@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 use mixengine_platform::Host;
 
+pub mod adopt;
 pub mod bin_commands;
 pub mod blueprints;
 pub mod certs;
