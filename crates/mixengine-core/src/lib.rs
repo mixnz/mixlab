@@ -1169,6 +1169,17 @@ pub enum Error {
         path: PathBuf,
     },
 
+    /// A directory where an install would go, which could not be recorded as one — roadmap task
+    /// **T182f**. Distinct from [`AlreadyInstalled`](Self::AlreadyInstalled) because what a person
+    /// does about it is different: record it by hand once it can be checked, or remove it.
+    #[error("{} is on disk but not recorded: {reason}", path.display())]
+    UnrecordedInstall {
+        /// The directory.
+        path: PathBuf,
+        /// Why it could not be recorded, as a phrase.
+        reason: String,
+    },
+
     /// This copy of MixEngine is not one that may replace itself — roadmap task **T88**.
     ///
     /// A `.deb`, an `.rpm`, a `.pkg` or an AppImage put it where it is, and whatever did that is
