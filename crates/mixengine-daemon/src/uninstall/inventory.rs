@@ -100,7 +100,20 @@ pub(crate) async fn take(
         .collect();
 
     rows.extend(directory_rows(&root, &moved, query));
-    rows.extend(in_use(going(&root, &moved, query)).await);
+    let window_folders: Vec<std::path::PathBuf> = rows
+        .iter()
+        .filter(|row| matches!(row.id, ResidueId::WindowData | ResidueId::WindowCache))
+        .filter(|row| matches!(row.outcome, Removal::Planned { .. }))
+        .map(|row| std::path::PathBuf::from(&row.location))
+        .collect();
+    rows.extend(
+        in_use(
+            going(&root, &moved, query),
+            window_folders,
+            !query.skip_holders,
+        )
+        .await,
+    );
 
     Ok(rows)
 }
@@ -398,30 +411,49 @@ fn tombstone(id: ResidueId, path: &Path) -> Residue {
     }
 }
 
-/// **12.** Every process running from a directory this uninstall would remove — T182, D4.
+/// **12.** Every process in the way of a directory this uninstall would remove — T182, D4, and
+/// T182e, D4.
+///
+/// Two kinds, one row per process: a process *running from* one of those directories (any system),
+/// and a process holding something inside one of them that **cannot be moved** — a working
+/// directory, a file held without sharing delete (Windows, where that refuses a rename). What can be
+/// moved is not mentioned: the rename moves it out on its own (`main`'s
+/// `remove_what_the_uninstall_armed`). The window's folders are looked in for holders too; nothing
+/// runs from them.
 ///
 /// **This daemon and everything it started are spared**: its own shutdown stops them, in
-/// dependency order, before anything is removed. A process table that cannot be read spares
-/// everybody — the rename in `mixengine_platform::tombstone` is the second line of defence, and it
-/// refuses rather than half-deletes.
-async fn in_use(directories: Vec<std::path::PathBuf>) -> Vec<Residue> {
-    if directories.is_empty() {
+/// dependency order, before anything is removed. A table that cannot be read spares everybody — the
+/// rename in `mixengine_platform::tombstone` is the second line of defence, and it refuses rather
+/// than half-deletes.
+async fn in_use(
+    directories: Vec<std::path::PathBuf>,
+    window_folders: Vec<std::path::PathBuf>,
+    look_for_holders: bool,
+) -> Vec<Residue> {
+    if directories.is_empty() && window_folders.is_empty() {
         return Vec::new();
     }
 
-    let occupants = crate::api::on_a_blocking_thread(move || {
-        Ok(mixengine_platform::occupants::processes_under(
-            &directories,
-            Some(std::process::id()),
-        ))
+    let spare = Some(std::process::id());
+    let (occupants, held) = crate::api::on_a_blocking_thread(move || {
+        let occupants = mixengine_platform::occupants::processes_under(&directories, spare);
+        let held = match look_for_holders {
+            true => {
+                let mut everywhere = directories;
+                everywhere.extend(window_folders);
+                mixengine_platform::occupants::held_under(&everywhere, spare)
+            }
+            false => Vec::new(),
+        };
+        Ok((occupants, held))
     })
     .await
     .unwrap_or_else(|error| {
         tracing::warn!(%error, "the processes in the way of an uninstall could not be read");
-        Vec::new()
+        (Vec::new(), Vec::new())
     });
 
-    occupants
+    let running: Vec<Residue> = occupants
         .into_iter()
         .map(|occupant| Residue {
             id: ResidueId::InUse,
@@ -434,6 +466,57 @@ async fn in_use(directories: Vec<std::path::PathBuf>) -> Vec<Residue> {
                     occupant.name
                 ),
             },
+        })
+        .collect();
+
+    let stuck = stuck_rows(&held, &running);
+    running.into_iter().chain(stuck).collect()
+}
+
+/// A row per process holding something stuck, that is not already a row for running — T182e, D4.
+///
+/// Matched on the `(pid N)` the running row's `what` ends with, which is how both kinds spell it.
+fn stuck_rows(
+    held: &[mixengine_platform::occupants::HeldItem],
+    running: &[Residue],
+) -> Vec<Residue> {
+    let mut by_process: std::collections::BTreeMap<u32, (String, Vec<String>)> =
+        std::collections::BTreeMap::new();
+
+    for item in held.iter().filter(|item| !item.movable) {
+        for holder in &item.holders {
+            by_process
+                .entry(holder.pid)
+                .or_insert_with(|| (holder.name.clone(), Vec::new()))
+                .1
+                .push(item.path.display().to_string());
+        }
+    }
+
+    by_process
+        .into_iter()
+        .filter(|(pid, _)| {
+            let tag = format!("(pid {pid})");
+            !running.iter().any(|row| row.what.ends_with(&tag))
+        })
+        .map(|(pid, (name, mut paths))| {
+            paths.sort();
+            let more = match paths.len() - 1 {
+                0 => String::new(),
+                more => format!(" (and {more} more)"),
+            };
+            let first = paths.swap_remove(0);
+            Residue {
+                id: ResidueId::InUse,
+                what: format!("{name} (pid {pid})"),
+                location: first.clone(),
+                outcome: Removal::Blocked {
+                    by: format!(
+                        "{name} has {first} open, so it cannot be moved or deleted{more}; close it \
+                         and run the uninstall again"
+                    ),
+                },
+            }
         })
         .collect()
 }
@@ -1036,6 +1119,87 @@ fn trust_place(method: mixengine_platform::TrustStoreMethod) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mixengine_platform::occupants::{HeldItem, Holder};
+
+    fn held(path: &str, movable: bool, holders: &[(u32, &str)]) -> HeldItem {
+        HeldItem {
+            path: std::path::PathBuf::from(path),
+            movable,
+            holders: holders
+                .iter()
+                .map(|(pid, name)| Holder {
+                    pid: *pid,
+                    name: (*name).to_owned(),
+                })
+                .collect(),
+        }
+    }
+
+    /// T182e, D4: a movable item is not a row at all — the rename moves it.
+    #[test]
+    fn a_movable_item_is_not_a_row() {
+        let rows = stuck_rows(&[held(r"C:\home\bin", true, &[(1200, "Code.exe")])], &[]);
+        assert!(rows.is_empty(), "{rows:?}");
+    }
+
+    /// T182e, D4: a stuck item is a `Blocked` row naming the program, the path and what to do.
+    #[test]
+    fn a_stuck_item_is_a_blocked_row() {
+        let rows = stuck_rows(&[held(r"C:\home\data", false, &[(7, "pwsh.exe")])], &[]);
+
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(rows[0].id, ResidueId::InUse);
+        assert_eq!(rows[0].what, "pwsh.exe (pid 7)");
+        assert_eq!(rows[0].location, r"C:\home\data");
+        let Removal::Blocked { by } = &rows[0].outcome else {
+            panic!("{:?}", rows[0].outcome)
+        };
+        assert!(
+            by.contains(r"has C:\home\data open, so it cannot be moved or deleted"),
+            "{by}"
+        );
+        assert!(by.ends_with("close it and run the uninstall again"), "{by}");
+    }
+
+    /// One program holding many stuck things is one row with a count.
+    #[test]
+    fn many_stuck_items_of_one_process_are_one_row() {
+        let rows = stuck_rows(
+            &[
+                held(r"C:\home\a", false, &[(9, "tool.exe")]),
+                held(r"C:\home\b", false, &[(9, "tool.exe")]),
+                held(r"C:\home\c", false, &[(9, "tool.exe")]),
+            ],
+            &[],
+        );
+
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        let Removal::Blocked { by } = &rows[0].outcome else {
+            panic!("{:?}", rows[0].outcome)
+        };
+        assert!(by.contains("(and 2 more)"), "{by}");
+        assert_eq!(rows[0].location, r"C:\home\a");
+    }
+
+    /// A process already a row for running from the home is not a second row.
+    #[test]
+    fn a_process_running_and_stuck_is_one_row() {
+        let running = Residue {
+            id: ResidueId::InUse,
+            what: "php.exe (pid 42)".to_owned(),
+            location: r"C:\home\runtimes\php.exe".to_owned(),
+            outcome: Removal::Blocked {
+                by: "running".to_owned(),
+            },
+        };
+
+        let rows = stuck_rows(
+            &[held(r"C:\home\data", false, &[(42, "php.exe")])],
+            &[running],
+        );
+
+        assert!(rows.is_empty(), "{rows:?}");
+    }
 
     fn found(daemon: &[&str], window: Option<&[&str]>) -> Found {
         Found {
@@ -1172,6 +1336,7 @@ mod tests {
             keep_home,
             keep_relocated,
             grant: false,
+            skip_holders: false,
         }
     }
 

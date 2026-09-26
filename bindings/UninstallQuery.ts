@@ -31,4 +31,13 @@ keep_relocated: boolean,
  * **Defaults to `false`**, and ignored by `daemon.uninstall_plan`, which raises nothing. The
  * two-call path is T64's rule: what is about to be allowed is read before it is allowed.
  */
-grant: boolean, };
+grant: boolean, 
+/**
+ * Leave out what other programs hold in the folders that would go — roadmap task **T182e**.
+ *
+ * **Defaults to `false`**: every plan and every act looks, because something stuck found before
+ * the prompt is something the person can close while nothing has changed. `true` is for a caller
+ * that wants only the folders named — the uninstaller's `--relocated` listing, read while a
+ * banner is up — and reading the handle table costs seconds.
+ */
+skip_holders: boolean, };

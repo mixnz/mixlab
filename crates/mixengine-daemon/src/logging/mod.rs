@@ -11,6 +11,7 @@
 use std::io::{self, Write as _};
 use std::num::NonZeroUsize;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
 use mixengine_core::config::{LogFormat, LogLevel};
@@ -77,7 +78,7 @@ pub(crate) fn init(options: &Options<'_>) -> io::Result<()> {
 
     // Kept so that `release` below can reach it. The subscriber owns the only other reference and
     // lives for the life of the process, which is exactly the problem T87 has with it.
-    let _ = LIVE.set(Arc::clone(&sink.file));
+    let _ = LIVE.set(sink.clone());
 
     tracing::subscriber::set_global_default(subscriber(options, sink))
         .expect("the daemon installs its subscriber exactly once, here");
@@ -89,7 +90,7 @@ pub(crate) fn init(options: &Options<'_>) -> io::Result<()> {
 ///
 /// **A static because the subscriber is one.** `set_global_default` takes the sink for the life of
 /// the process, and nothing this module hands back could be dropped to close the file.
-static LIVE: OnceLock<Arc<Mutex<RotatingFile>>> = OnceLock::new();
+static LIVE: OnceLock<Sink> = OnceLock::new();
 
 /// Whether [`init`] has run, and an event therefore has somewhere to go.
 ///
@@ -107,14 +108,14 @@ pub(crate) fn started() -> bool {
 /// deletion, and a daemon removing its own home is removing the directory its log is in. This is
 /// called once, from `main`, after the last thing that could log and immediately before the removal.
 ///
-/// **Anything logged afterwards reopens the file**, which is [`RotatingFile::release`]'s own
-/// documented behaviour — so this is the end of the process's logging by convention rather than by
-/// construction, and the convention is one line long: nothing comes after it but the removal.
+/// **And for good** (T182e): anything logged afterwards is dropped rather than reopening the file,
+/// which is what [`RotatingFile::release`] alone would do. The convention used to be enough — nothing
+/// came between this and the removal but a rename — and stopped being enough when the removal began
+/// to look for held folders and retry, seconds in which any task still running may log. A reopened
+/// `daemon.log` then refused the rename of the directory it lives in.
 pub(crate) fn release() {
-    if let Some(file) = LIVE.get() {
-        file.lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .release();
+    if let Some(sink) = LIVE.get() {
+        sink.close();
     }
 }
 
@@ -223,13 +224,28 @@ fn subscriber(options: &Options<'_>, file: Sink) -> Box<dyn Subscriber + Send + 
 struct Sink {
     file: Arc<Mutex<RotatingFile>>,
     note: Note,
+
+    /// Set once, by [`release`]: every write after it is dropped rather than reopening the file.
+    closed: Arc<AtomicBool>,
 }
 
 impl Sink {
+    /// Let go of the file for good — T182e. The flag is set before the lock is taken, and every
+    /// writer reads it after taking the lock, so a write that began first finishes and every later
+    /// one sees the file closed.
+    fn close(&self) {
+        self.closed.store(true, Ordering::SeqCst);
+        self.file
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .release();
+    }
+
     fn new(file: RotatingFile, note: Note) -> Self {
         Self {
             file: Arc::new(Mutex::new(file)),
             note,
+            closed: Arc::new(AtomicBool::new(false)),
         }
     }
 }
@@ -238,8 +254,10 @@ impl<'a> MakeWriter<'a> for Sink {
     type Writer = SinkWriter<'a>;
 
     fn make_writer(&'a self) -> Self::Writer {
+        let file = self.file.lock().unwrap_or_else(PoisonError::into_inner);
         SinkWriter {
-            file: self.file.lock().unwrap_or_else(PoisonError::into_inner),
+            closed: self.closed.load(Ordering::SeqCst),
+            file,
             note: self.note,
         }
     }
@@ -250,14 +268,23 @@ impl<'a> MakeWriter<'a> for Sink {
 struct SinkWriter<'a> {
     file: MutexGuard<'a, RotatingFile>,
     note: Note,
+
+    /// Read under the lock: the file has been let go of for good, so this event goes nowhere.
+    closed: bool,
 }
 
 impl io::Write for SinkWriter<'_> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        if self.closed {
+            return Ok(buf.len());
+        }
         self.file.write(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
+        if self.closed {
+            return Ok(());
+        }
         self.file.flush()
     }
 }
@@ -275,6 +302,9 @@ impl Drop for SinkWriter<'_> {
     /// written, which a detached daemon (T9) would then do from inside its own logger, and a failure
     /// to report that rotation failed is not worth a process.
     fn drop(&mut self) {
+        if self.closed {
+            return;
+        }
         let Some(error) = self.file.take_failure() else {
             return;
         };
@@ -293,6 +323,31 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
+
+    /// T182e. Once the daemon has let go of its log for the last time, an event from a task still
+    /// running must not open it again: the uninstall now spends seconds between letting go and
+    /// renaming the directory, and a reopened `daemon.log` refused that rename (measured on a real
+    /// Windows uninstall, where the daemon named itself as the holder).
+    #[test]
+    fn a_closed_log_stays_closed_whatever_is_written_after() {
+        let home = TempDir::new().unwrap();
+        let path = home.path().join("daemon.log");
+        let sink = Sink::new(
+            RotatingFile::open(path.clone(), MAX_BYTES, KEEP).unwrap(),
+            text_note,
+        );
+
+        sink.make_writer().write_all(b"before\n").unwrap();
+        sink.close();
+        sink.make_writer().write_all(b"after\n").unwrap();
+
+        let written = std::fs::read_to_string(&path).unwrap();
+        assert!(written.contains("before"), "{written}");
+        assert!(
+            !written.contains("after"),
+            "the file was opened again: {written}"
+        );
+    }
 
     struct Log {
         home: TempDir,

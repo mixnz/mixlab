@@ -164,6 +164,18 @@ case "$mode" in
       exit 1
     fi
 
+    # **The reference is `mix --help`, and a person reads it.** A doc comment on a command or a flag
+    # is printed as it is, so what only this repository's developers can follow — a roadmap task, a
+    # design decision, a path under docs/ — does not belong in one. It goes in a `//` comment beside
+    # it instead, which clap never prints.
+    internal='\bT[0-9]{1,3}[a-z]?\b|[Rr]oadmap task|\bADR ?[0-9]{2,4}\b|\bD[0-9]{1,2}\b|docs/(specs|decisions|plans|roadmap)/'
+    if grep -nE "$internal" "$work/cli.md" >&2; then
+      echo "" >&2
+      echo "mix --help names something only this repository's developers can follow (above)." >&2
+      echo "Say it for the person reading the help, and move the rest into a // comment beside it." >&2
+      exit 1
+    fi
+
     echo "the site builds ($(find "$site" -type f | wc -l | tr -d ' ') files) and the command reference is current"
     ;;
 esac

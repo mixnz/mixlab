@@ -133,6 +133,10 @@ windows-sys = { workspace = true, features = [
     # T182b: which program holds a file an uninstall could not move aside, asked of the Restart
     # Manager exactly as the system's own "file in use" dialog asks it. Modules, not crates.
     "Win32_System_RestartManager",
+    # T182e: the system's handle table, the one place Windows says who holds a directory — a watch
+    # or a working directory — and not only a file. The function's declaration only; the table's
+    # layout is declared in `windows/handles.rs`. Modules, not crates.
+    "Wdk_System_SystemInformation",
     # The other kind of child: a job object with `KILL_ON_JOB_CLOSE`, which is how this system
     # guarantees a supervised process cannot outlive the daemon (roadmap task T13).
     "Win32_System_JobObjects",

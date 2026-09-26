@@ -208,6 +208,11 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       entries and the window's `MixLab` entries go with the home and stay with it, as two rows of
       the plan and the report. After T186.
       Design: [2026-09-26-t182d-an-uninstall-forgets-what-it-kept-in-the-credential-store-design.md](../specs/2026-09-26-t182d-an-uninstall-forgets-what-it-kept-in-the-credential-store-design.md).
+- [ ] **T182e** An uninstall moves what it can past other programs, and names only what it cannot:
+      on Windows, a watched folder or a file shared for deletion inside a folder that goes is moved
+      out on its own before the rename, like `bin/`; a working directory or a file held without
+      sharing delete is a `Blocked` row of the plan, named with Retry before anything changes.
+      Design: [2026-09-26-t182e-an-uninstall-moves-what-it-can-design.md](../specs/2026-09-26-t182e-an-uninstall-moves-what-it-can-design.md).
 - [ ] **T182a** An uninstall path for macOS and Linux, which have no uninstaller to hang T182 on:
       for example an *Uninstall MixLab…* item in the macOS app that runs the whole removal, deletes
       the `.app` and quits, so the app never outlives it. Until then the handbook's order stands:

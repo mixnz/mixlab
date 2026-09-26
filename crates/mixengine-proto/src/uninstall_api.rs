@@ -46,6 +46,15 @@ pub struct UninstallQuery {
     /// two-call path is T64's rule: what is about to be allowed is read before it is allowed.
     #[serde(default)]
     pub grant: bool,
+
+    /// Leave out what other programs hold in the folders that would go — roadmap task **T182e**.
+    ///
+    /// **Defaults to `false`**: every plan and every act looks, because something stuck found before
+    /// the prompt is something the person can close while nothing has changed. `true` is for a caller
+    /// that wants only the folders named — the uninstaller's `--relocated` listing, read while a
+    /// banner is up — and reading the handle table costs seconds.
+    #[serde(default)]
+    pub skip_holders: bool,
 }
 
 /// What an uninstall found, and what became of each thing.
@@ -303,6 +312,25 @@ pub enum Removal {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// T182e. A query from a client that predates `skip_holders` still reads, and looks.
+    #[test]
+    fn a_query_without_skip_holders_looks_for_holders() {
+        let query: UninstallQuery =
+            serde_json::from_str(r#"{"keep_home":false,"keep_relocated":false,"grant":false}"#)
+                .expect("an older query reads");
+
+        assert!(!query.skip_holders);
+    }
+
+    /// T182e. The uninstaller's `--relocated` listing asks not to pay for the scan.
+    #[test]
+    fn a_query_can_skip_holders() {
+        let query: UninstallQuery =
+            serde_json::from_str(r#"{"skip_holders":true}"#).expect("the field reads");
+
+        assert!(query.skip_holders);
+    }
 
     /// The outcome is tagged, so a client matches on a word rather than on which fields arrived —
     /// `Outcome`'s rule in `doctor_api`, and for its reason.

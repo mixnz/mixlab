@@ -17,6 +17,7 @@ per sentence, what happened and what to do next.
 | Confirm dialog | Title names the action, body gives the consequence in one sentence, button repeats the verb |
 | Email | The code, how long it works, what to do if it was not you |
 | `mix`, mixengined | One line, lowercase, ending with the command that fixes it |
+| `///` on a clap command or flag | Printed by `mix --help`. What it does for the user; task ids, history and `docs/` paths go in `//` |
 | Any README | What this folder is for, then where to start: the first command, or the first file to read |
 | CHANGELOG | What the user can do now, in their words. Not how it was built |
 

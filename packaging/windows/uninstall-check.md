@@ -61,6 +61,29 @@ Design [docs/specs/2026-09-25-t182b-a-helper-that-keeps-up-and-an-uninstall-that
 16. **The window's own folders.** `%LOCALAPPDATA%\io.github.mixnz.mixlab` is gone afterwards whatever
     was ticked; `%APPDATA%\io.github.mixnz.mixlab` is gone only when the data box was ticked.
 17. **The desktop icon goes with it**, without refreshing the desktop.
-18. **A home something else is standing in.** With File Explorer open inside `%LOCALAPPDATA%\MixEngine`
-    and the data box ticked, the uninstall stops, the log names the folder as open in another
-    program, nothing of the home is removed, and after closing Explorer a second run finishes.
+18. **A home something else is standing in.** With a terminal whose current directory is inside
+    `%LOCALAPPDATA%\MixEngine` opened *after* the checks page (so the checks could not name it) and
+    the data box ticked, the uninstall stops, the log names the folder as open in another program,
+    nothing of the home is removed, and after closing the terminal a second run finishes. (File
+    Explorer no longer stops it: since T182e a folder Explorer shows is moved out, item 19.)
+
+## T182e
+
+Design [docs/specs/2026-09-26-t182e-an-uninstall-moves-what-it-can-design.md](../../docs/specs/2026-09-26-t182e-an-uninstall-moves-what-it-can-design.md).
+
+19. **What can move is moved.** VS Code open (it watches `bin` on `PATH`) and File Explorer open
+    inside `%LOCALAPPDATA%\MixEngine\etc`. Tick the data box: no Retry box appears, the uninstall
+    finishes, and neither folder is left.
+20. **What cannot move is named first, on a page of its own.** A terminal whose current directory is
+    `%LOCALAPPDATA%\MixEngine\data`. Tick the data box and click Next: a page lists the terminal's
+    program, pid and folder, before any UAC prompt. Close it and click **Check again**: the list
+    reads *Nothing is in the way now*. Click Uninstall: it goes on and finishes.
+21. **Something opened after the page is still caught.** On that page with the list clear, open the
+    terminal in `data` again, then click Uninstall: a Retry/Cancel box names it before any UAC
+    prompt. Close it and press Retry: the uninstall goes on and finishes.
+22. **Nothing in the way, no page.** With nothing open in MixLab's folders, the choices page's Next
+    goes straight to the progress page.
+23. **An updated install leaves nothing.** On an install that has updated itself once (so
+    `%LOCALAPPDATA%\Programs\MixEngine\update.lock` exists), a complete uninstall leaves no
+    `Programs\MixEngine` folder, and its log ends with *Remove folder*. The log shows the firewall row
+    as `MixEngine - shared sites`, with a plain dash.

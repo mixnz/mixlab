@@ -181,18 +181,20 @@ impl Uninstall {
         handle.progress(5, "reading what this machine holds").await;
         let planned = self.rows(query).await?;
 
-        // T182, D4: nothing is touched while a process runs from a directory that is going.
+        // T182, D4: nothing is touched while a process runs from a directory that is going — or,
+        // since T182e, holds something in one that cannot be moved. The row's own sentence says
+        // which, and what to close.
         if let Some(row) = planned
             .iter()
             .find(|row| matches!(row.outcome, Removal::Blocked { .. }))
         {
+            let by = match &row.outcome {
+                Removal::Blocked { by } => by.as_str(),
+                _ => "it is in the way",
+            };
             return Err(Error::new(
                 mixengine_proto::ErrorCode::PreconditionFailed,
-                format!(
-                    "{} is running from {}; close it and run the uninstall again — nothing was \
-                     changed",
-                    row.what, row.location
-                ),
+                format!("{}: {by} — nothing was changed", row.what),
             ));
         }
 

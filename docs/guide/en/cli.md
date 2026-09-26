@@ -358,7 +358,7 @@ mix project update [PROJECT] [OPTIONS]
 | Flag | What it does |
 | --- | --- |
 | `<PROJECT>` | The project's name. Defaults to whichever project the current directory is in |
-| `--name` `<NAME>` | A new name. `id` spelled out because the flattened project argument is also called `name`, and clap refuses two arguments under one id — it did so at *parse* time, so `mix project update blog --name blogging` panicked instead of running. Found by T77's `every_command_is_one_clap_can_build`, which is now what stops the next one. |
+| `--name` `<NAME>` | A new name |
 | `--root` `<DIR>` | A new root, for a repository that moved |
 | `--pin` `<RUNTIME=VERSION>` | Pin a language, as `php=^8.3`. Replaces every pin the project had |
 | `--clear-pins` | Remove every pin |
@@ -635,7 +635,7 @@ mix blueprint apply <BLUEPRINT> [OPTIONS]
 | `--install-missing` | Answer every version question by installing what the blueprint asks for |
 | `--with-front-end` | Install a web server too, where this home has none. A home with no front end serves no site, and nothing installs one by itself. With this, a blueprint that declares a site plans the default web server as well — and a home that already has one, Caddy or nginx, is left alone. |
 | `--autostart` | Start the services this apply creates whenever MixEngine starts. Only what it creates: a server this home already had is left as its owner set it. Read and changed afterwards with `mix service autostart`. |
-| `--start` | Start the services this project needs once the apply is done. **This project's, not this home's** — roadmap task **T125**. Which services those are is the daemon's answer and not this command's: the sites the apply just made, the database and the pool they declare, and the front end they are reached through. Until T125 the only set a client could ask for was *every service this home declares*. Runs after the elevation, because a site served at a name the hosts file does not resolve is a browser error with a progress bar in front of it. |
+| `--start` | Start the services this project needs once the apply is done. These are the project's sites, the database and pool they use, and the front end they are reached through, not every service of this home. They start after the permission prompt, so every site's name already resolves when it comes up. |
 | `--use-installed` | Answer every version question by using what this machine already has |
 | `--run-scaffold` | Run the blueprint's own `[scaffold]` command without asking first. For a blueprint the gallery signed. An unsigned one takes the other flag, and neither covers the other: a script that runs somebody's unsigned command should say so on the line that does it. |
 | `--run-untrusted-scaffold` | Run an **untrusted** blueprint's own `[scaffold]` command without asking first. Nothing vouches for what this runs. The command is still printed before it starts. |
@@ -950,6 +950,7 @@ mix uninstall [OPTIONS]
 | `--keep-home` | Leave this home's directory where it is, and undo only what is outside it. Keeps the databases in `data/`, the certificates and everything else this home holds. The daemon keeps running, because there is still a home for it to serve. |
 | `--keep-relocated` | Leave the directories `[paths]` moved out of the home where they are. Its own choice, apart from `--keep-home`: a home can go while `data/` on another disk stays, or the reverse. A directory that was never moved is inside the home. |
 | `--relocated` | With `--dry-run`: print only the relocated directories, one path per line. For a program to read — the Windows uninstaller shows them before it asks anything. |
+| `--blocked` | With `--dry-run`: print only the programs in the way, one per line, with the pid and the folder each one uses. Prints nothing when nothing is in the way. For a program to read: the Windows uninstaller shows the list before it removes anything. |
 | `--yes` | Answer the confirmation in advance, for a script with nobody at the keyboard |
 | `--no-wait` | Start the work and print the job, rather than waiting for it to finish |
 
@@ -1364,14 +1365,11 @@ mix job cancel <JOB>
 
 ### mix job logs
 
-What a job printed — roadmap task **T78a**.
+What a job printed.
 
-**Only a job that runs somebody else's program prints anything**, which today is an apply running a
-blueprint's own `[scaffold]` command. Everything else a job does is reported as progress and as its
-result, and this answers nothing for those rather than pretending output was lost.
-
-The lines live in memory for as long as the daemon keeps the job's log, so this is what to read
-while one runs rather than a record to come back to a week later.
+Only a job that runs another program prints anything. Today that is an apply running a blueprint's
+`[scaffold]` command; other jobs report progress and a result, and show nothing here. The lines stay
+in memory while the daemon keeps the job, so read them while it runs.
 
 ```
 mix job logs <JOB> [OPTIONS]
@@ -1491,9 +1489,8 @@ mix elevation status
 
 Ask once, for everything that is waiting.
 
-One prompt for the whole queue: `docs/decisions/0005-on-demand-elevation.md` calls asking inside a
-loop a defect. Saying no is a normal answer — the list stays, and this command can be run again
-later.
+One prompt covers the whole list. Saying no is a normal answer: the list stays, and this command can
+be run again later.
 
 ```
 mix elevation grant [OPTIONS]

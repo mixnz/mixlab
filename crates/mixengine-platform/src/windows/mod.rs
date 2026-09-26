@@ -24,6 +24,10 @@ pub(crate) mod console;
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub(crate) mod elevated;
 pub(crate) mod fullname;
+// Who holds a file or a directory, read from the system's handle table — T182e. `host`, like the
+// `occupants` module that is its only caller.
+#[cfg(feature = "host")]
+pub(crate) mod handles;
 #[cfg(feature = "host")]
 pub(crate) mod home;
 #[cfg(any(feature = "host", feature = "elevated"))]

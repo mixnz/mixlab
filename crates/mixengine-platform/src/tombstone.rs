@@ -71,21 +71,28 @@ pub struct Held {
 /// its own, and is what is left to report once this has passed.
 pub const PATIENCE: Duration = Duration::from_secs(10);
 
+/// How long the first try waits, before anything is looked for — the T182e design, D5. Long enough
+/// for the daemon's last database connection to close; a holder that is still there after it is
+/// looked for, and what can be moved is moved.
+pub const QUICK: Duration = Duration::from_secs(2);
+
 /// How long between two tries of a refused rename.
 const RETRY_EVERY: Duration = Duration::from_millis(100);
 
 /// Rename every directory in `paths` to its tombstone, then delete the tombstones.
 ///
 /// A path that is not there is skipped, and one that already is a tombstone is deleted as it is. A
-/// rename the system refuses is tried again for up to [`PATIENCE`] before anything is put back.
+/// rename the system refuses is tried again for up to `patience` ([`QUICK`] or [`PATIENCE`]) before
+/// anything is put back.
 ///
-/// **`lifted` are directories inside one of `paths` that go out on their own first**, each to a
-/// tombstone beside the directory holding it — T182b. A directory another program *watches* can be
-/// renamed, but the directory above it cannot: Windows refuses the parent's rename for as long as
-/// the watch is open. A home's `bin/` is on `PATH`, and editors watch every directory on `PATH` to
-/// offer its commands — measured with VS Code, whose watch kept every uninstall of a home until it
-/// was closed. Lifted out, the watch goes with it and the home is free to move. A lifted directory
-/// is put back with everything else when a later rename is refused.
+/// **`lifted` are files or directories inside one of `paths` that go out on their own first**,
+/// deepest first, each to a tombstone beside the directory holding it — T182b and T182e, D5. A
+/// directory another program *watches*, or a file it holds sharing delete, can be renamed, but the
+/// directory above it cannot: Windows refuses the parent's rename for as long as it is held. A
+/// home's `bin/` is on `PATH`, and editors watch every directory on `PATH` to offer its commands —
+/// measured with VS Code, whose watch kept every uninstall of a home until it was closed. Lifted
+/// out, the holder goes with it and the parent is free to move. A lifted item is put back with
+/// everything else when a later rename is refused.
 ///
 /// # Errors
 ///
@@ -95,25 +102,27 @@ pub fn remove_all_or_nothing(
     paths: &[PathBuf],
     lifted: &[PathBuf],
     pid: u32,
-) -> Result<Vec<Leftover>, Refused> {
-    remove_all_or_nothing_within(paths, lifted, pid, PATIENCE)
-}
-
-/// [`remove_all_or_nothing`], with the patience given — zero for a test that wants the refusal.
-fn remove_all_or_nothing_within(
-    paths: &[PathBuf],
-    lifted: &[PathBuf],
-    pid: u32,
     patience: Duration,
 ) -> Result<Vec<Leftover>, Refused> {
-    // Each lifted directory beside the armed directory holding it; one inside nothing armed stays
-    // where it is and goes with whatever removes it.
-    let lifts = lifted.iter().filter_map(|inner| {
-        let outer = paths
-            .iter()
-            .find(|outer| inner.starts_with(outer) && inner != *outer)?;
-        Some((inner.clone(), lifted_tombstone_for(inner, outer, pid)))
-    });
+    // Deepest first, so a held file is out of a held directory before that directory moves (T182e,
+    // D5). Each goes beside the armed directory holding it; one inside nothing armed stays where it
+    // is and goes with whatever removes it.
+    let mut ordered: Vec<&PathBuf> = lifted.iter().collect();
+    ordered.sort_by_key(|inner| std::cmp::Reverse(inner.components().count()));
+    ordered.dedup();
+
+    let lifts = ordered
+        .into_iter()
+        .enumerate()
+        .filter_map(|(order, inner)| {
+            let outer = paths
+                .iter()
+                .find(|outer| inner.starts_with(outer) && inner != *outer)?;
+            Some((
+                inner.clone(),
+                lifted_tombstone_for(inner, outer, pid, order),
+            ))
+        });
     let moves = lifts.chain(
         paths
             .iter()
@@ -160,7 +169,12 @@ fn remove_all_or_nothing_within(
     let mut left = Vec::new();
 
     for (_, renamed) in &moved {
-        match std::fs::remove_dir_all(renamed) {
+        // A lifted item may be a file (T182e), which `remove_dir_all` refuses.
+        let removed = match std::fs::symlink_metadata(renamed) {
+            Ok(metadata) if !metadata.is_dir() => std::fs::remove_file(renamed),
+            _ => std::fs::remove_dir_all(renamed),
+        };
+        match removed {
             Ok(()) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(error) => left.push(Leftover {
@@ -438,16 +452,17 @@ fn tombstone_for(path: &Path, pid: u32) -> PathBuf {
     path.with_file_name(format!("{name}{MARK}{pid}"))
 }
 
-/// Where `inner`, a directory inside `outer`, is set aside on its own: beside `outer`, named after
-/// it, so [`tombstones_beside`] finds it with `outer`'s own and the next uninstall removes it.
-fn lifted_tombstone_for(inner: &Path, outer: &Path, pid: u32) -> PathBuf {
+/// Where `inner`, inside `outer`, is set aside on its own: beside `outer`, named after it and
+/// numbered by `order`, so two lifted `logs` cannot collide and [`tombstones_beside`] finds every one
+/// with `outer`'s own — T182e, D5.
+fn lifted_tombstone_for(inner: &Path, outer: &Path, pid: u32, order: usize) -> PathBuf {
     let inner_name = inner
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_default();
 
     let mut tombstone = tombstone_for(outer, pid).into_os_string();
-    tombstone.push(format!("-{inner_name}"));
+    tombstone.push(format!("-{order}-{inner_name}"));
     PathBuf::from(tombstone)
 }
 
@@ -474,7 +489,8 @@ mod tests {
         let a = directory_with_a_file(root.path(), "a");
         let b = directory_with_a_file(root.path(), "b");
 
-        let left = remove_all_or_nothing(&[a.clone(), b.clone()], &[], 7).expect("nothing refused");
+        let left = remove_all_or_nothing(&[a.clone(), b.clone()], &[], 7, PATIENCE)
+            .expect("nothing refused");
 
         assert!(left.is_empty(), "{left:?}");
         assert!(!a.exists() && !b.exists());
@@ -491,7 +507,7 @@ mod tests {
         let b = directory_with_a_file(root.path(), "b");
         directory_with_a_file(root.path(), "b.removing-7");
 
-        let refused = remove_all_or_nothing_within(&[a.clone(), b.clone()], &[], 7, Duration::ZERO)
+        let refused = remove_all_or_nothing(&[a.clone(), b.clone()], &[], 7, Duration::ZERO)
             .expect_err("refused");
 
         assert_eq!(refused.path, b);
@@ -504,7 +520,8 @@ mod tests {
     fn a_missing_directory_is_not_a_refusal() {
         let root = tempfile::tempdir().expect("tempdir");
 
-        let left = remove_all_or_nothing(&[root.path().join("gone")], &[], 7).expect("fine");
+        let left =
+            remove_all_or_nothing(&[root.path().join("gone")], &[], 7, PATIENCE).expect("fine");
 
         assert!(left.is_empty());
     }
@@ -518,7 +535,8 @@ mod tests {
 
         assert_eq!(tombstones_beside(&home), vec![old.clone()]);
 
-        let left = remove_all_or_nothing(std::slice::from_ref(&old), &[], 7).expect("fine");
+        let left =
+            remove_all_or_nothing(std::slice::from_ref(&old), &[], 7, PATIENCE).expect("fine");
 
         assert!(left.is_empty());
         assert!(!old.exists());
@@ -540,7 +558,7 @@ mod tests {
             .open(b.join("file"))
             .expect("hold");
 
-        let refused = remove_all_or_nothing_within(&[a.clone(), b.clone()], &[], 7, Duration::ZERO)
+        let refused = remove_all_or_nothing(&[a.clone(), b.clone()], &[], 7, Duration::ZERO)
             .expect_err("refused");
         drop(held);
 
@@ -557,8 +575,7 @@ mod tests {
         let a = directory_with_a_file(root.path(), "a");
 
         let held = std::fs::File::open(a.join("file")).expect("hold");
-        let outcome =
-            remove_all_or_nothing_within(std::slice::from_ref(&a), &[], 7, Duration::ZERO);
+        let outcome = remove_all_or_nothing(std::slice::from_ref(&a), &[], 7, Duration::ZERO);
         drop(held);
 
         assert!(outcome.is_err(), "{outcome:?}");
@@ -597,9 +614,8 @@ mod tests {
             drop(held);
         });
 
-        let left =
-            remove_all_or_nothing_within(std::slice::from_ref(&a), &[], 7, Duration::from_secs(5))
-                .expect("the rename went through once the file was let go");
+        let left = remove_all_or_nothing(std::slice::from_ref(&a), &[], 7, Duration::from_secs(5))
+            .expect("the rename went through once the file was let go");
         releaser.join().expect("the releasing thread");
 
         assert!(left.is_empty(), "{left:?}");
@@ -626,15 +642,14 @@ mod tests {
             .open(&bin)
             .expect("the directory held open");
 
-        let refused =
-            remove_all_or_nothing_within(std::slice::from_ref(&home), &[], 7, Duration::ZERO);
+        let refused = remove_all_or_nothing(std::slice::from_ref(&home), &[], 7, Duration::ZERO);
         assert!(
             refused.is_err(),
             "the parent of a held directory was renamed: {refused:?}"
         );
         assert!(bin.join("file").exists(), "a refusal touched the home");
 
-        let left = remove_all_or_nothing_within(
+        let left = remove_all_or_nothing(
             std::slice::from_ref(&home),
             std::slice::from_ref(&bin),
             7,
@@ -663,7 +678,7 @@ mod tests {
         // The second directory's tombstone name is taken, which refuses its rename on every system.
         directory_with_a_file(root.path(), "other.removing-7");
 
-        let refused = remove_all_or_nothing_within(
+        let refused = remove_all_or_nothing(
             &[home.clone(), other.clone()],
             std::slice::from_ref(&bin),
             7,
@@ -674,7 +689,11 @@ mod tests {
         assert_eq!(refused.path, other);
         assert!(bin.join("file").exists(), "bin was not put back");
         assert!(home.join("file").exists(), "home was not put back");
-        assert!(!root.path().join("home.removing-7-bin").exists());
+        assert!(
+            tombstones_beside(&home).is_empty(),
+            "{:?}",
+            tombstones_beside(&home)
+        );
     }
 
     /// T182b. A directory held open — a shell standing in it, a window showing it — is named when
@@ -727,5 +746,105 @@ mod tests {
         std::fs::write(root.path().join("free.txt"), b"nobody has this").expect("a free file");
 
         assert!(first_held(root.path()).is_none());
+    }
+
+    /// T182e, D5. A held file inside a held directory leaves first, then the directory, then the
+    /// home; on a later refusal all of it comes back.
+    #[test]
+    fn nested_lifts_leave_deepest_first_and_come_back() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let home = directory_with_a_file(root.path(), "home");
+        let logs = directory_with_a_file(&home, "logs");
+        let log = logs.join("file");
+        let other = directory_with_a_file(root.path(), "other");
+        directory_with_a_file(root.path(), "other.removing-7");
+
+        let refused = remove_all_or_nothing(
+            &[home.clone(), other.clone()],
+            // Given shallowest first on purpose: the order is the function's to fix.
+            &[logs.clone(), log.clone()],
+            7,
+            Duration::ZERO,
+        )
+        .expect_err("refused");
+
+        assert_eq!(refused.path, other);
+        assert!(log.exists(), "the file was not put back");
+        assert!(home.join("file").exists(), "home was not put back");
+        assert!(
+            tombstones_beside(&home).is_empty(),
+            "{:?}",
+            tombstones_beside(&home)
+        );
+    }
+
+    /// The same, with the file held open sharing delete — which on Windows refuses the rename of
+    /// the directory holding it, so the order is what lets both go: the file first, then its
+    /// directory, then the home.
+    #[test]
+    fn nested_lifts_all_go_when_nothing_refuses() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let home = directory_with_a_file(root.path(), "home");
+        let logs = directory_with_a_file(&home, "logs");
+        let _held = std::fs::File::open(logs.join("file")).expect("held sharing delete");
+
+        let left = remove_all_or_nothing(
+            std::slice::from_ref(&home),
+            // Shallowest first on purpose.
+            &[logs.clone(), logs.join("file")],
+            7,
+            Duration::ZERO,
+        )
+        .expect("nothing refused");
+
+        assert!(left.is_empty(), "{left:?}");
+        assert!(!home.exists());
+        assert!(
+            tombstones_beside(&home).is_empty(),
+            "{:?}",
+            tombstones_beside(&home)
+        );
+    }
+
+    /// T182e, D5. A lifted file is deleted with the tombstones.
+    #[test]
+    fn a_lifted_file_is_deleted() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let home = directory_with_a_file(root.path(), "home");
+
+        let left = remove_all_or_nothing(
+            std::slice::from_ref(&home),
+            &[home.join("file")],
+            7,
+            Duration::ZERO,
+        )
+        .expect("nothing refused");
+
+        assert!(left.is_empty(), "{left:?}");
+        assert!(
+            tombstones_beside(&home).is_empty(),
+            "{:?}",
+            tombstones_beside(&home)
+        );
+    }
+
+    /// Two lifted items with one name do not collide.
+    #[test]
+    fn two_lifted_items_with_one_name_do_not_collide() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let home = directory_with_a_file(root.path(), "home");
+        let first = directory_with_a_file(&home.join("a"), "logs");
+        let second = directory_with_a_file(&home.join("b"), "logs");
+
+        let left = remove_all_or_nothing(
+            std::slice::from_ref(&home),
+            &[first, second],
+            7,
+            Duration::ZERO,
+        )
+        .expect("nothing refused");
+
+        assert!(left.is_empty(), "{left:?}");
+        assert!(!home.exists());
     }
 }

@@ -229,6 +229,146 @@ async fn a_program_running_from_the_home_blocks_with_exit_code_three() {
     );
 }
 
+/// T182e. What the Windows uninstaller reads is ASCII when it asks: the firewall row's label is
+/// spelled with an em dash, which its log showed as `â€”`, and a plain dash here says the whole
+/// plan went through the same door.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_plan_read_as_plain_text_is_ascii() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+
+    let plain = home.mix_in(
+        home.path(),
+        &[("MIXENGINE_PLAIN_TEXT", "1")],
+        &["uninstall", "--dry-run"],
+    );
+    let usual = home.mix(&["uninstall", "--dry-run"]);
+
+    assert!(
+        stdout(&usual).contains("MixEngine — shared sites"),
+        "{}",
+        stdout(&usual)
+    );
+    assert!(
+        stdout(&plain).contains("MixEngine - shared sites"),
+        "{}",
+        stdout(&plain)
+    );
+    assert!(stdout(&plain).is_ascii(), "{}", stdout(&plain));
+}
+
+/// T182e, D6. On a home nothing is in the way of, the listing the Windows uninstaller's "close
+/// these first" page reads is empty, and the command succeeds.
+#[tokio::test(flavor = "multi_thread")]
+async fn listing_what_is_in_the_way_of_a_plain_home_prints_nothing() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+
+    let printed = home.mix(&["uninstall", "--dry-run", "--blocked"]);
+
+    assert!(printed.status.success(), "{}", stderr(&printed));
+    assert_eq!(stdout(&printed).trim(), "", "{}", stdout(&printed));
+}
+
+/// T182e, D6. A program standing in the home is one line of that listing, naming its pid and the
+/// folder it holds, and the listing still succeeds — it is a question, not a refusal.
+#[cfg(windows)]
+#[tokio::test(flavor = "multi_thread")]
+async fn listing_what_is_in_the_way_names_a_program_standing_in_the_home() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+
+    let directory = home.path().join("t182e-listed");
+    std::fs::create_dir_all(&directory).expect("a directory in the home");
+    let ping = std::path::PathBuf::from(std::env::var("SystemRoot").expect("SystemRoot"))
+        .join(r"System32\PING.EXE");
+    let mut occupant = std::process::Command::new(ping)
+        .args(["-n", "30", "127.0.0.1"])
+        .current_dir(&directory)
+        .stdout(std::process::Stdio::null())
+        .spawn()
+        .expect("start the occupant");
+
+    let printed = home.mix(&["uninstall", "--dry-run", "--blocked"]);
+
+    let _ = occupant.kill();
+    let _ = occupant.wait();
+
+    let said = stdout(&printed);
+    assert!(printed.status.success(), "{}", stderr(&printed));
+    let line = said
+        .lines()
+        .find(|line| line.contains(&format!("(pid {})", occupant.id())))
+        .unwrap_or_else(|| panic!("the occupant is not listed: {said}"));
+    assert!(line.contains("t182e-listed"), "{line}");
+}
+
+/// T182e, D6. `--blocked` without `--dry-run` is refused by the parser: it changes nothing.
+#[test]
+fn listing_what_is_in_the_way_requires_a_dry_run() {
+    let home = Home::new();
+
+    let printed = home.mix(&["uninstall", "--blocked"]);
+
+    assert_eq!(printed.status.code(), Some(2), "{}", stderr(&printed));
+}
+
+/// T182e, D4. A program *standing* in the home — a working directory, which cannot be moved — makes
+/// the dry run exit `3` and name it.
+#[cfg(windows)]
+#[tokio::test(flavor = "multi_thread")]
+async fn a_program_standing_in_the_home_blocks_with_exit_code_three() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+
+    let directory = home.path().join("t182e-standing");
+    std::fs::create_dir_all(&directory).expect("a directory in the home");
+    let ping = std::path::PathBuf::from(std::env::var("SystemRoot").expect("SystemRoot"))
+        .join(r"System32\PING.EXE");
+    let mut occupant = std::process::Command::new(ping)
+        .args(["-n", "30", "127.0.0.1"])
+        .current_dir(&directory)
+        .stdout(std::process::Stdio::null())
+        .spawn()
+        .expect("start the occupant");
+
+    let printed = home.mix(&["uninstall", "--dry-run"]);
+
+    let _ = occupant.kill();
+    let _ = occupant.wait();
+
+    let said = stdout(&printed);
+    assert_eq!(printed.status.code(), Some(3), "{said}");
+    assert!(said.contains("BLOCKED"), "{said}");
+    assert!(said.contains(&format!("(pid {})", occupant.id())), "{said}");
+}
+
+/// T182e, D4. A directory only *watched* — what an editor does — can be moved, so it is not in the
+/// way and the dry run does not block.
+#[cfg(windows)]
+#[tokio::test(flavor = "multi_thread")]
+async fn a_watched_folder_in_the_home_does_not_block() {
+    use std::os::windows::fs::OpenOptionsExt as _;
+
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+
+    let directory = home.path().join("t182e-watched");
+    std::fs::create_dir_all(&directory).expect("a directory in the home");
+    let _watch = std::fs::OpenOptions::new()
+        .access_mode(0x0010_0081)
+        .share_mode(0x7)
+        .custom_flags(0x0200_0000)
+        .open(&directory)
+        .expect("the directory watched");
+
+    let printed = home.mix(&["uninstall", "--dry-run"]);
+
+    let said = stdout(&printed);
+    assert_ne!(printed.status.code(), Some(3), "{said}");
+    assert!(!said.contains("BLOCKED"), "{said}");
+}
+
 /// T182, D9. `--relocated` without `--dry-run` is refused by the parser: it changes nothing, and
 /// must never be mistaken for the act.
 #[test]

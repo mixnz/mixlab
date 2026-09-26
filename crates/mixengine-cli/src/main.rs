@@ -348,6 +348,14 @@ enum Command {
         #[arg(long, requires = "dry_run")]
         relocated: bool,
 
+        /// With `--dry-run`: print only the programs in the way, one per line, with the pid and the
+        /// folder each one uses.
+        ///
+        /// Prints nothing when nothing is in the way. For a program to read: the Windows uninstaller
+        /// shows the list before it removes anything.
+        #[arg(long, requires = "dry_run", conflicts_with = "relocated")]
+        blocked: bool,
+
         /// Answer the confirmation in advance, for a script with nobody at the keyboard.
         #[arg(long, conflicts_with = "dry_run")]
         yes: bool,
@@ -515,11 +523,11 @@ enum ProjectCommand {
         project: WhichProject,
 
         /// A new name.
-        ///
-        /// `id` spelled out because the flattened project argument is also called `name`, and clap
-        /// refuses two arguments under one id — it did so at *parse* time, so `mix project update
-        /// blog --name blogging` panicked instead of running. Found by T77's
-        /// `every_command_is_one_clap_can_build`, which is now what stops the next one.
+        //
+        // `id` spelled out because the flattened project argument is also called `name`, and clap
+        // refuses two arguments under one id — it did so at *parse* time, so `mix project update
+        // blog --name blogging` panicked instead of running. Found by T77's
+        // `every_command_is_one_clap_can_build`, which is now what stops the next one.
         #[arg(long, id = "new_name", value_name = "NAME")]
         name: Option<String>,
 
@@ -756,13 +764,13 @@ enum BlueprintCommand {
 
         /// Start the services this project needs once the apply is done.
         ///
-        /// **This project's, not this home's** — roadmap task **T125**. Which services those are is
-        /// the daemon's answer and not this command's: the sites the apply just made, the database
-        /// and the pool they declare, and the front end they are reached through. Until T125 the
-        /// only set a client could ask for was *every service this home declares*.
-        ///
-        /// Runs after the elevation, because a site served at a name the hosts file does not
-        /// resolve is a browser error with a progress bar in front of it.
+        /// These are the project's sites, the database and pool they use, and the front end they
+        /// are reached through, not every service of this home. They start after the permission
+        /// prompt, so every site's name already resolves when it comes up.
+        //
+        // Roadmap task T125: which services those are is the daemon's answer and not this
+        // command's. Until T125 the only set a client could ask for was every service this home
+        // declares.
         #[arg(long)]
         start: bool,
 
@@ -1253,9 +1261,11 @@ enum ElevationCommand {
 
     /// Ask once, for everything that is waiting.
     ///
-    /// One prompt for the whole queue: `docs/decisions/0005-on-demand-elevation.md` calls asking
-    /// inside a loop a defect. Saying no is a normal answer — the list stays, and this command can
-    /// be run again later.
+    /// One prompt covers the whole list. Saying no is a normal answer: the list stays, and this
+    /// command can be run again later.
+    //
+    // One prompt for the whole queue: `docs/decisions/0005-on-demand-elevation.md` calls asking
+    // inside a loop a defect.
     Grant {
         /// Say yes in advance, instead of being asked.
         ///
@@ -1575,15 +1585,13 @@ enum JobCommand {
         job: i64,
     },
 
-    /// What a job printed — roadmap task **T78a**.
+    /// What a job printed.
     ///
-    /// **Only a job that runs somebody else's program prints anything**, which today is an apply
-    /// running a blueprint's own `[scaffold]` command. Everything else a job does is reported as
-    /// progress and as its result, and this answers nothing for those rather than pretending output
-    /// was lost.
-    ///
-    /// The lines live in memory for as long as the daemon keeps the job's log, so this is what to
-    /// read while one runs rather than a record to come back to a week later.
+    /// Only a job that runs another program prints anything. Today that is an apply running a
+    /// blueprint's `[scaffold]` command; other jobs report progress and a result, and show nothing
+    /// here. The lines stay in memory while the daemon keeps the job, so read them while it runs.
+    //
+    // Roadmap task T78a.
     Logs {
         /// The job, as `mix job list` numbers them.
         #[arg(value_name = "JOB")]
@@ -2411,6 +2419,7 @@ async fn run(args: Args) -> Result<ExitCode, Error> {
             keep_home,
             keep_relocated,
             relocated,
+            blocked,
             yes,
             no_wait,
         } => {
@@ -2419,6 +2428,7 @@ async fn run(args: Args) -> Result<ExitCode, Error> {
                 keep_home,
                 keep_relocated,
                 relocated,
+                blocked,
                 yes,
                 no_wait,
             };
@@ -2994,6 +3004,7 @@ async fn uninstall(
         keep_home,
         keep_relocated,
         relocated,
+        blocked,
         yes,
         no_wait,
     } = wanted;
@@ -3019,6 +3030,9 @@ async fn uninstall(
         // A plan raises nothing whatever this says; sent as it will be sent to the act, so the two
         // calls are visibly one question asked twice.
         grant: false,
+        // T182e: the listing the uninstaller reads while its banner is up names folders and
+        // nothing else, so it does not pay for reading the handle table.
+        skip_holders: relocated,
     };
 
     let planned: UninstallReport = ask(
@@ -3036,6 +3050,19 @@ async fn uninstall(
                 && !item.location.contains(mixengine_platform::tombstone::MARK)
             {
                 emit(&format!("{}\n", item.location))?;
+            }
+        }
+
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    // T182e, D6: the listing the uninstaller's "close these first" page reads — one line per program
+    // in the way, and nothing else. A question and not a refusal, so it succeeds either way. ASCII
+    // only: the uninstaller reads it through `nsExec`, which spells a dash as three other characters.
+    if blocked {
+        for item in &planned.items {
+            if matches!(item.outcome, Removal::Blocked { .. }) {
+                emit(&format!("{}: {}\n", item.what, item.location))?;
             }
         }
 
@@ -3078,6 +3105,8 @@ async fn uninstall(
             // in advance — which is T64's rule met, so the prompt is raised inside the one job the
             // caller is already following.
             grant: true,
+            // And the act always looks: something stuck that appeared since the plan refuses here.
+            skip_holders: false,
             ..query
         }),
     )
@@ -3275,6 +3304,7 @@ struct UninstallAsk {
     keep_home: bool,
     keep_relocated: bool,
     relocated: bool,
+    blocked: bool,
     yes: bool,
     no_wait: bool,
 }
@@ -6492,6 +6522,13 @@ fn rendered(json: bool, answer: &impl serde::Serialize, human: impl FnOnce() -> 
 fn emit(rendered: &str) -> Result<(), Error> {
     let mut stdout = std::io::stdout().lock();
 
+    // T182e: a reader that cannot decode UTF-8 — the Windows uninstaller, through `nsExec` — asks
+    // for ASCII look-alikes of the typography this crate's sentences use.
+    let rendered = match std::env::var_os(PLAIN_TEXT) {
+        Some(_) => plain_text(rendered),
+        None => rendered.to_owned(),
+    };
+
     stdout
         .write_all(rendered.as_bytes())
         .and_then(|()| stdout.flush())
@@ -6502,6 +6539,26 @@ fn emit(rendered: &str) -> Result<(), Error> {
                 format!("cannot write to stdout: {source}"),
             )),
         })
+}
+
+/// Set, to anything, by a caller that reads `mix`'s output in a legacy code page — T182e. The
+/// Windows uninstaller does, since `nsExec` decodes what it captures as ANSI.
+const PLAIN_TEXT: &str = "MIXENGINE_PLAIN_TEXT";
+
+/// `text` with the typographic characters `mix` and the daemon write — dashes, curly quotes, the
+/// ellipsis — spelled in ASCII, and everything else, a person's name in a path included, as it was.
+fn plain_text(text: &str) -> String {
+    let mut plain = String::with_capacity(text.len());
+    for character in text.chars() {
+        match character {
+            '\u{2014}' | '\u{2013}' | '\u{2012}' | '\u{2212}' => plain.push('-'),
+            '\u{2018}' | '\u{2019}' => plain.push('\''),
+            '\u{201C}' | '\u{201D}' => plain.push('"'),
+            '\u{2026}' => plain.push_str("..."),
+            other => plain.push(other),
+        }
+    }
+    plain
 }
 
 /// Put a failure where the person or the program running `mix` will find it.
@@ -6563,6 +6620,23 @@ fn for_seconds(text: &str) -> Result<u64, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// T182e. The uninstaller reads `mix` through `nsExec`, which decodes in the ANSI code page, so
+    /// under `MIXENGINE_PLAIN_TEXT` the typographic characters become their ASCII look-alikes — the
+    /// firewall row read `MixEngine â€” shared sites` in the uninstaller's log.
+    #[test]
+    fn plain_text_spells_typography_in_ascii() {
+        assert_eq!(
+            plain_text("MixEngine — shared sites, 1–2, ‘a’ “b” …"),
+            "MixEngine - shared sites, 1-2, 'a' \"b\" ..."
+        );
+    }
+
+    /// And leaves everything else alone — a path with a non-English name is still that path.
+    #[test]
+    fn plain_text_leaves_other_characters_alone() {
+        assert_eq!(plain_text(r"C:\Users\Nguyễn\x"), r"C:\Users\Nguyễn\x");
+    }
 
     /// **T151.** Nothing is asked, and nothing refused here, unless MixEngine could install it.
     #[test]

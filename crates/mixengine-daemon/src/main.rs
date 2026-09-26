@@ -775,9 +775,7 @@ async fn run() -> anyhow::Result<()> {
         // armed; a failure here is left for the rename to report.
         let _ = std::env::set_current_dir(std::env::temp_dir());
 
-        // `bin/` goes out on its own first: it is on `PATH`, and an editor watching it for commands
-        // would otherwise keep the whole home (T182b, measured with VS Code).
-        remove_what_the_uninstall_armed(armed, &[home.paths.bin().to_path_buf()]);
+        remove_what_the_uninstall_armed(armed, home.paths.bin());
     }
 
     served.map(|_| ())
@@ -800,18 +798,39 @@ async fn run() -> anyhow::Result<()> {
 /// A path that is already gone is not a failure: on a home with no relocation the root removes
 /// everything under it, and a `[paths]` entry pointing inside the root would be removed with it.
 ///
-/// `lifted` go out of the directory holding them first, for a program watching one of them — see
+/// `bin/` goes out on its own first — it is on `PATH`, and an editor watching it would otherwise keep
+/// the whole home (T182b, measured with VS Code) — and on a refusal, whatever else another program
+/// holds that can be moved goes out on its own too (T182e, D5). See
 /// [`remove_all_or_nothing`](mixengine_platform::tombstone::remove_all_or_nothing).
-fn remove_what_the_uninstall_armed(armed: &[PathBuf], lifted: &[PathBuf]) {
+fn remove_what_the_uninstall_armed(armed: &[PathBuf], bin: &Path) {
+    use mixengine_platform::tombstone::{PATIENCE, QUICK, remove_all_or_nothing};
+
     let pid = std::process::id();
     let note = mixengine_platform::tombstone::note_for(pid);
 
     // A note left by an earlier process that had this pid would be read as this one's.
     let _ = std::fs::remove_file(&note);
 
-    let lines: Vec<String> = match mixengine_platform::tombstone::remove_all_or_nothing(
-        armed, lifted, pid,
-    ) {
+    // **Once as before, with `bin/` lifted**, and on a machine nothing else holds that is the whole
+    // of it — no scan is paid for. **On a refusal, look** (T182e, D5): everything was put back, so
+    // what other programs hold is read, whatever can be moved is lifted out too, and the renames go
+    // again with the full patience. What cannot be moved is named below.
+    let mut lifted = vec![bin.to_path_buf()];
+    let mut stuck: Vec<mixengine_platform::occupants::HeldItem> = Vec::new();
+
+    let outcome = match remove_all_or_nothing(armed, &lifted, pid, QUICK) {
+        Err(_) => {
+            let held = mixengine_platform::occupants::held_under(armed, Some(pid));
+            let (movable, unmovable): (Vec<_>, Vec<_>) =
+                held.into_iter().partition(|item| item.movable);
+            lifted.extend(movable.into_iter().map(|item| item.path));
+            stuck = unmovable;
+            remove_all_or_nothing(armed, &lifted, pid, PATIENCE)
+        }
+        done => done,
+    };
+
+    let lines: Vec<String> = match outcome {
         Ok(left) => left
             .into_iter()
             .map(|leftover| {
@@ -823,26 +842,36 @@ fn remove_what_the_uninstall_armed(armed: &[PathBuf], lifted: &[PathBuf]) {
             })
             .collect(),
         // **What refused, and who, before where** (T182b): an uninstaller's log cuts a long line
-        // off, and the path is the part a person can most easily do without. What is left once
-        // the rename has been retried is something that does not let go by itself — a window or
-        // a terminal open inside the home, most often — so that is what the line tells them to
-        // close.
+        // off, and the path is the part a person can most easily do without. The handle table's
+        // answer comes first, since it names the program and says it cannot be moved (T182e);
+        // `first_held`'s is what is left when the table could not see the holder.
         Err(refused) => {
             let seconds = refused.tried_for.as_secs();
-            vec![match &refused.held {
-                Some(held) if !held.by.is_empty() => format!(
+            let named = stuck.iter().find(|item| !item.holders.is_empty());
+            vec![match (named, &refused.held) {
+                (Some(item), _) => format!(
+                    "mixengined: nothing was removed, {} holds {} open, so it cannot be moved or \
+                     deleted (tried for {seconds} s). close it, then run the uninstall again",
+                    item.holders
+                        .iter()
+                        .map(|holder| format!("{} ({})", holder.name, holder.pid))
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    item.path.display()
+                ),
+                (None, Some(held)) if !held.by.is_empty() => format!(
                     "mixengined: nothing was removed, {} holds {} open (tried for {seconds} s). \
                      close it, then run the uninstall again",
                     held.by.join(", "),
                     held.path.display()
                 ),
-                Some(held) => format!(
+                (None, Some(held)) => format!(
                     "mixengined: nothing was removed, another program has {} open, such as File \
                      Explorer or a terminal (tried for {seconds} s). close it, then run the \
                      uninstall again",
                     held.path.display()
                 ),
-                None => format!(
+                (None, None) => format!(
                     "mixengined: nothing was removed, {} could not be moved aside: {} (tried for \
                      {seconds} s). close any program using it, then run the uninstall again",
                     refused.path.display(),
@@ -2334,6 +2363,147 @@ mod tests {
         assert_eq!(
             signalled_budget(Duration::from_millis(1)),
             Duration::from_millis(1)
+        );
+    }
+
+    /// A home with `bin/`, `etc/caddy/` and `data/`, each holding a file, and a relocated `logs/`
+    /// beside it holding `daemon.log` — the layout the real uninstalls met.
+    fn a_home_with_relocated_logs() -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let root = tempfile::tempdir().expect("tempdir");
+        let home = root.path().join("MixEngine");
+        for inner in ["bin", "etc/caddy", "data"] {
+            std::fs::create_dir_all(home.join(inner)).expect("a directory");
+            std::fs::write(home.join(inner).join("file"), b"x").expect("a file");
+        }
+        let logs = root.path().join("mixlab_data").join("logs");
+        std::fs::create_dir_all(&logs).expect("the relocated logs");
+        std::fs::write(logs.join("daemon.log"), b"x").expect("a log");
+        (root, home, logs)
+    }
+
+    /// A program started *apart from* this test process — not its child — the way VS Code, File
+    /// Explorer or a terminal is not the daemon's child: the removal spares the daemon's own
+    /// descendants, so a child of the test would be spared and prove nothing. PowerShell's
+    /// `Start-Process` starts it hidden and exits, which leaves it with no living parent in this
+    /// test's family. `directory` reaches it through the environment rather than inside a quoted
+    /// string. Returns its pid, once it can be seen holding `directory`.
+    fn apart_holding(directory: &Path, start_process: &str) -> u32 {
+        let started = std::process::Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", start_process])
+            .env("T182E_WATCHED", directory)
+            .output()
+            .expect("PowerShell starts the program");
+        let pid: u32 = String::from_utf8_lossy(&started.stdout)
+            .trim()
+            .parse()
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Start-Process gave no pid: {}",
+                    String::from_utf8_lossy(&started.stderr)
+                )
+            });
+
+        let parent = directory.parent().expect("a parent").to_path_buf();
+        let deadline = std::time::Instant::now() + Duration::from_secs(30);
+        while std::time::Instant::now() < deadline {
+            let held = mixengine_platform::occupants::held_under(
+                std::slice::from_ref(&parent),
+                Some(std::process::id()),
+            );
+            if held
+                .iter()
+                .any(|item| item.holders.iter().any(|holder| holder.pid == pid))
+            {
+                return pid;
+            }
+            std::thread::sleep(Duration::from_millis(200));
+        }
+        end(pid);
+        panic!("pid {pid} was never seen holding {}", directory.display());
+    }
+
+    /// A watch on `directory`, from a program apart from this test.
+    fn apart_watching(directory: &Path) -> u32 {
+        apart_holding(
+            directory,
+            "(Start-Process powershell -WindowStyle Hidden -PassThru -ArgumentList \
+             '-NoProfile','-NonInteractive','-Command',\
+             '$w = New-Object IO.FileSystemWatcher $env:T182E_WATCHED; \
+             $w.EnableRaisingEvents = $true; Start-Sleep -Seconds 60').Id",
+        )
+    }
+
+    /// A program apart from this test whose working directory is `directory` — a terminal in it.
+    fn apart_standing_in(directory: &Path) -> u32 {
+        apart_holding(
+            directory,
+            "(Start-Process ping -WindowStyle Hidden -PassThru -WorkingDirectory \
+             $env:T182E_WATCHED -ArgumentList '-n','60','127.0.0.1').Id",
+        )
+    }
+
+    fn end(pid: u32) {
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/PID", &pid.to_string()])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status();
+    }
+
+    /// T182e, D5, end to end: other programs watching `bin/` and `etc/caddy/` — VS Code and File
+    /// Explorer on the machine that found this — do not keep the home. The removal moves both
+    /// watched folders out on its own and every armed directory goes, relocated `logs/` included.
+    #[test]
+    fn watched_folders_do_not_keep_the_home() {
+        // Windows alone refuses the rename of a folder another program holds.
+        if !cfg!(windows) {
+            return;
+        }
+        let (_root, home, logs) = a_home_with_relocated_logs();
+        let watchers = [
+            apart_watching(&home.join("bin")),
+            apart_watching(&home.join("etc").join("caddy")),
+        ];
+
+        remove_what_the_uninstall_armed(&[home.clone(), logs.clone()], &home.join("bin"));
+
+        watchers.into_iter().for_each(end);
+        assert!(!home.exists(), "the home was kept");
+        assert!(!logs.exists(), "the relocated logs were kept");
+        assert!(
+            mixengine_platform::tombstone::tombstones_beside(&home).is_empty(),
+            "{:?}",
+            mixengine_platform::tombstone::tombstones_beside(&home)
+        );
+    }
+
+    /// T182e, D5, end to end: a program standing in `data/` cannot be moved past, and the removal
+    /// puts every directory back — nothing half deleted — and names it in the note `mix` reads.
+    #[test]
+    fn a_program_standing_in_the_home_keeps_all_of_it() {
+        if !cfg!(windows) {
+            return;
+        }
+        let (_root, home, logs) = a_home_with_relocated_logs();
+        let standing = apart_standing_in(&home.join("data"));
+
+        remove_what_the_uninstall_armed(&[home.clone(), logs.clone()], &home.join("bin"));
+
+        let note =
+            std::fs::read_to_string(mixengine_platform::tombstone::note_for(std::process::id()))
+                .unwrap_or_default();
+        end(standing);
+
+        for kept in ["bin/file", "etc/caddy/file", "data/file"] {
+            assert!(home.join(kept).exists(), "{kept} was not put back");
+        }
+        assert!(
+            logs.join("daemon.log").exists(),
+            "the relocated logs were not put back"
+        );
+        assert!(
+            note.contains(&format!("({standing})")),
+            "the note does not name the program standing in data: {note}"
         );
     }
 }
