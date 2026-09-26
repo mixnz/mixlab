@@ -33,6 +33,7 @@
 //!
 //! [T23]: ../../../docs/roadmap/phase-2-runtimes.md
 
+use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
@@ -792,10 +793,21 @@ fn staging_for(into: &Path) -> Result<PathBuf> {
 ///
 /// [`Error::MissingFromArtifact`] naming the first entry that is not there.
 pub fn present(artifact: &Artifact, dir: &Path) -> Result<()> {
-    for (executable, relative) in &artifact.provides {
+    provided(&artifact.provides, &artifact.url, dir)
+}
+
+/// [`present`], for a `provides` map read from somewhere other than an artifact — the marker an
+/// earlier install left, which [`crate::adopt`] checks before it records a directory (T182f).
+///
+/// # Errors
+///
+/// [`Error::MissingFromArtifact`] naming the first entry that is not there, or that would lead
+/// outside `dir`.
+pub fn provided(provides: &BTreeMap<String, String>, url: &str, dir: &Path) -> Result<()> {
+    for (executable, relative) in provides {
         let path = Path::new(relative);
         let missing = || Error::MissingFromArtifact {
-            url: artifact.url.clone(),
+            url: url.to_owned(),
             executable: executable.clone(),
             path: relative.clone(),
         };

@@ -248,7 +248,8 @@ impl ToWire for mixengine_core::Error {
             // T182f. Recorded by hand once it can be checked, or removed.
             Core::UnrecordedInstall { path, .. } => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
-                    "`mix runtime adopt` or `mix package adopt` records it once it can be checked,                      or remove {} and install again",
+                    "`mix runtime adopt` or `mix package adopt` records it once it can be checked, \
+                     or remove {} and install again",
                     path.display()
                 ))
             }
@@ -998,6 +999,23 @@ mod tests {
 
         assert_eq!(error.code, ErrorCode::InvalidArgument);
         assert_eq!(error.hint, None);
+    }
+
+    /// **T182f.** A directory an earlier home left is `already_exists`, and the hint is one sentence
+    /// naming both ways on — with no run of spaces where a line continuation went missing.
+    #[test]
+    fn an_unrecorded_install_names_adopt_and_the_directory() {
+        let error = mixengine_core::Error::UnrecordedInstall {
+            path: PathBuf::from("/data/runtimes/node/24.19.0"),
+            reason: "its marker names another install".to_owned(),
+        }
+        .to_wire();
+
+        assert_eq!(error.code, ErrorCode::AlreadyExists);
+        let hint = error.hint.expect("a hint");
+        assert!(hint.contains("mix runtime adopt"), "{hint}");
+        assert!(hint.contains("/data/runtimes/node/24.19.0"), "{hint}");
+        assert!(!hint.contains("  "), "{hint:?}");
     }
 
     #[test]

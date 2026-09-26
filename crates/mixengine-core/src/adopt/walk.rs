@@ -199,7 +199,16 @@ async fn attempt(
 ) -> Result<std::result::Result<Claimed, Refusal>> {
     let marker = match evidence {
         Evidence::Marker => match marker::read(&found.path) {
-            Some(marker) if marker.names(&found.subject) => marker,
+            // What the install said is not proof its files are still there, nor that its paths stay
+            // inside the directory: the same check the index path makes, against the marker's map.
+            Some(marker) if marker.names(&found.subject) => {
+                if let Err(error) =
+                    crate::install::provided(marker.provides(), marker.url(), &found.path)
+                {
+                    return Ok(Err(Refusal::Incomplete(error.to_string())));
+                }
+                marker
+            }
             Some(_) => return Ok(Err(Refusal::OtherInstall)),
             None => return Ok(Err(Refusal::NoMarker)),
         },
@@ -527,6 +536,32 @@ mod tests {
                 .expect("rows")
                 .is_empty()
         );
+    }
+
+    /// A marker is what an install said, not proof its files are still there: a directory whose
+    /// program is gone, or whose marker points outside it, is left rather than recorded as a runtime
+    /// that cannot run.
+    #[tokio::test]
+    async fn a_marker_whose_files_are_missing_or_outside_is_left() {
+        let (_temp, store, paths) = home().await;
+
+        let gone = a_node(&paths, "24.19.0");
+        on_disk(&gone, true);
+        std::fs::remove_file(gone.path.join("node")).expect("the program");
+
+        let mut outside = a_node(&paths, "22.0.0");
+        outside.provides = [("node".to_owned(), "../../elsewhere/node".to_owned())]
+            .into_iter()
+            .collect();
+        on_disk(&outside, true);
+
+        let walked = walk(&store, &paths, None, &no_smoke).await.expect("a walk");
+
+        assert!(walked.claimed.is_empty(), "{walked:?}");
+        assert_eq!(walked.left.len(), 2, "{walked:?}");
+        for left in &walked.left {
+            assert!(left.reason.contains("does not hold"), "{}", left.reason);
+        }
     }
 
     /// Without a marker and without an index there is nothing to go on, and nothing is recorded:

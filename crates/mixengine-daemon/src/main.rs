@@ -1905,7 +1905,8 @@ async fn serve(
                 Err(error) => {
                     tracing::info!(
                         %error,
-                        "installs an earlier home left without a marker wait for the next start:                          the package index could not be read"
+                        "installs an earlier home left without a marker wait for the next start: \
+                         the package index could not be read"
                     );
                     return;
                 }

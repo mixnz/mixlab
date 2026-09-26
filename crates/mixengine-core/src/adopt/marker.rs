@@ -145,6 +145,24 @@ impl Marker {
             Self::Package(marker) => &marker.sha256,
         }
     }
+
+    /// Which URL the marker says the install came from.
+    #[must_use]
+    pub fn url(&self) -> &str {
+        match self {
+            Self::Runtime(marker) => &marker.url,
+            Self::Package(marker) => &marker.url,
+        }
+    }
+
+    /// What the marker says the directory holds.
+    #[must_use]
+    pub fn provides(&self) -> &BTreeMap<String, String> {
+        match self {
+            Self::Runtime(marker) => &marker.provides,
+            Self::Package(marker) => &marker.provides,
+        }
+    }
 }
 
 impl RuntimeMarker {
