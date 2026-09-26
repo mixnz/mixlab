@@ -1,5 +1,6 @@
 //! `mixengined` — the only process that owns state. Clients are thin; this is not.
 
+mod adopt;
 mod api;
 mod autostart;
 mod bin_scan;

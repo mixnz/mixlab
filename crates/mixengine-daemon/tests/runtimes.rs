@@ -1088,3 +1088,27 @@ async fn refresh_bypasses_a_fresh_cache() {
         "`refresh` reaches the registry instead of answering from the cache: {refreshed}"
     );
 }
+
+/// **T182f, D1.** An install leaves its marker beside what it unpacked, naming what was installed,
+/// so a home that loses its database can record the directory again.
+#[tokio::test]
+async fn an_installed_runtime_carries_its_marker() {
+    let fixture = Fixture::start().await;
+    let installed = fixture.client().await.install(VERSION).await;
+    assert_eq!(installed["state"], "succeeded", "{installed}");
+
+    let marker: Value = serde_json::from_slice(
+        &std::fs::read(
+            fixture
+                .installed_at(VERSION)
+                .join(".mixengine-install.json"),
+        )
+        .expect("the marker is in the install directory"),
+    )
+    .expect("the marker is JSON");
+
+    assert_eq!(marker["what"], "runtime", "{marker}");
+    assert_eq!(marker["kind"], "php", "{marker}");
+    assert_eq!(marker["version"], VERSION, "{marker}");
+    assert_eq!(marker["sha256"], fixture.packed.sha256, "{marker}");
+}

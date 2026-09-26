@@ -535,37 +535,79 @@ impl Runtimes {
             paths::create_dir(parent).map_err(|error| error.to_wire())?;
         }
 
+        // Assembled before the install rather than after it, because the marker the install leaves
+        // in the directory is this row (T182f, D1).
+        let installation = runtimes::Installation {
+            kind,
+            version: version.clone(),
+            channel: package.channel.into(),
+            path: into.clone(),
+            bytes: selection.artifact.size,
+            url: selection.artifact.url.clone(),
+            sha256: selection.artifact.sha256.clone(),
+            // Recorded because the shim reads it, months later and with nothing to ask: which file
+            // inside the directory is `php` is the publisher's layout, not ours.
+            provides: selection.artifact.provides.clone(),
+            // The other half of what the index knows and the daemon would otherwise consult once and
+            // forget. See `migrations-archive/0005_runtime_extensions.sql`.
+            extension_dir: selection.artifact.extension_dir.clone(),
+            extensions: selection.artifact.extensions.clone(),
+        };
+        let marker = mixengine_core::adopt::marker::Marker::runtime(&installation).encode();
+
         let smoke = runtimes::smoke_test(kind);
-        let installed = self
+        let installed = match self
             .fetcher
             .installer
-            .install(
+            .install_marked(
                 selection.artifact,
                 &into,
                 smoke.as_ref(),
                 mixengine_core::install::NotAnArchive::Refuse,
+                Some(&marker),
                 handle,
             )
             .await
-            .map_err(|error| error.to_wire())?;
+        {
+            Ok(installed) => installed,
+
+            // **T182f, D2.** The directory is there and has no row: an earlier home installed it.
+            Err(mixengine_core::Error::AlreadyInstalled { path }) => {
+                let found = mixengine_core::adopt::walk::Found {
+                    subject: mixengine_core::adopt::Subject::Runtime {
+                        kind,
+                        version: version.clone(),
+                    },
+                    path,
+                };
+
+                return match crate::adopt::claim_offered(
+                    &self.store,
+                    &found,
+                    &selection.artifact.sha256,
+                    handle,
+                )
+                .await?
+                {
+                    mixengine_core::adopt::walk::Claimed::Runtime(summary) => {
+                        self.after_recorded(kind, version, summary).await
+                    }
+                    mixengine_core::adopt::walk::Claimed::Package(_) => Err(Error::new(
+                        ErrorCode::Internal,
+                        "a runtime directory was recorded as a package",
+                    )),
+                };
+            }
+
+            Err(error) => return Err(error.to_wire()),
+        };
 
         let record = runtimes::remember(
             &self.store,
             &runtimes::Installation {
-                kind,
-                version: version.clone(),
-                channel: package.channel.into(),
                 path: installed.path.clone(),
                 bytes: installed.bytes,
-                url: selection.artifact.url.clone(),
-                sha256: selection.artifact.sha256.clone(),
-                // Recorded because the shim reads it, months later and with nothing to ask: which
-                // file inside the directory is `php` is the publisher's layout, not ours.
-                provides: selection.artifact.provides.clone(),
-                // The other half of what the index knows and the daemon would otherwise consult
-                // once and forget. See `migrations-archive/0005_runtime_extensions.sql`.
-                extension_dir: selection.artifact.extension_dir.clone(),
-                extensions: selection.artifact.extensions.clone(),
+                ..installation
             },
             Timestamp::from_system_time(SystemTime::now()),
         )
@@ -591,6 +633,23 @@ impl Runtimes {
             }
         };
 
+        self.after_recorded(kind, version, summary).await
+    }
+
+    /// What every newly recorded runtime needs: for a JDK this home's authority, a pool and its
+    /// activation port, and its `conf.d`. Shared by an install, an adopt and the start walk — roadmap
+    /// task **T182f**.
+    ///
+    /// # Errors
+    ///
+    /// Only when the summary cannot be encoded: everything else here is reported and left for the
+    /// next daemon start, on the reasoning each step gives.
+    pub(crate) async fn after_recorded(
+        &self,
+        kind: RuntimeKind,
+        version: &PackageVersion,
+        summary: RuntimeSummary,
+    ) -> Result<serde_json::Value, Error> {
         // **After the row and never before it**, because the pool points at that row: this is the
         // post-install hook `docs/features/runtime-versions.md` describes, and it is the same
         // idempotent call the daemon makes at boot. A failure here is reported and does not undo the

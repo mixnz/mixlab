@@ -762,3 +762,25 @@ async fn refresh_bypasses_a_fresh_cache() {
         "`refresh` reaches the registry instead of answering from the cache: {refreshed}"
     );
 }
+
+/// **T182f, D1.** A package install leaves its marker too, for the same reason a runtime does.
+#[tokio::test]
+async fn an_installed_package_carries_its_marker() {
+    let fixture = Fixture::start().await;
+    let installed = fixture.client().await.install(VERSION).await;
+    assert_eq!(installed["state"], "succeeded", "{installed}");
+
+    let marker: Value = serde_json::from_slice(
+        &std::fs::read(
+            fixture
+                .installed_at(VERSION)
+                .join(".mixengine-install.json"),
+        )
+        .expect("the marker is in the install directory"),
+    )
+    .expect("the marker is JSON");
+
+    assert_eq!(marker["what"], "package", "{marker}");
+    assert_eq!(marker["package"], PACKAGE, "{marker}");
+    assert_eq!(marker["version"], VERSION, "{marker}");
+}
