@@ -178,7 +178,8 @@ X11 or sound, and `libz` — the one nothing starts without — is what the smok
    Not `run/`, which is scratch belonging to the daemon currently running: a partial download's whole
    value is surviving a restart, and it is named after the artifact's hash so the same file offered
    by a mirror and by the default host resumes one download rather than starting two.
-3. Extract to a staging dir, then atomic-rename into `runtimes/<kind>/<version>/`.
+3. Extract to a staging dir, write `.mixengine-install.json` into it (the row about to be recorded,
+   T182f), then atomic-rename into `runtimes/<kind>/<version>/`.
 4. Post-install hook (per kind): PHP — write the base `php.ini` from our template and create the
    `php-fpm@<version>` service record. **The service half landed with T32 and is written differently
    from what this step implies**: it is not a PHP-shaped branch in the installer but a walk over the
@@ -198,6 +199,15 @@ X11 or sound, and `libz` — the one nothing starts without — is what the smok
    `bin/`.
 
 Failures roll back the staging directory. A half-extracted version must never appear in `list`.
+
+**A directory without a row** — T182f. A home that lost its database (an uninstall that kept the
+folders `[paths]` moved elsewhere, then a fresh install pointed at them) finds versions on disk it
+has no row for. Each daemon start records them: by the marker every install leaves, and for an
+install older than the marker by the package index, once every file the build provides is there and
+the smoke test passes. An install that finds its directory already there records it instead of
+refusing when the marker names that build. What cannot be checked is named by `mix doctor` and left
+alone; `mix runtime adopt` and `mix package adopt` record one by hand. Design:
+[T182f](../specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md).
 
 **What the machine lacks is read first** — phase 18. `runtime.requirements` answers what a version
 lacks here and what can be done about each: the Microsoft Visual C++ Redistributable can be installed
