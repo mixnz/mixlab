@@ -36,11 +36,14 @@ async fn every_check_is_reported_and_named() {
 
     assert_eq!(
         report["checks"].as_array().map(Vec::len),
-        Some(23),
+        Some(24),
         "{report}"
     );
 
     let table = stdout(&home.mix(&["doctor"]));
+
+    // T182f's: installs an earlier home left on disk, which only this command would ever name.
+    assert!(table.contains("not recorded"), "{table}");
 
     // T76's, and the reason it is asserted here rather than only in the daemon's own tests: the
     // check reports a rule *Windows* wrote for `mixengined.exe`, and a client that dropped it would

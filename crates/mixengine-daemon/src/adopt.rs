@@ -45,3 +45,57 @@ pub(crate) async fn claim_offered(
 
     Ok(claimed)
 }
+
+/// The start's first pass: directories whose own marker names them — spec D3.
+///
+/// Offline and a directory listing long, so it runs before the start-time repairs, which then give
+/// a recorded PHP its pool as they would any other. Reported and never fatal: a home that cannot
+/// record what it found is one whose install buttons still refuse, which is where it was before.
+pub(crate) async fn offline(store: &Store, paths: &mixengine_core::Paths) -> walk::Walked {
+    run(store, paths, None).await
+}
+
+/// The start's second pass: directories from before markers existed, checked against the index.
+pub(crate) async fn with_index(
+    store: &Store,
+    paths: &mixengine_core::Paths,
+    index: &mixengine_core::index::Index,
+) -> walk::Walked {
+    match mixengine_core::index::Target::host() {
+        Some(target) => run(store, paths, Some((index, target))).await,
+        None => walk::Walked::default(),
+    }
+}
+
+async fn run(
+    store: &Store,
+    paths: &mixengine_core::Paths,
+    index: Option<(&mixengine_core::index::Index, mixengine_core::index::Target)>,
+) -> walk::Walked {
+    match walk::walk(store, paths, index, &smoke_for).await {
+        Ok(walked) => {
+            for claimed in &walked.claimed {
+                tracing::info!(?claimed, "recorded an install an earlier home left on disk");
+            }
+            walked
+        }
+        Err(error) => {
+            tracing::warn!(%error, "what an earlier home left on disk could not be recorded");
+            walk::Walked::default()
+        }
+    }
+}
+
+/// The smoke test an install of this would have run.
+fn smoke_for(
+    subject: &mixengine_core::adopt::Subject,
+) -> Option<mixengine_core::install::SmokeTest> {
+    match subject {
+        mixengine_core::adopt::Subject::Runtime { kind, .. } => {
+            mixengine_core::runtimes::smoke_test(*kind)
+        }
+        mixengine_core::adopt::Subject::Package { package, .. } => crate::services::catalogue()
+            .recipe(package)
+            .and_then(|recipe| recipe.smoke_test()),
+    }
+}

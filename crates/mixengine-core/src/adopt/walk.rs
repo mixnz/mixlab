@@ -307,7 +307,7 @@ pub async fn walk(
     store: &Store,
     paths: &Paths,
     index: Option<(&Index, Target)>,
-    smoke_for: &dyn Fn(&Subject) -> Option<SmokeTest>,
+    smoke_for: &(dyn Fn(&Subject) -> Option<SmokeTest> + Sync),
 ) -> Result<Walked> {
     let mut walked = Walked::default();
 

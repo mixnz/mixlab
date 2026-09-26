@@ -1690,6 +1690,10 @@ async fn serve(
 
     crate::metrics::sampler::start(sampler, shutdown.clone());
 
+    // **What an earlier home left on disk, and marked, is recorded first** — roadmap task T182f.
+    // Before the repairs below, so a recorded PHP gets its pool from them like any other.
+    let adopted = adopt::offline(store, paths).await;
+
     // **Every installed runtime gets the service its recipe says it should have** — roadmap task
     // T32. Idempotent and run here as well as after an install, which is what gives a PHP installed
     // by an earlier build its pool with no data migration and repairs a home whose row somebody
@@ -1881,7 +1885,57 @@ async fn serve(
         Arc::clone(&fetcher),
         Arc::clone(&services),
     );
-    let packages = packages::Packages::new(paths, store, Arc::clone(&jobs), fetcher);
+    let packages = packages::Packages::new(paths, store, Arc::clone(&jobs), Arc::clone(&fetcher));
+
+    // **And what an earlier home left without a marker** — roadmap task T182f. It needs the index,
+    // which may be a network fetch, so it runs in the background and never holds a start up. Only
+    // when the first pass left something: on an ordinary start there is nothing to ask the index.
+    if !adopted.left.is_empty() {
+        let (store, paths) = (store.clone(), paths.clone());
+        let (runtimes, packages, shims) = (
+            Arc::clone(&runtimes),
+            Arc::clone(&packages),
+            Arc::clone(&shims),
+        );
+        let fetcher = Arc::clone(&fetcher);
+
+        tokio::spawn(async move {
+            let catalogue = match fetcher.index.catalogue().await {
+                Ok(catalogue) => catalogue,
+                Err(error) => {
+                    tracing::info!(
+                        %error,
+                        "installs an earlier home left without a marker wait for the next start:                          the package index could not be read"
+                    );
+                    return;
+                }
+            };
+
+            let walked = adopt::with_index(&store, &paths, &catalogue.index).await;
+            if walked.claimed.is_empty() {
+                return;
+            }
+
+            for claimed in walked.claimed {
+                let settled = match claimed {
+                    mixengine_core::adopt::walk::Claimed::Runtime(summary) => {
+                        let (kind, version) = (summary.kind, summary.version.clone());
+                        runtimes.after_recorded(kind, &version, summary).await
+                    }
+                    mixengine_core::adopt::walk::Claimed::Package(summary) => {
+                        packages.after_recorded(&summary)
+                    }
+                };
+                if let Err(error) = settled {
+                    tracing::warn!(%error, "a recorded install could not be given what it needs");
+                }
+            }
+
+            if let Err(error) = shims.refresh().await {
+                tracing::warn!(%error, "bin/ could not be refreshed after recording installs");
+            }
+        });
+    }
 
     if sources.index.url != mixengine_core::index::DEFAULT_URL {
         // Worth a line of its own: from here on this daemon trusts a publisher that is not us, and
