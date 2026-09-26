@@ -539,6 +539,60 @@ async fn installing_over_a_version_that_is_already_there_is_refused() {
     );
 }
 
+/// **T182f, D1.** The marker is in the directory the moment the directory exists: written into the
+/// staging directory, so the rename that makes the install visible carries it.
+#[tokio::test]
+async fn an_install_leaves_the_marker_it_was_given() {
+    let fixture = Fixture::start().await;
+    let artifact = fixture.publish(&plain(Packing::TarGz), &[]);
+
+    fixture
+        .installer
+        .install_marked(
+            &artifact,
+            &fixture.target(),
+            None,
+            mixengine_core::install::NotAnArchive::Refuse,
+            Some(b"{\"marker\":true}\n"),
+            &Recorder::default(),
+        )
+        .await
+        .expect("an install");
+
+    assert_eq!(
+        std::fs::read(
+            fixture
+                .target()
+                .join(mixengine_core::adopt::marker::FILE_NAME)
+        )
+        .expect("the marker"),
+        b"{\"marker\":true}\n"
+    );
+}
+
+/// And an install that fails leaves nothing, the marker included.
+#[tokio::test]
+async fn a_failed_install_leaves_no_marker_behind() {
+    let fixture = Fixture::start().await;
+    let mut wrong = fixture.publish(&plain(Packing::TarGz), &[]);
+    wrong.sha256 = "00".repeat(32);
+
+    fixture
+        .installer
+        .install_marked(
+            &wrong,
+            &fixture.target(),
+            None,
+            mixengine_core::install::NotAnArchive::Refuse,
+            Some(b"{}\n"),
+            &Recorder::default(),
+        )
+        .await
+        .expect_err("a checksum that does not match");
+
+    assert!(!fixture.target().exists(), "nothing was renamed into place");
+}
+
 /// Refused before the download rather than after it, which costs a round trip instead of an
 /// artifact.
 #[tokio::test]
