@@ -531,6 +531,37 @@ impl Packages {
         })
     }
 
+    /// `package.adopt` — record a version that is on disk without a row — roadmap task **T182f**.
+    ///
+    /// A version already recorded answers its row, so asking twice is not an error.
+    ///
+    /// # Errors
+    ///
+    /// As [`crate::adopt::by_hand`].
+    pub(crate) async fn adopt(&self, target: &PackageTarget) -> Result<PackageSummary, Error> {
+        match packages::record(&self.store, &target.package, &target.version).await {
+            Ok(summary) => return Ok(summary),
+            Err(mixengine_core::Error::NotFound { .. }) => {}
+            Err(error) => return Err(error.to_wire()),
+        }
+
+        let found = mixengine_core::adopt::walk::Found {
+            subject: mixengine_core::adopt::Subject::Package {
+                package: target.package.clone(),
+                version: target.version.clone(),
+            },
+            path: packages::directory(&self.paths, &target.package, &target.version),
+        };
+
+        match crate::adopt::by_hand(&self.store, &found, &self.fetcher.index).await? {
+            mixengine_core::adopt::walk::Claimed::Package(summary) => Ok(summary),
+            mixengine_core::adopt::walk::Claimed::Runtime(_) => Err(Error::new(
+                ErrorCode::Internal,
+                "a package directory was recorded as a runtime",
+            )),
+        }
+    }
+
     /// `package.uninstall` — refuse while anything is an instance of it, then remove the directory
     /// and the row.
     ///

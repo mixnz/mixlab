@@ -1206,3 +1206,50 @@ async fn a_directory_that_cannot_be_recorded_is_named_by_doctor_and_kept() {
     }
     assert!(stray.is_dir(), "nothing was deleted");
 }
+
+/// **T182f, by hand.** A directory the start walk left — here because its marker names another
+/// version — is recorded by `runtime.adopt` once the index vouches for it, and its marker is put
+/// right. A version already recorded answers its row, and one not on disk is refused by name.
+#[tokio::test]
+async fn adopting_one_version_checks_it_against_the_index() {
+    let mut fixture = Fixture::start().await;
+    fixture.client().await.install(VERSION).await;
+    let marker = fixture
+        .installed_at(VERSION)
+        .join(".mixengine-install.json");
+    let written = std::fs::read_to_string(&marker).expect("the marker");
+    std::fs::write(&marker, written.replace(VERSION, "8.3.32")).expect("a wrong marker");
+
+    fixture.reinstall().await;
+    let mut client = fixture.client().await;
+    assert_eq!(
+        client.call("runtime.list_installed", json!({})).await["runtimes"],
+        json!([]),
+        "a marker naming another version is not recorded on its own"
+    );
+
+    let adopted = client
+        .call("runtime.adopt", json!({"kind": "php", "version": VERSION}))
+        .await;
+    assert_eq!(adopted["version"], VERSION, "{adopted}");
+    assert_eq!(adopted["default"], true, "{adopted}");
+    assert!(
+        std::fs::read_to_string(&marker)
+            .expect("the marker")
+            .contains(VERSION),
+        "the marker now names what is there"
+    );
+
+    let again = client
+        .call("runtime.adopt", json!({"kind": "php", "version": VERSION}))
+        .await;
+    assert_eq!(
+        again["version"], VERSION,
+        "adopting it twice answers its row: {again}"
+    );
+
+    let refused = client
+        .refuse("runtime.adopt", json!({"kind": "php", "version": "9.9.7"}))
+        .await;
+    assert_eq!(refused["data"]["code"], "not_found", "{refused}");
+}

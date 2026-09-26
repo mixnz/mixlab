@@ -784,3 +784,28 @@ async fn an_installed_package_carries_its_marker() {
     assert_eq!(marker["package"], PACKAGE, "{marker}");
     assert_eq!(marker["version"], VERSION, "{marker}");
 }
+
+/// **T182f.** `package.adopt` answers a recorded version's row, and refuses one not on disk by name.
+#[tokio::test]
+async fn adopting_a_package_answers_its_row_or_says_it_is_not_there() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    let installed = client.install(VERSION).await;
+    assert_eq!(installed["state"], "succeeded", "{installed}");
+
+    let adopted = client
+        .call(
+            "package.adopt",
+            json!({"package": PACKAGE, "version": VERSION}),
+        )
+        .await;
+    assert_eq!(adopted["version"], VERSION, "{adopted}");
+
+    let refused = client
+        .refuse(
+            "package.adopt",
+            json!({"package": PACKAGE, "version": "9.9.7"}),
+        )
+        .await;
+    assert_eq!(refused["data"]["code"], "not_found", "{refused}");
+}

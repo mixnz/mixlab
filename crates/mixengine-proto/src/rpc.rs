@@ -272,6 +272,14 @@ pub mod method {
     /// [`RuntimeSummary`](crate::RuntimeSummary) that is now the default.
     pub const RUNTIME_SET_DEFAULT: &str = "runtime.set_default";
 
+    /// Record a version that is on disk without a row, such as one an earlier home left — roadmap
+    /// task **T182f**. Takes [`RuntimeTarget`](crate::RuntimeTarget), answers the
+    /// [`RuntimeSummary`](crate::RuntimeSummary) now recorded, or the one already there.
+    ///
+    /// Checked by its marker, or against the package index: every file the build provides is there,
+    /// and it runs. Nothing is downloaded and nothing on disk is removed.
+    pub const RUNTIME_ADOPT: &str = "runtime.adopt";
+
     /// What one installed version can load, and what it does load. Takes
     /// [`RuntimeTarget`](crate::RuntimeTarget), answers
     /// [`ExtensionList`](crate::ExtensionList).
@@ -460,6 +468,12 @@ pub mod method {
     /// **Refused while any service is an instance of it**, naming them: `services.package_id` is
     /// `ON DELETE RESTRICT`, and what a person does about it is [`SERVICE_DELETE`].
     pub const PACKAGE_UNINSTALL: &str = "package.uninstall";
+
+    /// Record a version that is on disk without a row — roadmap task **T182f**. Takes
+    /// [`PackageTarget`](crate::PackageTarget), answers the
+    /// [`PackageSummary`](crate::PackageSummary) now recorded, or the one already there. Checked
+    /// as [`RUNTIME_ADOPT`] checks a runtime.
+    pub const PACKAGE_ADOPT: &str = "package.adopt";
 
     /// Create a service from an installed package. Takes
     /// [`ServiceCreate`](crate::ServiceCreate), answers the

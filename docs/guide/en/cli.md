@@ -163,6 +163,21 @@ mix runtime default <RUNTIME> <VERSION>
 | `<RUNTIME>` | Which language |
 | `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and deliberately not a constraint like `8.3`, even now that the daemon can read one: choosing a version from a range is *resolution*, it answers with what is installed, and none of these three commands is asking that question — an install picking `8.3`'s newest would be picking between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
 
+### mix runtime adopt
+
+Record a version that is on disk but not listed, such as one an earlier install left.
+
+Nothing is downloaded. The folder is checked against the package index first.
+
+```
+mix runtime adopt <RUNTIME> <VERSION>
+```
+
+| Flag | What it does |
+| --- | --- |
+| `<RUNTIME>` | Which language |
+| `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and deliberately not a constraint like `8.3`, even now that the daemon can read one: choosing a version from a range is *resolution*, it answers with what is installed, and none of these three commands is asking that question — an install picking `8.3`'s newest would be picking between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
+
 ### mix runtime ext
 
 Which extensions an installed build loads.
@@ -292,6 +307,21 @@ frees it, and deleting a service keeps its data directory.
 
 ```
 mix package uninstall <PACKAGE> <VERSION>
+```
+
+| Flag | What it does |
+| --- | --- |
+| `<PACKAGE>` | Which package, as `mix package available` lists it |
+| `<VERSION>` | Which version, exactly as `mix package available` lists it |
+
+### mix package adopt
+
+Record a version that is on disk but not listed, such as one an earlier install left.
+
+Nothing is downloaded. The folder is checked against the package index first.
+
+```
+mix package adopt <PACKAGE> <VERSION>
 ```
 
 | Flag | What it does |

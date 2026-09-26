@@ -99,3 +99,64 @@ fn smoke_for(
             .and_then(|recipe| recipe.smoke_test()),
     }
 }
+
+/// `runtime.adopt` and `package.adopt`: record one directory a person named — spec D3, by hand.
+///
+/// Its marker first. When that is missing, or names another install, the package index is asked:
+/// a person asking for this directory by name is what lets the index overrule a marker, which the
+/// start walk never does on its own. The index check rewrites the marker to match what is there.
+///
+/// # Errors
+///
+/// `not_found` when nothing is on disk there; the wire form of
+/// [`mixengine_core::Error::UnrecordedInstall`] when neither check passes; the errors of reading the
+/// index and of recording.
+pub(crate) async fn by_hand(
+    store: &Store,
+    found: &Found,
+    index: &mixengine_core::index::Client,
+) -> Result<Claimed, Error> {
+    if !found.path.is_dir() {
+        let (name, version) = (found.subject.name(), found.subject.version());
+        let command = match &found.subject {
+            mixengine_core::adopt::Subject::Runtime { .. } => "runtime",
+            mixengine_core::adopt::Subject::Package { .. } => "package",
+        };
+        return Err(Error::new(
+            mixengine_proto::ErrorCode::NotFound,
+            format!(
+                "{name} {version} is not on disk at {}",
+                found.path.display()
+            ),
+        )
+        .with_hint(format!(
+            "`mix {command} install {name} {version}` installs it"
+        )));
+    }
+
+    match walk::claim(store, found, &Evidence::Marker).await {
+        Ok(claimed) => return Ok(claimed),
+        Err(mixengine_core::Error::UnrecordedInstall { .. }) => {}
+        Err(error) => return Err(error.to_wire()),
+    }
+
+    let catalogue = index.catalogue().await.map_err(|error| error.to_wire())?;
+    let Some(target) = mixengine_core::index::Target::host() else {
+        return Err(Error::new(
+            mixengine_proto::ErrorCode::UnsupportedPlatform,
+            "this build runs on a system the package index has no vocabulary for",
+        ));
+    };
+
+    walk::claim(
+        store,
+        found,
+        &Evidence::Index {
+            index: &catalogue.index,
+            target,
+            smoke: smoke_for(&found.subject),
+        },
+    )
+    .await
+    .map_err(|error| error.to_wire())
+}

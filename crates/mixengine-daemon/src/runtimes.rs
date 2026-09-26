@@ -924,6 +924,41 @@ impl Runtimes {
             .map_err(|error| error.to_wire())
     }
 
+    /// `runtime.adopt` — record a version that is on disk without a row — roadmap task **T182f**.
+    ///
+    /// A version already recorded answers its row, so asking twice is not an error.
+    ///
+    /// # Errors
+    ///
+    /// As [`crate::adopt::by_hand`].
+    pub(crate) async fn adopt(&self, target: &RuntimeTarget) -> Result<RuntimeSummary, Error> {
+        match runtimes::record(&self.store, target.kind, &target.version).await {
+            Ok(summary) => return Ok(summary),
+            Err(mixengine_core::Error::NotFound { .. }) => {}
+            Err(error) => return Err(error.to_wire()),
+        }
+
+        let found = mixengine_core::adopt::walk::Found {
+            subject: mixengine_core::adopt::Subject::Runtime {
+                kind: target.kind,
+                version: target.version.clone(),
+            },
+            path: runtimes::directory(&self.paths, target.kind, &target.version),
+        };
+
+        match crate::adopt::by_hand(&self.store, &found, &self.fetcher.index).await? {
+            mixengine_core::adopt::walk::Claimed::Runtime(summary) => {
+                self.after_recorded(target.kind, &target.version, summary.clone())
+                    .await?;
+                Ok(summary)
+            }
+            mixengine_core::adopt::walk::Claimed::Package(_) => Err(Error::new(
+                ErrorCode::Internal,
+                "a runtime directory was recorded as a package",
+            )),
+        }
+    }
+
     /// `runtime.resolve` — which installed version this directory uses, and why that one.
     ///
     /// **Every step of the order happens here** ([`mixengine_core::resolve`]), including the two
