@@ -5,6 +5,7 @@ task:
   - T182f
   - T182g
   - T182h
+  - T182i
 ---
 
 # T182f–h — A reinstall finds what the last one kept
@@ -171,6 +172,24 @@ On a start whose database has just been created, the daemon looks in the configu
 - A home with nothing relocated behaves exactly as today: the uninstaller removes it whole, and there
   is nothing to find.
 - `mix`, `mixengined` and MixLab all reach the same methods. The window adds no capability of its own.
+
+## MixLab
+
+Most of this happens in the daemon, so a person in the window sees it without asking: a runtime or
+package recorded at start is simply installed in the Runtimes screen, and *Install* on a version
+whose marked directory is there records it rather than failing. The doctor line appears in
+Settings → Doctor. What the window adds:
+
+- **T182g — built.** The Dashboard shows *Service data from an earlier install* while
+  `service.found` answers rows, and *Review* opens a list with **Adopt** where the answer carries
+  `opens_with`, and the daemon's reason where it does not.
+- **T182i — a directory the start could not check.** `runtime.adopt` and `package.adopt` reach only
+  `mix` today (listed as known gaps in `apps/desktop/client-surface-exceptions.json`). The Runtimes
+  screen, and the packages list, gain a row for a version on disk but not recorded, with the daemon's
+  reason and **Adopt**; an `already_exists` from *Install* offers the same button. That needs a
+  daemon method listing those directories, since the window may not parse the doctor's sentence.
+- **T182h.** The first-run storage picker shows *Restore from your earlier install* when
+  `home.previous` answers, with the counts it gives.
 
 ## Tests
 

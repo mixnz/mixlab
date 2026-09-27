@@ -1,0 +1,33 @@
+{
+  "cliOnly": {
+    "update.check": "ADR 0056: MixEngine's own updater is `mix self-update`; MixLab updates itself through its own updater.",
+    "update.status": "ADR 0056: MixEngine's own updater is `mix self-update`; MixLab updates itself through its own updater.",
+    "update.decide": "ADR 0056: MixEngine's own updater is `mix self-update`; MixLab updates itself through its own updater.",
+    "update.apply": "ADR 0056: MixEngine's own updater is `mix self-update`; MixLab updates itself through its own updater.",
+    "update.hand_over": "ADR 0056: MixEngine's own updater is `mix self-update`; MixLab updates itself through its own updater.",
+    "update.finish": "ADR 0056: MixEngine's own updater is `mix self-update`; MixLab updates itself through its own updater.",
+    "daemon.uninstall": "T182: the Windows uninstaller drives it through `mix uninstall`; MixLab's Uninstall section was removed in v0.0.8.",
+    "daemon.uninstall_plan": "T182: the Windows uninstaller drives it through `mix uninstall`; MixLab's Uninstall section was removed in v0.0.8.",
+    "daemon.version": "The handshake `mix` makes before anything else; the window reads daemon.status, which carries the version.",
+    "database.open": "Hands an instance to an installed desktop database client; MixLab is that client and opens its own db tab from database.credentials.",
+    "job.wait": "A blocking wait for a terminal; the window follows jobs through job.status and the event stream.",
+    "service.status": "One row of service.list; the window reads the list and the event stream.",
+    "metrics.snapshot": "A one-off reading for `mix`; the window draws the live metrics stream.",
+    "runtime.resolve": "Answers for a working directory, which a terminal has and the window does not; the window shows a project's pins from project.show.",
+    "path.rescan": "The daemon rescans every `[bin] rescan_seconds`; the command is for a person in a terminal who does not want to wait.",
+    "extension.inspect": "Reads a local extension.toml for an extension's author; the window installs from the registry."
+  },
+  "knownGaps": {
+    "runtime.adopt": "T182f: the Runtimes screen has no row for a version on disk but not recorded, and no Adopt.",
+    "package.adopt": "T182f: the packages list has no row for a version on disk but not recorded, and no Adopt.",
+    "site.start": "The Sites screen cannot start serving a stopped site.",
+    "site.stop": "The Sites screen cannot stop serving a site.",
+    "site.delete": "The Sites screen cannot delete a site.",
+    "job.cancel": "A running install or apply has no Cancel in the window.",
+    "job.list": "The window has no history of the jobs the daemon ran.",
+    "cert.status": "The window cannot show the certificate a site's front end actually presents.",
+    "cert.ca_rotate": "The window cannot rotate this home's certificate authority.",
+    "cert.ca_uninstall": "The window cannot take this home's authority out of the trust stores on its own.",
+    "project.export": "The Projects screen cannot write a project's mixengine.toml."
+  }
+}

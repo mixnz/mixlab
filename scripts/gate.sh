@@ -50,6 +50,8 @@ check "documentation links" node scripts/check-docs.mjs
 # A string whose `\` continuation went missing reads "no line              in the hosts file", and
 # neither rustfmt nor the compiler says a word about it.
 check "string continuations" node scripts/check-strings.mjs
+# MixLab is the product: every daemon method is reachable from the window, or says why not.
+check "the client surface" node scripts/check-client-surface.mjs
 # CI's `docs` job: the corpus builds a site, and the committed command reference is what `mix`
 # generates. A new or changed flag on `mix` without `bash packaging/docs.sh --reference` is red there
 # and green on the check above, which reads links and spec headers and never runs `mix`.

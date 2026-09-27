@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   parseFrontMatter, checkSpecHeader, roadmapTicks, taskState, checkSpecAgainstRoadmap,
   stripCode, linkTargets, targetPath, rootedMentions, renderSpecIndex, isIgnoredFile,
+  checkMixLabSection,
 } from './check-docs.mjs';
 
 const specs = new Set(['2026-08-22-t40a-elevation-design.md']);
@@ -119,4 +120,20 @@ test('a shipped migration is never read: its bytes are a checksum every user dat
   assert.equal(isIgnoredFile('crates/mixengine-core/src/store.rs'), false);
   assert.equal(isIgnoredFile('docs/architecture/data-model.md'), false);
   assert.equal(isIgnoredFile('scripts/check-docs.mjs'), true);
+});
+test('a spec from the MixLab rule on must say what the window does', () => {
+  const name = '2026-09-28-t190-x-design.md';
+  const without = header(['status: draft', 'date: 2026-09-28']);
+  assert.match(checkMixLabSection(name, without)[0], /## MixLab/);
+
+  const withIt = header(['status: draft', 'date: 2026-09-28']) + '\n## MixLab\n\nThe Sites screen gains a Stop button.\n';
+  assert.deepEqual(checkMixLabSection(name, withIt), []);
+});
+
+test('an older spec, or one already implemented, is not asked', () => {
+  assert.deepEqual(checkMixLabSection('2026-09-20-t180-x-design.md', header(['status: draft', 'date: 2026-09-20'])), []);
+  assert.deepEqual(
+    checkMixLabSection('2026-09-28-t190-x-design.md', header(['status: implemented', 'date: 2026-09-28'])),
+    [],
+  );
 });

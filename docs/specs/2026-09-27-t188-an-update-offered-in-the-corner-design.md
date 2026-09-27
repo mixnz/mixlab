@@ -87,6 +87,12 @@ already removes its own staging directory.
 - Every string through `t()`, in `en.ts` and `vi.ts`, written with the `writing-user-facing-text`
   skill.
 
+## MixLab
+
+All of it: this task is MixLab's own updater, in the shell, drawn whatever modules are visible
+(ADR 0056). D1 is the corner panel, D4 the files it lives in; Settings → Updates keeps reading the
+same state.
+
 ## Tests
 
 - `view.test.ts`: every state in D1 from the inputs that produce it, including a start with a

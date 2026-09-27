@@ -41,7 +41,10 @@ The header is the one exception. [specs/README.md](../specs/README.md) is genera
 - a header is missing or invalid;
 - a spec whose tasks are all ticked is not `implemented`;
 - an `implemented` spec's task is still open;
-- the index is stale.
+- the index is stale;
+- a `draft` or `approved` spec dated 2026-09-27 or later has no `## MixLab` section. MixLab is the
+  product, so every design says which screen does what it describes, or why the window has no part
+  in it. A method only `mix` can reach is a gap, and `scripts/check-client-surface.mjs` lists it.
 
 ## `docs/plans/` — local only, never referenced
 
