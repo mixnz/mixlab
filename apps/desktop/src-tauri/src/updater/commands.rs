@@ -1,4 +1,4 @@
-//! The commands Settings → Updates calls — spec D9.
+//! The commands Settings → Updates and the update panel call — T187 spec D9, T188 spec D2.
 //!
 //! No unit tests of their own: each one reads the placement and the records, or hands work to a
 //! module that has its tests (`feed`, `install`, `handover`). What the pane draws from their answer
@@ -25,6 +25,10 @@ pub struct UpdaterState {
     feed: Mutex<Option<Feed>>,
     checked_at: Mutex<Option<String>>,
     installing: AtomicBool,
+    /// A download is running; a second one would write the same `.partial` file (T188).
+    downloading: AtomicBool,
+    /// Wakes the running download's `select!` so it stops, keeping the partial file.
+    cancel: tokio::sync::Notify,
 }
 
 #[derive(Serialize)]
@@ -47,6 +51,9 @@ pub struct UpdateStatus {
     skipped: Option<String>,
     automatic: bool,
     installing: bool,
+    /// The offered version when its download is on disk and proved (T188 D2), so a window starting
+    /// after a finished download opens on *Ready*.
+    downloaded: Option<String>,
     checked_at: Option<String>,
     /// Why a check a person asked for failed. Always `None` for the automatic one (spec D6).
     failure: Option<String>,
@@ -76,6 +83,25 @@ fn summary(feed: &Feed, placement: &Placement) -> FeedSummary {
     }
 }
 
+/// The SHA-256 of what this kind of install downloads for `feed`, if the release has one here.
+fn expected_sha256<'a>(feed: &'a Feed, placement: &Placement) -> Option<&'a str> {
+    let (os, arch) = super::host();
+    match placement {
+        Placement::Swap { .. } => feed.artifact(os, arch).map(|a| a.sha256.as_str()),
+        Placement::Installer { installer, .. } => feed
+            .installer(os, arch, installer)
+            .map(|i| i.sha256.as_str()),
+        Placement::Development | Placement::Elsewhere => None,
+    }
+}
+
+/// The offered version, when `ready` proves its download for this kind of install.
+fn downloaded(app: &AppHandle, feed: &Feed, placement: &Placement) -> Option<String> {
+    let sha256 = expected_sha256(feed, placement)?;
+    let staging = install::updates_dir(app).ok()?.join(&feed.version);
+    super::ready::read_for(&staging, &feed.version, sha256).map(|ready| ready.version)
+}
+
 fn status(
     app: &AppHandle,
     state: &UpdaterState,
@@ -85,6 +111,7 @@ fn status(
     let decision = install::records(app)?.decision();
     let feed = state.feed.lock().unwrap().clone();
     let checked_at = state.checked_at.lock().unwrap().clone();
+    let downloaded = feed.as_ref().and_then(|f| downloaded(app, f, &placement));
     Ok(UpdateStatus {
         current: env!("CARGO_PKG_VERSION").to_owned(),
         feed: feed.as_ref().map(|f| summary(f, &placement)),
@@ -92,6 +119,7 @@ fn status(
         skipped: decision.skipped,
         automatic: decision.automatic,
         installing: state.installing.load(Ordering::SeqCst),
+        downloaded,
         checked_at,
         failure,
     })
@@ -163,51 +191,99 @@ pub fn update_skip(app: AppHandle, version: String) -> Result<(), AppError> {
         .map_err(|e| err!("error.updateFailed", message = e))
 }
 
-/// Windows: download, swap and relaunch. Returns only on failure.
+fn offered(state: &UpdaterState) -> Result<Feed, AppError> {
+    state
+        .feed
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or_else(|| err!("error.updateNoBuild"))
+}
+
+/// Clears the flag however the download ends, a cancel and a panic included.
+struct Downloading<'a>(&'a AtomicBool);
+
+impl Drop for Downloading<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+}
+
+/// Download and prove the offered release (T188 D2): the payload on Windows, the installer on macOS
+/// and Linux, ending in a `ready` marker. Installs nothing. `update_cancel_download` stops it with
+/// `error.updateCancelled` and keeps the partial file for the next try.
 #[tauri::command]
-pub async fn update_install(
+pub async fn update_download(
     app: AppHandle,
     state: State<'_, UpdaterState>,
     on_progress: Channel<Progress>,
 ) -> Result<(), AppError> {
+    let feed = offered(&state)?;
+    if state.downloading.swap(true, Ordering::SeqCst) {
+        return Err(err!("error.updateDownloading"));
+    }
+    let _downloading = Downloading(&state.downloading);
+
+    let progress = |received, total| {
+        let _ = on_progress.send(Progress { received, total });
+    };
+    let work = async {
+        match placement::read() {
+            Placement::Swap { .. } => install::stage_payload(&app, &feed, progress).await,
+            Placement::Installer { installer, .. } => {
+                handover::download_installer(&app, &feed, &installer, progress).await
+            }
+            Placement::Development | Placement::Elsewhere => Err(err!("error.updateUnwritable")),
+        }
+    };
+    // `notified()` is registered when it is created, so a cancel that lands before the first poll
+    // still reaches it.
+    let cancelled = state.cancel.notified();
+    tokio::select! {
+        result = work => result,
+        () = cancelled => Err(err!("error.updateCancelled")),
+    }
+}
+
+#[tauri::command]
+pub fn update_cancel_download(state: State<'_, UpdaterState>) {
+    // `notify_waiters` and not `notify_one`: a cancel pressed when nothing is downloading must not
+    // be stored and stop the next download the moment it starts.
+    state.cancel.notify_waiters();
+}
+
+/// Windows: swap in what `update_download` staged, and relaunch. Returns only on failure.
+#[tauri::command]
+pub async fn update_install(
+    app: AppHandle,
+    state: State<'_, UpdaterState>,
+) -> Result<(), AppError> {
     let Placement::Swap { directory } = placement::read() else {
         return Err(err!("error.updateUnwritable"));
     };
-    let feed = state
-        .feed
-        .lock()
-        .unwrap()
-        .clone()
-        .ok_or_else(|| err!("error.updateNoBuild"))?;
+    let feed = offered(&state)?;
     state.installing.store(true, Ordering::SeqCst);
-    let result = install::install_swap(&app, &feed, &directory, |received, total| {
-        let _ = on_progress.send(Progress { received, total });
-    })
-    .await;
+    let result = install::install_staged(&app, &feed, &directory).await;
     state.installing.store(false, Ordering::SeqCst);
     result
 }
 
-/// macOS and Linux: download the installer and open it. Stops nothing.
+/// macOS and Linux: open the installer `update_download` fetched. Stops nothing.
 #[tauri::command]
-pub async fn update_hand_over(
+pub fn update_open_installer(
     app: AppHandle,
     state: State<'_, UpdaterState>,
-    on_progress: Channel<Progress>,
 ) -> Result<handover::HandedOver, AppError> {
     let Placement::Installer { installer, .. } = placement::read() else {
         return Err(err!("error.updateUnwritable"));
     };
-    let feed = state
-        .feed
-        .lock()
-        .unwrap()
-        .clone()
-        .ok_or_else(|| err!("error.updateNoBuild"))?;
-    handover::hand_over(&app, &feed, &installer, |received, total| {
-        let _ = on_progress.send(Progress { received, total });
-    })
-    .await
+    handover::open_installer(&app, &offered(&state)?, &installer)
+}
+
+/// How many services an install would restart, or `None` with no daemon running (T188 D1).
+#[tauri::command]
+pub async fn update_restarts() -> Option<u32> {
+    crate::modules::mixengine::for_update::running_services().await
 }
 
 #[tauri::command]

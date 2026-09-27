@@ -1,5 +1,6 @@
-//! The Windows update, in the order spec D4 gives, and what the next start does when a window died
-//! half way through it (spec D8).
+//! The Windows update, in the order spec D4 gives — split by T188 into a download
+//! ([`stage_payload`]) and an install ([`install_staged`]), each its own click — and what the next
+//! start does when a window died half way through it (spec D8).
 
 use std::path::Path;
 
@@ -11,7 +12,7 @@ use crate::modules::mixengine::for_update;
 use super::feed::Feed;
 use super::lock::{self, Acquired};
 use super::records::{InProgress, Records};
-use super::{stage, swap};
+use super::{ready, stage, swap};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Recovery {
@@ -45,12 +46,53 @@ fn failed(message: impl std::fmt::Display) -> AppError {
     err!("error.updateFailed", message = message)
 }
 
-/// Spec D4, steps 1 to 8. Returns only on failure: success ends in a relaunch.
-pub async fn install_swap<R: Runtime>(
+/// Spec D4 steps 2 to 4, then the `ready` marker (T188 D2). Touches nothing installed and takes no
+/// lock: the files it writes are under `updates/<version>/`, which nothing but this updater reads.
+pub async fn stage_payload<R: Runtime>(
+    app: &AppHandle<R>,
+    feed: &Feed,
+    progress: impl Fn(u64, u64),
+) -> Result<(), AppError> {
+    let (os, arch) = super::host();
+    let artifact = feed
+        .artifact(os, arch)
+        .ok_or_else(|| err!("error.updateNoBuild"))?;
+
+    let staging = updates_dir(app)?.join(&feed.version);
+    let archive = staging.join("payload.zip");
+    // A marker from an earlier try is taken back first: from here until the new one is written,
+    // what is on disk is not proved.
+    let _ = std::fs::remove_file(staging.join(ready::FILE));
+    stage::download(
+        &reqwest::Client::new(),
+        &artifact.url,
+        &artifact.sha256,
+        &archive,
+        progress,
+    )
+    .await
+    .map_err(failed)?;
+    let unpacked = staging.join("unpacked");
+    let _ = std::fs::remove_dir_all(&unpacked);
+    stage::unpack(&archive, &artifact.provides, &unpacked).map_err(failed)?;
+    stage::smoke_test(&unpacked, &artifact.provides, &feed.version).map_err(failed)?;
+
+    ready::write(
+        &staging,
+        &ready::Ready {
+            version: feed.version.clone(),
+            sha256: artifact.sha256.clone(),
+        },
+    )
+    .map_err(failed)
+}
+
+/// Spec D4 steps 1 and 5 to 8, from what [`stage_payload`] left. Returns only on failure: success
+/// ends in a relaunch.
+pub async fn install_staged<R: Runtime>(
     app: &AppHandle<R>,
     feed: &Feed,
     directory: &Path,
-    progress: impl Fn(u64, u64),
 ) -> Result<(), AppError> {
     let (os, arch) = super::host();
     let artifact = feed
@@ -69,22 +111,16 @@ pub async fn install_swap<R: Runtime>(
         Acquired::Unwritable => return Err(err!("error.updateUnwritable")),
     };
 
-    // 2 to 4. Nothing installed is touched until the payload is proved.
+    // 2 to 4 happened in `stage_payload`. What it proved has to be this release's and still whole:
+    // checked under the lock, and before anything is stopped.
     let staging = updates_dir(app)?.join(&feed.version);
-    let archive = staging.join("payload.zip");
-    stage::download(
-        &reqwest::Client::new(),
-        &artifact.url,
+    let unpacked = ready::staged(
+        &staging,
+        &feed.version,
         &artifact.sha256,
-        &archive,
-        progress,
+        &artifact.provides,
     )
-    .await
-    .map_err(failed)?;
-    let unpacked = staging.join("unpacked");
-    let _ = std::fs::remove_dir_all(&unpacked);
-    stage::unpack(&archive, &artifact.provides, &unpacked).map_err(failed)?;
-    stage::smoke_test(&unpacked, &artifact.provides, &feed.version).map_err(failed)?;
+    .map_err(|_| err!("error.updateNotDownloaded"))?;
 
     // 5. The record first, then the stop, so a window that dies here is finished by the next one.
     let records = records(app)?;

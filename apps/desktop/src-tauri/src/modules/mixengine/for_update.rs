@@ -35,6 +35,26 @@ pub async fn running() -> bool {
     health::presence().await.presence == Presence::Running
 }
 
+/// How many services an install would stop and start again, for the update panel's sentence
+/// (T188). `None` when no daemon answers, or it would not say; never starts one.
+pub async fn running_services() -> Option<u32> {
+    if !running().await {
+        return None;
+    }
+    let answer: Value = rpc::call("service.list", json!({})).await.ok()?;
+    let count = answer["services"]
+        .as_array()?
+        .iter()
+        .filter(|service| {
+            matches!(
+                service["state"].as_str(),
+                Some("running" | "degraded" | "starting" | "restarting")
+            )
+        })
+        .count();
+    Some(u32::try_from(count).unwrap_or(u32::MAX))
+}
+
 /// `daemon.shutdown`, then wait until it has gone. Answers the services it stopped.
 pub async fn stop() -> Result<Vec<String>, AppError> {
     let answer: Value = rpc::call("daemon.shutdown", json!({})).await?;
