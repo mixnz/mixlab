@@ -5,6 +5,7 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import ClosingStrip from "./components/ClosingStrip";
 import SettingsModal from "./components/SettingsModal";
 import TabNotice from "./components/TabNotice";
+import UpdatePanel from "./components/UpdatePanel";
 import ContextMenu from "../components/ContextMenu";
 import { moveTab, Tab, TabAction, tabKeyDown, TabStrip, TabTitle, useTabReorder } from "../components/TabStrip";
 import { CloudDownloadIcon, CloudUploadIcon, PlusIcon, SettingsIcon } from "../icons";
@@ -35,9 +36,6 @@ import { startSync, SYNC_NOW_EVENT } from "./sync";
 import { useSyncActivity } from "./sync/activity";
 import { syncClosingHere, syncStatus } from "./sync/api";
 import { closingSoon } from "./sync/closing";
-
-/** Where the update notice remembers which release it was last shown for (T187). */
-const NOTICED_KEY = "mixlab.update.noticed";
 
 interface WorkspaceProps {
   /** The module ids this window draws — `shell/profiles.ts`. */
@@ -146,26 +144,10 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
   /* MixLab's own updater — T187. Here rather than in the pane, so the Settings button can say that
      a release is waiting whatever modules are visible, and the pane reads the same state. */
   const updates = useUpdates(settingsOpen);
-  const offered = updates.view === "offer" && !updates.later ? (updates.status?.feed?.version ?? null) : null;
-  /* The version the notice was last shown for, so it appears once per release (spec D9). Browser
-     storage, wrapped: a notice shown twice is the worst a failed read can do. */
-  const [noticed, setNoticed] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(NOTICED_KEY);
-    } catch {
-      return null;
-    }
-  });
-  const notice = offered !== null && offered !== noticed;
-  const markNoticed = () => {
-    if (offered === null) return;
-    setNoticed(offered);
-    try {
-      localStorage.setItem(NOTICED_KEY, offered);
-    } catch {
-      /* Nothing to do: the notice comes back next start, which is harmless. */
-    }
-  };
+  /* The release on the Settings button's dot: offered, downloading or ready to install. *Later*
+     hides the corner panel and not the dot, which interrupts nothing (T188 D1). */
+  const pendingView = updates.view === "offer" || updates.view === "downloading" || updates.view === "ready";
+  const offered = pendingView ? (updates.status?.feed?.version ?? null) : null;
   /* Where the `[+]` menu was asked for, while it is open. Never set with one module: the button
      opens a tab outright then, exactly as it did before there was a registry. */
   const [moduleMenu, setModuleMenu] = useState<{ x: number; y: number } | null>(null);
@@ -533,22 +515,6 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
         />
       )}
 
-      {notice && (
-        <TabNotice
-          message={t("update.available", { version: offered })}
-          action={{
-            label: t("update.view"),
-            onClick: () => {
-              markNoticed();
-              setSettingsSection("update");
-              setSettingsOpen(true);
-            },
-          }}
-          dismissLabel={t("update.dismissNotice")}
-          onDismiss={markNoticed}
-        />
-      )}
-
       <div className="tab-content">
         {/* Only the tabs that have been looked at. One restored from the last session is drawn on
             the strip above and has no pane down here until it is picked. */}
@@ -601,6 +567,17 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
           );
         })}
       </div>
+
+      {/* MixLab's own release, offered in the corner: T188. Under Settings when that is open, and
+          drawn whatever modules are visible (ADR 0056). T187's once-per-release strip is gone: one
+          notice for one release. */}
+      <UpdatePanel
+        updates={updates}
+        onInstallerOpened={() => {
+          setSettingsSection("update");
+          setSettingsOpen(true);
+        }}
+      />
 
       {settingsOpen && (
         <SettingsModal

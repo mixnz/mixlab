@@ -179,8 +179,6 @@ const vi: SharedDict = {
     elsewhere: "Bản MixLab này không do bộ cài của MixLab đặt vào máy nên MixLab không tự cập nhật được. Tải bản mới từ trang tải về.",
     openPage: "Mở trang tải về",
     available: "Đã có MixLab {{version}}.",
-    view: "Xem",
-    dismissNotice: "Đóng",
   },
   // Thông báo khi một lệnh ở backend thất bại. Khóa ở đây chính là `code` mà `AppError` mang theo
   // — xem src-tauri/src/error.rs. `{{message}}` là nguyên văn lời của driver, không dịch: đó là

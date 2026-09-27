@@ -194,8 +194,6 @@ const en = {
     elsewhere: "Something other than MixLab's installer put this copy here, so MixLab can't update it. Get the new version from the download page.",
     openPage: "Open the download page",
     available: "MixLab {{version}} is available.",
-    view: "View",
-    dismissNotice: "Dismiss",
   },
   // What a failed backend command says. The keys here are the `code` an `AppError` carries \u2014 see
   // src-tauri/src/error.rs \u2014 and `{{message}}` is where a driver's own words go, untranslated
