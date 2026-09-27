@@ -103,6 +103,22 @@ mix uninstall --keep-relocated
 keeps them and removes the home. Use both flags to keep everything. A folder you never moved is
 inside the home, so it goes with the home.
 
+### Installing again over the folders you kept
+
+Point the new install at the same folders when it asks where to keep them. When it starts:
+
+- **Runtimes and packages** already in them are listed as installed on their own. One MixLab could
+  not check, for example because there was no network, shows under *On disk, not listed* in
+  Runtimes with an **Adopt** button. From a terminal: `mix runtime found`, then
+  `mix runtime adopt php 8.3.33` (and the same with `package`).
+- **Databases** in `data/` show on the Dashboard as *Service data from an earlier install*. Open
+  *Review* and press **Adopt**. The service comes back stopped, with a new admin password, and every
+  database and account in it is kept. From a terminal: `mix service found`, then
+  `mix service adopt mariadb@main`.
+
+An application's own database account keeps the password the application already has. Only the
+admin password is new, because the old one went with the home.
+
 ## Then remove the program itself
 
 `mix uninstall` removes what MixLab did. Removing MixLab is your package manager's job, and it
