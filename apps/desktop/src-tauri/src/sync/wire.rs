@@ -30,6 +30,14 @@ pub struct Page {
     pub more: bool,
 }
 
+/// `POST /v1/records/heads` (T189).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Heads {
+    pub stale: Vec<String>,
+    pub next_since: i64,
+}
+
 /// `GET /v1/capabilities`. Every number is the server's to choose and the client's to read.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]

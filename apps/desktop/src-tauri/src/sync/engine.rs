@@ -5,10 +5,12 @@
 //! key and never sees a plaintext. **Callers fetch and commit before they push**, which is what
 //! lets a push trust that a record it has never seen is one the server does not have.
 
+use std::collections::{BTreeMap, HashSet};
+
 use super::chunk::chunk;
 use super::merge::{resolve, Keep};
 use super::store::Store;
-use super::transport::{refusal, PageOutcome, Remote};
+use super::transport::{refusal, AskHeads, PageOutcome, Remote};
 use super::wire::{BatchResult, Capabilities, ErrorBody, Operation, Page, RecordBody, WireRecord};
 use crate::error::AppError;
 
@@ -117,6 +119,52 @@ pub async fn commit(
         }
     }
     store.set_since(collection, fetched.next_since).await
+}
+
+/// Which of `collections` (opaque) a full run must pull (T189, D4). A cursor at 0, a resync and a
+/// record owed under another version are stale without asking: `fetch` does more than read from
+/// the cursor for each, and the server sees none of them. The rest are asked in as few requests as
+/// the server takes, and **a collection the answer does not name has its cursor moved to
+/// `nextSince`**: since the cursor, only this machine wrote to it, and its push remembered those
+/// writes (D3). Never backwards.
+pub async fn stale<A: AskHeads>(
+    remote: &A,
+    store: &Store,
+    limits: &Capabilities,
+    collections: &[String],
+    version: &str,
+) -> Result<Vec<String>, AppError> {
+    let mut stale = Vec::new();
+    let mut asked = Vec::new();
+    for collection in collections {
+        let since = store.since(collection).await?;
+        if since == 0
+            || store.resyncing(collection).await?
+            || store.owed_elsewhere(collection, version).await?
+        {
+            stale.push(collection.clone());
+        } else {
+            asked.push((collection.clone(), since));
+        }
+    }
+    let per_request = usize::try_from(limits.max_batch_operations)
+        .unwrap_or(usize::MAX)
+        .max(1);
+    for part in asked.chunks(per_request) {
+        let cursors: BTreeMap<String, i64> = part.iter().cloned().collect();
+        let heads = remote.heads(&cursors).await?;
+        let named: HashSet<&str> = heads.stale.iter().map(String::as_str).collect();
+        for (collection, since) in part {
+            if named.contains(collection.as_str()) {
+                stale.push(collection.clone());
+            } else {
+                store
+                    .set_since(collection, heads.next_since.max(*since))
+                    .await?;
+            }
+        }
+    }
+    Ok(stale)
 }
 
 /// Keep the first failure; later ones say less than it does.
@@ -251,7 +299,8 @@ async fn operation_for(store: &Store, change: &Outgoing) -> Result<Option<Operat
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sync::wire::ErrorDetail;
+    use crate::sync::transport::AskHeads;
+    use crate::sync::wire::{ErrorDetail, Heads};
     use std::collections::BTreeMap;
     use std::sync::Mutex;
 
@@ -272,6 +321,8 @@ mod tests {
         forgotten_below: i64,
         /// The `resync` flag of every page asked for, in order.
         resync_flags: Vec<bool>,
+        /// How many `heads` requests were made.
+        heads_asked: usize,
     }
 
     impl Fake {
@@ -456,6 +507,129 @@ mod tests {
                 return all;
             }
         }
+    }
+
+    impl AskHeads for Fake {
+        async fn heads(&self, cursors: &BTreeMap<String, i64>) -> Result<Heads, AppError> {
+            let mut state = self.state.lock().unwrap();
+            state.heads_asked += 1;
+            let stale = cursors
+                .iter()
+                .filter(|(collection, since)| {
+                    let since = **since;
+                    (since > 0 && since < state.forgotten_below)
+                        || state.records.values().any(|record| {
+                            &record.collection == *collection
+                                && record.seq > since
+                                && (since == 0 || record.device != self.device)
+                        })
+                })
+                .map(|(collection, _)| collection.clone())
+                .collect();
+            Ok(Heads {
+                stale,
+                next_since: state.seq,
+            })
+        }
+    }
+
+    fn opaque(ids: &[&str]) -> Vec<String> {
+        ids.iter().map(|id| id.to_string()).collect()
+    }
+
+    /// T189, D3: what only this machine wrote is not news, and the cursor steps over its echo.
+    #[tokio::test]
+    async fn a_collection_only_this_machine_wrote_is_not_stale_and_its_cursor_moves() {
+        let (server, store) = (Fake::new("mine"), Store::in_memory("s").await.unwrap());
+        server.holds("a", 1, 100, "theirs");
+        pull_all(&server, &store).await;
+        push(
+            &server,
+            &store,
+            &limits(),
+            "mine",
+            vec![write("b", 200, "x")],
+        )
+        .await
+        .unwrap();
+
+        let stale = stale(&server, &store, &limits(), &opaque(&["c"]), VERSION)
+            .await
+            .unwrap();
+        assert!(stale.is_empty());
+        assert_eq!(store.since("c").await.unwrap(), 2);
+    }
+
+    #[tokio::test]
+    async fn another_machines_write_is_stale_and_the_cursor_stays() {
+        let (server, store) = (Fake::new("mine"), Store::in_memory("s").await.unwrap());
+        server.holds("a", 1, 100, "theirs");
+        pull_all(&server, &store).await;
+        server.holds("b", 1, 100, "theirs");
+
+        let stale = stale(&server, &store, &limits(), &opaque(&["c"]), VERSION)
+            .await
+            .unwrap();
+        assert_eq!(stale, opaque(&["c"]));
+        assert_eq!(store.since("c").await.unwrap(), 1);
+    }
+
+    /// T189, D4 step 2: the states in which `fetch` does more than read from the cursor.
+    #[tokio::test]
+    async fn a_zero_cursor_a_resync_and_an_owed_record_are_stale_without_asking() {
+        let (server, store) = (Fake::new("mine"), Store::in_memory("s").await.unwrap());
+        store.set_since("resyncing", 5).await.unwrap();
+        store.begin_resync("resyncing").await.unwrap();
+        store.set_since("owed", 5).await.unwrap();
+        store
+            .owe("owed", &["x".to_string()], "0.0.1-older")
+            .await
+            .unwrap();
+
+        let mut stale = stale(
+            &server,
+            &store,
+            &limits(),
+            &opaque(&["zero", "resyncing", "owed"]),
+            VERSION,
+        )
+        .await
+        .unwrap();
+        stale.sort();
+        assert_eq!(stale, opaque(&["owed", "resyncing", "zero"]));
+        assert_eq!(server.state.lock().unwrap().heads_asked, 0);
+    }
+
+    #[tokio::test]
+    async fn heads_are_asked_in_chunks_the_server_takes() {
+        let (server, store) = (Fake::new("mine"), Store::in_memory("s").await.unwrap());
+        for collection in ["c1", "c2", "c3"] {
+            store.set_since(collection, 1).await.unwrap();
+        }
+        // `limits()` allows two operations per batch.
+        stale(
+            &server,
+            &store,
+            &limits(),
+            &opaque(&["c1", "c2", "c3"]),
+            VERSION,
+        )
+        .await
+        .unwrap();
+        assert_eq!(server.state.lock().unwrap().heads_asked, 2);
+    }
+
+    /// A server that answers a smaller `nextSince` than this machine's cursor (restored from a
+    /// backup, say) must not wind the cursor back over rows already landed.
+    #[tokio::test]
+    async fn the_cursor_never_moves_backwards() {
+        let (server, store) = (Fake::new("mine"), Store::in_memory("s").await.unwrap());
+        store.set_since("c", 7).await.unwrap();
+        // The fake's `seq` is 0, so it answers `nextSince: 0`.
+        stale(&server, &store, &limits(), &opaque(&["c"]), VERSION)
+            .await
+            .unwrap();
+        assert_eq!(store.since("c").await.unwrap(), 7);
     }
 
     #[tokio::test]
