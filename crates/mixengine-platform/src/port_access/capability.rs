@@ -17,7 +17,8 @@
 
 #![allow(
     dead_code,
-    reason = "the codec is compiled on all three systems and called on one, which is the module's               whole purpose: on Windows and macOS it is read by the tests below and by nothing else"
+    reason = "the codec is compiled on all three systems and called on one, which is the module's \
+              whole purpose: on Windows and macOS it is read by the tests below and by nothing else"
 )]
 
 /// The attribute's name.

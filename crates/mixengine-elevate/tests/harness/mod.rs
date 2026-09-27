@@ -107,7 +107,8 @@ impl Request {
         windows,
         expect(
             unused_mut,
-            reason = "the body that assigns through it is `#[cfg(unix)]`, and the signature is one                       thing rather than two"
+            reason = "the body that assigns through it is `#[cfg(unix)]`, and the signature is one \
+                      thing rather than two"
         )
     )]
     pub(crate) fn owned_by_the_caller(mut self) -> Self {

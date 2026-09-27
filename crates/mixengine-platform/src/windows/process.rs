@@ -479,7 +479,8 @@ impl Group {
 
         #[expect(
             unsafe_code,
-            reason = "the pointer is to a local this frame owns and the length is that local's own                       size, so the kernel reads exactly the struct that is there"
+            reason = "the pointer is to a local this frame owns and the length is that local's own \
+                      size, so the kernel reads exactly the struct that is there"
         )]
         let set = unsafe {
             SetInformationJobObject(

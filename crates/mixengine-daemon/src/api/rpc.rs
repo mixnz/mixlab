@@ -1853,7 +1853,8 @@ impl Api {
             return Err(Error::new(
                 ErrorCode::InvalidArgument,
                 format!(
-                    "`cpu_percent` is a percentage of one core, and this machine has                      {} — so {ceiling} is the whole of it",
+                    "`cpu_percent` is a percentage of one core, and this machine has \
+                     {} — so {ceiling} is the whole of it",
                     support.cores
                 ),
             )
@@ -2273,7 +2274,8 @@ fn refuse_project_scope(target: &ServiceTarget, verb: &str) -> Result<(), Error>
     Err(Error::new(
         ErrorCode::InvalidArgument,
         format!(
-            "`service.{verb}` has no project scope: what a project needs includes the front end              every other site is reached through"
+            "`service.{verb}` has no project scope: what a project needs includes the front end \
+             every other site is reached through"
         ),
     )
     .with_hint(format!(

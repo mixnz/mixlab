@@ -142,7 +142,8 @@ fn a_wired_machine_resolves_a_name_nothing_has_ever_asked_for_and_leaves_the_res
         // A machine that cannot lend us a port cannot be measured on, and saying so is better than
         // asserting something about a socket that never opened — which is the whole of D14.
         eprintln!(
-            "this machine would not lend the port its resolver mechanism sends to, so a fake DNS              server could not be started; nothing below could be proved"
+            "this machine would not lend the port its resolver mechanism sends to, so a fake DNS \
+             server could not be started; nothing below could be proved"
         );
         return;
     };

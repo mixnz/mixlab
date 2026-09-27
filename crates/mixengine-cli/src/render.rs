@@ -187,7 +187,8 @@ fn advice(domain: &str, problem: CertProblem) -> String {
                 .to_owned()
         }
         CertProblem::NotTrusted => {
-            "this was not signed by this home's authority — `mix cert ca-status` says which              authority this home has"
+            "this was not signed by this home's authority — `mix cert ca-status` says which \
+             authority this home has"
                 .to_owned()
         }
         // `CertProblem` is `#[non_exhaustive]`: a variant added by a newer daemon reaches an older
@@ -223,7 +224,8 @@ pub(crate) fn ca_status(status: &CaStatus) -> String {
     // the path is what a person opens and the owner is what tells them which browser to restart.
     rendered.push_str(&match &status.browsers {
         Browsers::Reached { databases } if databases.is_empty() => {
-            "  browsers   none found — Firefox and Chrome keep certificate databases of their own,              and this machine has none
+            "  browsers   none found — Firefox and Chrome keep certificate databases of their own, \
+             and this machine has none
 "
             .to_owned()
         }
@@ -847,6 +849,7 @@ pub(crate) fn service_autostart(service: &ServiceSummary) -> String {
     };
 
     format!(
+        // aligned on purpose: `note` sits in the label column the lines above it use.
         "{} — {answer}\n  note        anything a service that does start depends on is started too, \
          whether or not it is set here\n",
         service.id
@@ -4042,7 +4045,8 @@ pub(crate) fn autostart_report(autostarted: Autostarted, report: &AutostartRepor
 
     if report.mechanism == AutostartMechanism::None {
         rendered.push_str(
-            "  this machine has no way to start something at login that MixEngine will write, so              there is nothing to register
+            "  this machine has no way to start something at login that MixEngine will write, so \
+             there is nothing to register
 ",
         );
     }

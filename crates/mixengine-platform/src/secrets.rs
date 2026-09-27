@@ -167,7 +167,8 @@ pub fn generate_secret(length: usize) -> Result<String> {
         getrandom::fill(&mut buffer).map_err(|source| Error::UnsupportedPlatform {
             capability: "Keyring",
             reason: format!(
-                "this machine's operating system would not produce random bytes, so there is                  nothing to make a credential out of ({source})"
+                "this machine's operating system would not produce random bytes, so there is \
+                 nothing to make a credential out of ({source})"
             ),
         })?;
 

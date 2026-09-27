@@ -584,7 +584,8 @@ impl Elevation {
     pub(crate) async fn require_resolver(&self) -> Result<(), Error> {
         let Some(port) = self.dns.wirable_port() else {
             tracing::debug!(
-                "no DNS server is answering on a port a resolver could be pointed at, so nothing                  is asked for"
+                "no DNS server is answering on a port a resolver could be pointed at, so nothing \
+                 is asked for"
             );
             return Ok(());
         };
@@ -1583,7 +1584,8 @@ mod tests {
 
         for (key, at) in [("second", 2), ("third", 3)] {
             sqlx::query(
-                "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at)                  VALUES ('{\"op\":\"probe\"}', ?, ?)",
+                "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at) \
+                 VALUES ('{\"op\":\"probe\"}', ?, ?)",
             )
             .bind(key)
             .bind(at)
@@ -2542,7 +2544,8 @@ mod tests {
         with_an_installed_helper(&home);
 
         sqlx::query(
-            "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at)              VALUES ('{\"op\":\"probe\"}', 'hosts-apply', 1)",
+            "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at) \
+             VALUES ('{\"op\":\"probe\"}', 'hosts-apply', 1)",
         )
         .execute(elevation.store.pool())
         .await
@@ -2576,7 +2579,8 @@ mod tests {
         with_an_installed_helper(&home);
 
         sqlx::query(
-            "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at)              VALUES ('{\"op\":\"probe\"}', 'resolver', 1)",
+            "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at) \
+             VALUES ('{\"op\":\"probe\"}', 'resolver', 1)",
         )
         .execute(elevation.store.pool())
         .await
@@ -2602,7 +2606,8 @@ mod tests {
         with_an_installed_helper(&home);
 
         sqlx::query(
-            "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at)              VALUES ('{\"op\":\"probe\"}', 'trust-store', 1)",
+            "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at) \
+             VALUES ('{\"op\":\"probe\"}', 'trust-store', 1)",
         )
         .execute(elevation.store.pool())
         .await
@@ -2630,7 +2635,8 @@ mod tests {
         with_an_installed_helper(&home);
 
         sqlx::query(
-            "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at)              VALUES ('{\"op\":\"probe\"}', 'port-access', 1)",
+            "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at) \
+             VALUES ('{\"op\":\"probe\"}', 'port-access', 1)",
         )
         .execute(elevation.store.pool())
         .await
@@ -2658,7 +2664,8 @@ mod tests {
         with_an_installed_helper(&home);
 
         sqlx::query(
-            "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at)              VALUES ('{\"op\":\"probe\"}', 'port-access', 1)",
+            "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at) \
+             VALUES ('{\"op\":\"probe\"}', 'port-access', 1)",
         )
         .execute(elevation.store.pool())
         .await

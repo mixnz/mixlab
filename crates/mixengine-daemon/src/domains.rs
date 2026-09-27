@@ -198,7 +198,8 @@ fn why_not(
 
     if !wildcard && !hosts_entry {
         return Some(
-            "nothing routes this name: its TLD is not wired to the DNS server, and it has no line              in the hosts file"
+            "nothing routes this name: its TLD is not wired to the DNS server, and it has no line \
+             in the hosts file"
                 .to_owned(),
         );
     }

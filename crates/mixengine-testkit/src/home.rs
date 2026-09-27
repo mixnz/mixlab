@@ -104,7 +104,8 @@ pub struct Home {
     /// The directory itself, kept for the one job it has left: removing the home when this drops.
     #[expect(
         dead_code,
-        reason = "every path is taken from `root` below, which is the same directory under the                   name the daemon resolves it to"
+        reason = "every path is taken from `root` below, which is the same directory under the \
+                  name the daemon resolves it to"
     )]
     dir: TempDir,
 

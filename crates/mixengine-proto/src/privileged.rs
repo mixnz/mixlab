@@ -1705,7 +1705,8 @@ mod tests {
         assert!(encoded.contains("deadbeef"), "{encoded}");
         assert!(
             !encoded.contains("fingerprint"),
-            "a fingerprint field is what would let a compromised daemon name a corporate root:              {encoded}"
+            "a fingerprint field is what would let a compromised daemon name a corporate root: \
+             {encoded}"
         );
     }
 

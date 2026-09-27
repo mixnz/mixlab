@@ -841,7 +841,8 @@ impl Runtimes {
                     ),
                 )
                 .with_hint(
-                    "install another version that answers the pin, change the pin, or `--force`                      to remove it anyway",
+                    "install another version that answers the pin, change the pin, or `--force` \
+                     to remove it anyway",
                 ));
             }
         }

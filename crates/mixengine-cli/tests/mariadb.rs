@@ -331,7 +331,8 @@ fn without_a_password(root: &Path, port: u16, user: &str) -> String {
     );
     assert!(
         said.contains("Access denied"),
-        "the client failed before the server could refuse it, so this proves nothing about          `{user}`: {said}"
+        "the client failed before the server could refuse it, so this proves nothing about \
+         `{user}`: {said}"
     );
 
     said

@@ -287,7 +287,8 @@ fn windows_runs_the_helper_and_a_report_appears_beside_the_request() {
     assert_eq!(outcome, ElevationOutcome::Completed);
 
     let report = report(&pending).expect(
-        "no report beside the request — `Completed` means the helper ran, not that it left \n         one",
+        "no report beside the request — `Completed` means the helper ran, not that it left \
+         one",
     );
     assert_eq!(report.nonce, "t40a");
     assert!(
@@ -319,7 +320,8 @@ fn macos_runs_the_helper_and_a_report_appears_beside_the_request() {
     assert_eq!(outcome, ElevationOutcome::Completed);
 
     let report = report(&pending).expect(
-        "no report beside the request — `Completed` means the helper ran, not that it left \n         one",
+        "no report beside the request — `Completed` means the helper ran, not that it left \
+         one",
     );
     assert_eq!(report.nonce, "t40a");
     assert!(report.elevated);

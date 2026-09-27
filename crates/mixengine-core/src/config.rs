@@ -556,7 +556,9 @@ where
 
     if seconds == 0 {
         return Err(serde::de::Error::custom(format!(
-            "an idle check every 0 seconds is a loop with no pause in it rather than a schedule;              give it a number of seconds, or remove the key for the default of              {DEFAULT_IDLE_CHECK_SECONDS}"
+            "an idle check every 0 seconds is a loop with no pause in it rather than a schedule; \
+             give it a number of seconds, or remove the key for the default of \
+             {DEFAULT_IDLE_CHECK_SECONDS}"
         )));
     }
 
@@ -577,7 +579,9 @@ where
 
     if minutes == 0 {
         return Err(serde::de::Error::custom(format!(
-            "restarting a service after 0 minutes over its ceiling would act on a single reading;              give it a number of minutes, or remove the key for the default of              {DEFAULT_MEMORY_OVER_MINUTES}"
+            "restarting a service after 0 minutes over its ceiling would act on a single reading; \
+             give it a number of minutes, or remove the key for the default of \
+             {DEFAULT_MEMORY_OVER_MINUTES}"
         )));
     }
 
