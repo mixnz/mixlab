@@ -925,6 +925,35 @@ impl Runtimes {
             .map_err(|error| error.to_wire())
     }
 
+    /// `runtime.found` — every runtime directory on disk with no row, and why — roadmap task
+    /// **T182i**. Offline: no index, and nothing recorded.
+    ///
+    /// # Errors
+    ///
+    /// The wire error of a table that could not be read.
+    pub(crate) async fn found(&self) -> Result<mixengine_proto::RuntimeFoundList, Error> {
+        let found = mixengine_core::adopt::walk::unrecorded(&self.store, &self.paths)
+            .await
+            .map_err(|error| error.to_wire())?;
+
+        Ok(mixengine_proto::RuntimeFoundList {
+            found: found
+                .iter()
+                .filter_map(|one| match &one.subject {
+                    mixengine_core::adopt::Subject::Runtime { kind, version } => {
+                        Some(mixengine_proto::RuntimeFound {
+                            kind: *kind,
+                            version: version.clone(),
+                            path: one.path.display().to_string(),
+                            why: mixengine_core::adopt::walk::examine(one),
+                        })
+                    }
+                    mixengine_core::adopt::Subject::Package { .. } => None,
+                })
+                .collect(),
+        })
+    }
+
     /// `runtime.adopt` — record a version that is on disk without a row — roadmap task **T182f**.
     ///
     /// A version already recorded answers its row, so asking twice is not an error.

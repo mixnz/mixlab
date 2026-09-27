@@ -1253,3 +1253,40 @@ async fn adopting_one_version_checks_it_against_the_index() {
         .await;
     assert_eq!(refused["data"]["code"], "not_found", "{refused}");
 }
+
+/// **T182i.** `runtime.found` lists a directory the start left, with why — what the window draws
+/// beside **Adopt** — and after the adopt it is gone.
+#[tokio::test]
+async fn a_runtime_the_start_left_is_listed_with_why_until_it_is_adopted() {
+    let mut fixture = Fixture::start().await;
+    fixture.client().await.install(VERSION).await;
+    let marker = fixture
+        .installed_at(VERSION)
+        .join(".mixengine-install.json");
+    let written = std::fs::read_to_string(&marker).expect("the marker");
+    std::fs::write(&marker, written.replace(VERSION, "8.3.32")).expect("a wrong marker");
+
+    fixture.reinstall().await;
+    let mut client = fixture.client().await;
+
+    let found = client.call("runtime.found", json!({})).await;
+    let row = &found["found"][0];
+    assert_eq!(row["kind"], "php", "{found}");
+    assert_eq!(row["version"], VERSION, "{found}");
+    assert!(
+        row["why"]
+            .as_str()
+            .is_some_and(|why| why.contains("another install")),
+        "{found}"
+    );
+
+    client
+        .call("runtime.adopt", json!({"kind": "php", "version": VERSION}))
+        .await;
+    let found = client.call("runtime.found", json!({})).await;
+    assert_eq!(
+        found["found"],
+        json!([]),
+        "an adopted version is no longer listed: {found}"
+    );
+}

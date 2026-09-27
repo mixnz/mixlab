@@ -178,6 +178,14 @@ mix runtime adopt <RUNTIME> <VERSION>
 | `<RUNTIME>` | Which language |
 | `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and deliberately not a constraint like `8.3`, even now that the daemon can read one: choosing a version from a range is *resolution*, it answers with what is installed, and none of these three commands is asking that question — an install picking `8.3`'s newest would be picking between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
 
+### mix runtime found
+
+List versions that are on disk but not listed, and why each is not
+
+```
+mix runtime found
+```
+
 ### mix runtime ext
 
 Which extensions an installed build loads.
@@ -328,6 +336,14 @@ mix package adopt <PACKAGE> <VERSION>
 | --- | --- |
 | `<PACKAGE>` | Which package, as `mix package available` lists it |
 | `<VERSION>` | Which version, exactly as `mix package available` lists it |
+
+### mix package found
+
+List versions that are on disk but not listed, and why each is not
+
+```
+mix package found
+```
 
 ## mix project
 

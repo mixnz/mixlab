@@ -1625,6 +1625,25 @@ pub(crate) fn runtime_summary(runtime: &RuntimeSummary) -> String {
     rendered
 }
 
+/// `mix runtime found` and `mix package found`, for a person: one version per line, where it is,
+/// and why it is not listed.
+pub(crate) fn on_disk<'a>(
+    rows: impl Iterator<Item = (String, &'a String, &'a String)>,
+    noun: &str,
+) -> String {
+    let mut rendered = String::new();
+    for (name, path, why) in rows {
+        rendered.push_str(&format!("{name}  {why}\n  {path}\n"));
+    }
+
+    if rendered.is_empty() {
+        return "nothing on disk is waiting to be listed\n".to_owned();
+    }
+
+    rendered.push_str(&format!("`mix {noun} adopt` records one\n"));
+    rendered
+}
+
 /// `mix package adopt`, for a person: [`runtime_summary`]'s layout, for a package.
 pub(crate) fn package_summary(package: &mixengine_proto::PackageSummary) -> String {
     let mut rendered = format!("{} {}\n", package.package, package.version);

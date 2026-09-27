@@ -280,6 +280,11 @@ pub mod method {
     /// and it runs. Nothing is downloaded and nothing on disk is removed.
     pub const RUNTIME_ADOPT: &str = "runtime.adopt";
 
+    /// Every runtime directory on disk with no row, and why — roadmap task **T182i**. Takes
+    /// nothing, answers [`RuntimeFoundList`](crate::RuntimeFoundList). Offline and a read: no index
+    /// is fetched and nothing is recorded; [`RUNTIME_ADOPT`] is what checks and records one.
+    pub const RUNTIME_FOUND: &str = "runtime.found";
+
     /// What one installed version can load, and what it does load. Takes
     /// [`RuntimeTarget`](crate::RuntimeTarget), answers
     /// [`ExtensionList`](crate::ExtensionList).
@@ -489,6 +494,11 @@ pub mod method {
     /// [`PackageSummary`](crate::PackageSummary) now recorded, or the one already there. Checked
     /// as [`RUNTIME_ADOPT`] checks a runtime.
     pub const PACKAGE_ADOPT: &str = "package.adopt";
+
+    /// Every package directory on disk with no row, and why — roadmap task **T182i**. Takes
+    /// nothing, answers [`PackageFoundList`](crate::PackageFoundList), as [`RUNTIME_FOUND`] does
+    /// for runtimes.
+    pub const PACKAGE_FOUND: &str = "package.found";
 
     /// Create a service from an installed package. Takes
     /// [`ServiceCreate`](crate::ServiceCreate), answers the

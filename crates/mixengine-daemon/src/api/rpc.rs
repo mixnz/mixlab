@@ -288,6 +288,14 @@ async fn call_method(
                     encode_result(&api.runtimes.uninstall(&asked).await.map_err(refused)?)
                 }
 
+                rpc::method::RUNTIME_FOUND => {
+                    encode_result(&api.runtimes.found().await.map_err(refused)?)
+                }
+
+                rpc::method::PACKAGE_FOUND => {
+                    encode_result(&api.packages.found().await.map_err(refused)?)
+                }
+
                 rpc::method::RUNTIME_ADOPT => {
                     let target: RuntimeTarget = arguments(params)?;
                     encode_result(&api.runtimes.adopt(&target).await.map_err(refused)?)

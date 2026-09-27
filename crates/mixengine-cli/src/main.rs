@@ -1369,6 +1369,9 @@ enum RuntimeCommand {
         runtime: Which,
     },
 
+    /// List versions that are on disk but not listed, and why each is not.
+    Found,
+
     /// Which extensions an installed build loads.
     ///
     /// Under `runtime` rather than as `mix php ext …`, which is what
@@ -1507,6 +1510,9 @@ enum PackageCommand {
         #[command(flatten)]
         package: WhichPackage,
     },
+
+    /// List versions that are on disk but not listed, and why each is not.
+    Found,
 }
 
 /// Which package a listing is about, or every package.
@@ -4874,6 +4880,23 @@ async fn package(
             });
         }
 
+        PackageCommand::Found => {
+            let found: mixengine_proto::PackageFoundList =
+                ask(&mut client, rpc::method::PACKAGE_FOUND, None).await?;
+            emit(&rendered(json, &found, || {
+                render::on_disk(
+                    found.found.iter().map(|row| {
+                        (
+                            format!("{} {}", row.package, row.version),
+                            &row.path,
+                            &row.why,
+                        )
+                    }),
+                    "package",
+                )
+            }))?;
+        }
+
         PackageCommand::Adopt { package } => {
             let target = PackageTarget {
                 package: package.package,
@@ -5542,6 +5565,20 @@ async fn runtime(
                 ask(&mut client, rpc::method::RUNTIME_UNINSTALL, encode(&asked)).await?;
             emit(&rendered(json, &removal, || {
                 render::runtime_removal(&removal)
+            }))?;
+        }
+
+        RuntimeCommand::Found => {
+            let found: mixengine_proto::RuntimeFoundList =
+                ask(&mut client, rpc::method::RUNTIME_FOUND, None).await?;
+            emit(&rendered(json, &found, || {
+                render::on_disk(
+                    found
+                        .found
+                        .iter()
+                        .map(|row| (format!("{} {}", row.kind, row.version), &row.path, &row.why)),
+                    "runtime",
+                )
             }))?;
         }
 

@@ -884,3 +884,22 @@ async fn a_found_instance_is_listed_and_adopting_it_makes_it_a_stopped_service()
         .await;
     assert_eq!(refused["data"]["code"], "not_found", "{refused}");
 }
+
+/// **T182i.** `package.found` lists a package directory with no row, with why.
+#[tokio::test]
+async fn a_package_directory_with_no_row_is_listed_with_why() {
+    let fixture = Fixture::start().await;
+    let stray = fixture.installed_at("9.9.9");
+    std::fs::create_dir_all(&stray).expect("a directory nothing installed");
+
+    let mut client = fixture.client().await;
+    let found = client.call("package.found", json!({})).await;
+    let row = &found["found"][0];
+    assert_eq!(row["package"], PACKAGE, "{found}");
+    assert_eq!(row["version"], "9.9.9", "{found}");
+    assert!(
+        row["why"].as_str().is_some_and(|why| why.contains("index")),
+        "{found}"
+    );
+    assert!(stray.is_dir(), "listing touches nothing");
+}
