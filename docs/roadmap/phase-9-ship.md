@@ -219,7 +219,7 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       Design: [2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md](../specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md).
 - [x] **T182g** Service instances found in `data/` are listed and adopted on request, with a new
       admin password set through the T127 repair path. After T182f. Spec D4.
-- [ ] **T182i** MixLab adopts a runtime or package the start could not check: a daemon method lists
+- [x] **T182i** MixLab adopts a runtime or package the start could not check: a daemon method lists
       the directories on disk but not recorded, with the reason, and the Runtimes screen and the
       packages list show them with **Adopt** (`runtime.adopt`, `package.adopt`). After T182g. Spec
       `## MixLab`.
