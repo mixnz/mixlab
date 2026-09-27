@@ -563,9 +563,12 @@ pub async fn render(paths: &Paths, state: &State) -> Result<bool> {
                 source,
             })?;
 
-        tracing::debug!(
+        // Info rather than debug: `extension_lifecycle` has twice found this file still there on
+        // windows-latest (runs 36036932030 and 36308355036) with nothing in the log to say whether
+        // this line ran. Now the daemon log answers that.
+        tracing::info!(
             file = %entry.path().display(),
-            "an extension that is no longer loaded left a file behind"
+            "removed a file an extension that is no longer loaded left behind"
         );
         changed = true;
     }
@@ -632,6 +635,20 @@ pub async fn refresh_all(store: &Store, paths: &Paths) -> Result<Vec<PackageVers
 
     for summary in crate::runtimes::records(store, None).await? {
         let state = state(store, summary.kind, &summary.version).await?;
+
+        // Which extensions this rewrite still writes an ini for — the other half of the question the
+        // removal line above answers, when a file outlives its extension.
+        if !state.additions.is_empty() {
+            tracing::info!(
+                runtime = %summary.version,
+                extensions = ?state
+                    .additions
+                    .iter()
+                    .map(|addition| addition.extension.as_str())
+                    .collect::<Vec<_>>(),
+                "an ini set keeps the lines of these extensions"
+            );
+        }
 
         if render(paths, &state).await? {
             moved.push(summary.version);
