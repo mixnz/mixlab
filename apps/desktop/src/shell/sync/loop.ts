@@ -137,7 +137,8 @@ function isSignedOut(error: unknown): boolean {
 /**
  * Sync at D8's moments: at launch, on focus once {@link FOCUS_PULL_MS} has passed, whenever
  * asked, a local check every {@link LOCAL_CHECK_MS}, and a pull when nothing has been heard for
- * {@link IDLE_PULL_MS}. **One run at a time**, across every
+ * {@link IDLE_PULL_MS}. A full run asks the server once which collections changed elsewhere
+ * (T189) and pulls only those. **One run at a time**, across every
  * loop there is: a moment that arrives during a run asks for one more, however many arrive, and a
  * loop started while a stopped one is still writing waits for it. Returns the stop.
  */
@@ -166,14 +167,26 @@ export function startSyncLoop(options: LoopOptions): () => void {
     let error: unknown = undefined;
     let finished = false;
     try {
+      // One question for the whole run (T189): a collection no other machine touched is only
+      // pushed. A push run never asks, as it never did.
+      let stale: Set<string> | null = null;
+      if (run === "full") {
+        try {
+          stale = new Set(await options.backend.heads(collections.map((collection) => collection.id)));
+        } catch (failure) {
+          if (isSignedOut(failure)) return;
+          error = failure;
+          options.onError("heads", failure);
+          return;
+        }
+      }
       for (const collection of collections) {
         // A stopped loop finishes the collection it is in, and starts no other.
         if (stopped) return;
         try {
-          const replaced =
-            run === "full"
-              ? await syncCollection(options.backend, collection, onSending)
-              : await pushCollection(options.backend, collection, false, onSending);
+          const replaced = stale?.has(collection.id)
+            ? await syncCollection(options.backend, collection, onSending)
+            : await pushCollection(options.backend, collection, false, onSending);
           if (replaced > 0) options.onReplaced(collection.id, replaced);
         } catch (failure) {
           if (isSignedOut(failure)) return;
