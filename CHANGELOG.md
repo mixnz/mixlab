@@ -9,6 +9,9 @@
 ### Changed
 - A new MixLab version is offered in a panel in the corner: download it, then install it when you
   are ready. Settings → Updates takes the same two steps.
+- `php`, `node`, `python` and the rest are on your PATH only for the languages you installed with
+  MixEngine, so a Node.js or Python you installed yourself is no longer hidden. A tool you add with
+  `npm install -g` or `pip install` is a command as soon as it lands.
 
 ### Fixed
 - A blueprint that installs PHP now turns on its PHP extensions, such as `redis` for Laravel, and
