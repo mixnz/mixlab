@@ -60,15 +60,6 @@ use mixengine_proto::{PackageVersion, RuntimeKind, ServiceId, VersionConstraint}
 /// where the reason belongs.
 const NOT_RUNNABLE: i32 = 127;
 
-/// Set by a resolution that found nothing asked and no default — roadmap task **T185b**. A flag for
-/// the process rather than a field on [`Refusal`], because a shim is one run: it resolves once,
-/// and on a refusal `main` asks this before it prints anything.
-static MAY_HAND_OVER: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-/// Set on the program a shim hands over to, so a second shim further down the PATH — another
-/// home's `bin/` — refuses rather than handing over again.
-const HANDED_OVER: &str = "MIXENGINE_SHIM_HANDED_OVER";
-
 fn main() {
     // `argv[0]` rather than `current_exe`, and the difference is the whole dispatch: a shim is this
     // binary under another name, so what has to be read is the name it was *invoked* by. On Unix
@@ -89,14 +80,6 @@ fn main() {
         Ok(code) => std::process::exit(code),
 
         Err(refusal) => {
-            // T185b: when MixEngine has nothing to say for this directory, the person's own
-            // program further down the PATH answers instead.
-            if MAY_HAND_OVER.load(std::sync::atomic::Ordering::Relaxed)
-                && let Some(code) = hand_over(&invoked, &arguments)
-            {
-                std::process::exit(code);
-            }
-
             // Named after the command the user typed rather than after MixEngine, the way every
             // other program on their PATH complains. `mix` is named in the hint instead, which is
             // where it is something to type rather than a brand.
@@ -393,45 +376,6 @@ async fn global(
             None,
         ),
     ))
-}
-
-/// Run the next program of this command's name on the PATH — roadmap task **T185b**, D3.
-///
-/// Every entry that is this home's `bin/` is skipped, compared spelled in full (a trailing
-/// separator or a relative spelling is the same directory), and so is a directory holding a
-/// trampoline's pointer file: another home's `bin/`. The program is started with the person's
-/// environment as it is, plus [`HANDED_OVER`]. [`None`] when there is nothing to run, when this
-/// shim was itself handed over to, or when the start failed — the caller then refuses as before.
-fn hand_over(invoked: &Path, arguments: &[OsString]) -> Option<i32> {
-    if std::env::var_os(HANDED_OVER).is_some() {
-        return None;
-    }
-
-    let name = shims::dispatch(invoked)?.name;
-    let home = home_override().map(PathBuf::from);
-    let root = paths::resolve_root_default(home.as_deref()).ok()?;
-    let own = mixengine_platform::paths::in_full(Paths::new(root, &PathOverrides::default()).bin());
-    let same = |entry: &Path| {
-        let entry = mixengine_platform::paths::in_full(entry);
-        if cfg!(windows) {
-            entry
-                .to_string_lossy()
-                .trim_end_matches(['\\', '/'])
-                .eq_ignore_ascii_case(own.to_string_lossy().trim_end_matches(['\\', '/']))
-        } else {
-            entry == own
-        }
-    };
-
-    let path = std::env::var_os("PATH")?;
-    let program = std::env::split_paths(&path)
-        .filter(|entry| !entry.as_os_str().is_empty())
-        .filter(|entry| !same(entry))
-        .filter(|entry| !entry.join(handover::RESOLVER_POINTER).exists())
-        .find_map(|entry| runnable(&entry, name))?;
-
-    let environment = BTreeMap::from([(HANDED_OVER.to_owned(), OsString::from("1"))]);
-    become_program(&program, arguments, &environment).ok()
 }
 
 /// The file in `bindir` that this system would run for a bare `name`.
@@ -732,16 +676,9 @@ fn resolved(kind: RuntimeKind, executable: &str) -> Result<Resolution, Refusal> 
             },
         )
         .await
-        .map_err(|error| {
-            // T185b: nothing asked, and no default — the one refusal a program further down the
-            // PATH may answer instead. A pin nothing matches is not it.
-            if matches!(error, mixengine_core::Error::NoDefaultRuntime { .. }) {
-                MAY_HAND_OVER.store(true, std::sync::atomic::Ordering::Relaxed);
-            }
-            Refusal {
-                hint: hint_for(&error),
-                said: explain(&error),
-            }
+        .map_err(|error| Refusal {
+            hint: hint_for(&error),
+            said: explain(&error),
         })?;
 
         let program = runtimes::program(&store, kind, &resolved.runtime.version, executable)

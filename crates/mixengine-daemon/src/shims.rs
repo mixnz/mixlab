@@ -124,6 +124,9 @@ pub(crate) struct Shims {
     /// PATH with nothing behind it. The window is small and the failure is not, which is the shape
     /// of a lock that is worth taking.
     filling: tokio::sync::Mutex<()>,
+
+    /// Told when the installed runtimes change, so the watch on their bindirs follows — T185b.
+    rearm: tokio::sync::Notify,
 }
 
 impl Shims {
@@ -141,7 +144,27 @@ impl Shims {
             store,
             catalogue,
             filling: tokio::sync::Mutex::new(()),
+            rearm: tokio::sync::Notify::new(),
         }
+    }
+
+    /// A runtime was installed or removed: bring `bin/` up to date now, and watch the bindirs the
+    /// rows name from here on — roadmap task **T185b**.
+    ///
+    /// A re-scan rather than a refresh, because the table of tools found inside runtimes is part of
+    /// what changed: the last Node that had `yarn` going takes `yarn` with it, and a refresh would
+    /// read the table from before and keep it.
+    pub(crate) async fn runtimes_changed(&self) -> Result<shims::Refreshed, Error> {
+        let refreshed = self.rescan().await;
+
+        self.rearm.notify_one();
+
+        refreshed
+    }
+
+    /// Resolves when [`runtimes_changed`](Self::runtimes_changed) has asked for the watch to follow.
+    pub(crate) async fn rearmed(&self) {
+        self.rearm.notified().await;
     }
 
     /// Put one copy of the shim in `bin/` per command, and clear out what is not one.

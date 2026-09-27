@@ -4,7 +4,7 @@ slug = "runtimes"
 order = 5
 summary = "Cài bao nhiêu phiên bản tùy bạn, và để mỗi thư mục tự chọn phiên bản của nó. Không hook shell, không phải nhớ gì cả."
 translation_of = "en/runtimes.md"
-source_sha256 = "89ab7ae94a3189629e2f2dbd54f08610e77057d2358e4dee2cbef7dcac894191"
+source_sha256 = "dbd84058824aea458c977d3c36884a8acc8374d9f412acf872a60e3f27558f7d"
 +++
 
 # Phiên bản PHP, Node, Python, Ruby, Go và Java
@@ -175,19 +175,20 @@ Ràng buộc không ghi pre-release thì không bao giờ chọn pre-release. `8
 
 ## Shim
 
-`mix path install` điền vào `<root>/bin` và đưa duy nhất thư mục đó vào `PATH` của bạn. Trong đó
-có một chương trình nhỏ cho mỗi lệnh: `php`, `php-config`, `pecl`, `composer`, `node`, `npm`,
-`npx`, `python`, `pip`, `ruby`, `gem`, `bundle`, `go`, `gofmt`, `java`, `javac`, `jar`,
-`jshell`, `keytool`, `jlink`. Mỗi chương trình tự tìm xem thư mục
-hiện tại muốn phiên bản nào rồi chuyển cho file thực thi thật.
+`mix path install` đưa `<root>/bin` vào `PATH` của bạn. Trong đó có một chương trình nhỏ cho mỗi
+lệnh của những ngôn ngữ bạn đã cài bằng MixEngine: `php`, `composer`, `node`, `npm`, `python`,
+`pip`, `ruby`, `go`, `java` và các lệnh khác. Mỗi chương trình tự tìm xem thư mục hiện tại muốn
+phiên bản nào rồi chuyển cho file thực thi thật.
 
 Hai hệ quả đáng biết:
 
 - **Hoạt động cả khi daemon đã dừng.** Shim đọc trực tiếp thứ nó cần thay vì hỏi qua socket. Vì
   vậy `php -v` trong một project vẫn trả lời được khi MixEngine không chạy.
-- **Không cần làm mới gì sau khi cài thêm.** Danh sách lệnh là cố định, nên `<root>/bin` không phụ
-  thuộc vào bạn đã cài gì. Shim `node` trên máy chưa có Node.js sẽ không resolve ra gì, và cho bạn
-  biết cần gõ lệnh nào.
+- **Chỉ có những gì bạn đã cài.** Cài bản Node.js đầu tiên thì có `node`, `npm`, `npx`; gỡ bản
+  cuối cùng thì chúng mất. Ngôn ngữ bạn chưa từng cài bằng MixEngine không có lệnh nào trong
+  `<root>/bin`, nên `which node` sẽ tìm thấy bản Node.js bạn tự cài.
+- **Terminal mở từ trước có thể còn nhớ đường dẫn cũ.** Sau khi một lệnh xuất hiện hoặc mất đi, mở
+  terminal mới, hoặc gõ `hash -r` trong bash.
 
 Chỉ có `<root>/bin` được đưa vào `PATH`. Một mục duy nhất, không bao giờ là một thư mục cho mỗi
 phiên bản.

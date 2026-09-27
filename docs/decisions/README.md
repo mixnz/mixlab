@@ -56,6 +56,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0054](0054-an-install-completes-itself-from-its-own-payload.md) | An install completes itself from its own payload; an update still adds nothing | Accepted |
 | [0055](0055-the-daemons-credentials-are-one-keychain-item-per-home-on-macos.md) | The daemon's credentials are one Keychain item per home on macOS | Accepted |
 | [0056](0056-mixlab-stands-without-mixengine.md) | MixLab stands without MixEngine, and updates itself; MixEngine never updates unasked | Accepted |
+| [0057](0057-a-runtime-s-commands-are-in-bin-only-while-it-is-installed.md) | A runtime's commands are in `bin/` only while it is installed | Accepted |
 
 ### Desktop (recorded in MixDB)
 

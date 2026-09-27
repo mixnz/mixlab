@@ -92,7 +92,7 @@ const vi: typeof en = {
         open: "Mở {{url}}",
       },
     pathNudge: {
-      title: "Dùng php, node, python ở mọi terminal",
+      title: "Dùng các ngôn ngữ cài ở đây trong mọi terminal",
       intro:
         "Thêm thư mục lệnh của MixEngine vào PATH, mỗi project sẽ chạy đúng phiên bản nó cần. Không cần quyền quản trị.",
       install: "Thêm vào PATH",
@@ -573,7 +573,7 @@ const vi: typeof en = {
       },
       path: {
         title: "Lệnh trong terminal",
-        toggle: "Đưa php, node, python và các lệnh khác vào PATH",
+        toggle: "Đưa các ngôn ngữ tôi cài bằng MixEngine vào PATH",
         directory: "Thư mục: {{directory}}",
         places: "Ghi ở: {{places}}",
         changed: "Mở một terminal mới để nhận thay đổi.",

@@ -607,6 +607,14 @@ pub fn refresh(
     }
 
     for extra in extra {
+        // A tool installed into a runtime is that runtime's command, and goes with it: the table of
+        // discovered tools may still list it from before the last version went (T185b).
+        if let Origin::Global { kind } = &extra.origin
+            && !installed.contains(kind)
+        {
+            continue;
+        }
+
         let name = format!("{}{}", extra.name, std::env::consts::EXE_SUFFIX);
 
         if expected.insert(fold(&name)) {

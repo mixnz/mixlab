@@ -74,18 +74,6 @@
 # are read. 0 is refused: that is a loop with no pause in it rather than a schedule.
 #renew_check_seconds = 3600
 
-[bin]
-# `<root>/bin` holds one command per language, one per client of a database you have installed,
-# and one per tool you installed into a runtime with `npm install -g`, `pip install` or
-# `gem install`. This is how often MixEngine looks for the last of those.
-#
-# Short on purpose: it is what makes `npm install -g yarn` followed by `yarn --version` work in
-# the shell you are already typing in. A check costs one look at each runtime's own directory and
-# does nothing else unless one of them has changed. `mix path rescan` runs it now.
-#
-# 0 is refused: that is a loop with no pause in it rather than a schedule.
-#rescan_seconds = 2
-
 [services]
 # MixEngine stops nothing on its own unless you ask it to. Turn on "Save battery" in MixLab's
 # Settings, or run "mix service save-resources --on", and a service nobody has used for a while is

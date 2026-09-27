@@ -22,6 +22,10 @@ getrandom = { workspace = true, optional = true }
 # `.github/elevate-dependencies.txt`.
 if-addrs = { workspace = true, optional = true }
 mixengine-proto = { workspace = true, optional = true }
+# T185b: watching each runtime's bindir. Optional and enabled by `host`, on `sysinfo`'s reasoning:
+# `mixengine-elevate` compiles this crate with `elevated` alone and must not gain a watcher, and CI
+# diffs that closure against `.github/elevate-dependencies.txt`.
+notify = { workspace = true, optional = true }
 # T71's reading: what each supervised process group is spending. Optional and enabled by `host`,
 # exactly as `directories` and `tracing` are — `mixengine-elevate` compiles this crate with
 # `elevated` alone and must not gain a process enumerator, and CI diffs that closure against
@@ -206,6 +210,7 @@ host = [
     # T186: declared on macOS only, so naming it here is a no-op on the other two.
     "dep:security-framework",
     "dep:mixengine-proto",
+    "dep:notify",
     # T49a's trust stores on macOS and Linux, which are made of PEM text. Declared per target
     # above, so naming it here activates it on those two and is a no-op on Windows —
     # `dbus-secret-service`'s arrangement, and for its reason.

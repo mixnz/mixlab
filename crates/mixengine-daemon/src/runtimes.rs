@@ -212,7 +212,7 @@ impl Runtimes {
     /// Reported and never fatal — the next start, and the rescan, fill it again.
     async fn refresh_bin(&self) {
         if let Some(shims) = self.shims.get()
-            && let Err(error) = shims.refresh().await
+            && let Err(error) = shims.runtimes_changed().await
         {
             tracing::warn!(%error, "bin/ could not be refreshed after a runtime came or went");
         }

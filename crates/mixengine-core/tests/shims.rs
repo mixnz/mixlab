@@ -601,3 +601,22 @@ fn composer_needs_both_composer_and_php() {
     fixture.refresh();
     assert!(composer.exists(), "Composer with a PHP");
 }
+
+/// **T185b.** A tool installed into a runtime — `npm install -g yarn` — is a command of that runtime,
+/// so it follows the same rule: no Node installed, no `yarn`, whatever the table of discovered tools
+/// still says from before the last Node went.
+#[test]
+fn a_tool_installed_into_a_runtime_goes_with_its_runtime() {
+    let mut fixture = Fixture::new().fronting(&["yarn"]);
+    let yarn = fixture
+        .bin()
+        .join(format!("yarn{}", std::env::consts::EXE_SUFFIX));
+
+    fixture.installed = [mixengine_proto::RuntimeKind::Node].into_iter().collect();
+    fixture.refresh();
+    assert!(yarn.exists(), "yarn with its Node installed");
+
+    fixture.installed = std::collections::BTreeSet::new();
+    fixture.refresh();
+    assert!(!yarn.exists(), "yarn with no Node left to run it");
+}

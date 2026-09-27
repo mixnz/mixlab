@@ -669,7 +669,7 @@ async fn call_method(
                     encode_result(&api.shims.uninstall().await.map_err(refused)?)
                 }
 
-                // T131: the pass the daemon repeats every `[bin] rescan_seconds`, run now.
+                // T131: the pass the daemon runs when a runtime's bindir changes, run now.
                 rpc::method::PATH_RESCAN => {
                     no_params(params.as_ref())?;
                     encode_result(&api.shims.rescanned().await.map_err(refused)?)

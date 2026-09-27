@@ -213,7 +213,6 @@ logs = "logs-elsewhere"
                 level: LogLevel::Trace,
                 format: LogFormat::Json,
             },
-            bin: mixengine_core::config::Bin::default(),
             daemon: Daemon {
                 ipc_path: Some(PathBuf::from("/run/user/1000/mixengined.sock")),
                 shutdown_grace_seconds: 30,
@@ -569,48 +568,6 @@ fn crash_reports_are_recorded_unless_the_file_says_otherwise() {
     let path = write(&home, "[crash]\nenabled = false\n");
     let config = config::load(&path).unwrap();
     assert!(!config.crash.enabled);
-}
-
-/// **Two seconds, and short on purpose** — roadmap task **T131**. What it buys is that
-/// `npm install -g yarn && yarn --version` works in one breath, in the shell somebody is already
-/// typing in.
-#[test]
-fn a_home_that_says_nothing_rescans_every_two_seconds() {
-    let home = TempDir::new().unwrap();
-    let path = write(&home, "");
-
-    let config = config::load(&path).unwrap();
-
-    assert_eq!(config.bin.rescan_seconds, 2);
-}
-
-/// And a machine whose filesystem makes a directory's modification time expensive, or a person who
-/// would rather type `mix path rescan`, can slow it down.
-#[test]
-fn a_rescan_period_can_be_lengthened() {
-    let home = TempDir::new().unwrap();
-    let path = write(&home, "[bin]\nrescan_seconds = 60\n");
-
-    let config = config::load(&path).unwrap();
-
-    assert_eq!(config.bin.rescan_seconds, 60);
-}
-
-/// Zero is refused on `renew_check_seconds`' reasoning: it is not a short pause, it is none — and a
-/// loop with no pause in it would stat every installed runtime's bindir as fast as the disk allows.
-#[test]
-fn a_rescan_period_of_zero_is_refused_rather_than_corrected() {
-    let home = TempDir::new().unwrap();
-    let path = write(&home, "[bin]\nrescan_seconds = 0\n");
-
-    let error = config::load(&path).unwrap_err();
-    let message = reported(&error);
-
-    assert!(
-        matches!(error, mixengine_core::Error::Config { .. }),
-        "{error:?}"
-    );
-    assert!(message.contains('2'), "{message}");
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -295,6 +295,11 @@ sqlx = { version = "0.9.0", default-features = false, features = [
     "macros",
     "tls-none",
 ] }
+# Being told when a runtime's bindir changes, so a tool installed with `npm install -g` becomes a
+# command without anything polling for it — roadmap task T185b, ADR 0057. The kernel's own
+# notification on each system (ReadDirectoryChangesW, FSEvents, inotify): an idle machine pays
+# nothing, where the two-second `stat` loop it replaces woke the daemon for as long as it ran.
+notify = "8.2.0"
 # Per-process CPU and RSS — the reading T71's sampler takes, and the crate `docs/standards/rust.md`
 # already names for "process/system info". `default-features = false` with `system` alone: this
 # workspace never asks about disks, networks, components or logged-in users, and every one of those

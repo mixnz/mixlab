@@ -53,9 +53,10 @@ is resolved against installed versions — **never** silently against downloadab
 
 ## Shims
 
-`<root>/bin/` contains a small shim binary per exposed command (`php`, `php-config`, `pecl`,
-`composer`, `node`, `npm`, `npx`, `python`, `pip`, `ruby`, `gem`, `bundle`, `go`, `gofmt`, `java`,
-`javac`, `jar`, `jshell`, `keytool`, `jlink`). The shim:
+`<root>/bin/` contains a small shim binary per exposed command of each **installed** kind (`php`,
+`php-config`, `pecl`, `composer`, `node`, `npm`, `npx`, `python`, `pip`, `ruby`, `gem`, `bundle`,
+`go`, `gofmt`, `java`, `javac`, `jar`, `jshell`, `keytool`, `jlink`) — T185b, ADR 0057. No version of a
+kind installed means no command of it in `bin/`, a tool installed into a runtime included. The shim:
 
 1. Reads its own file name to know which command was invoked.
 2. Calls `resolve` (in-process, reading SQLite read-only + walking for `mixengine.toml`) — **no IPC**,
@@ -113,8 +114,9 @@ directory it was typed in and looked for inside *that* version's bindir — so a
 another Node gets that Node's Yarn, or a sentence naming the version and `npm install -g yarn`. A
 PATH entry pointing at one install could never have done that, which is why there is not one.
 
-The pass runs every `[bin] rescan_seconds` (two by default), costs one `stat` per installed runtime
-and does nothing more when no bindir has moved. `mix path rescan` runs it now. Composer's own global
+The daemon watches each installed runtime's bindir and runs the pass when one gains or loses an
+entry, so nothing runs on an idle machine. A start, and every runtime installed, removed, adopted
+or restored, runs it before answering. `mix path rescan` runs it now. Composer's own global
 bindir is out of scope: it is `~/.composer/vendor/bin`, outside every install directory.
 
 ### What a shim tells the program it becomes
@@ -194,9 +196,9 @@ X11 or sound, and `libz` — the one nothing starts without — is what the smok
    interpreter from its own location instead. **A path computed at run time beats a path written at
    install time** — the same rule the shim itself is an instance of — so the hook that would have
    fixed this would have been the bug.
-5. Record in `runtime_installs`, emit events. **No shim refresh** — see the note under *Shims*: the
-   command table does not depend on what is installed, so there is nothing an install changes about
-   `bin/`.
+5. Record in `runtime_installs`, emit events, **refresh `bin/`** — T185b, ADR 0057: a runtime's
+   commands are in `bin/` only while one of its versions is installed, so the first install of a
+   kind adds its names and the last uninstall removes them.
 
 Failures roll back the staging directory. A half-extracted version must never appear in `list`.
 
