@@ -2198,7 +2198,8 @@ fn idle_after(value: &str) -> Result<u32, String> {
 
     if millis.is_zero() {
         return Err(
-            "an idle policy of zero would stop the service on the next sweep; `--never` is how you              switch idle stopping off"
+            "an idle policy of zero would stop the service on the next sweep; `--never` is how you \
+             switch idle stopping off"
                 .to_owned(),
         );
     }
@@ -2207,7 +2208,8 @@ fn idle_after(value: &str) -> Result<u32, String> {
 
     if minutes * 60_000 != millis.0 {
         return Err(format!(
-            "{value:?} is not a whole number of minutes, and that is what MixEngine stores — write              it as minutes or hours"
+            "{value:?} is not a whole number of minutes, and that is what MixEngine stores — write \
+             it as minutes or hours"
         ));
     }
 
@@ -3524,7 +3526,8 @@ fn update_lock_in(
             format!("another update is running ({holder})"),
         )
         .with_hint(
-            "wait for it to finish, whether it is mix self-update or MixLab; two updates at once              would interleave their swaps",
+            "wait for it to finish, whether it is mix self-update or MixLab; two updates at once \
+             would interleave their swaps",
         )),
         Err(mixengine_platform::Error::Io { source, .. })
             if matches!(

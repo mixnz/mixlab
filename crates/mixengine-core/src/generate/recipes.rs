@@ -225,7 +225,9 @@ fn within_socket_limit(service: &str, key: &'static str, socket: &Path) -> Resul
             service: service.to_owned(),
             key,
             value: socket.display().to_string(),
-            reason: "a Unix socket path is capped at 103 characters by `sockaddr_un`, and a server                      given a longer one aborts after it has started — move the MixEngine home                      somewhere shorter",
+            reason: "a Unix socket path is capped at 103 characters by `sockaddr_un`, and a server \
+                     given a longer one aborts after it has started — move the MixEngine home \
+                     somewhere shorter",
         });
     }
 

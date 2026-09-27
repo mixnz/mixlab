@@ -42,6 +42,13 @@ jobs:
           node --test scripts/check-docs.test.mjs
           node scripts/check-docs.mjs
 
+      # A Rust string whose `\` line continuation went missing carries a run of spaces into the
+      # message, and neither rustfmt nor clippy notices. Needs only Node, like the step above.
+      - name: String continuations
+        run: |
+          node --test scripts/check-strings.test.mjs
+          node scripts/check-strings.mjs
+
       # No toolchain action: rust-toolchain.toml is the single source of truth for the version and
       # for the clippy/rustfmt components. Given no argument, `rustup toolchain install` installs
       # exactly what that file pins — note that `rustup show` stopped installing anything in 1.28.

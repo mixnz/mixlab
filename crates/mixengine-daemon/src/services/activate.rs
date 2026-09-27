@@ -172,7 +172,8 @@ pub(crate) async fn hold_all(
             Err(error) => tracing::warn!(
                 service = service.as_str(),
                 %error,
-                "this service cannot be started by a request; something else holds its activator's                  address"
+                "this service cannot be started by a request; something else holds its activator's \
+                 address"
             ),
         }
     }

@@ -17,7 +17,9 @@ pub(crate) mod pf;
 #[cfg(feature = "elevated")]
 #[allow(
     dead_code,
-    reason = "Windows refuses both directions before it would ever need a lock, so on that \n              system this is compiled and not called — the same shape as the tables in \n              `crate::prompt`"
+    reason = "Windows refuses both directions before it would ever need a lock, so on that \
+              system this is compiled and not called — the same shape as the tables in \
+              `crate::prompt`"
 )]
 const LOCK: &str = "port-access.lock";
 
@@ -74,7 +76,9 @@ pub fn revoke(target: &mixengine_proto::privileged::PortAccessTarget) -> crate::
 #[cfg(feature = "elevated")]
 #[allow(
     dead_code,
-    reason = "Windows refuses both directions before it would ever need a lock, so on that \n              system this is compiled and not called — the same shape as the tables in \n              `crate::prompt`"
+    reason = "Windows refuses both directions before it would ever need a lock, so on that \
+              system this is compiled and not called — the same shape as the tables in \
+              `crate::prompt`"
 )]
 pub(crate) fn held() -> crate::Result<crate::lock::Lock> {
     let path = crate::elevated::audit_directory()?.join(LOCK);

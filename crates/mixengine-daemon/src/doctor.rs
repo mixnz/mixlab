@@ -314,7 +314,8 @@ impl Doctor {
             return Check {
                 name,
                 outcome: Outcome::Skipped {
-                    because: "this home has no usable certificate authority, so there is nothing                               for a browser to trust — `mix cert ca-status` says which"
+                    because: "this home has no usable certificate authority, so there is nothing \
+                              for a browser to trust — `mix cert ca-status` says which"
                         .to_owned(),
                 },
             };

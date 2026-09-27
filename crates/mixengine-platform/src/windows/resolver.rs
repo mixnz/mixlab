@@ -167,7 +167,9 @@ pub(crate) fn apply(
 fn notify_dns_client() -> String {
     #[expect(
         unsafe_code,
-        reason = "the service control manager has no safe binding in this tree; every handle below                   is closed on the path that opened it, and the one out-parameter is owned by this                   frame"
+        reason = "the service control manager has no safe binding in this tree; every handle below \
+                  is closed on the path that opened it, and the one out-parameter is owned by this \
+                  frame"
     )]
     unsafe {
         let manager = OpenSCManagerW(std::ptr::null(), std::ptr::null(), SC_MANAGER_CONNECT);

@@ -258,7 +258,8 @@ impl ToWire for mixengine_core::Error {
             // itself on what to do about it.
             Core::DataDirectoryTaken { holder, .. } => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
-                    "give this one a directory of its own, or `mix service delete {holder}` if it                      is the one that should go — two servers over one data directory corrupt it"
+                    "give this one a directory of its own, or `mix service delete {holder}` if it \
+                     is the one that should go — two servers over one data directory corrupt it"
                 ))
             }
 
@@ -267,7 +268,8 @@ impl ToWire for mixengine_core::Error {
             // the hint spends itself on what to do about it.
             Core::ProjectRootTaken { holder, .. } => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
-                    "`mix project show {holder}` is the one that has it — one directory is one                      project"
+                    "`mix project show {holder}` is the one that has it — one directory is one \
+                     project"
                 ))
             }
 
@@ -277,7 +279,8 @@ impl ToWire for mixengine_core::Error {
             // The user's own argument, and the message already says which rule it broke.
             Core::InvalidProjectName { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
                 .with_hint(
-                    "a project name is a handle: up to sixty-four characters, no path separators                      and no control characters",
+                    "a project name is a handle: up to sixty-four characters, no path separators \
+                     and no control characters",
                 ),
 
             Core::InvalidDatabaseName { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
@@ -417,7 +420,8 @@ impl ToWire for mixengine_core::Error {
             // file. The hint differs because the repair does — nothing here is about `[runtimes]`.
             Core::ManifestEdit { path, .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
                 .with_hint(format!(
-                    "{} could not be rewritten with the project in it — check that it is a TOML                      file this user can write",
+                    "{} could not be rewritten with the project in it — check that it is a TOML \
+                     file this user can write",
                     path.display()
                 )),
 
