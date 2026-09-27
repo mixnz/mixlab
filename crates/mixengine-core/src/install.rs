@@ -33,6 +33,7 @@
 //!
 //! [T23]: ../../../docs/roadmap/phase-2-runtimes.md
 
+use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
@@ -308,6 +309,30 @@ impl Installer {
         not_an_archive: NotAnArchive,
         watcher: &W,
     ) -> Result<Installed> {
+        self.install_marked(artifact, into, smoke, not_an_archive, None, watcher)
+            .await
+    }
+
+    /// [`install`](Self::install), leaving `marker` in the directory — roadmap task **T182f**.
+    ///
+    /// `marker`, when given, is written to [`crate::adopt::marker::FILE_NAME`] in the staging
+    /// directory after the smoke test and before the rename, so a directory that exists always has
+    /// the marker it was installed with. The bytes are the caller's: this pipeline does not know
+    /// what a marker says, only where it goes.
+    ///
+    /// # Errors
+    ///
+    /// As [`install`](Self::install), and [`Error::Io`] when the marker cannot be written — which
+    /// leaves `into` untouched like every other failure.
+    pub async fn install_marked<W: Watcher>(
+        &self,
+        artifact: &Artifact,
+        into: &Path,
+        smoke: Option<&SmokeTest>,
+        not_an_archive: NotAnArchive,
+        marker: Option<&[u8]>,
+        watcher: &W,
+    ) -> Result<Installed> {
         if into.exists() {
             return Err(Error::AlreadyInstalled {
                 path: into.to_path_buf(),
@@ -341,6 +366,16 @@ impl Installer {
             self.unpack(&part, &unpacking, &staging, watcher).await?;
             present(artifact, &staging)?;
             self.smoke(artifact, &staging, smoke, watcher).await?;
+            if let Some(marker) = marker {
+                let path = staging.join(crate::adopt::marker::FILE_NAME);
+                tokio::fs::write(&path, marker)
+                    .await
+                    .map_err(|source| Error::Io {
+                        action: "write",
+                        path,
+                        source,
+                    })?;
+            }
             promote(&staging, into).await
         }
         .await;
@@ -620,70 +655,81 @@ impl Installer {
             return Err(Error::InstallCancelled);
         }
 
-        let relative =
-            artifact
-                .provides
-                .get(&smoke.executable)
-                .ok_or_else(|| Error::MissingFromArtifact {
-                    url: artifact.url.clone(),
-                    executable: smoke.executable.clone(),
-                    path: String::new(),
-                })?;
-        let program = staging.join(relative);
-
         watcher.report(CHECKED_AT, "checking it runs here").await;
 
-        let failed = |detail: String| Error::SmokeTestFailed {
-            program: program.clone(),
-            detail,
-        };
-
-        // `current_dir` is the staging directory because that is where the runtime's own files are:
-        // a Windows PHP resolves its DLLs from beside the executable, which is the whole reason
-        // `provides` carries a path rather than only a name.
-        let mut checking = tokio::process::Command::new(&program);
-        checking
-            .args(&smoke.args)
-            .current_dir(staging)
-            // A check that hung would otherwise outlive the timeout below and hold the staging
-            // directory open, which is exactly what the rename cannot tolerate on Windows.
-            .kill_on_drop(true);
-
-        for variable in smoke.unset {
-            checking.env_remove(variable);
-        }
-
-        // A runtime is a console program and the daemon has no console, so without this Windows
-        // makes one for it — a terminal window flashing on the desktop for every `php -v`.
-        mixengine_platform::process::without_a_window(checking.as_std_mut());
-
-        let running = checking.output();
-
-        let output = match tokio::time::timeout(SMOKE_TIMEOUT, running).await {
-            Ok(Ok(output)) => output,
-            // Where a missing VC++ redistributable, a glibc floor, an unloadable architecture and a
-            // machine whose application control policy refuses the image all arrive: the OS refuses
-            // to start it and says why. The last of those needs a sentence of its own — T94.
-            Ok(Err(source)) => return Err(failed(why_it_would_not_start(&source))),
-            Err(_) => {
-                return Err(failed(format!(
-                    "it did not answer within {} seconds",
-                    SMOKE_TIMEOUT.as_secs()
-                )));
-            }
-        };
-
-        if !output.status.success() {
-            let complaint = String::from_utf8_lossy(&output.stderr);
-            let first = complaint.lines().find(|line| !line.trim().is_empty());
-            return Err(failed(match first {
-                Some(line) => format!("it exited with {}: {line}", output.status),
-                None => format!("it exited with {}", output.status),
-            }));
-        }
-
-        Ok(())
+        check_runs(artifact, staging, smoke).await
     }
+}
+
+/// Run `smoke` against the build in `dir` — the check an install makes before the rename, and the
+/// one [`crate::adopt`] makes of a directory an earlier home left without a marker (T182f).
+///
+/// # Errors
+///
+/// [`Error::MissingFromArtifact`] when `provides` does not name the executable, and
+/// [`Error::SmokeTestFailed`] when it will not start, times out or exits non-zero.
+pub async fn check_runs(artifact: &Artifact, dir: &Path, smoke: &SmokeTest) -> Result<()> {
+    let relative =
+        artifact
+            .provides
+            .get(&smoke.executable)
+            .ok_or_else(|| Error::MissingFromArtifact {
+                url: artifact.url.clone(),
+                executable: smoke.executable.clone(),
+                path: String::new(),
+            })?;
+    let program = dir.join(relative);
+
+    let failed = |detail: String| Error::SmokeTestFailed {
+        program: program.clone(),
+        detail,
+    };
+
+    // `current_dir` is the dir directory because that is where the runtime's own files are:
+    // a Windows PHP resolves its DLLs from beside the executable, which is the whole reason
+    // `provides` carries a path rather than only a name.
+    let mut checking = tokio::process::Command::new(&program);
+    checking
+        .args(&smoke.args)
+        .current_dir(dir)
+        // A check that hung would otherwise outlive the timeout below and hold the dir
+        // directory open, which is exactly what the rename cannot tolerate on Windows.
+        .kill_on_drop(true);
+
+    for variable in smoke.unset {
+        checking.env_remove(variable);
+    }
+
+    // A runtime is a console program and the daemon has no console, so without this Windows
+    // makes one for it — a terminal window flashing on the desktop for every `php -v`.
+    mixengine_platform::process::without_a_window(checking.as_std_mut());
+
+    let running = checking.output();
+
+    let output = match tokio::time::timeout(SMOKE_TIMEOUT, running).await {
+        Ok(Ok(output)) => output,
+        // Where a missing VC++ redistributable, a glibc floor, an unloadable architecture and a
+        // machine whose application control policy refuses the image all arrive: the OS refuses
+        // to start it and says why. The last of those needs a sentence of its own — T94.
+        Ok(Err(source)) => return Err(failed(why_it_would_not_start(&source))),
+        Err(_) => {
+            return Err(failed(format!(
+                "it did not answer within {} seconds",
+                SMOKE_TIMEOUT.as_secs()
+            )));
+        }
+    };
+
+    if !output.status.success() {
+        let complaint = String::from_utf8_lossy(&output.stderr);
+        let first = complaint.lines().find(|line| !line.trim().is_empty());
+        return Err(failed(match first {
+            Some(line) => format!("it exited with {}: {line}", output.status),
+            None => format!("it exited with {}", output.status),
+        }));
+    }
+
+    Ok(())
 }
 
 /// What a smoke test says when the operating system would not start the program at all.
@@ -742,11 +788,26 @@ fn staging_for(into: &Path) -> Result<PathBuf> {
 /// shape a bundle copied by something that did not follow it takes, and it is what the strictness
 /// here was really buying. The one entry whose shape matters beyond existing is the smoke-test
 /// executable, and that one is proved by being run.
-fn present(artifact: &Artifact, staging: &Path) -> Result<()> {
-    for (executable, relative) in &artifact.provides {
+///
+/// # Errors
+///
+/// [`Error::MissingFromArtifact`] naming the first entry that is not there.
+pub fn present(artifact: &Artifact, dir: &Path) -> Result<()> {
+    provided(&artifact.provides, &artifact.url, dir)
+}
+
+/// [`present`], for a `provides` map read from somewhere other than an artifact — the marker an
+/// earlier install left, which [`crate::adopt`] checks before it records a directory (T182f).
+///
+/// # Errors
+///
+/// [`Error::MissingFromArtifact`] naming the first entry that is not there, or that would lead
+/// outside `dir`.
+pub fn provided(provides: &BTreeMap<String, String>, url: &str, dir: &Path) -> Result<()> {
+    for (executable, relative) in provides {
         let path = Path::new(relative);
         let missing = || Error::MissingFromArtifact {
-            url: artifact.url.clone(),
+            url: url.to_owned(),
             executable: executable.clone(),
             path: relative.clone(),
         };
@@ -758,7 +819,7 @@ fn present(artifact: &Artifact, staging: &Path) -> Result<()> {
             return Err(missing());
         }
 
-        let staged = staging.join(path);
+        let staged = dir.join(path);
         let carried = if staged.is_dir() {
             std::fs::read_dir(&staged).is_ok_and(|mut entries| entries.next().is_some())
         } else {

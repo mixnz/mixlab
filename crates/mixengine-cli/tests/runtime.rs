@@ -12,7 +12,7 @@
 
 mod harness;
 
-use harness::{Home, json, stdout};
+use harness::{Home, json, stderr, stdout};
 use mixengine_testkit::{FakePackage, MockRegistry, Packed, Packing, declare};
 use serde_json::{Value, json as document};
 
@@ -324,5 +324,26 @@ async fn refresh_reaches_the_daemon_from_the_command_line() {
         refreshed["runtimes"].as_array().map(Vec::len),
         Some(0),
         "`--refresh` reached the daemon: {refreshed}"
+    );
+}
+
+/// **T182f.** `mix runtime adopt` reaches `runtime.adopt`: a version recorded answers its row, and
+/// one that is not on disk says so and names the install.
+#[tokio::test(flavor = "multi_thread")]
+async fn adopt_reaches_the_daemon_from_the_command_line() {
+    let fixture = Fixture::start().await;
+    let installed = fixture.home.mix(&["runtime", "install", "php", VERSION]);
+    assert!(installed.status.success(), "{installed:?}");
+
+    let adopted = fixture.home.mix(&["runtime", "adopt", "php", VERSION]);
+    assert!(adopted.status.success(), "{adopted:?}");
+    assert!(stdout(&adopted).contains(VERSION), "{}", stdout(&adopted));
+
+    let missing = fixture.home.mix(&["runtime", "adopt", "php", "9.9.7"]);
+    assert!(!missing.status.success(), "{missing:?}");
+    let said = format!("{}{}", stdout(&missing), stderr(&missing));
+    assert!(
+        said.contains("not on disk") && said.contains("mix runtime install php 9.9.7"),
+        "{said}"
     );
 }

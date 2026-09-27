@@ -213,6 +213,14 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       out on its own before the rename, like `bin/`; a working directory or a file held without
       sharing delete is a `Blocked` row of the plan, named with Retry before anything changes.
       Design: [2026-09-26-t182e-an-uninstall-moves-what-it-can-design.md](../specs/2026-09-26-t182e-an-uninstall-moves-what-it-can-design.md).
+- [x] **T182f** A reinstall records the runtimes and packages the last one kept: every install
+      leaves a marker in its directory, an install that finds its directory adopts it instead of
+      refusing, and each start records what it finds on disk. Spec D1–D3.
+      Design: [2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md](../specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md).
+- [ ] **T182g** Service instances found in `data/` are listed and adopted on request, with a new
+      admin password set through the T127 repair path. After T182f. Spec D4.
+- [ ] **T182h** The uninstaller leaves a copy of the state in each kept folder, and a fresh home
+      offers to restore projects, sites, domains and services from it. After T182g. Spec D5, D6.
 - [ ] **T182a** An uninstall path for macOS and Linux, which have no uninstaller to hang T182 on:
       for example an *Uninstall MixLab…* item in the macOS app that runs the whole removal, deletes
       the `.app` and quits, so the app never outlives it. Until then the handbook's order stands:

@@ -5,6 +5,8 @@
 ### Fixed
 - A blueprint that installs PHP now turns on its PHP extensions, such as `redis` for Laravel, and
   turns them on for the PHP version the project uses, not the newest one installed.
+- Reinstalling MixLab over folders an earlier install kept now lists the runtimes and packages
+  already in them, instead of refusing to install them again.
 
 ## v0.0.9
 

@@ -481,6 +481,10 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       empty `cache\updates`, and a `mix uninstall --dry-run` row naming the file.
       The staging directory of the running version is now removed by its first start, which also
       ends the ~30 MB each self-update used to leave in the cache.
+- [ ] **T185b** `bin/` fronts only what is installed: a runtime's commands appear with its first
+      version and go with its last, and a shim whose directory asked for nothing hands over to the
+      next program of that name on the PATH. Supersedes point 1 of ADR 0033.
+      Design: [T185b](../specs/2026-09-27-t185b-bin-fronts-only-what-is-installed-design.md).
 
 **Milestone M7** — after 30 idle minutes only `mixengined` + the web server are running, and the next
 request still succeeds within budget.

@@ -83,6 +83,11 @@ binaries. What they state is what the daemon **writes** —
    rather than only its state. No API is missing; the affordance is.
 3. **Runtimes** — installed versions per kind with the default marked; available versions;
    install/uninstall as jobs reporting progress; PHP extension toggles per version.
+   **And a version that is on disk but not listed — T182f**: a folder an earlier install left, which
+   the daemon records on its own at start when it can check it. One it could not check is named by
+   `daemon.doctor`, and `runtime.adopt` / `package.adopt` record it on request (`mix runtime adopt`,
+   `mix package adopt`). A screen that offers *Install* for such a version gets `already_exists` with
+   the adopt command in the hint, and offers that instead.
    **And what an extension's plan names before anybody agrees to it — T82**: a `web-app` freezes two
    things at install, the php-fpm pool it runs on and the database it administers, and
    `ExtensionPlan.site` carries both. Which server an administrative interface opens onto is not a

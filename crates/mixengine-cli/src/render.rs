@@ -1597,6 +1597,21 @@ pub(crate) fn runtime_summary(runtime: &RuntimeSummary) -> String {
     rendered
 }
 
+/// `mix package adopt`, for a person: [`runtime_summary`]'s layout, for a package.
+pub(crate) fn package_summary(package: &mixengine_proto::PackageSummary) -> String {
+    let mut rendered = format!("{} {}\n", package.package, package.version);
+
+    for (label, value) in [
+        ("path", package.path.clone()),
+        ("size", size(package.bytes)),
+        ("installed", ago(package.installed_at, SystemTime::now())),
+    ] {
+        rendered.push_str(&format!("  {label:9} {value}\n"));
+    }
+
+    rendered
+}
+
 /// `mix runtime uninstall`, for a person.
 ///
 /// The second line is the whole reason the answer is not just the runtime: a kind left with no

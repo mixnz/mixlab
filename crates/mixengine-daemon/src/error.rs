@@ -244,6 +244,16 @@ impl ToWire for mixengine_core::Error {
                 )
             }
 
+            // A directory an earlier home installed and this one could not check — roadmap task
+            // T182f. Recorded by hand once it can be checked, or removed.
+            Core::UnrecordedInstall { path, .. } => {
+                Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
+                    "`mix runtime adopt` or `mix package adopt` records it once it can be checked, \
+                     or remove {} and install again",
+                    path.display()
+                ))
+            }
+
             // The third way of saying "it is already here", and the one whose repair is different:
             // a service is not replaced by installing something, it is replaced by deleting it.
             Core::ServiceAlreadyDeclared { .. } => {
@@ -993,6 +1003,23 @@ mod tests {
 
         assert_eq!(error.code, ErrorCode::InvalidArgument);
         assert_eq!(error.hint, None);
+    }
+
+    /// **T182f.** A directory an earlier home left is `already_exists`, and the hint is one sentence
+    /// naming both ways on — with no run of spaces where a line continuation went missing.
+    #[test]
+    fn an_unrecorded_install_names_adopt_and_the_directory() {
+        let error = mixengine_core::Error::UnrecordedInstall {
+            path: PathBuf::from("/data/runtimes/node/24.19.0"),
+            reason: "its marker names another install".to_owned(),
+        }
+        .to_wire();
+
+        assert_eq!(error.code, ErrorCode::AlreadyExists);
+        let hint = error.hint.expect("a hint");
+        assert!(hint.contains("mix runtime adopt"), "{hint}");
+        assert!(hint.contains("/data/runtimes/node/24.19.0"), "{hint}");
+        assert!(!hint.contains("  "), "{hint:?}");
     }
 
     #[test]

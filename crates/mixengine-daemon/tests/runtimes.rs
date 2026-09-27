@@ -45,8 +45,9 @@ fn program_name() -> String {
 struct Fixture {
     home: Home,
     /// Held rather than read: dropping it would stop the server the daemon downloads from.
-    _registry: MockRegistry,
-    _daemon: Daemon,
+    registry: MockRegistry,
+    /// An `Option` so [`reinstall`](Self::reinstall) can stop it and start another.
+    daemon: Option<Daemon>,
     packed: Packed,
 }
 
@@ -86,14 +87,25 @@ impl Fixture {
 
         Self {
             home,
-            _registry: registry,
-            _daemon: daemon,
+            registry,
+            daemon: Some(daemon),
             packed,
         }
     }
 
     async fn client(&self) -> Client {
         Client::connect(&self.home).await
+    }
+
+    /// Stop this daemon, remove what the uninstaller removes with the home — the database — and
+    /// start a fresh daemon on the same directories: the machine T182f was reported from.
+    async fn reinstall(&mut self) {
+        self.daemon.take();
+        for name in ["mixengine.db", "mixengine.db-wal", "mixengine.db-shm"] {
+            let _ = std::fs::remove_file(self.home.path().join(name));
+        }
+        self.daemon = Some(Daemon::start(&self.home, &self.registry));
+        self.home.wait_until_listening().await;
     }
 
     /// Where the daemon would have put this version.
@@ -1066,7 +1078,7 @@ async fn refresh_bypasses_a_fresh_cache() {
     // Republished with the one offered version gone. The cache is still fresh, so an ordinary call
     // keeps answering from it — the behaviour `refresh` exists to bypass, proved here so the test
     // below is proof of the flag and not of a registry that always answers the same way.
-    fixture._registry.publish(&json!({
+    fixture.registry.publish(&json!({
         "schema": 1,
         "generated_at": "2026-08-14T06:55:13Z",
         "packages": [],
@@ -1087,4 +1099,157 @@ async fn refresh_bypasses_a_fresh_cache() {
         Some(0),
         "`refresh` reaches the registry instead of answering from the cache: {refreshed}"
     );
+}
+
+/// **T182f, D1.** An install leaves its marker beside what it unpacked, naming what was installed,
+/// so a home that loses its database can record the directory again.
+#[tokio::test]
+async fn an_installed_runtime_carries_its_marker() {
+    let fixture = Fixture::start().await;
+    let installed = fixture.client().await.install(VERSION).await;
+    assert_eq!(installed["state"], "succeeded", "{installed}");
+
+    let marker: Value = serde_json::from_slice(
+        &std::fs::read(
+            fixture
+                .installed_at(VERSION)
+                .join(".mixengine-install.json"),
+        )
+        .expect("the marker is in the install directory"),
+    )
+    .expect("the marker is JSON");
+
+    assert_eq!(marker["what"], "runtime", "{marker}");
+    assert_eq!(marker["kind"], "php", "{marker}");
+    assert_eq!(marker["version"], VERSION, "{marker}");
+    assert_eq!(marker["sha256"], fixture.packed.sha256, "{marker}");
+}
+
+/// **T182f, the machine it was reported from.** A PHP installed by one home is on disk when the
+/// next home starts without its database: it is listed as installed and as the default.
+#[tokio::test]
+async fn a_runtime_the_last_home_installed_is_recorded_by_the_next_one() {
+    let mut fixture = Fixture::start().await;
+    let installed = fixture.client().await.install(VERSION).await;
+    assert_eq!(installed["state"], "succeeded", "{installed}");
+
+    fixture.reinstall().await;
+    let mut client = fixture.client().await;
+
+    let list = client.call("runtime.list_installed", json!({})).await;
+    assert_eq!(list["runtimes"][0]["version"], VERSION, "{list}");
+    assert_eq!(list["runtimes"][0]["default"], true, "{list}");
+}
+
+/// **And one installed before markers existed**: recorded from the index once its files are there
+/// and it runs, in the background so the start is not held up by the network.
+#[tokio::test]
+async fn a_runtime_from_before_markers_is_recorded_from_the_index() {
+    let mut fixture = Fixture::start().await;
+    fixture.client().await.install(VERSION).await;
+    std::fs::remove_file(
+        fixture
+            .installed_at(VERSION)
+            .join(".mixengine-install.json"),
+    )
+    .expect("the marker");
+
+    fixture.reinstall().await;
+    let mut client = fixture.client().await;
+
+    // Polled, because the pass runs in the background and there is no job to wait on; bounded by
+    // PATIENCE so a pass that never records fails with the listing it last saw.
+    let deadline = tokio::time::Instant::now() + PATIENCE;
+    loop {
+        let list = client.call("runtime.list_installed", json!({})).await;
+        if list["runtimes"][0]["version"] == VERSION {
+            break;
+        }
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "never recorded: {list}"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    assert!(
+        fixture
+            .installed_at(VERSION)
+            .join(".mixengine-install.json")
+            .is_file(),
+        "and it was given its marker, so the next start does not ask the index"
+    );
+}
+
+/// A directory that fails the check is left, named by `mix doctor`, and nothing is deleted.
+#[tokio::test]
+async fn a_directory_that_cannot_be_recorded_is_named_by_doctor_and_kept() {
+    let mut fixture = Fixture::start().await;
+    let stray = fixture.installed_at("9.9.8");
+    std::fs::create_dir_all(&stray).expect("a directory nothing installed");
+    fixture.reinstall().await;
+
+    let mut client = fixture.client().await;
+    // Polled for the reason the test above gives.
+    let deadline = tokio::time::Instant::now() + PATIENCE;
+    loop {
+        let report = client.call("daemon.doctor", json!({})).await;
+        let text = report.to_string();
+        if text.contains("9.9.8") {
+            assert!(text.contains("not recorded"), "{report}");
+            break;
+        }
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "doctor never named it: {report}"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    assert!(stray.is_dir(), "nothing was deleted");
+}
+
+/// **T182f, by hand.** A directory the start walk left — here because its marker names another
+/// version — is recorded by `runtime.adopt` once the index vouches for it, and its marker is put
+/// right. A version already recorded answers its row, and one not on disk is refused by name.
+#[tokio::test]
+async fn adopting_one_version_checks_it_against_the_index() {
+    let mut fixture = Fixture::start().await;
+    fixture.client().await.install(VERSION).await;
+    let marker = fixture
+        .installed_at(VERSION)
+        .join(".mixengine-install.json");
+    let written = std::fs::read_to_string(&marker).expect("the marker");
+    std::fs::write(&marker, written.replace(VERSION, "8.3.32")).expect("a wrong marker");
+
+    fixture.reinstall().await;
+    let mut client = fixture.client().await;
+    assert_eq!(
+        client.call("runtime.list_installed", json!({})).await["runtimes"],
+        json!([]),
+        "a marker naming another version is not recorded on its own"
+    );
+
+    let adopted = client
+        .call("runtime.adopt", json!({"kind": "php", "version": VERSION}))
+        .await;
+    assert_eq!(adopted["version"], VERSION, "{adopted}");
+    assert_eq!(adopted["default"], true, "{adopted}");
+    assert!(
+        std::fs::read_to_string(&marker)
+            .expect("the marker")
+            .contains(VERSION),
+        "the marker now names what is there"
+    );
+
+    let again = client
+        .call("runtime.adopt", json!({"kind": "php", "version": VERSION}))
+        .await;
+    assert_eq!(
+        again["version"], VERSION,
+        "adopting it twice answers its row: {again}"
+    );
+
+    let refused = client
+        .refuse("runtime.adopt", json!({"kind": "php", "version": "9.9.7"}))
+        .await;
+    assert_eq!(refused["data"]["code"], "not_found", "{refused}");
 }

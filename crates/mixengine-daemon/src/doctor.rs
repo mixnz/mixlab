@@ -58,6 +58,9 @@ pub(crate) struct Doctor {
     /// — roadmap task **T27e**.
     runtimes: std::path::PathBuf,
 
+    /// The whole layout, for the one check that walks both `runtimes/` and `packages/` — T182f.
+    layout: mixengine_core::Paths,
+
     /// What these rows render to, for the drift check — the registry's own generator.
     generator: mixengine_core::generate::Generator,
 
@@ -100,6 +103,7 @@ impl Doctor {
             etc: paths.etc().to_path_buf(),
             bin: paths.bin().to_path_buf(),
             runtimes: paths.runtimes().to_path_buf(),
+            layout: paths.clone(),
             generator,
             crashes,
         })
@@ -123,6 +127,7 @@ impl Doctor {
                 self.java_pin().await,
                 self.java_trust().await,
                 self.commands().await,
+                self.unrecorded().await,
                 self.dns_server(),
                 self.port_access().await,
                 self.pending_permissions().await,
@@ -530,6 +535,41 @@ impl Doctor {
                          cannot verify this home's own HTTPS sites",
                         bundle.display()
                     ),
+                },
+            },
+        }
+    }
+
+    /// **What is on disk but not recorded** — roadmap task **T182f**. A directory an earlier home
+    /// installed that this one could not check. A `Note`: it costs disk and blocks an install of the
+    /// same version, and nothing is broken by it. Walked at report time rather than remembered from
+    /// the start, so a directory recorded or removed since is not reported.
+    async fn unrecorded(&self) -> Check {
+        let name = "installs on disk that this home has not recorded".to_owned();
+
+        match mixengine_core::adopt::walk::unrecorded(&self.store, &self.layout).await {
+            Ok(found) if found.is_empty() => Check {
+                name,
+                outcome: Outcome::Ok {},
+            },
+            Ok(found) => Check {
+                name,
+                outcome: Outcome::Note {
+                    because: format!(
+                        "{} not recorded. `mix runtime adopt` or `mix package adopt` records one \
+                         once it can be checked; nothing here removes them",
+                        found
+                            .iter()
+                            .map(|found| found.path.display().to_string())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
+                },
+            },
+            Err(error) => Check {
+                name,
+                outcome: Outcome::Skipped {
+                    because: format!("this home's installs could not be read: {error}"),
                 },
             },
         }

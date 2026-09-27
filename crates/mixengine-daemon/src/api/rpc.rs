@@ -288,6 +288,11 @@ async fn call_method(
                     encode_result(&api.runtimes.uninstall(&asked).await.map_err(refused)?)
                 }
 
+                rpc::method::RUNTIME_ADOPT => {
+                    let target: RuntimeTarget = arguments(params)?;
+                    encode_result(&api.runtimes.adopt(&target).await.map_err(refused)?)
+                }
+
                 rpc::method::RUNTIME_SET_DEFAULT => {
                     let target: RuntimeTarget = arguments(params)?;
                     encode_result(&api.runtimes.set_default(&target).await.map_err(refused)?)
@@ -326,6 +331,11 @@ async fn call_method(
                 rpc::method::PACKAGE_REQUIREMENTS => {
                     let target: PackageTarget = arguments(params)?;
                     encode_result(&api.packages.requirements(&target).await.map_err(refused)?)
+                }
+
+                rpc::method::PACKAGE_ADOPT => {
+                    let target: PackageTarget = arguments(params)?;
+                    encode_result(&api.packages.adopt(&target).await.map_err(refused)?)
                 }
 
                 rpc::method::PACKAGE_UNINSTALL => {

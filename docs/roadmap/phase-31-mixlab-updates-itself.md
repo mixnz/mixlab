@@ -29,6 +29,9 @@ Decision: [ADR 0056](../decisions/0056-mixlab-stands-without-mixengine.md).
 - [x] **T187g** MixEngine stops looking on its own: the daemon's start check and clock removed,
       `[updates]` keys read and ignored, the MixEngine module's Updates section and
       `update_relaunch` removed, `client-surface.md` and `features/updates.md` corrected. Spec D10.
+- [ ] **T188** An update offered in the corner: a bottom-right panel that downloads when asked and
+      installs when asked again, with `update_install` split into download and install.
+      Design: [2026-09-27-t188-an-update-offered-in-the-corner-design.md](../specs/2026-09-27-t188-an-update-offered-in-the-corner-design.md).
 
 **Built 2026-09-26, M31 not yet measured.** Every task above landed with its tests: the feed
 reader, placement, lock, stage, swap, recovery, handover and the pane's state are unit-tested, the

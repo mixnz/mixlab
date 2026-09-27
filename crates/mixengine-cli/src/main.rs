@@ -1361,6 +1361,14 @@ enum RuntimeCommand {
         runtime: Which,
     },
 
+    /// Record a version that is on disk but not listed, such as one an earlier install left.
+    ///
+    /// Nothing is downloaded. The folder is checked against the package index first.
+    Adopt {
+        #[command(flatten)]
+        runtime: Which,
+    },
+
     /// Which extensions an installed build loads.
     ///
     /// Under `runtime` rather than as `mix php ext …`, which is what
@@ -1488,6 +1496,14 @@ enum PackageCommand {
     /// Refused while a service is an instance of it, naming the services — `mix service delete` is
     /// what frees it, and deleting a service keeps its data directory.
     Uninstall {
+        #[command(flatten)]
+        package: WhichPackage,
+    },
+
+    /// Record a version that is on disk but not listed, such as one an earlier install left.
+    ///
+    /// Nothing is downloaded. The folder is checked against the package index first.
+    Adopt {
         #[command(flatten)]
         package: WhichPackage,
     },
@@ -4846,6 +4862,18 @@ async fn package(
             });
         }
 
+        PackageCommand::Adopt { package } => {
+            let target = PackageTarget {
+                package: package.package,
+                version: package.version,
+            };
+            let summary: mixengine_proto::PackageSummary =
+                ask(&mut client, rpc::method::PACKAGE_ADOPT, encode(&target)).await?;
+            emit(&rendered(json, &summary, || {
+                render::package_summary(&summary)
+            }))?;
+        }
+
         PackageCommand::Uninstall { package } => {
             let target = PackageTarget {
                 package: package.package,
@@ -5502,6 +5530,18 @@ async fn runtime(
                 ask(&mut client, rpc::method::RUNTIME_UNINSTALL, encode(&asked)).await?;
             emit(&rendered(json, &removal, || {
                 render::runtime_removal(&removal)
+            }))?;
+        }
+
+        RuntimeCommand::Adopt { runtime } => {
+            let summary: RuntimeSummary = ask(
+                &mut client,
+                rpc::method::RUNTIME_ADOPT,
+                encode(&target(runtime)),
+            )
+            .await?;
+            emit(&rendered(json, &summary, || {
+                render::runtime_summary(&summary)
             }))?;
         }
 

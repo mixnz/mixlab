@@ -34,8 +34,8 @@ use mixengine_core::generate::Catalogue;
 use mixengine_core::{Paths, Store, packages, paths};
 use mixengine_proto::{
     Error, ErrorCode, JobId, JobKind, JobSummary, PackageCatalogue, PackageFilter, PackageInstall,
-    PackageList, PackageRelease, PackageRemoval, PackageTarget, PackageVersion, Requirements,
-    Timestamp, VersionConstraint, rpc,
+    PackageList, PackageRelease, PackageRemoval, PackageSummary, PackageTarget, PackageVersion,
+    Requirements, Timestamp, VersionConstraint, rpc,
 };
 
 use crate::error::ToWire as _;
@@ -422,29 +422,70 @@ impl Packages {
             .recipe(package)
             .and_then(|recipe| recipe.smoke_test());
 
-        let installed = self
+        // Before the install, because the marker it leaves in the directory is this row (T182f).
+        let installation = packages::Installation {
+            package: package.to_owned(),
+            version: version.clone(),
+            path: into.clone(),
+            bytes: selection.artifact.size,
+            url: selection.artifact.url.clone(),
+            sha256: selection.artifact.sha256.clone(),
+            provides: selection.artifact.provides.clone(),
+        };
+        let marker = mixengine_core::adopt::marker::Marker::package(&installation).encode();
+
+        let installed = match self
             .fetcher
             .installer
-            .install(
+            .install_marked(
                 selection.artifact,
                 &into,
                 smoke.as_ref(),
                 mixengine_core::install::NotAnArchive::Refuse,
+                Some(&marker),
                 handle,
             )
             .await
-            .map_err(|error| error.to_wire())?;
+        {
+            Ok(installed) => installed,
+
+            // **T182f, D2**, on `runtimes::perform`'s reasoning: an earlier home installed it.
+            Err(mixengine_core::Error::AlreadyInstalled { path }) => {
+                let found = mixengine_core::adopt::walk::Found {
+                    subject: mixengine_core::adopt::Subject::Package {
+                        package: package.to_owned(),
+                        version: version.clone(),
+                    },
+                    path,
+                };
+
+                return match crate::adopt::claim_offered(
+                    &self.store,
+                    &found,
+                    &selection.artifact.sha256,
+                    handle,
+                )
+                .await?
+                {
+                    mixengine_core::adopt::walk::Claimed::Package(summary) => {
+                        self.after_recorded(&summary)
+                    }
+                    mixengine_core::adopt::walk::Claimed::Runtime(_) => Err(Error::new(
+                        ErrorCode::Internal,
+                        "a package directory was recorded as a runtime",
+                    )),
+                };
+            }
+
+            Err(error) => return Err(error.to_wire()),
+        };
 
         let record = packages::remember(
             &self.store,
             &packages::Installation {
-                package: package.to_owned(),
-                version: version.clone(),
                 path: installed.path.clone(),
                 bytes: installed.bytes,
-                url: selection.artifact.url.clone(),
-                sha256: selection.artifact.sha256.clone(),
-                provides: selection.artifact.provides.clone(),
+                ..installation
             },
             Timestamp::from_system_time(SystemTime::now()),
         )
@@ -468,12 +509,57 @@ impl Packages {
             }
         };
 
-        serde_json::to_value(&summary).map_err(|error| {
+        self.after_recorded(&summary)
+    }
+
+    /// What a newly recorded package answers — shared by an install, an adopt and the start walk
+    /// (T182f). A package needs nothing more once its row exists: an instance of it is
+    /// `service.create`, which a person asks for.
+    ///
+    /// # Errors
+    ///
+    /// Only when the summary cannot be encoded.
+    pub(crate) fn after_recorded(
+        &self,
+        summary: &PackageSummary,
+    ) -> Result<serde_json::Value, Error> {
+        serde_json::to_value(summary).map_err(|error| {
             Error::new(
                 ErrorCode::Internal,
                 format!("what the install produced could not be encoded: {error}"),
             )
         })
+    }
+
+    /// `package.adopt` — record a version that is on disk without a row — roadmap task **T182f**.
+    ///
+    /// A version already recorded answers its row, so asking twice is not an error.
+    ///
+    /// # Errors
+    ///
+    /// As [`crate::adopt::by_hand`].
+    pub(crate) async fn adopt(&self, target: &PackageTarget) -> Result<PackageSummary, Error> {
+        match packages::record(&self.store, &target.package, &target.version).await {
+            Ok(summary) => return Ok(summary),
+            Err(mixengine_core::Error::NotFound { .. }) => {}
+            Err(error) => return Err(error.to_wire()),
+        }
+
+        let found = mixengine_core::adopt::walk::Found {
+            subject: mixengine_core::adopt::Subject::Package {
+                package: target.package.clone(),
+                version: target.version.clone(),
+            },
+            path: packages::directory(&self.paths, &target.package, &target.version),
+        };
+
+        match crate::adopt::by_hand(&self.store, &found, &self.fetcher.index).await? {
+            mixengine_core::adopt::walk::Claimed::Package(summary) => Ok(summary),
+            mixengine_core::adopt::walk::Claimed::Runtime(_) => Err(Error::new(
+                ErrorCode::Internal,
+                "a package directory was recorded as a runtime",
+            )),
+        }
     }
 
     /// `package.uninstall` — refuse while anything is an instance of it, then remove the directory
