@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isNewer, updateView, type ViewInput } from "./view";
+import { isNewer, panelView, retryStep, updateView, type View, type ViewInput } from "./view";
 
 const base: ViewInput = {
   current: "0.0.9",
@@ -9,6 +9,8 @@ const base: ViewInput = {
   installing: false,
   handedOver: false,
   onDisk: null,
+  downloading: false,
+  downloaded: null,
 };
 
 describe("updateView", () => {
@@ -42,6 +44,55 @@ describe("updateView", () => {
 
   it("is up to date when nothing has been read yet", () =>
     expect(updateView({ ...base, offered: null })).toBe("upToDate"));
+
+  it("is downloading while a download runs, over the offer", () =>
+    expect(updateView({ ...base, downloading: true })).toBe("downloading"));
+
+  it("is ready when the offered version is downloaded, without downloading again", () =>
+    expect(updateView({ ...base, downloaded: "0.0.10" })).toBe("ready"));
+
+  it("does not call an older download ready for a newer offer", () =>
+    expect(updateView({ ...base, downloaded: "0.0.9" })).toBe("offer"));
+
+  it("keeps a skipped version quiet even when it is downloaded", () =>
+    expect(updateView({ ...base, skipped: "0.0.10", downloaded: "0.0.10" })).toBe("skipped"));
+
+  it("shows an install in progress over a finished download", () =>
+    expect(updateView({ ...base, downloaded: "0.0.10", installing: true })).toBe("installing"));
+});
+
+describe("panelView", () => {
+  const panel = (view: View, later = false, failed = false) => panelView({ view, later, failed });
+
+  it("offers, downloads and asks to install", () => {
+    expect(panel("offer")).toBe("offer");
+    expect(panel("downloading")).toBe("downloading");
+    expect(panel("ready")).toBe("ready");
+  });
+
+  it("hides after Later until the next start, but not a download in progress", () => {
+    expect(panel("offer", true)).toBe("hidden");
+    expect(panel("ready", true)).toBe("hidden");
+    expect(panel("downloading", true)).toBe("downloading");
+  });
+
+  it("says a failure over the offer or the install it came from", () => {
+    expect(panel("offer", false, true)).toBe("failed");
+    expect(panel("ready", false, true)).toBe("failed");
+  });
+
+  it("says an install is running, even after Later", () => {
+    expect(panel("installing")).toBe("installing");
+    expect(panel("installing", true)).toBe("installing");
+  });
+
+  it("draws nothing for any other state, failed or not", () => {
+    const quiet: View[] = ["upToDate", "noBuild", "skipped", "development", "elsewhere", "handedOver", "finish"];
+    for (const view of quiet) {
+      expect(panel(view)).toBe("hidden");
+      expect(panel(view, false, true)).toBe("hidden");
+    }
+  });
 });
 
 describe("isNewer", () => {
@@ -51,4 +102,17 @@ describe("isNewer", () => {
     expect(isNewer("0.1.0", "0.0.99")).toBe(true);
     expect(isNewer("0.0.9", "0.0.9")).toBe(false);
   });
+});
+
+describe("retryStep", () => {
+  it("tries the step that failed again", () => {
+    expect(retryStep("download", { code: "error.updateFailed" })).toBe("download");
+    expect(retryStep("install", { code: "error.updateLocked" })).toBe("install");
+  });
+
+  it("downloads again when the install found its download gone", () =>
+    expect(retryStep("install", { code: "error.updateNotDownloaded" })).toBe("download"));
+
+  it("reads a failure that is not an AppError as the step itself", () =>
+    expect(retryStep("install", "boom")).toBe("install"));
 });

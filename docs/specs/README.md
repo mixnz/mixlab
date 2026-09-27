@@ -173,4 +173,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-09-26 | [T187 — MixLab updates itself](2026-09-26-t187-mixlab-updates-itself-design.md) | T187 | implemented |
 | 2026-09-27 | [T182f–h — A reinstall finds what the last one kept](2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md) | T182f, T182g, T182h, T182i | implemented |
 | 2026-09-27 | [T185b — `bin/` fronts only what is installed](2026-09-27-t185b-bin-fronts-only-what-is-installed-design.md) | T185b | implemented |
-| 2026-09-27 | [T188 — An update offered in the corner](2026-09-27-t188-an-update-offered-in-the-corner-design.md) | T188 | draft |
+| 2026-09-27 | [T188 — An update offered in the corner](2026-09-27-t188-an-update-offered-in-the-corner-design.md) | T188 | implemented |

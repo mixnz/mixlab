@@ -1,4 +1,4 @@
-/** What the Updates pane draws, decided from values alone — T187, spec D9. */
+/** What the Updates pane and the corner panel draw, decided from values alone: T187 spec D9, T188 spec D1. */
 
 export type PlacementKind = "development" | "swap" | "installer" | "elsewhere";
 
@@ -9,6 +9,8 @@ export type View =
   | "noBuild"
   | "offer"
   | "skipped"
+  | "downloading"
+  | "ready"
   | "installing"
   | "handedOver"
   | "finish";
@@ -23,6 +25,10 @@ export interface ViewInput {
   handedOver: boolean;
   /** What the installer has put on disk, polled while handed over. */
   onDisk: string | null;
+  /** A download is running now. */
+  downloading: boolean;
+  /** The version whose download is on disk and proved; null when none. */
+  downloaded: string | null;
 }
 
 /** Whether `a` is a later version than `b`, compared as numbers part by part. */
@@ -41,11 +47,38 @@ export function updateView(input: ViewInput): View {
   if (placement.kind === "development") return "development";
   if (placement.kind === "elsewhere") return "elsewhere";
   if (input.installing) return "installing";
+  if (input.downloading) return "downloading";
   if (input.handedOver) {
     return offered && input.onDisk && !isNewer(offered.version, input.onDisk) ? "finish" : "handedOver";
   }
   if (!offered || !isNewer(offered.version, input.current)) return "upToDate";
   if (!offered.hasBuild) return "noBuild";
   if (input.skipped === offered.version) return "skipped";
-  return "offer";
+  return input.downloaded === offered.version ? "ready" : "offer";
+}
+
+export type Panel = "hidden" | "offer" | "downloading" | "ready" | "installing" | "failed";
+
+/**
+ * The corner panel: T188 D1. *Later* hides it until the next window start, except while a download
+ * or an install somebody started is running: stopping MixEngine and swapping can take half a
+ * minute, and a panel that vanished on the click would read as nothing happening. A failed download
+ * or install replaces the offer it came from.
+ */
+export function panelView({ view, later, failed }: { view: View; later: boolean; failed: boolean }): Panel {
+  if (view === "downloading" || view === "installing") return view;
+  if (later) return "hidden";
+  if (view !== "offer" && view !== "ready") return "hidden";
+  return failed ? "failed" : view;
+}
+
+export type Step = "download" | "install";
+
+/**
+ * What *Try again* runs: the step that failed, except an install that found its download gone,
+ * which has to download again first. Trying that install again would fail the same way for ever.
+ */
+export function retryStep(failed: Step, failure: unknown): Step {
+  const code = typeof failure === "object" && failure !== null ? (failure as { code?: unknown }).code : undefined;
+  return failed === "install" && code === "error.updateNotDownloaded" ? "download" : failed;
 }

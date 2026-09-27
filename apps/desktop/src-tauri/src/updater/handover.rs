@@ -1,4 +1,5 @@
-//! macOS and Linux: download the window's installer, check it, and hand it to the system — spec D5.
+//! macOS and Linux: download the window's installer and check it, then, on a second click, hand it
+//! to the system — spec D5, split in two by T188 (spec D2).
 //! Nothing here elevates: the installer asks for the password itself.
 
 use std::path::{Path, PathBuf};
@@ -11,7 +12,7 @@ use crate::modules::mixengine::for_update;
 
 use super::feed::Feed;
 use super::placement::Placement;
-use super::stage;
+use super::{ready, stage};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,26 +70,33 @@ fn query(program: &str, args: &[&str]) -> Option<String> {
     (output.status.success() && !text.is_empty()).then_some(text)
 }
 
-/// Download the window's installer of `kind`, check it, and open it. Stops nothing.
-pub async fn hand_over<R: Runtime>(
-    app: &AppHandle<R>,
-    feed: &Feed,
-    kind: &str,
-    progress: impl Fn(u64, u64),
-) -> Result<HandedOver, AppError> {
-    let (os, arch) = super::host();
-    let installer = feed
-        .installer(os, arch, kind)
-        .ok_or_else(|| err!("error.updateNoBuild"))?;
-    let name = installer
-        .url
+/// Where the installer for `version` is kept: `updates/<version>/<the name its URL ends in>`.
+pub fn installer_path(updates: &Path, version: &str, url: &str) -> PathBuf {
+    let name = url
         .rsplit('/')
         .next()
         .filter(|name| !name.is_empty())
         .unwrap_or("mixlab-installer");
-    let path = super::install::updates_dir(app)?
-        .join(&feed.version)
-        .join(name);
+    updates.join(version).join(name)
+}
+
+/// Spec D2, `update_download` on macOS and Linux: fetch the installer of `kind` and check it, then
+/// mark it ready. Opens nothing and stops nothing.
+pub async fn download_installer<R: Runtime>(
+    app: &AppHandle<R>,
+    feed: &Feed,
+    kind: &str,
+    progress: impl Fn(u64, u64),
+) -> Result<(), AppError> {
+    let (os, arch) = super::host();
+    let installer = feed
+        .installer(os, arch, kind)
+        .ok_or_else(|| err!("error.updateNoBuild"))?;
+    let path = installer_path(
+        &super::install::updates_dir(app)?,
+        &feed.version,
+        &installer.url,
+    );
 
     stage::download(
         &reqwest::Client::new(),
@@ -99,6 +107,47 @@ pub async fn hand_over<R: Runtime>(
     )
     .await
     .map_err(|e| err!("error.updateFailed", message = e))?;
+
+    let staging = path.parent().ok_or_else(|| {
+        err!(
+            "error.updateFailed",
+            message = "the installer has no directory"
+        )
+    })?;
+    ready::write(
+        staging,
+        &ready::Ready {
+            version: feed.version.clone(),
+            sha256: installer.sha256.clone(),
+        },
+    )
+    .map_err(|e| err!("error.updateFailed", message = e))
+}
+
+/// Spec D2, `update_open_installer`: hand the installer `download_installer` proved to the system.
+/// Stops nothing. A marker for another version or another file, or an installer that is gone, is
+/// `error.updateNotDownloaded`: it has to be downloaded again.
+pub fn open_installer<R: Runtime>(
+    app: &AppHandle<R>,
+    feed: &Feed,
+    kind: &str,
+) -> Result<HandedOver, AppError> {
+    let (os, arch) = super::host();
+    let installer = feed
+        .installer(os, arch, kind)
+        .ok_or_else(|| err!("error.updateNoBuild"))?;
+    let path = installer_path(
+        &super::install::updates_dir(app)?,
+        &feed.version,
+        &installer.url,
+    );
+    let proved = path
+        .parent()
+        .and_then(|staging| ready::read_for(staging, &feed.version, &installer.sha256))
+        .is_some();
+    if !proved || !path.is_file() {
+        return Err(err!("error.updateNotDownloaded"));
+    }
 
     let opener = if os == "macos" { "open" } else { "xdg-open" };
     let mut command = std::process::Command::new(opener);
@@ -147,6 +196,23 @@ mod tests {
         assert_eq!(
             install_command("rpm", Path::new("/tmp/m.rpm")),
             "sudo dnf install '/tmp/m.rpm'"
+        );
+    }
+
+    #[test]
+    fn the_installer_is_kept_under_the_name_its_url_ends_in() {
+        let updates = Path::new("/u");
+        assert_eq!(
+            installer_path(
+                updates,
+                "0.0.10",
+                "https://x/releases/download/v0.0.10/MixLab-0.0.10.pkg"
+            ),
+            Path::new("/u/0.0.10/MixLab-0.0.10.pkg")
+        );
+        assert_eq!(
+            installer_path(updates, "0.0.10", "https://x/"),
+            Path::new("/u/0.0.10/mixlab-installer")
         );
     }
 

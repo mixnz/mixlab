@@ -11,11 +11,13 @@ import { openReleasesPage } from "../../version";
 import styles from "./SettingsModal.module.css";
 
 /**
- * MixLab's updater — T187, `docs/specs/2026-09-26-t187-mixlab-updates-itself-design.md`, D9.
+ * MixLab's updater — T187, `docs/specs/2026-09-26-t187-mixlab-updates-itself-design.md`, D9, in the
+ * two steps T188 gave it: *Download*, then *Install and restart* or *Open installer*.
  *
  * Since ADR 0056 this is where MixLab is updated, with or without MixEngine: the running version,
  * the check, the offer and the install. What it draws is `updates.view`, decided in
- * `shell/update/view.ts` from values alone; this file only lays it out.
+ * `shell/update/view.ts` from values alone; this file only lays it out. The corner panel reads the
+ * same state, so a download started in one shows its progress in the other.
  */
 function UpdateSection({ updates }: { updates: Updates }) {
   const { t, lang } = useTranslation();
@@ -83,8 +85,8 @@ function UpdateSection({ updates }: { updates: Updates }) {
           )}
           {!onInstaller && <p className={styles.hint}>{t("update.daemonRestarts")}</p>}
           <div className={styles.updateActions}>
-            <Button variant="primary" size="small" onClick={() => void updates.install()}>
-              {onInstaller ? t("update.openInstaller") : t("update.install")}
+            <Button variant="primary" size="small" onClick={() => void updates.download()}>
+              {t("update.download")}
             </Button>
             <Button size="small" onClick={updates.remindLater}>
               {t("update.later")}
@@ -96,18 +98,33 @@ function UpdateSection({ updates }: { updates: Updates }) {
         </div>
       )}
 
-      {view === "installing" && (
-        <p className={styles.hint}>
-          {progress && progress.received < progress.total
-            ? t("update.downloading", { percent })
-            : t("update.installing")}
-        </p>
+      {view === "downloading" && (
+        <div className={styles.updateRow}>
+          <span className={styles.hint}>{t("update.downloading", { percent })}</span>
+          <Button size="small" onClick={() => void updates.cancelDownload()}>
+            {t("update.cancel")}
+          </Button>
+        </div>
       )}
 
-      {/* The installer's download has its own progress, before `handedOver` is set. */}
-      {onInstaller && progress && view === "offer" && (
-        <p className={styles.hint}>{t("update.downloading", { percent })}</p>
+      {view === "ready" && feed && (
+        <div className={styles.updateOffer}>
+          <span className={styles.updateVersion}>
+            {t(onInstaller ? "update.installerDownloaded" : "update.ready", { version: feed.version })}
+          </span>
+          {!onInstaller && <p className={styles.hint}>{t("update.daemonRestarts")}</p>}
+          <div className={styles.updateActions}>
+            <Button variant="primary" size="small" onClick={() => void updates.install()}>
+              {t(onInstaller ? "update.openInstaller" : "update.installRestart")}
+            </Button>
+            <Button variant="ghost" size="small" onClick={() => void updates.skip()}>
+              {t("update.skip")}
+            </Button>
+          </div>
+        </div>
       )}
+
+      {view === "installing" && <p className={styles.hint}>{t("update.installing")}</p>}
 
       {(view === "handedOver" || view === "finish") && handedOver && (
         <div className={styles.updateOffer}>

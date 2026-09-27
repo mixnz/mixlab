@@ -10,6 +10,7 @@ const upToDate: UpdateStatus = {
   skipped: null,
   automatic: true,
   installing: false,
+  downloaded: null,
   checkedAt: null,
   failure: null,
 };

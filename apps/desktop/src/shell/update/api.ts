@@ -1,4 +1,4 @@
-/** The only `invoke` calls for MixLab's updater — T187. The Rust side is `src-tauri/src/updater/commands.rs`. */
+/** The only `invoke` calls for MixLab's updater: T187, split into download and install by T188. The Rust side is `src-tauri/src/updater/commands.rs`. */
 import { Channel, invoke } from "@tauri-apps/api/core";
 import type { PlacementKind } from "./view";
 
@@ -24,6 +24,8 @@ export interface UpdateStatus {
   skipped: string | null;
   automatic: boolean;
   installing: boolean;
+  /** The offered version when its download is on disk and proved; null when none. */
+  downloaded: string | null;
   checkedAt: string | null;
   /** Why a check somebody asked for failed. Never set by the automatic check. */
   failure: string | null;
@@ -54,10 +56,14 @@ function withProgress<T>(command: string, onProgress: (progress: Progress) => vo
   return invoke<T>(command, { onProgress: channel });
 }
 
-/** Windows: download, swap, relaunch. Success ends this process, so it only returns on failure. */
-export const updateInstall = (onProgress: (progress: Progress) => void) =>
-  withProgress<void>("update_install", onProgress);
-
-/** macOS and Linux: download the installer and open it. */
-export const updateHandOver = (onProgress: (progress: Progress) => void) =>
-  withProgress<HandedOver>("update_hand_over", onProgress);
+/** Download and prove the offered release; rejects with `error.updateCancelled` when stopped. */
+export const updateDownload = (onProgress: (progress: Progress) => void) =>
+  withProgress<void>("update_download", onProgress);
+/** Stops a running download and keeps what arrived, so the next one resumes. */
+export const updateCancelDownload = () => invoke<void>("update_cancel_download");
+/** Windows: swap in the downloaded release and relaunch. Success ends this process, so it only returns on failure. */
+export const updateInstall = () => invoke<void>("update_install");
+/** macOS and Linux: open the downloaded installer. */
+export const updateOpenInstaller = () => invoke<HandedOver>("update_open_installer");
+/** How many services an install would restart; null when MixEngine is not running. */
+export const updateRestarts = () => invoke<number | null>("update_restarts");

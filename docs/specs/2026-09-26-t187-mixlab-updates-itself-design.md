@@ -226,6 +226,10 @@ restarts what was stopped. In both cases the pane says what happened.
 
 ## D9 — The pane and the indicator
 
+*Changed by [T188](2026-09-27-t188-an-update-offered-in-the-corner-design.md): the strip across the
+top is replaced by a panel in the corner, and the one-click Install is two clicks, Download and then
+Install and restart (or Open installer).*
+
 **Settings → Updates** (the shell's pane, drawn whatever modules are visible):
 
 - The running version, and when the feed was last read.

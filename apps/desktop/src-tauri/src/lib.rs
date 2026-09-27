@@ -130,12 +130,19 @@ pub fn run() {
             }
 
             // An update that stopped MixEngine and was interrupted is finished here, and `.old`
-            // files an earlier update left are removed (T187, spec D8).
+            // files an earlier update left are removed (T187, spec D8). Then every download but
+            // the release on offer goes (T188, spec D2).
             {
                 let handle = app.handle().clone();
-                tauri::async_runtime::spawn(
-                    async move { updater::install::recover(&handle).await },
-                );
+                tauri::async_runtime::spawn(async move {
+                    updater::install::recover(&handle).await;
+                    if let Ok(updates) = updater::install::updates_dir(&handle) {
+                        let offered = updater::feed::Cache::new(updates.clone())
+                            .load(updater::PUBLIC_KEY)
+                            .map(|feed| feed.version);
+                        updater::ready::discard_stale(&updates, offered.as_deref());
+                    }
+                });
             }
 
             {
