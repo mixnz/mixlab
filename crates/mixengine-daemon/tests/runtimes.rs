@@ -1339,3 +1339,29 @@ async fn a_copy_of_the_last_home_is_offered_and_restored() {
         "a restored copy is not offered again: {again}"
     );
 }
+
+/// **T185b.** A home with no PHP has no `php` in `bin/`; installing one puts it there as the install
+/// ends, without waiting for the rescan, and uninstalling the last one takes it away again.
+#[tokio::test]
+async fn bin_holds_php_only_while_a_php_is_installed() {
+    let fixture = Fixture::start().await;
+    let php = fixture
+        .home
+        .path()
+        .join("bin")
+        .join(format!("php{}", std::env::consts::EXE_SUFFIX));
+    assert!(!php.exists(), "a home with no PHP fronts none");
+
+    let mut client = fixture.client().await;
+    let installed = client.install(VERSION).await;
+    assert_eq!(installed["state"], "succeeded", "{installed}");
+    assert!(php.exists(), "the install refreshed bin/ as it ended");
+
+    client
+        .call(
+            "runtime.uninstall",
+            json!({"kind": "php", "version": VERSION}),
+        )
+        .await;
+    assert!(!php.exists(), "the last PHP took its name with it");
+}

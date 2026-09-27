@@ -42,6 +42,9 @@ struct Found {
 
     /// Names more than one installed package claimed.
     conflicts: Vec<shims::Conflict>,
+
+    /// The runtime kinds with a version installed, whose compiled names `bin/` fronts — T185b.
+    installed: std::collections::BTreeSet<mixengine_proto::RuntimeKind>,
 }
 
 /// Where each name in `bin/` came from, for the listing a person reads.
@@ -164,7 +167,7 @@ impl Shims {
 
         let _filling = self.filling.lock().await;
 
-        let mut refreshed = shims::refresh(&self.bin, &shim, &shims::every_kind(), &found.extra)
+        let mut refreshed = shims::refresh(&self.bin, &shim, &found.installed, &found.extra)
             .map_err(|error| error.to_wire())?;
         refreshed.conflicts = found.conflicts.clone();
 
@@ -216,7 +219,18 @@ impl Shims {
             origin: shims::Origin::Global { kind },
         }));
 
-        Ok(Found { extra, conflicts })
+        let installed = mixengine_core::runtimes::records(&self.store, None)
+            .await
+            .map_err(|error| error.to_wire())?
+            .into_iter()
+            .map(|runtime| runtime.kind)
+            .collect();
+
+        Ok(Found {
+            extra,
+            conflicts,
+            installed,
+        })
     }
 
     /// Look for a tool somebody installed into a runtime, and fill `bin/` with what is found.

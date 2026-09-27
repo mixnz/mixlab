@@ -1886,6 +1886,7 @@ async fn serve(
         Arc::clone(&services),
     );
     let packages = packages::Packages::new(paths, store, Arc::clone(&jobs), Arc::clone(&fetcher));
+    runtimes.keeps_bin(Arc::clone(&shims));
 
     // **And what an earlier home left without a marker** — roadmap task T182f. It needs the index,
     // which may be a network fetch, so it runs in the background and never holds a start up. Only

@@ -40,24 +40,24 @@ fn listing(home: &Home) -> BTreeSet<String> {
         .collect()
 }
 
-/// **The last piece of Phase 2's milestone.** T25 built a shim nothing put anywhere; a daemon that
-/// has started is now a home whose `bin/` is a directory of commands.
+/// **A daemon that has started has a `bin/`, and fronts no language it has not installed** —
+/// roadmap task T185b. Phase 2's milestone was a `bin/` of commands; since T185b a `php` there
+/// appears with the first PHP (proved in `mixengine-daemon`'s
+/// `bin_holds_php_only_while_a_php_is_installed`), because a `node` on a machine with no Node.js hid
+/// a Node the person had installed themselves.
 #[test]
-fn a_daemon_that_has_started_has_filled_bin() {
+fn a_daemon_that_has_started_has_a_bin_with_no_language_in_it() {
     let home = Home::new();
     let _daemon = home.start_daemon();
 
     let found = listing(&home);
 
     assert!(
-        found.contains(&php()),
-        "{} is missing from bin/, which holds {found:?}\n--- daemon.log ---\n{}",
+        !found.contains(&php()),
+        "{} is in bin/ with no PHP installed: {found:?}\n--- daemon.log ---\n{}",
         php(),
         home.daemon_log()
     );
-
-    // More than one, because a `bin/` with only `php` in it would be a table that was not walked.
-    assert!(found.len() > 1, "{found:?}");
 }
 
 /// The read, over the wire, against whatever this machine's PATH actually is.
@@ -104,10 +104,7 @@ fn status_reports_what_is_really_in_bin_in_both_renderings() {
         rendered.contains(&home.path().join("bin").display().to_string()),
         "{rendered}"
     );
-    assert!(
-        rendered.contains("this user's PATH") && rendered.contains("php"),
-        "{rendered}"
-    );
+    assert!(rendered.contains("this user's PATH"), "{rendered}");
 }
 
 /// A subcommand that does not exist is refused by the client, without a daemon being started for it.

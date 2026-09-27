@@ -177,6 +177,10 @@ pub(crate) struct Runtimes {
     /// makes it so have to be one decision, or two callers arriving together both find nothing and
     /// both start.
     running: tokio::sync::Mutex<BTreeMap<(RuntimeKind, PackageVersion), JobId>>,
+
+    /// `bin/`, refreshed as a runtime comes or goes — roadmap task **T185b**. Set once, after both
+    /// are built; a test that builds no `Shims` leaves it unset and nothing is refreshed.
+    shims: std::sync::OnceLock<Arc<crate::shims::Shims>>,
 }
 
 impl Runtimes {
@@ -195,7 +199,23 @@ impl Runtimes {
             fetcher,
             services,
             running: tokio::sync::Mutex::new(BTreeMap::new()),
+            shims: std::sync::OnceLock::new(),
         })
+    }
+
+    /// Keep `bin/` in step with what is installed — roadmap task **T185b**. Called once in `main`.
+    pub(crate) fn keeps_bin(&self, shims: Arc<crate::shims::Shims>) {
+        let _ = self.shims.set(shims);
+    }
+
+    /// Refresh `bin/` now: a runtime's names are there only while one of its versions is.
+    /// Reported and never fatal — the next start, and the rescan, fill it again.
+    async fn refresh_bin(&self) {
+        if let Some(shims) = self.shims.get()
+            && let Err(error) = shims.refresh().await
+        {
+            tracing::warn!(%error, "bin/ could not be refreshed after a runtime came or went");
+        }
     }
 
     /// The index and the download pipeline this daemon installs through — for the blueprint
@@ -752,6 +772,8 @@ impl Runtimes {
             ),
         }
 
+        self.refresh_bin().await;
+
         serde_json::to_value(&summary).map_err(|error| {
             Error::new(
                 ErrorCode::Internal,
@@ -903,6 +925,8 @@ impl Runtimes {
             default_cleared,
             "a runtime was uninstalled"
         );
+
+        self.refresh_bin().await;
 
         Ok(RuntimeRemoval {
             removed,
