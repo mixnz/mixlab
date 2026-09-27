@@ -17,6 +17,10 @@ struct Fixture {
     /// **T130** and **T131**. Empty for the suite that predates them, which is what keeps every
     /// assertion below about the compiled table alone.
     extra: Vec<shims::Extra>,
+
+    /// The runtime kinds installed, which decides whose names a refresh writes — roadmap task
+    /// **T185b**. Every kind, for the suite that predates it.
+    installed: std::collections::BTreeSet<mixengine_proto::RuntimeKind>,
 }
 
 impl Fixture {
@@ -25,6 +29,7 @@ impl Fixture {
         let fixture = Self {
             root,
             extra: Vec::new(),
+            installed: shims::every_kind(),
         };
 
         // T185: on Windows what `bin/` is filled from is the trampoline, and the resolver beside it
@@ -97,7 +102,8 @@ impl Fixture {
     fn refresh(&self) -> shims::Refreshed {
         let source = shims::source(&mixengined_in(self.root.path())).expect("the pair is there");
 
-        shims::refresh(&self.bin(), &source, &self.extra).expect("a writable temporary directory")
+        shims::refresh(&self.bin(), &source, &self.installed, &self.extra)
+            .expect("a writable temporary directory")
     }
 
     fn copy_of(&self, name: &str) -> PathBuf {
@@ -421,7 +427,7 @@ fn on_windows_bin_holds_the_trampoline_and_points_at_the_resolver() {
     let (install, bin) = an_install_with_both();
     let source = shims::source(&mixengined_in(install.path())).expect("both are there");
 
-    shims::refresh(&bin, &source, &[]).expect("refresh");
+    shims::refresh(&bin, &source, &shims::every_kind(), &[]).expect("refresh");
 
     assert_eq!(
         std::fs::read(bin.join("php.exe")).expect("php"),
@@ -443,8 +449,8 @@ fn a_second_refresh_keeps_the_pointer() {
     let (install, bin) = an_install_with_both();
     let source = shims::source(&mixengined_in(install.path())).expect("both are there");
 
-    shims::refresh(&bin, &source, &[]).expect("first");
-    let second = shims::refresh(&bin, &source, &[]).expect("second");
+    shims::refresh(&bin, &source, &shims::every_kind(), &[]).expect("first");
+    let second = shims::refresh(&bin, &source, &shims::every_kind(), &[]).expect("second");
 
     assert!(bin.join("mixengine-shim.path").is_file());
     assert!(second.removed.is_empty(), "{second:?}");
@@ -467,7 +473,7 @@ fn on_windows_an_install_without_the_trampoline_fills_bin_with_the_shim() {
     let source = shims::source(&mixengined_in(install.path())).expect("the shim alone is enough");
     assert_eq!(source.placed, source.resolver);
 
-    shims::refresh(&bin, &source, &[]).expect("refresh");
+    shims::refresh(&bin, &source, &shims::every_kind(), &[]).expect("refresh");
     assert_eq!(
         std::fs::read(bin.join("php.exe")).expect("php"),
         b"resolver"
@@ -487,13 +493,25 @@ fn on_windows_a_trampoline_that_arrives_later_replaces_the_shim_copies() {
     let bin = install.path().join("bin");
     let mixengined = mixengined_in(install.path());
 
-    shims::refresh(&bin, &shims::source(&mixengined).expect("shim"), &[]).expect("first");
+    shims::refresh(
+        &bin,
+        &shims::source(&mixengined).expect("shim"),
+        &shims::every_kind(),
+        &[],
+    )
+    .expect("first");
     std::fs::write(
         install.path().join("mixengine-trampoline.exe"),
         b"trampoline",
     )
     .expect("a trampoline");
-    shims::refresh(&bin, &shims::source(&mixengined).expect("both"), &[]).expect("second");
+    shims::refresh(
+        &bin,
+        &shims::source(&mixengined).expect("both"),
+        &shims::every_kind(),
+        &[],
+    )
+    .expect("second");
 
     assert_eq!(
         std::fs::read(bin.join("php.exe")).expect("php"),
@@ -513,8 +531,73 @@ fn elsewhere_bin_is_the_resolver_and_there_is_no_pointer() {
     let bin = install.path().join("bin");
 
     let source = shims::source(&mixengined_in(install.path())).expect("the shim is there");
-    shims::refresh(&bin, &source, &[]).expect("refresh");
+    shims::refresh(&bin, &source, &shims::every_kind(), &[]).expect("refresh");
 
     assert_eq!(std::fs::read(bin.join("php")).expect("php"), b"resolver");
     assert!(!bin.join("mixengine-shim.path").exists());
+}
+
+/// **T185b.** A runtime's names are in `bin/` only while one of its versions is installed: none on
+/// a home with nothing, exactly the kind's rows once one is, and gone again when the last goes.
+#[test]
+fn only_an_installed_runtime_has_its_names_in_bin() {
+    use mixengine_proto::RuntimeKind;
+
+    let mut fixture = Fixture::new();
+    let exe = |name: &str| format!("{name}{}", std::env::consts::EXE_SUFFIX);
+
+    fixture.installed = std::collections::BTreeSet::new();
+    let refreshed = fixture.refresh();
+    for name in ["php", "node", "npm", "python", "ruby", "composer"] {
+        assert!(
+            !fixture.bin().join(exe(name)).exists(),
+            "{name} with nothing installed"
+        );
+    }
+    assert!(
+        refreshed
+            .commands
+            .iter()
+            .all(|name| !name.starts_with("node")),
+        "{:?}",
+        refreshed.commands
+    );
+
+    fixture.installed = [RuntimeKind::Node].into_iter().collect();
+    fixture.refresh();
+    for name in ["node", "npm", "npx"] {
+        assert!(
+            fixture.bin().join(exe(name)).exists(),
+            "{name} with Node installed"
+        );
+    }
+    assert!(!fixture.bin().join(exe("php")).exists(), "php without PHP");
+
+    fixture.installed = std::collections::BTreeSet::new();
+    fixture.refresh();
+    assert!(
+        !fixture.bin().join(exe("node")).exists(),
+        "node after the last Node went"
+    );
+}
+
+/// **T185b.** Composer is run by PHP, so its name needs both installed.
+#[test]
+fn composer_needs_both_composer_and_php() {
+    use mixengine_proto::RuntimeKind;
+
+    let mut fixture = Fixture::new();
+    let composer = fixture
+        .bin()
+        .join(format!("composer{}", std::env::consts::EXE_SUFFIX));
+
+    fixture.installed = [RuntimeKind::Composer].into_iter().collect();
+    fixture.refresh();
+    assert!(!composer.exists(), "Composer with no PHP to run it");
+
+    fixture.installed = [RuntimeKind::Composer, RuntimeKind::Php]
+        .into_iter()
+        .collect();
+    fixture.refresh();
+    assert!(composer.exists(), "Composer with a PHP");
 }

@@ -164,8 +164,8 @@ impl Shims {
 
         let _filling = self.filling.lock().await;
 
-        let mut refreshed =
-            shims::refresh(&self.bin, &shim, &found.extra).map_err(|error| error.to_wire())?;
+        let mut refreshed = shims::refresh(&self.bin, &shim, &shims::every_kind(), &found.extra)
+            .map_err(|error| error.to_wire())?;
         refreshed.conflicts = found.conflicts.clone();
 
         Ok(refreshed)
