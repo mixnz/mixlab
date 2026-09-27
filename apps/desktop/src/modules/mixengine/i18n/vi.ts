@@ -99,6 +99,18 @@ const vi: typeof en = {
       installing: "Đang thêm…",
       done: "Xong. Mở một terminal mới để bắt đầu dùng.",
     },
+    restorePrevious: {
+      title: "Khôi phục lần cài trước",
+      intro:
+        "Các thư mục bạn giữ lại có một bản sao của nó: {{projects}} project, {{sites}} site và {{services}} service.",
+      newer: "Các thư mục bạn giữ lại có bản sao từ một bản MixLab mới hơn. Cài bản đó để khôi phục.",
+      restore: "Khôi phục",
+      restoring: "Đang khôi phục",
+      confirmTitle: "Khôi phục lần cài trước?",
+      confirmMessage:
+        "Các project, site và service sẽ quay lại. Mỗi database được đặt mật khẩu quản trị mới và để ở trạng thái dừng. Dữ liệu bên trong vẫn giữ nguyên.",
+      done: "Đã khôi phục {{projects}} project, {{sites}} site và {{services}} service.",
+    },
     foundServices: {
       title: "Dữ liệu service từ lần cài trước",
       intro:

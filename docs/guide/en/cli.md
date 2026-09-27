@@ -953,6 +953,36 @@ cleanup`.
 mix disk
 ```
 
+## mix home
+
+Bring back an earlier install's projects, sites and services from the folders it kept
+
+```
+mix home <COMMAND>
+```
+
+### mix home previous
+
+Say what the copy an earlier install left in its kept folders holds, if there is one
+
+```
+mix home previous
+```
+
+### mix home restore
+
+Restore that copy into this home: projects, sites, domains and services.
+
+Every database gets a new admin password and is left stopped; the databases in it are kept.
+
+```
+mix home restore [OPTIONS]
+```
+
+| Flag | What it does |
+| --- | --- |
+| `-y`, `--yes` | Do not ask first |
+
 ## mix cleanup
 
 Take back what is safe to lose: rotated log files and the download cache.

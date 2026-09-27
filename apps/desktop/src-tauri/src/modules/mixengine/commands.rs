@@ -495,6 +495,19 @@ pub async fn mixengine_service_reset_credential(service: String) -> Result<Value
     .await
 }
 
+/// `home.previous` — what a copy of an earlier install's state in the kept folders holds (T182h).
+#[tauri::command]
+pub async fn mixengine_home_previous() -> Result<Value, AppError> {
+    rpc::call("home.previous", json!({})).await
+}
+
+/// `home.restore` — bring that copy back into this home (T182h). Databases get a new admin
+/// password and stay stopped.
+#[tauri::command]
+pub async fn mixengine_home_restore() -> Result<Value, AppError> {
+    rpc::call("home.restore", json!({})).await
+}
+
 /// `runtime.found` — runtime directories on disk with no row, and why (T182i). A read.
 #[tauri::command]
 pub async fn mixengine_runtime_found() -> Result<Value, AppError> {
