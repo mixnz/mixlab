@@ -10,7 +10,7 @@
 use mixengine_core::adopt::instances::{self, FoundInstance, Opens};
 use mixengine_proto::{
     Error, ErrorCode, ResetCredential, ServiceAdopt, ServiceCreate, ServiceFound, ServiceFoundList,
-    ServiceId, ServiceSummary,
+    ServiceId, ServiceSummary, ServiceTarget,
 };
 
 use super::Api;
@@ -119,6 +119,15 @@ impl Api {
                     asked.service, asked.service
                 ))
             })?;
+
+            // **Left stopped, as an adopt promises.** A reset starts back the service it repaired
+            // — the right answer for a repair of something that was running, and not for one that
+            // has only just become a service. Starting it is a person's call.
+            self.service_stop(&ServiceTarget {
+                service: Some(asked.service.clone()),
+                ..ServiceTarget::default()
+            })
+            .await?;
         }
 
         Ok(self

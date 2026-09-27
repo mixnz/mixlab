@@ -117,6 +117,9 @@ const SERVICE: &str = "mariadb@main";
 /// the home id in the name.
 const RESET: &str = "mariadb@reset";
 
+/// The instance the adopt test keeps across a reinstall — a name of its own for [`RESET`]'s reason.
+const KEPT: &str = "mariadb@kept";
+
 /// The MariaDB this suite is about, or the reason there is none.
 fn package() -> PathBuf {
     let directory = std::env::var_os(PACKAGE).unwrap_or_else(|| {
@@ -1044,5 +1047,75 @@ async fn a_superuser_credential_is_re_set_and_the_databases_are_kept() {
     assert_eq!(
         again["made"]["database"], "existing",
         "the repair discarded the data directory: {again}"
+    );
+}
+
+/// **T182f and T182g, the machine they were reported from.** A MariaDB with a database in it is
+/// kept on disk while the home's database goes — an uninstall that kept its folders, then a fresh
+/// install pointed at them. The next daemon records the package on its own, lists the data as
+/// found, and `mix service adopt` brings it back with a new admin password: the service starts, and
+/// the database made before is still there.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs a real MariaDB — see the module note, and the `mariadb` step in _services.yml"]
+async fn service_data_an_earlier_home_left_is_adopted_and_keeps_its_databases() {
+    let (home, daemon, registry, _installed_at, _port) = created_as(KEPT).await;
+    watch(&home);
+
+    at("starting the service and making a database in it");
+    expect(&home, &["service", "start", KEPT, "--json"]);
+    let made = expect(
+        &home,
+        &["database", "create", KEPT, "--name", "shop", "--json"],
+    );
+    assert_eq!(made["made"]["database"], "created", "{made}");
+    expect(&home, &["service", "stop", KEPT, "--json"]);
+
+    // --- the reinstall: the home's database goes, the folders stay -------------------------------
+    at("stopping the daemon and removing the home's database");
+    drop(daemon);
+    for name in ["mixengine.db", "mixengine.db-wal", "mixengine.db-shm"] {
+        let _ = std::fs::remove_file(home.path().join(name));
+    }
+    let _daemon = home.start_daemon_reading_index(&registry.url(), registry.public_key());
+    watch(&home);
+
+    // --- the package is recorded on its own (T182f), the data is found (T182g) -------------------
+    at("listing what the earlier home left");
+    let found = expect(&home, &["service", "found", "--json"]);
+    let row = found["found"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|row| row["service"] == KEPT))
+        .unwrap_or_else(|| panic!("{KEPT} is not listed: {found}\n{}", home.daemon_log()))
+        .clone();
+    assert_eq!(row["opens_with"], VERSION, "{row}");
+
+    at("adopting it");
+    let adopted = expect(&home, &["service", "adopt", KEPT, "--json"]);
+    assert_eq!(
+        adopted["state"],
+        "stopped",
+        "{adopted}\n{}",
+        home.daemon_log()
+    );
+
+    // --- proved by the service being up, which `mariadb-admin ping` with the new password is -----
+    at("starting it with the password the adopt set");
+    expect(&home, &["service", "start", KEPT, "--json"]);
+    let up = status(&home, KEPT);
+    assert_eq!(up["state"], "running", "{up}\n{}", home.daemon_log());
+
+    // Under another account: `shop`'s password was in the earlier home's credential store, which an
+    // uninstall empties, so MixEngine refuses to manage that account — and saying so is itself proof
+    // the account survived. The application that used it keeps its own copy of the password.
+    at("checking that the database made before the reinstall survived it");
+    let again = expect(
+        &home,
+        &[
+            "database", "create", KEPT, "--name", "shop", "--user", "adopted", "--json",
+        ],
+    );
+    assert_eq!(
+        again["made"]["database"], "existing",
+        "the adopt lost the data: {again}"
     );
 }

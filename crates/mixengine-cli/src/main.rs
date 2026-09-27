@@ -1868,6 +1868,18 @@ enum ServiceCommand {
         #[arg(long)]
         no_wait: bool,
     },
+
+    /// List service data an earlier install left, and whether each can be adopted.
+    Found,
+
+    /// Turn service data an earlier install left back into a service, with a new admin password.
+    ///
+    /// The databases and accounts in it are kept. The service is left stopped.
+    Adopt {
+        /// A service `mix service found` lists: `mariadb@main`.
+        #[arg(value_name = "SERVICE", value_parser = service_id)]
+        service: ServiceId,
+    },
 }
 
 /// What can be done to a service's limits.
@@ -6300,6 +6312,28 @@ async fn service(
                 ask(&mut client, rpc::method::SERVICE_CREATE, encode(&create)).await?;
             emit(&rendered(json, &creation, || {
                 render::service_creation(&creation)
+            }))?;
+            return Ok(ExitCode::SUCCESS);
+        }
+
+        ServiceCommand::Found => {
+            let found: mixengine_proto::ServiceFoundList =
+                ask(&mut client, rpc::method::SERVICE_FOUND, None).await?;
+            emit(&rendered(json, &found, || render::service_found(&found)))?;
+            return Ok(ExitCode::SUCCESS);
+        }
+
+        ServiceCommand::Adopt { service } => {
+            let summary: mixengine_proto::ServiceSummary = ask(
+                &mut client,
+                rpc::method::SERVICE_ADOPT,
+                encode(&mixengine_proto::ServiceAdopt {
+                    service: service.clone(),
+                }),
+            )
+            .await?;
+            emit(&rendered(json, &summary, || {
+                render::service_adopted(&summary)
             }))?;
             return Ok(ExitCode::SUCCESS);
         }

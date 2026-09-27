@@ -1442,6 +1442,34 @@ pub(crate) fn package_removal(removal: &PackageRemoval) -> String {
 /// connection that is refused, hours later. So a move is stated at the moment it happens, with as
 /// much of the program that took the port as this machine would give up.
 #[must_use]
+/// `mix service found`, for a person: one line per directory, what opens it or why nothing does.
+pub(crate) fn service_found(found: &mixengine_proto::ServiceFoundList) -> String {
+    if found.found.is_empty() {
+        return "nothing an earlier install left is waiting to be adopted\n".to_owned();
+    }
+
+    let mut rendered = String::new();
+    for row in &found.found {
+        let state = match (&row.opens_with, &row.why_not) {
+            (Some(version), _) => format!("opens with {version}"),
+            (None, Some(why)) => why.clone(),
+            (None, None) => "cannot be adopted".to_owned(),
+        };
+        rendered.push_str(&format!("{}  {state}\n  {}\n", row.service, row.path));
+    }
+
+    rendered
+}
+
+/// `mix service adopt`, for a person.
+pub(crate) fn service_adopted(summary: &ServiceSummary) -> String {
+    format!(
+        "adopted {}, stopped\n  a new admin password was set where it keeps one; the databases and \
+         accounts in it are as they were\n  `mix service start {}` starts it\n",
+        summary.id, summary.id
+    )
+}
+
 pub(crate) fn service_creation(creation: &ServiceCreation) -> String {
     let mut rendered = format!(
         "created {}
