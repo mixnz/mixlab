@@ -198,19 +198,9 @@ async fn attempt(
     evidence: &Evidence<'_>,
 ) -> Result<std::result::Result<Claimed, Refusal>> {
     let marker = match evidence {
-        Evidence::Marker => match marker::read(&found.path) {
-            // What the install said is not proof its files are still there, nor that its paths stay
-            // inside the directory: the same check the index path makes, against the marker's map.
-            Some(marker) if marker.names(&found.subject) => {
-                if let Err(error) =
-                    crate::install::provided(marker.provides(), marker.url(), &found.path)
-                {
-                    return Ok(Err(Refusal::Incomplete(error.to_string())));
-                }
-                marker
-            }
-            Some(_) => return Ok(Err(Refusal::OtherInstall)),
-            None => return Ok(Err(Refusal::NoMarker)),
+        Evidence::Marker => match by_marker(found) {
+            Ok(marker) => marker,
+            Err(refusal) => return Ok(Err(refusal)),
         },
 
         Evidence::Index {
@@ -260,6 +250,35 @@ async fn attempt(
                 .await?,
         ),
     }))
+}
+
+/// The marker that would record this directory, or why none does.
+fn by_marker(found: &Found) -> std::result::Result<Marker, Refusal> {
+    match marker::read(&found.path) {
+        // What the install said is not proof its files are still there, nor that its paths stay
+        // inside the directory: the same check the index path makes, against the marker's map.
+        Some(marker) if marker.names(&found.subject) => {
+            crate::install::provided(marker.provides(), marker.url(), &found.path)
+                .map_err(|error| Refusal::Incomplete(error.to_string()))?;
+            Ok(marker)
+        }
+        Some(_) => Err(Refusal::OtherInstall),
+        None => Err(Refusal::NoMarker),
+    }
+}
+
+/// Why this directory is not recorded yet, said offline and recording nothing — roadmap task
+/// **T182i**, what a client draws beside its **Adopt**.
+///
+/// The marker check a start makes, without the index: a directory with no marker has not been
+/// checked, and adopting it asks the index. One whose marker would record it answers that the next
+/// start will — a state the start itself leaves only for a moment.
+#[must_use]
+pub fn examine(found: &Found) -> String {
+    match by_marker(found) {
+        Ok(_) => "its marker is good, so the next start records it".to_owned(),
+        Err(refusal) => refusal.reason(&found.subject),
+    }
 }
 
 /// The index's entry and artifact for this directory's install on `target`.
@@ -562,6 +581,56 @@ mod tests {
         for left in &walked.left {
             assert!(left.reason.contains("does not hold"), "{}", left.reason);
         }
+    }
+
+    /// **T182i.** Why each directory is not recorded, said offline and without recording anything —
+    /// what the window draws beside **Adopt**.
+    #[tokio::test]
+    async fn examine_says_why_without_recording() {
+        let (_temp, store, paths) = home().await;
+
+        let bare = a_node(&paths, "20.0.0");
+        on_disk(&bare, false);
+
+        let other = a_node(&paths, "21.0.0");
+        on_disk(&other, false);
+        std::fs::write(
+            other.path.join(marker::FILE_NAME),
+            Marker::runtime(&a_node(&paths, "19.0.0")).encode(),
+        )
+        .expect("a marker");
+
+        let gone = a_node(&paths, "22.0.0");
+        on_disk(&gone, true);
+        std::fs::remove_file(gone.path.join("node")).expect("the program");
+
+        let fine = a_node(&paths, "23.0.0");
+        on_disk(&fine, true);
+
+        let found = unrecorded(&store, &paths).await.expect("a walk");
+        let why = |version: &str| {
+            let one = found
+                .iter()
+                .find(|found| found.subject.version().as_str() == version)
+                .expect("listed");
+            examine(one)
+        };
+
+        assert!(why("20.0.0").contains("index"), "{}", why("20.0.0"));
+        assert!(
+            why("21.0.0").contains("another install"),
+            "{}",
+            why("21.0.0")
+        );
+        assert!(why("22.0.0").contains("does not hold"), "{}", why("22.0.0"));
+        assert!(why("23.0.0").contains("next start"), "{}", why("23.0.0"));
+        assert!(
+            crate::runtimes::records(&store, None)
+                .await
+                .expect("rows")
+                .is_empty(),
+            "examining records nothing"
+        );
     }
 
     /// Without a marker and without an index there is nothing to go on, and nothing is recorded:
