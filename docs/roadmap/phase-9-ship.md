@@ -217,7 +217,7 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       leaves a marker in its directory, an install that finds its directory adopts it instead of
       refusing, and each start records what it finds on disk. Spec D1–D3.
       Design: [2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md](../specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md).
-- [ ] **T182g** Service instances found in `data/` are listed and adopted on request, with a new
+- [x] **T182g** Service instances found in `data/` are listed and adopted on request, with a new
       admin password set through the T127 repair path. After T182f. Spec D4.
 - [ ] **T182h** The uninstaller leaves a copy of the state in each kept folder, and a fresh home
       offers to restore projects, sites, domains and services from it. After T182g. Spec D5, D6.

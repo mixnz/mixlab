@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+- MixLab and `mix service adopt` bring back databases an earlier install left in its folders, with
+  a new admin password. The databases inside are kept.
+
 ### Fixed
 - A blueprint that installs PHP now turns on its PHP extensions, such as `redis` for Laravel, and
   turns them on for the PHP version the project uses, not the newest one installed.
