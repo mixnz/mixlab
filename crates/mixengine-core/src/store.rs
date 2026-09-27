@@ -26,6 +26,17 @@ use crate::{Error, Result};
 /// makes an edit here reach the next build — see the note there.
 static MIGRATIONS: Migrator = sqlx::migrate!("./migrations");
 
+/// The newest migration this build carries — what a copy of a database written by another build is
+/// compared with before it is read (T182h).
+#[must_use]
+pub fn schema_version() -> i64 {
+    MIGRATIONS
+        .iter()
+        .map(|migration| migration.version)
+        .max()
+        .unwrap_or(0)
+}
+
 /// Connections in the pool.
 ///
 /// SQLite serialises writers, so a larger number buys nothing there — but WAL lets readers run
