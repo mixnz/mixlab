@@ -95,7 +95,8 @@ binaries. What they state is what the daemon **writes** —
    never reads the error to decide.
    **And a copy of an earlier install's state — T182h**: `home.previous` says what the copy in the
    kept folders holds, while the home has nothing of its own; `home.restore` brings it back. The
-   Dashboard shows a card with the counts and **Restore**, then the report.
+   Dashboard shows a card with the counts and **Restore**, then the report. While a restore is
+   offered, `service.found` answers nothing, so the two cards never compete for the same data.
    **And a service's data an earlier install left — T182g**: `service.found` lists each data
    directory with no service row, with the installed version that opens it or the daemon's reason
    none does; `service.adopt` brings one back, stopped, with a new admin password. MixLab's Dashboard

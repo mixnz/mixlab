@@ -23,6 +23,19 @@ impl Api {
     ///
     /// The wire error of a table that could not be read.
     pub(crate) async fn service_found(&self) -> Result<ServiceFoundList, Error> {
+        // **A restore comes first** (T182h). While a copy of the earlier home can be restored, its
+        // data is not offered one directory at a time: adopting a database first would give this
+        // home a service of its own, and the restore that brings back the projects and sites would
+        // then be refused. A copy this build cannot restore does not hold this back.
+        if self
+            .home_previous()
+            .await?
+            .copy
+            .is_some_and(|copy| !copy.newer)
+        {
+            return Ok(ServiceFoundList { found: Vec::new() });
+        }
+
         let found = self.found_with_openers().await?;
 
         Ok(ServiceFoundList {

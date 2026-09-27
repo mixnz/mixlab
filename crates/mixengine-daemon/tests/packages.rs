@@ -903,3 +903,41 @@ async fn a_package_directory_with_no_row_is_listed_with_why() {
     );
     assert!(stray.is_dir(), "listing touches nothing");
 }
+
+/// **T182h over T182g.** While a copy of the earlier home can be restored, its service data is not
+/// offered for adopting one by one: adopting a database first would give this home a service of its
+/// own, and the restore that brings back the projects and sites would then be refused.
+#[tokio::test]
+async fn service_data_is_not_offered_while_a_restore_is() {
+    let fixture = Fixture::started_with_package().await;
+    let mut client = fixture.client().await;
+
+    let kept = fixture.home.path().join("data").join(PACKAGE).join("main");
+    std::fs::create_dir_all(&kept).expect("a kept data directory");
+    std::fs::write(kept.join("somebody.db"), b"data").expect("its data");
+    std::fs::write(kept.join(".mixengine-ready"), format!("{VERSION}\n")).expect("its marker");
+
+    let scratch = tempfile::tempdir().expect("a scratch home");
+    let other = mixengine_core::Store::open(&scratch.path().join("mixengine.db"))
+        .await
+        .expect("an earlier home's database");
+    let data = fixture.home.path().join("data");
+    mixengine_core::adopt::snapshot::write(&other, &data)
+        .await
+        .expect("a copy");
+    other.close().await;
+
+    let found = client.call("service.found", Value::Null).await;
+    assert_eq!(
+        found["found"],
+        json!([]),
+        "a restore is offered instead: {found}"
+    );
+
+    std::fs::remove_file(data.join(".mixengine-state.db")).expect("the copy");
+    let found = client.call("service.found", Value::Null).await;
+    assert_eq!(
+        found["found"][0]["service"], "fakeservice@main",
+        "with no copy, the data is offered again: {found}"
+    );
+}
