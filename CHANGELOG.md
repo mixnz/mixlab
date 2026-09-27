@@ -12,12 +12,16 @@
 - `php`, `node`, `python` and the rest are on your PATH only for the languages you installed with
   MixEngine, so a Node.js or Python you installed yourself is no longer hidden. A tool you add with
   `npm install -g` or `pip install` is a command as soon as it lands.
+- Sync asks your server once what changed on your other machines, instead of once for each kind
+  of item. A sync server you run yourself needs updating to this release.
 
 ### Fixed
 - A blueprint that installs PHP now turns on its PHP extensions, such as `redis` for Laravel, and
   turns them on for the PHP version the project uses, not the newest one installed.
 - Reinstalling MixLab over folders an earlier install kept now lists the runtimes and packages
   already in them, instead of refusing to install them again.
+- If MixLab closed while sync was sending an edit, it no longer says afterwards that the edit was
+  replaced by a newer one.
 
 ## v0.0.9
 

@@ -296,11 +296,19 @@ Decision: [ADR 0045](../decisions/0045-mixlab-has-an-account-and-mixengine-does-
       it, so an older app no longer deletes or overwrites it; but the cursor has moved past it, and
       after an upgrade nothing delivers it again. Design:
       [2026-09-22-t178d-a-skipped-record-is-delivered-again-design.md](../specs/2026-09-22-t178d-a-skipped-record-is-delivered-again-design.md).
-- [ ] **T189** Sync asks before it pulls: `POST /v1/records/heads` names the collections another
+- [x] **T189** Sync asks before it pulls: `POST /v1/records/heads` names the collections another
       machine changed, in one request per run instead of one per collection, and moves the cursor
       past this machine's own writes so their echo is never fetched. Mandatory in `/v1`, on both
       servers and in the conformance suite. Design:
       [2026-09-28-t189-sync-asks-before-it-pulls-design.md](../specs/2026-09-28-t189-sync-asks-before-it-pulls-design.md).
+
+      **Done.** Both servers answer the route, and `server/conformance/src/heads.test.ts` holds
+      them to it, the reaper instances included. `engine::stale` asks, and moves the cursor of every
+      collection it was not told about, never backwards; `sync_heads` carries it to `loop.ts`, whose
+      full run asks once and pulls only what the answer names. A push that meets its own
+      unremembered write at the same stamp writes it again instead of handing it back (D5).
+      `sync_live.rs` proves the echo is stepped over against two native servers. An account nobody
+      has written to keeps its cursors at 0, and so is pulled every full run until something is.
 
 
 **Milestone M30** — on two machines: a fresh install signs in and reproduces exactly the
