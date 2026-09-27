@@ -107,9 +107,10 @@ too.
   when a copy failed. `mix uninstall` removes what was recorded, because an `uninstall.exe` older
   than the file does not know its name.
 - **MixLab swaps and relaunches itself** — roadmap task **T187**. On a window install MixLab's own
-  updater (`apps/desktop/src-tauri/src/updater/`) downloads the payload, checks it, runs the staged
-  `mixengined --version`, stops a running daemon through `daemon.shutdown`, swaps, starts the daemon
-  and the services it stopped again, and relaunches the window. With no daemon running it starts
+  updater (`apps/desktop/src-tauri/src/updater/`) downloads the payload, checks it and runs the staged
+  `mixengined --version` on one click (*Download*), and on a second (*Install and restart*, T188)
+  stops a running daemon through `daemon.shutdown`, swaps, starts the daemon and the services it
+  stopped again, and relaunches the window. With no daemon running it starts
   none. On Windows a running executable can be renamed and not overwritten, which is what the swap
   relies on. On Linux the window reads its own path *before* the swap: `/proc/self/exe` follows the
   inode, so a window asking afterwards is told its own path is `…/mixlab.old`.
@@ -150,7 +151,8 @@ too.
 ## User flow
 
 1. Update found by a check somebody asked for → carried on the event stream and shown by
-   `mix status`, or found by MixLab → a dot on its Settings button and one notice per release.
+   `mix status`, or found by MixLab → a dot on its Settings button and a panel in the corner that
+   downloads when asked and installs when asked again (T188).
    Nothing interrupts work, and nothing installs itself.
 2. `mix self-update` shows version, size and release notes from the feed before asking.
 3. **Explicit consent required.** Updates are never silent, because installing one restarts the
