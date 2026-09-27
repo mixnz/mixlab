@@ -52,7 +52,8 @@ it. A start re-scans too, so a home changed while the daemon was stopped is righ
 **No poll** (changed while building). The two-second `bin_scan` loop is gone. A tool installed
 with `npm install -g` is heard by a watch on each runtime's bindir — the kernel's notification,
 through `notify` in `mixengine-platform` — so an idle machine pays nothing. `[bin]
-rescan_seconds` goes with it; ADR 0057 records it.
+rescan_seconds` leaves the template but is still read and ignored: every home first run by 0.0.7 to
+0.0.9 has a `[bin]` line, and `config.toml` is never rewritten. ADR 0057 records both.
 
 **A name removed while in use.** On Windows a trampoline that is running cannot be deleted. The sweep
 already renames such a file aside (`MOVED_ASIDE`) and removes it at the next refresh. That path is

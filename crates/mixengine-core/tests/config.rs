@@ -213,6 +213,7 @@ logs = "logs-elsewhere"
                 level: LogLevel::Trace,
                 format: LogFormat::Json,
             },
+            retired_bin: mixengine_core::config::RetiredBin::default(),
             daemon: Daemon {
                 ipc_path: Some(PathBuf::from("/run/user/1000/mixengined.sock")),
                 shutdown_grace_seconds: 30,
@@ -423,6 +424,58 @@ fn the_template_as_shipped_changes_nothing() {
     let config: Config = toml::from_str(TEMPLATE).unwrap();
 
     assert_eq!(config, Config::default());
+}
+
+/// Every template a release has shipped, byte for byte, named by the first release that shipped it.
+/// A release that changes the template adds its own here.
+const RELEASED_TEMPLATES: &[(&str, &str)] = &[
+    ("v0.0.1", include_str!("released-templates/v0.0.1.toml")),
+    ("v0.0.7", include_str!("released-templates/v0.0.7.toml")),
+];
+
+/// **`config.toml` is written once and never rewritten**, so a home keeps the template of the
+/// release it first ran — and whatever a later build drops from the template must still read
+/// there. T185b dropped `[bin]`, and every home first run by 0.0.7 to 0.0.9 stopped starting, the
+/// uninstaller with it, since it asks the daemon what it would remove.
+#[test]
+fn a_home_holding_any_released_template_still_starts() {
+    for (release, template) in RELEASED_TEMPLATES {
+        let home = TempDir::new().unwrap();
+        let path = write(&home, template);
+
+        if let Err(error) = config::load(&path) {
+            panic!(
+                "a home first run by {release} no longer reads its own config.toml:\n{}",
+                reported(&error)
+            );
+        }
+    }
+}
+
+/// And with every key it documented uncommented, which is the file of somebody who changed one.
+#[test]
+fn every_key_a_released_template_documented_still_reads() {
+    for (release, template) in RELEASED_TEMPLATES {
+        let uncommented: String = template
+            .lines()
+            .map(|line| {
+                line.strip_prefix('#')
+                    .filter(|rest| is_key_line(rest))
+                    .unwrap_or(line)
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let home = TempDir::new().unwrap();
+        let path = write(&home, &uncommented);
+
+        if let Err(error) = config::load(&path) {
+            panic!(
+                "a key {release} documented is now refused:\n{}",
+                reported(&error)
+            );
+        }
+    }
 }
 
 #[test]

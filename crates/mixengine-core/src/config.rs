@@ -40,6 +40,9 @@ pub struct Config {
     pub dns: Dns,
     /// Certificate upkeep.
     pub certs: Certs,
+    /// `[bin]`, which nothing reads any more — see [`RetiredBin`].
+    #[serde(rename = "bin")]
+    pub retired_bin: RetiredBin,
     /// Idle shutdown.
     pub services: Services,
     /// Ending a share nobody ended.
@@ -207,6 +210,20 @@ impl Default for Dns {
             port: None,
         }
     }
+}
+
+/// `[bin]`: the period of the two-second poll T185b replaced with a watch on each runtime's bindir.
+///
+/// **Read and ignored, never refused.** `config.toml` is written once and never rewritten, and the
+/// template of every release from 0.0.7 to 0.0.9 has a `[bin]` line that is not commented out — so
+/// every home first run by one of them holds the section, and refusing it stopped the daemon, and
+/// the uninstaller that asks it what it would remove, on a file nobody had edited. ADR 0057.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct RetiredBin {
+    /// How often the poll ran, in seconds. Accepted so a home that set it still starts; the daemon
+    /// logs that it does nothing.
+    pub rescan_seconds: Option<u64>,
 }
 
 /// How MixEngine keeps this home's certificates from expiring — roadmap task **T52**.

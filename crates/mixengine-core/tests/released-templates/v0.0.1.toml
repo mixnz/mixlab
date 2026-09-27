@@ -1,0 +1,182 @@
+# MixEngine configuration.
+#
+# Written once, on first run, and never rewritten — your edits survive every update. Each key is
+# listed commented out, showing the value MixEngine uses when you leave it alone, or an example
+# where there is nothing to show because the answer depends on the machine.
+#
+# A key MixEngine does not recognise is an error, not a warning. A typo you cannot see would
+# otherwise look exactly like a setting that does not work.
+
+[log]
+# The daemon writes to logs/daemon.log and to its stderr, both at this level. The file is moved
+# aside once it reaches 10 MB and the last five are kept; nothing else prunes it.
+#
+# How much to log: "error", "warn", "info", "debug" or "trace".
+#level = "info"
+# "text" reads well in a terminal, "json" feeds a log collector. Setting MIXENGINE_LOG_FORMAT in
+# the daemon's environment overrides this for that one run, which is how a collector that wraps
+# the process asks for JSON without editing this file.
+#format = "text"
+
+[daemon]
+# Where the daemon listens for the CLI and the GUI. Left unset it picks a socket under run/ — a
+# named pipe on Windows — which is the right answer unless that filesystem cannot host one.
+#ipc_path = "/example/mixengined.sock"
+
+# How long "mix daemon stop" may spend stopping services, in total, before it kills what is left.
+#
+# The total and not the allowance of each one: a service already says how many seconds it needs in
+# order to shut down cleanly, and each of them gets that or whatever is left of this, whichever is
+# less. So eight services do not add up to eight grace periods, and this is the number you wait.
+#
+# 0 kills everything at once, which costs a database the recovery it does on its next start. Raise
+# it if you run something that genuinely takes longer to flush — a generous value costs nothing on
+# a shutdown where everything stops when it is asked to.
+#
+# 600 (ten minutes) is the most MixEngine takes, and a number above it is refused rather than
+# quietly lowered. Nothing here takes ten minutes to stop, so a larger number is a typo or a way of
+# writing "never" — and a budget that never runs out is not one.
+#
+# A machine shutting down or a console closing on Windows is not bounded by this: the OS gives the
+# daemon about five seconds and then ends it whatever it is doing, so that path uses less.
+#shutdown_grace_seconds = 10
+
+[dns]
+# MixEngine runs a small DNS server on loopback so that a site you create resolves without anything
+# being written to your hosts file — and so that *.blog.test resolves too, which a hosts file cannot
+# do. It answers only for the domains MixEngine manages (.test, .localhost, .local) and refuses
+# every other name, so it can never become your machine's resolver by accident.
+#
+# Turning it off means your sites resolve through the hosts file instead: one entry per domain, a
+# permission prompt each time the list changes, and no wildcards. "mix status" says which of the two
+# this machine is using and why.
+#enabled = true
+
+# The loopback port it listens on. Left unset it uses 53 on Windows and 53535 on macOS and Linux —
+# the split is about what each system's resolver rule can carry, not about permissions: a Windows
+# NRPT rule names a server and cannot name a port, while /etc/resolver and resolvectl can name both.
+#
+# Set this if something on your machine already holds that port. The example below is just an
+# example; any free port works, and MixEngine points the resolver at whichever one you choose.
+#
+# 0 means "any free port, chosen at every start". That is what MixEngine's own test suite uses and
+# is not useful on a real machine: a port that changes cannot be the one your resolver was told
+# about.
+#port = 5300
+
+[certs]
+# MixEngine signs a certificate for each of your HTTPS sites and replaces it once it has fewer than
+# 30 days left. This is how often it looks. The daemon also looks every time it starts, which is
+# what covers a machine that is switched off more than it is on.
+#
+# The number is not a deadline. A certificate is replaced a month before it expires, so a check
+# that happens late still has weeks in hand; what this really sets is how often a handful of files
+# are read. 0 is refused: that is a loop with no pause in it rather than a schedule.
+#renew_check_seconds = 3600
+
+[services]
+# A service nothing is using can be stopped, so that a project you are not working on costs nothing.
+# You turn that on per service: "mix service idle mariadb@main --after 60m". Nothing does it by
+# itself yet — until MixEngine can start a service again on the first request that needs it, a
+# stopped one stays stopped until you start it.
+#
+# This is how often MixEngine looks, not how long it waits. A service is stopped after it has been
+# seen idle this many times in a row, so "--after 60m" at the default period is 120 readings — which
+# is what makes a reading that arrives late after your laptop wakes up cost a fraction of the wait
+# rather than the whole of it.
+#
+# Idle is measured, never assumed: a service with a connection open to it is never idle, one
+# something else depends on is never idle, and a service MixEngine could not measure at all is left
+# running. 0 is refused — that is a loop with no pause in it rather than a schedule.
+#idle_check_seconds = 30
+
+[sharing]
+# "mix site share" puts one site on your local network so a phone can open it. A share you turned
+# on and walked away from ends by itself: when this machine leaves the network it was shared on,
+# and when the length you gave "--for" runs out. This is how often MixEngine looks.
+#
+# It compares the interface the site was shared on against the address that interface holds now, so
+# joining another Wi-Fi ends the share and says so. A finding has to be seen twice in a row before
+# anything happens, which is what stops a DHCP renewal or a laptop waking up from ending a share
+# that is perfectly fine.
+#
+# What it cannot tell apart: two networks that hand this machine the same address on the same
+# adapter. That share stays up.
+#
+# 0 is refused — that is a loop with no pause in it rather than a schedule.
+#check_seconds = 30
+
+[updates]
+# MixEngine looks for a newer MixEngine when the daemon starts and once a day after that. Finding
+# one changes nothing on its own: it becomes a line in "mix status", and "mix self-update" is what
+# installs it — after showing you the version, the size and the notes, and telling you which
+# services it will stop and start again.
+#
+# What it reads is one small signed document. If this machine is offline, nothing is said and
+# nothing is slower; if the signature does not check out, the release is refused rather than
+# installed.
+#
+# false stops the daemon looking on its own — no check at start, no daily check, no notification.
+# "mix self-update" still works, because you asked.
+#enabled = true
+#
+# How often, in seconds. 0 is refused: that is a loop with no pause in it rather than a schedule,
+# and "I want no checks" is the key above.
+#check_seconds = 86400
+
+[metrics]
+# What MixEngine is costing this machine: CPU and memory, per service and for the daemon itself.
+#
+# Two rates, and the reason is that they answer two questions. While a client has the live view
+# open a reading is taken every second, which is what that view is. While nobody is watching one is
+# taken every minute, because "what was eating my battery last night" is a question about a night
+# nobody was watching — a history kept only while somebody looked would hold exactly the minutes
+# that needed no recording.
+#
+# One reading costs about 10 ms on Windows and about 2 ms on Linux, so once a minute is roughly a
+# fiftieth of a percent of one core. 0 is refused for both: that is a loop with no pause in it
+# rather than a schedule.
+#sample_seconds = 1
+#idle_sample_seconds = 60
+#
+# How long the per-minute history is kept. 0 keeps none of it — the live view still works, and
+# nothing is written down.
+#retention_hours = 24
+
+[crash]
+# When MixEngine hits a bug in itself, it writes a small file to logs/crashes/ saying where in
+# MixEngine's own source it happened and the function names around it. That is all it holds: none of
+# your paths, none of your site names, no passwords — by what the file is allowed to contain rather
+# than by filtering something out of it afterwards. That is what makes it safe to attach to a public
+# bug report without reading it first.
+#
+# Nothing sends it anywhere; there is no server to send it to. "mix doctor" tells you when one is
+# there, and "mix doctor --bundle" is the one thing that packs it into an archive — which is a
+# command you type. The twenty newest are kept and older ones are removed.
+#
+# false stops the file being written. The daemon log still records that a crash happened.
+#enabled = true
+
+[paths]
+# The directories that grow can live elsewhere: a second disk, a larger volume. Write them in full
+# ("D:/bulk/data", "/mnt/bulk/data") or relative to this directory, as in the examples below.
+#
+# On Windows, forward slashes work everywhere and are the safe choice here: inside "double quotes"
+# a backslash starts a TOML escape, so "D:\bulk" quietly becomes D:<backspace>ulk. Write
+# 'D:\bulk\data' in single quotes if you want backslashes.
+#
+# On Windows a path has to be anchored: one that starts at a drive root without naming the drive
+# ("/bulk", '\bulk') or names a drive without starting at its root ('C:bulk') is refused, because
+# it would land on whichever directory that drive happens to be sitting in rather than here.
+#
+# Refused everywhere: a path that, after resolving "." and "..", names no directory of its own
+# ("", ".", "..", "bulk/.."). It would point at this directory or at one containing it, and
+# resetting a service's data would then take the whole installation with it. A sibling
+# ("../bulk/data") is fine.
+#
+# Everything else — bin/, etc/, certs/, extensions/, blueprints/, run/, mixengine.db — stays next
+# to this file, so uninstalling stays a promise MixEngine can keep.
+#runtimes = "bulk/runtimes"
+#packages = "bulk/packages"
+#data = "bulk/data"
+#logs = "bulk/logs"

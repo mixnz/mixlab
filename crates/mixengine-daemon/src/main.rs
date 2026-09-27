@@ -664,6 +664,15 @@ async fn run() -> anyhow::Result<()> {
         tracing::debug!("released a console this process was the only one attached to");
     }
 
+    // Said rather than silently ignored: a key that does nothing looks exactly like one that does
+    // not work (T185b, ADR 0057).
+    if home.config.retired_bin.rescan_seconds.is_some() {
+        tracing::info!(
+            "`[bin] rescan_seconds` in config.toml no longer does anything: MixEngine notices a \
+             tool installed into a runtime as it lands; the line can be removed"
+        );
+    }
+
     // **Before `Store::open`, and that ordering is the point of taking it here.** `sqlx-sqlite`
     // implements the migration lock as a no-op, SQLite having no advisory lock to use, so two
     // daemons that both got as far as opening the database could both read the schema as behind and

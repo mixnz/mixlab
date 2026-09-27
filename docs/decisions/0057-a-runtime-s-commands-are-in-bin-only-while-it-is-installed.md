@@ -50,8 +50,15 @@ Design: [T185b](../specs/2026-09-27-t185b-bin-fronts-only-what-is-installed-desi
    Python's `Scripts`) through its parent. An event waits 250 ms for the rest of its burst, then the
    watch is re-armed and the bindirs re-scanned, in that order, so a file written between the two is
    either read or heard. The watch follows the rows: every runtime installed, removed, adopted or
-   restored re-arms it. `[bin] rescan_seconds` is removed, and `mix path rescan` stays for a
-   bindir the system would not let the daemon watch.
+   restored re-arms it. `mix path rescan` stays for a bindir the system would not let the daemon
+   watch.
+6. **`[bin] rescan_seconds` does nothing, and is still read.** It leaves the template, but
+   `config.toml` is written once and never rewritten, and the template of 0.0.7 to 0.0.9 has a
+   `[bin]` line that is not commented out: every home first run by one of them holds it. So `[bin]`
+   is a retired section — read, ignored, and logged when the key is set — and every template a
+   release has shipped is a test fixture that must still load, with its keys commented and
+   uncommented. Dropping the section outright stopped the daemon, and the uninstaller that asks it
+   what it would remove, on a file nobody had edited.
 
 ## Consequences
 
