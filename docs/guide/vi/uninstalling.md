@@ -4,7 +4,7 @@ slug = "uninstalling"
 order = 13
 summary = "Hoàn tác mọi thứ MixLab đã ghi bên ngoài thư mục của nó, xem danh sách trước khi đồng ý, và giữ lại cơ sở dữ liệu nếu bạn muốn."
 translation_of = "en/uninstalling.md"
-source_sha256 = "980c9350849ff93506c8e42d65581068d6d6d29540d06758bf15b8861706ac37"
+source_sha256 = "50cca2c8b1228efd0d2c5cb0963bab31703b5e431fca7146c6005998a257aa8e"
 +++
 
 # Gỡ MixLab
