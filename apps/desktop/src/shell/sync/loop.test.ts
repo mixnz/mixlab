@@ -543,3 +543,39 @@ describe("the upload signal", () => {
     expect(loop.heard).toEqual(["start full", "end full"]);
   });
 });
+
+describe("the download signal", () => {
+  beforeEach(() => void vi.useFakeTimers());
+  afterEach(() => void vi.useRealTimers());
+
+  function downloadHarness(stale: (ids: string[]) => Promise<string[]>) {
+    const { fake } = backend([], undefined, stale);
+    const heard: string[] = [];
+    const stop = startSyncLoop({
+      backend: fake,
+      collections: () => [collection([])],
+      onFocus: () => () => {},
+      onRequest: () => () => {},
+      onReplaced: () => {},
+      onError: () => {},
+      onRunStart: (run) => void heard.push(`start ${run}`),
+      onDownloading: () => void heard.push("downloading"),
+      onRunEnd: ({ run }) => void heard.push(`end ${run}`),
+    });
+    return { heard, stop };
+  }
+
+  it("says a full run downloads once heads names something to pull", async () => {
+    const loop = downloadHarness(async (ids) => ids);
+    await vi.advanceTimersByTimeAsync(0);
+    loop.stop();
+    expect(loop.heard).toEqual(["start full", "downloading", "end full"]);
+  });
+
+  it("says nothing of a download when heads names nothing, as asking is not downloading", async () => {
+    const loop = downloadHarness(async () => []);
+    await vi.advanceTimersByTimeAsync(0);
+    loop.stop();
+    expect(loop.heard).toEqual(["start full", "end full"]);
+  });
+});

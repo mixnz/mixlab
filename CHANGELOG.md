@@ -14,6 +14,8 @@
   `npm install -g` or `pip install` is a command as soon as it lands.
 - Sync asks your server once what changed on your other machines, instead of once for each kind
   of item. A sync server you run yourself needs updating to this release.
+- The download icon shows only when another machine changed something, not every time sync
+  checks with your server.
 
 ### Fixed
 - A blueprint that installs PHP now turns on its PHP extensions, such as `redis` for Laravel, and

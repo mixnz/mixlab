@@ -1,15 +1,19 @@
 import { useSyncExternalStore } from "react";
-import type { Run, RunResult } from "./loop";
+import type { RunResult } from "./loop";
 
-/** A pull shorter than this never shows. A push shows only when it sends: see `uploading`. */
+/**
+ * A download shorter than this never shows. A run shows nothing while it only asks what changed:
+ * `down` waits for `downloading`, and `up` for `uploading`.
+ */
 export const SHOW_AFTER_MS = 200;
 
 /** Once shown, each icon this long at least, so a run does not flash one on and off. */
 export const SHOW_AT_LEAST_MS = 600;
 
 /**
- * Which way sync is moving, as the window draws it: `down` while a full run asks the server for
- * news, `up` once this machine's changes are actually being sent. `null` when neither shows.
+ * Which way sync is moving, as the window draws it: `down` while a full run pulls what the server
+ * said changed, `up` once this machine's changes are actually being sent. `null` when neither
+ * shows.
  */
 export type SyncDirection = "down" | "up" | null;
 
@@ -27,7 +31,8 @@ export interface ActivityStore {
   subscribe: (listener: () => void) => () => void;
   /** The same object until something changes. */
   get: () => SyncActivity;
-  runStarted: (run: Run) => void;
+  /** The run under way is about to pull: the server named something that changed elsewhere. */
+  downloading: () => void;
   /** The run under way is sending this machine's changes. */
   uploading: () => void;
   runEnded: (result: RunResult) => void;
@@ -76,11 +81,11 @@ export function createActivity(): ActivityStore {
       return () => void listeners.delete(listener);
     },
     get: () => value,
-    runStarted(run) {
-      // A push is the local check every focus and every half minute runs. With nothing changed it
-      // sends nothing, yet reading eleven collections took 240–465ms: shown, alt-tabbing looked
-      // like syncing. A push shows only once it sends — `uploading`.
-      if (run === "push") return;
+    downloading() {
+      // A run that only asks shows nothing. A push is the local check every focus and every half
+      // minute runs, and reading eleven collections took 240–465ms; a full run first asks the
+      // server what changed (T189). Shown for either, alt-tabbing looked like syncing. `down` is
+      // for a pull the server said has something to fetch, and it still waits its delay.
       want("down", SHOW_AFTER_MS);
     },
     uploading() {

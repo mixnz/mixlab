@@ -94,6 +94,11 @@ export interface LoopOptions {
   onRequest: (listener: () => void) => () => void;
   /** A run began: at least one row is on. */
   onRunStart?: (run: Run) => void;
+  /**
+   * That full run is about to pull: the server named something that changed elsewhere (T189).
+   * Never for a run that only asked and was told nothing changed.
+   */
+  onDownloading?: () => void;
   /** That run is about to send this machine's changes — only ever between its start and its end. */
   onUploading?: () => void;
   /** That run ended, however it ended. */
@@ -179,6 +184,7 @@ export function startSyncLoop(options: LoopOptions): () => void {
           options.onError("heads", failure);
           return;
         }
+        if (stale.size > 0) options.onDownloading?.();
       }
       for (const collection of collections) {
         // A stopped loop finishes the collection it is in, and starts no other.
