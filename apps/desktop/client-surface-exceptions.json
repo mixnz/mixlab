@@ -18,10 +18,6 @@
     "extension.inspect": "Reads a local extension.toml for an extension's author; the window installs from the registry."
   },
   "knownGaps": {
-    "runtime.adopt": "T182f: the Runtimes screen has no row for a version on disk but not recorded, and no Adopt.",
-    "package.adopt": "T182f: the packages list has no row for a version on disk but not recorded, and no Adopt.",
-    "runtime.found": "T182i: the Languages tab does not yet list what runtime.found answers.",
-    "package.found": "T182i: the Packages tab does not yet list what package.found answers.",
     "site.start": "The Sites screen cannot start serving a stopped site.",
     "site.stop": "The Sites screen cannot stop serving a site.",
     "site.delete": "The Sites screen cannot delete a site.",

@@ -253,6 +253,12 @@ const vi: typeof en = {
     runtimes: {
       tabLanguages: "Ngôn ngữ",
       about: "Ngôn ngữ, máy chủ và các phiên bản máy này đang giữ.",
+      onDisk: {
+        title: "Có trên đĩa, chưa ghi nhận",
+        description: "Lần cài trước để lại những bản này. Nhận lại sẽ đối chiếu với package index rồi đưa vào danh sách. Không tải gì về.",
+        adopt: "Nhận lại",
+        adopting: "Đang nhận lại",
+      },
       installedTitle: "Đã cài",
       installedEmpty: "Chưa cài gì ở đây.",
       availableTitle: "Có thể cài",

@@ -258,6 +258,12 @@ export default {
     runtimes: {
       tabLanguages: "Languages",
       about: "Languages, servers and the versions of each this machine keeps.",
+      onDisk: {
+        title: "On disk, not listed",
+        description: "An earlier install left these. Adopt checks one against the package index and lists it. Nothing is downloaded.",
+        adopt: "Adopt",
+        adopting: "Adopting",
+      },
       installedTitle: "Installed",
       installedEmpty: "Nothing installed here yet.",
       availableTitle: "Available",

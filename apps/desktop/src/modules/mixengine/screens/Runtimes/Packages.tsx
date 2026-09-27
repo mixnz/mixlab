@@ -4,6 +4,8 @@ import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import { packageRowsFrom } from "../../onDisk";
+import OnDiskCard from "./OnDiskCard";
 import Input from "../../../../components/Input";
 import MonogramBadge from "../../../../components/MonogramBadge";
 import NoticeBanner from "../../../../components/NoticeBanner";
@@ -33,6 +35,7 @@ export default function Packages({
   const { t } = useTranslation();
   const { installed, available, stale, jobs, installingJob, error, clearError, notice, clearNotice } =
     state;
+  const onDisk = packageRowsFrom(state.onDisk, (name) => packageCategory(name) === category);
 
   // Chỉ lọc bảng "chưa cài": bảng trên là những bản máy này đang giữ, thường vài hàng, và giấu bớt
   // chúng sau một câu tìm kiếm là giấu đúng thứ người dùng cần thấy đủ trước khi gỡ.
@@ -50,6 +53,12 @@ export default function Packages({
     <div className={styles.catalogue}>
       {error !== "" && <ErrorBanner message={error} onDismiss={clearError} />}
       {notice !== "" && <NoticeBanner message={notice} onDismiss={clearNotice} />}
+
+      <OnDiskCard
+        rows={onDisk}
+        adopting={state.adopting}
+        onAdopt={(row) => void state.adopt(row.name, row.version)}
+      />
 
       <Card title={t("mixengine.runtimes.installedTitle")} count={installedInCategory.length} flush>
         {installedInCategory.length === 0 ? (

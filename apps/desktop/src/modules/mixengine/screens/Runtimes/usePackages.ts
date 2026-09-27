@@ -5,6 +5,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { PackageRelease } from "@mixengine/api";
 import type { PackageSummary } from "@mixengine/api";
+import type { PackageFoundList } from "@mixengine/api";
 import { applyJob, type JobRow } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
 import {
@@ -35,6 +36,11 @@ export interface PackagesState {
   agree: () => Promise<void>;
   chooseInstead: (version: string) => Promise<void>;
   dismissAsking: () => void;
+  /** Package directories on disk with no row, as `package.found` answers them — T182i. */
+  onDisk: PackageFoundList;
+  /** The `name@version` being adopted now. */
+  adopting: string | null;
+  adopt: (pkg: string, version: string) => Promise<void>;
 }
 
 /**
@@ -47,6 +53,8 @@ export interface PackagesState {
 export function usePackages(active: boolean): PackagesState {
   const [installed, setInstalled] = useState<PackageSummary[]>([]);
   const [available, setAvailable] = useState<PackageRelease[]>([]);
+  const [onDisk, setOnDisk] = useState<PackageFoundList>({ found: [] });
+  const [adopting, setAdopting] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [installingJob, setInstallingJob] = useState<Record<string, number>>({});
@@ -69,8 +77,13 @@ export function usePackages(active: boolean): PackagesState {
   const reload = useCallback(
     async (stillShow = "") => {
       try {
-        const [inst, avail] = await Promise.all([api.packagesInstalled(), api.packagesAvailable()]);
+        const [inst, avail, found] = await Promise.all([
+          api.packagesInstalled(),
+          api.packagesAvailable(),
+          api.packagesFound(),
+        ]);
         setInstalled(inst.packages);
+        setOnDisk(found);
         setAvailable(avail.packages);
         setStale(avail.stale);
         setError(stillShow);
@@ -209,6 +222,22 @@ export function usePackages(active: boolean): PackagesState {
     [reload, t],
   );
 
+  const adopt = useCallback(
+    async (pkg: string, version: string) => {
+      setAdopting(`${pkg}@${version}`);
+      setError("");
+      try {
+        await api.packageAdopt(pkg, version);
+        void reload();
+      } catch (e) {
+        setError(errorMessage(t, e));
+      } finally {
+        setAdopting(null);
+      }
+    },
+    [reload, t],
+  );
+
   const clearError = useCallback(() => setError(""), []);
   const clearNotice = useCallback(() => setNotice(""), []);
 
@@ -228,5 +257,8 @@ export function usePackages(active: boolean): PackagesState {
     agree,
     chooseInstead,
     dismissAsking,
+    onDisk,
+    adopting,
+    adopt,
   };
 }
