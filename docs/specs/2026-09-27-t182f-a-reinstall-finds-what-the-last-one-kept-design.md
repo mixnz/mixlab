@@ -5,6 +5,7 @@ task:
   - T182f
   - T182g
   - T182h
+  - T182i
 ---
 
 # T182f–h — A reinstall finds what the last one kept
@@ -109,20 +110,25 @@ too (`client-surface.md`).
 The generator's layout is `data/<package>/<instance>/`. A directory there with no `services` row is
 a **found instance**:
 
-- `service.found` lists them, with the package, the instance name, the size, and whether an installed
-  version of that package can open it. `mix service found` prints the same list, `mix doctor` counts
+- `service.found` lists them, with the service id they would become, the directory, the version
+  that bootstrapped them, and the installed version that can open them or why none can. **No size**:
+  walking a database's files on every listing costs more than the number is worth. `mix service found` prints the same list, `mix doctor` counts
   them, and MixLab's Dashboard shows *Found N services from an earlier install* with a *Review* link
   to a list with one **Adopt** button per row.
-- **Which version can open it** is read from the data, never guessed: PostgreSQL's `PG_VERSION`
-  names a major, and an installed package of that major is required. MariaDB and MySQL write their
-  version into `mariadb_upgrade_info` / `mysql_upgrade_info`, and an installed version of the same
-  product that is the same or newer is required. Redis needs any installed Redis. A row that cannot
-  be opened says which version to install.
-- `service.adopt {package, instance}` (and `mix service adopt mariadb@main`) writes the `services`
+- **Which version can open it** is read from the data, never guessed — from `.mixengine-ready`, which
+  every first run MixEngine finished writes with the version that ran it, and which `first_run`
+  already trusts. MariaDB and MySQL need an installed version of the **same major.minor**: a newer
+  series needs `mariadb-upgrade`, which MixEngine does not run yet, and an older server opening newer
+  data corrupts it. PostgreSQL needs the **same major**. Anything else opens with any installed
+  version. The newest that fits is chosen. A directory with no marker never finished its first run
+  and cannot be adopted; a row that cannot be opened says which version to install.
+  (Amended while building T182g: this replaces reading `PG_VERSION` / `mariadb_upgrade_info`.)
+- `service.adopt {service}` (and `mix service adopt mariadb@main`) writes the `services`
   row with the existing `data_dir`, allocates a port through the normal allocator (the old port may be
   taken by now), generates a new admin secret, and runs the recipe's `reset_steps` against the
   existing data, which is `service.reset_credential`'s path (T127). MariaDB, MySQL and PostgreSQL all
-  have one. The instance is left **stopped**.
+  have one. The reset starts back what it repaired, so the adopt stops it again: the instance is left
+  **stopped**.
 - The databases and accounts inside are untouched. The apps that used them keep their own passwords.
 
 ## D5 — The uninstaller leaves a copy of the state in what it keeps (T182h)
@@ -166,6 +172,24 @@ On a start whose database has just been created, the daemon looks in the configu
 - A home with nothing relocated behaves exactly as today: the uninstaller removes it whole, and there
   is nothing to find.
 - `mix`, `mixengined` and MixLab all reach the same methods. The window adds no capability of its own.
+
+## MixLab
+
+Most of this happens in the daemon, so a person in the window sees it without asking: a runtime or
+package recorded at start is simply installed in the Runtimes screen, and *Install* on a version
+whose marked directory is there records it rather than failing. The doctor line appears in
+Settings → Doctor. What the window adds:
+
+- **T182g — built.** The Dashboard shows *Service data from an earlier install* while
+  `service.found` answers rows, and *Review* opens a list with **Adopt** where the answer carries
+  `opens_with`, and the daemon's reason where it does not.
+- **T182i — a directory the start could not check.** `runtime.adopt` and `package.adopt` reach only
+  `mix` today (listed as known gaps in `apps/desktop/client-surface-exceptions.json`). The Runtimes
+  screen, and the packages list, gain a row for a version on disk but not recorded, with the daemon's
+  reason and **Adopt**; an `already_exists` from *Install* offers the same button. That needs a
+  daemon method listing those directories, since the window may not parse the doctor's sentence.
+- **T182h.** The first-run storage picker shows *Restore from your earlier install* when
+  `home.previous` answers, with the counts it gives.
 
 ## Tests
 

@@ -88,6 +88,16 @@ binaries. What they state is what the daemon **writes** —
    `daemon.doctor`, and `runtime.adopt` / `package.adopt` record it on request (`mix runtime adopt`,
    `mix package adopt`). A screen that offers *Install* for such a version gets `already_exists` with
    the adopt command in the hint, and offers that instead.
+   **Drawn from `runtime.found` / `package.found` — T182i**: each directory on disk with no row and
+   the daemon's reason. The Languages tab and each Packages tab show them in an *On disk, not listed*
+   card with **Adopt** (`runtime.adopt` / `package.adopt`). An *Install* whose directory was already
+   there ends as a failed job; the tab reloads and the version appears in that card, so the client
+   never reads the error to decide.
+   **And a service's data an earlier install left — T182g**: `service.found` lists each data
+   directory with no service row, with the installed version that opens it or the daemon's reason
+   none does; `service.adopt` brings one back, stopped, with a new admin password. MixLab's Dashboard
+   shows a card while `service.found` answers rows, and a list with **Adopt** where the answer has
+   `opens_with` — the client decides nothing about versions.
    **And what an extension's plan names before anybody agrees to it — T82**: a `web-app` freezes two
    things at install, the php-fpm pool it runs on and the database it administers, and
    `ExtensionPlan.site` carries both. Which server an administrative interface opens onto is not a

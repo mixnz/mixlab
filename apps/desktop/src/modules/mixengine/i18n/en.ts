@@ -101,6 +101,20 @@ export default {
       installing: "Adding…",
       done: "Done. Open a new terminal to start using them.",
     },
+    foundServices: {
+      title: "Service data from an earlier install",
+      intro:
+        "{{count}} to review. Adopt one to use it again with a new admin password. The databases inside are kept.",
+      review: "Review",
+      dialogTitle: "Data from an earlier install",
+      dialogIntro:
+        "Each one becomes a service again, stopped, with a new admin password. Apps that used it keep their own passwords.",
+      opensWith: "Opens with {{version}}",
+      adopt: "Adopt",
+      adopting: "Adopting",
+      adopted: "{{service}} is back and stopped. Start it from Services.",
+      none: "Nothing left to adopt.",
+    },
     afterApply: {
       titleWorking: "Bringing your project up",
       titleReady: "Your project is ready",
@@ -244,6 +258,12 @@ export default {
     runtimes: {
       tabLanguages: "Languages",
       about: "Languages, servers and the versions of each this machine keeps.",
+      onDisk: {
+        title: "On disk, not listed",
+        description: "An earlier install left these. Adopt checks one against the package index and lists it. Nothing is downloaded.",
+        adopt: "Adopt",
+        adopting: "Adopting",
+      },
       installedTitle: "Installed",
       installedEmpty: "Nothing installed here yet.",
       availableTitle: "Available",

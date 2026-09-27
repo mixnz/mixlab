@@ -249,6 +249,17 @@ that has a database vocabulary, and only after the start has already failed: a r
 log line while a start was still running could take down a cluster that an application was merely
 polling with a stale password of its own.
 
+## Data an earlier install left
+
+A data directory under `data/` with no service row — an uninstall that kept the folders `[paths]`
+moved, then a fresh install pointed at them — is listed by `service.found` (`mix service found`,
+MixLab's Dashboard) and brought back by `service.adopt` (`mix service adopt`, **Adopt**). Adopting is
+`service.create` with the same id, whose derived data directory is the one found, and for a database
+`service.reset_credential`, which sets a new admin password. The service is left stopped; the
+databases and accounts inside are kept, and an application's own account keeps the password the
+application holds. Which installed version may open the data is read from `.mixengine-ready`. Design:
+[T182f–h](../specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md), D4.
+
 ## Web server integration
 
 - Exactly one of Caddy/Nginx is the active front end (owns 80/443). Switching regenerates all site

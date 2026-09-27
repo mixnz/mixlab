@@ -5,6 +5,8 @@ import Card from "../../../../components/Card";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import { runtimeRowsFrom, type OnDiskRow } from "../../onDisk";
+import OnDiskCard from "./OnDiskCard";
 import Input from "../../../../components/Input";
 import MonogramBadge from "../../../../components/MonogramBadge";
 import NoticeBanner from "../../../../components/NoticeBanner";
@@ -47,6 +49,8 @@ export default function Languages({ active }: { active: boolean }) {
   // Filters the "not installed" table only — the same reason `Packages.tsx` has.
   const [filter, setFilter] = useState("");
   const [error, setError] = useState("");
+  const [onDisk, setOnDisk] = useState<OnDiskRow[]>([]);
+  const [adopting, setAdopting] = useState<string | null>(null);
   // What an install said about this machine and went on anyway — T27e.
   const [notice, setNotice] = useState("");
   const { t } = useTranslation();
@@ -66,8 +70,13 @@ export default function Languages({ active }: { active: boolean }) {
   const reload = useCallback(
     async (stillShow = "") => {
       try {
-        const [inst, avail] = await Promise.all([api.runtimesInstalled(), api.runtimesAvailable()]);
+        const [inst, avail, found] = await Promise.all([
+          api.runtimesInstalled(),
+          api.runtimesAvailable(),
+          api.runtimesFound(),
+        ]);
         setInstalled(inst.runtimes);
+        setOnDisk(runtimeRowsFrom(found));
         setAvailable(avail.runtimes);
         setStale(avail.stale);
         setError(stillShow);
@@ -205,6 +214,19 @@ export default function Languages({ active }: { active: boolean }) {
     }
   }
 
+  async function adopt(row: OnDiskRow) {
+    setAdopting(row.key);
+    setError("");
+    try {
+      await api.runtimeAdopt(row.name, row.version);
+      void reload();
+    } catch (e) {
+      setError(errorMessage(t, e));
+    } finally {
+      setAdopting(null);
+    }
+  }
+
   async function setDefault(target: RuntimeSummary) {
     setError("");
     try {
@@ -225,6 +247,8 @@ export default function Languages({ active }: { active: boolean }) {
     <div className={styles.catalogue}>
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
       {notice !== "" && <NoticeBanner message={notice} onDismiss={() => setNotice("")} />}
+
+      <OnDiskCard rows={onDisk} adopting={adopting} onAdopt={(row) => void adopt(row)} />
 
       <Card title={t("mixengine.runtimes.installedTitle")} count={installed.length} flush>
         {installed.length === 0 ? (

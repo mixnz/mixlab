@@ -67,6 +67,12 @@ application's own set of rules; `server/README.md` is the server's.
   `mix self-update` stays, and is the headless distribution's updater.
 - **No business logic in MixEngine's clients.** `mix` and the `mixengine` module only render what
   the daemon returns.
+- **MixLab reaches what `mix` reaches.** A daemon method ships with its MixLab screen in the same
+  task; a spec is not done until its `## MixLab` section says which screen does it, or why the window
+  has no part in it. `node scripts/check-client-surface.mjs` fails on a method the window cannot
+  reach unless `apps/desktop/client-surface-exceptions.json` gives the reason (its `knownGaps` list
+  only shrinks), and `node scripts/check-docs.mjs` fails on a new spec with no `## MixLab` section.
+  Both run in `scripts/gate.sh` and in CI's lint job.
 - **No client-only capability.** Every mutating API method is reachable from `mix`. A gap in the
   CLI is a gap in MixEngine — `docs/features/client-surface.md` is what any full graphical
   client must be able to ask for, and MixLab's `mixengine` module draws every screen from it.

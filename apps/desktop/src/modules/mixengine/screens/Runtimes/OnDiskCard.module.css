@@ -1,0 +1,12 @@
+/* A version on disk but not listed: its name, then where it is and why, in the secondary tone the
+   installed table uses for its detail lines. */
+.name {
+  font-weight: 600;
+}
+
+.detail {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  word-break: break-all;
+}

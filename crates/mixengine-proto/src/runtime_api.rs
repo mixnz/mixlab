@@ -452,6 +452,33 @@ pub struct RuntimeRemoval {
     pub default_cleared: bool,
 }
 
+/// One runtime directory on disk with no row — roadmap task **T182i**. The answer to `runtime.found` is a
+/// list of these.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct RuntimeFound {
+    /// Which language.
+    pub kind: RuntimeKind,
+
+    /// Which version the directory is named after.
+    pub version: PackageVersion,
+
+    /// The directory.
+    pub path: String,
+
+    /// Why it is not recorded yet, as a phrase: no marker (adopting checks it against the package
+    /// index), a marker for another install, or files missing.
+    pub why: String,
+}
+
+/// What `runtime.found` answers — roadmap task **T182i**.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct RuntimeFoundList {
+    /// Every directory with no row, in the order the directory lists them.
+    pub found: Vec<RuntimeFound>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -114,6 +114,24 @@ export function checkSpecHeader(name, text, specNames, adrNumbers) {
   return errors;
 }
 
+// The first day a spec had to say what MixLab does. MixLab is the product (CLAUDE.md, ADR 0056), and
+// a design that answers only for the daemon and `mix` ships a feature a person in the window cannot
+// reach — T182f did, with `mix runtime adopt` and no button. Earlier specs are left as they are.
+const MIXLAB_SECTION_FROM = '2026-09-27';
+
+/** A spec from `MIXLAB_SECTION_FROM` on that is not yet built must have a `## MixLab` section. */
+export function checkMixLabSection(name, text) {
+  const parsed = parseFrontMatter(text);
+  if (!parsed || parsed.error) return [];
+  const { fields, body } = parsed;
+  if ((fields.date ?? '') < MIXLAB_SECTION_FROM) return [];
+  if (!['draft', 'approved'].includes(fields.status)) return [];
+  if (/^## MixLab\b/m.test(body)) return [];
+  return [
+    `${name}: no \`## MixLab\` section — say which screen does this and how, or why the window has no part in it`,
+  ];
+}
+
 export function roadmapTicks(texts) {
   const ticks = new Map();
   for (const text of texts) {
@@ -251,6 +269,7 @@ function checkSpecs(files, writeIndex) {
     if (headerErrors.length) continue;
     const { fields, body } = parseFrontMatter(text);
     errors.push(...checkSpecAgainstRoadmap(name, fields, ticks));
+    errors.push(...checkMixLabSection(name, text));
     entries.push({
       name,
       title: body.match(/^# (.+)$/m)?.[1] ?? name,

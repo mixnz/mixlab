@@ -205,6 +205,33 @@ pub struct PackageRemoval {
     pub removed: PackageSummary,
 }
 
+/// One package directory on disk with no row — roadmap task **T182i**. The answer to `package.found` is a
+/// list of these.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct PackageFound {
+    /// Which package, by the name a recipe is found under.
+    pub package: String,
+
+    /// Which version the directory is named after.
+    pub version: PackageVersion,
+
+    /// The directory.
+    pub path: String,
+
+    /// Why it is not recorded yet, as a phrase: no marker (adopting checks it against the package
+    /// index), a marker for another install, or files missing.
+    pub why: String,
+}
+
+/// What `package.found` answers — roadmap task **T182i**.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct PackageFoundList {
+    /// Every directory with no row, in the order the directory lists them.
+    pub found: Vec<PackageFound>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

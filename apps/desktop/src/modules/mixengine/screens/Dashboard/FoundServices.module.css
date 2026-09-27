@@ -1,0 +1,54 @@
+/* Service data an earlier install left: PathNudge's accent-toned card, since it too asks for one
+   decision and then goes away. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 22px;
+  border: 1px solid rgb(var(--accent-rgb) / 0.45);
+  border-radius: var(--radius-xl);
+  background: rgb(var(--accent-rgb) / 0.06);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.intro {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+/* Only beside the button: the card itself is a column, where a 20rem basis would be a height. */
+.row > .intro {
+  flex: 1 1 20rem;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.path {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  word-break: break-all;
+}
+
+.state {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}

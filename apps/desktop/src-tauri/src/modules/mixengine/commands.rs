@@ -495,6 +495,50 @@ pub async fn mixengine_service_reset_credential(service: String) -> Result<Value
     .await
 }
 
+/// `runtime.found` — runtime directories on disk with no row, and why (T182i). A read.
+#[tauri::command]
+pub async fn mixengine_runtime_found() -> Result<Value, AppError> {
+    rpc::call("runtime.found", json!({})).await
+}
+
+/// `runtime.adopt` — record one runtime version that is on disk without a row, checked against the
+/// package index (T182f). Nothing is downloaded or removed.
+#[tauri::command]
+pub async fn mixengine_runtime_adopt(kind: String, version: String) -> Result<Value, AppError> {
+    rpc::call("runtime.adopt", json!({ "kind": kind, "version": version })).await
+}
+
+/// `package.found` — package directories on disk with no row, and why (T182i). A read.
+#[tauri::command]
+pub async fn mixengine_package_found() -> Result<Value, AppError> {
+    rpc::call("package.found", json!({})).await
+}
+
+/// `package.adopt` — record one package version that is on disk without a row, checked against the
+/// package index (T182f). Nothing is downloaded or removed.
+#[tauri::command]
+pub async fn mixengine_package_adopt(package: String, version: String) -> Result<Value, AppError> {
+    rpc::call(
+        "package.adopt",
+        json!({ "package": package, "version": version }),
+    )
+    .await
+}
+
+/// `service.found` — service data an earlier install left under `data/`, and whether each can be
+/// adopted (T182g). A read: nothing is written.
+#[tauri::command]
+pub async fn mixengine_service_found() -> Result<Value, AppError> {
+    rpc::call("service.found", json!({})).await
+}
+
+/// `service.adopt` — turn one found data directory back into a stopped service with a new admin
+/// password (T182g). The databases and accounts in it are kept.
+#[tauri::command]
+pub async fn mixengine_service_adopt(service: String) -> Result<Value, AppError> {
+    rpc::call("service.adopt", json!({ "service": service })).await
+}
+
 /// Mở stream log của một service. Mở lại (một service khác, hay cùng service với `tail` khác) đóng
 /// cái đang mở — đúng luật `LogsState::keep` đã theo cho `MixEngineState`.
 #[tauri::command]

@@ -19,6 +19,7 @@
 // Crate-visible for one name: `blueprints::planned` reads the scaffold's PATH from
 // `api::apply::scaffold`, so that a plan judges a command against the string the shell would be
 // started with (T78b, D3).
+mod adopt_service;
 pub(crate) mod apply;
 mod create;
 pub(crate) mod events;

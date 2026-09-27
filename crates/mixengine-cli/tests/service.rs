@@ -712,3 +712,26 @@ fn a_service_with_no_credential_is_refused_a_reset() {
         "the refusal does not say which services keep one: {said}"
     );
 }
+
+/// **T182g.** `mix service found` and `mix service adopt` reach the daemon: a fresh home has
+/// nothing to adopt, and adopting something that is not there says where to look.
+#[test]
+fn found_and_adopt_reach_the_daemon_from_the_command_line() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+
+    let found = json(&home.mix(&["service", "found", "--json"]));
+    assert_eq!(found["found"], serde_json::json!([]), "{found}");
+
+    let table = stdout(&home.mix(&["service", "found"]));
+    assert!(table.contains("nothing"), "{table}");
+
+    let refused = home.mix(&["service", "adopt", "fakeservice@main"]);
+    assert!(!refused.status.success(), "{refused:?}");
+    let said = format!(
+        "{}{}",
+        stdout(&refused),
+        String::from_utf8_lossy(&refused.stderr)
+    );
+    assert!(said.contains("mix service found"), "{said}");
+}

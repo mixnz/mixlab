@@ -531,6 +531,35 @@ impl Packages {
         })
     }
 
+    /// `package.found` — every package directory on disk with no row, and why — roadmap task
+    /// **T182i**. Offline: no index, and nothing recorded.
+    ///
+    /// # Errors
+    ///
+    /// The wire error of a table that could not be read.
+    pub(crate) async fn found(&self) -> Result<mixengine_proto::PackageFoundList, Error> {
+        let found = mixengine_core::adopt::walk::unrecorded(&self.store, &self.paths)
+            .await
+            .map_err(|error| error.to_wire())?;
+
+        Ok(mixengine_proto::PackageFoundList {
+            found: found
+                .iter()
+                .filter_map(|one| match &one.subject {
+                    mixengine_core::adopt::Subject::Package { package, version } => {
+                        Some(mixengine_proto::PackageFound {
+                            package: package.clone(),
+                            version: version.clone(),
+                            path: one.path.display().to_string(),
+                            why: mixengine_core::adopt::walk::examine(one),
+                        })
+                    }
+                    mixengine_core::adopt::Subject::Runtime { .. } => None,
+                })
+                .collect(),
+        })
+    }
+
     /// `package.adopt` — record a version that is on disk without a row — roadmap task **T182f**.
     ///
     /// A version already recorded answers its row, so asking twice is not an error.

@@ -809,3 +809,97 @@ async fn adopting_a_package_answers_its_row_or_says_it_is_not_there() {
         .await;
     assert_eq!(refused["data"]["code"], "not_found", "{refused}");
 }
+
+/// **T182g.** Service data an earlier home left under `data/` is listed with the version that would
+/// open it, and adopting it makes a stopped service whose data directory is that one. A directory
+/// whose first run never finished is listed with why it cannot be adopted, and left alone.
+#[tokio::test]
+async fn a_found_instance_is_listed_and_adopting_it_makes_it_a_stopped_service() {
+    let fixture = Fixture::started_with_package().await;
+    let mut client = fixture.client().await;
+
+    let kept = fixture.home.path().join("data").join(PACKAGE).join("main");
+    std::fs::create_dir_all(&kept).expect("a kept data directory");
+    std::fs::write(kept.join("somebody.db"), b"data").expect("its data");
+    std::fs::write(kept.join(".mixengine-ready"), format!("{VERSION}\n")).expect("its marker");
+
+    let half = fixture.home.path().join("data").join(PACKAGE).join("half");
+    std::fs::create_dir_all(&half).expect("a half-made data directory");
+    std::fs::write(half.join("somebody.db"), b"data").expect("its data");
+
+    let found = client.call("service.found", Value::Null).await;
+    let rows = found["found"].as_array().expect("a list");
+    let row = |id: &str| {
+        rows.iter()
+            .find(|row| row["service"] == id)
+            .unwrap_or_else(|| panic!("{id} is listed: {found}"))
+            .clone()
+    };
+    assert_eq!(row("fakeservice@main")["opens_with"], VERSION, "{found}");
+    assert!(row("fakeservice@half")["why_not"].is_string(), "{found}");
+
+    let doctor = client.call("daemon.doctor", Value::Null).await.to_string();
+    assert!(
+        doctor.contains("mix service found"),
+        "the doctor names found service data: {doctor}"
+    );
+
+    let adopted = client
+        .call("service.adopt", json!({"service": "fakeservice@main"}))
+        .await;
+    assert_eq!(adopted["id"], "fakeservice@main", "{adopted}");
+    assert_eq!(adopted["state"], "stopped", "{adopted}");
+    assert!(
+        kept.join("somebody.db").is_file(),
+        "its data is where it was"
+    );
+
+    let again = client
+        .call("service.adopt", json!({"service": "fakeservice@main"}))
+        .await;
+    assert_eq!(
+        again["id"], "fakeservice@main",
+        "adopting twice answers the service: {again}"
+    );
+
+    let found = client.call("service.found", Value::Null).await;
+    assert!(
+        found["found"]
+            .as_array()
+            .is_some_and(|rows| rows.iter().all(|row| row["service"] != "fakeservice@main")),
+        "an adopted instance is no longer found: {found}"
+    );
+
+    let refused = client
+        .refuse("service.adopt", json!({"service": "fakeservice@half"}))
+        .await;
+    assert_eq!(refused["data"]["code"], "precondition_failed", "{refused}");
+    assert!(
+        half.join("somebody.db").is_file(),
+        "a refused adopt touches nothing"
+    );
+
+    let refused = client
+        .refuse("service.adopt", json!({"service": "fakeservice@nope"}))
+        .await;
+    assert_eq!(refused["data"]["code"], "not_found", "{refused}");
+}
+
+/// **T182i.** `package.found` lists a package directory with no row, with why.
+#[tokio::test]
+async fn a_package_directory_with_no_row_is_listed_with_why() {
+    let fixture = Fixture::start().await;
+    let stray = fixture.installed_at("9.9.9");
+    std::fs::create_dir_all(&stray).expect("a directory nothing installed");
+
+    let mut client = fixture.client().await;
+    let found = client.call("package.found", json!({})).await;
+    let row = &found["found"][0];
+    assert_eq!(row["package"], PACKAGE, "{found}");
+    assert_eq!(row["version"], "9.9.9", "{found}");
+    assert!(
+        row["why"].as_str().is_some_and(|why| why.contains("index")),
+        "{found}"
+    );
+    assert!(stray.is_dir(), "listing touches nothing");
+}

@@ -347,3 +347,18 @@ async fn adopt_reaches_the_daemon_from_the_command_line() {
         "{said}"
     );
 }
+
+/// **T182i.** `mix runtime found` and `mix package found` reach the daemon: a home with nothing left
+/// on disk lists nothing, in both renderings.
+#[tokio::test(flavor = "multi_thread")]
+async fn found_reaches_the_daemon_from_the_command_line() {
+    let fixture = Fixture::start().await;
+
+    for noun in ["runtime", "package"] {
+        let found = json(&fixture.home.mix(&[noun, "found", "--json"]));
+        assert_eq!(found["found"], serde_json::json!([]), "{noun}: {found}");
+
+        let table = stdout(&fixture.home.mix(&[noun, "found"]));
+        assert!(table.contains("nothing"), "{noun}: {table}");
+    }
+}

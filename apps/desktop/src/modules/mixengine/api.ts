@@ -36,6 +36,7 @@ import type { CleanupQuery } from "@mixengine/api";
 import type { MetricsHistory } from "@mixengine/api";
 import type { MetricsHistoryQuery } from "@mixengine/api";
 import type { PackageList } from "@mixengine/api";
+import type { PackageSummary } from "@mixengine/api";
 import type { PackageCatalogue } from "@mixengine/api";
 import type { PackageTarget } from "@mixengine/api";
 import type { PackageInstall } from "@mixengine/api";
@@ -46,6 +47,8 @@ import type { FrontEndSwitch } from "@mixengine/api";
 import type { SaveResources, SaveResourcesSet, ServiceAutostartSet } from "@mixengine/api";
 import type { ServiceIdleSet } from "@mixengine/api";
 import type { ServiceSummary } from "@mixengine/api";
+import type { ServiceFoundList } from "@mixengine/api";
+import type { PackageFoundList, RuntimeFoundList } from "@mixengine/api";
 import type { ServiceCreate } from "@mixengine/api";
 import type { ServiceCreation } from "@mixengine/api";
 import type { ServiceDelete } from "@mixengine/api";
@@ -420,6 +423,39 @@ export function databaseCredentials(service: string, user?: string): Promise<Dat
  */
 export function serviceResetCredential(service: string): Promise<ServiceWalk> {
   return invoke<ServiceWalk>("mixengine_service_reset_credential", { service });
+}
+
+/** Runtime directories on disk with no row, and the daemon's reason for each — `runtime.found`, T182i. */
+export function runtimesFound(): Promise<RuntimeFoundList> {
+  return invoke<RuntimeFoundList>("mixengine_runtime_found");
+}
+
+/** Record one runtime version that is on disk without a row — `runtime.adopt`, T182f. */
+export function runtimeAdopt(kind: string, version: string): Promise<RuntimeSummary> {
+  return invoke<RuntimeSummary>("mixengine_runtime_adopt", { kind, version });
+}
+
+/** Package directories on disk with no row, and the daemon's reason for each — `package.found`, T182i. */
+export function packagesFound(): Promise<PackageFoundList> {
+  return invoke<PackageFoundList>("mixengine_package_found");
+}
+
+/** Record one package version that is on disk without a row — `package.adopt`, T182f. */
+export function packageAdopt(pkg: string, version: string): Promise<PackageSummary> {
+  return invoke<PackageSummary>("mixengine_package_adopt", { package: pkg, version });
+}
+
+/** Service data an earlier install left under `data/`, and whether each can be adopted — `service.found`, T182g. */
+export function serviceFound(): Promise<ServiceFoundList> {
+  return invoke<ServiceFoundList>("mixengine_service_found");
+}
+
+/**
+ * Turn one found data directory back into a service — `service.adopt`, T182g. The service is left
+ * stopped, with a new admin password; the databases and accounts in it are kept.
+ */
+export function serviceAdopt(service: string): Promise<ServiceSummary> {
+  return invoke<ServiceSummary>("mixengine_service_adopt", { service });
 }
 
 /** Không trả gì — thành công nghĩa là một tab `db` mới đã được xếp hàng mở, xem

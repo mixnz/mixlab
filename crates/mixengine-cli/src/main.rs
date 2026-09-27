@@ -1369,6 +1369,9 @@ enum RuntimeCommand {
         runtime: Which,
     },
 
+    /// List versions that are on disk but not listed, and why each is not.
+    Found,
+
     /// Which extensions an installed build loads.
     ///
     /// Under `runtime` rather than as `mix php ext …`, which is what
@@ -1507,6 +1510,9 @@ enum PackageCommand {
         #[command(flatten)]
         package: WhichPackage,
     },
+
+    /// List versions that are on disk but not listed, and why each is not.
+    Found,
 }
 
 /// Which package a listing is about, or every package.
@@ -1867,6 +1873,18 @@ enum ServiceCommand {
         /// Answer as soon as the repair has been accepted, rather than when it has finished.
         #[arg(long)]
         no_wait: bool,
+    },
+
+    /// List service data an earlier install left, and whether each can be adopted.
+    Found,
+
+    /// Turn service data an earlier install left back into a service, with a new admin password.
+    ///
+    /// The databases and accounts in it are kept. The service is left stopped.
+    Adopt {
+        /// A service `mix service found` lists: `mariadb@main`.
+        #[arg(value_name = "SERVICE", value_parser = service_id)]
+        service: ServiceId,
     },
 }
 
@@ -4862,6 +4880,23 @@ async fn package(
             });
         }
 
+        PackageCommand::Found => {
+            let found: mixengine_proto::PackageFoundList =
+                ask(&mut client, rpc::method::PACKAGE_FOUND, None).await?;
+            emit(&rendered(json, &found, || {
+                render::on_disk(
+                    found.found.iter().map(|row| {
+                        (
+                            format!("{} {}", row.package, row.version),
+                            &row.path,
+                            &row.why,
+                        )
+                    }),
+                    "package",
+                )
+            }))?;
+        }
+
         PackageCommand::Adopt { package } => {
             let target = PackageTarget {
                 package: package.package,
@@ -5530,6 +5565,20 @@ async fn runtime(
                 ask(&mut client, rpc::method::RUNTIME_UNINSTALL, encode(&asked)).await?;
             emit(&rendered(json, &removal, || {
                 render::runtime_removal(&removal)
+            }))?;
+        }
+
+        RuntimeCommand::Found => {
+            let found: mixengine_proto::RuntimeFoundList =
+                ask(&mut client, rpc::method::RUNTIME_FOUND, None).await?;
+            emit(&rendered(json, &found, || {
+                render::on_disk(
+                    found
+                        .found
+                        .iter()
+                        .map(|row| (format!("{} {}", row.kind, row.version), &row.path, &row.why)),
+                    "runtime",
+                )
             }))?;
         }
 
@@ -6300,6 +6349,28 @@ async fn service(
                 ask(&mut client, rpc::method::SERVICE_CREATE, encode(&create)).await?;
             emit(&rendered(json, &creation, || {
                 render::service_creation(&creation)
+            }))?;
+            return Ok(ExitCode::SUCCESS);
+        }
+
+        ServiceCommand::Found => {
+            let found: mixengine_proto::ServiceFoundList =
+                ask(&mut client, rpc::method::SERVICE_FOUND, None).await?;
+            emit(&rendered(json, &found, || render::service_found(&found)))?;
+            return Ok(ExitCode::SUCCESS);
+        }
+
+        ServiceCommand::Adopt { service } => {
+            let summary: mixengine_proto::ServiceSummary = ask(
+                &mut client,
+                rpc::method::SERVICE_ADOPT,
+                encode(&mixengine_proto::ServiceAdopt {
+                    service: service.clone(),
+                }),
+            )
+            .await?;
+            emit(&rendered(json, &summary, || {
+                render::service_adopted(&summary)
             }))?;
             return Ok(ExitCode::SUCCESS);
         }

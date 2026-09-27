@@ -4,7 +4,7 @@ slug = "uninstalling"
 order = 13
 summary = "Hoàn tác mọi thứ MixLab đã ghi bên ngoài thư mục của nó, xem danh sách trước khi đồng ý, và giữ lại cơ sở dữ liệu nếu bạn muốn."
 translation_of = "en/uninstalling.md"
-source_sha256 = "980c9350849ff93506c8e42d65581068d6d6d29540d06758bf15b8861706ac37"
+source_sha256 = "50cca2c8b1228efd0d2c5cb0963bab31703b5e431fca7146c6005998a257aa8e"
 +++
 
 # Gỡ MixLab
@@ -103,6 +103,22 @@ mix uninstall --keep-relocated
 
 giữ chúng lại và xóa home. Dùng cả hai cờ để giữ tất cả. Thư mục nào bạn chưa từng chuyển đi thì
 nằm trong home, nên đi cùng home.
+
+### Cài lại trên các thư mục đã giữ
+
+Khi bản cài mới hỏi nơi lưu dữ liệu, chọn đúng các thư mục cũ. Lúc khởi động:
+
+- **Runtime và package** có sẵn trong đó tự hiện là đã cài. Bản nào MixLab chưa kiểm được, ví dụ vì
+  lúc đó không có mạng, sẽ nằm trong mục *Có trên đĩa, chưa ghi nhận* ở màn Runtimes, kèm nút
+  **Nhận lại**. Từ terminal: `mix runtime found`, rồi `mix runtime adopt php 8.3.33` (với package
+  cũng vậy).
+- **Database** trong `data/` hiện trên Dashboard dưới dạng *Dữ liệu service từ lần cài trước*. Bấm
+  *Xem* rồi **Nhận lại**. Service quay lại ở trạng thái dừng, với mật khẩu quản trị mới, và mọi
+  database cùng tài khoản bên trong vẫn giữ nguyên. Từ terminal: `mix service found`, rồi
+  `mix service adopt mariadb@main`.
+
+Tài khoản database riêng của từng app vẫn dùng mật khẩu mà app đang giữ. Chỉ mật khẩu quản trị là
+mới, vì mật khẩu cũ đã mất cùng home.
 
 ## Rồi gỡ chính chương trình
 

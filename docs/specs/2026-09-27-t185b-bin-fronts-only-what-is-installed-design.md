@@ -106,6 +106,13 @@ last step of an install, which becomes true) are corrected in the same change.
 - Desktop copy that promises `php`, `node`, `python` on the PATH (the PATH switch in Settings, the
   Dashboard reminder, the guide) is reworded to *the languages you install with MixEngine*.
 
+## MixLab
+
+No new screen, and nothing the window has to decide: which names `bin/` holds is the daemon's.
+The PATH switch in Settings and the Dashboard's *Use php, node and python in any terminal* card are
+reworded to *the languages you install with MixEngine*, since a fresh install no longer fronts all
+four. D4's doctor row appears in Settings → Doctor like every other check.
+
 ## Tests
 
 - `core/tests/shims.rs`: an empty install set writes no runtime names; installing Node writes exactly

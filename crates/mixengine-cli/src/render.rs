@@ -1442,6 +1442,34 @@ pub(crate) fn package_removal(removal: &PackageRemoval) -> String {
 /// connection that is refused, hours later. So a move is stated at the moment it happens, with as
 /// much of the program that took the port as this machine would give up.
 #[must_use]
+/// `mix service found`, for a person: one line per directory, what opens it or why nothing does.
+pub(crate) fn service_found(found: &mixengine_proto::ServiceFoundList) -> String {
+    if found.found.is_empty() {
+        return "nothing an earlier install left is waiting to be adopted\n".to_owned();
+    }
+
+    let mut rendered = String::new();
+    for row in &found.found {
+        let state = match (&row.opens_with, &row.why_not) {
+            (Some(version), _) => format!("opens with {version}"),
+            (None, Some(why)) => why.clone(),
+            (None, None) => "cannot be adopted".to_owned(),
+        };
+        rendered.push_str(&format!("{}  {state}\n  {}\n", row.service, row.path));
+    }
+
+    rendered
+}
+
+/// `mix service adopt`, for a person.
+pub(crate) fn service_adopted(summary: &ServiceSummary) -> String {
+    format!(
+        "adopted {}, stopped\n  a new admin password was set where it keeps one; the databases and \
+         accounts in it are as they were\n  `mix service start {}` starts it\n",
+        summary.id, summary.id
+    )
+}
+
 pub(crate) fn service_creation(creation: &ServiceCreation) -> String {
     let mut rendered = format!(
         "created {}
@@ -1594,6 +1622,25 @@ pub(crate) fn runtime_summary(runtime: &RuntimeSummary) -> String {
         rendered.push_str(&format!("  {label:9} {value}\n"));
     }
 
+    rendered
+}
+
+/// `mix runtime found` and `mix package found`, for a person: one version per line, where it is,
+/// and why it is not listed.
+pub(crate) fn on_disk<'a>(
+    rows: impl Iterator<Item = (String, &'a String, &'a String)>,
+    noun: &str,
+) -> String {
+    let mut rendered = String::new();
+    for (name, path, why) in rows {
+        rendered.push_str(&format!("{name}  {why}\n  {path}\n"));
+    }
+
+    if rendered.is_empty() {
+        return "nothing on disk is waiting to be listed\n".to_owned();
+    }
+
+    rendered.push_str(&format!("`mix {noun} adopt` records one\n"));
     rendered
 }
 

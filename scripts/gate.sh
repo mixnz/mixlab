@@ -50,10 +50,29 @@ check "documentation links" node scripts/check-docs.mjs
 # A string whose `\` continuation went missing reads "no line              in the hosts file", and
 # neither rustfmt nor the compiler says a word about it.
 check "string continuations" node scripts/check-strings.mjs
+# MixLab is the product: every daemon method is reachable from the window, or says why not.
+check "the client surface" node scripts/check-client-surface.mjs
 # CI's `docs` job: the corpus builds a site, and the committed command reference is what `mix`
 # generates. A new or changed flag on `mix` without `bash packaging/docs.sh --reference` is red there
 # and green on the check above, which reads links and spec headers and never runs `mix`.
 check "the command reference" bash packaging/docs.sh --check
+# The handbook's own tests: every page parses, and a translation names the English it was made from.
+# A code check rather than a machine one, so it belongs here although the rest of `cargo test` does
+# not — an English page edited without `bash packaging/docs.sh --restamp` is red on every CI leg.
+check "the handbook" cargo test -p mixengine-docs --quiet
+
+# CI's `desktop` job, which this gate used to leave to CI entirely: an unmocked command in a demo
+# scene, a failing vitest or a lint error in the window each cost a whole CI run to find. They need
+# `npm ci` in apps/desktop once, and the screenshots `npx playwright install chromium` once.
+desktop() {
+  (cd apps/desktop && "$@")
+}
+check "desktop build" desktop npm run build
+check "desktop tests" desktop npm test
+check "desktop lint" desktop npm run lint
+check "desktop screenshots" desktop npm run screenshots -- --check
+check "desktop rustfmt" desktop bash -c 'cd src-tauri && cargo fmt --check'
+check "desktop clippy" desktop bash -c 'cd src-tauri && cargo clippy --locked --all-targets -- -D warnings'
 
 if [ ${#failed[@]} -ne 0 ]; then
   echo "the gate is red: ${failed[*]}" >&2
