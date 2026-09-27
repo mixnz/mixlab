@@ -8,6 +8,7 @@
 //!
 //! Design: `docs/specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md`.
 
+pub mod instances;
 pub mod marker;
 pub mod walk;
 
