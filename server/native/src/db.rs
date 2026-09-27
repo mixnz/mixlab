@@ -199,6 +199,8 @@ CREATE TABLE IF NOT EXISTS record (
   PRIMARY KEY (account_id, collection, id)
 );
 CREATE INDEX IF NOT EXISTS record_by_seq ON record (account_id, seq);
+-- What `heads` reads: one collection's rows above a cursor, without walking the others (T189).
+CREATE INDEX IF NOT EXISTS record_by_collection_seq ON record (account_id, collection, seq);
 
 -- Guessing at one account, counted against that account.
 CREATE TABLE IF NOT EXISTS attempt (
