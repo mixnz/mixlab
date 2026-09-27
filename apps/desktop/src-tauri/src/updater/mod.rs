@@ -11,6 +11,7 @@ pub mod handover;
 pub mod install;
 pub mod lock;
 pub mod placement;
+pub mod ready;
 pub mod records;
 pub mod stage;
 pub mod swap;
