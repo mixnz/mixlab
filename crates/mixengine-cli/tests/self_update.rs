@@ -293,6 +293,20 @@ async fn an_update_replaces_the_binaries_relaunches_and_starts_what_was_running(
     // from a thread that is driving one.
     tokio::task::block_in_place(|| home.declare(&[Service::new("fakeservice@main")]));
 
+    // A Node recorded, so that `bin/` holds a `node` to compare with the trampoline at the end: since
+    // T185b a language with nothing installed has no command there. Node and not PHP, which would
+    // bring a pool this fixture cannot run. Windows only, where that comparison is made.
+    if cfg!(windows) {
+        mixengine_testkit::declare::runtime(
+            &home.database_file(),
+            "node",
+            "24.19.0",
+            &home.path().join("runtimes").join("node").join("24.19.0"),
+            "node.exe",
+        )
+        .await;
+    }
+
     let started = installed.mix(&home, &["service", "start", "fakeservice@main", "--json"]);
     assert!(started.status.success(), "{}", stdout(&started));
 
@@ -366,9 +380,10 @@ async fn an_update_replaces_the_binaries_relaunches_and_starts_what_was_running(
     // And on Windows `bin/` is made of it now rather than of copies of the shim (T185).
     if cfg!(windows) {
         let trampoline = std::fs::metadata(installed.binary(GAINED)).expect("the trampoline");
-        let php = std::fs::metadata(home.path().join("bin").join(named("php"))).expect("bin/php");
+        let node =
+            std::fs::metadata(home.path().join("bin").join(named("node"))).expect("bin/node");
         assert_eq!(
-            php.len(),
+            node.len(),
             trampoline.len(),
             "bin/ was not refreshed from the trampoline"
         );

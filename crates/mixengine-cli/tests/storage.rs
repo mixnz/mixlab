@@ -184,13 +184,33 @@ mod relocated {
     /// started reading `config.toml` would still pass its own tests and fail here.
     #[tokio::test(flavor = "multi_thread")]
     async fn a_shim_still_answers_for_a_relocated_home() {
-        let (home, _bulk) = a_relocated_home();
+        let (home, bulk) = a_relocated_home();
+
+        // A PHP inside the relocated `runtimes/`, recorded, and a start to put its name in `bin/` —
+        // since T185b a language with nothing installed has no command there to run.
+        let program = match cfg!(windows) {
+            true => "php.exe",
+            false => "bin/php",
+        };
+        mixengine_testkit::declare::runtime(
+            &home.database_file(),
+            "php",
+            "8.3.33",
+            &bulk.path().join("runtimes").join("php").join("8.3.33"),
+            program,
+        )
+        .await;
+        drop(home.start_daemon_with(&[]));
 
         let php = home
             .path()
             .join("bin")
             .join(format!("php{}", std::env::consts::EXE_SUFFIX));
-        assert!(php.is_file(), "the daemon filled bin/ on its first start");
+        assert!(
+            php.is_file(),
+            "a start with a PHP recorded left no php in bin/\n--- daemon ---\n{}",
+            home.daemon_log()
+        );
 
         let output = std::process::Command::new(&php)
             .env("MIXENGINE_HOME", home.path())
@@ -198,21 +218,17 @@ mod relocated {
             .output()
             .expect("the shim runs");
 
-        // No PHP is installed, so the shim refuses — and *that* is the answer being asserted: it
-        // reached this home's database, found nothing pinned, and said so. A shim that had tripped
-        // over the relocation would fail about a directory instead.
+        // The answer is the installed program's: the shim read this home's database, found the PHP
+        // on the other disk, and ran it. A shim that had tripped over the relocation would fail
+        // about a directory instead.
         let said = format!(
             "{}{}",
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
         assert!(
-            said.to_lowercase().contains("php"),
-            "the shim did not answer about php: {said}"
-        );
-        assert!(
-            !said.contains("runtimes"),
-            "the shim tripped over the relocation: {said}"
+            output.status.success() && said.contains("fakeservice"),
+            "the shim did not run the PHP in the relocated runtimes/: {said}"
         );
     }
 }
