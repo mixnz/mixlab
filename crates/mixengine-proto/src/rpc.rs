@@ -429,6 +429,21 @@ pub mod method {
     /// Also the name of the job it performs the work in, which is where the log of it lives.
     pub const SERVICE_RESET_CREDENTIAL: &str = "service.reset_credential";
 
+    /// Service data an earlier home left under `data/`, with no service row — roadmap task
+    /// **T182g**. Takes nothing, answers [`ServiceFoundList`](crate::ServiceFoundList): each
+    /// directory, the version that made it, and the installed version that would open it or why none
+    /// does. A read: nothing is written.
+    pub const SERVICE_FOUND: &str = "service.found";
+
+    /// Turn one found data directory back into a service — roadmap task **T182g**. Takes
+    /// [`ServiceAdopt`](crate::ServiceAdopt), answers the
+    /// [`ServiceSummary`](crate::ServiceSummary) of the service, left stopped.
+    ///
+    /// `service.create` with that id, whose data directory is the one found, then — for a database
+    /// — `service.reset_credential`, which writes a new admin password into it. Every database and
+    /// account inside is kept. An id that already has a row answers that row.
+    pub const SERVICE_ADOPT: &str = "service.adopt";
+
     /// Every service package on this machine. Takes [`PackageFilter`](crate::PackageFilter),
     /// answers [`PackageList`](crate::PackageList).
     ///

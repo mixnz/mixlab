@@ -530,12 +530,76 @@ pub struct ServiceFailure {
     pub reason: Option<StateReason>,
 }
 
+/// One service data directory an earlier home left under `data/`, with no service row — roadmap
+/// task **T182g**. The answer to `service.found` is a list of these.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct ServiceFound {
+    /// The service it would become: what `service.adopt` takes back.
+    pub service: ServiceId,
+
+    /// The directory.
+    pub path: String,
+
+    /// The server version that bootstrapped it, where its first run finished.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub made_by: Option<PackageVersion>,
+
+    /// The installed version `service.adopt` would run it with. Absent when it cannot be adopted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opens_with: Option<PackageVersion>,
+
+    /// Why it cannot be adopted yet, as a sentence with what to do. Absent when it can.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub why_not: Option<String>,
+}
+
+/// What `service.found` answers — roadmap task **T182g**.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct ServiceFoundList {
+    /// Every data directory with no service row, in the order the directory lists them.
+    pub found: Vec<ServiceFound>,
+}
+
+/// What `service.adopt` takes — roadmap task **T182g**.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct ServiceAdopt {
+    /// A service `service.found` listed.
+    pub service: ServiceId,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn service(id: &str) -> ServiceId {
         ServiceId::parse(id).expect("a valid service id")
+    }
+
+    /// **T182g.** A found instance that can be adopted says with what, and leaves out the two
+    /// fields that would only be there when it cannot.
+    #[test]
+    fn a_found_service_that_opens_carries_only_what_opens_it() {
+        let found = ServiceFound {
+            service: service("mariadb@main"),
+            path: "/data/mariadb/main".to_owned(),
+            made_by: None,
+            opens_with: Some(PackageVersion::parse("11.4.5").expect("a version")),
+            why_not: None,
+        };
+
+        let json = serde_json::to_value(&found).expect("encodes");
+        assert_eq!(json["service"], "mariadb@main");
+        assert_eq!(json["opens_with"], "11.4.5");
+        assert!(
+            json.get("made_by").is_none() && json.get("why_not").is_none(),
+            "{json}"
+        );
+
+        let back: ServiceFound = serde_json::from_value(json).expect("decodes");
+        assert_eq!(back, found);
     }
 
     /// Both answers travel tagged, and the front-end one carries which program it is — which is
