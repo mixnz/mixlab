@@ -335,6 +335,12 @@ impl Uninstall {
             )
         });
 
+        // T182h: the home's state goes with the home, so a folder that stays gets a copy of it —
+        // the next home pointed at it can bring the projects and sites back.
+        if !unfinished && !query.keep_home {
+            self.leave_a_copy(&mut items).await;
+        }
+
         handle
             .progress(95, "arming this home's own directories")
             .await;
@@ -616,6 +622,32 @@ impl Uninstall {
             | ResidueId::Credentials
             | ResidueId::WindowCredentials
             | ResidueId::InUse => None,
+        }
+    }
+
+    /// Write a copy of this home's state into each relocated folder that stays — roadmap task
+    /// **T182h**, spec D5 — and say so on its row.
+    ///
+    /// Never fatal: a copy that cannot be written costs only the restore it would have offered, and
+    /// is logged; the uninstall goes on exactly as it would have.
+    async fn leave_a_copy(&self, items: &mut [Residue]) {
+        for index in kept_relocated(items) {
+            let dir = std::path::PathBuf::from(&items[index].location);
+            match mixengine_core::adopt::snapshot::write(&self.store, &dir).await {
+                Ok(written) => {
+                    tracing::info!(path = %written.display(), "left a copy of this home's state");
+                    items[index].outcome = Removal::Kept {
+                        because: "you asked for it to stay, and it now holds a copy of your \
+                                  projects and sites so the next install can bring them back"
+                            .to_owned(),
+                    };
+                }
+                Err(error) => tracing::warn!(
+                    path = %dir.display(),
+                    %error,
+                    "a kept folder could not be given a copy of this home's state"
+                ),
+            }
         }
     }
 
@@ -1004,9 +1036,52 @@ fn settle(
     Residue { outcome, ..after }
 }
 
+/// The rows of relocated folders this uninstall keeps — where a copy of the state goes (T182h).
+fn kept_relocated(items: &[Residue]) -> Vec<usize> {
+    items
+        .iter()
+        .enumerate()
+        .filter(|(_, item)| {
+            item.id == ResidueId::RelocatedDirectory && matches!(item.outcome, Removal::Kept { .. })
+        })
+        .map(|(index, _)| index)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn row(id: ResidueId, location: &str, outcome: Removal) -> Residue {
+        Residue {
+            id,
+            what: String::new(),
+            location: location.to_owned(),
+            outcome,
+        }
+    }
+
+    /// **T182h.** A copy of the state goes into each relocated folder that is kept, and only there:
+    /// not a relocated folder that goes, and not the home.
+    #[test]
+    fn a_copy_goes_into_each_kept_relocated_folder_only() {
+        let kept = || Removal::Kept {
+            because: "asked".to_owned(),
+        };
+        let items = vec![
+            row(ResidueId::RelocatedDirectory, "/disk/runtimes", kept()),
+            row(
+                ResidueId::RelocatedDirectory,
+                "/disk/logs",
+                Removal::Planned {
+                    how: "remove".to_owned(),
+                },
+            ),
+            row(ResidueId::Home, "/home/me/.mixengine", kept()),
+        ];
+
+        assert_eq!(kept_relocated(&items), [0]);
+    }
 
     #[test]
     fn nothing_left_is_a_removal() {

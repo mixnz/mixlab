@@ -223,7 +223,7 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       the directories on disk but not recorded, with the reason, and the Runtimes screen and the
       packages list show them with **Adopt** (`runtime.adopt`, `package.adopt`). After T182g. Spec
       `## MixLab`.
-- [ ] **T182h** The uninstaller leaves a copy of the state in each kept folder, and a fresh home
+- [x] **T182h** The uninstaller leaves a copy of the state in each kept folder, and a fresh home
       offers to restore projects, sites, domains and services from it. After T182g. Spec D5, D6.
 - [ ] **T182a** An uninstall path for macOS and Linux, which have no uninstaller to hang T182 on:
       for example an *Uninstall MixLab…* item in the macOS app that runs the whole removal, deletes

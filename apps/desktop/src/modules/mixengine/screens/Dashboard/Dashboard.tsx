@@ -72,6 +72,7 @@ import { serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStat
 import CleanupDialog from "./CleanupDialog";
 import DiskUsagePanel from "./DiskUsagePanel";
 import FoundServices from "./FoundServices";
+import RestorePrevious from "./RestorePrevious";
 import PathNudge from "./PathNudge";
 import QuickStart from "./QuickStart";
 import { shouldOfferQuickStart } from "../../quickStart";
@@ -627,6 +628,8 @@ export default function Dashboard({
       {/* Trên bảng service, và chỉ khi home này chưa có site nào — T117. */}
       {shouldOfferQuickStart(sites) && <QuickStart onCreated={() => void readSites()} />}
       <PathNudge active={active} />
+      {/* T182h: a copy of an earlier install's state, while this home has nothing of its own. */}
+      <RestorePrevious active={active} onRestored={() => void reload()} />
       {/* T182g: service data an earlier install left, until nothing is left to adopt. */}
       <FoundServices active={active} onAdopted={() => void reload()} />
 

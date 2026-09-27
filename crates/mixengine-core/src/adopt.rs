@@ -10,6 +10,7 @@
 
 pub mod instances;
 pub mod marker;
+pub mod snapshot;
 pub mod walk;
 
 use mixengine_proto::{PackageVersion, RuntimeKind};

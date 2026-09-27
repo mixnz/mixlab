@@ -49,6 +49,7 @@ import type { ServiceIdleSet } from "@mixengine/api";
 import type { ServiceSummary } from "@mixengine/api";
 import type { ServiceFoundList } from "@mixengine/api";
 import type { PackageFoundList, RuntimeFoundList } from "@mixengine/api";
+import type { HomePrevious, HomeRestoreReport } from "@mixengine/api";
 import type { ServiceCreate } from "@mixengine/api";
 import type { ServiceCreation } from "@mixengine/api";
 import type { ServiceDelete } from "@mixengine/api";
@@ -423,6 +424,16 @@ export function databaseCredentials(service: string, user?: string): Promise<Dat
  */
 export function serviceResetCredential(service: string): Promise<ServiceWalk> {
   return invoke<ServiceWalk>("mixengine_service_reset_credential", { service });
+}
+
+/** What a copy of an earlier install's state in the kept folders holds — `home.previous`, T182h. */
+export function homePrevious(): Promise<HomePrevious> {
+  return invoke<HomePrevious>("mixengine_home_previous");
+}
+
+/** Bring that copy back into this home — `home.restore`, T182h. */
+export function homeRestore(): Promise<HomeRestoreReport> {
+  return invoke<HomeRestoreReport>("mixengine_home_restore");
 }
 
 /** Runtime directories on disk with no row, and the daemon's reason for each — `runtime.found`, T182i. */

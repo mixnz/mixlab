@@ -104,6 +104,7 @@
     "crates/mixengine-proto/src/project_api.rs",
     "crates/mixengine-proto/src/repair_api.rs",
     "crates/mixengine-proto/src/requirement.rs",
+    "crates/mixengine-proto/src/restore_api.rs",
     "crates/mixengine-proto/src/rpc.rs",
     "crates/mixengine-proto/src/runtime.rs",
     "crates/mixengine-proto/src/runtime_api.rs",

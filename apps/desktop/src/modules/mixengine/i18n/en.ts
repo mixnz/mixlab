@@ -101,6 +101,18 @@ export default {
       installing: "Adding…",
       done: "Done. Open a new terminal to start using them.",
     },
+    restorePrevious: {
+      title: "Restore your earlier install",
+      intro:
+        "The folders you kept hold a copy of it: {{projects}} projects, {{sites}} sites and {{services}} services.",
+      newer: "The folders you kept hold a copy from a newer MixLab. Install that version to restore it.",
+      restore: "Restore",
+      restoring: "Restoring",
+      confirmTitle: "Restore your earlier install?",
+      confirmMessage:
+        "Its projects, sites and services come back. Every database gets a new admin password and stays stopped. The databases inside are kept.",
+      done: "Restored {{projects}} projects, {{sites}} sites and {{services}} services.",
+    },
     foundServices: {
       title: "Service data from an earlier install",
       intro:

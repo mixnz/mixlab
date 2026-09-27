@@ -1290,3 +1290,52 @@ async fn a_runtime_the_start_left_is_listed_with_why_until_it_is_adopted() {
         "an adopted version is no longer listed: {found}"
     );
 }
+
+/// **T182h.** A copy of the earlier home's state in a kept folder is offered by the next home and
+/// restored: the project comes back, the pool the start already made for the recorded PHP is kept
+/// rather than duplicated, and the copy is not offered twice.
+#[tokio::test]
+async fn a_copy_of_the_last_home_is_offered_and_restored() {
+    let mut fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    client.install(VERSION).await;
+    let root = fixture.home.path().join("work").join("shop");
+    std::fs::create_dir_all(&root).expect("a project folder");
+    client
+        .call(
+            "project.create",
+            json!({"name": "shop", "root": root.display().to_string()}),
+        )
+        .await;
+    drop(client);
+
+    // What the uninstaller does when it keeps a folder: a copy of the state, written into it.
+    let data = fixture.home.path().join("data");
+    std::fs::create_dir_all(&data).expect("the data folder");
+    fixture.daemon.take();
+    let store = mixengine_core::Store::open(&fixture.home.path().join("mixengine.db"))
+        .await
+        .expect("the old home's database");
+    mixengine_core::adopt::snapshot::write(&store, &data)
+        .await
+        .expect("a copy");
+    store.close().await;
+
+    fixture.reinstall().await;
+    let mut client = fixture.client().await;
+
+    let previous = client.call("home.previous", json!({})).await;
+    assert_eq!(previous["copy"]["projects"], 1, "{previous}");
+
+    let restored = client.call("home.restore", json!({})).await;
+    assert_eq!(restored["projects"], 1, "{restored}");
+
+    let projects = client.call("project.list", json!({})).await;
+    assert!(projects.to_string().contains("shop"), "{projects}");
+
+    let again = client.call("home.previous", json!({})).await;
+    assert!(
+        again["copy"].is_null(),
+        "a restored copy is not offered again: {again}"
+    );
+}

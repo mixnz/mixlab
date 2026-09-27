@@ -306,6 +306,8 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         mixengine::commands::mixengine_database_credentials,
         mixengine::commands::mixengine_service_reset_credential,
         mixengine::commands::mixengine_service_found,
+        mixengine::commands::mixengine_home_previous,
+        mixengine::commands::mixengine_home_restore,
         mixengine::commands::mixengine_runtime_found,
         mixengine::commands::mixengine_runtime_adopt,
         mixengine::commands::mixengine_package_found,

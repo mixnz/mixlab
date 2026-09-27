@@ -6,6 +6,7 @@ import type {
   DatabaseClientReport,
   DiskUsage,
   ElevationStatus,
+  HomePrevious,
   MetricsFrame,
   PackageFoundList,
   PathReport,
@@ -265,6 +266,7 @@ export const mixengineHandlers: Handlers = {
   }),
   // Nothing an earlier install left, so the adopt cards stay out of the pictures (T182g, T182i).
   mixengine_service_found: returns<ServiceFoundList>({ found: [] }),
+  mixengine_home_previous: returns<HomePrevious>({}),
   mixengine_runtime_found: returns<RuntimeFoundList>({ found: [] }),
   mixengine_package_found: returns<PackageFoundList>({ found: [] }),
   mixengine_elevation_status: returns<ElevationStatus>(ELEVATION),
