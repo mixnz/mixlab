@@ -269,8 +269,11 @@ pub async fn update_install(
 }
 
 /// macOS and Linux: open the installer `update_download` fetched. Stops nothing.
+///
+/// `async` although nothing in it awaits: Tauri runs a synchronous command on the main thread, and
+/// this one waits on `open` or `xdg-open`, which would hold the window still while it does.
 #[tauri::command]
-pub fn update_open_installer(
+pub async fn update_open_installer(
     app: AppHandle,
     state: State<'_, UpdaterState>,
 ) -> Result<handover::HandedOver, AppError> {

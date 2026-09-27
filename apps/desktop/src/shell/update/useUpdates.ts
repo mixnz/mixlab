@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useWindowFocused } from "../../core/windowFocus";
 import * as api from "./api";
-import { panelView, updateView, type Panel, type View } from "./view";
+import { panelView, retryStep, updateView, type Panel, type Step, type View } from "./view";
 
 /** 30 seconds after the window is drawn, then every 24 hours — spec D6. */
 const FIRST_CHECK_MS = 30_000;
@@ -70,7 +70,7 @@ export function useUpdates(watching: boolean): Updates {
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [failure, setFailure] = useState<unknown>(null);
-  const [lastStep, setLastStep] = useState<"download" | "install" | null>(null);
+  const [lastStep, setLastStep] = useState<Step | null>(null);
   const [restarts, setRestarts] = useState<number | null>(null);
   const [checkFailure, setCheckFailure] = useState<string | null>(null);
   const focused = useWindowFocused();
@@ -113,7 +113,7 @@ export function useUpdates(watching: boolean): Updates {
   }, []);
 
   /** A download or an install: its failure is the panel's as well as the pane's. */
-  const step = useCallback(async (name: "download" | "install", work: () => Promise<void>): Promise<boolean> => {
+  const step = useCallback(async (name: Step, work: () => Promise<void>): Promise<boolean> => {
     setError(null);
     setFailure(null);
     setLastStep(name);
@@ -228,7 +228,8 @@ export function useUpdates(watching: boolean): Updates {
     cancelDownload: () => api.updateCancelDownload().catch(() => undefined),
     install,
     retry: async () => {
-      await (lastStep === "install" ? install() : download());
+      if (lastStep === null) return;
+      await (retryStep(lastStep, failure) === "install" ? install() : download());
     },
     skip: () =>
       run(async () => {

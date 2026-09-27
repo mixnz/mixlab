@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isNewer, panelView, updateView, type View, type ViewInput } from "./view";
+import { isNewer, panelView, retryStep, updateView, type View, type ViewInput } from "./view";
 
 const base: ViewInput = {
   current: "0.0.9",
@@ -81,8 +81,13 @@ describe("panelView", () => {
     expect(panel("ready", false, true)).toBe("failed");
   });
 
+  it("says an install is running, even after Later", () => {
+    expect(panel("installing")).toBe("installing");
+    expect(panel("installing", true)).toBe("installing");
+  });
+
   it("draws nothing for any other state, failed or not", () => {
-    const quiet: View[] = ["upToDate", "noBuild", "skipped", "development", "elsewhere", "installing", "handedOver", "finish"];
+    const quiet: View[] = ["upToDate", "noBuild", "skipped", "development", "elsewhere", "handedOver", "finish"];
     for (const view of quiet) {
       expect(panel(view)).toBe("hidden");
       expect(panel(view, false, true)).toBe("hidden");
@@ -97,4 +102,17 @@ describe("isNewer", () => {
     expect(isNewer("0.1.0", "0.0.99")).toBe(true);
     expect(isNewer("0.0.9", "0.0.9")).toBe(false);
   });
+});
+
+describe("retryStep", () => {
+  it("tries the step that failed again", () => {
+    expect(retryStep("download", { code: "error.updateFailed" })).toBe("download");
+    expect(retryStep("install", { code: "error.updateLocked" })).toBe("install");
+  });
+
+  it("downloads again when the install found its download gone", () =>
+    expect(retryStep("install", { code: "error.updateNotDownloaded" })).toBe("download"));
+
+  it("reads a failure that is not an AppError as the step itself", () =>
+    expect(retryStep("install", "boom")).toBe("install"));
 });

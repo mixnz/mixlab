@@ -138,6 +138,13 @@ function UpdatePanel({ updates, onInstallerOpened }: Props) {
         </>
       )}
 
+      {panel === "installing" && (
+        <>
+          <span className={styles.title}>{t("update.installing")}</span>
+          {!onInstaller && <span className={styles.meta}>{t("update.daemonRestarts")}</span>}
+        </>
+      )}
+
       {panel === "failed" && (
         <>
           <span className={styles.meta}>{errorMessage(t, updates.failure)}</span>

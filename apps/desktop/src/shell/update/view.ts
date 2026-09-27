@@ -57,15 +57,28 @@ export function updateView(input: ViewInput): View {
   return input.downloaded === offered.version ? "ready" : "offer";
 }
 
-export type Panel = "hidden" | "offer" | "downloading" | "ready" | "failed";
+export type Panel = "hidden" | "offer" | "downloading" | "ready" | "installing" | "failed";
 
 /**
  * The corner panel: T188 D1. *Later* hides it until the next window start, except while a download
- * somebody started is running; a failed download or install replaces the offer it came from.
+ * or an install somebody started is running: stopping MixEngine and swapping can take half a
+ * minute, and a panel that vanished on the click would read as nothing happening. A failed download
+ * or install replaces the offer it came from.
  */
 export function panelView({ view, later, failed }: { view: View; later: boolean; failed: boolean }): Panel {
-  if (view === "downloading") return "downloading";
+  if (view === "downloading" || view === "installing") return view;
   if (later) return "hidden";
   if (view !== "offer" && view !== "ready") return "hidden";
   return failed ? "failed" : view;
+}
+
+export type Step = "download" | "install";
+
+/**
+ * What *Try again* runs: the step that failed, except an install that found its download gone,
+ * which has to download again first. Trying that install again would fail the same way for ever.
+ */
+export function retryStep(failed: Step, failure: unknown): Step {
+  const code = typeof failure === "object" && failure !== null ? (failure as { code?: unknown }).code : undefined;
+  return failed === "install" && code === "error.updateNotDownloaded" ? "download" : failed;
 }
