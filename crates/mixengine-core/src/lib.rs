@@ -1169,6 +1169,15 @@ pub enum Error {
         path: PathBuf,
     },
 
+    /// A copy of an earlier home's state that this home will not take — roadmap task **T182h**.
+    #[error("this home cannot be restored from {}: {reason}", path.display())]
+    RestoreRefused {
+        /// The copy.
+        path: PathBuf,
+        /// Why, as a phrase.
+        reason: String,
+    },
+
     /// A directory where an install would go, which could not be recorded as one — roadmap task
     /// **T182f**. Distinct from [`AlreadyInstalled`](Self::AlreadyInstalled) because what a person
     /// does about it is different: record it by hand once it can be checked, or remove it.
