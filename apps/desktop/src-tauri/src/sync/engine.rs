@@ -235,6 +235,16 @@ pub async fn push<R: Remote>(
                         pushed.accepted += 1;
                         pushed.landed.push(change.id.clone());
                     }
+                    // This machine's own write, which the server kept before this machine could
+                    // remember it (T189, D5): the same device at the same stamp. The local item is
+                    // this device's latest word on the record, so it is written over, not handed
+                    // back as an edit that replaced it.
+                    (409 | 412, Some(current))
+                        if current.device == device && current.updated_at == change.updated_at =>
+                    {
+                        store.remember(&current).await?;
+                        retry.push((*change).clone());
+                    }
                     (409 | 412, Some(current)) => match resolve(
                         change.updated_at,
                         device,
@@ -738,6 +748,30 @@ mod tests {
         assert_eq!(second.superseded.len(), 1);
         assert_eq!(server.current("a").version, 1);
         assert_eq!(server.current("a").ciphertext.as_deref(), Some("theirs"));
+    }
+
+    /// T189, D5: the server kept this machine's write and the app died before remembering it. The
+    /// same device at the same `updatedAt` is this machine's own word: written again, not handed
+    /// back as a newer edit that replaced it.
+    #[tokio::test]
+    async fn this_machines_own_unremembered_write_is_written_again() {
+        let (server, store) = (Fake::new("mine"), Store::in_memory("s").await.unwrap());
+        server.holds("a", 1, 100, "mine");
+
+        let pushed = push(
+            &server,
+            &store,
+            &limits(),
+            "mine",
+            vec![write("a", 100, "again")],
+        )
+        .await
+        .unwrap();
+
+        assert!(pushed.superseded.is_empty());
+        assert_eq!(pushed.landed, vec!["a".to_string()]);
+        assert_eq!(server.current("a").version, 2);
+        assert_eq!(server.current("a").ciphertext.as_deref(), Some("again"));
     }
 
     #[tokio::test]
