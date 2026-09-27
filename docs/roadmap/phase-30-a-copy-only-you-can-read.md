@@ -296,6 +296,11 @@ Decision: [ADR 0045](../decisions/0045-mixlab-has-an-account-and-mixengine-does-
       it, so an older app no longer deletes or overwrites it; but the cursor has moved past it, and
       after an upgrade nothing delivers it again. Design:
       [2026-09-22-t178d-a-skipped-record-is-delivered-again-design.md](../specs/2026-09-22-t178d-a-skipped-record-is-delivered-again-design.md).
+- [ ] **T189** Sync asks before it pulls: `POST /v1/records/heads` names the collections another
+      machine changed, in one request per run instead of one per collection, and moves the cursor
+      past this machine's own writes so their echo is never fetched. Mandatory in `/v1`, on both
+      servers and in the conformance suite. Design:
+      [2026-09-28-t189-sync-asks-before-it-pulls-design.md](../specs/2026-09-28-t189-sync-asks-before-it-pulls-design.md).
 
 
 **Milestone M30** — on two machines: a fresh install signs in and reproduces exactly the
