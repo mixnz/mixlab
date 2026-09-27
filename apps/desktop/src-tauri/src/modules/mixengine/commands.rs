@@ -495,6 +495,20 @@ pub async fn mixengine_service_reset_credential(service: String) -> Result<Value
     .await
 }
 
+/// `service.found` — service data an earlier install left under `data/`, and whether each can be
+/// adopted (T182g). A read: nothing is written.
+#[tauri::command]
+pub async fn mixengine_service_found() -> Result<Value, AppError> {
+    rpc::call("service.found", json!({})).await
+}
+
+/// `service.adopt` — turn one found data directory back into a stopped service with a new admin
+/// password (T182g). The databases and accounts in it are kept.
+#[tauri::command]
+pub async fn mixengine_service_adopt(service: String) -> Result<Value, AppError> {
+    rpc::call("service.adopt", json!({ "service": service })).await
+}
+
 /// Mở stream log của một service. Mở lại (một service khác, hay cùng service với `tail` khác) đóng
 /// cái đang mở — đúng luật `LogsState::keep` đã theo cho `MixEngineState`.
 #[tauri::command]

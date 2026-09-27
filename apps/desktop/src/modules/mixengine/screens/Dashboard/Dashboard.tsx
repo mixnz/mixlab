@@ -71,6 +71,7 @@ import { eventArrived, noReadsYet, readBegan, readLanded } from "../../readOrder
 import { serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStateLabel";
 import CleanupDialog from "./CleanupDialog";
 import DiskUsagePanel from "./DiskUsagePanel";
+import FoundServices from "./FoundServices";
 import PathNudge from "./PathNudge";
 import QuickStart from "./QuickStart";
 import { shouldOfferQuickStart } from "../../quickStart";
@@ -626,6 +627,8 @@ export default function Dashboard({
       {/* Trên bảng service, và chỉ khi home này chưa có site nào — T117. */}
       {shouldOfferQuickStart(sites) && <QuickStart onCreated={() => void readSites()} />}
       <PathNudge active={active} />
+      {/* T182g: service data an earlier install left, until nothing is left to adopt. */}
+      <FoundServices active={active} onAdopted={() => void reload()} />
 
       <Card
         flush

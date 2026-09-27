@@ -99,6 +99,20 @@ const vi: typeof en = {
       installing: "Đang thêm…",
       done: "Xong. Mở một terminal mới để bắt đầu dùng.",
     },
+    foundServices: {
+      title: "Dữ liệu service từ lần cài trước",
+      intro:
+        "Có {{count}} mục cần xem. Nhận lại một mục để dùng tiếp với mật khẩu quản trị mới. Các database bên trong vẫn giữ nguyên.",
+      review: "Xem",
+      dialogTitle: "Dữ liệu từ lần cài trước",
+      dialogIntro:
+        "Mỗi mục thành một service như cũ, đang dừng, với mật khẩu quản trị mới. App nào từng dùng nó vẫn giữ mật khẩu riêng của app.",
+      opensWith: "Mở bằng bản {{version}}",
+      adopt: "Nhận lại",
+      adopting: "Đang nhận lại",
+      adopted: "Đã nhận lại {{service}}, đang dừng. Bật nó ở mục Services.",
+      none: "Không còn gì để nhận lại.",
+    },
     afterApply: {
       titleWorking: "Đang đưa project lên",
       titleReady: "Project đã sẵn sàng",

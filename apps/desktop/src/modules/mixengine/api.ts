@@ -46,6 +46,7 @@ import type { FrontEndSwitch } from "@mixengine/api";
 import type { SaveResources, SaveResourcesSet, ServiceAutostartSet } from "@mixengine/api";
 import type { ServiceIdleSet } from "@mixengine/api";
 import type { ServiceSummary } from "@mixengine/api";
+import type { ServiceFoundList } from "@mixengine/api";
 import type { ServiceCreate } from "@mixengine/api";
 import type { ServiceCreation } from "@mixengine/api";
 import type { ServiceDelete } from "@mixengine/api";
@@ -420,6 +421,19 @@ export function databaseCredentials(service: string, user?: string): Promise<Dat
  */
 export function serviceResetCredential(service: string): Promise<ServiceWalk> {
   return invoke<ServiceWalk>("mixengine_service_reset_credential", { service });
+}
+
+/** Service data an earlier install left under `data/`, and whether each can be adopted — `service.found`, T182g. */
+export function serviceFound(): Promise<ServiceFoundList> {
+  return invoke<ServiceFoundList>("mixengine_service_found");
+}
+
+/**
+ * Turn one found data directory back into a service — `service.adopt`, T182g. The service is left
+ * stopped, with a new admin password; the databases and accounts in it are kept.
+ */
+export function serviceAdopt(service: string): Promise<ServiceSummary> {
+  return invoke<ServiceSummary>("mixengine_service_adopt", { service });
 }
 
 /** Không trả gì — thành công nghĩa là một tab `db` mới đã được xếp hàng mở, xem
