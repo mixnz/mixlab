@@ -105,7 +105,12 @@ A new command, `sync_heads(collections: Vec<String>) -> Vec<String>`, in
 2. **Stale without asking**: a collection whose cursor is `0`, that is mid-resync
    (`store.resyncing`), or that is owed under another version (`store.owed_elsewhere`, T178d). These
    are exactly the states in which `engine::fetch` already does something other than a plain read
-   from the cursor, and the server cannot see any of them.
+   from the cursor, and the server cannot see any of them. **And a collection holding a change
+   still stamped** (`store.unlanded`): its push may have landed without this machine hearing, and
+   D5 does not cover a creation the person then deleted here. Nothing is agreed about it, so no
+   deletion is ever sent, and only the pull of its echo agrees on it, after which the deletion
+   follows. A quiet run has nothing stamped, so this costs a pull only after a push that did not
+   finish.
 3. The rest go in one request, chunked by `maxBatchOperations` (one chunk in practice).
 4. For each collection sent and not named in `stale`, `store.set_since(collection, nextSince)`.
 5. The result is the plain names of every stale collection, from step 2 and from the server.

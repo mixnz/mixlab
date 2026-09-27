@@ -489,6 +489,18 @@ impl Store {
         }))
     }
 
+    /// Whether any change to `collection` is still stamped: made here and not yet landed. The
+    /// server may hold it already, from a push this machine never heard the end of (T189).
+    pub async fn unlanded(&self, collection: &str) -> Result<bool, AppError> {
+        let row = sqlx::query("SELECT 1 FROM stamp WHERE server = ?1 AND collection = ?2 LIMIT 1")
+            .bind(&self.server)
+            .bind(collection)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(store_error)?;
+        Ok(row.is_some())
+    }
+
     async fn unstamp_deletion(&self, collection: &str, id: &str) -> Result<(), AppError> {
         sqlx::query(
             "DELETE FROM stamp WHERE server = ?1 AND collection = ?2 AND id = ?3 AND hash = ?4",

@@ -123,10 +123,11 @@ pub async fn commit(
 
 /// Which of `collections` (opaque) a full run must pull (T189, D4). A cursor at 0, a resync and a
 /// record owed under another version are stale without asking: `fetch` does more than read from
-/// the cursor for each, and the server sees none of them. The rest are asked in as few requests as
-/// the server takes, and **a collection the answer does not name has its cursor moved to
-/// `nextSince`**: since the cursor, only this machine wrote to it, and its push remembered those
-/// writes (D3). Never backwards.
+/// the cursor for each, and the server sees none of them. So is a change still stamped: its push
+/// may have landed unheard, and only the pull of that echo agrees on it. The rest are asked in as
+/// few requests as the server takes, and **a collection the answer does not name has its cursor
+/// moved to `nextSince`**: since the cursor, only this machine wrote to it, and its push
+/// remembered those writes (D3). Never backwards.
 pub async fn stale<A: AskHeads>(
     remote: &A,
     store: &Store,
@@ -141,6 +142,7 @@ pub async fn stale<A: AskHeads>(
         if since == 0
             || store.resyncing(collection).await?
             || store.owed_elsewhere(collection, version).await?
+            || store.unlanded(collection).await?
         {
             stale.push(collection.clone());
         } else {
@@ -640,6 +642,23 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(store.since("c").await.unwrap(), 7);
+    }
+
+    /// A change still stamped never landed: the server may hold it while this machine never
+    /// remembered it — a creation the app died before recording, then deleted here. Only the pull
+    /// of its echo agrees on it, so the deletion can follow; the cursor must not step over it.
+    #[tokio::test]
+    async fn a_change_that_never_landed_keeps_its_collection_stale() {
+        let (server, store) = (Fake::new("mine"), Store::in_memory("s").await.unwrap());
+        store.set_since("c", 1).await.unwrap();
+        store.stamp("c", "a", "h", 100).await.unwrap();
+
+        let stale = stale(&server, &store, &limits(), &opaque(&["c"]), VERSION)
+            .await
+            .unwrap();
+        assert_eq!(stale, opaque(&["c"]));
+        assert_eq!(server.state.lock().unwrap().heads_asked, 0);
+        assert_eq!(store.since("c").await.unwrap(), 1);
     }
 
     #[tokio::test]
