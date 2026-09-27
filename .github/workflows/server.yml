@@ -122,7 +122,7 @@ jobs:
         env:
           CONFORMANCE_BASE_URL: http://127.0.0.1:8788
           CONFORMANCE_ACCESS_TOKEN: conformance-shared-token
-        run: npx vitest run src/tombstones.test.ts src/freeze.test.ts src/access.test.ts
+        run: npx vitest run src/tombstones.test.ts src/freeze.test.ts src/access.test.ts src/heads.test.ts
 
       - name: The workers' logs
         if: failure()
@@ -256,7 +256,7 @@ jobs:
         env:
           CONFORMANCE_BASE_URL: http://127.0.0.1:8766
           CONFORMANCE_ACCESS_TOKEN: conformance-shared-token
-        run: npx vitest run src/tombstones.test.ts src/freeze.test.ts src/access.test.ts
+        run: npx vitest run src/tombstones.test.ts src/freeze.test.ts src/access.test.ts src/heads.test.ts
 
       - name: The servers' logs
         if: failure()
