@@ -1,6 +1,6 @@
 # 0033. `<root>/bin` is a projection of what is installed, not of a compiled constant
 
-**Status**: Accepted
+**Status**: Accepted; point 1 of the decision, and its poll, superseded by [0057](0057-a-runtime-s-commands-are-in-bin-only-while-it-is-installed.md)
 **Date**: 2026-09-15
 
 ## Context

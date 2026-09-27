@@ -3,7 +3,7 @@
 mod adopt;
 mod api;
 mod autostart;
-mod bin_scan;
+mod bin_watch;
 mod blueprints;
 mod certs;
 mod crash;
@@ -664,6 +664,15 @@ async fn run() -> anyhow::Result<()> {
         tracing::debug!("released a console this process was the only one attached to");
     }
 
+    // Said rather than silently ignored: a key that does nothing looks exactly like one that does
+    // not work (T185b, ADR 0057).
+    if home.config.retired_bin.rescan_seconds.is_some() {
+        tracing::info!(
+            "`[bin] rescan_seconds` in config.toml no longer does anything: MixEngine notices a \
+             tool installed into a runtime as it lands; the line can be removed"
+        );
+    }
+
     // **Before `Store::open`, and that ordering is the point of taking it here.** `sqlx-sqlite`
     // implements the migration lock as a no-op, SQLite having no advisory lock to use, so two
     // daemons that both got as far as opening the database could both read the schema as behind and
@@ -1192,7 +1201,9 @@ async fn serve(
     // run*, but *is the directory this binary sits in one this account may write*.
     let daemon_exe = program.clone();
 
-    match shims.refresh().await {
+    // A re-scan and not only a refresh: a tool installed into a runtime while the daemon was
+    // stopped is in no table yet, and this start is the moment it is found (T185b).
+    match shims.rescan().await {
         Ok(refreshed) if refreshed.written.is_empty() && refreshed.removed.is_empty() => {
             tracing::debug!(commands = refreshed.commands.len(), "bin/ is up to date");
         }
@@ -1222,15 +1233,10 @@ async fn serve(
         ),
     }
 
-    // **And from here a short loop keeps it current** — roadmap task T131. The refresh above is the
-    // only one a start would otherwise perform, so a `npm install -g yarn` typed a minute later
-    // would leave `yarn` uninstallable-looking until the next restart. See `bin_scan` for what an
-    // idle machine pays for this, which is one `stat` per installed runtime per tick.
-    let _rescanning = bin_scan::start(
-        Arc::clone(&shims),
-        store.clone(),
-        std::time::Duration::from_secs(config.bin.rescan_seconds),
-    );
+    // **And from here a watch keeps it current** — roadmap tasks T131 and T185b. A `npm install -g
+    // yarn` typed a minute later changes a runtime's bindir and tells nobody; the kernel tells this,
+    // and nothing runs while nothing changes. See `bin_watch`.
+    let _watching = bin_watch::start(Arc::clone(&shims), store.clone());
 
     // **The gallery is a projection of a compiled-in table into the database**, exactly as `bin/`
     // above is one onto the disk and `etc/` is one out of it — roadmap task T79, its design's D5.
@@ -1694,6 +1700,14 @@ async fn serve(
     // Before the repairs below, so a recorded PHP gets its pool from them like any other.
     let adopted = adopt::offline(store, paths).await;
 
+    // `bin/` was filled a few hundred lines up from the rows as they were, and a runtime recorded
+    // here is one whose commands it does not hold yet (T185b).
+    if !adopted.claimed.is_empty()
+        && let Err(error) = shims.runtimes_changed().await
+    {
+        tracing::warn!(%error, "bin/ could not be refreshed after recording installs");
+    }
+
     // **Every installed runtime gets the service its recipe says it should have** — roadmap task
     // T32. Idempotent and run here as well as after an install, which is what gives a PHP installed
     // by an earlier build its pool with no data migration and repairs a home whose row somebody
@@ -1886,6 +1900,7 @@ async fn serve(
         Arc::clone(&services),
     );
     let packages = packages::Packages::new(paths, store, Arc::clone(&jobs), Arc::clone(&fetcher));
+    runtimes.keeps_bin(Arc::clone(&shims));
 
     // **And what an earlier home left without a marker** — roadmap task T182f. It needs the index,
     // which may be a network fetch, so it runs in the background and never holds a start up. Only
@@ -1932,7 +1947,7 @@ async fn serve(
                 }
             }
 
-            if let Err(error) = shims.refresh().await {
+            if let Err(error) = shims.runtimes_changed().await {
                 tracing::warn!(%error, "bin/ could not be refreshed after recording installs");
             }
         });
@@ -1966,7 +1981,7 @@ async fn serve(
     // `bin/` was filled a few hundred lines up without what was missing, so when anything was added
     // it is filled again.
     if !updates.complete_install().await.is_empty()
-        && let Err(error) = shims.refresh().await
+        && let Err(error) = shims.runtimes_changed().await
     {
         tracing::warn!(%error, "bin/ could not be refreshed after the install completed itself");
     }

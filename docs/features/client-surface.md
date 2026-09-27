@@ -241,8 +241,8 @@ binaries. What they state is what the daemon **writes** —
    or *whose `mysql` is this*.
 
    **`path.rescan` is the fourth**, and it is the one a person types rather than a screen calls on a
-   timer: the daemon already looks for a tool installed into a runtime every `[bin] rescan_seconds`,
-   so this exists for the moment in between and for a home that slowed that key down.
+   timer: the daemon already hears a tool installed into a runtime through a watch on its bindir,
+   so this exists for a bindir the system would not let it watch.
 
 **And one screen that is drawn before any of this** — roadmap task **T146**. A window that finds no
 daemon running offers a choice of where the four growing directories go: `runtimes/`, `packages/`,

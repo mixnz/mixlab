@@ -108,6 +108,131 @@ impl Fixture {
         self.home.wait_until_listening().await;
     }
 
+    /// Stop this daemon and start another on the same home, database and all.
+    async fn restart(&mut self) {
+        self.daemon.take();
+        self.daemon = Some(Daemon::start(&self.home, &self.registry));
+        self.home.wait_until_listening().await;
+    }
+
+    /// Record a Node.js in this home the way an install leaves one: its program where `provides`
+    /// says, and a row. Written straight into the database, so the daemon hears nothing of it.
+    async fn record_node(&self, version: &str) {
+        let install = self.node_at(version);
+        let program = match cfg!(windows) {
+            true => "node.exe",
+            false => "bin/node",
+        };
+
+        let file = install.join(program);
+        std::fs::create_dir_all(file.parent().expect("a directory")).expect("a directory");
+        std::fs::copy(mixengine_testkit::package::executable_source(), &file)
+            .unwrap_or_else(|error| panic!("copy to {}: {error}", file.display()));
+
+        let store = mixengine_core::Store::open(&self.home.database_file())
+            .await
+            .expect("the database");
+
+        mixengine_core::runtimes::remember(
+            &store,
+            &mixengine_core::runtimes::Installation {
+                kind: mixengine_proto::RuntimeKind::Node,
+                version: mixengine_proto::PackageVersion::parse(version).expect("a version"),
+                channel: mixengine_proto::PackageChannel::Stable,
+                path: install,
+                bytes: 30_000_000,
+                url: format!("https://example.invalid/node-{version}.tar.zst"),
+                sha256: "00".to_owned(),
+                provides: [("node".to_owned(), program.to_owned())]
+                    .into_iter()
+                    .collect(),
+                extension_dir: None,
+                extensions: mixengine_core::index::Extensions::default(),
+            },
+            mixengine_proto::Timestamp(1_760_000_000_000),
+        )
+        .await
+        .expect("a row");
+
+        store.close().await;
+    }
+
+    /// What `npm install -g <name>` leaves in this Node's bindir, and nothing else.
+    fn install_globally(&self, version: &str, name: &str) {
+        let bindir = self.bindir(version);
+        let file = bindir.join(match cfg!(windows) {
+            true => format!("{name}.cmd"),
+            false => name.to_owned(),
+        });
+
+        std::fs::create_dir_all(&bindir).expect("a bindir");
+        std::fs::copy(mixengine_testkit::package::executable_source(), &file)
+            .unwrap_or_else(|error| panic!("copy to {}: {error}", file.display()));
+    }
+
+    /// And `npm uninstall -g <name>`.
+    fn uninstall_globally(&self, version: &str, name: &str) {
+        let file = self.bindir(version).join(match cfg!(windows) {
+            true => format!("{name}.cmd"),
+            false => name.to_owned(),
+        });
+
+        std::fs::remove_file(&file)
+            .unwrap_or_else(|error| panic!("remove {}: {error}", file.display()));
+    }
+
+    fn node_at(&self, version: &str) -> std::path::PathBuf {
+        self.home.path().join("runtimes").join("node").join(version)
+    }
+
+    fn bindir(&self, version: &str) -> std::path::PathBuf {
+        mixengine_core::runtimes::globals::directory(
+            mixengine_proto::RuntimeKind::Node,
+            &self.node_at(version),
+        )
+        .expect("Node has a bindir")
+    }
+
+    /// `<root>/bin/<name>`, as this system spells a command there.
+    fn command(&self, name: &str) -> std::path::PathBuf {
+        self.home
+            .path()
+            .join("bin")
+            .join(format!("{name}{}", std::env::consts::EXE_SUFFIX))
+    }
+
+    /// Wait until `name` is in `bin/` or is not, as `present` says — or fail, saying what `bin/`
+    /// held instead and what the daemon logged.
+    async fn command_becomes(&self, name: &str, present: bool) {
+        let command = self.command(name);
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(15);
+
+        while command.exists() != present {
+            if tokio::time::Instant::now() > deadline {
+                let held: Vec<String> = std::fs::read_dir(self.home.path().join("bin"))
+                    .map(|entries| {
+                        entries
+                            .flatten()
+                            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                            .collect()
+                    })
+                    .unwrap_or_default();
+
+                panic!(
+                    "{name} was {} bin/ fifteen seconds later\n--- bin/ ---\n{held:?}\n--- daemon \
+                     ---\n{}",
+                    match present {
+                        true => "still not in",
+                        false => "still in",
+                    },
+                    self.home.daemon_log()
+                );
+            }
+
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    }
+
     /// Where the daemon would have put this version.
     fn installed_at(&self, version: &str) -> std::path::PathBuf {
         self.home.path().join("runtimes").join("php").join(version)
@@ -1338,4 +1463,85 @@ async fn a_copy_of_the_last_home_is_offered_and_restored() {
         again["copy"].is_null(),
         "a restored copy is not offered again: {again}"
     );
+}
+
+/// **T185b.** A home with no PHP has no `php` in `bin/`; installing one puts it there as the install
+/// ends, without waiting for the rescan, and uninstalling the last one takes it away again.
+#[tokio::test]
+async fn bin_holds_php_only_while_a_php_is_installed() {
+    let fixture = Fixture::start().await;
+    let php = fixture
+        .home
+        .path()
+        .join("bin")
+        .join(format!("php{}", std::env::consts::EXE_SUFFIX));
+    assert!(!php.exists(), "a home with no PHP fronts none");
+
+    let mut client = fixture.client().await;
+    let installed = client.install(VERSION).await;
+    assert_eq!(installed["state"], "succeeded", "{installed}");
+    assert!(php.exists(), "the install refreshed bin/ as it ended");
+
+    client
+        .call(
+            "runtime.uninstall",
+            json!({"kind": "php", "version": VERSION}),
+        )
+        .await;
+    assert!(!php.exists(), "the last PHP took its name with it");
+}
+
+/// **T185b.** Two Nodes, and only one of them has `yarn`: `bin/yarn` is there while that one is,
+/// and removing it takes `yarn` away in the same call — not at some later pass — while `node`
+/// stays, because a Node is still installed.
+#[tokio::test]
+async fn the_last_node_with_a_tool_takes_the_tool_with_it() {
+    let mut fixture = Fixture::start().await;
+    fixture.record_node("22.20.0").await;
+    fixture.record_node("24.19.0").await;
+    fixture.install_globally("24.19.0", "yarn");
+
+    // Rows written behind the daemon's back are what a start finds; a restart is that start.
+    fixture.restart().await;
+    assert!(
+        fixture.command("yarn").exists(),
+        "a start found the yarn in Node 24"
+    );
+    assert!(fixture.command("node").exists(), "and fronts node");
+
+    let mut client = fixture.client().await;
+    client
+        .call(
+            "runtime.uninstall",
+            json!({"kind": "node", "version": "24.19.0"}),
+        )
+        .await;
+
+    assert!(
+        !fixture.command("yarn").exists(),
+        "the uninstall answered with yarn still in bin/, though no Node left has it"
+    );
+    assert!(
+        fixture.command("node").exists(),
+        "node went too, though Node 22 is still installed"
+    );
+}
+
+/// **T185b.** `npm install -g` tells nobody. The daemon hears the bindir change and `bin/` follows,
+/// both ways, with nothing asked of it and nothing polling.
+#[tokio::test]
+async fn a_tool_installed_into_a_runtime_becomes_a_command_unasked() {
+    let mut fixture = Fixture::start().await;
+    fixture.record_node("22.20.0").await;
+    fixture.restart().await;
+    assert!(
+        !fixture.command("yarn").exists(),
+        "nothing has installed yarn yet"
+    );
+
+    fixture.install_globally("22.20.0", "yarn");
+    fixture.command_becomes("yarn", true).await;
+
+    fixture.uninstall_globally("22.20.0", "yarn");
+    fixture.command_becomes("yarn", false).await;
 }

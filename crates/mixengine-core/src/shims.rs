@@ -42,12 +42,12 @@
 //! Somebody who wants a script of their own on the PATH has every other directory on the machine to
 //! put it in.
 //!
-//! **It does not depend on what is installed.** [`COMMANDS`] is a constant, so `bin/` holds `node`
-//! on a machine with no Node.js: the shim there resolves nothing and says which command to type,
-//! which is a better answer than `node: command not found` for a tool whose whole job is managing
-//! versions of Node. That is also why nothing calls this after an install —
-//! [runtime-versions.md](../../../docs/features/runtime-versions.md) lists "refresh shims" as the
-//! last step of one, and there is nothing to refresh.
+//! **It depends on what is installed** — roadmap task T185b, ADR 0057. It used not to: `bin/`
+//! held `node` on a machine with no Node.js, on the argument that a shim saying which command to
+//! type beats `node: command not found`. What that bought was a `which node` that said yes and a
+//! `node` that then refused — and, `bin/` being first on the PATH, a Node the person had installed
+//! themselves hidden behind it. A [`COMMANDS`] row is now written only while its kind has a version
+//! installed, and the daemon refreshes after every install and uninstall.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -572,7 +572,12 @@ fn present(directory: &Path, name: &str) -> Result<PathBuf> {
 /// [`Error::Io`] naming the file that could not be written. Failing to *remove* a stranger is not
 /// one — it lands in [`Refreshed::refused`] — because a directory that has what it should have is
 /// working, and refusing to start over a file nobody can delete would be worse than saying so.
-pub fn refresh(bin: &Path, source: &Source, extra: &[Extra]) -> Result<Refreshed> {
+pub fn refresh(
+    bin: &Path,
+    source: &Source,
+    installed: &std::collections::BTreeSet<RuntimeKind>,
+    extra: &[Extra],
+) -> Result<Refreshed> {
     crate::paths::create_dir(bin)?;
 
     let mut refreshed = Refreshed::default();
@@ -582,7 +587,18 @@ pub fn refresh(bin: &Path, source: &Source, extra: &[Extra]) -> Result<Refreshed
     // happen — must not displace the compiled row, or `bin/npm` would be a shim that dispatches to
     // a file found by a shim that dispatches to a file. A name already spoken for is dropped here
     // rather than refused, because the caller's list is a description of a disk and not a request.
-    let mut names: Vec<String> = COMMANDS.iter().map(file_name).collect();
+    // **Only what is installed** — roadmap task T185b. A `node` in `bin/` on a machine with no
+    // Node.js made `which node` say yes and then refused, and — `bin/` being first on the PATH —
+    // hid a Node the person had installed themselves. A row fronted by another kind (`composer`,
+    // run by PHP) needs both.
+    let mut names: Vec<String> = COMMANDS
+        .iter()
+        .filter(|command| {
+            installed.contains(&command.kind)
+                && command.via.is_none_or(|via| installed.contains(&via))
+        })
+        .map(file_name)
+        .collect();
     let mut expected: HashSet<String> = names.iter().map(|name| fold(name)).collect();
 
     // T185: the trampolines' way to the resolver is not a stranger to sweep.
@@ -591,6 +607,14 @@ pub fn refresh(bin: &Path, source: &Source, extra: &[Extra]) -> Result<Refreshed
     }
 
     for extra in extra {
+        // A tool installed into a runtime is that runtime's command, and goes with it: the table of
+        // discovered tools may still list it from before the last version went (T185b).
+        if let Origin::Global { kind } = &extra.origin
+            && !installed.contains(kind)
+        {
+            continue;
+        }
+
         let name = format!("{}{}", extra.name, std::env::consts::EXE_SUFFIX);
 
         if expected.insert(fold(&name)) {
@@ -619,6 +643,13 @@ pub fn refresh(bin: &Path, source: &Source, extra: &[Extra]) -> Result<Refreshed
     }
 
     Ok(refreshed)
+}
+
+/// Every runtime kind — what a caller passes to [`refresh`] to front every row, as a refresh did
+/// before roadmap task **T185b**.
+#[must_use]
+pub fn every_kind() -> std::collections::BTreeSet<RuntimeKind> {
+    RuntimeKind::ALL.into_iter().collect()
 }
 
 /// Write `bin/mixengine-shim.path` when it does not already say `resolver`.

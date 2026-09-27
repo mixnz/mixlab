@@ -173,19 +173,20 @@ A constraint with no pre-release in it never selects one. `8.5` and `^8.5` both 
 
 ## The shims
 
-`mix path install` fills `<root>/bin` and puts that one directory on your `PATH`. It holds a small
-program per command — `php`, `php-config`, `pecl`, `composer`, `node`, `npm`, `npx`, `python`,
-`pip`, `ruby`, `gem`, `bundle`, `go`, `gofmt`, `java`, `javac`, `jar`, `jshell`, `keytool`,
-`jlink` — and each one works out which version this directory
-wants and hands over to the real binary.
+`mix path install` puts `<root>/bin` on your `PATH`. It holds a small program per command of each
+language you have installed with MixEngine — `php`, `composer`, `node`, `npm`, `python`, `pip`,
+`ruby`, `go`, `java` and the rest — and each one works out which version this directory wants and
+hands over to the real binary.
 
 Two things follow that are worth knowing:
 
 - **It works with the daemon stopped.** A shim reads what it needs directly rather than asking over
   a socket, which is why `php -v` in a project still answers when MixEngine is not running.
-- **There is nothing to refresh after an install.** The list of commands is fixed, so `<root>/bin`
-  does not depend on what you have installed. A `node` shim on a machine with no Node.js resolves
-  nothing and tells you which command to type.
+- **Only what you installed is there.** Installing the first Node.js puts `node`, `npm` and `npx`
+  there; removing the last one takes them away. A language you never installed with MixEngine has
+  no command in `<root>/bin`, so `which node` finds the Node.js you installed yourself.
+- **A terminal open from before may remember an old path.** After a command appears or goes, open a
+  new terminal, or run `hash -r` in bash.
 
 Only `<root>/bin` goes on your `PATH` — one entry, never a directory per version.
 

@@ -213,7 +213,7 @@ logs = "logs-elsewhere"
                 level: LogLevel::Trace,
                 format: LogFormat::Json,
             },
-            bin: mixengine_core::config::Bin::default(),
+            retired_bin: mixengine_core::config::RetiredBin::default(),
             daemon: Daemon {
                 ipc_path: Some(PathBuf::from("/run/user/1000/mixengined.sock")),
                 shutdown_grace_seconds: 30,
@@ -426,6 +426,58 @@ fn the_template_as_shipped_changes_nothing() {
     assert_eq!(config, Config::default());
 }
 
+/// Every template a release has shipped, byte for byte, named by the first release that shipped it.
+/// A release that changes the template adds its own here.
+const RELEASED_TEMPLATES: &[(&str, &str)] = &[
+    ("v0.0.1", include_str!("released-templates/v0.0.1.toml")),
+    ("v0.0.7", include_str!("released-templates/v0.0.7.toml")),
+];
+
+/// **`config.toml` is written once and never rewritten**, so a home keeps the template of the
+/// release it first ran — and whatever a later build drops from the template must still read
+/// there. T185b dropped `[bin]`, and every home first run by 0.0.7 to 0.0.9 stopped starting, the
+/// uninstaller with it, since it asks the daemon what it would remove.
+#[test]
+fn a_home_holding_any_released_template_still_starts() {
+    for (release, template) in RELEASED_TEMPLATES {
+        let home = TempDir::new().unwrap();
+        let path = write(&home, template);
+
+        if let Err(error) = config::load(&path) {
+            panic!(
+                "a home first run by {release} no longer reads its own config.toml:\n{}",
+                reported(&error)
+            );
+        }
+    }
+}
+
+/// And with every key it documented uncommented, which is the file of somebody who changed one.
+#[test]
+fn every_key_a_released_template_documented_still_reads() {
+    for (release, template) in RELEASED_TEMPLATES {
+        let uncommented: String = template
+            .lines()
+            .map(|line| {
+                line.strip_prefix('#')
+                    .filter(|rest| is_key_line(rest))
+                    .unwrap_or(line)
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let home = TempDir::new().unwrap();
+        let path = write(&home, &uncommented);
+
+        if let Err(error) = config::load(&path) {
+            panic!(
+                "a key {release} documented is now refused:\n{}",
+                reported(&error)
+            );
+        }
+    }
+}
+
 #[test]
 fn every_key_the_template_documents_is_a_real_key() {
     // `deny_unknown_fields` turns this into a spell-checker for the template: uncomment every key
@@ -569,48 +621,6 @@ fn crash_reports_are_recorded_unless_the_file_says_otherwise() {
     let path = write(&home, "[crash]\nenabled = false\n");
     let config = config::load(&path).unwrap();
     assert!(!config.crash.enabled);
-}
-
-/// **Two seconds, and short on purpose** — roadmap task **T131**. What it buys is that
-/// `npm install -g yarn && yarn --version` works in one breath, in the shell somebody is already
-/// typing in.
-#[test]
-fn a_home_that_says_nothing_rescans_every_two_seconds() {
-    let home = TempDir::new().unwrap();
-    let path = write(&home, "");
-
-    let config = config::load(&path).unwrap();
-
-    assert_eq!(config.bin.rescan_seconds, 2);
-}
-
-/// And a machine whose filesystem makes a directory's modification time expensive, or a person who
-/// would rather type `mix path rescan`, can slow it down.
-#[test]
-fn a_rescan_period_can_be_lengthened() {
-    let home = TempDir::new().unwrap();
-    let path = write(&home, "[bin]\nrescan_seconds = 60\n");
-
-    let config = config::load(&path).unwrap();
-
-    assert_eq!(config.bin.rescan_seconds, 60);
-}
-
-/// Zero is refused on `renew_check_seconds`' reasoning: it is not a short pause, it is none — and a
-/// loop with no pause in it would stat every installed runtime's bindir as fast as the disk allows.
-#[test]
-fn a_rescan_period_of_zero_is_refused_rather_than_corrected() {
-    let home = TempDir::new().unwrap();
-    let path = write(&home, "[bin]\nrescan_seconds = 0\n");
-
-    let error = config::load(&path).unwrap_err();
-    let message = reported(&error);
-
-    assert!(
-        matches!(error, mixengine_core::Error::Config { .. }),
-        "{error:?}"
-    );
-    assert!(message.contains('2'), "{message}");
 }
 
 // ---------------------------------------------------------------------------------------------

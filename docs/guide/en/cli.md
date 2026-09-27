@@ -1521,9 +1521,8 @@ mix path uninstall
 
 Look for a tool you installed into a runtime, now.
 
-The daemon does this on its own every couple of seconds, so `npm install -g yarn` makes `yarn` a
-command without anybody asking. This is for the moment in between, and for a home whose `[bin]
-rescan_seconds` was slowed down.
+The daemon notices on its own when a runtime's folder changes, so `npm install -g yarn` makes `yarn`
+a command without anybody asking. This is for a folder the system would not let it watch.
 
 ```
 mix path rescan

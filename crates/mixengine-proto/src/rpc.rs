@@ -352,11 +352,9 @@ pub mod method {
     /// Compare `<root>/bin` against what is installed, now. Takes no parameters, answers
     /// [`PathReport`](crate::PathReport).
     ///
-    /// **Roadmap task T131, and it exists because the automatic pass has a period.** The daemon
-    /// looks for a tool somebody installed into a runtime every `[bin] rescan_seconds`, so a
-    /// `yarn` is a command a moment after `npm install -g yarn` returns rather than instantly —
-    /// and a person who slowed that key down, or who wants to know *now* whether MixEngine agrees
-    /// with their disk, has something to type.
+    /// **Roadmap task T131.** The daemon hears a tool somebody installed into a runtime through a
+    /// watch on its bindir (T185b), so this is for a bindir the system would not let it watch, and
+    /// for a person who wants to know *now* whether MixEngine agrees with their disk.
     ///
     /// Idempotent and cheap: a pass that finds nothing changed copies nothing.
     pub const PATH_RESCAN: &str = "path.rescan";

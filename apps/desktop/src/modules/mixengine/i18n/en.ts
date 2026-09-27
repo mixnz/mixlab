@@ -94,7 +94,7 @@ export default {
         open: "Open {{url}}",
       },
     pathNudge: {
-      title: "Use php, node and python in any terminal",
+      title: "Use the languages you install here in any terminal",
       intro:
         "Add MixEngine's command folder to your PATH and each project runs the version it asks for. No admin prompt.",
       install: "Add to PATH",
@@ -583,7 +583,7 @@ export default {
       },
       path: {
         title: "Terminal commands",
-        toggle: "Put php, node, python and the rest on my PATH",
+        toggle: "Put the languages I install with MixEngine on my PATH",
         directory: "Folder: {{directory}}",
         places: "Written to: {{places}}",
         changed: "Open a new terminal to pick up the change.",

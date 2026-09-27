@@ -42,6 +42,9 @@ struct Found {
 
     /// Names more than one installed package claimed.
     conflicts: Vec<shims::Conflict>,
+
+    /// The runtime kinds with a version installed, whose compiled names `bin/` fronts — T185b.
+    installed: std::collections::BTreeSet<mixengine_proto::RuntimeKind>,
 }
 
 /// Where each name in `bin/` came from, for the listing a person reads.
@@ -121,6 +124,9 @@ pub(crate) struct Shims {
     /// PATH with nothing behind it. The window is small and the failure is not, which is the shape
     /// of a lock that is worth taking.
     filling: tokio::sync::Mutex<()>,
+
+    /// Told when the installed runtimes change, so the watch on their bindirs follows — T185b.
+    rearm: tokio::sync::Notify,
 }
 
 impl Shims {
@@ -138,7 +144,27 @@ impl Shims {
             store,
             catalogue,
             filling: tokio::sync::Mutex::new(()),
+            rearm: tokio::sync::Notify::new(),
         }
+    }
+
+    /// A runtime was installed or removed: bring `bin/` up to date now, and watch the bindirs the
+    /// rows name from here on — roadmap task **T185b**.
+    ///
+    /// A re-scan rather than a refresh, because the table of tools found inside runtimes is part of
+    /// what changed: the last Node that had `yarn` going takes `yarn` with it, and a refresh would
+    /// read the table from before and keep it.
+    pub(crate) async fn runtimes_changed(&self) -> Result<shims::Refreshed, Error> {
+        let refreshed = self.rescan().await;
+
+        self.rearm.notify_one();
+
+        refreshed
+    }
+
+    /// Resolves when [`runtimes_changed`](Self::runtimes_changed) has asked for the watch to follow.
+    pub(crate) async fn rearmed(&self) {
+        self.rearm.notified().await;
     }
 
     /// Put one copy of the shim in `bin/` per command, and clear out what is not one.
@@ -164,8 +190,8 @@ impl Shims {
 
         let _filling = self.filling.lock().await;
 
-        let mut refreshed =
-            shims::refresh(&self.bin, &shim, &found.extra).map_err(|error| error.to_wire())?;
+        let mut refreshed = shims::refresh(&self.bin, &shim, &found.installed, &found.extra)
+            .map_err(|error| error.to_wire())?;
         refreshed.conflicts = found.conflicts.clone();
 
         Ok(refreshed)
@@ -216,7 +242,18 @@ impl Shims {
             origin: shims::Origin::Global { kind },
         }));
 
-        Ok(Found { extra, conflicts })
+        let installed = mixengine_core::runtimes::records(&self.store, None)
+            .await
+            .map_err(|error| error.to_wire())?
+            .into_iter()
+            .map(|runtime| runtime.kind)
+            .collect();
+
+        Ok(Found {
+            extra,
+            conflicts,
+            installed,
+        })
     }
 
     /// Look for a tool somebody installed into a runtime, and fill `bin/` with what is found.

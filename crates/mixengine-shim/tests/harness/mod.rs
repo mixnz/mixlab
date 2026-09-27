@@ -157,7 +157,7 @@ impl Home {
         // filled from the build directory would look current and keep naming *those* files.
         shims::clear(&bin).expect("bin/ can be emptied");
 
-        shims::refresh(&bin, &source, &self.client_extras())
+        shims::refresh(&bin, &source, &shims::every_kind(), &self.client_extras())
             .expect("bin/ can be filled in a temporary home")
     }
 
@@ -171,8 +171,13 @@ impl Home {
             },
         }));
 
-        shims::refresh(&self.path().join("bin"), &built_source(), &extra)
-            .expect("bin/ can be filled in a temporary home")
+        shims::refresh(
+            &self.path().join("bin"),
+            &built_source(),
+            &shims::every_kind(),
+            &extra,
+        )
+        .expect("bin/ can be filled in a temporary home")
     }
 
     /// The client commands of the installed service packages — roadmap task **T130**.
@@ -368,8 +373,13 @@ impl Home {
         let mut extra = self.client_extras();
         extra.extend(globals);
 
-        shims::refresh(&self.path().join("bin"), &built_source(), &extra)
-            .expect("bin/ can be filled in a temporary home")
+        shims::refresh(
+            &self.path().join("bin"),
+            &built_source(),
+            &shims::every_kind(),
+            &extra,
+        )
+        .expect("bin/ can be filled in a temporary home")
     }
 
     /// A service package on disk and in the database, optionally with one instance of it.

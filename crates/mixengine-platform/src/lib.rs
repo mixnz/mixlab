@@ -125,6 +125,10 @@ pub mod signal;
 pub mod tombstone;
 #[cfg(feature = "host")]
 mod traits;
+// Documented by its own `//!` header: a runtime's bindir, heard changing (T185b). `host` only,
+// since `mixengine-elevate` never waits on a directory.
+#[cfg(feature = "host")]
+pub mod watch;
 // Documented by its own `//!` header: the MixLab window's own folders, which an uninstall removes
 // with the home (T182b). Not a `Host` capability, because nothing here changes the machine.
 #[cfg(feature = "host")]

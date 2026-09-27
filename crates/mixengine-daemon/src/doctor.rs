@@ -743,6 +743,11 @@ impl Doctor {
             )),
         }
 
+        // T185b, D4: a language MixEngine fronts that the person also installed themselves.
+        said.extend(runtimes_hidden(&self.bin, |name| {
+            elsewhere_on_the_path(name, &self.bin)
+        }));
+
         match said.is_empty() {
             true => Check {
                 name,
@@ -1227,6 +1232,36 @@ impl Doctor {
 /// skipped, since the name being asked about is the one this directory holds.
 ///
 /// [`None`] when nothing else answers to it, which is every name on nearly every machine.
+/// Each language name `bin/` fronts that is also installed further down the PATH — roadmap task
+/// **T185b**, D4 — as a sentence naming where. `elsewhere` answers that question for one name.
+///
+/// Without this a person who installed Node twice cannot see which one a terminal runs: `bin/` is
+/// first on the PATH, so wherever MixEngine has installed a language its copy is the one that runs.
+fn runtimes_hidden(
+    bin: &std::path::Path,
+    elsewhere: impl Fn(&str) -> Option<std::path::PathBuf>,
+) -> Vec<String> {
+    let mut seen = std::collections::BTreeSet::new();
+
+    mixengine_core::shims::COMMANDS
+        .iter()
+        .map(|command| command.name)
+        .filter(|name| seen.insert(*name))
+        .filter(|name| {
+            bin.join(format!("{name}{}", std::env::consts::EXE_SUFFIX))
+                .is_file()
+        })
+        .filter_map(|name| {
+            elsewhere(name).map(|theirs| {
+                format!(
+                    "{name}: bin/ runs MixEngine's; {} is further down the PATH",
+                    theirs.display()
+                )
+            })
+        })
+        .collect()
+}
+
 fn elsewhere_on_the_path(command: &str, bin: &std::path::Path) -> Option<std::path::PathBuf> {
     let path = std::env::var_os("PATH")?;
 
@@ -1481,6 +1516,28 @@ fn app_control_outcome(
         Err(error) => Outcome::Skipped {
             because: mixengine_proto::flatten(&error),
         },
+    }
+}
+
+#[cfg(test)]
+mod shadowing_tests {
+    use super::*;
+
+    /// **T185b, D4.** A language `bin/` fronts that is also installed further down the PATH is
+    /// named, with where; a language `bin/` does not front, or that nothing else provides, is not.
+    #[test]
+    fn a_language_in_bin_that_hides_another_is_named() {
+        let bin = tempfile::tempdir().expect("a bin/");
+        let exe = |name: &str| format!("{name}{}", std::env::consts::EXE_SUFFIX);
+        std::fs::write(bin.path().join(exe("node")), b"").expect("a node shim");
+        std::fs::write(bin.path().join(exe("php")), b"").expect("a php shim");
+
+        let theirs = std::path::PathBuf::from("/usr/local/bin/node");
+        let said = runtimes_hidden(bin.path(), |name| (name == "node").then(|| theirs.clone()));
+
+        assert_eq!(said.len(), 1, "{said:?}");
+        assert!(said[0].starts_with("node:"), "{said:?}");
+        assert!(said[0].contains("/usr/local/bin/node"), "{said:?}");
     }
 }
 

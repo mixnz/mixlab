@@ -669,7 +669,7 @@ async fn call_method(
                     encode_result(&api.shims.uninstall().await.map_err(refused)?)
                 }
 
-                // T131: the pass the daemon repeats every `[bin] rescan_seconds`, run now.
+                // T131: the pass the daemon runs when a runtime's bindir changes, run now.
                 rpc::method::PATH_RESCAN => {
                     no_params(params.as_ref())?;
                     encode_result(&api.shims.rescanned().await.map_err(refused)?)
@@ -3511,11 +3511,9 @@ mod tests {
         let installed: PathReport = daemon.expect(rpc::method::PATH_INSTALL, Value::Null).await;
         assert!(installed.on_path);
         assert!(installed.places.iter().all(|place| place.changed));
-        assert_eq!(
-            installed.commands.len(),
-            mixengine_core::shims::COMMANDS.len(),
-            "{installed:?}"
-        );
+        // T185b: this home has no runtime installed, so `bin/` fronts none of the compiled names —
+        // a `node` there would hide a Node the person installed themselves.
+        assert!(installed.commands.is_empty(), "{installed:?}");
         assert!(installed.stale.is_empty());
 
         // Idempotent, and it says which of the two it was — a client that reported a write it did
@@ -3530,10 +3528,7 @@ mod tests {
         assert!(!removed.on_path);
 
         // The shims stay: removing the home is what removes them.
-        assert_eq!(
-            removed.commands.len(),
-            mixengine_core::shims::COMMANDS.len()
-        );
+        assert_eq!(removed.commands, installed.commands);
 
         // Two installs and an uninstall. The status is absent, which is the point: a read is not a
         // mutation, and the mock records only what changed the machine or tried to.

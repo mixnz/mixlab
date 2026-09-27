@@ -75,11 +75,10 @@
 #renew_check_seconds = 3600
 
 [services]
-# MixEngine stops nothing on its own unless you ask it to. Turn on "Save battery" in MixLab's
-# Settings, or run "mix service save-resources --on", and a service nobody has used for a while is
-# stopped — half an hour for a PHP pool, an hour for a database or a cache — and started again by the
-# next request that needs it. One service can be given its own time with
-# "mix service idle mariadb@main --after 60m", or never be stopped with "--after 0".
+# A service nothing is using can be stopped, so that a project you are not working on costs nothing.
+# You turn that on per service: "mix service idle mariadb@main --after 60m". Nothing does it by
+# itself yet — until MixEngine can start a service again on the first request that needs it, a
+# stopped one stays stopped until you start it.
 #
 # This is how often MixEngine looks, not how long it waits. A service is stopped after it has been
 # seen idle this many times in a row, so "--after 60m" at the default period is 120 readings — which
@@ -106,19 +105,6 @@
 #
 # 0 is refused — that is a loop with no pause in it rather than a schedule.
 #check_seconds = 30
-
-[sites]
-# A site you have just made has nothing in it yet, and a web server's answer to that is a 404 — or,
-# for a site that forwards to a program you run yourself, a 502 before that program is started.
-# MixEngine answers with a page of its own instead: which site this is, what kind it is, and the one
-# thing that is missing.
-#
-# It appears only where there is genuinely nothing. A site with an index at "/" never renders it, an
-# application's own 404 at any other path is never replaced, and a gateway error your own program
-# sent is passed through untouched.
-#
-# false gives you the bare error back.
-#welcome_page = true
 
 [updates]
 # MixEngine looks for a newer MixEngine when the daemon starts and once a day after that. Finding

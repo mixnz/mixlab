@@ -99,7 +99,7 @@ impl Api {
             ));
         }
 
-        if let Err(error) = self.shims.refresh().await {
+        if let Err(error) = self.shims.runtimes_changed().await {
             problems.push(format!("bin/ could not be refreshed: {}", error.message));
         }
 

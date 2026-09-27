@@ -56,7 +56,8 @@ a runtime is handed a bundle of this machine's own roots plus MixEngine's.
 - [x] **T131** A globally installed tool is a command *(P)*. `runtimes::globals` for where each
       package manager's bindir is and what in it may be fronted; the `bin_commands` table
       (migration 0022); a third dispatch arm in the shim; `daemon::bin_scan`'s two-second mtime
-      poll, `[bin] rescan_seconds`, `path.rescan` and `mix path rescan`.
+      poll, `[bin] rescan_seconds`, `path.rescan` and `mix path rescan`. The poll and its key were
+      replaced by a watch on each bindir in T185b.
       **It follows the version the way `npm` does.** `yarn` is resolved for the directory it was
       typed in and looked for inside *that* version's bindir, so a project pinned to another Node
       gets that Node's Yarn — or a sentence naming the version and `npm install -g yarn`, rather

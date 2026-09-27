@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 date: 2026-09-27
 task: T185b
 ---
@@ -44,38 +44,29 @@ can fix with one command, and the shim says which one.
 
 ## D2 — `bin/` is refreshed when a runtime comes or goes
 
-`runtime.install`, `runtime.uninstall` and an install that completes itself (T185a) call
-`Shims::refresh` once they have written their rows. The start-up refresh and the two-second
-`bin_scan` stay, so a home changed while the daemon was stopped is still right after its next start.
+`runtime.install`, `runtime.uninstall`, an adopted or restored runtime and an install that
+completes itself (T185a) call `Shims::runtimes_changed` once they have written their rows: a
+re-scan of every bindir, not only a refresh, since the last Node that had `yarn` takes `yarn` with
+it. A start re-scans too, so a home changed while the daemon was stopped is right as it starts.
+
+**No poll** (changed while building). The two-second `bin_scan` loop is gone. A tool installed
+with `npm install -g` is heard by a watch on each runtime's bindir — the kernel's notification,
+through `notify` in `mixengine-platform` — so an idle machine pays nothing. `[bin]
+rescan_seconds` leaves the template but is still read and ignored: every home first run by 0.0.7 to
+0.0.9 has a `[bin]` line, and `config.toml` is never rewritten. ADR 0057 records both.
 
 **A name removed while in use.** On Windows a trampoline that is running cannot be deleted. The sweep
 already renames such a file aside (`MOVED_ASIDE`) and removes it at the next refresh. That path is
 reused as it is, and a test holds it for a runtime's names.
 
-## D3 — The shim hands over when MixEngine has nothing to say
+## D3 — No hand-over (dropped while building)
 
-The shim resolves as it does today. **Only when the directory asked for nothing** does it look
-further:
-
-| What resolution answered | What the shim does |
-| --- | --- |
-| a version | runs it, as today |
-| `RuntimeUnresolved` (a pin nothing installed matches) | refuses, as today. Running another version than the pin asked for is worse than an error |
-| `NoDefaultRuntime` (nothing pinned, no default) | **hands over** to the next program of that name on the PATH, if there is one; otherwise refuses as today |
-| no install of the kind at all (the window between an uninstall and a refresh) | **hands over**, same rule |
-
-"The next program on the PATH" is the first match for the invoked name in `PATH` **with every entry
-that is this home's `bin/` removed**, compared after `paths::in_full`. On Windows the lookup uses
-`PATHEXT`, as `runnable` already does for a bindir. A file that is a MixEngine shim or trampoline
-(another home's `bin/`) is skipped by name and size, the check `is_current` already makes.
-
-The handover is the existing `become_program` with the program's arguments and **the environment
-untouched**: no ini set, no PATH change, nothing of MixEngine's. On Unix that is an `exec`; on
-Windows the Job Object child the shim already starts.
-
-`MIXENGINE_SHIM_HANDED_OVER=1` is set on the handed-over child. A shim started with it set never
-hands over again and refuses instead, which ends any loop two homes' `bin/` directories could make
-between them.
+A shim that handed over to the next program on the PATH when the directory asked for nothing was
+designed here and dropped before it shipped. D1 is the whole answer: no version of a language
+installed means no command of it in `bin/` — compiled rows and tools installed into a runtime alike —
+so there is never a shim in front of a language MixEngine does not provide, and nothing to hand over
+to. Where a language is installed, its shim resolves one of MixEngine’s versions or refuses with the
+command that fixes it, as before.
 
 ## D4 — `mix doctor` names a program `bin/` is hiding
 
@@ -91,7 +82,7 @@ Otherwise a person who installed Node twice has no way to see which one a termin
 ## D5 — The decision, written down
 
 A new ADR, **0057 — A runtime's commands are in `bin/` only while it is installed**, supersedes point
-1 of ADR 0033's decision and records D1 and D3. ADR 0033 gets the one-line `superseded in part by`
+1 of ADR 0033's decision and its poll, and records D1, D2's watch and D3. ADR 0033 gets the one-line `superseded in part by`
 pointer its README asks for. The module comment in `crates/mixengine-core/src/shims.rs` ("It does
 not depend on what is installed") and `docs/features/runtime-versions.md` ("refresh shims" as the
 last step of an install, which becomes true) are corrected in the same change.
@@ -118,12 +109,12 @@ four. D4's doctor row appears in Settings → Doctor like every other check.
 - `core/tests/shims.rs`: an empty install set writes no runtime names; installing Node writes exactly
   the `kind: node` rows; Composer needs both kinds; a kind with no default keeps its names; removing
   the last version removes them, with a held file on Windows renamed aside.
-- Shim: `NoDefaultRuntime` with a program further down a test PATH hands over to it, with its
-  arguments and exit code; with none, refuses with 127 as today; `RuntimeUnresolved` never hands
-  over; a PATH whose only other match is another home's shim refuses; `MIXENGINE_SHIM_HANDED_OVER`
-  stops a second handover. Written with the `tests-that-say-why` skill, since each starts a real
-  program.
-- Daemon: `runtime.install` and `runtime.uninstall` leave `bin/` matching the rows without waiting
-  for `bin_scan`.
+- `core/tests/shims.rs` also: a tool installed into a runtime (`yarn` into Node) leaves `bin/` with
+  its runtime, whatever the table of discovered tools still lists.
+- Daemon: `runtime.install` and `runtime.uninstall` leave `bin/` matching the rows before they
+  answer; two Nodes where only one has `yarn` lose `yarn` with that one and keep `node`; a tool
+  written into a bindir appears in `bin/` unasked, and goes when it is removed.
+- Platform: a watched directory's new file is heard, a missing directory is heard being created,
+  and a dropped watch hears nothing.
 - By hand on this Windows machine: with a user-level Python and no MixEngine Python, `python
   --version` in a new terminal prints the user's Python.

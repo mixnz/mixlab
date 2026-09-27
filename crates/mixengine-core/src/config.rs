@@ -40,8 +40,9 @@ pub struct Config {
     pub dns: Dns,
     /// Certificate upkeep.
     pub certs: Certs,
-    /// How often `<root>/bin` is compared against what is installed.
-    pub bin: Bin,
+    /// `[bin]`, which nothing reads any more — see [`RetiredBin`].
+    #[serde(rename = "bin")]
+    pub retired_bin: RetiredBin,
     /// Idle shutdown.
     pub services: Services,
     /// Ending a share nobody ended.
@@ -211,57 +212,18 @@ impl Default for Dns {
     }
 }
 
-/// How often `<root>/bin` is compared against what is installed — roadmap task **T131**.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+/// `[bin]`: the period of the two-second poll T185b replaced with a watch on each runtime's bindir.
+///
+/// **Read and ignored, never refused.** `config.toml` is written once and never rewritten, and the
+/// template of every release from 0.0.7 to 0.0.9 has a `[bin]` line that is not commented out — so
+/// every home first run by one of them holds the section, and refusing it stopped the daemon, and
+/// the uninstaller that asks it what it would remove, on a file nobody had edited. ADR 0057.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
-pub struct Bin {
-    /// How often the daemon looks for a tool somebody installed into a runtime, in seconds.
-    ///
-    /// **Two seconds, and short on purpose.** What it buys is that `npm install -g yarn && yarn
-    /// --version` works in one breath, in the shell somebody is already typing in — a pass that
-    /// arrived a minute later would leave them with `command not found` for exactly as long as it
-    /// takes to conclude the tool did not install.
-    ///
-    /// **And it costs one `stat` per installed runtime.** A tick reads each bindir's modification
-    /// time and returns without opening the database when none has changed, which is what keeps
-    /// this inside M7's promise that an idle machine costs nothing — `bench`'s idle measurement is
-    /// what checks that rather than this sentence.
-    ///
-    /// It is a key at all so that a machine with a filesystem whose directory times are expensive,
-    /// or a person who would rather type `mix path rescan`, can slow it down. Zero is refused for
-    /// [`Certs::renew_check_seconds`]' reason: it is not a short period, it is no pause at all.
-    #[serde(deserialize_with = "rescan")]
-    pub rescan_seconds: u64,
-}
-
-/// The default for [`Bin::rescan_seconds`].
-const DEFAULT_RESCAN_SECONDS: u64 = 2;
-
-/// [`Bin`] writes its own [`Default`] for [`Certs`]' reason: a derived one would be zero, which is
-/// the one value this key refuses.
-impl Default for Bin {
-    fn default() -> Self {
-        Self {
-            rescan_seconds: DEFAULT_RESCAN_SECONDS,
-        }
-    }
-}
-
-/// Refuse a rescan period of zero.
-fn rescan<'de, D>(deserializer: D) -> std::result::Result<u64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let seconds = u64::deserialize(deserializer)?;
-
-    if seconds == 0 {
-        return Err(serde::de::Error::custom(format!(
-            "a rescan every 0 seconds is a loop with no pause in it rather than a schedule; give \
-             it a number of seconds, or remove the key for the default of {DEFAULT_RESCAN_SECONDS}"
-        )));
-    }
-
-    Ok(seconds)
+pub struct RetiredBin {
+    /// How often the poll ran, in seconds. Accepted so a home that set it still starts; the daemon
+    /// logs that it does nothing.
+    pub rescan_seconds: Option<u64>,
 }
 
 /// How MixEngine keeps this home's certificates from expiring — roadmap task **T52**.

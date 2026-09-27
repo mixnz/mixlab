@@ -14,7 +14,7 @@
     "service.status": "One row of service.list; the window reads the list and the event stream.",
     "metrics.snapshot": "A one-off reading for `mix`; the window draws the live metrics stream.",
     "runtime.resolve": "Answers for a working directory, which a terminal has and the window does not; the window shows a project's pins from project.show.",
-    "path.rescan": "The daemon rescans every `[bin] rescan_seconds`; the command is for a person in a terminal who does not want to wait.",
+    "path.rescan": "The daemon watches each runtime's bindir and rescans when one changes; the command is for a person in a terminal whose bindir could not be watched.",
     "extension.inspect": "Reads a local extension.toml for an extension's author; the window installs from the registry."
   },
   "knownGaps": {

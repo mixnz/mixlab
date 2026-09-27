@@ -222,6 +222,50 @@ pub async fn package(database: &Path) {
     pool.close().await;
 }
 
+/// Record a runtime the way an install leaves one: the `fakeservice` binary copied to `program`
+/// inside `install_path`, and a `runtime_installs` row naming it, as the default of its kind.
+///
+/// For a suite that cannot link `mixengine-core` — the CLI's — and needs a runtime a shim will
+/// resolve: since T185b `bin/` holds a language's commands only while a version of it is installed.
+/// Written by hand for [`package`]'s reason, and restating the columns rather than calling the
+/// product's insert, on this crate's rule that a fixture must not agree with the daemon by
+/// construction.
+///
+/// # Panics
+///
+/// As [`package`], and if the binary cannot be copied.
+pub async fn runtime(
+    database: &Path,
+    kind: &str,
+    version: &str,
+    install_path: &Path,
+    program: &str,
+) {
+    let file = install_path.join(program);
+    std::fs::create_dir_all(file.parent().expect("a program inside a directory"))
+        .unwrap_or_else(|error| panic!("a directory for {}: {error}", file.display()));
+    std::fs::copy(FakeService::program(), &file)
+        .unwrap_or_else(|error| panic!("copy the fixture binary to {}: {error}", file.display()));
+
+    let pool = open(database).await;
+
+    sqlx::query(
+        "INSERT INTO runtime_installs
+             (kind, version, channel, install_path, installed_at, size_bytes, source_url, sha256,
+              is_default, provides_json)
+         VALUES (?, ?, 'stable', ?, '2026-08-12T00:00:00Z', 1, 'https://example', 'ab', 1, ?)",
+    )
+    .bind(kind)
+    .bind(version)
+    .bind(install_path.to_string_lossy().into_owned())
+    .bind(serde_json::json!({ kind: program }).to_string())
+    .execute(&pool)
+    .await
+    .unwrap_or_else(|error| panic!("a runtime row for {kind} {version}: {error}"));
+
+    pool.close().await;
+}
+
 /// This home's id, as its first migration wrote it — roadmap task **T182d**.
 ///
 /// What every credential address of the home starts with, for a suite that seeds one the way the
