@@ -36,6 +36,7 @@ import {
   applyDelete,
   applyPut,
   listSince,
+  staleSince,
   type Outcome,
   type Precondition,
 } from "./records";
@@ -149,6 +150,8 @@ export class Account implements DurableObject {
         return this.readRecords(config, request, url);
       case "POST /v1/records/batch":
         return this.batch(config, request, body);
+      case "POST /v1/records/heads":
+        return this.readHeads(config, request, body);
       case "GET /__test__/outbox":
         return this.readOutbox(config);
       default:
@@ -314,6 +317,14 @@ export class Account implements DurableObject {
       resync === "1",
     );
     return "records" in result ? json(200, result) : outcome(result);
+  }
+
+  private async readHeads(config: Config, request: Request, body: unknown): Promise<Response> {
+    const session = await this.authenticate(request);
+    if (!session) return fail(401, "invalid-token", "That token is invalid or has expired.");
+    // A read, like `GET /v1/records`: a frozen account still answers it (D4b).
+    const result = staleSince(this.sql, config.capabilities, body, session.deviceId);
+    return "stale" in result ? json(200, result) : outcome(result);
   }
 
   private async writeRecord(

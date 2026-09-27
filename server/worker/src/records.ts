@@ -311,3 +311,53 @@ export function listSince(
     more,
   };
 }
+
+export interface Heads {
+  stale: string[];
+  nextSince: number;
+}
+
+/**
+ * `POST /v1/records/heads` (T189, D2): which of the cursors a pull would bring news of. A row this
+ * device wrote is not news to it, since its push remembered the row; a row of unknown device is.
+ * The Durable Object runs one request at a time, so `nextSince` and every test below read one
+ * state.
+ */
+export function staleSince(
+  sql: SqlStorage,
+  limits: Capabilities,
+  body: unknown,
+  device: string,
+): Outcome | Heads {
+  const cursors = asObject(asObject(body)?.["cursors"]);
+  const entries = cursors ? Object.entries(cursors) : [];
+  if (entries.length === 0 || entries.length > limits.maxBatchOperations) {
+    return invalid(`\`cursors\` names between 1 and ${limits.maxBatchOperations} collections.`);
+  }
+  for (const [collection, since] of entries) {
+    if (!isOpaqueId(collection)) return invalid("A collection ID must be 64 lowercase hex characters.");
+    if (typeof since !== "number" || !Number.isSafeInteger(since) || since < 0) {
+      return invalid("A cursor is a sequence number.");
+    }
+  }
+
+  const { reaped_below_seq: reapedBelow, next_seq: nextSince } = account(sql);
+  const stale = entries
+    .filter(([collection, value]) => {
+      const since = value as number;
+      // A pull would answer 410 (D3): stale, so the client meets it and resyncs.
+      if (since > 0 && since < reapedBelow) return true;
+      const rows =
+        since === 0
+          ? sql.exec(`SELECT 1 FROM record WHERE collection = ? LIMIT 1`, collection)
+          : sql.exec(
+              `SELECT 1 FROM record WHERE collection = ? AND seq > ? AND device != ? LIMIT 1`,
+              collection,
+              since,
+              device,
+            );
+      return rows.toArray().length > 0;
+    })
+    .map(([collection]) => collection);
+  return { stale, nextSince };
+}
