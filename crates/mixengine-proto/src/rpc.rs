@@ -440,6 +440,17 @@ pub mod method {
     /// does. A read: nothing is written.
     pub const SERVICE_FOUND: &str = "service.found";
 
+    /// A copy of an earlier home's state in a folder this home keeps — roadmap task **T182h**.
+    /// Takes nothing, answers [`HomePrevious`](crate::HomePrevious): what the newest copy holds,
+    /// while this home has no project, site or package's service of its own yet. A read.
+    pub const HOME_PREVIOUS: &str = "home.previous";
+
+    /// Restore that copy into this home — roadmap task **T182h**. Takes nothing, answers
+    /// [`HomeRestoreReport`](crate::HomeRestoreReport). Projects, sites, domains, routes and
+    /// services come back; every database gets a new admin password and is left stopped; the hosts
+    /// file and the certificates of HTTPS sites are asked for as a site create asks for them.
+    pub const HOME_RESTORE: &str = "home.restore";
+
     /// Turn one found data directory back into a service — roadmap task **T182g**. Takes
     /// [`ServiceAdopt`](crate::ServiceAdopt), answers the
     /// [`ServiceSummary`](crate::ServiceSummary) of the service, left stopped.

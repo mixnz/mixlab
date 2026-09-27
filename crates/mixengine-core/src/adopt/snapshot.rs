@@ -211,14 +211,7 @@ pub async fn restore(store: &Store, copy: &Path) -> Result<Restored> {
         ));
     }
 
-    let own: i64 = sqlx::query_scalar(
-        "SELECT (SELECT COUNT(*) FROM projects) + (SELECT COUNT(*) FROM sites)
-              + (SELECT COUNT(*) FROM services WHERE package_id IS NOT NULL)",
-    )
-    .fetch_one(store.pool())
-    .await
-    .map_err(|source| store.failure("read", source))?;
-    if own > 0 {
+    if has_things_of_its_own(store).await? {
         return Err(refuse(
             "this home already has projects, sites or services of its own, and a restore only goes \
              into one that has none",
@@ -250,6 +243,24 @@ pub async fn restore(store: &Store, copy: &Path) -> Result<Restored> {
     })?;
 
     Ok(restored)
+}
+
+/// Whether `store` has a project, a site or a package's service of its own — a home a restore
+/// does not go into, since projects and sites are copied with their own ids.
+///
+/// # Errors
+///
+/// [`Error::Database`] when the rows cannot be read.
+pub async fn has_things_of_its_own(store: &Store) -> Result<bool> {
+    let own: i64 = sqlx::query_scalar(
+        "SELECT (SELECT COUNT(*) FROM projects) + (SELECT COUNT(*) FROM sites)
+              + (SELECT COUNT(*) FROM services WHERE package_id IS NOT NULL)",
+    )
+    .fetch_one(store.pool())
+    .await
+    .map_err(|source| store.failure("read", source))?;
+
+    Ok(own > 0)
 }
 
 /// The merge itself, on one connection with the copy attached, in one transaction.

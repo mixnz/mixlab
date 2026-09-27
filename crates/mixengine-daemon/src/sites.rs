@@ -249,7 +249,7 @@ impl Sites {
     /// The site is already written by the time this runs. Returning an error here would say the
     /// operation failed when it did not, and the queue is a want rather than a step: `mix status`
     /// keeps showing what is waiting until somebody grants it or drops it.
-    async fn wants_the_hosts_file(&self) {
+    pub(crate) async fn wants_the_hosts_file(&self) {
         if let Err(error) = self.elevation.require_hosts().await {
             tracing::warn!(
                 ?error,

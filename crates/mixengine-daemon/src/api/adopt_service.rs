@@ -106,34 +106,49 @@ impl Api {
             "adopted service data an earlier home left"
         );
 
-        if self.services.has_credential_reset(&asked.service) {
-            self.service_reset_credential(&ResetCredential {
-                service: asked.service.clone(),
-                wait: true,
-            })
-            .await
-            .map_err(|error| {
-                error.with_hint(format!(
-                    "{} is a service again and its data is untouched; `mix service \
-                     reset-credential {}` sets its admin password",
-                    asked.service, asked.service
-                ))
-            })?;
-
-            // **Left stopped, as an adopt promises.** A reset starts back the service it repaired
-            // — the right answer for a repair of something that was running, and not for one that
-            // has only just become a service. Starting it is a person's call.
-            self.service_stop(&ServiceTarget {
-                service: Some(asked.service.clone()),
-                ..ServiceTarget::default()
-            })
-            .await?;
-        }
+        self.new_admin_password(&asked.service).await?;
 
         Ok(self
             .summary_of(&asked.service)
             .await?
             .unwrap_or(created.service))
+    }
+
+    /// For a service that keeps an admin password, set a new one in its data and leave it stopped —
+    /// what an adopt (T182g) and a restore (T182h) both need, since the password the data holds
+    /// went with the earlier home's credential store. Nothing for any other service.
+    ///
+    /// # Errors
+    ///
+    /// The reset's own, with a hint saying the service and its data stand and how to try again;
+    /// and a stop that fails.
+    pub(super) async fn new_admin_password(&self, service: &ServiceId) -> Result<(), Error> {
+        if !self.services.has_credential_reset(service) {
+            return Ok(());
+        }
+
+        self.service_reset_credential(&ResetCredential {
+            service: service.clone(),
+            wait: true,
+        })
+        .await
+        .map_err(|error| {
+            error.with_hint(format!(
+                "{service} is a service again and its data is untouched; `mix service \
+                 reset-credential {service}` sets its admin password"
+            ))
+        })?;
+
+        // **Left stopped.** A reset starts back the service it repaired — the right answer for a
+        // repair of something that was running, and not for one that has only just become a
+        // service again. Starting it is a person's call.
+        self.service_stop(&ServiceTarget {
+            service: Some(service.clone()),
+            ..ServiceTarget::default()
+        })
+        .await?;
+
+        Ok(())
     }
 
     /// Every found directory, with what would open it.

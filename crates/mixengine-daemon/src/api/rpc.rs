@@ -733,6 +733,14 @@ async fn call_method(
                     encode_result(&api.service_restart(&target).await.map_err(refused)?)
                 }
 
+                rpc::method::HOME_PREVIOUS => {
+                    encode_result(&api.home_previous().await.map_err(refused)?)
+                }
+
+                rpc::method::HOME_RESTORE => {
+                    encode_result(&api.home_restore().await.map_err(refused)?)
+                }
+
                 rpc::method::SERVICE_FOUND => {
                     encode_result(&api.service_found().await.map_err(refused)?)
                 }

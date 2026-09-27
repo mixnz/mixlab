@@ -27,6 +27,7 @@ mod front_end;
 mod http;
 mod logs;
 mod metrics;
+mod restore;
 mod rpc;
 
 pub(crate) use rpc::on_a_blocking_thread;

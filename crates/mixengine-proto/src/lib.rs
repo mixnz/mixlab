@@ -46,6 +46,7 @@ pub mod privileged;
 mod project_api;
 mod repair_api;
 mod requirement;
+mod restore_api;
 pub mod rpc;
 mod runtime;
 mod runtime_api;
@@ -129,6 +130,7 @@ pub use project_api::{
 };
 pub use repair_api::{Action, DoctorRepair, Repair, RepairReport};
 pub use requirement::{Need, RedistributableArch, Remedy, Requirement, Requirements};
+pub use restore_api::{HomePrevious, HomeRestoreReport, PreviousCopy};
 pub use runtime::RuntimeKind;
 pub use runtime_api::{
     ExtensionChange, ExtensionChoice, ExtensionList, ExtensionSource, Linkage, PoolOutcome,
