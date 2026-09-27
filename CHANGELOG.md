@@ -12,12 +12,16 @@
 - `php`, `node`, `python` and the rest are on your PATH only for the languages you installed with
   MixEngine, so a Node.js or Python you installed yourself is no longer hidden. A tool you add with
   `npm install -g` or `pip install` is a command as soon as it lands.
+- Start MixEngine waits until the four data folders are listed, so you can move them before the
+  first start.
 
 ### Fixed
 - A blueprint that installs PHP now turns on its PHP extensions, such as `redis` for Laravel, and
   turns them on for the PHP version the project uses, not the newest one installed.
 - Reinstalling MixLab over folders an earlier install kept now lists the runtimes and packages
   already in them, instead of refusing to install them again.
+- On Windows, MixLab opens straight into its window. An empty window no longer flashes and
+  disappears first.
 
 ## v0.0.9
 

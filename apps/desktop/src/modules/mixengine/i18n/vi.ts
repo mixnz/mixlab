@@ -54,6 +54,7 @@ const vi: typeof en = {
       lookedIn: "Đã tìm lần lượt ở:",
       start: "Khởi động MixEngine",
       starting: "Đang khởi động\u2026",
+      readingStorage: "Đang đọc thư mục dữ liệu…",
       retry: "Thử lại",
       getIt: "Cài lại MixEngine",
     },

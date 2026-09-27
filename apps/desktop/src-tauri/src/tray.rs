@@ -110,7 +110,9 @@ pub fn has_tray_host<R: Runtime>(app: &AppHandle<R>) -> bool {
 pub fn hidden_start<R: Runtime>(app: &AppHandle<R>) {
     let state = app.state::<TrayState>();
     state.hidden_start.store(true, Ordering::SeqCst);
-    // Declared hidden, but restoring a maximized window shows it on Windows — so say it again.
+    // Declared hidden, and on Windows nothing shows it before `launch::bring_to_front` any more.
+    // Said again anyway, for the systems where the window-state plugin still maximizes it on
+    // creation.
     if let Some(main) = app.get_webview_window(MAIN) {
         let _ = main.hide();
     }

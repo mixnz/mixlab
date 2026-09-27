@@ -89,10 +89,14 @@ export default function MixEngineTab({
      nguyên. */
   const [storage, setStorage] = useState<StorageReport | null>(null);
   const [rows, setRows] = useState<StorageRow[]>([]);
+  /* Whether the storage question is still out. While it is, Start waits: a click before the four
+     rows arrive starts the daemon on its defaults, and once it has run the choice is gone. */
+  const [storageAsked, setStorageAsked] = useState(false);
   useEffect(() => {
     if (presence !== "notRunning") return;
 
     let live = true;
+    setStorageAsked(false);
     void api
       .storage()
       .then((answer) => {
@@ -102,7 +106,10 @@ export default function MixEngineTab({
       })
       // Không hỏi được chỗ đặt file thì cổng vẫn phải vẽ được cái nút của nó: đây là một màn hình
       // thêm vào, không phải điều kiện để khởi động daemon.
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (live) setStorageAsked(true);
+      });
     return () => {
       live = false;
     };
@@ -249,8 +256,17 @@ export default function MixEngineTab({
           </div>
         )}
         {presence === "notRunning" && (
-          <Button onClick={() => void run(() => api.startDaemon(chosenFrom(rows)))} disabled={busy}>
-            {busy ? t("mixengine.gate.starting") : t("mixengine.gate.start")}
+          <Button
+            onClick={() => void run(() => api.startDaemon(chosenFrom(rows)))}
+            busy={
+              busy
+                ? t("mixengine.gate.starting")
+                : storageAsked
+                  ? undefined
+                  : t("mixengine.gate.readingStorage")
+            }
+          >
+            {t("mixengine.gate.start")}
           </Button>
         )}
         {presence === "notAnswering" && (

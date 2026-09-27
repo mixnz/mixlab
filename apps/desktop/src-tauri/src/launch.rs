@@ -17,6 +17,8 @@
 //! module's, in `modules/db/handoff.rs`. The design:
 //! `docs/specs/2026-09-03-mixengine-connection-handoff-design.md`.
 
+#[cfg(windows)]
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -286,12 +288,29 @@ fn received<R: Runtime>(app: &AppHandle<R>, line: &str) {
     }
 }
 
+/// Whether `main` has been shown once, and so had its saved maximized flag put back (Windows).
+#[cfg(windows)]
+static PLACED: AtomicBool = AtomicBool::new(false);
+
 pub(crate) fn bring_to_front<R: Runtime>(app: &AppHandle<R>) {
     // Back in the Dock first, when closing it to the tray took it out (T168).
     crate::tray::show_in_dock(app);
     if let Some(window) = app.get_webview_window("main") {
-        let _ = window.unminimize();
+        /* On Windows, tao answers anything that touches a maximized window that is still hidden —
+        maximizing it, and `unminimize` too — by showing it and hiding it again at once. When the
+        window-state plugin maximized `main` as it was created, every start flashed an empty window
+        and took it away until `setup` was done. And `show` takes tens of milliseconds while the
+        webview resizes, so maximizing just before it still flashes, and just after it shows a
+        window at the wrong size first. So the first showing is one call that shows it maximized,
+        and `show` after it, for tao's own record, changes nothing on screen. */
+        #[cfg(windows)]
+        if !PLACED.swap(true, Ordering::SeqCst) && crate::platform::saved_maximized(app, "main") {
+            crate::platform::show_maximized(&window);
+        }
+        // `show` before `unminimize`, for the reason above: a window closed to the tray while
+        // maximized is still maximized.
         let _ = window.show();
+        let _ = window.unminimize();
         let _ = window.set_focus();
     }
 }
