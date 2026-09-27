@@ -4,7 +4,7 @@ slug = "uninstalling"
 order = 13
 summary = "Hoàn tác mọi thứ MixLab đã ghi bên ngoài thư mục của nó, xem danh sách trước khi đồng ý, và giữ lại cơ sở dữ liệu nếu bạn muốn."
 translation_of = "en/uninstalling.md"
-source_sha256 = "50cca2c8b1228efd0d2c5cb0963bab31703b5e431fca7146c6005998a257aa8e"
+source_sha256 = "9a2e97b04d0ead917773d090a720b19d5eb3fa8f7b9d841aa2f7d470a6890cb3"
 +++
 
 # Gỡ MixLab
@@ -107,6 +107,10 @@ nằm trong home, nên đi cùng home.
 ### Cài lại trên các thư mục đã giữ
 
 Khi bản cài mới hỏi nơi lưu dữ liệu, chọn đúng các thư mục cũ. Lúc khởi động:
+
+- **Project, site và service** quay lại từ bản sao mà lần gỡ để lại trong các thư mục đó: Dashboard
+  hiện *Khôi phục lần cài trước*, hoặc chạy `mix home restore`. Database được đặt mật khẩu quản trị
+  mới và để ở trạng thái dừng cho đến khi bạn bật.
 
 - **Runtime và package** có sẵn trong đó tự hiện là đã cài. Bản nào MixLab chưa kiểm được, ví dụ vì
   lúc đó không có mạng, sẽ nằm trong mục *Có trên đĩa, chưa ghi nhận* ở màn Runtimes, kèm nút

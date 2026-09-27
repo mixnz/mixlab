@@ -107,6 +107,10 @@ inside the home, so it goes with the home.
 
 Point the new install at the same folders when it asks where to keep them. When it starts:
 
+- **Your projects, sites and services** come back from the copy the uninstall left in those
+  folders: the Dashboard shows *Restore your earlier install*, or run `mix home restore`. Databases
+  get a new admin password and stay stopped until you start them.
+
 - **Runtimes and packages** already in them are listed as installed on their own. One MixLab could
   not check, for example because there was no network, shows under *On disk, not listed* in
   Runtimes with an **Adopt** button. From a terminal: `mix runtime found`, then

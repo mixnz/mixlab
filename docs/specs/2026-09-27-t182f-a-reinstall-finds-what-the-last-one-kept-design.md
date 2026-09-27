@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-09-27
 task:
   - T182f
@@ -148,9 +148,13 @@ On a start whose database has just been created, the daemon looks in the configu
 `packages` and `data` directories for `.mixengine-state.db`. It restores nothing on its own:
 
 - `home.previous` answers what the newest copy holds: counts of projects, sites, services and
-  runtimes, and when it was taken. The storage report carries the same answer, so MixLab's first-run
-  picker can show *Restore from your earlier install: 3 projects, 5 sites, 2 databases* right after a
-  folder is picked. `mix home restore` does the same from the CLI.
+  runtimes, and when it was taken — only while the home has no project, site or package's service
+  of its own, since projects and sites are copied with their own ids. `mix home previous` prints it
+  and `mix home restore` restores it. (Amended while building T182h: MixLab offers the restore on
+  the Dashboard rather than in the first-run storage picker, which runs before any daemon exists.)
+- **Left out of a restore:** extensions and what they own (their files lived in the home),
+  `settings` (the home keeps its new id, which names its credential addresses), and a site's share
+  (its firewall rule went with the old home).
 - **Restore** runs in one transaction on the new database, after migrating the copy in a temporary
   file when it is older than this build. A copy newer than this build is refused by name.
   - `runtime_installs` and `packages` rows come back when their directory still exists. Extension
@@ -188,8 +192,10 @@ Settings → Doctor. What the window adds:
   screen, and the packages list, gain a row for a version on disk but not recorded, with the daemon's
   reason and **Adopt**; an `already_exists` from *Install* offers the same button. That needs a
   daemon method listing those directories, since the window may not parse the doctor's sentence.
-- **T182h.** The first-run storage picker shows *Restore from your earlier install* when
-  `home.previous` answers, with the counts it gives.
+- **T182h — built.** The Dashboard shows *Restore your earlier install* with the counts
+  `home.previous` gives, and **Restore** behind a confirm that says databases get a new admin
+  password and stay stopped. Afterwards the card shows the report: what came back, what was skipped,
+  and any step that still needs a hand.
 
 ## Tests
 
