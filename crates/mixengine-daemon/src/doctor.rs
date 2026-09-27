@@ -544,32 +544,59 @@ impl Doctor {
     /// installed that this one could not check. A `Note`: it costs disk and blocks an install of the
     /// same version, and nothing is broken by it. Walked at report time rather than remembered from
     /// the start, so a directory recorded or removed since is not reported.
+    ///
+    /// **And service data an earlier home left under `data/`** — roadmap task **T182g** — counted
+    /// here rather than in a check of its own, because both are the same leftover of one uninstall.
     async fn unrecorded(&self) -> Check {
         let name = "installs on disk that this home has not recorded".to_owned();
 
-        match mixengine_core::adopt::walk::unrecorded(&self.store, &self.layout).await {
-            Ok(found) if found.is_empty() => Check {
-                name,
-                outcome: Outcome::Ok {},
-            },
-            Ok(found) => Check {
-                name,
-                outcome: Outcome::Note {
-                    because: format!(
-                        "{} not recorded. `mix runtime adopt` or `mix package adopt` records one \
-                         once it can be checked; nothing here removes them",
-                        found
-                            .iter()
-                            .map(|found| found.path.display().to_string())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                },
-            },
-            Err(error) => Check {
-                name,
-                outcome: Outcome::Skipped {
-                    because: format!("this home's installs could not be read: {error}"),
+        let installs = mixengine_core::adopt::walk::unrecorded(&self.store, &self.layout).await;
+        let instances = mixengine_core::adopt::instances::found(
+            &self.store,
+            &self.layout,
+            &crate::services::catalogue(),
+        )
+        .await;
+
+        let (installs, instances) = match (installs, instances) {
+            (Ok(installs), Ok(instances)) => (installs, instances),
+            (Err(error), _) | (_, Err(error)) => {
+                return Check {
+                    name,
+                    outcome: Outcome::Skipped {
+                        because: format!("this home's installs could not be read: {error}"),
+                    },
+                };
+            }
+        };
+
+        let mut said = Vec::new();
+        if !installs.is_empty() {
+            said.push(format!(
+                "{} not recorded. `mix runtime adopt` or `mix package adopt` records one once it \
+                 can be checked",
+                installs
+                    .iter()
+                    .map(|found| found.path.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+        if !instances.is_empty() {
+            said.push(format!(
+                "{} service data director{} an earlier install left. `mix service found` lists \
+                 them and `mix service adopt` brings one back",
+                instances.len(),
+                if instances.len() == 1 { "y" } else { "ies" }
+            ));
+        }
+
+        Check {
+            name,
+            outcome: match said.is_empty() {
+                true => Outcome::Ok {},
+                false => Outcome::Note {
+                    because: format!("{}; nothing here removes them", said.join("; ")),
                 },
             },
         }

@@ -725,6 +725,15 @@ async fn call_method(
                     encode_result(&api.service_restart(&target).await.map_err(refused)?)
                 }
 
+                rpc::method::SERVICE_FOUND => {
+                    encode_result(&api.service_found().await.map_err(refused)?)
+                }
+
+                rpc::method::SERVICE_ADOPT => {
+                    let asked: mixengine_proto::ServiceAdopt = arguments(params)?;
+                    encode_result(&api.service_adopt(&asked).await.map_err(refused)?)
+                }
+
                 rpc::method::SERVICE_RESET_CREDENTIAL => {
                     let reset: ResetCredential = arguments(params)?;
                     encode_result(
@@ -1594,7 +1603,7 @@ impl Api {
     ///
     /// An empty list is a real answer and not a failure: until T30 renders a `services` row into a
     /// runnable spec, this build declares nothing at all.
-    async fn service_list(&self) -> Result<ServiceList, Error> {
+    pub(super) async fn service_list(&self) -> Result<ServiceList, Error> {
         let graph = self
             .services
             .graph()
@@ -2114,7 +2123,7 @@ impl Api {
     ///
     /// `invalid_argument` for a service that keeps no credential of its own — asked **before**
     /// anything is stopped, so naming a web server costs nothing. Then whatever the repair reports.
-    async fn service_reset_credential(
+    pub(super) async fn service_reset_credential(
         &self,
         reset: &ResetCredential,
     ) -> Result<ServiceWalk, Error> {
