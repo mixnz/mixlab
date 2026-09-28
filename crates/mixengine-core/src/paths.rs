@@ -118,6 +118,44 @@ pub fn create_dir(path: &Path) -> Result<()> {
     })
 }
 
+/// A relative path written with `/`, joined onto `base` one part at a time — roadmap task **T191**.
+///
+/// A manifest's `provides` value, a site's doc root and a route's root are all stored with `/`,
+/// because they are written once for every system or rendered into a web server's configuration.
+/// `Path::join` would keep that `/` inside a Windows path (`…\8.3.33\bin/php`), which is the
+/// spelling a person then reads in an error or a log. Splitting on both separators also accepts a
+/// value that already arrived native; on Unix the two are one character.
+#[must_use]
+pub fn join_stored(base: &Path, relative: &str) -> PathBuf {
+    relative
+        .split(['/', std::path::MAIN_SEPARATOR])
+        .filter(|part| !part.is_empty())
+        .fold(base.to_path_buf(), |path, part| path.join(part))
+}
+
+/// `path` rebuilt from its components, so every separator is this system's — roadmap task **T191**.
+///
+/// For a path a person wrote by hand, such as a `[paths]` value the configuration template tells
+/// them to write with `/`. A trailing separator and `.` parts go; `..` stays, and so does a UNC
+/// prefix, which `components` keeps whole.
+#[must_use]
+pub fn native(path: &Path) -> PathBuf {
+    path.components().collect()
+}
+
+/// A relative path stored with `/`, spelled for a person on this system — roadmap task **T191**.
+///
+/// The wire form of a site's doc root and a static route's root. The column keeps `/`; the input
+/// side (`sites::relative_doc_root`) accepts either spelling, so what a client reads it can send
+/// back unchanged.
+#[must_use]
+pub fn native_relative(stored: &str) -> String {
+    stored
+        .split('/')
+        .collect::<Vec<_>>()
+        .join(std::path::MAIN_SEPARATOR_STR)
+}
+
 /// Remove a directory tree that may not be there.
 ///
 /// **A directory that is already gone is the answer this wants**, which is what makes an uninstall
@@ -456,5 +494,82 @@ mod tests {
             paths.credentials_file(),
             Path::new("/home/me/MixEngine-dev/credentials.json")
         );
+    }
+
+    /// T191: a manifest's `bin/php` joined onto an install directory is spelled as this system
+    /// spells one — no `/` left inside a Windows path.
+    #[test]
+    fn a_stored_relative_path_joins_in_this_systems_spelling() {
+        let base = std::env::temp_dir().join("install");
+
+        for relative in ["bin/php", "a/b/c", "bin//php", "bin/php/"] {
+            let joined = join_stored(&base, relative);
+
+            if cfg!(windows) {
+                assert!(
+                    !joined.display().to_string().contains('/'),
+                    "{relative} joined as {}",
+                    joined.display()
+                );
+            }
+            assert!(joined.starts_with(&base), "{}", joined.display());
+            assert_eq!(
+                joined.file_name().and_then(|name| name.to_str()),
+                relative.trim_end_matches('/').rsplit('/').next(),
+                "{relative}"
+            );
+        }
+
+        assert_eq!(join_stored(&base, ""), base);
+    }
+
+    /// A value that already arrived native is split too, not kept as one strange name.
+    #[test]
+    fn a_native_relative_path_joins_to_the_same_answer() {
+        let base = std::env::temp_dir().join("install");
+        let native_spelled = ["bin", "php"].join(std::path::MAIN_SEPARATOR_STR);
+
+        assert_eq!(
+            join_stored(&base, &native_spelled),
+            join_stored(&base, "bin/php")
+        );
+    }
+
+    /// T191 D2: a relocation written with `/` is respelled; on Unix nothing changes.
+    #[test]
+    fn a_path_written_with_slashes_is_respelled() {
+        let cases: &[(&str, &str)] = if cfg!(windows) {
+            &[
+                ("D:/bulk/data", r"D:\bulk\data"),
+                (r"D:\bulk/data", r"D:\bulk\data"),
+                ("D:/bulk/data/", r"D:\bulk\data"),
+                (r"\\server\share/bulk", r"\\server\share\bulk"),
+                ("bulk/data", r"bulk\data"),
+            ]
+        } else {
+            &[
+                ("/mnt/bulk/data", "/mnt/bulk/data"),
+                ("/mnt/bulk/data/", "/mnt/bulk/data"),
+                ("bulk/data", "bulk/data"),
+            ]
+        };
+
+        for (written, expected) in cases {
+            assert_eq!(
+                native(Path::new(written)),
+                PathBuf::from(expected),
+                "{written}"
+            );
+        }
+    }
+
+    /// T191 D3: a stored doc root reaches the wire in this system's spelling.
+    #[test]
+    fn a_stored_relative_path_is_respelled_for_the_wire() {
+        let expected = ["public", "assets"].join(std::path::MAIN_SEPARATOR_STR);
+
+        assert_eq!(native_relative("public/assets"), expected);
+        assert_eq!(native_relative("public"), "public");
+        assert_eq!(native_relative(""), "");
     }
 }
