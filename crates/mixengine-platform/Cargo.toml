@@ -130,6 +130,9 @@ windows-sys = { workspace = true, features = [
     # a group without opening every process on the machine (T181). A feature adds modules, not
     # crates.
     "Win32_System_Diagnostics_ToolHelp",
+    # A process's resident size, read one pid at a time by a metrics reading on Windows (T190),
+    # where `sysinfo` would list the whole machine first. A feature adds modules, not crates.
+    "Win32_System_ProcessStatus",
     # This user's `Path`, which Windows keeps in `HKCU\Environment` rather than anywhere a file
     # could be edited. `setx` would write it too and would truncate it at 1024 characters, which is
     # the whole argument for reaching the API here — see `windows/path.rs`.
