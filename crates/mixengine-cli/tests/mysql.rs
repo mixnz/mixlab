@@ -186,15 +186,40 @@ fn expect(home: &Home, args: &[&str]) -> Value {
 
     assert!(
         output.status.success(),
-        "`mix {}` exited {}\n--- stdout ---\n{}\n--- stderr ---\n{}\n--- daemon.log ---\n{}",
+        "`mix {}` exited {}\n--- stdout ---\n{}\n--- stderr ---\n{}\n--- daemon.log ---\n{}{}",
         args.join(" "),
         output.status,
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr),
-        home.daemon_log()
+        home.daemon_log(),
+        bootstrap_logs(home)
     );
 
     json(&output)
+}
+
+/// Every `mysql-bootstrap.err` in this home, each under a header naming its service.
+///
+/// **Where a bootstrap or a repair says why `mysqld` exited**, and nowhere else: the step that sets
+/// the root password runs with `--log-error` pointed here, and the daemon keeps nothing of what a
+/// step with a secret file printed. Run 36375268590 failed a credential reset on Windows with
+/// `mysqld.exe … exited with exit code: 1` and no cause, because this file went with the runner.
+fn bootstrap_logs(home: &Home) -> String {
+    let Ok(services) = std::fs::read_dir(home.path().join("logs").join("services")) else {
+        return String::new();
+    };
+
+    let mut said = String::new();
+
+    for service in services.flatten() {
+        let log = service.path().join("mysql-bootstrap.err");
+
+        if let Ok(text) = std::fs::read_to_string(&log) {
+            said.push_str(&format!("\n--- {} ---\n{text}", log.display()));
+        }
+    }
+
+    said
 }
 
 /// What `mix service status mysql@main` says.
@@ -811,10 +836,22 @@ async fn a_superuser_credential_is_re_set_and_the_databases_are_kept() {
         &home,
         &["service", "reset-credential", RESET, "--yes", "--json"],
     );
-    assert_eq!(walk["complete"], true, "{walk}\n{}", home.daemon_log());
+    assert_eq!(
+        walk["complete"],
+        true,
+        "{walk}\n{}{}",
+        home.daemon_log(),
+        bootstrap_logs(&home)
+    );
 
     let up = status(&home, RESET);
-    assert_eq!(up["state"], "running", "{up}\n{}", home.daemon_log());
+    assert_eq!(
+        up["state"],
+        "running",
+        "{up}\n{}{}",
+        home.daemon_log(),
+        bootstrap_logs(&home)
+    );
 
     at("checking that the database made before the repair survived it");
     let again = expect(
