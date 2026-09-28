@@ -280,6 +280,7 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       spends with nobody watching (T190a). The question a fix has to answer: what may the sweep
       reuse between passes, and what change has to invalidate it, so that a config edit, a
       certificate renewal or a started service is never judged against a stale graph.
+      Design: [2026-09-28-t190b-the-idle-sweep-does-not-render-to-look-design.md](../specs/2026-09-28-t190b-the-idle-sweep-does-not-render-to-look-design.md).
 - [x] **T72** CI budgets: `mixengined` idle < 32 MB RSS, with the published total reported beside
       it — failing the build on regression. **(P)**
       Design: [2026-08-30-t72-ci-budgets-design.md](../specs/2026-08-30-t72-ci-budgets-design.md).
