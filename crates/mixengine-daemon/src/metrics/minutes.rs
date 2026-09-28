@@ -154,6 +154,7 @@ mod tests {
         MetricsFrame {
             at: Timestamp(at),
             samples: vec![sample(cpu, rss)],
+            cores: 1,
         }
     }
 
@@ -161,6 +162,7 @@ mod tests {
         MetricsFrame {
             at: Timestamp(at),
             samples: Vec::new(),
+            cores: 1,
         }
     }
 

@@ -18,4 +18,13 @@ at: Timestamp,
  * One per subject that could be measured. **A subject that could not is absent** — never a
  * sample of zero, because *not measured* and *measured nothing* are different facts.
  */
-samples: Array<MetricsSample>, };
+samples: Array<MetricsSample>, 
+/**
+ * How many logical processors this machine has — roadmap task **T190c**.
+ *
+ * What a client divides [`MetricsSample::cpu_percent`] by to show a share of the whole
+ * machine, as Task Manager does. The same count as
+ * [`LimitSupport::cores`](crate::LimitSupport). A frame from a daemon older than this field
+ * reads as `1`, which is the unit it was always in.
+ */
+cores: number, };

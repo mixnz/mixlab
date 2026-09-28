@@ -52,6 +52,72 @@ const MINUTE_CAPACITY: usize = 8;
 /// How many milliseconds an hour is, for the retention arithmetic.
 const HOUR: i64 = 3_600_000;
 
+/// How far back the figure on the stream reaches — roadmap task **T190c**.
+///
+/// **Five seconds, because a second is a count of quanta.** Windows adds CPU time to a process
+/// 15.6 ms at a time, so a one-second reading can only be 0, 1.56, 3.12… percent of a core: a
+/// daemon spending half a percent reads as a figure jumping between 0 and 3. Over five readings a
+/// quantum moves the figure by 0.31%. At the idle rate a subject has one reading in five seconds,
+/// and the figure is that reading.
+const SMOOTHING: Duration = Duration::from_secs(5);
+
+/// The readings of the last [`SMOOTHING`], per subject, and the mean the stream publishes.
+///
+/// **The stream's figure, not the history's.** The minute accumulator is fed the raw frame, so a
+/// minute's `cpu_peak` stays the highest single reading rather than the highest mean.
+#[derive(Debug, Default)]
+struct Smoother {
+    recent: std::collections::BTreeMap<
+        MetricsSubject,
+        std::collections::VecDeque<(Instant, Option<f32>)>,
+    >,
+}
+
+impl Smoother {
+    /// The frame the stream publishes for `raw`, taken at `now`: each sample's CPU figure is the
+    /// mean of its readings in the last [`SMOOTHING`].
+    ///
+    /// A subject absent from `raw` is forgotten, so one that comes back starts again. A reading of
+    /// [`None`] is not averaged in as a zero, and a subject with no figure at all publishes `None`.
+    fn publish(&mut self, raw: &MetricsFrame, now: Instant) -> MetricsFrame {
+        self.recent
+            .retain(|subject, _| raw.samples.iter().any(|sample| &sample.subject == subject));
+
+        let samples =
+            raw.samples
+                .iter()
+                .map(|sample| {
+                    let readings = self.recent.entry(sample.subject.clone()).or_default();
+                    readings.push_back((now, sample.cpu_percent));
+
+                    while readings.front().is_some_and(|(taken, _)| {
+                        now.saturating_duration_since(*taken) >= SMOOTHING
+                    }) {
+                        readings.pop_front();
+                    }
+
+                    let figures: Vec<f32> = readings.iter().filter_map(|(_, cpu)| *cpu).collect();
+                    #[expect(
+                        clippy::cast_precision_loss,
+                        reason = "at most a handful of readings, far below f32's exact integers"
+                    )]
+                    let mean = (!figures.is_empty())
+                        .then(|| figures.iter().sum::<f32>() / figures.len() as f32);
+
+                    MetricsSample {
+                        cpu_percent: mean,
+                        ..sample.clone()
+                    }
+                })
+                .collect();
+
+        MetricsFrame {
+            samples,
+            ..raw.clone()
+        }
+    }
+}
+
 /// One subject and the process at the head of its group.
 type Subject = (MetricsSubject, GroupRoot);
 
@@ -78,7 +144,12 @@ fn frame_from(host: &dyn Host, at: Timestamp, subjects: &[Subject]) -> MetricsFr
         })
         .collect();
 
-    MetricsFrame { at, samples }
+    MetricsFrame {
+        at,
+        samples,
+        // What one core is worth here, so every client divides by the same number (T190c).
+        cores: host.resource_control().support().cores,
+    }
 }
 
 /// The daemon's own group, or [`None`] where this process cannot be identified.
@@ -114,6 +185,9 @@ pub(crate) struct Sampler {
     /// second reader taking its own readings would be a second consumer of the CPU state a
     /// difference is taken against, and each would see the interval since the *other's* refresh.
     latest: Option<(Instant, MetricsFrame)>,
+
+    /// The last five seconds of readings, for the figure the stream publishes (T190c).
+    smoother: Smoother,
 
     /// Where an open stream reads its frames from.
     frames: broadcast::Sender<MetricsFrame>,
@@ -154,6 +228,7 @@ impl Sampler {
             idle: Duration::from_secs(config.idle_sample_seconds),
             retention_hours: config.retention_hours,
             latest: None,
+            smoother: Smoother::default(),
             frames: broadcast::Sender::new(STREAM_CAPACITY),
             minutes: broadcast::Sender::new(MINUTE_CAPACITY),
             requests,
@@ -230,10 +305,15 @@ impl Sampler {
         let at = Timestamp::from_system_time(SystemTime::now());
         let frame = frame_from(self.host.as_ref(), at, &subjects);
 
-        self.latest = Some((Instant::now(), frame.clone()));
+        // **The stream and a snapshot get the five-second mean; the history gets the reading** —
+        // roadmap task T190c. See `Smoother`.
+        let now = Instant::now();
+        let published = self.smoother.publish(&frame, now);
+
+        self.latest = Some((now, published.clone()));
 
         // Nobody listening is the ordinary state of a daemon with no client attached.
-        let _ = self.frames.send(frame.clone());
+        let _ = self.frames.send(published.clone());
 
         let rolled = self.accumulator.observe(&frame);
 
@@ -247,7 +327,7 @@ impl Sampler {
 
         self.write(rolled, at).await;
 
-        frame
+        published
     }
 
     /// Write the minutes a tick completed, and trim what has aged out.
@@ -413,6 +493,115 @@ mod tests {
                 started: StartTime::from_stored(stored),
             },
         )
+    }
+
+    // ---- The five-second mean on the stream — roadmap task T190c. ----
+
+    /// A frame with the daemon alone, at `cpu`.
+    fn daemon_at(cpu: Option<f32>) -> MetricsFrame {
+        MetricsFrame {
+            at: Timestamp(0),
+            samples: vec![MetricsSample {
+                subject: MetricsSubject::Daemon,
+                cpu_percent: cpu,
+                rss_bytes: 1,
+                processes: 1,
+            }],
+            cores: 12,
+        }
+    }
+
+    /// Feed `readings` one second apart, and return the last published figure.
+    fn published(readings: &[Option<f32>]) -> Option<f32> {
+        let mut smoother = Smoother::default();
+        let start = Instant::now();
+        let mut last = None;
+
+        for (second, cpu) in readings.iter().enumerate() {
+            let now = start + Duration::from_secs(second as u64);
+            last = smoother.publish(&daemon_at(*cpu), now).samples[0].cpu_percent;
+        }
+
+        last
+    }
+
+    #[test]
+    fn five_quantised_seconds_publish_their_mean() {
+        let mean = published(&[Some(0.0), Some(1.56), Some(0.0), Some(3.12), Some(0.0)])
+            .expect("a figure");
+
+        assert!((mean - 0.936).abs() < 0.001, "{mean}");
+    }
+
+    #[test]
+    fn a_reading_older_than_five_seconds_is_dropped() {
+        // The 10.0 is six seconds before the last reading, so it is out of the window.
+        let mean = published(&[
+            Some(10.0),
+            Some(0.0),
+            Some(0.0),
+            Some(0.0),
+            Some(0.0),
+            Some(0.0),
+            Some(0.0),
+        ])
+        .expect("a figure");
+
+        assert!(mean.abs() < 0.001, "{mean}");
+    }
+
+    #[test]
+    fn one_reading_publishes_itself() {
+        assert_eq!(published(&[Some(2.5)]), Some(2.5));
+    }
+
+    #[test]
+    fn a_missing_reading_is_not_a_zero() {
+        assert_eq!(published(&[None, None]), None);
+        assert_eq!(published(&[None, Some(2.0)]), Some(2.0));
+    }
+
+    #[test]
+    fn the_raw_frame_is_left_as_it_was_for_the_history() {
+        let mut smoother = Smoother::default();
+        let start = Instant::now();
+        smoother.publish(&daemon_at(Some(0.0)), start);
+
+        let raw = daemon_at(Some(3.12));
+        let out = smoother.publish(&raw, start + Duration::from_secs(1));
+
+        assert_eq!(
+            raw.samples[0].cpu_percent,
+            Some(3.12),
+            "the peak the minute keeps"
+        );
+        assert_eq!(
+            out.samples[0].cpu_percent,
+            Some(1.56),
+            "the mean the stream shows"
+        );
+        assert_eq!(out.cores, 12);
+    }
+
+    #[test]
+    fn a_subject_absent_from_a_frame_is_forgotten() {
+        let mut smoother = Smoother::default();
+        let start = Instant::now();
+        smoother.publish(&daemon_at(Some(9.0)), start);
+
+        let empty = MetricsFrame {
+            at: Timestamp(0),
+            samples: vec![],
+            cores: 12,
+        };
+        smoother.publish(&empty, start + Duration::from_secs(1));
+
+        let back = smoother.publish(&daemon_at(Some(1.0)), start + Duration::from_secs(2));
+        assert_eq!(
+            back.samples[0].cpu_percent,
+            Some(1.0),
+            "a subject that went and came back starts again"
+        );
     }
 
     #[test]

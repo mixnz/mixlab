@@ -7,10 +7,11 @@ const HOUR = 60 * MINUTE;
 const MIB = 1024 * 1024;
 
 describe("CPU_UNIT.niceMax", () => {
-  /* Một subject nhàn rỗi không được phóng nhiễu lên thành núi: thang có sàn của nó. */
+  /* Một subject nhàn rỗi không được phóng nhiễu lên thành núi: thang có sàn của nó, từ T190c là
+     5% của cả máy. */
   it("never goes below its floor", () => {
-    expect(CPU_UNIT.niceMax(0)).toBe(25);
-    expect(CPU_UNIT.niceMax(3.2)).toBe(25);
+    expect(CPU_UNIT.niceMax(0)).toBe(5);
+    expect(CPU_UNIT.niceMax(3.2)).toBe(5);
   });
 
   it("rounds up to a readable step", () => {
@@ -36,9 +37,10 @@ describe("CPU_UNIT labels", () => {
     expect(CPU_UNIT.tick(0)).toBe("0%");
   });
 
-  /* Tooltip giữ đúng độ chính xác daemon gửi, như bảng Dashboard. */
-  it("writes a tooltip value at full precision", () => {
-    expect(CPU_UNIT.value(12.3456789)).toBe("12.3457%");
+  /* Tooltip đọc như Task Manager, như bảng Dashboard (T190c): một chữ số thập phân của cả máy. */
+  it("writes a tooltip value with one decimal, as Task Manager does", () => {
+    expect(CPU_UNIT.value(12.3456789)).toBe("12.3%");
+    expect(CPU_UNIT.value(0.02)).toBe("<0.1%");
   });
 });
 

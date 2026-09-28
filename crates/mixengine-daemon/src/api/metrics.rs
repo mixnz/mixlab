@@ -109,6 +109,7 @@ mod tests {
                 rss_bytes: 1,
                 processes: 1,
             }],
+            cores: 1,
         });
 
         let text = String::from_utf8(encoded.to_vec()).expect("utf-8");

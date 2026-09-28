@@ -353,11 +353,16 @@ function TrayPanel() {
                 {t("mixengine.tray.counts", { up: counts.up, total: counts.total })}
               </span>
               <div className={styles.usages}>
-                <DaemonUsage className={styles.usage} reading={readingFor(frame, DAEMON_SUBJECT)} />
+                <DaemonUsage
+                  className={styles.usage}
+                  reading={readingFor(frame, DAEMON_SUBJECT)}
+                  cores={frame?.cores ?? 1}
+                />
                 <DaemonUsage
                   className={styles.usage}
                   label={t("mixengine.tray.services")}
                   reading={servicesTotal(frame)}
+                  cores={frame?.cores ?? 1}
                 />
               </div>
             </section>

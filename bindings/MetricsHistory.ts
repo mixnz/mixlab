@@ -16,4 +16,10 @@ minutes: Array<MetricsMinute>,
 /**
  * How long this home keeps a row, so a client can say why its chart starts where it does.
  */
-retention_hours: number, };
+retention_hours: number, 
+/**
+ * How many logical processors this machine has — roadmap task **T190c**, and
+ * [`MetricsFrame::cores`]'s reason: what `cpu_avg` and `cpu_peak` are divided by to be drawn
+ * as a share of the machine. The rows themselves stay in percent of one core.
+ */
+cores: number, };

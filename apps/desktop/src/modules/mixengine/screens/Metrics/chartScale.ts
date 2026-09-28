@@ -1,4 +1,4 @@
-import { formatBytes, formatPercent } from "../../metricsState";
+import { formatBytes, formatCpu } from "../../metricsState";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -36,12 +36,12 @@ function niceCeil(value: number, base: number, steps: readonly number[]): number
 }
 
 /**
- * **Thang có sàn, không phải thang tự do.** Một daemon nhàn rỗi ở 0,3% mà thang chạy tới 0,5% thì
- * nhiễu đo đạc vẽ thành núi non; sàn giữ cho một đường phẳng trông phẳng. Sàn cố tình nhỏ — một
- * phần tư lõi — chứ không phải 100%: neo cứng ở một lõi sẽ dìm mọi chi tiết của một service thật sự
- * chỉ dùng vài phần trăm, mà vẫn không cứu nổi trường hợp đỉnh 250%.
+ * **Thang có sàn, không phải thang tự do.** Một daemon nhàn rỗi ở 0,03% mà thang chạy tới 0,05% thì
+ * nhiễu đo đạc vẽ thành núi non; sàn giữ cho một đường phẳng trông phẳng. Từ T190c biểu đồ vẽ theo
+ * phần trăm **cả máy** như Task Manager, nên sàn là 5% của máy chứ không còn là một phần tư lõi: đủ
+ * nhỏ để một service dùng vài phần trăm vẫn thấy rõ hình dạng, đủ lớn để nhiễu không thành núi.
  */
-const CPU_FLOOR = 25;
+const CPU_FLOOR = 5;
 
 /** Cùng lý do, phía byte: dưới 64 MB thì cái đang nhìn là nhiễu cấp phát, không phải mức dùng. */
 const RSS_FLOOR = 64 * MIB;
@@ -56,7 +56,8 @@ export const CPU_UNIT: Unit = {
   niceMax: (peak) => Math.max(CPU_FLOOR, niceCeil(peak, 10, PERCENT_STEPS)),
   // Hai chữ số thập phân rồi bỏ số 0 thừa: `25`, `2.5`, `125` — không phải `25.0000%` của tooltip.
   tick: (value) => `${Number(value.toFixed(2))}%`,
-  value: formatPercent,
+  // Giá trị đã là phần trăm cả máy (Metrics.tsx chia sẵn), nên mẫu số ở đây là 1 (T190c).
+  value: (share) => formatCpu(share, 1),
 };
 
 export const RSS_UNIT: Unit = {

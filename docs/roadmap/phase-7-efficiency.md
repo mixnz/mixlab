@@ -286,6 +286,14 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       (D4, 9.9 ms of CPU per probe down to 0.5 ms). The daemon at rest went from 0.82% of a core to
       0.53%, and the 30-second burst is gone. The 0.45% target was not met. A trace finds no single
       source left above 1 ms/s, only several small periodic tasks, recorded in the spec.
+- [x] **T190c** CPU is shown the way Task Manager shows it. `cpu_percent` is a share of one core,
+      the unit a limit is declared in, and the tray printed it as such: 0.53% of one core is 0.04%
+      of a twelve-thread machine, the scale a person brings. The per-second figure also jumped
+      between 0, 1.56 and 3.1% because Windows counts CPU time in 15.6 ms quanta. Frames and
+      histories carry the machine's logical processors, the stream carries the mean of the last
+      five seconds, and MixLab and `mix` show a share of the machine with one decimal. The stored
+      history and the limits keep their unit.
+      Design: [2026-09-29-t190c-cpu-is-shown-the-way-task-manager-shows-it-design.md](../specs/2026-09-29-t190c-cpu-is-shown-the-way-task-manager-shows-it-design.md).
 - [x] **T72** CI budgets: `mixengined` idle < 32 MB RSS, with the published total reported beside
       it — failing the build on regression. **(P)**
       Design: [2026-08-30-t72-ci-budgets-design.md](../specs/2026-08-30-t72-ci-budgets-design.md).

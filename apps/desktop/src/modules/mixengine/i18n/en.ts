@@ -387,6 +387,7 @@ export default {
       limits: {
         title: "Limits",
         cpu: "CPU",
+        cpuHint: "Percent of one core. 100 is a whole core.",
         memory: "Memory",
         priority: "Priority",
         priorityNormal: "Normal",

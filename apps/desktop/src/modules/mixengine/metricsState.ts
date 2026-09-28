@@ -18,12 +18,18 @@ export function metricsSubjectFor(serviceId: string): string {
 /** Subject của chính daemon — không có `ServiceRow` tương ứng, vẽ riêng khỏi bảng service. */
 export const DAEMON_SUBJECT = "daemon";
 
-/** Parse một message thô từ `/metrics`. `null` nếu không phải một `MetricsFrame` hợp lệ. */
+/**
+ * Parse một message thô từ `/metrics`. `null` nếu không phải một `MetricsFrame` hợp lệ.
+ *
+ * Frame của daemon cũ hơn T190c không có `cores`: con số của nó vốn là phần trăm của một lõi, nên
+ * `cores` mặc định là 1 thay vì từ chối cả frame.
+ */
 export function parseMetricsFrame(raw: string): MetricsFrame | null {
   try {
-    const value = JSON.parse(raw) as { at?: unknown; samples?: unknown };
+    const value = JSON.parse(raw) as { at?: unknown; samples?: unknown; cores?: unknown };
     if (typeof value.at !== "number" || !Array.isArray(value.samples)) return null;
-    return value as unknown as MetricsFrame;
+    const cores = typeof value.cores === "number" ? value.cores : 1;
+    return { ...(value as unknown as MetricsFrame), cores };
   } catch {
     return null;
   }
@@ -76,8 +82,25 @@ export function formatBytes(bytes: number): string {
   return `${shown} ${BYTE_UNITS[unit]}`;
 }
 
-/** `cpu_percent` làm tròn 4 chữ số thập phân — `250` (hai lõi rưỡi) đọc thành `"250.0000%"`, giữ
- *  đúng độ chính xác daemon gửi thay vì cắt về số nguyên. */
-export function formatPercent(value: number): string {
-  return `${value.toFixed(4)}%`;
+/**
+ * `cpu_percent` (phần trăm của một lõi) quy ra phần trăm của cả máy — T190c.
+ *
+ * Mẫu số là số luồng logic daemon gửi kèm (`MetricsFrame.cores`, `MetricsHistory.cores`), cũng là
+ * mẫu số Task Manager dùng. `cores` bằng 0 được coi là 1.
+ */
+export function machineShare(percentOfOneCore: number, cores: number): number {
+  return percentOfOneCore / Math.max(1, cores);
+}
+
+/**
+ * CPU như Task Manager hiển thị: phần trăm của cả máy, một chữ số thập phân.
+ *
+ * Khác 0 mà làm tròn ra `0.0` thì hiện `<0.1%`, để một tiến trình đang chạy không bao giờ trông như
+ * không làm gì; chưa đo được thì hiện `—`.
+ */
+export function formatCpu(percentOfOneCore: number | null, cores: number): string {
+  if (percentOfOneCore === null) return "—";
+  const share = machineShare(percentOfOneCore, cores);
+  if (share > 0 && share < 0.05) return "<0.1%";
+  return `${share.toFixed(1)}%`;
 }
