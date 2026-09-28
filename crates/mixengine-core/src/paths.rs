@@ -554,12 +554,10 @@ mod tests {
             ]
         };
 
+        // Compared as text: `Path`'s own `==` goes by components, and on Windows it calls
+        // `D:/bulk` and `D:\bulk` equal — the very difference this is about.
         for (written, expected) in cases {
-            assert_eq!(
-                native(Path::new(written)),
-                PathBuf::from(expected),
-                "{written}"
-            );
+            assert_eq!(native(Path::new(written)).as_os_str(), *expected, "{written}");
         }
     }
 

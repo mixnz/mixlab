@@ -808,9 +808,14 @@ pub fn set_paths(path: &Path, requested: &RequestedPaths) -> Result<Vec<&'static
     // would be written and the file would come back without them.
     table.set_implicit(false);
 
+    // Written in this system's spelling (T191); `toml_edit` escapes the backslashes a person
+    // writing the file by hand has to think about.
     for (key, asked) in requested.entries() {
-        if let Some(asked) = asked.and_then(Path::to_str) {
-            table[key] = toml_edit::value(asked);
+        if let Some(asked) = asked {
+            let spelled = crate::paths::native(asked);
+            if let Some(text) = spelled.to_str() {
+                table[key] = toml_edit::value(text);
+            }
         }
     }
 
@@ -889,7 +894,9 @@ where
         check_relocation(candidate).map_err(serde::de::Error::custom)?;
     }
 
-    Ok(path)
+    // Respelled once it has passed (T191): the template advises `/` for TOML's sake, and a path
+    // built under `D:/bulk` would otherwise read `D:/bulk\mariadb` everywhere it is shown.
+    Ok(path.map(|path| crate::paths::native(&path)))
 }
 
 /// The rule [`relocation`] enforces, as a function anything may call — roadmap task **T143**.
@@ -1137,6 +1144,81 @@ pub fn write_template(path: &Path) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// T191 D2: the template tells a person on Windows to write `/`; what the daemon uses is spelled
+    /// natively, so nothing built under it mixes the two.
+    #[test]
+    fn a_relocation_written_with_slashes_is_read_natively() {
+        let written = if cfg!(windows) {
+            "D:/bulk/data"
+        } else {
+            "/mnt/bulk/data"
+        };
+        let config: Config =
+            toml::from_str(&format!("[paths]\ndata = \"{written}\"\n")).expect("a configuration");
+        let data = config.paths.data.expect("set");
+
+        // Compared as text: `Path`'s own `==` goes by components, and on Windows it calls
+        // `D:/bulk/data` and `D:\bulk\data` equal — the very difference this is about.
+        let expected = if cfg!(windows) {
+            r"D:\bulk\data"
+        } else {
+            written
+        };
+        assert_eq!(data.as_os_str(), expected);
+    }
+
+    /// Single quotes and backslashes, the template's other advice, read exactly as before.
+    #[test]
+    fn a_relocation_written_with_backslashes_is_unchanged() {
+        let config: Config =
+            toml::from_str("[paths]\ndata = 'D:\\bulk\\data'\n").expect("a configuration");
+
+        assert_eq!(config.paths.data.expect("set").as_os_str(), r"D:\bulk\data");
+    }
+
+    /// A share stays a share.
+    #[test]
+    fn a_relocation_onto_a_share_keeps_its_prefix() {
+        let config: Config =
+            toml::from_str("[paths]\ndata = '\\\\server\\share/bulk'\n").expect("a configuration");
+        let data = config.paths.data.expect("set");
+
+        if cfg!(windows) {
+            assert_eq!(data.as_os_str(), r"\\server\share\bulk");
+        }
+    }
+
+    /// `set_paths` writes the native spelling, escaped by `toml_edit`, and `load` reads it back.
+    #[test]
+    fn set_paths_writes_what_load_reads_back() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let file = directory.path().join(FILE_NAME);
+        std::fs::write(&file, "").expect("an empty configuration");
+
+        let asked = if cfg!(windows) {
+            "D:/bulk/data"
+        } else {
+            "/mnt/bulk/data"
+        };
+        set_paths(
+            &file,
+            &RequestedPaths {
+                data: Some(PathBuf::from(asked)),
+                ..RequestedPaths::default()
+            },
+        )
+        .expect("written");
+
+        let written = std::fs::read_to_string(&file).expect("the file");
+        if cfg!(windows) {
+            assert!(!written.contains("D:/"), "{written}");
+        }
+
+        let read = load(&file).expect("read back").paths.data.expect("set");
+        let expected = if cfg!(windows) { r"D:\bulk\data" } else { asked };
+        assert_eq!(read.as_os_str(), expected);
+    }
 
     /// **On unless the user says otherwise**, and the shipped template says so in words —
     /// roadmap task **T124**.
