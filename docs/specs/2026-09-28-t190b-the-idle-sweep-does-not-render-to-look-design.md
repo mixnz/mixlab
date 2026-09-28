@@ -83,12 +83,60 @@ side effect nobody designed. After this task that happens at the next change or 
 `mix doctor` reports drift (T47b). Nothing documented promised a 30-second repair. The feature doc
 for idle stopping gets one sentence saying the sweep does not regenerate configuration.
 
+## D4. A database's health is asked in its own protocol, not by starting a program
+
+*Added after D1–D3 were built and measured.* With the 30-second burst gone, the floor on the real
+home still read 0.60% on average (twelve 20-second windows, median 0.51%), against a target of
+0.45%. The largest part of what is left was measured directly:
+
+| Source | Cost | How it was measured |
+| --- | --- | --- |
+| A `HealthProbe::Command` run: `mysqladmin ping` for MySQL, `redis-cli ping` for Redis, each every 10 s | **10.4 ms of CPU in the daemon per run**, so 2.1 ms/s, about **0.21%** | a bench calling `mixengine_supervisor::Surroundings::run` 30 times, reading the process's own CPU time |
+| Four supervisors waking every 250 ms (`runner.rs` `WATCH`) | under 0.1%: below one 15.6 ms quantum in 10 s, even with sixteen loops | a bench of the same loop shape |
+
+The ten milliseconds are what starting a process costs on Windows: a restricted token (ADR 0010),
+`CreateProcessAsUser`, and a thread per pipe. The daemon pays that twice every ten seconds to ask
+two servers whether they answer.
+
+**Two new probes answer the same question without a process.**
+
+- **`HealthProbe::MysqlGreeting { addr }`, for MySQL and MariaDB.** The probe opens a TCP
+  connection and reads the first packet the server sends. The server sends that packet from its
+  connection handler before any login, so an answer proves the server is accepting and serving
+  connections, not only that a listener is bound. **Healthy** means a complete packet header and a
+  payload whose first byte is `0x0a` (the handshake) or `0xff` (an error packet, such as
+  *too many connections* or *host blocked*). Anything else is unhealthy: nothing within the
+  timeout, a closed connection, or bytes that are not a MySQL packet. This is `mysqladmin ping`'s
+  own rule: its exit status is 0 whenever the server answers, *access denied* included. That is why
+  the probe needs no password, and why `MYSQL_PWD` is not read for it.
+- **`HealthProbe::RedisPing { addr }`, for Redis.** The probe opens a TCP connection, sends `PING`
+  as a RESP array, and reads one reply line. **Healthy** means `+PONG`, or any error reply except
+  `-LOADING` (for example `-NOAUTH`, which proves the server answered). **Unhealthy** means
+  `-LOADING` (the dataset is still loading and the server will not serve reads), no reply within
+  the timeout, or a closed connection.
+
+Both keep the `Command` probe's reason for existing. The doc comment on `HealthProbe::Command` says a
+TCP accept "only proves the listener is up". A greeting and a `PONG` are both written by the
+server's own request path, so they prove more than an accept. The interval, timeout and
+failure counts of each recipe's `HealthCheck` are unchanged.
+
+**What moves:**
+
+- `mixengine-proto`: the two variants, documented beside the others; `bindings/` regenerated
+  (`packaging/bindings.sh`). Neither MixLab nor `mix` renders a `HealthProbe`: `grep` finds it
+  only in `bindings/`.
+- `mixengine-supervisor`: `health.rs` learns both probes. The protocol parsing lives in a small
+  module of its own, with a pure function per reply so it can be tested without a socket.
+- Recipes: `mysql.rs` and `mariadb.rs` switch their `HealthCheck` to `MysqlGreeting`, and
+  `redis.rs` to `RedisPing`. Their **readiness** checks stay `Command`: a readiness check runs once
+  per start, not every ten seconds.
+
 ## MixLab
 
 **No screen changes and no new method.** The Services screen and the tray draw the same states. A
-PHP pool is still idle-stopped after the same delay, and started by the same request. The only
-difference a person can see is the daemon's CPU figure in the tray and on the Dashboard with nobody
-using anything.
+PHP pool is still idle-stopped after the same delay, and started by the same request. A database is
+still reported unhealthy by the same run of failures. The only difference a person can see is the
+daemon's CPU figure in the tray and on the Dashboard with nobody using anything.
 
 ## Testing
 
@@ -102,14 +150,24 @@ using anything.
   does not stop it, and it resets the tally.
 - **A stop on a fresh graph still happens.** The same setup with the fresh render agreeing: the
   service is stopped, and `declared()` was called exactly once for the stop.
+- **The two probes, without a socket (D4).** For MySQL: a handshake packet, an error packet, a
+  truncated header, an empty read and a non-MySQL banner, each judged by the pure function. For
+  Redis: `+PONG`, `-NOAUTH …`, `-LOADING …`, an empty read and garbage.
+- **The two probes, against a socket (D4).** A `TcpListener` in the test plays the server: it
+  writes a greeting, or `+PONG`, or `-LOADING`, or nothing and closes. `Health::probe` then answers
+  healthy or unhealthy within the check's timeout. A listener that accepts and never writes is
+  unhealthy when the timeout runs out, not later.
+- **The recipes (D4).** The MySQL, MariaDB and Redis recipe tests assert the new probe and the
+  unchanged interval, timeout and readiness check.
 - **The measurement.** A per-second timeline of the daemon's CPU time, as in T190a, on the real
   home with MixLab closed: the 30-second burst is gone, and the floor is recorded before and after
-  in six 20-second windows.
+  in twelve 20-second windows.
 
 | Target, the machine of T190a | Before | After |
 | --- | --- | --- |
 | Burst every 30 s | 60–95 ms | none |
-| Daemon, nobody watching | 0.7% | **≤ 0.45%** of one core |
+| One health probe of MySQL or Redis, CPU in the daemon | 10.4 ms | **< 1 ms** |
+| Daemon, nobody watching | 0.83% | **≤ 0.45%** of one core |
 
 ## Out of scope
 
@@ -119,3 +177,7 @@ using anything.
   when somebody asked.
 - **The sweep's period.** Thirty seconds stays. It is the observation that has to be frequent, not
   the rendering.
+- **PostgreSQL's `pg_isready`.** Its protocol needs a startup message rather than a greeting, and no
+  PostgreSQL was running on the measured home. It gets its own task if a measurement asks for it.
+- **Making a process start cheaper.** The restricted token is ADR 0010's, and D4 removes the start
+  from the loop that runs every ten seconds rather than shaving it.
