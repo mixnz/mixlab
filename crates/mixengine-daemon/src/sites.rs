@@ -1157,12 +1157,7 @@ fn summary(
 
 /// Root plus doc root, as the filesystem spells it. `""` is the root itself.
 fn doc_root_full(root: &Path, doc_root: &str) -> PathBuf {
-    match doc_root.is_empty() {
-        true => root.to_path_buf(),
-        false => doc_root
-            .split('/')
-            .fold(root.to_path_buf(), |path, part| path.join(part)),
-    }
+    mixengine_core::paths::join_stored(root, doc_root)
 }
 
 /// A proxy target is an address: an absolute `http`/`https` URL with a host, a path allowed.
