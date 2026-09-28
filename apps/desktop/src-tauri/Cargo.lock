@@ -3774,7 +3774,7 @@ dependencies = [
 
 [[package]]
 name = "mixengine-platform"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "dbus-secret-service",
  "directories",
@@ -3798,7 +3798,7 @@ dependencies = [
 
 [[package]]
 name = "mixengine-proto"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "serde",
  "serde_json",
@@ -3807,7 +3807,7 @@ dependencies = [
 
 [[package]]
 name = "mixengine-testkit"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "clap",
  "flate2",
@@ -3828,7 +3828,7 @@ dependencies = [
 
 [[package]]
 name = "mixlab"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "arboard",
  "argon2 0.5.3",

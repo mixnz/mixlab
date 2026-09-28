@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.10
+
 ### Added
 - MixLab and `mix service adopt` bring back databases an earlier install left in its folders, with
   a new admin password. The databases inside are kept.
