@@ -45,7 +45,8 @@ pub enum Opens {
 ///
 /// `data/<package>/<instance>` for a server with named instances, `data/<package>` for one that
 /// exists once. `data/extensions` (an extension's own data), a name that starts with a dot, a
-/// package no recipe is found under, and an empty directory are none of them an instance.
+/// package no recipe is found under, an empty directory, and an instance's temporary directory
+/// beside it are none of them an instance.
 ///
 /// # Errors
 ///
@@ -89,7 +90,10 @@ pub async fn found(
         };
 
         for (instance, path) in candidates {
-            if recorded.contains(&(package.clone(), instance.clone())) || is_empty(&path) {
+            if recorded.contains(&(package.clone(), instance.clone()))
+                || is_empty(&path)
+                || is_scratch(&path)
+            {
                 continue;
             }
             found.push(FoundInstance {
@@ -159,6 +163,24 @@ fn series_of(package: &str, version: &PackageVersion) -> Option<String> {
 fn made_by(dir: &Path) -> Option<PackageVersion> {
     let text = std::fs::read_to_string(dir.join(READY_MARKER)).ok()?;
     PackageVersion::parse(text.trim()).ok()
+}
+
+/// Whether `dir` is another instance's temporary directory rather than an instance of its own.
+///
+/// The MySQL family keeps its temporary files in `<data>.tmp`, beside the data directory
+/// (`recipes::scratch_dir`), and the server writes to it on every start, so it is never empty. A
+/// `<name>.tmp` beside a `<name>` is that directory, unless its own first run finished — an
+/// instance a person named that way.
+fn is_scratch(dir: &Path) -> bool {
+    let Some(owner) = dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .and_then(|name| name.strip_suffix(".tmp"))
+    else {
+        return false;
+    };
+
+    dir.with_file_name(owner).is_dir() && !dir.join(READY_MARKER).exists()
 }
 
 fn is_empty(dir: &Path) -> bool {
@@ -294,6 +316,47 @@ mod tests {
             .expect("a walk");
 
         assert!(found.is_empty(), "{found:?}");
+    }
+
+    #[tokio::test]
+    async fn an_instances_scratch_directory_is_not_an_instance() {
+        let (_temp, store, paths) = home().await;
+        data(&paths, "mysql/5.7", Some("5.7.44"));
+        let scratch = paths.data().join("mysql/5.7.tmp");
+        std::fs::create_dir_all(&scratch).expect("the scratch directory");
+        std::fs::write(scratch.join("ibFA1E.tmp"), b"").expect("a temporary file");
+
+        let found = found(&store, &paths, &Catalogue::builtin())
+            .await
+            .expect("a walk");
+
+        assert_eq!(
+            found
+                .iter()
+                .map(|found| found.instance.as_str())
+                .collect::<Vec<_>>(),
+            ["5.7"]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_finished_instance_named_like_a_scratch_directory_is_still_found() {
+        let (_temp, store, paths) = home().await;
+        data(&paths, "mariadb/main", Some("11.4.3"));
+        data(&paths, "mariadb/main.tmp", Some("11.4.3"));
+
+        let mut found = found(&store, &paths, &Catalogue::builtin())
+            .await
+            .expect("a walk");
+        found.sort_by(|left, right| left.instance.cmp(&right.instance));
+
+        assert_eq!(
+            found
+                .iter()
+                .map(|found| found.instance.as_str())
+                .collect::<Vec<_>>(),
+            ["main", "main.tmp"]
+        );
     }
 
     #[tokio::test]
