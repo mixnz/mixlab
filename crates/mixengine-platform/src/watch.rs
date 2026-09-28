@@ -19,7 +19,9 @@ use std::path::{Path, PathBuf};
 use notify::event::{EventKind, ModifyKind};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher as _};
 
-/// The watch, for as long as it is held. Dropping it stops every notification it asked for.
+/// The watch, for as long as it is held. Dropping it stops every notification it asked for, on
+/// Windows a moment later: the backend stops on a thread of its own, so a change made right after
+/// the drop can still be heard.
 #[derive(Debug)]
 pub struct Watch {
     _watcher: Option<RecommendedWatcher>,
@@ -173,9 +175,16 @@ mod tests {
             .expect("no notification arrived when the missing directory was created");
     }
 
-    /// The watch belongs to its value: once dropped, nothing more is delivered.
+    /// The watch belongs to its value: once dropped, it goes quiet.
+    ///
+    /// **Soon after, not at once.** On Windows `notify` stops a watch on a thread of its own:
+    /// dropping sends that thread a message and returns, and `CancelIo` runs when the thread gets to
+    /// it, so a change made in that moment is still heard. CI run 36424733552 caught exactly that on
+    /// a loaded `windows-latest` runner, with one write straight after the drop. Every caller answers
+    /// a notification by looking again, so a late one costs a scan; what matters is that a dropped
+    /// watch stops, and that is what this asserts.
     #[test]
-    fn a_dropped_watch_hears_nothing() {
+    fn a_dropped_watch_goes_quiet() {
         let home = tempfile::tempdir().expect("a temporary directory");
         let (sender, heard) = mpsc::channel();
 
@@ -187,12 +196,22 @@ mod tests {
         });
 
         drop(watch);
-        std::fs::write(home.path().join("yarn"), b"").expect("write a file");
 
-        assert_eq!(
-            heard.recv_timeout(Duration::from_millis(500)),
-            Err(mpsc::RecvTimeoutError::Timeout),
-            "a watch that had been dropped still delivered a notification"
+        // One write per probe, and a probe that hears nothing within half a second is the quiet
+        // being asked for. Twenty probes is about ten seconds, far beyond any stop seen so far.
+        const PROBES: usize = 20;
+        let quiet = (0..PROBES).any(|probe| {
+            std::fs::write(home.path().join(format!("probe-{probe}")), b"").expect("write a file");
+            let delivered = heard.recv_timeout(Duration::from_millis(500)).is_ok();
+            // One write can arrive as several events; they belong to this probe, not the next.
+            while heard.try_recv().is_ok() {}
+            !delivered
+        });
+
+        assert!(
+            quiet,
+            "a dropped watch was still delivering notifications after {PROBES} writes, about ten \
+             seconds: dropping it did not stop it"
         );
         drop(kept);
     }
