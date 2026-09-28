@@ -234,6 +234,14 @@ reading, and the daemon at 0.8–1.4% of a core with a stream open, of which 0.6
 nobody watching
 ([design](../specs/2026-09-28-t190-a-reading-on-windows-does-not-list-the-machine-design.md)).
 
+**Stored per core, shown per machine (T190c).** `cpu_percent`, `cpu_avg` and `cpu_peak` stay a
+percentage of one core, the unit a limit is declared in. Every frame and history carries `cores`,
+the machine's logical processors, and MixLab and `mix` divide by it to show a share of the whole
+machine with one decimal, as Task Manager does. The figure on the stream is the mean of the last
+five seconds of readings, because one second of CPU time on Windows is a count of 15.6 ms quanta.
+The minute history is kept from the readings themselves
+([design](../specs/2026-09-29-t190c-cpu-is-shown-the-way-task-manager-shows-it-design.md)).
+
 **The reading is `mixengine-platform`'s `ProcessMetrics`, not `sysinfo` in the daemon** — the same
 place every other question about this machine is asked, with a programmable mock beside it, which is
 what lets the minute arithmetic and the retention be tested from invented numbers. A group is walked
