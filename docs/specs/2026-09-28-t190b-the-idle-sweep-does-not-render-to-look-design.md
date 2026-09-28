@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-09-28
 task: T190b
 ---
@@ -168,6 +168,39 @@ daemon's CPU figure in the tray and on the Dashboard with nobody using anything.
 | Burst every 30 s | 60–95 ms | none |
 | One health probe of MySQL or Redis, CPU in the daemon | 10.4 ms | **< 1 ms** |
 | Daemon, nobody watching | 0.83% | **≤ 0.45%** of one core |
+
+### Measured
+
+Release builds (`MIXENGINE_RELEASE=1`, `crt-static`), on the real home with four services running
+(caddy, mysql@5.7, php-fpm@7.3.33, redis@main) and MixLab closed. Each build was started by `mix`.
+"Mean" is the mean of the 20-second windows; the timeline is the daemon's CPU time over 120 s.
+
+| Build | Mean of the 20 s windows | 120 s timeline | Burst every 30 s |
+| --- | --- | --- | --- |
+| Original, measured twice | 0.83% (6) / 0.81% (6) | 0.84% / 0.76% | 62–156 ms |
+| D1–D3 | 0.60% (12) | 0.64% | none |
+| **D1–D4** | **0.53%** (12) | **0.53%** | none |
+
+| Bench | Before | After |
+| --- | --- | --- |
+| One health probe of MySQL, CPU in the probing process | 9.90 ms (`Command`) | **0.52 ms** (`MysqlGreeting`, the fake server included) |
+
+**The first two targets are met; the third is not.** The floor fell by about 35%, from 0.82% to
+0.53%, and the 30-second burst is gone. **0.45% was not reached, and the target is not moved.** A
+60-second ETW trace of the D1–D4 build (`/OPT:NOICF`, frame pointers) names what remains:
+
+| Samples in 58 s (ETW's own stack walking set apart) | What | How often | Without a trace |
+| --- | --- | --- | --- |
+| ~24 | `CreateToolhelp32Snapshot` in `Sampler::measure` | once a minute | ~7 ms a minute (T190's bench) |
+| ~23 | `TcpStream::connect` and close for the health probes and the idle probe | four connections every 10 s | small; ETW inflates socket calls in the kernel most |
+| ~14 | the `notify` crate's watcher thread over the runtimes' bindirs | wakes every 100 ms, inside `notify`'s Windows backend | ~0.02% |
+| ~3–5 | the sharing check's interface list | every 30 s | ~0.01% |
+| ~190 | tokio's scheduler and timers, the heap, context switches | spread | no single source |
+
+**No single source remains above 1 ms/s.** What is left is the sum of several small periodic tasks
+and the runtime underneath four supervised services. Going lower means making that whole family
+less frequent (probes, watcher, timers). That is a design change beyond this task, and the owner
+chose to ship this one with the gap recorded rather than hold it for that.
 
 ## Out of scope
 
