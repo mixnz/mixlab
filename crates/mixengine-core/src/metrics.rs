@@ -62,6 +62,7 @@ pub async fn history(
     store: &Store,
     query: &MetricsHistoryQuery,
     retention_hours: u32,
+    cores: u32,
 ) -> Result<MetricsHistory> {
     let subject = query.subject.as_ref().map(ToString::to_string);
     let since = query.since.map_or(i64::MIN, |at| at.0);
@@ -113,6 +114,7 @@ pub async fn history(
     Ok(MetricsHistory {
         minutes,
         retention_hours,
+        cores,
     })
 }
 
@@ -176,7 +178,7 @@ mod tests {
             .await
             .expect("written");
 
-        let read = history(&store, &MetricsHistoryQuery::default(), 24)
+        let read = history(&store, &MetricsHistoryQuery::default(), 24, 1)
             .await
             .expect("read");
 
@@ -199,7 +201,7 @@ mod tests {
 
         write_minute(&store, &row).await.expect("written");
 
-        let read = history(&store, &MetricsHistoryQuery::default(), 24)
+        let read = history(&store, &MetricsHistoryQuery::default(), 24, 1)
             .await
             .expect("read");
 
@@ -225,7 +227,7 @@ mod tests {
             .expect("a delete over no rows is still a delete");
 
         assert_eq!(
-            history(&store, &MetricsHistoryQuery::default(), 24)
+            history(&store, &MetricsHistoryQuery::default(), 24, 1)
                 .await
                 .expect("read")
                 .minutes
@@ -256,6 +258,7 @@ mod tests {
                 until: None,
             },
             24,
+            1,
         )
         .await
         .expect("read");
@@ -277,7 +280,7 @@ mod tests {
 
         assert_eq!(trim(&store, Timestamp(120_000)).await.expect("trimmed"), 1);
 
-        let left = history(&store, &MetricsHistoryQuery::default(), 24)
+        let left = history(&store, &MetricsHistoryQuery::default(), 24, 1)
             .await
             .expect("read");
 
@@ -296,7 +299,7 @@ mod tests {
             .await
             .expect("written again");
 
-        let read = history(&store, &MetricsHistoryQuery::default(), 24)
+        let read = history(&store, &MetricsHistoryQuery::default(), 24, 1)
             .await
             .expect("read");
 
@@ -317,7 +320,7 @@ mod tests {
         .expect("a row somebody wrote by hand");
 
         assert!(
-            history(&store, &MetricsHistoryQuery::default(), 24)
+            history(&store, &MetricsHistoryQuery::default(), 24, 1)
                 .await
                 .expect("read")
                 .minutes

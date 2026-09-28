@@ -1604,7 +1604,11 @@ impl Api {
     ///
     /// Whatever [`mixengine_core::metrics::history`] reports when the table cannot be read.
     async fn metrics_history(&self, query: &MetricsHistoryQuery) -> Result<MetricsHistory, Error> {
-        mixengine_core::metrics::history(&self.store, query, self.metrics.retention_hours())
+        // The machine's logical processors ride along (T190c), so a client draws the rows as a
+        // share of the machine without asking a second question.
+        let cores = self.elevation.host().resource_control().support().cores;
+
+        mixengine_core::metrics::history(&self.store, query, self.metrics.retention_hours(), cores)
             .await
             .map_err(|error| error.to_wire())
     }

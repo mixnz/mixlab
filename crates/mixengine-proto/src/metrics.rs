@@ -132,6 +132,20 @@ pub struct MetricsFrame {
     /// One per subject that could be measured. **A subject that could not is absent** — never a
     /// sample of zero, because *not measured* and *measured nothing* are different facts.
     pub samples: Vec<MetricsSample>,
+
+    /// How many logical processors this machine has — roadmap task **T190c**.
+    ///
+    /// What a client divides [`MetricsSample::cpu_percent`] by to show a share of the whole
+    /// machine, as Task Manager does. The same count as
+    /// [`LimitSupport::cores`](crate::LimitSupport). A frame from a daemon older than this field
+    /// reads as `1`, which is the unit it was always in.
+    #[serde(default = "one_core")]
+    pub cores: u32,
+}
+
+/// What a reply from a daemon older than roadmap task T190c meant: percent of one core.
+const fn one_core() -> u32 {
+    1
 }
 
 /// One subject's minute, out of the 24-hour history.
@@ -197,6 +211,12 @@ pub struct MetricsHistory {
 
     /// How long this home keeps a row, so a client can say why its chart starts where it does.
     pub retention_hours: u32,
+
+    /// How many logical processors this machine has — roadmap task **T190c**, and
+    /// [`MetricsFrame::cores`]'s reason: what `cpu_avg` and `cpu_peak` are divided by to be drawn
+    /// as a share of the machine. The rows themselves stay in percent of one core.
+    #[serde(default = "one_core")]
+    pub cores: u32,
 }
 
 #[cfg(test)]
@@ -205,6 +225,29 @@ mod tests {
 
     fn service(id: &str) -> MetricsSubject {
         MetricsSubject::Service(ServiceId::parse(id).expect("an id"))
+    }
+
+    /// Frames and histories say what one core is worth here — roadmap task **T190c**.
+    #[test]
+    fn a_frame_carries_the_machine_s_cores_and_an_old_one_reads_as_one() {
+        let frame = MetricsFrame {
+            at: Timestamp(1),
+            samples: vec![],
+            cores: 12,
+        };
+        let json = serde_json::to_value(&frame).expect("serialised");
+        assert_eq!(json["cores"], 12);
+
+        let old: MetricsFrame =
+            serde_json::from_str(r#"{"at":1,"samples":[]}"#).expect("an old daemon's frame");
+        assert_eq!(
+            old.cores, 1,
+            "percent of one core, which is what an old daemon meant"
+        );
+
+        let history: MetricsHistory =
+            serde_json::from_str(r#"{"minutes":[],"retention_hours":24}"#).expect("an old history");
+        assert_eq!(history.cores, 1);
     }
 
     #[test]
@@ -252,6 +295,7 @@ mod tests {
                 rss_bytes: 42_000,
                 processes: 1,
             }],
+            cores: 1,
         };
 
         let json = serde_json::to_string(&frame).expect("serialises");

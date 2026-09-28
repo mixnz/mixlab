@@ -4926,6 +4926,7 @@ mod tests {
         let rendered = metrics_frame(&MetricsFrame {
             at: Timestamp(60_000),
             samples: vec![sample(MetricsSubject::Daemon, None, 41_943_040)],
+            cores: 1,
         });
 
         assert!(rendered.contains("40.0 MiB"), "{rendered}");
@@ -4941,6 +4942,7 @@ mod tests {
         let rendered = metrics_frame(&MetricsFrame {
             at: Timestamp(60_000),
             samples: Vec::new(),
+            cores: 1,
         });
 
         assert_eq!(
@@ -4967,6 +4969,7 @@ mod tests {
                     samples: 60,
                 }],
                 retention_hours: 24,
+                cores: 1,
             },
             now,
         );
@@ -4989,6 +4992,7 @@ mod tests {
             &MetricsHistory {
                 minutes: Vec::new(),
                 retention_hours: 24,
+                cores: 1,
             },
             SystemTime::now(),
         );

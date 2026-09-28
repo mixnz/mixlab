@@ -78,7 +78,12 @@ fn frame_from(host: &dyn Host, at: Timestamp, subjects: &[Subject]) -> MetricsFr
         })
         .collect();
 
-    MetricsFrame { at, samples }
+    MetricsFrame {
+        at,
+        samples,
+        // What one core is worth here, so every client divides by the same number (T190c).
+        cores: host.resource_control().support().cores,
+    }
 }
 
 /// The daemon's own group, or [`None`] where this process cannot be identified.
