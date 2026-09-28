@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-09-28
 task: T190
 ---
@@ -147,6 +147,36 @@ unaffected.
 
 If the daemon does not reach 1%, what remains is profiled and named in this spec before the task
 is ticked, rather than the target being moved.
+
+### Measured
+
+Release builds, the same machine. The daemon was measured on its real home, seven services with
+four running, started by MixLab. The build under test was built as `packaging/stage.sh` builds one
+(`MIXENGINE_RELEASE=1`, `crt-static`). Without that flag a build resolves `MixEngine-dev`, not the
+home it was meant to measure.
+
+| Measurement | Before | After |
+| --- | --- | --- |
+| `one_refresh_costs`, Windows, a reading at the fast rate | 14.6 ms | **41 µs** |
+| `one_refresh_costs`, Windows, a reading that lists the machine | 14.3 ms | 6.9 ms |
+| `one_refresh_costs`, WSL, a reading at the fast rate | 450 µs | 198 µs |
+| `one_refresh_costs`, WSL, a reading that lists the machine | 1.13 ms | 1.12 ms |
+| Daemon, nobody watching | 0.70% | 0.63–0.70% |
+| Daemon, one stream open (20 s runs) | 5.94, 5.23, 5.70% | 0.78, 0.78, 1.25, 0.94, 1.41, 1.41% |
+
+**The first target is met. The second is met in three runs of six.** The cost a stream adds fell
+about twelve-fold, but the 1% line is not reliably under. What remains, named as far as it was
+measured:
+
+- **0.63–0.70% is spent with nobody watching**, before and after alike. It comes from outside the
+  sampler, which at the 60-second rate costs 0.0001% of a core.
+- **The reading itself** is 41 µs a second, plus 6.9 ms once in ten seconds: about 0.07%.
+- **The remaining 0.1–0.7%** is the rest of the tick while a stream is open: `services::records`
+  read from the database each second, the frame built and written to the stream. It was not
+  profiled function by function, because an ETW trace needs an administrator shell.
+
+**Ticked with this gap, by the owner's decision, not by moving the target.** The profile of the
+idle floor and of the rest of the tick is its own task, **T190a**.
 
 ## Out of scope
 
