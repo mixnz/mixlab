@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { serviceStateKey, serviceStateTone, toggleMode } from "./serviceStateLabel";
+import { serviceStateHint, serviceStateKey, serviceStateTone, toggleMode } from "./serviceStateLabel";
 
 describe("serviceStateKey", () => {
   it("names a key for every state the closed enum has", () => {
@@ -98,17 +98,20 @@ describe("a service MixEngine stopped", () => {
   it("is resting, in a tone of its own", () => {
     expect(serviceStateKey("stopped", "daemon")).toBe("mixengine.serviceState.resting");
     expect(serviceStateTone("stopped", "daemon")).toBe("resting");
+    expect(serviceStateHint("stopped", "daemon")).toBe("mixengine.serviceState.restingHint");
   });
 
   it("changes nothing when a person stopped it, nobody did, or the daemon did not say", () => {
     for (const stoppedBy of ["person", "never", null, undefined] as const) {
       expect(serviceStateKey("stopped", stoppedBy)).toBe("mixengine.serviceState.stopped");
       expect(serviceStateTone("stopped", stoppedBy)).toBe("bad");
+      expect(serviceStateHint("stopped", stoppedBy)).toBeNull();
     }
   });
 
   it("changes nothing for a service that is not stopped", () => {
     expect(serviceStateKey("running", "daemon")).toBe("mixengine.serviceState.running");
     expect(serviceStateTone("failed", "daemon")).toBe("bad");
+    expect(serviceStateHint("running", "daemon")).toBeNull();
   });
 });

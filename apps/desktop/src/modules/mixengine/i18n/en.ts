@@ -345,7 +345,8 @@ export default {
       stopping: "Stopping",
       restarting: "Restarting",
       failed: "Failed",
-      resting: "Resting — starts on the next visit",
+      resting: "Resting",
+      restingHint: "Starts again on the next visit.",
     },
     serviceForm: {
       newService: "New service",

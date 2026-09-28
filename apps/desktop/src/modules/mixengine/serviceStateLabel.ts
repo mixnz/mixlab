@@ -32,6 +32,19 @@ export function serviceStateKey(
 }
 
 /**
+ * Câu giải thích đi kèm nhãn trạng thái, cho tooltip, hoặc `null` khi nhãn đã tự nói đủ.
+ *
+ * Nhãn nằm trong pill và trong những ô hẹp — bảng Dashboard, tray — nên phải ngắn; "sẽ tự bật lại"
+ * là phần người dùng cần biết nhưng không cần đọc mỗi lần liếc qua.
+ */
+export function serviceStateHint(
+  state: string | null | undefined,
+  stoppedBy?: StoppedBy | null,
+): "mixengine.serviceState.restingHint" | null {
+  return state === "stopped" && stoppedBy === "daemon" ? "mixengine.serviceState.restingHint" : null;
+}
+
+/**
  * Ba sắc thái một trạng thái được vẽ bằng, hoặc `null` khi không biết trạng thái đó là gì.
  *
  * Ba chứ không phải bảy: màu ở đây trả lời "có đang phục vụ không", không phải "đang ở state nào"

@@ -340,7 +340,8 @@ const vi: typeof en = {
       stopping: "Đang dừng",
       restarting: "Đang khởi động lại",
       failed: "Hỏng",
-      resting: "Đang nghỉ — tự bật ở lần truy cập tới",
+      resting: "Đang nghỉ",
+      restingHint: "Tự bật lại ở lần truy cập tới.",
     },
     serviceForm: {
       newService: "Tạo service",

@@ -17,7 +17,7 @@ import * as api from "../api";
 import DaemonUsage from "../components/DaemonUsage";
 import { applyEvent, needsResync, rowsFrom, type ServiceRow } from "../daemonState";
 import { ensureDaemonWatch, subscribeDaemonWatch } from "../daemonWatch";
-import { serviceStateKey, serviceStateTone, toggleMode } from "../serviceStateLabel";
+import { serviceStateHint, serviceStateKey, serviceStateTone, toggleMode } from "../serviceStateLabel";
 import { DAEMON_SUBJECT, parseMetricsFrame, readingFor, servicesTotal } from "../metricsState";
 import { siteVisit } from "../siteState";
 import { isFree } from "../storagePicker";
@@ -294,6 +294,11 @@ function TrayPanel() {
     return key === null ? (row.state ?? "—") : t(key);
   }
 
+  function stateHint(row: ServiceRow): string | undefined {
+    const key = serviceStateHint(row.state, row.stoppedBy);
+    return key === null ? undefined : t(key);
+  }
+
   const running = presence === "running";
   const counts = serviceCounts(rows);
 
@@ -426,6 +431,7 @@ function TrayPanel() {
                             className={styles.rowState}
                             tone={pending ? "warning" : pillTone(row)}
                             pulse={mode === "moving"}
+                            title={pending ? undefined : stateHint(row)}
                           >
                             {pending
                               ? t(pending === "stop" ? "mixengine.dashboard.stopping" : "mixengine.dashboard.starting")

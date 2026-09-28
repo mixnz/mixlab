@@ -28,6 +28,9 @@
   replaced by a newer one.
 - On Windows, MixLab opens straight into its window. An empty window no longer flashes and
   disappears first.
+- On a narrow window, a resting service no longer makes the Dashboard's service table scroll
+  sideways, and memory such as `44.3 MB` stays on one line. Hover *Resting* to see when it starts
+  again.
 
 ## v0.0.9
 

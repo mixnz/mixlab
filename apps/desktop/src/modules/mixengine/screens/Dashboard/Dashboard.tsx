@@ -68,7 +68,7 @@ import {
   opensADatabase,
 } from "../ServicesDetail/openChoices";
 import { eventArrived, noReadsYet, readBegan, readLanded } from "../../readOrder";
-import { serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStateLabel";
+import { serviceStateHint, serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStateLabel";
 import CleanupDialog from "./CleanupDialog";
 import DiskUsagePanel from "./DiskUsagePanel";
 import FoundServices from "./FoundServices";
@@ -521,6 +521,12 @@ export default function Dashboard({
     return key === null ? (state ?? "—") : t(key);
   }
 
+  /** Câu mà nhãn ngắn bỏ bớt, cho tooltip của pill. */
+  function stateHint(state: string | null | undefined, stoppedBy?: StoppedBy | null): string | undefined {
+    const key = serviceStateHint(state, stoppedBy);
+    return key === null ? undefined : t(key);
+  }
+
   const runningCount = rows.filter((row) => isServing(row.state)).length;
   const movingCount = rows.filter(
     (row) => busy[row.id] !== undefined || toggleMode(row.state, false) === "moving",
@@ -719,7 +725,11 @@ export default function Dashboard({
                           {t(PENDING_LABEL[busy[row.id]])}
                         </StatusPill>
                       ) : (
-                        <StatusPill tone={pillTone(row.state, row.stoppedBy)} pulse={mode === "moving"}>
+                        <StatusPill
+                          tone={pillTone(row.state, row.stoppedBy)}
+                          pulse={mode === "moving"}
+                          title={stateHint(row.state, row.stoppedBy)}
+                        >
                           {stateLabel(row.state, row.stoppedBy)}
                         </StatusPill>
                       )}
@@ -736,15 +746,17 @@ export default function Dashboard({
                         )}
                       />
                     </td>
-                    <td className={row.port === null ? styles.none : styles.mono}>{row.port ?? "—"}</td>
+                    <td className={row.port === null ? styles.none : styles.mono} data-nowrap>{row.port ?? "—"}</td>
                     {/* Vắng mặt trong frame là "—", không phải 0%: một service rảnh và một service không
                         đo được là hai câu khác nhau. */}
-                    <td className={styles.mono}>
+                    <td className={styles.mono} data-nowrap>
                       {reading === null || reading.cpu_percent === null
                         ? "—"
                         : formatPercent(reading.cpu_percent)}
                     </td>
-                    <td className={styles.mono}>{reading === null ? "—" : formatBytes(reading.rss_bytes)}</td>
+                    <td className={styles.mono} data-nowrap>
+                      {reading === null ? "—" : formatBytes(reading.rss_bytes)}
+                    </td>
                     <td data-align="end" data-nowrap>
                       <span className={styles.actions}>
                         {mode === "moving" ? (

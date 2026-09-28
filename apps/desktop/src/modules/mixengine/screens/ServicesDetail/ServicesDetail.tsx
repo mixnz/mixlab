@@ -14,7 +14,7 @@ import * as api from "../../api";
 import type { ServiceCreation, ServiceSummary, StoppedBy } from "@mixengine/api";
 import { movesARow, needsResync } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
-import { serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStateLabel";
+import { serviceStateHint, serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStateLabel";
 import { afterRefusal } from "../../forceStep";
 import ServiceForm from "../../components/ServiceForm";
 import AutostartPanel from "./AutostartPanel";
@@ -102,6 +102,12 @@ export default function ServicesDetail({ active }: { active: boolean }) {
   function stateLabel(state: string | null | undefined, stoppedBy?: StoppedBy | null): string {
     const key = serviceStateKey(state, stoppedBy);
     return key === null ? (state ?? "—") : t(key);
+  }
+
+  /** Câu mà nhãn ngắn bỏ bớt, cho tooltip. */
+  function stateHint(state: string | null | undefined, stoppedBy?: StoppedBy | null): string | undefined {
+    const key = serviceStateHint(state, stoppedBy);
+    return key === null ? undefined : t(key);
   }
 
   /* Select the service just created: whoever stood it up is about to set its limits and idle. */
@@ -214,7 +220,7 @@ export default function ServicesDetail({ active }: { active: boolean }) {
                   <span className={styles.instance}>{serviceInstance(service.id)}</span>
                   {service.version != null && <span className={styles.version}>{service.version}</span>}
                 </span>
-                <span className={styles.rowState}>
+                <span className={styles.rowState} title={stateHint(service.state, service.stopped_by)}>
                   <span className={`${styles.dot} ${styles[dotTone(service.state, service.stopped_by)]}`} aria-hidden="true" />
                   {stateLabel(service.state, service.stopped_by)}
                 </span>
@@ -238,7 +244,11 @@ export default function ServicesDetail({ active }: { active: boolean }) {
                 // State, role and port on the title's own line: one glance reads the whole service.
                 current !== undefined && (
                   <>
-                    <StatusPill tone={pillTone(current.state, current.stopped_by)} pulse={mode === "moving"}>
+                    <StatusPill
+                      tone={pillTone(current.state, current.stopped_by)}
+                      pulse={mode === "moving"}
+                      title={pending !== undefined ? undefined : stateHint(current.state, current.stopped_by)}
+                    >
                       {pending !== undefined ? t(PENDING_LABEL[pending]) : stateLabel(current.state, current.stopped_by)}
                     </StatusPill>
                     {current.role?.role === "front_end" && (
