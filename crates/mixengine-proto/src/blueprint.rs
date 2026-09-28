@@ -499,7 +499,8 @@ pub enum PlanAction {
         /// pool a new site uses is decided when the site is made, on the machine that makes it.
         kind: SiteKind,
 
-        /// Relative to the project root; `""` is the root itself.
+        /// Relative to the project root, spelled the way this system spells a path; `""` is the
+        /// root itself.
         doc_root: String,
 
         /// Whether HTTPS is declared.

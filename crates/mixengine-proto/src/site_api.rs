@@ -109,7 +109,8 @@ pub enum RouteTarget {
     /// Files from a directory, with **the matched prefix stripped**: `/assets` over `dist` answers
     /// `/assets/app.css` out of `<root>/dist/app.css`.
     Static {
-        /// Absolute, or relative to the owner's root — [`SiteSummary::doc_root`]'s rule.
+        /// Absolute, or relative to the owner's root, spelled the way this system spells a path —
+        /// [`SiteSummary::doc_root`]'s rule.
         root: String,
     },
 }
@@ -343,7 +344,8 @@ pub struct SiteSummary {
     /// What it serves.
     pub kind: SiteKind,
 
-    /// Relative to the project's root, as stored. `""` is the root itself.
+    /// Relative to the project's root, spelled the way this system spells a path. `""` is the
+    /// root itself.
     pub doc_root: String,
 
     /// Whether HTTPS is declared.

@@ -117,12 +117,11 @@ apply that follows passes it to `site.create`, which accepts either spelling for
 This is done in the daemon rather than in each client, for the rule that neither client carries
 logic: `mix` and MixLab would each need a copy, and they would drift apart. No type changes.
 
-**The fields' doc comments in `mixengine-proto` are not changed in this task**, although "as
-stored" no longer describes what Windows receives. Every byte of `mixengine-proto` is part of the
-privileged helper's fingerprint (`packaging/helper-lock.mjs`, T182b). A comment edit there would
-move `HELPER_VERSION`, and every install would then replace its elevated helper on the next update,
-elevation prompt included, for no change in behaviour. The comment is corrected the next time a
-release moves the helper for a reason of its own.
+The fields' doc comments change from "as stored" to "spelled the way this system spells a path",
+and `bindings/` is regenerated for them. Every byte of `mixengine-proto` is part of the privileged
+helper's fingerprint (`packaging/helper-lock.mjs`, T182b), so the comment edit moves
+`HELPER_VERSION` to 0.1.3. Installs replace their helper on the next update, which is the cost of a
+contract that says what it sends.
 
 A blueprint is the exception, and it stays one. A manifest's `doc_root` is portable text written for
 every system, and `mix blueprint export` keeps writing `/`.
@@ -206,6 +205,3 @@ check.
   changing any spelling.
 - **D3 changes what a field holds on Windows.** Every client of `bindings/` is in this repository,
   and no stored value changes, so nothing outside needs migrating.
-- **Three proto doc comments say "as stored" until the helper next moves** (see D3). The
-  follow-up is to correct `SiteSummary::doc_root`, `RouteTarget::Static::root` and
-  `PlanAction::CreateSite::doc_root` in the same release as the next `HELPER_VERSION` bump.

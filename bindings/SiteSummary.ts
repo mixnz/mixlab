@@ -22,7 +22,8 @@ owner: SiteOwner,
  */
 kind: SiteKind, 
 /**
- * Relative to the project's root, as stored. `""` is the root itself.
+ * Relative to the project's root, spelled the way this system spells a path. `""` is the
+ * root itself.
  */
 doc_root: string, 
 /**

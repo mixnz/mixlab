@@ -26,6 +26,7 @@ upstream: string, } | { "target": "php-fpm",
  */
 pool?: ServiceId | null, } | { "target": "static", 
 /**
- * Absolute, or relative to the owner's root — [`SiteSummary::doc_root`]'s rule.
+ * Absolute, or relative to the owner's root, spelled the way this system spells a path —
+ * [`SiteSummary::doc_root`]'s rule.
  */
 root: string, };
