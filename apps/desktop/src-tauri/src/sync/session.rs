@@ -8,7 +8,7 @@
 //! conflict's winners, leaves as a token and plain items; only when the shell hands the token back
 //! are versions and hashes recorded and the cursor moved (D4, and `lend`'s module comment).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -1047,6 +1047,40 @@ impl SyncState {
         self.with_session(|session| {
             let (name, items) = (name.clone(), items.clone());
             async move { lend::notice(&session.store, &session.keys, &name, &items, now()).await }
+        })
+        .await
+    }
+
+    /// Which of `collections` a full run must pull, in one request; every other one's cursor is
+    /// moved past this machine's own writes (T189). Plain names in, plain names out.
+    pub async fn heads(&self, collections: Vec<String>) -> Result<Vec<String>, AppError> {
+        let collections = Arc::new(collections);
+        self.with_session(|session| {
+            let collections = collections.clone();
+            async move {
+                let opaque: Vec<String> = collections
+                    .iter()
+                    .map(|name| crypto::opaque_id(&session.keys.id, name))
+                    .collect();
+                let stale: HashSet<String> = engine::stale(
+                    &session.transport,
+                    &session.store,
+                    &session.limits,
+                    &opaque,
+                    APP_VERSION,
+                )
+                .await?
+                .into_iter()
+                .collect();
+                Ok::<_, AppError>(
+                    collections
+                        .iter()
+                        .zip(&opaque)
+                        .filter(|(_, id)| stale.contains(*id))
+                        .map(|(name, _)| name.clone())
+                        .collect(),
+                )
+            }
         })
         .await
     }

@@ -7,18 +7,18 @@ describe("the direction icon", () => {
 
   const ended = (run: "full" | "push") => ({ run, error: undefined, finished: true });
 
-  it("never shows for a pull shorter than the delay", () => {
+  it("never shows for a download shorter than the delay", () => {
     const store = createActivity();
-    store.runStarted("full");
+    store.downloading();
     vi.advanceTimersByTime(SHOW_AFTER_MS - 1);
     store.runEnded(ended("full"));
     vi.advanceTimersByTime(SHOW_AT_LEAST_MS);
     expect(store.get().direction).toBeNull();
   });
 
-  it("shows down for a long full run, and stays at least the minimum once shown", () => {
+  it("shows down for a long download, and stays at least the minimum once shown", () => {
     const store = createActivity();
-    store.runStarted("full");
+    store.downloading();
     vi.advanceTimersByTime(SHOW_AFTER_MS);
     expect(store.get().direction).toBe("down");
     store.runEnded(ended("full"));
@@ -30,19 +30,29 @@ describe("the direction icon", () => {
 
   it("keeps its icon through back-to-back runs", () => {
     const store = createActivity();
-    store.runStarted("full");
+    store.downloading();
     vi.advanceTimersByTime(SHOW_AFTER_MS);
     store.runEnded(ended("full"));
-    store.runStarted("full");
+    store.downloading();
     vi.advanceTimersByTime(SHOW_AT_LEAST_MS * 2);
     expect(store.get().direction).toBe("down");
+  });
+
+  it("never shows for a full run that only asks, however long it takes", () => {
+    // T189: a full run first asks the server what changed. Asking is not downloading, and a run
+    // told that nothing changed only pushes.
+    const store = createActivity();
+    vi.advanceTimersByTime(SHOW_AFTER_MS * 10);
+    store.runEnded(ended("full"));
+    vi.advanceTimersByTime(SHOW_AT_LEAST_MS);
+    expect(store.get().direction).toBeNull();
+    expect(store.get().lastSyncedAt).not.toBeNull();
   });
 
   it("never shows for a push that sends nothing, however long it takes", () => {
     // A push is the local check alt-tabbing runs: reading every collection, sending nothing when
     // nothing changed. Measured at 240–465ms with eleven rows on, so a delay alone does not hide it.
     const store = createActivity();
-    store.runStarted("push");
     vi.advanceTimersByTime(SHOW_AFTER_MS * 10);
     expect(store.get().direction).toBeNull();
     store.runEnded(ended("push"));
@@ -51,7 +61,6 @@ describe("the direction icon", () => {
 
   it("shows up at once when a push sends, and holds it the minimum", () => {
     const store = createActivity();
-    store.runStarted("push");
     store.uploading();
     expect(store.get().direction).toBe("up");
     store.runEnded(ended("push"));
@@ -63,7 +72,7 @@ describe("the direction icon", () => {
 
   it("turns a full run's down into up once it sends, after down has had its minimum", () => {
     const store = createActivity();
-    store.runStarted("full");
+    store.downloading();
     vi.advanceTimersByTime(SHOW_AFTER_MS);
     store.uploading();
     expect(store.get().direction).toBe("down");
@@ -73,7 +82,7 @@ describe("the direction icon", () => {
 
   it("goes straight to up when a full run sends before down was due", () => {
     const store = createActivity();
-    store.runStarted("full");
+    store.downloading();
     store.uploading();
     expect(store.get().direction).toBe("up");
     vi.advanceTimersByTime(SHOW_AFTER_MS);
@@ -82,10 +91,9 @@ describe("the direction icon", () => {
 
   it("lets a full run's icon stop on time when a push follows it", () => {
     const store = createActivity();
-    store.runStarted("full");
+    store.downloading();
     vi.advanceTimersByTime(SHOW_AFTER_MS);
     store.runEnded(ended("full"));
-    store.runStarted("push");
     store.runEnded(ended("push"));
     vi.advanceTimersByTime(SHOW_AT_LEAST_MS);
     expect(store.get().direction).toBeNull();
@@ -97,7 +105,7 @@ describe("the direction icon", () => {
     store.subscribe(heard);
     const before = store.get();
     expect(store.get()).toBe(before);
-    store.runStarted("full");
+    store.downloading();
     vi.advanceTimersByTime(SHOW_AFTER_MS);
     expect(heard).toHaveBeenCalled();
     expect(store.get()).not.toBe(before);

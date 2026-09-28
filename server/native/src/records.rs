@@ -767,3 +767,91 @@ pub async fn list(
         Ok(Some(Ok(page))) => axum::Json(page).into_response(),
     }
 }
+
+/// `POST /v1/records/heads` (T189, D2): which of the cursors a pull would bring news of. A row
+/// this device wrote is not news to it, since its push remembered the row; a row of unknown device
+/// is. One snapshot, so `nextSince` never names a seq the tests below did not see (M3).
+pub async fn heads(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: String,
+) -> Response {
+    let fields = match parse(&body) {
+        Ok(fields) => fields,
+        Err(failure) => return failure.into_response(),
+    };
+    let limits = state.config.capabilities.clone();
+    let cursors = fields.get("cursors").and_then(Value::as_object);
+    let count = cursors.map_or(0, Map::len);
+    if count == 0 || count as u64 > limits.max_batch_operations {
+        return invalid_request(format!(
+            "`cursors` names between 1 and {} collections.",
+            limits.max_batch_operations
+        ))
+        .into_response();
+    }
+    let mut asked = Vec::with_capacity(count);
+    for (collection, since) in cursors.into_iter().flatten() {
+        if !is_opaque_id(collection) {
+            return invalid_request("A collection ID must be 64 lowercase hex characters.")
+                .into_response();
+        }
+        // `as_i64` is `None` for 1.5 and for "5": a cursor is an integer, never coerced.
+        let Some(since) = since.as_i64().filter(|since| *since >= 0) else {
+            return invalid_request("A cursor is a sequence number.").into_response();
+        };
+        asked.push((collection.clone(), since));
+    }
+
+    let outcome = state
+        .db
+        .call(move |connection| {
+            let Some(session) = authenticate(connection, &headers) else {
+                return Ok(None);
+            };
+            let snapshot = connection.transaction()?;
+            let (reaped_below, latest): (i64, i64) = snapshot.query_row(
+                "SELECT reaped_below_seq, next_seq FROM account WHERE id = ?1",
+                params![session.account_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )?;
+            let mut stale = Vec::new();
+            {
+                let mut any = snapshot.prepare(
+                    "SELECT 1 FROM record WHERE account_id = ?1 AND collection = ?2 LIMIT 1",
+                )?;
+                let mut another = snapshot.prepare(
+                    "SELECT 1 FROM record
+                     WHERE account_id = ?1 AND collection = ?2 AND seq > ?3 AND device != ?4
+                     LIMIT 1",
+                )?;
+                for (collection, since) in &asked {
+                    // A pull would answer 410 (D3): stale, so the client meets it and resyncs.
+                    let is_stale = if *since > 0 && *since < reaped_below {
+                        true
+                    } else if *since == 0 {
+                        any.exists(params![session.account_id, collection])?
+                    } else {
+                        another.exists(params![
+                            session.account_id,
+                            collection,
+                            since,
+                            session.device_id
+                        ])?
+                    };
+                    if is_stale {
+                        stale.push(collection.clone());
+                    }
+                }
+            }
+            snapshot.commit()?;
+            Ok(Some(json!({ "stale": stale, "nextSince": latest })))
+        })
+        .await;
+
+    match outcome {
+        Err(error) => server_error(error),
+        Ok(None) => invalid_token().into_response(),
+        Ok(Some(answer)) => axum::Json(answer).into_response(),
+    }
+}

@@ -15,14 +15,24 @@ import {
 const nothing: SyncChanges = { upserts: [], removed: [] };
 const one: SyncChanges = { upserts: [{ id: "a", data: 1 }], removed: [] };
 
-/** A backend that says what it was asked, in order. */
-function backend(pages: PulledPage[], pushed: PushedChanges = { accepted: 0, replaced: nothing, token: null, error: null, needsPull: false }) {
+/** A backend that says what it was asked, in order. `stale` is what `heads` names. */
+function backend(
+  pages: PulledPage[],
+  pushed: PushedChanges = { accepted: 0, replaced: nothing, token: null, error: null, needsPull: false },
+  stale: (ids: string[]) => Promise<string[]> = async (ids) => ids,
+) {
   const calls: string[] = [];
+  const pulled: string[] = [];
   const queue = [...pages];
   const fake: SyncBackend = {
     notice: async () => void calls.push("notice"),
-    pullPage: async () => {
+    heads: async (ids) => {
+      calls.push("heads");
+      return stale(ids);
+    },
+    pullPage: async (collection) => {
       calls.push("pull");
+      pulled.push(collection);
       return queue.shift() ?? { token: "end", changes: nothing, more: false };
     },
     commitPull: async (_c, token) => void calls.push(`commitPull ${token}`),
@@ -32,15 +42,16 @@ function backend(pages: PulledPage[], pushed: PushedChanges = { accepted: 0, rep
     },
     commitPush: async (_c, token) => void calls.push(`commitPush ${token}`),
   };
-  return { fake, calls };
+  return { fake, calls, pulled };
 }
 
 function collection(
   calls: string[],
   write: (changes: SyncChanges) => Promise<void> = async () => {},
+  id = "c",
 ): SyncableCollection {
   return {
-    id: "c",
+    id,
     labelKey: "sync.preferences",
     read: async () => {
       calls.push("read");
@@ -121,6 +132,7 @@ describe("one collection", () => {
     let pushes = 0;
     const fake: SyncBackend = {
       notice: async () => void calls.push("notice"),
+      heads: async (ids) => ids,
       pullPage: async () => {
         calls.push("pull");
         return { token: "p1", changes: nothing, more: false };
@@ -428,6 +440,61 @@ describe("the loop", () => {
     expect(loop.starts()).toBe(0);
     expect(loop.ends).toEqual([]);
   });
+
+  it("asks once per full run, and pulls only what the answer names", async () => {
+    const shared = backend([], undefined, async () => ["d"]);
+    const calls = shared.calls;
+    const stop = startSyncLoop({
+      backend: shared.fake,
+      collections: () => [collection(calls), collection(calls, undefined, "d")],
+      onFocus: () => () => {},
+      onRequest: () => () => {},
+      onReplaced: () => {},
+      onError: () => {},
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    stop();
+    expect(calls.filter((call) => call === "heads")).toHaveLength(1);
+    expect(shared.pulled).toEqual(["d"]);
+    expect(calls.filter((call) => call === "push")).toHaveLength(2);
+  });
+
+  it("a failed heads fails the run and touches no collection", async () => {
+    const shared = backend([], undefined, () => Promise.reject({ code: "error.syncServerRefused" }));
+    const errors: unknown[] = [];
+    const ends: RunResult[] = [];
+    const stop = startSyncLoop({
+      backend: shared.fake,
+      collections: () => [collection(shared.calls)],
+      onFocus: () => () => {},
+      onRequest: () => () => {},
+      onReplaced: () => {},
+      onError: (_id, error) => void errors.push(error),
+      onRunEnd: (result) => void ends.push(result),
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    stop();
+    expect(shared.calls).toEqual(["heads"]);
+    expect(errors).toHaveLength(1);
+    expect(ends[0]?.error).toEqual({ code: "error.syncServerRefused" });
+  });
+
+  it("stays quiet when heads says signed out", async () => {
+    const shared = backend([], undefined, () => Promise.reject({ code: "error.syncNotSignedIn" }));
+    const errors: unknown[] = [];
+    const stop = startSyncLoop({
+      backend: shared.fake,
+      collections: () => [collection(shared.calls)],
+      onFocus: () => () => {},
+      onRequest: () => () => {},
+      onReplaced: () => {},
+      onError: (_id, error) => void errors.push(error),
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    stop();
+    expect(errors).toEqual([]);
+    expect(shared.calls).toEqual(["heads"]);
+  });
 });
 
 describe("the upload signal", () => {
@@ -472,6 +539,42 @@ describe("the upload signal", () => {
     const loop = uploadHarness((onSending) => void late.push(onSending));
     await vi.advanceTimersByTimeAsync(0);
     for (const onSending of late) onSending();
+    loop.stop();
+    expect(loop.heard).toEqual(["start full", "end full"]);
+  });
+});
+
+describe("the download signal", () => {
+  beforeEach(() => void vi.useFakeTimers());
+  afterEach(() => void vi.useRealTimers());
+
+  function downloadHarness(stale: (ids: string[]) => Promise<string[]>) {
+    const { fake } = backend([], undefined, stale);
+    const heard: string[] = [];
+    const stop = startSyncLoop({
+      backend: fake,
+      collections: () => [collection([])],
+      onFocus: () => () => {},
+      onRequest: () => () => {},
+      onReplaced: () => {},
+      onError: () => {},
+      onRunStart: (run) => void heard.push(`start ${run}`),
+      onDownloading: () => void heard.push("downloading"),
+      onRunEnd: ({ run }) => void heard.push(`end ${run}`),
+    });
+    return { heard, stop };
+  }
+
+  it("says a full run downloads once heads names something to pull", async () => {
+    const loop = downloadHarness(async (ids) => ids);
+    await vi.advanceTimersByTimeAsync(0);
+    loop.stop();
+    expect(loop.heard).toEqual(["start full", "downloading", "end full"]);
+  });
+
+  it("says nothing of a download when heads names nothing, as asking is not downloading", async () => {
+    const loop = downloadHarness(async () => []);
+    await vi.advanceTimersByTimeAsync(0);
     loop.stop();
     expect(loop.heard).toEqual(["start full", "end full"]);
   });

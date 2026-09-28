@@ -47,6 +47,11 @@ export interface PushedChanges {
 export interface SyncBackend {
   /** Stamps this machine's changes before a pull, so the pull can weigh them (D4). Sends nothing. */
   notice(collection: string, items: SyncItem[]): Promise<void>;
+  /**
+   * Which of these collections a full run must pull, in one request (T189). Every other one's
+   * cursor moves past this machine's own writes, so it is only pushed.
+   */
+  heads(collections: string[]): Promise<string[]>;
   pullPage(collection: string): Promise<PulledPage>;
   /** `skipped`: what the module did not write, which sync must not agree on (T178a, L4). */
   commitPull(collection: string, token: string, skipped: string[]): Promise<void>;
@@ -57,6 +62,7 @@ export interface SyncBackend {
 
 export const tauriSync: SyncBackend = {
   notice: (collection, items) => invoke("sync_notice", { collection, items }),
+  heads: (collections) => invoke("sync_heads", { collections }),
   pullPage: (collection) => invoke("sync_pull_page", { collection }),
   commitPull: (collection, token, skipped) => invoke("sync_commit_pull", { collection, token, skipped }),
   push: (collection, items, onSending) => {

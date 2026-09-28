@@ -12,6 +12,10 @@
 - `php`, `node`, `python` and the rest are on your PATH only for the languages you installed with
   MixEngine, so a Node.js or Python you installed yourself is no longer hidden. A tool you add with
   `npm install -g` or `pip install` is a command as soon as it lands.
+- Sync asks your server once what changed on your other machines, instead of once for each kind
+  of item. A sync server you run yourself needs updating to this release.
+- The download icon shows only when another machine changed something, not every time sync
+  checks with your server.
 - Start MixEngine waits until the four data folders are listed, so you can move them before the
   first start.
 
@@ -20,6 +24,8 @@
   turns them on for the PHP version the project uses, not the newest one installed.
 - Reinstalling MixLab over folders an earlier install kept now lists the runtimes and packages
   already in them, instead of refusing to install them again.
+- If MixLab closed while sync was sending an edit, it no longer says afterwards that the edit was
+  replaced by a newer one.
 - On Windows, MixLab opens straight into its window. An empty window no longer flashes and
   disappears first.
 

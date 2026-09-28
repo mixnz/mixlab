@@ -416,6 +416,30 @@ past a deletion and leave the two machines disagreeing about which one won.
   missed nothing, so it is never expired. A client sends it on every page of a resync after the
   first, and nowhere else. Any other value is `400 invalid-request`.
 
+`POST /v1/records/heads` — which collections a pull would bring news of, in one request (T189):
+
+```json
+{ "cursors": { "<collection>": 903, "<collection>": 0 } }
+```
+
+```json
+{ "stale": ["<collection>"], "nextSince": 911 }
+```
+
+- **Mandatory in `/v1`**, and not announced in `features`: a client asks it before every full run
+  and has no other way to learn what changed.
+- A collection is **stale** when `0 < since` and `since` is below the oldest surviving tombstone
+  (a pull would answer `410`); when `since` is `0` and the collection holds any row; or when it
+  holds a row with `seq > since` written by **another device** than the one asking. A row whose
+  device is unknown counts as another's. A collection the asking device alone wrote to since the
+  cursor is not stale.
+- `nextSince` is the account's latest `seq`, read with the answer. A client moves the cursor of
+  every collection it asked about and was not told is stale to `nextSince`: nothing another
+  machine wrote lies between, and the rest this device already has.
+- `cursors` holds between 1 and `maxBatchOperations` entries, each a collection id and an integer
+  `≥ 0`. Anything else is `400 invalid-request`.
+- A read: a frozen account answers it.
+
 `POST /v1/records/batch`:
 
 ```json

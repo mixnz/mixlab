@@ -273,6 +273,126 @@ async fn two_machines_settle_a_conflict_the_same_way() {
     assert_eq!(open(&data_key, &last), b"laptop's");
 }
 
+/// T189: the machine that wrote is told nothing is new and its cursor steps over its own write;
+/// the other machine is told to pull.
+#[tokio::test]
+#[ignore = "needs a sync server in test-outbox mode; see the module comment"]
+async fn heads_name_what_another_machine_wrote_and_step_over_an_echo() {
+    let master = crypto::new_master_key();
+    let (id_key, data_key) = (crypto::id_key(&master), crypto::data_key(&master));
+    let collection = crypto::opaque_id(&id_key, "saved-queries");
+    let version = env!("CARGO_PKG_VERSION");
+
+    let (email, a) = account().await;
+    let (desktop, desktop_store, desktop_device) = machine(&email, &a, "desktop").await;
+    let (laptop, laptop_store, _) = machine(&email, &a, "laptop").await;
+    let limits = desktop.capabilities().await.unwrap();
+
+    // Both machines have read the account once, so neither cursor is 0.
+    let first = crypto::opaque_id(&id_key, "first");
+    engine::push(
+        &desktop,
+        &desktop_store,
+        &limits,
+        &desktop_device,
+        vec![seal(&data_key, &collection, &first, b"select 1", 100)],
+    )
+    .await
+    .unwrap();
+    pull_all(&desktop, &desktop_store, &collection).await;
+    pull_all(&laptop, &laptop_store, &collection).await;
+
+    let second = crypto::opaque_id(&id_key, "second");
+    engine::push(
+        &desktop,
+        &desktop_store,
+        &limits,
+        &desktop_device,
+        vec![seal(&data_key, &collection, &second, b"select 2", 200)],
+    )
+    .await
+    .unwrap();
+
+    let told_desktop = engine::stale(
+        &desktop,
+        &desktop_store,
+        &limits,
+        std::slice::from_ref(&collection),
+        version,
+    )
+    .await
+    .unwrap();
+    let told_laptop = engine::stale(
+        &laptop,
+        &laptop_store,
+        &limits,
+        std::slice::from_ref(&collection),
+        version,
+    )
+    .await
+    .unwrap();
+    assert!(told_desktop.is_empty());
+    assert_eq!(told_laptop, vec![collection.clone()]);
+
+    let echo = engine::fetch(&desktop, &desktop_store, &collection, version)
+        .await
+        .unwrap();
+    assert!(
+        echo.records.is_empty(),
+        "the desktop's cursor stepped over its own write"
+    );
+}
+
+/// T189, the shell's call: plain names in, plain names out, one request for the lot.
+#[tokio::test]
+#[ignore = "needs a sync server in test-outbox mode; see the module comment"]
+async fn the_client_asks_which_collections_to_pull_by_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let (desktop, email) = signed_up(dir.path(), "desktop", "correct horse").await;
+    let laptop = machine_state(dir.path(), "laptop");
+    laptop
+        .login(&server(), None, &email, "correct horse".into(), "laptop")
+        .await
+        .unwrap();
+    let names = vec!["query-snippets".to_string(), "rest-requests".to_string()];
+
+    // Never pulled: stale without asking.
+    assert_eq!(desktop.heads(names.clone()).await.unwrap(), names);
+
+    // An account nobody has written to ends every pull at 0, which is a cursor that has seen
+    // nothing: something is written first, so both machines' cursors are past it.
+    let first = Item {
+        id: "a-snippet".into(),
+        data: json!({ "sql": "select 1" }),
+    };
+    pull_everything(&desktop, "query-snippets").await;
+    desktop
+        .push("query-snippets", vec![first.clone()])
+        .await
+        .unwrap();
+    for name in &names {
+        pull_everything(&desktop, name).await;
+        pull_everything(&laptop, name).await;
+    }
+    let second = Item {
+        id: "another-snippet".into(),
+        data: json!({ "sql": "select 2" }),
+    };
+    desktop
+        .push("query-snippets", vec![first, second])
+        .await
+        .unwrap();
+
+    assert_eq!(
+        desktop.heads(names.clone()).await.unwrap(),
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        laptop.heads(names).await.unwrap(),
+        vec!["query-snippets".to_string()]
+    );
+}
+
 #[tokio::test]
 #[ignore = "needs a sync server in test-outbox mode; see the module comment"]
 async fn a_wrong_code_is_a_wrong_code() {

@@ -94,6 +94,15 @@ pub async fn sync_notice(
     state.notice(&collection, items).await
 }
 
+/// The collections a full run must pull, asked of the server in one request (T189).
+#[tauri::command]
+pub async fn sync_heads(
+    state: State<'_, SyncState>,
+    collections: Vec<String>,
+) -> Result<Vec<String>, AppError> {
+    state.heads(collections).await
+}
+
 #[tauri::command]
 pub async fn sync_pull_page(
     state: State<'_, SyncState>,

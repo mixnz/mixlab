@@ -272,6 +272,17 @@ export function since(
   return call(`/v1/records?${query}`, { token });
 }
 
+/** `POST /v1/records/heads` (T189). */
+export interface Heads {
+  stale: string[];
+  nextSince: number;
+}
+
+/** `cursors` is `unknown` so a test can send what a client never should. */
+export function heads(token: string, cursors: unknown): Promise<Result<Heads & Partial<ErrorBody>>> {
+  return call("/v1/records/heads", { body: { cursors }, token });
+}
+
 /** Create one record and hand back everything a test needs to keep working with it. */
 export async function seed(
   token: string,

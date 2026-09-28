@@ -34,7 +34,7 @@ export function startSync(): () => void {
       return () => window.removeEventListener(SYNC_NOW_EVENT, listener);
     },
     onReplaced: noteReplaced,
-    onRunStart: syncActivity.runStarted,
+    onDownloading: syncActivity.downloading,
     onUploading: syncActivity.uploading,
     onRunEnd: syncActivity.runEnded,
     // An `AppError` is a plain object, which `String()` would print as `[object Object]`.

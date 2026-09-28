@@ -140,6 +140,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/v1/account/check", post(accounts::check_verifier))
         .route("/v1/records", get(records::list))
         .route("/v1/records/batch", post(records::batch))
+        .route("/v1/records/heads", post(records::heads))
         .route(
             "/v1/records/{collection}/{id}",
             put(records::write).delete(records::write),

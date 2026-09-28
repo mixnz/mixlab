@@ -4,6 +4,7 @@
 //! a key the server chose and the person reads a sentence MixLab chose (D4a). And `reqwest` here
 //! has no `json` feature, so bodies are encoded and decoded with `serde_json` by hand.
 
+use std::collections::BTreeMap;
 use std::future::Future;
 use std::time::Duration;
 
@@ -12,7 +13,7 @@ use reqwest::{Client, Method, RequestBuilder, Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use super::wire::{BatchResponse, BatchResult, Capabilities, ErrorBody, Operation, Page};
+use super::wire::{BatchResponse, BatchResult, Capabilities, ErrorBody, Heads, Operation, Page};
 use crate::error::AppError;
 
 /// What a pull can be told about its cursor.
@@ -38,6 +39,15 @@ pub trait Remote {
         &self,
         operations: &[Operation],
     ) -> impl Future<Output = Result<Vec<BatchResult>, AppError>> + Send;
+}
+
+/// `POST /v1/records/heads` (T189). A trait of its own rather than a third method of [`Remote`]:
+/// every fake that pages or pushes would have to answer a question it is never asked.
+pub trait AskHeads {
+    fn heads(
+        &self,
+        cursors: &BTreeMap<String, i64>,
+    ) -> impl Future<Output = Result<Heads, AppError>> + Send;
 }
 
 pub struct Transport {
@@ -143,6 +153,25 @@ impl Remote for Transport {
         read::<BatchResponse>(response)
             .await
             .map(|batch| batch.results)
+    }
+}
+
+impl AskHeads for Transport {
+    async fn heads(&self, cursors: &BTreeMap<String, i64>) -> Result<Heads, AppError> {
+        #[derive(Serialize)]
+        struct Body<'a> {
+            cursors: &'a BTreeMap<String, i64>,
+        }
+        let body = serde_json::to_vec(&Body { cursors })
+            .map_err(|_| err!("error.syncCannotEncodeRequest"))?;
+        let response = self
+            .request(Method::POST, "/v1/records/heads")
+            .header(CONTENT_TYPE, "application/json")
+            .body(body)
+            .send()
+            .await
+            .map_err(unreachable)?;
+        read(response).await
     }
 }
 
