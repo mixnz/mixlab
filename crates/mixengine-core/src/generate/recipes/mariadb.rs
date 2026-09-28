@@ -419,10 +419,9 @@ impl Recipe for Mariadb {
                 timeout: millis(settings.number(READY_TIMEOUT)),
             })
             .health(HealthCheck {
-                probe: HealthProbe::Command {
-                    program: admin.clone(),
-                    args: ping(addr),
-                },
+                // The server's greeting, not `mariadb-admin ping`: the same answer without starting
+                // a process every ten seconds — roadmap task T190b, D4.
+                probe: HealthProbe::MysqlGreeting { addr },
                 interval: HEALTH_INTERVAL,
                 timeout: HEALTH_TIMEOUT,
                 // Three rather than one: a probe can miss its window behind a checkpoint flush on a
@@ -885,6 +884,28 @@ mod tests {
     /// a generated `.env` names `127.0.0.1`, and `mariadb` typed with no host at all names the
     /// socket. Waking on only one of them leaves the other client hanging against an address
     /// nothing holds.
+    /// **Health is asked in the server's own protocol** — roadmap task T190b, D4. Readiness, which
+    /// runs once per start, still asks the client program.
+    #[test]
+    fn health_is_asked_in_the_protocol_and_readiness_is_still_the_client() {
+        let spec = Mariadb
+            .spec(&context("{}"))
+            .expect("a spec")
+            .build()
+            .expect("a valid spec");
+        let health = spec.health().expect("a health check");
+
+        assert!(
+            matches!(health.probe, HealthProbe::MysqlGreeting { .. }),
+            "{health:?}"
+        );
+        assert_eq!(health.interval, HEALTH_INTERVAL);
+        assert!(
+            matches!(spec.ready(), ReadyCheck::Command { .. }),
+            "{:?}",
+            spec.ready()
+        );
+    }
     #[test]
     fn a_stopped_server_is_woken_at_its_port_and_at_its_socket() {
         let context = context("{}");
