@@ -24,6 +24,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use crate::process::StartTime;
 use crate::{GroupReading, GroupRoot, ProcessMetrics};
@@ -168,6 +169,87 @@ fn members(roots: &[GroupRoot], parents: &BTreeMap<u32, u32>) -> BTreeSet<u32> {
         .filter(|root| parents.contains_key(&root.pid))
         .flat_map(|root| walk(root.pid, &children, &boundaries))
         .collect()
+}
+
+/// How long a listing of the machine is trusted — roadmap task **T190**.
+///
+/// Ten seconds, which is how late a worker a group spawned on its own can be counted. A root is
+/// never late: a changed root lists the machine at once.
+const REDISCOVER: Duration = Duration::from_secs(10);
+
+/// The last listing of the machine, kept between readings — roadmap task **T190**.
+///
+/// **Who is in a group changes rarely, and what they spend changes every second.** Listing every
+/// process on the machine answers the first question, and on Windows it was the whole cost of a
+/// tick: 10–20 ms, at the one-second rate, while the only person watching was reading the daemon's
+/// CPU off the result.
+#[derive(Debug, Default)]
+struct Discovery {
+    kept: Option<Kept>,
+}
+
+/// One listing, and what it was taken for.
+#[derive(Debug)]
+struct Kept {
+    /// The roots the listing was taken for. Any change is a service started, stopped or restarted.
+    roots: Vec<GroupRoot>,
+
+    parents: BTreeMap<u32, u32>,
+
+    taken: Instant,
+
+    /// The members the first reading after this listing could not read, or [`None`] before that
+    /// reading. A member that was readable and is no longer has ended. One that never was is a
+    /// process this account may not open, and listing again for it would list every tick.
+    absent: Option<BTreeSet<u32>>,
+}
+
+impl Discovery {
+    /// The parent table this reading walks, listing the machine only when the one kept will not do.
+    ///
+    /// [`None`] when a listing was needed and failed. The caller then refreshes everything, as
+    /// before T181, and the next reading tries again.
+    fn parents(
+        &mut self,
+        roots: &[GroupRoot],
+        now: Instant,
+        list: impl FnOnce() -> crate::Result<BTreeMap<u32, u32>>,
+    ) -> Option<&BTreeMap<u32, u32>> {
+        let reusable = self.kept.as_ref().is_some_and(|kept| {
+            kept.roots == roots && now.saturating_duration_since(kept.taken) < REDISCOVER
+        });
+
+        if !reusable {
+            self.kept = list().ok().map(|parents| Kept {
+                roots: roots.to_vec(),
+                parents,
+                taken: now,
+                absent: None,
+            });
+        }
+
+        self.kept.as_ref().map(|kept| &kept.parents)
+    }
+
+    /// Which members this reading could not read. A member that was readable before and is not now
+    /// has ended, so the group changed shape and the next reading lists the machine.
+    fn absent(&mut self, missing: BTreeSet<u32>) {
+        let Some(kept) = self.kept.as_mut() else {
+            return;
+        };
+
+        let ended = match &kept.absent {
+            None => {
+                kept.absent = Some(missing);
+                false
+            }
+            Some(baseline) => !missing.is_subset(baseline),
+        };
+
+        if ended {
+            self.kept = None;
+        }
+    }
 }
 
 /// This machine's own answer, with the state a CPU figure is a difference from.
@@ -443,6 +525,136 @@ mod tests {
         let parents = BTreeMap::from([(10, 11), (11, 10)]);
 
         assert_eq!(members(&[root(10, 7)], &parents), BTreeSet::from([10, 11]));
+    }
+
+    /// A listing that counts how many times the machine was listed.
+    fn counting(
+        calls: &std::cell::Cell<u32>,
+    ) -> impl FnOnce() -> crate::Result<BTreeMap<u32, u32>> + '_ {
+        move || {
+            calls.set(calls.get() + 1);
+            Ok(parents())
+        }
+    }
+
+    #[test]
+    fn the_same_roots_within_rediscover_list_the_machine_once() {
+        let calls = std::cell::Cell::new(0);
+        let mut discovery = Discovery::default();
+        let start = Instant::now();
+        let roots = [root(10, 7)];
+
+        assert!(discovery.parents(&roots, start, counting(&calls)).is_some());
+        assert!(
+            discovery
+                .parents(&roots, start + Duration::from_secs(1), counting(&calls))
+                .is_some()
+        );
+        assert!(
+            discovery
+                .parents(
+                    &roots,
+                    start + REDISCOVER - Duration::from_millis(1),
+                    counting(&calls)
+                )
+                .is_some()
+        );
+
+        assert_eq!(calls.get(), 1, "a tick at the fast rate reuses the listing");
+    }
+
+    #[test]
+    fn a_listing_older_than_rediscover_is_taken_again() {
+        let calls = std::cell::Cell::new(0);
+        let mut discovery = Discovery::default();
+        let start = Instant::now();
+        let roots = [root(10, 7)];
+
+        discovery.parents(&roots, start, counting(&calls));
+        discovery.parents(&roots, start + REDISCOVER, counting(&calls));
+
+        assert_eq!(
+            calls.get(),
+            2,
+            "a worker a group spawned on its own is found within REDISCOVER"
+        );
+    }
+
+    #[test]
+    fn changed_roots_list_the_machine_again() {
+        let calls = std::cell::Cell::new(0);
+        let mut discovery = Discovery::default();
+        let now = Instant::now();
+
+        discovery.parents(&[root(10, 7)], now, counting(&calls));
+        // Same pid, a different start: the service was restarted and the system reused the pid.
+        discovery.parents(&[root(10, 8)], now, counting(&calls));
+        // A service was added.
+        discovery.parents(&[root(10, 8), root(20, 7)], now, counting(&calls));
+
+        assert_eq!(calls.get(), 3);
+    }
+
+    #[test]
+    fn a_member_that_ended_lists_the_machine_again() {
+        let calls = std::cell::Cell::new(0);
+        let mut discovery = Discovery::default();
+        let now = Instant::now();
+        let roots = [root(10, 7)];
+
+        discovery.parents(&roots, now, counting(&calls));
+        discovery.absent(BTreeSet::new());
+        discovery.parents(&roots, now, counting(&calls));
+        discovery.absent(BTreeSet::from([12]));
+        discovery.parents(&roots, now, counting(&calls));
+
+        assert_eq!(
+            calls.get(),
+            2,
+            "12 was read after the listing and is gone now"
+        );
+    }
+
+    #[test]
+    fn a_member_absent_from_the_first_reading_does_not_force_a_listing() {
+        let calls = std::cell::Cell::new(0);
+        let mut discovery = Discovery::default();
+        let now = Instant::now();
+        let roots = [root(10, 7)];
+
+        // 12 cannot be opened by this account, ever. Listing the machine again on its account
+        // every tick would be the cost T190 exists to remove.
+        discovery.parents(&roots, now, counting(&calls));
+        discovery.absent(BTreeSet::from([12]));
+        for _ in 0..5 {
+            discovery.parents(&roots, now, counting(&calls));
+            discovery.absent(BTreeSet::from([12]));
+        }
+
+        assert_eq!(calls.get(), 1);
+    }
+
+    #[test]
+    fn a_failed_listing_is_tried_again_next_tick() {
+        let calls = std::cell::Cell::new(0);
+        let mut discovery = Discovery::default();
+        let now = Instant::now();
+        let roots = [root(10, 7)];
+
+        let failing = || {
+            calls.set(calls.get() + 1);
+            Err(crate::Error::Os {
+                action: "list this machine's processes",
+                source: std::io::Error::other("the snapshot could not be taken"),
+            })
+        };
+
+        assert!(
+            discovery.parents(&roots, now, failing).is_none(),
+            "the tick falls back"
+        );
+        assert!(discovery.parents(&roots, now, counting(&calls)).is_some());
+        assert_eq!(calls.get(), 2);
     }
 
     /// **A real reading, twice, of the process running the test** — roadmap task **T181**.
