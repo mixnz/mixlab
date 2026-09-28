@@ -24,7 +24,7 @@ The corner panel walks through these states, and every step forward is a click:
 
 | State | The panel says | Buttons |
 | --- | --- | --- |
-| **Offer** | *MixLab 0.0.10 is available*, the size, up to three lines from the release notes | **Download**, **Later**, and a small *Skip this version* link |
+| **Offer** | *MixLab 0.0.10 is available*, the size, and a *Read the release notes* link to the release page | **Download**, **Later**, and a small *Skip this version* link |
 | **Downloading** | a progress bar with bytes received out of the total | **Cancel** |
 | **Ready** (Windows) | *MixLab 0.0.10 is ready to install*, and when a daemon runs, *MixEngine and N services will restart* | **Install and restart**, **Later** |
 | **Ready** (macOS, Linux) | *The installer for 0.0.10 is downloaded* | **Open installer**, **Later** |
@@ -82,8 +82,10 @@ already removes its own staging directory.
   `src/components/`, and adds a shared component only if two places need it.
 - `src/shell/update/view.ts` gains the panel's states, derived purely from `UpdateStatus` plus the
   hook's local state (downloading, failed), so they are unit-tested the way `updateView` is.
-- The release-note lines reuse MixDB's `highlights()` rule from the removed `UpdateToast`: bullets
-  under the version's headings, Markdown stripped, three at most, each cut at 120 characters.
+- The release notes are a link to `notes_url`, or to the latest release when the feed has none,
+  opened in the browser. The feed's `notes` are the tag's commit subjects (`packaging/feed.sh`),
+  written for the repository rather than for the user, so neither the panel nor Settings → Updates
+  prints them. (This replaced three `highlights()` lines drawn from those notes.)
 - Every string through `t()`, in `en.ts` and `vi.ts`, written with the `writing-user-facing-text`
   skill.
 
@@ -97,7 +99,6 @@ same state.
 
 - `view.test.ts`: every state in D1 from the inputs that produce it, including a start with a
   finished download (**Ready** without a download), *Later* and *Skip*.
-- `highlights()` over the three shapes the changelog takes: bullets, bullets that wrap, prose.
 - Rust: `update_install` refuses without a `ready` file and with one naming another version; a
   `ready` file is written only after the smoke test passes; a cancelled download leaves the partial
   file and no `ready`.

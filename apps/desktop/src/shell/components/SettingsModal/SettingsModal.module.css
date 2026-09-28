@@ -240,20 +240,6 @@
   border-radius: var(--radius-lg);
 }
 
-/* The release notes are commit subjects, one per line: kept as written, and capped at twelve lines
-   (12 × 20px) so a long release does not push the buttons out of the pane. */
-.updateNotes {
-  margin: 0;
-  width: 100%;
-  max-height: 240px;
-  overflow: auto;
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
-  color: var(--text-secondary);
-  white-space: pre-wrap;
-}
-
 .updateCommand {
   font-family: var(--font-mono);
   font-size: var(--text-sm);

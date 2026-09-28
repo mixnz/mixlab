@@ -1,7 +1,9 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
 import Button from "../../../components/Button";
 import { errorMessage } from "../../../core/errors";
 import { useTranslation } from "../../../i18n";
-import { highlights, MAX_HIGHLIGHTS, type Updates } from "../../update";
+import type { Updates } from "../../update";
+import { RELEASES_PAGE } from "../../version";
 import styles from "./UpdatePanel.module.css";
 
 const MB = 1_000_000;
@@ -40,9 +42,6 @@ function UpdatePanel({ updates, onInstallerOpened }: Props) {
   if (panel === "hidden" || !status || !feed) return null;
   const onInstaller = status.placement.kind === "installer";
 
-  const changes = highlights(feed.notes);
-  const shown = changes.slice(0, MAX_HIGHLIGHTS);
-  const more = changes.length - shown.length;
   const known = progress !== null && progress.total > 0;
   const percent = known ? Math.min(100, (progress.received / progress.total) * 100) : null;
 
@@ -54,14 +53,16 @@ function UpdatePanel({ updates, onInstallerOpened }: Props) {
           {feed.size !== null && (
             <span className={styles.meta}>{t("update.size", { size: Math.max(1, Math.round(feed.size / MB)) })}</span>
           )}
-          {shown.length > 0 && (
-            <ul className={styles.changes}>
-              {shown.map((change, i) => (
-                <li key={i}>{change}</li>
-              ))}
-              {more > 0 && <li className={styles.more}>{t("update.moreChanges", { count: more })}</li>}
-            </ul>
-          )}
+          {/* The feed's notes are the tag's commit subjects (packaging/feed.sh), written for the
+              repository rather than for the user, so the panel links to the release page instead. */}
+          <Button
+            variant="link"
+            size="small"
+            className={styles.notes}
+            onClick={() => void openUrl(feed.notesUrl ?? RELEASES_PAGE)}
+          >
+            {t("update.notesLink")}
+          </Button>
           <div className={styles.actions}>
             <Button variant="primary" size="small" onClick={() => void updates.download()}>
               {t("update.download")}

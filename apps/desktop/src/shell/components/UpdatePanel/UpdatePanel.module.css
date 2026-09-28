@@ -36,24 +36,16 @@
   color: var(--accent-text);
 }
 
-.meta,
-.changes {
+.meta {
   margin: 0;
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
-}
-
-.meta {
   overflow-wrap: anywhere;
 }
 
-.changes {
-  padding-left: 18px;
-}
-
-.more {
-  list-style: none;
-  opacity: 0.6;
+/* A link, not a block: the column would otherwise stretch its hit area across the panel. */
+.notes {
+  align-self: flex-start;
 }
 
 .actions {

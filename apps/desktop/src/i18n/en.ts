@@ -173,7 +173,6 @@ const en = {
     readyRestartsDaemon: "MixEngine will restart.",
     readyRestartsServices: "MixEngine and {{count}} services will restart.",
     received: "{{received}} of {{total}} MB",
-    moreChanges: "and {{count}} more",
     tryAgain: "Try again",
     close: "Close",
     openInstaller: "Open installer",
