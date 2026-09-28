@@ -1216,7 +1216,11 @@ mod tests {
         }
 
         let read = load(&file).expect("read back").paths.data.expect("set");
-        let expected = if cfg!(windows) { r"D:\bulk\data" } else { asked };
+        let expected = if cfg!(windows) {
+            r"D:\bulk\data"
+        } else {
+            asked
+        };
         assert_eq!(read.as_os_str(), expected);
     }
 

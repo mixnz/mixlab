@@ -600,7 +600,7 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       development build, because a release that lost the marker would rename every user's home.
       **Not the whole fence:** `MIXENGINE_HOME` and `--home` still win, so a developer who points a
       build at the real home on purpose still can — and one who forgets still hits it.
-- [ ] **T191** A path is spelled the way this system spells one. On Windows, MixLab and `mix`
+- [x] **T191** A path is spelled the way this system spells one. On Windows, MixLab and `mix`
       show `…\8.3.33\bin/php`, `D:/bulk/runtimes\php`, and a site form reading
       `C:\…\blog/public` while the site's own page reads `C:\…\blog\public`: a value kept with `/` for
       nginx, TOML or a manifest was joined onto a path of this machine, or put on a screen, without
@@ -608,6 +608,11 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       joins and splits with the system's separator, and one Windows test walks `mix --json` for a
       drive path holding a `/`. **(P)**
       Design: [2026-09-28-t191-a-path-is-spelled-the-way-this-system-spells-one-design.md](../specs/2026-09-28-t191-a-path-is-spelled-the-way-this-system-spells-one-design.md).
+      **Left for the next helper release:** three doc comments in `mixengine-proto`
+      (`SiteSummary::doc_root`, `RouteTarget::Static::root`, `PlanAction::CreateSite::doc_root`)
+      still say "as stored". Every byte of that crate is in the helper's fingerprint, and a comment
+      is not worth an elevation prompt on every install. Correct them when `HELPER_VERSION` next
+      moves for a reason of its own.
 
 **Milestone M9 — v0.0.1.** This page named it `v0.1.0` until 2026-09-06: `66695d0` swept that
 literal out of everything the build reads but spared the roadmap, on the reading that the number

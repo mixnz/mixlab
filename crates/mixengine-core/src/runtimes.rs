@@ -478,10 +478,7 @@ pub async fn program(
 
     let checked = Path::new(relative);
     if !crate::install::archive::safe(checked) {
-        return Err(unreadable(&format!(
-            "{executable} = {}",
-            checked.display()
-        )));
+        return Err(unreadable(&format!("{executable} = {}", checked.display())));
     }
 
     Ok(crate::paths::join_stored(
