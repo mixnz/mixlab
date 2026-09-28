@@ -7,7 +7,7 @@ import { errorMessage } from "../../../core/errors";
 import { useTranslation } from "../../../i18n";
 import { privacyPolicyUrl } from "../../links";
 import type { Updates } from "../../update";
-import { openReleasesPage } from "../../version";
+import { openReleasesPage, RELEASES_PAGE } from "../../version";
 import styles from "./SettingsModal.module.css";
 
 /**
@@ -77,12 +77,10 @@ function UpdateSection({ updates }: { updates: Updates }) {
               {t("update.size", { size: Math.max(1, Math.round(feed.size / 1_000_000)) })}
             </span>
           )}
-          {feed.notes && <pre className={styles.updateNotes}>{feed.notes}</pre>}
-          {feed.notesUrl && (
-            <Button variant="link" size="small" onClick={() => void openUrl(feed.notesUrl ?? "")}>
-              {t("update.notesLink")}
-            </Button>
-          )}
+          {/* A link rather than the feed's notes, which are commit subjects (see UpdatePanel). */}
+          <Button variant="link" size="small" onClick={() => void openUrl(feed.notesUrl ?? RELEASES_PAGE)}>
+            {t("update.notesLink")}
+          </Button>
           {!onInstaller && <p className={styles.hint}>{t("update.daemonRestarts")}</p>}
           <div className={styles.updateActions}>
             <Button variant="primary" size="small" onClick={() => void updates.download()}>

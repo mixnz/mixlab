@@ -158,7 +158,6 @@ const vi: SharedDict = {
     readyRestartsDaemon: "MixEngine sẽ khởi động lại.",
     readyRestartsServices: "MixEngine và {{count}} dịch vụ sẽ khởi động lại.",
     received: "{{received}} / {{total}} MB",
-    moreChanges: "và {{count}} thay đổi khác",
     tryAgain: "Thử lại",
     close: "Đóng",
     openInstaller: "Mở bộ cài",
