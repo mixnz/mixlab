@@ -262,11 +262,24 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       to 41 µs, and the daemon with one stream open from 5.2–5.9% of a core to 0.8–1.4%. The 1%
       target was met in three runs of six: 0.6–0.7% of what is left is spent with nobody watching,
       before and after alike, and is T190a's.
-- [ ] **T190a** Profile what the daemon spends when nobody is watching, and the rest of a tick at
+- [x] **T190a** Profile what the daemon spends when nobody is watching, and the rest of a tick at
       the fast rate. T190 left the daemon at 0.6–0.7% of a core idle and 0.8–1.4% with a stream
       open on Windows, and neither is the reading: that costs 41 µs. Candidates, unmeasured: the
       DNS server, reading every service row from the database each second, and writing the frame.
       An ETW trace (`wpr -start CPU`) from an administrator shell, on the real home, names them.
+      **Found:** the MixLab window is not the floor; with it closed the daemon still averages
+      0.7%. The floor comes in 60–95 ms bursts every 30 s, and the burst is the idle sweep asking
+      `registry.graph()`, which renders every service's configuration. The DNS server, the sharing
+      check's interface list (2.6 ms) and the metrics listing are all well under 1 ms/s.
+      Design: [2026-09-28-t190a-what-the-daemon-spends-while-it-waits-design.md](../specs/2026-09-28-t190a-what-the-daemon-spends-while-it-waits-design.md).
+- [ ] **T190b** The idle sweep does not render every service to learn the graph. Every 30 s
+      `services::idle` calls `registry.graph()`, whose spec source is `Rendered(Generator)`, so each
+      sweep runs `Generator::prepare` and `documents` for every service: reading certificate pairs,
+      rendering recipes, parsing TOML, creating directories, and opening a SQLite transaction. On
+      Windows that is 60–95 ms every 30 s, 0.2–0.3% of a core, close to half of what the daemon
+      spends with nobody watching (T190a). The question a fix has to answer: what may the sweep
+      reuse between passes, and what change has to invalidate it, so that a config edit, a
+      certificate renewal or a started service is never judged against a stale graph.
 - [x] **T72** CI budgets: `mixengined` idle < 32 MB RSS, with the published total reported beside
       it — failing the build on regression. **(P)**
       Design: [2026-08-30-t72-ci-budgets-design.md](../specs/2026-08-30-t72-ci-budgets-design.md).
