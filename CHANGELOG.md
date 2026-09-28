@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Changed
+- MixEngine uses less CPU while nothing is happening: it no longer rewrites every service's
+  configuration every thirty seconds to check what is idle.
 - When a new version is offered, *Read the release notes* opens the release page in your browser,
   instead of listing the commits that went into it.
 

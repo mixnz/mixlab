@@ -99,6 +99,14 @@ yet reach the database they query, because nothing in the schema records which d
 uses. With the switch off it changes nothing, which is why MixLab no longer shows it on the project
 form (T167g); the column, the API field and the verb stay.
 
+**The sweep looks through the last rendering (T190b).** Every thirty seconds it asks which running
+services have a policy and what depends on them. It answers from the graph the last change produced,
+up to ten minutes old, and renders again only before it stops something, which it then decides on
+the fresh graph. So it no longer rewrites this home's configuration every thirty seconds: that was
+half of what the daemon spent at rest on Windows. A generated file edited by hand is put back at the
+next change or within ten minutes, and `mix doctor` reports it in the meantime
+([design](../specs/2026-09-28-t190b-the-idle-sweep-does-not-render-to-look-design.md)).
+
 **A service MixEngine stopped is drawn as resting, not as stopped.** `ServiceSummary.stopped_by`
 (T167d) and the transition's reason let a client tell the three apart: `daemon` — resting, woken by
 the next request, grey; `person` — stopped, stays stopped; a crash — `failed`, red.
