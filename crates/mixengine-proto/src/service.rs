@@ -498,7 +498,29 @@ pub enum HealthProbe {
         expect_status: u16,
     },
 
-    /// A command exits zero — `mariadb-admin ping`, `pg_isready`, `redis-cli ping`.
+    /// A MySQL or MariaDB server still greets a new connection — roadmap task **T190b**, D4.
+    ///
+    /// **The server's first packet, read without logging in.** The connection handler writes it,
+    /// so it proves more than a TCP accept, and it is what `mysqladmin ping` rests on: that
+    /// command succeeds whenever the server answers, *access denied* included. A handshake
+    /// (`0x0a`) or an error packet (`0xff`, such as *too many connections*) is healthy; anything
+    /// else within the timeout is not. No process is started, which on Windows was 10 ms of the
+    /// daemon's CPU every ten seconds per database.
+    MysqlGreeting {
+        /// Where the server listens.
+        addr: SocketAddr,
+    },
+
+    /// A Redis server still answers `PING` — roadmap task **T190b**, D4.
+    ///
+    /// `+PONG` is healthy, and so is any error reply but `-LOADING`: `-NOAUTH` is a server that
+    /// answered. `-LOADING` is a server that will not serve reads yet, and is not healthy.
+    RedisPing {
+        /// Where the server listens.
+        addr: SocketAddr,
+    },
+
+    /// A command exits zero — `pg_isready`, and any recipe with no protocol probe of its own.
     ///
     /// The honest check for a database: a TCP accept only proves the listener is up, which stays
     /// true while the server refuses every query.
@@ -1792,6 +1814,23 @@ fn absolute(relative: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The two probes T190b adds travel under names a client can read — roadmap task **T190b**, D4.
+    #[test]
+    fn the_protocol_probes_travel_by_their_own_names() {
+        let addr: SocketAddr = "127.0.0.1:3306".parse().expect("an address");
+
+        for (probe, tag) in [
+            (HealthProbe::MysqlGreeting { addr }, "mysql_greeting"),
+            (HealthProbe::RedisPing { addr }, "redis_ping"),
+        ] {
+            let json = serde_json::to_value(&probe).expect("serialised");
+            assert_eq!(json["type"], tag, "{json}");
+
+            let back: HealthProbe = serde_json::from_value(json).expect("read back");
+            assert_eq!(back, probe);
+        }
+    }
 
     fn spec() -> ServiceSpecBuilder {
         ServiceSpec::builder(
