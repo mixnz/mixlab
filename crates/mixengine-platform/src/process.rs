@@ -1193,6 +1193,32 @@ pub(crate) fn parent_table() -> Result<BTreeMap<u32, u32>> {
     sys::parent_table()
 }
 
+/// What one process has spent: its CPU time so far and its resident size now — roadmap task
+/// **T190**.
+#[cfg(all(feature = "host", windows))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Usage {
+    /// Kernel and user time together, since the process began.
+    pub(crate) cpu_time: std::time::Duration,
+
+    /// The working set, which is what `sysinfo` reports as a process's memory on this system.
+    pub(crate) rss_bytes: u64,
+}
+
+/// One process's [`Usage`], read without listing the machine — roadmap task **T190**.
+///
+/// Windows only: there `sysinfo` takes a snapshot of every process even when asked for a few, and
+/// that snapshot was the whole cost of a metrics tick. [`None`] for every way of not being a
+/// running process that this account may read, as [`started_at`] answers.
+///
+/// # Errors
+///
+/// [`Error::Os`] when the process was opened and could not be read.
+#[cfg(all(feature = "host", windows))]
+pub(crate) fn usage(pid: u32) -> Result<Option<Usage>> {
+    sys::usage(pid)
+}
+
 /// A process that survived the daemon which started it, taken over by the one running now.
 ///
 /// **The third kind of relationship in this module, and the weakest.** A [`Supervised`] child is

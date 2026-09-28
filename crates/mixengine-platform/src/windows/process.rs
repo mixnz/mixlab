@@ -741,6 +741,111 @@ pub(crate) fn parent_table() -> Result<std::collections::BTreeMap<u32, u32>> {
     Ok(table)
 }
 
+/// One process's CPU time and working set — roadmap task **T190**, see `crate::process::usage`.
+///
+/// **The calls `sysinfo` makes, without the snapshot around them.** `GetProcessTimes` for CPU and
+/// `GetProcessMemoryInfo`'s `WorkingSetSize` for memory, so the numbers are the same quantities a
+/// `sysinfo` refresh reports. The handle is opened and closed here, and `None` covers the same three
+/// cases [`started_at`] documents.
+#[cfg(feature = "host")]
+pub(crate) fn usage(pid: u32) -> Result<Option<crate::process::Usage>> {
+    use windows_sys::Win32::System::ProcessStatus::{
+        K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
+    };
+
+    #[expect(
+        unsafe_code,
+        reason = "OpenProcess takes three integers and returns a handle this function owns and \
+                  closes on every path"
+    )]
+    let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+
+    if process.is_null() {
+        let error = io::Error::last_os_error();
+
+        return match error.raw_os_error().map(|code| code as u32) {
+            Some(ERROR_INVALID_PARAMETER | ERROR_ACCESS_DENIED) => Ok(None),
+
+            _ => Err(Error::Os {
+                action: "read what a process has spent",
+                source: error,
+            }),
+        };
+    }
+
+    let mut created = FILETIME {
+        dwLowDateTime: 0,
+        dwHighDateTime: 0,
+    };
+    let mut ended = created;
+    let mut kernel = created;
+    let mut user = created;
+
+    #[expect(
+        unsafe_code,
+        reason = "the four pointers are to locals this frame owns and the handle is the one opened \
+                  above; the call writes exactly four FILETIMEs and closes nothing"
+    )]
+    let timed = unsafe {
+        GetProcessTimes(
+            process,
+            &raw mut created,
+            &raw mut ended,
+            &raw mut kernel,
+            &raw mut user,
+        )
+    };
+    let mut failure = (timed == 0).then(io::Error::last_os_error);
+
+    #[expect(
+        unsafe_code,
+        reason = "PROCESS_MEMORY_COUNTERS is a repr(C) struct of integers, so all zeroes is a valid \
+                  value for the kernel to overwrite"
+    )]
+    let mut counters: PROCESS_MEMORY_COUNTERS = unsafe { std::mem::zeroed() };
+    counters.cb = size_of::<PROCESS_MEMORY_COUNTERS>() as u32;
+
+    if failure.is_none() {
+        #[expect(
+            unsafe_code,
+            reason = "the handle is the one opened above and the pointer is to a local whose cb \
+                      says how much of it may be written"
+        )]
+        let measured = unsafe { K32GetProcessMemoryInfo(process, &raw mut counters, counters.cb) };
+        failure = (measured == 0).then(io::Error::last_os_error);
+    }
+
+    #[expect(
+        unsafe_code,
+        reason = "the handle was opened by this function, is not used after this, and is closed \
+                  exactly once"
+    )]
+    unsafe {
+        CloseHandle(process);
+    }
+
+    if let Some(source) = failure {
+        return Err(Error::Os {
+            action: "read what a process has spent",
+            source,
+        });
+    }
+
+    if ticks(ended) != 0 {
+        return Ok(None);
+    }
+
+    // A FILETIME tick is 100 nanoseconds.
+    let spent = ticks(kernel)
+        .saturating_add(ticks(user))
+        .saturating_mul(100);
+
+    Ok(Some(crate::process::Usage {
+        cpu_time: std::time::Duration::from_nanos(spent),
+        rss_bytes: counters.WorkingSetSize as u64,
+    }))
+}
+
 /// The two halves of a `FILETIME` as the one number it is.
 fn ticks(time: FILETIME) -> u64 {
     (u64::from(time.dwHighDateTime) << 32) | u64::from(time.dwLowDateTime)
@@ -1318,6 +1423,47 @@ mod tests {
 
     use super::*;
     use crate::process::{Limits, Priority};
+
+    #[cfg(feature = "host")]
+    #[test]
+    fn usage_reads_this_process() {
+        let first = usage(std::process::id())
+            .expect("this process can be read")
+            .expect("this process is running");
+        assert!(first.rss_bytes > 0, "{first:?}");
+
+        // Spend some CPU so the second reading has something to show.
+        let began = Instant::now();
+        let mut spin = 0_u64;
+        while began.elapsed() < std::time::Duration::from_millis(50) {
+            spin = spin.wrapping_add(1);
+        }
+        std::hint::black_box(spin);
+
+        let second = usage(std::process::id())
+            .expect("this process can be read")
+            .expect("this process is running");
+        assert!(
+            second.cpu_time > first.cpu_time,
+            "{first:?} then {second:?}"
+        );
+    }
+
+    #[cfg(feature = "host")]
+    #[test]
+    fn usage_of_a_process_that_has_exited_is_none() {
+        // The Child keeps a handle, so the pid still names this exited process, not a stranger.
+        let mut child = Command::new("cmd")
+            .args(["/c", "exit", "0"])
+            .spawn()
+            .expect("cmd starts");
+        child.wait().expect("cmd exits");
+
+        assert_eq!(
+            usage(child.id()).expect("an ended process is not an error"),
+            None
+        );
+    }
 
     /// Read back what was written, rather than time a busy loop.
     ///

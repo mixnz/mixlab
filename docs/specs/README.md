@@ -175,3 +175,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-09-27 | [T185b — `bin/` fronts only what is installed](2026-09-27-t185b-bin-fronts-only-what-is-installed-design.md) | T185b | implemented |
 | 2026-09-27 | [T188 — An update offered in the corner](2026-09-27-t188-an-update-offered-in-the-corner-design.md) | T188 | implemented |
 | 2026-09-28 | [T189 — Sync asks before it pulls](2026-09-28-t189-sync-asks-before-it-pulls-design.md) | T189 | implemented |
+| 2026-09-28 | [T190 — A reading on Windows does not list the machine](2026-09-28-t190-a-reading-on-windows-does-not-list-the-machine-design.md) | T190 | implemented |

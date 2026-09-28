@@ -253,6 +253,20 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       rate, measuring six. Discovery becomes a cheap `pid → ppid` table per system, and `sysinfo`
       refreshes only the walked members.
       Design: [2026-09-24-t181-a-reading-refreshes-only-the-groups-it-measures-design.md](../specs/2026-09-24-t181-a-reading-refreshes-only-the-groups-it-measures-design.md).
+- [x] **T190** A reading on Windows does not list the machine. After T181 a tick still took two
+      `CreateToolhelp32Snapshot`s, one for discovery and one inside `sysinfo` even for `Some(pids)`:
+      the daemon at 4.8% of a core while the tray panel was open. Discovery is kept between ticks,
+      and on Windows members are read one pid at a time with the calls `sysinfo` itself makes.
+      Design: [2026-09-28-t190-a-reading-on-windows-does-not-list-the-machine-design.md](../specs/2026-09-28-t190-a-reading-on-windows-does-not-list-the-machine-design.md).
+      **Measured on the real home, seven services:** a reading at the fast rate went from 14.6 ms
+      to 41 µs, and the daemon with one stream open from 5.2–5.9% of a core to 0.8–1.4%. The 1%
+      target was met in three runs of six: 0.6–0.7% of what is left is spent with nobody watching,
+      before and after alike, and is T190a's.
+- [ ] **T190a** Profile what the daemon spends when nobody is watching, and the rest of a tick at
+      the fast rate. T190 left the daemon at 0.6–0.7% of a core idle and 0.8–1.4% with a stream
+      open on Windows, and neither is the reading: that costs 41 µs. Candidates, unmeasured: the
+      DNS server, reading every service row from the database each second, and writing the frame.
+      An ETW trace (`wpr -start CPU`) from an administrator shell, on the real home, names them.
 - [x] **T72** CI budgets: `mixengined` idle < 32 MB RSS, with the published total reported beside
       it — failing the build on regression. **(P)**
       Design: [2026-08-30-t72-ci-budgets-design.md](../specs/2026-08-30-t72-ci-budgets-design.md).

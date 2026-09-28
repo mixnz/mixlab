@@ -22,6 +22,8 @@
   first start.
 
 ### Fixed
+- On Windows, MixEngine no longer uses several percent of your CPU while the tray panel or the
+  Dashboard is open.
 - A blueprint that installs PHP now turns on its PHP extensions, such as `redis` for Laravel, and
   turns them on for the PHP version the project uses, not the newest one installed.
 - Reinstalling MixLab over folders an earlier install kept now lists the runtimes and packages

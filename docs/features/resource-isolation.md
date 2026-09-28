@@ -219,6 +219,12 @@ refreshed every process on the machine until T181: about 10 ms on Windows, about
 Since T181 a reading lists each process's parent the cheap way and refreshes only the processes in a
 group — about 0.5 ms on the same Mac, a two-thousandth of a core at the fast rate
 ([design](../specs/2026-09-24-t181-a-reading-refreshes-only-the-groups-it-measures-design.md)).
+Windows had not gained: `sysinfo` lists every process there even when asked for a few, so a
+reading still cost 14.6 ms and the daemon held 5–6% of a core while the tray panel was open. Since
+T190 the listing is kept between readings and each member is read by pid on Windows: 41 µs a
+reading, and the daemon at 0.8–1.4% of a core with a stream open, of which 0.6–0.7% it spends with
+nobody watching
+([design](../specs/2026-09-28-t190-a-reading-on-windows-does-not-list-the-machine-design.md)).
 
 **The reading is `mixengine-platform`'s `ProcessMetrics`, not `sysinfo` in the daemon** — the same
 place every other question about this machine is asked, with a programmable mock beside it, which is
