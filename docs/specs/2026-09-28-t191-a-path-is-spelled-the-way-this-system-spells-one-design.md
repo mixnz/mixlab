@@ -115,10 +115,14 @@ and the column still holds `public/assets`.
 apply that follows passes it to `site.create`, which accepts either spelling for the reason above.
 
 This is done in the daemon rather than in each client, for the rule that neither client carries
-logic: `mix` and MixLab would each need a copy, and they would drift apart. The doc comments on the
-fields change from "as stored" to "relative to the root, spelled the way this system spells a
-path"; `packaging/bindings.sh` regenerates `bindings/` for the comment change, and no type
-changes.
+logic: `mix` and MixLab would each need a copy, and they would drift apart. No type changes.
+
+**The fields' doc comments in `mixengine-proto` are not changed in this task**, although "as
+stored" no longer describes what Windows receives. Every byte of `mixengine-proto` is part of the
+privileged helper's fingerprint (`packaging/helper-lock.mjs`, T182b). A comment edit there would
+move `HELPER_VERSION`, and every install would then replace its elevated helper on the next update,
+elevation prompt included, for no change in behaviour. The comment is corrected the next time a
+release moves the helper for a reason of its own.
 
 A blueprint is the exception, and it stays one. A manifest's `doc_root` is portable text written for
 every system, and `mix blueprint export` keeps writing `/`.
@@ -202,3 +206,6 @@ check.
   changing any spelling.
 - **D3 changes what a field holds on Windows.** Every client of `bindings/` is in this repository,
   and no stored value changes, so nothing outside needs migrating.
+- **Three proto doc comments say "as stored" until the helper next moves** (see D3). The
+  follow-up is to correct `SiteSummary::doc_root`, `RouteTarget::Static::root` and
+  `PlanAction::CreateSite::doc_root` in the same release as the next `HELPER_VERSION` bump.
