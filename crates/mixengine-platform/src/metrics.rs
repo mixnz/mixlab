@@ -470,29 +470,66 @@ mod tests {
         assert!(second[0].processes >= 1, "{second:?}");
     }
 
-    /// What one refresh of every process on this machine costs.
+    /// What one reading costs, with seven groups — the shape of the report that led to **T190**.
     ///
     /// **Ignored by default and asserting nothing** — a timing taken on a shared runner is not a
     /// fact to fail a build on. It exists because T71 chose to sample a machine nobody is watching,
     /// and the number belongs beside the periods that spend it, which is
-    /// [`ProcessMetrics::measure`]'s documentation. Run it with `--ignored --nocapture`.
+    /// [`ProcessMetrics::measure`]'s documentation. Run it with `--release --ignored --nocapture`.
     #[test]
     #[ignore = "a measurement, not an assertion"]
     fn one_refresh_costs() {
-        let sampler = Sampler::default();
-        let mine = std::process::id();
-        let started = crate::process::started_at(mine)
-            .expect("this process can be asked about")
-            .expect("this process is running");
+        // This process and six children that do nothing for a minute.
+        let mut children: Vec<std::process::Child> = (0..6)
+            .map(|_| {
+                let mut command = if cfg!(windows) {
+                    let mut command = std::process::Command::new("ping");
+                    command.args(["-n", "60", "127.0.0.1"]);
+                    command
+                } else {
+                    let mut command = std::process::Command::new("sleep");
+                    command.arg("60");
+                    command
+                };
+                command
+                    .stdout(std::process::Stdio::null())
+                    .spawn()
+                    .expect("a child to measure")
+            })
+            .collect();
 
-        // The first call builds the table; the ones after it are what a tick actually pays.
-        sampler.measure(&[GroupRoot { pid: mine, started }]);
+        let roots: Vec<GroupRoot> = std::iter::once(std::process::id())
+            .chain(children.iter().map(std::process::Child::id))
+            .map(|pid| GroupRoot {
+                pid,
+                started: crate::process::started_at(pid)
+                    .expect("a child can be asked about")
+                    .expect("a child is running"),
+            })
+            .collect();
 
+        // A new sampler lists the machine on its first reading.
         let began = std::time::Instant::now();
         for _ in 0..10 {
-            sampler.measure(&[GroupRoot { pid: mine, started }]);
+            Sampler::default().measure(&roots);
         }
+        println!(
+            "a reading that lists the machine: {:?}",
+            began.elapsed() / 10
+        );
 
-        println!("one refresh: {:?}", began.elapsed() / 10);
+        // The same sampler again, within a second: what a tick at the fast rate pays.
+        let sampler = Sampler::default();
+        sampler.measure(&roots);
+        let began = std::time::Instant::now();
+        for _ in 0..10 {
+            sampler.measure(&roots);
+        }
+        println!("a reading at the fast rate: {:?}", began.elapsed() / 10);
+
+        for child in &mut children {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
     }
 }

@@ -253,6 +253,11 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       rate, measuring six. Discovery becomes a cheap `pid → ppid` table per system, and `sysinfo`
       refreshes only the walked members.
       Design: [2026-09-24-t181-a-reading-refreshes-only-the-groups-it-measures-design.md](../specs/2026-09-24-t181-a-reading-refreshes-only-the-groups-it-measures-design.md).
+- [ ] **T190** A reading on Windows does not list the machine. After T181 a tick still took two
+      `CreateToolhelp32Snapshot`s, one for discovery and one inside `sysinfo` even for `Some(pids)`:
+      the daemon at 4.8% of a core while the tray panel was open. Discovery is kept between ticks,
+      and on Windows members are read one pid at a time with the calls `sysinfo` itself makes.
+      Design: [2026-09-28-t190-a-reading-on-windows-does-not-list-the-machine-design.md](../specs/2026-09-28-t190-a-reading-on-windows-does-not-list-the-machine-design.md).
 - [x] **T72** CI budgets: `mixengined` idle < 32 MB RSS, with the published total reported beside
       it — failing the build on regression. **(P)**
       Design: [2026-08-30-t72-ci-budgets-design.md](../specs/2026-08-30-t72-ci-budgets-design.md).
