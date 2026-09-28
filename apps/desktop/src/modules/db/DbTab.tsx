@@ -39,6 +39,7 @@ import { DatabaseIcon } from "./icons";
 import { useTranslation } from "../../i18n";
 import { errorMessage } from "../../core/errors";
 import { savedChange } from "../../core/followSaved";
+import { fileName } from "../../core/paths";
 import { stableStringify } from "../../core/stableStringify";
 import type { ModuleTabProps, TabBadge } from "../../shell/module";
 import { dbBadgeMarks } from "./badges";
@@ -61,15 +62,6 @@ const MONGO_URI_RE = /^mongodb(?:\+srv)?:\/\/(?:[^@/]*@)?([^/?]*)(?:\/([^?]*))?/
 /** Host only — the string itself carries the password, which must never reach a tab title. */
 function mongoUriHost(uri: string): string {
   return MONGO_URI_RE.exec(uri.trim())?.[1] ?? "";
-}
-
-/** The last segment of a file path, whichever separator it was written with — Windows paths reach
- *  here with backslashes and the dialog's own with forward ones. Falls back to the whole path when
- *  it ends in a separator, so the title is never empty. */
-function fileName(path: string): string {
-  const trimmed = path.trim();
-  const segments = trimmed.split(/[\/]/).filter((segment) => segment !== "");
-  return segments[segments.length - 1] ?? trimmed;
 }
 
 /** The default database, i.e. the path segment in `mongodb://host/thisOne?options`. */
