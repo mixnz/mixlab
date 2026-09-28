@@ -476,15 +476,15 @@ pub async fn program(
             known: provides.keys().cloned().collect(),
         })?;
 
-    let relative = Path::new(relative);
-    if !crate::install::archive::safe(relative) {
-        return Err(unreadable(&format!(
-            "{executable} = {}",
-            relative.display()
-        )));
+    let checked = Path::new(relative);
+    if !crate::install::archive::safe(checked) {
+        return Err(unreadable(&format!("{executable} = {}", checked.display())));
     }
 
-    Ok(Path::new(&row.install_path).join(relative))
+    Ok(crate::paths::join_stored(
+        Path::new(&row.install_path),
+        relative,
+    ))
 }
 
 /// Whether anything of this kind is installed at all.

@@ -6,6 +6,10 @@
 - When a new version is offered, *Read the release notes* opens the release page in your browser,
   instead of listing the commits that went into it.
 
+### Fixed
+- On Windows, MixLab and `mix` write every path with backslashes. Paths such as
+  `C:\Users\you\blog/public` no longer mix the two separators.
+
 ## v0.0.10
 
 ### Added

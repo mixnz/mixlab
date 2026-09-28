@@ -90,6 +90,12 @@ describe("relativeToRoot", () => {
   it("keeps a path outside the root as-is", () => {
     expect(relativeToRoot(root, "/somewhere/else")).toBe("/somewhere/else");
   });
+
+  it("answers in Windows spelling whichever separator the dialog used", () => {
+    const winRoot = "C:\\Users\\dev\\blog";
+    expect(relativeToRoot(winRoot, `${winRoot}\\public\\assets`, "windows")).toBe("public\\assets");
+    expect(relativeToRoot(winRoot, `${winRoot}/public/assets`, "windows")).toBe("public\\assets");
+  });
 });
 
 describe("joinDocRoot", () => {
@@ -105,6 +111,15 @@ describe("joinDocRoot", () => {
 
   it("tolerates a trailing separator on the root", () => {
     expect(joinDocRoot(`${root}/`, "public")).toBe(`${root}/public`);
+  });
+
+  it("joins with a backslash on Windows, the doc root included", () => {
+    expect(joinDocRoot("C:\\Users\\dev\\blog", "public\\assets", "windows")).toBe(
+      "C:\\Users\\dev\\blog\\public\\assets",
+    );
+    expect(joinDocRoot("C:\\Users\\dev\\blog", "public/assets", "windows")).toBe(
+      "C:\\Users\\dev\\blog\\public\\assets",
+    );
   });
 });
 

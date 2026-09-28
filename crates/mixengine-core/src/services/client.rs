@@ -81,7 +81,7 @@ impl Chosen {
     pub fn program(&self, package: &str, executable: &str) -> Result<PathBuf> {
         self.provides
             .get(executable)
-            .map(|relative| self.install_path.join(relative))
+            .map(|relative| crate::paths::join_stored(&self.install_path, relative))
             .ok_or_else(|| Error::PackageProvidesNothing {
                 package: package.to_owned(),
                 version: self.version.clone(),
@@ -426,6 +426,33 @@ mod tests {
     use super::*;
 
     use crate::Paths;
+
+    /// T191: the program behind a published name is spelled as this system spells a path, so a
+    /// service that will not start names a file a person can paste.
+    #[test]
+    fn a_program_is_spelled_the_way_this_system_spells_a_path() {
+        let chosen = Chosen {
+            service: None,
+            version: PackageVersion::parse("1.0.0").expect("a version"),
+            install_path: std::env::temp_dir()
+                .join("packages")
+                .join("redis")
+                .join("1.0.0"),
+            listen: None,
+            provides: [("redis-cli".to_owned(), "bin/redis-cli".to_owned())].into(),
+        };
+
+        let program = chosen.program("redis", "redis-cli").expect("published");
+
+        assert!(program.ends_with(std::path::Path::new("bin").join("redis-cli")));
+        if cfg!(windows) {
+            assert!(
+                !program.display().to_string().contains('/'),
+                "{}",
+                program.display()
+            );
+        }
+    }
 
     async fn store() -> (tempfile::TempDir, Store) {
         let home = tempfile::tempdir().expect("a temporary directory");

@@ -1,5 +1,6 @@
 import type { StorageReport } from "@mixengine/api";
 
+import { joinPath, PATH_STYLE, type PathStyle } from "../../core/paths";
 import type { ChosenPaths } from "./api";
 
 /**
@@ -45,16 +46,17 @@ export function pick(rows: StorageRow[], key: StorageKey, directory: string): St
 /**
  * Bốn dòng sau khi người dùng chọn **một** thư mục cho cả bốn.
  *
- * `<thư mục>/runtimes`, `<thư mục>/packages`, … — trường hợp thường gặp là "để hết lên ổ kia", và
- * bắt người ta bấm bốn lần cho một ý định là bắt họ làm việc của máy. Nối bằng `/` chứ không phải
- * dấu phân cách của hệ điều hành: giá trị này đi thẳng vào `config.toml`, và tệp mẫu nói rõ dấu
- * gạch chéo xuôi dùng được ở mọi nơi kể cả Windows, nơi dấu gạch ngược trong chuỗi TOML là ký tự
- * thoát.
+ * `<thư mục>\runtimes`, `<thư mục>\packages`, … — trường hợp thường gặp là "để hết lên ổ kia", và
+ * bắt người ta bấm bốn lần cho một ý định là bắt họ làm việc của máy. Nối bằng dấu phân cách của hệ
+ * điều hành, giống giá trị nút chọn từng dòng gửi đi: daemon ghi `config.toml` qua `toml_edit`, vốn
+ * tự thoát dấu gạch ngược (T191).
  */
-export function oneFolderFor(rows: StorageRow[], directory: string): StorageRow[] {
-  const base = directory.replace(/[\\/]+$/, "");
-
-  return rows.map((row) => ({ ...row, picked: `${base}/${row.key}` }));
+export function oneFolderFor(
+  rows: StorageRow[],
+  directory: string,
+  style: PathStyle = PATH_STYLE,
+): StorageRow[] {
+  return rows.map((row) => ({ ...row, picked: joinPath(directory, row.key, style) }));
 }
 
 /**

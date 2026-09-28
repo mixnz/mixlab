@@ -9,5 +9,8 @@
 
 set -euo pipefail
 
-cd "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+# The root from where this file sits, as `scripts/gate.sh` finds it, rather than from git: inside a
+# hook git exports GIT_DIR, and with it `rev-parse --show-toplevel` answers the current directory,
+# which in a linked worktree is `packaging/` itself.
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
 exec node packaging/helper-lock.mjs "$@"

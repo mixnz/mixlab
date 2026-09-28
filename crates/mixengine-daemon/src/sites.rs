@@ -1118,7 +1118,8 @@ fn summary(
         domain: site.domains.first().cloned().unwrap_or_default(),
         owner: holder.wire(),
         kind: site.kind.clone(),
-        doc_root: site.doc_root.clone(),
+        // Stored with `/`, sent in this system's spelling — roadmap task **T191**.
+        doc_root: mixengine_core::paths::native_relative(&site.doc_root),
         https: site.https_enabled,
         https_redirect: site.https_redirect,
         state: site.state,
@@ -1128,7 +1129,7 @@ fn summary(
         routes: {
             let mut routes = site.routes.clone();
             routes.sort_by(sites::by_specificity);
-            routes
+            routes.into_iter().map(natively).collect()
         },
         sharing: site.sharing.as_ref().map(|sharing| {
             let url = sites::shared_url(sharing.address, web_port);
@@ -1157,11 +1158,23 @@ fn summary(
 
 /// Root plus doc root, as the filesystem spells it. `""` is the root itself.
 fn doc_root_full(root: &Path, doc_root: &str) -> PathBuf {
-    match doc_root.is_empty() {
-        true => root.to_path_buf(),
-        false => doc_root
-            .split('/')
-            .fold(root.to_path_buf(), |path, part| path.join(part)),
+    mixengine_core::paths::join_stored(root, doc_root)
+}
+
+/// A route as the wire carries it: a static root spelled as this system spells a path, like the
+/// doc root beside it — roadmap task **T191**. The column keeps `/`.
+fn natively(route: SiteRoute) -> SiteRoute {
+    match route.target {
+        RouteTarget::Static { root } => SiteRoute {
+            path: route.path,
+            target: RouteTarget::Static {
+                root: mixengine_core::paths::native_relative(&root),
+            },
+        },
+        target => SiteRoute {
+            path: route.path,
+            target,
+        },
     }
 }
 
@@ -1306,6 +1319,34 @@ fn route_list_is_writable(routes: &[SiteRoute]) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// T191 D3: a static route's root reaches the wire as this system spells a path.
+    #[test]
+    fn a_static_route_root_is_spelled_natively() {
+        let route = SiteRoute {
+            path: "/assets".to_owned(),
+            target: RouteTarget::Static {
+                root: "dist/css".to_owned(),
+            },
+        };
+
+        let RouteTarget::Static { root } = natively(route).target else {
+            panic!("still a static route");
+        };
+        assert_eq!(root, ["dist", "css"].join(std::path::MAIN_SEPARATOR_STR));
+    }
+
+    /// Review focus 1: what MixLab sends back after reading the native spelling is stored with `/`.
+    #[test]
+    fn a_natively_spelled_doc_root_is_stored_with_slashes() {
+        let root = tempfile::tempdir().expect("a project directory");
+        let sent = mixengine_core::paths::native_relative("public/assets");
+
+        assert_eq!(
+            sites::relative_doc_root(root.path(), &sent).expect("inside"),
+            "public/assets"
+        );
+    }
 
     /// **T81b, D6.** The sentence an extension-owned site refuses every edit with — one sentence,
     /// naming the one thing a person can do.

@@ -98,12 +98,18 @@ describe("oneFolderFor", () => {
     }
   });
 
-  // Giá trị này đi thẳng vào `config.toml`, nơi dấu gạch ngược là ký tự thoát của TOML và tệp mẫu
-  // khuyên dùng gạch chéo xuôi kể cả trên Windows.
-  it("joins with a forward slash, which the configuration file takes on every system", () => {
-    const rows = oneFolderFor(rowsFrom(aFreeHome()), "D:/bulk");
+  // Cùng một thư mục, hai nút phải gửi cùng một cách viết: daemon ghi `config.toml` qua
+  // `toml_edit`, vốn tự thoát dấu gạch ngược, nên không còn lý do gì để ép gạch chéo xuôi.
+  it("joins in Windows spelling on Windows, whichever separator the folder came with", () => {
+    for (const folder of ["D:\\bulk", "D:/bulk"]) {
+      const rows = oneFolderFor(rowsFrom(aFreeHome()), folder, "windows");
+      expect(rows[0]?.picked).toBe("D:\\bulk\\runtimes");
+    }
+  });
 
-    expect(rows[0]?.picked).toBe("D:/bulk/runtimes");
+  it("joins with a forward slash elsewhere", () => {
+    const rows = oneFolderFor(rowsFrom(aFreeHome()), "/Volumes/SSD/bulk", "posix");
+    expect(rows[0]?.picked).toBe("/Volumes/SSD/bulk/runtimes");
   });
 });
 

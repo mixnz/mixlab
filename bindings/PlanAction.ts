@@ -102,7 +102,8 @@ user: string, } | { "action": "create_site",
  */
 kind: SiteKind, 
 /**
- * Relative to the project root; `""` is the root itself.
+ * Relative to the project root, spelled the way this system spells a path; `""` is the
+ * root itself.
  */
 doc_root: string, 
 /**

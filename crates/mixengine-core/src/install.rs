@@ -678,7 +678,7 @@ pub async fn check_runs(artifact: &Artifact, dir: &Path, smoke: &SmokeTest) -> R
                 executable: smoke.executable.clone(),
                 path: String::new(),
             })?;
-    let program = dir.join(relative);
+    let program = crate::paths::join_stored(dir, relative);
 
     let failed = |detail: String| Error::SmokeTestFailed {
         program: program.clone(),

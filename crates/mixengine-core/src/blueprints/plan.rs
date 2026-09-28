@@ -252,7 +252,9 @@ pub async fn plan(
                 SiteKind::PhpFpm { .. } => SiteKind::PhpFpm { pool: None },
                 other => other.clone(),
             },
-            doc_root: site.doc_root.clone(),
+            // What this machine will make, so spelled the way it spells a path (T191); the
+            // manifest keeps `/`, and `site.create` accepts either.
+            doc_root: crate::paths::native_relative(&site.doc_root),
             https: site.https,
             // Carried whole — roadmap task **T135**. A php-fpm route's pool is already `None` in
             // the manifest, on capture's own rule, so there is nothing to clear here.

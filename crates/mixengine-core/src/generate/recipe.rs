@@ -376,7 +376,7 @@ impl Context {
     pub fn provided(&self, name: &str) -> Result<PathBuf> {
         self.provides
             .get(name)
-            .map(|relative| self.install_path.join(relative))
+            .map(|relative| crate::paths::join_stored(&self.install_path, relative))
             .ok_or_else(|| Error::ServiceProvidesNothing {
                 service: self.service.as_str().to_owned(),
                 executable: name.to_owned(),
