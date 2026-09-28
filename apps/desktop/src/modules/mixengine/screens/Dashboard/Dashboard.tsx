@@ -56,7 +56,7 @@ import type { MetricsFrame } from "@mixengine/api";
 import {
   DAEMON_SUBJECT,
   formatBytes,
-  formatPercent,
+  formatCpu,
   metricsSubjectFor,
   parseMetricsFrame,
   readingFor,
@@ -594,7 +594,7 @@ export default function Dashboard({
                   Luôn vẽ, kể cả trước frame đầu tiên: khung đứng sẵn với "—" thay vì hiện ra sau và
                   đẩy cả màn xuống — `frame` về `null` mỗi lần rời tab, nên cú nhảy đó lặp lại mỗi
                   lần quay lại. */}
-              <DaemonUsage reading={daemon} />
+              <DaemonUsage reading={daemon} cores={frame?.cores ?? 1} />
             </div>
           )
         }
@@ -750,9 +750,7 @@ export default function Dashboard({
                     {/* Vắng mặt trong frame là "—", không phải 0%: một service rảnh và một service không
                         đo được là hai câu khác nhau. */}
                     <td className={styles.mono} data-nowrap>
-                      {reading === null || reading.cpu_percent === null
-                        ? "—"
-                        : formatPercent(reading.cpu_percent)}
+                      {formatCpu(reading?.cpu_percent ?? null, frame?.cores ?? 1)}
                     </td>
                     <td className={styles.mono} data-nowrap>
                       {reading === null ? "—" : formatBytes(reading.rss_bytes)}

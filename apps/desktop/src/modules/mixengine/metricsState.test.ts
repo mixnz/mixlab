@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   DAEMON_SUBJECT,
   formatBytes,
-  formatPercent,
+  formatCpu,
+  machineShare,
   metricsSubjectFor,
   parseMetricsFrame,
   readingFor,
@@ -25,8 +26,14 @@ describe("metricsSubjectFor", () => {
 
 describe("parseMetricsFrame", () => {
   it("parses a well-formed frame", () => {
+    const raw = JSON.stringify({ at: 1757203200000, samples: [], cores: 12 });
+    expect(parseMetricsFrame(raw)).toEqual({ at: 1757203200000, samples: [], cores: 12 });
+  });
+
+  /* Daemon cũ hơn T190c không gửi `cores`: con số của nó vốn là phần trăm của một lõi. */
+  it("reads an old daemon's frame as percent of one core", () => {
     const raw = JSON.stringify({ at: 1757203200000, samples: [] });
-    expect(parseMetricsFrame(raw)).toEqual({ at: 1757203200000, samples: [] });
+    expect(parseMetricsFrame(raw)?.cores).toBe(1);
   });
 
   it("returns null for something that is not even JSON", () => {
@@ -45,6 +52,7 @@ describe("readingFor", () => {
       { subject: "daemon", cpu_percent: 1, rss_bytes: 100, processes: 1 },
       { subject: "service:mariadb@main", cpu_percent: null, rss_bytes: 200, processes: 2 },
     ],
+    cores: 1,
   };
 
   it("finds the sample for a subject present in the frame", () => {
@@ -77,17 +85,32 @@ describe("formatBytes", () => {
   });
 });
 
-describe("formatPercent", () => {
-  it("always shows exactly four decimal digits", () => {
-    expect(formatPercent(0)).toBe("0.0000%");
-    expect(formatPercent(1.5)).toBe("1.5000%");
-    expect(formatPercent(2.123456)).toBe("2.1235%");
+/* T190c: `cpu_percent` là phần trăm của MỘT lõi; người dùng đọc theo Task Manager, tức phần trăm
+   của cả máy, một chữ số thập phân. */
+describe("formatCpu", () => {
+  it("shows a share of the machine with one decimal, as Task Manager does", () => {
+    expect(formatCpu(150, 12)).toBe("12.5%");
+    expect(formatCpu(7.3, 12)).toBe("0.6%");
   });
 
-  /* 250 là hai lõi rưỡi (MetricsSample.cpu_percent doc-comment) — vẫn giữ nguyên bốn chữ số thập
-     phân, không cắt về số nguyên chỉ vì giá trị lớn hơn 100. */
-  it("keeps the format for a reading over one core", () => {
-    expect(formatPercent(250)).toBe("250.0000%");
+  it("never shows a running process as doing nothing", () => {
+    expect(formatCpu(0.53, 12)).toBe("<0.1%");
+  });
+
+  it("shows zero as zero and an unmeasured figure as a dash", () => {
+    expect(formatCpu(0, 12)).toBe("0.0%");
+    expect(formatCpu(null, 12)).toBe("—");
+  });
+
+  it("treats a machine of no cores as one", () => {
+    expect(formatCpu(50, 0)).toBe("50.0%");
+  });
+});
+
+describe("machineShare", () => {
+  it("divides a share of one core by the machine's cores", () => {
+    expect(machineShare(150, 12)).toBe(12.5);
+    expect(machineShare(150, 0)).toBe(150);
   });
 });
 
@@ -102,6 +125,7 @@ describe("servicesTotal", () => {
   it("adds every service and leaves the daemon out", () => {
     const total = servicesTotal({
       at: 1,
+      cores: 1,
       samples: [sample("daemon", 5, 100), sample("service:caddy", 1.5, 10), sample("service:mariadb@main", 2, 30)],
     });
     expect(total?.cpu_percent).toBe(3.5);
@@ -112,14 +136,15 @@ describe("servicesTotal", () => {
   it("does not count an unreadable CPU as zero", () => {
     const total = servicesTotal({
       at: 1,
+      cores: 1,
       samples: [sample("service:caddy", null, 10), sample("service:redis@main", 1, 5)],
     });
     expect(total?.cpu_percent).toBe(1);
-    expect(servicesTotal({ at: 1, samples: [sample("service:caddy", null, 10)] })?.cpu_percent).toBeNull();
+    expect(servicesTotal({ at: 1, cores: 1, samples: [sample("service:caddy", null, 10)] })?.cpu_percent).toBeNull();
   });
 
   it("is absent when no service was measured", () => {
-    expect(servicesTotal({ at: 1, samples: [sample("daemon", 5, 100)] })).toBeNull();
+    expect(servicesTotal({ at: 1, cores: 1, samples: [sample("daemon", 5, 100)] })).toBeNull();
     expect(servicesTotal(null)).toBeNull();
   });
 });

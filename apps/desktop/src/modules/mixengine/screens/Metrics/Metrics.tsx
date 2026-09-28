@@ -10,7 +10,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { MetricsHistory } from "@mixengine/api";
 import { segmentsFor } from "../../metricsHistoryState";
-import { DAEMON_SUBJECT, metricsSubjectFor } from "../../metricsState";
+import { DAEMON_SUBJECT, machineShare, metricsSubjectFor } from "../../metricsState";
 import Chart from "./Chart";
 import { CPU_UNIT, RSS_UNIT, windowStart } from "./chartScale";
 import styles from "./Metrics.module.css";
@@ -56,6 +56,7 @@ export default function Metrics({ active }: { active: boolean }) {
   }, [active, reload]);
 
   const minutes = history?.minutes ?? [];
+  const cores = history?.cores ?? 1;
   const segments = segmentsFor(minutes);
 
   /* Trục không kéo giãn khoảng đã đo ra hết bề rộng: `windowStart` chọn một bậc thời gian tròn
@@ -100,8 +101,9 @@ export default function Metrics({ active }: { active: boolean }) {
                 to={to}
                 unit={CPU_UNIT}
                 label={t("mixengine.metrics.cpu")}
-                avg={(m) => m.cpu_avg}
-                peak={(m) => m.cpu_peak}
+                // Hàng lưu theo phần trăm một lõi; vẽ theo phần trăm cả máy như Task Manager (T190c).
+                avg={(m) => (m.cpu_avg === null ? null : machineShare(m.cpu_avg, cores))}
+                peak={(m) => (m.cpu_peak === null ? null : machineShare(m.cpu_peak, cores))}
                 hue="sky"
               />
             </section>

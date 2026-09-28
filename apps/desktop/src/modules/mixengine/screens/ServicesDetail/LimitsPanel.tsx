@@ -81,6 +81,8 @@ export default function LimitsPanel({ service }: { service: string }) {
                 disabled={saving}
                 onChange={(e) => setCpu(e.target.value)}
               />
+              {/* Giới hạn khai báo theo một lõi, khác cách tray và Dashboard hiện mức dùng (T190c). */}
+              <p className={styles.hint}>{t("mixengine.servicesDetail.limits.cpuHint")}</p>
               {cpuKind === "unavailable" && (
                 <p className={styles.hint}>
                   {t("mixengine.servicesDetail.limits.unavailable", {

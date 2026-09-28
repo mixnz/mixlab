@@ -1,7 +1,7 @@
 import type { MetricsSample } from "@mixengine/api";
 
 import { useTranslation } from "../../../../i18n";
-import { formatBytes, formatPercent } from "../../metricsState";
+import { formatBytes, formatCpu, machineShare } from "../../metricsState";
 import styles from "./DaemonUsage.module.css";
 
 /**
@@ -13,10 +13,13 @@ import styles from "./DaemonUsage.module.css";
  */
 export default function DaemonUsage({
   reading,
+  cores,
   label,
   className,
 }: {
   reading: MetricsSample | null;
+  /** Số luồng logic của máy (`MetricsFrame.cores`): CPU hiện theo phần trăm cả máy như Task Manager (T190c). */
+  cores: number;
   /** What the strip measures, already translated. The daemon's by default. */
   label?: string;
   /** For a caller that lays the strip out differently — the tray stretches it across its card. */
@@ -33,12 +36,15 @@ export default function DaemonUsage({
       <span className={styles.cell}>
         <span className={styles.label}>{t("mixengine.dashboard.cpu")}</span>
         <span className={styles.value}>
-          {reading === null || reading.cpu_percent === null ? "—" : formatPercent(reading.cpu_percent)}
+          {formatCpu(reading?.cpu_percent ?? null, cores)}
         </span>
         <span className={styles.bar} aria-hidden="true">
           <span
             style={{
-              width: reading === null ? 0 : `${Math.min(100, Math.max(3, reading.cpu_percent ?? 0))}%`,
+              width:
+                reading === null
+                  ? 0
+                  : `${Math.min(100, Math.max(3, machineShare(reading.cpu_percent ?? 0, cores)))}%`,
             }}
           />
         </span>

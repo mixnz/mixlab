@@ -237,6 +237,8 @@ function metricFrames(): MetricsFrame[] {
   const running = SERVICES.filter((s) => s.pid !== null);
   return Array.from({ length: 30 }, (_, i) => ({
     at: NOW - (29 - i) * 2_000,
+    // Eight logical processors: the tray and the Dashboard draw a share of the machine (T190c).
+    cores: 8,
     samples: [
       { subject: "daemon", cpu_percent: 0.6 + 0.3 * Math.sin(i / 4), rss_bytes: 38 * MB, processes: 1 },
       ...running.map((s, n) => ({

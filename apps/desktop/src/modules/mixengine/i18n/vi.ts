@@ -382,6 +382,7 @@ const vi: typeof en = {
       limits: {
         title: "Giới hạn",
         cpu: "CPU",
+        cpuHint: "Tính theo một lõi: 100 là dùng hết một lõi.",
         memory: "Bộ nhớ",
         priority: "Độ ưu tiên",
         priorityNormal: "Bình thường",
