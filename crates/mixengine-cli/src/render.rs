@@ -2076,7 +2076,7 @@ pub(crate) fn metrics_frame(frame: &MetricsFrame) -> String {
         .map(|sample| {
             [
                 sample.subject.to_string(),
-                percent(sample.cpu_percent),
+                percent(sample.cpu_percent, frame.cores),
                 memory(sample.rss_bytes),
                 sample.processes.to_string(),
             ]
@@ -2112,8 +2112,8 @@ pub(crate) fn metrics_history(history: &MetricsHistory, now: SystemTime) -> Stri
             [
                 ago(minute.minute, now),
                 minute.subject.to_string(),
-                percent(minute.cpu_avg),
-                percent(minute.cpu_peak),
+                percent(minute.cpu_avg, history.cores),
+                percent(minute.cpu_peak, history.cores),
                 memory(minute.rss_peak),
                 minute.samples.to_string(),
             ]
@@ -2133,9 +2133,28 @@ pub(crate) fn metrics_history(history: &MetricsHistory, now: SystemTime) -> Stri
     )
 }
 
-/// A percentage of one core, or a dash where no figure was taken.
-fn percent(cpu: Option<f32>) -> String {
-    cpu.map_or_else(|| MISSING.to_owned(), |cpu| format!("{cpu:.1}%"))
+/// A share of the whole machine with one decimal, as Task Manager shows it — roadmap task T190c —
+/// or a dash where no figure was taken.
+///
+/// `cpu` is percent of one core and `cores` what one core is worth here; `0` is read as one. A
+/// figure above zero that rounds to `0.0` prints `<0.1%`, so a running service never reads as idle.
+fn percent(cpu: Option<f32>, cores: u32) -> String {
+    cpu.map_or_else(
+        || MISSING.to_owned(),
+        |cpu| {
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "a count of logical processors, far below f32's exact integers"
+            )]
+            let share = cpu / cores.max(1) as f32;
+
+            if share > 0.0 && share < 0.05 {
+                "<0.1%".to_owned()
+            } else {
+                format!("{share:.1}%")
+            }
+        },
+    )
 }
 
 /// Resident bytes, at the scale a person reads memory in.
@@ -4937,6 +4956,30 @@ mod tests {
         );
     }
 
+    /// **CPU is a share of the machine with one decimal, as Task Manager shows it** — roadmap task
+    /// T190c. The frame's figure is percent of one core; `cores` is what one core is worth here.
+    #[test]
+    fn cpu_is_a_share_of_the_machine() {
+        let rendered = metrics_frame(&MetricsFrame {
+            at: Timestamp(60_000),
+            samples: vec![
+                sample(MetricsSubject::Daemon, Some(150.0), 1),
+                sample(
+                    MetricsSubject::Service(ServiceId::parse("redis@main").expect("an id")),
+                    Some(0.53),
+                    1,
+                ),
+            ],
+            cores: 12,
+        });
+
+        assert!(rendered.contains("12.5%"), "{rendered}");
+        assert!(
+            rendered.contains("<0.1%"),
+            "a running service never reads as idle: {rendered}"
+        );
+    }
+
     #[test]
     fn a_frame_that_measured_nothing_says_so_rather_than_printing_an_empty_table() {
         let rendered = metrics_frame(&MetricsFrame {
@@ -4969,7 +5012,7 @@ mod tests {
                     samples: 60,
                 }],
                 retention_hours: 24,
-                cores: 1,
+                cores: 4,
             },
             now,
         );
@@ -4977,8 +5020,8 @@ mod tests {
         assert!(rendered.contains("SAMPLES"), "{rendered}");
         assert!(rendered.contains("60"), "{rendered}");
         assert!(
-            rendered.contains("1.5%") && rendered.contains("9.5%"),
-            "{rendered}"
+            rendered.contains("0.4%") && rendered.contains("2.4%"),
+            "1.5 and 9.5 percent of one core on four cores (T190c): {rendered}"
         );
         assert!(
             rendered.contains("ago"),
