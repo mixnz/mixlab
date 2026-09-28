@@ -391,10 +391,9 @@ impl Recipe for Mysql {
                 timeout: millis(settings.number(READY_TIMEOUT)),
             })
             .health(HealthCheck {
-                probe: HealthProbe::Command {
-                    program: admin.clone(),
-                    args: ping(addr),
-                },
+                // The server's greeting, not `mysqladmin ping`: the same answer without starting a
+                // process every ten seconds — roadmap task T190b, D4.
+                probe: HealthProbe::MysqlGreeting { addr },
                 interval: HEALTH_INTERVAL,
                 timeout: HEALTH_TIMEOUT,
                 failures_before_degraded: 3,
@@ -1074,6 +1073,28 @@ mod tests {
     /// All four rows of the route table, for [`route`]'s own reason: 5.6 is the one published line
     /// that repairs itself through `--bootstrap` rather than through `--init-file`, and no machine
     /// anybody runs these tests on is running 5.6.
+    /// **Health is asked in the server's own protocol** — roadmap task T190b, D4. Readiness, which
+    /// runs once per start, still asks the client program.
+    #[test]
+    fn health_is_asked_in_the_protocol_and_readiness_is_still_the_client() {
+        let spec = Mysql
+            .spec(&context("{}"))
+            .expect("a spec")
+            .build()
+            .expect("a valid spec");
+        let health = spec.health().expect("a health check");
+
+        assert!(
+            matches!(health.probe, HealthProbe::MysqlGreeting { .. }),
+            "{health:?}"
+        );
+        assert_eq!(health.interval, HEALTH_INTERVAL);
+        assert!(
+            matches!(spec.ready(), ReadyCheck::Command { .. }),
+            "{:?}",
+            spec.ready()
+        );
+    }
     #[test]
     fn the_reset_follows_the_route_and_creates_no_data_directory() {
         for (version, provides, route, windows) in [

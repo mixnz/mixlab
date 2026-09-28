@@ -223,9 +223,10 @@ impl Recipe for Redis {
                 timeout: millis(settings.number(READY_TIMEOUT)),
             })
             .health(HealthCheck {
-                probe: HealthProbe::Command {
-                    program: client.clone(),
-                    args: ping(context, port),
+                // `PING` over one connection, not `redis-cli ping`: the same answer without starting
+                // a process every ten seconds — roadmap task T190b, D4.
+                probe: HealthProbe::RedisPing {
+                    addr: address(context)?,
                 },
                 interval: HEALTH_INTERVAL,
                 timeout: HEALTH_TIMEOUT,
@@ -401,6 +402,28 @@ mod tests {
     /// **Redis is woken at its port and nowhere else**, which is not an omission: it listens on
     /// no Unix socket, and an address the server never binds is one the daemon must not bind
     /// either — a client reaching it would be answered by something that is not Redis.
+    /// **Health is asked in the server's own protocol** — roadmap task T190b, D4. Readiness, which
+    /// runs once per start, still asks the client program.
+    #[test]
+    fn health_is_asked_in_the_protocol_and_readiness_is_still_the_client() {
+        let spec = Redis
+            .spec(&context("{}"))
+            .expect("a spec")
+            .build()
+            .expect("a valid spec");
+        let health = spec.health().expect("a health check");
+
+        assert!(
+            matches!(health.probe, HealthProbe::RedisPing { .. }),
+            "{health:?}"
+        );
+        assert_eq!(health.interval, HEALTH_INTERVAL);
+        assert!(
+            matches!(spec.ready(), ReadyCheck::Command { .. }),
+            "{:?}",
+            spec.ready()
+        );
+    }
     #[test]
     fn a_stopped_server_is_woken_at_its_port_alone() {
         assert_eq!(

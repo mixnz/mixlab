@@ -252,6 +252,14 @@ pub(crate) struct Registry {
     /// [`Provisioning`](mixengine_core::generate::Provisioning) holds a cloned
     /// [`Context`](mixengine_core::generate::Context), which only the generator can build.
     provisioning: Arc<Mutex<HashMap<ServiceId, mixengine_core::generate::Provisioning>>>,
+
+    /// The graph the last [`Registry::graph`] produced, and when — roadmap task **T190b**.
+    ///
+    /// Read only by the idle sweep, through [`Registry::graph_for_sweep`]. Every other caller
+    /// renders, because every other caller either changes this home or answers somebody who just
+    /// asked; the sweep asks every thirty seconds whether anything is idle, and rendering and
+    /// installing every service to answer that was half of what the daemon spent at rest.
+    last_graph: Mutex<Option<(tokio::time::Instant, ServiceGraph)>>,
 }
 
 /// One service being supervised.
@@ -498,6 +506,7 @@ impl Registry {
             jobs,
             rituals: Arc::new(Mutex::new(HashMap::new())),
             provisioning: Arc::new(Mutex::new(HashMap::new())),
+            last_graph: Mutex::new(None),
         }
     }
 
@@ -603,13 +612,47 @@ impl Registry {
         self.remember_rituals(&generated);
         self.remember_provisioning(&generated);
 
-        ServiceGraph::new(
+        let graph = ServiceGraph::new(
             generated
                 .into_iter()
                 .map(|one| one.spec)
                 .collect::<Vec<_>>(),
         )
-        .map_err(|error| Undeclarable::Invalid(Box::new(mixengine_core::Error::Graph(error))))
+        .map_err(|error| Undeclarable::Invalid(Box::new(mixengine_core::Error::Graph(error))))?;
+
+        *lock(&self.last_graph) = Some((tokio::time::Instant::now(), graph.clone()));
+
+        Ok(graph)
+    }
+
+    /// The last graph a walk produced if it is younger than `max_age`, and a new walk otherwise —
+    /// roadmap task **T190b**, for the idle sweep and nothing else.
+    ///
+    /// **Stale on purpose, and bounded twice.** Every change to this home walks, so the graph here
+    /// is behind only when a change skipped the walk, and `max_age` bounds even that. And the sweep
+    /// never *acts* on it: a stop is decided on a fresh [`graph`](Self::graph).
+    ///
+    /// # Errors
+    ///
+    /// [`Undeclarable`], exactly as [`graph`](Self::graph) reports it, when a walk was needed.
+    pub(crate) async fn graph_for_sweep(
+        &self,
+        max_age: std::time::Duration,
+    ) -> Result<ServiceGraph, Undeclarable> {
+        let kept = lock(&self.last_graph)
+            .as_ref()
+            .filter(|(taken, _)| taken.elapsed() < max_age)
+            .map(|(_, graph)| graph.clone());
+
+        match kept {
+            Some(graph) => Ok(graph),
+            None => self.graph().await,
+        }
+    }
+
+    /// Drop the kept graph, so the next sweep renders — for a change that does not walk (T190b).
+    pub(crate) fn forget_graph(&self) {
+        *lock(&self.last_graph) = None;
     }
 
     /// The absolute path of the program this home's front end runs, or [`None`].
@@ -2413,6 +2456,80 @@ mod tests {
             .expect("the row");
 
         (state, pid)
+    }
+
+    /// **The idle sweep may look through the last graph while it is young** — roadmap task T190b.
+    #[tokio::test]
+    async fn the_sweep_reuses_a_young_graph_and_renders_an_old_one() {
+        let (_home, paths, store) = home(&["caddy"]).await;
+        // Paused only now: the database above is real, and a paused clock times its pool out.
+        tokio::time::pause();
+        let source = Arc::new(super::fixture::Swappable::new(vec![
+            spec("caddy").build().expect("a spec"),
+        ]));
+        let registry = registry(&paths, &store, Arc::clone(&source) as Arc<dyn SpecSource>);
+        let age = Duration::from_secs(600);
+
+        registry.graph_for_sweep(age).await.expect("a graph");
+        registry.graph_for_sweep(age).await.expect("a graph");
+        assert_eq!(
+            source.renders(),
+            1,
+            "the second look reused the first render"
+        );
+
+        tokio::time::advance(age).await;
+        registry.graph_for_sweep(age).await.expect("a graph");
+        assert_eq!(
+            source.renders(),
+            2,
+            "a graph as old as the limit is rendered again"
+        );
+    }
+
+    /// **Any walk refreshes what the sweep sees**, which is what bounds its staleness by the next
+    /// change rather than by the clock — roadmap task T190b.
+    #[tokio::test]
+    async fn any_walk_refreshes_what_the_sweep_sees() {
+        let (_home, paths, store) = home(&["caddy", "redis"]).await;
+        tokio::time::pause();
+        let source = Arc::new(super::fixture::Swappable::new(vec![
+            spec("caddy").build().expect("a spec"),
+        ]));
+        let registry = registry(&paths, &store, Arc::clone(&source) as Arc<dyn SpecSource>);
+        let age = Duration::from_secs(600);
+
+        registry.graph_for_sweep(age).await.expect("a graph");
+        source.set(vec![
+            spec("caddy").build().expect("a spec"),
+            spec("redis").build().expect("a spec"),
+        ]);
+        registry.graph().await.expect("a walk after a change");
+
+        let seen = registry.graph_for_sweep(age).await.expect("a graph");
+        assert!(
+            seen.spec(&service("redis")).is_some(),
+            "the walk's graph, not the older one"
+        );
+        assert_eq!(source.renders(), 2);
+    }
+
+    /// A change that does not walk says so, and the next sweep renders — roadmap task T190b.
+    #[tokio::test]
+    async fn a_forgotten_graph_is_rendered_again() {
+        let (_home, paths, store) = home(&["caddy"]).await;
+        tokio::time::pause();
+        let source = Arc::new(super::fixture::Swappable::new(vec![
+            spec("caddy").build().expect("a spec"),
+        ]));
+        let registry = registry(&paths, &store, Arc::clone(&source) as Arc<dyn SpecSource>);
+        let age = Duration::from_secs(600);
+
+        registry.graph_for_sweep(age).await.expect("a graph");
+        registry.forget_graph();
+        registry.graph_for_sweep(age).await.expect("a graph");
+
+        assert_eq!(source.renders(), 2);
     }
 
     /// A ceiling this machine will not hold, watched to the end of the count — task **T71a**.

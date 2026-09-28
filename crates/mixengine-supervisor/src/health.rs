@@ -154,6 +154,12 @@ impl Health {
                 Ok(endpoint.answered(timeout).await == Some(*expect_status))
             }
 
+            // **In the server's own protocol, with no process** — roadmap task T190b, D4. Each is
+            // bounded by the same timeout inside; see `wire`.
+            HealthProbe::MysqlGreeting { addr } => Ok(crate::wire::greeting(*addr, timeout).await),
+
+            HealthProbe::RedisPing { addr } => Ok(crate::wire::ping(*addr, timeout).await),
+
             // The honest probe for a database: a TCP accept only proves the listener is up, which
             // stays true while the server refuses every query.
             //
@@ -347,6 +353,122 @@ mod tests {
                 .await
                 .expect("a TCP probe can always be made"),
             "a refused connection is the answer, not a failure of the supervisor"
+        );
+    }
+
+    // ---- The protocol probes, against a socket — roadmap task T190b, D4. ----
+
+    /// What the pretend server does once it has accepted.
+    #[derive(Clone, Copy)]
+    enum Says {
+        /// Write these bytes, then wait for the client to go.
+        Bytes(&'static [u8]),
+        /// Close at once, without a word.
+        Nothing,
+        /// Say nothing and keep the connection open, as a server that has stopped answering does.
+        Silence,
+    }
+
+    /// A loopback server that accepts one connection and does `says`.
+    async fn server(says: Says) -> SocketAddr {
+        let listener = tokio::net::TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0)))
+            .await
+            .expect("a loopback port");
+        let addr = listener
+            .local_addr()
+            .expect("a bound listener has an address");
+
+        tokio::spawn(async move {
+            use tokio::io::AsyncWriteExt as _;
+
+            let Ok((mut stream, _)) = listener.accept().await else {
+                return;
+            };
+
+            match says {
+                Says::Bytes(bytes) => {
+                    let _ = stream.write_all(bytes).await;
+                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                }
+                Says::Nothing => drop(stream),
+                Says::Silence => tokio::time::sleep(std::time::Duration::from_secs(5)).await,
+            }
+        });
+
+        addr
+    }
+
+    /// Ask `probe` once, with a short timeout, and say how long it took.
+    async fn ask(probe: HealthProbe) -> (bool, std::time::Duration) {
+        let health = Health::watching(&HealthCheck {
+            probe,
+            timeout: Millis(300),
+            ..check()
+        });
+
+        let began = std::time::Instant::now();
+        let answer = health
+            .probe(&anywhere())
+            .await
+            .expect("a protocol probe can always be made");
+
+        (answer, began.elapsed())
+    }
+
+    #[tokio::test]
+    async fn a_mysql_server_that_greets_is_healthy() {
+        let addr = server(Says::Bytes(&[0x4a, 0x00, 0x00, 0x00, 0x0a, b'8', b'.'])).await;
+
+        assert!(ask(HealthProbe::MysqlGreeting { addr }).await.0);
+    }
+
+    #[tokio::test]
+    async fn a_mysql_server_that_closes_without_a_word_is_not() {
+        let addr = server(Says::Nothing).await;
+
+        assert!(!ask(HealthProbe::MysqlGreeting { addr }).await.0);
+    }
+
+    #[tokio::test]
+    async fn a_mysql_server_that_says_nothing_is_not_and_is_not_waited_on() {
+        let addr = server(Says::Silence).await;
+
+        let (answer, took) = ask(HealthProbe::MysqlGreeting { addr }).await;
+
+        assert!(!answer);
+        assert!(
+            took < std::time::Duration::from_secs(2),
+            "the check's timeout bounds the probe: {took:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_redis_server_that_pongs_is_healthy() {
+        let addr = server(Says::Bytes(b"+PONG\r\n")).await;
+
+        assert!(ask(HealthProbe::RedisPing { addr }).await.0);
+    }
+
+    #[tokio::test]
+    async fn a_redis_server_still_loading_is_not() {
+        let addr = server(Says::Bytes(
+            b"-LOADING Redis is loading the dataset in memory\r\n",
+        ))
+        .await;
+
+        assert!(!ask(HealthProbe::RedisPing { addr }).await.0);
+    }
+
+    #[tokio::test]
+    async fn a_redis_server_that_says_nothing_is_not_and_is_not_waited_on() {
+        let addr = server(Says::Silence).await;
+
+        let (answer, took) = ask(HealthProbe::RedisPing { addr }).await;
+
+        assert!(!answer);
+        assert!(
+            took < std::time::Duration::from_secs(2),
+            "the check's timeout bounds the probe: {took:?}"
         );
     }
 

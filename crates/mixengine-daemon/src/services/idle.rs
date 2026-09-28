@@ -31,6 +31,12 @@ use mixengine_core::services::ServiceGraph;
 use mixengine_proto::{IdleExemption, IdlePolicy, Millis, ServiceId};
 use mixengine_supervisor::Observation;
 
+/// How long the sweep may look through the last graph a walk produced — roadmap task **T190b**.
+///
+/// Ten minutes: the longest a sweep observes with a policy that has since changed. A change walks,
+/// which refreshes the graph long before this runs out, and a stop is decided on a fresh one anyway.
+pub(crate) const SWEEP_GRAPH_AGE: Duration = Duration::from_secs(600);
+
 /// What a sweep concluded about one service.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Verdict {
@@ -224,7 +230,10 @@ impl Sweeper {
 
     /// Take one reading of every running service that has a policy, and stop what is spent.
     pub(crate) async fn sweep(&mut self) -> Pass {
-        let graph = match self.registry.graph().await {
+        // **The last walk's graph, not a new render** — roadmap task T190b. Rendering installs every
+        // service's configuration, and doing that every thirty seconds to learn who has a policy was
+        // half of what this daemon spent at rest. A stop still renders first; see `still_stoppable`.
+        let graph = match self.registry.graph_for_sweep(SWEEP_GRAPH_AGE).await {
             Ok(graph) => graph,
             // The home's declarations could not be read, so nothing is stopped: an idle policy that
             // cannot be looked up is not an absent one.
@@ -288,13 +297,52 @@ impl Sweeper {
             if let Verdict::Stop { after } =
                 self.tally
                     .observe(id, &policy, self.period, exempt, &observation)
-                && self.stop(&graph, id, after).await
+                && let Some(fresh) = self.still_stoppable(id, &policy, &running, &warm).await
+                && self.stop(&fresh, id, after).await
             {
                 stopped.push(id.clone());
             }
         }
 
         Pass::Ran { stopped, measured }
+    }
+
+    /// The present, asked once before a stop — roadmap task **T190b**, the spec's D2.
+    ///
+    /// The sweep counted against a graph up to [`SWEEP_GRAPH_AGE`] old. Stopping is the one thing it
+    /// does, so it renders now and stops only if the fresh graph still gives this service a policy
+    /// no longer than the one counted, and still does not exempt it. [`None`] in every other case;
+    /// the verdict has already cleared the tally, so counting starts again from nothing.
+    async fn still_stoppable(
+        &self,
+        id: &ServiceId,
+        counted: &IdlePolicy,
+        running: &BTreeSet<ServiceId>,
+        warm: &BTreeMap<ServiceId, String>,
+    ) -> Option<ServiceGraph> {
+        let fresh = match self.registry.graph().await {
+            Ok(fresh) => fresh,
+            Err(error) => {
+                tracing::warn!(
+                    service = id.as_str(),
+                    ?error,
+                    "an idle service was not stopped: this home's services could not be read"
+                );
+                return None;
+            }
+        };
+
+        let policy = fresh.spec(id).and_then(|spec| spec.idle())?;
+
+        if observations(policy.after, self.period) > observations(counted.after, self.period) {
+            return None;
+        }
+
+        if !exemptions(&fresh, id, running, warm).is_empty() {
+            return None;
+        }
+
+        Some(fresh)
     }
 
     /// Drop the count of every service this daemon is no longer supervising.
@@ -313,10 +361,9 @@ impl Sweeper {
 
     /// Stop one idle service, and say so on its transition rather than in a second event.
     ///
-    /// **Takes the sweep's own graph rather than asking for another.** `Registry::graph` renders
-    /// every declared service's configuration on the way, so asking again per stopped service would
-    /// make a sweep cost more the more it found to do — to answer a question this sweep answered a
-    /// few microseconds earlier.
+    /// **Takes the graph `still_stoppable` rendered for this stop** — roadmap task T190b. The sweep
+    /// looks through a kept graph, and a stop is the one thing it may not decide on one; one render
+    /// per stopped service is what that costs, and a stop happens once per idle period at most.
     async fn stop(&self, graph: &ServiceGraph, id: &ServiceId, after: Millis) -> bool {
         // **Set before the plan is walked, never after.** The runner reads the reason at the moment
         // it enters `Stopping`, so a value written afterwards would arrive too late to explain this
@@ -418,6 +465,167 @@ mod tests {
 
     fn id(text: &str) -> ServiceId {
         ServiceId::parse(text).expect("a valid id")
+    }
+
+    // ---- The sweep against a real registry — roadmap task T190b. ----
+
+    use std::sync::Arc;
+
+    use mixengine_testkit::FakeService;
+
+    use super::super::SpecSource;
+    use super::super::fixture::{self, Swappable, arguments, registry_on};
+
+    /// The port the idle probe asks about; the mock host reports nobody connected to it.
+    const PROBED: u16 = 45_123;
+
+    fn idle_spec(fake: &FakeService, after: Millis) -> ServiceSpec {
+        fixture::spec("caddy")
+            .args(arguments(fake))
+            .idle(IdlePolicy {
+                after,
+                probe: IdleProbe::Connections { port: PROBED },
+            })
+            .build()
+            .expect("a usable spec")
+    }
+
+    /// A registry with `caddy` running under `source`, on a host that reports nobody connected.
+    async fn running(
+        source: &Arc<Swappable>,
+    ) -> (
+        mixengine_testkit::Home,
+        Arc<super::super::Registry>,
+        mixengine_core::Store,
+    ) {
+        let (home, paths, store) = fixture::home(&["caddy"]).await;
+        let host = mixengine_platform::mock::Host::with_home(paths.root());
+        host.set_connections(PROBED, 0);
+
+        let registry = Arc::new(registry_on(
+            &paths,
+            &store,
+            Arc::clone(source) as Arc<dyn SpecSource>,
+            Arc::new(host),
+        ));
+
+        let graph = registry.graph().await.expect("a graph");
+        let plan = graph.start_plan([&id("caddy")]).expect("a plan");
+        assert!(registry.start(&graph, &plan).await.failed.is_none());
+
+        (home, registry, store)
+    }
+
+    /// **A sweep with nothing to stop looks through the start's graph and renders nothing.**
+    #[tokio::test]
+    async fn a_sweep_with_nothing_to_stop_does_not_render() {
+        let fake = FakeService::new();
+        let source = Arc::new(Swappable::new(vec![idle_spec(
+            &fake,
+            Millis::from_secs(3600),
+        )]));
+        let (_home, registry, store) = running(&source).await;
+        let before = source.renders();
+
+        let mut sweeper = Sweeper::new(Arc::clone(&registry), store, PERIOD);
+        sweeper.sweep().await;
+        sweeper.sweep().await;
+
+        assert_eq!(
+            source.renders(),
+            before,
+            "both sweeps looked through the start's graph"
+        );
+    }
+
+    /// **A stop is decided on a graph rendered for it** — the spec's D2.
+    #[tokio::test]
+    async fn a_stop_is_decided_on_a_fresh_graph() {
+        let fake = FakeService::new();
+        let source = Arc::new(Swappable::new(vec![idle_spec(&fake, Millis(1))]));
+        let (_home, registry, store) = running(&source).await;
+        let before = source.renders();
+
+        let pass = Sweeper::new(Arc::clone(&registry), store, PERIOD)
+            .sweep()
+            .await;
+
+        assert_eq!(
+            pass,
+            Pass::Ran {
+                stopped: vec![id("caddy")],
+                measured: 1
+            }
+        );
+        assert_eq!(source.renders(), before + 1, "one render, for the stop");
+    }
+
+    #[tokio::test]
+    async fn a_policy_switched_off_since_the_kept_graph_saves_the_service() {
+        let fake = FakeService::new();
+        let source = Arc::new(Swappable::new(vec![idle_spec(&fake, Millis(1))]));
+        let (_home, registry, store) = running(&source).await;
+        source.set(vec![
+            fixture::spec("caddy")
+                .args(arguments(&fake))
+                .build()
+                .expect("a spec"),
+        ]);
+
+        let pass = Sweeper::new(Arc::clone(&registry), store, PERIOD)
+            .sweep()
+            .await;
+
+        assert_eq!(
+            pass,
+            Pass::Ran {
+                stopped: vec![],
+                measured: 1
+            }
+        );
+        assert!(registry.supervised().contains(&id("caddy")));
+    }
+
+    #[tokio::test]
+    async fn a_policy_lengthened_since_the_kept_graph_saves_the_service() {
+        let fake = FakeService::new();
+        let source = Arc::new(Swappable::new(vec![idle_spec(&fake, Millis(1))]));
+        let (_home, registry, store) = running(&source).await;
+        source.set(vec![idle_spec(&fake, Millis::from_secs(3600))]);
+
+        let pass = Sweeper::new(Arc::clone(&registry), store, PERIOD)
+            .sweep()
+            .await;
+
+        assert_eq!(
+            pass,
+            Pass::Ran {
+                stopped: vec![],
+                measured: 1
+            }
+        );
+        assert!(registry.supervised().contains(&id("caddy")));
+    }
+
+    #[tokio::test]
+    async fn a_fresh_render_that_fails_stops_nothing() {
+        let fake = FakeService::new();
+        let source = Arc::new(Swappable::new(vec![idle_spec(&fake, Millis(1))]));
+        let (_home, registry, store) = running(&source).await;
+        source.unavailable(true);
+
+        let pass = Sweeper::new(Arc::clone(&registry), store, PERIOD)
+            .sweep()
+            .await;
+
+        assert_eq!(
+            pass,
+            Pass::Ran {
+                stopped: vec![],
+                measured: 1
+            }
+        );
+        assert!(registry.supervised().contains(&id("caddy")));
     }
 
     fn policy(minutes: u64) -> IdlePolicy {

@@ -24,7 +24,15 @@ url: string,
 /**
  * The status that means healthy.
  */
-expect_status: number, } | { "type": "command", 
+expect_status: number, } | { "type": "mysql_greeting", 
+/**
+ * Where the server listens.
+ */
+addr: string, } | { "type": "redis_ping", 
+/**
+ * Where the server listens.
+ */
+addr: string, } | { "type": "command", 
 /**
  * The program to run.
  */

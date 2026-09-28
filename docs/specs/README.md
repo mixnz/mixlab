@@ -177,4 +177,5 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-09-28 | [T189 — Sync asks before it pulls](2026-09-28-t189-sync-asks-before-it-pulls-design.md) | T189 | implemented |
 | 2026-09-28 | [T190 — A reading on Windows does not list the machine](2026-09-28-t190-a-reading-on-windows-does-not-list-the-machine-design.md) | T190 | implemented |
 | 2026-09-28 | [T190a — What the daemon spends while it waits](2026-09-28-t190a-what-the-daemon-spends-while-it-waits-design.md) | T190a | implemented |
+| 2026-09-28 | [T190b — The idle sweep does not render to look](2026-09-28-t190b-the-idle-sweep-does-not-render-to-look-design.md) | T190b | implemented |
 | 2026-09-28 | [T191 — A path is spelled the way this system spells one](2026-09-28-t191-a-path-is-spelled-the-way-this-system-spells-one-design.md) | T191 | implemented |

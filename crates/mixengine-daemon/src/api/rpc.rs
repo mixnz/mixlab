@@ -1742,6 +1742,9 @@ impl Api {
     /// **Nothing is stopped or started here**, on [`Self::service_set_idle`]'s reasoning: the next
     /// idle sweep rebuilds its graph from the rows and reads the switch there, so a service already
     /// past its saving policy is stopped by that sweep and not by this call.
+    ///
+    /// **Which is why the kept graph is forgotten** — roadmap task T190b. The sweep looks through
+    /// the last walk's graph, and this changes every recipe's default policy without walking.
     async fn service_set_save_resources(
         &self,
         asked: SaveResourcesSet,
@@ -1749,6 +1752,8 @@ impl Api {
         mixengine_core::services::save_resources::set(&self.store, asked.on)
             .await
             .map_err(|error| error.to_wire())?;
+
+        self.services.forget_graph();
 
         self.service_save_resources().await
     }

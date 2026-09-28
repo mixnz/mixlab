@@ -272,7 +272,7 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       `registry.graph()`, which renders every service's configuration. The DNS server, the sharing
       check's interface list (2.6 ms) and the metrics listing are all well under 1 ms/s.
       Design: [2026-09-28-t190a-what-the-daemon-spends-while-it-waits-design.md](../specs/2026-09-28-t190a-what-the-daemon-spends-while-it-waits-design.md).
-- [ ] **T190b** The idle sweep does not render every service to learn the graph. Every 30 s
+- [x] **T190b** The idle sweep does not render every service to learn the graph. Every 30 s
       `services::idle` calls `registry.graph()`, whose spec source is `Rendered(Generator)`, so each
       sweep runs `Generator::prepare` and `documents` for every service: reading certificate pairs,
       rendering recipes, parsing TOML, creating directories, and opening a SQLite transaction. On
@@ -280,6 +280,12 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       spends with nobody watching (T190a). The question a fix has to answer: what may the sweep
       reuse between passes, and what change has to invalidate it, so that a config edit, a
       certificate renewal or a started service is never judged against a stale graph.
+      Design: [2026-09-28-t190b-the-idle-sweep-does-not-render-to-look-design.md](../specs/2026-09-28-t190b-the-idle-sweep-does-not-render-to-look-design.md).
+      **Measured on the real home:** the sweep looks through the last walk's graph (D1–D3). MySQL,
+      MariaDB and Redis health is asked in their own protocol instead of by starting a client
+      (D4, 9.9 ms of CPU per probe down to 0.5 ms). The daemon at rest went from 0.82% of a core to
+      0.53%, and the 30-second burst is gone. The 0.45% target was not met. A trace finds no single
+      source left above 1 ms/s, only several small periodic tasks, recorded in the spec.
 - [x] **T72** CI budgets: `mixengined` idle < 32 MB RSS, with the published total reported beside
       it — failing the build on regression. **(P)**
       Design: [2026-08-30-t72-ci-budgets-design.md](../specs/2026-08-30-t72-ci-budgets-design.md).

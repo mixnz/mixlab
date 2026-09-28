@@ -15,6 +15,7 @@ pub mod idle;
 pub mod logs;
 pub mod ready;
 pub mod restart;
+mod wire;
 
 pub use command::Surroundings;
 pub use health::{Health, Verdict};

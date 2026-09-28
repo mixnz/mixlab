@@ -236,3 +236,75 @@ pub(crate) fn registry_on(
         jobs,
     )
 }
+
+/// Specs a test can replace between walks, counting how often it was asked to render — roadmap
+/// task **T190b**, whose subject is how often the idle sweep renders.
+#[derive(Debug)]
+pub(crate) struct Swappable {
+    specs: std::sync::Mutex<Vec<ServiceSpec>>,
+    unavailable: std::sync::atomic::AtomicBool,
+    renders: std::sync::atomic::AtomicUsize,
+}
+
+impl Swappable {
+    pub(crate) fn new(specs: Vec<ServiceSpec>) -> Self {
+        Self {
+            specs: std::sync::Mutex::new(specs),
+            unavailable: std::sync::atomic::AtomicBool::new(false),
+            renders: std::sync::atomic::AtomicUsize::new(0),
+        }
+    }
+
+    /// What the next render answers.
+    pub(crate) fn set(&self, specs: Vec<ServiceSpec>) {
+        *self
+            .specs
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = specs;
+    }
+
+    /// Whether the next render fails, as a home whose package went missing does.
+    pub(crate) fn unavailable(&self, failing: bool) {
+        self.unavailable
+            .store(failing, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// How many times `declared` has been asked.
+    pub(crate) fn renders(&self) -> usize {
+        self.renders.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+impl SpecSource for Swappable {
+    fn declared(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = mixengine_core::Result<Vec<Generated>>> + Send + '_>> {
+        self.renders
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
+        let answer = if self.unavailable.load(std::sync::atomic::Ordering::SeqCst) {
+            Err(mixengine_core::Error::NotFound {
+                kind: "package",
+                id: "the one this service belongs to".to_owned(),
+            })
+        } else {
+            let specs = self
+                .specs
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .clone();
+            Ok(generated(&specs, Written::Unchanged))
+        };
+
+        Box::pin(std::future::ready(answer))
+    }
+
+    /// **Nothing, and that is the truthful answer here** — roadmap task **T53**. This fixture holds
+    /// specs a test wrote by hand; there is no recipe behind them and so no setting to merge.
+    fn settings(
+        &self,
+        _service: &ServiceId,
+    ) -> Pin<Box<dyn Future<Output = mixengine_core::Result<Option<Settings>>> + Send + '_>> {
+        Box::pin(std::future::ready(Ok(None)))
+    }
+}
