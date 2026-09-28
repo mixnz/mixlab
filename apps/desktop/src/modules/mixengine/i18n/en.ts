@@ -56,6 +56,7 @@ export default {
       lookedIn: "Looked in, in this order:",
       start: "Start MixEngine",
       starting: "Starting\u2026",
+      readingStorage: "Reading data folders…",
       retry: "Try again",
       getIt: "Reinstall MixEngine",
     },

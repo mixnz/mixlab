@@ -73,13 +73,17 @@ pub fn run() {
     let builder = builder
         // Only the maximized flag is persisted: leave the window maximized and it comes back
         // maximized, restore it down and the next launch uses the default size from the config.
-        .plugin(
-            tauri_plugin_window_state::Builder::default()
+        .plugin({
+            let window_state = tauri_plugin_window_state::Builder::default()
                 .with_state_flags(tauri_plugin_window_state::StateFlags::MAXIMIZED)
                 // The tray panel is placed beside the icon every time it opens (T168).
-                .with_denylist(&[tray::PANEL])
-                .build(),
-        )
+                .with_denylist(&[tray::PANEL]);
+            // On Windows `main` is maximized as it is first shown instead — see
+            // `launch::bring_to_front` for why.
+            #[cfg(windows)]
+            let window_state = window_state.skip_initial_state("main");
+            window_state.build()
+        })
         // Registers `mixlab://` with the OS through the installers, and on macOS delivers the URLs
         // the OS opens the app with — see `launch::start` for which systems listen to it.
         .plugin(tauri_plugin_deep_link::init());

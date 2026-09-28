@@ -16,6 +16,8 @@
   of item. A sync server you run yourself needs updating to this release.
 - The download icon shows only when another machine changed something, not every time sync
   checks with your server.
+- Start MixEngine waits until the four data folders are listed, so you can move them before the
+  first start.
 
 ### Fixed
 - A blueprint that installs PHP now turns on its PHP extensions, such as `redis` for Laravel, and
@@ -24,6 +26,8 @@
   already in them, instead of refusing to install them again.
 - If MixLab closed while sync was sending an edit, it no longer says afterwards that the edit was
   replaced by a newer one.
+- On Windows, MixLab opens straight into its window. An empty window no longer flashes and
+  disappears first.
 
 ## v0.0.9
 

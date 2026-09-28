@@ -1,4 +1,4 @@
-//! The three things every corner of the app needed and each wrote out for itself.
+//! The things every corner of the app needed and each wrote out for itself.
 //!
 //! None of them is about a database, a terminal or a request — they are about the machine MixDB is
 //! running on and the runtime it is running in, which is why they are here at the crate root rather
@@ -51,4 +51,47 @@ pub fn hide_console(command: &mut Command) -> &mut Command {
         command.creation_flags(CREATE_NO_WINDOW);
     }
     command
+}
+
+/// Whether the window-state plugin last saved `label` as maximized.
+///
+/// Read from the plugin's own file, for the one window whose state it is told not to put back
+/// itself (`lib.rs`, and `launch::bring_to_front` for why). A file that is missing or unreadable
+/// is a window that was not maximized: the plugin itself treats it the same way.
+#[cfg(windows)]
+pub fn saved_maximized<R: tauri::Runtime>(app: &AppHandle<R>, label: &str) -> bool {
+    use tauri_plugin_window_state::AppHandleExt;
+
+    let Ok(dir) = app.path().app_config_dir() else {
+        return false;
+    };
+    std::fs::read(dir.join(app.filename()))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+        .and_then(|saved| saved.get(label)?.get("maximized")?.as_bool())
+        .unwrap_or(false)
+}
+
+/// Shows `window` maximized in a single `ShowWindow`, so nothing smaller or emptier reaches the
+/// screen first.
+///
+/// On the main thread, as every call on a window's handle must be; queued there behind anything
+/// already asked of the window, so a `show` that follows it still comes after it. tao reads the
+/// maximized state back from the `WM_SIZE` this causes, so its own record stays true.
+#[cfg(windows)]
+pub fn show_maximized<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
+    /// Not in `std`, and `windows-sys` is not a dependency for one call.
+    const SW_SHOWMAXIMIZED: i32 = 3;
+    #[link(name = "user32")]
+    extern "system" {
+        fn ShowWindow(hwnd: *mut std::ffi::c_void, command: i32) -> i32;
+    }
+
+    let target = window.clone();
+    let _ = window.run_on_main_thread(move || {
+        if let Ok(hwnd) = target.hwnd() {
+            // SAFETY: the handle is this process's own live window, and this is its thread.
+            unsafe { ShowWindow(hwnd.0, SW_SHOWMAXIMIZED) };
+        }
+    });
 }
