@@ -91,8 +91,8 @@ export default function ExtensionsPanel({
         <Input
           allowClear
           className={styles.search}
-          placeholder={t("mixengine.runtimes.extensions.search")}
-          aria-label={t("mixengine.runtimes.extensions.search")}
+          placeholder={t("mixengine.packages.extensions.search")}
+          aria-label={t("mixengine.packages.extensions.search")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           onKeyDown={(e) => {
@@ -103,19 +103,19 @@ export default function ExtensionsPanel({
           }}
         />
         <SegmentedControl
-          aria-label={t("mixengine.runtimes.extensions.filter")}
+          aria-label={t("mixengine.packages.extensions.filter")}
           value={onFilter}
           onChange={setOnFilter}
           segments={[
-            { value: "all", label: t("mixengine.runtimes.extensions.filterAll"), count: searched.length },
+            { value: "all", label: t("mixengine.packages.extensions.filterAll"), count: searched.length },
             {
               value: "on",
-              label: t("mixengine.runtimes.extensions.filterOn"),
+              label: t("mixengine.packages.extensions.filterOn"),
               count: searched.filter((ext) => ext.enabled).length,
             },
             {
               value: "off",
-              label: t("mixengine.runtimes.extensions.filterOff"),
+              label: t("mixengine.packages.extensions.filterOff"),
               count: searched.filter((ext) => !ext.enabled).length,
             },
           ]}
@@ -123,19 +123,19 @@ export default function ExtensionsPanel({
       </div>
 
       {banner && banner.kind === "restartRequired" && (
-        <p className={styles.banner}>{t("mixengine.runtimes.extensions.restartRequired")}</p>
+        <p className={styles.banner}>{t("mixengine.packages.extensions.restartRequired")}</p>
       )}
       {banner && banner.kind === "appliesNextStart" && (
-        <p className={styles.banner}>{t("mixengine.runtimes.extensions.appliesNextStart")}</p>
+        <p className={styles.banner}>{t("mixengine.packages.extensions.appliesNextStart")}</p>
       )}
 
       <Card
         headingLevel={3}
-        title={t("mixengine.runtimes.extensions.title", { version: target.version })}
-        count={t("mixengine.runtimes.extensions.onCount", { on: onCount, total: optional.length })}
+        title={t("mixengine.packages.extensions.title", { version: target.version })}
+        count={t("mixengine.packages.extensions.onCount", { on: onCount, total: optional.length })}
       >
         {shown.length === 0 ? (
-          <EmptyState title={t("mixengine.runtimes.extensions.noMatches")} />
+          <EmptyState title={t("mixengine.packages.extensions.noMatches")} />
         ) : (
           <ul className={styles.grid}>
             {shown.map((ext) => (
@@ -159,10 +159,10 @@ export default function ExtensionsPanel({
           title={
             <span className={styles.builtInTitle}>
               <LockIcon size={14} />
-              {t("mixengine.runtimes.extensions.builtIn")}
+              {t("mixengine.packages.extensions.builtIn")}
             </span>
           }
-          description={t("mixengine.runtimes.extensions.builtInAbout")}
+          description={t("mixengine.packages.extensions.builtInAbout")}
         >
           <ul className={styles.chips}>
             {shownBuiltIn.map((ext) => (

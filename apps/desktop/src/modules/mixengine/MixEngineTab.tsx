@@ -25,7 +25,7 @@ import Packages from "./screens/Packages";
 import ServicesDetail from "./screens/ServicesDetail";
 import Settings from "./screens/Settings";
 import Sites from "./screens/Sites";
-import { requestRuntimesLanguageFilter } from "./runtimesNavigation";
+import { requestLanguageFilter } from "./packagesNavigation";
 import { requestLogsService } from "./logsNavigation";
 import { requestSitesFilter } from "./sitesNavigation";
 import {
@@ -126,7 +126,7 @@ export default function MixEngineTab({
   }
 
   /* Mỗi màn hình sidebar tự quản lý watch/reload riêng của nó (qua `subscribeDaemonWatch`) và có
-     thể đang giữa một việc dài hơi (một job cài đặt ở Runtimes) khi người dùng đổi sang màn khác —
+     thể đang giữa một việc dài hơi (một job cài đặt ở Packages) khi người dùng đổi sang màn khác —
      đổi màn không được unmount nó, nếu không state cục bộ đang theo dõi việc đó mất sạch. Nên
      render mỗi màn đã từng xem qua đúng một lần, chỉ ẩn/hiện bằng `hidden`; màn chưa xem qua thì
      chưa vào DOM (mở tất cả chín màn ngay từ đầu là chín lượt gọi API cho những màn có thể không
@@ -339,7 +339,7 @@ export default function MixEngineTab({
           <PhpExtensions
             active={active}
             onInstallPhp={() => {
-              requestRuntimesLanguageFilter("php");
+              requestLanguageFilter("php");
               selectScreen("packages");
             }}
           />

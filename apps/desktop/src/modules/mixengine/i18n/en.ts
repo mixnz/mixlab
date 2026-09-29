@@ -265,7 +265,7 @@ export default {
         unresolved: "Not installed: {{hint}}",
       },
     },
-    runtimes: {
+    packages: {
       tabLanguages: "Languages",
       about: "Languages, servers and the versions of each this machine keeps.",
       onDisk: {
@@ -350,7 +350,7 @@ export default {
       title: "New service",
       package: "Package",
       packagePlaceholder: "Pick an installed package",
-      noPackages: "No packages installed yet. Install one under Runtimes first.",
+      noPackages: "No packages installed yet. Install one under Packages first.",
       instance: "Instance name",
       instancePlaceholder: "main, secondary, …",
       idPreview: "It will be called {{id}}.",

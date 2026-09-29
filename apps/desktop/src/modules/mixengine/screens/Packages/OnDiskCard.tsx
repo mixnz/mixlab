@@ -28,12 +28,12 @@ export default function OnDiskCard({
 
   return (
     <Card
-      title={t("mixengine.runtimes.onDisk.title")}
-      description={t("mixengine.runtimes.onDisk.description")}
+      title={t("mixengine.packages.onDisk.title")}
+      description={t("mixengine.packages.onDisk.description")}
       count={rows.length}
       flush
     >
-      <Table aria-label={t("mixengine.runtimes.onDisk.title")}>
+      <Table aria-label={t("mixengine.packages.onDisk.title")}>
         <tbody>
           {rows.map((row) => (
             <tr key={row.key}>
@@ -47,11 +47,11 @@ export default function OnDiskCard({
               <td data-align="end">
                 <Button
                   variant="soft"
-                  busy={adopting === row.key ? t("mixengine.runtimes.onDisk.adopting") : undefined}
+                  busy={adopting === row.key ? t("mixengine.packages.onDisk.adopting") : undefined}
                   disabled={adopting !== null && adopting !== row.key}
                   onClick={() => onAdopt(row)}
                 >
-                  {t("mixengine.runtimes.onDisk.adopt")}
+                  {t("mixengine.packages.onDisk.adopt")}
                 </Button>
               </td>
             </tr>

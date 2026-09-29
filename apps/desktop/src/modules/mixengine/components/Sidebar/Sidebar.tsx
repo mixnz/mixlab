@@ -38,7 +38,7 @@ import styles from "./Sidebar.module.css";
  * `docs/specs/2026-09-07-mixengine-metrics-settings-design.md`).
  *
  * **`phpExtensions` cũng không nằm trong đó** — `client-surface.md` đặt công tắc extension bên
- * trong màn Runtimes, và nó vẫn ở đó: cùng một component, vẽ ở hai nơi (T118). Nhóm *Môi trường* là
+ * trong màn Packages, và nó vẫn ở đó: cùng một component, vẽ ở hai nơi (T118). Nhóm *Môi trường* là
  * chỗ thứ hai, vì đó là nơi người ta đi tìm nó.
  *
  * Bảng này vẫn là chỗ **duy nhất** quyết định thứ tự, đúng như khi nó còn phẳng.

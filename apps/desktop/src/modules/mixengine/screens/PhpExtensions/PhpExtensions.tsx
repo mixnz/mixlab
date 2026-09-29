@@ -18,11 +18,11 @@ import styles from "./PhpExtensions.module.css";
  * Bật tắt extension của PHP — T118.
  *
  * **Không có method mới.** `runtime.list_extensions` và `runtime.set_extension` đã tồn tại từ T28,
- * và `ExtensionsPanel` đã vẽ chúng từ khi có màn Runtimes. Thứ thiếu là *đường tới đó*: nó nằm sau
- * một hàng phiên bản phải mở ra ở một màn tên là Runtimes, bốn hàng phía trên một mục sidebar tên
- * là *Extensions* mà lại nói về một chuyện hoàn toàn khác.
+ * và `ExtensionsPanel` đã vẽ chúng từ khi có màn Runtimes (nay là Packages). Thứ thiếu là *đường
+ * tới đó*: nó nằm sau một hàng phiên bản phải mở ra ở một màn khi đó tên là Runtimes, bốn hàng phía
+ * trên một mục sidebar tên là *Extensions* mà lại nói về một chuyện hoàn toàn khác.
  *
- * **Cùng một component, vẽ ở hai nơi**, không phải hai bản chép: mở từ Runtimes vẫn được, và bản
+ * **Cùng một component, vẽ ở hai nơi**, không phải hai bản chép: mở từ Packages vẫn được, và bản
  * thứ hai sẽ là bản lệch đúng vào ngày một trong hai được sửa.
  *
  * **Không có PHP thì một câu và một nút**, không phải một bảng rỗng: bảng rỗng bắt người ta đoán
@@ -71,7 +71,7 @@ export default function PhpExtensions({
    * mounted và chỉ ẩn đi, nên "đã mount" không có nghĩa là "vừa được xem".
    *
    * Đây là màn duy nhất từng bỏ qua giao kèo ấy, và cái giá đúng bằng một lỗi: gỡ bản PHP đang
-   * chọn ở màn Runtimes thì `Select` ở đây vẫn giữ nguyên nó, và `ExtensionsPanel` hỏi daemon về
+   * chọn ở màn Packages thì `Select` ở đây vẫn giữ nguyên nó, và `ExtensionsPanel` hỏi daemon về
    * một runtime không còn tồn tại ("no such runtime: php …"). Luật chọn lại version khi bản đang
    * chọn biến mất đã nằm sẵn trong `reload()` — thứ thiếu chỉ là một lượt gọi nữa.
    */

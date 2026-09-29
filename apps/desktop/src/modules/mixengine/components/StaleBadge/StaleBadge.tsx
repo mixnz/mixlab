@@ -9,5 +9,5 @@ import styles from "./StaleBadge.module.css";
 export default function StaleBadge({ stale }: { stale: boolean }) {
   const { t } = useTranslation();
   if (!stale) return null;
-  return <span className={styles.badge}>{t("mixengine.runtimes.stale")}</span>;
+  return <span className={styles.badge}>{t("mixengine.packages.stale")}</span>;
 }

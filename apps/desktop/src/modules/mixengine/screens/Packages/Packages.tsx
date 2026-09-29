@@ -4,7 +4,7 @@ import PageHeader from "../../../../components/PageHeader";
 import SegmentedControl, { type Segment } from "../../../../components/SegmentedControl";
 import { DatabaseGenericIcon, EngineIcon, GlobeIcon, PackageIcon, PulseIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
-import { peekPendingRuntimesFilter } from "../../runtimesNavigation";
+import { peekPendingLanguageFilter } from "../../packagesNavigation";
 import Languages from "./Languages";
 import PackageList from "./PackageList";
 import { PACKAGE_CATEGORY_ORDER, packageCategory, type PackageCategory } from "./packageCategories";
@@ -28,7 +28,7 @@ export default function Packages({ active }: { active: boolean }) {
   const packages = usePackages(active);
 
   // Somebody sent the user here to install a runtime — "Install a PHP" on the PHP extensions
-  // screen, via `runtimesNavigation.ts`. This screen stays mounted between visits and keeps
+  // screen, via `packagesNavigation.ts`. This screen stays mounted between visits and keeps
   // whichever tab was last open, so a visit that arrives with a request pending has to be put back
   // on Languages; `Languages` itself takes the request and fills its search box.
   //
@@ -36,7 +36,7 @@ export default function Packages({ active }: { active: boolean }) {
   // an `active` edge is what keeps it from fighting the user — once they are on this screen the
   // token is already gone, and a manual switch to another tab stays switched.
   useEffect(() => {
-    if (active && peekPendingRuntimesFilter() !== null) setTab("languages");
+    if (active && peekPendingLanguageFilter() !== null) setTab("languages");
   }, [active]);
 
   // Đổi tab không được unmount Ngôn ngữ: một job đang cài ở đó vẫn phải còn được theo dõi
@@ -64,10 +64,10 @@ export default function Packages({ active }: { active: boolean }) {
   }, [tab, hasOther]);
 
   const categoryLabel: Record<PackageCategory, string> = {
-    web: t("mixengine.runtimes.categoryWeb"),
-    database: t("mixengine.runtimes.categoryDatabase"),
-    cache: t("mixengine.runtimes.categoryCache"),
-    other: t("mixengine.runtimes.categoryOther"),
+    web: t("mixengine.packages.categoryWeb"),
+    database: t("mixengine.packages.categoryDatabase"),
+    cache: t("mixengine.packages.categoryCache"),
+    other: t("mixengine.packages.categoryOther"),
   };
 
   const tabIcon: Record<TabKey, ReactNode> = {
@@ -79,13 +79,13 @@ export default function Packages({ active }: { active: boolean }) {
   };
 
   const tabs: Segment<TabKey>[] = [
-    { value: "languages", label: t("mixengine.runtimes.tabLanguages"), icon: tabIcon.languages },
+    { value: "languages", label: t("mixengine.packages.tabLanguages"), icon: tabIcon.languages },
     ...categoryTabs.map((cat) => ({ value: cat as TabKey, label: categoryLabel[cat], icon: tabIcon[cat] })),
   ];
 
   return (
     <div className={`mixengine-page ${styles.packages}`}>
-      <PageHeader title={t("mixengine.sidebar.packages")} description={t("mixengine.runtimes.about")} />
+      <PageHeader title={t("mixengine.sidebar.packages")} description={t("mixengine.packages.about")} />
       <div className={styles.tabs}>
         <SegmentedControl
           mode="tabs"

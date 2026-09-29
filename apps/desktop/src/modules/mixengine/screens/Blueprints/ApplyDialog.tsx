@@ -178,7 +178,7 @@ export default function ApplyDialog({
 
   // Theo dõi job khi đang chạy — đăng ký đúng một lần, gỡ khi rời phase "running". Qua
   // `subscribeDaemonWatch` chứ không gọi thẳng `api.watch()`: kênh đó dùng chung cho cả app (xem
-  // `daemonWatch.ts`) — Dashboard/Sites/Runtimes rất có thể đang mở cùng lúc dialog này, và một
+  // `daemonWatch.ts`) — Dashboard/Sites/Packages rất có thể đang mở cùng lúc dialog này, và một
   // `api.watch()`/`api.unwatch()` riêng ở đây sẽ giành mất hoặc đóng luôn kênh của chúng.
   useEffect(() => {
     if (phase.kind !== "running") return;

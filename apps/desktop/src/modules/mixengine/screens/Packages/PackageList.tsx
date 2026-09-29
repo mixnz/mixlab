@@ -60,18 +60,18 @@ export default function PackageList({
         onAdopt={(row) => void state.adopt(row.name, row.version)}
       />
 
-      <Card title={t("mixengine.runtimes.installedTitle")} count={installedInCategory.length} flush>
+      <Card title={t("mixengine.packages.installedTitle")} count={installedInCategory.length} flush>
         {installedInCategory.length === 0 ? (
-          <EmptyState title={t("mixengine.runtimes.installedEmpty")} />
+          <EmptyState title={t("mixengine.packages.installedEmpty")} />
         ) : (
-          <Table aria-label={t("mixengine.runtimes.installedTitle")}>
+          <Table aria-label={t("mixengine.packages.installedTitle")}>
             <thead>
               <tr>
-                <th>{t("mixengine.runtimes.columnPackage")}</th>
-                <th>{t("mixengine.runtimes.columnVersion")}</th>
-                <th>{t("mixengine.runtimes.columnInstalledAt")}</th>
-                <th>{t("mixengine.runtimes.columnServices")}</th>
-                <th data-align="end">{t("mixengine.runtimes.columnActions")}</th>
+                <th>{t("mixengine.packages.columnPackage")}</th>
+                <th>{t("mixengine.packages.columnVersion")}</th>
+                <th>{t("mixengine.packages.columnInstalledAt")}</th>
+                <th>{t("mixengine.packages.columnServices")}</th>
+                <th data-align="end">{t("mixengine.packages.columnActions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -99,13 +99,13 @@ export default function PackageList({
                         disabled={inUse}
                         title={
                           inUse
-                            ? t("mixengine.runtimes.uninstallBlockedMessage", {
+                            ? t("mixengine.packages.uninstallBlockedMessage", {
                                 services: row.services.join(", "),
                               })
                             : undefined
                         }
                       >
-                        {t("mixengine.runtimes.uninstall")}
+                        {t("mixengine.packages.uninstall")}
                       </Button>
                     </td>
                   </tr>
@@ -117,7 +117,7 @@ export default function PackageList({
       </Card>
 
       <Card
-        title={t("mixengine.runtimes.availableTitle")}
+        title={t("mixengine.packages.availableTitle")}
         count={
           <>
             {availableInCategory.length}
@@ -128,8 +128,8 @@ export default function PackageList({
           <Input
             allowClear
             className={styles.filter}
-            placeholder={t("mixengine.runtimes.searchAvailable")}
-            aria-label={t("mixengine.runtimes.searchAvailable")}
+            placeholder={t("mixengine.packages.searchAvailable")}
+            aria-label={t("mixengine.packages.searchAvailable")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             onKeyDown={(e) => {
@@ -144,7 +144,7 @@ export default function PackageList({
         flush
       >
         {availableInCategory.length === 0 ? (
-          filter.trim() !== "" && <EmptyState title={t("mixengine.runtimes.noMatches")} />
+          filter.trim() !== "" && <EmptyState title={t("mixengine.packages.noMatches")} />
         ) : (
           <ul className={styles.available}>
             {availableInCategory.map((release) => {
@@ -183,7 +183,7 @@ export default function PackageList({
                     </span>
                   ) : (
                     <Button variant="soft" className={styles.install} onClick={() => void state.install(release)}>
-                      {t("mixengine.runtimes.install")}
+                      {t("mixengine.packages.install")}
                     </Button>
                   )}
                 </li>

@@ -28,7 +28,7 @@ import {
 import { applyJob, type JobRow } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
 import { afterRefusal } from "../../forceStep";
-import { takePendingRuntimesFilter } from "../../runtimesNavigation";
+import { takePendingLanguageFilter } from "../../packagesNavigation";
 import { formatInstalledAt, jobFinished, jobFor, versionKey } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
 import { matchesAvailable } from "./availableFilter";
@@ -95,13 +95,13 @@ export default function Languages({ active }: { active: boolean }) {
     if (active) void reload();
   }, [active, reload]);
 
-  // A navigation request from `runtimesNavigation.ts` — "Install a PHP" on the PHP extensions
+  // A navigation request from `packagesNavigation.ts` — "Install a PHP" on the PHP extensions
   // screen means "open Packages already searching for php", and the search box lives here. Read on
   // the `active` edge rather than on mount: this component stays mounted between visits, so mount
   // happens once while the request can arrive any number of times afterwards.
   useEffect(() => {
     if (!active) return;
-    const requested = takePendingRuntimesFilter();
+    const requested = takePendingLanguageFilter();
     if (requested !== null) setFilter(requested);
   }, [active]);
 
@@ -250,19 +250,19 @@ export default function Languages({ active }: { active: boolean }) {
 
       <OnDiskCard rows={onDisk} adopting={adopting} onAdopt={(row) => void adopt(row)} />
 
-      <Card title={t("mixengine.runtimes.installedTitle")} count={installed.length} flush>
+      <Card title={t("mixengine.packages.installedTitle")} count={installed.length} flush>
         {installed.length === 0 ? (
-          <EmptyState title={t("mixengine.runtimes.installedEmpty")} />
+          <EmptyState title={t("mixengine.packages.installedEmpty")} />
         ) : (
-          <Table aria-label={t("mixengine.runtimes.installedTitle")}>
+          <Table aria-label={t("mixengine.packages.installedTitle")}>
             <thead>
               <tr>
-                <th>{t("mixengine.runtimes.columnRuntime")}</th>
-                <th>{t("mixengine.runtimes.columnVersion")}</th>
-                <th>{t("mixengine.runtimes.columnChannel")}</th>
-                <th>{t("mixengine.runtimes.columnInstalledAt")}</th>
-                <th>{t("mixengine.runtimes.columnDefault")}</th>
-                <th data-align="end">{t("mixengine.runtimes.columnActions")}</th>
+                <th>{t("mixengine.packages.columnRuntime")}</th>
+                <th>{t("mixengine.packages.columnVersion")}</th>
+                <th>{t("mixengine.packages.columnChannel")}</th>
+                <th>{t("mixengine.packages.columnInstalledAt")}</th>
+                <th>{t("mixengine.packages.columnDefault")}</th>
+                <th data-align="end">{t("mixengine.packages.columnActions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -300,16 +300,16 @@ export default function Languages({ active }: { active: boolean }) {
                       <td className={styles.muted}>{formatInstalledAt(row.installed_at)}</td>
                       <td>
                         {row.default ? (
-                          <span className={styles.defaultPill}>{t("mixengine.runtimes.columnDefault")}</span>
+                          <span className={styles.defaultPill}>{t("mixengine.packages.columnDefault")}</span>
                         ) : (
                           <Button size="small" variant="ghost" onClick={() => void setDefault(row)}>
-                            {t("mixengine.runtimes.setDefault")}
+                            {t("mixengine.packages.setDefault")}
                           </Button>
                         )}
                       </td>
                       <td data-align="end" data-nowrap>
                         <Button size="small" variant="danger" onClick={() => setUninstallTarget(row)}>
-                          {t("mixengine.runtimes.uninstall")}
+                          {t("mixengine.packages.uninstall")}
                         </Button>
                       </td>
                     </tr>
@@ -329,7 +329,7 @@ export default function Languages({ active }: { active: boolean }) {
       </Card>
 
       <Card
-        title={t("mixengine.runtimes.availableTitle")}
+        title={t("mixengine.packages.availableTitle")}
         count={
           <>
             {shownAvailable.length}
@@ -340,8 +340,8 @@ export default function Languages({ active }: { active: boolean }) {
           <Input
             allowClear
             className={styles.filter}
-            placeholder={t("mixengine.runtimes.searchAvailable")}
-            aria-label={t("mixengine.runtimes.searchAvailable")}
+            placeholder={t("mixengine.packages.searchAvailable")}
+            aria-label={t("mixengine.packages.searchAvailable")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             onKeyDown={(e) => {
@@ -356,7 +356,7 @@ export default function Languages({ active }: { active: boolean }) {
         flush
       >
         {shownAvailable.length === 0 ? (
-          filter.trim() !== "" && <EmptyState title={t("mixengine.runtimes.noMatches")} />
+          filter.trim() !== "" && <EmptyState title={t("mixengine.packages.noMatches")} />
         ) : (
           <ul className={styles.available}>
             {shownAvailable.map((release) => {
@@ -395,7 +395,7 @@ export default function Languages({ active }: { active: boolean }) {
                     </span>
                   ) : (
                     <Button variant="soft" className={styles.install} onClick={() => void install(release)}>
-                      {t("mixengine.runtimes.install")}
+                      {t("mixengine.packages.install")}
                     </Button>
                   )}
                 </li>
@@ -407,10 +407,10 @@ export default function Languages({ active }: { active: boolean }) {
 
       {uninstallTarget && (
         <ConfirmDialog
-          title={t("mixengine.runtimes.uninstallConfirmTitle", { version: uninstallTarget.version })}
+          title={t("mixengine.packages.uninstallConfirmTitle", { version: uninstallTarget.version })}
           message={forceHint ?? uninstallTarget.version}
           confirmLabel={
-            forceHint !== null ? t("mixengine.runtimes.uninstallForceConfirm") : undefined
+            forceHint !== null ? t("mixengine.packages.uninstallForceConfirm") : undefined
           }
           danger
           onCancel={() => {

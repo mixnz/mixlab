@@ -260,7 +260,7 @@ const vi: typeof en = {
         unresolved: "Chưa cài: {{hint}}",
       },
     },
-    runtimes: {
+    packages: {
       tabLanguages: "Ngôn ngữ",
       about: "Ngôn ngữ, máy chủ và các phiên bản máy này đang giữ.",
       onDisk: {
@@ -345,7 +345,7 @@ const vi: typeof en = {
       title: "Thêm service",
       package: "Package",
       packagePlaceholder: "Chọn một package đã cài",
-      noPackages: "Chưa cài package nào. Cài một package ở mục Runtimes trước.",
+      noPackages: "Chưa cài package nào. Cài một package ở mục Packages trước.",
       instance: "Tên instance",
       instancePlaceholder: "main, secondary, …",
       idPreview: "Nó sẽ tên là {{id}}.",
