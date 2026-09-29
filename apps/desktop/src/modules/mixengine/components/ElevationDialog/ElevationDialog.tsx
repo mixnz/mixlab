@@ -11,31 +11,36 @@ import { useRunningDots } from "../../screens/Settings/useRunningDots";
 import styles from "./ElevationDialog.module.css";
 
 /**
- * Mọi thao tác đang chờ quyền quản trị, rồi một prompt.
+ * Every operation waiting for administrator rights, then one prompt.
  *
- * Danh sách hiện **trước** khi `elevation.grant` được gọi, vì thứ người ta sắp cho phép là thứ họ
- * được xem. Mỗi hàng nêu thao tác và, khi có, đúng những gì nó sẽ đổi — không dịch, vì đó là đường
- * dẫn và cổng thật.
+ * The list is shown **before** `elevation.grant` is called, because what people are about to allow
+ * is what they get to see. Each row names the operation and, when there is one, exactly what it
+ * will change — untranslated, because those are real paths and ports.
  *
- * **`canPrompt: false` ẩn hẳn nút "Cho phép"**, không chỉ khoá nó — `ElevationSummary.can_prompt`
- * nói thẳng "helper còn đó không", và trên máy không còn helper (ví dụ vừa Uninstall MixEngine trên
- * macOS: helper nằm ngoài `MIXENGINE_HOME`, bị lệnh Uninstall xoá cùng lúc, nhưng một `hosts-apply`
- * cũ có thể vẫn còn kẹt trong hàng đợi elevation từ trước) thì `elevation.grant` không còn gì để gọi
- * — một nút "Cho phép" vẫn vẽ ra trong tình huống đó là hứa một việc app không làm được. `reason`
- * là câu daemon tự viết cho từng nền tảng (vd. Linux: nguyên câu lệnh `pkexec` để gõ tay).
+ * **`canPrompt: false` hides the "Allow" button entirely**, not just disables it —
+ * `ElevationSummary.can_prompt` says plainly "is the helper still there", and on a machine with no
+ * helper left (for example right after uninstalling MixEngine on macOS: the helper lives outside
+ * `MIXENGINE_HOME` and is removed by the same Uninstall, but an old `hosts-apply` may still be
+ * stuck in the elevation queue from before) `elevation.grant` has nothing left to call — an
+ * "Allow" button still drawn in that situation promises something the app cannot do. `reason` is
+ * the sentence the daemon writes for each platform (e.g. Linux: the whole `pkexec` command to type
+ * by hand).
  *
- * **Không có nút "Bỏ qua".** `elevation.drop` bỏ cả lô mà không để lại cách nào cấp lại — đóng hộp
- * thoại (Escape, bấm ra ngoài, hay nút Đóng) chỉ ẩn nó đi, số đang chờ ở Dashboard vẫn còn nguyên
- * và bấm lại mở ra đúng danh sách này.
+ * **There is no "Skip" button.** `elevation.drop` drops the whole batch without leaving any way to
+ * grant it again — closing the dialog (Escape, clicking outside, or the Close button) only hides
+ * it; the waiting count on the Dashboard stays as it is, and clicking it again opens this same
+ * list.
  *
- * **`elevation.grant` là một job, và dialog chờ job đó xong mới đóng.** RPC trả lời ngay khi hàng
- * job được tạo, còn hộp mật khẩu bật lên *sau đó* bên trong job — đóng dialog ngay khi RPC trả lời
- * từng là bug thật: `onClose` kéo `reload()` của Dashboard đọc `daemon.status` đúng lúc hàng đợi
- * vẫn còn nguyên (người dùng chưa gõ mật khẩu), và sau khi gõ xong daemon không phát sự kiện nào
- * về hàng đợi (`elevation_required` chỉ bắn khi hàng đợi *dài thêm*), nên con số "N đang chờ" đứng
- * yên tới khi ai đó đổi tab. Nên ở đây poll `jobStatus` mỗi giây tới khi job xong, rồi mới `onClose`
- * — và đọc `GrantOutcome` trong `result`: `declined` (đóng hộp mật khẩu) giữ dialog mở với một dòng
- * nói rõ chưa có gì đổi, mở lại nút Cho phép, thay vì đóng im lặng để lại con số cũ không lời giải.
+ * **`elevation.grant` is a job, and the dialog waits for that job to finish before closing.** The
+ * RPC answers as soon as the job row is created, while the password box comes up *afterwards*
+ * inside the job — closing the dialog as soon as the RPC answered was a real bug: `onClose`
+ * triggered the Dashboard's `reload()`, which read `daemon.status` while the queue was still intact
+ * (the user had not typed the password yet), and once they had, the daemon emitted no event about
+ * the queue (`elevation_required` only fires when the queue *grows*), so the "N waiting" count sat
+ * still until someone switched tabs. So this polls `jobStatus` every second until the job finishes,
+ * and only then calls `onClose` — and reads the `GrantOutcome` in `result`: `declined` (the
+ * password box was closed) keeps the dialog open with a line saying nothing has changed yet and
+ * re-enables the Allow button, instead of closing silently and leaving the old count unexplained.
  */
 export default function ElevationDialog({
   pending,
@@ -49,12 +54,13 @@ export default function ElevationDialog({
   onClose: () => void;
 }) {
   const [busy, setBusy] = useState(false);
-  /** Kết cục của lượt Cho phép vừa rồi khi nó không dẫn tới đóng dialog — câu đã dịch, hoặc `null`. */
+  /** The outcome of the last Allow when it did not lead to closing the dialog — a translated
+   *  sentence, or `null`. */
   const [notice, setNotice] = useState<string | null>(null);
   const dots = useRunningDots(busy);
   const { t } = useTranslation();
-  /** Còn mount hay không — đặt `true` trong thân effect chứ không chỉ `false` ở cleanup, vì
-   *  `React.StrictMode` (dev) chạy mount → unmount giả → mount lại. */
+  /** Whether still mounted — set to `true` in the effect body rather than only `false` in the
+   *  cleanup, because `React.StrictMode` (dev) runs mount → fake unmount → mount again. */
   const live = useRef(true);
   useEffect(() => {
     live.current = true;
@@ -80,7 +86,7 @@ export default function ElevationDialog({
       setNotice(t("mixengine.elevation.cannotPromptReason", { reason: grant.reason }));
       return;
     }
-    // `completed` — hàng đợi đã khác; Dashboard đọc lại con số trong `onClose`.
+    // `completed` — the queue has changed; the Dashboard rereads the count in `onClose`.
     onClose();
   }
 
@@ -153,11 +159,12 @@ export default function ElevationDialog({
               {pending.map((op, at) => {
                 const { kind, description, detail } = describeOp(op);
                 return (
-                  // Vị trí là khoá: `PendingOp.id` có tồn tại, nhưng thứ tự là thứ daemon gửi và danh
-                  // sách không sắp xếp lại, nên hai cách cho cùng một kết quả và cách này không phải
-                  // tin vào một field.
+                  // The position is the key: `PendingOp.id` does exist, but the order is what the
+                  // daemon sends and the list is never re-sorted, so both give the same result and
+                  // this one does not have to trust a field.
                   <li key={at}>
-                    {/* Câu của daemon đứng trước; tên kỹ thuật đứng sau, cho người muốn tra cứu nó. */}
+                    {/* The daemon's sentence first; the technical name after, for anyone who wants
+                        to look it up. */}
                     {description && <div>{description}</div>}
                     <code className={styles.kind}>{kind}</code>
                     {detail && <pre className={styles.detail}>{detail}</pre>}

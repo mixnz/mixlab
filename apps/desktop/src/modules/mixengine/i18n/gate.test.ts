@@ -4,11 +4,12 @@ import { resolve } from "../../../i18n";
 import { EN, VI } from "../../../i18n/dicts";
 
 /**
- * Cổng vào tab khi không tìm thấy daemon nói ra chỗ nó đã tìm — T111.
+ * The tab's gate, when the daemon is not found, says where it looked — T111.
  *
- * `VI` không được khai kiểu theo `EN` trong `i18n/dicts.ts`, nên một khoá có bên này mà thiếu bên
- * kia là thứ `tsc` không nói gì cả: `resolve` trả về chính chuỗi khoá, và người dùng tiếng Việt
- * nhìn thấy `mixengine.gate.lookedIn` giữa màn hình. Đây là chỗ duy nhất nói không.
+ * `VI` is not typed against `EN` in `i18n/dicts.ts`, so a key present on one side and missing on
+ * the other is something `tsc` says nothing about: `resolve` returns the key string itself, and a
+ * Vietnamese user sees `mixengine.gate.lookedIn` in the middle of the screen. This is the only
+ * place that says no.
  */
 describe("the not-installed gate", () => {
   it("labels the list of directories in every language", () => {
@@ -20,8 +21,9 @@ describe("the not-installed gate", () => {
     }
   });
 
-  /* Danh sách là một `<ul>` và không còn nội suy vào câu, nên câu không được mang chỗ giữ chỗ nào:
-     một `{{searched}}` sót lại sẽ in ra đúng như thế, vì không ai truyền biến cho nó nữa. */
+  /* The list is a `<ul>` and is no longer interpolated into the sentence, so the sentence must
+     carry no placeholder: a leftover `{{searched}}` would be printed just like that, since nobody
+     passes it a variable any more. */
   it("states the fault in a sentence with nothing left to interpolate", () => {
     for (const dict of [EN, VI]) {
       expect(resolve(dict, "mixengine.gate.notInstalled")).not.toContain("{{");

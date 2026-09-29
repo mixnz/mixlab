@@ -18,21 +18,22 @@ import styles from "./Metrics.module.css";
 const HOUR_MS = 3_600_000;
 
 /**
- * Lịch sử 24 giờ theo subject — chỉ lịch sử, không lặp lại số "bây giờ" Dashboard đã vẽ (Quyết định
- * D1, spec Metrics/Settings). `metrics.history` là một RPC đọc thường, không cần giữ stream nào mở.
+ * 24-hour history per subject — history only, not repeating the "now" figures the Dashboard
+ * already draws (Decision D1, Metrics/Settings spec). `metrics.history` is a plain read RPC; no
+ * stream needs to be held open.
  */
 export default function Metrics({ active }: { active: boolean }) {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [subject, setSubject] = useState(DAEMON_SUBJECT);
   const [history, setHistory] = useState<MetricsHistory | null>(null);
-  // Mốc "bây giờ" của lần đọc này, không phải của lần render này — trục phải đứng yên giữa hai lần
-  // tải, nếu không mỗi lần React vẽ lại là biểu đồ nhích một chút.
+  // The "now" anchor of this read, not of this render — the axis must stand still between two
+  // loads, otherwise every React redraw nudges the chart a little.
   const [loadedAt, setLoadedAt] = useState(() => Date.now());
   const [error, setError] = useState("");
   const { t } = useTranslation();
 
-  // Danh sách service chỉ để dựng bộ chọn — đọc một lần lúc màn hình được xem tới, không cần theo
-  // dõi stream nào vì đây không phải bảng trạng thái sống như Dashboard.
+  // The service list only builds the picker — read once when the screen is first visited; no
+  // stream needs following, because this is not a live state table like the Dashboard.
   useEffect(() => {
     if (!active) return;
     void api
@@ -59,8 +60,8 @@ export default function Metrics({ active }: { active: boolean }) {
   const cores = history?.cores ?? 1;
   const segments = segmentsFor(minutes);
 
-  /* Trục không kéo giãn khoảng đã đo ra hết bề rộng: `windowStart` chọn một bậc thời gian tròn
-     chứa nó, và phần chưa ai đo trong bậc ấy hiện ra đúng là chưa ai đo. */
+  /* The axis does not stretch the measured range across the full width: `windowStart` picks a round
+     time step containing it, and the unmeasured part of that step shows up as exactly that. */
   const retention = (history?.retention_hours ?? 24) * HOUR_MS;
   const last = minutes[minutes.length - 1];
   const to = Math.max(loadedAt, last === undefined ? 0 : last.minute + 60_000);
@@ -101,7 +102,8 @@ export default function Metrics({ active }: { active: boolean }) {
                 to={to}
                 unit={CPU_UNIT}
                 label={t("mixengine.metrics.cpu")}
-                // Hàng lưu theo phần trăm một lõi; vẽ theo phần trăm cả máy như Task Manager (T190c).
+                // Rows are stored as a percentage of one core; drawn as a percentage of the whole
+                // machine, like Task Manager (T190c).
                 avg={(m) => (m.cpu_avg === null ? null : machineShare(m.cpu_avg, cores))}
                 peak={(m) => (m.cpu_peak === null ? null : machineShare(m.cpu_peak, cores))}
                 hue="sky"

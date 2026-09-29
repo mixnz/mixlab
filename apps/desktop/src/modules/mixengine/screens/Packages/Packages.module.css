@@ -1,16 +1,17 @@
-/* `min-height`, không phải `height`: hai bảng bên dưới dài hơn một màn hình, và một `height: 100%`
-   chốt cứng chiều cao `.packages` đúng bằng viewport — sticky của `.tabs` chỉ dính được trong đúng
-   phạm vi chiều cao containing block của nó, nên với `height: 100%` nó rời khỏi đầu trang gần như
-   ngay khi cuộn. */
+/* `min-height`, not `height`: the two tables below are longer than a screen, and a `height: 100%`
+   pins the height of `.packages` to exactly the viewport — `.tabs`'s sticky can only stick within
+   the height of its containing block, so with `height: 100%` it leaves the top of the page almost
+   as soon as you scroll. */
 .packages {
   position: relative;
   width: 100%;
   min-height: 100%;
 }
 
-/* `.packages` không tự cuộn — `.mixengine-screen` (ancestor) mới là vùng cuộn thật, xem
-   `mixengine.css`. Sticky trên div bọc chứ không trên chính `SegmentedControl`: containing block
-   của một phần tử sticky là parent trực tiếp của nó, và parent đó phải cao suốt theo nội dung. */
+/* `.packages` does not scroll itself — `.mixengine-screen` (an ancestor) is the real scroll area;
+   see `mixengine.css`. Sticky on the wrapping div rather than on `SegmentedControl` itself: a
+   sticky element's containing block is its direct parent, and that parent has to be as tall as
+   the content. */
 .tabs {
   position: sticky;
   top: 0;
@@ -20,8 +21,8 @@
   background: var(--page-bg);
 }
 
-/* Giữ Ngôn ngữ mount một khi đã ghé qua — không thêm hộp mới vào layout lúc đang hiện,
-   cùng lý do `.mixengine-screen-pane` đã theo ở `mixengine.css`. */
+/* Keep Languages mounted once visited — no new box is added to the layout while showing, for the
+   same reason `.mixengine-screen-pane` follows in `mixengine.css`. */
 .pane {
   display: contents;
 }

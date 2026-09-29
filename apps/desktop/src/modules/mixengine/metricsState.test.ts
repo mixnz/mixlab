@@ -16,8 +16,8 @@ describe("metricsSubjectFor", () => {
     expect(metricsSubjectFor("mariadb@main")).toBe("service:mariadb@main");
   });
 
-  /* Một service tên "daemon" là hợp lệ phía MixEngine (ServiceId::parse chấp nhận tên trần) — nếu
-     không giữ prefix, nó sẽ trùng DAEMON_SUBJECT và ăn nhầm lịch sử của daemon. */
+  /* A service named "daemon" is valid on MixEngine's side (ServiceId::parse accepts bare names) —
+     without the prefix, it would collide with DAEMON_SUBJECT and take over the daemon's history. */
   it("does not collide with the daemon subject for a service literally named daemon", () => {
     expect(metricsSubjectFor("daemon")).not.toBe(DAEMON_SUBJECT);
     expect(metricsSubjectFor("daemon")).toBe("service:daemon");
@@ -30,7 +30,8 @@ describe("parseMetricsFrame", () => {
     expect(parseMetricsFrame(raw)).toEqual({ at: 1757203200000, samples: [], cores: 12 });
   });
 
-  /* Daemon cũ hơn T190c không gửi `cores`: con số của nó vốn là phần trăm của một lõi. */
+  /* A daemon older than T190c does not send `cores`: its figure was already a percentage of one
+     core. */
   it("reads an old daemon's frame as percent of one core", () => {
     const raw = JSON.stringify({ at: 1757203200000, samples: [] });
     expect(parseMetricsFrame(raw)?.cores).toBe(1);
@@ -59,8 +60,8 @@ describe("readingFor", () => {
     expect(readingFor(frame, "service:mariadb@main")?.rss_bytes).toBe(200);
   });
 
-  /* Vắng mặt trong frame không phải là 0 — một subject không đo được thì không nằm trong samples,
-     không phải một sample với các số 0. */
+  /* Absent from the frame is not 0 — a subject that could not be measured is not in samples; it is
+     not a sample of zeros. */
   it("is null for a subject absent from the frame, not a zeroed sample", () => {
     expect(readingFor(frame, "service:caddy@main")).toBeNull();
   });
@@ -69,8 +70,8 @@ describe("readingFor", () => {
     expect(readingFor(null, "daemon")).toBeNull();
   });
 
-  /* cpu_percent: null trong một sample đã có mặt phải giữ nguyên null qua readingFor — không phải
-     lỗi parse, là câu trả lời thật của lần đo đầu tiên chưa có gì để trừ. */
+  /* cpu_percent: null in a sample that is present must stay null through readingFor — not a parse
+     error, but the real answer of a first measurement with nothing to subtract yet. */
   it("keeps a present sample's null cpu_percent as null, not coerced to zero", () => {
     expect(readingFor(frame, "service:mariadb@main")?.cpu_percent).toBeNull();
   });
@@ -85,8 +86,8 @@ describe("formatBytes", () => {
   });
 });
 
-/* T190c: `cpu_percent` là phần trăm của MỘT lõi; người dùng đọc theo Task Manager, tức phần trăm
-   của cả máy, một chữ số thập phân. */
+/* T190c: `cpu_percent` is a percentage of ONE core; users read it the Task Manager way, i.e. as a
+   percentage of the whole machine, with one decimal place. */
 describe("formatCpu", () => {
   it("shows a share of the machine with one decimal, as Task Manager does", () => {
     expect(formatCpu(150, 12)).toBe("12.5%");

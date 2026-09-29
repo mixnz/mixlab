@@ -15,8 +15,9 @@ interface Props {
   onImported: () => void;
 }
 
-/** Nhập một blueprint từ file `.toml`. Không bao giờ thất bại vì chữ ký — kết quả chỉ đổi
- *  `trusted`/`signature` trên `BlueprintSummary` trả về, danh sách tự hiện điều đó. */
+/** Imports a blueprint from a `.toml` file. Never fails because of the signature — the result only
+ *  changes `trusted`/`signature` on the returned `BlueprintSummary`, and the list shows that by
+ *  itself. */
 export default function ImportDialog({ onCancel, onImported }: Props) {
   const { t } = useTranslation();
   const [path, setPath] = useState("");

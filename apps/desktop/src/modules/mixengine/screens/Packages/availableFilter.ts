@@ -1,10 +1,10 @@
 /**
- * Lọc bảng "chưa cài" của Packages — thuần hiển thị, không có RPC nào nhận câu tìm kiếm này
- * (`runtime.list_available`/`package.list_available` trả về cả danh sách, xem `Languages.tsx`).
+ * Filters the "not installed" table of Packages — display only; no RPC takes this search
+ * (`runtime.list_available`/`package.list_available` return the whole list; see `Languages.tsx`).
  *
- * Mỗi từ trong câu tìm phải khớp một chỗ nào đó, không phải cả câu khớp liền một mạch: gõ
- * `php 8.3` vẫn ra `php 8.3.14` dù hai mẩu đó nằm ở hai trường khác nhau, và thứ tự gõ không
- * quyết định kết quả.
+ * Each word in the search has to match somewhere, rather than the whole search matching in one
+ * run: typing `php 8.3` still finds `php 8.3.14` even though the two pieces sit in different
+ * fields, and the order they are typed in does not decide the result.
  */
 export function matchesAvailable(fields: string[], query: string): boolean {
   const words = query.toLowerCase().split(/\s+/).filter((word) => word !== "");

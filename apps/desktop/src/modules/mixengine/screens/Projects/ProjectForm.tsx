@@ -24,16 +24,16 @@ import styles from "./ProjectForm.module.css";
 const RUNTIME_KINDS: readonly RuntimeKind[] = ["php", "node", "python", "ruby", "go", "java", "composer"];
 
 /**
- * Một khối gấp/mở dựng tay — thay cho `<details>` gốc vì hai lý do:
+ * A hand-built collapsible block — instead of a native `<details>`, for two reasons:
  *
- * **Icon và chuyển động tự chọn được.** `<details>` chỉ có tam giác mặc định của trình duyệt,
- * không đổi được kiểu hay tốc độ. Ở đây một `ChevronRightIcon` xoay 90° khi mở, cùng khuôn với
- * chevron của `Select` (`Select.module.css`).
+ * **The icon and the motion can be chosen.** `<details>` only has the browser's default triangle,
+ * whose style and speed cannot be changed. Here a `ChevronRightIcon` rotates 90° when open, in the
+ * same mould as `Select`'s chevron (`Select.module.css`).
  *
- * **Chiều cao đổi mượt, không nhảy khựng.** Chiều cao đi từ `0fr` lên `1fr` trên chính
- * `grid-template-rows` — kỹ thuật animate về `auto` không cần đo bằng JS. `<details>` đổi chiều cao
- * tức thì trong một frame, và đó chính là thứ khiến `Modal` không kịp canh lại giữa màn hình (xem
- * `dialogMotion.ts`, `onEntered`) trước khi có phần này.
+ * **The height changes smoothly, without a jump.** The height goes from `0fr` to `1fr` on
+ * `grid-template-rows` itself — the technique for animating to `auto` without measuring in JS.
+ * `<details>` changes height instantly within one frame, and that is exactly what kept `Modal` from
+ * re-centring itself on screen in time (see `dialogMotion.ts`, `onEntered`) before this existed.
  */
 function Disclosure({
   summary,
@@ -67,11 +67,12 @@ function Disclosure({
 }
 
 interface Props {
-  /** `undefined` = tạo mới. Có giá trị = sửa. */
+  /** `undefined` = create new. A value = edit. */
   initial?: ProjectDetail;
   onCancel: () => void;
-  /** Gọi sau khi lưu xong — cha tự `reload()`. `warning` có giá trị khi project đã tạo xong nhưng
-   *  site đi kèm (mục "tạo nhanh site") thất bại — project vẫn coi là đã lưu, cha tự vẽ cảnh báo. */
+  /** Called once saving is done — the parent does its own `reload()`. `warning` has a value when
+   *  the project was created but the accompanying site (the "quick site" section) failed — the
+   *  project still counts as saved, and the parent draws the warning itself. */
   onSaved: (warning?: string) => void;
 }
 
@@ -97,10 +98,10 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
     return initialPins;
   });
 
-  // "Tạo nhanh site" — chỉ hiện lúc tạo project mới (xem JSX). Bỏ trống domains là bỏ qua hẳn bước
-  // này, không phải một site rỗng gửi lên daemon.
-  // Root của site này luôn là `root` (field ngay phía trên) — cùng project, biết ngay từ đầu, không
-  // cần đọc lại như `SiteForm` phải làm khi project là một lựa chọn tách rời.
+  // "Quick site" — only shown when creating a new project (see the JSX). Leaving domains empty
+  // skips this step entirely; it does not send an empty site to the daemon.
+  // This site's root is always `root` (the field just above) — the same project, known from the
+  // start, with no need to reread the way `SiteForm` must when the project is a separate choice.
   const [siteDraft, setSiteDraft] = useState(emptySiteDraft);
   const [serviceIds, setServiceIds] = useState<string[]>([]);
 
@@ -114,14 +115,15 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
   }, [editing]);
 
   /**
-   * Các bản đã cài, để mỗi ô pin gợi ý được thay vì bắt gõ thuộc lòng.
+   * The installed versions, so each pin field can make suggestions instead of making people type
+   * from memory.
    *
-   * **Đã cài, không phải tải được** — một constraint chỉ bao giờ được resolve trên những bản có
-   * trên máy này (`VersionConstraint`), nên gợi ý một bản chưa cài là mời người dùng ghim vào thứ
-   * sẽ không resolve nổi.
+   * **Installed, not downloadable** — a constraint is only ever resolved against versions present
+   * on this machine (`VersionConstraint`), so suggesting a version not installed invites the user
+   * to pin something that will not resolve.
    *
-   * Hỏng thì bỏ qua: ô pin vẫn gõ tay được như trước, và một dialog tạo project không nên chết vì
-   * danh sách gợi ý không đọc được.
+   * On failure it is skipped: the pin field can still be typed by hand as before, and a
+   * create-project dialog should not die because the suggestion list could not be read.
    */
   useEffect(() => {
     let live = true;
@@ -175,9 +177,10 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
         try {
           await api.siteCreate({ project: { name: created.project.name }, ...siteCreateFields(siteDraft) });
         } catch (e) {
-          // Project đã lưu xong — đây là một cảnh báo về riêng cái site, không phải một lần lưu
-          // thất bại. Đóng dialog vẫn đúng: mở lại nó chỉ để gõ lại y hệt phần project sẽ đụng
-          // ngay lỗi "tên đã tồn tại", vì `project.create` vừa chạy xong thật.
+          // The project was saved — this is a warning about the site alone, not a failed save.
+          // Closing the dialog is still right: reopening it just to retype the same project part
+          // would hit a "name already exists" error straight away, since `project.create` really
+          // did just run.
           onSaved(t("mixengine.projects.form.siteFailed", { error: errorMessage(t, e) }));
           return;
         }
@@ -231,9 +234,9 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
             </label>
 
             <Disclosure summary={t("mixengine.projects.form.pinsSummary")}>
-              {/* `freeText` chứ không phải một Select thường: giá trị ở đây là một
-                  `VersionConstraint`, và danh sách chỉ là các bản đã cài — `^8.3` hay `8.3` không
-                  nằm trong đó nhưng vẫn phải ghim được. */}
+              {/* `freeText` rather than a plain Select: the value here is a `VersionConstraint`,
+                  and the list is only the installed versions — `^8.3` or `8.3` is not in it but
+                  still has to be pinnable. */}
               {RUNTIME_KINDS.map((kind) => (
                 <label key={kind} className={styles.field}>
                   {kind}
@@ -256,8 +259,8 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
               ))}
             </Disclosure>
 
-            {/* Chỉ ở form tạo mới — sửa một project đã có không phải lúc để gộp thêm một site,
-                site của nó (nếu có) đã sửa được riêng ở màn Sites. */}
+            {/* Only in the create form — editing an existing project is not the moment to bundle in
+                a site; its site (if any) can already be edited separately on the Sites screen. */}
             {!editing && (
               <Disclosure summary={t("mixengine.projects.form.quickSiteSummary")}>
                 <SiteFields

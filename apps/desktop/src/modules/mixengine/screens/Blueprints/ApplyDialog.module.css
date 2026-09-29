@@ -68,8 +68,9 @@
   font-size: var(--text-sm);
 }
 
-/* Cảnh báo, không phải lỗi: chưa có gì hỏng, và apply không tick vẫn là một lựa chọn hợp lệ. Nên
-   `--warning-text` chứ không `--danger`, và một dải bên trái thay vì một khung đỏ. */
+/* A warning, not an error: nothing is broken yet, and applying without ticking is still a valid
+   choice. Hence `--warning-text` rather than `--danger`, and a bar on the left instead of a red
+   frame. */
 .consentWarning {
   margin: 0;
   padding: 6px 10px;
@@ -78,8 +79,9 @@
   font-size: var(--text-sm);
 }
 
-/* Cùng ngôn ngữ hình với `.consentWarning` — đây đúng là cùng một câu, nói lại sau khi việc đã
-   xảy ra. Đứng đầu màn "Xong" nên có khung riêng chứ không chỉ một dải. */
+/* The same visual language as `.consentWarning` — this is indeed the same sentence, said again
+   after the fact. It sits at the top of the "Done" screen, so it gets its own frame rather than
+   just a bar. */
 .leftUnrun {
   display: flex;
   flex-direction: column;
@@ -110,8 +112,9 @@
   gap: 8px;
 }
 
-/* Khối output đứng riêng khỏi `.running` — T120. Nút và panel log sống lâu hơn phase "running":
-   một apply hỏng là lúc người ta cần đọc output nhất, mà đó đúng là lúc khối `.running` biến mất. */
+/* The output block stands apart from `.running` — T120. The button and the log panel outlive the
+   "running" phase: a failed apply is when people most need to read the output, and that is exactly
+   when the `.running` block disappears. */
 .output {
   display: flex;
   flex-direction: column;

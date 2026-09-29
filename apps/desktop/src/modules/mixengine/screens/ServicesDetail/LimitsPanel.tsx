@@ -81,7 +81,8 @@ export default function LimitsPanel({ service }: { service: string }) {
                 disabled={saving}
                 onChange={(e) => setCpu(e.target.value)}
               />
-              {/* Giới hạn khai báo theo một lõi, khác cách tray và Dashboard hiện mức dùng (T190c). */}
+              {/* Limits are declared per core, unlike how the tray and the Dashboard show usage
+                  (T190c). */}
               <p className={styles.hint}>{t("mixengine.servicesDetail.limits.cpuHint")}</p>
               {cpuKind === "unavailable" && (
                 <p className={styles.hint}>
@@ -139,8 +140,9 @@ export default function LimitsPanel({ service }: { service: string }) {
       </div>
 
       <div className={styles.footer}>
-        {/* `watchdog: null` gộp hai trường hợp khác nhau (máy tự ép được, hoặc không khai memory_mb) —
-            không suy ra cái nào, chỉ nói "không có gì đang canh". */}
+        {/* `watchdog: null` lumps two different cases together (the machine can enforce it itself,
+            or no memory_mb was declared) — neither is inferred; it only says "nothing is
+            watching". */}
         <p className={styles.watchdog}>
           {report.watchdog === null || report.watchdog === undefined
             ? t("mixengine.servicesDetail.limits.watchdogNone")

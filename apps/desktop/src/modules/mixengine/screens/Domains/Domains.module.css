@@ -47,15 +47,16 @@
   color: var(--text-secondary);
 }
 
-/* Cột duy nhất mang một câu dài (`because` daemon tự viết) — cho nó xuống dòng thay vì kéo cả
-   bảng rộng hơn khung và đẩy cột Actions ra ngoài vùng nhìn thấy. */
+/* The only column carrying a long sentence (the `because` the daemon writes) — let it wrap instead
+   of stretching the whole table wider than its frame and pushing the Actions column out of view. */
 .reason {
   white-space: normal;
   overflow-wrap: anywhere;
   min-width: 12rem;
 }
 
-/* Cùng token với `.bad` của Dashboard: một domain có `because` là một domain đang hỏng. */
+/* The same token as the Dashboard's `.bad`: a domain with a `because` is a domain that is
+   broken. */
 .bad {
   color: var(--danger-text);
   font-size: var(--text-sm);

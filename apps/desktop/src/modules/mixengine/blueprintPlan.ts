@@ -11,11 +11,11 @@ import type { VersionAnswer } from "@mixengine/api";
 import type { TranslationKey } from "../../i18n";
 
 /**
- * Chỉ hai loại action từng sinh `disposition: "choice"` trong bindings hiện tại
- * (`install_runtime`, `ensure_service`) — subject suy từ chính action đó.
+ * Only two action kinds ever produce `disposition: "choice"` in the current bindings
+ * (`install_runtime`, `ensure_service`) — the subject is derived from the action itself.
  *
- * **`id` của service ghép `${package}@${instance}` — suy ra, chưa đối chiếu daemon thật.** Xem ghi
- * chú Task 12 (Blueprints plan) và Self-Review Notes.
+ * **The service `id` is built as `${package}@${instance}` — inferred, not yet checked against a
+ * real daemon.** See the Task 12 note (Blueprints plan) and the Self-Review Notes.
  */
 export function answerSubjectFor(step: PlanStep): AnswerSubject | null {
   if (step.disposition.disposition !== "choice") return null;
@@ -28,19 +28,21 @@ export function answerSubjectFor(step: PlanStep): AnswerSubject | null {
   return null;
 }
 
-/** `-1` khi plan không có bước `run_scaffold` nào — luôn tối đa một bước như vậy trên một plan. */
+/** `-1` when the plan has no `run_scaffold` step — there is always at most one such step in a
+ *  plan. */
 export function scaffoldStepIndex(steps: PlanStep[]): number {
   return steps.findIndex((step) => step.action.action === "run_scaffold");
 }
 
 /**
- * Ô đồng ý đang ở trạng thái nào — `none` khi plan không hề có lệnh nào để hỏi.
+ * What state the consent box is in — `none` when the plan has no command to ask about at all.
  *
- * **`declined` là một câu trả lời, không phải một ô chưa chạm tới.** Trong `mix`, câu hỏi này là
- * một `[y/N]` chặn ngang: không trả lời thì không đi tiếp được, và `unasked` in hẳn một dòng stderr
- * nói lệnh đã bị bỏ. Trên desktop ô tick im lặng, nên một apply bỏ qua lệnh khởi tạo trông y hệt
- * một apply chạy nó — người dùng chỉ biết ở màn "Xong", lẫn giữa mười dòng khác. Trạng thái này là
- * thứ để giao diện nói trước, ở nút bấm và ở khối cảnh báo cạnh ô tick.
+ * **`declined` is an answer, not a box nobody has touched.** In `mix`, this question is a blocking
+ * `[y/N]`: without an answer you cannot go on, and `unasked` prints a whole stderr line saying the
+ * command was skipped. On the desktop the checkbox is silent, so an apply that skips the init
+ * command looks exactly like one that runs it — the user only finds out on the "Done" screen, lost
+ * among ten other lines. This state is what lets the interface say it up front, on the button and
+ * in the warning block next to the checkbox.
  */
 export function scaffoldConsentState(
   steps: PlanStep[],
@@ -51,11 +53,12 @@ export function scaffoldConsentState(
 }
 
 /**
- * Lệnh khởi tạo đã bị bỏ lại, hoặc `null`.
+ * The init command that was left out, or `null`.
  *
- * Dùng để dựng một khối riêng ở đầu màn "Xong" thay cho dòng `stepNotRun` lẫn trong danh sách —
- * và thay cho `why` của daemon, vốn kết bằng một gợi ý `mix blueprint apply --run-scaffold`: một
- * cờ dòng lệnh vô nghĩa với người đang bấm chuột.
+ * Used to build a block of its own at the top of the "Done" screen instead of a `stepNotRun` line
+ * lost in the list — and instead of the daemon's `why`, which ends with a hint to run
+ * `mix blueprint apply --run-scaffold`: a command-line flag that means nothing to someone clicking
+ * a mouse.
  */
 export function scaffoldLeftCommand(applied: BlueprintApplied): string | null {
   for (const outcome of applied.steps) {
@@ -67,25 +70,26 @@ export function scaffoldLeftCommand(applied: BlueprintApplied): string | null {
 }
 
 /**
- * Những bước đã chạy và hỏng — rỗng khi apply trót lọt.
+ * The steps that ran and failed — empty when the apply went through cleanly.
  *
- * **Một job thành công không có nghĩa là một apply trót lọt.** `api/apply.rs` cố ý trả
- * `StepResult::Failed` cho một `[scaffold]` exit khác 0 thay vì ném lỗi: một script post-install
- * hỏng để lại một project vẫn dùng được — site vẫn phục vụ, database vẫn còn — và phá cả cái đó đi
- * là sai hướng đắt hơn. Cái sai là client đọc "job xong" thành "xong", rồi mời người ta bấm vào
- * một site có thư mục dựng dở.
+ * **A successful job does not mean a clean apply.** `api/apply.rs` deliberately returns
+ * `StepResult::Failed` for a `[scaffold]` with a non-zero exit instead of raising an error: a
+ * broken post-install script leaves a project that is still usable — the site still serves, the
+ * database is still there — and tearing that down too would be the more expensive wrong direction.
+ * The mistake is a client reading "job done" as "done", then inviting people to click into a site
+ * whose directory is half-built.
  *
- * `not_run` không nằm ở đây: nó là một câu trả lời (ô đồng ý bỏ trống), không phải một thất bại, và
- * [`scaffoldLeftCommand`] đã nói riêng câu ấy.
+ * `not_run` is not here: it is an answer (the consent box left empty), not a failure, and
+ * [`scaffoldLeftCommand`] already says that separately.
  */
 export function failedSteps(applied: BlueprintApplied): StepOutcome[] {
   return applied.steps.filter((outcome) => outcome.result.result === "failed");
 }
 
 /**
- * Apply thật chỉ bật khi mọi bước `choice` đã có câu trả lời và không bước nào `blocked`/
- * `unsupported`. Một bước `confirm` (scaffold) không chặn gì — từ chối nó chỉ khiến bước đó
- * `not_run`, không khiến cả plan không gửi được.
+ * The real apply is only enabled when every `choice` step has an answer and no step is `blocked`/
+ * `unsupported`. A `confirm` step (scaffold) blocks nothing — declining it only makes that step
+ * `not_run`, it does not stop the whole plan from being sent.
  */
 export function canApply(steps: PlanStep[], choices: Record<number, MismatchAnswer>): boolean {
   return steps.every((step, i) => {
@@ -109,13 +113,13 @@ export function buildAnswers(
   return answers;
 }
 
-/** `command` là đúng chuỗi step đã hiện — không phải cái gì người dùng gõ lại. */
+/** `command` is exactly the string the step showed — not anything the user typed again. */
 export function buildScaffoldConsent(plan: BlueprintPlan, step: PlanStep): ScaffoldConsent | null {
   if (step.action.action !== "run_scaffold") return null;
   return { command: step.action.command, untrusted: !plan.trusted };
 }
 
-/** Một câu người đọc được cho mỗi `PlanAction` — mười biến thể, mười khoá i18n. */
+/** One human-readable sentence for each `PlanAction` — ten variants, ten i18n keys. */
 export function describePlanAction(
   t: (key: TranslationKey, vars?: Record<string, string | number>) => string,
   action: PlanAction,
@@ -150,13 +154,15 @@ export function describePlanAction(
   }
 }
 
-/** `null` cho một job chưa xong, thất bại, hay bị huỷ — không suy ra từ `state`, chỉ đọc `outcome`. */
+/** `null` for a job that is unfinished, failed or cancelled — not inferred from `state`; only
+ *  `outcome` is read. */
 export function blueprintAppliedFrom(job: JobSummary): BlueprintApplied | null {
   if (job.outcome?.ending !== "succeeded") return null;
   return job.outcome.result as BlueprintApplied;
 }
 
-/** `null` khi job không thất bại (kể cả đang chạy, kể cả huỷ) — huỷ không phải một lỗi để hiện. */
+/** `null` when the job did not fail (including still running, including cancelled) — a
+ *  cancellation is not an error to show. */
 export function jobFailureMessage(job: JobSummary): string | null {
   return job.outcome?.ending === "failed" ? job.outcome.error.message : null;
 }

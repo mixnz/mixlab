@@ -1,4 +1,4 @@
-//! Nói chuyện với daemon của MixEngine. Xem
+//! Talks to MixEngine's daemon. See
 //! `docs/specs/2026-09-06-mixengine-transport-design.md`.
 
 pub mod commands;
@@ -14,8 +14,8 @@ pub mod sse;
 pub mod state;
 pub mod transport;
 
-/// Đặt state của module vào app. Tauri khóa state theo kiểu, nên nó không bao giờ gặp state của
-/// module khác.
+/// Puts the module's state into the app. Tauri keys state by type, so it never meets another
+/// module's state.
 pub fn register<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
     builder
         .manage(state::MixEngineState::default())

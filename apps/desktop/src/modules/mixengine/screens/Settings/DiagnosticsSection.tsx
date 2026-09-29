@@ -10,8 +10,8 @@ import { formatBytes } from "../../metricsState";
 import styles from "./Settings.module.css";
 
 /**
- * `daemon.bundle` — một archive, một đường dẫn. "Copy diagnostics" là một file để mở, không phải
- * năm chỗ để đọc (T4.8). `omitted` vẽ luôn, không trình bày archive như đã đầy đủ.
+ * `daemon.bundle` — one archive, one path. "Copy diagnostics" is one file to open, not five places
+ * to read (T4.8). `omitted` is drawn too, rather than presenting the archive as complete.
  */
 export default function DiagnosticsSection({ onError }: { onError: (message: string) => void }) {
   const [report, setReport] = useState<BundleReport | null>(null);

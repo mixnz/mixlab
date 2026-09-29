@@ -2,11 +2,11 @@ import type { AutostartReport } from "@mixengine/api";
 import type { DoctorReport } from "@mixengine/api";
 
 /**
- * Bốn trạng thái một công tắc tự khởi động có thể ở, không phải hai — T85b.
+ * Four states an autostart switch can be in, not two — T85b.
  *
- * **`enabledOtherHome` là trạng thái cả roadmap lẫn `client-surface.md` đều gọi đích danh**: một
- * entry đã đăng ký thuộc home khác vẫn khiến `enabled: true`, và vẽ nó như `enabledThisHome` là nói
- * "đã bật" cho một công tắc chưa từng chạm tới home đang mở.
+ * **`enabledOtherHome` is the state both the roadmap and `client-surface.md` name explicitly**: a
+ * registered entry belonging to another home still makes `enabled: true`, and drawing it as
+ * `enabledThisHome` says "enabled" for a switch that has never touched the home that is open.
  */
 export type AutostartPresentation = "unsupported" | "enabledOtherHome" | "enabledThisHome" | "disabled";
 
@@ -19,10 +19,11 @@ export function autostartPresentation(
 }
 
 /**
- * Giữ nguyên thứ tự và độ dài `DoctorReport.checks` — không lọc bớt check nào, kể cả mọi
- * `outcome: "ok"`. Hàm này tồn tại chỉ để có một chỗ test khẳng định điều đó, vì lọc bớt là lỗi dễ
- * mắc nhất khi ai đó "dọn" danh sách trước khi vẽ (đúng luật `DoctorReport` doc-comment: danh sách
- * ngắn hơn đọc như một câu trả lời sạch thay vì một câu hỏi chưa từng được hỏi).
+ * Keeps the order and length of `DoctorReport.checks` — no check is filtered out, including every
+ * `outcome: "ok"`. This function exists only so there is one place for a test to assert that,
+ * because filtering is the easiest mistake to make when someone "tidies" the list before drawing
+ * it (per the `DoctorReport` doc comment: a shorter list reads as a clean answer rather than a
+ * question that was never asked).
  */
 export function doctorChecksInOrder(report: DoctorReport): DoctorReport["checks"] {
   return report.checks;

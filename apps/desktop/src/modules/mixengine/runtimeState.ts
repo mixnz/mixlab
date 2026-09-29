@@ -2,14 +2,16 @@ import type { AppError } from "../../core/errors";
 import type { PoolOutcome } from "@mixengine/api";
 import type { JobRow } from "./daemonState";
 
-/** `"php@8.3.12"` — cùng một chuỗi làm key React lẫn key tra `installingJob`. */
+/** `"php@8.3.12"` — the same string serves as the React key and as the `installingJob` lookup
+ *  key. */
 export type VersionKey = string;
 
 export function versionKey(kind: string, version: string): VersionKey {
   return `${kind}@${version}`;
 }
 
-/** Cách vẽ một `ExtensionChange.pool` — ba giá trị, ba banner khác nhau, không giá trị nào là lỗi. */
+/** How to draw an `ExtensionChange.pool` — three values, three different banners, none of them an
+ *  error. */
 export type PoolBanner = "none" | "restartRequired" | "appliesNextStart";
 
 export function poolBanner(outcome: PoolOutcome): PoolBanner {
@@ -23,37 +25,40 @@ export function poolBanner(outcome: PoolOutcome): PoolBanner {
   }
 }
 
-/** Job đang theo dõi cho một hàng, từ `JobRow[]` `daemonState.applyJob` đã tính — không tự giữ map
- *  job thứ hai, chỉ tra lại cái đã có. */
+/** The job being followed for a row, from the `JobRow[]` `daemonState.applyJob` computed — no
+ *  second job map of its own; it only looks up what is already there. */
 export function jobFor(jobs: JobRow[], jobId: number | undefined): JobRow | undefined {
   return jobId === undefined ? undefined : jobs.find((job) => job.id === jobId);
 }
 
-/** Một job vừa kết thúc: job nào, và nó hỏng vì gì. */
+/** A job that just ended: which job, and what it failed on. */
 export interface JobFinished {
   id: number;
-  /** `null` khi job xong xuôi hoặc bị huỷ theo yêu cầu — chỉ `ending: "failed"` mới có gì để kể. */
+  /** `null` when the job completed or was cancelled on request — only `ending: "failed"` has
+   *  something to tell. */
   error: AppError | null;
 }
 
 /**
- * `job_finished` này nói gì, nếu message này là một `job_finished` — ngược lại `null`.
+ * What this `job_finished` says, if this message is a `job_finished` — otherwise `null`.
  *
- * `applyJob` đã xoá job đó khỏi `JobRow[]`, nhưng chỉ xoá thôi không kéo một bản vừa cài xong ra
- * khỏi bảng "có thể cài" — cái đó cần đọc lại `installed`/`available` từ daemon. Tách riêng khỏi
- * `applyJob` vì đây là quyết định "có nên gọi lại API không", không phải state của bảng job.
+ * `applyJob` has already removed that job from `JobRow[]`, but removing it alone does not take a
+ * just-installed version out of the "available" table — that needs rereading
+ * `installed`/`available` from the daemon. Kept apart from `applyJob` because this is a decision
+ * about "should the API be called again", not the job table's state.
  *
- * **`ending` là nửa còn lại của câu, không phải chi tiết phụ.** Một job hỏng cũng gửi
- * `job_finished`, và `error` của nó là chỗ *duy nhất* nói ra vì sao: `runtime.install` đã trả lời
- * "đã nhận" từ lâu rồi, nên không còn lời gọi nào thất bại để mà bắt. Đọc mỗi `job` rồi đọc lại
- * danh sách là để người dùng nhìn thanh tiến độ biến mất, danh sách không đổi, và tự đoán.
+ * **`ending` is the other half of the sentence, not a side detail.** A failed job also sends
+ * `job_finished`, and its `error` is the *only* place that says why: `runtime.install` answered
+ * "accepted" long ago, so there is no failing call left to catch. Reading only `job` and then
+ * rereading the list leaves the user watching the progress bar vanish, the list stay the same, and
+ * guessing.
  */
 export function jobFinished(raw: string): JobFinished | null {
   let event: { type?: unknown; job?: unknown; ending?: unknown; error?: unknown };
   try {
     event = JSON.parse(raw) as typeof event;
   } catch {
-    // Không phải JSON hợp lệ — không phải việc của hàm này báo lỗi đó.
+    // Not valid JSON — reporting that is not this function's job.
     return null;
   }
   if (event.type !== "job_finished" || typeof event.job !== "number") return null;
@@ -64,11 +69,12 @@ export function jobFinished(raw: string): JobFinished | null {
 }
 
 /**
- * `Error` của daemon, thành thứ `errorMessage` vẽ được.
+ * The daemon's `Error`, as something `errorMessage` can draw.
  *
- * Cùng `code` và cùng tham số mà `map_rpc_error` (`mixengine/rpc.rs`) dựng cho một call bị từ
- * chối, cố ý: **một job hỏng không phải một bộ từ vựng lỗi thứ hai**. Cùng một câu daemon viết,
- * dù nó tới qua answer của call hay qua stream sự kiện, phải hiện ra cùng một cách.
+ * The same `code` and the same parameters `map_rpc_error` (`mixengine/rpc.rs`) builds for a refused
+ * call, on purpose: **a failed job is not a second error vocabulary**. The same sentence the daemon
+ * wrote, whether it arrives through a call's answer or through the event stream, has to show up
+ * the same way.
  */
 function refusal(value: unknown): AppError {
   const wire = (typeof value === "object" && value !== null ? value : {}) as {
@@ -80,29 +86,30 @@ function refusal(value: unknown): AppError {
     code: typeof wire.code === "string" ? wire.code : "internal",
     message: typeof wire.message === "string" ? wire.message : "",
   };
-  // Vắng mặt chứ không rỗng, cùng luật `map_rpc_error` đã đặt.
+  // Absent rather than empty, the same rule `map_rpc_error` sets.
   if (typeof wire.hint === "string") params.hint = wire.hint;
   return { code: "error.mixengineRefused", params };
 }
 
-/** `RuntimeSummary.installed_at`/`PackageSummary.installed_at` là mili giây epoch (`Timestamp`),
- *  không phải chuỗi — cùng cách `UpdateSection.tsx` đã vẽ `checked_at`: giờ theo múi giờ và định
- *  dạng của chính máy người dùng, không phải một chuẩn cố định. */
+/** `RuntimeSummary.installed_at`/`PackageSummary.installed_at` are epoch milliseconds
+ *  (`Timestamp`), not strings — drawn the same way `UpdateSection.tsx` draws `checked_at`: in the
+ *  user's own machine's time zone and format, not a fixed standard. */
 export function formatInstalledAt(ms: number): string {
   return new Date(ms).toLocaleString();
 }
 
 /**
- * Các bản đã cài của một kind, **mới nhất trước** — thứ một ô pin gợi ý.
+ * The installed versions of one kind, **newest first** — what a pin field suggests.
  *
- * Sắp lại chứ không tin thứ tự daemon trả về: `runtime.list_installed` đọc `ORDER BY kind,
- * version`, tức là sắp *chuỗi*, nên `8.10.0` về trước `8.9.0`. Một danh sách gợi ý nói sai bản nào
- * mới hơn thì tệ hơn là không sắp gì.
+ * Re-sorted rather than trusting the daemon's order: `runtime.list_installed` reads `ORDER BY kind,
+ * version`, which sorts *strings*, so `8.10.0` comes before `8.9.0`. A suggestion list that gets
+ * wrong which version is newer is worse than no sorting at all.
  *
- * So từng đoạn: phần số dẫn đầu so như số, phần đuôi còn lại so như chuỗi và **đuôi ngắn hơn là
- * bản ra sau** — `8.5.0` sau `8.5.0RC1`, đúng luật "một constraint không nhắc pre-release thì không
- * bao giờ chọn pre-release" của `VersionConstraint`. Đây là thứ tự để *hiển thị*; việc chọn bản nào
- * thật sự khớp constraint vẫn là của daemon.
+ * Compared segment by segment: the leading numeric part compares as a number, the remaining tail
+ * compares as a string, and **the shorter tail is the later release** — `8.5.0` after `8.5.0RC1`,
+ * matching `VersionConstraint`'s rule that "a constraint that does not mention a pre-release never
+ * picks a pre-release". This is an order for *display*; choosing which version really matches a
+ * constraint is still the daemon's job.
  */
 export function installedVersions(
   runtimes: readonly { kind: string; version: string }[],
@@ -114,12 +121,12 @@ export function installedVersions(
     .sort((left, right) => compareVersions(right, left));
 }
 
-/** Âm khi `left` ra trước `right`. */
+/** Negative when `left` comes before `right`. */
 function compareVersions(left: string, right: string): number {
   const ours = left.split(".");
   const theirs = right.split(".");
   for (let i = 0; i < Math.max(ours.length, theirs.length); i++) {
-    // Đoạn thiếu là bản ngắn hơn — `20.11` trước `20.11.1`.
+    // A missing segment is the shorter version — `20.11` before `20.11.1`.
     if (ours[i] === undefined) return -1;
     if (theirs[i] === undefined) return 1;
     const decided = compareSegments(ours[i], theirs[i]);
@@ -132,12 +139,14 @@ function compareSegments(left: string, right: string): number {
   const ourNumber = Number.parseInt(left, 10);
   const theirNumber = Number.parseInt(right, 10);
   if (ourNumber !== theirNumber) {
-    // Một đoạn không mở đầu bằng số cho `NaN`; so như chuỗi là thứ duy nhất còn nghĩa lúc đó.
+    // A segment not starting with a digit gives `NaN`; comparing as strings is the only thing that
+    // still means anything then.
     if (Number.isNaN(ourNumber) || Number.isNaN(theirNumber)) return left < right ? -1 : 1;
     return ourNumber - theirNumber;
   }
 
-  // Cùng số dẫn đầu: đuôi rỗng (`0`) là bản phát hành, đuôi có chữ (`0RC1`) là bản trước nó.
+  // Same leading number: an empty tail (`0`) is the release, a lettered tail (`0RC1`) is the one
+  // before it.
   const ourTail = left.slice(String(ourNumber).length);
   const theirTail = right.slice(String(theirNumber).length);
   if (ourTail === theirTail) return 0;

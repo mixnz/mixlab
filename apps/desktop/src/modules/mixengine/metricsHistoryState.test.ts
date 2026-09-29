@@ -26,8 +26,8 @@ describe("segmentsFor", () => {
     expect(segmentsFor(minutes)).toEqual([minutes]);
   });
 
-  /* Một phút vắng (ở đây: 60_000 -> 180_000, thiếu 120_000) là ranh giới đoạn — không một đường
-     nối hai đoạn qua nó. */
+  /* A missing minute (here: 60_000 -> 180_000, missing 120_000) is a segment boundary — no line
+     joins the two segments across it. */
   it("breaks into a new segment across a missing minute", () => {
     const first = minute(0);
     const second = minute(60_000);
@@ -53,8 +53,9 @@ describe("runsOf", () => {
     expect(runsOf(segment, hasCpu)).toEqual([segment]);
   });
 
-  /* `cpu_avg: null` là một phút không lần đọc nào mang được con số CPU. Lọc nó ra rồi nối hai bên
-     lại là bịa ra một đoạn chưa từng đo — cùng một lỗi như nối qua một phút vắng. */
+  /* `cpu_avg: null` is a minute in which no reading could carry a CPU figure. Filtering it out and
+     joining both sides makes up a stretch that was never measured — the same mistake as joining
+     across a missing minute. */
   it("breaks a run where the value is missing", () => {
     const first = minute(0);
     const absent = minute(60_000, null);
@@ -68,7 +69,8 @@ describe("runsOf", () => {
 });
 
 describe("gapsIn", () => {
-  /* Một đoạn phủ từ phút đầu tới hết phút cuối — phút `n` là khoảng [n, n+60s). */
+  /* A segment covers from its first minute to the end of its last — minute `n` is the range
+     [n, n+60s). */
   it("finds the window either side of one segment", () => {
     const segments = [[minute(600_000), minute(660_000)]];
     expect(gapsIn(segments, 0, 900_000)).toEqual([
@@ -94,9 +96,9 @@ describe("gapsIn", () => {
 const watched = (at: number, samples: number) => ({ ...minute(at), samples });
 
 describe("sampledRanges", () => {
-  /* `samples: 1` là một phút không ai nhìn: `cpu_peak` bằng `cpu_avg` vì chỉ có đúng một lần đọc,
-     nên dải đỉnh dẹt xuống thành không. Dẹt vì không ai đo khác hẳn dẹt vì thật sự đều — và đây là
-     thứ nói ra sự khác nhau đó. */
+  /* `samples: 1` is a minute nobody was watching: `cpu_peak` equals `cpu_avg` because there was
+     exactly one reading, so the peak band flattens to nothing. Flat because nobody measured is
+     quite different from flat because it really was steady — and this is what tells them apart. */
   it("finds the stretch somebody was watching", () => {
     const segment = [watched(0, 60), watched(60_000, 42)];
     expect(sampledRanges([segment], 2)).toEqual([{ from: 0, to: 120_000 }]);
@@ -114,7 +116,8 @@ describe("sampledRanges", () => {
     expect(sampledRanges([[watched(0, 1), watched(60_000, 1)]], 2)).toEqual([]);
   });
 
-  /* Hai đoạn là hai đoạn: giữa chúng là một phút vắng, không phải một lúc ai đó vẫn đang nhìn. */
+  /* Two segments are two segments: between them is a missing minute, not a moment someone was
+     still watching. */
   it("never joins two segments into one stretch", () => {
     const segments = [[watched(0, 60)], [watched(180_000, 60)]];
     expect(sampledRanges(segments, 2)).toEqual([
@@ -132,7 +135,8 @@ describe("nearestMinute", () => {
     expect(nearestMinute(minutes, 100_000, 30_000)?.minute).toBe(120_000);
   });
 
-  /* Trong vùng chưa có dữ liệu, phút gần nhất có thể cách hàng giờ — đọc nó ra là nói dối. */
+  /* In a region with no data yet, the nearest minute may be hours away — reading it out is a
+     lie. */
   it("finds nothing past the tolerance", () => {
     expect(nearestMinute(minutes, 600_000, 30_000)).toBeNull();
   });

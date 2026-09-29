@@ -1,7 +1,7 @@
-//! Giữ `GET /logs/{subject}/{id}` mở và đẩy từng khung lên UI — mirror của `events.rs`, khác đúng
-//! route và state (`LogsState`, không phải `MixEngineState`). `Frames` (parser SSE) dùng chung, không
-//! viết lại. `subject` là `"service"` hoặc `"job"` — hai kiểu duy nhất `LogSubject` (phía MixEngine)
-//! định nghĩa.
+//! Keeps `GET /logs/{subject}/{id}` open and pushes each frame up to the UI — a mirror of
+//! `events.rs`, differing only in the route and the state (`LogsState`, not `MixEngineState`).
+//! `Frames` (the SSE parser) is shared, not rewritten. `subject` is `"service"` or `"job"` — the
+//! only two kinds `LogSubject` (on MixEngine's side) defines.
 
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
@@ -16,11 +16,12 @@ use super::sse::Frames;
 use super::state::LogsState;
 use super::transport;
 
-/// Mở `GET /logs/{subject}/{id}?tail=N&follow=1` và chạy tới khi bị hủy hoặc kết nối đứt.
+/// Opens `GET /logs/{subject}/{id}?tail=N&follow=1` and runs until cancelled or until the
+/// connection drops.
 ///
-/// `subject` là `"service"` hoặc `"job"` — đúng hai đoạn route `LogSubject` (trong `bindings/`) nói
-/// tới, không có đoạn thứ ba. Route tự nói loại nào, nên không cần đoán một job id có phải tên
-/// service hay không.
+/// `subject` is `"service"` or `"job"` — exactly the two route segments `LogSubject` (in
+/// `bindings/`) names, with no third. The route says which kind it is, so there is no need to guess
+/// whether a job id is a service name.
 pub async fn stream_logs(
     subject: &str,
     id: String,
@@ -88,8 +89,9 @@ where
                 }
             }
         }
-        // Kết nối đứt: khác `/events`, không có "resync" cho log — một tab Logs mở lại tự gửi lại
-        // `tail`/`follow` từ đầu, đó đã là "đọc lại" của luồng này.
+        // The connection dropped: unlike `/events`, there is no "resync" for logs — a Logs tab that
+        // reopens sends `tail`/`follow` again from the start, and that is already this stream's
+        // "read again".
     });
 
     Ok(())

@@ -15,18 +15,19 @@ import ExtensionsPanel from "../Packages/ExtensionsPanel";
 import styles from "./PhpExtensions.module.css";
 
 /**
- * Bật tắt extension của PHP — T118.
+ * Turning PHP extensions on and off — T118.
  *
- * **Không có method mới.** `runtime.list_extensions` và `runtime.set_extension` đã tồn tại từ T28,
- * và `ExtensionsPanel` đã vẽ chúng từ khi có màn Runtimes (nay là Packages). Thứ thiếu là *đường
- * tới đó*: nó nằm sau một hàng phiên bản phải mở ra ở một màn khi đó tên là Runtimes, bốn hàng phía
- * trên một mục sidebar tên là *Extensions* mà lại nói về một chuyện hoàn toàn khác.
+ * **No new method.** `runtime.list_extensions` and `runtime.set_extension` have existed since T28,
+ * and `ExtensionsPanel` has drawn them since the Runtimes screen (now Packages) existed. What was
+ * missing was *the way there*: it sat behind a version row that had to be expanded on a screen then
+ * called Runtimes, four rows above a sidebar item called *Extensions* that was about something else
+ * entirely.
  *
- * **Cùng một component, vẽ ở hai nơi**, không phải hai bản chép: mở từ Packages vẫn được, và bản
- * thứ hai sẽ là bản lệch đúng vào ngày một trong hai được sửa.
+ * **The same component, drawn in two places**, not two copies: opening it from Packages still
+ * works, and a second copy would drift apart on exactly the day one of them gets changed.
  *
- * **Không có PHP thì một câu và một nút**, không phải một bảng rỗng: bảng rỗng bắt người ta đoán
- * xem họ thiếu bước nào.
+ * **No PHP means one sentence and one button**, not an empty table: an empty table makes people
+ * guess which step they are missing.
  */
 export default function PhpExtensions({
   active,
@@ -41,12 +42,12 @@ export default function PhpExtensions({
   const { t } = useTranslation();
 
   /**
-   * Giữ nguyên tham chiếu chừng nào `version` chưa đổi.
+   * Keeps the same reference as long as `version` has not changed.
    *
-   * `ExtensionsPanel` có `target` trong deps của `reload`, nên một object literal dựng ngay trong
-   * JSX là một `target` mới **mỗi lần render** — và `MixEngineTab` render lại toàn bộ pane đang
-   * mounted mỗi lần đổi màn. Nghĩa là mỗi lượt chuyển màn tốn thêm một `runtime.list_extensions`
-   * hỏi lại đúng thứ vừa hỏi.
+   * `ExtensionsPanel` has `target` in `reload`'s deps, so an object literal built inline in JSX is
+   * a new `target` **on every render** — and `MixEngineTab` re-renders every mounted pane on each
+   * screen switch. That means every screen switch costs an extra `runtime.list_extensions` asking
+   * again exactly what was just asked.
    */
   const target = useMemo<RuntimeTarget>(() => ({ kind: "php", version }), [version]);
 
@@ -54,7 +55,8 @@ export default function PhpExtensions({
     try {
       const listed = await api.runtimesInstalled("php");
       setInstalled(listed.runtimes);
-      // Bản mặc định của home, vì đó là bản `php` trên terminal đang chạy; không có thì bản đầu.
+      // The home's default version, because that is the `php` the terminal runs; failing that, the
+      // first one.
       setVersion((current) => {
         if (listed.runtimes.some((runtime) => runtime.version === current)) return current;
         const preferred = listed.runtimes.find((runtime) => runtime.default) ?? listed.runtimes[0];
@@ -67,13 +69,14 @@ export default function PhpExtensions({
   }, [t]);
 
   /**
-   * Đọc lại mỗi khi quay lại màn này, không chỉ lúc mount — `MixEngineTab.pane` giữ mọi màn
-   * mounted và chỉ ẩn đi, nên "đã mount" không có nghĩa là "vừa được xem".
+   * Rereads every time we come back to this screen, not only on mount — `MixEngineTab.pane` keeps
+   * every screen mounted and only hides it, so "mounted" does not mean "just looked at".
    *
-   * Đây là màn duy nhất từng bỏ qua giao kèo ấy, và cái giá đúng bằng một lỗi: gỡ bản PHP đang
-   * chọn ở màn Packages thì `Select` ở đây vẫn giữ nguyên nó, và `ExtensionsPanel` hỏi daemon về
-   * một runtime không còn tồn tại ("no such runtime: php …"). Luật chọn lại version khi bản đang
-   * chọn biến mất đã nằm sẵn trong `reload()` — thứ thiếu chỉ là một lượt gọi nữa.
+   * This is the only screen that ever skipped that agreement, and the cost was exactly one bug:
+   * removing the selected PHP version on the Packages screen left the `Select` here holding it, and
+   * `ExtensionsPanel` asked the daemon about a runtime that no longer exists ("no such runtime: php
+   * …"). The rule for picking another version when the selected one disappears was already in
+   * `reload()` — all that was missing was one more call.
    */
   useEffect(() => {
     if (active) void reload();

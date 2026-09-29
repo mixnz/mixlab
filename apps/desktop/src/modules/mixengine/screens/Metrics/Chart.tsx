@@ -9,66 +9,70 @@ import styles from "./Chart.module.css";
 
 const MINUTE_MS = 60_000;
 
-/** Chiều cao vùng vẽ, không kể lề. */
+/** The height of the plot area, not counting margins. */
 const PLOT_HEIGHT = 128;
-/** Chừa chỗ cho nét vẽ ở đúng đỉnh thang: không có nó, nửa trên của đường bị cắt ở mép SVG. */
+/** Leaves room for the stroke right at the top of the scale: without it, the upper half of the line
+ *  is cut off at the SVG edge. */
 const PAD_TOP = 10;
-/** Chỗ cho dải lấy mẫu rồi tới nhãn thời gian. */
+/** Room for the sampling band, then the time labels. */
 const PAD_BOTTOM = 28;
-/** Dải lấy mẫu: nằm dưới vạch 0, không đè lên dữ liệu sát đáy. */
+/** The sampling band: sits below the 0 line, not over the data near the bottom. */
 const RAIL_TOP = 4;
 const RAIL_HEIGHT = 3;
-/** Từ bao nhiêu lần đọc một phút trở lên thì `peak` mới nói được điều gì khác `avg`. */
+/** From how many readings per minute `peak` starts to say anything different from `avg`. */
 const SAMPLED_MINIMUM = 2;
-/** Chỗ cho nhãn trục dọc. */
+/** Room for the vertical axis labels. */
 const PAD_LEFT = 58;
 const PAD_RIGHT = 10;
 const HEIGHT = PAD_TOP + PLOT_HEIGHT + PAD_BOTTOM;
-/** Dưới mức này thì nhãn trục chồng lên nhau; biểu đồ thà co lại còn hơn tự dẫm lên mình. */
+/** Below this the axis labels overlap; the chart would rather shrink than trip over itself. */
 const MIN_WIDTH = 360;
-/** Bao nhiêu pixel cho một nhãn thời gian trước khi hai nhãn chạm nhau. */
+/** How many pixels one time label gets before two labels touch. */
 const TICK_SPACING = 110;
-/** Con trỏ phải nằm trong chừng này mới tính là đang chỉ vào một phút. */
+/** The cursor has to be within this much to count as pointing at a minute. */
 const SNAP_PX = 8;
-/** Một vùng trống hẹp hơn thế này không đủ chỗ cho chữ. */
+/** An empty region narrower than this has no room for text. */
 const GAP_LABEL_PX = 90;
 
 interface Props {
   segments: MetricsMinute[][];
-  /** Cửa sổ trục ngang phủ — cả thời gian lưu trữ, không chỉ phần đã có dữ liệu. */
+  /** The window the horizontal axis covers — the whole retention period, not only the part that
+   *  has data. */
   from: number;
   to: number;
-  /** Đại lượng đang vẽ: nó dựng thang dọc và viết nhãn cho chính mình. */
+  /** The quantity being drawn: it builds the vertical scale and writes its own labels. */
   unit: Unit;
-  /** Tên đại lượng, đã dịch — cho người đọc màn hình chứ không phải người nhìn nó. */
+  /** The quantity's name, translated — for someone reading the screen rather than looking at it. */
   label: string;
-  /** Đọc giá trị trung bình/đỉnh từ một phút — cặp `cpu_avg`/`cpu_peak` hay `rss_avg`/`rss_peak`. */
+  /** Reads the average/peak values from a minute — the `cpu_avg`/`cpu_peak` or `rss_avg`/`rss_peak`
+   *  pair. */
   avg: (minute: MetricsMinute) => number | null;
   peak: (minute: MetricsMinute) => number | null;
   /** The categorical hue the series is drawn in — one per quantity, so two charts are told apart. */
   hue: "sky" | "purple";
 }
 
-/** Phút dưới con trỏ, cùng vị trí của nó tính bằng pixel CSS trong khung. */
+/** The minute under the cursor, with its position in CSS pixels within the frame. */
 interface Hover {
   minute: MetricsMinute;
   left: number;
 }
 
 /**
- * Một dải đỉnh và một đường trung bình trên trục thời gian thật, dựng tay bằng SVG — không thêm thư
- * viện chart (Quyết định D4, spec Metrics/Settings).
+ * A peak band and an average line on a real time axis, hand-built in SVG — no chart library added
+ * (Decision D4, Metrics/Settings spec).
  *
- * **Mỗi dải liên tục là một `<path>` riêng.** Đây là cơ chế thật giữ đúng luật "một phút vắng là
- * một khoảng trống, không phải một điểm nối": trục X ánh xạ theo *thời gian*, không theo chỉ số
- * mảng, nên một khoảng trống thời gian tự để lại một khoảng trống hình học — và không vẽ một
- * `<path>` xuyên qua nó là điều duy nhất còn phải giữ đúng. `runsOf` áp cùng luật ấy một tầng sâu
- * hơn, cho phút có dòng nhưng không có số.
+ * **Each continuous run is a `<path>` of its own.** This is the real mechanism that keeps the rule
+ * "a missing minute is a gap, not a joining point": the X axis maps by *time*, not by array index,
+ * so a gap in time leaves a gap in the geometry by itself — and not drawing a `<path>` through it
+ * is the only thing left to get right. `runsOf` applies the same rule one level deeper, for minutes
+ * that have a row but no figure.
  *
- * **Khung vẽ đo theo pixel thật.** `viewBox` khớp bề rộng đã đo nên một đơn vị SVG là một pixel:
- * nét vẽ dày đều theo mọi hướng, và chữ ra đúng cỡ. Bản trước kéo một `viewBox` cố định 640×120 ra
- * cả bề rộng pane bằng `preserveAspectRatio="none"`, làm đoạn ngang mảnh hơn đoạn dốc và biến nét
- * đỉnh dày 4px thành một dải thô.
+ * **The frame is measured in real pixels.** `viewBox` matches the measured width so one SVG unit
+ * is one pixel: strokes are equally thick in every direction, and text comes out at the right
+ * size. The previous version stretched a fixed 640×120 `viewBox` across the whole pane width with
+ * `preserveAspectRatio="none"`, making horizontal stretches thinner than steep ones and turning the
+ * 4px peak stroke into a coarse band.
  */
 export default function Chart({ segments, from, to, unit, label, avg, peak, hue }: Props) {
   const { lang, t } = useTranslation();
@@ -91,7 +95,7 @@ export default function Chart({ segments, from, to, unit, label, avg, peak, hue 
     () => new Intl.DateTimeFormat(lang, { hour: "2-digit", minute: "2-digit" }),
     [lang],
   );
-  // Bản tóm tắt phải nói cả ngày: một trình đọc màn hình không thấy được cửa sổ dài bao nhiêu.
+  // The summary has to state the whole day: a screen reader cannot see how long the window is.
   const stamp = useMemo(
     () => new Intl.DateTimeFormat(lang, { dateStyle: "short", timeStyle: "short" }),
     [lang],
@@ -141,8 +145,9 @@ export default function Chart({ segments, from, to, unit, label, avg, peak, hue 
           <span className={styles.keyLine} />
           {t("mixengine.metrics.average")}
         </span>
-        {/* Chú giải này cần một câu giải thích, không chỉ một cái tên: dải nói lên *vì sao* dải
-            đỉnh ở chỗ khác lại dẹt. `Tooltip` của app thay vì `title` để chữ ra đúng phông app. */}
+        {/* This legend needs an explanation, not just a name: the band says *why* the peak band is
+            flat elsewhere. The app's `Tooltip` rather than `title`, so the text comes out in the
+            app's font. */}
         <Tooltip text={t("mixengine.metrics.sampledHint")}>
           <span className={styles.key}>
             <span className={styles.keyRail} />
@@ -171,8 +176,8 @@ export default function Chart({ segments, from, to, unit, label, avg, peak, hue 
             peak: unit.value(observed),
           })}
         >
-          {/* Thời gian không ai đo, vẽ ra thành một vùng — nếu không, nó không phân biệt được với
-              một đường đi ngang, và 40 phút dữ liệu trông y hệt 24 giờ. */}
+          {/* Time nobody measured, drawn as a region — otherwise it cannot be told apart from a
+              flat line, and 40 minutes of data looks exactly like 24 hours. */}
           {gaps.map((gap) => (
             <rect
               key={gap.from}
@@ -219,9 +224,10 @@ export default function Chart({ segments, from, to, unit, label, avg, peak, hue 
             </g>
           ))}
 
-          {/* Quãng có người nhìn, nói bên dưới trục thay vì trên chính đường dữ liệu. `samples: 1`
-              là trạng thái thường của một máy không ai mở Dashboard, nên vẽ nhạt những phút ấy đi
-              là vẽ nhạt gần cả biểu đồ — mất đúng thứ đang cần đọc. */}
+          {/* The stretches someone was watching, stated below the axis rather than on the data
+              line itself. `samples: 1` is the normal state of a machine where nobody has the
+              Dashboard open, so fading those minutes would fade almost the whole chart — losing
+              exactly what needs to be read. */}
           {sampled.map((range) => (
             <rect
               key={range.from}
@@ -247,8 +253,8 @@ export default function Chart({ segments, from, to, unit, label, avg, peak, hue 
 
           {runs.map((run) => {
             const first = run[0]!;
-            // Một phút đơn độc không có đường để vẽ, nhưng nó là dữ liệu thật: một vạch từ trung
-            // bình lên đỉnh cộng một chấm. Bản trước bỏ qua mọi dải ngắn hơn hai điểm.
+            // A lone minute has no line to draw, but it is real data: a tick from the average up to
+            // the peak plus a dot. The previous version skipped every run shorter than two points.
             if (run.length === 1) {
               return (
                 <g key={first.minute}>
@@ -265,9 +271,9 @@ export default function Chart({ segments, from, to, unit, label, avg, peak, hue 
             }
             const top = run.map((m) => `${x(m.minute)},${y(peak(m)!)}`);
             const line = run.map((m) => `${x(m.minute)},${y(avg(m)!)}`);
-            // Dải khép kín giữa đỉnh và trung bình — một *vùng*, không phải một nét dày. Bản trước
-            // vẽ đỉnh bằng `strokeWidth={4}` mờ, nên hai đường trông như hai series rời nhau thay
-            // vì "trung bình nằm trong vùng đỉnh".
+            // A closed band between peak and average — a *region*, not a thick stroke. The previous
+            // version drew the peak with a faint `strokeWidth={4}`, so the two lines looked like
+            // two separate series instead of "the average sits inside the peak region".
             const band = `M${top.join("L")}L${[...line].reverse().join("L")}Z`;
             return (
               <g key={first.minute}>

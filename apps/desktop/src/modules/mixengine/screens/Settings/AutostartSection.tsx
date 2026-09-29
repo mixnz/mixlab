@@ -9,12 +9,13 @@ import { autostartPresentation } from "../../settingsState";
 import styles from "./Settings.module.css";
 
 /**
- * Công tắc tự khởi động — T85b.
+ * The autostart switch — T85b.
  *
- * **`enabled && !for_this_home` phải đọc khác `enabled && for_this_home`.** Một entry đã đăng ký
- * thuộc home khác vẫn là `enabled: true` — công tắc bật, nhưng bật cho một home không phải home
- * này. Bấm "Bật" ở đây vẫn hợp lệ (nó *thay* entry, vì chỉ có một entry mỗi user), nhưng câu hiện
- * ra không được nói "đã bật" như thể không có gì cần biết thêm.
+ * **`enabled && !for_this_home` must read differently from `enabled && for_this_home`.** A
+ * registered entry belonging to another home is still `enabled: true` — the switch is on, but on
+ * for a home that is not this one. Pressing "Enable" here is still valid (it *replaces* the entry,
+ * since there is only one entry per user), but the sentence shown must not say "enabled" as if
+ * there were nothing more to know.
  */
 export default function AutostartSection({ onError }: { onError: (message: string) => void }) {
   const [report, setReport] = useState<AutostartReport | null>(null);

@@ -2,8 +2,8 @@ import type { ProjectPin } from "@mixengine/api";
 import type { RuntimeKind } from "@mixengine/api";
 
 /**
- * Một `ProjectPin` thành thứ vẽ được — không suy ra `resolvedVersion` từ `constraint` phía client,
- * chỉ đọc lại đúng những gì daemon đã tính.
+ * A `ProjectPin` as something drawable — `resolvedVersion` is not inferred from `constraint` on the
+ * client side; only what the daemon computed is read back.
  */
 export interface FormattedPin {
   kind: RuntimeKind;

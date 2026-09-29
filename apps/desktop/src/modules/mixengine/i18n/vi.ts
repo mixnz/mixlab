@@ -37,9 +37,9 @@ const vi: typeof en = {
       servicesDetail: "Services",
       logs: "Logs",
       blueprints: "Blueprints",
-      // Chỉ đổi **nhãn**: add-on của MixEngine vẫn là `extension.*` ở mọi method, mọi tài liệu.
-      // Đây là chỗ duy nhất hai nghĩa đụng nhau — bốn hàng dưới *Packages*, nơi extension của PHP
-      // đang trốn (T118).
+      // Only the **label** changes: MixEngine's add-ons are still `extension.*` in every method and
+      // every document. This is the only place the two meanings collide — four rows below
+      // *Packages*, where PHP's extensions are hiding (T118).
       extensions: "Add-ons",
       metrics: "Metrics",
       settings: "Settings",

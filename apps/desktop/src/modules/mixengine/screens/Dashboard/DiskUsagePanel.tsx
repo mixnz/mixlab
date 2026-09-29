@@ -15,8 +15,9 @@ interface Props {
   onCleanup: () => void;
 }
 
-/** Vì sao một hạng mục dọn được hay không — bốn biến thể `Reclaim`, một câu mỗi cái, daemon nói chứ
- *  không phải MixDB suy ra từ tên hạng mục (đúng luật `Reclaim` doc-comment đã nêu). */
+/** Why a category can or cannot be cleaned — the four `Reclaim` variants, one sentence each; the
+ *  daemon says so rather than MixDB inferring it from the category name (just as the `Reclaim`
+ *  doc comment says). */
 function reclaimNote(category: CategoryUsage, t: ReturnType<typeof useTranslation>["t"]): string {
   const { reclaim } = category;
   switch (reclaim.reclaim) {
@@ -64,11 +65,12 @@ function ReclaimTag({ category }: { category: CategoryUsage }) {
 }
 
 /**
- * Bảng disk usage 5 hạng mục cố định (T96), mỗi hạng mục vẽ khác nhau theo `Reclaim` daemon trả về.
+ * The disk usage table with 5 fixed categories (T96), each drawn differently according to the
+ * `Reclaim` the daemon returns.
  *
- * **Chỉ hai hạng mục (`logs`, `cache`) có nút dọn** — ba cái còn lại (`runtimes`, `data`, `certs`)
- * chỉ đọc, trỏ người dùng sang đúng chỗ dọn được. Nút "Dọn dẹp" luôn hiện — dialog tự lọc đúng hai
- * hàng dọn được.
+ * **Only two categories (`logs`, `cache`) have a clean-up button** — the other three (`runtimes`,
+ * `data`, `certs`) are read-only and point the user to the right place to clean them. The "Clean
+ * up" button always shows — the dialog itself filters down to exactly the two cleanable rows.
  */
 export default function DiskUsagePanel({ disk, refreshing, onRefresh, onCleanup }: Props) {
   const { t } = useTranslation();

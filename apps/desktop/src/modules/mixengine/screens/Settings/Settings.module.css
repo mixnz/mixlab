@@ -32,8 +32,8 @@
   color: var(--danger-text);
 }
 
-/* Khoảng cách trong một section do `gap` của nó quyết định, không phải margin 1em mặc định của
-   `<p>` — hai `<p>` liền nhau (General, Autostart, Updates, Uninstall) từng cách nhau 8px cộng 2em. */
+/* Spacing within a section is decided by its `gap`, not by `<p>`'s default 1em margin — two
+   adjacent `<p>`s (General, Autostart, Updates, Uninstall) used to sit 8px plus 2em apart. */
 .section p {
   margin: 0;
 }
@@ -74,8 +74,8 @@
   border-bottom: none;
 }
 
-/* Cả hai cột đều có thể mang một câu dài (tên một check, câu `because` daemon tự viết) — bọc chữ
-   trong đúng nửa của nó thay vì đẩy tràn khỏi khung. */
+/* Both columns may carry a long sentence (a check's name, the `because` the daemon writes) — wrap
+   the text within its own half instead of pushing it out of the frame. */
 .listItem > span {
   min-width: 0;
   overflow-wrap: break-word;

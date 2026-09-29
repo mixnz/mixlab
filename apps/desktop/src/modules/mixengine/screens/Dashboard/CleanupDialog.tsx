@@ -16,12 +16,13 @@ interface Props {
 }
 
 /**
- * Dọn `logs`/`cache` qua `daemon.cleanup`.
+ * Cleans up `logs`/`cache` through `daemon.cleanup`.
  *
- * **Chỉ hai checkbox, luôn đúng hai** — `Reclaim::ByCleanup` chỉ bao giờ gắn với `logs`/`cache`
- * (đúng lời `Cleaned` doc-comment), nên danh sách lọc từ `disk.categories` chứ không hard-code, để
- * một máy nào đó daemon nói khác đi vẫn vẽ đúng thay vì vẽ một checkbox chết. Bỏ tick nghĩa là dọn
- * (mặc định) — `CleanupQuery.keep_logs`/`keep_cache` mặc định `false`.
+ * **Only two checkboxes, always exactly two** — `Reclaim::ByCleanup` is only ever attached to
+ * `logs`/`cache` (just as the `Cleaned` doc comment says), so the list is filtered from
+ * `disk.categories` rather than hard-coded, so that a machine where the daemon says otherwise still
+ * draws correctly instead of drawing a dead checkbox. Unticked means clean (the default) —
+ * `CleanupQuery.keep_logs`/`keep_cache` default to `false`.
  */
 export default function CleanupDialog({ disk, onCancel, onStarted }: Props) {
   const { t } = useTranslation();

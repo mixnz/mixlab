@@ -17,8 +17,9 @@ const rows: ServiceRow[] = [
 ];
 
 describe("rowsFrom", () => {
-  /* Cột `autostart` là **cài đặt**, không phải trạng thái: nó tới từ `service.list` và không có sự
-     kiện nào đổi nó. Test này là chỗ giữ nó không bị bỏ quên khi ai đó thêm field vào `ServiceRow`. */
+  /* The `autostart` column is a **setting**, not a state: it comes from `service.list` and no event
+     changes it. This test is what keeps it from being forgotten when someone adds a field to
+     `ServiceRow`. */
   it("carries a service's autostart setting onto its row", () => {
     const made = rowsFrom([
       {
@@ -38,8 +39,8 @@ describe("rowsFrom", () => {
     ]);
   });
 
-  /* T183: phiên bản là thứ người dùng đọc cạnh id. Daemon cũ không gửi field này, nên nó thành
-     `null`, và `null` nghĩa là không vẽ gì. */
+  /* T183: the version is what the user reads next to the id. An old daemon does not send this
+     field, so it becomes `null`, and `null` means draw nothing. */
   it("carries a service's version onto its row, and null when the daemon sent none", () => {
     const base = {
       id: "mysql@main",
@@ -57,7 +58,8 @@ describe("rowsFrom", () => {
 });
 
 describe("applyEvent", () => {
-  /* Trạng thái được thông báo, không bao giờ được suy ra: hàng đổi vì stream nói, không vì ai bấm. */
+  /* State is announced, never inferred: a row changes because the stream says so, not because
+     someone clicked. */
   it("moves a row when the stream says the service changed", () => {
     const raw = JSON.stringify({ type: "service_state_changed", service: "caddy@main", to: "starting" });
     const next = applyEvent(rows, raw);
@@ -66,8 +68,8 @@ describe("applyEvent", () => {
     expect(next.resync).toBe(false);
   });
 
-  /* `resync` nghĩa là bus 1024 message bên kia đã tràn. Con số `missed` chỉ để ghi log — cách xử
-     lý giống nhau dù lỡ một hay một nghìn. */
+  /* `resync` means the 1024-message bus on the other side has overflowed. The `missed` count is
+     only for logging — the handling is the same whether one or a thousand were missed. */
   it("asks for a resync when the bus overflowed", () => {
     expect(applyEvent(rows, JSON.stringify({ type: "resync", missed: 900 })).resync).toBe(true);
   });
@@ -76,8 +78,8 @@ describe("applyEvent", () => {
     expect(applyEvent(rows, JSON.stringify({ type: "mixdb_disconnected" })).resync).toBe(true);
   });
 
-  /* Một biến thể sinh ra ở phiên bản sau phải tới đây như một object bỏ qua được — không ném, và
-     không làm mất hàng nào. Đó là toàn bộ lý do sự kiện được internally tagged. */
+  /* A variant born in a later version must arrive here as an ignorable object — no throw, and no
+     rows lost. That is the whole reason events are internally tagged. */
   it("ignores an event type it has never heard of", () => {
     const next = applyEvent(rows, JSON.stringify({ type: "quantum_flux", whatever: 1 }));
     expect(next.rows).toEqual(rows);
@@ -88,13 +90,14 @@ describe("applyEvent", () => {
     expect(applyEvent(rows, "<html>").rows).toEqual(rows);
   });
 
-  /* Một service chưa có trong bảng: không dựng hàng giả, đợi `service.list` nói nó là gì. */
+  /* A service not yet in the table: build no fake row; wait for `service.list` to say what it
+     is. */
   it("does not invent a row for a service it does not know", () => {
     const raw = JSON.stringify({ type: "service_state_changed", service: "redis@main", to: "running" });
     expect(applyEvent(rows, raw).rows).toHaveLength(2);
   });
 
-  /* Một `service_state_changed` thiếu nửa nào cũng không được đụng vào bảng. */
+  /* A `service_state_changed` missing either half must not touch the table. */
   it("ignores a state change that names no service or no state", () => {
     expect(applyEvent(rows, JSON.stringify({ type: "service_state_changed", to: "running" })).rows)
       .toEqual(rows);
@@ -104,8 +107,9 @@ describe("applyEvent", () => {
     ).toEqual(rows);
   });
 
-  /* Ghim đúng cái lỗi đã mắc: `id` là tên trong bản phác kiến trúc của MixEngine, `service` là tên
-     daemon thật sự gửi. Đọc nhầm thì bảng đứng im và không gì báo. */
+  /* Pins down the exact mistake that was made: `id` is the name in MixEngine's architecture sketch,
+     `service` is the name the daemon actually sends. Misreading it leaves the table frozen with
+     nothing to say so. */
   it("does not answer to the field name the architecture note used", () => {
     const raw = JSON.stringify({ type: "service_state_changed", id: "caddy@main", to: "running" });
     expect(applyEvent(rows, raw).rows).toEqual(rows);
@@ -128,7 +132,8 @@ describe("applyJob", () => {
     expect(next[0]).toMatchObject({ id: 9, percent: 5, message: "downloading" });
   });
 
-  /* Tiến độ là thứ duy nhất trên stream được phép lặp lại — nó cập nhật hàng cũ, không đẻ hàng mới. */
+  /* Progress is the only thing on the stream allowed to repeat — it updates the existing row and
+     spawns no new one. */
   it("updates a job it already has instead of adding a second row", () => {
     const raw = JSON.stringify({ type: "job_progress", job: 7, percent: 80, message: "granted" });
     const next = applyJob(running, raw);
@@ -136,7 +141,7 @@ describe("applyJob", () => {
     expect(next[0].percent).toBe(80);
   });
 
-  /* `kind` chỉ có ở message đầu; một message sau không được xoá nó. */
+  /* `kind` is only on the first message; a later message must not erase it. */
   it("keeps the kind a later message does not repeat", () => {
     const raw = JSON.stringify({ type: "job_progress", job: 7, percent: 80 });
     expect(applyJob(running, raw)[0].kind).toBe("elevation");
@@ -154,8 +159,8 @@ describe("applyJob", () => {
 });
 
 describe("needsResync", () => {
-  /* Cùng câu trả lời với `applyEvent`, nhưng gọi được ngoài updater của `setState` — React chạy
-     updater hai lần trong StrictMode, nên một `reload()` đặt trong đó bắn hai lần mỗi sự kiện. */
+  /* The same answer as `applyEvent`, but callable outside a `setState` updater — React runs
+     updaters twice under StrictMode, so a `reload()` placed inside one fires twice per event. */
   it("says yes to exactly what applyEvent says yes to", () => {
     for (const raw of [
       JSON.stringify({ type: "resync", missed: 1 }),
@@ -176,16 +181,16 @@ describe("needsResync", () => {
 });
 
 describe("movesARow", () => {
-  /* Chỉ `service_state_changed` mới đổi bảng service. Câu hỏi này tồn tại để `Dashboard` biết một
-     message có đua với một `service.list` đang bay hay không — hỏi **ngoài** updater của
-     `setRows`, vì updater chạy hai lần trong StrictMode. */
+  /* Only `service_state_changed` changes the service table. This question exists so `Dashboard`
+     knows whether a message races a `service.list` in flight — asked **outside** the `setRows`
+     updater, because updaters run twice under StrictMode. */
   it("says yes to a service state change", () => {
     const raw = JSON.stringify({ type: "service_state_changed", service: "caddy@main", to: "stopped" });
     expect(movesARow(raw)).toBe(true);
   });
 
-  /* Tiến độ job bắn liên tục suốt một lần cài runtime. Coi nó là một lý do đọc lại là biến một
-     job dài thành một tràng `service.list` không ai cần. */
+  /* Job progress fires continuously throughout a runtime install. Treating it as a reason to reread
+     turns one long job into a barrage of `service.list` calls nobody needs. */
   it("says no to job progress", () => {
     expect(movesARow(JSON.stringify({ type: "job_progress", job: 4, percent: 10 }))).toBe(false);
   });

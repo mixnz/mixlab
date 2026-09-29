@@ -14,8 +14,8 @@ interface Props {
   onCaptured: () => void;
 }
 
-/** Capture một project đang có thành một blueprint mới. Không có `blueprint.delete` — overwrite là
- *  cách duy nhất sửa một slug đã lỡ đặt sai tên. */
+/** Captures an existing project as a new blueprint. There is no `blueprint.delete` — overwriting is
+ *  the only way to fix a slug that was named wrongly. */
 export default function CaptureDialog({ onCancel, onCaptured }: Props) {
   const { t } = useTranslation();
   const [projectNames, setProjectNames] = useState<string[]>([]);

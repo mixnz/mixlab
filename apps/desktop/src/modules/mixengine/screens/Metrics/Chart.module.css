@@ -29,7 +29,8 @@
   gap: 6px;
 }
 
-/* Chú giải soi đúng nét nó nói tới: một vệt cho đường, một ô cho vùng tô. */
+/* The legend mirrors exactly the mark it describes: a stroke for the line, a swatch for the
+   fill. */
 .keyLine {
   width: 14px;
   height: 2px;
@@ -62,7 +63,7 @@
   overflow: visible;
 }
 
-/* Lưới và nhãn lùi hẳn ra sau dữ liệu — chúng là thước đo, không phải nội dung. */
+/* Grid and labels step well back behind the data — they are a ruler, not content. */
 .grid {
   stroke: var(--border-soft);
   stroke-width: 1;
@@ -137,7 +138,7 @@
   white-space: nowrap;
 }
 
-/* Gần mép phải thì lật sang trái, thay vì tràn ra ngoài khung. */
+/* Near the right edge it flips to the left, instead of spilling outside the frame. */
 .readoutLeft {
   transform: translateX(calc(-100% - 12px));
 }
@@ -148,7 +149,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Con số dẫn, tên đi sau: người đọc đã biết mình đang xem series nào, cái họ thiếu là giá trị. */
+/* The number leads, the name follows: the reader already knows which series they are looking at;
+   what they lack is the value. */
 .readoutRow {
   display: flex;
   align-items: center;

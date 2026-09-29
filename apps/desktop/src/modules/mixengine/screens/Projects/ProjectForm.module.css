@@ -55,9 +55,10 @@
   transform: rotate(90deg);
 }
 
-/* Chiều cao đi từ `0fr` lên `1fr` trên grid-template-rows — animate về "auto" không cần đo bằng
-   JS, và không nhảy khựng trong một frame như `<details>` gốc. `.disclosureInner` mới là chỗ
-   `overflow: hidden`: đặt trên chính hàng grid sẽ cắt luôn viền focus của các control bên trong. */
+/* The height goes from `0fr` to `1fr` on grid-template-rows — animating to "auto" without measuring
+   in JS, and without the one-frame jump of a native `<details>`. `.disclosureInner` is where
+   `overflow: hidden` sits: putting it on the grid row itself would also clip the focus ring of the
+   controls inside. */
 .disclosureBody {
   display: grid;
   grid-template-rows: 0fr;

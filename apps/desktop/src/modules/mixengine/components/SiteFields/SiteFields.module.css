@@ -56,7 +56,7 @@
   gap: 8px;
 }
 
-/* T135. Mỗi route một hàng: đường dẫn, target, ô của target đó, nút xóa. */
+/* T135. One row per route: the path, the target, that target's field, the delete button. */
 .routeList {
   display: flex;
   flex-direction: column;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
-/** Chấm chạy `""` → `"."` → `".."` → `"..."`, lặp lại — báo còn sống trong lúc một việc dài đang chạy. */
+/** Running dots `""` → `"."` → `".."` → `"..."`, repeating — a sign of life while a long task is
+ *  running. */
 export function useRunningDots(active: boolean): string {
   const [count, setCount] = useState(0);
   useEffect(() => {

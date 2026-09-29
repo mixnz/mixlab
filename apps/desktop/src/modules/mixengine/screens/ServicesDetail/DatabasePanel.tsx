@@ -14,12 +14,13 @@ import { createsDatabases, opensADatabase } from "./openChoices";
 import styles from "./DatabasePanel.module.css";
 
 /**
- * Những gì màn Services nói về một database — và **không nói gì cả về một service không phải
- * database**.
+ * What the Services screen says about a database — and **says nothing at all about a service that
+ * is not a database**.
  *
- * *Mở* không ở đây nữa: nó là một hành động trên chính service, nên nó ở menu 3 chấm của hàng đó
- * trên Dashboard. Đứng cạnh nút Tạo, hai nút trả lời hai câu hỏi không liên quan bằng cùng một
- * hình dáng, và cái ô "Tên database" ở giữa thì thuộc về đúng một trong hai.
+ * *Open* is no longer here: it is an action on the service itself, so it lives in that row's
+ * three-dot menu on the Dashboard. Standing next to the Create button, the two buttons answered two
+ * unrelated questions with the same shape, and the "Database name" field between them belonged to
+ * exactly one of the two.
  */
 export default function DatabasePanel({ service }: { service: string }) {
   const [report, setReport] = useState<DatabaseClientReport | null>(null);
@@ -27,22 +28,22 @@ export default function DatabasePanel({ service }: { service: string }) {
   const [userName, setUserName] = useState("");
   const [createdMessage, setCreatedMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  /** Lỗi của một hành động trong panel. Không giấu panel đi — việc Tạo hỏng không đổi việc service
-   *  này vẫn là một database. */
+  /** The error of an action in the panel. The panel is not hidden — a failed Create does not change
+   *  the fact that this service is still a database. */
   const [error, setError] = useState("");
-  /** Lỗi của chính lần đọc `database.client`. Panel không biết mình có nên tồn tại hay không, nên
-   *  nó hiện đúng câu đó và không hiện gì khác. */
+  /** The error of the `database.client` read itself. The panel does not know whether it should
+   *  exist, so it shows exactly that sentence and nothing else. */
   const [loadError, setLoadError] = useState("");
   const { t } = useTranslation();
 
   /**
-   * Đọc `database.client` cho service đang chọn.
+   * Reads `database.client` for the selected service.
    *
-   * **Xoá câu trả lời cũ trước khi hỏi câu mới, và bỏ qua câu trả lời về trễ.** Không làm điều thứ
-   * nhất thì một lần đọc hỏng để nguyên `report` của service *trước đó* — chính là cách panel đã
-   * hiện địa chỉ credential của `postgres@main` dưới tên `php-fpm@8.4.24`. Không làm điều thứ hai
-   * thì bấm nhanh qua hai service sẽ để response của cái cũ hạ cánh sau và thắng, cùng đường đua
-   * `readOrder.ts` mô tả cho bảng ở Dashboard.
+   * **Clears the old answer before asking the new question, and ignores answers that arrive
+   * late.** Without the first, a failed read leaves the *previous* service's `report` in place —
+   * exactly how the panel once showed `postgres@main`'s credential address under the name
+   * `php-fpm@8.4.24`. Without the second, clicking quickly through two services lets the old one's
+   * response land later and win, the same race `readOrder.ts` describes for the Dashboard table.
    */
   useEffect(() => {
     let live = true;
@@ -89,18 +90,19 @@ export default function DatabasePanel({ service }: { service: string }) {
     }
   }
 
-  // Hỏi mà không ra thì nói ra. Im lặng ở đây là một panel biến mất vì daemon không trả lời được,
-  // và người đọc kết luận service này không phải database — một câu chưa ai nói.
+  // Asked and got nothing: say so. Staying silent here is a panel disappearing because the daemon
+  // could not answer, and the reader concludes this service is not a database — something nobody
+  // said.
   if (loadError !== "") {
     return <ErrorBanner message={loadError} onDismiss={() => setLoadError("")} />;
   }
 
-  // Chưa đọc xong: chưa có gì để nói.
+  // Not finished reading: nothing to say yet.
   if (report === null) return null;
 
-  // **Không phải database thì không có panel nào cả.** `protocol: null` là một trạng thái daemon
-  // trả lời cho nginx, caddy và mọi php-fpm pool — một dòng chữ giải thích rằng ở đây không có gì
-  // vẫn là một khối chiếm chỗ nói rằng có.
+  // **Not a database means no panel at all.** `protocol: null` is a state the daemon answers for
+  // nginx, caddy and every php-fpm pool — a line of text explaining there is nothing here is still
+  // a block taking up space saying there is.
   if (!opensADatabase(report)) return null;
 
   return (
@@ -126,8 +128,8 @@ export default function DatabasePanel({ service }: { service: string }) {
           </div>
         )}
 
-        {/* Redis và MongoDB không tạo database kiểu này: daemon nói vậy, và một form chỉ có thể bị
-            từ chối thì không vẽ (T155). */}
+        {/* Redis and MongoDB do not create databases this way: the daemon says so, and a form that
+            can only be refused is not drawn (T155). */}
         {createsDatabases(report) && (
           <>
             <h4 className={styles.groupTitle}>{t("mixengine.servicesDetail.database.createTitle")}</h4>

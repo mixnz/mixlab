@@ -18,18 +18,19 @@ import { subscribeDaemonWatch } from "../../daemonWatch";
 import styles from "./Settings.module.css";
 import { useRunningDots } from "./useRunningDots";
 
-/** Hai giá trị `FrontEndServer` — đúng danh sách đóng của hợp đồng, không đọc từ package nào. */
+/** The two `FrontEndServer` values — exactly the contract's closed list, not read from any
+ *  package. */
 const SERVERS: FrontEndServer[] = ["caddy", "nginx"];
 
-/** `JobOutcome.error` thành `AppError` dịch được. */
+/** `JobOutcome.error` as a translatable `AppError`. */
 function refusal(error: WireError): AppError {
   const params: Record<string, string> = { code: error.code, message: error.message };
   if (error.hint) params.hint = error.hint;
   return { code: "error.mixengineRefused", params };
 }
 
-/** Server đang active, hay `null` khi không hàng nào là front end. `undefined` khi daemon này build
- *  trước khi `role` tồn tại (ADR 0019: member vắng mặt là "daemon cũ", không phải "chưa biết"). */
+/** The active server, or `null` when no row is the front end. `undefined` when this daemon was
+ *  built before `role` existed (ADR 0019: an absent member means "old daemon", not "unknown"). */
 function activeFrontEnd(services: ServiceSummary[]): FrontEndServer | null | undefined {
   if (services.every((service) => service.role === undefined || service.role === null)) {
     return undefined;
@@ -43,26 +44,28 @@ function activeFrontEnd(services: ServiceSummary[]): FrontEndServer | null | und
 /**
  * "Default web server" — `service.set_front_end`, T97 / ADR 0026.
  *
- * **Đọc từ `ServiceSummary.role`, không có method đọc riêng.** Hàng có `role: front_end` mang luôn
- * `server`, chính là giá trị `FrontEndSwitch.server` nhận — MixDB không map tên package sang ý nghĩa
- * (ADR 0026: "no client may map a package name to a role"). Danh sách lựa chọn là hai giá trị đóng
- * của `FrontEndServer`; server chưa cài thì daemon từ chối kèm lệnh cài trong `hint`, hiện qua
- * `errorMessage` như mọi lỗi khác, không tự kiểm tra package ở đây.
+ * **Read from `ServiceSummary.role`; there is no separate read method.** The row with
+ * `role: front_end` also carries `server`, exactly the value `FrontEndSwitch.server` takes — MixDB
+ * does not map package names to meanings (ADR 0026: "no client may map a package name to a role").
+ * The choice list is the two closed values of `FrontEndServer`; for a server not yet installed the
+ * daemon refuses with the install command in `hint`, shown through `errorMessage` like every other
+ * error, with no package check done here.
  *
- * **Ghi là một job**, không phải một setting: daemon dừng server cũ, dựng server mới, và có thể cần
- * một prompt (grant cổng 80/443 trên Linux đổi theo binary). Poll `jobStatus` như mọi job khác,
- * rồi đọc `FrontEndReport` trong `result` — năm `outcome` được vẽ như năm kết cục khác nhau, không
- * gộp thành "lỗi":
+ * **Writing is a job**, not a setting: the daemon stops the old server, brings up the new one, and
+ * may need a prompt (the port 80/443 grant on Linux follows the binary). Poll `jobStatus` like any
+ * other job, then read the `FrontEndReport` in `result` — the five `outcome`s are drawn as five
+ * different outcomes, not lumped together as "error":
  *
- * - `switched`/`unchanged` → đọc lại; hiện `not_carried` (override không mang qua được — thứ trường
- *   này tồn tại để không bị nuốt im lặng) và `kept_data`.
- * - `not_granted` → cùng luồng T64 khắp app: đọc `elevation.status`, mở `ElevationDialog`. Khi dialog
- *   đóng, đọc lại hàng đợi: rỗng (đã cấp) thì tự gọi switch lại — daemon nói "allowing it and asking
- *   again works"; còn gì chờ (người dùng chỉ đóng) thì dừng ở một câu, không lặp vô hạn.
- * - `rolled_back`/`failed` → `because` màu đỏ, lựa chọn quay về server đang active.
+ * - `switched`/`unchanged` → reread; show `not_carried` (overrides that could not be carried over
+ *   — this field exists so they are not silently swallowed) and `kept_data`.
+ * - `not_granted` → the same T64 flow as everywhere in the app: read `elevation.status`, open
+ *   `ElevationDialog`. When the dialog closes, read the queue again: empty (granted) means calling
+ *   switch again by itself — the daemon says "allowing it and asking again works"; something still
+ *   waiting (the user only closed it) stops at one sentence, with no endless loop.
+ * - `rolled_back`/`failed` → `because` in red, and the choice returns to the active server.
  *
- * Không truyền `version`: daemon lấy bản mới nhất đã cài, đúng ghi chú của hợp đồng ("nobody
- * choosing a web server is choosing a patch release").
+ * No `version` is passed: the daemon takes the newest installed version, exactly as the contract
+ * notes ("nobody choosing a web server is choosing a patch release").
  */
 export default function FrontEndSection({
   active,
@@ -111,8 +114,9 @@ export default function FrontEndSection({
     });
   }, [reload]);
 
-  // Lựa chọn theo server đang active mỗi lần đọc lại — trừ lúc người dùng đã chọn khác và job đang
-  // chạy, để một `reload()` giữa chừng không kéo Select về giá trị cũ.
+  // The choice follows the active server on every reread — except while the user has picked
+  // something else and the job is running, so that a `reload()` midway does not pull the Select
+  // back to the old value.
   useEffect(() => {
     if (job === null && current !== undefined) setChoice(current ?? SERVERS[0]);
   }, [current, job]);
@@ -144,7 +148,7 @@ export default function FrontEndSection({
     const result = summary.outcome.result as FrontEndReport;
     setReport(result);
     if (result.outcome.outcome === "not_granted") {
-      // Thao tác đang chờ trong hàng đợi elevation — cho xem rồi mới hỏi, T64.
+      // Operations waiting in the elevation queue — show them first, then ask, T64.
       try {
         const queue = await api.elevationStatus();
         if (!live.current) return;
@@ -179,7 +183,8 @@ export default function FrontEndSection({
     }
   }
 
-  /** Sau `ElevationDialog`: hàng đợi rỗng là đã cấp — hỏi lại; còn gì chờ là người dùng chỉ đóng. */
+  /** After `ElevationDialog`: an empty queue means granted — ask again; something still waiting
+   *  means the user only closed it. */
   async function afterElevation() {
     setPending(null);
     try {
@@ -199,7 +204,7 @@ export default function FrontEndSection({
 
   if (services === null) return null;
 
-  // Daemon build trước T97: giữ hàng này nhìn thấy được với lý do, thay vì biến mất.
+  // A daemon built before T97: keep this row visible with a reason, instead of disappearing.
   if (current === undefined) {
     return (
       <section className={styles.section}>
@@ -279,7 +284,8 @@ export default function FrontEndSection({
           <p className={styles.warn}>{t("mixengine.settings.frontEnd.notCarried")}</p>
           <ul className={styles.list}>
             {report.not_carried.map((line, index) => (
-              // Vị trí là khoá: mỗi dòng là một câu daemon viết, không có id nào khác.
+              // The position is the key: each line is a sentence the daemon wrote, with no other
+              // id.
               <li key={index} className={styles.muted}>
                 {line}
               </li>

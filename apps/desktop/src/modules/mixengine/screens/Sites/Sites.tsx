@@ -28,7 +28,8 @@ import ShareDialog from "./ShareDialog";
 import SiteForm from "./SiteForm";
 import styles from "./Sites.module.css";
 
-/** Ô chia sẻ: nút Chia sẻ khi chưa, đếm ngược sống + nút Bỏ chia sẻ khi đang. */
+/** The share cell: a Share button when not shared, a live countdown + an Unshare button when it
+ *  is. */
 function SharingCell({
   sharing,
   onShare,
@@ -66,11 +67,11 @@ function SharingCell({
 }
 
 /**
- * Mọi site trong home, và trạng thái chia sẻ LAN của chúng.
+ * Every site in the home, and their LAN sharing state.
  *
- * **Chia sẻ đến từ stream, không từ suy đoán** — `site_sharing_changed` là chỗ roadmap gọi là "chỗ
- * duy nhất `mix` là client yếu hơn": với CLI lý do nằm trong log không ai đọc, ở đây nó phải là một
- * dòng thấy được ngay khi nó tới.
+ * **Sharing comes from the stream, not from guessing** — `site_sharing_changed` is what the roadmap
+ * calls "the only place `mix` is the weaker client": in the CLI the reason sits in a log nobody
+ * reads; here it has to be a line visible the moment it arrives.
  */
 export default function Sites({ active }: { active: boolean }) {
   const [rows, setRows] = useState<SiteRow[]>([]);
@@ -81,18 +82,19 @@ export default function Sites({ active }: { active: boolean }) {
   const [editing, setEditing] = useState<SiteDetail | null>(null);
   const [sharing, setSharing] = useState<string | null>(null);
   /**
-   * Domain đang chờ bật service, khoá **cả bảng** chứ không riêng hàng ấy.
+   * The domain waiting for its services to start; it locks **the whole table**, not just that row.
    *
-   * Một biến giữ một domain, nên hai lượt chồng nhau sẽ giẫm lên nhau: lượt xong trước xoá luôn
-   * dấu chờ của lượt còn đang chạy. Khoá cả bảng là cách rẻ nhất để chuyện đó không xảy ra, và cái
-   * giá — vài giây không bấm được hàng khác — nhỏ hơn một bảng nói sai nó đang làm gì.
+   * One variable holds one domain, so two overlapping runs would trample each other: the one that
+   * finishes first also clears the waiting mark of the one still running. Locking the whole table
+   * is the cheapest way to keep that from happening, and the cost — a few seconds unable to click
+   * another row — is smaller than a table that misstates what it is doing.
    */
   const [opening, setOpening] = useState<string | null>(null);
   const { t } = useTranslation();
 
-  // `filterOverride` là đường thoát khỏi độ trễ một nhịp của `setState`: effect refresh project
-  // list dưới đây tính ra filter hợp lệ rồi cần đọc site *ngay* với giá trị đó, không phải với
-  // `projectFilter` cũ còn nằm trong closure cho tới lần render kế tiếp.
+  // `filterOverride` is the way out of `setState`'s one-beat delay: the effect below that refreshes
+  // the project list computes a valid filter and then needs to read sites *right away* with that
+  // value, not with the old `projectFilter` still sitting in the closure until the next render.
   const reload = useCallback(
     async (filterOverride?: string) => {
       const filter = filterOverride ?? projectFilter;
@@ -108,17 +110,19 @@ export default function Sites({ active }: { active: boolean }) {
   );
 
   /**
-   * Đọc lại danh sách project mỗi khi vừa quay lại màn này — một project có thể vừa được
-   * thêm/sửa/xoá ở màn Projects trong lúc màn này bị ẩn, và trước đây danh sách chỉ đọc một lần lúc
-   * mount nên Select đứng yên với dữ liệu cũ.
+   * Rereads the project list every time we come back to this screen — a project may have just been
+   * added/edited/deleted on the Projects screen while this one was hidden, and the list used to be
+   * read only once on mount, so the Select sat still with stale data.
    *
-   * **Validate `projectFilter` trước khi gọi `site.list`, không phải sau.** Filter đang chọn có thể
-   * trỏ tới một project vừa bị xoá — gọi `site.list` với một project không còn tồn tại là daemon từ
-   * chối thẳng ("no such project: …"), không phải trả một danh sách rỗng, nên phải đổi filter về
-   * "tất cả" *trước* khi đọc site, không phải bắt lỗi rồi thử lại.
+   * **Validate `projectFilter` before calling `site.list`, not after.** The selected filter may
+   * point to a project that was just deleted — calling `site.list` with a project that no longer
+   * exists is refused outright by the daemon ("no such project: …") rather than returning an empty
+   * list, so the filter has to be reset to "all" *before* reading sites, not by catching the error
+   * and retrying.
    *
-   * Cũng là chỗ đọc yêu cầu điều hướng từ `sitesNavigation.ts` (Projects → "mở Sites, lọc theo
-   * project X") — gộp chung vì cả hai đều quyết định filter nào là đúng trước khi gọi `site.list`.
+   * Also where the navigation request from `sitesNavigation.ts` is read (Projects → "open Sites,
+   * filtered by project X") — merged together because both decide which filter is right before
+   * calling `site.list`.
    */
   useEffect(() => {
     if (!active) return;
@@ -141,9 +145,10 @@ export default function Sites({ active }: { active: boolean }) {
     return () => {
       live = false;
     };
-    // `reload`/`projectFilter` cố ý đọc từ closure tại thời điểm effect chạy, không phải deps: đây
-    // là lần refresh cho một lượt `active` mới, không phải một effect nên chạy lại mỗi khi
-    // `projectFilter` tự đổi (SiteForm lưu xong đã có `reload()` riêng cho việc đó).
+    // `reload`/`projectFilter` are deliberately read from the closure at the time the effect runs,
+    // not from deps: this is the refresh for a new `active` turn, not an effect that should rerun
+    // every time `projectFilter` changes by itself (SiteForm already has its own `reload()` for
+    // that once it saves).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
@@ -162,14 +167,14 @@ export default function Sites({ active }: { active: boolean }) {
   }
 
   /**
-   * Bấm vào domain: bật những service site này cần, rồi mở nó.
+   * Clicking a domain: start the services this site needs, then open it.
    *
-   * **Không đợi service báo khoẻ, chỉ đợi `service.start` trả về** — cùng luật `AfterApply` đã
-   * theo. Sức khoẻ thật là câu hỏi của màn Services; ở đây chờ thêm chỉ là giữ người dùng lại
-   * trước một trình duyệt đằng nào cũng tự thử lại.
+   * **Does not wait for the services to report healthy, only for `service.start` to return** — the
+   * same rule `AfterApply` follows. Real health is a question for the Services screen; waiting any
+   * longer here only holds the user back in front of a browser that retries on its own anyway.
    *
-   * Start hỏng thì **không** mở: một trang lỗi không nói được rằng service mới là thứ hỏng, còn
-   * `ErrorBanner` thì nói đúng câu daemon trả về.
+   * If start fails, it does **not** open: an error page cannot say that the service is what broke,
+   * while `ErrorBanner` says exactly what the daemon returned.
    */
   async function visit(row: SiteRow) {
     const { startProject, url } = siteVisit(row);
@@ -185,8 +190,9 @@ export default function Sites({ active }: { active: boolean }) {
   }
 
   /**
-   * Bỏ chia sẻ. Cập nhật hàng ngay khi call trả về, không đợi `site_sharing_changed` — sự kiện đó
-   * là cho lúc nó **tự** đổi (hết giờ, mất mạng), không phải cho lúc người dùng vừa bấm.
+   * Unshares. Updates the row as soon as the call returns, without waiting for
+   * `site_sharing_changed` — that event is for when it changes **by itself** (time runs out, the
+   * network drops), not for when the user has just clicked.
    */
   async function unshare(domain: string) {
     try {
@@ -300,7 +306,8 @@ export default function Sites({ active }: { active: boolean }) {
                       <span className={row.https ? styles.httpsOn : styles.none}>
                         {row.https ? t("mixengine.sites.httpsOn") : t("mixengine.sites.httpsOff")}
                       </span>
-                      {/* T98: site ép HTTPS — `?? false` cho daemon build trước khi trường này tồn tại. */}
+                      {/* T98: the site forces HTTPS — `?? false` for a daemon built before this
+                          field existed. */}
                       {row.https && (row.https_redirect ?? false) && (
                         <span className={styles.redirect}> {t("mixengine.sites.redirect")}</span>
                       )}

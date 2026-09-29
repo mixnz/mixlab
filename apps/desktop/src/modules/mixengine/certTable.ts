@@ -9,9 +9,9 @@ export interface CertRow {
 }
 
 /**
- * `cert.issue` gọi không `site` vừa vẽ bảng vừa cấp lại — đúng cách roadmap chọn cho T2.7. Chỉ
- * `state.state === "present"` mới có `cert` để đọc `sans`/`days_left`; `absent`/`unusable` không có
- * gì để đọc, không phải một lỗi.
+ * `cert.issue` called without `site` both draws the table and reissues — the way the roadmap chose
+ * for T2.7. Only `state.state === "present"` has a `cert` to read `sans`/`days_left` from;
+ * `absent`/`unusable` have nothing to read, which is not an error.
  */
 export function buildCertRows(report: CertIssueReport): CertRow[] {
   return report.sites.map(({ domain, outcome, state }) => ({

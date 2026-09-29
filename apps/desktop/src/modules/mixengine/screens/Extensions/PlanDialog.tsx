@@ -15,10 +15,11 @@ interface Props {
 }
 
 /**
- * Xem trước một install trước khi gửi, cho cả nguồn registry lẫn nguồn thư mục cục bộ.
+ * Previews an install before sending it, for both registry and local directory sources.
  *
- * `extension.plan` là bước duy nhất — không gọi `extension.inspect` trước (Quyết định D2, spec).
- * Đăng nhập (`site.signs_in`) vẽ **trong** khối quyền, không cạnh domain (spec, mục 2).
+ * `extension.plan` is the only step — `extension.inspect` is not called first (Decision D2, spec).
+ * Sign-in (`site.signs_in`) is drawn **inside** the permissions block, not next to the domain
+ * (spec, section 2).
  */
 export default function PlanDialog({ source, onCancel, onInstalled }: Props) {
   const { t } = useTranslation();
@@ -38,7 +39,7 @@ export default function PlanDialog({ source, onCancel, onInstalled }: Props) {
     setInstalling(true);
     setError("");
     try {
-      // `consent` trích nguyên từ `plan` — không build lại từ input, xem Quyết định D3.
+      // `consent` is taken verbatim from `plan` — not rebuilt from input; see Decision D3.
       await api.extensionInstall({
         source,
         consent: {

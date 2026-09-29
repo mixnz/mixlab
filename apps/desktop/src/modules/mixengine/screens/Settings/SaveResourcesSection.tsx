@@ -9,13 +9,14 @@ import styles from "./Settings.module.css";
 /**
  * "Save battery" — T167b, ADR 0041.
  *
- * **Tắt trừ khi người dùng bật.** Khi tắt, MixEngine không dừng service nào chỉ vì nó rảnh: một site
- * đang chạy thì cứ chạy. Khi bật, pool PHP rảnh nửa tiếng và database/cache rảnh một tiếng sẽ được
- * dừng, và request kế tiếp cần tới sẽ bật lại — câu dưới công tắc nói đúng điều người dùng sẽ thấy:
- * lần tải đầu có thể chậm một nhịp.
+ * **Off unless the user turns it on.** When off, MixEngine stops no service just because it is
+ * idle: a running site just keeps running. When on, PHP pools idle for half an hour and
+ * databases/caches idle for an hour are stopped, and the next request that needs them starts them
+ * again — the sentence under the switch says exactly what the user will notice: the first load may
+ * be a beat slower.
  *
- * `Switch` chứ không phải `Checkbox` như mục Autostart bên cạnh: đây là một cài đặt có hiệu lực
- * ngay khi bấm, đúng thứ `Switch` dành cho.
+ * `Switch` rather than `Checkbox` like the Autostart section next to it: this is a setting that
+ * takes effect the moment it is clicked, exactly what `Switch` is for.
  */
 export default function SaveResourcesSection({ onError }: { onError: (message: string) => void }) {
   const [on, setOn] = useState<boolean | null>(null);

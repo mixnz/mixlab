@@ -15,7 +15,7 @@ import styles from "./CaBlock.module.css";
 
 type Translate = ReturnType<typeof useTranslation>["t"];
 
-/** Một câu tả `trust` — bốn nhánh tường minh, không ghép chuỗi key động. */
+/** A sentence describing `trust` — four explicit branches, no dynamically built key strings. */
 function trustLine(trust: Trust, t: Translate): string {
   switch (trust.state) {
     case "installed":
@@ -29,7 +29,8 @@ function trustLine(trust: Trust, t: Translate): string {
   }
 }
 
-/** Một câu tả `browsers` khi không nhánh nào tới được — nhánh `reached` vẽ danh sách riêng. */
+/** A sentence describing `browsers` when no branch was reached — the `reached` branch draws its own
+ *  list. */
 function browsersLine(browsers: Exclude<Browsers, { state: "reached" }>, t: Translate): string {
   switch (browsers.state) {
     case "no_tool":
@@ -79,17 +80,17 @@ function browsersPill(browsers: Browsers, t: Translate): Pill {
 }
 
 /**
- * Trạng thái CA — T2.6.
+ * The CA's state — T2.6.
  *
- * **Hai hàng độc lập, không một tick xanh gộp chung.** `trust` là kho hệ thống, `browsers` là NSS
- * database của Firefox/Chrome — một máy có thể giữ CA trong kho hệ thống mà không trình duyệt nào
- * biết tới, đó là một trạng thái bình thường chứ không phải mâu thuẫn.
+ * **Two independent rows, not one combined green tick.** `trust` is the system store, `browsers`
+ * is the Firefox/Chrome NSS database — a machine can hold the CA in the system store without any
+ * browser knowing about it; that is a normal state, not a contradiction.
  */
 export default function CaBlock({
   revision,
   onError,
 }: {
-  /** Đổi là đọc lại — `Domains` tăng nó khi một job kết thúc hay khi màn được mở lại. */
+  /** A change means reread — `Domains` bumps it when a job ends or when the screen is reopened. */
   revision: number;
   onError: (message: string) => void;
 }) {
@@ -113,9 +114,10 @@ export default function CaBlock({
   }, [reload, revision]);
 
   /**
-   * Luồng hai lượt T64: enqueue trước với `grant: false`, xong đọc `elevation.status` — có gì chờ
-   * thì hiện `ElevationDialog` cho người dùng xem trước khi bật prompt hệ điều hành; không có gì
-   * (sửa NSS database không cần quyền trên máy này) thì chỉ đọc lại trạng thái.
+   * The two-pass T64 flow: enqueue first with `grant: false`, then read `elevation.status` — if
+   * something is waiting, show `ElevationDialog` for the user to see before the OS prompt comes up;
+   * if nothing is (repairing the NSS database needs no rights on this machine), just reread the
+   * state.
    */
   async function repair() {
     setRepairing(true);

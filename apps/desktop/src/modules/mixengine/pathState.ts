@@ -1,23 +1,25 @@
 import type { PathReport } from "@mixengine/api";
 
 /**
- * Dashboard có nhắc người dùng đưa `<root>/bin` vào PATH không.
+ * Whether the Dashboard reminds the user to put `<root>/bin` on PATH.
  *
- * **Là trạng thái của máy, không phải một cờ đã lưu** — cùng lý do với `shouldOfferQuickStart`:
- * người vừa `mix path uninstall` sẽ thấy thẻ nhắc quay lại, và không có gì để reset.
+ * **It is the machine's state, not a saved flag** — for the same reason as
+ * `shouldOfferQuickStart`: someone who just ran `mix path uninstall` sees the reminder card come
+ * back, and there is nothing to reset.
  *
- * `null` nghĩa là report chưa về hoặc đọc hỏng, không phải "chưa cài".
+ * `null` means the report has not arrived or failed to read, not "not installed".
  */
 export function shouldOfferPathInstall(report: PathReport | null): boolean {
   return report !== null && !report.on_path;
 }
 
-/** Một lần install/uninstall có thật sự ghi vào đâu không. */
+/** Whether an install/uninstall actually wrote anywhere. */
 export type PathOutcome = "changed" | "unchanged";
 
 /**
- * Đọc từ `PathPlace.changed` — cờ daemon đặt đúng cho câu hỏi này, để client nói "đã có sẵn" thay
- * vì nhận một lần ghi nó không làm. Chỉ khi có nơi đổi thật thì "mở terminal mới" mới có nghĩa.
+ * Read from `PathPlace.changed` — the flag the daemon sets for exactly this question, so the client
+ * can say "already there" instead of taking credit for a write it did not do. Only when some place
+ * really changed does "open a new terminal" mean anything.
  */
 export function pathOutcome(report: PathReport): PathOutcome {
   return report.places.some((place) => place.changed) ? "changed" : "unchanged";

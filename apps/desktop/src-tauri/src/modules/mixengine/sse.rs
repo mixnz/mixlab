@@ -1,14 +1,14 @@
-//! Tách khung Server-Sent Events.
+//! Splits Server-Sent Events frames.
 //!
-//! Bốn luật, và không hơn: dòng bắt đầu bằng `:` là comment (stream rảnh gửi một cái mỗi 15 giây —
-//! đó là thứ phân biệt kết nối sống với kết nối chết); dòng `data:` gom lại, nối bằng `\n`; dòng
-//! trống chốt một message; dòng khác bỏ qua.
+//! Four rules, and no more: a line starting with `:` is a comment (an idle stream sends one every
+//! 15 seconds — that is what tells a live connection from a dead one); `data:` lines are gathered
+//! and joined with `\n`; an empty line closes a message; any other line is ignored.
 //!
-//! Sự kiện của MixEngine **internally tagged** — không có dòng `event:` nào để đọc, discriminator
-//! nằm trong chính JSON. Nên ở đây không có khái niệm "loại sự kiện": nó chỉ chở payload ra, và
-//! việc hiểu payload là của phía trên.
+//! MixEngine's events are **internally tagged** — there is no `event:` line to read; the
+//! discriminator lives inside the JSON itself. So there is no notion of "event type" here: it only
+//! carries the payload out, and understanding the payload is the job of the layer above.
 
-/// Bộ gom byte thành từng message. Một cái cho mỗi kết nối.
+/// Gathers bytes into messages. One per connection.
 #[derive(Default)]
 pub struct Frames {
     buffer: String,
@@ -19,15 +19,15 @@ impl Frames {
         Self::default()
     }
 
-    /// Nuốt một chunk vừa tới, trả về từng payload đã hoàn chỉnh, đúng thứ tự.
+    /// Swallows a chunk that just arrived, returns each completed payload, in order.
     pub fn push(&mut self, chunk: &str) -> Vec<String> {
         self.buffer.push_str(chunk);
         let mut out = Vec::new();
 
         loop {
-            // Dòng trống chốt một message, và nó tới ở một trong hai hình dạng. Lấy cái xuất hiện
-            // sớm hơn: một `\r\n\r\n` cũng chứa một `\n\n` lệch một byte, nên tìm `\n\n` trước rồi
-            // mới quyết định độ rộng là sai.
+            // An empty line closes a message, and it arrives in one of two shapes. Take whichever
+            // appears first: a `\r\n\r\n` also contains a `\n\n` one byte off, so searching for
+            // `\n\n` first and only then deciding the width is wrong.
             let crlf = self.buffer.find("\r\n\r\n");
             let lf = self.buffer.find("\n\n");
             let (at, width) = match (crlf, lf) {
@@ -60,7 +60,7 @@ impl Frames {
 mod tests {
     use super::*;
 
-    /// Một message, gọn gàng.
+    /// One message, cleanly.
     #[test]
     fn one_message_comes_out_whole() {
         let mut frames = Frames::new();
@@ -70,22 +70,24 @@ mod tests {
         );
     }
 
-    /// Stream rảnh gửi một comment `:` mỗi 15 giây — đó là thứ phân biệt kết nối sống với kết nối
-    /// chết, và nó không phải một message.
+    /// An idle stream sends a `:` comment every 15 seconds — that is what tells a live connection
+    /// from a dead one, and it is not a message.
     #[test]
     fn a_comment_is_not_a_message() {
         let mut frames = Frames::new();
         assert!(frames.push(": keepalive\n\n").is_empty());
     }
 
-    /// Nhiều dòng `data:` của cùng một message được nối bằng `\n`, đúng như spec SSE.
+    /// Several `data:` lines of the same message are joined with `\n`, exactly as the SSE spec
+    /// says.
     #[test]
     fn several_data_lines_join() {
         let mut frames = Frames::new();
         assert_eq!(frames.push("data: a\ndata: b\n\n"), vec!["a\nb"]);
     }
 
-    /// TCP cắt ở đâu cũng được, kể cả giữa một dòng. Không có gì ra cho tới khi dòng trống tới.
+    /// TCP may cut anywhere, even in the middle of a line. Nothing comes out until the empty line
+    /// arrives.
     #[test]
     fn a_message_split_across_chunks_waits_for_its_blank_line() {
         let mut frames = Frames::new();
@@ -94,14 +96,14 @@ mod tests {
         assert_eq!(frames.push("\n\n"), vec!["{\"type\":\"job_progress\"}"]);
     }
 
-    /// Hai message trong một chunk ra cả hai, đúng thứ tự.
+    /// Two messages in one chunk both come out, in order.
     #[test]
     fn two_messages_in_one_chunk_both_come_out() {
         let mut frames = Frames::new();
         assert_eq!(frames.push("data: a\n\ndata: b\n\n"), vec!["a", "b"]);
     }
 
-    /// `\r\n` cũng phải nuốt được: đây là HTTP.
+    /// `\r\n` has to be swallowed too: this is HTTP.
     #[test]
     fn carriage_returns_do_not_end_up_in_the_payload() {
         let mut frames = Frames::new();

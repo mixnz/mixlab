@@ -3,7 +3,7 @@ import type { PathReport } from "@mixengine/api";
 
 import { pathOutcome, shouldOfferPathInstall } from "./pathState";
 
-/** Một report, chỉ đủ field để trả lời câu hỏi đang hỏi. */
+/** A report, with just enough fields to answer the question being asked. */
 function report(on_path: boolean, changed: boolean[] = []): PathReport {
   return {
     directory: "C:\\Users\\me\\MixEngine\\bin",
@@ -22,8 +22,8 @@ describe("shouldOfferPathInstall", () => {
     expect(shouldOfferPathInstall(report(true))).toBe(false);
   });
 
-  /* `null` là "chưa đọc xong" hoặc "đọc hỏng", không phải "chưa cài": mời trên nó sẽ làm thẻ loé lên
-     trước mặt người đã cài từ lâu, mỗi lần mở tab. */
+  /* `null` is "not finished reading" or "read failed", not "not installed": inviting on it would
+     flash the card in front of someone who installed long ago, every time the tab opens. */
   it("does not offer before the report has arrived", () => {
     expect(shouldOfferPathInstall(null)).toBe(false);
   });
@@ -34,8 +34,8 @@ describe("pathOutcome", () => {
     expect(pathOutcome(report(true, [false, true]))).toBe("changed");
   });
 
-  /* Không nơi nào `changed` là daemon không ghi gì cả — nói "mở terminal mới" lúc đó là đòi một
-     việc không thay đổi được gì. */
+  /* With no place `changed`, the daemon wrote nothing at all — saying "open a new terminal" then
+     asks for something that changes nothing. */
   it("says nothing changed when every place already agreed", () => {
     expect(pathOutcome(report(true, [false, false]))).toBe("unchanged");
   });

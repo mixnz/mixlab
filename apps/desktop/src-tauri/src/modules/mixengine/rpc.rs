@@ -1,15 +1,15 @@
-//! Một call JSON-RPC 2.0 tới `POST /rpc`, và những gì đi ra khi nó hỏng.
+//! One JSON-RPC 2.0 call to `POST /rpc`, and what comes out when it fails.
 //!
-//! **HTTP status nói về phong bì; lỗi JSON-RPC nói về cuộc gọi.** Một method thất bại là `200`
-//! mang member `error` — request đã tới, đã parse được, đã được trả lời. Các status thật sự xuất
-//! hiện đều là chuyện phong bì: `400` body không đọc được, `404` route không có, `405` kèm
-//! `Allow`, `413` quá 1 MiB.
+//! **HTTP status is about the envelope; a JSON-RPC error is about the call.** A failed method is a
+//! `200` carrying an `error` member — the request arrived, was parsed, and was answered. The
+//! statuses that actually appear are all envelope matters: `400` unreadable body, `404` no such
+//! route, `405` with `Allow`, `413` over 1 MiB.
 //!
-//! **Rẽ nhánh theo `error.data.code`, không bao giờ theo câu chữ.** Tập mã đóng của MixEngine:
+//! **Branch on `error.data.code`, never on the wording.** MixEngine's closed set of codes:
 //! `not_found · already_exists · invalid_argument · conflict · precondition_failed · port_in_use ·
 //! privileged_required · unsupported_platform · dependency_missing · process_failed · io ·
-//! internal`. `message` không dịch: đó là daemon nói, và là chuỗi người ta tra cứu được — cùng
-//! luật `error.rs` đã đặt cho message của driver.
+//! internal`. `message` is not translated: it is the daemon speaking, and a string people can look
+//! up — the same rule `error.rs` sets for driver messages.
 
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
@@ -22,7 +22,7 @@ use crate::error::AppError;
 
 use super::transport;
 
-/// Gọi một method và giải kết quả của nó.
+/// Calls a method and decodes its result.
 pub async fn call<T: DeserializeOwned>(method: &str, params: Value) -> Result<T, AppError> {
     let body = request(
         "POST",
@@ -46,7 +46,7 @@ pub async fn call<T: DeserializeOwned>(method: &str, params: Value) -> Result<T,
     serde_json::from_value(result).map_err(|e| err!("error.mixengineProtocol", message = e))
 }
 
-/// Member `error` của một answer, thành `AppError`. `None` khi answer là một kết quả.
+/// An answer's `error` member, as an `AppError`. `None` when the answer is a result.
 pub fn map_rpc_error(body: &Value) -> Option<AppError> {
     let error = body.get("error")?;
     let data = error.get("data");
@@ -57,7 +57,7 @@ pub fn map_rpc_error(body: &Value) -> Option<AppError> {
     let message = error.get("message").and_then(Value::as_str).unwrap_or("");
 
     let mut mapped = err!("error.mixengineRefused", code = code, message = message);
-    // Vắng mặt chứ không rỗng: UI phân biệt được "không có gợi ý" với "gợi ý rỗng".
+    // Absent rather than empty: the UI can tell "no hint" from "an empty hint".
     if let Some(hint) = data
         .and_then(|data| data.get("hint"))
         .and_then(Value::as_str)
@@ -67,10 +67,10 @@ pub fn map_rpc_error(body: &Value) -> Option<AppError> {
     Some(mapped)
 }
 
-/// Một request HTTP/1.1 trên transport cục bộ; trả về body thô.
+/// One HTTP/1.1 request over the local transport; returns the raw body.
 ///
-/// Mở kết nối cho mỗi call rồi đóng. Trên socket cục bộ chi phí bắt tay là micro giây, và đổi lại
-/// không phải nuôi pool và không có kết nối chết nào phải phát hiện.
+/// Opens a connection per call, then closes it. On a local socket the handshake costs
+/// microseconds, and in return there is no pool to maintain and no dead connection to detect.
 pub async fn request(verb: &str, path: &str, body: Option<Value>) -> Result<Vec<u8>, AppError> {
     let io = transport::connect().await?;
     let payload = body.map(|value| value.to_string()).unwrap_or_default();
@@ -78,15 +78,16 @@ pub async fn request(verb: &str, path: &str, body: Option<Value>) -> Result<Vec<
     let outgoing = Request::builder()
         .method(verb)
         .uri(path)
-        // Một request HTTP/1.1 cần `Host`, và daemon không quan tâm nó nói gì: không có tên nào
-        // để phân giải ở đầu kia một socket.
+        // An HTTP/1.1 request needs `Host`, and the daemon does not care what it says: there is no
+        // name to resolve at the other end of a socket.
         .header("host", "mixengine")
         .header("content-type", "application/json")
         .body(Full::new(Bytes::from(payload)))
         .map_err(|e| err!("error.mixengineProtocol", message = e))?;
 
-    // `_sender` phải sống tới khi body đọc xong: thả nó ra là đóng kết nối, và body vẫn đang chảy
-    // trên đó. Tên có gạch dưới chứ không phải `_` trần — `_` thả ngay tại chỗ.
+    // `_sender` has to live until the body is read: dropping it closes the connection, and the
+    // body is still flowing over it. Named with an underscore rather than a bare `_` — `_` drops
+    // on the spot.
     let (_sender, response) = send(TokioIo::new(io), outgoing).await?;
 
     let status = response.status();
@@ -97,8 +98,8 @@ pub async fn request(verb: &str, path: &str, body: Option<Value>) -> Result<Vec<
         .map_err(|e| err!("error.mixengineProtocol", message = e))?
         .to_bytes();
 
-    // 200 mang `error` vẫn là một call thất bại, và nó được xử ở `call`. Chỉ status ngoài dải
-    // thành công mới là chuyện phong bì.
+    // A 200 carrying `error` is still a failed call, and it is handled in `call`. Only a status
+    // outside the success range is an envelope matter.
     if !status.is_success() {
         return Err(err!(
             "error.mixengineProtocol",
@@ -108,11 +109,11 @@ pub async fn request(verb: &str, path: &str, body: Option<Value>) -> Result<Vec<
     Ok(collected.to_vec())
 }
 
-/// Bắt tay HTTP/1.1 trên một IO đã mở và gửi một request.
+/// Performs the HTTP/1.1 handshake on an already open IO and sends one request.
 ///
-/// Generic trên kiểu IO: từng có hai nhánh `#[cfg]` với hai kiểu (pipe và socket) gọi vào đây;
-/// từ T102 `transport::Io` là một kiểu duy nhất của `mixengine-platform`, và generic vẫn giữ để
-/// hàm này không biết kiểu đó là gì.
+/// Generic over the IO type: there used to be two `#[cfg]` branches with two types (pipe and
+/// socket) calling in here; since T102 `transport::Io` is a single type from `mixengine-platform`,
+/// and the generic stays so this function does not know what that type is.
 type Sent = (
     hyper::client::conn::http1::SendRequest<Full<Bytes>>,
     hyper::Response<hyper::body::Incoming>,
@@ -126,7 +127,8 @@ where
         .await
         .map_err(|e| err!("error.mixengineProtocol", message = e))?;
 
-    // Kết nối phải được bơm trong lúc request đang bay; nó kết thúc khi `sender` bị thả.
+    // The connection has to be driven while the request is in flight; it ends when `sender` is
+    // dropped.
     tauri::async_runtime::spawn(async move {
         let _ = connection.await;
     });
@@ -144,8 +146,8 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    /// Một method thất bại là HTTP 200 mang member `error`. Cái phải đi ra là `data.code` — mã ổn
-    /// định — chứ không phải câu chữ, và `hint` là thứ UI vẽ thành hành động gợi ý.
+    /// A failed method is HTTP 200 carrying an `error` member. What must come out is `data.code` —
+    /// the stable code — not the wording, and `hint` is what the UI draws as a suggested action.
     #[test]
     fn a_refusal_carries_the_stable_code_and_the_hint() {
         let body = json!({
@@ -170,7 +172,7 @@ mod tests {
         );
     }
 
-    /// Không có `hint` thì tham số vắng mặt, không phải một chuỗi rỗng.
+    /// With no `hint` the parameter is absent, not an empty string.
     #[test]
     fn a_refusal_without_a_hint_carries_none() {
         let body = json!({
@@ -181,7 +183,7 @@ mod tests {
         assert_eq!(error.params.get("hint"), None);
     }
 
-    /// Một `error` không có `data.code` vẫn phải ra một lỗi đọc được, không phải `None`.
+    /// An `error` without `data.code` must still produce a readable error, not `None`.
     #[test]
     fn an_error_without_a_data_code_still_maps() {
         let body = json!({
@@ -193,12 +195,13 @@ mod tests {
         assert_eq!(error.params.get("code"), Some(&"internal".to_string()));
     }
 
-    /// Nói chuyện thật với một daemon đang chạy trên máy này.
+    /// Talks for real to a daemon running on this machine.
     ///
-    /// `#[ignore]` vì nó cần một MixEngine đã cài và đang chạy, thứ CI không có — chạy nó bằng
-    /// `cargo test --manifest-path src-tauri/Cargo.toml -- --ignored --nocapture`. Đây là bài duy
-    /// nhất chứng minh cả chuỗi: tên pipe suy ra đúng, chủ sở hữu khớp, HTTP/1.1 bắt tay được, và
-    /// JSON-RPC trả về thứ đọc được. Không test thuần nào thay được nó.
+    /// `#[ignore]` because it needs an installed, running MixEngine, which CI does not have — run
+    /// it with `cargo test --manifest-path src-tauri/Cargo.toml -- --ignored --nocapture`. This is
+    /// the only test that proves the whole chain: the pipe name is derived correctly, the owner
+    /// matches, HTTP/1.1 handshakes, and JSON-RPC returns something readable. No pure test can
+    /// replace it.
     #[tokio::test]
     #[ignore]
     async fn a_live_daemon_answers_its_own_status() {
@@ -218,8 +221,9 @@ mod tests {
             "{status}"
         );
 
-        // `service.list` trả `{ services: [...] }` — một object, không phải mảng trần. Đây chính
-        // là thứ chỉ một daemon thật nói ra, và là lý do frontend gõ kiểu theo `ServiceList`.
+        // `service.list` returns `{ services: [...] }` — an object, not a bare array. This is
+        // exactly what only a real daemon tells you, and why the frontend types against
+        // `ServiceList`.
         let services: Value = call("service.list", json!({})).await.expect("service.list");
         println!("services: {services:#}");
         assert!(
@@ -228,12 +232,13 @@ mod tests {
         );
     }
 
-    /// Nhiều call liên tiếp, đúng cái làm hỏng bản trước.
+    /// Several calls in a row, exactly what broke the previous version.
     ///
-    /// Trên Windows daemon giữ đúng một instance pipe chờ sẵn và chỉ dựng cái thay thế *sau khi*
-    /// đã nhận một client. Một client dial liên tiếp — mà `presence()` rồi Dashboard làm ngay khi
-    /// tab mở — rơi vào khe đó, và cả bước đọc owner lẫn bước mở đều trả `ERROR_PIPE_BUSY`. Bản
-    /// trước báo "daemon không trả lời" ở một máy daemon đang chạy bình thường.
+    /// On Windows the daemon keeps exactly one pipe instance waiting and only sets up its
+    /// replacement *after* it has accepted a client. A client dialling in quick succession — which
+    /// `presence()` and then the Dashboard do as soon as the tab opens — falls into that gap, and
+    /// both the owner read and the open return `ERROR_PIPE_BUSY`. The previous version reported
+    /// "daemon not responding" on a machine where the daemon was running normally.
     #[tokio::test]
     #[ignore]
     async fn a_live_daemon_answers_several_calls_in_a_row() {
@@ -248,7 +253,7 @@ mod tests {
         println!("five rounds of /health + daemon.status, no busy pipe");
     }
 
-    /// Một answer thành công không phải một lỗi.
+    /// A successful answer is not an error.
     #[test]
     fn a_result_is_not_an_error() {
         let body = json!({ "jsonrpc": "2.0", "id": 1, "result": { "version": "0.1.0" } });

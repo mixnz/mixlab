@@ -44,7 +44,7 @@ import "./mixengine.css";
 /** How often the gate asks whether a daemon has come up somewhere else — the tray, `mix`. */
 const GATE_POLL_MS = 2000;
 
-/** Trang cài đặt của MixEngine, cho một máy chưa có nó. */
+/** MixEngine's install page, for a machine that does not have it yet. */
 const INSTALL_PAGE_EN = "https://mixnz.github.io/mixlab/en/install/";
 /** Only languages with a translated install page go here; everything else falls back to English. */
 const INSTALL_PAGE_BY_LANG: Partial<Record<Language, string>> = {
@@ -52,15 +52,15 @@ const INSTALL_PAGE_BY_LANG: Partial<Record<Language, string>> = {
 };
 
 /**
- * Cổng vào module, rồi màn hình.
+ * The module's gate, then the screens.
  *
- * **Ba trạng thái, không phải hai.** *Không chạy* (không dial được nhưng chương trình có trên máy),
- * *không trả lời* (dial được, `/health` không xong), *không có MixEngine*. Gộp cả ba thành một
- * thông báo lỗi là bắt người dùng đoán xem họ phải cài, phải khởi động, hay phải chờ.
+ * **Three states, not two.** *Not running* (cannot dial, but the program is on the machine), *not
+ * responding* (dials, but `/health` does not finish), *no MixEngine*. Folding all three into one
+ * error message makes the user guess whether they have to install, start or wait.
  *
- * **Không tự khởi động daemon khi mở tab.** Mở một tab là một cử chỉ rẻ và người dùng có thể chỉ
- * đang tìm nhầm tab; khởi động một daemon đang giám sát database thì không rẻ như vậy. Nút nói rõ
- * nó sắp làm gì.
+ * **Opening the tab does not start the daemon.** Opening a tab is a cheap gesture and the user may
+ * just have picked the wrong tab; starting a daemon that supervises databases is not that cheap.
+ * The button says plainly what it is about to do.
  */
 export default function MixEngineTab({
   isModuleVisible,
@@ -78,15 +78,15 @@ export default function MixEngineTab({
   const [error, setError] = useState("");
   const { t, lang } = useTranslation();
 
-  /* Chỗ đặt bốn thư mục phình to, và bốn dòng người dùng đang sửa — T146.
-     `null` là "chưa hỏi xong", phân biệt với "đã hỏi và quyền chọn đã đóng".
+  /* Where the four growing directories go, and the four rows the user is editing — T146.
+     `null` is "not finished asking", as distinct from "asked, and the choice is closed".
 
-     **Chỉ hỏi ở `notRunning`, không hỏi ở `notInstalled`.** Thiết kế nói picker thuộc về cả hai
-     cổng, và điều đó không làm được: câu trả lời tới từ `mixengined --storage`, mà `notInstalled`
-     nghĩa là đúng chương trình ấy không có trên máy. Hỏi ở đó là chạy một tiến trình chắc chắn
-     hỏng để vẽ một màn hình chắc chắn không vẽ được. Một máy chưa cài MixEngine sẽ thấy picker ở
-     lần mở đầu tiên *sau khi* cài — vẫn trước lần cài runtime đầu tiên, nên cửa sổ chọn còn
-     nguyên. */
+     **Only asked at `notRunning`, not at `notInstalled`.** The design says the picker belongs to
+     both gates, and that cannot be done: the answer comes from `mixengined --storage`, and
+     `notInstalled` means that very program is not on the machine. Asking there would run a process
+     certain to fail in order to draw a screen certain not to draw. A machine without MixEngine sees
+     the picker on the first open *after* installing — still before the first runtime install, so
+     the window for choosing is still intact. */
   const [storage, setStorage] = useState<StorageReport | null>(null);
   const [rows, setRows] = useState<StorageRow[]>([]);
   /* Whether the storage question is still out. While it is, Start waits: a click before the four
@@ -104,8 +104,8 @@ export default function MixEngineTab({
         setStorage(answer);
         setRows(rowsFrom(answer));
       })
-      // Không hỏi được chỗ đặt file thì cổng vẫn phải vẽ được cái nút của nó: đây là một màn hình
-      // thêm vào, không phải điều kiện để khởi động daemon.
+      // If we cannot ask where the files go, the gate must still be able to draw its button: this
+      // is an extra screen, not a condition for starting the daemon.
       .catch(() => {})
       .finally(() => {
         if (live) setStorageAsked(true);
@@ -125,14 +125,14 @@ export default function MixEngineTab({
     if (typeof picked === "string") setRows((prev) => oneFolderFor(prev, picked));
   }
 
-  /* Mỗi màn hình sidebar tự quản lý watch/reload riêng của nó (qua `subscribeDaemonWatch`) và có
-     thể đang giữa một việc dài hơi (một job cài đặt ở Packages) khi người dùng đổi sang màn khác —
-     đổi màn không được unmount nó, nếu không state cục bộ đang theo dõi việc đó mất sạch. Nên
-     render mỗi màn đã từng xem qua đúng một lần, chỉ ẩn/hiện bằng `hidden`; màn chưa xem qua thì
-     chưa vào DOM (mở tất cả chín màn ngay từ đầu là chín lượt gọi API cho những màn có thể không
-     bao giờ được xem).
-     Khai báo trước mọi `return` sớm bên dưới (cổng "chưa hỏi xong"/"daemon không chạy") — Hook
-     phải chạy đều ở mọi lần render, không được đứng sau một nhánh return. */
+  /* Each sidebar screen manages its own watch/reload (through `subscribeDaemonWatch`) and may be in
+     the middle of something long-running (an install job in Packages) when the user switches to
+     another screen — switching must not unmount it, or the local state tracking that work is lost.
+     So each screen ever visited is rendered exactly once and only shown/hidden with `hidden`; a
+     screen not yet visited is not in the DOM (opening all nine screens up front would be nine API
+     calls for screens that may never be looked at).
+     Declared before every early `return` below (the "not finished asking"/"daemon not running"
+     gates) — Hooks must run on every render, never after a return branch. */
   const [mountedScreens, setMountedScreens] = useState<MixEngineScreen[]>([screen]);
   useEffect(() => {
     setMountedScreens((prev) => (prev.includes(screen) ? prev : [...prev, screen]));
@@ -188,8 +188,9 @@ export default function MixEngineTab({
     onTitleChange(t("mixengine.newTabTitle"));
   }, [onTitleChange, t]);
 
-  /* Khởi động một daemon hỏng được vì nhiều lý do người dùng sửa được — chương trình không ở chỗ
-     đoán, một daemon khác đang giữ lock. Nuốt cái đó đi là để họ bấm một cái nút không làm gì. */
+  /* Starting a daemon can fail for many reasons the user can fix — the program is not where we
+     guessed, another daemon holds the lock. Swallowing that leaves them pressing a button that does
+     nothing. */
   async function run(work: () => Promise<unknown>) {
     setBusy(true);
     setError("");
@@ -203,8 +204,8 @@ export default function MixEngineTab({
     }
   }
 
-  // Chưa hỏi xong: một khung trống, không phải một thông báo. Câu trả lời tới trong vài mili giây
-  // và một dòng "đang kiểm tra" nhấp nháy thì tệ hơn là không có gì.
+  // Not finished asking: an empty frame, not a message. The answer arrives within milliseconds, and
+  // a flickering "checking" line is worse than nothing.
   if (report === null || presence === null) return <div className="mixengine-root" />;
 
   if (presence !== "running") {
@@ -215,8 +216,8 @@ export default function MixEngineTab({
         {presence === "notInstalled" && report.searched.length > 0 && (
           <>
             <p className="mixengine-gate-looked">{t("mixengine.gate.lookedIn")}</p>
-            {/* Khoá theo cả chỉ số: một `PATH` thật hay có cùng một thư mục hai lần, và hai `li`
-                cùng khoá là một cảnh báo React cho thứ vốn là dữ liệu hợp lệ. */}
+            {/* Keyed by the index too: a real `PATH` often has the same directory twice, and two
+                `li` with the same key are a React warning for what is valid data. */}
             <ul className="mixengine-gate-searched">
               {report.searched.map((dir, index) => (
                 <li key={`${index}-${dir}`}>{dir}</li>
@@ -289,12 +290,13 @@ export default function MixEngineTab({
     onStateChange(undefined);
   }
 
-  /* `render` nhận `active` thay vì nhận thẳng một node dựng sẵn — mỗi màn tự quyết định làm gì với
-     nó (đọc lại danh sách khi vừa quay lại, xem `Dashboard.tsx`/`ServicesDetail.tsx`...). Giữ mount
-     không kéo theo tự đọc lại: một sự kiện live-update không phải lúc nào cũng phủ hết những gì đổi
-     ở màn khác trong lúc màn này bị ẩn (gỡ/cài PHP không sinh `service_state_changed`, nhưng vẫn có
-     thể là lý do người dùng quay lại Dashboard/Services để nhìn), nên mỗi màn tự đọc lại lúc `active`
-     chuyển sang `true` — đúng câu spec đã viết: "tự đọc lại khi focus quay lại tab". */
+  /* `render` takes `active` instead of a ready-built node — each screen decides for itself what to
+     do with it (read its list again when it has just come back, see
+     `Dashboard.tsx`/`ServicesDetail.tsx`...). Staying mounted does not bring rereading with it: a
+     live-update event does not always cover everything that changed on other screens while this
+     one was hidden (removing/installing PHP produces no `service_state_changed`, yet may be why the
+     user comes back to Dashboard/Services to look), so each screen rereads itself when `active`
+     turns `true` — exactly what the spec says: "reread when focus returns to the tab". */
   function pane(key: MixEngineScreen, render: (active: boolean) => ReactNode) {
     if (!mountedScreens.includes(key)) return null;
     const active = screen === key;

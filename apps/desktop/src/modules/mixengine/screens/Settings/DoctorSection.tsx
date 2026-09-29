@@ -14,17 +14,20 @@ import styles from "./Settings.module.css";
 /**
  * `daemon.doctor` + `daemon.doctor_repair`.
  *
- * **Sửa dùng lại đúng hàng đợi `elevation.status`/`ElevationDialog` Dashboard đã dựng ở Pha 1**
- * (Quyết định D3, spec Metrics/Settings) — không viết dialog elevation thứ hai. Gọi
- * `doctorRepair({ grant: false })` xong, đọc `elevation.status`: có gì chờ thì mở đúng dialog đó;
- * không có gì (sửa nằm trong `MIXENGINE_HOME` không cần quyền) thì chỉ đọc lại report.
+ * **Repairing reuses exactly the `elevation.status`/`ElevationDialog` queue the Dashboard built in
+ * Phase 1** (Decision D3, Metrics/Settings spec) — no second elevation dialog is written. After
+ * calling `doctorRepair({ grant: false })`, read `elevation.status`: if something is waiting, open
+ * that very dialog; if nothing is (the repair is inside `MIXENGINE_HOME` and needs no rights), just
+ * reread the report.
  *
- * **Report được đọc lại mỗi lần quay lại màn này và mỗi khi một job kết thúc**, không chỉ lúc
- * mount. `MixEngineTab` giữ mọi màn đã mở trong DOM thay vì unmount, nên "mount" chỉ xảy ra một lần
- * cho cả đời tab — một report đọc đúng một lần đứng yên tới khi đóng hẳn tab MixEngine, dù người
- * dùng vừa cấp quyền ở Dashboard (nút "N đang chờ") hay từ CLI. Một `elevation.grant` xong là một
- * `job_finished`, và daemon không phát sự kiện nào riêng cho "hàng đợi vừa ngắn đi" (xem
- * `isJobFinished`), nên đó là tín hiệu để đọc lại; `active` là đường dự phòng khi sự kiện rơi.
+ * **The report is reread every time we come back to this screen and every time a job ends**, not
+ * only on mount. `MixEngineTab` keeps every opened screen in the DOM instead of unmounting, so
+ * "mount" happens only once for the tab's whole life — a report read exactly once would stand
+ * still until the MixEngine tab is closed for good, even though the user has just granted rights
+ * on the Dashboard (the "N waiting" button) or from the CLI. A finished `elevation.grant` is a
+ * `job_finished`, and the daemon emits no event of its own for "the queue just got shorter" (see
+ * `isJobFinished`), so that is the signal to reread; `active` is the fallback when events are
+ * dropped.
  */
 export default function DoctorSection({
   active,
@@ -85,7 +88,8 @@ export default function DoctorSection({
 
       <ul className={styles.list}>
         {doctorChecksInOrder(report).map((check, index) => (
-          // Vị trí là khoá: report không có id nào khác, và thứ tự cố định là chính điều đang test.
+          // The position is the key: the report has no other id, and the fixed order is exactly
+          // what is being tested.
           <li key={index} className={styles.listItem}>
             <span>{check.name}</span>
             <span

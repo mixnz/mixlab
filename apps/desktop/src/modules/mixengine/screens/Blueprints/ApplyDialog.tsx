@@ -44,24 +44,25 @@ interface Props {
   onCancel: () => void;
 
   /**
-   * Hộp thoại đã đóng sau một lượt apply. `applied` là kết quả khi nó thành công, `null` khi
-   * thất bại — người gọi cần nó để quyết định đoạn tiếp theo (`AfterApply`), và nhất là để biết
-   * lệnh khởi tạo có chạy hay không.
+   * The dialog has closed after an apply. `applied` is the result when it succeeded, `null` when it
+   * failed — the caller needs it to decide what comes next (`AfterApply`), and above all to know
+   * whether the init command ran.
    */
   onDone: (applied: BlueprintApplied | null) => void;
 
-  /** Điền sẵn tên project. Quick Start đã hỏi rồi, người dùng không phải gõ lại — T117. */
+  /** Prefills the project name. Quick Start has already asked, so the user does not type it again
+   *  — T117. */
   initialProject?: string;
 
-  /** Điền sẵn thư mục, cùng lý do. */
+  /** Prefills the directory, for the same reason. */
   initialRoot?: string;
 
   /**
-   * Cài luôn web server nếu home này chưa có — `BlueprintApply.front_end`, T115.
+   * Also installs a web server if this home has none yet — `BlueprintApply.front_end`, T115.
    *
-   * Mặc định **tắt**: một apply là chuyện của một project, còn dựng sẵn cái máy nó chạy trên là
-   * chuyện rộng hơn và phải được hỏi. Quick Start là chỗ duy nhất bật nó, vì câu của nó đúng là
-   * *cho tôi một site chạy được*.
+   * **Off** by default: an apply is about one project, while setting up the machine it runs on is
+   * a broader matter and has to be asked. Quick Start is the only place that turns it on, because
+   * its question really is *give me a site that works*.
    */
   withFrontEnd?: boolean;
 }
@@ -74,8 +75,9 @@ type Phase =
   | { kind: "failed"; message: string };
 
 /**
- * Một method (`blueprint.apply`), gọi hai lượt. Lượt 1 (`dry_run: true`) chỉ đọc; lượt 2
- * (`dry_run: false`) là lượt duy nhất thật sự làm gì, và chỉ gửi được sau khi `canApply` đồng ý.
+ * One method (`blueprint.apply`), called twice. Pass 1 (`dry_run: true`) only reads; pass 2
+ * (`dry_run: false`) is the only one that really does anything, and can only be sent once
+ * `canApply` agrees.
  */
 export default function ApplyDialog({
   blueprint,
@@ -113,18 +115,19 @@ export default function ApplyDialog({
         blueprint: blueprint.slug,
         project,
         root,
-        // **Thư mục người dùng chọn chính là thư mục của project** — T120c, D1. Hai cửa sổ hiểu
-        // "chọn thư mục" giống hệt nhau; chỗ duy nhất còn ghép đường dẫn là `mix` khi không có
-        // `--path`, vì ở đó không ai chọn thư mục nào cả.
+        // **The directory the user picks is the project's directory** — T120c, D1. Both windows
+        // understand "pick a directory" the same way; the only place still joining paths is `mix`
+        // without `--path`, because there nobody picks a directory at all.
         root_is_parent: false,
         dry_run: true,
         front_end: withFrontEnd,
-        // **Luôn tắt, và không có prop nào bật nó** — `BlueprintApply.autostart` (T116) là một
-        // trường bắt buộc, nên nó được gửi chứ không được bỏ trống. Cửa sổ này không quyết định hộ
-        // ai service nào khởi động cùng MixEngine: một apply đánh cờ lên mọi thứ nó *tạo ra* là
-        // một apply trả lời một câu người dùng chưa hỏi. Câu đó được hỏi ở đúng một chỗ, menu ⋮
-        // của Dashboard, trên đúng service người ta đang nhìn. `mix blueprint apply --autostart`
-        // vẫn gửi được cờ này cho ai muốn nó trong một lệnh.
+        // **Always off, and no prop turns it on** — `BlueprintApply.autostart` (T116) is a required
+        // field, so it is sent rather than left out. This window does not decide on anyone's behalf
+        // which services start along with MixEngine: an apply flagging everything it *creates* is
+        // an apply answering a question the user has not asked. That question is asked in exactly
+        // one place, the Dashboard's ⋮ menu, on exactly the service people are looking at.
+        // `mix blueprint apply --autostart` still sends this flag for anyone who wants it in one
+        // command.
         autostart: false,
       });
       if (response.outcome === "planned") {
@@ -153,17 +156,17 @@ export default function ApplyDialog({
         blueprint: blueprint.slug,
         project,
         root,
-        // Gửi ở cả hai lượt, cùng lý do với `front_end` phía dưới: kế hoạch người ta đọc phải là
-        // kế hoạch chạy, nên thứ quyết định thư mục không được đổi sau lượt dry run.
+        // Sent on both passes, for the same reason as `front_end` below: the plan people read must
+        // be the plan that runs, so what decides the directory must not change after the dry run.
         root_is_parent: false,
         dry_run: false,
         install_prerequisites: installPrerequisites,
         answers: buildAnswers(plan.steps, choices),
         scaffold: scaffold ?? undefined,
-        // Gửi ở cả hai lượt: kế hoạch người ta đọc phải là kế hoạch chạy, nên một cờ đổi kế hoạch
-        // không được thêm vào sau lượt dry run.
+        // Sent on both passes: the plan people read must be the plan that runs, so a flag that
+        // changes the plan must not be added after the dry run.
         front_end: withFrontEnd,
-        // Gửi ở cả hai lượt, cùng lý do: xem lượt dry run phía trên.
+        // Sent on both passes, for the same reason: see the dry run above.
         autostart: false,
       });
       if (response.outcome === "started") {
@@ -176,16 +179,17 @@ export default function ApplyDialog({
     }
   }
 
-  // Theo dõi job khi đang chạy — đăng ký đúng một lần, gỡ khi rời phase "running". Qua
-  // `subscribeDaemonWatch` chứ không gọi thẳng `api.watch()`: kênh đó dùng chung cho cả app (xem
-  // `daemonWatch.ts`) — Dashboard/Sites/Packages rất có thể đang mở cùng lúc dialog này, và một
-  // `api.watch()`/`api.unwatch()` riêng ở đây sẽ giành mất hoặc đóng luôn kênh của chúng.
+  // Follow the job while it runs — subscribe exactly once, unsubscribe on leaving the "running"
+  // phase. Through `subscribeDaemonWatch` rather than calling `api.watch()` directly: that channel
+  // is shared by the whole app (see `daemonWatch.ts`) — Dashboard/Sites/Packages may well be open
+  // alongside this dialog, and a separate `api.watch()`/`api.unwatch()` here would steal or close
+  // their channel.
   useEffect(() => {
     if (phase.kind !== "running") return;
     return subscribeDaemonWatch((raw) => setJobs((current) => applyJob(current, raw)));
   }, [phase.kind]);
 
-  // Job đã biến khỏi JobRow[] (job_finished) — đọc lại kết quả đầy đủ qua job.status.
+  // The job has left JobRow[] (job_finished) — read the full result again through job.status.
   useEffect(() => {
     if (phase.kind !== "running") return;
     if (jobFor(jobs, phase.jobId) !== undefined) return;
@@ -205,11 +209,12 @@ export default function ApplyDialog({
     };
   }, [phase, jobs, t]);
 
-  // Mở stream **ngay khi apply bắt đầu chạy**, không đợi bấm nút — T120, D6. Trước đây stream chỉ
-  // mở khi `showLog` bật, nên mọi dòng in ra trước cú bấm là mất hẳn: một apply hỏng ở bước thứ hai
-  // rồi mới được bấm "Xem output" hiển thị một panel trắng. Nút giờ chỉ bật/tắt **hiển thị**, còn
-  // việc thu thập thì chạy suốt phase "running" — và `logEntries` ở lại sau khi phase đổi, nên đọc
-  // được cả khi apply đã hỏng.
+  // Open the stream **as soon as the apply starts running**, without waiting for the button — T120,
+  // D6. The stream used to open only when `showLog` was on, so every line printed before the click
+  // was lost for good: an apply that failed at the second step and only then got "Show output"
+  // clicked showed a blank panel. The button now only toggles **display**, while collection runs
+  // throughout the "running" phase — and `logEntries` stays after the phase changes, so it can
+  // still be read once the apply has failed.
   useEffect(() => {
     if (phase.kind !== "running") return;
     const job = phase.jobId;
@@ -242,9 +247,10 @@ export default function ApplyDialog({
     });
   }
   if (phase.kind === "plan") {
-    // Nút nói đúng việc nó sắp làm. Một "Apply" chung chung trên một plan có lệnh khởi tạo chưa
-    // được đồng ý là một nút hứa dựng project rồi dựng ra thư mục rỗng — nên khi ô tick còn trống,
-    // nhãn đổi hẳn chứ không chỉ thêm một dòng chú thích ở trên.
+    // The button says exactly what it is about to do. A generic "Apply" on a plan with an init
+    // command not yet agreed to is a button promising to build a project and then building an empty
+    // directory — so while the checkbox is empty, the label changes outright rather than just
+    // adding a caption above.
     const plan = phase.plan;
     actions.push({
       kind: "confirm",
@@ -270,9 +276,9 @@ export default function ApplyDialog({
 
   return (
     <Modal
-      // Escape và cú bấm ra ngoài đi cùng đường với nút ở dưới: một apply đã chạy xong thì đóng
-      // bằng cách nào cũng là "xong", không phải "huỷ" — người gọi còn cả một chuỗi khởi động
-      // treo trên `onDone`, và đánh mất nó vì một phím Escape là đánh mất luôn cái site.
+      // Escape and clicking outside take the same path as the button below: an apply that has
+      // finished is "done" however it is closed, not "cancelled" — the caller still has a whole
+      // start-up chain hanging on `onDone`, and losing it to an Escape key loses the site too.
       onClose={() => {
         if (phase.kind === "done") onDone(phase.applied);
         else if (phase.kind === "failed") onDone(null);
@@ -364,10 +370,11 @@ export default function ApplyDialog({
                             checked={scaffoldAgreed}
                             onChange={(e) => setScaffoldAgreed(e.target.checked)}
                           />
-                          {/* Câu `[y/N]` của `mix`, vẽ ra thành giao diện. Không tick là một câu trả
-                              lời — apply vẫn cài runtime, DB, site và domain, chỉ là thư mục
-                              project ở lại rỗng — và cho tới T121 thì desktop không nói câu ấy ở
-                              đâu cả: người dùng biết được ở màn "Xong", lẫn giữa mười dòng khác. */}
+                          {/* `mix`'s `[y/N]` question, drawn as an interface. Not ticking is an
+                              answer — the apply still installs the runtime, DB, site and domain,
+                              only the project directory stays empty — and until T121 the desktop
+                              said so nowhere: the user found out on the "Done" screen, lost among
+                              ten other lines. */}
                           {!scaffoldAgreed && (
                             <p className={styles.consentWarning} role="status">
                               {t("mixengine.blueprints.apply.scaffoldDeclined")}
@@ -394,8 +401,9 @@ export default function ApplyDialog({
               </div>
             )}
 
-            {/* Sống lâu hơn phase "running" — T120, D6. Một apply hỏng là lúc output đáng đọc nhất,
-                mà trước đây nút nằm trong khối trên nên biến mất đúng lúc đó. */}
+            {/* Outlives the "running" phase — T120, D6. A failed apply is when the output is most
+                worth reading, and the button used to sit in the block above, so it vanished
+                exactly then. */}
             {(phase.kind === "running" || logEntries.length > 0) && (
               <div className={styles.output}>
                 <Button onClick={() => setShowLog((v) => !v)}>
@@ -425,9 +433,10 @@ export default function ApplyDialog({
               <div className={styles.done}>
                 <h4>{t("mixengine.blueprints.apply.doneTitle")}</h4>
 
-                {/* Ở **đầu** danh sách, không phải dòng thứ mười. Và bằng câu của chính app: `why`
-                    daemon trả về kết bằng một gợi ý `mix blueprint apply --run-scaffold`, một cờ
-                    dòng lệnh vô nghĩa với người vừa bấm chuột qua bốn màn hình. */}
+                {/* At the **top** of the list, not the tenth line. And in the app's own words: the
+                    `why` the daemon returns ends with a hint to run
+                    `mix blueprint apply --run-scaffold`, a command-line flag that means nothing to
+                    someone who has just clicked through four screens. */}
                 {scaffoldLeftCommand(phase.applied) !== null && (
                   <div className={styles.leftUnrun} role="alert">
                     <p>{t("mixengine.blueprints.apply.leftUnrunTitle")}</p>

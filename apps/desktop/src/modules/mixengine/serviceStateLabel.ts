@@ -1,27 +1,29 @@
 import type { ServiceState, StoppedBy } from "@mixengine/api";
 
 /**
- * Khoá dịch cho một `ServiceState`, hoặc `null` nếu không có khoá nào.
+ * The translation key for a `ServiceState`, or `null` if there is none.
  *
- * **Một bảng cho mọi màn hình.** Dashboard và Extensions cùng vẽ trạng thái service, và trước đây
- * cả hai in thẳng chuỗi trên wire — nên `running` hiện ra y nguyên bằng tiếng Anh ở một app đã
- * dịch phần còn lại. Hai chỗ tự dịch lấy sẽ thành hai cách gọi một trạng thái.
+ * **One table for every screen.** The Dashboard and Extensions both draw service state, and both
+ * used to print the wire string directly — so `running` showed up as is, in English, in an app that
+ * had translated everything else. Two places translating on their own would become two names for
+ * one state.
  *
- * **`null` chứ không phải một khoá đoán bừa.** `ServiceState` là enum đóng — doc của nó nói thẳng
- * "a state machine with room for one more state is one nobody can reason about" — nhưng cái đọc ở
- * đây là chuỗi một daemon gửi tới, và daemon có thể mới hơn bản MixDB đang chạy. Một trạng thái lạ
- * phải hiện ra đúng như daemon viết, không được biến thành ô trống hay thành một khoá dịch không
- * tồn tại.
+ * **`null` rather than a guessed key.** `ServiceState` is a closed enum — its doc says plainly "a
+ * state machine with room for one more state is one nobody can reason about" — but what is read
+ * here is a string a daemon sends, and the daemon may be newer than the running MixDB. An unknown
+ * state has to show up exactly as the daemon wrote it, not turn into an empty cell or a
+ * translation key that does not exist.
  */
 export type ServiceStateKey =
   | `mixengine.serviceState.${ServiceState}`
   | "mixengine.serviceState.resting";
 
 /**
- * `stoppedBy` là thứ tách **"đang nghỉ"** khỏi "đã dừng" — T167g, ADR 0041. Một service MixEngine tự
- * dừng vì rảnh (`stopped` + `daemon`) sẽ được bật lại ở request kế tiếp, nên nó không phải hỏng và
- * cũng không phải thứ người dùng đã tắt: vẽ nó là `Stopped` đỏ là nói dối về thứ người dùng sẽ thấy.
- * Daemon cũ hơn không gửi `stopped_by`, và khi đó mọi thứ hiện y như trước.
+ * `stoppedBy` is what separates **"resting"** from "stopped" — T167g, ADR 0041. A service MixEngine
+ * stopped itself for being idle (`stopped` + `daemon`) will be started again on the next request,
+ * so it is neither broken nor something the user turned off: drawing it as a red `Stopped` lies
+ * about what the user will see. An older daemon does not send `stopped_by`, and then everything
+ * shows just as before.
  */
 export function serviceStateKey(
   state: string | null | undefined,
@@ -32,10 +34,12 @@ export function serviceStateKey(
 }
 
 /**
- * Câu giải thích đi kèm nhãn trạng thái, cho tooltip, hoặc `null` khi nhãn đã tự nói đủ.
+ * The explanation that goes with the state label, for the tooltip, or `null` when the label says
+ * enough on its own.
  *
- * Nhãn nằm trong pill và trong những ô hẹp — bảng Dashboard, tray — nên phải ngắn; "sẽ tự bật lại"
- * là phần người dùng cần biết nhưng không cần đọc mỗi lần liếc qua.
+ * The label sits in a pill and in narrow cells — the Dashboard table, the tray — so it has to be
+ * short; "will start again by itself" is something the user needs to know but not to read at every
+ * glance.
  */
 export function serviceStateHint(
   state: string | null | undefined,
@@ -45,17 +49,18 @@ export function serviceStateHint(
 }
 
 /**
- * Ba sắc thái một trạng thái được vẽ bằng, hoặc `null` khi không biết trạng thái đó là gì.
+ * The three tones a state is drawn in, or `null` when that state is unknown.
  *
- * Ba chứ không phải bảy: màu ở đây trả lời "có đang phục vụ không", không phải "đang ở state nào"
- * — chữ đã nói state rồi. `degraded` là `busy` chứ không phải `bad`: nó vẫn trả lời, chỉ là không
- * khoẻ, và đỏ dành cho thứ không trả lời.
+ * Three, not seven: the colour here answers "is it serving", not "which state is it in" — the text
+ * already says the state. `degraded` is `busy`, not `bad`: it still answers, just not healthily,
+ * and red is for things that do not answer.
  *
- * Đi cùng `serviceStateKey` trong một file vì hai hàm phải bao đúng một tập tên; test bắt điều đó.
+ * Kept in one file with `serviceStateKey` because the two functions must cover exactly one set of
+ * names; the test checks that.
  */
 export type ServiceTone = "ok" | "bad" | "busy" | "resting";
 
-/** `resting` là sắc thái thứ tư, xám: không phục vụ lúc này, nhưng cũng chẳng có gì hỏng. */
+/** `resting` is the fourth tone, grey: not serving right now, but nothing is broken either. */
 export function serviceStateTone(
   state: string | null | undefined,
   stoppedBy?: StoppedBy | null,
@@ -75,18 +80,21 @@ const TONE: Record<ServiceState, ServiceTone> = {
 };
 
 /**
- * Nút công tắc của một hàng đang ở chế độ nào.
+ * Which mode a row's toggle button is in.
  *
- * Ba chế độ, và chúng trả lời **"bấm vào thì được gì"**, không phải "service đang ở state nào":
+ * Three modes, and they answer **"what does clicking get you"**, not "which state is the service
+ * in":
  *
- * - `up` — nó đang trả lời, nên việc còn lại là tắt. `degraded` nằm ở đây: nó chạy yếu chứ không
- *   phải không chạy, và tắt vẫn là việc duy nhất có nghĩa.
- * - `down` — nó không trả lời, nên việc là bật. Cả một state lạ cũng vào đây: mời bật một thứ đã
- *   chạy thì daemon từ chối một câu đọc được, còn không mời gì cả thì hàng đó thành ngõ cụt.
- * - `moving` — đang chuyển, không có việc nào để bấm.
+ * - `up` — it is answering, so what is left is to stop it. `degraded` goes here: it runs weakly,
+ *   not not at all, and stopping is still the only meaningful action.
+ * - `down` — it is not answering, so the action is to start it. An unknown state goes here too:
+ *   inviting a start of something already running gets a readable refusal from the daemon, while
+ *   inviting nothing turns that row into a dead end.
+ * - `moving` — in transition; there is nothing to click.
  *
- * `inFlight` là "vừa gửi một hành động và chưa có sự kiện nào xác nhận". Lúc đó `state` vẫn còn
- * giá trị cũ, nên nếu chỉ nhìn `state` thì nút sẽ mời bấm lần nữa đúng cái vừa bấm.
+ * `inFlight` is "an action was just sent and no event has confirmed it yet". At that point `state`
+ * still holds the old value, so looking only at `state` would make the button invite clicking the
+ * very thing just clicked.
  */
 export type ToggleMode = "up" | "down" | "moving";
 
@@ -96,7 +104,8 @@ export function toggleMode(state: string | null | undefined, inFlight: boolean):
   return state === "running" || state === "degraded" ? "up" : "down";
 }
 
-/** Thu hẹp một chuỗi trên wire về enum — chỗ duy nhất biết bảy tên đó, và không có `as` nào. */
+/** Narrows a wire string to the enum — the only place that knows those seven names, with no
+ *  `as`. */
 function isServiceState(value: string): value is ServiceState {
   return (KNOWN as ReadonlySet<string>).has(value);
 }

@@ -79,8 +79,8 @@ import { shouldOfferQuickStart } from "../../quickStart";
 import type { SiteSummary } from "@mixengine/api";
 import styles from "./Dashboard.module.css";
 
-/* Bảng tra tường minh chứ không ghép `${action}ing`: "stop" + "ing" ra "stoping", và một khoá dịch
-   dựng bằng phép nối chuỗi là một khoá không ai grep ra được. */
+/* An explicit lookup table rather than building `${action}ing`: "stop" + "ing" gives "stoping", and
+   a translation key built by string concatenation is a key nobody can grep for. */
 const PENDING_LABEL = {
   start: "mixengine.dashboard.starting",
   stop: "mixengine.dashboard.stopping",
@@ -90,11 +90,11 @@ const PENDING_LABEL = {
 type ServiceFilter = "all" | "running" | "stopped";
 
 /**
- * Daemon, và mọi thứ nó đang giám sát.
+ * The daemon, and everything it supervises.
  *
- * **Trạng thái đến từ stream, không từ suy đoán.** Bấm Start thì hàng đó chuyển sang `starting` khi
- * `service_state_changed` nói vậy, không phải ngay lúc bấm — một công tắc nói dối về việc MariaDB
- * có đang chạy hay không tệ hơn một công tắc chậm.
+ * **State comes from the stream, not from guessing.** Pressing Start moves the row to `starting`
+ * when `service_state_changed` says so, not at the moment of the click — a switch that lies about
+ * whether MariaDB is running is worse than a slow switch.
  */
 export default function Dashboard({
   active,
@@ -111,46 +111,53 @@ export default function Dashboard({
   const [status, setStatus] = useState<DaemonStatus | null>(null);
   const [rows, setRows] = useState<ServiceRow[]>([]);
   const [pending, setPending] = useState<unknown[] | null>(null);
-  /** `ElevationStatus.can_prompt`/`reason` — "còn helper để bật prompt không, và tại sao không khi
-   *  không". Mặc định `true` vì đa số máy bật prompt được; chỉ đổi khi `elevation.status` nói khác. */
+  /** `ElevationStatus.can_prompt`/`reason` — "is there still a helper to raise the prompt, and why
+   *  not when there is not". Defaults to `true` because most machines can raise the prompt; only
+   *  changes when `elevation.status` says otherwise. */
   const [canPrompt, setCanPrompt] = useState(true);
   const [reason, setReason] = useState<string | null | undefined>(null);
-  /** Có bao nhiêu thao tác chờ quyền, theo `daemon.status`. Chỉ là con số; danh sách ở `elevation.status`. */
+  /** How many operations are waiting for rights, per `daemon.status`. Just a number; the list is in
+   *  `elevation.status`. */
   const [waiting, setWaiting] = useState(0);
   const [jobs, setJobs] = useState<JobRow[]>([]);
-  /** Frame mới nhất của `/metrics`, hoặc `null` khi chưa có (stream chưa mở, hay chưa nhận frame nào). */
+  /** The latest `/metrics` frame, or `null` when there is none yet (the stream is not open, or no
+   *  frame has arrived). */
   const [frame, setFrame] = useState<MetricsFrame | null>(null);
   const focused = useWindowFocused();
   const [disk, setDisk] = useState<DiskUsage | null>(null);
-  /** `site.list`, hay `null` khi chưa đọc xong — điều kiện vẽ thẻ Quick Start (T117). */
+  /** `site.list`, or `null` when not finished reading — the condition for drawing the Quick Start
+   *  card (T117). */
   const [sites, setSites] = useState<SiteSummary[] | null>(null);
   const [refreshingDisk, setRefreshingDisk] = useState(false);
   const [cleaning, setCleaning] = useState(false);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
-  /** Service nào đang có một hành động bay, và là hành động nào. Khoá theo id. */
+  /** Which services have an action in flight, and which action. Keyed by id. */
   const [busy, setBusy] = useState<Record<string, api.ServiceAction>>({});
-  /** Menu của một hàng, và chỗ nó được mở ra. `null` là không có menu nào đang mở. */
+  /** A row's menu, and where it was opened. `null` means no menu is open. */
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   /**
-   * `database.client` cho từng service, tra **một lần cho mỗi id** rồi nhớ.
+   * `database.client` for each service, looked up **once per id** and then remembered.
    *
-   * **Phải biết trước khi bấm, nên không thể tra lúc mở menu.** Nút ⋮ của một service không phải
-   * database phải xám ngay từ lúc vẽ — mở ra một menu rỗng rồi mới biết là tệ hơn không mời bấm.
+   * **It has to be known before the click, so it cannot be looked up when the menu opens.** The ⋮
+   * button of a service that is not a database has to be greyed out from the moment it is drawn —
+   * opening an empty menu and only then finding out is worse than not inviting the click.
    *
-   * Tra một lượt cho mỗi id là chấp nhận được vì **câu trả lời không bao giờ đổi**: nó là protocol
-   * của recipe, tức một thuộc tính của package service này chạy ra. Nên lần đọc `service.list` đầu
-   * tiên trả giá N lượt, và mọi lần `reload()` sau đó — mỗi lần quay lại tab, mỗi `resync` — trả
-   * giá 0.
+   * One lookup per id is acceptable because **the answer never changes**: it is the recipe's
+   * protocol, i.e. a property of the package this service runs. So the first `service.list` read
+   * pays N lookups, and every `reload()` after that — every return to the tab, every `resync` —
+   * pays 0.
    *
-   * Vắng mặt một id nghĩa là chưa hỏi xong *hoặc* đã hỏi hỏng, và cả hai đều vẽ ra một nút xám.
+   * An id being absent means not finished asking *or* asked and failed, and both draw a greyed-out
+   * button.
    */
   const [databases, setDatabases] = useState<Record<string, DatabaseClientReport>>({});
-  /** Những id đã gửi câu hỏi đi, để `rows` đổi theo stream không biến thành một tràng RPC. */
+  /** The ids whose question has been sent, so `rows` changing with the stream does not turn into a
+   *  barrage of RPCs. */
   const asked = useRef(new Set<string>());
-  /** Mật khẩu đang hiện trong hộp thoại, hoặc `null`. Không bao giờ nằm trong `rows`. */
+  /** The password shown in the dialog, or `null`. Never kept in `rows`. */
   const [credentials, setCredentials] = useState<DatabaseCredentials | null>(null);
-  /** Service đang được hỏi "đặt lại mật khẩu?", hoặc `null`. */
+  /** The service being asked "reset the password?", or `null`. */
   const [resetTarget, setResetTarget] = useState<string | null>(null);
   /** Which rows the Services card shows. */
   const [filter, setFilter] = useState<ServiceFilter>("all");
@@ -159,27 +166,28 @@ export default function Dashboard({
   const { t } = useTranslation();
 
   /**
-   * Thứ tự giữa các lần đọc và các sự kiện — xem `readOrder.ts`.
+   * The order between reads and events — see `readOrder.ts`.
    *
-   * **`rows` có hai người ghi và không cái nào biết cái kia.** Một snapshot `service.list` và một
-   * `service_state_changed` cùng gọi `setRows`, và React ghi theo thứ tự **tới**, không theo thứ
-   * tự *đúng*. Bấm Stop all là lúc điều đó lộ ra: nhiều thao tác xong gần nhau, nhiều lượt đọc và
-   * nhiều sự kiện chen nhau trên đường về, nên một snapshot cũ ghi đè một snapshot mới — và vì
-   * `stopped` là chuyển trạng thái cuối cùng, không còn sự kiện nào sửa lại. Hàng đứng ở "Đang
-   * tắt" cho tới khi có người bấm Làm mới.
+   * **`rows` has two writers and neither knows about the other.** A `service.list` snapshot and a
+   * `service_state_changed` both call `setRows`, and React writes in order of **arrival**, not in
+   * the *right* order. Pressing Stop all is when that shows: many operations finish close together,
+   * many reads and events jostle on the way back, so an old snapshot overwrites a new one — and
+   * since `stopped` is the final transition, no event is left to correct it. The row stays at
+   * "Stopping" until someone presses Refresh.
    *
-   * `useRef` chứ không phải `useState`: đây là sổ ghi thứ tự, không phải thứ được vẽ, và một
-   * `setState` ở đây sẽ render lại mỗi lần một message đi qua.
+   * `useRef` rather than `useState`: this is a ledger of order, not something drawn, and a
+   * `setState` here would re-render every time a message passes through.
    */
   const order = useRef(noReadsYet());
 
-  /* Mọi lỗi đi qua đây thành một câu người đọc được. `errorMessage` dịch `code` và điền `params`,
-     nên `hint` của MixEngine tới người dùng nguyên vẹn thay vì rơi vào một promise không ai bắt —
-     một tab đứng im, rỗng, không nói gì là kết cục tệ hơn bất kỳ thông báo nào. */
+  /* Every error passes through here into a human-readable sentence. `errorMessage` translates the
+     `code` and fills in `params`, so MixEngine's `hint` reaches the user intact instead of falling
+     into a promise nobody catches — a tab standing still, empty and silent, is a worse outcome than
+     any message. */
   const reload = useCallback(async () => {
-    /* Vòng lặp chứ không đệ quy: một `useCallback` không gọi được chính nó. Nó quay thêm một vòng
-       đúng khi có sự kiện chen vào giữa lượt đọc vừa rồi, và dừng ngay lượt đầu tiên không bị
-       chen — mỗi vòng là một round trip thật, nên nó tự giới hạn nhịp. */
+    /* A loop rather than recursion: a `useCallback` cannot call itself. It goes round once more
+       exactly when an event slipped in during the read just done, and stops at the first read that
+       was not interrupted — each round is a real round trip, so it limits its own pace. */
     for (;;) {
       const began = readBegan(order.current);
       order.current = began.order;
@@ -192,8 +200,8 @@ export default function Dashboard({
         ]);
         landed = readLanded(order.current, began.seq);
         order.current = landed.order;
-        // Một snapshot khởi hành trước một snapshot đã vẽ rồi thì không được vẽ: nó mang tin cũ
-        // hơn thứ đang trên màn hình, dù nó về sau.
+        // A snapshot that set off before one already drawn must not be drawn: it carries older news
+        // than what is on screen, even though it arrived later.
         if (landed.apply) {
           setStatus(next);
           setRows(rowsFrom(list.services));
@@ -202,8 +210,8 @@ export default function Dashboard({
         }
         setError("");
       } catch (e) {
-        // Một lượt đọc hỏng vẫn phải hạ cánh, nếu không `inFlight` không bao giờ về 0 và mọi sự
-        // kiện sau đó đều bị coi là đang đua.
+        // A failed read still has to land, otherwise `inFlight` never returns to 0 and every event
+        // after that is treated as racing.
         landed = readLanded(order.current, began.seq);
         order.current = landed.order;
         setError(errorMessage(t, e));
@@ -213,24 +221,26 @@ export default function Dashboard({
   }, [t]);
 
   /**
-   * Home này đã có site nào chưa — điều kiện vẽ thẻ Quick Start (T117).
+   * Whether this home has any site yet — the condition for drawing the Quick Start card (T117).
    *
-   * Đọc riêng khỏi `reload()` chứ không gộp vào `Promise.all` của nó: `reload()` chạy lại mỗi lần
-   * quay lại tab và mỗi lần stream nói có gì đổi, còn câu hỏi này chỉ đổi khi một site được tạo
-   * hoặc xoá. Thất bại thì để nguyên giá trị cũ và không dựng banner lỗi: một Dashboard đỏ vì
-   * không hỏi được "đã có site chưa" là một Dashboard đỏ vì một câu trang trí.
+   * Read separately from `reload()` rather than folded into its `Promise.all`: `reload()` runs
+   * again on every return to the tab and every time the stream says something changed, while this
+   * question only changes when a site is created or deleted. On failure the old value stays and no
+   * error banner is raised: a Dashboard turned red because it could not ask "is there a site yet"
+   * is a Dashboard turned red over a decorative question.
    */
   const readSites = useCallback(async () => {
     try {
       const listed = await api.sites();
       setSites(listed.sites);
     } catch {
-      // Để nguyên: `null` vẫn là "chưa biết", và `shouldOfferQuickStart` không mời trên `null`.
+      // Leave it: `null` is still "unknown", and `shouldOfferQuickStart` does not invite on `null`.
     }
   }, []);
 
-  /** Nút "Làm mới" của bảng disk usage — `refresh: true` đi bộ đĩa lại, khác `reload()` ở trên vốn
-   *  đọc bản daemon giữ sẵn (tới một phút) để không biến mỗi lần quay lại tab thành một lần đi bộ. */
+  /** The disk usage table's "Refresh" button — `refresh: true` walks the disk again, unlike
+   *  `reload()` above, which reads the copy the daemon keeps (up to a minute old) so that every
+   *  return to the tab does not become a disk walk. */
   const refreshDisk = useCallback(async () => {
     setRefreshingDisk(true);
     try {
@@ -243,11 +253,11 @@ export default function Dashboard({
   }, [t]);
 
   /**
-   * Mở danh sách thao tác đang chờ quyền quản trị.
+   * Opens the list of operations waiting for administrator rights.
    *
-   * Một tab mở ra khi hàng đợi đã có sẵn thứ gì đó **không** nhận `elevation_required` — sự kiện đó
-   * chỉ bắn lúc hàng đợi đổi. Nên con số ở `daemon.status` là thứ duy nhất nói rằng có gì đó đang
-   * chờ, và `elevation.status` là chỗ lấy danh sách để hiện ra.
+   * A tab opened while the queue already holds something receives **no** `elevation_required` —
+   * that event only fires when the queue changes. So the number in `daemon.status` is the only
+   * thing saying something is waiting, and `elevation.status` is where the list to show comes from.
    */
   const showWaiting = useCallback(async () => {
     try {
@@ -261,10 +271,12 @@ export default function Dashboard({
   }, [t]);
 
   /**
-   * Gửi một hành động và chờ nó xong. **Không đọc lại** — ai gọi mới quyết định lúc nào đọc.
+   * Sends an action and waits for it to finish. **Does not reread** — the caller decides when to
+   * read.
    *
-   * Hàng vẫn đổi theo stream suốt lúc đó, đúng luật "trạng thái được thông báo". Việc đọc lại tách
-   * ra khỏi đây vì một lần bấm Stop all là *một* câu hỏi chứ không phải N: xem [`stopAll`].
+   * The row keeps changing with the stream all the while, per the "state is announced" rule.
+   * Rereading is split out of here because one press of Stop all is *one* question, not N: see
+   * [`stopAll`].
    */
   const run = useCallback(
     async (id: string, action: api.ServiceAction) => {
@@ -285,11 +297,11 @@ export default function Dashboard({
   );
 
   /**
-   * Một hành động trên một hàng, rồi đọc lại.
+   * An action on one row, then a reread.
    *
-   * **Sự kiện là best-effort và không bao giờ là đường duy nhất biết trạng thái**, nên tin mỗi
-   * stream là để lại một bảng đứng im khi một sự kiện rơi. Đọc lại không phải là suy đoán, nó là
-   * đọc — và `order` ở trên là thứ giữ cho lần đọc ấy không bị một lần đọc cũ hơn ghi đè.
+   * **Events are best-effort and never the only way to know the state**, so trusting the stream
+   * alone leaves a frozen table when an event is dropped. Rereading is not guessing, it is reading
+   * — and `order` above is what keeps that read from being overwritten by an older one.
    */
   const act = useCallback(
     async (id: string, action: api.ServiceAction) => {
@@ -300,11 +312,11 @@ export default function Dashboard({
   );
 
   /**
-   * Tắt mọi thứ đang chạy, rồi đọc lại **một** lần.
+   * Stops everything that is running, then rereads **once**.
    *
-   * Không phải `Promise.all` của `act`: cách đó bắn N lượt `reload` song song cho một lần bấm, mỗi
-   * lượt ba RPC, và chúng đua nhau — đúng thứ `order` ở trên tồn tại để chặn. Chặn được không có
-   * nghĩa là nên gây ra: một lần bấm là một câu hỏi, nên hỏi một lần.
+   * Not a `Promise.all` of `act`: that fires N parallel `reload`s for one click, three RPCs each,
+   * and they race each other — exactly what `order` above exists to prevent. Being able to prevent
+   * it does not mean we should cause it: one click is one question, so ask once.
    */
   const stopAll = useCallback(async () => {
     await Promise.all(
@@ -313,26 +325,28 @@ export default function Dashboard({
     await reload();
   }, [reload, rows, run]);
 
-  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — sự kiện service_state_changed không bao
-  // giờ báo tin một service khác được tạo/xoá ở màn Services, và không method-kiểu-runtime nào
-  // (cài/gỡ PHP...) sinh sự kiện gì cho bảng này biết cả; quay lại tab vẫn là đường dự phòng.
+  // Reread on mount and every time we come back to this screen — the service_state_changed event
+  // never reports that another service was created/deleted on the Services screen, and no
+  // runtime-style method (installing/removing PHP...) emits anything this table would hear about;
+  // coming back to the tab remains the fallback.
   useEffect(() => {
     if (active) void reload();
   }, [active, reload]);
 
-  // Cùng nhịp, riêng call: xem `readSites`.
+  // The same beat, a separate call: see `readSites`.
   useEffect(() => {
     if (active) void readSites();
   }, [active, readSites]);
 
   /**
-   * `/metrics` khoá vòng đời theo `active`, không theo mount/unmount như `/events`.
+   * `/metrics` ties its lifetime to `active`, not to mount/unmount like `/events`.
    *
-   * **Mở kết nối này chính là subscribe** — MixEngine lấy mẫu 1 Hz trong lúc còn ai giữ stream, 1
-   * lần/phút khi không. `MixEngineTab.tsx` giữ mọi màn đã-xem-qua ở trong DOM thay vì unmount lúc
-   * đổi tab, nên nếu khoá theo unmount, rời Dashboard sang màn khác sẽ không đóng được gì — daemon
-   * kẹt ở lấy mẫu nhanh vĩnh viễn dù không còn ai nhìn. Effect cleanup chạy cho cả hai trường hợp
-   * (`active` chuyển `false`, và unmount thật), nên khoá theo `active` là đủ cho cả hai.
+   * **Opening this connection is the subscription** — MixEngine samples at 1 Hz while anyone holds
+   * the stream, and once a minute when nobody does. `MixEngineTab.tsx` keeps every visited screen
+   * in the DOM instead of unmounting on a tab switch, so if this were tied to unmount, leaving the
+   * Dashboard for another screen would close nothing — the daemon would be stuck sampling fast
+   * forever with nobody looking. The effect cleanup runs in both cases (`active` turning `false`,
+   * and a real unmount), so tying it to `active` covers both.
    *
    * **And only while the window has focus**, the tray panel's rule. `active` says Dashboard is the
    * tab in front, not that anybody is looking: a window left on Dashboard behind another
@@ -366,38 +380,44 @@ export default function Dashboard({
 
   useEffect(() => {
     return subscribeDaemonWatch((raw) => {
-      // Một lô rỗng nghĩa là không còn gì chờ — đóng hộp thoại thay vì để nó đứng đó rỗng không.
-      // `elevation_required` mang cả số mới nhất: cập nhật `waiting` thẳng từ đây, không đợi một
-      // `reload()` khác — nếu không, nút "N thao tác đang chờ" đứng yên với số cũ sau khi Cho phép,
-      // vì bản thân sự kiện này chưa từng được xem là một lý do resync.
+      // An empty batch means nothing is waiting any more — close the dialog rather than leave it
+      // standing there empty. `elevation_required` carries the latest count too: update `waiting`
+      // straight from here without waiting for another `reload()` — otherwise the "N operations
+      // waiting" button sits still with the old count after Allow, since this event itself was
+      // never considered a reason to resync.
       const ops = pendingFrom(raw);
       if (ops !== null) {
         setWaiting(ops.length);
         if (ops.length === 0) {
           setPending(null);
         } else if (active) {
-          // `elevation_required` chỉ mang `pending` (đúng hình `{"type":"elevation_required",
-          // "pending":[…]}`), không mang `can_prompt`/`reason` — đọc lại qua `elevation.status`
-          // trước khi tự mở dialog, để biết máy này còn bật prompt được không (vd. một `hosts-apply`
-          // cũ kẹt trong hàng đợi từ trước, nhưng helper vừa bị một lệnh Uninstall xoá).
+          // `elevation_required` only carries `pending` (exactly the shape
+          // `{"type":"elevation_required","pending":[…]}`), not `can_prompt`/`reason` — read them
+          // again through `elevation.status` before opening the dialog ourselves, to know whether
+          // this machine can still raise the prompt (e.g. an old `hosts-apply` stuck in the queue
+          // from before, while the helper has just been removed by an Uninstall).
           //
-          // **Chỉ khi màn này đang hiện.** `MixEngineTab` giữ Dashboard trong DOM khi người dùng ở
-          // màn khác, và `Modal` vẽ qua portal nên một dialog mở từ đây vẫn nổi lên trên màn đó —
-          // trong khi màn tự khởi phát thao tác (CaBlock "Fix browser trust", Doctor "Repair") đã
-          // mở dialog của riêng nó cho đúng hàng đợi này: hai modal y hệt, cùng một job grant.
-          // Khi ẩn, Dashboard chỉ giữ con số cho nút "N đang chờ"; ai mở tab sẽ thấy nút đó.
+          // **Only while this screen is showing.** `MixEngineTab` keeps the Dashboard in the DOM
+          // while the user is on another screen, and `Modal` draws through a portal, so a dialog
+          // opened from here still floats above that screen — while the screen that started the
+          // operation itself (CaBlock "Fix browser trust", Doctor "Repair") has already opened its
+          // own dialog for this same queue: two identical modals, one grant job. While hidden, the
+          // Dashboard only keeps the count for the "N waiting" button; whoever opens the tab sees
+          // that button.
           void showWaiting();
         }
       }
       setJobs((current) => applyJob(current, raw));
-      // Sự kiện là best-effort: khi bus bên kia tràn hay kết nối đứt, đọc lại thay vì tin cái đang
-      // có trên màn hình. Ngoài updater, vì updater chạy hai lần trong StrictMode.
-      // `job_finished` cũng là một lý do đọc lại: một `elevation.grant` xong đổi số "N đang chờ"
-      // mà không có sự kiện nào riêng nói vậy (xem `isJobFinished`).
+      // Events are best-effort: when the bus on the other side overflows or the connection drops,
+      // reread instead of trusting what is on the screen. Outside the updater, because updaters
+      // run twice under StrictMode. `job_finished` is also a reason to reread: a finished
+      // `elevation.grant` changes the "N waiting" count with no event of its own saying so (see
+      // `isJobFinished`).
       if (needsResync(raw) || isJobFinished(raw)) void reload();
-      // Một sự kiện đổi hàng, tới trong lúc một `service.list` đang trên đường về, nghĩa là
-      // snapshot đó có thể đã đọc *trước* sự kiện này — client không phân biệt được. Ghi lại ở đây
-      // để lượt đọc ấy xin thêm một lượt nữa khi hạ cánh. Ngoài updater, cùng lý do hai dòng trên.
+      // An event that changes a row, arriving while a `service.list` is on its way back, means that
+      // snapshot may have been read *before* this event — the client cannot tell. Note it here so
+      // that read requests one more when it lands. Outside the updater, for the same reason as the
+      // two lines above.
       if (movesARow(raw)) order.current = eventArrived(order.current);
       setRows((current) => applyEvent(current, raw).rows);
     });
@@ -406,14 +426,15 @@ export default function Dashboard({
 
 
   /**
-   * Hỏi `database.client` cho những id chưa từng hỏi.
+   * Asks `database.client` for the ids never asked about.
    *
-   * **`ServiceSummary` không trả lời được câu này.** `ServiceRole` chỉ phân biệt front end với
-   * phần còn lại, và [ADR 0026] cấm client suy ra vai trò từ tên package — nên `database.client`
-   * là đường duy nhất. Chạy theo `rows` vì đó là nơi một service mới xuất hiện.
+   * **`ServiceSummary` cannot answer this.** `ServiceRole` only tells the front end from everything
+   * else, and [ADR 0026] forbids the client from inferring a role from the package name — so
+   * `database.client` is the only way. Driven by `rows` because that is where a new service shows
+   * up.
    *
-   * Một câu hỏi hỏng thì **bỏ id ra khỏi `asked`**: lần `reload()` sau hỏi lại. Giữ nó lại là để
-   * một trục trặc thoáng qua khoá nút ⋮ của hàng đó cho tới khi đóng cửa sổ.
+   * A failed question **removes the id from `asked`**: the next `reload()` asks again. Keeping it
+   * would let a passing glitch lock that row's ⋮ button until the window is closed.
    *
    * [ADR 0026]: https://github.com/mixnz/mixlab/blob/master/docs/decisions/0026-the-active-front-end-is-a-row-and-switching-it-is-a-job.md
    */
@@ -441,7 +462,7 @@ export default function Dashboard({
     })();
   }, [rows]);
 
-  /** Lấy mật khẩu quản trị viên của một service và mở hộp thoại. */
+  /** Fetches a service's administrator password and opens the dialog. */
   const showCredentials = useCallback(
     async (id: string) => {
       try {
@@ -453,7 +474,7 @@ export default function Dashboard({
     [t],
   );
 
-  /** Chạy `service.reset_credential`, rồi đọc lại — nó dừng và bật lại nhiều service. */
+  /** Runs `service.reset_credential`, then rereads — it stops and restarts several services. */
   const resetCredential = useCallback(
     async (id: string) => {
       try {
@@ -469,13 +490,15 @@ export default function Dashboard({
 
 
   /**
-   * Bật hay tắt autostart cho một service — cùng cột mà `AutostartPanel` ở màn Services đổi.
+   * Turns autostart on or off for a service — the same column `AutostartPanel` on the Services
+   * screen changes.
    *
-   * **Ghi lại thứ daemon trả về, không phải thứ vừa bấm.** Một hàng nói "có" trong khi cột trong
-   * database vẫn là "không" tệ hơn một hàng đổi chậm — cùng luật cả bảng này đang theo.
+   * **Records what the daemon returns, not what was just clicked.** A row saying "yes" while the
+   * column in the database still says "no" is worse than a row that changes slowly — the same rule
+   * this whole table follows.
    *
-   * Không khởi động và không dừng gì cả, nên không đi qua `busy`: thứ nó đổi là walk ở lần daemon
-   * khởi động sau (T112/T113).
+   * Starts nothing and stops nothing, so it does not go through `busy`: what it changes is the walk
+   * at the next daemon start (T112/T113).
    */
   const setAutostart = useCallback(
     async (id: string, autostart: boolean) => {
@@ -491,16 +514,17 @@ export default function Dashboard({
     [t],
   );
 
-  /** Hàng đang mở menu. Menu chỉ sống cùng một `menu.id`, nhưng bảng thì cập nhật từ stream, nên
-   *  đọc lại từ `rows` thay vì chụp ảnh hàng lúc mở — nhãn autostart phải theo cột bên cạnh. */
+  /** The row whose menu is open. The menu only lives with one `menu.id`, but the table updates from
+   *  the stream, so read it again from `rows` instead of snapshotting the row when it opened — the
+   *  autostart label has to follow the column next to it. */
   const menuRow = menu === null ? undefined : rows.find((row) => row.id === menu.id);
 
-  /** Câu trả lời cho hàng đang mở menu, buộc vào một tên: `databases[menu.id]` đọc hai lần thì
-   *  TypeScript mất luôn phần thu hẹp kiểu trên `client`.
+  /** The answer for the row whose menu is open, bound to a name: reading `databases[menu.id]` twice
+   *  makes TypeScript lose the type narrowing on `client`.
    *
-   *  `opensADatabase` lọc ngay ở đây chứ không còn ở nút ⋮: `database.client` cũng trả lời cho
-   *  nginx và cho một php-fpm pool, chỉ là với `protocol: null`, nên có mặt trong `databases`
-   *  không có nghĩa là có gì để mở. */
+   *  `opensADatabase` filters right here rather than at the ⋮ button: `database.client` also
+   *  answers for nginx and for a php-fpm pool, just with `protocol: null`, so being present in
+   *  `databases` does not mean there is anything to open. */
   const menuReport =
     menuRow === undefined ? undefined : databases[menuRow.id];
   const menuDatabase =
@@ -515,13 +539,13 @@ export default function Dashboard({
     return "neutral";
   }
 
-  /** Trạng thái đã dịch; một trạng thái daemon mới hơn build này hiện nguyên văn. */
+  /** The translated state; a state from a daemon newer than this build is shown verbatim. */
   function stateLabel(state: string | null | undefined, stoppedBy?: StoppedBy | null): string {
     const key = serviceStateKey(state, stoppedBy);
     return key === null ? (state ?? "—") : t(key);
   }
 
-  /** Câu mà nhãn ngắn bỏ bớt, cho tooltip của pill. */
+  /** The sentence the short label leaves out, for the pill's tooltip. */
   function stateHint(state: string | null | undefined, stoppedBy?: StoppedBy | null): string | undefined {
     const key = serviceStateHint(state, stoppedBy);
     return key === null ? undefined : t(key);
@@ -590,30 +614,33 @@ export default function Dashboard({
                   {homeCopied ? t("mixengine.dashboard.copied") : t("mixengine.dashboard.copy")}
                 </Button>
               </div>
-              {/* Daemon không có `ServiceRow` — vẽ riêng khỏi bảng service, không chèn vào `rows`.
-                  Luôn vẽ, kể cả trước frame đầu tiên: khung đứng sẵn với "—" thay vì hiện ra sau và
-                  đẩy cả màn xuống — `frame` về `null` mỗi lần rời tab, nên cú nhảy đó lặp lại mỗi
-                  lần quay lại. */}
+              {/* The daemon has no `ServiceRow` — drawn apart from the service table, not inserted
+                  into `rows`. Always drawn, even before the first frame: the frame stands ready
+                  with "—" instead of appearing later and pushing the whole screen down — `frame`
+                  goes back to `null` every time the tab is left, so that jump would repeat on every
+                  return. */}
               <DaemonUsage reading={daemon} cores={frame?.cores ?? 1} />
             </div>
           )
         }
         actions={
           <div className={styles.headerButtons}>
-            {/* Không tự bật hộp thoại lúc mở tab: một lô có thể nằm chờ nhiều ngày, và một modal bật
-                lên mỗi lần mở tab là thứ người ta học cách bấm bỏ mà không đọc. */}
+            {/* The dialog does not open by itself when the tab opens: a batch may wait for days,
+                and a modal popping up every time the tab opens is something people learn to
+                dismiss without reading. */}
             {waiting > 0 && pending === null && (
               <Button size="large" className={styles.waiting} onClick={() => void showWaiting()}>
                 {t("mixengine.dashboard.elevationWaiting", { count: waiting })}
               </Button>
             )}
-            {/* Đường dự phòng thủ công: một service được tạo/xoá từ nơi khác không sinh sự kiện nào
-                cho bảng này biết. */}
+            {/* The manual fallback: a service created/deleted elsewhere produces no event for this
+                table to hear about. */}
             <Button size="large" onClick={() => void reload()}>
               <ReloadIcon size={15} />
               {t("mixengine.dashboard.reload")}
             </Button>
-            {/* Không đổi hàng nào ở đây: bảng đổi khi `service_state_changed` tới, không khi bấm. */}
+            {/* No row changes here: the table changes when `service_state_changed` arrives, not on
+                the click. */}
             <Button
               size="large"
               variant="danger"
@@ -631,7 +658,7 @@ export default function Dashboard({
         }
       />
 
-      {/* Trên bảng service, và chỉ khi home này chưa có site nào — T117. */}
+      {/* Above the service table, and only when this home has no site yet — T117. */}
       {shouldOfferQuickStart(sites) && <QuickStart onCreated={() => void readSites()} />}
       <PathNudge active={active} />
       {/* T182h: a copy of an earlier install's state, while this home has nothing of its own. */}
@@ -660,7 +687,7 @@ export default function Dashboard({
           />
         }
       >
-        {/* Tiến độ vẽ ngay tại chỗ, không phủ spinner lên cả màn hình. */}
+        {/* Progress is drawn in place, not as a spinner over the whole screen. */}
         {jobs.length > 0 && (
           <ul className={styles.jobs}>
             {jobs.map((job) => (
@@ -694,7 +721,8 @@ export default function Dashboard({
               <tr>
                 <th>{t("mixengine.dashboard.service")}</th>
                 <th>{t("mixengine.dashboard.state")}</th>
-                {/* Cạnh State — T114: cái gì đang chạy, và cái gì sẽ chạy sau lần đăng nhập tới. */}
+                {/* Next to State — T114: what is running, and what will run after the next
+                    login. */}
                 <th>{t("mixengine.dashboard.autostart")}</th>
                 <th>{t("mixengine.dashboard.port")}</th>
                 <th>{t("mixengine.dashboard.cpu")}</th>
@@ -719,8 +747,8 @@ export default function Dashboard({
                     </td>
                     <td data-nowrap>
                       {busy[row.id] ? (
-                        /* Một hành động vừa gửi đi và chưa có sự kiện nào xác nhận: cũng là "đang
-                           chuyển", nên cùng tông với `starting`/`stopping`. */
+                        /* An action just sent with no event confirming it yet: also "in
+                           transition", so the same tone as `starting`/`stopping`. */
                         <StatusPill tone="warning" pulse>
                           {t(PENDING_LABEL[busy[row.id]])}
                         </StatusPill>
@@ -747,8 +775,8 @@ export default function Dashboard({
                       />
                     </td>
                     <td className={row.port === null ? styles.none : styles.mono} data-nowrap>{row.port ?? "—"}</td>
-                    {/* Vắng mặt trong frame là "—", không phải 0%: một service rảnh và một service không
-                        đo được là hai câu khác nhau. */}
+                    {/* Absent from the frame is "—", not 0%: an idle service and a service that
+                        could not be measured are two different statements. */}
                     <td className={styles.mono} data-nowrap>
                       {formatCpu(reading?.cpu_percent ?? null, frame?.cores ?? 1)}
                     </td>
@@ -833,7 +861,7 @@ export default function Dashboard({
         />
       )}
 
-      {/* Menu này không bao giờ rỗng: autostart và log có mặt cho *mọi* service. */}
+      {/* This menu is never empty: autostart and logs are there for *every* service. */}
       {menu !== null && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
           <button
@@ -863,7 +891,7 @@ export default function Dashboard({
             </button>
           )}
 
-          {/* Nhãn lật theo cột Autostart của chính hàng đó, chứ không phải một dấu tick. */}
+          {/* The label flips with that row's own Autostart column, rather than being a tick. */}
           {menuRow !== undefined && (
             <button
               type="button"
@@ -918,7 +946,8 @@ export default function Dashboard({
                 {t("mixengine.dashboard.credentials")}
               </button>
 
-              {/* Dấu ba chấm là lời hứa: bấm vào mở một câu hỏi, không chạy ngay. */}
+              {/* The ellipsis is a promise: clicking opens a question, it does not run right
+                  away. */}
               <button
                 type="button"
                 onClick={() => {
@@ -939,8 +968,8 @@ export default function Dashboard({
         <CredentialDialog credentials={credentials} onClose={() => setCredentials(null)} />
       )}
 
-      {/* Không `danger`: `ConfirmDialog` dành màu đó cho thao tác **mất dữ liệu**, và đây giữ
-          nguyên mọi database. */}
+      {/* Not `danger`: `ConfirmDialog` keeps that colour for operations that **lose data**, and
+          this one keeps every database intact. */}
       {resetTarget !== null && (
         <ConfirmDialog
           title={t("mixengine.dashboard.resetTitle")}
@@ -972,7 +1001,8 @@ export default function Dashboard({
           reason={reason}
           onClose={() => {
             setPending(null);
-            // Sau grant hoặc drop, hàng đợi đã khác: đọc lại con số thay vì giữ cái cũ.
+            // After a grant or a drop the queue is different: reread the count instead of keeping
+            // the old one.
             void reload();
           }}
         />

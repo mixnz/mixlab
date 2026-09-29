@@ -1,12 +1,12 @@
-//! Daemon có ở đó không, và nếu không thì khởi động nó.
+//! Whether the daemon is there, and if not, starting it.
 //!
-//! **Ba trạng thái, không phải hai**, và UI vẽ ba thứ khác nhau: *không chạy* (không dial được
-//! nhưng `mixengined` có trên máy), *không trả lời* (dial được, `/health` không xong), *không có
-//! MixEngine* (không tìm thấy chương trình). Gộp cả ba thành "lỗi" là bắt người dùng đoán xem họ
-//! phải cài, phải khởi động, hay phải chờ.
+//! **Three states, not two**, and the UI draws three different things: *not running* (cannot dial,
+//! but `mixengined` is on the machine), *not responding* (dials, but `/health` does not finish),
+//! *no MixEngine* (the program was not found). Folding all three into "error" makes the user guess
+//! whether they have to install, start or wait.
 //!
-//! `/health` không cần xác thực — đó chính là lý do nó tồn tại bên MixEngine: để một client quyết
-//! định có tự khởi động daemon không.
+//! `/health` needs no authentication — that is exactly why it exists on MixEngine's side: so a
+//! client can decide whether to start the daemon itself.
 
 use std::ffi::OsString;
 use std::process::Command;
@@ -19,26 +19,28 @@ use crate::error::AppError;
 
 use super::rpc;
 
-/// Tên trần của daemon — một entry của `MIX_BINARIES`, đúng dạng
-/// `mixengine_platform::install::program_path` nhận, không đuôi thực thi.
+/// The daemon's bare name — an entry of `MIX_BINARIES`, in the form
+/// `mixengine_platform::install::program_path` takes, with no executable extension.
 const DAEMON: &str = "mixengined";
 
-/// Chương trình để khởi động một daemon: chỗ máy này thật sự có, không thì tên trần cho `PATH`.
+/// The program to start a daemon with: where this machine really has it, otherwise the bare name
+/// for `PATH`.
 ///
-/// **Danh sách module này từng tự giữ nay là của `mixengine-platform`** — roadmap task **T107**.
-/// Phép đo biện minh cho nó vẫn đúng và đã đi cùng nó sang bên kia: trên máy viết module này
-/// MixEngine nằm ở `%LOCALAPPDATA%\Programs\MixEngine` và **không** có trên `PATH` của tiến trình
-/// này, vì installer Windows là bản per-user sửa `PATH` của người dùng, còn một tiến trình đang
-/// chạy mang theo `PATH` nó thừa kế lúc mở. Cái mới là daemon, các script đóng gói và cửa sổ này
-/// giờ đọc **một** câu trả lời thay vì ba.
+/// **The list this module used to keep for itself now belongs to `mixengine-platform`** — roadmap
+/// task **T107**. The measurement that justified it still holds and went over with it: on the
+/// machine this module was written on, MixEngine lives in `%LOCALAPPDATA%\Programs\MixEngine` and
+/// is **not** on this process's `PATH`, because the Windows installer is a per-user one that edits
+/// the user's `PATH`, while a running process carries the `PATH` it inherited when it opened. What
+/// is new is that the daemon, the packaging scripts and this window now read **one** answer instead
+/// of three.
 ///
-/// Tên trần vẫn ở lại làm nước cuối: một entry `PATH` xuất hiện sau khi tiến trình này khởi động
-/// vẫn đáng một lần spawn, và một lần spawn hỏng thì nói ra bằng lời.
+/// The bare name stays as the last resort: a `PATH` entry that appeared after this process started
+/// is still worth one spawn, and a failed spawn is reported in words.
 fn program() -> OsString {
     mixengine_platform::install::program_path(DAEMON).map_or_else(|| DAEMON.into(), OsString::from)
 }
 
-/// Daemon đang ở trạng thái nào, nhìn từ đây.
+/// What state the daemon is in, seen from here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Presence {
@@ -48,11 +50,11 @@ pub enum Presence {
     NotInstalled,
 }
 
-/// Cổng vào tab vẽ gì, và khi không tìm thấy gì thì đã tìm ở đâu — roadmap task **T111**.
+/// What the tab's gate draws, and when nothing was found, where we looked — roadmap task **T111**.
 ///
-/// `searched` là danh sách [`mixengine_platform::install::program_path`] đã đi qua, đúng thứ tự, và
-/// chỉ được điền cho [`Presence::NotInstalled`]: ba trạng thái kia không tìm gì cả, nên một danh
-/// sách rỗng nói đúng điều đó thay vì một danh sách mà phía kia phải nhớ bỏ qua.
+/// `searched` is the list [`mixengine_platform::install::program_path`] went through, in order, and
+/// is only filled for [`Presence::NotInstalled`]: the other three states search nothing, so an
+/// empty list says exactly that instead of a list the other side has to remember to ignore.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PresenceReport {
@@ -60,26 +62,28 @@ pub struct PresenceReport {
     pub searched: Vec<String>,
 }
 
-/// Bao lâu thì coi như daemon không trả lời.
+/// How long before the daemon counts as not responding.
 ///
-/// `/health` là một lần đọc không chạm đĩa ở đầu kia; hai giây là rộng rãi tới mức chỉ một daemon
-/// thật sự kẹt mới chạm phải, và đủ ngắn để cổng vào tab không đứng hình.
+/// `/health` is a read that touches no disk on the other end; two seconds is generous enough that
+/// only a truly stuck daemon hits it, and short enough that the tab's gate does not freeze.
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(2);
 
-/// Daemon đang ở trạng thái nào.
+/// What state the daemon is in.
 ///
-/// **Đúng một lần dial.** Bản trước dial một lần chỉ để hỏi "có ai ở đó không", vứt kết nối đi, rồi
-/// dial lại cho `/health` — và trên Windows lần dial phí ấy ăn mất đúng cái instance pipe đang chờ,
-/// nên lần thứ hai gặp một daemon chưa kịp dựng cái thay thế. Kết quả là "daemon không trả lời" ở
-/// một máy daemon đang chạy bình thường. Câu hỏi "có ai ở đó không" đã nằm sẵn trong câu trả lời
-/// của `/health`, nên hỏi riêng nó không thêm gì ngoài một lỗi.
+/// **Exactly one dial.** The previous version dialled once just to ask "is anyone there", threw the
+/// connection away, then dialled again for `/health` — and on Windows that wasted dial ate exactly
+/// the pipe instance that was waiting, so the second one met a daemon that had not yet set up its
+/// replacement. The result was "daemon not responding" on a machine where the daemon was running
+/// normally. The question "is anyone there" is already inside `/health`'s answer, so asking it
+/// separately adds nothing but a bug.
 ///
-/// **Từ T111 câu trả lời mang theo chỗ đã tìm daemon**, khi không tìm thấy nó.
+/// **Since T111 the answer carries where we looked for the daemon**, when it was not found.
 pub async fn presence() -> PresenceReport {
     let presence =
         match tokio::time::timeout(HEALTH_TIMEOUT, rpc::request("GET", "/health", None)).await {
             Ok(Ok(_)) => Presence::Running,
-            // Không tới được endpoint: chưa chạy, hoặc chưa cài. Đó là hai câu khác nhau.
+            // Cannot reach the endpoint: not running, or not installed. Those are two different
+            // answers.
             Ok(Err(error)) if error.code == "error.mixengineUnreachable" => {
                 if installed() {
                     Presence::NotRunning
@@ -87,7 +91,8 @@ pub async fn presence() -> PresenceReport {
                     Presence::NotInstalled
                 }
             }
-            // Tới được nhưng không xong: một daemon đang kẹt, hoặc một pipe của tài khoản khác.
+            // Reachable but does not finish: a stuck daemon, or a pipe belonging to another
+            // account.
             _ => Presence::NotAnswering,
         };
 
@@ -100,7 +105,7 @@ pub async fn presence() -> PresenceReport {
     PresenceReport { presence, searched }
 }
 
-/// Những thư mục lần tìm đã đi qua, đúng dạng cổng vào tab sẽ in ra.
+/// The directories the search went through, in the form the tab's gate prints them.
 fn searched() -> Vec<String> {
     mixengine_platform::install::program_search_dirs()
         .iter()
@@ -108,21 +113,22 @@ fn searched() -> Vec<String> {
         .collect()
 }
 
-/// `mixengined` có trên máy này không. Chỉ hỏi khi đã biết không dial được.
+/// Whether `mixengined` is on this machine. Only asked once we know we cannot dial.
 ///
-/// **Vài lần đọc đĩa, không phải một tiến trình** — roadmap task **T107**. Bản trước chạy
-/// `mixengined --version` rồi vứt output đi: một lần tạo tiến trình, một cửa sổ console phải giấu
-/// bằng tay, và tới cả giây trong lúc mở tab, để trả lời câu hỏi mà một lần `stat` đã trả lời — và
-/// `program_path` hỏi `PATH` bằng cách đọc nó, chứ không bằng cách chạy một chương trình trên đó.
+/// **A few disk reads, not a process** — roadmap task **T107**. The previous version ran
+/// `mixengined --version` and threw the output away: one process creation, one console window to
+/// hide by hand, and up to a second while the tab opens, to answer a question a single `stat`
+/// answers — and `program_path` asks `PATH` by reading it, not by running a program on it.
 fn installed() -> bool {
     mixengine_platform::install::program_path(DAEMON).is_some()
 }
 
-/// Bốn thư mục người dùng chọn chỗ đặt, dạng lệnh khởi động nhận — roadmap task **T146**.
+/// The four directories the user chose a location for, in the form the start command takes —
+/// roadmap task **T146**.
 ///
-/// **Chỉ những khoá người ta thật sự đổi**, không phải cả bốn mỗi lần: daemon coi một giá trị
-/// trùng với thứ `config.toml` đã ghi là no-op im lặng, nhưng gửi bốn khoá cho một lần đổi một
-/// khoá là nói ba câu mình không có ý nói.
+/// **Only the keys someone actually changed**, not all four every time: the daemon treats a value
+/// equal to what `config.toml` already holds as a silent no-op, but sending four keys for a
+/// one-key change is saying three things we do not mean.
 #[derive(Debug, Default, Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChosenPaths {
@@ -133,10 +139,11 @@ pub struct ChosenPaths {
 }
 
 impl ChosenPaths {
-    /// Bốn khoá và giá trị của chúng, theo đúng thứ tự `config.toml` liệt kê.
+    /// The four keys and their values, in the order `config.toml` lists them.
     ///
-    /// Tên cờ **chính là** tên khoá, nên đây là một vòng lặp chứ không phải bốn khối giống nhau —
-    /// cùng lý do `mixengined` tự dựng lại danh sách tham số cho tiến trình con bằng một vòng lặp.
+    /// The flag names **are** the key names, so this is one loop rather than four identical blocks
+    /// — for the same reason `mixengined` rebuilds the argument list for its child process with a
+    /// loop.
     fn entries(&self) -> [(&'static str, Option<&str>); 4] {
         [
             ("runtimes", self.runtimes.as_deref()),
@@ -147,20 +154,22 @@ impl ChosenPaths {
     }
 }
 
-/// Daemon cất các thư mục phình to ở đâu, và điều đó còn đổi được không — roadmap task **T146**.
+/// Where the daemon keeps its growing directories, and whether that can still be changed — roadmap
+/// task **T146**.
 ///
-/// **Hỏi được khi chưa có daemon nào**, đó là toàn bộ lý do nó chạy một tiến trình thay vì gọi
-/// JSON-RPC: màn hình mời người dùng chọn ổ được vẽ *trước* lần khởi động đầu tiên. `--storage`
-/// không tạo ra thứ gì — không home, không `config.toml`, không database — nên hỏi không phải là
-/// thứ làm mất đi quyền chọn.
+/// **Answerable before any daemon exists**, which is the whole reason it runs a process instead of
+/// calling JSON-RPC: the screen inviting the user to pick a drive is drawn *before* the first
+/// start. `--storage` creates nothing — no home, no `config.toml`, no database — so asking is not
+/// what takes the choice away.
 ///
-/// Một tiến trình cho mỗi lần vẽ cổng, và đó là lý do [`installed`] đọc đĩa thay vì chạy chương
-/// trình: cái này trả giá đó cho một màn hình người ta đang nhìn, không phải cho một vòng poll.
+/// One process per drawing of the gate, and that is why [`installed`] reads the disk instead of
+/// running the program: this one pays that price for a screen someone is looking at, not for a
+/// polling loop.
 ///
-/// **`Value` chứ không phải kiểu của `mixengine-proto`**, theo đúng luật `commands.rs` đã nêu cho
-/// hai lệnh đọc kia: Rust ở đây không đọc field nào — nó chuyển tiếp — và hợp đồng đã có bản sinh
-/// tự động ở `bindings/` cho frontend gõ theo. Kéo thêm một crate vào chỉ để đặt tên cho thứ đi
-/// thẳng qua là trả giá mà không mua được phép kiểm tra nào.
+/// **`Value` rather than a `mixengine-proto` type**, following the rule `commands.rs` states for
+/// the other two reads: Rust here reads no field — it forwards — and the contract already has a
+/// generated copy in `bindings/` for the frontend to type against. Pulling in another crate just to
+/// name something that passes straight through pays a price and buys no check.
 pub async fn storage() -> Result<Value, AppError> {
     let output = tauri::async_runtime::spawn_blocking(|| {
         let mut command = Command::new(program());
@@ -182,15 +191,15 @@ pub async fn storage() -> Result<Value, AppError> {
         .map_err(|e| err!("error.mixengineStorageFailed", message = e))
 }
 
-/// Khởi động daemon và trả về endpoint nó in ra.
+/// Starts the daemon and returns the endpoint it prints.
 ///
-/// `--detach` **chỉ trả về khi daemon đã trả lời trên endpoint của nó** và in endpoint ra stdout —
-/// nên không có vòng lặp backoff ở đây. Việc chờ thuộc về tiến trình biết con nó còn sống hay
-/// không, và đó không phải tiến trình này.
+/// `--detach` **only returns once the daemon answers on its endpoint** and prints the endpoint to
+/// stdout — so there is no backoff loop here. The waiting belongs to the process that knows whether
+/// its child is still alive, and that is not this process.
 ///
-/// `chosen` là bốn thư mục người dùng vừa chọn ở cổng vào, nếu có — roadmap task **T146**. Chúng
-/// đi thẳng vào dòng lệnh chứ không được ghi ở đây: quyết định chúng có được phép hay không là một
-/// câu hỏi về các dòng trong database, và tiến trình này không mở database nào.
+/// `chosen` is the four directories the user just picked at the gate, if any — roadmap task
+/// **T146**. They go straight onto the command line rather than being written here: whether they
+/// are allowed is a question about rows in the database, and this process opens no database.
 pub async fn start_daemon(chosen: Option<ChosenPaths>) -> Result<String, AppError> {
     let output = tauri::async_runtime::spawn_blocking(move || {
         let mut command = Command::new(program());
@@ -221,12 +230,12 @@ pub async fn start_daemon(chosen: Option<ChosenPaths>) -> Result<String, AppErro
 mod tests {
     use super::*;
 
-    /// Daemon được tìm ở đúng chỗ platform nói MixEngine nằm, và câu trả lời trên máy này hoặc là
-    /// một đường dẫn thật, hoặc là tên trần — không bao giờ là một chương trình rỗng.
+    /// The daemon is looked for exactly where the platform says MixEngine lives, and the answer on
+    /// this machine is either a real path or the bare name — never an empty program.
     ///
-    /// **Nửa per-OS của khẳng định này đã chuyển đi.** Trước đây nó viết thẳng
-    /// `programs\mixengine\mixengined.exe` ở đây, cạnh một danh sách module này tự giữ; từ T107
-    /// danh sách ấy là `mixengine_platform::install::program_dirs`, và test nêu tên nó cũng vậy.
+    /// **The per-OS half of this assertion has moved.** It used to spell out
+    /// `programs\mixengine\mixengined.exe` here, next to a list this module kept for itself; since
+    /// T107 that list is `mixengine_platform::install::program_dirs`, and so is the test naming it.
     #[test]
     fn the_daemon_is_looked_for_where_the_platform_says_mixengine_is() {
         let program = program();
@@ -238,8 +247,8 @@ mod tests {
         }
     }
 
-    /// Bốn trạng thái đi qua wire dạng camelCase — frontend so chuỗi với chúng, nên đổi cách viết
-    /// ở đây là làm hỏng cổng vào tab mà không gì lúc build nói ra.
+    /// The four states go over the wire in camelCase — the frontend compares strings against them,
+    /// so changing the spelling here breaks the tab's gate with nothing at build time saying so.
     #[test]
     fn presence_is_camel_cased_for_the_shell() {
         let json = |value: Presence| serde_json::to_string(&value).unwrap();
@@ -249,8 +258,9 @@ mod tests {
         assert_eq!(json(Presence::NotInstalled), "\"notInstalled\"");
     }
 
-    /// Báo cáo đi qua wire dạng một object hai field camelCase — frontend đọc cả hai theo tên, nên
-    /// đổi cách viết ở đây là làm hỏng cổng vào tab mà không gì lúc build nói ra.
+    /// The report goes over the wire as an object with two camelCase fields — the frontend reads
+    /// both by name, so changing the spelling here breaks the tab's gate with nothing at build time
+    /// saying so.
     #[test]
     fn the_report_is_camel_cased_for_the_shell() {
         let report = PresenceReport {
@@ -264,8 +274,8 @@ mod tests {
         );
     }
 
-    /// Chỗ đã tìm bắt đầu ngay cạnh chương trình này — bước đầu tiên của T107, và cũng đúng thư mục
-    /// `npm run dev:app` chép daemon vào (T111).
+    /// The search starts right next to this program — the first step of T107, and also exactly
+    /// the directory `npm run dev:app` copies the daemon into (T111).
     #[test]
     fn where_it_looked_begins_beside_this_program() {
         let running = std::env::current_exe().expect("this test has a path");

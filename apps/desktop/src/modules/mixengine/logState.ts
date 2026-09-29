@@ -6,10 +6,10 @@ export type LogEntry =
   | { kind: "gap"; missed: number };
 
 /**
- * Một khung SSE từ `/logs/service/{id}` áp lên danh sách đang có.
+ * One SSE frame from `/logs/service/{id}` applied to the existing list.
  *
- * Ba biến thể, không hơn — một `type` lạ (một biến thể thêm ở phiên bản sau) bị bỏ qua chứ không ném,
- * cùng luật `daemonState.applyEvent` đã theo cho `/events`.
+ * Three variants, no more — an unknown `type` (a variant added in a later version) is ignored
+ * rather than thrown, the same rule `daemonState.applyEvent` follows for `/events`.
  */
 export function applyLogFrame(entries: LogEntry[], raw: string, maxEntries: number): LogEntry[] {
   let frame: { type?: unknown; stream?: unknown; at?: unknown; text?: unknown; missed?: unknown };
@@ -19,9 +19,9 @@ export function applyLogFrame(entries: LogEntry[], raw: string, maxEntries: numb
     return entries;
   }
 
-  /* Màu của terminal bị bóc ngay ở đây — một lần cho mỗi dòng, chỗ duy nhất cả hai khung log
-     (`Logs`, `ApplyDialog`) cùng đi qua — chứ không phải mỗi lần render mỗi dòng đang hiện. Daemon
-     giữ nguyên bản gốc là đúng; xem `core/ansi.ts`. */
+  /* Terminal colours are stripped right here — once per line, the only place both log views
+     (`Logs`, `ApplyDialog`) pass through — rather than on every render of every visible line. The
+     daemon keeping the original is correct; see `core/ansi.ts`. */
   let next: LogEntry | null = null;
   if (frame.type === "line" && typeof frame.text === "string") {
     const stream = frame.stream === "stderr" ? "stderr" : "stdout";

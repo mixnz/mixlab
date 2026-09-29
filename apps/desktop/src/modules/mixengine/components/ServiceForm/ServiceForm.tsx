@@ -14,25 +14,27 @@ import styles from "./ServiceForm.module.css";
 
 interface Props {
   onCancel: () => void;
-  /** Gọi sau khi tạo xong — cha tự `reload()` và tự kể chuyện `moved_from`. */
+  /** Called once creation is done — the parent does its own `reload()` and tells the `moved_from`
+   *  story itself. */
   onCreated: (created: ServiceCreation) => void;
 }
 
 /**
- * Dựng một service instance mới từ một package đã có trên đĩa.
+ * Builds a new service instance from a package already on disk.
  *
- * **Chỉ package, không runtime.** `php-fpm@<version>` sinh ra cùng lúc với một bản cài PHP và
- * không phải thứ dựng bằng tay ở đây; danh sách này là `package.list`, đúng những gì
- * `service.create` nhận.
+ * **Packages only, not runtimes.** `php-fpm@<version>` is born together with a PHP install and is
+ * not something built by hand here; this list is `package.list`, exactly what `service.create`
+ * takes.
  *
- * **Một lựa chọn cho cả tên lẫn phiên bản.** `ServiceCreate` bắt buộc `version` và cố ý không có
- * `service.resolve` nào chọn hộ, nhưng hai `Select` rời nhau là hai giá trị có thể lệch nhau — nên
- * mỗi dòng ở đây là một hàng `package.list` có thật, không phải một cặp người dùng tự ghép.
+ * **One choice for both name and version.** `ServiceCreate` requires `version` and deliberately
+ * has no `service.resolve` to pick one for you, but two separate `Select`s are two values that can
+ * drift apart — so each row here is a real `package.list` row, not a pair the user put together.
  */
 export default function ServiceForm({ onCancel, onCreated }: Props) {
   const { t } = useTranslation();
 
-  /** `null` là chưa hỏi xong — khác hẳn `[]`, nghĩa là hỏi rồi và trên máy không có package nào. */
+  /** `null` is not finished asking — quite different from `[]`, which means asked, and there are
+   *  no packages on the machine. */
   const [packages, setPackages] = useState<PackageSummary[] | null>(null);
   const [picked, setPicked] = useState("");
   const [instance, setInstance] = useState("");
@@ -51,13 +53,14 @@ export default function ServiceForm({ onCancel, onCreated }: Props) {
 
   const chosen = (packages ?? []).find((row) => versionKey(row.package, row.version) === picked);
   const nothingInstalled = packages !== null && packages.length === 0;
-  /* Front end thì không có ô nào để gõ, nên `instance` còn sót lại từ một lựa chọn trước cũng
-     không được đi theo vào id. */
+  /* A front end has no field to type into, so an `instance` left over from a previous choice must
+     not follow along into the id either. */
   const named = chosen !== undefined && takesInstanceName(chosen.package);
   const id = chosen === undefined ? "" : serviceIdFrom(chosen.package, named ? instance : "");
   const incomplete = chosen === undefined || (named && instance.trim() === "");
 
-  /** Đổi package là đổi luôn câu hỏi "có tên instance không", nên ô đó được đặt lại theo package. */
+  /** Changing the package also changes the question "is there an instance name", so that field is
+   *  reset according to the package. */
   function pick(next: string) {
     setPicked(next);
     const row = (packages ?? []).find((p) => versionKey(p.package, p.version) === next);
@@ -71,8 +74,8 @@ export default function ServiceForm({ onCancel, onCreated }: Props) {
     try {
       onCreated(await api.serviceCreate({ id, version: chosen.version }));
     } catch (e) {
-      // Ở lại trong modal với nguyên lựa chọn vừa rồi: câu daemon từ chối ("một web server khác
-      // đang giữ cổng 80") thường được sửa bằng cách đổi một field, không bằng cách gõ lại cả form.
+      // Stay in the modal with the choice just made: what the daemon refuses ("another web server
+      // holds port 80") is usually fixed by changing one field, not by retyping the whole form.
       setError(errorMessage(t, e));
     } finally {
       setSaving(false);
@@ -101,10 +104,11 @@ export default function ServiceForm({ onCancel, onCreated }: Props) {
           <ModalBody>
             <label className={styles.field}>
               {t("mixengine.serviceForm.package")}
-              {/* `searchable`: danh sách dài theo số package đã cài, và mỗi phiên bản là một dòng
-                  riêng — một máy giữ hai bản MariaDB cạnh Redis, Postgres và hai web server thì
-                  cuộn tìm lâu hơn gõ. `Select` khớp trên nhãn, và nhãn ở đây là "tên phiên-bản",
-                  nên gõ `maria` hay gõ `11.4` đều tới. */}
+              {/* `searchable`: the list grows with the number of installed packages, and each
+                  version is a row of its own — on a machine holding two MariaDB versions next to
+                  Redis, Postgres and two web servers, scrolling takes longer than typing. `Select`
+                  matches on the label, and the label here is "name version", so typing `maria` or
+                  `11.4` both get there. */}
               {nothingInstalled ? (
                 <p className={styles.hint}>{t("mixengine.serviceForm.noPackages")}</p>
               ) : (

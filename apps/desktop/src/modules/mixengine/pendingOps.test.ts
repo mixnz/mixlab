@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { describeOp, pendingFrom } from "./pendingOps";
 
-/** Đúng hình dạng daemon gửi: `PendingOp` bọc `PrivilegedOp` trong field `op`. */
+/** Exactly the shape the daemon sends: `PendingOp` wraps `PrivilegedOp` in the `op` field. */
 const hostsApply = {
   id: 7,
   requested_at: 1788651901982,
@@ -19,8 +19,8 @@ describe("pendingFrom", () => {
     expect(pendingFrom(raw)).toHaveLength(2);
   });
 
-  /* Một lô rỗng vẫn là một `elevation_required`: nó nghĩa là "không còn gì chờ", khác hẳn "sự
-     kiện này không nói về quyền quản trị". */
+  /* An empty batch is still an `elevation_required`: it means "nothing is waiting any more", quite
+     different from "this event is not about administrator rights". */
   it("tells an empty queue from an event about something else", () => {
     expect(pendingFrom(JSON.stringify({ type: "elevation_required", pending: [] }))).toEqual([]);
     expect(pendingFrom(JSON.stringify({ type: "resync", missed: 1 }))).toBeNull();
@@ -29,14 +29,15 @@ describe("pendingFrom", () => {
 });
 
 describe("describeOp", () => {
-  /* Loại thao tác nằm ở `op.op`, một tầng sâu hơn chỗ dễ đoán. Đọc nhầm tầng thì mọi hàng hiện
-     `unknown` và người dùng được mời cho phép một danh sách không nói gì. */
+  /* The operation kind sits at `op.op`, one level deeper than the obvious guess. Reading the wrong
+     level makes every row show `unknown`, and the user is invited to allow a list that says
+     nothing. */
   it("reads the kind out of the op the pending entry wraps", () => {
     expect(describeOp(hostsApply).kind).toBe("hosts-apply");
   });
 
-  /* Câu của daemon là lời của bên biết thao tác đó làm gì. Viết lại nó ở MixDB là bịa ra một lời
-     giải thích thứ hai. */
+  /* The daemon's sentence comes from the side that knows what the operation does. Rewriting it in
+     MixDB would make up a second explanation. */
   it("carries the daemon's own sentence", () => {
     expect(describeOp(hostsApply).description).toBe("Add 1 name to the hosts file");
   });
@@ -47,8 +48,8 @@ describe("describeOp", () => {
     expect(detail).toContain("127.0.0.1");
   });
 
-  /* 13 biến thể, và một cái chưa biết vẫn phải hiện ra — giấu nó đi là xin quyền cho một thao tác
-     người dùng không được xem. */
+  /* 13 variants, and an unknown one must still show up — hiding it asks for rights for an operation
+     the user is not allowed to see. */
   it("still describes an op it has no special wording for", () => {
     expect(describeOp({ id: 1, op: { op: "audit-log-remove" } }).kind).toBe("audit-log-remove");
     expect(describeOp({}).kind).toBe("unknown");
@@ -56,8 +57,9 @@ describe("describeOp", () => {
     expect(describeOp(null).description).toBe("");
   });
 
-  /* `TrustPlan.der` là chứng chỉ DER trần — vài trăm số, mỗi số một dòng khi đổ nguyên qua
-     `JSON.stringify`. Hộp thoại phải nói kích thước, không đổ cả mảng ra màn hình. */
+  /* `TrustPlan.der` is a bare DER certificate — a few hundred numbers, one per line when dumped
+     whole through `JSON.stringify`. The dialog must state the size, not dump the whole array onto
+     the screen. */
   it("summarises a certificate's DER instead of dumping every byte", () => {
     const der = Array.from({ length: 402 }, (_, i) => i % 256);
     const described = describeOp({
@@ -73,8 +75,8 @@ describe("describeOp", () => {
     expect(described.detail).toContain("443");
   });
 
-  /* Ghim đúng cái lỗi đã mắc: một `PrivilegedOp` trần — tầng bên trong — không phải thứ đi trên
-     wire, và đọc nó như thể nó là `PendingOp` cho ra `unknown`. */
+  /* Pins down the exact mistake that was made: a bare `PrivilegedOp` — the inner level — is not
+     what travels on the wire, and reading it as if it were a `PendingOp` gives `unknown`. */
   it("does not mistake a bare privileged op for a pending entry", () => {
     expect(describeOp({ op: "hosts-apply", entries: [] }).kind).toBe("unknown");
   });

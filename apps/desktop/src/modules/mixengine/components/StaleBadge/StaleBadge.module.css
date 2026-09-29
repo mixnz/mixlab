@@ -4,7 +4,7 @@
   margin-left: 8px;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
-  /* Hổ phách: có việc cần người quyết (làm mới danh sách), nhưng chưa có gì hỏng. */
+  /* Amber: something needs a person's decision (refresh the list), but nothing is broken yet. */
   background: rgb(var(--warning-rgb) / 0.14);
   color: var(--warning-text);
   font-size: var(--text-xs);

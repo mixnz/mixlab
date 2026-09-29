@@ -20,8 +20,9 @@ import ImportDialog from "./ImportDialog";
 import ApplyDialog from "./ApplyDialog";
 import styles from "./Blueprints.module.css";
 
-/** Danh sách blueprint của home này — capture, nhập, apply. Không có sửa/xoá (`blueprint.delete`
- *  không tồn tại) — overwrite lúc capture/nhập là đường duy nhất thay một slug. */
+/** The blueprint list of this home — capture, import, apply. There is no edit/delete
+ *  (`blueprint.delete` does not exist) — overwriting on capture/import is the only way to replace a
+ *  slug. */
 export default function Blueprints({ active }: { active: boolean }) {
   const [rows, setRows] = useState<BlueprintSummary[]>([]);
   const [error, setError] = useState("");
@@ -29,7 +30,8 @@ export default function Blueprints({ active }: { active: boolean }) {
   const [capturing, setCapturing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [applying, setApplying] = useState<BlueprintSummary | null>(null);
-  /** Apply vừa xong — chuỗi xin quyền → khởi động → mở site đang chạy cho project này. */
+  /** The apply that just finished — the ask-for-rights → start → open-site chain running for this
+   *  project. */
   const [settling, setSettling] = useState<BlueprintApplied | null>(null);
   const { t } = useTranslation();
 
@@ -43,7 +45,8 @@ export default function Blueprints({ active }: { active: boolean }) {
     }
   }, [t]);
 
-  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cùng lý do `Dashboard.tsx`.
+  // Reread on mount and every time we come back to this screen — the same reason as
+  // `Dashboard.tsx`.
   useEffect(() => {
     if (active) void reload();
   }, [active, reload]);
@@ -152,15 +155,15 @@ export default function Blueprints({ active }: { active: boolean }) {
           onCancel={() => setApplying(null)}
           onDone={(applied) => {
             setApplying(null);
-            // Một apply thất bại không có gì để khởi động và không có site nào để mở.
+            // A failed apply has nothing to start and no site to open.
             setSettling(applied);
             void reload();
           }}
         />
       )}
 
-      {/* Dựng lên **sau khi** `ApplyDialog` đóng, không lồng vào trong nó: cả hai đều là `Modal`,
-          và `Modal` nghe Escape ở mức `window` — chồng nhau thì một phím đóng cả hai. */}
+      {/* Brought up **after** `ApplyDialog` closes, not nested inside it: both are `Modal`s, and
+          `Modal` listens for Escape at `window` level — stacked, one key closes both. */}
       {settling && (
         <AfterApply applied={settling} onFinished={() => setSettling(null)} />
       )}

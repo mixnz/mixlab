@@ -8,7 +8,7 @@ describe("cleanupFlagFor", () => {
     expect(cleanupFlagFor("cache")).toBe("keep_cache");
   });
 
-  /* runtimes/data/certs không bao giờ có reclaim: "by_cleanup" — không có flag nào để gửi. */
+  /* runtimes/data/certs never have reclaim: "by_cleanup" — there is no flag to send. */
   it("has no flag for the three categories daemon.cleanup never touches", () => {
     expect(cleanupFlagFor("runtimes")).toBeNull();
     expect(cleanupFlagFor("data")).toBeNull();

@@ -83,20 +83,22 @@ import type { RepairReport } from "@mixengine/api";
 import type { BundleReport } from "@mixengine/api";
 
 /**
- * Chỗ duy nhất module này gọi `invoke()`.
+ * The only place this module calls `invoke()`.
  *
- * Frontend không chạm mạng và không chạm đĩa: nó gọi qua đây và vẽ thứ quay về. Kiểu của những
- * thứ quay về là hợp đồng của MixEngine, lấy thẳng từ `bindings/` ở gốc repo qua alias `@mixengine/api` — đừng viết lại chúng ở
- * đây, đó là `npm run bindings`.
+ * The frontend touches neither the network nor the disk: it calls through here and draws what
+ * comes back. The types of what comes back are MixEngine's contract, taken straight from
+ * `bindings/` at the repo root through the `@mixengine/api` alias — do not rewrite them here; that
+ * is `npm run bindings`.
  */
 
-/** Daemon đang ở trạng thái nào, nhìn từ máy này. */
+/** What state the daemon is in, seen from this machine. */
 export type Presence = "running" | "notAnswering" | "notRunning" | "notInstalled";
 
 /**
- * Trạng thái, kèm những thư mục đã tìm `mixengined` — đúng thứ tự đã tìm (T111).
+ * The state, with the directories searched for `mixengined` — in the order searched (T111).
  *
- * `searched` chỉ có nội dung khi `presence` là `notInstalled`; ba trạng thái kia không tìm gì cả.
+ * `searched` only has content when `presence` is `notInstalled`; the other three states search
+ * nothing.
  */
 export type PresenceReport = { presence: Presence; searched: string[] };
 
@@ -105,16 +107,16 @@ export function presence(): Promise<PresenceReport> {
 }
 
 /**
- * Bốn thư mục phình to được đặt ở đâu, và điều đó còn đổi được không — T146.
+ * Where the four growing directories go, and whether that can still be changed — T146.
  *
- * Trả lời được **khi chưa có daemon nào**: nó chạy `mixengined --storage`, một lệnh đọc và không
- * tạo ra thứ gì. Đó là điều làm cho việc hỏi không phải là thứ đóng mất quyền chọn.
+ * Answerable **before any daemon exists**: it runs `mixengined --storage`, a command that reads and
+ * creates nothing. That is what makes asking not the thing that closes off the choice.
  */
 export function storage(): Promise<StorageReport> {
   return invoke<StorageReport>("mixengine_storage");
 }
 
-/** Bốn thư mục người dùng vừa chọn, đúng dạng lệnh khởi động nhận — T146. */
+/** The four directories the user just picked, in the form the start command takes — T146. */
 export type ChosenPaths = {
   runtimes?: string;
   packages?: string;
@@ -123,11 +125,11 @@ export type ChosenPaths = {
 };
 
 /**
- * Khởi động daemon; trả về endpoint nó in ra khi đã sẵn sàng.
+ * Starts the daemon; returns the endpoint it prints once it is ready.
  *
- * `chosen` chỉ mang những khoá người dùng thật sự đổi. Daemon ghi chúng vào `config.toml` — cờ ở
- * đây cấu hình *một home*, không phải một tiến trình — và từ chối lần khởi động nếu đã có thứ gì
- * được cài, vì lúc đó chỗ đặt đã nằm trong các dòng của database.
+ * `chosen` carries only the keys the user actually changed. The daemon writes them into
+ * `config.toml` — the flags here configure *a home*, not a process — and refuses to start if
+ * anything is already installed, because by then the locations live in the database's rows.
  */
 export function startDaemon(chosen?: ChosenPaths): Promise<string> {
   return invoke<string>("mixengine_start", { chosen: chosen ?? null });
@@ -137,8 +139,8 @@ export function status(): Promise<DaemonStatus> {
   return invoke<DaemonStatus>("mixengine_status");
 }
 
-/** `service.list` trả `{ services: [...] }`, không phải một mảng trần — đo được trên daemon thật,
- *  và `ServiceList` trong hợp đồng nói đúng như vậy. */
+/** `service.list` returns `{ services: [...] }`, not a bare array — measured on a real daemon,
+ *  and `ServiceList` in the contract says exactly that. */
 export function services(): Promise<ServiceList> {
   return invoke<ServiceList>("mixengine_services");
 }
@@ -150,22 +152,24 @@ export function serviceAction(id: string, action: ServiceAction): Promise<unknow
 }
 
 /**
- * `service.start` với scope project — *mọi service project này cần*, theo thứ tự phụ thuộc (T125).
+ * `service.start` with a project scope — *every service this project needs*, in dependency order
+ * (T125).
  *
- * Tập ấy là câu trả lời của daemon: service các site của project khai, pool php-fpm chúng đặt tên,
- * và front end chúng được phục vụ qua. Trước T125 chỗ này gửi target rỗng, nghĩa là mọi service
- * home khai — một home bốn bản PHP bật cả bốn để dựng một site.
+ * That set is the daemon's answer: the services the project's sites declare, the php-fpm pools
+ * they name, and the front end they are served through. Before T125 this sent an empty target,
+ * meaning every service the home declares — a home with four PHP versions started all four to
+ * bring up one site.
  */
 export function serviceStartProject(project: string): Promise<unknown> {
   return invoke("mixengine_service_start_project", { project });
 }
 
 /**
- * Mở stream sự kiện.
+ * Opens the event stream.
  *
- * Mỗi message là JSON **thô**: người gọi tự parse, vì một `type` chưa biết phải bỏ qua được chứ
- * không phải làm vỡ gì. Sự kiện của MixEngine internally tagged, và một biến thể sinh ra ở phiên
- * bản sau phải tới được một MixDB cũ như một object nó nhận ra và lờ đi.
+ * Each message is **raw** JSON: the caller parses it, because an unknown `type` has to be
+ * ignorable rather than break anything. MixEngine's events are internally tagged, and a variant
+ * born in a later version has to reach an older MixDB as an object it recognises and ignores.
  */
 export function watch(onMessage: (raw: string) => void): Promise<void> {
   const channel = new Channel<string>();
@@ -178,36 +182,37 @@ export function unwatch(): Promise<void> {
 }
 
 /**
- * Mọi thao tác đang chờ quyền quản trị, kèm câu daemon tự viết cho từng cái.
+ * Every operation waiting for administrator rights, with the description the daemon wrote for
+ * each.
  *
- * `daemon.status` chỉ mang một con số. Một tab mở ra khi đã có sẵn thao tác chờ không nhận
- * `elevation_required` nào — sự kiện đó chỉ bắn lúc hàng đợi đổi — nên đây là đường duy nhất thấy
- * chúng.
+ * `daemon.status` carries only a number. A tab opened while operations are already waiting receives
+ * no `elevation_required` — that event only fires when the queue changes — so this is the only way
+ * to see them.
  */
 export function elevationStatus(): Promise<ElevationStatus> {
   return invoke<ElevationStatus>("mixengine_elevation_status");
 }
 
-/** Cho phép cả lô thao tác đang chờ — đúng một prompt của hệ điều hành.
+/** Grants the whole batch of waiting operations — exactly one OS prompt.
  *
- *  **Trả về một job, không phải kết quả.** Daemon tạo hàng job rồi trả lời ngay; prompt bật lên
- *  *sau đó*, bên trong job. Ai gọi phải theo dõi qua `jobStatus` tới khi job xong — `result` của
- *  job là một `GrantOutcome` (`completed`/`declined`/`unavailable`). */
+ *  **Returns a job, not a result.** The daemon creates the job row and answers at once; the prompt
+ *  comes up *afterwards*, inside the job. The caller has to follow it through `jobStatus` until the
+ *  job finishes — the job's `result` is a `GrantOutcome` (`completed`/`declined`/`unavailable`). */
 export function elevationGrant(): Promise<JobSummary> {
   return invoke<JobSummary>("mixengine_elevation_grant");
 }
 
-/** Bỏ cả lô đi. Từ chối là một kết cục bình thường, không phải một lỗi. */
+/** Drops the whole batch. Declining is an ordinary outcome, not an error. */
 export function elevationDrop(): Promise<unknown> {
   return invoke("mixengine_elevation_drop");
 }
 
-/** `project` lọc theo tên; bỏ trống thấy mọi site trong home. */
+/** `project` filters by name; leave it empty to see every site in the home. */
 export function sites(project?: string): Promise<SiteList> {
   return invoke<SiteList>("mixengine_sites", { project });
 }
 
-/** Mọi thứ chỉ một lookup mới trả lời được: `doc_root_full`, `pool`, `services`. */
+/** Everything only a lookup can answer: `doc_root_full`, `pool`, `services`. */
 export function site(domain: string): Promise<SiteDetail> {
   return invoke<SiteDetail>("mixengine_site", { domain });
 }
@@ -216,7 +221,7 @@ export function siteCreate(input: SiteCreate): Promise<SiteCreation> {
   return invoke<SiteCreation>("mixengine_site_create", { params: input });
 }
 
-/** `domains`/`services` thay thế toàn bộ danh sách site đang có, không merge. */
+/** `domains`/`services` replace the site's whole existing list; nothing is merged. */
 export function siteUpdate(input: SiteUpdate): Promise<{ site: SiteDetail }> {
   return invoke("mixengine_site_update", { params: input });
 }
@@ -233,28 +238,31 @@ export function projects(): Promise<ProjectList> {
   return invoke<ProjectList>("mixengine_projects");
 }
 
-/** Pin **hiệu lực** (file thắng row) kèm project — dùng cho cả trang chi tiết và form sửa. */
+/** The **effective** pins (the file wins over the row) with the project — used by both the detail
+ *  page and the edit form. */
 export function projectShow(name: string): Promise<ProjectDetail> {
   return invoke<ProjectDetail>("mixengine_project_show", { name });
 }
 
-/** `project.create` trả cả pin hiệu lực, đúng hình `ProjectDetail` — không phải `ProjectSummary`
- *  trần. Gọi `.project` để lấy hàng vừa tạo (xem `ProjectForm.tsx`, chỗ đã đọc nhầm tầng này). */
+/** `project.create` returns the effective pins too, in the shape of `ProjectDetail` — not a bare
+ *  `ProjectSummary`. Use `.project` for the row just created (see `ProjectForm.tsx`, where this
+ *  layer was once misread). */
 export function projectCreate(input: ProjectCreate): Promise<ProjectDetail> {
   return invoke<ProjectDetail>("mixengine_project_create", { params: input });
 }
 
-/** `pins` thay thế toàn bộ — gửi lại mọi pin hiện có cộng thay đổi. */
+/** `pins` replaces everything — send back every existing pin plus the change. */
 export function projectUpdate(input: ProjectUpdate): Promise<ProjectSummary> {
   return invoke<ProjectSummary>("mixengine_project_update", { params: input });
 }
 
-/** Thư mục và `mixengine.toml` được giữ nguyên — chỉ gỡ đăng ký. */
+/** The directory and `mixengine.toml` are kept — only the registration is removed. */
 export function projectDelete(name: string): Promise<ProjectRemoval> {
   return invoke<ProjectRemoval>("mixengine_project_delete", { name });
 }
 
-/** `domain.dns_status` là cả liệt kê lẫn chẩn đoán một tên — bỏ trống `domain` thấy mọi tên. */
+/** `domain.dns_status` is both the listing and the diagnosis of one name — leave `domain` empty to
+ *  see every name. */
 export function domains(domain?: string): Promise<DomainStatusReport> {
   return invoke<DomainStatusReport>("mixengine_domains", { domain });
 }
@@ -269,18 +277,19 @@ export function domainRemove(domain: string): Promise<unknown> {
   return invoke("mixengine_domain_remove", { domain });
 }
 
-/** Hai câu trả lời tin cậy, không phải một: `trust` là kho hệ thống, `browsers` là NSS database. */
+/** Two trust answers, not one: `trust` is the system store, `browsers` is the NSS database. */
 export function caStatus(): Promise<CaStatus> {
   return invoke<CaStatus>("mixengine_ca_status");
 }
 
-/** Luồng hai lượt T64, giống `doctorRepair`: `grant: false` để enqueue, đọc `elevation.status`
- *  rồi mới `elevation.grant` sau khi người dùng đã xem hàng đợi — xem `CaBlock.tsx`. */
+/** The two-pass T64 flow, like `doctorRepair`: `grant: false` to enqueue, read `elevation.status`,
+ *  and only then `elevation.grant` once the user has seen the queue — see `CaBlock.tsx`. */
 export function caRepair(input: DoctorRepair): Promise<unknown> {
   return invoke("mixengine_ca_repair", { params: input });
 }
 
-/** Bỏ trống `domain` để cấp cho mọi site có khai HTTPS — cùng một call vẽ bảng lẫn cấp lại. */
+/** Leave `domain` empty to issue for every site that declares HTTPS — one call both draws the table
+ *  and reissues. */
 export function certs(domain?: string): Promise<CertIssueReport> {
   return invoke<CertIssueReport>("mixengine_certs", { domain });
 }
@@ -341,7 +350,7 @@ export function serviceLimits(service: string): Promise<ServiceLimitsReport> {
   return invoke<ServiceLimitsReport>("mixengine_service_limits", { service });
 }
 
-/** `ServiceLimitsSet` gửi toàn bộ ba field — không có patch. */
+/** `ServiceLimitsSet` sends all three fields — there is no patch. */
 export function serviceSetLimits(
   service: string,
   limits: ResourceLimits,
@@ -351,8 +360,8 @@ export function serviceSetLimits(
   });
 }
 
-/** Hình dạng câu trả lời chưa có type đã vendor — đọc như `unknown`, ép kiểu tại chỗ gọi sau khi
- *  xác nhận với daemon thật (spec, Kiểm thử). */
+/** The answer's shape has no vendored type yet — read as `unknown`, and cast at the call site once
+ *  confirmed against a real daemon (spec, Testing). */
 export function serviceIdle(service: string): Promise<unknown> {
   return invoke("mixengine_service_idle", { service });
 }
@@ -361,32 +370,33 @@ export function serviceSetIdle(params: ServiceIdleSet): Promise<unknown> {
   return invoke("mixengine_service_set_idle", { params });
 }
 
-/** `service.save_resources` — home này có dừng service không ai dùng không ("Save battery",
- *  T167b). Tắt trừ khi người dùng đã bật (ADR 0041). */
+/** `service.save_resources` — whether this home stops services nobody is using ("Save battery",
+ *  T167b). Off unless the user has turned it on (ADR 0041). */
 export function saveResources(): Promise<SaveResources> {
   return invoke<SaveResources>("mixengine_service_save_resources");
 }
 
-/** `service.set_save_resources` — bật/tắt "Save battery". Không dừng và không khởi động gì: lượt
- *  quét idle kế tiếp mới đọc nó. Trả trạng thái mới. */
+/** `service.set_save_resources` — turns "Save battery" on/off. Stops nothing and starts nothing:
+ *  the next idle sweep is what reads it. Returns the new state. */
 export function setSaveResources(on: boolean): Promise<SaveResources> {
   const params: SaveResourcesSet = { on };
   return invoke<SaveResources>("mixengine_service_set_save_resources", { params });
 }
 
-/** `service.set_autostart` — service này có khởi động cùng MixEngine không (T112).
- *  Không khởi động và không dừng gì: thứ nó đổi là walk ở lần daemon khởi động sau. */
+/** `service.set_autostart` — whether this service starts along with MixEngine (T112).
+ *  Starts nothing and stops nothing: what it changes is the walk at the next daemon start. */
 export function serviceSetAutostart(params: ServiceAutostartSet): Promise<ServiceSummary> {
   return invoke<ServiceSummary>("mixengine_service_set_autostart", { params });
 }
 
-/** Đổi web server mặc định — một job (theo dõi qua `jobStatus`), kết quả là `FrontEndReport`.
- *  Server đang active không có method đọc riêng: đọc `ServiceSummary.role` từ `services()`. */
+/** Changes the default web server — a job (followed through `jobStatus`) whose result is
+ *  `FrontEndReport`. The active server has no read method of its own: read `ServiceSummary.role`
+ *  from `services()`. */
 export function serviceSetFrontEnd(params: FrontEndSwitch): Promise<JobSummary> {
   return invoke<JobSummary>("mixengine_service_set_front_end", { params });
 }
 
-/** `version` là bắt buộc — không có `service.resolve` nào chọn hộ, xem doc của `ServiceCreate`. */
+/** `version` is required — no `service.resolve` picks one for you; see `ServiceCreate`'s doc. */
 export function serviceCreate(params: ServiceCreate): Promise<ServiceCreation> {
   return invoke<ServiceCreation>("mixengine_service_create", { params });
 }
@@ -404,23 +414,23 @@ export function databaseClient(service: string): Promise<DatabaseClientReport> {
 }
 
 /**
- * Mật khẩu MixEngine đang giữ cho một account — `database.credentials`, T77b.
+ * The password MixEngine holds for one account — `database.credentials`, T77b.
  *
- * **Câu trả lời duy nhất trong cả API mang chính mật khẩu** (ADR 0025); mọi `database.*` khác chỉ
- * trả *địa chỉ* của nó trong credential store. `user` vắng nghĩa là quản trị viên của server —
- * đúng mặc định `database.open` dùng.
+ * **The only answer in the whole API that carries the password itself** (ADR 0025); every other
+ * `database.*` only returns its *address* in the credential store. An absent `user` means the
+ * server's administrator — the same default `database.open` uses.
  */
 export function databaseCredentials(service: string, user?: string): Promise<DatabaseCredentials> {
   return invoke<DatabaseCredentials>("mixengine_database_credentials", { service, user });
 }
 
 /**
- * Ghi lại credential quản trị viên vào data directory của chính database — `service.reset_credential`,
- * T127.
+ * Writes the administrator credential back into the database's own data directory —
+ * `service.reset_credential`, T127.
  *
- * Dừng service này và mọi thứ phụ thuộc nó, chạy bước đặt mật khẩu offline của recipe, rồi bật lại.
- * **Mọi database trong thư mục ấy được giữ nguyên** — đó là câu quyết định chuyện này cho một
- * người, nên nơi nào gọi hàm này cũng phải nói nó ra trước.
+ * Stops this service and everything that depends on it, runs the recipe's offline set-password
+ * step, then starts them again. **Every database in that directory is kept intact** — that is what
+ * decides this for a person, so every caller of this function has to say it first.
  */
 export function serviceResetCredential(service: string): Promise<ServiceWalk> {
   return invoke<ServiceWalk>("mixengine_service_reset_credential", { service });
@@ -469,14 +479,14 @@ export function serviceAdopt(service: string): Promise<ServiceSummary> {
   return invoke<ServiceSummary>("mixengine_service_adopt", { service });
 }
 
-/** Không trả gì — thành công nghĩa là một tab `db` mới đã được xếp hàng mở, xem
- *  `Handoff`/`crate::launch::request` phía Rust. */
+/** Returns nothing — success means a new `db` tab has been queued to open; see
+ *  `Handoff`/`crate::launch::request` on the Rust side. */
 export function databaseOpenInMixDB(service: string, database?: string): Promise<void> {
   return invoke("mixengine_database_open_in_mixdb", { service, database });
 }
 
-/** Mở stream log của một service. Cùng khuôn `watch`/`unwatch` — một `Channel` mới, người gọi tự
- *  parse JSON thô. */
+/** Opens a service's log stream. The same pattern as `watch`/`unwatch` — a new `Channel`, and the
+ *  caller parses the raw JSON. */
 export function logsWatch(
   service: string,
   tail: number,
@@ -500,24 +510,26 @@ export function blueprintCapture(input: BlueprintCapture): Promise<BlueprintSumm
   return invoke<BlueprintSummary>("mixengine_blueprint_capture", { params: input });
 }
 
-/** Không bao giờ trả lỗi vì chữ ký sai — đọc lại `trusted`/`signature` trên kết quả, không bắt lỗi
- *  riêng cho trường hợp đó. */
+/** Never returns an error for a bad signature — read `trusted`/`signature` on the result instead;
+ *  there is no separate error to catch for that case. */
 export function blueprintImport(input: BlueprintImport): Promise<BlueprintSummary> {
   return invoke<BlueprintSummary>("mixengine_blueprint_import", { params: input });
 }
 
-/** Một method, gọi hai lượt — `input.dry_run` quyết định lượt nào. */
+/** One method, called twice — `input.dry_run` decides which pass. */
 export function blueprintApply(input: BlueprintApply): Promise<BlueprintApplyResponse> {
   return invoke<BlueprintApplyResponse>("mixengine_blueprint_apply", { params: input });
 }
 
-/** Đọc job đã kết thúc — `applyJob` đã xoá hàng của nó khỏi danh sách job đang chạy trên stream. */
+/** Reads a finished job — `applyJob` has already removed its row from the running-job list on the
+ *  stream. */
 export function jobStatus(job: number): Promise<JobSummary> {
   return invoke<JobSummary>("mixengine_job_status", { job });
 }
 
-/** Output thật của một job (vd. lệnh `[scaffold]` của một blueprint) — cùng khuôn `logsWatch`, khác
- *  route phía Rust (`GET /logs/job/{id}` thay vì `/logs/service/{id}`). */
+/** A job's real output (e.g. a blueprint's `[scaffold]` command) — the same pattern as
+ *  `logsWatch`, with a different Rust-side route (`GET /logs/job/{id}` instead of
+ *  `/logs/service/{id}`). */
 export function jobLogsWatch(
   job: number,
   tail: number,
@@ -529,7 +541,8 @@ export function jobLogsWatch(
   return invoke("mixengine_job_logs_watch", { job, tail, follow, onLine: channel });
 }
 
-/** Cùng state phía Rust với `logsUnwatch` — đóng bất cứ stream log nào đang mở, service hay job. */
+/** The same Rust-side state as `logsUnwatch` — closes whatever log stream is open, service or
+ *  job. */
 export function jobLogsUnwatch(): Promise<void> {
   return invoke("mixengine_logs_unwatch");
 }
@@ -542,12 +555,14 @@ export function extensionsAvailable(): Promise<ExtensionCatalogue> {
   return invoke<ExtensionCatalogue>("mixengine_extension_list_available");
 }
 
-/** Bước duy nhất trước khi cài — không có `extensionInspect`, xem Quyết định D2 spec. */
+/** The only step before installing — there is no `extensionInspect`; see Decision D2 in the
+ *  spec. */
 export function extensionPlan(input: ExtensionPlanRequest): Promise<ExtensionPlan> {
   return invoke<ExtensionPlan>("mixengine_extension_plan", { params: input });
 }
 
-/** `input.consent` phải trích nguyên từ `ExtensionPlan` vừa nhận — xem Quyết định D3 spec. */
+/** `input.consent` must be taken verbatim from the `ExtensionPlan` just received — see Decision D3
+ *  in the spec. */
 export function extensionInstall(input: ExtensionInstall): Promise<unknown> {
   return invoke("mixengine_extension_install", { params: input });
 }
@@ -556,7 +571,7 @@ export function extensionUninstall(input: ExtensionUninstall): Promise<Extension
   return invoke<ExtensionRemoval>("mixengine_extension_uninstall", { params: input });
 }
 
-/** Gọi `extension.*`, không phải `service.*` — xem Global Constraints. */
+/** Calls `extension.*`, not `service.*` — see Global Constraints. */
 export function extensionStart(id: string): Promise<unknown> {
   return invoke("mixengine_extension_start", { id });
 }
@@ -565,9 +580,10 @@ export function extensionStop(id: string): Promise<unknown> {
   return invoke("mixengine_extension_stop", { id });
 }
 
-/** Mở `GET /metrics`. Cùng khuôn `logsWatch` — một `Channel` mới, người gọi tự parse JSON thô.
- *  **Mở kết nối này chính là subscribe**: gọi đúng lúc màn hình cần số "bây giờ", đóng lại bằng
- *  `metricsUnwatch()` ngay khi không còn cần — không mở suốt đời app như `watch()`/`/events`. */
+/** Opens `GET /metrics`. The same pattern as `logsWatch` — a new `Channel`, and the caller parses
+ *  the raw JSON. **Opening this connection is the subscription**: call it exactly when the screen
+ *  needs the "now" figures, and close it with `metricsUnwatch()` as soon as they are no longer
+ *  needed — not held open for the app's lifetime like `watch()`/`/events`. */
 export function metricsWatch(onFrame: (raw: string) => void): Promise<void> {
   const channel = new Channel<string>();
   channel.onmessage = onFrame;
@@ -602,17 +618,17 @@ export function autostartDisable(): Promise<AutostartReport> {
   return invoke<AutostartReport>("mixengine_autostart_disable");
 }
 
-/** `path.status` — `<root>/bin` có trên PATH đã lưu của user này chưa. */
+/** `path.status` — whether `<root>/bin` is on this user's saved PATH yet. */
 export function pathStatus(): Promise<PathReport> {
   return invoke<PathReport>("mixengine_path_status");
 }
 
-/** `path.install` — điền `<root>/bin` và đưa nó vào PATH. Không bật hộp thoại quản trị. */
+/** `path.install` — fills `<root>/bin` and puts it on PATH. Raises no administrator dialog. */
 export function pathInstall(): Promise<PathReport> {
   return invoke<PathReport>("mixengine_path_install");
 }
 
-/** `path.uninstall` — gỡ `<root>/bin` khỏi PATH, các lệnh trong đó vẫn còn. */
+/** `path.uninstall` — removes `<root>/bin` from PATH; the commands in it stay. */
 export function pathUninstall(): Promise<PathReport> {
   return invoke<PathReport>("mixengine_path_uninstall");
 }
@@ -635,8 +651,8 @@ export function doctor(): Promise<DoctorReport> {
   return invoke<DoctorReport>("mixengine_doctor");
 }
 
-/** `grant: false` (đường thường) enqueue vào đúng hàng đợi `elevation.status` chung — đọc lại đó để
- *  biết có cần mở `ElevationDialog` không, không tự trả một dialog riêng. */
+/** `grant: false` (the normal path) enqueues onto the same shared `elevation.status` queue — read
+ *  that again to know whether `ElevationDialog` needs to open; no dialog of its own is returned. */
 export function doctorRepair(input: DoctorRepair): Promise<RepairReport> {
   return invoke<RepairReport>("mixengine_doctor_repair", { params: input });
 }

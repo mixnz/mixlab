@@ -3,11 +3,12 @@ import type { MetricsMinute } from "@mixengine/api";
 const MINUTE_MS = 60_000;
 
 /**
- * Chia `minutes` (đã sắp theo thời gian tăng dần) thành các đoạn liền kề.
+ * Splits `minutes` (sorted by ascending time) into contiguous segments.
  *
- * **Một phút vắng là ranh giới đoạn, không phải một điểm nối liền qua nó** — `MetricsHistory.minutes`
- * doc-comment: một phút không có dòng là một phút không ai đo (service dừng, máy ngủ, daemon đang
- * thay), không bao giờ là một phút dùng 0. Vẽ một đường nối hai đoạn là bịa ra dữ liệu chưa từng lấy.
+ * **A missing minute is a segment boundary, not a point joined across** — the
+ * `MetricsHistory.minutes` doc comment: a minute with no row is a minute nobody measured (service
+ * stopped, machine asleep, daemon being replaced), never a minute that used 0. Drawing a line
+ * joining two segments makes up data that was never taken.
  */
 export function segmentsFor(minutes: readonly MetricsMinute[]): MetricsMinute[][] {
   const segments: MetricsMinute[][] = [];
@@ -24,12 +25,12 @@ export function segmentsFor(minutes: readonly MetricsMinute[]): MetricsMinute[][
 }
 
 /**
- * Chia một đoạn thành các dải mà `defined` đúng suốt dọc.
+ * Splits a segment into bands along which `defined` holds throughout.
  *
- * **Cùng một luật như [`segmentsFor`], một tầng sâu hơn.** Một phút có dòng vẫn có thể không mang
- * được con số CPU (`cpu_avg: null`, `MetricsMinute` doc-comment) — không lần đọc nào trong phút đó
- * lấy được. Lọc phút ấy ra rồi nối hai bên lại vẽ ra một đoạn chưa ai đo, đúng cái sai mà
- * [`segmentsFor`] đã tránh ở mức phút vắng.
+ * **The same rule as [`segmentsFor`], one level deeper.** A minute with a row may still carry no
+ * CPU figure (`cpu_avg: null`, the `MetricsMinute` doc comment) — no reading in that minute got
+ * one. Filtering that minute out and joining both sides draws a stretch nobody measured, exactly
+ * the mistake [`segmentsFor`] avoids at the missing-minute level.
  */
 export function runsOf(
   segment: readonly MetricsMinute[],
@@ -52,21 +53,21 @@ export function runsOf(
   return runs;
 }
 
-/** Một khoảng thời gian nửa mở `[from, to)`. */
+/** A half-open time range `[from, to)`. */
 export interface TimeRange {
   from: number;
   to: number;
 }
 
 /**
- * Các khoảng trong `[from, to)` mà không đoạn nào phủ — thời gian không ai đo.
+ * The ranges within `[from, to)` that no segment covers — time nobody measured.
  *
- * Luật "một phút vắng là một khoảng trống" mới chỉ nói biểu đồ đừng *nối* qua đó. Cái này nói phần
- * còn lại: một khoảng trống phải **nhìn thấy được**, nếu không nó không phân biệt được với một
- * đường đi ngang. Cửa sổ chạy hết thời gian lưu trữ, nên một home mới bật cũng thấy ngay phần lớn
- * biểu đồ là thời gian chưa có dữ liệu chứ không tưởng 40 phút của mình là 24 giờ.
+ * The rule "a missing minute is a gap" only says the chart must not *join* across it. This says
+ * the rest: a gap has to be **visible**, otherwise it cannot be told apart from a flat line. The
+ * window spans the whole retention period, so a freshly started home sees right away that most of
+ * the chart is time with no data yet, rather than mistaking its 40 minutes for 24 hours.
  *
- * Một phút `n` phủ `[n, n + 60s)` — nó là một phút, không phải một điểm.
+ * A minute `n` covers `[n, n + 60s)` — it is a minute, not a point.
  */
 export function gapsIn(
   segments: readonly (readonly MetricsMinute[])[],
@@ -87,17 +88,19 @@ export function gapsIn(
 }
 
 /**
- * Các khoảng mà mỗi phút có ít nhất `minimum` lần đọc — quãng thời gian thật sự có người nhìn.
+ * The ranges in which every minute has at least `minimum` readings — the stretches when someone
+ * was really watching.
  *
- * **Một phút một lần đọc và một phút sáu mươi lần đọc không phải hai độ tin cậy như nhau**
- * (`MetricsMinute::samples` doc-comment, và spec Metrics mục 2 nói thẳng là không được vẽ chúng như
- * nhau). Chỗ này là cách nói ra điều đó mà không đụng vào chính đường dữ liệu: `samples: 1` là
- * trạng thái *thường* của một máy không ai mở Dashboard, nên vẽ nó nhạt đi là vẽ gần cả biểu đồ
- * nhạt đi — mất đúng thứ đang cần đọc.
+ * **A minute with one reading and a minute with sixty are not the same confidence**
+ * (`MetricsMinute::samples` doc comment, and section 2 of the Metrics spec says plainly they must
+ * not be drawn alike). This is how to say that without touching the data line itself: `samples: 1`
+ * is the *normal* state of a machine where nobody has the Dashboard open, so drawing it faded would
+ * fade almost the whole chart — losing exactly what needs to be read.
  *
- * Cái nó nói rõ là **dải đỉnh**: ở `samples: 1` thì `cpu_peak` bằng `cpu_avg` vì chỉ có một lần đọc
- * để so, nên dải tự dẹt xuống thành không. Dẹt vì không ai đo trông y hệt dẹt vì mức dùng thật sự
- * đều, và không có gì trong hình phân biệt được hai cái đó.
+ * What it makes clear is the **peak band**: at `samples: 1`, `cpu_peak` equals `cpu_avg` because
+ * there is only one reading to compare, so the band flattens to nothing by itself. Flat because
+ * nobody measured looks exactly like flat because usage really was steady, and nothing in the
+ * picture tells the two apart.
  */
 export function sampledRanges(
   segments: readonly (readonly MetricsMinute[])[],
@@ -123,11 +126,11 @@ export function sampledRanges(
 }
 
 /**
- * Phút gần `time` nhất, hoặc `null` nếu phút gần nhất vẫn xa hơn `tolerance`.
+ * The minute nearest to `time`, or `null` if even the nearest minute is further than `tolerance`.
  *
- * `tolerance` là điều kiện làm cho crosshair trung thực: trong vùng chưa có dữ liệu, phút gần nhất
- * có thể cách hàng giờ, và đọc số của nó ra dưới con trỏ là gán một giá trị cho một thời điểm chưa
- * ai đo.
+ * `tolerance` is what keeps the crosshair honest: in a region with no data yet, the nearest minute
+ * may be hours away, and reading its figures out under the cursor assigns a value to a moment
+ * nobody measured.
  */
 export function nearestMinute(
   minutes: readonly MetricsMinute[],

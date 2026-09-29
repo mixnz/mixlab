@@ -9,14 +9,15 @@ import { pathOutcome, type PathOutcome } from "../../pathState";
 import styles from "./Settings.module.css";
 
 /**
- * `<root>/bin` trên PATH của user này — `path.status`, `path.install`, `path.uninstall`.
+ * `<root>/bin` on this user's PATH — `path.status`, `path.install`, `path.uninstall`.
  *
- * Cùng việc `mix path install` làm, để người chỉ cài app không phải mở terminal gõ lệnh mới dùng
- * được shim. Không có quyền quản trị nào ở đây: Windows ghi vào `HKCU\Environment`, Unix ghi vào
- * shell profile trong home.
+ * The same job `mix path install` does, so someone who only installed the app does not have to
+ * open a terminal and type a command before the shims work. No administrator rights here: Windows
+ * writes to `HKCU\Environment`, Unix writes to the shell profile in the home directory.
  *
- * **Công tắc đọc `on_path`, không tự gấp `places`**: daemon đã quyết "đủ mọi nơi mới tính là có",
- * và một client tự gấp là chỗ hai client bất đồng về chữ "đã cài".
+ * **The switch reads `on_path`; it does not fold `places` itself**: the daemon has decided "only
+ * present everywhere counts as present", and a client folding it itself is where two clients
+ * disagree about the word "installed".
  */
 export default function PathSection({
   active,

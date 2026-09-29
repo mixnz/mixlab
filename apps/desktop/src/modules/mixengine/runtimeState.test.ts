@@ -67,9 +67,9 @@ describe("jobFinished", () => {
     expect(finished?.error).toBeNull();
   });
 
-  // Một job hỏng là toàn bộ lý do hàm này đọc `ending`: đây là chỗ duy nhất câu của daemon tới
-  // được người dùng, và bản trước bỏ nó đi — thanh tiến độ biến mất, danh sách không đổi, không
-  // một chữ nào giải thích.
+  // A failed job is the whole reason this function reads `ending`: it is the only place the
+  // daemon's sentence reaches the user, and the previous version dropped it — the progress bar
+  // vanished, the list did not change, and not a word explained why.
   it("turns a failed job into the same refusal a rejected call would have carried", () => {
     const finished = jobFinished(
       JSON.stringify({
@@ -105,7 +105,8 @@ describe("jobFinished", () => {
     expect(finished?.error?.params).not.toHaveProperty("hint");
   });
 
-  // Người dùng tự huỷ thì không có gì để báo — banner đỏ cho một việc họ vừa yêu cầu là nhiễu.
+  // If the user cancelled it themselves there is nothing to report — a red banner for something
+  // they just asked for is noise.
   it("carries no error for a cancelled job", () => {
     expect(
       jobFinished(JSON.stringify({ type: "job_finished", job: 7, ending: "cancelled" }))?.error,

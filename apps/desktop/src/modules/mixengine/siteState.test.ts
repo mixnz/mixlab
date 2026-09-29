@@ -77,7 +77,8 @@ describe("relativeToRoot", () => {
     expect(relativeToRoot(root, root)).toBe("");
   });
 
-  /* Root chọn kèm dấu / cuối vẫn phải cắt đúng, không để lại một dấu / thừa ở đầu kết quả. */
+  /* A root chosen with a trailing / must still be stripped correctly, leaving no extra / at the
+     start of the result. */
   it("tolerates a trailing separator on the root", () => {
     expect(relativeToRoot(`${root}/`, `${root}/public`)).toBe("public");
   });
@@ -86,7 +87,8 @@ describe("relativeToRoot", () => {
     expect(relativeToRoot(root, `${root}/public/assets`)).toBe("public/assets");
   });
 
-  /* Không nằm dưới root — SiteCreate.doc_root chấp nhận cả tuyệt đối, giữ nguyên thay vì đoán. */
+  /* Not under the root — SiteCreate.doc_root also accepts absolute paths; keep it as is rather than
+     guess. */
   it("keeps a path outside the root as-is", () => {
     expect(relativeToRoot(root, "/somewhere/else")).toBe("/somewhere/else");
   });

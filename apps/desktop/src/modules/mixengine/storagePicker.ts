@@ -4,31 +4,32 @@ import { joinPath, PATH_STYLE, type PathStyle } from "../../core/paths";
 import type { ChosenPaths } from "./api";
 
 /**
- * Cổng vào biến câu trả lời `--storage` thành mấy dòng để vẽ, và mấy dòng đó thành cờ khởi động.
+ * The gate turns the `--storage` answer into rows to draw, and those rows into start-up flags.
  *
- * Thuần và không gọi gì — cùng lý do `daemonState.ts` ở đây chứ không nằm trong component: luật
- * đáng có test là *khoá nào đi vào dòng lệnh*, và một `useState` thì không test được. Gửi thừa một
- * khoá không làm hỏng gì (daemon coi giá trị trùng là no-op im lặng), nhưng nó là nói ba câu mình
- * không có ý nói, và nó làm `config.toml` bị ghi lại vì một lần bấm không đổi gì.
+ * Pure and calls nothing — for the same reason `daemonState.ts` lives here and not in a component:
+ * the rule worth testing is *which keys go onto the command line*, and a `useState` cannot be
+ * tested. Sending an extra key breaks nothing (the daemon treats an equal value as a silent no-op),
+ * but it says three things we do not mean, and it makes `config.toml` get rewritten for a click
+ * that changed nothing.
  */
 
-/** Bốn khoá `[paths]` có thể dời, đúng thứ tự tệp cấu hình liệt kê. */
+/** The four movable `[paths]` keys, in the order the config file lists them. */
 export const KEYS = ["runtimes", "packages", "data", "logs"] as const;
 
 export type StorageKey = (typeof KEYS)[number];
 
-/** Một dòng của bảng chọn. Chỉ những gì bảng vẽ. */
+/** One row of the picker table. Only what the table draws. */
 export interface StorageRow {
   key: StorageKey;
-  /** Chỗ nó đang ở, theo daemon. */
+  /** Where it currently is, according to the daemon. */
   current: string;
-  /** Nó có nằm ngoài home không — daemon trả lời, không phải bên này so chuỗi. */
+  /** Whether it lies outside the home — the daemon answers; this side does not compare strings. */
   relocated: boolean;
-  /** Chỗ người dùng vừa chọn, hoặc `null` khi họ chưa chọn gì. */
+  /** Where the user just chose, or `null` when they have not chosen anything. */
   picked: string | null;
 }
 
-/** Bốn dòng từ một câu trả lời, chưa ai chọn gì. */
+/** Four rows from an answer, with nothing chosen yet. */
 export function rowsFrom(report: StorageReport): StorageRow[] {
   return KEYS.map((key) => ({
     key,
@@ -38,18 +39,19 @@ export function rowsFrom(report: StorageReport): StorageRow[] {
   }));
 }
 
-/** Một dòng sau khi người dùng chọn một thư mục cho nó. */
+/** One row after the user has chosen a directory for it. */
 export function pick(rows: StorageRow[], key: StorageKey, directory: string): StorageRow[] {
   return rows.map((row) => (row.key === key ? { ...row, picked: directory } : row));
 }
 
 /**
- * Bốn dòng sau khi người dùng chọn **một** thư mục cho cả bốn.
+ * The four rows after the user has chosen **one** directory for all four.
  *
- * `<thư mục>\runtimes`, `<thư mục>\packages`, … — trường hợp thường gặp là "để hết lên ổ kia", và
- * bắt người ta bấm bốn lần cho một ý định là bắt họ làm việc của máy. Nối bằng dấu phân cách của hệ
- * điều hành, giống giá trị nút chọn từng dòng gửi đi: daemon ghi `config.toml` qua `toml_edit`, vốn
- * tự thoát dấu gạch ngược (T191).
+ * `<directory>\runtimes`, `<directory>\packages`, … — the common case is "put everything on the
+ * other drive", and making people click four times for one intention is making them do the
+ * machine's work. Joined with the operating system's separator, like the value the per-row button
+ * sends: the daemon writes `config.toml` through `toml_edit`, which escapes backslashes itself
+ * (T191).
  */
 export function oneFolderFor(
   rows: StorageRow[],
@@ -60,14 +62,14 @@ export function oneFolderFor(
 }
 
 /**
- * Những khoá cần gửi đi, và chỉ những khoá đó.
+ * The keys that need to be sent, and only those.
  *
- * Một dòng chưa ai chọn không được gửi. Một dòng người ta chọn đúng chỗ nó đang ở cũng không —
- * daemon sẽ coi là no-op, nhưng không nhờ vào điều đó: cái được gửi nên là *cái đã đổi*, để lời
- * mình nói với daemon đúng bằng điều mình có ý nói.
+ * A row nobody has chosen is not sent. Nor is a row chosen to exactly where it already is — the
+ * daemon would treat it as a no-op, but we do not rely on that: what gets sent should be *what
+ * changed*, so what we tell the daemon matches exactly what we mean.
  *
- * `undefined` khi không có gì đổi, vì đó là thứ `startDaemon` nhận cho "không chọn gì" — và một
- * object rỗng thì frontend đọc là "có chọn" trong khi nó không.
+ * `undefined` when nothing changed, because that is what `startDaemon` takes for "nothing chosen"
+ * — and the frontend would read an empty object as "something chosen" when nothing was.
  */
 export function chosenFrom(rows: StorageRow[]): ChosenPaths | undefined {
   const chosen: ChosenPaths = {};
@@ -83,17 +85,18 @@ export function chosenFrom(rows: StorageRow[]): ChosenPaths | undefined {
   return any ? chosen : undefined;
 }
 
-/** Quyền chọn còn mở không — daemon trả lời, bên này không suy ra từ đường dẫn. */
+/** Whether the choice is still open — the daemon answers; this side does not infer it from the
+ *  path. */
 export function isFree(report: StorageReport): boolean {
   return report.changeable.changeable === "free";
 }
 
 /**
- * Câu daemon nói về những gì đã cài, hoặc `null` khi chưa cài gì.
+ * The daemon's sentence about what has been installed, or `null` when nothing has.
  *
- * Câu của daemon chứ không phải câu bên này dựng: *cái gì đã được cài* là một phép đo nó vừa làm,
- * và một client viết lại câu đó là một câu trả lời thứ hai cho cùng một câu hỏi — cùng luật màn
- * hình Doctor và Uninstall đang theo.
+ * The daemon's sentence rather than one built on this side: *what has been installed* is a
+ * measurement it just made, and a client rewriting that sentence is a second answer to the same
+ * question — the same rule the Doctor and Uninstall screens follow.
  */
 export function explanationOf(report: StorageReport): string | null {
   return report.changeable.changeable === "taken" ? report.changeable.explanation : null;

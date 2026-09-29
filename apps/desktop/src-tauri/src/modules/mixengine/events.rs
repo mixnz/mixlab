@@ -1,12 +1,13 @@
-//! Giữ `GET /events` mở và đẩy từng message lên UI.
+//! Keeps `GET /events` open and pushes each message up to the UI.
 //!
-//! **Chỗ này không diễn giải gì** — nó chở JSON thô. Sự kiện của MixEngine internally tagged, và
-//! một biến thể sinh ra ở phiên bản sau phải tới được một MixDB cũ như một object bỏ qua được,
-//! chứ không phải như một lỗi parse. Việc hiểu payload là của frontend.
+//! **Nothing is interpreted here** — it carries raw JSON. MixEngine's events are internally tagged,
+//! and a variant born in a later version has to reach an older MixDB as an object it can ignore,
+//! not as a parse error. Understanding the payload is the frontend's job.
 //!
-//! **Sự kiện là best-effort và không bao giờ là đường duy nhất biết trạng thái.** Hai thứ frontend
-//! phải xử đều đi qua đây dưới dạng một message: `{"type":"resync","missed":N}` khi bus bên kia
-//! tràn, và [`DISCONNECTED`] khi kết nối đứt. Cả hai đều có nghĩa là "đọc lại `*.list`".
+//! **Events are best-effort and never the only way to know the state.** Two things the frontend
+//! has to handle both come through here as a message: `{"type":"resync","missed":N}` when the bus
+//! on the other side overflows, and [`DISCONNECTED`] when the connection drops. Both mean "read
+//! `*.list` again".
 
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
@@ -21,13 +22,13 @@ use super::sse::Frames;
 use super::state::MixEngineState;
 use super::transport;
 
-/// Message MixDB tự phát khi stream đứt. Tên có tiền tố `mixdb_` để không bao giờ đụng một `type`
-/// của MixEngine, kể cả một cái thêm vào ở phiên bản sau.
+/// The message MixDB emits itself when the stream drops. The name has a `mixdb_` prefix so it can
+/// never collide with a MixEngine `type`, including one added in a later version.
 pub const DISCONNECTED: &str = r#"{"type":"mixdb_disconnected"}"#;
 
-/// Mở stream và chạy tới khi bị hủy hoặc kết nối đứt.
+/// Opens the stream and runs until cancelled or until the connection drops.
 ///
-/// Trả về ngay khi stream đã mở; phần đọc chạy trên một task riêng.
+/// Returns as soon as the stream is open; the reading runs on a task of its own.
 pub async fn stream_events(
     on_event: Channel<String>,
     window: &str,
@@ -46,7 +47,7 @@ pub async fn stream_events(
     open(TokioIo::new(io), request, on_event, window, state).await
 }
 
-/// Bắt tay, gửi, rồi giao phần đọc cho một task.
+/// Handshakes, sends, then hands the reading over to a task.
 async fn open<I>(
     io: TokioIo<I>,
     request: Request<Full<Bytes>>,
@@ -70,13 +71,14 @@ where
         .await
         .map_err(|e| err!("error.mixengineProtocol", message = e))?;
 
-    // Chỉ giữ token sau khi stream đã mở được: hủy cái đang chạy rồi mới phát hiện cái mới không
-    // mở nổi sẽ để người dùng không còn stream nào cả.
+    // Only keep the token once the stream has opened: cancelling the running one and only then
+    // finding the new one cannot open would leave the user with no stream at all.
     let token = CancellationToken::new();
     state.keep(window, token.clone());
 
     tauri::async_runtime::spawn(async move {
-        // `sender` phải sống cùng task này: thả nó ra là đóng kết nối mà body đang chảy trên đó.
+        // `sender` has to live as long as this task: dropping it closes the connection the body
+        // is flowing over.
         let _sender = sender;
         let mut frames = Frames::new();
         loop {
@@ -93,7 +95,8 @@ where
                 }
             }
         }
-        // Kết nối đứt là một tin, không phải im lặng: frontend đọc lại `*.list` khi thấy nó.
+        // A dropped connection is a message, not silence: the frontend reads `*.list` again when
+        // it sees it.
         let _ = on_event.send(DISCONNECTED.to_string());
     });
 

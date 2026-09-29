@@ -12,7 +12,7 @@ import { siteUrl } from "../../siteState";
 import ElevationDialog from "../ElevationDialog";
 import styles from "./AfterApply.module.css";
 
-/** Đã đi tới đâu trong chuỗi ba bước. */
+/** How far along the three-step chain we are. */
 type Phase =
   | { kind: "checking" }
   | { kind: "granting"; pending: unknown[]; canPrompt: boolean; reason?: string | null }
@@ -21,58 +21,61 @@ type Phase =
 
 interface Props {
   /**
-   * Kết quả của lượt apply vừa xong.
+   * The result of the apply that just finished.
    *
-   * **Cả một kết quả chứ không chỉ tên project** — T125. Khối này từng nhận đúng một chuỗi, nên nó
-   * không có cách nào biết apply vừa hỏng bước nào và nói "đã sẵn sàng" cho mọi lượt apply mà job
-   * không ném lỗi. Một `[scaffold]` exit khác 0 là `StepResult::Failed` *bên trong* một job thành
-   * công (`api/apply.rs` cố ý: một script post-install hỏng không đáng để phá cả project), nên
-   * "job xong" và "apply ổn" là hai câu khác nhau và chỉ câu thứ hai đáng để mời người ta bấm vào
-   * site.
+   * **A whole result rather than just the project name** — T125. This block used to take a single
+   * string, so it had no way to know which step the apply had just failed and said "ready" for
+   * every apply whose job did not throw. A `[scaffold]` with a non-zero exit is a
+   * `StepResult::Failed` *inside* a successful job (`api/apply.rs` on purpose: a broken
+   * post-install script is not worth tearing down the whole project), so "job done" and "apply
+   * fine" are two different statements and only the second is worth inviting people to click into
+   * the site.
    */
   applied: BlueprintApplied;
 
-  /** Người dùng đóng khối này. `url` là địa chỉ tìm được, hoặc `null` nếu không có site nào. */
+  /** The user closes this block. `url` is the address found, or `null` if there is no site. */
   onFinished: (url: string | null) => void;
 }
 
 /**
- * Đoạn sau một `blueprint.apply` thành công: xin quyền → khởi động → mở site.
+ * What follows a successful `blueprint.apply`: ask for rights → start → open the site.
  *
- * **Ba call, theo đúng thứ tự đó, và thứ tự mới là phần khó.** `blueprint.apply` không bao giờ bật
- * prompt quyền — nó xếp hosts entry và chứng chỉ vào hàng đợi, và client là chỗ tiêu cái prompt duy
- * nhất ấy. Khởi động *trước* lượt cho phép sẽ phục vụ site ở một tên máy này chưa phân giải và
- * bằng chứng chỉ chưa store nào tin; mở trình duyệt vào đó là một lỗi đỏ nằm cuối một thanh tiến
- * độ xanh.
+ * **Three calls, in exactly that order, and the order is the hard part.** `blueprint.apply` never
+ * raises the rights prompt — it queues the hosts entry and the certificate, and the client is where
+ * that single prompt is spent. Starting *before* the grant would serve the site on a name this
+ * machine does not resolve yet, with a certificate no store trusts yet; opening a browser on that
+ * is a red error at the end of a green progress bar.
  *
- * Hàng đợi rỗng (máy đã có sẵn tên trong hosts) thì đi thẳng sang khởi động — không có gì để hỏi.
- * Không đọc được `elevation.status` cũng đi tiếp: site vẫn chạy, và đứng im vì không hỏi được một
- * câu phụ trợ thì tệ hơn một site chạy mà tên chưa phân giải.
+ * An empty queue (the machine already has the name in hosts) goes straight on to starting — there
+ * is nothing to ask. Failing to read `elevation.status` also goes on: the site still runs, and
+ * standing still because a side question could not be asked is worse than a running site whose
+ * name does not resolve yet.
  *
- * **"Khởi động" nghĩa là những gì project này cần** — T125, và câu chữ nói đúng thế. Tập ấy vẫn
- * không phải của client: `service.start` nhận một scope `project` và daemon là chỗ đọc
- * `site_service_links`, pool php-fpm site đặt tên, và front end của home. Trước T125 chỗ này gửi
- * một target rỗng — *mọi service home này khai* — nên dựng một site Laravel trên máy có bốn bản PHP
- * và ba database bật cả tám.
+ * **"Start" means what this project needs** — T125, and the wording says exactly that. That set is
+ * still not the client's: `service.start` takes a `project` scope, and the daemon is what reads
+ * `site_service_links`, the php-fpm pool the site names, and the home's front end. Before T125 this
+ * sent an empty target — *every service this home declares* — so bringing up a Laravel site on a
+ * machine with four PHP versions and three databases started all eight.
  *
- * **Một apply có bước hỏng không được mời người ta bấm vào site.** Một `[scaffold]` exit khác 0 về
- * đây trong một job *thành công*, nên khối này từng nói "đã sẵn sàng" bên trên một thư mục dựng dở.
- * Chuỗi vẫn chạy đủ — hàng đợi quyền vẫn đáng tiêu, front end vẫn đáng bật, và bỏ dở cả hai chỉ để
- * phản đối một script hỏng là để lại một máy nửa vời — nhưng cái *nói ra* thì đổi: tiêu đề khác,
- * các bước hỏng nằm trên cùng, và địa chỉ là một dòng chữ chứ không phải một nút mời bấm.
+ * **An apply with a failed step must not invite people to click into the site.** A `[scaffold]`
+ * with a non-zero exit arrives here inside a *successful* job, so this block used to say "ready"
+ * above a half-built directory. The chain still runs in full — the rights queue is still worth
+ * spending, the front end still worth starting, and abandoning both just to protest a broken script
+ * leaves the machine half done — but what it *says* changes: a different title, the failed steps on
+ * top, and the address as a line of text rather than an inviting button.
  *
- * **Một component chứ không phải hai bản sao.** Chuỗi này từng chỉ sống trong `QuickStart`, nên
- * apply từ màn Blueprints kết thúc ở một danh sách bước và một nút Đóng: service chưa bật, tên
- * miền chưa phân giải, và không có đường nào tới site vừa dựng.
+ * **One component rather than two copies.** This chain used to live only in `QuickStart`, so an
+ * apply from the Blueprints screen ended at a list of steps and a Close button: services not
+ * started, domain not resolved, and no way to the site just built.
  *
- * **Không lồng trong `ApplyDialog`.** Cả `ElevationDialog` lẫn khối này đều là `Modal`, và `Modal`
- * nghe Escape ở mức `window`: hai cái chồng nhau thì một phím Escape đóng cả hai. Nên `ApplyDialog`
- * đóng lại trước, rồi màn gọi nó dựng component này lên thay chỗ.
+ * **Not nested inside `ApplyDialog`.** Both `ElevationDialog` and this block are `Modal`s, and
+ * `Modal` listens for Escape at `window` level: with two stacked, one Escape closes both. So
+ * `ApplyDialog` closes first, then the screen that called it brings this component up in its place.
  *
- * **Đưa ra địa chỉ, không tự điều hướng.** Bản đầu mở luôn trình duyệt khi lệnh khởi tạo đã chạy;
- * thử xong thì thấy chính cái popup này đã làm đủ việc *cho người ta thấy thành quả*, và giật một
- * cửa sổ trình duyệt lên trước mặt ai đó là một tác dụng phụ họ không xin. Nút ở đây, cú bấm là
- * của họ.
+ * **Offer the address, do not navigate by itself.** The first version opened the browser right
+ * away once the init command had run; after trying it, this popup turned out to do enough to *show
+ * people the result*, and pulling a browser window up in front of someone is a side effect they did
+ * not ask for. The button is here; the click is theirs.
  */
 export default function AfterApply({ applied, onFinished }: Props) {
   const project = applied.project;
@@ -81,7 +84,7 @@ export default function AfterApply({ applied, onFinished }: Props) {
   const [error, setError] = useState("");
   const { t } = useTranslation();
 
-  // Lượt xin quyền. Chạy đúng một lần, ngay khi khối này dựng lên.
+  // The rights pass. Runs exactly once, as soon as this block comes up.
   useEffect(() => {
     if (phase.kind !== "checking") return;
     let live = true;
@@ -100,14 +103,14 @@ export default function AfterApply({ applied, onFinished }: Props) {
           setPhase({ kind: "starting" });
         }
       })
-      // Đi tiếp: xem doc ở trên.
+      // Go on: see the doc above.
       .catch(() => live && setPhase({ kind: "starting" }));
     return () => {
       live = false;
     };
   }, [phase.kind]);
 
-  // Lượt khởi động, rồi tìm địa chỉ của site vừa dựng.
+  // The start pass, then finding the address of the site just built.
   useEffect(() => {
     if (phase.kind !== "starting") return;
     let live = true;
@@ -130,9 +133,9 @@ export default function AfterApply({ applied, onFinished }: Props) {
     };
   }, [phase.kind, project, t]);
 
-  // Đóng hộp thoại quyền là đi tiếp, không phải huỷ: `elevation.drop` không có ở đây, nên đóng chỉ
-  // ẩn nó đi và hàng đợi vẫn còn — Dashboard vẫn đếm. Site vẫn nên được khởi động: một tên chưa
-  // phân giải là chuyện của hàng đợi, không phải lý do để không chạy gì cả.
+  // Closing the rights dialog means going on, not cancelling: `elevation.drop` is not here, so
+  // closing only hides it and the queue remains — the Dashboard still counts it. The site should
+  // still be started: an unresolved name is the queue's business, not a reason to run nothing.
   if (phase.kind === "granting") {
     return (
       <ElevationDialog
@@ -146,9 +149,9 @@ export default function AfterApply({ applied, onFinished }: Props) {
 
   const done = phase.kind === "ready";
 
-  // Tiêu đề nói đúng trạng thái nó đang ở. Một cái nhan đề đứng yên ở "Đang đưa project lên" phía
-  // trên một dòng "đã sẵn sàng" là hai câu cãi nhau trong cùng một hộp thoại — và nhan đề là thứ
-  // người ta đọc trước.
+  // The title says exactly which state it is in. A heading stuck at "Bringing the project up" above
+  // a "ready" line is two sentences arguing in the same dialog — and the heading is what people
+  // read first.
   const heading = !done
     ? t("mixengine.afterApply.titleWorking")
     : failed.length > 0
@@ -180,8 +183,8 @@ export default function AfterApply({ applied, onFinished }: Props) {
               </div>
             )}
 
-            {/* Ở **trên** địa chỉ, không phải dưới nó. Bước hỏng là thứ quyết định người ta làm gì
-                tiếp theo, và một khối cảnh báo nằm dưới một nút xanh là một khối không ai đọc. */}
+            {/* **Above** the address, not below it. The failed step is what decides what people do
+                next, and a warning block under a green button is a block nobody reads. */}
             {done && failed.length > 0 && (
               <div className={styles.trouble} role="alert">
                 <p>{t("mixengine.afterApply.troubleTitle")}</p>
@@ -201,10 +204,10 @@ export default function AfterApply({ applied, onFinished }: Props) {
                 {phase.url === null ? (
                   <p>{t("mixengine.afterApply.noSite")}</p>
                 ) : failed.length > 0 ? (
-                  // **Địa chỉ, không phải lời mời.** Site có thật và đang được phục vụ, nên giấu nó
-                  // đi là giấu mất thứ người ta cần khi đã sửa xong; nhưng một nút primary "Mở
-                  // website" bên dưới một lệnh khởi tạo hỏng là hộp thoại này tự khen một việc nó
-                  // vừa nói là hỏng.
+                  // **An address, not an invitation.** The site is real and being served, so hiding
+                  // it would hide what people need once they have fixed things; but a primary "Open
+                  // website" button under a failed init command is this dialog praising a job it
+                  // has just said failed.
                   <p>{t("mixengine.afterApply.readyWithTrouble", { url: phase.url })}</p>
                 ) : (
                   <>

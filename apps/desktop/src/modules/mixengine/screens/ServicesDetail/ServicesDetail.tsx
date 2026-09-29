@@ -98,13 +98,13 @@ export default function ServicesDetail({ active }: { active: boolean }) {
     });
   }, [reload]);
 
-  /** Trạng thái đã dịch; một trạng thái daemon mới hơn build này hiện nguyên văn. */
+  /** The translated state; a state from a daemon newer than this build is shown verbatim. */
   function stateLabel(state: string | null | undefined, stoppedBy?: StoppedBy | null): string {
     const key = serviceStateKey(state, stoppedBy);
     return key === null ? (state ?? "—") : t(key);
   }
 
-  /** Câu mà nhãn ngắn bỏ bớt, cho tooltip. */
+  /** The sentence the short label leaves out, for the tooltip. */
   function stateHint(state: string | null | undefined, stoppedBy?: StoppedBy | null): string | undefined {
     const key = serviceStateHint(state, stoppedBy);
     return key === null ? undefined : t(key);
@@ -301,14 +301,14 @@ export default function ServicesDetail({ active }: { active: boolean }) {
                 {movedNotice(moved)}
               </p>
             )}
-            {/* Đầu tiên, và **không vẽ gì cả** cho một service không phải database — nên với
-                nginx hay một php-fpm pool, cái đầu tiên đọc được vẫn là Autostart. Nó đứng trên
-                vì nó là thứ riêng của service này, còn ba panel dưới hỏi cùng một câu cho mọi
-                service. */}
+            {/* First, and it **draws nothing at all** for a service that is not a database — so for
+                nginx or a php-fpm pool, the first thing to read is still Autostart. It sits on
+                top because it is specific to this service, while the three panels below ask the
+                same question of every service. */}
             <DatabasePanel service={selected} />
-            {/* Cạnh nhau và theo thứ tự này: autostart trả lời "cái gì đang chạy khi tôi ngồi
-                xuống", idle trả lời "cái gì còn chạy khi tôi không dùng tới". Hai câu hỏi khác
-                nhau về một service, và ai bật cả hai phải nhìn thấy cả hai cùng lúc. */}
+            {/* Side by side and in this order: autostart answers "what is running when I sit
+                down", idle answers "what keeps running when I am not using it". Two different
+                questions about one service, and anyone turning both on has to see both at once. */}
             <AutostartPanel service={selected} />
             <IdlePanel service={selected} />
             <LimitsPanel service={selected} />

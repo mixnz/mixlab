@@ -5,10 +5,11 @@ export type Kind = SiteKind["kind"];
 export type Target = RouteTarget["target"];
 
 /**
- * Một route trong lúc đang sửa — T135.
+ * One route while being edited — T135.
  *
- * Phẳng, không phải union: người dùng đổi qua lại giữa các target và ô họ vừa gõ phải còn nguyên khi
- * họ đổi lại. `routeToApi` là chỗ nó hẹp lại đúng hình dạng daemon nhận.
+ * Flat, not a union: the user switches back and forth between targets, and the field they just
+ * typed into has to still be there when they switch back. `routeToApi` is where it narrows to
+ * exactly the shape the daemon takes.
  */
 export interface RouteRow {
   path: string;
@@ -68,11 +69,11 @@ export function siteDraftFromDetail(detail: SiteDetail): SiteDraft {
     pool: kind.kind === "php-fpm" ? (kind.pool ?? "") : "",
     upstream: kind.kind === "reverse-proxy" ? kind.upstream : "",
     port: kind.kind === "node-app" ? String(kind.port) : "",
-    // T135. `?? []` vì một daemon build trước T135 không gửi trường này.
+    // T135. `?? []` because a daemon built before T135 does not send this field.
     routes: (detail.site.routes ?? []).map(routeFromApi),
     services: new Set(detail.services.map((s) => s.service)),
     https: detail.site.https,
-    // T98. `?? false` vì một daemon build trước T98 không gửi trường này.
+    // T98. `?? false` because a daemon built before T98 does not send this field.
     httpsRedirect: detail.site.https_redirect ?? false,
     acceptRiskyTld: false,
     enabled: detail.site.state === "enabled",
@@ -83,7 +84,7 @@ export function emptyRoute(): RouteRow {
   return { path: "", target: "proxy", upstream: "", pool: "", root: "" };
 }
 
-/** Một `SiteRoute` từ daemon, mở rộng thành dòng đang sửa. */
+/** A `SiteRoute` from the daemon, expanded into a row being edited. */
 export function routeFromApi(route: SiteRoute): RouteRow {
   return {
     path: route.path,
@@ -94,7 +95,7 @@ export function routeFromApi(route: SiteRoute): RouteRow {
   };
 }
 
-/** Và ngược lại — chỉ gửi đúng field của target đang chọn. */
+/** And back again — only sends the fields of the chosen target. */
 export function routeToApi(row: RouteRow): SiteRoute {
   switch (row.target) {
     case "proxy":

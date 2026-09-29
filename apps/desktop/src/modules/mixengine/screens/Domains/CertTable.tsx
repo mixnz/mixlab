@@ -52,16 +52,16 @@ function outcomeTone(row: CertRow): StatusTone {
 }
 
 /**
- * Chứng chỉ từng site — T2.7.
+ * Each site's certificate — T2.7.
  *
- * **Một call `cert.issue` không `site` vẽ cả bảng.** Cấp lại một hàng là gọi lại đúng method đó với
- * `{ site }` — idempotent, không bật prompt.
+ * **One `cert.issue` call without `site` draws the whole table.** Reissuing one row calls that same
+ * method again with `{ site }` — idempotent, raises no prompt.
  */
 export default function CertTable({
   revision,
   onError,
 }: {
-  /** Đổi là đọc lại — `Domains` tăng nó khi một job kết thúc hay khi màn được mở lại. */
+  /** A change means reread — `Domains` bumps it when a job ends or when the screen is reopened. */
   revision: number;
   onError: (message: string) => void;
 }) {

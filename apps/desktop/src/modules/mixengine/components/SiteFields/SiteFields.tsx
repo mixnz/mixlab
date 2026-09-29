@@ -58,13 +58,13 @@ export default function SiteFields({
   }
 
   /**
-   * Dialog luôn trả một đường dẫn tuyệt đối — cắt bỏ phần project root trước khi lưu vào state, vì
-   * đó là hình dạng thật `SiteSummary.doc_root` giữ ("Relative to the project's root, as stored").
-   * Không cắt thì ô này hiện tuyệt đối ngay sau khi chọn nhưng lại hiện phần còn lại sau khi lưu
-   * rồi mở lại — hai lần hiện khác nhau cho cùng một site.
+   * The dialog always returns an absolute path — strip the project root before storing it in
+   * state, because that is the real shape `SiteSummary.doc_root` holds ("Relative to the project's
+   * root, as stored"). Without stripping, this field shows an absolute path right after choosing
+   * but only the remainder after saving and reopening — two different displays for the same site.
    *
-   * `defaultPath` mở sẵn đúng chỗ đang chọn (root, hoặc root/doc_root hiện tại) để bấm Browse là
-   * đi thẳng vào project, không phải mò lại từ đầu ổ đĩa.
+   * `defaultPath` opens right at the current choice (root, or the current root/doc_root) so that
+   * pressing Browse goes straight into the project, rather than feeling around from the drive root.
    */
   async function browseDocRoot() {
     const picked = await openDialog({
@@ -118,8 +118,9 @@ export default function SiteFields({
             {t("common.browse")}
           </Button>
         </div>
-        {/* Ô trên chỉ giữ phần còn lại sau root (đúng cái daemon lưu) — dòng này là chỗ duy nhất
-            người dùng thấy root của project và đường dẫn đầy đủ thật sự là gì. */}
+        {/* The field above holds only the remainder after the root (exactly what the daemon
+            stores) — this line is the only place the user sees the project's root and what the
+            full path really is. */}
         {projectRoot !== "" && (
           <p className={styles.hint}>
             {t("mixengine.sites.form.docRootFull", { path: joinDocRoot(projectRoot, value.docRoot) })}
@@ -183,8 +184,8 @@ export default function SiteFields({
         )}
       </div>
 
-      {/* T135. Khối này không kiểm tra gì cả — đường dẫn sai quay về bằng đúng câu daemon nói,
-          giống mọi thứ khác trong form này. */}
+      {/* T135. This block validates nothing — a wrong path comes back with exactly what the daemon
+          says, like everything else in this form. */}
       <div className={styles.field}>
         {t("mixengine.sites.form.routes")}
         <p className={styles.hint}>{t("mixengine.sites.form.routesHint")}</p>
@@ -295,7 +296,7 @@ export default function SiteFields({
             label={t("mixengine.sites.form.https")}
             checked={value.https}
             disabled={disabled}
-            // Bỏ HTTPS là bỏ luôn redirect: không có địa chỉ HTTPS nào để chuyển tới.
+            // Dropping HTTPS drops the redirect too: there is no HTTPS address to redirect to.
             onChange={(https) => set(https ? { https } : { https, httpsRedirect: false })}
           />
           <SwitchTile

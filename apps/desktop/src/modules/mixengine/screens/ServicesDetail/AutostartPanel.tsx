@@ -9,16 +9,17 @@ import * as api from "../../api";
 import styles from "./AutostartPanel.module.css";
 
 /**
- * Service này có khởi động cùng MixEngine không — T114.
+ * Whether this service starts along with MixEngine — T114.
  *
- * **Một công tắc, không nút Save**, khác `IdlePanel` ngay bên cạnh: idle có ba trạng thái và một
- * con số phải gõ, nên nó cần một lần xác nhận; đây là một cột boolean, và một công tắc phải bấm
- * thêm "Lưu" là một công tắc người ta tưởng đã bật.
+ * **A switch, no Save button**, unlike `IdlePanel` right next to it: idle has three states and a
+ * number to type, so it needs a confirmation; this is a boolean column, and a switch that needs an
+ * extra "Save" press is a switch people think they have turned on.
  *
- * **Đặt cạnh idle và có một dòng giữa hai cái.** Hai cài đặt trả lời hai câu khác nhau — "khi tôi
- * ngồi xuống thì cái gì đang chạy" và "khi tôi không dùng thì cái gì còn chạy" — và một service bật
- * cả hai sẽ khởi động lúc đăng nhập rồi bị dừng khi không ai dùng. Đó là đúng, và cũng đúng là thứ
- * người ta sẽ đọc thành lỗi, nên câu giải thích nằm ngay đây thay vì trong tài liệu.
+ * **Placed next to idle, with a line between the two.** The two settings answer two different
+ * questions — "what is running when I sit down" and "what keeps running when I am not using it" —
+ * and a service with both on will start at login and then be stopped when nobody uses it. That is
+ * correct, and it is also exactly what people will read as a bug, so the explanation sits right
+ * here rather than in the documentation.
  */
 export default function AutostartPanel({ service }: { service: string }) {
   const [autostart, setAutostart] = useState<boolean | null>(null);
@@ -26,8 +27,9 @@ export default function AutostartPanel({ service }: { service: string }) {
   const [error, setError] = useState("");
   const { t } = useTranslation();
 
-  // Đọc từ `service.list` chứ không phải một method đọc riêng: `ServiceSummary` đã mang sẵn cột
-  // này (T112), nên thêm một command backend nữa chỉ để hỏi một service là thêm một chỗ để lệch.
+  // Read from `service.list` rather than a separate read method: `ServiceSummary` already carries
+  // this column (T112), so adding another backend command just to ask about one service would add
+  // another place to drift.
   const reload = useCallback(async () => {
     try {
       const list = await api.services();
@@ -48,8 +50,9 @@ export default function AutostartPanel({ service }: { service: string }) {
     setError("");
     try {
       const summary = await api.serviceSetAutostart({ service, autostart: wanted });
-      // Thứ daemon trả về, không phải thứ vừa bấm: một công tắc nói dối về cột trong database tệ
-      // hơn một công tắc chậm — cùng luật bảng service ở Dashboard đang theo.
+      // What the daemon returns, not what was just clicked: a switch that lies about the column in
+      // the database is worse than a slow switch — the same rule the Dashboard's service table
+      // follows.
       setAutostart(summary.autostart);
     } catch (e) {
       setError(errorMessage(t, e));

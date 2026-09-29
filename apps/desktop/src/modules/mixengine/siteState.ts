@@ -6,21 +6,23 @@ import { joinPath, nativePath, PATH_STYLE, type PathStyle } from "../../core/pat
 export type SiteRow = SiteSummary;
 
 /**
- * Chỉ site thuộc một project mới sửa được.
+ * Only a site belonging to a project can be edited.
  *
- * Site của một extension chỉ xem/liệt kê được ở đây — `site.update` gửi thẳng vào nó vẫn bị daemon
- * từ chối dù UI có cho phép, nhưng để nút bấm luôn hỏng là hứa một hành động không giữ được.
+ * An extension's site can only be viewed/listed here — a `site.update` sent straight at it is
+ * still refused by the daemon even if the UI allowed it, but leaving a button that always fails
+ * promises an action that cannot be kept.
  */
 export function canEditSite(owner: SiteOwner): boolean {
   return owner.type === "project";
 }
 
 /**
- * Áp `site_sharing_changed` lên bảng site.
+ * Applies `site_sharing_changed` to the site table.
  *
- * Cùng luật Dashboard đã theo cho `service_state_changed`: sự kiện là best-effort, nhưng khi tới nó
- * là nguồn thật, không phải suy đoán. `type` lạ hoặc payload hỏng bị bỏ qua, không ném — một biến
- * thể sinh ra ở phiên bản sau phải tới được một MixDB cũ như một object bỏ qua được.
+ * The same rule the Dashboard follows for `service_state_changed`: events are best-effort, but when
+ * one arrives it is the real source, not a guess. An unknown `type` or a broken payload is ignored,
+ * not thrown — a variant born in a later version has to reach an older MixDB as an ignorable
+ * object.
  */
 export function applySharingChange(rows: SiteRow[], raw: string): SiteRow[] {
   let event: unknown;
@@ -40,8 +42,8 @@ export function applySharingChange(rows: SiteRow[], raw: string): SiteRow[] {
   return rows.map((row) => (row.domain === domain ? { ...row, sharing } : row));
 }
 
-/** Tên hiển thị mỗi domain gõ vào, tách bằng dấu phẩy hoặc xuống dòng — đầu danh sách là chính.
- *  Dùng chung giữa `SiteForm` và khối "tạo nhanh site" trong `ProjectForm`. */
+/** The display names of the typed domains, separated by commas or newlines — the first in the list
+ *  is the primary. Shared by `SiteForm` and the "quick site" block in `ProjectForm`. */
 export function parseDomains(raw: string): string[] {
   return raw
     .split(/[,\n]/)
@@ -50,11 +52,12 @@ export function parseDomains(raw: string): string[] {
 }
 
 /**
- * Phần còn lại của một đường dẫn tuyệt đối sau khi bỏ project root — dùng ngay sau khi dialog chọn
- * thư mục (luôn trả tuyệt đối) trả về, để field Doc root chỉ giữ đúng phần daemon thật sự lưu
- * (`SiteSummary.doc_root`), viết theo dấu phân cách của hệ điều hành như daemon gửi về (T191), để
- * field giữ cùng một chuỗi dù đến từ Browse hay từ daemon. Không nằm dưới root thì giữ nguyên tuyệt
- * đối — `SiteCreate.doc_root` chấp nhận cả hai, đây là trường hợp hiếm không đáng chặn.
+ * The remainder of an absolute path after removing the project root — used right after the
+ * directory-picker dialog (which always returns an absolute path) returns, so the Doc root field
+ * holds only the part the daemon really stores (`SiteSummary.doc_root`), written with the operating
+ * system's separator as the daemon sends it back (T191), so the field holds the same string whether
+ * it came from Browse or from the daemon. Not under the root keeps the absolute path —
+ * `SiteCreate.doc_root` accepts both, and this is a rare case not worth blocking.
  */
 export function relativeToRoot(
   root: string,
@@ -70,15 +73,15 @@ export function relativeToRoot(
   return absolute;
 }
 
-/** Nối root với phần còn lại để hiển thị, theo dấu phân cách của hệ điều hành (T191) — chỉ để đọc,
- *  không phải giá trị gửi lên daemon (đó vẫn là phần còn lại một mình). `""` là chính root, đúng
- *  nghĩa `SiteSummary.doc_root` ghi. */
+/** Joins the root with the remainder for display, using the operating system's separator (T191) —
+ *  for reading only, not the value sent to the daemon (that is still the remainder on its own).
+ *  `""` is the root itself, exactly as `SiteSummary.doc_root` describes. */
 export function joinDocRoot(root: string, relative: string, style: PathStyle = PATH_STYLE): string {
   if (relative === "") return root;
   return joinPath(root, relative, style);
 }
 
-/** `mm:ss`, hay `hh:mm:ss` một khi còn hơn một giờ. Quá hạn kẹp về 0, không âm. */
+/** `mm:ss`, or `hh:mm:ss` once more than an hour remains. Past due clamps to 0, never negative. */
 export function formatRemaining(untilMs: number, nowMs: number = Date.now()): string {
   const totalSeconds = Math.max(0, Math.round((untilMs - nowMs) / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -89,38 +92,41 @@ export function formatRemaining(untilMs: number, nowMs: number = Date.now()): st
 }
 
 /**
- * Địa chỉ mở được của một site — T117.
+ * The openable address of a site — T117.
  *
- * `SiteSummary` mang domain và một cờ `https`, không mang URL: daemon trả *site là gì*, còn ghép
- * thành một địa chỉ là việc hiển thị. Ở đúng một chỗ vì hai chỗ sẽ lệch nhau đúng vào ngày một
- * trong hai được sửa.
+ * `SiteSummary` carries the domain and an `https` flag, not a URL: the daemon returns *what the
+ * site is*, and turning it into an address is a display matter. In exactly one place because two
+ * places would drift apart on exactly the day one of them gets changed.
  *
- * **`https` là *khai báo*, không phải chứng chỉ đã cấp xong.** Một site vừa tạo có `https: true`
- * trước khi ai kịp cho phép cài CA; link này vẫn là link đúng để mở, còn trình duyệt cảnh báo gì
- * thì là câu chuyện của lượt elevation chưa chi.
+ * **`https` is a *declaration*, not a certificate already issued.** A freshly created site has
+ * `https: true` before anyone has had time to allow the CA to be installed; this link is still the
+ * right link to open, and whatever the browser warns about belongs to the elevation pass not yet
+ * done.
  */
 export function siteUrl(site: { domain: string; https: boolean }): string {
   return `${site.https ? "https" : "http"}://${site.domain}`;
 }
 
-/** Hai việc một cú bấm vào domain sinh ra, tách khỏi việc *làm* chúng. */
+/** The two things a click on a domain produces, kept apart from *doing* them. */
 export interface SiteVisit {
-  /** Project cần bật service trước khi mở, hoặc `null` nếu không có gì để bật. */
+  /** The project whose services must be started before opening, or `null` if there is nothing to
+   *  start. */
   startProject: string | null;
-  /** Địa chỉ mở ra sau đó. */
+  /** The address to open afterwards. */
   url: string;
 }
 
 /**
- * Bấm vào domain của một site thì phải làm gì.
+ * What clicking a site's domain should do.
  *
- * **Site của extension chỉ mở, không bật gì** — `service.start` nhận một *tên project*, mà một site
- * extension không có project nào; đoán bừa một cái tên là gửi cho daemon một thứ nó sẽ từ chối.
- * Thứ phục vụ nó là việc của extension ấy, và nút vẫn bấm được thay vì thành một hàng chết giữa
- * bảng.
+ * **An extension's site is only opened, nothing is started** — `service.start` takes a *project
+ * name*, and an extension site has no project; guessing a name would send the daemon something it
+ * will refuse. What serves it is that extension's business, and the button stays clickable rather
+ * than becoming a dead row in the middle of the table.
  *
- * Trạng thái `disabled` cố ý *không* xét ở đây: nó nói web server có sinh server block hay không,
- * và mở ra để thấy đúng lỗi ấy vẫn là câu trả lời, không phải một nút bấm không ăn.
+ * The `disabled` state is deliberately *not* considered here: it says whether the web server
+ * produces a server block, and opening it to see exactly that error is still an answer, not a
+ * button that does nothing.
  */
 export function siteVisit(site: {
   domain: string;

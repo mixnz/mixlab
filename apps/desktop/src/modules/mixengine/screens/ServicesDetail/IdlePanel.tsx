@@ -12,7 +12,8 @@ import styles from "./IdlePanel.module.css";
 
 type Choice = "recipe" | "never" | "minutes";
 
-/** Ba trạng thái, không hai: vắng mặt (theo recipe), 0 (tắt hẳn), n (n phút). Không một checkbox. */
+/** Three states, not two: absent (follow the recipe), 0 (off entirely), n (n minutes). Not a
+ *  checkbox. */
 export default function IdlePanel({ service }: { service: string }) {
   const [choice, setChoice] = useState<Choice>("recipe");
   const [minutes, setMinutes] = useState("30");

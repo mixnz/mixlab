@@ -3,18 +3,19 @@ import { lazy } from "react";
 import { EngineIcon } from "../../icons";
 import type { ModuleDefinition } from "../../shell/module";
 
-/* Nạp khi một tab của module này được mở lần đầu, không phải lúc khởi động — cùng lý do với bốn
-   module kia. Icon và nhãn thì eager: chúng có mặt trên tab strip trước khi có tab nào loại này. */
-/** MixEngine: môi trường web dev cục bộ chạy trên máy này, quản lý từ đây. */
+/* Loaded when a tab of this module is first opened, not at start-up — for the same reason as the
+   other four modules. The icon and label are eager: they are on the tab strip before any tab of
+   this kind exists. */
+/** MixEngine: the local web dev environment running on this machine, managed from here. */
 export const mixengineModule: ModuleDefinition = {
   id: "mixengine",
   labelKey: "app.moduleMixEngine",
   Icon: EngineIcon,
   defaultTitleKey: "mixengine.newTabTitle",
-  /* Một tab là hết. Tab này là bảng điều khiển của **một** daemon trên **một** máy: mở cái thứ hai
-     không cho xem thêm gì cả, chỉ là hai bản sao cùng một trạng thái, cạnh nhau, và cái nào cũng có
-     thể là cái người dùng vừa đọc lần trước. Khác hẳn bốn module kia, nơi mỗi tab là một kết nối,
-     một phiên, một yêu cầu. */
+  /* One tab is all. This tab is the control panel of **one** daemon on **one** machine: opening a
+     second one shows nothing more, just two copies of the same state side by side, and either
+     could be the one the user read last time. Quite unlike the other four modules, where each tab
+     is a connection, a session, a request. */
   singleTab: true,
   Tab: lazy(() => import("./MixEngineTab")),
   /* Loaded when the tray's frame first draws this section — T168, T192. The main window never

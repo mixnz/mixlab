@@ -21,9 +21,10 @@ import type { PackagesState } from "./usePackages";
 import styles from "./Catalogue.module.css";
 
 /**
- * Một nhóm package — nhóm nào là do dải tab của `Packages.tsx` quyết định, không phải một tab con
- * ở đây: bốn nhóm đứng ngang hàng với Ngôn ngữ trên đúng một dải tab, không lồng hai tầng.
- * State thì ở `usePackages`, cao hơn mọi tab, nên đổi nhóm không làm mất dấu một job đang cài.
+ * One package group — which group is decided by the tab strip in `Packages.tsx`, not by a sub-tab
+ * here: the four groups stand level with Languages on a single tab strip, not nested two deep.
+ * State lives in `usePackages`, above every tab, so switching groups does not lose track of a job
+ * that is installing.
  */
 export default function PackageList({
   category,
@@ -37,8 +38,9 @@ export default function PackageList({
     state;
   const onDisk = packageRowsFrom(state.onDisk, (name) => packageCategory(name) === category);
 
-  // Chỉ lọc bảng "chưa cài": bảng trên là những bản máy này đang giữ, thường vài hàng, và giấu bớt
-  // chúng sau một câu tìm kiếm là giấu đúng thứ người dùng cần thấy đủ trước khi gỡ.
+  // Only the "not installed" table is filtered: the table above is what this machine holds, usually
+  // a few rows, and hiding some of them behind a search hides exactly what the user needs to see in
+  // full before removing anything.
   const [filter, setFilter] = useState("");
 
   const installedInCategory = installed.filter((row) => packageCategory(row.package) === category);
@@ -133,7 +135,8 @@ export default function PackageList({
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             onKeyDown={(e) => {
-              // Escape xoá câu tìm, và dừng ở đây — không để nó nổi lên đóng cả tab đang mở.
+              // Escape clears the search and stops here — it must not bubble up and close the whole
+              // open tab.
               if (e.key !== "Escape" || filter === "") return;
               e.preventDefault();
               e.stopPropagation();

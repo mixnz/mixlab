@@ -1,16 +1,17 @@
 import type { ServiceId } from "@mixengine/api";
 
 /**
- * Dựng `ServiceId` từ package người dùng chọn và cái tên instance họ gõ thêm.
+ * Builds a `ServiceId` from the package the user picked and the instance name they typed.
  *
- * **Không có ô nhập id.** `ServiceId` tự tài liệu hoá phần trước `@` là "the package this is an
- * instance of" (xem doc của type), nên để người dùng gõ cả chuỗi là mời họ gõ ra một id mà phần
- * đầu không khớp package nào — daemon từ chối, và câu từ chối đó không nói được là họ gõ nhầm chỗ
- * nào. Package tới từ một `Select`, chỉ phần sau `@` là chữ tự do.
+ * **There is no id field.** `ServiceId` documents the part before `@` as "the package this is an
+ * instance of" (see the type's doc), so letting the user type the whole string invites them to
+ * produce an id whose first half matches no package — the daemon refuses, and that refusal cannot
+ * say where they mistyped. The package comes from a `Select`; only the part after `@` is free text.
  *
- * Instance rỗng ra tên package trần (`caddy`), đúng hình `service.list` đang trả về cho instance
- * đầu tiên của một package. Không tự đặt hộ một tên như `@main`: đó là một quyết định, và
- * `ServiceId` là thứ đi vào tên thư mục `logs/services/<id>/` nên đổi về sau không rẻ.
+ * An empty instance gives the bare package name (`caddy`), the same shape `service.list` returns
+ * for a package's first instance. No name such as `@main` is chosen on the user's behalf: that is a
+ * decision, and `ServiceId` goes into the directory name `logs/services/<id>/`, so changing it
+ * later is not cheap.
  */
 export function serviceIdFrom(packageName: string, instance: string): ServiceId {
   const suffix = instance.trim();
@@ -18,19 +19,22 @@ export function serviceIdFrom(packageName: string, instance: string): ServiceId 
 }
 
 /**
- * Một home chỉ có đúng một front end, nên id của nó không mang `@`.
+ * A home has exactly one front end, so its id carries no `@`.
  *
- * **Đây là bản sao của một luật nằm bên daemon, và MixDB không tra được nó.** `package.list` không
- * có field nào nói package này cho phép mấy instance (xem `PackageSummary`, `PackageRelease`) —
- * luật nằm trong recipe. Daemon nói câu cuối cùng: `service.create` với `caddy@main` bị từ chối
- * `invalid_argument` kèm "there is one caddy, so its id carries no `@`", và một package MixEngine
- * thêm sau này mà bảng dưới chưa biết vẫn bị nó chặn đúng như vậy.
+ * **This is a copy of a rule that lives in the daemon, and MixDB cannot look it up.**
+ * `package.list` has no field saying how many instances a package allows (see `PackageSummary`,
+ * `PackageRelease`) — the rule lives in the recipe. The daemon has the final word: `service.create`
+ * with `caddy@main` is refused with `invalid_argument` and "there is one caddy, so its id carries
+ * no `@`", and a package MixEngine adds later that the table below does not know yet is blocked the
+ * same way.
  *
- * Nên bảng dưới **chỉ chọn hộ giá trị mặc định của một ô nhập**, không phải chỗ quyết định đúng
- * sai. Đoán sai theo chiều nào cũng chỉ tốn một câu từ chối đọc được, không phải một service hỏng.
+ * So the table below **only picks the default value of an input field**; it is not where right and
+ * wrong are decided. Guessing wrong in either direction costs only a readable refusal, not a broken
+ * service.
  *
- * `true` cho tên lạ: phần lớn package còn lại là database và cache, và một package mới mà form
- * lặng lẽ giấu mất ô tên instance là một package không dựng được instance thứ hai từ MixDB.
+ * `true` for unknown names: most of the remaining packages are databases and caches, and a new
+ * package whose instance-name field the form silently hides is a package that cannot get a second
+ * instance from MixDB.
  */
 export function takesInstanceName(packageName: string): boolean {
   return !FRONT_ENDS.has(packageName.toLowerCase());
@@ -38,5 +42,6 @@ export function takesInstanceName(packageName: string): boolean {
 
 const FRONT_ENDS = new Set(["caddy", "nginx", "apache", "apache2", "httpd"]);
 
-/** Tên gợi ý cho instance đầu tiên — chính cái `mariadb@main` doc của `ServiceId` lấy làm ví dụ. */
+/** The suggested name for the first instance — the very `mariadb@main` `ServiceId`'s doc uses as
+ *  its example. */
 export const DEFAULT_INSTANCE = "main";

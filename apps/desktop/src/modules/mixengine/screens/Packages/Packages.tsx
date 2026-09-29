@@ -14,17 +14,17 @@ import styles from "./Packages.module.css";
 type TabKey = "languages" | PackageCategory;
 
 /**
- * Một sidebar item, một dải tab — không hai mục sidebar (D5), và không hai tầng tab: Ngôn ngữ
- * đứng ngang hàng với từng nhóm package, không phải ngang hàng với một tab "Phần mềm" còn phải
- * mở ra mới thấy nhóm. `runtime.*` và `package.*` cùng hình dạng RPC và cùng hình dạng job, khác
- * đúng namespace gọi và đúng khả năng `force`.
+ * One sidebar item, one tab strip — not two sidebar entries (D5), and not two levels of tabs:
+ * Languages stands level with each package group, not level with a "Software" tab that has to be
+ * opened before the groups show. `runtime.*` and `package.*` share the same RPC shape and the same
+ * job shape, differing only in the namespace called and in the `force` capability.
  */
 export default function Packages({ active }: { active: boolean }) {
   const [tab, setTab] = useState<TabKey>("languages");
   const { t } = useTranslation();
 
-  // State của `package.*` sống ở đây, không trong từng nhóm — xem `usePackages`. Đọc kể cả khi
-  // đang ở tab Ngôn ngữ: dải tab dưới đây cần biết có package nào rơi vào nhóm "Khác" không.
+  // `package.*`'s state lives here, not in each group — see `usePackages`. Read even while on the
+  // Languages tab: the tab strip below needs to know whether any package falls into "Other".
   const packages = usePackages(active);
 
   // Somebody sent the user here to install a runtime — "Install a PHP" on the PHP extensions
@@ -39,26 +39,26 @@ export default function Packages({ active }: { active: boolean }) {
     if (active && peekPendingLanguageFilter() !== null) setTab("languages");
   }, [active]);
 
-  // Đổi tab không được unmount Ngôn ngữ: một job đang cài ở đó vẫn phải còn được theo dõi
-  // (`installingJob`/`jobs` cục bộ của nó) khi người dùng ghé qua một nhóm package rồi quay lại —
-  // xem `MixEngineTab.tsx`, chỗ đã theo cùng luật này cho các màn sidebar. Các nhóm package thì
-  // không cần giữ mount: state của chúng đã ở `usePackages`, cao hơn tab.
+  // Switching tabs must not unmount Languages: a job installing there still has to be followed
+  // (its local `installingJob`/`jobs`) when the user visits a package group and comes back — see
+  // `MixEngineTab.tsx`, which follows the same rule for the sidebar screens. The package groups do
+  // not need to stay mounted: their state is already in `usePackages`, above the tabs.
   const [languagesMounted, setLanguagesMounted] = useState(tab === "languages");
   useEffect(() => {
     if (tab === "languages") setLanguagesMounted(true);
   }, [tab]);
 
-  // Ba nhóm đầu luôn có mặt — vị trí một tab không được nhảy chỉ vì người dùng vừa gỡ bản cuối
-  // cùng trong nhóm đó. "Khác" thì ngược lại: nó không phải một nhóm người dùng nhận ra, chỉ là
-  // chốt cho package registry mới hơn bản đang chạy (xem `packageCategories.ts`), nên chỉ vẽ khi
-  // thật sự có gì rơi vào đó.
+  // The first three groups are always present — a tab's position must not jump just because the
+  // user removed the last version in that group. "Other" is the opposite: it is not a group users
+  // recognise, just a catch-all for packages from a registry newer than the running version (see
+  // `packageCategories.ts`), so it is only drawn when something actually falls into it.
   const hasOther =
     packages.installed.some((row) => packageCategory(row.package) === "other") ||
     packages.available.some((release) => packageCategory(release.package) === "other");
   const categoryTabs = PACKAGE_CATEGORY_ORDER.filter((cat) => cat !== "other" || hasOther);
 
-  // Package "Khác" cuối cùng vừa biến mất trong lúc đang đứng ở tab đó: quay về Ngôn ngữ thay vì
-  // giữ một tab không còn trên dải.
+  // The last "Other" package just vanished while that tab was showing: go back to Languages
+  // instead of keeping a tab that is no longer on the strip.
   useEffect(() => {
     if (tab === "other" && !hasOther) setTab("languages");
   }, [tab, hasOther]);
@@ -100,8 +100,8 @@ export default function Packages({ active }: { active: boolean }) {
         </div>
       )}
       {tab !== "languages" && (
-        // `key` gắn theo nhóm: ô tìm của `PackageList` là state cục bộ, và một câu tìm gõ cho Máy chủ
-        // web không được đi theo sang Cơ sở dữ liệu.
+        // `key` follows the group: `PackageList`'s search box is local state, and a search typed
+        // for Web servers must not follow along into Databases.
         <div className={styles.pane}>
           <PackageList key={tab} category={tab} state={packages} />
         </div>

@@ -1,16 +1,18 @@
 import * as api from "./api";
 
 /**
- * Kênh sự kiện MixEngine dùng chung cho cả app.
+ * The MixEngine event channel shared by the whole app.
  *
- * `api.watch()`/`api.unwatch()` là một cặp invoke toàn cục phía daemon — không phải một kênh riêng
- * cho từng màn hình. Trước đây mỗi màn hình (Dashboard, Sites, Packages/Languages, Packages/PackageList)
- * tự gọi `watch()` lúc mount và `unwatch()` lúc unmount, dựa hẳn vào việc luôn chỉ một trong số đó
- * được mount cùng lúc. Giữ nhiều màn hình mount cùng lúc (để không mất tiến độ job khi chuyển tab) phá
- * vỡ giả định đó: màn hình mount sau sẽ giành mất kênh của màn hình mount trước.
+ * `api.watch()`/`api.unwatch()` are a pair of invokes that are global on the daemon side — not a
+ * channel per screen. Each screen (Dashboard, Sites, Packages/Languages, Packages/PackageList) used
+ * to call `watch()` on mount and `unwatch()` on unmount itself, relying entirely on only one of
+ * them ever being mounted at a time. Keeping several screens mounted at once (so job progress is
+ * not lost when switching tabs) breaks that assumption: the screen mounted later would take the
+ * channel away from the one mounted earlier.
  *
- * Cách của `db/tools.ts` với `tools://progress`: mở kênh đúng một lần cho cả đời app, không bao giờ
- * đóng lại — mỗi bên chỉ thêm/bớt callback của mình khỏi một tập hợp cục bộ, không đụng gì tới daemon.
+ * The approach of `db/tools.ts` with `tools://progress`: open the channel exactly once for the
+ * app's lifetime and never close it — each side only adds/removes its own callback in a local set,
+ * without touching the daemon.
  */
 /** What `src-tauri/src/modules/mixengine/events.rs` sends when the stream ends. */
 const DISCONNECTED = '{"type":"mixdb_disconnected"}';
@@ -25,14 +27,15 @@ function ensureWatching(): void {
     if (raw === DISCONNECTED) watching = null;
     for (const listener of listeners) listener(raw);
   }).catch(() => {
-    // Cho phép lần subscribe sau thử lại — một watch hỏng lúc mở kênh không nên khoá vĩnh viễn.
-    // Không có màn hình cụ thể nào để báo lỗi này nữa (kênh dùng chung), nên chỉ nuốt và thử lại.
+    // Let the next subscribe try again — a watch that failed while opening the channel should not
+    // lock up for good. There is no particular screen to report this error to any more (the
+    // channel is shared), so just swallow it and retry.
     watching = null;
   });
 }
 
-/** Đăng ký nhận mọi message thô từ kênh MixEngine. Gọi hàm trả về để huỷ đăng ký — việc đó không
- *  đóng kênh, chỉ gỡ callback này khỏi danh sách nhận. */
+/** Subscribes to every raw message from the MixEngine channel. Call the returned function to
+ *  unsubscribe — that does not close the channel; it only removes this callback from the list. */
 export function subscribeDaemonWatch(listener: (raw: string) => void): () => void {
   listeners.add(listener);
   ensureWatching();

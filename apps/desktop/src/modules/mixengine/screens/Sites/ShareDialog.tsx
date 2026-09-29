@@ -15,12 +15,13 @@ interface Props {
 }
 
 /**
- * Chia sẻ một site ra LAN.
+ * Shares a site on the LAN.
  *
- * **Không tự chọn interface.** Máy chỉ có một candidate thì bỏ trống là đủ. Máy có nhiều hơn một,
- * `site.share` từ chối và nêu tên trong `hint` — một câu, không phải một danh sách có cấu trúc — nên
- * ô interface luôn là một text field gõ tay, không phải dropdown tự điền. Đọc `hint`, gõ lại, thử
- * lại: nghiệp vụ chọn đúng interface nào ở lại phía daemon.
+ * **Does not pick an interface by itself.** A machine with only one candidate is fine left empty.
+ * On a machine with more than one, `site.share` refuses and names them in `hint` — a sentence, not
+ * a structured list — so the interface field is always a hand-typed text field, not an auto-filled
+ * dropdown. Read the `hint`, type it in, try again: the logic of choosing the right interface stays
+ * on the daemon's side.
  */
 export default function ShareDialog({ domain, onCancel, onShared }: Props) {
   const { t } = useTranslation();

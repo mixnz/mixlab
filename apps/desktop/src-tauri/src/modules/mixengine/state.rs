@@ -1,14 +1,14 @@
-//! Thứ module này giữ giữa hai lệnh: đúng một stream sự kiện đang mở.
+//! What this module keeps between two commands: exactly one open event stream.
 //!
 //! **One per window** since T168a: the tray panel is a second webview with its own `daemonWatch.ts`,
 //! and a single slot meant the panel opening its stream closed the main window's — the Dashboard
 //! would silently stop updating whenever somebody clicked the tray icon.
 //!
-//! Một tab một stream là sai. Bus sự kiện bên MixEngine là bus chung, sức chứa 1024 message, và
-//! hai tab MixEngine mở cùng lúc sẽ là hai kết nối `/events` cùng đọc nó. Một stream, mọi tab
-//! nghe cùng một `Channel`, là đủ cho pha này — log có stream riêng theo service ([ADR 0009 bên
-//! MixEngine]: log không bao giờ là sự kiện), giữ trong `LogsState` ngay dưới đây, tách hẳn khỏi
-//! `MixEngineState`.
+//! One stream per tab is wrong. MixEngine's event bus is a shared bus holding 1024 messages, and
+//! two MixEngine tabs open at once would be two `/events` connections reading it. One stream, with
+//! every tab listening on the same `Channel`, is enough for this phase — logs have their own stream
+//! per service ([MixEngine's ADR 0009]: logs are never events), kept in `LogsState` just below,
+//! entirely separate from `MixEngineState`.
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -57,10 +57,10 @@ impl MixEngineState {
     }
 }
 
-/// Đúng một stream log đang mở — riêng với `MixEngineState`, vì `/events` và `/logs/service/{id}`
-/// là hai kết nối cùng lúc, không phải một cái thay cái kia. Cùng hình dạng `keep`/`stop`, tách struct
-/// vì Tauri khoá state theo kiểu: gộp chung sẽ là hai stream chia nhau một khoá, và mở Logs sẽ đóng
-/// `/events` đang mở cho Dashboard.
+/// Exactly one open log stream — separate from `MixEngineState`, because `/events` and
+/// `/logs/service/{id}` are two connections at once, not one replacing the other. The same
+/// `keep`/`stop` shape, a separate struct because Tauri keys state by type: merging them would be
+/// two streams sharing one lock, and opening Logs would close the `/events` open for the Dashboard.
 #[derive(Default)]
 pub struct LogsState {
     open: Mutex<Option<CancellationToken>>,
@@ -82,16 +82,17 @@ impl LogsState {
     }
 }
 
-/// Đúng một stream `/metrics` đang mở — riêng với `MixEngineState`/`LogsState`, vì Dashboard giữ
-/// `/events` **và** `/metrics` cùng lúc: gộp chung với một trong hai sẽ để một cái giành khoá của
-/// cái kia. Không tái dùng `LogsState` cho việc này dù cùng là "một stream" — `/logs/{id}` và
-/// `/metrics` có thể cùng mở một lúc khi Logs và Dashboard cùng ở trạng thái đã-xem-qua
-/// (`mountedScreens` giữ mọi màn trong DOM).
+/// Exactly one open `/metrics` stream — separate from `MixEngineState`/`LogsState`, because the
+/// Dashboard holds `/events` **and** `/metrics` at once: merging with either would let one take the
+/// other's lock. `LogsState` is not reused for this even though it is also "one stream" —
+/// `/logs/{id}` and `/metrics` can be open at the same time when Logs and the Dashboard are both in
+/// the already-visited state (`mountedScreens` keeps every screen in the DOM).
 ///
-/// **Đóng stream này có ý nghĩa khác đóng hai cái kia.** `/events`/`/logs` đóng vì không ai đọc nữa;
-/// `/metrics` đóng còn đổi hành vi của daemon — mở kết nối này khiến daemon lấy mẫu 1 Hz, đóng nó
-/// trả daemon về 1 lần/phút. `stop()` ở đây phải được gọi đúng lúc Dashboard không còn `active`,
-/// không chỉ lúc unmount.
+/// **Closing this stream means something different from closing the other two.** `/events` and
+/// `/logs` close because nobody reads them any more; closing `/metrics` also changes the daemon's
+/// behaviour — opening this connection makes the daemon sample at 1 Hz, and closing it returns the
+/// daemon to once a minute. `stop()` here must be called exactly when the Dashboard is no longer
+/// `active`, not only on unmount.
 ///
 /// **One per window since T168.** The tray panel shows the daemon's own CPU and memory while it is
 /// open; with a single slot, opening it closed the Dashboard's stream, and closing it left the
@@ -115,8 +116,8 @@ impl MetricsState {
 mod tests {
     use super::*;
 
-    /// Mở cái thứ hai là đóng cái thứ nhất — nếu không, một tab mở lại sẽ để lại một kết nối
-    /// `/events` không ai đọc, chạy tới lúc app thoát.
+    /// Opening a second one closes the first — otherwise a reopened tab would leave behind an
+    /// `/events` connection nobody reads, running until the app exits.
     #[test]
     fn a_second_stream_cancels_the_first() {
         let state = MixEngineState::default();
@@ -166,8 +167,8 @@ mod tests {
         assert!(!main.is_cancelled());
     }
 
-    /// Đóng khi không có gì mở, và đóng hai lần, đều không được panic: `mixengine_unwatch` chạy từ
-    /// cleanup của một effect và effect chạy hai lần trong StrictMode.
+    /// Closing with nothing open, and closing twice, must both not panic: `mixengine_unwatch` runs
+    /// from an effect's cleanup and effects run twice under StrictMode.
     #[test]
     fn stopping_nothing_is_harmless() {
         let state = MixEngineState::default();

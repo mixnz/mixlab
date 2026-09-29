@@ -16,7 +16,7 @@ import ApplyDialog from "../Blueprints/ApplyDialog";
 import { canStart } from "../../quickStart";
 import styles from "./QuickStart.module.css";
 
-/** Đã dựng xong tới đâu. */
+/** How far the build has got. */
 type Phase =
   | { kind: "form" }
   | { kind: "applying"; blueprint: BlueprintSummary }
@@ -24,16 +24,17 @@ type Phase =
   | { kind: "done"; url: string | null };
 
 /**
- * Dựng site đầu tiên trong một lần bấm — T117.
+ * Builds the first site in one click — T117.
  *
- * **Một thẻ, không phải wizard.** Một modal chồng lên một daemon đang cài runtime là một modal chắn
- * đường; một màn hình riêng thì phải tự biện minh mãi mãi kể cả khi người ta đã có hai mươi site.
- * Thẻ này chỉ được vẽ khi `site.list` rỗng, và nó biến mất bằng cách **xong việc**.
+ * **A card, not a wizard.** A modal over a daemon that is installing a runtime is a modal in the
+ * way; a screen of its own would have to justify itself forever, even once people have twenty
+ * sites. This card is only drawn when `site.list` is empty, and it goes away by **getting the job
+ * done**.
  *
- * **Đoạn sau apply — cho phép → khởi động → mở — sống trong [`AfterApply`]**, không ở đây nữa.
- * Nó từng chỉ ở đây, nên apply từ màn Blueprints kết thúc ở một danh sách bước và một nút Đóng:
- * service chưa bật, tên miền chưa phân giải, và không có đường nào tới site vừa dựng. Thẻ này giờ
- * chỉ hỏi ba câu, mở `ApplyDialog`, rồi nhận lại một địa chỉ.
+ * **What follows the apply — allow → start → open — lives in [`AfterApply`]**, no longer here. It
+ * used to live only here, so an apply from the Blueprints screen ended at a list of steps and a
+ * Close button: services not started, domain not resolved, and no way to the site just built. This
+ * card now only asks three questions, opens `ApplyDialog`, then gets an address back.
  */
 export default function QuickStart({ onCreated }: { onCreated: () => void }) {
   const [available, setAvailable] = useState<BlueprintSummary[]>([]);
@@ -150,14 +151,14 @@ export default function QuickStart({ onCreated }: { onCreated: () => void }) {
       )}
 
       {/**
-       * **`onCreated` chỉ được gọi ở đây, khi mọi thứ đã xong — và đó là một ràng buộc, không
-       * phải một sở thích.** Dashboard vẽ thẻ này khi và chỉ khi `site.list` rỗng
-       * (`shouldOfferQuickStart`), nên `onCreated` là cú đọc lại làm thẻ này **biến mất**. Gọi nó
-       * sớm hơn — lúc apply vừa xong, chẳng hạn — sẽ unmount `AfterApply` ngay giữa chuỗi ba call
-       * của nó: cú `site.list` của Dashboard về trong vài mili giây, còn chuỗi kia cần
-       * `elevation.status` + `service.start` + `site.list`, nên nó thua chắc chắn chứ không
-       * phải thua lúc được lúc mất. Triệu chứng là một project dựng xong mà trình duyệt không
-       * bao giờ mở.
+       * **`onCreated` is only called here, once everything is done — and that is a constraint, not
+       * a preference.** The Dashboard draws this card if and only if `site.list` is empty
+       * (`shouldOfferQuickStart`), so `onCreated` is the reread that makes this card **go away**.
+       * Calling it earlier — right when the apply finishes, for instance — would unmount
+       * `AfterApply` in the middle of its chain of three calls: the Dashboard's `site.list` comes
+       * back within milliseconds, while that chain needs `elevation.status` + `service.start` +
+       * `site.list`, so it loses for certain rather than only sometimes. The symptom is a project
+       * that got built but whose browser never opens.
        */}
       {phase.kind === "settling" && (
         <AfterApply

@@ -17,7 +17,7 @@ import {
 } from "../../requirementStep";
 import { jobFinished, versionKey } from "../../runtimeState";
 
-/** Tất cả những gì `Packages.tsx` cần để vẽ một nhóm, và không hơn. */
+/** Everything `Packages.tsx` needs to draw a group, and nothing more. */
 export interface PackagesState {
   installed: PackageSummary[];
   available: PackageRelease[];
@@ -44,11 +44,12 @@ export interface PackagesState {
 }
 
 /**
- * State của `package.*` cho cả dải tab nhóm (Máy chủ web / Cơ sở dữ liệu / Cache & hàng đợi /
- * Khác). Nằm ở `Packages.tsx`, không nằm trong từng tab: bốn nhóm là bốn lát cắt hiển thị của
- * đúng một cặp `package.list_installed`/`package.list_available`, nên gọi một lần rồi lọc — chứ
- * không phải bốn component cùng hỏi daemon một câu. Nó cũng là lý do đổi nhóm không làm mất dấu
- * một job đang cài: `installingJob` sống ở đây, cao hơn mọi tab.
+ * `package.*`'s state for the whole group tab strip (Web servers / Databases / Cache & queues /
+ * Other). It lives in `Packages.tsx`, not in each tab: the four groups are four display slices of
+ * exactly one `package.list_installed`/`package.list_available` pair, so it is called once and then
+ * filtered — not four components asking the daemon the same question. It is also why switching
+ * groups does not lose track of a job that is installing: `installingJob` lives here, above every
+ * tab.
  */
 export function usePackages(active: boolean): PackagesState {
   const [installed, setInstalled] = useState<PackageSummary[]>([]);
@@ -64,16 +65,17 @@ export function usePackages(active: boolean): PackagesState {
   const [asking, setAsking] = useState<{ release: PackageRelease; step: AskingStep } | null>(null);
   const { t } = useTranslation();
 
-  // Cùng lý do `Languages.tsx` đã theo: đọc `installingJob` mới nhất trong callback `watch` đăng
-  // ký một lần, không đăng ký lại watch mỗi lần map đó đổi.
+  // The same reason `Languages.tsx` follows: read the latest `installingJob` inside the `watch`
+  // callback registered once, rather than registering the watch again every time that map changes.
   const installingJobRef = useRef(installingJob);
   useEffect(() => {
     installingJobRef.current = installingJob;
   }, [installingJob]);
 
-  // `stillShow` là câu lỗi phải sống sót qua lần đọc lại này. Một job cài hỏng vẫn phải được kể
-  // lại dù lần đọc ngay sau đó trả lời bình thường: đọc lại được không có nghĩa là việc cài đã
-  // xong. Rỗng — mặc định — là "đọc xong thì màn hình sạch", đúng như trước.
+  // `stillShow` is the error sentence that has to survive this reread. A failed install job still
+  // has to be reported even if the read right after it answers normally: being able to read again
+  // does not mean the install finished. Empty — the default — is "once read, the screen is clean",
+  // just as before.
   const reload = useCallback(
     async (stillShow = "") => {
       try {
@@ -94,9 +96,10 @@ export function usePackages(active: boolean): PackagesState {
     [t],
   );
 
-  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cùng lý do `Languages.tsx`/`Dashboard.tsx`.
-  // Chạy kể cả khi đang đứng ở tab Ngôn ngữ: dải tab cấp trên phải biết ngay có package nào rơi
-  // vào nhóm "Khác" hay không, và nó chỉ biết được sau lần đọc này.
+  // Reread on mount and every time we come back to this screen — the same reason as
+  // `Languages.tsx`/`Dashboard.tsx`. Runs even while on the Languages tab: the tab strip above has
+  // to know right away whether any package falls into "Other", and it can only know after this
+  // read.
   useEffect(() => {
     if (active) void reload();
   }, [active, reload]);
@@ -104,13 +107,13 @@ export function usePackages(active: boolean): PackagesState {
   useEffect(() => {
     return subscribeDaemonWatch((raw) => {
       setJobs((current) => applyJob(current, raw));
-      // Job đang theo dõi vừa xong: đọc lại "đã cài"/"có thể cài" — không có tin nào khác báo
-      // chuyện này, xem `Languages.tsx`.
+      // The job being followed just finished: reread "installed"/"available" — no other news
+      // reports this; see `Languages.tsx`.
       const finished = jobFinished(raw);
       if (finished !== null && Object.values(installingJobRef.current).includes(finished.id)) {
-        // Job hỏng thì `job_finished` là chỗ duy nhất nói ra vì sao — xem `jobFinished`. Đọc lại
-        // vẫn phải chạy (một job hỏng nửa chừng vẫn có thể đã đổi thứ gì đó), nhưng nó không được
-        // xoá mất câu lỗi vừa tới.
+        // For a failed job, `job_finished` is the only place that says why — see `jobFinished`.
+        // The reread still has to run (a job that failed halfway may still have changed
+        // something), but it must not wipe out the error sentence that just arrived.
         void reload(finished.error === null ? "" : errorMessage(t, finished.error));
         setInstallingJob((current) => {
           const next = { ...current };
@@ -208,7 +211,8 @@ export function usePackages(active: boolean): PackagesState {
 
   const dismissAsking = useCallback(() => setAsking(null), []);
 
-  /** Không có `force` — refuse vì `services` không rỗng là chốt (D6). Vẽ danh sách, dừng ở đó. */
+  /** There is no `force` — refusing because `services` is not empty is final (D6). Draw the list
+   *  and stop there. */
   const uninstall = useCallback(
     async (target: PackageSummary) => {
       setError("");

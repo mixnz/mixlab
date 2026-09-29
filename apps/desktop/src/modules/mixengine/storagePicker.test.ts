@@ -11,7 +11,7 @@ import {
   rowsFrom,
 } from "./storagePicker";
 
-/** Câu trả lời `--storage` của một home chưa ai đụng vào. */
+/** The `--storage` answer of a home nobody has touched yet. */
 function aFreeHome(): StorageReport {
   return {
     root: "/home/me/MixEngine",
@@ -62,8 +62,8 @@ describe("chosenFrom", () => {
     expect(chosenFrom(rows)).toEqual({ data: "/bulk/data" });
   });
 
-  // Daemon coi giá trị trùng là no-op im lặng, nhưng không nhờ vào điều đó: cái được gửi nên là
-  // cái đã đổi, hoặc `config.toml` bị ghi lại vì một lần bấm không đổi gì.
+  // The daemon treats an equal value as a silent no-op, but we do not rely on that: what gets sent
+  // should be what changed, or `config.toml` gets rewritten for a click that changed nothing.
   it("does not send a key picked at the place it already is", () => {
     const rows = pick(rowsFrom(aFreeHome()), "data", "/home/me/MixEngine/data");
 
@@ -98,8 +98,9 @@ describe("oneFolderFor", () => {
     }
   });
 
-  // Cùng một thư mục, hai nút phải gửi cùng một cách viết: daemon ghi `config.toml` qua
-  // `toml_edit`, vốn tự thoát dấu gạch ngược, nên không còn lý do gì để ép gạch chéo xuôi.
+  // The same directory, both buttons must send the same spelling: the daemon writes `config.toml`
+  // through `toml_edit`, which escapes backslashes itself, so there is no longer any reason to
+  // force forward slashes.
   it("joins in Windows spelling on Windows, whichever separator the folder came with", () => {
     for (const folder of ["D:\\bulk", "D:/bulk"]) {
       const rows = oneFolderFor(rowsFrom(aFreeHome()), folder, "windows");

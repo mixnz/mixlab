@@ -15,12 +15,13 @@ import SiteFields, {
 import styles from "./SiteForm.module.css";
 
 interface Props {
-  /** `undefined` = tạo mới. Có giá trị = sửa, khoá project lại. */
+  /** `undefined` = create new. A value = edit, with the project locked. */
   initial?: SiteDetail;
-  /** Chọn sẵn khi tạo mới — Sites truyền project đang lọc, nếu có. Bỏ qua khi `initial` có giá trị. */
+  /** Preselected when creating — Sites passes the project it is filtering by, if any. Ignored when
+   *  `initial` has a value. */
   defaultProject?: string;
   onCancel: () => void;
-  /** Gọi sau khi lưu xong — cha tự `reload()`. */
+  /** Called once saving is done — the parent does its own `reload()`. */
   onSaved: () => void;
 }
 
@@ -30,7 +31,7 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
 
   const [projectNames, setProjectNames] = useState<string[]>([]);
   const [serviceIds, setServiceIds] = useState<string[]>([]);
-  // `false` cho tới khi cả hai danh sách trên tới nơi — xem chỗ dùng nó ngay trước `return`.
+  // `false` until both lists above have arrived — see where it is used just before `return`.
   const [listsReady, setListsReady] = useState(false);
 
   const [project, setProject] = useState(
@@ -38,13 +39,15 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
       ? initial.site.owner.name
       : (defaultProject ?? ""),
   );
-  // Root của project sở hữu site — cho tạo mới, đọc lại mỗi khi đổi project (dưới); cho sửa,
-  // `SiteDetail.root` đã có sẵn, project bị khoá nên không đổi nữa. Chỉ để hiển thị: giá trị gửi
-  // lên daemon vẫn luôn là phần còn lại một mình (`docRoot`), đúng `SiteSummary.doc_root`.
+  // The root of the project owning the site — for create, reread every time the project changes
+  // (below); for edit, `SiteDetail.root` is already there and the project is locked, so it no
+  // longer changes. Display only: the value sent to the daemon is always the remainder on its own
+  // (`docRoot`), exactly `SiteSummary.doc_root`.
   const [projectRoot, setProjectRoot] = useState(editing ? initial.root : "");
-  // Đã có lần trả lời đầu tiên chưa — khác với `projectRoot !== ""`, vì "" là một câu trả lời hợp
-  // lệ (không project nào chọn, hoặc project rỗng thật). Chỉ chặn Modal ở lần đầu; đổi project sau
-  // khi Modal đã mở không đóng nó lại, xem chỗ dùng ngay trước `return`.
+  // Whether the first answer has arrived yet — different from `projectRoot !== ""`, because "" is
+  // a valid answer (no project chosen, or a genuinely empty project). Only holds back the Modal the
+  // first time; changing the project after the Modal has opened does not close it — see where it
+  // is used just before `return`.
   const [projectRootReady, setProjectRootReady] = useState(editing);
   const [draft, setDraft] = useState(() => (editing ? siteDraftFromDetail(initial) : emptySiteDraft()));
 
@@ -59,7 +62,8 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
     });
   }, []);
 
-  // Chỉ cho tạo mới — sửa thì project bị khoá và `initial.root` đã là root đúng, không đổi nữa.
+  // Only for create — for edit the project is locked and `initial.root` is already the right root,
+  // which no longer changes.
   useEffect(() => {
     if (editing) return;
     if (project === "") {
@@ -87,14 +91,14 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
 
   const noProjects = !editing && projectNames.length === 0;
 
-  // Chưa đủ dữ liệu để biết hình dạng cuối cùng của form — chưa mở Modal. Không chờ thì danh sách
-  // service (rỗng lúc đầu, đầy sau khi `api.services()` trả lời) và dòng "Full path" (chờ
-  // `projectRoot`) nới chiều cao dialog ra đúng lúc animation mở nó còn đang chạy — dialog đang
-  // animate ở một chiều cao, giữa chừng lại cao thêm, và đó chính là chỗ modal "dứt vị trí lên
-  // trên" bị báo. `onEntered`/`.settled` (`dialogMotion.ts`) chỉ che được thay đổi *sau khi*
-  // animation xong; thay đổi *trong lúc* nó đang chạy thì phải tránh từ gốc, không phải che sau đó.
-  // Gọi cục bộ qua IPC nên thường xong trong một khung hình — một khoảng lặng rất ngắn trước khi mở
-  // còn tốt hơn một cái giật hình sau khi đã mở.
+  // Not enough data yet to know the form's final shape — do not open the Modal yet. Without
+  // waiting, the service list (empty at first, filled once `api.services()` answers) and the "Full
+  // path" line (waiting for `projectRoot`) stretch the dialog's height while its opening animation
+  // is still running — the dialog animates at one height, grows taller midway, and that is exactly
+  // the reported modal "snapping upwards". `onEntered`/`.settled` (`dialogMotion.ts`) only cover
+  // changes *after* the animation finishes; changes *while* it runs have to be avoided at the
+  // source, not covered afterwards. The calls are local over IPC so they usually finish within a
+  // frame — a very short pause before opening is better than a jolt after it has opened.
   if (!listsReady || !projectRootReady) return null;
 
   async function submit() {

@@ -8,15 +8,15 @@ import type { DatabaseCredentials } from "@mixengine/api";
 import styles from "./CredentialDialog.module.css";
 
 /**
- * Mật khẩu MixEngine đang giữ cho một account, đủ để dán vào `.env` của một project.
+ * The password MixEngine holds for one account, enough to paste into a project's `.env`.
  *
- * **Ẩn cho tới khi được hỏi.** Cửa sổ này mở ra từ một menu, nên nó có thể mở ra trước mặt người
- * khác đang nhìn màn hình; một mật khẩu hiện sẵn không cho ai cơ hội quyết định điều đó. Nút Sao
- * chép không cần nhìn thấy nó, nên đó là đường mặc định và nó đứng trước.
+ * **Hidden until asked for.** This window opens from a menu, so it may open in front of someone
+ * else looking at the screen; a password shown up front gives nobody the chance to decide that.
+ * The Copy button does not need to see it, so that is the default path and it comes first.
  *
- * Địa chỉ trong credential store đi kèm vì nó trả lời câu hỏi khác: **cái này sống ở đâu** khi ai
- * đó muốn đổi nó bằng công cụ của hệ điều hành. `SecretAddress` mang cả hai nửa (T84), nên chỗ này
- * vẽ được mà không cần biết namespace của MixEngine.
+ * The address in the credential store comes along because it answers a different question: **where
+ * this lives** when someone wants to change it with the operating system's tools. `SecretAddress`
+ * carries both halves (T84), so this can be drawn without knowing MixEngine's namespace.
  */
 export default function CredentialDialog({
   credentials,
@@ -63,8 +63,9 @@ export default function CredentialDialog({
 
             <label className={styles.field}>
               {t("mixengine.credentials.password")}
-              {/* `readOnly` chứ không `disabled`: một ô xám không chọn được chữ trong nó, mà chọn tay
-                  là đường dự phòng khi webview từ chối clipboard (xem `core/clipboard.ts`). */}
+              {/* `readOnly` rather than `disabled`: a greyed-out field does not let you select its
+                  text, and selecting by hand is the fallback when the webview refuses the
+                  clipboard (see `core/clipboard.ts`). */}
               <Input
                 value={credentials.password}
                 type={shown ? "text" : "password"}

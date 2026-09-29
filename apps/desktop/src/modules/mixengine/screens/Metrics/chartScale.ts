@@ -5,26 +5,27 @@ const HOUR = 60 * MINUTE;
 const MIB = 1024 * 1024;
 
 /**
- * Một đại lượng biết tự dựng thang dọc và tự viết nhãn cho mình.
+ * A quantity that knows how to build its own vertical scale and write its own labels.
  *
- * Biểu đồ không biết nó đang vẽ phần trăm hay byte, và không nên biết: hai thứ đó làm tròn theo hai
- * cơ số khác nhau (10 và 2) và đọc ra hai kiểu khác nhau. Đây là chỗ duy nhất giữ đúng cặp đó.
+ * The chart does not know whether it is drawing percentages or bytes, and should not: the two round
+ * on different bases (10 and 2) and read differently. This is the only place that keeps that pair
+ * right.
  */
 export interface Unit {
-  /** Đỉnh của trục dọc cho một giá trị lớn nhất đã đo — luôn là một mốc đọc được, và không bao giờ
-   *  thấp hơn sàn của đại lượng. */
+  /** The top of the vertical axis for a given measured maximum — always a readable mark, and never
+   *  below the quantity's floor. */
   niceMax(peak: number): number;
-  /** Nhãn một vạch lưới. Ngắn — nó nằm cạnh biểu đồ, không nằm trong tooltip. */
+  /** The label of one grid line. Short — it sits beside the chart, not inside the tooltip. */
   tick(value: number): string;
-  /** Giá trị đầy đủ trong tooltip, đúng độ chính xác daemon gửi. */
+  /** The full value in the tooltip, at exactly the precision the daemon sends. */
   value(value: number): string;
 }
 
 /**
- * Làm tròn `value` lên mốc `steps` gần nhất trên cơ số `base`.
+ * Rounds `value` up to the nearest `steps` mark on base `base`.
  *
- * `steps` là phần định trị trong `[1, base)`, tăng dần, và mục cuối phải là chính `base` — một giá
- * trị nằm ngay dưới bậc trên cùng vẫn phải có chỗ để trèo lên.
+ * `steps` are mantissas in `[1, base)`, ascending, and the last entry must be `base` itself — a
+ * value just below the top step still needs room to climb.
  */
 function niceCeil(value: number, base: number, steps: readonly number[]): number {
   if (value <= 0) return steps[0]! * Math.pow(base, 0);
@@ -36,27 +37,30 @@ function niceCeil(value: number, base: number, steps: readonly number[]): number
 }
 
 /**
- * **Thang có sàn, không phải thang tự do.** Một daemon nhàn rỗi ở 0,03% mà thang chạy tới 0,05% thì
- * nhiễu đo đạc vẽ thành núi non; sàn giữ cho một đường phẳng trông phẳng. Từ T190c biểu đồ vẽ theo
- * phần trăm **cả máy** như Task Manager, nên sàn là 5% của máy chứ không còn là một phần tư lõi: đủ
- * nhỏ để một service dùng vài phần trăm vẫn thấy rõ hình dạng, đủ lớn để nhiễu không thành núi.
+ * **A scale with a floor, not a free scale.** An idle daemon at 0.03% with a scale running to
+ * 0.05% draws measurement noise as mountains; the floor keeps a flat line looking flat. Since T190c
+ * the chart draws a percentage of the **whole machine**, like Task Manager, so the floor is 5% of
+ * the machine rather than a quarter of a core: small enough that a service using a few percent
+ * still shows its shape clearly, large enough that noise does not become mountains.
  */
 const CPU_FLOOR = 5;
 
-/** Cùng lý do, phía byte: dưới 64 MB thì cái đang nhìn là nhiễu cấp phát, không phải mức dùng. */
+/** The same reason on the byte side: below 64 MB what you see is allocation noise, not usage. */
 const RSS_FLOOR = 64 * MIB;
 
-/** Cơ số 10, đủ dày để `250` không bị làm tròn lên `500`. */
+/** Base 10, dense enough that `250` is not rounded up to `500`. */
 const PERCENT_STEPS = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
 
-/** Cơ số 2 — mốc byte phải là mốc `formatBytes` viết ra gọn: `320 MB`, không phải `312.5 MB`. */
+/** Base 2 — byte marks must be ones `formatBytes` writes neatly: `320 MB`, not `312.5 MB`. */
 const BYTE_STEPS = [1, 1.25, 1.5, 2];
 
 export const CPU_UNIT: Unit = {
   niceMax: (peak) => Math.max(CPU_FLOOR, niceCeil(peak, 10, PERCENT_STEPS)),
-  // Hai chữ số thập phân rồi bỏ số 0 thừa: `25`, `2.5`, `125` — không phải `25.0000%` của tooltip.
+  // Two decimal places, then drop trailing zeros: `25`, `2.5`, `125` — not the tooltip's
+  // `25.0000%`.
   tick: (value) => `${Number(value.toFixed(2))}%`,
-  // Giá trị đã là phần trăm cả máy (Metrics.tsx chia sẵn), nên mẫu số ở đây là 1 (T190c).
+  // The value is already a percentage of the whole machine (Metrics.tsx divides it beforehand), so
+  // the denominator here is 1 (T190c).
   value: (share) => formatCpu(share, 1),
 };
 
@@ -66,19 +70,21 @@ export const RSS_UNIT: Unit = {
   value: formatBytes,
 };
 
-/** Các bề rộng cửa sổ được phép, tăng dần. */
+/** The allowed window widths, ascending. */
 const WINDOWS = [HOUR, 3 * HOUR, 6 * HOUR, 12 * HOUR, 24 * HOUR];
 
 /**
- * Đầu cửa sổ trục ngang: bậc nhỏ nhất còn chứa hết dữ liệu, nhiều nhất là cả thời gian lưu trữ.
+ * The start of the horizontal axis window: the smallest step that still holds all the data, at
+ * most the whole retention period.
  *
- * **Cửa sổ vừa dữ liệu, nhưng không bằng dữ liệu.** Hai thái cực đều sai. Kéo giãn đúng khoảng đã
- * đo ra hết bề rộng là cái sai bản đầu mắc phải: 40 phút trông y hệt 24 giờ, không nhãn nào cải
- * chính. Mà đóng cứng 24 giờ thì một home vừa bật có nửa tiếng số liệu chỉ được một vệt 2% bề rộng
- * — thật, nhưng không đọc được. Bậc kế trên là chỗ cả hai cùng đúng: nhãn thời gian nói đúng mình
- * đang ở đâu, phần chưa ai đo vẫn hiện ra là phần chưa ai đo, và dữ liệu vẫn đủ to để nhìn.
+ * **The window fits the data, but does not equal it.** Both extremes are wrong. Stretching exactly
+ * the measured range across the full width was the first version's mistake: 40 minutes looked
+ * exactly like 24 hours, with no label to correct it. Fixing it at 24 hours, on the other hand,
+ * gives a freshly started home with half an hour of figures a streak 2% of the width — true, but
+ * unreadable. The next step up is where both are right: the time labels say exactly where we are,
+ * the unmeasured part still shows as unmeasured, and the data is still big enough to see.
  *
- * `earliest` là phút sớm nhất có dòng, hoặc `null` khi chưa có dòng nào.
+ * `earliest` is the earliest minute with a row, or `null` when there is no row yet.
  */
 export function windowStart(earliest: number | null, to: number, retention: number): number {
   if (earliest === null) return to - retention;
@@ -87,8 +93,8 @@ export function windowStart(earliest: number | null, to: number, retention: numb
   return to - Math.max(span, Math.min(fitted, retention));
 }
 
-/** Các bước thời gian được phép, tăng dần. Mọi bước dưới một giờ là ước của một giờ, mọi bước từ
- *  một giờ trở lên là ước của một ngày — điều kiện để gióng theo mốc tròn của lịch địa phương. */
+/** The allowed time steps, ascending. Every step under an hour divides an hour, every step of an
+ *  hour or more divides a day — the condition for aligning to round marks of the local calendar. */
 const INTERVALS = [
   MINUTE,
   2 * MINUTE,
@@ -105,11 +111,11 @@ const INTERVALS = [
 ];
 
 /**
- * Mốc đầu tiên từ `time` trở đi, gióng theo giờ/phút tròn của **lịch địa phương**.
+ * The first mark from `time` onwards, aligned to round hours/minutes of the **local calendar**.
  *
- * Gióng bằng các trường của `Date` chứ không bằng số học trên mốc epoch: một múi giờ lệch nửa giờ
- * (Ấn Độ, Nepal) làm `Math.ceil(time / interval) * interval` rơi vào 10:30, 11:30 — đúng khoảng
- * cách, sai mốc.
+ * Aligned through `Date`'s fields rather than arithmetic on the epoch value: a time zone offset by
+ * half an hour (India, Nepal) makes `Math.ceil(time / interval) * interval` land on 10:30, 11:30 —
+ * the right spacing, the wrong marks.
  */
 function alignUp(time: number, interval: number): number {
   const at = new Date(time);
@@ -128,7 +134,7 @@ function alignUp(time: number, interval: number): number {
   return at.getTime();
 }
 
-/** Mốc kế tiếp, cũng bằng các trường của `Date`: một ngày đổi giờ mùa hè không dài 24 tiếng. */
+/** The next mark, also through `Date`'s fields: a daylight-saving day is not 24 hours long. */
 function nextTick(time: number, interval: number): number {
   const at = new Date(time);
   if (interval < HOUR) at.setMinutes(at.getMinutes() + interval / MINUTE);
@@ -137,16 +143,17 @@ function nextTick(time: number, interval: number): number {
 }
 
 /**
- * Các mốc thời gian tròn trong `[from, to]`, nhiều nhất `max` mốc.
+ * The round time marks within `[from, to]`, at most `max` of them.
  *
- * Bước được chọn là bước nhỏ nhất còn vừa `max` — một cửa sổ 24 giờ ra mốc 6 tiếng, một cửa sổ 20
- * phút ra mốc 5 phút. Cửa sổ ngắn không được để trục trống: dữ liệu mới chạy được nửa tiếng vẫn
- * phải nói lên nó đang nằm ở nửa tiếng nào.
+ * The step chosen is the smallest one that still fits `max` — a 24-hour window gives 6-hour marks,
+ * a 20-minute window gives 5-minute marks. A short window must not leave the axis empty: data that
+ * has only run for half an hour still has to say which half hour it is in.
  */
 export function timeTicks(from: number, to: number, max: number): number[] {
   if (to <= from || max < 1) return [];
   const span = to - from;
-  // `max` mốc bọc lấy `max - 1` khoảng: một cửa sổ dài đúng bốn bước có năm mốc, không phải bốn.
+  // `max` marks enclose `max - 1` intervals: a window exactly four steps long has five marks, not
+  // four.
   const interval =
     INTERVALS.find((candidate) => span / candidate <= max - 1) ?? INTERVALS[INTERVALS.length - 1]!;
 

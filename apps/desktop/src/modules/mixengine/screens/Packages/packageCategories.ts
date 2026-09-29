@@ -1,14 +1,14 @@
 /**
- * Nhóm package theo chức năng cho tab con — thuần hiển thị, `package.*` không có field nào nói
- * chuyện này (xem `PackageSummary`/`PackageRelease`).
+ * Groups packages by function for the sub-tabs — display only; `package.*` has no field saying
+ * this (see `PackageSummary`/`PackageRelease`).
  *
- * `"other"` là chốt cho mọi tên chưa biết, không phải một trường hợp lỗi: một package MixEngine
- * thêm sau này (registry mới hơn bản MixDB đang chạy) vẫn phải hiện ra ở đâu đó, không được lặng
- * lẽ biến mất vì bảng tra không có tên nó.
+ * `"other"` is the catch-all for every unknown name, not an error case: a package MixEngine adds
+ * later (a registry newer than the running MixDB) still has to show up somewhere, and must not
+ * silently vanish because the lookup table lacks its name.
  */
 export type PackageCategory = "web" | "database" | "cache" | "other";
 
-/** Thứ tự tab con luôn cố định, không phụ thuộc thứ tự `package.list_available` trả về. */
+/** The sub-tab order is always fixed, regardless of the order `package.list_available` returns. */
 export const PACKAGE_CATEGORY_ORDER: PackageCategory[] = ["web", "database", "cache", "other"];
 
 const WEB_SERVERS = new Set(["caddy", "nginx", "apache", "apache2", "httpd"]);

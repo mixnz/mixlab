@@ -26,21 +26,22 @@ describe("openChoices", () => {
 });
 
 describe("opensADatabase", () => {
-  /* `protocol` là câu trả lời duy nhất cho "service này có phải database không". Cả panel ở màn
-     Services lẫn menu 3 chấm ở Dashboard đều hỏi nó, nên nó phải là **một** hàm: hai chỗ tự quyết
-     lấy là hai định nghĩa của cùng một câu hỏi, và chúng sẽ lệch nhau. */
+  /* `protocol` is the only answer to "is this service a database". Both the panel on the Services
+     screen and the three-dot menu on the Dashboard ask it, so it has to be **one** function: two
+     places deciding for themselves are two definitions of the same question, and they will drift
+     apart. */
   it("says yes to a service a client speaks a protocol to", () => {
     expect(opensADatabase({ protocol: "postgres" })).toBe(true);
   });
 
-  /* nginx, caddy, php-fpm: `database.client` trả `protocol: null` cho chúng — một **trạng thái**,
-     không phải lỗi. Chỗ này là nơi trạng thái đó biến thành "không vẽ gì cả". */
+  /* nginx, caddy, php-fpm: `database.client` returns `protocol: null` for them — a **state**, not
+     an error. This is where that state becomes "draw nothing at all". */
   it("says no to a service no client opens", () => {
     expect(opensADatabase({ protocol: null })).toBe(false);
   });
 
-  /* `protocol` là member tuỳ chọn theo luật ADR 0019: vắng nghĩa là daemon cũ hơn member này, và
-     đoán nó là một database sẽ vẽ ra một panel không có gì ở sau. */
+  /* `protocol` is an optional member under ADR 0019: absence means a daemon older than this
+     member, and guessing it is a database would draw a panel with nothing behind it. */
   it("says no when the daemon never answered the member", () => {
     expect(opensADatabase({})).toBe(false);
   });

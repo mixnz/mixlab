@@ -10,14 +10,17 @@ import { shouldOfferPathInstall } from "../../pathState";
 import styles from "./PathNudge.module.css";
 
 /**
- * Nhắc đưa `<root>/bin` vào PATH, cho người vừa cài app mà chưa từng gõ `mix path install`.
+ * A reminder to put `<root>/bin` on PATH, for someone who just installed the app and has never
+ * typed `mix path install`.
  *
- * **Chỉ vẽ khi `on_path: false`, và biến mất bằng cách xong việc** — như thẻ Quick Start, không có
- * nút "Ẩn" hay cờ đã lưu. Sau khi cài, thẻ ở lại với một câu "mở terminal mới", vì đó là điều người
- * dùng cần biết tiếp theo; lần mở tab sau nó không còn nữa.
+ * **Only drawn when `on_path: false`, and it goes away by getting the job done** — like the Quick
+ * Start card, there is no "Hide" button or saved flag. After installing, the card stays with an
+ * "open a new terminal" line, because that is what the user needs to know next; the next time the
+ * tab opens it is gone.
  *
- * Đọc `path.status` hỏng thì im lặng: một Dashboard đỏ vì một lời nhắc là một Dashboard đỏ vì một
- * câu trang trí. Bật/tắt đầy đủ, kèm báo lỗi, nằm ở Settings.
+ * A failed `path.status` read stays silent: a Dashboard turned red because of a reminder is a
+ * Dashboard turned red over a decorative sentence. The full on/off, with error reporting, lives in
+ * Settings.
  *
  * **Read again each time Dashboard comes back to the front**, not once at mount: Dashboard stays
  * mounted after its first visit (`mountedScreens`), so a switch flipped in Settings, or a
@@ -42,7 +45,7 @@ export default function PathNudge({ active }: { active: boolean }) {
         setDone(false);
       })
       .catch(() => {
-        // Để nguyên report cũ: không biết thì không đổi gì.
+        // Keep the old report: not knowing changes nothing.
       });
     return () => {
       live = false;

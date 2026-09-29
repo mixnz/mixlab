@@ -2,32 +2,33 @@ import type { ServiceState, StoppedBy } from "@mixengine/api";
 import type { ServiceSummary } from "@mixengine/api";
 
 /**
- * Rút gọn stream sự kiện thành state của bảng.
+ * Reduces the event stream to the table's state.
  *
- * Thuần và không gọi gì — đó là lý do nó ở đây chứ không nằm trong component. Luật **"trạng thái
- * được thông báo, không bao giờ được suy ra"** là thứ đáng có test, và một `useEffect` thì không
- * test được.
+ * Pure and calls nothing — which is why it lives here and not inside a component. The rule **"state
+ * is announced, never inferred"** is worth testing, and a `useEffect` cannot be tested.
  */
 
-/** Một dòng của bảng service. Chỉ những gì bảng vẽ. */
+/** One row of the service table. Only what the table draws. */
 export interface ServiceRow {
   id: string;
   state: ServiceState | null;
   port: number | null;
-  /** Có khởi động cùng daemon không — T112. Chỉ là **cài đặt**, không phải dự đoán: nó nói cột
-   *  trong database, không nói service này sẽ chạy sau lần đăng nhập tới (còn tuỳ cổng có rảnh và
-   *  chương trình còn đó không). Sự kiện `service_state_changed` không đổi nó, nên `applyEvent`
-   *  giữ nguyên giá trị cũ và chỉ một lần đọc lại `service.list` mới đổi được. */
+  /** Whether it starts along with the daemon — T112. Only a **setting**, not a prediction: it
+   *  states the column in the database, not that this service will run after the next login (that
+   *  also depends on whether the port is free and the program is still there). A
+   *  `service_state_changed` event does not change it, so `applyEvent` keeps the old value and only
+   *  rereading `service.list` can change it. */
   autostart: boolean;
-  /** Ai để nó dừng, khi nó đang dừng — T167g. `daemon` nghĩa là MixEngine tự dừng (vì rảnh), và
-   *  request kế tiếp sẽ bật lại; `null` khi đang chạy hoặc daemon cũ không gửi. */
+  /** Who stopped it, when it is stopped — T167g. `daemon` means MixEngine stopped it itself (for
+   *  being idle), and the next request will start it again; `null` while running or when an old
+   *  daemon does not send it. */
   stoppedBy: StoppedBy | null;
-  /** Phiên bản chương trình service đang chạy — T183. `null` khi daemon không gửi (daemon cũ,
-   *  service của extension…), và khi đó không vẽ gì cả. */
+  /** The version of the program the service is running — T183. `null` when the daemon does not
+   *  send it (an old daemon, an extension's service…), and then nothing is drawn. */
   version: string | null;
 }
 
-/** Một câu trả lời `service.list`, thành các dòng. */
+/** A `service.list` answer, as rows. */
 export function rowsFrom(list: ServiceSummary[]): ServiceRow[] {
   return list.map((service) => ({
     id: service.id,
@@ -40,11 +41,11 @@ export function rowsFrom(list: ServiceSummary[]): ServiceRow[] {
 }
 
 /**
- * Message này có nghĩa là "đừng tin cái đang có, đọc lại" không.
+ * Whether this message means "do not trust what we have, read again".
  *
- * Tách khỏi [`applyEvent`] vì câu trả lời chỉ phụ thuộc vào message, không phụ thuộc vào bảng — và
- * vì gọi nó **ngoài** updater của `setState` là chỗ duy nhất đúng: React gọi updater hai lần trong
- * StrictMode, nên một tác dụng phụ đặt trong đó sẽ chạy hai lần cho mỗi sự kiện.
+ * Split from [`applyEvent`] because the answer depends only on the message, not on the table — and
+ * because calling it **outside** a `setState` updater is the only correct place: React calls
+ * updaters twice under StrictMode, so a side effect placed inside one would run twice per event.
  */
 export function needsResync(raw: string): boolean {
   try {
@@ -55,10 +56,10 @@ export function needsResync(raw: string): boolean {
   }
 }
 
-/** Có phải một `job_finished` không — bất kể job nào. Dashboard đọc lại `daemon.status` khi thấy
- *  nó, vì một `elevation.grant` xong (từ dialog, từ CLI, hay từ một cửa sổ MixDB khác) đổi số
- *  thao tác đang chờ mà daemon không phát sự kiện nào riêng cho chuyện đó (`elevation_required`
- *  chỉ bắn khi hàng đợi *dài thêm*). */
+/** Whether it is a `job_finished` — for any job. The Dashboard rereads `daemon.status` when it sees
+ *  one, because a finished `elevation.grant` (from the dialog, from the CLI, or from another MixDB
+ *  window) changes the waiting count without the daemon emitting any event of its own for that
+ *  (`elevation_required` only fires when the queue *grows*). */
 /** The event stream ended — the daemon stopped, or was stopped from somewhere else (T168: the tray). */
 export function isDisconnected(raw: string): boolean {
   try {
@@ -79,15 +80,15 @@ export function isJobFinished(raw: string): boolean {
 }
 
 /**
- * Message này có đổi một hàng của bảng service không.
+ * Whether this message changes a row of the service table.
  *
- * Tách khỏi [`applyEvent`] vì câu trả lời chỉ phụ thuộc vào message — và vì chỗ duy nhất hỏi được
- * là **ngoài** updater của `setRows`, cùng lý do [`needsResync`] nêu: React gọi updater hai lần
- * trong StrictMode.
+ * Split from [`applyEvent`] because the answer depends only on the message — and because the only
+ * place it can be asked is **outside** the `setRows` updater, for the reason [`needsResync`] gives:
+ * React calls updaters twice under StrictMode.
  *
- * `Dashboard` hỏi câu này để biết một message có đua với một `service.list` đang trên đường về hay
- * không — xem `readOrder.ts`. Chỉ `service_state_changed` được tính: tiến độ job bắn liên tục suốt
- * một lần cài runtime, và coi nó là một lý do đọc lại là biến một job dài thành một tràng RPC.
+ * `Dashboard` asks this to know whether a message races a `service.list` on its way back — see
+ * `readOrder.ts`. Only `service_state_changed` counts: job progress fires continuously throughout a
+ * runtime install, and treating it as a reason to reread turns one long job into a barrage of RPCs.
  */
 export function movesARow(raw: string): boolean {
   try {
@@ -99,10 +100,11 @@ export function movesARow(raw: string): boolean {
 }
 
 /**
- * Bảng sau một message.
+ * The table after a message.
  *
- * `resync` là `true` khi thứ vừa tới có nghĩa là "đừng tin cái đang có, đọc lại": bus bên kia tràn,
- * hoặc kết nối đứt. Sự kiện là best-effort và **không bao giờ là đường duy nhất biết trạng thái**.
+ * `resync` is `true` when what just arrived means "do not trust what we have, read again": the bus
+ * on the other side overflowed, or the connection dropped. Events are best-effort and **never the
+ * only way to know the state**.
  */
 export function applyEvent(
   rows: ServiceRow[],
@@ -121,15 +123,16 @@ export function applyEvent(
       return { rows, resync: true };
 
     case "service_state_changed": {
-      /* `service`, **không phải** `id`. Bản phác Rust trong `daemon-and-ipc.md` của MixEngine viết
-         `ServiceStateChanged { id, .. }`, nhưng thứ daemon thật sự gửi là `ServiceTransition`, và
-         nó gọi field đó là `service`. Đọc nhầm tên thì mọi sự kiện rơi vào im lặng và bảng không
-         bao giờ đổi — hợp đồng đã sinh ở `bindings/` (alias `@mixengine/api`) là sự thật, tài liệu kiến trúc thì không. */
+      /* `service`, **not** `id`. The Rust sketch in MixEngine's `daemon-and-ipc.md` writes
+         `ServiceStateChanged { id, .. }`, but what the daemon actually sends is
+         `ServiceTransition`, and it calls that field `service`. Misread the name and every event
+         falls silent and the table never changes — the contract generated in `bindings/` (the
+         `@mixengine/api` alias) is the truth; the architecture document is not. */
       const id = typeof event.service === "string" ? event.service : null;
       const to = typeof event.to === "string" ? (event.to as ServiceState) : null;
       if (id === null || to === null) return { rows, resync: false };
-      // Không dựng hàng cho một service chưa biết: `service.list` là chỗ một hàng ra đời, và nó
-      // biết những thứ sự kiện này không mang theo.
+      // Build no row for an unknown service: `service.list` is where a row is born, and it knows
+      // things this event does not carry.
       const stoppedBy = to === "stopped" ? stoppedByReason(event.reason) : null;
       return {
         rows: rows.map((row) => (row.id === id ? { ...row, state: to, stoppedBy } : row)),
@@ -138,16 +141,17 @@ export function applyEvent(
     }
 
     default:
-      // Một biến thể của phiên bản sau. Bỏ qua là đúng hợp đồng, không phải bỏ sót: sự kiện được
-      // internally tagged chính là để chuyện này xảy ra được.
+      // A variant from a later version. Ignoring it is the contract, not an oversight: events are
+      // internally tagged precisely so this can happen.
       return { rows, resync: false };
   }
 }
 
 /**
- * Ai dừng một service, đọc từ `reason` của sự kiện chuyển sang `stopped` — cùng luật với
- * `StoppedBy::of` bên MixEngine: `requested` và `credential_reset` là một người, mọi lý do khác là
- * máy. Một `reason` không đọc được thì không đoán: `null`, và hàng hiện như trước T167.
+ * Who stopped a service, read from the `reason` of the event moving it to `stopped` — the same rule
+ * as MixEngine's `StoppedBy::of`: `requested` and `credential_reset` are a person, every other
+ * reason is the machine. An unreadable `reason` is not guessed at: `null`, and the row shows as it
+ * did before T167.
  */
 export function stoppedByReason(reason: unknown): StoppedBy | null {
   if (typeof reason !== "object" || reason === null) return null;
@@ -156,7 +160,7 @@ export function stoppedByReason(reason: unknown): StoppedBy | null {
   return kind === "requested" || kind === "credential_reset" ? "person" : "daemon";
 }
 
-/** Một thao tác dài đang chạy. `id` là rowid của hàng `jobs` bên MixEngine. */
+/** A long-running operation in progress. `id` is the rowid of MixEngine's `jobs` row. */
 export interface JobRow {
   id: number;
   kind: string;
@@ -165,11 +169,11 @@ export interface JobRow {
 }
 
 /**
- * Job đang chạy, sau một message.
+ * The running jobs, after a message.
  *
- * `job_progress` và `job_finished` mang giá trị **đã được ghi xuống**, không phải một mô tả thứ hai
- * về nó — nên một job kết thúc mà không sống sót qua transaction của nó thì không bao giờ được báo.
- * Tiến độ là thứ duy nhất trên stream được phép lặp lại.
+ * `job_progress` and `job_finished` carry the value **as written down**, not a second description
+ * of it — so a job that ends without surviving its transaction is never reported. Progress is the
+ * only thing on the stream allowed to repeat.
  */
 export function applyJob(jobs: JobRow[], raw: string): JobRow[] {
   let event: {
@@ -199,6 +203,6 @@ export function applyJob(jobs: JobRow[], raw: string): JobRow[] {
   };
   const at = jobs.findIndex((job) => job.id === id);
   if (at === -1) return [...jobs, row];
-  // `kind` chỉ có ở message đầu; đừng để một message sau xoá nó.
+  // `kind` is only on the first message; do not let a later message erase it.
   return jobs.map((job, i) => (i === at ? { ...row, kind: row.kind || job.kind } : job));
 }

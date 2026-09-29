@@ -15,7 +15,7 @@ describe("autostartPresentation", () => {
     ).toBe("disabled");
   });
 
-  /* Đây là trạng thái T85b tồn tại để đặt tên: enabled đúng, nhưng không phải cho home này. */
+  /* This is the state T85b exists to name: enabled is true, but not for this home. */
   it("is enabledOtherHome when the registered entry belongs to a different home", () => {
     expect(
       autostartPresentation({ mechanism: "logon_task", enabled: true, for_this_home: false }),
@@ -30,8 +30,8 @@ describe("autostartPresentation", () => {
 });
 
 describe("doctorChecksInOrder", () => {
-  /* Danh sách ngắn hơn đọc như một câu trả lời sạch thay vì một câu hỏi chưa từng được hỏi — nên
-     mọi "ok" phải ở lại, không bị lọc trước khi vẽ. */
+  /* A shorter list reads as a clean answer rather than a question that was never asked — so every
+     "ok" has to stay, not be filtered out before drawing. */
   it("keeps every check, including ones that all report ok", () => {
     const checks = [
       { name: "a", outcome: { outcome: "ok" as const } },

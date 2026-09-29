@@ -3,7 +3,7 @@ import type { SiteSummary } from "@mixengine/api";
 
 import { canStart, shouldOfferQuickStart } from "./quickStart";
 
-/** Một site, đủ field để đếm. Nội dung không quan trọng: câu hỏi là *có hay không*. */
+/** A site, with enough fields to count. The content does not matter: the question is *whether*. */
 const a_site = { domain: "blog.test" } as unknown as SiteSummary;
 
 describe("shouldOfferQuickStart", () => {
@@ -15,8 +15,8 @@ describe("shouldOfferQuickStart", () => {
     expect(shouldOfferQuickStart([a_site])).toBe(false);
   });
 
-  /* `null` là "chưa đọc xong", không phải "rỗng" — mời trên nó sẽ làm thẻ loé lên trước mặt người
-     đã có site, mỗi lần mở tab. */
+  /* `null` is "not finished reading", not "empty" — inviting on it would flash the card in front of
+     someone who already has sites, every time the tab opens. */
   it("does not offer before the listing has arrived", () => {
     expect(shouldOfferQuickStart(null)).toBe(false);
   });
@@ -29,8 +29,8 @@ describe("canStart", () => {
     expect(canStart("blog", "")).toBe(false);
   });
 
-  /* Khoảng trắng không phải một cái tên. Luật slug thật vẫn là của daemon — đây chỉ quyết định nút
-     có bấm được không. */
+  /* Whitespace is not a name. The real slug rules still belong to the daemon — this only decides
+     whether the button can be pressed. */
   it("does not count whitespace as either", () => {
     expect(canStart("   ", "/projects/blog")).toBe(false);
     expect(canStart("blog", "   ")).toBe(false);

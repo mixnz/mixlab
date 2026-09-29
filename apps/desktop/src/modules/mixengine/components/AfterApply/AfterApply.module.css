@@ -14,8 +14,8 @@
   width: 100%;
 }
 
-/* Cùng ngôn ngữ hình với `.leftUnrun` của `ApplyDialog` — đây là cùng một câu, nói lại sau khi
-   chuỗi khởi động đã chạy xong. Đứng trên địa chỉ nên có khung riêng. */
+/* The same visual language as `ApplyDialog`'s `.leftUnrun` — this is the same sentence, said again
+   after the start-up chain has finished. It sits above the address, so it gets its own frame. */
 .trouble {
   display: flex;
   flex-direction: column;

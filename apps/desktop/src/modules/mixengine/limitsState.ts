@@ -6,8 +6,8 @@ export function enforcementKind(enforcement: Enforcement): EnforcementDisplay {
   return enforcement.kind;
 }
 
-/** Chỉ `unavailable` và `advisory` mang lý do; `null` nghĩa là không có gì để nói thêm, không phải
- *  chỗ để bịa một câu. */
+/** Only `unavailable` and `advisory` carry a reason; `null` means there is nothing more to say, not
+ *  a place to make up a sentence. */
 export function enforcementReason(enforcement: Enforcement): string | null {
   if (enforcement.kind === "unavailable") return enforcement.why;
   if (enforcement.kind === "advisory") return enforcement.why;

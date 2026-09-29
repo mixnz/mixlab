@@ -1,9 +1,11 @@
-//! Giữ `GET /metrics` mở và đẩy từng `MetricsFrame` lên UI — mirror của `events.rs`/`logs.rs`, khác
-//! route (cố định, không tham số) và state (`MetricsState`, không phải `LogsState`/`MixEngineState`).
+//! Keeps `GET /metrics` open and pushes each `MetricsFrame` up to the UI — a mirror of
+//! `events.rs`/`logs.rs`, differing in the route (fixed, no parameters) and the state
+//! (`MetricsState`, not `LogsState`/`MixEngineState`).
 //!
-//! **Mở kết nối này chính là subscribe.** MixEngine lấy mẫu 1 Hz trong lúc có ai giữ `/metrics`, và
-//! rơi về 1 lần/phút khi không — đóng kết nối này ngay khi màn hình không còn cần số "bây giờ" nữa
-//! (xem `MetricsState`) là phần bắt buộc để giữ đúng bất biến đó, không phải một chi tiết dọn dẹp.
+//! **Opening this connection is the subscription.** MixEngine samples at 1 Hz while someone holds
+//! `/metrics`, and falls back to once a minute when nobody does — closing this connection as soon
+//! as the screen no longer needs the "now" figures (see `MetricsState`) is required to keep that
+//! invariant, not a cleanup detail.
 
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
@@ -18,7 +20,7 @@ use super::sse::Frames;
 use super::state::MetricsState;
 use super::transport;
 
-/// Mở `GET /metrics` và chạy tới khi bị hủy hoặc kết nối đứt.
+/// Opens `GET /metrics` and runs until cancelled or until the connection drops.
 pub async fn stream_metrics(
     on_frame: Channel<String>,
     window: &str,
@@ -80,8 +82,8 @@ where
                 }
             }
         }
-        // Kết nối đứt: không có gì để phát riêng — frontend tự coi "không còn frame mới" là hết số,
-        // và tự mở lại đúng lúc `active` quay về `true`.
+        // The connection dropped: nothing of its own to emit — the frontend treats "no new frames"
+        // as the end of the figures itself, and reopens exactly when `active` goes back to `true`.
     });
 
     Ok(())

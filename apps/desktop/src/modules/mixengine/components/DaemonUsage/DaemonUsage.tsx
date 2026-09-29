@@ -18,7 +18,8 @@ export default function DaemonUsage({
   className,
 }: {
   reading: MetricsSample | null;
-  /** Số luồng logic của máy (`MetricsFrame.cores`): CPU hiện theo phần trăm cả máy như Task Manager (T190c). */
+  /** The machine's logical thread count (`MetricsFrame.cores`): CPU is shown as a percentage of the
+   *  whole machine, like Task Manager (T190c). */
   cores: number;
   /** What the strip measures, already translated. The daemon's by default. */
   label?: string;

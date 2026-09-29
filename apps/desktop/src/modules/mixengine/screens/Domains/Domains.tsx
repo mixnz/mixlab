@@ -24,23 +24,25 @@ function Fact({ on }: { on: boolean }) {
 }
 
 /**
- * Bảng chẩn đoán domain — T2.5.
+ * The domain diagnosis table — T2.5.
  *
- * **Bốn sự thật độc lập, không một verdict.** `hosts_entry`, `wildcard`, `server_answers`,
- * `resolves_to` mỗi cái trả lời một câu hỏi khác nhau; `because` là câu duy nhất nói cái gì sai,
- * vẽ nguyên văn — không dịch, vì đó là câu daemon tự viết.
+ * **Four independent facts, not one verdict.** `hosts_entry`, `wildcard`, `server_answers` and
+ * `resolves_to` each answer a different question; `because` is the only sentence saying what is
+ * wrong, drawn verbatim — not translated, because the daemon writes it.
  *
- * **Cả ba khối (CA, bảng domain, bảng chứng chỉ) đọc lại khi một job kết thúc**, không chỉ lúc
- * mount hay lúc quay lại màn. Một `elevation.grant` xong (từ "Fix browser trust" ngay đây, từ
- * Dashboard, hay từ CLI) đổi cả `because` của từng domain lẫn trạng thái CA, mà daemon không phát
- * sự kiện riêng nào cho chuyện đó — `job_finished` là tín hiệu (xem `isJobFinished`). `revision`
- * là cách màn này bảo hai khối con đọc lại mà không bắt mỗi khối tự subscribe kênh sự kiện.
+ * **All three blocks (CA, domain table, certificate table) reread when a job ends**, not only on
+ * mount or on returning to the screen. A finished `elevation.grant` (from "Fix browser trust"
+ * right here, from the Dashboard, or from the CLI) changes both each domain's `because` and the
+ * CA's state, and the daemon emits no event of its own for that — `job_finished` is the signal
+ * (see `isJobFinished`). `revision` is how this screen tells the two child blocks to reread
+ * without making each of them subscribe to the event channel.
  */
 export default function Domains({ active }: { active: boolean }) {
   const [rows, setRows] = useState<DomainStatus[]>([]);
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
-  /** Tăng mỗi lần có lý do để mọi khối đọc lại — `CaBlock`/`CertTable` đọc lại khi nó đổi. */
+  /** Bumped every time there is a reason for every block to reread — `CaBlock`/`CertTable` reread
+   *  when it changes. */
   const [revision, setRevision] = useState(0);
   const { t } = useTranslation();
 
@@ -54,7 +56,8 @@ export default function Domains({ active }: { active: boolean }) {
     }
   }, [t]);
 
-  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cùng lý do `Dashboard.tsx`.
+  // Reread on mount and every time we come back to this screen — the same reason as
+  // `Dashboard.tsx`.
   useEffect(() => {
     if (active) {
       void reload();
@@ -148,8 +151,9 @@ export default function Domains({ active }: { active: boolean }) {
                       "—"
                     )}
                   </td>
-                  {/* `because` là "một câu nói cái gì sai, hoặc None khi không có gì sai" (doc-comment
-                      `DomainStatus`) — có chữ là có lỗi, nên màu đỏ đọc được trước cả câu. */}
+                  {/* `because` is "a sentence saying what is wrong, or None when nothing is" (the
+                      `DomainStatus` doc comment) — text means an error, so the red reads before
+                      the sentence does. */}
                   <td className={`${styles.reason} ${styles.bad}`}>{row.because ?? ""}</td>
                   <td data-align="end" data-nowrap>
                     <Button size="small" variant="danger" onClick={() => void remove(row.domain)}>

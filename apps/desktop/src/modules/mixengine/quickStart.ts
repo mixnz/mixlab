@@ -1,27 +1,28 @@
 import type { SiteSummary } from "@mixengine/api";
 
 /**
- * Dashboard có mời người dùng dựng site đầu tiên không — T117.
+ * Whether the Dashboard invites the user to build their first site — T117.
  *
- * **Là trạng thái của home, không phải một cờ đã lưu.** Một cờ "đã bỏ qua" là thứ phải lưu, phải
- * migrate, và sẽ có người sửa tay sai; đọc từ `site.list` thì một máy vừa xoá hết site sẽ thấy thẻ
- * mời quay lại — đúng, và không có gì để reset.
+ * **It is the home's state, not a saved flag.** A "skipped" flag is something to store, to migrate,
+ * and someone will edit it by hand wrongly; reading from `site.list`, a machine that has just
+ * deleted every site sees the invitation card come back — correctly, and with nothing to reset.
  *
- * `null` nghĩa là **danh sách chưa về**, không phải home rỗng: mời trên `null` sẽ làm thẻ loé lên
- * trước mặt cả người đã có hai mươi site, mỗi lần mở tab.
+ * `null` means **the list has not arrived**, not an empty home: inviting on `null` would flash the
+ * card even in front of someone with twenty sites, every time the tab opens.
  *
- * **Project không tính.** Người có ba project và không site nào thì vẫn chưa có website — đó chính
- * là câu phàn nàn mà T117 được viết ra để trả lời.
+ * **Projects do not count.** Someone with three projects and no site still has no website — that
+ * is exactly the complaint T117 was written to answer.
  */
 export function shouldOfferQuickStart(sites: SiteSummary[] | null): boolean {
   return sites !== null && sites.length === 0;
 }
 
 /**
- * Tên project gõ vào đã dùng được chưa.
+ * Whether the typed project name is usable yet.
  *
- * Không phải bản sao luật slug của daemon — daemon vẫn là chỗ từ chối, và thẻ này không được đoán
- * thay nó. Đây chỉ là điều kiện để **bật nút**: rỗng thì không có gì để gửi.
+ * Not a copy of the daemon's slug rules — the daemon is still where refusals happen, and this card
+ * must not guess on its behalf. This is only the condition for **enabling the button**: empty
+ * means there is nothing to send.
  */
 export function canStart(project: string, root: string): boolean {
   return project.trim() !== "" && root.trim() !== "";

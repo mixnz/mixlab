@@ -2,27 +2,28 @@ import type { MetricsFrame } from "@mixengine/api";
 import type { MetricsSample } from "@mixengine/api";
 
 /**
- * Ghép một `ServiceId` với đúng chuỗi `MetricsSubject` bên MixEngine dùng trên dây.
+ * Joins a `ServiceId` into exactly the `MetricsSubject` string MixEngine uses on the wire.
  *
- * `"service:<id>"` — prefix `service:` là load-bearing, không phải trang trí: `ServiceId::parse`
- * chấp nhận tên trần, nên một service hoàn toàn có thể tên là `daemon`; dùng chung một spelling sẽ
- * gán lịch sử của daemon cho service đó. Type export phía TypeScript cố ý là `String` trần
- * (`ts(as = "String")`, `mixengine-proto/src/metrics.rs`) — ngữ pháp này chỉ tồn tại ở
- * `MetricsSubject::parse` phía Rust, không kiểm chứng được từ kiểu dữ liệu, nên client phải tự giữ
- * đúng một chỗ.
+ * `"service:<id>"` — the `service:` prefix is load-bearing, not decoration: `ServiceId::parse`
+ * accepts bare names, so a service may perfectly well be named `daemon`; sharing one spelling would
+ * attribute the daemon's history to that service. The type exported to TypeScript is deliberately a
+ * bare `String` (`ts(as = "String")`, `mixengine-proto/src/metrics.rs`) — this grammar only exists
+ * in `MetricsSubject::parse` on the Rust side and cannot be checked from the data type, so the
+ * client has to keep it right in exactly one place.
  */
 export function metricsSubjectFor(serviceId: string): string {
   return `service:${serviceId}`;
 }
 
-/** Subject của chính daemon — không có `ServiceRow` tương ứng, vẽ riêng khỏi bảng service. */
+/** The daemon's own subject — it has no matching `ServiceRow` and is drawn apart from the service
+ *  table. */
 export const DAEMON_SUBJECT = "daemon";
 
 /**
- * Parse một message thô từ `/metrics`. `null` nếu không phải một `MetricsFrame` hợp lệ.
+ * Parses one raw message from `/metrics`. `null` if it is not a valid `MetricsFrame`.
  *
- * Frame của daemon cũ hơn T190c không có `cores`: con số của nó vốn là phần trăm của một lõi, nên
- * `cores` mặc định là 1 thay vì từ chối cả frame.
+ * A frame from a daemon older than T190c has no `cores`: its figure was already a percentage of
+ * one core, so `cores` defaults to 1 instead of rejecting the whole frame.
  */
 export function parseMetricsFrame(raw: string): MetricsFrame | null {
   try {
@@ -36,11 +37,11 @@ export function parseMetricsFrame(raw: string): MetricsFrame | null {
 }
 
 /**
- * Mẫu của một subject trong frame mới nhất, hoặc `null` nếu subject đó vắng mặt.
+ * A subject's sample in the latest frame, or `null` if that subject is absent.
  *
- * **Vắng mặt trong frame không phải là 0** — một subject không đo được là một subject không nằm
- * trong `samples`, không phải một `MetricsSample` với các số 0 (`MetricsFrame` doc-comment). Gọi
- * chỗ này thay vì tự `find` là chỗ duy nhất giữ đúng luật đó.
+ * **Absent from the frame is not 0** — a subject that could not be measured is a subject not in
+ * `samples`, not a `MetricsSample` of zeros (`MetricsFrame` doc comment). Calling this instead of
+ * doing your own `find` is the only thing that keeps that rule.
  */
 export function readingFor(frame: MetricsFrame | null, subject: string): MetricsSample | null {
   if (frame === null) return null;
@@ -70,7 +71,7 @@ export function servicesTotal(frame: MetricsFrame | null): MetricsSample | null 
 
 const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"];
 
-/** Một kích cỡ đọc được liếc qua. Một chữ số thập phân, bỏ luôn nếu là số tròn. */
+/** A size readable at a glance. One decimal place, dropped when the number is whole. */
 export function formatBytes(bytes: number): string {
   let size = bytes;
   let unit = 0;
@@ -83,20 +84,21 @@ export function formatBytes(bytes: number): string {
 }
 
 /**
- * `cpu_percent` (phần trăm của một lõi) quy ra phần trăm của cả máy — T190c.
+ * `cpu_percent` (a percentage of one core) converted to a percentage of the whole machine — T190c.
  *
- * Mẫu số là số luồng logic daemon gửi kèm (`MetricsFrame.cores`, `MetricsHistory.cores`), cũng là
- * mẫu số Task Manager dùng. `cores` bằng 0 được coi là 1.
+ * The denominator is the logical thread count the daemon sends along (`MetricsFrame.cores`,
+ * `MetricsHistory.cores`), which is also the denominator Task Manager uses. `cores` of 0 is
+ * treated as 1.
  */
 export function machineShare(percentOfOneCore: number, cores: number): number {
   return percentOfOneCore / Math.max(1, cores);
 }
 
 /**
- * CPU như Task Manager hiển thị: phần trăm của cả máy, một chữ số thập phân.
+ * CPU as Task Manager shows it: a percentage of the whole machine, one decimal place.
  *
- * Khác 0 mà làm tròn ra `0.0` thì hiện `<0.1%`, để một tiến trình đang chạy không bao giờ trông như
- * không làm gì; chưa đo được thì hiện `—`.
+ * Non-zero but rounding to `0.0` shows `<0.1%`, so a running process never looks like it is doing
+ * nothing; not measured yet shows `—`.
  */
 export function formatCpu(percentOfOneCore: number | null, cores: number): string {
   if (percentOfOneCore === null) return "—";

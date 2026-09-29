@@ -15,16 +15,16 @@ import styles from "./Settings.module.css";
 import SaveResourcesSection from "./SaveResourcesSection";
 
 /**
- * Root directory, TLD quản lý, autostart, doctor, diagnostics — T4.6–T4.8. Cập nhật không nằm
- * ở đây mà ở Settings → Updates của MixLab (T187, ADR 0056).
+ * Root directory, managed TLD, autostart, doctor, diagnostics — T4.6–T4.8. Updates are not here but
+ * in MixLab's Settings → Updates (T187, ADR 0056).
  *
- * **Root/TLD không gọi command mới nào** — cả hai đọc từ `daemon.status()`
- * (`home`, `dns?.wildcards`), cuộc gọi Dashboard đã làm mỗi lần `reload()`. Settings tự gọi lại một
- * lần riêng, rẻ hơn chia sẻ state với một màn khác.
+ * **Root/TLD call no new command** — both are read from `daemon.status()` (`home`,
+ * `dns?.wildcards`), the call the Dashboard already makes on every `reload()`. Settings makes its
+ * own separate call, which is cheaper than sharing state with another screen.
  *
- * **"Default web server" là một section riêng (`FrontEndSection`)** — `service.set_front_end` và
- * `ServiceSummary.role` (T97) có từ bindings `v0.0.6`; trên một daemon cũ hơn section đó tự hiện
- * dòng "bản này chưa hỗ trợ" thay vì biến mất.
+ * **"Default web server" is a section of its own (`FrontEndSection`)** — `service.set_front_end`
+ * and `ServiceSummary.role` (T97) exist since bindings `v0.0.6`; on an older daemon that section
+ * shows a "this version does not support it yet" line instead of disappearing.
  */
 export default function Settings({ active }: { active: boolean }) {
   const [status, setStatus] = useState<DaemonStatus | null>(null);

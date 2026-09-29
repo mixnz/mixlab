@@ -1,11 +1,11 @@
-//! "Open" trên màn hình Services chi tiết — mở thẳng một tab `db` trong tiến trình đang chạy, không
-//! đi qua `database.open` (vốn khởi động một process ngoài) và không đi qua OS.
+//! "Open" on the Services detail screen — opens a `db` tab straight in the running process, going
+//! neither through `database.open` (which starts an external process) nor through the OS.
 //!
-//! Lặp lại đúng ba bước Pha 0 đã dùng cho `mixlab://connect` — dựng một `Handoff`, giữ nó trong
-//! `HandoffState`, gọi `crate::launch::request` — chỉ khác nguồn dựng `Handoff` là `database.client`
-//! gọi thẳng ở đây, không phải một URL đọc từ dòng lệnh. Xem
-//! `docs/specs/2026-09-06-mixengine-runtimes-services-logs-design.md`, mục 4 và
-//! Quyết định D2.
+//! Repeats exactly the three steps Phase 0 used for `mixlab://connect` — build a `Handoff`, keep it
+//! in `HandoffState`, call `crate::launch::request` — differing only in that the `Handoff` is built
+//! from `database.client` called right here, not from a URL read off the command line. See
+//! `docs/specs/2026-09-06-mixengine-runtimes-services-logs-design.md`, section 4 and
+//! Decision D2.
 
 use serde_json::{json, Value};
 use tauri::{AppHandle, State};
@@ -18,9 +18,9 @@ use crate::secrets::secrets_resolve_mixengine;
 
 use super::rpc;
 
-/// `DatabaseProtocol` bên MixEngine có bốn giá trị; một giá trị lạ là daemon nói về một protocol
-/// bindings này chưa biết, không phải lỗi lập trình — trả `unsupported_platform`-shaped error thay
-/// vì panic.
+/// MixEngine's `DatabaseProtocol` has four values; an unknown one is the daemon talking about a
+/// protocol these bindings do not know yet, not a programming error — return an
+/// `unsupported_platform`-shaped error instead of panicking.
 fn db_kind_of(protocol: &str) -> Result<DbKind, AppError> {
     match protocol {
         "mysql" => Ok(DbKind::Mysql),
@@ -34,11 +34,11 @@ fn db_kind_of(protocol: &str) -> Result<DbKind, AppError> {
     }
 }
 
-/// Mở một service database làm một tab `db` mới trong cùng tiến trình.
+/// Opens a database service as a new `db` tab in the same process.
 ///
-/// `database` là tên database cụ thể muốn mở vào, hoặc `None` để mở ở mức server. Không bao giờ
-/// nhận hay chuyển tiếp mật khẩu ra ngoài hàm này — nó sống trong biến cục bộ `password` và chỉ đi
-/// vào `Handoff` đang chờ `db` lấy.
+/// `database` is the specific database to open into, or `None` to open at server level. Never
+/// takes or forwards the password outside this function — it lives in the local variable
+/// `password` and only goes into the `Handoff` waiting for `db` to pick it up.
 #[tauri::command]
 pub async fn mixengine_database_open_in_mixdb(
     app: AppHandle,
@@ -60,8 +60,8 @@ pub async fn mixengine_database_open_in_mixdb(
         })?;
     let kind = db_kind_of(protocol)?;
 
-    // `database.client` không mang port — nó là thứ `ServiceSummary` (từ `service.list`) khai, cùng
-    // report `mixengine_services()` đã dùng, không phải một field của báo cáo này.
+    // `database.client` carries no port — that is what `ServiceSummary` (from `service.list`)
+    // declares, the same report `mixengine_services()` uses, not a field of this report.
     let services: Value = rpc::call("service.list", json!({})).await?;
     let port = services
         .get("services")
@@ -145,7 +145,8 @@ pub async fn mixengine_database_open_in_mixdb(
 mod tests {
     use super::*;
 
-    /// Mỗi protocol daemon trả về mở đúng một workspace — `mongodb` là tab Mongo (T155).
+    /// Each protocol the daemon returns opens exactly one workspace — `mongodb` is the Mongo tab
+    /// (T155).
     #[test]
     fn every_protocol_the_daemon_answers_opens_a_workspace() {
         assert_eq!(db_kind_of("mysql").unwrap(), DbKind::Mysql);
