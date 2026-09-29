@@ -245,6 +245,29 @@ mix_window_in() {
   esac
 }
 
+# What a staged window was built from: the release's version, then a hash of the sources on disk.
+# `desktop.sh` writes it beside the window and `stage.sh` rebuilds a window whose line differs.
+#
+# **The sources as they are, not as committed.** A temporary index takes every file under the paths
+# the window compiles from — ignored ones left out by `.gitignore`, uncommitted edits and new files
+# in — and `write-tree` hashes it. A version alone missed a window staged for 0.0.9 inside a 0.0.10
+# setup, and a commit hash would miss a fix still being tried out, which is when a local package is
+# built. Outside a git checkout the version is all there is to go on.
+mix_window_fingerprint() {
+  local index tree
+  index="$(mktemp)"
+  rm -f "$index"
+  if tree="$(cd "$MIX_ROOT" \
+    && GIT_INDEX_FILE="$index" git add -A -- apps/desktop bindings crates/mixengine-proto \
+      crates/mixengine-platform Cargo.toml 2>/dev/null \
+    && GIT_INDEX_FILE="$index" git write-tree 2>/dev/null)"; then
+    echo "$(mix_version) $tree"
+  else
+    echo "$(mix_version)"
+  fi
+  rm -f "$index"
+}
+
 # `MIX_BINARIES` without the window, one per line — what every headless artifact holds, and what
 # `stage.sh` builds from the root workspace. Derived rather than declared as a sixth list: a second
 # hand-kept array of the same names is what T85c was.

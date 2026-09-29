@@ -6,7 +6,8 @@
 # crate is a workspace of its own that this one `exclude`s (ADR 0027, rule 5). `-p mixlab` there is
 # an error, not a build. See the T105 design, D2.
 #
-# Run once per build leg. `stage.sh` runs it itself when nothing is staged, which is what keeps
+# Run once per build leg. `stage.sh` runs it itself when nothing is staged, or when what is staged
+# was built from other sources (`mix_window_fingerprint`), which is what keeps
 # `bash packaging/linux/build-deb.sh` working end to end on a developer machine; CI runs it as a
 # step of its own so that the four Linux packaging scripts, which each call `stage.sh`, do not race
 # to be the one that pays for it.
@@ -40,6 +41,10 @@ done
 export MIXENGINE_RELEASE=1
 
 app="$MIX_ROOT/apps/desktop"
+
+# Taken before the build rather than after it: a file edited while this compiles is not in the
+# window, and the next `stage.sh` should say so by building it again.
+fingerprint="$(mix_window_fingerprint)"
 
 # **`MIX_TIMINGS=1` asks cargo where the build went** (T173c). `tauri build` passes what follows a
 # second `--` to the runner, so the flag reaches cargo and the report lands in
@@ -108,6 +113,9 @@ test -e "$(mix_window_in "$window")" || {
   echo "the window was not staged at $(mix_window_in "$window")" >&2
   exit 1
 }
+
+# What `stage.sh` compares with the sources it is about to package — `mix_window_fingerprint`.
+echo "$fingerprint" >"$window/fingerprint"
 
 # **And what it will need from the machine it runs on** — T105a, ADR 0028. Read here rather than at
 # packaging time because this is where the binary is newest and the machine that built it is still

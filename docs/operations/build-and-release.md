@@ -461,7 +461,8 @@ bash packaging/linux/build-rpm.sh       # .rpm, with the window and headless
 ```
 
 **The first line is optional and is there for speed.** `packaging/stage.sh` runs `desktop.sh` itself
-when nothing has staged the window, so any one of the lines below works on its own — but the two
+when nothing has staged the window, or when the staged one was built from other sources than the
+checkout holds now (its `fingerprint` file differs), so any one of the lines below works on its own — but the two
 Linux scripts each call `stage.sh`, and running it once up front means one of them is not paying for
 a ten-minute webview build inside a packaging run. The window's crate is a workspace of its own that
 this one excludes (ADR 0027, rule 5), which is why `stage.sh` cannot build it with `cargo -p` like

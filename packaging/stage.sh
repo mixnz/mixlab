@@ -130,8 +130,20 @@ done
 # The window, from wherever this leg built it — T105, D2. **Built here only if nothing staged it**:
 # CI runs `packaging/desktop.sh` as a step of its own, and the four Linux packaging scripts each
 # call this file, so without the guard one leg would build a webview application four times.
+#
+# **Or if what is staged was built from other sources.** A window left in `target/` by an earlier
+# run used to be packaged as it was: a 0.0.9 window went out inside a 0.0.10 setup, and nothing
+# said so. `desktop.sh` writes `mix_window_fingerprint` beside the window, and one that differs from
+# the sources here now is built again. Not under `MIX_PREBUILT`: CI's window was built from this
+# very commit by the job before, and this job must not compile at all.
 window="$MIX_OUT/window/$(mix_window_key "$target")"
-if [ ! -e "$(mix_window_in "$window")" ]; then
+stale=0
+if [ -e "$(mix_window_in "$window")" ] && [ "${MIX_PREBUILT:-0}" != "1" ] \
+  && [ "$(cat "$window/fingerprint" 2>/dev/null)" != "$(mix_window_fingerprint)" ]; then
+  echo "the staged window was built from other sources; building it again" >&2
+  stale=1
+fi
+if [ ! -e "$(mix_window_in "$window")" ] || [ "$stale" = "1" ]; then
   if [ "${MIX_PREBUILT:-0}" = "1" ]; then
     echo "MIX_PREBUILT is set and no window is staged at $window" >&2
     exit 1

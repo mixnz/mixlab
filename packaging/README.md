@@ -19,7 +19,8 @@ bash scripts/build-installer.sh      # anywhere:   picks this OS's line above, t
 ```
 
 **The first line is optional and is there for speed.** `stage.sh` runs `desktop.sh` itself when
-nothing has staged the window, so any one of the lines below it works on its own — but the four
+nothing has staged the window, or when the staged one was built from other sources than the checkout
+holds now (its `fingerprint` file differs), so any one of the lines below it works on its own — but the four
 Linux scripts each call `stage.sh`, and running it once up front means one of them is not paying for
 a ten-minute webview build inside a packaging run. It is a script of its own because the window's
 crate is a workspace this one `exclude`s (ADR 0027, rule 5): `cargo build -p mixlab` at the root is
