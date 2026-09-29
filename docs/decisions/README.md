@@ -57,6 +57,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0055](0055-the-daemons-credentials-are-one-keychain-item-per-home-on-macos.md) | The daemon's credentials are one Keychain item per home on macOS | Accepted |
 | [0056](0056-mixlab-stands-without-mixengine.md) | MixLab stands without MixEngine, and updates itself; MixEngine never updates unasked | Accepted |
 | [0057](0057-a-runtime-s-commands-are-in-bin-only-while-it-is-installed.md) | A runtime's commands are in `bin/` only while it is installed | Accepted |
+| [0058](0058-the-tray-is-mixlabs-and-a-module-lends-it-a-section.md) | The tray is MixLab's, and a module lends it a section | Accepted |
 
 ### Desktop (recorded in MixDB)
 

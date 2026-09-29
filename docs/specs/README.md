@@ -180,3 +180,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-09-28 | [T190b — The idle sweep does not render to look](2026-09-28-t190b-the-idle-sweep-does-not-render-to-look-design.md) | T190b | implemented |
 | 2026-09-28 | [T191 — A path is spelled the way this system spells one](2026-09-28-t191-a-path-is-spelled-the-way-this-system-spells-one-design.md) | T191 | implemented |
 | 2026-09-29 | [T190c — CPU is shown the way Task Manager shows it](2026-09-29-t190c-cpu-is-shown-the-way-task-manager-shows-it-design.md) | T190c | implemented |
+| 2026-09-29 | [T192 — The tray is MixLab's](2026-09-29-t192-the-tray-is-mixlabs-design.md) | T192 | approved |
