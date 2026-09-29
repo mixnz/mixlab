@@ -402,4 +402,6 @@ giờ mọc thêm field, vì đó là thứ client đọc trước khi biết c�
   Metrics mở cạnh nhau tới mức đáng tách tab riêng khi build tới đó.
 - **Tray/menu-bar — answered by T168.** A webview panel on macOS and Windows, the same panel behind a
   three-item menu on Linux, and a login switch beside the daemon's (ADR 0042). See
-  `docs/specs/2026-09-19-t168-mixengine-in-the-tray-design.md`.
+  `docs/specs/2026-09-19-t168-mixengine-in-the-tray-design.md`. Since T192 the panel's frame, the
+  icon and the login switch are the shell's, and this module lends the panel a section (ADR 0058,
+  `docs/specs/2026-09-29-t192-the-tray-is-mixlabs-design.md`).

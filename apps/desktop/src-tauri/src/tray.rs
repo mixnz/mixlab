@@ -343,8 +343,7 @@ fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
             let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
         }
         // Without an icon (a session with no tray host), closing the main window is quitting —
-        // and the hidden panel would
-        // otherwise keep the process alive with nothing on screen.
+        // and the hidden panel would otherwise keep the process alive with nothing on screen.
         (MAIN, WindowEvent::Destroyed) => app.exit(0),
         _ => {}
     }

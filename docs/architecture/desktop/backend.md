@@ -15,7 +15,7 @@ Shared by every module:
 | `error.rs` | `AppError` and the `err!` macro. Declared first and with `#[macro_use]`, so everything below it has the macro. |
 | `secrets.rs` | The OS credential store, and the three `secrets_*` commands. Keyed by an arbitrary id, so any module can keep something in it. |
 | `ssh/mod.rs` | russh-based local port forward (`open_tunnel`), `open_shell`, `test_connection`, and the `SshConfig`/`SshAuth` those take. Shared by db and terminal, and `known_hosts.json` is the app's, not either module's. |
-| `tray.rs` | The tray icon and the hidden `tray` panel window: placing it beside the icon, hiding it on blur, close-to-tray for `main`, the Linux menu and the checks that decide whether a session can show an icon at all, and a login start's hidden window (T168). |
+| `tray.rs` | The tray icon and the hidden `tray` panel window: placing it beside the icon, hiding it on blur, close-to-tray for `main`, the icon's native menu, the checks that decide whether a session can show an icon at all, and a login start's hidden window (T168). Since T192 the icon is up on every preset, and `panel` — whether a visible module lends the panel a section — decides whether a primary click opens the panel or the main window ([ADR 0058](../../decisions/0058-the-tray-is-mixlabs-and-a-module-lends-it-a-section.md)). |
 | `login_item.rs` | MixLab's own login entry through `tauri-plugin-autostart`, read back from the system on every ask (ADR 0042). |
 | `modules/mod.rs` | `handler()` — every command of every module. |
 

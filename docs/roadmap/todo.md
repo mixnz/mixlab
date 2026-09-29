@@ -73,6 +73,15 @@ half of a rename — which is exactly the reading a version that never shipped i
 
 ## Where we are
 
+**Phase 32 is built — 5 of 5, and M32 waits on CI's Linux and macOS legs.** The tray belonged to
+MixEngine: without the `mixengine` module there was no icon, and the close button quit MixLab and
+every terminal session with it. Now the icon, close-to-tray, the login switch and the panel's frame
+are MixLab's, on every preset; the `mixengine` module lends the panel a section, and without one a
+click on the icon brings the window back
+([ADR 0058](../decisions/0058-the-tray-is-mixlabs-and-a-module-lends-it-a-section.md)). A development
+build was checked by hand on Windows.
+Design: [2026-09-29-t192-the-tray-is-mixlabs-design.md](../specs/2026-09-29-t192-the-tray-is-mixlabs-design.md).
+
 **Phase 30 is built — 19 of 19, and M30 is met.** MixLab has an account, so a second machine
 has the saved connections, REST collections, snippets and, one switch each, the saved passwords the
 first one has. Everything is encrypted on the machine before it leaves; the server holds ciphertext

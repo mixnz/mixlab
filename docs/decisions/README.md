@@ -41,7 +41,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0040](0040-a-development-builds-home-follows-its-checkout.md) | A development build's home follows its checkout, unless root cannot read it there | Accepted |
 | [0039](0039-a-jdk-is-told-about-the-authority-inside-its-own-cacerts.md) | A JDK is told about the authority inside its own `cacerts` | Accepted |
 | [0041](0041-mixengine-stops-nothing-a-person-did-not-ask-it-to.md) | MixEngine stops nothing a person did not ask it to stop | Accepted |
-| [0042](0042-mixlab-starts-at-login-when-a-person-asks-it-to.md) | MixLab starts at login when a person asks it to, and separately from the daemon | Accepted |
+| [0042](0042-mixlab-starts-at-login-when-a-person-asks-it-to.md) | MixLab starts at login when a person asks it to, and separately from the daemon | Accepted; the switch's place by 0058 |
 | [0043](0043-documentation-lives-under-docs.md) | Documentation for people lives under `docs/`; `.claude/` holds only agent configuration | Accepted |
 | [0044](0044-mixlab-is-the-product-and-mixengine-is-the-engine.md) | MixLab is the product; MixEngine is the engine inside it and the headless distribution | Accepted; decision 6 superseded by 0046, decision 5 by 0049 |
 | [0045](0045-mixlab-has-an-account-and-mixengine-does-not.md) | MixLab has an end-to-end encrypted account; MixEngine has none, and its server is its own repository | Accepted; decision 4 superseded by 0046 |
