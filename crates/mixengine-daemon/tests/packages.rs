@@ -1114,6 +1114,10 @@ impl Fixture {
 
 /// **T193c, D6 step 4 — added at execution.** An instance that does not start on the new patch is
 /// put back on the old one and started again, and the old version is kept.
+///
+/// **And the job fails**, saying so — the final review's finding: a job that ended `succeeded`
+/// here let `mix package upgrade` exit zero and MixLab say nothing, over an update that did not
+/// happen.
 #[tokio::test]
 async fn a_package_that_does_not_start_on_the_new_patch_goes_back() {
     let fixture = Fixture::start_with_a_broken_next_patch().await;
@@ -1130,17 +1134,17 @@ async fn a_package_that_does_not_start_on_the_new_patch_goes_back() {
     let finished = client.finished(job["id"].clone()).await;
     assert_eq!(
         finished["state"],
-        "succeeded",
-        "{finished}\n{}",
+        "failed",
+        "an update that moved nothing is a failed job\n{finished}\n--- daemon ---\n{}",
         fixture.home.daemon_log()
     );
-
-    let result = &finished["outcome"]["result"];
-    assert_eq!(
-        result["entries"][0]["outcome"]["outcome"], "failed",
-        "{result}"
+    let said = finished["outcome"]["error"]["message"]
+        .as_str()
+        .unwrap_or_default();
+    assert!(
+        said.contains("fakeservice@main") && said.contains(VERSION),
+        "the error names the instance and the version it is back on: {finished}"
     );
-    assert_eq!(result["old"]["state"], "kept", "{result}");
 
     let services = client.call("service.list", json!({})).await;
     let main = services["services"]

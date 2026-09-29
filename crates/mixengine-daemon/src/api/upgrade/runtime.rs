@@ -410,16 +410,18 @@ impl Api {
             if standing.running {
                 handle.progress(50, &format!("starting {to_pool}")).await;
                 let walk = self.service_start(&crate::api::target(to_pool)).await?;
+                // **A failed job, not a plan marked "not done"** — the final review's finding:
+                // an update that moved nothing has to end the way a failure ends, or `mix` exits
+                // zero and MixLab says nothing.
                 if let Some(failed) = walk.failed {
-                    settle(&mut plan, &UpgradeOutcome::Skipped {});
-                    plan.old = OldVersion::Kept {
-                        because: vec![format!(
-                            "{0} did not start, so nothing was moved; `mix service logs {0}` \
-                             says why",
+                    return Err(Error::new(
+                        ErrorCode::ProcessFailed,
+                        format!(
+                            "{0} did not start, so nothing was moved and {kind} {from} is still \
+                             installed; `mix service logs {0}` says why",
                             failed.service
-                        )],
-                    };
-                    return Ok(plan);
+                        ),
+                    ));
                 }
             } else if standing.person_stopped {
                 upgrade::set_stopped_by_person(&self.store, to_pool)
@@ -468,13 +470,14 @@ impl Api {
             {
                 tracing::warn!(%error, "a pool an update started could not be stopped again");
             }
-            settle(&mut plan, &UpgradeOutcome::Skipped {});
-            plan.old = OldVersion::Kept {
-                because: vec![format!(
-                    "the front end refused the sites on {kind} {to}: {refused}"
-                )],
-            };
-            return Ok(plan);
+            return Err(Error::new(
+                refused.code,
+                format!(
+                    "the front end refused the sites on {kind} {to}, so they were moved back and \
+                     {kind} {from} is still installed: {}",
+                    refused.message
+                ),
+            ));
         }
 
         for pool in &moving {

@@ -253,20 +253,20 @@ impl Api {
                     "asking whether this machine will let it answer on 80 and 443",
                 )
                 .await;
+            // A failed job, as `runtime_walk` says why: nothing has moved.
             if let Some(because) = self
                 .would_lose_the_grant(asked.grant, &binary, true, handle)
                 .await
             {
-                settle(&mut plan, &UpgradeOutcome::Skipped {});
-                plan.old = OldVersion::Kept {
-                    because: vec![because],
-                };
-                return Ok(plan);
+                return Err(Error::new(
+                    ErrorCode::PrivilegedRequired,
+                    format!("{because}; {package} {from} is still in use"),
+                ));
             }
         }
 
         // 3–4. One instance at a time.
-        let mut still_on_from = Vec::new();
+        let mut why = Vec::new();
         for instance in &instances {
             handle
                 .progress(
@@ -275,8 +275,8 @@ impl Api {
                 )
                 .await;
             let outcome = self.move_instance(instance, package, from, &to).await?;
-            if matches!(outcome, UpgradeOutcome::Failed { .. }) {
-                still_on_from.push(instance.service.clone());
+            if let UpgradeOutcome::Failed { because } = &outcome {
+                why.push(because.clone());
             }
             mark(&mut plan, &instance.service, outcome);
         }
@@ -288,17 +288,16 @@ impl Api {
             tracing::warn!(%error, "bin/ could not be refreshed after a package was updated");
         }
 
+        // An instance that went back means the update did not happen for it: a failed job, which
+        // is what makes `mix` exit non-zero and MixLab say so. The ones that moved stay moved.
+        if !why.is_empty() {
+            return Err(Error::new(ErrorCode::ProcessFailed, why.join("; ")));
+        }
+
         // 8. Remove `from`, or keep it.
         plan.old = if asked.keep {
             OldVersion::Kept {
                 because: vec!["you asked to keep it".to_owned()],
-            }
-        } else if !still_on_from.is_empty() {
-            OldVersion::Kept {
-                because: still_on_from
-                    .iter()
-                    .map(|service| format!("{service} is still on {package} {from}"))
-                    .collect(),
             }
         } else {
             match self
