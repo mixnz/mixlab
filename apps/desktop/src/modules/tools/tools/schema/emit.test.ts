@@ -5,7 +5,7 @@ import { inferSchema } from "./infer";
 const fields = (value: unknown) => inferSchema(value)!;
 
 describe("toCreateTable", () => {
-  it("ánh xạ kiểu theo dialect MySQL", () => {
+  it("maps types for the MySQL dialect", () => {
     const sql = toCreateTable(fields({ id: 1, ratio: 1.5, ok: true, meta: { a: 1 } }), {
       table: "users",
       dialect: "mysql",
@@ -16,7 +16,7 @@ describe("toCreateTable", () => {
     expect(sql).toContain("`meta` JSON NOT NULL");
   });
 
-  it("ánh xạ kiểu theo dialect PostgreSQL", () => {
+  it("maps types for the PostgreSQL dialect", () => {
     const sql = toCreateTable(fields({ ok: true, meta: { a: 1 }, ratio: 1.5 }), {
       table: "users",
       dialect: "postgres",
@@ -28,7 +28,7 @@ describe("toCreateTable", () => {
 
   // A sample is only a sample; an INT column overflowing at the two-billionth record is something
   // to fix in production.
-  it("dùng BIGINT chứ không INT", () => {
+  it("uses BIGINT rather than INT", () => {
     expect(toCreateTable(fields({ n: 1 }), { table: "t", dialect: "mysql" })).toContain(
       "`n` BIGINT",
     );
@@ -37,13 +37,13 @@ describe("toCreateTable", () => {
     );
   });
 
-  it("đổi tên cột sang snake_case", () => {
+  it("renames columns to snake_case", () => {
     expect(toCreateTable(fields({ createdAt: "x" }), { table: "t", dialect: "mysql" })).toContain(
       "`created_at`",
     );
   });
 
-  it("nhận ra cột thời gian", () => {
+  it("recognises time columns", () => {
     const sql = toCreateTable(fields({ at: "2026-08-28T00:00:00Z" }), {
       table: "t",
       dialect: "postgres",
@@ -51,7 +51,7 @@ describe("toCreateTable", () => {
     expect(sql).toContain('"at" TIMESTAMPTZ');
   });
 
-  it("bỏ NOT NULL cho khoá optional hoặc từng thấy null", () => {
+  it("drops NOT NULL for keys that are optional or have been seen null", () => {
     const sql = toCreateTable(fields([{ a: 1 }, { a: null, b: 2 }]), {
       table: "t",
       dialect: "mysql",
@@ -60,13 +60,13 @@ describe("toCreateTable", () => {
     expect(sql).not.toContain("NOT NULL");
   });
 
-  it("giữ NOT NULL cho khoá luôn có mặt và không bao giờ null", () => {
+  it("keeps NOT NULL for keys always present and never null", () => {
     expect(toCreateTable(fields([{ a: 1 }, { a: 2 }]), { table: "t", dialect: "mysql" })).toContain(
       "`a` BIGINT NOT NULL",
     );
   });
 
-  it("in TEXT khi chỉ thấy null", () => {
+  it("prints TEXT when only null has been seen", () => {
     expect(toCreateTable(fields({ a: null }), { table: "t", dialect: "mysql" })).toContain(
       "`a` TEXT",
     );
@@ -74,7 +74,7 @@ describe("toCreateTable", () => {
 
   // Flattening is a data modelling decision; the tool does not have enough information to make it
   // for the user.
-  it("để object lồng nhau thành một cột JSON chứ không trải phẳng", () => {
+  it("makes a nested object one JSON column rather than flattening it", () => {
     const sql = toCreateTable(fields({ user: { id: 1 } }), { table: "t", dialect: "mysql" });
     expect(sql).toContain("`user` JSON");
     expect(sql).not.toContain("user_id");
@@ -82,43 +82,43 @@ describe("toCreateTable", () => {
 });
 
 describe("toTypeScript", () => {
-  it("in interface với optional và null", () => {
+  it("prints an interface with optional and null", () => {
     expect(toTypeScript(fields([{ a: 1 }, { a: null, b: "x" }]), "Row")).toBe(
       "export interface Row {\n  a: number | null;\n  b?: string;\n}",
     );
   });
 
-  it("in interface lồng cho object con", () => {
+  it("prints nested interfaces for child objects", () => {
     const code = toTypeScript(fields({ user: { id: 1 } }), "Row");
     expect(code).toContain("user: RowUser;");
     expect(code).toContain("export interface RowUser {");
   });
 
-  it("in mảng object thành T[]", () => {
+  it("prints an array of objects as T[]", () => {
     expect(toTypeScript(fields({ tags: [{ n: "a" }] }), "Row")).toContain("tags: RowTags[];");
   });
 
-  it("bọc ngoặc kép khoá không phải định danh hợp lệ", () => {
+  it("quotes keys that are not valid identifiers", () => {
     expect(toTypeScript(fields({ "a-b": 1 }), "Row")).toContain('"a-b": number;');
   });
 
-  it("in unknown khi chỉ thấy null hoặc mảng rỗng", () => {
+  it("prints unknown when only null or empty arrays have been seen", () => {
     expect(toTypeScript(fields({ a: null, b: [] }), "Row")).toContain("a: unknown");
   });
 });
 
 describe("toGoStruct", () => {
-  it("in field PascalCase kèm tag json giữ khoá gốc", () => {
+  it("prints PascalCase fields with a json tag keeping the original key", () => {
     expect(toGoStruct(fields({ created_at: "x" }), "Row")).toBe(
       'type Row struct {\n\tCreatedAt string `json:"created_at"`\n}',
     );
   });
 
-  it("dùng con trỏ cho khoá optional hoặc nullable", () => {
+  it("uses pointers for optional or nullable keys", () => {
     expect(toGoStruct(fields([{ a: 1 }, { a: null }]), "Row")).toContain("A *int64");
   });
 
-  it("in struct lồng và slice", () => {
+  it("prints nested structs and slices", () => {
     const code = toGoStruct(fields({ user: { id: 1 }, tags: [{ n: "a" }] }), "Row");
     // `user` is required and never null, so it is a value rather than a pointer.
     expect(code).toContain("User RowUser");
@@ -126,7 +126,7 @@ describe("toGoStruct", () => {
     expect(code).toContain("type RowUser struct {");
   });
 
-  it("dùng con trỏ cho struct con optional", () => {
+  it("uses a pointer for an optional child struct", () => {
     const code = toGoStruct(fields([{ user: { id: 1 } }, {}]), "Row");
     expect(code).toContain("User *RowUser");
   });

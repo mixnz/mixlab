@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseCsvRows, rowsToObjects, toCsv } from "./csv";
 
 describe("parseCsvRows", () => {
-  it("tách theo dấu phân cách", () => {
+  it("splits on the separator", () => {
     expect(parseCsvRows("a,b\n1,2", ",")).toEqual([
       ["a", "b"],
       ["1", "2"],
@@ -10,40 +10,40 @@ describe("parseCsvRows", () => {
   });
 
   // The whole reason not to use `split(",")`.
-  it("giữ dấu phân cách nằm trong ngoặc kép", () => {
+  it("keeps a separator inside double quotes", () => {
     expect(parseCsvRows('a,b\n"x,y",2', ",")).toEqual([
       ["a", "b"],
       ["x,y", "2"],
     ]);
   });
 
-  it("hiểu ngoặc kép đôi là một dấu ngoặc kép", () => {
+  it("understands a doubled double quote as one double quote", () => {
     expect(parseCsvRows('a\n"nói ""xin chào"""', ",")).toEqual([["a"], ['nói "xin chào"']]);
   });
 
-  it("giữ xuống dòng nằm trong ngoặc kép", () => {
+  it("keeps a newline inside double quotes", () => {
     expect(parseCsvRows('a,b\n"hai\ndòng",2', ",")).toEqual([
       ["a", "b"],
       ["hai\ndòng", "2"],
     ]);
   });
 
-  it("nuốt CRLF như một lần xuống dòng", () => {
+  it("treats CRLF as one newline", () => {
     expect(parseCsvRows("a,b\r\n1,2\r\n", ",")).toEqual([
       ["a", "b"],
       ["1", "2"],
     ]);
   });
 
-  it("giữ trường rỗng ở đầu, giữa và cuối dòng", () => {
+  it("keeps empty fields at the start, middle and end of a line", () => {
     expect(parseCsvRows(",a,,b,", ",")).toEqual([["", "a", "", "b", ""]]);
   });
 
-  it("không đẻ ra một dòng thừa vì xuống dòng cuối file", () => {
+  it("does not produce an extra row from a trailing newline", () => {
     expect(parseCsvRows("a\n1\n", ",")).toEqual([["a"], ["1"]]);
   });
 
-  it("nhận dấu phân cách khác dấu phẩy", () => {
+  it("accepts separators other than a comma", () => {
     expect(parseCsvRows("a;b\n1;2", ";")).toEqual([
       ["a", "b"],
       ["1", "2"],
@@ -52,7 +52,7 @@ describe("parseCsvRows", () => {
 });
 
 describe("rowsToObjects", () => {
-  it("lấy dòng đầu làm tên cột", () => {
+  it("takes the first row as column names", () => {
     expect(
       rowsToObjects([
         ["id", "name"],
@@ -61,16 +61,16 @@ describe("rowsToObjects", () => {
     ).toEqual([{ id: "1", name: "An" }]);
   });
 
-  it("bù ô rỗng cho dòng ngắn hơn tiêu đề", () => {
+  it("fills empty cells for rows shorter than the header", () => {
     expect(rowsToObjects([["a", "b"], ["1"]])).toEqual([{ a: "1", b: "" }]);
   });
 
-  it("bỏ dòng trống hoàn toàn", () => {
+  it("skips entirely empty rows", () => {
     expect(rowsToObjects([["a"], [""], ["1"]])).toEqual([{ a: "1" }]);
   });
 
   // Guessing types loses the leading zero of postal codes, silently, and it cannot be recovered.
-  it("để mọi giá trị là chuỗi, kể cả thứ trông như số", () => {
+  it("keeps every value a string, even ones that look like numbers", () => {
     expect(
       rowsToObjects([
         ["zip", "ok"],
@@ -81,21 +81,21 @@ describe("rowsToObjects", () => {
 });
 
 describe("toCsv", () => {
-  it("lấy hợp các khoá làm cột, theo thứ tự xuất hiện lần đầu", () => {
+  it("takes the union of keys as columns, in order of first appearance", () => {
     expect(toCsv([{ b: 1 }, { a: 2 }], ",", true)).toBe("b,a\n1,\n,2");
   });
 
-  it("bọc ngoặc khi giá trị có dấu phân cách, ngoặc kép hoặc xuống dòng", () => {
+  it("quotes values containing a separator, double quote or newline", () => {
     expect(toCsv([{ a: "x,y", b: 'nói "chào"', c: "hai\ndòng" }], ",", false)).toBe(
       '"x,y","nói ""chào""","hai\ndòng"',
     );
   });
 
-  it("in null thành ô rỗng và object thành JSON", () => {
+  it("prints null as an empty cell and objects as JSON", () => {
     expect(toCsv([{ a: null, b: { x: 1 } }], ",", false)).toBe(',"{""x"":1}"');
   });
 
-  it("bỏ dòng tiêu đề khi không cần", () => {
+  it("omits the header row when not needed", () => {
     expect(toCsv([{ a: 1 }], ",", false)).toBe("1");
   });
 });

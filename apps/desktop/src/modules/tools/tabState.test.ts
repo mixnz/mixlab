@@ -2,24 +2,24 @@ import { describe, expect, it } from "vitest";
 import { parseToolsTabState } from "./tabState";
 
 describe("parseToolsTabState", () => {
-  it("nhận một toolId là chuỗi khác rỗng", () => {
+  it("accepts a toolId that is a non-empty string", () => {
     expect(parseToolsTabState({ toolId: "timestamp" })).toEqual({ toolId: "timestamp" });
   });
 
-  it("trả null cho giá trị không phải object", () => {
+  it("returns null for a value that is not an object", () => {
     expect(parseToolsTabState(undefined)).toBeNull();
     expect(parseToolsTabState("timestamp")).toBeNull();
     expect(parseToolsTabState(null)).toBeNull();
     expect(parseToolsTabState(["timestamp"])).toBeNull();
   });
 
-  it("trả null khi toolId thiếu, rỗng, hoặc không phải chuỗi", () => {
+  it("returns null when toolId is missing, empty or not a string", () => {
     expect(parseToolsTabState({})).toBeNull();
     expect(parseToolsTabState({ toolId: "" })).toBeNull();
     expect(parseToolsTabState({ toolId: 7 })).toBeNull();
   });
 
-  it("bỏ qua mọi khoá lạ thay vì từ chối cả object", () => {
+  it("ignores unknown keys instead of rejecting the whole object", () => {
     expect(parseToolsTabState({ toolId: "jwt", input: "bí mật" })).toEqual({ toolId: "jwt" });
   });
 });

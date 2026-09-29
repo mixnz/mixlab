@@ -19,7 +19,7 @@ const base: ConnectionFields = {
 };
 
 describe("parseConnectionString", () => {
-  it("đọc URI MySQL đầy đủ", () => {
+  it("reads a full MySQL URI", () => {
     expect(parseConnectionString("mysql://an:pw@db:3306/shop?ssl=true")).toEqual({
       kind: "mysql",
       srv: false,
@@ -32,12 +32,12 @@ describe("parseConnectionString", () => {
     });
   });
 
-  it("nhận cả postgres:// và postgresql://", () => {
+  it("accepts both postgres:// and postgresql://", () => {
     expect(parseConnectionString("postgres://h/d")?.kind).toBe("postgres");
     expect(parseConnectionString("postgresql://h/d")?.kind).toBe("postgres");
   });
 
-  it("nhận rediss:// và đọc số database ở phần path", () => {
+  it("accepts rediss:// and reads the database number from the path", () => {
     const f = parseConnectionString("rediss://:pw@127.0.0.1:6379/2");
     expect(f?.kind).toBe("redis");
     expect(f?.user).toBe("");
@@ -46,7 +46,7 @@ describe("parseConnectionString", () => {
   });
 
   // The DNS SRV record is what states the port, so a `+srv` URI carrying a port is a wrong URI.
-  it("để cổng trống với mongodb+srv", () => {
+  it("leaves the port empty for mongodb+srv", () => {
     const f = parseConnectionString("mongodb+srv://u:p@cluster.example.com/app");
     expect(f?.kind).toBe("mongodb");
     expect(f?.srv).toBe(true);
@@ -54,50 +54,50 @@ describe("parseConnectionString", () => {
   });
 
   // The silent failure: `URL` returns the username and password percent-encoded.
-  it("decode mật khẩu đã percent-encode", () => {
+  it("decodes a percent-encoded password", () => {
     expect(parseConnectionString("mysql://u:p%40ss@h/d")?.password).toBe("p@ss");
   });
 
-  it("không vỡ vì chuỗi phần trăm hỏng", () => {
+  it("does not break on a malformed percent sequence", () => {
     expect(parseConnectionString("mysql://u:p%zz@h/d")?.password).toBe("p%zz");
   });
 
-  it("trả null cho scheme lạ và cho chuỗi không phải URI", () => {
+  it("returns null for an unknown scheme and for a string that is not a URI", () => {
     expect(parseConnectionString("ftp://h/d")).toBeNull();
     expect(parseConnectionString("chỉ là chữ")).toBeNull();
   });
 });
 
 describe("toUri", () => {
-  it("ghép lại đầy đủ", () => {
+  it("builds the full string back", () => {
     expect(toUri({ ...base, password: "pw", params: [{ key: "ssl", value: "true" }] })).toBe(
       "mysql://an:pw@db.example.com:3306/shop?ssl=true",
     );
   });
 
-  it("bỏ phần xác thực khi không có user lẫn mật khẩu", () => {
+  it("drops the credentials part when there is neither user nor password", () => {
     expect(toUri({ ...base, user: "", password: "" })).toBe("mysql://db.example.com:3306/shop");
   });
 
-  it("giữ dạng chỉ có mật khẩu của Redis", () => {
+  it("keeps Redis's password-only form", () => {
     expect(
       toUri({ ...base, kind: "redis", user: "", password: "pw", port: "6379", database: "0" }),
     ).toBe("redis://:pw@db.example.com:6379/0");
   });
 
-  it("dùng scheme mongodb+srv và bỏ cổng khi srv", () => {
+  it("uses the mongodb+srv scheme and drops the port with srv", () => {
     expect(toUri({ ...base, kind: "mongodb", srv: true, port: "", password: "pw" })).toBe(
       "mongodb+srv://an:pw@db.example.com/shop",
     );
   });
 
   // Without encoding these three characters the string cannot be parsed anywhere.
-  it("encode mật khẩu có ký tự phá cú pháp", () => {
+  it("encodes a password with syntax-breaking characters", () => {
     const uri = toUri({ ...base, password: "a/b?c#d" });
     expect(uri).toContain("a%2Fb%3Fc%23d");
   });
 
-  it("đi vòng tròn với mật khẩu chứa cả năm ký tự khó", () => {
+  it("round-trips a password containing all five tricky characters", () => {
     const password = "p@ss:w/o?rd#1";
     const back = parseConnectionString(toUri({ ...base, password }));
     expect(back?.password).toBe(password);
@@ -107,32 +107,32 @@ describe("toUri", () => {
 });
 
 describe("toJdbc", () => {
-  it("in chuỗi JDBC cho MySQL", () => {
+  it("prints a JDBC string for MySQL", () => {
     expect(toJdbc({ ...base, password: "pw" })).toBe(
       "jdbc:mysql://db.example.com:3306/shop?user=an&password=pw",
     );
   });
 
-  it("in chuỗi JDBC cho PostgreSQL", () => {
+  it("prints a JDBC string for PostgreSQL", () => {
     expect(toJdbc({ ...base, kind: "postgres", port: "5432", password: "pw" })).toBe(
       "jdbc:postgresql://db.example.com:5432/shop?user=an&password=pw",
     );
   });
 
-  it("bù cổng mặc định khi ô cổng để trống", () => {
+  it("fills in the default port when the port field is empty", () => {
     expect(toJdbc({ ...base, port: "", password: "pw" })).toContain("db.example.com:3306");
   });
 
   // There is no JDBC standard for these two kinds, and printing a valid-looking string hands the
   // user something that will break somewhere else.
-  it("trả null cho MongoDB và Redis", () => {
+  it("returns null for MongoDB and Redis", () => {
     expect(toJdbc({ ...base, kind: "mongodb" })).toBeNull();
     expect(toJdbc({ ...base, kind: "redis" })).toBeNull();
   });
 });
 
 describe("toEnvPairs", () => {
-  it("dựng năm biến DB_*", () => {
+  it("builds the five DB_* variables", () => {
     expect(toEnvPairs({ ...base, password: "pw" })).toEqual([
       { key: "DB_HOST", value: "db.example.com" },
       { key: "DB_PORT", value: "3306" },
@@ -142,7 +142,7 @@ describe("toEnvPairs", () => {
     ]);
   });
 
-  it("bù cổng mặc định theo loại DB", () => {
+  it("fills in the default port by DB kind", () => {
     const pairs = toEnvPairs({ ...base, kind: "mongodb", port: "" });
     expect(pairs.find((p) => p.key === "DB_PORT")?.value).toBe("27017");
   });

@@ -12,7 +12,7 @@ function seededRnd(seed: number): () => number {
 }
 
 describe("generate", () => {
-  it("sinh đúng số dòng, cột theo đúng thứ tự field", () => {
+  it("generates the right number of rows, columns in field order", () => {
     const fields: FieldSpec[] = [
       { name: "b", kind: "word" },
       { name: "a", kind: "word" },
@@ -22,7 +22,7 @@ describe("generate", () => {
     expect(Object.keys(rows[0])).toEqual(["b", "a"]);
   });
 
-  it("integer nằm trong khoảng min/max", () => {
+  it("integer stays within min/max", () => {
     const rows = generate([{ name: "age", kind: "integer", min: 18, max: 65 }], 200, seededRnd(7));
     for (const row of rows) {
       expect(row.age).toBeGreaterThanOrEqual(18);
@@ -31,7 +31,7 @@ describe("generate", () => {
     }
   });
 
-  it("float nằm trong khoảng và làm tròn đúng số chữ số thập phân", () => {
+  it("float stays within range and rounds to the right number of decimals", () => {
     const rows = generate(
       [{ name: "price", kind: "float", min: 0, max: 100, decimals: 1 }],
       50,
@@ -45,47 +45,47 @@ describe("generate", () => {
     }
   });
 
-  it("boolean chỉ sinh true hoặc false", () => {
+  it("boolean only produces true or false", () => {
     const rows = generate([{ name: "active", kind: "boolean" }], 50, seededRnd(11));
     for (const row of rows) expect(typeof row.active).toBe("boolean");
   });
 
-  it("constant luôn trả đúng giá trị đã đặt", () => {
+  it("constant always returns the value set", () => {
     const rows = generate([{ name: "status", kind: "constant", value: "seed" }], 10, seededRnd(2));
     expect(rows.every((row) => row.status === "seed")).toBe(true);
   });
 
-  it("uuid có đúng hình dạng UUID v4", () => {
+  it("uuid has the shape of a UUID v4", () => {
     const rows = generate([{ name: "id", kind: "uuid" }], 30, seededRnd(5));
     const re = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
     for (const row of rows) expect(row.id as string).toMatch(re);
   });
 
-  it("email có dạng địa chỉ hợp lệ, đúng domain đã định nghĩa", () => {
+  it("email is a valid address on the defined domain", () => {
     const rows = generate([{ name: "email", kind: "email" }], 30, seededRnd(9));
     for (const row of rows) {
       expect(row.email as string).toMatch(/^[a-z0-9.]+@(example\.com|mail\.test|sample\.dev|demo\.io)$/);
     }
   });
 
-  it("phone theo locale vi có 10 chữ số bắt đầu bằng 0", () => {
+  it("phone in the vi locale has 10 digits starting with 0", () => {
     const rows = generate([{ name: "phone", kind: "phone", locale: "vi" }], 30, seededRnd(13));
     for (const row of rows) expect(row.phone as string).toMatch(/^0\d{9}$/);
   });
 
-  it("fullName theo locale vi lấy từ vốn tên tiếng Việt", () => {
+  it("fullName in the vi locale comes from the Vietnamese name pool", () => {
     const rows = generate([{ name: "name", kind: "fullName", locale: "vi" }], 30, seededRnd(17));
     // Accented VN names — the English name pool has no such characters, so this proves the right
     // pool was used.
     expect(rows.some((row) => /[ăâđêôơư]/i.test(row.name as string))).toBe(true);
   });
 
-  it("fullName mặc định không có tên đệm — luôn đúng hai từ", () => {
+  it("fullName has no middle name by default — always exactly two words", () => {
     const rows = generate([{ name: "name", kind: "fullName", locale: "vi" }], 30, seededRnd(23));
     for (const row of rows) expect((row.name as string).split(" ")).toHaveLength(2);
   });
 
-  it("fullName kèm includeMiddle thì chèn tên đệm ở giữa", () => {
+  it("fullName with includeMiddle inserts a middle name in between", () => {
     const rowsVi = generate(
       [{ name: "name", kind: "fullName", locale: "vi", includeMiddle: true }],
       30,
@@ -101,14 +101,14 @@ describe("generate", () => {
     for (const row of rowsEn) expect((row.name as string).split(" ")).toHaveLength(3);
   });
 
-  it("middleName đứng riêng lấy đúng vốn theo locale", () => {
+  it("a standalone middleName comes from the right pool for its locale", () => {
     const rows = generate([{ name: "middle", kind: "middleName", locale: "vi" }], 30, seededRnd(37));
     // The Vietnamese middle-name pool does not mix with the given-name pool — "Long"/"Nam" are not
     // in it.
     expect(rows.every((row) => !["Long", "Nam"].includes(row.middle as string))).toBe(true);
   });
 
-  it("fullName cùng dòng với firstName/lastName thì là cùng một người", () => {
+  it("fullName in the same row as firstName/lastName is the same person", () => {
     const fields: FieldSpec[] = [
       { name: "full", kind: "fullName", locale: "vi" },
       { name: "first", kind: "firstName", locale: "vi" },
@@ -118,7 +118,7 @@ describe("generate", () => {
     for (const row of rows) expect(row.full).toBe(`${row.last} ${row.first}`);
   });
 
-  it("kết quả giống nhau bất kể firstName hay fullName đứng trước trong danh sách field", () => {
+  it("the result is the same whether firstName or fullName comes first in the field list", () => {
     const withFullFirst = generate(
       [
         { name: "full", kind: "fullName", locale: "vi" },
@@ -138,7 +138,7 @@ describe("generate", () => {
     expect(withFullFirst.map((row) => row.first)).toEqual(withFirstFirst.map((row) => row.first));
   });
 
-  it("fullName + firstName + middleName + lastName cùng dòng khớp nhau hoàn toàn", () => {
+  it("fullName + firstName + middleName + lastName in the same row match completely", () => {
     const fields: FieldSpec[] = [
       { name: "full", kind: "fullName", locale: "vi", includeMiddle: true },
       { name: "first", kind: "firstName", locale: "vi" },
@@ -149,7 +149,7 @@ describe("generate", () => {
     for (const row of rows) expect(row.full).toBe(`${row.last} ${row.middle} ${row.first}`);
   });
 
-  it("email đi theo tên khi cùng dòng có field tên", () => {
+  it("email follows the name when the row has a name field", () => {
     const fields: FieldSpec[] = [
       { name: "first", kind: "firstName", locale: "vi" },
       { name: "last", kind: "lastName", locale: "vi" },
@@ -167,7 +167,7 @@ describe("generate", () => {
   // A fixed bug: email has no Locale picker of its own on the Panel, so it used to always default
   // to "vi", even when the name field in the same list was "en" — the email and the name then
   // belonged to two different people.
-  it("email theo locale en khi field tên là en, dù bản thân field email không đặt locale", () => {
+  it("email takes the name field's en locale, though it sets no locale itself", () => {
     const fields: FieldSpec[] = [
       { name: "first", kind: "firstName", locale: "en" },
       { name: "last", kind: "lastName", locale: "en" },
@@ -182,14 +182,14 @@ describe("generate", () => {
     }
   });
 
-  it("email vẫn mặc định vi khi không có field tên nào trong danh sách", () => {
+  it("email still defaults to vi when the list has no name field", () => {
     const rows = generate([{ name: "email", kind: "email" }], 20, seededRnd(61));
     for (const row of rows) {
       expect(row.email as string).toMatch(/^[a-z0-9.]+@(example\.com|mail\.test|sample\.dev|demo\.io)$/);
     }
   });
 
-  it("date nằm trong khoảng from/to, in ra ISO hợp lệ", () => {
+  it("date stays within from/to and prints valid ISO", () => {
     const fields: FieldSpec[] = [
       { name: "created_at", kind: "date", from: "2026-01-01T00:00:00Z", to: "2026-01-31T00:00:00Z" },
     ];
@@ -205,7 +205,7 @@ describe("generate", () => {
 });
 
 describe("inferFields", () => {
-  it("đoán kiểu từ mảng object mẫu", () => {
+  it("guesses types from a sample array of objects", () => {
     const sample = [
       {
         id: "550e8400-e29b-41d4-a716-446655440000",
@@ -226,22 +226,22 @@ describe("inferFields", () => {
     ]);
   });
 
-  it("đoán tên đệm từ tên cột middle_name/ten_dem", () => {
+  it("guesses a middle name from a middle_name/ten_dem column", () => {
     expect(inferFields({ middle_name: "Văn" })).toEqual([{ name: "middle_name", kind: "middleName" }]);
     expect(inferFields({ ten_dem: "Văn" })).toEqual([{ name: "ten_dem", kind: "middleName" }]);
   });
 
-  it("đoán được từ một object đơn, không cần mảng", () => {
+  it("guesses from a single object, no array needed", () => {
     expect(inferFields({ phone: "0912345678" })).toEqual([{ name: "phone", kind: "phone" }]);
   });
 
-  it("bỏ qua field lồng object hoặc mảng", () => {
+  it("skips fields nesting an object or array", () => {
     expect(inferFields([{ id: 1, meta: { a: 1 }, tags: ["x"] }])).toEqual([
       { name: "id", kind: "integer" },
     ]);
   });
 
-  it("không đọc được thì trả null", () => {
+  it("returns null when it cannot be read", () => {
     expect(inferFields("hello")).toBeNull();
     expect(inferFields([1, 2, 3])).toBeNull();
   });

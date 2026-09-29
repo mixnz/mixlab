@@ -9,25 +9,25 @@ const kinds = (left: string, right: string, options: DiffOptions = plain): strin
 };
 
 describe("diffLines", () => {
-  it("gọi hai đoạn giống nhau là giống nhau", () => {
+  it("calls two identical texts identical", () => {
     expect(kinds("a\nb", "a\nb")).toEqual(["s:a", "s:b"]);
   });
 
-  it("thấy dòng thêm vào", () => {
+  it("sees added lines", () => {
     expect(kinds("a\nc", "a\nb\nc")).toEqual(["s:a", "a:b", "s:c"]);
   });
 
-  it("thấy dòng bị xoá", () => {
+  it("sees removed lines", () => {
     expect(kinds("a\nb\nc", "a\nc")).toEqual(["s:a", "r:b", "s:c"]);
   });
 
-  it("đếm số dòng thêm và xoá", () => {
+  it("counts added and removed lines", () => {
     const result = diffLines("a\nb", "a\nc\nd", plain);
     expect(result.ok && result.added).toBe(2);
     expect(result.ok && result.removed).toBe(1);
   });
 
-  it("đánh số dòng theo từng bên", () => {
+  it("numbers lines per side", () => {
     const result = diffLines("a\nb", "a", plain);
     expect(result.ok && result.lines[1]).toEqual({
       kind: "remove",
@@ -37,17 +37,17 @@ describe("diffLines", () => {
     });
   });
 
-  it("bỏ qua khoảng trắng khi được yêu cầu", () => {
+  it("ignores whitespace when asked", () => {
     expect(kinds("a  b", "a b", { ignoreWhitespace: true, ignoreCase: false })).toEqual(["s:a  b"]);
   });
 
-  it("bỏ qua hoa thường khi được yêu cầu", () => {
+  it("ignores case when asked", () => {
     expect(kinds("Abc", "abc", { ignoreWhitespace: false, ignoreCase: true })).toEqual(["s:Abc"]);
   });
 
   // Trimming the identical head and tail is what makes the tool usable on real files: ten differing
   // lines between two 50-thousand-line files leave an LCS table of only 10×10.
-  it("chạy được với file rất dài khi phần khác nhau nhỏ", () => {
+  it("handles very long files when the differing part is small", () => {
     const head = Array.from({ length: 30_000 }, (_, i) => `dòng ${i}`).join("\n");
     const result = diffLines(`${head}\nX`, `${head}\nY`, plain);
     expect(result.ok).toBe(true);
@@ -56,7 +56,7 @@ describe("diffLines", () => {
     expect(result.removed).toBe(1);
   });
 
-  it("từ chối khi phần khác nhau vượt quá giới hạn", () => {
+  it("refuses when the differing part exceeds the limit", () => {
     const left = Array.from({ length: 2100 }, (_, i) => `l${i}`).join("\n");
     const right = Array.from({ length: 2100 }, (_, i) => `r${i}`).join("\n");
     expect(diffLines(left, right, plain)).toEqual({ ok: false, reason: "tooLarge" });
@@ -66,13 +66,13 @@ describe("diffLines", () => {
   // always emits all its removes before its adds, never interleaved. If someone changes the
   // tie-break (`>=` → `>`) in `diffLines`, this test breaks first, instead of letting those two
   // functions quietly pair the wrong lines.
-  it("một cụm thay đổi xuất hết remove rồi mới đến add", () => {
+  it("a change cluster emits all removes before any adds", () => {
     expect(kinds("a\nb\nc", "a\nx\ny\nc")).toEqual(["s:a", "r:b", "a:x", "a:y", "s:c"]);
   });
 });
 
 describe("diffSegments", () => {
-  it("tô đúng đoạn khác nhau ở giữa", () => {
+  it("highlights exactly the differing part in the middle", () => {
     const result = diffSegments("SELECT * FROM users WHERE id = 1", "SELECT * FROM users WHERE id = 2", plain);
     expect(result).toEqual({
       left: [
@@ -86,7 +86,7 @@ describe("diffSegments", () => {
     });
   });
 
-  it("tô đoạn khác nhau ở đầu", () => {
+  it("highlights a differing part at the start", () => {
     const result = diffSegments("foo bar baz", "quux bar baz", plain);
     expect(result).toEqual({
       left: [
@@ -100,7 +100,7 @@ describe("diffSegments", () => {
     });
   });
 
-  it("tô đoạn khác nhau ở cuối", () => {
+  it("highlights a differing part at the end", () => {
     const result = diffSegments("bar baz foo", "bar baz quux", plain);
     expect(result).toEqual({
       left: [
@@ -114,7 +114,7 @@ describe("diffSegments", () => {
     });
   });
 
-  it("không chặn overlap giữa đầu và đuôi khi một chuỗi là tiền tố của chuỗi kia", () => {
+  it("does not let head and tail overlap when one string is a prefix of the other", () => {
     const result = diffSegments("foo", "foobar", plain);
     expect(result).toEqual({
       left: [{ text: "foo", changed: false }],
@@ -125,15 +125,15 @@ describe("diffSegments", () => {
     });
   });
 
-  it("trả null khi hai dòng không đủ giống nhau — tránh tô nhầm phần trùng hợp", () => {
+  it("returns null when two lines are too different — no highlighting a coincidence", () => {
     expect(diffSegments("SELECT id FROM a;", "DELETE FROM b WHERE x = 1;", plain)).toBeNull();
   });
 
-  it("trả null khi bật ignoreWhitespace", () => {
+  it("returns null when ignoreWhitespace is on", () => {
     expect(diffSegments("a  b", "a b c", { ignoreWhitespace: true, ignoreCase: false })).toBeNull();
   });
 
-  it("tôn trọng ignoreCase khi so khớp đầu/đuôi", () => {
+  it("respects ignoreCase when matching head/tail", () => {
     const result = diffSegments("Hello World", "hello there", { ignoreWhitespace: false, ignoreCase: true });
     expect(result).toEqual({
       left: [
@@ -147,7 +147,7 @@ describe("diffSegments", () => {
     });
   });
 
-  it("không cắt vỡ ký tự Unicode hai code unit", () => {
+  it("does not split a two-code-unit Unicode character", () => {
     const result = diffSegments("chào 😀 bạn", "chào 😀😀 bạn", plain);
     expect(result).not.toBeNull();
     // Joined back it must give exactly the original string — if a surrogate pair were split,
@@ -158,7 +158,7 @@ describe("diffSegments", () => {
 });
 
 describe("computeLineSegments", () => {
-  it("gắn segment cho đúng cặp remove/add ghép được, để trống dòng lẻ", () => {
+  it("attaches segments to the pairable remove/add pairs, leaving leftover lines bare", () => {
     const result = diffLines("a\nfoo\nc", "a\nfoobar\nc", plain);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -172,7 +172,7 @@ describe("computeLineSegments", () => {
     ]);
   });
 
-  it("không gắn gì khi cặp không đủ giống nhau", () => {
+  it("attaches nothing when a pair is not similar enough", () => {
     const result = diffLines("a\nSELECT id FROM a;\nc", "a\nDELETE FROM b WHERE x = 1;\nc", plain);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -181,7 +181,7 @@ describe("computeLineSegments", () => {
 });
 
 describe("buildSplitRows", () => {
-  it("xếp dòng same vào một hàng ở cả hai bên", () => {
+  it("puts a same line on one row on both sides", () => {
     const result = diffLines("a\nb", "a\nb", plain);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -198,7 +198,7 @@ describe("buildSplitRows", () => {
     ]);
   });
 
-  it("ghép cặp remove/add cùng số lượng thành hàng replaced", () => {
+  it("pairs equal numbers of removes/adds into replaced rows", () => {
     const result = diffLines("foo", "foobar", plain);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -219,7 +219,7 @@ describe("buildSplitRows", () => {
     ]);
   });
 
-  it("để trống bên kia khi số dòng remove và add lệch nhau", () => {
+  it("leaves the other side blank when remove and add counts differ", () => {
     const result = diffLines("a\nb", "a\nx\ny", plain);
     expect(result.ok).toBe(true);
     if (!result.ok) return;

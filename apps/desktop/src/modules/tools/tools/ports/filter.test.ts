@@ -11,41 +11,41 @@ const row = (over: Partial<ListeningPort> = {}): ListeningPort => ({
 });
 
 describe("matchesFilter", () => {
-  it("nhận mọi hàng khi ô lọc rỗng", () => {
+  it("accepts every row when the filter is empty", () => {
     expect(matchesFilter(row(), "")).toBe(true);
     expect(matchesFilter(row(), "   ")).toBe(true);
   });
 
-  it("khớp theo số cổng", () => {
+  it("matches by port number", () => {
     expect(matchesFilter(row({ port: 8080 }), "8080")).toBe(true);
   });
 
   // Typing `80` finds 80, 8080 and 3080 — handy when you do not remember the exact port.
-  it("khớp cổng theo chuỗi con", () => {
+  it("matches ports by substring", () => {
     expect(matchesFilter(row({ port: 8080 }), "80")).toBe(true);
     expect(matchesFilter(row({ port: 3080 }), "80")).toBe(true);
   });
 
-  it("khớp theo tên tiến trình", () => {
+  it("matches by process name", () => {
     expect(matchesFilter(row({ process: "postgres" }), "postgres")).toBe(true);
   });
 
   // People type `node`, not `Node.exe`.
-  it("không phân biệt hoa thường ở tên tiến trình", () => {
+  it("ignores case in process names", () => {
     expect(matchesFilter(row({ process: "Node.exe" }), "node")).toBe(true);
     expect(matchesFilter(row({ process: "node.exe" }), "NODE")).toBe(true);
   });
 
-  it("khớp một phần tên tiến trình", () => {
+  it("matches part of a process name", () => {
     expect(matchesFilter(row({ process: "com.docker.backend" }), "docker")).toBe(true);
   });
 
-  it("không vỡ khi không tra được tên tiến trình", () => {
+  it("does not break when the process name could not be looked up", () => {
     expect(matchesFilter(row({ process: null }), "node")).toBe(false);
     expect(matchesFilter(row({ process: null, port: 3000 }), "3000")).toBe(true);
   });
 
-  it("loại hàng không khớp cả cổng lẫn tên", () => {
+  it("excludes rows matching neither port nor name", () => {
     expect(matchesFilter(row({ port: 3000, process: "node.exe" }), "nginx")).toBe(false);
   });
 });

@@ -38,12 +38,12 @@ const sheets = Object.entries(
 ).map(([path, css]) => ({ path, css }));
 
 describe("grid rows", () => {
-  it("đọc được stylesheet, không phải một mớ rỗng", () => {
+  it("reads the stylesheet, not an empty blob", () => {
     expect(sheets.length).toBeGreaterThan(10);
     expect(sheets.every(({ css }) => css.length > 0)).toBe(true);
   });
 
-  it("không rule nào cho ô của lưới padding dọc", () => {
+  it("no rule gives grid cells vertical padding", () => {
     const offenders = sheets.flatMap(({ path, css }) =>
       blocks(css)
         .filter(({ selector }) => /\.gridRows\b[^{]*\btd\b/.test(selector))
@@ -53,7 +53,7 @@ describe("grid rows", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("mọi rule ghim dòng đều lấy chiều cao từ --row-h, không viết số", () => {
+  it("every row-pinning rule takes its height from --row-h, not a written number", () => {
     const offenders = sheets.flatMap(({ path, css }) =>
       blocks(css)
         .filter(({ selector }) => /\.gridRows\b[^{]*\btd\b/.test(selector))

@@ -8,7 +8,7 @@ import {
 } from "./mask";
 
 describe("detectFieldSpecs", () => {
-  it("đoán shape và kind mặc định theo tên cột", () => {
+  it("guesses the shape and default kind from the column name", () => {
     const rows = [
       {
         id: 1,
@@ -34,67 +34,67 @@ describe("detectFieldSpecs", () => {
     expect(byName.note).toEqual({ name: "note", shape: "generic", kind: "none" });
   });
 
-  it("liệt kê cột theo thứ tự xuất hiện lần đầu, hợp từ nhiều dòng", () => {
+  it("lists columns in order of first appearance, merged across rows", () => {
     const rows = [{ b: 1 }, { a: 2, b: 3 }];
     expect(detectFieldSpecs(rows).map((s) => s.name)).toEqual(["b", "a"]);
   });
 });
 
 describe("maskValue", () => {
-  it("none giữ nguyên giá trị và kiểu gốc", () => {
+  it("none keeps the value and its original type", () => {
     expect(maskValue(42, "none", "generic")).toBe(42);
     expect(maskValue(null, "none", "generic")).toBeNull();
   });
 
-  it("giá trị rỗng hoặc null không bị đổi, bất kể kind", () => {
+  it("empty or null values are left unchanged, whatever the kind", () => {
     expect(maskValue(null, "redact", "generic")).toBeNull();
     expect(maskValue(undefined, "hash", "email")).toBeUndefined();
     expect(maskValue("", "partial", "name")).toBe("");
   });
 
-  it("redact luôn thành ***", () => {
+  it("redact always gives ***", () => {
     expect(maskValue("bất kỳ giá trị nào", "redact", "generic")).toBe("***");
   });
 
-  it("partial theo shape email giữ chữ đầu và cả domain", () => {
+  it("partial with the email shape keeps the first letter and the whole domain", () => {
     expect(maskValue("jane.doe@example.com", "partial", "email")).toBe("j*******@example.com");
   });
 
-  it("partial theo shape phone giữ 2 số cuối", () => {
+  it("partial with the phone shape keeps the last 2 digits", () => {
     expect(maskValue("0912345678", "partial", "phone")).toBe("********78");
   });
 
-  it("partial theo shape card giữ 4 số cuối", () => {
+  it("partial with the card shape keeps the last 4 digits", () => {
     expect(maskValue("4111111111111111", "partial", "card")).toBe("************1111");
   });
 
-  it("partial theo shape idNumber giữ 4 số cuối", () => {
+  it("partial with the idNumber shape keeps the last 4 digits", () => {
     expect(maskValue("079203001234", "partial", "idNumber")).toBe("********1234");
   });
 
-  it("partial theo shape name viết tắt từng từ", () => {
+  it("partial with the name shape abbreviates each word", () => {
     expect(maskValue("Nguyễn Văn An", "partial", "name")).toBe("N*** V*** A***");
   });
 
-  it("partial theo shape generic giữ chữ đầu và cuối", () => {
+  it("partial with the generic shape keeps the first and last letters", () => {
     expect(maskValue("abcdefg", "partial", "generic")).toBe("a*****g");
     expect(maskValue("ab", "partial", "generic")).toBe("**");
   });
 
-  it("hash tất định — cùng giá trị luôn ra cùng mã", () => {
+  it("hash is deterministic — the same value always gives the same code", () => {
     const first = maskValue("customer-42", "hash", "generic");
     const second = maskValue("customer-42", "hash", "generic");
     expect(first).toBe(second);
     expect(first).toMatch(/^h_[0-9a-f]{8}$/);
   });
 
-  it("hash khác giá trị thì khác mã", () => {
+  it("hash gives different codes for different values", () => {
     expect(maskValue("a", "hash", "generic")).not.toBe(maskValue("b", "hash", "generic"));
   });
 });
 
 describe("maskRows", () => {
-  it("chỉ mask field có kind khác none, giữ nguyên các field còn lại", () => {
+  it("only masks fields whose kind is not none, leaving the rest intact", () => {
     const rows = [
       { id: 1, email: "a@b.com" },
       { id: 2, email: "c@d.com" },
@@ -109,7 +109,7 @@ describe("maskRows", () => {
     ]);
   });
 
-  it("hash giữ nhất quán khi cùng giá trị lặp lại ở nhiều dòng", () => {
+  it("hash stays consistent when the same value repeats across rows", () => {
     const rows = [{ key: "same" }, { key: "same" }, { key: "different" }];
     const specs: FieldMaskSpec[] = [{ name: "key", shape: "generic", kind: "hash" }];
     const [first, second, third] = maskRows(rows, specs);
@@ -119,20 +119,20 @@ describe("maskRows", () => {
 });
 
 describe("parseFlatRows", () => {
-  it("nhận mảng object phẳng", () => {
+  it("accepts an array of flat objects", () => {
     expect(parseFlatRows([{ a: 1 }, { a: 2 }])).toEqual([{ a: 1 }, { a: 2 }]);
   });
 
-  it("nhận một object đơn, bọc lại thành mảng một phần tử", () => {
+  it("accepts a single object, wrapping it into a one-element array", () => {
     expect(parseFlatRows({ a: 1 })).toEqual([{ a: 1 }]);
   });
 
-  it("từ chối object/mảng lồng bên trong — không âm thầm bỏ qua", () => {
+  it("refuses nested objects/arrays — it does not silently skip them", () => {
     expect(parseFlatRows([{ a: 1, nested: { x: 1 } }])).toBeNull();
     expect(parseFlatRows([{ a: 1, tags: ["x"] }])).toBeNull();
   });
 
-  it("không đọc được thì trả null", () => {
+  it("returns null when it cannot be read", () => {
     expect(parseFlatRows("hello")).toBeNull();
     expect(parseFlatRows([1, 2, 3])).toBeNull();
     expect(parseFlatRows([])).toBeNull();

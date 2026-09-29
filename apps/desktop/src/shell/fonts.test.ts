@@ -25,14 +25,14 @@ const sheets = import.meta.glob("../**/*.css", {
 }) as Record<string, string>;
 
 describe("font tokens", () => {
-  it("đọc được stylesheet, không phải một mớ rỗng", () => {
+  it("reads the stylesheets, not an empty blob", () => {
     const values = Object.values(sheets);
     expect(values.length).toBeGreaterThan(40);
     expect(values.every((css) => css.length > 0)).toBe(true);
     expect(appCss).toContain(":root");
   });
 
-  it("định nghĩa cả hai vai trên :root", () => {
+  it("defines both roles on :root", () => {
     expect(appCss).toMatch(/--font-ui:\s*[^;]+;/);
     expect(appCss).toMatch(/--font-mono:\s*[^;]+;/);
   });
@@ -42,7 +42,7 @@ describe("font tokens", () => {
     expect(appCss).toMatch(/--font-mono:\s*"Geist Mono Variable",/);
   });
 
-  it("không stylesheet nào gọi tên font ngoài chỗ định nghĩa token", () => {
+  it("no stylesheet names a font outside the token definitions", () => {
     const offenders = Object.entries(sheets)
       .filter(([path]) => !path.endsWith("/App.css"))
       .filter(([, css]) => /font-family:[^;]*(Geist|Fira Code|system-ui|sans-serif|monospace)/.test(css))
@@ -50,7 +50,7 @@ describe("font tokens", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("mọi var(--font-*) được dùng đều có định nghĩa", () => {
+  it("every var(--font-*) used has a definition", () => {
     const defined = new Set([...appCss.matchAll(/(--font-[\w-]+):/g)].map(([, name]) => name));
     const used = new Set(
       Object.values(sheets).flatMap((css) =>

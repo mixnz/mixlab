@@ -7,27 +7,27 @@ const texts = (pattern: string, flags: string, subject: string): string[] => {
 };
 
 describe("runRegex", () => {
-  it("thu mọi match với cờ g", () => {
+  it("collects every match with the g flag", () => {
     expect(texts("\\d+", "g", "a1b22c333")).toEqual(["1", "22", "333"]);
   });
 
-  it("chỉ thu match đầu khi không có cờ g", () => {
+  it("only collects the first match without the g flag", () => {
     expect(texts("\\d+", "", "a1b22")).toEqual(["1"]);
   });
 
   // An empty-matching pattern leaves `lastIndex` in place and `exec` returns forever. The loop has
   // to push it forward itself.
-  it("không treo với mẫu khớp rỗng", () => {
+  it("does not hang on an empty-matching pattern", () => {
     expect(texts("(?=a)", "g", "aaa")).toEqual(["", "", ""]);
     expect(runRegex("a*", "g", "bb", "").ok).toBe(true);
   });
 
-  it("trả vị trí của từng match", () => {
+  it("returns each match's position", () => {
     const result = runRegex("b", "g", "abcb", "");
     expect(result.ok && result.matches.map((match) => match.index)).toEqual([1, 3]);
   });
 
-  it("liệt kê nhóm bắt theo số", () => {
+  it("lists numbered capture groups", () => {
     const result = runRegex("(\\w)(\\d)", "", "a1", "");
     expect(result.ok && result.matches[0]?.groups).toEqual([
       { name: null, index: 1, text: "a" },
@@ -35,7 +35,7 @@ describe("runRegex", () => {
     ]);
   });
 
-  it("liệt kê nhóm có tên", () => {
+  it("lists named groups", () => {
     const result = runRegex("(?<chu>\\w)", "", "a", "");
     expect(result.ok && result.matches[0]?.groups).toContainEqual({
       name: "chu",
@@ -44,22 +44,22 @@ describe("runRegex", () => {
     });
   });
 
-  it("để null cho nhóm không khớp", () => {
+  it("gives null for a group that did not match", () => {
     const result = runRegex("(a)|(b)", "", "a", "");
     expect(result.ok && result.matches[0]?.groups[1]?.text).toBeNull();
   });
 
-  it("in bản xem trước sau khi thay thế", () => {
+  it("prints a preview after replacement", () => {
     const result = runRegex("(\\d)", "g", "a1b2", "[$1]");
     expect(result.ok && result.replaced).toBe("a[1]b[2]");
   });
 
-  it("trả nguyên văn thông báo của engine khi mẫu sai", () => {
+  it("returns the engine's message verbatim when the pattern is wrong", () => {
     const result = runRegex("(", "", "a", "");
     expect(result.ok).toBe(false);
   });
 
-  it("cắt bớt khi có quá nhiều match", () => {
+  it("truncates when there are too many matches", () => {
     const result = runRegex("a", "g", "a".repeat(600), "");
     expect(result.ok && result.truncated).toBe(true);
     expect(result.ok && result.matches.length).toBe(500);
