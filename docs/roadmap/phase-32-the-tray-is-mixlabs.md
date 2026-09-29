@@ -12,16 +12,16 @@ Decision: [ADR 0058](../decisions/0058-the-tray-is-mixlabs-and-a-module-lends-it
 
 ---
 
-- [ ] **T192a** `tray.rs`: `icon` and `panel` in `TrayState`, `tray_configure { panel, labels }`,
+- [x] **T192a** `tray.rs`: `icon` and `panel` in `TrayState`, `tray_configure { panel, labels }`,
       `click_action` with its tests, the secondary-click menu on macOS and Windows, and the Linux
       menu without **Open control panel** when there is no panel. **(P)**
-- [ ] **T192b** The frame: `TraySection` on `ModuleDefinition`, `TrayFrame` with its header and
+- [x] **T192b** The frame: `TraySection` on `ModuleDefinition`, `TrayFrame` with its header and
       per-section error boundaries, `tray.tsx` drawing it, `Workspace.tsx` sending `panel`, and the
       strings and styles moved.
-- [ ] **T192c** The engine's section: `TrayPanel` becomes `TraySection`, and **Stop MixEngine** with
+- [x] **T192c** The engine's section: `TrayPanel` becomes `TraySection`, and **Stop MixEngine** with
       its confirmation moves into the engine card.
-- [ ] **T192d** The shell's General pane, and the login switch moved into it.
-- [ ] **T192e** The architecture notes, `client-surface.md`, the handbook's tray page, and the
+- [x] **T192d** The shell's General pane, and the login switch moved into it.
+- [x] **T192e** The architecture notes, `client-surface.md`, the handbook's tray page, and the
       changelog line.
 
 **Milestone M32**: on Windows with the *Database tools* preset, a terminal session survives the close

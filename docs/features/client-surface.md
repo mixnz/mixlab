@@ -266,7 +266,9 @@ A tray or menu-bar item needs no more than the dashboard does: overall state, st
 list. MixLab's is built (T168,
 [the design](../specs/2026-09-19-t168-mixengine-in-the-tray-design.md)): a
 webview panel that also starts and stops single services and asks `daemon.shutdown` — every one of
-them a method this document already lists, so the tray added nothing to the API.
+them a method this document already lists, so the tray added nothing to the API. Since T192
+([the design](../specs/2026-09-29-t192-the-tray-is-mixlabs-design.md)) the panel's frame is
+MixLab's and this is the `mixengine` module's section of it; the methods are the same.
 
 ## Rules the API is responsible for
 

@@ -107,18 +107,24 @@ mix service delete mariadb@legacy
 
 ### Từ khay hệ thống
 
-MixLab đặt một icon MixEngine trên khay hệ thống (Windows, Linux) hoặc thanh menu (macOS). Trên
-Windows và macOS, bấm vào icon sẽ trượt một bảng vào góc màn hình, sát thanh taskbar hoặc menu bar.
-Trên Linux, bấm vào icon sẽ mở một menu ngắn, và **Mở bảng điều khiển** mở cùng bảng đó dưới dạng
-một cửa sổ nhỏ, vì Linux không báo cho ứng dụng biết khi icon được bấm. Bảng liệt kê các service kèm
-nút Chạy và Dừng, có **Dừng tất cả**, liệt kê các site (bấm vào để mở), và cuối bảng có **Mở
-MixLab** và **Tắt MixEngine**; riêng **Tắt MixEngine** hỏi xác nhận trước.
+MixLab có một icon trên khay hệ thống (Windows, Linux) hoặc thanh menu (macOS), dù bạn dùng những
+module nào. Khi bật MixEngine, trên Windows và macOS bấm vào icon sẽ trượt một bảng vào góc màn hình,
+sát thanh taskbar hoặc menu bar. Trên Linux, bấm vào icon sẽ mở một menu ngắn, và **Mở bảng điều
+khiển** mở cùng bảng đó dưới dạng một cửa sổ nhỏ, vì Linux không báo cho ứng dụng biết khi icon được
+bấm. Không bật MixEngine thì không có bảng, bấm vào icon sẽ mở lại cửa sổ MixLab.
 
-Khi đã có icon, bấm đóng cửa sổ MixLab chỉ ẩn cửa sổ đi. Muốn thoát, dùng nút nguồn trong bảng, hoặc
-⌘Q trên macOS. Thoát MixLab không tắt MixEngine.
+Đầu bảng có **Mở MixLab** và nút nguồn để thoát MixLab. Bên dưới, thẻ MixEngine hiện CPU và bộ nhớ,
+cuối thẻ có **Tắt MixEngine**, nút này hỏi xác nhận trước. Tiếp theo là các service kèm nút Chạy và
+Dừng, **Dừng tất cả**, và các site (bấm vào để mở).
+
+Trên Windows và macOS, bấm chuột phải vào icon sẽ mở **Mở MixLab** và **Thoát MixLab**.
+
+Bấm đóng cửa sổ MixLab chỉ ẩn cửa sổ đi, nên các phiên terminal và kết nối cơ sở dữ liệu vẫn mở.
+Muốn thoát, dùng menu của icon, nút nguồn trong bảng, hoặc ⌘Q trên macOS. Thoát MixLab không tắt
+MixEngine.
 
 Muốn có icon ngay sau khi đăng nhập, bật **Mở MixLab trên khay hệ thống mỗi khi đăng nhập** trong
-Settings của MixLab. Công tắc này tách riêng với **Chạy MixEngine mỗi khi đăng nhập** (`mix
+**Settings → Chung**. Công tắc này tách riêng với **Chạy MixEngine mỗi khi đăng nhập** (`mix
 autostart`); bạn có thể bật một trong hai, hoặc cả hai.
 
 Trên GNOME, icon cần extension *AppIndicator and KStatusNotifierItem Support*. Ubuntu có sẵn
