@@ -90,3 +90,46 @@ async fn a_site_cannot_be_asked_for_the_pools_status_page() {
         );
     }
 }
+
+/// **T193b through the front end.** After its PHP is updated within its line, the site is served by
+/// the new version's pool.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs a real Caddy and a real PHP — see the module note, and the `caddy` and `php` steps in _services.yml"]
+async fn a_site_is_still_served_after_its_php_is_updated() {
+    let served = php_site::served_with(php_site::FRONT, &php_site::runtimes()[..1], true).await;
+    let site = &served.sites[0];
+    let next = served.next.clone().expect("a next patch was offered");
+
+    let finished = harness::json(&served.home.mix(&[
+        "runtime",
+        "upgrade",
+        "php",
+        &site.version,
+        "--yes",
+        "--json",
+    ]));
+    assert_eq!(
+        finished["state"],
+        "succeeded",
+        "{finished}\n--- daemon ---\n{}",
+        served.home.daemon_log()
+    );
+
+    let shown = harness::json(&served.home.mix(&["site", "show", &site.domain, "--json"]));
+    assert!(
+        shown.to_string().contains(&format!("php-fpm@{next}")),
+        "the site points at the new pool: {shown}"
+    );
+
+    let answer = request_as(served.port, "/", &site.domain).unwrap_or_else(|| {
+        panic!(
+            "the front end answered nothing\n--- daemon ---\n{}",
+            served.home.daemon_log()
+        )
+    });
+    assert!(
+        answer.contains("200") && answer.contains(&site.says),
+        "the site is served by the new pool: {answer}\n--- daemon ---\n{}",
+        served.home.daemon_log()
+    );
+}

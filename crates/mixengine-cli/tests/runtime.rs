@@ -33,6 +33,11 @@ struct Fixture {
 
 impl Fixture {
     async fn start() -> Self {
+        Self::start_with(index).await
+    }
+
+    /// Publish what `index_for` says about the one archive, and start a daemon that can see it.
+    async fn start_with(index_for: fn(&Packed, &str) -> Value) -> Self {
         let packing = match cfg!(windows) {
             true => Packing::Zip,
             false => Packing::TarZst,
@@ -47,7 +52,7 @@ impl Fixture {
         .await;
 
         let url = registry.publish_asset(&packed.path(), packed.bytes.clone());
-        registry.publish(&index(&packed, &url));
+        registry.publish(&index_for(&packed, &url));
 
         let home = Home::new();
         let daemon = home.start_daemon_reading_index(&registry.url(), registry.public_key());
@@ -361,4 +366,102 @@ async fn found_reaches_the_daemon_from_the_command_line() {
         let table = stdout(&fixture.home.mix(&[noun, "found"]));
         assert!(table.contains("nothing"), "{noun}: {table}");
     }
+}
+
+/// Two patches of one line, the same archive under both — roadmap task **T193**.
+fn two_patches(packed: &Packed, url: &str) -> Value {
+    let mut published = index(packed, url);
+    // An update renders the pool before it moves anything, and a pool renders only for an install
+    // that publishes its server: the one program stands in for all three.
+    published["packages"][0]["artifacts"][0]["provides"] = document!({
+        "php": program_name(),
+        "php-cgi": program_name(),
+        "php-fpm": program_name(),
+    });
+    let mut next = published["packages"][0].clone();
+    next["version"] = document!("8.3.34");
+    published["packages"]
+        .as_array_mut()
+        .expect("the index has a package list")
+        .push(next);
+    published
+}
+
+/// **T193a and T193b through `mix`.** The listing names the update with its command, the plan is
+/// printed before anything happens, and `--yes` runs it to the end.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_update_is_listed_planned_and_applied_from_the_command_line() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let home = &fixture.home;
+
+    let installed = json(&home.mix(&["runtime", "install", "php", VERSION, "--json"]));
+    assert_eq!(
+        installed["state"],
+        "succeeded",
+        "{installed}\n--- daemon ---\n{}",
+        home.daemon_log()
+    );
+
+    let listing = home.mix(&["runtime", "available"]);
+    let listed = stdout(&listing);
+    assert!(
+        listed.contains("php 8.3.33 → 8.3.34") && listed.contains("mix runtime upgrade php 8.3.33"),
+        "the listing names the update and its command\n--- stdout ---\n{listed}\n--- stderr ---\n{}",
+        stderr(&listing)
+    );
+
+    let dry = home.mix(&["runtime", "upgrade", "php", VERSION, "--dry-run"]);
+    let planned = stdout(&dry);
+    assert!(
+        planned.contains("will be removed"),
+        "a dry run prints the plan\n--- stdout ---\n{planned}\n--- stderr ---\n{}",
+        stderr(&dry)
+    );
+    let still = stdout(&home.mix(&["runtime", "list"]));
+    assert!(
+        still.contains(VERSION) && !still.contains("8.3.34"),
+        "a dry run changed nothing: {still}"
+    );
+
+    let finished = json(&home.mix(&["runtime", "upgrade", "php", VERSION, "--yes", "--json"]));
+    assert_eq!(
+        finished["state"],
+        "succeeded",
+        "{finished}\n--- daemon ---\n{}",
+        home.daemon_log()
+    );
+    assert_eq!(finished["kind"], "runtime.upgrade");
+    assert_eq!(
+        finished["outcome"]["result"]["old"]["state"], "removed",
+        "{finished}"
+    );
+
+    let after = stdout(&home.mix(&["runtime", "list"]));
+    assert!(
+        after.contains("8.3.34") && !after.contains(VERSION),
+        "8.3.34 replaced 8.3.33: {after}"
+    );
+}
+
+/// A question nobody can answer is refused rather than taken as a yes.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_update_without_yes_and_without_a_terminal_changes_nothing() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let home = &fixture.home;
+    let installed = json(&home.mix(&["runtime", "install", "php", VERSION, "--json"]));
+    assert_eq!(installed["state"], "succeeded", "{installed}");
+
+    let asked = home.mix(&["runtime", "upgrade", "php", VERSION]);
+    assert!(
+        !asked.status.success(),
+        "no terminal and no --yes is a refusal\n--- stdout ---\n{}\n--- stderr ---\n{}",
+        stdout(&asked),
+        stderr(&asked)
+    );
+
+    let still = stdout(&home.mix(&["runtime", "list"]));
+    assert!(
+        still.contains(VERSION) && !still.contains("8.3.34"),
+        "nothing moved: {still}"
+    );
 }

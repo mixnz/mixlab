@@ -5943,7 +5943,11 @@ fn upgrade_confirmed(
     yes: bool,
     json: bool,
 ) -> Result<bool, Error> {
-    emit(&rendered(json, plan, || render::upgrade_plan(plan)))?;
+    // **One document per `--json` run**: the plan is the answer only to a dry run; otherwise the
+    // finished job carries the same plan, marked, and is what is printed.
+    if !json || dry_run {
+        emit(&rendered(json, plan, || render::upgrade_plan(plan)))?;
+    }
 
     if dry_run {
         return Ok(false);

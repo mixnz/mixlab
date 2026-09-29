@@ -1119,3 +1119,117 @@ async fn service_data_an_earlier_home_left_is_adopted_and_keeps_its_databases() 
         "the adopt lost the data: {again}"
     );
 }
+
+/// The patch after [`VERSION`], published from the same archive — roadmap task **T193c**. A real
+/// second patch of one line is not on the machine, and what is under test is the move, not the build.
+const NEXT: &str = "11.4.13";
+
+/// **T193c, added at execution.** An instance updated within its line keeps its databases: the
+/// account made before the update logs in afterwards, through the new version's own client.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs a real MariaDB — see the module note, and the `mariadb` step in _services.yml"]
+async fn an_instance_updated_within_its_line_keeps_its_databases() {
+    let root = package();
+    let port = free_port();
+    let packed = packed();
+
+    let registry = MockRegistry::start(&serde_json::json!({
+        "schema": 1, "generated_at": "2026-09-29T06:55:12Z", "packages": []
+    }))
+    .await;
+    let url = registry.publish_asset(&packed.path(), packed.bytes.clone());
+    let mut published = index(&packed, &url, provides(&root));
+    let mut next = published["packages"][0].clone();
+    next["version"] = Value::from(NEXT);
+    published["packages"]
+        .as_array_mut()
+        .expect("the index has a package list")
+        .push(next);
+    registry.publish(&published);
+
+    let home = Home::new();
+    let _daemon = home.start_daemon_reading_index(&registry.url(), registry.public_key());
+    watch(&home);
+
+    at("installing the package");
+    let installed = expect(&home, &["package", "install", "mariadb", VERSION, "--json"]);
+    assert_eq!(
+        installed["state"],
+        "succeeded",
+        "{installed}\n--- daemon ---\n{}",
+        home.daemon_log()
+    );
+
+    at("creating and starting the service");
+    expect(
+        &home,
+        &[
+            "service",
+            "create",
+            SERVICE,
+            VERSION,
+            "--port",
+            &port.to_string(),
+            "--json",
+        ],
+    );
+    let started = expect(&home, &["service", "start", SERVICE, "--json"]);
+    assert_eq!(
+        started["complete"],
+        true,
+        "{started}\n--- server ---\n{}\n--- daemon ---\n{}",
+        server_log(&home),
+        home.daemon_log()
+    );
+
+    at("making a database and its account");
+    let made = expect(
+        &home,
+        &[
+            "database",
+            "create",
+            SERVICE,
+            "--name",
+            "blog",
+            "--user",
+            "blog-app",
+            "--password",
+            "Ch0sen!Pw",
+            "--json",
+        ],
+    );
+    assert_eq!(made["made"]["database"], "created", "{made}");
+
+    at("updating the package within its line");
+    let finished = expect(
+        &home,
+        &["package", "upgrade", "mariadb", VERSION, "--yes", "--json"],
+    );
+    assert_eq!(
+        finished["state"],
+        "succeeded",
+        "{finished}\n--- server ---\n{}\n--- daemon ---\n{}",
+        server_log(&home),
+        home.daemon_log()
+    );
+    assert_eq!(
+        finished["outcome"]["result"]["old"]["state"], "removed",
+        "{finished}"
+    );
+
+    let up = status(&home, SERVICE);
+    assert_eq!(
+        up["state"],
+        "running",
+        "{up}\n--- server ---\n{}\n--- daemon ---\n{}",
+        server_log(&home),
+        home.daemon_log()
+    );
+
+    at("logging in with the account made before the update");
+    let after = home.path().join("packages").join("mariadb").join(NEXT);
+    with_the_password(&after, port, "blog-app", "Ch0sen!Pw");
+
+    at("stopping the service");
+    expect(&home, &["service", "stop", SERVICE, "--json"]);
+}
