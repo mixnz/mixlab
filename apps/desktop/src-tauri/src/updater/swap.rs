@@ -62,6 +62,30 @@ pub fn swap_named(
     Ok(swapped)
 }
 
+/// Remove the `.old` copy of every name an update is about to swap, before anything is stopped.
+/// Answers the first one that cannot be removed.
+///
+/// **One that stays is a program still running from it**, and on Windows the likeliest is this
+/// window ([`window_old`]): an update swapped the files underneath it and it never started again.
+/// Swapping now would fail on that file half way, after the daemon had been stopped — so the caller
+/// decides before anything is touched.
+pub fn clear_old(provides: &BTreeMap<String, String>, directory: &Path) -> Result<(), PathBuf> {
+    for name in provides.keys() {
+        let old = with_old_suffix(&directory.join(installed_name(name)));
+        remove_any(&old);
+        if old.exists() {
+            return Err(old);
+        }
+    }
+    Ok(())
+}
+
+/// What the window's own file is renamed to by a swap: the file a window still running after one
+/// runs from.
+pub fn window_old(directory: &Path) -> PathBuf {
+    with_old_suffix(&directory.join(installed_name("mixlab")))
+}
+
 /// Every name an update of this product swaps: the window and the MixEngine binaries beside it.
 ///
 /// What [`discard_old`] may remove, and nothing else: the directory holding the window can hold
@@ -254,6 +278,47 @@ mod tests {
         );
         assert_eq!(discard_old(installed.path()), 1);
         assert_eq!(discard_old(installed.path()), 0);
+    }
+
+    #[test]
+    fn a_leftover_old_copy_is_cleared_before_a_swap() {
+        let installed = tempfile::tempdir().unwrap();
+        let old = installed
+            .path()
+            .join(format!("{}{OLD_SUFFIX}", installed_name("mix")));
+        write(&old, "old");
+
+        assert_eq!(
+            clear_old(&provides(&["mix", "mixlab"]), installed.path()),
+            Ok(())
+        );
+        assert!(!old.exists());
+    }
+
+    /// The window an update swapped underneath and never restarted: its `.old` is in use, and the
+    /// answer names it, as the window's, rather than stopping MixEngine to fail on it.
+    #[cfg(windows)]
+    #[test]
+    fn an_old_copy_in_use_is_named() {
+        use std::os::windows::fs::OpenOptionsExt as _;
+
+        let installed = tempfile::tempdir().unwrap();
+        let old = installed
+            .path()
+            .join(format!("{}{OLD_SUFFIX}", installed_name("mixlab")));
+        write(&old, "running");
+        // No sharing at all: what a running image's file refuses a delete with.
+        let _held = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(&old)
+            .unwrap();
+
+        assert_eq!(
+            clear_old(&provides(&["mix", "mixlab"]), installed.path()),
+            Err(window_old(installed.path()))
+        );
+        assert_eq!(old, window_old(installed.path()));
     }
 
     /// The directory holding the window can hold other people's files — `/Applications`, a shared

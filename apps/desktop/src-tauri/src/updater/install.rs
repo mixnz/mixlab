@@ -122,6 +122,18 @@ pub async fn install_staged<R: Runtime>(
     )
     .map_err(|_| err!("error.updateNotDownloaded"))?;
 
+    // What an earlier update renamed has to be gone before this one renames anything. The window's
+    // own, still in use, is this window: that update put newer files on disk and never restarted
+    // it. Restarting now finishes that update, and the new window offers this one again if it is
+    // still newer. Anything else in use is another program, which a restart would not free.
+    if let Err(old) = swap::clear_old(&artifact.provides, directory) {
+        if old == swap::window_old(directory) {
+            log::warn!("an earlier update never restarted this window; restarting it now");
+            return crate::relaunch::restart(app);
+        }
+        return Err(err!("error.updateOldInUse", path = old.display()));
+    }
+
     // 5. The record first, then the stop, so a window that dies here is finished by the next one.
     let records = records(app)?;
     let mut record = InProgress {
@@ -155,12 +167,13 @@ pub async fn install_staged<R: Runtime>(
     }
     let _ = std::fs::remove_dir_all(&staging);
 
-    // 7. The daemon back, from the new files. A failure is said, and the record stays so the next
-    // start tries again.
+    // 7. The daemon back, from the new files. **A failure does not stop step 8.** From the swap on
+    // this window runs from a renamed file, and staying open on it leaves every later try failing on
+    // that file. The record stays, so the relaunched window starts MixEngine again (`recover`).
     if record.daemon_was_running {
-        for_update::start_again(directory, &record.services)
-            .await
-            .map_err(|e| err!("error.updateDaemonNotBack").caused_by(e))?;
+        if let Err(error) = for_update::start_again(directory, &record.services).await {
+            log::warn!("the update is in place, but MixEngine did not start again: {error}");
+        }
     }
 
     // 8. The window, from the new files. The relaunched copy clears the record (`recover`).

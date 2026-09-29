@@ -6,8 +6,9 @@
 //! `false` and nothing else here is called: nothing in this file ever starts a daemon that was not
 //! running before an update.
 //!
-//! No unit tests: every function is a passthrough to the daemon, like `commands.rs`' passthroughs.
-//! They are exercised by the spec's manual paths 2 and 3.
+//! Every function but [`running_ids`] is a passthrough to the daemon, like `commands.rs`'
+//! passthroughs, exercised by the spec's manual paths 2 and 3. `running_ids` decides what an update
+//! starts again, so it is tested here.
 
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -42,30 +43,38 @@ pub async fn running_services() -> Option<u32> {
         return None;
     }
     let answer: Value = rpc::call("service.list", json!({})).await.ok()?;
-    let count = answer["services"]
-        .as_array()?
-        .iter()
-        .filter(|service| {
-            matches!(
-                service["state"].as_str(),
-                Some("running" | "degraded" | "starting" | "restarting")
-            )
-        })
-        .count();
-    Some(u32::try_from(count).unwrap_or(u32::MAX))
+    Some(u32::try_from(running_ids(&answer).len()).unwrap_or(u32::MAX))
 }
 
-/// `daemon.shutdown`, then wait until it has gone. Answers the services it stopped.
-pub async fn stop() -> Result<Vec<String>, AppError> {
-    let answer: Value = rpc::call("daemon.shutdown", json!({})).await?;
-    let stopped = answer["services"]["reached"]
+/// The services a `service.list` answer shows as up or on their way up.
+pub fn running_ids(list: &Value) -> Vec<String> {
+    list["services"]
         .as_array()
-        .map(|ids| {
-            ids.iter()
-                .filter_map(|id| id.as_str().map(str::to_owned))
+        .map(|services| {
+            services
+                .iter()
+                .filter(|service| {
+                    matches!(
+                        service["state"].as_str(),
+                        Some("running" | "degraded" | "starting" | "restarting")
+                    )
+                })
+                .filter_map(|service| service["id"].as_str().map(str::to_owned))
                 .collect()
         })
-        .unwrap_or_default();
+        .unwrap_or_default()
+}
+
+/// `daemon.shutdown`, then wait until it has gone. Answers the services that were running.
+///
+/// **Asked before the shutdown, not read from its answer.** `daemon.shutdown` reports every service
+/// in its stop plan as reached, the ones that were already stopped included, so starting that list
+/// again started services a person had stopped — and one the new daemon no longer declares failed
+/// the whole update.
+pub async fn stop() -> Result<Vec<String>, AppError> {
+    let listed: Value = rpc::call("service.list", json!({})).await?;
+    let was_running = running_ids(&listed);
+    rpc::call::<Value>("daemon.shutdown", json!({})).await?;
 
     let deadline = Instant::now() + GONE_TIMEOUT;
     while running().await {
@@ -74,13 +83,17 @@ pub async fn stop() -> Result<Vec<String>, AppError> {
         }
         tokio::time::sleep(POLL).await;
     }
-    Ok(stopped)
+    Ok(was_running)
 }
 
 /// Start the `mixengined` in `directory`, wait until it answers, then start each of `services`.
 ///
 /// `--detach` returns only once the daemon answers on its endpoint (`health::start_daemon` says
 /// the same), so there is no wait loop here.
+///
+/// **Only the daemon not starting is an error.** A service that will not start is logged and the
+/// rest are still started: the new daemon may no longer declare one the old one ran, and one
+/// refusal used to leave every service after it stopped and the update unfinished.
 pub async fn start_again(directory: &Path, services: &[String]) -> Result<(), AppError> {
     let program = directory.join(format!("mixengined{}", std::env::consts::EXE_SUFFIX));
     let output = tauri::async_runtime::spawn_blocking(move || {
@@ -100,7 +113,37 @@ pub async fn start_again(directory: &Path, services: &[String]) -> Result<(), Ap
     }
 
     for service in services {
-        rpc::call::<Value>("service.start", json!({ "service": service })).await?;
+        if let Err(error) = rpc::call::<Value>("service.start", json!({ "service": service })).await
+        {
+            log::warn!("after an update, {service} did not start again: {error}");
+        }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_a_service_that_is_up_or_on_its_way_is_started_again() {
+        let list = json!({ "services": [
+            { "id": "caddy", "state": "running" },
+            { "id": "mariadb@main", "state": "stopped" },
+            { "id": "mysql@5.7", "state": "starting" },
+            { "id": "redis@main", "state": "failed" },
+            { "id": "php-fpm@8.4.24", "state": "degraded" },
+            { "id": "php-fpm@8.5.9", "state": "restarting" },
+            { "id": "never-created" }
+        ]});
+        assert_eq!(
+            running_ids(&list),
+            ["caddy", "mysql@5.7", "php-fpm@8.4.24", "php-fpm@8.5.9"]
+        );
+    }
+
+    #[test]
+    fn an_answer_without_services_starts_nothing() {
+        assert!(running_ids(&json!({})).is_empty());
+    }
 }

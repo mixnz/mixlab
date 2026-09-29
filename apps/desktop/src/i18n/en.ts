@@ -217,6 +217,7 @@ const en = {
     updateUnwritable: "MixLab can't write to the folder it's installed in, so it can't update itself here.",
     updateFailed: "The update didn't install, and nothing was changed. {{message}}",
     updateNotDownloaded: "The update isn't on this computer any more. Download it again.",
+    updateOldInUse: "{{path}} is still in use. Close the program running from it, then try again.",
     updateCancelled: "The download was stopped.",
     updateDownloading: "The update is already downloading.",
     updateDaemonNotBack: "MixLab was updated, but MixEngine didn't start again. Start it from the MixEngine tab. {{cause}}",

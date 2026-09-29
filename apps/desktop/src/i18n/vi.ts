@@ -200,6 +200,7 @@ const vi: SharedDict = {
     updateLocked: "Đang có một lần cập nhật khác chạy (tiến trình {{pid}}). Thử lại khi nó xong.",
     updateUnwritable: "MixLab không ghi được vào thư mục cài đặt nên không tự cập nhật được ở đây.",
     updateNotDownloaded: "Bản cập nhật không còn trên máy. Tải lại để cài.",
+    updateOldInUse: "{{path}} vẫn đang được dùng. Đóng chương trình đang chạy từ file này rồi thử lại.",
     updateCancelled: "Đã dừng tải về.",
     updateDownloading: "Bản cập nhật đang được tải về.",
     updateFailed: "Chưa cài được bản cập nhật, chưa có gì bị thay đổi. {{message}}",
