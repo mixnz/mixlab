@@ -17,6 +17,7 @@ export const mixengineModule: ModuleDefinition = {
      một phiên, một yêu cầu. */
   singleTab: true,
   Tab: lazy(() => import("./MixEngineTab")),
-  /* Loaded when the tray window first draws — T168. The main window never loads it. */
-  TrayPanel: lazy(() => import("./tray/TrayPanel")),
+  /* Loaded when the tray's frame first draws this section — T168, T192. The main window never
+     loads it. */
+  TraySection: lazy(() => import("./tray/TraySection")),
 };

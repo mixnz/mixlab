@@ -2,9 +2,8 @@ import type en from "./en";
 
 const vi: typeof en = {
   mixengine: {
-    // The tray panel (T168). The slogan is a brand line and stays in English in every language.
+    // The tray panel's MixEngine section (T168, T192).
     tray: {
-      slogan: "For Developers. By Developers.",
       counts: "Service đang chạy: {{up}}/{{total}}",
       setUp: "Thiết lập trong MixLab",
       services: "Service",
@@ -18,8 +17,6 @@ const vi: typeof en = {
       cancel: "Huỷ",
       confirm: "Dừng",
       openMain: "Mở MixLab",
-      quit: "Thoát MixLab (MixEngine vẫn chạy)",
-      quitAlone: "Thoát MixLab",
       shutdownDone: "MixEngine đã tắt. Số service đã dừng theo: {{count}}.",
       shutdownFailed: "{{service}} không chịu dừng; MixEngine vẫn đã tắt.",
       unordered: "Đã dừng không theo thứ tự: {{message}}",

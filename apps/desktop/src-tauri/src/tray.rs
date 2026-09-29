@@ -149,7 +149,7 @@ pub fn create_panel<R: Runtime>(app: &AppHandle<R>) {
         .inner_size(PANEL_WIDTH, PANEL_HEIGHT);
 
     // Transparent and without the system's shadow: the page draws a rounded card with its own
-    // shadow inside a margin of this window, and slides it in from the right (`TrayPanel.module.css`).
+    // shadow inside a margin of this window, and slides it in from the right (`src/shell/tray/TrayFrame.module.css`).
     #[cfg(not(target_os = "linux"))]
     let builder = builder
         .transparent(true)

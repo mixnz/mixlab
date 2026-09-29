@@ -128,12 +128,14 @@ const vi: SharedDict = {
   },
   // Bản nào đang chạy, và bản mới đến từ đâu. Trình cập nhật của MixEngine mới là thứ thay cửa sổ
   // này — T106 — nên khối này là một tấm biển chỉ đường chứ không phải một trình tải về.
-  // MixEngine in the tray (T168). The Linux tray menu's three items — sent to
-  // `src-tauri/src/tray.rs` rather than kept in Rust.
+  // The tray (T168, T192): the frame's header, and the menu's items — sent to
+  // `src-tauri/src/tray.rs` rather than kept in Rust. The slogan is a brand line and stays in
+  // English in every language.
   tray: {
     openPanel: "Mở bảng điều khiển",
     openMain: "Mở MixLab",
     quit: "Thoát MixLab",
+    slogan: "For Developers. By Developers.",
   },
   update: {
     title: "Cập nhật",
