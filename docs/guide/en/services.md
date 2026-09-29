@@ -114,8 +114,8 @@ application about clicks on its icon. Without MixEngine there is no panel, and a
 MixLab's window back.
 
 The panel's header has **Open MixLab** and a power button that quits MixLab. Below it, the MixEngine
-card shows CPU and memory and ends with **Stop MixEngine**, which asks you to confirm first. Then come
-your services with Start and Stop, **Stop all**, and your sites (a click opens one).
+card shows CPU and memory and ends with **Stop MixEngine**, which asks you to confirm first. Then
+come your services with Start and Stop, **Stop all**, and your sites (a click opens one).
 
 On Windows and macOS a right click on the icon opens **Open MixLab** and **Quit MixLab**.
 

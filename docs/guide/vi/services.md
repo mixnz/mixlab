@@ -4,7 +4,7 @@ slug = "services"
 order = 6
 summary = "Caddy hoặc Nginx, MariaDB, MySQL, PostgreSQL, Redis và Memcached. Cài khi bạn yêu cầu, cấu hình sẵn cho bạn, và không bao giờ in mật khẩu ra màn hình."
 translation_of = "en/services.md"
-source_sha256 = "0e1c5ac2325014ad8e4070f35b60f82b3714d7b977c2eb981da7d456bf4e20c2"
+source_sha256 = "bca59240f1dc642d6ad590cec6db015ebd15011409015e4a9f1263427f0f6c35"
 +++
 
 # Máy chủ, cơ sở dữ liệu và bộ nhớ đệm
@@ -108,10 +108,10 @@ mix service delete mariadb@legacy
 ### Từ khay hệ thống
 
 MixLab có một icon trên khay hệ thống (Windows, Linux) hoặc thanh menu (macOS), dù bạn dùng những
-module nào. Khi bật MixEngine, trên Windows và macOS bấm vào icon sẽ trượt một bảng vào góc màn hình,
-sát thanh taskbar hoặc menu bar. Trên Linux, bấm vào icon sẽ mở một menu ngắn, và **Mở bảng điều
-khiển** mở cùng bảng đó dưới dạng một cửa sổ nhỏ, vì Linux không báo cho ứng dụng biết khi icon được
-bấm. Không bật MixEngine thì không có bảng, bấm vào icon sẽ mở lại cửa sổ MixLab.
+module nào. Khi bật MixEngine, trên Windows và macOS bấm vào icon sẽ trượt một bảng vào góc màn
+hình, sát thanh taskbar hoặc menu bar. Trên Linux, bấm vào icon sẽ mở một menu ngắn, và **Mở bảng
+điều khiển** mở cùng bảng đó dưới dạng một cửa sổ nhỏ, vì Linux không báo cho ứng dụng biết khi icon
+được bấm. Không bật MixEngine thì không có bảng, bấm vào icon sẽ mở lại cửa sổ MixLab.
 
 Đầu bảng có **Mở MixLab** và nút nguồn để thoát MixLab. Bên dưới, thẻ MixEngine hiện CPU và bộ nhớ,
 cuối thẻ có **Tắt MixEngine**, nút này hỏi xác nhận trước. Tiếp theo là các service kèm nút Chạy và
