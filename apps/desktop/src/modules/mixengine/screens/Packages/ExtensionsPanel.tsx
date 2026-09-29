@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import Card from "../../../../components/Card";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import Input from "../../../../components/Input";
 import SegmentedControl from "../../../../components/SegmentedControl";
 import SwitchTile from "../../../../components/SwitchTile";
@@ -18,14 +19,33 @@ import styles from "./ExtensionsPanel.module.css";
 type OnFilter = "all" | "on" | "off";
 
 export default function ExtensionsPanel({
-  target,
+  target: given,
   leading,
 }: {
   target: RuntimeTarget;
   /** Controls at the start of the toolbar row — the PHP extensions screen puts its version picker here. */
   leading?: ReactNode;
 }) {
+  /**
+   * The target by value, not by reference: the same object as long as kind and version stay put.
+   *
+   * `reload` depends on it, so a caller writing `target={{ kind, version }}` inline — as the
+   * Languages table does, inside a `map` where it cannot memoise — would otherwise hand in a new
+   * target on every render of its own, and every render would ask `runtime.list_extensions` again.
+   */
+  const { kind, version } = given;
+  const target = useMemo<RuntimeTarget>(() => ({ kind, version }), [kind, version]);
   const [extensions, setExtensions] = useState<RuntimeExtension[]>([]);
+  /** The target whose read last answered, as `kind@version`. Anything else on screen — the first
+   *  read, or another version just picked on the PHP extensions screen — is a list not known yet,
+   *  and `extensions` still holds the previous target's, which are not this one's to show. */
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const targetKey = `${kind}@${version}`;
+  const loaded = loadedFor === targetKey;
+  /** The number of the latest read asked for. An answer carrying any other number is dropped: a
+   *  version picked while another was still being read may answer first, and the older answer
+   *  landing after it would put that version's extensions back on screen under the one now picked. */
+  const latestRead = useRef(0);
   const [banner, setBanner] = useState<{ name: string; kind: PoolBanner } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -47,12 +67,17 @@ export default function ExtensionsPanel({
   const onCount = optional.filter((ext) => ext.enabled).length;
 
   const reload = useCallback(async () => {
+    const read = ++latestRead.current;
     try {
-      setExtensions((await api.runtimeExtensions(target)).extensions);
+      const answer = await api.runtimeExtensions(target);
+      if (read !== latestRead.current) return;
+      setExtensions(answer.extensions);
       setError("");
     } catch (e) {
+      if (read !== latestRead.current) return;
       setError(errorMessage(t, e));
     }
+    setLoadedFor(`${target.kind}@${target.version}`);
   }, [t, target]);
 
   useEffect(() => {
@@ -63,7 +88,7 @@ export default function ExtensionsPanel({
   // search typed against the version before.
   useEffect(() => {
     setFilter("");
-  }, [target.kind, target.version]);
+  }, [kind, version]);
 
   async function toggle(name: string, enabled: boolean) {
     setBusy(name);
@@ -132,9 +157,13 @@ export default function ExtensionsPanel({
       <Card
         headingLevel={3}
         title={t("mixengine.packages.extensions.title", { version: target.version })}
-        count={t("mixengine.packages.extensions.onCount", { on: onCount, total: optional.length })}
+        count={
+          loaded ? t("mixengine.packages.extensions.onCount", { on: onCount, total: optional.length }) : undefined
+        }
       >
-        {shown.length === 0 ? (
+        {!loaded ? (
+          <LoadingState />
+        ) : shown.length === 0 ? (
           <EmptyState title={t("mixengine.packages.extensions.noMatches")} />
         ) : (
           <ul className={styles.grid}>
@@ -153,7 +182,7 @@ export default function ExtensionsPanel({
         )}
       </Card>
 
-      {shownBuiltIn.length > 0 && (
+      {loaded && shownBuiltIn.length > 0 && (
         <Card
           headingLevel={3}
           title={

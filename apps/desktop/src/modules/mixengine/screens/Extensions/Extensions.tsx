@@ -6,6 +6,7 @@ import Card from "../../../../components/Card";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import MonogramBadge from "../../../../components/MonogramBadge";
 import PageHeader from "../../../../components/PageHeader";
 import StatusPill, { type StatusTone } from "../../../../components/StatusPill";
@@ -41,6 +42,9 @@ function pillTone(state: string | null | undefined): StatusTone {
 export default function Extensions({ active }: { active: boolean }) {
   const [installed, setInstalled] = useState<ExtensionSummary[]>([]);
   const [available, setAvailable] = useState<ExtensionOffer[]>([]);
+  /** False until the first read has answered — until then both lists being empty means "not known
+   *  yet", not "nothing installed" or "an empty registry". */
+  const [loaded, setLoaded] = useState(false);
   const [unreadable, setUnreadable] = useState(0);
   const [stale, setStale] = useState(false);
   const [serviceState, setServiceState] = useState<Record<string, string | null | undefined>>({});
@@ -67,6 +71,8 @@ export default function Extensions({ active }: { active: boolean }) {
       setError("");
     } catch (e) {
       setError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t]);
 
@@ -132,7 +138,7 @@ export default function Extensions({ active }: { active: boolean }) {
         }
       />
 
-      <Card title={t("mixengine.extensions.installedTitle")} count={installed.length} flush>
+      <Card title={t("mixengine.extensions.installedTitle")} count={loaded ? installed.length : undefined} flush>
         <Table aria-label={t("mixengine.extensions.installedTitle")}>
           <thead>
             <tr>
@@ -184,20 +190,25 @@ export default function Extensions({ active }: { active: boolean }) {
             ))}
           </tbody>
         </Table>
+        {!loaded && <LoadingState />}
       </Card>
 
       <Card
         title={t("mixengine.extensions.registryTitle")}
         count={
-          <>
-            {available.length}
-            <StaleBadge stale={stale} />
-          </>
+          loaded ? (
+            <>
+              {available.length}
+              <StaleBadge stale={stale} />
+            </>
+          ) : undefined
         }
         description={unreadable > 0 ? t("mixengine.extensions.unreadable", { count: unreadable }) : undefined}
         flush
       >
-        {available.length === 0 ? (
+        {!loaded ? (
+          <LoadingState />
+        ) : available.length === 0 ? (
           <EmptyState title={t("mixengine.extensions.registryEmpty")} />
         ) : (
           <Table aria-label={t("mixengine.extensions.registryTitle")}>

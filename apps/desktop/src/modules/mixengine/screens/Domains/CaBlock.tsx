@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
+import LoadingState from "../../../../components/LoadingState";
 import StatusPill, { type StatusTone } from "../../../../components/StatusPill";
 import { CheckIcon, LockIcon } from "../../../../icons";
 import { errorMessage } from "../../../../core/errors";
@@ -96,6 +97,8 @@ export default function CaBlock({
 }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<CaStatus | null>(null);
+  /** False until the first read has answered, failed or not — a failure is the banner's to say. */
+  const [loaded, setLoaded] = useState(false);
   const [repairing, setRepairing] = useState(false);
   const [pending, setPending] = useState<unknown[] | null>(null);
   const [canPrompt, setCanPrompt] = useState(true);
@@ -106,6 +109,8 @@ export default function CaBlock({
       setStatus(await api.caStatus());
     } catch (e) {
       onError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [onError, t]);
 
@@ -138,7 +143,13 @@ export default function CaBlock({
     }
   }
 
-  if (status === null) return null;
+  if (status === null) {
+    return loaded ? null : (
+      <Card title={t("mixengine.domains.ca.title")}>
+        <LoadingState compact />
+      </Card>
+    );
+  }
 
   return (
     <Card

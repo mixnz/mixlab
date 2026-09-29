@@ -6,6 +6,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { AutostartReport } from "@mixengine/api";
 import { autostartPresentation } from "../../settingsState";
+import SectionLoading from "./SectionLoading";
 import styles from "./Settings.module.css";
 
 /**
@@ -19,6 +20,8 @@ import styles from "./Settings.module.css";
  */
 export default function AutostartSection({ onError }: { onError: (message: string) => void }) {
   const [report, setReport] = useState<AutostartReport | null>(null);
+  /** False until the first read has answered, failed or not — a failure is the banner's to say. */
+  const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const { t } = useTranslation();
 
@@ -27,6 +30,8 @@ export default function AutostartSection({ onError }: { onError: (message: strin
       setReport(await api.autostartStatus());
     } catch (e) {
       onError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t, onError]);
 
@@ -46,7 +51,7 @@ export default function AutostartSection({ onError }: { onError: (message: strin
     }
   }
 
-  if (report === null) return null;
+  if (report === null) return loaded ? null : <SectionLoading title={t("mixengine.settings.autostart.title")} />;
   const presentation = autostartPresentation(report);
 
   return (

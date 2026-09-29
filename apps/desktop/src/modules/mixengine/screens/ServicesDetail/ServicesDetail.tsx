@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 
 import Button from "../../../../components/Button";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import MonogramBadge from "../../../../components/MonogramBadge";
 import PageHeader from "../../../../components/PageHeader";
 import StatusPill, { type StatusTone } from "../../../../components/StatusPill";
@@ -62,6 +63,9 @@ function dotTone(
 
 export default function ServicesDetail({ active }: { active: boolean }) {
   const [services, setServices] = useState<ServiceSummary[]>([]);
+  /** False until the first read has answered — until then an empty `services` means "not known
+   *  yet", not "no services". */
+  const [loaded, setLoaded] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   /** A service just created did not get the port its recipe wanted. See `PortMoved`: true of this
@@ -80,6 +84,8 @@ export default function ServicesDetail({ active }: { active: boolean }) {
       setServices(list.services);
     } catch (e) {
       setError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t]);
 
@@ -196,7 +202,7 @@ export default function ServicesDetail({ active }: { active: boolean }) {
       <div className={styles.list}>
         <div className={styles.listHead}>
           <h2 className={styles.listTitle}>{t("mixengine.sidebar.servicesDetail")}</h2>
-          <span className={styles.count}>{services.length}</span>
+          {loaded && <span className={styles.count}>{services.length}</span>}
         </div>
         <Button className={styles.newService} onClick={() => setCreating(true)}>
           <PlusIcon size={14} />
@@ -227,7 +233,8 @@ export default function ServicesDetail({ active }: { active: boolean }) {
               </span>
             </button>
           ))}
-          {services.length === 0 && <p className={styles.listEmpty}>{t("mixengine.servicesDetail.noServices")}</p>}
+          {!loaded && <LoadingState compact />}
+          {loaded && services.length === 0 && <p className={styles.listEmpty}>{t("mixengine.servicesDetail.noServices")}</p>}
         </div>
       </div>
 
@@ -301,17 +308,24 @@ export default function ServicesDetail({ active }: { active: boolean }) {
                 {movedNotice(moved)}
               </p>
             )}
-            {/* First, and it **draws nothing at all** for a service that is not a database — so for
-                nginx or a php-fpm pool, the first thing to read is still Autostart. It sits on
-                top because it is specific to this service, while the three panels below ask the
-                same question of every service. */}
-            <DatabasePanel service={selected} />
-            {/* Side by side and in this order: autostart answers "what is running when I sit
-                down", idle answers "what keeps running when I am not using it". Two different
-                questions about one service, and anyone turning both on has to see both at once. */}
-            <AutostartPanel service={selected} />
-            <IdlePanel service={selected} />
-            <LimitsPanel service={selected} />
+            {/* The panels are keyed by service: a panel is about one service, so another one gets a
+                fresh set — nothing typed, read or failed for the last one is left to show under
+                this one's name while its own read is out. **One key, on the group.** The same key
+                on each of four siblings is a duplicate key, and React then fails to remove the old
+                panels on a change of service: they pile up, one set per service visited. */}
+            <Fragment key={selected}>
+              {/* First, and it **draws nothing at all** for a service that is not a database — so
+                  for nginx or a php-fpm pool, the first thing to read is still Autostart. It sits
+                  on top because it is specific to this service, while the three panels below ask
+                  the same question of every service. */}
+              <DatabasePanel service={selected} />
+              {/* Side by side and in this order: autostart answers "what is running when I sit
+                  down", idle answers "what keeps running when I am not using it". Two different
+                  questions about one service, and anyone turning both on has to see both at once. */}
+              <AutostartPanel service={selected} />
+              <IdlePanel service={selected} />
+              <LimitsPanel service={selected} />
+            </Fragment>
           </>
         )}
       </div>

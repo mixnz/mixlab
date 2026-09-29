@@ -5,6 +5,7 @@ import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import PageHeader from "../../../../components/PageHeader";
 import Select from "../../../../components/Select";
 import StatusPill from "../../../../components/StatusPill";
@@ -75,6 +76,9 @@ function SharingCell({
  */
 export default function Sites({ active }: { active: boolean }) {
   const [rows, setRows] = useState<SiteRow[]>([]);
+  /** False until the first read has answered — until then an empty `rows` means "not known yet",
+   *  not "no sites". A later read under another filter keeps the old rows up, as every reread does. */
+  const [loaded, setLoaded] = useState(false);
   const [projectNames, setProjectNames] = useState<string[]>([]);
   const [projectFilter, setProjectFilter] = useState("");
   const [error, setError] = useState("");
@@ -104,6 +108,8 @@ export default function Sites({ active }: { active: boolean }) {
         setError("");
       } catch (e) {
         setError(errorMessage(t, e));
+      } finally {
+        setLoaded(true);
       }
     },
     [projectFilter, t],
@@ -240,7 +246,9 @@ export default function Sites({ active }: { active: boolean }) {
       />
 
       <Card flush>
-        {rows.length === 0 ? (
+        {!loaded ? (
+          <LoadingState />
+        ) : rows.length === 0 ? (
           <EmptyState title={t("mixengine.sites.empty")} />
         ) : (
           <Table aria-label={t("mixengine.sidebar.sites")}>

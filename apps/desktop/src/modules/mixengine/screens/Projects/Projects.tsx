@@ -5,6 +5,7 @@ import Card from "../../../../components/Card";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import PageHeader from "../../../../components/PageHeader";
 import Table from "../../../../components/Table";
 import { copyText } from "../../../../core/clipboard";
@@ -27,6 +28,9 @@ interface Props {
 /** Every project registered in the home — create, edit (name/root/pins), delete. */
 export default function Projects({ active, onOpenSites }: Props) {
   const [rows, setRows] = useState<ProjectSummary[]>([]);
+  /** False until the first read has answered — until then an empty `rows` means "not known yet",
+   *  not "no projects". */
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ProjectDetail | null>(null);
@@ -47,6 +51,8 @@ export default function Projects({ active, onOpenSites }: Props) {
       );
     } catch (e) {
       setError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t]);
 
@@ -100,7 +106,9 @@ export default function Projects({ active, onOpenSites }: Props) {
       />
 
       <Card flush>
-        {rows.length === 0 ? (
+        {!loaded ? (
+          <LoadingState />
+        ) : rows.length === 0 ? (
           <EmptyState title={t("mixengine.projects.empty")} />
         ) : (
           <Table aria-label={t("mixengine.sidebar.projects")}>

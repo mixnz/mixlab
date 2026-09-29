@@ -7,6 +7,10 @@
 - Languages and Packages list the newest version of each first, both what is installed and what
   you can download.
 
+### Fixed
+- MixEngine's screens show that they are loading while they wait for MixEngine's answer, instead
+  of saying there is nothing there or showing a blank page.
+
 ## v0.0.13
 
 ### Changed

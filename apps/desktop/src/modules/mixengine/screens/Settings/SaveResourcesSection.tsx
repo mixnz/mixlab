@@ -4,6 +4,7 @@ import Switch from "../../../../components/Switch";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
+import SectionLoading from "./SectionLoading";
 import styles from "./Settings.module.css";
 
 /**
@@ -20,6 +21,8 @@ import styles from "./Settings.module.css";
  */
 export default function SaveResourcesSection({ onError }: { onError: (message: string) => void }) {
   const [on, setOn] = useState<boolean | null>(null);
+  /** False until the first read has answered, failed or not — a failure is the banner's to say. */
+  const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const labelId = useId();
   const { t } = useTranslation();
@@ -29,6 +32,8 @@ export default function SaveResourcesSection({ onError }: { onError: (message: s
       setOn((await api.saveResources()).on);
     } catch (e) {
       onError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t, onError]);
 
@@ -47,7 +52,7 @@ export default function SaveResourcesSection({ onError }: { onError: (message: s
     }
   }
 
-  if (on === null) return null;
+  if (on === null) return loaded ? null : <SectionLoading title={t("mixengine.settings.saveResources.title")} />;
 
   return (
     <section className={styles.section}>

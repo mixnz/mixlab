@@ -13,6 +13,7 @@ import FrontEndSection from "./FrontEndSection";
 import PathSection from "./PathSection";
 import styles from "./Settings.module.css";
 import SaveResourcesSection from "./SaveResourcesSection";
+import SectionLoading from "./SectionLoading";
 
 /**
  * Root directory, managed TLD, autostart, doctor, diagnostics — T4.6–T4.8. Updates are not here but
@@ -28,6 +29,8 @@ import SaveResourcesSection from "./SaveResourcesSection";
  */
 export default function Settings({ active }: { active: boolean }) {
   const [status, setStatus] = useState<DaemonStatus | null>(null);
+  /** False until the first read has answered, failed or not — a failure is the banner's to say. */
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const { t } = useTranslation();
 
@@ -36,6 +39,8 @@ export default function Settings({ active }: { active: boolean }) {
       setStatus(await api.status());
     } catch (e) {
       setError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t]);
 
@@ -48,6 +53,7 @@ export default function Settings({ active }: { active: boolean }) {
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
 
       <PageHeader title={t("mixengine.sidebar.settings")} description={t("mixengine.settings.about")} />
+      {!loaded && <SectionLoading title={t("mixengine.settings.general.title")} />}
       {status && (
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>{t("mixengine.settings.general.title")}</h3>

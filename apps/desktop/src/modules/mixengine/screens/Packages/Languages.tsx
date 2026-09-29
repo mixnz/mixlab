@@ -5,6 +5,7 @@ import Card from "../../../../components/Card";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import { runtimeRowsFrom, type OnDiskRow } from "../../onDisk";
 import OnDiskCard from "./OnDiskCard";
 import Input from "../../../../components/Input";
@@ -44,6 +45,9 @@ import styles from "./Catalogue.module.css";
 export default function Languages({ active }: { active: boolean }) {
   const [installed, setInstalled] = useState<RuntimeSummary[]>([]);
   const [available, setAvailable] = useState<RuntimeRelease[]>([]);
+  /** False until the first read has answered — until then both lists being empty means "not known
+   *  yet", not "nothing installed". */
+  const [loaded, setLoaded] = useState(false);
   const [stale, setStale] = useState(false);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [installingJob, setInstallingJob] = useState<Record<string, number>>({});
@@ -88,6 +92,8 @@ export default function Languages({ active }: { active: boolean }) {
         setError(stillShow);
       } catch (e) {
         setError(errorMessage(t, e));
+      } finally {
+        setLoaded(true);
       }
     },
     [t],
@@ -260,8 +266,10 @@ export default function Languages({ active }: { active: boolean }) {
 
       <OnDiskCard rows={onDisk} adopting={adopting} onAdopt={(row) => void adopt(row)} />
 
-      <Card title={t("mixengine.packages.installedTitle")} count={installed.length} flush>
-        {installed.length === 0 ? (
+      <Card title={t("mixengine.packages.installedTitle")} count={loaded ? installed.length : undefined} flush>
+        {!loaded ? (
+          <LoadingState />
+        ) : installed.length === 0 ? (
           <EmptyState title={t("mixengine.packages.installedEmpty")} />
         ) : (
           <Table aria-label={t("mixengine.packages.installedTitle")}>
@@ -341,10 +349,12 @@ export default function Languages({ active }: { active: boolean }) {
       <Card
         title={t("mixengine.packages.availableTitle")}
         count={
-          <>
-            {shownAvailable.length}
-            <StaleBadge stale={stale} />
-          </>
+          loaded ? (
+            <>
+              {shownAvailable.length}
+              <StaleBadge stale={stale} />
+            </>
+          ) : undefined
         }
         actions={
           <Input
@@ -365,7 +375,9 @@ export default function Languages({ active }: { active: boolean }) {
         }
         flush
       >
-        {shownAvailable.length === 0 ? (
+        {!loaded ? (
+          <LoadingState />
+        ) : shownAvailable.length === 0 ? (
           filter.trim() !== "" && <EmptyState title={t("mixengine.packages.noMatches")} />
         ) : (
           <ul className={styles.available}>

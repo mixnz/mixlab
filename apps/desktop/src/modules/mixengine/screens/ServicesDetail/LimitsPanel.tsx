@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import Input from "../../../../components/Input";
 import Select from "../../../../components/Select";
 import { errorMessage } from "../../../../core/errors";
@@ -14,6 +15,8 @@ import styles from "./LimitsPanel.module.css";
 
 export default function LimitsPanel({ service }: { service: string }) {
   const [report, setReport] = useState<ServiceLimitsReport | null>(null);
+  /** False until the first read has answered, failed or not. */
+  const [loaded, setLoaded] = useState(false);
   const [cpu, setCpu] = useState("");
   const [memory, setMemory] = useState("");
   const [priority, setPriority] = useState<"normal" | "background">("normal");
@@ -32,6 +35,8 @@ export default function LimitsPanel({ service }: { service: string }) {
       setError("");
     } catch (e) {
       setError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [service, t]);
 
@@ -58,7 +63,13 @@ export default function LimitsPanel({ service }: { service: string }) {
     }
   }
 
-  if (report === null) return null;
+  if (report === null) {
+    return loaded ? null : (
+      <Card headingLevel={3} title={t("mixengine.servicesDetail.limits.title")}>
+        <LoadingState compact />
+      </Card>
+    );
+  }
 
   const cpuKind = enforcementKind(report.support.cpu);
   const memoryKind = enforcementKind(report.support.memory);

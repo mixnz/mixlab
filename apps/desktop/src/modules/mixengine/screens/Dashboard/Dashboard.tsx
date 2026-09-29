@@ -7,6 +7,7 @@ import ContextMenu from "../../../../components/ContextMenu";
 import Card from "../../../../components/Card";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import MonogramBadge from "../../../../components/MonogramBadge";
 import PageHeader from "../../../../components/PageHeader";
 import SegmentedControl from "../../../../components/SegmentedControl";
@@ -110,6 +111,9 @@ export default function Dashboard({
 }) {
   const [status, setStatus] = useState<DaemonStatus | null>(null);
   const [rows, setRows] = useState<ServiceRow[]>([]);
+  /** False until the first read has been drawn or has failed — until then an empty `rows` means
+   *  "not known yet", not "no services". */
+  const [loaded, setLoaded] = useState(false);
   const [pending, setPending] = useState<unknown[] | null>(null);
   /** `ElevationStatus.can_prompt`/`reason` — "is there still a helper to raise the prompt, and why
    *  not when there is not". Defaults to `true` because most machines can raise the prompt; only
@@ -207,6 +211,7 @@ export default function Dashboard({
           setRows(rowsFrom(list.services));
           setWaiting(next.elevation?.pending ?? 0);
           setDisk(usage);
+          setLoaded(true);
         }
         setError("");
       } catch (e) {
@@ -215,6 +220,7 @@ export default function Dashboard({
         landed = readLanded(order.current, began.seq);
         order.current = landed.order;
         setError(errorMessage(t, e));
+        setLoaded(true);
       }
       if (!landed.readAgain) return;
     }
@@ -676,12 +682,16 @@ export default function Dashboard({
             value={filter}
             onChange={setFilter}
             segments={[
-              { value: "all", label: t("mixengine.dashboard.filterAll"), count: rows.length },
-              { value: "running", label: t("mixengine.dashboard.filterRunning"), count: runningCount },
+              { value: "all", label: t("mixengine.dashboard.filterAll"), count: loaded ? rows.length : undefined },
+              {
+                value: "running",
+                label: t("mixengine.dashboard.filterRunning"),
+                count: loaded ? runningCount : undefined,
+              },
               {
                 value: "stopped",
                 label: t("mixengine.dashboard.filterStopped"),
-                count: rows.length - runningCount,
+                count: loaded ? rows.length - runningCount : undefined,
               },
             ]}
           />
@@ -700,7 +710,9 @@ export default function Dashboard({
           </ul>
         )}
 
-        {rows.length === 0 ? (
+        {!loaded ? (
+          <LoadingState />
+        ) : rows.length === 0 ? (
           <EmptyState title={t("mixengine.dashboard.noServices")} />
         ) : shown.length === 0 ? (
           <EmptyState

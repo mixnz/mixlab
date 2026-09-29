@@ -9,6 +9,7 @@ import ElevationDialog from "../../components/ElevationDialog";
 import { isJobFinished, needsResync } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
 import { doctorChecksInOrder } from "../../settingsState";
+import SectionLoading from "./SectionLoading";
 import styles from "./Settings.module.css";
 
 /**
@@ -37,6 +38,8 @@ export default function DoctorSection({
   onError: (message: string) => void;
 }) {
   const [report, setReport] = useState<DoctorReport | null>(null);
+  /** False until the first read has answered, failed or not — a failure is the banner's to say. */
+  const [loaded, setLoaded] = useState(false);
   const [repairing, setRepairing] = useState(false);
   const [pending, setPending] = useState<unknown[] | null>(null);
   const [canPrompt, setCanPrompt] = useState(true);
@@ -48,6 +51,8 @@ export default function DoctorSection({
       setReport(await api.doctor());
     } catch (e) {
       onError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t, onError]);
 
@@ -80,7 +85,7 @@ export default function DoctorSection({
     }
   }
 
-  if (report === null) return null;
+  if (report === null) return loaded ? null : <SectionLoading title={t("mixengine.settings.doctor.title")} />;
 
   return (
     <section className={styles.section}>

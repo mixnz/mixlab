@@ -1,0 +1,39 @@
+/* The same box `EmptyState` draws, so the answer replaces the wait without the card changing size
+   more than it has to. */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 36px 22px;
+  color: var(--text-muted);
+  /* Held invisible for the first tenth of a second, as `LoadingOverlay` is: a read off a warm
+     daemon is usually quicker than that, and a spinner that flashes reads as a glitch. */
+  animation: loading-state-in 180ms ease-out 100ms both;
+}
+
+.compact {
+  padding: 14px 0;
+  justify-content: flex-start;
+}
+
+@keyframes loading-state-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading {
+    animation: none;
+  }
+}
+
+.spinner {
+  composes: spinner from "../LoadingOverlay/LoadingOverlay.module.css";
+}
+
+.label {
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+}

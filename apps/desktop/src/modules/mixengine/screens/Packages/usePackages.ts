@@ -21,6 +21,9 @@ import { jobFinished, versionKey } from "../../runtimeState";
 export interface PackagesState {
   installed: PackageSummary[];
   available: PackageRelease[];
+  /** False until the first read has answered — until then both lists being empty means "not known
+   *  yet", not "nothing installed". */
+  loaded: boolean;
   stale: boolean;
   jobs: JobRow[];
   installingJob: Record<string, number>;
@@ -54,6 +57,7 @@ export interface PackagesState {
 export function usePackages(active: boolean): PackagesState {
   const [installed, setInstalled] = useState<PackageSummary[]>([]);
   const [available, setAvailable] = useState<PackageRelease[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [onDisk, setOnDisk] = useState<PackageFoundList>({ found: [] });
   const [adopting, setAdopting] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
@@ -91,6 +95,8 @@ export function usePackages(active: boolean): PackagesState {
         setError(stillShow);
       } catch (e) {
         setError(errorMessage(t, e));
+      } finally {
+        setLoaded(true);
       }
     },
     [t],
@@ -248,6 +254,7 @@ export function usePackages(active: boolean): PackagesState {
   return {
     installed,
     available,
+    loaded,
     stale,
     jobs,
     installingJob,

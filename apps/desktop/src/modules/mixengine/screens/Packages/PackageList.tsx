@@ -4,6 +4,7 @@ import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import { packageRowsFrom } from "../../onDisk";
 import OnDiskCard from "./OnDiskCard";
 import Input from "../../../../components/Input";
@@ -34,7 +35,7 @@ export default function PackageList({
   state: PackagesState;
 }) {
   const { t } = useTranslation();
-  const { installed, available, stale, jobs, installingJob, error, clearError, notice, clearNotice } =
+  const { installed, available, loaded, stale, jobs, installingJob, error, clearError, notice, clearNotice } =
     state;
   const onDisk = packageRowsFrom(state.onDisk, (name) => packageCategory(name) === category);
 
@@ -68,8 +69,10 @@ export default function PackageList({
         onAdopt={(row) => void state.adopt(row.name, row.version)}
       />
 
-      <Card title={t("mixengine.packages.installedTitle")} count={installedInCategory.length} flush>
-        {installedInCategory.length === 0 ? (
+      <Card title={t("mixengine.packages.installedTitle")} count={loaded ? installedInCategory.length : undefined} flush>
+        {!loaded ? (
+          <LoadingState />
+        ) : installedInCategory.length === 0 ? (
           <EmptyState title={t("mixengine.packages.installedEmpty")} />
         ) : (
           <Table aria-label={t("mixengine.packages.installedTitle")}>
@@ -127,10 +130,12 @@ export default function PackageList({
       <Card
         title={t("mixengine.packages.availableTitle")}
         count={
-          <>
-            {availableInCategory.length}
-            <StaleBadge stale={stale} />
-          </>
+          loaded ? (
+            <>
+              {availableInCategory.length}
+              <StaleBadge stale={stale} />
+            </>
+          ) : undefined
         }
         actions={
           <Input
@@ -152,7 +157,9 @@ export default function PackageList({
         }
         flush
       >
-        {availableInCategory.length === 0 ? (
+        {!loaded ? (
+          <LoadingState />
+        ) : availableInCategory.length === 0 ? (
           filter.trim() !== "" && <EmptyState title={t("mixengine.packages.noMatches")} />
         ) : (
           <ul className={styles.available}>

@@ -6,6 +6,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { PathReport } from "@mixengine/api";
 import { pathOutcome, type PathOutcome } from "../../pathState";
+import SectionLoading from "./SectionLoading";
 import styles from "./Settings.module.css";
 
 /**
@@ -27,6 +28,8 @@ export default function PathSection({
   onError: (message: string) => void;
 }) {
   const [report, setReport] = useState<PathReport | null>(null);
+  /** False until the first read has answered, failed or not — a failure is the banner's to say. */
+  const [loaded, setLoaded] = useState(false);
   const [outcome, setOutcome] = useState<PathOutcome | null>(null);
   const [busy, setBusy] = useState(false);
   const labelId = useId();
@@ -37,6 +40,8 @@ export default function PathSection({
       setReport(await api.pathStatus());
     } catch (e) {
       onError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t, onError]);
 
@@ -59,7 +64,7 @@ export default function PathSection({
     }
   }
 
-  if (report === null) return null;
+  if (report === null) return loaded ? null : <SectionLoading title={t("mixengine.settings.path.title")} />;
   const stale = report.stale ?? [];
 
   return (

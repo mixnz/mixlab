@@ -4,6 +4,7 @@ import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import PageHeader from "../../../../components/PageHeader";
 import SegmentedControl from "../../../../components/SegmentedControl";
 import Select from "../../../../components/Select";
@@ -24,6 +25,10 @@ import styles from "./Logs.module.css";
 
 const MAX_ENTRIES = 2000;
 const INITIAL_TAIL = 200;
+/** How long an open stream with no line yet is still "reading" rather than "an empty log". The
+ *  stream never ends, so there is no answer to wait for: a service that has written nothing sends
+ *  nothing, and only the clock can say so. */
+const FIRST_LINE_WAIT_MS = 2000;
 
 export default function Logs({ active }: { active: boolean }) {
   const [ids, setIds] = useState<string[]>([]);
@@ -31,6 +36,8 @@ export default function Logs({ active }: { active: boolean }) {
   const [tail, setTail] = useState(INITIAL_TAIL);
   const [filter, setFilter] = useState<StreamFilter>("all");
   const [entries, setEntries] = useState<LogEntry[]>([]);
+  /** True from opening a stream until its first line, its failure, or `FIRST_LINE_WAIT_MS`. */
+  const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState("");
   const { t } = useTranslation();
 
@@ -53,12 +60,19 @@ export default function Logs({ active }: { active: boolean }) {
   useEffect(() => {
     if (selected === null) return;
     setEntries([]);
+    setWaiting(true);
+    const timer = setTimeout(() => setWaiting(false), FIRST_LINE_WAIT_MS);
     api
       .logsWatch(selected, tail, true, (raw) => {
+        setWaiting(false);
         setEntries((current) => applyLogFrame(current, raw, MAX_ENTRIES));
       })
-      .catch((e: unknown) => setError(errorMessage(t, e)));
+      .catch((e: unknown) => {
+        setWaiting(false);
+        setError(errorMessage(t, e));
+      });
     return () => {
+      clearTimeout(timer);
       void api.logsUnwatch();
     };
   }, [selected, tail, t]);
@@ -133,9 +147,9 @@ export default function Logs({ active }: { active: boolean }) {
             {hiddenHistoric > 0 && (
               <p className={styles.note}>{t("mixengine.logs.historicHidden", { count: hiddenHistoric })}</p>
             )}
-            {visible.length === 0 && hiddenHistoric === 0 && (
-              <p className={styles.empty}>{t("mixengine.logs.empty")}</p>
-            )}
+            {visible.length === 0 &&
+              hiddenHistoric === 0 &&
+              (waiting ? <LoadingState /> : <p className={styles.empty}>{t("mixengine.logs.empty")}</p>)}
             {visible.map((entry, i) => {
               if (entry.kind === "gap") {
                 return (

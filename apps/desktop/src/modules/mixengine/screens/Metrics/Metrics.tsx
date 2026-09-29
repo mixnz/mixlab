@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import Card from "../../../../components/Card";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import PageHeader from "../../../../components/PageHeader";
 import Select from "../../../../components/Select";
 import { errorMessage } from "../../../../core/errors";
@@ -26,6 +27,14 @@ export default function Metrics({ active }: { active: boolean }) {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [subject, setSubject] = useState(DAEMON_SUBJECT);
   const [history, setHistory] = useState<MetricsHistory | null>(null);
+  /** The subject whose read last answered. Anything else in the picker — the first read, or a
+   *  subject just picked — is a history not known yet, not an empty one. */
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  /** The number of the latest read asked for. An answer carrying any other number is dropped: a
+   *  subject picked while another was still being read may answer first, and the older answer
+   *  landing after it would put that subject's history — and its name in `loadedFor` — back on
+   *  screen under the one now picked. */
+  const latestRead = useRef(0);
   // The "now" anchor of this read, not of this render — the axis must stand still between two
   // loads, otherwise every React redraw nudges the chart a little.
   const [loadedAt, setLoadedAt] = useState(() => Date.now());
@@ -43,13 +52,18 @@ export default function Metrics({ active }: { active: boolean }) {
   }, [active, t]);
 
   const reload = useCallback(async () => {
+    const read = ++latestRead.current;
     try {
-      setHistory(await api.metricsHistory({ subject, since: null, until: null }));
+      const answer = await api.metricsHistory({ subject, since: null, until: null });
+      if (read !== latestRead.current) return;
+      setHistory(answer);
       setLoadedAt(Date.now());
       setError("");
     } catch (e) {
+      if (read !== latestRead.current) return;
       setError(errorMessage(t, e));
     }
+    setLoadedFor(subject);
   }, [subject, t]);
 
   useEffect(() => {
@@ -90,7 +104,9 @@ export default function Metrics({ active }: { active: boolean }) {
           />
         }
       >
-        {minutes.length === 0 ? (
+        {loadedFor !== subject ? (
+          <LoadingState />
+        ) : minutes.length === 0 ? (
           <EmptyState title={t("mixengine.metrics.empty")} />
         ) : (
           <div className={styles.charts}>

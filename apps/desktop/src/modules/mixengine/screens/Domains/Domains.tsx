@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
 import EmptyState from "../../../../components/EmptyState";
+import LoadingState from "../../../../components/LoadingState";
 import ErrorBanner from "../../../../components/ErrorBanner";
 import PageHeader from "../../../../components/PageHeader";
 import Table from "../../../../components/Table";
@@ -39,6 +40,9 @@ function Fact({ on }: { on: boolean }) {
  */
 export default function Domains({ active }: { active: boolean }) {
   const [rows, setRows] = useState<DomainStatus[]>([]);
+  /** False until the first read has answered — until then an empty `rows` means "not known yet",
+   *  not "no domains". */
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
   /** Bumped every time there is a reason for every block to reread — `CaBlock`/`CertTable` reread
@@ -53,6 +57,8 @@ export default function Domains({ active }: { active: boolean }) {
       setError("");
     } catch (e) {
       setError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t]);
 
@@ -100,8 +106,10 @@ export default function Domains({ active }: { active: boolean }) {
 
       <CaBlock revision={revision} onError={setError} />
 
-      <Card title={t("mixengine.domains.title")} count={rows.length} flush>
-        {rows.length === 0 ? (
+      <Card title={t("mixengine.domains.title")} count={loaded ? rows.length : undefined} flush>
+        {!loaded ? (
+          <LoadingState />
+        ) : rows.length === 0 ? (
           <EmptyState title={t("mixengine.domains.empty")} />
         ) : (
           <Table aria-label={t("mixengine.domains.title")}>

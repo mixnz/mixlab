@@ -15,6 +15,7 @@ import type { ServiceSummary } from "@mixengine/api";
 import ElevationDialog from "../../components/ElevationDialog";
 import { isJobFinished, needsResync } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
+import SectionLoading from "./SectionLoading";
 import styles from "./Settings.module.css";
 import { useRunningDots } from "./useRunningDots";
 
@@ -75,6 +76,8 @@ export default function FrontEndSection({
   onError: (message: string) => void;
 }) {
   const [services, setServices] = useState<ServiceSummary[] | null>(null);
+  /** False until the first read has answered, failed or not — a failure is the banner's to say. */
+  const [loaded, setLoaded] = useState(false);
   const [choice, setChoice] = useState<FrontEndServer | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [job, setJob] = useState<JobSummary | null>(null);
@@ -101,6 +104,8 @@ export default function FrontEndSection({
       setServices(list.services);
     } catch (e) {
       onError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t, onError]);
 
@@ -202,7 +207,7 @@ export default function FrontEndSection({
     setNotice(t("mixengine.settings.frontEnd.stillWaiting"));
   }
 
-  if (services === null) return null;
+  if (services === null) return loaded ? null : <SectionLoading title={t("mixengine.settings.frontEnd.title")} />;
 
   // A daemon built before T97: keep this row visible with a reason, instead of disappearing.
   if (current === undefined) {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
+import LoadingState from "../../../../components/LoadingState";
 import StatusPill, { type StatusTone } from "../../../../components/StatusPill";
 import Table from "../../../../components/Table";
 import { errorMessage } from "../../../../core/errors";
@@ -67,6 +68,8 @@ export default function CertTable({
 }) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<CertRow[]>([]);
+  /** False until the first read has answered: the table is drawn empty until then. */
+  const [loaded, setLoaded] = useState(false);
   const [reissuing, setReissuing] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -74,6 +77,8 @@ export default function CertTable({
       setRows(buildCertRows(await api.certs()));
     } catch (e) {
       onError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [onError, t]);
 
@@ -94,7 +99,7 @@ export default function CertTable({
   }
 
   return (
-    <Card title={t("mixengine.domains.certs.title")} count={rows.length} flush>
+    <Card title={t("mixengine.domains.certs.title")} count={loaded ? rows.length : undefined} flush>
       <Table aria-label={t("mixengine.domains.certs.title")}>
         <thead>
           <tr>
@@ -154,6 +159,7 @@ export default function CertTable({
           ))}
         </tbody>
       </Table>
+      {!loaded && <LoadingState />}
     </Card>
   );
 }

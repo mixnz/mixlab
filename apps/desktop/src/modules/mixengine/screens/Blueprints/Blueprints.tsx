@@ -4,6 +4,7 @@ import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import LoadingState from "../../../../components/LoadingState";
 import Input from "../../../../components/Input";
 import MonogramBadge from "../../../../components/MonogramBadge";
 import PageHeader from "../../../../components/PageHeader";
@@ -25,6 +26,9 @@ import styles from "./Blueprints.module.css";
  *  slug. */
 export default function Blueprints({ active }: { active: boolean }) {
   const [rows, setRows] = useState<BlueprintSummary[]>([]);
+  /** False until the first read has answered — until then an empty `rows` means "not known yet",
+   *  not "no blueprints". */
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [capturing, setCapturing] = useState(false);
@@ -42,6 +46,8 @@ export default function Blueprints({ active }: { active: boolean }) {
       setError("");
     } catch (e) {
       setError(errorMessage(t, e));
+    } finally {
+      setLoaded(true);
     }
   }, [t]);
 
@@ -95,7 +101,11 @@ export default function Blueprints({ active }: { active: boolean }) {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {shown.length === 0 ? (
+      {!loaded ? (
+        <Card>
+          <LoadingState />
+        </Card>
+      ) : shown.length === 0 ? (
         <Card>
           <EmptyState
             title={rows.length === 0 ? t("mixengine.blueprints.empty") : t("mixengine.blueprints.noMatches")}
