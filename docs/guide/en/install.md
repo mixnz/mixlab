@@ -21,7 +21,7 @@ something that needs it — see [What MixLab asks permission for](./permissions.
 resolves to whichever release is newest and *not* a pre-release, so once the first one ships these
 links go live with no edit to this page. Until then, get the newest pre-release by hand from
 [the releases page](https://github.com/mixnz/mixlab/releases) — right now that is
-`v0.0.10`.
+`v0.0.11`.
 
 ## What you are installing
 

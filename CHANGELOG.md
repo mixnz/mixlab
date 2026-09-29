@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.11
+
 ### Changed
 - MixEngine uses less CPU while nothing is happening: it no longer rewrites every service's
   configuration every thirty seconds to check what is idle, and it checks that MySQL, MariaDB and
@@ -14,6 +16,8 @@
 ### Fixed
 - On Windows, MixLab and `mix` write every path with backslashes. Paths such as
   `C:\Users\you\blog/public` no longer mix the two separators.
+- MixLab and `mix service adopt` no longer list a MySQL or MariaDB temporary folder as an
+  unfinished database every time MixEngine starts.
 
 ## v0.0.10
 

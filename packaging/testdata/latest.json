@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "generated_at": "2026-10-01T09:00:00Z",
-  "version": "0.0.10",
+  "version": "9.9.9",
   "published_at": "2026-10-01T09:00:00Z",
   "notes": "feat(updates): MixLab updates itself (T187)",
-  "notes_url": "https://github.com/mixnz/mixlab/releases/tag/v0.0.10",
+  "notes_url": "https://github.com/mixnz/mixlab/releases/tag/v9.9.9",
   "artifacts": [
     {
       "os": "windows",
       "arch": "x86_64",
-      "url": "https://github.com/mixnz/mixlab/releases/download/v0.0.10/mixlab-0.0.10-windows-x86_64.zip",
+      "url": "https://github.com/mixnz/mixlab/releases/download/v9.9.9/mixlab-9.9.9-windows-x86_64.zip",
       "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "size": 41000000,
       "provides": {
@@ -29,7 +29,7 @@
       "os": "macos",
       "arch": "aarch64",
       "kind": "pkg",
-      "url": "https://github.com/mixnz/mixlab/releases/download/v0.0.10/mixlab-0.0.10-macos-universal.pkg",
+      "url": "https://github.com/mixnz/mixlab/releases/download/v9.9.9/mixlab-9.9.9-macos-universal.pkg",
       "size": 52000000,
       "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
     },
@@ -37,7 +37,7 @@
       "os": "linux",
       "arch": "x86_64",
       "kind": "deb",
-      "url": "https://github.com/mixnz/mixlab/releases/download/v0.0.10/mixlab_0.0.10_amd64.deb",
+      "url": "https://github.com/mixnz/mixlab/releases/download/v9.9.9/mixlab_9.9.9_amd64.deb",
       "size": 38000000,
       "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
       "flavour": "window"
@@ -46,7 +46,7 @@
       "os": "linux",
       "arch": "x86_64",
       "kind": "deb",
-      "url": "https://github.com/mixnz/mixlab/releases/download/v0.0.10/mixengine-headless_0.0.10_amd64.deb",
+      "url": "https://github.com/mixnz/mixlab/releases/download/v9.9.9/mixengine-headless_9.9.9_amd64.deb",
       "size": 9000000,
       "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
       "flavour": "headless"

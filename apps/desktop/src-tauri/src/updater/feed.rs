@@ -257,7 +257,7 @@ mod tests {
     fn the_fixture_verifies_and_parses() {
         let (signer, signature) = signed(FIXTURE);
         let feed = verify(FIXTURE, &signature, &signer.public_key()).expect("verifies");
-        assert_eq!(feed.version, "0.0.10");
+        assert_eq!(feed.version, "9.9.9");
         assert_eq!(
             feed.artifact("windows", "x86_64").unwrap().provides.len(),
             6

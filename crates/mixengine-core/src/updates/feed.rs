@@ -445,7 +445,7 @@ mod tests {
         let feed: Feed = serde_json::from_str(fixture).expect("the shared fixture parses");
 
         assert_eq!(feed.schema, SCHEMA);
-        assert_eq!(feed.version, "0.0.10");
+        assert_eq!(feed.version, "9.9.9");
         assert!(feed.artifact(Os::Windows, Arch::X86_64).is_some());
     }
 }
