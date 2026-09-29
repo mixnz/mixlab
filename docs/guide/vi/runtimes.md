@@ -4,7 +4,7 @@ slug = "runtimes"
 order = 5
 summary = "Cài bao nhiêu phiên bản tuỳ bạn, và để mỗi thư mục tự chọn phiên bản của nó. Không hook shell, không phải nhớ gì cả."
 translation_of = "en/runtimes.md"
-source_sha256 = "27594d82cb04c2c8ace1ba4cbdded841d4ad19c4444dd881c7f77fc77e23805d"
+source_sha256 = "2f178188de778f5cda444f0165793bfa4596f3dc05288b4f08d86afd48f8d74d"
 +++
 
 # Phiên bản PHP, Node, Python, Ruby, Go và Java
@@ -52,6 +52,38 @@ Bạn không phải đoán cái nào là cái nào. Trên máy đó, `mix runtim
 `mix package available` có thêm cột `RUNS`, ghi `native` hoặc `emulated` cho từng phiên bản, và
 lệnh cài sẽ nói rõ trước khi bắt đầu tải. Trên các máy khác không có cột này, vì không có gì để
 nói.
+
+## Cập nhật lên bản vá mới hơn
+
+`mix runtime available` liệt kê mỗi dòng phiên bản một hàng, ví dụ PHP 8.4 hay Node.js 22, kèm bản
+mới nhất của dòng đó và số bản còn lại. `--all` liệt kê mọi bản, còn `--kind php --line 8.4` liệt kê
+các bản của một dòng. Khi một phiên bản bạn đã cài có bản mới hơn trong cùng dòng, danh sách ghi rõ
+ngay phía trên bảng:
+
+```text
+update: php 8.4.24 → 8.4.25   mix runtime upgrade php 8.4.24
+```
+
+```bash
+mix runtime upgrade php 8.4.24 --dry-run   # xem sẽ chuyển những gì, không thay đổi gì
+mix runtime upgrade php 8.4.24             # in kế hoạch đó rồi hỏi bạn
+```
+
+Bản cập nhật cài 8.4.25, bật lại đúng các extension PHP bạn đang dùng, chép cấu hình pool php-fpm
+cũ sang pool mới, rồi chuyển các site, phiên bản mặc định và mọi project ghim đúng 8.4.24 sang bản
+mới. Sau đó 8.4.24 bị gỡ. Thêm `--keep` nếu muốn giữ lại.
+
+Bản cũ cũng được giữ lại khi còn thứ cần đến nó: một `mixengine.toml` ghim đúng bản vá đó,
+một công cụ bạn cài vào nó bằng `npm install -g` hay `pip install`, hoặc một extension như
+phpMyAdmin chỉ chạy được trên bản cũ. Kế hoạch ghi rõ từng lý do. MixLab không bao giờ sửa
+`mixengine.toml` của bạn, và cũng không tự cài lại các công cụ global đó vào bản mới.
+
+Cập nhật chỉ diễn ra trong cùng một dòng. Lên từ PHP 8.3 sang 8.4 làm thay đổi danh sách extension,
+nên `mix runtime upgrade` từ chối: bạn tự cài 8.4 rồi đổi pin.
+
+Trong cửa sổ MixLab, phiên bản đã cài có bản vá mới sẽ có thêm một hàng **Cập nhật lên 8.4.25** ngay
+bên dưới. Hộp thoại hiện cùng kế hoạch đó và một ô để giữ bản cũ, còn hàng này hiện tiến trình trong
+lúc cập nhật.
 
 ## Composer
 

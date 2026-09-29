@@ -74,6 +74,13 @@ half of a rename — which is exactly the reading a version that never shipped i
 
 ## Where we are
 
+**Phase 33 is built: 4 of 4, and M33 is met on Windows.** The available lists show one row per
+version line, and an installed runtime or server updates to the newest patch of its line, carrying
+its sites, pools, instances, extension choices and pins, with the old version removed unless
+something still needs it. The `#[ignore]`d real-server suites prove the milestone: a PHP site still
+served through Caddy after its PHP is updated, and a MariaDB instance keeping its databases.
+Design: [2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md](../specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md).
+
 **Phase 32 is built — 5 of 5, and M32 waits on CI's Linux and macOS legs.** The tray belonged to
 MixEngine: without the `mixengine` module there was no icon, and the close button quit MixLab and
 every terminal session with it. Now the icon, close-to-tray, the login switch and the panel's frame
