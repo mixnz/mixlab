@@ -36,6 +36,7 @@ import { startSync, SYNC_NOW_EVENT } from "./sync";
 import { useSyncActivity } from "./sync/activity";
 import { syncClosingHere, syncStatus } from "./sync/api";
 import { closingSoon } from "./sync/closing";
+import { traySections } from "./tray/sections";
 
 interface WorkspaceProps {
   /** The module ids this window draws — `shell/profiles.ts`. */
@@ -65,10 +66,11 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
   const visible = useMemo(() => visibleModules(enabled), [enabledKey]);
   const visibleIds = useMemo(() => visible.map((m) => m.id), [visible]);
 
-  /* The tray icon follows what this window draws (T168): a module with a tray panel puts it up, and
-     hiding the last such module takes it down. Again on a language switch, for the Linux menu's
-     words. `lang` is listed beside `t` because `t` is one function for the life of the app. */
-  const hasTrayPanel = visible.some((module) => module.TrayPanel !== undefined);
+  /* The tray icon is MixLab's and goes up whatever modules are visible (ADR 0058); what this window
+     tells it is whether a visible module lends the panel a section, and the words for its menu —
+     again on a language switch. `lang` is listed beside `t` because `t` is one function for the
+     life of the app. */
+  const hasTraySection = traySections(visible).length > 0;
 
   // The main window syncs; the tray panel, which never mounts a workspace, does not.
   /** The signed-in server and its announced end, when there is one (D4b). */
@@ -92,12 +94,12 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
   }, []);
 
   useEffect(() => {
-    void configureTray(hasTrayPanel, {
+    void configureTray(hasTraySection, {
       openPanel: t("tray.openPanel"),
       openMain: t("tray.openMain"),
       quit: t("tray.quit"),
     }).catch((e: unknown) => void logError("tray", e));
-  }, [hasTrayPanel, lang, t]);
+  }, [hasTraySection, lang, t]);
 
   function newTab(moduleId: string = defaultModuleId(visible), state?: unknown): TabInfo {
     const def = moduleById(moduleId);

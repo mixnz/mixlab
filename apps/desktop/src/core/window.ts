@@ -19,7 +19,7 @@ export function quitApp(): Promise<void> {
   return invoke("app_quit");
 }
 
-/** The Linux tray menu's words, which Rust does not keep a dictionary for. */
+/** The tray menu's words, which Rust does not keep a dictionary for. */
 export interface TrayLabels {
   openPanel: string;
   openMain: string;
@@ -27,11 +27,11 @@ export interface TrayLabels {
 }
 
 /**
- * Turns the tray icon on or off. `enabled` is "a module this window draws has a tray panel"; the
- * backend still decides whether this session can show an icon at all.
+ * Puts the tray icon up, and says whether a module this window draws lends the panel a section
+ * (ADR 0058). The backend still decides whether this session can show an icon at all.
  */
-export function configureTray(enabled: boolean, labels: TrayLabels): Promise<void> {
-  return invoke("tray_configure", { enabled, labels });
+export function configureTray(panel: boolean, labels: TrayLabels): Promise<void> {
+  return invoke("tray_configure", { panel, labels });
 }
 
 /** MixLab at login — ADR 0042, `src-tauri/src/login_item.rs`. What the operating system holds now. */

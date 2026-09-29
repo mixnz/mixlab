@@ -62,6 +62,7 @@ done
 | [29 — One name to find it by](phase-29-one-name-to-find-it-by.md) | One name for the product, and the engine keeps its own where that is still the right word | T176a–T176f | 6 / 6 | **M29** searching for MixLab reaches the repository, the handbook and the download page, the *do I need both* question is answered in one sentence, and no identifier moved — **met**, and the redirects were measured rather than predicted |
 | [30 — A copy only you can read](phase-30-a-copy-only-you-can-read.md) | A person's second machine has what they ticked, and the server that carried it cannot read it | T177a–T178d | 19 / 19 | **M30** two machines agree on exactly what was ticked, a revoked device stops syncing, and the server's database yields no plaintext — **the CI half met** by run 35646590878, conformance green against both servers; **the two-machine half met** 2026-09-22 by hand: rows not ticked stayed home, edits and deletions crossed, a removed machine was signed out, a move worked, and the self-hosted server's SQLite held no plaintext beyond the email and device name D1 allows |
 | [31 — MixLab updates itself](phase-31-mixlab-updates-itself.md) | A MixLab user is told about a release and installs it from MixLab; MixEngine never looks or installs unasked | T187a–T187g | 7 / 7 | **M31** on Windows, a MixLab whose MixEngine never started comes back on the next release from Settings with no `mixengined` at any point, one with MixEngine running keeps its services, and an idle `mixengined` makes no request to the feed |
+| [32 — The tray is MixLab's](phase-32-the-tray-is-mixlabs.md) | MixLab runs in the background on every preset; a module lends the tray a section | T192a–T192e | 5 / 5 | **M32** on *Database tools*, a terminal session survives the close button and the icon brings it back; with MixEngine visible the panel works as M22 says |
 
 [Parked](parked.md) — revisit deliberately, do not start early.
 
@@ -71,6 +72,15 @@ spared `docs/roadmap/`, reading the number as a milestone still ahead rather tha
 half of a rename — which is exactly the reading a version that never shipped invites.
 
 ## Where we are
+
+**Phase 32 is built — 5 of 5, and M32 waits on CI's Linux and macOS legs.** The tray belonged to
+MixEngine: without the `mixengine` module there was no icon, and the close button quit MixLab and
+every terminal session with it. Now the icon, close-to-tray, the login switch and the panel's frame
+are MixLab's, on every preset; the `mixengine` module lends the panel a section, and without one a
+click on the icon brings the window back
+([ADR 0058](../decisions/0058-the-tray-is-mixlabs-and-a-module-lends-it-a-section.md)). A development
+build was checked by hand on Windows.
+Design: [2026-09-29-t192-the-tray-is-mixlabs-design.md](../specs/2026-09-29-t192-the-tray-is-mixlabs-design.md).
 
 **Phase 30 is built — 19 of 19, and M30 is met.** MixLab has an account, so a second machine
 has the saved connections, REST collections, snippets and, one switch each, the saved passwords the

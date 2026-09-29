@@ -106,18 +106,25 @@ mix service delete mariadb@legacy
 
 ### From the tray
 
-MixLab puts a MixEngine icon in the tray (Windows), the menu bar (macOS) or the system tray (Linux).
-On Windows and macOS a click slides a panel into the corner of the screen, beside the taskbar or
-under the menu bar. On Linux a click opens a short menu, and **Open control panel** opens the same
-panel as a small window, because Linux does not tell an application about clicks on its icon. The
-panel lists your services with Start and Stop, has **Stop all**, lists your sites (a click opens
-one), and ends with **Open MixLab** and **Stop MixEngine**, which asks you to confirm first.
+MixLab has an icon in the tray (Windows), the menu bar (macOS) or the system tray (Linux), whichever
+modules you use. With MixEngine on, a click on Windows and macOS slides a panel into the corner of
+the screen, beside the taskbar or under the menu bar. On Linux a click opens a short menu, and
+**Open control panel** opens the same panel as a small window, because Linux does not tell an
+application about clicks on its icon. Without MixEngine there is no panel, and a click brings
+MixLab's window back.
 
-Closing MixLab's window while the icon is there only hides the window. Use the power button in the
-panel, or ⌘Q on macOS, to quit. Quitting MixLab leaves MixEngine running.
+The panel's header has **Open MixLab** and a power button that quits MixLab. Below it, the MixEngine
+card shows CPU and memory and ends with **Stop MixEngine**, which asks you to confirm first. Then
+come your services with Start and Stop, **Stop all**, and your sites (a click opens one).
 
-To have the icon after you log in, turn on **Open MixLab in the tray when I log in** in MixLab's
-Settings. This is a separate switch from **Start MixEngine when I log in** (`mix autostart`), and
+On Windows and macOS a right click on the icon opens **Open MixLab** and **Quit MixLab**.
+
+Closing MixLab's window only hides it, so terminal sessions and database connections stay open. To
+quit, use the icon's menu, the power button in the panel, or ⌘Q on macOS. Quitting MixLab leaves
+MixEngine running.
+
+To have the icon after you log in, turn on **Open MixLab in the tray when I log in** in **Settings →
+General**. This is a separate switch from **Start MixEngine when I log in** (`mix autostart`), and
 you can turn on either one or both.
 
 On GNOME the icon needs the *AppIndicator and KStatusNotifierItem Support* extension. Ubuntu

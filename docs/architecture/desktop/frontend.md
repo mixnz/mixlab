@@ -9,10 +9,13 @@ local `useState` plus the i18n context, with the theme and accent hooks persisti
 `main.tsx` → `I18nProvider` → `shell/App` (tab bar) → the module the tab names in the registry →
 `modules/db/DbTab` (form, then workspace), `modules/rest/RestTab` or `modules/terminal/TerminalTab`.
 
-**A second page, `tray.html` → `tray.tsx`**, is the tray panel's window (T168). It draws the
-`TrayPanel` of the first visible module that has one — only `mixengine` does — and reloads itself
-when the main window changes the theme, accent, language or module set in the storage both windows
-share. Each window has its own JavaScript context, so its own `daemonWatch.ts` channel; the backend
+**A second page, `tray.html` → `tray.tsx`**, is the tray panel's window (T168, T192). It draws the
+shell's frame, `shell/tray/TrayFrame.tsx` — the slide, the dismissal and a header with Open MixLab and
+Quit MixLab — around the `TraySection` of every visible module that lends one; only `mixengine`
+does, and with none there is no panel and the icon opens the main window
+([ADR 0058](../../decisions/0058-the-tray-is-mixlabs-and-a-module-lends-it-a-section.md)). It reloads
+itself when the main window changes the theme, accent, language or module set in the storage both
+windows share. Each window has its own JavaScript context, so its own `daemonWatch.ts` channel; the backend
 keeps one `/events` stream per window label.
 
 ## The shell and its modules

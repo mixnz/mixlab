@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+- MixLab keeps running in the tray when you close its window, whichever modules you use, so open
+  terminal sessions and connections survive. Quit from the tray icon's menu. The switch that opens
+  MixLab at login is now in Settings → General.
+
 ### Fixed
 - The tray panel no longer leaves a dim rectangle over the desktop around its edges.
 

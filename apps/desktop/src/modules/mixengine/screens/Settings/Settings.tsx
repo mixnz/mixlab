@@ -7,7 +7,6 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { DaemonStatus } from "@mixengine/api";
 import AutostartSection from "./AutostartSection";
-import LoginItemSection from "./LoginItemSection";
 import DiagnosticsSection from "./DiagnosticsSection";
 import DoctorSection from "./DoctorSection";
 import FrontEndSection from "./FrontEndSection";
@@ -64,7 +63,6 @@ export default function Settings({ active }: { active: boolean }) {
       <FrontEndSection active={active} onError={setError} />
 
       <AutostartSection onError={setError} />
-      <LoginItemSection onError={setError} />
       <SaveResourcesSection onError={setError} />
       <PathSection active={active} onError={setError} />
       <DoctorSection active={active} onError={setError} />

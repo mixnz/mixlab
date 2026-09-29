@@ -8,17 +8,18 @@ import { blockNativeContextMenu } from "./core/nativeContextMenu";
 import { logError } from "./core/log";
 import { IS_MAC, IS_WINDOWS } from "./core/platform";
 import { readEnabledModules, visibleModules } from "./shell/profiles";
+import TrayFrame from "./shell/tray/TrayFrame";
+import { traySections } from "./shell/tray/sections";
 /* The tokens, the ground and the theme the main window draws with. `shell/theme` applies the stored
    theme and accent as it is imported. */
 import "./shell/theme";
 import "./shell/App.css";
 
 /**
- * The tray panel's window — T168, `src-tauri/src/tray.rs`.
+ * The tray panel's window — T168, T192, `src-tauri/src/tray.rs`.
  *
- * It draws the `TrayPanel` of the first module this window would draw that has one, and nothing
- * when none does — the backend never shows the window then, because the main window never turned
- * the icon on.
+ * The shell's frame around the sections the visible modules lend (ADR 0058), and nothing when none
+ * does — the backend never shows the window then, because the main window said there is no panel.
  */
 
 blockNativeContextMenu();
@@ -43,13 +44,13 @@ window.addEventListener("storage", (e) => {
 });
 
 const enabled = readEnabledModules();
-const Panel = enabled === null ? undefined : visibleModules(enabled).find((m) => m.TrayPanel)?.TrayPanel;
+const sections = enabled === null ? [] : traySections(visibleModules(enabled));
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <I18nProvider>
       <ErrorBoundary variant="app">
-        <Suspense fallback={null}>{Panel !== undefined && <Panel />}</Suspense>
+        <Suspense fallback={null}>{sections.length > 0 && <TrayFrame sections={sections} />}</Suspense>
       </ErrorBoundary>
     </I18nProvider>
   </React.StrictMode>,

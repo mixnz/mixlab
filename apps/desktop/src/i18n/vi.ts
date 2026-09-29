@@ -86,6 +86,7 @@ const vi: SharedDict = {
   settings: {
     title: "Cài đặt",
     appearance: "Giao diện",
+    general: "Chung",
     theme: "Chế độ hiển thị",
     themeLight: "Sáng",
     themeDark: "Tối",
@@ -128,12 +129,21 @@ const vi: SharedDict = {
   },
   // Bản nào đang chạy, và bản mới đến từ đâu. Trình cập nhật của MixEngine mới là thứ thay cửa sổ
   // này — T106 — nên khối này là một tấm biển chỉ đường chứ không phải một trình tải về.
-  // MixEngine in the tray (T168). The Linux tray menu's three items — sent to
-  // `src-tauri/src/tray.rs` rather than kept in Rust.
+  // The tray (T168, T192): the frame's header, and the menu's items — sent to
+  // `src-tauri/src/tray.rs` rather than kept in Rust. The slogan is a brand line and stays in
+  // English in every language.
   tray: {
     openPanel: "Mở bảng điều khiển",
     openMain: "Mở MixLab",
     quit: "Thoát MixLab",
+    slogan: "For Developers. By Developers.",
+  },
+  loginItem: {
+    title: "Khi đăng nhập",
+    toggle: "Mở MixLab trên khay hệ thống mỗi khi đăng nhập",
+    about: "Chỉ hiện icon trên khay. MixEngine có công tắc riêng trong phần Settings của nó.",
+    noTray: "Desktop của bạn không hiện icon trên khay, nên MixLab sẽ mở cửa sổ khi đăng nhập.",
+    unsupported: "Bản build phát triển không tự chạy khi đăng nhập.",
   },
   update: {
     title: "Cập nhật",

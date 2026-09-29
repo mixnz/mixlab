@@ -1,0 +1,125 @@
+/* The tray panel's frame — T192. On macOS and Windows the window is transparent and sits in the
+   corner of the screen; the card is drawn 10px inside it — the gap the eye sees — and slides in from
+   the right each time the window is shown. On Linux the window is an ordinary one and the card
+   simply fills it. What goes under the header is the sections modules lend. */
+.stage {
+  width: 100%;
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  overflow: hidden;
+}
+
+.stage[data-slides] {
+  padding: 10px;
+}
+
+.panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+.stage[data-slides] .panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  /* No shadow: any shadow wider than the 10px around the card is cut off at the window's edge
+     and shows as a dim rectangle over the desktop. The border alone sets the card apart. */
+  overflow: hidden;
+  /* Off the right-hand edge until shown. The window clips it, so it appears to come out of the
+     side of the screen. */
+  transform: translateX(calc(100% + 12px));
+  opacity: 0;
+  /* Leaving: the same way back, eased in so it gathers speed toward the edge. 420ms is
+     `SLIDE_OUT_MS` in `TrayFrame.tsx`, which waits for it before hiding the window. */
+  transition:
+    transform 420ms cubic-bezier(0.64, 0, 0.78, 0),
+    opacity 420ms ease-in;
+}
+
+/* Arriving: eased out, so it settles into place. */
+.stage[data-slides] .panel.shown {
+  transform: none;
+  opacity: 1;
+  transition:
+    transform 560ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 400ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage[data-slides] .panel,
+  .stage[data-slides] .panel.shown {
+    transition: opacity 240ms linear;
+    transform: none;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
+/* As tall as the name and the slogan together: 20px and 16px of line, and the 2px between them.
+   A number rather than a stretch — a stretched image counts its own height into the row it is
+   stretched to, and the row grows to fit it. */
+.logo {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+}
+
+/* The mark and the words give way before the two actions do: a long slogan ellipsizes. */
+.brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--text-lg);
+  line-height: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The brand line: read, never acted on — muted, and smaller than anything that is a control. */
+.slogan {
+  font-size: var(--text-xs);
+  line-height: 16px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The shell's two ways out of the panel, at the header's right: back into MixLab, and quit. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}

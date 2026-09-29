@@ -75,6 +75,16 @@ export interface ModuleSettingsSection {
   Section: ComponentType;
 }
 
+/** What the tray's frame hands every section it draws. */
+export interface TraySectionProps {
+  /** The card is on screen. Always true on Linux, where the panel is a window and never slides. */
+  shown: boolean;
+  /** The panel's window has focus. A section reads its state again when this turns true. */
+  focused: boolean;
+  /** Slides the panel out and hides it, as Esc and a click elsewhere do. */
+  dismiss: () => void;
+}
+
 /**
  * One thing MixDB can open a tab of.
  *
@@ -113,12 +123,13 @@ export interface ModuleDefinition {
    *  knows nothing about what any of them do. */
   shortcuts?: ShortcutGroup[];
   /**
-   * What the tray panel draws — T168, `src/tray.tsx`.
+   * A section of the tray panel — T192, ADR 0058, `src/shell/tray/TrayFrame.tsx`.
    *
-   * The panel is a second window, and it draws the first visible module that has one of these. A
-   * window where none does gets no tray icon at all, and closing it quits as it always did.
+   * The shell owns the panel: its window, its slide and a header with Open MixLab and Quit MixLab.
+   * A module only lends it what goes under that header, and the panel exists only while a visible
+   * module does. Without one, a click on the icon opens the main window.
    */
-  TrayPanel?: ComponentType;
+  TraySection?: ComponentType<TraySectionProps>;
   /** The collections this module lends to sync (the design's D5). The shell offers them and
    *  never learns what an item is — see `core/syncCollection.ts`. */
   syncable?: SyncableCollection[];

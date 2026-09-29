@@ -4,10 +4,10 @@
 //! Dashboard (`src/tray.tsx`). The design, including why Linux gets a menu in front of the panel
 //! rather than a popover, is `docs/specs/2026-09-19-t168-mixengine-in-the-tray-design.md`.
 //!
-//! **The icon exists only while the frontend says so.** `tray_configure` is called by the main
-//! window once it knows which modules it draws: a MixLab used only as a database client (T108) has
-//! nothing to put in a panel and gets no icon. While there is an icon, closing the main window
-//! hides it instead of quitting; without one, closing quits, as it always did.
+//! **The icon is MixLab's, not a module's** — ADR 0058, `docs/specs/2026-09-29-t192-the-tray-is-mixlabs-design.md`.
+//! `tray_configure` puts it up wherever the session can show one, and says whether a visible module
+//! lends the panel a section. While there is an icon, closing the main window hides it instead of
+//! quitting; a primary click opens the panel when there is one and the main window when there is not.
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
@@ -51,10 +51,9 @@ const DISMISS_EVENT: &str = "tray://dismiss";
 /// slide out, for a page that is broken or not loaded yet.
 const DISMISS_FALLBACK: Duration = Duration::from_millis(1200);
 
-/// The three words the Linux menu needs, sent by the frontend so that Rust holds no dictionary.
+/// The three words the icon's menu needs, sent by the frontend so that Rust holds no dictionary.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub struct Labels {
     pub open_panel: String,
     pub open_main: String,
@@ -64,11 +63,13 @@ pub struct Labels {
 #[derive(Default)]
 pub struct TrayState {
     /// Whether the icon is up, and with it whether closing the main window hides it.
-    enabled: AtomicBool,
+    icon: AtomicBool,
+    /// Whether a visible module lends the panel a section: what a click opens, and whether the
+    /// Linux menu offers the panel.
+    panel: AtomicBool,
     /// Counts the panel's shows, so that a fallback hide from before a show never hides the
     /// panel it shows — see [`request_dismiss`].
     shows: AtomicU64,
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     labels: Mutex<Labels>,
     /// Whether this session can show a tray icon at all, asked once — see [`has_host`].
     host: OnceLock<bool>,
@@ -78,8 +79,12 @@ pub struct TrayState {
 }
 
 impl TrayState {
-    fn enabled(&self) -> bool {
-        self.enabled.load(Ordering::SeqCst)
+    fn icon(&self) -> bool {
+        self.icon.load(Ordering::SeqCst)
+    }
+
+    fn panel(&self) -> bool {
+        self.panel.load(Ordering::SeqCst)
     }
 
     fn host(&self) -> bool {
@@ -96,7 +101,7 @@ pub fn register<R: Runtime>(builder: Builder<R>) -> Builder<R> {
 
 /// How long a login start waits for the main window to turn the icon on before showing the window
 /// instead. The frontend calls `tray_configure` within a second of loading; this is for the start
-/// where it never does — a first-run screen, a module set with no tray panel, a broken page.
+/// where it never does — a first-run screen, a broken page.
 const HIDDEN_START_GRACE: Duration = Duration::from_secs(8);
 
 /// Whether this session can show a tray icon — for Settings' note under the login switch.
@@ -144,7 +149,7 @@ pub fn create_panel<R: Runtime>(app: &AppHandle<R>) {
         .inner_size(PANEL_WIDTH, PANEL_HEIGHT);
 
     // Transparent and without the system's shadow: the page draws a rounded card with its own
-    // shadow inside a margin of this window, and slides it in from the right (`TrayPanel.module.css`).
+    // shadow inside a margin of this window, and slides it in from the right (`src/shell/tray/TrayFrame.module.css`).
     #[cfg(not(target_os = "linux"))]
     let builder = builder
         .transparent(true)
@@ -165,36 +170,35 @@ pub fn create_panel<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-/// Turns the icon on or off, and gives it the words for its Linux menu.
+/// Puts the icon up, and says whether a visible module lends the panel a section.
 ///
-/// Called by the main window whenever the modules it draws or its language change. `enabled` is
-/// "a visible module has a tray panel"; whether this session can show an icon at all is decided
-/// here, not there.
+/// Called by the main window on start and whenever the modules it draws or its language change.
+/// The icon no longer depends on any module (ADR 0058): whether this session can show one at all is
+/// decided here, by `has_host`.
 #[tauri::command]
 pub fn tray_configure(
     app: AppHandle,
     state: tauri::State<'_, TrayState>,
-    enabled: bool,
+    panel: bool,
     labels: Labels,
 ) -> Result<(), AppError> {
     *state.labels.lock().unwrap_or_else(|e| e.into_inner()) = labels;
-    let enabled = enabled && state.host();
-
-    if enabled {
-        if app.tray_by_id(ICON).is_none() {
-            create_icon(&app)?;
-        } else {
-            #[cfg(target_os = "linux")]
-            refresh_menu(&app, &state);
-        }
-    } else {
-        app.remove_tray_by_id(ICON);
+    state.panel.store(panel, Ordering::SeqCst);
+    if !panel {
         hide_panel(&app);
     }
 
-    let was = state.enabled.swap(enabled, Ordering::SeqCst);
-    let waiting = state.hidden_start.swap(false, Ordering::SeqCst);
-    if !enabled && (was || waiting) {
+    let icon = state.host();
+    if icon {
+        if app.tray_by_id(ICON).is_none() {
+            create_icon(&app)?;
+        } else {
+            refresh_menu(&app, &state);
+        }
+    }
+
+    state.icon.store(icon, Ordering::SeqCst);
+    if state.hidden_start.swap(false, Ordering::SeqCst) && !icon {
         // Nobody may be left with a running app and no way to see it.
         crate::launch::bring_to_front(&app);
     }
@@ -286,6 +290,36 @@ fn hide_panel<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
+/// Which button a click on the icon was made with, as far as routing it goes.
+#[cfg_attr(target_os = "linux", allow(dead_code))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Button {
+    Primary,
+    Secondary,
+    Other,
+}
+
+/// What a click on the icon does — the spec's D2.
+#[cfg_attr(target_os = "linux", allow(dead_code))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ClickAction {
+    TogglePanel,
+    OpenMain,
+    /// The native menu answers the secondary button on its own; nothing else may.
+    Ignore,
+}
+
+/// Where a click goes. There is a panel only while a visible module lends it a section; without
+/// one, the icon is the way back to the main window.
+#[cfg_attr(target_os = "linux", allow(dead_code))]
+fn click_action(panel: bool, button: Button) -> ClickAction {
+    match button {
+        Button::Primary if panel => ClickAction::TogglePanel,
+        Button::Primary => ClickAction::OpenMain,
+        Button::Secondary | Button::Other => ClickAction::Ignore,
+    }
+}
+
 fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     let app = window.app_handle();
     let state = app.state::<TrayState>();
@@ -302,14 +336,14 @@ fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
             api.prevent_close();
             request_dismiss(app);
         }
-        (MAIN, WindowEvent::CloseRequested { api, .. }) if state.enabled() => {
+        (MAIN, WindowEvent::CloseRequested { api, .. }) if state.icon() => {
             api.prevent_close();
             let _ = window.hide();
             #[cfg(target_os = "macos")]
             let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
         }
-        // Without a tray, closing the main window is quitting — and the hidden panel would
-        // otherwise keep the process alive with nothing on screen.
+        // Without an icon (a session with no tray host), closing the main window is quitting —
+        // and the hidden panel would otherwise keep the process alive with nothing on screen.
         (MAIN, WindowEvent::Destroyed) => app.exit(0),
         _ => {}
     }
@@ -328,16 +362,19 @@ fn create_icon(app: &AppHandle) -> Result<(), AppError> {
         None => builder,
     };
 
+    let builder = builder
+        .menu(&native_menu(app, &app.state::<TrayState>())?)
+        .on_menu_event(|app, event| on_menu_event(app, event.id().as_ref()));
+
+    // macOS and Windows: the primary click is ours (`on_icon_event`), the secondary opens the menu.
     #[cfg(not(target_os = "linux"))]
     let builder = builder
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| on_icon_event(tray.app_handle(), event));
 
+    // Linux tells an application nothing about clicks: every click opens the menu (T168 D1).
     #[cfg(target_os = "linux")]
-    let builder = builder
-        .menu(&linux_menu(app, &app.state::<TrayState>())?)
-        .show_menu_on_left_click(true)
-        .on_menu_event(|app, event| on_menu_event(app, event.id().as_ref()));
+    let builder = builder.show_menu_on_left_click(true);
 
     builder
         .build(app)
@@ -347,19 +384,32 @@ fn create_icon(app: &AppHandle) -> Result<(), AppError> {
 
 #[cfg(not(target_os = "linux"))]
 fn on_icon_event(app: &AppHandle, event: tauri::tray::TrayIconEvent) {
-    use tauri::tray::{MouseButtonState, TrayIconEvent};
+    use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
     use tauri::PhysicalPosition;
 
-    // Either button: a right click on a Windows tray icon is expected to do something.
     let TrayIconEvent::Click {
         rect,
         position,
+        button,
         button_state: MouseButtonState::Up,
         ..
     } = event
     else {
         return;
     };
+    let button = match button {
+        MouseButton::Left => Button::Primary,
+        MouseButton::Right => Button::Secondary,
+        MouseButton::Middle => Button::Other,
+    };
+    match click_action(app.state::<TrayState>().panel(), button) {
+        ClickAction::Ignore => return,
+        ClickAction::OpenMain => {
+            crate::launch::bring_to_front(app);
+            return;
+        }
+        ClickAction::TogglePanel => {}
+    }
     let Some(panel) = app.get_webview_window(PANEL) else {
         return;
     };
@@ -465,10 +515,10 @@ fn status_notifier_watcher() -> bool {
     ask().unwrap_or(false)
 }
 
-/// The menu a Linux tray opens on any click: the panel, the main window, quit. Linux tells an
-/// application nothing about clicks on its icon, so the panel cannot open on one (D1).
-#[cfg(target_os = "linux")]
-fn linux_menu(
+/// The icon's menu: on macOS and Windows the secondary click's, on Linux every click's. **Open
+/// control panel** is Linux's alone — elsewhere the primary click opens the panel — and only while
+/// there is one.
+fn native_menu(
     app: &AppHandle,
     state: &TrayState,
 ) -> Result<tauri::menu::Menu<tauri::Wry>, AppError> {
@@ -480,22 +530,25 @@ fn linux_menu(
         .unwrap_or_else(|e| e.into_inner())
         .clone();
     let fail = |e: tauri::Error| err!("error.trayUnavailable", message = e);
-    let open_panel = MenuItem::with_id(app, "open_panel", &labels.open_panel, true, None::<&str>)
-        .map_err(fail)?;
     let open_main =
         MenuItem::with_id(app, "open_main", &labels.open_main, true, None::<&str>).map_err(fail)?;
     let separator = PredefinedMenuItem::separator(app).map_err(fail)?;
     let quit = MenuItem::with_id(app, "quit", &labels.quit, true, None::<&str>).map_err(fail)?;
-    Menu::with_items(app, &[&open_panel, &open_main, &separator, &quit]).map_err(fail)
+    if cfg!(target_os = "linux") && state.panel() {
+        let open_panel =
+            MenuItem::with_id(app, "open_panel", &labels.open_panel, true, None::<&str>)
+                .map_err(fail)?;
+        return Menu::with_items(app, &[&open_panel, &open_main, &separator, &quit]).map_err(fail);
+    }
+    Menu::with_items(app, &[&open_main, &separator, &quit]).map_err(fail)
 }
 
-/// The same menu in the language the main window now speaks.
-#[cfg(target_os = "linux")]
+/// The same menu, after the language or the panel changed.
 fn refresh_menu(app: &AppHandle, state: &TrayState) {
     let Some(tray) = app.tray_by_id(ICON) else {
         return;
     };
-    match linux_menu(app, state) {
+    match native_menu(app, state) {
         Ok(menu) => {
             let _ = tray.set_menu(Some(menu));
         }
@@ -503,7 +556,6 @@ fn refresh_menu(app: &AppHandle, state: &TrayState) {
     }
 }
 
-#[cfg(target_os = "linux")]
 fn on_menu_event(app: &AppHandle, id: &str) {
     match id {
         "open_panel" => {
@@ -679,5 +731,28 @@ mod tests {
     fn a_panel_larger_than_the_work_area_starts_at_its_corner() {
         let work = bounds(0.0, 0.0, 300.0, 400.0);
         assert_eq!(panel_position(false, PANEL_SIZE, work, 8.0), (0.0, 0.0));
+    }
+
+    #[test]
+    fn a_primary_click_toggles_the_panel_when_there_is_one() {
+        assert_eq!(
+            click_action(true, Button::Primary),
+            ClickAction::TogglePanel
+        );
+    }
+
+    #[test]
+    fn a_primary_click_opens_the_main_window_when_no_module_lends_a_section() {
+        assert_eq!(click_action(false, Button::Primary), ClickAction::OpenMain);
+    }
+
+    #[test]
+    fn a_secondary_click_is_left_to_the_native_menu() {
+        // The menu opens on its own (`show_menu_on_left_click(false)`); doing anything here as well
+        // would open the panel behind it.
+        for panel in [true, false] {
+            assert_eq!(click_action(panel, Button::Secondary), ClickAction::Ignore);
+            assert_eq!(click_action(panel, Button::Other), ClickAction::Ignore);
+        }
     }
 }
