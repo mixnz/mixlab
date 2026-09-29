@@ -2,13 +2,20 @@
 
 ## Unreleased
 
+## v0.0.13
+
 ### Changed
 - MixLab keeps running in the tray when you close its window, whichever modules you use, so open
   terminal sessions and connections survive. Quit from the tray icon's menu. The switch that opens
   MixLab at login is now in Settings → General.
+- Messages in MixLab, in `mix` and in the handbook read more plainly, in English and Vietnamese.
 
 ### Fixed
 - The tray panel no longer leaves a dim rectangle over the desktop around its edges.
+- With no project yet, the new-site form sends you to the Projects screen instead of to
+  `mix project add`, a command that does not exist.
+- The handbook's troubleshooting page gives the right form of `mix runtime uninstall` and
+  `mix package uninstall`.
 
 ## v0.0.12
 
