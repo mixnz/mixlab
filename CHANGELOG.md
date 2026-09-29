@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changed
+- Switching between light and dark in Settings fades from one to the other instead of flashing.
+
 ## v0.0.13
 
 ### Changed

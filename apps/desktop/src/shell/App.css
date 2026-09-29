@@ -631,6 +631,15 @@ button.brand-settings.has-update::after {
   }
 }
 
+/* The cross-fade `applyThemeSmoothly` in `shell/theme.ts` starts when the theme is switched. The
+   browser's default is 250ms, which still reads as a flash from dark to light; this is slow enough
+   for the eye to adjust and short enough not to feel like waiting. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 380ms;
+  animation-timing-function: ease-in-out;
+}
+
 /* A row, not a line of text: an entry that leads with a mark — the module icons in the `[+]` menu —
    needs the gap between mark and word set here, or the two run together. An entry that is only
    words is laid out the same way and reads no differently for it. */

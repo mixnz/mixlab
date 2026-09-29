@@ -61,6 +61,21 @@ function applyTheme(theme: ThemeMode): void {
   }
 }
 
+/* A theme the user picks fades in rather than landing in one frame: a whole window flipping from
+   dark to light at once is hard on the eyes. The browser snapshots the old page and cross-fades to
+   the new one, so the terminal's canvas fades with everything else. The timing lives in App.css.
+   Only the click is animated — the first paint, a synced preference and the OS switching under
+   *system* still apply at once. A webview without view transitions, or a user who asked for less
+   motion, gets the switch as it always was. */
+function applyThemeSmoothly(theme: ThemeMode): void {
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced || typeof document.startViewTransition !== "function") {
+    applyTheme(theme);
+    return;
+  }
+  document.startViewTransition(() => applyTheme(theme));
+}
+
 /* The default is what `:root` already carries, so the attribute is left off for it rather than
    written out, which keeps the DOM clean for the common case. */
 function applyAccent(accent: AccentColor): void {
@@ -120,7 +135,7 @@ export function useTheme(): [ThemeMode, (theme: ThemeMode) => void] {
   useEffect(() => onPreferencesChanged(() => setTheme(readStoredTheme())), []);
 
   function updateTheme(next: ThemeMode) {
-    applyTheme(next);
+    applyThemeSmoothly(next);
     setTheme(next);
   }
 
