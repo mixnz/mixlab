@@ -428,7 +428,7 @@ namespace mới.
 
 Nhãn của mục đó là **Packages**, không phải *Runtimes*: màn này chứa cả web server, cơ sở dữ liệu
 và cache, và một nhãn chỉ nói "runtime" thì sai với nửa nội dung. Khoá màn trong code cũng là
-`packages`, còn thư mục `screens/Runtimes/` giữ tên vì nó đã chứa `Packages.tsx`.
+`packages`, và thư mục `screens/Packages/` cũng vậy.
 
 **D6 — `package.uninstall` bị refuse thì dừng ở đó, không có bước hai.** Không giống
 `runtime.uninstall` có `force` để vượt qua refusal-vì-pin, `package.uninstall` không có tham số nào

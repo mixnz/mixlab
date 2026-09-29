@@ -6,10 +6,10 @@ import { DatabaseGenericIcon, EngineIcon, GlobeIcon, PackageIcon, PulseIcon } fr
 import { useTranslation } from "../../../../i18n";
 import { peekPendingRuntimesFilter } from "../../runtimesNavigation";
 import Languages from "./Languages";
-import Packages from "./Packages";
+import PackageList from "./PackageList";
 import { PACKAGE_CATEGORY_ORDER, packageCategory, type PackageCategory } from "./packageCategories";
 import { usePackages } from "./usePackages";
-import styles from "./Runtimes.module.css";
+import styles from "./Packages.module.css";
 
 type TabKey = "languages" | PackageCategory;
 
@@ -19,7 +19,7 @@ type TabKey = "languages" | PackageCategory;
  * mở ra mới thấy nhóm. `runtime.*` và `package.*` cùng hình dạng RPC và cùng hình dạng job, khác
  * đúng namespace gọi và đúng khả năng `force`.
  */
-export default function Runtimes({ active }: { active: boolean }) {
+export default function Packages({ active }: { active: boolean }) {
   const [tab, setTab] = useState<TabKey>("languages");
   const { t } = useTranslation();
 
@@ -84,7 +84,7 @@ export default function Runtimes({ active }: { active: boolean }) {
   ];
 
   return (
-    <div className={`mixengine-page ${styles.runtimes}`}>
+    <div className={`mixengine-page ${styles.packages}`}>
       <PageHeader title={t("mixengine.sidebar.packages")} description={t("mixengine.runtimes.about")} />
       <div className={styles.tabs}>
         <SegmentedControl
@@ -100,10 +100,10 @@ export default function Runtimes({ active }: { active: boolean }) {
         </div>
       )}
       {tab !== "languages" && (
-        // `key` gắn theo nhóm: ô tìm của `Packages` là state cục bộ, và một câu tìm gõ cho Máy chủ
+        // `key` gắn theo nhóm: ô tìm của `PackageList` là state cục bộ, và một câu tìm gõ cho Máy chủ
         // web không được đi theo sang Cơ sở dữ liệu.
         <div className={styles.pane}>
-          <Packages key={tab} category={tab} state={packages} />
+          <PackageList key={tab} category={tab} state={packages} />
         </div>
       )}
     </div>

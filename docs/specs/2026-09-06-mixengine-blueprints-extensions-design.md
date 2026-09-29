@@ -129,8 +129,8 @@ một câu trả lời**:
 **Lượt 2 — `dry_run: false`, `answers`/`scaffold` đã gom.** Trả `BlueprintApplyResponse::Started {
 job: JobSummary }`. **Không viết hạ tầng job mới** — tái dùng đúng `applyJob`/`JobRow` từ
 [daemonState.ts:90](../../apps/desktop/src/modules/mixengine/daemonState.ts), cùng cách
-[Languages.tsx](../../apps/desktop/src/modules/mixengine/screens/Runtimes/Languages.tsx)/
-[Packages.tsx](../../apps/desktop/src/modules/mixengine/screens/Runtimes/Packages.tsx) đã vẽ tiến độ
+[Languages.tsx](../../apps/desktop/src/modules/mixengine/screens/Packages/Languages.tsx)/
+[PackageList.tsx](../../apps/desktop/src/modules/mixengine/screens/Packages/PackageList.tsx) đã vẽ tiến độ
 `runtime.install`/`package.install` ở Pha 3: màn hình Apply tự mở `api.watch()`, áp `applyJob` lên
 `JobRow[]` cục bộ, giữ `job.id` từ response để tra đúng hàng bằng `jobFor` (đã có ở
 [runtimeState.ts:27](../../apps/desktop/src/modules/mixengine/runtimeState.ts)).
@@ -244,7 +244,7 @@ Phần thuần, không cần daemon:
 
 - **Tên `extension.*`/`ExtensionChoice`/`ExtensionChange` trùng tiền tố với `runtime.*` (Pha 3) —
   nhắc lại đúng bẫy spec Pha 3 đã tự mắc một lần.** `ExtensionsPanel.tsx` đã tồn tại ở
-  [screens/Runtimes/ExtensionsPanel.tsx](../../apps/desktop/src/modules/mixengine/screens/Runtimes/ExtensionsPanel.tsx)
+  [screens/Packages/ExtensionsPanel.tsx](../../apps/desktop/src/modules/mixengine/screens/Packages/ExtensionsPanel.tsx)
   — đó là PHP extension theo từng bản (`runtime.list_extensions`/`set_extension`), **không liên quan
   gì** tới màn hình Extensions (sản phẩm: Mailpit, phpMyAdmin, MixDB, `extension.*`) spec này dựng.
   Đặt tên component mới (`screens/Extensions/`) để không ai đọc lướt tưởng hai thứ là một, và một dòng

@@ -11,7 +11,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { RuntimeSummary } from "@mixengine/api";
 import type { RuntimeTarget } from "@mixengine/api";
-import ExtensionsPanel from "../Runtimes/ExtensionsPanel";
+import ExtensionsPanel from "../Packages/ExtensionsPanel";
 import styles from "./PhpExtensions.module.css";
 
 /**

@@ -96,7 +96,7 @@ export default function Languages({ active }: { active: boolean }) {
   }, [active, reload]);
 
   // A navigation request from `runtimesNavigation.ts` — "Install a PHP" on the PHP extensions
-  // screen means "open Runtimes already searching for php", and the search box lives here. Read on
+  // screen means "open Packages already searching for php", and the search box lives here. Read on
   // the `active` edge rather than on mount: this component stays mounted between visits, so mount
   // happens once while the request can arrive any number of times afterwards.
   useEffect(() => {

@@ -4,7 +4,7 @@ import * as api from "./api";
  * Kênh sự kiện MixEngine dùng chung cho cả app.
  *
  * `api.watch()`/`api.unwatch()` là một cặp invoke toàn cục phía daemon — không phải một kênh riêng
- * cho từng màn hình. Trước đây mỗi màn hình (Dashboard, Sites, Runtimes/Languages, Runtimes/Packages)
+ * cho từng màn hình. Trước đây mỗi màn hình (Dashboard, Sites, Packages/Languages, Packages/PackageList)
  * tự gọi `watch()` lúc mount và `unwatch()` lúc unmount, dựa hẳn vào việc luôn chỉ một trong số đó
  * được mount cùng lúc. Giữ nhiều màn hình mount cùng lúc (để không mất tiến độ job khi chuyển tab) phá
  * vỡ giả định đó: màn hình mount sau sẽ giành mất kênh của màn hình mount trước.

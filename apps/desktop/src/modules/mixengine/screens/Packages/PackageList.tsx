@@ -21,11 +21,11 @@ import type { PackagesState } from "./usePackages";
 import styles from "./Catalogue.module.css";
 
 /**
- * Một nhóm package — nhóm nào là do dải tab của `Runtimes.tsx` quyết định, không phải một tab con
+ * Một nhóm package — nhóm nào là do dải tab của `Packages.tsx` quyết định, không phải một tab con
  * ở đây: bốn nhóm đứng ngang hàng với Ngôn ngữ trên đúng một dải tab, không lồng hai tầng.
  * State thì ở `usePackages`, cao hơn mọi tab, nên đổi nhóm không làm mất dấu một job đang cài.
  */
-export default function Packages({
+export default function PackageList({
   category,
   state,
 }: {

@@ -46,7 +46,7 @@ Written down first so that nothing below is built twice.
   handles the plan, the answers and the scaffold consent.
 - **PHP extension toggles already exist end to end.** `runtime.list_extensions` and
   `runtime.set_extension` (T28), `mix runtime ext enable|disable`, and
-  `screens/Runtimes/ExtensionsPanel.tsx` — which renders a checkbox per extension, marks the
+  `screens/Packages/ExtensionsPanel.tsx` — which renders a checkbox per extension, marks the
   statically linked ones, and says whether the pool reloaded, needs a restart or was not running.
   `igbinary`, `redis` and `mongodb` are loaded by build default and `xdebug` is one click away.
 - **The `services` table has carried an `autostart` column since `0001_initial.sql`**,
@@ -265,7 +265,7 @@ fields filled in. It ends on the URL, as a link.
 
 ### D10 — PHP extensions get a screen, and the two "Extensions" stop colliding
 
-No API changes. `screens/Runtimes/ExtensionsPanel.tsx` is lifted into a screen of its own,
+No API changes. `screens/Packages/ExtensionsPanel.tsx` is lifted into a screen of its own,
 `phpExtensions`, with a version selector above it, and stays reachable from the Runtimes screen
 where it is today — the panel is one component rendered in two places, not two copies.
 

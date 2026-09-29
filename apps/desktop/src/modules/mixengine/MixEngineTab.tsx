@@ -21,7 +21,7 @@ import Logs from "./screens/Logs";
 import Metrics from "./screens/Metrics";
 import Projects from "./screens/Projects";
 import PhpExtensions from "./screens/PhpExtensions";
-import Runtimes from "./screens/Runtimes";
+import Packages from "./screens/Packages";
 import ServicesDetail from "./screens/ServicesDetail";
 import Settings from "./screens/Settings";
 import Sites from "./screens/Sites";
@@ -330,7 +330,7 @@ export default function MixEngineTab({
         ))}
         {pane("sites", (active) => <Sites active={active} />)}
         {pane("domains", (active) => <Domains active={active} />)}
-        {pane("packages", (active) => <Runtimes active={active} />)}
+        {pane("packages", (active) => <Packages active={active} />)}
         {/* A callback rather than a link: a home with no PHP on it has nothing for this screen to
             draw, and the place to install one is Packages right above. The request carried along
             with the jump is what lands it on Languages with `php` already typed — same shape as

@@ -45,7 +45,7 @@ export interface PackagesState {
 
 /**
  * State của `package.*` cho cả dải tab nhóm (Máy chủ web / Cơ sở dữ liệu / Cache & hàng đợi /
- * Khác). Nằm ở `Runtimes.tsx`, không nằm trong từng tab: bốn nhóm là bốn lát cắt hiển thị của
+ * Khác). Nằm ở `Packages.tsx`, không nằm trong từng tab: bốn nhóm là bốn lát cắt hiển thị của
  * đúng một cặp `package.list_installed`/`package.list_available`, nên gọi một lần rồi lọc — chứ
  * không phải bốn component cùng hỏi daemon một câu. Nó cũng là lý do đổi nhóm không làm mất dấu
  * một job đang cài: `installingJob` sống ở đây, cao hơn mọi tab.

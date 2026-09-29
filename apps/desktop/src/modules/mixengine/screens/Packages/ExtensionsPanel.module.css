@@ -5,7 +5,7 @@
   min-width: 0;
 }
 
-/* Inside a Runtimes row the panel sits on the sunken surface, padded away from the table. */
+/* Inside a Languages row the panel sits on the sunken surface, padded away from the table. */
 td > .panel {
   padding: 16px 18px;
 }

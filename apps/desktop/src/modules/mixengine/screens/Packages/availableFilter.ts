@@ -1,5 +1,5 @@
 /**
- * Lọc bảng "chưa cài" của Runtimes — thuần hiển thị, không có RPC nào nhận câu tìm kiếm này
+ * Lọc bảng "chưa cài" của Packages — thuần hiển thị, không có RPC nào nhận câu tìm kiếm này
  * (`runtime.list_available`/`package.list_available` trả về cả danh sách, xem `Languages.tsx`).
  *
  * Mỗi từ trong câu tìm phải khớp một chỗ nào đó, không phải cả câu khớp liền một mạch: gõ

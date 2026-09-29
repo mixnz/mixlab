@@ -1,14 +1,14 @@
 /* `min-height`, không phải `height`: hai bảng bên dưới dài hơn một màn hình, và một `height: 100%`
-   chốt cứng chiều cao `.runtimes` đúng bằng viewport — sticky của `.tabs` chỉ dính được trong đúng
+   chốt cứng chiều cao `.packages` đúng bằng viewport — sticky của `.tabs` chỉ dính được trong đúng
    phạm vi chiều cao containing block của nó, nên với `height: 100%` nó rời khỏi đầu trang gần như
    ngay khi cuộn. */
-.runtimes {
+.packages {
   position: relative;
   width: 100%;
   min-height: 100%;
 }
 
-/* `.runtimes` không tự cuộn — `.mixengine-screen` (ancestor) mới là vùng cuộn thật, xem
+/* `.packages` không tự cuộn — `.mixengine-screen` (ancestor) mới là vùng cuộn thật, xem
    `mixengine.css`. Sticky trên div bọc chứ không trên chính `SegmentedControl`: containing block
    của một phần tử sticky là parent trực tiếp của nó, và parent đó phải cao suốt theo nội dung. */
 .tabs {
