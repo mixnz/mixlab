@@ -278,7 +278,7 @@ impl Api {
             .await;
 
         if let Some(because) = self
-            .would_lose_the_grant(switch, install, &was, handle)
+            .would_lose_the_grant(switch.grant, &install.binary, was.is_some(), handle)
             .await
         {
             return Ok(self
@@ -475,18 +475,19 @@ impl Api {
         Some(graph.spec(id)?.limits())
     }
 
-    /// Ask this machine for the new front end, and answer with the reason to stay where we are.
+    /// Ask this machine for `binary`, and answer with the reason to stay where we are.
     ///
     /// [`None`] means go: the grant is there, this system grants nothing at all, or the front end
-    /// the home is on cannot answer either — in which case the switch takes nothing away.
-    async fn would_lose_the_grant(
+    /// the home is on cannot answer either — in which case the change takes nothing away. Shared by
+    /// a switch (T97) and a front end's update within its line (T193c, D6 step 2).
+    pub(super) async fn would_lose_the_grant(
         &self,
-        switch: &FrontEndSwitch,
-        install: &Install,
-        was: &Option<ServiceId>,
+        grant: bool,
+        binary: &Path,
+        has_front_end: bool,
         handle: &crate::jobs::JobHandle,
     ) -> Option<String> {
-        if self.may_answer(&install.binary) {
+        if self.may_answer(binary) {
             return None;
         }
 
@@ -496,9 +497,9 @@ impl Api {
             .elevation
             .host()
             .port_access()
-            .probe(&install.binary, &crate::elevation::Elevation::ANSWERING)
+            .probe(binary, &crate::elevation::Elevation::ANSWERING)
             .ok()?
-            .plan(&install.binary)?;
+            .plan(binary)?;
 
         if let Err(error) = self
             .elevation
@@ -514,26 +515,24 @@ impl Api {
         // **Inside this job and not as one of its own**, which is what `grant_within` exists for:
         // whether the switch may go ahead depends on what the machine says *after* the prompt has
         // been answered, and there is no hook between one job ending and another beginning.
-        if switch.grant
-            && let Err(error) = self.elevation.grant_within(handle).await
-        {
+        if grant && let Err(error) = self.elevation.grant_within(handle).await {
             tracing::info!(code = ?error.code, "the prompt a switch raised did not run");
         }
 
-        if self.may_answer(&install.binary) {
+        if self.may_answer(binary) {
             return None;
         }
 
         // The rule is *do not make it worse*. A home whose front end cannot answer either has
         // nothing to lose, and refusing would trap it there.
-        if was.is_some() && !self.front_end_may_answer().await {
+        if has_front_end && !self.front_end_may_answer().await {
             return None;
         }
 
         Some(format!(
             "this machine has not been asked to let {} answer on 80 and 443, so the front end it \
              is on was kept",
-            install.binary.display()
+            binary.display()
         ))
     }
 

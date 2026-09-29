@@ -90,6 +90,19 @@ impl Packages {
         })
     }
 
+    /// The install job running for this version, if there is one — T193c.
+    pub(crate) async fn installing(
+        &self,
+        package: &str,
+        version: &PackageVersion,
+    ) -> Option<JobId> {
+        self.running
+            .lock()
+            .await
+            .get(&(package.to_owned(), version.clone()))
+            .copied()
+    }
+
     /// `package.list` — what is on this machine, and what is holding each of them.
     ///
     /// # Errors

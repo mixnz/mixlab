@@ -20,13 +20,13 @@ use mixengine_proto::{
     ExtensionUninstall, FrontEndSwitch, IdleReport, IdleSource, JobFilter, JobId, JobKind, JobList,
     JobQuery, JobState, JobSummary, JobWait, LimitSupport, MemoryWatchdog, MetricsFrame,
     MetricsHistory, MetricsHistoryQuery, PackageFilter, PackageInstall, PackageTarget,
-    ProjectCreate, ProjectQuery, ProjectRef, ProjectUpdate, ResetCredential, ResourceLimits,
-    RuntimeFilter, RuntimeInstall, RuntimeQuestion, RuntimeTarget, RuntimeUninstall,
-    RuntimeUpgrade, RuntimeUpgradeQuery, SaveResources, SaveResourcesSet, ServiceAutostartSet,
-    ServiceCreate, ServiceDelete, ServiceFailure, ServiceId, ServiceIdleSet, ServiceLimitsReport,
-    ServiceLimitsSet, ServiceList, ServiceQuery, ServiceRole, ServiceSpec, ServiceSummary,
-    ServiceTarget, ServiceWalk, SiteCreate, SiteListQuery, SiteQuery, SiteShare, SiteUpdate,
-    StateReason, UninstallQuery, UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide,
+    PackageUpgrade, PackageUpgradeQuery, ProjectCreate, ProjectQuery, ProjectRef, ProjectUpdate,
+    ResetCredential, ResourceLimits, RuntimeFilter, RuntimeInstall, RuntimeQuestion, RuntimeTarget,
+    RuntimeUninstall, RuntimeUpgrade, RuntimeUpgradeQuery, SaveResources, SaveResourcesSet,
+    ServiceAutostartSet, ServiceCreate, ServiceDelete, ServiceFailure, ServiceId, ServiceIdleSet,
+    ServiceLimitsReport, ServiceLimitsSet, ServiceList, ServiceQuery, ServiceRole, ServiceSpec,
+    ServiceSummary, ServiceTarget, ServiceWalk, SiteCreate, SiteListQuery, SiteQuery, SiteShare,
+    SiteUpdate, StateReason, UninstallQuery, UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide,
     UpdateFinish, UpdateHandOver, UpdateStatus, Uptime,
 };
 use serde_json::Value;
@@ -352,7 +352,20 @@ async fn call_method(
 
                 rpc::method::PACKAGE_UNINSTALL => {
                     let target: PackageTarget = arguments(params)?;
+                    api.not_being_upgraded(&target.package, &target.version)
+                        .await
+                        .map_err(refused)?;
                     encode_result(&api.packages.uninstall(&target).await.map_err(refused)?)
+                }
+
+                rpc::method::PACKAGE_UPGRADE_PLAN => {
+                    let query: PackageUpgradeQuery = arguments(params)?;
+                    encode_result(&api.package_upgrade_plan(&query).await.map_err(refused)?)
+                }
+
+                rpc::method::PACKAGE_UPGRADE => {
+                    let asked: PackageUpgrade = arguments(params)?;
+                    encode_result(&api.package_upgrade(asked).await.map_err(refused)?)
                 }
 
                 rpc::method::PROJECT_CREATE => {
