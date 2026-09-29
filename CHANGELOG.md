@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- The tray panel no longer leaves a dim rectangle over the desktop around its edges.
+
 ## v0.0.12
 
 ### Fixed

@@ -42,6 +42,67 @@ if [ ! -f "$MIX_ROOT/Cargo.toml" ] || ! grep -q '^\[workspace\]' "$MIX_ROOT/Carg
   exit 1
 fi
 
+windows=0
+case "$(uname -s)" in
+  MINGW* | MSYS* | CYGWIN*) windows=1 ;;
+esac
+
+# **On Windows, measuring and removing go through Windows' own `dir` and `rmdir`, not `du` and
+# `rm`.** Under Git Bash those two walk the tree through the POSIX layer, several Windows calls per
+# file, and a `target/` holds hundreds of thousands of files: minutes for each step.
+
+# Kibibytes under a directory, or nothing when it cannot be measured.
+size_kib() {
+  if [ "$windows" -eq 1 ]; then
+    # `dir` reads each size from the listing itself. `/-c` drops the thousands separators. Its
+    # second-last line is "N File(s) BYTES bytes" in whatever language Windows speaks, so the
+    # second number on it is the total.
+    cmd //c dir //s //a //-c "$(cygpath -w "$1")" 2>/dev/null |
+      tr -d '\r' |
+      awk 'NF { prev = last; last = $0 } END { print prev }' |
+      grep -o '[0-9]\+' | sed -n 2p |
+      awk '{ printf "%d\n", $1 / 1024 }' || true
+  else
+    du -sk "$1" 2>/dev/null | cut -f1 || true
+  fi
+}
+
+# Kibibytes free on the disk this workspace is on — before and after is what was reclaimed, without
+# walking anything a second time.
+free_kib() {
+  df -Pk "$MIX_ROOT" | awk 'NR == 2 { print $4 }'
+}
+
+# A size in kibibytes as a person reads it; `?` for one that could not be measured.
+human() {
+  awk -v k="$1" 'BEGIN {
+    if (k == "") { print "?"; exit }
+    split("K M G T", unit, " "); i = 1
+    while (k >= 1024 && i < 4) { k /= 1024; i++ }
+    printf(i == 1 ? "%d%s\n" : "%.1f%s\n", k, unit[i])
+  }'
+}
+
+# Removes one directory, and fails when any of it is left.
+remove_dir() {
+  if [ "$windows" -eq 0 ]; then
+    rm -rf "$1"
+    return
+  fi
+  # Renamed out of the way first, which is instant: an interrupted removal then leaves a directory
+  # cargo never looks at, rather than a half-emptied `debug/` it builds around. A rename refused
+  # because something holds a file open falls back to removing in place.
+  local doomed="$1.removing-$$"
+  if ! mv "$1" "$doomed" 2>/dev/null; then
+    doomed="$1"
+  fi
+  cmd //c rmdir //s //q "$(cygpath -w "$doomed")" >/dev/null 2>&1 || true
+  if [ -d "$doomed" ]; then
+    echo "could not remove all of ${doomed#"$MIX_ROOT/"} — something still holds a file in it" >&2
+    return 1
+  fi
+}
+
 level=debug
 assume_yes=0
 dry_run=0
@@ -87,11 +148,11 @@ fi
 
 echo "level: $level"
 echo
-# `du` over eighty gigabytes takes a moment and is the whole point of the report, so it is measured
-# rather than estimated. Paths printed relative to the root: three absolute paths of a hundred
-# characters each hide the one thing a reader is checking, which is *which* directory this is.
+# Measured rather than estimated: the size is the whole point of the report. Paths printed relative
+# to the root: three absolute paths of a hundred characters each hide the one thing a reader is
+# checking, which is *which* directory this is.
 for path in "${present[@]}"; do
-  printf '  %-10s %s\n' "$(du -sh "$path" 2>/dev/null | cut -f1)" "${path#"$MIX_ROOT/"}"
+  printf '  %-10s %s\n' "$(human "$(size_kib "$path")")" "${path#"$MIX_ROOT/"}"
 done
 echo
 
@@ -154,9 +215,12 @@ if [ "$assume_yes" -eq 0 ]; then
   esac
 fi
 
-# **Checked again immediately before the `rm`, one path at a time.** The list was built forty lines
-# ago and the value of a guard is where it sits: a path that is not under this workspace, or is the
-# workspace itself, is a bug in this file rather than a thing to delete and find out about.
+free_before="$(free_kib)"
+failed=0
+
+# **Checked again immediately before the removal, one path at a time.** The list was built forty
+# lines ago and the value of a guard is where it sits: a path that is not under this workspace, or
+# is the workspace itself, is a bug in this file rather than a thing to delete and find out about.
 for path in "${present[@]}"; do
   case "$path" in
     "$MIX_ROOT"/*/target | "$MIX_ROOT"/target | "$MIX_ROOT"/*/target/* | "$MIX_ROOT"/target/*) ;;
@@ -166,15 +230,16 @@ for path in "${present[@]}"; do
       ;;
   esac
   echo "removing ${path#"$MIX_ROOT/"}"
-  rm -rf "$path"
-done
-
-echo
-echo "remaining:"
-for root in "${roots[@]}"; do
-  if [ -d "$root" ]; then
-    printf '  %-10s %s\n' "$(du -sh "$root" 2>/dev/null | cut -f1)" "${root#"$MIX_ROOT/"}"
-  else
-    printf '  %-10s %s\n' "gone" "${root#"$MIX_ROOT/"}"
+  if ! remove_dir "$path"; then
+    failed=1
   fi
 done
+
+free_after="$(free_kib)"
+freed=$((free_after - free_before))
+if [ "$freed" -lt 0 ]; then
+  freed=0
+fi
+echo
+echo "freed $(human "$freed"); $(human "$free_after") free on this disk now"
+exit "$failed"
