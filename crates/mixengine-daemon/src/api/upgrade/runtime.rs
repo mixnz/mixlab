@@ -1,13 +1,16 @@
 //! `runtime.upgrade_plan` and `runtime.upgrade` — roadmap task **T193b**, the design's D5.
 
+use std::sync::Arc;
+
 use mixengine_core::extensions::manifest::Body;
 use mixengine_core::upgrade::{self, ManifestPin, PinRewrite};
 use mixengine_proto::{
-    Error, ErrorCode, ExtensionId, OldVersion, PackageVersion, RuntimeKind, RuntimeUpgradeQuery,
-    ServiceId, SiteKind, UpgradeEntry, UpgradeItem, UpgradeOutcome, UpgradePlan, VersionConstraint,
+    Error, ErrorCode, ExtensionId, JobSummary, OldVersion, PackageVersion, RuntimeKind,
+    RuntimeTarget, RuntimeUninstall, RuntimeUpgrade, RuntimeUpgradeQuery, ServiceId, SiteKind,
+    UpgradeEntry, UpgradeItem, UpgradeOutcome, UpgradePlan, VersionConstraint, rpc,
 };
 
-use super::{Resolved, resolve};
+use super::{Resolved, resolve, settle};
 use crate::api::Api;
 use crate::error::ToWire as _;
 
@@ -281,5 +284,247 @@ impl Api {
         let survey = self.survey(query.kind, &query.from, &resolved).await?;
 
         Ok(plan_of(query.kind, &query.from, &resolved, &survey))
+    }
+
+    /// `runtime.upgrade` — one job, and the refusals that come before it.
+    ///
+    /// # Errors
+    ///
+    /// What [`resolve`] refuses; `dependency_missing` when this machine lacks what `to` needs and
+    /// nothing was agreed; `conflict` when `to` is being installed or either version is being
+    /// updated by another job.
+    pub(crate) async fn runtime_upgrade(
+        self: &Arc<Self>,
+        asked: RuntimeUpgrade,
+    ) -> Result<JobSummary, Error> {
+        let kind = asked.query.kind;
+        let installed = self.installed_runtimes(kind).await?;
+        let resolved = resolve(
+            self.runtimes.fetcher(),
+            kind.as_str(),
+            &installed,
+            &asked.query.from,
+            asked.query.to.as_ref(),
+        )
+        .await?;
+
+        if let Some(job) = self.runtimes.installing(kind, &resolved.to).await {
+            return Err(Error::new(
+                ErrorCode::Conflict,
+                format!("job {job} is installing {kind} {}", resolved.to),
+            ));
+        }
+
+        let target = RuntimeTarget {
+            kind,
+            version: resolved.to.clone(),
+        };
+        if !resolved.to_installed && !asked.ignore_requirements {
+            crate::requirements::gate(
+                self.runtimes.fetcher(),
+                kind.as_str(),
+                resolved.to.as_str(),
+                &crate::runtimes::subject_of(&target),
+                asked.install_prerequisites,
+            )
+            .await?;
+        }
+
+        let api = Arc::clone(self);
+        let (from, to) = (asked.query.from.clone(), resolved.to.clone());
+        self.begin_upgrade(
+            rpc::method::RUNTIME_UPGRADE,
+            kind.as_str(),
+            &from,
+            &to,
+            move |handle| async move { api.runtime_walk(&asked, resolved, &handle).await },
+        )
+        .await
+    }
+
+    /// The walk — D5, steps 1 to 9, in order. **The old version is untouched until the new one is
+    /// proven**: nothing points at `to` before its pool has started, and `from` goes last.
+    async fn runtime_walk(
+        &self,
+        asked: &RuntimeUpgrade,
+        resolved: Resolved,
+        handle: &crate::jobs::JobHandle,
+    ) -> Result<UpgradePlan, Error> {
+        let kind = asked.query.kind;
+        let from = &asked.query.from;
+        let to = resolved.to.clone();
+        let wire = |error: mixengine_core::Error| error.to_wire();
+
+        // 1. Install `to`.
+        if !resolved.to_installed {
+            let target = RuntimeTarget {
+                kind,
+                version: to.clone(),
+            };
+            if asked.install_prerequisites && !asked.ignore_requirements {
+                crate::requirements::prepare(
+                    self.runtimes.fetcher(),
+                    kind.as_str(),
+                    to.as_str(),
+                    &crate::runtimes::subject_of(&target),
+                    handle,
+                )
+                .await?;
+            }
+            handle.progress(5, &format!("installing {kind} {to}")).await;
+            self.runtimes.perform(&target, handle).await?;
+        }
+
+        // Read after the install, so `to` is a row every query below can see.
+        let survey = self
+            .survey(
+                kind,
+                from,
+                &Resolved {
+                    to_installed: true,
+                    ..resolved.clone()
+                },
+            )
+            .await?;
+        let mut plan = plan_of(kind, from, &resolved, &survey);
+
+        let mut was = None;
+        if let Some((from_pool, to_pool)) = &survey.pools {
+            // 2. Extension choices; 3. the pool's settings.
+            handle
+                .progress(40, "carrying the extension choices and the pool's settings")
+                .await;
+            upgrade::carry_extension_choices(&self.store, &self.paths, kind, from, &to)
+                .await
+                .map_err(wire)?;
+            upgrade::copy_pool_settings(&self.store, from_pool, to_pool)
+                .await
+                .map_err(wire)?;
+            self.services
+                .reconfigure()
+                .await
+                .map_err(|error| error.to_wire())?;
+
+            // 4. The new pool in the old one's state.
+            let standing = self.standing_of(from_pool).await?;
+            if standing.running {
+                handle.progress(50, &format!("starting {to_pool}")).await;
+                let walk = self.service_start(&crate::api::target(to_pool)).await?;
+                if let Some(failed) = walk.failed {
+                    settle(&mut plan, &UpgradeOutcome::Skipped {});
+                    plan.old = OldVersion::Kept {
+                        because: vec![format!(
+                            "{0} did not start, so nothing was moved; `mix service logs {0}` \
+                             says why",
+                            failed.service
+                        )],
+                    };
+                    return Ok(plan);
+                }
+            } else if standing.person_stopped {
+                upgrade::set_stopped_by_person(&self.store, to_pool)
+                    .await
+                    .map_err(wire)?;
+            }
+            was = Some(standing);
+        }
+
+        // 5–6. One transaction.
+        handle
+            .progress(65, "moving the sites, the default and the pins")
+            .await;
+        let moving: Vec<ServiceId> = survey
+            .extension_pools
+            .iter()
+            .filter(|pool| pool.moves)
+            .map(|pool| pool.pool.clone())
+            .collect();
+        let moved = upgrade::move_runtime(
+            &self.store,
+            &upgrade::RuntimeMove {
+                kind,
+                from: from.clone(),
+                to: to.clone(),
+                pools: survey.pools.clone(),
+                extension_pools: moving.clone(),
+                pins: survey.pins.clone(),
+            },
+        )
+        .await
+        .map_err(wire)?;
+
+        // 7. Render; a refusal reverses the move.
+        handle.progress(75, "rendering the sites again").await;
+        if let Err(refused) = self.sites.now_serves_what_it_declares().await {
+            upgrade::move_back(&self.store, &moved)
+                .await
+                .map_err(wire)?;
+            if let Err(error) = self.sites.now_serves_what_it_declares().await {
+                tracing::error!(%error, "the sites could not be rendered again after an update was reversed");
+            }
+            if let (Some((_, to_pool)), Some(standing)) = (&survey.pools, was)
+                && standing.running
+                && let Err(error) = self.service_stop(&crate::api::target(to_pool)).await
+            {
+                tracing::warn!(%error, "a pool an update started could not be stopped again");
+            }
+            settle(&mut plan, &UpgradeOutcome::Skipped {});
+            plan.old = OldVersion::Kept {
+                because: vec![format!(
+                    "the front end refused the sites on {kind} {to}: {refused}"
+                )],
+            };
+            return Ok(plan);
+        }
+
+        for pool in &moving {
+            if self.standing_of(pool).await?.running
+                && let Err(error) = self.service_restart(&crate::api::target(pool)).await
+            {
+                tracing::warn!(%pool, %error, "an extension's pool did not restart on the new PHP");
+            }
+        }
+
+        // 8. Stop the old pool.
+        if let (Some((from_pool, _)), Some(standing)) = (&survey.pools, was)
+            && standing.running
+        {
+            handle.progress(85, &format!("stopping {from_pool}")).await;
+            self.service_stop(&crate::api::target(from_pool)).await?;
+        }
+
+        settle(&mut plan, &UpgradeOutcome::Done {});
+
+        // 9. Remove `from`, or keep it.
+        handle
+            .progress(95, &format!("removing {kind} {from}"))
+            .await;
+        let because = survey.reasons_to_keep(kind, from);
+        plan.old = if asked.keep {
+            OldVersion::Kept {
+                because: vec!["you asked to keep it".to_owned()],
+            }
+        } else if !because.is_empty() {
+            OldVersion::Kept { because }
+        } else {
+            match self
+                .runtimes
+                .uninstall(&RuntimeUninstall {
+                    target: RuntimeTarget {
+                        kind,
+                        version: from.clone(),
+                    },
+                    force: false,
+                })
+                .await
+            {
+                Ok(_) => OldVersion::Removed {},
+                Err(error) => OldVersion::Kept {
+                    because: vec![error.message],
+                },
+            }
+        };
+
+        Ok(plan)
     }
 }

@@ -7,11 +7,6 @@
 //! **Shared by both namespaces is only which release `to` is, and who is already moving what.**
 //! Everything else differs enough that one walk for both would be two walks behind a `match`.
 
-#![expect(
-    dead_code,
-    reason = "T193b's walk, which calls these, is the next task"
-)]
-
 mod package;
 mod runtime;
 

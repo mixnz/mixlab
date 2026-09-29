@@ -22,8 +22,8 @@ use mixengine_proto::{
     MetricsHistory, MetricsHistoryQuery, PackageFilter, PackageInstall, PackageTarget,
     ProjectCreate, ProjectQuery, ProjectRef, ProjectUpdate, ResetCredential, ResourceLimits,
     RuntimeFilter, RuntimeInstall, RuntimeQuestion, RuntimeTarget, RuntimeUninstall,
-    RuntimeUpgradeQuery, SaveResources, SaveResourcesSet, ServiceAutostartSet, ServiceCreate,
-    ServiceDelete, ServiceFailure, ServiceId, ServiceIdleSet, ServiceLimitsReport,
+    RuntimeUpgrade, RuntimeUpgradeQuery, SaveResources, SaveResourcesSet, ServiceAutostartSet,
+    ServiceCreate, ServiceDelete, ServiceFailure, ServiceId, ServiceIdleSet, ServiceLimitsReport,
     ServiceLimitsSet, ServiceList, ServiceQuery, ServiceRole, ServiceSpec, ServiceSummary,
     ServiceTarget, ServiceWalk, SiteCreate, SiteListQuery, SiteQuery, SiteShare, SiteUpdate,
     StateReason, UninstallQuery, UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide,
@@ -286,6 +286,9 @@ async fn call_method(
 
                 rpc::method::RUNTIME_UNINSTALL => {
                     let asked: RuntimeUninstall = arguments(params)?;
+                    api.not_being_upgraded(asked.target.kind.as_str(), &asked.target.version)
+                        .await
+                        .map_err(refused)?;
                     encode_result(&api.runtimes.uninstall(&asked).await.map_err(refused)?)
                 }
 
@@ -641,6 +644,11 @@ async fn call_method(
                 rpc::method::DOMAIN_DNS_STATUS => {
                     let query: DomainStatusQuery = arguments(params)?;
                     encode_result(&api.domains.status(&query).await.map_err(refused)?)
+                }
+
+                rpc::method::RUNTIME_UPGRADE => {
+                    let asked: RuntimeUpgrade = arguments(params)?;
+                    encode_result(&api.runtime_upgrade(asked).await.map_err(refused)?)
                 }
 
                 rpc::method::RUNTIME_UPGRADE_PLAN => {
@@ -2092,7 +2100,10 @@ impl Api {
     /// holding the port and the data directory — and starting the service again on top of it would
     /// put a second one there to collide with the first. A restart that could not take the service
     /// down has not restarted it, and says so.
-    async fn service_restart(&self, target: &ServiceTarget) -> Result<ServiceWalk, Error> {
+    pub(super) async fn service_restart(
+        &self,
+        target: &ServiceTarget,
+    ) -> Result<ServiceWalk, Error> {
         refuse_project_scope(target, "restart")?;
 
         let graph = self

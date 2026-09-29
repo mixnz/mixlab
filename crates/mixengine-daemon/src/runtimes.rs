@@ -220,7 +220,6 @@ impl Runtimes {
 
     /// The install job running for this version, if there is one — `runtime.upgrade` refuses to
     /// race it (T193b, the design's *Error handling*).
-    #[expect(dead_code, reason = "T193b's walk, which calls it, is the next task")]
     pub(crate) async fn installing(
         &self,
         kind: RuntimeKind,

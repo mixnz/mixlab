@@ -1771,3 +1771,268 @@ async fn an_upgrade_plan_names_what_moves_and_writes_nothing() {
         "a plan moved nothing: {site}"
     );
 }
+
+/// **T193b.** The site moves to the new pool, the default follows, and the old version is gone.
+#[tokio::test]
+async fn an_upgrade_moves_the_site_and_the_default_and_removes_the_old_version() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+    let job = client
+        .call(
+            "runtime.install",
+            json!({"kind": "php", "version": "8.3.33"}),
+        )
+        .await;
+    assert_eq!(
+        client.finished(job["id"].clone()).await["state"],
+        "succeeded"
+    );
+    a_php_site(&fixture, &mut client, "php-fpm@8.3.33").await;
+
+    let job = client
+        .call("runtime.upgrade", json!({"kind": "php", "from": "8.3.33"}))
+        .await;
+    assert_eq!(job["kind"], "runtime.upgrade");
+    let finished = client.finished(job["id"].clone()).await;
+    assert_eq!(finished["state"], "succeeded", "{finished}");
+    assert_eq!(
+        finished["outcome"]["result"]["old"]["state"], "removed",
+        "{finished}"
+    );
+
+    let site = client
+        .call("site.show", json!({"site": {"domain": "blog.test"}}))
+        .await;
+    assert!(site.to_string().contains("php-fpm@8.3.34"), "{site}");
+
+    let installed = client
+        .call("runtime.list_installed", json!({"kind": "php"}))
+        .await;
+    let versions: Vec<&str> = installed["runtimes"]
+        .as_array()
+        .expect("T193 fixture")
+        .iter()
+        .map(|row| row["version"].as_str().expect("T193 fixture"))
+        .collect();
+    assert_eq!(versions, ["8.3.34"], "{installed}");
+    assert_eq!(installed["runtimes"][0]["default"], true, "{installed}");
+}
+
+#[tokio::test]
+async fn an_upgrade_asked_to_keep_keeps_the_old_version() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+    let job = client
+        .call(
+            "runtime.install",
+            json!({"kind": "php", "version": "8.3.33"}),
+        )
+        .await;
+    assert_eq!(
+        client.finished(job["id"].clone()).await["state"],
+        "succeeded"
+    );
+
+    let job = client
+        .call(
+            "runtime.upgrade",
+            json!({"kind": "php", "from": "8.3.33", "keep": true}),
+        )
+        .await;
+    let finished = client.finished(job["id"].clone()).await;
+    assert_eq!(
+        finished["outcome"]["result"]["old"]["state"], "kept",
+        "{finished}"
+    );
+
+    let installed = client
+        .call("runtime.list_installed", json!({"kind": "php"}))
+        .await;
+    assert_eq!(
+        installed["runtimes"]
+            .as_array()
+            .expect("T193 fixture")
+            .len(),
+        2,
+        "{installed}"
+    );
+}
+
+/// **Review focus 4.**
+#[tokio::test]
+async fn an_upgrade_to_an_installed_version_moves_without_downloading() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+    for version in ["8.3.33", "8.3.34"] {
+        let job = client
+            .call(
+                "runtime.install",
+                json!({"kind": "php", "version": version}),
+            )
+            .await;
+        assert_eq!(
+            client.finished(job["id"].clone()).await["state"],
+            "succeeded"
+        );
+    }
+
+    let plan = client
+        .call(
+            "runtime.upgrade_plan",
+            json!({"kind": "php", "from": "8.3.33"}),
+        )
+        .await;
+    assert_eq!(plan["to_installed"], true, "{plan}");
+    assert_eq!(plan["bytes"], 0, "{plan}");
+
+    let job = client
+        .call("runtime.upgrade", json!({"kind": "php", "from": "8.3.33"}))
+        .await;
+    assert_eq!(
+        client.finished(job["id"].clone()).await["state"],
+        "succeeded"
+    );
+}
+
+/// **T193b, Error handling.** An uninstall of a version an upgrade is moving is refused.
+#[tokio::test]
+async fn a_version_being_upgraded_cannot_be_uninstalled() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+    let job = client
+        .call(
+            "runtime.install",
+            json!({"kind": "php", "version": "8.3.33"}),
+        )
+        .await;
+    assert_eq!(
+        client.finished(job["id"].clone()).await["state"],
+        "succeeded"
+    );
+
+    let upgrading = client
+        .call("runtime.upgrade", json!({"kind": "php", "from": "8.3.33"}))
+        .await;
+    let refused = client
+        .refuse(
+            "runtime.uninstall",
+            json!({"kind": "php", "version": "8.3.33"}),
+        )
+        .await;
+    // On a fast machine the upgrade can finish before this call lands, and then 8.3.33 is simply
+    // gone; only a conflict says anything about the rule, so that is what is asserted when it
+    // is not `not_found`.
+    if refused["data"]["code"] != "not_found" {
+        assert_eq!(refused["data"]["code"], "conflict", "{refused}");
+    }
+    client.finished(upgrading["id"].clone()).await;
+}
+
+/// The phpMyAdmin fixture, with its `[web-app.runtime].requires` set to `requires`.
+fn web_app_requiring(requires: &str) -> tempfile::TempDir {
+    let directory = tempfile::Builder::new()
+        .prefix("mixengine-web-app")
+        .tempdir()
+        .expect("a temporary directory");
+    let manifest = mixengine_testkit::extension::PHPMYADMIN
+        .replace("requires = \"^8.0\"", &format!("requires = \"{requires}\""));
+    assert!(
+        manifest.contains(requires),
+        "the fixture's requires line moved"
+    );
+    std::fs::write(directory.path().join("extension.toml"), manifest).expect("a manifest");
+    std::fs::create_dir_all(directory.path().join("phpMyAdmin-5.2.3-all-languages"))
+        .expect("a doc root");
+
+    directory
+}
+
+/// **T193b, D5 step 5 — added at execution.** A `web-app` whose `requires` only the old patch
+/// satisfies stays on it, and the old version is kept for it.
+#[tokio::test]
+async fn a_web_app_that_needs_the_old_patch_keeps_it() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+    let job = client
+        .call(
+            "runtime.install",
+            json!({"kind": "php", "version": "8.3.33"}),
+        )
+        .await;
+    assert_eq!(
+        client.finished(job["id"].clone()).await["state"],
+        "succeeded"
+    );
+
+    // The fixture declares a database, so this home has to run one.
+    declare::database(
+        &fixture.home.database_file(),
+        "mariadb@main",
+        "mariadb",
+        3306,
+    )
+    .await;
+
+    let directory = web_app_requiring("8.3.33");
+    let source = json!({"type": "path", "path": directory.path().display().to_string()});
+    let plan = client
+        .call("extension.plan", json!({"source": source}))
+        .await;
+    let started = client
+        .call(
+            "extension.install",
+            json!({
+                "source": source,
+                "consent": {
+                    "id": plan["id"],
+                    "version": plan["version"],
+                    "signed": plan["signed"],
+                    "network": plan["permissions"]["network"],
+                },
+            }),
+        )
+        .await;
+    let installed = client.finished(started["id"].clone()).await;
+    assert_eq!(
+        installed["state"],
+        "succeeded",
+        "{installed}\n{}",
+        fixture.home.daemon_log()
+    );
+
+    let upgrade = client
+        .call(
+            "runtime.upgrade_plan",
+            json!({"kind": "php", "from": "8.3.33"}),
+        )
+        .await;
+    let pool = upgrade["entries"]
+        .as_array()
+        .expect("a list")
+        .iter()
+        .find(|entry| entry["item"]["item"] == "extension_pool")
+        .cloned()
+        .unwrap_or_else(|| panic!("the web-app's pool is in the plan: {upgrade}"));
+    assert_eq!(pool["item"]["pool"], "php-fpm@phpmyadmin", "{upgrade}");
+    assert_eq!(pool["item"]["moves"], false, "{upgrade}");
+    assert_eq!(upgrade["old"]["state"], "will_be_kept", "{upgrade}");
+
+    let job = client
+        .call("runtime.upgrade", json!({"kind": "php", "from": "8.3.33"}))
+        .await;
+    let finished = client.finished(job["id"].clone()).await;
+    assert_eq!(finished["state"], "succeeded", "{finished}");
+    assert_eq!(
+        finished["outcome"]["result"]["old"]["state"], "kept",
+        "{finished}"
+    );
+
+    let listed = client
+        .call("runtime.list_installed", json!({"kind": "php"}))
+        .await;
+    assert_eq!(
+        listed["runtimes"].as_array().expect("a list").len(),
+        2,
+        "8.3.33 stays for the web-app: {listed}"
+    );
+}
