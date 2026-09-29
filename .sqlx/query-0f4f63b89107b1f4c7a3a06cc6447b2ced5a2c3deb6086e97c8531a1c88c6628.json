@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE services SET package_id =\n           (SELECT id FROM packages WHERE name = ? AND version = ?)\n         WHERE id = ?\n           AND EXISTS (SELECT 1 FROM packages WHERE name = ? AND version = ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "0f4f63b89107b1f4c7a3a06cc6447b2ced5a2c3deb6086e97c8531a1c88c6628"
+}

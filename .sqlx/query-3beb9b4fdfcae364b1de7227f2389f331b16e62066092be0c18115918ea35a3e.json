@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT is_default FROM runtime_installs WHERE kind = ? AND version = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "is_default",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "runtime_installs",
+            "name": "is_default"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3beb9b4fdfcae364b1de7227f2389f331b16e62066092be0c18115918ea35a3e"
+}

@@ -42,6 +42,7 @@ pub mod sites;
 pub mod storage;
 pub mod store;
 pub mod updates;
+pub mod upgrade;
 pub mod window;
 
 pub use config::Config;

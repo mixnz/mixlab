@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE runtime_installs SET is_default = 1 WHERE kind = ? AND version = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "b976f4fa360d921f78bcb418d9cf2c42b52afc4e63c2a7f979766f54647cf04b"
+}

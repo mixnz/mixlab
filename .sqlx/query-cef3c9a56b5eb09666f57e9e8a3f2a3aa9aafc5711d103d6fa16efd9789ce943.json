@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE services SET runtime_install_id =\n               (SELECT id FROM runtime_installs WHERE kind = ? AND version = ?)\n             WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "cef3c9a56b5eb09666f57e9e8a3f2a3aa9aafc5711d103d6fa16efd9789ce943"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE services SET stopped_by = 'person' WHERE id = ? AND state = 'stopped'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "26180e4f1ed6152c9ed7a3e5e4697414ca6dda0ff6587079df8be06b97df1407"
+}

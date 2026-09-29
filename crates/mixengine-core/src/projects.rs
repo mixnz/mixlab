@@ -469,7 +469,7 @@ fn decode(root: &str, column: &str) -> Result<BTreeMap<RuntimeKind, VersionConst
 /// Serialising a map of strings cannot fail; written as a fallback rather than an `expect` because
 /// nothing in this crate panics, and an empty object is what a project with no pins already means —
 /// which is what `packages::remember` says beside the same call.
-fn encode(pins: &BTreeMap<RuntimeKind, VersionConstraint>) -> String {
+pub(crate) fn encode(pins: &BTreeMap<RuntimeKind, VersionConstraint>) -> String {
     let raw: BTreeMap<&str, &str> = pins
         .iter()
         .map(|(kind, constraint)| (kind.as_str(), constraint.as_str()))

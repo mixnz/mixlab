@@ -116,6 +116,7 @@
     "crates/mixengine-proto/src/time.rs",
     "crates/mixengine-proto/src/uninstall_api.rs",
     "crates/mixengine-proto/src/update_api.rs",
+    "crates/mixengine-proto/src/upgrade_api.rs",
     "crates/mixengine-proto/src/version.rs"
   ]
 }
