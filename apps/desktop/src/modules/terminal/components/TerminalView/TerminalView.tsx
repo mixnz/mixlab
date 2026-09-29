@@ -27,25 +27,30 @@ import SearchBar from "../SearchBar";
 import { readDocumentToken, searchDecorations, terminalTheme } from "../../xtermTheme";
 import styles from "./TerminalView.module.css";
 
-/** Kéo cửa sổ sinh ra hàng chục sự kiện một giây; đầu xa chỉ cần biết kích thước cuối cùng. */
+/** Dragging the window produces dozens of events a second; the far end only needs the final
+ *  size. */
 const RESIZE_DEBOUNCE = 100;
 
 interface Props {
   target: TerminalTarget;
-  /** Cái ô *Chạy khi kết nối* của host đã lưu đang giữ, hoặc `null`. Gõ hộ đúng một lần cho mỗi
-   *  phiên — kể cả phiên sinh ra từ nút Kết nối lại, vì đó cũng là một lần vào máy ấy. */
+  /** What the saved host's *Run on connect* field holds, or `null`. Typed on the user's behalf
+   *  exactly once per session — including a session born from the Reconnect button, since that is
+   *  also an entry into that machine. */
   runOnConnect: string | null;
-  /** Tab nằm sau vẫn mounted và vẫn nhận byte — cái này chỉ quyết định focus và lúc nào đo lại. */
+  /** A background tab stays mounted and keeps receiving bytes — this only decides focus and when
+   *  to measure again. */
   active: boolean;
-  /** Phiên đã mở xong. Với SSH thì đây là lúc kết nối, xác thực và xin pty đều đã qua — vài giây
-   *  sau khi bấm nút, nên tab có gì đó để nói trong lúc chờ. */
+  /** The session has finished opening. For SSH this is when connecting, authenticating and
+   *  requesting a pty are all done — a few seconds after the button press, so the tab has
+   *  something to say while waiting. */
   onOpened: () => void;
   onExit: (exit: SessionExit) => void;
-  /** Phiên không mở được: sai mật khẩu, vân tay đổi, máy chủ không tới được. Khác `onError` ở chỗ
-   *  nó nói rằng *không có phiên nào cả*, nên tab trả màn hình về form. */
+  /** The session could not be opened: a wrong password, a changed fingerprint, an unreachable
+   *  server. Unlike `onError`, it says that *there is no session at all*, so the tab returns the
+   *  screen to the form. */
   onFailed: () => void;
-  /** Bỏ hẳn phiên đã kết thúc và quay về màn hình chọn đích. Khác `onExit` ở chỗ đó là người dùng
-   *  nói, không phải shell nói. */
+  /** Drops the ended session for good and goes back to the target picker. Unlike `onExit`, this is
+   *  the user speaking, not the shell. */
   onDismiss: () => void;
   onError: (message: string) => void;
 }
@@ -67,26 +72,28 @@ function TerminalView({
   const fitRef = useRef<FitAddon | null>(null);
   const searchRef = useRef<SearchAddon | null>(null);
   const sessionRef = useRef<string | null>(null);
-  /* Trong state chứ không trong ref: nó là điều kiện `enabled` của `terminal.copy`, và một ref đổi
-     giá trị thì không có ai đăng ký lại phím tắt. */
+  /* In state rather than in a ref: it is the `enabled` condition of `terminal.copy`, and a ref
+     changing value re-registers nobody's shortcut. */
   const [hasSelection, setHasSelection] = useState(false);
-  /* Shell đã chết. Trong state chứ không chỉ trong biến `ended` của effect bên dưới, và cũng vì lý
-     do ấy: nó quyết định phím tắt nào đang được đăng ký. */
+  /* The shell has died. In state rather than only in the effect's `ended` variable below, for the
+     same reason: it decides which shortcuts are registered. */
   const [ended, setEnded] = useState(false);
-  /* Thanh tìm đang mở hay không. Trong state chứ không trong ref: nó quyết định cái được vẽ. */
+  /* Whether the find bar is open. In state rather than in a ref: it decides what gets drawn. */
   const [searching, setSearching] = useState(false);
-  /** Mỗi lần `Ctrl+F` được bấm, kể cả khi thanh đã mở — xem `SearchBar.focusSignal`. */
+  /** Every time `Ctrl+F` is pressed, even when the bar is already open — see
+   *  `SearchBar.focusSignal`. */
   const [findSignal, setFindSignal] = useState(0);
-  /** Menu chuột phải đang mở ở đâu, theo toạ độ của cửa sổ. `null` là đang đóng. */
+  /** Where the right-click menu is open, in window coordinates. `null` means it is closed. */
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
-  /* Cài đặt lúc dựng terminal đi qua ref: đổi cài đặt thì `term.options` được đặt lại tại chỗ —
-     xem effect ở cuối — chứ không dựng lại cả màn hình và mở lại cả phiên. */
+  /* The settings used when building the terminal go through a ref: changing a setting resets
+     `term.options` in place — see the effect at the end — rather than rebuilding the whole screen
+     and reopening the whole session. */
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
-  // Callback đi qua ref: effect mở phiên chỉ được chạy lại khi `target` đổi, không phải mỗi lần
-  // cha render lại.
+  // Callbacks go through a ref: the session-opening effect may only rerun when `target` changes,
+  // not on every parent re-render.
   const onOpenedRef = useRef(onOpened);
   onOpenedRef.current = onOpened;
   const onExitRef = useRef(onExit);
@@ -107,10 +114,10 @@ function TerminalView({
     if (!host) return;
 
     const term = new Terminal({
-      /* Bắt buộc, và không phải để cho vui: `registerDecoration` — cái addon tìm kiếm gọi để tô
-         vàng các kết quả — nằm trong nhóm API còn đang đề xuất, và xterm *ném lỗi* khi cờ này tắt.
-         Thiếu nó thì `findNext` văng ngay ở chữ đầu tiên người dùng gõ vào ô tìm, và cả thanh tìm
-         trông như thể không tìm thấy gì. */
+      /* Required, and not for fun: `registerDecoration` — which the search addon calls to highlight
+         matches in yellow — is part of the still-proposed API group, and xterm *throws* when this
+         flag is off. Without it `findNext` blows up on the first letter the user types into the
+         find field, and the whole find bar looks as if it found nothing. */
       allowProposedApi: true,
       fontFamily: settingsRef.current.fontFamily,
       fontSize: settingsRef.current.fontSize,
@@ -123,11 +130,11 @@ function TerminalView({
     term.loadAddon(fit);
     const search = new SearchAddon();
     term.loadAddon(search);
-    /* Địa chỉ trong màn hình mở bằng `Ctrl/Cmd+Click`, không phải bằng một cú bấm trơn: bấm trơn
-       trong terminal là đặt con trỏ và bắt đầu bôi đen, và một dòng log dài đầy đường dẫn sẽ trở
-       thành bãi mìn nếu mỗi cú chạm lại bật trình duyệt lên. `hasPrimaryModifier` chứ không phải
-       `ctrlKey || metaKey` — trên máy Mac thì `Ctrl+Click` là cú mở menu ngữ cảnh, và nó phải giữ
-       nguyên nghĩa ấy. Cái gì được mở thì `links.ts` trả lời. */
+    /* Addresses on screen open with `Ctrl/Cmd+Click`, not with a plain click: a plain click in a
+       terminal places the cursor and starts a selection, and a long log line full of paths would
+       become a minefield if every touch launched the browser. `hasPrimaryModifier` rather than
+       `ctrlKey || metaKey` — on a Mac `Ctrl+Click` is the context-menu click, and it has to keep
+       that meaning. What gets opened is `links.ts`'s answer. */
     const links = new WebLinksAddon(
       (event, uri) => {
         if (!hasPrimaryModifier(event)) return;
@@ -136,8 +143,9 @@ function TerminalView({
         void openUrl(url).catch((e) => onErrorRef.current(errorMessage(tRef.current, e)));
       },
       {
-        /* xterm gạch chân mọi thứ regex của nó nhặt được, kể cả cái sẽ không mở. Chú thích này là
-           chỗ duy nhất nói ra hai điều đó: phải giữ phím nào, và cái dưới con trỏ có mở được không. */
+        /* xterm underlines everything its regex picks up, including what will not open. This hint
+           is the only place that says both things: which key to hold, and whether what is under
+           the cursor can be opened. */
         hover: (_event, text) => {
           host.title =
             openableUrl(text) === null
@@ -150,10 +158,10 @@ function TerminalView({
       },
     );
     term.loadAddon(links);
-    /* Cửa duy nhất để lấy được một phím ra khỏi xterm. Nó đọc `keydown` trên textarea ẩn của chính
-       nó và `stopPropagation` mọi `Ctrl`+chữ cái, nên listener của app ở `window` không bao giờ
-       nghe thấy `Ctrl+W`. Trả `false` là xterm thoát ra *trước* khi `preventDefault`, và sự kiện
-       bay lên nguyên vẹn — cho bộ điều phối, hoặc cho chính webview khi đó là lệnh dán. */
+    /* The only way to get a key out of xterm. It reads `keydown` on its own hidden textarea and
+       `stopPropagation`s every `Ctrl`+letter, so the app's listener on `window` never hears
+       `Ctrl+W`. Returning `false` makes xterm bail out *before* `preventDefault`, and the event
+       bubbles up intact — to the dispatcher, or to the webview itself when it is a paste. */
     term.attachCustomKeyEventHandler((e) => {
       const press = pressOf(e);
       return shellKeeps(press, isClaimed(press));
@@ -164,20 +172,23 @@ function TerminalView({
     fitRef.current = fit;
     searchRef.current = search;
 
-    /* Id sinh ở đây chứ không do tab cấp: `StrictMode` chạy effect hai vòng trong dev, và cleanup
-       của vòng đầu phải đóng đúng phiên của vòng đầu. */
+    /* The id is generated here rather than handed out by the tab: `StrictMode` runs effects twice
+       in dev, and the first round's cleanup has to close exactly the first round's session. */
     const id = crypto.randomUUID();
     sessionRef.current = id;
     let ended = false;
-    /* Lệnh mở màn đã gõ hộ chưa. Đợi byte đầu tiên chứ không gửi ngay lúc `openSession` trả về:
-       với SSH thì lúc ấy pty vừa được cấp và shell bên kia còn chưa in dấu nhắc, mà một dòng gõ
-       vào trước khi shell đọc stdin là một dòng có thể rơi mất — hoặc tệ hơn, rơi vào giữa banner
-       đăng nhập. Byte đầu tiên là lời nói đầu tiên của shell, và sau nó thì nó đang nghe. */
+    /* Whether the startup command has been typed on the user's behalf yet. Waits for the first byte
+       rather than sending as soon as `openSession` returns: with SSH, at that point the pty has
+       just been granted and the shell on the other side has not printed its prompt yet, and a line
+       typed before the shell reads stdin is a line that may be lost — or worse, land in the middle
+       of the login banner. The first byte is the shell's first word, and after it, it is
+       listening. */
     let greeted = false;
-    /* Effect này đã bị dọn chưa — tab đóng, hoặc `target` đổi và vòng sau đã bắt đầu. Mọi thứ
-       quay lại từ `openSession` sau lúc ấy nói về một phiên không còn ai xem: ghi vào một `Terminal`
-       đã `dispose` là một lỗi ném ra, và gọi `onExit`/`onFailed` lúc này là nói về vòng cũ trên
-       cái tab vòng mới vừa dựng. */
+    /* Whether this effect has been cleaned up — the tab closed, or `target` changed and the next
+       round has begun. Everything coming back from `openSession` after that is about a session
+       nobody is watching any more: writing into a `dispose`d `Terminal` throws, and calling
+       `onExit`/`onFailed` now would talk about the old round on the tab the new round just built.
+       */
     let disposed = false;
 
     const typed = term.onData((data) => {
@@ -192,7 +203,8 @@ function TerminalView({
         if (!greeted) {
           greeted = true;
           const keys = openingKeystrokes(runOnConnectRef.current);
-          // Hỏng thì im lặng, đúng như mọi lần gõ khác: phiên vẫn mở, và người dùng gõ tiếp được.
+          // A failure stays silent, just like any other typing: the session is still open, and the
+          // user can keep typing.
           if (keys) void writeSession(id, keys).catch(() => {});
         }
         return;
@@ -202,9 +214,10 @@ function TerminalView({
       onExitRef.current(message);
     })
       .then(() => {
-        /* Tab đóng giữa lúc bắt tay. `terminal_open` chỉ đưa phiên vào map *sau khi* mở xong, nên
-           `closeSession` của cleanup chạy lúc map còn trống và không đóng được gì; phiên vào map
-           ngay sau đó và từ đấy không ai còn biết nó tồn tại. Đóng ở đây là chỗ duy nhất còn kịp. */
+        /* The tab closed mid-handshake. `terminal_open` only puts the session into the map *after*
+           opening, so the cleanup's `closeSession` runs while the map is still empty and closes
+           nothing; the session goes into the map right after and from then on nobody knows it
+           exists. Closing here is the only place still in time. */
         if (disposed) {
           void closeSession(id).catch(() => {});
           return;
@@ -212,8 +225,8 @@ function TerminalView({
         onOpenedRef.current();
       })
       .catch((e) => {
-        /* Không có phiên nào để đóng: `terminal_open` hỏng trước khi đưa được gì vào map, nên
-           cleanup bên dưới không được gọi `terminal_close` cho một id chưa từng tồn tại. */
+        /* There is no session to close: `terminal_open` failed before putting anything into the
+           map, so the cleanup below must not call `terminal_close` for an id that never existed. */
         ended = true;
         if (disposed) return;
         onErrorRef.current(errorMessage(tRef.current, e));
@@ -224,7 +237,7 @@ function TerminalView({
       disposed = true;
       typed.dispose();
       selected.dispose();
-      // Chỉ khi unmount, không phải khi mất `active`: tab nằm sau vẫn phải cuộn tiếp.
+      // Only on unmount, not on losing `active`: a background tab still has to keep scrolling.
       if (!ended) void closeSession(id).catch(() => {});
       term.dispose();
       termRef.current = null;
@@ -252,7 +265,8 @@ function TerminalView({
     const observer = new ResizeObserver(() => {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
-        /* Khung ẩn có kích thước 0, và `fit()` lúc đó tính ra cols/rows rác rồi bắn xuống server. */
+        /* A hidden frame has size 0, and `fit()` then computes garbage cols/rows and sends them to
+           the server. */
         if (host.clientWidth === 0 || host.clientHeight === 0) return;
         fitRef.current?.fit();
         const term = termRef.current;
@@ -268,24 +282,26 @@ function TerminalView({
     };
   }, []);
 
-  /* Chỉ đăng ký khi đang có vùng chọn, và đó là toàn bộ cách `Ctrl+C` biết mình là lệnh nào: không
-     chọn gì thì không ai nhận chord, `shellKeeps` trả phím lại cho shell và nó là lệnh huỷ như mọi
-     khi. Trên macOS thì `Cmd+C` mang chord này còn `Ctrl+C` không mang gì — không có gì để phân xử. */
+  /* Only registered while there is a selection, and that is the whole way `Ctrl+C` knows which
+     command it is: with nothing selected nobody takes the chord, `shellKeeps` hands the key back to
+     the shell, and it is the interrupt as always. On macOS `Cmd+C` carries this chord and `Ctrl+C`
+     carries nothing — there is nothing to arbitrate. */
   useShortcut("terminal.copy", copySelection, active && hasSelection);
 
-  /* Cùng `Ctrl/Cmd+C`, và hai cái không bao giờ cùng sống: có vùng chọn thì phím là lệnh chép, hết
-     phiên mà không chọn gì thì nó đóng màn hình đã đứng im. Nên lần bấm đầu chép và xoá vùng chọn,
-     lần thứ hai đóng — cùng nhịp với phiên đang sống, nơi lần thứ hai là lệnh huỷ. */
+  /* The same `Ctrl/Cmd+C`, and the two are never alive at once: with a selection the key copies,
+     and once the session has ended with nothing selected it closes the frozen screen. So the first
+     press copies and clears the selection, the second closes — the same rhythm as a live session,
+     where the second press is the interrupt. */
   useShortcut("terminal.dismiss", () => onDismissRef.current(), active && ended && !hasSelection);
 
-  /* Phóng to thu nhỏ đi qua store dùng chung nên mọi tab terminal đổi cùng lúc — và vì `enabled` là
-     `active`, chỉ tab đang xem mới nhận phím; ở một tab cơ sở dữ liệu thì `Ctrl+=` không có ai
-     nhận và rơi xuống webview như cũ. */
+  /* Zooming goes through the shared store, so every terminal tab changes at once — and because
+     `enabled` is `active`, only the tab being viewed takes the key; on a database tab nobody takes
+     `Ctrl+=` and it falls through to the webview as before. */
   useShortcut("terminal.zoomIn", () => zoomTerminal(1), active);
   useShortcut("terminal.zoomOut", () => zoomTerminal(-1), active);
 
-  /* Chỉ khi tab đang xem. Ở một tab khác thì `Ctrl+F` không có ai nhận và rơi xuống webview như
-     cũ, đúng như `terminal.zoomIn` đang làm. */
+  /* Only while the tab is being viewed. On another tab nobody takes `Ctrl+F` and it falls through
+     to the webview as before, just as `terminal.zoomIn` does. */
   useShortcut(
     "terminal.find",
     () => {
@@ -298,9 +314,10 @@ function TerminalView({
   function find(query: string, back: boolean): boolean {
     const search = searchRef.current;
     if (!search) return false;
-    /* Bốn màu chứ không hai: `matchOverviewRuler` và `activeMatchColorOverviewRuler` là bắt buộc
-       trong `ISearchDecorationOptions`. Chúng vẽ dải đánh dấu bên phải màn hình — chỗ cho thấy các
-       kết quả nằm đâu trong cả phần đã cuộn qua — nên chúng dùng đúng cặp màu của chính kết quả. */
+    /* Four colours rather than two: `matchOverviewRuler` and `activeMatchColorOverviewRuler` are
+       required in `ISearchDecorationOptions`. They draw the marker strip on the right of the screen
+       — which shows where the matches sit across the whole scrolled-back part — so they use the
+       same pair of colours as the matches themselves. */
     const options = { decorations: searchDecorations(readDocumentToken) };
     return back ? search.findPrevious(query, options) : search.findNext(query, options);
   }
@@ -308,7 +325,8 @@ function TerminalView({
   function closeSearch() {
     setSearching(false);
     searchRef.current?.clearDecorations();
-    // Bàn phím về lại shell; đóng thanh mà con trỏ ở lại một ô đã biến mất thì gõ gì cũng mất.
+    // The keyboard goes back to the shell; closing the bar while the cursor stays in a field that
+    // has vanished would lose whatever is typed.
     termRef.current?.focus();
   }
 
@@ -317,24 +335,24 @@ function TerminalView({
     if (!term) return;
     const text = term.getSelection();
     if (!text) return;
-    /* Xoá vùng chọn ngay, kể cả khi chép hỏng: để nguyên thì lần `Ctrl+C` sau lại là chép, và
-       không còn đường nào gửi lệnh huỷ xuống shell. */
+    /* Clear the selection right away, even if copying failed: leaving it would make the next
+       `Ctrl+C` copy again, with no way left to send an interrupt to the shell. */
     term.clearSelection();
     void copyText(text).catch((e) => onErrorRef.current(errorMessage(tRef.current, e)));
   }
 
-  /* Đường duy nhất phải tự đọc clipboard. `Ctrl+V` không đi qua đây — `shellKeeps` buông phím ra
-     cho webview và xterm nghe sự kiện `paste` của chính nó — nhưng một mục menu thì không có phím
-     nào để buông, nên nó phải hỏi hệ điều hành. Qua Rust chứ không qua `navigator.clipboard`; lý do
-     nằm ở `terminal/clipboard.ts`. */
+  /* The only path that has to read the clipboard itself. `Ctrl+V` does not come through here —
+     `shellKeeps` lets the key through to the webview and xterm listens to its own `paste` event —
+     but a menu item has no key to let through, so it has to ask the operating system. Through Rust
+     rather than `navigator.clipboard`; the reason is in `terminal/clipboard.ts`. */
   async function pasteFromClipboard() {
     const term = termRef.current;
     if (!term) return;
     try {
       const text = await readText();
-      // `term.paste` chứ không `writeSession` thẳng: xterm mới là chỗ biết phiên có đang bật chế
-      // độ bracketed paste hay không, và một khối nhiều dòng dán vào `bash` mà thiếu dấu bọc là
-      // một khối lệnh tự chạy.
+      // `term.paste` rather than `writeSession` directly: xterm is what knows whether the session
+      // has bracketed paste mode on, and a multi-line block pasted into `bash` without the wrapping
+      // is a block of commands that runs by itself.
       if (text !== "") term.paste(text);
     } catch (e) {
       onErrorRef.current(errorMessage(tRef.current, e));
@@ -347,12 +365,12 @@ function TerminalView({
   }
 
   function handleContextMenu(e: React.MouseEvent) {
-    /* Ô tìm là một ô nhập văn bản thật; menu của webview trên nó là thứ đúng, đúng như
-       `nativeContextMenu.ts` đã quyết cho mọi ô nhập trong app. */
+    /* The find field is a real text input; the webview's menu on it is the right thing, just as
+       `nativeContextMenu.ts` decided for every text input in the app. */
     if (e.target instanceof HTMLInputElement) return;
-    /* Bắt buộc, và đây là lý do: `core/nativeContextMenu.ts` cố ý tha cho ô nhập văn bản, mà
-       textarea ẩn của xterm *là* một ô nhập văn bản. Không chặn ở đây thì cái hiện ra là menu của
-       webview, và trong đó có Reload — một cú bấm nhầm là mọi kết nối đang mở rụng theo. */
+    /* Required, and this is why: `core/nativeContextMenu.ts` deliberately spares text inputs, and
+       xterm's hidden textarea *is* a text input. Without blocking it here what shows up is the
+       webview's menu, which includes Reload — one misclick and every open connection drops. */
     e.preventDefault();
     if (settingsRef.current.rightClickPastes) {
       void pasteFromClipboard();
@@ -361,12 +379,13 @@ function TerminalView({
     setMenu({ x: e.clientX, y: e.clientY });
   }
 
-  /* Font đổi là ô chữ đổi, nên số cột và số dòng đổi theo: đo lại rồi báo cho đầu kia. Thiếu bước
-     ấy thì `stty size` trong shell nói một đằng còn màn hình vẽ một nẻo, và mọi thứ vẽ theo chiều
-     rộng cuối dòng đều lệch.
+  /* A font change is a cell size change, so the column and row counts change with it: measure again
+     and tell the other end. Without that step `stty size` in the shell says one thing while the
+     screen draws another, and everything drawn to the full line width is off.
 
-     Con trỏ và scrollback không đổi kích thước ô nào, nhưng chúng đi cùng effect này vì chúng đi
-     cùng một object `settings`: tách ra là ba effect cùng một dependency. */
+     The cursor and scrollback change no cell size, but they come along with this effect because
+     they come in the same `settings` object: splitting them would be three effects with the same
+     dependency. */
   useEffect(() => {
     const term = termRef.current;
     const host = hostRef.current;
@@ -376,16 +395,16 @@ function TerminalView({
     term.options.cursorStyle = settings.cursorStyle;
     term.options.cursorBlink = settings.cursorBlink;
     term.options.scrollback = settings.scrollback;
-    // Khung đang ẩn thì để yên: `fit()` lúc ấy tính ra cols/rows rác. Tab quay lại sẽ đo lại —
-    // xem effect `[active]` bên dưới.
+    // Leave a hidden frame alone: `fit()` then computes garbage cols/rows. The tab measures again
+    // when it comes back — see the `[active]` effect below.
     if (host.clientWidth === 0) return;
     fitRef.current?.fit();
     const id = sessionRef.current;
     if (id) void resizeSession(id, term.cols, term.rows).catch(() => {});
   }, [settings]);
 
-  // Tab quay lại: cửa sổ có thể đã đổi kích thước trong lúc khung này ẩn, và `ResizeObserver`
-  // không bắn cho một khung đang `display: none`.
+  // The tab is back: the window may have been resized while this frame was hidden, and
+  // `ResizeObserver` does not fire for a frame that is `display: none`.
   useEffect(() => {
     if (!active) return;
     const host = hostRef.current;

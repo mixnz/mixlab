@@ -16,7 +16,7 @@ describe("reloadTarget", () => {
   });
 
   it("still reloads the keyspace when the right was touched but holds no value", () => {
-    // Ví dụ: tab Group, hoặc lời nhắc chọn key. Không có gì bên phải để đọc lại.
+    // For example: the Group tab, or the prompt to pick a key. Nothing on the right to reread.
     expect(reloadTarget("right", false)).toBe("left");
   });
 

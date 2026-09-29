@@ -6,28 +6,30 @@ import { useTranslation } from "../../../../i18n";
 import styles from "./SearchBar.module.css";
 
 interface Props {
-  /** Tìm `query`, đi tới (`back` sai) hoặc lùi (`back` đúng). Trả `false` khi không có kết quả
-   *  nào — thanh nói điều đó ra thay vì im lặng như thể chưa gõ gì. */
+  /** Searches for `query`, forwards (`back` false) or backwards (`back` true). Returns `false` when
+   *  there is no match — the bar says so instead of staying silent as if nothing had been typed. */
   onFind: (query: string, back: boolean) => boolean;
   onClose: () => void;
-  /** Bơm lên một mỗi lần `Ctrl+F` được bấm. Thanh đã mở rồi thì phím ấy không mở lại được gì —
-   *  cái nó phải làm là kéo bàn phím về ô và chọn sẵn nội dung, đúng như thanh tìm của trình
-   *  duyệt. Một con số chứ không phải một cờ: cùng một cử chỉ lặp lại phải kích hoạt lại. */
+  /** Bumped by one each time `Ctrl+F` is pressed. With the bar already open that key cannot open
+   *  anything again — what it has to do is pull the keyboard back to the field and preselect its
+   *  contents, just like a browser's find bar. A number rather than a flag: the same gesture
+   *  repeated has to trigger again. */
   focusSignal: number;
 }
 
-/** Thanh tìm trong phần đã cuộn qua của một phiên terminal. */
+/** The find bar over the scrolled-back part of a terminal session. */
 function SearchBar({ onFind, onClose, focusSignal }: Props) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
-  /* `null` là chưa tìm lần nào — khác hẳn "đã tìm và không thấy gì", và chỉ cái thứ hai mới đáng
-     nói ra. */
+  /* `null` means no search yet — quite different from "searched and found nothing", and only the
+     latter is worth saying. */
   const [found, setFound] = useState<boolean | null>(null);
 
-  /* Thanh vừa hiện ra là để gõ vào; một thanh mở ra mà bàn phím vẫn ở chỗ khác thì mở làm gì. Và
-     `Ctrl+F` bấm lại lúc thanh đang mở chạy lại đúng effect này — `select()` là cái làm cho lần
-     bấm thứ hai có nghĩa: gõ đè lên chuỗi cũ để tìm cái khác. */
+  /* A bar that just appeared is there to be typed into; a bar opening while the keyboard stays
+     elsewhere is pointless. And `Ctrl+F` pressed again while the bar is open reruns exactly this
+     effect — `select()` is what gives the second press meaning: type over the old string to search
+     for something else. */
   useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
@@ -53,8 +55,9 @@ function SearchBar({ onFind, onClose, focusSignal }: Props) {
         placeholder={t("terminal.findPlaceholder")}
         aria-label={t("terminal.findPlaceholder")}
         value={query}
-        /* Tìm ngay từng phím: kết quả nhảy theo cái đang gõ, đúng như thanh tìm của trình duyệt.
-           `back` luôn sai ở đây — gõ thêm một chữ là thu hẹp về phía trước, không phải quay lui. */
+        /* Searches on every key: the result jumps along with what is typed, just like a browser's
+           find bar. `back` is always false here — typing one more letter narrows forwards, not
+           backwards. */
         onChange={(e) => find(e.target.value, false)}
         onKeyDown={(e) => {
           if (e.key === "Escape") {

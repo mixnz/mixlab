@@ -54,7 +54,7 @@
   gap: 4px;
 }
 
-/* Một thẻ trong danh sách, nên nó có viền thật chứ không trôi trên nền cột. */
+/* A card in a list, so it has a real border rather than floating on the column's background. */
 .item {
   display: flex;
   flex-direction: column;
@@ -78,7 +78,8 @@
   box-shadow: 0 0 0 1px var(--accent) inset;
 }
 
-/* Dấu hiệu rồi mới tới tên, và tên co lại chứ không đẩy dấu hiệu ra khỏi thẻ. */
+/* The marker first, then the name, and the name shrinks rather than pushing the marker out of the
+   card. */
 .title {
   display: flex;
   align-items: center;

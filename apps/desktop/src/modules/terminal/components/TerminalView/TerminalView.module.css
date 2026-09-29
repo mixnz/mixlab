@@ -7,8 +7,9 @@
   background: var(--ansi-background);
 }
 
-/* Khung bọc màn hình, để thanh tìm có chỗ đứng trên nó. `.host` là flex item của khung này chứ
-   không còn của `.terminal-tab`, nên khung phải mang đúng cái mà `.host` từng dựa vào. */
+/* The frame around the screen, so the find bar has somewhere to stand above it. `.host` is a flex
+   item of this frame rather than of `.terminal-tab`, so the frame has to carry exactly what `.host`
+   used to rely on. */
 .frame {
   display: flex;
   flex: 1;

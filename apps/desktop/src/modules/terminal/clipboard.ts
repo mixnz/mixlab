@@ -2,19 +2,22 @@ import { terminalClipboardText } from "./api";
 import type { AppError } from "../../core/errors";
 
 /**
- * Lấy văn bản trên clipboard xuống.
+ * Fetches the text on the clipboard.
  *
- * Ở đây chứ không ở `core/clipboard.ts` cạnh `copyText`, và ranh giới mới là lý do: `core/` không
- * gọi Tauri, còn cách đọc clipboard duy nhất dùng được thì phải đi qua Rust.
+ * Here rather than in `core/clipboard.ts` next to `copyText`, and the boundary is the reason:
+ * `core/` does not call Tauri, while the only usable way to read the clipboard has to go through
+ * Rust.
  *
- * Vì `navigator.clipboard.readText()` không dùng được: WebView2 coi việc *đọc* clipboard là một
- * quyền phải xin, nên lần đầu bấm Dán trong menu là một dải hệ thống dựng lên giữa cửa sổ hỏi
- * "trang này muốn xem những gì bạn đã sao chép" — app không tô vẽ được nó, và câu trả lời được nhớ
- * theo origin nên nó chỉ hiện đúng một lần, đủ để không ai gặp lại mà sửa. Ghi thì không bị hỏi,
- * nên `copyText` ở lại `core/` với đường `execCommand` dự phòng của nó.
+ * Because `navigator.clipboard.readText()` is unusable: WebView2 treats *reading* the clipboard as
+ * a permission to request, so the first Paste from the menu raises a system strip in the middle of
+ * the window asking "this page wants to see what you copied" — the app cannot style it, and the
+ * answer is remembered per origin so it shows exactly once, just enough that nobody sees it again
+ * to fix it. Writing is not asked about, so `copyText` stays in `core/` with its `execCommand`
+ * fallback.
  *
- * Chỉ menu chuột phải đi qua đây. `Ctrl+V` không: `shellKeeps` buông phím ra cho webview và xterm
- * nghe sự kiện `paste` của chính nó — một phím dán thì không phải xin phép ai cả.
+ * Only the right-click menu goes through here. `Ctrl+V` does not: `shellKeeps` lets the key through
+ * to the webview and xterm listens to its own `paste` event — a paste key needs nobody's
+ * permission.
  */
 export async function readText(): Promise<string> {
   try {

@@ -9,7 +9,7 @@ describe("reachesErrorBanner", () => {
   });
 
   it("lets it through when nothing else is going to say it", () => {
-    // Connection nối thẳng: không có TunnelBanner nào hiện lên thay.
+    // A direct connection: no TunnelBanner shows up in its place.
     expect(reachesErrorBanner(lost, null)).toBe(true);
   });
 

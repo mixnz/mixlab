@@ -253,13 +253,14 @@
 /* No dark overrides here any more: the sticky header takes `--page-bg` and the FK badge is written
    in `--accent-*`, and both of those already carry the theme's own values. */
 
-/* Hai vai của chữ, nói tường minh ở chỗ trước đây không ai nói gì.
-   Trước đợt token font, cả ô lẫn header đều mono vì thừa kế từ `:root` — không phải vì có ai chọn
-   thế. Đổi `:root` sang sans là cả hai lặng lẽ thành sans, và ô dữ liệu mất đúng thứ khiến mono
-   đáng giá: khoảng trắng cuối một `varchar` nhìn thấy được, `l` phân biệt được với `1`, và các cột
-   số thẳng hàng nhau.
+/* The two roles of text, stated explicitly where nobody used to say anything.
+   Before the font token work, both cells and headers were mono because they inherited it from
+   `:root` — not because anyone chose it. Switching `:root` to sans quietly made both sans, and the
+   data cells lost exactly what makes mono worth it: trailing whitespace in a `varchar` is visible,
+   `l` can be told from `1`, and number columns line up.
 
-   Header thì ngược lại: tên cột là nhãn app viết ra, không phải giá trị để so từng ký tự. */
+   Headers are the opposite: a column name is a label the app writes, not a value to compare
+   character by character. */
 .sqlTable tbody td {
   font-family: var(--font-mono);
 }

@@ -1,37 +1,40 @@
-/** Một hàng trong hộp cuộn: `offsetTop` và `offsetHeight` của nó. */
+/** A row in the scroll box: its `offsetTop` and `offsetHeight`. */
 export interface RowBox {
   top: number;
   height: number;
 }
 
-/** Hộp cuộn: đang cuộn tới đâu, và cao bao nhiêu (`clientHeight`). */
+/** The scroll box: how far it is scrolled, and how tall it is (`clientHeight`). */
 export interface ViewBox {
   scrollTop: number;
   height: number;
 }
 
 /**
- * Hộp cuộn phải cuộn tới đâu để thấy được một hàng, hoặc `null` khi không cần cuộn.
+ * Where the scroll box has to scroll to for a row to be visible, or `null` when no scrolling is
+ * needed.
  *
- * `headerHeight` là phần trên cùng bị tiêu đề dính che. `scrollIntoView({block:"nearest"})` không
- * biết gì về nó: nó cuộn hàng tới đúng mép trên hộp, mà mép trên hộp lại đang nằm sau tiêu đề —
- * cuộn xong thì thứ vừa cuộn tới vẫn không đọc được. Nên phép tính nằm ở đây.
+ * `headerHeight` is the top part covered by the sticky header. `scrollIntoView({block:"nearest"})`
+ * knows nothing about it: it scrolls the row to the box's very top edge, and that top edge is
+ * behind the header — after scrolling, the thing just scrolled to is still unreadable. So the
+ * arithmetic lives here.
  *
- * Thuần, và nhận số chứ không nhận phần tử: một cái gọi từ `DbTab` chạy được trong một test không
- * cần trình duyệt, và cái duy nhất `DbTab` còn phải làm là đọc bốn con số ra khỏi DOM.
+ * Pure, and takes numbers rather than elements: a call from `DbTab` can run in a test without a
+ * browser, and all `DbTab` still has to do is read four numbers out of the DOM.
  */
 export function scrollTopFor(row: RowBox, view: ViewBox, headerHeight: number): number | null {
-  /** Mép trên và mép dưới của phần thật sự nhìn thấy, trong toạ độ nội dung của hộp. */
+  /** The top and bottom edges of the part really visible, in the box's content coordinates. */
   const top = view.scrollTop + headerHeight;
   const bottom = view.scrollTop + view.height;
 
   let target: number;
   if (row.top < top) {
-    // Ở trên: kéo xuống cho tới khi nó đứng ngay dưới tiêu đề.
+    // Above: bring it down until it sits just below the header.
     target = row.top - headerHeight;
   } else if (row.top + row.height > bottom) {
-    /* Ở dưới: kéo lên vừa đủ để thấy hết. Một hàng cao hơn cả khung thì phép này lại đẩy phần đầu
-       của nó ra ngoài, mà phần đầu — cái tên — mới là phần đáng thấy; nên nó canh theo mép trên. */
+    /* Below: bring it up just enough to see all of it. For a row taller than the frame this pushes
+       its top out instead, and the top — the name — is the part worth seeing; so it aligns to the
+       top edge. */
     target =
       row.height > view.height - headerHeight
         ? row.top - headerHeight
@@ -41,7 +44,7 @@ export function scrollTopFor(row: RowBox, view: ViewBox, headerHeight: number): 
   }
 
   target = Math.max(0, target);
-  // Kẹp xong mà trùng chỗ đang đứng thì không có gì để cuộn — hàng đầu danh sách nằm một phần sau
-  // tiêu đề là ca này, và nó không sửa được bằng cách cuộn.
+  // If clamping lands on where it already is, there is nothing to scroll — the first row sitting
+  // partly behind the header is this case, and scrolling cannot fix it.
   return target === view.scrollTop ? null : target;
 }

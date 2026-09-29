@@ -1,10 +1,11 @@
 @import "@xterm/xterm/css/xterm.css";
 
-/* `width` chứ không để mặc kệ: `shell/App.css` cho `.tab-panel` `display: flex` mà không đặt
-   hướng, nên khung này là một flex item trên trục ngang và `0 1 auto` lấy chiều rộng theo nội
-   dung. Với form thì nó hẹp hơn cửa sổ; với xterm thì tệ hơn — `FitAddon` đo khung để tính số
-   cột rồi đặt lại chiều rộng cho `.xterm`, khung co theo, `ResizeObserver` bắn, và màn hình tự
-   ăn mòn chính nó cho tới khi còn một dải. Module db nói cùng một câu ở `.login-view`. */
+/* `width` rather than leaving it be: `shell/App.css` gives `.tab-panel` `display: flex` without
+   setting a direction, so this frame is a flex item on the horizontal axis and `0 1 auto` takes its
+   width from its content. For the form it is narrower than the window; for xterm it is worse —
+   `FitAddon` measures the frame to compute the column count and then resets `.xterm`'s width, the
+   frame shrinks along, `ResizeObserver` fires, and the screen eats itself away until only a strip
+   is left. The db module says the same thing at `.login-view`. */
 .terminal-tab {
   display: flex;
   flex-direction: column;
@@ -27,8 +28,9 @@
   opacity: 0.6;
 }
 
-/* Dải dưới màn hình chứ không phải lớp phủ: xterm đã ở đó và đã đo xong kích thước, còn một lớp
-   phủ trong lúc chờ chỉ để lại một khung đen. Điều cần nói là "đang chờ máy chủ". */
+/* A strip under the screen rather than an overlay: xterm is already there and has already measured
+   its size, while an overlay during the wait would only leave a black frame. What needs saying is
+   "waiting for the server". */
 .terminal-connecting {
   padding: 8px 12px;
   border-top: 1px solid var(--border);

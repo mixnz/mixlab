@@ -1,10 +1,11 @@
 import { shellLabel } from "./shells";
 import type { TerminalChoice, TerminalTarget } from "./types";
 
-/** Một dấu tab này nên mang. `TerminalTab` biến nó thành `TabBadge` vì nó là chỗ có `t`. */
+/** A mark this tab should carry. `TerminalTab` turns it into a `TabBadge` because that is where
+ *  `t` is. */
 export type TerminalBadgeMark = { type: "local" } | { type: "ssh" } | { type: "ended" };
 
-/** Cái người dùng chọn, rút gọn thành cái Rust cần. Nhãn hiển thị ở lại đây. */
+/** What the user chose, reduced to what Rust needs. The display label stays here. */
 export function terminalTarget(choice: TerminalChoice): TerminalTarget {
   if (choice.kind === "local") {
     return { type: "local", shell: choice.shell.path, args: choice.shell.args, cwd: choice.cwd };
@@ -13,15 +14,16 @@ export function terminalTarget(choice: TerminalChoice): TerminalTarget {
 }
 
 /**
- * Tên tab: tên shell, hoặc `user@host` — không phải đường dẫn, vì tab bar chỉ rộng vài chữ.
+ * The tab name: the shell name, or `user@host` — not a path, because the tab bar is only a few
+ * characters wide.
  *
- * `savedName` là tên của đích đã lưu mà phiên này đến từ đó, và nó thắng cả hai khi có. Ai đưa nó
- * xuống đây là việc của người gọi: `TerminalTab` chỉ đưa khi cài đặt *tên tab là tên đích* đang
- * bật và `choice.targetId` tra ra được một entry. Nên hàm này không biết gì về cài đặt ấy, và
- * `null` vẫn là hành vi từ trước tới nay.
+ * `savedName` is the name of the saved target this session came from, and it beats both when
+ * present. Passing it down is the caller's job: `TerminalTab` only passes it when the *tab name is
+ * the target name* setting is on and `choice.targetId` resolves to an entry. So this function knows
+ * nothing about that setting, and `null` is still the behaviour it has always had.
  */
 export function terminalTitle(choice: TerminalChoice, savedName: string | null): string {
-  // Một entry chưa đặt tên là không có gì để hiện, không phải một yêu cầu để tab trống tên.
+  // An entry not yet named has nothing to show, not a request for the tab to have no name.
   if (savedName !== null && savedName.trim() !== "") return savedName;
   return choice.kind === "local"
     ? shellLabel(choice.shell.name)
@@ -29,10 +31,11 @@ export function terminalTitle(choice: TerminalChoice, savedName: string | null):
 }
 
 /**
- * Tab bar nên hiện dấu gì.
+ * Which marks the tab bar should show.
  *
- * Chưa mở phiên thì không dấu nào: form trên màn hình có thể đang chọn một đích khác hẳn cái tab
- * sẽ chạy, đúng như `dbBadgeMarks` không đánh dấu một tab còn đang ở form kết nối.
+ * No mark before a session opens: the form on screen may be choosing a completely different target
+ * than the one the tab will run, just as `dbBadgeMarks` does not mark a tab still on the connection
+ * form.
  */
 export function terminalBadgeMarks(
   choice: TerminalChoice | null,
@@ -45,13 +48,15 @@ export function terminalBadgeMarks(
 }
 
 /**
- * Ô *Chạy khi kết nối* biến thành đúng những phím sẽ được gõ hộ, hoặc `null` khi không có gì.
+ * The *Run on connect* field turned into exactly the keys to be typed on the user's behalf, or
+ * `null` when there are none.
  *
- * `\r` chứ không phải `\n`, và một cái ở cuối dòng cuối: pty nhận phím Enter, và một lệnh không ai
- * bấm Enter thì nằm đó chờ chứ không chạy. Dòng trống bị bỏ — trong ô nó là khoảng thở, xuống tới
- * shell nó là một lần Enter thừa in thêm một dấu nhắc.
+ * `\r` rather than `\n`, and one at the end of the last line: the pty takes the Enter key, and a
+ * command nobody pressed Enter on sits there waiting rather than running. Empty lines are dropped —
+ * in the field they are breathing room; down in the shell they are a stray Enter printing an extra
+ * prompt.
  *
- * Ở đây chứ không ở `TerminalView` vì nó thuần: cùng lý do `terminalTarget` ở đây.
+ * Here rather than in `TerminalView` because it is pure: the same reason `terminalTarget` is here.
  */
 export function openingKeystrokes(text: string | null | undefined): string | null {
   if (!text) return null;

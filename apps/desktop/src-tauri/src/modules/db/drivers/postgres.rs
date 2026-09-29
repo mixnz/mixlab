@@ -18,8 +18,9 @@ use sqlx::{Column, PgPool, Row, TypeInfo};
 use std::collections::{BTreeMap, HashMap};
 use tokio::sync::Mutex;
 
-/// Cái mà mọi lệnh PostgreSQL đang dùng kết nối dùng thay cho `err!("error.postgres", message = e)`
-/// — cùng cách phân biệt như `mysql::map_error`, xem `mysql::lost_connection`.
+/// What every PostgreSQL command using a connection uses instead of
+/// `err!("error.postgres", message = e)` — the same distinction as `mysql::map_error`; see
+/// `mysql::lost_connection`.
 pub(super) fn map_error(e: sqlx::Error) -> AppError {
     if super::mysql::lost_connection(&e) {
         err!("error.connectionLost")
@@ -78,8 +79,9 @@ impl Pools {
             .max_connections(5)
             .connect_with(self.options.clone().database(&name))
             .await
-            // Không đi qua `map_error`: đây là chỗ mở pool, kể cả pool đầu tiên mà `connect()` mở
-            // — hỏng ở đây là "không kết nối được", và lý do thật nằm trong `message`.
+            // Not through `map_error`: this is where pools are opened, including the first one
+            // `connect()` opens — failing here is "could not connect", and the real reason is in
+            // `message`.
             .map_err(|e| err!("error.postgres", message = e))?;
 
         let mut pools = self.pools.lock().await;

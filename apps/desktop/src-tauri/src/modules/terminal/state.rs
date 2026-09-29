@@ -6,37 +6,38 @@ use tokio_util::sync::CancellationToken;
 
 use super::models::TerminalSize;
 
-/// Tay cầm một phiên. Local hay SSH khác nhau ở chỗ ai dựng nó, không ở chỗ dùng nó.
+/// A session's handle. Local and SSH differ in who builds it, not in how it is used.
 pub struct Session {
-    /// Byte người dùng gõ, chảy tới đầu xa.
+    /// The bytes the user types, flowing to the far end.
     pub input: UnboundedSender<Vec<u8>>,
-    /// cols/rows mỗi khi khung đổi kích thước.
+    /// cols/rows each time the frame is resized.
     pub resize: UnboundedSender<TerminalSize>,
-    /// Đóng tab, hoặc app thoát.
+    /// The tab closing, or the app exiting.
     pub kill: CancellationToken,
 }
 
 impl Drop for Session {
-    /// Bỏ tay cầm là giết phiên: tiến trình con bị kill, thread ghi và thread resize thấy kênh
-    /// đóng rồi tự thoát. Nên không có đường nào bỏ sót một phiên.
+    /// Dropping the handle kills the session: the child process is killed, and the writer and
+    /// resize threads see their channels close and exit by themselves. So there is no way to leave
+    /// a session behind.
     fn drop(&mut self) {
         self.kill.cancel();
     }
 }
 
-/// Mọi phiên đang mở, theo id frontend cấp. Khoá thường chứ không phải khoá async: không có gì
-/// được await khi đang giữ nó.
+/// Every open session, by the id the frontend assigns. A plain lock rather than an async one:
+/// nothing is awaited while holding it.
 #[derive(Default)]
 pub struct TerminalState {
     pub sessions: Mutex<HashMap<String, Session>>,
 }
 
 impl TerminalState {
-    /// Bỏ một phiên khỏi map, nếu nó còn ở đó.
+    /// Removes a session from the map, if it is still there.
     ///
-    /// Buông nó *ngoài* phạm vi khoá: `Drop` của `Session` huỷ token và buông hai đầu gửi, và đó
-    /// là thứ đánh thức các thread và task còn đang chờ trên chúng — không có gì trong đó cần
-    /// khoá, và không có gì trong đó nên chạy khi đang giữ khoá.
+    /// It is let go *outside* the lock's scope: `Session`'s `Drop` cancels the token and lets go of
+    /// both senders, and that is what wakes the threads and tasks still waiting on them — nothing
+    /// in there needs the lock, and nothing in there should run while holding it.
     pub fn forget(&self, id: &str) {
         let gone = self.sessions.lock().unwrap().remove(id);
         drop(gone);

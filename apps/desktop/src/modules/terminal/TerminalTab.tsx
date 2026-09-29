@@ -14,36 +14,43 @@ import { terminalBadgeMarks, terminalTarget, terminalTitle } from "./session";
 import type { TerminalChoice } from "./types";
 import "./terminal.css";
 
-/** Terminal: một tab, một phiên. Form đứng trước, phiên thay chỗ nó khi người dùng bấm Mở. */
+/** Terminal: one tab, one session. The form comes first; the session takes its place when the user
+ *  presses Open. */
 function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateChange }: ModuleTabProps) {
   const { t, lang } = useTranslation();
   const [choice, setChoice] = useState<TerminalChoice | null>(null);
-  /* Cái tab vừa thử mở. Khác `choice` ở chỗ nó không bị xoá khi phiên hỏng — form cần nó để dựng
-     lại đúng những gì người dùng đã gõ. */
+  /* The tab that was just tried. Unlike `choice`, it is not cleared when the session fails — the
+     form needs it to rebuild exactly what the user typed. */
   const [lastTried, setLastTried] = useState<TerminalChoice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exit, setExit] = useState<SessionExit | null>(null);
-  /** Phiên đã yêu cầu nhưng chưa mở xong. Với SSH thì đây là vài giây kết nối và xác thực. */
+  /** A session requested but not finished opening. For SSH that is a few seconds of connecting and
+   *  authenticating. */
   const [opening, setOpening] = useState(false);
-  /* Bấm "Kết nối lại" là bơm số này lên: `TerminalView` mount lại, sinh id mới, mở phiên mới. Nội
-     dung cũ đi theo instance cũ — đúng thế, vì nó là màn hình của một shell không còn nữa. */
+  /* Pressing "Reconnect" bumps this number: `TerminalView` remounts, generates a new id, opens a
+     new session. The old content goes with the old instance — rightly, since it is the screen of a
+     shell that no longer exists. */
   const [generation, setGeneration] = useState(0);
-  /* Tab này đang ở đâu lần mở app trước, chụp đúng một lần. Chụp chứ không đọc sống: `start` ghi
-     giá trị mới ngay khi phiên mở, mà đọc lại cái đó thì tab tự khôi phục từ chính nó. */
+  /* Where this tab was the last time the app was opened, captured exactly once. Captured rather
+     than read live: `start` writes the new value as soon as the session opens, and reading that
+     back would make the tab restore itself from itself. */
   const [restoredState] = useState(() => parseTerminalTabState(restored));
-  /* Gọi `useSavedTargets` ở đây là thứ khởi động lượt đọc mà `useSavedTargetsLoaded` đang chờ — từ
-     trước tới giờ chỉ `TargetForm` gọi nó, mà form thì không có mặt khi tab đang khôi phục. */
+  /* Calling `useSavedTargets` here is what starts the read `useSavedTargetsLoaded` is waiting for
+     — until now only `TargetForm` called it, and the form is not present while the tab is
+     restoring. */
   const savedTargets = useSavedTargets();
   const savedTargetsLoaded = useSavedTargetsLoaded();
   const settings = useTerminalSettings();
-  /** Việc khôi phục đã có lượt của nó chưa — thắng hay thua đều tính. Thiếu cái này thì một tab
-   *  khác lưu thêm một đích là snapshot mới, effect chạy lại, và tab này mở phiên thứ hai. */
+  /** Whether the restore has had its turn yet — win or lose, both count. Without this, another tab
+   *  saving one more target is a new snapshot, the effect runs again, and this tab opens a second
+   *  session. */
   const restoreTried = useRef(false);
 
-  /* Tên của đích đã lưu mà phiên này đến từ đó, khi cài đặt hỏi tới nó. Tắt cài đặt là `null`,
-     và `terminalTitle` quay về cách đặt tên cũ — nên đổi công tắc là mọi tab đang mở đổi tên ngay,
-     đúng như mọi cài đặt khác trong file này. Đích bị xoá cũng ra `null`: tab giữ tên nó đang có
-     thay vì trống, vì `find` không tìm thấy gì. */
+  /* The name of the saved target this session came from, when the setting asks for it. With the
+     setting off it is `null`, and `terminalTitle` falls back to the old way of naming — so flipping
+     the switch renames every open tab at once, just like every other setting in this file. A
+     deleted target also gives `null`: the tab keeps the name it has rather than going blank,
+     because `find` finds nothing. */
   const savedName =
     settings.titleShowsTargetName && choice?.targetId
       ? (savedTargets.find((target) => target.id === choice.targetId)?.name ?? null)
@@ -55,10 +62,11 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
   // this holds words and has to be built again when they change. See `i18n/index.tsx`.
   }, [choice, savedName, onTitleChange, t, lang]);
 
-  /* `useMemo` chứ không dựng thẳng trong effect, và effect không lấy `onBadgesChange` làm phụ
-     thuộc: shell so danh sách badge theo tham chiếu (xem `shell/tabs.ts`), nên một mảng mới là một
-     `setTabs` — và `App` cấp một closure mới mỗi lần render. Hai cái đó cộng lại là một vòng lặp
-     tự nuôi nó cho tới khi React cắt bằng "Maximum update depth exceeded", và cả cây đi theo. */
+  /* `useMemo` rather than building it right in the effect, and the effect does not depend on
+     `onBadgesChange`: the shell compares badge lists by reference (see `shell/tabs.ts`), so a new
+     array is a `setTabs` — and `App` hands out a new closure on every render. Together those two
+     make a self-feeding loop until React cuts it with "Maximum update depth exceeded", taking the
+     whole tree with it. */
   const badges = useMemo(
     () =>
       terminalBadgeMarks(choice, exit !== null).map((mark) => {
@@ -85,8 +93,9 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
 
   const opened = useCallback(() => setOpening(false), []);
 
-  /* Phiên không mở được. `choice` bị xoá nên form quay lại — với `lastTried` còn nguyên, nên người
-     dùng sửa mật khẩu rồi bấm lại chứ không gõ lại từ đầu. Banner do `onError` đặt vẫn ở trên đó. */
+  /* The session could not be opened. `choice` is cleared so the form comes back — with `lastTried`
+     intact, so the user fixes the password and presses again rather than retyping from scratch.
+     The banner set by `onError` stays on top of it. */
   const failed = useCallback(() => {
     setOpening(false);
     setChoice(null);
@@ -97,35 +106,37 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
     setExit(null);
     setOpening(true);
     setChoice(next);
-    /* Gọi từ event handler chứ không từ render, nên một object mới mỗi lần là đúng: shell so theo
-       tham chiếu và chỉ ghi một lần cho mỗi lần mở phiên. */
+    /* Called from an event handler rather than from render, so a new object each time is right:
+       the shell compares by reference and writes only once per session opening. */
     onStateChange(tabStateFor(next));
   }
 
-  /* Bỏ phiên đã chết và quay về màn hình chọn đích. `lastTried` ở lại, nên form dựng lại đúng
-     những gì vừa mở — mở lại cái cũ là một lần bấm, mà đổi sang cái khác cũng vậy.
+  /* Drops the dead session and goes back to the target picker. `lastTried` stays, so the form
+     rebuilds exactly what was just opened — reopening the old one is one click, and so is switching
+     to another.
 
-     Đây là chỗ duy nhất quên ngữ cảnh: bấm nút này là nói "tôi rời khỏi đây". Phiên chết mà chưa
-     bấm thì giữ — màn hình "phiên đã kết thúc" với nút Kết nối lại vẫn là màn hình của đích ấy —
-     và `failed` cũng giữ, vì SSH hỏng không phải là rời đi. */
+     This is the only place that forgets the context: pressing this button says "I am leaving
+     here". A dead session not yet dismissed is kept — the "session ended" screen with its
+     Reconnect button is still that target's screen — and `failed` keeps it too, because a failed
+     SSH is not leaving. */
   function dismiss() {
     setExit(null);
     setChoice(null);
     onStateChange(undefined);
   }
 
-  /* Tab quay lại đúng chỗ nó đang ở, một lần, lần đầu nó được nhìn tới — với một tab khôi phục từ
-     phiên trước thì đó cũng là lần đầu nó được mount.
+  /* The tab returns to exactly where it was, once, the first time it is looked at — for a tab
+     restored from the previous session that is also the first time it is mounted.
 
-     Hai nhánh chờ hai thứ khác nhau. `ssh` chờ danh sách đích đọc xong: trước đó danh sách rỗng và
-     mọi id đều trông như đã bị xoá. `local` chờ `localShells()` — shell dò lại mỗi lần chạy, nên
-     một distro WSL đã gỡ hay một shell đã xoá đơn giản là không có trong danh sách; nó chỉ chờ
-     thêm danh sách đích khi nó thật sự trỏ tới một dòng. Không tìm thấy thì về `TargetForm`, không
-     banner: không có gì hỏng cả.
+     The two branches wait for different things. `ssh` waits for the target list to finish reading:
+     before that the list is empty and every id looks deleted. `local` waits for `localShells()` —
+     shells are detected afresh on every run, so an uninstalled WSL distro or a deleted shell is
+     simply not in the list; it only also waits for the target list when it really points at a row.
+     Not found goes back to `TargetForm`, with no banner: nothing is broken.
 
-     Lệnh mở màn tra trên entry đang sống chứ không đọc từ `localStorage` — sửa nó một lần là tab
-     nào trỏ tới đó cũng theo. Entry đã bị xoá thì nhánh `local` vẫn mở đúng shell của nó, chỉ là
-     không còn lệnh nào để gõ hộ. */
+     The startup command is looked up on the live entry rather than read from `localStorage` —
+     editing it once makes every tab pointing at it follow. For a deleted entry the `local` branch
+     still opens its shell, just with no command left to type on its behalf. */
   useEffect(() => {
     if (restoreTried.current || restoredState === null) return;
 
@@ -133,10 +144,12 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
       if (!savedTargetsLoaded) return;
       restoreTried.current = true;
       const entry = savedTargets.find((target) => target.id === restoredState.targetId);
-      // Một dòng đổi từ máy chủ sang máy này giữa hai lần mở app: id còn đó nhưng nó không còn mở
-      // được một phiên SSH nào, nên tab về form đúng như khi entry đã bị xoá hẳn.
+      // A row changed from a server to this machine between two app launches: the id is still
+      // there but it can no longer open any SSH session, so the tab goes back to the form just as
+      // when the entry has been deleted outright.
       if (entry === undefined || entry.kind !== "ssh") return;
-      // `config` ở đây đã đầy đủ — `savedTargets.ts` ghép bí mật từ keyring vào trước khi trao ra.
+      // `config` here is already complete — `savedTargets.ts` merges the secrets from the keyring
+      // in before handing it out.
       start({
         kind: "ssh",
         config: entry.config,
@@ -146,18 +159,20 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
       return;
     }
 
-    /* Chỉ một tab local từng được lưu thành một dòng mới phải chờ danh sách: cái còn lại không có
-       gì để tra, và bắt nó chờ là bắt nó không mở lại được khi lượt đọc file hỏng. */
+    /* Only a local tab once saved as a new row has to wait for the list: the other kind has
+       nothing to look up, and making it wait would keep it from reopening when the file read
+       fails. */
     if (restoredState.targetId !== undefined && !savedTargetsLoaded) return;
     restoreTried.current = true;
     const saved = restoredState.targetId
       ? savedTargets.find((target) => target.id === restoredState.targetId)
       : undefined;
-    /* Không có cờ huỷ, và cố ý: `restoreTried` đã bảo đảm `localShells()` chỉ chạy đúng một lần,
-       nên thứ duy nhất một cleanup huỷ được lại chính là lần thử ấy — StrictMode tháo rồi gắn lại
-       ngay khi mount, cleanup bắn trước khi dò xong, và tab không bao giờ về lại shell của nó.
-       Bỏ đi cũng không mất gì: tab đóng giữa chừng thì `start` ghi vào một component đã gỡ, React
-       không làm gì cả, và `restateTab` bên shell bỏ qua id không còn trong danh sách. */
+    /* No cancellation flag, on purpose: `restoreTried` already guarantees `localShells()` runs
+       exactly once, so the only thing a cleanup could cancel is that very attempt — StrictMode
+       unmounts and remounts right after mounting, the cleanup fires before detection finishes,
+       and the tab never returns to its shell. Leaving it out costs nothing: if the tab closes
+       midway, `start` writes into an unmounted component, React does nothing, and the shell's
+       `restateTab` ignores an id no longer in the list. */
     localShells()
       .then((shells) => {
         const shell = shells.find((s) => s.name === restoredState.shellName);
@@ -170,7 +185,7 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
           runOnConnect: saved?.kind === "local" ? (saved.runOnConnect ?? null) : null,
         });
       })
-      // Dò shell hỏng thì tab mở ra là form, đúng như trước khi có tính năng này.
+      // If shell detection fails the tab opens on the form, just as before this feature existed.
       .catch(() => {});
   }, [restoredState, savedTargetsLoaded, savedTargets]);
 
@@ -180,8 +195,9 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
     setGeneration((n) => n + 1);
   }
 
-  /* `useMemo` chứ không gọi thẳng trong JSX: `target` là dependency của effect mở phiên trong
-     `TerminalView`, nên một object mới mỗi lần cha render là một phiên mới mỗi lần cha render. */
+  /* `useMemo` rather than calling it directly in JSX: `target` is a dependency of the
+     session-opening effect in `TerminalView`, so a new object on every parent render is a new
+     session on every parent render. */
   const target = useMemo(() => (choice ? terminalTarget(choice) : null), [choice]);
 
   return (

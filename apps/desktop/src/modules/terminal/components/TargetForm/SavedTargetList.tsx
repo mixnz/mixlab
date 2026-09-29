@@ -10,26 +10,28 @@ import styles from "./SavedTargetList.module.css";
 
 interface Props {
   targets: SavedTarget[];
-  /** Đích đang được nạp trong form, để tô đúng dòng. */
+  /** The target currently loaded in the form, to highlight the right row. */
   selectedId: string | null;
   onSelect: (target: SavedTarget) => void;
-  /** Nháy đúp: nạp đích *và* mở luôn phiên. Một chỗ hay dùng thì mọi ô trong form đã đúng sẵn, nên
-   *  bắt người ta nạp rồi mới bấm Kết nối là bắt bấm hai lần cho một ý định. */
+  /** Double-click: loads the target *and* opens the session right away. For a place used often
+   *  every field in the form is already right, so making people load it and then press Connect is
+   *  making them click twice for one intention. */
   onOpen: (target: SavedTarget) => void;
   onDelete: (id: string) => void;
-  /** Bỏ form về trắng — hành động trên danh sách, không phải trên một dòng nào của nó, nên nó nằm
-   *  ở đầu cột chứ không trong menu của một dòng. */
+  /** Clears the form — an action on the list, not on any of its rows, so it sits at the top of
+   *  the column rather than in a row's menu. */
   onNew: () => void;
 }
 
-/** Menu mở ở đâu, và mở trên đích nào. */
+/** Where the menu is open, and on which target. */
 interface MenuState {
   target: SavedTarget;
   x: number;
   y: number;
 }
 
-/** Dòng phụ dưới tên: đủ để phân biệt hai mục trùng tên, không dài hơn thế. */
+/** The secondary line under the name: enough to tell two entries with the same name apart, no
+ *  longer than that. */
 function subtitle(target: SavedTarget): string {
   if (target.kind === "ssh") return `${target.config.username}@${target.config.host}`;
   const label = shellLabel(target.shellName);
@@ -37,15 +39,16 @@ function subtitle(target: SavedTarget): string {
 }
 
 /**
- * Cột đích đã lưu — cả shell trên máy này lẫn máy chủ SSH, trộn chung một danh sách.
+ * The saved targets column — both shells on this machine and SSH servers, mixed in one list.
  *
- * Trộn chung vì cột này là *những chỗ tôi hay mở*, không phải danh sách máy chủ: nó vẫn hiện khi
- * form đang ở "Máy này", và nó vẫn hiện như thế từ trước khi có nhánh local. Cái phân biệt hai loại
- * là dấu hiệu đầu dòng cộng dòng phụ, chứ không phải hai nhóm có tiêu đề riêng — với năm bảy mục
- * thì hai tiêu đề tốn nhiều chỗ hơn phần chúng nói được.
+ * Mixed because this column is *the places I open often*, not a server list: it still shows while
+ * the form is on "This machine", and it showed like that before the local branch existed. What
+ * tells the two kinds apart is the leading marker plus the secondary line, not two groups with
+ * their own headings — with five or seven entries, two headings take up more room than they have
+ * to say.
  *
- * Tự vẽ chứ không dùng `ItemList`: cái đó nói lại bằng tên, mà hai mục trùng tên — chuyện thường
- * với "prod" — thì không phân biệt được. Danh sách này đi theo `id`.
+ * Drawn by hand rather than with `ItemList`: that one reports back by name, and two entries with
+ * the same name — common with "prod" — cannot be told apart. This list goes by `id`.
  */
 function SavedTargetList({ targets, selectedId, onSelect, onOpen, onDelete, onNew }: Props) {
   const { t } = useTranslation();
@@ -78,8 +81,9 @@ function SavedTargetList({ targets, selectedId, onSelect, onOpen, onDelete, onNe
                 }}
               >
                 <span className={styles.title}>
-                  {/* Logo của shell cho máy này; quả địa cầu cho SSH, vì cái nó nói là "ở chỗ khác
-                      trên mạng" chứ không phải "một terminal" — cả hai dòng đều là terminal. */}
+                  {/* The shell's logo for this machine; a globe for SSH, because what it says is
+                      "somewhere else on the network" rather than "a terminal" — both rows are
+                      terminals. */}
                   {target.kind === "local" ? (
                     <ShellIcon name={target.shellName} className={styles.mark} />
                   ) : (
@@ -111,8 +115,9 @@ function SavedTargetList({ targets, selectedId, onSelect, onOpen, onDelete, onNe
       {confirming && (
         <ConfirmDialog
           title={t("terminal.deleteTargetTitle")}
-          /* Chỉ máy chủ mới có gì trong kho thông tin đăng nhập để mất, nên chỉ nó mới nói câu ấy —
-             hứa xoá mật khẩu của một shell trên máy này là hứa một việc không có thật. */
+          /* Only a server has anything in the credential store to lose, so only it says that
+             sentence — promising to delete the password of a shell on this machine is promising
+             something that is not real. */
           message={
             confirming.kind === "ssh"
               ? t("terminal.deleteTargetMessageSsh", { name: confirming.name })

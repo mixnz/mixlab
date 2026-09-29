@@ -7,9 +7,9 @@ describe("fontStack", () => {
     expect(fontStack("Cascadia Code")).toBe('"Cascadia Code", monospace');
   });
 
-  /* Cái này là lý do hàm tồn tại: xterm nuốt lặng lẽ một `ctx.font` không phân tích được, giữ số
-     đo ô chữ cũ, và màn hình cắt ngang mọi dòng khi cỡ chữ đổi. Không stack nào ra khỏi đây mà
-     thiếu tên font. */
+  /* This is why the function exists: xterm silently swallows a `ctx.font` it cannot parse, keeps
+     the old cell measurements, and the screen cuts across every line when the font size changes.
+     No stack leaves here without a font name. */
   it("never answers with a stack that has no font in it", () => {
     expect(fontStack("")).toBe(DEFAULT_FONT_FAMILY);
     expect(fontStack("   ")).toBe(DEFAULT_FONT_FAMILY);

@@ -64,48 +64,50 @@ pub struct SshConfig {
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const CHANNEL_OPEN_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// Nhịp russh gửi một gói giữ phiên khi đường đang im.
+/// The interval at which russh sends a keepalive packet while the line is quiet.
 ///
-/// 15 giây: đủ ngắn để đi trước idle timeout của một NAT gia đình (thường 300 giây) và trước
-/// `ClientAliveInterval` của sshd; đủ dài để một phiên để không cả ngày cũng chỉ tốn vài trăm byte.
+/// 15 seconds: short enough to beat a home NAT's idle timeout (usually 300 seconds) and sshd's
+/// `ClientAliveInterval`; long enough that a session left idle all day only costs a few hundred
+/// bytes.
 const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(15);
 
-/// Số lần liên tiếp không được trả lời trước khi russh kết thúc phiên — cũng là mặc định của nó.
-/// Nhân với nhịp trên, một đường chết bị phát hiện trong khoảng 45 giây.
+/// How many consecutive unanswered keepalives before russh ends the session — also its default.
+/// Multiplied by the interval above, a dead line is detected within about 45 seconds.
 const KEEPALIVE_MAX: usize = 3;
 
-/// Khoảng nghỉ tối thiểu sau một lần xác thực hỏng.
+/// The minimum pause after a failed authentication.
 ///
-/// Không có nó, một pool đang cố mở kết nối trong lúc mạng chết sẽ bắn hàng chục lần xác thực mỗi
-/// phút vào một sshd có `MaxAuthTries` — và có thể có fail2ban.
+/// Without it, a pool trying to open connections while the network is dead would fire dozens of
+/// authentications a minute at an sshd that has `MaxAuthTries` — and possibly fail2ban.
 const RETRY_COOLDOWN: Duration = Duration::from_secs(3);
 
-/// Nhịp watcher kiểm tra phiên khi mọi thứ đang ổn.
+/// The interval at which the watcher checks the session while everything is fine.
 const WATCH_IDLE: Duration = Duration::from_secs(15);
 
-/// Nhịp ngay sau lần hỏng đầu tiên, trước khi giãn dần.
+/// The interval right after the first failure, before it gradually widens.
 const WATCH_MIN: Duration = Duration::from_secs(5);
 
-/// Trần của backoff: máy chủ SSH thật sự không tới được thì thử một phút một lần, không hơn.
+/// The backoff's cap: an SSH server that really cannot be reached is tried once a minute, no more.
 const WATCH_MAX: Duration = Duration::from_secs(60);
 
-/// Vòng accept chờ chừng này sau một lỗi không thuộc về riêng một kết nối — hết file descriptor,
-/// hết bộ nhớ tạm. Đủ dài để một lỗi lặp lại không đốt hết một lõi, đủ ngắn để truy vấn tiếp theo
-/// qua tunnel không kịp nhận ra.
+/// How long the accept loop waits after an error that does not belong to a single connection —
+/// out of file descriptors, temporarily out of memory. Long enough that a repeating error does not
+/// burn a whole core, short enough that the next query through the tunnel does not notice.
 const ACCEPT_RETRY: Duration = Duration::from_millis(100);
 
-/// Bấy nhiêu lần hỏng liên tiếp thì mới phiền tới người dùng — khoảng hai giây cổng không nhận
-/// được gì. Ngắn hơn thì một cơn hết file descriptor thoáng qua cũng nháy banner.
+/// This many consecutive failures before bothering the user — about two seconds of the port
+/// accepting nothing. Any shorter and a passing run out of file descriptors would flash the banner.
 const ACCEPT_ALARM: u32 = 20;
 
-/// Lỗi `accept` thuộc về đúng một kết nối vừa hỏng, không phải về cái cổng đang nghe.
+/// An `accept` error belongs to exactly one connection that just failed, not to the listening
+/// port.
 ///
-/// Kết nối bị huỷ giữa lúc bắt tay là chuyện thường của một pool: Windows trả `WSAECONNRESET` hoặc
-/// `WSAECONNABORTED`, Unix trả `ECONNABORTED`, và `EINTR` là một signal cắt ngang lời gọi. Lần
-/// `accept` sau vẫn nhận được như không có gì.
+/// A connection cancelled mid-handshake is routine for a pool: Windows returns `WSAECONNRESET` or
+/// `WSAECONNABORTED`, Unix returns `ECONNABORTED`, and `EINTR` is a signal interrupting the call.
+/// The next `accept` still succeeds as if nothing happened.
 ///
-/// Xếp nhầm không tốn gì ngoài một nhịp `ACCEPT_RETRY`: từ đây trở đi cả hai nhánh đều thử lại, và
-/// cái danh sách này chỉ quyết định có chờ và có đếm về phía banner hay không.
+/// Misclassifying costs nothing but one `ACCEPT_RETRY` beat: from here on both branches retry, and
+/// this list only decides whether to wait and whether to count towards the banner.
 fn is_transient_accept(e: &std::io::Error) -> bool {
     matches!(
         e.kind(),
@@ -116,11 +118,12 @@ fn is_transient_accept(e: &std::io::Error) -> bool {
     )
 }
 
-/// Nhịp chờ kế tiếp của watcher.
+/// The watcher's next waiting interval.
 ///
-/// So sánh bằng `==` chứ không phải `>=`: `WATCH_MAX` lớn hơn `WATCH_IDLE`, nên một điều kiện
-/// "lớn hơn hoặc bằng nhịp nghỉ" sẽ kéo cả nhịp trần về `WATCH_MIN` và biến backoff thành một vòng
-/// lặp. `WATCH_IDLE` chỉ được đặt khi thành công, nên so bằng là chính xác.
+/// Compared with `==` rather than `>=`: `WATCH_MAX` is larger than `WATCH_IDLE`, so a condition of
+/// "greater than or equal to the idle interval" would pull even the capped interval back to
+/// `WATCH_MIN` and turn the backoff into a loop. `WATCH_IDLE` is only set on success, so comparing
+/// for equality is exact.
 fn next_backoff(current: Duration, ok: bool) -> Duration {
     if ok {
         return WATCH_IDLE;
@@ -223,10 +226,10 @@ fn verify_host(path: &Path, endpoint: &str, fingerprint: &str) -> Result<(), App
     }
 }
 
-/// Chuyện đang xảy ra với một tunnel, cho ai muốn nói lại với người dùng.
+/// What is happening to a tunnel, for whoever wants to tell the user about it.
 ///
-/// `ssh/` không biết gì về Tauri — nó nhận một callback và gọi, còn việc biến thành sự kiện của
-/// cửa sổ là việc của `commands/mod.rs`.
+/// `ssh/` knows nothing about Tauri — it takes a callback and calls it, and turning that into a
+/// window event is the job of `commands/mod.rs`.
 pub enum TunnelEvent {
     Reconnecting,
     Reconnected,
@@ -235,19 +238,22 @@ pub enum TunnelEvent {
 
 pub type TunnelNotify = Arc<dyn Fn(TunnelEvent) + Send + Sync>;
 
-/// Phiên SSH đang dùng, và dấu vết của lần mở gần nhất.
+/// The SSH session in use, and a trace of the latest opening.
 struct SessionSlot {
-    /// `None` nghĩa là chưa có phiên nào, hoặc lần mở lại gần nhất thất bại.
+    /// `None` means there is no session yet, or the latest reopening failed.
     handle: Option<Arc<client::Handle<TunnelHandler>>>,
-    /// Khi phiên hiện tại được mở. Một phiên trẻ hơn `RETRY_COOLDOWN` không bị vứt đi vì một lần
-    /// mở channel hỏng: máy chủ từ chối forward thẳng thừng (`PermitOpen`, `AllowTcpForwarding no`)
-    /// thì mọi lần đều hỏng, và xác thực lại cho từng kết nối bị từ chối chỉ tổ nện máy chủ.
+    /// When the current session was opened. A session younger than `RETRY_COOLDOWN` is not thrown
+    /// away over one failed channel opening: a server that flatly refuses forwarding
+    /// (`PermitOpen`, `AllowTcpForwarding no`) fails every time, and re-authenticating for every
+    /// refused connection would only hammer the server.
     opened_at: Option<Instant>,
-    /// Lần thất bại gần nhất, để không nện máy chủ SSH bằng một chuỗi xác thực hỏng.
+    /// The latest failure, so the SSH server is not hammered with a chain of failed
+    /// authentications.
     failed_at: Option<Instant>,
 }
 
-/// Tất cả những gì cần để mở lại phiên, dùng chung bởi vòng accept, watcher, và mọi task bridge.
+/// Everything needed to reopen the session, shared by the accept loop, the watcher and every
+/// bridge task.
 struct TunnelInner {
     ssh: SshConfig,
     remote_host: String,
@@ -258,12 +264,12 @@ struct TunnelInner {
 }
 
 impl TunnelInner {
-    /// Phiên đang dùng, mở lại nếu phiên cũ đã chết.
+    /// The session in use, reopened if the old one has died.
     ///
-    /// Khoá giữ suốt lần xác thực là cố ý: pool mở năm kết nối cùng lúc thì cả năm dừng lại sau
-    /// **một** lần `authenticate`, không phải năm lần. Cái giá là khi đang mở lại, mọi kết nối mới
-    /// qua tunnel này chờ tối đa `CONNECT_TIMEOUT` (10 giây) — nằm gọn trong `acquire_timeout` 30
-    /// giây mặc định của sqlx.
+    /// Holding the lock for the whole authentication is deliberate: a pool opening five connections
+    /// at once has all five wait behind **one** `authenticate`, not five. The price is that while
+    /// reopening, every new connection through this tunnel waits up to `CONNECT_TIMEOUT` (10
+    /// seconds) — well within sqlx's default 30-second `acquire_timeout`.
     async fn session(&self) -> Result<Arc<client::Handle<TunnelHandler>>, AppError> {
         let mut slot = self.session.lock().await;
         if let Some(handle) = slot.handle.as_ref().filter(|handle| !handle.is_closed()) {
@@ -299,12 +305,13 @@ impl TunnelInner {
         }
     }
 
-    /// Vứt phiên hiện tại đi, để lần `session()` kế tiếp mở phiên mới.
+    /// Throws the current session away, so the next `session()` opens a new one.
     ///
-    /// `is_closed()` là đường phát hiện nhanh, không phải đường duy nhất: một phiên vừa chết có thể
-    /// chưa kịp báo, và cái hỏng đầu tiên là `channel_open_direct_tcpip`. Cooldown ở đây chặn
-    /// trường hợp ngược lại — phiên còn sống nhưng máy chủ từ chối forward, khi đó mở phiên mới
-    /// không giúp được gì và không được phép lặp lại cho từng kết nối.
+    /// `is_closed()` is the quick way to detect it, not the only one: a session that just died may
+    /// not have reported it yet, and the first thing to fail is `channel_open_direct_tcpip`. The
+    /// cooldown here blocks the opposite case — the session is alive but the server refuses
+    /// forwarding; opening a new session then helps nothing and must not be repeated for every
+    /// connection.
     async fn forget_session(&self) {
         let mut slot = self.session.lock().await;
         if slot
@@ -330,9 +337,9 @@ pub struct Tunnel {
 }
 
 impl Tunnel {
-    /// Một tay cầm rẻ tới cùng phiên, để người gọi mở lại được mà không phải giữ cái khoá mà
-    /// `Tunnel` đang nằm sau — xác thực mất tới 10 giây, và bản đồ connection không được khoá lâu
-    /// như thế. Xem `commands::tunnel_reconnect`.
+    /// A cheap handle to the same session, so the caller can reopen it without holding the lock
+    /// `Tunnel` sits behind — authentication takes up to 10 seconds, and the connection map must
+    /// not be locked that long. See `commands::tunnel_reconnect`.
     pub fn session_handle(&self) -> TunnelSession {
         TunnelSession(Arc::clone(&self.inner))
     }
@@ -345,13 +352,13 @@ impl Drop for Tunnel {
     }
 }
 
-/// Mở lại phiên theo yêu cầu của người dùng, không chờ hết nhịp backoff.
+/// Reopens the session at the user's request, without waiting out the backoff.
 pub struct TunnelSession(Arc<TunnelInner>);
 
 impl TunnelSession {
     pub async fn reconnect(&self) -> Result<(), AppError> {
-        // Xoá dấu thất bại trước, nếu không lần gọi ngay sau một lần hỏng sẽ rơi vào cooldown và
-        // nút *Thử lại* không làm gì cả.
+        // Clear the failure mark first, otherwise a call right after a failure would fall into the
+        // cooldown and the *Retry* button would do nothing.
         {
             let mut slot = self.0.session.lock().await;
             slot.failed_at = None;
@@ -440,13 +447,14 @@ async fn authenticate_inner(
         // nothing else is coming until the client has seen it. russh leaves it on by default.
         nodelay: true,
         window_size: WINDOW_SIZE,
-        // russh mặc định không gửi gì cả (`keepalive_interval: None`), nên một phiên để không sẽ
-        // bị NAT hoặc sshd bỏ rơi mà không ai biết — và `is_closed()` không bao giờ thành `true`.
-        // Bật lên vừa giữ phiên sống, vừa là thứ duy nhất phát hiện được đường đã chết.
+        // russh sends nothing by default (`keepalive_interval: None`), so an idle session would be
+        // dropped by a NAT or by sshd without anyone knowing — and `is_closed()` would never become
+        // `true`. Turning it on both keeps the session alive and is the only thing that detects a
+        // dead line.
         keepalive_interval: Some(KEEPALIVE_INTERVAL),
         keepalive_max: KEEPALIVE_MAX,
-        // `inactivity_timeout` giữ nguyên `None`: nó đóng phiên khi không có traffic, đúng thứ
-        // đang muốn tránh.
+        // `inactivity_timeout` stays `None`: it closes the session when there is no traffic,
+        // exactly what we want to avoid.
         ..client::Config::default()
     });
     let refused: Arc<Mutex<Option<AppError>>> = Arc::new(Mutex::new(None));
@@ -546,8 +554,9 @@ pub async fn open_tunnel(
     app_data: &Path,
     notify: TunnelNotify,
 ) -> Result<(u16, Tunnel), AppError> {
-    // Lần xác thực đầu đứng ngoài `session()`: nó phải hỏng ra ngoài cho `connect_db` thấy, và
-    // không có gì để báo "đang kết nối lại" khi chưa từng có kết nối nào.
+    // The first authentication stands outside `session()`: it has to fail outwards for
+    // `connect_db` to see, and there is no "reconnecting" to report when there has never been a
+    // connection.
     let session = authenticate(ssh, app_data).await?;
 
     let listener = TcpListener::bind(("127.0.0.1", 0))
@@ -574,39 +583,39 @@ pub async fn open_tunnel(
     let accept: JoinHandle<()> = tokio::spawn({
         let inner = Arc::clone(&inner);
         async move {
-            /* Bao nhiêu lỗi `accept` liên tiếp không thuộc về một kết nối lẻ. Đếm để biết lúc nào
-            nên nói, và để biết lúc nào nói lại rằng đã ổn. */
+            /* How many consecutive `accept` errors do not belong to a single connection. Counted to
+            know when to speak up, and when to say again that things are fine. */
             let mut failures: u32 = 0;
             loop {
                 let (local_stream, _) = match listener.accept().await {
                     Ok(pair) => {
-                        // Nhận lại được sau khi đã kêu thì phải rút lời: banner đang nói tunnel
-                        // hỏng, mà nó vừa nhận một kết nối.
+                        // Accepting again after having complained means taking it back: the banner
+                        // is saying the tunnel is broken, and it has just accepted a connection.
                         if failures >= ACCEPT_ALARM {
                             (inner.notify)(TunnelEvent::Reconnected);
                         }
                         failures = 0;
                         pair
                     }
-                    // Một kết nối lẻ chết giữa lúc bắt tay. Cái tiếp theo vẫn tới, nên không chờ
-                    // và không đếm.
+                    // A single connection died mid-handshake. The next one still arrives, so no
+                    // wait and no count.
                     Err(e) if is_transient_accept(&e) => continue,
                     Err(e) => {
                         failures += 1;
-                        /* Trước đây chỗ này `break` ngay lần đầu, và tunnel chết trong im lặng:
-                        watcher chỉ nhìn phiên SSH, thấy phiên còn sống nên không banner nào
-                        hiện, và mọi truy vấn sau đó chỉ trả về `connectionLost`. Nói đúng một
-                        lần, ở đúng lần thứ `ACCEPT_ALARM`. */
+                        /* This used to `break` on the first one, and the tunnel died silently: the
+                        watcher only looks at the SSH session, saw it still alive so no banner
+                        showed, and every query after that just returned `connectionLost`. Speak up
+                        exactly once, at exactly the `ACCEPT_ALARM`-th time. */
                         if failures == ACCEPT_ALARM {
                             (inner.notify)(TunnelEvent::Failed(err!(
                                 "error.tunnelAcceptFailed",
                                 message = e
                             )));
                         }
-                        /* Và vẫn thử tiếp, như watcher vẫn thử tiếp: hết file descriptor là
-                        chuyện qua đi, còn bỏ vòng lặp ở đây thì không còn gì mở lại được cổng
-                        — nó chỉ được bind một lần, trong `open_tunnel`. Vòng lặp sống đúng
-                        bằng đời của `Tunnel`, mà `Drop` của nó abort task này. */
+                        /* And keep trying, just as the watcher keeps trying: running out of file
+                        descriptors passes, while leaving the loop here leaves nothing that can
+                        reopen the port — it is only bound once, in `open_tunnel`. The loop lives
+                        exactly as long as the `Tunnel`, whose `Drop` aborts this task. */
                         tokio::time::sleep(ACCEPT_RETRY).await;
                         continue;
                     }
@@ -624,9 +633,10 @@ pub async fn open_tunnel(
         }
     });
 
-    // Chỉ mở lại khi có ai đó gõ cửa thì banner chỉ hiện sau khi người dùng đã bấm vào một thứ và
-    // chờ. Watcher làm tab tự lành: máy tính ngủ dậy, đường mạng về, và banner đã chuyển sang "đã
-    // kết nối lại" trước khi người dùng chạm vào gì.
+    // Reopening only when someone knocks means the banner only shows after the user has clicked
+    // something and waited. The watcher makes the tab heal itself: the computer wakes up, the
+    // network comes back, and the banner has already switched to "reconnected" before the user
+    // touches anything.
     let watch: JoinHandle<()> = tokio::spawn({
         let inner = Arc::clone(&inner);
         async move {
@@ -660,8 +670,8 @@ async fn bridge_connection(inner: &Arc<TunnelInner>, mut local_stream: tokio::ne
     let channel = match open_channel(inner).await {
         Some(channel) => channel,
         None => {
-            // Phiên trông còn sống mà không phải. Vứt nó đi rồi thử đúng một lần nữa với phiên
-            // mới, trước khi buông socket local.
+            // The session looks alive but is not. Throw it away and try exactly once more with a
+            // new session, before letting go of the local socket.
             inner.forget_session().await;
             match open_channel(inner).await {
                 Some(channel) => channel,
@@ -696,8 +706,8 @@ async fn bridge_connection(inner: &Arc<TunnelInner>, mut local_stream: tokio::ne
     .await;
 }
 
-/// Một lần thử mở channel forward trên phiên hiện tại. `None` là hỏng, không nói vì sao — người
-/// gọi chỉ có hai lựa chọn, thử lại hoặc buông.
+/// One attempt to open a forwarding channel on the current session. `None` is a failure, without
+/// saying why — the caller only has two choices, retry or let go.
 async fn open_channel(inner: &Arc<TunnelInner>) -> Option<russh::Channel<client::Msg>> {
     let session = inner.session().await.ok()?;
     let opened = timeout(
@@ -716,11 +726,11 @@ async fn open_channel(inner: &Arc<TunnelInner>) -> Option<russh::Channel<client:
     }
 }
 
-/// Một shell đang chạy trên máy chủ, cộng phiên SSH giữ nó sống.
+/// A shell running on the server, plus the SSH session keeping it alive.
 ///
-/// Phiên đi cùng channel chứ không ở lại trong hàm: `client::Handle` là thứ chạy vòng lặp sự kiện
-/// của russh, và bỏ nó là channel chết theo trong vài mili giây. Người gọi phải giữ cả hai sống
-/// đúng bằng nhau, nên hàm này trao cả hai cùng lúc.
+/// The session travels with the channel rather than staying in the function: `client::Handle` is
+/// what runs russh's event loop, and dropping it makes the channel die within milliseconds. The
+/// caller has to keep both alive for exactly as long, so this function hands over both at once.
 pub struct RemoteShell {
     session: client::Handle<TunnelHandler>,
     read: russh::ChannelReadHalf,
@@ -728,8 +738,9 @@ pub struct RemoteShell {
 }
 
 impl RemoteShell {
-    /// Tách làm hai nửa cho hai task: một đọc, một ghi. Phiên SSH ở lại với nửa ghi — đó là nửa
-    /// sống đúng bằng phiên terminal, còn nửa đọc kết thúc ngay khi đầu xa im.
+    /// Splits into two halves for two tasks: one reads, one writes. The SSH session stays with the
+    /// write half — that is the half living exactly as long as the terminal session, while the read
+    /// half ends as soon as the far end goes quiet.
     pub fn split(self) -> (russh::ChannelReadHalf, RemoteWriter) {
         (
             self.read,
@@ -741,17 +752,19 @@ impl RemoteShell {
     }
 }
 
-/// Nửa ghi của một phiên shell: byte gõ, đổi kích thước, và đóng.
+/// The write half of a shell session: typed bytes, resizes, and closing.
 ///
-/// Giữ luôn `client::Handle` vì cả ba đường ra vào của một phiên đều đi qua đây — nên bỏ cái này
-/// là đóng cả kết nối, và không có đường nào để sót một phiên SSH đang mở.
+/// Also holds the `client::Handle`, because all three ways in and out of a session pass through
+/// here — so dropping this closes the whole connection, and there is no way to leave an SSH session
+/// open behind.
 pub struct RemoteWriter {
     session: client::Handle<TunnelHandler>,
     write: russh::ChannelWriteHalf<client::Msg>,
 }
 
 impl RemoteWriter {
-    /// Byte người dùng gõ. Hỏng là đường đã đứt — người gọi dừng, không thử lại.
+    /// The bytes the user types. A failure means the line is broken — the caller stops and does not
+    /// retry.
     pub async fn write(&self, bytes: Vec<u8>) -> Result<(), AppError> {
         self.write
             .data_bytes(bytes)
@@ -759,8 +772,8 @@ impl RemoteWriter {
             .map_err(|e| err!("error.sshShellFailed", message = e))
     }
 
-    /// Khung đổi kích thước. `pix_width`/`pix_height` để 0: đầu xa dùng cols/rows, và số pixel của
-    /// một webview không nói gì về ô chữ của nó.
+    /// A resize frame. `pix_width`/`pix_height` are left at 0: the far end uses cols/rows, and a
+    /// webview's pixel count says nothing about its character cells.
     pub async fn resize(&self, cols: u16, rows: u16) -> Result<(), AppError> {
         self.write
             .window_change(cols as u32, rows as u32, 0, 0)
@@ -768,9 +781,9 @@ impl RemoteWriter {
             .map_err(|e| err!("error.sshShellFailed", message = e))
     }
 
-    /// Đóng cho gọn: hết đầu vào, đóng channel, rồi chào máy chủ. Bỏ `RemoteWriter` cũng đóng
-    /// được, nhưng bằng cách rơi handle mà không nói lời nào — và một sshd đang ghi log thì đáng
-    /// được nói.
+    /// Closes cleanly: end of input, close the channel, then say goodbye to the server. Dropping
+    /// `RemoteWriter` also closes it, but by dropping the handle without a word — and an sshd that
+    /// keeps logs deserves to be told.
     pub async fn close(self) {
         let _ = self.write.eof().await;
         let _ = self.write.close().await;
@@ -781,12 +794,12 @@ impl RemoteWriter {
     }
 }
 
-/// Mở một shell trên máy chủ: kết nối, xác thực, xin pty, xin shell.
+/// Opens a shell on the server: connect, authenticate, request a pty, request a shell.
 ///
-/// Dùng chung `authenticate()` với tunnel — cùng kiểm vân tay theo `known_hosts.json`, cùng hai
-/// cách xác thực — nhưng **kết nối là riêng**: vòng đời một terminal là vòng đời cái tab, còn vòng
-/// đời một tunnel là vòng đời một kết nối database. Gộp lại thì đóng tab terminal làm rụng kết nối
-/// database.
+/// Shares `authenticate()` with the tunnel — the same fingerprint check against
+/// `known_hosts.json`, the same two ways of authenticating — but **the connection is its own**: a
+/// terminal's lifetime is the tab's lifetime, while a tunnel's lifetime is a database connection's.
+/// Sharing one would make closing a terminal tab drop the database connection.
 pub async fn open_shell(
     ssh: &SshConfig,
     app_data: &Path,
@@ -808,10 +821,10 @@ pub async fn open_shell(
         }
     };
 
-    /* `want_reply: true` cho cả hai: một máy chủ từ chối cấp pty phải nói ra, và câu trả lời của
-    nó tới dưới dạng `ChannelMsg::Success`/`Failure` trong hàng đợi của channel. Bộ đọc bỏ qua
-    cả hai — cái nó chờ là byte — nhưng một `Failure` bao giờ cũng kéo theo channel đóng, và
-    phiên kết thúc ngay thay vì treo trên một terminal câm. */
+    /* `want_reply: true` for both: a server refusing to grant a pty has to say so, and its answer
+    arrives as `ChannelMsg::Success`/`Failure` in the channel's queue. The reader ignores both —
+    what it waits for is bytes — but a `Failure` always brings the channel closing with it, and the
+    session ends right away instead of hanging on a mute terminal. */
     channel
         .request_pty(true, "xterm-256color", cols as u32, rows as u32, 0, 0, &[])
         .await
@@ -975,48 +988,54 @@ mod tests {
         assert!(known.is_empty());
     }
 
-    /// Nhịp của watcher. Thành công thì về nhịp nghỉ; hỏng lần đầu xuống nhịp nhanh nhất rồi giãn
-    /// dần gấp đôi tới trần — và ở lại trần thay vì quay về nhịp nhanh.
+    /// The watcher's interval. Success goes back to the idle interval; the first failure drops to
+    /// the fastest interval, then doubles gradually up to the cap — and stays at the cap instead of
+    /// returning to the fast interval.
     #[test]
     fn the_watcher_backs_off_while_the_tunnel_stays_down() {
-        // Đang ổn thì mỗi nhịp là WATCH_IDLE, dù trước đó vừa hỏng ở nhịp nào.
+        // While things are fine every interval is WATCH_IDLE, whatever interval it just failed at.
         assert_eq!(next_backoff(WATCH_IDLE, true), WATCH_IDLE);
         assert_eq!(next_backoff(WATCH_MIN, true), WATCH_IDLE);
         assert_eq!(next_backoff(WATCH_MAX, true), WATCH_IDLE);
 
-        // Lần hỏng đầu tiên — nhịp hiện tại đang là nhịp nghỉ — thử lại nhanh.
+        // The first failure — the current interval is the idle one — retries quickly.
         assert_eq!(next_backoff(WATCH_IDLE, false), WATCH_MIN);
 
-        // Rồi gấp đôi.
+        // Then doubles.
         assert_eq!(next_backoff(WATCH_MIN, false), Duration::from_secs(10));
         assert_eq!(
             next_backoff(Duration::from_secs(10), false),
             Duration::from_secs(20)
         );
 
-        // Chạm trần thì dừng ở trần, không vượt và không quay về WATCH_MIN.
+        // Hitting the cap stops at the cap, neither exceeding it nor going back to WATCH_MIN.
         assert_eq!(next_backoff(Duration::from_secs(40), false), WATCH_MAX);
         assert_eq!(next_backoff(WATCH_MAX, false), WATCH_MAX);
     }
 
-    /// Cái vòng accept quyết định trên: lỗi nào là của một kết nối lẻ, lỗi nào là của cổng.
+    /// What the accept loop above decides: which errors belong to a single connection, and which to
+    /// the port.
     ///
-    /// Kiểm bằng chính mã lỗi của hệ điều hành chứ không bằng `ErrorKind` viết tay, vì điều đang
-    /// được khẳng định là *mã của Windows và của Unix rơi vào đúng những `ErrorKind` mà vòng lặp
-    /// bắt* — phần dễ sai nhất và phần không đọc ra được từ code.
+    /// Checked with the operating system's own error codes rather than hand-written `ErrorKind`s,
+    /// because what is being asserted is that *Windows' and Unix's codes land in exactly the
+    /// `ErrorKind`s the loop catches* — the part easiest to get wrong and the part that cannot be
+    /// read off the code.
     #[test]
     fn an_aborted_connection_is_not_a_broken_listener() {
-        // Mã thô được hệ điều hành *đang chạy* dịch, nên mỗi nửa chỉ chạy ở nhà nó — CI chạy cả
-        // hai. Một pool buông socket nửa mở sinh ra đúng những mã này.
+        // Raw codes are translated by the *running* operating system, so each half only runs at
+        // home — CI runs both. A pool dropping half-open sockets produces exactly these codes.
         #[cfg(windows)]
         {
             assert!(is_transient_accept(&Error::from_raw_os_error(10054))); // WSAECONNRESET
             assert!(is_transient_accept(&Error::from_raw_os_error(10053))); // WSAECONNABORTED
-                                                                            // Hết handle không phải chuyện của một kết nối: chờ rồi thử lại.
+                                                                            // Running out of
+                                                                            // handles is not about
+                                                                            // one connection: wait,
+                                                                            // then retry.
             assert!(!is_transient_accept(&Error::from_raw_os_error(10024))); // WSAEMFILE
         }
-        // Unix không có một bảng số chung: Linux đánh `ECONNRESET` là 104, macOS là 54 — nên lấy
-        // từ `libc` của chính hệ điều hành đang build, không viết số tay.
+        // Unix has no shared number table: Linux numbers `ECONNRESET` 104, macOS 54 — so take them
+        // from the `libc` of the operating system being built for, not hand-written numbers.
         #[cfg(unix)]
         {
             assert!(is_transient_accept(&Error::from_raw_os_error(
@@ -1030,11 +1049,11 @@ mod tests {
             )));
         }
 
-        // Và một signal cắt ngang lời gọi, ở mọi nhà.
+        // And a signal interrupting the call, everywhere.
         assert!(is_transient_accept(&Error::from(ErrorKind::Interrupted)));
 
-        // Hai giây cổng câm là ngưỡng phiền tới người dùng: đủ lâu để một cơn thoáng qua tự khỏi
-        // trong im lặng.
+        // Two seconds of a silent port is the threshold for bothering the user: long enough for a
+        // passing blip to clear up silently.
         assert_eq!(ACCEPT_RETRY * ACCEPT_ALARM, Duration::from_secs(2));
     }
 }

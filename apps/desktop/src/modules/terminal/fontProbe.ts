@@ -1,34 +1,38 @@
 /**
- * Font nào trong danh sách thật sự có trên máy này.
+ * Which fonts in the list really exist on this machine.
  *
- * Không có API nào hỏi thẳng được. `document.fonts.check` thì trả `true` cho cả những tên không
- * tồn tại, còn `queryLocalFonts` đòi một lượt xin phép mà app không có chỗ nào để hỏi. Nên cách
- * duy nhất còn lại là cách mọi người vẫn dùng: đo một chuỗi mẫu bằng font ấy, rồi so với chính
- * chuỗi ấy đo bằng font dự phòng. Bằng nhau nghĩa là trình duyệt đã rơi về dự phòng — font không
- * có ở đây.
+ * No API can ask this directly. `document.fonts.check` returns `true` even for names that do not
+ * exist, and `queryLocalFonts` demands a permission prompt the app has nowhere to ask for. So the
+ * only way left is the one everyone uses: measure a sample string in that font, then compare it
+ * with the same string measured in a fallback font. Equal means the browser has fallen back — the
+ * font is not here.
  *
- * Ba font dự phòng chứ không một: một font đơn cách có thể rộng đúng bằng `monospace` mặc định
- * của máy — nó *là* cái ấy — nhưng gần như không bao giờ rộng bằng cả `serif` lẫn `sans-serif`.
+ * Three fallback fonts rather than one: a monospace font may be exactly as wide as the machine's
+ * default `monospace` — it *is* that font — but almost never as wide as both `serif` and
+ * `sans-serif`.
  *
- * Ở đây chứ không trong `fonts.ts` vì nó cần canvas; `fonts.ts` giữ phần quy tắc thuần mà test
- * với tới được.
+ * Here rather than in `fonts.ts` because it needs a canvas; `fonts.ts` keeps the pure rules that
+ * tests can reach.
  */
 
-/** Trộn chữ hẹp với chữ rộng: hai font khác nhau khó lòng ra cùng một bề rộng cho cả cụm. */
+/** Mixes narrow and wide characters: two different fonts are unlikely to give the same width for
+ *  the whole run. */
 const PROBE_TEXT = "mmmmmmmmmmlliWW0O";
 
-/** To hẳn lên: mỗi khác biệt nhỏ về hình chữ thành vài pixel thay vì một phần pixel bị làm tròn. */
+/** Much larger: every small difference in glyph shape becomes a few pixels rather than a fraction
+ *  of a pixel lost to rounding. */
 const PROBE_SIZE = 72;
 
 const FALLBACKS = ["monospace", "serif", "sans-serif"] as const;
 
 export async function installedFonts(candidates: readonly string[]): Promise<string[]> {
-  /* Đợi font tải xong trước khi đo. Geist Mono không phải font hệ thống mà là webfont đóng kèm app
-     — xem `main.tsx` — nên đo sớm một nhịp là trình duyệt còn đang dùng font dự phòng, và cái font
-     mặc định của chính terminal bị kết luận là "máy không có". */
+  /* Wait for fonts to load before measuring. Geist Mono is not a system font but a webfont bundled
+     with the app — see `main.tsx` — so measuring one beat early finds the browser still using the
+     fallback, and the terminal's own default font is judged "not on this machine". */
   await document.fonts.ready;
   const ctx = document.createElement("canvas").getContext("2d");
-  // Không đo được thì đừng đoán: trả danh sách rỗng, và hộp chọn sẽ chỉ còn font đang dùng.
+  // If it cannot be measured, do not guess: return an empty list, and the picker will only have
+  // the font in use.
   if (!ctx) return [];
 
   const baseline = FALLBACKS.map((fallback) => {

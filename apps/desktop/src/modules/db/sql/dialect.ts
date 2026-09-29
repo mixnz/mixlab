@@ -189,7 +189,7 @@ export interface SqlDialect {
    *
    * True on every engine. `DbTab` folds this into `SqlWorkspace`'s `dataReadOnly` prop, which only
    * the Data tab's grid reads — the Query tab is not wired to this flag yet (ClickHouse's still
-   * closed there; see the design doc above's "Những gì để lại").
+   * closed there; see the design doc above's "What is left out").
    */
   rowsWritable: boolean;
 

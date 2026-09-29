@@ -8,35 +8,38 @@ import type { SavedTarget } from "./types";
 import { createStore, useStore, useStoreLoaded } from "../../core/jsonStore";
 
 /**
- * Danh sách đích đã lưu, dùng chung bởi mọi tab.
+ * The list of saved targets, shared by every tab.
  *
- * Đọc một lần: mỗi tab tự đọc thì mỗi tab tốn một lượt đọc file cộng một lượt hỏi kho thông tin
- * đăng nhập cho mỗi máy chủ, và một đích lưu ở tab này sẽ không thấy ở tab kia cho tới lần mở app
- * sau. Danh sách là một thứ trên đĩa, nên nó là một thứ trong bộ nhớ.
+ * Read once: if each tab read it itself, each tab would cost one file read plus one credential
+ * store query per server, and a target saved in this tab would not show in another until the next
+ * app launch. The list is one thing on disk, so it is one thing in memory.
  *
- * Cơ chế nằm ở `core/jsonStore.ts` — đọc một lần, thay cả cụm, `loaded` tách khỏi giá trị. Ở đây
- * chỉ còn phần riêng của danh sách này: nó không tự đọc file, mà đi qua `savedTargets.ts`, nơi giữ
- * ranh giới giữa `terminal-hosts.json` và kho thông tin đăng nhập của hệ điều hành.
+ * The mechanism lives in `core/jsonStore.ts` — read once, replace wholesale, `loaded` kept apart
+ * from the value. Only this list's own part is left here: it does not read the file itself, but
+ * goes through `savedTargets.ts`, which keeps the boundary between `terminal-hosts.json` and the
+ * operating system's credential store.
  */
 
-/* Không có `persist`: mọi lượt ghi đi qua `savedTargets.ts`, thứ vừa ghi vừa trả về danh sách mới.
-   Ảnh chụp là cái nó trả về, không phải cái store tự dựng lấy. */
+/* No `persist`: every write goes through `savedTargets.ts`, which both writes and returns the new
+   list. The snapshot is what it returns, not something the store builds for itself. */
 const store = createStore<SavedTarget[]>({ defaults: [], load: loadSavedTargets });
 
-/** Danh sách dùng chung, giữ đồng bộ giữa mọi tab gọi nó. */
+/** The shared list, kept in sync across every tab that calls it. */
 export function useSavedTargets(): SavedTarget[] {
   return useStore(store);
 }
 
-/** Đã đọc xong file chưa. Danh sách rỗng lúc chưa đọc và danh sách rỗng khi không có đích nào là
- *  hai thứ khác nhau, mà nhìn vào danh sách thì không phân biệt được. Ai coi "không có trong danh
- *  sách" là "đã bị xoá" — một tab đang khôi phục đích nó mở dở — phải hỏi cái này trước. */
+/** Whether the file has finished reading. An empty list before reading and an empty list when
+ *  there are no targets are two different things, and looking at the list cannot tell them apart.
+ *  Anyone treating "not in the list" as "deleted" — a tab restoring the target it had open — has
+ *  to ask this first. */
 export function useSavedTargetsLoaded(): boolean {
   return useStoreLoaded(store);
 }
 
-/* Ghi thì đi qua module vẫn ghi từ trước — nó là chỗ giữ ranh giới giữa `terminal-hosts.json` và
-   kho thông tin đăng nhập — và danh sách nó trả về thành ảnh chụp mới. */
+/* Writes go through the module that has always written — it keeps the boundary between
+   `terminal-hosts.json` and the credential store — and the list it returns becomes the new
+   snapshot. */
 
 export async function addTarget(target: SavedTarget): Promise<void> {
   store.publish(await addSavedTarget(target));

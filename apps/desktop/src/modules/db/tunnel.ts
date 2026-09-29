@@ -3,20 +3,22 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { AppError } from "../../core/errors";
 
 /**
- * Chuyện đang xảy ra với SSH tunnel của một connection.
+ * What is happening to a connection's SSH tunnel.
  *
- * Chỉ connection nào đi qua tunnel mới có sự kiện này — connection nối thẳng không phát gì cả, nên
- * không cần một cờ riêng để biết có nên vẽ banner hay không.
+ * Only connections going through a tunnel have this event — a direct connection emits nothing, so
+ * no separate flag is needed to know whether to draw the banner.
  */
 export interface TunnelState {
-  /** Connection này là của tab nào: hai tab có thể cùng đứt một lúc và mỗi tab chỉ nghe của mình. */
+  /** Which tab this connection belongs to: two tabs may drop at the same moment and each one only
+   *  listens to its own. */
   id: string;
   state: "reconnecting" | "reconnected" | "failed";
-  /** Chỉ có với `failed`: vì sao không mở lại được — khoá sai, host không tới được. */
+  /** Only present with `failed`: why it could not be reopened — a wrong key, an unreachable
+   *  host. */
   error?: AppError;
 }
 
-/** Nghe mọi tin về tunnel của `id` cho tới khi hàm trả về được gọi. */
+/** Listens to all tunnel news for `id` until the returned function is called. */
 export function onTunnelState(
   id: string,
   onState: (state: TunnelState) => void
@@ -26,7 +28,8 @@ export function onTunnelState(
   });
 }
 
-/** Mở lại phiên SSH ngay, thay vì chờ hết nhịp backoff của watcher bên Rust. */
+/** Reopens the SSH session right away, instead of waiting out the backoff of the Rust-side
+ *  watcher. */
 export function tunnelReconnect(id: string): Promise<void> {
   return invoke("tunnel_reconnect", { id });
 }

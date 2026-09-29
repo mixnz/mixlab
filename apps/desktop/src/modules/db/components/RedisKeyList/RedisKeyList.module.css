@@ -154,8 +154,9 @@
   opacity: 1;
 }
 
-/* Một Redis key là định danh do người dùng đặt, thường có dấu phân nhóm (`user:1042:session`) mà
-   chỉ mono mới giữ thẳng hàng giữa các dòng. Trước đợt token font nó mono nhờ thừa kế từ `:root`. */
+/* A Redis key is an identifier the user chooses, often with group separators (`user:1042:session`)
+   that only mono keeps aligned across rows. Before the font token work it was mono by inheriting
+   from `:root`. */
 .name {
   font-family: var(--font-mono);
 }

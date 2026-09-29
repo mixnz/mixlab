@@ -22,7 +22,8 @@ describe("shellLabel", () => {
     expect(shellLabel("wsl:Ubuntu 22.04")).toBe("WSL: Ubuntu 22.04");
   });
 
-  // Rust dò được cái gì thì frontend hiện cái đó — một shell chưa có trong bảng vẫn phải chọn được.
+  // Whatever Rust detects, the frontend shows — a shell not yet in the table must still be
+  // selectable.
   it("falls back to the name for anything it has never heard of", () => {
     expect(shellLabel("fish")).toBe("fish");
   });
@@ -44,7 +45,7 @@ describe("shellBrand", () => {
     expect(shellBrand("wsl:my-dev-box")).toBe("linux");
   });
 
-  // Không có logo là một câu trả lời, và `icons.tsx` vẽ biểu tượng terminal chung cho nó.
+  // Having no logo is an answer, and `icons.tsx` draws the generic terminal icon for it.
   it("has no mark for the shells that have no logo", () => {
     expect(shellBrand("cmd")).toBeNull();
     expect(shellBrand("sh")).toBeNull();

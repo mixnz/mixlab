@@ -2,10 +2,10 @@ import type { AppError } from "../../../../core/errors";
 import type { TunnelState } from "../../tunnel";
 
 /**
- * Banner đang nói gì, nếu có nói gì.
+ * What the banner is saying, if it is saying anything.
  *
- * Tách khỏi component vì đây là chỗ duy nhất có gì để sai: thứ tự các sự kiện tới, và cái nào được
- * phép thay cái nào.
+ * Kept apart from the component because this is the only place with anything to get wrong: the
+ * order events arrive in, and which one is allowed to replace which.
  */
 export type BannerState =
   | { kind: "hidden" }
@@ -16,13 +16,15 @@ export type BannerState =
 export const HIDDEN: BannerState = { kind: "hidden" };
 
 /**
- * Popup có được hiện với trạng thái này không.
+ * Whether the popup may show for this state.
  *
- * `ripe` là đã đứt đủ lâu để đáng chặn màn hình; `showing` là popup đang đứng đó từ trước.
+ * `ripe` means disconnected long enough to be worth blocking the screen; `showing` means the popup
+ * has been standing there from before.
  *
- * Hai cửa khác nhau, vì hai lần đứt không giống nhau. Phần lớn chỉ kéo dài vài trăm mili-giây rồi tự
- * lành và câu lệnh chạy tiếp như không có gì: chặn ở đó chỉ là nháy màn hình. Và "đã kết nối lại" chỉ trấn
- * an ai vừa bị chặn — người không thấy gì xảy ra thì không cần được báo là nó đã qua.
+ * Two different gates, because two disconnections are not alike. Most last only a few hundred
+ * milliseconds, heal themselves, and the statement carries on as if nothing happened: blocking
+ * there is just a flash of the screen. And "reconnected" only reassures someone who was just
+ * blocked — someone who saw nothing happen does not need to be told it has passed.
  */
 export function popupShows(state: BannerState, ripe: boolean, showing: boolean): boolean {
   switch (state.kind) {
@@ -37,19 +39,19 @@ export function popupShows(state: BannerState, ripe: boolean, showing: boolean):
   }
 }
 
-/** Trạng thái kế tiếp của banner. Trả lại chính `current` khi không có gì mới để nói. */
+/** The banner's next state. Returns `current` itself when there is nothing new to say. */
 export function nextBannerState(current: BannerState, event: TunnelState): BannerState {
   switch (event.state) {
     case "reconnecting":
       return current.kind === "reconnecting" ? current : { kind: "reconnecting" };
     case "reconnected":
-      // Chưa từng hiện gì thì không có gì để trấn an: một tab mở ra sau khi tunnel đã tự lành
-      // không có lý do gì để báo "đã kết nối lại".
+      // Nothing has ever shown, so there is nobody to reassure: a tab opened after the tunnel has
+      // healed itself has no reason to report "reconnected".
       return current.kind === "hidden" ? current : { kind: "reconnected" };
     case "failed": {
       const error = event.error ?? { code: "error.sshUnavailable" };
-      // Cùng một lỗi lặp lại là nhịp backoff của watcher, không phải tin mới. Giữ nguyên object để
-      // không có gì bên React bị dựng lại mỗi phút.
+      // The same error repeating is the watcher's backoff beat, not news. Keep the same object so
+      // nothing on the React side is rebuilt every minute.
       if (current.kind === "failed" && current.error.code === error.code) return current;
       return { kind: "failed", error };
     }

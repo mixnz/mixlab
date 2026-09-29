@@ -21,17 +21,17 @@ import { shellLabel } from "../../shells";
 import type { LocalShell } from "../../types";
 import styles from "./TerminalSettings.module.css";
 
-/** Giá trị của ô chọn shell khi không đặt gì. `Select` nhận `string | number`, không nhận `null` —
- *  chuỗi rỗng là cách viết `null` ở tầng ấy, và nó không đụng tên shell nào. */
+/** The shell picker's value when nothing is set. `Select` takes `string | number`, not `null` —
+ *  the empty string is how `null` is written at that layer, and it matches no shell name. */
 const NO_DEFAULT_SHELL = "";
 
 /**
- * Pane của module terminal trong hộp Cài đặt của app.
+ * The terminal module's pane in the app's Settings dialog.
  *
- * Mọi ô ghi thẳng vào `terminal-settings.json` khi nó đổi, nên không có nút Lưu — đúng như pane
- * của module REST. Hai ô số ghi lúc rời ô hoặc lúc `Enter` chứ không ghi từng phím: `clampScrollback`
- * sẽ kéo một số đang gõ dở về giới hạn ngay giữa chừng, và người dùng gõ "12000" sẽ thấy ô nhảy
- * về 100 sau chữ số đầu tiên.
+ * Every field writes straight to `terminal-settings.json` when it changes, so there is no Save
+ * button — just like the REST module's pane. The two number fields write on leaving the field or on
+ * `Enter` rather than on every key: `clampScrollback` would pull a half-typed number to the limit
+ * midway, and a user typing "12000" would see the field jump to 100 after the first digit.
  */
 function TerminalSettings() {
   const { t } = useTranslation();
@@ -39,21 +39,23 @@ function TerminalSettings() {
   const [shells, setShells] = useState<LocalShell[]>([]);
   const [fonts, setFonts] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  /** Hai ô số trong lúc đang được gõ, để một số dở dang không bị kẹp giữa chừng. */
+  /** The two number fields while being typed, so a half-finished number is not clamped midway. */
   const [fontSizeText, setFontSizeText] = useState<string | null>(null);
   const [scrollbackText, setScrollbackText] = useState<string | null>(null);
 
   useEffect(() => {
     localShells()
       .then(setShells)
-      // Không dò được shell nào thì ô chọn chỉ còn mục "cái máy này đưa ra trước tiên", và đó vẫn
-      // là một câu trả lời dùng được. Lỗi hiện dưới ô chứ không nuốt.
+      // If no shell was detected, the picker only has the "whatever this machine offers first"
+      // entry, and that is still a usable answer. The error shows under the field rather than
+      // being swallowed.
       .catch((e) => setError(errorMessage(t, e)));
-    // Một lần: danh sách shell của một máy không đổi giữa chừng.
+    // Once: a machine's shell list does not change midway.
   }, []);
 
-  /* Cũng một lần, và cũng vì cùng lý do — font cài trên máy không mọc thêm trong lúc hộp thoại
-     đang mở. Đo bằng canvas nên nó chỉ chạy được sau khi có DOM, tức là trong effect. */
+  /* Also once, and for the same reason — fonts installed on the machine do not sprout while the
+     dialog is open. Measured with a canvas, so it can only run once there is a DOM, i.e. in an
+     effect. */
   useEffect(() => {
     let live = true;
     installedFonts(TERMINAL_FONTS).then((found) => {
@@ -66,14 +68,14 @@ function TerminalSettings() {
 
   const family = familyOf(settings.fontFamily);
 
-  /* Font đang dùng luôn có mặt, kể cả khi phép đo không nhận ra nó: một hộp chọn không chỉ vào
-     đâu cả là một hộp chọn nói dối về cái đang chạy. */
+  /* The font in use is always present, even when the measurement does not recognise it: a picker
+     pointing at nothing is a picker lying about what is running. */
   const fontOptions = useMemo(() => {
     const names = fonts.includes(family) ? fonts : [family, ...fonts];
     return names.map((name) => ({
       value: name,
       label: name,
-      // Mỗi mục vẽ bằng chính nó: chọn một phông chữ mà không thấy nó thì chọn bằng gì.
+      // Each entry is drawn in itself: how else would you pick a font without seeing it.
       optionLabel: <span style={{ fontFamily: fontStack(name) }}>{name}</span>,
     }));
   }, [fonts, family]);
@@ -100,10 +102,11 @@ function TerminalSettings() {
 
         <div className={styles.row}>
           <span className={styles.label}>{t("terminal.settingsFontFamily")}</span>
-          {/* Hộp chọn chứ không phải ô nhập, và không chỉ vì gõ tên font thì mệt: một ô nhập ghi
-              từng phím, nên nó đi qua cả những giá trị dở dang — kể cả chuỗi rỗng. xterm dựng
-              `ctx.font` từ giá trị ấy, chuỗi hỏng thì canvas lặng lẽ giữ số đo ô chữ cũ, và màn
-              hình cắt ngang mọi dòng. Ở đây mọi giá trị đều đi qua `fontStack`. */}
+          {/* A picker rather than a text field, and not only because typing font names is tiring:
+              a text field writes on every key, so it passes through half-finished values — even
+              the empty string. xterm builds `ctx.font` from that value, a broken string makes the
+              canvas quietly keep the old cell measurements, and the screen cuts across every line.
+              Here every value goes through `fontStack`. */}
           <Select<string>
             size="small"
             className={styles.wide}

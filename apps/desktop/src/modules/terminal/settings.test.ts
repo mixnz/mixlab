@@ -21,8 +21,8 @@ describe("clampScrollback", () => {
     expect(clampScrollback(10_000_000)).toBe(MAX_SCROLLBACK);
   });
 
-  /* Ô nhập là `type="number"` nhưng cái đi vào đây là `Number(text)` của một ô người dùng gõ tay,
-     và một ô trống ra `NaN`. */
+  /* The input is `type="number"`, but what arrives here is `Number(text)` of a field the user types
+     into by hand, and an empty field gives `NaN`. */
   it("falls back to the default for a value that is not a number", () => {
     expect(clampScrollback(Number.NaN)).toBe(DEFAULT_SETTINGS.scrollback);
     expect(clampScrollback(Number.POSITIVE_INFINITY)).toBe(DEFAULT_SETTINGS.scrollback);
@@ -50,8 +50,8 @@ describe("sanitizeSettings", () => {
     expect(sanitizeSettings({})).toEqual(DEFAULT_SETTINGS);
   });
 
-  /* Ca thật sự đáng test: một file viết ra bởi bản trước, thiếu đúng những trường bản này mới
-     thêm. Trường có phải giữ, trường thiếu phải bù. */
+  /* The case really worth testing: a file written by the previous version, missing exactly the
+     fields this version added. Fields present must be kept, missing ones filled in. */
   it("fills in only what an older file is missing", () => {
     const settings = sanitizeSettings({ fontSize: 18, scrollback: 12000 });
     expect(settings.fontSize).toBe(18);
@@ -62,14 +62,15 @@ describe("sanitizeSettings", () => {
     expect(settings.titleShowsTargetName).toBe(DEFAULT_SETTINGS.titleShowsTargetName);
   });
 
-  /* Chưa ai chạm vào cài đặt thì tab vẫn mang tên đích đã lưu: đó là cái người mở năm phiên tới
-     năm máy chủ cần, và `deploy@10.0.0.7` năm lần thì không. */
+  /* With nobody having touched the settings, the tab still carries the saved target's name: that is
+     what someone opening five sessions to five servers needs, and `deploy@10.0.0.7` five times is
+     not. */
   it("names a tab after its saved target until told otherwise", () => {
     expect(sanitizeSettings({}).titleShowsTargetName).toBe(true);
   });
 
-  /* Mặc định bật, nên `false` trong file là một câu người dùng đã nói — không phải một trường
-     thiếu. Nó phải sống sót, đúng như `cursorBlink: false` sống sót. */
+  /* On by default, so `false` in the file is something the user said — not a missing field. It
+     has to survive, just as `cursorBlink: false` survives. */
   it("keeps a setting the user turned off", () => {
     expect(sanitizeSettings({ titleShowsTargetName: false }).titleShowsTargetName).toBe(false);
   });
@@ -89,8 +90,8 @@ describe("sanitizeSettings", () => {
     expect(sanitizeSettings(stored)).toEqual(stored);
   });
 
-  /* File này người dùng sửa được bằng tay, và một giá trị lạ ở đây là một terminal không vẽ nổi
-     con trỏ chứ không phải một dòng log. */
+  /* The user can edit this file by hand, and an unknown value here is a terminal that cannot draw
+     its cursor, not a log line. */
   it("refuses a cursor style xterm does not have", () => {
     expect(sanitizeSettings({ cursorStyle: "spiral" }).cursorStyle).toBe(
       DEFAULT_SETTINGS.cursorStyle,
@@ -120,8 +121,8 @@ describe("sanitizeSettings", () => {
 });
 
 describe("withLegacyFontSize", () => {
-  /* Cỡ chữ ở đợt trước nằm trong localStorage. Người dùng đã chỉnh nó không được thấy màn hình
-     nhảy về mặc định chỉ vì chỗ cất đổi. */
+  /* The previous round kept the font size in localStorage. A user who adjusted it must not see the
+     screen jump back to the default just because where it is stored changed. */
   it("takes the old localStorage size when the file has none", () => {
     expect(withLegacyFontSize(undefined, "20").fontSize).toBe(20);
     expect(withLegacyFontSize({ scrollback: 8000 }, "20").fontSize).toBe(20);

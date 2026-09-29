@@ -7,51 +7,54 @@ import { onTunnelState, tunnelReconnect } from "../../tunnel";
 import { HIDDEN, nextBannerState, popupShows, type BannerState } from "./state";
 import styles from "./TunnelBanner.module.css";
 
-/** "Đã kết nối lại" ở lại bao lâu trước khi tự biến mất. */
+/** How long "Reconnected" stays before disappearing by itself. */
 const REASSURED_MS = 3000;
 
 /**
- * Đứt bao lâu thì mới đáng chặn màn hình.
+ * How long a disconnection lasts before it is worth blocking the screen.
  *
- * Dưới ngưỡng này không ai biết là có chuyện gì xảy ra: tunnel mở lại xong, câu lệnh được chạy lại,
- * dữ liệu về — và một popup chớp lên rồi tắt chỉ là cái giật mình thừa.
+ * Below this threshold nobody knows anything happened: the tunnel reopens, the statement is run
+ * again, the data arrives — and a popup flashing up and away is just a needless start.
  */
 const BLOCK_AFTER_MS = 800;
 
 interface Props {
   connectionId: string;
-  /** Ngắt hẳn connection này — một trong hai lối ra khi tunnel không mở lại được. */
+  /** Disconnects this connection for good — one of the two ways out when the tunnel cannot be
+   *  reopened. */
   onDisconnect: () => void;
 }
 
 /**
- * Chặn workspace của tab này lại khi SSH tunnel của nó đứt, cho tới khi mở lại được hoặc người dùng
- * quyết định làm gì khác.
+ * Blocks this tab's workspace while its SSH tunnel is broken, until it can be reopened or the user
+ * decides to do something else.
  *
- * Chặn chứ không phải báo, vì lúc đó không còn gì làm được thật: mọi lệnh đều trả về "mất kết nối", và
- * đó cũng là câu ErrorBanner đang nuốt để nhường chỗ cho đây — xem `useWorkspaceError`.
+ * Blocking rather than notifying, because at that point nothing can really be done: every command
+ * returns "connection lost", and that is also the sentence ErrorBanner is swallowing to make room
+ * for this — see `useWorkspaceError`.
  *
- * Phủ đúng workspace chứ không portal ra `document.body`: tab nền trong MixDB vẫn mounted và chỉ bị
- * `display: none`, nên một popup cố định theo viewport sẽ che cả tab đang xem vì tunnel của tab khác rớt.
+ * Covers exactly the workspace rather than portalling out to `document.body`: background tabs in
+ * MixDB stay mounted and are only `display: none`, so a popup fixed to the viewport would cover the
+ * tab being viewed because another tab's tunnel dropped.
  *
- * Trả `null` khi không có gì để nói — kể cả với connection không đi qua tunnel, vì với chúng không
- * có sự kiện nào tới cả.
+ * Returns `null` when there is nothing to say — including for connections not going through a
+ * tunnel, since no event ever arrives for them.
  */
 function TunnelBanner({ connectionId, onDisconnect }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<BannerState>(HIDDEN);
   const [retrying, setRetrying] = useState(false);
   /**
-   * Trạng thái người dùng đã bấm "để sau", so bằng danh tính chứ không bằng giá trị.
+   * The state for which the user pressed "later", compared by identity rather than by value.
    *
-   * `nextBannerState` trả lại đúng object cũ khi tin mới không nói gì khác, nên nhịp backoff của
-   * watcher — cùng một lỗi, mỗi phút một lần — không dựng lại cái popup vừa bị gạt đi, còn một chuyện
-   * thật sự khác thì có.
+   * `nextBannerState` returns the very same object when the new news says nothing different, so the
+   * watcher's backoff beat — the same error, once a minute — does not bring back the popup that was
+   * just dismissed, while something genuinely different does.
    */
   const [dismissed, setDismissed] = useState<BannerState | null>(null);
-  /** Đã đứt quá {@link BLOCK_AFTER_MS}. */
+  /** Disconnected for longer than {@link BLOCK_AFTER_MS}. */
   const [ripe, setRipe] = useState(false);
-  /** Popup đang đứng đó từ lần render trước — xem {@link popupShows}. */
+  /** The popup has been standing there since the previous render — see {@link popupShows}. */
   const [showing, setShowing] = useState(false);
 
   useEffect(() => {
@@ -60,8 +63,8 @@ function TunnelBanner({ connectionId, onDisconnect }: Props) {
     void onTunnelState(connectionId, (event) =>
       setState((current) => nextBannerState(current, event))
     ).then((fn) => {
-      // Tab có thể đã đóng trước khi `listen` kịp trả về: gỡ ngay thay vì để lại một người nghe
-      // không ai gỡ.
+      // The tab may have closed before `listen` managed to return: unsubscribe right away rather
+      // than leaving a listener nobody removes.
       if (stopped) fn();
       else unlisten = fn;
     });
@@ -96,7 +99,7 @@ function TunnelBanner({ connectionId, onDisconnect }: Props) {
   useEffect(() => {
     if (!visible) return;
     function onKeyDown(e: KeyboardEvent) {
-      // Esc làm đúng việc của nút "để sau", không hơn: không ngắt, không thử lại.
+      // Esc does exactly what the "later" button does, no more: no disconnecting, no retrying.
       if (e.key === "Escape") setDismissed(state);
     }
     window.addEventListener("keydown", onKeyDown);
@@ -110,7 +113,8 @@ function TunnelBanner({ connectionId, onDisconnect }: Props) {
     try {
       await tunnelReconnect(connectionId);
     } catch {
-      // Không cần bắt gì: dù mở lại được hay không, tunnel tự phát tin và popup đổi theo tin đó.
+      // Nothing to catch: whether it reopens or not, the tunnel reports by itself and the popup
+      // changes with that news.
     } finally {
       setRetrying(false);
     }
@@ -135,7 +139,7 @@ function TunnelBanner({ connectionId, onDisconnect }: Props) {
           {state.kind === "reconnecting" && <span className={styles.spinner} aria-hidden="true" />}
           {message}
         </p>
-        {/* "Đã kết nối lại" không hỏi gì cả: nó tự biến mất và mọi thứ dùng được tiếp. */}
+        {/* "Reconnected" asks nothing: it disappears by itself and everything is usable again. */}
         {state.kind !== "reconnected" && (
           <div className={styles.actions}>
             <Button size="large" onClick={onDisconnect}>

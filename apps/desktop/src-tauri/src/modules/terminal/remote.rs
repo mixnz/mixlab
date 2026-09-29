@@ -10,11 +10,11 @@ use super::stream::{coalesce, QUEUE_DEPTH};
 use crate::error::AppError;
 use crate::ssh::SshConfig;
 
-/// Mở một shell trên máy chủ và trả về tay cầm của nó.
+/// Opens a shell on the server and returns its handle.
 ///
-/// Cùng hình dạng `Session` với `local::spawn`, nên `commands.rs` không phân biệt được hai loại
-/// phiên — và không cần phân biệt. Chỗ khác nhau nằm gọn trong hàm này: hai task tokio thay cho
-/// bốn thread, một channel SSH thay cho một pty.
+/// The same `Session` shape as `local::spawn`, so `commands.rs` cannot tell the two kinds of
+/// session apart — and does not need to. The difference is contained in this function: two tokio
+/// tasks instead of four threads, an SSH channel instead of a pty.
 pub async fn spawn(
     ssh: &SshConfig,
     app_data: &Path,
@@ -31,8 +31,8 @@ pub async fn spawn(
     let (exit_tx, exit_rx) = oneshot::channel::<Option<i32>>();
     let kill = CancellationToken::new();
 
-    // Đọc đầu xa. Đây là chỗ duy nhất giữ `raw_tx`, nên task này kết thúc là bộ gom lô biết đã hết
-    // byte — và chỉ khi đó `Exit` mới được phát.
+    // Reads the far end. This is the only place holding `raw_tx`, so this task ending is how the
+    // batcher knows the bytes are done — and only then is `Exit` emitted.
     tokio::spawn(async move {
         let mut code = None;
         while let Some(msg) = read.wait().await {
@@ -42,28 +42,29 @@ pub async fn spawn(
                         break;
                     }
                 }
-                /* Một phiên có pty thường trộn stderr vào stdout, nhưng máy chủ vẫn được phép tách
-                ra — và một dòng lỗi không hiện lên màn hình thì tệ hơn là hiện lẫn vào dòng
-                khác. */
+                /* A session with a pty usually mixes stderr into stdout, but the server is still
+                allowed to keep them apart — and an error line that does not show on screen is
+                worse than one shown mixed into other lines. */
                 ChannelMsg::ExtendedData { data, .. } => {
                     if raw_tx.send(data.to_vec()).await.is_err() {
                         break;
                     }
                 }
-                // Mã thoát tới trước khi channel đóng. Giữ lại, không phát ngay: đệm gom lô có thể
-                // còn byte.
+                // The exit code arrives before the channel closes. Keep it rather than emitting it
+                // right away: the batching buffer may still hold bytes.
                 ChannelMsg::ExitStatus { exit_status } => code = Some(exit_status as i32),
                 ChannelMsg::Eof | ChannelMsg::Close => break,
-                // `Success`/`Failure` của hai `request_*`, `WindowAdjusted` của điều khiển luồng.
-                // Không có gì để làm với chúng.
+                // The two `request_*`s' `Success`/`Failure`, flow control's `WindowAdjusted`.
+                // Nothing to do with them.
                 _ => {}
             }
         }
         let _ = exit_tx.send(code);
     });
 
-    /* Ghi, đổi kích thước, đóng — một task, vì cả ba đi qua cùng một nửa ghi, và vì đây là chỗ giữ
-    phiên SSH sống. Task này về là kết nối đóng. */
+    /* Writing, resizing, closing — one task, because all three go through the same write half, and
+    because this is what keeps the SSH session alive. This task returning means the connection
+    closes. */
     tokio::spawn({
         let kill = kill.clone();
         async move {
@@ -75,12 +76,12 @@ pub async fn spawn(
                                 break;
                             }
                         }
-                        // `Session` đã bị bỏ: đóng tab, hoặc app thoát.
+                        // The `Session` has been dropped: the tab closed, or the app exited.
                         None => break,
                     },
                     size = resize_rx.recv() => match size {
-                        // Hỏng thì bỏ qua: một khung window_change trượt không làm phiên sai, và
-                        // khung sau sẽ nói lại kích thước mới nhất.
+                        // A failure is ignored: one missed window_change frame does not make the
+                        // session wrong, and the next frame will state the latest size again.
                         Some(size) => { let _ = writer.resize(size.cols, size.rows).await; }
                         None => break,
                     },
@@ -91,8 +92,8 @@ pub async fn spawn(
         }
     });
 
-    // Một đường ra, một thứ tự: hết byte → hết đệm → mới tới `Exit`. Giống hệt `local::spawn`, và
-    // vì cùng lý do.
+    // One way out, one order: bytes done → buffer done → only then `Exit`. Exactly like
+    // `local::spawn`, and for the same reason.
     tokio::spawn(async move {
         coalesce(raw_rx, |chunk| out(Output::Data(chunk))).await;
         let code = exit_rx.await.ok().flatten();

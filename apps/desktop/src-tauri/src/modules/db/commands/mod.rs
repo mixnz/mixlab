@@ -22,22 +22,24 @@ use crate::modules::db::models::{ConnectionConfig, DbKind};
 use crate::modules::db::state::{ActiveConnection, Cancel, DbHandle, DbState};
 use crate::ssh::{self, SshConfig};
 
-/// Chạy lại một lệnh **đọc** đúng một lần, nếu lần đầu chết cùng kết nối.
+/// Runs a **read** command again exactly once, if the first attempt died along with the connection.
 ///
-/// Chỉ đọc. Một `INSERT` chạy lại sau khi mất kết nối có thể thành hai dòng — câu lệnh có thể đã
-/// tới máy chủ và chỉ có câu trả lời là mất — nên lệnh ghi báo lỗi và để người dùng quyết định.
+/// Reads only. An `INSERT` run again after losing the connection may become two rows — the
+/// statement may have reached the server and only the answer was lost — so write commands report
+/// the error and leave the decision to the user.
 ///
-/// Là macro chứ không phải một hàm nhận closure: một `Fn() -> impl Future` mượn `State<'_, DbState>`
-/// đưa lời gọi vào đúng loại rắc rối lifetime không đáng đánh nhau, còn macro thì chỉ là viết thân
-/// lệnh hai lần.
+/// A macro rather than a function taking a closure: an `Fn() -> impl Future` borrowing
+/// `State<'_, DbState>` drags the call into exactly the kind of lifetime trouble not worth
+/// fighting, while a macro just writes the command body twice.
 ///
-/// Gọi bằng `retry_read!({ ... })` — ngoặc tròn bọc block, vì một lời gọi macro mở bằng ngoặc nhọn
-/// ở vị trí câu lệnh được phân tích như một *statement macro*, không phải một biểu thức có giá trị.
+/// Called as `retry_read!({ ... })` — parentheses around the block, because a macro call opening
+/// with a brace in statement position is parsed as a *statement macro*, not an expression with a
+/// value.
 macro_rules! retry_read {
     ($body:block) => {{
         match async { $body }.await {
-            // Không ngủ giữa hai lần: lần thứ hai sẽ tự nằm chờ trong `acquire` của pool, sau
-            // lần mở lại phiên đang diễn ra.
+            // No sleep between the two attempts: the second one will wait by itself in the pool's
+            // `acquire`, behind the session reopening that is under way.
             Err(e) if e.code == "error.connectionLost" => async { $body }.await,
             first => first,
         }
@@ -95,13 +97,13 @@ fn reporter(app: &AppHandle, id: &str) -> impl Fn(drivers::dump::Progress) {
     }
 }
 
-/// Một tin về tunnel của một connection, gửi lên cửa sổ.
+/// A piece of news about a connection's tunnel, sent up to the window.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct TunnelState {
     id: String,
-    /// `"reconnecting"`, `"reconnected"` hoặc `"failed"` — cùng bộ chữ với `TunnelState` bên
-    /// TypeScript.
+    /// `"reconnecting"`, `"reconnected"` or `"failed"` — the same set of words as `TunnelState` on
+    /// the TypeScript side.
     state: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<AppError>,
@@ -174,8 +176,8 @@ pub async fn connect_db(
     config: ConnectionConfig,
 ) -> Result<String, AppError> {
     let app_data = app_data_dir(&app)?;
-    // Id sinh ở đây chứ không phải sau khi đã kết nối: closure báo tin cần biết nó tên gì, và
-    // tunnel bắt đầu báo tin ngay khi nó được mở.
+    // The id is generated here rather than after connecting: the reporting closure needs to know
+    // its name, and the tunnel starts reporting as soon as it is opened.
     let id = Uuid::new_v4().to_string();
     let notify = tunnel_notify(&app, &id);
     let (handle, endpoint, tunnel) = match config.kind {
@@ -325,14 +327,15 @@ pub async fn connect_db(
     Ok(id)
 }
 
-/// Đóng một connection, và nói lời chia tay trước khi đóng cửa.
+/// Closes a connection, and says goodbye before shutting the door.
 ///
-/// Buông pool đi thì socket cũng mất, nhưng phía máy chủ đó là một kết nối biến mất giữa chừng và
-/// nó ghi một dòng log cho mỗi cái. `close()` gửi lời chào tạm biệt rồi mới chờ.
+/// Dropping the pool loses the socket too, but on the server side that is a connection vanishing
+/// midway, and it writes a log line for each one. `close()` sends the goodbye and only then waits.
 ///
-/// Thứ tự có chủ ý: lấy khỏi bản đồ trước (khoá không giữ qua `await` nào), đóng pool khi tunnel
-/// **vẫn còn sống** trong cái vừa lấy ra — đường về máy chủ phải còn thì lời tạm biệt mới tới nơi
-/// — rồi mới buông, và `Drop` của `Tunnel` hạ cổng forward.
+/// The order is deliberate: take it out of the map first (the lock is held across no `await`),
+/// close the pool while the tunnel is **still alive** inside what was just taken out — the road
+/// back to the server must still be there for the goodbye to arrive — and only then let go, and
+/// `Tunnel`'s `Drop` takes the forwarded port down.
 #[tauri::command]
 pub async fn disconnect_db(state: State<'_, DbState>, id: String) -> Result<(), AppError> {
     /* First, and whether or not the connection is still in the map: a transfer runs an external
@@ -347,21 +350,22 @@ pub async fn disconnect_db(state: State<'_, DbState>, id: String) -> Result<(), 
         DbHandle::Mysql { pool, .. } => pool.close().await,
         DbHandle::Postgres(pools) => pools.close_all().await,
         DbHandle::Sqlite(pool) => pool.close().await,
-        // Mongo tự gom lại khi tay cầm cuối cùng đi, và Redis là một kết nối chứ không phải pool.
-        // ClickHouse không giữ socket nào cả — mỗi lệnh là một HTTP request riêng, nên không có gì
-        // để đóng ở đây.
+        // Mongo cleans up by itself when the last handle goes, and Redis is a connection rather
+        // than a pool. ClickHouse holds no socket at all — each command is a separate HTTP request,
+        // so there is nothing to close here.
         DbHandle::Mongo(_) | DbHandle::Redis(_) | DbHandle::Clickhouse(_) | DbHandle::Mssql(_) => {}
     }
     drop(connection);
     Ok(())
 }
 
-/// Mở lại phiên SSH của một connection ngay lập tức, thay vì chờ hết nhịp backoff của watcher.
-/// Đây là cái nút *Thử lại* trên banner gọi.
+/// Reopens a connection's SSH session right away, instead of waiting out the watcher's backoff.
+/// This is what the banner's *Retry* button calls.
 #[tauri::command]
 pub async fn tunnel_reconnect(state: State<'_, DbState>, id: String) -> Result<(), AppError> {
-    // Tay cầm được sao ra và bản đồ được mở khoá **trước** khi chờ: xác thực mất tới
-    // `CONNECT_TIMEOUT` (10 giây), và giữ bản đồ lâu như thế sẽ chặn mọi lệnh khác trong app.
+    // The handle is copied out and the map unlocked **before** waiting: authentication takes up to
+    // `CONNECT_TIMEOUT` (10 seconds), and holding the map that long would block every other command
+    // in the app.
     let session = {
         let connections = state.connections.lock().await;
         let connection = connections
@@ -749,8 +753,9 @@ mod tests {
         assert!(!two.flag().load(Ordering::Relaxed));
     }
 
-    /// Đúng một lần chạy lại, và chỉ khi lần đầu chết cùng kết nối. Bộ đếm là thứ nói lên điều đó:
-    /// một lệnh ghi lọt vào đây sẽ chạy hai lần, nên "chạy đúng mấy lần" là điều phải khoá lại.
+    /// Exactly one rerun, and only when the first attempt died along with the connection. The
+    /// counter is what shows it: a write command slipping in here would run twice, so "how many
+    /// times it runs" is what has to be locked down.
     #[tokio::test]
     async fn a_read_runs_again_only_after_a_lost_connection() {
         let runs = Cell::new(0);
@@ -765,18 +770,19 @@ mod tests {
         assert_eq!(result, Ok(7));
         assert_eq!(runs.get(), 2);
 
-        // Lần đầu đã xong thì không có lần thứ hai.
+        // If the first attempt succeeded there is no second.
         let runs = Cell::new(0);
         let result: Result<u32, AppError> = retry_read!({
             runs.set(runs.get() + 1);
-            // Kiểu lỗi phải nói ra ở đây: thân lệnh thật được `?` ghim kiểu cho, còn một `Ok`
-            // đứng một mình trong `async` thì không có gì để suy ra `E`.
+            // The error type has to be spelled out here: the real command body has its type pinned
+            // by `?`, while an `Ok` standing alone in `async` has nothing to infer `E` from.
             Ok::<u32, AppError>(1)
         });
         assert_eq!(result, Ok(1));
         assert_eq!(runs.get(), 1);
 
-        // Lỗi của máy chủ không phải lý do để hỏi lại: câu SQL sai lần hai vẫn sai.
+        // A server error is no reason to ask again: a wrong SQL statement is still wrong the
+        // second time.
         let runs = Cell::new(0);
         let result: Result<u32, AppError> = retry_read!({
             runs.set(runs.get() + 1);

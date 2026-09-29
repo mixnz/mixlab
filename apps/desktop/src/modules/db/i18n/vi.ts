@@ -46,9 +46,10 @@ const dbVi: DbDict = {
     revealConnectionStringConfirm: "Hiện",
     useSslLabel: "Dùng SSL",
     useSslHint: "Tắt đi nếu server không có SSL, hoặc chỉ có SSL cũ như chứng chỉ tự ký cũ.",
-    // Hiện khi kết nối Redis tới máy khác mà để trống mật khẩu. Đúng trường hợp đó Redis mặc định
-    // bật protected mode và cắt kết nối thay vì trả lời — người dùng chỉ thấy "broken pipe". SSH
-    // chỉ giúp được khi tunnel đi tới đúng máy đang chạy Redis, tức là host ở trên.
+    // Shown when a Redis connection to another machine has an empty password. In exactly that case
+    // Redis turns on protected mode by default and cuts the connection instead of answering — the
+    // user only sees "broken pipe". SSH only helps when the tunnel goes to the very machine running
+    // Redis, i.e. the host above.
     redisNoPasswordWarning:
       "Chưa nhập mật khẩu: nếu server bật protected mode (mặc định của Redis khi người dùng default chưa có mật khẩu), nó chỉ nhận kết nối đến từ chính máy nó và cắt mọi kết nối khác, hiện ra thành “Redis: broken pipe”. Đặt mật khẩu trên server (requirepass), hoặc đi vào từ chính máy đó: mở SSH tới máy đang chạy Redis và để host ở trên là 127.0.0.1.",
     connectionMethodLegend: "Phương thức kết nối",
@@ -103,8 +104,9 @@ const dbVi: DbDict = {
     newConnection: "Kết nối mới",
     pin: "Ghim lên đầu",
     unpin: "Bỏ ghim",
-    // Đánh dấu kết nối là nơi MixLab sẽ không gửi câu lệnh ghi xuống. Đây là lời nhắc mình đang ở
-    // máy chủ nào, không phải quyền — máy chủ cho phép gì là chuyện của tài khoản đăng nhập.
+    // Marks the connection as one MixLab will not send write statements to. It is a reminder of
+    // which server you are on, not a permission — what the server allows is up to the login
+    // account.
     markReadOnly: "Đánh dấu chỉ đọc",
     allowWrites: "Cho phép ghi",
     pinnedTooltip: "Đã ghim",
@@ -140,8 +142,8 @@ const dbVi: DbDict = {
     selectTableStructurePrompt: "Chọn một bảng để xem cấu trúc.",
     selectDatabaseStatsPrompt: "Chọn một database để xem dung lượng các bảng của nó.",
   },
-  // Tab Cấu trúc: cột ở trên, index ở dưới. Mỗi thay đổi là một ALTER TABLE riêng, nên cách diễn
-  // đạt nói về từng cột/từng index chứ không nói về các thay đổi đang chờ lưu.
+  // Structure tab: columns on top, indexes below. Each change is a separate ALTER TABLE, so the
+  // wording talks about each column/index rather than about changes waiting to be saved.
   structure: {
     columnsTitle: "Các cột",
     indexesTitle: "Các index",
@@ -203,9 +205,9 @@ const dbVi: DbDict = {
     rebuildEngineNotAllowed:
       "MixLab mới verify việc đổi sorting key trên MergeTree, ReplacingMergeTree, SummingMergeTree và AggregatingMergeTree. Engine của bảng này là {{engine}}.",
   },
-  // Tab Thống kê, dùng chung cho cả hai workspace: mỗi bảng/collection của database đang chọn
-  // chiếm bao nhiêu dung lượng. MySQL đếm dòng trong bảng, MongoDB đếm document trong collection,
-  // nên ba tiêu đề cột liên quan có hai bản.
+  // Statistics tab, shared by both workspaces: how much space each table/collection of the
+  // selected database takes. MySQL counts rows in a table, MongoDB counts documents in a
+  // collection, so the three related column headings come in two versions.
   dbStats: {
     tablesTitle: "Các bảng trong {{database}}",
     collectionsTitle: "Các collection trong {{database}}",
@@ -234,24 +236,26 @@ const dbVi: DbDict = {
     sortAsc: "Đang sắp theo {{column}}, nhỏ nhất trước",
     sortDesc: "Đang sắp theo {{column}}, lớn nhất trước",
   },
-  // Popup đổi tên, dùng chung cho mọi nơi mở nó: chỉ tiêu đề nói rõ đang đổi tên cái gì.
+  // The rename popup, shared by every place that opens it: only the title says what is being
+  // renamed.
   renameDialog: {
     name: "Tên mới",
     errorName: "Tên mới không được để trống.",
     submit: "Đổi tên",
     saving: "Đang đổi tên...",
   },
-  // Ô chọn collation, dùng chung cho mọi nơi khai báo collation — của một cột hay của cả bảng.
+  // The collation picker, shared by every place a collation is declared — for a column or for a
+  // whole table.
   collation: {
     charsetDefault: "{{charset}} · mặc định",
-    // Hiện bên cạnh nhóm collation `uca1400_*` của MariaDB, vốn không thuộc charset nào cả: chúng
-    // đại diện cho cả một họ, và server tự khớp theo charset của cột — `uca1400_ai_ci` trên cột
-    // utf8mb4 sẽ thành `utf8mb4_uca1400_ai_ci`.
+    // Shown next to MariaDB's `uca1400_*` collation group, which belongs to no charset: they stand
+    // for a whole family, and the server matches by the column's charset — `uca1400_ai_ci` on a
+    // utf8mb4 column becomes `utf8mb4_uca1400_ai_ci`.
     anyCharset: "mọi charset Unicode",
     search: "Tìm collation...",
   },
-  // Tạo cơ sở dữ liệu, mở từ ô chọn database của cả hai workspace. Chỉ popup của MySQL có thêm
-  // collation; phần còn lại giống nhau.
+  // Create database, opened from the database picker of both workspaces. Only the MySQL popup also
+  // has a collation; the rest is the same.
   databaseDialog: {
     title: "Tạo cơ sở dữ liệu",
     name: "Tên cơ sở dữ liệu",
@@ -376,8 +380,8 @@ const dbVi: DbDict = {
     leftoverWarning:
       'Đã đổi xong sorting key. Dọn bảng tạm "{{table}}" thất bại. Bảng đó giữ dữ liệu cũ, xoá tay là an toàn.',
   },
-  // Tab Truy vấn. Script được chạy lần lượt từng câu lệnh, và mỗi câu lệnh được báo đúng theo bản
-  // chất của nó — một bảng kết quả, số dòng đã thay đổi, hoặc chỉ là đã chạy xong.
+  // Query tab. A script is run one statement at a time, and each statement is reported according
+  // to what it is — a result table, a count of changed rows, or just that it ran.
   query: {
     run: "Chạy",
     format: "Định dạng",
@@ -386,18 +390,18 @@ const dbVi: DbDict = {
     running: "Đang chạy...",
     cancel: "Dừng",
     cancelling: "Đang dừng...",
-    // Bản thân phím tắt được vẽ thành phím bấm, nên ở đây chỉ còn phần chữ quanh nó.
+    // The shortcut itself is drawn as keycaps, so only the words around it are left here.
     runShortcutHint: "chạy phần đang chọn, hoặc toàn bộ script",
     selectionHint: "Bôi đen một phần script để chỉ chạy phần đó; không bôi đen thì chạy toàn bộ.",
     editorHeading: "SQL",
     placeholder: "SELECT * FROM ...",
     editorLabel: "Trình soạn SQL",
     targetLabel: "Đang chạy trên",
-    // Đủ ngắn để nằm gọn một dòng trong chip; phần còn lại nằm ở tooltip.
+    // Short enough to fit on one line in the chip; the rest is in the tooltip.
     noDatabase: "Chưa chọn cơ sở dữ liệu",
     noDatabaseHint: "Viết db.table trong câu lệnh, hoặc chọn cơ sở dữ liệu ở thanh trên.",
     resizeResults: "Kéo để đổi chiều cao phần kết quả",
-    // Script chạy xong nhưng bên trong không có gì để chạy: toàn chú thích, hoặc một dấu chấm phẩy lạc.
+    // The script ran but had nothing inside to run: all comments, or a stray semicolon.
     noStatements: "Không có câu lệnh nào để chạy.",
     noStatementsHint: "Phần được gửi đi chỉ có chú thích, nên máy chủ không có gì để làm.",
     resultLabel: "#{{n}} {{verb}}",
@@ -409,9 +413,9 @@ const dbVi: DbDict = {
     ok: "OK",
     noRows: "Kết quả không có dòng nào.",
     statementFailed: "Câu lệnh này lỗi, các câu lệnh sau nó không chạy.",
-    // Các hành động ở thanh dưới, đều là chuyện khung kết quả chiếm bao nhiêu phần của tab: ẩn đi
-    // để trả cửa sổ lại cho script, hoặc nhấc ra toàn cửa sổ — cách để đọc một lượt nhiều câu
-    // SELECT mà không phải chia nhau một khung vốn đã hẹp.
+    // The actions on the bottom bar, all about how much of the tab the result pane takes: hide it
+    // to give the window back to the script, or lift it out to the whole window — the way to read
+    // several SELECTs in one go without sharing an already narrow pane.
     hideResults: "Ẩn phần kết quả",
     showResults: "Hiện phần kết quả",
     resultsEmpty: "Chưa chạy gì nên chưa có kết quả để ẩn.",
@@ -420,7 +424,7 @@ const dbVi: DbDict = {
     zoomEmpty: "Chưa chạy gì nên chưa có kết quả để mở rộng.",
     zoomShut: "Kết quả đang ẩn. Hiện lên trước đã.",
     zoomTitle: "Kết quả",
-    // Chip trên thanh công cụ, và điều xảy ra khi vẫn cố ghi.
+    // The chip on the toolbar, and what happens when writing is attempted anyway.
     readOnly: "Chỉ đọc",
     readOnlyBlocked: "Chưa gửi gì cả: kết nối này được đánh dấu chỉ đọc, mà trong script lại có câu lệnh {{verb}}.",
     ddlOnlyReadOnly: "Chỉ khoá DDL",
@@ -428,38 +432,38 @@ const dbVi: DbDict = {
       "INSERT/UPDATE/DELETE/TRUNCATE chạy được ở đây. Đổi bảng và database vẫn phải qua Structure tab.",
     ddlBlocked:
       "Chưa gửi gì cả: Query tab này chỉ nhận INSERT/UPDATE/DELETE/TRUNCATE gõ tay. Thay đổi khác phải qua Structure tab.",
-    // Cửa chặn trước một UPDATE, DELETE hay TRUNCATE không nói rõ dòng nào.
+    // The gate before an UPDATE, DELETE or TRUNCATE that does not say which rows.
     unguardedTitle: "Sửa toàn bộ các dòng?",
     unguardedOne: "{{verb}} trên {{table}} không nói rõ dòng nào, nên nó áp dụng cho tất cả.",
     unguardedOneUnnamed: "{{verb}} này không nói rõ dòng nào, nên nó áp dụng cho tất cả.",
     unguardedMany: "{{n}} câu lệnh không nói rõ áp dụng cho dòng nào, nên mỗi câu áp dụng cho mọi dòng của bảng nó nhắm tới: {{list}}.",
-    // Và cửa chặn trước một DROP, hay một ALTER có xoá đi thứ gì đó. Dòng dữ liệu còn lấy lại được
-    // từ bản sao lưu; trigger, phân quyền và khoá ngoại của một bảng đã bị xoá thì không — nên câu
-    // hỏi ở đây phải khác.
+    // And the gate before a DROP, or an ALTER that removes something. Data rows can be recovered
+    // from a backup; the triggers, grants and foreign keys of a dropped table cannot — so the
+    // question here has to be different.
     unguardedDropTitle: "Xoá hẳn nhé?",
     unguardedDrop: "{{verb}} trên {{table}} xoá luôn nó và mọi thứ bên trong. Ở đây không có gì lấy lại được.",
     unguardedDropUnnamed: "{{verb}} này xoá luôn thứ nó nhắm tới và mọi thứ bên trong. Ở đây không có gì lấy lại được.",
     unguardedManyMixed: "{{n}} câu lệnh, mỗi câu xoá hoặc ghi đè trọn vẹn thứ nó nhắm tới: {{list}}.",
     unguardedConfirm: "Vẫn chạy",
-    // Trên phần kết quả, khi script có từ hai câu lệnh trở lên: đã chạy mấy câu, và máy chủ tốn bao
-    // lâu cho tất cả. Một câu lệnh lỗi làm dừng những câu sau nó, và không có dòng này thì một
-    // script bị chặn giữa chừng trông y hệt một script chạy xong.
+    // Above the results, when the script has two or more statements: how many ran, and how long
+    // the server took for all of them. A failing statement stops the ones after it, and without
+    // this line a script stopped midway looks exactly like one that finished.
     scriptSummary: "{{n}} / {{m}} câu lệnh · {{ms}} ms",
     scriptSummaryAll: "{{m}} câu lệnh · {{ms}} ms",
-    // Tooltip của tiêu đề cột, nói xem bấm thêm một cái nữa thì được gì — và nói luôn chỗ dễ hiểu
-    // nhầm nhất. Sắp ở đây chỉ sắp lại những dòng đã về: một kết quả bị cắt ở 1000 dòng, sắp giảm
-    // dần, không cho ra giá trị lớn nhất của bảng.
+    // The column header's tooltip, saying what one more click gets you — and naming the easiest
+    // misunderstanding too. Sorting here only reorders the rows that came back: a result cut at
+    // 1000 rows, sorted descending, does not give the table's largest value.
     sortAsc: "Sắp theo {{column}}, nhỏ trước (chỉ những dòng đã trả về)",
     sortDesc: "Sắp theo {{column}}, lớn trước (chỉ những dòng đã trả về)",
     sortNone: "Trở lại thứ tự máy chủ đã gửi",
     findPlaceholder: "Lọc các dòng này...",
     findCount: "{{n}} / {{m}} dòng",
-    // Không dùng chung câu với `noRows`: câu kia nói truy vấn không tìm được gì, câu này nói ô lọc
-    // ở trên đã cắt hết. Bảo người ta là truy vấn rỗng trong khi nó không rỗng là loại câu sai mà
-    // người ta sẽ tin và làm theo.
+    // Not sharing the sentence with `noRows`: that one says the query found nothing, this one says
+    // the filter box above cut everything out. Telling people the query is empty when it is not is
+    // the kind of wrong sentence people believe and act on.
     noMatchingRows: "Không có dòng nào ở đây khớp.",
-    // Menu chuột phải trên kết quả. Hai nửa: phần đang chọn, và cả kết quả — nửa sau vì lý do
-    // thường gặp nhất để mở menu này là lấy hết.
+    // The right-click menu on the results. Two halves: the selection, and the whole result — the
+    // latter because the most common reason to open this menu is to take everything.
     copySelectionTsv: "Chép dạng TSV",
     copySelectionCsv: "Chép dạng CSV",
     copySelectionJson: "Chép dạng JSON",
@@ -467,9 +471,9 @@ const dbVi: DbDict = {
     copyAllCsv: "Chép cả kết quả dạng CSV",
     copyAllJson: "Chép cả kết quả dạng JSON",
     expandCell: "Mở ô này",
-    // Nói ra khi script được gửi đi kèm một mức trần mà nó không tự viết.
+    // Said when the script is sent with a limit it did not write itself.
     limitAdded: "Đã thêm LIMIT {{limit}} vào {{n}} câu lệnh trong số này. Tự viết LIMIT nếu muốn mức khác.",
-    // Câu truy vấn đã lưu, gõ tên là gợi ý lại.
+    // Saved queries; typing a name suggests them again.
     snippets: "Đã lưu",
     snippetHint: "Các câu truy vấn đã lưu. Giữ lại câu này dưới một cái tên, hoặc gõ tên để lấy lại một câu cũ.",
     snippetsTitle: "Câu truy vấn đã lưu",
@@ -482,21 +486,22 @@ const dbVi: DbDict = {
     snippetDeleteConfirm: "Bỏ nhé?",
     snippetSaveFailed: "Không lưu được.",
     snippetDeleteFailed: "Không bỏ được.",
-    // Mọi thứ đã chạy trên kết nối này.
+    // Everything that has run on this connection.
     history: "Lịch sử",
     historyTitle: "Lịch sử truy vấn",
     historyFilter: "Tìm trong các câu truy vấn...",
     historyClear: "Xoá hết",
-    // Chỉ xoá phần của kết nối này, đúng bằng những gì danh sách đang hiện.
+    // Only clears this connection's part, exactly what the list is showing.
     historyClearConfirm: "Xoá danh sách này?",
-    // Xoá từng dòng thay vì xoá hết, để bỏ những lần chạy hỏng còn sót lại quanh câu chạy được.
+    // Deletes line by line instead of all at once, to drop the failed runs left around the one
+    // that worked.
     historyDrop: "Xoá dòng này",
     historyDropConfirm: "Xoá nhé?",
     historyEmpty: "Chưa chạy gì trên kết nối này.",
     historyNoMatch: "Không câu truy vấn nào ở đây chứa nội dung đó.",
     historyFailed: "lỗi",
-    // Bảng chú thích hiện ra khi trỏ chuột dừng trên một cái tên trong câu lệnh. Dòng đầu luôn là
-    // chính cái tên đó, nên ở đây chỉ là những gì nói quanh nó.
+    // The info panel that shows when the pointer rests on a name in the statement. The first line
+    // is always that name itself, so only what is said around it is here.
     hoverTable: "bảng · {{n}} cột",
     hoverTableOne: "bảng · 1 cột",
     hoverMoreColumns: "còn {{n}} cột nữa",
@@ -508,9 +513,9 @@ const dbVi: DbDict = {
     hoverUniqueKey: "duy nhất",
     hoverIndexed: "có chỉ mục",
   },
-  // Những gì trình soạn SQL gạch chân, và vì sao. Sáu mục đầu là điều bản thân câu lệnh nói ra;
-  // ba mục cuối là trình soạn đối chiếu với cơ sở dữ liệu nó nhìn thấy được, nên được viết như một
-  // nhận xét chứ không phải một phán quyết.
+  // What the SQL editor underlines, and why. The first six are what the statement itself says; the
+  // last three are the editor checking against the database it can see, so they are written as a
+  // remark rather than a verdict.
   lint: {
     openString: "Dấu nháy này chưa được đóng.",
     openIdentifier: "Tên trong dấu nháy này chưa được đóng.",
@@ -521,11 +526,11 @@ const dbVi: DbDict = {
     unknownTable: "Cơ sở dữ liệu này không có bảng nào tên {{name}}.",
     unknownColumn: "{{table}} không có cột nào tên {{name}}.",
     unknownName: "Không bảng nào trong câu lệnh này có cột tên {{name}}.",
-    // Nút bấm trên tooltip của chỗ gạch chân.
+    // The buttons on the underline's tooltip.
     replaceWith: "Dùng {{name}}",
   },
-  // Thanh điều kiện phía trên lưới. Mọi chuỗi ở đây đều không phụ thuộc loại cơ sở dữ liệu —
-  // riêng nhãn toán tử thì mỗi bên tự đặt, ở `sqlTable.op.*` và `noSqlTable.op.*`.
+  // The condition bar above the grid. Every string here is independent of the database kind —
+  // only the operator labels are set by each side, in `sqlTable.op.*` and `noSqlTable.op.*`.
   filterBar: {
     addFilter: "Thêm bộ lọc",
     removeFilter: "Xoá bộ lọc này",
@@ -545,7 +550,7 @@ const dbVi: DbDict = {
     loading: "Đang tải...",
     noRows: "Không có dòng nào.",
     reloadRows: "Tải lại dữ liệu",
-    // Đặt tên cho bảng phím tắt trong Cài đặt; bản thân tổ hợp phím lấy từ danh mục.
+    // Names the shortcut table in Settings; the key combination itself comes from the catalogue.
     shortcutScope: "Dữ liệu bảng",
     shortcutSelectAll: "Chọn mọi dòng trên trang",
     shortcutFilter: "Nhảy tới thanh lọc",
@@ -563,12 +568,12 @@ const dbVi: DbDict = {
     sortNone: "{{column}}: nhấn để sắp xếp giảm dần",
     sortDesc: "{{column}}: đang giảm dần, nhấn để sắp xếp tăng dần",
     sortAsc: "{{column}}: đang tăng dần, nhấn để bỏ sắp xếp",
-    // Menu chuột phải trên vùng dữ liệu. Các mục thao tác theo dòng có hai cách viết: một cho dòng
-    // dưới con trỏ, một cho nhiều dòng đang chọn — `t()` không có quy tắc số nhiều, và đặt {{n}}
-    // vào một chuỗi duy nhất thì câu cho một dòng đọc không xuôi.
+    // The right-click menu on the data area. The row actions have two wordings: one for the row
+    // under the cursor, one for several selected rows — `t()` has no plural rules, and putting
+    // {{n}} into a single string makes the one-row sentence read awkwardly.
     copyCellValue: "Sao chép giá trị ô",
-    // Hàng tiêu đề có menu riêng, chỉ gồm mục này: tên cột không bôi đen được bằng chuột, nên đây
-    // là cách duy nhất để sao chép nó.
+    // The header row has its own menu, holding only this item: column names cannot be selected
+    // with the mouse, so this is the only way to copy one.
     copyColumnName: "Sao chép tên cột",
     openReferencedRow: "Mở dòng được tham chiếu trong {{table}}",
     copyInsert: "Sao chép câu lệnh INSERT",
@@ -582,8 +587,8 @@ const dbVi: DbDict = {
     copyAsJson: "Sao chép dòng dạng JSON",
     copyRowsAsJson: "Sao chép {{n}} dòng dạng JSON",
     expandCell: "Mở ô này",
-    // Nghĩa tiếng Việt đứng trước, ký hiệu/từ khoá SQL trong ngoặc — người dùng đọc được ngay
-    // toán tử làm gì mà vẫn thấy đúng thứ câu lệnh sẽ chạy.
+    // The Vietnamese meaning comes first, the SQL symbol/keyword in parentheses — users can read
+    // at once what the operator does while still seeing exactly what the statement will run.
     op: {
       eq: "Bằng (=)",
       ne: "Khác (≠)",
@@ -688,8 +693,8 @@ const dbVi: DbDict = {
     loading: "Đang tải...",
     saving: "Đang lưu...",
     noDocuments: "Không có document nào.",
-    // Nghĩa tiếng Việt đứng trước, toán tử Mongo tương ứng trong ngoặc — bốn toán tử cùng dựa
-    // trên $regex được phân biệt bằng hình dạng mẫu mà mỗi cái tạo ra.
+    // The Vietnamese meaning comes first, the matching Mongo operator in parentheses — the four
+    // operators built on $regex are told apart by the shape of the pattern each one produces.
     op: {
       eq: "Bằng ($eq)",
       ne: "Khác ($ne)",
@@ -773,13 +778,14 @@ const dbVi: DbDict = {
     reloadDatabases: "Tải lại danh sách cơ sở dữ liệu",
     dataTab: "Key",
     groupTab: "Xoá key",
-    // Redis không xoá được cả một tiền tố bằng một lệnh — keyspace vốn phẳng, `user:*` chỉ là một
-    // mẫu khớp trên đó — nên xoá một nhóm nghĩa là phải gọi tên từng key, và đây là danh sách đó.
+    // Redis cannot delete a whole prefix in one command — the keyspace is flat, and `user:*` is
+    // just a pattern matched over it — so deleting a group means naming every key, and this is that
+    // list.
     listGroupKeys: "Liệt kê key để xoá",
     keyPatternPlaceholder: "Mẫu key, ví dụ user:*",
     keyPatternTooltip: "Mẫu glob của Redis: * khớp mọi thứ, ? một ký tự, [ab] một tập ký tự. Nhấn Enter để quét.",
-    // Keyspace của Redis vốn phẳng; dấu phân cách chỉ là quy ước khi đặt tên key, nên dùng ký tự
-    // nào để nhóm là do người dùng chọn.
+    // Redis's keyspace is flat; the separator is only a naming convention for keys, so which
+    // character groups them is up to the user.
     separatorLabel: "Nhóm key theo",
     separatorFlat: "Không nhóm",
     separatorFlatShort: "—",
@@ -787,21 +793,22 @@ const dbVi: DbDict = {
     noKeys: "Không có key nào",
     noKeysInSlice: "Chưa có key nào khớp ở phần này. Tải thêm để quét tiếp.",
     reloadKeys: "Quét lại danh sách key",
-    // Keyspace được duyệt bằng SCAN, không có số trang và cũng không có tổng số để chia trang.
-    // Sidebar quét hết một lượt ngay từ đầu để danh sách sắp xếp được theo tên và giữ nguyên thứ
-    // tự đó; những dòng dưới đây cho biết lượt quét đã đi tới đâu.
+    // The keyspace is walked with SCAN; there are no page numbers and no total to page by. The
+    // sidebar scans everything in one pass up front so the list can be sorted by name and keep that
+    // order; the lines below say how far the scan has got.
     scanningKeys: "Đang quét... {{n}} key",
     keysLoadedAll: "{{n}} key",
     keysLoadedPartial: "Đã tải {{n}} key, keyspace vẫn còn nữa",
     partialCountTooltip: "Số key đã đọc được dưới nhánh này. Quét chưa xong nên có thể còn nữa.",
     scanLimitNotice: "Đã dừng sớm để danh sách còn đọc được. Nâng trần số key, hoặc thu hẹp mẫu key, để xem phần còn lại theo đúng thứ tự.",
-    // Trần cho lượt quét. Nhớ theo từng kết nối: con số phù hợp phụ thuộc vào server chứ không
-    // phải vào ứng dụng.
+    // The cap for the scan. Remembered per connection: the right number depends on the server,
+    // not on the application.
     scanLimitLabel: "Trần số key",
     scanLimitTooltip: "Đọc tối đa bao nhiêu key rồi dừng quét. Toàn bộ keyspace được đọc ngay từ đầu để danh sách giữ được thứ tự theo tên, nên trần càng cao thì mở càng lâu.",
     scanLimitShort: "{{n}}K",
     scanLimitOption: "Tối đa {{n}} key",
-    // Các hàng đã có sẵn, chỉ giữ lại để sidebar không phải vẽ hàng nghìn hàng cùng lúc.
+    // The rows already there, only kept so the sidebar does not have to draw thousands of rows at
+    // once.
     showMoreRows: "Hiện thêm {{n}} mục",
     loadMoreKeys: "Tải thêm key",
     loadingMore: "Đang tải...",
@@ -826,8 +833,9 @@ const dbVi: DbDict = {
     loadedOf: "Đã tải {{loaded}}/{{total}}",
     loadedCount: "Đã tải {{loaded}}",
     loadMoreItems: "Tải thêm",
-    // Giá trị lưu trong key mà parse ra được object/array JSON — Redis chỉ biết đó là một chuỗi,
-    // nên bản format là cách đọc nó, còn bản thô mới là thứ thực sự được lưu.
+    // A value stored in a key that parses as a JSON object/array — Redis only knows it as a
+    // string, so the formatted version is a way to read it, while the raw version is what is
+    // actually stored.
     expandJson: "Hiện dạng JSON đã format",
     collapseJson: "Thu lại một dòng",
     viewRaw: "Thô",
@@ -839,8 +847,8 @@ const dbVi: DbDict = {
   },
   redisGroup: {
     keyCount: "{{n}} key thuộc tiền tố này",
-    // Danh sách này lấy từ lượt quét của sidebar, nên nếu lượt quét dừng sớm thì nó ít hơn số key
-    // thực có dưới tiền tố — cần nói rõ trước khi xoá bất cứ thứ gì.
+    // This list comes from the sidebar's scan, so if the scan stopped early it has fewer keys than
+    // really exist under the prefix — which needs saying before deleting anything.
     partialNotice:
       "Lượt quét keyspace chưa xong, nên đây là những key đã đọc được dưới tiền tố này chứ chưa phải toàn bộ.",
     selectAll: "Chọn tất cả",
@@ -853,8 +861,8 @@ const dbVi: DbDict = {
     confirmTitle: "Xoá các key?",
     confirmMessage: "Xoá {{n}} key thuộc {{prefix}}? Thao tác này không thể hoàn tác.",
   },
-  // Các công cụ dòng lệnh lo việc dump/restore. MixLab không đóng gói kèm: nó dùng công cụ có sẵn
-  // trên máy, bản tự tải về, hoặc đường dẫn bạn chọn ở đây.
+  // The command-line tools that handle dump/restore. MixLab does not bundle them: it uses tools
+  // already on the machine, a version it downloads itself, or a path you choose here.
   tools: {
     title: "Công cụ dump",
     intro:
@@ -868,7 +876,8 @@ const dbVi: DbDict = {
     choose: "Chọn file...",
     forget: "Dùng mặc định",
     working: "Đang xử lý...",
-    // Bản tải nặng vài chục MB nên phải nói rõ đang tới đâu, và nói hẳn khi xong.
+    // The download weighs a few dozen MB, so it has to say how far along it is, and say so plainly
+    // when done.
     stageDownloading: "Đang tải về",
     stageVerifying: "Đang kiểm tra bản tải",
     stageUnpacking: "Đang giải nén",
@@ -881,15 +890,17 @@ const dbVi: DbDict = {
     sourceCustom: "tự chọn",
     sourceDownloaded: "đã tải",
     sourceSystem: "có sẵn",
-    // Hiện thay cho nút tải, ở máy nào mà nhà cung cấp không phát hành bản tải được.
+    // Shown instead of the download button, on machines for which the vendor publishes no
+    // downloadable build.
     noDownload:
       "Không có bản tải nào cho máy này. Cài bằng trình quản lý gói (mysql-client hoặc mariadb-client), hoặc chỉ cho MixLab một bản có sẵn ở dưới.",
-    // EDB có build binaries cho Windows và macOS, nhưng đã ngừng build cho Linux từ sau
-    // PostgreSQL 10, nên đây là câu Linux thấy thay cho nút tải.
+    // EDB builds binaries for Windows and macOS, but stopped building for Linux after
+    // PostgreSQL 10, so this is the sentence Linux sees instead of the download button.
     noDownloadPostgres:
       "Không có bản tải PostgreSQL client tools nào cho máy này. Cài postgresql-client bằng trình quản lý gói, hoặc chỉ cho MixLab một bản có sẵn ở dưới.",
   },
-  // Dump, restore và xoá cả một cơ sở dữ liệu — nhóm nút bên phải của thanh action trong sidebar.
+  // Dump, restore and dropping a whole database — the button group on the right of the sidebar's
+  // action bar.
   dump: {
     dump: "Dump cơ sở dữ liệu này",
     restore: "Restore vào cơ sở dữ liệu này",
@@ -936,8 +947,9 @@ const dbVi: DbDict = {
     dropMongoMessage:
       "Xoá {{database}} cùng toàn bộ collection và document trong đó? Thao tác này không hoàn tác được, nên dump trước nếu còn cần.",
   },
-  // Thông báo khi một lệnh ở backend thất bại. Khoá ở đây chính là `code` mà `AppError` mang theo
-  // — xem src-tauri/src/error.rs. `{{message}}` là nguyên văn lời của driver, không dịch: đó là
+  // Messages when a backend command fails. The key here is exactly the `code` `AppError` carries
+  // — see src-tauri/src/error.rs. `{{message}}` is the driver's verbatim text, not translated: it
+  // is
   tunnel: {
     reconnecting: "Mất kết nối SSH. Đang kết nối lại…",
     reconnected:
@@ -946,9 +958,9 @@ const dbVi: DbDict = {
     retry: "Thử lại",
     later: "Để sau",
   },
-  // máy chủ đang nói, và cũng là phần đáng tra cứu nhất.
+  // the server speaking, and also the part most worth looking up.
   error: {
-    // Sáu loại driver, khi lỗi đến từ chính máy chủ.
+    // The six driver kinds, when the error comes from the server itself.
     mysql: "MySQL: {{message}}",
     postgres: "PostgreSQL: {{message}}",
     mongo: "MongoDB: {{message}}",
@@ -960,7 +972,7 @@ const dbVi: DbDict = {
       "Máy chủ MySQL này yêu cầu kiểm tra mật khẩu đầy đủ, và chỉ chấp nhận điều đó trên kết nối đã mã hoá. Bật Use SSL rồi kết nối lại.",
     mssqlInvalidBinary: "Giá trị này không phải base64 hợp lệ, không ghi được: {{message}}",
     mssqlAmbiguousMoney: "Dùng dấu chấm, không dùng dấu phẩy, cho phần thập phân của giá trị tiền tệ.",
-    // Kết nối
+    // Connection
     unknownConnection: "Kết nối này không còn mở. Kết nối lại để tiếp tục.",
     wrongConnectionKind: "Đây không phải kết nối {{kind}}.",
     connectTimeout:
@@ -996,7 +1008,7 @@ const dbVi: DbDict = {
     handoffExpired: "Kết nối được chuyển sang này đã được mở rồi.",
     mongoNoTcpHost: "Chuỗi kết nối không chỉ ra host TCP nào để mở tunnel.",
     emptyRedisCommand: "Không có lệnh nào để chạy.",
-    // Ghi dòng và document
+    // Writing rows and documents
     updateWithoutKey: "Dòng này không có cột nào định danh nó, nên không thể cập nhật.",
     deleteWithoutKey: "Dòng này không có cột nào định danh nó, nên không thể xoá.",
     rowsMatched: "Lẽ ra phải khớp đúng 1 dòng, nhưng khớp {{matched}} dòng. Không thay đổi gì.",
@@ -1005,11 +1017,11 @@ const dbVi: DbDict = {
     documentsDeleted: "Lẽ ra phải xoá đúng 1 document, nhưng đã xoá {{deleted}}.",
     documentInvalid: "Document {{index}}: {{cause}}",
     documentNotObject: "Document {{index}} không phải là một object.",
-    // Bộ lọc
+    // Filters
     unknownFilterColumn: "Bảng không có cột nào tên {{column}}.",
     invalidFilterField: "{{field}} không phải trường mà bộ lọc này dùng được.",
     unknownFilterOperator: "Toán tử lọc {{operator}} không hợp lệ.",
-    // Cấu trúc
+    // Structure
     databaseNameRequired: "Cơ sở dữ liệu phải có tên.",
     tableNameRequired: "Bảng phải có tên.",
     collectionNameRequired: "Collection phải có tên.",
@@ -1043,7 +1055,7 @@ const dbVi: DbDict = {
       "Không thấy cột nào của {{database}}.{{table}}. Có thể bảng không tồn tại, hoặc tài khoản của bạn không có quyền trên bảng đó.",
     unknownColumn: "{{table}} không còn cột nào tên {{name}}.",
     nothingToRun: "Không có gì để chạy.",
-    // Giá trị BSON
+    // BSON values
     bsonObjectId: "ObjectId phải là chuỗi hex 24 ký tự.",
     bsonInt32Range: "Số này nằm ngoài phạm vi của Int32.",
     bsonDate: "Ngày giờ phải viết theo RFC 3339, ví dụ 2024-01-31T09:00:00.000Z.",
@@ -1052,7 +1064,7 @@ const dbVi: DbDict = {
     bsonMissingField: "Giá trị {{type}} cần có {{field}}.",
     bsonReadOnlyType: "{{type}} chỉ đọc được, không ghi được.",
     bsonUnknownType: "Kiểu BSON {{type}} không hợp lệ.",
-    // Dump và restore
+    // Dump and restore
     unknownDumpMode: "Chế độ dump {{mode}} không hợp lệ.",
     notMongoUri: "Chuỗi kết nối không phải URI mongodb://.",
     srvOverTunnel:
@@ -1068,17 +1080,17 @@ const dbVi: DbDict = {
     toolWaitFailed: "Không chờ được {{tool}} chạy xong: {{message}}",
     toolFailed: "{{tool}} thất bại:\n{{message}}",
     transferCancelled: "{{tool}} đã bị dừng trước khi chạy xong.",
-    // Bộ công cụ tải về
+    // Downloaded tool suites
     unknownTool: "Công cụ {{tool}} không hợp lệ.",
     unknownToolSuite: "Bộ công cụ {{suite}} không hợp lệ.",
     mysqlToolNotFound:
       "Không tìm thấy {{tool}}. Cài MySQL client tools, trỏ MixLab tới một bản có sẵn trong Cài đặt, hoặc để MixLab tự tải về.",
-    // Dùng thay ở nơi MixLab không có gì để tải, nên mời tải là vô ích.
+    // Used instead where MixLab has nothing to download, so inviting a download is pointless.
     mysqlToolNotInstalled:
       "Không tìm thấy {{tool}}. Cài MySQL client tools bằng trình quản lý gói (mysql-client hoặc mariadb-client), hoặc trỏ MixLab tới một bản có sẵn trong Cài đặt.",
     postgresToolNotFound:
       "Không tìm thấy {{tool}}. Cài PostgreSQL client tools, trỏ MixLab tới một bản có sẵn trong Cài đặt, hoặc để MixLab tự tải về.",
-    // Dùng thay ở nơi không có gì để tải, nên mời tải là vô ích.
+    // Used instead where there is nothing to download, so inviting a download is pointless.
     postgresToolNotInstalled:
       "Không tìm thấy {{tool}}. Cài PostgreSQL client tools (postgresql-client), hoặc trỏ MixLab tới một bản có sẵn trong Cài đặt.",
     mongoToolNotFound:
@@ -1098,7 +1110,7 @@ const dbVi: DbDict = {
     cannotCopyTool: "Không đặt được {{tool}} vào {{path}}: {{message}}",
     cannotSaveToolPath: "Không ghi nhớ được vị trí công cụ đó: {{message}}",
     helperMissing: "Thao tác này cần {{program}} nhưng không chạy được: {{message}}",
-    // File và thư mục riêng của ứng dụng
+    // The application's own files and directories
     cannotReadFile: "Không đọc được {{path}}: {{message}}",
     cannotWriteFile: "Không ghi được {{path}}: {{message}}",
     sqliteRestoreFailed: "Khôi phục dừng lại ở {{statement}}: {{message}}",

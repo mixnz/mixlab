@@ -1,11 +1,11 @@
-/* Phủ đúng workspace của một tab, không phải cả cửa sổ: `.sql-workspace`, `.mongo-workspace` và
-   `.redis-workspace` đều là `position: relative` cho việc này. Thanh tab và các connection khác vẫn
-   dùng được trong khi tab này đứng đợi tunnel của nó. */
+/* Covers exactly one tab's workspace, not the whole window: `.sql-workspace`, `.mongo-workspace`
+   and `.redis-workspace` are all `position: relative` for this. The tab strip and other connections
+   stay usable while this tab waits for its tunnel. */
 .overlay {
   position: absolute;
   inset: 0;
-  /* Dưới dialog thật (80/81 trong `dialogMotion`): một hộp thoại người dùng đang mở dở không bị cái
-     này nuốt mất. */
+  /* Below real dialogs (80/81 in `dialogMotion`): a dialog the user has half-filled is not
+     swallowed by this. */
   z-index: 40;
   display: flex;
   align-items: center;
@@ -34,12 +34,12 @@
   margin: 0;
   font-size: var(--text-md);
   line-height: 1.5;
-  /* Câu lỗi thường dẫn lại lời của máy chủ, có khi không có chỗ nào để ngắt dòng. */
+  /* The error sentence often quotes the server, sometimes with nowhere to break the line. */
   overflow-wrap: anywhere;
 }
 
-/* Một vệt màu bên trái nói đây là tin gì, không nhuộm cả hộp: chữ vẫn đọc trên nền của dialog như
-   mọi hộp thoại khác. */
+/* A coloured bar on the left says what kind of news this is, without tinting the whole box: the
+   text still reads on the dialog's background like every other dialog. */
 .reconnecting {
   border-left: 3px solid var(--warning);
 }
@@ -52,8 +52,8 @@
   border-left: 3px solid var(--danger);
 }
 
-/* Quay đều trong lúc chờ: trạng thái này có thể ở lại tới một phút, nên phải thấy được là nó vẫn đang
-   làm gì đó. */
+/* Spins steadily while waiting: this state may last up to a minute, so it has to be visibly still
+   doing something. */
 .spinner {
   flex: none;
   width: 12px;

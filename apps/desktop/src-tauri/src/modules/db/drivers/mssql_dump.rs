@@ -87,9 +87,9 @@ fn dump_index_statement(schema: &str, table: &str, index: &TableIndex) -> String
 ///
 /// Never called for a `generated` column — see [`computed_column_definition`], which a computed
 /// column's entry in `TableStructure::columns` is routed to instead. `default_value`/
-/// `default_is_expression` on a computed column do not carry its expression (Vượt quá chữ spec #4
-/// of this plan) and would produce a plain column with a wrong or missing default if this ran on
-/// one.
+/// `default_is_expression` on a computed column do not carry its expression (Beyond the letter of
+/// the spec #4 of this plan) and would produce a plain column with a wrong or missing default if
+/// this ran on one.
 fn column_spec_from(column: &StructureColumn) -> ColumnSpec {
     ColumnSpec {
         name: column.name.clone(),
@@ -155,9 +155,9 @@ async fn computed_definitions(
 }
 
 /// A computed column's declaration: `name AS (expression)`, `PERSISTED` appended when the server
-/// stores rather than recomputes it — the one distinction the spec's top-level phi mục tiêu says
-/// the Structure tab does not let a user change, but a dump still has to spell correctly to
-/// reproduce the table as it is.
+/// stores rather than recomputes it — the one distinction the spec's top-level non-goals say the
+/// Structure tab does not let a user change, but a dump still has to spell correctly to reproduce
+/// the table as it is.
 fn computed_column_definition(name: &str, computed: &ComputedDefinition) -> String {
     let mut sql = format!("{} AS ({})", quote_ident(name), computed.definition);
     if computed.persisted {

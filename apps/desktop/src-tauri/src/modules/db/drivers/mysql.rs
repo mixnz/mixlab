@@ -7,12 +7,12 @@ use sqlx::mysql::{MySqlConnectOptions, MySqlPoolOptions, MySqlRow, MySqlSslMode}
 use sqlx::{Column, MySqlPool, Row, TypeInfo};
 use std::collections::BTreeMap;
 
-/// Lỗi này là đường ống đứt, không phải máy chủ từ chối.
+/// This error is a broken pipe, not the server refusing.
 ///
-/// `Io` là chỗ câu "expected to read N bytes, got 0 bytes at EOF" đi ra — sqlx dựng nó ở
-/// `net/socket/buffered.rs` khi socket đóng giữa chừng. Hai biến thể pool đi kèm vì khi tunnel
-/// đang được mở lại, cái người dùng gặp không phải là một socket đứt mà là một `acquire` không có
-/// kết nối nào để trả.
+/// `Io` is where the message "expected to read N bytes, got 0 bytes at EOF" comes out — sqlx builds
+/// it in `net/socket/buffered.rs` when the socket closes midway. The two pool variants come along
+/// because while the tunnel is being reopened, what the user hits is not a broken socket but an
+/// `acquire` with no connection to hand out.
 pub(super) fn lost_connection(e: &sqlx::Error) -> bool {
     matches!(
         e,
@@ -20,7 +20,8 @@ pub(super) fn lost_connection(e: &sqlx::Error) -> bool {
     )
 }
 
-/// Cái mà mọi lệnh MySQL đang dùng kết nối dùng thay cho `err!("error.mysql", message = e)`.
+/// What every MySQL command using a connection uses instead of
+/// `err!("error.mysql", message = e)`.
 pub(super) fn map_error(e: sqlx::Error) -> AppError {
     if lost_connection(&e) {
         err!("error.connectionLost")
@@ -955,11 +956,11 @@ mod tests {
         assert_eq!(quote_ident("we`ird"), "`we``ird`");
     }
 
-    /// `Database(_)` không dựng được ở đây — `sqlx::error::DatabaseError` là một trait và bản cài
-    /// đặt của MySQL không public — nên hai biến thể "máy chủ đã trả lời" dùng để thay thế là
-    /// `RowNotFound` và `Protocol`. Điều cần giữ vẫn là điều đó: một lỗi máy chủ đã trả lời thì
-    /// không bao giờ được biến thành "mất kết nối", vì như thế lệnh đọc sẽ bị chạy lại vô ích và
-    /// người dùng bị nói sai chuyện gì đã xảy ra.
+    /// `Database(_)` cannot be built here — `sqlx::error::DatabaseError` is a trait and MySQL's
+    /// implementation is not public — so the two "the server answered" variants used instead are
+    /// `RowNotFound` and `Protocol`. What has to hold is still the same: an error the server
+    /// answered with must never be turned into "connection lost", because then a read command
+    /// would be rerun for nothing and the user would be told the wrong story about what happened.
     #[test]
     fn only_a_broken_pipe_counts_as_a_lost_connection() {
         let eof = sqlx::Error::Io(std::io::Error::new(
@@ -984,8 +985,8 @@ mod tests {
         ));
         let error = map_error(eof);
         assert_eq!(error.code, "error.connectionLost");
-        // Nguyên văn của sqlx ở đây là chuyện nội bộ của thư viện, không phải máy chủ nói — nên
-        // nó không thuộc diện được giữ nguyên như quy ước ở `error.rs` mô tả.
+        // sqlx's verbatim text here is the library's internal business, not the server speaking —
+        // so it does not qualify to be kept verbatim under the convention `error.rs` describes.
         assert!(error.params.is_empty());
 
         let other = map_error(sqlx::Error::RowNotFound);

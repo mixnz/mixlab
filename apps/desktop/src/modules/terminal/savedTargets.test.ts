@@ -98,7 +98,8 @@ describe("parseSavedTarget", () => {
     });
   });
 
-  /* Cùng luật với `tabState.ts`: không có thư mục bắt đầu là mở ở thư mục mặc định của shell. */
+  /* The same rule as `tabState.ts`: no starting directory means opening in the shell's default
+     directory. */
   it("reads an absent working directory as none", () => {
     const entry = parseSavedTarget({ id: "t-1", name: "a", kind: "local", shellName: "pwsh" });
     expect(entry).toEqual({
@@ -111,8 +112,8 @@ describe("parseSavedTarget", () => {
     });
   });
 
-  /* Entry của bản cũ, hồi danh sách chỉ có máy chủ. Không đoán gì cả: hồi ấy không có loại nào
-     khác, nên `ssh` là cái nó vốn là. */
+  /* An entry from the old version, when the list only held servers. Nothing is guessed: there was
+     no other kind back then, so `ssh` is what it always was. */
   it("reads an entry written before there were kinds as a server", () => {
     const entry = parseSavedTarget({ id: "h-1", name: "prod", config: withPassword });
     expect(entry).toEqual({
@@ -131,21 +132,22 @@ describe("parseSavedTarget", () => {
     expect(parseSavedTarget({ name: "a", config: withPassword })).toBeNull();
     expect(parseSavedTarget({ id: "", name: "a", config: withPassword })).toBeNull();
     expect(parseSavedTarget({ id: "t-1", config: withPassword })).toBeNull();
-    // Một máy chủ không có `config` thì không có gì để kết nối tới.
+    // A server without `config` has nothing to connect to.
     expect(parseSavedTarget({ id: "t-1", name: "a", kind: "ssh" })).toBeNull();
-    // Một shell không có tên thì không tìm lại được trong danh sách shell của máy.
+    // A shell without a name cannot be found again in the machine's shell list.
     expect(parseSavedTarget({ id: "t-1", name: "a", kind: "local" })).toBeNull();
-    // Một loại phiên bản sau này thêm vào: bản này không vẽ nổi nó.
+    // A kind added by a later version: this version cannot draw it.
     expect(parseSavedTarget({ id: "t-1", name: "a", kind: "serial" })).toBeNull();
-    // Không có địa chỉ thì không có dòng nào để vẽ, dù mọi thứ khác đều ở đó.
+    // Without an address there is no row to draw, even though everything else is there.
     expect(
       parseSavedTarget({ id: "t-1", name: "a", config: { port: 22, username: "u", auth: withPassword.auth } }),
     ).toBeNull();
   });
 
-  /* Chỗ này từng là một `as SshConfig`, tức là không kiểm gì cả. Một entry sửa tay thiếu `auth`
-     đi lọt, rồi `mergeSecrets` đọc `config.auth.type` và ném ra giữa `Promise.all` của
-     `loadSavedTargets` — cả danh sách rỗng suốt phiên làm việc vì một dòng. */
+  /* This used to be an `as SshConfig`, i.e. no check at all. A hand-edited entry missing `auth`
+     slipped through, then `mergeSecrets` read `config.auth.type` and threw in the middle of
+     `loadSavedTargets`' `Promise.all` — the whole list empty for the entire session because of one
+     row. */
   it("reads a hand-edited server without dropping the list it is in", () => {
     const entry = parseSavedTarget({ id: "t-1", name: "prod", config: { host: "example.com" } });
     expect(entry).toEqual({
@@ -155,7 +157,7 @@ describe("parseSavedTarget", () => {
       config: { host: "example.com", port: 22, username: "", auth: { type: "password", password: "" } },
       runOnConnect: undefined,
     });
-    // Và cái vừa đọc ra đi qua được `mergeSecrets`, thứ đã ném ra trước đây.
+    // And what was just read passes through `mergeSecrets`, which used to throw.
     expect(() => mergeSecrets((entry as { config: SshConfig }).config, {})).not.toThrow();
   });
 
@@ -171,7 +173,7 @@ describe("parseSavedTarget", () => {
     expect(port(22.5)).toBe(22);
   });
 
-  /** Một khoá riêng đọc thành khoá riêng, kể cả khi đường dẫn đã bị xoá khỏi file. */
+  /** A private key reads as a private key, even when the path has been removed from the file. */
   it("keeps a key entry a key entry", () => {
     const entry = parseSavedTarget({
       id: "t-1",
@@ -189,8 +191,8 @@ describe("withoutSecrets", () => {
     expect(stored.kind === "ssh" && stored.config.auth).toEqual({ type: "password", password: "" });
   });
 
-  /* Một shell trên máy này không có gì để giấu, nên nó không đi vòng nào cả — và `savedTargets.ts`
-     cũng không gọi keyring cho nó. */
+  /* A shell on this machine has nothing to hide, so it takes no detour at all — and
+     `savedTargets.ts` does not call the keyring for it either. */
   it("passes a local shell through untouched", () => {
     const target: SavedTarget = {
       id: "t-1",

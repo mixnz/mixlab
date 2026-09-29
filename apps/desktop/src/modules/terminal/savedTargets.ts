@@ -5,27 +5,29 @@ import { dedupeById, upsertById } from "../../core/byId";
 import { mergeSshSecrets, splitSshSecrets, type SshSecrets } from "../../core/ssh";
 
 /**
- * Danh sách đích đã lưu, chia làm hai chỗ.
+ * The list of saved targets, split across two places.
  *
- * `terminal-hosts.json` giữ cái một đích *là* — tên, và tuỳ loại: shell cùng thư mục bắt đầu, hay
- * địa chỉ, cổng, người dùng, đường dẫn khoá — và nó là văn bản thường có chủ đích: đó là danh sách
- * những chỗ mình hay mở, đọc và chép được thì tiện. Cái mở được cửa thì đi vào kho thông tin đăng
- * nhập của hệ điều hành, qua ba lệnh `secrets_*` mà module db cũng dùng.
+ * `terminal-hosts.json` holds what a target *is* — the name, and depending on the kind: the shell
+ * and its starting directory, or the address, port, user and key path — and it is plain text on
+ * purpose: it is the list of places you open often, and being able to read and copy it is handy.
+ * What opens the door goes into the operating system's credential store, through the three
+ * `secrets_*` commands the db module also uses.
  *
- * `runOnConnect` ở lại trong file cùng với tên: nó là mấy dòng lệnh mở màn, không phải bí mật —
- * và chú thích dưới ô ấy trong form nói thẳng ra như vậy, vì một người tưởng nó được giấu sẽ đặt
- * `export TOKEN=…` vào đó.
+ * `runOnConnect` stays in the file along with the name: it is a few startup command lines, not a
+ * secret — and the caption under that field in the form says so plainly, because someone who
+ * thinks it is hidden will put `export TOKEN=…` in it.
  *
- * Nhánh `local` không có gì để giấu, nên nó không đụng tới kho thông tin đăng nhập ở cả ba đường:
- * lưu, đọc và xoá.
+ * The `local` branch has nothing to hide, so it does not touch the credential store on any of the
+ * three paths: save, read and delete.
  *
- * Tên file giữ nguyên từ hồi danh sách chỉ có máy chủ. Đổi tên file là bỏ lại danh sách của mọi
- * người đang dùng ở bản cũ, và cái tên ấy không ai nhìn thấy.
+ * The file name is kept from when the list only held servers. Renaming the file would leave behind
+ * the list of everyone using the old version, and nobody ever sees that name.
  *
- * Id là uuid do module này sinh, nên nó không bao giờ đụng id của một kết nối database — hai bên
- * chia nhau một kho nhưng không chia nhau khoá nào.
+ * The id is a uuid this module generates, so it never collides with a database connection's id —
+ * the two share one store but share no key.
  *
- * Chỗ chia là chuyện riêng của file này: cái đi vào và đi ra là một `SavedTarget` đầy đủ.
+ * Where the split happens is this file's own business: what goes in and comes out is a complete
+ * `SavedTarget`.
  */
 
 let storePromise: Promise<Store> | null = null;
@@ -37,18 +39,20 @@ function getStore(): Promise<Store> {
   return storePromise;
 }
 
-/* Những gì không được nằm trong `terminal-hosts.json`, và cách chẻ ra rồi ghép lại: `core/ssh.ts`,
-   vì module db chẻ đúng cùng một thứ cho tunnel của nó. Tên cũ giữ lại cho những chỗ đã import. */
+/* What must not sit in `terminal-hosts.json`, and how to split it out and merge it back:
+   `core/ssh.ts`, because the db module splits exactly the same thing for its tunnel. The old names
+   are kept for the places that already import them. */
 export type HostSecrets = SshSecrets;
 
 /**
- * Một entry trên đĩa, đọc phòng thủ, hoặc `null` khi nó không phải một cái nào cả.
+ * An entry on disk, read defensively, or `null` when it is not an entry at all.
  *
- * Mọi thứ tới đây là JSON một phiên bản nào đó của app đã ghi — kể cả bản không biết `kind` là gì.
- * Entry thiếu `kind` đọc là `ssh`: hồi ấy danh sách chỉ có máy chủ, nên đó không phải phỏng đoán.
+ * Everything arriving here is JSON some version of the app wrote — including a version that did
+ * not know what `kind` is. An entry missing `kind` reads as `ssh`: the list only held servers back
+ * then, so that is not a guess.
  *
- * `cwd` vắng mặt và `cwd` là `null` là một thứ, đúng như bên `tabState.ts`: mở shell ở thư mục mặc
- * định của nó.
+ * An absent `cwd` and a `null` `cwd` are the same thing, just as in `tabState.ts`: open the shell
+ * in its default directory.
  */
 export function parseSavedTarget(value: unknown): SavedTarget | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
@@ -63,7 +67,7 @@ export function parseSavedTarget(value: unknown): SavedTarget | null {
     return { id: entry.id, name: entry.name, kind: "local", shellName: entry.shellName, cwd, runOnConnect };
   }
 
-  // `undefined` cũng vào đây: xem chú thích trên hàm.
+  // `undefined` also lands here: see the comment on the function.
   if (entry.kind !== undefined && entry.kind !== "ssh") return null;
   const config = parseSshConfig(entry.config);
   if (config === null) return null;
@@ -71,17 +75,18 @@ export function parseSavedTarget(value: unknown): SavedTarget | null {
 }
 
 /**
- * Phần `config` của một entry ssh, đọc từng trường một, hoặc `null` khi không còn gì để vẽ.
+ * The `config` part of an ssh entry, read field by field, or `null` when nothing is left to draw.
  *
- * Trước đây chỗ này là một `as SshConfig` — một lời hứa với trình biên dịch, không phải một phép
- * kiểm. Một entry sửa tay thiếu `auth` đi lọt qua, rồi `mergeSecrets` đọc `config.auth.type` và
- * ném ra giữa `Promise.all` của `loadSavedTargets`: **cả danh sách** biến mất trong suốt phiên
- * làm việc, đúng ngược với điều `loadStored` hứa ngay bên trên nó.
+ * This used to be an `as SshConfig` — a promise to the compiler, not a check. A hand-edited entry
+ * missing `auth` slipped through, then `mergeSecrets` read `config.auth.type` and threw in the
+ * middle of `loadSavedTargets`' `Promise.all`: **the whole list** vanished for the entire session,
+ * exactly the opposite of what `loadStored` promises just above it.
  *
- * Chỉ `host` là không đoán được — không có nó thì không có dòng nào để vẽ. Còn lại đều có mặc
- * định đúng, theo đúng lẽ mà file này đã chọn ở chỗ khác: một máy chủ mà kho bí mật không còn gì
- * cho nó vẫn hiện ra với ô mật khẩu trống. Một `auth` thiếu hoặc lạ đọc thành mật khẩu rỗng vì
- * cùng lẽ ấy — dòng ấy sửa lại được trong form, còn vứt đi thì mất luôn cả tên và địa chỉ.
+ * Only `host` cannot be guessed — without it there is no row to draw. Everything else has a sound
+ * default, by the same reasoning this file chose elsewhere: a server for which the secret store
+ * has nothing left still shows up with an empty password field. A missing or unknown `auth` reads
+ * as an empty password for the same reason — that row can be fixed in the form, while throwing it
+ * away loses the name and address too.
  */
 function parseSshConfig(value: unknown): SshConfig | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
@@ -93,7 +98,8 @@ function parseSshConfig(value: unknown): SshConfig | null {
 
   return {
     host: config.host,
-    // Cổng ssh mặc định. Một entry không nói cổng vẫn mở được; nói sai thì không.
+    // The default ssh port. An entry that does not state a port can still open; one stating a
+    // wrong one cannot.
     port: typeof port === "number" && Number.isInteger(port) && port > 0 && port <= 65535 ? port : 22,
     username: typeof config.username === "string" ? config.username : "",
     auth:
@@ -105,14 +111,15 @@ function parseSshConfig(value: unknown): SshConfig | null {
           }
         : {
             type: "password",
-            // Rỗng là chuyện thường chứ không phải chuyện hỏng: `splitSecrets` ghi ra đúng thế,
-            // và mật khẩu thật nằm trong kho của hệ điều hành.
+            // Empty is normal, not broken: `splitSecrets` writes exactly that, and the real
+            // password lives in the operating system's store.
             password: typeof auth.password === "string" ? auth.password : "",
           },
   };
 }
 
-/** Cái ghi xuống file: một đích với phần bí mật đã lấy ra. Nhánh `local` đi qua nguyên vẹn. */
+/** What gets written to the file: a target with its secret part taken out. The `local` branch
+ *  passes through intact. */
 export function withoutSecrets(target: SavedTarget): SavedTarget {
   return target.kind === "ssh" ? { ...target, config: splitSshSecrets(target.config).config } : target;
 }
@@ -131,12 +138,13 @@ export function deleteSecrets(id: string): Promise<void> {
 }
 
 /**
- * Cái thật sự nằm trên đĩa, phần bí mật đã bị lấy ra từ trước.
+ * What is really on disk, with the secret part taken out beforehand.
  *
- * Entry nào không đọc được thì rơi ra khỏi danh sách chứ không làm hỏng cả lượt đọc — và vì mọi
- * lượt ghi đều đi qua đây trước, nó cũng biến mất khỏi file ngay lần lưu tiếp theo. Đó là điều
- * đúng: một dòng không vẽ được cũng không mở được, giữ lại chỉ là giữ một chỗ hỏng. Cái mà bản cũ
- * ghi ra thì đọc được — thiếu `kind` là `ssh`, xem `parseSavedTarget`.
+ * An entry that cannot be read drops out of the list rather than breaking the whole read — and
+ * since every write passes through here first, it also disappears from the file on the next save.
+ * That is right: a row that cannot be drawn cannot be opened either, and keeping it is just keeping
+ * something broken. What the old version wrote can be read — a missing `kind` is `ssh`; see
+ * `parseSavedTarget`.
  */
 async function loadStored(): Promise<SavedTarget[]> {
   const store = await getStore();
@@ -158,8 +166,9 @@ async function persist(list: SavedTarget[]): Promise<void> {
   await store.save();
 }
 
-/** Mọi đích đã lưu, phần bí mật đã ghép lại. Một máy chủ mà kho không còn gì cho nó vẫn về đây —
- *  chỉ là ô mật khẩu trống, và đó là điều đúng để hiện. */
+/** Every saved target, with the secret part merged back in. A server for which the store has
+ *  nothing left still comes back here — just with an empty password field, and that is the right
+ *  thing to show. */
 export async function loadSavedTargets(): Promise<SavedTarget[]> {
   const stored = await loadStored();
   return Promise.all(
@@ -172,13 +181,15 @@ export async function loadSavedTargets(): Promise<SavedTarget[]> {
 }
 
 /**
- * Ghi bí mật của `target` vào kho của hệ điều hành, rồi cả danh sách — không bí mật nào — xuống
- * file. Những đích khác cũng bị lược: chúng vừa được trao đi với phần bí mật đã ghép vào.
+ * Writes `target`'s secrets into the operating system's store, then the whole list — with no
+ * secrets — to the file. The other targets are stripped too: they were just handed out with their
+ * secret parts merged in.
  *
- * Nhánh `local` ghi một tập rỗng chứ không bỏ qua hẳn, và đó là chỗ dễ trượt: một dòng vốn là máy
- * chủ, sửa thành shell trên máy này, mà không đi qua đây thì mật khẩu cũ của nó nằm lại trong kho
- * của hệ điều hành mãi mãi — `removeSavedTarget` sau đó nhìn vào một entry `local` và không có lý
- * do gì để xoá. Tập rỗng là lệnh xoá, xem `secrets.rs`.
+ * The `local` branch writes an empty set rather than skipping entirely, and that is the easy place
+ * to slip: a row that used to be a server, edited into a shell on this machine, without passing
+ * through here would leave its old password in the operating system's store forever —
+ * `removeSavedTarget` would later look at a `local` entry and have no reason to delete anything.
+ * An empty set is a delete command; see `secrets.rs`.
  */
 async function persistTarget(list: SavedTarget[], target: SavedTarget): Promise<void> {
   await saveSecrets(target.id, target.kind === "ssh" ? splitSshSecrets(target.config).secrets : {});
@@ -204,10 +215,10 @@ export async function updateSavedTarget(target: SavedTarget): Promise<SavedTarge
 export async function removeSavedTarget(id: string): Promise<SavedTarget[]> {
   const list = await loadSavedTargets();
   const next = list.filter((entry) => entry.id !== id);
-  /* Bí mật đi theo đích nó thuộc về; để lại là để một entry trong kho của hệ điều hành mà không còn
-     gì gọi tên nó nữa. Hỏi không điều kiện, kể cả với một shell trên máy này: xoá cái không có ở
-     đó không phải là lỗi (`secrets.rs`), còn đoán rằng nó chưa từng có gì thì sai đúng một trường
-     hợp — một dòng từng là máy chủ. */
+  /* Secrets go with the target they belong to; leaving them behind leaves an entry in the operating
+     system's store that nothing names any more. Asked unconditionally, even for a shell on this
+     machine: deleting what is not there is not an error (`secrets.rs`), while guessing it never had
+     anything is wrong in exactly one case — a row that used to be a server. */
   await deleteSecrets(id);
   await persist(next);
   return next;

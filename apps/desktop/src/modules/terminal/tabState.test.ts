@@ -18,8 +18,8 @@ describe("parseTerminalTabState", () => {
     });
   });
 
-  /* State ghi bởi bản trước, hồi danh sách chỉ có máy chủ và id được gọi là `hostId`. Một tab đang
-     mở lúc người dùng nâng cấp không mất chỗ nó đang đứng. */
+  /* State written by the previous version, when the list only held servers and the id was called
+     `hostId`. A tab open while the user upgrades does not lose where it was. */
   it("đọc được id của phiên trước, hồi nó còn tên là hostId", () => {
     expect(parseTerminalTabState({ kind: "ssh", hostId: "h-1" })).toEqual({
       kind: "ssh",
@@ -42,8 +42,9 @@ describe("parseTerminalTabState", () => {
     });
   });
 
-  /* `targetId` là cộng thêm: shell và thư mục vẫn là cái mở lại tab, còn id chỉ để tra lệnh mở màn.
-     Nên một shell chưa ai lưu thành dòng nào vẫn nhớ được. */
+  /* `targetId` is additional: the shell and directory are still what reopen the tab, while the id
+     is only for looking up the startup command. So a shell nobody has saved as a row can still be
+     remembered. */
   it("giữ id của đích đã lưu bên cạnh shell, không thay nó", () => {
     expect(
       parseTerminalTabState({ kind: "local", shellName: "pwsh", cwd: null, targetId: "t-1" }),
@@ -51,7 +52,8 @@ describe("parseTerminalTabState", () => {
   });
 
   it("nhận shell không có thư mục bắt đầu, viết cách nào cũng được", () => {
-    // So cả object chứ không `?.cwd`: `TerminalTabState` là union, nhánh `ssh` không có `cwd`.
+    // Compares the whole object rather than `?.cwd`: `TerminalTabState` is a union, and the `ssh`
+    // branch has no `cwd`.
     const expected = { kind: "local", shellName: "pwsh", cwd: null, targetId: undefined };
     expect(parseTerminalTabState({ kind: "local", shellName: "pwsh", cwd: null })).toEqual(expected);
     expect(parseTerminalTabState({ kind: "local", shellName: "pwsh" })).toEqual(expected);
@@ -61,8 +63,8 @@ describe("parseTerminalTabState", () => {
     expect(parseTerminalTabState(undefined)).toBeNull();
   });
 
-  /* Tất cả những cái dưới đây là chuỗi một phiên bản nào đó của app đã ghi vào `localStorage`, nên
-     không tin gì cả — shell cố ý đưa qua mà không nhìn. */
+  /* Everything below is a string some version of the app wrote into `localStorage`, so nothing is
+     trusted — the shell deliberately passes it through without looking. */
   it("bỏ qua mọi thứ không phải state của tab terminal", () => {
     expect(parseTerminalTabState(null)).toBeNull();
     expect(parseTerminalTabState("ssh")).toBeNull();
@@ -77,8 +79,8 @@ describe("parseTerminalTabState", () => {
     expect(parseTerminalTabState({ kind: "local", shellName: "pwsh", cwd: 7 })).toBeNull();
   });
 
-  /* Một id không đọc được không làm hỏng cả state: shell và thư mục vẫn mở lại được tab, chỉ là
-     không có entry nào để tra lệnh mở màn. */
+  /* An unreadable id does not break the whole state: the shell and directory can still reopen the
+     tab, there is just no entry to look up the startup command in. */
   it("bỏ id hỏng của nhánh local mà vẫn giữ được shell", () => {
     expect(parseTerminalTabState({ kind: "local", shellName: "pwsh", targetId: 7 })).toEqual({
       kind: "local",
@@ -116,9 +118,9 @@ describe("tabStateFor", () => {
     });
   });
 
-  /* Kể cả lệnh mở màn: nó thuộc về entry trong `terminal-hosts.json`, và tab chỉ trỏ tới entry.
-     Chép ra đây là để hai bản của cùng một thứ trôi khỏi nhau — sửa lệnh xong, tab cũ vẫn chạy
-     lệnh cũ. */
+  /* Including the startup command: it belongs to the entry in `terminal-hosts.json`, and the tab
+     only points at the entry. Copying it here would let two copies of the same thing drift apart —
+     edit the command, and an old tab still runs the old one. */
   it("không chép lệnh mở màn ra khỏi đích đã lưu", () => {
     expect(
       tabStateFor({ kind: "ssh", config: CONFIG, targetId: "t-1", runOnConnect: "cd ~/a" }),
@@ -135,7 +137,8 @@ describe("tabStateFor", () => {
   });
 
   it("không nhớ gì về một phiên SSH gõ tay", () => {
-    // Không có id để trỏ tới, và mật khẩu thì không được ghi ra — nên không ghi gì cả.
+    // There is no id to point at, and the password must not be written out — so nothing is
+    // written at all.
     expect(
       tabStateFor({ kind: "ssh", config: CONFIG, targetId: null, runOnConnect: null }),
     ).toBeUndefined();

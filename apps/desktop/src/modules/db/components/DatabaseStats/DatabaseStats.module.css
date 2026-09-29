@@ -201,7 +201,8 @@
   opacity: 0.55;
 }
 
-/* Cột số ở đây chỉ so sánh được khi chúng thẳng hàng, và đó là việc mono làm. Header là nhãn. */
+/* The number columns here are only comparable when they line up, and that is mono's job. The
+   header is a label. */
 .grid tbody td {
   font-family: var(--font-mono);
 }

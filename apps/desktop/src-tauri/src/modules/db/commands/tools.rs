@@ -4,9 +4,9 @@
 //! programs (`mysqldump` and `mysql`, `pg_dump` and `psql`, `mongodump` and
 //! `mongorestore`), and nothing outside the database module has a use for them.
 //!
-//! Tên lệnh mang tiền tố `dumptools_` chứ không phải `tools_`: module Tools có lệnh riêng của nó,
-//! và `generate_handler!` là một danh sách phẳng nên hai họ lệnh khác chủ mà trùng tiền tố sẽ nằm
-//! lẫn vào nhau mà không có gì cảnh báo.
+//! The command names carry the `dumptools_` prefix rather than `tools_`: the Tools module has
+//! commands of its own, and `generate_handler!` is a flat list, so two families of commands with
+//! different owners but the same prefix would mix together with nothing to warn about it.
 
 use super::{in_background, tools_dir, TOOLS_PROGRESS_EVENT};
 use crate::error::AppError;

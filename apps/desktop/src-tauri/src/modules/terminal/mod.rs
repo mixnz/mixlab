@@ -1,7 +1,7 @@
-//! Terminal: một phiên shell, trên máy này hoặc trên một máy chủ qua SSH.
+//! Terminal: a shell session, on this machine or on a server over SSH.
 //!
-//! Chỗ khác nhau giữa hai loại phiên nằm gọn trong hàm dựng phiên; từ `commands.rs` trở lên chỉ
-//! còn một `Session` và một đường ra.
+//! The difference between the two kinds of session is contained in the function that builds the
+//! session; from `commands.rs` upwards there is only one `Session` and one way out.
 
 pub mod commands;
 pub mod local;
@@ -10,7 +10,7 @@ pub mod remote;
 pub mod state;
 pub mod stream;
 
-/// Đặt state của module vào app. Gọi một lần, từ `lib.rs`.
+/// Puts the module's state into the app. Called once, from `lib.rs`.
 pub fn register<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
     builder.manage(state::TerminalState::default())
 }

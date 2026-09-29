@@ -10,10 +10,11 @@ import {
 } from "./settings";
 
 /**
- * Cài đặt hiển thị đang dùng, chung cho mọi tab terminal và nhớ lại giữa các lần mở.
+ * The display settings in use, shared by every terminal tab and remembered between launches.
  *
- * Cơ chế nằm ở `core/jsonStore.ts`. Ở đây chỉ còn phần riêng: lượt đọc *ghi lại ngay*, vì nó vừa
- * nhấc cỡ chữ ra khỏi `localStorage` và xoá khoá cũ đi — không ghi thì một lần thoát app là mất.
+ * The mechanism lives in `core/jsonStore.ts`. Only this store's own part is left here: the read
+ * *writes back right away*, because it has just lifted the font size out of `localStorage` and
+ * deleted the old key — without writing, one app exit would lose it.
  */
 
 const FILE = "terminal-settings.json";
@@ -26,9 +27,9 @@ function getStore(): Promise<Store> {
   return storePromise;
 }
 
-/** Cỡ chữ mà đợt trước để lại, và cùng lúc dọn nó đi. Đọc trong `try` vì `localStorage` ném ở
- *  những webview cấm lưu trữ theo site — và một cỡ chữ không đọc được thì mặc định là câu trả lời
- *  đúng, không phải một lỗi để báo. */
+/** The font size the previous round left behind, cleared away at the same time. Read inside a
+ *  `try` because `localStorage` throws in webviews that forbid per-site storage — and a font size
+ *  that cannot be read makes the default the right answer, not an error to report. */
 function takeLegacyFontSize(): string | null {
   try {
     const value = localStorage.getItem(LEGACY_FONT_SIZE_KEY);
@@ -44,8 +45,9 @@ const shared = createStore<TerminalSettings>({
   load: async () => {
     const store = await getStore();
     const settings = withLegacyFontSize(await store.get(KEY), takeLegacyFontSize());
-    /* Ghi lại ngay sau khi nạp, chứ không đợi lần sửa đầu tiên: khoá `localStorage` vừa bị xoá,
-       nên cỡ chữ cũ giờ chỉ còn tồn tại ở đây. Không ghi thì một lần thoát app là nó mất. */
+    /* Write back right after loading rather than waiting for the first edit: the `localStorage` key
+       has just been deleted, so the old font size now only exists here. Without writing, one app
+       exit would lose it. */
     await store.set(KEY, settings);
     await store.save();
     return settings;
@@ -57,33 +59,37 @@ const shared = createStore<TerminalSettings>({
   },
 });
 
-/** Trên màn hình ngay, xuống đĩa sau. Không có gì ở đây đáng dựng một lỗi trước mặt người dùng:
- *  một cỡ chữ không tới được đĩa là một cỡ chữ trở về mặc định ở lần mở sau. */
+/** On screen right away, to disk afterwards. Nothing here is worth raising an error in front of
+ *  the user: a font size that did not reach the disk is a font size back at the default on the
+ *  next launch. */
 function write(next: TerminalSettings): void {
   void shared.save(next).catch(() => {});
 }
 
-/** Cài đặt dùng chung, giữ đồng bộ giữa mọi nơi gọi nó. */
+/** The shared settings, kept in sync across every place that calls it. */
 export function useTerminalSettings(): TerminalSettings {
-  // Đọc hỏng thì `loaded` ở lại `false` và màn hình chạy bằng mặc định; không có chỗ nào ở đây báo
-  // được lỗi, và một terminal vẽ bằng cỡ chữ mặc định vẫn là một terminal dùng được.
+  // A failed read leaves `loaded` at `false` and the screen runs on the defaults; there is nowhere
+  // here to report an error, and a terminal drawn at the default font size is still a usable
+  // terminal.
   return useStore(shared);
 }
 
-/** Cái store đang giữ ngay lúc này, cho chỗ gọi không phải component — một handler chuột phải đọc
- *  công tắc của nó ở thời điểm bấm, chứ không ở thời điểm handler được dựng. */
+/** What the store holds right now, for callers that are not components — a right-click handler
+ *  reads its switch at the moment of the click, not when the handler was built. */
 export function currentTerminalSettings(): TerminalSettings {
   return shared.get();
 }
 
 /**
- * Cài đặt, đợi file nạp xong.
+ * The settings, once the file has finished loading.
  *
- * Khác {@link currentTerminalSettings} ở đúng chỗ đáng khác: một màn hình mở ra ngay lúc app khởi
- * động mà hỏi thẳng `snapshot` thì nhận về mặc định, vì lượt đọc file chưa xong. `TargetForm` cần
- * shell mặc định *đúng* chứ không cần nó *ngay*, nên nó đợi.
+ * Differs from {@link currentTerminalSettings} exactly where it is worth differing: a screen
+ * opening right at app start that asked `snapshot` directly would get the defaults, because the
+ * file read has not finished. `TargetForm` needs the *right* default shell rather than needing it
+ * *now*, so it waits.
  *
- * Đọc hỏng vẫn trả về một bộ cài đặt — bộ mặc định — chứ không ném: form vẫn phải mở ra được.
+ * A failed read still returns a set of settings — the defaults — rather than throwing: the form
+ * still has to open.
  */
 export function loadTerminalSettings(): Promise<TerminalSettings> {
   return shared.ready().then(
@@ -92,8 +98,8 @@ export function loadTerminalSettings(): Promise<TerminalSettings> {
   );
 }
 
-/** Một lần sửa cài đặt. Một cửa chứ không phải một setter mỗi trường: pane Cài đặt sửa mỗi lần
- *  một trường và không trường nào cần thứ trường khác không cần. */
+/** One settings change. One door rather than a setter per field: the Settings pane changes one
+ *  field at a time and no field needs anything another field does not. */
 /** One settings change, resolved once it is on disk and rejected when it is not — for sync, which
  *  agrees only on what the disk holds (T178a, L5). Sanitized on the way in, as every write is. */
 export function saveTerminalSettings(patch: Partial<TerminalSettings>): Promise<void> {
@@ -101,15 +107,16 @@ export function saveTerminalSettings(patch: Partial<TerminalSettings>): Promise<
 }
 
 export function updateTerminalSettings(patch: Partial<TerminalSettings>): void {
-  /* Lọc cả lúc ghi chứ không chỉ lúc đọc file. Một trường hỏng ở đây không dừng lại ở chỗ nó bị
-     ghi sai: `fontFamily` rỗng đi thẳng vào `term.options.fontFamily`, xterm dựng `ctx.font` từ nó,
-     chuỗi ấy không phân tích được, canvas bỏ qua phép gán và giữ số đo ô chữ cũ — chữ to lên mà
-     dòng đứng nguyên. Đúng một dòng ở đây là mọi cửa ghi đều không mở được lối ấy nữa. */
+  /* Sanitized on write too, not only when reading the file. A broken field here does not stay where
+     it was written wrong: an empty `fontFamily` goes straight into `term.options.fontFamily`, xterm
+     builds `ctx.font` from it, that string cannot be parsed, the canvas ignores the assignment and
+     keeps the old cell measurements — the text grows while the lines stay put. Exactly one line
+     here means no write door can open that path again. */
   void saveTerminalSettings(patch).catch(() => {});
 }
 
-/** To lên (`delta` dương) hay nhỏ đi (`delta` âm) một nấc. Chạm đầu khoảng thì không ghi và không
- *  ai được báo — không có gì đổi thì không có gì để vẽ lại. */
+/** One step bigger (positive `delta`) or smaller (negative `delta`). Hitting an end of the range
+ *  writes nothing and notifies nobody — nothing changed, so there is nothing to redraw. */
 export function zoomTerminal(delta: number): void {
   const settings = shared.get();
   const fontSize = stepFontSize(settings.fontSize, delta);

@@ -1,7 +1,7 @@
-/* `.group`, `.groupLabel` và `.hint` có bản sinh đôi ở `SettingsModal.module.css` của shell và ở
-   `RestSettings.module.css` của module REST. Chép chứ không dùng chung, đúng lý do đã ghi ở đó:
-   cái dialog là của shell còn cái pane này là của module, và một CSS Module không đọc được lớp
-   của file khác mà không import qua ranh giới ấy. */
+/* `.group`, `.groupLabel` and `.hint` have twins in the shell's `SettingsModal.module.css` and in
+   the REST module's `RestSettings.module.css`. Copied rather than shared, for the reason noted
+   there: the dialog belongs to the shell while this pane belongs to the module, and a CSS Module
+   cannot read another file's classes without importing across that boundary. */
 .group {
   display: flex;
   flex-direction: column;
@@ -47,7 +47,7 @@
   opacity: 0.65;
 }
 
-/* Ô nhận một font stack hoặc một đường dẫn — cả hai đều dài hơn cái ô 5rem bên trên nhiều. */
+/* The field takes a font stack or a path — both far longer than the 5rem field above. */
 .wide {
   flex: 1;
   min-width: 0;

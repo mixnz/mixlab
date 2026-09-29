@@ -38,10 +38,10 @@ interface Props {
   status: string;
   error: string;
   /**
-   * Connection này đi qua SSH tunnel.
+   * This connection goes through an SSH tunnel.
    *
-   * Chỉ để biết ai kể chuyện mất kết nối: có tunnel thì TunnelBanner kể, và ErrorBanner im — xem
-   * {@link useWorkspaceError}.
+   * Only used to know who tells the story of a lost connection: with a tunnel, TunnelBanner tells
+   * it and ErrorBanner stays quiet — see {@link useWorkspaceError}.
    */
   tunnelled: boolean;
   onDisconnect: () => void;

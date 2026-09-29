@@ -78,15 +78,15 @@ describe("terminalTitle", () => {
     expect(terminalTitle(remote, null)).toBe("deploy@example.com");
   });
 
-  /* Cái tên đã lưu thắng cả hai, và thắng ở cả hai loại phiên: người đặt tên "Prod DB" cho một
-     máy chủ là người muốn đọc "Prod DB" trên tab, chứ không phải đọc lại cái họ vừa gõ vào form. */
+  /* The saved name beats both, and beats them for both kinds of session: someone who named a server
+     "Prod DB" wants to read "Prod DB" on the tab, not read back what they typed into the form. */
   it("names the tab after the saved target when one is given", () => {
     expect(terminalTitle(remote, "Prod DB")).toBe("Prod DB");
     expect(terminalTitle(bash, "Dự án A")).toBe("Dự án A");
   });
 
-  /* Không có gì để hiện thì không đổi gì. Một tên rỗng là một entry chưa đặt tên, không phải một
-     yêu cầu để tab trống tên. */
+  /* Nothing to show changes nothing. An empty name is an entry not yet named, not a request for the
+     tab to have no name. */
   it("falls back when the saved name is empty", () => {
     expect(terminalTitle(remote, "")).toBe("deploy@example.com");
     expect(terminalTitle(remote, "   ")).toBe("deploy@example.com");
@@ -94,7 +94,8 @@ describe("terminalTitle", () => {
 });
 
 describe("terminalBadgeMarks", () => {
-  // Chưa có phiên thì form đang hiện, và form có thể là của một shell khác cái tab sẽ mở.
+  // With no session yet the form is showing, and the form may be for a different shell than the
+  // one the tab will open.
   it("marks nothing while the tab is still on the form", () => {
     expect(terminalBadgeMarks(null, false)).toEqual([]);
   });
@@ -117,8 +118,9 @@ describe("openingKeystrokes", () => {
     expect(openingKeystrokes("cd ~/project-a/frontend")).toBe("cd ~/project-a/frontend\r");
   });
 
-  /* Mấy dòng là mấy lệnh, và người dùng gõ chúng vào một ô nhiều dòng vì họ muốn từng dòng chạy —
-     `\r` chứ không phải `\n`: pty đọc phím Enter, không đọc ký tự xuống dòng. */
+  /* Several lines are several commands, and the user types them into a multi-line field because
+     they want each line to run — `\r` rather than `\n`: the pty reads the Enter key, not a newline
+     character. */
   it("runs every line, however the box wrote its newlines", () => {
     expect(openingKeystrokes("cd ~/a\nnvm use\r\nnpm run dev")).toBe(
       "cd ~/a\rnvm use\rnpm run dev\r",
@@ -129,7 +131,7 @@ describe("openingKeystrokes", () => {
     expect(openingKeystrokes("  cd ~/a  \n\n\n  ls  \n")).toBe("cd ~/a\rls\r");
   });
 
-  /* Ô trống là chuyện thường tình, không phải một lệnh rỗng để gửi xuống. */
+  /* An empty field is perfectly normal, not an empty command to send down. */
   it("has nothing to send for an empty box", () => {
     expect(openingKeystrokes(null)).toBeNull();
     expect(openingKeystrokes("")).toBeNull();

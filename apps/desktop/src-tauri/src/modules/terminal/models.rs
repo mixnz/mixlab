@@ -1,40 +1,40 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Kích thước khung, tính bằng ô chữ.
+/// The frame size, in character cells.
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct TerminalSize {
     pub cols: u16,
     pub rows: u16,
 }
 
-/// Một shell dò được trên máy này.
+/// A shell detected on this machine.
 #[derive(Debug, Clone, Serialize)]
 pub struct LocalShell {
-    /// Định danh bền — `shells.ts` biến nó thành nhãn hiển thị.
+    /// A stable identifier — `shells.ts` turns it into a display label.
     pub name: String,
     pub path: String,
-    /// Tham số cố định; rỗng với hầu hết, `["-d", "<distro>"]` với WSL.
+    /// Fixed arguments; empty for most, `["-d", "<distro>"]` for WSL.
     pub args: Vec<String>,
 }
 
-/// Phiên mở đi đâu.
+/// Where the session opens.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum TerminalTarget {
     Local {
-        /// `None` là "shell mặc định của máy".
+        /// `None` is "the machine's default shell".
         shell: Option<String>,
         #[serde(default)]
         args: Vec<String>,
         cwd: Option<String>,
     },
-    /// Máy chủ mở phiên. Đúng `SshConfig` mà tunnel dùng — bốn trường ấy là bốn trường của một máy
-    /// chủ SSH, không của thứ nằm ở đầu kia.
+    /// The server the session opens on. Exactly the `SshConfig` the tunnel uses — those four
+    /// fields are the four fields of an SSH server, not of whatever sits at the other end.
     Ssh(crate::ssh::SshConfig),
 }
 
-/// Thứ duy nhất phiên gửi ngược lên UI dưới dạng JSON. Byte thì đi thẳng, không bọc.
+/// The only thing the session sends back up to the UI as JSON. Bytes go straight, unwrapped.
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum TerminalEvent {
@@ -44,8 +44,8 @@ pub enum TerminalEvent {
     },
 }
 
-/// Đầu xa nói gì. `commands.rs` là chỗ duy nhất biến cái này thành khung IPC — nhờ vậy cả lớp
-/// phiên chạy được trong `cargo test` mà không cần webview.
+/// What the far end says. `commands.rs` is the only place that turns this into an IPC frame —
+/// thanks to that the whole session layer runs under `cargo test` without a webview.
 #[derive(Debug, Clone)]
 pub enum Output {
     Data(Vec<u8>),

@@ -1,39 +1,43 @@
 import { DEFAULT_FONT_SIZE, stepFontSize } from "./fontSize";
 
-/** Kiểu con trỏ. Đúng ba giá trị `ITerminalOptions.cursorStyle` của xterm nhận — không phải một
- *  danh sách của riêng app, nên nó không được rộng hơn. */
+/** The cursor style. Exactly the three values xterm's `ITerminalOptions.cursorStyle` takes — not a
+ *  list of the app's own, so it must not be any wider. */
 export type CursorStyle = "block" | "underline" | "bar";
 
 /**
- * Cách terminal hiển thị, chung cho mọi tab và nhớ lại giữa các lần mở.
+ * How the terminal is displayed, shared by every tab and remembered between launches.
  *
- * Một bộ chứ không phải một bộ mỗi tab, cùng lý do `rest/workspace.ts` giữ bốn công tắc của nó ở
- * một chỗ: cỡ chữ là vì mắt người dùng, và mắt thì không đổi khi họ chuyển tab.
+ * One set rather than one per tab, for the same reason `rest/workspace.ts` keeps its four switches
+ * in one place: the font size is about the user's eyes, and eyes do not change when switching
+ * tabs.
  */
 export interface TerminalSettings {
-  /** Nguyên một font stack CSS, không phải một tên font: cái này đi thẳng vào `fontFamily` của
-   *  xterm, và một máy thiếu font đầu tiên vẫn phải còn đường lui. */
+  /** A whole CSS font stack, not a font name: this goes straight into xterm's `fontFamily`, and a
+   *  machine missing the first font still needs a way to fall back. */
   fontFamily: string;
   fontSize: number;
   scrollback: number;
   cursorStyle: CursorStyle;
   cursorBlink: boolean;
-  /** `LocalShell.name` — `pwsh`, `git-bash`, `wsl:Ubuntu` — chứ không phải đường dẫn. Đường dẫn
-   *  của cùng một shell đổi theo bản cài, còn tên thì backend sinh ra ổn định. */
+  /** `LocalShell.name` — `pwsh`, `git-bash`, `wsl:Ubuntu` — rather than a path. The same shell's
+   *  path changes with the installation, while the name the backend generates is stable. */
   defaultShell: string | null;
   defaultCwd: string | null;
-  /** Chuột phải dán thẳng thay vì mở menu — quy ước của PuTTY, và người quen nó thì rất quen. */
+  /** Right-click pastes straight away instead of opening a menu — PuTTY's convention, and people
+   *  used to it are very used to it. */
   rightClickPastes: boolean;
   /**
-   * Tab mang tên đích đã lưu thay vì `user@host` hoặc tên shell.
+   * The tab carries the saved target's name instead of `user@host` or the shell name.
    *
-   * Ai mở năm tab tới năm máy chủ của cùng một hệ thống thì `deploy@10.0.0.7` không phân biệt được
-   * cái nào với cái nào, còn "Prod DB" thì được. Ai chỉ mở một hai phiên thì ngược lại — nên đây là
-   * một công tắc chứ không phải một quyết định. Phiên không đến từ đích đã lưu vẫn tên như cũ:
-   * không có gì để hiện. Xem `terminalTitle` bên `session.ts`.
+   * For someone opening five tabs to five servers of the same system, `deploy@10.0.0.7` cannot
+   * tell which is which, while "Prod DB" can. For someone opening only one or two sessions it is
+   * the other way round — so this is a switch rather than a decision. A session not coming from a
+   * saved target keeps its old name: there is nothing to show. See `terminalTitle` in
+   * `session.ts`.
    *
-   * Bật sẵn: người đã đặt tên cho một đích đã nói tên nào là tên họ đọc ra, và tab thì là chỗ duy
-   * nhất cái tên ấy được đọc lại. Tắt nó đi thì công sức đặt tên chỉ còn thấy trong form.
+   * On by default: someone who named a target has said which name they read, and the tab is the
+   * only place that name is read back. Turning it off leaves the naming effort visible only in the
+   * form.
    */
   titleShowsTargetName: boolean;
 }
@@ -47,13 +51,14 @@ const RETIRED_DEFAULT_FONT_FAMILIES: readonly string[] = ['"Fira Code", monospac
 
 export const DEFAULT_SCROLLBACK = 5000;
 
-/* Dưới 100 dòng thì cuộn lên không còn nghĩa gì, còn trên 100k thì mỗi phiên giữ vài trăm MB và
-   một máy có mười tab terminal là một máy hết bộ nhớ. */
+/* Below 100 lines scrolling back no longer means anything, while above 100k each session holds a
+   few hundred MB and a machine with ten terminal tabs is a machine out of memory. */
 export const MIN_SCROLLBACK = 100;
 export const MAX_SCROLLBACK = 100_000;
 
-/** Khoá `localStorage` mà đợt trước cất cỡ chữ vào. Chỉ còn tồn tại để đọc nốt một lần rồi xoá —
- *  xem {@link withLegacyFontSize} và `settingsStore.ts`. */
+/** The `localStorage` key the previous round stored the font size under. It only still exists to
+ *  be read one last time and then deleted — see {@link withLegacyFontSize} and
+ *  `settingsStore.ts`. */
 export const LEGACY_FONT_SIZE_KEY = "mixdb-terminal-font-size";
 
 export const DEFAULT_SETTINGS: TerminalSettings = {
@@ -70,7 +75,8 @@ export const DEFAULT_SETTINGS: TerminalSettings = {
 
 const CURSOR_STYLES: readonly CursorStyle[] = ["block", "underline", "bar"];
 
-/** Số dòng giữ lại, đã kẹp trong khoảng. Kẹp chứ không từ chối, đúng như `stepFontSize`. */
+/** The number of lines kept, clamped to the range. Clamped rather than refused, just like
+ *  `stepFontSize`. */
 export function clampScrollback(lines: number): number {
   if (!Number.isFinite(lines)) return DEFAULT_SCROLLBACK;
   return Math.min(MAX_SCROLLBACK, Math.max(MIN_SCROLLBACK, Math.round(lines)));
@@ -85,11 +91,12 @@ function optionalText(value: unknown): string | null {
 }
 
 /**
- * Bản ghi đọc từ đĩa thành cài đặt dùng được.
+ * A record read from disk turned into usable settings.
  *
- * Không tin trường nào: `terminal-settings.json` là một file người dùng mở ra sửa được, và bản
- * trước của app viết ra một file thiếu đúng những trường bản này mới thêm. Cả hai ca ra cùng một
- * việc — trường nào hiểu được thì giữ, trường nào không thì lấy mặc định.
+ * No field is trusted: `terminal-settings.json` is a file the user can open and edit, and the
+ * app's previous version wrote a file missing exactly the fields this version added. Both cases
+ * come to the same job — keep the fields that make sense, and take the default for those that do
+ * not.
  */
 export function sanitizeSettings(raw: unknown): TerminalSettings {
   const record = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
@@ -98,8 +105,8 @@ export function sanitizeSettings(raw: unknown): TerminalSettings {
     fontFamily: RETIRED_DEFAULT_FONT_FAMILIES.includes(record.fontFamily as string)
       ? DEFAULT_FONT_FAMILY
       : text(record.fontFamily, DEFAULT_FONT_FAMILY),
-    // `?? Number.NaN` chứ không để `Number(undefined)` một mình: `Number(null)` ra 0, và 0 kẹp
-    // thành cỡ chữ nhỏ nhất thay vì thành mặc định.
+    // `?? Number.NaN` rather than leaving `Number(undefined)` alone: `Number(null)` gives 0, and 0
+    // clamps to the smallest font size instead of to the default.
     fontSize: stepFontSize(Number(record.fontSize ?? Number.NaN), 0),
     scrollback: clampScrollback(Number(record.scrollback ?? Number.NaN)),
     cursorStyle: CURSOR_STYLES.includes(cursorStyle as CursorStyle)
@@ -110,9 +117,9 @@ export function sanitizeSettings(raw: unknown): TerminalSettings {
     defaultShell: optionalText(record.defaultShell),
     defaultCwd: optionalText(record.defaultCwd),
     rightClickPastes: record.rightClickPastes === true,
-    /* `typeof` chứ không phải `=== true`, không như dòng trên: cái này mặc định bật, nên một file
-       thiếu nó phải lấy mặc định, còn `false` viết trong file là một câu người dùng đã nói và phải
-       sống sót. Cùng hình dạng với `cursorBlink`. */
+    /* `typeof` rather than `=== true`, unlike the line above: this one defaults to on, so a file
+       missing it has to take the default, while `false` written in the file is something the user
+       said and has to survive. The same shape as `cursorBlink`. */
     titleShowsTargetName:
       typeof record.titleShowsTargetName === "boolean"
         ? record.titleShowsTargetName
@@ -121,14 +128,16 @@ export function sanitizeSettings(raw: unknown): TerminalSettings {
 }
 
 /**
- * Cài đặt, cộng cỡ chữ mà đợt trước để lại trong `localStorage`.
+ * The settings, plus the font size the previous round left in `localStorage`.
  *
- * Chỗ cất cỡ chữ đổi từ `localStorage` sang `terminal-settings.json` ở đợt này. Một người đã kéo
- * cỡ chữ lên 20 không có lý do gì để thấy nó về 14 sau khi cập nhật, nên giá trị cũ được đọc nốt
- * đúng một lần — lúc file chưa có cỡ chữ của riêng nó — rồi khoá cũ bị xoá.
+ * Where the font size is kept moves from `localStorage` to `terminal-settings.json` in this round.
+ * Someone who raised the font size to 20 has no reason to see it back at 14 after updating, so the
+ * old value is read exactly once more — while the file has no font size of its own yet — and then
+ * the old key is deleted.
  *
- * Hàm thuần, nhận `legacy` như một tham số chứ không tự đọc `localStorage`: `settingsStore.ts`
- * đọc, còn quy tắc thì ở đây, nơi test với tới được mà không cần trình duyệt.
+ * A pure function, taking `legacy` as a parameter rather than reading `localStorage` itself:
+ * `settingsStore.ts` does the reading, while the rule lives here, where tests can reach it without
+ * a browser.
  */
 export function withLegacyFontSize(raw: unknown, legacy: string | null): TerminalSettings {
   const settings = sanitizeSettings(raw);

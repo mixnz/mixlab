@@ -1,13 +1,14 @@
 import { DEFAULT_FONT_FAMILY } from "./settings";
 
 /**
- * Font đơn cách đáng đưa cho một terminal.
+ * Monospace fonts worth offering to a terminal.
  *
- * Một danh sách viết tay chứ không phải mọi font máy có, và đó là chủ ý: hộp chọn này để chọn font
- * *cho terminal*, mà một terminal cần đúng một thứ — mọi ký tự rộng bằng nhau. Đưa cả nghìn font
- * của máy ra là mời người dùng chọn một font tỷ lệ, và màn hình sẽ lệch cột ngay dòng đầu tiên.
+ * A hand-written list rather than every font the machine has, and on purpose: this picker chooses
+ * a font *for a terminal*, and a terminal needs exactly one thing — every character equally wide.
+ * Offering all the machine's thousand fonts invites the user to pick a proportional one, and the
+ * screen misaligns its columns from the very first line.
  *
- * `fontProbe.ts` lọc danh sách này xuống còn những cái máy thật sự có.
+ * `fontProbe.ts` filters this list down to the ones the machine really has.
  */
 export const TERMINAL_FONTS: readonly string[] = [
   "Anonymous Pro",
@@ -42,12 +43,13 @@ export const TERMINAL_FONTS: readonly string[] = [
 ];
 
 /**
- * Một tên font thành nguyên font stack để đưa cho xterm.
+ * A font name as a whole font stack to hand to xterm.
  *
- * Luôn có `monospace` ở cuối, và đây là chỗ quan trọng nhất của cả file. xterm đo bề rộng một ô
- * chữ bằng `ctx.font = "<cỡ>px <stack>"` trên canvas; một stack rỗng hoặc không phân tích được thì
- * phép gán ấy bị bỏ qua *lặng lẽ* và số đo cũ ở lại, trong khi CSS `font-size` xterm tiêm vào màn
- * hình vẫn đổi. Kết quả là chữ to lên mà ô chữ đứng nguyên, và mọi dòng bị cắt ngang.
+ * Always has `monospace` at the end, and this is the most important part of the whole file. xterm
+ * measures a cell's width with `ctx.font = "<size>px <stack>"` on a canvas; with an empty or
+ * unparseable stack that assignment is ignored *silently* and the old measurement stays, while the
+ * CSS `font-size` xterm injects into the screen still changes. The result is text growing while the
+ * cells stay put, and every line cut across.
  */
 export function fontStack(family: string): string {
   const name = family.trim();
@@ -55,9 +57,9 @@ export function fontStack(family: string): string {
   return `"${name.replace(/["\\]/g, "")}", monospace`;
 }
 
-/** Tên font đứng đầu một stack — đường ngược của {@link fontStack}, để hộp chọn biết đang chọn
- *  cái nào. Một stack không đọc được thì trả về tên của font mặc định, chứ không phải chuỗi rỗng:
- *  hộp chọn phải chỉ vào một mục nào đó. */
+/** The font name at the head of a stack — the reverse of {@link fontStack}, so the picker knows
+ *  which one is chosen. An unreadable stack returns the default font's name rather than an empty
+ *  string: the picker has to point at some entry. */
 export function familyOf(stack: string): string {
   const first = stack.split(",")[0]?.trim() ?? "";
   const bare = first.replace(/^["']|["']$/g, "").trim();

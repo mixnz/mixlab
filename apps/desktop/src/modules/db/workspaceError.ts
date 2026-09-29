@@ -2,28 +2,29 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "../../i18n";
 
 /**
- * Câu này có được phép rơi xuống ErrorBanner không.
+ * Whether this sentence may fall through to ErrorBanner.
  *
- * `lostMessage` là câu "mất kết nối" trong ngôn ngữ đang bật, hoặc `null` với connection không đi qua
- * tunnel — ở đó không có gì bị nuốt cả.
+ * `lostMessage` is the "connection lost" sentence in the active language, or `null` for a
+ * connection not going through a tunnel — nothing is swallowed there.
  */
 export function reachesErrorBanner(message: string, lostMessage: string | null): boolean {
   return message !== lostMessage;
 }
 
 /**
- * Dòng lỗi của ErrorBanner trong một workspace, thay cho `useState("")`.
+ * A workspace's ErrorBanner line, in place of `useState("")`.
  *
- * Bọc `useState` chỉ vì một lẽ: khi connection đi qua SSH tunnel thì "mất kết nối" không được phép
- * rơi xuống đây. TunnelBanner đang kể đúng chuyện đó và kể tốt hơn — nó nói tunnel đang được mở lại, tự
- * biến mất khi mở được, và có nút thử lại khi không. ErrorBanner thì chỉ để lại một câu chết cứng người
- * dùng phải tự tay tắt, nằm ngay dưới câu báo mọi thứ đã lành.
+ * It wraps `useState` for one reason only: when the connection goes through an SSH tunnel,
+ * "connection lost" must not fall through to here. TunnelBanner is telling exactly that story and
+ * telling it better — it says the tunnel is being reopened, disappears once it is, and has a retry
+ * button when it is not. ErrorBanner would only leave a dead sentence the user has to dismiss by
+ * hand, sitting right under the one saying everything has healed.
  *
- * Connection nối thẳng không nuốt gì: ở đó không có TunnelBanner nào để thay lời, và nuốt đi thì chỉ còn
- * lại một thao tác im lặng không xảy ra gì cả.
+ * A direct connection swallows nothing: there is no TunnelBanner there to speak instead, and
+ * swallowing would leave only a silent action where nothing happens.
  *
- * Trả về đúng hình dạng của `useState`, nên `setError("")` để tắt banner vẫn chạy như cũ: chỉ đúng một
- * câu bị nuốt, chuỗi rỗng không phải câu đó.
+ * Returns exactly the shape of `useState`, so `setError("")` to dismiss the banner still works as
+ * before: only that one sentence is swallowed, and the empty string is not that sentence.
  */
 export function useWorkspaceError(tunnelled: boolean): [string, (message: string) => void] {
   const { t } = useTranslation();

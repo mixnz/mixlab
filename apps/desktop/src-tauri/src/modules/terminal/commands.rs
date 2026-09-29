@@ -10,8 +10,8 @@ use super::state::TerminalState;
 use super::{local, remote};
 use crate::error::AppError;
 
-/// Máy này mở được shell nào. Dò bằng cách nhìn đĩa và — trên Windows — hỏi `wsl.exe`, nên chạy
-/// trên thread blocking chứ không giữ vòng lặp async.
+/// Which shells this machine can open. Detected by looking at the disk and — on Windows — asking
+/// `wsl.exe`, so it runs on a blocking thread rather than holding up the async loop.
 #[tauri::command]
 pub async fn terminal_local_shells() -> Result<Vec<LocalShell>, AppError> {
     tokio::task::spawn_blocking(local::detect)
@@ -19,14 +19,15 @@ pub async fn terminal_local_shells() -> Result<Vec<LocalShell>, AppError> {
         .map_err(|e| err!("error.terminalSpawnFailed", message = e))
 }
 
-/// Mở một phiên và nối nó với `on_event`.
+/// Opens a session and connects it to `on_event`.
 ///
-/// `Data` đi dạng byte thô, `Exit` đi dạng JSON, trên cùng một kênh — `Channel` đánh số thứ tự cho
-/// mọi khung và phía JS xếp lại theo số đó, nên `Exit` không thể vượt lên trước byte cuối.
+/// `Data` travels as raw bytes and `Exit` as JSON, over the same channel — `Channel` numbers every
+/// frame and the JS side reorders by that number, so `Exit` cannot overtake the last byte.
 ///
-/// `Exit` cũng là lúc phiên rời map. Frontend chỉ gọi `terminal_close` cho một tab đóng khi phiên
-/// còn sống, nên một phiên tự kết thúc — gõ `exit`, máy chủ ngắt — mà không được bỏ ở đây thì nằm
-/// lại tới lúc app thoát, và cùng với nó là mọi thứ `Session` đang cầm.
+/// `Exit` is also when the session leaves the map. The frontend only calls `terminal_close` for a
+/// tab closed while its session is still alive, so a session that ends by itself — typing `exit`,
+/// the server disconnecting — and is not dropped here would stay until the app exits, along with
+/// everything the `Session` holds.
 #[tauri::command]
 pub async fn terminal_open(
     app: AppHandle,
@@ -36,9 +37,10 @@ pub async fn terminal_open(
     on_event: Channel<InvokeResponseBody>,
     state: State<'_, TerminalState>,
 ) -> Result<(), AppError> {
-    /* Phiên đã kết thúc chưa, đọc lại sau khi chèn. Một shell chết ngay — lệnh không tồn tại, một
-    máy chủ đóng ngay sau banner — phát `Exit` trước khi `spawn` kịp trả về, và lúc ấy không có
-    gì trong map để bỏ. Cờ này là cách chỗ chèn biết nó vừa chèn một phiên đã chết. */
+    /* Whether the session has already ended, read again after inserting. A shell that dies at once
+    — a command that does not exist, a server closing right after its banner — emits `Exit` before
+    `spawn` has had time to return, and at that point there is nothing in the map to drop. This flag
+    is how the inserting side knows it has just inserted a dead session. */
     let ended = Arc::new(AtomicBool::new(false));
     let sink = output_sink(on_event, ended.clone(), {
         let app = app.clone();
@@ -53,36 +55,39 @@ pub async fn terminal_open(
         TerminalTarget::Local { shell, args, cwd } => {
             in_background(move || local::spawn(shell, args, cwd, size, sink)).await?
         }
-        // Xác thực hỏng, vân tay đổi, máy chủ không tới được — tất cả hỏng ở đây, trước khi có
-        // phiên nào để đưa vào map. Đó là thứ frontend đưa về `ErrorBanner` ngay tại form.
+        // Failed authentication, a changed fingerprint, an unreachable server — all of them fail
+        // here, before there is any session to put in the map. That is what the frontend brings
+        // back to the `ErrorBanner` right at the form.
         TerminalTarget::Ssh(ssh) => remote::spawn(&ssh, &app_data_dir(&app)?, size, sink).await?,
     };
 
-    // Cùng một id mở hai lần thì phiên cũ bị thay và `Drop` của nó dọn phần còn lại.
+    // Opening the same id twice replaces the old session, and its `Drop` cleans up the rest.
     let dead = {
         let mut sessions = state.sessions.lock().unwrap();
         sessions.insert(id.clone(), session);
-        // Đã chết trước khi kịp vào map: bỏ ra ngay, vì `Exit` đã đi qua và không quay lại nữa.
+        // Died before making it into the map: drop it right away, because `Exit` has already gone
+        // past and will not come back.
         if ended.load(Ordering::SeqCst) {
             sessions.remove(&id)
         } else {
             None
         }
     };
-    // Ngoài phạm vi khoá, cùng lý do như `TerminalState::forget`.
+    // Outside the lock's scope, for the same reason as `TerminalState::forget`.
     drop(dead);
     Ok(())
 }
 
-/// Đường ra của một phiên: `Data` đi thẳng dạng byte, `Exit` đi dạng JSON — và `Exit` cũng là lúc
-/// phiên rời map, qua `forget`.
+/// A session's way out: `Data` goes straight as bytes, `Exit` goes as JSON — and `Exit` is also
+/// when the session leaves the map, through `forget`.
 ///
-/// `ended` được đặt *trước* khi `forget` lấy khoá, vì chỗ chèn đọc cờ ấy *dưới* khoá. Bỏ sót chỉ
-/// xảy ra nếu cả hai cùng thấy map trống, mà cái đó cần cờ được đặt sau khi chỗ chèn đã đọc nó và
-/// trước khi nó chèn — hai việc chỗ chèn làm liền nhau dưới cùng một khoá.
+/// `ended` is set *before* `forget` takes the lock, because the inserting side reads that flag
+/// *under* the lock. Missing it could only happen if both saw an empty map, which needs the flag
+/// set after the inserting side has read it and before it inserts — two things the inserting side
+/// does back to back under the same lock.
 ///
-/// Rời khỏi `terminal_open` để test gọi được: dựng một `AppHandle` giả tốn hơn nhiều so với gọi
-/// thẳng chỗ này với một `TerminalState` của riêng nó.
+/// Moved out of `terminal_open` so tests can call it: building a fake `AppHandle` costs far more
+/// than calling this directly with a `TerminalState` of its own.
 fn output_sink(
     on_event: Channel<InvokeResponseBody>,
     ended: Arc<AtomicBool>,
@@ -102,8 +107,8 @@ fn output_sink(
     })
 }
 
-/// Byte người dùng gõ. `data` là chuỗi chứ không phải base64: cái `onData` của xterm sinh ra luôn
-/// là chuỗi hợp lệ, và UTF-8 của nó đúng là thứ cần ghi vào pty.
+/// The bytes the user types. `data` is a string rather than base64: what xterm's `onData` produces
+/// is always a valid string, and its UTF-8 is exactly what needs to be written to the pty.
 #[tauri::command]
 pub async fn terminal_write(
     id: String,
@@ -137,23 +142,25 @@ pub async fn terminal_resize(
         .map_err(|_| err!("error.terminalUnknownSession"))
 }
 
-/// Đóng phiên. Bỏ khỏi map là `Drop` chạy, là tiến trình bị giết — không có bước nào khác.
-/// Một id không có trong map không phải lỗi: một phiên tự chết đã tự bỏ mình khỏi map khi phát
-/// `Exit`, và tab đóng sau đó vẫn có quyền gọi.
+/// Closes the session. Removing it from the map runs `Drop`, which kills the process — there is no
+/// other step. An id not in the map is not an error: a session that died by itself already removed
+/// itself from the map when it emitted `Exit`, and the tab closing afterwards is still entitled to
+/// call.
 #[tauri::command]
 pub async fn terminal_close(id: String, state: State<'_, TerminalState>) -> Result<(), AppError> {
     state.sessions.lock().unwrap().remove(&id);
     Ok(())
 }
 
-/// Văn bản đang nằm trên clipboard của hệ thống, đọc ngay trong tiến trình này.
+/// The text currently on the system clipboard, read right in this process.
 ///
-/// Webview không đọc clipboard được nếu không dựng một hộp xin quyền, nên đây là đường duy nhất của
-/// nút Dán trong menu chuột phải — lý do đầy đủ nằm ở `Cargo.toml`, chỗ khai báo `arboard`. Ghi thì
-/// không ở đây: `core/clipboard.ts` ghi qua webview, mà ghi thì chẳng ai hỏi quyền cả.
+/// The webview cannot read the clipboard without raising a permission box, so this is the only
+/// path for the Paste item in the right-click menu — the full reason is in `Cargo.toml`, where
+/// `arboard` is declared. Writing is not here: `core/clipboard.ts` writes through the webview, and
+/// nobody asks for permission to write.
 ///
-/// `in_background` vì trên Linux đọc clipboard là một vòng trao đổi với X11 hoặc Wayland, và nó
-/// không có việc gì phải diễn ra trên luồng đang vẽ cửa sổ.
+/// `in_background` because on Linux reading the clipboard is a round trip with X11 or Wayland, and
+/// it has no business happening on the thread drawing the window.
 #[tauri::command]
 pub async fn terminal_clipboard_text() -> Result<String, AppError> {
     in_background(|| {
@@ -175,15 +182,16 @@ mod tests {
     use std::time::{Duration, Instant};
     use tauri::ipc::Channel;
 
-    /// Đường mà "gõ `exit` rồi để tab đấy" đi.
+    /// The path "type `exit` and leave the tab there" takes.
     ///
-    /// Frontend không gọi `terminal_close` cho một tab đã thấy `Exit`, nên nếu `Exit` không tự bỏ
-    /// phiên khỏi map thì `Session` nằm lại tới lúc app thoát — và cùng với nó là hai thread đang
-    /// chờ trên hai channel của nó, hoặc, với một phiên SSH, cả kết nối TCP và keepalive 15 giây.
+    /// The frontend does not call `terminal_close` for a tab that has seen `Exit`, so if `Exit` did
+    /// not drop the session from the map itself, the `Session` would stay until the app exits — and
+    /// with it the two threads waiting on its two channels, or, for an SSH session, the whole TCP
+    /// connection and its 15-second keepalive.
     ///
-    /// Chạy đúng cái sink mà `terminal_open` dựng; chỗ duy nhất không đi qua đây là một dòng lấy
-    /// `TerminalState` ra khỏi `AppHandle`. `exit 3` chứ không phải gõ `exit` vào một shell tương
-    /// tác, cùng lý do như test trong `local.rs`.
+    /// Runs exactly the sink `terminal_open` builds; the only thing not going through here is one
+    /// line taking `TerminalState` out of the `AppHandle`. `exit 3` rather than typing `exit` into
+    /// an interactive shell, for the same reason as the test in `local.rs`.
     #[tokio::test]
     async fn a_session_that_ends_by_itself_leaves_the_map() {
         let state = Arc::new(TerminalState::default());
@@ -216,8 +224,9 @@ mod tests {
         )
         .expect("shell phải mở được");
 
-        // ConPTY hỏi vị trí con trỏ rồi đợi trả lời trước khi cho tiến trình con chạy; trong app
-        // thì xterm trả lời, ở đây thì không ai. Trả lời hộ nó — xem `local.rs`.
+        // ConPTY asks for the cursor position and waits for an answer before letting the child
+        // process run; in the app xterm answers, here nobody does. Answer on its behalf — see
+        // `local.rs`.
         session.input.send(b"\x1b[1;1R".to_vec()).unwrap();
         state.sessions.lock().unwrap().insert(id.clone(), session);
 

@@ -16,13 +16,13 @@
 /* Marked in its own colour rather than the engine's, and kept beside the logo: the lock is about
    what this tab will let you do, which has nothing to do with which server it is on.
 
-   Nó mang nền và viền của riêng nó, không chỉ là một cái icon đổi màu. Lý do là dấu này sắp phải
-   tự đứng một mình: vạch accent chạy dọc mép trên tab từng nói "read-only" to hơn nó nhiều, và
-   vạch đó sắp biến mất. Một icon khoá 12px lẫn giữa logo engine và tên tab thì không thay thế
-   được điều đó — nó đọc như một icon nữa, không đọc như một trạng thái.
+   It carries a background and border of its own, not just a recoloured icon. The reason is that
+   this mark is about to stand on its own: the accent bar along the tab's top edge used to say
+   "read-only" far louder than it, and that bar is about to go. A 12px lock icon lost between the
+   engine logo and the tab name cannot replace that — it reads as one more icon, not as a state.
 
-   Amber chứ không phải accent: đây là một sự thật về kết nối — không ghi được — chứ không phải
-   một lựa chọn trang trí, nên nó không được đổi theo màu người dùng chọn. */
+   Amber rather than the accent: this is a fact about the connection — it cannot write — not a
+   decorative choice, so it must not change with the colour the user picks. */
 .tab-lock {
   padding: 0.05rem 0.25rem;
   border: 1px solid rgb(var(--readonly-rgb) / 0.45);
@@ -1016,7 +1016,7 @@ button.saved-list-new {
 }
 
 .redis-workspace {
-  /* Chỗ đứng của popup tunnel: nó phủ workspace của tab này, và chỉ nó. */
+  /* Where the tunnel popup sits: it covers this tab's workspace, and only that. */
   position: relative;
   display: flex;
   flex-direction: column;

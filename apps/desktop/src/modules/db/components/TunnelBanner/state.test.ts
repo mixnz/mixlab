@@ -13,13 +13,13 @@ describe("nextBannerState", () => {
   });
 
   it("says nothing about a recovery nobody saw the loss of", () => {
-    // Một tab mở ra sau khi tunnel đã tự lành thì không có gì để trấn an ai cả.
+    // A tab opened after the tunnel has healed itself has nobody to reassure.
     expect(nextBannerState(HIDDEN, reconnected)).toBe(HIDDEN);
   });
 
   it("keeps the same failure rather than replacing it", () => {
-    // Watcher giãn nhịp và báo lại cùng một lỗi; nếu mỗi lần là một object mới thì mọi thứ React
-    // gắn với object đó sẽ bị dựng lại theo nhịp backoff.
+    // The watcher widens its interval and reports the same error again; if each time were a new
+    // object, everything React attaches to that object would be rebuilt on the backoff beat.
     const first = nextBannerState(HIDDEN, failed);
     expect(first).toEqual({ kind: "failed", error: { code: "error.sshAuthFailed" } });
     expect(nextBannerState(first, failed)).toBe(first);

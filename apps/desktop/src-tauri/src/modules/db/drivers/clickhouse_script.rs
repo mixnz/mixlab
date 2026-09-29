@@ -502,7 +502,7 @@ enum DispatchOutcome {
     /// `INSERT`, synchronous — ClickHouse's own count of what it wrote.
     Affected(u64),
     /// `TRUNCATE`, or a mutation (`ALTER TABLE ... UPDATE`/`DELETE FROM ... WHERE`) that finished.
-    /// ClickHouse gives no rows-affected count for either (see the design doc's Phi mục tiêu), so
+    /// ClickHouse gives no rows-affected count for either (see the design doc's Non-goals), so
     /// there is nothing more than "it worked" to report.
     Ok,
     Err(AppError),

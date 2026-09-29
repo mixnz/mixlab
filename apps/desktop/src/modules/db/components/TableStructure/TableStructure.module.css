@@ -297,8 +297,9 @@
 /* No dark overrides here any more: the sticky header and pinned column take `--page-bg` and the key
    badge is written in `--accent-*`, and both of those already carry the theme's own values. */
 
-/* Ô ở đây là tên cột, kiểu dữ liệu và giá trị mặc định — tất cả đều là thứ người ta đọc từng ký
-   tự (`varchar(255)` khác `varchar(25)`), nên mono. Header là nhãn, nên sans. */
+/* The cells here are column names, data types and default values — all things people read
+   character by character (`varchar(255)` differs from `varchar(25)`), so mono. The header is a
+   label, so sans. */
 .grid tbody td {
   font-family: var(--font-mono);
 }

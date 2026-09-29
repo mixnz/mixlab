@@ -976,8 +976,9 @@
   }
 }
 
-/* Xem ghi chú cùng nội dung ở cuối `SqlTable.module.css`: ô mang giá trị từ server nên mono, tên
-   cột là nhãn nên sans. Cả hai trước đây chỉ mono nhờ thừa kế từ `:root`. */
+/* See the note with the same content at the end of `SqlTable.module.css`: cells carry values from
+   the server so they are mono, column names are labels so they are sans. Both used to be mono only
+   by inheriting it from `:root`. */
 .grid tbody td {
   font-family: var(--font-mono);
 }

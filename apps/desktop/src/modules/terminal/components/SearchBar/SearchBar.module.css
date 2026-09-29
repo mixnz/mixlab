@@ -1,5 +1,5 @@
-/* Một dải trên đầu màn hình chứ không phải một lớp phủ ở góc: màn hình terminal vẽ tới sát mép và
-   một hộp nổi trên nó luôn che mất đúng dòng người ta đang đọc. */
+/* A strip at the top of the screen rather than an overlay in the corner: the terminal screen draws
+   right up to the edge, and a box floating over it always covers exactly the line being read. */
 .bar {
   display: flex;
   align-items: center;

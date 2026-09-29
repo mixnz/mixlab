@@ -1,13 +1,13 @@
 /**
- * Cái gì trong màn hình terminal được phép mở ra ngoài, và cái gì không.
+ * What on the terminal screen may be opened outside, and what may not.
  *
- * Mọi chuỗi đi qua đây đều do một máy chủ in ra. Trao nó cho trình mở của hệ điều hành là trao cho
- * máy chủ ấy một đường khởi động thứ gì đó trên máy này, nên chỉ hai lược đồ đi qua: `http` và
- * `https`. `file:`, `data:` và mọi lược đồ do ứng dụng cài đặt tự đăng ký — `vscode:`, `ms-msdt:` —
- * đều dừng ở đây, dù regex của addon có nhặt chúng lên hay không.
+ * Every string passing through here was printed by a server. Handing it to the operating system's
+ * opener hands that server a way to launch something on this machine, so only two schemes get
+ * through: `http` and `https`. `file:`, `data:` and every scheme registered by an installed
+ * application — `vscode:`, `ms-msdt:` — stop here, whether or not the addon's regex picks them up.
  */
 
-/** Địa chỉ như nó được viết, nếu mở được; `null` với mọi thứ khác. */
+/** The address as written, if it can be opened; `null` for anything else. */
 export function openableUrl(text: string): string | null {
   let url: URL;
   try {
@@ -15,6 +15,7 @@ export function openableUrl(text: string): string | null {
   } catch {
     return null;
   }
-  // `URL` đã hạ lược đồ về chữ thường rồi; cái trả về là chuỗi gốc, vì đó là cái người dùng thấy.
+  // `URL` has already lowercased the scheme; what is returned is the original string, because that
+  // is what the user sees.
   return url.protocol === "http:" || url.protocol === "https:" ? text : null;
 }

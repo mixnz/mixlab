@@ -11,8 +11,9 @@ describe("shellKeeps", () => {
     expect(shellKeeps(press({ key: "w", mod: true }), true)).toBe(false);
   });
 
-  /* `Ctrl+R` là tìm ngược lịch sử lệnh và `Ctrl+A` là về đầu dòng. Chúng có mặt trong catalogue của
-     app, nhưng trong một tab terminal thì không ai nghe — và cái không ai nghe là của shell. */
+  /* `Ctrl+R` is reverse history search and `Ctrl+A` is go to the start of the line. They are in the
+     app's catalogue, but in a terminal tab nobody listens to them — and what nobody listens to
+     belongs to the shell. */
   it("keeps a chord no handler answers", () => {
     expect(shellKeeps(press({ key: "r", mod: true }), false)).toBe(true);
     expect(shellKeeps(press({ key: "a", mod: true }), false)).toBe(true);
@@ -23,21 +24,22 @@ describe("shellKeeps", () => {
     expect(shellKeeps(press({ key: "v" }), true)).toBe(true);
   });
 
-  /* `Ctrl+C` là hai lệnh khác nhau tuỳ lúc, và cái quyết định là có vùng chọn hay không — điều
-     `terminal.copy` nói bằng cách chỉ đăng ký khi có. Ở đây nó tới dưới dạng `claimed`. */
+  /* `Ctrl+C` is two different commands depending on the moment, and what decides is whether there
+     is a selection — which `terminal.copy` expresses by only registering when there is one. Here it
+     arrives as `claimed`. */
   it("copies when something is selected and cancels when nothing is", () => {
     expect(shellKeeps(press({ key: "c", mod: true }), true)).toBe(false);
     expect(shellKeeps(press({ key: "c", mod: true }), false)).toBe(true);
   });
 
-  /* Dán không đi qua catalogue: buông tay để webview dán vào textarea của xterm. */
+  /* Paste does not go through the catalogue: let go so the webview pastes into xterm's textarea. */
   it("always steps aside for paste", () => {
     expect(shellKeeps(press({ key: "v", mod: true }), false)).toBe(false);
     expect(shellKeeps(press({ key: "v", mod: true, shift: true }), false)).toBe(false);
   });
 
-  /* Trên Mac, `Ctrl+Tab` tới với `mod` tắt vì `mod` ở đó là `⌘`. Không hỏi `ctrlOnly` thì terminal
-     giữ luôn phím và tab không bao giờ đổi. */
+  /* On a Mac, `Ctrl+Tab` arrives with `mod` off because `mod` there is `⌘`. Without asking
+     `ctrlOnly` the terminal would keep the key and the tab would never change. */
   it("hands over a Ctrl chord the app claims, even with the primary modifier up", () => {
     expect(shellKeeps(press({ key: "tab", ctrlOnly: true }), true)).toBe(false);
   });

@@ -1,29 +1,30 @@
 import type { ShortcutGroup } from "../../core/shortcuts";
 
 /**
- * Phím tắt của module terminal, đưa cho shell qua `ModuleDefinition.shortcuts` — y như
- * `REST_SHORTCUTS`.
+ * The terminal module's shortcuts, handed to the shell through `ModuleDefinition.shortcuts` — just
+ * like `REST_SHORTCUTS`.
  *
- * Ngắn có chủ ý: mọi chord không có tên ở đây đều là của shell. Dán không có mặt vì nó không có
- * handler nào — xem `keys.ts`.
+ * Short on purpose: every chord not named here belongs to the shell. Paste is absent because it has
+ * no handler — see `keys.ts`.
  */
 export const TERMINAL_SHORTCUTS: ShortcutGroup[] = [
   {
     scope: "terminal",
     labelKey: "terminal.shortcutScope",
     defs: [
-      /* Cùng `Ctrl/Cmd+C` với lệnh huỷ của shell, và cách phân xử nằm ở chỗ `TerminalView` chỉ
-         đăng ký nó khi đang có vùng chọn: có thì chép, không thì phím rơi xuống shell nguyên vẹn.
-         Trên macOS câu hỏi không đặt ra — `Cmd+C` mới là chord này, `Ctrl+C` không mang phím tắt
-         nào cả. */
+      /* The same `Ctrl/Cmd+C` as the shell's interrupt, and the arbitration is that `TerminalView`
+         only registers it while there is a selection: with one it copies, without one the key falls
+         through to the shell intact. On macOS the question does not arise — `Cmd+C` is this chord,
+         and `Ctrl+C` carries no shortcut at all. */
       { id: "terminal.copy", chord: { key: "c" }, labelKey: "terminal.shortcutCopy" },
-      /* Lại `Ctrl/Cmd+C`, và cũng không đụng ai: nó chỉ được đăng ký sau khi phiên đã kết thúc,
-         lúc mà không còn shell nào để huỷ. Cùng một phím, và đó là chủ ý — khi màn hình đã đứng
-         im, cái người ta gõ theo phản xạ để thoát ra vẫn là nó. */
+      /* `Ctrl/Cmd+C` again, and it collides with nobody either: it is only registered once the
+         session has ended, when there is no shell left to interrupt. The same key, on purpose —
+         once the screen has frozen, what people type by reflex to get out is still that key. */
       { id: "terminal.dismiss", chord: { key: "c" }, labelKey: "terminal.shortcutDismiss" },
-      /* `Ctrl/Cmd` với `+` và `-`, đúng chỗ mọi trình duyệt và mọi terminal khác để nó. Ba cách gõ
-         cho một cử chỉ, nên `alias` — xem `ShortcutDef.alias`; ở đây `+` không shift là phím của
-         bàn phím số, còn `+` có shift là phím `=` khi shift thật sự được giữ. */
+      /* `Ctrl/Cmd` with `+` and `-`, exactly where every browser and every other terminal puts it.
+         Three ways of typing one gesture, hence `alias` — see `ShortcutDef.alias`; here `+` without
+         shift is the numeric keypad's key, while `+` with shift is the `=` key when shift really is
+         held. */
       {
         id: "terminal.zoomIn",
         chord: { key: "=" },
@@ -36,10 +37,11 @@ export const TERMINAL_SHORTCUTS: ShortcutGroup[] = [
         alias: [{ key: "_", shift: true }],
         labelKey: "terminal.shortcutZoomOut",
       },
-      /* Không đặt `whenTyping: "ignore"`: con trỏ nằm trong ô tìm cũng là "đang gõ", và `Ctrl+F`
-         lúc ấy phải chọn lại nội dung ô chứ không phải rơi xuống webview. Trong màn hình terminal
-         thì `isTextEntry` cũng trả `true` — textarea ẩn của xterm — nên def này bị bỏ qua hoàn
-         toàn nếu mang cờ ấy, và phím tắt sẽ không bao giờ chạy. */
+      /* No `whenTyping: "ignore"`: the cursor sitting in the find field also counts as "typing",
+         and `Ctrl+F` then has to reselect the field's contents rather than fall through to the
+         webview. Inside the terminal screen `isTextEntry` also returns `true` — xterm's hidden
+         textarea — so with that flag this def would be skipped entirely, and the shortcut would
+         never run. */
       { id: "terminal.find", chord: { key: "f" }, labelKey: "terminal.shortcutFind" },
     ],
   },

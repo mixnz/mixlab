@@ -68,16 +68,17 @@
   gap: 8px;
 }
 
-/* Logo rồi mới tới tên. `inline-flex` chứ không `flex`: nhãn này còn được vẽ trong nút của
-   `Select`, cạnh mũi tên xuống, và một khối chiếm cả dòng sẽ đẩy mũi tên ra khỏi chỗ của nó. */
+/* The logo, then the name. `inline-flex` rather than `flex`: this label is also drawn inside
+   `Select`'s button, next to the down arrow, and a block taking the whole line would push the arrow
+   out of its place. */
 .shellOption {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Dòng chú thích dưới ô *Chạy khi kết nối*. Nhỏ và mờ: nó là điều đáng biết trước khi gõ vào ô,
-   không phải một phần của nhãn. */
+/* The caption under the *Run on connect* field. Small and faint: it is something worth knowing
+   before typing into the field, not part of the label. */
 .hint {
   margin: 0;
   font-size: var(--text-sm);

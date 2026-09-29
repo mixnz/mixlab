@@ -2,26 +2,29 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import type { LocalShell, TerminalSize, TerminalTarget } from "./types";
 
 /**
- * Chỗ duy nhất trong module này nói chuyện với native.
+ * The only place in this module that talks to native code.
  *
- * Mọi lệnh reject bằng `AppError` — `{ code, params }` — và người gọi đưa qua `errorMessage(t, e)`
- * chứ không hiện thẳng.
+ * Every command rejects with an `AppError` — `{ code, params }` — and the caller passes it through
+ * `errorMessage(t, e)` rather than showing it directly.
  */
 
-/** Máy này mở được shell nào; thứ tự là thứ tự gợi ý, cái đầu tiên là mặc định. */
+/** Which shells this machine can open; the order is the suggested order, the first is the
+ *  default. */
 export function localShells(): Promise<LocalShell[]> {
   return invoke<LocalShell[]>("terminal_local_shells");
 }
 
-/** Phiên kết thúc: shell thoát bình thường, hoặc đường đứt. Đợt 1 `message` luôn null. */
+/** The session ended: the shell exited normally, or the line broke. In round 1 `message` is always
+ *  null. */
 export interface SessionExit {
   type: "exit";
   code: number | null;
   message: string | null;
 }
 
-/** Một kênh chở hai thứ: `ArrayBuffer` là byte đầu xa in ra, object là phiên đã kết thúc. Cùng
- *  một kênh nên thứ tự là thật — `exit` không thể tới trước byte cuối cùng. */
+/** One channel carrying two things: an `ArrayBuffer` is bytes the far end printed, an object means
+ *  the session ended. The same channel, so the order is real — `exit` cannot arrive before the
+ *  last byte. */
 export type SessionMessage = ArrayBuffer | SessionExit;
 
 export function openSession(
@@ -47,7 +50,8 @@ export function closeSession(id: string): Promise<void> {
   return invoke("terminal_close", { id });
 }
 
-/** Văn bản trên clipboard hệ thống. Rust đọc hộ — `src-tauri/src/modules/terminal/commands.rs`. */
+/** The text on the system clipboard. Rust reads it for us —
+ *  `src-tauri/src/modules/terminal/commands.rs`. */
 export function terminalClipboardText(): Promise<string> {
   return invoke<string>("terminal_clipboard_text");
 }
