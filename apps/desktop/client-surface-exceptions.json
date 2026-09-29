@@ -26,6 +26,10 @@
     "cert.status": "The window cannot show the certificate a site's front end actually presents.",
     "cert.ca_rotate": "The window cannot rotate this home's certificate authority.",
     "cert.ca_uninstall": "The window cannot take this home's authority out of the trust stores on its own.",
-    "project.export": "The Projects screen cannot write a project's mixengine.toml."
+    "project.export": "The Projects screen cannot write a project's mixengine.toml.",
+    "runtime.upgrade_plan": "T193b: the Update dialog lands in T193's MixLab task",
+    "runtime.upgrade": "T193b: the Update dialog lands in T193's MixLab task",
+    "package.upgrade_plan": "T193c: the Update dialog lands in T193's MixLab task",
+    "package.upgrade": "T193c: the Update dialog lands in T193's MixLab task"
   }
 }

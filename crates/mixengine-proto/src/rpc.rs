@@ -321,6 +321,17 @@ pub mod method {
     /// in the hint.
     pub const RUNTIME_RESOLVE: &str = "runtime.resolve";
 
+    /// What updating one installed version within its line would do, changing nothing — roadmap
+    /// task **T193b**. Takes [`RuntimeUpgradeQuery`](crate::RuntimeUpgradeQuery), answers
+    /// [`UpgradePlan`](crate::UpgradePlan).
+    pub const RUNTIME_UPGRADE_PLAN: &str = "runtime.upgrade_plan";
+
+    /// Update one installed version to a newer release of its line, moving everything that points
+    /// at it — T193b. Takes [`RuntimeUpgrade`](crate::RuntimeUpgrade), answers a
+    /// [`JobSummary`](crate::JobSummary) whose result is the [`UpgradePlan`](crate::UpgradePlan)
+    /// marked with what was done.
+    pub const RUNTIME_UPGRADE: &str = "runtime.upgrade";
+
     /// Whether a new terminal will find the commands in `<root>/bin`. Takes no parameters, answers
     /// [`PathReport`](crate::PathReport).
     ///
@@ -508,6 +519,17 @@ pub mod method {
     /// nothing, answers [`PackageFoundList`](crate::PackageFoundList), as [`RUNTIME_FOUND`] does
     /// for runtimes.
     pub const PACKAGE_FOUND: &str = "package.found";
+
+    /// What updating one installed package version within its line would do, changing nothing —
+    /// roadmap task **T193c**. Takes [`PackageUpgradeQuery`](crate::PackageUpgradeQuery), answers
+    /// [`UpgradePlan`](crate::UpgradePlan).
+    pub const PACKAGE_UPGRADE_PLAN: &str = "package.upgrade_plan";
+
+    /// Update one installed package version to a newer release of its line, moving its instances
+    /// one at a time — T193c. Takes [`PackageUpgrade`](crate::PackageUpgrade), answers a
+    /// [`JobSummary`](crate::JobSummary) whose result is the [`UpgradePlan`](crate::UpgradePlan)
+    /// marked with what was done.
+    pub const PACKAGE_UPGRADE: &str = "package.upgrade";
 
     /// Create a service from an installed package. Takes
     /// [`ServiceCreate`](crate::ServiceCreate), answers the

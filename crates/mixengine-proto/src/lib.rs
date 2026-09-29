@@ -58,6 +58,7 @@ mod storage_api;
 mod time;
 mod uninstall_api;
 mod update_api;
+mod upgrade_api;
 mod version;
 
 pub use autostart_api::{AutostartMechanism, AutostartReport};
@@ -164,6 +165,10 @@ pub use update_api::{
     UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide, UpdateDecision, UpdateFinish,
     UpdateHandOver, UpdateHandedOver, UpdateInstaller, UpdateOffer, UpdatePlacement, UpdateRelease,
     UpdateStatus,
+};
+pub use upgrade_api::{
+    OldVersion, PackageUpgrade, PackageUpgradeQuery, RuntimeUpgrade, RuntimeUpgradeQuery,
+    UpgradeEntry, UpgradeItem, UpgradeOutcome, UpgradePlan,
 };
 pub use version::{Execution, PackageChannel, PackageVersion, VersionConstraint, VersionError};
 
