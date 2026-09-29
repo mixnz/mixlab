@@ -42,20 +42,21 @@ use mixengine_proto::{
     FrontEndSwitch, IdleReport, InstalledExtensions, JobFilter, JobId, JobList, JobOutcome,
     JobQuery, JobState, JobSummary, JobWait, LogFrame, MetricsFrame, MetricsHistory, Millis,
     MismatchAnswer, PackageCatalogue, PackageFilter, PackageInstall, PackageList, PackageRemoval,
-    PackageTarget, PackageVersion, PathReport, PendingOpId, PlanAction, Priority, ProjectCreate,
-    ProjectDetail, ProjectExport, ProjectList, ProjectQuery, ProjectRef, ProjectRemoval,
-    ProjectUpdate, Reclaim, Remedy, Removal, RepairReport, Requirement, Requirements,
-    ResetCredential, ResidueId, ResolvedRuntime, ResourceLimits, RouteTarget, RuntimeCatalogue,
-    RuntimeFilter, RuntimeInstall, RuntimeKind, RuntimeList, RuntimeQuestion, RuntimeRemoval,
-    RuntimeSummary, RuntimeTarget, RuntimeUninstall, SaveResources, SaveResourcesSet,
-    ScaffoldConsent, ServiceAutostartSet, ServiceCreate, ServiceCreation, ServiceDelete, ServiceId,
-    ServiceIdleSet, ServiceLimitsReport, ServiceLimitsSet, ServiceList, ServiceQuery,
-    ServiceRemoval, ServiceRole, ServiceSummary, ServiceTarget, ServiceWalk, SignatureCheck,
-    SiteCreate, SiteCreation, SiteDetail, SiteKind, SiteList, SiteListQuery, SiteQuery, SiteRef,
-    SiteRemoval, SiteRoute, SiteShare, SiteSharing, SiteState, SiteUpdate, StorageReport,
-    Timestamp, UninstallQuery, UninstallReport, UpdateApplied, UpdateApply, UpdateCheck,
-    UpdateDecide, UpdateDecision, UpdateFinish, UpdateHandOver, UpdateHandedOver, UpdatePlacement,
-    UpdateStatus, VersionAnswer, VersionConstraint, rpc,
+    PackageTarget, PackageUpgrade, PackageUpgradeQuery, PackageVersion, PathReport, PendingOpId,
+    PlanAction, Priority, ProjectCreate, ProjectDetail, ProjectExport, ProjectList, ProjectQuery,
+    ProjectRef, ProjectRemoval, ProjectUpdate, Reclaim, Remedy, Removal, RepairReport, Requirement,
+    Requirements, ResetCredential, ResidueId, ResolvedRuntime, ResourceLimits, RouteTarget,
+    RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind, RuntimeList, RuntimeQuestion,
+    RuntimeRemoval, RuntimeSummary, RuntimeTarget, RuntimeUninstall, RuntimeUpgrade,
+    RuntimeUpgradeQuery, SaveResources, SaveResourcesSet, ScaffoldConsent, ServiceAutostartSet,
+    ServiceCreate, ServiceCreation, ServiceDelete, ServiceId, ServiceIdleSet, ServiceLimitsReport,
+    ServiceLimitsSet, ServiceList, ServiceQuery, ServiceRemoval, ServiceRole, ServiceSummary,
+    ServiceTarget, ServiceWalk, SignatureCheck, SiteCreate, SiteCreation, SiteDetail, SiteKind,
+    SiteList, SiteListQuery, SiteQuery, SiteRef, SiteRemoval, SiteRoute, SiteShare, SiteSharing,
+    SiteState, SiteUpdate, StorageReport, Timestamp, UninstallQuery, UninstallReport,
+    UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide, UpdateDecision, UpdateFinish,
+    UpdateHandOver, UpdateHandedOver, UpdatePlacement, UpdateStatus, UpgradePlan, VersionAnswer,
+    VersionConstraint, rpc,
 };
 
 use autostart::Autostart;
@@ -1323,6 +1324,14 @@ enum RuntimeCommand {
         /// for their own machine to notice.
         #[arg(long)]
         refresh: bool,
+
+        /// Print every release rather than one row per line.
+        #[arg(long, conflicts_with = "line")]
+        all: bool,
+
+        /// Print every release of this line (`8.4`, `22`).
+        #[arg(long, value_name = "LINE", requires = "kind")]
+        line: Option<String>,
     },
 
     /// Download and install one version.
@@ -1360,6 +1369,39 @@ enum RuntimeCommand {
         /// Remove it even though a registered project pins it.
         #[arg(long)]
         force: bool,
+    },
+
+    /// Update one installed version to the newest release of its line, and move what uses it.
+    ///
+    /// Sites, the default and pins move to the new version; the old one is removed afterwards
+    /// unless `--keep` is given or something still needs it. The plan is printed first.
+    Upgrade {
+        #[command(flatten)]
+        runtime: Which,
+
+        /// Update to this release of the same line instead of the newest.
+        #[arg(long, value_name = "VERSION", value_parser = runtime_version)]
+        to: Option<PackageVersion>,
+
+        /// Keep the old version installed.
+        #[arg(long)]
+        keep: bool,
+
+        /// Print the plan and change nothing.
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Do not ask: agree to the update and to what the new version needs of the machine.
+        #[arg(long)]
+        yes: bool,
+
+        /// Update even though MixEngine judges this machine lacks something the new version needs.
+        #[arg(long)]
+        ignore_requirements: bool,
+
+        /// Return once the daemon has accepted the update, rather than once it has finished.
+        #[arg(long)]
+        no_wait: bool,
     },
 
     /// Make one installed version the one its kind resolves to.
@@ -1477,6 +1519,14 @@ enum PackageCommand {
         /// for their own machine to notice.
         #[arg(long)]
         refresh: bool,
+
+        /// Print every release rather than one row per line.
+        #[arg(long, conflicts_with = "line")]
+        all: bool,
+
+        /// Print every release of this line (`8.4`, `22`).
+        #[arg(long, value_name = "LINE", requires = "package")]
+        line: Option<String>,
     },
 
     /// Download and install one version.
@@ -1506,6 +1556,39 @@ enum PackageCommand {
     Uninstall {
         #[command(flatten)]
         package: WhichPackage,
+    },
+
+    /// Update one installed version to the newest release of its line, and move what uses it.
+    ///
+    /// Its instances move to the new version one at a time; the old one is removed afterwards
+    /// unless `--keep` is given or an instance could not move. The plan is printed first.
+    Upgrade {
+        #[command(flatten)]
+        package: WhichPackage,
+
+        /// Update to this release of the same line instead of the newest.
+        #[arg(long, value_name = "VERSION", value_parser = runtime_version)]
+        to: Option<PackageVersion>,
+
+        /// Keep the old version installed.
+        #[arg(long)]
+        keep: bool,
+
+        /// Print the plan and change nothing.
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Do not ask: agree to the update and to what the new version needs of the machine.
+        #[arg(long)]
+        yes: bool,
+
+        /// Update even though MixEngine judges this machine lacks something the new version needs.
+        #[arg(long)]
+        ignore_requirements: bool,
+
+        /// Return once the daemon has accepted the update, rather than once it has finished.
+        #[arg(long)]
+        no_wait: bool,
     },
 
     /// Record a version that is on disk but not listed, such as one an earlier install left.
@@ -4886,6 +4969,8 @@ async fn package(
         PackageCommand::Available {
             filter: Named { package },
             refresh,
+            all,
+            line,
         } => {
             let filter = PackageFilter { package, refresh };
             let catalogue: PackageCatalogue = ask(
@@ -4895,7 +4980,7 @@ async fn package(
             )
             .await?;
             emit(&rendered(json, &catalogue, || {
-                render::package_catalogue(&catalogue)
+                render::package_catalogue(&catalogue, &render::Lines { all, line })
             }))?;
         }
 
@@ -4975,6 +5060,69 @@ async fn package(
             emit(&rendered(json, &summary, || {
                 render::package_summary(&summary)
             }))?;
+        }
+
+        PackageCommand::Upgrade {
+            package,
+            to,
+            keep,
+            dry_run,
+            yes,
+            ignore_requirements,
+            no_wait,
+        } => {
+            let query = PackageUpgradeQuery {
+                package: package.package,
+                from: package.version,
+                to,
+            };
+            let plan: UpgradePlan = ask(
+                &mut client,
+                rpc::method::PACKAGE_UPGRADE_PLAN,
+                encode(&query),
+            )
+            .await?;
+            if !upgrade_confirmed(&plan, dry_run, yes, json)? {
+                return Ok(match dry_run {
+                    true => ExitCode::SUCCESS,
+                    false => ExitCode::FAILURE,
+                });
+            }
+
+            let target = PackageTarget {
+                package: query.package.clone(),
+                version: plan.to.clone(),
+            };
+            let Some(install_prerequisites) = prerequisites_agreed(
+                &mut client,
+                rpc::method::PACKAGE_REQUIREMENTS,
+                encode(&target),
+                Agreement {
+                    yes,
+                    ignore_requirements,
+                },
+                json,
+            )
+            .await?
+            else {
+                return Ok(ExitCode::FAILURE);
+            };
+
+            // `grant`: the person has just agreed to a plan that says this machine may ask, which is
+            // what `set-front-end` does after its own question.
+            let asked = PackageUpgrade {
+                query: PackageUpgradeQuery {
+                    to: Some(plan.to.clone()),
+                    ..query
+                },
+                keep,
+                install_prerequisites,
+                ignore_requirements,
+                grant: true,
+            };
+            let started: JobSummary =
+                ask(&mut client, rpc::method::PACKAGE_UPGRADE, encode(&asked)).await?;
+            return finish_upgrade(&mut client, started, no_wait, json).await;
         }
 
         PackageCommand::Uninstall { package } => {
@@ -5598,6 +5746,8 @@ async fn runtime(
         RuntimeCommand::Available {
             filter: Kind { kind },
             refresh,
+            all,
+            line,
         } => {
             let filter = RuntimeFilter { kind, refresh };
             let catalogue: RuntimeCatalogue = ask(
@@ -5607,7 +5757,7 @@ async fn runtime(
             )
             .await?;
             emit(&rendered(json, &catalogue, || {
-                render::runtime_catalogue(&catalogue)
+                render::runtime_catalogue(&catalogue, &render::Lines { all, line })
             }))?;
         }
 
@@ -5622,6 +5772,66 @@ async fn runtime(
                 ignore_requirements,
             };
             return install(&mut client, target(runtime), agreement, no_wait, json).await;
+        }
+
+        RuntimeCommand::Upgrade {
+            runtime,
+            to,
+            keep,
+            dry_run,
+            yes,
+            ignore_requirements,
+            no_wait,
+        } => {
+            let query = RuntimeUpgradeQuery {
+                kind: runtime.kind,
+                from: runtime.version,
+                to,
+            };
+            let plan: UpgradePlan = ask(
+                &mut client,
+                rpc::method::RUNTIME_UPGRADE_PLAN,
+                encode(&query),
+            )
+            .await?;
+            if !upgrade_confirmed(&plan, dry_run, yes, json)? {
+                return Ok(match dry_run {
+                    true => ExitCode::SUCCESS,
+                    false => ExitCode::FAILURE,
+                });
+            }
+
+            let target = RuntimeTarget {
+                kind: query.kind,
+                version: plan.to.clone(),
+            };
+            let Some(install_prerequisites) = prerequisites_agreed(
+                &mut client,
+                rpc::method::RUNTIME_REQUIREMENTS,
+                encode(&target),
+                Agreement {
+                    yes,
+                    ignore_requirements,
+                },
+                json,
+            )
+            .await?
+            else {
+                return Ok(ExitCode::FAILURE);
+            };
+
+            let asked = RuntimeUpgrade {
+                query: RuntimeUpgradeQuery {
+                    to: Some(plan.to.clone()),
+                    ..query
+                },
+                keep,
+                install_prerequisites,
+                ignore_requirements,
+            };
+            let started: JobSummary =
+                ask(&mut client, rpc::method::RUNTIME_UPGRADE, encode(&asked)).await?;
+            return finish_upgrade(&mut client, started, no_wait, json).await;
         }
 
         RuntimeCommand::Uninstall { runtime, force } => {
@@ -5724,6 +5934,67 @@ async fn runtime(
     }
 
     Ok(ExitCode::SUCCESS)
+}
+
+/// Print the plan, and ask — or answer `true` without asking under `--yes`. T193, D7.
+fn upgrade_confirmed(
+    plan: &UpgradePlan,
+    dry_run: bool,
+    yes: bool,
+    json: bool,
+) -> Result<bool, Error> {
+    // **One document per `--json` run**: the plan is the answer only to a dry run; otherwise the
+    // finished job carries the same plan, marked, and is what is printed.
+    if !json || dry_run {
+        emit(&rendered(json, plan, || render::upgrade_plan(plan)))?;
+    }
+
+    if dry_run {
+        return Ok(false);
+    }
+    if yes {
+        return Ok(true);
+    }
+
+    match confirm::ask(&format!(
+        "\nupdate {} {} to {}? [y/N] ",
+        plan.subject, plan.from, plan.to
+    )) {
+        confirm::Answer::Yes => Ok(true),
+        confirm::Answer::No => {
+            let _ = writeln!(std::io::stderr(), "nothing was changed");
+            Ok(false)
+        }
+        confirm::Answer::Unanswerable => Err(unanswered()),
+    }
+}
+
+/// Follow an update job and print what it did.
+async fn finish_upgrade(
+    client: &mut Client,
+    started: JobSummary,
+    no_wait: bool,
+    json: bool,
+) -> Result<ExitCode, Error> {
+    if no_wait {
+        emit(&rendered(json, &started, || render::job_status(&started)))?;
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    let finished = follow(client, started, json).await?;
+    let result = serde_json::to_value(&finished).ok().and_then(|value| {
+        serde_json::from_value::<UpgradePlan>(value["outcome"]["result"].clone()).ok()
+    });
+
+    emit(&rendered(json, &finished, || match &result {
+        Some(plan) => render::upgrade_plan(plan),
+        None => render::job_status(&finished),
+    }))?;
+
+    Ok(match render::job_succeeded(&finished) {
+        true => ExitCode::SUCCESS,
+        false => ExitCode::FAILURE,
+    })
 }
 
 /// `mix runtime install`: start the download, and follow it unless told not to.

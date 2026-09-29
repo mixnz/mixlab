@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE services SET\n           config_overrides_json = (SELECT config_overrides_json FROM services WHERE id = ?),\n           limits_json           = (SELECT limits_json FROM services WHERE id = ?),\n           idle_minutes          = (SELECT idle_minutes FROM services WHERE id = ?),\n           autostart             = (SELECT autostart FROM services WHERE id = ?)\n         WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "297b610d5adc313b21f44ca25b8395120f69116af3ffa480d69e91060515fc92"
+}

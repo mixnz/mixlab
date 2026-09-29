@@ -50,4 +50,16 @@ execution?: Execution | null,
  * [`None`] means a peer that predates the member, per ADR 0019; an empty list means nothing is
  * lacking or nothing could be judged.
  */
-needs?: Array<Requirement> | null, };
+needs?: Array<Requirement> | null, 
+/**
+ * The line this release belongs to (`8.4`, `22`) — roadmap task **T193a**, D1.
+ *
+ * Decided by the daemon (`mixengine_core::lines`) so that no client decides it; [`None`] is a
+ * daemon that predates the member, per ADR 0019.
+ */
+line?: string | null, 
+/**
+ * Whether this is the release its line is represented by: the newest stable one, or the newest
+ * pre-release in a line that has no stable release yet. [`None`] as for `line`.
+ */
+newest_in_line?: boolean | null, };

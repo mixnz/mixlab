@@ -45,6 +45,10 @@ pub(crate) struct Served {
     /// One per PHP, in the order the versions were given: the pool's service id and the domain of
     /// the site in front of it.
     pub sites: Vec<Site>,
+
+    /// The patch published after the first PHP's version from the same archive, when
+    /// [`served_with`] was asked for one — roadmap task **T193b**.
+    pub next: Option<String>,
 }
 
 /// One PHP, and what was built on top of it.
@@ -199,6 +203,16 @@ fn packing() -> Packing {
 /// directives — nginx's is the one that had to be written twice before it stopped leaking. A fixture
 /// that could only be Caddy would have left the second rendering asserted and never served.
 pub(crate) async fn served(front: &'static FrontEnd, roots: &[PathBuf]) -> Served {
+    served_with(front, roots, false).await
+}
+
+/// [`served`], and with `next_patch` the first PHP's archive published a second time under the
+/// patch after it ([`next`]), so an update has somewhere to go without a second PHP on the machine.
+pub(crate) async fn served_with(
+    front: &'static FrontEnd,
+    roots: &[PathBuf],
+    next_patch: bool,
+) -> Served {
     assert!(!roots.is_empty(), "a home with no PHP serves nothing");
 
     let (port, control) = (free_port(), free_port());
@@ -225,6 +239,7 @@ pub(crate) async fn served(front: &'static FrontEnd, roots: &[PathBuf]) -> Serve
     }];
 
     let mut versions = Vec::with_capacity(roots.len());
+    let mut offered_next = None;
 
     for root in roots {
         let version = version_of(root);
@@ -240,6 +255,19 @@ pub(crate) async fn served(front: &'static FrontEnd, roots: &[PathBuf]) -> Serve
             &url,
             Value::Object(provides(root)),
         ));
+
+        if next_patch && offered_next.is_none() {
+            let after = next(&version);
+            packages.push(entry(
+                "php",
+                &after,
+                &packed,
+                &url,
+                Value::Object(provides(root)),
+            ));
+            offered_next = Some(after);
+        }
+
         versions.push(version);
     }
 
@@ -324,6 +352,7 @@ pub(crate) async fn served(front: &'static FrontEnd, roots: &[PathBuf]) -> Serve
         _registry: registry,
         port,
         sites,
+        next: offered_next,
     }
 }
 
@@ -371,3 +400,15 @@ fn site(home: &Home, version: &str) -> Site {
 
 /// The `FrontEnd` this fixture serves through, re-exported so a caller need not name two modules.
 pub(crate) const FRONT: &FrontEnd = &CADDY;
+
+/// The patch after `version`: `8.3.33` → `8.3.34` — roadmap task **T193b**.
+pub(crate) fn next(version: &str) -> String {
+    let (head, last) = version
+        .rsplit_once('.')
+        .unwrap_or_else(|| panic!("{version} has no patch number"));
+    let digits: String = last.chars().take_while(char::is_ascii_digit).collect();
+    let patch: u32 = digits
+        .parse()
+        .unwrap_or_else(|_| panic!("{version}'s patch is not a number"));
+    format!("{head}.{}", patch + 1)
+}

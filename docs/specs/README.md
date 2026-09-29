@@ -181,3 +181,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-09-28 | [T191 — A path is spelled the way this system spells one](2026-09-28-t191-a-path-is-spelled-the-way-this-system-spells-one-design.md) | T191 | implemented |
 | 2026-09-29 | [T190c — CPU is shown the way Task Manager shows it](2026-09-29-t190c-cpu-is-shown-the-way-task-manager-shows-it-design.md) | T190c | implemented |
 | 2026-09-29 | [T192 — The tray is MixLab's](2026-09-29-t192-the-tray-is-mixlabs-design.md) | T192 | implemented |
+| 2026-09-29 | [T193 — A line shows its newest, and updates in place](2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md) | T193a, T193b, T193c, T193d | implemented |

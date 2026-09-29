@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- Available versions are listed one row per version series, with older patches one click away.
+- An installed runtime or server updates to the newest patch of its series, and its sites,
+  settings and pins move with it (`mix runtime upgrade`, `mix package upgrade`, and *Update* in
+  MixLab).
+
 ### Changed
 - Switching between light and dark in Settings fades from one to the other instead of flashing.
 - Languages and Packages list the newest version of each first, both what is installed and what

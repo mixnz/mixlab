@@ -50,6 +50,38 @@ a `RUNS` column on that machine, saying `native` or `emulated` per version, and 
 before it starts downloading. On every other machine the column is not there, because there is
 nothing for it to say.
 
+## Updating to a newer patch
+
+`mix runtime available` lists one row per line, such as PHP 8.4 or Node.js 22, showing the newest
+release of each and how many others it has. `--all` lists every release, and
+`--kind php --line 8.4` lists the releases of one line. When a version you have installed has a
+newer release in its line, the listing says so above the table:
+
+```text
+update: php 8.4.24 → 8.4.25   mix runtime upgrade php 8.4.24
+```
+
+```bash
+mix runtime upgrade php 8.4.24 --dry-run   # print what would move, and change nothing
+mix runtime upgrade php 8.4.24             # print the same plan, then ask
+```
+
+The update installs 8.4.25, turns on the same PHP extensions, gives its php-fpm pool the settings
+the old pool had, and moves your sites, the default and every project pinned to exactly 8.4.24 over
+to it. Then 8.4.24 is removed. Add `--keep` to keep it.
+
+The old version also stays when something still needs it: a `mixengine.toml` that pins exactly that
+patch, a tool you installed into it with `npm install -g` or `pip install`, or an extension such as
+phpMyAdmin that only the old version satisfies. The plan names each one. MixLab never edits your
+`mixengine.toml`, and it does not install your global tools again under the new version.
+
+An update stays inside its line. Going from PHP 8.3 to 8.4 changes which extensions exist, so
+`mix runtime upgrade` refuses it: install 8.4 and change the pin yourself.
+
+In the MixLab window, an installed version with a newer patch has an **Update to 8.4.25** row under
+it. The dialog shows the same plan and a box to keep the old version, and the row shows the progress
+while the update runs.
+
 ## Composer
 
 ```bash

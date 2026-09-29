@@ -58,6 +58,7 @@ mod storage_api;
 mod time;
 mod uninstall_api;
 mod update_api;
+mod upgrade_api;
 mod version;
 
 pub use autostart_api::{AutostartMechanism, AutostartReport};
@@ -121,7 +122,7 @@ pub use metrics::{
 };
 pub use package_api::{
     PackageCatalogue, PackageFilter, PackageFound, PackageFoundList, PackageInstall, PackageList,
-    PackageRelease, PackageRemoval, PackageSummary, PackageTarget,
+    PackageRelease, PackageRemoval, PackageSummary, PackageTarget, PackageUpdate,
 };
 pub use path_api::{CommandConflict, CommandOrigin, CommandSource, PathPlace, PathReport};
 pub use project_api::{
@@ -136,7 +137,7 @@ pub use runtime_api::{
     ExtensionChange, ExtensionChoice, ExtensionList, ExtensionSource, Linkage, PoolOutcome,
     ResolvedRuntime, RuntimeCatalogue, RuntimeExtension, RuntimeFilter, RuntimeFound,
     RuntimeFoundList, RuntimeInstall, RuntimeList, RuntimeQuestion, RuntimeRelease, RuntimeRemoval,
-    RuntimeSource, RuntimeSummary, RuntimeTarget, RuntimeUninstall,
+    RuntimeSource, RuntimeSummary, RuntimeTarget, RuntimeUninstall, RuntimeUpdate,
 };
 pub use service::{
     Backoff, EnvValue, HealthCheck, HealthProbe, IdleExemption, IdlePolicy, IdleProbe, IdleSource,
@@ -164,6 +165,10 @@ pub use update_api::{
     UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide, UpdateDecision, UpdateFinish,
     UpdateHandOver, UpdateHandedOver, UpdateInstaller, UpdateOffer, UpdatePlacement, UpdateRelease,
     UpdateStatus,
+};
+pub use upgrade_api::{
+    OldVersion, PackageUpgrade, PackageUpgradeQuery, RuntimeUpgrade, RuntimeUpgradeQuery,
+    UpgradeEntry, UpgradeItem, UpgradeOutcome, UpgradePlan,
 };
 pub use version::{Execution, PackageChannel, PackageVersion, VersionConstraint, VersionError};
 

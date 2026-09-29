@@ -4,7 +4,7 @@ slug = "services"
 order = 6
 summary = "Caddy hoặc Nginx, MariaDB, MySQL, PostgreSQL, Redis và Memcached. Cài khi bạn yêu cầu, cấu hình sẵn cho bạn, và không bao giờ in mật khẩu ra màn hình."
 translation_of = "en/services.md"
-source_sha256 = "3ab9e9922aef6b8fce21063d6ec7e7fa84e83387b80ede2c89bced38b4b9f2e4"
+source_sha256 = "7ab35d29a66dfe2bb3cd7e77f99502e55e08701a166d6a880e615cded3613a95"
 +++
 
 # Máy chủ, cơ sở dữ liệu và bộ nhớ đệm
@@ -130,6 +130,29 @@ autostart`); bạn có thể bật một trong hai, hoặc cả hai.
 Trên GNOME, icon cần extension *AppIndicator and KStatusNotifierItem Support*. Ubuntu có sẵn
 extension này; Fedora và GNOME gốc thì không. Khi thiếu nó sẽ không có icon, đóng cửa sổ vẫn thoát
 MixLab như trước, và công tắc đăng nhập sẽ mở cửa sổ thay cho icon.
+
+## Cập nhật server lên bản vá mới hơn
+
+`mix package available` cũng liệt kê server theo từng dòng phiên bản, và báo bản cập nhật phía trên
+bảng giống như với runtime.
+
+```bash
+mix package upgrade mariadb 11.4.5 --dry-run
+mix package upgrade mariadb 11.4.5
+```
+
+Lần lượt từng instance của bản cũ được dừng, chuyển sang bản mới rồi chạy lại. Thư mục dữ
+liệu, port, mật khẩu và cấu hình giữ nguyên. Nếu một instance không chạy được trên bản mới, nó
+được chuyển về bản cũ và chạy lại, còn bản cập nhật kết thúc với trạng thái thất bại kèm lý do.
+Bản cũ chỉ bị gỡ khi mọi instance đã chuyển xong; `--keep` để giữ lại.
+
+Cập nhật chỉ diễn ra trong cùng một dòng, nơi định dạng dữ liệu không đổi. Riêng MySQL 8.0 thì không
+quay lại được: khi một bản vá 8.0 mới hơn đã mở dữ liệu, bản cũ không mở lại được nữa, và kế hoạch
+báo trước điều này để bạn quyết định.
+
+Cập nhật Caddy hay Nginx sẽ khởi động lại nó, nên các site ngừng phản hồi trong chốc lát.
+Trên Linux, chương trình mới cần quyền nhận kết nối ở cổng 80 và 443, và MixLab xin quyền đó
+trước khi dừng bất cứ thứ gì.
 
 ## Web server nào đang phục vụ site của bạn
 

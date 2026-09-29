@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
@@ -17,8 +17,10 @@ import { ChevronDownIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { PackageVersion, RuntimeKind, RuntimeRelease } from "@mixengine/api";
-import type { RuntimeSummary } from "@mixengine/api";
+import type { RuntimeSummary, RuntimeUpdate, UpgradePlan } from "@mixengine/api";
 import RequirementDialog from "../../components/RequirementDialog";
+import UpdateRow from "../../components/UpdateRow";
+import UpgradeDialog from "../../components/UpgradeDialog";
 import {
   askingStep,
   needLabel,
@@ -39,6 +41,8 @@ import {
 } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
 import { matchesAvailable } from "./availableFilter";
+import { groupByLine } from "./availableLines";
+import { updateRowState } from "../../updateRow";
 import ExtensionsPanel from "./ExtensionsPanel";
 import styles from "./Catalogue.module.css";
 
@@ -58,11 +62,19 @@ export default function Languages({ active }: { active: boolean }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   // Filters the "not installed" table only — the same reason `Packages.tsx` has.
   const [filter, setFilter] = useState("");
+  // Lines the person opened to see their older releases — T193a.
+  const [openLines, setOpenLines] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [onDisk, setOnDisk] = useState<OnDiskRow[]>([]);
   const [adopting, setAdopting] = useState<string | null>(null);
   // What an install said about this machine and went on anyway — T27e.
   const [notice, setNotice] = useState("");
+  // T193b: what the index has newer in each installed version's line, and the update being asked.
+  const [updates, setUpdates] = useState<RuntimeUpdate[]>([]);
+  const [upgrading, setUpgrading] = useState<{ update: RuntimeUpdate; plan: UpgradePlan } | null>(null);
+  const [askingUpgrade, setAskingUpgrade] = useState<
+    { update: RuntimeUpdate; keep: boolean; step: AskingStep } | null
+  >(null);
   const { t } = useTranslation();
 
   // Reads the latest `installingJob` from inside a `watch` callback registered once — the effect
@@ -89,6 +101,7 @@ export default function Languages({ active }: { active: boolean }) {
         setOnDisk(runtimeRowsFrom(found));
         setAvailable(avail.runtimes);
         setStale(avail.stale);
+        setUpdates(avail.updates ?? []);
         setError(stillShow);
       } catch (e) {
         setError(errorMessage(t, e));
@@ -226,6 +239,58 @@ export default function Languages({ active }: { active: boolean }) {
     }
   }
 
+  // T193b: the plan first, then what this machine lacks for the new version (T151), then the job.
+  async function askToUpgrade(update: RuntimeUpdate) {
+    setError("");
+    try {
+      const plan = await api.runtimeUpgradePlan({ kind: update.kind, from: update.from, to: update.to });
+      setUpgrading({ update, plan });
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }
+
+  // After the plan was agreed: what the new version lacks is asked exactly as `install` asks it.
+  async function upgrade(update: RuntimeUpdate, keep: boolean) {
+    setUpgrading(null);
+    const step = requirementStep(update.needs ?? []);
+    if (step.kind === "proceed" || step.kind === "notice") {
+      await startUpgrade(update, keep, false);
+      return;
+    }
+
+    const asked = askingStep(step);
+    // Only agreeing to install what MixEngine can install continues an update. Choosing another
+    // version is a different question — which release of the line to go to — and is answered by
+    // the version list, so it is said rather than offered here.
+    if (asked === null || asked.kind !== "consent") {
+      setError(
+        t("mixengine.requirements.unavailable", {
+          name: `${update.kind} ${update.to}`,
+          needs: step.needs.map(needLabel).join(", "),
+        }),
+      );
+      return;
+    }
+    setAskingUpgrade({ update, keep, step: asked });
+  }
+
+  async function startUpgrade(update: RuntimeUpdate, keep: boolean, installPrerequisites: boolean) {
+    setError("");
+    try {
+      const job = await api.runtimeUpgrade({
+        kind: update.kind,
+        from: update.from,
+        to: update.to,
+        keep,
+        install_prerequisites: installPrerequisites,
+      });
+      setInstallingJob((current) => ({ ...current, [versionKey(update.kind, update.from)]: job.id }));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }
+
   async function adopt(row: OnDiskRow) {
     setAdopting(row.key);
     setError("");
@@ -250,14 +315,63 @@ export default function Languages({ active }: { active: boolean }) {
   }
 
   const shownInstalled = newestFirst(installed, (row) => row.kind);
-  const shownAvailable = newestFirst(
-    available.filter(
-      (release) =>
-        !release.installed &&
-        matchesAvailable([release.kind, release.version, release.channel], filter),
+  // One row per line, the rest behind a toggle — T193a. Which line a release is in and which is
+  // newest are the daemon's answers; `groupByLine` only groups by them.
+  const lineGroups = groupByLine(
+    newestFirst(
+      available.filter((release) => !release.installed),
+      (release) => release.kind,
     ),
     (release) => release.kind,
+    (release) => matchesAvailable([release.kind, release.version, release.channel], filter),
+    openLines,
   );
+  const toggleLine = (key: string) =>
+    setOpenLines((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  function releaseRow(release: RuntimeRelease, nested: boolean, toggle: ReactNode) {
+    const key = versionKey(release.kind, release.version);
+    const job = jobFor(jobs, installingJob[key]);
+    const { others, libraries } = splitLibraries(
+      (release.needs ?? []).map((requirement) => requirement.need),
+    );
+    const needs =
+      libraries.length > 0
+        ? [...others, t("mixengine.requirements.systemLibraries", { count: libraries.length })]
+        : others;
+    return (
+      <li key={key} className={nested ? styles.releaseNested : styles.release}>
+        <MonogramBadge name={release.kind} size={28} />
+        <span className={styles.releaseName}>
+          {release.kind}
+          {toggle}
+        </span>
+        <span className={styles.version}>{release.version}</span>
+        <span className={styles.tag}>{release.channel}</span>
+        <span
+          className={styles.needs}
+          title={libraries.length > 0 ? libraries.join(", ") : t("mixengine.requirements.columnNeeds")}
+        >
+          {needs.join(", ")}
+        </span>
+        {job ? (
+          <span className={styles.progress}>
+            <progress value={job.percent} max={100} />
+            <span className={styles.progressText}>{job.message}</span>
+          </span>
+        ) : (
+          <Button variant="soft" className={styles.install} onClick={() => void install(release)}>
+            {t("mixengine.packages.install")}
+          </Button>
+        )}
+      </li>
+    );
+  }
 
   return (
     <div className={styles.catalogue}>
@@ -287,9 +401,15 @@ export default function Languages({ active }: { active: boolean }) {
               {shownInstalled.map((row) => {
                 const key = versionKey(row.kind, row.version);
                 const open = expanded === key;
+                const update = updateRowState(
+                  updates.find(
+                    (candidate) => candidate.kind === row.kind && candidate.from === row.version,
+                  ),
+                  jobFor(jobs, installingJob[key]),
+                );
                 return (
                   <Fragment key={key}>
-                    <tr>
+                    <tr className={update.kind === "none" ? undefined : styles.withUpdate}>
                       <td data-nowrap>
                         <span className={styles.name}>
                           <MonogramBadge name={row.kind} size={28} />
@@ -331,6 +451,11 @@ export default function Languages({ active }: { active: boolean }) {
                         </Button>
                       </td>
                     </tr>
+                    <UpdateRow
+                      columns={6}
+                      state={update}
+                      onUpdate={(update) => void askToUpgrade(update)}
+                    />
                     {open && row.kind === "php" && (
                       <tr className={styles.expansion}>
                         <td colSpan={6}>
@@ -351,7 +476,7 @@ export default function Languages({ active }: { active: boolean }) {
         count={
           loaded ? (
             <>
-              {shownAvailable.length}
+              {lineGroups.length}
               <StaleBadge stale={stale} />
             </>
           ) : undefined
@@ -377,52 +502,29 @@ export default function Languages({ active }: { active: boolean }) {
       >
         {!loaded ? (
           <LoadingState />
-        ) : shownAvailable.length === 0 ? (
+        ) : lineGroups.length === 0 ? (
           filter.trim() !== "" && <EmptyState title={t("mixengine.packages.noMatches")} />
         ) : (
           <ul className={styles.available}>
-            {shownAvailable.map((release) => {
-              const key = versionKey(release.kind, release.version);
-              const job = jobFor(jobs, installingJob[key]);
-              const { others, libraries } = splitLibraries(
-                (release.needs ?? []).map((requirement) => requirement.need),
-              );
-              const needs =
-                libraries.length > 0
-                  ? [
-                      ...others,
-                      t("mixengine.requirements.systemLibraries", { count: libraries.length }),
-                    ]
-                  : others;
-              return (
-                <li key={key} className={styles.release}>
-                  <MonogramBadge name={release.kind} size={28} />
-                  <span className={styles.releaseName}>{release.kind}</span>
-                  <span className={styles.version}>{release.version}</span>
-                  <span className={styles.tag}>{release.channel}</span>
-                  <span
-                    className={styles.needs}
-                    title={
-                      libraries.length > 0
-                        ? libraries.join(", ")
-                        : t("mixengine.requirements.columnNeeds")
-                    }
-                  >
-                    {needs.join(", ")}
-                  </span>
-                  {job ? (
-                    <span className={styles.progress}>
-                      <progress value={job.percent} max={100} />
-                      <span className={styles.progressText}>{job.message}</span>
-                    </span>
-                  ) : (
-                    <Button variant="soft" className={styles.install} onClick={() => void install(release)}>
-                      {t("mixengine.packages.install")}
+            {lineGroups.map((group) => (
+              <Fragment key={group.key}>
+                {releaseRow(
+                  group.head,
+                  false,
+                  group.others.length > 0 && (
+                    <Button
+                      variant="link"
+                      className={styles.moreInLine}
+                      aria-expanded={group.open}
+                      onClick={() => toggleLine(group.key)}
+                    >
+                      {t("mixengine.packages.moreInLine", { count: group.others.length })}
                     </Button>
-                  )}
-                </li>
-              );
-            })}
+                  ),
+                )}
+                {group.open && group.others.map((release) => releaseRow(release, true, null))}
+              </Fragment>
+            ))}
           </ul>
         )}
       </Card>
@@ -440,6 +542,28 @@ export default function Languages({ active }: { active: boolean }) {
             setForceHint(null);
           }}
           onConfirm={() => void uninstall(uninstallTarget, forceHint !== null)}
+        />
+      )}
+
+      {upgrading && (
+        <UpgradeDialog
+          plan={upgrading.plan}
+          onCancel={() => setUpgrading(null)}
+          onConfirm={(keep) => void upgrade(upgrading.update, keep)}
+        />
+      )}
+
+      {askingUpgrade && (
+        <RequirementDialog
+          name={`${askingUpgrade.update.kind} ${askingUpgrade.update.to}`}
+          step={askingUpgrade.step}
+          onCancel={() => setAskingUpgrade(null)}
+          onInstall={() => {
+            const { update, keep } = askingUpgrade;
+            setAskingUpgrade(null);
+            void startUpgrade(update, keep, true);
+          }}
+          onChoose={() => setAskingUpgrade(null)}
         />
       )}
 

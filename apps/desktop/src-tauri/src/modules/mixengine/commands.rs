@@ -377,6 +377,33 @@ pub async fn mixengine_package_uninstall(target: Value) -> Result<Value, AppErro
     rpc::call("package.uninstall", target).await
 }
 
+/// `query` is a `RuntimeUpgradeQuery { kind, from, to? }`. Answers `UpgradePlan` and changes
+/// nothing — T193b.
+#[tauri::command]
+pub async fn mixengine_runtime_upgrade_plan(query: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.upgrade_plan", query).await
+}
+
+/// `asked` is a `RuntimeUpgrade`. Answers `JobSummary`, followed over the stream as
+/// `runtime.install` is; the finished job's result is the plan, marked — T193b.
+#[tauri::command]
+pub async fn mixengine_runtime_upgrade(asked: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.upgrade", asked).await
+}
+
+/// `query` is a `PackageUpgradeQuery { package, from, to? }`. Answers `UpgradePlan` — T193c.
+#[tauri::command]
+pub async fn mixengine_package_upgrade_plan(query: Value) -> Result<Value, AppError> {
+    rpc::call("package.upgrade_plan", query).await
+}
+
+/// `asked` is a `PackageUpgrade`; the window sends `grant: true`, because the person has just
+/// agreed to a plan that says the machine may ask — T193c.
+#[tauri::command]
+pub async fn mixengine_package_upgrade(asked: Value) -> Result<Value, AppError> {
+    rpc::call("package.upgrade", asked).await
+}
+
 /// `service` is a bare `ServiceId` (a string).
 #[tauri::command]
 pub async fn mixengine_service_limits(service: String) -> Result<Value, AppError> {

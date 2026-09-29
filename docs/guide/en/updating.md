@@ -83,6 +83,12 @@ On a desktop it also opens the package in your software centre. Once it is insta
 
 The Windows installer is updated by `mix self-update` in place.
 
+## PHP, Node.js and the servers you installed
+
+This page is about MixLab itself. The versions of PHP, Node.js, databases and web servers you
+installed are updated separately, one at a time and only when you ask. See
+[Updating to a newer patch](./runtimes.md) and [Updating a server to a newer patch](./services.md).
+
 ## Versions
 
 MixLab uses semantic versioning, one version across everything it ships. Before 1.0 the API may

@@ -251,6 +251,13 @@ pub struct RuntimeCatalogue {
     /// `false` for a fresh fetch and for a cache still inside its six hours — the distinction a
     /// person acts on is "could the publisher be reached", not "how old exactly".
     pub stale: bool,
+
+    /// Each installed version whose line has a newer release here, and which one — T193a, D2.
+    ///
+    /// Composed with the available list and never with the installed one, because listing what is
+    /// on the disk must not cost a request to the index. [`None`] is a daemon from before T193.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updates: Option<Vec<RuntimeUpdate>>,
 }
 
 /// One installed runtime. The whole of what `runtime.set_default` answers, and what a finished
@@ -346,6 +353,41 @@ pub struct RuntimeRelease {
     ///
     /// [`None`] means a peer that predates the member, per ADR 0019; an empty list means nothing is
     /// lacking or nothing could be judged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub needs: Option<Vec<crate::Requirement>>,
+
+    /// The line this release belongs to (`8.4`, `22`) — roadmap task **T193a**, D1.
+    ///
+    /// Decided by the daemon (`mixengine_core::lines`) so that no client decides it; [`None`] is a
+    /// daemon that predates the member, per ADR 0019.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line: Option<String>,
+
+    /// Whether this is the release its line is represented by: the newest stable one, or the newest
+    /// pre-release in a line that has no stable release yet. [`None`] as for `line`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub newest_in_line: Option<bool>,
+}
+
+/// One installed version and the newer release of its line the index offers — roadmap task
+/// **T193a**, D2.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct RuntimeUpdate {
+    /// Which language.
+    pub kind: RuntimeKind,
+
+    /// The installed version.
+    pub from: PackageVersion,
+
+    /// The release it would move to.
+    pub to: PackageVersion,
+
+    /// Whether `to` is already installed: then nothing is downloaded, and the move still has to be
+    /// asked for.
+    pub to_installed: bool,
+
+    /// What this machine lacks for `to`, as a release's `needs` says it (T149).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub needs: Option<Vec<crate::Requirement>>,
 }
@@ -531,6 +573,8 @@ mod tests {
             installed: false,
             execution: Some(Execution::Native),
             needs: None,
+            line: None,
+            newest_in_line: None,
         };
 
         let encoded = serde_json::to_value(&release).unwrap();
@@ -688,5 +732,43 @@ mod tests {
         let release: RuntimeRelease =
             serde_json::from_value(older).expect("a peer from before T149");
         assert_eq!(release.needs, None);
+    }
+
+    /// **T193a, ADR 0019.** A daemon from before lines sends none of the three members, and a
+    /// client must read that as absence rather than fail.
+    #[test]
+    fn a_catalogue_from_before_lines_decodes_with_none_of_them() {
+        let old = serde_json::json!({
+            "runtimes": [{
+                "kind": "php", "version": "8.4.24", "channel": "stable",
+                "bytes": 1, "installed": false
+            }],
+            "stale": false
+        });
+
+        let decoded: RuntimeCatalogue = serde_json::from_value(old).unwrap();
+        assert_eq!(decoded.updates, None);
+        assert_eq!(decoded.runtimes[0].line, None);
+        assert_eq!(decoded.runtimes[0].newest_in_line, None);
+    }
+
+    #[test]
+    fn an_update_names_both_versions_and_whether_the_newer_is_here() {
+        let update = RuntimeUpdate {
+            kind: RuntimeKind::Php,
+            from: version("8.4.24"),
+            to: version("8.4.25"),
+            to_installed: false,
+            needs: Some(Vec::new()),
+        };
+
+        let encoded = serde_json::to_value(&update).unwrap();
+        assert_eq!(encoded["from"], "8.4.24");
+        assert_eq!(encoded["to"], "8.4.25");
+        assert_eq!(encoded["to_installed"], false);
+        assert_eq!(
+            serde_json::from_value::<RuntimeUpdate>(encoded).unwrap(),
+            update
+        );
     }
 }

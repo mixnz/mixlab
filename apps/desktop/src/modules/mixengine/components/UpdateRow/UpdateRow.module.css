@@ -1,0 +1,33 @@
+/* The row under an installed version with an update - T193. */
+.row > td {
+  padding-top: 0;
+}
+
+/* `width: 0; min-width: 100%` keeps this content out of the table's column widths: the cell is as
+   wide as the table makes it, and nothing inside can ask for more. */
+.body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 0;
+  min-width: 100%;
+  min-height: 28px;
+}
+
+/* A fixed length, so the bar never grows or shrinks as the job's message changes. */
+.bar {
+  flex: none;
+  width: 240px;
+  height: 6px;
+  accent-color: var(--accent);
+}
+
+.message {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}

@@ -39,16 +39,17 @@ use mixengine_proto::{
     ExtensionSource, FilesystemReach, FrontEndOutcome, FrontEndReport, GrantOutcome, Handshake,
     IdleExemption, IdleProbe, IdleReport, IdleSource, InstalledExtensions, IssueOutcome, JobList,
     JobOutcome, JobState, JobSummary, Launch, Linkage, Made, MemoryMeasure, MemoryWatchdog,
-    MetricsFrame, MetricsHistory, NetworkReach, Outcome, PROTOCOL_VERSION, PackageCatalogue,
-    PackageList, PackageRelease, PackageRemoval, PackageVersion, PathReport, PinSource, PlanAction,
-    PlanStep, PoolOutcome, Priority, ProjectDetail, ProjectExport, ProjectList, ProjectRemoval,
-    RecipeAddition, Reclaim, Removal, RepairReport, Requirement, ResolvedRuntime, RotateOutcome,
-    RuntimeCatalogue, RuntimeList, RuntimeRelease, RuntimeRemoval, RuntimeSource, RuntimeSummary,
-    ServiceCreation, ServiceId, ServiceLimitsReport, ServiceList, ServiceRemoval, ServiceState,
-    ServiceSummary, ServiceWalk, SignatureCheck, SiteDetail, SiteKind, SiteList, SiteOwner,
-    SiteRemoval, SiteSharing, StateReason, StepResult, StorageChoice, StorageReport, Timestamp,
-    Trust, UninstallOutcome, UninstallReport, Unusable, UpdateApplied, UpdateHandedOver,
-    UpdatePlacement, UpdateStatus, Uptime, Verdict, WhenExceeded, privileged::ElevationOutcome,
+    MetricsFrame, MetricsHistory, NetworkReach, OldVersion, Outcome, PROTOCOL_VERSION,
+    PackageCatalogue, PackageList, PackageRelease, PackageRemoval, PackageVersion, PathReport,
+    PinSource, PlanAction, PlanStep, PoolOutcome, Priority, ProjectDetail, ProjectExport,
+    ProjectList, ProjectRemoval, RecipeAddition, Reclaim, Removal, RepairReport, Requirement,
+    ResolvedRuntime, RotateOutcome, RuntimeCatalogue, RuntimeList, RuntimeRelease, RuntimeRemoval,
+    RuntimeSource, RuntimeSummary, ServiceCreation, ServiceId, ServiceLimitsReport, ServiceList,
+    ServiceRemoval, ServiceState, ServiceSummary, ServiceWalk, SignatureCheck, SiteDetail,
+    SiteKind, SiteList, SiteOwner, SiteRemoval, SiteSharing, StateReason, StepResult,
+    StorageChoice, StorageReport, Timestamp, Trust, UninstallOutcome, UninstallReport, Unusable,
+    UpdateApplied, UpdateHandedOver, UpdatePlacement, UpdateStatus, UpgradeItem, UpgradeOutcome,
+    UpgradePlan, Uptime, Verdict, WhenExceeded, privileged::ElevationOutcome,
 };
 
 /// `mix cert ca-status`, for a person.
@@ -1262,9 +1263,66 @@ pub(crate) fn package_list(list: &PackageList) -> String {
     )
 }
 
-/// `mix package available`, for a person.
+/// Which rows of a catalogue to print — roadmap task **T193a**, D3.
+///
+/// **Filtering on what the daemon sent**, which is rendering: `line` and `newest_in_line` are the
+/// daemon's answers, and nothing here compares two versions.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Lines {
+    /// Every release, as before T193.
+    pub(crate) all: bool,
+
+    /// Every release of this one line.
+    pub(crate) line: Option<String>,
+}
+
+impl Lines {
+    /// Whether a release with these two members is printed.
+    fn shows(&self, line: Option<&str>, newest: Option<bool>) -> bool {
+        match (&self.line, line) {
+            (Some(wanted), Some(have)) => wanted == have,
+            (Some(_), None) => true,
+            // A daemon from before lines marks nothing, and its list is printed whole.
+            (None, _) => self.all || newest != Some(false),
+        }
+    }
+
+    /// Whether the `MORE` column is printed: only on the one-row-per-line view of a daemon that
+    /// said which line each row is in.
+    fn counts(&self, any_line: bool) -> bool {
+        !self.all && self.line.is_none() && any_line
+    }
+}
+
+/// How many other releases share `line`, as a `MORE` cell. `lines` is every row of one name.
+fn more(lines: &[Option<&str>], line: Option<&str>) -> String {
+    let Some(line) = line else {
+        return MISSING.to_owned();
+    };
+
+    match lines.iter().filter(|other| **other == Some(line)).count() {
+        0 | 1 => MISSING.to_owned(),
+        count => format!("+{}", count - 1),
+    }
+}
+
+/// The lines above a table that name each update, with the command that applies it — D3.
+fn update_lines<'a>(
+    command: &str,
+    updates: impl Iterator<Item = (&'a str, &'a PackageVersion, &'a PackageVersion)>,
+) -> String {
+    let mut said = String::new();
+    for (name, from, to) in updates {
+        said.push_str(&format!(
+            "update: {name} {from} → {to}   mix {command} upgrade {name} {from}\n"
+        ));
+    }
+    said
+}
+
+/// `mix package available`, for a person — one row per line unless `lines` says otherwise (T193a).
 #[must_use]
-pub(crate) fn package_catalogue(catalogue: &PackageCatalogue) -> String {
+pub(crate) fn package_catalogue(catalogue: &PackageCatalogue, lines: &Lines) -> String {
     let mut rendered = String::new();
 
     if catalogue.stale {
@@ -1275,12 +1333,30 @@ pub(crate) fn package_catalogue(catalogue: &PackageCatalogue) -> String {
     }
 
     if catalogue.packages.is_empty() {
-        rendered.push_str(
-            "the package index offers nothing this build can run on this machine
-",
-        );
+        rendered.push_str("the package index offers nothing this build can run on this machine\n");
         return rendered;
     }
+
+    rendered.push_str(&update_lines(
+        "package",
+        catalogue
+            .updates
+            .iter()
+            .flatten()
+            .map(|update| (update.package.as_str(), &update.from, &update.to)),
+    ));
+
+    let shown: Vec<&PackageRelease> = catalogue
+        .packages
+        .iter()
+        .filter(|release| lines.shows(release.line.as_deref(), release.newest_in_line))
+        .collect();
+    let counted = lines.counts(
+        catalogue
+            .packages
+            .iter()
+            .any(|release| release.line.is_some()),
+    );
 
     let cells = |release: &PackageRelease| {
         [
@@ -1296,19 +1372,17 @@ pub(crate) fn package_catalogue(catalogue: &PackageCatalogue) -> String {
         ]
     };
 
-    let emulated = emulation_column(catalogue.packages.iter().map(|release| release.execution));
-    let lacking = any_lacking(
-        catalogue
-            .packages
-            .iter()
-            .map(|release| release.needs.as_ref()),
-    );
+    let emulated = emulation_column(shown.iter().map(|release| release.execution));
+    let lacking = any_lacking(shown.iter().map(|release| release.needs.as_ref()));
 
     if let Some(note) = &emulated {
         rendered.push_str(note);
     }
 
     let mut headings = PACKAGE_HEADINGS.to_vec();
+    if counted {
+        headings.push(MORE_HEADING);
+    }
     if emulated.is_some() {
         headings.push(RUNS_HEADING);
     }
@@ -1316,11 +1390,19 @@ pub(crate) fn package_catalogue(catalogue: &PackageCatalogue) -> String {
         headings.push(NEEDS_HEADING);
     }
 
-    let rows: Vec<Vec<String>> = catalogue
-        .packages
+    let rows: Vec<Vec<String>> = shown
         .iter()
         .map(|release| {
             let mut row = cells(release).to_vec();
+            if counted {
+                let same: Vec<Option<&str>> = catalogue
+                    .packages
+                    .iter()
+                    .filter(|other| other.package == release.package)
+                    .map(|other| other.line.as_deref())
+                    .collect();
+                row.push(more(&same, release.line.as_deref()));
+            }
             if emulated.is_some() {
                 row.push(runs(release.execution));
             }
@@ -1340,6 +1422,9 @@ const PACKAGE_HEADINGS: [&str; 6] = ["PACKAGE", "VERSION", "CHANNEL", "SIZE", "I
 
 /// The columns `mix runtime available` prints when nothing is emulated.
 const RUNTIME_HEADINGS: [&str; 6] = ["RUNTIME", "VERSION", "CHANNEL", "SIZE", "INSTALLED", "EOL"];
+
+/// The column that counts a line's other releases — roadmap task **T193a**.
+const MORE_HEADING: &str = "MORE";
 
 /// The seventh column's heading, on both listings.
 const RUNS_HEADING: &str = "RUNS";
@@ -1532,7 +1617,7 @@ pub(crate) fn service_removal(removal: &ServiceRemoval) -> String {
 /// **The staleness is a line above the table and not a column**, because it is true of the whole
 /// answer: every row came out of the same document, and repeating "from a cached index" against each
 /// of forty versions would say it forty times.
-pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue) -> String {
+pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue, lines: &Lines) -> String {
     let mut rendered = String::new();
 
     if catalogue.stale {
@@ -1546,6 +1631,27 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue) -> String {
         rendered.push_str("the package index offers nothing for this machine\n");
         return rendered;
     }
+
+    rendered.push_str(&update_lines(
+        "runtime",
+        catalogue
+            .updates
+            .iter()
+            .flatten()
+            .map(|update| (update.kind.as_str(), &update.from, &update.to)),
+    ));
+
+    let shown: Vec<&RuntimeRelease> = catalogue
+        .runtimes
+        .iter()
+        .filter(|release| lines.shows(release.line.as_deref(), release.newest_in_line))
+        .collect();
+    let counted = lines.counts(
+        catalogue
+            .runtimes
+            .iter()
+            .any(|release| release.line.is_some()),
+    );
 
     let cells = |release: &RuntimeRelease| {
         [
@@ -1561,19 +1667,17 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue) -> String {
         ]
     };
 
-    let emulated = emulation_column(catalogue.runtimes.iter().map(|release| release.execution));
-    let lacking = any_lacking(
-        catalogue
-            .runtimes
-            .iter()
-            .map(|release| release.needs.as_ref()),
-    );
+    let emulated = emulation_column(shown.iter().map(|release| release.execution));
+    let lacking = any_lacking(shown.iter().map(|release| release.needs.as_ref()));
 
     if let Some(note) = &emulated {
         rendered.push_str(note);
     }
 
     let mut headings = RUNTIME_HEADINGS.to_vec();
+    if counted {
+        headings.push(MORE_HEADING);
+    }
     if emulated.is_some() {
         headings.push(RUNS_HEADING);
     }
@@ -1581,11 +1685,19 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue) -> String {
         headings.push(NEEDS_HEADING);
     }
 
-    let rows: Vec<Vec<String>> = catalogue
-        .runtimes
+    let rows: Vec<Vec<String>> = shown
         .iter()
         .map(|release| {
             let mut row = cells(release).to_vec();
+            if counted {
+                let same: Vec<Option<&str>> = catalogue
+                    .runtimes
+                    .iter()
+                    .filter(|other| other.kind == release.kind)
+                    .map(|other| other.line.as_deref())
+                    .collect();
+                row.push(more(&same, release.line.as_deref()));
+            }
             if emulated.is_some() {
                 row.push(runs(release.execution));
             }
@@ -1598,6 +1710,112 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue) -> String {
 
     rendered.push_str(&table_of(&headings, &rows));
     rendered
+}
+
+/// What an update will do or did, for a person — roadmap tasks **T193b** and **T193c**, D7.
+///
+/// **One rendering for the plan and for the result**, as the type is one: each line gains how it
+/// went once the job has run.
+pub(crate) fn upgrade_plan(plan: &UpgradePlan) -> String {
+    let mut said = format!("{} {} → {}", plan.subject, plan.from, plan.to);
+    said.push_str(&match plan.to_installed {
+        true => ", already installed\n".to_owned(),
+        false => format!(", {} to download\n", size(plan.bytes)),
+    });
+
+    if plan.stale {
+        said.push_str(
+            "this is judged against a cached index; mixengined could not reach the package index\n",
+        );
+    }
+    if !plan.needs.is_empty() {
+        said.push_str(&requirements(&plan.needs));
+    }
+
+    for entry in &plan.entries {
+        said.push_str(&format!(
+            "  - {}{}\n",
+            upgrade_item(plan, &entry.item),
+            upgrade_outcome(&entry.outcome)
+        ));
+    }
+
+    let (subject, from) = (&plan.subject, &plan.from);
+    said.push_str(&match &plan.old {
+        OldVersion::WillBeRemoved {} => {
+            format!("{subject} {from} will be removed afterwards; --keep keeps it\n")
+        }
+        OldVersion::WillBeKept { because } => {
+            format!("{subject} {from} will be kept: {}\n", because.join("; "))
+        }
+        OldVersion::Removed {} => format!("{subject} {from} was removed\n"),
+        OldVersion::Kept { because } => {
+            format!("{subject} {from} was kept: {}\n", because.join("; "))
+        }
+    });
+
+    said
+}
+
+/// One entry of a plan, as a sentence.
+fn upgrade_item(plan: &UpgradePlan, item: &UpgradeItem) -> String {
+    let (subject, old, new) = (&plan.subject, &plan.from, &plan.to);
+    match item {
+        UpgradeItem::Default {} => format!("{new} becomes the default {subject}"),
+        UpgradeItem::Site { site, from, to } => format!("{site} moves from {from} to {to}"),
+        UpgradeItem::ExtensionPool {
+            pool, moves: true, ..
+        } => {
+            format!("{pool} moves to {subject} {new}")
+        }
+        UpgradeItem::ExtensionPool {
+            pool,
+            moves: false,
+            requires: Some(requires),
+        } => format!("{pool} stays on {subject} {old}: it requires {requires}"),
+        UpgradeItem::ExtensionPool {
+            pool,
+            moves: false,
+            requires: None,
+        } => format!("{pool} stays on {subject} {old}"),
+        UpgradeItem::DroppedExtension { name } => {
+            format!("{name} is not in {new}'s build, so it will be off")
+        }
+        UpgradeItem::Pin { project, from, to } => format!("{project}'s pin {from} becomes {to}"),
+        UpgradeItem::Manifest {
+            project,
+            path,
+            constraint,
+        } => format!("{project} pins {subject} {constraint} in {path}, which only {old} answers"),
+        UpgradeItem::Tool { name } => {
+            format!("{name} is installed only in {old}; install it again under {new}")
+        }
+        UpgradeItem::Instance {
+            service,
+            restarts: true,
+        } => format!("{service} is stopped, moved to {new} and started again"),
+        UpgradeItem::Instance {
+            service,
+            restarts: false,
+        } => format!("{service} moves to {new} and stays stopped"),
+        UpgradeItem::FrontEndRestart { service } => format!(
+            "{service} restarts, so no site answers for a moment; this machine may ask whether \
+             {new} may answer on 80 and 443"
+        ),
+        UpgradeItem::NoDowngrade { service } => {
+            format!("{service}: once MySQL {new} has opened its data, {old} cannot open it again")
+        }
+    }
+}
+
+/// How one entry went, as a suffix; nothing for a plan.
+fn upgrade_outcome(outcome: &UpgradeOutcome) -> String {
+    match outcome {
+        UpgradeOutcome::Planned {} => String::new(),
+        UpgradeOutcome::Done {} => " (done)".to_owned(),
+        UpgradeOutcome::Skipped {} => " (not done)".to_owned(),
+        UpgradeOutcome::Failed { because } => format!(" (failed: {because})"),
+    }
 }
 
 /// One installed runtime, for a person: what `mix runtime default` answers and what a finished
@@ -4188,7 +4406,114 @@ mod tests {
             installed: false,
             execution,
             needs: None,
+            line: None,
+            newest_in_line: None,
         }
+    }
+
+    fn in_line(release: RuntimeRelease, line: &str, newest: bool) -> RuntimeRelease {
+        RuntimeRelease {
+            line: Some(line.to_owned()),
+            newest_in_line: Some(newest),
+            ..release
+        }
+    }
+
+    fn by_line() -> RuntimeCatalogue {
+        RuntimeCatalogue {
+            runtimes: vec![
+                in_line(offered("8.4.25", None), "8.4", true),
+                in_line(offered("8.4.24", None), "8.4", false),
+                in_line(offered("8.4.23", None), "8.4", false),
+                in_line(offered("8.3.30", None), "8.3", true),
+            ],
+            stale: false,
+            updates: Some(vec![mixengine_proto::RuntimeUpdate {
+                kind: RuntimeKind::Php,
+                from: PackageVersion::parse("8.4.24").expect("a version"),
+                to: PackageVersion::parse("8.4.25").expect("a version"),
+                to_installed: false,
+                needs: Some(Vec::new()),
+            }]),
+        }
+    }
+
+    const EVERY_LINE: Lines = Lines {
+        all: false,
+        line: None,
+    };
+
+    /// **T193a, D3.** One row stands for each line, with a count of the rest.
+    #[test]
+    fn one_row_stands_for_each_line_with_a_count_of_the_rest() {
+        let rendered = runtime_catalogue(&by_line(), &EVERY_LINE);
+
+        assert!(rendered.contains("8.4.25"), "{rendered}");
+        assert!(rendered.contains("8.3.30"), "{rendered}");
+        assert!(
+            !rendered.contains("8.4.23"),
+            "an older patch is not a row: {rendered}"
+        );
+        assert!(rendered.contains("MORE"), "{rendered}");
+        assert!(
+            rendered.contains("+2"),
+            "two other 8.4 releases: {rendered}"
+        );
+    }
+
+    #[test]
+    fn all_prints_every_release() {
+        let rendered = runtime_catalogue(
+            &by_line(),
+            &Lines {
+                all: true,
+                line: None,
+            },
+        );
+        assert!(rendered.contains("8.4.23"), "{rendered}");
+        assert!(!rendered.contains("MORE"), "{rendered}");
+    }
+
+    #[test]
+    fn naming_a_line_prints_every_release_of_it_and_nothing_else() {
+        let rendered = runtime_catalogue(
+            &by_line(),
+            &Lines {
+                all: false,
+                line: Some("8.4".to_owned()),
+            },
+        );
+        assert!(rendered.contains("8.4.23"), "{rendered}");
+        assert!(!rendered.contains("8.3.30"), "{rendered}");
+    }
+
+    #[test]
+    fn an_update_is_named_above_the_table_with_the_command_that_applies_it() {
+        let rendered = runtime_catalogue(&by_line(), &EVERY_LINE);
+        assert!(rendered.contains("php 8.4.24 → 8.4.25"), "{rendered}");
+        assert!(
+            rendered.contains("mix runtime upgrade php 8.4.24"),
+            "{rendered}"
+        );
+    }
+
+    /// **A daemon from before T193 sends no lines**, and its list is printed as it always was
+    /// rather than as nothing — the plan's review focus 1.
+    #[test]
+    fn an_old_daemon_s_catalogue_is_printed_flat() {
+        let rendered = runtime_catalogue(
+            &RuntimeCatalogue {
+                runtimes: vec![offered("8.4.25", None), offered("8.4.24", None)],
+                stale: false,
+                updates: None,
+            },
+            &EVERY_LINE,
+        );
+        assert!(
+            rendered.contains("8.4.25") && rendered.contains("8.4.24"),
+            "{rendered}"
+        );
+        assert!(!rendered.contains("MORE"), "{rendered}");
     }
 
     fn lacking(release: RuntimeRelease, need: Need, remedy: Remedy) -> RuntimeRelease {
@@ -4204,8 +4529,9 @@ mod tests {
         let plain = RuntimeCatalogue {
             runtimes: vec![offered("8.3.33", Some(Execution::Native))],
             stale: false,
+            updates: None,
         };
-        assert!(!runtime_catalogue(&plain).contains("NEEDS"));
+        assert!(!runtime_catalogue(&plain, &EVERY_LINE).contains("NEEDS"));
 
         let lacking_one = RuntimeCatalogue {
             runtimes: vec![
@@ -4223,8 +4549,9 @@ mod tests {
                 offered("8.3.33", Some(Execution::Native)),
             ],
             stale: false,
+            updates: None,
         };
-        let rendered = runtime_catalogue(&lacking_one);
+        let rendered = runtime_catalogue(&lacking_one, &EVERY_LINE);
         assert!(rendered.contains("NEEDS"), "{rendered}");
         assert!(rendered.contains("Visual C++ 2022 (x64)"), "{rendered}");
     }
@@ -4272,10 +4599,14 @@ mod tests {
     /// `native` against every row would be noise on all five.
     #[test]
     fn a_catalogue_of_native_releases_has_no_column_about_it() {
-        let rendered = runtime_catalogue(&RuntimeCatalogue {
-            runtimes: vec![offered("8.3.33", Some(Execution::Native))],
-            stale: false,
-        });
+        let rendered = runtime_catalogue(
+            &RuntimeCatalogue {
+                runtimes: vec![offered("8.3.33", Some(Execution::Native))],
+                stale: false,
+                updates: None,
+            },
+            &EVERY_LINE,
+        );
 
         assert!(!rendered.contains("RUNS"), "no column: {rendered}");
         assert!(!rendered.contains("emulated"), "and no note: {rendered}");
@@ -4285,23 +4616,31 @@ mod tests {
     /// emulated — [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md).
     #[test]
     fn a_daemon_that_reports_no_execution_brings_no_column_either() {
-        let rendered = runtime_catalogue(&RuntimeCatalogue {
-            runtimes: vec![offered("8.3.33", None)],
-            stale: false,
-        });
+        let rendered = runtime_catalogue(
+            &RuntimeCatalogue {
+                runtimes: vec![offered("8.3.33", None)],
+                stale: false,
+                updates: None,
+            },
+            &EVERY_LINE,
+        );
 
         assert!(!rendered.contains("RUNS"), "{rendered}");
     }
 
     #[test]
     fn one_emulated_release_brings_the_column_and_the_sentence_that_explains_it() {
-        let rendered = runtime_catalogue(&RuntimeCatalogue {
-            runtimes: vec![
-                offered("8.3.33", Some(Execution::Emulated)),
-                offered("8.4.24", Some(Execution::Native)),
-            ],
-            stale: false,
-        });
+        let rendered = runtime_catalogue(
+            &RuntimeCatalogue {
+                runtimes: vec![
+                    offered("8.3.33", Some(Execution::Emulated)),
+                    offered("8.4.24", Some(Execution::Native)),
+                ],
+                stale: false,
+                updates: None,
+            },
+            &EVERY_LINE,
+        );
 
         assert!(rendered.contains("RUNS"), "the column: {rendered}");
         assert!(rendered.contains("emulated"), "the word: {rendered}");
@@ -6340,6 +6679,8 @@ pub(crate) fn storage(report: &StorageReport) -> String {
 
 #[cfg(test)]
 mod grant_problems {
+    use mixengine_proto::UpgradeEntry;
+
     use super::*;
 
     /// **A grant that did nothing says why** — roadmap task **T147**.
@@ -6385,5 +6726,82 @@ mod grant_problems {
         };
 
         assert_eq!(grant(&outcome), "job #1: 2 applied, 0 still waiting");
+    }
+    fn a_plan(old: OldVersion, outcome: UpgradeOutcome) -> UpgradePlan {
+        UpgradePlan {
+            subject: "php".to_owned(),
+            from: PackageVersion::parse("8.4.24").expect("a fixture"),
+            to: PackageVersion::parse("8.4.25").expect("a fixture"),
+            to_installed: false,
+            bytes: 31_457_280,
+            stale: false,
+            needs: Vec::new(),
+            entries: vec![
+                UpgradeEntry {
+                    item: UpgradeItem::Default {},
+                    outcome: outcome.clone(),
+                },
+                UpgradeEntry {
+                    item: UpgradeItem::Site {
+                        site: "blog.test".to_owned(),
+                        from: ServiceId::parse("php-fpm@8.4.24").expect("a fixture"),
+                        to: ServiceId::parse("php-fpm@8.4.25").expect("a fixture"),
+                    },
+                    outcome,
+                },
+            ],
+            old,
+        }
+    }
+
+    #[test]
+    fn a_plan_says_what_moves_and_what_becomes_of_the_old_version() {
+        let rendered = upgrade_plan(&a_plan(
+            OldVersion::WillBeRemoved {},
+            UpgradeOutcome::Planned {},
+        ));
+
+        assert!(rendered.starts_with("php 8.4.24 → 8.4.25"), "{rendered}");
+        assert!(rendered.contains("to download"), "{rendered}");
+        assert!(
+            rendered.contains("blog.test moves from php-fpm@8.4.24 to php-fpm@8.4.25"),
+            "{rendered}"
+        );
+        assert!(
+            rendered.contains("8.4.25 becomes the default php"),
+            "{rendered}"
+        );
+        assert!(
+            rendered.contains("php 8.4.24 will be removed"),
+            "{rendered}"
+        );
+        assert!(rendered.contains("--keep"), "{rendered}");
+    }
+
+    #[test]
+    fn a_plan_kept_for_a_reason_names_the_reason() {
+        let rendered = upgrade_plan(&a_plan(
+            OldVersion::WillBeKept {
+                because: vec!["blog pins php 8.4.24 in /work/blog/mixengine.toml".to_owned()],
+            },
+            UpgradeOutcome::Planned {},
+        ));
+        assert!(rendered.contains("will be kept"), "{rendered}");
+        assert!(rendered.contains("/work/blog/mixengine.toml"), "{rendered}");
+    }
+
+    #[test]
+    fn a_finished_update_marks_each_line() {
+        let rendered = upgrade_plan(&a_plan(
+            OldVersion::Kept {
+                because: vec!["the front end refused the sites".to_owned()],
+            },
+            UpgradeOutcome::Skipped {},
+        ));
+        assert!(rendered.contains("(not done)"), "{rendered}");
+        assert!(
+            rendered.contains("php 8.4.24 was kept: the front end refused the sites"),
+            "{rendered}"
+        );
     }
 }

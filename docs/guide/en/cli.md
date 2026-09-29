@@ -115,6 +115,8 @@ mix runtime available [OPTIONS]
 | --- | --- |
 | `--kind` `<RUNTIME>` | Only this language. Every one of them when it is left out |
 | `--refresh` | Ask the package index again even if the cached copy is still fresh. The daemon otherwise answers from a cache for up to six hours, which is the wrong default for someone who just watched a version get published and does not want to wait for their own machine to notice. |
+| `--all` | Print every release rather than one row per line |
+| `--line` `<LINE>` | Print every release of this line (`8.4`, `22`) |
 
 ### mix runtime install
 
@@ -148,6 +150,28 @@ mix runtime uninstall <RUNTIME> <VERSION> [OPTIONS]
 | `<RUNTIME>` | Which language |
 | `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and never a range like `8.3`: choosing a version from a range answers with what is installed, and an install would be choosing between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
 | `--force` | Remove it even though a registered project pins it |
+
+### mix runtime upgrade
+
+Update one installed version to the newest release of its line, and move what uses it.
+
+Sites, the default and pins move to the new version; the old one is removed afterwards unless
+`--keep` is given or something still needs it. The plan is printed first.
+
+```
+mix runtime upgrade <RUNTIME> <VERSION> [OPTIONS]
+```
+
+| Flag | What it does |
+| --- | --- |
+| `<RUNTIME>` | Which language |
+| `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and never a range like `8.3`: choosing a version from a range answers with what is installed, and an install would be choosing between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
+| `--to` `<VERSION>` | Update to this release of the same line instead of the newest |
+| `--keep` | Keep the old version installed |
+| `--dry-run` | Print the plan and change nothing |
+| `--yes` | Do not ask: agree to the update and to what the new version needs of the machine |
+| `--ignore-requirements` | Update even though MixEngine judges this machine lacks something the new version needs |
+| `--no-wait` | Return once the daemon has accepted the update, rather than once it has finished |
 
 ### mix runtime default
 
@@ -283,6 +307,8 @@ mix package available [OPTIONS]
 | --- | --- |
 | `--package` `<PACKAGE>` | Only this package. Every one of them when it is left out |
 | `--refresh` | Ask the package index again even if the cached copy is still fresh. The daemon otherwise answers from a cache for up to six hours, which is the wrong default for someone who just watched a version get published and does not want to wait for their own machine to notice. |
+| `--all` | Print every release rather than one row per line |
+| `--line` `<LINE>` | Print every release of this line (`8.4`, `22`) |
 
 ### mix package install
 
@@ -315,6 +341,28 @@ mix package uninstall <PACKAGE> <VERSION>
 | --- | --- |
 | `<PACKAGE>` | Which package, as `mix package available` lists it |
 | `<VERSION>` | Which version, exactly as `mix package available` lists it |
+
+### mix package upgrade
+
+Update one installed version to the newest release of its line, and move what uses it.
+
+Its instances move to the new version one at a time; the old one is removed afterwards unless
+`--keep` is given or an instance could not move. The plan is printed first.
+
+```
+mix package upgrade <PACKAGE> <VERSION> [OPTIONS]
+```
+
+| Flag | What it does |
+| --- | --- |
+| `<PACKAGE>` | Which package, as `mix package available` lists it |
+| `<VERSION>` | Which version, exactly as `mix package available` lists it |
+| `--to` `<VERSION>` | Update to this release of the same line instead of the newest |
+| `--keep` | Keep the old version installed |
+| `--dry-run` | Print the plan and change nothing |
+| `--yes` | Do not ask: agree to the update and to what the new version needs of the machine |
+| `--ignore-requirements` | Update even though MixEngine judges this machine lacks something the new version needs |
+| `--no-wait` | Return once the daemon has accepted the update, rather than once it has finished |
 
 ### mix package adopt
 

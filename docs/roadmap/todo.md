@@ -63,6 +63,7 @@ done
 | [30 — A copy only you can read](phase-30-a-copy-only-you-can-read.md) | A person's second machine has what they ticked, and the server that carried it cannot read it | T177a–T178d | 19 / 19 | **M30** two machines agree on exactly what was ticked, a revoked device stops syncing, and the server's database yields no plaintext — **the CI half met** by run 35646590878, conformance green against both servers; **the two-machine half met** 2026-09-22 by hand: rows not ticked stayed home, edits and deletions crossed, a removed machine was signed out, a move worked, and the self-hosted server's SQLite held no plaintext beyond the email and device name D1 allows |
 | [31 — MixLab updates itself](phase-31-mixlab-updates-itself.md) | A MixLab user is told about a release and installs it from MixLab; MixEngine never looks or installs unasked | T187a–T187g | 7 / 7 | **M31** on Windows, a MixLab whose MixEngine never started comes back on the next release from Settings with no `mixengined` at any point, one with MixEngine running keeps its services, and an idle `mixengined` makes no request to the feed |
 | [32 — The tray is MixLab's](phase-32-the-tray-is-mixlabs.md) | MixLab runs in the background on every preset; a module lends the tray a section | T192a–T192e | 5 / 5 | **M32** on *Database tools*, a terminal session survives the close button and the icon brings it back; with MixEngine visible the panel works as M22 says |
+| [33 — A line shows its newest](phase-33-a-line-shows-its-newest.md) | The available list is one row per line, and an installed version updates to its line's newest patch on a click | T193a–T193d | 4 / 4 | **M33** PHP 8.4.24 serving a site updates to 8.4.25 from MixLab with its extensions kept and 8.4.24 gone; a MariaDB 11.4 instance updates within its line with its data intact |
 
 [Parked](parked.md) — revisit deliberately, do not start early.
 
@@ -72,6 +73,13 @@ spared `docs/roadmap/`, reading the number as a milestone still ahead rather tha
 half of a rename — which is exactly the reading a version that never shipped invites.
 
 ## Where we are
+
+**Phase 33 is built: 4 of 4, and M33 is met on Windows.** The available lists show one row per
+version line, and an installed runtime or server updates to the newest patch of its line, carrying
+its sites, pools, instances, extension choices and pins, with the old version removed unless
+something still needs it. The `#[ignore]`d real-server suites prove the milestone: a PHP site still
+served through Caddy after its PHP is updated, and a MariaDB instance keeping its databases.
+Design: [2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md](../specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md).
 
 **Phase 32 is built — 5 of 5, and M32 waits on CI's Linux and macOS legs.** The tray belonged to
 MixEngine: without the `mixengine` module there was no icon, and the close button quit MixLab and

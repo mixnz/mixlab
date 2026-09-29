@@ -131,6 +131,29 @@ On GNOME the icon needs the *AppIndicator and KStatusNotifierItem Support* exten
 includes it; Fedora and plain GNOME do not. Without it there is no icon, closing the window quits
 MixLab as before, and the login switch opens the window instead.
 
+## Updating a server to a newer patch
+
+`mix package available` lists servers one row per line too, and names an update above the table
+the same way runtimes do.
+
+```bash
+mix package upgrade mariadb 11.4.5 --dry-run
+mix package upgrade mariadb 11.4.5
+```
+
+Each instance of the old version is stopped, moved to the new one and started again, one at a time.
+Its data directory, port, password and settings stay as they were. If an instance does not start on
+the new version, it goes back to the old one and is started again, and the update ends as failed
+with the reason. The old version is removed once every instance has moved; `--keep` keeps it.
+
+An update stays inside its line, where the data format does not change. MySQL 8.0 cannot go back,
+though: once a newer 8.0 patch has opened the data, an older one cannot, and the plan says so before
+you agree.
+
+Updating Caddy or Nginx restarts it, so your sites do not answer for a moment. On Linux the new
+program needs permission to answer on ports 80 and 443, and MixLab asks for it before it stops
+anything.
+
 ## Which web server your sites go through
 
 One of Caddy and Nginx is your front end at a time: every site in the home is reached through it,

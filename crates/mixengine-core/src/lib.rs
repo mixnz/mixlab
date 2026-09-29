@@ -26,6 +26,7 @@ pub mod hosts;
 pub mod index;
 pub mod install;
 pub mod jobs;
+pub mod lines;
 pub mod manifest;
 pub mod metrics;
 pub mod packages;
@@ -41,6 +42,7 @@ pub mod sites;
 pub mod storage;
 pub mod store;
 pub mod updates;
+pub mod upgrade;
 pub mod window;
 
 pub use config::Config;

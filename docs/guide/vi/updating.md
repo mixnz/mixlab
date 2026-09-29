@@ -4,7 +4,7 @@ slug = "updating"
 order = 12
 summary = "Cập nhật do bạn quyết, có kiểm tra chữ ký, và có chạy thử trước khi thay bất cứ thứ gì. Riêng một chương trình cố ý không bao giờ được thay theo đường này."
 translation_of = "en/updating.md"
-source_sha256 = "fc25a5a5c4501180e661d037d757ad7043c2b24dcda0846aabc9bf1586bf1140"
+source_sha256 = "8feeb440cd6b5826a66124f4d646b2f8ad8107f713ea39c38d34ea282a93ef8d"
 +++
 
 # Cập nhật MixLab
@@ -82,6 +82,12 @@ Trên máy có desktop, nó mở luôn gói đó trong trình quản lý phần 
 `mix self-update --finish`.
 
 Bộ cài Windows được `mix self-update` cập nhật tại chỗ.
+
+## PHP, Node.js và các server bạn đã cài
+
+Trang này nói về việc cập nhật chính MixLab. Các phiên bản PHP, Node.js, cơ sở dữ liệu và web server
+bạn đã cài được cập nhật riêng, từng cái một và chỉ khi bạn yêu cầu. Xem
+[Cập nhật lên bản vá mới hơn](./runtimes.md) và [Cập nhật server lên bản vá mới hơn](./services.md).
 
 ## Phiên bản
 
