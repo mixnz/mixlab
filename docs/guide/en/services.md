@@ -2,7 +2,7 @@
 title = "Servers, databases and caches"
 slug = "services"
 order = 6
-summary = "Caddy or Nginx, MariaDB, MySQL, PostgreSQL, Redis and Memcached — installed on request, configured for you, and never printing a password."
+summary = "Caddy or Nginx, MariaDB, MySQL, PostgreSQL, Redis and Memcached, installed on request, configured for you, and never printing a password."
 +++
 
 # Servers, databases and caches
@@ -14,8 +14,8 @@ summary = "Caddy or Nginx, MariaDB, MySQL, PostgreSQL, Redis and Memcached — i
 
 Two words, kept apart the way MixLab keeps them apart.
 
-A **package** is a program MixLab knows how to run — Caddy, MariaDB, Redis. Installing one puts a
-copy of it in MixLab's own directory and does nothing else.
+A **package** is a program MixLab knows how to run, such as Caddy, MariaDB or Redis. Installing one
+puts a copy of it in MixLab's own directory and does nothing else.
 
 A **service** is a running instance of a package: a port, a data directory, a generated
 configuration, a log, and a state. `mariadb@main` and `mariadb@legacy` are two services of one
@@ -25,15 +25,15 @@ package, with different ports, different data and possibly different versions.
 
 | Service | Default line | Default port |
 | --- | --- | --- |
-| Caddy | 2.x | 80 and 443 — the default front end |
-| Nginx | 1.27 | 80 and 443 — the alternative, one front end at a time |
+| Caddy | 2.x | 80 and 443. The default front end |
+| Nginx | 1.27 | 80 and 443. The alternative, one front end at a time |
 | php-fpm | one per installed PHP | a socket, or a local port on Windows |
 | MariaDB | 11.4 LTS | 3306 |
-| MySQL | 8.4 LTS | 3306 — a different product from MariaDB, not a version of it |
+| MySQL | 8.4 LTS | 3306. A different product from MariaDB, not a version of it |
 | PostgreSQL | 16 | 5432 |
 | Redis | 7.x | 6379 |
 | Memcached | 1.6 | 11211 |
-| MongoDB | 8.x | 27017 — no accounts, so it only ever listens on loopback |
+| MongoDB | 8.x | 27017. No accounts, so it only ever listens on loopback |
 
 **Nothing arrives by itself.** A fresh MixLab has no web server until you install one, and
 "default" above means *the one this project recommends when there is a choice*, not *the one that is
@@ -55,9 +55,9 @@ MixEngine home, so its service is simply `caddy` with no `@` at all.
 The name does not have to say which version a service runs. `mix service list` shows the version
 beside each id, and so does MixLab, so `mysql@main` is enough.
 
-The id cannot be changed afterwards — it is also the generated configuration directory, the log
-directory, the socket and the address the password is stored at — so renaming one means creating the
-other and deleting this one, which keeps the data.
+The id cannot be changed afterwards, because it is also the name of the generated configuration
+directory, the log directory, the socket and the address the password is stored at. To rename a
+service, create the new one and delete the old one; the data is kept.
 
 Useful flags on `mix service create`:
 
@@ -96,9 +96,9 @@ mix service logs mariadb@main --follow
 `mix service status` requires an id where `start` and the rest take an optional one: a status with
 no subject is a `list` typed wrongly, and answering it as a list would hide that.
 
-Deleting a service takes the row and the configuration generated from it, and **never the data** —
-that is somebody's databases. The answer names the directory that was left, so nobody has to go
-looking:
+Deleting a service takes the row and the configuration generated from it, and **never the data**,
+because that is somebody's databases. The answer names the directory that was left, so nobody has to
+go looking:
 
 ```bash
 mix service delete mariadb@legacy
@@ -152,13 +152,13 @@ mix service set-front-end nginx
 before it starts. Pass `--yes` in a script.
 
 **On Linux the new server needs permission to answer on ports 80 and 443**, and that permission
-belongs to the program rather than to MixLab — so moving to a different program means asking for
+belongs to the program rather than to MixLab, so moving to a different program means asking for
 it again, and a prompt may appear. If nobody allows it, **nothing changes**: you stay on the server
 you were on, MixLab says so, and `mix elevation grant` followed by the same command finishes the
 job. macOS and Windows need no second permission.
 
 Two things do not travel with the switch, and MixLab names them rather than dropping them
-quietly: settings you had overridden — an `nginx.conf` setting means nothing to Caddy — and any
+quietly: settings you had overridden (an `nginx.conf` setting means nothing to Caddy), and any
 limits or idle policy you had set on the old server. The old server's data directory is left exactly
 where it was.
 
@@ -172,12 +172,12 @@ mix database create mariadb@main --name shop --user shop_app
 ```
 
 **Nothing prints the password by default.** It is generated and put into your operating system's own
-credential store — Credential Manager on Windows, the Keychain on macOS, the Secret Service on
-Linux — and what is printed is the address it was stored at, as the store's own name and key. That
+credential store (Credential Manager on Windows, the Keychain on macOS, the Secret Service on
+Linux), and what is printed is the address it was stored at, as the store's own name and key. That
 is what lets a client tell you *"stored in your credential store as …"* without anybody hardcoding
 MixLab's naming.
 
-When a project needs the password itself — most often for a `.env` file — `mix database
+When a project needs the password itself, most often for a `.env` file, `mix database
 credentials` prints it, and `--password` on `create` lets you choose it instead of letting MixLab
 generate one:
 
@@ -189,8 +189,8 @@ mix database create mariadb@main --name shop --user shop-app --password
 Without a value, `--password` prompts and reads one line from standard input, so it also works
 piped: `echo secret | mix database create … --password`. Choosing a password for an account you
 already made changes what is stored, and the server is realigned to it the same way it already is
-when a password drifts — but an account already on the server that MixLab holds no credential for
-is still refused, even with the correct password: knowing a password is not what makes it yours.
+when a password drifts. An account already on the server that MixLab holds no credential for is
+still refused, even with the correct password.
 
 To open the database in a desktop client:
 
@@ -200,7 +200,7 @@ mix database open mariadb@main     # open it
 ```
 
 `client` reads only: it starts nothing and opens nothing, and *"no client installed"* is an answer
-rather than a failure — it names where MixLab looked and where to get one.
+rather than a failure: it names where MixLab looked and where to get one.
 
 `open` starts the instance if it is stopped, reads the password from the credential store **at that
 moment**, and hands it to the client in that process's own environment. It is never printed, never
@@ -215,19 +215,18 @@ mix service idle mariadb@main --after 30m
 ```
 
 `limits` with no subcommand reads; `set` replaces; `clear` removes. **`set` replaces every field,
-not only the ones you name** — `set --cpu 50` clears a memory ceiling that was there — so it prints
+not only the ones you name.** `set --cpu 50` clears a memory ceiling that was there, so it prints
 all three fields of the result, and a cleared limit is on your screen rather than a surprise. What
 your operating system will actually enforce differs, and the answer says which of the two you have:
-a **hard** ceiling is a wall — at it, the service is killed or its next allocation fails — while an
+a **hard** ceiling is a wall: at it, the service is killed or its next allocation fails. An
 **advisory** one is a watched line the service may cross, after which MixLab warns and, where the
-recipe permits, restarts. A control drawn as a guarantee when it is advisory would be a lie about
-your data.
+recipe permits, restarts.
 
 `idle` says when a service is stopped for being unused, and what is currently holding it open.
 **Nothing is stopped for being idle unless you ask**: a site that is up stays up. To save battery,
 turn on *Save battery* in MixLab's Settings, or run `mix service save-resources --on`; a PHP pool
 nobody used for half an hour, or a database or cache for an hour, is then paused, and the next
-request that needs it starts it again — that first load can take a second. `mix service idle`
+request that needs it starts it again. That first load can take a second. `mix service idle`
 gives one service its own time either way, and `--after 0` means never.
 
 The web server itself is never stopped for being idle, and it starts with MixEngine.
@@ -235,6 +234,6 @@ The web server itself is never stopped for being idle, and it starts with MixEng
 ## The generated configuration
 
 MixLab writes the configuration for every service it runs, out of what it knows. Those files are
-disposable — they are regenerated, never read back — so there is nothing there for you to edit and
+disposable: they are regenerated and never read back, so there is nothing there for you to edit and
 nothing to keep in sync. If a setting you need has no flag, that is a gap in MixLab rather than
 an invitation to edit the file.

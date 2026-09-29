@@ -9,7 +9,7 @@ untranslated_reason = "The reference is generated from the binary's own English 
 # Tham chiếu lệnh
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -23,7 +23,7 @@ vừa được thêm vào.
 Những định nghĩa đó viết bằng tiếng Anh, vì `mix --help` và `mix <lệnh> --help` trả lời bằng tiếng
 Anh. Một bản dịch tay của trang này sẽ thành nguồn sự thật thứ hai cho hai mươi lệnh cùng các lệnh
 con của chúng. Mà nguồn thứ hai thì lệch đi trong im lặng: nó vẫn trông đúng rất lâu sau khi chương
-trình đã thay đổi. Cẩm nang này thà nói rõ một giới hạn còn hơn giấu nó sau một trang cũ.
+trình đã thay đổi.
 
 ## Đọc bản tham chiếu ở đâu
 
@@ -35,7 +35,7 @@ mix docs cli
 mix docs --reference
 ```
 
-Lệnh đầu in trang đó ra. Lệnh thứ hai in đúng nội dung gốc mà trang đó được sinh ra từ đó.
+Lệnh đầu in trang đó ra. Lệnh thứ hai in nội dung gốc dùng để sinh ra trang đó.
 
 Trên máy của bạn, `--help` luôn là câu trả lời sát nhất và mới nhất:
 
@@ -47,7 +47,7 @@ mix site create --help
 
 ## Các trang còn lại thì sao
 
-Mọi trang khác của cẩm nang đều có bản tiếng Việt đầy đủ, và mỗi bản dịch đều ghi lại phiên bản
-tiếng Anh mà nó được dịch từ đó. Sửa trang tiếng Anh mà không xem lại bản tiếng Việt là một lỗi
+Mọi trang khác của cẩm nang đều có bản tiếng Việt đầy đủ, và mỗi bản dịch đều ghi lại nó được dịch
+từ phiên bản tiếng Anh nào. Sửa trang tiếng Anh mà không xem lại bản tiếng Việt là một lỗi
 test, không phải chuyện ai đó tình cờ phát hiện nửa năm sau. Bắt đầu từ
 [trang chủ của cẩm nang](./index.md).

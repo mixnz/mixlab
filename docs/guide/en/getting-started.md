@@ -13,8 +13,8 @@ summary = "From a fresh install to https://blog.test with a green padlock, in ab
 > applies.
 
 This walks the whole path once: a PHP version, a web server, a project, a site, and a certificate
-your browser accepts. It assumes MixLab is installed — [Installing MixLab](./install.md) if it
-is not — and it assumes nothing else.
+your browser accepts. It assumes MixLab is installed, and nothing else. If it
+is not, start with [Installing MixLab](./install.md).
 
 ## 1. Check the daemon
 
@@ -36,7 +36,7 @@ mix runtime available --kind php
 mix runtime install php 8.3.33
 ```
 
-The version is exact rather than a range, deliberately — `8.3` would be asking MixLab to choose
+The version is exact rather than a range, on purpose: `8.3` would be asking MixLab to choose
 between versions none of which are on the machine yet. `mix runtime list` shows what you now have.
 
 ## 3. Install and create a web server
@@ -53,12 +53,12 @@ mix service list
 
 Versions move: take one from what `mix package available` actually lists rather than from this page.
 Caddy runs once for the whole home rather than once per site, which is why its service id has no
-`@name` on it — `mariadb@main` names an instance, `caddy` names the only one there is.
+`@name` on it: `mariadb@main` names an instance, `caddy` names the only one there is.
 
 ## 4. Register a project
 
-A **project** is a directory MixLab knows about. Go to the one you want to serve — make an empty
-one if you are just trying this out — and register it:
+A **project** is a directory MixLab knows about. Go to the one you want to serve, or make an
+empty one if you are trying this out, and register it:
 
 ```bash
 mkdir -p ~/code/blog && cd ~/code/blog
@@ -77,8 +77,8 @@ mix site create --domain blog.test --kind php-fpm --https true
 
 **This is the step that asks for permission**, and on a fresh machine it is the only one that does.
 MixLab needs the name `blog.test` to reach your own machine, and it needs your browser to trust
-the certificate it is about to issue. It collects both — and the grant to listen on port 80 and 443,
-where that is privileged — and raises **one** prompt for all of them. If you want to see exactly
+the certificate it is about to issue. It collects both, plus the grant to listen on port 80 and 443
+where that is privileged, and raises **one** prompt for all of them. If you want to see exactly
 what is being asked for before you agree, `mix elevation status` prints it; [What MixLab asks
 permission for](./permissions.md) explains each one.
 
@@ -98,7 +98,7 @@ mix cert status
 ```
 
 That opens a real TLS connection to your own front end for every site and reports the certificate it
-actually presented — which is the only thing a browser ever sees.
+actually presented. That is the only thing a browser ever sees.
 
 ## 7. Add a database, if the project needs one
 
@@ -118,17 +118,16 @@ shell history or an argument list.
 - MixLab downloaded one PHP and one web server into its own directory. Nothing was installed
   system-wide, and no other version of anything on your machine was touched.
 - It generated a certificate authority, asked once to have it trusted, and issued a 90-day
-  certificate for `blog.test` — and it will reissue that certificate before it expires without being
-  asked.
+  certificate for `blog.test`. It reissues that certificate before it expires without being asked.
 - It wrote the web server's configuration itself. That configuration is disposable: MixLab
   regenerates it from what it knows, so there is no file for you to keep in sync.
 
 ## Where to go next
 
-- [Projects and sites](./projects-and-sites.md) — the two nouns, and what each one owns.
-- [PHP, Node, Python, Ruby, Go and Java versions](./runtimes.md) — how a directory chooses its own
+- [Projects and sites](./projects-and-sites.md): the two nouns, and what each one owns.
+- [PHP, Node, Python, Ruby, Go and Java versions](./runtimes.md): how a directory chooses its own
   version.
-- [Servers, databases and caches](./services.md) — everything a project runs against.
-- [Names and the padlock](./domains-and-https.md) — how `blog.test` resolves, and what signed it.
-- [What MixLab asks permission for](./permissions.md) — every prompt, and what it changes.
-- [When something is wrong](./troubleshooting.md) — `mix doctor` first.
+- [Servers, databases and caches](./services.md): everything a project runs against.
+- [Names and the padlock](./domains-and-https.md): how `blog.test` resolves, and what signed it.
+- [What MixLab asks permission for](./permissions.md): every prompt, and what it changes.
+- [When something is wrong](./troubleshooting.md): `mix doctor` first.

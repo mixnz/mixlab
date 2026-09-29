@@ -4,13 +4,13 @@ slug = "install"
 order = 2
 summary = "Bộ cài cho hệ điều hành của bạn, nó đụng vào những gì, cố ý không đụng vào những gì, và cách kiểm tra file vừa tải."
 translation_of = "en/install.md"
-source_sha256 = "e22c3d50c9b2226a6c80aede647b7eab5d07fe7b989c09e60ec1e19574390076"
+source_sha256 = "e48317e3aba7dc88da6e0aba4069bc1bf69f90739eb5214b4ed3ceb006e5f816"
 +++
 
 # Cài đặt MixLab
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -39,11 +39,11 @@ Có năm chương trình. Nên biết mỗi cái làm gì trước khi một tro
 Ba chương trình đầu và MixLab được cài chung một lượt. Trên Windows chúng được cài dưới tài khoản
 của bạn, và bộ cài không đặt `mixengine-elevate` vào máy: MixLab tự cài nó vào lần đầu tiên có việc
 cần quyền quản trị, ngay trong hộp thoại xin quyền mà đằng nào bạn cũng sẽ thấy. `.pkg`, `.deb` và
-`.rpm` thì đặt nó vào máy với quyền root ngay lúc cài. Dù cài cách nào, MixLab cũng giữ nó luôn mới:
+`.rpm` thì đặt nó vào máy với quyền root ngay lúc cài. Dù cài cách nào, MixLab cũng tự cập nhật nó:
 khi một bản cập nhật thay đổi nó, lần xin quyền kế tiếp sẽ thay nó.
 
 **Nếu bạn không cần cửa sổ, có bản tải không kèm nó.** Mỗi hệ điều hành đều phát hành một bản
-**headless** chỉ chứa bốn chương trình dòng lệnh và không gì khác — không có cửa sổ, và trên Linux
+**headless** chỉ chứa bốn chương trình dòng lệnh và không gì khác: không có cửa sổ, và trên Linux
 cũng không cần cài WebKitGTK. Link nằm trong từng mục bên dưới, và đó là bản dành cho máy chủ, image
 container, hay bất kỳ máy nào không có màn hình.
 
@@ -73,7 +73,7 @@ Bản cho Windows ARM được phát hành bên cạnh, đặt tên `aarch64`.
 Windows hiện *"Windows protected your PC"* và giấu nút chạy sau **More info → Run anyway**. Cảnh
 báo này chỉ nói rằng chưa ai mua chứng chỉ, chứ không nói gì về bản thân file. Nếu muốn biết chắc
 file mình tải có đúng không, hãy kiểm tra chữ ký theo hướng dẫn bên dưới. Cảnh báo này thường xuất
-hiện lại ở mỗi bản phát hành, vì khi không có danh tính nhà phát hành, "uy tín" mà Windows tích lũy
+hiện lại ở mỗi bản phát hành, vì khi không có danh tính nhà phát hành, "uy tín" mà Windows tích luỹ
 gắn với từng file chứ không gắn với dự án.
 
 ## macOS
@@ -153,8 +153,8 @@ cd mixlab
 cargo build --release
 ```
 
-Các file thực thi nằm trong `target/release/`. MixLab được build riêng — nó là một workspace độc lập
-nằm dưới `apps/desktop/` — và build từ mã nguồn là thêm một cách cài chạy hoàn toàn dưới tài khoản
+Các file thực thi nằm trong `target/release/`. MixLab được build riêng, vì nó là một workspace độc
+lập nằm dưới `apps/desktop/`. Build từ mã nguồn là thêm một cách cài chạy hoàn toàn dưới tài khoản
 của bạn. Cũng vì thế mà việc đặt chương trình phụ trợ cần quyền quản trị không bao giờ là việc của
 người đóng gói.
 
@@ -172,8 +172,8 @@ không phải chữ ký** và cũng không được coi là chữ ký: ai thay �
 được checksum nằm cạnh nó. Các file không gắn số phiên bản mà những link ở trên trỏ tới cũng có
 `.sha256` và `.minisig` riêng, đặt tên theo chính chúng chứ không theo file có số phiên bản mà chúng
 là bản sao. File `.minisig` mới là câu trả lời thật: đó là chữ ký Ed25519 do chính pipeline phát
-hành của MixLab tạo ra, ứng với khóa công khai được commit trong repo của dự án tại
-`packaging/updates.pub` và được biên dịch vào MixEngine. Đây cũng chính là khóa mà `mix self-update`
+hành của MixLab tạo ra, ứng với khoá công khai được commit trong repo của dự án tại
+`packaging/updates.pub` và được biên dịch vào MixEngine. Đây cũng chính là khoá mà `mix self-update`
 kiểm tra trước khi thay bất cứ thứ gì.
 
 ## Sau khi cài
@@ -185,7 +185,7 @@ Rồi gõ:
 mix status
 ```
 
-Lệnh `mix` đầu tiên sẽ khởi động daemon nếu nó chưa chạy. Kết quả bạn nên thấy là một daemon khỏe
+Lệnh `mix` đầu tiên sẽ khởi động daemon nếu nó chưa chạy. Kết quả bạn nên thấy là một daemon khoẻ
 mạnh, số phiên bản của nó, và chưa có gì đang được giám sát.
 
 Tiếp theo, đưa các lệnh runtime vào `PATH`. Đây là một bước riêng vì chúng nằm ở một thư mục riêng:
@@ -198,7 +198,7 @@ Lệnh này điền vào `<root>/bin` các shim, để `php`, `node`, `python` v
 bản mà từng thư mục yêu cầu, thay vì một phiên bản chung cho cả máy. MixLab cũng làm được việc
 này ngay trên Dashboard, hoặc bằng công tắc **Lệnh trong terminal** trong Settings.
 
-Nếu bạn có cài cửa sổ, hãy mở **MixLab** — từ Start Menu, `/Applications`, menu ứng dụng của
+Nếu bạn có cài cửa sổ, hãy mở **MixLab** từ Start Menu, `/Applications`, menu ứng dụng của
 desktop, hoặc chạy `mixlab`. Nó hiển thị đúng daemon mà `mix status` vừa trả lời.
 
 ## Những gì bộ cài không làm

@@ -18,7 +18,7 @@ A **project** is a directory on your disk that MixLab knows about. It owns the p
 which language versions that directory uses.
 
 A **site** is something served, under a project. It owns one or more domains, what is served out of
-which folder, and what serves it. A project with no site is perfectly normal — it is a directory
+which folder, and what serves it. A project with no site is perfectly normal: it is a directory
 whose PHP version MixLab knows. A project can have several sites.
 
 ## Registering a project
@@ -49,15 +49,15 @@ mix site list
 mix site show blog.test
 ```
 
-`--doc-root` is the folder that is served, relative to the project root — `public` for most modern
+`--doc-root` is the folder that is served, relative to the project root: `public` for most modern
 PHP frameworks, and the project root itself when it is left out. `--domain` may be given more than
 once; the first is the **primary**, and the rest are aliases. The primary matters: it is what the
 site's canonical URL and its certificate are named after.
 
 `mix site update` changes a site. Like `--pin` above, `--domain` and `--service` replace what the
-site had rather than adding to it — giving neither changes neither.
+site had rather than adding to it. Giving neither changes neither.
 
-Starting and stopping a site is a flag and a re-render, not a process:
+Starting and stopping a site flips a flag and renders the configuration again:
 
 ```bash
 mix site stop blog.test
@@ -73,8 +73,8 @@ their own.
 | --- | --- |
 | `php-fpm` | PHP, through a pool of the version this directory resolves to |
 | `static` | Files, and nothing running |
-| `reverse-proxy` | Everything forwarded to an address you already have listening — `--upstream` |
-| `node-app` | A Node process you run yourself, on a port — `--port` |
+| `reverse-proxy` | Everything forwarded to an address you already have listening, given with `--upstream` |
+| `node-app` | A Node process you run yourself, on the port given with `--port` |
 
 `reverse-proxy` and `node-app` are the two that matter when you are already running something.
 MixLab gives it a real name and a certificate without taking over how it is started.

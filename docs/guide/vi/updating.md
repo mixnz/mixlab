@@ -1,16 +1,16 @@
 +++
-title = "Giữ MixLab luôn mới"
+title = "Cập nhật MixLab"
 slug = "updating"
 order = 12
 summary = "Cập nhật do bạn quyết, có kiểm tra chữ ký, và có chạy thử trước khi thay bất cứ thứ gì. Riêng một chương trình cố ý không bao giờ được thay theo đường này."
 translation_of = "en/updating.md"
-source_sha256 = "6f789f06360b5f28e593cd9cf08e0db7deee0c75d7bb61901925820903c0a0b0"
+source_sha256 = "453dba97b5dee6e8247e6ee681c5007076249716c1e4ec9a39822adbc8951346"
 +++
 
-# Giữ MixLab luôn mới
+# Cập nhật MixLab
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -26,9 +26,8 @@ Không có `--check` thì cũng hiện đúng thông tin đó, rồi hỏi bạn
 
 Cập nhật sẽ khởi động lại các service bạn đang chạy. Vì thế đó là việc bạn chọn, không phải việc
 xảy ra với bạn giữa lúc đang làm, nên **không có gì được cài mà không hỏi**. Daemon có kiểm tra
-lặng lẽ, lúc khởi động và mỗi ngày một lần, để `mix status` báo được cho bạn là có bản mới. Cả hai
-lần kiểm tra đều thất bại trong im lặng nếu không có mạng: máy không có mạng không phải máy có vấn
-đề.
+lặng lẽ, lúc khởi động và mỗi ngày một lần, để `mix status` báo được cho bạn là có bản mới. Không có
+mạng thì cả hai lần kiểm tra đều lặng lẽ bỏ qua.
 
 `--yes` trả lời trước câu hỏi, dành cho script chạy khi không có ai ở bàn phím.
 
@@ -38,7 +37,7 @@ Theo thứ tự, và không bước nào bỏ qua được:
 
 1. Bản phát hành được tải về và đối chiếu hash với feed cập nhật **có chữ ký**. Payload không khớp
    thì không được giải nén.
-2. Chữ ký được kiểm tra bằng khóa công khai biên dịch sẵn trong MixEngine. Không có gì ở tầng
+2. Chữ ký được kiểm tra bằng khoá công khai biên dịch sẵn trong MixEngine. Không có gì ở tầng
    truyền tải được tin để quyết định một file có phải của chúng tôi hay không.
 3. **Bản `mixengined` mới được chạy thử một lần** trước khi thay bất cứ gì, để chắc máy này khởi
    động được nó. Một bản cập nhật sẽ để lại daemon không chạy được thì bị chặn ở đây, thay vì phát

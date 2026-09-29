@@ -98,7 +98,7 @@ const terminalEn = {
     runOnConnect: "Run on connect",
     runOnConnectPlaceholder: "cd ~/project-a/frontend",
     runOnConnectHint:
-      "Typed for you once the shell answers, one command per line. It is kept in plain text beside the host — not the place for a password.",
+      "Typed for you once the shell answers, one command per line. It is stored in plain text beside the host, so do not put a password here.",
   },
   error: {
     terminalSpawnFailed: "Could not start the shell: {{message}}",

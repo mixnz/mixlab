@@ -1,16 +1,16 @@
 +++
-title = "Tên miền và ổ khóa"
+title = "Tên miền và ổ khoá"
 slug = "domains-and-https"
 order = 7
-summary = "Vì sao blog.test trỏ về máy bạn, ai ký chứng chỉ cho nó, và cách tìm ra vấn đề khi ổ khóa không xanh."
+summary = "Vì sao blog.test trỏ về máy bạn, ai ký chứng chỉ cho nó, và cách tìm ra vấn đề khi ổ khoá không xanh."
 translation_of = "en/domains-and-https.md"
-source_sha256 = "6cedb3824e0313f7564bc27f3ad4a8aeb9312feca49953a483458f77a14b4365"
+source_sha256 = "a6b49830f6f2dfad251d86fe636b7dfe33fd79dfa42de6d2dc3705d79bea8ac5"
 +++
 
-# Tên miền và ổ khóa
+# Tên miền và ổ khoá
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -57,7 +57,7 @@ mix domain remove api.blog.test
 ```
 
 Tên thêm bằng cách này là **alias**. Tên miền chính của site không đổi, vì tên chính là thứ URL
-chuẩn và chứng chỉ lấy tên theo. Không thể xóa tên miền cuối cùng của site, cũng không xóa được
+chuẩn và chứng chỉ lấy tên theo. Không thể xoá tên miền cuối cùng của site, cũng không xoá được
 tên chính. Muốn sắp xếp lại thì dùng `mix site update`; `--domain` đầu tiên bạn truyền sẽ thành
 tên chính.
 
@@ -76,7 +76,7 @@ Không truyền tham số thì lệnh làm vậy cho mọi tên mà MixLab này 
 
 MixLab tự cấp chứng chỉ thay vì dùng một CA công cộng, vì tên miền cục bộ không phân giải được
 trên internet và không CA công cộng nào chịu ký cho chúng. Vì vậy trên máy bạn có một CA riêng, được
-tạo lần đầu dùng, và khóa bí mật của nó không bao giờ rời khỏi máy.
+tạo lần đầu dùng, và khoá bí mật của nó không bao giờ rời khỏi máy.
 
 ```bash
 mix cert ca-status
@@ -89,7 +89,7 @@ một câu hỏi khác, liên quan tới các trust store của hệ điều hà
 Trên Linux có hai câu trả lời về độ tin cậy chứ không phải một, và MixLab giữ chúng tách biệt:
 trust store của hệ thống, và cơ sở dữ liệu chứng chỉ riêng mà Chrome và Firefox đọc thay vì store
 hệ thống. Một công cụ gộp hai cái làm một sẽ hiện dấu tích xanh ngay cạnh trình duyệt đang báo ổ
-khóa đỏ.
+khoá đỏ.
 
 ## Chứng chỉ cho site
 
@@ -108,7 +108,7 @@ không chắc.
 ## Chuyển hướng sang HTTPS
 
 Khi site đã có chứng chỉ, cả `http://blog.test` lẫn `https://blog.test` đều chạy và phục vụ cùng
-một site — mặc định không chuyển hướng. Đây là chủ ý: một webhook, một script cũ, hay bất cứ thứ
+một site, vì mặc định không chuyển hướng. Đây là chủ ý: một webhook, một script cũ, hay bất cứ thứ
 gì khác vẫn đang trỏ vào HTTP thuần vẫn tiếp tục hoạt động, và một request lúc bị chuyển hướng lúc
 không là loại lỗi khó chịu hơn nhiều so với việc không bao giờ bị chuyển hướng.
 
@@ -118,7 +118,7 @@ Nếu có thứ gì đó truy cập site này từ bên ngoài mà cần chuyể
 mix site update blog.test --https-redirect true
 ```
 
-Site phải đã bật HTTPS trước — MixLab từ chối bật chuyển hướng cho site chưa có gì để chuyển
+Site phải bật HTTPS trước, vì MixLab từ chối bật chuyển hướng cho site chưa có gì để chuyển
 hướng *đến*. Tắt HTTPS sau đó sẽ tự tắt luôn chuyển hướng, thay vì để nó bật cho một địa chỉ không
 còn trả lời nữa.
 
@@ -126,7 +126,7 @@ Có một request không bao giờ bị chuyển hướng, dù cấu hình thế
 authority của máy này vẫn phải truy cập được `/__mixengine/ca.crt` qua HTTP thuần, nên đường dẫn
 đó luôn trả lời trực tiếp.
 
-## Ổ khóa có thật sự xanh không?
+## Ổ khoá có thật sự xanh không?
 
 ```bash
 mix cert status
@@ -143,7 +143,7 @@ không reload gì cả.
 mix cert ca-rotate
 ```
 
-**Có tính phá hủy.** Mọi trình duyệt đang cache chuỗi chứng chỉ dưới CA cũ sẽ ngừng chấp nhận, và
+**Có tính phá huỷ.** Mọi trình duyệt đang cache chuỗi chứng chỉ dưới CA cũ sẽ ngừng chấp nhận, và
 chứng chỉ của mọi site được cấp lại. Không có gì bị thay nếu máy này không tin được CA mới: từ
 chối hộp thoại xin quyền thì mọi thứ giữ nguyên như cũ.
 

@@ -2,7 +2,7 @@
 title = "Extensions"
 slug = "extensions"
 order = 10
-summary = "The tools you reach for beside the stack — phpMyAdmin, Mailpit, MinIO — installed from a signed registry, with what each one may do shown before you agree."
+summary = "The tools you reach for beside the stack, such as phpMyAdmin, Mailpit and MinIO, installed from a signed registry, with what each one may do shown before you agree."
 +++
 
 # Extensions
@@ -29,8 +29,8 @@ There are three shapes an extension can take, and it is worth recognising which 
 
 | Kind | What it is |
 | --- | --- |
-| `web-app` | Source served on your own stack, on a generated internal site — phpMyAdmin, Adminer |
-| `service` | A program MixLab supervises like any other — Mailpit, MinIO, MeiliSearch |
+| `web-app` | Source served on your own stack, on a generated internal site. For example phpMyAdmin, Adminer |
+| `service` | A program MixLab supervises like any other. For example Mailpit, MinIO, MeiliSearch |
 | `recipe` | Configuration only: extra web-server directives, a `php.ini` profile |
 
 ## Look before you install
@@ -47,7 +47,7 @@ Two lines of that plan deserve reading rather than skimming, and they only appea
 - **Which database an administrative interface would open onto.** A tool like phpMyAdmin freezes
   that at install time, and which server it administers is not a detail to discover afterwards.
 - **Which account it would be signed in as.** An extension may declare that it signs in with a
-  server's superuser account — the most consequential thing an extension can be granted. The plan
+  server's superuser account, the most consequential thing an extension can be granted. The plan
   names the account, says the password comes from your operating system's credential store when the
   pool starts, and says that nothing writes it to disk.
 
@@ -86,10 +86,8 @@ visible in every listing that names it, so nobody has to remember where it came 
 
 **An extension is not an API client.** It does not get to call MixEngine's own API, ask the daemon
 to change your machine, or reach anything it did not declare. What it gets is what its manifest
-declared and what you agreed to — a port, a site, a service, a database connection — and nothing
-else.
+declared and what you agreed to: a port, a site, a service, a database connection. Nothing else.
 
 An extension's site shows up in `mix site list` like any other, and can be started and stopped.
 Every other edit to it is refused, and the refusal names the uninstall command that removes it: the
-site belongs to the extension, and editing it out from under the extension would be a way of quietly
-breaking one.
+site belongs to the extension, and editing it behind the extension's back would break it.

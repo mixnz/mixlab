@@ -95,7 +95,7 @@ mix docs --reference           # the whole command reference
 
 `--json` answers `{ topic, locale, title, url, body }`, where `body` is exactly what the plain form
 prints. This is the reliable route when there is no network, and the correct one when the version on
-the machine matters — the pages inside a binary are that binary's version, while this site documents
+the machine matters: the pages inside a binary are that binary's version, while this site documents
 the current release.
 
 ## Every command answers JSON
@@ -114,7 +114,7 @@ Branch on `code`, never on the sentence.
 
 ## Talking to the daemon directly
 
-`mix` is a thin client over a local JSON-RPC API — a Unix socket, or a named pipe on Windows. The
+`mix` is a thin client over a local JSON-RPC API, on a Unix socket or a named pipe on Windows. The
 full contract is published as TypeScript types, generated from the daemon's own source and checked
 by CI against it:
 
@@ -132,6 +132,6 @@ connection is the only end that knows it.
 ## What to do about versions
 
 - The site documents one release; `index.json` says which.
-- A running daemon reports its own version — `mix status --json`.
+- A running daemon reports its own version in `mix status --json`.
 - When those two disagree, the daemon is the truth about the machine in front of you, and the site
   is the truth about the current release.

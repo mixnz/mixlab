@@ -2,7 +2,7 @@
 title = "Blueprints"
 slug = "blueprints"
 order = 9
-summary = "Write down what a project is made of, and set the same thing up again somewhere else — or on somebody else's machine."
+summary = "Write down what a project is made of, and set the same thing up again somewhere else, or on somebody else's machine."
 +++
 
 # Blueprints
@@ -14,7 +14,7 @@ summary = "Write down what a project is made of, and set the same thing up again
 
 A blueprint is a written record of what a project is made of: which PHP it wants, which services it
 uses, what its site looks like, and optionally a command that scaffolds a fresh copy. It is how you
-set the same environment up twice — on a second machine, for a colleague, or for the next project of
+set the same environment up twice: on a second machine, for a colleague, or for the next project of
 the same shape.
 
 ## Capturing one
@@ -25,7 +25,7 @@ mix blueprint capture blog-stack --description "PHP 8.3, MariaDB, Redis"
 mix blueprint list
 ```
 
-The name is what it is filed under — lower-case letters, digits and hyphens.
+The name is what it is filed under: lower-case letters, digits and hyphens.
 
 **What a blueprint carries is the shape, not the contents.** It records that the project uses a
 MariaDB and which version; it does not record your data, and it never contains a password. Applying
@@ -39,8 +39,8 @@ mix blueprint apply blog-stack --project shop
 ```
 
 **Run the dry run first.** It prints the plan and changes nothing: which runtimes would be
-installed, which services would be created, what the site would be called, and — where there is one
-— the scaffold command that would be executed. Nothing about an apply is hidden from that plan.
+installed, which services would be created, what the site would be called, and the scaffold command
+that would be executed, if there is one. Nothing about an apply is hidden from that plan.
 
 `--path` says where the new project goes; it defaults to a directory named after the project, under
 where you are.
@@ -61,7 +61,7 @@ answer it up front for every such question in the plan:
 mix blueprint import ./blog-stack.toml
 ```
 
-A blueprint from elsewhere may carry a detached signature — `mix` looks for `<file>.minisig` beside
+A blueprint from elsewhere may carry a detached signature: `mix` looks for `<file>.minisig` beside
 it, or takes `--signature`. And here is the rule that matters:
 
 **What arrives without a signature the gallery vouches for is untrusted for good.** Nothing raises
@@ -73,8 +73,8 @@ agreed to before it runs.
 
 ## The scaffold command, and why it is asked about
 
-A blueprint may carry a command to run once in the new project — `composer create-project …`, or the
-equivalent for whatever framework it is for. That is somebody else's program running on your
+A blueprint may carry a command to run once in the new project, such as `composer create-project …`
+or the equivalent for whatever framework it is for. That is somebody else's program running on your
 machine, so MixLab prints the exact command and asks before running it, and it asks differently
 depending on where the blueprint came from.
 
@@ -85,8 +85,8 @@ Two flags skip the question, and **neither covers the other**:
 | `--run-scaffold` | A blueprint the gallery signed |
 | `--run-untrusted-scaffold` | An untrusted one. Nothing vouches for what this runs |
 
-A script that runs somebody's unsigned command should say so on the line that does it. That is the
-entire reason there are two flags rather than one, and the command is printed before it starts in
+A script that runs somebody's unsigned command should say so on the line that runs it. That is why
+there are two flags rather than one, and the command is printed before it starts in
 both cases.
 
 ## Watching an apply
@@ -101,9 +101,9 @@ mix job logs <id>
 mix job wait <id>
 ```
 
-`mix job logs` is where the scaffold command's own output goes — that is the one thing an apply runs
+`mix job logs` is where the scaffold command's own output goes. That is the one thing an apply runs
 that prints anything of its own. The lines live for as long as the daemon keeps the job, so it is
 what to read while one runs rather than a record to come back to next week.
 
-If the apply needs an administrator — a new domain that needs routing, say — it asks once at the
-end. `--grant` spends that prompt without asking first.
+If the apply needs an administrator, for example because a new domain needs routing, it asks once
+at the end. `--grant` spends that prompt without asking first.

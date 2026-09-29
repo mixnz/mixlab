@@ -2,15 +2,15 @@
 title = "Phiên bản PHP, Node, Python, Ruby, Go và Java"
 slug = "runtimes"
 order = 5
-summary = "Cài bao nhiêu phiên bản tùy bạn, và để mỗi thư mục tự chọn phiên bản của nó. Không hook shell, không phải nhớ gì cả."
+summary = "Cài bao nhiêu phiên bản tuỳ bạn, và để mỗi thư mục tự chọn phiên bản của nó. Không hook shell, không phải nhớ gì cả."
 translation_of = "en/runtimes.md"
-source_sha256 = "dbd84058824aea458c977d3c36884a8acc8374d9f412acf872a60e3f27558f7d"
+source_sha256 = "27594d82cb04c2c8ace1ba4cbdded841d4ad19c4444dd881c7f77fc77e23805d"
 +++
 
 # Phiên bản PHP, Node, Python, Ruby, Go và Java
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -29,7 +29,7 @@ mix runtime install php 8.3.33
 mix runtime list
 ```
 
-Phiên bản phải ghi chính xác. Đây là cố ý chứ không phải thiếu sót. Ghi `8.3` nghĩa là *"chọn giúp
+Phiên bản phải ghi chính xác, và đây là cố ý. Ghi `8.3` nghĩa là *"chọn giúp
 tôi một cái"*, mà chưa cài gì thì không có gì để chọn. Việc chọn giữa các phiên bản là việc của bước
 resolve, và resolve chỉ trả lời dựa trên những gì có trên máy. Muốn dùng một khoảng phiên bản thì
 dùng ở `mix runtime available`.
@@ -111,7 +111,7 @@ chưa đổi), và MixLab không đưa thư mục đó vào `PATH` của bạn.
 ## Java
 
 ```bash
-mix runtime available --kind java      # 11, 17, 21 và 25 — các dòng hỗ trợ dài hạn
+mix runtime available --kind java      # các dòng hỗ trợ dài hạn: 11, 17, 21 và 25
 mix runtime install java 21
 java --version                         # JDK mà thư mục này resolve ra
 mix project update api --pin java=21
@@ -119,7 +119,7 @@ mix project update api --pin java=21
 
 `java`, `javac`, `jar`, `jshell`, `keytool` và `jlink` là lệnh như mọi lệnh khác. Mỗi lệnh được khởi
 động với **`JAVA_HOME` trỏ đúng JDK của nó**, kể cả khi bạn đã export một giá trị khác, nên chương
-trình — và cả tiến trình con mà nó tự khởi động — đều tìm thấy đúng JDK mà thư mục này pin.
+trình, và cả tiến trình con mà nó tự khởi động, đều tìm thấy đúng JDK mà thư mục này pin.
 
 **Maven và Gradle gõ thẳng trong terminal đọc `JAVA_HOME` của bạn trước.** Nếu biến đó trỏ vào một
 JDK hệ thống thì `mvn` và `./gradlew` dùng JDK đó, bất kể thư mục pin gì; bỏ biến đó đi thì chúng sẽ
@@ -180,7 +180,7 @@ lệnh của những ngôn ngữ bạn đã cài bằng MixEngine: `php`, `compo
 `pip`, `ruby`, `go`, `java` và các lệnh khác. Mỗi chương trình tự tìm xem thư mục hiện tại muốn
 phiên bản nào rồi chuyển cho file thực thi thật.
 
-Hai hệ quả đáng biết:
+Ba hệ quả đáng biết:
 
 - **Hoạt động cả khi daemon đã dừng.** Shim đọc trực tiếp thứ nó cần thay vì hỏi qua socket. Vì
   vậy `php -v` trong một project vẫn trả lời được khi MixEngine không chạy.

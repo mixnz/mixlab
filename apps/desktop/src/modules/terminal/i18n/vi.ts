@@ -61,7 +61,7 @@ const terminalVi: TerminalDict = {
     settingsScreenGroup: "Màn hình",
     settingsFontFamily: "Phông chữ",
     settingsFontFamilyHint:
-      "Chỉ liệt kê những phông đều nét máy này đang có — chỉ loại ấy mới vẽ thẳng được một terminal.",
+      "Chỉ liệt kê các phông đều nét có trên máy này, vì terminal chỉ hiển thị đúng với loại phông đó.",
     settingsFontSearch: "Tìm phông",
     settingsFontSize: "Cỡ chữ",
     settingsScrollback: "Cuộn ngược",
@@ -98,7 +98,7 @@ const terminalVi: TerminalDict = {
     runOnConnect: "Chạy khi kết nối",
     runOnConnectPlaceholder: "cd ~/project-a/frontend",
     runOnConnectHint:
-      "Gõ hộ ngay khi shell lên tiếng, mỗi dòng một lệnh. Nó nằm nguyên văn cạnh host — không phải chỗ để mật khẩu.",
+      "Gõ hộ ngay khi shell lên tiếng, mỗi dòng một lệnh. Nội dung được lưu nguyên văn cạnh host, nên đừng để mật khẩu ở đây.",
   },
   error: {
     terminalSpawnFailed: "Không khởi động được shell: {{message}}",

@@ -4,13 +4,13 @@ slug = "for-agents"
 order = 16
 summary = "Mọi trang của cẩm nang này đều là Markdown thuần tại một địa chỉ dễ đoán, kèm một manifest, một file gộp, và cùng nội dung đó nằm sẵn trong chương trình mix."
 translation_of = "en/for-agents.md"
-source_sha256 = "3beaf5fc9bb34940ae3b5bebb518e7ca07f1498d87c85c068b2131adb5baa816"
+source_sha256 = "2fd84051112f127382e4c8e064f279d2ee11b693b3f81115a86242a4339e0e79"
 +++
 
 # Đọc cẩm nang này bằng chương trình
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -125,7 +125,7 @@ daemon và được CI kiểm tra đối chiếu với nó:
 https://github.com/mixnz/mixlab/tree/master/bindings
 ```
 
-Một file nén chứa các kiểu đó được đính kèm mỗi bản phát hành, ký bằng cùng khóa với các binary.
+Một file nén chứa các kiểu đó được đính kèm mỗi bản phát hành, ký bằng cùng khoá với các binary.
 Những gì các kiểu này mô tả là những gì daemon **ghi ra**; vài request chấp nhận nhiều hơn những gì
 được mô tả, và gửi đúng cấu trúc đã ghi trong tài liệu thì luôn được chấp nhận.
 

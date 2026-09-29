@@ -4,13 +4,13 @@ slug = "permissions"
 order = 11
 summary = "Mọi hộp thoại quyền quản trị mà MixLab có thể hiện lên, mỗi cái thay đổi chính xác điều gì, và vì sao không có gì của MixLab chạy thường trực với quyền root."
 translation_of = "en/permissions.md"
-source_sha256 = "e07a33677cf2b415fdbac300e2b84fbaf3cfd08bc31ab5380adeedde05a425c8"
+source_sha256 = "70689e3d687acbe7aeea42f215b3c6b1c5ec9b53da08859822f9e1b4de56e77b"
 +++
 
 # MixLab xin quyền để làm gì
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -46,7 +46,7 @@ MixLab tự cấp chứng chỉ để site của bạn chạy `https://` mà kh�
 chấp nhận, CA đã ký các chứng chỉ đó phải nằm trong trust store của hệ thống, và đưa nó vào đó cần
 xin quyền.
 
-**Điều này có nghĩa gì, và không có nghĩa gì.** CA được tạo trên máy bạn và khóa bí mật của nó
+**Điều này có nghĩa gì, và không có nghĩa gì.** CA được tạo trên máy bạn và khoá bí mật của nó
 không bao giờ rời khỏi máy. Nó có thể chứng nhận cho bất kỳ tên nào, nên bạn nên hiểu rằng cài nó
 là một quyết định tin cậy thật sự. Mọi công cụ HTTPS cục bộ đều xin đúng quyền này. Từ chối cũng
 được: site của bạn vẫn chạy qua `http://`, và MixLab nói rõ điều đó thay vì báo lỗi.
@@ -71,8 +71,8 @@ Bản thân `mixengine-elevate` phải nằm ở nơi bạn không ghi được.
 quản trị mà nằm trong thư mục bất kỳ tiến trình nào cũng ghi đè được thì không phải ranh giới bảo
 mật. Vì thế việc đặc quyền đầu tiên MixLab làm là đặt chương trình phụ trợ này vào chỗ. Hai
 cách cài MixLab chạy hoàn toàn dưới tài khoản của bạn: bộ cài Windows và build từ mã nguồn. Đó là
-lý do việc này không thể là việc của bộ cài. Ở đâu `.deb`,
-`.rpm` hoặc `.pkg` đã đặt sẵn nó, MixLab nhận ra và không hỏi gì.
+lý do việc này không thể là việc của bộ cài. Ở đâu `.deb`, `.rpm` hoặc
+`.pkg` đã đặt sẵn nó, MixLab nhận ra và không hỏi gì.
 
 ### Thay chương trình phụ trợ đặc quyền
 
@@ -123,6 +123,6 @@ quản trị viên mới sửa được:
 | Linux | `/var/log/mixengine/elevate.log` |
 
 File đó và bản thân chương trình phụ trợ là hai thứ duy nhất MixLab để lại bên ngoài thư mục
-riêng của nó. `mix doctor` báo cáo cả hai và không xóa cái nào. Một công cụ chẩn đoán mà xóa nhật
-ký kiểm tra thuộc sở hữu root thì tức là xóa luôn bằng chứng về thứ nó đang chẩn đoán.
+riêng của nó. `mix doctor` báo cáo cả hai và không xoá cái nào, vì nhật ký kiểm tra chính
+là bằng chứng về thứ nó đang chẩn đoán.
 `mix uninstall` mới là lệnh gỡ chúng đi, và nó sẽ hỏi trước.

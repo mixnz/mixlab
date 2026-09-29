@@ -2,7 +2,7 @@
 title = "Showing a site to your phone"
 slug = "sharing"
 order = 8
-summary = "Put one site on the local network, scan a QR code, and take it back off again — one site, one port, one rule."
+summary = "Put one site on the local network, scan a QR code, and take it back off again. One site, one port, one rule."
 +++
 
 # Showing a site to your phone
@@ -23,13 +23,13 @@ That prints a URL your phone can open and a QR code you can point a camera at. T
 happened:
 
 1. The site started answering on this machine's address on the local network, instead of only on
-   loopback. **This site only** — every other site keeps answering on loopback alone.
+   loopback. **This site only.** Every other site keeps answering on loopback alone.
 2. The certificate was reissued to cover that address, so the padlock survives the trip.
 3. One administrator prompt asked for a firewall rule, for that one port.
 
 ## When the machine has more than one network
 
-MixLab **refuses to choose** rather than putting your site on a network you did not mean — a
+MixLab **refuses to choose** rather than putting your site on a network you did not mean. A
 laptop on office Wi-Fi and a VPN at the same time is the case this exists for. It names the
 candidates, and you pick:
 
@@ -64,8 +64,7 @@ not sure costs nothing.
 ## What to know before you use it
 
 - **Anybody on that network can reach the site.** There is no authentication in front of it. On a
-  café network or a shared office, that is the whole story — share for a length, and unshare when
-  you are done.
+  café network or a shared office, share for a set time, and unshare when you are done.
 - **The certificate is still MixLab's.** Your phone does not trust MixLab's authority, so it
   will warn. Sharing is for checking a layout on a real screen, not for demonstrating a padlock.
 - **Nothing about your other sites changes.** The rule is one port, one site, and it is undone by

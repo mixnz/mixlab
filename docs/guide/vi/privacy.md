@@ -2,9 +2,9 @@
 title = "Quyền riêng tư"
 slug = "privacy"
 order = 17
-summary = "MixLab giữ gì trên máy bạn, những lần hiếm hoi nó tự kết nối mạng, và máy chủ đồng bộ giữ gì khi bạn đăng nhập — không có gì nó đọc được."
+summary = "MixLab giữ gì trên máy bạn, những lần hiếm hoi nó tự kết nối mạng, và máy chủ đồng bộ giữ gì khi bạn đăng nhập mà không đọc được gì."
 translation_of = "en/privacy.md"
-source_sha256 = "c393258adcefc3755d7c9a3dd1529ad11ab18e8622981dbc583a2fc174e7b5bd"
+source_sha256 = "29588b3d68aca26935d0d4a38221bf2ddfbadd84a783c0a0f41be5a77fa9a43c"
 +++
 
 # Quyền riêng tư
@@ -27,14 +27,14 @@ chính sách này, hay về quyền riêng tư trong MixLab, xin gửi tới hai
 
 ## Những gì nằm lại trên máy bạn
 
-- **Home của MixEngine** — `mix status` cho biết nó ở đâu — chứa các runtime, dịch vụ, site, chứng
+- **Home của MixEngine** (`mix status` cho biết nó ở đâu) chứa các runtime, dịch vụ, site, chứng
   chỉ và log mà MixEngine quản lý. Không thứ nào trong đó được gửi đi.
 - **Cửa sổ MixLab** giữ cài đặt, kết nối đã lưu, request REST và lịch sử, bản nháp và snippet truy
   vấn dưới dạng file trong thư mục dữ liệu của ứng dụng, tên là `io.github.mixnz.mixlab`, ở vị trí
   quen thuộc của hệ điều hành.
 - **Mật khẩu và bí mật** không được ghi vào các file đó. Chúng được giao cho kho thông tin đăng nhập
-  mà hệ điều hành đã có sẵn — Credential Manager trên Windows, Keychain trên macOS, Secret Service
-  trên Linux — dưới tên `MixLab`. Chúng không bao giờ được ghi vào log, và bản in gỡ lỗi hiện chúng
+  mà hệ điều hành đã có sẵn (Credential Manager trên Windows, Keychain trên macOS, Secret Service
+  trên Linux), dưới tên `MixLab`. Chúng không bao giờ được ghi vào log, và bản in gỡ lỗi hiện chúng
   thành `***`.
 
 ## Khi MixLab tự kết nối mạng
@@ -53,7 +53,7 @@ Ngoài những trường hợp dưới đây, MixLab im lặng trừ khi bạn b
 GitHub và các nhà cung cấp đó thấy địa chỉ IP và user agent của yêu cầu, như mọi máy chủ web, theo
 chính sách quyền riêng tư của riêng họ. Chúng tôi không nhận được gì từ họ.
 
-**Kết nối do bạn tự tạo** — tới một cơ sở dữ liệu, qua SSH, một request REST — đi thẳng từ máy bạn
+**Kết nối do bạn tự tạo**, tới một cơ sở dữ liệu, qua SSH hay một request REST, đi thẳng từ máy bạn
 tới địa chỉ bạn nhập. Không có gì của chúng tôi nằm giữa.
 
 ## Đồng bộ
@@ -66,7 +66,7 @@ Cloudflare Workers.
 
 - địa chỉ email của bạn, vì đó là tên đăng nhập và là nơi nhận mã;
 - một giá trị băm của địa chỉ đó, dùng để đặt tên cho tài khoản;
-- một *verifier* suy ra từ mật khẩu — không bao giờ là chính mật khẩu;
+- một *verifier* suy ra từ mật khẩu, không bao giờ là chính mật khẩu;
 - tên bạn đặt cho các máy, và lần cuối mỗi máy được thấy;
 - các bản ghi của bạn dưới dạng bản mã, cùng kích thước và thời điểm chúng thay đổi.
 
@@ -101,7 +101,7 @@ dữ liệu cá nhân của bất kỳ ai.
 
 Các luật bảo vệ dữ liệu như GDPR và CCPA cho bạn quyền truy cập, sửa, xuất và xoá dữ liệu của mình.
 Với đồng bộ, Settings của MixLab cho thấy những máy nào đang đăng nhập và gỡ được chúng; những gì nó
-chưa làm được — kể cả xoá tài khoản — xin gửi tới địa chỉ ở trên. Mọi thứ khác đều nằm trên máy bạn
+chưa làm được, kể cả xoá tài khoản, xin gửi tới địa chỉ ở trên. Mọi thứ khác đều nằm trên máy bạn
 và trong tay bạn: home của MixEngine, thư mục dữ liệu của ứng dụng, và các mục tên `MixLab` trong
 kho thông tin đăng nhập.
 

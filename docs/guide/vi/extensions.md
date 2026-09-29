@@ -4,13 +4,13 @@ slug = "extensions"
 order = 10
 summary = "Những công cụ đi kèm stack như phpMyAdmin, Mailpit, MinIO. Cài từ một registry có chữ ký, và cho bạn xem mỗi cái được phép làm gì trước khi đồng ý."
 translation_of = "en/extensions.md"
-source_sha256 = "00b63c53d453c6d7039dd280b47391a6c11cb23c0e06fb68758ec0c060866df5"
+source_sha256 = "dbc8da97a5411b73dac121c57bb832e7eb87d946f6f5e96b03b10f3c4af70f48"
 +++
 
 # Extension
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -93,4 +93,4 @@ khác.
 
 Site của extension xuất hiện trong `mix site list` như mọi site khác, và có thể bật hoặc tắt. Mọi
 chỉnh sửa khác lên site đó đều bị từ chối, và lời từ chối nêu tên lệnh uninstall để gỡ nó. Site
-thuộc về extension, và sửa site sau lưng extension là một cách âm thầm làm hỏng nó.
+thuộc về extension, và sửa nó sau lưng extension sẽ làm hỏng extension.

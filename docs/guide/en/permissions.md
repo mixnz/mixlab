@@ -30,7 +30,7 @@ There are six, and you will normally meet them once.
 
 So that `blog.test` and everything under it reaches your own machine. MixLab runs a small DNS
 server that answers `127.0.0.1` for every name under a managed suffix, and what needs permission is
-pointing your system at it — a file under `/etc/resolver/` on macOS, a resolver rule on Linux, an
+pointing your system at it: a file under `/etc/resolver/` on macOS, a resolver rule on Linux, an
 NRPT rule on Windows.
 
 This is asked **once**, not once per site, and that is the whole reason the DNS server exists: an
@@ -46,16 +46,16 @@ putting it there needs permission.
 
 **What this does and does not mean.** The authority is generated on your machine and its private key
 never leaves it. It can vouch for any name, so it is worth understanding that installing it is a
-real trust decision — the same one every local-HTTPS tool asks for. Declining is a supported answer:
+real trust decision, the same one every local-HTTPS tool asks for. Declining is a supported answer:
 your sites keep working over `http://`, and MixLab says so rather than failing.
 
 On Linux, Chrome and Firefox read their own certificate databases rather than the system store, so
-MixLab writes there too — which needs no administrator at all, because those files are yours.
+MixLab writes there too. That needs no administrator at all, because those files are yours.
 
 ### Listening on port 80 and 443
 
 On macOS and Linux, ports below 1024 are privileged. MixLab does not solve this by running the
-web server as root — it grants the ability to the one program that needs it and nothing else, and
+web server as root. It grants the ability to the one program that needs it and nothing else, and
 then the server runs as you.
 
 ### A firewall rule, when you share a site
@@ -66,12 +66,12 @@ is touched.
 
 ### Installing the privileged helper
 
-`mixengine-elevate` itself has to live somewhere you cannot write to — a program that runs as an
+`mixengine-elevate` itself has to live somewhere you cannot write to: a program that runs as an
 administrator and sits in a directory any process could overwrite is not a security boundary. So the
 first privileged thing MixLab ever does is put the helper in place. Two of the ways of installing
 MixLab run entirely as you (the Windows installer and building from source), which is why this
-cannot be the installer's job. Where a `.deb`, an `.rpm` or
-a `.pkg` has already placed it, MixLab notices and asks for nothing.
+cannot be the installer's job. Where a `.deb`, an `.rpm` or a `.pkg` has
+already placed it, MixLab notices and asks for nothing.
 
 ### Replacing the privileged helper
 
@@ -96,7 +96,7 @@ You can see the queue before anything is asked:
 mix elevation status
 ```
 
-That prints every operation waiting and what it will change — the exact hosts lines, the port, the
+That prints every operation waiting and what it will change: the exact hosts lines, the port, the
 store. Then, when you are ready:
 
 ```bash
@@ -122,6 +122,6 @@ can change:
 | Linux | `/var/log/mixengine/elevate.log` |
 
 That file and the helper itself are the only two things MixLab leaves outside its own directory.
-`mix doctor` reports both and removes neither — a diagnostic that deleted a root-owned audit trail
-would be deleting the record of what it was diagnosing. `mix uninstall` is what takes them away, and
+`mix doctor` reports both and removes neither, because the audit trail is the record of what it is
+diagnosing. `mix uninstall` is what takes them away, and
 it asks.

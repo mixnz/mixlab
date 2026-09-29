@@ -26,7 +26,7 @@ const restVi: RestDict = {
     rowEnabled: "Dùng dòng này",
     addRow: "Thêm dòng",
     removeRow: "Xoá dòng",
-    noRows: "Chưa có gì \u2014 gõ vào dòng cuối để thêm.",
+    noRows: "Chưa có gì. Gõ vào dòng cuối để thêm.",
     bodyKind: "Kiểu body",
     bodyNone: "Không có",
     bodyForm: "Form",
@@ -39,7 +39,7 @@ const restVi: RestDict = {
     bodyPlaceholder: "Nội dung request",
     clearFile: "Bỏ tệp",
     binaryBodyHint:
-      "Gửi đúng như tệp trên đĩa, không kèm Content-Type nào \u2014 thêm ở Headers nếu máy chủ cần.",
+      "Gửi đúng như tệp trên đĩa, không kèm Content-Type nào. Thêm ở Headers nếu máy chủ cần.",
     partKind: "Kiểu phần",
     partText: "Văn bản",
     partFile: "Tệp",
@@ -101,7 +101,7 @@ const restVi: RestDict = {
     responseHeadersTab: "Headers ({{n}})",
     totalTimeHint: "Tổng thời gian, từ byte gửi đầu tiên tới byte đọc cuối cùng",
     sizeHint: "Kích thước body của response",
-    realSizeHint: "Đã cắt để hiển thị \u2014 body thật là {{size}}",
+    realSizeHint: "Đã cắt để hiển thị. Body đầy đủ là {{size}}",
     redirected: "Có redirect",
     finalUrlHint: "Kết thúc ở {{url}}",
     wrapLines: "Xuống dòng",
@@ -112,9 +112,9 @@ const restVi: RestDict = {
       "Mặc định tắt: bật lên là trang tự gọi ảnh, CSS và cả pixel theo dõi tới máy chủ của nó.",
     runScripts: "Chạy script",
     runScriptsHint:
-      "Mặc định tắt, và tắt lại mỗi lần mở khung này: bật lên là script của trang chạy. Nó vẫn không với tới app — nhưng một script lặp vô tận sẽ kéo cả cửa sổ theo.",
+      "Mặc định tắt, và tắt lại mỗi lần mở khung này: bật lên là script của trang chạy. Nó vẫn không với tới app, nhưng một script lặp vô tận sẽ làm treo cửa sổ.",
     truncatedNotice: "Đang hiện {{shown}} đầu trong {{total}}.",
-    sourceTooBig: "Body lớn hơn {{limit}} \u2014 tắt cây để app không treo. Raw vẫn xem được.",
+    sourceTooBig: "Body lớn hơn {{limit}} nên cây bị tắt để app không treo. Raw vẫn xem được.",
     binaryBody: "{{mime}} \u00b7 {{size}}",
     binaryHint: "Kiểu này không render được.",
     copyValue: "Sao chép giá trị",
@@ -168,7 +168,7 @@ const restVi: RestDict = {
     settingsFollowRedirects: "Đi theo redirect",
     settingsInvalidCerts: "Chấp nhận chứng chỉ tự ký",
     settingsInvalidCertsHint:
-      "Tắt kiểm tra chứng chỉ cho mọi request — chỉ bật khi biết rõ máy chủ.",
+      "Tắt kiểm tra chứng chỉ cho mọi request. Chỉ bật khi biết rõ máy chủ.",
     settingsGlobalHint: "Ba mục này áp cho mọi request.",
 
     shortcutScope: "REST",

@@ -4,13 +4,13 @@ slug = "projects-and-sites"
 order = 4
 summary = "Hai khái niệm cốt lõi của MixLab, mỗi cái quản những gì, và cách một bản checkout mang theo cấu hình của chính nó."
 translation_of = "en/projects-and-sites.md"
-source_sha256 = "414a26592b95db96eac537937aed34747c8a9b4dbcb340586251eb8f79537090"
+source_sha256 = "1f1833a6e87f005e4f4d884a319ca4e9d82c9019a6a58f088ac5b820f799f1a0"
 +++
 
 # Dự án và site
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -41,7 +41,7 @@ mix project create --name blog --pin php=^8.3 --pin node=22
 ```
 
 Về sau muốn sửa gì thì dùng `mix project update`. Một điểm cần nhớ: `--pin` **thay thế** toàn bộ
-danh sách pin chứ không thêm vào, và `--clear-pins` mà không kèm `--pin` sẽ xóa hết. Xóa project
+danh sách pin chứ không thêm vào, và `--clear-pins` mà không kèm `--pin` sẽ xoá hết. Xoá project
 chỉ là MixLab quên nó đi; file của bạn vẫn còn nguyên.
 
 ## Khai báo một site
@@ -60,7 +60,7 @@ chuẩn của site và chứng chỉ đều lấy tên theo nó.
 `mix site update` dùng để sửa site. Giống `--pin` ở trên, `--domain` và `--service` thay thế giá
 trị cũ của site chứ không thêm vào. Không truyền cái nào thì không cái nào đổi.
 
-Bật và tắt site chỉ là bật một cờ rồi sinh lại cấu hình, không phải khởi động hay dừng tiến trình:
+Bật và tắt site chỉ đổi một cờ rồi sinh lại cấu hình:
 
 ```bash
 mix site stop blog.test

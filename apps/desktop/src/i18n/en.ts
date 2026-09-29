@@ -119,7 +119,7 @@ const en = {
     languageVietnamese: "Ti\u1ebfng Vi\u1ec7t",
     privacyPolicy: "Privacy policy",
     privacyHint:
-      "MixLab collects nothing about you. What it keeps stays on this machine — unless you turn sync on, and then the server holds only what it cannot read.",
+      "MixLab collects nothing about you. What it keeps stays on this machine. If you turn sync on, the server holds only what it cannot read.",
     logHint: "A file on this machine records crashes and errors, in case something needs a closer look.",
     openLogFolder: "Open log folder",
   },
@@ -236,7 +236,7 @@ const en = {
     mixengineProtocol: "MixEngine answered something this version does not understand: {{message}}",
     // SSH
     sshTimeout:
-      "The SSH connection to {{host}}:{{port}} timed out after {{seconds}}s \u2014 check the host, the port and the firewall.",
+      "The SSH connection to {{host}}:{{port}} timed out after {{seconds}}s. Check the host, the port and the firewall.",
     sshConnectFailed: "Cannot reach the SSH server: {{message}}",
     sshAuthFailed: "SSH authentication failed: {{message}}",
     sshShellFailed: "Could not open a shell on the SSH server: {{message}}",
@@ -246,15 +246,15 @@ const en = {
     sshAuthRejected:
       "The SSH server rejected the login (partial success: {{partialSuccess}}). It accepts: {{methods}}.",
     sshHostKeyChanged:
-      "The SSH server at {{endpoint}} is offering a different key than the one MixLab saw before ({{fingerprint}} now, {{known}} before). Either the server was rebuilt, or something is standing between you and it. If the change was expected, remove its entry from {{file}} and connect again.",
+      "The SSH server at {{endpoint}} is offering a different key than the one MixLab saw before ({{fingerprint}} now, {{known}} before). The server may have been rebuilt, or something may be standing between you and it. If you expected the change, remove its entry from {{file}} and connect again.",
     cannotReadPrivateKey: "Cannot read the private key file: {{message}}",
     invalidPrivateKey: "That is not a private key MixLab can read: {{message}}",
     cannotBindTunnelPort: "Cannot open a local port for the tunnel: {{message}}",
     tunnelAcceptFailed:
-      "The tunnel's local port has stopped taking connections: {{message}}. MixLab keeps trying — if it does not come back, close the tab and connect again.",
+      "The tunnel's local port has stopped taking connections: {{message}}. MixLab keeps trying. If it does not come back, close the tab and connect again.",
     cannotSaveKnownHost: "Cannot remember the server's key: {{message}}",
     sshUnavailable:
-      "The SSH tunnel is not open at the moment \u2014 MixLab is trying to open it again.",
+      "The SSH tunnel is not open. MixLab is trying to open it again.",
     // Saved passwords
     credentialStoreUnreachable: "Cannot reach the system credential store: {{message}}",
     cannotSavePassword: "Cannot save the password: {{message}}",
@@ -309,7 +309,7 @@ const en = {
     backgroundTaskFailed: "The task did not finish: {{message}}",
     // The one error in here the webview raises rather than the backend. Said out loud because the
     // alternative is a copy that did nothing and a paste, somewhere else, of what was there before.
-    clipboard: "Nothing was copied — the clipboard refused: {{message}}",
+    clipboard: "Nothing was copied. The clipboard refused: {{message}}",
     /** An error shape MixLab doesn't recognise \u2014 shown as-is rather than swallowed. */
     unknown: "{{message}}",
     /** The Error Boundary around one tab \u2014 the rest of the app (other tabs, the update check) is
@@ -325,7 +325,7 @@ const en = {
     preferences: "Preferences",
     recoveryTitle: "Your recovery key",
     recoveryHint:
-      "Write it down and keep it somewhere safe — it is shown once. With it and your email you can get your data back if you forget your password. Without the email it is not enough.",
+      "Write it down and keep it somewhere safe. It is shown only once. If you forget your password, this key and your email get your data back.",
     recoveryCopy: "Copy",
     recoveryWritten: "I have written it down",
     recoveryCheck: "Type groups {{first}} and {{second}} back",
@@ -372,14 +372,14 @@ const en = {
     addServerAction: "Add",
     removeServer: "Remove",
     serverInvalid: "That is not a server address.",
-    serverInsecure: "Use https:// — plain http:// works only for a server on this machine.",
+    serverInsecure: "Use https://. Plain http:// works only for a server on this machine.",
     access: "Access token",
     accessHint: "Only for a server its owner has closed to their own people.",
     email: "Email",
     passwordAgain: "Password, again",
     passwordsDiffer: "The two passwords are different.",
     passwordHint:
-      "Nobody can reset this password and keep your data — only your recovery key can. Choose one you will remember.",
+      "Only your recovery key can reset this password and keep your data. Choose one you will remember.",
     signIn: "Sign in",
     signUp: "Create an account",
     signingIn: "Signing in",

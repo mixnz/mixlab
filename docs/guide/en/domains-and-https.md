@@ -23,12 +23,12 @@ both, and this page is about what it actually did.
 | `.test` | **The default.** Reserved by the standards body for exactly this, never resolvable on the internet, and it cannot collide with anything real |
 | `.internal` | Also managed. Reserved as the private-use suffix, and it reads as an intention where `.test` reads as an experiment |
 | `.localhost` | Offered as the zero-configuration option: many systems already send `*.localhost` to loopback, so it needs no change at all |
-| `.local` | Supported, and warned about — see below |
+| `.local` | Supported, with a warning. See below |
 | `.dev`, `.app`, … | **Refused.** They are real, public, and browser-pinned to HTTPS; taking one over locally breaks the real internet for you |
 
 **`.local` belongs to mDNS**, which is how printers and speakers announce themselves on a network.
 Using it works until somebody plugs one in. MixLab will let you, but the CLI makes you say
-`--i-know`, and it never points a *resolver* at `.local` — a site there gets one exact hosts entry
+`--i-know`, and it never points a *resolver* at `.local`. A site there gets one exact hosts entry
 and nothing more, because sending every `.local` name to loopback would break every Bonjour device
 on your network.
 
@@ -56,7 +56,7 @@ mix domain remove api.blog.test
 
 A name added this way is an **alias**. The site's primary domain does not change, because the
 primary is what the canonical URL and the certificate are named after. Removing is refused for a
-site's last domain and for its primary — `mix site update` is what reorders them, and the first
+site's last domain and for its primary. `mix site update` is what reorders them, and the first
 `--domain` it is given becomes the primary.
 
 ## When a name does not work
@@ -80,7 +80,7 @@ machine, generated on first use, whose private key never leaves it.
 mix cert ca-status
 ```
 
-That says what the authority is — its name, its fingerprint, how long it has. Whether your machine
+That says what the authority is: its name, its fingerprint, how long it has. Whether your machine
 *trusts* it is a separate question about your operating system's stores, and this build does not
 answer it here; nothing printed by `ca-status` implies an answer to it.
 
@@ -105,9 +105,9 @@ nothing and is a reasonable thing to do when you are unsure.
 ## Redirecting to HTTPS
 
 Once a site has a certificate, `http://blog.test` and `https://blog.test` both work and serve the
-same site — nothing redirects by default. That is deliberate: a webhook, an old script, or anything
-else still pointed at plain HTTP keeps working, and a request that gets redirected only sometimes is
-a harder bug than one that never does.
+same site, because nothing redirects by default. That is on purpose: a webhook, an old script, or
+anything else still pointed at plain HTTP keeps working, and a request that gets redirected only
+sometimes is a harder bug than one that never does.
 
 If something reaching this site from outside expects a redirect, turn one on for that site alone:
 
@@ -115,7 +115,7 @@ If something reaching this site from outside expects a redirect, turn one on for
 mix site update blog.test --https-redirect true
 ```
 
-It needs HTTPS already on — MixLab refuses to turn on a redirect for a site with nothing to
+It needs HTTPS already on, because MixLab refuses to turn on a redirect for a site with nothing to
 redirect *to*. Turning HTTPS back off later carries the redirect off with it, rather than leaving it
 switched on for an address that no longer answers.
 
@@ -130,7 +130,7 @@ mix cert status
 ```
 
 This does not read the disk. It opens a real TLS connection to your own front end for every site and
-reports the certificate that was actually presented — which is the only thing a browser ever sees,
+reports the certificate that was actually presented. That is the only thing a browser ever sees,
 and the only way to notice a server still holding a certificate that was replaced underneath it. It
 reads only: nothing is issued, nothing is installed, nothing is reloaded.
 
@@ -142,7 +142,7 @@ mix cert ca-rotate
 
 **Destructive.** Every browser holding a cached chain under the old authority stops accepting it,
 and every site's certificate is reissued. Nothing is replaced unless this machine can be made to
-trust the new authority — declining the prompt leaves everything exactly as it was.
+trust the new authority: declining the prompt leaves everything exactly as it was.
 
 To stop trusting MixLab's authority without removing anything else:
 

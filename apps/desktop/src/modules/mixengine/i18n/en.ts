@@ -58,7 +58,7 @@ export default {
       getIt: "Reinstall MixEngine",
     },
       storage: {
-        free: "Nothing is installed yet, so these can still be moved \u2014 choose now and a start puts them there.",
+        free: "Nothing is installed yet, so these can still be moved. Choose now, and the next start puts them there.",
         taken: "{{what}}, so these can no longer be moved here: where they are is recorded against each of them.",
         runtimes: "Runtimes",
         packages: "Servers",
@@ -262,7 +262,7 @@ export default {
         pinsTitle: "Effective runtime pins",
         sourceManifest: "from {{path}}",
         sourceRow: "from this project's own setting",
-        unresolved: "Not installed — {{hint}}",
+        unresolved: "Not installed: {{hint}}",
       },
     },
     runtimes: {
@@ -311,7 +311,7 @@ export default {
         noMatches: "No extension matches your search.",
         restartRequired: "Restart the pool for this to take effect.",
         restartButton: "Restart pool",
-        appliesNextStart: "Saved — takes effect next time the pool starts.",
+        appliesNextStart: "Saved. Takes effect the next time the pool starts.",
       },
     },
     requirements: {
@@ -326,13 +326,13 @@ export default {
       unavailable:
         "{{name}} cannot run on this computer: it needs {{needs}}, and no published release runs here.",
       applyConsent:
-        "Install the Microsoft Visual C++ Redistributable ({{arch}}) first — Windows may ask for approval once",
+        "Install the Microsoft Visual C++ Redistributable ({{arch}}) first. Windows may ask for approval once",
       applyBlocked: "This blueprint cannot be applied on this computer: it needs {{needs}}.",
       systemLibraries: "System libraries ({{count}})",
       librariesNotice:
-        "Installing {{name}}. This computer's loader does not list {{libraries}} — install them with your distribution's package manager.",
+        "Installing {{name}}. This computer's loader does not list {{libraries}}. Install them with your distribution's package manager.",
       applyLibraries:
-        "This computer's loader does not list {{libraries}} — install them with your distribution's package manager. The blueprint still applies.",
+        "This computer's loader does not list {{libraries}}. Install them with your distribution's package manager. The blueprint still applies.",
     },
     serviceState: {
       stopped: "Stopped",
@@ -350,7 +350,7 @@ export default {
       title: "New service",
       package: "Package",
       packagePlaceholder: "Pick an installed package",
-      noPackages: "No packages installed yet — install one under Runtimes first.",
+      noPackages: "No packages installed yet. Install one under Runtimes first.",
       instance: "Instance name",
       instancePlaceholder: "main, secondary, …",
       idPreview: "It will be called {{id}}.",
@@ -391,7 +391,7 @@ export default {
         priorityBackground: "Background",
         unsupported: "Not supported on this machine.",
         unavailable: "Not available here: {{reason}}",
-        advisoryNote: "Advisory only — the service may exceed this and keep running.",
+        advisoryNote: "Advisory only: the service may exceed this and keep running.",
         watchdogNone: "Nothing is watching this ceiling.",
         watchdogRestarts: "Restarted after {{minutes}} minutes over the line.",
         watchdogWarnsOnly: "Warned after {{minutes}} minutes over the line, left running.",
@@ -404,7 +404,7 @@ export default {
         dependencies:
           "Anything this service depends on starts too, whether or not it is set here.",
         versusIdle:
-          "This decides what is running when you sit down. The idle timeout below decides what stays running while you are not using it — a service can have both.",
+          "This decides what is running when you sit down. The idle timeout below decides what stays running while you are not using it. A service can have both.",
       },
       idle: {
         title: "Idle shutdown",
@@ -422,7 +422,7 @@ export default {
         userName: "Account name (defaults to the database name)",
         create: "Create",
         createdNew: "Created.",
-        createdExisting: "Already existed — nothing changed.",
+        createdExisting: "Already existed. Nothing changed.",
         secretLine: "Password stored in your credential store as {{key}}.",
       },
     },
@@ -437,7 +437,7 @@ export default {
       loadMore: "Load more history",
       gap: "— {{count}} lines skipped —",
       empty: "No output yet.",
-      historicHidden: "{{count}} lines read back from the log file do not say which stream they came from — they show under All.",
+      historicHidden: "{{count}} lines read back from the log file do not say which stream they came from, so they show under All.",
       streamUnknown: "Lines read back from the log file do not say which stream they came from.",
     },
     sites: {
@@ -452,7 +452,7 @@ export default {
       columnActions: "Actions",
       ownerProject: "project: {{name}}",
       ownerExtension: "extension: {{id}}",
-      editDisabledHint: "Belongs to an extension — remove it by uninstalling that extension.",
+      editDisabledHint: "Belongs to an extension. Uninstall the extension to remove it.",
       openHint: "Start what this site needs, then open {{url}}",
       opening: "Starting…",
       sharingIndefinite: "on the LAN",
@@ -472,7 +472,7 @@ export default {
         createTitle: "New site",
         editTitle: "Edit site",
         project: "Project",
-        noProjects: "No projects yet — register one first with `mix project add <folder>`.",
+        noProjects: "No projects yet. Create one on the Projects screen first.",
         domains: "Domains",
         domainsPlaceholder: "blog.test, www.blog.test",
         acceptRiskyTld: "I understand .local is mDNS territory",
@@ -488,7 +488,7 @@ export default {
           "A path prefix answered by something other than the kind above. Longest prefix wins.",
         routesAdd: "Add a route",
         routesRemove: "Remove this route",
-        routesEmpty: "No routes — everything is answered by the kind above.",
+        routesEmpty: "No routes. The kind above answers everything.",
         routePath: "Path",
         routeTarget: "Answered by",
         routeUpstream: "Upstream URL",
@@ -571,13 +571,13 @@ export default {
         title: "Save battery",
         toggle: "Pause services nobody is using",
         off: "Off: nothing is stopped for being idle. A site that is up stays up.",
-        on: "A PHP pool nobody used for half an hour, or a database or cache for an hour, is paused. The next visit starts it again — that first load can take a second.",
+        on: "A PHP pool nobody used for half an hour, or a database or cache for an hour, is paused. The next visit starts it again, and that first load can take a second.",
         keepWarm: "To keep one project running all the time, run: mix project keep-warm <name>",
       },
       autostart: {
         title: "Start at login",
         toggle: "Start MixEngine when I log in",
-        unsupported: "Not supported on this machine — run by hand: {{location}}",
+        unsupported: "Not supported on this machine. Run it by hand: {{location}}",
         otherHome: "This is registered for a different MixEngine home.",
         location: "Registered at: {{location}}",
       },
@@ -671,7 +671,7 @@ export default {
     },
     blueprints: {
       newButton: "Capture project…",
-      about: "Stacks to start a project from — the ones MixEngine ships, and the ones captured or imported here.",
+      about: "Stacks to start a project from: the ones MixEngine ships, and the ones captured or imported here.",
       search: "Search blueprints…",
       noMatches: "No blueprint matches that search.",
       importButton: "Import…",
@@ -692,7 +692,7 @@ export default {
         name: "Slug",
         description: "Description",
         overwrite: "Replace an existing blueprint with this slug",
-        overwriteHint: "There is no undo for a blueprint — this replaces it for good.",
+        overwriteHint: "This replaces the blueprint for good. There is no undo.",
         saving: "Capturing…",
       },
       import: {
@@ -721,7 +721,7 @@ export default {
         scaffoldUntrusted: "Nobody has vouched for this blueprint. Review the command before agreeing.",
         scaffoldConsent: "I've read the command above and agree to run it",
         scaffoldDeclined:
-          "Not ticked: MixEngine will still install the runtimes, services, site and domain — but it will not run the command, so the project folder will be left empty and the site will have nothing to serve.",
+          "Not ticked: MixEngine still installs the runtimes, services, site and domain, but does not run the command, so the project folder will be left empty and the site will have nothing to serve.",
         applyButton: "Apply",
         applyWithoutCommand: "Set up without running the command",
         applying: "Applying…",
@@ -730,13 +730,13 @@ export default {
         hideLog: "Hide output",
         doneTitle: "Done",
         leftUnrunTitle:
-          "The project folder is still empty — this command was not run, because the box agreeing to it was not ticked:",
+          "The project folder is still empty. This command did not run, because its box was not ticked:",
         leftUnrunHow:
           "Run it yourself in {{root}}, or apply this blueprint again and tick the box.",
         stepDone: "Done",
         stepAlreadyTrue: "Already true",
-        stepNotRun: "Not run — {{why}}",
-        stepFailed: "Failed — {{why}}",
+        stepNotRun: "Not run: {{why}}",
+        stepFailed: "Failed: {{why}}",
         close: "Close",
         action: {
           register_project: "Register the project “{{name}}” at {{root}}",
@@ -774,7 +774,7 @@ export default {
       deleteData: "Also delete its data directory",
       plan: {
         title: "Install {{name}}",
-        unsigned: "Nobody has vouched for this — installing from a local folder is never signed.",
+        unsigned: "Nobody has vouched for this. An install from a local folder is never signed.",
         homepage: "Homepage: {{url}}",
         permissionsTitle: "This extension will:",
         apiRead: "Call the daemon API to read",
@@ -782,7 +782,7 @@ export default {
         network: "Be reachable from: {{reach}}",
         filesystem: "Needs access to: {{reach}}",
         signsIn:
-          "Signs in as {{account}} — the password is read from the OS keyring when its pool starts and is never written to disk.",
+          "Signs in as {{account}}. The password is read from the OS keyring when its pool starts and is never written to disk.",
         site: "Runs on {{domain}} (pool {{pool}})",
         database: "Administers {{database}}",
         ports: "Wants port “{{name}}”: {{wanted}}",

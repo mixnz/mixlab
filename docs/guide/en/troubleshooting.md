@@ -2,7 +2,7 @@
 title = "When something is wrong"
 slug = "troubleshooting"
 order = 14
-summary = "mix doctor first, then the four commands that answer the questions people actually have — and one file that holds everything a bug report needs."
+summary = "mix doctor first, then the four commands that answer the questions people actually have, and one file that holds everything a bug report needs."
 +++
 
 # When something is wrong
@@ -68,8 +68,8 @@ not trusted, `mix doctor --repair` is what puts it back.
 mix runtime resolve php
 ```
 
-The version this directory gets, **and which of the four sources decided it** — which is the half
-you want when the answer is not the one you expected.
+The version this directory gets, **and which of the four sources decided it**. That second half is
+what you want when the answer is not the one you expected.
 
 ## Reading the logs
 
@@ -81,7 +81,7 @@ mix service logs mariadb@main -n 200
 `--follow` survives the service crashing and being restarted: what is being followed is the service,
 not one run of its process. The daemon's own log is `logs/daemon.log` inside MixEngine's home.
 
-For a long operation — an install, a blueprint apply — the job is where to look:
+For a long operation, such as an install or a blueprint apply, the job is where to look:
 
 ```bash
 mix job list
@@ -97,7 +97,7 @@ as a result, and this says so rather than pretending output was lost.
 
 **A port is already in use.** Something else on your machine has it. `mix service create --port`
 picks another for a new service; for one that exists, delete it and create it again on a different
-port — the data directory is kept.
+port. The data directory is kept.
 
 **The daemon will not start.** Read `logs/daemon.log` in the home. `mix status --no-autostart` asks
 whether one is running without starting one, which is the right question when you are diagnosing
@@ -125,8 +125,8 @@ cache     90 MiB    `mix cleanup` — 90 MiB in 12 file(s)
 other     310 MiB   packages, generated config, the database
 ```
 
-`mix cleanup` takes back the last two and nothing else. It removes rotated log files —
-`daemon.log.1`, a service's `current.log.2` — and empties the download cache. It does not touch the
+`mix cleanup` takes back the last two and nothing else. It removes rotated log files
+(`daemon.log.1`, a service's `current.log.2`) and empties the download cache. It does not touch the
 log files being written right now, this home's crash reports, your databases, your installed
 runtimes or your certificates: it matches file names rather than sweeping the home, so there is no
 argument you can give it that would reach them.
@@ -137,13 +137,14 @@ advance, which is how a script says yes.
 It refuses while another job is running, because emptying the cache would delete the file a download
 is resuming from. Wait for the job, or cancel it with `mix job cancel <id>`.
 
-To free more than that: `mix runtime list` and `mix runtime uninstall <kind>@<version>` are what
-reclaim `runtimes/`, and `mix package list` and `mix package uninstall <name>` most of *other*.
+To free more than that: `mix runtime list` and `mix runtime uninstall <runtime> <version>` are what
+reclaim `runtimes/`, and `mix package list` and `mix package uninstall <package> <version>` most of
+*other*.
 
 ## When MixLab itself hits a bug
 
 If the daemon runs into a bug in its own code, it writes a small file into `logs/crashes/` inside
-MixEngine's home. `mix doctor` tells you one is there — as a note, never as a problem, so it does
+MixEngine's home. `mix doctor` tells you one is there as a note, never as a problem, so it does
 not change the command's exit code.
 
 **What is in it**: where in MixLab's own source the bug happened, the function names around it,
@@ -151,11 +152,11 @@ which version was running and which operating system. That is the whole list.
 
 **What is not in it**: none of your file paths, none of your site or project names, and no
 passwords. That is true because of what the file is *allowed to hold* rather than because something
-was filtered out of it afterwards — so you can attach one to a public bug report as it is, without
+was filtered out of it afterwards. So you can attach one to a public bug report as it is, without
 reading it first.
 
 The message the crash printed is the one part that can mention a path of yours, so it goes to
-`logs/daemon.log` instead. That file is worth sending too, but send it knowingly — see below.
+`logs/daemon.log` instead. That file is worth sending too, but read it first. See below.
 
 **Nothing sends any of this anywhere.** There is no server to send it to. The twenty newest are kept
 and older ones are removed. If you would rather no such file was written at all, put this in
@@ -179,8 +180,8 @@ machine is, any crash reports, and the tail of the log. `--out` copies it somewh
 choosing.
 
 **What it deliberately leaves out is named in the archive itself**, so nobody has to guess whether a
-missing section is a redaction or a failure. Open it and look before you send it anywhere — it is a
-plain archive, and it is yours.
+missing section is a redaction or a failure. It is a plain archive: open it and look before you send
+it anywhere.
 
 Every `mix` command also takes `--json`, which is often the fastest way to show somebody exactly
 what you saw.

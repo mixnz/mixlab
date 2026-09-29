@@ -4,13 +4,13 @@ slug = "index"
 order = 1
 summary = "Chạy PHP, Node, Python, Ruby, Go và Java ngay trên máy với đúng phiên bản bạn cần, có tên miền thật và HTTPS, không cần Docker."
 translation_of = "en/index.md"
-source_sha256 = "e91225d3f0ca6578cc4b78f40f4dec21816a3b1acad3958614b4a654d1660f0e"
+source_sha256 = "ecde9ceea649df86b90b485ecf083feb198fdd13cd022315d9d45607a772cb3d"
 +++
 
 # MixLab
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -31,7 +31,7 @@ thoát ngay khi xong việc.
 
 - [Cài đặt MixLab](./install.md): file cài cho hệ điều hành của bạn, và bộ cài đụng vào những gì
   trên máy.
-- [Site đầu tiên của bạn](./getting-started.md): từ máy vừa cài xong tới ổ khóa xanh trên trình
+- [Site đầu tiên của bạn](./getting-started.md): từ máy vừa cài xong tới ổ khoá xanh trên trình
   duyệt, mất khoảng năm phút.
 
 ## Cẩm nang
@@ -41,7 +41,7 @@ thoát ngay khi xong việc.
 - [Phiên bản PHP, Node, Python, Ruby, Go và Java](./runtimes.md): nhiều phiên bản cùng lúc, chọn
   theo từng thư mục.
 - [Máy chủ, cơ sở dữ liệu và bộ nhớ đệm](./services.md): những thứ dự án của bạn cần để chạy.
-- [Tên miền và ổ khóa](./domains-and-https.md): vì sao `blog.test` phân giải được, và ai ký chứng
+- [Tên miền và ổ khoá](./domains-and-https.md): vì sao `blog.test` phân giải được, và ai ký chứng
   chỉ cho nó.
 - [Cho điện thoại xem site của bạn](./sharing.md): mở một site ra mạng nội bộ, rồi đóng lại.
 - [Blueprint](./blueprints.md): ghi lại dự án gồm những gì, để dựng lại y hệt ở máy khác.
@@ -49,7 +49,7 @@ thoát ngay khi xong việc.
   chữ ký.
 - [MixLab xin quyền để làm gì](./permissions.md): từng hộp thoại xin quyền, và mỗi cái thay đổi
   gì trên máy.
-- [Giữ MixLab luôn mới](./updating.md): cập nhật do bạn quyết, có kiểm tra chữ ký, có chạy thử
+- [Cập nhật MixLab](./updating.md): cập nhật do bạn quyết, có kiểm tra chữ ký, có chạy thử
   trước.
 - [Gỡ MixLab](./uninstalling.md): và cách kiểm tra xem còn sót lại gì không.
 - [Khi có gì đó không ổn](./troubleshooting.md): chạy `mix doctor` trước đã.
@@ -63,7 +63,6 @@ thoát ngay khi xong việc.
 Mọi trang ở đây đều có bản tiếng Anh và bản tiếng Việt, và đều được phát hành thêm dưới dạng
 Markdown thuần tại một địa chỉ dễ đoán. Chính những trang này được biên dịch thẳng vào chương trình
 `mix`, nên `mix docs` vẫn trả lời được trên máy không có mạng và không có daemon nào đang chạy.
-Đó thường là đúng lúc bạn cần đọc tài liệu nhất.
 
 MixLab chạy trên Windows, macOS và Linux, và mọi trang ở đây đúng cho cả ba. Chỗ nào một hệ điều
 hành thật sự khác, trang đó sẽ nói rõ đang nói về hệ nào.

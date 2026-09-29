@@ -2,7 +2,7 @@
 title = "Keeping MixLab current"
 slug = "updating"
 order = 12
-summary = "Updates are opt-in, checked against a signature, and rehearsed before anything is replaced — and one binary is deliberately never replaced this way."
+summary = "Updates are opt-in, checked against a signature, and rehearsed before anything is replaced. One binary is deliberately never replaced this way."
 +++
 
 # Keeping MixLab current
@@ -17,16 +17,15 @@ mix self-update --check
 mix self-update
 ```
 
-`--check` prints what is available — the version, the size, and what changed — and installs nothing.
+`--check` prints what is available (the version, the size, and what changed) and installs nothing.
 Without it, the same information is shown and then you are asked.
 
 ## Updates are never silent
 
 An update restarts the services you are running. That makes it a thing you choose, not a thing that
 happens to you while you are working, so **nothing is ever installed without being asked**. The
-daemon does check quietly — at start, and on a daily clock — so that `mix status` can tell you an
-update exists, and both checks fail silently: a machine with no network is not a machine with a
-problem.
+daemon does check quietly, at start and once a day, so that `mix status` can tell you an
+update exists, and both checks fail silently when there is no network.
 
 `--yes` answers the question in advance, for a script with nobody at the keyboard.
 
@@ -87,5 +86,5 @@ The Windows installer is updated by `mix self-update` in place.
 ## Versions
 
 MixLab uses semantic versioning, one version across everything it ships. Before 1.0 the API may
-break between minor versions, and each break is listed in the changelog — which is what
+break between minor versions, and each break is listed in the changelog. That is what
 `mix self-update --check` prints before it asks.

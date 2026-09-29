@@ -7,7 +7,7 @@ const dbVi: DbDict = {
     newSqliteFileDialogTitle: "File database SQLite mới",
     allFilesFilter: "Tất cả file",
     testingTunnel: "Đang kiểm tra...",
-    tunnelOk: "\u2713 Tunnel OK \u2014 Xác thực SSH thành công",
+    tunnelOk: "\u2713 Tunnel OK: xác thực SSH thành công",
     tunnelFailed: "\u2717 {{error}}",
     connecting: "Đang kết nối...",
     handoffNeedsPassword: "Nhập mật khẩu để kết nối.",
@@ -30,7 +30,7 @@ const dbVi: DbDict = {
     kindClickhouse: "ClickHouse",
     kindMssql: "SQL Server",
     workspaceUnavailable:
-      "Đã kết nối {{kind}}. Bản MixLab này chưa duyệt được — chưa có workspace cho loại cơ sở dữ liệu này.",
+      "Đã kết nối {{kind}}. Bản MixLab này chưa duyệt được vì chưa có workspace cho loại cơ sở dữ liệu này.",
     kindUnknown: "Không rõ",
     sqlitePathLabel: "File database",
     sqlitePathPlaceholder: "Đường dẫn tới file .db hoặc .sqlite",
@@ -50,7 +50,7 @@ const dbVi: DbDict = {
     // bật protected mode và cắt kết nối thay vì trả lời — người dùng chỉ thấy "broken pipe". SSH
     // chỉ giúp được khi tunnel đi tới đúng máy đang chạy Redis, tức là host ở trên.
     redisNoPasswordWarning:
-      "Chưa nhập mật khẩu: nếu server bật protected mode — mặc định của Redis khi người dùng default chưa có mật khẩu — nó chỉ nhận kết nối đến từ chính máy nó và cắt mọi kết nối khác, hiện ra thành “Redis: broken pipe”. Hãy đặt mật khẩu trên server (requirepass), hoặc đi vào từ chính máy đó: mở SSH tới máy đang chạy Redis và để host ở trên là 127.0.0.1.",
+      "Chưa nhập mật khẩu: nếu server bật protected mode (mặc định của Redis khi người dùng default chưa có mật khẩu), nó chỉ nhận kết nối đến từ chính máy nó và cắt mọi kết nối khác, hiện ra thành “Redis: broken pipe”. Đặt mật khẩu trên server (requirepass), hoặc đi vào từ chính máy đó: mở SSH tới máy đang chạy Redis và để host ở trên là 127.0.0.1.",
     connectionMethodLegend: "Phương thức kết nối",
     methodTcpIp: "TCP/IP trực tiếp",
     methodSsh: "SSH tunnel",
@@ -80,7 +80,7 @@ const dbVi: DbDict = {
     file: "File",
     showPassword: "Hiện mật khẩu",
     hidePassword: "Ẩn mật khẩu",
-    sqliteOpenedDirectly: "File được mở thẳng trên máy này — không có gì để định tuyến hay tunnel.",
+    sqliteOpenedDirectly: "File được mở thẳng trên máy này, nên không cần định tuyến hay tunnel.",
     authPasswordHint: "Mật khẩu của tài khoản SSH",
     authPrivateKeyHint: "Một file key, và passphrase nếu có",
     route: "Đường đi",
@@ -108,7 +108,7 @@ const dbVi: DbDict = {
     markReadOnly: "Đánh dấu chỉ đọc",
     allowWrites: "Cho phép ghi",
     pinnedTooltip: "Đã ghim",
-    savedItemTooltip: "Bấm để sửa \u00b7 bấm đúp để kết nối \u00b7 chuột phải để xem tùy chọn",
+    savedItemTooltip: "Bấm để sửa \u00b7 bấm đúp để kết nối \u00b7 chuột phải để xem tuỳ chọn",
   },
   sql: {
     noTables: "Không có bảng nào",
@@ -124,16 +124,16 @@ const dbVi: DbDict = {
     statsTab: "Thống kê",
     queryTab: "Truy vấn",
     searchTablesPlaceholder: "Tìm bảng...",
-    followedTableHint: "Mở từ một khóa ngoại — giữ ở đây cho tới khi bạn chọn bảng khác",
+    followedTableHint: "Mở từ một khoá ngoại. Bảng giữ ở đây cho tới khi bạn chọn bảng khác",
     reloadTables: "Tải lại danh sách bảng",
     addTable: "Tạo bảng mới",
-    addTableSystem: "{{database}} là cơ sở dữ liệu hệ thống — không thể tạo bảng mới",
-    systemTable: "{{database}} là cơ sở dữ liệu hệ thống — không thể đổi tên hay xóa bảng trong đó",
+    addTableSystem: "{{database}} là cơ sở dữ liệu hệ thống, không tạo bảng mới được",
+    systemTable: "{{database}} là cơ sở dữ liệu hệ thống, không đổi tên hay xoá bảng trong đó được",
     renameTable: "Đổi tên",
-    dropTable: "Xóa bảng",
+    dropTable: "Xoá bảng",
     renameTableTitle: "Đổi tên bảng {{table}}",
-    dropTableTitle: "Xóa bảng?",
-    dropTableMessage: "Xóa {{table}} cùng toàn bộ dữ liệu trong đó? Thao tác này không thể hoàn tác.",
+    dropTableTitle: "Xoá bảng?",
+    dropTableMessage: "Xoá {{table}} cùng toàn bộ dữ liệu trong đó? Thao tác này không thể hoàn tác.",
     resizeSidebar: "Thay đổi kích thước sidebar",
     resizeSidebarTooltip: "Kéo để thay đổi kích thước, bấm đúp để vừa khít",
     selectTablePrompt: "Chọn một bảng để xem dữ liệu.",
@@ -150,7 +150,7 @@ const dbVi: DbDict = {
     saving: "Đang áp dụng...",
     addColumn: "Thêm cột",
     editColumn: "Sửa cột này",
-    dropColumn: "Xóa cột này",
+    dropColumn: "Xoá cột này",
     noColumns: "Không có cột nào.",
     filterColumns: "Tìm cột...",
     noColumnsMatch: "Không có cột nào khớp.",
@@ -164,17 +164,17 @@ const dbVi: DbDict = {
     yes: "CÓ",
     no: "KHÔNG",
     none: "—",
-    primaryTooltip: "Thuộc khóa chính",
+    primaryTooltip: "Thuộc khoá chính",
     uniqueTooltip: "Cột đầu tiên của một unique index",
     indexTooltip: "Cột đầu tiên của một index",
     autoIncrementTooltip: "Máy chủ tự gán giá trị này",
     expressionTooltip: "Biểu thức máy chủ chạy cho mỗi dòng mới, không phải chuỗi được lưu",
-    generatedTooltip: "Cột generated — biểu thức của nó không được đọc ở đây, nên chỉ có thể xóa",
-    dropColumnTitle: "Xóa cột?",
-    dropColumnMessage: "Xóa {{column}} cùng toàn bộ dữ liệu trong đó? Thao tác này không thể hoàn tác.",
+    generatedTooltip: "Cột generated. Biểu thức của nó không được đọc ở đây, nên chỉ xoá được",
+    dropColumnTitle: "Xoá cột?",
+    dropColumnMessage: "Xoá {{column}} cùng toàn bộ dữ liệu trong đó? Thao tác này không thể hoàn tác.",
     addIndex: "Thêm index",
     editIndex: "Sửa index này",
-    dropIndex: "Xóa index này",
+    dropIndex: "Xoá index này",
     noIndexes: "Không có index nào.",
     indexName: "Tên",
     indexKind: "Loại",
@@ -187,9 +187,9 @@ const dbVi: DbDict = {
     kindFulltext: "FULLTEXT",
     kindSpatial: "SPATIAL",
     kindIndex: "INDEX",
-    functionalIndexTooltip: "Index này dựa trên biểu thức, không được đọc ở đây — chỉ có thể xóa",
-    dropIndexTitle: "Xóa index?",
-    dropIndexMessage: "Xóa index {{index}}? Dữ liệu trong bảng không bị ảnh hưởng.",
+    functionalIndexTooltip: "Index này dựa trên biểu thức không được đọc ở đây, nên chỉ xoá được",
+    dropIndexTitle: "Xoá index?",
+    dropIndexMessage: "Xoá index {{index}}? Dữ liệu trong bảng không bị ảnh hưởng.",
     skipIndexesTitle: "Skip index",
     addSkipIndex: "Thêm skip index",
     noSkipIndexes: "Không có skip index nào.",
@@ -197,11 +197,11 @@ const dbVi: DbDict = {
     skipIndexExpr: "Biểu thức",
     skipIndexType: "Loại",
     skipIndexGranularity: "Granularity",
-    dropSkipIndexTitle: "Xóa skip index này?",
+    dropSkipIndexTitle: "Xoá skip index này?",
     dropSkipIndexMessage:
-      'Thao tác này xóa skip index "{{index}}". Nó chỉ giúp scan nhanh hơn — không mất dữ liệu nào.',
+      'Thao tác này xoá skip index "{{index}}". Nó chỉ giúp scan nhanh hơn, nên không mất dữ liệu nào.',
     rebuildEngineNotAllowed:
-      "MixLab mới verify việc đổi sorting key trên MergeTree, ReplacingMergeTree, SummingMergeTree và AggregatingMergeTree — engine của bảng này là {{engine}}.",
+      "MixLab mới verify việc đổi sorting key trên MergeTree, ReplacingMergeTree, SummingMergeTree và AggregatingMergeTree. Engine của bảng này là {{engine}}.",
   },
   // Tab Thống kê, dùng chung cho cả hai workspace: mỗi bảng/collection của database đang chọn
   // chiếm bao nhiêu dung lượng. MySQL đếm dòng trong bảng, MongoDB đếm document trong collection,
@@ -229,7 +229,7 @@ const dbVi: DbDict = {
     noTablesMatch: "Không có bảng nào khớp.",
     noCollectionsMatch: "Không có collection nào khớp.",
     estimateNote:
-      "Số dòng và kích thước dòng trung bình là ước lượng server tự lưu, không phải số đếm chính xác — với bảng InnoDB sai số có thể khá lớn.",
+      "Số dòng và kích thước dòng trung bình là ước lượng server tự lưu, không phải số đếm chính xác. Với bảng InnoDB, sai số có thể khá lớn.",
     sortNone: "Sắp xếp theo {{column}}",
     sortAsc: "Đang sắp theo {{column}}, nhỏ nhất trước",
     sortDesc: "Đang sắp theo {{column}}, lớn nhất trước",
@@ -269,9 +269,9 @@ const dbVi: DbDict = {
     engineHint: "Engine không đổi được sau khi bảng đã tạo.",
     collationPlaceholder: "(theo mặc định của cơ sở dữ liệu)",
     columnHint:
-      "Bảng được tạo với một cột id int(11) unsigned AUTO_INCREMENT làm khóa chính. Các cột còn lại thêm ở tab Cấu trúc.",
+      "Bảng được tạo với một cột id int(11) unsigned AUTO_INCREMENT làm khoá chính. Các cột còn lại thêm ở tab Cấu trúc.",
     columnHintPostgres:
-      "Bảng được tạo với một cột id integer GENERATED BY DEFAULT AS IDENTITY làm khóa chính. Các cột còn lại thêm ở tab Cấu trúc. Đặt tên dạng schema.table để tạo ngoài public.",
+      "Bảng được tạo với một cột id integer GENERATED BY DEFAULT AS IDENTITY làm khoá chính. Các cột còn lại thêm ở tab Cấu trúc. Đặt tên dạng schema.table để tạo ngoài public.",
     columnHintClickhouse:
       "Bảng được tạo với một cột id UInt64 và sorting key rỗng (ORDER BY tuple()). Các cột còn lại thêm ở tab Cấu trúc.",
     errorName: "Bảng cần có tên.",
@@ -303,7 +303,7 @@ const dbVi: DbDict = {
     defaultExpressionHint:
       "CURRENT_TIMESTAMP và NOW() được nhận ra sẵn; tích vào đây cho các biểu thức khác, ví dụ uuid().",
     identityLockedMssql:
-      "SQL Server không thể đổi type, nullable hay collation của cột IDENTITY — chỉ đổi được tên và comment. Xoá rồi thêm lại cột nếu cần đổi phần còn lại.",
+      "SQL Server không thể đổi type, nullable hay collation của cột IDENTITY, chỉ đổi được tên và comment. Xoá rồi thêm lại cột nếu cần đổi phần còn lại.",
     errorName: "Cột cần có tên.",
     errorType: "Cột cần có kiểu dữ liệu.",
     errorTypeArg: "{{type}} cần có danh sách giá trị, ví dụ 'a','b'.",
@@ -317,13 +317,13 @@ const dbVi: DbDict = {
     editTitle: "Sửa index {{index}}",
     name: "Tên",
     namePlaceholder: "(lấy theo tên cột đầu tiên)",
-    nameFixed: "Khóa chính luôn có tên là PRIMARY",
+    nameFixed: "Khoá chính luôn có tên là PRIMARY",
     kind: "Loại",
     kindIndex: "Index thường",
     kindUnique: "Unique",
     kindFulltext: "Full-text",
     kindSpatial: "Spatial",
-    kindPrimary: "Khóa chính",
+    kindPrimary: "Khoá chính",
     method: "Cấu trúc",
     methodDefault: "(theo storage engine)",
     columns: "Các cột",
@@ -332,10 +332,10 @@ const dbVi: DbDict = {
     removeColumn: "Bỏ cột này",
     prefixLength: "Độ dài prefix",
     prefixPlaceholder: "cả cột",
-    prefixTooltip: "Chỉ index n ký tự đầu — bắt buộc với cột TEXT hoặc BLOB",
+    prefixTooltip: "Chỉ index n ký tự đầu. Bắt buộc với cột TEXT hoặc BLOB",
     comment: "Ghi chú",
     replaceNote:
-      "Không thể sửa index tại chỗ: index này sẽ được xóa và tạo lại trong cùng một câu lệnh.",
+      "Không thể sửa index tại chỗ: index này sẽ được xoá và tạo lại trong cùng một câu lệnh.",
     errorColumns: "Index cần ít nhất một cột.",
     errorDuplicateColumn: "{{column}} bị chọn hai lần.",
     submitAdd: "Thêm index",
@@ -351,7 +351,7 @@ const dbVi: DbDict = {
     type: "Loại",
     granularity: "Granularity",
     granularityHint:
-      "Granularity đếm theo granule (khối dữ liệu, mỗi khối bằng index_granularity của bảng — thường là 8192 dòng), không phải theo số dòng trực tiếp.",
+      "Granularity đếm theo granule (khối dữ liệu, mỗi khối bằng index_granularity của bảng, thường là 8192 dòng), không phải theo số dòng trực tiếp.",
     errorName: "Index phải có tên.",
     errorExpr: "Index cần một biểu thức để lọc theo.",
     saving: "Đang lưu…",
@@ -374,7 +374,7 @@ const dbVi: DbDict = {
     saving: "Đang rebuild…",
     submit: "Rebuild",
     leftoverWarning:
-      'Đã đổi xong sorting key. Dọn bảng tạm "{{table}}" thất bại — bảng đó giữ dữ liệu cũ, tự xoá tay là an toàn.',
+      'Đã đổi xong sorting key. Dọn bảng tạm "{{table}}" thất bại. Bảng đó giữ dữ liệu cũ, xoá tay là an toàn.',
   },
   // Tab Truy vấn. Script được chạy lần lượt từng câu lệnh, và mỗi câu lệnh được báo đúng theo bản
   // chất của nó — một bảng kết quả, số dòng đã thay đổi, hoặc chỉ là đã chạy xong.
@@ -395,30 +395,30 @@ const dbVi: DbDict = {
     targetLabel: "Đang chạy trên",
     // Đủ ngắn để nằm gọn một dòng trong chip; phần còn lại nằm ở tooltip.
     noDatabase: "Chưa chọn cơ sở dữ liệu",
-    noDatabaseHint: "Hãy viết db.table trong câu lệnh, hoặc chọn cơ sở dữ liệu ở thanh trên.",
+    noDatabaseHint: "Viết db.table trong câu lệnh, hoặc chọn cơ sở dữ liệu ở thanh trên.",
     resizeResults: "Kéo để đổi chiều cao phần kết quả",
     // Script chạy xong nhưng bên trong không có gì để chạy: toàn chú thích, hoặc một dấu chấm phẩy lạc.
     noStatements: "Không có câu lệnh nào để chạy.",
-    noStatementsHint: "Phần được gửi đi chỉ có chú thích — không có gì để yêu cầu máy chủ làm.",
+    noStatementsHint: "Phần được gửi đi chỉ có chú thích, nên máy chủ không có gì để làm.",
     resultLabel: "#{{n}} {{verb}}",
     duration: "{{ms}} ms",
     rowCount: "{{n}} dòng",
-    truncated: "Chỉ {{n}} dòng đầu — thêm LIMIT để biết chắc mình đang xem gì",
+    truncated: "Chỉ {{n}} dòng đầu. Thêm LIMIT để biết chắc mình đang xem gì",
     affected: "{{n}} dòng đã thay đổi",
     lastInsertId: "id vừa thêm {{id}}",
     ok: "OK",
     noRows: "Kết quả không có dòng nào.",
-    statementFailed: "Câu lệnh này lỗi — các câu lệnh sau nó không chạy.",
+    statementFailed: "Câu lệnh này lỗi, các câu lệnh sau nó không chạy.",
     // Các hành động ở thanh dưới, đều là chuyện khung kết quả chiếm bao nhiêu phần của tab: ẩn đi
     // để trả cửa sổ lại cho script, hoặc nhấc ra toàn cửa sổ — cách để đọc một lượt nhiều câu
     // SELECT mà không phải chia nhau một khung vốn đã hẹp.
     hideResults: "Ẩn phần kết quả",
     showResults: "Hiện phần kết quả",
-    resultsEmpty: "Chưa chạy gì cả — chưa có kết quả để ẩn.",
-    resultsZoomed: "Kết quả đang nằm trên cửa sổ — đóng lại trước đã.",
+    resultsEmpty: "Chưa chạy gì nên chưa có kết quả để ẩn.",
+    resultsZoomed: "Kết quả đang phủ lên cửa sổ. Đóng lại trước đã.",
     zoom: "Mở rộng kết quả",
-    zoomEmpty: "Chưa chạy gì cả — chưa có kết quả để mở rộng.",
-    zoomShut: "Kết quả đang ẩn — hiện lên trước đã.",
+    zoomEmpty: "Chưa chạy gì nên chưa có kết quả để mở rộng.",
+    zoomShut: "Kết quả đang ẩn. Hiện lên trước đã.",
     zoomTitle: "Kết quả",
     // Chip trên thanh công cụ, và điều xảy ra khi vẫn cố ghi.
     readOnly: "Chỉ đọc",
@@ -427,7 +427,7 @@ const dbVi: DbDict = {
     ddlOnlyReadOnlyHint:
       "INSERT/UPDATE/DELETE/TRUNCATE chạy được ở đây. Đổi bảng và database vẫn phải qua Structure tab.",
     ddlBlocked:
-      "Chưa gửi gì cả: Query tab này chỉ nhận INSERT/UPDATE/DELETE/TRUNCATE gõ tay — thay đổi khác phải qua Structure tab.",
+      "Chưa gửi gì cả: Query tab này chỉ nhận INSERT/UPDATE/DELETE/TRUNCATE gõ tay. Thay đổi khác phải qua Structure tab.",
     // Cửa chặn trước một UPDATE, DELETE hay TRUNCATE không nói rõ dòng nào.
     unguardedTitle: "Sửa toàn bộ các dòng?",
     unguardedOne: "{{verb}} trên {{table}} không nói rõ dòng nào, nên nó áp dụng cho tất cả.",
@@ -449,8 +449,8 @@ const dbVi: DbDict = {
     // Tooltip của tiêu đề cột, nói xem bấm thêm một cái nữa thì được gì — và nói luôn chỗ dễ hiểu
     // nhầm nhất. Sắp ở đây chỉ sắp lại những dòng đã về: một kết quả bị cắt ở 1000 dòng, sắp giảm
     // dần, không cho ra giá trị lớn nhất của bảng.
-    sortAsc: "Sắp theo {{column}}, nhỏ trước — chỉ những dòng đã trả về",
-    sortDesc: "Sắp theo {{column}}, lớn trước — chỉ những dòng đã trả về",
+    sortAsc: "Sắp theo {{column}}, nhỏ trước (chỉ những dòng đã trả về)",
+    sortDesc: "Sắp theo {{column}}, lớn trước (chỉ những dòng đã trả về)",
     sortNone: "Trở lại thứ tự máy chủ đã gửi",
     findPlaceholder: "Lọc các dòng này...",
     findCount: "{{n}} / {{m}} dòng",
@@ -468,7 +468,7 @@ const dbVi: DbDict = {
     copyAllJson: "Chép cả kết quả dạng JSON",
     expandCell: "Mở ô này",
     // Nói ra khi script được gửi đi kèm một mức trần mà nó không tự viết.
-    limitAdded: "Đã thêm LIMIT {{limit}} vào {{n}} câu lệnh trong số này. Hãy tự viết LIMIT nếu muốn mức khác.",
+    limitAdded: "Đã thêm LIMIT {{limit}} vào {{n}} câu lệnh trong số này. Tự viết LIMIT nếu muốn mức khác.",
     // Câu truy vấn đã lưu, gõ tên là gợi ý lại.
     snippets: "Đã lưu",
     snippetHint: "Các câu truy vấn đã lưu. Giữ lại câu này dưới một cái tên, hoặc gõ tên để lấy lại một câu cũ.",
@@ -476,7 +476,7 @@ const dbVi: DbDict = {
     snippetNamePlaceholder: "Đặt tên cho câu này...",
     saveSnippet: "Lưu",
     snippetSaving: "Đang lưu...",
-    snippetNothingToSave: "Trình soạn thảo đang trống — chưa có gì để lưu, nhưng những câu đã lưu vẫn nằm bên dưới.",
+    snippetNothingToSave: "Trình soạn thảo đang trống nên chưa có gì để lưu. Những câu đã lưu trước đó nằm bên dưới.",
     snippetsEmpty: "Chưa lưu câu nào. Đặt tên cho một câu ở đây, rồi gõ tên đó là nó sẽ hiện ra gợi ý lại.",
     snippetDelete: "Bỏ {{name}}",
     snippetDeleteConfirm: "Bỏ nhé?",
@@ -528,7 +528,7 @@ const dbVi: DbDict = {
   // riêng nhãn toán tử thì mỗi bên tự đặt, ở `sqlTable.op.*` và `noSqlTable.op.*`.
   filterBar: {
     addFilter: "Thêm bộ lọc",
-    removeFilter: "Xóa bộ lọc này",
+    removeFilter: "Xoá bộ lọc này",
     enableFilter: "Áp dụng bộ lọc này",
     apply: "Áp dụng",
     field: "Trường cần lọc",
@@ -551,18 +551,18 @@ const dbVi: DbDict = {
     shortcutFilter: "Nhảy tới thanh lọc",
     insertRows: "Thêm dòng mới",
     cloneRows: "Nhân bản các dòng đã chọn",
-    deleteRows: "Xóa các dòng đã chọn",
-    deletingRows: "Đang xóa...",
-    deleteRowsTitle: "Xóa các dòng?",
-    deleteRowsMessage: "Xóa {{n}} dòng đã chọn? Thao tác này không thể hoàn tác.",
-    deleteAllRowsOption: "Xóa toàn bộ {{total}} dòng của bảng, không chỉ các dòng đang chọn",
+    deleteRows: "Xoá các dòng đã chọn",
+    deletingRows: "Đang xoá...",
+    deleteRowsTitle: "Xoá các dòng?",
+    deleteRowsMessage: "Xoá {{n}} dòng đã chọn? Thao tác này không thể hoàn tác.",
+    deleteAllRowsOption: "Xoá toàn bộ {{total}} dòng của bảng, không chỉ các dòng đang chọn",
     resetAutoIncrementOption: "Đặt lại {{column}} để dòng thêm mới bắt đầu từ 1",
     // `->` for the arrow, as everywhere else in the app. Shown in a `Tooltip` of the app's own
     // rather than through `title`, so it is drawn in the app's font like the grid around it.
-    foreignKey: "Khóa ngoại -> {{table}}.{{column}}",
-    sortNone: "{{column}} — nhấn để sắp xếp giảm dần",
-    sortDesc: "{{column}} — đang giảm dần, nhấn để sắp xếp tăng dần",
-    sortAsc: "{{column}} — đang tăng dần, nhấn để bỏ sắp xếp",
+    foreignKey: "Khoá ngoại -> {{table}}.{{column}}",
+    sortNone: "{{column}}: nhấn để sắp xếp giảm dần",
+    sortDesc: "{{column}}: đang giảm dần, nhấn để sắp xếp tăng dần",
+    sortAsc: "{{column}}: đang tăng dần, nhấn để bỏ sắp xếp",
     // Menu chuột phải trên vùng dữ liệu. Các mục thao tác theo dòng có hai cách viết: một cho dòng
     // dưới con trỏ, một cho nhiều dòng đang chọn — `t()` không có quy tắc số nhiều, và đặt {{n}}
     // vào một chuỗi duy nhất thì câu cho một dòng đọc không xuôi.
@@ -582,7 +582,7 @@ const dbVi: DbDict = {
     copyAsJson: "Sao chép dòng dạng JSON",
     copyRowsAsJson: "Sao chép {{n}} dòng dạng JSON",
     expandCell: "Mở ô này",
-    // Nghĩa tiếng Việt đứng trước, ký hiệu/từ khóa SQL trong ngoặc — người dùng đọc được ngay
+    // Nghĩa tiếng Việt đứng trước, ký hiệu/từ khoá SQL trong ngoặc — người dùng đọc được ngay
     // toán tử làm gì mà vẫn thấy đúng thứ câu lệnh sẽ chạy.
     op: {
       eq: "Bằng (=)",
@@ -619,16 +619,16 @@ const dbVi: DbDict = {
     inserting: "Đang thêm...",
     setNull: "Ghi NULL vào ô này",
     unsetNull: "Bỏ ghi NULL vào ô này",
-    notNullTooltip: "{{column}} là NOT NULL — không được để trống",
+    notNullTooltip: "{{column}} là NOT NULL, không được để trống",
     notNullMarker: "NOT NULL",
     autoValue: "AUTO",
     autoTooltip: "Máy chủ tự gán giá trị này",
     generatedValue: "GENERATED",
-    generatedTooltip: "Cột generated — máy chủ tự tính giá trị này",
+    generatedTooltip: "Cột generated. Máy chủ tự tính giá trị này",
     defaultTooltip: "Để trống thì cột này dùng giá trị mặc định: {{value}}",
     errorNotNull: "Dòng {{n}}: {{column}} là NOT NULL, không thể đặt thành NULL.",
     errorRequired: "Dòng {{n}}: {{column}} là NOT NULL, không có giá trị mặc định, cần nhập giá trị.",
-    transactionNote: "Tất cả các dòng được thêm cùng nhau — một dòng lỗi thì không dòng nào được lưu.",
+    transactionNote: "Tất cả các dòng được thêm cùng nhau. Một dòng lỗi thì không dòng nào được lưu.",
   },
   insertDocuments: {
     title: "Thêm document vào {{collection}}",
@@ -641,7 +641,7 @@ const dbVi: DbDict = {
     inserting: "Đang thêm...",
     idNote: "_id đã được điền sẵn và có thể sửa; các property còn lại bạn tự thêm vào.",
     orderedNote:
-      "Các document được thêm lần lượt, không phải một transaction — nếu một document lỗi thì những document trước đó đã được lưu.",
+      "Các document được thêm lần lượt, không phải một transaction. Nếu một document lỗi thì những document trước đó đã được lưu.",
     errorDuplicateId: "Document {{a}} và {{b}} có cùng _id.",
   },
   mongo: {
@@ -654,7 +654,7 @@ const dbVi: DbDict = {
     createDatabase: "Tạo cơ sở dữ liệu mới",
     reloadDatabases: "Tải lại danh sách cơ sở dữ liệu",
     createDatabaseHint:
-      "MongoDB không có cơ sở dữ liệu rỗng: tên này chỉ được giữ tạm ở đây cho tới khi bạn tạo collection đầu tiên — lúc đó server mới thật sự lưu nó.",
+      "MongoDB không có cơ sở dữ liệu rỗng: tên này chỉ được giữ tạm ở đây cho tới khi bạn tạo collection đầu tiên. Lúc đó server mới thật sự lưu nó.",
     databaseNameInvalid:
       "Tên cơ sở dữ liệu không được chứa dấu cách hay các ký tự / \\ . \" $ * < > : | ?",
     databaseExists: "Đã có cơ sở dữ liệu tên {{database}}.",
@@ -663,15 +663,15 @@ const dbVi: DbDict = {
     searchCollectionsPlaceholder: "Tìm collection...",
     reloadCollections: "Tải lại danh sách collection",
     addCollection: "Tạo collection mới",
-    addCollectionSystem: "{{database}} là cơ sở dữ liệu hệ thống — không thể tạo collection mới",
+    addCollectionSystem: "{{database}} là cơ sở dữ liệu hệ thống, không tạo collection mới được",
     systemCollection:
-      "{{database}} là cơ sở dữ liệu hệ thống — không thể đổi tên hay xóa collection trong đó",
+      "{{database}} là cơ sở dữ liệu hệ thống, không đổi tên hay xoá collection trong đó được",
     renameCollection: "Đổi tên",
-    dropCollection: "Xóa collection",
+    dropCollection: "Xoá collection",
     renameCollectionTitle: "Đổi tên collection {{collection}}",
-    dropCollectionTitle: "Xóa collection?",
+    dropCollectionTitle: "Xoá collection?",
     dropCollectionMessage:
-      "Xóa {{collection}} cùng toàn bộ document trong đó? Thao tác này không thể hoàn tác.",
+      "Xoá {{collection}} cùng toàn bộ document trong đó? Thao tác này không thể hoàn tác.",
     resizeSidebar: "Thay đổi kích thước sidebar",
     resizeSidebarTooltip: "Kéo để thay đổi kích thước, bấm đúp để vừa khít",
     selectCollectionPrompt: "Chọn một collection để xem document.",
@@ -722,12 +722,12 @@ const dbVi: DbDict = {
     addProperty: "Thêm property",
     addItem: "Thêm item",
     propertyNamePlaceholder: "Tên property",
-    deleteProperty: "Xóa property",
-    undoDeleteProperty: "Hoàn tác xóa",
-    deleteItem: "Xóa item",
+    deleteProperty: "Xoá property",
+    undoDeleteProperty: "Hoàn tác xoá",
+    deleteItem: "Xoá item",
     renameProperty: "Đổi tên property",
     confirmRename: "Xác nhận đổi tên",
-    cancelRename: "Hủy đổi tên",
+    cancelRename: "Huỷ đổi tên",
     showMore: "+{{n}} nữa...",
     collapse: "Thu gọn",
     expand: "Mở rộng",
@@ -735,10 +735,10 @@ const dbVi: DbDict = {
     saveError: "Lưu thất bại",
     selectTypePlaceholder: "Kiểu",
     maxDepthReached: "… (đã đạt độ sâu tối đa)",
-    discardChanges: "Hủy thay đổi",
+    discardChanges: "Huỷ thay đổi",
     savedFlash: "Đã lưu",
-    deleteDocument: "Xóa document",
-    confirmDeleteDocument: "Xóa document này? Không thể hoàn tác.",
+    deleteDocument: "Xoá document",
+    confirmDeleteDocument: "Xoá document này? Không thể hoàn tác.",
     collapseDocument: "Thu gọn document",
     expandDocument: "Mở rộng document",
     typeLabel: {
@@ -772,12 +772,12 @@ const dbVi: DbDict = {
     searchDatabasesPlaceholder: "Tìm cơ sở dữ liệu...",
     reloadDatabases: "Tải lại danh sách cơ sở dữ liệu",
     dataTab: "Key",
-    groupTab: "Xóa key",
-    // Redis không xóa được cả một tiền tố bằng một lệnh — keyspace vốn phẳng, `user:*` chỉ là một
-    // mẫu khớp trên đó — nên xóa một nhóm nghĩa là phải gọi tên từng key, và đây là danh sách đó.
-    listGroupKeys: "Liệt kê key để xóa",
+    groupTab: "Xoá key",
+    // Redis không xoá được cả một tiền tố bằng một lệnh — keyspace vốn phẳng, `user:*` chỉ là một
+    // mẫu khớp trên đó — nên xoá một nhóm nghĩa là phải gọi tên từng key, và đây là danh sách đó.
+    listGroupKeys: "Liệt kê key để xoá",
     keyPatternPlaceholder: "Mẫu key, ví dụ user:*",
-    keyPatternTooltip: "Mẫu glob của Redis — * khớp mọi thứ, ? một ký tự, [ab] một tập ký tự. Nhấn Enter để quét.",
+    keyPatternTooltip: "Mẫu glob của Redis: * khớp mọi thứ, ? một ký tự, [ab] một tập ký tự. Nhấn Enter để quét.",
     // Keyspace của Redis vốn phẳng; dấu phân cách chỉ là quy ước khi đặt tên key, nên dùng ký tự
     // nào để nhóm là do người dùng chọn.
     separatorLabel: "Nhóm key theo",
@@ -785,20 +785,20 @@ const dbVi: DbDict = {
     separatorFlatShort: "—",
     keyTreeLabel: "Danh sách key",
     noKeys: "Không có key nào",
-    noKeysInSlice: "Chưa có key nào khớp ở phần này — tải thêm để quét tiếp.",
+    noKeysInSlice: "Chưa có key nào khớp ở phần này. Tải thêm để quét tiếp.",
     reloadKeys: "Quét lại danh sách key",
     // Keyspace được duyệt bằng SCAN, không có số trang và cũng không có tổng số để chia trang.
     // Sidebar quét hết một lượt ngay từ đầu để danh sách sắp xếp được theo tên và giữ nguyên thứ
     // tự đó; những dòng dưới đây cho biết lượt quét đã đi tới đâu.
     scanningKeys: "Đang quét... {{n}} key",
     keysLoadedAll: "{{n}} key",
-    keysLoadedPartial: "Đã tải {{n}} key — keyspace vẫn còn nữa",
-    partialCountTooltip: "Số key đã đọc được dưới nhánh này — quét chưa xong nên có thể còn nữa.",
+    keysLoadedPartial: "Đã tải {{n}} key, keyspace vẫn còn nữa",
+    partialCountTooltip: "Số key đã đọc được dưới nhánh này. Quét chưa xong nên có thể còn nữa.",
     scanLimitNotice: "Đã dừng sớm để danh sách còn đọc được. Nâng trần số key, hoặc thu hẹp mẫu key, để xem phần còn lại theo đúng thứ tự.",
     // Trần cho lượt quét. Nhớ theo từng kết nối: con số phù hợp phụ thuộc vào server chứ không
     // phải vào ứng dụng.
     scanLimitLabel: "Trần số key",
-    scanLimitTooltip: "Đọc tối đa bao nhiêu key rồi dừng quét. Toàn bộ keyspace được đọc ngay từ đầu để danh sách giữ được thứ tự theo tên — trần càng cao thì mở càng lâu.",
+    scanLimitTooltip: "Đọc tối đa bao nhiêu key rồi dừng quét. Toàn bộ keyspace được đọc ngay từ đầu để danh sách giữ được thứ tự theo tên, nên trần càng cao thì mở càng lâu.",
     scanLimitShort: "{{n}}K",
     scanLimitOption: "Tối đa {{n}} key",
     // Các hàng đã có sẵn, chỉ giữ lại để sidebar không phải vẽ hàng nghìn hàng cùng lúc.
@@ -811,7 +811,7 @@ const dbVi: DbDict = {
   },
   redisValue: {
     loading: "Đang tải...",
-    deleting: "Đang xóa...",
+    deleting: "Đang xoá...",
     noExpiry: "Không hết hạn",
     expiresIn: "Hết hạn sau {{time}}",
     expired: "Key không còn tồn tại",
@@ -821,7 +821,7 @@ const dbVi: DbDict = {
     member: "Giá trị",
     value: "Giá trị",
     emptyValue: "Key này không chứa gì.",
-    keyGone: "Key này không còn tồn tại — đã bị xóa hoặc đã hết hạn.",
+    keyGone: "Key này không còn tồn tại. Nó đã bị xoá hoặc đã hết hạn.",
     unsupportedType: "Chưa hiển thị được giá trị kiểu {{type}} ở đây.",
     loadedOf: "Đã tải {{loaded}}/{{total}}",
     loadedCount: "Đã tải {{loaded}}",
@@ -833,25 +833,25 @@ const dbVi: DbDict = {
     viewRaw: "Thô",
     viewFormatted: "JSON",
     reload: "Tải lại giá trị",
-    deleteKey: "Xóa key",
-    deleteKeyTitle: "Xóa key?",
-    deleteKeyMessage: "Xóa {{key}} và toàn bộ dữ liệu bên trong? Thao tác này không thể hoàn tác.",
+    deleteKey: "Xoá key",
+    deleteKeyTitle: "Xoá key?",
+    deleteKeyMessage: "Xoá {{key}} và toàn bộ dữ liệu bên trong? Thao tác này không thể hoàn tác.",
   },
   redisGroup: {
     keyCount: "{{n}} key thuộc tiền tố này",
     // Danh sách này lấy từ lượt quét của sidebar, nên nếu lượt quét dừng sớm thì nó ít hơn số key
-    // thực có dưới tiền tố — cần nói rõ trước khi xóa bất cứ thứ gì.
+    // thực có dưới tiền tố — cần nói rõ trước khi xoá bất cứ thứ gì.
     partialNotice:
       "Lượt quét keyspace chưa xong, nên đây là những key đã đọc được dưới tiền tố này chứ chưa phải toàn bộ.",
     selectAll: "Chọn tất cả",
     filterPlaceholder: "Lọc trong danh sách này...",
-    deleteSelected: "Xóa mục đã chọn ({{n}})",
-    deleting: "Đang xóa... {{done}}/{{total}}",
+    deleteSelected: "Xoá mục đã chọn ({{n}})",
+    deleting: "Đang xoá... {{done}}/{{total}}",
     selectedCount: "Đã chọn {{selected}}/{{total}}",
     noKeys: "Không còn key nào dưới tiền tố này.",
     noMatches: "Không có key nào khớp bộ lọc.",
-    confirmTitle: "Xóa các key?",
-    confirmMessage: "Xóa {{n}} key thuộc {{prefix}}? Thao tác này không thể hoàn tác.",
+    confirmTitle: "Xoá các key?",
+    confirmMessage: "Xoá {{n}} key thuộc {{prefix}}? Thao tác này không thể hoàn tác.",
   },
   // Các công cụ dòng lệnh lo việc dump/restore. MixLab không đóng gói kèm: nó dùng công cụ có sẵn
   // trên máy, bản tự tải về, hoặc đường dẫn bạn chọn ở đây.
@@ -859,12 +859,12 @@ const dbVi: DbDict = {
     title: "Công cụ dump",
     intro:
       "Việc dump và restore do chính công cụ của MySQL/PostgreSQL/MongoDB đảm nhiệm. MixLab dùng bản nào tìm được, và có thể tự tải một bản riêng.",
-    mysqlSuite: "MySQL — mysqldump và mysql",
-    postgresSuite: "PostgreSQL — pg_dump và psql",
-    mongoSuite: "MongoDB — mongodump và mongorestore",
+    mysqlSuite: "MySQL: mysqldump và mysql",
+    postgresSuite: "PostgreSQL: pg_dump và psql",
+    mongoSuite: "MongoDB: mongodump và mongorestore",
     download: "Tải về",
     redownload: "Tải lại",
-    remove: "Xóa bản đã tải",
+    remove: "Xoá bản đã tải",
     choose: "Chọn file...",
     forget: "Dùng mặc định",
     working: "Đang xử lý...",
@@ -883,18 +883,18 @@ const dbVi: DbDict = {
     sourceSystem: "có sẵn",
     // Hiện thay cho nút tải, ở máy nào mà nhà cung cấp không phát hành bản tải được.
     noDownload:
-      "Không có bản tải nào cho máy này. Hãy cài bằng trình quản lý gói — mysql-client hoặc mariadb-client — hoặc chỉ cho MixLab một bản có sẵn ở dưới.",
+      "Không có bản tải nào cho máy này. Cài bằng trình quản lý gói (mysql-client hoặc mariadb-client), hoặc chỉ cho MixLab một bản có sẵn ở dưới.",
     // EDB có build binaries cho Windows và macOS, nhưng đã ngừng build cho Linux từ sau
     // PostgreSQL 10, nên đây là câu Linux thấy thay cho nút tải.
     noDownloadPostgres:
-      "Không có bản tải PostgreSQL client tools nào cho máy này. Hãy cài postgresql-client bằng trình quản lý gói, hoặc chỉ cho MixLab một bản có sẵn ở dưới.",
+      "Không có bản tải PostgreSQL client tools nào cho máy này. Cài postgresql-client bằng trình quản lý gói, hoặc chỉ cho MixLab một bản có sẵn ở dưới.",
   },
-  // Dump, restore và xóa cả một cơ sở dữ liệu — nhóm nút bên phải của thanh action trong sidebar.
+  // Dump, restore và xoá cả một cơ sở dữ liệu — nhóm nút bên phải của thanh action trong sidebar.
   dump: {
     dump: "Dump cơ sở dữ liệu này",
     restore: "Restore vào cơ sở dữ liệu này",
-    drop: "Xóa cơ sở dữ liệu này",
-    systemDatabase: "{{database}} là cơ sở dữ liệu hệ thống — không thể dump, restore hay xóa",
+    drop: "Xoá cơ sở dữ liệu này",
+    systemDatabase: "{{database}} là cơ sở dữ liệu hệ thống, không dump, restore hay xoá được",
     dumpTitle: "Dump {{database}}",
     modeAll: "Cả cấu trúc và dữ liệu",
     modeAllHint: "Toàn bộ: bảng, dữ liệu bên trong, và các routine đi kèm.",
@@ -907,22 +907,22 @@ const dbVi: DbDict = {
     archiveFilter: "Archive MongoDB",
     dumping: "Đang dump {{database}}...",
     restoring: "Đang restore vào {{database}}...",
-    dropping: "Đang xóa {{database}}...",
+    dropping: "Đang xoá {{database}}...",
     installing: "Đang tải công cụ...",
-    transferHint: "Cơ sở dữ liệu lớn có thể mất vài phút. Hãy để MixLab mở cho tới khi xong.",
+    transferHint: "Cơ sở dữ liệu lớn có thể mất vài phút. Giữ MixLab mở cho tới khi xong.",
     cancelTransfer: "Dừng",
     progressTables: "Bảng {{at}}/{{total}}",
     installTitle: "Tải công cụ về?",
     installMysql:
-      "Dump cần mysqldump, máy này chưa có. MixLab có thể tải bộ MySQL client tools từ dev.mysql.com — bản tải nặng từ vài chục tới vài trăm MB, nhưng chỉ giữ lại vài file cần thiết. Chỉ tải một lần.",
+      "Dump cần mysqldump, máy này chưa có. MixLab có thể tải bộ MySQL client tools từ dev.mysql.com. Bản tải nặng từ vài chục tới vài trăm MB, nhưng chỉ giữ lại vài file cần thiết. Chỉ tải một lần.",
     noDownload:
-      "Dump cần bộ MySQL client tools, máy này chưa có mà nhà cung cấp chỉ phát hành dạng gói cài đặt cho nền tảng này. Hãy cài mysql-client hoặc mariadb-client bằng trình quản lý gói, hoặc chỉ cho MixLab một bản có sẵn trong phần Cài đặt.",
+      "Dump cần bộ MySQL client tools, máy này chưa có mà nhà cung cấp chỉ phát hành dạng gói cài đặt cho nền tảng này. Cài mysql-client hoặc mariadb-client bằng trình quản lý gói, hoặc chỉ cho MixLab một bản có sẵn trong phần Cài đặt.",
     installPostgres:
-      "Dump cần pg_dump, máy này chưa có. MixLab có thể tải bộ PostgreSQL binaries từ enterprisedb.com — bản tải nặng vài trăm MB, nhưng chỉ giữ lại vài file cần thiết. Chỉ tải một lần.",
+      "Dump cần pg_dump, máy này chưa có. MixLab có thể tải bộ PostgreSQL binaries từ enterprisedb.com. Bản tải nặng vài trăm MB, nhưng chỉ giữ lại vài file cần thiết. Chỉ tải một lần.",
     noDownloadPostgres:
-      "Dump cần pg_dump và psql, máy này chưa có mà cũng không có bản tải nào cho nền tảng này. Hãy cài postgresql-client bằng trình quản lý gói, hoặc chỉ cho MixLab một bản có sẵn trong phần Cài đặt.",
+      "Dump cần pg_dump và psql, máy này chưa có mà cũng không có bản tải nào cho nền tảng này. Cài postgresql-client bằng trình quản lý gói, hoặc chỉ cho MixLab một bản có sẵn trong phần Cài đặt.",
     installMongo:
-      "Dump cần mongodump, máy này chưa có. MixLab có thể tải bộ MongoDB Database Tools từ mongodb.com — khoảng 60MB, chỉ một lần.",
+      "Dump cần mongodump, máy này chưa có. MixLab có thể tải bộ MongoDB Database Tools từ mongodb.com, khoảng 60MB, chỉ tải một lần.",
     installConfirm: "Tải về",
     restoreTitle: "Restore vào {{database}}?",
     restoreMysql:
@@ -930,18 +930,18 @@ const dbVi: DbDict = {
     restoreMongo:
       "Restore {{file}} vào {{database}}? Các collection sẽ vào đây bất kể archive được dump từ cơ sở dữ liệu nào, và document trùng _id sẽ được giữ nguyên. MixLab không hoàn tác được.",
     restoreConfirm: "Restore",
-    dropTitle: "Xóa cơ sở dữ liệu?",
+    dropTitle: "Xoá cơ sở dữ liệu?",
     dropMysqlMessage:
-      "Xóa {{database}} cùng toàn bộ bảng và dữ liệu trong đó? Thao tác này không thể hoàn tác — nên dump lại trước nếu còn cần.",
+      "Xoá {{database}} cùng toàn bộ bảng và dữ liệu trong đó? Thao tác này không hoàn tác được, nên dump trước nếu còn cần.",
     dropMongoMessage:
-      "Xóa {{database}} cùng toàn bộ collection và document trong đó? Thao tác này không thể hoàn tác — nên dump lại trước nếu còn cần.",
+      "Xoá {{database}} cùng toàn bộ collection và document trong đó? Thao tác này không hoàn tác được, nên dump trước nếu còn cần.",
   },
-  // Thông báo khi một lệnh ở backend thất bại. Khóa ở đây chính là `code` mà `AppError` mang theo
+  // Thông báo khi một lệnh ở backend thất bại. Khoá ở đây chính là `code` mà `AppError` mang theo
   // — xem src-tauri/src/error.rs. `{{message}}` là nguyên văn lời của driver, không dịch: đó là
   tunnel: {
-    reconnecting: "Mất kết nối SSH — đang kết nối lại…",
+    reconnecting: "Mất kết nối SSH. Đang kết nối lại…",
     reconnected:
-      "Đã kết nối lại. Những gì thuộc về kết nối cũ — bảng tạm, transaction đang mở, script đang chạy dở — đã mất theo nó.",
+      "Đã kết nối lại. Những gì thuộc về kết nối cũ đã mất theo nó: bảng tạm, transaction đang mở, script đang chạy dở.",
     failed: "Không mở lại được tunnel SSH: {{message}}",
     retry: "Thử lại",
     later: "Để sau",
@@ -957,52 +957,52 @@ const dbVi: DbDict = {
     clickhouse: "ClickHouse: {{message}}",
     mssql: "SQL Server: {{message}}",
     mysqlSecureAuthRequired:
-      "Máy chủ MySQL này yêu cầu kiểm tra mật khẩu đầy đủ, và chỉ chấp nhận điều đó trên kết nối đã mã hóa. Hãy bật Use SSL rồi kết nối lại.",
+      "Máy chủ MySQL này yêu cầu kiểm tra mật khẩu đầy đủ, và chỉ chấp nhận điều đó trên kết nối đã mã hoá. Bật Use SSL rồi kết nối lại.",
     mssqlInvalidBinary: "Giá trị này không phải base64 hợp lệ, không ghi được: {{message}}",
     mssqlAmbiguousMoney: "Dùng dấu chấm, không dùng dấu phẩy, cho phần thập phân của giá trị tiền tệ.",
     // Kết nối
-    unknownConnection: "Kết nối này không còn mở — hãy kết nối lại.",
+    unknownConnection: "Kết nối này không còn mở. Kết nối lại để tiếp tục.",
     wrongConnectionKind: "Đây không phải kết nối {{kind}}.",
     connectTimeout:
-      "Kết nối {{kind}} quá hạn sau {{seconds}} giây — kiểm tra host, cổng và tường lửa.",
+      "Kết nối {{kind}} quá hạn sau {{seconds}} giây. Kiểm tra host, cổng và tường lửa.",
     connectionLost:
-      "Mất kết nối tới máy chủ. Nếu kết nối này đi qua SSH tunnel, MixLab đang mở lại — thử lại sau giây lát.",
+      "Mất kết nối tới máy chủ. Nếu kết nối này đi qua SSH tunnel, MixLab đang mở lại. Thử lại sau giây lát.",
     noTunnel: "Kết nối này không đi qua SSH tunnel.",
     mongoUriRequired: "Cần có chuỗi kết nối MongoDB.",
-    sqlitePathRequired: "Hãy chọn file database SQLite cần mở.",
+    sqlitePathRequired: "Chọn file database SQLite cần mở.",
     sqliteFileNotFound: "Không có file nào ở {{path}}.",
-    sqliteFileExists: "Đã có file ở {{path}}. Hãy dùng Duyệt để mở nó, hoặc chọn tên khác.",
+    sqliteFileExists: "Đã có file ở {{path}}. Dùng Duyệt để mở nó, hoặc chọn tên khác.",
     sqliteNoDatabases:
-      "Một database SQLite là một file. Tạo hay xóa nó là việc của trình quản lý file, không phải ở đây.",
-    clickhouseReadOnly: "MixLab hiện chỉ đọc ClickHouse — chưa có gì ở đây ghi vào nó.",
+      "Một database SQLite là một file. Tạo hay xoá nó là việc của trình quản lý file, không phải ở đây.",
+    clickhouseReadOnly: "MixLab hiện chỉ đọc ClickHouse, chưa ghi được gì vào đó.",
     clickhouseOnlyFeature: "Cái này chỉ áp dụng cho kết nối ClickHouse.",
     clickhouseMutationTimeout:
-      "Thao tác vẫn đang chạy trên server sau 30 giây — tải lại bảng để xem đã xong chưa.",
+      "Thao tác vẫn đang chạy trên server sau 30 giây. Tải lại bảng để xem đã xong chưa.",
     clickhouseMutationTargetUnknown:
       "Không có gì để chạy lệnh này: chưa chọn database, và câu lệnh cũng không nêu tên.",
     clickhouseHeterogeneousInsert:
       "Các dòng này không khai báo cùng một tập cột, nên không thể chèn chung thành một câu lệnh nguyên tử trên ClickHouse.",
     clickhouseUnknownEngine:
-      "MixLab không tạo bảng với engine {{engine}} — hãy chọn một engine thuộc họ MergeTree.",
+      "MixLab không tạo bảng với engine {{engine}}. Chọn một engine thuộc họ MergeTree.",
     clickhouseTypeChangeFailed:
       "Đổi kiểu cột {{column}} thất bại, và bảng {{table}} không đọc được cho tới khi kiểu cũ được đặt lại: hãy sửa kiểu của cột về như trước. Server báo: {{cause}}",
     clickhouseSkipIndexExprRequired: "Skip index cần một biểu thức để lọc theo.",
     clickhouseOrderByColumnsRequired: "Sorting key cần ít nhất một cột.",
     clickhouseRebuildParse:
-      "MixLab không đọc lại được định nghĩa của bảng này từ server — chưa thử rebuild.",
+      "MixLab không đọc lại được định nghĩa của bảng này từ server nên chưa thử rebuild.",
     clickhouseRebuildCountMismatch:
-      "Số dòng bị lệch trong lúc copy bảng {{table}} (có ghi đồng thời?). Đã huỷ rebuild, bảng gốc không hề bị đụng — thử lại.",
+      "Số dòng bị lệch trong lúc copy bảng {{table}} (có ghi đồng thời?). Đã huỷ rebuild, bảng gốc không hề bị đụng. Thử lại.",
     handoffInvalid: "Không đọc được kết nối MixLab được mở cùng: {{message}}",
     handoffExpired: "Kết nối được chuyển sang này đã được mở rồi.",
     mongoNoTcpHost: "Chuỗi kết nối không chỉ ra host TCP nào để mở tunnel.",
     emptyRedisCommand: "Không có lệnh nào để chạy.",
     // Ghi dòng và document
     updateWithoutKey: "Dòng này không có cột nào định danh nó, nên không thể cập nhật.",
-    deleteWithoutKey: "Dòng này không có cột nào định danh nó, nên không thể xóa.",
-    rowsMatched: "Lẽ ra phải khớp đúng 1 dòng, nhưng khớp {{matched}} dòng — không thay đổi gì.",
+    deleteWithoutKey: "Dòng này không có cột nào định danh nó, nên không thể xoá.",
+    rowsMatched: "Lẽ ra phải khớp đúng 1 dòng, nhưng khớp {{matched}} dòng. Không thay đổi gì.",
     rowFailed: "Dòng {{index}}: {{cause}}",
     documentsMatched: "Lẽ ra phải khớp đúng 1 document, nhưng khớp {{matched}}.",
-    documentsDeleted: "Lẽ ra phải xóa đúng 1 document, nhưng đã xóa {{deleted}}.",
+    documentsDeleted: "Lẽ ra phải xoá đúng 1 document, nhưng đã xoá {{deleted}}.",
     documentInvalid: "Document {{index}}: {{cause}}",
     documentNotObject: "Document {{index}} không phải là một object.",
     // Bộ lọc
@@ -1025,22 +1025,22 @@ const dbVi: DbDict = {
     sqliteNoPrimaryKeyAfterwards:
       "Primary key của SQLite là một phần của chính bảng, không thêm được vào bảng đã tạo mà chưa có.",
     sqliteIndexBelongsToConstraint:
-      "{{index}} thuộc về một ràng buộc PRIMARY KEY hoặc UNIQUE, không xóa riêng được.",
+      "{{index}} thuộc về một ràng buộc PRIMARY KEY hoặc UNIQUE, không xoá riêng được.",
     sqliteColumnInTableConstraint:
-      "{{column}} là một phần của ràng buộc cấp bảng (khoá ghép, UNIQUE, CHECK hay FOREIGN KEY) — viết lại những thứ đó chưa được hỗ trợ.",
+      "{{column}} là một phần của ràng buộc cấp bảng (khoá ghép, UNIQUE, CHECK hay FOREIGN KEY), và việc viết lại những thứ đó chưa được hỗ trợ.",
     sqliteColumnGenerated:
-      "{{column}} là cột generated — giá trị của nó đến từ biểu thức, không phải từ việc sửa.",
+      "{{column}} là cột generated. Giá trị của nó đến từ biểu thức, không sửa tay được.",
     sqliteColumnIsPrimaryKey:
       "{{column}} chính là rowid của bảng, được đặt bí danh INTEGER PRIMARY KEY, không đổi được.",
     sqliteRebuildForeignKeyViolation:
-      "Dựng lại {{table}} sẽ để lại một khoá ngoại trỏ vào một dòng không còn khớp — chưa có gì bị đổi.",
+      "Dựng lại {{table}} sẽ để lại một khoá ngoại trỏ vào một dòng không còn khớp. Chưa có gì bị đổi.",
     unknownIndexType: "Kiểu index {{type}} không hợp lệ.",
     mssqlRenameCannotChangeSchema:
-      "SQL Server không thể chuyển bảng sang schema khác bằng cách đổi tên — đổi tên trong {{schema}}, hoặc xoá và tạo lại ở schema mới.",
+      "SQL Server không thể chuyển bảng sang schema khác bằng cách đổi tên. Đổi tên trong {{schema}}, hoặc xoá và tạo lại ở schema mới.",
     mssqlIdentityToggleNotSupported:
-      "SQL Server không thể bật/tắt IDENTITY qua ALTER COLUMN — xoá cột rồi thêm lại nếu cần đổi.",
+      "SQL Server không thể bật/tắt IDENTITY qua ALTER COLUMN. Xoá cột rồi thêm lại nếu cần đổi.",
     noVisibleColumns:
-      "Không thấy cột nào của {{database}}.{{table}} — có thể bảng không tồn tại, hoặc tài khoản của bạn không có quyền trên bảng đó.",
+      "Không thấy cột nào của {{database}}.{{table}}. Có thể bảng không tồn tại, hoặc tài khoản của bạn không có quyền trên bảng đó.",
     unknownColumn: "{{table}} không còn cột nào tên {{name}}.",
     nothingToRun: "Không có gì để chạy.",
     // Giá trị BSON
@@ -1056,11 +1056,11 @@ const dbVi: DbDict = {
     unknownDumpMode: "Chế độ dump {{mode}} không hợp lệ.",
     notMongoUri: "Chuỗi kết nối không phải URI mongodb://.",
     srvOverTunnel:
-      "Dump qua SSH tunnel cần chuỗi kết nối mongodb:// thường — chuỗi mongodb+srv:// tự phân giải host của nó, mà tunnel không tới được những host đó.",
+      "Dump qua SSH tunnel cần chuỗi kết nối mongodb:// thường. Chuỗi mongodb+srv:// tự phân giải host của nó, mà tunnel không tới được những host đó.",
     notMongoArchive:
-      "{{path}} không phải archive của mongodump — MixLab chỉ restore được archive một file do chính nó dump ra.",
+      "{{path}} không phải archive của mongodump. MixLab chỉ restore được archive một file do chính nó dump ra.",
     archiveDatabaseUnreadable:
-      "Không xác định được {{path}} chứa cơ sở dữ liệu nào — có thể file đã bị nén: {{message}}",
+      "Không xác định được {{path}} chứa cơ sở dữ liệu nào. Có thể file đã bị nén: {{message}}",
     archiveNamesNoDatabase: "{{path}} không ghi cơ sở dữ liệu nào để restore.",
     noDumpAddress: "Kết nối này không có địa chỉ để dump.",
     noDumpUri: "Kết nối này không có chuỗi kết nối để dump.",
@@ -1072,28 +1072,28 @@ const dbVi: DbDict = {
     unknownTool: "Công cụ {{tool}} không hợp lệ.",
     unknownToolSuite: "Bộ công cụ {{suite}} không hợp lệ.",
     mysqlToolNotFound:
-      "Không tìm thấy {{tool}}. Hãy cài MySQL client tools, trỏ MixLab tới một bản có sẵn trong Cài đặt, hoặc để MixLab tự tải về.",
+      "Không tìm thấy {{tool}}. Cài MySQL client tools, trỏ MixLab tới một bản có sẵn trong Cài đặt, hoặc để MixLab tự tải về.",
     // Dùng thay ở nơi MixLab không có gì để tải, nên mời tải là vô ích.
     mysqlToolNotInstalled:
-      "Không tìm thấy {{tool}}. Hãy cài MySQL client tools bằng trình quản lý gói (mysql-client hoặc mariadb-client), hoặc trỏ MixLab tới một bản có sẵn trong Cài đặt.",
+      "Không tìm thấy {{tool}}. Cài MySQL client tools bằng trình quản lý gói (mysql-client hoặc mariadb-client), hoặc trỏ MixLab tới một bản có sẵn trong Cài đặt.",
     postgresToolNotFound:
-      "Không tìm thấy {{tool}}. Hãy cài PostgreSQL client tools, trỏ MixLab tới một bản có sẵn trong Cài đặt, hoặc để MixLab tự tải về.",
+      "Không tìm thấy {{tool}}. Cài PostgreSQL client tools, trỏ MixLab tới một bản có sẵn trong Cài đặt, hoặc để MixLab tự tải về.",
     // Dùng thay ở nơi không có gì để tải, nên mời tải là vô ích.
     postgresToolNotInstalled:
-      "Không tìm thấy {{tool}}. Hãy cài PostgreSQL client tools (postgresql-client), hoặc trỏ MixLab tới một bản có sẵn trong Cài đặt.",
+      "Không tìm thấy {{tool}}. Cài PostgreSQL client tools (postgresql-client), hoặc trỏ MixLab tới một bản có sẵn trong Cài đặt.",
     mongoToolNotFound:
-      "Không tìm thấy {{tool}}. Hãy cài MongoDB Database Tools, trỏ MixLab tới một bản có sẵn trong Cài đặt, hoặc để MixLab tự tải về.",
+      "Không tìm thấy {{tool}}. Cài MongoDB Database Tools, trỏ MixLab tới một bản có sẵn trong Cài đặt, hoặc để MixLab tự tải về.",
     noFileAt: "Không có file nào ở {{path}}.",
     noMysqlArchive:
-      "MySQL không phát hành bản nén nào của client tools cho nền tảng này — hãy cài qua trình quản lý gói (mysql-client / mariadb-client), MixLab sẽ tự tìm thấy trên PATH.",
+      "MySQL không phát hành bản nén nào của client tools cho nền tảng này. Cài qua trình quản lý gói (mysql-client / mariadb-client), MixLab sẽ tự tìm thấy trên PATH.",
     noPostgresArchive:
-      "EnterpriseDB không phát hành bản PostgreSQL binaries nào cho nền tảng này — hãy cài client tools qua trình quản lý gói (postgresql-client), MixLab sẽ tự tìm thấy trên PATH.",
+      "EnterpriseDB không phát hành bản PostgreSQL binaries nào cho nền tảng này. Cài client tools qua trình quản lý gói (postgresql-client), MixLab sẽ tự tìm thấy trên PATH.",
     downloadFailed: "Tải về thất bại: {{message}}",
     unpackFailed: "Giải nén bản tải về thất bại: {{message}}",
     downloadIncomplete:
-      "Bản tải về không chứa các công cụ cần có — có thể phiên bản MixLab yêu cầu đã bị gỡ khỏi máy chủ.",
+      "Bản tải về không chứa các công cụ cần có. Có thể phiên bản MixLab yêu cầu đã bị gỡ khỏi máy chủ.",
     checksumMismatch:
-      "Bản tải về không đúng file MixLab mong đợi (checksum là {{actual}}, không phải {{expected}}). Có thể bản phát hành đã bị gỡ hoặc thay thế — hãy tự cài công cụ rồi trỏ MixLab tới chúng trong Cài đặt.",
+      "Bản tải về không đúng file MixLab mong đợi (checksum là {{actual}}, không phải {{expected}}). Có thể bản phát hành đã bị gỡ hoặc thay thế. Tự cài công cụ rồi trỏ MixLab tới chúng trong Cài đặt.",
     cannotReadDownload: "Không đọc lại được bản tải về: {{message}}",
     cannotCopyTool: "Không đặt được {{tool}} vào {{path}}: {{message}}",
     cannotSaveToolPath: "Không ghi nhớ được vị trí công cụ đó: {{message}}",
@@ -1101,11 +1101,11 @@ const dbVi: DbDict = {
     // File và thư mục riêng của ứng dụng
     cannotReadFile: "Không đọc được {{path}}: {{message}}",
     cannotWriteFile: "Không ghi được {{path}}: {{message}}",
-    sqliteRestoreFailed: "Khôi phục dừng lại ở {{statement}} — {{message}}",
-    mssqlRestoreFailed: "Khôi phục dừng lại ở {{statement}} — {{message}}",
+    sqliteRestoreFailed: "Khôi phục dừng lại ở {{statement}}: {{message}}",
+    mssqlRestoreFailed: "Khôi phục dừng lại ở {{statement}}: {{message}}",
     sqliteRebuildParseFailed:
-      "MixLab không đọc được cấu trúc CREATE TABLE của {{table}} đủ rõ để dựng lại — đây là một cú pháp app chưa nhận ra.",
-    cannotRemoveDirectory: "Không xóa được {{path}}: {{message}}",
+      "MixLab không đọc được cấu trúc CREATE TABLE của {{table}} đủ rõ để dựng lại. Bảng dùng cú pháp mà MixLab chưa nhận ra.",
+    cannotRemoveDirectory: "Không xoá được {{path}}: {{message}}",
     noAppDataDir: "MixLab không có chỗ nào để lưu file riêng của nó: {{message}}",
   },
   dbSync: {

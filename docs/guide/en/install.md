@@ -15,12 +15,12 @@ summary = "The installer for your system, what it touches, what it deliberately 
 Every build is published on the project's GitHub releases page, with a checksum and a signature
 beside it. Pick the file for your system below. Installing changes as little as it can: nothing is
 added to your certificate store, your DNS settings or your firewall until the day you ask for
-something that needs it — see [What MixLab asks permission for](./permissions.md).
+something that needs it. [What MixLab asks permission for](./permissions.md) has the detail.
 
 **No stable release exists yet.** Every download link below is a permanent URL that GitHub always
 resolves to whichever release is newest and *not* a pre-release, so once the first one ships these
 links go live with no edit to this page. Until then, get the newest pre-release by hand from
-[the releases page](https://github.com/mixnz/mixlab/releases) — right now that is
+[the releases page](https://github.com/mixnz/mixlab/releases). Right now that is
 `v0.0.12`.
 
 ## What you are installing
@@ -42,7 +42,7 @@ something needs an administrator, inside a prompt you were going to see anyway. 
 an update changes it, the next permission prompt replaces it.
 
 **If you do not want the window, there is a download without it.** Every system publishes a
-**headless** installer holding the four command-line programs and nothing else — no window, and on
+**headless** installer holding the four command-line programs and nothing else: no window, and on
 Linux no WebKitGTK to install. It is linked in each section below and is what a server, a container
 image, or any machine with no display wants.
 
@@ -153,8 +153,8 @@ cd mixlab
 cargo build --release
 ```
 
-The binaries land in `target/release/`. MixLab is built separately — it is a workspace of its own
-under `apps/desktop/` — and a source build is one more way of installing that runs entirely as you,
+The binaries land in `target/release/`. MixLab is built separately, as a workspace of its own
+under `apps/desktop/`. A source build is one more way of installing that runs entirely as you,
 which is why placing the privileged helper is never a packager's job.
 
 ## Checking what you downloaded
@@ -170,14 +170,14 @@ The `.sha256` tells you whether two downloads of the same file are the same file
 signature** and is not offered as one: anybody who could replace the artifact could replace the
 checksum beside it. The unversioned files the links above point at carry their own `.sha256` and
 `.minisig`, named after themselves rather than after the versioned file they are a copy of. The
-`.minisig` is the real answer — an Ed25519 signature MixLab's own release pipeline makes, against
+`.minisig` is the real answer: an Ed25519 signature MixLab's own release pipeline makes, against
 a public key committed in this project's repository as `packaging/updates.pub` and compiled into
 MixEngine itself. That is the same key `mix self-update` checks before it replaces anything.
 
 ## After installing
 
-Open a new terminal — the installer changed your `PATH`, and a shell that was already running has
-not heard about it — and ask:
+Open a new terminal, since the installer changed your `PATH` and a shell that was already running
+has not heard about it. Then ask:
 
 ```bash
 mix status
@@ -197,7 +197,7 @@ That fills `<root>/bin` with the shims that make `php`, `node`, `python` and `ru
 version each directory asks for, rather than to one version for the whole machine. MixLab does
 the same from its Dashboard, or from the **Terminal commands** switch in Settings.
 
-If you installed the window, open **MixLab** — from the Start Menu, `/Applications`, your desktop's
+If you installed the window, open **MixLab** from the Start Menu, `/Applications`, your desktop's
 application menu, or by running `mixlab`. It shows the same daemon `mix status` just answered.
 
 ## What the installer did not do

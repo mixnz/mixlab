@@ -4,13 +4,13 @@ slug = "uninstalling"
 order = 13
 summary = "Hoàn tác mọi thứ MixLab đã ghi bên ngoài thư mục của nó, xem danh sách trước khi đồng ý, và giữ lại cơ sở dữ liệu nếu bạn muốn."
 translation_of = "en/uninstalling.md"
-source_sha256 = "9a2e97b04d0ead917773d090a720b19d5eb3fa8f7b9d841aa2f7d470a6890cb3"
+source_sha256 = "f71a93e21c7b671daa39466ba021fc4261c0fd81dc216c54bfbdd662c4beae67"
 +++
 
 # Gỡ MixLab
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -27,10 +27,10 @@ Gỡ MixLab trong Installed apps. Bộ gỡ hỏi hai lựa chọn, mặc địn
 
 Nếu MixLab đang mở, bộ gỡ hỏi rồi đóng nó. Sau đó nó kiểm tra mọi thứ có thể làm kẹt giữa chừng:
 file đang được dùng, hoặc chương trình đang chạy từ thư mục của MixLab, ví dụ một `php` bạn chạy
-qua shim. Có thứ nào chặn thì nó nêu tên và không xóa gì cả. Tắt thứ đó rồi bấm Uninstall lại.
+qua shim. Có thứ nào chặn thì nó nêu tên và không xoá gì cả. Tắt thứ đó rồi bấm Uninstall lại.
 
 Tiếp theo là một hộp thoại quản trị để hoàn tác các thay đổi trên máy liệt kê bên dưới, rồi đến
-lượt chương trình. Nếu bạn từ chối hộp thoại, không có gì bị xóa và MixLab vẫn còn nguyên. Khi nào
+lượt chương trình. Nếu bạn từ chối hộp thoại, không có gì bị xoá và MixLab vẫn còn nguyên. Khi nào
 sẵn sàng thì chạy Uninstall lại.
 
 Phần còn lại của trang này là cùng việc đó nhưng làm bằng `mix`, cũng là cách làm trên macOS và
@@ -52,14 +52,14 @@ Lệnh này không thay đổi gì, chỉ liệt kê từng thứ nó sẽ gỡ:
 - mục trong `PATH`
 - chương trình phụ trợ đặc quyền, cùng nhật ký kiểm tra của nó
 - cache và log của cửa sổ MixLab, cùng các kết nối và lịch sử nó đã lưu nếu thư mục bên dưới
-  cũng bị xóa
+  cũng bị xoá
 - mật khẩu database, cùng mật khẩu đã lưu và phiên đăng nhập sync của MixLab, trong kho mật
   khẩu của hệ thống. Nếu bạn giữ thư mục bên dưới thì chúng được giữ theo
 - và cuối cùng là thư mục riêng của MixLab
 
-## Thực hiện
+## Gỡ
 
-Thoát MixLab trước. Nếu cửa sổ còn mở, nó sẽ lưu lại mật khẩu ngay sau khi chúng bị xóa.
+Thoát MixLab trước. Nếu cửa sổ còn mở, nó sẽ lưu lại mật khẩu ngay sau khi chúng bị xoá.
 
 ```bash
 mix uninstall
@@ -81,7 +81,7 @@ cáo giấu những dòng đó, bạn sẽ không phân biệt được "không 
 kiểm tra cấu hình resolver". Lệnh thoát với mã khác không nếu bất cứ thứ gì nó đã xử lý vẫn còn,
 để script kiểm tra được.
 
-Kết nối sẽ đứt giữa chừng, và đó là bình thường: daemon đang xóa chính thư mục home nó phục vụ, nên
+Kết nối sẽ đứt giữa chừng, và đó là bình thường: daemon đang xoá chính thư mục home nó phục vụ, nên
 nó tự dừng. Sau đó MixLab đọc lại các dòng cuối trực tiếp từ đĩa. Nhờ vậy câu trả lời là *không
 còn gì sót lại*, chứ không phải *daemon bảo thế*.
 
@@ -101,7 +101,7 @@ mục đó là một lựa chọn riêng:
 mix uninstall --keep-relocated
 ```
 
-giữ chúng lại và xóa home. Dùng cả hai cờ để giữ tất cả. Thư mục nào bạn chưa từng chuyển đi thì
+giữ chúng lại và xoá home. Dùng cả hai cờ để giữ tất cả. Thư mục nào bạn chưa từng chuyển đi thì
 nằm trong home, nên đi cùng home.
 
 ### Cài lại trên các thư mục đã giữ
@@ -127,7 +127,7 @@ mới, vì mật khẩu cũ đã mất cùng home.
 ## Rồi gỡ chính chương trình
 
 `mix uninstall` gỡ những gì MixLab đã làm. Còn gỡ bản thân MixLab là việc của trình quản lý
-gói, và tùy vào cách bạn đã cài:
+gói, và tuỳ vào cách bạn đã cài:
 
 ```bash
 sudo dpkg -r mixlab
@@ -136,12 +136,12 @@ sudo rm -rf /usr/local/bin/mix /usr/local/bin/mixengined /usr/local/bin/mixengin
   /Applications/MixLab.app
 ```
 
-Trên Windows, bộ gỡ của bộ cài đã làm luôn phần này. Trên macOS, dòng thứ ba ở trên xóa những gì
+Trên Windows, bộ gỡ của bộ cài đã làm luôn phần này. Trên macOS, dòng thứ ba ở trên xoá những gì
 `.pkg` đã đặt vào, **MixLab** cũng nằm trong đó.
 
 ## Những gì cố ý không tự động
 
 Nhật ký kiểm tra của chương trình phụ trợ đặc quyền thuộc sở hữu root, và bản thân chương trình đó
-cũng vậy. `mix doctor` báo cáo cả hai và không xóa cái nào. Một công cụ chẩn đoán mà xóa nhật ký
-thuộc sở hữu root thì tức là xóa luôn bằng chứng về thứ nó đang chẩn đoán. `mix uninstall` mới là
+cũng vậy. `mix doctor` báo cáo cả hai và không xoá cái nào, vì nhật ký chính là bằng chứng
+về thứ nó đang chẩn đoán. `mix uninstall` mới là
 lệnh gỡ chúng, và nó sẽ hỏi trước.

@@ -56,7 +56,7 @@ const vi: typeof en = {
       getIt: "Cài lại MixEngine",
     },
       storage: {
-        free: "Chưa cài gì, nên vẫn dời được \u2014 chọn bây giờ và lần khởi động sẽ đặt chúng ở đó.",
+        free: "Chưa cài gì, nên vẫn dời được. Chọn bây giờ, lần khởi động tới sẽ đặt chúng ở đó.",
         taken: "{{what}}, nên không dời được ở đây nữa: chỗ đặt đã được ghi lại theo từng thứ một.",
         runtimes: "Runtime",
         packages: "Máy chủ",
@@ -257,7 +257,7 @@ const vi: typeof en = {
         pinsTitle: "Pin runtime hiệu lực",
         sourceManifest: "từ {{path}}",
         sourceRow: "từ cài đặt riêng của project",
-        unresolved: "Chưa cài — {{hint}}",
+        unresolved: "Chưa cài: {{hint}}",
       },
     },
     runtimes: {
@@ -306,7 +306,7 @@ const vi: typeof en = {
         noMatches: "Không có extension nào khớp.",
         restartRequired: "Cần khởi động lại pool để có hiệu lực.",
         restartButton: "Khởi động lại pool",
-        appliesNextStart: "Đã lưu — áp dụng lần pool tiếp theo khởi động.",
+        appliesNextStart: "Đã lưu. Áp dụng từ lần pool khởi động tới.",
       },
     },
     requirements: {
@@ -321,13 +321,13 @@ const vi: typeof en = {
       unavailable:
         "{{name}} không chạy được trên máy này: cần {{needs}}, và không bản nào đã phát hành chạy được ở đây.",
       applyConsent:
-        "Cài Microsoft Visual C++ Redistributable ({{arch}}) trước — Windows có thể hỏi quyền một lần",
+        "Cài Microsoft Visual C++ Redistributable ({{arch}}) trước. Windows có thể hỏi quyền một lần",
       applyBlocked: "Không áp dụng được blueprint này trên máy này: cần {{needs}}.",
       systemLibraries: "Thư viện hệ thống ({{count}})",
       librariesNotice:
-        "Đang cài {{name}}. Trình nạp thư viện của máy này không liệt kê {{libraries}}, hãy cài chúng bằng trình quản lý gói của bản phân phối.",
+        "Đang cài {{name}}. Trình nạp thư viện của máy này không liệt kê {{libraries}}. Cài chúng bằng trình quản lý gói của bản phân phối.",
       applyLibraries:
-        "Trình nạp thư viện của máy này không liệt kê {{libraries}}, hãy cài chúng bằng trình quản lý gói của bản phân phối. Blueprint vẫn áp dụng được.",
+        "Trình nạp thư viện của máy này không liệt kê {{libraries}}. Cài chúng bằng trình quản lý gói của bản phân phối. Blueprint vẫn áp dụng được.",
     },
     serviceState: {
       stopped: "Đã dừng",
@@ -345,7 +345,7 @@ const vi: typeof en = {
       title: "Thêm service",
       package: "Package",
       packagePlaceholder: "Chọn một package đã cài",
-      noPackages: "Chưa cài package nào — cài một cái ở mục Runtimes trước.",
+      noPackages: "Chưa cài package nào. Cài một package ở mục Runtimes trước.",
       instance: "Tên instance",
       instancePlaceholder: "main, secondary, …",
       idPreview: "Nó sẽ tên là {{id}}.",
@@ -386,7 +386,7 @@ const vi: typeof en = {
         priorityBackground: "Nền",
         unsupported: "Máy này không hỗ trợ.",
         unavailable: "Không dùng được ở đây: {{reason}}",
-        advisoryNote: "Chỉ cảnh báo — service có thể vượt qua và vẫn chạy tiếp.",
+        advisoryNote: "Chỉ cảnh báo: service có thể vượt qua và vẫn chạy tiếp.",
         watchdogNone: "Không có gì đang canh ngưỡng này.",
         watchdogRestarts: "Bị restart sau {{minutes}} phút vượt ngưỡng.",
         watchdogWarnsOnly: "Chỉ cảnh báo sau {{minutes}} phút vượt ngưỡng, vẫn để chạy.",
@@ -399,7 +399,7 @@ const vi: typeof en = {
         dependencies:
           "Mọi thứ service này phụ thuộc vào cũng được khởi động theo, dù có bật ở đây hay không.",
         versusIdle:
-          "Cái này quyết định lúc bạn ngồi xuống thì cái gì đang chạy. Thời gian rảnh bên dưới quyết định lúc bạn không dùng thì cái gì còn chạy — một service có thể bật cả hai.",
+          "Mục này quyết định service nào đã chạy sẵn khi bạn bắt đầu làm việc. Thời gian rảnh bên dưới quyết định service nào còn chạy khi bạn không dùng. Một service có thể bật cả hai.",
       },
       idle: {
         title: "Tự dừng khi rảnh",
@@ -417,7 +417,7 @@ const vi: typeof en = {
         userName: "Tên account (mặc định trùng tên database)",
         create: "Tạo",
         createdNew: "Đã tạo.",
-        createdExisting: "Đã có từ trước — không đổi gì.",
+        createdExisting: "Đã có từ trước. Không đổi gì.",
         secretLine: "Mật khẩu lưu trong credential store dưới tên {{key}}.",
       },
     },
@@ -432,7 +432,7 @@ const vi: typeof en = {
       loadMore: "Xem thêm phía trên",
       gap: "— bỏ qua {{count}} dòng —",
       empty: "Chưa có gì được in ra.",
-      historicHidden: "{{count}} dòng đọc lại từ file log không cho biết thuộc luồng nào — xem ở Tất cả.",
+      historicHidden: "{{count}} dòng đọc lại từ file log không cho biết thuộc luồng nào, nên nằm ở Tất cả.",
       streamUnknown: "Dòng đọc lại từ file log không cho biết thuộc luồng nào.",
     },
     sites: {
@@ -447,7 +447,7 @@ const vi: typeof en = {
       columnActions: "Hành động",
       ownerProject: "project: {{name}}",
       ownerExtension: "extension: {{id}}",
-      editDisabledHint: "Của một extension — gỡ bằng cách gỡ extension đó.",
+      editDisabledHint: "Thuộc một extension. Gỡ extension đó để gỡ mục này.",
       openHint: "Bật những gì site này cần, rồi mở {{url}}",
       opening: "Đang bật…",
       sharingIndefinite: "đang chia sẻ LAN",
@@ -467,7 +467,7 @@ const vi: typeof en = {
         createTitle: "Site mới",
         editTitle: "Sửa site",
         project: "Project",
-        noProjects: "Chưa có project nào — đăng ký một cái trước bằng `mix project add <thư mục>`.",
+        noProjects: "Chưa có project nào. Tạo một project ở màn Projects trước.",
         domains: "Domains",
         domainsPlaceholder: "blog.test, www.blog.test",
         acceptRiskyTld: "Tôi hiểu .local là lãnh thổ mDNS",
@@ -482,8 +482,8 @@ const vi: typeof en = {
         routesHint:
           "Một tiền tố đường dẫn được trả lời bởi thứ khác với loại ở trên. Tiền tố dài hơn thắng.",
         routesAdd: "Thêm route",
-        routesRemove: "Xóa route này",
-        routesEmpty: "Chưa có route — mọi thứ do loại ở trên trả lời.",
+        routesRemove: "Xoá route này",
+        routesEmpty: "Chưa có route. Loại ở trên trả lời mọi request.",
         routePath: "Đường dẫn",
         routeTarget: "Trả lời bởi",
         routeUpstream: "URL upstream",
@@ -561,13 +561,13 @@ const vi: typeof en = {
         title: "Tiết kiệm pin",
         toggle: "Tạm dừng dịch vụ không ai dùng tới",
         off: "Đang tắt: không dịch vụ nào bị dừng chỉ vì rảnh. Site đang chạy thì cứ chạy.",
-        on: "Pool PHP không ai dùng trong nửa tiếng, hoặc database/cache trong một tiếng, sẽ được tạm dừng. Lần truy cập tiếp theo sẽ bật lại — lần tải đầu có thể chậm một chút.",
+        on: "Pool PHP không ai dùng trong nửa tiếng, hoặc database/cache trong một tiếng, sẽ được tạm dừng. Lần truy cập tiếp theo sẽ bật lại, và lần tải đầu có thể chậm một chút.",
         keepWarm: "Muốn một project luôn chạy, hãy chạy: mix project keep-warm <tên>",
       },
       autostart: {
         title: "Khởi động cùng máy",
         toggle: "Chạy MixEngine mỗi khi đăng nhập",
-        unsupported: "Máy này không hỗ trợ — chạy tay: {{location}}",
+        unsupported: "Máy này không hỗ trợ. Chạy tay: {{location}}",
         otherHome: "Mục này đang đăng ký cho một home MixEngine khác.",
         location: "Đã đăng ký ở: {{location}}",
       },
@@ -661,7 +661,7 @@ const vi: typeof en = {
     },
     blueprints: {
       newButton: "Capture project…",
-      about: "Các stack để dựng project — cái MixEngine có sẵn, và cái đã capture hoặc nhập ở đây.",
+      about: "Các stack để dựng project: stack MixEngine có sẵn, và stack đã capture hoặc nhập ở đây.",
       search: "Tìm blueprint…",
       noMatches: "Không có blueprint nào khớp.",
       importButton: "Nhập…",
@@ -682,7 +682,7 @@ const vi: typeof en = {
         name: "Slug",
         description: "Mô tả",
         overwrite: "Ghi đè blueprint đã có cùng slug",
-        overwriteHint: "Không có cách hoàn tác — ghi đè là vĩnh viễn.",
+        overwriteHint: "Ghi đè là vĩnh viễn, không hoàn tác được.",
         saving: "Đang capture…",
       },
       import: {
@@ -711,7 +711,7 @@ const vi: typeof en = {
         scaffoldUntrusted: "Không ai bảo chứng cho blueprint này. Đọc kỹ lệnh trước khi đồng ý.",
         scaffoldConsent: "Tôi đã đọc lệnh trên và đồng ý chạy nó",
         scaffoldDeclined:
-          "Chưa tick: MixEngine vẫn cài runtime, service, dựng site và domain — nhưng sẽ không chạy lệnh trên, nên thư mục project ở lại rỗng và site không có gì để phục vụ.",
+          "Chưa tick: MixEngine vẫn cài runtime, service, dựng site và domain, nhưng không chạy lệnh trên, nên thư mục project ở lại rỗng và site không có gì để phục vụ.",
         applyButton: "Apply",
         applyWithoutCommand: "Cài môi trường, không chạy lệnh",
         applying: "Đang apply…",
@@ -720,12 +720,12 @@ const vi: typeof en = {
         hideLog: "Ẩn output",
         doneTitle: "Xong",
         leftUnrunTitle:
-          "Thư mục project vẫn đang rỗng — lệnh này chưa chạy, vì ô đồng ý chạy nó chưa được tick:",
+          "Thư mục project vẫn rỗng. Lệnh này chưa chạy vì ô đồng ý chưa được tick:",
         leftUnrunHow: "Bạn tự chạy nó trong {{root}}, hoặc apply lại blueprint này và tick ô đó.",
         stepDone: "Xong",
         stepAlreadyTrue: "Đã có sẵn từ trước",
-        stepNotRun: "Không chạy — {{why}}",
-        stepFailed: "Thất bại — {{why}}",
+        stepNotRun: "Không chạy: {{why}}",
+        stepFailed: "Thất bại: {{why}}",
         close: "Đóng",
         action: {
           register_project: "Đăng ký project “{{name}}” tại {{root}}",
@@ -763,7 +763,7 @@ const vi: typeof en = {
       deleteData: "Xoá luôn thư mục dữ liệu",
       plan: {
         title: "Cài {{name}}",
-        unsigned: "Không ai bảo chứng cho cái này — cài từ thư mục cục bộ luôn không có chữ ký.",
+        unsigned: "Không ai bảo chứng cho extension này. Bản cài từ thư mục cục bộ không bao giờ có chữ ký.",
         homepage: "Trang chủ: {{url}}",
         permissionsTitle: "Extension này sẽ:",
         apiRead: "Gọi API daemon để đọc",
@@ -771,7 +771,7 @@ const vi: typeof en = {
         network: "Được truy cập từ: {{reach}}",
         filesystem: "Cần quyền truy cập: {{reach}}",
         signsIn:
-          "Đăng nhập bằng tài khoản {{account}} — mật khẩu đọc từ keyring hệ điều hành lúc pool khởi động, không bao giờ ghi xuống đĩa.",
+          "Đăng nhập bằng tài khoản {{account}}. Mật khẩu đọc từ keyring hệ điều hành lúc pool khởi động, không bao giờ ghi xuống đĩa.",
         site: "Chạy tại {{domain}} (pool {{pool}})",
         database: "Quản lý {{database}}",
         ports: "Xin cổng “{{name}}”: {{wanted}}",

@@ -12,7 +12,7 @@ const dbEn = {
     newSqliteFileDialogTitle: "New SQLite database file",
     allFilesFilter: "All files",
     testingTunnel: "Testing...",
-    tunnelOk: "\u2713 Tunnel OK \u2014 SSH auth succeeded",
+    tunnelOk: "\u2713 Tunnel OK: SSH auth succeeded",
     tunnelFailed: "\u2717 {{error}}",
     connecting: "Connecting...",
     /* A `mixlab://` link opened from a browser: everything but the password came with it. */
@@ -41,7 +41,7 @@ const dbEn = {
     /** Shown where a workspace would be, for a kind `DbTab` has no workspace for: one this
      *  build can connect to but not browse yet, or one saved by a newer version. */
     workspaceUnavailable:
-      "Connected to {{kind}}. This build of MixLab cannot browse it yet — there is no workspace for this database kind.",
+      "Connected to {{kind}}. This build of MixLab cannot browse it yet, because there is no workspace for this database kind.",
     /** A `kind` this build doesn't list in `KIND_LABEL` — a connection saved by a newer version,
      *  read back by this one. See `kindLabel` in connectionForm.ts. */
     kindUnknown: "Unknown",
@@ -64,7 +64,7 @@ const dbEn = {
     // answering — which reaches the user as "broken pipe" and explains nothing. An SSH tunnel only
     // helps when it lands on the machine Redis itself runs on, which is what the host says.
     redisNoPasswordWarning:
-      "No password: if this server runs with protected mode on — Redis's default when the default user has no password — it only accepts connections coming from its own machine and closes every other one, which shows up as “Redis: broken pipe”. Set a password on the server (requirepass), or arrive from that machine: an SSH tunnel to the host Redis runs on, with the host above left at 127.0.0.1.",
+      "No password: if this server runs with protected mode on (Redis's default when the default user has no password), it only accepts connections coming from its own machine and closes every other one, which shows up as “Redis: broken pipe”. Set a password on the server (requirepass), or arrive from that machine: an SSH tunnel to the host Redis runs on, with the host above left at 127.0.0.1.",
     connectionMethodLegend: "Connection method",
     methodTcpIp: "Direct TCP/IP",
     methodSsh: "SSH tunnel",
@@ -94,7 +94,7 @@ const dbEn = {
     file: "File",
     showPassword: "Show the password",
     hidePassword: "Hide the password",
-    sqliteOpenedDirectly: "The file is opened directly on this computer — there is nothing to route or tunnel.",
+    sqliteOpenedDirectly: "The file is opened directly on this computer, so there is nothing to route or tunnel.",
     authPasswordHint: "The SSH account's password",
     authPrivateKeyHint: "A key file, and its passphrase if it has one",
     route: "Route",
@@ -138,11 +138,11 @@ const dbEn = {
     statsTab: "Statistics",
     queryTab: "Query",
     searchTablesPlaceholder: "Search tables...",
-    followedTableHint: "Opened by following a foreign key — held here until you pick another table",
+    followedTableHint: "Opened by following a foreign key. It stays here until you pick another table",
     reloadTables: "Reload tables",
     addTable: "Create a table",
-    addTableSystem: "{{database}} belongs to the server — no table can be added to it",
-    systemTable: "{{database}} belongs to the server — its tables cannot be renamed or dropped",
+    addTableSystem: "{{database}} belongs to the server, so no table can be added to it",
+    systemTable: "{{database}} belongs to the server, so its tables cannot be renamed or dropped",
     renameTable: "Rename",
     dropTable: "Drop table",
     renameTableTitle: "Rename {{table}}",
@@ -184,7 +184,7 @@ const dbEn = {
     autoIncrementTooltip: "The server assigns this value itself",
     expressionTooltip: "An expression the server runs for each new row, not text it stores",
     generatedTooltip:
-      "A generated column — its expression is not read here, so it can only be dropped",
+      "A generated column. Its expression is not read here, so it can only be dropped",
     dropColumnTitle: "Drop column?",
     dropColumnMessage: "Drop {{column}} and everything stored in it? This cannot be undone.",
     addIndex: "Add an index",
@@ -203,7 +203,7 @@ const dbEn = {
     kindSpatial: "SPATIAL",
     kindIndex: "INDEX",
     functionalIndexTooltip:
-      "This index is on an expression, which is not read here — it can only be dropped",
+      "This index is on an expression, which is not read here, so it can only be dropped",
     dropIndexTitle: "Drop index?",
     dropIndexMessage: "Drop the index {{index}}? The rows themselves are untouched.",
     skipIndexesTitle: "Skip indexes",
@@ -215,9 +215,9 @@ const dbEn = {
     skipIndexGranularity: "Granularity",
     dropSkipIndexTitle: "Drop this skip index?",
     dropSkipIndexMessage:
-      'This drops the skip index "{{index}}". It only speeds up scanning — no data is lost.',
+      'This drops the skip index "{{index}}". It only speeds up scanning, so no data is lost.',
     rebuildEngineNotAllowed:
-      "MixLab has only verified the sorting-key rebuild against MergeTree, ReplacingMergeTree, SummingMergeTree and AggregatingMergeTree — this table's engine is {{engine}}.",
+      "MixLab has only verified the sorting-key rebuild against MergeTree, ReplacingMergeTree, SummingMergeTree and AggregatingMergeTree. This table's engine is {{engine}}.",
   },
   // The Statistics tab, shared by both workspaces: what every table or collection of the selected
   // database weighs. MySQL counts rows in tables, MongoDB documents in collections, so the three
@@ -245,7 +245,7 @@ const dbEn = {
     noTablesMatch: "No table matches this search.",
     noCollectionsMatch: "No collection matches this search.",
     estimateNote:
-      "Row counts and average row sizes are the estimates the server keeps, not exact counts — on an InnoDB table they can be well off.",
+      "Row counts and average row sizes are the estimates the server keeps, not exact counts. On an InnoDB table they can be well off.",
     sortNone: "Sort by {{column}}",
     sortAsc: "Sorted by {{column}}, smallest first",
     sortDesc: "Sorted by {{column}}, largest first",
@@ -319,7 +319,7 @@ const dbEn = {
     defaultExpressionHint:
       "CURRENT_TIMESTAMP and NOW() are recognised on their own; tick this for any other expression, e.g. uuid().",
     identityLockedMssql:
-      "SQL Server can't change an IDENTITY column's type, nullability or collation — only its name and comment. Drop and re-add the column to change the rest.",
+      "SQL Server can't change an IDENTITY column's type, nullability or collation, only its name and comment. Drop and re-add the column to change the rest.",
     errorName: "The column needs a name.",
     errorType: "The column needs a type.",
     errorTypeArg: "{{type}} needs a list of values, e.g. 'a','b'.",
@@ -348,7 +348,7 @@ const dbEn = {
     removeColumn: "Remove this column",
     prefixLength: "Prefix length",
     prefixPlaceholder: "whole",
-    prefixTooltip: "Index only the first n characters — required for a TEXT or BLOB column",
+    prefixTooltip: "Index only the first n characters. Required for a TEXT or BLOB column",
     comment: "Comment",
     replaceNote:
       "An index cannot be changed in place: this one is dropped and rebuilt in a single statement.",
@@ -367,7 +367,7 @@ const dbEn = {
     type: "Type",
     granularity: "Granularity",
     granularityHint:
-      "Granularity counts granules (blocks of the table's own index_granularity rows each — usually 8192), not rows directly.",
+      "Granularity counts granules (blocks of the table's own index_granularity rows each, usually 8192), not rows directly.",
     errorName: "The index has to be named.",
     errorExpr: "The index needs an expression to cover.",
     saving: "Saving…",
@@ -390,7 +390,7 @@ const dbEn = {
     saving: "Rebuilding…",
     submit: "Rebuild",
     leftoverWarning:
-      'The sorting key was changed. Cleaning up the temporary table "{{table}}" failed — it holds the old data and is safe to drop by hand.',
+      'The sorting key was changed. Cleaning up the temporary table "{{table}}" failed. It holds the old data and is safe to drop by hand.',
   },
   // The Query tab. A script is run statement by statement, and each statement is reported as what
   // it is — a result set, a count of rows changed, or plain confirmation that it ran.
@@ -415,28 +415,28 @@ const dbEn = {
     resizeResults: "Drag to resize the results",
     // A script that ran fine and had nothing in it to run: all comments, or a stray semicolon.
     noStatements: "There was no statement to run.",
-    noStatementsHint: "What was sent held only comments — nothing the server could be asked to do.",
+    noStatementsHint: "What was sent held only comments, so there was nothing for the server to do.",
     resultLabel: "#{{n}} {{verb}}",
     duration: "{{ms}} ms",
     rowCount: "{{n}} rows",
-    truncated: "First {{n}} rows only — add a LIMIT to be sure of what you are seeing",
+    truncated: "First {{n}} rows only. Add a LIMIT to be sure of what you are seeing",
     affected: "{{n}} rows changed",
     lastInsertId: "last inserted id {{id}}",
     ok: "OK",
     noRows: "The result set is empty.",
-    statementFailed: "This statement failed — nothing after it ran.",
+    statementFailed: "This statement failed, and nothing after it ran.",
     // The footer's actions, both about how much of the tab the results are given: put away to get
     // the window back for the script, or lifted out over the whole of it — which is how a run of
     // several SELECTs is read without each of them getting a quarter of a short pane.
     hideResults: "Hide the results",
     showResults: "Show the results",
-    resultsEmpty: "Nothing has been run yet — there are no results to put away.",
+    resultsEmpty: "Nothing has been run yet, so there are no results to hide.",
     // The two exclude each other: results lifted over the window cannot be put away from a bar
     // underneath them, and results put away cannot be lifted.
-    resultsZoomed: "The results are over the window — close them first.",
+    resultsZoomed: "The results are covering the window. Close them first.",
     zoom: "Expand the results",
-    zoomEmpty: "Nothing has been run yet — there are no results to expand.",
-    zoomShut: "The results are put away — show them first.",
+    zoomEmpty: "Nothing has been run yet, so there are no results to expand.",
+    zoomShut: "The results are hidden. Show them first.",
     zoomTitle: "Results",
     // The chip in the toolbar, and what happens when a write is attempted anyway.
     readOnly: "Read-only",
@@ -448,7 +448,7 @@ const dbEn = {
     ddlOnlyReadOnlyHint:
       "INSERT/UPDATE/DELETE/TRUNCATE work here. Table and database changes still go through the Structure tab.",
     ddlBlocked:
-      "Nothing was sent: this Query tab only takes INSERT/UPDATE/DELETE/TRUNCATE by hand — other changes go through the Structure tab.",
+      "Nothing was sent: this Query tab only takes INSERT/UPDATE/DELETE/TRUNCATE by hand. Other changes go through the Structure tab.",
     // The gate in front of an UPDATE, DELETE or TRUNCATE that names no rows.
     unguardedTitle: "Change every row?",
     unguardedOne: "{{verb}} on {{table}} says nothing about which rows, so it applies to all of them.",
@@ -469,8 +469,8 @@ const dbEn = {
     // The heading's tooltip, which says what one more click does — and says the thing that is
     // easiest to get wrong about it. Sorting here reorders the rows that came back and nothing
     // else: a result cut off at 1000 rows, sorted descending, does not show the table's largest.
-    sortAsc: "Sort by {{column}}, smallest first — only the rows already returned",
-    sortDesc: "Sort by {{column}}, largest first — only the rows already returned",
+    sortAsc: "Sort by {{column}}, smallest first (only the rows already returned)",
+    sortDesc: "Sort by {{column}}, largest first (only the rows already returned)",
     sortNone: "Back to the order the server sent",
     findPlaceholder: "Filter these rows...",
     findCount: "{{n}} of {{m}} rows",
@@ -496,7 +496,7 @@ const dbEn = {
     snippetNamePlaceholder: "Name this query...",
     saveSnippet: "Save",
     snippetSaving: "Saving...",
-    snippetNothingToSave: "The editor is empty — there is nothing to save, but what is saved is below.",
+    snippetNothingToSave: "The editor is empty, so there is nothing to save. What you saved before is below.",
     snippetsEmpty: "Nothing saved yet. Name a query here and typing that name will offer it back.",
     snippetDelete: "Forget {{name}}",
     snippetDeleteConfirm: "Forget it?",
@@ -581,9 +581,9 @@ const dbEn = {
     // `->` for the arrow, as everywhere else in the app. Shown in a `Tooltip` of the app's own
     // rather than through `title`, so it is drawn in the app's font like the grid around it.
     foreignKey: "Foreign key -> {{table}}.{{column}}",
-    sortNone: "{{column}} — click to sort descending",
-    sortDesc: "{{column}} — sorted descending, click to sort ascending",
-    sortAsc: "{{column}} — sorted ascending, click to remove the sort",
+    sortNone: "{{column}}: click to sort descending",
+    sortDesc: "{{column}}: sorted descending, click to sort ascending",
+    sortAsc: "{{column}}: sorted ascending, click to remove the sort",
     // The right-click menu over the rows. The row entries come in two spellings each, one for the
     // single row under the pointer and one for a selection — there is no plural rule in `t()`, and
     // "Copy 1 rows" is worse than a second key.
@@ -640,16 +640,16 @@ const dbEn = {
     inserting: "Inserting...",
     setNull: "Write NULL into this cell",
     unsetNull: "Stop writing NULL into this cell",
-    notNullTooltip: "{{column}} is NOT NULL — it cannot be left empty",
+    notNullTooltip: "{{column}} is NOT NULL, so it cannot be left empty",
     notNullMarker: "NOT NULL",
     autoValue: "AUTO",
     autoTooltip: "The server assigns this value itself",
     generatedValue: "GENERATED",
-    generatedTooltip: "A generated column — the server computes this value itself",
+    generatedTooltip: "A generated column. The server computes this value itself",
     defaultTooltip: "Left empty, this column falls back to its default: {{value}}",
     errorNotNull: "Row {{n}}: {{column}} is NOT NULL and cannot be set to NULL.",
     errorRequired: "Row {{n}}: {{column}} is NOT NULL, has no default, and needs a value.",
-    transactionNote: "All rows are inserted together — if one fails, none are saved.",
+    transactionNote: "All rows are inserted together. If one fails, none are saved.",
   },
   insertDocuments: {
     title: "Add documents to {{collection}}",
@@ -662,7 +662,7 @@ const dbEn = {
     inserting: "Inserting...",
     idNote: "_id is filled in for you and can be edited; every other property is yours to add.",
     orderedNote:
-      "Documents are inserted in order and not as one transaction — if one fails, the ones before it are already saved.",
+      "Documents are inserted in order and not as one transaction. If one fails, the ones before it are already saved.",
     errorDuplicateId: "Documents {{a}} and {{b}} carry the same _id.",
   },
   mongo: {
@@ -683,9 +683,9 @@ const dbEn = {
     searchCollectionsPlaceholder: "Search collections...",
     reloadCollections: "Reload collections",
     addCollection: "Create a collection",
-    addCollectionSystem: "{{database}} belongs to the server — no collection can be added to it",
+    addCollectionSystem: "{{database}} belongs to the server, so no collection can be added to it",
     systemCollection:
-      "{{database}} belongs to the server — its collections cannot be renamed or dropped",
+      "{{database}} belongs to the server, so its collections cannot be renamed or dropped",
     renameCollection: "Rename",
     dropCollection: "Drop collection",
     renameCollectionTitle: "Rename {{collection}}",
@@ -797,7 +797,7 @@ const dbEn = {
     // over it — so removing a group means naming every key in it, which is what this lists.
     listGroupKeys: "List keys to delete",
     keyPatternPlaceholder: "Key pattern, e.g. user:*",
-    keyPatternTooltip: "A Redis glob — * matches anything, ? one character, [ab] a set. Press Enter to scan.",
+    keyPatternTooltip: "A Redis glob: * matches anything, ? one character, [ab] a set. Press Enter to scan.",
     // Redis keyspaces are flat; a separator is only a convention in how names are written, so
     // which character groups them is the user's to pick.
     separatorLabel: "Group keys by",
@@ -805,20 +805,20 @@ const dbEn = {
     separatorFlatShort: "—",
     keyTreeLabel: "Keys",
     noKeys: "No keys",
-    noKeysInSlice: "Nothing matched here yet — load more to keep scanning.",
+    noKeysInSlice: "Nothing matched here yet. Load more to keep scanning.",
     reloadKeys: "Rescan keys",
     // The keyspace is walked with SCAN, which has no page numbers and no total to divide into
     // pages. The sidebar walks it to the end up front so the list can be sorted by name and stay
     // that way; these say how far that walk has got.
     scanningKeys: "Scanning... {{n}} keys",
     keysLoadedAll: "{{n}} keys",
-    keysLoadedPartial: "{{n}} keys loaded — more in the keyspace",
-    partialCountTooltip: "Keys read under this prefix so far — the scan is not finished, so there may be more.",
+    keysLoadedPartial: "{{n}} keys loaded, more in the keyspace",
+    partialCountTooltip: "Keys read under this prefix so far. The scan is not finished, so there may be more.",
     scanLimitNotice: "Stopped early to keep the list readable. Raise the key limit, or narrow the key pattern, to see the rest in order.",
     // How far the scan is allowed to walk. Remembered per connection: the right number follows
     // the server, not the app.
     scanLimitLabel: "Key limit",
-    scanLimitTooltip: "How many keys to read before the scan stops. The whole keyspace is read up front so the list can stay sorted by name — a higher limit takes longer to open.",
+    scanLimitTooltip: "How many keys to read before the scan stops. The whole keyspace is read up front so the list can stay sorted by name, so a higher limit takes longer to open.",
     scanLimitShort: "{{n}}K",
     scanLimitOption: "Up to {{n}} keys",
     // Rows already in hand, held back only so the sidebar isn't laying out thousands at once.
@@ -841,7 +841,7 @@ const dbEn = {
     member: "Value",
     value: "Value",
     emptyValue: "This key holds nothing.",
-    keyGone: "This key no longer exists — it was deleted or has expired.",
+    keyGone: "This key no longer exists. It was deleted or has expired.",
     unsupportedType: "Values of type {{type}} cannot be shown here yet.",
     loadedOf: "{{loaded}} of {{total}} loaded",
     loadedCount: "{{loaded}} loaded",
@@ -879,9 +879,9 @@ const dbEn = {
     title: "Dump tools",
     intro:
       "Dumping and restoring is done by the database vendors' own tools. MixLab uses whichever copy it can find, and can fetch one of its own.",
-    mysqlSuite: "MySQL \u2014 mysqldump and mysql",
-    postgresSuite: "PostgreSQL \u2014 pg_dump and psql",
-    mongoSuite: "MongoDB \u2014 mongodump and mongorestore",
+    mysqlSuite: "MySQL: mysqldump and mysql",
+    postgresSuite: "PostgreSQL: pg_dump and psql",
+    mongoSuite: "MongoDB: mongodump and mongorestore",
     download: "Download",
     redownload: "Download again",
     remove: "Delete copy",
@@ -903,7 +903,7 @@ const dbEn = {
     sourceSystem: "installed",
     // Shown in place of the download button where the vendor publishes nothing for this machine.
     noDownload:
-      "There is no download of these tools for this machine. Install them with your package manager — mysql-client or mariadb-client — or point MixLab at a copy below.",
+      "There is no download of these tools for this machine. Install them with your package manager (mysql-client or mariadb-client), or point MixLab at a copy below.",
     // EDB builds PostgreSQL binaries for Windows and macOS but stopped building Linux ones after
     // PostgreSQL 10, so this is what Linux is shown in place of the download button.
     noDownloadPostgres:
@@ -914,7 +914,7 @@ const dbEn = {
     dump: "Dump this database",
     restore: "Restore into this database",
     drop: "Drop this database",
-    systemDatabase: "{{database}} belongs to the server — it cannot be dumped, restored into or dropped",
+    systemDatabase: "{{database}} belongs to the server, so it cannot be dumped, restored into or dropped",
     dumpTitle: "Dump {{database}}",
     modeAll: "Structure and data",
     modeAllHint: "Everything: the tables, what is in them, and the routines beside them.",
@@ -934,15 +934,15 @@ const dbEn = {
     progressTables: "Table {{at}} of {{total}}",
     installTitle: "Download the tools?",
     installMysql:
-      "Dumping needs mysqldump, which is not on this machine. MixLab can download the MySQL client tools from dev.mysql.com \u2014 a distribution of some tens to a couple of hundred megabytes, of which only a few files are kept. It happens once.",
+      "Dumping needs mysqldump, which is not on this machine. MixLab can download the MySQL client tools from dev.mysql.com. The download is some tens to a couple of hundred megabytes, of which only a few files are kept. It happens once.",
     noDownload:
       "Dumping needs the MySQL client tools, which are not on this machine and are published for it only as a distribution package. Install mysql-client or mariadb-client with your package manager, or point MixLab at a copy in Settings.",
     installPostgres:
-      "Dumping needs pg_dump, which is not on this machine. MixLab can download the PostgreSQL binaries from enterprisedb.com — a distribution of some hundreds of megabytes, of which only a few files are kept. It happens once.",
+      "Dumping needs pg_dump, which is not on this machine. MixLab can download the PostgreSQL binaries from enterprisedb.com. The download is some hundreds of megabytes, of which only a few files are kept. It happens once.",
     noDownloadPostgres:
       "Dumping needs pg_dump and psql, which are not on this machine and have no download for it. Install postgresql-client with your package manager, or point MixLab at a copy in Settings.",
     installMongo:
-      "Dumping needs mongodump, which is not on this machine. MixLab can download the MongoDB Database Tools from mongodb.com \u2014 about 60MB, once.",
+      "Dumping needs mongodump, which is not on this machine. MixLab can download the MongoDB Database Tools from mongodb.com. It is about 60MB, downloaded once.",
     installConfirm: "Download",
     restoreTitle: "Restore into {{database}}?",
     restoreMysql:
@@ -952,14 +952,14 @@ const dbEn = {
     restoreConfirm: "Restore",
     dropTitle: "Drop database?",
     dropMysqlMessage:
-      "Drop {{database}} with every table and row in it? This cannot be undone \u2014 dump it first if you may want it back.",
+      "Drop {{database}} with every table and row in it? This cannot be undone, so dump it first if you may want it back.",
     dropMongoMessage:
-      "Drop {{database}} with every collection and document in it? This cannot be undone \u2014 dump it first if you may want it back.",
+      "Drop {{database}} with every collection and document in it? This cannot be undone, so dump it first if you may want it back.",
   },
   tunnel: {
-    reconnecting: "The SSH tunnel dropped \u2014 opening it again\u2026",
+    reconnecting: "The SSH tunnel dropped. Opening it again\u2026",
     reconnected:
-      "The tunnel is back. Anything the old connection held \u2014 temporary tables, an open transaction, a script that was running \u2014 went with it.",
+      "The tunnel is back. Anything the old connection held went with it: temporary tables, an open transaction, a script that was running.",
     failed: "The SSH tunnel could not be opened again: {{message}}",
     retry: "Try again",
     later: "Later",
@@ -987,12 +987,12 @@ const dbEn = {
      *  instead of erroring — '9,9999' becomes 99999.0000, not 9.9999 with a mistyped separator. */
     mssqlAmbiguousMoney: "Use a period, not a comma, for the decimal point in a money value.",
     // Connections
-    unknownConnection: "This connection is no longer open \u2014 connect again.",
+    unknownConnection: "This connection is no longer open. Connect again.",
     wrongConnectionKind: "This is not a {{kind}} connection.",
     connectTimeout:
-      "The {{kind}} connection timed out after {{seconds}}s \u2014 check the host, the port and the firewall.",
+      "The {{kind}} connection timed out after {{seconds}}s. Check the host, the port and the firewall.",
     connectionLost:
-      "The connection to the server was lost. If it goes through an SSH tunnel, MixLab is opening it again \u2014 try once more in a moment.",
+      "The connection to the server was lost. If it goes through an SSH tunnel, MixLab is opening it again. Try once more in a moment.",
     noTunnel: "This connection does not go through an SSH tunnel.",
     mongoUriRequired: "A MongoDB connection string is required.",
     sqlitePathRequired: "Choose the SQLite database file to open.",
@@ -1004,24 +1004,24 @@ const dbEn = {
     sqliteFileExists: "There is already a file at {{path}}. Open it with Browse, or pick another name.",
     sqliteNoDatabases:
       "A SQLite database is a file. Creating or deleting one is done in the file manager, not here.",
-    clickhouseReadOnly: "MixLab only reads from ClickHouse for now — nothing here writes to it.",
+    clickhouseReadOnly: "MixLab only reads from ClickHouse for now. Nothing here writes to it.",
     clickhouseOnlyFeature: "This only applies to a ClickHouse connection.",
     clickhouseMutationTimeout:
-      "The mutation is still running on the server after 30 seconds — reload the table to check whether it finished.",
+      "The mutation is still running on the server after 30 seconds. Reload the table to check whether it finished.",
     clickhouseMutationTargetUnknown:
       "Nothing to run this against: no database is selected, and the statement does not name one.",
     clickhouseHeterogeneousInsert:
       "These rows don't all fill in the same columns, so ClickHouse cannot insert them as one atomic statement.",
     clickhouseUnknownEngine:
-      "MixLab does not create tables with the {{engine}} engine — pick one of the MergeTree family.",
+      "MixLab does not create tables with the {{engine}} engine. Pick one of the MergeTree family.",
     clickhouseTypeChangeFailed:
       "Changing the type of {{column}} failed, and {{table}} cannot be read until it is put back: set the column's type to what it was before. The server said: {{cause}}",
     clickhouseSkipIndexExprRequired: "The skip index needs an expression to cover.",
     clickhouseOrderByColumnsRequired: "The sorting key needs at least one column.",
     clickhouseRebuildParse:
-      "MixLab could not read this table's own definition back from the server — the rebuild was not attempted.",
+      "MixLab could not read this table's own definition back from the server, so the rebuild was not attempted.",
     clickhouseRebuildCountMismatch:
-      "The row count changed while {{table}} was being copied (a write landed at the same time?). The rebuild was cancelled and the original table was not touched — try again.",
+      "The row count changed while {{table}} was being copied (a write landed at the same time?). The rebuild was cancelled and the original table was not touched. Try again.",
     /* A `mixlab://connect?…` URL another program started MixLab with — see `handoff.ts`. The first
        is only ever printed to stderr; the second is answered with an empty form. Both exist so a
        code that does reach the screen one day is a sentence rather than its own key. */
@@ -1032,7 +1032,7 @@ const dbEn = {
     // Writing rows and documents
     updateWithoutKey: "This row has no column that identifies it, so it cannot be updated.",
     deleteWithoutKey: "This row has no column that identifies it, so it cannot be deleted.",
-    rowsMatched: "Expected to match exactly 1 row, matched {{matched}} \u2014 nothing was changed.",
+    rowsMatched: "Expected to match exactly 1 row, matched {{matched}}. Nothing was changed.",
     rowFailed: "Row {{index}}: {{cause}}",
     documentsMatched: "Expected to match exactly 1 document, matched {{matched}}.",
     documentsDeleted: "Expected to delete exactly 1 document, deleted {{deleted}}.",
@@ -1060,20 +1060,20 @@ const dbEn = {
     sqliteIndexBelongsToConstraint:
       "{{index}} belongs to a PRIMARY KEY or UNIQUE constraint and cannot be dropped on its own.",
     sqliteColumnInTableConstraint:
-      "{{column}} is part of a table-level constraint (a composite key, a UNIQUE, a CHECK or a FOREIGN KEY) — rewriting those is not supported yet.",
+      "{{column}} is part of a table-level constraint (a composite key, a UNIQUE, a CHECK or a FOREIGN KEY), and rewriting those is not supported yet.",
     sqliteColumnGenerated:
-      "{{column}} is a generated column — its value comes from its expression, not from an edit.",
+      "{{column}} is a generated column. Its value comes from its expression, not from an edit.",
     sqliteColumnIsPrimaryKey:
       "{{column}} is the table's own rowid, aliased as an INTEGER PRIMARY KEY, and cannot be changed.",
     sqliteRebuildForeignKeyViolation:
-      "Rebuilding {{table}} would leave a foreign key pointing at a row that no longer matches — nothing was changed.",
+      "Rebuilding {{table}} would leave a foreign key pointing at a row that no longer matches. Nothing was changed.",
     unknownIndexType: "Unknown index type {{type}}.",
     mssqlRenameCannotChangeSchema:
-      "SQL Server cannot move a table to another schema by renaming it — rename it within {{schema}}, or drop and recreate it in the new one.",
+      "SQL Server cannot move a table to another schema by renaming it. Rename it within {{schema}}, or drop and recreate it in the new one.",
     mssqlIdentityToggleNotSupported:
-      "SQL Server can't turn IDENTITY on or off through ALTER COLUMN — drop the column and add it again to change that.",
+      "SQL Server can't turn IDENTITY on or off through ALTER COLUMN. Drop the column and add it again to change that.",
     noVisibleColumns:
-      "No columns of {{database}}.{{table}} are visible \u2014 the table may not exist, or your user may have no privileges on it.",
+      "No columns of {{database}}.{{table}} are visible. The table may not exist, or your user may have no privileges on it.",
     unknownColumn: "{{table}} no longer has a column called {{name}}.",
     nothingToRun: "There is nothing to run.",
     // BSON values
@@ -1089,11 +1089,11 @@ const dbEn = {
     unknownDumpMode: "Unknown dump mode {{mode}}.",
     notMongoUri: "The connection string is not a mongodb:// URI.",
     srvOverTunnel:
-      "Dumping over an SSH tunnel needs a plain mongodb:// connection string \u2014 a mongodb+srv:// one resolves its own hosts, which the tunnel does not reach.",
+      "Dumping over an SSH tunnel needs a plain mongodb:// connection string. A mongodb+srv:// one resolves its own hosts, which the tunnel does not reach.",
     notMongoArchive:
-      "{{path}} is not a mongodump archive \u2014 MixLab restores the single-file archives its own dump writes.",
+      "{{path}} is not a mongodump archive. MixLab restores the single-file archives its own dump writes.",
     archiveDatabaseUnreadable:
-      "Cannot tell which database {{path}} holds \u2014 it may be compressed: {{message}}",
+      "Cannot tell which database {{path}} holds. It may be compressed: {{message}}",
     archiveNamesNoDatabase: "{{path}} names no database to restore from.",
     noDumpAddress: "This connection has no address to dump from.",
     noDumpUri: "This connection has no connection string to dump with.",
@@ -1118,15 +1118,15 @@ const dbEn = {
       "{{tool}} was not found. Install the MongoDB Database Tools, point MixLab at a copy in Settings, or let it download one.",
     noFileAt: "There is no file at {{path}}.",
     noMysqlArchive:
-      "MySQL publishes no archive of its client tools for this platform \u2014 install them through your package manager (mysql-client / mariadb-client) and MixLab will find them on PATH.",
+      "MySQL publishes no archive of its client tools for this platform. Install them through your package manager (mysql-client / mariadb-client) and MixLab will find them on PATH.",
     noPostgresArchive:
-      "EnterpriseDB publishes no PostgreSQL binaries for this platform \u2014 install the client tools through your package manager (postgresql-client) and MixLab will find them on PATH.",
+      "EnterpriseDB publishes no PostgreSQL binaries for this platform. Install the client tools through your package manager (postgresql-client) and MixLab will find them on PATH.",
     downloadFailed: "The download failed: {{message}}",
     unpackFailed: "Unpacking the download failed: {{message}}",
     downloadIncomplete:
-      "The download did not contain the tools it was supposed to \u2014 the version MixLab asks for may have been withdrawn.",
+      "The download did not contain the tools it was supposed to. The version MixLab asks for may have been withdrawn.",
     checksumMismatch:
-      "The download is not the file MixLab expects (its checksum is {{actual}}, not {{expected}}). The release may have been withdrawn or replaced \u2014 install the tools yourself and point MixLab at them in Settings.",
+      "The download is not the file MixLab expects (its checksum is {{actual}}, not {{expected}}). The release may have been withdrawn or replaced. Install the tools yourself and point MixLab at them in Settings.",
     cannotReadDownload: "Cannot read the download back: {{message}}",
     cannotCopyTool: "Cannot put {{tool}} in {{path}}: {{message}}",
     cannotSaveToolPath: "Cannot remember where that tool is: {{message}}",
@@ -1134,10 +1134,10 @@ const dbEn = {
     // Files and the app's own directory
     cannotReadFile: "Cannot read {{path}}: {{message}}",
     cannotWriteFile: "Cannot write {{path}}: {{message}}",
-    sqliteRestoreFailed: "The restore stopped at {{statement}} — {{message}}",
-    mssqlRestoreFailed: "The restore stopped at {{statement}} — {{message}}",
+    sqliteRestoreFailed: "The restore stopped at {{statement}}: {{message}}",
+    mssqlRestoreFailed: "The restore stopped at {{statement}}: {{message}}",
     sqliteRebuildParseFailed:
-      "MixLab could not read {{table}}'s own CREATE TABLE text well enough to rebuild it — this is a syntax it does not recognise yet.",
+      "MixLab could not read {{table}}'s own CREATE TABLE text well enough to rebuild it. It uses a syntax MixLab does not recognise yet.",
     cannotRemoveDirectory: "Cannot remove {{path}}: {{message}}",
     noAppDataDir: "There is nowhere for MixLab to keep its own files: {{message}}",
   },

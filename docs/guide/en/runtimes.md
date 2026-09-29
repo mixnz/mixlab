@@ -2,7 +2,7 @@
 title = "PHP, Node, Python, Ruby, Go and Java versions"
 slug = "runtimes"
 order = 5
-summary = "Install as many versions as you need, and let each directory choose its own — with no shell hook and nothing to remember."
+summary = "Install as many versions as you need, and let each directory choose its own, with no shell hook and nothing to remember."
 +++
 
 # PHP, Node, Python, Ruby, Go and Java versions
@@ -16,7 +16,7 @@ MixLab installs language runtimes into its own directory, one immutable folder p
 never touches whatever your operating system already has. Installing a version never modifies a
 version already installed, so nothing you have working can be broken by adding something new.
 
-Six languages are managed: **PHP**, **Node.js**, **Python**, **Ruby**, **Go** and **Java** — and one
+Six languages are managed: **PHP**, **Node.js**, **Python**, **Ruby**, **Go** and **Java**, plus one
 tool, **Composer**, which installs the same way and runs under whichever PHP the directory uses.
 
 ## Installing a version
@@ -27,22 +27,21 @@ mix runtime install php 8.3.33
 mix runtime list
 ```
 
-The version is exact, and that is deliberate rather than an omission. `8.3` asks *"choose one for
-me"*, and there is nothing to choose from until something is installed — choosing between versions
-is what resolution does, and resolution answers with what is on the machine. `mix runtime available`
-is where a range belongs.
+The version is exact, on purpose. `8.3` asks *"choose one for me"*, and there is nothing to choose
+from until something is installed. Choosing between versions is what resolution does, and resolution
+answers with what is on the machine. `mix runtime available` is where a range belongs.
 
 An install is a job, and `mix` waits for it by default: `mix runtime install php 8.3.33 && …` is a
 sentence about PHP being there. `--no-wait` returns as soon as the daemon has accepted the work and
 hands you a job id, which `mix job wait` can be pointed at later.
 
-**Installing a PHP also creates its php-fpm pool** — `php-fpm@8.3.33`, a service like any other, in
-`mix service list`. Node, Python, Ruby, Go and Java are invoked per command and have nothing
-supervised.
+**Installing a PHP also creates its php-fpm pool**, such as `php-fpm@8.3.33`: a service like any
+other, in `mix service list`. Node, Python, Ruby, Go and Java are invoked per command and have
+nothing supervised.
 
 ### On a Windows PC with an ARM processor
 
-Some versions have no build made for that processor — nobody publishes an ARM64 Windows PHP, for
+Some versions have no build made for that processor. Nobody publishes an ARM64 Windows PHP, for
 instance. Where that is so, MixLab installs the x86_64 build instead and Windows runs it for you.
 It works; it is a little slower than a build made for your machine would be.
 
@@ -60,9 +59,9 @@ composer --version                      # runs composer.phar under this director
 mix project update shop --pin composer=2.2
 ```
 
-Composer is a file, not a program: the `composer` command starts the PHP your directory resolves
-to and hands it `composer.phar`. So `MIXENGINE_PHP=8.1 composer install` uses PHP 8.1, and a
-directory pinned to PHP 7.4 needs the 2.2 line — Composer 2.3 and later want PHP 7.2.5 or newer.
+Composer is a file, not a program: the `composer` command starts the PHP your directory resolves to
+and hands it `composer.phar`. So `MIXENGINE_PHP=8.1 composer install` uses PHP 8.1, and a directory
+pinned to PHP 7.4 needs the 2.2 line, because Composer 2.3 and later want PHP 7.2.5 or newer.
 
 | Your PHP | Pin |
 | --- | --- |
@@ -82,7 +81,7 @@ mix project update api --pin go=1.25
 ```
 
 `go` and `gofmt` are commands like every other. `GOROOT` is worked out by `go` itself from where it
-is installed, and `GOPATH`, the module cache and the build cache stay where Go puts them — every
+is installed, and `GOPATH`, the module cache and the build cache stay where Go puts them. Every
 version shares them, which is how Go is designed to be used.
 
 **A pinned Go is the Go that builds.** A `go.mod` asking for a newer release than the one your
@@ -103,13 +102,13 @@ The answer is to install the newer Go and pin it. Three details:
 `mix doctor` tells you when MixEngine itself was started with a `GOTOOLCHAIN` other than `local`, or
 with a `GOROOT`, because the commands it starts inherit them.
 
-Programs you add with `go install` land in Go's own `GOBIN` — `~/go/bin` unless you changed it —
+Programs you add with `go install` land in Go's own `GOBIN` (`~/go/bin` unless you changed it),
 which MixLab does not put on your `PATH`.
 
 ## Java
 
 ```bash
-mix runtime available --kind java      # 11, 17, 21 and 25 — the long-term-support lines
+mix runtime available --kind java      # the long-term-support lines: 11, 17, 21 and 25
 mix runtime install java 21
 java --version                         # the JDK this directory resolves to
 mix project update api --pin java=21
@@ -117,7 +116,7 @@ mix project update api --pin java=21
 
 `java`, `javac`, `jar`, `jshell`, `keytool` and `jlink` are commands like every other. Each is
 started with **`JAVA_HOME` set to the JDK it belongs to**, even if you have exported another one, so
-a program — and any build it runs itself — finds the JDK this directory asked for.
+a program, and any build it runs itself, finds the JDK this directory asked for.
 
 **Maven and Gradle typed in a terminal read your own `JAVA_HOME` first.** If yours points at a
 system JDK, `mvn` and `./gradlew` use that one whatever the directory pins; unset it and they find
@@ -130,7 +129,7 @@ argument. Two limits are worth knowing: a runtime you build yourself with `jlink
 original store and does not trust these sites, and a JVM started with `-Djavax.net.ssl.trustStore`
 reads that store instead of the JDK's own. If a JDK has lost it, `mix doctor --repair` puts it back.
 
-**On Linux a JDK expects some of the system's libraries** — `zlib` to start at all, `freetype` for
+**On Linux a JDK expects some of the system's libraries**: `zlib` to start at all, `freetype` for
 fonts, X11 for windows and ALSA for sound. When your system does not have one, the install says
 which and carries on: a server that never draws a window or plays a sound runs without them, and
 your distribution's package manager has them when you need them.
@@ -166,7 +165,7 @@ silently against downloadable ones:
 | --- | --- |
 | `8.3.33` | Exactly that |
 | `8.3` or `8` | As many segments as are written have to agree; one nobody wrote is a zero |
-| `^8.3` | Up to the leftmost non-zero segment — `^0.12` stops before `0.13` |
+| `^8.3` | Up to the leftmost non-zero segment: `^0.12` stops before `0.13` |
 
 A constraint with no pre-release in it never selects one. `8.5` and `^8.5` both pass over
 `8.5.0RC1`; naming it exactly is how you ask for it.
@@ -174,11 +173,11 @@ A constraint with no pre-release in it never selects one. `8.5` and `^8.5` both 
 ## The shims
 
 `mix path install` puts `<root>/bin` on your `PATH`. It holds a small program per command of each
-language you have installed with MixEngine — `php`, `composer`, `node`, `npm`, `python`, `pip`,
-`ruby`, `go`, `java` and the rest — and each one works out which version this directory wants and
+language you have installed with MixEngine (`php`, `composer`, `node`, `npm`, `python`, `pip`,
+`ruby`, `go`, `java` and the rest), and each one works out which version this directory wants and
 hands over to the real binary.
 
-Two things follow that are worth knowing:
+Three things follow that are worth knowing:
 
 - **It works with the daemon stopped.** A shim reads what it needs directly rather than asking over
   a socket, which is why `php -v` in a project still answers when MixEngine is not running.
@@ -188,7 +187,7 @@ Two things follow that are worth knowing:
 - **A terminal open from before may remember an old path.** After a command appears or goes, open a
   new terminal, or run `hash -r` in bash.
 
-Only `<root>/bin` goes on your `PATH` — one entry, never a directory per version.
+Only `<root>/bin` goes on your `PATH`: one entry, never a directory per version.
 
 ```bash
 mix path status
@@ -219,6 +218,6 @@ Enabling loads the extension on every PHP process of that version, the pool incl
 mix runtime uninstall php 8.1.31
 ```
 
-This is refused while a registered project pins that version — the projects are named — and while
-the php-fpm pool running out of it is running. `--force` crosses the first of those and never the
+This is refused while a registered project pins that version, naming the projects, and while the
+php-fpm pool running out of it is running. `--force` crosses the first of those and never the
 second.

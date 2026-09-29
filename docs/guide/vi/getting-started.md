@@ -2,15 +2,15 @@
 title = "Site đầu tiên của bạn"
 slug = "getting-started"
 order = 3
-summary = "Từ máy vừa cài xong tới https://blog.test với ổ khóa xanh, mất khoảng năm phút."
+summary = "Từ máy vừa cài xong tới https://blog.test với ổ khoá xanh, mất khoảng năm phút."
 translation_of = "en/getting-started.md"
-source_sha256 = "cc15ce067a2bba5bc274b55de50f949beacdf4bee696eea72ba93cd3d8520606"
+source_sha256 = "148380e56cd9ed182eb7fbfa6e2f2e4ac54e363658ad279bce3aa31279915ceb"
 +++
 
 # Site đầu tiên của bạn
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -94,8 +94,8 @@ Từ chối cũng được. Site vẫn được tạo và vẫn chạy qua `http
 mix site list
 ```
 
-Rồi mở `https://blog.test` trên trình duyệt. Bạn sẽ thấy trang `phpinfo()` và một ổ khóa, không có
-cảnh báo nào. Nếu ổ khóa không xanh, hãy hỏi thẳng server thay vì đoán:
+Rồi mở `https://blog.test` trên trình duyệt. Bạn sẽ thấy trang `phpinfo()` và một ổ khoá, không có
+cảnh báo nào. Nếu ổ khoá không xanh, hãy hỏi thẳng server thay vì đoán:
 
 ```bash
 mix cert status
@@ -132,6 +132,6 @@ Lệnh cuối tạo cơ sở dữ liệu và một tài khoản để truy cập
 - [Phiên bản PHP, Node, Python, Ruby, Go và Java](./runtimes.md): cách một thư mục tự chọn phiên
   bản.
 - [Máy chủ, cơ sở dữ liệu và bộ nhớ đệm](./services.md): mọi thứ một project cần để chạy.
-- [Tên miền và ổ khóa](./domains-and-https.md): `blog.test` phân giải thế nào, và ai ký chứng chỉ.
+- [Tên miền và ổ khoá](./domains-and-https.md): `blog.test` phân giải thế nào, và ai ký chứng chỉ.
 - [MixLab xin quyền để làm gì](./permissions.md): từng hộp thoại, và nó thay đổi gì.
 - [Khi có gì đó không ổn](./troubleshooting.md): chạy `mix doctor` trước đã.

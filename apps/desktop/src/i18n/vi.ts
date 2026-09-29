@@ -10,9 +10,9 @@ const vi: SharedDict = {
     connect: "Kết nối",
     disconnect: "Ngắt kết nối",
     save: "Lưu",
-    cancel: "Hủy",
+    cancel: "Huỷ",
     confirm: "Xác nhận",
-    delete: "Xóa",
+    delete: "Xoá",
     duplicate: "Nhân bản",
     browse: "Duyệt...",
     close: "Đóng",
@@ -52,7 +52,7 @@ const vi: SharedDict = {
     lastOne: "Phải để lại ít nhất một mô-đun.",
     confirmTitle: "Đóng các tab này?",
     confirmMessage:
-      "Các tab đang mở của {{modules}} sẽ bị đóng. Không xoá gì đã lưu — bật lại là thấy nguyên chỗ cũ.",
+      "Các tab đang mở của {{modules}} sẽ bị đóng. Những gì đã lưu vẫn còn, bật lại là thấy nguyên chỗ cũ.",
     confirmAction: "Tắt và đóng tab",
     turnedOn: "{{module}} vừa được bật để mở tab này. Tắt lại trong Cài đặt → Mô-đun.",
     turnedOnDismiss: "Ẩn thông báo",
@@ -65,7 +65,7 @@ const vi: SharedDict = {
   },
   select: {
     placeholder: "Chọn...",
-    noOptions: "Không có tùy chọn",
+    noOptions: "Không có tuỳ chọn",
     noMatches: "Không tìm thấy",
     searchPlaceholder: "Tìm...",
     useTyped: 'Dùng "{{value}}"',
@@ -108,7 +108,7 @@ const vi: SharedDict = {
     languageVietnamese: "Tiếng Việt",
     privacyPolicy: "Chính sách quyền riêng tư",
     privacyHint:
-      "MixLab không thu thập bất cứ thông tin nào về bạn. Những gì app ghi nhớ đều nằm lại trên máy này — trừ khi bạn bật đồng bộ, và khi đó máy chủ chỉ giữ những gì nó không đọc được.",
+      "MixLab không thu thập bất cứ thông tin nào về bạn. Những gì app ghi nhớ đều nằm lại trên máy này. Nếu bạn bật đồng bộ, máy chủ chỉ giữ những gì nó không đọc được.",
     logHint: "Một file trên máy ghi lại các lỗi và crash, phòng khi cần xem kỹ hơn.",
     openLogFolder: "Mở thư mục log",
   },
@@ -161,7 +161,7 @@ const vi: SharedDict = {
     notesLink: "Xem có gì mới",
     daemonRestarts: "Nếu MixEngine đang chạy, nó sẽ dừng để cập nhật rồi chạy lại cùng các dịch vụ cũ.",
     download: "Tải về",
-    cancel: "Hủy",
+    cancel: "Huỷ",
     ready: "MixLab {{version}} đã sẵn sàng để cài",
     installerDownloaded: "Đã tải bộ cài {{version}}",
     installRestart: "Cài và khởi động lại",
@@ -189,7 +189,7 @@ const vi: SharedDict = {
     openPage: "Mở trang tải về",
     available: "Đã có MixLab {{version}}.",
   },
-  // Thông báo khi một lệnh ở backend thất bại. Khóa ở đây chính là `code` mà `AppError` mang theo
+  // Thông báo khi một lệnh ở backend thất bại. Khoá ở đây chính là `code` mà `AppError` mang theo
   // — xem src-tauri/src/error.rs. `{{message}}` là nguyên văn lời của driver, không dịch: đó là
   // máy chủ đang nói, và cũng là phần đáng tra cứu nhất.
   error: {
@@ -219,7 +219,7 @@ const vi: SharedDict = {
     mixengineProtocol: "MixEngine trả lời một thứ phiên bản này không hiểu: {{message}}",
     // SSH
     sshTimeout:
-      "Kết nối SSH tới {{host}}:{{port}} quá hạn sau {{seconds}} giây — kiểm tra host, cổng và tường lửa.",
+      "Kết nối SSH tới {{host}}:{{port}} quá hạn sau {{seconds}} giây. Kiểm tra host, cổng và tường lửa.",
     sshConnectFailed: "Không kết nối được tới máy chủ SSH: {{message}}",
     sshAuthFailed: "Xác thực SSH thất bại: {{message}}",
     sshShellFailed: "Không mở được shell trên máy chủ SSH: {{message}}",
@@ -229,27 +229,27 @@ const vi: SharedDict = {
     sshAuthRejected:
       "Máy chủ SSH từ chối đăng nhập (partial success: {{partialSuccess}}). Máy chủ chấp nhận: {{methods}}.",
     sshHostKeyChanged:
-      "Máy chủ SSH tại {{endpoint}} đang đưa ra khóa khác với khóa MixLab từng thấy ({{fingerprint}} bây giờ, trước đó là {{known}}). Hoặc máy chủ vừa được dựng lại, hoặc có ai đó đang đứng giữa. Nếu thay đổi này là mong đợi, hãy xóa mục tương ứng trong {{file}} rồi kết nối lại.",
-    cannotReadPrivateKey: "Không đọc được file khóa riêng: {{message}}",
-    invalidPrivateKey: "Đây không phải khóa riêng mà MixLab đọc được: {{message}}",
+      "Khoá của máy chủ SSH {{endpoint}} đã thay đổi: bây giờ là {{fingerprint}}, trước đó là {{known}}. Có thể máy chủ vừa được dựng lại, hoặc có ai đó đang đứng giữa. Nếu bạn biết trước việc này, xoá mục của máy chủ trong {{file}} rồi kết nối lại.",
+    cannotReadPrivateKey: "Không đọc được file khoá riêng: {{message}}",
+    invalidPrivateKey: "Đây không phải khoá riêng mà MixLab đọc được: {{message}}",
     cannotBindTunnelPort: "Không mở được cổng cục bộ cho tunnel: {{message}}",
     tunnelAcceptFailed:
-      "Cổng cục bộ của tunnel đã ngừng nhận kết nối: {{message}}. MixLab vẫn đang thử lại — nếu không trở lại, hãy đóng tab và kết nối lại.",
-    cannotSaveKnownHost: "Không ghi nhớ được khóa của máy chủ: {{message}}",
-    sshUnavailable: "Tunnel SSH hiện không mở — MixLab đang thử mở lại.",
+      "Cổng cục bộ của tunnel đã ngừng nhận kết nối: {{message}}. MixLab vẫn đang thử lại. Nếu không được, đóng tab rồi kết nối lại.",
+    cannotSaveKnownHost: "Không ghi nhớ được khoá của máy chủ: {{message}}",
+    sshUnavailable: "Tunnel SSH đang đóng. MixLab đang thử mở lại.",
     // Mật khẩu đã lưu
     credentialStoreUnreachable: "Không truy cập được kho mật khẩu của hệ điều hành: {{message}}",
     cannotSavePassword: "Không lưu được mật khẩu: {{message}}",
     cannotReadPassword: "Không đọc lại được mật khẩu đã lưu: {{message}}",
-    syncKeyDerivation: "Không dẫn xuất được khóa đồng bộ: {{message}}",
-    syncCannotWrapKey: "Không bảo vệ được khóa đồng bộ.",
-    syncCannotUnwrapKey: "Sai mật khẩu, hoặc khóa của tài khoản này đã hỏng.",
+    syncKeyDerivation: "Không dẫn xuất được khoá đồng bộ: {{message}}",
+    syncCannotWrapKey: "Không bảo vệ được khoá đồng bộ.",
+    syncCannotUnwrapKey: "Sai mật khẩu, hoặc khoá của tài khoản này đã hỏng.",
     syncRecoveryKeyUnreadable:
-      "Đây không phải khóa khôi phục. Đối chiếu lại với bản bạn đã ghi.",
-    syncCannotSealRecord: "Không mã hóa được mục này để đồng bộ.",
+      "Đây không phải khoá khôi phục. Đối chiếu lại với bản bạn đã ghi.",
+    syncCannotSealRecord: "Không mã hoá được mục này để đồng bộ.",
     syncCannotOpenRecord:
       "Không đọc được một mục từ máy chủ. Có thể nó đã bị sửa đổi.",
-    syncSignedOut: "Bạn đã bị đăng xuất khỏi đồng bộ. Hãy đăng nhập lại.",
+    syncSignedOut: "Bạn đã bị đăng xuất khỏi đồng bộ. Đăng nhập lại để tiếp tục.",
     syncAccessTokenRejected:
       "Máy chủ đồng bộ này cần mã truy cập, và mã đang đặt không được chấp nhận.",
     syncAccountFrozen:
@@ -265,25 +265,25 @@ const vi: SharedDict = {
     syncStoreFailed: "Không lưu được trạng thái đồng bộ: {{message}}",
     syncConflictUnresolved: "Một máy khác liên tục thay đổi mục này. Đồng bộ sẽ thử lại sau.",
     syncWrongPassword: "Địa chỉ email và mật khẩu không khớp với tài khoản nào.",
-    syncEmailNotVerified: "Hãy xác nhận địa chỉ bằng mã trong thư trước khi đăng nhập.",
-    syncEmailTaken: "Địa chỉ này đã có tài khoản. Hãy đăng nhập.",
+    syncEmailNotVerified: "Nhập mã trong thư để xác nhận địa chỉ trước khi đăng nhập.",
+    syncEmailTaken: "Địa chỉ này đã có tài khoản. Đăng nhập bằng địa chỉ này.",
     syncInvalidEmail: "Địa chỉ này không nhận được thư.",
     syncInvalidDeviceName: "Máy này cần có tên.",
-    syncLetterNotSent: "Không gửi được thư xác nhận nên tài khoản chưa được tạo. Hãy thử lại sau.",
+    syncLetterNotSent: "Không gửi được thư xác nhận nên tài khoản chưa được tạo. Thử lại sau.",
     syncWrongCode: "Mã không đúng, đã dùng hoặc đã hết hạn.",
-    syncSavedUnreadable: "Không đọc được thông tin đăng nhập đồng bộ đã lưu. Hãy đăng nhập lại.",
+    syncSavedUnreadable: "Không đọc được thông tin đăng nhập đồng bộ đã lưu. Đăng nhập lại.",
     syncNotSignedIn: "Chưa đăng nhập đồng bộ.",
-    syncNothingToVerify: "Không có lần đăng ký nào đang chờ mã. Hãy đăng ký lại.",
+    syncNothingToVerify: "Không có lần đăng ký nào đang chờ mã. Đăng ký lại từ đầu.",
     syncPageStale: "Trạng thái đồng bộ đã đổi trong lúc áp dụng. Đồng bộ sẽ chạy lại.",
     syncArgonUnsupported: "Tài khoản này được tạo bởi một ứng dụng khác mà MixLab không đăng nhập thay được.",
-    syncResetExpired: "Quá trình đặt lại đã quá lâu. Hãy xin mã mới.",
+    syncResetExpired: "Lần đặt lại này đã quá hạn. Xin mã mới.",
     syncRecoveryKeyWrong: "Khoá khôi phục này không mở được tài khoản.",
-    syncNothingToReset: "Không có lần đặt lại mật khẩu nào đang diễn ra. Hãy bắt đầu lại.",
+    syncNothingToReset: "Không có lần đặt lại mật khẩu nào đang diễn ra. Bắt đầu lại từ đầu.",
     syncMoveIncomplete:
       "{{missing}} bản ghi chưa tới được máy chủ mới. Tài khoản cũ vẫn đang đóng băng: hãy thử lại, hoặc dừng việc chuyển.",
-    syncSignInAgainToMove: "Hãy đăng xuất rồi đăng nhập lại trên máy này trước khi chuyển tài khoản.",
-    syncNothingToMove: "Không có lần chuyển nào đang diễn ra. Hãy bắt đầu lại.",
-    cannotRemovePassword: "Không xóa được mật khẩu đã lưu: {{message}}",
+    syncSignInAgainToMove: "Đăng xuất rồi đăng nhập lại trên máy này trước khi chuyển tài khoản.",
+    syncNothingToMove: "Không có lần chuyển nào đang diễn ra. Bắt đầu lại từ đầu.",
+    cannotRemovePassword: "Không xoá được mật khẩu đã lưu: {{message}}",
 
     // Hai lỗi cả hai tầng cùng phát: một thư mục ứng dụng tự tạo, và một tác vụ giao cho luồng
     // nền. Module database cũng phát chúng, và đọc từ đây.
@@ -291,7 +291,7 @@ const vi: SharedDict = {
     backgroundTaskFailed: "Tác vụ không hoàn tất: {{message}}",
     // Lỗi duy nhất ở đây do webview báo chứ không phải backend. Phải nói rõ, vì nếu im lặng thì
     // người dùng dán ở chỗ khác và nhận đúng thứ đang có sẵn trong clipboard từ trước.
-    clipboard: "Chưa sao chép được — clipboard từ chối: {{message}}",
+    clipboard: "Chưa sao chép được. Clipboard từ chối: {{message}}",
     /** Dạng lỗi MixLab không nhận ra — hiển thị nguyên trạng thay vì nuốt mất. */
     unknown: "{{message}}",
     crashedTab: "Tab này gặp lỗi và không thể tiếp tục. Phần còn lại của MixLab không bị ảnh hưởng.",
@@ -303,7 +303,7 @@ const vi: SharedDict = {
     preferences: "Tuỳ chọn",
     recoveryTitle: "Khoá khôi phục của bạn",
     recoveryHint:
-      "Hãy ghi lại và cất ở nơi an toàn — khoá chỉ hiện một lần. Có khoá này và email, bạn lấy lại được dữ liệu nếu quên mật khẩu. Không có email thì khoá không đủ.",
+      "Ghi lại và cất ở nơi an toàn. Khoá chỉ hiện một lần. Nếu quên mật khẩu, bạn lấy lại dữ liệu bằng khoá này và email.",
     recoveryCopy: "Sao chép",
     recoveryWritten: "Tôi đã ghi lại",
     recoveryCheck: "Gõ lại nhóm {{first}} và {{second}}",
@@ -327,7 +327,7 @@ const vi: SharedDict = {
     syncedJustNow: "Vừa đồng bộ xong",
     syncedAgo: "Đã đồng bộ {{when}}",
     syncFailed: "Lần đồng bộ trước bị lỗi: {{message}}",
-    closing: "Máy chủ này sẽ đóng vào {{date}}. Hãy chép tài khoản sang máy chủ khác trước ngày đó.",
+    closing: "Máy chủ này sẽ đóng vào {{date}}. Chép tài khoản sang máy chủ khác trước ngày đó.",
     replaced: "Các thay đổi của bạn trong {{collection}} đã bị thay bằng bản mới hơn từ máy khác ({{count}}).",
     collections: "Những gì được đồng bộ",
     collectionsHint: "Mọi mục đều tắt sẵn. Chỉ bật những gì bạn muốn có trên các máy khác.",
@@ -349,14 +349,14 @@ const vi: SharedDict = {
     addServerAction: "Thêm",
     removeServer: "Gỡ",
     serverInvalid: "Đây không phải địa chỉ máy chủ.",
-    serverInsecure: "Hãy dùng https:// — http:// chỉ dùng được cho máy chủ chạy trên chính máy này.",
+    serverInsecure: "Dùng https://. http:// chỉ dùng được cho máy chủ chạy trên chính máy này.",
     access: "Access token",
     accessHint: "Chỉ cần cho máy chủ mà chủ của nó đã giới hạn người dùng.",
     email: "Email",
     passwordAgain: "Nhập lại mật khẩu",
     passwordsDiffer: "Hai mật khẩu không khớp.",
     passwordHint:
-      "Không ai đặt lại được mật khẩu này mà vẫn giữ được dữ liệu của bạn — chỉ khoá khôi phục làm được. Hãy chọn mật khẩu bạn sẽ nhớ.",
+      "Chỉ khoá khôi phục mới đặt lại được mật khẩu này mà vẫn giữ dữ liệu của bạn. Chọn mật khẩu bạn sẽ nhớ.",
     signIn: "Đăng nhập",
     signUp: "Tạo tài khoản",
     signingIn: "Đang đăng nhập",
@@ -408,8 +408,8 @@ const vi: SharedDict = {
       "Tài khoản cũ mở lại. Máy nào còn trỏ về đó sẽ tiếp tục ghi vào đó, nơi không máy nào của bạn đọc.",
     moveFinish: "Hoàn tất việc chuyển",
     moveAbandon: "Dừng việc chuyển",
-    closingSoon: "{{server}} sẽ đóng sau {{days}} ngày, vào {{date}}. Hãy chuyển tài khoản trước ngày đó.",
-    closingNow: "{{server}} đã hẹn đóng vào {{date}}. Hãy chuyển tài khoản ngay, khi máy chủ còn trả lời.",
+    closingSoon: "{{server}} sẽ đóng sau {{days}} ngày, vào {{date}}. Chuyển tài khoản trước ngày đó.",
+    closingNow: "{{server}} đã hẹn đóng vào {{date}}. Chuyển tài khoản ngay, khi máy chủ còn trả lời.",
     openSync: "Mở Đồng bộ",
     serverClosing: "{{server}} đã báo sẽ đóng vào {{date}}. Tài khoản ở đó sẽ phải chuyển đi trước ngày đó.",
     secretNeedsOwner: "Bật {{collection}} trước.",

@@ -4,13 +4,13 @@ slug = "troubleshooting"
 order = 14
 summary = "Chạy mix doctor trước, rồi bốn lệnh trả lời đúng những câu hỏi người dùng hay gặp, và một file gom đủ mọi thứ một báo cáo lỗi cần."
 translation_of = "en/troubleshooting.md"
-source_sha256 = "21a65e073f3ed6eb81292eb8d1db0ea812e2a8781b3a642032ea82fe656d5f91"
+source_sha256 = "466aae33ce48f3f8a911d58b36cc10cd1a9596caa88c434b9aa6a7ee617b2d72"
 +++
 
 # Khi có gì đó không ổn
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -53,7 +53,7 @@ Bốn câu hỏi được trả lời riêng rẽ thay vì một kết luận ch
 định tuyến bằng cách nào, hiện tại nó có phân giải được trên máy này không, và có gì đang trả lời
 ở đó không. Câu nào trả lời `no` thì đó là chỗ cần sửa.
 
-### "Sao ổ khóa không xanh?"
+### "Sao ổ khoá không xanh?"
 
 ```bash
 mix cert status
@@ -99,7 +99,7 @@ nói rõ như vậy thay vì giả vờ output bị mất.
 ## Các tình huống thường gặp
 
 **Cổng đã bị chiếm.** Có thứ gì khác trên máy đang dùng nó. Với service mới, dùng
-`mix service create --port` để chọn cổng khác. Với service đã có, xóa rồi tạo lại trên cổng khác;
+`mix service create --port` để chọn cổng khác. Với service đã có, xoá rồi tạo lại trên cổng khác;
 thư mục dữ liệu được giữ nguyên.
 
 **Daemon không khởi động.** Đọc `logs/daemon.log` trong home. `mix status --no-autostart` hỏi xem
@@ -107,7 +107,7 @@ có daemon đang chạy không mà không khởi động cái mới. Đó là c�
 không phải đang làm việc.
 
 **Lệnh cần một phiên bản chưa cài.** MixLab nói rõ và nêu đúng lệnh `mix runtime install` cần
-gõ. Nếu bạn yêu cầu một *khoảng* phiên bản thì nó không biết phiên bản nào thỏa mãn, nên chỉ bạn
+gõ. Nếu bạn yêu cầu một *khoảng* phiên bản thì nó không biết phiên bản nào thoả mãn, nên chỉ bạn
 sang `mix runtime available`.
 
 **Có gì đó xin quyền quản trị và bạn đã từ chối.** Không có gì bị áp dụng nửa chừng.
@@ -127,8 +127,8 @@ cache     90 MiB    `mix cleanup` — 90 MiB in 12 file(s)
 other     310 MiB   packages, generated config, the database
 ```
 
-`mix cleanup` chỉ lấy lại hai nhóm cuối và không gì khác. Nó xóa các bản log đã xoay vòng —
-`daemon.log.1`, `current.log.2` của một service — và dọn sạch cache tải về. Nó không đụng tới các
+`mix cleanup` chỉ lấy lại hai nhóm cuối và không gì khác. Nó xoá các bản log đã xoay vòng
+(`daemon.log.1`, `current.log.2` của một service) và dọn sạch cache tải về. Nó không đụng tới các
 file log đang được ghi ngay lúc này, các báo cáo sự cố của home, cơ sở dữ liệu của bạn, các runtime
 đã cài hay các chứng chỉ: nó khớp theo *tên file* chứ không quét cả home, nên không có tham số nào
 bạn truyền vào mà chạm tới được chúng.
@@ -136,12 +136,12 @@ bạn truyền vào mà chạm tới được chúng.
 `--keep-logs` và `--keep-cache` giữ lại một trong hai nhóm. `--yes` trả lời câu xác nhận trước, đó
 là cách một script nói đồng ý.
 
-Lệnh này từ chối chạy khi còn job khác đang chạy, vì dọn cache sẽ xóa mất file mà một lượt tải đang
-tiếp tục dở. Hãy đợi job đó xong, hoặc hủy nó bằng `mix job cancel <id>`.
+Lệnh này từ chối chạy khi còn job khác đang chạy, vì dọn cache sẽ xoá mất file mà một lượt tải đang
+tiếp tục dở. Hãy đợi job đó xong, hoặc huỷ nó bằng `mix job cancel <id>`.
 
-Để giải phóng nhiều hơn: `mix runtime list` và `mix runtime uninstall <kind>@<version>` là thứ lấy
-lại `runtimes/`, còn `mix package list` và `mix package uninstall <name>` lấy lại phần lớn của
-*other*.
+Để giải phóng nhiều hơn: `mix runtime list` và `mix runtime uninstall <runtime> <version>` là thứ
+lấy lại `runtimes/`, còn `mix package list` và `mix package uninstall <package> <version>` lấy lại
+phần lớn của *other*.
 
 ## Khi chính MixLab gặp bug
 
@@ -158,11 +158,11 @@ có mật khẩu. Điều này đúng vì file *chỉ được phép chứa* nh�
 cần đọc trước.
 
 Thông báo mà crash in ra là phần duy nhất có thể nhắc tới đường dẫn của bạn, nên nó được ghi vào
-`logs/daemon.log` thay vì vào file kia. File đó cũng đáng gửi kèm, nhưng hãy gửi có ý thức. Xem
+`logs/daemon.log` thay vì vào file kia. File đó cũng đáng gửi kèm, nhưng nên đọc qua trước. Xem
 bên dưới.
 
 **Không có gì được gửi đi đâu cả.** Không có server nào để gửi tới. Hai mươi file mới nhất được
-giữ lại, các file cũ hơn bị xóa. Nếu bạn không muốn file như vậy được ghi ra, thêm vào
+giữ lại, các file cũ hơn bị xoá. Nếu bạn không muốn file như vậy được ghi ra, thêm vào
 `config.toml`:
 
 ```toml
@@ -182,8 +182,8 @@ Một file nén gom đủ mọi thứ một báo cáo lỗi cần: kết quả `
 thông tin máy, các báo cáo crash nếu có, và phần cuối của log. `--out` chép nó tới nơi bạn chọn.
 
 **Những gì cố ý bỏ ra ngoài được ghi tên ngay trong file nén**, nên không ai phải đoán một phần
-thiếu là do che đi hay do lỗi. Hãy mở ra xem trước khi gửi đi đâu. Đó là một file nén bình thường,
-và nó là của bạn.
+thiếu là do che đi hay do lỗi. Đó là một file nén bình thường, nên mở ra xem trước khi
+gửi đi đâu.
 
 Mọi lệnh `mix` đều nhận `--json`, thường là cách nhanh nhất để cho người khác thấy chính xác bạn
 đã thấy gì.

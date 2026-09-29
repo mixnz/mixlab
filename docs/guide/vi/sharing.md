@@ -4,13 +4,13 @@ slug = "sharing"
 order = 8
 summary = "Đưa đúng một site ra mạng nội bộ, quét mã QR, rồi rút nó về. Một site, một cổng, một luật."
 translation_of = "en/sharing.md"
-source_sha256 = "8547c1c031db73b34728417bec900178ffda5a3355ee6036c0ad7f5c41560f8b"
+source_sha256 = "b1408dbb04f9463fb4a7fbb5f1ea870538882fe3171a07166e2a8b3dafa1c2a6"
 +++
 
 # Cho điện thoại xem site của bạn
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -27,7 +27,7 @@ ra:
 
 1. Site bắt đầu trả lời trên địa chỉ của máy này trong mạng nội bộ, thay vì chỉ trên loopback.
    **Chỉ site này thôi.** Mọi site khác vẫn chỉ trả lời trên loopback.
-2. Chứng chỉ được cấp lại để bao cả địa chỉ đó, nên ổ khóa vẫn còn khi truy cập từ máy khác.
+2. Chứng chỉ được cấp lại để bao cả địa chỉ đó, nên ổ khoá vẫn còn khi truy cập từ máy khác.
 3. Một hộp thoại quản trị xin thêm một rule firewall, cho đúng một cổng đó.
 
 ## Khi máy có nhiều mạng
@@ -66,9 +66,9 @@ Site chưa được chia sẻ thì giữ nguyên, nên chạy lệnh này khi kh
 ## Cần biết trước khi dùng
 
 - **Bất kỳ ai trong mạng đó đều truy cập được site.** Không có lớp xác thực nào phía trước. Ở mạng
-  quán cà phê hay văn phòng chung, chuyện chỉ có vậy: chia sẻ có thời hạn, và rút về khi xong việc.
+  quán cà phê hay văn phòng chung, hãy chia sẻ có thời hạn, và rút về khi xong việc.
 - **Chứng chỉ vẫn là của MixLab.** Điện thoại của bạn không tin CA của MixLab, nên nó sẽ cảnh
-  báo. Chia sẻ là để kiểm tra layout trên màn hình thật, không phải để trình diễn ổ khóa.
+  báo. Chia sẻ là để kiểm tra layout trên màn hình thật, không phải để trình diễn ổ khoá.
 - **Các site khác không đổi gì.** Luật là một cổng, một site, và nó được hoàn tác bằng `unshare`,
   khi hết thời hạn, hoặc khi rời khỏi mạng.
 

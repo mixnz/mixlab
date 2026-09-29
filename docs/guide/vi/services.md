@@ -4,13 +4,13 @@ slug = "services"
 order = 6
 summary = "Caddy hoặc Nginx, MariaDB, MySQL, PostgreSQL, Redis và Memcached. Cài khi bạn yêu cầu, cấu hình sẵn cho bạn, và không bao giờ in mật khẩu ra màn hình."
 translation_of = "en/services.md"
-source_sha256 = "bca59240f1dc642d6ad590cec6db015ebd15011409015e4a9f1263427f0f6c35"
+source_sha256 = "3ab9e9922aef6b8fce21063d6ec7e7fa84e83387b80ede2c89bced38b4b9f2e4"
 +++
 
 # Máy chủ, cơ sở dữ liệu và bộ nhớ đệm
 
 > **Đây là tài liệu hướng dẫn dùng MixLab qua dòng lệnh `mix`.** Nếu bạn muốn thao tác bằng
-> giao diện đồ họa cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
+> giao diện đồ hoạ cho dễ hơn thì bạn đã có sẵn: mọi bộ cài đều đặt sẵn cửa sổ MixLab ngay cạnh
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
@@ -58,7 +58,7 @@ Tên service không cần ghi phiên bản. `mix service list` hiện phiên b�
 vậy, nên đặt `mysql@main` là đủ.
 
 Id không đổi được sau khi tạo, vì nó cũng là tên thư mục cấu hình sinh ra, thư mục log, socket, và
-địa chỉ lưu mật khẩu. Muốn đổi tên thì tạo service mới rồi xóa cái cũ; dữ liệu vẫn được giữ lại.
+địa chỉ lưu mật khẩu. Muốn đổi tên thì tạo service mới rồi xoá cái cũ; dữ liệu vẫn được giữ lại.
 
 Các cờ hữu ích của `mix service create`:
 
@@ -94,11 +94,11 @@ mix service stop mariadb@main
 mix service logs mariadb@main --follow
 ```
 
-`mix service status` bắt buộc có id, trong khi `start` và các lệnh còn lại thì id là tùy chọn. Hỏi
+`mix service status` bắt buộc có id, trong khi `start` và các lệnh còn lại thì id là tuỳ chọn. Hỏi
 status mà không nói của cái gì thì thực ra là gõ nhầm `list`, và nếu trả lời bằng một danh sách thì
 sẽ che mất lỗi đó.
 
-Xóa service sẽ xóa bản ghi và cấu hình sinh ra từ nó, nhưng **không bao giờ xóa dữ liệu**, vì đó là
+Xoá service sẽ xoá bản ghi và cấu hình sinh ra từ nó, nhưng **không bao giờ xoá dữ liệu**, vì đó là
 cơ sở dữ liệu của ai đó. Kết quả trả về nêu rõ thư mục còn để lại, để không ai phải đi tìm:
 
 ```bash
@@ -140,8 +140,8 @@ và `mix service front-end` cho biết đó là cái nào.
 mix service front-end
 ```
 
-Đổi sang cái kia chỉ một lệnh, và đây là một thao tác thật chứ không phải một tùy chọn: server đang
-dùng bị dừng, bản ghi của nó bị xóa, mọi site được render lại cho server mới, rồi server mới được
+Đổi sang cái kia chỉ một lệnh, và đây là một thao tác thật chứ không phải một tuỳ chọn: server đang
+dùng bị dừng, bản ghi của nó bị xoá, mọi site được render lại cho server mới, rồi server mới được
 khởi động.
 
 ```bash
@@ -153,13 +153,13 @@ mix service set-front-end nginx
 Thêm `--yes` khi chạy trong script.
 
 **Trên Linux, server mới cần quyền để trả lời trên cổng 80 và 443**, và quyền đó thuộc về chính
-chương trình chứ không thuộc về MixLab — nên đổi sang chương trình khác nghĩa là phải xin lại, và
+chương trình chứ không thuộc về MixLab, nên đổi sang chương trình khác nghĩa là phải xin lại, và
 một hộp thoại xin quyền có thể hiện ra. Nếu không ai cấp quyền thì **không có gì thay đổi cả**: bạn
 vẫn ở trên server cũ, MixLab nói rõ điều đó, và `mix elevation grant` rồi chạy lại đúng lệnh trên
 sẽ hoàn tất. macOS và Windows không cần xin quyền lần hai.
 
 Có hai thứ không đi theo khi đổi, và MixLab nêu tên chúng thay vì lặng lẽ bỏ đi: các thiết lập
-bạn đã ghi đè — một tùy chọn của `nginx.conf` chẳng có ý nghĩa gì với Caddy — cùng với giới hạn tài
+bạn đã ghi đè (một tuỳ chọn của `nginx.conf` chẳng có ý nghĩa gì với Caddy), cùng với giới hạn tài
 nguyên hay chính sách idle bạn đã đặt cho server cũ. Thư mục dữ liệu của server cũ được giữ nguyên
 tại chỗ.
 
@@ -190,7 +190,7 @@ Không kèm giá trị thì `--password` sẽ hỏi và đọc một dòng từ 
 được: `echo secret | mix database create … --password`. Chọn mật khẩu cho tài khoản đã tạo trước đó
 sẽ thay đổi giá trị đang lưu, và server được đồng bộ lại theo đúng cách nó vẫn làm khi mật khẩu bị
 lệch. Tuy nhiên, một tài khoản có sẵn trên server mà MixLab không giữ credential nào thì vẫn bị
-từ chối, kể cả khi bạn đưa đúng mật khẩu. Biết mật khẩu không có nghĩa tài khoản đó là của bạn.
+từ chối, kể cả khi bạn đưa đúng mật khẩu.
 
 Để mở cơ sở dữ liệu bằng ứng dụng trên máy:
 
@@ -214,20 +214,19 @@ mix service limits mariadb@main set --memory 512 --cpu 50
 mix service idle mariadb@main --after 30m
 ```
 
-`limits` không kèm lệnh con thì đọc; `set` thay thế; `clear` xóa. **`set` thay thế tất cả các
-trường, không chỉ trường bạn nêu.** Ví dụ `set --cpu 50` sẽ xóa luôn giới hạn bộ nhớ đang có. Vì
-thế lệnh in ra cả ba trường của kết quả, để giới hạn bị xóa hiện ngay trên màn hình chứ không thành
+`limits` không kèm lệnh con thì đọc; `set` thay thế; `clear` xoá. **`set` thay thế tất cả các
+trường, không chỉ trường bạn nêu.** Ví dụ `set --cpu 50` sẽ xoá luôn giới hạn bộ nhớ đang có. Vì
+thế lệnh in ra cả ba trường của kết quả, để giới hạn bị xoá hiện ngay trên màn hình chứ không thành
 bất ngờ về sau. Hệ điều hành thực sự áp đặt được gì thì mỗi hệ mỗi khác, và câu trả lời sẽ nói bạn
 đang có loại nào trong hai loại: giới hạn **cứng** là một bức tường, chạm tới là service bị kill
 hoặc lần cấp phát tiếp theo thất bại; giới hạn **cảnh báo** là một vạch được theo dõi, service có
-thể vượt qua, khi đó MixLab cảnh báo và, nếu recipe cho phép, khởi động lại. Nếu vẽ một giới hạn
-cảnh báo như thể nó là một bảo đảm thì đó là nói dối về dữ liệu của bạn.
+thể vượt qua, khi đó MixLab cảnh báo và, nếu recipe cho phép, khởi động lại.
 
 `idle` cho biết khi nào service bị dừng vì không ai dùng, và hiện tại cái gì đang giữ nó mở.
 **Không có gì bị dừng chỉ vì rảnh, trừ khi bạn yêu cầu**: site đang chạy thì cứ chạy. Muốn tiết kiệm
 pin, bật *Tiết kiệm pin* trong Settings của MixLab, hoặc chạy `mix service save-resources --on`. Khi
 đó pool PHP không ai dùng trong nửa tiếng, hoặc database/cache trong một tiếng, sẽ được tạm dừng, và
-request tiếp theo cần tới sẽ bật lại — lần tải đầu có thể chậm một chút. Dù bật hay tắt,
+request tiếp theo cần tới sẽ bật lại. Lần tải đầu có thể chậm một chút. Dù bật hay tắt,
 `mix service idle` vẫn đặt được thời gian riêng cho một service, và `--after 0` nghĩa là không bao
 giờ.
 

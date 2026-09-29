@@ -32,7 +32,7 @@ const restEn = {
     rowEnabled: "Include this row",
     addRow: "Add row",
     removeRow: "Remove row",
-    noRows: "Nothing here yet \u2014 type in the last row to add one.",
+    noRows: "Nothing here yet. Type in the last row to add one.",
     bodyKind: "Body type",
     bodyNone: "None",
     bodyForm: "Form",
@@ -45,7 +45,7 @@ const restEn = {
     bodyPlaceholder: "Request body",
     clearFile: "Remove the file",
     binaryBodyHint:
-      "Sent exactly as it is on disk, with no Content-Type of its own \u2014 add one in Headers if the server needs it.",
+      "Sent exactly as it is on disk, with no Content-Type of its own. Add one in Headers if the server needs it.",
     partKind: "Part type",
     partText: "Text",
     partFile: "File",
@@ -111,7 +111,7 @@ const restEn = {
     responseHeadersTab: "Headers ({{n}})",
     totalTimeHint: "Total time, from the first byte sent to the last byte read",
     sizeHint: "Size of the response body",
-    realSizeHint: "Cut for display \u2014 the body is really {{size}}",
+    realSizeHint: "Cut for display. The full body is {{size}}",
     redirected: "Redirected",
     finalUrlHint: "Ended at {{url}}",
     wrapLines: "Wrap lines",
@@ -122,10 +122,10 @@ const restEn = {
       "Off by default: turning it on lets the page fetch images, styles and tracking pixels from the server it came from.",
     runScripts: "Run scripts",
     runScriptsHint:
-      "Off by default, and off again every time this pane is drawn: turning it on runs the page's own script. It still cannot reach the app — but a script that loops forever takes the window with it.",
+      "Off by default, and off again every time this pane is drawn: turning it on runs the page's own script. It still cannot reach the app, but a script that loops forever freezes the window.",
     truncatedNotice: "Showing the first {{shown}} of {{total}}.",
     sourceTooBig:
-      "The body is over {{limit}} \u2014 the tree is off so the app stays responsive. Raw still works.",
+      "The body is over {{limit}}, so the tree is off to keep the app responsive. Raw still works.",
     binaryBody: "{{mime}} \u00b7 {{size}}",
     binaryHint: "Nothing to render for this type.",
     copyValue: "Copy value",
@@ -180,7 +180,7 @@ const restEn = {
     settingsFollowRedirects: "Follow redirects",
     settingsInvalidCerts: "Accept self-signed certificates",
     settingsInvalidCertsHint:
-      "Turns certificate checking off for every request — leave it off unless you know the server.",
+      "Turns certificate checking off for every request. Leave this off unless you know the server.",
     settingsGlobalHint: "These three apply to every request.",
 
     // Shortcuts

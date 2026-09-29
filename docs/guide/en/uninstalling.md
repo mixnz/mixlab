@@ -55,7 +55,7 @@ That changes nothing and names every single thing it would remove:
   system's password store. If you keep the directory below, they stay with it
 - and finally MixLab's own directory
 
-## Doing it
+## Removing it
 
 Quit MixLab first. If its window is open, it saves its passwords again after they are removed.
 
@@ -74,7 +74,7 @@ your browsers are exactly as they were; run the command again when you are ready
 failure. Close the program and run the command again.
 
 **The report is a measurement, not a claim.** What comes back is what MixLab found on the machine
-*afterwards*, row by row, including the rows that answered *nothing there* — a report that hid those
+*afterwards*, row by row, including the rows that answered *nothing there*. A report that hid those
 would leave you unable to tell "there was no resolver wiring" from "the resolver wiring was not
 looked at". The command exits non-zero if anything it acted on is still present, so a script can
 ask.
@@ -141,6 +141,5 @@ what the `.pkg` placed, **MixLab** included.
 ## What is deliberately not automatic
 
 The audit log the privileged helper keeps is root-owned, and so is the helper itself. `mix doctor`
-reports both and removes neither: a diagnostic that deleted a root-owned audit trail would be
-deleting the record of what it was diagnosing. `mix uninstall` is the command that removes them, and
-it asks.
+reports both and removes neither, because the audit trail is the record of what it is diagnosing.
+`mix uninstall` is the command that removes them, and it asks.
