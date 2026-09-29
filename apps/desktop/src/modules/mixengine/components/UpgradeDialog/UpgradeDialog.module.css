@@ -1,0 +1,12 @@
+.lines {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.old {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+}

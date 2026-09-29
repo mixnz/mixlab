@@ -6,6 +6,7 @@ import * as api from "../../api";
 import type { PackageRelease } from "@mixengine/api";
 import type { PackageSummary } from "@mixengine/api";
 import type { PackageFoundList } from "@mixengine/api";
+import type { PackageUpdate, UpgradePlan } from "@mixengine/api";
 import { applyJob, type JobRow } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
 import {
@@ -44,6 +45,17 @@ export interface PackagesState {
   /** The `name@version` being adopted now. */
   adopting: string | null;
   adopt: (pkg: string, version: string) => Promise<void>;
+  /** Each installed version whose line has a newer release — T193c. */
+  updates: PackageUpdate[];
+  /** The update being asked about, with the daemon's plan for it. */
+  upgrading: { update: PackageUpdate; plan: UpgradePlan } | null;
+  askToUpgrade: (update: PackageUpdate) => Promise<void>;
+  upgrade: (update: PackageUpdate, keep: boolean) => Promise<void>;
+  dismissUpgrade: () => void;
+  /** What the new version lacks, asked as an install asks it — T151. */
+  askingUpgrade: { update: PackageUpdate; keep: boolean; step: AskingStep } | null;
+  agreeUpgrade: () => Promise<void>;
+  dismissAskingUpgrade: () => void;
 }
 
 /**
@@ -67,6 +79,15 @@ export function usePackages(active: boolean): PackagesState {
   // What an install said about this machine and went on anyway — T27e.
   const [notice, setNotice] = useState("");
   const [asking, setAsking] = useState<{ release: PackageRelease; step: AskingStep } | null>(null);
+  const [updates, setUpdates] = useState<PackageUpdate[]>([]);
+  const [upgrading, setUpgrading] = useState<{ update: PackageUpdate; plan: UpgradePlan } | null>(
+    null,
+  );
+  const [askingUpgrade, setAskingUpgrade] = useState<{
+    update: PackageUpdate;
+    keep: boolean;
+    step: AskingStep;
+  } | null>(null);
   const { t } = useTranslation();
 
   // The same reason `Languages.tsx` follows: read the latest `installingJob` inside the `watch`
@@ -92,6 +113,7 @@ export function usePackages(active: boolean): PackagesState {
         setOnDisk(found);
         setAvailable(avail.packages);
         setStale(avail.stale);
+        setUpdates(avail.updates ?? []);
         setError(stillShow);
       } catch (e) {
         setError(errorMessage(t, e));
@@ -248,6 +270,81 @@ export function usePackages(active: boolean): PackagesState {
     [reload, t],
   );
 
+  // T193c: the plan first, then what the new version lacks (T151), then the job — as `Languages`.
+  const askToUpgrade = useCallback(
+    async (update: PackageUpdate) => {
+      setError("");
+      try {
+        const plan = await api.packageUpgradePlan({
+          package: update.package,
+          from: update.from,
+          to: update.to,
+        });
+        setUpgrading({ update, plan });
+      } catch (e) {
+        setError(errorMessage(t, e));
+      }
+    },
+    [t],
+  );
+
+  const startUpgrade = useCallback(
+    async (update: PackageUpdate, keep: boolean, installPrerequisites: boolean) => {
+      setError("");
+      try {
+        const job = await api.packageUpgrade({
+          package: update.package,
+          from: update.from,
+          to: update.to,
+          keep,
+          install_prerequisites: installPrerequisites,
+        });
+        setInstallingJob((current) => ({
+          ...current,
+          [versionKey(update.package, update.from)]: job.id,
+        }));
+      } catch (e) {
+        setError(errorMessage(t, e));
+      }
+    },
+    [t],
+  );
+
+  const upgrade = useCallback(
+    async (update: PackageUpdate, keep: boolean) => {
+      setUpgrading(null);
+      const step = requirementStep(update.needs ?? []);
+      if (step.kind === "proceed" || step.kind === "notice") {
+        await startUpgrade(update, keep, false);
+        return;
+      }
+
+      // Only agreeing to install what MixEngine can install continues an update; which release
+      // of the line to go to instead is the version list's question.
+      const asked = askingStep(step);
+      if (asked === null || asked.kind !== "consent") {
+        setError(
+          t("mixengine.requirements.unavailable", {
+            name: `${update.package} ${update.to}`,
+            needs: step.needs.map(needLabel).join(", "),
+          }),
+        );
+        return;
+      }
+      setAskingUpgrade({ update, keep, step: asked });
+    },
+    [startUpgrade, t],
+  );
+
+  const agreeUpgrade = useCallback(async () => {
+    if (askingUpgrade === null) return;
+    setAskingUpgrade(null);
+    await startUpgrade(askingUpgrade.update, askingUpgrade.keep, true);
+  }, [askingUpgrade, startUpgrade]);
+
+  const dismissUpgrade = useCallback(() => setUpgrading(null), []);
+  const dismissAskingUpgrade = useCallback(() => setAskingUpgrade(null), []);
+
   const clearError = useCallback(() => setError(""), []);
   const clearNotice = useCallback(() => setNotice(""), []);
 
@@ -271,5 +368,13 @@ export function usePackages(active: boolean): PackagesState {
     onDisk,
     adopting,
     adopt,
+    updates,
+    upgrading,
+    askToUpgrade,
+    upgrade,
+    dismissUpgrade,
+    askingUpgrade,
+    agreeUpgrade,
+    dismissAskingUpgrade,
   };
 }

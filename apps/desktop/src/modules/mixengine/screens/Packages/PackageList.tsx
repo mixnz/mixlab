@@ -14,13 +14,14 @@ import Table from "../../../../components/Table";
 import { useTranslation } from "../../../../i18n";
 import { formatInstalledAt, jobFor, newestFirst, versionKey } from "../../runtimeState";
 import RequirementDialog from "../../components/RequirementDialog";
+import UpgradeDialog from "../../components/UpgradeDialog";
 import StaleBadge from "../../components/StaleBadge";
 import { splitLibraries } from "../../requirementStep";
 import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
 import { packageCategory, type PackageCategory } from "./packageCategories";
 import type { PackagesState } from "./usePackages";
-import type { PackageRelease } from "@mixengine/api";
+import type { PackageRelease, PackageSummary } from "@mixengine/api";
 import styles from "./Catalogue.module.css";
 
 /**
@@ -111,6 +112,28 @@ export default function PackageList({
     );
   }
 
+  // The installed row's Update: the job's progress while one runs, else the button — T193c.
+  function updateCell(row: PackageSummary) {
+    const job = jobFor(jobs, installingJob[versionKey(row.package, row.version)]);
+    if (job) {
+      return (
+        <span className={styles.progress}>
+          <progress value={job.percent} max={100} />
+          <span className={styles.progressText}>{job.message}</span>
+        </span>
+      );
+    }
+    const update = state.updates.find(
+      (candidate) => candidate.package === row.package && candidate.from === row.version,
+    );
+    if (!update) return null;
+    return (
+      <Button size="small" variant="soft" onClick={() => void state.askToUpgrade(update)}>
+        {t("mixengine.upgrade.available", { to: update.to })}
+      </Button>
+    );
+  }
+
   return (
     <div className={styles.catalogue}>
       {error !== "" && <ErrorBanner message={error} onDismiss={clearError} />}
@@ -150,7 +173,12 @@ export default function PackageList({
                         {row.package}
                       </span>
                     </td>
-                    <td className={styles.version}>{row.version}</td>
+                    <td className={styles.version}>
+                      <span className={styles.versionWithUpdate}>
+                        {row.version}
+                        {updateCell(row)}
+                      </span>
+                    </td>
                     <td className={styles.muted}>{formatInstalledAt(row.installed_at)}</td>
                     <td className={inUse ? styles.services : styles.muted}>
                       {inUse ? row.services.join(", ") : "—"}
@@ -238,6 +266,26 @@ export default function PackageList({
           </ul>
         )}
       </Card>
+
+      {state.upgrading && (
+        <UpgradeDialog
+          plan={state.upgrading.plan}
+          onCancel={state.dismissUpgrade}
+          onConfirm={(keep) => {
+            if (state.upgrading) void state.upgrade(state.upgrading.update, keep);
+          }}
+        />
+      )}
+
+      {state.askingUpgrade && (
+        <RequirementDialog
+          name={`${state.askingUpgrade.update.package} ${state.askingUpgrade.update.to}`}
+          step={state.askingUpgrade.step}
+          onCancel={state.dismissAskingUpgrade}
+          onInstall={() => void state.agreeUpgrade()}
+          onChoose={state.dismissAskingUpgrade}
+        />
+      )}
 
       {state.asking && (
         <RequirementDialog

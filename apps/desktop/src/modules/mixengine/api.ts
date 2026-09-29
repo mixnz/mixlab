@@ -38,6 +38,11 @@ import type { MetricsHistoryQuery } from "@mixengine/api";
 import type { PackageList } from "@mixengine/api";
 import type { PackageSummary } from "@mixengine/api";
 import type { PackageCatalogue } from "@mixengine/api";
+import type { PackageUpgrade } from "@mixengine/api";
+import type { PackageUpgradeQuery } from "@mixengine/api";
+import type { RuntimeUpgrade } from "@mixengine/api";
+import type { RuntimeUpgradeQuery } from "@mixengine/api";
+import type { UpgradePlan } from "@mixengine/api";
 import type { PackageTarget } from "@mixengine/api";
 import type { PackageInstall } from "@mixengine/api";
 import type { PackageRemoval } from "@mixengine/api";
@@ -324,6 +329,26 @@ export function runtimeExtensions(target: RuntimeTarget): Promise<ExtensionList>
 
 export function runtimeSetExtension(choice: ExtensionChoice): Promise<ExtensionChange> {
   return invoke<ExtensionChange>("mixengine_runtime_set_extension", { choice });
+}
+
+/** What updating one installed runtime within its line would do; changes nothing — T193b. */
+export function runtimeUpgradePlan(query: RuntimeUpgradeQuery): Promise<UpgradePlan> {
+  return invoke<UpgradePlan>("mixengine_runtime_upgrade_plan", { query });
+}
+
+/** Starts the update; the job's result is the plan, marked with what was done — T193b. */
+export function runtimeUpgrade(asked: RuntimeUpgrade): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_runtime_upgrade", { asked });
+}
+
+/** `runtimeUpgradePlan` for a server package — T193c. */
+export function packageUpgradePlan(query: PackageUpgradeQuery): Promise<UpgradePlan> {
+  return invoke<UpgradePlan>("mixengine_package_upgrade_plan", { query });
+}
+
+/** `runtimeUpgrade` for a server package. Always sends `grant: true` — see the Tauri command. */
+export function packageUpgrade(asked: PackageUpgrade): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_package_upgrade", { asked: { ...asked, grant: true } });
 }
 
 export function packagesInstalled(name?: string): Promise<PackageList> {

@@ -17,8 +17,9 @@ import { ChevronDownIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { PackageVersion, RuntimeKind, RuntimeRelease } from "@mixengine/api";
-import type { RuntimeSummary } from "@mixengine/api";
+import type { RuntimeSummary, RuntimeUpdate, UpgradePlan } from "@mixengine/api";
 import RequirementDialog from "../../components/RequirementDialog";
+import UpgradeDialog from "../../components/UpgradeDialog";
 import {
   askingStep,
   needLabel,
@@ -66,6 +67,12 @@ export default function Languages({ active }: { active: boolean }) {
   const [adopting, setAdopting] = useState<string | null>(null);
   // What an install said about this machine and went on anyway — T27e.
   const [notice, setNotice] = useState("");
+  // T193b: what the index has newer in each installed version's line, and the update being asked.
+  const [updates, setUpdates] = useState<RuntimeUpdate[]>([]);
+  const [upgrading, setUpgrading] = useState<{ update: RuntimeUpdate; plan: UpgradePlan } | null>(null);
+  const [askingUpgrade, setAskingUpgrade] = useState<
+    { update: RuntimeUpdate; keep: boolean; step: AskingStep } | null
+  >(null);
   const { t } = useTranslation();
 
   // Reads the latest `installingJob` from inside a `watch` callback registered once — the effect
@@ -92,6 +99,7 @@ export default function Languages({ active }: { active: boolean }) {
         setOnDisk(runtimeRowsFrom(found));
         setAvailable(avail.runtimes);
         setStale(avail.stale);
+        setUpdates(avail.updates ?? []);
         setError(stillShow);
       } catch (e) {
         setError(errorMessage(t, e));
@@ -229,6 +237,80 @@ export default function Languages({ active }: { active: boolean }) {
     }
   }
 
+  // T193b: the plan first, then what this machine lacks for the new version (T151), then the job.
+  async function askToUpgrade(update: RuntimeUpdate) {
+    setError("");
+    try {
+      const plan = await api.runtimeUpgradePlan({ kind: update.kind, from: update.from, to: update.to });
+      setUpgrading({ update, plan });
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }
+
+  // After the plan was agreed: what the new version lacks is asked exactly as `install` asks it.
+  async function upgrade(update: RuntimeUpdate, keep: boolean) {
+    setUpgrading(null);
+    const step = requirementStep(update.needs ?? []);
+    if (step.kind === "proceed" || step.kind === "notice") {
+      await startUpgrade(update, keep, false);
+      return;
+    }
+
+    const asked = askingStep(step);
+    // Only agreeing to install what MixEngine can install continues an update. Choosing another
+    // version is a different question — which release of the line to go to — and is answered by
+    // the version list, so it is said rather than offered here.
+    if (asked === null || asked.kind !== "consent") {
+      setError(
+        t("mixengine.requirements.unavailable", {
+          name: `${update.kind} ${update.to}`,
+          needs: step.needs.map(needLabel).join(", "),
+        }),
+      );
+      return;
+    }
+    setAskingUpgrade({ update, keep, step: asked });
+  }
+
+  async function startUpgrade(update: RuntimeUpdate, keep: boolean, installPrerequisites: boolean) {
+    setError("");
+    try {
+      const job = await api.runtimeUpgrade({
+        kind: update.kind,
+        from: update.from,
+        to: update.to,
+        keep,
+        install_prerequisites: installPrerequisites,
+      });
+      setInstallingJob((current) => ({ ...current, [versionKey(update.kind, update.from)]: job.id }));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }
+
+  // The installed row's Update: the job's progress while one runs, else the button — T193b.
+  function updateCell(row: RuntimeSummary) {
+    const job = jobFor(jobs, installingJob[versionKey(row.kind, row.version)]);
+    if (job) {
+      return (
+        <span className={styles.progress}>
+          <progress value={job.percent} max={100} />
+          <span className={styles.progressText}>{job.message}</span>
+        </span>
+      );
+    }
+    const update = updates.find(
+      (candidate) => candidate.kind === row.kind && candidate.from === row.version,
+    );
+    if (!update) return null;
+    return (
+      <Button size="small" variant="soft" onClick={() => void askToUpgrade(update)}>
+        {t("mixengine.upgrade.available", { to: update.to })}
+      </Button>
+    );
+  }
+
   async function adopt(row: OnDiskRow) {
     setAdopting(row.key);
     setError("");
@@ -363,7 +445,12 @@ export default function Languages({ active }: { active: boolean }) {
                           )}
                         </span>
                       </td>
-                      <td className={styles.version}>{row.version}</td>
+                      <td className={styles.version}>
+                        <span className={styles.versionWithUpdate}>
+                          {row.version}
+                          {updateCell(row)}
+                        </span>
+                      </td>
                       <td>
                         <span className={styles.tag}>{row.channel}</span>
                       </td>
@@ -469,6 +556,28 @@ export default function Languages({ active }: { active: boolean }) {
             setForceHint(null);
           }}
           onConfirm={() => void uninstall(uninstallTarget, forceHint !== null)}
+        />
+      )}
+
+      {upgrading && (
+        <UpgradeDialog
+          plan={upgrading.plan}
+          onCancel={() => setUpgrading(null)}
+          onConfirm={(keep) => void upgrade(upgrading.update, keep)}
+        />
+      )}
+
+      {askingUpgrade && (
+        <RequirementDialog
+          name={`${askingUpgrade.update.kind} ${askingUpgrade.update.to}`}
+          step={askingUpgrade.step}
+          onCancel={() => setAskingUpgrade(null)}
+          onInstall={() => {
+            const { update, keep } = askingUpgrade;
+            setAskingUpgrade(null);
+            void startUpgrade(update, keep, true);
+          }}
+          onChoose={() => setAskingUpgrade(null)}
         />
       )}
 
