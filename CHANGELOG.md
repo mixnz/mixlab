@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.12
+
 ### Fixed
 - After installing an update on Windows, MixLab restarts on the new version even when MixEngine
   does not come back. It no longer stays open on the old version and fails the next try with
