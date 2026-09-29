@@ -330,9 +330,9 @@ export default function MixEngineTab({
         ))}
         {pane("sites", (active) => <Sites active={active} />)}
         {pane("domains", (active) => <Domains active={active} />)}
-        {pane("runtimes", (active) => <Runtimes active={active} />)}
+        {pane("packages", (active) => <Runtimes active={active} />)}
         {/* A callback rather than a link: a home with no PHP on it has nothing for this screen to
-            draw, and the place to install one is Runtimes right above. The request carried along
+            draw, and the place to install one is Packages right above. The request carried along
             with the jump is what lands it on Languages with `php` already typed — same shape as
             Projects → Sites above, and `selectScreen` so the jump is remembered like any other. */}
         {pane("phpExtensions", (active) => (
@@ -340,7 +340,7 @@ export default function MixEngineTab({
             active={active}
             onInstallPhp={() => {
               requestRuntimesLanguageFilter("php");
-              selectScreen("runtimes");
+              selectScreen("packages");
             }}
           />
         ))}

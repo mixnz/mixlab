@@ -32,13 +32,13 @@ const vi: typeof en = {
       projects: "Projects",
       sites: "Sites",
       domains: "Domains & TLS",
-      runtimes: "Runtimes",
+      packages: "Packages",
       phpExtensions: "PHP Extensions",
       servicesDetail: "Services",
       logs: "Logs",
       blueprints: "Blueprints",
       // Chỉ đổi **nhãn**: add-on của MixEngine vẫn là `extension.*` ở mọi method, mọi tài liệu.
-      // Đây là chỗ duy nhất hai nghĩa đụng nhau — bốn hàng dưới *Runtimes*, nơi extension của PHP
+      // Đây là chỗ duy nhất hai nghĩa đụng nhau — bốn hàng dưới *Packages*, nơi extension của PHP
       // đang trốn (T118).
       extensions: "Add-ons",
       metrics: "Metrics",

@@ -66,7 +66,7 @@ const GROUPS: readonly {
   {
     labelKey: "mixengine.sidebar.groupEnvironment",
     items: [
-      { screen: "runtimes", labelKey: "mixengine.sidebar.runtimes", Icon: PackageIcon },
+      { screen: "packages", labelKey: "mixengine.sidebar.packages", Icon: PackageIcon },
       { screen: "phpExtensions", labelKey: "mixengine.sidebar.phpExtensions", Icon: PuzzleIcon },
       { screen: "servicesDetail", labelKey: "mixengine.sidebar.servicesDetail", Icon: ServerIcon },
     ],

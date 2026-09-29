@@ -11,7 +11,7 @@ export type MixEngineScreen =
   | "projects"
   | "sites"
   | "domains"
-  | "runtimes"
+  | "packages"
   | "phpExtensions"
   | "servicesDetail"
   | "logs"

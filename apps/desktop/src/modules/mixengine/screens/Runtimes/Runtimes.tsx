@@ -85,11 +85,11 @@ export default function Runtimes({ active }: { active: boolean }) {
 
   return (
     <div className={`mixengine-page ${styles.runtimes}`}>
-      <PageHeader title={t("mixengine.sidebar.runtimes")} description={t("mixengine.runtimes.about")} />
+      <PageHeader title={t("mixengine.sidebar.packages")} description={t("mixengine.runtimes.about")} />
       <div className={styles.tabs}>
         <SegmentedControl
           mode="tabs"
-          aria-label={t("mixengine.sidebar.runtimes")}
+          aria-label={t("mixengine.sidebar.packages")}
           segments={tabs}
           value={tab}
           onChange={setTab}

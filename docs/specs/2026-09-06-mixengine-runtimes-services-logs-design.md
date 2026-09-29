@@ -426,6 +426,10 @@ dạng RPC (`RuntimeSummary`~`PackageSummary`, `RuntimeCatalogue`~`PackageCatalo
 thêm một mục nữa ngoài 9 mục gốc — Projects (D4) đã là một ngoại lệ, không nên thành tiền lệ cho mỗi
 namespace mới.
 
+Nhãn của mục đó là **Packages**, không phải *Runtimes*: màn này chứa cả web server, cơ sở dữ liệu
+và cache, và một nhãn chỉ nói "runtime" thì sai với nửa nội dung. Khoá màn trong code cũng là
+`packages`, còn thư mục `screens/Runtimes/` giữ tên vì nó đã chứa `Packages.tsx`.
+
 **D6 — `package.uninstall` bị refuse thì dừng ở đó, không có bước hai.** Không giống
 `runtime.uninstall` có `force` để vượt qua refusal-vì-pin, `package.uninstall` không có tham số nào
 tương tự — refuse vì `services` không rỗng là chốt. UI vẽ danh sách service đang phụ thuộc và một câu

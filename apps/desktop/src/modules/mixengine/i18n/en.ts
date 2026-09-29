@@ -30,14 +30,14 @@ export default {
       projects: "Projects",
       sites: "Sites",
       domains: "Domains & TLS",
-      runtimes: "Runtimes",
+      packages: "Packages",
       phpExtensions: "PHP Extensions",
       servicesDetail: "Services",
       logs: "Logs",
       blueprints: "Blueprints",
       // **The label, and not the word.** MixEngine's own add-ons are `extension.*` everywhere —
       // the methods, the module, every document — and this is the one place the two meanings
-      // collided: four rows below *Runtimes*, where PHP's extensions were hiding (T118).
+      // collided: four rows below *Packages*, where PHP's extensions were hiding (T118).
       extensions: "Add-ons",
       metrics: "Metrics",
       settings: "Settings",
