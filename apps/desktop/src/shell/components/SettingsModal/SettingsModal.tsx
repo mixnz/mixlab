@@ -11,12 +11,14 @@ import {
   KeyboardIcon,
   ModulesIcon,
   PaletteIcon,
+  SettingsIcon,
   SyncIcon,
 } from "../../../icons";
 import { useTranslation } from "../../../i18n";
 import { visibleModules } from "../../profiles";
 import { useSyncActivity } from "../../sync/activity";
 import AppearanceSection from "./AppearanceSection";
+import GeneralSection from "./GeneralSection";
 import ModulesSection, { type ModuleSettings } from "./ModulesSection";
 import ShortcutsSection from "./ShortcutsSection";
 import SyncSection from "./SyncSection";
@@ -72,7 +74,8 @@ function SettingsModal({
   /* The panes, in the order they are listed: the one a user changes often, then which parts of the
      app this window has at all, then whatever the visible modules contribute, then the errands.
      Appearance leads because it is the pane a user opens this dialog for most; Modules sits right
-     under it because it is the setting that decides which of the panes below it exist.
+     under it because it is the setting that decides which of the panes below it exist. General
+     sits between them: MixLab-wide behaviour that is not how it looks (T192).
 
      Rebuilt on every render rather than held as a module-level constant — T108 — because the module
      panes come and go with the setting the Modules pane carries.
@@ -83,6 +86,7 @@ function SettingsModal({
      that module's business and carries its own headings; the shell never sees them. */
   const sections: { id: SectionId; labelKey: TranslationKey; icon: ComponentType<IconProps> }[] = [
     { id: "appearance", labelKey: "settings.appearance", icon: PaletteIcon },
+    { id: "general", labelKey: "settings.general", icon: SettingsIcon },
     { id: "modules", labelKey: "profiles.title", icon: ModulesIcon },
     { id: "shortcuts", labelKey: "shortcuts.title", icon: KeyboardIcon },
     { id: "sync", labelKey: "sync.title", icon: SyncIcon },
@@ -151,6 +155,15 @@ function SettingsModal({
                   accent={accent}
                   onAccentChange={onAccentChange}
                 />
+              </div>
+              <div
+                className={styles.panel}
+                role="tabpanel"
+                id="settings-panel-general"
+                aria-labelledby="settings-tab-general"
+                hidden={shown !== "general"}
+              >
+                <GeneralSection />
               </div>
               <div
                 className={styles.panel}

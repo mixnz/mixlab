@@ -97,6 +97,7 @@ const en = {
   settings: {
     title: "Settings",
     appearance: "Appearance",
+    general: "General",
     theme: "Theme",
     themeLight: "Light",
     themeDark: "Dark",
@@ -149,6 +150,14 @@ const en = {
     openMain: "Open MixLab",
     quit: "Quit MixLab",
     slogan: "For Developers. By Developers.",
+  },
+  // MixLab at login (ADR 0042, ADR 0058): the shell's General pane, whatever modules are visible.
+  loginItem: {
+    title: "At login",
+    toggle: "Open MixLab in the tray when I log in",
+    about: "Only the tray icon appears. MixEngine has its own switch in its Settings pane.",
+    noTray: "Your desktop shows no tray icons, so MixLab will open its window at login instead.",
+    unsupported: "A development build does not start at login.",
   },
   // MixLab's own updater, in Settings → Updates (T187). It checks, downloads and installs whether
   // or not MixEngine is running, and never installs without a click.

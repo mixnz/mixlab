@@ -592,13 +592,6 @@ export default {
           "These old files in the folder could not be removed: {{names}}. Close any terminal still using them, then try again.",
       },
       // MixLab's own login entry, beside MixEngine's — ADR 0042, T168f.
-      loginItem: {
-        title: "MixLab in the tray",
-        toggle: "Open MixLab in the tray when I log in",
-        about: "Only the tray icon appears. This is separate from starting MixEngine above.",
-        noTray: "Your desktop shows no tray icons, so MixLab will open its window at login instead.",
-        unsupported: "A development build does not start at login.",
-      },
       doctor: {
         title: "Diagnostics",
         ok: "OK",

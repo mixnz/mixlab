@@ -86,6 +86,7 @@ const vi: SharedDict = {
   settings: {
     title: "Cài đặt",
     appearance: "Giao diện",
+    general: "Chung",
     theme: "Chế độ hiển thị",
     themeLight: "Sáng",
     themeDark: "Tối",
@@ -136,6 +137,13 @@ const vi: SharedDict = {
     openMain: "Mở MixLab",
     quit: "Thoát MixLab",
     slogan: "For Developers. By Developers.",
+  },
+  loginItem: {
+    title: "Khi đăng nhập",
+    toggle: "Mở MixLab trên khay hệ thống mỗi khi đăng nhập",
+    about: "Chỉ hiện icon trên khay. MixEngine có công tắc riêng trong phần Settings của nó.",
+    noTray: "Desktop của bạn không hiện icon trên khay, nên MixLab sẽ mở cửa sổ khi đăng nhập.",
+    unsupported: "Bản build phát triển không tự chạy khi đăng nhập.",
   },
   update: {
     title: "Cập nhật",
