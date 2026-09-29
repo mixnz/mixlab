@@ -169,6 +169,8 @@ impl Packages {
                     needs: chosen.map(|_| {
                         requirements::of(&catalogue.index, name, &package.version, &facts)
                     }),
+                    line: None,
+                    newest_in_line: None,
                 });
             }
         }
@@ -176,6 +178,7 @@ impl Packages {
         Ok(PackageCatalogue {
             packages: offered,
             stale: catalogue.freshness.is_stale(),
+            updates: None,
         })
     }
 

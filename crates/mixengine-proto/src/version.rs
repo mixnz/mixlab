@@ -228,6 +228,15 @@ impl PackageVersion {
     pub fn cmp_precedence(&self, other: &Self) -> Ordering {
         precedence(&self.0).cmp(&precedence(&other.0))
     }
+
+    /// Whether this is a pre-release (`8.5.0RC1`, `1.2.3-rc.1`) — roadmap task **T193a**.
+    ///
+    /// **The same reading precedence makes**, so the two can never disagree: whatever follows the
+    /// numbers is a pre-release tail, and build metadata after a `+` is not part of it.
+    #[must_use]
+    pub fn is_pre_release(&self) -> bool {
+        !precedence(&self.0).tail.is_empty()
+    }
 }
 
 /// One version, taken apart far enough to be compared with another.
@@ -780,5 +789,23 @@ mod tests {
             .to_string();
 
         assert!(error.contains("does not begin with a digit"), "{error}");
+    }
+
+    /// **T193a.** What decides whether a stable install may be offered a release.
+    #[test]
+    fn a_version_with_a_tail_is_a_pre_release_and_build_metadata_is_not_one() {
+        for (version, pre) in [
+            ("8.4.24", false),
+            ("8.5.0RC1", true),
+            ("1.2.3-rc.1", true),
+            ("1.2.3+build.7", false),
+            ("22", false),
+        ] {
+            assert_eq!(
+                PackageVersion::parse(version).unwrap().is_pre_release(),
+                pre,
+                "{version}"
+            );
+        }
     }
 }

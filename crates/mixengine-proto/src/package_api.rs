@@ -150,6 +150,13 @@ pub struct PackageCatalogue {
 
     /// Whether this came from a cached index the daemon could not refresh.
     pub stale: bool,
+
+    /// Each installed version whose line has a newer release here, and which one — T193a, D2.
+    ///
+    /// Composed with the available list and never with the installed one, because listing what is
+    /// on the disk must not cost a request to the index. [`None`] is a daemon from before T193.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updates: Option<Vec<PackageUpdate>>,
 }
 
 /// One version the index offers, and whether this machine already has it.
@@ -191,6 +198,39 @@ pub struct PackageRelease {
     ///
     /// [`None`] means a peer that predates the member, per ADR 0019; an empty list means nothing is
     /// lacking or nothing could be judged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub needs: Option<Vec<crate::Requirement>>,
+
+    /// The line this release belongs to (`8.4`, `22`) — roadmap task **T193a**, D1.
+    ///
+    /// Decided by the daemon (`mixengine_core::lines`) so that no client decides it; [`None`] is a
+    /// daemon that predates the member, per ADR 0019.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line: Option<String>,
+
+    /// Whether this is the release its line is represented by: the newest stable one, or the newest
+    /// pre-release in a line that has no stable release yet. [`None`] as for `line`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub newest_in_line: Option<bool>,
+}
+
+/// One installed package version and the newer release of its line — roadmap task **T193a**, D2.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct PackageUpdate {
+    /// Which package.
+    pub package: String,
+
+    /// The installed version.
+    pub from: PackageVersion,
+
+    /// The release it would move to.
+    pub to: PackageVersion,
+
+    /// Whether `to` is already installed.
+    pub to_installed: bool,
+
+    /// What this machine lacks for `to`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub needs: Option<Vec<crate::Requirement>>,
 }

@@ -4188,6 +4188,8 @@ mod tests {
             installed: false,
             execution,
             needs: None,
+            line: None,
+            newest_in_line: None,
         }
     }
 
@@ -4204,6 +4206,7 @@ mod tests {
         let plain = RuntimeCatalogue {
             runtimes: vec![offered("8.3.33", Some(Execution::Native))],
             stale: false,
+            updates: None,
         };
         assert!(!runtime_catalogue(&plain).contains("NEEDS"));
 
@@ -4223,6 +4226,7 @@ mod tests {
                 offered("8.3.33", Some(Execution::Native)),
             ],
             stale: false,
+            updates: None,
         };
         let rendered = runtime_catalogue(&lacking_one);
         assert!(rendered.contains("NEEDS"), "{rendered}");
@@ -4275,6 +4279,7 @@ mod tests {
         let rendered = runtime_catalogue(&RuntimeCatalogue {
             runtimes: vec![offered("8.3.33", Some(Execution::Native))],
             stale: false,
+            updates: None,
         });
 
         assert!(!rendered.contains("RUNS"), "no column: {rendered}");
@@ -4288,6 +4293,7 @@ mod tests {
         let rendered = runtime_catalogue(&RuntimeCatalogue {
             runtimes: vec![offered("8.3.33", None)],
             stale: false,
+            updates: None,
         });
 
         assert!(!rendered.contains("RUNS"), "{rendered}");
@@ -4301,6 +4307,7 @@ mod tests {
                 offered("8.4.24", Some(Execution::Native)),
             ],
             stale: false,
+            updates: None,
         });
 
         assert!(rendered.contains("RUNS"), "the column: {rendered}");

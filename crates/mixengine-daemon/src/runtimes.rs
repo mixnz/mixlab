@@ -304,6 +304,8 @@ impl Runtimes {
                     needs: chosen.map(|_| {
                         requirements::of(&catalogue.index, kind.as_str(), &package.version, &facts)
                     }),
+                    line: None,
+                    newest_in_line: None,
                 });
             }
         }
@@ -311,6 +313,7 @@ impl Runtimes {
         Ok(RuntimeCatalogue {
             runtimes,
             stale: catalogue.freshness.is_stale(),
+            updates: None,
         })
     }
 

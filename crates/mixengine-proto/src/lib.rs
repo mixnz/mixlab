@@ -121,7 +121,7 @@ pub use metrics::{
 };
 pub use package_api::{
     PackageCatalogue, PackageFilter, PackageFound, PackageFoundList, PackageInstall, PackageList,
-    PackageRelease, PackageRemoval, PackageSummary, PackageTarget,
+    PackageRelease, PackageRemoval, PackageSummary, PackageTarget, PackageUpdate,
 };
 pub use path_api::{CommandConflict, CommandOrigin, CommandSource, PathPlace, PathReport};
 pub use project_api::{
@@ -136,7 +136,7 @@ pub use runtime_api::{
     ExtensionChange, ExtensionChoice, ExtensionList, ExtensionSource, Linkage, PoolOutcome,
     ResolvedRuntime, RuntimeCatalogue, RuntimeExtension, RuntimeFilter, RuntimeFound,
     RuntimeFoundList, RuntimeInstall, RuntimeList, RuntimeQuestion, RuntimeRelease, RuntimeRemoval,
-    RuntimeSource, RuntimeSummary, RuntimeTarget, RuntimeUninstall,
+    RuntimeSource, RuntimeSummary, RuntimeTarget, RuntimeUninstall, RuntimeUpdate,
 };
 pub use service::{
     Backoff, EnvValue, HealthCheck, HealthProbe, IdleExemption, IdlePolicy, IdleProbe, IdleSource,
