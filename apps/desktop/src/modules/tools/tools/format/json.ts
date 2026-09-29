@@ -3,7 +3,7 @@
  *
  * `JSON.parse` followed by `stringify` silently damages data, exactly the kind people often paste
  * into this module: `1787875200123456789` becomes `…800`, `{"2":…,"1":…}` gets reordered, `1.50`
- * becomes `1.5`, and `"A"` becomes `"A"`. None of them report an error.
+ * becomes `1.5`, and `"\u0041"` becomes `"A"`. None of them report an error.
  *
  * So there is only a tokeniser here that reprints the whitespace: every token is emitted again as
  * exactly its **source slice**, and no number ever passes through `Number`. Minify is the same

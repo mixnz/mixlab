@@ -16,7 +16,7 @@ use serde_json::{json, Map, Value};
 use std::str::FromStr;
 
 /// The first host a connection string points at. A tunnel needs a concrete address to forward
-/// to, and with a URI that address is only knowable after parsing â€” a `mongodb+srv://` string
+/// to, and with a URI that address is only knowable after parsing — a `mongodb+srv://` string
 /// doesn't even contain it literally, it resolves to its hosts over DNS during the parse.
 pub async fn first_endpoint(uri: &str) -> Result<(String, u16), AppError> {
     let opts = ClientOptions::parse(uri)
@@ -41,7 +41,7 @@ pub async fn connect(uri: &str, endpoint: Option<(String, u16)>) -> Result<Clien
             port: Some(port),
         }];
         // Only that one host is forwarded, so topology discovery would hand back the replica
-        // set's own addresses â€” unreachable from this machine. Talk to the tunneled node
+        // set's own addresses — unreachable from this machine. Talk to the tunneled node
         // directly instead.
         opts.direct_connection = Some(true);
         opts.repl_set_name = None;
@@ -57,8 +57,8 @@ pub async fn connect(uri: &str, endpoint: Option<(String, u16)>) -> Result<Clien
 }
 
 /// Reads what the header shows about the server. `hostInfo` describes the machine the
-/// server actually runs on â€” distribution, release and architecture, the same detail Redis
-/// reports â€” but it needs a privilege managed deployments often withhold, so a server that
+/// server actually runs on — distribution, release and architecture, the same detail Redis
+/// reports — but it needs a privilege managed deployments often withhold, so a server that
 /// refuses it falls back to `buildInfo`, which only knows what the server was built for.
 pub async fn server_info(client: &Client) -> Result<ServerInfo, AppError> {
     let admin = client.database("admin");
@@ -97,7 +97,7 @@ fn host_os(info: &Document) -> Option<String> {
     (!parts.is_empty()).then(|| parts.join(" "))
 }
 
-/// The OS the server was built for, out of `buildInfo` â€” "linux x86_64". The same pair MySQL
+/// The OS the server was built for, out of `buildInfo` — "linux x86_64". The same pair MySQL
 /// reports as `version_compile_os` and `version_compile_machine`.
 fn build_os(info: &Document) -> String {
     let env = info.get_document("buildEnvironment").ok();
@@ -354,7 +354,7 @@ pub async fn find(
 
 /// Wraps an ambiguous BSON scalar as `{"$type": tag, "$value": repr}`. Types
 /// with an unambiguous native JSON shape (String/Boolean/Null/Array/Document)
-/// are never wrapped â€” the frontend tells them apart from typed scalars by
+/// are never wrapped — the frontend tells them apart from typed scalars by
 /// checking for this `$type`/`$value` pair, so leaving them bare keeps that
 /// check simple and avoids colliding with a real field literally named
 /// `$type` (astronomically unlikely, same caveat as MongoDB's own Extended
@@ -417,7 +417,7 @@ pub fn bson_to_json(bson: &Bson) -> Value {
         Bson::Undefined => wrap("Undefined", Value::Null),
         Bson::MaxKey => wrap("MaxKey", Value::Null),
         Bson::MinKey => wrap("MinKey", Value::Null),
-        // DbPointer's fields are pub(crate) in the bson crate â€” there is no
+        // DbPointer's fields are pub(crate) in the bson crate — there is no
         // way to reconstruct one from outside the crate, so it is rendered
         // for display only; json_to_bson rejects writing this type back.
         Bson::DbPointer(dbp) => wrap("DbPointer", json!(format!("{dbp:?}"))),
@@ -568,7 +568,7 @@ pub struct CollectionPage {
     pub total: i64,
 }
 
-/// One condition on the documents a page is cut out of â€” the list's filter bar sends a list of
+/// One condition on the documents a page is cut out of — the list's filter bar sends a list of
 /// these, and they are ANDed together. `field` is a field path, dotted to reach into a
 /// subdocument, and is spelled `column` on the wire so the bar can send the same shape whichever
 /// database is behind it. `value` carries whatever the user typed, as text: the operator is what
@@ -585,7 +585,7 @@ pub struct Filter {
 
 /// Escapes the metacharacters out of text that is about to become part of a regex, so a value
 /// with a `.` or a `*` in it is matched as itself. Only for the operators that build the pattern
-/// (contains/starts with/ends with) â€” `regexp` hands the user's own pattern through untouched.
+/// (contains/starts with/ends with) — `regexp` hands the user's own pattern through untouched.
 fn escape_regex(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for ch in value.chars() {
@@ -597,9 +597,9 @@ fn escape_regex(value: &str) -> String {
     out
 }
 
-/// Reads the user's own regex out of the text box. `/pattern/flags` is understood â€” it is how a
+/// Reads the user's own regex out of the text box. `/pattern/flags` is understood — it is how a
 /// regex is written everywhere else, and the only way to ask for one of Mongo's flags from a
-/// single box â€” and anything else is taken as a bare pattern. Unknown flags are dropped rather
+/// single box — and anything else is taken as a bare pattern. Unknown flags are dropped rather
 /// than passed on, so a `g` carried over from JavaScript habit doesn't have the server reject the
 /// whole query.
 fn parse_regex(raw: &str) -> Regex {
@@ -625,15 +625,15 @@ fn parse_regex(raw: &str) -> Regex {
 ///
 /// This is the one thing a Mongo filter has to do that a SQL one doesn't. MySQL takes every value
 /// as a bound string and coerces it against the column's own type; Mongo has no column type to
-/// coerce against, and matches by exact BSON type â€” `{_id: "5"}` finds nothing in a collection
+/// coerce against, and matches by exact BSON type — `{_id: "5"}` finds nothing in a collection
 /// keyed by the number 5, and nothing at all in one keyed by ObjectIds. So the text is read for
 /// what it looks like:
 ///
-/// - `null`, `true`, `false` â€” those three values
+/// - `null`, `true`, `false` — those three values
 /// - a whole number, else a decimal one
-/// - 24 hex characters â€” an ObjectId, which is what `_id` usually holds
-/// - an RFC 3339 timestamp â€” a date
-/// - anything else â€” a string
+/// - 24 hex characters — an ObjectId, which is what `_id` usually holds
+/// - an RFC 3339 timestamp — a date
+/// - anything else — a string
 ///
 /// Wrapping the value in quotes (`'5'`) turns all of that off and takes what is inside them as a
 /// string, which is the way to reach a field that really does hold `"5"` as text.
@@ -675,7 +675,7 @@ fn parse_value(raw: &str) -> Bson {
 }
 
 /// {@link parse_value} for one item of an `IN`/`BETWEEN` list, whose quotes were already taken
-/// off during the split â€” the flag is all that is left of them.
+/// off during the split — the flag is all that is left of them.
 fn parse_item(item: &ListItem) -> Bson {
     if item.quoted {
         Bson::String(item.text.clone())
@@ -684,7 +684,7 @@ fn parse_item(item: &ListItem) -> Bson {
     }
 }
 
-/// Turns the filter rows into the query document the page is read through â€” one clause per row,
+/// Turns the filter rows into the query document the page is read through — one clause per row,
 /// gathered under `$and` so that two conditions on the same field both survive (an object can
 /// only hold one entry per key, and `{age: {...}, age: {...}}` would silently be one of them).
 ///
@@ -716,7 +716,7 @@ fn build_filter(filters: &[Filter]) -> Result<Document, AppError> {
             // Case-insensitive on purpose, so these read the same way as their SQL counterparts:
             // MySQL's default collation makes LIKE case-insensitive, and a filter bar that
             // matched differently depending on the workspace would be a trap. `regexp` below is
-            // exempt â€” the user writing the pattern is the one who decides.
+            // exempt — the user writing the pattern is the one who decides.
             "contains" | "notContains" | "startsWith" | "endsWith" => {
                 let escaped = escape_regex(raw);
                 let pattern = match operator {
@@ -746,7 +746,7 @@ fn build_filter(filters: &[Filter]) -> Result<Document, AppError> {
             }
             "between" | "notBetween" => {
                 let items = split_list_parts(raw);
-                // Two bounds or nothing â€” one of them alone says nothing about a range.
+                // Two bounds or nothing — one of them alone says nothing about a range.
                 if items.len() < 2 {
                     continue;
                 }
@@ -830,13 +830,13 @@ pub async fn collection_page(
 /// Ids to prefill the `_id` of `count` new documents with.
 ///
 /// Mongo has no auto-increment to read off: the id of a document that does not exist yet is
-/// whatever the writer decides, and what every driver decides â€” including this one, when an
-/// insert names no `_id` â€” is a freshly minted ObjectId. So that is the answer here too, and it
+/// whatever the writer decides, and what every driver decides — including this one, when an
+/// insert names no `_id` — is a freshly minted ObjectId. So that is the answer here too, and it
 /// is a real "next id": an ObjectId leads with its creation timestamp, so the ones handed out
 /// now sort after everything already in the collection.
 ///
 /// The exception worth honouring is a collection keyed by numbers. Those are counted by hand
-/// somewhere, and the only sensible next value is the highest plus one â€” so the highest `_id`
+/// somewhere, and the only sensible next value is the highest plus one — so the highest `_id`
 /// is read first, and its type decides. Anything else (strings, compound keys, an empty
 /// collection) falls back to ObjectIds, since no scheme can be inferred from them.
 pub async fn next_ids(
@@ -877,7 +877,7 @@ pub async fn next_ids(
 ///
 /// Ordered rather than atomic: a transaction needs a replica set, which a standalone server is
 /// not, so a failure partway through leaves the documents before it inserted. The caller is
-/// expected to refetch the page afterwards â€” on failure as much as on success â€” so what landed
+/// expected to refetch the page afterwards — on failure as much as on success — so what landed
 /// is what is on screen.
 pub async fn insert_documents(
     client: &Client,
