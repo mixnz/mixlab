@@ -1559,7 +1559,13 @@ fn two_patches(packed: &Packed, url: &str) -> Value {
                 "url": url,
                 "sha256": packed.sha256,
                 "size": packed.size(),
-                "provides": { "php": program_name() },
+                // A pool renders only for an install that publishes its server, so the one
+                // program stands in for all three.
+                "provides": {
+                    "php": program_name(),
+                    "php-cgi": program_name(),
+                    "php-fpm": program_name(),
+                },
             }],
         })
     };
@@ -1603,7 +1609,7 @@ async fn the_catalogue_says_each_line_its_newest_and_what_updates() {
     let row = |version: &str| {
         catalogue["runtimes"]
             .as_array()
-            .unwrap()
+            .expect("T193 fixture")
             .iter()
             .find(|row| row["version"] == version)
             .cloned()
@@ -1650,5 +1656,118 @@ async fn two_installed_patches_of_one_line_each_get_an_update() {
     assert!(
         updates.iter().all(|update| update["to"] == "8.3.34"),
         "{catalogue}"
+    );
+}
+
+/// A project `blog` with one PHP site on `pool`.
+async fn a_php_site(fixture: &Fixture, client: &mut Client, pool: &str) {
+    let root = fixture.home.path().join("blog");
+    std::fs::create_dir_all(&root).expect("T193 fixture");
+    client
+        .call(
+            "project.create",
+            json!({"root": root.display().to_string(), "name": "blog"}),
+        )
+        .await;
+    client
+        .call(
+            "site.create",
+            json!({
+                "project": {"name": "blog"},
+                "domains": ["blog.test"],
+                "kind": {"kind": "php-fpm", "pool": pool},
+            }),
+        )
+        .await;
+}
+
+/// **T193b, D4.** What is not an update is refused before anything else is read.
+#[tokio::test]
+async fn an_upgrade_plan_refuses_what_is_not_an_update() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+    let job = client
+        .call(
+            "runtime.install",
+            json!({"kind": "php", "version": "8.3.33"}),
+        )
+        .await;
+    assert_eq!(
+        client.finished(job["id"].clone()).await["state"],
+        "succeeded"
+    );
+
+    let not_installed = client
+        .refuse(
+            "runtime.upgrade_plan",
+            json!({"kind": "php", "from": "8.2.29"}),
+        )
+        .await;
+    assert_eq!(
+        not_installed["data"]["code"], "invalid_argument",
+        "{not_installed}"
+    );
+
+    let other_line = client
+        .refuse(
+            "runtime.upgrade_plan",
+            json!({"kind": "php", "from": "8.3.33", "to": "8.2.29"}),
+        )
+        .await;
+    assert_eq!(
+        other_line["data"]["code"], "invalid_argument",
+        "{other_line}"
+    );
+    assert!(
+        other_line["message"]
+            .as_str()
+            .expect("T193 fixture")
+            .contains("switch"),
+        "{other_line}"
+    );
+}
+
+/// **T193b, D7.** A plan names the site that moves and the default, and changes nothing.
+#[tokio::test]
+async fn an_upgrade_plan_names_what_moves_and_writes_nothing() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+    let job = client
+        .call(
+            "runtime.install",
+            json!({"kind": "php", "version": "8.3.33"}),
+        )
+        .await;
+    assert_eq!(
+        client.finished(job["id"].clone()).await["state"],
+        "succeeded"
+    );
+    a_php_site(&fixture, &mut client, "php-fpm@8.3.33").await;
+
+    let plan = client
+        .call(
+            "runtime.upgrade_plan",
+            json!({"kind": "php", "from": "8.3.33"}),
+        )
+        .await;
+
+    assert_eq!(plan["to"], "8.3.34", "{plan}");
+    assert_eq!(plan["to_installed"], false);
+    let items: Vec<&str> = plan["entries"]
+        .as_array()
+        .expect("T193 fixture")
+        .iter()
+        .map(|entry| entry["item"]["item"].as_str().expect("T193 fixture"))
+        .collect();
+    assert!(items.contains(&"site"), "{plan}");
+    assert!(items.contains(&"default"), "{plan}");
+    assert_eq!(plan["old"]["state"], "will_be_removed", "{plan}");
+
+    let site = client
+        .call("site.show", json!({"site": {"domain": "blog.test"}}))
+        .await;
+    assert!(
+        site.to_string().contains("php-fpm@8.3.33"),
+        "a plan moved nothing: {site}"
     );
 }

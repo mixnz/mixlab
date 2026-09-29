@@ -21,12 +21,13 @@ use mixengine_proto::{
     JobQuery, JobState, JobSummary, JobWait, LimitSupport, MemoryWatchdog, MetricsFrame,
     MetricsHistory, MetricsHistoryQuery, PackageFilter, PackageInstall, PackageTarget,
     ProjectCreate, ProjectQuery, ProjectRef, ProjectUpdate, ResetCredential, ResourceLimits,
-    RuntimeFilter, RuntimeInstall, RuntimeQuestion, RuntimeTarget, RuntimeUninstall, SaveResources,
-    SaveResourcesSet, ServiceAutostartSet, ServiceCreate, ServiceDelete, ServiceFailure, ServiceId,
-    ServiceIdleSet, ServiceLimitsReport, ServiceLimitsSet, ServiceList, ServiceQuery, ServiceRole,
-    ServiceSpec, ServiceSummary, ServiceTarget, ServiceWalk, SiteCreate, SiteListQuery, SiteQuery,
-    SiteShare, SiteUpdate, StateReason, UninstallQuery, UpdateApplied, UpdateApply, UpdateCheck,
-    UpdateDecide, UpdateFinish, UpdateHandOver, UpdateStatus, Uptime,
+    RuntimeFilter, RuntimeInstall, RuntimeQuestion, RuntimeTarget, RuntimeUninstall,
+    RuntimeUpgradeQuery, SaveResources, SaveResourcesSet, ServiceAutostartSet, ServiceCreate,
+    ServiceDelete, ServiceFailure, ServiceId, ServiceIdleSet, ServiceLimitsReport,
+    ServiceLimitsSet, ServiceList, ServiceQuery, ServiceRole, ServiceSpec, ServiceSummary,
+    ServiceTarget, ServiceWalk, SiteCreate, SiteListQuery, SiteQuery, SiteShare, SiteUpdate,
+    StateReason, UninstallQuery, UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide,
+    UpdateFinish, UpdateHandOver, UpdateStatus, Uptime,
 };
 use serde_json::Value;
 use tracing::Instrument as _;
@@ -640,6 +641,11 @@ async fn call_method(
                 rpc::method::DOMAIN_DNS_STATUS => {
                     let query: DomainStatusQuery = arguments(params)?;
                     encode_result(&api.domains.status(&query).await.map_err(refused)?)
+                }
+
+                rpc::method::RUNTIME_UPGRADE_PLAN => {
+                    let query: RuntimeUpgradeQuery = arguments(params)?;
+                    encode_result(&api.runtime_upgrade_plan(&query).await.map_err(refused)?)
                 }
 
                 rpc::method::RUNTIME_RESOLVE => {
@@ -2853,6 +2859,7 @@ mod tests {
             // that it was cancelled rather than watch a process exit.
             shutdown: super::super::Shutdown::new(CancellationToken::new(), SHUTDOWN_GRACE),
             front_end: tokio::sync::Mutex::new(()),
+            upgrading: tokio::sync::Mutex::new(std::collections::BTreeMap::new()),
         });
 
         Daemon {

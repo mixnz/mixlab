@@ -218,6 +218,21 @@ impl Runtimes {
         }
     }
 
+    /// The install job running for this version, if there is one — `runtime.upgrade` refuses to
+    /// race it (T193b, the design's *Error handling*).
+    #[expect(dead_code, reason = "T193b's walk, which calls it, is the next task")]
+    pub(crate) async fn installing(
+        &self,
+        kind: RuntimeKind,
+        version: &PackageVersion,
+    ) -> Option<JobId> {
+        self.running
+            .lock()
+            .await
+            .get(&(kind, version.clone()))
+            .copied()
+    }
+
     /// The index and the download pipeline this daemon installs through — for the blueprint
     /// executor, which judges releases it resolved through this same index (T152).
     pub(crate) fn fetcher(&self) -> &Arc<Fetcher> {

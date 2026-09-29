@@ -38,10 +38,11 @@ use mixengine_proto::privileged::PrivilegedOp;
 use mixengine_proto::{
     Error, ErrorCode, FrontEndOutcome, FrontEndReport, FrontEndSwitch, JobFilter, JobKind,
     JobState, JobSummary, PackageVersion, ResourceLimits, ServiceCreate, ServiceFailure, ServiceId,
-    ServiceState, ServiceTarget, ServiceWalk, rpc,
+    ServiceState, ServiceWalk, rpc,
 };
 
 use super::Api;
+use super::target;
 use crate::error::ToWire as _;
 
 /// How many running jobs the conflict check looks at. [`super::rpc`]'s constant, for its reason.
@@ -687,16 +688,6 @@ struct Install {
 
     /// Which installed version it belongs to.
     version: PackageVersion,
-}
-
-/// One service, waited for. Both walks a switch makes are about one row and both are waited on:
-/// what comes next depends on whether this one arrived.
-fn target(id: &ServiceId) -> ServiceTarget {
-    ServiceTarget {
-        service: Some(id.clone()),
-        project: None,
-        wait: true,
-    }
 }
 
 /// Is this overrides column the empty document every uncustomised service has?

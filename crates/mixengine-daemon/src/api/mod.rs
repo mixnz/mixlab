@@ -29,6 +29,7 @@ mod logs;
 mod metrics;
 mod restore;
 mod rpc;
+mod upgrade;
 
 pub(crate) use rpc::on_a_blocking_thread;
 
@@ -252,6 +253,16 @@ pub(crate) struct Api {
     /// database, cache and pool goes past it untouched, which is what makes a lock affordable on a
     /// path that is otherwise the hottest in this file.
     front_end: tokio::sync::Mutex<()>,
+
+    /// Every version an upgrade job is moving from or to, by `(kind or package, version)` —
+    /// roadmap task **T193b**. The same job is the value under both keys, so a second upgrade of the
+    /// same `from` is answered with it and anything touching either version is refused.
+    upgrading: tokio::sync::Mutex<
+        std::collections::BTreeMap<
+            (String, mixengine_proto::PackageVersion),
+            mixengine_proto::JobId,
+        >,
+    >,
 }
 
 /// What this daemon is looking after: its services, its jobs, its runtimes and its `bin/`.
@@ -625,6 +636,7 @@ impl Api {
             events,
             shutdown,
             front_end: tokio::sync::Mutex::new(()),
+            upgrading: tokio::sync::Mutex::new(std::collections::BTreeMap::new()),
         })
     }
 
@@ -696,6 +708,16 @@ impl Started {
     /// How long ago that was, measured on the clock that cannot be corrected out from under it.
     fn elapsed(self) -> std::time::Duration {
         self.since.elapsed()
+    }
+}
+
+/// One service, waited for. Both walks a switch makes are about one row and both are waited on:
+/// what comes next depends on whether this one arrived.
+fn target(id: &mixengine_proto::ServiceId) -> mixengine_proto::ServiceTarget {
+    mixengine_proto::ServiceTarget {
+        service: Some(id.clone()),
+        project: None,
+        wait: true,
     }
 }
 
