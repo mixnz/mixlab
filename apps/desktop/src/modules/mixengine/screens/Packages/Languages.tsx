@@ -29,7 +29,13 @@ import { applyJob, type JobRow } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
 import { afterRefusal } from "../../forceStep";
 import { takePendingLanguageFilter } from "../../packagesNavigation";
-import { formatInstalledAt, jobFinished, jobFor, versionKey } from "../../runtimeState";
+import {
+  formatInstalledAt,
+  jobFinished,
+  jobFor,
+  newestFirst,
+  versionKey,
+} from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
 import { matchesAvailable } from "./availableFilter";
 import ExtensionsPanel from "./ExtensionsPanel";
@@ -237,10 +243,14 @@ export default function Languages({ active }: { active: boolean }) {
     }
   }
 
-  const shownAvailable = available.filter(
-    (release) =>
-      !release.installed &&
-      matchesAvailable([release.kind, release.version, release.channel], filter),
+  const shownInstalled = newestFirst(installed, (row) => row.kind);
+  const shownAvailable = newestFirst(
+    available.filter(
+      (release) =>
+        !release.installed &&
+        matchesAvailable([release.kind, release.version, release.channel], filter),
+    ),
+    (release) => release.kind,
   );
 
   return (
@@ -266,7 +276,7 @@ export default function Languages({ active }: { active: boolean }) {
               </tr>
             </thead>
             <tbody>
-              {installed.map((row) => {
+              {shownInstalled.map((row) => {
                 const key = versionKey(row.kind, row.version);
                 const open = expanded === key;
                 return (

@@ -11,7 +11,7 @@ import MonogramBadge from "../../../../components/MonogramBadge";
 import NoticeBanner from "../../../../components/NoticeBanner";
 import Table from "../../../../components/Table";
 import { useTranslation } from "../../../../i18n";
-import { formatInstalledAt, jobFor, versionKey } from "../../runtimeState";
+import { formatInstalledAt, jobFor, newestFirst, versionKey } from "../../runtimeState";
 import RequirementDialog from "../../components/RequirementDialog";
 import StaleBadge from "../../components/StaleBadge";
 import { splitLibraries } from "../../requirementStep";
@@ -43,12 +43,18 @@ export default function PackageList({
   // full before removing anything.
   const [filter, setFilter] = useState("");
 
-  const installedInCategory = installed.filter((row) => packageCategory(row.package) === category);
-  const availableInCategory = available.filter(
-    (release) =>
-      packageCategory(release.package) === category &&
-      !release.installed &&
-      matchesAvailable([release.package, release.version, release.channel], filter),
+  const installedInCategory = newestFirst(
+    installed.filter((row) => packageCategory(row.package) === category),
+    (row) => row.package,
+  );
+  const availableInCategory = newestFirst(
+    available.filter(
+      (release) =>
+        packageCategory(release.package) === category &&
+        !release.installed &&
+        matchesAvailable([release.package, release.version, release.channel], filter),
+    ),
+    (release) => release.package,
   );
 
   return (

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatInstalledAt,
   installedVersions,
+  newestFirst,
   jobFinished,
   jobFor,
   poolBanner,
@@ -167,5 +168,49 @@ describe("installedVersions", () => {
   it("treats a version with fewer segments as the earlier one", () => {
     const list = [runtime("node", "20.11"), runtime("node", "20.11.1")];
     expect(installedVersions(list, "node")).toEqual(["20.11.1", "20.11"]);
+  });
+});
+
+describe("newestFirst", () => {
+  function row(name: string, version: string) {
+    return { name, version };
+  }
+
+  it("orders each name's versions newest first, comparing segments as numbers", () => {
+    const rows = [
+      row("php", "8.9.0"),
+      row("php", "8.10.0"),
+      row("php", "8.5.0RC1"),
+      row("php", "8.5.0"),
+    ];
+    expect(newestFirst(rows, (r) => r.name).map((r) => r.version)).toEqual([
+      "8.10.0",
+      "8.9.0",
+      "8.5.0",
+      "8.5.0RC1",
+    ]);
+  });
+
+  /* The daemon's order between names is kept: only versions of one name move, and two names are
+     never interleaved even when their rows arrived mixed. */
+  it("keeps names in the order they first appear and groups their rows", () => {
+    const rows = [
+      row("php", "8.2.0"),
+      row("node", "20.0.0"),
+      row("php", "8.3.0"),
+      row("node", "22.0.0"),
+    ];
+    expect(newestFirst(rows, (r) => r.name)).toEqual([
+      row("php", "8.3.0"),
+      row("php", "8.2.0"),
+      row("node", "22.0.0"),
+      row("node", "20.0.0"),
+    ]);
+  });
+
+  it("does not touch the list it is given", () => {
+    const rows = [row("php", "8.2.0"), row("php", "8.3.0")];
+    newestFirst(rows, (r) => r.name);
+    expect(rows.map((r) => r.version)).toEqual(["8.2.0", "8.3.0"]);
   });
 });

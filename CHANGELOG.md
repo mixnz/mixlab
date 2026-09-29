@@ -4,6 +4,8 @@
 
 ### Changed
 - Switching between light and dark in Settings fades from one to the other instead of flashing.
+- Languages and Packages list the newest version of each first, both what is installed and what
+  you can download.
 
 ## v0.0.13
 

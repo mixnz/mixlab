@@ -121,6 +121,29 @@ export function installedVersions(
     .sort((left, right) => compareVersions(right, left));
 }
 
+/**
+ * `rows` with each name's versions **newest first**, for the installed and available tables.
+ *
+ * Names keep the order the daemon gave them in — the first row of a name decides where its group
+ * sits — and only the versions within one name are re-ordered, by the same comparison as
+ * `installedVersions`. Two names are never interleaved.
+ */
+export function newestFirst<Row extends { version: string }>(
+  rows: readonly Row[],
+  nameOf: (row: Row) => string,
+): Row[] {
+  const groups = new Map<string, Row[]>();
+  for (const row of rows) {
+    const name = nameOf(row);
+    const group = groups.get(name);
+    if (group === undefined) groups.set(name, [row]);
+    else group.push(row);
+  }
+  return [...groups.values()].flatMap((group) =>
+    group.sort((left, right) => compareVersions(right.version, left.version)),
+  );
+}
+
 /** Negative when `left` comes before `right`. */
 function compareVersions(left: string, right: string): number {
   const ours = left.split(".");
