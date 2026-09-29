@@ -1,6 +1,6 @@
 export type Dialect = "mysql" | "postgresql";
 
-/** Một mệnh đề không dịch được. Nó **thay cho** đầu ra, không đi kèm đầu ra. */
+/** A clause that cannot be translated. It **replaces** the output; it does not come with it. */
 export interface Unsupported {
   code:
     | "join"
@@ -13,27 +13,29 @@ export interface Unsupported {
     | "function"
     | "multi"
     | "parse";
-  /** Đoạn SQL gây ra, để Panel chỉ đúng chỗ thay vì chỉ nói "không hỗ trợ". */
+  /** The SQL fragment responsible, so the Panel can point at the right place instead of just
+   *  saying "not supported". */
   fragment: string;
 }
 
-/** Một chỗ dịch được nhưng ngữ nghĩa Mongo không trùng SQL. Nó **đi kèm** đầu ra. */
+/** A place that can be translated but where Mongo's semantics do not match SQL's. It **comes
+ *  with** the output. */
 export interface Warning {
   code: "isNull" | "type" | "objectId" | "starWithGroupBy";
-  /** Trường hoặc đoạn SQL mà cảnh báo nói về. */
+  /** The field or SQL fragment the warning is about. */
   fragment: string;
 }
 
 /**
- * Kết quả của một lần dịch.
+ * The result of one translation.
  *
- * Hai nhánh, không phải một object có cả `output` lẫn `unsupported`: **không bao giờ xuất kết quả
- * một phần**. Một truy vấn rụng mất `HAVING` trông y hệt một truy vấn đúng, và có người sẽ chạy nó
- * trên production.
+ * Two branches, not one object with both `output` and `unsupported`: **never output a partial
+ * result**. A query that has lost its `HAVING` looks exactly like a correct query, and someone will
+ * run it in production.
  *
- * `Unsupported` và `Warning` cùng mang `fragment` nhưng nằm ở hai nhánh khác nhau, và đó là chủ ý:
- * cái thứ nhất *thay cho* đầu ra, cái thứ hai *đi kèm* đầu ra. Gộp hai thứ vào một danh sách là
- * bước đầu để một ngày nào đó xuất kết quả một phần.
+ * `Unsupported` and `Warning` both carry a `fragment` but live in two different branches, and that
+ * is deliberate: the first *replaces* the output, the second *comes with* the output. Putting both
+ * in one list is the first step towards one day outputting a partial result.
  */
 export type Translation =
   | { ok: true; output: string; warnings: Warning[] }

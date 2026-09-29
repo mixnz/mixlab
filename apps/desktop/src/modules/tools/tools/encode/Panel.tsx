@@ -45,15 +45,15 @@ function EncodePanel() {
   const [whole, setWhole] = useState(false);
   const [algo, setAlgo] = useState<HashAlgo>("SHA-256");
 
-  // Đổi thẻ là đổi việc, nên kết quả cũ không còn nghĩa gì — giữ nó lại chỉ khiến người ta tưởng
-  // nó là kết quả của thẻ mới.
+  // Switching the card means switching the job, so the old result no longer means anything —
+  // keeping it would only make people think it is the new card's result.
   useEffect(() => {
     setOutput("");
     setError(null);
   }, [tab]);
 
-  /* Chỉ đường giải mã mới ném — base64 hỏng, hex lẻ chữ, URI không hợp lệ. Bọc chung một chỗ để
-     mọi nút đi qua cùng một lối xử lý lỗi. */
+  /* Only the decoding paths throw — broken base64, odd-length hex, an invalid URI. Wrapped in one
+     place so every button goes through the same error-handling route. */
   const run = (work: () => string) => {
     try {
       setOutput(work());

@@ -13,10 +13,11 @@ import styles from "./Panel.module.css";
 
 type KindChoice = FormatKind | "auto";
 
-/** Tên dialect của `sql-formatter`. Khác `SqlDialect` của `convert/insert.ts`, cố ý không trùng tên. */
+/** `sql-formatter`'s dialect names. Different from `convert/insert.ts`'s `SqlDialect`, deliberately
+ *  not sharing the name. */
 type FormatterLanguage = "mysql" | "postgresql" | "sqlite" | "sql";
 
-/** Nhãn là chính thứ nó sinh ra hoặc chính tên dialect, nên không dịch. */
+/** The label is the very thing it produces or the dialect's own name, so it is not translated. */
 const INDENTS: SelectOption<string>[] = [
   { value: "  ", label: "2 spaces" },
   { value: "    ", label: "4 spaces" },
@@ -44,7 +45,8 @@ interface Outcome {
 function FormatPanel() {
   const { t } = useTranslation();
 
-  // Dựng trong component vì mục "tự đoán" là chuỗi phải dịch; ba mục kia là tên định dạng.
+  // Built inside the component because the "auto-detect" entry is a string to translate; the other
+  // three are format names.
   const kinds: SelectOption<KindChoice>[] = [
     { value: "auto", label: t("toolbox.format.auto") },
     { value: "json", label: "JSON" },
@@ -81,7 +83,8 @@ function FormatPanel() {
       );
       return;
     }
-    // `sql-formatter` ném khi câu lệnh không đọc được; thông báo của nó đã chỉ đúng chỗ.
+    // `sql-formatter` throws when the statement cannot be read; its message already points at the
+    // right place.
     try {
       const output = minify
         ? minifySql(input)
@@ -108,7 +111,7 @@ function FormatPanel() {
         />
       </label>
 
-      {/* Nói ra cái đoán. Đoán im lặng mà sai thì người dùng không có cách nào biết. */}
+      {/* State the guess. A silent guess that is wrong leaves the user no way of knowing. */}
       {choice === "auto" && guessed ? <p className={styles.guess}>{t(GUESS_KEY[guessed])}</p> : null}
 
       <div className={styles.controls}>

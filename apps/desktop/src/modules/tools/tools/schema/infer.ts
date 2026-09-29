@@ -1,9 +1,9 @@
 /**
- * Suy ra hình dạng của một mẫu JSON.
+ * Infers the shape of a JSON sample.
  *
- * Đây là phần đáng test của tool Sinh schema; ba bộ sinh mã ở `emit.ts` chỉ in ra thứ hàm này đã
- * kết luận. Mẫu là một object, hoặc một mảng object — mảng thì hợp các khoá lại và khoá nào vắng
- * mặt ở một phần tử là khoá `optional`.
+ * This is the part of the Schema generator tool worth testing; the three code generators in
+ * `emit.ts` only print what this function has concluded. The sample is an object, or an array of
+ * objects — for an array the keys are merged, and a key absent from any element is `optional`.
  */
 
 export type JsonType =
@@ -17,22 +17,22 @@ export type JsonType =
   | "unknown";
 
 export interface Field {
-  /** Khoá đúng như trong JSON. Đổi tên là việc của bộ sinh mã. */
+  /** The key exactly as in the JSON. Renaming is the code generator's job. */
   name: string;
   types: JsonType[];
-  /** Khoá vắng mặt ở ít nhất một phần tử của mảng mẫu. */
+  /** The key is absent from at least one element of the sample array. */
   optional: boolean;
-  /** Mọi giá trị chuỗi đã thấy đều trông như ISO 8601 — cột thời gian, không phải `VARCHAR`. */
+  /** Every string value seen looks like ISO 8601 — a time column, not a `VARCHAR`. */
   isoLike: boolean;
-  /** Với object: các trường con. Với mảng object: hình dạng của phần tử. */
+  /** For an object: the child fields. For an array of objects: the element's shape. */
   children?: Field[];
 }
 
 /**
- * Chặt hơn `Date.parse` một cách có chủ đích.
+ * Deliberately stricter than `Date.parse`.
  *
- * `timestamp/time.ts` không có hàm nhận diện ISO nào để dùng lại — nó gọi `Date.parse`, mà
- * `Date.parse("2026")` là hợp lệ. Một cột chứa toàn chuỗi bốn chữ số không phải cột thời gian.
+ * `timestamp/time.ts` has no ISO detection function to reuse — it calls `Date.parse`, and
+ * `Date.parse("2026")` is valid. A column full of four-digit strings is not a time column.
  */
 const ISO_8601 = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/;
 

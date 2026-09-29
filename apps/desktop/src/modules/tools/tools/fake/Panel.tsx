@@ -46,8 +46,8 @@ function blankField(): FieldSpec {
   return { name: `field${nextFieldId}`, kind: "fullName" };
 }
 
-/** `crypto.getRandomValues` bọc lại thành `() => number` trong [0, 1) — hình dạng mà `generate()`
- *  cần, và cũng là hình dạng test truyền một LCG tất định vào thay. */
+/** `crypto.getRandomValues` wrapped as `() => number` in [0, 1) — the shape `generate()` needs,
+ *  and also the shape a test passes a deterministic LCG in as instead. */
 function cryptoRnd(): () => number {
   const buf = new Uint32Array(1);
   return () => {

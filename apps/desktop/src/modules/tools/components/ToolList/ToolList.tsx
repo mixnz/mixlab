@@ -26,12 +26,13 @@ interface ToolListProps {
 }
 
 /**
- * Danh sách tool có nhóm.
+ * The grouped tool list.
  *
- * Riêng của module thay vì `components/ItemList`: cái kia nhận một mảng chuỗi phẳng và gánh cả
- * tìm kiếm, ghim và menu chuột phải — thứ một danh sách cố định gồm mười mấy nhãn ta tự viết
- * không cần, và nống nó ra cho đúng một người dùng thì hại nhiều hơn lợi. Việc lọc theo `query` thì
- * vẫn cần — chỉ là nhỏ đến mức viết thẳng ở đây rẻ hơn kéo `ItemList` vào.
+ * The module's own rather than `components/ItemList`: that one takes a flat array of strings and
+ * carries search, pinning and a right-click menu too — things a fixed list of a dozen-odd labels we
+ * write ourselves does not need, and stretching it for exactly one user does more harm than good.
+ * Filtering by `query` is still needed — it is just small enough that writing it right here is
+ * cheaper than pulling `ItemList` in.
  */
 function ToolList({
   tools,

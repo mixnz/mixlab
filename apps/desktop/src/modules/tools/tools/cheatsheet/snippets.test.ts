@@ -42,7 +42,7 @@ describe("fill", () => {
     expect(fill("{{a}}-{{a}}", { a: "x" })).toBe("x-x");
   });
 
-  // Một ô chưa điền phải nhìn thấy được trong đầu ra, chứ không biến mất thành khoảng trắng.
+  // An unfilled slot has to be visible in the output, not vanish into whitespace.
   it("giữ nguyên tham số chưa có giá trị", () => {
     expect(fill("cmd {{host}} {{port}}", { host: "db" })).toBe("cmd db {{port}}");
   });
@@ -51,7 +51,7 @@ describe("fill", () => {
     expect(fill("cmd {{host}}", { host: "" })).toBe("cmd {{host}}");
   });
 
-  // Tool không bọc ngoặc hộ: người viết template quyết định chỗ nào cần ngoặc.
+  // The tool does not add quotes: the template's author decides where quotes are needed.
   it("không tự bọc ngoặc cho giá trị có dấu cách", () => {
     expect(fill("mysql -p'{{password}}'", { password: "mật khẩu" })).toBe("mysql -p'mật khẩu'");
   });
@@ -107,7 +107,7 @@ describe("readSnippets", () => {
     expect(readSnippets([good])).toEqual([good]);
   });
 
-  // Một file bị sửa tay làm mất mục hỏng chứ không được làm hỏng cả tool.
+  // A hand-edited file loses the broken entries; it must not break the whole tool.
   it("bỏ mục thiếu trường hoặc sai kiểu", () => {
     expect(readSnippets([good, { id: "b" }, { ...good, id: "" }, { ...good, template: 7 }])).toEqual(
       [good],

@@ -1,14 +1,15 @@
 /**
- * Format và minify XML bằng một bộ parse tự viết.
+ * Formats and minifies XML with a hand-written parser.
  *
- * **Không `DOMParser`.** Nó là API của trình duyệt, không có trong Node, mà vitest chạy trong Node
- * và repo cố ý không có jsdom — dùng nó là biến đây thành tool duy nhất trong module không test
- * được. Đổi lại còn được thứ `DOMParser` không cho: lỗi có vị trí, và câu chữ giống nhau ở mọi nơi.
+ * **No `DOMParser`.** It is a browser API, absent from Node, while vitest runs in Node and the repo
+ * deliberately has no jsdom — using it would make this the only tool in the module that cannot be
+ * tested. In return we also get what `DOMParser` does not give: errors with positions, and the same
+ * wording everywhere.
  */
 
 export type XmlNode =
   | { kind: "element"; name: string; attrs: string; selfClosing: boolean; children: XmlNode[] }
-  /** Bốn loại sau đi qua nguyên văn — không có gì để in lại. */
+  /** The last four kinds pass through verbatim — there is nothing to reprint. */
   | { kind: "text" | "comment" | "cdata" | "pi" | "doctype"; raw: string };
 
 export interface XmlSyntaxError {
@@ -37,7 +38,7 @@ function parse(text: string): XmlNode[] {
   const stack: { name: string; children: XmlNode[]; index: number }[] = [];
   const into = (): XmlNode[] => stack[stack.length - 1]?.children ?? root;
 
-  /** Nuốt trọn một khối mở/đóng cố định — comment, CDATA, PI, doctype. */
+  /** Swallows a whole fixed open/close block — comment, CDATA, PI, doctype. */
   const raw = (kind: "comment" | "cdata" | "pi" | "doctype", close: string): void => {
     const start = i;
     const end = text.indexOf(close, i);
@@ -82,7 +83,7 @@ function parse(text: string): XmlNode[] {
       while (i < text.length && !NAME_END.includes(text[i]!)) i += 1;
       const name = text.slice(nameStart, i);
       if (name === "") throw new ScanError(start, "Thẻ không có tên");
-      // Dấu `>` nằm trong giá trị thuộc tính thì không phải chỗ kết thúc thẻ.
+      // A `>` inside an attribute value is not where the tag ends.
       const attrStart = i;
       let quote = "";
       while (i < text.length) {
@@ -118,7 +119,7 @@ function isBlank(node: XmlNode): boolean {
   return node.kind === "text" && node.raw.trim() === "";
 }
 
-/** Có cả text thật lẫn phần tử con. Khoảng trắng ở đây là dữ liệu, không phải trình bày. */
+/** Has both real text and child elements. Whitespace here is data, not presentation. */
 function isMixed(children: XmlNode[]): boolean {
   return (
     children.some((node) => node.kind === "text" && node.raw.trim() !== "") &&
@@ -131,7 +132,7 @@ function openTag(node: Element): string {
   return node.selfClosing ? `<${head} />` : `<${head}>`;
 }
 
-/** In nguyên văn, không thêm bớt một khoảng trắng nào. Dành cho nội dung hỗn hợp. */
+/** Prints verbatim, without adding or removing a single space. Meant for mixed content. */
 function inline(nodes: XmlNode[]): string {
   return nodes
     .map((node) => {

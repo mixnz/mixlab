@@ -7,21 +7,21 @@ import styles from "./CopyField.module.css";
 interface CopyFieldProps {
   label: string;
   value: string;
-  /** Cho ô cao lên và cuộn được, cho giá trị dài nhiều dòng. */
+  /** Lets the field grow taller and scroll, for long multi-line values. */
   multiline?: boolean;
-  /** In bằng font mono. Mặc định bật — gần như mọi thứ module này in ra là mã hoặc id. */
+  /** Prints in a mono font. On by default — almost everything this module prints is code or ids. */
   mono?: boolean;
 }
 
 const COPIED_MS = 1500;
 
 /**
- * Một dòng kết quả chỉ đọc kèm nút chép.
+ * One read-only result line with a copy button.
  *
- * Nút báo đã chép bằng cách tự đổi trong một giây rưỡi. Một lần chép hỏng bị nuốt ở đây, đúng như
- * `RequestList` và `TreeView` của module rest làm: `copyText` đã tự xử lý phần khó (nó thử lại
- * bằng đường `execCommand` cũ trước khi bỏ cuộc), và một dòng kết quả không có chỗ nào để treo
- * thông báo lỗi lên.
+ * The button reports the copy by changing itself for a second and a half. A failed copy is
+ * swallowed here, just as the rest module's `RequestList` and `TreeView` do: `copyText` already
+ * handles the hard part itself (it retries through the old `execCommand` path before giving up),
+ * and a result line has nowhere to hang an error message.
  */
 function CopyField({ label, value, multiline = false, mono = true }: CopyFieldProps) {
   const { t } = useTranslation();

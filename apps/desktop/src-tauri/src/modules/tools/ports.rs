@@ -1,36 +1,39 @@
-//! Đọc output của `netstat`, `ss` và `lsof` thành một danh sách cổng đang nghe.
+//! Reads the output of `netstat`, `ss` and `lsof` into a list of listening ports.
 //!
-//! Không có `Command` nào trong file này, và đó là chủ ý: chạy lệnh phụ thuộc máy, phụ thuộc
-//! quyền, và không test được trong CI. Đọc output thì là hàm thuần — và nó là chỗ mọi lỗi sẽ nằm,
-//! vì ba nền tảng có ba định dạng, mỗi cái một kiểu dòng lạ. `commands.rs` giữ nửa kia.
+//! There is no `Command` in this file, and that is deliberate: running commands depends on the
+//! machine, depends on permissions, and cannot be tested in CI. Reading output is a pure function —
+//! and it is where every bug will be, because three platforms have three formats, each with its own
+//! odd lines. `commands.rs` keeps the other half.
 //!
-//! `allow(dead_code)` cho cả file, và nó là điều kiện để cách chia trên hoạt động: `collect()` ở
-//! `commands.rs` bị `cfg` theo nền tảng nên trên máy nào cũng chỉ gọi **một** trong ba bộ đọc, còn
-//! cả ba thì cố ý được biên dịch ở mọi nơi để **test của cả ba chạy ở mọi nơi**. Không có dòng
-//! này thì clippy báo hai bộ đọc kia là code chết trên Windows, và báo `parse_netstat` là code
-//! chết trên máy Linux của CI. Đóng khung ở đúng file này chấp nhận được vì trong đây không có gì
-//! ngoài ba bộ đọc và mấy hàm phụ của chúng.
+//! `allow(dead_code)` for the whole file, and it is what makes the split above work: `collect()` in
+//! `commands.rs` is `cfg`-gated per platform, so on any machine it only calls **one** of the three
+//! parsers, while all three are deliberately compiled everywhere so that **all three's tests run
+//! everywhere**. Without this line clippy reports the other two parsers as dead code on Windows,
+//! and reports `parse_netstat` as dead code on CI's Linux machine. Fencing it in exactly this file
+//! is acceptable because there is nothing in here but the three parsers and their helpers.
 #![allow(dead_code)]
 
 use serde::Serialize;
 use std::collections::HashMap;
 
-/// Một cổng đang được nghe trên máy này.
+/// A port being listened on on this machine.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ListeningPort {
     pub port: u16,
-    /// Địa chỉ đang nghe: `0.0.0.0`, `127.0.0.1`, `::`. Phân biệt "mở ra ngoài" với "chỉ localhost".
+    /// The listening address: `0.0.0.0`, `127.0.0.1`, `::`. Tells "open to the outside" apart from
+    /// "localhost only".
     pub address: String,
     pub pid: u32,
-    /// `None` khi tra được cổng nhưng không tra được tên tiến trình — thường là thiếu quyền.
+    /// `None` when the port could be found but not the process name — usually a lack of
+    /// permissions.
     pub process: Option<String>,
 }
 
-/// Tách `0.0.0.0:445` hoặc `[::]:445` thành địa chỉ và cổng.
+/// Splits `0.0.0.0:445` or `[::]:445` into address and port.
 ///
-/// Cắt ở dấu hai chấm **cuối cùng**: địa chỉ IPv6 có đầy dấu hai chấm bên trong nó, nên cắt ở dấu
-/// đầu tiên là ra `[` và một mớ rác.
+/// Splits at the **last** colon: an IPv6 address is full of colons inside it, so splitting at the
+/// first gives `[` and a pile of garbage.
 fn split_address(text: &str) -> Option<(String, u16)> {
     let cut = text.rfind(':')?;
     let (host, port) = text.split_at(cut);
@@ -39,10 +42,10 @@ fn split_address(text: &str) -> Option<(String, u16)> {
     Some((host.to_string(), port))
 }
 
-/// Bảng PID → tên tiến trình, đọc từ `tasklist /FO CSV /NH`.
+/// The PID → process name table, read from `tasklist /FO CSV /NH`.
 ///
-/// Mỗi dòng là `"tên","pid","session","số","bộ nhớ"`. Tách bằng `","` chứ không bằng dấu phẩy đơn:
-/// tên tiến trình có thể chứa dấu phẩy, và nó nằm trong ngoặc kép chính vì thế.
+/// Each line is `"name","pid","session","number","memory"`. Split on `","` rather than on a single
+/// comma: a process name may contain commas, and that is exactly why it sits in quotes.
 fn tasklist_names(text: &str) -> HashMap<u32, String> {
     let mut names = HashMap::new();
     for line in text.lines() {
@@ -60,14 +63,15 @@ fn tasklist_names(text: &str) -> HashMap<u32, String> {
     names
 }
 
-/// Đọc `netstat -ano` cộng `tasklist /FO CSV /NH`.
+/// Reads `netstat -ano` plus `tasklist /FO CSV /NH`.
 ///
-/// **`netstat -ano`, không phải `netstat -ano -p TCP`**: cờ `-p TCP` lọc mất toàn bộ IPv6, nên một
-/// service chỉ nghe trên `[::]` sẽ biến mất khỏi bảng mà không có dấu hiệu gì.
+/// **`netstat -ano`, not `netstat -ano -p TCP`**: the `-p TCP` flag filters out all of IPv6, so a
+/// service listening only on `[::]` would vanish from the table without a trace.
 ///
-/// Bỏ `-p` thì output có thêm UDP, và cách phân biệt là **số cột**: dòng TCP có 5 cột vì có cột
-/// trạng thái, dòng UDP chỉ có 4. Nên luật ở đây là đúng 5 cột, cột đầu `TCP`, cột thứ tư
-/// `LISTENING` — UDP tự rụng vì thiếu cột, TCP đang `ESTABLISHED` tự rụng vì sai trạng thái.
+/// Without `-p` the output also includes UDP, and the way to tell them apart is the **number of
+/// columns**: a TCP line has 5 columns because it has a state column, a UDP line only 4. So the
+/// rule here is exactly 5 columns, first column `TCP`, fourth column `LISTENING` — UDP drops out
+/// for lacking a column, `ESTABLISHED` TCP drops out for the wrong state.
 pub fn parse_netstat(netstat: &str, tasklist: &str) -> Vec<ListeningPort> {
     let names = tasklist_names(tasklist);
     let mut ports = Vec::new();
@@ -92,7 +96,7 @@ pub fn parse_netstat(netstat: &str, tasklist: &str) -> Vec<ListeningPort> {
     ports
 }
 
-/// Rút tên và PID đầu tiên ra khỏi `users:(("nginx",pid=123,fd=6),("nginx",pid=124,fd=6))`.
+/// Pulls the first name and PID out of `users:(("nginx",pid=123,fd=6),("nginx",pid=124,fd=6))`.
 fn parse_ss_users(field: &str) -> Option<(String, u32)> {
     let rest = field.strip_prefix("users:((")?;
     let name = rest.strip_prefix('"')?;
@@ -106,11 +110,12 @@ fn parse_ss_users(field: &str) -> Option<(String, u32)> {
     Some((name.to_string(), pid.parse().ok()?))
 }
 
-/// Đọc `ss -lntp`.
+/// Reads `ss -lntp`.
 ///
-/// Không dùng cờ `-H` để bỏ tiêu đề: cờ đó chỉ có ở `iproute2` đời mới, và nhận ra dòng tiêu đề ở
-/// đây rẻ hơn là đòi hỏi một phiên bản. Phần khó là `users:(("nginx",pid=123,fd=6))` — tên và PID
-/// nằm lồng trong ngoặc, và một cổng có thể có nhiều tiến trình cùng giữ.
+/// The `-H` flag to drop the header is not used: it only exists in newer `iproute2`, and
+/// recognising the header line here is cheaper than demanding a version. The hard part is
+/// `users:(("nginx",pid=123,fd=6))` — the name and PID are nested in parentheses, and a port may be
+/// held by several processes at once.
 pub fn parse_ss(text: &str) -> Vec<ListeningPort> {
     let mut ports = Vec::new();
     for line in text.lines() {
@@ -124,7 +129,7 @@ pub fn parse_ss(text: &str) -> Vec<ListeningPort> {
         };
         let (process, pid) = match fields.get(5).and_then(|f| parse_ss_users(f)) {
             Some((name, pid)) => (Some(name), pid),
-            // Không có quyền xem tiến trình: cổng vẫn là một câu trả lời có ích.
+            // No permission to see processes: the port is still a useful answer.
             None => (None, 0),
         };
         ports.push(ListeningPort {
@@ -137,11 +142,11 @@ pub fn parse_ss(text: &str) -> Vec<ListeningPort> {
     ports
 }
 
-/// Đọc `lsof -nP -iTCP -sTCP:LISTEN -Fpcn`.
+/// Reads `lsof -nP -iTCP -sTCP:LISTEN -Fpcn`.
 ///
-/// Dạng field: mỗi dòng một trường, ký tự đầu là tên trường. `p` mở đầu một tiến trình, `c` là tên
-/// lệnh của nó, và mọi dòng `n` sau đó thuộc về tiến trình gần nhất — nên phải nhớ `p` và `c` đang
-/// mở chứ không đọc từng dòng độc lập.
+/// Field format: one field per line, the first character is the field name. `p` starts a process,
+/// `c` is its command name, and every `n` line after that belongs to the latest process — so the
+/// open `p` and `c` have to be remembered rather than reading each line independently.
 pub fn parse_lsof(text: &str) -> Vec<ListeningPort> {
     let mut ports = Vec::new();
     let mut pid = 0u32;
@@ -158,7 +163,7 @@ pub fn parse_lsof(text: &str) -> Vec<ListeningPort> {
             }
             'c' => command = Some(value.to_string()),
             'n' => {
-                // `*:3000` nghĩa là nghe trên mọi địa chỉ.
+                // `*:3000` means listening on every address.
                 let text = value.replace("*:", "0.0.0.0:");
                 if let Some((address, port)) = split_address(&text) {
                     ports.push(ListeningPort {
@@ -179,7 +184,7 @@ pub fn parse_lsof(text: &str) -> Vec<ListeningPort> {
 mod tests {
     use super::*;
 
-    /// Bắt nguyên văn từ `netstat -ano` trên Windows 11.
+    /// Captured verbatim from `netstat -ano` on Windows 11.
     const NETSTAT: &str = "\
 Active Connections
 
@@ -200,7 +205,7 @@ Active Connections
     #[test]
     fn netstat_chi_lay_dong_dang_nghe() {
         let ports = parse_netstat(NETSTAT, TASKLIST);
-        // Hai dòng LISTENING IPv4 cộng một dòng IPv6; ESTABLISHED và UDP không được vào.
+        // Two IPv4 LISTENING lines plus one IPv6 line; ESTABLISHED and UDP must not get in.
         assert_eq!(ports.len(), 3);
         assert!(ports.iter().all(|p| p.port != 65370));
         assert!(ports.iter().all(|p| p.port != 53));
@@ -264,7 +269,7 @@ LISTEN     0      128          0.0.0.0:22          0.0.0.0:*
         assert_eq!(pg.pid, 99);
     }
 
-    // Thiếu quyền thì `ss` không in cột tiến trình. Cổng vẫn phải hiện ra.
+    // Without permission `ss` prints no process column. The port must still show up.
     #[test]
     fn ss_van_tra_cong_khi_khong_co_cot_tien_trinh() {
         let ssh = parse_ss(SS).into_iter().find(|p| p.port == 22).unwrap();

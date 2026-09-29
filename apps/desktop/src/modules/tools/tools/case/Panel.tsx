@@ -16,8 +16,8 @@ const STYLE_LABEL: Record<CaseStyle, string> = {
   title: "Title Case",
 };
 
-/* Nhãn là chính cú pháp nó sinh ra, nên không dịch: `snake_case` gọi là snake_case ở mọi ngôn ngữ,
-   và một bản dịch chỉ làm người đọc phải đoán ngược lại. */
+/* The label is the very syntax it produces, so it is not translated: `snake_case` is called
+   snake_case in every language, and a translation only makes the reader guess backwards. */
 const STYLE_OPTIONS: SelectOption<CaseStyle>[] = CASE_STYLES.map((style) => ({
   value: style,
   label: STYLE_LABEL[style],
@@ -28,7 +28,7 @@ function CasePanel() {
   const [input, setInput] = useState("");
   const [style, setStyle] = useState<CaseStyle>("snake");
 
-  // Từng dòng một: cách dùng thật là chép cả danh sách cột từ tab db rồi dán vào đây.
+  // Line by line: the real use is copying a whole column list from the db tab and pasting it here.
   const output = useMemo(
     () =>
       input

@@ -12,14 +12,16 @@
   flex-wrap: wrap;
 }
 
-/* 18rem chứ không phải 10rem: placeholder dài nhất là bản tiếng Việt "Lọc theo cổng hoặc tiến
-   trình", đo được 270px ở font của ô (Fira Code 14.4px, font của app khi đo) kể cả padding và viền. Ô 10rem cắt mất
-   nửa câu, và một placeholder cụt thì không nói được là ô này lọc theo những gì. */
+/* 18rem rather than 10rem: the longest placeholder is the Vietnamese one "Lọc theo cổng hoặc tiến
+   trình", measured at 270px in the field's font (Fira Code 14.4px, the app's font when measured)
+   including padding and border. A 10rem field cuts off half the sentence, and a truncated
+   placeholder cannot say what this field filters by. */
 .filter {
   width: 18rem;
 }
 
-/* Ô số cổng thì ngược lại — nội dung dài nhất là năm chữ số, nên rộng bằng ô lọc chỉ tổ trống. */
+/* The port number field is the opposite — its longest content is five digits, so making it as wide
+   as the filter field only adds empty space. */
 .port {
   width: 8rem;
 }
@@ -37,8 +39,8 @@
 
 .row {
   display: grid;
-  /* Địa chỉ rộng hơn hẳn ba cột kia: một IPv6 như `fe80::1ff:fe23:4567` dài gấp mấy lần
-     `0.0.0.0`, và cột 9rem cũ cắt cụt nó. */
+  /* The address is much wider than the other three columns: an IPv6 such as `fe80::1ff:fe23:4567`
+     is several times longer than `0.0.0.0`, and the old 9rem column truncated it. */
   grid-template-columns: 4.5rem 15rem 4.5rem 1fr;
   gap: 0.5rem;
   padding: 0.3rem 0.5rem;
@@ -50,13 +52,14 @@
   font-family: inherit;
   text-align: left;
   width: 100%;
-  /* `<button>` mặc định là `content-box`, nên `width: 100%` cộng thêm 0.5rem padding mỗi bên và
-     đẩy hàng rộng hơn bảng đúng 16px — vừa đủ để đẻ ra một thanh cuộn ngang không ai cần. */
+  /* `<button>` defaults to `content-box`, so `width: 100%` adds 0.5rem of padding on each side and
+     pushes the row exactly 16px wider than the table — just enough to spawn a horizontal scrollbar
+     nobody needs. */
   box-sizing: border-box;
 }
 
-/* Ô nào dài quá thì cắt bằng dấu ba chấm chứ không đẩy cột bên cạnh đi. Giá trị đầy đủ nằm ở
-   `title`, và một IPv6 dài vẫn chép được từ ô kết quả bên dưới. */
+/* A cell that is too long is cut with an ellipsis rather than pushing the neighbouring column away.
+   The full value is in `title`, and a long IPv6 can still be copied from the result field below. */
 .row > span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -73,8 +76,8 @@
   color: var(--accent-text);
 }
 
-/* `--surface-bg` chứ không phải `--bg`: biến kia không tồn tại trong repo, nên nền của hàng tiêu
-   đề dính lại là trong suốt, và các hàng cuộn qua bên dưới thì đọc lẫn vào nó. */
+/* `--surface-bg` rather than `--bg`: that other variable does not exist in the repo, so the sticky
+   header row's background was transparent, and the rows scrolling underneath read right into it. */
 .head {
   font-weight: 600;
   opacity: 0.6;

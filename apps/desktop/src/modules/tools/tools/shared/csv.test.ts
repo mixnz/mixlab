@@ -9,7 +9,7 @@ describe("parseCsvRows", () => {
     ]);
   });
 
-  // Toàn bộ lý do không dùng `split(",")`.
+  // The whole reason not to use `split(",")`.
   it("giữ dấu phân cách nằm trong ngoặc kép", () => {
     expect(parseCsvRows('a,b\n"x,y",2', ",")).toEqual([
       ["a", "b"],
@@ -69,7 +69,7 @@ describe("rowsToObjects", () => {
     expect(rowsToObjects([["a"], [""], ["1"]])).toEqual([{ a: "1" }]);
   });
 
-  // Đoán kiểu là mất số 0 đứng đầu của mã bưu chính, im lặng, và không lấy lại được.
+  // Guessing types loses the leading zero of postal codes, silently, and it cannot be recovered.
   it("để mọi giá trị là chuỗi, kể cả thứ trông như số", () => {
     expect(
       rowsToObjects([

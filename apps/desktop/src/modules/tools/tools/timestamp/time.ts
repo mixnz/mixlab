@@ -9,10 +9,11 @@ export interface TimeOutputs {
 }
 
 /**
- * Đơn vị của một dãy chữ số, đoán theo độ dài.
+ * The unit of a string of digits, guessed by length.
  *
- * Đoán là cần thiết — người ta dán một cột `bigint` vào đây mà không biết nó là giây hay mili —
- * nhưng đoán im lặng thì không: Panel hiển thị kết quả của hàm này để người dùng thấy nó đoán gì.
+ * Guessing is necessary — people paste a `bigint` column in here without knowing whether it is
+ * seconds or milliseconds — but guessing silently is not: the Panel shows this function's result so
+ * the user can see what it guessed.
  */
 export function detectUnit(input: string): TimeUnit | null {
   const digits = input.trim();
@@ -25,7 +26,7 @@ export function detectUnit(input: string): TimeUnit | null {
 
 const TO_MILLIS: Record<TimeUnit, number> = { seconds: 1000, millis: 1, micros: 1 / 1000 };
 
-/** Mốc thời gian tính bằng mili, từ một dãy chữ số hoặc một chuỗi ISO 8601. */
+/** A point in time in milliseconds, from a string of digits or an ISO 8601 string. */
 export function toInstant(input: string): number | null {
   const text = input.trim();
   if (text === "") return null;
@@ -47,8 +48,8 @@ const DIVISIONS: [limit: number, size: number, unit: Intl.RelativeTimeFormatUnit
 ];
 
 /**
- * `now` là tham số chứ không phải `Date.now()` bên trong: đó là thứ làm hàm này test được, và
- * cũng là thứ cho Panel đóng băng kết quả trong khi người dùng đang đọc nó.
+ * `now` is a parameter rather than `Date.now()` inside: that is what makes this function testable,
+ * and also what lets the Panel freeze the result while the user is reading it.
  */
 export function toOutputs(ms: number, timeZone: string, now: number): TimeOutputs {
   const date = new Date(ms);
@@ -66,8 +67,8 @@ export function toOutputs(ms: number, timeZone: string, now: number): TimeOutput
 
   return {
     isoUtc: date.toISOString(),
-    // `sv-SE` cho ra `2026-08-28 07:00:00` — ISO trừ chữ T, thứ duy nhất trong các locale có sẵn
-    // in ra dạng đọc được mà vẫn sắp xếp đúng.
+    // `sv-SE` gives `2026-08-28 07:00:00` — ISO without the T, the only one of the built-in locales
+    // that prints a readable form that still sorts correctly.
     isoLocal: new Intl.DateTimeFormat("sv-SE", {
       timeZone,
       dateStyle: "short",

@@ -17,7 +17,8 @@
   min-width: 14rem;
 }
 
-/* Rộng hơn từ khi nhãn mang theo cả chênh lệch — `Asia/Ho_Chi_Minh (UTC+07:00)` không vừa 12rem. */
+/* Wider since the label carries the offset too — `Asia/Ho_Chi_Minh (UTC+07:00)` does not fit in
+   12rem. */
 .zone {
   min-width: 18rem;
 }

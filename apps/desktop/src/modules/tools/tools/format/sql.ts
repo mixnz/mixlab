@@ -1,8 +1,9 @@
 /**
- * Gom một câu lệnh SQL về một dòng.
+ * Collapses an SQL statement onto one line.
  *
- * Không phải parser, nhưng **phải hiểu chuỗi và comment**: gom khoảng trắng bên trong `'…'` là đổi
- * dữ liệu, và bỏ nửa dòng `-- …` là biến phần đuôi câu lệnh thành comment.
+ * Not a parser, but it **has to understand strings and comments**: collapsing whitespace inside
+ * `'…'` changes the data, and dropping half a `-- …` line turns the tail of the statement into a
+ * comment.
  */
 
 const WS = " \t\n\r";
@@ -18,7 +19,7 @@ export function minifySql(text: string): string {
     out.push(chunk);
   };
 
-  /** Đọc trọn một chuỗi hoặc định danh có ngoặc, kể cả `''` lồng bên trong. */
+  /** Reads a whole string or quoted identifier, including a nested `''`. */
   const readQuoted = (quote: string): string => {
     const start = i;
     i += 1;
@@ -37,7 +38,7 @@ export function minifySql(text: string): string {
       }
       i += 1;
     }
-    // Chưa đóng: trả nốt phần còn lại. Minify không có việc từ chối một câu lệnh.
+    // Not closed: return whatever is left. Minify has no business refusing a statement.
     return text.slice(start, i);
   };
 

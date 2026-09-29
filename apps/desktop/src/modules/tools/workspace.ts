@@ -1,21 +1,22 @@
 import { createStore, jsonFile, useStore } from "../../core/jsonStore";
 
 /**
- * Những lựa chọn của module Tools còn lại giữa các phiên.
+ * The Tools module's choices that persist between sessions.
  *
- * Chỉ là đồ đạc, không phải dữ liệu: múi giờ một người làm việc trong đó là như nhau ở mọi tab, và
- * chọn lại nó mỗi lần mở app là việc vô nghĩa. **Nội dung hai ô vào/ra vẫn không bao giờ được lưu**
- * — người ta dán token và chuỗi kết nối có mật khẩu vào các tool này.
+ * Only furniture, not data: the time zone a person works in is the same in every tab, and picking
+ * it again on every app launch is pointless. **The contents of the input and output fields are
+ * still never saved** — people paste tokens and connection strings with passwords into these
+ * tools.
  */
 export interface ToolsWorkspace {
-  /** Tên hiện hành của IANA — xem `tools/timestamp/zones.ts`. `null` nghĩa là dùng múi của máy. */
+  /** IANA's current name — see `tools/timestamp/zones.ts`. `null` means use the machine's zone. */
   timeZone: string | null;
 }
 
 const DEFAULTS: ToolsWorkspace = { timeZone: null };
 
-/* Trải lên trên phần mặc định chứ không thay thế nó: một file do bản cũ ghi ra vẫn là lựa chọn của
-   người dùng, và trường nó chưa từng nghe tới thì lấy giá trị mặc định. */
+/* Spread over the defaults rather than replacing them: a file written by an old version is still
+   the user's choice, and a field it has never heard of takes the default value. */
 const file = jsonFile<Partial<ToolsWorkspace>>("tools-workspace.json", "workspace", {});
 const store = createStore<ToolsWorkspace>({
   defaults: DEFAULTS,
@@ -23,8 +24,9 @@ const store = createStore<ToolsWorkspace>({
   persist: file.persist,
 });
 
-/** Ghi ngầm phía sau. Không có gì ở đây đáng một thông báo lỗi trước mặt người dùng: một múi giờ
- *  không kịp xuống đĩa là một múi giờ trở về mặc định ở lần mở sau. */
+/** Writes quietly in the background. Nothing here is worth an error message in front of the user:
+ *  a time zone that did not make it to disk is a time zone back at the default on the next
+ *  launch. */
 function write(next: ToolsWorkspace): void {
   void store.save(next).catch(() => {});
 }

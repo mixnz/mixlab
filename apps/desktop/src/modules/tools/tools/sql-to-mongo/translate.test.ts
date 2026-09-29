@@ -225,7 +225,7 @@ describe("translate — pipeline", () => {
   it("HAVING dùng một hàm gộp không có trong SELECT thì $group phải tự thêm nó vào", async () => {
     const out = (await ok("SELECT city FROM users GROUP BY city HAVING COUNT(*) > 5")).output;
     expect(out).not.toContain('""');
-    // Trường phụ trợ phải được gộp để lọc được, rồi bị $project bỏ đi.
+    // The helper field has to be grouped to be filterable, then dropped by $project.
     expect(out).toContain('"$sum": 1');
     const project = out.slice(out.indexOf('"$project"'));
     expect(project).not.toContain("_having");

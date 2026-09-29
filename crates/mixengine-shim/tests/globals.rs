@@ -1,9 +1,9 @@
 //! A globally installed tool is a command — roadmap task **T131**.
 //!
-//! The second complaint this phase answers, end to end: `npm -g install yarn`, sau đó lệnh `yarn`
-//! không gọi được. npm's global prefix is the Node install's own directory, which is on nobody's
-//! PATH — so the program existed, ran perfectly well when named by its full path, and could not be
-//! typed.
+//! The second complaint this phase answers, end to end: `npm -g install yarn`, and then the `yarn`
+//! command cannot be run. npm's global prefix is the Node install's own directory, which is on
+//! nobody's PATH — so the program existed, ran perfectly well when named by its full path, and
+//! could not be typed.
 //!
 //! What is proved here is that it becomes a command **and follows the version**, which is the half
 //! that a PATH entry pointing at one install could never do: a directory pinned to another Node

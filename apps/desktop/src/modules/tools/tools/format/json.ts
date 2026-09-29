@@ -1,16 +1,18 @@
 /**
- * Format và minify JSON **mà không đi qua `JSON.parse`**.
+ * Formats and minifies JSON **without going through `JSON.parse`**.
  *
- * `JSON.parse` rồi `stringify` làm hỏng dữ liệu im lặng, đúng với thứ người ta hay dán vào module
- * này: `1787875200123456789` thành `…800`, `{"2":…,"1":…}` bị sắp lại, `1.50` thành `1.5`, và
- * `"A"` thành `"A"`. Không cái nào báo lỗi.
+ * `JSON.parse` followed by `stringify` silently damages data, exactly the kind people often paste
+ * into this module: `1787875200123456789` becomes `…800`, `{"2":…,"1":…}` gets reordered, `1.50`
+ * becomes `1.5`, and `"A"` becomes `"A"`. None of them report an error.
  *
- * Nên ở đây chỉ có một bộ tách token in lại khoảng trắng: mọi token được phát lại đúng **lát cắt
- * nguồn** của nó, và không con số nào đi qua `Number`. Minify là cùng hàm đó với thụt lề rỗng.
+ * So there is only a tokeniser here that reprints the whitespace: every token is emitted again as
+ * exactly its **source slice**, and no number ever passes through `Number`. Minify is the same
+ * function with an empty indent.
  */
 
 export interface JsonSyntaxError {
-  /** Vị trí ký tự trong nguồn; dòng và cột suy ra từ nó, để Panel chỉ đúng chỗ. */
+  /** The character position in the source; line and column are derived from it, so the Panel
+   *  points at the right place. */
   index: number;
   line: number;
   column: number;
@@ -19,7 +21,7 @@ export interface JsonSyntaxError {
 
 export type JsonResult = { ok: true; output: string } | { ok: false; error: JsonSyntaxError };
 
-/** Ném bên trong `render`, bắt lại ở `run`. Riêng tư của file này. */
+/** Thrown inside `render`, caught in `run`. Private to this file. */
 class ScanError extends Error {
   constructor(
     readonly index: number,
@@ -55,7 +57,7 @@ function render(text: string, indent: string): string {
     i += 1;
     while (i < text.length) {
       const ch = text[i]!;
-      // Escape đi qua nguyên văn — mở nó ra là đổi nguồn.
+      // Escapes pass through verbatim — expanding them would change the source.
       if (ch === "\\") {
         i += 2;
         continue;
@@ -84,7 +86,7 @@ function render(text: string, indent: string): string {
       if (text[i] === "+" || text[i] === "-") i += 1;
       while (isDigit(text[i])) i += 1;
     }
-    // Lát cắt nguồn. `Number` không bao giờ chạm vào con số này.
+    // The source slice. `Number` never touches this number.
     return text.slice(start, i);
   };
 
@@ -188,7 +190,7 @@ function run(text: string, indent: string): JsonResult {
   }
 }
 
-/** `indent` là chuỗi thụt lề một cấp: `"  "`, `"    "` hoặc `"\t"`. */
+/** `indent` is the string for one level of indentation: `"  "`, `"    "` or `"\t"`. */
 export function formatJson(text: string, indent: string): JsonResult {
   return run(text, indent);
 }

@@ -2,19 +2,20 @@ import { likeToRegex } from "./like";
 import type { Dialect, Translation, Unsupported, Warning } from "./types";
 
 /*
- * Hình dạng AST dưới đây là của `node-sql-parser`, đọc ra từ chính nó chứ không đoán. Vài chỗ
- * không như tên gọi gợi ý, và mỗi chỗ đều đã suýt thành một lỗi:
+ * The AST shape below is `node-sql-parser`'s, read off the library itself rather than guessed. A
+ * few places are not what their names suggest, and each one nearly became a bug:
  *
- * - `NOT (a = 1)` **không** phải `binary_expr` với operator `NOT`. Nó là một node `function` tên
- *   `NOT`, nên nó phải được nhận ra *trước* khi luật từ chối gạt mọi hàm vô hướng đi.
- * - PostgreSQL trả `column_ref.column` là `{ expr: { value } }`, MySQL trả một chuỗi. `columnName`
- *   đọc cả hai.
- * - `astify` trả một object cho một câu lệnh và một **mảng** cho nhiều câu.
- * - `limit` là `{ seperator, value: [limit, offset?] }` — `seperator` (viết sai chính tả như vậy
- *   trong thư viện) là `"offset"` khi có phần tử thứ hai.
+ * - `NOT (a = 1)` is **not** a `binary_expr` with operator `NOT`. It is a `function` node named
+ *   `NOT`, so it has to be recognised *before* the rejection rule sweeps away every scalar
+ * function.
+ * - PostgreSQL returns `column_ref.column` as `{ expr: { value } }`, MySQL returns a string.
+ *   `columnName` reads both.
+ * - `astify` returns an object for one statement and an **array** for several.
+ * - `limit` is `{ seperator, value: [limit, offset?] }` — `seperator` (misspelt like that in the
+ *   library) is `"offset"` when there is a second element.
  */
 
-/** Đủ dùng cho việc duyệt ở đây; AST thật rộng hơn nhiều và ta không cần phần còn lại. */
+/** Enough for the traversal here; the real AST is much wider and we do not need the rest. */
 interface Node {
   type?: string;
   [key: string]: unknown;
@@ -23,7 +24,7 @@ interface Node {
 const isNode = (value: unknown): value is Node =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Tên cột, đọc được cả dạng chuỗi của MySQL lẫn dạng object của PostgreSQL. */
+/** The column name, readable from both MySQL's string form and PostgreSQL's object form. */
 function columnName(ref: Node): string {
   const column = ref.column;
   if (typeof column === "string") return column;
@@ -33,7 +34,7 @@ function columnName(ref: Node): string {
   return "";
 }
 
-/** Tên của một node `function`, đọc từ cấu trúc `name.name[0].value`. */
+/** The name of a `function` node, read from the `name.name[0].value` structure. */
 function functionName(node: Node): string {
   const name = node.name;
   if (typeof name === "string") return name;
@@ -47,10 +48,10 @@ function functionName(node: Node): string {
 const AGGREGATES = new Set(["COUNT", "SUM", "AVG", "MIN", "MAX"]);
 
 /**
- * Mọi lý do câu lệnh này không dịch được, gom một lượt.
+ * Every reason this statement cannot be translated, collected in one pass.
  *
- * Gom hết thay vì dừng ở cái đầu tiên: người dán một câu có cả JOIN lẫn subquery nên thấy cả hai
- * trong một lần, chứ không phải sửa một cái rồi mới biết còn cái nữa.
+ * Collects them all rather than stopping at the first: someone pasting a statement with both a JOIN
+ * and a subquery should see both at once, not fix one and only then find out about the other.
  */
 function collectUnsupported(ast: Node, sql: string): Unsupported[] {
   const found: Unsupported[] = [];
@@ -74,7 +75,7 @@ function collectUnsupported(ast: Node, sql: string): Unsupported[] {
     }
     if (!isNode(value)) return;
 
-    // Một subquery xuất hiện dưới dạng một node lồng có khoá `ast`, hoặc một node `select` lồng.
+    // A subquery appears as a nested node with an `ast` key, or as a nested `select` node.
     if (value.ast !== undefined || (value !== ast && value.type === "select")) {
       add("subquery", "SELECT (…)");
       return;
@@ -88,7 +89,7 @@ function collectUnsupported(ast: Node, sql: string): Unsupported[] {
       if (!AGGREGATES.has(name)) add("function", `${name}(…)`);
     }
 
-    // `NOT` đội lốt một hàm vô hướng. Đi vào trong nó thay vì từ chối nó.
+    // `NOT` in the guise of a scalar function. Go inside it rather than rejecting it.
     if (value.type === "function" && functionName(value) !== "NOT") {
       add("function", `${functionName(value)}(…)`);
       return;
@@ -106,7 +107,7 @@ function collectUnsupported(ast: Node, sql: string): Unsupported[] {
   return found;
 }
 
-/** Giá trị literal của một node, dùng thẳng làm giá trị JSON. */
+/** A node's literal value, used directly as a JSON value. */
 function literal(node: Node): unknown {
   if (node.type === "null") return null;
   if (node.type === "bool") return node.value;
@@ -115,22 +116,23 @@ function literal(node: Node): unknown {
 
 const OBJECT_ID = /^[0-9a-f]{24}$/i;
 
-/** Ngữ cảnh đi kèm suốt lượt duyệt: dialect quyết định `LIKE` có phân biệt hoa thường không, và
- *  cảnh báo được gom vào đây trên đường đi. */
+/** The context carried through the traversal: the dialect decides whether `LIKE` is
+ *  case-sensitive, and warnings are collected here along the way. */
 interface Context {
   dialect: Dialect;
   warnings: Warning[];
   /**
-   * Tên mà `$group` đã đặt cho từng hàm gộp, tra theo {@link aggrKey}.
+   * The name `$group` gave each aggregate function, looked up by {@link aggrKey}.
    *
-   * Chỉ có mặt khi đang dịch `HAVING`. `HAVING COUNT(*) > 5` nói về **kết quả đã gộp**, nên vế
-   * trái của nó là một `aggr_func` chứ không phải một cột — không có bảng này thì tên trường ra
-   * rỗng, và `$match: { "": … }` là một truy vấn chạy được nhưng không khớp gì cả.
+   * Only present while translating `HAVING`. `HAVING COUNT(*) > 5` talks about **the grouped
+   * result**, so its left side is an `aggr_func` rather than a column — without this table the
+   * field name comes out empty, and `$match: { "": … }` is a query that runs but matches nothing.
    */
   aggrAlias?: Map<string, string>;
 }
 
-/** Chữ ký của một hàm gộp, đủ để nhận ra `COUNT(*)` trong `HAVING` là `COUNT(*)` trong `SELECT`. */
+/** An aggregate function's signature, enough to recognise that `COUNT(*)` in `HAVING` is the
+ *  `COUNT(*)` in `SELECT`. */
 function aggrKey(fn: Node): string {
   const name = String(fn.name ?? "").toUpperCase();
   const arg = isNode(fn.args) && isNode(fn.args.expr) ? fn.args.expr : null;
@@ -149,7 +151,7 @@ function buildFilter(node: unknown, ctx: Context): unknown {
 
   if (node.type === "function" && functionName(node) === "NOT") {
     const args = isNode(node.args) && Array.isArray(node.args.value) ? node.args.value : [];
-    // `$not` của Mongo chỉ đứng bên trong một trường; phủ định cả một điều kiện là `$nor`.
+    // Mongo's `$not` only stands inside a field; negating a whole condition is `$nor`.
     return { $nor: args.map((arg) => buildFilter(arg, ctx)) };
   }
 
@@ -163,13 +165,14 @@ function buildFilter(node: unknown, ctx: Context): unknown {
   if (operator === "OR") return { $or: [buildFilter(left, ctx), buildFilter(right, ctx)] };
 
   if (!isNode(left) || !isNode(right)) return {};
-  // Trong `HAVING`, vế trái là một hàm gộp và tên của nó là tên `$group` vừa đặt.
+  // In `HAVING`, the left side is an aggregate function and its name is the one `$group` just
+  // gave it.
   const field =
     left.type === "aggr_func" ? (ctx.aggrAlias?.get(aggrKey(left)) ?? "") : columnName(left);
 
   if (operator === "LIKE" || operator === "NOT LIKE" || operator === "ILIKE") {
-    // MySQL không phân biệt hoa thường theo collation mặc định; PostgreSQL thì có, và `ILIKE` là
-    // cách nó nói "đừng phân biệt". Đây là chỗ ô chọn dialect có ảnh hưởng thật.
+    // MySQL is case-insensitive under the default collation; PostgreSQL is not, and `ILIKE` is how
+    // it says "do not distinguish". This is where the dialect picker has a real effect.
     const insensitive = ctx.dialect === "mysql" || operator === "ILIKE";
     const expr = {
       $regex: likeToRegex(String(right.value ?? "")),
@@ -187,7 +190,7 @@ function buildFilter(node: unknown, ctx: Context): unknown {
   }
 
   switch (operator) {
-    // Dạng ngắn, không `$eq`: đó là cái người ta viết tay, và nó đọc được hơn.
+    // The short form, no `$eq`: that is what people write by hand, and it reads better.
     case "=":
       return { [field]: literal(right) };
     case "!=":
@@ -219,7 +222,7 @@ function buildFilter(node: unknown, ctx: Context): unknown {
   }
 }
 
-/** `null` cho `SELECT *` — không có projection thì `find` không nhận tham số thứ hai. */
+/** `null` for `SELECT *` — with no projection, `find` takes no second argument. */
 function buildProjection(columns: unknown): Record<string, unknown> | null {
   if (!Array.isArray(columns)) return null;
 
@@ -238,7 +241,7 @@ function buildProjection(columns: unknown): Record<string, unknown> | null {
   }
 
   if (!named) return null;
-  // `_id` đi kèm mặc định trong Mongo, còn `SELECT name` thì không có nghĩa là "name và _id".
+  // `_id` comes along by default in Mongo, while `SELECT name` does not mean "name and _id".
   if (!("_id" in projection)) projection._id = 0;
   return projection;
 }
@@ -254,7 +257,7 @@ function buildSort(orderby: unknown): Record<string, number> | null {
   return Object.keys(sort).length > 0 ? sort : null;
 }
 
-/** `[limit, skip]`, mỗi cái `null` khi câu lệnh không nói tới. */
+/** `[limit, skip]`, each `null` when the statement does not mention it. */
 function buildLimit(limit: unknown): [number | null, number | null] {
   if (!isNode(limit) || !Array.isArray(limit.value) || limit.value.length === 0) return [null, null];
   const values = limit.value.filter(isNode).map((node) => Number(node.value));
@@ -262,27 +265,28 @@ function buildLimit(limit: unknown): [number | null, number | null] {
   return [values[0] ?? null, hasOffset ? values[1] : null];
 }
 
-/** Node `aggr_func` của một cột, nếu cột đó là một hàm gộp. */
+/** A column's `aggr_func` node, if that column is an aggregate function. */
 function aggregateOf(entry: unknown): Node | null {
   if (!isNode(entry) || !isNode(entry.expr)) return null;
   return entry.expr.type === "aggr_func" ? entry.expr : null;
 }
 
-/** Câu này có cần pipeline không, hay `find()` là đủ. */
+/** Whether this statement needs a pipeline, or `find()` is enough. */
 function needsPipeline(ast: Node): boolean {
   if (ast.groupby || ast.having) return true;
   if (typeof ast.distinct === "string" && ast.distinct.toUpperCase() === "DISTINCT") return true;
   return Array.isArray(ast.columns) && ast.columns.some((entry) => aggregateOf(entry) !== null);
 }
 
-/** Biểu thức `$group` cho một hàm gộp. */
+/** The `$group` expression for an aggregate function. */
 function accumulator(fn: Node): unknown {
   const name = String(fn.name ?? "").toUpperCase();
   const arg = isNode(fn.args) && isNode(fn.args.expr) ? fn.args.expr : null;
 
   if (name === "COUNT") {
     if (!arg || arg.type === "star") return { $sum: 1 };
-    // `COUNT(col)` của SQL bỏ qua NULL. Dịch nó thành `$sum: 1` là loại lỗi chạy êm và ra số sai.
+    // SQL's `COUNT(col)` skips NULLs. Translating it to `$sum: 1` is the kind of bug that runs
+    // smoothly and gives the wrong number.
     return { $sum: { $cond: [{ $eq: [`$${columnName(arg)}`, null] }, 0, 1] } };
   }
 
@@ -301,18 +305,19 @@ function accumulator(fn: Node): unknown {
   }
 }
 
-/** Tên các cột trong `GROUP BY`. */
+/** The names of the `GROUP BY` columns. */
 function groupKeys(groupby: unknown): string[] {
   if (!isNode(groupby) || !Array.isArray(groupby.columns)) return [];
   return groupby.columns.filter(isNode).map(columnName).filter(Boolean);
 }
 
 /**
- * Các stage của một aggregation pipeline.
+ * The stages of an aggregation pipeline.
  *
- * Thứ tự cố định, và hai `$match` ở hai vị trí khác nhau **chính là** chỗ `WHERE` khác `HAVING`:
- * `WHERE` lọc trước khi gộp, `HAVING` lọc kết quả đã gộp. Đặt sai thì truy vấn vẫn chạy và vẫn ra
- * số — chỉ là số khác.
+ * The order is fixed, and the two `$match`es in two different positions **are** exactly where
+ * `WHERE` differs from `HAVING`: `WHERE` filters before grouping, `HAVING` filters the grouped
+ * result. Put them in the wrong place and the query still runs and still gives numbers — just
+ * different numbers.
  */
 function buildPipeline(ast: Node, ctx: Context): unknown[] {
   const stages: unknown[] = [];
@@ -323,8 +328,8 @@ function buildPipeline(ast: Node, ctx: Context): unknown[] {
   const columns = Array.isArray(ast.columns) ? ast.columns : [];
   const distinct = typeof ast.distinct === "string" && ast.distinct.toUpperCase() === "DISTINCT";
 
-  /* Khoá gộp: các cột GROUP BY, hoặc — với DISTINCT — chính các cột được chọn. Một hàm gộp không
-     có GROUP BY thì gộp cả bảng, và khoá là `null`. */
+  /* The grouping key: the GROUP BY columns, or — with DISTINCT — the selected columns themselves.
+     An aggregate function without GROUP BY groups the whole table, and the key is `null`. */
   const plainColumns = columns
     .filter((entry) => aggregateOf(entry) === null)
     .map((entry) => (isNode(entry) && isNode(entry.expr) ? columnName(entry.expr) : ""))
@@ -348,9 +353,9 @@ function buildPipeline(ast: Node, ctx: Context): unknown[] {
     aggrAlias.set(aggrKey(fn), alias);
   }
 
-  /* Một hàm gộp chỉ xuất hiện trong `HAVING` vẫn phải được gộp, nếu không thì không có gì để lọc.
-     Nó vào `$group` dưới một tên phụ trợ và bị `$project` bỏ đi sau đó — người dùng không hỏi nó,
-     nên nó không nên có mặt trong kết quả. */
+  /* An aggregate function appearing only in `HAVING` still has to be grouped, otherwise there is
+     nothing to filter. It goes into `$group` under a helper name and is dropped by `$project`
+     afterwards — the user did not ask for it, so it should not be in the result. */
   const helpers: string[] = [];
   const findAggregates = (value: unknown) => {
     if (Array.isArray(value)) return value.forEach(findAggregates);
@@ -373,9 +378,10 @@ function buildPipeline(ast: Node, ctx: Context): unknown[] {
 
   if (ast.having) stages.push({ $match: buildFilter(ast.having, { ...ctx, aggrAlias }) });
 
-  /* `$project` đưa khoá gộp từ `_id` trở lại tên cột như trong `SELECT` — không có nó thì kết quả
-     mang một trường tên `_id` mà câu SQL không hề nhắc tới. Nó cũng là chỗ các tên phụ trợ ở trên
-     biến mất: `$project` liệt kê cái được giữ, nên không kể tên là đủ để bỏ. */
+  /* `$project` brings the grouping key from `_id` back to the column names as in `SELECT` — without
+     it the result carries a field named `_id` the SQL statement never mentioned. It is also where
+     the helper names above disappear: `$project` lists what is kept, so not naming them is enough
+     to drop them. */
   if (keyFields.length > 0 || helpers.length > 0) {
     const project: Record<string, unknown> = { _id: 0 };
     for (const name of keyFields) {
@@ -417,20 +423,20 @@ function formatFind(
 }
 
 /**
- * Một câu SQL thành một truy vấn MongoDB, hoặc thành lý do vì sao không.
+ * An SQL statement as a MongoDB query, or as the reasons why not.
  *
- * Async vì parser được `import()` động: nó là thứ nặng duy nhất của tool, và nó chỉ cần có mặt
- * khi người ta thật sự bấm dịch.
+ * Async because the parser is loaded with a dynamic `import()`: it is the only heavy thing in the
+ * tool, and it only needs to be present when someone actually presses translate.
  */
 export async function translate(sql: string, dialect: Dialect): Promise<Translation> {
   const trimmed = sql.trim();
   if (trimmed === "") return { ok: false, unsupported: [{ code: "parse", fragment: "" }] };
 
-  /* Bản dựng riêng cho một dialect, không phải entry chính.
-     `node-sql-parser` gói cả mười mấy dialect vào một file 2,5 MB; `build/mysql` là 276 kB và
-     `build/postgresql` là 308 kB. Ta biết dialect ngay tại đây, nên không có lý do gì tải phần
-     còn lại — và hai nhánh `import()` viết rời nhau như thế này là cách bundler tách được chúng
-     thành hai chunk. */
+  /* A build for one dialect, not the main entry.
+     `node-sql-parser` bundles a dozen-odd dialects into one 2.5 MB file; `build/mysql` is 276 kB
+     and `build/postgresql` is 308 kB. The dialect is known right here, so there is no reason to
+     load the rest — and two separate `import()` branches written like this are how the bundler can
+     split them into two chunks. */
   const { Parser } =
     dialect === "mysql"
       ? await import("node-sql-parser/build/mysql")

@@ -1,12 +1,13 @@
 /**
- * Sinh dữ liệu giả để seed/test bảng, và đoán trước danh sách field từ một JSON mẫu.
+ * Generates fake data to seed/test tables, and guesses the field list up front from a sample JSON.
  *
- * Vốn dữ liệu (tên, địa chỉ, công ty...) tự viết ngay trong file này — không cài thư viện faker
- * ngoài, cùng tinh thần với `ids.ts` tự viết UUID/ULID. `inferFields` cũng viết riêng, không dùng
- * lại bộ suy schema đệ quy của tool Sinh schema (`schema/infer.ts`): ở đây chỉ cần tên cột + kiểu
- * JS thô của giá trị đầu tiên, không cần hợp nhiều mẫu hay đi vào object/array lồng nhau — kéo cả
- * bộ máy đó vào chỉ để lấy một phần nhỏ của nó sẽ buộc `fake` phải hiểu cấu trúc nội bộ của một
- * tool khác, thứ mà `tool.ts` cố tình không cho.
+ * The data pools (names, addresses, companies...) are written right in this file — no external
+ * faker library is installed, in the same spirit as `ids.ts` writing its own UUID/ULID.
+ * `inferFields` is written separately too, not reusing the Schema generator tool's recursive schema
+ * inference (`schema/infer.ts`): here only the column name + the raw JS type of the first value are
+ * needed, with no merging of several samples or descending into nested objects/arrays — pulling
+ * that whole machinery in just to use a small part of it would force `fake` to understand another
+ * tool's internal structure, which `tool.ts` deliberately does not allow.
  */
 
 export type Locale = "vi" | "en";
@@ -52,7 +53,8 @@ export const FIELD_KINDS: FieldKind[] = [
   "constant",
 ];
 
-/** Kind nào có vốn dữ liệu theo locale — Panel chỉ hiện ô chọn Locale cho những kind này. */
+/** Which kinds have locale-specific data pools — the Panel only shows the Locale picker for these
+ *  kinds. */
 export const LOCALE_KINDS: Set<FieldKind> = new Set([
   "fullName",
   "firstName",
@@ -67,16 +69,17 @@ export const LOCALE_KINDS: Set<FieldKind> = new Set([
 export interface FieldSpec {
   name: string;
   kind: FieldKind;
-  /** name/address/city/company/phone — mặc định "vi" khi vắng mặt. */
+  /** name/address/city/company/phone — defaults to "vi" when absent. */
   locale?: Locale;
-  /** fullName — có chèn tên đệm vào giữa họ và tên hay không, mặc định false. */
+  /** fullName — whether to insert a middle name between the family and given names, defaults to
+   *  false. */
   includeMiddle?: boolean;
   /** integer/float */
   min?: number;
   max?: number;
-  /** float — số chữ số thập phân, mặc định 2 */
+  /** float — the number of decimal places, defaults to 2 */
   decimals?: number;
-  /** date — ISO, mặc định 5 năm trước tới lúc sinh */
+  /** date — ISO, defaults to 5 years ago up to the time of generation */
   from?: string;
   to?: string;
   /** constant */
@@ -107,8 +110,9 @@ const LAST_NAMES: Record<Locale, string[]> = {
   ],
 };
 
-/** Tên đệm tiếng Việt có vốn riêng (không phải tên gọi); tiếng Anh dùng lại vốn tên đầu — ngoài
- *  đời middle name vốn cũng thường lấy từ cùng một tập given name. */
+/** Vietnamese middle names have a pool of their own (not given names); English reuses the
+ *  first-name pool — in real life a middle name is usually drawn from the same set of given names
+ *  anyway. */
 const MIDDLE_NAMES: Record<Locale, string[]> = {
   vi: [
     "Văn", "Thị", "Hữu", "Đức", "Minh", "Ngọc", "Thành", "Xuân",
@@ -157,7 +161,8 @@ const WORDS = [
 
 const DOMAINS = ["example.com", "mail.test", "sample.dev", "demo.io"];
 
-/** Đầu số di động VN hay gặp — không cần đủ, chỉ cần đủ giống thật để test/demo. */
+/** Common VN mobile prefixes — they need not be complete, only realistic enough for
+ *  testing/demos. */
 const VI_PHONE_PREFIXES = ["032", "070", "076", "081", "086", "088", "090", "091", "094", "096", "097", "098", "099"];
 
 const DIACRITICS: [RegExp, string][] = [
@@ -170,7 +175,8 @@ const DIACRITICS: [RegExp, string][] = [
   [/đ/g, "d"],
 ];
 
-/** Chuyển tên có dấu thành phần trước @ của email — đủ dùng cho cả locale không dấu (en). */
+/** Turns an accented name into the part of an email before the @ — good enough for unaccented
+ *  locales (en) as well. */
 export function slugify(text: string): string {
   let out = text.toLowerCase();
   for (const [pattern, replacement] of DIACRITICS) out = out.replace(pattern, replacement);
@@ -187,8 +193,9 @@ function randInt(min: number, max: number, rnd: () => number): number {
 
 const HEX_DIGITS = "0123456789abcdef";
 
-/** Không tái dùng `uuidv4` của tool ids — chữ ký khác (`rnd: () => number` thay vì byte thật từ
- *  `crypto`), và ở đây chỉ cần trông giống UUID v4 cho dữ liệu test, không cần đúng entropy. */
+/** Does not reuse the ids tool's `uuidv4` — a different signature (`rnd: () => number` instead of
+ *  real bytes from `crypto`), and here it only needs to look like a UUID v4 for test data, not have
+ *  the right entropy. */
 function fakeUuid(rnd: () => number): string {
   const hex = Array.from({ length: 32 }, () => HEX_DIGITS[Math.floor(rnd() * 16)]);
   hex[12] = "4";
@@ -222,10 +229,11 @@ function makePerson(locale: Locale, rnd: () => number): Person {
 }
 
 /**
- * Một "người" dùng chung cho mọi field tên/email cùng locale trong **cùng một dòng** — sinh một
- * lần rồi cache lại, để `fullName`, `firstName`/`middleName`/`lastName` và `email` không kể ba câu
- * chuyện khác nhau về cùng một dòng dữ liệu. Bất kể field nào chạm tới trước, các field còn lại
- * đọc lại đúng người đó — kết quả không phụ thuộc thứ tự field trong danh sách.
+ * One "person" shared by every name/email field of the same locale in **the same row** — generated
+ * once and then cached, so that `fullName`, `firstName`/`middleName`/`lastName` and `email` do not
+ * tell three different stories about the same data row. Whichever field touches it first, the
+ * remaining fields read back that same person — the result does not depend on the field order in
+ * the list.
  */
 function personFor(locale: Locale, rnd: () => number, people: Map<Locale, Person>): Person {
   let person = people.get(locale);
@@ -239,9 +247,9 @@ function personFor(locale: Locale, rnd: () => number, people: Map<Locale, Person
 const NAME_KINDS = new Set<FieldKind>(["fullName", "firstName", "middleName", "lastName"]);
 
 /**
- * `email` không có ô chọn Locale riêng trên Panel — nó phải mượn locale của field tên trong cùng
- * danh sách field, chứ không mặc định "vi". Tính một lần cho cả `generate()`, không phải mỗi dòng:
- * nó chỉ phụ thuộc danh sách field, không phụ thuộc dữ liệu đã sinh ra.
+ * `email` has no Locale picker of its own on the Panel — it has to borrow the locale of the name
+ * field in the same field list, rather than defaulting to "vi". Computed once for the whole
+ * `generate()`, not per row: it depends only on the field list, not on the data generated.
  */
 function emailLocaleHint(fields: FieldSpec[]): Locale {
   return fields.find((field) => NAME_KINDS.has(field.kind))?.locale ?? "vi";
@@ -317,8 +325,9 @@ function genValue(
 }
 
 /**
- * `rnd` trả về số trong [0, 1) — Panel truyền một bộ sinh dựa trên `crypto.getRandomValues`, test
- * truyền một LCG tất định. `now` tách riêng cùng lý do `ids.ts` tách nó ra khỏi `Date.now()`.
+ * `rnd` returns a number in [0, 1) — the Panel passes a generator based on
+ * `crypto.getRandomValues`, a test passes a deterministic LCG. `now` is kept separate for the same
+ * reason `ids.ts` keeps it apart from `Date.now()`.
  */
 export function generate(
   fields: FieldSpec[],
@@ -329,7 +338,7 @@ export function generate(
   const emailLocale = emailLocaleHint(fields);
   const rows: Record<string, unknown>[] = [];
   for (let i = 0; i < count; i++) {
-    // Một map mới mỗi dòng: "người" chỉ dùng chung trong phạm vi một dòng, không rò sang dòng kế.
+    // A new map per row: a "person" is only shared within one row and does not leak into the next.
     const people = new Map<Locale, Person>();
     const row: Record<string, unknown> = {};
     for (const field of fields) row[field.name] = genValue(field, rnd, now, people, emailLocale);
@@ -368,9 +377,10 @@ function guessKind(name: string, value: unknown): FieldKind {
 }
 
 /**
- * Đoán field từ dòng đầu tiên đọc được — một object, hoặc phần tử object đầu tiên của một mảng.
- * Chỉ soi một mẫu, không hợp nhiều dòng như `schema/infer.ts`: đây chỉ là gợi ý ban đầu để người
- * dùng sửa tiếp trên bảng field, không phải suy luận kiểu chính xác.
+ * Guesses fields from the first row that can be read — an object, or the first object element of
+ * an array. Only looks at one sample, without merging several rows like `schema/infer.ts`: this is
+ * only an initial suggestion for the user to keep editing in the field table, not precise type
+ * inference.
  */
 export function inferFields(sample: unknown): FieldSpec[] | null {
   const row = isRecord(sample) ? sample : Array.isArray(sample) ? sample.find(isRecord) : undefined;

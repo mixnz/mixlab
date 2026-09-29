@@ -23,8 +23,8 @@ describe("convertData", () => {
     expect(await output("a: 1\nb: x\n", "yaml", "json")).toBe('{\n  "a": 1,\n  "b": "x"\n}');
   });
 
-  // YAML 1.2 — cái bẫy `yes` thành `true` của YAML 1.1 không có ở js-yaml đời mới. Ghim lại
-  // phòng khi ai đó đổi phiên bản.
+  // YAML 1.2 — YAML 1.1's trap of `yes` becoming `true` is absent from modern js-yaml. Pinned here
+  // in case someone changes the version.
   it("để `yes` là chuỗi, không thành boolean", async () => {
     expect(await output("a: yes\n", "yaml", "json")).toBe('{\n  "a": "yes"\n}');
   });
@@ -70,7 +70,7 @@ describe("từ chối", () => {
 });
 
 describe("cảnh báo", () => {
-  // Trục đi qua `JSON.parse`, khác tool Format. Nói ra chứ không im lặng.
+  // The pivot goes through `JSON.parse`, unlike the Format tool. Say so rather than stay silent.
   it("cảnh báo khi JSON nguồn có số nguyên quá dài", async () => {
     const result = await convertData('{"id":1787875200123456789}', "json", "yaml", options);
     expect(result.ok).toBe(true);

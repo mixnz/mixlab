@@ -1,17 +1,17 @@
 import type { ComponentType } from "react";
 import type { TranslationKey } from "../../i18n";
 
-/** Năm ngăn của sidebar, theo thứ tự chúng hiện ra. */
+/** The sidebar's five sections, in the order they appear. */
 export type ToolGroup = "data" | "encode" | "time" | "infra" | "text";
 
 export const TOOL_GROUPS: ToolGroup[] = ["data", "encode", "time", "infra", "text"];
 
 /**
- * Một tool trong module.
+ * One tool in the module.
  *
- * `Panel` không nhận prop nào, và đó là chủ ý: một tool không cần biết nó ở tab nào hay tab có
- * đang hiện không — nó là một ô vào và một ô ra. Hợp đồng nhỏ đến mức này là thứ giữ cho việc
- * thêm tool thứ 15 vẫn là một file cộng một dòng trong `registry.ts`.
+ * `Panel` takes no props, and that is deliberate: a tool does not need to know which tab it is in
+ * or whether the tab is showing — it is one input and one output. A contract this small is what
+ * keeps adding the 15th tool down to one file plus one line in `registry.ts`.
  */
 export interface ToolDefinition {
   id: string;

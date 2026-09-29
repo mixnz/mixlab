@@ -1,18 +1,18 @@
 /**
- * Làm mờ dữ liệu nhạy cảm trong một tập object phẳng, để chia sẻ mẫu dữ liệu mà không lộ PII.
+ * Masks sensitive data in a set of flat objects, to share data samples without exposing PII.
  *
- * Đây là làm mờ đơn giản cho việc export dữ liệu mẫu — **không phải** anonymization đạt chuẩn bảo
- * mật/GDPR. Mọi thứ chạy trong tiến trình này, không gửi đi đâu; `hash` là một hash không mã hoá
- * (FNV-1a), dò ngược được nếu tập giá trị gốc nhỏ (vd một số điện thoại cụ thể) — đủ để giữ tính
- * nhất quán giữa các dòng/bảng, không đủ để giấu một giá trị bí mật thật sự.
+ * This is simple masking for exporting sample data — **not** anonymisation up to security/GDPR
+ * standards. Everything runs in this process and is sent nowhere; `hash` is a non-cryptographic
+ * hash (FNV-1a), reversible if the set of original values is small (e.g. a specific phone number) —
+ * enough to keep things consistent across rows/tables, not enough to hide a truly secret value.
  */
 
 export type MaskKind = "none" | "redact" | "partial" | "hash";
 
 export const MASK_KINDS: MaskKind[] = ["none", "redact", "partial", "hash"];
 
-/** Chỉ quyết định *cách* `partial` định dạng — không phải một danh mục hiện ra riêng cho người
- *  dùng chọn; người dùng chỉ chọn `MaskKind` per field. */
+/** Only decides *how* `partial` formats — not a category shown separately for the user to pick;
+ *  the user only picks a `MaskKind` per field. */
 export type Shape = "email" | "phone" | "name" | "card" | "idNumber" | "dob" | "address" | "generic";
 
 export interface FieldMaskSpec {
@@ -21,8 +21,9 @@ export interface FieldMaskSpec {
   kind: MaskKind;
 }
 
-/** Đoán shape từ tên cột. Cột không khớp gì rơi vào `generic`, và shape đó mặc định kind `none` —
- *  im lặng bỏ qua một cột lạ an toàn hơn là mask nhầm một cột như `id`/`created_at`. */
+/** Guesses the shape from the column name. A column matching nothing falls into `generic`, and
+ *  that shape defaults to kind `none` — silently skipping an unknown column is safer than wrongly
+ *  masking a column like `id`/`created_at`. */
 export function detectShape(fieldName: string): Shape {
   const key = fieldName.toLowerCase();
   if (/email/.test(key)) return "email";
@@ -51,7 +52,8 @@ export function defaultKindForShape(shape: Shape): MaskKind {
   }
 }
 
-/** Cột theo thứ tự xuất hiện lần đầu, hợp từ mọi dòng — dòng đầu thiếu một cột không giấu mất nó. */
+/** Columns in order of first appearance, merged across every row — a first row missing a column
+ *  does not hide it. */
 export function detectFieldSpecs(rows: Record<string, unknown>[]): FieldMaskSpec[] {
   const columns: string[] = [];
   for (const row of rows) {
@@ -74,8 +76,8 @@ function fnv1a(text: string): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-/** Giữ N chữ số cuối, thay phần trước bằng dấu sao — dùng cho phone/card/idNumber, khác nhau chỉ
- *  ở số chữ số giữ lại. */
+/** Keeps the last N digits and replaces what comes before with asterisks — used for
+ *  phone/card/idNumber, which differ only in how many digits are kept. */
 function maskDigitsKeepingLast(text: string, keep: number): string {
   const digits = text.replace(/\D/g, "");
   if (digits.length <= keep) return "*".repeat(text.length);
@@ -116,12 +118,13 @@ function maskPartial(text: string, shape: Shape): string {
 }
 
 /**
- * Áp một `MaskKind` lên một giá trị. Giá trị rỗng (`null`/`undefined`/`""`) không có gì để giấu,
- * nên đi qua nguyên vẹn bất kể `kind` — che một ô vốn đã trống chỉ tạo cảm giác có dữ liệu ở đó.
+ * Applies a `MaskKind` to a value. An empty value (`null`/`undefined`/`""`) has nothing to hide, so
+ * it passes through intact whatever the `kind` — masking a cell that was already empty only makes
+ * it look as if there were data there.
  *
- * `none` là kind duy nhất giữ nguyên kiểu gốc; ba kind còn lại luôn trả về chuỗi, kể cả khi đầu vào
- * là số hay boolean — một số điện thoại có thể được lưu dưới dạng số, và kết quả làm mờ nó không
- * còn là một số nữa.
+ * `none` is the only kind that keeps the original type; the other three always return a string,
+ * even when the input is a number or a boolean — a phone number may be stored as a number, and its
+ * masked result is no longer a number.
  */
 export function maskValue(value: unknown, kind: MaskKind, shape: Shape): unknown {
   if (kind === "none" || value === null || value === undefined || value === "") return value;
@@ -160,9 +163,10 @@ function isFlat(row: Record<string, unknown>): boolean {
 }
 
 /**
- * Chuẩn hoá một JSON đã parse thành mảng object phẳng, hoặc `null` nếu không đọc được — kể cả khi
- * chỉ một field bị lồng. Bỏ qua âm thầm field lồng thay vì báo lỗi sẽ khiến người dùng tưởng mọi
- * cột đã được xét mask, trong khi có cột chưa từng được nhìn tới.
+ * Normalises parsed JSON into an array of flat objects, or `null` if it cannot be read — even when
+ * only one field is nested. Silently skipping nested fields instead of reporting an error would
+ * make the user think every column had been considered for masking, when some were never looked
+ * at.
  */
 export function parseFlatRows(parsed: unknown): Record<string, unknown>[] | null {
   const rows = Array.isArray(parsed) ? parsed : isRecord(parsed) ? [parsed] : null;

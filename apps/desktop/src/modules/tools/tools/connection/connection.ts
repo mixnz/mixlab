@@ -1,9 +1,9 @@
 import type { EnvPair } from "../env/env";
 
 /**
- * Tách và ghép chuỗi kết nối của bốn loại DB mà MixDB hỗ trợ.
+ * Splits and builds connection strings for the four kinds of DB MixDB supports.
  *
- * Tool không mở kết nối nào để thử xem chuỗi có đúng không — nó chỉ đọc và viết.
+ * The tool opens no connection to check whether the string is right — it only reads and writes.
  */
 
 export type DbKind = "mysql" | "postgres" | "mongodb" | "redis";
@@ -15,10 +15,12 @@ export interface ConnectionParam {
 
 export interface ConnectionFields {
   kind: DbKind;
-  /** Chỉ có nghĩa với MongoDB: `mongodb+srv://` lấy host và cổng từ bản ghi SRV của DNS. */
+  /** Only meaningful for MongoDB: `mongodb+srv://` takes the host and port from the DNS SRV
+   *  record. */
   srv: boolean;
   host: string;
-  /** Chuỗi chứ không phải số: ô rỗng là "dùng mặc định", và `0` không phải cách nói điều đó. */
+  /** A string rather than a number: an empty field is "use the default", and `0` is not the way to
+   *  say that. */
   port: string;
   user: string;
   password: string;
@@ -50,8 +52,9 @@ const SCHEME_OF: Record<DbKind, string> = {
   redis: "redis",
 };
 
-/** `decodeURIComponent` ném với chuỗi phần trăm hỏng như `%zz`. Một chuỗi kết nối gõ tay có thể
- *  chứa đúng thứ đó, và trả về nguyên văn thì có ích hơn là không trả về gì. */
+/** `decodeURIComponent` throws on a broken percent sequence such as `%zz`. A hand-typed connection
+ *  string may contain exactly that, and returning it verbatim is more useful than returning
+ *  nothing. */
 function safeDecode(text: string): string {
   try {
     return decodeURIComponent(text);
@@ -75,9 +78,10 @@ export function parseConnectionString(text: string): ConnectionFields | null {
     srv: scheme.srv,
     host: url.hostname,
     port: scheme.srv ? "" : url.port,
-    /* Đây là chỗ hỏng im lặng: `url.username` và `url.password` trả về chuỗi **đã** percent-encode,
-       khác với `pathname` và `searchParams`. Quên decode thì ô mật khẩu hiện `p%40ss`, người dùng
-       chép nó sang một file config, và triệu chứng ở đầu kia là "sai tài khoản". */
+    /* This is the silent failure: `url.username` and `url.password` return strings that are
+       **already** percent-encoded, unlike `pathname` and `searchParams`. Forget to decode and the
+       password field shows `p%40ss`, the user copies it into a config file, and the symptom at the
+       other end is "wrong credentials". */
     user: safeDecode(url.username),
     password: safeDecode(url.password),
     database: url.pathname.replace(/^\//, ""),
@@ -94,10 +98,10 @@ function query(params: ConnectionParam[]): string {
 
 export function toUri(fields: ConnectionFields): string {
   const scheme = fields.kind === "mongodb" && fields.srv ? "mongodb+srv" : SCHEME_OF[fields.kind];
-  /* Encode cả user lẫn mật khẩu. `/`, `?` và `#` là bắt buộc — thiếu chúng thì chuỗi không parse
-     được ở đâu cả. `@` và `:` thì `URL` vẫn đọc đúng nhờ luật "cắt ở `@` cuối cùng", nhưng chuỗi
-     này còn được dán sang driver, sang file config và sang mắt người, và không phải chỗ nào cũng
-     theo luật đó. */
+  /* Encode both the user and the password. `/`, `?` and `#` are required — without them the string
+     cannot be parsed anywhere. `@` and `:` are still read correctly by `URL` thanks to its "split
+     at the last `@`" rule, but this string also gets pasted into drivers, config files and human
+     eyes, and not every one of them follows that rule. */
   const auth =
     fields.user === "" && fields.password === ""
       ? ""
@@ -109,8 +113,9 @@ export function toUri(fields: ConnectionFields): string {
   return `${scheme}://${auth}${fields.host}${port}${database}${query(fields.params)}`;
 }
 
-/** `null` cho MongoDB và Redis: hai loại đó **không có chuẩn JDBC**, và in ra một chuỗi
- *  `jdbc:mongodb://…` trông hợp lệ là đưa cho người dùng một thứ sẽ hỏng ở nơi khác. */
+/** `null` for MongoDB and Redis: those two kinds **have no JDBC standard**, and printing a
+ *  valid-looking `jdbc:mongodb://…` string hands the user something that will break somewhere
+ *  else. */
 export function toJdbc(fields: ConnectionFields): string | null {
   if (fields.kind !== "mysql" && fields.kind !== "postgres") return null;
   const driver = fields.kind === "mysql" ? "mysql" : "postgresql";
@@ -122,9 +127,9 @@ export function toJdbc(fields: ConnectionFields): string | null {
   return `jdbc:${driver}://${fields.host}:${port}/${fields.database}${query(all)}`;
 }
 
-/** Tên cố định `DB_*` chứ không theo tên biến của image docker chính thức
- *  (`MYSQL_ROOT_PASSWORD`, `POSTGRES_USER`…): những tên đó khác nhau theo từng image và từng
- *  phiên bản, còn `DB_*` thì đoán được và sửa lại một dòng là xong. */
+/** Fixed `DB_*` names rather than the official docker images' variable names
+ *  (`MYSQL_ROOT_PASSWORD`, `POSTGRES_USER`…): those names differ from image to image and version to
+ *  version, while `DB_*` is predictable and fixing one line is all it takes. */
 export function toEnvPairs(fields: ConnectionFields): EnvPair[] {
   return [
     { key: "DB_HOST", value: fields.host },

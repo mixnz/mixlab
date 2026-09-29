@@ -1,8 +1,9 @@
 /**
- * Lệnh giết một tiến trình, in ra để chép.
+ * The command to kill a process, printed for copying.
  *
- * **Tool không chạy lệnh nào trong đây.** Đó là ranh giới an toàn của cả module: một tool in ra
- * `kill -9` là một tool người dùng đọc trước khi chạy, còn một nút "Kill" là một cú bấm nhầm.
+ * **The tool runs none of the commands in here.** That is the safety boundary of the whole module:
+ * a tool that prints `kill -9` is a tool the user reads before running, while a "Kill" button is a
+ * misclick waiting to happen.
  */
 
 export type KillOs = "macos" | "linux" | "windows";
@@ -13,17 +14,18 @@ export function killByPid(os: KillOs, pid: number): string {
 
 export function killByPort(os: KillOs, port: number): string {
   if (os === "windows") {
-    // `%a` chứ không phải `%%a`: chuỗi này được dán thẳng vào dấu nhắc cmd, không vào một file .bat.
+    // `%a` rather than `%%a`: this string is pasted straight at the cmd prompt, not into a .bat
+    // file.
     return `for /f "tokens=5" %a in ('netstat -ano ^| findstr :${port}') do taskkill /PID %a /F`;
   }
   return `lsof -ti:${port} | xargs kill -9`;
 }
 
 /**
- * Máy đang chạy MixDB là OS nào — chỉ để đặt **giá trị mặc định** của ô chọn.
+ * Which OS the machine running MixDB is — only to set the picker's **default value**.
  *
- * Ô vẫn đổi tay được, và đó là chủ ý: người ngồi Windows thường xuyên cần lệnh kill cho một server
- * Linux đang mở ở tab Terminal bên cạnh.
+ * The picker can still be changed by hand, and that is deliberate: people on Windows often need
+ * the kill command for a Linux server open in the Terminal tab next door.
  */
 export function hostOs(): KillOs {
   const platform = navigator.platform.toLowerCase();

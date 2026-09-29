@@ -1,9 +1,9 @@
 /**
- * Đổi qua lại giữa nhị phân, bát phân, thập phân và thập lục — bằng `bigint` xuyên suốt, không
+ * Converts between binary, octal, decimal and hexadecimal — with `bigint` throughout, never
  * `Number`.
  *
- * ID kiểu bigint hay snowflake trong DB thường vượt `Number.MAX_SAFE_INTEGER`; `parseInt`/`Number`
- * làm tròn sai ở đó mà không báo lỗi. `bigint` thì không có trần.
+ * bigint or snowflake-style IDs in a DB often exceed `Number.MAX_SAFE_INTEGER`; `parseInt`/`Number`
+ * round wrongly there without reporting an error. `bigint` has no ceiling.
  */
 
 export type Base = "bin" | "oct" | "dec" | "hex";
@@ -27,7 +27,8 @@ const PREFIX: Record<Exclude<Base, "dec">, RegExp> = {
 
 const HEX_DIGITS = "0123456789abcdef";
 
-/** `BigInt(string)` không nhận cả tiền tố lẫn dấu trừ cùng lúc, nên đây tự cộng dồn theo hệ số. */
+/** `BigInt(string)` does not accept a prefix and a minus sign together, so this accumulates by
+ *  radix itself. */
 function magnitudeToBigInt(digits: string, base: Base): bigint {
   const radix = BigInt(RADIX[base]);
   let value = 0n;
@@ -37,7 +38,8 @@ function magnitudeToBigInt(digits: string, base: Base): bigint {
   return value;
 }
 
-/** Soi tiền tố (`0x`/`0b`/`0o`) trước, thập phân là hệ mặc định khi không có tiền tố nào khớp. */
+/** Looks at the prefix (`0x`/`0b`/`0o`) first; decimal is the default base when no prefix
+ *  matches. */
 export function detectBase(input: string): Base | null {
   const trimmed = input.trim();
   const body = trimmed.startsWith("-") ? trimmed.slice(1) : trimmed;
@@ -49,7 +51,8 @@ export function detectBase(input: string): Base | null {
   return null;
 }
 
-/** Số âm chỉ được đọc ở thập phân — hệ khác không có quy ước hai's complement ở đây. */
+/** Negative numbers are only read in decimal — the other bases have no two's complement convention
+ *  here. */
 export function parseValue(input: string, base: Base): bigint | null {
   const trimmed = input.trim();
   if (trimmed === "" || trimmed === "-") return null;
@@ -69,7 +72,8 @@ export interface RadixOutputs {
   hex: string;
 }
 
-/** Nhóm 4 kí tự một từ bên phải sang, phần lẻ (nếu có) nằm ở nhóm đầu tiên bên trái. */
+/** Groups of 4 characters counted from the right; the remainder (if any) is the first group on the
+ *  left. */
 function groupBinary(digits: string): string {
   const chunks: string[] = [];
   let end = digits.length;

@@ -1,18 +1,19 @@
 import type { Snippet } from "./snippets";
 
 /**
- * Bộ snippet ship sẵn.
+ * The snippet set shipped with the app.
  *
- * **Hằng số trong code, không đi qua store.** Hệ quả đúng theo cả hai chiều: nâng bản MixDB thì bộ
- * này được cập nhật theo, và thứ người dùng tự viết thì không bao giờ bị một bản nâng cấp ghi đè.
+ * **Constants in code, not going through the store.** The consequences are right both ways:
+ * upgrading MixDB updates this set along with it, and what users write themselves is never
+ * overwritten by an upgrade.
  *
- * Snippet sẵn có không sửa và không xoá được. Muốn một bản khác thì thêm một snippet của mình —
- * đơn giản hơn hẳn việc dựng khái niệm "bản sẵn có đã bị sửa", thứ phải trả lời câu hỏi "bản nâng
- * cấp đổi snippet này thì sao" mà không có câu trả lời nào dễ chịu.
+ * Built-in snippets cannot be edited or deleted. Wanting a different version means adding a
+ * snippet of your own — far simpler than building the notion of "a built-in that has been edited",
+ * which would have to answer "what if an upgrade changes this snippet" with no pleasant answer.
  *
- * Mỗi mục phải qua được tiêu chí nhận tool của module: nằm trên đường đi của một dev đang làm việc
- * với DB, API hoặc server. Ngoặc đặt sẵn ở nơi cần — `-p'{{password}}'` — vì `fill` cố ý không bọc
- * hộ.
+ * Every entry has to pass the module's tool admission criterion: it sits on the path of a dev
+ * working with a DB, an API or a server. Quotes are placed where needed — `-p'{{password}}'` —
+ * because `fill` deliberately does not wrap anything.
  */
 export const BUILTIN: Snippet[] = [
   {

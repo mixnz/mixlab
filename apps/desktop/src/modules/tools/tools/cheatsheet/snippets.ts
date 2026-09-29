@@ -1,22 +1,22 @@
 /**
- * Snippet của cheatsheet: một lệnh có chỗ trống, và cách điền vào chỗ trống đó.
+ * Cheatsheet snippets: a command with blanks, and the way to fill those blanks.
  *
- * Phần điền tham số là **chức năng**, không phải chỗ chứa — đó là thứ phân biệt tool này với một
- * file ghi chú, và là lý do nó qua được tiêu chí nhận tool của module.
+ * Filling in parameters is the **feature**, not a container — that is what sets this tool apart
+ * from a notes file, and why it passes the module's tool admission criterion.
  */
 
 export interface Snippet {
   id: string;
   title: string;
-  /** Nhóm để xếp danh sách: `mysql`, `postgres`, `docker`, `ssh`… Chuỗi tự do. */
+  /** The group to sort the list by: `mysql`, `postgres`, `docker`, `ssh`… A free string. */
   group: string;
-  /** Lệnh, với tham số viết `{{tên}}`. */
+  /** The command, with parameters written as `{{name}}`. */
   template: string;
 }
 
 const PARAM = /\{\{([A-Za-z0-9_]+)\}\}/g;
 
-/** Tên các tham số, theo thứ tự xuất hiện lần đầu, không lặp. */
+/** The parameter names, in order of first appearance, without repeats. */
 export function paramsOf(template: string): string[] {
   const names: string[] = [];
   for (const match of template.matchAll(PARAM)) {
@@ -27,14 +27,14 @@ export function paramsOf(template: string): string[] {
 }
 
 /**
- * Thay `{{tên}}` bằng giá trị.
+ * Replaces `{{name}}` with values.
  *
- * Tên không có giá trị — hoặc có giá trị rỗng — thì **giữ nguyên `{{tên}}`**: một ô chưa điền phải
- * nhìn thấy được trong đầu ra, chứ không biến mất thành khoảng trắng rồi để người dùng chép đi một
- * lệnh thiếu mất một đối số.
+ * A name with no value — or with an empty value — **keeps `{{name}}` as is**: an unfilled slot has
+ * to be visible in the output, rather than vanishing into whitespace and letting the user copy a
+ * command missing an argument.
  *
- * **Không bọc ngoặc hộ.** Không phải mọi tham số đều đứng ở vị trí một đối số shell, và bọc thêm ở
- * chỗ template đã bọc rồi thì hỏng theo cách khó thấy hơn hẳn cách nó đang hỏng.
+ * **No quotes are added.** Not every parameter stands in a shell argument position, and wrapping
+ * where the template already wraps breaks in a far harder-to-see way than it breaks now.
  */
 export function fill(template: string, values: Record<string, string>): string {
   return template.replace(PARAM, (whole, name: string) => {
@@ -43,14 +43,15 @@ export function fill(template: string, values: Record<string, string>): string {
   });
 }
 
-/** Một snippet đang được soạn: mọi thứ trừ `id`, thứ chỉ danh sách mới đặt được. */
+/** A snippet being edited: everything except `id`, which only the list can assign. */
 export type SnippetDraft = Omit<Snippet, "id">;
 
 /**
- * Id không đụng nhau, không cần `crypto.randomUUID`.
+ * Ids that do not collide, without needing `crypto.randomUUID`.
  *
- * Danh sách này là của một người trên một máy và dài vài chục mục; thứ duy nhất id phải làm là
- * phân biệt hai mục thêm liền nhau, và một bộ đếm chạy sau mốc thời gian làm được đúng thế.
+ * This list belongs to one person on one machine and is a few dozen entries long; the only thing an
+ * id has to do is tell two entries added back to back apart, and a counter running after a
+ * timestamp does exactly that.
  */
 let counter = 0;
 function nextId(): string {
@@ -83,11 +84,12 @@ function isSnippet(value: unknown): value is Snippet {
 }
 
 /**
- * Đọc thứ lấy từ đĩa lên thành một danh sách snippet.
+ * Reads what was taken from disk into a snippet list.
  *
- * Kiểm shape và chỉ shape, như `parseToolsTabState` làm — và nằm ở đây chứ không trong
- * `snippetsStore.ts` vì đây là phần thuần, tức là phần test được. Một file do bản cũ ghi ra, hoặc
- * một file bị sửa tay, làm mất mục hỏng chứ không làm hỏng cả tool.
+ * Checks the shape and only the shape, as `parseToolsTabState` does — and lives here rather than in
+ * `snippetsStore.ts` because this is the pure part, i.e. the part that can be tested. A file
+ * written by an old version, or a hand-edited file, loses the broken entries rather than breaking
+ * the whole tool.
  */
 export function readSnippets(value: unknown): Snippet[] {
   return Array.isArray(value) ? value.filter(isSnippet) : [];

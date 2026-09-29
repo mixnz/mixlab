@@ -1,22 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 /**
- * Ô của lưới không được có padding dọc.
+ * Grid cells must not have vertical padding.
  *
- * Chiều cao dòng là một số khai báo trong TypeScript (`ROW_HEIGHT`), và spacer đứng thay cho các
- * dòng ngoài khung cao đúng `count × ROW_HEIGHT` — xem `virtualRows.ts`. CSS lấy lại con số đó qua
- * `--row-h` và đặt `height`, nên hai bên không thể lệch nhau *trừ khi* một rule cộng thêm chiều
- * cao mà `height` không nuốt: padding dọc, hoặc border dọc.
+ * The row height is a number declared in TypeScript (`ROW_HEIGHT`), and the spacer standing in for
+ * the rows outside the frame is exactly `count × ROW_HEIGHT` tall — see `virtualRows.ts`. CSS takes
+ * that number back through `--row-h` and sets `height`, so the two sides cannot drift apart
+ * *unless* a rule adds height that `height` does not swallow: vertical padding, or a vertical
+ * border.
  *
- * Đã có người dính đúng cái đó khi thử "nén dòng lại" bằng padding: dòng phồng từ 33px lên 38.8px
- * và số dòng thấy được **giảm**. Không test nào đỏ, và triệu chứng duy nhất là đáy trang trôi ra
- * xa khi cuộn tới gần nó.
+ * Someone has already hit exactly that while trying to "tighten the rows" with padding: the rows
+ * swelled from 33px to 38.8px and the number of visible rows **dropped**. No test went red, and the
+ * only symptom was the bottom of the page drifting away when scrolling close to it.
  *
- * Vitest ở đây chạy môi trường node, không có DOM, nên chiều cao thật không đo được. Cái đo được
- * là stylesheet, và đây là điều kiện duy nhất trên stylesheet có thể phá bất biến kia.
+ * Vitest here runs in a node environment with no DOM, so the real height cannot be measured. What
+ * can be measured is the stylesheet, and this is the only condition on the stylesheet that could
+ * break that invariant.
  *
- * `?raw` chỉ trả về nội dung thật vì `vite.config.ts` bật `test.css` — xem ghi chú trong
- * `shell/fonts.test.ts`. Case đầu tiên bên dưới canh điều đó.
+ * `?raw` only returns real content because `vite.config.ts` turns on `test.css` — see the note in
+ * `shell/fonts.test.ts`. The first case below guards that.
  */
 
 /** Every innermost `selector { … }` block. */

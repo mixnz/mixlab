@@ -23,7 +23,7 @@ function CheatsheetPanel() {
   const mine = useSnippets();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
-  /** `null` khi không soạn gì. `id` là `null` khi đang thêm mới. */
+  /** `null` when nothing is being edited. `id` is `null` while adding a new one. */
   const [draft, setDraft] = useState<{ id: string | null; fields: SnippetDraft } | null>(null);
 
   const all = useMemo(() => [...BUILTIN, ...mine], [mine]);
@@ -40,7 +40,7 @@ function CheatsheetPanel() {
 
   const pick = (id: string): void => {
     setSelectedId(id);
-    // Giá trị của lệnh trước không có nghĩa gì với lệnh sau.
+    // The previous command's values mean nothing to the next command.
     setValues({});
     setDraft(null);
   };
@@ -54,7 +54,7 @@ function CheatsheetPanel() {
     saveSnippets(next);
     setDraft(null);
     if (draft.id === null) {
-      // Mục vừa thêm là mục cuối; chọn nó luôn để người dùng dùng được ngay.
+      // The item just added is the last one; select it right away so the user can use it at once.
       setSelectedId(next[next.length - 1]?.id ?? null);
       setValues({});
     }
@@ -82,7 +82,7 @@ function CheatsheetPanel() {
         <Button onClick={() => setDraft({ id: null, fields: EMPTY_DRAFT })}>
           {t("toolbox.cheatsheet.add")}
         </Button>
-        {/* Snippet sẵn có không sửa và không xoá được — xem `builtin.ts`. */}
+        {/* Built-in snippets cannot be edited or deleted — see `builtin.ts`. */}
         <Button
           onClick={() => selected && setDraft({ id: selected.id, fields: { ...selected } })}
           disabled={!isMine}

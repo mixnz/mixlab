@@ -9,7 +9,8 @@ import styles from "./Panel.module.css";
 
 const MAX_COUNT = 1000;
 
-/* Tên kiểu không dịch: `ULID` và `UUID v7` là tên riêng của định dạng, giống `snake_case`. */
+/* Type names are not translated: `ULID` and `UUID v7` are the formats' own names, like
+   `snake_case`. */
 const KIND_LABEL: Record<IdKind, string> = {
   uuidv4: "UUID v4",
   uuidv7: "UUID v7",
@@ -28,8 +29,8 @@ function IdsPanel() {
   const [count, setCount] = useState(10);
   const [result, setResult] = useState("");
 
-  // Sinh trong handler, không trong render: kết quả phải đứng yên cho tới lần bấm sau, còn render
-  // thì chạy lại bất cứ lúc nào.
+  // Generated in the handler, not in render: the result has to stay put until the next click,
+  // while render may run again at any moment.
   const generate = () => {
     const now = Date.now();
     const size = RANDOM_BYTES[kind];
@@ -64,8 +65,8 @@ function IdsPanel() {
           min={1}
           max={MAX_COUNT}
           value={count}
-          // Kẹp ở đây chứ không chỉ dựa vào `min`/`max` của input: gõ tay vẫn qua được chúng, và
-          // một con số dán vào có thể là bất cứ thứ gì.
+          // Clamped here rather than relying only on the input's `min`/`max`: typing by hand still
+          // gets past them, and a pasted number could be anything.
           onChange={(event) =>
             setCount(Math.min(MAX_COUNT, Math.max(1, Math.floor(Number(event.target.value)) || 1)))
           }

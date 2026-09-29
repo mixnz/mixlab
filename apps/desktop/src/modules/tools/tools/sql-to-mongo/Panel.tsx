@@ -38,7 +38,8 @@ function SqlToMongoPanel() {
   const [sql, setSql] = useState("");
   const [dialect, setDialect] = useState<Dialect>("mysql");
   const [result, setResult] = useState<Translation | null>(null);
-  // Lần bấm đầu tiên còn phải tải chunk parser về, nên nút phải nói là nó đang làm gì.
+  // The first click still has to download the parser chunk, so the button has to say what it is
+  // doing.
   const [busy, setBusy] = useState(false);
 
   const run = () => {
@@ -75,8 +76,9 @@ function SqlToMongoPanel() {
         </Button>
       </div>
 
-      {/* Câu không dịch được thì **không có ô kết quả nào cả** — không phải một ô rỗng, mà là
-          không có ô. Đây là chỗ luật "không bao giờ xuất kết quả một phần" hiện lên màn hình. */}
+      {/* A statement that cannot be translated gets **no result field at all** — not an empty
+          field, but no field. This is where the "never output a partial result" rule shows up on
+          screen. */}
       {result && !result.ok ? (
         <section className={styles.problems}>
           <h3 className={styles.heading}>{t("toolbox.sqlToMongo.unsupportedTitle")}</h3>

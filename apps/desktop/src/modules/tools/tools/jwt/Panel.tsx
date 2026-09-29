@@ -18,8 +18,8 @@ const LOCAL_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 function JwtPanel() {
   const { t } = useTranslation();
   const [token, setToken] = useState("");
-  // Đóng băng lúc mount: "còn hạn hay chưa" mà tự đổi giữa chừng thì người đọc không biết nó vừa
-  // đổi hay mình đọc nhầm. Dán token mới là đủ để hỏi lại.
+  // Frozen at mount: if "expired or not" changed by itself midway, the reader could not tell
+  // whether it just changed or they misread it. Pasting a new token is enough to ask again.
   const [now] = useState(() => Date.now());
 
   const result = useMemo(() => (token.trim() === "" ? null : decodeJwt(token)), [token]);

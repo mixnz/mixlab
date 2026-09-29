@@ -429,8 +429,9 @@ function Select<T extends string | number>({
         onClick={() => (open ? setOpen(false) : openMenu())}
         onKeyDown={onKeyDown}
       >
-        {/* Chưa chọn gì thì chữ trên trigger phải đọc ra là một lời mời, không phải một giá trị:
-            cùng một chỗ, cùng một cỡ chữ, nên độ đậm là thứ duy nhất phân biệt được hai nghĩa. */}
+        {/* With nothing selected, the text on the trigger has to read as an invitation, not a
+            value: the same place, the same font size, so the weight is the only thing that can
+            tell the two meanings apart. */}
         {/* A free-text value need not be in the list at all — `^8.3` is a real pin and no option
             is spelled that way — so the trigger falls back to the value itself before it falls
             back to the placeholder. Only a genuinely empty one is an invitation. */}

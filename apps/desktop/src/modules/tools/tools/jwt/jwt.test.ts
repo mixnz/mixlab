@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { claimTimes, decodeJwt } from "./jwt";
 
-// header {"alg":"HS256","typ":"JWT"}, payload {"sub":"1","exp":1756339200}, chữ ký giả.
+// header {"alg":"HS256","typ":"JWT"}, payload {"sub":"1","exp":1756339200}, a fake signature.
 const TOKEN =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" +
   ".eyJzdWIiOiIxIiwiZXhwIjoxNzU2MzM5MjAwfQ" +
@@ -25,7 +25,7 @@ describe("decodeJwt", () => {
 
   it("phân biệt base64 hỏng với JSON hỏng", () => {
     expect(decodeJwt("!!!.eyJhIjoxfQ.sig")).toEqual({ ok: false, reason: "base64" });
-    // "bm90IGpzb24" giải ra "not json" — base64 đúng, JSON sai.
+    // "bm90IGpzb24" decodes to "not json" — valid base64, invalid JSON.
     expect(decodeJwt("bm90IGpzb24.eyJhIjoxfQ.sig")).toEqual({ ok: false, reason: "json" });
   });
 

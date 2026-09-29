@@ -1,11 +1,11 @@
 /**
- * Đọc và ghi biến môi trường ở bốn dạng.
+ * Reads and writes environment variables in four forms.
  *
- * Trục là một **danh sách có thứ tự**, không phải `Record`: thứ tự dòng trong `.env` là thứ người
- * viết cố ý, và đảo nó là làm phiền người đọc lần sau.
+ * The pivot is an **ordered list**, not a `Record`: the order of lines in a `.env` is something
+ * the author meant, and shuffling it annoys the next reader.
  *
- * Đây là tool mà người dùng gần như chắc chắn dán mật khẩu DB vào. Nó không lưu gì cả, như mọi
- * tool khác trong module.
+ * This is the tool users are almost certain to paste DB passwords into. It saves nothing, like
+ * every other tool in the module.
  */
 
 export interface EnvPair {
@@ -13,7 +13,8 @@ export interface EnvPair {
   value: string;
 }
 
-/** Vị trí dấu ngoặc đóng, bỏ qua ngoặc đã bị escape. `-1` nghĩa là giá trị còn trải sang dòng sau. */
+/** The position of the closing quote, skipping escaped quotes. `-1` means the value continues onto
+ *  the next line. */
 function closingIndex(body: string, quote: string): number {
   for (let i = 0; i < body.length; i += 1) {
     if (quote === '"' && body[i] === "\\") {
@@ -54,7 +55,7 @@ export function parseEnv(text: string): EnvPair[] {
     const quote = rest[0];
     if (quote === '"' || quote === "'") {
       let body = rest.slice(1);
-      // Giá trị trong ngoặc được phép trải nhiều dòng.
+      // A quoted value may span several lines.
       while (closingIndex(body, quote) === -1 && i < lines.length) {
         body += `\n${lines[i]!}`;
         i += 1;
@@ -65,7 +66,7 @@ export function parseEnv(text: string): EnvPair[] {
       continue;
     }
 
-    // Không ngoặc: phần sau ` #` là comment, không phải giá trị.
+    // Unquoted: what follows ` #` is a comment, not part of the value.
     const hash = rest.indexOf(" #");
     pairs.push({ key, value: (hash === -1 ? rest : rest.slice(0, hash)).trim() });
   }
@@ -118,8 +119,8 @@ export function toJsonEnv(pairs: EnvPair[]): string {
   return JSON.stringify(record, null, 2);
 }
 
-/** Đầu ra được dán vào một dòng lệnh thật, nên bọc theo luật shell: ngoặc đơn, và dấu nháy đơn bên
- *  trong phải đóng chuỗi, escape, rồi mở lại. */
+/** The output gets pasted into a real command line, so it is wrapped by shell rules: single
+ *  quotes, and a single quote inside has to close the string, be escaped, then reopen it. */
 function shellValue(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }

@@ -8,9 +8,9 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 /**
- * `btoa` nhận một chuỗi mà mỗi ký tự phải nằm trong Latin-1, nên gọi thẳng nó là hỏng với mọi thứ
- * ngoài ASCII — kể cả tiếng Việt. Đường vòng qua `TextEncoder` là bắt buộc, không phải cẩn thận
- * thừa.
+ * `btoa` takes a string whose every character must be in Latin-1, so calling it directly breaks on
+ * anything beyond ASCII — Vietnamese included. The detour through `TextEncoder` is required, not
+ * excess caution.
  */
 export function textToBase64(text: string, urlSafe: boolean): string {
   let binary = "";
@@ -19,7 +19,7 @@ export function textToBase64(text: string, urlSafe: boolean): string {
   return urlSafe ? base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") : base64;
 }
 
-/** Nhận cả base64 thường lẫn url-safe, và tự đắp lại phần đệm mà url-safe đã bỏ. */
+/** Accepts both plain and url-safe base64, and puts back the padding url-safe dropped. */
 export function base64ToText(input: string): string {
   const normalised = input.trim().replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalised + "=".repeat((4 - (normalised.length % 4)) % 4);

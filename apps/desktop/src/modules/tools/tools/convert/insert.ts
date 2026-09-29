@@ -1,8 +1,9 @@
 /**
- * Sinh câu lệnh `INSERT` từ một mảng object.
+ * Generates `INSERT` statements from an array of objects.
  *
- * Đầu ra là thứ để **đọc và dán tay**, không phải cách thay cho truy vấn tham số hoá — tool không
- * biết dữ liệu đến từ đâu. Panel nói điều đó ra thành một dòng dưới ô kết quả.
+ * The output is for **reading and pasting by hand**, not a replacement for parameterised queries —
+ * the tool does not know where the data came from. The Panel says so in a line under the result
+ * field.
  */
 
 export type SqlDialect = "mysql" | "postgres";
@@ -10,7 +11,7 @@ export type SqlDialect = "mysql" | "postgres";
 export interface InsertOptions {
   table: string;
   dialect: SqlDialect;
-  /** Một câu lệnh với nhiều dòng `VALUES`, thay vì mỗi dòng một câu lệnh. */
+  /** One statement with many `VALUES` rows, instead of one statement per row. */
   multiRow: boolean;
 }
 
@@ -19,13 +20,13 @@ function quoteIdent(name: string, dialect: SqlDialect): string {
 }
 
 /**
- * Bọc một chuỗi thành literal SQL.
+ * Wraps a string as an SQL literal.
  *
- * **Hai dialect escape khác nhau, và đây là chỗ sai mà chạy êm.** MySQL coi `\` là ký tự escape
- * trong chuỗi (mặc định, khi `NO_BACKSLASH_ESCAPES` tắt), nên nó phải được nhân đôi — bỏ qua thì
- * `C:\new\table` vào DB thành một ký tự xuống dòng và một tab. PostgreSQL với
- * `standard_conforming_strings` bật (mặc định từ 9.1) thì không, và nhân đôi ở đó là ghi thừa một
- * dấu `\` vào dữ liệu.
+ * **The two dialects escape differently, and this is a mistake that runs smoothly.** MySQL treats
+ * `\` as an escape character in strings (by default, with `NO_BACKSLASH_ESCAPES` off), so it has to
+ * be doubled — skip that and `C:\new\table` lands in the DB as a newline and a tab. PostgreSQL with
+ * `standard_conforming_strings` on (the default since 9.1) does not, and doubling there writes an
+ * extra `\` into the data.
  */
 function quoteText(value: string, dialect: SqlDialect): string {
   const escaped = dialect === "mysql" ? value.replace(/\\/g, "\\\\") : value;

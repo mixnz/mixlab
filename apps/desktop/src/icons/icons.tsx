@@ -471,7 +471,7 @@ export function StopIcon(props: IconProps) {
   );
 }
 
-/** Một chiếc cờ-lê — hộp đồ nghề của module Tools. */
+/** A wrench — the Tools module's toolbox. */
 export function ToolsIcon(props: IconProps) {
   return (
     <Icon {...props}>

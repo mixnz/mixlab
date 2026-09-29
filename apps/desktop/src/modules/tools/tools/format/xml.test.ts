@@ -17,7 +17,7 @@ describe("formatXml", () => {
     );
   });
 
-  // Khoảng trắng trong nội dung hỗn hợp *là* dữ liệu: thêm xuống dòng vào giữa là đổi tài liệu.
+  // Whitespace in mixed content *is* data: adding a newline in the middle changes the document.
   it("không thụt lề lại nội dung hỗn hợp", () => {
     expect(out(formatXml("<doc><p>xin <b>chào</b> bạn</p></doc>", "  "))).toBe(
       "<doc>\n  <p>xin <b>chào</b> bạn</p>\n</doc>",

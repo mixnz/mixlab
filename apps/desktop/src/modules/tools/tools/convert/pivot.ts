@@ -2,11 +2,13 @@ import { parseCsvRows, rowsToObjects, toCsv } from "../shared/csv";
 import { toInsert, type SqlDialect } from "./insert";
 
 /**
- * Trục của tool Chuyển đổi: mọi định dạng vào đều thành một giá trị JS, mọi định dạng ra đều sinh
- * từ giá trị đó. Ba bộ đọc cộng bốn bộ ghi, không phải mười hai hàm dịch chéo.
+ * The Convert tool's pivot: every input format becomes a JS value, and every output format is
+ * produced from that value. Three readers plus four writers, not twelve cross-translating
+ * functions.
  *
- * Cái giá là mất những gì trục không mang được — comment của YAML, và độ chính xác của số trong
- * JSON. Cái sau được nói ra bằng `warnings`; tool Format thì tránh hẳn bằng cách không đi qua đây.
+ * The price is losing whatever the pivot cannot carry — YAML comments, and the precision of JSON
+ * numbers. The latter is reported through `warnings`; the Format tool avoids it entirely by not
+ * going through here.
  */
 
 export type ReadFormat = "json" | "yaml" | "csv";
@@ -28,10 +30,10 @@ export type ConvertResult =
   | { ok: true; output: string; warnings: "precision"[] }
   | { ok: false; failure: ConvertFailure };
 
-/** Số nguyên từ 16 chữ số trở lên không sống sót qua `JSON.parse`. */
+/** Integers of 16 digits or more do not survive `JSON.parse`. */
 const LONG_INTEGER = /(^|[^\w.])-?\d{16,}([^\d.]|$)/;
 
-/** CSV và INSERT cần một mảng object mà mọi giá trị đều là ô đơn. */
+/** CSV and INSERT need an array of objects whose every value is a single cell. */
 function isFlatObjectArray(value: unknown): value is Record<string, unknown>[] {
   return (
     Array.isArray(value) &&
@@ -51,7 +53,8 @@ function isFlatObjectArray(value: unknown): value is Record<string, unknown>[] {
 async function read(text: string, from: ReadFormat, options: ConvertOptions): Promise<unknown> {
   if (from === "json") return JSON.parse(text);
   if (from === "yaml") {
-    // Nạp ở lần dùng đầu, không phải lúc mở tab — đúng cách `node-sql-parser` được nạp ở giai đoạn 2.
+    // Loaded on first use, not when the tab opens — the same way `node-sql-parser` is loaded in
+    // stage 2.
     const yaml = await import("js-yaml");
     return yaml.load(text);
   }
@@ -93,7 +96,7 @@ export async function convertData(
     };
   }
 
-  // Không xuất kết quả một phần: một bảng CSV thiếu mất cột lồng nhau trông y hệt một bảng đúng.
+  // No partial output: a CSV table missing its nested columns looks exactly like a correct one.
   if ((to === "csv" || to === "insert") && !isFlatObjectArray(value)) {
     return { ok: false, failure: { reason: "needsRows" } };
   }

@@ -1,10 +1,10 @@
 export type FormatKind = "json" | "xml" | "sql";
 
 /**
- * Đoán định dạng theo ký tự đầu tiên khác khoảng trắng.
+ * Guesses the format from the first non-whitespace character.
  *
- * Panel **nói ra** nó đoán gì, đúng như tool Timestamp làm với đơn vị: một cái đoán im lặng mà sai
- * thì người dùng không có cách nào biết. `null` nghĩa là không có gì để đoán.
+ * The Panel **says** what it guessed, just as the Timestamp tool does with units: a silent guess
+ * that is wrong leaves the user no way of knowing. `null` means there is nothing to guess from.
  */
 export function detectFormat(text: string): FormatKind | null {
   const head = text.trimStart();

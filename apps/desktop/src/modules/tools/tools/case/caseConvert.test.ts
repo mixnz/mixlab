@@ -30,8 +30,8 @@ describe("splitWords", () => {
     expect(splitWords("")).toEqual([]);
   });
 
-  /* Chữ có dấu là chữ, không phải dấu ngăn. Một phép tách chỉ biết `a-zA-Z` sẽ xé "có gì hot"
-     thành `c`, `g`, `hot` — mỗi chữ có dấu thành một ranh giới từ. */
+  /* Accented letters are letters, not separators. A split that only knows `a-zA-Z` would tear
+     "có gì hot" into `c`, `g`, `hot` — every accented letter becoming a word boundary. */
   it("giữ nguyên chữ tiếng Việt thay vì coi dấu là ranh giới từ", () => {
     expect(splitWords("có gì hot")).toEqual(["có", "gì", "hot"]);
     expect(splitWords("Xin chào bạn")).toEqual(["xin", "chào", "bạn"]);

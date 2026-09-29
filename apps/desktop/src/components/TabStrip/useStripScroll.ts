@@ -3,105 +3,110 @@ import { overflowState, scrollStep, type StripOverflow } from "./overflow";
 import styles from "./TabStrip.module.css";
 
 /**
- * Một dải tab dài hơn chỗ nó có: cuộn ngang bằng chuột, và hai mũi tên nói phía nào còn tab bị
- * giấu.
+ * A tab strip longer than the room it has: horizontal scrolling with the mouse, and two arrows
+ * saying which side still has hidden tabs.
  *
- * Ba việc nhỏ đi chung một hook vì chúng nhìn cùng một phần tử và cùng ba con số của nó — tách
- * thành ba thì mỗi cái lại tự đo lại một lần.
+ * Three small jobs share one hook because they look at the same element and the same three numbers
+ * of it — split into three, each would measure again by itself.
  *
- * Không có thanh cuộn nào để nhìn (xem `TabStrip.module.css`), nên hai mũi tên là thứ duy nhất nói
- * rằng còn tab ở ngoài khung. Chúng hiện và ẩn *cùng nhau*, theo `overflowing`, và chỉ mờ đi theo
- * `atStart`/`atEnd`: một mũi tên tự thêm vào rồi tự bớt đi làm khung hẹp lại rồi rộng ra, và một
- * dải tab đang ở ngay ranh giới sẽ nhấp nháy giữa hai trạng thái.
+ * There is no scrollbar to see (see `TabStrip.module.css`), so the two arrows are the only thing
+ * saying there are tabs outside the frame. They show and hide *together*, following `overflowing`,
+ * and only fade following `atStart`/`atEnd`: an arrow adding and removing itself would narrow the
+ * frame and then widen it again, and a tab strip sitting right at the boundary would flicker
+ * between the two states.
  */
 export interface StripScroll extends StripOverflow {
-  /** `-1` là về phía trái, `1` là về phía phải. */
+  /** `-1` is towards the left, `1` towards the right. */
   scrollBy: (direction: -1 | 1) => void;
 }
 
 const FITS: StripOverflow = { overflowing: false, atStart: true, atEnd: true };
 
 /* -------------------------------------------------------------------------------------------
-   LƯỢT TRƯỢT
+   THE GLIDE
 
-   Dải tab đi tới chỗ mấy nấc bánh xe vừa yêu cầu, một frame một bước, thay vì nhảy tới đó.
+   The tab strip travels to where the wheel notches just asked, one step per frame, instead of
+   jumping there.
 
-   `behavior: "smooth"` không làm được việc này. Gọi nó lần nữa giữa lúc nó đang chạy là *dựng lại*
-   đường ease từ chỗ dải tab đang đứng, nên mỗi nấc bẻ vận tốc một lần — xoay nhanh thì nấc nào
-   cũng bẻ, và cái mắt thấy là khựng. Trình duyệt không làm thế với Shift+bánh xe: nó nối tiếp
-   animation đang chạy. Một phép tiệm cận số mũ nối tiếp được như vậy vì nó không có đường ease nào
-   để dựng lại — thêm một nấc chỉ là dời cái đích, còn vận tốc thì liên tục.
+   `behavior: "smooth"` cannot do this. Calling it again while it is running *rebuilds* the ease
+   curve from where the strip currently stands, so every notch breaks the velocity once — spin
+   fast and every notch breaks it, and what the eye sees is stutter. The browser does not do that
+   with Shift+wheel: it continues the running animation. An exponential approach can continue like
+   that because it has no ease curve to rebuild — one more notch just moves the target, and the
+   velocity stays continuous.
 
-   Đây đúng là lượt trượt `core/scroll.ts` chạy cho trục dọc, cùng hằng số, và vì cùng một lý do đã
-   viết ở đó. Hai bản chứ không phải một, vì bên kia còn hai việc nữa mà bên này không có: tìm xem
-   nấc thuộc về pane nào, và kéo dài một nấc khi bánh xe quay dồn. Cái duy nhất trùng nhau là mấy
-   dòng dưới đây. */
+   This is exactly the glide `core/scroll.ts` runs for the vertical axis, with the same constants,
+   and for the same reason written there. Two copies rather than one, because that one has two more
+   jobs this one does not: working out which pane a notch belongs to, and stretching a notch when
+   the wheel spins in a burst. The only overlap is the few lines below. */
 
-/** Hằng số thời gian của lượt trượt. */
+/** The glide's time constant. */
 const GLIDE_MS = 55;
-/** Còn gần đích hơn quãng này thì dừng lại ở đích luôn. */
+/** Closer to the target than this, stop right at the target. */
 const SETTLE_PX = 0.5;
-/** Dải tab được phép lệch khỏi chỗ lượt trượt vừa đặt nó bao xa trước khi kết luận là có thứ khác
- *  đang cuộn nó — một lần bấm mũi tên, hay một tab tự kéo mình vào khung. `scrollLeft` bị chốt về
- *  pixel thiết bị nên nó vẫn trôi đi một phần pixel dù không ai đụng vào. */
+/** How far the tab strip may drift from where the glide just put it before concluding something
+ *  else is scrolling it — an arrow click, or a tab pulling itself into the frame. `scrollLeft` is
+ *  snapped to device pixels, so it still drifts a fraction of a pixel even when nobody touches it.
+ * */
 const DRIFT_PX = 2;
 
-/** Một lượt trượt đang chạy. */
+/** A glide in progress. */
 interface Glide {
-  /** Chỗ mấy nấc cho tới lúc này gộp lại đang yêu cầu. */
+  /** Where the notches so far, taken together, are asking to go. */
   target: number;
-  /** `scrollLeft` cuối cùng lượt này tự ghi, để nhận ra một lần cuộn đến từ chỗ khác. */
+  /** The last `scrollLeft` this glide wrote itself, to recognise a scroll coming from elsewhere. */
   applied: number;
   /**
-   * Frame gần nhất đã cựa quậy, theo đồng hồ của `requestAnimationFrame` — `null` cho tới frame
-   * đầu tiên, và frame ấy chỉ để lấy giờ chứ không đi bước nào.
+   * The latest frame that moved, on `requestAnimationFrame`'s clock — `null` until the first frame,
+   * and that frame only takes the time rather than taking any step.
    *
-   * Không lấy `performance.now()` lúc có nấc bánh xe làm mốc, dù hai đồng hồ ấy cùng một gốc: dấu
-   * thời gian của một frame là lúc frame ấy *bắt đầu*, mà lúc ấy có thể sớm hơn cái nấc vừa xảy ra
-   * trong chính frame đó. Quãng thời gian ra số âm, và một quãng âm trong phép tiệm cận bên dưới
-   * là dải tab đi ngược. Còn khi nó ra một số lớn thì frame đầu nuốt trọn cả nấc rồi lượt trượt
-   * dừng ngay tại đó — nấc nào cũng thành một cú giật rồi một khoảng đứng im, đúng cái phải sửa.
+   * `performance.now()` at the wheel notch is not used as the reference, even though the two
+   * clocks share an origin: a frame's timestamp is when that frame *started*, which may be earlier
+   * than the notch that just happened within that very frame. The interval comes out negative, and
+   * a negative interval in the approach below makes the tab strip go backwards. And when it comes
+   * out large, the first frame swallows the whole notch and the glide stops right there — every
+   * notch becomes a jolt followed by a standstill, exactly what had to be fixed.
    */
   time: number | null;
   frame: number;
 }
 
-/** Một dải tab cuộn được xa nhất tới đâu. */
+/** How far a tab strip can scroll at most. */
 function maxScrollLeft(el: HTMLElement): number {
   return Math.max(0, el.scrollWidth - el.clientWidth);
 }
 
-/** Ô giữ lượt trượt của một dải tab. Ở ngoài hook vì ba hàm dưới đây chỉ đụng tới nó và tới phần
- *  tử được truyền vào — không đóng gói cái gì của một lần render, nên không có phụ thuộc nào để
- *  khai và không có bản cũ nào để lỡ giữ lại. */
+/** The slot holding a tab strip's glide. Outside the hook because the three functions below only
+ *  touch it and the element passed in — they capture nothing from a render, so there are no
+ *  dependencies to declare and no stale copy to hold on to by mistake. */
 type GlideRef = { current: Glide | null };
 
-/** Bỏ lượt trượt đang chạy, nếu có. Gọi được cả khi không có. */
+/** Drops the running glide, if any. Can be called even when there is none. */
 function stopGlide(glide: GlideRef): void {
   if (glide.current !== null) cancelAnimationFrame(glide.current.frame);
   glide.current = null;
 }
 
-/** Một bước của lượt trượt. */
+/** One step of the glide. */
 function step(el: HTMLElement, glide: GlideRef, now: number): void {
   const g = glide.current;
   if (g === null) return;
 
-  // Frame đầu tiên chỉ đặt đồng hồ. Xem `Glide.time`.
+  // The first frame only sets the clock. See `Glide.time`.
   if (g.time === null) {
     g.time = now;
     g.frame = requestAnimationFrame((t) => step(el, glide, t));
     return;
   }
 
-  /* Thứ khác vừa cuộn dải tab — một tab tự kéo mình vào khung, một cú kéo tab chạm mép. Cái đó
-     thắng, và lượt này thành cũ ngay lúc ấy. */
+  /* Something else just scrolled the tab strip — a tab pulling itself into the frame, a tab drag
+     touching the edge. That wins, and this glide goes stale on the spot. */
   if (Math.abs(el.scrollLeft - g.applied) > DRIFT_PX) {
     stopGlide(glide);
     return;
   }
 
-  // Tab mở thêm hay đóng bớt giữa chừng đổi quãng còn đi được.
+  // Tabs opened or closed midway change how far is left to go.
   g.target = Math.min(Math.max(g.target, 0), maxScrollLeft(el));
 
   const remaining = g.target - el.scrollLeft;
@@ -111,12 +116,12 @@ function step(el: HTMLElement, glide: GlideRef, now: number): void {
     return;
   }
 
-  // Tiệm cận số mũ, tính theo thời gian frame thật, để lượt trượt dài đúng bằng nhau trên màn
-  // 144Hz và trên màn 60Hz.
+  // An exponential approach, computed on real frame time, so the glide takes exactly as long on a
+  // 144Hz screen as on a 60Hz one.
   const before = el.scrollLeft;
   el.scrollLeft = before + remaining * (1 - Math.exp(-(now - g.time) / GLIDE_MS));
   if (el.scrollLeft === before) {
-    // Một bước nhỏ tới mức làm tròn nuốt mất sẽ giữ vòng lặp này chạy mãi.
+    // A step so small that rounding swallows it would keep this loop running forever.
     el.scrollLeft = g.target;
     stopGlide(glide);
     return;
@@ -127,16 +132,17 @@ function step(el: HTMLElement, glide: GlideRef, now: number): void {
 }
 
 /**
- * Xê dịch đích của dải tab thêm `delta`, và trượt tới đó.
+ * Moves the tab strip's target by `delta`, and glides there.
  *
- * Một cửa duy nhất cho cả bánh xe lẫn hai mũi tên. Nấc bánh xe đến dày hơn frame, nên chúng cộng
- * vào cái đích lượt trượt đang đi tới; tính lại từ chỗ dải tab đang đứng sẽ nuốt gần hết chúng, đó
- * đúng là chỗ `behavior: "smooth"` hỏng. Bấm mũi tên đi cùng đường ấy chứ không đi đường riêng, vì
- * một cú bấm giữa lúc bánh xe đang bay mà cắt ngang là bỏ mất quãng còn lại của bánh xe — và vì
- * hai cách cuộn cùng một dải tab thì không có lý do gì để cảm giác khác nhau.
+ * One single door for both the wheel and the two arrows. Wheel notches arrive faster than frames,
+ * so they add onto the target the glide is heading for; recomputing from where the strip currently
+ * stands would swallow most of them, which is exactly where `behavior: "smooth"` breaks. Arrow
+ * clicks take the same road rather than one of their own, because a click cutting in while the
+ * wheel is in flight would drop the rest of the wheel's travel — and because two ways of scrolling
+ * the same tab strip have no reason to feel different.
  *
- * Kẹp, không thì xoay hết cỡ ở một đầu dựng lên một cái đích tận đâu và nấc quay ngược đầu tiên
- * chẳng nhúc nhích gì.
+ * Clamped, otherwise spinning all the way at one end builds a target far beyond it and the first
+ * notch in the other direction does not budge.
  */
 function glideBy(el: HTMLElement, glide: GlideRef, delta: number): void {
   const max = maxScrollLeft(el);
@@ -161,11 +167,11 @@ function glideBy(el: HTMLElement, glide: GlideRef, delta: number): void {
 
 export function useStripScroll(scroller: RefObject<HTMLDivElement | null>): StripScroll {
   const [state, setState] = useState<StripOverflow>(FITS);
-  /* Cái trạng thái đang hiển thị, đọc được từ trong listener mà không phải dựng lại listener mỗi
-     lần nó đổi. `setState` với một object mới mỗi lần đo là một vòng render vô tận, nên chỗ so
-     sánh nằm ở đây. */
+  /* The state being displayed, readable from inside the listener without rebuilding the listener
+     every time it changes. `setState` with a new object on every measurement is an endless render
+     loop, so the comparison lives here. */
   const shown = useRef(state);
-  /** Lượt trượt đang chạy, hoặc `null` khi dải tab đang đứng yên. */
+  /** The running glide, or `null` when the tab strip is standing still. */
   const glide = useRef<Glide | null>(null);
 
   const measure = useCallback(() => {
@@ -186,9 +192,9 @@ export function useStripScroll(scroller: RefObject<HTMLDivElement | null>): Stri
     setState(next);
   }, [scroller]);
 
-  /* Sau mỗi lần render, vì mở thêm hay đóng bớt một tab đổi `scrollWidth` mà không đổi kích thước
-     phần tử nào — `ResizeObserver` bên dưới không thấy gì. Rẻ như `useTabSlide` ngay cạnh: ba thuộc
-     tính, và không `setState` khi ba con số ra cùng một kết quả. */
+  /* After every render, because opening or closing a tab changes `scrollWidth` without changing any
+     element's size — the `ResizeObserver` below sees nothing. As cheap as `useTabSlide` right next
+     to it: three properties, and no `setState` when the three numbers give the same result. */
   useLayoutEffect(measure);
 
   useEffect(() => {
@@ -196,19 +202,22 @@ export function useStripScroll(scroller: RefObject<HTMLDivElement | null>): Stri
     if (el === null) return;
     const stop = new AbortController();
 
-    // Cuộn tới đâu thì mũi tên nào tắt đổi theo — kể cả lần cuộn do chính hai mũi tên gây ra.
+    // Wherever it scrolls to, which arrow is off follows — including scrolls the two arrows cause
+    // themselves.
     el.addEventListener("scroll", measure, { passive: true, signal: stop.signal });
 
-    /* Bánh xe chuột chỉ có một trục, và trục ấy là trục dải tab không có. Nấc đi vào lượt trượt ở
-       đầu file — chặn cái mặc định là chặn luôn animation trình duyệt vẫn chạy cho một nấc, nên
-       phần ấy phải tự chạy lấy, và `glideBy` giải thích tại sao nó chạy như thế.
+    /* The mouse wheel has only one axis, and it is the axis the tab strip does not have. Notches go
+       into the glide at the top of the file — blocking the default also blocks the animation the
+       browser would run for a notch, so that part has to run on its own, and `glideBy` explains why
+       it runs the way it does.
 
-       `passive: false` vì nó phải chặn: không chặn thì trang phía sau cuộn theo. Chuột cảm ứng gửi
-       `deltaX` của riêng nó và được để yên — trình duyệt cuộn ngang hộ rồi, và Shift+bánh xe cũng
-       vậy, nên cả hai đi qua đây mà không bị đụng tới.
+       `passive: false` because it has to block: otherwise the page behind scrolls along. A
+       touchpad sends its own `deltaX` and is left alone — the browser already scrolls horizontally
+       for it, and so for Shift+wheel, so both pass through here untouched.
 
-       Chỉ nhận nấc tính bằng pixel: `deltaY` ở chế độ dòng hay trang không phải con số `scrollLeft`
-       cần, cùng chỗ vạch mà `core/scroll.ts` vạch. Mọi webview app này chạy trên đều gửi pixel. */
+       Only notches measured in pixels are taken: a `deltaY` in line or page mode is not the number
+       `scrollLeft` needs, the same line `core/scroll.ts` draws. Every webview this app runs on
+       sends pixels. */
     el.addEventListener(
       "wheel",
       (e) => {
@@ -221,8 +230,8 @@ export function useStripScroll(scroller: RefObject<HTMLDivElement | null>): Stri
       { passive: false, signal: stop.signal },
     );
 
-    // Cửa sổ hẹp lại là số tab vừa khung ít đi, và một dải tab của tab không đứng trước thì rộng 0
-    // cho tới lúc nó được nhìn tới.
+    // A narrower window means fewer tabs fit the frame, and the tab strip of a tab not in front is
+    // 0 wide until it is looked at.
     const resize = new ResizeObserver(measure);
     resize.observe(el);
     return () => {
@@ -245,15 +254,15 @@ export function useStripScroll(scroller: RefObject<HTMLDivElement | null>): Stri
 }
 
 /**
- * Tab đang mở luôn nằm trong khung.
+ * The open tab always sits inside the frame.
  *
- * `Ctrl+Tab` sang cái thứ mười, hay một tab mới mở ở cuối một dải đã đầy, thì cái được chọn nằm
- * ngoài chỗ nhìn thấy — và không còn thanh cuộn nào để nói nó ở đâu. Chỉ chạy khi tab đang mở *đổi*
- * chứ không phải sau mỗi lần render: nếu không thì người dùng cuộn sang xem một tab khác sẽ bị kéo
- * ngược về chỗ cũ ngay lập tức.
+ * `Ctrl+Tab` to the tenth one, or a new tab opening at the end of a strip that is already full,
+ * leaves the selected tab outside the visible area — and there is no scrollbar left to say where it
+ * is. Only runs when the open tab *changes*, not after every render: otherwise a user scrolling
+ * across to look at another tab would be pulled straight back.
  *
- * `data-active` chứ không phải một prop: `TabStrip` nhận tab của mình dưới dạng `children` và không
- * biết cái nào đang mở — `Tab` thì biết, và nó đánh dấu lên chính nó.
+ * `data-active` rather than a prop: `TabStrip` takes its tabs as `children` and does not know
+ * which one is open — `Tab` does, and marks it on itself.
  */
 export function useActiveTabInView(scroller: RefObject<HTMLDivElement | null>): void {
   const last = useRef<Element | null>(null);
@@ -263,9 +272,9 @@ export function useActiveTabInView(scroller: RefObject<HTMLDivElement | null>): 
     const active = el.querySelector("[data-active]");
     if (active === last.current) return;
     last.current = active;
-    /* Một dải nằm trên tab không đứng trước được bày ở kích thước 0 và mọi thứ trong nó chồng lên
-       nhau ở mép trái — cuộn theo cái đo được ở đó là cuộn về một chỗ vô nghĩa. Cùng lý do
-       `useTabSlide` không đo một dải đang ẩn. */
+    /* A strip on a tab that is not in front is laid out at size 0 and everything in it piles up at
+       the left edge — scrolling by what is measured there scrolls to a meaningless place. The same
+       reason `useTabSlide` does not measure a hidden strip. */
     if (active === null || el.offsetParent === null) return;
     active.scrollIntoView({ block: "nearest", inline: "nearest" });
   });

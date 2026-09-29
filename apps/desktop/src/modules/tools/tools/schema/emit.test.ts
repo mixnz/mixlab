@@ -26,7 +26,8 @@ describe("toCreateTable", () => {
     expect(sql).toContain('"ratio" DOUBLE PRECISION');
   });
 
-  // Mẫu chỉ là mẫu; một cột INT tràn ở bản ghi thứ hai tỉ là chuyện sửa lúc production.
+  // A sample is only a sample; an INT column overflowing at the two-billionth record is something
+  // to fix in production.
   it("dùng BIGINT chứ không INT", () => {
     expect(toCreateTable(fields({ n: 1 }), { table: "t", dialect: "mysql" })).toContain(
       "`n` BIGINT",
@@ -55,7 +56,7 @@ describe("toCreateTable", () => {
       table: "t",
       dialect: "mysql",
     });
-    // `a` từng thấy null, `b` thì vắng mặt ở phần tử đầu — cả hai đều nullable.
+    // `a` has been seen as null, `b` is absent from the first element — both are nullable.
     expect(sql).not.toContain("NOT NULL");
   });
 
@@ -71,7 +72,8 @@ describe("toCreateTable", () => {
     );
   });
 
-  // Trải phẳng là một quyết định về mô hình dữ liệu; tool không có đủ thông tin để thay người dùng.
+  // Flattening is a data modelling decision; the tool does not have enough information to make it
+  // for the user.
   it("để object lồng nhau thành một cột JSON chứ không trải phẳng", () => {
     const sql = toCreateTable(fields({ user: { id: 1 } }), { table: "t", dialect: "mysql" });
     expect(sql).toContain("`user` JSON");
@@ -118,7 +120,7 @@ describe("toGoStruct", () => {
 
   it("in struct lồng và slice", () => {
     const code = toGoStruct(fields({ user: { id: 1 }, tags: [{ n: "a" }] }), "Row");
-    // `user` bắt buộc và không bao giờ null, nên là giá trị chứ không phải con trỏ.
+    // `user` is required and never null, so it is a value rather than a pointer.
     expect(code).toContain("User RowUser");
     expect(code).toContain("Tags []RowTags");
     expect(code).toContain("type RowUser struct {");

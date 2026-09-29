@@ -22,16 +22,16 @@ function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
 }
 
-/** Module tối ở 4 hướng vuông góc quanh (row, col) — nền cho cả hai kiểu bo theo module lân cận
- *  bên dưới, "Nối liền" và "Classy". */
+/** Dark modules in the 4 orthogonal directions around (row, col) — the basis for both styles below
+ *  that round according to neighbouring modules, "Connected" and "Classy". */
 function neighborsOf(grid: Grid, row: number, col: number) {
   const dark = (r: number, c: number) => r >= 0 && r < grid.size && c >= 0 && c < grid.size && grid.isDark(r, c);
   return { up: dark(row - 1, col), down: dark(row + 1, col), left: dark(row, col - 1), right: dark(row, col + 1) };
 }
 
-/** [trên-trái, trên-phải, dưới-phải, dưới-trái]. Một góc chỉ được bo tròn khi cả hai module vuông
- *  góc kề nó đều sáng — góc chạm vào module tối bên cạnh thì để vuông, nhờ vậy các module tối liền
- *  kề nhau nối liền thành khối mượt thay vì rời rạc từng ô. */
+/** [top-left, top-right, bottom-right, bottom-left]. A corner is only rounded when both orthogonal
+ *  modules next to it are light — a corner touching a neighbouring dark module stays square, so
+ *  adjacent dark modules join into a smooth block instead of separate cells. */
 function connectedCorners(n: ReturnType<typeof neighborsOf>, radius: number): Corners {
   return [
     n.up || n.left ? 0 : radius,
@@ -41,16 +41,18 @@ function connectedCorners(n: ReturnType<typeof neighborsOf>, radius: number): Co
   ];
 }
 
-/** Như `connectedCorners`, nhưng chỉ bo hai góc chéo (trên-trái, dưới-phải) — hai góc còn lại luôn
- *  vuông, tạo cảm giác "chảy" xiên một chiều thay vì bo đối xứng cả 4 góc. */
+/** Like `connectedCorners`, but only rounds the two diagonal corners (top-left, bottom-right) — the
+ *  other two always stay square, giving a slanted one-way "flowing" feel instead of symmetric
+ *  rounding on all 4 corners. */
 function classyCorners(n: ReturnType<typeof neighborsOf>, radius: number): Corners {
   return [n.up || n.left ? 0 : radius, 0, n.down || n.right ? 0 : radius, 0];
 }
 
-/** Vẽ tay từng module lên canvas thay vì dùng `createDataURL` có sẵn của lib — để tự chọn màu và
- *  hình dạng module. "Vuông"/"Bo góc"/"Chấm tròn" vẽ từng ô hoàn toàn độc lập; "Nối liền" và
- *  "Classy" biết tới module bên cạnh — bo góc từng module theo 4 góc riêng (`roundRect` nhận mảng
- *  bán kính theo góc) để các module tối liền kề trông như một khối liền mạch. */
+/** Draws each module onto the canvas by hand instead of using the library's built-in
+ *  `createDataURL` — so the colours and module shapes can be chosen. "Square"/"Rounded"/"Dots"
+ *  draw each cell fully independently; "Connected" and "Classy" know about neighbouring modules —
+ *  rounding each module's 4 corners individually (`roundRect` takes an array of per-corner radii)
+ *  so adjacent dark modules look like one seamless block. */
 function draw(
   canvas: HTMLCanvasElement,
   grid: Grid,

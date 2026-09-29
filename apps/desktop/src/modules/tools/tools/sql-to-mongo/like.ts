@@ -1,16 +1,16 @@
-/** Mọi ký tự có nghĩa trong regex, để escape từng cái một. */
+/** Every character with a meaning in regex, to escape one by one. */
 const SPECIAL = /[.*+?^${}()|[\]\\]/g;
 
 /**
- * Một mẫu `LIKE` của SQL thành mẫu regex của Mongo.
+ * An SQL `LIKE` pattern as a Mongo regex pattern.
  *
- * Việc escape ở đây không phải cẩn thận thừa: `LIKE 'a.b%'` mà quên escape dấu chấm thì thành một
- * truy vấn khác hẳn — vẫn chạy, vẫn ra kết quả, chỉ là kết quả sai. Đó là loại lỗi không ai bắt
- * được bằng mắt.
+ * The escaping here is not excess caution: `LIKE 'a.b%'` with the dot left unescaped becomes a
+ * completely different query — still running, still giving results, just wrong ones. That is the
+ * kind of bug nobody catches by eye.
  *
- * Neo `^`/`$` chỉ bỏ đúng ở đầu nào có `%`: `LIKE 'abc'` trong SQL là bằng chính xác, không phải
- * chứa. Escape chạy **trước** khi `%` và `_` được đổi, nếu không thì `.*` vừa sinh ra sẽ bị escape
- * thành `\.\*` ngay sau đó.
+ * The `^`/`$` anchors are only dropped at whichever end has a `%`: `LIKE 'abc'` in SQL is exact
+ * equality, not "contains". Escaping runs **before** `%` and `_` are converted, otherwise the `.*`
+ * just produced would be escaped into `\.\*` right after.
  */
 export function likeToRegex(pattern: string): string {
   const startsAny = pattern.startsWith("%");
@@ -22,8 +22,8 @@ export function likeToRegex(pattern: string): string {
     .replace(/%/g, ".*")
     .replace(/_/g, ".");
 
-  // `LIKE '%'` khớp mọi thứ. `.*$` cũng vậy, nhưng cái neo ở đuôi chỉ tổ làm người đọc dừng lại
-  // hỏi nó để làm gì.
+  // `LIKE '%'` matches everything. So does `.*$`, but the trailing anchor only makes the reader
+  // stop and wonder what it is for.
   if (startsAny && body === "") return ".*";
 
   return `${startsAny ? ".*" : "^"}${body}${endsAny ? ".*" : "$"}`;

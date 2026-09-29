@@ -2,21 +2,22 @@ import { describe, expect, it } from "vitest";
 import appCss from "./App.css?raw";
 
 /**
- * Hai vai của chữ, khẳng định trên chính stylesheet.
+ * The two roles of text, asserted on the stylesheet itself.
  *
- * Không có gì để render ở đây, và không có gì trong này thấy được khi review. Trước đợt token này
- * `var(--font-mono)` đã được dùng ở bốn chỗ mà chưa bao giờ được định nghĩa: ba chỗ có `, monospace`
- * đỡ phía sau, chỗ thứ tư không có, nên rule của nó vô hiệu và chữ rơi về font kế thừa từ `:root`
- * — vốn tình cờ cũng là Fira Code. Nó đúng nhờ tai nạn, và cái tai nạn đó biến mất đúng lúc `:root`
- * chuyển sang sans. Triệu chứng duy nhất là một dialog đổi font, nên nó được khẳng định ở đây.
+ * There is nothing to render here, and nothing in here is visible in review. Before this token
+ * work, `var(--font-mono)` was used in four places without ever being defined: three had a
+ * `, monospace` fallback behind them, the fourth did not, so its rule was void and the text fell
+ * back to the font inherited from `:root` — which happened to be Fira Code too. It was right by
+ * accident, and that accident vanished exactly when `:root` switched to sans. The only symptom was
+ * a dialog changing font, so it is asserted here.
  *
- * `?raw` chỉ trả về nội dung thật vì `vite.config.ts` bật `test.css`: mặc định Vitest stub mọi
- * `.css` thành chuỗi rỗng, kể cả qua `?raw`. Đó là lý do case đầu tiên bên dưới tồn tại — một test
- * parse chuỗi rỗng thì xanh mà chưa đọc dòng nào, và `glass.test.ts` đã xanh đúng như thế suốt từ
- * ngày nó được viết.
+ * `?raw` only returns real content because `vite.config.ts` turns on `test.css`: by default Vitest
+ * stubs every `.css` as an empty string, even through `?raw`. That is why the first case below
+ * exists — a test parsing an empty string is green without reading a single line, and
+ * `glass.test.ts` was green exactly like that from the day it was written.
  */
 
-/** Mọi stylesheet dưới `src/`. `App.css` nằm trong đó và được lọc ra ở chỗ cần. */
+/** Every stylesheet under `src/`. `App.css` is among them and is filtered out where needed. */
 const sheets = import.meta.glob("../**/*.css", {
   query: "?raw",
   import: "default",

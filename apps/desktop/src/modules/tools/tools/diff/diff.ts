@@ -1,15 +1,15 @@
 /**
- * So sánh hai đoạn văn bản theo dòng.
+ * Compares two pieces of text line by line.
  *
- * LCS là O(n×m) cả thời gian lẫn bộ nhớ, và bộ nhớ mới là chỗ đau: một bảng 5000×5000 ô 4 byte là
- * 95 MB cho một lần bấm. Nên **cắt phần đầu và phần đuôi giống nhau trước**, rồi mới chạy LCS trên
- * phần giữa, và chặn phần giữa lại. Mười dòng khác nhau giữa hai file 50 nghìn dòng thì bảng chỉ
- * còn 10×10.
+ * LCS is O(n×m) in both time and memory, and memory is where it hurts: a 5000×5000 table of 4-byte
+ * cells is 95 MB for one click. So **trim the identical head and tail first**, only then run LCS on
+ * the middle, and cap the middle. Ten differing lines between two 50-thousand-line files leave a
+ * table of only 10×10.
  */
 
 export interface DiffLine {
   kind: "same" | "add" | "remove";
-  /** Số dòng ở mỗi bên, hoặc `null` nếu dòng không tồn tại bên đó. */
+  /** The line number on each side, or `null` if the line does not exist on that side. */
   leftNo: number | null;
   rightNo: number | null;
   text: string;
@@ -24,7 +24,7 @@ export type DiffResult =
   | { ok: true; lines: DiffLine[]; added: number; removed: number }
   | { ok: false; reason: "tooLarge" };
 
-/** 2000×2000 ô 4 byte là 16 MB — chấp nhận được cho một lần bấm. */
+/** 2000×2000 cells of 4 bytes is 16 MB — acceptable for one click. */
 const MAX_MIDDLE = 2000;
 
 function keyOf(line: string, options: DiffOptions): string {
@@ -54,7 +54,8 @@ export function diffLines(left: string, right: string, options: DiffOptions): Di
   const midB = b.length - head - tail;
   if (midA > MAX_MIDDLE || midB > MAX_MIDDLE) return { ok: false, reason: "tooLarge" };
 
-  // Bảng LCS chạy ngược từ cuối, nên ô (i, j) là độ dài chuỗi chung của hai phần đuôi.
+  // The LCS table runs backwards from the end, so cell (i, j) is the common-subsequence length of
+  // the two tails.
   const width = midB + 1;
   const table = new Uint32Array((midA + 1) * width);
   const at = (i: number, j: number): number => i * width + j;
@@ -118,9 +119,10 @@ export interface DiffSegment {
 }
 
 /**
- * Dưới ngưỡng này thì phần đầu/đuôi chung chỉ là trùng hợp giữa hai dòng không liên quan (VD hai câu
- * SQL khác hẳn nhau nhưng cùng bắt đầu `SELECT` và cùng kết `;`) — tô riêng đoạn giữa lúc đó gây hiểu
- * lầm hơn là tô nguyên dòng như trước, nên trả `null` để nơi gọi render nguyên dòng.
+ * Below this threshold the shared head/tail is just a coincidence between two unrelated lines (e.g.
+ * two completely different SQL statements that both start with `SELECT` and end with `;`) —
+ * highlighting only the middle then misleads more than highlighting the whole line as before, so
+ * return `null` for the caller to render the whole line.
  */
 const MIN_SEGMENT_SIMILARITY = 0.3;
 
@@ -129,12 +131,13 @@ function segmentKey(ch: string, ignoreCase: boolean): string {
 }
 
 /**
- * Tô riêng đoạn khác nhau giữa một dòng bị xoá và dòng được thêm tương ứng, bằng đúng trick cắt
- * đầu/đuôi giống nhau ở trên nhưng ở mức ký tự (code point, qua `Array.from`, để không cắt vỡ một
- * ký tự Unicode hai code unit).
+ * Highlights just the differing part between a removed line and its matching added line, using the
+ * same identical-head/tail trimming trick as above but at the character level (code points, through
+ * `Array.from`, so a two-code-unit Unicode character is not split).
  *
- * Bỏ qua `ignoreWhitespace`: quy đổi lại vị trí sau khi gộp khoảng trắng không đáng công sức, nên khi
- * tuỳ chọn đó bật thì trả `null` luôn — nơi gọi render nguyên dòng.
+ * Ignores `ignoreWhitespace`: mapping positions back after collapsing whitespace is not worth the
+ * effort, so when that option is on it returns `null` straight away — the caller renders the whole
+ * line.
  */
 export function diffSegments(
   leftText: string,
@@ -176,9 +179,10 @@ interface DiffRun {
 }
 
 /**
- * Gom các dòng không phải "same" liền nhau thành từng cụm. Do cách chọn nhánh khi bằng điểm ở trên
- * (`>=` ưu tiên remove), một cụm luôn là một khối remove rồi mới đến một khối add — nhưng hàm này
- * không dựa vào thứ tự đó để đúng: nó tách theo `kind` bất kể remove/add có xen kẽ nhau hay không.
+ * Groups adjacent non-"same" lines into clusters. Because of how ties are broken above (`>=`
+ * favours remove), a cluster is always a block of removes followed by a block of adds — but this
+ * function does not rely on that order to be correct: it splits by `kind` whether removes and adds
+ * interleave or not.
  */
 function findRuns(lines: DiffLine[]): DiffRun[] {
   const runs: DiffRun[] = [];
@@ -202,12 +206,13 @@ function findRuns(lines: DiffLine[]): DiffRun[] {
 }
 
 /**
- * Với mỗi cụm remove/add, ghép theo vị trí (remove thứ k với add thứ k) để tính đoạn khác nhau — số
- * dư (khi remove và add không cùng số lượng) không được ghép, giữ nguyên render cả dòng.
+ * For each remove/add cluster, pairs by position (the k-th remove with the k-th add) to compute the
+ * differing parts — leftovers (when removes and adds are not equal in number) are not paired and
+ * keep rendering the whole line.
  *
- * Trả về map từ `DiffLine` (theo tham chiếu, cùng mảng `lines` truyền vào) sang các segment của
- * riêng dòng đó, dùng cho view Unified: mỗi dòng vẫn render trên hàng riêng, chỉ đoạn khác nhau bên
- * trong được tô đậm hơn.
+ * Returns a map from `DiffLine` (by reference, from the same `lines` array passed in) to that
+ * line's own segments, used by the Unified view: each line still renders on its own row, and only
+ * the differing part inside is highlighted more strongly.
  */
 export function computeLineSegments(lines: DiffLine[], options: DiffOptions): Map<DiffLine, DiffSegment[]> {
   const map = new Map<DiffLine, DiffSegment[]>();
@@ -226,9 +231,10 @@ export function computeLineSegments(lines: DiffLine[], options: DiffOptions): Ma
 }
 
 /**
- * Một ô trong view Split. `"blank"` là bên không có dòng tương ứng (phần dư khi remove và add lệch
- * số lượng) — không có số dòng, không có chữ. `kind` phân biệt "same" (không tô màu) với
- * "remove"/"add" (tô nền đỏ/xanh), để nơi render không phải đoán qua việc so `no`/`text`.
+ * One cell in the Split view. `"blank"` is the side with no corresponding line (the leftover when
+ * removes and adds differ in number) — no line number, no text. `kind` tells "same" (no colour)
+ * from "remove"/"add" (red/green background), so the renderer does not have to guess by comparing
+ * `no`/`text`.
  */
 export type SplitCell =
   | { kind: "blank" }
@@ -251,9 +257,9 @@ function cellOf(
 }
 
 /**
- * Dựng các hàng cho view Split (2 cột song song kiểu GitHub): dòng "same" chiếm một hàng ở cả hai
- * bên, một cặp remove/add ghép được chiếm một hàng "replaced", phần dư (remove hoặc add lẻ ra) chiếm
- * một hàng chỉ có một bên — bên kia để trống.
+ * Builds the rows for the Split view (2 side-by-side columns, GitHub-style): a "same" line takes
+ * one row on both sides, a pairable remove/add takes one "replaced" row, and a leftover (an odd
+ * remove or add) takes a row with only one side — the other side is blank.
  */
 export function buildSplitRows(lines: DiffLine[], options: DiffOptions): SplitRow[] {
   const rows: SplitRow[] = [];

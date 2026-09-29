@@ -1,12 +1,13 @@
 /**
- * MD5, vì `crypto.subtle` cố tình không có nó và ta vẫn cần: `MD5()` của MySQL và checksum của
- * gần như mọi bản tải về đều là nó. Bảy chục dòng không đáng để kéo một thư viện về.
+ * MD5, because `crypto.subtle` deliberately lacks it and we still need it: MySQL's `MD5()` and the
+ * checksums of almost every download are MD5. Seventy lines are not worth pulling in a library.
  *
- * MD5 **không an toàn cho mật khẩu**. Nó ở đây để đối chiếu và để đọc dữ liệu có sẵn, không phải
- * để sinh ra cái gì mới.
+ * MD5 **is not safe for passwords**. It is here for comparing and for reading existing data, not
+ * for producing anything new.
  */
 
-/* Số bit dịch trái mỗi vòng, và bảng hằng K[i] = floor(|sin(i+1)| * 2^32) — cả hai lấy từ RFC 1321. */
+/* The left-shift amounts per round, and the constant table K[i] = floor(|sin(i+1)| * 2^32) — both
+   taken from RFC 1321. */
 const S = [
   7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14,
   20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15, 21, 6,
@@ -16,7 +17,7 @@ const S = [
 const K = new Uint32Array(64);
 for (let i = 0; i < 64; i++) K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 2 ** 32);
 
-/** Một word 32-bit thành 8 chữ hex, little-endian — MD5 in ra theo thứ tự byte ngược. */
+/** A 32-bit word as 8 hex digits, little-endian — MD5 prints in reversed byte order. */
 function hexLE(word: number): string {
   let out = "";
   for (let i = 0; i < 4; i++) out += ((word >>> (i * 8)) & 0xff).toString(16).padStart(2, "0");
@@ -25,7 +26,7 @@ function hexLE(word: number): string {
 
 export function md5(bytes: Uint8Array): string {
   const len = bytes.length;
-  // Đệm tới bội của 64 byte, chừa 8 byte cuối cho độ dài tính bằng bit.
+  // Pad to a multiple of 64 bytes, leaving the last 8 bytes for the length in bits.
   const padded = new Uint8Array((((len + 8) >> 6) + 1) << 6);
   padded.set(bytes);
   padded[len] = 0x80;

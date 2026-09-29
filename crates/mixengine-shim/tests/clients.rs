@@ -1,6 +1,6 @@
 //! The client commands of an installed service package — roadmap task **T130**.
 //!
-//! The first of the three complaints this phase answers, end to end: `bin` thiếu `mysql`,
+//! The first of the three complaints this phase answers, end to end: `bin` has no `mysql`,
 //! `mysqldump`, … — a home with a database in it had no way to open one from a terminal, because
 //! `<root>/bin` was a projection of a compile-time constant that named four languages and nothing
 //! else.

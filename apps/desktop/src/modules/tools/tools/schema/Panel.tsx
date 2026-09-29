@@ -31,7 +31,8 @@ function SchemaPanel() {
   const [dialect, setDialect] = useState<SqlDialect>("mysql");
   const [rootName, setRootName] = useState("Row");
 
-  // Suy luận là hàm thuần và rẻ, nên chạy theo từng lần gõ — không cần nút như tool Chuyển đổi.
+  // Inference is a cheap pure function, so it runs on every keystroke — no button needed like the
+  // Convert tool.
   const outcome = useMemo<Outcome | null>(() => {
     if (input.trim() === "") return null;
     let value: unknown;

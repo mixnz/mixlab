@@ -1,12 +1,13 @@
 /**
- * Chạy một regex và thu kết quả. Hàm thuần — phần chạy nó trong Worker nằm ở `run.ts`.
+ * Runs a regex and collects the results. A pure function — running it in a Worker lives in
+ * `run.ts`.
  *
- * Tách ra đúng ở đây vì đây là ranh giới test được: vòng lặp thu match chạy trong Node, còn
- * `Worker` thì không tồn tại ở đó.
+ * Split exactly here because this is the testable boundary: the match-collecting loop runs in
+ * Node, while `Worker` does not exist there.
  */
 
 export interface RegexGroup {
-  /** `null` cho nhóm theo số. Nhóm có tên được liệt kê riêng, với `index` là `-1`. */
+  /** `null` for numbered groups. Named groups are listed separately, with an `index` of `-1`. */
   name: string | null;
   index: number;
   text: string | null;
@@ -22,7 +23,7 @@ export type RegexRun =
   | { ok: true; matches: RegexMatch[]; truncated: boolean; replaced: string | null }
   | { ok: false; message: string };
 
-/** Đủ để nhìn, và giữ payload gửi qua khỏi Worker ở mức có nghĩa. */
+/** Enough to look at, and keeps the payload sent out of the Worker at a meaningful size. */
 const MAX_MATCHES = 500;
 
 function toMatch(found: RegExpExecArray): RegexMatch {
@@ -46,7 +47,7 @@ export function runRegex(
   try {
     re = new RegExp(pattern, flags);
   } catch (error) {
-    // Thông báo của engine đã chỉ đúng chỗ; viết lại chỉ làm mờ đi.
+    // The engine's message already points at the right place; rewriting it would only blur it.
     return { ok: false, message: error instanceof Error ? error.message : String(error) };
   }
 
@@ -59,7 +60,7 @@ export function runRegex(
       const found = re.exec(subject);
       if (!found) break;
       matches.push(toMatch(found));
-      // Mẫu khớp rỗng làm `lastIndex` đứng yên và `exec` trả về mãi mãi.
+      // An empty-matching pattern leaves `lastIndex` in place and `exec` returns forever.
       if (found[0] === "") re.lastIndex += 1;
       if (matches.length >= MAX_MATCHES) {
         truncated = true;

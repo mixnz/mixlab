@@ -4,7 +4,7 @@ import { md5 } from "./md5";
 const of = (text: string) => md5(new TextEncoder().encode(text));
 
 describe("md5", () => {
-  // Bộ vector chuẩn ở phụ lục A.5 của RFC 1321.
+  // The standard test vectors from appendix A.5 of RFC 1321.
   it("khớp bộ vector của RFC 1321", () => {
     expect(of("")).toBe("d41d8cd98f00b204e9800998ecf8427e");
     expect(of("a")).toBe("0cc175b9c0f1b6a831c399e269772661");
@@ -22,7 +22,7 @@ describe("md5", () => {
   });
 
   it("băm theo byte UTF-8, không theo mã ký tự", () => {
-    // "Xin chào" có một ký tự ngoài ASCII, nên chuỗi 8 ký tự này là 9 byte.
+    // "Xin chào" has one non-ASCII character, so this 8-character string is 9 bytes.
     expect(new TextEncoder().encode("Xin chào")).toHaveLength(9);
     expect(of("Xin chào")).toHaveLength(32);
   });

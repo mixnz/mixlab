@@ -53,8 +53,8 @@ function MaskPanel() {
     label: t(KIND_LABEL[kind]),
   }));
 
-  // Đọc lại luôn thay toàn bộ danh sách field bằng một lần đoán mới — chỉnh tay trước đó mất, cùng
-  // cách tool Sinh dữ liệu giả xử lý "Suy trường từ mẫu".
+  // Rereading always replaces the whole field list with a new guess — earlier manual edits are
+  // lost, the same way the Fake data tool handles "Infer fields from sample".
   const readData = () => {
     setOutput("");
     if (format === "json") {

@@ -1,8 +1,8 @@
 /**
- * Module Tools gọi mọi thứ là gì, bằng tiếng Việt.
+ * What the Tools module calls everything, in Vietnamese.
  *
- * Dữ liệu thuần, không import gì từ `src/i18n/`: `dicts.ts` import file này, nên bất cứ thứ gì
- * import ngược ra từ đó sẽ khép vòng.
+ * Pure data, importing nothing from `src/i18n/`: `dicts.ts` imports this file, so anything
+ * importing back out of there would close a cycle.
  */
 const toolsVi = {
   toolbox: {

@@ -5,13 +5,13 @@
   max-width: 46rem;
 }
 
-/* Đây là một hàng *lựa chọn* — chọn Base64 hay URL hay hash — chứ không phải điều hướng: đổi nó
-   đổi cách ô bên dưới được xử lý, không đưa bạn sang màn khác. Nên nó là segmented control, cùng
-   hình dạng với `.choice-row` trong `modules/db/db.css`.
+/* This is a row of *choices* — Base64, URL or hash — not navigation: changing it changes how the
+   field below is processed, it does not take you to another screen. So it is a segmented control,
+   the same shape as `.choice-row` in `modules/db/db.css`.
 
-   Trước đây nó gạch chân bằng `inset 0 -2px 0 var(--accent)` — cách viết thứ ba của cùng một vạch
-   2px mà tab cửa sổ và `.method-tab` cũng dùng, ở ba tầng khác nhau. Một tín hiệu dùng cho mọi
-   tầng thì thôi xếp hạng được tầng nào. */
+   It used to underline with `inset 0 -2px 0 var(--accent)` — the third way of writing the same
+   2px bar that the window tabs and `.method-tab` also used, at three different levels. A signal
+   used for every level can no longer rank any of them. */
 .tabs {
   display: inline-flex;
   align-self: flex-start;

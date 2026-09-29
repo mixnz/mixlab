@@ -53,9 +53,9 @@
   opacity: 1;
 }
 
-/* Tên và giá trị của header/param là dữ liệu gửi đi nguyên trạng — một khoảng trắng thừa ở cuối
-   làm hỏng một request và không nhìn thấy được bằng sans. `Input` đặt `font-family: inherit`, nên
-   trước đợt token font các ô này mono nhờ thừa kế từ `:root`; giờ nói ra. */
+/* Header/param names and values are data sent as is — a stray trailing space breaks a request and
+   cannot be seen in sans. `Input` sets `font-family: inherit`, so before the font token work these
+   cells were mono by inheriting from `:root`; now it is said explicitly. */
 .row input {
   font-family: var(--font-mono);
 }

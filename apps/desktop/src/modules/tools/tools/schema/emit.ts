@@ -3,11 +3,11 @@ import type { SqlDialect } from "../convert/insert";
 import type { Field, JsonType } from "./infer";
 
 /**
- * Ba bộ sinh mã từ kết quả của `inferSchema`.
+ * The three code generators working from `inferSchema`'s result.
  *
- * Đặt tên dùng lại `convert()` của tool Đổi kiểu chữ — `snake_case` cho cột SQL, `PascalCase` cho
- * field Go, giữ nguyên cho TypeScript. Đây là lần đầu hai tool trong module gọi nhau, và nó đi
- * đúng chiều: logic thuần gọi logic thuần.
+ * Naming reuses the Case converter tool's `convert()` — `snake_case` for SQL columns, `PascalCase`
+ * for Go fields, unchanged for TypeScript. This is the first time two tools in the module call each
+ * other, and it goes in the right direction: pure logic calling pure logic.
  */
 
 export interface CreateTableOptions {
@@ -15,7 +15,7 @@ export interface CreateTableOptions {
   dialect: SqlDialect;
 }
 
-/** Kiểu duy nhất của một trường, đã bỏ `null` ra. `null` nghĩa là trộn nhiều kiểu hoặc chỉ có null. */
+/** A field's single type, with `null` taken out. `null` means mixed types or only nulls. */
 function soleType(field: Field): JsonType | null {
   const types = field.types.filter((type) => type !== "null");
   return types.length === 1 ? types[0]! : null;
@@ -30,7 +30,8 @@ function sqlType(field: Field, dialect: SqlDialect): string {
   if (type === null) return "TEXT";
   if (type === "object" || type === "array") return dialect === "mysql" ? "JSON" : "JSONB";
   if (type === "boolean") return dialect === "mysql" ? "TINYINT(1)" : "BOOLEAN";
-  // Mẫu chỉ là mẫu: một cột INT tràn ở bản ghi thứ hai tỉ là chuyện sửa lúc production.
+  // A sample is only a sample: an INT column overflowing at the two-billionth record is something
+  // to fix in production.
   if (type === "integer") return "BIGINT";
   if (type === "number") return dialect === "mysql" ? "DOUBLE" : "DOUBLE PRECISION";
   if (type === "string") {
@@ -48,7 +49,7 @@ export function toCreateTable(fields: Field[], options: CreateTableOptions): str
     const suffix = nullable(field) ? "" : " NOT NULL";
     return `  ${column} ${sqlType(field, options.dialect)}${suffix}`;
   });
-  // Tên bảng giữ nguyên như người dùng gõ — họ đã chọn nó rồi.
+  // The table name is kept exactly as the user typed it — they have already chosen it.
   return `CREATE TABLE ${ident(options.table)} (\n${lines.join(",\n")}\n);`;
 }
 
@@ -89,7 +90,8 @@ export function toTypeScript(fields: Field[], rootName: string): string {
   }
 
   emit(fields, rootName);
-  // `emit` đẩy block cha vào sau các block con nó sinh ra, nên đảo lại để root đứng đầu.
+  // `emit` pushes a parent block after the child blocks it produces, so reverse to put the root
+  // first.
   return blocks.reverse().join("\n\n");
 }
 
@@ -122,7 +124,7 @@ export function toGoStruct(fields: Field[], rootName: string): string {
     if ((type === "object" || type === "array") && field.children) {
       const child = `${parent}${convert(field.name, "pascal")}`;
       emit(field.children, child);
-      // Slice đã là kiểu nil được rồi, nên không thêm con trỏ.
+      // A slice is already a nil-able type, so no pointer is added.
       return type === "array" ? `[]${child}` : `${pointer}${child}`;
     }
     return type === "array" ? "[]any" : `${pointer}${GO_TYPE[type]}`;

@@ -69,9 +69,9 @@ describe("zoneOffset", () => {
 describe("preferredZone", () => {
   const at = Date.parse("2026-01-15T00:00:00Z");
 
-  /* Windows chỉ có `SE Asia Standard Time` cho cả Bangkok, Hà Nội và Jakarta, và ICU quy ID thô ấy
-     về `Asia/Bangkok`. Một máy đặt tiếng Việt vì thế mặc định thành Bangkok — cùng +07:00 nên
-     không nhìn ra, mà vẫn là sai nước. */
+  /* Windows only has `SE Asia Standard Time` for Bangkok, Hanoi and Jakarta alike, and ICU maps
+     that raw ID to `Asia/Bangkok`. A machine set to Vietnamese therefore defaults to Bangkok — the
+     same +07:00 so it does not show, yet still the wrong country. */
   it("đổi sang vùng của nước trong locale khi vùng của máy không thuộc nước đó", () => {
     expect(preferredZone("Asia/Bangkok", ["vi-VN"], at)).toBe("Asia/Ho_Chi_Minh");
   });
@@ -82,8 +82,8 @@ describe("preferredZone", () => {
     expect(preferredZone("Europe/Berlin", ["de-DE"], at)).toBe("Europe/Berlin");
   });
 
-  /* Điều kiện phải trùng chênh lệch: máy đặt London mà locale tiếng Việt là người đang ở London,
-     không phải một máy bị Windows quy sai vùng. */
+  /* The condition is that the offsets must match: a machine set to London with a Vietnamese locale
+     is someone who really is in London, not a machine Windows mapped to the wrong zone. */
   it("không đổi khi chênh lệch không trùng", () => {
     expect(preferredZone("Europe/London", ["vi-VN"], at)).toBe("Europe/London");
   });
@@ -97,8 +97,9 @@ describe("preferredZone", () => {
     expect(preferredZone("Asia/Bangkok", ["khong-phai-locale!!"], at)).toBe("Asia/Bangkok");
   });
 
-  /* Đây là tình huống thật trên WebView2: `resolvedOptions().locale` đi theo ngôn ngữ hiển thị
-     của webview và ra `en-US`, còn vùng thật của người dùng chỉ lộ ra ở `navigator.languages`. */
+  /* This is the real situation on WebView2: `resolvedOptions().locale` follows the webview's
+     display language and gives `en-US`, while the user's real region only shows in
+     `navigator.languages`. */
   it("đi tiếp xuống nguồn sau khi nguồn đầu không cứu được", () => {
     expect(preferredZone("Asia/Bangkok", ["en-US", "vi-VN"], at)).toBe("Asia/Ho_Chi_Minh");
   });
@@ -109,8 +110,9 @@ describe("preferredZone", () => {
     );
   });
 
-  /* Nguồn đầu đã khẳng định vùng của máy là đúng nước, nên nguồn sau không được lật lại: một máy
-     Thái có `navigator.languages` gồm cả tiếng Việt vẫn phải ở Bangkok. */
+  /* The first source has already confirmed the machine's zone is in the right country, so a later
+     source must not overturn it: a Thai machine whose `navigator.languages` includes Vietnamese
+     still has to stay in Bangkok. */
   it("dừng ngay khi một nguồn xác nhận vùng của máy là đúng nước", () => {
     expect(preferredZone("Asia/Bangkok", ["th-TH", "vi-VN"], at)).toBe("Asia/Bangkok");
   });

@@ -6,7 +6,7 @@ describe("minifySql", () => {
     expect(minifySql("SELECT   a,\n       b\nFROM   t")).toBe("SELECT a, b FROM t");
   });
 
-  // Gom khoảng trắng bên trong chuỗi là đổi dữ liệu, không phải làm gọn câu lệnh.
+  // Collapsing whitespace inside a string changes the data, it does not tidy the statement.
   it("không đụng vào khoảng trắng bên trong chuỗi", () => {
     expect(minifySql("SELECT  'a   b'  FROM t")).toBe("SELECT 'a   b' FROM t");
   });
@@ -19,7 +19,7 @@ describe("minifySql", () => {
     expect(minifySql('SELECT `a  b`,  "c  d"  FROM t')).toBe('SELECT `a  b`, "c  d" FROM t');
   });
 
-  // Nuốt nửa dòng comment là biến phần còn lại của câu lệnh thành comment.
+  // Swallowing half a comment line turns the rest of the statement into a comment.
   it("bỏ trọn comment một dòng", () => {
     expect(minifySql("SELECT a -- lấy cột a\nFROM t")).toBe("SELECT a FROM t");
   });

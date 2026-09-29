@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { generate, inferFields, slugify, type FieldSpec } from "./fake";
 
-/** LCG tất định — cùng seed luôn ra cùng chuỗi, nên test không phụ thuộc `Math.random`. */
+/** A deterministic LCG — the same seed always gives the same sequence, so the test does not depend
+ *  on `Math.random`. */
 function seededRnd(seed: number): () => number {
   let s = seed >>> 0;
   return () => {
@@ -74,7 +75,8 @@ describe("generate", () => {
 
   it("fullName theo locale vi lấy từ vốn tên tiếng Việt", () => {
     const rows = generate([{ name: "name", kind: "fullName", locale: "vi" }], 30, seededRnd(17));
-    // Tên VN có dấu — vốn tên tiếng Anh không có ký tự này, nên đây là bằng chứng đã dùng đúng vốn.
+    // Accented VN names — the English name pool has no such characters, so this proves the right
+    // pool was used.
     expect(rows.some((row) => /[ăâđêôơư]/i.test(row.name as string))).toBe(true);
   });
 
@@ -101,7 +103,8 @@ describe("generate", () => {
 
   it("middleName đứng riêng lấy đúng vốn theo locale", () => {
     const rows = generate([{ name: "middle", kind: "middleName", locale: "vi" }], 30, seededRnd(37));
-    // Vốn tên đệm tiếng Việt không lẫn với vốn tên gọi — "Long"/"Nam" không nằm trong đó.
+    // The Vietnamese middle-name pool does not mix with the given-name pool — "Long"/"Nam" are not
+    // in it.
     expect(rows.every((row) => !["Long", "Nam"].includes(row.middle as string))).toBe(true);
   });
 
@@ -161,8 +164,9 @@ describe("generate", () => {
     }
   });
 
-  // Bug đã sửa: email không có ô chọn Locale riêng trên Panel nên trước đây luôn mặc định "vi",
-  // dù field tên trong cùng danh sách là "en" — email và tên khi đó thuộc hai người khác nhau.
+  // A fixed bug: email has no Locale picker of its own on the Panel, so it used to always default
+  // to "vi", even when the name field in the same list was "en" — the email and the name then
+  // belonged to two different people.
   it("email theo locale en khi field tên là en, dù bản thân field email không đặt locale", () => {
     const fields: FieldSpec[] = [
       { name: "first", kind: "firstName", locale: "en" },

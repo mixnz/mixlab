@@ -45,8 +45,8 @@ describe("diffLines", () => {
     expect(kinds("Abc", "abc", { ignoreWhitespace: false, ignoreCase: true })).toEqual(["s:Abc"]);
   });
 
-  // Cắt đầu đuôi giống nhau là thứ làm tool dùng được với file thật: mười dòng khác nhau giữa
-  // hai file 50 nghìn dòng thì bảng LCS chỉ còn 10×10.
+  // Trimming the identical head and tail is what makes the tool usable on real files: ten differing
+  // lines between two 50-thousand-line files leave an LCS table of only 10×10.
   it("chạy được với file rất dài khi phần khác nhau nhỏ", () => {
     const head = Array.from({ length: 30_000 }, (_, i) => `dòng ${i}`).join("\n");
     const result = diffLines(`${head}\nX`, `${head}\nY`, plain);
@@ -62,9 +62,10 @@ describe("diffLines", () => {
     expect(diffLines(left, right, plain)).toEqual({ ok: false, reason: "tooLarge" });
   });
 
-  // Chốt lại invariant mà `computeLineSegments`/`buildSplitRows` dựa vào: một cụm thay đổi luôn xuất
-  // hết remove rồi mới đến add, không xen kẽ. Nếu ai đó đổi tie-break (`>=` → `>`) trong `diffLines`,
-  // test này gãy trước, thay vì để hai hàm kia âm thầm ghép sai cặp.
+  // Locks down the invariant `computeLineSegments`/`buildSplitRows` rely on: a change cluster
+  // always emits all its removes before its adds, never interleaved. If someone changes the
+  // tie-break (`>=` → `>`) in `diffLines`, this test breaks first, instead of letting those two
+  // functions quietly pair the wrong lines.
   it("một cụm thay đổi xuất hết remove rồi mới đến add", () => {
     expect(kinds("a\nb\nc", "a\nx\ny\nc")).toEqual(["s:a", "r:b", "a:x", "a:y", "s:c"]);
   });
@@ -149,7 +150,8 @@ describe("diffSegments", () => {
   it("không cắt vỡ ký tự Unicode hai code unit", () => {
     const result = diffSegments("chào 😀 bạn", "chào 😀😀 bạn", plain);
     expect(result).not.toBeNull();
-    // Ghép lại phải ra đúng chuỗi gốc — nếu cắt vỡ surrogate pair, join() sẽ ra ký tự lỗi khác độ dài.
+    // Joined back it must give exactly the original string — if a surrogate pair were split,
+    // join() would give a broken character of a different length.
     expect(result!.left.map((s) => s.text).join("")).toBe("chào 😀 bạn");
     expect(result!.right.map((s) => s.text).join("")).toBe("chào 😀😀 bạn");
   });
@@ -222,7 +224,8 @@ describe("buildSplitRows", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const rows = buildSplitRows(result.lines, plain);
-    // "a" giống nhau, "b" bị ghép với "x" (cặp đầu tiên), "y" là add lẻ ra → bên trái để trống.
+    // "a" is the same, "b" is paired with "x" (the first pair), "y" is a leftover add → the left
+    // side is blank.
     expect(rows).toEqual([
       {
         left: { kind: "same", no: 1, text: "a", segments: null },

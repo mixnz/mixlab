@@ -45,7 +45,7 @@ describe("parseConnectionString", () => {
     expect(f?.database).toBe("2");
   });
 
-  // Bản ghi SRV của DNS mới là thứ nói cổng, nên một URI `+srv` mang cổng là một URI sai.
+  // The DNS SRV record is what states the port, so a `+srv` URI carrying a port is a wrong URI.
   it("để cổng trống với mongodb+srv", () => {
     const f = parseConnectionString("mongodb+srv://u:p@cluster.example.com/app");
     expect(f?.kind).toBe("mongodb");
@@ -53,7 +53,7 @@ describe("parseConnectionString", () => {
     expect(f?.port).toBe("");
   });
 
-  // Chỗ hỏng im lặng: `URL` trả username và password ở dạng đã percent-encode.
+  // The silent failure: `URL` returns the username and password percent-encoded.
   it("decode mật khẩu đã percent-encode", () => {
     expect(parseConnectionString("mysql://u:p%40ss@h/d")?.password).toBe("p@ss");
   });
@@ -91,7 +91,7 @@ describe("toUri", () => {
     );
   });
 
-  // Ba ký tự này không encode thì chuỗi không parse được ở đâu cả.
+  // Without encoding these three characters the string cannot be parsed anywhere.
   it("encode mật khẩu có ký tự phá cú pháp", () => {
     const uri = toUri({ ...base, password: "a/b?c#d" });
     expect(uri).toContain("a%2Fb%3Fc%23d");
@@ -123,8 +123,8 @@ describe("toJdbc", () => {
     expect(toJdbc({ ...base, port: "", password: "pw" })).toContain("db.example.com:3306");
   });
 
-  // Không có chuẩn JDBC cho hai loại này, và in ra một chuỗi trông hợp lệ là đưa cho người dùng
-  // một thứ sẽ hỏng ở nơi khác.
+  // There is no JDBC standard for these two kinds, and printing a valid-looking string hands the
+  // user something that will break somewhere else.
   it("trả null cho MongoDB và Redis", () => {
     expect(toJdbc({ ...base, kind: "mongodb" })).toBeNull();
     expect(toJdbc({ ...base, kind: "redis" })).toBeNull();

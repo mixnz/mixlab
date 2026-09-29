@@ -10,7 +10,7 @@ import styles from "./Panel.module.css";
 
 const FLAGS = ["g", "i", "m", "s", "u"] as const;
 
-/** Cắt văn bản thành các đoạn khớp và không khớp, để tô đúng chỗ. */
+/** Cuts the text into matching and non-matching pieces, to highlight the right places. */
 function segments(subject: string, matches: RegexMatch[]): { text: string; hit: boolean }[] {
   const parts: { text: string; hit: boolean }[] = [];
   let at = 0;

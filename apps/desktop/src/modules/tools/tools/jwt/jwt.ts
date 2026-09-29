@@ -3,7 +3,7 @@ import { base64ToText } from "../encode/encode";
 export interface JwtParts {
   header: unknown;
   payload: unknown;
-  /** Nguyên trạng, chưa giải mã. Nó không được kiểm chứng — xem chú thích của `decodeJwt`. */
+  /** As is, not decoded. It is not verified — see the comment on `decodeJwt`. */
   signature: string;
 }
 
@@ -15,17 +15,18 @@ export interface JwtTimes {
   exp?: number;
   iat?: number;
   nbf?: number;
-  /** `null` khi payload không có `exp` — "không biết" khác "còn hạn". */
+  /** `null` when the payload has no `exp` — "unknown" is different from "not expired". */
   expired: boolean | null;
 }
 
 /**
- * Tách một JWT ra ba phần và đọc hai phần đầu.
+ * Splits a JWT into its three parts and reads the first two.
  *
- * Trả về kết quả thay vì ném: ba lý do hỏng cần ba câu khác nhau trên màn hình, và một `catch`
- * gộp chung sẽ không phân biệt được base64 hỏng với JSON hỏng.
+ * Returns a result instead of throwing: three reasons for failure need three different sentences
+ * on screen, and one shared `catch` could not tell broken base64 from broken JSON.
  *
- * **Không kiểm chữ ký.** Cần secret, và một chữ "hợp lệ" sai thì nguy hiểm hơn im lặng.
+ * **The signature is not checked.** That needs the secret, and a wrong "valid" is more dangerous
+ * than silence.
  */
 export function decodeJwt(token: string): JwtResult {
   const parts = token.trim().split(".");
@@ -57,7 +58,7 @@ export function decodeJwt(token: string): JwtResult {
 const numberClaim = (payload: Record<string, unknown>, key: string): number | undefined =>
   typeof payload[key] === "number" ? (payload[key] as number) : undefined;
 
-/** `now` tính bằng mili; `exp`/`iat`/`nbf` của JWT tính bằng giây. */
+/** `now` is in milliseconds; a JWT's `exp`/`iat`/`nbf` are in seconds. */
 export function claimTimes(payload: unknown, now: number): JwtTimes {
   if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
     return { expired: null };

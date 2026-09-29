@@ -112,8 +112,8 @@ const vi: SharedDict = {
     logHint: "Một file trên máy ghi lại các lỗi và crash, phòng khi cần xem kỹ hơn.",
     openLogFolder: "Mở thư mục log",
   },
-  // Các tổ hợp Ctrl/Cmd ứng dụng nhận, đúng như Settings liệt kê. Phím riêng của một module được
-  // đặt tên trong từ điển của module đó.
+  // The Ctrl/Cmd combinations the application takes, just as Settings lists them. A module's own
+  // keys are named in that module's dictionary.
   shortcuts: {
     title: "Phím tắt",
     scope: {
@@ -127,8 +127,8 @@ const vi: SharedDict = {
     prevTab: "Tab liền trước",
     reload: "Tải lại pane đang xem",
   },
-  // Bản nào đang chạy, và bản mới đến từ đâu. Trình cập nhật của MixEngine mới là thứ thay cửa sổ
-  // này — T106 — nên khối này là một tấm biển chỉ đường chứ không phải một trình tải về.
+  // Which version is running, and where the new one comes from. MixEngine's updater is what
+  // replaces this window — T106 — so this block is a signpost rather than a downloader.
   // The tray (T168, T192): the frame's header, and the menu's items — sent to
   // `src-tauri/src/tray.rs` rather than kept in Rust. The slogan is a brand line and stays in
   // English in every language.
@@ -189,14 +189,15 @@ const vi: SharedDict = {
     openPage: "Mở trang tải về",
     available: "Đã có MixLab {{version}}.",
   },
-  // Thông báo khi một lệnh ở backend thất bại. Khoá ở đây chính là `code` mà `AppError` mang theo
-  // — xem src-tauri/src/error.rs. `{{message}}` là nguyên văn lời của driver, không dịch: đó là
-  // máy chủ đang nói, và cũng là phần đáng tra cứu nhất.
+  // Messages when a backend command fails. The key here is exactly the `code` `AppError` carries
+  // — see src-tauri/src/error.rs. `{{message}}` is the driver's verbatim text, not translated: it
+  // is the server speaking, and also the part most worth looking up.
   error: {
-    // MixEngine — daemon cục bộ mà app này quản lý. `message` là lời của chính daemon và không
-    // bao giờ được dịch: đó là chuỗi người ta tra cứu được.
-    // Khởi động lại cửa sổ — T106, `src-tauri/src/relaunch.rs`. Cái đầu là máy mà hệ điều hành
-    // không chịu cho biết executable của chính tiến trình này; cái sau là máy không chạy nổi nó.
+    // MixEngine — the local daemon this app manages. `message` is the daemon's own words and is
+    // never translated: it is a string people can look up.
+    // Relaunching the window — T106, `src-tauri/src/relaunch.rs`. The first is a machine whose
+    // operating system will not reveal this process's own executable; the second is a machine
+    // that cannot run it.
     relaunchNoExecutable: "MixLab không xác định được chương trình nào cần khởi động lại.",
     relaunchFailed: "MixLab không tự khởi động lại được: {{message}}",
     mixengineNoHome: "Không xác định được MixEngine để file ở đâu.",
@@ -237,7 +238,7 @@ const vi: SharedDict = {
       "Cổng cục bộ của tunnel đã ngừng nhận kết nối: {{message}}. MixLab vẫn đang thử lại. Nếu không được, đóng tab rồi kết nối lại.",
     cannotSaveKnownHost: "Không ghi nhớ được khoá của máy chủ: {{message}}",
     sshUnavailable: "Tunnel SSH đang đóng. MixLab đang thử mở lại.",
-    // Mật khẩu đã lưu
+    // Saved passwords
     credentialStoreUnreachable: "Không truy cập được kho mật khẩu của hệ điều hành: {{message}}",
     cannotSavePassword: "Không lưu được mật khẩu: {{message}}",
     cannotReadPassword: "Không đọc lại được mật khẩu đã lưu: {{message}}",
@@ -285,14 +286,15 @@ const vi: SharedDict = {
     syncNothingToMove: "Không có lần chuyển nào đang diễn ra. Bắt đầu lại từ đầu.",
     cannotRemovePassword: "Không xoá được mật khẩu đã lưu: {{message}}",
 
-    // Hai lỗi cả hai tầng cùng phát: một thư mục ứng dụng tự tạo, và một tác vụ giao cho luồng
-    // nền. Module database cũng phát chúng, và đọc từ đây.
+    // Two errors both layers emit: an application directory created by the app itself, and a task
+    // handed to a background thread. The database module emits them too, and reads them from here.
     cannotCreateDirectory: "Không tạo được {{path}}: {{message}}",
     backgroundTaskFailed: "Tác vụ không hoàn tất: {{message}}",
-    // Lỗi duy nhất ở đây do webview báo chứ không phải backend. Phải nói rõ, vì nếu im lặng thì
-    // người dùng dán ở chỗ khác và nhận đúng thứ đang có sẵn trong clipboard từ trước.
+    // The only error here reported by the webview rather than the backend. It has to be said
+    // plainly, because if it stayed silent the user would paste elsewhere and get whatever was
+    // already on the clipboard before.
     clipboard: "Chưa sao chép được. Clipboard từ chối: {{message}}",
-    /** Dạng lỗi MixLab không nhận ra — hiển thị nguyên trạng thay vì nuốt mất. */
+    /** An error shape MixLab does not recognise — shown as is rather than swallowed. */
     unknown: "{{message}}",
     crashedTab: "Tab này gặp lỗi và không thể tiếp tục. Phần còn lại của MixLab không bị ảnh hưởng.",
     crashedApp: "MixLab gặp lỗi không thể tự phục hồi.",

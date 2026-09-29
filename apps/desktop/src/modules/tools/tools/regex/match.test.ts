@@ -15,7 +15,8 @@ describe("runRegex", () => {
     expect(texts("\\d+", "", "a1b22")).toEqual(["1"]);
   });
 
-  // Mẫu khớp rỗng làm `lastIndex` đứng yên và `exec` trả về mãi mãi. Vòng lặp phải tự đẩy nó lên.
+  // An empty-matching pattern leaves `lastIndex` in place and `exec` returns forever. The loop has
+  // to push it forward itself.
   it("không treo với mẫu khớp rỗng", () => {
     expect(texts("(?=a)", "g", "aaa")).toEqual(["", "", ""]);
     expect(runRegex("a*", "g", "bb", "").ok).toBe(true);

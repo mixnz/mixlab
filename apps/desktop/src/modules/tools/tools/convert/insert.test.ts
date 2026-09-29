@@ -26,8 +26,8 @@ describe("toInsert", () => {
     expect(toInsert([{ a: "it's" }], postgres)).toContain("'it''s'");
   });
 
-  // MySQL coi `\` là ký tự escape; PostgreSQL thì không. Sai chỗ này thì câu lệnh vẫn chạy và
-  // ghi vào DB một thứ khác.
+  // MySQL treats `\` as an escape character; PostgreSQL does not. Get this wrong and the statement
+  // still runs, writing something else into the DB.
   it("chỉ nhân đôi dấu gạch chéo ngược cho MySQL", () => {
     expect(toInsert([{ p: "C:\\new" }], mysql)).toContain("'C:\\\\new'");
     expect(toInsert([{ p: "C:\\new" }], postgres)).toContain("'C:\\new'");

@@ -1,27 +1,28 @@
-/** Cái một hộp cuộn ngang nói về chính nó. Ba con số, không phải một phần tử — nên file này test
- *  được mà không cần DOM, đúng như `keyboard.ts`. */
+/** What a horizontal scroll box says about itself. Three numbers, not an element — so this file
+ *  can be tested without a DOM, just like `keyboard.ts`. */
 export interface ScrollBox {
   scrollLeft: number;
   scrollWidth: number;
   clientWidth: number;
 }
 
-/** Dải tab còn giấu gì ở hai đầu. */
+/** What the tab strip is still hiding at either end. */
 export interface StripOverflow {
-  /** Có tab nào không vừa khung không — cái quyết định hai mũi tên có mặt hay không. */
+  /** Whether any tab does not fit the frame — what decides whether the two arrows are present. */
   overflowing: boolean;
-  /** Đã ở sát đầu trái: không còn gì bị giấu bên ấy, nên mũi tên trái không bấm được. */
+  /** Already right at the left end: nothing is hidden on that side, so the left arrow cannot be
+   *  clicked. */
   atStart: boolean;
   atEnd: boolean;
 }
 
-/* `scrollWidth` và `clientWidth` là số nguyên đã làm tròn còn `scrollLeft` thì không, nên một dải
-   cuộn hết cỡ vẫn hay đứng cách mép cuối một phần pixel. Cùng lý do `core/scroll.ts` chừa đúng một
-   pixel ở `hasRoom`. */
+/* `scrollWidth` and `clientWidth` are rounded integers while `scrollLeft` is not, so a strip
+   scrolled all the way often stands a fraction of a pixel short of the end. The same reason
+   `core/scroll.ts` leaves exactly one pixel in `hasRoom`. */
 const EPSILON = 1;
 
 /**
- * Nhìn ba con số ra hai mũi tên.
+ * Turns three numbers into two arrows.
  *
  * `hasTabs` false means the box holds nothing but `trailing`. That never counts as overflowing:
  * the arrows scroll tabs, and taking `trailing` out to make room for them would empty the box, make
@@ -38,10 +39,12 @@ export function overflowState(box: ScrollBox, hasTabs: boolean): StripOverflow {
   };
 }
 
-/** Phần khung một lần bấm mũi tên đi được. Chừa lại một ít để mắt còn bắt được chỗ vừa rời đi. */
+/** The part of the frame one arrow click travels. Keeps a little back so the eye can still catch
+ *  the place just left. */
 const STEP_RATIO = 0.8;
 
-/** Một lần bấm mũi tên cuộn bao nhiêu pixel. Ít nhất một, vì cuộn không pixel nào là không cuộn. */
+/** How many pixels one arrow click scrolls. At least one, because scrolling zero pixels is not
+ *  scrolling. */
 export function scrollStep(clientWidth: number): number {
   return Math.max(1, Math.round(clientWidth * STEP_RATIO));
 }

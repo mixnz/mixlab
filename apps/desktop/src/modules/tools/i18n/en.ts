@@ -1,8 +1,8 @@
 /**
- * Module Tools gọi mọi thứ là gì.
+ * What the Tools module calls everything.
  *
- * Dữ liệu thuần, không import gì từ `src/i18n/`: `dicts.ts` import file này, nên bất cứ thứ gì
- * import ngược ra từ đó sẽ khép vòng.
+ * Pure data, importing nothing from `src/i18n/`: `dicts.ts` imports this file, so anything
+ * importing back out of there would close a cycle.
  */
 const toolsEn = {
   toolbox: {
@@ -360,8 +360,8 @@ const toolsEn = {
     },
   },
 
-  /* Phần nhóm `error` mà module này phát ra. `dicts.ts` gộp nhóm này bằng tay — nó là nhóm duy
-     nhất được phép trùng tên giữa các từ điển. */
+  /* The part of the `error` group this module emits. `dicts.ts` merges this group by hand — it is
+     the only group allowed to share names across dictionaries. */
   error: {
     portScanFailed: "Could not read the list of open ports: {{tool}} did not run.",
   },

@@ -9,12 +9,13 @@ import { detectUnit, toInstant, toOutputs } from "./time";
 import { allZones, canonicalZone, preferredZone, zoneOffset } from "./zones";
 import styles from "./Panel.module.css";
 
-/* Vùng của máy, đã chỉnh lại theo nước của người dùng — xem `preferredZone`. Windows báo về
-   `Asia/Bangkok` cho một máy đặt tiếng Việt, và +07:00 thì giống hệt nên không ai nhìn ra.
+/* The machine's zone, corrected according to the user's country — see `preferredZone`. Windows
+   reports `Asia/Bangkok` for a machine set to Vietnamese, and +07:00 is identical so nobody
+   notices.
 
-   Ba nguồn chứ không một: `resolvedOptions().locale` trong webview đi theo **ngôn ngữ hiển thị**
-   của webview — thường là `en-US` — chứ không theo vùng của Windows như Node. `navigator.languages`
-   mới là chỗ ngôn ngữ thật của người dùng lộ ra. */
+   Three sources rather than one: `resolvedOptions().locale` in the webview follows the webview's
+   **display language** — usually `en-US` — rather than the Windows region as in Node.
+   `navigator.languages` is where the user's real language shows. */
 const resolved = Intl.DateTimeFormat().resolvedOptions();
 const LOCALE_SOURCES = [
   resolved.locale,
@@ -23,31 +24,32 @@ const LOCALE_SOURCES = [
 ];
 const LOCAL_ZONE = preferredZone(resolved.timeZone, LOCALE_SOURCES, Date.now());
 
-/* Tính một lần ở tầng module: hơn bốn trăm mục, và danh sách không đổi trong suốt một phiên chạy. */
+/* Computed once at module level: more than four hundred entries, and the list does not change
+   during a run. */
 const ZONE_NAMES = allZones();
 
 function TimestampPanel() {
   const { t } = useTranslation();
   const workspace = useToolsWorkspace();
   const [input, setInput] = useState(() => String(Date.now()));
-  // Đóng băng "bây giờ" thay vì để nó nhảy mỗi giây: dòng "3 ngày trước" mà tự đổi trong lúc
-  // người ta đang đọc thì khó chịu hơn là hữu ích. Nút "Bây giờ" làm mới cả hai.
+  // Freeze "now" instead of letting it tick every second: a "3 days ago" line changing by itself
+  // while people are reading it is more annoying than useful. The "Now" button refreshes both.
   const [now, setNow] = useState(() => Date.now());
 
-  /* Tên đã lưu được chuẩn hoá lại trên đường ra: một file do bản trước ghi có thể còn giữ
-     `Asia/Saigon`. Vùng nào runtime không còn biết thì lui về múi của máy, chứ không để ô chọn
-     trống trơn. */
+  /* The saved name is normalised again on the way out: a file written by the previous version may
+     still hold `Asia/Saigon`. A zone the runtime no longer knows falls back to the machine's zone,
+     rather than leaving the picker blank. */
   const stored = workspace.timeZone === null ? null : canonicalZone(workspace.timeZone);
   const zone = stored !== null && ZONE_NAMES.includes(stored) ? stored : LOCAL_ZONE;
 
-  /* Chênh lệch của mỗi vùng phụ thuộc thời điểm — một nửa thế giới đổi giờ theo mùa — nên danh
-     sách được dựng lại khi `now` đổi, chứ không phải một lần ở tầng module như tên các vùng. */
+  /* Each zone's offset depends on the moment — half the world changes its clocks by season — so the
+     list is rebuilt when `now` changes, rather than once at module level like the zone names. */
   const zoneOptions: SelectOption<string>[] = useMemo(
     () =>
       ZONE_NAMES.map((name) => {
         const offset = zoneOffset(name, now);
         const label = offset ? `${name} (UTC${offset})` : name;
-        // Gõ "saigon" hay "+07" hay "ho chi minh" đều phải tìm ra được cùng một vùng.
+        // Typing "saigon", "+07" or "ho chi minh" must all find the same zone.
         return { value: name, label, searchText: `${label} ${name.replace(/[_/]/g, " ")}` };
       }),
     [now],

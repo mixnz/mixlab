@@ -15,7 +15,7 @@ import {
 } from "./connection";
 import styles from "./Panel.module.css";
 
-/** Nhãn là tên sản phẩm, nên không dịch. */
+/** The labels are product names, so they are not translated. */
 const KINDS: SelectOption<DbKind>[] = [
   { value: "mysql", label: "MySQL" },
   { value: "postgres", label: "PostgreSQL" },
@@ -36,8 +36,9 @@ const BLANK: ConnectionFields = {
 
 function ConnectionPanel() {
   const { t } = useTranslation();
-  /* `fields` là nguồn sự thật duy nhất, và ô dán giữ state riêng của nó. Nếu ô dán cũng đọc ngược
-     từ `fields` thì sửa một trường sẽ viết lại ô dán, và con trỏ của người đang gõ nhảy về đầu. */
+  /* `fields` is the single source of truth, and the paste box keeps its own state. If the paste box
+     also read back from `fields`, editing one field would rewrite the paste box, and the cursor of
+     the person typing would jump to the start. */
   const [text, setText] = useState("");
   const [unreadable, setUnreadable] = useState(false);
   const [fields, setFields] = useState<ConnectionFields>(BLANK);

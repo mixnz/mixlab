@@ -29,8 +29,8 @@ function ToolsTab({ onTitleChange, onStateChange, restored }: ModuleTabProps) {
     };
   }, []);
 
-  // Đọc `restored` đúng một lần, ở đây. Đọc nó reactively thì module ghi đè chính mình ngay lần
-  // ghi đầu tiên — luật nằm trong `shell/module.ts`.
+  // Read `restored` exactly once, here. Reading it reactively would make the module overwrite
+  // itself on its very first write — the rule lives in `shell/module.ts`.
   // No tool by default — only a saved pick from a previous run reopens one. A fresh tab lands on
   // the empty prompt instead of steering everyone toward whichever tool sits first in the registry.
   const [selectedId, setSelectedId] = useState<string | null>(() => {
@@ -41,11 +41,11 @@ function ToolsTab({ onTitleChange, onStateChange, restored }: ModuleTabProps) {
 
   const selected = TOOLS.find((tool) => tool.id === selectedId) ?? null;
 
-  // Tiêu đề tab là tên tool, không phải "Tools": ba tab Tools mở cùng lúc thì phân biệt được.
-  // `onTitleChange` không nằm trong deps — shell trả về một closure mới mỗi lần render, và
-  // `shell/tabs.ts` gọi tên vòng lặp mà việc liệt kê nó tạo ra.
-  // `lang` bên cạnh `t`: `t` là một hàm duy nhất suốt vòng đời app, nên `lang` mới là thứ báo
-  // hiệu chữ đã đổi và title cần dựng lại. Xem `i18n/index.tsx`.
+  // The tab title is the tool's name, not "Tools": three Tools tabs open at once can be told apart.
+  // `onTitleChange` is not in the deps — the shell returns a new closure on every render, and
+  // `shell/tabs.ts` names the loop that listing it would create.
+  // `lang` next to `t`: `t` is a single function for the app's whole lifetime, so `lang` is what
+  // signals that the text has changed and the title needs rebuilding. See `i18n/index.tsx`.
   useEffect(() => {
     onTitleChange(selected ? t(selected.labelKey) : t("toolbox.newTabTitle"));
     // eslint-disable-next-line react-hooks/exhaustive-deps

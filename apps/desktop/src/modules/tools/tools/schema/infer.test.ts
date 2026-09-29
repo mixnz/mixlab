@@ -21,7 +21,7 @@ describe("inferSchema", () => {
     expect(fields?.[0]?.optional).toBe(false);
   });
 
-  // `integer` gặp `number` thì nới thành `number`, không giữ cả hai.
+  // `integer` meeting `number` widens to `number`; both are not kept.
   it("nới integer thành number khi thấy cả hai", () => {
     expect(inferSchema([{ a: 1 }, { a: 1.5 }])?.[0]?.types).toEqual(["number"]);
   });

@@ -34,9 +34,9 @@ describe("overflowState", () => {
     });
   });
 
-  /* `scrollWidth` và `clientWidth` là số nguyên đã làm tròn còn `scrollLeft` thì không, nên một
-     dải tab cuộn hết cỡ vẫn hay đứng cách mép cuối một phần pixel. Gọi phần ấy là "còn tab bị ẩn"
-     là để một mũi tên sáng lên mà bấm vào không đi đâu cả. */
+  /* `scrollWidth` and `clientWidth` are rounded integers while `scrollLeft` is not, so a tab strip
+     scrolled all the way often stands a fraction of a pixel short of the end. Calling that fraction
+     "tabs still hidden" would light up an arrow that goes nowhere when clicked. */
   it("does not call a fraction of a pixel a hidden tab", () => {
     expect(overflowState({ scrollLeft: 499.6, scrollWidth: 900, clientWidth: 400 }, true).atEnd).toBe(true);
     expect(overflowState({ scrollLeft: 0.4, scrollWidth: 900, clientWidth: 400 }, true).atStart).toBe(true);
@@ -57,8 +57,8 @@ describe("overflowState", () => {
 });
 
 describe("scrollStep", () => {
-  /* Gần một khung, chừa lại một phần để mắt còn bắt được chỗ vừa rời đi — bấm một cái nhảy trọn
-     một khung thì không biết mình đang ở đâu nữa. */
+  /* Nearly one frame, keeping a little back so the eye can still catch the place just left —
+     jumping a whole frame per click leaves you not knowing where you are. */
   it("moves most of a screenful", () => {
     expect(scrollStep(400)).toBe(320);
   });

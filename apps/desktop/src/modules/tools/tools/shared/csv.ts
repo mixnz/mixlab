@@ -1,14 +1,14 @@
 /**
- * CSV theo RFC 4180, cả hai chiều, tự viết.
+ * CSV per RFC 4180, both directions, hand-written.
  *
- * Phần khó nằm đúng ở dấu ngoặc kép: một trường có ngoặc thì dấu phân cách, xuống dòng và cả ngoặc
- * kép đôi `""` đều nằm được bên trong nó. Đó là lý do không có `split(",")` ở đây.
+ * The hard part is exactly the double quotes: inside a quoted field, separators, newlines and even
+ * doubled quotes `""` can all sit. That is why there is no `split(",")` here.
  *
- * Dùng chung giữa `convert` và `mask` — cả hai đều cần đọc/ghi CSV, và RFC 4180 đủ rắc rối để không
- * đáng chép lại lần thứ hai.
+ * Shared by `convert` and `mask` — both need to read/write CSV, and RFC 4180 is tricky enough not
+ * to be worth copying a second time.
  */
 
-/** Đọc CSV ra lưới chuỗi. **Không đoán kiểu** — `007` là `"007"`, không phải `7`. */
+/** Reads CSV into a grid of strings. **No type guessing** — `007` is `"007"`, not `7`. */
 export function parseCsvRows(text: string, delimiter: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -66,12 +66,13 @@ export function parseCsvRows(text: string, delimiter: string): string[][] {
     }
   }
 
-  // Không có dòng thừa khi file kết thúc bằng một lần xuống dòng.
+  // No extra row when the file ends with a newline.
   if (started || field !== "" || row.length > 0) endRow();
   return rows;
 }
 
-/** Dòng đầu là tên cột. Dòng trống hoàn toàn bị bỏ — nó là dòng trắng, không phải bản ghi rỗng. */
+/** The first row is the column names. Entirely empty rows are dropped — they are blank lines, not
+ *  empty records. */
 export function rowsToObjects(rows: string[][]): Record<string, string>[] {
   const header = rows[0];
   if (!header) return [];

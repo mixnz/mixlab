@@ -10,7 +10,7 @@ import { matchesFilter } from "./filter";
 import { hostOs, killByPid, killByPort, type KillOs } from "./kill";
 import styles from "./Panel.module.css";
 
-/** Nhãn là tên hệ điều hành, nên không dịch. */
+/** The labels are operating system names, so they are not translated. */
 const OSES: SelectOption<KillOs>[] = [
   { value: "macos", label: "macOS" },
   { value: "linux", label: "Linux" },
@@ -23,10 +23,12 @@ function PortsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<ListeningPort | null>(null);
-  /* Số cổng của khối lệnh kill, tách khỏi bảng. Bấm một hàng thì điền vào đây, nhưng gõ tay cũng
-     được — nhu cầu thật là giết một cổng trên **máy khác**, máy mà bảng này không thấy. */
+  /* The port number for the kill command block, separate from the table. Clicking a row fills it
+     in, but it can also be typed by hand — the real need is killing a port on **another machine**,
+     one this table cannot see. */
   const [killPort, setKillPort] = useState("");
-  // Mặc định theo máy đang chạy, nhưng đổi tay được: người ngồi Windows vẫn hay cần lệnh Linux.
+  // Defaults to the machine it is running on, but can be changed by hand: people on Windows often
+  // need a Linux command.
   const [os, setOs] = useState<KillOs>(hostOs);
   const [busy, setBusy] = useState(false);
 
@@ -36,7 +38,7 @@ function PortsPanel() {
     void listeningPorts()
       .then((rows) => {
         setPorts(rows);
-        // Cổng đang chọn có thể đã đóng giữa hai lần tải.
+        // The selected port may have closed between two loads.
         setSelected((current) =>
           current && rows.some((row) => row.pid === current.pid && row.port === current.port)
             ? current
@@ -48,8 +50,8 @@ function PortsPanel() {
         setPorts([]);
       })
       .finally(() => setBusy(false));
-    // `t` không nằm trong deps: nó đổi khi người dùng đổi ngôn ngữ, và một lần quét lại vì
-    // chuyện đó là quét thừa.
+    // `t` is not in the deps: it changes when the user switches language, and a rescan for that
+    // reason is a wasted scan.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -121,9 +123,9 @@ function PortsPanel() {
         </div>
       ) : null}
 
-      {/* Khối này **không phụ thuộc vào bảng ở trên**: nhu cầu thật hay gặp là giết một cổng trên
-          một máy khác, có thể khác hệ điều hành, mà bảng của máy này không thấy. Chọn OS, gõ số
-          cổng, chép lệnh. */}
+      {/* This block **does not depend on the table above**: the real, common need is killing a
+          port on another machine, possibly on another operating system, which this machine's table
+          cannot see. Pick the OS, type the port number, copy the command. */}
       <section className={styles.kill}>
         <h3 className={styles.killTitle}>{t("toolbox.ports.killTitle")}</h3>
         <div className={styles.controls}>
@@ -151,8 +153,8 @@ function PortsPanel() {
           />
         ) : null}
 
-        {/* Lệnh theo PID chỉ có nghĩa với một hàng của **máy này**: PID của máy khác thì bảng
-            không biết. */}
+        {/* The PID-based command only means something for a row of **this machine**: the table
+            does not know another machine's PIDs. */}
         {selected ? (
           <CopyField
             label={`${t("toolbox.ports.byPid")} · ${selected.pid}`}

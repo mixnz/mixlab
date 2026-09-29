@@ -8,11 +8,11 @@ export interface RegexRequest {
 }
 
 /**
- * Đúng hai thứ file này cần từ scope của worker.
+ * Exactly the two things this file needs from the worker's scope.
  *
- * `self` được lib `dom` khai là `Window`, còn `DedicatedWorkerGlobalScope` thì thuộc lib
- * `webworker` — và bật lib đó lên là đụng độ khai báo với `dom` trên toàn project. Khai đúng phần
- * dùng tới rẻ hơn nhiều so với việc đó.
+ * `self` is declared as `Window` by the `dom` lib, while `DedicatedWorkerGlobalScope` belongs to
+ * the `webworker` lib — and turning that lib on clashes with `dom`'s declarations across the whole
+ * project. Declaring just the part used is far cheaper than that.
  */
 interface WorkerScope {
   onmessage: ((event: MessageEvent<RegexRequest>) => void) | null;

@@ -50,14 +50,16 @@ describe("parseValue", () => {
     expect(parseValue("-42", "dec")).toBe(-42n);
   });
 
-  // Số âm chỉ có quy ước ở thập phân — hex/oct/bin không làm two's complement ở đây.
+  // Negative numbers only have a convention in decimal — hex/oct/bin do not do two's complement
+  // here.
   it("không đọc số âm ở hex/oct/bin", () => {
     expect(parseValue("-0xFF", "hex")).toBeNull();
     expect(parseValue("-11", "bin")).toBeNull();
     expect(parseValue("-17", "oct")).toBeNull();
   });
 
-  // ID kiểu bigint/snowflake vượt Number.MAX_SAFE_INTEGER — đây là lý do dùng BigInt xuyên suốt.
+  // bigint/snowflake-style IDs exceed Number.MAX_SAFE_INTEGER — this is why BigInt is used
+  // throughout.
   it("đọc được số lớn hơn Number.MAX_SAFE_INTEGER", () => {
     expect(parseValue("9223372036854775807", "dec")).toBe(9223372036854775807n);
   });

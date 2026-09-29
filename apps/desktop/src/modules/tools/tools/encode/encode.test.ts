@@ -10,7 +10,7 @@ describe("base64", () => {
   it("đi qua UTF-8, không qua `btoa` trần — dán tiếng Việt vào là thấy ngay", () => {
     const encoded = textToBase64("Xin chào", false);
     expect(base64ToText(encoded)).toBe("Xin chào");
-    // 9 byte UTF-8 thành 12 ký tự base64, không phải 8 ký tự thành 12.
+    // 9 UTF-8 bytes become 12 base64 characters, not 8 characters becoming 12.
     expect(encoded).toHaveLength(12);
   });
 

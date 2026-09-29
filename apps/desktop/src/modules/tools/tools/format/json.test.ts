@@ -4,8 +4,8 @@ import { formatJson, minifyJson } from "./json";
 const out = (result: ReturnType<typeof formatJson>): string => (result.ok ? result.output : "");
 
 describe("formatJson", () => {
-  // Đây là lý do cả file này tồn tại: bốn giá trị dưới đây đi qua `JSON.parse` + `stringify`
-  // là hỏng, im lặng, và người dùng chép đi một id sai.
+  // This is why this whole file exists: the four values below break when passed through
+  // `JSON.parse` + `stringify`, silently, and the user copies away a wrong id.
   it("giữ nguyên số lớn, thứ tự khoá, số 0 thừa và escape", () => {
     const source = '{"2":"a","1":"b","id":1787875200123456789,"price":1.50,"c":"\\u0041"}';
     const text = out(formatJson(source, "  "));

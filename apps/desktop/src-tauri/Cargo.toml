@@ -109,15 +109,17 @@ zeroize = { version = "1.8", features = ["zeroize_derive"] }
 chrono = "0.4.45"
 tauri-plugin-dialog = "2.7.2"
 tauri-plugin-log = "2"
-# Đọc clipboard ở phía Rust. `navigator.clipboard.readText()` làm WebView2 bật hộp xin quyền
-# `clipboard-read` của Chromium — một dải hệ thống app không tô vẽ được, hiện đúng một lần rồi nhớ
-# lựa chọn theo origin. Ở đây thì không có webview nào phải xin ai cả.
+# Reads the clipboard on the Rust side. `navigator.clipboard.readText()` makes WebView2 raise
+# Chromium's `clipboard-read` permission box — a system strip the app cannot style, shown exactly
+# once and then remembering the choice per origin. Here there is no webview that has to ask anyone.
 #
-# **Thẳng arboard chứ không qua `tauri-plugin-clipboard-manager` (T175a).** Plugin đó là một lớp
-# mỏng bọc chính crate này, và nó xin arboard feature mặc định `image-data` — tức đọc *ảnh* trong
-# clipboard, thứ không chỗ nào ở đây đọc — kéo theo `image` và `moxcms`, 99 giây biên dịch mỗi lần
-# build. Feature của cargo chỉ cộng chứ không trừ, nên cách duy nhất nói không là tự khai báo.
-# `wayland-data-control` là thứ plugin xin thêm ngoài mặc định: clipboard Linux trên Wayland.
+# **arboard directly rather than through `tauri-plugin-clipboard-manager` (T175a).** That plugin is
+# a thin layer over this very crate, and it asks for arboard's default `image-data` feature — i.e.
+# reading *images* from the clipboard, which nothing here does — pulling in `image` and `moxcms`,
+# 99 seconds of compilation on every build. Cargo features only add, never subtract, so the only
+# way to say no is to declare it ourselves.
+# `wayland-data-control` is what the plugin asks for beyond the defaults: the Linux clipboard on
+# Wayland.
 arboard = { version = "3", default-features = false, features = ["wayland-data-control"] }
 keyring = { version = "3.6", features = ["windows-native", "apple-native", "sync-secret-service"] }
 
@@ -136,8 +138,8 @@ reqwest = { version = "0.13", default-features = false, features = ["native-tls"
 # all of it into memory first.
 tokio-util = { version = "0.7", features = ["io", "compat"] }
 
-# Pty cho phiên terminal cục bộ. Dùng ConPTY trên Windows và forkpty ở nơi khác, nên không
-# phải viết một nhánh cho mỗi hệ điều hành. Đây là thư viện WezTerm chạy thật.
+# The pty for local terminal sessions. Uses ConPTY on Windows and forkpty elsewhere, so there is no
+# branch to write per operating system. This is the library WezTerm really runs on.
 portable-pty = "0.9"
 
 # `getuid`, for the one check the single-instance socket makes before it connects: that the file
@@ -182,8 +184,8 @@ objc2-foundation = { version = "0.3", default-features = false, features = ["std
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = "5"
 
-# `test-util` không nằm trong feature `full`, mà bộ gom lô chỉ test được khi tua nhanh được
-# đồng hồ — 5ms thật thì test nào cũng thành test đo thời gian.
+# `test-util` is not in the `full` feature, and the batcher can only be tested when the clock can
+# be fast-forwarded — with a real 5ms every test would become a timing test.
 [dev-dependencies]
 tokio = { version = "1.53.1", features = ["full", "test-util"] }
 # A temporary home for the transport test to bind a real endpoint under.

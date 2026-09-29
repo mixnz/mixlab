@@ -20,7 +20,7 @@ describe("matchesFilter", () => {
     expect(matchesFilter(row({ port: 8080 }), "8080")).toBe(true);
   });
 
-  // Gõ `80` ra cả 80, 8080 và 3080 — có ích khi chưa nhớ chính xác cổng.
+  // Typing `80` finds 80, 8080 and 3080 — handy when you do not remember the exact port.
   it("khớp cổng theo chuỗi con", () => {
     expect(matchesFilter(row({ port: 8080 }), "80")).toBe(true);
     expect(matchesFilter(row({ port: 3080 }), "80")).toBe(true);
@@ -30,7 +30,7 @@ describe("matchesFilter", () => {
     expect(matchesFilter(row({ process: "postgres" }), "postgres")).toBe(true);
   });
 
-  // Người ta gõ `node`, không gõ `Node.exe`.
+  // People type `node`, not `Node.exe`.
   it("không phân biệt hoa thường ở tên tiến trình", () => {
     expect(matchesFilter(row({ process: "Node.exe" }), "node")).toBe(true);
     expect(matchesFilter(row({ process: "node.exe" }), "NODE")).toBe(true);

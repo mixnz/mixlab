@@ -26,7 +26,8 @@ const VIEW_MODE_LABEL: Record<ViewMode, TranslationKey> = {
   split: "toolbox.diff.viewSplit",
 };
 
-/** Render text nguyên dòng, hoặc — khi có segment — với đúng đoạn `changed` tô đậm hơn. */
+/** Renders the whole line's text, or — when there are segments — with exactly the `changed` part
+ *  highlighted more strongly. */
 function LineText({ text, segments }: { text: string; segments: DiffSegment[] | null }) {
   if (segments === null) return <>{text}</>;
   return (
@@ -56,8 +57,8 @@ function DiffPanel() {
     let a = left;
     let b = right;
     if (asJson) {
-      // Chuẩn hoá thụt lề cả hai bên trước, nên JSON viết một dòng và viết thụt lề không còn khác
-      // nhau. **Không sắp xếp khoá**: đổi thứ tự khoá là một khác biệt thật.
+      // Normalise indentation on both sides first, so JSON written on one line and indented JSON no
+      // longer differ. **Keys are not sorted**: changing key order is a real difference.
       const fa = formatJson(left, "  ");
       const fb = formatJson(right, "  ");
       if (!fa.ok || !fb.ok) return "notJson";
@@ -174,9 +175,10 @@ function DiffPanel() {
 }
 
 /**
- * Hai `<span>` — số dòng và nội dung — chứ không phải một `<div>` bọc ngoài: `.splitGrid` xếp bốn
- * cột (số/nội dung x trái/phải) bằng CSS Grid trên chính các span này, để một hàng dài phải xuống
- * dòng thì Grid tự canh chiều cao hai bên bằng nhau, không cần đo bằng JS.
+ * Two `<span>`s — the line number and the content — rather than one wrapping `<div>`: `.splitGrid`
+ * lays out four columns (number/content × left/right) with CSS Grid on these very spans, so that
+ * when a long row has to wrap, the Grid evens out the heights of both sides by itself, with no JS
+ * measuring.
  */
 function SplitHalf({ cell, side }: { cell: SplitCell; side: "left" | "right" }) {
   const divider = side === "right" ? styles.splitRight : "";

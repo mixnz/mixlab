@@ -40,7 +40,8 @@ function ConvertPanel() {
   const [dialect, setDialect] = useState<SqlDialect>("mysql");
   const [multiRow, setMultiRow] = useState(false);
   const [result, setResult] = useState<ConvertResult | null>(null);
-  // Lần bấm đầu tiên còn phải tải chunk js-yaml về, nên nút phải nói là nó đang làm gì.
+  // The first click still has to download the js-yaml chunk, so the button has to say what it is
+  // doing.
   const [busy, setBusy] = useState(false);
 
   const usesCsv = from === "csv" || to === "csv";

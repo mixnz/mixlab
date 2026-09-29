@@ -52,8 +52,8 @@
   margin: 0;
 }
 
-/* Cùng hình dạng segmented control với `.tabs` trong tool encode: đây là một lựa chọn (Gộp hay
-   Song song), không phải điều hướng, nên không dùng TabStrip dùng cho các tab tài liệu. */
+/* The same segmented control shape as `.tabs` in the encode tool: this is a choice (Unified or
+   Split), not navigation, so it does not use the TabStrip meant for document tabs. */
 .tabs {
   display: inline-flex;
   gap: 0.15rem;
@@ -130,8 +130,9 @@
   background: rgb(var(--danger-rgb) / 0.14);
 }
 
-/* Đoạn khác nhau bên trong một dòng đã đổi (từ `diffSegments`/`computeLineSegments`) — đậm hơn hẳn
-   nền `.add`/`.remove` của cả dòng, cộng thêm in đậm để không chỉ dựa vào màu sắc. */
+/* The differing part inside a changed line (from `diffSegments`/`computeLineSegments`) — much
+   stronger than the whole line's `.add`/`.remove` background, plus bold so it does not rely on
+   colour alone. */
 .seg {
   font-weight: 600;
 }
@@ -144,10 +145,10 @@
   background: rgb(var(--danger-rgb) / 0.38);
 }
 
-/* Kiểu Split của GitHub: một CSS Grid 4 cột (số/nội dung x trái/phải). `.splitRow` và các span do
-   `SplitHalf` trả về không tạo box riêng (`display: contents`), nên chính các span đó mới là ô của
-   Grid — nhờ vậy một hàng dài phải xuống dòng thì Grid tự canh chiều cao hai bên bằng nhau, không
-   cần đo bằng JS như khi dùng hai khối `.result` tách rời. */
+/* GitHub-style Split: a 4-column CSS Grid (number/content × left/right). `.splitRow` and the spans
+   `SplitHalf` returns create no box of their own (`display: contents`), so those spans themselves
+   are the Grid's cells — that way when a long row has to wrap, the Grid evens out the heights of
+   both sides by itself, with no JS measuring as with two separate `.result` blocks. */
 .splitGrid {
   display: grid;
   grid-template-columns: 3rem 1fr 3rem 1fr;
@@ -168,7 +169,8 @@
   white-space: pre-wrap;
 }
 
-/* Vạch ngăn cách nửa trái/phải, đặt trên cột số dòng bên phải (cột thứ 3 trong 4 cột của Grid). */
+/* The divider between the left and right halves, placed on the right-hand line-number column (the
+   3rd of the Grid's 4 columns). */
 .splitRight {
   border-left: 1px solid var(--border-soft);
 }

@@ -19,8 +19,8 @@ import SchemaPanel from "./tools/schema/Panel";
 import SqlToMongoPanel from "./tools/sql-to-mongo/Panel";
 import TimestampPanel from "./tools/timestamp/Panel";
 
-/** Mọi tool module này có. Thêm một tool là một dòng ở đây — và file này là chỗ duy nhất
- *  `ToolsTab` học được tool nào tồn tại. */
+/** Every tool this module has. Adding a tool is one line here — and this file is the only place
+ *  `ToolsTab` learns which tools exist. */
 export const TOOLS: ToolDefinition[] = [
   {
     id: "sql-to-mongo",

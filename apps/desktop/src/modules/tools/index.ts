@@ -4,9 +4,10 @@ import type { ModuleDefinition } from "../../shell/module";
 import { ToolsIcon } from "../../icons";
 import { snippetsSyncable } from "./tools/cheatsheet/snippetsStore";
 
-/* Nạp khi một tab của module này được mở lần đầu, không phải lúc khởi động — cùng lý do với ba
-   module kia. Icon và nhãn thì eager: chúng có mặt trên tab strip trước khi có tab nào loại này. */
-/** Tools: những tiện ích nhỏ một dev chạm tới trong lúc đang làm việc với DB, API hoặc máy chủ. */
+/* Loaded when a tab of this module is first opened, not at start-up — for the same reason as the
+   other three modules. The icon and label are eager: they are on the tab strip before any tab of
+   this kind exists. */
+/** Tools: the small utilities a dev reaches for while working with a DB, an API or a server. */
 export const toolsModule: ModuleDefinition = {
   id: "tools",
   labelKey: "app.moduleTools",

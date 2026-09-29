@@ -1,8 +1,9 @@
-/* Bố cục của một tab Tools. Quy tắc phạm vi component sống trong CSS Module của component đó;
-   ở đây chỉ có ba khối chia đôi màn hình. */
+/* The layout of a Tools tab. Component-scoped rules live in that component's CSS Module; here there
+   are only the three blocks splitting the screen in two. */
 
-/* `width: 100%` chứ không chỉ `height`: khung chứa tab là flex, nên không có nó thì tab co lại
-   vừa đúng nội dung thay vì trải hết bề ngang — `.terminal-tab` cũng phải khai đúng hai dòng này. */
+/* `width: 100%` rather than only `height`: the tab container is flex, so without it the tab shrinks
+   to fit its content instead of spanning the full width — `.terminal-tab` has to declare exactly
+   these two lines too. */
 .tools-tab {
   display: flex;
   width: 100%;
@@ -11,10 +12,11 @@
   min-height: 0;
 }
 
-/* 260px chứ không phải 220px: font của app khi đo là Fira Code, và ở 16px thì nhãn dài nhất
-   ("Environment variables") rộng 202px, tiêu đề nhóm dài nhất ("Connection & infrastructure")
-   rộng 194px. Trừ hai lớp padding 0.5rem của `.list` và `.item` là 32px, cộng chỗ cho thanh cuộn
-   ~15px, thì 250px mới vừa đủ một hàng — 260px để nhãn dài thêm chút nữa vẫn không xuống dòng. */
+/* 260px rather than 220px: the app's font when measured is Fira Code, and at 16px the longest label
+   ("Environment variables") is 202px wide and the longest group heading ("Connection &
+   infrastructure") 194px. Adding the two 0.5rem paddings of `.list` and `.item`, 32px, plus room
+   for the scrollbar, ~15px, 250px just fits one row — 260px so a slightly longer label still does
+   not wrap. */
 .tools-sidebar {
   display: flex;
   flex-direction: column;

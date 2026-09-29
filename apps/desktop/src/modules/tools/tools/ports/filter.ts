@@ -1,14 +1,15 @@
 import type { ListeningPort } from "./api";
 
 /**
- * Một hàng có khớp ô lọc không.
+ * Whether a row matches the filter box.
  *
- * Khớp theo **số cổng hoặc tên tiến trình**: nửa thời gian câu hỏi là "cái gì đang giữ 3000", nửa
- * còn lại là "mấy con node đang chạy ở đâu", và một ô lọc trả lời được cả hai thì không phải chọn.
+ * Matches on **the port number or the process name**: half the time the question is "what is
+ * holding 3000", the other half is "where are those node processes running", and a filter box that
+ * answers both saves having to choose.
  *
- * Tên tiến trình so không phân biệt hoa thường — người ta gõ `node`, không gõ `Node.exe`. Số cổng
- * thì so theo chuỗi con, nên gõ `80` ra cả `80`, `8080` và `3080`; đó là thứ có ích khi chưa nhớ
- * chính xác cổng.
+ * Process names compare case-insensitively — people type `node`, not `Node.exe`. Port numbers
+ * compare as substrings, so typing `80` finds `80`, `8080` and `3080`; that is handy when you do
+ * not remember the exact port.
  */
 export function matchesFilter(row: ListeningPort, needle: string): boolean {
   const text = needle.trim().toLowerCase();
