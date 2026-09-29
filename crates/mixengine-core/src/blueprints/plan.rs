@@ -662,7 +662,7 @@ async fn ensure(
                     action,
                     format!(
                         "{id} is already running {installed}, and this build cannot move an \
-                         existing instance to another version — answer `use_installed` to reuse \
+                         existing instance to another version; answer `use_installed` to reuse \
                          it, or give the blueprint `instance = \"per-project\"` for one of its own"
                     ),
                 ),
@@ -904,7 +904,7 @@ fn occupied(root: &Path) -> Option<String> {
     };
 
     Some(format!(
-        "{} already holds {listed} — this blueprint's command needs a directory with nothing in \
+        "{} already holds {listed}; this blueprint's command needs a directory with nothing in \
          it at all, hidden files included. Point the apply at another directory, or clear this \
          one; an earlier apply that stopped partway leaves files here too.",
         root.display()
@@ -954,7 +954,7 @@ pub fn not_an_npm_name(root: &Path) -> Option<String> {
 
     // The answer rather than the rule: `slug` always produces a name the branches above accept.
     let suggestion = match crate::domains::slug(&name) {
-        Some(slug) => format!(" — rename the folder to `{slug}` and apply again"),
+        Some(slug) => format!("; rename the folder to `{slug}` and apply again"),
         None => String::new(),
     };
 

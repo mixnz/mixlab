@@ -1033,7 +1033,7 @@ async fn detach(args: &Args, paths: &Paths, endpoint: &ipc::Endpoint) -> anyhow:
             && !status.is_success()
         {
             anyhow::bail!(
-                "the daemon stopped without listening on {endpoint} ({status}) — {} says why",
+                "the daemon stopped without listening on {endpoint} ({status}); {} says why",
                 paths.daemon_log_file().display()
             );
         }
@@ -1044,7 +1044,7 @@ async fn detach(args: &Args, paths: &Paths, endpoint: &ipc::Endpoint) -> anyhow:
                 // to go and look at, which is not a process this command started.
                 Some(status) => anyhow::anyhow!(
                     "another daemon holds {} and did not start listening on {endpoint} within \
-                     {DETACH_TIMEOUT:?} — the one started here stood aside for it ({status}), and \
+                     {DETACH_TIMEOUT:?}; the one started here stood aside for it ({status}), and \
                      {} says what it is doing",
                     paths.lock_file().display(),
                     paths.daemon_log_file().display()
@@ -1052,7 +1052,7 @@ async fn detach(args: &Args, paths: &Paths, endpoint: &ipc::Endpoint) -> anyhow:
 
                 None => anyhow::anyhow!(
                     "the daemon (pid {}) did not start listening on {endpoint} within \
-                     {DETACH_TIMEOUT:?} — it is still running, and {} says what it is doing",
+                     {DETACH_TIMEOUT:?}; it is still running, and {} says what it is doing",
                     daemon.pid(),
                     paths.daemon_log_file().display()
                 ),
@@ -1229,7 +1229,7 @@ async fn serve(
         }
         Err(error) => tracing::warn!(
             %error,
-            "could not fill bin/ — the commands in it may be missing or out of date"
+            "could not fill bin/; the commands in it may be missing or out of date"
         ),
     }
 
@@ -1256,7 +1256,7 @@ async fn serve(
         ),
         Err(error) => tracing::warn!(
             %error,
-            "could not seed the blueprint gallery — some built-in blueprints may be missing"
+            "could not seed the blueprint gallery; some built-in blueprints may be missing"
         ),
     }
 
@@ -1364,7 +1364,7 @@ async fn serve(
 
     if mixengine_platform::elevated::is_elevated() {
         tracing::warn!(
-            "this daemon holds an administrative token — every service it supervises inherits it, \
+            "this daemon holds an administrative token; every service it supervises inherits it, \
              and writes files into this home as an administrator. `mix status` says so too."
         );
     }

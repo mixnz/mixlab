@@ -418,7 +418,7 @@ fn failure_in(command: &str, code: Option<i32>, last: &[String], root: &Path) ->
 
     let said = match last.iter().find(|line| !line.trim().is_empty()) {
         Some(_) => format!(
-            "{ended} — its last words:
+            "{ended}; its last words:
 {}",
             last.join(
                 "

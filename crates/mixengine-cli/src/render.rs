@@ -76,26 +76,26 @@ pub(crate) fn cert_issue(report: &CertIssueReport) -> String {
         .iter()
         .map(|site| match (&site.outcome, &site.state) {
             (IssueOutcome::Issued {}, CertState::Present { cert }) => format!(
-                "  {}  issued — {} days, {} name(s)\n",
+                "  {}  issued: {} days, {} name(s)\n",
                 site.domain,
                 cert.days_left,
                 cert.sans.len()
             ),
             (IssueOutcome::Reused {}, CertState::Present { cert }) => format!(
-                "  {}  unchanged — {} days left\n",
+                "  {}  unchanged: {} days left\n",
                 site.domain, cert.days_left
             ),
             // Roadmap task **T52**: a site that declares no HTTPS asked for nothing, and printing
             // it as "not issued" reads as a fault where there is none.
             (IssueOutcome::NotWanted { because }, _) => {
-                format!("  {}  nothing to do — {because}\n", site.domain)
+                format!("  {}  nothing to do: {because}\n", site.domain)
             }
             (IssueOutcome::Refused { because }, _) => {
-                format!("  {}  not issued — {because}\n", site.domain)
+                format!("  {}  not issued: {because}\n", site.domain)
             }
             // A written or reused certificate that does not read back is a state nothing should
             // produce, and printing it as success would hide exactly the case worth seeing.
-            (_, state) => format!("  {}  unclear — {state:?}\n", site.domain),
+            (_, state) => format!("  {}  unclear: {state:?}\n", site.domain),
         })
         .collect()
 }
@@ -132,23 +132,23 @@ pub(crate) fn cert_status(report: &CertStatusReport) -> String {
                 .to_owned(),
                 Handshake::NotServed { because } => {
                     format!(
-                        "    not served over TLS — {because}
+                        "    not served over TLS: {because}
 "
                     )
                 }
                 Handshake::Failed { because } => format!(
-                    "    the handshake failed — {because}
+                    "    the handshake failed: {because}
 "
                 ),
                 Handshake::Presented { cert, trust } => format!(
-                    "    presented {} — {} days, {} name(s), {}
+                    "    presented {}: {} days, {} name(s), {}
 ",
                     short(&cert.fingerprint),
                     cert.days_left,
                     cert.sans.len(),
                     match trust {
                         Verdict::Trusted {} => "trusted by this home's authority".to_owned(),
-                        Verdict::Rejected { because } => format!("not trusted — {because}"),
+                        Verdict::Rejected { because } => format!("not trusted: {because}"),
                     }
                 ),
             });
@@ -180,14 +180,14 @@ fn advice(domain: &str, problem: CertProblem) -> String {
             format!("run `mix cert issue --site {domain}`")
         }
         CertProblem::NotServed => {
-            "start this home's front end — `mix service list` says which it is".to_owned()
+            "start this home's front end; `mix service list` says which it is".to_owned()
         }
         CertProblem::ServedCertificateDiffers => {
-            "the running server is holding an older certificate — restart this home's front end"
+            "the running server is holding an older certificate; restart this home's front end"
                 .to_owned()
         }
         CertProblem::NotTrusted => {
-            "this was not signed by this home's authority — `mix cert ca-status` says which \
+            "this was not signed by this home's authority; `mix cert ca-status` says which \
              authority this home has"
                 .to_owned()
         }
@@ -203,19 +203,19 @@ pub(crate) fn ca_status(status: &CaStatus) -> String {
 
     rendered.push_str(&match &status.trust {
         Trust::Installed { store } => format!(
-            "  trusted    yes — in {store}
+            "  trusted    yes, in {store}
 "
         ),
         Trust::NotInstalled { because } => format!(
-            "  trusted    no — {because}
+            "  trusted    no: {because}
 "
         ),
         Trust::NoStore { because } => format!(
-            "  trusted    n/a — {because}
+            "  trusted    n/a: {because}
 "
         ),
         Trust::Unknown { because } => format!(
-            "  trusted    unknown — {because}
+            "  trusted    unknown: {because}
 "
         ),
     });
@@ -224,22 +224,22 @@ pub(crate) fn ca_status(status: &CaStatus) -> String {
     // the path is what a person opens and the owner is what tells them which browser to restart.
     rendered.push_str(&match &status.browsers {
         Browsers::Reached { databases } if databases.is_empty() => {
-            "  browsers   none found — Firefox and Chrome keep certificate databases of their own, \
+            "  browsers   none found; Firefox and Chrome keep certificate databases of their own, \
              and this machine has none
 "
             .to_owned()
         }
         Browsers::Reached { databases } => databases.iter().map(browser).collect::<String>(),
         Browsers::NoTool { because } => format!(
-            "  browsers   not asked — {because}
+            "  browsers   not asked: {because}
 "
         ),
         Browsers::NotSearched { because } => format!(
-            "  browsers   n/a — {because}
+            "  browsers   n/a: {because}
 "
         ),
         Browsers::Unknown { because } => format!(
-            "  browsers   unknown — {because}
+            "  browsers   unknown: {because}
 "
         ),
     });
@@ -298,7 +298,7 @@ pub(crate) fn ca_uninstall(report: &CaUninstallReport) -> String {
     let mut rendered = match &report.outcome {
         UninstallOutcome::Removed {} => {
             "this home's certificate authority was taken out of every store that held it
-the certificate and its key are still on disk — `mix doctor --repair` puts the trust back
+the certificate and its key are still on disk; `mix doctor --repair` puts the trust back
 "
             .to_owned()
         }
@@ -325,13 +325,13 @@ fn browser(database: &BrowserDatabase) -> String {
         "yes".to_owned()
     } else {
         match &database.because {
-            Some(because) => format!("no — {because}"),
+            Some(because) => format!("no: {because}"),
             None => "no".to_owned(),
         }
     };
 
     format!(
-        "  browsers   {verdict} — {} ({})
+        "  browsers   {verdict}: {} ({})
 ",
         database.path, database.owner
     )
@@ -342,13 +342,13 @@ fn certificate(state: &CaState) -> String {
     match state {
         // Reachable, and worth a sentence rather than an empty screen: a start whose generation
         // failed warns into the daemon's log and carries on, so this is what the next question gets.
-        CaState::Absent {} => "  authority  none — one is made when the daemon starts
+        CaState::Absent {} => "  authority  none; one is made when the daemon starts
 "
         .to_owned(),
 
         CaState::Unusable { because } => {
             format!(
-                "  authority  unusable — {}
+                "  authority  unusable: {}
 ",
                 unusable(*because)
             )
@@ -405,7 +405,7 @@ fn unusable(because: Unusable) -> &'static str {
 /// `mix status`, for a person.
 pub(crate) fn status(status: &DaemonStatus) -> String {
     let mut rendered = format!(
-        "mixengined {} — running (pid {}, up {})\n",
+        "mixengined {}: running (pid {}, up {})\n",
         status.version,
         status.pid,
         uptime(status.uptime)
@@ -431,12 +431,12 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
             // for some of its names and not others — `.local` is never routed — and "wildcards work"
             // would be true and useless to somebody whose `.local` site had just stopped resolving.
             DnsMode::Dns => format!(
-                "  names     DNS on {} — wildcards for {}\n",
+                "  names     DNS on {}, wildcards for {}\n",
                 dns.listening.as_deref().unwrap_or("loopback"),
                 patterns(&dns.wildcards)
             ),
             DnsMode::HostsOnly => format!(
-                "  names     hosts file — no wildcards{}\n",
+                "  names     hosts file, no wildcards{}\n",
                 dns.because
                     .as_deref()
                     .map(|because| format!(" ({because})"))
@@ -448,7 +448,7 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
     if let Some(elevation) = &status.elevation {
         if elevation.elevated {
             rendered.push_str(
-                "  note      this daemon holds an administrative token — every service it \
+                "  note      this daemon holds an administrative token; every service it \
                  supervises inherits it\n",
             );
         }
@@ -456,7 +456,7 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
         // Degraded is this number and nothing else — there is no flag on the wire and none here.
         if elevation.pending > 0 {
             rendered.push_str(&format!(
-                "  waiting   {} for permission — `mix elevation status` says what they are\n",
+                "  waiting   {} for permission; `mix elevation status` says what they are\n",
                 operations(elevation.pending)
             ));
         }
@@ -467,7 +467,7 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
     // and what makes it worth one is that nothing else in the product would ever mention it.
     if let Some(update) = &status.update {
         rendered.push_str(&format!(
-            "  update    MixEngine {} is available — `mix self-update` shows what changed\n",
+            "  update    MixEngine {} is available; `mix self-update` shows what changed\n",
             update.version
         ));
     }
@@ -487,7 +487,7 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
 
     if status.version != env!("CARGO_PKG_VERSION") {
         skew.push(format!(
-            "mix is {} and this daemon is {} — they speak the same protocol, so this is a daemon \
+            "mix is {} and this daemon is {}; they speak the same protocol, so this is a daemon \
              that has not been restarted since the upgrade",
             env!("CARGO_PKG_VERSION"),
             status.version
@@ -543,7 +543,7 @@ pub(crate) fn update_status(status: &UpdateStatus) -> String {
         (&status.placement, &status.installer)
     {
         rendered.push_str(&format!("  installed {directory}\n"));
-        rendered.push_str(&format!("  update    not by MixEngine — {because}\n"));
+        rendered.push_str(&format!("  update    not by MixEngine: {because}\n"));
 
         return rendered;
     }
@@ -646,7 +646,7 @@ pub(crate) fn update_applied(applied: &UpdateApplied) -> String {
 
     if !applied.kept.is_empty() {
         rendered.push_str(&format!(
-            "  kept      {} — updating the privileged helper needs its own prompt\n",
+            "  kept      {}; updating the privileged helper needs its own prompt\n",
             list(&applied.kept)
         ));
     }
@@ -708,7 +708,7 @@ pub(crate) fn daemon_shutdown(shutdown: &DaemonShutdown) -> String {
 
     if let Some(why) = &shutdown.unordered {
         rendered.push_str(
-            "  the services were not stopped in dependency order — mixengined could not work one \
+            "  the services were not stopped in dependency order; mixengined could not work one \
              out, so all of them stopped at the same time\n",
         );
 
@@ -850,7 +850,7 @@ pub(crate) fn service_autostart(service: &ServiceSummary) -> String {
 
     format!(
         // aligned on purpose: `note` sits in the label column the lines above it use.
-        "{} — {answer}\n  note        anything a service that does start depends on is started too, \
+        "{}: {answer}\n  note        anything a service that does start depends on is started too, \
          whether or not it is set here\n",
         service.id
     )
@@ -859,9 +859,9 @@ pub(crate) fn service_autostart(service: &ServiceSummary) -> String {
 /// `mix service save-resources`, for a person.
 pub(crate) fn save_resources(answer: mixengine_proto::SaveResources) -> String {
     match answer.on {
-        true => "on — a service nobody is using is stopped, and started again when it is needed\n"
+        true => "on: a service nobody is using is stopped, and started again when it is needed\n"
             .to_owned(),
-        false => "off — nothing is stopped for being idle unless you gave it a time with \
+        false => "off: nothing is stopped for being idle unless you gave it a time with \
                   `mix service idle`\n"
             .to_owned(),
     }
@@ -869,7 +869,7 @@ pub(crate) fn save_resources(answer: mixengine_proto::SaveResources) -> String {
 
 /// `mix service status <service>`, for a person.
 pub(crate) fn service_status(service: &ServiceSummary) -> String {
-    let mut rendered = format!("{} — {}\n", service.id, state(service));
+    let mut rendered = format!("{}: {}\n", service.id, state(service));
 
     let mut field = |label: &str, value: &str| {
         rendered.push_str(&format!("  {label:11} {value}\n"));
@@ -914,7 +914,7 @@ pub(crate) fn service_status(service: &ServiceSummary) -> String {
     } else if !service.supervised && service.pid.is_some() {
         field(
             "note",
-            "the row names a process and nothing in this daemon is supervising it — that is what a \
+            "the row names a process and nothing in this daemon is supervising it; that is what a \
              daemon which was killed leaves behind",
         );
     }
@@ -964,12 +964,12 @@ pub(crate) fn front_end_report(report: &FrontEndReport) -> String {
 
             match started {
                 Some(walk) if walk.failed.is_some() => said.push_str(
-                    "  it was started and did not come up — `mix service logs` has what it \
+                    "  it was started and did not come up; `mix service logs` has what it \
                      printed\n",
                 ),
                 Some(_) => said.push_str("  started, because the one it replaced was running\n"),
                 None => said.push_str(
-                    "  left stopped, because the one it replaced was — `mix service start` brings \
+                    "  left stopped, because the one it replaced was; `mix service start` brings \
                      it up\n",
                 ),
             }
@@ -997,7 +997,7 @@ pub(crate) fn front_end_report(report: &FrontEndReport) -> String {
     if !report.answering {
         rendered.push_str(
             "  it has not been allowed to answer on 80 and 443 on this machine, so it will not \
-             start — `mix doctor` says what to do\n",
+             start; `mix doctor` says what to do\n",
         );
     }
 
@@ -1036,7 +1036,7 @@ pub(crate) fn service_walk(walked: Walked, walk: &ServiceWalk) -> String {
 
     if !walk.complete {
         return format!(
-            "accepted — mixengined is {} {} in the background\n",
+            "accepted; mixengined is {} {} in the background\n",
             walked.ongoing(),
             names(&walk.planned)
         );
@@ -1049,9 +1049,9 @@ pub(crate) fn service_walk(walked: Walked, walk: &ServiceWalk) -> String {
     // A reason is `None` only when the failure was the daemon's own — a database that would not
     // take the write. There is nothing to render and inventing one would be worse than saying so.
     let mut rendered = match &failure.reason {
-        Some(reason) => format!("{} {} — {reason}\n", failure.service, walked.failed()),
+        Some(reason) => format!("{} {}: {reason}\n", failure.service, walked.failed()),
         None => format!(
-            "{} {} — mixengined did not say why; logs/daemon.log has it\n",
+            "{} {}: mixengined did not say why; logs/daemon.log has it\n",
             failure.service,
             walked.failed()
         ),
@@ -1135,8 +1135,7 @@ const fn in_the_run_it_names(state: Option<ServiceState>) -> bool {
 /// scanning this asks is "which one does `php` mean" and a `*` is a footnote they have to look up.
 pub(crate) fn runtime_list(list: &RuntimeList) -> String {
     if list.runtimes.is_empty() {
-        return "no runtimes are installed — `mix runtime available` lists what can be\n"
-            .to_owned();
+        return "no runtimes are installed; `mix runtime available` lists what can be\n".to_owned();
     }
 
     let now = SystemTime::now();
@@ -1170,7 +1169,7 @@ pub(crate) fn runtime_list(list: &RuntimeList) -> String {
 /// you turned it on* are different answers to why xdebug is loaded.
 pub(crate) fn extension_list(list: &ExtensionList) -> String {
     if list.extensions.is_empty() {
-        return "this build declares no extensions — nothing to turn on or off\n".to_owned();
+        return "this build declares no extensions; nothing to turn on or off\n".to_owned();
     }
 
     let rows: Vec<[String; 4]> = list
@@ -1213,7 +1212,7 @@ pub(crate) fn extension_change(change: &ExtensionChange) -> String {
     let pool = match change.pool {
         PoolOutcome::Reloaded => "its pool re-read its configuration",
         PoolOutcome::RestartRequired => {
-            "the running pool is still using the previous set — restart it to pick this up"
+            "the running pool is still using the previous set; restart it to pick this up"
         }
         PoolOutcome::PoolNotRunning => "its pool is not running and will read this when it starts",
         _ => "what its pool did is not something this build can describe",
@@ -1229,7 +1228,7 @@ pub(crate) fn extension_change(change: &ExtensionChange) -> String {
 #[must_use]
 pub(crate) fn package_list(list: &PackageList) -> String {
     if list.packages.is_empty() {
-        return "no packages are installed — `mix package available` lists what can be
+        return "no packages are installed; `mix package available` lists what can be
 "
         .to_owned();
     }
@@ -1270,7 +1269,7 @@ pub(crate) fn package_catalogue(catalogue: &PackageCatalogue) -> String {
 
     if catalogue.stale {
         rendered.push_str(
-            "this list is from a cached index — mixengined could not reach the package index, so \
+            "this list is from a cached index; mixengined could not reach the package index, so \
              versions published since then are missing\n",
         );
     }
@@ -1373,7 +1372,7 @@ pub(crate) fn requirements(unmet: &[Requirement]) -> String {
     let mut rendered = String::from("this machine lacks what it needs:\n");
     for requirement in unmet {
         rendered.push_str(&format!(
-            "  - {} — {}\n",
+            "  - {}: {}\n",
             requirement.need, requirement.remedy
         ));
     }
@@ -1388,7 +1387,7 @@ pub(crate) fn advisories(advisories: &[Requirement]) -> String {
         .collect();
 
     format!(
-        "warning: this machine's loader does not list {} — install them with this distribution's \
+        "warning: this machine's loader does not list {}; install them with this distribution's \
          package manager; the install goes on\n",
         named.join(", ")
     )
@@ -1409,7 +1408,7 @@ fn emulation_column(executions: impl Iterator<Item = Option<Execution>>) -> Opti
     });
 
     emulated.then(|| {
-        "emulated — nothing is published for this machine's own architecture, so the x86_64 \
+        "emulated; nothing is published for this machine's own architecture, so the x86_64 \
          build is installed and the operating system runs it\n"
             .to_owned()
     })
@@ -1492,7 +1491,7 @@ pub(crate) fn service_creation(creation: &ServiceCreation) -> String {
         };
 
         rendered.push_str(&format!(
-            "  it asked for {} — {holder}, so it was moved
+            "  it asked for {}; {holder}, so it was moved
 ",
             moved.preferred
         ));
@@ -1538,7 +1537,7 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue) -> String {
 
     if catalogue.stale {
         rendered.push_str(
-            "this list is from a cached index — mixengined could not reach the package index, so \
+            "this list is from a cached index; mixengined could not reach the package index, so \
              versions published since then are missing\n",
         );
     }
@@ -1609,7 +1608,7 @@ pub(crate) fn runtime_summary(runtime: &RuntimeSummary) -> String {
         runtime.kind,
         runtime.version,
         match runtime.default {
-            true => " — the default for its kind",
+            true => ", the default for its kind",
             false => "",
         }
     );
@@ -1718,7 +1717,7 @@ pub(crate) fn runtime_resolved(resolved: &ResolvedRuntime) -> String {
         RuntimeSource::Manifest { path } => path.clone(),
         RuntimeSource::Project { root } => format!("the project registered at {root}"),
         RuntimeSource::Default => format!(
-            "the default for {} — nothing here pins a version",
+            "the default for {}; nothing here pins a version",
             runtime.kind
         ),
     };
@@ -1735,7 +1734,7 @@ pub(crate) fn runtime_removal(removal: &RuntimeRemoval) -> String {
 
     if removal.default_cleared {
         rendered.push_str(&format!(
-            "  it was the default for {}, and nothing was promoted in its place — \
+            "  it was the default for {}, and nothing was promoted in its place; \
              `mix runtime default {} <version>` chooses one\n",
             removal.removed.kind, removal.removed.kind
         ));
@@ -1825,7 +1824,7 @@ fn waiting(status: &ElevationStatus) -> String {
 
     for pending in &status.pending {
         rendered.push_str(&format!(
-            "  {:<4} {} — {}\n",
+            "  {:<4} {}: {}\n",
             pending.id,
             pending.op.name(),
             pending.description
@@ -1860,14 +1859,14 @@ fn grant(outcome: &GrantOutcome) -> String {
     let what = match &outcome.outcome {
         // A choice and not a failure — ADR 0005. The word carries that, and nothing here adds to it.
         ElevationOutcome::Declined => "declined".to_owned(),
-        ElevationOutcome::Unavailable { reason } => format!("could not be raised — {reason}"),
+        ElevationOutcome::Unavailable { reason } => format!("could not be raised: {reason}"),
         ElevationOutcome::Completed => format!(
             "{} applied, {} still waiting",
             outcome.applied, outcome.still_pending
         ),
     };
 
-    let mut rendered = format!("job {} — {what}", outcome.job);
+    let mut rendered = format!("job {}: {what}", outcome.job);
 
     // The daemon's own sentences, one per line, unchanged. Which operation each is about is already
     // in the sentence, because the daemon put it there.
@@ -1944,7 +1943,7 @@ pub(crate) fn path_report(pathed: Pathed, report: &PathReport) -> String {
             _ => "s",
         },
         match report.commands.is_empty() {
-            true => "none — `mix path install` fills the directory".to_owned(),
+            true => "none; `mix path install` fills the directory".to_owned(),
             false => report.commands.join(", "),
         }
     ));
@@ -1973,7 +1972,7 @@ pub(crate) fn path_report(pathed: Pathed, report: &PathReport) -> String {
 
     for stale in &report.stale {
         rendered.push_str(&format!(
-            "  {stale} is in that directory and answers to nothing — it could not be removed\n"
+            "  {stale} is in that directory and answers to nothing; it could not be removed\n"
         ));
     }
 
@@ -2014,7 +2013,7 @@ pub(crate) fn job_list(list: &JobList) -> String {
 /// summarised here — it is the same wire error the call would have been refused with had the work
 /// been short enough to do inline, and rewording it would give one failure two spellings.
 pub(crate) fn job_status(job: &JobSummary) -> String {
-    let mut rendered = format!("job {} — {} ({})\n", job.id, job.state, job.kind);
+    let mut rendered = format!("job {}: {} ({})\n", job.id, job.state, job.kind);
 
     let mut field = |label: &str, value: &str| {
         rendered.push_str(&format!("  {label:9} {value}\n"));
@@ -2099,7 +2098,7 @@ pub(crate) fn metrics_frame(frame: &MetricsFrame) -> String {
 pub(crate) fn metrics_history(history: &MetricsHistory, now: SystemTime) -> String {
     if history.minutes.is_empty() {
         return format!(
-            "no readings in that window — this home keeps {} hours of them
+            "no readings in that window; this home keeps {} hours of them
 ",
             history.retention_hours
         );
@@ -2334,7 +2333,7 @@ fn units(seconds: u64) -> String {
 /// `mix project list` — every registered project, and whether it has a manifest.
 pub(crate) fn project_list(list: &ProjectList) -> String {
     if list.projects.is_empty() {
-        return "no projects are registered — `mix project create <dir>` adds one\n".to_owned();
+        return "no projects are registered; `mix project create <dir>` adds one\n".to_owned();
     }
 
     let mut out = format!("{:<24}  {:<9}  {}\n", "PROJECT", "MANIFEST", "ROOT");
@@ -2419,7 +2418,7 @@ pub(crate) fn project_export(exported: &ProjectExport) -> String {
     match exported.created {
         true => format!("wrote {}\n", exported.path),
         false => format!(
-            "updated {} — everything else in it is untouched\n",
+            "updated {}; everything else in it is untouched\n",
             exported.path
         ),
     }
@@ -2428,7 +2427,7 @@ pub(crate) fn project_export(exported: &ProjectExport) -> String {
 /// `mix site list` — every site, and what serves it.
 pub(crate) fn site_list(list: &SiteList) -> String {
     if list.sites.is_empty() {
-        return "no sites are declared — `mix site create` adds one\n".to_owned();
+        return "no sites are declared; `mix site create` adds one\n".to_owned();
     }
 
     // **A count and not the routes themselves** — roadmap task **T135**. What a listing is for is
@@ -2476,7 +2475,7 @@ fn route_target_word(target: &mixengine_proto::RouteTarget) -> String {
         mixengine_proto::RouteTarget::PhpFpm { pool } => format!(
             "php-fpm {}",
             pool.as_ref()
-                .map_or("— the service it named is gone", ServiceId::as_str)
+                .map_or("(the service it named is gone)", ServiceId::as_str)
         ),
         mixengine_proto::RouteTarget::Static { root } => format!("files in {root}"),
     }
@@ -2654,9 +2653,9 @@ pub(crate) fn disk_usage(usage: &DiskUsage) -> String {
 fn reclaim(reclaim: &Reclaim) -> String {
     match reclaim {
         Reclaim::Never { because } | Reclaim::AtACost { because } => because.clone(),
-        Reclaim::ByMethod { method, because } => format!("{method} — {because}"),
+        Reclaim::ByMethod { method, because } => format!("{method}: {because}"),
         Reclaim::ByCleanup { bytes, files } => {
-            format!("`mix cleanup` — {} in {files} file(s)", size(*bytes))
+            format!("`mix cleanup`: {} in {files} file(s)", size(*bytes))
         }
     }
 }
@@ -2684,7 +2683,7 @@ pub(crate) fn cleanup_report(report: &CleanupReport) -> String {
             } => (
                 "LEFT     ",
                 Some(format!(
-                    "{} in {files} file(s); {left_behind} file(s) would not go — {because}",
+                    "{} in {files} file(s); {left_behind} file(s) would not go: {because}",
                     size(*bytes)
                 )),
             ),
@@ -2741,7 +2740,7 @@ not included
         );
         for left in &report.omitted {
             out.push_str(&format!(
-                "       {} — {}
+                "       {}: {}
 ",
                 left.name, left.because
             ));
@@ -2856,12 +2855,12 @@ pub(crate) fn site_detail(detail: &SiteDetail) -> String {
             "  pool      {}\n",
             pool.declared
                 .as_ref()
-                .map_or("— the service it named is gone", ServiceId::as_str)
+                .map_or("(the service it named is gone)", ServiceId::as_str)
         ));
 
         if pool.declared != pool.resolved {
             out.push_str(&format!(
-                "  resolves  {} — this directory resolves to a different PHP than the site was \
+                "  resolves  {}; this directory resolves to a different PHP than the site was \
                  declared with\n",
                 pool.resolved.as_ref().map_or("—", ServiceId::as_str)
             ));
@@ -2954,7 +2953,7 @@ pub(crate) fn service_idle(report: &IdleReport) -> String {
         IdleSource::Recipe => "the default for this kind of service",
         // The state of every service in this build, and it is worth spelling out rather than
         // leaving as a blank: nothing is wrong, the feature simply has no default yet.
-        IdleSource::Unset => "no default yet — nothing idles this",
+        IdleSource::Unset => "no default yet; nothing idles this",
         // Asked for, and nothing to measure it with. The line above still says "never", which is
         // what happens; this says why, which is what a person can act on.
         IdleSource::Unmeasurable => "asked for, but this service has nothing to measure",
@@ -3136,21 +3135,21 @@ fn enforcement(
             let counts = counted(measure, measured);
 
             match capped {
-                true => format!("enforced —{counts} at the ceiling, {ending}"),
-                false => format!("would be enforced —{counts} at a ceiling, {ending}"),
+                true => format!("enforced:{counts} at the ceiling, {ending}"),
+                false => format!("would be enforced:{counts} at a ceiling, {ending}"),
             }
         }
 
         // The permanent fact: this operating system has no such mechanism, and none is coming.
         Enforcement::Unsupported => match capped {
-            true => "stored, not enforced — this system has no such limit".to_owned(),
+            true => "stored, not enforced; this system has no such limit".to_owned(),
             false => "this system has no such limit".to_owned(),
         },
 
         // The fixable one, in the platform's own words, because they were written for this line.
         Enforcement::Unavailable { why } => match capped {
-            true => format!("stored, not enforced — {why}"),
-            false => format!("could not be enforced — {why}"),
+            true => format!("stored, not enforced: {why}"),
+            false => format!("could not be enforced: {why}"),
         },
 
         // **Watched rather than capped** — roadmap task T71a. Deliberately not the word "enforced":
@@ -3162,8 +3161,8 @@ fn enforcement(
             let counts = counted(measure, measured);
 
             let opening = match capped {
-                true => format!("watched, not capped —{counts}"),
-                false => format!("would be watched, not capped —{counts}"),
+                true => format!("watched, not capped:{counts}"),
+                false => format!("would be watched, not capped:{counts}"),
             };
 
             match why {
@@ -3417,7 +3416,7 @@ pub(crate) fn blueprint_imported(summary: &BlueprintSummary) -> String {
     };
 
     format!(
-        "imported {} — {vouched}
+        "imported {}: {vouched}
   {}
 ",
         summary.slug, summary.file
@@ -3435,7 +3434,7 @@ pub(crate) fn blueprint_imported(summary: &BlueprintSummary) -> String {
 /// extension runs as this account and could ignore any token it was handed (ADR 0014).
 pub(crate) fn extension_inspection(inspection: &ExtensionInspection) -> String {
     let mut out = format!(
-        "{} {} — {}\n  {}\n",
+        "{} {}: {}\n  {}\n",
         inspection.id,
         inspection.version,
         inspection.name,
@@ -3458,7 +3457,7 @@ pub(crate) fn extension_inspection(inspection: &ExtensionInspection) -> String {
         match inspection.permissions.network {
             NetworkReach::Loopback => "this machine only, on 127.0.0.1",
             NetworkReach::Lan =>
-                "every interface, on 0.0.0.0 — reachable from other machines on this network",
+                "every interface, on 0.0.0.0, reachable from other machines on this network",
         }
     ));
 
@@ -3488,7 +3487,7 @@ pub(crate) fn extension_inspection(inspection: &ExtensionInspection) -> String {
             })
             .collect();
         out.push_str(&format!(
-            "api          says it would {} what MixEngine knows about services — a declaration \
+            "api          says it would {} what MixEngine knows about services; a declaration \
              shown to you, not a permission MixEngine enforces\n",
             calls.join(" and ")
         ));
@@ -3500,9 +3499,7 @@ pub(crate) fn extension_inspection(inspection: &ExtensionInspection) -> String {
             "artifact     none for this machine; published for {}\n",
             targets.join(", ")
         ),
-        ArtifactAvailability::NotRequired => {
-            "artifact     none — it downloads nothing\n".to_owned()
-        }
+        ArtifactAvailability::NotRequired => "artifact     none; it downloads nothing\n".to_owned(),
     });
 
     out.push_str(&format!(
@@ -3529,7 +3526,7 @@ pub(crate) fn extension_inspection(inspection: &ExtensionInspection) -> String {
     }
 
     if !inspection.ports.is_empty() {
-        out.push_str("\nports asked for, and not held — allocation happens at install\n");
+        out.push_str("\nports asked for, and not held; allocation happens at install\n");
         for port in &inspection.ports {
             out.push_str(&format!("  {:<10} {}\n", port.name, port.wanted));
         }
@@ -3556,9 +3553,9 @@ pub(crate) fn extension_inspection(inspection: &ExtensionInspection) -> String {
 /// `mix blueprint list` — every blueprint this home holds.
 pub(crate) fn blueprint_list(list: &BlueprintList) -> String {
     if list.blueprints.is_empty() {
-        return "no blueprints have been captured — `mix blueprint capture --name <name>` writes one
+        return "no blueprints have been captured; `mix blueprint capture --name <name>` writes one
 "
-            .to_owned();
+        .to_owned();
     }
 
     let mut out = format!(
@@ -3708,10 +3705,10 @@ fn step_said(step: &PlanStep) -> String {
 
     match &step.disposition {
         Disposition::Choice { installed, .. } => {
-            format!("{said} — {} is installed", installed.as_str())
+            format!("{said}; {} is installed", installed.as_str())
         }
         Disposition::Blocked { reason } | Disposition::Unsupported { reason } => {
-            format!("{said} — {reason}")
+            format!("{said}: {reason}")
         }
         _ => said,
     }
@@ -3795,7 +3792,7 @@ fn action_said(action: &PlanAction) -> String {
         // moment somebody is deciding, rather than in documentation.
         PlanAction::SetPhpExtension { runtime, name } => match runtime {
             Some(runtime) => format!(
-                "php extension {name} — changes PHP {} for every project here",
+                "php extension {name}: changes PHP {} for every project here",
                 runtime.as_str()
             ),
             // Nothing installed answers yet: the runtime step installs the PHP this lands on.
@@ -3827,7 +3824,7 @@ fn site_kind_word(kind: &SiteKind) -> &'static str {
 /// vouches for and which stays marked for as long as it is installed.
 pub(crate) fn installed_extensions(list: &InstalledExtensions) -> String {
     if list.extensions.is_empty() {
-        return "nothing is installed — `mix extension available` lists what could be\n".to_owned();
+        return "nothing is installed; `mix extension available` lists what could be\n".to_owned();
     }
 
     let rows: Vec<[String; 7]> = list
@@ -3914,7 +3911,7 @@ pub(crate) fn extension_catalogue(catalogue: &ExtensionCatalogue) -> String {
     // one somebody goes looking for in the wrong place.
     if catalogue.unreadable > 0 {
         out.push_str(&format!(
-            "\n{} {} this build cannot read — update MixEngine to see {}\n",
+            "\n{} {} this build cannot read; update MixEngine to see {}\n",
             catalogue.unreadable,
             match catalogue.unreadable {
                 1 => "entry",
@@ -3933,7 +3930,7 @@ pub(crate) fn extension_catalogue(catalogue: &ExtensionCatalogue) -> String {
 /// `mix extension plan`, which is also the question `install` asks before it installs anything.
 pub(crate) fn extension_plan(plan: &ExtensionPlan) -> String {
     let mut out = format!(
-        "{} {} — {}\n  {}\n",
+        "{} {}: {}\n  {}\n",
         plan.id,
         plan.version,
         plan.name,
@@ -3963,7 +3960,7 @@ pub(crate) fn extension_plan(plan: &ExtensionPlan) -> String {
         match plan.permissions.network {
             NetworkReach::Loopback => "this machine only, on 127.0.0.1",
             NetworkReach::Lan =>
-                "every interface, on 0.0.0.0 — reachable from other machines on this network",
+                "every interface, on 0.0.0.0, reachable from other machines on this network",
         }
     ));
 
@@ -3993,7 +3990,7 @@ pub(crate) fn extension_plan(plan: &ExtensionPlan) -> String {
             })
             .collect();
         out.push_str(&format!(
-            "api          says it would {} what MixEngine knows about services — a declaration \
+            "api          says it would {} what MixEngine knows about services; a declaration \
              shown to you, not a permission MixEngine enforces\n",
             calls.join(" and ")
         ));
@@ -4028,7 +4025,7 @@ pub(crate) fn extension_plan(plan: &ExtensionPlan) -> String {
         // from, and that nothing writes it down.
         if let Some(user) = &site.signs_in {
             out.push_str(&format!(
-                "signs in     as {user}, in a php-fpm pool of its own — that pool reads the \
+                "signs in     as {user}, in a php-fpm pool of its own; that pool reads the \
                  password from this machine's keyring when it starts, and nothing writes it to \
                  disk\n"
             ));
@@ -4316,7 +4313,7 @@ mod tests {
             rendered
                 .lines()
                 .next()
-                .is_some_and(|line| line.starts_with("emulated —")),
+                .is_some_and(|line| line.starts_with("emulated;")),
             "the note comes before the table: {rendered}"
         );
     }
@@ -5288,7 +5285,7 @@ mod tests {
         // the fixture has always been version-agnostic and this assertion was not, so a version bump
         // failed a test that is about a *heading* and not about a number.
         let heading = format!(
-            "mixengined {} — running (pid 4123, up 13m 32s)",
+            "mixengined {}: running (pid 4123, up 13m 32s)",
             env!("CARGO_PKG_VERSION")
         );
         assert_eq!(lines.next(), Some(heading.as_str()));
@@ -5521,7 +5518,7 @@ mod tests {
     fn a_service_that_was_never_created_is_told_apart_from_one_that_is_stopped() {
         let rendered = service_status(&summary("mailpit", None));
 
-        assert!(rendered.starts_with("mailpit — not created"), "{rendered}");
+        assert!(rendered.starts_with("mailpit: not created"), "{rendered}");
         assert!(rendered.contains("has never been created"), "{rendered}");
 
         // The ordinary case says nothing extra, because a note on every status is a note nobody
@@ -5602,7 +5599,7 @@ mod tests {
 
         // The name of the thing to fix is the first thing on the screen, and the evidence is
         // directly under it — five lines of `started` above both would be five lines in the way.
-        assert_eq!(lines[0], "web failed to start — 5 failed starts within 5m");
+        assert_eq!(lines[0], "web failed to start: 5 failed starts within 5m");
         assert_eq!(lines[1], "    Address already in use");
         assert_eq!(lines[2], "  started   db");
         assert_eq!(lines[3], "  blocked   worker");
@@ -5633,7 +5630,7 @@ mod tests {
 
         assert_eq!(
             lines[0],
-            "postgres@main failed to start — it refuses the superuser password this home holds"
+            "postgres@main failed to start: it refuses the superuser password this home holds"
         );
         assert_eq!(
             lines[1],
@@ -5657,7 +5654,7 @@ mod tests {
 
         assert_eq!(
             service_walk(Walked::Restart, &accepted),
-            "accepted — mixengined is restarting db in the background\n"
+            "accepted; mixengined is restarting db in the background\n"
         );
     }
 
@@ -6321,11 +6318,7 @@ pub(crate) fn storage(report: &StorageReport) -> String {
         rendered.push_str(&format!(
             "  {name:<9}  {}{}\n",
             directory.path,
-            if directory.relocated {
-                " — moved"
-            } else {
-                ""
-            }
+            if directory.relocated { " (moved)" } else { "" }
         ));
     }
 
@@ -6337,7 +6330,7 @@ pub(crate) fn storage(report: &StorageReport) -> String {
         // The daemon's own sentence, for the reason every other rendering here uses one: what is
         // installed is a fact it measured, and a client restating it would be a second answer.
         StorageChoice::Taken { explanation, .. } => format!(
-            "\n  {explanation}, so these can no longer be moved by a flag — moving them means \
+            "\n  {explanation}, so these can no longer be moved by a flag; moving them means \
              moving the files and rewriting what the database records about them\n"
         ),
     });
@@ -6363,7 +6356,7 @@ mod grant_problems {
             applied: 0,
             still_pending: 1,
             problems: vec![
-                "helper-install — cannot read /Volumes/SSD/mixengine-elevate: Operation not \
+                "helper-install: cannot read /Volumes/SSD/mixengine-elevate: Operation not \
                  permitted (os error 1)"
                     .to_owned(),
             ],
@@ -6391,6 +6384,6 @@ mod grant_problems {
             problems: Vec::new(),
         };
 
-        assert_eq!(grant(&outcome), "job #1 — 2 applied, 0 still waiting");
+        assert_eq!(grant(&outcome), "job #1: 2 applied, 0 still waiting");
     }
 }

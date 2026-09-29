@@ -625,7 +625,7 @@ impl Packages {
                 ),
             )
             .with_hint(format!(
-                "`mix service delete {}` first — deleting a service keeps its data directory",
+                "`mix service delete {}` first; deleting a service keeps its data directory",
                 removed.services[0]
             )));
         }
@@ -666,7 +666,7 @@ impl Packages {
                     format!("this build of MixEngine cannot run {package}"),
                 )
                 .with_hint(format!(
-                    "it knows how to configure and run: {known} — a package with no recipe would \
+                    "it knows how to configure and run: {known}; a package with no recipe would \
                      unpack into a directory nothing could start"
                 ))
             })

@@ -882,7 +882,7 @@ impl Registry {
                 Err(mixengine_proto::Error::new(
                     mixengine_proto::ErrorCode::PreconditionFailed,
                     match reason {
-                        Some(reason) => format!("{failed} did not start — {reason}"),
+                        Some(reason) => format!("{failed} did not start: {reason}"),
                         None => format!("{failed} did not start"),
                     },
                 )

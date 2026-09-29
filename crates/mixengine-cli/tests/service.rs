@@ -282,7 +282,7 @@ fn a_service_starts_stops_and_says_so_in_both_renderings() {
     // The human rendering of the same answer, which is the half a person actually reads.
     let rendered = stdout(&home.mix(&["service", "status", "fakeservice@main"]));
     assert!(
-        rendered.starts_with("fakeservice@main — running"),
+        rendered.starts_with("fakeservice@main: running"),
         "{rendered}"
     );
     assert!(rendered.contains("supervised  yes"), "{rendered}");
@@ -304,7 +304,7 @@ fn a_service_starts_stops_and_says_so_in_both_renderings() {
     // present: `stopped` with `started 4m ago` under it is a contradiction on one screen.
     let rendered = stdout(&home.mix(&["service", "status", "fakeservice@main"]));
     assert!(
-        rendered.starts_with("fakeservice@main — stopped"),
+        rendered.starts_with("fakeservice@main: stopped"),
         "{rendered}"
     );
     assert!(rendered.contains("last start"), "{rendered}");
@@ -379,7 +379,7 @@ fn a_service_that_never_becomes_ready_fails_the_command_and_names_the_one_to_fix
     // failure, not a lost one.
     let rendered = stdout(&output);
     assert!(
-        rendered.starts_with("fakeservice@main failed to start — not ready within 2s"),
+        rendered.starts_with("fakeservice@main failed to start: not ready within 2s"),
         "{rendered}"
     );
     assert!(rendered.contains("blocked   fakeservice@php"), "{rendered}");
@@ -560,7 +560,7 @@ fn a_walk_nobody_waits_for_is_reported_as_accepted_rather_than_as_finished() {
     let rendered = stdout(&home.mix(&["service", "start", "--no-wait"]));
     assert_eq!(
         rendered,
-        "accepted — mixengined is starting fakeservice@main in the background\n"
+        "accepted; mixengined is starting fakeservice@main in the background\n"
     );
 
     // And the walk really is going on behind that answer, which is the difference between this and a

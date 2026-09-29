@@ -254,7 +254,7 @@ pub(crate) mod linux {
             Some(126) => ElevationOutcome::Declined,
             Some(127) => ElevationOutcome::Unavailable {
                 reason:
-                    "pkexec would not authorise this — either no authentication agent answered, \
+                    "pkexec would not authorise this; either no authentication agent answered, \
                          or the request was refused"
                         .to_owned(),
             },

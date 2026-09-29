@@ -42,7 +42,7 @@ pub(crate) fn to_wire(error: &mixengine_platform::Error) -> Error {
         // accident. The one thing worth saying first is that the request did not go anywhere.
         Platform::EndpointNotOurs { .. } => Error::new(ErrorCode::Conflict, flatten(error))
             .with_hint(
-                "nothing was sent to it — the endpoint name carries this account's own SID, so \
+                "nothing was sent to it; the endpoint name carries this account's own SID, so \
                  another account serving it is not a collision to work around; end that process \
                  before running MixEngine again",
             ),
@@ -56,7 +56,7 @@ pub(crate) fn to_wire(error: &mixengine_platform::Error) -> Error {
                 // somebody else. That is a `--home` or a `MIXENGINE_HOME` pointing somewhere
                 // surprising far more often than it is a permission to repair.
                 std::io::ErrorKind::PermissionDenied => failure.with_hint(
-                    "a MixEngine home is readable only by the account that owns it — check which \
+                    "a MixEngine home is readable only by the account that owns it; check which \
                      home --home or MIXENGINE_HOME is pointing at",
                 ),
 

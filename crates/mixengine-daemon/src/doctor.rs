@@ -260,7 +260,7 @@ impl Doctor {
                 name,
                 outcome: Outcome::Skipped {
                     because: "this home has no usable certificate authority, so there is nothing \
-                              for this machine to trust — `mix cert ca-status` says which"
+                              for this machine to trust; `mix cert ca-status` says which"
                         .to_owned(),
                 },
             };
@@ -320,7 +320,7 @@ impl Doctor {
                 name,
                 outcome: Outcome::Skipped {
                     because: "this home has no usable certificate authority, so there is nothing \
-                              for a browser to trust — `mix cert ca-status` says which"
+                              for a browser to trust; `mix cert ca-status` says which"
                         .to_owned(),
                 },
             };
@@ -411,7 +411,7 @@ impl Doctor {
             return Check {
                 name,
                 outcome: Outcome::Skipped {
-                    because: "this home has no usable certificate authority to sign with — \
+                    because: "this home has no usable certificate authority to sign with; \
                               `mix cert ca-status` says which"
                         .to_owned(),
                 },
@@ -485,7 +485,7 @@ impl Doctor {
                 outcome: Outcome::Note {
                     because: format!(
                         "this daemon's own environment sets {}, and a command started through \
-                         bin/ inherits it rather than MixEngine's own — unset it, or add this \
+                         bin/ inherits it rather than MixEngine's own; unset it, or add this \
                          home's authority to the file it names",
                         shadowing.join(" and ")
                     ),
@@ -1310,7 +1310,7 @@ fn go_outcome(installed: bool, toolchain: Option<&OsStr>, goroot: Option<&OsStr>
         false => Outcome::Note {
             because: format!(
                 "this daemon's own environment sets {}, and a go started through bin/ inherits it \
-                 rather than running the Go its directory pins — unset it",
+                 rather than running the Go its directory pins; unset it",
                 said.join(" and ")
             ),
         },
@@ -1358,7 +1358,7 @@ fn java_outcome(
         true => Outcome::Ok {},
         false => Outcome::Note {
             because: format!(
-                "this daemon's own environment sets {} — unset it, or expect a JDK other than the \
+                "this daemon's own environment sets {}; unset it, or expect a JDK other than the \
                  pinned one",
                 said.join(" and ")
             ),
@@ -1373,7 +1373,7 @@ fn java_trust_outcome(lacking: &[String]) -> Outcome {
         false => Outcome::Problem {
             id: ProblemId::JavaTrustMissing,
             because: format!(
-                "{} cannot verify this home's own HTTPS sites — `mix doctor --repair` writes the \
+                "{} cannot verify this home's own HTTPS sites; `mix doctor --repair` writes the \
                  authority into each one, and a `cacerts` whose password was changed is the one \
                  case keytool refuses",
                 lacking.join(", ")
@@ -1458,7 +1458,7 @@ fn foreign_rule_outcome(
         Ok(Some(count)) => Outcome::Note {
             because: format!(
                 "this machine holds {count} inbound firewall rule(s) for {program}, and MixEngine \
-                 did not create any of them — most likely the one Windows offered when this daemon \
+                 did not create any of them; most likely the one Windows offered when this daemon \
                  began answering mDNS for a shared site. MixEngine opens the web ports a shared \
                  site needs and nothing else, so a rule for the program as a whole is wider than \
                  sharing ever asks for. To see them: `netsh advfirewall firewall show rule \
@@ -1497,7 +1497,7 @@ fn app_control_outcome(
         Ok(AppControlState::Enforced) => Outcome::Problem {
             id: ProblemId::ApplicationControlEnforced,
             because: "Smart App Control is enforcing on this machine, and every program MixEngine \
-                      starts is unsigned — a runtime it has just downloaded is exactly the \
+                      starts is unsigned; a runtime it has just downloaded is exactly the \
                       first-seen file such a policy refuses to load"
                 .to_owned(),
         },

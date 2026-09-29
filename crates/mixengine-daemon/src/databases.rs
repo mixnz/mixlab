@@ -431,7 +431,7 @@ impl Databases {
                         format!("{service} has no superuser credential in this machine's keyring"),
                     )
                     .with_hint(
-                        "that password is written by the service's first run — `mix service \
+                        "that password is written by the service's first run; `mix service \
                          start` performs it",
                     )
                 } else {

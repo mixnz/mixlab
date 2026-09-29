@@ -83,7 +83,7 @@ impl Delegation {
         }
 
         Err(format!(
-            "no cgroup in this session may be written to (looked upward from {}) — a delegated \
+            "no cgroup in this session may be written to (looked upward from {}); a delegated \
              subtree is what systemd's user manager provides, and this session has none",
             own.display()
         ))
@@ -115,7 +115,7 @@ impl Delegation {
             .and_then(|mut file| file.write_all(format!("+{controller}").as_bytes()))
             .map_err(|error| {
                 format!(
-                    "this session does not delegate the {controller} controller ({error}) — a \
+                    "this session does not delegate the {controller} controller ({error}); a \
                      service's {controller} limit will be stored and not enforced"
                 )
             })

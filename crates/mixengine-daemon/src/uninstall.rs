@@ -194,7 +194,7 @@ impl Uninstall {
             };
             return Err(Error::new(
                 mixengine_proto::ErrorCode::PreconditionFailed,
-                format!("{}: {by} — nothing was changed", row.what),
+                format!("{}: {by}; nothing was changed", row.what),
             ));
         }
 
@@ -685,7 +685,7 @@ impl Uninstall {
                 true => Removal::Kept {
                     because: "something outside this home is still there, and a home removed \
                               while this machine is still wired for it is one nothing could \
-                              repair — run the uninstall again once the rows above are clear"
+                              repair; run the uninstall again once the rows above are clear"
                         .to_owned(),
                 },
                 false => {

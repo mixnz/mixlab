@@ -15,7 +15,7 @@ use keyring::error::Error as KeyringError;
 pub(crate) fn absent_store(source: &KeyringError) -> Option<&'static str> {
     matches!(source, KeyringError::NoStorageAccess(_)).then_some(
         "this process has no logon session, so Windows has no per-user Credential Manager vault to \
-         open — run MixEngine as a signed-in user rather than as a service account without a \
+         open; run MixEngine as a signed-in user rather than as a service account without a \
          loaded profile",
     )
 }

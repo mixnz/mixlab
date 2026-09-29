@@ -35,7 +35,7 @@ impl OrphanGuarantee {
     pub fn because(self) -> &'static str {
         match self {
             Self::Total => {
-                "if this daemon is killed, every process a service started dies with it — the \
+                "if this daemon is killed, every process a service started dies with it; the \
                  kernel enforces it"
             }
             Self::ImmediateChild => {

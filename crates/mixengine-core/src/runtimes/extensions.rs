@@ -396,7 +396,7 @@ impl State {
         };
 
         format!(
-            "\n; Every authority this machine trusts, and MixEngine's own — so a site of this\n\
+            "\n; Every authority this machine trusts, and MixEngine's own, so a site of this\n\
              ; home can be reached over HTTPS from PHP, and the public internet still can.\n\
              openssl.cafile = \"{0}\"\n\
              curl.cainfo = \"{0}\"\n",

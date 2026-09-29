@@ -1855,7 +1855,7 @@ pub enum Error {
     ///
     /// Distinct from "not given": the user meant to point somewhere and the value went missing on
     /// the way, so the platform default would be the one place they did *not* ask for.
-    #[error("MIXENGINE_HOME is empty — unset it to use this platform's default location")]
+    #[error("MIXENGINE_HOME is empty; unset it to use this platform's default location")]
     EmptyHome,
 
     /// The OS refused to answer a question only it can answer.

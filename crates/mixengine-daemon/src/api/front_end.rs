@@ -207,7 +207,7 @@ impl Api {
             format!("{id} is declared by {}", declared.join(", ")),
         )
         .with_hint(format!(
-            "`mix site update <site> --service …` drops it — a switch deletes {id}, and it will not \
+            "`mix site update <site> --service …` drops it; a switch deletes {id}, and it will not \
              overrule a declaration somebody made on purpose"
         )))
     }

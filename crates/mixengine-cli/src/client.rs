@@ -313,7 +313,7 @@ async fn handshake(
         return Err(Error::new(
             ErrorCode::PreconditionFailed,
             format!(
-                "this daemon speaks protocol {} and `mix` speaks {PROTOCOL_VERSION} — mixengined \
+                "this daemon speaks protocol {} and `mix` speaks {PROTOCOL_VERSION}; mixengined \
                  {} and mix {} are not from the same release",
                 version.protocol,
                 version.version,
@@ -450,7 +450,7 @@ fn started_and_gone(endpoint: &Endpoint) -> Error {
         ),
     )
     .with_hint(
-        "run `mixengined` in the foreground for this home — it exits with the reason, where a \
+        "run `mixengined` in the foreground for this home; it exits with the reason, where a \
          detached one only writes it to logs/daemon.log",
     )
 }

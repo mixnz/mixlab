@@ -1229,7 +1229,7 @@ impl Elevation {
                                 |pending| pending.op.name().to_owned(),
                             );
 
-                        format!("{what} — {reason}")
+                        format!("{what}: {reason}")
                     })
                     .collect();
 

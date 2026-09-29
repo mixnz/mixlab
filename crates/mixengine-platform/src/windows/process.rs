@@ -340,7 +340,7 @@ impl Group {
         Err(Error::UnsupportedPlatform {
             capability: "signalling a supervised process",
             reason: "Windows has no signal a daemon can send a process it did not give a console \
-                     to — a service that needs to re-read its configuration on this system is \
+                     to; a service that needs to re-read its configuration on this system is \
                      restarted instead"
                 .to_owned(),
         })
@@ -354,10 +354,11 @@ impl Group {
     pub(crate) fn request_stop(&self, _pid: u32) -> Result<()> {
         Err(Error::UnsupportedPlatform {
             capability: "asking a supervised process group to stop",
-            reason: "Windows has no signal a daemon can send to a process it did not give a console \
-                     to — a service that needs to shut down cleanly is stopped with its own command \
+            reason:
+                "Windows has no signal a daemon can send to a process it did not give a console \
+                     to; a service that needs to shut down cleanly is stopped with its own command \
                      instead"
-                .to_owned(),
+                    .to_owned(),
         })
     }
 

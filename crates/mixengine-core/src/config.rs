@@ -932,7 +932,7 @@ fn check_relocation(candidate: &Path) -> std::result::Result<(), String> {
 
     if !names_a_directory(candidate) {
         return Err(
-            "after resolving `.` and `..` this names no directory of its own — it points \
+            "after resolving `.` and `..` this names no directory of its own; it points \
                     at the MixEngine home, at a directory containing it, or at the root of a \
                     filesystem; remove the key to use the default"
                 .to_owned(),
@@ -1050,7 +1050,7 @@ where
         return Err(serde::de::Error::custom(format!(
             "a shutdown budget of {seconds} seconds is longer than the \
              {MAX_SHUTDOWN_GRACE_SECONDS} seconds MixEngine accepts; nothing it supervises takes \
-             ten minutes to stop, and a budget that never runs out is not one — lower it, or \
+             ten minutes to stop, and a budget that never runs out is not one; lower it, or \
              remove the key for the default of {DEFAULT_SHUTDOWN_GRACE_SECONDS}"
         )));
     }

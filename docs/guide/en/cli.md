@@ -13,8 +13,8 @@ summary = "Every mix command and every flag, generated from the binary's own def
 > applies.
 
 Every command `mix` accepts, in version 0.0.12. This page is **generated** from the
-binary's own definitions, so it cannot describe a flag that is not there — and it is the
-one page of this handbook that exists in English only, because those definitions are.
+binary's own definitions, so it cannot describe a flag that is not there. It is the one
+page of this handbook that exists in English only, because those definitions are.
 `mix docs cli --lang vi` says why, in Vietnamese.
 
 The same text is `mix <command> --help` on the machine in front of you, and
@@ -38,9 +38,8 @@ Show where this home keeps the directories that grow, and whether that can still
 
 **Starts no daemon and needs none.** `runtimes/`, `packages/`, `data/` and `logs/` can each be moved
 to another disk by `[paths]` in `config.toml`, or by starting `mixengined` with `--runtimes`,
-`--packages`, `--data` or `--logs` — and that choice is free only until the first runtime, package
-or service is installed, because from then on where they are is recorded against each of them rather
-than worked out.
+`--packages`, `--data` or `--logs`. That choice is free only until the first runtime, package or
+service is installed. From then on, where each of them lives is recorded against it.
 
 The answer comes from `mixengined` itself, run once: whether anything is installed is a question
 about rows in this home's database, and `mix` does not open one.
@@ -69,10 +68,10 @@ mix daemon stop
 
 Read the MixLab handbook, offline, in English or Vietnamese.
 
-With no topic it lists them. It talks to no daemon and needs no home — the pages are compiled into
-this binary, which is what makes `mix docs install` answer on a machine where nothing starts. The
-same pages are published at <https://mixnz.github.io/mixlab/>, as HTML for a person and as plain
-Markdown for a program.
+With no topic it lists them. It talks to no daemon and needs no home, because the pages are compiled
+into this binary. That is why `mix docs install` answers on a machine where nothing starts. The same
+pages are published at <https://mixnz.github.io/mixlab/>, as HTML for a person and as plain Markdown
+for a program.
 
 ```
 mix docs [TOPIC] [OPTIONS]
@@ -82,7 +81,7 @@ mix docs [TOPIC] [OPTIONS]
 | --- | --- |
 | `<TOPIC>` | Which topic. Omit it to list them |
 | `--lang` `<CODE>` | Which language: `en` or `vi`. An unrecognised one is answered in English |
-| `--reference` | Print the whole command reference as Markdown, instead of a topic. This is what `docs/guide/en/cli.md` is generated from, by `packaging/docs.sh --reference` — so the reference cannot describe a flag this binary does not have. It is English only, because the definitions it is generated from are. It does not conflict with `--lang`: that flag carries `MIXENGINE_LANG`, and a variable somebody exported once should not be able to refuse a command. |
+| `--reference` | Print the whole command reference as Markdown, instead of a topic. It is built from this binary's own command definitions, so it cannot describe a flag the binary does not have. It is English only, because those definitions are. It does not conflict with `--lang`: that flag carries `MIXENGINE_LANG`, and a variable somebody exported once should not be able to refuse a command. |
 
 ## mix runtime
 
@@ -128,9 +127,9 @@ mix runtime install <RUNTIME> <VERSION> [OPTIONS]
 | Flag | What it does |
 | --- | --- |
 | `<RUNTIME>` | Which language |
-| `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and deliberately not a constraint like `8.3`, even now that the daemon can read one: choosing a version from a range is *resolution*, it answers with what is installed, and none of these three commands is asking that question — an install picking `8.3`'s newest would be picking between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
+| `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and never a range like `8.3`: choosing a version from a range answers with what is installed, and an install would be choosing between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
 | `--no-wait` | Return once the daemon has accepted the install, rather than once it has finished. `mix` waits by default, because `mix runtime install php 8.3.33 && …` is a sentence about PHP being there. What comes back instead is the job, which `mix job wait` can be pointed at later. |
-| `--yes` | Install what this version needs of the machine first without asking — the Microsoft Visual C++ Redistributable, on Windows. Windows still asks for approval |
+| `--yes` | Install what this version needs of the machine first, without asking: the Microsoft Visual C++ Redistributable, on Windows. Windows still asks for approval |
 | `--ignore-requirements` | Install even though MixEngine judges this machine lacks something the version needs. The version is still run once before it is kept |
 
 ### mix runtime uninstall
@@ -147,7 +146,7 @@ mix runtime uninstall <RUNTIME> <VERSION> [OPTIONS]
 | Flag | What it does |
 | --- | --- |
 | `<RUNTIME>` | Which language |
-| `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and deliberately not a constraint like `8.3`, even now that the daemon can read one: choosing a version from a range is *resolution*, it answers with what is installed, and none of these three commands is asking that question — an install picking `8.3`'s newest would be picking between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
+| `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and never a range like `8.3`: choosing a version from a range answers with what is installed, and an install would be choosing between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
 | `--force` | Remove it even though a registered project pins it |
 
 ### mix runtime default
@@ -161,7 +160,7 @@ mix runtime default <RUNTIME> <VERSION>
 | Flag | What it does |
 | --- | --- |
 | `<RUNTIME>` | Which language |
-| `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and deliberately not a constraint like `8.3`, even now that the daemon can read one: choosing a version from a range is *resolution*, it answers with what is installed, and none of these three commands is asking that question — an install picking `8.3`'s newest would be picking between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
+| `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and never a range like `8.3`: choosing a version from a range answers with what is installed, and an install would be choosing between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
 
 ### mix runtime adopt
 
@@ -176,7 +175,7 @@ mix runtime adopt <RUNTIME> <VERSION>
 | Flag | What it does |
 | --- | --- |
 | `<RUNTIME>` | Which language |
-| `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and deliberately not a constraint like `8.3`, even now that the daemon can read one: choosing a version from a range is *resolution*, it answers with what is installed, and none of these three commands is asking that question — an install picking `8.3`'s newest would be picking between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
+| `<VERSION>` | Which version, exactly as `mix runtime available` lists it. Required, and never a range like `8.3`: choosing a version from a range answers with what is installed, and an install would be choosing between versions none of which are here yet. `mix runtime resolve` is where a range belongs. |
 
 ### mix runtime found
 
@@ -188,11 +187,7 @@ mix runtime found
 
 ### mix runtime ext
 
-Which extensions an installed build loads.
-
-Under `runtime` rather than as `mix php ext …`, which is what `docs/features/runtime-versions.md`
-wrote: a per-language command family for one language is a noun this CLI would then owe every other
-runtime.
+Which extensions an installed PHP build loads
 
 ```
 mix runtime ext <COMMAND>
@@ -240,9 +235,8 @@ mix runtime ext disable <EXTENSION> [OPTIONS]
 
 Say which installed version a directory uses, and why that one.
 
-The question `php -v` answers by running, asked without running anything — and the reason is the
-point of it: what a person wants when the version surprises them is which of the four sources
-decided it.
+It answers the question `php -v` answers, without running anything. The reason is the point: when a
+version surprises you, what you want to know is which of the four sources decided it.
 
 ```
 mix runtime resolve <RUNTIME> [OPTIONS]
@@ -303,14 +297,14 @@ mix package install <PACKAGE> <VERSION> [OPTIONS]
 | `<PACKAGE>` | Which package, as `mix package available` lists it |
 | `<VERSION>` | Which version, exactly as `mix package available` lists it |
 | `--no-wait` | Return once the daemon has accepted the install, rather than once it has finished |
-| `--yes` | Install what this version needs of the machine first without asking — the Microsoft Visual C++ Redistributable, on Windows. Windows still asks for approval |
+| `--yes` | Install what this version needs of the machine first, without asking: the Microsoft Visual C++ Redistributable, on Windows. Windows still asks for approval |
 | `--ignore-requirements` | Install even though MixEngine judges this machine lacks something the version needs. The version is still run once before it is kept |
 
 ### mix package uninstall
 
 Remove one installed version.
 
-Refused while a service is an instance of it, naming the services — `mix service delete` is what
+Refused while a service is an instance of it, naming the services. `mix service delete` is what
 frees it, and deleting a service keeps its data directory.
 
 ```
@@ -357,8 +351,8 @@ mix project <COMMAND>
 
 Register a directory as a project.
 
-With no `--name` and no `--pin`, whatever the `mixengine.toml` in that directory says is used —
-which is what adopting a colleague's checkout is.
+With no `--name` and no `--pin`, whatever the `mixengine.toml` in that directory says is used. That
+is how you adopt a colleague's checkout.
 
 ```
 mix project create [DIR] [OPTIONS]
@@ -416,8 +410,8 @@ Hold this project's services out of idle shutdown while you are working on it.
 A verb of its own rather than a flag on `update`, because it is a thing you do to a project for an
 afternoon and not part of what the project *is*.
 
-It reaches the PHP pool this project's sites name. It does not yet reach the database they query —
-nothing in MixEngine records which database a project uses.
+It reaches the PHP pool this project's sites name. It does not yet reach the database they query,
+because nothing in MixEngine records which database a project uses.
 
 ```
 mix project keep-warm [PROJECT] [OPTIONS]
@@ -465,7 +459,7 @@ mix site <COMMAND>
 Declare a site under a project.
 
 With nothing but a project named, whatever the `[site]` and `[[services]]` in that project's
-`mixengine.toml` say is used — which is what adopting a colleague's site is.
+`mixengine.toml` say is used. That is how you adopt a colleague's site.
 
 ```
 mix site create [OPTIONS]
@@ -557,7 +551,7 @@ mix site share [DOMAIN] [OPTIONS]
 | Flag | What it does |
 | --- | --- |
 | `<DOMAIN>` | Any of the site's domains. Defaults to the site of whichever project you are in |
-| `--interface` `<NAME>` | Which network to share on, by the name this machine gives it. Needed only where more than one is up — MixEngine refuses to choose rather than putting a site on a network you did not mean, and names the candidates when it does. |
+| `--interface` `<NAME>` | Which network to share on, by the name this machine gives it. Needed only where more than one is up. MixEngine refuses to choose rather than putting a site on a network you did not mean, and names the candidates when it does. |
 | `--for` `<LENGTH>` | How long to share for: `30s`, `90m`, `2h`, `1d`, or a bare number of seconds. Measured from when the share began, so asking for a length shorter than the site has already been shared for is refused rather than ending it on the spot. Off by default: a share with no `--for` lasts until you unshare it or this machine leaves the network. |
 
 ### mix site unshare
@@ -579,8 +573,8 @@ mix site unshare [DOMAIN]
 
 Serve this site.
 
-A flag and a re-render: the front end is told to read its configuration again. Nothing is started —
-a site is not a process, and the services it uses have states of their own.
+This sets a flag and tells the front end to read its configuration again. Nothing is started: a site
+is not a process, and the services it uses have states of their own.
 
 ```
 mix site start [DOMAIN]
@@ -632,7 +626,7 @@ mix blueprint capture <NAME> [OPTIONS]
 
 | Flag | What it does |
 | --- | --- |
-| `<NAME>` | What to file it under: lower-case letters, digits and hyphens. Positional rather than `--name`, because the flattened project argument is already called `name` and clap refuses two arguments under one id — found by running the command rather than by a test, which is why it is worth a sentence here. |
+| `<NAME>` | What to file it under: lower-case letters, digits and hyphens |
 | `--project` `<PROJECT>` | Which project. Defaults to whichever project the current directory is in |
 | `--description` `<TEXT>` | What it is for |
 | `--overwrite` | Replace the blueprint already filed under this name |
@@ -641,9 +635,9 @@ mix blueprint capture <NAME> [OPTIONS]
 
 Take in a blueprint somebody else wrote.
 
-**What arrives without a signature the gallery key vouches for is untrusted for good** — nothing
-raises that afterwards, and it is what decides how loudly its `[scaffold]` command has to be agreed
-to before it runs.
+**What arrives without a signature the gallery key vouches for is untrusted for good.** Nothing
+raises that afterwards, and it decides how loudly its `[scaffold]` command has to be agreed to
+before it runs.
 
 ```
 mix blueprint import <FILE> [OPTIONS]
@@ -679,14 +673,14 @@ mix blueprint apply <BLUEPRINT> [OPTIONS]
 | `--path` `<DIR>` | Where it goes. Defaults to a directory named for the project, in the current one |
 | `--dry-run` | Stop after planning, and print the plan. Sent as it is typed rather than insisted on here: whether this build can carry an apply out is the daemon's to say, and a client that refused to ask would be holding a rule of its own. |
 | `--install-missing` | Answer every version question by installing what the blueprint asks for |
-| `--with-front-end` | Install a web server too, where this home has none. A home with no front end serves no site, and nothing installs one by itself. With this, a blueprint that declares a site plans the default web server as well — and a home that already has one, Caddy or nginx, is left alone. |
+| `--with-front-end` | Install a web server too, where this home has none. A home with no front end serves no site, and nothing installs one by itself. With this, a blueprint that declares a site plans the default web server as well. A home that already has one, Caddy or nginx, is left alone. |
 | `--autostart` | Start the services this apply creates whenever MixEngine starts. Only what it creates: a server this home already had is left as its owner set it. Read and changed afterwards with `mix service autostart`. |
 | `--start` | Start the services this project needs once the apply is done. These are the project's sites, the database and pool they use, and the front end they are reached through, not every service of this home. They start after the permission prompt, so every site's name already resolves when it comes up. |
 | `--use-installed` | Answer every version question by using what this machine already has |
 | `--run-scaffold` | Run the blueprint's own `[scaffold]` command without asking first. For a blueprint the gallery signed. An unsigned one takes the other flag, and neither covers the other: a script that runs somebody's unsigned command should say so on the line that does it. |
 | `--run-untrusted-scaffold` | Run an **untrusted** blueprint's own `[scaffold]` command without asking first. Nothing vouches for what this runs. The command is still printed before it starts. |
 | `--grant` | Spend the one elevation prompt at the end without asking first |
-| `--install-prerequisites` | Install what the blueprint's releases need of this machine first, without asking — the Microsoft Visual C++ Redistributable, on Windows. Windows still asks for approval. Its own flag rather than `--yes`: an apply asks several questions, and one flag answering all of them would answer ones nobody read |
+| `--install-prerequisites` | Install what the blueprint's releases need of this machine first, without asking: the Microsoft Visual C++ Redistributable, on Windows. Windows still asks for approval. This is a flag of its own rather than part of `--yes`, because an apply asks several questions and one flag answering all of them would answer ones nobody read. |
 | `--ignore-requirements` | Apply even though MixEngine judges this machine lacks something the releases need |
 
 ## mix extension
@@ -818,7 +812,7 @@ mix database create <SERVICE> [OPTIONS]
 | `<SERVICE>` | Which instance: `mariadb@main`, `postgres@shop` |
 | `--name` `<NAME>` | The database's name |
 | `--user` `<ACCOUNT>` | The account's name. The database's own when nobody says |
-| `--password` `<VALUE>` | Choose the account's password instead of generating one. With a value, that is the password. Without one, `mix` prompts and reads one line from standard input — so this also works piped: `echo secret | mix database create … --password`. Not shown on any command line MixEngine itself runs afterwards: it goes into this machine's credential store the same way a generated password does. With an existing account of ours, this changes what is stored — and the server is realigned to it, the same way it already is when a password drifts. |
+| `--password` `<VALUE>` | Choose the account's password instead of generating one. With a value, that is the password. Without one, `mix` prompts and reads one line from standard input, so this also works piped: `echo secret | mix database create … --password`. It is not shown on any command line MixEngine itself runs afterwards: it goes into this machine's credential store the same way a generated password does. With an existing account of ours, this changes what is stored, and the server is realigned to it the same way it already is when a password drifts. |
 
 ### mix database client
 
@@ -841,9 +835,9 @@ mix database client <SERVICE>
 
 The password MixEngine holds for one account.
 
-Reads only: starts nothing. Prints the password itself — the last line of the plain rendering is the
-value alone, so a script can read it with `tail -1`. This is the only `mix database` command whose
-whole purpose is to print a credential.
+Reads only: starts nothing. Prints the password itself, and the last line of the plain rendering is
+the value alone, so a script can read it with `tail -1`. This is the only `mix database` command
+whose whole purpose is to print a credential.
 
 ```
 mix database credentials <SERVICE> [OPTIONS]
@@ -862,8 +856,9 @@ MixLab need not be running: a copy already open takes the connection as a new ta
 says so, and one that is not open is started.
 
 The instance is started if it is not running. The account's password is read from this machine's
-credential store at that moment and handed to the client in its own environment — never printed,
-never put in an argument. Exits 1 on an install with no window — the headless archive — and says so.
+credential store at that moment and handed to the client in its own environment. It is never printed
+and never put in an argument. Exits 1 on an install with no window (the headless archive), and says
+so.
 
 ```
 mix database open <SERVICE> [OPTIONS]
@@ -879,8 +874,8 @@ mix database open <SERVICE> [OPTIONS]
 
 Show what MixEngine is costing this machine: CPU and memory, per service and for the daemon.
 
-One reading and out by default. `--watch` opens the live stream, which is also what puts the daemon
-on its one-second rate — it samples once a minute when nobody is looking.
+One reading and out by default. `--watch` opens the live stream, which also puts the daemon on its
+one-second rate. When nobody is looking, it samples once a minute.
 
 ```
 mix metrics [OPTIONS]
@@ -905,10 +900,10 @@ mix doctor [OPTIONS]
 
 | Flag | What it does |
 | --- | --- |
-| `--repair` | Repair everything that can be repaired, and ask for the rest. Repairs inside this home are made at once. Anything needing an administrator is queued, shown, and then granted once — one prompt for the whole batch. |
+| `--repair` | Repair everything that can be repaired, and ask for the rest. Repairs inside this home are made at once. Anything needing an administrator is queued, shown, and then granted with one prompt for the whole batch. |
 | `--yes` | Do not ask before raising the prompt. Only with `--repair` |
 | `--no-wait` | Return as soon as the grant has started, rather than waiting for it. Only with `--repair` |
-| `--bundle` | Write one diagnostics archive and print where it went. Everything a bug report needs in one file: the findings above, this daemon's status, what this machine is, any crash reports this home has recorded, and the tail of the log — with whatever was deliberately left out named beside them. |
+| `--bundle` | Write one diagnostics archive and print where it went. Everything a bug report needs in one file: the findings above, this daemon's status, what this machine is, any crash reports this home has recorded, and the tail of the log. Whatever was deliberately left out is named beside them. |
 | `--out` `<FILE>` | Copy the archive here as well. Only with `--bundle` |
 
 ## mix self-update
@@ -917,8 +912,8 @@ Update MixEngine itself.
 
 Checks for a newer release and shows its version, its size and what changed before asking. On yes,
 the daemon downloads it, checks the signature, runs the new `mixengined` once to be sure this
-machine will start it, stops what it is supervising, replaces the binaries and exits — and this
-command starts the new daemon, which starts your services again.
+machine will start it, stops what it is supervising, replaces the binaries and exits. This command
+then starts the new daemon, which starts your services again.
 
 `mixengine-elevate` is never replaced here. It runs as root, and updating it needs an elevation
 prompt of its own.
@@ -944,7 +939,7 @@ mix self-update [OPTIONS]
 
 Where this home's disk has gone, and what would take each part back.
 
-Five categories — runtimes, data, logs, certs and cache — plus everything else. Each row says what
+Five categories (runtimes, data, logs, certs and cache) plus everything else. Each row says what
 would reclaim it: your databases never, a runtime only through `mix runtime uninstall`, the
 certificates only by losing HTTPS until they are issued again, and the logs and the cache by `mix
 cleanup`.
@@ -989,7 +984,7 @@ Take back what is safe to lose: rotated log files and the download cache.
 
 Nothing else, whatever `mix disk` says the total is. Your databases, your installed runtimes, your
 certificates, the log files being written right now and this home's crash reports are all out of
-reach — this command matches file names, it does not sweep the home.
+reach: this command matches file names, it does not sweep the home.
 
 Refuses while another job is running, because a cleanup empties the directory a download resumes
 from.
@@ -1009,9 +1004,9 @@ mix cleanup [OPTIONS]
 
 Take MixEngine off this machine.
 
-Undoes everything MixEngine has written outside its own directory — the hosts block, the DNS
-routing, the port grant, the certificate authority, the firewall rules, the login entry, your PATH
-entry, the privileged helper and its audit log — and then removes the directory itself.
+Undoes everything MixEngine has written outside its own directory (the hosts block, the DNS routing,
+the port grant, the certificate authority, the firewall rules, the login entry, your PATH entry, the
+privileged helper and its audit log), and then removes the directory itself.
 
 `--dry-run` names every one of them and changes nothing. Exits non-zero when anything it acted on is
 still there, so a script can ask.
@@ -1025,7 +1020,7 @@ mix uninstall [OPTIONS]
 | `--dry-run` | List what would be removed, and remove nothing |
 | `--keep-home` | Leave this home's directory where it is, and undo only what is outside it. Keeps the databases in `data/`, the certificates and everything else this home holds. The daemon keeps running, because there is still a home for it to serve. |
 | `--keep-relocated` | Leave the directories `[paths]` moved out of the home where they are. Its own choice, apart from `--keep-home`: a home can go while `data/` on another disk stays, or the reverse. A directory that was never moved is inside the home. |
-| `--relocated` | With `--dry-run`: print only the relocated directories, one path per line. For a program to read — the Windows uninstaller shows them before it asks anything. |
+| `--relocated` | With `--dry-run`: print only the relocated directories, one path per line. For a program to read. The Windows uninstaller shows them before it asks anything. |
 | `--blocked` | With `--dry-run`: print only the programs in the way, one per line, with the pid and the folder each one uses. Prints nothing when nothing is in the way. For a program to read: the Windows uninstaller shows the list before it removes anything. |
 | `--yes` | Answer the confirmation in advance, for a script with nobody at the keyboard |
 | `--no-wait` | Start the work and print the job, rather than waiting for it to finish |
@@ -1043,7 +1038,7 @@ mix domain <COMMAND>
 Give a site one more name.
 
 The new name is an alias: the site's primary domain is unchanged, because that is what its canonical
-URL and — from the HTTPS work — its certificate are named after.
+URL and its certificate are named after.
 
 ```
 mix domain add <DOMAIN> [OPTIONS]
@@ -1148,11 +1143,9 @@ mix service limits <SERVICE> <COMMAND>
 
 Replace every limit on this service.
 
-**Every field, not only the ones named.** A flag left out is that field's default — uncapped, or
-ordinary priority — so `set --cpu 50` clears a memory ceiling that was there. That is deliberate:
-composing a partial change would mean reading the current value and merging it, which is business
-logic a client may not hold. What this does instead is print all three fields of the result, so a
-cleared limit is on the screen.
+**Every field, not only the ones named.** A flag left out is that field's default (uncapped, or
+ordinary priority), so `set --cpu 50` clears a memory ceiling that was there. All three fields of
+the result are printed, so a cleared limit is on the screen.
 
 ```
 mix service limits set [OPTIONS]
@@ -1191,7 +1184,7 @@ mix service idle <SERVICE> [OPTIONS]
 | Flag | What it does |
 | --- | --- |
 | `<SERVICE>` | The service to read or set |
-| `--after` `<DURATION>` | Stop it once nothing has used it for this long — `30m`, `2h`, `90m` |
+| `--after` `<DURATION>` | Stop it once nothing has used it for this long, such as `30m`, `2h` or `90m` |
 | `--never` | Never stop it for being unused, whatever a later release makes the default |
 | `--default` | Go back to whatever its recipe wants, which in this build is never |
 
@@ -1219,7 +1212,7 @@ mix service save-resources [OPTIONS]
 
 Whether this service starts when MixEngine does.
 
-With no flag: read it. `mix autostart` is a different question — whether this *machine* starts a
+With no flag: read it. `mix autostart` is a different question: whether this *machine* starts a
 daemon for this home when you log in.
 
 A service that something set here depends on is started too, whether or not it is set itself: a pool
@@ -1242,8 +1235,8 @@ mix service autostart <SERVICE> [OPTIONS]
 Create a service from an installed package.
 
 The part of the id before `@` is the package it is an instance of, which is why there is no separate
-argument for it: `mariadb@main` is an instance of `mariadb`, and a package that runs only once —
-Caddy — is named without an `@` at all.
+argument for it: `mariadb@main` is an instance of `mariadb`. A package that runs only once, such as
+Caddy, is named without an `@` at all.
 
 ```
 mix service create <SERVICE> <VERSION> [OPTIONS]
@@ -1262,8 +1255,8 @@ mix service create <SERVICE> <VERSION> [OPTIONS]
 
 Delete a service, keeping its data directory.
 
-Takes the row and the configuration generated from it. **Never the data** — that is somebody's
-databases, and the answer names the directory that was left so nobody has to go looking.
+Takes the row and the configuration generated from it. **Never the data**, because that is
+somebody's databases. The answer names the directory that was left, so nobody has to go looking.
 
 ```
 mix service delete <SERVICE> [OPTIONS]
@@ -1317,9 +1310,9 @@ mix service start [SERVICE] [OPTIONS]
 
 | Flag | What it does |
 | --- | --- |
-| `<SERVICE>` | The service to act on. Every declared service when it is left out. Naming one does not mean acting on one — a plan is the transitive set — and what the daemon walked comes back in the answer. |
+| `<SERVICE>` | The service to act on. Every declared service when it is left out. Naming one does not mean acting on only that one: a plan is the transitive set, and what the daemon walked comes back in the answer. |
 | `--no-wait` | Return once the daemon has accepted the plan, rather than once it has walked it. `mix` waits by default, because `mix service start db && …` is a sentence about the database being up: an answer sent before the walk would exit `0` for a service that never came up. |
-| `--project` `<PROJECT>` | Every service one project needs, instead of one or all. Its sites' databases and caches, the php-fpm pool they name, and the front end they are reached through — worked out by the daemon, which is the only thing that can: the set is `site_service_links`, and no client may derive it. |
+| `--project` `<PROJECT>` | Every service one project needs, instead of one or all. Its sites' databases and caches, the php-fpm pool they name, and the front end they are reached through, as the daemon works them out. |
 
 ### mix service stop
 
@@ -1331,7 +1324,7 @@ mix service stop [SERVICE] [OPTIONS]
 
 | Flag | What it does |
 | --- | --- |
-| `<SERVICE>` | The service to act on. Every declared service when it is left out. Naming one does not mean acting on one — a plan is the transitive set — and what the daemon walked comes back in the answer. |
+| `<SERVICE>` | The service to act on. Every declared service when it is left out. Naming one does not mean acting on only that one: a plan is the transitive set, and what the daemon walked comes back in the answer. |
 | `--no-wait` | Return once the daemon has accepted the plan, rather than once it has walked it. `mix` waits by default, because `mix service start db && …` is a sentence about the database being up: an answer sent before the walk would exit `0` for a service that never came up. |
 
 ### mix service restart
@@ -1344,18 +1337,18 @@ mix service restart [SERVICE] [OPTIONS]
 
 | Flag | What it does |
 | --- | --- |
-| `<SERVICE>` | The service to act on. Every declared service when it is left out. Naming one does not mean acting on one — a plan is the transitive set — and what the daemon walked comes back in the answer. |
+| `<SERVICE>` | The service to act on. Every declared service when it is left out. Naming one does not mean acting on only that one: a plan is the transitive set, and what the daemon walked comes back in the answer. |
 | `--no-wait` | Return once the daemon has accepted the plan, rather than once it has walked it. `mix` waits by default, because `mix service start db && …` is a sentence about the database being up: an answer sent before the walk would exit `0` for a service that never came up. |
 
 ### mix service reset-credential
 
 Re-set this database's superuser password inside its own data directory.
 
-For a server that refuses the password MixEngine holds for it — `ERROR 1045`, or `password
-authentication failed`. A database keeps its own copy of that password inside its data directory and
-this machine's credential store holds the other; they are written together when the service first
-starts and can only come apart afterwards. Once they have, nothing can log in to put them back,
-because every way of changing the copy inside the directory needs the password that was lost.
+For a server that refuses the password MixEngine holds for it, with `ERROR 1045` or `password
+authentication failed`. A database keeps its own copy of that password inside its data directory,
+and this machine's credential store holds the other. They are written together when the service
+first starts and can only come apart afterwards. Once they have, nothing can log in to put them
+back, because every way of changing the copy inside the directory needs the password that was lost.
 
 This stops the service and everything that depends on it, writes the password this home holds into
 the data directory through the server's own offline bootstrap, and starts back what went down.
@@ -1434,8 +1427,8 @@ mix job status <JOB>
 Wait for a job to finish.
 
 **Answers when the job ends or when the wait runs out**, and the second is not an error: what comes
-back is the job as it stands. The exit status is what a script branches on — non-zero for a job that
-failed, and for one that has not finished yet.
+back is the job as it stands. The exit status is what a script branches on. It is non-zero for a job
+that failed, and for one that has not finished yet.
 
 ```
 mix job wait <JOB> [OPTIONS]
@@ -1510,7 +1503,7 @@ mix path install
 
 Take `<root>/bin` back off this user's PATH.
 
-The commands stay in the directory — they are inside the home, and removing the home is what removes
+The commands stay in the directory. They are inside the home, and removing the home is what removes
 them.
 
 ```
@@ -1559,7 +1552,7 @@ mix autostart enable
 
 Remove it.
 
-Does **not** stop the daemon that is running — turning off "start at login" is not a request to lose
+Does **not** stop the daemon that is running. Turning off "start at login" is not a request to lose
 the daemon you are using.
 
 ```
@@ -1595,7 +1588,7 @@ mix elevation grant [OPTIONS]
 
 | Flag | What it does |
 | --- | --- |
-| `--yes` | Say yes in advance, instead of being asked. What it skips is the question, never the screen: every operation and what it will change is printed either way. It exists for the caller that cannot be asked — a script, a CI step, anything with no terminal behind it — and for `--json`, which has no way to answer. |
+| `--yes` | Say yes in advance, instead of being asked. What it skips is the question, never the screen: every operation and what it will change is printed either way. It exists for a caller that cannot be asked, such as a script or a CI step, and for `--json`, which has no way to answer. |
 | `--no-wait` | Answer as soon as the prompt has been raised, without waiting for it |
 
 ### mix elevation drop
@@ -1644,7 +1637,7 @@ mix cert issue [OPTIONS]
 Say whether each site's padlock is green, by asking the server rather than the disk.
 
 Opens a real TLS connection to this home's front end for every site and reports the certificate it
-presents — which is the only thing a browser ever sees, and the only way to notice a server still
+presents. That is the only thing a browser ever sees, and the only way to notice a server still
 holding a certificate that was replaced underneath it.
 
 Reads only. Nothing is issued, nothing is installed and nothing is reloaded.
@@ -1669,7 +1662,7 @@ Replace this home's certificate authority with a new one.
 
 Destructive: every browser holding a cached chain under the old authority stops accepting it, and
 every site's certificate is reissued. Nothing is replaced unless this machine can be made to trust
-the new one — declining the prompt leaves this home exactly as it was.
+the new one. Declining the prompt leaves this home exactly as it was.
 
 ```
 mix cert ca-rotate [OPTIONS]
@@ -1684,7 +1677,7 @@ mix cert ca-rotate [OPTIONS]
 
 Take this home's certificate authority out of every store that trusts it.
 
-Leaves the certificate and its key on disk, and leaves every site's certificate alone — `mix doctor
+Leaves the certificate and its key on disk, and leaves every site's certificate alone. `mix doctor
 --repair` puts the trust back. Removing it from the system store needs an administrator; the browser
 databases do not.
 

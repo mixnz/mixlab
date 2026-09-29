@@ -100,7 +100,7 @@ pub(crate) fn untouched_with_consent(
             Some(_) => None,
             None => Some(StepResult::NotRun {
                 why: format!(
-                    "`{what}` was not run: nobody agreed to it — `mix blueprint apply \
+                    "`{what}` was not run: nobody agreed to it; `mix blueprint apply \
                      --run-scaffold` shows it, asks, and runs it in the project directory"
                 ),
             }),

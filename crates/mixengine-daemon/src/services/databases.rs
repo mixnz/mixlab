@@ -140,7 +140,7 @@ pub(crate) async fn ensure(
             // missing entry and a wrong one are one command away from each other: the reset writes
             // what this home holds, and generates one first where it holds nothing.
             .with_hint(format!(
-                "that password is written by the service's first run — `mix service start` \
+                "that password is written by the service's first run; `mix service start` \
                  performs it. For a data directory that has already been bootstrapped, `mix \
                  service reset-credential {service}` puts a credential back without touching the \
                  databases in it"
@@ -210,7 +210,7 @@ const REFUSALS: [&str; 3] = ["ERROR 1045", "28P01", "password authentication fai
 pub(super) fn repair_hint(service: &ServiceId) -> String {
     format!(
         "the password inside the server's data directory and the one in this machine's credential \
-         store have come apart, and nothing can log in to bring them back together — until this \
+         store have come apart, and nothing can log in to bring them back together; until this \
          release a credential's address named the service and not the home, so another \
          MIXENGINE_HOME on this machine (a sandbox, a second install, a test run) could overwrite \
          the entry. `mix service reset-credential {service}` writes this home's password into the \
@@ -274,7 +274,7 @@ fn explain_a_refused_superuser(error: Error, service: &ServiceId) -> Error {
         error.code,
         format!(
             "{service} refused the superuser password this home holds, so the server was \
-             bootstrapped with a different one — {}",
+             bootstrapped with a different one: {}",
             error.message
         ),
     )

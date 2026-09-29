@@ -15,7 +15,7 @@ use keyring::error::Error as KeyringError;
 /// The workaround for a machine with no credential store, or `None` when it has one.
 pub(crate) fn absent_store(source: &KeyringError) -> Option<&'static str> {
     matches!(source, KeyringError::NoStorageAccess(_)).then_some(
-        "this session has no login Keychain to open — log in at the console once so macOS creates \
+        "this session has no login Keychain to open; log in at the console once so macOS creates \
          it, or run MixEngine as a user that has",
     )
 }

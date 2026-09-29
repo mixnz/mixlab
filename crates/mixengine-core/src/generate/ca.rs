@@ -155,7 +155,7 @@ fn compose(roots: &[Vec<u8>], authority_pem: Option<&str>) -> String {
     // front end re-read its configuration.
     match authority_pem.and_then(crate::certs::ca::der) {
         Some(der) => contents.push_str(&format!("# MixEngine authority: {}\n", fingerprint(&der))),
-        None => contents.push_str("# MixEngine authority: none — this home has not made one yet\n"),
+        None => contents.push_str("# MixEngine authority: none; this home has not made one yet\n"),
     }
 
     contents.push_str(&format!("# Machine roots: {}\n", roots.len()));

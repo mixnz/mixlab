@@ -92,7 +92,7 @@ impl Endpoint {
                 return Err(Error::UnsupportedCheck {
                     check,
                     reason: format!(
-                        "{url} is HTTPS, and this build makes plaintext requests only — a check \
+                        "{url} is HTTPS, and this build makes plaintext requests only; a check \
                          against a service on this machine should name its `http://` address"
                     ),
                 });

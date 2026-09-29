@@ -48,17 +48,17 @@ const FILE_NOT_FOUND: &str = "org.freedesktop.DBus.Error.FileNotFound";
 fn workaround(name: &str) -> Option<&'static str> {
     match name {
         SERVICE_UNKNOWN => Some(
-            "this session's D-Bus has no secret service on it — install and start one \
+            "this session's D-Bus has no secret service on it; install and start one \
              (gnome-keyring, kwallet), or on a machine with no desktop run \
              `gnome-keyring-daemon --unlock --components=secrets` inside a session bus",
         ),
         NOT_SUPPORTED => Some(
-            "this login has no D-Bus session bus at all and one cannot be started here — run under \
+            "this login has no D-Bus session bus at all and one cannot be started here; run under \
              `dbus-run-session`, or point DBUS_SESSION_BUS_ADDRESS at the bus of a logged-in \
              session",
         ),
         FILE_NOT_FOUND => Some(
-            "DBUS_SESSION_BUS_ADDRESS names a socket that is not there — unset it to let this \
+            "DBUS_SESSION_BUS_ADDRESS names a socket that is not there; unset it to let this \
              machine find its own session bus, or point it at one that exists",
         ),
         // **Everything else is a store that is present and refusing**, which is the safe direction
@@ -88,7 +88,7 @@ pub(crate) fn absent_store(source: &KeyringError) -> Option<&'static str> {
         // Declared for exactly this case and constructed nowhere in 4.1.0 — matched anyway, so the
         // day the backend starts answering properly this module needs no edit to agree.
         dbus_secret_service::Error::Unavailable => Some(
-            "this machine has no secret service — install and start one (gnome-keyring, kwallet)",
+            "this machine has no secret service; install and start one (gnome-keyring, kwallet)",
         ),
         dbus_secret_service::Error::Dbus(bus) => workaround(bus.name()?),
         // The enum is `#[non_exhaustive]`, so this arm is required rather than chosen. It falls the

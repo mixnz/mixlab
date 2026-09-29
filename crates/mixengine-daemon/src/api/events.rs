@@ -97,7 +97,7 @@ impl Subscription {
             Err(broadcast::error::RecvError::Lagged(missed)) => {
                 tracing::warn!(
                     missed,
-                    "an event subscriber fell behind — telling it to resync"
+                    "an event subscriber fell behind; telling it to resync"
                 );
                 Some(Frame::Event(DaemonEvent::Resync { missed }))
             }

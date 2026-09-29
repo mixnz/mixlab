@@ -199,7 +199,7 @@ async fn post_rpc(api: &Arc<Api>, request: Request<Incoming>) -> Response<Respon
                         ErrorCode::InvalidArgument,
                         format!("the request body is larger than {MAX_BODY} bytes"),
                     )
-                    .with_hint("`POST /rpc` takes one call or a batch — send a smaller batch"),
+                    .with_hint("`POST /rpc` takes one call or a batch; send a smaller batch"),
                 )
             } else {
                 problem(

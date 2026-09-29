@@ -218,7 +218,7 @@ pub async fn abandon(store: &Store, at: Timestamp) -> Result<Vec<JobFinish>> {
             mixengine_proto::ErrorCode::Internal,
             "the daemon that was running this stopped before it finished",
         )
-        .with_hint("nothing was left half-applied that a retry cannot repeat — ask for it again"),
+        .with_hint("nothing was left half-applied that a retry cannot repeat; ask for it again"),
     };
 
     // Cannot fail: the value is built two statements above out of types this crate owns.

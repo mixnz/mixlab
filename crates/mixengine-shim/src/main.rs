@@ -227,7 +227,7 @@ fn client(invoked: &Path, arguments: &[OsString]) -> Result<i32, Refusal> {
             .map_err(|error| Refusal {
                 said: explain(&error),
                 hint: Some(format!(
-                    "{} is where this shim looks — set MIXENGINE_HOME if that is not the install \
+                    "{} is where this shim looks; set MIXENGINE_HOME if that is not the install \
                      it belongs to",
                     database.display()
                 )),
@@ -661,7 +661,7 @@ fn resolved(kind: RuntimeKind, executable: &str) -> Result<Resolution, Refusal> 
             .map_err(|error| Refusal {
                 said: explain(&error),
                 hint: Some(format!(
-                    "{} is where this shim looks — set MIXENGINE_HOME if that is not the install \
+                    "{} is where this shim looks; set MIXENGINE_HOME if that is not the install \
                      it belongs to",
                     database.display()
                 )),

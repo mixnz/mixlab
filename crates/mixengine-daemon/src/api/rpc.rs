@@ -902,7 +902,7 @@ async fn call_method(
                         format!("this daemon has no method `{unknown}`"),
                     )
                     .with_hint(
-                        "the client and the daemon are probably from different releases — \
+                        "the client and the daemon are probably from different releases; \
                          `daemon.version` says which one this is",
                     ),
                 }),
@@ -937,7 +937,7 @@ async fn call_method(
             // something a user can act on, and the daemon's log is where it belongs.
             tracing::error!(
                 panicked = join.is_panic(),
-                "a request handler did not finish — answering `internal` and staying up"
+                "a request handler did not finish; answering `internal` and staying up"
             );
 
             Err(Failure {
@@ -947,7 +947,7 @@ async fn call_method(
                     format!("`{named}` failed in a way it does not account for"),
                 )
                 .with_hint(
-                    "this is a bug in MixEngine — `logs/daemon.log` has the detail a report needs",
+                    "this is a bug in MixEngine; `logs/daemon.log` has the detail a report needs",
                 ),
             })
         }
@@ -1888,7 +1888,7 @@ impl Api {
                 ErrorCode::InvalidArgument,
                 format!(
                     "`cpu_percent` is a percentage of one core, and this machine has \
-                     {} — so {ceiling} is the whole of it",
+                     {}, so {ceiling} is the whole of it",
                     support.cores
                 ),
             )
@@ -2162,7 +2162,7 @@ impl Api {
                 ),
             )
             .with_hint(
-                "only the database servers keep one — `mix service list` shows what this home runs",
+                "only the database servers keep one; `mix service list` shows what this home runs",
             ));
         }
 

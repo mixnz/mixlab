@@ -222,7 +222,7 @@ fn address(context: &Context) -> Result<SocketAddr> {
             key: "bind_addr",
             value: context.bind().to_owned(),
             reason: "MongoDB runs here with no accounts, so on an address a network can reach it \
-                     is a database anyone on that network can read and delete — bind it to \
+                     is a database anyone on that network can read and delete; bind it to \
                      127.0.0.1",
         })?;
 

@@ -187,7 +187,7 @@ pub(crate) fn left_behind(ledger: &Ledger) -> String {
 
     match said.is_empty() {
         true => String::new(),
-        false => format!(" — left in place: {}", said.join(", ")),
+        false => format!("; left in place: {}", said.join(", ")),
     }
 }
 

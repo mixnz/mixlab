@@ -80,8 +80,8 @@ const VERSION: &str = if mixengine_platform::RELEASE {
 struct Args {
     /// Root directory of the MixEngine installation to talk to.
     ///
-    /// Defaults to the OS convention, exactly as `mixengined` resolves it — the two have to agree
-    /// or they would be talking about different daemons.
+    /// Defaults to the OS convention, the same one `mixengined` uses, so the two always talk about
+    /// the same daemon.
     #[arg(long, global = true, env = "MIXENGINE_HOME", value_name = "DIR")]
     home: Option<PathBuf>,
 
@@ -111,9 +111,9 @@ enum Command {
     ///
     /// **Starts no daemon and needs none.** `runtimes/`, `packages/`, `data/` and `logs/` can each
     /// be moved to another disk by `[paths]` in `config.toml`, or by starting `mixengined` with
-    /// `--runtimes`, `--packages`, `--data` or `--logs` — and that choice is free only until the
-    /// first runtime, package or service is installed, because from then on where they are is
-    /// recorded against each of them rather than worked out.
+    /// `--runtimes`, `--packages`, `--data` or `--logs`. That choice is free only until the first
+    /// runtime, package or service is installed. From then on, where each of them lives is recorded
+    /// against it.
     ///
     /// The answer comes from `mixengined` itself, run once: whether anything is installed is a
     /// question about rows in this home's database, and `mix` does not open one.
@@ -127,10 +127,10 @@ enum Command {
 
     /// Read the MixLab handbook, offline, in English or Vietnamese.
     ///
-    /// With no topic it lists them. It talks to no daemon and needs no home — the pages are
-    /// compiled into this binary, which is what makes `mix docs install` answer on a machine where
-    /// nothing starts. The same pages are published at <https://mixnz.github.io/mixlab/>, as
-    /// HTML for a person and as plain Markdown for a program.
+    /// With no topic it lists them. It talks to no daemon and needs no home, because the pages are
+    /// compiled into this binary. That is why `mix docs install` answers on a machine where nothing
+    /// starts. The same pages are published at <https://mixnz.github.io/mixlab/>, as HTML for a
+    /// person and as plain Markdown for a program.
     Docs {
         /// Which topic. Omit it to list them.
         topic: Option<String>,
@@ -141,12 +141,12 @@ enum Command {
 
         /// Print the whole command reference as Markdown, instead of a topic.
         ///
-        /// This is what `docs/guide/en/cli.md` is generated from, by `packaging/docs.sh
-        /// --reference` — so the reference cannot describe a flag this binary does not have. It is
-        /// English only, because the definitions it is generated from are.
+        /// It is built from this binary's own command definitions, so it cannot describe a flag the
+        /// binary does not have. It is English only, because those definitions are.
         ///
         /// It does not conflict with `--lang`: that flag carries `MIXENGINE_LANG`, and a variable
         /// somebody exported once should not be able to refuse a command.
+        // `docs/guide/en/cli.md` is generated from this output by `packaging/docs.sh --reference`.
         #[arg(long, conflicts_with = "topic")]
         reference: bool,
     },
@@ -196,8 +196,8 @@ enum Command {
 
     /// Show what MixEngine is costing this machine: CPU and memory, per service and for the daemon.
     ///
-    /// One reading and out by default. `--watch` opens the live stream, which is also what puts the
-    /// daemon on its one-second rate — it samples once a minute when nobody is looking.
+    /// One reading and out by default. `--watch` opens the live stream, which also puts the daemon
+    /// on its one-second rate. When nobody is looking, it samples once a minute.
     Metrics {
         /// Keep printing, a block per reading, until interrupted.
         #[arg(long)]
@@ -224,7 +224,7 @@ enum Command {
         /// Repair everything that can be repaired, and ask for the rest.
         ///
         /// Repairs inside this home are made at once. Anything needing an administrator is queued,
-        /// shown, and then granted once — one prompt for the whole batch.
+        /// shown, and then granted with one prompt for the whole batch.
         #[arg(long)]
         repair: bool,
 
@@ -240,8 +240,8 @@ enum Command {
         /// Write one diagnostics archive and print where it went.
         ///
         /// Everything a bug report needs in one file: the findings above, this daemon's status,
-        /// what this machine is, any crash reports this home has recorded, and the tail of the log
-        /// — with whatever was deliberately left out named beside them.
+        /// what this machine is, any crash reports this home has recorded, and the tail of the log.
+        /// Whatever was deliberately left out is named beside them.
         #[arg(long, conflicts_with = "repair")]
         bundle: bool,
 
@@ -252,10 +252,10 @@ enum Command {
 
     /// Update MixEngine itself.
     ///
-    /// Checks for a newer release and shows its version, its size and what changed before asking. On
-    /// yes, the daemon downloads it, checks the signature, runs the new `mixengined` once to be sure
-    /// this machine will start it, stops what it is supervising, replaces the binaries and exits —
-    /// and this command starts the new daemon, which starts your services again.
+    /// Checks for a newer release and shows its version, its size and what changed before asking.
+    /// On yes, the daemon downloads it, checks the signature, runs the new `mixengined` once to be
+    /// sure this machine will start it, stops what it is supervising, replaces the binaries and
+    /// exits. This command then starts the new daemon, which starts your services again.
     ///
     /// `mixengine-elevate` is never replaced here. It runs as root, and updating it needs an
     /// elevation prompt of its own.
@@ -263,9 +263,9 @@ enum Command {
     /// A copy of MixEngine that a package manager installed is not updated by this: it says so, and
     /// names the directory.
     ///
-    /// On a Mac that installed MixLab from the .pkg, the next .pkg is downloaded, checked and opened
-    /// in Installer.app instead, and nothing is stopped. When the installation is done,
-    /// `mix self-update --finish` restarts MixEngine on the new version.
+    /// On a Mac that installed MixLab from the .pkg, the next .pkg is downloaded, checked and
+    /// opened in Installer.app instead, and nothing is stopped. When the installation is done, `mix
+    /// self-update --finish` restarts MixEngine on the new version.
     SelfUpdate {
         /// Check and print what is available. Installs nothing.
         #[arg(long)]
@@ -283,10 +283,10 @@ enum Command {
 
     /// Where this home's disk has gone, and what would take each part back.
     ///
-    /// Five categories — runtimes, data, logs, certs and cache — plus everything else. Each row says
+    /// Five categories (runtimes, data, logs, certs and cache) plus everything else. Each row says
     /// what would reclaim it: your databases never, a runtime only through `mix runtime uninstall`,
-    /// the certificates only by losing HTTPS until they are issued again, and the logs and the cache
-    /// by `mix cleanup`.
+    /// the certificates only by losing HTTPS until they are issued again, and the logs and the
+    /// cache by `mix cleanup`.
     Disk,
 
     /// Bring back an earlier install's projects, sites and services from the folders it kept.
@@ -297,9 +297,9 @@ enum Command {
 
     /// Take back what is safe to lose: rotated log files and the download cache.
     ///
-    /// Nothing else, whatever `mix disk` says the total is. Your databases, your installed runtimes,
-    /// your certificates, the log files being written right now and this home's crash reports are
-    /// all out of reach — this command matches file names, it does not sweep the home.
+    /// Nothing else, whatever `mix disk` says the total is. Your databases, your installed
+    /// runtimes, your certificates, the log files being written right now and this home's crash
+    /// reports are all out of reach: this command matches file names, it does not sweep the home.
     ///
     /// Refuses while another job is running, because a cleanup empties the directory a download
     /// resumes from.
@@ -323,9 +323,10 @@ enum Command {
 
     /// Take MixEngine off this machine.
     ///
-    /// Undoes everything MixEngine has written outside its own directory — the hosts block, the DNS
-    /// routing, the port grant, the certificate authority, the firewall rules, the login entry, your
-    /// PATH entry, the privileged helper and its audit log — and then removes the directory itself.
+    /// Undoes everything MixEngine has written outside its own directory (the hosts block, the DNS
+    /// routing, the port grant, the certificate authority, the firewall rules, the login entry,
+    /// your PATH entry, the privileged helper and its audit log), and then removes the directory
+    /// itself.
     ///
     /// `--dry-run` names every one of them and changes nothing. Exits non-zero when anything it
     /// acted on is still there, so a script can ask.
@@ -350,7 +351,7 @@ enum Command {
 
         /// With `--dry-run`: print only the relocated directories, one path per line.
         ///
-        /// For a program to read — the Windows uninstaller shows them before it asks anything.
+        /// For a program to read. The Windows uninstaller shows them before it asks anything.
         #[arg(long, requires = "dry_run")]
         relocated: bool,
 
@@ -443,7 +444,7 @@ enum CertCommand {
     /// Say whether each site's padlock is green, by asking the server rather than the disk.
     ///
     /// Opens a real TLS connection to this home's front end for every site and reports the
-    /// certificate it presents — which is the only thing a browser ever sees, and the only way to
+    /// certificate it presents. That is the only thing a browser ever sees, and the only way to
     /// notice a server still holding a certificate that was replaced underneath it.
     ///
     /// Reads only. Nothing is issued, nothing is installed and nothing is reloaded.
@@ -458,7 +459,7 @@ enum CertCommand {
     ///
     /// Destructive: every browser holding a cached chain under the old authority stops accepting
     /// it, and every site's certificate is reissued. Nothing is replaced unless this machine can be
-    /// made to trust the new one — declining the prompt leaves this home exactly as it was.
+    /// made to trust the new one. Declining the prompt leaves this home exactly as it was.
     CaRotate {
         /// Answer the confirmation in advance, for a script with nobody at the keyboard.
         #[arg(long)]
@@ -471,8 +472,8 @@ enum CertCommand {
 
     /// Take this home's certificate authority out of every store that trusts it.
     ///
-    /// Leaves the certificate and its key on disk, and leaves every site's certificate alone —
-    /// `mix doctor --repair` puts the trust back. Removing it from the system store needs an
+    /// Leaves the certificate and its key on disk, and leaves every site's certificate alone. `mix
+    /// doctor --repair` puts the trust back. Removing it from the system store needs an
     /// administrator; the browser databases do not.
     CaUninstall {
         /// Answer the confirmation in advance, for a script with nobody at the keyboard.
@@ -495,7 +496,7 @@ enum ProjectCommand {
     /// Register a directory as a project.
     ///
     /// With no `--name` and no `--pin`, whatever the `mixengine.toml` in that directory says is
-    /// used — which is what adopting a colleague's checkout is.
+    /// used. That is how you adopt a colleague's checkout.
     #[command(alias = "import")]
     Create {
         /// The project's root. Defaults to the current directory.
@@ -556,7 +557,7 @@ enum ProjectCommand {
     /// for an afternoon and not part of what the project *is*.
     ///
     /// It reaches the PHP pool this project's sites name. It does not yet reach the database they
-    /// query — nothing in MixEngine records which database a project uses.
+    /// query, because nothing in MixEngine records which database a project uses.
     #[command(name = "keep-warm")]
     KeepWarm {
         #[command(flatten)]
@@ -681,10 +682,9 @@ enum BlueprintCommand {
     /// Write down what a project is made of.
     Capture {
         /// What to file it under: lower-case letters, digits and hyphens.
-        ///
-        /// Positional rather than `--name`, because the flattened project argument is already
-        /// called `name` and clap refuses two arguments under one id — found by running the command
-        /// rather than by a test, which is why it is worth a sentence here.
+        // Positional rather than `--name`, because the flattened project argument is already called
+        // `name` and clap refuses two arguments under one id. That was found by running the command
+        // rather than by a test.
         #[arg(value_name = "NAME")]
         name: String,
 
@@ -703,9 +703,9 @@ enum BlueprintCommand {
 
     /// Take in a blueprint somebody else wrote.
     ///
-    /// **What arrives without a signature the gallery key vouches for is untrusted for good** —
-    /// nothing raises that afterwards, and it is what decides how loudly its `[scaffold]` command
-    /// has to be agreed to before it runs.
+    /// **What arrives without a signature the gallery key vouches for is untrusted for good.**
+    /// Nothing raises that afterwards, and it decides how loudly its `[scaffold]` command has to be
+    /// agreed to before it runs.
     Import {
         /// The manifest to read.
         #[arg(value_name = "FILE")]
@@ -756,7 +756,7 @@ enum BlueprintCommand {
         /// Install a web server too, where this home has none.
         ///
         /// A home with no front end serves no site, and nothing installs one by itself. With this,
-        /// a blueprint that declares a site plans the default web server as well — and a home that
+        /// a blueprint that declares a site plans the default web server as well. A home that
         /// already has one, Caddy or nginx, is left alone.
         #[arg(long)]
         with_front_end: bool,
@@ -802,10 +802,11 @@ enum BlueprintCommand {
         #[arg(long)]
         grant: bool,
 
-        /// Install what the blueprint's releases need of this machine first, without asking — the
-        /// Microsoft Visual C++ Redistributable, on Windows. Windows still asks for approval. Its own
-        /// flag rather than `--yes`: an apply asks several questions, and one flag answering all of
-        /// them would answer ones nobody read.
+        /// Install what the blueprint's releases need of this machine first, without asking: the
+        /// Microsoft Visual C++ Redistributable, on Windows. Windows still asks for approval.
+        ///
+        /// This is a flag of its own rather than part of `--yes`, because an apply asks several
+        /// questions and one flag answering all of them would answer ones nobody read.
         #[arg(long)]
         install_prerequisites: bool,
 
@@ -841,12 +842,12 @@ enum DatabaseCommand {
         /// Choose the account's password instead of generating one.
         ///
         /// With a value, that is the password. Without one, `mix` prompts and reads one line from
-        /// standard input — so this also works piped: `echo secret | mix database create … --password`.
-        /// Not shown on any command line MixEngine itself runs afterwards: it goes into this
-        /// machine's credential store the same way a generated password does.
+        /// standard input, so this also works piped: `echo secret | mix database create …
+        /// --password`. It is not shown on any command line MixEngine itself runs afterwards: it
+        /// goes into this machine's credential store the same way a generated password does.
         ///
-        /// With an existing account of ours, this changes what is stored — and the server is
-        /// realigned to it, the same way it already is when a password drifts.
+        /// With an existing account of ours, this changes what is stored, and the server is
+        /// realigned to it the same way it already is when a password drifts.
         #[arg(long, num_args = 0..=1, default_missing_value = "", value_name = "VALUE")]
         password: Option<String>,
     },
@@ -865,9 +866,9 @@ enum DatabaseCommand {
 
     /// The password MixEngine holds for one account.
     ///
-    /// Reads only: starts nothing. Prints the password itself — the last line of the plain
-    /// rendering is the value alone, so a script can read it with `tail -1`. This is the only
-    /// `mix database` command whose whole purpose is to print a credential.
+    /// Reads only: starts nothing. Prints the password itself, and the last line of the plain
+    /// rendering is the value alone, so a script can read it with `tail -1`. This is the only `mix
+    /// database` command whose whole purpose is to print a credential.
     Credentials {
         /// Which instance: `mariadb@main`, `postgres@shop`.
         #[arg(value_name = "SERVICE", value_parser = service_id)]
@@ -884,9 +885,9 @@ enum DatabaseCommand {
     /// command says so, and one that is not open is started.
     ///
     /// The instance is started if it is not running. The account's password is read from this
-    /// machine's credential store at that moment and handed to the client in its own environment —
-    /// never printed, never put in an argument. Exits 1 on an install with no window — the headless
-    /// archive — and says so.
+    /// machine's credential store at that moment and handed to the client in its own environment.
+    /// It is never printed and never put in an argument. Exits 1 on an install with no window (the
+    /// headless archive), and says so.
     Open {
         /// Which instance.
         #[arg(value_name = "SERVICE", value_parser = service_id)]
@@ -908,7 +909,7 @@ enum DomainCommand {
     /// Give a site one more name.
     ///
     /// The new name is an alias: the site's primary domain is unchanged, because that is what its
-    /// canonical URL and — from the HTTPS work — its certificate are named after.
+    /// canonical URL and its certificate are named after.
     Add {
         /// The name to add.
         #[arg(value_name = "DOMAIN")]
@@ -946,8 +947,8 @@ enum DomainCommand {
 enum SiteCommand {
     /// Declare a site under a project.
     ///
-    /// With nothing but a project named, whatever the `[site]` and `[[services]]` in that
-    /// project's `mixengine.toml` say is used — which is what adopting a colleague's site is.
+    /// With nothing but a project named, whatever the `[site]` and `[[services]]` in that project's
+    /// `mixengine.toml` say is used. That is how you adopt a colleague's site.
     #[command(alias = "import")]
     Create {
         /// The project. Defaults to whichever project the current directory is in.
@@ -1111,8 +1112,8 @@ enum SiteCommand {
 
         /// Which network to share on, by the name this machine gives it.
         ///
-        /// Needed only where more than one is up — MixEngine refuses to choose rather than putting
-        /// a site on a network you did not mean, and names the candidates when it does.
+        /// Needed only where more than one is up. MixEngine refuses to choose rather than putting a
+        /// site on a network you did not mean, and names the candidates when it does.
         #[arg(long, value_name = "NAME")]
         interface: Option<String>,
 
@@ -1136,8 +1137,8 @@ enum SiteCommand {
 
     /// Serve this site.
     ///
-    /// A flag and a re-render: the front end is told to read its configuration again. Nothing is
-    /// started — a site is not a process, and the services it uses have states of their own.
+    /// This sets a flag and tells the front end to read its configuration again. Nothing is
+    /// started: a site is not a process, and the services it uses have states of their own.
     Start {
         #[command(flatten)]
         site: WhichSite,
@@ -1214,7 +1215,7 @@ enum PathCommand {
 
     /// Take `<root>/bin` back off this user's PATH.
     ///
-    /// The commands stay in the directory — they are inside the home, and removing the home is what
+    /// The commands stay in the directory. They are inside the home, and removing the home is what
     /// removes them.
     Uninstall,
 
@@ -1249,7 +1250,7 @@ enum AutostartCommand {
 
     /// Remove it.
     ///
-    /// Does **not** stop the daemon that is running — turning off "start at login" is not a request
+    /// Does **not** stop the daemon that is running. Turning off "start at login" is not a request
     /// to lose the daemon you are using.
     Disable,
 }
@@ -1276,8 +1277,8 @@ enum ElevationCommand {
         /// Say yes in advance, instead of being asked.
         ///
         /// What it skips is the question, never the screen: every operation and what it will change
-        /// is printed either way. It exists for the caller that cannot be asked — a script, a CI
-        /// step, anything with no terminal behind it — and for `--json`, which has no way to answer.
+        /// is printed either way. It exists for a caller that cannot be asked, such as a script or
+        /// a CI step, and for `--json`, which has no way to answer.
         #[arg(long)]
         yes: bool,
 
@@ -1337,7 +1338,7 @@ enum RuntimeCommand {
         #[arg(long)]
         no_wait: bool,
 
-        /// Install what this version needs of the machine first without asking — the Microsoft
+        /// Install what this version needs of the machine first, without asking: the Microsoft
         /// Visual C++ Redistributable, on Windows. Windows still asks for approval.
         #[arg(long)]
         yes: bool,
@@ -1378,11 +1379,10 @@ enum RuntimeCommand {
     /// List versions that are on disk but not listed, and why each is not.
     Found,
 
-    /// Which extensions an installed build loads.
-    ///
-    /// Under `runtime` rather than as `mix php ext …`, which is what
-    /// `docs/features/runtime-versions.md` wrote: a per-language command family for one language
-    /// is a noun this CLI would then owe every other runtime.
+    /// Which extensions an installed PHP build loads.
+    // Under `runtime` rather than as `mix php ext …`, which is what
+    // `docs/features/runtime-versions.md` wrote: a per-language command family for one language is
+    // a noun this CLI would then owe every other runtime.
     Ext {
         #[command(subcommand)]
         command: ExtCommand,
@@ -1390,9 +1390,8 @@ enum RuntimeCommand {
 
     /// Say which installed version a directory uses, and why that one.
     ///
-    /// The question `php -v` answers by running, asked without running anything — and the reason is
-    /// the point of it: what a person wants when the version surprises them is which of the four
-    /// sources decided it.
+    /// It answers the question `php -v` answers, without running anything. The reason is the point:
+    /// when a version surprises you, what you want to know is which of the four sources decided it.
     Resolve {
         /// Which language.
         #[arg(value_name = "RUNTIME", value_parser = runtime_kind)]
@@ -1489,7 +1488,7 @@ enum PackageCommand {
         #[arg(long)]
         no_wait: bool,
 
-        /// Install what this version needs of the machine first without asking — the Microsoft
+        /// Install what this version needs of the machine first, without asking: the Microsoft
         /// Visual C++ Redistributable, on Windows. Windows still asks for approval.
         #[arg(long)]
         yes: bool,
@@ -1502,7 +1501,7 @@ enum PackageCommand {
 
     /// Remove one installed version.
     ///
-    /// Refused while a service is an instance of it, naming the services — `mix service delete` is
+    /// Refused while a service is an instance of it, naming the services. `mix service delete` is
     /// what frees it, and deleting a service keeps its data directory.
     Uninstall {
         #[command(flatten)]
@@ -1558,11 +1557,9 @@ struct Which {
 
     /// Which version, exactly as `mix runtime available` lists it.
     ///
-    /// Required, and deliberately not a constraint like `8.3`, even now that the daemon can read
-    /// one: choosing a version from a range is *resolution*, it answers with what is installed, and
-    /// none of these three commands is asking that question — an install picking `8.3`'s newest
-    /// would be picking between versions none of which are here yet. `mix runtime resolve` is where
-    /// a range belongs.
+    /// Required, and never a range like `8.3`: choosing a version from a range answers with what is
+    /// installed, and an install would be choosing between versions none of which are here yet.
+    /// `mix runtime resolve` is where a range belongs.
     #[arg(value_name = "VERSION", value_parser = runtime_version)]
     version: PackageVersion,
 }
@@ -1590,9 +1587,9 @@ enum JobCommand {
 
     /// Wait for a job to finish.
     ///
-    /// **Answers when the job ends or when the wait runs out**, and the second is not an error: what
-    /// comes back is the job as it stands. The exit status is what a script branches on — non-zero
-    /// for a job that failed, and for one that has not finished yet.
+    /// **Answers when the job ends or when the wait runs out**, and the second is not an error:
+    /// what comes back is the job as it stands. The exit status is what a script branches on. It is
+    /// non-zero for a job that failed, and for one that has not finished yet.
     Wait {
         /// The job to wait for.
         #[arg(value_name = "JOB")]
@@ -1710,7 +1707,7 @@ enum ServiceCommand {
         #[arg(value_name = "SERVICE", value_parser = service_id)]
         service: ServiceId,
 
-        /// Stop it once nothing has used it for this long — `30m`, `2h`, `90m`.
+        /// Stop it once nothing has used it for this long, such as `30m`, `2h` or `90m`.
         #[arg(long, value_name = "DURATION", group = "idle_change", value_parser = idle_after)]
         after: Option<u32>,
 
@@ -1743,7 +1740,7 @@ enum ServiceCommand {
 
     /// Whether this service starts when MixEngine does.
     ///
-    /// With no flag: read it. `mix autostart` is a different question — whether this *machine*
+    /// With no flag: read it. `mix autostart` is a different question: whether this *machine*
     /// starts a daemon for this home when you log in.
     ///
     /// A service that something set here depends on is started too, whether or not it is set
@@ -1767,8 +1764,8 @@ enum ServiceCommand {
     /// Create a service from an installed package.
     ///
     /// The part of the id before `@` is the package it is an instance of, which is why there is no
-    /// separate argument for it: `mariadb@main` is an instance of `mariadb`, and a package that runs
-    /// only once — Caddy — is named without an `@` at all.
+    /// separate argument for it: `mariadb@main` is an instance of `mariadb`. A package that runs
+    /// only once, such as Caddy, is named without an `@` at all.
     Create {
         /// The service to create.
         #[arg(value_name = "SERVICE", value_parser = service_id)]
@@ -1798,8 +1795,9 @@ enum ServiceCommand {
 
     /// Delete a service, keeping its data directory.
     ///
-    /// Takes the row and the configuration generated from it. **Never the data** — that is somebody's
-    /// databases, and the answer names the directory that was left so nobody has to go looking.
+    /// Takes the row and the configuration generated from it. **Never the data**, because that is
+    /// somebody's databases. The answer names the directory that was left, so nobody has to go
+    /// looking.
     Delete {
         /// The service to delete.
         #[arg(value_name = "SERVICE", value_parser = service_id)]
@@ -1853,12 +1851,12 @@ enum ServiceCommand {
 
     /// Re-set this database's superuser password inside its own data directory.
     ///
-    /// For a server that refuses the password MixEngine holds for it — `ERROR 1045`, or `password
-    /// authentication failed`. A database keeps its own copy of that password inside its data
-    /// directory and this machine's credential store holds the other; they are written together
-    /// when the service first starts and can only come apart afterwards. Once they have, nothing
-    /// can log in to put them back, because every way of changing the copy inside the directory
-    /// needs the password that was lost.
+    /// For a server that refuses the password MixEngine holds for it, with `ERROR 1045` or
+    /// `password authentication failed`. A database keeps its own copy of that password inside its
+    /// data directory, and this machine's credential store holds the other. They are written
+    /// together when the service first starts and can only come apart afterwards. Once they have,
+    /// nothing can log in to put them back, because every way of changing the copy inside the
+    /// directory needs the password that was lost.
     ///
     /// This stops the service and everything that depends on it, writes the password this home
     /// holds into the data directory through the server's own offline bootstrap, and starts back
@@ -1899,11 +1897,11 @@ enum ServiceCommand {
 enum LimitsCommand {
     /// Replace every limit on this service.
     ///
-    /// **Every field, not only the ones named.** A flag left out is that field's default — uncapped,
-    /// or ordinary priority — so `set --cpu 50` clears a memory ceiling that was there. That is
-    /// deliberate: composing a partial change would mean reading the current value and merging it,
-    /// which is business logic a client may not hold. What this does instead is print all three
-    /// fields of the result, so a cleared limit is on the screen.
+    /// **Every field, not only the ones named.** A flag left out is that field's default (uncapped,
+    /// or ordinary priority), so `set --cpu 50` clears a memory ceiling that was there. All three
+    /// fields of the result are printed, so a cleared limit is on the screen.
+    // Deliberate: composing a partial change would mean reading the current value and merging it,
+    // which is business logic a client may not hold.
     Set {
         /// A ceiling on CPU, as a percentage of one core. Left out: uncapped.
         #[arg(long, value_name = "PERCENT")]
@@ -1932,7 +1930,8 @@ enum LimitsCommand {
 /// programs.
 #[derive(Debug, Clone, Copy, clap::ValueEnum)]
 enum FrontEndServerArg {
-    /// Caddy, which is what this project picks when there is a choice — ADR 0004.
+    /// Caddy, the default front end.
+    // What this project picks when there is a choice: ADR 0004.
     Caddy,
 
     /// nginx, which is a first-class alternative and not a lesser one.
@@ -1975,8 +1974,8 @@ impl From<PriorityArg> for Priority {
 struct Target {
     /// The service to act on. Every declared service when it is left out.
     ///
-    /// Naming one does not mean acting on one — a plan is the transitive set — and what the daemon
-    /// walked comes back in the answer.
+    /// Naming one does not mean acting on only that one: a plan is the transitive set, and what the
+    /// daemon walked comes back in the answer.
     #[arg(value_name = "SERVICE", value_parser = service_id)]
     service: Option<ServiceId>,
 
@@ -2012,8 +2011,8 @@ struct StartTarget {
     /// Every service one project needs, instead of one or all.
     ///
     /// Its sites' databases and caches, the php-fpm pool they name, and the front end they are
-    /// reached through — worked out by the daemon, which is the only thing that can: the set is
-    /// `site_service_links`, and no client may derive it.
+    /// reached through, as the daemon works them out.
+    // Only the daemon can: the set is `site_service_links`, and no client may derive it.
     #[arg(long, value_name = "PROJECT", conflicts_with = "service")]
     project: Option<String>,
 }
@@ -2154,7 +2153,7 @@ fn agreed_to_switch(list: &ServiceList, server: FrontEndServer, json: bool) -> R
     emit(&match standing {
         Some(service) => format!(
             "{} is this home's front end.\nswitching to {server} stops it, renders every site for \
-             {server} and starts it — no site is reachable while that happens.\n",
+             {server} and starts it; no site is reachable while that happens.\n",
             service.id,
             server = server.package()
         ),
@@ -2166,7 +2165,7 @@ fn agreed_to_switch(list: &ServiceList, server: FrontEndServer, json: bool) -> R
 
     emit(
         "this machine may ask permission for it to answer on 80 and 443, and anything else \
-         MixEngine is already waiting for is asked for at the same time — `mix elevation status` \
+         MixEngine is already waiting for is asked for at the same time; `mix elevation status` \
          lists that.\n",
     )?;
 
@@ -2184,17 +2183,6 @@ fn agreed_to_switch(list: &ServiceList, server: FrontEndServer, json: bool) -> R
     }
 }
 
-/// Ask before a repair stops a database and rewrites the credential inside it — **T127**.
-///
-/// **Asked rather than assumed, and `--yes` is the way past it**, because this is the one `mix
-/// service` subcommand that changes something inside a data directory. What it says is what somebody
-/// weighing it needs: what stops, what is rewritten, and — the part that decides it — that the
-/// databases are kept.
-///
-/// # Errors
-///
-/// [`unanswered`] where there is nobody to ask: a script reaching this needs to be told which flag
-/// says yes in advance, rather than to have one assumed for it.
 /// `mix home …` — what an earlier install left a copy of, and bringing it back (T182h).
 #[derive(Debug, Subcommand)]
 enum HomeCommand {
@@ -2257,6 +2245,17 @@ fn agreed_to_restore() -> Result<bool, Error> {
     }
 }
 
+/// Ask before a repair stops a database and rewrites the credential inside it — **T127**.
+///
+/// **Asked rather than assumed, and `--yes` is the way past it**, because this is the one `mix
+/// service` subcommand that changes something inside a data directory. What it says is what somebody
+/// weighing it needs: what stops, what is rewritten, and — the part that decides it — that the
+/// databases are kept.
+///
+/// # Errors
+///
+/// [`unanswered`] where there is nobody to ask: a script reaching this needs to be told which flag
+/// says yes in advance, rather than to have one assumed for it.
 fn agreed_to_reset(service: &ServiceId) -> Result<bool, Error> {
     match confirm::ask(&format!(
         "\n{service} and everything that depends on it will be stopped, and its superuser password \
@@ -2296,7 +2295,7 @@ fn service_id(value: &str) -> Result<ServiceId, String> {
 /// means the opposite, so `--never` is what a person types for that.
 fn idle_after(value: &str) -> Result<u32, String> {
     let millis = mixengine_proto::Millis::parse(value)
-        .ok_or_else(|| format!("{value:?} is not a duration — write it as `30m`, `2h` or `90m`"))?;
+        .ok_or_else(|| format!("{value:?} is not a duration; write it as `30m`, `2h` or `90m`"))?;
 
     if millis.is_zero() {
         return Err(
@@ -2310,7 +2309,7 @@ fn idle_after(value: &str) -> Result<u32, String> {
 
     if minutes * 60_000 != millis.0 {
         return Err(format!(
-            "{value:?} is not a whole number of minutes, and that is what MixEngine stores — write \
+            "{value:?} is not a whole number of minutes, and that is what MixEngine stores; write \
              it as minutes or hours"
         ));
     }
@@ -2326,7 +2325,7 @@ fn idle_after(value: &str) -> Result<u32, String> {
 fn runtime_kind(value: &str) -> Result<RuntimeKind, String> {
     RuntimeKind::parse(value).ok_or_else(|| {
         format!(
-            "{value:?} is not a runtime MixEngine manages — it knows {}",
+            "{value:?} is not a runtime MixEngine manages; it knows {}",
             RuntimeKind::ALL.map(RuntimeKind::as_str).join(", ")
         )
     })
@@ -2346,7 +2345,7 @@ fn version_constraint(value: &str) -> Result<VersionConstraint, String> {
 fn job_state(value: &str) -> Result<JobState, String> {
     JobState::parse(value).ok_or_else(|| {
         format!(
-            "{value:?} is not a job state — a job is {}",
+            "{value:?} is not a job state; a job is {}",
             JobState::ALL.map(JobState::as_str).join(", ")
         )
     })
@@ -2796,7 +2795,7 @@ fn since_refusal(value: &str) -> Error {
         ErrorCode::InvalidArgument,
         format!("`--since {value}` is not a length of time"),
     )
-    .with_hint("write it as a number and one of s, m, h, d — for example `--since 2h`")
+    .with_hint("write it as a number and one of s, m, h, d, for example `--since 2h`")
 }
 
 /// `mix doctor` — roadmap task **T47a**.
@@ -4751,7 +4750,7 @@ async fn database(
                 )) {
                     Some(line) => Some(line),
                     None => {
-                        eprintln!("nobody to ask — pass `--password <value>` or pipe one line in");
+                        eprintln!("nobody to ask; pass `--password <value>` or pipe one line in");
                         return Ok(ExitCode::from(1));
                     }
                 },
@@ -5941,7 +5940,7 @@ fn unasked(command: &str, untrusted: bool) -> Option<ScaffoldConsent> {
 
     let _ = writeln!(
         std::io::stderr(),
-        "mix: `{command}` was not run — nothing here could be asked. `{flag}` agrees to it."
+        "mix: `{command}` was not run; nothing here could be asked. `{flag}` agrees to it."
     );
 
     None
@@ -6045,7 +6044,7 @@ fn question(
                     format!("{variable} is set to something that is not a version: {error}"),
                 )
                 .with_hint(
-                    "a version (`8.3.33`), a series (`8.3`) or a caret (`^8.3`) — the same forms \
+                    "a version (`8.3.33`), a series (`8.3`) or a caret (`^8.3`), the same forms \
                      `mixengine.toml` accepts",
                 )
             })?),
@@ -6190,7 +6189,7 @@ fn storage(root: &Path, json: bool) -> Result<ExitCode, Error> {
             format!("mixengined described this home in a way this `mix` cannot read: {source}"),
         )
         .with_hint(
-            "the two binaries are from different releases — reinstall MixEngine so that \
+            "the two binaries are from different releases; reinstall MixEngine so that \
                     `mix` and `mixengined` come from one",
         )
     })?;
@@ -6637,7 +6636,7 @@ fn report_gap(missed: u64) {
     // over: the output the user asked for is still going out.
     let _ = writeln!(
         stderr,
-        "mix: {missed} lines were dropped — this client fell behind the service"
+        "mix: {missed} lines were dropped; this client fell behind the service"
     );
 }
 
@@ -6777,7 +6776,7 @@ fn report(error: &Error, json: bool) {
 /// rather than read as "no limit": a share that ends when it begins is not a share, and a flag
 /// silently ignored is the other way to be wrong.
 fn for_seconds(text: &str) -> Result<u64, String> {
-    let refusal = || format!("`{text}` is not a length of time — try `30s`, `90m`, `2h` or `1d`");
+    let refusal = || format!("`{text}` is not a length of time; try `30s`, `90m`, `2h` or `1d`");
 
     let split = text
         .find(|character: char| !character.is_ascii_digit())

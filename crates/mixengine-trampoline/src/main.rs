@@ -58,7 +58,7 @@ fn run(own: &Path, name: &str, arguments: Vec<OsString>) -> Result<i32, String> 
         .output()
         .map_err(|error| {
             format!(
-                "cannot run {}: {error} — restarting MixEngine puts it back",
+                "cannot run {}: {error}; restarting MixEngine puts it back",
                 resolver.display()
             )
         })?;
@@ -88,7 +88,7 @@ fn resolver(bin: &Path) -> Result<PathBuf, String> {
 
     let said = std::fs::read_to_string(&pointer).map_err(|error| {
         format!(
-            "cannot read {}: {error} — restarting MixEngine writes it again",
+            "cannot read {}: {error}; restarting MixEngine writes it again",
             pointer.display()
         )
     })?;

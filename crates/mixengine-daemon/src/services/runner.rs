@@ -2087,7 +2087,7 @@ impl Runner {
                 tracing::warn!(
                     service = self.spec.id().as_str(),
                     after = ?ENVIRONMENT,
-                    "the environment this service is running with did not resolve in time — a \
+                    "the environment this service is running with did not resolve in time; a \
                      locked OS keyring is the usual reason; its own commands will be run with the \
                      entries the spec states outright"
                 );

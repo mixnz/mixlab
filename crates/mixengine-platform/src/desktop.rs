@@ -150,7 +150,7 @@ fn window_at(directory: Option<&std::path::Path>, executable: &str, bundle: &str
 
     Located::NotInstalled {
         searched: if looked.is_empty() {
-            "nowhere — this program cannot say which directory it is running from".to_owned()
+            "nowhere; this program cannot say which directory it is running from".to_owned()
         } else {
             looked.join(" and ")
         },

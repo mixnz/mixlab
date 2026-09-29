@@ -63,7 +63,7 @@ pub fn choose(found: &[Interface], asked: Option<&str>) -> Result<Interface> {
             .map(|candidate| (*candidate).clone())
             .ok_or_else(|| Error::NoInterface {
                 reason: format!(
-                    "this machine has no shareable interface called {name} — it has {}",
+                    "this machine has no shareable interface called {name}; it has {}",
                     listing(&candidates)
                 ),
             });
@@ -78,7 +78,7 @@ pub fn choose(found: &[Interface], asked: Option<&str>) -> Result<Interface> {
         [only] => Ok((*only).clone()),
         many => Err(Error::NoInterface {
             reason: format!(
-                "this machine has more than one network to share on — name the one you mean with \
+                "this machine has more than one network to share on; name the one you mean with \
                  --interface: {}",
                 listing(many)
             ),

@@ -50,8 +50,8 @@ pub(crate) fn address(run: &Path) -> Result<OsString> {
         return Err(Error::Address {
             address: socket.display().to_string(),
             reason: format!(
-                "a Unix socket path is limited to {} bytes on this system and this one is {length} \
-                 — put MIXENGINE_HOME somewhere shorter",
+                "a Unix socket path is limited to {} bytes on this system and this one is {length}\
+                ; put MIXENGINE_HOME somewhere shorter",
                 SUN_PATH - 1
             ),
         });

@@ -329,7 +329,7 @@ fn directory(root: &str) -> Result<PathBuf, Error> {
             ErrorCode::InvalidArgument,
             format!("{root} is not a directory"),
         )
-        .with_hint("make it first — a project is a directory that is already there"));
+        .with_hint("make it first; a project is a directory that is already there"));
     }
 
     Ok(path.to_path_buf())

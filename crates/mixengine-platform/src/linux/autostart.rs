@@ -34,7 +34,7 @@ const SYSTEMCTL: &str = "systemctl";
 
 /// What a machine with no user manager is told to do instead.
 const BY_HAND: &str = "this machine has no systemd user manager, so there is nothing to register an autostart entry \
-     with — start the daemon from whatever your session does use, with: mixengined --home";
+     with; start the daemon yourself from whatever your session uses: mixengined --home";
 
 /// This user's systemd unit directory, and the unit inside it.
 #[derive(Debug)]

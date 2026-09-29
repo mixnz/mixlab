@@ -116,7 +116,7 @@ fn failure(action: &'static str, service: &str, key: &str, source: KeyringError)
         return Error::UnsupportedPlatform {
             capability: "Keyring",
             reason: format!(
-                "this session has no credential store to keep {service}/{key} in ({source}) — \
+                "this session has no credential store to keep {service}/{key} in ({source}); \
                  {workaround}"
             ),
         };

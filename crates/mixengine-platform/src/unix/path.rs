@@ -98,8 +98,8 @@ impl Profiles {
     fn targets(&self, creating: bool) -> Result<Vec<PathBuf>> {
         let home = self.home.as_ref().ok_or(Error::UnsupportedPlatform {
             capability: "PathIntegration",
-            reason: "this account has no home directory, so there is no shell profile to write \
-                     — put <root>/bin on PATH yourself, in whatever this environment reads"
+            reason: "this account has no home directory, so there is no shell profile to write\
+                    ; put <root>/bin on PATH yourself, in whatever this environment reads"
                 .to_owned(),
         })?;
 

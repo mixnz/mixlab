@@ -126,8 +126,8 @@ pub(crate) fn reference(command: &clap::Command) -> String {
     );
     out.push_str(&format!(
         "Every command `mix` accepts, in version {VERSION}. This page is **generated** from the\n\
-         binary's own definitions, so it cannot describe a flag that is not there — and it is the\n\
-         one page of this handbook that exists in English only, because those definitions are.\n\
+         binary's own definitions, so it cannot describe a flag that is not there. It is the one\n\
+         page of this handbook that exists in English only, because those definitions are.\n\
          `mix docs cli --lang vi` says why, in Vietnamese.\n\n\
          The same text is `mix <command> --help` on the machine in front of you, and\n\
          `mix docs --reference` prints this whole page.\n\n\

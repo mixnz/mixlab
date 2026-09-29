@@ -66,7 +66,7 @@ fn resolve_root_with(
         Some(path) if path.as_os_str().is_empty() => {
             return Err(Error::new(
                 ErrorCode::InvalidArgument,
-                "the home directory is empty — unset --home and MIXENGINE_HOME to use this \
+                "the home directory is empty; unset --home and MIXENGINE_HOME to use this \
                  platform's default location",
             ));
         }

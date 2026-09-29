@@ -84,7 +84,7 @@ impl BrowserTrust for Browsers {
         if !available() {
             return Ok(BrowserSurvey::NoTool {
                 because: format!(
-                    "{CERTUTIL} is not installed, so Firefox and Chrome were not asked — it ships \
+                    "{CERTUTIL} is not installed, so Firefox and Chrome were not asked; it ships \
                      in {PACKAGE}"
                 ),
             });

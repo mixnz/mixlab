@@ -370,7 +370,7 @@ fn root_for(asked: &BlueprintApply) -> Result<PathBuf, Error> {
                 asked.project
             ),
         )
-        .with_hint("name the directory outright instead — `--path` on the command line")
+        .with_hint("name the directory outright instead: `--path` on the command line")
     })?;
 
     Ok(given.join(handle))

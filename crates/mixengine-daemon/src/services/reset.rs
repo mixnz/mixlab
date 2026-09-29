@@ -75,7 +75,7 @@ pub(crate) async fn perform(
             "this service's first run declares no way to re-set a credential in place".to_owned(),
         )
         .with_hint(
-            "only the database servers keep a superuser password of their own — `mix service list` \
+            "only the database servers keep a superuser password of their own; `mix service list` \
              shows what this home runs",
         ));
     }
@@ -179,8 +179,8 @@ async fn writable(data: &Path) -> Result<(), Error> {
             ),
         )
         .with_hint(
-            "look for a server process this daemon does not supervise — one left by an older run, \
-             or started by hand — and stop it. On Windows a database server can outlive the process \
+            "look for a server process this daemon does not supervise (one left by an older run, \
+             or started by hand) and stop it. On Windows a database server can outlive the process \
              that started it",
         )),
     }

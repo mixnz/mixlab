@@ -290,7 +290,7 @@ impl Store {
         if backup.exists() {
             tracing::warn!(
                 path = %backup.display(),
-                "a backup from this version is already there — keeping it and migrating anyway"
+                "a backup from this version is already there; keeping it and migrating anyway"
             );
             return Ok(());
         }

@@ -181,7 +181,7 @@ fn cannot_run(program: &OsString, action: &str, source: &std::io::Error) -> Erro
         // to do.
         std::io::ErrorKind::NotFound => Error::new(ErrorCode::DependencyMissing, message)
             .with_hint(format!(
-                "`mix` looks for the daemon at {BINARY}, then next to itself, then on PATH — \
+                "`mix` looks for the daemon at {BINARY}, then next to itself, then on PATH; \
                  install MixEngine, or point {BINARY} at a mixengined binary"
             )),
 

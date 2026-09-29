@@ -502,7 +502,7 @@ fn peer_of(pipe: &NamedPipeServer) -> Result<String> {
         // picked back up on the next start, while a daemon quietly acting as somebody else cannot
         // be undone after the fact.
         let failure = io::Error::last_os_error();
-        eprintln!("mixengined: cannot stop impersonating a client ({failure}) — aborting");
+        eprintln!("mixengined: cannot stop impersonating a client ({failure}); aborting");
         std::process::abort();
     }
 
@@ -617,7 +617,7 @@ pub(crate) async fn reach_socket(path: &Path) -> Result<()> {
     Err(Error::UnsupportedPlatform {
         capability: "a service listening on a Unix domain socket",
         reason: format!(
-            "nothing on Windows listens on {} — the same service listens on a TCP port here, and \
+            "nothing on Windows listens on {}; the same service listens on a TCP port here, and \
              the spec that named a socket path was written for another system",
             path.display()
         ),

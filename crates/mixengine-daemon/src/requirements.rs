@@ -86,7 +86,7 @@ pub(crate) fn refusal(
             None => "--install-prerequisites",
         };
         return Some(refused.with_hint(format!(
-            "MixEngine can install it from Microsoft first — pass `{agree}`, or agree in MixLab; \
+            "MixEngine can install it from Microsoft first; pass `{agree}`, or agree in MixLab; \
              pass `--ignore-requirements` if this machine has it some other way"
         )));
     }
@@ -163,7 +163,7 @@ pub(crate) async fn satisfy(
             .progress(
                 0,
                 format!(
-                    "installing the Microsoft Visual C++ Redistributable ({arch}) — Windows may \
+                    "installing the Microsoft Visual C++ Redistributable ({arch}); Windows may \
                      ask for approval, and this step cannot be cancelled once it has started"
                 ),
             )

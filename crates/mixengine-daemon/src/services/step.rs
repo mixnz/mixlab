@@ -108,7 +108,7 @@ pub(crate) async fn run(step: &Step) -> Result<Ran, Error> {
                 |exit| format!("it exited with {exit}")
             ),
             ran.complaint()
-                .map_or_else(String::new, |said| format!(" — {said}")),
+                .map_or_else(String::new, |said| format!(": {said}")),
         ),
     ))
 }

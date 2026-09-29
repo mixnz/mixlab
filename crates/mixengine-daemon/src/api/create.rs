@@ -81,7 +81,7 @@ impl Api {
                 format!("this build of MixEngine cannot run {package}"),
             )
             .with_hint(format!(
-                "it knows how to configure and run: {known} — the part of an id before `@` is the \
+                "it knows how to configure and run: {known}; the part of an id before `@` is the \
                  package it is an instance of"
             )));
         };
@@ -115,7 +115,7 @@ impl Api {
                     format!("{package} runs as named instances, so an id needs one"),
                 )
                 .with_hint(format!(
-                    "`{package}@main` — the name after the `@` is yours, and it is what tells two \
+                    "`{package}@main`; the name after the `@` is yours, and it is what tells two \
                      of them apart"
                 )));
             }
@@ -126,7 +126,7 @@ impl Api {
                     format!("there is one {package}, so its id carries no `@`"),
                 )
                 .with_hint(format!(
-                    "`{package}` — a second instance would be two processes contending for the \
+                    "`{package}`; a second instance would be two processes contending for the \
                      same port"
                 )));
             }
@@ -307,7 +307,7 @@ impl Api {
                     format!("{id} is declared by {}", declared.join(", ")),
                 )
                 .with_hint(format!(
-                    "`mix site update <site> --service …` drops it, or `mix service delete {id}                      --force` deletes it anyway — the sites keep running, with the declaration gone"
+                    "`mix site update <site> --service …` drops it, or `mix service delete {id}                      --force` deletes it anyway; the sites keep running, with the declaration gone"
                 )));
             }
         }

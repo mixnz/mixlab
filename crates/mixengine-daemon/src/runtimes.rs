@@ -541,7 +541,7 @@ impl Runtimes {
                 .map(|requirement| requirement.need.label())
                 .collect();
             let notice = format!(
-                "this machine's loader does not list {} — install them with this distribution's \
+                "this machine's loader does not list {}; install them with this distribution's \
                  package manager; the install goes on",
                 named.join(", ")
             );
@@ -1108,7 +1108,7 @@ pub(crate) fn offered<'a>(
                 format!("{kind} {version} is not published for this machine"),
             )
             .with_hint(
-                "upstream does not build every version for every system — \
+                "upstream does not build every version for every system; \
                  `mix runtime available` only lists what this one can run",
             )
         })

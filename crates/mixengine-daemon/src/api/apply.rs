@@ -535,7 +535,7 @@ impl Api {
 
                     Err(error) => Ok(StepResult::NotRun {
                         why: format!(
-                            "no certificate was issued for {name}: {} — `mix cert issue` tries \
+                            "no certificate was issued for {name}: {}; `mix cert issue` tries \
                              again, and `mix doctor` says what is missing",
                             error.message
                         ),
@@ -908,7 +908,7 @@ fn consent_refusal(plan: &BlueprintPlan, consent: Option<&ScaffoldConsent>) -> O
             Error::new(
                 ErrorCode::InvalidArgument,
                 format!(
-                    "nothing in this plan runs `{}` — this agrees to a plan made against \
+                    "nothing in this plan runs `{}`; this agrees to a plan made against \
                      another blueprint, or another moment",
                     consent.command
                 ),
@@ -961,7 +961,7 @@ fn consent_refusal(plan: &BlueprintPlan, consent: Option<&ScaffoldConsent>) -> O
     {
         return Some(
             Error::new(ErrorCode::PreconditionFailed, reason.clone()).with_hint(
-                "install it, put it on your PATH and restart the daemon — or apply without \
+                "install it, put it on your PATH and restart the daemon, or apply without \
                  agreeing to the command, and everything else is still applied",
             ),
         );
@@ -1045,7 +1045,7 @@ fn refusal(
             Error::new(
                 ErrorCode::InvalidArgument,
                 format!(
-                    "nothing in this plan asks about: {} — this answers a plan made against \
+                    "nothing in this plan asks about: {}; this answers a plan made against \
                      another machine, or another moment",
                     unasked.join(", ")
                 ),
