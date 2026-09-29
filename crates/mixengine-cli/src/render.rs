@@ -1262,9 +1262,66 @@ pub(crate) fn package_list(list: &PackageList) -> String {
     )
 }
 
-/// `mix package available`, for a person.
+/// Which rows of a catalogue to print — roadmap task **T193a**, D3.
+///
+/// **Filtering on what the daemon sent**, which is rendering: `line` and `newest_in_line` are the
+/// daemon's answers, and nothing here compares two versions.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Lines {
+    /// Every release, as before T193.
+    pub(crate) all: bool,
+
+    /// Every release of this one line.
+    pub(crate) line: Option<String>,
+}
+
+impl Lines {
+    /// Whether a release with these two members is printed.
+    fn shows(&self, line: Option<&str>, newest: Option<bool>) -> bool {
+        match (&self.line, line) {
+            (Some(wanted), Some(have)) => wanted == have,
+            (Some(_), None) => true,
+            // A daemon from before lines marks nothing, and its list is printed whole.
+            (None, _) => self.all || newest != Some(false),
+        }
+    }
+
+    /// Whether the `MORE` column is printed: only on the one-row-per-line view of a daemon that
+    /// said which line each row is in.
+    fn counts(&self, any_line: bool) -> bool {
+        !self.all && self.line.is_none() && any_line
+    }
+}
+
+/// How many other releases share `line`, as a `MORE` cell. `lines` is every row of one name.
+fn more(lines: &[Option<&str>], line: Option<&str>) -> String {
+    let Some(line) = line else {
+        return MISSING.to_owned();
+    };
+
+    match lines.iter().filter(|other| **other == Some(line)).count() {
+        0 | 1 => MISSING.to_owned(),
+        count => format!("+{}", count - 1),
+    }
+}
+
+/// The lines above a table that name each update, with the command that applies it — D3.
+fn update_lines<'a>(
+    command: &str,
+    updates: impl Iterator<Item = (&'a str, &'a PackageVersion, &'a PackageVersion)>,
+) -> String {
+    let mut said = String::new();
+    for (name, from, to) in updates {
+        said.push_str(&format!(
+            "update: {name} {from} → {to}   mix {command} upgrade {name} {from}\n"
+        ));
+    }
+    said
+}
+
+/// `mix package available`, for a person — one row per line unless `lines` says otherwise (T193a).
 #[must_use]
-pub(crate) fn package_catalogue(catalogue: &PackageCatalogue) -> String {
+pub(crate) fn package_catalogue(catalogue: &PackageCatalogue, lines: &Lines) -> String {
     let mut rendered = String::new();
 
     if catalogue.stale {
@@ -1275,12 +1332,30 @@ pub(crate) fn package_catalogue(catalogue: &PackageCatalogue) -> String {
     }
 
     if catalogue.packages.is_empty() {
-        rendered.push_str(
-            "the package index offers nothing this build can run on this machine
-",
-        );
+        rendered.push_str("the package index offers nothing this build can run on this machine\n");
         return rendered;
     }
+
+    rendered.push_str(&update_lines(
+        "package",
+        catalogue
+            .updates
+            .iter()
+            .flatten()
+            .map(|update| (update.package.as_str(), &update.from, &update.to)),
+    ));
+
+    let shown: Vec<&PackageRelease> = catalogue
+        .packages
+        .iter()
+        .filter(|release| lines.shows(release.line.as_deref(), release.newest_in_line))
+        .collect();
+    let counted = lines.counts(
+        catalogue
+            .packages
+            .iter()
+            .any(|release| release.line.is_some()),
+    );
 
     let cells = |release: &PackageRelease| {
         [
@@ -1296,19 +1371,17 @@ pub(crate) fn package_catalogue(catalogue: &PackageCatalogue) -> String {
         ]
     };
 
-    let emulated = emulation_column(catalogue.packages.iter().map(|release| release.execution));
-    let lacking = any_lacking(
-        catalogue
-            .packages
-            .iter()
-            .map(|release| release.needs.as_ref()),
-    );
+    let emulated = emulation_column(shown.iter().map(|release| release.execution));
+    let lacking = any_lacking(shown.iter().map(|release| release.needs.as_ref()));
 
     if let Some(note) = &emulated {
         rendered.push_str(note);
     }
 
     let mut headings = PACKAGE_HEADINGS.to_vec();
+    if counted {
+        headings.push(MORE_HEADING);
+    }
     if emulated.is_some() {
         headings.push(RUNS_HEADING);
     }
@@ -1316,11 +1389,19 @@ pub(crate) fn package_catalogue(catalogue: &PackageCatalogue) -> String {
         headings.push(NEEDS_HEADING);
     }
 
-    let rows: Vec<Vec<String>> = catalogue
-        .packages
+    let rows: Vec<Vec<String>> = shown
         .iter()
         .map(|release| {
             let mut row = cells(release).to_vec();
+            if counted {
+                let same: Vec<Option<&str>> = catalogue
+                    .packages
+                    .iter()
+                    .filter(|other| other.package == release.package)
+                    .map(|other| other.line.as_deref())
+                    .collect();
+                row.push(more(&same, release.line.as_deref()));
+            }
             if emulated.is_some() {
                 row.push(runs(release.execution));
             }
@@ -1340,6 +1421,9 @@ const PACKAGE_HEADINGS: [&str; 6] = ["PACKAGE", "VERSION", "CHANNEL", "SIZE", "I
 
 /// The columns `mix runtime available` prints when nothing is emulated.
 const RUNTIME_HEADINGS: [&str; 6] = ["RUNTIME", "VERSION", "CHANNEL", "SIZE", "INSTALLED", "EOL"];
+
+/// The column that counts a line's other releases — roadmap task **T193a**.
+const MORE_HEADING: &str = "MORE";
 
 /// The seventh column's heading, on both listings.
 const RUNS_HEADING: &str = "RUNS";
@@ -1532,7 +1616,7 @@ pub(crate) fn service_removal(removal: &ServiceRemoval) -> String {
 /// **The staleness is a line above the table and not a column**, because it is true of the whole
 /// answer: every row came out of the same document, and repeating "from a cached index" against each
 /// of forty versions would say it forty times.
-pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue) -> String {
+pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue, lines: &Lines) -> String {
     let mut rendered = String::new();
 
     if catalogue.stale {
@@ -1546,6 +1630,27 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue) -> String {
         rendered.push_str("the package index offers nothing for this machine\n");
         return rendered;
     }
+
+    rendered.push_str(&update_lines(
+        "runtime",
+        catalogue
+            .updates
+            .iter()
+            .flatten()
+            .map(|update| (update.kind.as_str(), &update.from, &update.to)),
+    ));
+
+    let shown: Vec<&RuntimeRelease> = catalogue
+        .runtimes
+        .iter()
+        .filter(|release| lines.shows(release.line.as_deref(), release.newest_in_line))
+        .collect();
+    let counted = lines.counts(
+        catalogue
+            .runtimes
+            .iter()
+            .any(|release| release.line.is_some()),
+    );
 
     let cells = |release: &RuntimeRelease| {
         [
@@ -1561,19 +1666,17 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue) -> String {
         ]
     };
 
-    let emulated = emulation_column(catalogue.runtimes.iter().map(|release| release.execution));
-    let lacking = any_lacking(
-        catalogue
-            .runtimes
-            .iter()
-            .map(|release| release.needs.as_ref()),
-    );
+    let emulated = emulation_column(shown.iter().map(|release| release.execution));
+    let lacking = any_lacking(shown.iter().map(|release| release.needs.as_ref()));
 
     if let Some(note) = &emulated {
         rendered.push_str(note);
     }
 
     let mut headings = RUNTIME_HEADINGS.to_vec();
+    if counted {
+        headings.push(MORE_HEADING);
+    }
     if emulated.is_some() {
         headings.push(RUNS_HEADING);
     }
@@ -1581,11 +1684,19 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue) -> String {
         headings.push(NEEDS_HEADING);
     }
 
-    let rows: Vec<Vec<String>> = catalogue
-        .runtimes
+    let rows: Vec<Vec<String>> = shown
         .iter()
         .map(|release| {
             let mut row = cells(release).to_vec();
+            if counted {
+                let same: Vec<Option<&str>> = catalogue
+                    .runtimes
+                    .iter()
+                    .filter(|other| other.kind == release.kind)
+                    .map(|other| other.line.as_deref())
+                    .collect();
+                row.push(more(&same, release.line.as_deref()));
+            }
             if emulated.is_some() {
                 row.push(runs(release.execution));
             }
@@ -4193,6 +4304,111 @@ mod tests {
         }
     }
 
+    fn in_line(release: RuntimeRelease, line: &str, newest: bool) -> RuntimeRelease {
+        RuntimeRelease {
+            line: Some(line.to_owned()),
+            newest_in_line: Some(newest),
+            ..release
+        }
+    }
+
+    fn by_line() -> RuntimeCatalogue {
+        RuntimeCatalogue {
+            runtimes: vec![
+                in_line(offered("8.4.25", None), "8.4", true),
+                in_line(offered("8.4.24", None), "8.4", false),
+                in_line(offered("8.4.23", None), "8.4", false),
+                in_line(offered("8.3.30", None), "8.3", true),
+            ],
+            stale: false,
+            updates: Some(vec![mixengine_proto::RuntimeUpdate {
+                kind: RuntimeKind::Php,
+                from: PackageVersion::parse("8.4.24").expect("a version"),
+                to: PackageVersion::parse("8.4.25").expect("a version"),
+                to_installed: false,
+                needs: Some(Vec::new()),
+            }]),
+        }
+    }
+
+    const EVERY_LINE: Lines = Lines {
+        all: false,
+        line: None,
+    };
+
+    /// **T193a, D3.** One row stands for each line, with a count of the rest.
+    #[test]
+    fn one_row_stands_for_each_line_with_a_count_of_the_rest() {
+        let rendered = runtime_catalogue(&by_line(), &EVERY_LINE);
+
+        assert!(rendered.contains("8.4.25"), "{rendered}");
+        assert!(rendered.contains("8.3.30"), "{rendered}");
+        assert!(
+            !rendered.contains("8.4.23"),
+            "an older patch is not a row: {rendered}"
+        );
+        assert!(rendered.contains("MORE"), "{rendered}");
+        assert!(
+            rendered.contains("+2"),
+            "two other 8.4 releases: {rendered}"
+        );
+    }
+
+    #[test]
+    fn all_prints_every_release() {
+        let rendered = runtime_catalogue(
+            &by_line(),
+            &Lines {
+                all: true,
+                line: None,
+            },
+        );
+        assert!(rendered.contains("8.4.23"), "{rendered}");
+        assert!(!rendered.contains("MORE"), "{rendered}");
+    }
+
+    #[test]
+    fn naming_a_line_prints_every_release_of_it_and_nothing_else() {
+        let rendered = runtime_catalogue(
+            &by_line(),
+            &Lines {
+                all: false,
+                line: Some("8.4".to_owned()),
+            },
+        );
+        assert!(rendered.contains("8.4.23"), "{rendered}");
+        assert!(!rendered.contains("8.3.30"), "{rendered}");
+    }
+
+    #[test]
+    fn an_update_is_named_above_the_table_with_the_command_that_applies_it() {
+        let rendered = runtime_catalogue(&by_line(), &EVERY_LINE);
+        assert!(rendered.contains("php 8.4.24 → 8.4.25"), "{rendered}");
+        assert!(
+            rendered.contains("mix runtime upgrade php 8.4.24"),
+            "{rendered}"
+        );
+    }
+
+    /// **A daemon from before T193 sends no lines**, and its list is printed as it always was
+    /// rather than as nothing — the plan's review focus 1.
+    #[test]
+    fn an_old_daemon_s_catalogue_is_printed_flat() {
+        let rendered = runtime_catalogue(
+            &RuntimeCatalogue {
+                runtimes: vec![offered("8.4.25", None), offered("8.4.24", None)],
+                stale: false,
+                updates: None,
+            },
+            &EVERY_LINE,
+        );
+        assert!(
+            rendered.contains("8.4.25") && rendered.contains("8.4.24"),
+            "{rendered}"
+        );
+        assert!(!rendered.contains("MORE"), "{rendered}");
+    }
+
     fn lacking(release: RuntimeRelease, need: Need, remedy: Remedy) -> RuntimeRelease {
         RuntimeRelease {
             needs: Some(vec![Requirement { need, remedy }]),
@@ -4208,7 +4424,7 @@ mod tests {
             stale: false,
             updates: None,
         };
-        assert!(!runtime_catalogue(&plain).contains("NEEDS"));
+        assert!(!runtime_catalogue(&plain, &EVERY_LINE).contains("NEEDS"));
 
         let lacking_one = RuntimeCatalogue {
             runtimes: vec![
@@ -4228,7 +4444,7 @@ mod tests {
             stale: false,
             updates: None,
         };
-        let rendered = runtime_catalogue(&lacking_one);
+        let rendered = runtime_catalogue(&lacking_one, &EVERY_LINE);
         assert!(rendered.contains("NEEDS"), "{rendered}");
         assert!(rendered.contains("Visual C++ 2022 (x64)"), "{rendered}");
     }
@@ -4276,11 +4492,14 @@ mod tests {
     /// `native` against every row would be noise on all five.
     #[test]
     fn a_catalogue_of_native_releases_has_no_column_about_it() {
-        let rendered = runtime_catalogue(&RuntimeCatalogue {
-            runtimes: vec![offered("8.3.33", Some(Execution::Native))],
-            stale: false,
-            updates: None,
-        });
+        let rendered = runtime_catalogue(
+            &RuntimeCatalogue {
+                runtimes: vec![offered("8.3.33", Some(Execution::Native))],
+                stale: false,
+                updates: None,
+            },
+            &EVERY_LINE,
+        );
 
         assert!(!rendered.contains("RUNS"), "no column: {rendered}");
         assert!(!rendered.contains("emulated"), "and no note: {rendered}");
@@ -4290,25 +4509,31 @@ mod tests {
     /// emulated — [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md).
     #[test]
     fn a_daemon_that_reports_no_execution_brings_no_column_either() {
-        let rendered = runtime_catalogue(&RuntimeCatalogue {
-            runtimes: vec![offered("8.3.33", None)],
-            stale: false,
-            updates: None,
-        });
+        let rendered = runtime_catalogue(
+            &RuntimeCatalogue {
+                runtimes: vec![offered("8.3.33", None)],
+                stale: false,
+                updates: None,
+            },
+            &EVERY_LINE,
+        );
 
         assert!(!rendered.contains("RUNS"), "{rendered}");
     }
 
     #[test]
     fn one_emulated_release_brings_the_column_and_the_sentence_that_explains_it() {
-        let rendered = runtime_catalogue(&RuntimeCatalogue {
-            runtimes: vec![
-                offered("8.3.33", Some(Execution::Emulated)),
-                offered("8.4.24", Some(Execution::Native)),
-            ],
-            stale: false,
-            updates: None,
-        });
+        let rendered = runtime_catalogue(
+            &RuntimeCatalogue {
+                runtimes: vec![
+                    offered("8.3.33", Some(Execution::Emulated)),
+                    offered("8.4.24", Some(Execution::Native)),
+                ],
+                stale: false,
+                updates: None,
+            },
+            &EVERY_LINE,
+        );
 
         assert!(rendered.contains("RUNS"), "the column: {rendered}");
         assert!(rendered.contains("emulated"), "the word: {rendered}");

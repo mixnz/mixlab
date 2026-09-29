@@ -1323,6 +1323,14 @@ enum RuntimeCommand {
         /// for their own machine to notice.
         #[arg(long)]
         refresh: bool,
+
+        /// Print every release rather than one row per line.
+        #[arg(long, conflicts_with = "line")]
+        all: bool,
+
+        /// Print every release of this line (`8.4`, `22`).
+        #[arg(long, value_name = "LINE", requires = "kind")]
+        line: Option<String>,
     },
 
     /// Download and install one version.
@@ -1477,6 +1485,14 @@ enum PackageCommand {
         /// for their own machine to notice.
         #[arg(long)]
         refresh: bool,
+
+        /// Print every release rather than one row per line.
+        #[arg(long, conflicts_with = "line")]
+        all: bool,
+
+        /// Print every release of this line (`8.4`, `22`).
+        #[arg(long, value_name = "LINE", requires = "package")]
+        line: Option<String>,
     },
 
     /// Download and install one version.
@@ -4886,6 +4902,8 @@ async fn package(
         PackageCommand::Available {
             filter: Named { package },
             refresh,
+            all,
+            line,
         } => {
             let filter = PackageFilter { package, refresh };
             let catalogue: PackageCatalogue = ask(
@@ -4895,7 +4913,7 @@ async fn package(
             )
             .await?;
             emit(&rendered(json, &catalogue, || {
-                render::package_catalogue(&catalogue)
+                render::package_catalogue(&catalogue, &render::Lines { all, line })
             }))?;
         }
 
@@ -5598,6 +5616,8 @@ async fn runtime(
         RuntimeCommand::Available {
             filter: Kind { kind },
             refresh,
+            all,
+            line,
         } => {
             let filter = RuntimeFilter { kind, refresh };
             let catalogue: RuntimeCatalogue = ask(
@@ -5607,7 +5627,7 @@ async fn runtime(
             )
             .await?;
             emit(&rendered(json, &catalogue, || {
-                render::runtime_catalogue(&catalogue)
+                render::runtime_catalogue(&catalogue, &render::Lines { all, line })
             }))?;
         }
 
