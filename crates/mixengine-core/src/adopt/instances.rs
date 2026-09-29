@@ -142,7 +142,7 @@ pub fn opens(found: &FoundInstance, installed: &[PackageSummary]) -> Opens {
 }
 
 /// The part of a version data is tied to, for a package whose data is tied to one.
-fn series_of(package: &str, version: &PackageVersion) -> Option<String> {
+pub(crate) fn series_of(package: &str, version: &PackageVersion) -> Option<String> {
     let parts: Vec<&str> = version.as_str().split('.').collect();
     let take = match package {
         "mariadb" | "mysql" => 2,

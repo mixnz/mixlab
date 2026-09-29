@@ -26,6 +26,7 @@ pub mod hosts;
 pub mod index;
 pub mod install;
 pub mod jobs;
+pub mod lines;
 pub mod manifest;
 pub mod metrics;
 pub mod packages;
