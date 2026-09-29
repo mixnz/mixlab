@@ -42,7 +42,7 @@ use mixengine_proto::{
     Error, ErrorCode, Execution, JobId, JobKind, JobSummary, PackageVersion, Requirements,
     ResolvedRuntime, RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind, RuntimeList,
     RuntimeQuestion, RuntimeRelease, RuntimeRemoval, RuntimeSummary, RuntimeTarget,
-    RuntimeUninstall, ServiceState, Timestamp, VersionConstraint, rpc,
+    RuntimeUninstall, RuntimeUpdate, ServiceState, Timestamp, VersionConstraint, rpc,
 };
 
 use crate::error::ToWire as _;
@@ -273,15 +273,20 @@ impl Runtimes {
         };
 
         let mut runtimes = Vec::new();
+        let mut updates = Vec::new();
+
         for kind in wanted.iter().copied() {
-            for package in catalogue.index.installable(kind.as_str()) {
+            let name = kind.as_str();
+            let mut offered = Vec::new();
+
+            for package in catalogue.index.installable(name) {
                 // An index that offers a version this build could not make a directory for is one
                 // whose entry is skipped rather than one that fails the listing: the other versions
                 // are still installable, and the alternative is a home that can list nothing because
                 // of one malformed row in a document nobody here controls.
                 let Ok(version) = PackageVersion::parse(package.version.clone()) else {
                     tracing::warn!(
-                        kind = kind.as_str(),
+                        kind = name,
                         version = package.version,
                         "the package index offers a version this build cannot use as a directory \
                          name; skipping it"
@@ -289,23 +294,54 @@ impl Runtimes {
                     continue;
                 };
 
-                let chosen = catalogue.index.artifact(kind.as_str(), &package.version);
+                let chosen = catalogue.index.artifact(name, &package.version);
 
                 runtimes.push(RuntimeRelease {
                     installed: installed
                         .iter()
                         .any(|have| have.kind == kind && have.version == version),
                     kind,
-                    version,
+                    line: Some(mixengine_core::lines::line_of(name, &version)),
+                    newest_in_line: Some(false),
+                    version: version.clone(),
                     channel: package.channel.into(),
                     eol: package.eol.clone(),
                     bytes: chosen.map_or(0, |chosen| chosen.artifact.size),
                     execution: chosen.map(|chosen| chosen.execution),
                     needs: chosen.map(|_| {
-                        requirements::of(&catalogue.index, kind.as_str(), &package.version, &facts)
+                        requirements::of(&catalogue.index, name, &package.version, &facts)
                     }),
-                    line: None,
-                    newest_in_line: None,
+                });
+                offered.push(version);
+            }
+
+            // **One release stands for each line** — roadmap task T193a, D1. Marked after the whole
+            // kind is read, because "newest" is a fact about the set and not about one row.
+            let newest = mixengine_core::lines::newest_of_each_line(name, offered.iter());
+            for release in runtimes.iter_mut().filter(|release| release.kind == kind) {
+                release.newest_in_line = Some(newest.values().any(|n| *n == release.version));
+            }
+
+            for have in installed.iter().filter(|have| have.kind == kind) {
+                let Some(to) =
+                    mixengine_core::lines::update_for(name, &have.version, offered.iter())
+                else {
+                    continue;
+                };
+
+                updates.push(RuntimeUpdate {
+                    kind,
+                    to_installed: installed
+                        .iter()
+                        .any(|other| other.kind == kind && other.version == to),
+                    needs: Some(requirements::of(
+                        &catalogue.index,
+                        name,
+                        to.as_str(),
+                        &facts,
+                    )),
+                    from: have.version.clone(),
+                    to,
                 });
             }
         }
@@ -313,7 +349,7 @@ impl Runtimes {
         Ok(RuntimeCatalogue {
             runtimes,
             stale: catalogue.freshness.is_stale(),
-            updates: None,
+            updates: Some(updates),
         })
     }
 

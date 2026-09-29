@@ -1545,3 +1545,107 @@ async fn a_tool_installed_into_a_runtime_becomes_a_command_unasked() {
     fixture.uninstall_globally("22.20.0", "yarn");
     fixture.command_becomes("yarn", false).await;
 }
+
+/// Two patches of one line, and one release of another, all the same archive — T193a.
+fn two_patches(packed: &Packed, url: &str) -> Value {
+    let entry = |version: &str| {
+        json!({
+            "kind": "php",
+            "version": version,
+            "channel": "stable",
+            "artifacts": [{
+                "os": std::env::consts::OS,
+                "arch": std::env::consts::ARCH,
+                "url": url,
+                "sha256": packed.sha256,
+                "size": packed.size(),
+                "provides": { "php": program_name() },
+            }],
+        })
+    };
+
+    json!({
+        "schema": 1,
+        "generated_at": "2026-09-29T06:55:12Z",
+        "packages": [entry("8.3.33"), entry("8.3.34"), entry("8.2.29")],
+    })
+}
+
+/// Three patches of one line, from the same archive.
+fn three_patches(packed: &Packed, url: &str) -> Value {
+    let mut index = two_patches(packed, url);
+    let mut first = index["packages"][0].clone();
+    first["version"] = json!("8.3.32");
+    index["packages"].as_array_mut().expect("a list").push(first);
+    index
+}
+
+/// **T193a.** Every release says its line, one per line says it is the newest, and an installed
+/// version with a newer patch is named with that patch.
+#[tokio::test]
+async fn the_catalogue_says_each_line_its_newest_and_what_updates() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+
+    let job = client
+        .call(
+            "runtime.install",
+            json!({"kind": "php", "version": "8.3.33"}),
+        )
+        .await;
+    let finished = client.finished(job["id"].clone()).await;
+    assert_eq!(finished["state"], "succeeded", "{finished}");
+
+    let catalogue = client.call("runtime.list_available", json!({})).await;
+    let row = |version: &str| {
+        catalogue["runtimes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["version"] == version)
+            .cloned()
+            .unwrap_or_else(|| panic!("{version} is listed: {catalogue}"))
+    };
+
+    assert_eq!(row("8.3.33")["line"], "8.3");
+    assert_eq!(row("8.3.33")["newest_in_line"], false);
+    assert_eq!(row("8.3.34")["newest_in_line"], true);
+    assert_eq!(row("8.2.29")["line"], "8.2");
+    assert_eq!(row("8.2.29")["newest_in_line"], true);
+
+    assert_eq!(
+        catalogue["updates"],
+        json!([{
+            "kind": "php", "from": "8.3.33", "to": "8.3.34", "to_installed": false, "needs": []
+        }]),
+        "{catalogue}"
+    );
+}
+
+/// **Two installed patches of one line each get their own entry** — the plan's review focus 2.
+#[tokio::test]
+async fn two_installed_patches_of_one_line_each_get_an_update() {
+    let fixture = Fixture::start_with(three_patches).await;
+    let mut client = fixture.client().await;
+
+    for version in ["8.3.32", "8.3.33"] {
+        let job = client
+            .call(
+                "runtime.install",
+                json!({"kind": "php", "version": version}),
+            )
+            .await;
+        assert_eq!(
+            client.finished(job["id"].clone()).await["state"],
+            "succeeded"
+        );
+    }
+
+    let catalogue = client.call("runtime.list_available", json!({})).await;
+    let updates = catalogue["updates"].as_array().expect("a list");
+    assert_eq!(updates.len(), 2, "{catalogue}");
+    assert!(
+        updates.iter().all(|update| update["to"] == "8.3.34"),
+        "{catalogue}"
+    );
+}

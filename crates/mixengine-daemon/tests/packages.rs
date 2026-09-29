@@ -63,6 +63,11 @@ struct Fixture {
 impl Fixture {
     /// Publish one version of one package and start a daemon that can see it.
     async fn start() -> Self {
+        Self::start_with(index).await
+    }
+
+    /// Publish what `index_for` says and start a daemon that can see it.
+    async fn start_with(index_for: fn(&Packed, &str) -> Value) -> Self {
         // `.zip` on Windows and `.tar.zst` elsewhere, which is what the publishing pipeline produces
         // for each — the point being that the daemon unpacks what its own platform is served.
         let packing = match cfg!(windows) {
@@ -81,7 +86,7 @@ impl Fixture {
         .await;
 
         let url = registry.publish_asset(&packed.path(), packed.bytes.clone());
-        registry.publish(&index(&packed, &url));
+        registry.publish(&index_for(&packed, &url));
 
         let home = Home::new();
         let daemon = Daemon::start(&home, &registry);
@@ -939,5 +944,31 @@ async fn service_data_is_not_offered_while_a_restore_is() {
     assert_eq!(
         found["found"][0]["service"], "fakeservice@main",
         "with no copy, the data is offered again: {found}"
+    );
+}
+
+/// Two patches of `fakeservice`, the same archive — roadmap task **T193a**.
+fn two_patches(packed: &Packed, url: &str) -> Value {
+    let mut index = index(packed, url);
+    let mut next = index["packages"][0].clone();
+    next["version"] = json!("1.0.1");
+    index["packages"].as_array_mut().expect("a list").push(next);
+    index
+}
+
+/// **T193a.** An installed package with a newer patch of its line is named with that patch.
+#[tokio::test]
+async fn a_package_catalogue_says_lines_and_updates_too() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+    assert_eq!(client.install(VERSION).await["state"], "succeeded");
+
+    let catalogue = client.call("package.list_available", json!({})).await;
+    assert_eq!(
+        catalogue["updates"],
+        json!([{
+            "package": PACKAGE, "from": "1.0.0", "to": "1.0.1", "to_installed": false, "needs": []
+        }]),
+        "{catalogue}"
     );
 }

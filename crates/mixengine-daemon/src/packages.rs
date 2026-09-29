@@ -34,8 +34,8 @@ use mixengine_core::generate::Catalogue;
 use mixengine_core::{Paths, Store, packages, paths};
 use mixengine_proto::{
     Error, ErrorCode, JobId, JobKind, JobSummary, PackageCatalogue, PackageFilter, PackageInstall,
-    PackageList, PackageRelease, PackageRemoval, PackageSummary, PackageTarget, PackageVersion,
-    Requirements, Timestamp, VersionConstraint, rpc,
+    PackageList, PackageRelease, PackageRemoval, PackageSummary, PackageTarget, PackageUpdate,
+    PackageVersion, Requirements, Timestamp, VersionConstraint, rpc,
 };
 
 use crate::error::ToWire as _;
@@ -138,8 +138,12 @@ impl Packages {
         let facts = requirements::facts();
 
         let mut offered = Vec::new();
+        let mut updates = Vec::new();
+
         for name in &wanted {
             let name = name.as_str();
+            let mut versions = Vec::new();
+
             for package in catalogue.index.installable(name) {
                 // An index that offers a version this build could not make a directory for is one
                 // whose entry is skipped rather than one that fails the listing, on
@@ -161,7 +165,9 @@ impl Packages {
                         .iter()
                         .any(|have| have.package == name && have.version == version),
                     package: name.to_owned(),
-                    version,
+                    line: Some(mixengine_core::lines::line_of(name, &version)),
+                    newest_in_line: Some(false),
+                    version: version.clone(),
                     channel: package.channel.into(),
                     eol: package.eol.clone(),
                     bytes: chosen.map_or(0, |chosen| chosen.artifact.size),
@@ -169,8 +175,36 @@ impl Packages {
                     needs: chosen.map(|_| {
                         requirements::of(&catalogue.index, name, &package.version, &facts)
                     }),
-                    line: None,
-                    newest_in_line: None,
+                });
+                versions.push(version);
+            }
+
+            // T193a, D1 — `runtimes::list_available`'s reasoning.
+            let newest = mixengine_core::lines::newest_of_each_line(name, versions.iter());
+            for release in offered.iter_mut().filter(|release| release.package == name) {
+                release.newest_in_line = Some(newest.values().any(|n| *n == release.version));
+            }
+
+            for have in installed.iter().filter(|have| have.package == name) {
+                let Some(to) =
+                    mixengine_core::lines::update_for(name, &have.version, versions.iter())
+                else {
+                    continue;
+                };
+
+                updates.push(PackageUpdate {
+                    package: name.to_owned(),
+                    to_installed: installed
+                        .iter()
+                        .any(|other| other.package == name && other.version == to),
+                    needs: Some(requirements::of(
+                        &catalogue.index,
+                        name,
+                        to.as_str(),
+                        &facts,
+                    )),
+                    from: have.version.clone(),
+                    to,
                 });
             }
         }
@@ -178,7 +212,7 @@ impl Packages {
         Ok(PackageCatalogue {
             packages: offered,
             stale: catalogue.freshness.is_stale(),
-            updates: None,
+            updates: Some(updates),
         })
     }
 
