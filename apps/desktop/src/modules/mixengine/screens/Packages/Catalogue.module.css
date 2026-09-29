@@ -146,10 +146,3 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* An installed version and its Update button - T193b. */
-.versionWithUpdate {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}

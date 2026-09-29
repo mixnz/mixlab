@@ -19,6 +19,7 @@ import * as api from "../../api";
 import type { PackageVersion, RuntimeKind, RuntimeRelease } from "@mixengine/api";
 import type { RuntimeSummary, RuntimeUpdate, UpgradePlan } from "@mixengine/api";
 import RequirementDialog from "../../components/RequirementDialog";
+import UpdateRow from "../../components/UpdateRow";
 import UpgradeDialog from "../../components/UpgradeDialog";
 import {
   askingStep,
@@ -41,6 +42,7 @@ import {
 import StaleBadge from "../../components/StaleBadge";
 import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
+import { updateRowState } from "../../updateRow";
 import ExtensionsPanel from "./ExtensionsPanel";
 import styles from "./Catalogue.module.css";
 
@@ -289,28 +291,6 @@ export default function Languages({ active }: { active: boolean }) {
     }
   }
 
-  // The installed row's Update: the job's progress while one runs, else the button — T193b.
-  function updateCell(row: RuntimeSummary) {
-    const job = jobFor(jobs, installingJob[versionKey(row.kind, row.version)]);
-    if (job) {
-      return (
-        <span className={styles.progress}>
-          <progress value={job.percent} max={100} />
-          <span className={styles.progressText}>{job.message}</span>
-        </span>
-      );
-    }
-    const update = updates.find(
-      (candidate) => candidate.kind === row.kind && candidate.from === row.version,
-    );
-    if (!update) return null;
-    return (
-      <Button size="small" variant="soft" onClick={() => void askToUpgrade(update)}>
-        {t("mixengine.upgrade.available", { to: update.to })}
-      </Button>
-    );
-  }
-
   async function adopt(row: OnDiskRow) {
     setAdopting(row.key);
     setError("");
@@ -445,12 +425,7 @@ export default function Languages({ active }: { active: boolean }) {
                           )}
                         </span>
                       </td>
-                      <td className={styles.version}>
-                        <span className={styles.versionWithUpdate}>
-                          {row.version}
-                          {updateCell(row)}
-                        </span>
-                      </td>
+                      <td className={styles.version}>{row.version}</td>
                       <td>
                         <span className={styles.tag}>{row.channel}</span>
                       </td>
@@ -470,6 +445,17 @@ export default function Languages({ active }: { active: boolean }) {
                         </Button>
                       </td>
                     </tr>
+                    <UpdateRow
+                      columns={6}
+                      state={updateRowState(
+                        updates.find(
+                          (candidate) =>
+                            candidate.kind === row.kind && candidate.from === row.version,
+                        ),
+                        jobFor(jobs, installingJob[key]),
+                      )}
+                      onUpdate={(update) => void askToUpgrade(update)}
+                    />
                     {open && row.kind === "php" && (
                       <tr className={styles.expansion}>
                         <td colSpan={6}>

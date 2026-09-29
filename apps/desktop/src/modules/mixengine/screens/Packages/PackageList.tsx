@@ -14,14 +14,16 @@ import Table from "../../../../components/Table";
 import { useTranslation } from "../../../../i18n";
 import { formatInstalledAt, jobFor, newestFirst, versionKey } from "../../runtimeState";
 import RequirementDialog from "../../components/RequirementDialog";
+import UpdateRow from "../../components/UpdateRow";
 import UpgradeDialog from "../../components/UpgradeDialog";
 import StaleBadge from "../../components/StaleBadge";
 import { splitLibraries } from "../../requirementStep";
 import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
+import { updateRowState } from "../../updateRow";
 import { packageCategory, type PackageCategory } from "./packageCategories";
 import type { PackagesState } from "./usePackages";
-import type { PackageRelease, PackageSummary } from "@mixengine/api";
+import type { PackageRelease } from "@mixengine/api";
 import styles from "./Catalogue.module.css";
 
 /**
@@ -112,28 +114,6 @@ export default function PackageList({
     );
   }
 
-  // The installed row's Update: the job's progress while one runs, else the button — T193c.
-  function updateCell(row: PackageSummary) {
-    const job = jobFor(jobs, installingJob[versionKey(row.package, row.version)]);
-    if (job) {
-      return (
-        <span className={styles.progress}>
-          <progress value={job.percent} max={100} />
-          <span className={styles.progressText}>{job.message}</span>
-        </span>
-      );
-    }
-    const update = state.updates.find(
-      (candidate) => candidate.package === row.package && candidate.from === row.version,
-    );
-    if (!update) return null;
-    return (
-      <Button size="small" variant="soft" onClick={() => void state.askToUpgrade(update)}>
-        {t("mixengine.upgrade.available", { to: update.to })}
-      </Button>
-    );
-  }
-
   return (
     <div className={styles.catalogue}>
       {error !== "" && <ErrorBanner message={error} onDismiss={clearError} />}
@@ -166,41 +146,49 @@ export default function PackageList({
                 const key = versionKey(row.package, row.version);
                 const inUse = row.services.length > 0;
                 return (
-                  <tr key={key}>
-                    <td data-nowrap>
-                      <span className={styles.name}>
-                        <MonogramBadge name={row.package} size={28} />
-                        {row.package}
-                      </span>
-                    </td>
-                    <td className={styles.version}>
-                      <span className={styles.versionWithUpdate}>
-                        {row.version}
-                        {updateCell(row)}
-                      </span>
-                    </td>
-                    <td className={styles.muted}>{formatInstalledAt(row.installed_at)}</td>
-                    <td className={inUse ? styles.services : styles.muted}>
-                      {inUse ? row.services.join(", ") : "—"}
-                    </td>
-                    <td data-align="end" data-nowrap>
-                      <Button
-                        size="small"
-                        variant="danger"
-                        onClick={() => void state.uninstall(row)}
-                        disabled={inUse}
-                        title={
-                          inUse
-                            ? t("mixengine.packages.uninstallBlockedMessage", {
-                                services: row.services.join(", "),
-                              })
-                            : undefined
-                        }
-                      >
-                        {t("mixengine.packages.uninstall")}
-                      </Button>
-                    </td>
-                  </tr>
+                  <Fragment key={key}>
+                    <tr>
+                      <td data-nowrap>
+                        <span className={styles.name}>
+                          <MonogramBadge name={row.package} size={28} />
+                          {row.package}
+                        </span>
+                      </td>
+                      <td className={styles.version}>{row.version}</td>
+                      <td className={styles.muted}>{formatInstalledAt(row.installed_at)}</td>
+                      <td className={inUse ? styles.services : styles.muted}>
+                        {inUse ? row.services.join(", ") : "—"}
+                      </td>
+                      <td data-align="end" data-nowrap>
+                        <Button
+                          size="small"
+                          variant="danger"
+                          onClick={() => void state.uninstall(row)}
+                          disabled={inUse}
+                          title={
+                            inUse
+                              ? t("mixengine.packages.uninstallBlockedMessage", {
+                                  services: row.services.join(", "),
+                                })
+                              : undefined
+                          }
+                        >
+                          {t("mixengine.packages.uninstall")}
+                        </Button>
+                      </td>
+                    </tr>
+                    <UpdateRow
+                      columns={5}
+                      state={updateRowState(
+                        state.updates.find(
+                          (candidate) =>
+                            candidate.package === row.package && candidate.from === row.version,
+                        ),
+                        jobFor(jobs, installingJob[key]),
+                      )}
+                      onUpdate={(update) => void state.askToUpgrade(update)}
+                    />
+                  </Fragment>
                 );
               })}
             </tbody>
