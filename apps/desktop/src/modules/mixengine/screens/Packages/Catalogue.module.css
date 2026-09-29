@@ -94,6 +94,19 @@
   border-top: 1px solid var(--border-soft);
 }
 
+/* An older release of a line, drawn under the row that stands for it - T193a. The badge column
+   (28px) and one gap (12px) further in, so it reads as belonging to the row above. */
+.releaseNested {
+  composes: release;
+  padding-left: 58px;
+}
+
+/* "N more" beside a runtime's name - T193a. */
+.moreInLine {
+  margin-left: 8px;
+  font-weight: 400;
+}
+
 .releaseName {
   font-weight: 500;
 }

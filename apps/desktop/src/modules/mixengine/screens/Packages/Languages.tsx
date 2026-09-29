@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
@@ -39,6 +39,7 @@ import {
 } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
 import { matchesAvailable } from "./availableFilter";
+import { groupByLine } from "./availableLines";
 import ExtensionsPanel from "./ExtensionsPanel";
 import styles from "./Catalogue.module.css";
 
@@ -58,6 +59,8 @@ export default function Languages({ active }: { active: boolean }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   // Filters the "not installed" table only — the same reason `Packages.tsx` has.
   const [filter, setFilter] = useState("");
+  // Lines the person opened to see their older releases — T193a.
+  const [openLines, setOpenLines] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [onDisk, setOnDisk] = useState<OnDiskRow[]>([]);
   const [adopting, setAdopting] = useState<string | null>(null);
@@ -250,14 +253,63 @@ export default function Languages({ active }: { active: boolean }) {
   }
 
   const shownInstalled = newestFirst(installed, (row) => row.kind);
-  const shownAvailable = newestFirst(
-    available.filter(
-      (release) =>
-        !release.installed &&
-        matchesAvailable([release.kind, release.version, release.channel], filter),
+  // One row per line, the rest behind a toggle — T193a. Which line a release is in and which is
+  // newest are the daemon's answers; `groupByLine` only groups by them.
+  const lineGroups = groupByLine(
+    newestFirst(
+      available.filter((release) => !release.installed),
+      (release) => release.kind,
     ),
     (release) => release.kind,
+    (release) => matchesAvailable([release.kind, release.version, release.channel], filter),
+    openLines,
   );
+  const toggleLine = (key: string) =>
+    setOpenLines((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  function releaseRow(release: RuntimeRelease, nested: boolean, toggle: ReactNode) {
+    const key = versionKey(release.kind, release.version);
+    const job = jobFor(jobs, installingJob[key]);
+    const { others, libraries } = splitLibraries(
+      (release.needs ?? []).map((requirement) => requirement.need),
+    );
+    const needs =
+      libraries.length > 0
+        ? [...others, t("mixengine.requirements.systemLibraries", { count: libraries.length })]
+        : others;
+    return (
+      <li key={key} className={nested ? styles.releaseNested : styles.release}>
+        <MonogramBadge name={release.kind} size={28} />
+        <span className={styles.releaseName}>
+          {release.kind}
+          {toggle}
+        </span>
+        <span className={styles.version}>{release.version}</span>
+        <span className={styles.tag}>{release.channel}</span>
+        <span
+          className={styles.needs}
+          title={libraries.length > 0 ? libraries.join(", ") : t("mixengine.requirements.columnNeeds")}
+        >
+          {needs.join(", ")}
+        </span>
+        {job ? (
+          <span className={styles.progress}>
+            <progress value={job.percent} max={100} />
+            <span className={styles.progressText}>{job.message}</span>
+          </span>
+        ) : (
+          <Button variant="soft" className={styles.install} onClick={() => void install(release)}>
+            {t("mixengine.packages.install")}
+          </Button>
+        )}
+      </li>
+    );
+  }
 
   return (
     <div className={styles.catalogue}>
@@ -351,7 +403,7 @@ export default function Languages({ active }: { active: boolean }) {
         count={
           loaded ? (
             <>
-              {shownAvailable.length}
+              {lineGroups.length}
               <StaleBadge stale={stale} />
             </>
           ) : undefined
@@ -377,52 +429,29 @@ export default function Languages({ active }: { active: boolean }) {
       >
         {!loaded ? (
           <LoadingState />
-        ) : shownAvailable.length === 0 ? (
+        ) : lineGroups.length === 0 ? (
           filter.trim() !== "" && <EmptyState title={t("mixengine.packages.noMatches")} />
         ) : (
           <ul className={styles.available}>
-            {shownAvailable.map((release) => {
-              const key = versionKey(release.kind, release.version);
-              const job = jobFor(jobs, installingJob[key]);
-              const { others, libraries } = splitLibraries(
-                (release.needs ?? []).map((requirement) => requirement.need),
-              );
-              const needs =
-                libraries.length > 0
-                  ? [
-                      ...others,
-                      t("mixengine.requirements.systemLibraries", { count: libraries.length }),
-                    ]
-                  : others;
-              return (
-                <li key={key} className={styles.release}>
-                  <MonogramBadge name={release.kind} size={28} />
-                  <span className={styles.releaseName}>{release.kind}</span>
-                  <span className={styles.version}>{release.version}</span>
-                  <span className={styles.tag}>{release.channel}</span>
-                  <span
-                    className={styles.needs}
-                    title={
-                      libraries.length > 0
-                        ? libraries.join(", ")
-                        : t("mixengine.requirements.columnNeeds")
-                    }
-                  >
-                    {needs.join(", ")}
-                  </span>
-                  {job ? (
-                    <span className={styles.progress}>
-                      <progress value={job.percent} max={100} />
-                      <span className={styles.progressText}>{job.message}</span>
-                    </span>
-                  ) : (
-                    <Button variant="soft" className={styles.install} onClick={() => void install(release)}>
-                      {t("mixengine.packages.install")}
+            {lineGroups.map((group) => (
+              <Fragment key={group.key}>
+                {releaseRow(
+                  group.head,
+                  false,
+                  group.others.length > 0 && (
+                    <Button
+                      variant="link"
+                      className={styles.moreInLine}
+                      aria-expanded={group.open}
+                      onClick={() => toggleLine(group.key)}
+                    >
+                      {t("mixengine.packages.moreInLine", { count: group.others.length })}
                     </Button>
-                  )}
-                </li>
-              );
-            })}
+                  ),
+                )}
+                {group.open && group.others.map((release) => releaseRow(release, true, null))}
+              </Fragment>
+            ))}
           </ul>
         )}
       </Card>

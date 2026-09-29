@@ -280,6 +280,7 @@ const vi: typeof en = {
       categoryCache: "Cache & hàng đợi",
       categoryOther: "Khác",
       searchAvailable: "Tìm bản chưa cài…",
+      moreInLine: "Thêm {{count}}",
       noMatches: "Không có bản nào khớp.",
       stale: "Danh sách có thể cũ",
       columnVersion: "Phiên bản",

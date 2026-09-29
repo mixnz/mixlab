@@ -285,6 +285,7 @@ export default {
       categoryCache: "Cache & queues",
       categoryOther: "Other",
       searchAvailable: "Search versions not installed…",
+      moreInLine: "{{count}} more",
       noMatches: "Nothing matches that search.",
       stale: "This list may be out of date",
       columnVersion: "Version",

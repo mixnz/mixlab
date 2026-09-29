@@ -1576,7 +1576,10 @@ fn three_patches(packed: &Packed, url: &str) -> Value {
     let mut index = two_patches(packed, url);
     let mut first = index["packages"][0].clone();
     first["version"] = json!("8.3.32");
-    index["packages"].as_array_mut().expect("a list").push(first);
+    index["packages"]
+        .as_array_mut()
+        .expect("a list")
+        .push(first);
     index
 }
 
