@@ -45,6 +45,13 @@ keeps the data directory.
 What tells a person which program an instance is, is `ServiceSummary::version` (T183), reported
 beside the id: the name is a label, the version is a fact.
 
+**An instance moves to a newer patch of its line with `package.upgrade`** — T193c. One instance at
+a time: stopped, pointed at the new version, rendered and started again, and put back on the old
+version if it does not start. On Linux a front end's new binary is asked for the port grant before
+anything stops. The old version is removed once every instance has moved. MySQL 8.0 cannot go back
+once a newer 8.0 patch has opened its data, and the plan says so. `mix package upgrade`, and
+*Update* in MixLab. Design: [T193](../specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md).
+
 **A data directory belongs to one service.** Two servers over one set of files corrupt them, and the
 cost lands on the data rather than on a start that fails, so `service.create` refuses a `data_dir`
 another row already holds and names who holds it. Only an explicit `--data-dir` can reach that

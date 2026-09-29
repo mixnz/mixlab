@@ -83,6 +83,12 @@ binaries. What they state is what the daemon **writes** —
    rather than only its state. No API is missing; the affordance is.
 3. **Runtimes** — installed versions per kind with the default marked; available versions;
    install/uninstall as jobs reporting progress; PHP extension toggles per version.
+   **And one row per line, with updates — T193**: `runtime.list_available` / `package.list_available`
+   mark each release's `line` and `newest_in_line` and list `updates`, so a client groups and
+   offers *Update* without comparing versions. `runtime.upgrade_plan` / `package.upgrade_plan` answer
+   what an update would move, and `runtime.upgrade` / `package.upgrade` run it as a job whose result
+   is that plan, marked. The Languages tab and each Packages tab draw *N more* under a line and
+   *Update to …* on an installed row, with the plan in the confirmation.
    **And a version that is on disk but not listed — T182f**: a folder an earlier install left, which
    the daemon records on its own at start when it can check it. One it could not check is named by
    `daemon.doctor`, and `runtime.adopt` / `package.adopt` record it on request (`mix runtime adopt`,

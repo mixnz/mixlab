@@ -221,6 +221,24 @@ smoke test still runs. `package.*` has the same two methods and flags.
 See [operations/runtime-packaging.md](../operations/runtime-packaging.md) for where the binaries come
 from on each OS.
 
+## Lines and updates
+
+**A line** is the part of a version a person chooses by: `8.4` for PHP, `22` for Node.js and Java,
+major.minor for Python, Ruby, Go and Composer — T193a. `mixengine_core::lines` is the only place it
+is decided, and it is never wider than a database's data series. `runtime.list_available` marks
+each release's `line` and whether it is the `newest_in_line`, and lists `updates`: each installed
+version whose line has a newer release here. `mix runtime available` prints one row per line
+(`--all`, `--line`), and MixLab one row per line with the rest behind *N more*.
+
+**An update stays within a line** — T193b. `runtime.upgrade_plan` says what would move;
+`runtime.upgrade` installs the new release, carries the extension choices and the pool's
+settings, starts the new pool if the old one ran, moves sites, `web-app` pools whose `requires`
+it satisfies, the default and exact SQLite pins in one transaction, renders the sites (reversing
+the move if the front end refuses them), stops the old pool and removes the old version, unless
+`keep`, a `mixengine.toml` pin, a tool installed into it or a `web-app` still needs it. Moving
+between lines is refused: that is a switch. `mix runtime upgrade`, and *Update* on the installed
+row in MixLab. Design: [T193](../specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md).
+
 ## PHP extensions
 
 Per-version, since that is how PHP works. **Landed with T28**, and three things about it are written
