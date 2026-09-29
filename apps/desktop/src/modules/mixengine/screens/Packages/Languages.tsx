@@ -401,9 +401,15 @@ export default function Languages({ active }: { active: boolean }) {
               {shownInstalled.map((row) => {
                 const key = versionKey(row.kind, row.version);
                 const open = expanded === key;
+                const update = updateRowState(
+                  updates.find(
+                    (candidate) => candidate.kind === row.kind && candidate.from === row.version,
+                  ),
+                  jobFor(jobs, installingJob[key]),
+                );
                 return (
                   <Fragment key={key}>
-                    <tr>
+                    <tr className={update.kind === "none" ? undefined : styles.withUpdate}>
                       <td data-nowrap>
                         <span className={styles.name}>
                           <MonogramBadge name={row.kind} size={28} />
@@ -447,13 +453,7 @@ export default function Languages({ active }: { active: boolean }) {
                     </tr>
                     <UpdateRow
                       columns={6}
-                      state={updateRowState(
-                        updates.find(
-                          (candidate) =>
-                            candidate.kind === row.kind && candidate.from === row.version,
-                        ),
-                        jobFor(jobs, installingJob[key]),
-                      )}
+                      state={update}
                       onUpdate={(update) => void askToUpgrade(update)}
                     />
                     {open && row.kind === "php" && (

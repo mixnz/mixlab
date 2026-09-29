@@ -60,6 +60,12 @@
 }
 
 /* The PHP row's extensions, under it, on the sunken surface. */
+/* An installed version whose update row follows it: the two read as one entry, so no line between
+   them - T193. `tbody tr` outranks the Table's own `tbody td` border. */
+tbody tr.withUpdate > td {
+  border-bottom: none;
+}
+
 .expansion > td {
   padding: 0;
   background: var(--surface-sunken);

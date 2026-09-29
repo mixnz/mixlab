@@ -145,9 +145,15 @@ export default function PackageList({
               {installedInCategory.map((row) => {
                 const key = versionKey(row.package, row.version);
                 const inUse = row.services.length > 0;
+                const update = updateRowState(
+                  state.updates.find(
+                    (candidate) => candidate.package === row.package && candidate.from === row.version,
+                  ),
+                  jobFor(jobs, installingJob[key]),
+                );
                 return (
                   <Fragment key={key}>
-                    <tr>
+                    <tr className={update.kind === "none" ? undefined : styles.withUpdate}>
                       <td data-nowrap>
                         <span className={styles.name}>
                           <MonogramBadge name={row.package} size={28} />
@@ -179,13 +185,7 @@ export default function PackageList({
                     </tr>
                     <UpdateRow
                       columns={5}
-                      state={updateRowState(
-                        state.updates.find(
-                          (candidate) =>
-                            candidate.package === row.package && candidate.from === row.version,
-                        ),
-                        jobFor(jobs, installingJob[key]),
-                      )}
+                      state={update}
                       onUpdate={(update) => void state.askToUpgrade(update)}
                     />
                   </Fragment>
