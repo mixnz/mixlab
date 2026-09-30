@@ -188,6 +188,13 @@ async fn a_running_daemon_stops_a_service_nothing_is_using_and_says_why() {
         "an idle stop is MixEngine's, which a client draws as resting (T167d): {stopped}"
     );
 
+    // **Waited for, and not read off the log as it stands.** The sweeper writes its own sentence
+    // after the stop it awaited has returned, so the transition waited for above is on disk a
+    // moment before this one is; a log read in between ends at `to=stopped` and says nothing about
+    // who asked (CI run 36691383530, `test (macos-latest)`). The assertion below stays: it is what
+    // prints the log when the wait gives up.
+    wait_for(&home, "nothing was using this service, so it was stopped").await;
+
     let log = home.daemon_log();
 
     assert!(
