@@ -148,10 +148,21 @@ pub fn rendered(
 /// **Through a temporary file and a rename**, so that a half-written `config.inc.php` is never what
 /// PHP reads: the application is being served the whole time this runs.
 ///
+/// **One writer at a time.** The temporary file has one name per configuration, and two callers
+/// reach here together: the rewrite a daemon spawns at start, beside its accept loop, and an install
+/// that arrives as it comes up. Unserialised, the second rename found the temporary file already
+/// moved and failed with *cannot find the file* (CI run 36687868649, `test (windows-latest)`). The
+/// daemon is the only writer of a home, so a lock in this process is the whole of it.
+///
 /// # Errors
 ///
 /// [`Error::Io`] naming the path, when the directory cannot be made or the file cannot be written.
 pub fn write(rendered: &Rendered) -> Result<()> {
+    static WRITING: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _one_at_a_time = WRITING
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+
     if let Some(parent) = rendered.path.parent() {
         crate::paths::create_dir(parent)?;
     }
@@ -315,5 +326,48 @@ mod tests {
             installed_at: Timestamp::parse_rfc3339("2026-09-03T00:00:00Z").expect("a timestamp"),
             ports: BTreeMap::new(),
         }
+    }
+
+    /// **Two writers of one file both finish.** The boot-time rewrite is spawned beside the accept
+    /// loop, so an install that arrives as the daemon comes up writes the same configuration at the
+    /// same moment — CI run 36687868649, `test (windows-latest)`,
+    /// `a_web_app_is_served_on_a_site_only_its_extension_may_edit`: *cannot write …config.inc.php:
+    /// The system cannot find the file specified*. Both wrote one temporary name, and the second
+    /// rename found it gone.
+    #[test]
+    fn two_writers_of_one_configuration_both_finish() {
+        let home = tempfile::tempdir().expect("a temporary directory");
+        let path = home.path().join("app").join("config.inc.php");
+
+        let failures: Vec<String> = std::thread::scope(|scope| {
+            let writers: Vec<_> = (0..8)
+                .map(|writer| {
+                    let path = path.clone();
+                    scope.spawn(move || {
+                        (0..200).find_map(|_| {
+                            write(&Rendered {
+                                path: path.clone(),
+                                text: format!("written by {writer}"),
+                            })
+                            .err()
+                            .map(|error| error.to_string())
+                        })
+                    })
+                })
+                .collect();
+
+            writers
+                .into_iter()
+                .filter_map(|writer| writer.join().expect("a writer that did not panic"))
+                .collect()
+        });
+
+        assert!(failures.is_empty(), "{failures:?}");
+        assert!(
+            std::fs::read_to_string(&path)
+                .expect("the file is there")
+                .starts_with("written by "),
+            "one whole configuration, never a torn one"
+        );
     }
 }
