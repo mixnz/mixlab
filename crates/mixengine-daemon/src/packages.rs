@@ -227,6 +227,17 @@ impl Packages {
             packages: offered,
             stale: catalogue.freshness.is_stale(),
             updates: Some(updates),
+            unavailable: Some(
+                catalogue
+                    .index
+                    .missing()
+                    .iter()
+                    .map(|missing| mixengine_proto::CatalogueGap {
+                        name: missing.kind.clone(),
+                        reason: missing.reason.clone(),
+                    })
+                    .collect(),
+            ),
         })
     }
 

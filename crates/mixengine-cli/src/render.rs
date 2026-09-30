@@ -1343,6 +1343,14 @@ pub(crate) fn package_catalogue(catalogue: &PackageCatalogue, lines: &Lines) -> 
         );
     }
 
+    for gap in catalogue.unavailable.iter().flatten() {
+        rendered.push_str(&format!(
+            "{} is missing from this list, its part of the package index could not be read \
+             ({}); `mix package available --refresh` tries again\n",
+            gap.name, gap.reason
+        ));
+    }
+
     if catalogue.packages.is_empty() {
         rendered.push_str("the package index offers nothing this build can run on this machine\n");
         return rendered;
@@ -1636,6 +1644,14 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue, lines: &Lines) -> 
             "this list is from a cached index; mixengined could not reach the package index, so \
              versions published since then are missing\n",
         );
+    }
+
+    for gap in catalogue.unavailable.iter().flatten() {
+        rendered.push_str(&format!(
+            "{} is missing from this list, its part of the package index could not be read \
+             ({}); `mix runtime available --refresh` tries again\n",
+            gap.name, gap.reason
+        ));
     }
 
     if catalogue.runtimes.is_empty() {
@@ -4483,6 +4499,7 @@ mod tests {
                 in_line(offered("8.3.30", None), "8.3", true),
             ],
             stale: false,
+            unavailable: None,
             updates: Some(vec![mixengine_proto::RuntimeUpdate {
                 kind: RuntimeKind::Php,
                 from: PackageVersion::parse("8.4.24").expect("a version"),
@@ -4561,6 +4578,7 @@ mod tests {
                 runtimes: vec![offered("8.4.25", None), offered("8.4.24", None)],
                 stale: false,
                 updates: None,
+                unavailable: None,
             },
             &EVERY_LINE,
         );
@@ -4578,6 +4596,41 @@ mod tests {
         }
     }
 
+    /// **T196.** A kind the index could not be read for is said above the table, where the
+    /// staleness line is said, and a list that read everything says nothing.
+    #[test]
+    fn a_kind_the_index_could_not_be_read_for_is_said_above_the_table() {
+        let mut catalogue = RuntimeCatalogue {
+            runtimes: vec![offered("8.3.33", Some(Execution::Native))],
+            stale: false,
+            updates: None,
+            unavailable: Some(vec![mixengine_proto::CatalogueGap {
+                name: "node".to_owned(),
+                reason: "it does not hash to what the signed root says".to_owned(),
+            }]),
+        };
+
+        let rendered = runtime_catalogue(&catalogue, &EVERY_LINE);
+        let first = rendered.lines().next().expect("a line above the table");
+        assert!(
+            first.starts_with("node is missing from this list"),
+            "{rendered}"
+        );
+        assert!(first.contains("does not hash"), "{rendered}");
+        assert!(
+            first.ends_with("`mix runtime available --refresh` tries again"),
+            "a line ends with the command that fixes it: {rendered}"
+        );
+
+        for silent in [None, Some(Vec::new())] {
+            catalogue.unavailable = silent;
+            assert!(
+                !runtime_catalogue(&catalogue, &EVERY_LINE).contains("missing from this list"),
+                "nothing unread, nothing said"
+            );
+        }
+    }
+
     /// **T151.** The column appears only when a row lacks something, on `RUNS`' reasoning.
     #[test]
     fn a_needs_column_appears_only_when_a_row_lacks_something() {
@@ -4585,6 +4638,7 @@ mod tests {
             runtimes: vec![offered("8.3.33", Some(Execution::Native))],
             stale: false,
             updates: None,
+            unavailable: None,
         };
         assert!(!runtime_catalogue(&plain, &EVERY_LINE).contains("NEEDS"));
 
@@ -4605,6 +4659,7 @@ mod tests {
             ],
             stale: false,
             updates: None,
+            unavailable: None,
         };
         let rendered = runtime_catalogue(&lacking_one, &EVERY_LINE);
         assert!(rendered.contains("NEEDS"), "{rendered}");
@@ -4659,6 +4714,7 @@ mod tests {
                 runtimes: vec![offered("8.3.33", Some(Execution::Native))],
                 stale: false,
                 updates: None,
+                unavailable: None,
             },
             &EVERY_LINE,
         );
@@ -4676,6 +4732,7 @@ mod tests {
                 runtimes: vec![offered("8.3.33", None)],
                 stale: false,
                 updates: None,
+                unavailable: None,
             },
             &EVERY_LINE,
         );
@@ -4693,6 +4750,7 @@ mod tests {
                 ],
                 stale: false,
                 updates: None,
+                unavailable: None,
             },
             &EVERY_LINE,
         );

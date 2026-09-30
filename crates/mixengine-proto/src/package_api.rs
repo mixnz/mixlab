@@ -157,6 +157,14 @@ pub struct PackageCatalogue {
     /// on the disk must not cost a request to the index. [`None`] is a daemon from before T193.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updates: Option<Vec<PackageUpdate>>,
+
+    /// What this list could not be read for — roadmap task **T196**.
+    ///
+    /// The package index is one file per kind, so one file that could not be read costs that kind
+    /// and no other. [`None`] is a daemon from before T196; an empty list is one that read
+    /// everything it was asked for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unavailable: Option<Vec<crate::CatalogueGap>>,
 }
 
 /// One version the index offers, and whether this machine already has it.

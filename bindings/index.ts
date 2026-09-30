@@ -30,6 +30,7 @@ export * from "./CaStatus";
 export * from "./CaStatusQuery";
 export * from "./CaUninstallQuery";
 export * from "./CaUninstallReport";
+export * from "./CatalogueGap";
 export * from "./CategoryUsage";
 export * from "./CertIssue";
 export * from "./CertIssueReport";

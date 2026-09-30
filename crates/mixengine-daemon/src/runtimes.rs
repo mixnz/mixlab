@@ -39,9 +39,9 @@ use mixengine_core::index::{self, Index, Package, Selection, Target};
 use mixengine_core::install::Installer;
 use mixengine_core::{Paths, Store, paths, resolve, runtimes};
 use mixengine_proto::{
-    Error, ErrorCode, Execution, JobId, JobKind, JobSummary, PackageVersion, Requirements,
-    ResolvedRuntime, RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind, RuntimeList,
-    RuntimeQuestion, RuntimeRelease, RuntimeRemoval, RuntimeSummary, RuntimeTarget,
+    CatalogueGap, Error, ErrorCode, Execution, JobId, JobKind, JobSummary, PackageVersion,
+    Requirements, ResolvedRuntime, RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind,
+    RuntimeList, RuntimeQuestion, RuntimeRelease, RuntimeRemoval, RuntimeSummary, RuntimeTarget,
     RuntimeUninstall, RuntimeUpdate, ServiceState, Timestamp, VersionConstraint, rpc,
 };
 
@@ -365,6 +365,17 @@ impl Runtimes {
             runtimes,
             stale: catalogue.freshness.is_stale(),
             updates: Some(updates),
+            unavailable: Some(
+                catalogue
+                    .index
+                    .missing()
+                    .iter()
+                    .map(|missing| CatalogueGap {
+                        name: missing.kind.clone(),
+                        reason: missing.reason.clone(),
+                    })
+                    .collect(),
+            ),
         })
     }
 
@@ -1124,6 +1135,20 @@ pub(crate) fn offered<'a>(
     version: &str,
     listing: &str,
 ) -> Result<(&'a Package, Selection<'a>), Error> {
+    // **Asked before "does not publish"** — roadmap task T196. A kind whose file could not be read
+    // and a kind that publishes nothing look the same from here on, and they send whoever reads
+    // the message to two different places.
+    if let Some(missing) = index.unread(kind) {
+        return Err(Error::new(
+            ErrorCode::Io,
+            format!(
+                "the package index could not be read for {kind}: {}",
+                missing.reason
+            ),
+        )
+        .with_hint(format!("`{listing} --refresh` tries again")));
+    }
+
     let Some(package) = index
         .packages()
         .find(|package| package.kind == kind && package.version == version)

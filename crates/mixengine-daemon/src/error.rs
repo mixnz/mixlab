@@ -161,9 +161,9 @@ impl ToWire for mixengine_core::Error {
             // nothing was kept: the list is read again without it, and the next ask tries again.
             Core::IndexKind { .. } => Error::new(ErrorCode::PreconditionFailed, chain(self))
                 .with_hint(
-                    "the package index names each of its files by hash and this one did not \
-                     match; an index that is being published at that moment is the usual reason, \
-                     so asking again in a minute is the usual fix",
+                    "this file did not match what the signed index says it should be, which \
+                     usually means the index was being published at that moment; ask again in a \
+                     minute",
                 ),
 
             // Bytes that are ours by signature and then do not match what the index says they hash

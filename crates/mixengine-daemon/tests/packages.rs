@@ -1157,3 +1157,40 @@ async fn a_package_that_does_not_start_on_the_new_patch_goes_back() {
     assert_eq!(main["version"], VERSION, "back on the old patch: {main}");
     assert_eq!(main["state"], "running", "and running again: {main}");
 }
+
+/// `package.list_available` names the package whose file could not be read — roadmap task
+/// **T196**, its design's D5, the twin of the runtime test.
+#[tokio::test]
+async fn a_package_that_cannot_be_read_is_named() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    fixture._registry.corrupt_kind(PACKAGE);
+
+    let listed = client
+        .call("package.list_available", json!({"refresh": true}))
+        .await;
+
+    assert_eq!(
+        listed["packages"].as_array().map(Vec::len),
+        Some(0),
+        "{listed}"
+    );
+    let gaps = listed["unavailable"]
+        .as_array()
+        .expect("a daemon that says what it could not read");
+    assert_eq!(gaps.len(), 1, "{listed}");
+    assert_eq!(gaps[0]["name"], PACKAGE);
+
+    let refused = client
+        .refuse(
+            "package.requirements",
+            json!({"package": PACKAGE, "version": VERSION}),
+        )
+        .await;
+    assert!(
+        refused["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("could not be read for")),
+        "{refused}"
+    );
+}

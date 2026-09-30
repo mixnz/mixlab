@@ -7,6 +7,7 @@ import type { PackageRelease } from "@mixengine/api";
 import type { PackageSummary } from "@mixengine/api";
 import type { PackageFoundList } from "@mixengine/api";
 import type { PackageUpdate, UpgradePlan } from "@mixengine/api";
+import type { CatalogueGap } from "@mixengine/api";
 import { applyJob, type JobRow } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
 import {
@@ -26,6 +27,8 @@ export interface PackagesState {
    *  yet", not "nothing installed". */
   loaded: boolean;
   stale: boolean;
+  /** What the package index could not be read for (T196); empty when it read everything. */
+  unavailable: CatalogueGap[];
   jobs: JobRow[];
   installingJob: Record<string, number>;
   error: string;
@@ -73,6 +76,7 @@ export function usePackages(active: boolean): PackagesState {
   const [onDisk, setOnDisk] = useState<PackageFoundList>({ found: [] });
   const [adopting, setAdopting] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
+  const [unavailable, setUnavailable] = useState<CatalogueGap[]>([]);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [installingJob, setInstallingJob] = useState<Record<string, number>>({});
   const [error, setError] = useState("");
@@ -113,6 +117,7 @@ export function usePackages(active: boolean): PackagesState {
         setOnDisk(found);
         setAvailable(avail.packages);
         setStale(avail.stale);
+        setUnavailable(avail.unavailable ?? []);
         setUpdates(avail.updates ?? []);
         setError(stillShow);
       } catch (e) {
@@ -353,6 +358,7 @@ export function usePackages(active: boolean): PackagesState {
     available,
     loaded,
     stale,
+    unavailable,
     jobs,
     installingJob,
     error,
