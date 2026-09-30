@@ -625,6 +625,17 @@ impl ToWire for mixengine_core::Error {
     }
 }
 
+/// What a Linux release with no credential store is told to do — roadmap task T194, D3.
+///
+/// A development build keeps a file already, and Windows and macOS always have a store in the
+/// session a daemon runs in, so only a Linux release is offered the file.
+pub(crate) fn keyring_hint(release: bool, os: &str) -> Option<&'static str> {
+    (release && os == "linux").then_some(
+        "this machine has no credential store; to keep this home's passwords in a file only your \
+         account can read, run `mix daemon credential-store home`",
+    )
+}
+
 impl ToWire for mixengine_platform::Error {
     fn to_wire(&self) -> Error {
         use mixengine_platform::Error as Platform;
@@ -632,9 +643,13 @@ impl ToWire for mixengine_platform::Error {
         match self {
             // `reason` is required to describe the manual workaround where there is one
             // (`docs/architecture/platform-abstraction.md`, rule 4), and it is already in the
-            // message.
-            Platform::UnsupportedPlatform { .. } => {
-                Error::new(ErrorCode::UnsupportedPlatform, chain(self))
+            // message. A Linux release with no keyring is also told MixEngine's own answer (T194).
+            Platform::UnsupportedPlatform { capability, .. } => {
+                let error = Error::new(ErrorCode::UnsupportedPlatform, chain(self));
+                match keyring_hint(mixengine_platform::RELEASE, std::env::consts::OS) {
+                    Some(hint) if *capability == "Keyring" => error.with_hint(hint),
+                    _ => error,
+                }
             }
 
             // Not `io`: nothing was touched. The environment is missing something the OS considers
@@ -1194,5 +1209,16 @@ mod tests {
             .is_some_and(|hint| hint.contains("caddy") && hint.contains("application control"));
 
         assert_eq!(named, cfg!(windows), "{:?}", error.hint);
+    }
+
+    /// T194, D3: a Linux release with no keyring is told the one command MixEngine offers, and
+    /// nothing switches on its own.
+    #[test]
+    fn a_linux_release_with_no_keyring_is_told_about_the_file_store() {
+        let hint = keyring_hint(true, "linux").expect("a hint");
+        assert!(hint.contains("mix daemon credential-store home"), "{hint}");
+        assert_eq!(keyring_hint(true, "windows"), None);
+        assert_eq!(keyring_hint(true, "macos"), None);
+        assert_eq!(keyring_hint(false, "linux"), None);
     }
 }

@@ -16,7 +16,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       0052's "a release refuses `home`" and T33's "it does not fall back to a file".
 - [x] **T194b** `settings.credential_store`, its precedence under the flag and over the build's
       default, and `credentials::choose` accepting `home` on a Linux release only. **(P)**
-- [ ] **T194c** The absent-store hint names `mix daemon credential-store home` ahead of the D-Bus
+- [x] **T194c** The absent-store hint names `mix daemon credential-store home` ahead of the D-Bus
       workarounds; nothing switches on its own.
 - [ ] **T194d** `daemon.set_credential_store`, refused while the current store holds anything for
       this home, effective at the next start; `mix daemon credential-store`, and MixLab's
