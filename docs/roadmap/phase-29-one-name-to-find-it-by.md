@@ -67,6 +67,16 @@ It carries the scope table; this phase is the order the work happens in.
       package `mixlab` taking over from `mixengine`, and the headless archives, the helper and every
       identifier inside an artifact keep their names.
       [Design](../specs/2026-09-23-t176f-a-download-is-named-after-what-it-installs-design.md).
+- [ ] **T176g** What is left of the name MixDB goes, under the window. No string a person reads
+      says MixDB any more; about a thousand places beneath it still do. Code identifiers and
+      comments (`databaseOpenInMixDB`, `open_in_mixdb.rs`, `MIXDB_PASSWORD`) and the living
+      documentation become MixLab; the keys a person's machine already holds (`mixdb-theme`,
+      `mixdb-lang`, `mixdb-accent` and their siblings, `mixdb-preview.localhost`) move with a
+      one-time migration, so nobody loses a setting; the read-only `MixDB` keyring service stays,
+      because it is how a standalone MixDB's passwords are still found, and says so. Implemented
+      specs and accepted ADRs are history and are not edited; `scripts/check-names.mjs` keeps it
+      that way.
+      [Design](../specs/2026-09-30-t176g-what-is-left-of-mixdb-becomes-mixlab-design.md).
 
 **Milestone M29** — **met.** `mixnz/mixlab` serves the repository and `mixnz.github.io/mixlab/` the
 handbook; `README.md` answers *"do I need both?"* above the fold; no name among `mix`, `mixengined`,
