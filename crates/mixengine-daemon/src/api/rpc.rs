@@ -203,6 +203,10 @@ async fn call_method(
                     no_params(params.as_ref())?;
                     encode_result(&api.daemon_shutdown().await)
                 }
+                rpc::method::DAEMON_SET_CREDENTIAL_STORE => {
+                    let asked: mixengine_proto::CredentialStoreSet = arguments(params)?;
+                    encode_result(&api.set_credential_store(asked).await.map_err(refused)?)
+                }
 
                 rpc::method::UPDATE_STATUS => {
                     no_params(params.as_ref())?;
@@ -459,7 +463,7 @@ async fn call_method(
                     encode_result(&api.sites.delete(&query).await.map_err(refused)?)
                 }
 
-                rpc::method::DAEMON_DOCTOR => encode_result(&api.doctor.report().await),
+                rpc::method::DAEMON_DOCTOR => encode_result(&api.doctor_report().await),
 
                 rpc::method::BLUEPRINT_CAPTURE => {
                     let capture: BlueprintCapture = arguments(params)?;
@@ -1140,6 +1144,55 @@ impl Failure {
 }
 
 impl Api {
+    /// `daemon.doctor` — every check the doctor makes, and the line about where this home keeps
+    /// its passwords (T194), which only the API knows: the store is decided in `main` and described
+    /// from here. A note and never a problem, so `daemon.doctor_repair` has nothing to read in it.
+    async fn doctor_report(&self) -> mixengine_proto::DoctorReport {
+        let mut report = self.doctor.report().await;
+        report.checks.push(crate::credentials::check(
+            self.credentials.store,
+            self.paths.credentials_file(),
+        ));
+        report
+    }
+
+    /// `daemon.set_credential_store` — roadmap task T194, D4. Records the store the next start
+    /// uses; the running daemon keeps the host it was built with.
+    ///
+    /// # Errors
+    ///
+    /// `precondition_failed` with the sentence [`crate::credentials::switch`] gives, or the wire
+    /// error of a database that could not be read or written.
+    async fn set_credential_store(
+        &self,
+        asked: mixengine_proto::CredentialStoreSet,
+    ) -> Result<mixengine_proto::CredentialStoreChange, Error> {
+        let release = mixengine_platform::RELEASE;
+        let to = crate::credentials::Store::from(asked.store);
+        let from = crate::credentials::recorded(&self.store)
+            .await?
+            .unwrap_or(crate::credentials::Store::default_for(release));
+
+        if from != to {
+            crate::credentials::check_switch(
+                &self.store,
+                self.paths.credentials_file(),
+                release,
+                std::env::consts::OS,
+                from,
+                to,
+            )
+            .await
+            .map_err(|why| Error::new(ErrorCode::PreconditionFailed, why))?;
+            crate::credentials::record(&self.store, to).await?;
+        }
+
+        Ok(mixengine_proto::CredentialStoreChange {
+            recorded: to.into(),
+            running: self.credentials.store.into(),
+        })
+    }
+
     /// `daemon.status` — every fact this build actually has.
     ///
     /// **Fallible since T40b**, and `daemon.version` is what stays infallible: how many operations
@@ -1167,6 +1220,10 @@ impl Api {
             elevation: Some(self.elevation.summary().await?),
             dns: Some(self.dns.status()),
             update: self.updates.offer().await,
+            credentials: Some(mixengine_proto::CredentialsStatus {
+                store: self.credentials.store.into(),
+                choosable: self.credentials.choosable,
+            }),
         })
     }
 
@@ -1189,7 +1246,7 @@ impl Api {
     ///
     /// The wire error of an archive that could not be written.
     async fn bundle(&self) -> Result<BundleReport, Error> {
-        let report = self.doctor.report().await;
+        let report = self.doctor_report().await;
         let status = self.status().await;
 
         self.bundles.take(&report, status, self.version()).await
@@ -2746,6 +2803,10 @@ mod tests {
 
         let api = Arc::new(Api {
             version: "0.1.0",
+            credentials: crate::credentials::Facts {
+                store: crate::credentials::Store::Home,
+                choosable: true,
+            },
             protocol: mixengine_proto::PROTOCOL_VERSION,
             pid: 4123,
             // The shipped default, so what these tests read is what a home reads.

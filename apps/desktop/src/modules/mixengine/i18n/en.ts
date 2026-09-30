@@ -597,6 +597,15 @@ export default {
         on: "A PHP pool nobody used for half an hour, or a database or cache for an hour, is paused. The next visit starts it again, and that first load can take a second.",
         keepWarm: "To keep one project running all the time, run: mix project keep-warm <name>",
       },
+      credentials: {
+        title: "Passwords",
+        os: "Database passwords are kept in your system's credential store.",
+        home: "Database passwords are kept in a file in this home that only your account can read. Other accounts on this machine cannot read it. Anyone with the disk or a backup of it can, so encrypt the whole disk if it may leave your hands.",
+        toFile: "Keep them in a file",
+        toKeyring: "Use the system's store",
+        saving: "Saving",
+        nextStart: "Saved. MixEngine uses it from its next start.",
+      },
       autostart: {
         title: "Start at login",
         toggle: "Start MixEngine when I log in",

@@ -587,6 +587,15 @@ const vi: typeof en = {
         on: "Pool PHP không ai dùng trong nửa tiếng, hoặc database/cache trong một tiếng, sẽ được tạm dừng. Lần truy cập tiếp theo sẽ bật lại, và lần tải đầu có thể chậm một chút.",
         keepWarm: "Muốn một project luôn chạy, hãy chạy: mix project keep-warm <tên>",
       },
+      credentials: {
+        title: "Mật khẩu",
+        os: "Mật khẩu database được lưu trong kho thông tin đăng nhập của hệ điều hành.",
+        home: "Mật khẩu database được lưu trong một file của home này, chỉ tài khoản của bạn đọc được. Tài khoản khác trên máy không đọc được file này. Ai có ổ đĩa hoặc bản sao lưu của nó thì đọc được, nên hãy mã hoá cả ổ đĩa nếu máy có thể rời khỏi tay bạn.",
+        toFile: "Lưu vào file",
+        toKeyring: "Dùng kho của hệ điều hành",
+        saving: "Đang lưu",
+        nextStart: "Đã lưu. MixEngine dùng nó từ lần khởi động sau.",
+      },
       autostart: {
         title: "Khởi động cùng máy",
         toggle: "Chạy MixEngine mỗi khi đăng nhập",

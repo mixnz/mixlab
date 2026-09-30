@@ -434,6 +434,9 @@ struct Launch {
 
     /// The store `serve` builds its host with.
     credentials: mixengine_platform::Credentials,
+
+    /// What `daemon.status` says about that store — roadmap task T194.
+    credential_facts: credentials::Facts,
 }
 
 /// The two signed documents this daemon reads, and what verifies each.
@@ -553,10 +556,14 @@ async fn run() -> anyhow::Result<()> {
 
     let mut args = Args::parse();
 
-    // T184: decided before the home is opened, so a release asked to keep its passwords in a file
-    // refuses without having created anything.
-    let credential_store = credentials::choose(mixengine_platform::RELEASE, args.credential_store)
-        .map_err(anyhow::Error::msg)?;
+    // T184, T194: refused before the home is opened when no recorded row could make it right — a
+    // release on a system that is not Linux asked to keep its passwords in a file.
+    credentials::refuse_early(
+        mixengine_platform::RELEASE,
+        std::env::consts::OS,
+        args.credential_store,
+    )
+    .map_err(anyhow::Error::msg)?;
 
     // Before anything else: find the home directory, read config.toml, create what is missing.
     // It happens before logging is set up because the log level is one of the things it reads —
@@ -695,6 +702,50 @@ async fn run() -> anyhow::Result<()> {
 
     tracing::info!(database = %store.file().display(), "database open and up to date");
 
+    // **Which store this home keeps its credentials in** — roadmap task T194, D1. Read here, after
+    // the database and before the host that reads a credential, so that a start with no flag gets
+    // the store the home chose. A release asked for another one switches only if the switch is
+    // allowed, and records it; a development build's flag is for this start alone.
+    let release = mixengine_platform::RELEASE;
+    let recorded = credentials::recorded(&store).await?;
+    let credential_store = match credentials::at_start(release, args.credential_store, recorded) {
+        credentials::AtStart::Use(chosen) => chosen,
+        credentials::AtStart::Switch { from, to } => {
+            credentials::check_switch(
+                &store,
+                home.paths.credentials_file(),
+                release,
+                std::env::consts::OS,
+                from,
+                to,
+            )
+            .await
+            .map_err(anyhow::Error::msg)?;
+            credentials::record(&store, to).await?;
+            to
+        }
+    };
+    // Read once for the run: whether a switch would be offered (`daemon.status`'s `choosable`).
+    // The operating system's store is asked only where the answer depends on it, a Linux release on
+    // it, so no other machine is made to reach its keyring at start.
+    let os_store_absent = release
+        && std::env::consts::OS == "linux"
+        && credential_store == credentials::Store::Os
+        && tokio::task::spawn_blocking(|| {
+            credentials::os_store_absent(mixengine_platform::host().keyring())
+        })
+        .await
+        .unwrap_or(false);
+    let credential_facts = credentials::Facts {
+        store: credential_store,
+        choosable: credentials::choosable(
+            release,
+            std::env::consts::OS,
+            credential_store,
+            os_store_absent,
+        ),
+    };
+
     // **Roadmap task T144**, and it has to be here rather than inside `open_home`: whether these
     // flags may be honoured is a question for the database, and `open_home` never opens one. What
     // makes the ordering safe is that `mixengine.db` is the one file `[paths]` cannot move, so the
@@ -750,6 +801,7 @@ async fn run() -> anyhow::Result<()> {
         Launch {
             program,
             credentials: credential_store.at(home.paths.credentials_file()),
+            credential_facts,
         },
     )
     .await;
@@ -1139,6 +1191,7 @@ async fn serve(
     let Launch {
         program,
         credentials,
+        credential_facts,
     } = launch;
 
     // The two settings this function spends, read out of the file `main` loaded. One argument
@@ -1307,7 +1360,11 @@ async fn serve(
     // T184: and the one host that reaches `keyring()` — directly, and through `elevation.host()`,
     // which the API hands to extensions and databases. Every other `host()` in this crate reaches
     // pools, activation, shims, autostart or machine facts, none of which read a credential.
-    tracing::info!(credentials = %credentials::describe(&credentials), "credentials");
+    tracing::info!(
+        credentials = %credentials::describe(&credentials, mixengine_platform::RELEASE),
+        choosable = credential_facts.choosable,
+        "credentials"
+    );
     let host = mixengine_platform::host_with(credentials);
 
     let services = Arc::new(
@@ -2018,6 +2075,7 @@ async fn serve(
             metrics,
             memory_over_minutes: config.services.memory_over_minutes,
             crashes,
+            credentials: credential_facts,
         },
         api::Shutdown::new(shutdown.clone(), shutdown_grace),
     );

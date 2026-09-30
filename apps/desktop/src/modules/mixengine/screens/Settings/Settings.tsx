@@ -13,6 +13,7 @@ import FrontEndSection from "./FrontEndSection";
 import PathSection from "./PathSection";
 import styles from "./Settings.module.css";
 import SaveResourcesSection from "./SaveResourcesSection";
+import CredentialsSection from "./CredentialsSection";
 import SectionLoading from "./SectionLoading";
 
 /**
@@ -69,6 +70,7 @@ export default function Settings({ active }: { active: boolean }) {
       <FrontEndSection active={active} onError={setError} />
 
       <AutostartSection onError={setError} />
+      <CredentialsSection status={status} onError={setError} />
       <SaveResourcesSection onError={setError} />
       <PathSection active={active} onError={setError} />
       <DoctorSection active={active} onError={setError} />

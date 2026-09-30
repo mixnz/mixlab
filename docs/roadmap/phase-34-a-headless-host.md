@@ -12,18 +12,18 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
 
 ---
 
-- [ ] **T194a** The ADR: a Linux release may keep a home's credentials in a file, superseding ADR
+- [x] **T194a** The ADR: a Linux release may keep a home's credentials in a file, superseding ADR
       0052's "a release refuses `home`" and T33's "it does not fall back to a file".
-- [ ] **T194b** `settings.credential_store`, its precedence under the flag and over the build's
+- [x] **T194b** `settings.credential_store`, its precedence under the flag and over the build's
       default, and `credentials::choose` accepting `home` on a Linux release only. **(P)**
-- [ ] **T194c** The absent-store hint names `mix daemon credential-store home` ahead of the D-Bus
+- [x] **T194c** The absent-store hint names `mix daemon credential-store home` ahead of the D-Bus
       workarounds; nothing switches on its own.
-- [ ] **T194d** `daemon.set_credential_store`, refused while the current store holds anything for
+- [x] **T194d** `daemon.set_credential_store`, refused while the current store holds anything for
       this home, effective at the next start; `mix daemon credential-store`, and MixLab's
       *Credentials* section in Settings → MixEngine.
-- [ ] **T194e** `credentials` on `daemon.status` and in `mix status`, the doctor note, the startup
+- [x] **T194e** `credentials` on `daemon.status` and in `mix status`, the doctor note, the startup
       log, the `mix database` wording; bindings.
-- [ ] **T194f** `security-model.md`, `platform-abstraction.md`'s `Keyring` row, the changelog lines,
+- [x] **T194f** `security-model.md`, `platform-abstraction.md`'s `Keyring` row, the changelog lines,
       and the design flipped to `implemented`.
 - [ ] **T195** Start at boot without a login: a systemd user unit and linger, enabled through
       `mixengine-elevate` once. Design to come.

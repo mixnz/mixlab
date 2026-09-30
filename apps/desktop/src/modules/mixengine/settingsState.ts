@@ -1,5 +1,5 @@
 import type { AutostartReport } from "@mixengine/api";
-import type { DoctorReport } from "@mixengine/api";
+import type { CredentialStore, CredentialsStatus, DoctorReport } from "@mixengine/api";
 
 /**
  * Four states an autostart switch can be in, not two — T85b.
@@ -27,4 +27,16 @@ export function autostartPresentation(
  */
 export function doctorChecksInOrder(report: DoctorReport): DoctorReport["checks"] {
   return report.checks;
+}
+
+/**
+ * What the Credentials section draws (T194): the store, and the one it may switch to — `null` when
+ * the daemon would refuse, or nothing at all from a daemon that predates the member.
+ */
+export function credentialsPresentation(
+  credentials: CredentialsStatus | null | undefined,
+): { store: CredentialStore; switchTo: CredentialStore | null } | null {
+  if (!credentials) return null;
+  const other: CredentialStore = credentials.store === "os" ? "home" : "os";
+  return { store: credentials.store, switchTo: credentials.choosable ? other : null };
 }

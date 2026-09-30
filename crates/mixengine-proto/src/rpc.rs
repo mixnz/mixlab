@@ -38,6 +38,18 @@ pub mod method {
     /// goes; the connection ending afterwards is the shutdown, not a failure.
     pub const DAEMON_SHUTDOWN: &str = "daemon.shutdown";
 
+    /// Choose where this home keeps its passwords from the next start. Takes
+    /// [`CredentialStoreSet`](crate::CredentialStoreSet), answers
+    /// [`CredentialStoreChange`](crate::CredentialStoreChange). Roadmap task **T194**.
+    ///
+    /// **Refused while the current store holds anything for this home**, naming what it holds, and
+    /// on a release refused for the file anywhere but a Linux machine with no credential store
+    /// ([ADR 0059]). Nothing moves: the running daemon keeps its host, and the next start reads the
+    /// recorded choice.
+    ///
+    /// [ADR 0059]: https://github.com/mixnz/mixlab/blob/master/docs/decisions/0059-a-linux-release-may-keep-a-homes-credentials-in-a-file.md
+    pub const DAEMON_SET_CREDENTIAL_STORE: &str = "daemon.set_credential_store";
+
     /// Examine this machine and say what was found. Takes nothing, answers
     /// [`DoctorReport`](crate::DoctorReport).
     ///

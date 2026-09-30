@@ -191,6 +191,24 @@ impl Home {
         self.spawn_daemon(arguments)
     }
 
+    /// A daemon started with `variables` removed from its environment — a test that is about what
+    /// the home remembers must not inherit what CI sets for the whole run (T194).
+    pub(crate) fn start_daemon_without(&self, variables: &[&str]) -> Daemon {
+        let mut command = Command::new(daemon_binary());
+        command
+            .arg("--home")
+            .arg(self.path())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        for variable in variables {
+            command.env_remove(variable);
+        }
+
+        let daemon = Daemon(command.spawn().expect("the daemon binary runs"));
+        self.wait_until_listening();
+        daemon
+    }
+
     /// The same, for a daemon that reads its package index from a registry this test is serving.
     pub(crate) fn start_daemon_reading_index(&self, url: &str, key: &str) -> Daemon {
         self.spawn_daemon(&["--index-url", url, "--index-key", key])

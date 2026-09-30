@@ -30,21 +30,22 @@ use mixengine_proto::{
     AnswerSubject, AutostartReport, BlueprintApplied, BlueprintApply, BlueprintApplyResponse,
     BlueprintCapture, BlueprintImport, BlueprintList, BlueprintPlan, BlueprintSummary,
     BundleReport, CaRotateReport, CaStatus, CaUninstallReport, CertIssue, CertIssueReport,
-    CertStatusQuery, CertStatusReport, CleanupQuery, CleanupReport, DaemonShutdown, DaemonStatus,
-    DatabaseAccount, DatabaseClientQuery, DatabaseClientReport, DatabaseCreate,
-    DatabaseCredentials, DatabaseCredentialsQuery, DatabaseHandoff, DatabaseOpen,
-    DiagnosticsBundle, DiskCategory, DiskUsage, DiskUsageQuery, Disposition, DoctorRepair,
-    DoctorReport, DomainAdd, DomainRemove, DomainStatusQuery, DomainStatusReport, ElevationDrop,
-    ElevationStatus, Error, ErrorCode, ExtensionAvailable, ExtensionCatalogue, ExtensionChange,
-    ExtensionChoice, ExtensionConsent, ExtensionId, ExtensionInspect, ExtensionInspection,
-    ExtensionInstall, ExtensionList, ExtensionOrigin, ExtensionPlan, ExtensionPlanRequest,
-    ExtensionRemoval, ExtensionTarget, ExtensionUninstall, FrontEndReport, FrontEndServer,
-    FrontEndSwitch, IdleReport, InstalledExtensions, JobFilter, JobId, JobList, JobOutcome,
-    JobQuery, JobState, JobSummary, JobWait, LogFrame, MetricsFrame, MetricsHistory, Millis,
-    MismatchAnswer, PackageCatalogue, PackageFilter, PackageInstall, PackageList, PackageRemoval,
-    PackageTarget, PackageUpgrade, PackageUpgradeQuery, PackageVersion, PathReport, PendingOpId,
-    PlanAction, Priority, ProjectCreate, ProjectDetail, ProjectExport, ProjectList, ProjectQuery,
-    ProjectRef, ProjectRemoval, ProjectUpdate, Reclaim, Remedy, Removal, RepairReport, Requirement,
+    CertStatusQuery, CertStatusReport, CleanupQuery, CleanupReport, CredentialStore,
+    CredentialStoreChange, CredentialStoreSet, DaemonShutdown, DaemonStatus, DatabaseAccount,
+    DatabaseClientQuery, DatabaseClientReport, DatabaseCreate, DatabaseCredentials,
+    DatabaseCredentialsQuery, DatabaseHandoff, DatabaseOpen, DiagnosticsBundle, DiskCategory,
+    DiskUsage, DiskUsageQuery, Disposition, DoctorRepair, DoctorReport, DomainAdd, DomainRemove,
+    DomainStatusQuery, DomainStatusReport, ElevationDrop, ElevationStatus, Error, ErrorCode,
+    ExtensionAvailable, ExtensionCatalogue, ExtensionChange, ExtensionChoice, ExtensionConsent,
+    ExtensionId, ExtensionInspect, ExtensionInspection, ExtensionInstall, ExtensionList,
+    ExtensionOrigin, ExtensionPlan, ExtensionPlanRequest, ExtensionRemoval, ExtensionTarget,
+    ExtensionUninstall, FrontEndReport, FrontEndServer, FrontEndSwitch, IdleReport,
+    InstalledExtensions, JobFilter, JobId, JobList, JobOutcome, JobQuery, JobState, JobSummary,
+    JobWait, LogFrame, MetricsFrame, MetricsHistory, Millis, MismatchAnswer, PackageCatalogue,
+    PackageFilter, PackageInstall, PackageList, PackageRemoval, PackageTarget, PackageUpgrade,
+    PackageUpgradeQuery, PackageVersion, PathReport, PendingOpId, PlanAction, Priority,
+    ProjectCreate, ProjectDetail, ProjectExport, ProjectList, ProjectQuery, ProjectRef,
+    ProjectRemoval, ProjectUpdate, Reclaim, Remedy, Removal, RepairReport, Requirement,
     Requirements, ResetCredential, ResidueId, ResolvedRuntime, ResourceLimits, RouteTarget,
     RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind, RuntimeList, RuntimeQuestion,
     RuntimeRemoval, RuntimeSummary, RuntimeTarget, RuntimeUninstall, RuntimeUpgrade,
@@ -1723,6 +1724,34 @@ enum JobCommand {
 enum DaemonCommand {
     /// Stop the services this home is running, then stop the daemon.
     Stop,
+
+    /// Choose where this home keeps its passwords from the next start: `os`, the system's
+    /// credential store, or `home`, a file only your account can read.
+    //
+    // Roadmap task T194, ADR 0059. A release takes `home` only on a Linux machine with no
+    // credential store, and the daemon refuses a switch while the current store holds anything.
+    CredentialStore {
+        /// `os` or `home`.
+        store: CredentialStoreArg,
+    },
+}
+
+/// The two stores `mix daemon credential-store` names.
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+enum CredentialStoreArg {
+    /// The system's credential store.
+    Os,
+    /// A file in this home, readable by your account only.
+    Home,
+}
+
+impl From<CredentialStoreArg> for CredentialStore {
+    fn from(store: CredentialStoreArg) -> Self {
+        match store {
+            CredentialStoreArg::Os => Self::Os,
+            CredentialStoreArg::Home => Self::Home,
+        }
+    }
 }
 
 /// `mix service …` — one subcommand per `service.*` method, and nothing that is not one.
@@ -2536,6 +2565,9 @@ async fn run(args: Args) -> Result<ExitCode, Error> {
         Command::Daemon {
             command: DaemonCommand::Stop,
         } => daemon_stop(&endpoint, args.json).await,
+        Command::Daemon {
+            command: DaemonCommand::CredentialStore { store },
+        } => daemon_credential_store(store, &endpoint, autostart.as_ref(), args.json).await,
         Command::Runtime { command } => {
             runtime(command, &endpoint, autostart.as_ref(), args.json).await
         }
@@ -4847,9 +4879,10 @@ async fn database(
             };
             let account: DatabaseAccount =
                 ask(&mut client, rpc::method::DATABASE_CREATE, encode(&create)).await?;
+            let store = credential_store(&mut client, json).await;
 
             emit(&rendered(json, &account, || {
-                render::database_created(&account)
+                render::database_created(&account, store)
             }))?;
         }
 
@@ -4901,9 +4934,10 @@ async fn database(
                 encode(&DatabaseCredentialsQuery { service, user }),
             )
             .await?;
+            let store = credential_store(&mut client, json).await;
 
             emit(&rendered(json, &answer, || {
-                render::database_credentials(&answer)
+                render::database_credentials(&answer, store)
             }))?;
         }
     }
@@ -6434,6 +6468,44 @@ async fn daemon_stop(endpoint: &Endpoint, json: bool) -> Result<ExitCode, Error>
         (None, None) => ExitCode::SUCCESS,
         _ => ExitCode::FAILURE,
     })
+}
+
+/// Which store the daemon keeps passwords in, for a sentence that says where one is — roadmap task
+/// T194. Asked only for a person: `--json` hands back the daemon's own answer and needs no more.
+/// A daemon that cannot say, or predates the member, is answered as it always was.
+async fn credential_store(client: &mut Client, json: bool) -> Option<CredentialStore> {
+    if json {
+        return None;
+    }
+    ask::<DaemonStatus>(client, rpc::method::DAEMON_STATUS, None)
+        .await
+        .ok()
+        .and_then(|status| status.credentials)
+        .map(|credentials| credentials.store)
+}
+
+/// `mix daemon credential-store` — roadmap task T194.
+async fn daemon_credential_store(
+    store: CredentialStoreArg,
+    endpoint: &Endpoint,
+    autostart: Option<&Autostart>,
+    json: bool,
+) -> Result<ExitCode, Error> {
+    let mut client = Client::connect(endpoint, autostart).await?;
+    let change: CredentialStoreChange = ask(
+        &mut client,
+        rpc::method::DAEMON_SET_CREDENTIAL_STORE,
+        encode(&CredentialStoreSet {
+            store: store.into(),
+        }),
+    )
+    .await?;
+
+    emit(&rendered(json, &change, || {
+        render::credential_store_change(change)
+    }))?;
+
+    Ok(ExitCode::SUCCESS)
 }
 
 /// `mix storage`: where this home's growing directories are — roadmap task **T145**.

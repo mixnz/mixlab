@@ -64,6 +64,19 @@ Stop the services this home is running, then stop the daemon
 mix daemon stop
 ```
 
+### mix daemon credential-store
+
+Choose where this home keeps its passwords from the next start: `os`, the system's credential store,
+or `home`, a file only your account can read
+
+```
+mix daemon credential-store <STORE>
+```
+
+| Flag | What it does |
+| --- | --- |
+| `<STORE>` | `os` or `home` |
+
 ## mix docs
 
 Read the MixLab handbook, offline, in English or Vietnamese.

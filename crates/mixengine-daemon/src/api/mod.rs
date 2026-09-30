@@ -137,6 +137,10 @@ pub(crate) struct Api {
     /// knows.
     pub(crate) databases: Arc<crate::databases::Databases>,
 
+    /// Which credential store this daemon runs on — roadmap task **T194**. `daemon.status` answers
+    /// it, and `daemon.set_credential_store` compares a switch against it.
+    credentials: crate::credentials::Facts,
+
     /// The blueprints this home holds, and the only thing that writes one down.
     ///
     /// Built here for `projects`' reason, and holding [`Paths`] beside the store because a capture
@@ -348,6 +352,10 @@ pub(crate) struct Supervision {
     /// doctor` counts what is on disk; nothing reachable from the API writes a report, because the
     /// only thing that writes one is a panic.
     pub(crate) crashes: crate::crash::Reports,
+
+    /// Which credential store this daemon runs on, and whether it would accept a switch — roadmap
+    /// task **T194**. Decided in `main` before the host was built, and only described from here.
+    pub(crate) credentials: crate::credentials::Facts,
 }
 
 /// The directories a finished uninstall left for this process to remove on its way out.
@@ -521,6 +529,7 @@ impl Api {
             metrics,
             memory_over_minutes,
             crashes,
+            credentials,
         } = supervision;
 
         let php_extensions =
@@ -602,6 +611,7 @@ impl Api {
             version: env!("CARGO_PKG_VERSION"),
             protocol: mixengine_proto::PROTOCOL_VERSION,
             pid: std::process::id(),
+            credentials,
             home: paths.root().display().to_string(),
             endpoint: endpoint.to_string(),
             database: store.file().display().to_string(),

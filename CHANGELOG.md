@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- MixEngine runs databases on a Linux server with no desktop: `mix daemon credential-store home`
+  keeps that home's passwords in a file only your account can read.
 - Available versions are listed one row per version series, with older patches one click away.
 - An installed runtime or server updates to the newest patch of its series, and its sites,
   settings and pins move with it (`mix runtime upgrade`, `mix package upgrade`, and *Update* in

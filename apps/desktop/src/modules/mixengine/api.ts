@@ -50,6 +50,7 @@ import type { ServiceLimitsReport } from "@mixengine/api";
 import type { ResourceLimits } from "@mixengine/api";
 import type { FrontEndSwitch } from "@mixengine/api";
 import type { SaveResources, SaveResourcesSet, ServiceAutostartSet } from "@mixengine/api";
+import type { CredentialStore, CredentialStoreChange, CredentialStoreSet } from "@mixengine/api";
 import type { ServiceIdleSet } from "@mixengine/api";
 import type { ServiceSummary } from "@mixengine/api";
 import type { ServiceFoundList } from "@mixengine/api";
@@ -406,6 +407,12 @@ export function saveResources(): Promise<SaveResources> {
 export function setSaveResources(on: boolean): Promise<SaveResources> {
   const params: SaveResourcesSet = { on };
   return invoke<SaveResources>("mixengine_service_set_save_resources", { params });
+}
+
+/** `daemon.set_credential_store` — where this home keeps its passwords from the next start (T194). */
+export function setCredentialStore(store: CredentialStore): Promise<CredentialStoreChange> {
+  const params: CredentialStoreSet = { store };
+  return invoke<CredentialStoreChange>("mixengine_daemon_set_credential_store", { params });
 }
 
 /** `service.set_autostart` — whether this service starts along with MixEngine (T112).

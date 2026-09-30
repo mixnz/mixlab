@@ -456,6 +456,13 @@ pub async fn mixengine_service_set_save_resources(params: Value) -> Result<Value
     rpc::call("service.set_save_resources", params).await
 }
 
+/// `params` has the shape of `CredentialStoreSet { store }` — `daemon.set_credential_store`, T194.
+/// Records the store the next start uses; the running daemon keeps its own.
+#[tauri::command]
+pub async fn mixengine_daemon_set_credential_store(params: Value) -> Result<Value, AppError> {
+    rpc::call("daemon.set_credential_store", params).await
+}
+
 /// `service.set_front_end` — T97 / ADR 0026. `params` has the shape of `FrontEndSwitch { server,
 /// version?, grant }`; returns a `JobSummary` (stopping the old server and bringing up the new one
 /// is one job), whose result is `FrontEndReport`. There is no separate read method: the active

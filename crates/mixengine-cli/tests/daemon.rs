@@ -233,3 +233,39 @@ fn stopping_a_daemon_that_is_not_running_does_not_start_one_to_stop_it() {
         "a daemon was started by the command that asks one to stop"
     );
 }
+
+/// **The home remembers its store** — roadmap task T194, D1. A development build defaults to the
+/// file; once `os` is recorded, a start with no flag runs on `os`. `MIXENGINE_CREDENTIAL_STORE` is
+/// removed from both daemons' environment, because CI sets it for the whole run and this test is
+/// about what the home says, not what the environment says.
+#[test]
+fn a_recorded_store_outlives_the_daemon_that_recorded_it() {
+    let home = Home::new();
+    let mut first = home.start_daemon_without(&["MIXENGINE_CREDENTIAL_STORE"]);
+
+    let before = json(&home.mix(&["status", "--json"]));
+    assert_eq!(
+        before.pointer("/daemon/credentials/store"),
+        Some(&serde_json::Value::from("home")),
+        "{before}"
+    );
+
+    let change = json(&home.mix(&["daemon", "credential-store", "os", "--json"]));
+    assert_eq!(change["recorded"], "os", "{change}");
+    assert_eq!(change["running"], "home", "{change}");
+
+    assert!(home.mix(&["daemon", "stop"]).status.success());
+    assert!(
+        first.wait_until_gone(),
+        "--- daemon.log ---\n{}",
+        home.daemon_log()
+    );
+
+    let _second = home.start_daemon_without(&["MIXENGINE_CREDENTIAL_STORE"]);
+    let after = json(&home.mix(&["status", "--json"]));
+    assert_eq!(
+        after.pointer("/daemon/credentials/store"),
+        Some(&serde_json::Value::from("os")),
+        "{after}"
+    );
+}

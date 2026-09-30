@@ -183,6 +183,10 @@ runs through the copy beside the program. The residual below states what that co
   ([ADR 0055](../decisions/0055-the-daemons-credentials-are-one-keychain-item-per-home-on-macos.md)). `mix database credentials <id>` reveals it on demand (T77b), the one method built to
   answer a credential rather than only its address — see
   [ADR 0025](../decisions/0025-a-credential-is-answered-only-by-a-method-that-exists-to-answer-it.md).
+  A Linux release with no keyring keeps them instead in `<root>/credentials.json`, owner-only,
+  when a person chooses it with `mix daemon credential-store home`
+  ([ADR 0059](../decisions/0059-a-linux-release-may-keep-a-homes-credentials-in-a-file.md)): safe
+  from other accounts, readable from a backup or a removed disk, and `mix doctor` says so.
 
 ## Client authentication
 
