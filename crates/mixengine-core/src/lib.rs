@@ -996,6 +996,22 @@ pub enum Error {
         text: String,
     },
 
+    /// A kind's file of the package index is not the one the signed root names — roadmap task
+    /// **T196**.
+    ///
+    /// The root verified. This file is believed only because the root states its hash, and it is
+    /// not that file: an index caught while it was being published, a mirror serving an old copy,
+    /// or somebody in between. It costs that kind and no other.
+    #[error("the package index's file for {kind} at {url} {problem}")]
+    IndexKind {
+        /// Which kind.
+        kind: String,
+        /// Where the file came from — a URL, or the cache file.
+        url: String,
+        /// What is wrong with it.
+        problem: index::KindProblem,
+    },
+
     /// The server offered an index older than the one already cached.
     ///
     /// Every index we ever published is validly signed, so the signature cannot tell an old one from

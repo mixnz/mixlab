@@ -101,6 +101,133 @@ pub fn default_transport() -> reqwest::Result<reqwest::Client> {
         .build()
 }
 
+/// Check `signature` over `document` against `key`.
+///
+/// **The one signature check there is**, for a single document and for the package index's root
+/// alike. `false` refuses minisign's legacy algorithm: everything this project publishes is the
+/// modern pre-hashed form, so accepting the other one would widen what we trust in exchange for
+/// nothing. The call checks the signature over the trusted comment as well as the one over the
+/// document.
+pub(crate) fn verify(
+    key: &PublicKey,
+    document: &[u8],
+    signature: &str,
+) -> std::result::Result<(), minisign_verify::Error> {
+    let signature = Signature::decode(signature)?;
+    key.verify(document, &signature, false)
+}
+
+/// What one GET came back with — roadmap task **T196**.
+pub(crate) enum Got {
+    /// `404` or `410`: the server has no such file. Told apart from every other failure because
+    /// it is the one answer that means "this source does not publish that".
+    Absent,
+
+    /// The server declared a length that is not the one expected, and the body was not read.
+    Declared(u64),
+
+    /// The body, and never more than one byte past the limit it was read under.
+    Body(Vec<u8>),
+}
+
+/// GET `url` inside `timeout`, reading no more than one byte past `limit`.
+///
+/// `exact` is the length the body must be, when the caller knows it: a `Content-Length` that says
+/// otherwise ends the request before the body. A body that runs past `limit` is cut there, and
+/// what was read is then judged like any other — a cut root fails its signature and a cut kind
+/// file fails its length — so a server cannot make this process hold more than it asked for.
+pub(crate) async fn get(
+    http: &reqwest::Client,
+    url: &str,
+    timeout: Duration,
+    limit: u64,
+    exact: Option<u64>,
+    document: &'static str,
+) -> Result<Got> {
+    let transport = |source: reqwest::Error| Error::IndexTransport {
+        document,
+        url: url.to_owned(),
+        source: Box::new(source),
+    };
+
+    let response = http
+        .get(url)
+        .timeout(timeout)
+        .send()
+        .await
+        .map_err(transport)?;
+
+    if matches!(
+        response.status(),
+        reqwest::StatusCode::NOT_FOUND | reqwest::StatusCode::GONE
+    ) {
+        return Ok(Got::Absent);
+    }
+
+    let mut response = response.error_for_status().map_err(transport)?;
+
+    if let (Some(exact), Some(declared)) = (exact, response.content_length())
+        && declared != exact
+    {
+        return Ok(Got::Declared(declared));
+    }
+
+    let mut body = Vec::new();
+    while let Some(chunk) = response.chunk().await.map_err(transport)? {
+        let room =
+            usize::try_from((limit + 1).saturating_sub(body.len() as u64)).unwrap_or(usize::MAX);
+        body.extend_from_slice(&chunk[..chunk.len().min(room)]);
+
+        if body.len() as u64 > limit {
+            break;
+        }
+    }
+
+    Ok(Got::Body(body))
+}
+
+/// How a kind file failed to be the one its root names — roadmap task **T196**.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum KindProblem {
+    /// The server has no such file.
+    Absent,
+
+    /// It is not the length the root states.
+    Length {
+        /// What the root says.
+        expected: u64,
+        /// What arrived, or what the server said would.
+        found: u64,
+    },
+
+    /// It does not hash to what the root states.
+    Hash,
+
+    /// It says it is another kind's file.
+    Named(String),
+
+    /// It is the root's, by hash, and what it says cannot be turned into packages.
+    Undecodable(String),
+}
+
+impl std::fmt::Display for KindProblem {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Absent => formatter.write_str("is not published"),
+            Self::Length { expected, found } => {
+                write!(
+                    formatter,
+                    "is {found} bytes and the signed root says {expected}"
+                )
+            }
+            Self::Hash => formatter.write_str("does not hash to what the signed root says"),
+            Self::Named(other) => write!(formatter, "says it is {other}'s"),
+            Self::Undecodable(why) => write!(formatter, "cannot be read: {why}"),
+        }
+    }
+}
+
 /// How the index in hand was obtained, and whether the caller should say so.
 ///
 /// Returned rather than logged alone because the three cases want different words in three different
@@ -279,11 +406,27 @@ impl<D: Document> Client<D> {
     /// [`Error::IndexRolledBack`] when it is older than what is already held, and [`Error::Io`] when
     /// the cache cannot be written.
     pub async fn refresh(&self) -> Result<Catalogue<D>> {
+        self.refresh_not_before(None).await
+    }
+
+    /// [`refresh`](Client::refresh), refusing as well anything generated before `floor`.
+    ///
+    /// For a document published in more than one encoding — roadmap task **T196**, its design's
+    /// D10. The package index is, and the mark one encoding left must hold for the other, or a home
+    /// could be walked backwards by being moved between them.
+    ///
+    /// # Errors
+    ///
+    /// As [`Client::refresh`].
+    pub(crate) async fn refresh_not_before(
+        &self,
+        floor: Option<Timestamp>,
+    ) -> Result<Catalogue<D>> {
         let cached = self.cached();
 
         let refreshed = match self.fetch().await {
             Ok((document, signature, index)) => self
-                .accept(cached.as_ref().map(|(index, _)| index), &index)
+                .accept(cached.as_ref().map(|(index, _)| index), floor, &index)
                 .and_then(|()| self.store(&document, &signature))
                 .map(|()| index),
             Err(unreachable) => Err(unreachable),
@@ -326,15 +469,19 @@ impl<D: Document> Client<D> {
     ///
     /// Done now rather than later on purpose: adding it to a fleet that already has caches means
     /// deciding what to do about the ones already holding a newer document than the server has.
-    fn accept(&self, cached: Option<&D>, offered: &D) -> Result<()> {
-        let Some(cached) = cached else {
+    fn accept(&self, cached: Option<&D>, floor: Option<Timestamp>, offered: &D) -> Result<()> {
+        let held = [cached.map(Document::generated_at), floor]
+            .into_iter()
+            .flatten()
+            .max();
+        let Some(held) = held else {
             return Ok(());
         };
-        if offered.generated_at() < cached.generated_at() {
+        if offered.generated_at() < held {
             return Err(Error::IndexRolledBack {
                 document: D::LABEL,
                 url: self.url.clone(),
-                cached: cached.generated_at().to_string(),
+                cached: held.to_string(),
                 offered: offered.generated_at().to_string(),
             });
         }
@@ -392,23 +539,11 @@ impl<D: Document> Client<D> {
     /// [`Error::IndexUnreadable`] when what it covered is not JSON we understand, and
     /// [`Error::IndexSchema`] when it is a document version this build cannot read.
     fn verified(&self, document: &[u8], signature: &str) -> Result<D> {
-        let signature = Signature::decode(signature).map_err(|source| Error::IndexSignature {
+        verify(&self.key, document, signature).map_err(|source| Error::IndexSignature {
             document: D::LABEL,
             url: self.url.clone(),
             source: Box::new(source),
         })?;
-
-        // `false` refuses minisign's legacy algorithm. Everything this project publishes is the
-        // modern pre-hashed form, so accepting the other one would widen what we trust in exchange
-        // for nothing. The call checks the signature over the trusted comment as well as the one
-        // over the document.
-        self.key
-            .verify(document, &signature, false)
-            .map_err(|source| Error::IndexSignature {
-                document: D::LABEL,
-                url: self.url.clone(),
-                source: Box::new(source),
-            })?;
 
         let index: D =
             serde_json::from_slice(document).map_err(|source| Error::IndexUnreadable {
@@ -434,7 +569,7 @@ impl<D: Document> Client<D> {
     /// truncated, tampered with or written by a newer schema all mean the same thing to the caller,
     /// which is "go to the network". The one that is worth a word in the log is a *signature*
     /// failure, because that is the only one that cannot happen by accident.
-    fn cached(&self) -> Option<(D, Duration)> {
+    pub(crate) fn cached(&self) -> Option<(D, Duration)> {
         let document = std::fs::read(&self.cache_file).ok()?;
         let signature = std::fs::read_to_string(self.signature_file()).ok()?;
 
@@ -479,6 +614,15 @@ impl<D: Document> Client<D> {
         };
         write(self.signature_file(), signature.as_bytes())?;
         write(self.cache_file.clone(), document)
+    }
+
+    /// Remove the cached document and its signature, where there is one.
+    ///
+    /// For a document published in more than one encoding, when the other one has just been
+    /// stored: one layout on disk at a time (the T196 design's D10).
+    pub(crate) fn forget(&self) {
+        let _ = std::fs::remove_file(&self.cache_file);
+        let _ = std::fs::remove_file(self.signature_file());
     }
 
     fn signature_file(&self) -> PathBuf {
