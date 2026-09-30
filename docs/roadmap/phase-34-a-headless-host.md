@@ -12,7 +12,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
 
 ---
 
-- [ ] **T194a** The ADR: a Linux release may keep a home's credentials in a file, superseding ADR
+- [x] **T194a** The ADR: a Linux release may keep a home's credentials in a file, superseding ADR
       0052's "a release refuses `home`" and T33's "it does not fall back to a file".
 - [ ] **T194b** `settings.credential_store`, its precedence under the flag and over the build's
       default, and `credentials::choose` accepting `home` on a Linux release only. **(P)**

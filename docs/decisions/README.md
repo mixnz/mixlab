@@ -51,13 +51,14 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0049](0049-a-download-is-named-after-what-it-installs.md) | A download is named after what it installs: `mixlab-…` with the window, `mixengine-…-headless` without | Accepted; its list of downloads amended by 0053 |
 | [0050](0050-a-copy-the-pkg-installed-is-updated-by-the-pkg.md) | A copy the `.pkg` installed is updated by the `.pkg`, through Installer.app | Accepted; extended to the Linux packages by 0053 |
 | [0051](0051-an-uninstall-ends-what-it-undoes.md) | An uninstall ends what it undoes, and is the uninstaller's rather than the window's | Accepted |
-| [0052](0052-a-build-that-is-not-a-release-keeps-its-own-credentials.md) | A build that is not a release keeps its credentials in its home, not in the OS store | Accepted |
+| [0052](0052-a-build-that-is-not-a-release-keeps-its-own-credentials.md) | A build that is not a release keeps its credentials in its home, not in the OS store | Accepted; one sentence superseded by 0059 |
 | [0053](0053-the-helper-has-its-own-version-and-follows-the-product.md) | The helper has its own version and follows the product through the daemon | Accepted |
 | [0054](0054-an-install-completes-itself-from-its-own-payload.md) | An install completes itself from its own payload; an update still adds nothing | Accepted |
 | [0055](0055-the-daemons-credentials-are-one-keychain-item-per-home-on-macos.md) | The daemon's credentials are one Keychain item per home on macOS | Accepted |
 | [0056](0056-mixlab-stands-without-mixengine.md) | MixLab stands without MixEngine, and updates itself; MixEngine never updates unasked | Accepted |
 | [0057](0057-a-runtime-s-commands-are-in-bin-only-while-it-is-installed.md) | A runtime's commands are in `bin/` only while it is installed | Accepted |
 | [0058](0058-the-tray-is-mixlabs-and-a-module-lends-it-a-section.md) | The tray is MixLab's, and a module lends it a section | Accepted |
+| [0059](0059-a-linux-release-may-keep-a-homes-credentials-in-a-file.md) | A Linux release may keep a home's credentials in a file | Accepted |
 
 ### Desktop (recorded in the standalone client)
 
