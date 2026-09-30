@@ -23,7 +23,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       *Credentials* section in Settings → MixEngine.
 - [x] **T194e** `credentials` on `daemon.status` and in `mix status`, the doctor note, the startup
       log, the `mix database` wording; bindings.
-- [ ] **T194f** `security-model.md`, `platform-abstraction.md`'s `Keyring` row, the changelog lines,
+- [x] **T194f** `security-model.md`, `platform-abstraction.md`'s `Keyring` row, the changelog lines,
       and the design flipped to `implemented`.
 - [ ] **T195** Start at boot without a login: a systemd user unit and linger, enabled through
       `mixengine-elevate` once. Design to come.
