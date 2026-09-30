@@ -220,9 +220,13 @@ describing a control that is not there is how a later reader concludes the contr
 
 ## Supply chain
 
-- Every downloaded runtime/package is verified against a SHA-256 pinned in the signed
-  `packages.json` index; the index itself is verified with a minisign/Ed25519 public key compiled
-  into the binary. A hash mismatch aborts and deletes the download.
+- Every downloaded runtime/package is verified against a SHA-256 pinned in the signed package
+  index; the index itself is verified with a minisign/Ed25519 public key compiled into the binary.
+  A hash mismatch aborts and deletes the download.
+- Since **T196** the index is one signed root and one file per kind. Only the root carries a
+  signature; each kind file is believed because the root states its SHA-256 and size, and is
+  refused before it is parsed when either differs. The root is verified before it is parsed and
+  refused when it is older than the one held, as the single document was.
 - Downloads go over HTTPS with the system roots — **not** our own CA.
 - Extension packages are verified the same way, and by the same key — **T81**. `extensions.json` is
   a second signed document beside the index, under the same tag and the same compiled-in Ed25519

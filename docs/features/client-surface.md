@@ -89,6 +89,9 @@ binaries. What they state is what the daemon **writes** —
    what an update would move, and `runtime.upgrade` / `package.upgrade` run it as a job whose result
    is that plan, marked. The Languages tab and each Packages tab draw *N more* under a line and
    *Update to …* on an installed row, with the plan in the confirmation.
+   **And what could not be read — T196**: the package index is one file per kind, and a file that
+   does not match the signed root costs that kind only. Both lists carry `unavailable`, one
+   `{ name, reason }` per kind left out, and a client says so beside the list, as it says `stale`.
    **And a version that is on disk but not listed — T182f**: a folder an earlier install left, which
    the daemon records on its own at start when it can check it. One it could not check is named by
    `daemon.doctor`, and `runtime.adopt` / `package.adopt` record it on request (`mix runtime adopt`,

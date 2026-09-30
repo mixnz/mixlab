@@ -20,7 +20,10 @@ currently running and may be emptied between runs; the whole value of a cached p
 it survives a reboot, because a machine that came up offline and lost its cache is a machine that can
 list nothing. It is also not private, and does not need to be: everything in it is a document
 published to the world, and what makes it trustworthy is the signature — re-checked on every read,
-because the file is one any local process can rewrite.
+because the file is one any local process can rewrite. The package index's kind files carry no
+signature of their own and are hashed against the verified root on every read instead (T196). The
+daemon keeps what it parsed for as long as the file it came from is unchanged, so a read here means
+a file that is new or has changed since.
 
 ## SQLite
 
