@@ -1970,9 +1970,16 @@ async fn serve(
             Arc::clone(&shims),
         );
         let fetcher = Arc::clone(&fetcher);
+        // The index is asked for the kinds the first pass left, and no others — T196.
+        let names: Vec<String> = adopted
+            .left
+            .iter()
+            .map(|left| left.found.subject.name().to_owned())
+            .collect();
 
         tokio::spawn(async move {
-            let catalogue = match fetcher.index.catalogue().await {
+            let names: Vec<&str> = names.iter().map(String::as_str).collect();
+            let catalogue = match fetcher.index.kinds(&names).await {
                 Ok(catalogue) => catalogue,
                 Err(error) => {
                     tracing::info!(

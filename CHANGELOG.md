@@ -11,6 +11,10 @@
   MixLab).
 
 ### Changed
+- MixEngine checks for new versions with one small request, and downloads the version list only
+  for the runtimes and servers it is asked about, and only when they change.
+- When part of the version list cannot be read, the rest is still listed, and `mix` and MixLab
+  say which runtime or server is missing.
 - MixLab no longer calls itself MixDB anywhere: not in its messages in a terminal, and not in the
   names of the temporary tables it creates while it changes a table. Your theme, language, modules
   and open tabs carry over.

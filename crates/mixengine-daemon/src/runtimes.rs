@@ -39,9 +39,9 @@ use mixengine_core::index::{self, Index, Package, Selection, Target};
 use mixengine_core::install::Installer;
 use mixengine_core::{Paths, Store, paths, resolve, runtimes};
 use mixengine_proto::{
-    Error, ErrorCode, Execution, JobId, JobKind, JobSummary, PackageVersion, Requirements,
-    ResolvedRuntime, RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind, RuntimeList,
-    RuntimeQuestion, RuntimeRelease, RuntimeRemoval, RuntimeSummary, RuntimeTarget,
+    CatalogueGap, Error, ErrorCode, Execution, JobId, JobKind, JobSummary, PackageVersion,
+    Requirements, ResolvedRuntime, RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind,
+    RuntimeList, RuntimeQuestion, RuntimeRelease, RuntimeRemoval, RuntimeSummary, RuntimeTarget,
     RuntimeUninstall, RuntimeUpdate, ServiceState, Timestamp, VersionConstraint, rpc,
 };
 
@@ -107,13 +107,14 @@ impl Default for IndexSource {
 /// The index and the download pipeline, shared by everything that installs anything.
 ///
 /// **One per daemon, and not one per namespace.** `runtime.*` and `package.*` both read the same
-/// signed document and both write into the same `cache/`, so two clients would be two processes
-/// worth of refresh racing over one `index.json` and two installers sharing one `downloads/`. The
+/// signed index and both write into the same `cache/`, so two clients would be two processes'
+/// worth of refresh racing over one set of cached files and two installers sharing one
+/// `downloads/`. The
 /// pair is built once, where the public key is checked, and handed to both.
 #[derive(Debug)]
 pub(crate) struct Fetcher {
     /// The verified package index, cached under `cache/`.
-    pub(crate) index: index::Client,
+    pub(crate) index: index::PackageIndex,
 
     /// The download pipeline, with its partial downloads in the same place.
     pub(crate) installer: Installer,
@@ -137,7 +138,7 @@ impl Fetcher {
         http: reqwest::Client,
     ) -> Result<Arc<Self>, Error> {
         Ok(Arc::new(Self {
-            index: index::Client::with_transport(
+            index: index::PackageIndex::with_transport(
                 &source.url,
                 &source.public_key,
                 paths.cache(),
@@ -271,20 +272,21 @@ impl Runtimes {
         &self,
         filter: &RuntimeFilter,
     ) -> Result<RuntimeCatalogue, Error> {
+        let wanted: &[RuntimeKind] = match &filter.kind {
+            Some(kind) => std::slice::from_ref(kind),
+            None => &RuntimeKind::ALL,
+        };
+        let names: Vec<&str> = wanted.iter().map(|kind| kind.as_str()).collect();
+
         let catalogue = match filter.refresh {
-            true => self.fetcher.index.refresh().await,
-            false => self.fetcher.index.catalogue().await,
+            true => self.fetcher.index.refresh(&names).await,
+            false => self.fetcher.index.kinds(&names).await,
         }
         .map_err(|error| error.to_wire())?;
         let installed = runtimes::records(&self.store, filter.kind)
             .await
             .map_err(|error| error.to_wire())?;
         let facts = requirements::facts();
-
-        let wanted: &[RuntimeKind] = match &filter.kind {
-            Some(kind) => std::slice::from_ref(kind),
-            None => &RuntimeKind::ALL,
-        };
 
         let mut runtimes = Vec::new();
         let mut updates = Vec::new();
@@ -364,6 +366,17 @@ impl Runtimes {
             runtimes,
             stale: catalogue.freshness.is_stale(),
             updates: Some(updates),
+            unavailable: Some(
+                catalogue
+                    .index
+                    .missing()
+                    .iter()
+                    .map(|missing| CatalogueGap {
+                        name: missing.kind.clone(),
+                        reason: missing.reason.clone(),
+                    })
+                    .collect(),
+            ),
         })
     }
 
@@ -386,7 +399,7 @@ impl Runtimes {
         let catalogue = self
             .fetcher
             .index
-            .catalogue()
+            .kinds(&[kind.as_str()])
             .await
             .map_err(|error| error.to_wire())?;
 
@@ -422,7 +435,7 @@ impl Runtimes {
         let catalogue = self
             .fetcher
             .index
-            .catalogue()
+            .kinds(&[target.kind.as_str()])
             .await
             .map_err(|error| error.to_wire())?;
         offered(
@@ -565,7 +578,7 @@ impl Runtimes {
         let catalogue = self
             .fetcher
             .index
-            .catalogue()
+            .kinds(&[kind.as_str()])
             .await
             .map_err(|error| error.to_wire())?;
         let (package, selection) = offered(
@@ -1123,9 +1136,22 @@ pub(crate) fn offered<'a>(
     version: &str,
     listing: &str,
 ) -> Result<(&'a Package, Selection<'a>), Error> {
+    // **Asked before "does not publish"** — roadmap task T196. A kind whose file could not be read
+    // and a kind that publishes nothing look the same from here on, and they send whoever reads
+    // the message to two different places.
+    if let Some(missing) = index.unread(kind) {
+        return Err(Error::new(
+            ErrorCode::Io,
+            format!(
+                "the package index could not be read for {kind}: {}",
+                missing.reason
+            ),
+        )
+        .with_hint(format!("`{listing} --refresh` tries again")));
+    }
+
     let Some(package) = index
-        .packages
-        .iter()
+        .packages()
         .find(|package| package.kind == kind && package.version == version)
     else {
         return Err(Error::new(

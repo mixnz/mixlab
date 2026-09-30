@@ -18,7 +18,7 @@
 //! minisign actually produces, rather than what we believe it produces — which is the difference
 //! that matters, since the format has a legacy variant the client refuses on purpose.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
 use std::io::Cursor;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -44,10 +44,165 @@ struct Published {
     /// does for any other server.
     extensions: Option<(Vec<u8>, String)>,
 
+    /// Index schema 2, encoded from the same value as `document` — roadmap task **T196**. `None`
+    /// when that value is not an index at all, which is a registry started only for its assets.
+    set: Option<Set>,
+
+    /// Kinds whose file answers `404`.
+    withheld: BTreeSet<String>,
+
+    /// Whether any `/index-v2*` path answers. A mirror that copied only `index.json` is `false`.
+    schema2: bool,
+
+    /// Every path asked for, in order.
+    requests: Vec<String>,
+
     reachable: bool,
     assets: BTreeMap<String, Vec<u8>>,
     cut_after: Option<usize>,
     ranges: Vec<Option<String>>,
+}
+
+/// Index schema 2 as this registry serves it: one signed root, one file per kind.
+#[derive(Debug, Clone)]
+struct Set {
+    root: Vec<u8>,
+    signature: String,
+
+    /// Kind to its file's bytes.
+    kinds: BTreeMap<String, Vec<u8>>,
+
+    /// The path schema 2 composes for an artifact, to the path its bytes were published at.
+    ///
+    /// Schema 2 states no URL: an artifact is at `{base_url}/{kind}-{version}/…` and nowhere else.
+    /// A fixture publishes its archive wherever it likes and writes that URL into a schema 1 index,
+    /// so this is what lets every such fixture stay as it is.
+    aliases: BTreeMap<String, String>,
+}
+
+/// The archive suffixes schema 2 can say.
+const FORMATS: [&str; 3] = ["zip", "tar.zst", "tar.gz"];
+
+/// Encode a schema 1 index as a root and a file per kind.
+///
+/// **This crate's own encoder**, written against the format and not against `mixengine-core` —
+/// which this crate does not depend on and must not start to. So the client is tested against a
+/// second implementation of the format rather than against itself.
+///
+/// [`None`] for a value with no `packages` or no `generated_at`.
+///
+/// # Panics
+///
+/// If an artifact's `url` ends in none of the three archive suffixes: schema 2 cannot say it, and
+/// a fixture that needs one is a fixture whose file name is wrong.
+fn encode(index: &serde_json::Value, address: SocketAddr, secret_key: &SecretKey) -> Option<Set> {
+    use sha2::Digest as _;
+
+    let generated_at = index.get("generated_at")?.as_str()?;
+    let origin = format!("http://{address}");
+
+    let mut by_kind: BTreeMap<String, Vec<&serde_json::Value>> = BTreeMap::new();
+    for package in index.get("packages")?.as_array()? {
+        let kind = package["kind"].as_str().expect("a package names its kind");
+        by_kind.entry(kind.to_owned()).or_default().push(package);
+    }
+
+    let mut kinds = BTreeMap::new();
+    let mut entries = serde_json::Map::new();
+    let mut aliases = BTreeMap::new();
+
+    for (kind, packages) in by_kind {
+        let mut shapes = Vec::new();
+        let mut seen: BTreeMap<String, usize> = BTreeMap::new();
+        let mut encoded = Vec::new();
+
+        for package in packages {
+            let version = package["version"]
+                .as_str()
+                .expect("a package has a version");
+            let stem = format!("{kind}-{version}");
+            let mut artifacts = Vec::new();
+
+            for artifact in package["artifacts"]
+                .as_array()
+                .expect("a package has artifacts")
+            {
+                let url = artifact["url"].as_str().expect("an artifact has a url");
+                let format = FORMATS
+                    .iter()
+                    .find(|format| url.ends_with(&format!(".{format}")))
+                    .unwrap_or_else(|| {
+                        panic!("{stem} is published at {url}, which index schema 2 cannot say")
+                    });
+                let os = artifact["os"].as_str().expect("an artifact names its os");
+                let arch = artifact["arch"]
+                    .as_str()
+                    .expect("an artifact names its arch");
+
+                // Everything the artifact says that is not about its bytes is its shape.
+                let mut shape = artifact
+                    .as_object()
+                    .expect("an artifact is an object")
+                    .clone();
+                for about_bytes in ["os", "arch", "url", "sha256", "size"] {
+                    shape.remove(about_bytes);
+                }
+                let key = serde_json::to_string(&shape).expect("serialise a shape");
+                let at = *seen.entry(key).or_insert_with(|| {
+                    shapes.push(serde_json::Value::Object(shape));
+                    shapes.len() - 1
+                });
+
+                if let Some(path) = url.strip_prefix(&origin) {
+                    aliases.insert(
+                        format!("/assets/{stem}/{stem}-{os}-{arch}.{format}"),
+                        path.to_owned(),
+                    );
+                }
+
+                artifacts.push(serde_json::json!({
+                    "os": os, "arch": arch, "format": format,
+                    "sha256": artifact["sha256"], "size": artifact["size"], "shape": at,
+                }));
+            }
+
+            let mut entry = package.as_object().expect("a package is an object").clone();
+            entry.remove("kind");
+            entry.insert("artifacts".to_owned(), serde_json::Value::Array(artifacts));
+            encoded.push(serde_json::Value::Object(entry));
+        }
+
+        let mut raw = serde_json::to_vec(&serde_json::json!({
+            "schema": 2, "kind": kind, "shapes": shapes, "packages": encoded,
+        }))
+        .expect("serialise a kind file");
+        raw.push(b'\n');
+
+        entries.insert(
+            kind.clone(),
+            serde_json::json!({
+                "sha256": format!("{:x}", sha2::Sha256::digest(&raw)),
+                "size": raw.len(),
+            }),
+        );
+        kinds.insert(kind, raw);
+    }
+
+    let mut root = serde_json::to_vec(&serde_json::json!({
+        "schema": 2,
+        "generated_at": generated_at,
+        "base_url": format!("{origin}/assets"),
+        "kinds": entries,
+    }))
+    .expect("serialise the root");
+    root.push(b'\n');
+
+    Some(Set {
+        signature: sign(secret_key, &root),
+        root,
+        kinds,
+        aliases,
+    })
 }
 
 /// An in-process registry: one index, one signature, one switch for pulling the plug.
@@ -77,20 +232,26 @@ impl MockRegistry {
         let document = serde_json::to_vec_pretty(index).expect("serialise the index");
         let signature = sign(&pair.sk, &document);
 
+        // Bound before anything is published: the schema 2 root states where artifacts live, and
+        // that is this registry's own address.
+        let listener = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+            .await
+            .expect("bind a loopback port");
+        let address = listener.local_addr().expect("read the bound port");
+
         let published = Arc::new(Mutex::new(Published {
             document,
             signature,
             extensions: None,
+            set: encode(index, address, &pair.sk),
+            withheld: BTreeSet::new(),
+            schema2: true,
+            requests: Vec::new(),
             reachable: true,
             assets: BTreeMap::new(),
             cut_after: None,
             ranges: Vec::new(),
         }));
-
-        let listener = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
-            .await
-            .expect("bind a loopback port");
-        let address = listener.local_addr().expect("read the bound port");
 
         let serving = Arc::clone(&published);
         tokio::spawn(async move {
@@ -130,7 +291,8 @@ impl MockRegistry {
         &self.public_key
     }
 
-    /// Replace what is served, re-signed with the same key.
+    /// Replace what is served, re-signed with the same key — `index.json` and the schema 2 set
+    /// encoded from it, both whole.
     ///
     /// # Panics
     ///
@@ -138,9 +300,115 @@ impl MockRegistry {
     pub fn publish(&self, index: &serde_json::Value) {
         let document = serde_json::to_vec_pretty(index).expect("serialise the index");
         let signature = sign(&self.secret_key, &document);
+        let set = encode(index, self.address, &self.secret_key);
         let mut published = self.published.lock().expect("the registry lock");
         published.document = document;
         published.signature = signature;
+        published.set = set;
+    }
+
+    /// Serve the signature of a new root beside the old root — roadmap task **T196**.
+    ///
+    /// Not a state the publisher passes through — it uploads the signature last — and exactly what
+    /// a client behind a cache that refreshed one file and not the other sees.
+    ///
+    /// # Panics
+    ///
+    /// If `index` is not an index, or no set is published yet.
+    pub fn publish_signature_only(&self, index: &serde_json::Value) {
+        let new = encode(index, self.address, &self.secret_key).expect("an index");
+        let mut published = self.published.lock().expect("the registry lock");
+        published
+            .set
+            .as_mut()
+            .expect("a schema 2 set is published")
+            .signature = new.signature;
+    }
+
+    /// Sign `root` and serve it as the schema 2 root, exactly as written; the kind files stay.
+    ///
+    /// For a root the encoder would never write: a schema this build cannot read, a kind whose
+    /// name is not a name.
+    ///
+    /// # Panics
+    ///
+    /// If the root cannot be serialised or signed, or no set is published yet.
+    pub fn publish_root(&self, root: &serde_json::Value) {
+        let mut raw = serde_json::to_vec(root).expect("serialise the root");
+        raw.push(b'\n');
+        let signature = sign(&self.secret_key, &raw);
+        let mut published = self.published.lock().expect("the registry lock");
+        let set = published.set.as_mut().expect("a schema 2 set is published");
+        set.root = raw;
+        set.signature = signature;
+    }
+
+    /// Serve, for `kind`, bytes of the right length that do not hash to what the root says.
+    ///
+    /// # Panics
+    ///
+    /// If no such kind is published.
+    pub fn corrupt_kind(&self, kind: &str) {
+        let mut published = self.published.lock().expect("the registry lock");
+        let bytes = published
+            .set
+            .as_mut()
+            .and_then(|set| set.kinds.get_mut(kind))
+            .expect("that kind is published");
+        // The byte before the trailing newline is the document's closing brace.
+        let at = bytes.len() - 2;
+        bytes[at] = b' ';
+    }
+
+    /// Serve `kind`'s file one byte short — a transfer that stopped.
+    ///
+    /// # Panics
+    ///
+    /// If no such kind is published.
+    pub fn truncate_kind(&self, kind: &str) {
+        let mut published = self.published.lock().expect("the registry lock");
+        published
+            .set
+            .as_mut()
+            .and_then(|set| set.kinds.get_mut(kind))
+            .expect("that kind is published")
+            .pop();
+    }
+
+    /// Answer `404` for `kind`'s file — an upload that has not got that far.
+    pub fn withhold_kind(&self, kind: &str) {
+        self.published
+            .lock()
+            .expect("the registry lock")
+            .withheld
+            .insert(kind.to_owned());
+    }
+
+    /// Answer `404` for every schema 2 path — a mirror that copied `index.json` and nothing else.
+    pub fn without_schema_2(&self) {
+        self.published.lock().expect("the registry lock").schema2 = false;
+    }
+
+    /// Every path asked for so far, in order.
+    ///
+    /// What "nothing but the signature was requested" is asserted on: a client that fetched the
+    /// whole index and got the right answer looks the same from the answer alone.
+    #[must_use]
+    pub fn requests(&self) -> Vec<String> {
+        self.published
+            .lock()
+            .expect("the registry lock")
+            .requests
+            .clone()
+    }
+
+    /// Start that list again.
+    pub fn forget_requests(&self) {
+        self.published
+            .lock()
+            .expect("the registry lock")
+            .requests
+            .clear();
     }
 
     /// Replace what is served at `/extensions.json`, signed with the same key as `/index.json`.
@@ -162,15 +430,23 @@ impl MockRegistry {
     /// Serve a document with a signature that does not cover it.
     ///
     /// The one tampering a real attacker gets to attempt against a client that checks nothing: the
-    /// bytes are changed and the old signature is left in place.
+    /// bytes are changed and the old signature is left in place. Both encodings: `index.json`, and
+    /// the schema 2 root with its kind files — which is also the window a real publish has, where a
+    /// new root sits beside the old signature until the signature is uploaded last.
     ///
     /// # Panics
     ///
     /// If the document cannot be serialised.
     pub fn publish_unsigned(&self, index: &serde_json::Value) {
         let document = serde_json::to_vec_pretty(index).expect("serialise the index");
+        let set = encode(index, self.address, &self.secret_key);
         let mut published = self.published.lock().expect("the registry lock");
         published.document = document;
+        if let (Some(old), Some(new)) = (published.set.as_mut(), set) {
+            old.root = new.root;
+            old.kinds = new.kinds;
+            old.aliases = new.aliases;
+        }
     }
 
     /// Stop answering, as a machine with no network does.
@@ -249,6 +525,7 @@ async fn answer(
 ) -> Result<Response<Full<Bytes>>, Infallible> {
     let (body, status) = {
         let mut published = published.lock().expect("the registry lock");
+        published.requests.push(request.uri().path().to_owned());
         if !published.reachable {
             (Bytes::new(), StatusCode::SERVICE_UNAVAILABLE)
         } else {
@@ -268,10 +545,40 @@ async fn answer(
                     }
                     None => (Bytes::new(), StatusCode::NOT_FOUND),
                 },
-                path => match published.assets.get(path).cloned() {
-                    Some(asset) => asset_answer(&mut published, &request, asset),
-                    None => (Bytes::new(), StatusCode::NOT_FOUND),
-                },
+                path if path.starts_with("/index-v2") => {
+                    let served = published
+                        .set
+                        .as_ref()
+                        .filter(|_| published.schema2)
+                        .and_then(|set| match path {
+                            "/index-v2.json" => Some(set.root.clone()),
+                            "/index-v2.json.minisig" => Some(set.signature.clone().into_bytes()),
+                            _ => path
+                                .strip_prefix("/index-v2-")
+                                .and_then(|name| name.strip_suffix(".json"))
+                                .filter(|kind| !published.withheld.contains(*kind))
+                                .and_then(|kind| set.kinds.get(kind).cloned()),
+                        });
+
+                    match served {
+                        Some(bytes) => (Bytes::from(bytes), StatusCode::OK),
+                        None => (Bytes::new(), StatusCode::NOT_FOUND),
+                    }
+                }
+                path => {
+                    // An artifact is asked for where schema 2 composes it and served from where
+                    // the fixture published it.
+                    let real = published
+                        .set
+                        .as_ref()
+                        .and_then(|set| set.aliases.get(path).cloned())
+                        .unwrap_or_else(|| path.to_owned());
+
+                    match published.assets.get(&real).cloned() {
+                        Some(asset) => asset_answer(&mut published, &request, asset),
+                        None => (Bytes::new(), StatusCode::NOT_FOUND),
+                    }
+                }
             }
         }
     };

@@ -745,7 +745,8 @@ impl Api {
     /// [`None`] when anything needed to judge could not be had: a dry run prints its plan regardless.
     async fn blueprint_needs(&self, plan: &BlueprintPlan) -> Option<Vec<Requirement>> {
         let targets = self.install_targets(plan).await.ok()?;
-        let catalogue = self.runtimes.fetcher().index.catalogue().await.ok()?;
+        let names: Vec<&str> = targets.iter().map(|(kind, _)| kind.as_str()).collect();
+        let catalogue = self.runtimes.fetcher().index.kinds(&names).await.ok()?;
         let facts = requirements::facts();
 
         Some(mixengine_core::requirements::merged(
@@ -777,7 +778,8 @@ impl Api {
         // **An index that cannot be read refuses nothing here**, on `requirements::gate`'s reasoning:
         // the install steps read it too, and report that in their own words.
         let fetcher = self.runtimes.fetcher();
-        let Ok(catalogue) = fetcher.index.catalogue().await else {
+        let names: Vec<&str> = targets.iter().map(|(kind, _)| kind.as_str()).collect();
+        let Ok(catalogue) = fetcher.index.kinds(&names).await else {
             return Ok(());
         };
 

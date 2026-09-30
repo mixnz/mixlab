@@ -17,6 +17,7 @@ import RequirementDialog from "../../components/RequirementDialog";
 import UpdateRow from "../../components/UpdateRow";
 import UpgradeDialog from "../../components/UpgradeDialog";
 import StaleBadge from "../../components/StaleBadge";
+import UnavailableNote from "../../components/UnavailableNote";
 import { splitLibraries } from "../../requirementStep";
 import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
@@ -40,7 +41,7 @@ export default function PackageList({
   state: PackagesState;
 }) {
   const { t } = useTranslation();
-  const { installed, available, loaded, stale, jobs, installingJob, error, clearError, notice, clearNotice } =
+  const { installed, available, loaded, stale, unavailable, jobs, installingJob, error, clearError, notice, clearNotice } =
     state;
   const onDisk = packageRowsFrom(state.onDisk, (name) => packageCategory(name) === category);
 
@@ -203,6 +204,7 @@ export default function PackageList({
             <>
               {lineGroups.length}
               <StaleBadge stale={stale} />
+              <UnavailableNote gaps={unavailable} />
             </>
           ) : undefined
         }

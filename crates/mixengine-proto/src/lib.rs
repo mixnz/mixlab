@@ -137,8 +137,8 @@ pub use requirement::{Need, RedistributableArch, Remedy, Requirement, Requiremen
 pub use restore_api::{HomePrevious, HomeRestoreReport, PreviousCopy};
 pub use runtime::RuntimeKind;
 pub use runtime_api::{
-    ExtensionChange, ExtensionChoice, ExtensionList, ExtensionSource, Linkage, PoolOutcome,
-    ResolvedRuntime, RuntimeCatalogue, RuntimeExtension, RuntimeFilter, RuntimeFound,
+    CatalogueGap, ExtensionChange, ExtensionChoice, ExtensionList, ExtensionSource, Linkage,
+    PoolOutcome, ResolvedRuntime, RuntimeCatalogue, RuntimeExtension, RuntimeFilter, RuntimeFound,
     RuntimeFoundList, RuntimeInstall, RuntimeList, RuntimeQuestion, RuntimeRelease, RuntimeRemoval,
     RuntimeSource, RuntimeSummary, RuntimeTarget, RuntimeUninstall, RuntimeUpdate,
 };

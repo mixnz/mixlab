@@ -287,7 +287,7 @@ fn published<'a>(
     index: &'a Index,
     target: Target,
 ) -> Option<(&'a Package, &'a Artifact)> {
-    let package = index.packages.iter().find(|package| {
+    let package = index.packages().find(|package| {
         package.kind == found.subject.name() && package.version == found.subject.version().as_str()
     })?;
 

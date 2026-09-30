@@ -140,9 +140,10 @@ impl Packages {
             None => self.catalogue.packages().map(str::to_owned).collect(),
         };
 
+        let names: Vec<&str> = wanted.iter().map(String::as_str).collect();
         let catalogue = match filter.refresh {
-            true => self.fetcher.index.refresh().await,
-            false => self.fetcher.index.catalogue().await,
+            true => self.fetcher.index.refresh(&names).await,
+            false => self.fetcher.index.kinds(&names).await,
         }
         .map_err(|error| error.to_wire())?;
         let installed = packages::records(&self.store, filter.package.as_deref())
@@ -226,6 +227,17 @@ impl Packages {
             packages: offered,
             stale: catalogue.freshness.is_stale(),
             updates: Some(updates),
+            unavailable: Some(
+                catalogue
+                    .index
+                    .missing()
+                    .iter()
+                    .map(|missing| mixengine_proto::CatalogueGap {
+                        name: missing.kind.clone(),
+                        reason: missing.reason.clone(),
+                    })
+                    .collect(),
+            ),
         })
     }
 
@@ -251,7 +263,7 @@ impl Packages {
         let catalogue = self
             .fetcher
             .index
-            .catalogue()
+            .kinds(&[name])
             .await
             .map_err(|error| error.to_wire())?;
 
@@ -292,7 +304,7 @@ impl Packages {
         let catalogue = self
             .fetcher
             .index
-            .catalogue()
+            .kinds(&[package.as_str()])
             .await
             .map_err(|error| error.to_wire())?;
         crate::runtimes::offered(
@@ -442,7 +454,7 @@ impl Packages {
         let catalogue = self
             .fetcher
             .index
-            .catalogue()
+            .kinds(&[package])
             .await
             .map_err(|error| error.to_wire())?;
         let (_, selection) = crate::runtimes::offered(

@@ -114,7 +114,7 @@ fn smoke_for(
 pub(crate) async fn by_hand(
     store: &Store,
     found: &Found,
-    index: &mixengine_core::index::Client,
+    index: &mixengine_core::index::PackageIndex,
 ) -> Result<Claimed, Error> {
     if !found.path.is_dir() {
         let (name, version) = (found.subject.name(), found.subject.version());
@@ -140,7 +140,10 @@ pub(crate) async fn by_hand(
         Err(error) => return Err(error.to_wire()),
     }
 
-    let catalogue = index.catalogue().await.map_err(|error| error.to_wire())?;
+    let catalogue = index
+        .kinds(&[found.subject.name()])
+        .await
+        .map_err(|error| error.to_wire())?;
     let Some(target) = mixengine_core::index::Target::host() else {
         return Err(Error::new(
             mixengine_proto::ErrorCode::UnsupportedPlatform,

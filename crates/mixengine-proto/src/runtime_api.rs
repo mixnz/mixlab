@@ -258,6 +258,29 @@ pub struct RuntimeCatalogue {
     /// on the disk must not cost a request to the index. [`None`] is a daemon from before T193.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updates: Option<Vec<RuntimeUpdate>>,
+
+    /// What this list could not be read for — roadmap task **T196**.
+    ///
+    /// The package index is one file per kind, so one file that could not be read costs that kind
+    /// and no other. [`None`] is a daemon from before T196; an empty list is one that read
+    /// everything it was asked for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unavailable: Option<Vec<CatalogueGap>>,
+}
+
+/// A runtime kind or a package an available list could not be read for — roadmap task **T196**.
+///
+/// Said rather than left out in silence: a list with a kind missing and no word about it reads as
+/// an index that publishes nothing for that kind, and sends a person looking for a version that
+/// was never gone.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct CatalogueGap {
+    /// The runtime kind or the package name.
+    pub name: String,
+
+    /// Why, as the daemon's own sentence.
+    pub reason: String,
 }
 
 /// One installed runtime. The whole of what `runtime.set_default` answers, and what a finished

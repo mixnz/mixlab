@@ -310,6 +310,7 @@ export default {
       moreInLine: "{{count}} more",
       noMatches: "Nothing matches that search.",
       stale: "This list may be out of date",
+      unavailable: "Missing from this list: {{names}}",
       columnVersion: "Version",
       columnChannel: "Channel",
       columnInstalledAt: "Installed",

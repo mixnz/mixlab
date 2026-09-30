@@ -157,6 +157,15 @@ impl ToWire for mixengine_core::Error {
                      own key, needs that key given to `mixengined --index-key`",
                 ),
 
+            // The root is ours and this file is not the one it names. Nothing here is broken and
+            // nothing was kept: the list is read again without it, and the next ask tries again.
+            Core::IndexKind { .. } => Error::new(ErrorCode::PreconditionFailed, chain(self))
+                .with_hint(
+                    "this file did not match what the signed index says it should be, which \
+                     usually means the index was being published at that moment; ask again in a \
+                     minute",
+                ),
+
             // Bytes that are ours by signature and then do not match what the index says they hash
             // to, or are longer than it says they are. A corrupted transfer or a mirror serving
             // something else; either way the download has been deleted and the next step is the

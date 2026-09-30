@@ -28,9 +28,28 @@ const SERVICES: &str = "services";
 /// `mixengine_supervisor::logs::CURRENT_LOG_FILE_NAME` is.
 const CURRENT_LOG: &str = "current.log";
 
-/// The three documents the package index, the extension registry and the update feed cache at the
-/// top of `cache/`.
-const CACHED_DOCUMENTS: [&str; 3] = ["index.json", "extensions.json", "latest.json"];
+/// The documents the package index, the extension registry and the update feed cache at the top
+/// of `cache/`.
+///
+/// The package index is one of two layouts, never both — `index.json`, or since roadmap task
+/// **T196** a signed root beside one file per kind, which [`is_kind_file`] recognises.
+const CACHED_DOCUMENTS: [&str; 5] = [
+    "index.json",
+    "index-v2.json",
+    "index-v2.json.minisig",
+    "extensions.json",
+    "latest.json",
+];
+
+/// Whether `name` is one kind's file of the package index: `index-v2-<kind>.json`.
+///
+/// By the index's own rule for a kind name rather than by prefix alone, so a file somebody left
+/// beside them is still theirs.
+fn is_kind_file(name: &str) -> bool {
+    name.strip_prefix("index-v2-")
+        .and_then(|rest| rest.strip_suffix(".json"))
+        .is_some_and(mixengine_core::index::schema2::is_kind_name)
+}
 
 /// The three directories under `cache/` whose contents are ours to empty.
 ///
@@ -208,9 +227,18 @@ fn is_rotated(name: &str, live: &str) -> bool {
 pub(super) fn reclaimable_cache(cache: &Path) -> Reclaimable {
     let mut reclaimable = Reclaimable::default();
 
-    for document in CACHED_DOCUMENTS {
-        let path = cache.join(document);
+    let kind_files = std::fs::read_dir(cache)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|entry| entry.file_name().to_str().is_some_and(is_kind_file))
+        .map(|entry| entry.path());
 
+    for path in CACHED_DOCUMENTS
+        .iter()
+        .map(|document| cache.join(document))
+        .chain(kind_files)
+    {
         if let Ok(meta) = std::fs::symlink_metadata(&path)
             && meta.is_file()
         {
@@ -404,6 +432,42 @@ mod tests {
         assert_eq!(names, ["current.log.1", "daemon.log.1", "daemon.log.2"]);
         assert_eq!(reclaimable.bytes, 600);
         assert_eq!(reclaimable.files, 3);
+    }
+
+    /// **T196.** The package index is cached as a root, its signature and a file per kind, and a
+    /// cleanup takes all of them — and nothing that merely looks like one.
+    #[test]
+    fn the_cache_list_takes_the_package_index_a_kind_at_a_time() {
+        let home = tempfile::tempdir().expect("a temporary directory");
+        let cache = home.path().join("cache");
+        std::fs::create_dir_all(&cache).expect("a tree");
+
+        for (path, bytes) in [
+            ("index-v2.json", 10),
+            ("index-v2.json.minisig", 20),
+            ("index-v2-php.json", 30),
+            ("index-v2-php-fpm.json", 40),
+            ("index-v2-notes.txt", 50),
+            ("index-v2-Not_A_Kind.json", 60),
+            ("index-v3.json", 70),
+        ] {
+            std::fs::write(cache.join(path), vec![0u8; bytes]).expect("a file");
+        }
+
+        let reclaimable = reclaimable_cache(&cache);
+
+        assert_eq!(reclaimable.bytes, 100, "only the index's own files");
+        assert_eq!(reclaimable.files, 4);
+        assert!(
+            reclaimable
+                .targets
+                .contains(&cache.join("index-v2-php-fpm.json"))
+        );
+        assert!(
+            !reclaimable
+                .targets
+                .contains(&cache.join("index-v2-notes.txt"))
+        );
     }
 
     /// The cache is a closed list of six things, and the three directories are emptied rather than

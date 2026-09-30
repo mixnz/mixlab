@@ -18,6 +18,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { PackageVersion, RuntimeKind, RuntimeRelease } from "@mixengine/api";
 import type { RuntimeSummary, RuntimeUpdate, UpgradePlan } from "@mixengine/api";
+import type { CatalogueGap } from "@mixengine/api";
 import RequirementDialog from "../../components/RequirementDialog";
 import UpdateRow from "../../components/UpdateRow";
 import UpgradeDialog from "../../components/UpgradeDialog";
@@ -40,6 +41,7 @@ import {
   versionKey,
 } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
+import UnavailableNote from "../../components/UnavailableNote";
 import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
 import { updateRowState } from "../../updateRow";
@@ -53,6 +55,7 @@ export default function Languages({ active }: { active: boolean }) {
    *  yet", not "nothing installed". */
   const [loaded, setLoaded] = useState(false);
   const [stale, setStale] = useState(false);
+  const [unavailable, setUnavailable] = useState<CatalogueGap[]>([]);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [installingJob, setInstallingJob] = useState<Record<string, number>>({});
   const [uninstallTarget, setUninstallTarget] = useState<RuntimeSummary | null>(null);
@@ -101,6 +104,7 @@ export default function Languages({ active }: { active: boolean }) {
         setOnDisk(runtimeRowsFrom(found));
         setAvailable(avail.runtimes);
         setStale(avail.stale);
+        setUnavailable(avail.unavailable ?? []);
         setUpdates(avail.updates ?? []);
         setError(stillShow);
       } catch (e) {
@@ -478,6 +482,7 @@ export default function Languages({ active }: { active: boolean }) {
             <>
               {lineGroups.length}
               <StaleBadge stale={stale} />
+              <UnavailableNote gaps={unavailable} />
             </>
           ) : undefined
         }

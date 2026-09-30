@@ -305,6 +305,7 @@ const vi: typeof en = {
       moreInLine: "Thêm {{count}}",
       noMatches: "Không có bản nào khớp.",
       stale: "Danh sách có thể cũ",
+      unavailable: "Thiếu trong danh sách: {{names}}",
       columnVersion: "Phiên bản",
       columnChannel: "Kênh",
       columnInstalledAt: "Đã cài lúc",
