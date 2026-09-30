@@ -66,7 +66,7 @@ pub(super) async fn resolve(
 
     let catalogue = fetcher
         .index
-        .catalogue()
+        .kinds(&[name])
         .await
         .map_err(|error| error.to_wire())?;
     let offered: Vec<PackageVersion> = catalogue

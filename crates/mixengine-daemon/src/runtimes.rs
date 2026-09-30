@@ -113,7 +113,7 @@ impl Default for IndexSource {
 #[derive(Debug)]
 pub(crate) struct Fetcher {
     /// The verified package index, cached under `cache/`.
-    pub(crate) index: index::Client,
+    pub(crate) index: index::PackageIndex,
 
     /// The download pipeline, with its partial downloads in the same place.
     pub(crate) installer: Installer,
@@ -137,7 +137,7 @@ impl Fetcher {
         http: reqwest::Client,
     ) -> Result<Arc<Self>, Error> {
         Ok(Arc::new(Self {
-            index: index::Client::with_transport(
+            index: index::PackageIndex::with_transport(
                 &source.url,
                 &source.public_key,
                 paths.cache(),
@@ -271,20 +271,21 @@ impl Runtimes {
         &self,
         filter: &RuntimeFilter,
     ) -> Result<RuntimeCatalogue, Error> {
+        let wanted: &[RuntimeKind] = match &filter.kind {
+            Some(kind) => std::slice::from_ref(kind),
+            None => &RuntimeKind::ALL,
+        };
+        let names: Vec<&str> = wanted.iter().map(|kind| kind.as_str()).collect();
+
         let catalogue = match filter.refresh {
-            true => self.fetcher.index.refresh().await,
-            false => self.fetcher.index.catalogue().await,
+            true => self.fetcher.index.refresh(&names).await,
+            false => self.fetcher.index.kinds(&names).await,
         }
         .map_err(|error| error.to_wire())?;
         let installed = runtimes::records(&self.store, filter.kind)
             .await
             .map_err(|error| error.to_wire())?;
         let facts = requirements::facts();
-
-        let wanted: &[RuntimeKind] = match &filter.kind {
-            Some(kind) => std::slice::from_ref(kind),
-            None => &RuntimeKind::ALL,
-        };
 
         let mut runtimes = Vec::new();
         let mut updates = Vec::new();
@@ -386,7 +387,7 @@ impl Runtimes {
         let catalogue = self
             .fetcher
             .index
-            .catalogue()
+            .kinds(&[kind.as_str()])
             .await
             .map_err(|error| error.to_wire())?;
 
@@ -422,7 +423,7 @@ impl Runtimes {
         let catalogue = self
             .fetcher
             .index
-            .catalogue()
+            .kinds(&[target.kind.as_str()])
             .await
             .map_err(|error| error.to_wire())?;
         offered(
@@ -565,7 +566,7 @@ impl Runtimes {
         let catalogue = self
             .fetcher
             .index
-            .catalogue()
+            .kinds(&[kind.as_str()])
             .await
             .map_err(|error| error.to_wire())?;
         let (package, selection) = offered(
@@ -1124,8 +1125,7 @@ pub(crate) fn offered<'a>(
     listing: &str,
 ) -> Result<(&'a Package, Selection<'a>), Error> {
     let Some(package) = index
-        .packages
-        .iter()
+        .packages()
         .find(|package| package.kind == kind && package.version == version)
     else {
         return Err(Error::new(

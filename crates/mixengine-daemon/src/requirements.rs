@@ -121,7 +121,7 @@ pub(crate) async fn gate(
     subject: &Subject,
     install_prerequisites: bool,
 ) -> Result<(), Error> {
-    let Ok(catalogue) = fetcher.index.catalogue().await else {
+    let Ok(catalogue) = fetcher.index.kinds(&[kind]).await else {
         return Ok(());
     };
 
@@ -234,7 +234,7 @@ pub(crate) async fn prepare(
 ) -> Result<(), Error> {
     let catalogue = fetcher
         .index
-        .catalogue()
+        .kinds(&[kind])
         .await
         .map_err(|error| error.to_wire())?;
 

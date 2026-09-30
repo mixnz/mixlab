@@ -65,6 +65,7 @@ done
 | [32 — The tray is MixLab's](phase-32-the-tray-is-mixlabs.md) | MixLab runs in the background on every preset; a module lends the tray a section | T192a–T192e | 5 / 5 | **M32** on *Database tools*, a terminal session survives the close button and the icon brings it back; with MixEngine visible the panel works as M22 says |
 | [33 — A line shows its newest](phase-33-a-line-shows-its-newest.md) | The available list is one row per line, and an installed version updates to its line's newest patch on a click | T193a–T193d | 4 / 4 | **M33** PHP 8.4.24 serving a site updates to 8.4.25 from MixLab with its extensions kept and 8.4.24 gone; a MariaDB 11.4 instance updates within its line with its data intact |
 | [34 — A headless host](phase-34-a-headless-host.md) | A Linux release with no desktop runs databases, keeps their passwords, and comes back after a reboot on its own | T194a–T195 | 6 / 7 | **M34** on an Ubuntu 24.04 server reached only over SSH, a MariaDB first-runs on the file store, survives a daemon restart, and answers after an unattended reboot |
+| [35 — An index that stays small](phase-35-an-index-that-stays-small.md) | The package index costs one small request when nothing was published, and only the kinds a home uses when something was | T196a–T196e | 0 / 5 | **M35** an idle daemon asks for one signature every six hours, a fresh home listing runtimes fetches six kind files and not eighteen, and an upgraded home cannot be walked backwards |
 
 [Parked](parked.md) — revisit deliberately, do not start early.
 

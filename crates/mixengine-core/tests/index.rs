@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime};
 
 use mixengine_core::generate::Catalogue;
 use mixengine_core::generate::recipes::php_fpm;
-use mixengine_core::index::{Arch, Client, Freshness, Index, Os, TARGETS};
+use mixengine_core::index::{Arch, Freshness, Os, PackageIndex, TARGETS};
 use mixengine_proto::{Execution, RuntimeKind};
 use mixengine_testkit::MockRegistry;
 
@@ -60,8 +60,8 @@ fn age_cache(cache: &Path, by: Duration) {
         .expect("set the cache mtime");
 }
 
-fn client(registry: &MockRegistry, cache: &Path) -> Client {
-    Client::with(&registry.url(), registry.public_key(), cache).expect("build a client")
+fn client(registry: &MockRegistry, cache: &Path) -> PackageIndex {
+    PackageIndex::with(&registry.url(), registry.public_key(), cache).expect("build a client")
 }
 
 #[tokio::test]
@@ -70,7 +70,7 @@ async fn a_signed_index_is_fetched_verified_and_read() {
     let registry = MockRegistry::start(&index_at("2026-08-14T06:55:12Z")).await;
 
     let catalogue = client(&registry, cache.path())
-        .catalogue()
+        .kinds(&["php"])
         .await
         .expect("the index is readable");
 
@@ -98,14 +98,14 @@ async fn a_client_built_from_a_shared_transport_reads_the_same_document() {
     let transport =
         mixengine_core::index::default_transport().expect("an HTTP client can be built");
 
-    let catalogue = Client::<Index>::with_transport(
+    let catalogue = PackageIndex::with_transport(
         &registry.url(),
         registry.public_key(),
         cache.path(),
         transport,
     )
     .expect("build a client from a shared transport")
-    .catalogue()
+    .kinds(&["php"])
     .await
     .expect("the index is readable");
 
@@ -123,7 +123,7 @@ async fn a_document_the_signature_does_not_cover_is_refused() {
     registry.publish_unsigned(&index_at("2026-09-01T00:00:00Z"));
 
     let refusal = client(&registry, cache.path())
-        .catalogue()
+        .kinds(&["php"])
         .await
         .expect_err("a document nobody signed is not an index");
     assert!(
@@ -139,11 +139,11 @@ async fn an_index_signed_by_somebody_else_is_refused() {
     let theirs = MockRegistry::start(&index_at("2026-08-14T06:55:12Z")).await;
 
     // Perfectly valid, and signed by the wrong key — a mirror serving somebody else's index.
-    let client: Client<Index> =
-        Client::with(&theirs.url(), ours.public_key(), cache.path()).expect("a client");
+    let client =
+        PackageIndex::with(&theirs.url(), ours.public_key(), cache.path()).expect("a client");
 
     let refusal = client
-        .catalogue()
+        .kinds(&["php"])
         .await
         .expect_err("another key is not this build's key");
     assert!(
@@ -159,14 +159,14 @@ async fn a_fresh_cache_is_used_without_asking_the_network() {
     let client = client(&registry, cache.path());
 
     assert_eq!(
-        client.catalogue().await.expect("first fetch").freshness,
+        client.kinds(&["php"]).await.expect("first fetch").freshness,
         Freshness::Fetched
     );
 
     // If the second call went to the network it would now fail, so answering at all is the proof.
     registry.unplug();
 
-    let second = client.catalogue().await.expect("served from the cache");
+    let second = client.kinds(&["php"]).await.expect("served from the cache");
     assert!(
         matches!(second.freshness, Freshness::Cached { .. }),
         "expected a cache hit, got {:?}",
@@ -181,12 +181,12 @@ async fn a_stale_cache_is_served_when_the_network_is_gone() {
     let registry = MockRegistry::start(&index_at("2026-08-14T06:55:12Z")).await;
     let client = client(&registry, cache.path());
 
-    client.catalogue().await.expect("first fetch");
+    client.kinds(&["php"]).await.expect("first fetch");
     age_cache(cache.path(), Duration::from_secs(48 * 60 * 60));
     registry.unplug();
 
     let stale = client
-        .catalogue()
+        .kinds(&["php"])
         .await
         .expect("an old index is still an index");
     assert!(
@@ -204,21 +204,24 @@ async fn an_index_from_before_the_cached_one_is_refused_and_the_cache_kept() {
     let registry = MockRegistry::start(&index_at("2026-09-01T00:00:00Z")).await;
     let client = client(&registry, cache.path());
 
-    client.catalogue().await.expect("first fetch");
+    client.kinds(&["php"]).await.expect("first fetch");
 
     // Correctly signed, by the right key, and older: a stale CDN edge, or a copy replayed from
     // before a security release. The signature cannot tell it apart from the current one.
     registry.publish(&index_at("2026-08-14T06:55:12Z"));
     age_cache(cache.path(), Duration::from_secs(48 * 60 * 60));
 
-    let kept = client.catalogue().await.expect("the cached index is kept");
+    let kept = client
+        .kinds(&["php"])
+        .await
+        .expect("the cached index is kept");
     assert!(
         kept.freshness.is_stale(),
         "the refusal has to be visible, got {:?}",
         kept.freshness
     );
     assert_eq!(
-        kept.index.generated_at.to_string(),
+        kept.index.generated_at().to_string(),
         "2026-09-01T00:00:00Z",
         "the newer document must survive being offered an older one"
     );
@@ -232,7 +235,7 @@ async fn a_schema_this_build_cannot_read_is_refused() {
     let registry = MockRegistry::start(&future).await;
 
     let refusal = client(&registry, cache.path())
-        .catalogue()
+        .kinds(&["php"])
         .await
         .expect_err("a newer document version is not readable");
     assert!(
@@ -309,22 +312,20 @@ fn installable_kinds() -> Vec<String> {
 #[ignore = "reaches the internet; the suite runs with egress blocked"]
 async fn the_published_index_verifies_against_the_key_in_this_build() {
     let cache = tempfile::tempdir().expect("a cache directory");
-    let catalogue = Client::new(cache.path())
+    let catalogue = PackageIndex::new(cache.path())
         .expect("the compiled-in key parses")
-        .catalogue()
+        .all()
         .await
         .expect("the published index verifies against the compiled-in key");
 
     let index = catalogue.index;
     let kinds = installable_kinds();
     println!(
-        "index schema {} generated {} — {} packages, {} artifacts, {} kinds this build can install",
-        index.schema,
-        index.generated_at,
-        index.packages.len(),
+        "index generated {} — {} packages, {} artifacts, {} kinds this build can install",
+        index.generated_at(),
+        index.packages().count(),
         index
-            .packages
-            .iter()
+            .packages()
             .map(|package| package.artifacts.len())
             .sum::<usize>(),
         kinds.len(),
@@ -342,12 +343,7 @@ async fn the_published_index_verifies_against_the_key_in_this_build() {
         println!();
 
         for kind in &kinds {
-            let published = || {
-                index
-                    .packages
-                    .iter()
-                    .filter(|package| package.kind == *kind)
-            };
+            let published = || index.packages().filter(|package| package.kind == *kind);
             print!("{kind:<12}");
 
             for target in TARGETS {
@@ -369,15 +365,14 @@ async fn the_published_index_verifies_against_the_key_in_this_build() {
     // command that can only refuse.
     for kind in &kinds {
         assert!(
-            index.packages.iter().any(|package| package.kind == *kind),
+            index.packages().any(|package| package.kind == *kind),
             "this build can install {kind} and the published index has none"
         );
     }
 
     let mut holes = Vec::new();
     for package in index
-        .packages
-        .iter()
+        .packages()
         .filter(|package| kinds.contains(&package.kind))
     {
         for target in TARGETS {
@@ -414,7 +409,7 @@ async fn a_cache_somebody_rewrote_is_ignored_rather_than_trusted() {
     let registry = MockRegistry::start(&index_at("2026-08-14T06:55:12Z")).await;
     let client = client(&registry, cache.path());
 
-    client.catalogue().await.expect("first fetch");
+    client.kinds(&["php"]).await.expect("first fetch");
 
     // The cache is an ordinary file in the user's home. Anything on this machine can rewrite it,
     // which is why it is verified on the way in rather than trusted because we wrote it once.
@@ -424,14 +419,17 @@ async fn a_cache_somebody_rewrote_is_ignored_rather_than_trusted() {
     )
     .expect("rewrite the cache");
 
-    let recovered = client.catalogue().await.expect("the network still answers");
+    let recovered = client
+        .kinds(&["php"])
+        .await
+        .expect("the network still answers");
     assert_eq!(
         recovered.freshness,
         Freshness::Fetched,
         "a tampered cache must send the client back to the network"
     );
     assert_eq!(
-        recovered.index.generated_at.to_string(),
+        recovered.index.generated_at().to_string(),
         "2026-08-14T06:55:12Z"
     );
 }

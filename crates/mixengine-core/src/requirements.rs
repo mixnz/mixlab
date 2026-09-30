@@ -429,10 +429,11 @@ mod tests {
     }
 
     fn index(packages: &str) -> Index {
-        serde_json::from_str(&format!(
+        serde_json::from_str::<crate::index::schema1::Document>(&format!(
             r#"{{"schema": 1, "generated_at": "2026-09-16T00:00:00Z", "packages": [{packages}]}}"#
         ))
         .expect("an index")
+        .into()
     }
 
     fn php(version: &str, os: &str, requires: &str) -> String {

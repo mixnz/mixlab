@@ -16,32 +16,48 @@
 //! becomes a breaking change and the `schema` number has to move for things that break nothing.
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use mixengine_proto::Execution;
 use serde::{Deserialize, Serialize};
 
-/// The schema this build can read.
+/// A kind a caller asked for and the index could not give — roadmap task **T196**, its design's D5.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Missing {
+    /// Which kind.
+    pub kind: String,
+
+    /// Why, as the refusal's own sentence.
+    pub reason: String,
+}
+
+/// The verified packages of the kinds somebody asked for.
 ///
-/// Bumped only for a change an existing client *cannot* read. Adding an optional field is not one —
-/// see the module note on unknown fields.
-pub const SCHEMA: u32 = 1;
-
-/// A verified package index: everything MixEngine can install, and where to get it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// **A view and not a document** — roadmap task **T196**, its design's D2. The index is published
+/// as one file per kind, so what a caller holds is the kinds it named: a kind the view was built
+/// for and the index does not name is held as empty, and a kind the view was *not* built for is a
+/// bug in the caller, which a debug build says out loud.
+///
+/// A view over a whole schema 1 document answers for every kind there is, which is what
+/// [`from_packages`](Index::from_packages) builds.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Index {
-    /// The document version. Checked against [`SCHEMA`] before anything else is believed.
-    pub schema: u32,
-
-    /// When the publishing pipeline generated this document.
+    /// When the publishing pipeline generated the document this was read under.
     ///
     /// Load-bearing rather than informational: it is what makes a rolled-back index detectable. An
     /// older index is signed just as validly as a newer one — we signed both — so the signature
-    /// cannot tell them apart and this field is the only thing that can.
-    pub generated_at: Timestamp,
+    /// cannot tell them apart and this value is the only thing that can.
+    generated_at: Timestamp,
 
-    /// Every version of every runtime and service, oldest schema entry first or not — the order is
-    /// the generator's and nothing here depends on it.
-    pub packages: Vec<Package>,
+    /// Each kind's versions, in the generator's order — nothing here depends on it. Shared rather
+    /// than copied: building a view clones one pointer per kind.
+    kinds: BTreeMap<String, Arc<[Package]>>,
+
+    /// What was asked for and could not be read.
+    missing: Vec<Missing>,
+
+    /// Built from a whole document, so it answers for every kind.
+    whole: bool,
 }
 
 /// One version of one thing, across every platform it was built for.
@@ -565,11 +581,84 @@ impl Package {
 }
 
 impl Index {
-    /// The package this document has for `kind` at `version`, whatever it was built for.
+    /// A whole document's packages, grouped by kind.
+    #[must_use]
+    pub fn from_packages(generated_at: Timestamp, packages: Vec<Package>) -> Self {
+        let mut grouped: BTreeMap<String, Vec<Package>> = BTreeMap::new();
+        for package in packages {
+            grouped
+                .entry(package.kind.clone())
+                .or_default()
+                .push(package);
+        }
+
+        Self {
+            generated_at,
+            kinds: grouped
+                .into_iter()
+                .map(|(kind, packages)| (kind, Arc::from(packages)))
+                .collect(),
+            missing: Vec::new(),
+            whole: true,
+        }
+    }
+
+    /// The kinds a caller asked for, and the ones among them that could not be read.
+    #[must_use]
+    pub fn from_kinds(
+        generated_at: Timestamp,
+        kinds: BTreeMap<String, Arc<[Package]>>,
+        missing: Vec<Missing>,
+    ) -> Self {
+        Self {
+            generated_at,
+            kinds,
+            missing,
+            whole: false,
+        }
+    }
+
+    /// When the document this view was read under was generated.
+    #[must_use]
+    pub fn generated_at(&self) -> Timestamp {
+        self.generated_at
+    }
+
+    /// Every package in the view, kind by kind.
+    pub fn packages(&self) -> impl Iterator<Item = &Package> {
+        self.kinds.values().flat_map(|packages| packages.iter())
+    }
+
+    /// The kinds that were asked for and could not be read.
+    #[must_use]
+    pub fn missing(&self) -> &[Missing] {
+        &self.missing
+    }
+
+    /// Why `kind` could not be read, when it could not.
+    ///
+    /// Asked before "the index does not publish this": a kind that was not read and a kind that
+    /// publishes nothing send a person to two different places.
+    #[must_use]
+    pub fn unread(&self, kind: &str) -> Option<&Missing> {
+        self.missing.iter().find(|missing| missing.kind == kind)
+    }
+
+    /// The versions of `kind` this view holds.
+    fn of(&self, kind: &str) -> &[Package] {
+        debug_assert!(
+            self.whole || self.kinds.contains_key(kind) || self.unread(kind).is_some(),
+            "this view of the package index was not built for {kind}"
+        );
+
+        self.kinds.get(kind).map_or(&[], |packages| packages)
+    }
+
+    /// The package this view has for `kind` at `version`, whatever it was built for.
     fn published(&self, kind: &str, version: &str) -> Option<&Package> {
-        self.packages
+        self.of(kind)
             .iter()
-            .find(|package| package.kind == kind && package.version == version)
+            .find(|package| package.version == version)
     }
 
     /// What `target` would install for `kind` at `version`.
@@ -597,23 +686,24 @@ impl Index {
     /// Windows machine can only reach by emulation *is* listed — the alternative was that machine
     /// being shown no PHP at all, in any branch, because upstream builds none for it.
     pub fn installable_for(&self, target: Target, kind: &str) -> impl Iterator<Item = &Package> {
-        self.packages
+        self.of(kind)
             .iter()
-            .filter(move |package| package.kind == kind && package.select(target).is_some())
+            .filter(move |package| package.select(target).is_some())
     }
 
     /// The same, for the machine this build runs on.
     pub fn installable(&self, kind: &str) -> impl Iterator<Item = &Package> {
         let host = Target::host();
-        self.packages.iter().filter(move |package| {
-            package.kind == kind && host.is_some_and(|target| package.select(target).is_some())
-        })
+        self.of(kind)
+            .iter()
+            .filter(move |package| host.is_some_and(|target| package.select(target).is_some()))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::index::schema1::Document;
 
     #[test]
     fn a_cpu_requirement_is_kept_rather_than_dropped() {
@@ -709,7 +799,7 @@ mod tests {
 
     #[test]
     fn an_artifact_carries_where_its_binaries_are_rather_than_only_their_names() {
-        let index: Index = serde_json::from_str(
+        let index: Document = serde_json::from_str(
             r#"{
               "schema": 1,
               "generated_at": "2026-08-14T06:55:12Z",
@@ -739,7 +829,7 @@ mod tests {
     fn a_field_this_build_does_not_know_is_not_an_error() {
         // The opposite of `config.toml`'s rule, and deliberately: this document is written by us and
         // read by builds older than it, so adding a field must not break what is already deployed.
-        let index: Index = serde_json::from_str(
+        let index: Document = serde_json::from_str(
             r#"{
               "schema": 1,
               "generated_at": "2026-08-14T06:55:12Z",
@@ -781,7 +871,7 @@ mod tests {
 
     /// An index shaped like the published one where it matters: PHP is on five targets and not on
     /// ARM64 Windows, which is true of every branch upstream has ever built.
-    fn php_as_published() -> Index {
+    fn php_as_published() -> Document {
         let artifact = |os: Os, arch: Arch| {
             serde_json::json!({
                 "os": os.as_str(), "arch": arch.as_str(),
@@ -811,7 +901,7 @@ mod tests {
     /// The finding this task exists for — roadmap task **T92**.
     #[test]
     fn an_arm64_windows_machine_is_offered_the_x86_64_build_and_told_so() {
-        let index = php_as_published();
+        let index = Index::from(php_as_published());
 
         let chosen = index
             .select(Target::new(Os::Windows, Arch::Aarch64), "php", "8.3.33")
@@ -823,7 +913,7 @@ mod tests {
 
     #[test]
     fn every_other_target_is_offered_its_own_build() {
-        let index = php_as_published();
+        let index = Index::from(php_as_published());
 
         for target in TARGETS {
             let chosen = index
@@ -847,7 +937,7 @@ mod tests {
     #[test]
     fn a_native_build_wins_over_one_that_would_have_to_be_emulated() {
         for first in [false, true] {
-            let mut index = php_as_published();
+            let mut document = php_as_published();
             let native: Artifact = serde_json::from_value(serde_json::json!({
                 "os": "windows", "arch": "aarch64",
                 "url": "https://example.invalid/php-windows-aarch64.zip",
@@ -856,9 +946,10 @@ mod tests {
             .expect("an artifact");
 
             match first {
-                true => index.packages[0].artifacts.insert(0, native),
-                false => index.packages[0].artifacts.push(native),
+                true => document.packages[0].artifacts.insert(0, native),
+                false => document.packages[0].artifacts.push(native),
             }
+            let index = Index::from(document);
 
             let chosen = index
                 .select(Target::new(Os::Windows, Arch::Aarch64), "php", "8.3.33")
@@ -873,10 +964,11 @@ mod tests {
     /// offered one and the emulation rule changes nothing.
     #[test]
     fn a_version_with_no_windows_build_is_offered_to_no_windows_machine() {
-        let mut index = php_as_published();
-        index.packages[0]
+        let mut document = php_as_published();
+        document.packages[0]
             .artifacts
             .retain(|artifact| artifact.os != Os::Windows);
+        let index = Index::from(document);
 
         for arch in [Arch::X86_64, Arch::Aarch64] {
             let target = Target::new(Os::Windows, arch);
@@ -888,7 +980,7 @@ mod tests {
     /// The listing follows the selection, so a version reachable only by emulation is listed.
     #[test]
     fn a_version_reachable_only_by_emulation_is_listed_as_installable() {
-        let index = php_as_published();
+        let index = Index::from(php_as_published());
 
         assert_eq!(
             index
@@ -949,5 +1041,64 @@ mod tests {
 
         assert!(extensions.is_empty());
         assert_eq!(serde_json::to_string(&extensions).expect("json"), "{}");
+    }
+
+    fn package(kind: &str, version: &str) -> Package {
+        serde_json::from_value(serde_json::json!({
+            "kind": kind, "version": version, "channel": "stable",
+            "artifacts": [{
+                "os": "linux", "arch": "x86_64",
+                "url": format!("https://example.invalid/{kind}-{version}.zip"),
+                "sha256": "00", "size": 1, "provides": { kind: "bin/x" }
+            }]
+        }))
+        .expect("a package")
+    }
+
+    /// A view holds the kinds it was asked for — roadmap task **T196**, its design's D2.
+    #[test]
+    fn a_view_answers_for_the_kinds_it_was_built_for() {
+        let stamp: Timestamp = "2026-09-30T00:00:00Z".parse().expect("valid");
+        let mut kinds: BTreeMap<String, Arc<[Package]>> = BTreeMap::new();
+        kinds.insert("php".to_owned(), Arc::from(vec![package("php", "8.4.1")]));
+        kinds.insert("go".to_owned(), Arc::from(Vec::<Package>::new()));
+        let view = Index::from_kinds(
+            stamp,
+            kinds,
+            vec![Missing {
+                kind: "node".to_owned(),
+                reason: "does not hash to what the root says".to_owned(),
+            }],
+        );
+
+        let linux = Target::new(Os::Linux, Arch::X86_64);
+        assert_eq!(view.installable_for(linux, "php").count(), 1);
+        assert_eq!(
+            view.installable_for(linux, "go").count(),
+            0,
+            "a kind the root does not name is empty"
+        );
+        assert_eq!(view.installable_for(linux, "node").count(), 0);
+        assert_eq!(view.packages().count(), 1);
+        assert_eq!(
+            view.unread("node").map(|missing| missing.kind.as_str()),
+            Some("node")
+        );
+        assert!(view.unread("php").is_none());
+        assert_eq!(view.generated_at().to_string(), "2026-09-30T00:00:00Z");
+    }
+
+    #[test]
+    fn a_whole_document_answers_for_every_kind() {
+        let stamp: Timestamp = "2026-09-30T00:00:00Z".parse().expect("valid");
+        let index = Index::from_packages(
+            stamp,
+            vec![package("php", "8.4.1"), package("node", "22.1.0")],
+        );
+
+        let linux = Target::new(Os::Linux, Arch::X86_64);
+        assert_eq!(index.installable_for(linux, "node").count(), 1);
+        assert_eq!(index.installable_for(linux, "ruby").count(), 0);
+        assert!(index.missing().is_empty());
     }
 }

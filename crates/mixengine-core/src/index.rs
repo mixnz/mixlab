@@ -46,11 +46,14 @@ use minisign_verify::{PublicKey, Signature};
 use crate::{Error, Result};
 
 pub mod format;
+pub mod packages;
+pub mod schema1;
 
 pub use format::{
-    Arch, Artifact, Channel, Extensions, Index, Os, Package, Requires, Selection, TARGETS, Target,
-    Timestamp,
+    Arch, Artifact, Channel, Extensions, Index, Missing, Os, Package, Requires, Selection, TARGETS,
+    Target, Timestamp,
 };
+pub use packages::PackageIndex;
 
 /// The key every published index is signed with, compiled in.
 ///
@@ -174,23 +177,9 @@ pub trait Document: serde::de::DeserializeOwned + Clone + std::fmt::Debug {
     fn generated_at(&self) -> Timestamp;
 }
 
-impl Document for Index {
-    const SCHEMA: u32 = format::SCHEMA;
-    const LABEL: &'static str = "package index";
-    const CACHE_FILE: &'static str = "index.json";
-
-    fn schema(&self) -> u32 {
-        self.schema
-    }
-
-    fn generated_at(&self) -> Timestamp {
-        self.generated_at
-    }
-}
-
 /// Reads a signed document, caching it and refusing to be walked backwards.
 #[derive(Debug)]
-pub struct Client<D = Index> {
+pub struct Client<D> {
     url: String,
     key: PublicKey,
     cache_file: PathBuf,
@@ -198,21 +187,8 @@ pub struct Client<D = Index> {
     document: std::marker::PhantomData<fn() -> D>,
 }
 
-impl Client<Index> {
-    /// Point a client at the published package index, caching under `cache_dir`.
-    ///
-    /// # Errors
-    ///
-    /// As [`Client::with`].
-    pub fn new(cache_dir: &Path) -> Result<Self> {
-        Self::with(DEFAULT_URL, PUBLIC_KEY, cache_dir)
-    }
-}
-
 impl<D: Document> Client<D> {
-    /// Point a client at the published index, caching under `cache_dir`.
-    ///
-    /// The same, against a named URL and key.
+    /// Point a client at a signed document at `url`, caching under `cache_dir`.
     ///
     /// This is what `MIXENGINE_INDEX_URL` and a team mirror use, and what `MockRegistry` uses in
     /// tests — the key has to be injectable because a test cannot hold the production private key,
@@ -220,7 +196,7 @@ impl<D: Document> Client<D> {
     ///
     /// # Errors
     ///
-    /// As [`Client::new`].
+    /// A transport that cannot be built, or a public key that is not one.
     pub fn with(url: &str, public_key: &str, cache_dir: &Path) -> Result<Self> {
         let http = default_transport().map_err(|source| Error::IndexTransport {
             document: D::LABEL,
