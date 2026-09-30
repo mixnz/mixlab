@@ -48,6 +48,7 @@ use crate::{Error, Result};
 pub mod format;
 pub mod packages;
 pub mod schema1;
+pub mod schema2;
 
 pub use format::{
     Arch, Artifact, Channel, Extensions, Index, Missing, Os, Package, Requires, Selection, TARGETS,
