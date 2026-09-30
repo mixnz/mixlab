@@ -2075,6 +2075,7 @@ async fn serve(
             metrics,
             memory_over_minutes: config.services.memory_over_minutes,
             crashes,
+            credentials: credential_facts,
         },
         api::Shutdown::new(shutdown.clone(), shutdown_grace),
     );

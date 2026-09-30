@@ -21,7 +21,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
 - [ ] **T194d** `daemon.set_credential_store`, refused while the current store holds anything for
       this home, effective at the next start; `mix daemon credential-store`, and MixLab's
       *Credentials* section in Settings → MixEngine.
-- [ ] **T194e** `credentials` on `daemon.status` and in `mix status`, the doctor note, the startup
+- [x] **T194e** `credentials` on `daemon.status` and in `mix status`, the doctor note, the startup
       log, the `mix database` wording; bindings.
 - [ ] **T194f** `security-model.md`, `platform-abstraction.md`'s `Keyring` row, the changelog lines,
       and the design flipped to `implemented`.

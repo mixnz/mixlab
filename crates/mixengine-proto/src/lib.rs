@@ -81,7 +81,10 @@ pub use cert_api::{
     SiteCertOutcome, SiteCertStatus, Trust, UninstallOutcome, Unusable, Verdict,
 };
 pub use crash::{CRASH_FORMAT, CrashLocation, CrashReport};
-pub use daemon::{DaemonShutdown, DaemonStatus, DaemonVersion, DnsMode, DnsStatus, Health};
+pub use daemon::{
+    CredentialStore, CredentialsStatus, DaemonShutdown, DaemonStatus, DaemonVersion, DnsMode,
+    DnsStatus, Health,
+};
 pub use database::{
     DatabaseAccount, DatabaseClientReport, DatabaseCredentials, DatabaseHandoff, DatabaseProtocol,
     DesktopClient, Launch, Made, Provisioned, SecretAddress,

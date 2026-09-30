@@ -99,6 +99,40 @@ pub struct DaemonStatus {
     /// exactly as it was.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub update: Option<crate::UpdateOffer>,
+
+    /// Which credential store this home keeps its passwords in — roadmap task **T194** — or
+    /// [`None`] from a daemon built before this member existed.
+    ///
+    /// **In the call every client already makes**, on [`DaemonStatus::elevation`]'s reasoning: where
+    /// the passwords are is a status line, and the switch that changes it is
+    /// `daemon.set_credential_store`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credentials: Option<CredentialsStatus>,
+}
+
+/// Which credential store a home keeps its passwords in — roadmap task **T194**,
+/// [ADR 0059](../../../docs/decisions/0059-a-linux-release-may-keep-a-homes-credentials-in-a-file.md).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub enum CredentialStore {
+    /// The operating system's credential store.
+    Os,
+    /// `credentials.json` in the home, readable by its account only.
+    Home,
+}
+
+/// The store a daemon runs on, and whether it would accept a switch — roadmap task **T194**.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct CredentialsStatus {
+    /// The store the running daemon built its host with.
+    pub store: CredentialStore,
+
+    /// Whether `daemon.set_credential_store` would accept the other store. Decided by the daemon, so
+    /// no client repeats which system and which build may choose which: only a development build,
+    /// and a Linux release with no keyring, keep a file.
+    pub choosable: bool,
 }
 
 /// What this daemon's own DNS server is doing, and what it costs when it is not — roadmap task
@@ -296,6 +330,7 @@ mod tests {
                 because: Some("nothing routes a managed TLD here yet".to_owned()),
             }),
             update: None,
+            credentials: None,
         }
     }
 
@@ -476,5 +511,33 @@ mod tests {
             serde_json::to_string(&health).unwrap(),
             r#"{"ok":true,"version":"0.1.0","protocol":1}"#
         );
+    }
+
+    /// T194, Review Focus 5: an older daemon's answer, with no `credentials`, still decodes.
+    #[test]
+    fn a_status_without_credentials_decodes_as_none() {
+        let mut value = serde_json::to_value(status()).unwrap();
+        value.as_object_mut().unwrap().remove("credentials");
+
+        let decoded: DaemonStatus = serde_json::from_value(value).unwrap();
+
+        assert_eq!(decoded.credentials, None);
+    }
+
+    /// T194: the store travels as a word a client can match on.
+    #[test]
+    fn the_credential_store_is_spelled_as_a_word() {
+        let with = DaemonStatus {
+            credentials: Some(CredentialsStatus {
+                store: CredentialStore::Home,
+                choosable: true,
+            }),
+            ..status()
+        };
+
+        let value = serde_json::to_value(&with).unwrap();
+
+        assert_eq!(value["credentials"]["store"], "home");
+        assert_eq!(value["credentials"]["choosable"], true);
     }
 }

@@ -446,6 +446,17 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
         });
     }
 
+    // Which store the passwords are in — roadmap task T194. Absent from a daemon that predates it,
+    // and then no line is invented.
+    if let Some(credentials) = &status.credentials {
+        rendered.push_str(match credentials.store {
+            mixengine_proto::CredentialStore::Os => "  passwords the system's credential store\n",
+            mixengine_proto::CredentialStore::Home => {
+                "  passwords a file in this home, readable by your account only\n"
+            }
+        });
+    }
+
     if let Some(elevation) = &status.elevation {
         if elevation.elevated {
             rendered.push_str(
@@ -3488,21 +3499,23 @@ fn qr(url: &str) -> Option<String> {
 ///
 /// **It says where the password lives and never what it is** — the T77a design, D11. Two lines,
 /// aligned on the noun, in the words this file uses everywhere else rather than a glyph.
-pub(crate) fn database_created(account: &DatabaseAccount) -> String {
+pub(crate) fn database_created(
+    account: &DatabaseAccount,
+    store: Option<mixengine_proto::CredentialStore>,
+) -> String {
     let word = |made: Made| match made {
         Made::Created => "created",
         Made::Existing => "already existed",
     };
 
     format!(
-        "database {} {} on {}\naccount  {} {}, password in the {} credentials at {}",
+        "database {} {} on {}\naccount  {} {}, password in {}",
         account.database,
         word(account.made.database),
         account.service,
         account.user,
         word(account.made.user),
-        account.secret.service,
-        account.secret.key,
+        where_kept(&account.secret, store),
     )
 }
 
@@ -3511,11 +3524,32 @@ pub(crate) fn database_created(account: &DatabaseAccount) -> String {
 /// **The last line is the value and nothing else** — roadmap task **T77b**'s D3 — so that
 /// `mix database credentials mariadb@main --user blog | tail -1` is the password, for a script
 /// writing a project's `.env`.
-pub(crate) fn database_credentials(answer: &DatabaseCredentials) -> String {
+pub(crate) fn database_credentials(
+    answer: &DatabaseCredentials,
+    store: Option<mixengine_proto::CredentialStore>,
+) -> String {
     format!(
-        "password for {} on {}\n  stored in the {} credentials at {}\n  {}",
-        answer.user, answer.service, answer.secret.service, answer.secret.key, answer.password,
+        "password for {} on {}\n  stored in {}\n  {}",
+        answer.user,
+        answer.service,
+        where_kept(&answer.secret, store),
+        answer.password,
     )
+}
+
+/// Where a credential is, in words — roadmap task T194, D5. A home that keeps its passwords in a
+/// file says so; any other answer, an older daemon's included, names the store's namespace as it
+/// always has.
+fn where_kept(
+    secret: &mixengine_proto::SecretAddress,
+    store: Option<mixengine_proto::CredentialStore>,
+) -> String {
+    match store {
+        Some(mixengine_proto::CredentialStore::Home) => {
+            format!("this home's credentials file at {}", secret.key)
+        }
+        _ => format!("the {} credentials at {}", secret.service, secret.key),
+    }
 }
 
 /// `mix database client`, for a person — roadmap task **T83**.
@@ -5401,7 +5435,30 @@ mod tests {
                 because: Some("[dns] enabled = false in config.toml".to_owned()),
             }),
             update: None,
+            credentials: None,
         }
+    }
+
+    /// T194: `mix status` names the store when the daemon says, and invents nothing when it does
+    /// not — Review Focus 5.
+    #[test]
+    fn status_names_the_credential_store_when_the_daemon_says() {
+        let told = DaemonStatus {
+            credentials: Some(mixengine_proto::CredentialsStatus {
+                store: mixengine_proto::CredentialStore::Home,
+                choosable: true,
+            }),
+            ..example()
+        };
+
+        let rendered = status(&told);
+        assert!(
+            rendered.contains("  passwords a file in this home"),
+            "{rendered}"
+        );
+
+        let rendered = status(&example());
+        assert!(!rendered.contains("  passwords "), "{rendered}");
     }
 
     /// `mix status` gains one line when an update is offered — roadmap task **T88**.
@@ -6392,16 +6449,7 @@ mod tests {
     /// guard: a renderer that grew a password would put one in a terminal's scrollback.
     #[test]
     fn a_created_database_says_where_the_password_lives() {
-        let rendered = database_created(&DatabaseAccount {
-            service: ServiceId::parse("mariadb@main").expect("an id"),
-            database: "blog".to_owned(),
-            user: "blog".to_owned(),
-            secret: SecretAddress::of("mariadb@main/blog"),
-            made: mixengine_proto::Provisioned {
-                database: Made::Created,
-                user: Made::Existing,
-            },
-        });
+        let rendered = database_created(&blog_account(), None);
 
         assert!(
             rendered.contains("database blog created on mariadb@main"),
@@ -6416,6 +6464,45 @@ mod tests {
             !rendered.to_ascii_lowercase().contains("password is"),
             "{rendered}"
         );
+    }
+
+    fn blog_account() -> DatabaseAccount {
+        DatabaseAccount {
+            service: ServiceId::parse("mariadb@main").expect("an id"),
+            database: "blog".to_owned(),
+            user: "blog".to_owned(),
+            secret: SecretAddress::of("mariadb@main/blog"),
+            made: mixengine_proto::Provisioned {
+                database: Made::Created,
+                user: Made::Existing,
+            },
+        }
+    }
+
+    /// T194, D5: a home that keeps its passwords in a file says so where it says where one is.
+    #[test]
+    fn a_database_in_a_file_store_says_so() {
+        let home = Some(mixengine_proto::CredentialStore::Home);
+
+        let created = database_created(&blog_account(), home);
+        assert!(
+            created.contains("this home's credentials file at mariadb@main/blog"),
+            "{created}"
+        );
+
+        let answer = DatabaseCredentials {
+            service: ServiceId::parse("mariadb@main").expect("an id"),
+            user: "blog".to_owned(),
+            secret: SecretAddress::of("mariadb@main/blog"),
+            password: "p".to_owned(),
+        };
+        let told = database_credentials(&answer, home);
+        assert!(
+            told.contains("this home's credentials file at mariadb@main/blog"),
+            "{told}"
+        );
+        let untold = database_credentials(&answer, None);
+        assert!(untold.contains("mixengine credentials"), "{untold}");
     }
 
     /// T96. Every row says what would take it back, so a person reading the table never has to know

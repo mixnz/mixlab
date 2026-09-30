@@ -459,7 +459,7 @@ async fn call_method(
                     encode_result(&api.sites.delete(&query).await.map_err(refused)?)
                 }
 
-                rpc::method::DAEMON_DOCTOR => encode_result(&api.doctor.report().await),
+                rpc::method::DAEMON_DOCTOR => encode_result(&api.doctor_report().await),
 
                 rpc::method::BLUEPRINT_CAPTURE => {
                     let capture: BlueprintCapture = arguments(params)?;
@@ -1140,6 +1140,18 @@ impl Failure {
 }
 
 impl Api {
+    /// `daemon.doctor` — every check the doctor makes, and the line about where this home keeps
+    /// its passwords (T194), which only the API knows: the store is decided in `main` and described
+    /// from here. A note and never a problem, so `daemon.doctor_repair` has nothing to read in it.
+    async fn doctor_report(&self) -> mixengine_proto::DoctorReport {
+        let mut report = self.doctor.report().await;
+        report.checks.push(crate::credentials::check(
+            self.credentials.store,
+            self.paths.credentials_file(),
+        ));
+        report
+    }
+
     /// `daemon.status` — every fact this build actually has.
     ///
     /// **Fallible since T40b**, and `daemon.version` is what stays infallible: how many operations
@@ -1167,6 +1179,10 @@ impl Api {
             elevation: Some(self.elevation.summary().await?),
             dns: Some(self.dns.status()),
             update: self.updates.offer().await,
+            credentials: Some(mixengine_proto::CredentialsStatus {
+                store: self.credentials.store.into(),
+                choosable: self.credentials.choosable,
+            }),
         })
     }
 
@@ -1189,7 +1205,7 @@ impl Api {
     ///
     /// The wire error of an archive that could not be written.
     async fn bundle(&self) -> Result<BundleReport, Error> {
-        let report = self.doctor.report().await;
+        let report = self.doctor_report().await;
         let status = self.status().await;
 
         self.bundles.take(&report, status, self.version()).await
@@ -2746,6 +2762,10 @@ mod tests {
 
         let api = Arc::new(Api {
             version: "0.1.0",
+            credentials: crate::credentials::Facts {
+                store: crate::credentials::Store::Home,
+                choosable: true,
+            },
             protocol: mixengine_proto::PROTOCOL_VERSION,
             pid: 4123,
             // The shipped default, so what these tests read is what a home reads.

@@ -252,6 +252,46 @@ pub(crate) fn describe(credentials: &Credentials, release: bool) -> String {
     }
 }
 
+impl From<Store> for mixengine_proto::CredentialStore {
+    fn from(store: Store) -> Self {
+        match store {
+            Store::Os => Self::Os,
+            Store::Home => Self::Home,
+        }
+    }
+}
+
+impl From<mixengine_proto::CredentialStore> for Store {
+    fn from(store: mixengine_proto::CredentialStore) -> Self {
+        match store {
+            mixengine_proto::CredentialStore::Os => Self::Os,
+            mixengine_proto::CredentialStore::Home => Self::Home,
+        }
+    }
+}
+
+/// `mix doctor`'s line about the store — roadmap task T194, D5. A note and never a problem: a file
+/// store is a choice somebody made, and there is nothing to repair.
+pub(crate) fn check(store: Store, file: &Path) -> mixengine_proto::Check {
+    use mixengine_proto::Outcome;
+
+    mixengine_proto::Check {
+        name: "where this home keeps its passwords".to_owned(),
+        outcome: match store {
+            Store::Os => Outcome::Ok {},
+            Store::Home => Outcome::Note {
+                because: format!(
+                    "this home keeps its passwords in {}, a file only your account can read. \
+                     Other accounts on this machine cannot read it; anyone holding the disk or a \
+                     backup of this home can, and encrypting the whole disk is what protects a \
+                     disk that leaves the machine",
+                    file.display()
+                ),
+            },
+        },
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -446,5 +486,22 @@ mod tests {
             describe(&Credentials::Os, true),
             "the operating system's credential store"
         );
+    }
+
+    /// T194, D5: a note for the file, never a problem, and nothing for the OS store.
+    #[test]
+    fn the_doctor_notes_a_file_store_and_passes_the_os_one() {
+        use mixengine_proto::Outcome;
+
+        let file = Path::new("/h/credentials.json");
+
+        assert_eq!(check(Store::Os, file).outcome, Outcome::Ok {});
+        match check(Store::Home, file).outcome {
+            Outcome::Note { because } => {
+                assert!(because.contains("/h/credentials.json"), "{because}");
+                assert!(because.contains("disk"), "{because}");
+            }
+            other => panic!("a note, not {other:?}"),
+        }
     }
 }

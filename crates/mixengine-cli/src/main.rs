@@ -30,9 +30,9 @@ use mixengine_proto::{
     AnswerSubject, AutostartReport, BlueprintApplied, BlueprintApply, BlueprintApplyResponse,
     BlueprintCapture, BlueprintImport, BlueprintList, BlueprintPlan, BlueprintSummary,
     BundleReport, CaRotateReport, CaStatus, CaUninstallReport, CertIssue, CertIssueReport,
-    CertStatusQuery, CertStatusReport, CleanupQuery, CleanupReport, DaemonShutdown, DaemonStatus,
-    DatabaseAccount, DatabaseClientQuery, DatabaseClientReport, DatabaseCreate,
-    DatabaseCredentials, DatabaseCredentialsQuery, DatabaseHandoff, DatabaseOpen,
+    CertStatusQuery, CertStatusReport, CleanupQuery, CleanupReport, CredentialStore,
+    DaemonShutdown, DaemonStatus, DatabaseAccount, DatabaseClientQuery, DatabaseClientReport,
+    DatabaseCreate, DatabaseCredentials, DatabaseCredentialsQuery, DatabaseHandoff, DatabaseOpen,
     DiagnosticsBundle, DiskCategory, DiskUsage, DiskUsageQuery, Disposition, DoctorRepair,
     DoctorReport, DomainAdd, DomainRemove, DomainStatusQuery, DomainStatusReport, ElevationDrop,
     ElevationStatus, Error, ErrorCode, ExtensionAvailable, ExtensionCatalogue, ExtensionChange,
@@ -4847,9 +4847,10 @@ async fn database(
             };
             let account: DatabaseAccount =
                 ask(&mut client, rpc::method::DATABASE_CREATE, encode(&create)).await?;
+            let store = credential_store(&mut client, json).await;
 
             emit(&rendered(json, &account, || {
-                render::database_created(&account)
+                render::database_created(&account, store)
             }))?;
         }
 
@@ -4901,9 +4902,10 @@ async fn database(
                 encode(&DatabaseCredentialsQuery { service, user }),
             )
             .await?;
+            let store = credential_store(&mut client, json).await;
 
             emit(&rendered(json, &answer, || {
-                render::database_credentials(&answer)
+                render::database_credentials(&answer, store)
             }))?;
         }
     }
@@ -6434,6 +6436,20 @@ async fn daemon_stop(endpoint: &Endpoint, json: bool) -> Result<ExitCode, Error>
         (None, None) => ExitCode::SUCCESS,
         _ => ExitCode::FAILURE,
     })
+}
+
+/// Which store the daemon keeps passwords in, for a sentence that says where one is — roadmap task
+/// T194. Asked only for a person: `--json` hands back the daemon's own answer and needs no more.
+/// A daemon that cannot say, or predates the member, is answered as it always was.
+async fn credential_store(client: &mut Client, json: bool) -> Option<CredentialStore> {
+    if json {
+        return None;
+    }
+    ask::<DaemonStatus>(client, rpc::method::DAEMON_STATUS, None)
+        .await
+        .ok()
+        .and_then(|status| status.credentials)
+        .map(|credentials| credentials.store)
 }
 
 /// `mix storage`: where this home's growing directories are — roadmap task **T145**.
