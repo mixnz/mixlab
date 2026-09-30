@@ -21,7 +21,7 @@ keeps working when the interface under it is redrawn.
   object: `mockIPC(handler, { shouldMockEvents: true })` answers commands, emits events, and keeps
   the callback registry a `Channel` delivers through.
 - **Every module restores its own screen from the session.** `shell/session.ts` reads
-  `mixdb-session` from `localStorage` — a list of tabs, each with an opaque `state` slot — and each
+  `<old>-session` from `localStorage` — a list of tabs, each with an opaque `state` slot — and each
   module parses its slot:
 
   | Module      | Slot                                                   | Parsed by                  |
@@ -32,8 +32,8 @@ keeps working when the interface under it is redrawn.
   | `terminal`  | `{ kind: "local", shellName, cwd }`                    | `parseTerminalTabState`    |
   | `tools`     | `{ toolId }`                                           | `parseToolsTabState`       |
 
-- **The rest of the window is `localStorage` too.** `mixdb-modules` (the visible set; present means
-  no first-run screen), `mixdb-theme`, `mixdb-accent`, `mixdb-lang`.
+- **The rest of the window is `localStorage` too.** `<old>-modules` (the visible set; present means
+  no first-run screen), `<old>-theme`, `<old>-accent`, `<old>-lang`.
 - **The title bar is the OS's, not the webview's.** Tauri keeps native decorations; nothing in
   `src/` draws window controls. What the user agent does decide is `IS_MAC` in `core/platform.ts` —
   the `⌘` or `Ctrl` in every shortcut label, and which modifier the shortcuts listen for — and the
@@ -64,10 +64,10 @@ then imports `src/main.tsx`.
 
 Each scene is one fresh page load with `localStorage` cleared and then seeded with:
 
-- `mixdb-modules` = all five modules,
-- `mixdb-theme` = `dark` or `light`,
-- `mixdb-lang` = `en`,
-- `mixdb-session` = a single active tab carrying the scene's slot from the table above.
+- `<old>-modules` = all five modules,
+- `<old>-theme` = `dark` or `light`,
+- `<old>-lang` = `en`,
+- `<old>-session` = a single active tab carrying the scene's slot from the table above.
 
 The app restores that tab the way it restores one after a relaunch. A scene therefore depends on a
 module's session slot — a documented, parsed, unit-tested shape — rather than on anything drawn.

@@ -24,7 +24,7 @@ use super::state::{Preview, RestState};
 
 /// The scheme the preview frame loads from. Three places have to agree on it: `frame-src` in
 /// `src-tauri/tauri.conf.json`, `PREVIEW_SCHEME` in `src/modules/rest/api.ts`, and here.
-pub const SCHEME: &str = "mixdb-preview";
+pub const SCHEME: &str = "mixlab-preview";
 
 /// How many documents are kept at once. One open pane needs one; the cap is what stops a body
 /// from outliving the pane that asked for it when `rest_preview_close` never arrives — a window

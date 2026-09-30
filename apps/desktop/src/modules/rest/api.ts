@@ -31,7 +31,7 @@ export function restCancel(requestId: string): Promise<void> {
  * `src-tauri/src/modules/rest/preview.rs`, and here. Change it in one and the frame loads nothing,
  * with a CSP violation in the console as the only sign.
  */
-const PREVIEW_SCHEME = "mixdb-preview";
+export const PREVIEW_SCHEME = "mixlab-preview";
 
 /** A document the Preview frame can load: the `url` to point it at, and the `id` to hand back to
  *  {@link previewClose} when the pane is done with it. */

@@ -653,7 +653,7 @@ async fn an_extension_is_a_service_a_web_app_or_a_recipe() {
             .unwrap_or_else(|error| panic!("{kind} was refused: {error}"));
     }
     assert!(
-        insert_extension(store.pool(), "mixdb", "desktop-app")
+        insert_extension(store.pool(), "an-old-client", "desktop-app")
             .await
             .is_err(),
         "desktop-app is not a kind"

@@ -1,4 +1,4 @@
-//! A connection handed to MixDB by another program — MixEngine's `mix database open` — as a
+//! A connection handed to MixLab by another program — MixEngine's `mix database open` — as a
 //! `mixlab://connect?…` URL, with the password in one environment variable rather than in the URL.
 //!
 //! This module understands the URL and keeps the result until the tab opened for it asks. It never
@@ -35,7 +35,7 @@ pub struct Handoff {
 /// The environment variable `password_env` points at, when its name is one a launcher would use.
 ///
 /// Trusted only inside the launcher's namespace — `MIX…_…PASSWORD`: `MIXENGINE_DB_PASSWORD`,
-/// `MIXDB_PASSWORD`. Once the scheme is registered with the OS, any web page can produce a
+/// `MIXLAB_DB_PASSWORD`. Once the scheme is registered with the OS, any web page can produce a
 /// `mixlab://` link naming any variable, and a name outside that namespace is how `$HOME` would
 /// otherwise be sent to a stranger's server as a password. The check is on the *name*; whether the
 /// variable exists is the caller's to find out. Nothing here reads the environment.
@@ -45,7 +45,7 @@ pub fn credential_name(url: &str) -> Option<String> {
     if names_a_launcher_credential(&name) {
         Some(name)
     } else {
-        eprintln!("mixdb: ignoring password_env={name}: not a launcher's credential variable");
+        eprintln!("mixlab: ignoring password_env={name}: not a launcher's credential variable");
         None
     }
 }
@@ -94,7 +94,7 @@ pub fn parse(url: &str, secret: Option<String>) -> Result<Handoff, AppError> {
         /* Refused by name rather than by falling through, because the reason is not "not supported
         yet". `mixlab://` is registered with the operating system, so any web page can hand this
         process a URL; a `kind=sqlite&path=…` would be that page choosing which file on the
-        user's disk MixDB opens. Nothing else here names a local path, which is what makes this
+        user's disk MixLab opens. Nothing else here names a local path, which is what makes this
         kind the exception. */
         Some("sqlite") => {
             return Err(invalid(
@@ -103,7 +103,7 @@ pub fn parse(url: &str, secret: Option<String>) -> Result<Handoff, AppError> {
         }
         Some(other) => {
             return Err(invalid(format!(
-                "kind `{other}` is not one MixDB opens this way"
+                "kind `{other}` is not one MixLab opens this way"
             )))
         }
         None => return Err(invalid("kind is missing")),
@@ -161,7 +161,7 @@ pub fn parse(url: &str, secret: Option<String>) -> Result<Handoff, AppError> {
 /// The connection string a MongoDB handed over by MixEngine is dialled with — roadmap task T155.
 ///
 /// `mongodb://<host>:<port>/<database>?directConnection=true`. Shared by this module's URL and by
-/// the Services screen's Open (`open_in_mixdb.rs`), so the two doors cannot build two strings.
+/// the Services screen's Open (`explore_data.rs`), so the two doors cannot build two strings.
 ///
 /// **The host is an address or a plain name, and nothing else.** A `mixlab://` link can come from
 /// any web page, and a host like `a/?authSource=x` would otherwise write options into the string.
@@ -397,14 +397,14 @@ mod tests {
         assert_eq!(handoff.label, "db.local:5432");
     }
 
-    /// Everything that is not a connection MixDB can open, each refused by name.
+    /// Everything that is not a connection MixLab can open, each refused by name.
     #[test]
     fn what_cannot_be_opened_is_refused() {
         for url in [
             "not a url",
             "https://connect?kind=mysql&host=h&port=1",
-            // The scheme MixDB registered, answered no more (ADR 0047).
-            "mixdb://connect?kind=mysql&host=h&port=1",
+            // Another program's scheme: only `mixlab://` is answered (ADR 0047).
+            "otherapp://connect?kind=mysql&host=h&port=1",
             "mixlab://open?kind=mysql&host=h&port=1",
             "mixlab://connect?host=h&port=1",
             "mixlab://connect?kind=mongo&host=h&port=1",
@@ -437,7 +437,10 @@ mod tests {
             named("MIXENGINE_DB_PASSWORD").as_deref(),
             Some("MIXENGINE_DB_PASSWORD")
         );
-        assert_eq!(named("MIXDB_PASSWORD").as_deref(), Some("MIXDB_PASSWORD"));
+        assert_eq!(
+            named("MIXLAB_DB_PASSWORD").as_deref(),
+            Some("MIXLAB_DB_PASSWORD")
+        );
         assert_eq!(named("MIX_PASSWORD").as_deref(), Some("MIX_PASSWORD"));
         for refused in [
             "PATH",

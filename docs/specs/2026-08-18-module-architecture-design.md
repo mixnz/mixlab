@@ -3,7 +3,7 @@ status: implemented
 date: 2026-08-18
 ---
 
-# Tách MixDB thành shell + module
+# Tách the standalone client thành shell + module
 
 Ngày: 2026-08-18
 
@@ -30,7 +30,7 @@ Những thứ nằm ngoài lần này, ghi ra để không bị kéo vào:
   tính năng mới — và nó cần đúng cái lifecycle API mà mục "Contract" cố tình bỏ.
 - **Không đổi tên command Tauri.** `mysql_query` vẫn là `mysql_query`, nên không file `api.ts` nào
   phải sửa chuỗi `invoke`.
-- **Không đổi tên app hay service name keychain.** Cả hai giữ `MixDB`. Đổi service name sau khi đã
+- **Không đổi tên app hay service name keychain.** Cả hai giữ `<Old>`. Đổi service name sau khi đã
   có người dùng là mất toàn bộ password đã lưu.
 - **Không tổng quát hoá persistence.** Mỗi module tự chọn file store của nó.
 
@@ -253,9 +253,9 @@ khác: bỏ thì giữ một `modules/db/commands.rs` nguyên khối, mọi mụ
 | Cái gì | Ở đâu | Sau refactor |
 | --- | --- | --- |
 | Saved connections | `connections.json`, key `saved` | y nguyên |
-| Password / URI / SSH secret | keychain, service `MixDB`, 1 entry/id | y nguyên |
+| Password / URI / SSH secret | keychain, service `<Old>`, 1 entry/id | y nguyên |
 | Query history / drafts / snippets | `query-history.json`, `query-drafts.json`, `query-snippets.json` | y nguyên |
-| Theme / accent / glass / language | `localStorage`: `mixdb-theme`, `mixdb-lang`, … | y nguyên |
+| Theme / accent / glass / language | `localStorage`: `<old>-theme`, `<old>-lang`, … | y nguyên |
 | `known_hosts.json` | app data dir | y nguyên |
 
 Cài bản mới đè bản cũ: mọi connection đã lưu vẫn ở đó. Đây là lý do tên file store và service name

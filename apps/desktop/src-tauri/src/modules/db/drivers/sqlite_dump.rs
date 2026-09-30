@@ -1,7 +1,7 @@
 //! Writing a SQLite schema and its rows out as SQL, and replaying one back in.
 //!
 //! The only dump here that is not a child process. `dump.rs` runs `mysqldump`, `pg_dump` or
-//! `mongodump` — tools MixDB has to find on the machine and offer to download when they are not
+//! `mongodump` — tools MixLab has to find on the machine and offer to download when they are not
 //! there — and SQLite has no equivalent worth carrying: the `sqlite3` shell is the only thing that
 //! dumps one, it is not shipped on Windows, and what it writes for the schema is already sitting in
 //! `sqlite_master` as text.
@@ -249,7 +249,8 @@ mod tests {
     impl Scratch {
         fn new() -> Self {
             Self {
-                path: std::env::temp_dir().join(format!("mixdb-dump-{}.sql", uuid::Uuid::new_v4())),
+                path: std::env::temp_dir()
+                    .join(format!("mixlab-dump-{}.sql", uuid::Uuid::new_v4())),
             }
         }
     }
@@ -340,7 +341,7 @@ mod tests {
     async fn a_missing_file_to_restore_from_is_reported_as_one() {
         let (_fixture, pool) = Fixture::open().await;
         let absent =
-            std::env::temp_dir().join(format!("mixdb-absent-{}.sql", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("mixlab-absent-{}.sql", uuid::Uuid::new_v4()));
         assert_eq!(
             restore(&pool, &absent).await.expect_err("should fail").code,
             "error.cannotReadFile"

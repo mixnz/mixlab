@@ -4,7 +4,7 @@ date: 2026-09-03
 task: T83
 ---
 
-# T83 — MixDB integration: the connection handoff (design)
+# T83 — the standalone client integration: the connection handoff (design)
 
 Roadmap task **T83**, phase 8. T77a made a database and stored its account's password in the OS
 keyring; T82a handed that password to a process of MixEngine's own. Both stopped at the same line:
@@ -15,29 +15,29 @@ and no file.
 
 ## Goal
 
-`mix database open mariadb@main` on a machine with MixDB installed starts MixDB with that server's
+`mix database open mariadb@main` on a machine with the standalone client installed starts the standalone client with that server's
 address, port and account already in hand, signed in as `root`, and nothing on the command line, in
-a log, in a shell history or on disk holds the password. On a machine without MixDB the same
+a log, in a shell history or on disk holds the password. On a machine without the standalone client the same
 command says so as a state — and says what to install — rather than failing. A graphical client can
 ask both questions through the API and draw the affordance from the answer.
 
 ## Measured, not assumed
 
-Every line below was read off this workspace, off the neighbouring `mixdb` checkout, or off the
+Every line below was read off this workspace, off the neighbouring `<old>` checkout, or off the
 machine this was designed on.
 
-- **MixDB registers no URL scheme today.** `src-tauri/src/lib.rs` loads the opener, store, dialog,
+- **The standalone client registers no URL scheme today.** `src-tauri/src/lib.rs` loads the opener, store, dialog,
   clipboard, updater, process and window-state plugins and nothing else; the only
   `register_uri_scheme_protocol` is the REST module's preview, which is an in-app scheme. There is no
-  `tauri-plugin-deep-link` and no `tauri-plugin-single-instance`. A `mixdb://` URL handed to the
+  `tauri-plugin-deep-link` and no `tauri-plugin-single-instance`. A `<old>://` URL handed to the
   operating system today lands in a "no application" dialog.
 - **Tauri's NSIS installer writes no App Paths entry.** The upstream template
   (`crates/tauri-bundler/src/bundle/windows/nsis/installer.nsi`) writes
   `Uninstall\${PRODUCTNAME}` with `DisplayIcon = "$INSTDIR\${MAINBINARYNAME}.exe"` (quoted) and
   `InstallLocation`, installs into `$LOCALAPPDATA\${PRODUCTNAME}` for the current user, and registers
   `Software\Classes\<scheme>` only for the deep-link protocols a build declares. On this machine:
-  `HKCU\…\Uninstall\MixDB` holds `DisplayIcon = "C:\Users\…\AppData\Local\MixDB\mixdb.exe"`, the
-  binary is `mixdb.exe` in lower case, and neither `App Paths\MixDB.exe` nor `App Paths\mixdb.exe`
+  `HKCU\…\Uninstall\the standalone client` holds `DisplayIcon = "C:\Users\…\AppData\Local\the standalone client\<old>.exe"`, the
+  binary is `<old>.exe` in lower case, and neither `App Paths\<Old>.exe` nor `App Paths\<old>.exe`
   exists. T80's `DetectHints.windows` says *"an executable name, looked for under App Paths"*, which
   would find nothing.
 - **The variable a credential travels in already has a name.** T82a's D2 fixed
@@ -60,8 +60,8 @@ machine this was designed on.
   credential was stored and never what it was.
 - **A `desktop-app` extension installs today**: `install.rs` gives a kind with no artifact its
   directory and its row, and `manifest::DesktopApp` carries `scheme` and per-OS `detect` hints —
-  *declared only*, with T83 named as the consumer. The testkit fixture `mixdb.toml` is one.
-- **MixDB speaks four kinds** — `DbKind::{Mysql, Postgres, Mongo, Redis}` — and its
+  *declared only*, with T83 named as the consumer. The testkit fixture `<old>.toml` is one.
+- **The standalone client speaks four kinds** — `DbKind::{Mysql, Postgres, Mongo, Redis}` — and its
   `ConnectionConfig` is host, port, username, password, database. What a handoff has to say fits in
   five fields.
 
@@ -85,13 +85,13 @@ the trait; the roadmap.
 
 **Out:**
 
-- **MixDB's receiving side.** Reading the URL from `argv`, the password from the environment, and
-  opening the tab is work in the `mixdb` repository. This design writes the contract it implements
+- **The standalone client's receiving side.** Reading the URL from `argv`, the password from the environment, and
+  opening the tab is work in the `<old>` repository. This design writes the contract it implements
   (D2) and changes nothing there; the coupling stays one-directional, as `features/extensions.md`
   requires.
-- **MixDB in the registry** and a shared keyring naming convention — T84. Until it lands, the
+- **The standalone client in the registry** and a shared keyring naming convention — T84. Until it lands, the
   extension is installed from a directory with `mix extension install --path`.
-- **A `mixdb://` scheme registration on MixDB's behalf.** MixEngine never writes another
+- **A `<old>://` scheme registration on the standalone client's behalf.** MixEngine never writes another
   application's registry keys, `Info.plist` or desktop entries.
 - **Flatpak and Snap launches.** A desktop entry whose `Exec` is `flatpak run …` starts the sandbox
   without the environment this design relies on; it is found, launched, and the credential does not
@@ -101,7 +101,7 @@ the trait; the roadmap.
 
 ### D1 — The scheme is a wire format, not a dispatch
 
-`features/extensions.md` says *"a `mixdb://` deep link … carrying host, port, user and a credential
+`features/extensions.md` says *"a `<old>://` deep link … carrying host, port, user and a credential
 fetched from the OS keyring"*, and the roadmap says *"never placed in an argument or a URL"*. Both are
 kept, by not handing the URL to the operating system.
 
@@ -109,12 +109,12 @@ Following a URL scheme — `ShellExecute`, `open`, `xdg-open` — means three th
 accept. The credential cannot travel beside it, because none of the three lets the caller set the
 launched process's environment without putting it on a command line. Whatever program has
 *registered* the scheme receives the handoff, and a scheme registration is a claim any program can
-make. And on the MixDB that exists today nothing has registered it at all.
+make. And on the standalone client's that exists today nothing has registered it at all.
 
 So the platform layer **locates the installed application and starts its binary directly**, with the
 URL as its one argument and the credential in its environment. The URL is the format the address is
-spelled in — the one MixDB will read out of `argv` on Windows and Linux and out of the Apple event on
-macOS the day it registers the scheme — and MixEngine never asks the OS who owns `mixdb://`.
+spelled in — the one the standalone client will read out of `argv` on Windows and Linux and out of the Apple event on
+macOS the day it registers the scheme — and MixEngine never asks the OS who owns `<old>://`.
 
 ### D2 — The credential is in the environment of the process this daemon starts, under the name T82a fixed
 
@@ -124,7 +124,7 @@ Four places a password could be put, and three are refused.
   machine, logged by process auditing on Windows, and one `ps` away everywhere. Refused by the
   roadmap line itself.
 - **A one-shot file** (`features/extensions.md`'s alternative): a password on disk for the length of
-  a race, in a format MixDB does not read. T82a's *"on no disk"* applies.
+  a race, in a format the standalone client does not read. T82a's *"on no disk"* applies.
 - **The environment of a process the daemon spawns**: `/proc/<pid>/environ` is owner-only and
   ptrace-guarded, `ps -E` shows another user's environment to root alone, and nothing audits it.
   It is what T82a chose for php-fpm and what the recipes already do for `mariadb-admin ping`.
@@ -134,27 +134,27 @@ The variable is **`MIXENGINE_DB_PASSWORD`** — `extensions::pools::CREDENTIAL_E
 describes itself:
 
 ```
-mixdb://connect?kind=mysql&host=127.0.0.1&port=3306&user=root&database=blog&label=mariadb%40main&password_env=MIXENGINE_DB_PASSWORD
+<old>://connect?kind=mysql&host=127.0.0.1&port=3306&user=root&database=blog&label=mariadb%40main&password_env=MIXENGINE_DB_PASSWORD
 ```
 
 `kind` is one of `mysql`, `postgres`, `redis` (D5). `user`, `database` and `password_env` are absent
 when there is nothing to say: a Redis handoff carries `kind`, `host`, `port` and `label`. `label` is
-the service id, for the tab MixDB will name. Values are percent-encoded by a ten-line encoder in
+the service id, for the tab the standalone client will name. Values are percent-encoded by a ten-line encoder in
 `services::handoff` — everything outside the unreserved set becomes `%XX` — rather than by a crate
 taken for one function.
 
 **What the receiving side owes**, written into `features/extensions.md` as the contract:
 read `argv[1]`, read the variable, **remove it from the process environment before anything else
-starts** — a Tauri application forks webview helpers and MixDB's terminal module spawns shells, and
+starts** — a Tauri application forks webview helpers and the standalone client's terminal module spawns shells, and
 each inherits what the parent still holds — and never write it to its saved-connections file. The
 password is the user's own, on a machine the security model calls single-user; what the removal
-buys is that a shell opened inside MixDB does not print it.
+buys is that a shell opened inside the standalone client does not print it.
 
 ### D3 — The client is the installed `desktop-app` extension, and having none is a state
 
-The hints that find MixDB — `MixDB.exe`, a bundle identifier, `mixdb.desktop` — live in
+The hints that find the standalone client — `<Old>.exe`, a bundle identifier, `<old>.desktop` — live in
 `[desktop-app.detect]`, and T80 put them there so that *the manifest says what each system looks it
-up by*. This design reads them from the installed extension's manifest and nowhere else. A MixDB
+up by*. This design reads them from the installed extension's manifest and nowhere else. A standalone-client
 identity compiled into the daemon would be a second copy T84's registry entry then has to agree
 with, and a product name in a crate that has so far named none.
 
@@ -184,8 +184,8 @@ nothing. The Windows hint stays what it is — an executable's file name — and
    The documented mechanism, honoured by Inno Setup, MSI and most hand-written installers.
 2. `HKCU` then `HKLM`, `Software\Microsoft\Windows\CurrentVersion\Uninstall\*` and the
    `WOW6432Node` table beside it: every subkey's `DisplayIcon`, with its quotation marks and any `,0`
-   icon index stripped, whose file name equals the hint **case-insensitively** — `mixdb.exe` is what
-   the installer wrote and `MixDB.exe` is what the manifest says, and NTFS agrees they are one file.
+   icon index stripped, whose file name equals the hint **case-insensitively** — `<old>.exe` is what
+   the installer wrote and `<Old>.exe` is what the manifest says, and NTFS agrees they are one file.
    A subkey with no `DisplayIcon` but an `InstallLocation` under which `<hint>` exists counts too.
 
 Enumerating the uninstall table is a few hundred `RegEnumKeyExW` calls and takes milliseconds; it is
@@ -208,7 +208,7 @@ first file named `<hint>` wins. `TryExec=` names the program where present, else
 arguments; a bare name resolves on this process's `PATH`. The reader of that line is a pure function
 compiled on every system and tested on every system, like `reserved`'s and `prompt`'s tables.
 
-### D5 — The protocol is the recipe's answer, and it is not MixDB's vocabulary
+### D5 — The protocol is the recipe's answer, and it is not the standalone client's vocabulary
 
 The URL has to say what to speak. `mariadb` speaks MySQL's protocol; that is a fact about the server,
 not about any client. So `Recipe` grows `fn protocol(&self) -> Option<DatabaseProtocol>` beside
@@ -221,7 +221,7 @@ client opens. `DatabaseProtocol` lives in `mixengine-proto`, since the report ca
 `extensions::database::endpoint` does and answers `Address { protocol, host, port, administrator }`
 — or `None` for a service with no protocol. It is a second function rather than a change to
 `endpoint` because the two disagree on Redis on purpose: phpMyAdmin cannot administer a cache, and
-MixDB can open one.
+The standalone client can open one.
 
 `database.client` answers `protocol: null` for such a service, as a state. `database.open` refuses
 it with `invalid_argument` naming the service — the T77a distinction: this operating system can do
@@ -252,7 +252,7 @@ A client opened onto a stopped server shows "connection refused", and since T69 
 has used for a while *is* stopped. `database.open` calls `Registry::ensure_running` — the same graph,
 plan and walk `service.start` uses, so a dependency comes up first and a first run is performed,
 which is also what puts the superuser credential in the keyring for step 9 below to read. It is asked
-**after** the client is located and **before** the credential is read: a machine without MixDB
+**after** the client is located and **before** the credential is read: a machine without the standalone client
 should not first pay for a database server coming up, and a credential should be read as late as the
 order allows.
 
@@ -267,17 +267,17 @@ imported, a bundle whose binary the installer left unsigned on a machine that re
 
 And the application can **hand on and exit 0**: this is what every Tauri application with the
 single-instance plugin does when it is already running — the second process forwards its `argv` to
-the first and ends. MixDB will do this the day it adopts that plugin, and a design that read a fast
+the first and ends. The standalone client will do this the day it adopts that plugin, and a design that read a fast
 exit as a failure would fail on the most common case of all, the client already being open.
 
 So the launcher waits up to one second on `Detached::exited`: still running is `running { pid }`;
 exited with success is `handed_on`; exited otherwise is `Launch::Failed { status }`, which the daemon
-reports as `process_failed` — *"MixDB exited a moment after it was started (exit code 1)"* — with the
+reports as `process_failed` — *"the standalone client exited a moment after it was started (exit code 1)"* — with the
 program's path in the hint so a person can run it by hand and read what it says. One second is a
 heuristic and is written down as one; it is also what nobody typing `mix database open` will notice.
 
 **A handoff to a running instance cannot carry the environment**, since the daemon only reaches the
-process it started. That is MixDB's to solve on the day it forwards — its second process reads the
+process it started. That is the standalone client's to solve on the day it forwards — its second process reads the
 variable before it forwards and sends it over its own channel — and the contract in
 `features/extensions.md` says so.
 
@@ -285,7 +285,7 @@ variable before it forwards and sends it over its own channel — and the contra
 
 On Unix the launched application stays this daemon's child (measured above), and a daemon that
 never waits on it leaves a zombie for as long as the daemon runs. `spawn_blocking(child.wait())` per
-launch would be a thread held for the life of every MixDB window somebody opens. Instead the shared
+launch would be a thread held for the life of every the standalone client window somebody opens. Instead the shared
 launcher hands each `Detached` to **one** thread, started on the first launch, that polls
 `exited()` every few seconds and drops what has ended, logging the exit at `debug`. On Windows the
 same thread costs nothing and closes the handle. It is in `mixengine-platform` beside the launcher,
@@ -330,12 +330,12 @@ nothing, which is the ordinary machine.
 ```
 mix database client mariadb@main
   daemon: handoff::address        → { mysql, 127.0.0.1, 3306, root }   (or protocol: null)
-          extension_store::all    → kind desktop-app → mixdb, hints
-          host.desktop_apps().locate("MixDB.exe")   [spawn_blocking]
+          extension_store::all    → kind desktop-app → <old>, hints
+          host.desktop_apps().locate("<Old>.exe")   [spawn_blocking]
              windows: App Paths → Uninstall\*\DisplayIcon
              macos:   mdfind bundle id → defaults read CFBundleExecutable
              linux:   XDG applications/<hint>.desktop → TryExec/Exec
-  answer: { service, protocol: "mysql", client: installed { mixdb, "MixDB", program } }
+  answer: { service, protocol: "mysql", client: installed { <old>, "the standalone client", program } }
 
 mix database open mariadb@main --user blog --database blog
   daemon: validated_identifier(user), validated_identifier(database)
@@ -344,7 +344,7 @@ mix database open mariadb@main --user blog --database blog
           services.ensure_running(mariadb@main)        (D7; first run stores root's credential)
           databases::read(keyring, "mariadb@main/blog") → password   (None → precondition_failed)
           handoff::url(scheme, address, user, database)
-            mixdb://connect?kind=mysql&host=127.0.0.1&port=3306&user=blog&database=blog
+            <old>://connect?kind=mysql&host=127.0.0.1&port=3306&user=blog&database=blog
                             &label=mariadb%40main&password_env=MIXENGINE_DB_PASSWORD
           host.desktop_apps().launch(program, [fixed args…, url], {MIXENGINE_DB_PASSWORD: password})
             spawn_detached(program, args, program's directory, extra env)
@@ -352,7 +352,7 @@ mix database open mariadb@main --user blog --database blog
             reaper takes the Detached
   answer: { …, secret: "mariadb@main/blog", client: installed {…}, launched: running { pid } }
 
-  mixdb:  argv[1] = the URL; getenv MIXENGINE_DB_PASSWORD, then unset it; opens the tab   (out of repo)
+  <old>:  argv[1] = the URL; getenv MIXENGINE_DB_PASSWORD, then unset it; opens the tab   (out of repo)
 ```
 
 ## Testing
@@ -366,8 +366,8 @@ account never contains the word `password=` — the T77a shape of asserting what
 answers `mysql` and `root`; `redis` answers `redis` and no account; `memcached` answers `None`; a
 service with no row is `NotFound`. `Recipe::protocol` per recipe.
 
-**Unit, `mixengine-platform`, on every system.** `desktop::entry::exec_line`: `mixdb %U` →
-`mixdb`, no args; `"/opt/My App/bin/mixdb" --flag %u` → program with the space, `["--flag"]`;
+**Unit, `mixengine-platform`, on every system.** `desktop::entry::exec_line`: `<old> %U` →
+`<old>`, no args; `"/opt/My App/bin/<old>" --flag %u` → program with the space, `["--flag"]`;
 `TryExec` wins over `Exec`; a line with only field codes. `desktop::entry::unquoted`: `"C:\a\b.exe"`
 → `C:\a\b.exe`; `C:\a\b.exe,0` → `C:\a\b.exe`; a bare path unchanged.
 
@@ -384,7 +384,7 @@ index. Linux `locate` against a temporary directory named as the only data dir.
 `fakeservice` spec declared under that id, on a mock host: no extension → `no_client`; the fixture
 manifest installed and the default host → `not_installed` naming what was searched; `with_desktop_app`
 → `database.open` answers `launched: running`, the recorder holds one launch whose last argument
-starts with `mixdb://connect?kind=redis` and whose `env_names` is empty; `--user` on Redis →
+starts with `<old>://connect?kind=redis` and whose `env_names` is empty; `--user` on Redis →
 `invalid_argument`; `memcached@main` → `client` answers `protocol: null` and `open` refuses by name.
 With rows for `mariadb` / `mariadb@main`: no credential in the mock keyring → `precondition_failed`
 with T77a's sentence; a seeded `mariadb@main/root` → launched with `env_names ==
@@ -397,7 +397,7 @@ entry → `precondition_failed` naming `blog`.
 for `redis@main`: `mix database client redis@main --json` answers `protocol: "redis"` and
 `client.state: "not_installed"` with a non-empty `searched`; `mix database open redis@main` exits `1`
 and prints the extension's homepage; with no extension both answer `no_client` and `open` prints
-`mix extension install mixdb`. **This is the (P) verification**: each system's own registry, Spotlight
+`mix extension install <old>`. **This is the (P) verification**: each system's own registry, Spotlight
 or XDG walk is what answers.
 
 **The real run, `crates/mixengine-cli/tests/mariadb.rs`, Linux only, in CI's keyring session.** A
@@ -413,21 +413,21 @@ and it is what proves D2 rather than restating it.
 | Risk | Answer |
 | --- | --- |
 | The password reaches a log, a shell history or a URL | D2 — environment only; the mock records names; the Linux run records presence, never value |
-| Whatever registered `mixdb://` receives the handoff | D1 — the located binary is started directly; the OS is never asked who owns the scheme |
-| A running MixDB never sees the credential | D8 — `handed_on` is reported honestly; the contract says what MixDB's second process owes |
-| A shell opened inside MixDB inherits the variable | D2 — the contract asks the receiver to remove it at start; the exposure is the user's own session |
+| Whatever registered `<old>://` receives the handoff | D1 — the located binary is started directly; the OS is never asked who owns the scheme |
+| A running the standalone client never sees the credential | D8 — `handed_on` is reported honestly; the contract says what the standalone client's second process owes |
+| A shell opened inside the standalone client inherits the variable | D2 — the contract asks the receiver to remove it at start; the exposure is the user's own session |
 | The daemon has no display to hand the app | D8 — a fast non-zero exit is `process_failed` with the program's path |
 | Zombies on Unix | D9 |
 | Tauri's installer writes no App Paths entry | D4 — measured, and the uninstall table is read too |
 | Spotlight is off on macOS | D4 — reported as the tool's failure, not as "not installed" |
-| A Flatpak or Snap MixDB | Out of scope, named above: found and launched, credential does not cross the sandbox |
+| A Flatpak or Snap the standalone client | Out of scope, named above: found and launched, credential does not cross the sandbox |
 | Two `open`s at once | Two windows, and no lock: `ensure_running` is idempotent and nothing here writes |
 | A locked keyring | `database.create`'s answer — the read blocks off the runtime and a person is at the machine to unlock it |
 
 ## What this leaves
 
-`features/extensions.md`'s integration list has its first two items built: MixDB is found per system,
+`features/extensions.md`'s integration list has its first two items built: the standalone client is found per system,
 and `mix` hands it a managed database with the password in one process's environment and nowhere
-else. The third and fourth — MixDB in the registry, and one keyring convention both applications
-read — are T84. And `mixdb` has a contract to implement: read the URL, read the variable, forget
+else. The third and fourth — the standalone client in the registry, and one keyring convention both applications
+read — are T84. And `<old>` has a contract to implement: read the URL, read the variable, forget
 the variable, open the tab.

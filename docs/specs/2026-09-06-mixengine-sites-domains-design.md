@@ -25,8 +25,8 @@ Ngày 2026-09-06. Pha 2 của [roadmap/mixengine-module.md](../roadmap/desktop/m
   trong 9 màn hình của `client-surface.md` và không có dòng nào trong bảng ánh xạ màn hình → pha của
   roadmap. Mục 2 dưới đây nói rõ Pha này định thu hẹp việc đó lại thế nào — xem **Câu hỏi 1**.
 - Không `cert.list`, `cert.renew`, `cert.ca_install` — cả ba bị daemon từ chối có lý do (roadmap đã
-  ghi), MixDB không gọi.
-- Không tự chọn network interface khi máy có nhiều ứng viên — daemon từ chối, MixDB chỉ hiện lại lý do
+  ghi), the standalone client không gọi.
+- Không tự chọn network interface khi máy có nhiều ứng viên — daemon từ chối, the standalone client chỉ hiện lại lý do
   daemon đưa ra, không tự đoán ứng viên nào đúng.
 - Không `site.delete` — roadmap T2.2 chỉ nói "tạo và sửa". Xem **Câu hỏi 2**.
 
@@ -84,7 +84,7 @@ suy đoán):
 `site.show` (`SiteQuery { site: { domain } }` → `SiteDetail`). Đây là chỗ ba việc chỉ lookup mới trả
 lời được, và form Sửa dựng trên nó chứ không dựng trên `SiteSummary`:
 
-- `doc_root_full` — đường tuyệt đối, **daemon đã ghép `root` (thư mục project) với `doc_root`**, MixDB
+- `doc_root_full` — đường tuyệt đối, **daemon đã ghép `root` (thư mục project) với `doc_root`**, the standalone client
   không tự ghép hai chuỗi lại. "Mở trong file manager" dùng thẳng field này.
 - `doc_root_exists` — báo cáo, không từ chối (nguyên văn spec bên đó): thư mục `public/` sinh ra từ
   `npm run build` chưa chạy vẫn là một site hợp lệ.
@@ -100,7 +100,7 @@ lời được, và form Sửa dựng trên nó chứ không dựng trên `SiteS
 - **Domains** — danh sách có thứ tự, đầu danh sách là domain chính; thêm/bớt/kéo thả để đổi thứ tự.
   `SiteUpdate.domains` **thay thế toàn bộ danh sách**, không merge — gửi cả danh sách hiện tại cộng
   thay đổi, không gửi mỗi domain mới.
-- **Doc root** — text field + nút duyệt thư mục (dialog file hệ thống MixDB đã có ở module khác, tái
+- **Doc root** — text field + nút duyệt thư mục (dialog file hệ thống the standalone client đã có ở module khác, tái
   dùng chứ không viết lại).
 - **Kind** — `php-fpm` (chọn pool từ `service.list` lọc theo runtime PHP), `static` (không thêm field
   nào), `reverse-proxy` (một URL `http`/`https` có host), `node-app` (một cổng loopback).
@@ -111,7 +111,7 @@ lời được, và form Sửa dựng trên nó chứ không dựng trên `SiteS
 - **State** — `enabled`/`disabled`, sửa qua `site.update { state }`, không phải qua service action nào.
 
 Mở doc root / mở URL / mở terminal tại site: ba khả năng module `tools` đã có sẵn ở nơi khác trong
-MixDB (roadmap nói thẳng "MixDB đã có sẵn cả ba đường đó") — Pha này nối chúng vào nút trên hàng site,
+The standalone client (roadmap nói thẳng "the standalone client đã có sẵn cả ba đường đó") — Pha này nối chúng vào nút trên hàng site,
 không viết lại file-manager hay terminal opener nào mới.
 
 ## 3. Chia sẻ LAN — T2.3, T2.4
@@ -144,7 +144,7 @@ Một màn hình, ba khối, dựng trên bốn method.
 **là cả `domain.list` lẫn diagnostic của từng tên** — roadmap gọi chúng bằng hai cái tên nhưng đây
 chỉ là một method: bỏ trống `domain` để thấy mọi tên, truyền một tên để refresh đúng hàng đó sau khi
 sửa. `domain.add` (`DomainAdd { site, domain, accept_risky_tld }`) / `domain.remove`
-(`DomainRemove { domain }` — không cần nêu site, tên tự xác định site của nó, chỉ MixDB không được tự
+(`DomainRemove { domain }` — không cần nêu site, tên tự xác định site của nó, chỉ the standalone client không được tự
 suy ra ngược lại).
 
 Bảng: domain, site khai nó (hoặc trống — "tên này chưa ai khai"), `hosts_entry`, `wildcard`,

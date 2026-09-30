@@ -1,5 +1,6 @@
-//! "Open" on the Services detail screen — opens a `db` tab straight in the running process, going
-//! neither through `database.open` (which starts an external process) nor through the OS.
+//! *Explore data* on the dashboard and "Open" on the Services detail screen — opens a `db` tab
+//! straight in the running process, going neither through `database.open` (which starts an external
+//! process) nor through the OS.
 //!
 //! Repeats exactly the three steps Phase 0 used for `mixlab://connect` — build a `Handoff`, keep it
 //! in `HandoffState`, call `crate::launch::request` — differing only in that the `Handoff` is built
@@ -40,7 +41,7 @@ fn db_kind_of(protocol: &str) -> Result<DbKind, AppError> {
 /// takes or forwards the password outside this function — it lives in the local variable
 /// `password` and only goes into the `Handoff` waiting for `db` to pick it up.
 #[tauri::command]
-pub async fn mixengine_database_open_in_mixdb(
+pub async fn mixengine_database_explore_data(
     app: AppHandle,
     handoffs: State<'_, HandoffState>,
     service: String,

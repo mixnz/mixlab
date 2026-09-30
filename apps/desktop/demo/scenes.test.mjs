@@ -34,7 +34,7 @@ describe("scenes", () => {
     for (const theme of THEMES) {
       it(`${scene.id}-${theme}: the session restores its tab, and its module accepts the slot`, () => {
         const storage = storageFor(scene, theme);
-        const session = parseSession(storage["mixdb-session"], MODULE_IDS);
+        const session = parseSession(storage["mixlab-session"], MODULE_IDS);
         expect(session?.tabs).toHaveLength(1);
         expect(session?.activeId).toBe(session?.tabs[0].id);
         expect(PARSERS[scene.moduleId](session?.tabs[0].state)).toEqual(scene.state);

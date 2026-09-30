@@ -11,7 +11,7 @@
 //! come from the machine, and the settings screen asks for a path instead of offering a button.
 //!
 //! A downloaded copy lives under the app's data directory and is never put on `PATH`: it belongs
-//! to MixDB rather than to the machine.
+//! to MixLab rather than to the machine.
 
 use crate::error::AppError;
 use serde::Serialize;
@@ -128,7 +128,7 @@ impl Tool {
 pub enum Source {
     /// A path the user picked themselves, which wins over everything else.
     Custom,
-    /// The copy MixDB downloaded.
+    /// The copy MixLab downloaded.
     Downloaded,
     /// Something already on this machine — on PATH, or in a usual install directory.
     System,
@@ -144,7 +144,7 @@ pub struct ToolStatus {
     /// Where the tool is, or `None` when it is nowhere to be found.
     pub path: Option<String>,
     pub source: Option<Source>,
-    /// Whether MixDB can fetch this tool for itself on this platform. An answer about the suite
+    /// Whether MixLab can fetch this tool for itself on this platform. An answer about the suite
     /// rather than the tool, repeated on each of its members so the settings screen — which reads
     /// tools, not suites — has it without asking a second question.
     pub downloadable: bool,
@@ -282,7 +282,7 @@ fn expand_dir(pattern: &str) -> Vec<PathBuf> {
         .collect()
 }
 
-/// Where `tool` is and how it got there: the path the user chose first, then the copy MixDB
+/// Where `tool` is and how it got there: the path the user chose first, then the copy MixLab
 /// downloaded, then whatever this machine already had. `None` when it is nowhere.
 pub fn locate(tool: Tool, tools_dir: &Path) -> Option<(PathBuf, Source)> {
     if let Some(chosen) = load_overrides(tools_dir).get(tool.stem()) {
@@ -337,8 +337,8 @@ pub fn status(tools_dir: &Path) -> Vec<ToolStatus> {
         .collect()
 }
 
-/// Deletes the copy MixDB downloaded. Anything found on the machine itself is left alone — it was
-/// never MixDB's to remove.
+/// Deletes the copy MixLab downloaded. Anything found on the machine itself is left alone — it was
+/// never MixLab's to remove.
 pub fn uninstall(suite: Suite, tools_dir: &Path) -> Result<(), AppError> {
     let dir = suite.dir(tools_dir);
     if !dir.exists() {
@@ -357,7 +357,7 @@ pub fn uninstall(suite: Suite, tools_dir: &Path) -> Result<(), AppError> {
 /// before running anything, so reaching this message means it went missing in between.
 ///
 /// What the message offers depends on what this platform can actually do: telling someone on macOS
-/// to let MixDB download the MySQL tools is telling them to press a button that fails.
+/// to let MixLab download the MySQL tools is telling them to press a button that fails.
 pub fn require(tool: Tool, tools_dir: &Path) -> Result<PathBuf, AppError> {
     find(tool, tools_dir).ok_or_else(|| match (tool.suite(), downloadable(tool.suite())) {
         (Suite::Mysql, true) => err!("error.mysqlToolNotFound", tool = tool.stem()),
@@ -487,7 +487,7 @@ fn archive_source(suite: Suite) -> Option<(String, &'static str)> {
     }
 }
 
-/// Whether MixDB has anywhere to download this suite from on this platform. `false` means the
+/// Whether MixLab has anywhere to download this suite from on this platform. `false` means the
 /// tools have to come from the machine — from a package manager, or from a path chosen in
 /// Settings — and no button should offer otherwise.
 pub fn downloadable(suite: Suite) -> bool {
@@ -496,7 +496,7 @@ pub fn downloadable(suite: Suite) -> bool {
 
 /// Checks a downloaded archive against the checksum pinned for it.
 ///
-/// A mismatch means the file is not the one this build of MixDB was made to unpack: a release
+/// A mismatch means the file is not the one this build of MixLab was made to unpack: a release
 /// withdrawn or rebuilt under the same name, a download that came back truncated, or something
 /// between here and the vendor handing over a different file. None of those should be unpacked
 /// and then run with the credentials of every database the user connects to.
@@ -798,7 +798,7 @@ const STAGING_PREFIX: &str = "download-";
 
 /// How long a staging directory has to have been untouched before it counts as abandoned.
 ///
-/// Nothing stops a second copy of MixDB being open, and a sweep at startup must not delete the
+/// Nothing stops a second copy of MixLab being open, and a sweep at startup must not delete the
 /// download the other one is in the middle of. Six hours is far past any download that is still
 /// going and far short of leaving the disk full until the next install.
 const STALE_AFTER: Duration = Duration::from_secs(6 * 60 * 60);
@@ -967,7 +967,7 @@ mod tests {
     /// each platform, and would be testing the clock rather than the rule.
     #[test]
     fn the_sweep_takes_abandoned_downloads_and_leaves_everything_else() {
-        let root = std::env::temp_dir().join(format!("mixdb-test-{}", uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("mixlab-test-{}", uuid::Uuid::new_v4()));
         let live = root.join("download-live");
         // An install that got as far as unpacking: what the sweep must be able to remove whole.
         std::fs::create_dir_all(root.join("download-dead/unpacked/bin")).unwrap();
@@ -977,7 +977,7 @@ mod tests {
         std::fs::create_dir_all(root.join("mysql/bin")).unwrap();
         std::fs::write(root.join("mysql/bin/mysqldump"), b"x").unwrap();
 
-        // Nothing is old enough yet — which is the case of a second copy of MixDB downloading.
+        // Nothing is old enough yet — which is the case of a second copy of MixLab downloading.
         sweep_staging_older_than(&root, Duration::from_secs(6 * 60 * 60));
         assert!(root.join("download-dead").is_dir());
         assert!(live.is_dir());
@@ -1015,7 +1015,7 @@ mod tests {
             return;
         }
         let tools_dir =
-            std::env::temp_dir().join(format!("mixdb-download-{}", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("mixlab-download-{}", uuid::Uuid::new_v4()));
         let installed = install(suite, &tools_dir, &|_| {});
         // Every check runs before the cleanup, so that a failure still takes the download with it
         // rather than leaving hundreds of megabytes behind on the runner.
@@ -1080,7 +1080,7 @@ mod tests {
     const EMPTY_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
     fn temp_file(contents: &[u8]) -> PathBuf {
-        let path = std::env::temp_dir().join(format!("mixdb-test-{}", uuid::Uuid::new_v4()));
+        let path = std::env::temp_dir().join(format!("mixlab-test-{}", uuid::Uuid::new_v4()));
         std::fs::write(&path, contents).unwrap();
         path
     }
@@ -1111,7 +1111,7 @@ mod tests {
     /// path segment (`Tools\*\bin`) or only part of one (`MariaDB *`).
     #[test]
     fn a_star_expands_against_what_is_on_disk() {
-        let root = std::env::temp_dir().join(format!("mixdb-test-{}", uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("mixlab-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(root.join("MariaDB 11.4").join("bin")).unwrap();
         std::fs::create_dir_all(root.join("Postgres").join("bin")).unwrap();
 
@@ -1128,7 +1128,7 @@ mod tests {
     /// whole reason a download is unpacked rather than copied out flat.
     #[test]
     fn a_download_is_laid_out_the_way_the_tools_are_run_from() {
-        let root = std::env::temp_dir().join(format!("mixdb-test-{}", uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("mixlab-test-{}", uuid::Uuid::new_v4()));
         let unpacked = root.join("unpacked").join("mysql-8.0.40");
         // Where each platform's archive keeps its OpenSSL, and where the clients then look for it.
         let (from, into, library) = if cfg!(windows) {
@@ -1220,7 +1220,7 @@ mod tests {
             )
         };
 
-        let root = std::env::temp_dir().join(format!("mixdb-test-{}", uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("mixlab-test-{}", uuid::Uuid::new_v4()));
         let unpacked = root.join("unpacked").join("pgsql");
         std::fs::create_dir_all(unpacked.join("bin")).unwrap();
         std::fs::create_dir_all(unpacked.join(from)).unwrap();

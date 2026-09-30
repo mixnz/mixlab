@@ -2,7 +2,7 @@
 //!
 //! Two pure things and one read. [`address`] joins a `services` row to its recipe the way
 //! [`crate::extensions::database::endpoint`] does, and disagrees with it on purpose about Redis:
-//! phpMyAdmin cannot administer a cache, and MixDB can open one. [`url`] spells the connection the
+//! phpMyAdmin cannot administer a cache, and MixLab can open one. [`url`] spells the connection the
 //! way the client reads it, and [`encode`] is the ten lines that keep a crate out of the tree for
 //! one function.
 //!
@@ -44,7 +44,7 @@ pub use crate::extensions::pools::CREDENTIAL_ENV;
 /// this task the string was spelled by
 /// [`Context::secret_address`](crate::generate::recipe::Context::secret_address) for the recipes,
 /// again by `database.open` for the handoff, and read back by the daemon's credential reader. The
-/// convention is published to another application — MixDB reads these entries — but it reads the
+/// convention is published to another application — MixLab reads these entries — but it reads the
 /// [`SecretAddress`](mixengine_proto::SecretAddress) the daemon *hands it* rather than composing
 /// one, which is what let T126 change the shape at all.
 #[must_use]
@@ -112,7 +112,7 @@ pub struct Connection<'a> {
 
     /// The key half of the keyring address the password sits at, where there is one.
     ///
-    /// **The key and never the namespace** — roadmap task **T84**, the design's D5. MixDB registers
+    /// **The key and never the namespace** — roadmap task **T84**, the design's D5. MixLab registers
     /// `mixlab://` with the operating system, so a URL is something a web page can make it receive; a
     /// URL that could name the *credential store's namespace* would be a way to read any secret on
     /// the machine and post it to a stranger's server as a password. A key it names reaches only
@@ -251,7 +251,7 @@ mod tests {
     }
 
     /// **One composition, published to another application** — roadmap task **T84**, the design's
-    /// D6. The address MixDB is told to read and the address MixEngine writes are the same string
+    /// D6. The address MixLab is told to read and the address MixEngine writes are the same string
     /// because they are the same function, not because two `format!`s agree by inspection.
     #[test]
     fn the_key_a_recipe_writes_and_the_key_a_handoff_names_are_one_function() {
@@ -279,7 +279,10 @@ mod tests {
         // An address from before this task has nothing older behind it, and saying so is what
         // keeps a miss to one lookup.
         assert_eq!(secret_key_before_homes("mariadb@main/root"), None);
-        assert_eq!(secret_key_before_homes("extensions/mixdb/config"), None);
+        assert_eq!(
+            secret_key_before_homes("extensions/phpmyadmin/config"),
+            None
+        );
     }
 
     /// Every recipe answers, and only the databases say a word.

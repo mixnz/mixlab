@@ -311,7 +311,7 @@ fn toml_version(manifest: &str, table: &[&str], what: &str) -> String {
 
 /// The window reports the version of the release it was cut with, and never one of its own.
 ///
-/// **What this stops.** `apps/desktop` carried MixDB's own version through phase 11, and a bump of
+/// **What this stops.** `apps/desktop` carried the standalone client's own version through phase 11, and a bump of
 /// the root manifest could not reach it — the crate is not a member of this workspace and cannot
 /// inherit from it. A window built from a release tag while one of these three disagreed would
 /// name the wrong version in Settings, offer the wrong one to the updater and put it in every

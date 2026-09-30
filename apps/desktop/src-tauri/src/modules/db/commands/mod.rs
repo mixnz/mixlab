@@ -568,7 +568,7 @@ async fn mongo_endpoint(
     Ok((uri, connection.endpoint.clone()))
 }
 
-/// Where MixDB keeps the tools it downloaded for itself.
+/// Where MixLab keeps the tools it downloaded for itself.
 fn tools_dir(app: &AppHandle) -> Result<PathBuf, AppError> {
     app_data_dir(app).map(|dir| dir.join("tools"))
 }

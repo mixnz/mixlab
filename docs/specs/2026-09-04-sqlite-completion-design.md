@@ -238,7 +238,7 @@ cho các lệnh DDL khác trong file này:
    tự sinh lại theo `CREATE TABLE` mới, không cần replay).
 4. `BEGIN`.
 5. `CREATE TABLE <tên tạm> (...)` — text đã vá ở B3/B4, cộng phần đuôi sau dấu ngoặc đóng cuối cùng của
-   bản gốc (`WITHOUT ROWID`, `STRICT`, nếu có — giữ nguyên xi). Tên tạm: `"__mixdb_rebuild_" + table`,
+   bản gốc (`WITHOUT ROWID`, `STRICT`, nếu có — giữ nguyên xi). Tên tạm: `"__<old>_rebuild_" + table`,
    kiểm tra trước không trùng bảng có sẵn (nếu trùng, thêm hậu tố số cho tới khi không trùng — cực
    hiếm nhưng rẻ để chắc chắn).
 6. `INSERT INTO <tên tạm> (<danh sách cột KHÔNG generated, theo đúng thứ tự cột gốc>) SELECT

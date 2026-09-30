@@ -151,7 +151,7 @@ describe("writeSession", () => {
     vi.stubGlobal("localStorage", storage);
 
     writeSession(TABS, "b");
-    const written = JSON.parse(storage.read("mixdb-session") ?? "null");
+    const written = JSON.parse(storage.read("mixlab-session") ?? "null");
     expect(written).toEqual({
       tabs: [
         { id: "a", moduleId: "db", title: "demo", state: { savedId: "c-1" } },
@@ -197,11 +197,11 @@ describe("writeSession", () => {
     // because the launch before it ran out of quota once.
     const storage = fakeStorage();
     vi.stubGlobal("localStorage", storage);
-    storage.seed("mixdb-session", '{"tabs":[],"activeId":"a"}');
+    storage.seed("mixlab-session", '{"tabs":[],"activeId":"a"}');
 
     const cycle: Record<string, unknown> = {};
     cycle.self = cycle;
     writeSession([{ id: "a", moduleId: "db", title: "d", badges: [], state: cycle }], "a");
-    expect(storage.read("mixdb-session")).toBe('{"tabs":[],"activeId":"a"}');
+    expect(storage.read("mixlab-session")).toBe('{"tabs":[],"activeId":"a"}');
   });
 });

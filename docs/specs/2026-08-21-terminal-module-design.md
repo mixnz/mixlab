@@ -9,7 +9,7 @@ Ngày: 2026-08-21
 
 ## Mục tiêu
 
-MixDB là một shell cộng các module. Hôm nay có hai: `db` và `rest`. Spec này mô tả module thứ ba —
+The standalone client là một shell cộng các module. Hôm nay có hai: `db` và `rest`. Spec này mô tả module thứ ba —
 một terminal, mở được phiên shell trên máy đang chạy app hoặc trên một máy chủ qua SSH — sống cạnh
 hai module kia mà không bên nào biết khái niệm của bên nào.
 
@@ -30,7 +30,7 @@ Ghi ra để không bị kéo vào:
 
 - **Không split pane.** Một tab là một phiên. Muốn hai phiên thì mở hai tab, đúng như module db.
 - **Không SFTP**, không duyệt file, không kéo thả file lên máy chủ.
-- **Không session restore.** Phiên chết khi thoát app, giống mọi tab khác của MixDB.
+- **Không session restore.** Phiên chết khi thoát app, giống mọi tab khác của standalone-client.
 - **Không tự kết nối lại.** Có lý do, xem mục 4.
 - **Không ghi log phiên ra file**, không phát lại phiên.
 - **Không snippet, không lệnh chạy sẵn khi vào phiên**, không profile theo màu.

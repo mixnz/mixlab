@@ -200,7 +200,7 @@ desktop at every login, and `<Hidden>` does not stop it. Four ways out were cons
 - **`<LogonType>S4U</LogonType>`**, which runs the process non-interactively and shows no window.
   Refused: it needs the batch-logon right, which is not granted to an ordinary account on every
   client SKU, and it puts the daemon on a window station from which T83's `DesktopApps` could never
-  start MixDB.
+  start the standalone client.
 - **Ship a windows-subsystem launcher binary.** Refused: a fourth binary in every artifact, for one
   system, to work around one flag.
 - **Make `mixengined` a windows-subsystem binary.** Refused outright: it would print nothing when run

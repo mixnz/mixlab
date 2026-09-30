@@ -25,7 +25,7 @@ GUI** — ADR 0011 bên đó. `mix` chỉ là client mỏng trên cùng một AP
 - **Không** đường mạng. Daemon không mở cổng TCP; `--listen` bên đó là thiết kế chưa xây.
 - **Không** cài MixEngine hộ người dùng.
 - **Không** đọc thẳng SQLite hay file config của MixEngine. Chỉ đi qua API.
-- **Không** ghi vào namespace keyring `mixengine`. MixDB chỉ đọc, và chỉ entry mà một handoff thật
+- **Không** ghi vào namespace keyring `mixengine`. The standalone client chỉ đọc, và chỉ entry mà một handoff thật
   đã chỉ tới — luật đó đã chốt ở Pha 0.
 
 ## Hiện trạng
@@ -33,15 +33,15 @@ GUI** — ADR 0011 bên đó. `mix` chỉ là client mỏng trên cùng một AP
 Ba thứ trong repo này đã sẵn và spec dựa lên cả ba.
 
 **Repo đã biết nói named pipe và Unix socket.** [`instance.rs`](../../apps/desktop/src-tauri/src/instance.rs)
-làm kênh giữa hai bản MixDB: `ClientOptions`/`ServerOptions` trên Windows,
+làm kênh giữa hai bản the standalone client: `ClientOptions`/`ServerOptions` trên Windows,
 `UnixStream`/`UnixListener` ở nơi khác, cả hai qua tokio. **Không tái sử dụng nó** — nó chở một dòng
 text mỗi chiều tới endpoint của chính mình, còn đây là HTTP/1.1 tới endpoint của người khác, có
 stream sống hàng giờ. Cái đi mượn là **hình dạng của lát cắt `#[cfg]`**, không phải code.
 
-**Đường handoff đã xong.** Pha 0 (`91abac3`, #20) dựng `mixdb://connect`, `Handoff::keyring_ref` và
+**Đường handoff đã xong.** Pha 0 (`91abac3`, #20) dựng `<old>://connect`, `Handoff::keyring_ref` và
 `secrets_resolve_mixengine`. Spec đó là
 [2026-09-03-mixengine-connection-handoff-design.md](2026-09-03-mixengine-connection-handoff-design.md).
-Ở đây nó là **chiều ngược lại**: MixEngine đẩy sang MixDB, còn spec này là MixDB hỏi MixEngine.
+Ở đây nó là **chiều ngược lại**: MixEngine đẩy sang the standalone client, còn spec này là the standalone client hỏi MixEngine.
 
 **`hyper` đã nằm trong cây.** `hyper 1.11` và `hyper-util 0.1.20` đã có trong `Cargo.lock` qua
 reqwest và tauri; khai báo trực tiếp không thêm crate mới. `tokio` đã bật `full`, nên
@@ -88,14 +88,14 @@ Lowercase vì đường dẫn Windows không phân biệt hoa thường: `--home
 `MIXENGINE_HOME=c:\dev\sandbox` là một thư mục và phải tới một daemon.
 
 **Đây là thứ đi mượn, và spec nói thẳng ra.** Thuật toán trên **không** nằm trong `bindings/` — nó
-là chi tiết nội bộ của `mixengine-platform`. Chép lại nghĩa là MixDB gánh một giả định mà CI bên kia
+là chi tiết nội bộ của `mixengine-platform`. Chép lại nghĩa là the standalone client gánh một giả định mà CI bên kia
 không canh hộ. Xem D1.
 
 ## 2. Transport, và vì sao không gọi `mix`
 
 `mix --json` chạy được mọi lệnh mutating, nên cám dỗ là gọi nó qua process. Ba thứ giết phương án đó:
 `GET /events`, `GET /logs/{id}` và `GET /metrics` đều là stream sống — một process gọi rồi thoát
-không chở được cái nào; mỗi lần hỏi tốn một process; và nó phụ thuộc `mix` có trên `PATH`, thứ MixDB
+không chở được cái nào; mỗi lần hỏi tốn một process; và nó phụ thuộc `mix` có trên `PATH`, thứ the standalone client
 không kiểm soát.
 
 Nên: `hyper` client HTTP/1.1 trên transport cục bộ, IO bọc bằng `hyper_util::rt::TokioIo`.
@@ -159,7 +159,7 @@ luật `error.rs` đã đặt cho message của driver.
 
 `GET /events`, Server-Sent Events. Sự kiện **internally tagged**: một dòng `data:` chứa
 `{"type": "…", …}`, không có dòng `event:`. Nghĩa là một handler switch theo `type`, và một biến thể
-sinh ra ở phiên bản sau tới MixDB cũ như một object bỏ qua được — nên **không được** ném lỗi khi gặp
+sinh ra ở phiên bản sau tới the standalone client cũ như một object bỏ qua được — nên **không được** ném lỗi khi gặp
 `type` lạ.
 
 Parser cần đúng bốn luật: dòng bắt đầu bằng `:` là comment (stream rảnh gửi mỗi 15 giây — đó là thứ

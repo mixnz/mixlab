@@ -43,7 +43,7 @@ export function pendingFrom(raw: string): unknown[] | null {
  * and the user is invited to allow a list that says nothing.
  *
  * `description` is the sentence the daemon writes. Prefer it: it comes from the side that knows
- * what the operation does, and rewriting it here would be MixDB making up a second explanation.
+ * what the operation does, and rewriting it here would be MixLab making up a second explanation.
  */
 export function describeOp(pending: unknown): DescribedOp {
   const row = (pending ?? {}) as { op?: unknown; description?: unknown };

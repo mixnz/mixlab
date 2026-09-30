@@ -23,7 +23,7 @@ pinned, because another checkout was running its own suite at the same time.
 program the Keychain has never seen. The Keychain asks before it hands an item to a program it does
 not recognise, and it answers that question with the program's signature. So an item one build
 wrote is a stranger's item to the next build. `apps/desktop/src-tauri/src/secrets.rs` measured the
-same thing for MixDB and designed its vault around it.
+same thing for the standalone client and designed its vault around it.
 
 **Why a test daemon reads an item it did not write.** Every test starts its daemon on a fresh
 temporary home. That home cannot hold anything an earlier build wrote, except for one path: T126's
@@ -82,7 +82,7 @@ the dialog back without any test failing. With a default, nothing has to remembe
 `--home` takes `MIXENGINE_HOME`), parsed in `Args` like every other piece of configuration.
 
 - **In a development build**, `os` is the way back to the real store. Use it for the one workflow
-  that needs it: MixDB or the desktop app reading a managed database's password through
+  that needs it: the standalone client or the desktop app reading a managed database's password through
   `SecretAddress` (D6).
 - **In a release**, `home` **fails the start** with a sentence saying why. A release that could be
   talked into keeping passwords in a plain file is a release with a downgrade switch. The flag is
@@ -144,7 +144,7 @@ together with the home.
 
 ### D6. The cost: handoff in a development build
 
-MixDB and the desktop app read a managed database's password straight from the OS store, at the
+The standalone client and the desktop app read a managed database's password straight from the OS store, at the
 `SecretAddress` the daemon hands them (`mixengine-proto/src/database.rs`,
 `apps/desktop/src-tauri/src/modules/db/handoff.rs`). On a development daemon using the file store,
 that read finds nothing.

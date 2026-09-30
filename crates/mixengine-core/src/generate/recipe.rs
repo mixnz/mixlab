@@ -428,7 +428,7 @@ impl Context {
     /// as a service that never became ready.
     ///
     /// **The composition itself is [`services::handoff::secret_key`](crate::services::handoff::secret_key)'s**
-    /// — roadmap task **T84**. It moved there when the address stopped being ours alone: MixDB reads
+    /// — roadmap task **T84**. It moved there when the address stopped being ours alone: MixLab reads
     /// these entries, so the rule is published, and a published rule spelled out in two places is
     /// one that drifts.
     #[must_use]
@@ -1045,7 +1045,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
     ///
     /// **Defaulted to [`None`] for [`administrator`](Self::administrator)'s reason**: a front end, a
     /// cache with no client protocol and a pool are not something a database client opens. Redis
-    /// answers although it names no administrator — MixDB opens a Redis, and a handoff to it simply
+    /// answers although it names no administrator — MixLab opens a Redis, and a handoff to it simply
     /// carries no credential.
     fn protocol(&self) -> Option<mixengine_proto::DatabaseProtocol> {
         None

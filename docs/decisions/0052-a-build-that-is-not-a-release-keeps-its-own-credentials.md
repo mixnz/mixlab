@@ -62,7 +62,7 @@ The design, with the reasoning for each point, is
 - **A test run never raises a credential dialog, on any system**, and never reads another home's
   credential through T126's fallback. The fallback now looks in the test home's own file, where
   nothing was ever written.
-- **MixDB and the desktop window read a managed database's password from the OS store**, at the
+- **The standalone client and the desktop window read a managed database's password from the OS store**, at the
   `SecretAddress` the daemon hands them. Against a development daemon on the file store they find
   nothing. Someone working on that hand-off starts the daemon with `--credential-store os`.
 - **CI's `services` and `bench` jobs set `MIXENGINE_CREDENTIAL_STORE=os`.** They run real servers

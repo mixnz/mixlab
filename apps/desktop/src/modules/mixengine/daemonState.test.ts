@@ -75,7 +75,7 @@ describe("applyEvent", () => {
   });
 
   it("asks for a resync when the connection dropped", () => {
-    expect(applyEvent(rows, JSON.stringify({ type: "mixdb_disconnected" })).resync).toBe(true);
+    expect(applyEvent(rows, JSON.stringify({ type: "mixlab_disconnected" })).resync).toBe(true);
   });
 
   /* A variant born in a later version must arrive here as an ignorable object — no throw, and no
@@ -164,7 +164,7 @@ describe("needsResync", () => {
   it("says yes to exactly what applyEvent says yes to", () => {
     for (const raw of [
       JSON.stringify({ type: "resync", missed: 1 }),
-      JSON.stringify({ type: "mixdb_disconnected" }),
+      JSON.stringify({ type: "mixlab_disconnected" }),
     ]) {
       expect(needsResync(raw)).toBe(true);
       expect(applyEvent(rows, raw).resync).toBe(true);

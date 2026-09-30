@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { onPreferencesChanged } from "../core/preferences";
 import type { ModuleDefinition } from "./module";
 import { MODULES, MODULE_PRESETS, PRESET_IDS, type PresetId } from "./registry";
+import { ACCENT_KEY, LANGUAGE_KEY, MODULES_KEY, SESSION_KEY, THEME_KEY } from "./storageKeys";
 
 /**
  * Which modules this window draws.
@@ -101,21 +102,14 @@ export function defaultModuleId(visible: ModuleDefinition[]): string {
   return visible[0].id;
 }
 
-/** Where the set is kept. `localStorage`, beside `mixdb-theme`, `mixdb-accent`, `mixdb-glass` and
- *  `mixdb-session` — a handful of strings about the window, read once on the way up. The prefix is
- *  the origin's rather than the product's; renaming all five is a migration for nothing, and two
- *  prefixes in one origin is worse than an old name. */
-export const MODULES_STORAGE_KEY = "mixdb-modules";
+/** Where the set is kept: `localStorage`, beside the theme, the accent, the language and the
+ *  session — a handful of strings about the window, read once on the way up. */
+export const MODULES_STORAGE_KEY = MODULES_KEY;
 
-/** The keys a build older than this task wrote. Any one of them present means this webview profile
- *  has been used before — see {@link resolveStoredModules}. */
-const LEGACY_SHELL_KEYS = [
-  "mixdb-session",
-  "mixdb-theme",
-  "mixdb-accent",
-  "mixdb-glass",
-  "mixdb-lang",
-];
+/** Keys a build older than the module set wrote. Any one of them present means this webview
+ *  profile has been used before — see {@link resolveStoredModules}. `public/storage-keys.js` has
+ *  already moved them to these names by the time this is read. */
+const LEGACY_SHELL_KEYS = [SESSION_KEY, THEME_KEY, ACCENT_KEY, LANGUAGE_KEY];
 
 /** As much of `Storage` as this file uses. Taken as an argument rather than reached for, so the
  *  decisions below can be tested in node, where there is no `localStorage`. */
@@ -178,7 +172,7 @@ export function writeEnabledModules(enabled: string[]): void {
   }
 }
 
-/** Whether T104's import brought a MixDB user's data across. A call that cannot be made — the
+/** Whether T104's import brought a standalone-client user's data across. A call that cannot be made — the
  *  browser-only `npm run dev`, a command somehow not registered — reads as `false`, which shows the
  *  first-run screen: one click, rather than a silently wrong profile. */
 export function importHappened(): Promise<boolean> {

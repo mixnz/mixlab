@@ -8,15 +8,15 @@ task: T165
 
 Roadmap task [T165](../roadmap/phase-12-one-product.md), on
 [T107](2026-09-09-t107-where-the-daemon-and-the-window-are-design.md) and
-[T84](2026-09-04-t84-mixdb-in-the-registry-and-one-keyring-design.md). 2026-09-17.
+[T84](2026-09-04-t84-the-window-in-the-registry-and-one-keyring-design.md). 2026-09-17.
 
-`desktop-app` was an extension kind with exactly one entry ever published: MixDB. On 2026-09-17
+`desktop-app` was an extension kind with exactly one entry ever published: the standalone client. On 2026-09-17
 that entry was withdrawn from `mixnz/mixengine-packages` (`20076b7`, registry re-cut the same day),
-because MixDB *is* MixLab now — the window every installer ships, which `mix database open` has
+because the standalone client *is* MixLab now — the window every installer ships, which `mix database open` has
 reached without any extension since T107. What is left in this workspace is a general mechanism
-nothing uses, a precedence rule written for one product (`scheme == mixdb`), and one sentence that
+nothing uses, a precedence rule written for one product (`scheme == <old>`), and one sentence that
 is now wrong: `mix database open` on an install with no window still says
-``mix extension install mixdb` adds MixDB`, naming an entry the registry no longer has.
+``mix extension install <old>` adds the standalone client`, naming an entry the registry no longer has.
 
 This task removes the kind, and with it every path by which a database opens in anything but this
 install's own window.
@@ -25,12 +25,12 @@ install's own window.
 
 - **The window is found without an extension.** `Databases::locate_client` asks
   `DesktopApps::locate_window` first (T107); an extension is only consulted when there is none, or
-  when its scheme is `mixdb`.
+  when its scheme is `<old>`.
 - **The registry tolerates an entry it cannot read.** `Registry::listing` counts it in
   `unreadable` and lists the rest, so a cached `extensions.json` from before today — which still
-  holds `mixdb` — does not break `extension.list_available` once the kind is gone.
-- **`mixdb://` is the window's scheme and stays** (T107's `window::SCHEME`, the merge design's D10).
-  Nothing here renames it, `open_in_mixdb.rs`, or the keyring convention of T84's D5/D6, which the
+  holds `<old>` — does not break `extension.list_available` once the kind is gone.
+- **`<old>://` is the window's scheme and stays** (T107's `window::SCHEME`, the merge design's D10).
+  Nothing here renames it, `open_in_<old>.rs`, or the keyring convention of T84's D5/D6, which the
   window's `db` module reads.
 
 ## D1 — Scope: the kind goes, whole
@@ -45,7 +45,7 @@ Removed, in every layer:
 | platform | `DesktopApps::locate` and the three lookups behind it — App Paths and the uninstall table, Spotlight, XDG desktop entries — plus `InstalledApp.args`, which only a desktop entry's `Exec=` ever filled |
 | CLI | the `not_installed` rendering, the plan's *found / not on this machine* lines, the install warning |
 | window | `openChoices`' `external`, its Dashboard branch and string, the plan dialog's presence line |
-| testkit | `fixtures/extensions/mixdb.toml` and `extension::MIXDB` |
+| testkit | `fixtures/extensions/<old>.toml` and `extension::<OLD>` |
 
 Kept: `DesktopApps::locate_window`, `DesktopApps::launch`, `Located`, `Started`, `Launch`,
 `DesktopClient::{Installed, NoClient}`, `database.client` and `database.open` themselves, and
@@ -104,7 +104,7 @@ DELETE FROM extensions WHERE kind = 'desktop-app';
   after the row is gone is a file operation a migration cannot do.
 
 `crates/mixengine-core/tests/upgrade.rs` asserts every row survives an upgrade, and
-`schema-0017.sql` holds a `mixdb` row. The frozen fixture is not edited; `EMPTIED` gains a sibling,
+`schema-0017.sql` holds a `<old>` row. The frozen fixture is not edited; `EMPTIED` gains a sibling,
 `REMOVED: &[(i64, &str, &str)]` — version, table, the `WHERE` it deletes — with a test proving that
 exactly those rows are gone and every other row of the table survives, the way
 `the_tables_two_migrations_empty_really_are_emptied` proves `EMPTIED`.
@@ -113,7 +113,7 @@ exactly those rows are gone and every other row of the table survives, the way
 
 `mix extension install --path` on such a manifest fails in `manifest::read` like any unknown kind,
 naming the three that exist. No dedicated sentence: the kind was never in anyone's hands but
-MixDB's, and a special case for it would be the rule this task removes, kept as an error message.
+The standalone client's, and a special case for it would be the rule this task removes, kept as an error message.
 
 ## D6 — The one real handoff test keeps a real client
 
@@ -140,31 +140,31 @@ second MixLab to forward a URL back to the first, which its own doc comment alre
 
 - **ADR 0038** — *The window is the only desktop database client, and `desktop-app` is not an
   extension kind*: D1–D3, and the alternative of keeping a general mechanism with no entry.
-- **`docs/features/extensions.md`** — the kinds table loses its row; "MixDB integration
+- **`docs/features/extensions.md`** — the kinds table loses its row; "the standalone client integration
   (`desktop-app`)" becomes "Opening a database in MixLab", keeping the handoff contract and the
   keyring convention, which are the window's now.
 - `client-surface.md`, `services.md`, `architecture/platform-abstraction.md`,
   `architecture/daemon-and-ipc.md`, `docs/guide/{en,vi}/extensions.md`, `docs/guide/en/cli.md` —
-  the sentences that name the kind or MixDB-as-extension.
+  the sentences that name the kind or the standalone client-as-extension.
 - **`CHANGELOG.md`** — the unreleased *Changed* line promising "another installed database
   application where MixEngine found one" loses that clause (unreleased, so no `Fixed`), and one
   *Changed* line: desktop-app extensions are gone, `mix database open` opens MixLab, an install
-  that added MixDB as an extension has it removed on upgrade.
+  that added the standalone client as an extension has it removed on upgrade.
 - **Roadmap** — T165 in phase 12 after T111, and `todo.md`'s row.
 - `bindings/` regenerated by `packaging/bindings.sh`; `.sqlx` untouched, since the migration is
   plain SQL and no `query!` changes.
 
-**Not edited:** past specs, `schema-0017.sql`, `window::SCHEME`, `open_in_mixdb.rs` and
-`databaseOpenInMixDB` — names that say `mixdb` about the window's own scheme, not about the kind.
+**Not edited:** past specs, `schema-0017.sql`, `window::SCHEME`, `open_in_<old>.rs` and
+`databaseOpenInthe standalone client` — names that say `<old>` about the window's own scheme, not about the kind.
 
 ## Testing
 
 - **`mixengine-core`** — the manifest reader refuses `kind = "desktop-app"`; migration 24 removes
   exactly the `desktop-app` rows (`upgrade.rs`, D4); `extension_publish.rs` and `manifest.rs` lose
-  their MixDB cases.
+  their the standalone client cases.
 - **`mixengine-daemon`** — on the mock: window present is `installed` with no extension and a
-  `mixdb://` URL; no window is `no_client` and starts nothing; the existing Redis, MongoDB and
-  credential-in-the-environment tests run against the window instead of `a_mixdb`.
+  `<old>://` URL; no window is `no_client` and starts nothing; the existing Redis, MongoDB and
+  credential-in-the-environment tests run against the window instead of `a_<old>`.
 - **`mixengine-platform`** — the per-OS `locate` tests go; `locate_window` and `launch` tests stay.
 - **`mixengine-cli`** — `database.rs` keeps *no client* with the new sentence and loses the
   `nowhere` fixture; `render.rs` loses the two plan tests; `mariadb.rs` per D6.
@@ -179,5 +179,5 @@ second MixLab to forward a URL back to the first, which its own doc comment alre
 - **The copied daemon in D6 may need something beside it.** If installing a package reaches for a
   sibling binary (the shim, for `bin`), the test copies that too; the plan finds out before it is
   written.
-- **Somebody's hand-installed `desktop-app` from `--path`** is removed by D4 exactly as MixDB's is.
+- **Somebody's hand-installed `desktop-app` from `--path`** is removed by D4 exactly as the standalone client's is.
   Nothing else ever used the kind, so this is the same person.

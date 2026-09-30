@@ -120,7 +120,7 @@ from the environment.
 - **A credential for anything but the database an extension already administers.** There is one
   `signs_in`, it means the server `[web-app.database]` resolved, and there is no vocabulary for a
   second.
-- **MixDB.** T83 and T84.
+- **The standalone client.** T83 and T84.
 
 ## Decisions
 

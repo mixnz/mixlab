@@ -37,7 +37,7 @@ describe("describeOp", () => {
   });
 
   /* The daemon's sentence comes from the side that knows what the operation does. Rewriting it in
-     MixDB would make up a second explanation. */
+     MixLab would make up a second explanation. */
   it("carries the daemon's own sentence", () => {
     expect(describeOp(hostsApply).description).toBe("Add 1 name to the hosts file");
   });

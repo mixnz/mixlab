@@ -886,7 +886,7 @@ async fn run_rebuild_transaction(
 /// A table name for the rebuild's temporary stand-in that does not collide with anything already
 /// in the schema (step 5 of B7 in the design spec).
 async fn temp_table_name(pool: &SqlitePool, table: &str) -> Result<String, AppError> {
-    let base = format!("__mixdb_rebuild_{table}");
+    let base = format!("__mixlab_rebuild_{table}");
     let mut candidate = base.clone();
     let mut suffix = 0u32;
     loop {

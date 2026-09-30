@@ -29,7 +29,7 @@ a daemon runner that performs one, the `database.create` method, and `mix databa
 Out: `database.list` and `database.drop` — nothing needs either, and dropping a database is a
 different decision with different stakes (D9). Reading a password back out: that is T83's shape, and
 building it here would be guessing at it (D11). Writing the credential into a project's `.env`: a
-scaffold's job, not MixEngine's. Anything about *browsing* data — that is MixDB, and
+scaffold's job, not MixEngine's. Anything about *browsing* data — that is the standalone client, and
 [`features/services.md`](../features/services.md) already says so.
 
 ## Decisions

@@ -393,9 +393,9 @@ Section "MixLab" SecCore
   !ifndef HEADLESS
     CreateShortcut "$SMPROGRAMS\MixLab.lnk" "$INSTDIR\mixlab.exe"
 
-    ; `mixlab://`, per user — ADR 0047. An earlier release registered `mixdb://` to this same
+    ; `mixlab://`, per user — ADR 0047. An earlier release registered the old scheme to this same
     ; binary, which the window no longer answers; that key goes, but only while it still points
-    ; here — a standalone MixDB that holds it is left alone.
+    ; here — a standalone client that holds it is left alone.
     !insertmacro RemoveSchemeIfOurs "mixdb"
     WriteRegStr HKCU "Software\Classes\mixlab" "" "URL:MixLab Protocol"
     WriteRegStr HKCU "Software\Classes\mixlab" "URL Protocol" ""
@@ -476,7 +476,7 @@ Function un.RemoveFromPath
   SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
 FunctionEnd
 
-; Take `mixlab://` back — **only if it is still ours**. `mixdb://` too, for an install an earlier
+; Take `mixlab://` back — **only if it is still ours**. The old scheme too, for an install an earlier
 ; release made and this one's installer never ran over.
 Function un.RemoveScheme
   !insertmacro RemoveSchemeIfOurs "mixlab"

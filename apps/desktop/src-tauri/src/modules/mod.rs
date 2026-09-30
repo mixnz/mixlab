@@ -1,4 +1,4 @@
-//! The modules MixDB is made of. One folder each, and one block of the list below each.
+//! The modules MixLab is made of. One folder each, and one block of the list below each.
 
 pub mod db;
 pub mod mixengine;
@@ -321,7 +321,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         mixengine::commands::mixengine_package_found,
         mixengine::commands::mixengine_package_adopt,
         mixengine::commands::mixengine_service_adopt,
-        mixengine::open_in_mixdb::mixengine_database_open_in_mixdb,
+        mixengine::explore_data::mixengine_database_explore_data,
         mixengine::commands::mixengine_logs_watch,
         mixengine::commands::mixengine_job_logs_watch,
         mixengine::commands::mixengine_logs_unwatch,

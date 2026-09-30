@@ -150,7 +150,7 @@ const WINDOW_SIZE: u32 = 8 * 1024 * 1024;
 /// returns rather than as large as possible.
 const BRIDGE_BUFFER: usize = 128 * 1024;
 
-/// Where the fingerprint of every SSH server MixDB has connected to is remembered, keyed by
+/// Where the fingerprint of every SSH server MixLab has connected to is remembered, keyed by
 /// `host:port`. Its own file rather than OpenSSH's `~/.ssh/known_hosts`: that file is the user's,
 /// written in a format with its own hashing and wildcard rules, and an app that only ever appends
 /// to it has no business rewriting it.
@@ -169,7 +169,7 @@ fn load_known_hosts(path: &Path) -> HashMap<String, String> {
 ///
 /// Two tunnels opening at once to two servers neither of which has been seen before both read the
 /// file, both add their own entry, and whichever writes second drops the other's. A lock private
-/// to this process is enough: the file is MixDB's own, and nothing outside it writes there.
+/// to this process is enough: the file is MixLab's own, and nothing outside it writes there.
 static KNOWN_HOSTS_LOCK: Mutex<()> = Mutex::new(());
 
 fn remember_host(path: &Path, endpoint: &str, fingerprint: &str) -> Result<(), AppError> {
@@ -367,7 +367,7 @@ impl TunnelSession {
     }
 }
 
-/// Checks the server's key against what MixDB saw the last time it connected to this address.
+/// Checks the server's key against what MixLab saw the last time it connected to this address.
 ///
 /// Trust on first use: a server never seen before is accepted and its fingerprint written down,
 /// and from then on a *different* key is refused. That is the half of host-key checking worth
@@ -886,7 +886,7 @@ mod tests {
     /// SSH server to exercise; this is the part that decides whether a key is the one seen before.
     #[test]
     fn a_remembered_host_is_read_back_and_can_be_replaced() {
-        let dir = std::env::temp_dir().join(format!("mixdb-test-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("mixlab-test-{}", uuid::Uuid::new_v4()));
         let file = known_hosts_file(&dir);
 
         // Nothing remembered yet — a first connection has nothing to check against.
@@ -922,7 +922,7 @@ mod tests {
     /// answers for it.
     #[test]
     fn hosts_remembered_at_the_same_time_all_survive() {
-        let dir = std::env::temp_dir().join(format!("mixdb-test-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("mixlab-test-{}", uuid::Uuid::new_v4()));
         let file = known_hosts_file(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -946,7 +946,7 @@ mod tests {
     /// The three answers TOFU has, from the one place that decides them.
     #[test]
     fn a_changed_key_is_refused_and_the_known_one_is_not() {
-        let dir = std::env::temp_dir().join(format!("mixdb-test-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("mixlab-test-{}", uuid::Uuid::new_v4()));
         let file = known_hosts_file(&dir);
 
         // Never seen: accepted, and written down.
@@ -978,7 +978,7 @@ mod tests {
     /// rather than failing every SSH connection the app makes.
     #[test]
     fn an_unreadable_store_is_treated_as_empty() {
-        let dir = std::env::temp_dir().join(format!("mixdb-test-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("mixlab-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let file = known_hosts_file(&dir);
         std::fs::write(&file, "not json").unwrap();

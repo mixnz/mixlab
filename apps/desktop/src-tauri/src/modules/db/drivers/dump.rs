@@ -63,7 +63,7 @@ struct OptionFile {
 
 impl OptionFile {
     fn new(host: &str, port: u16, user: &str, password: &str) -> Result<Self, AppError> {
-        let path = std::env::temp_dir().join(format!("mixdb-{}.cnf", uuid::Uuid::new_v4()));
+        let path = std::env::temp_dir().join(format!("mixlab-{}.cnf", uuid::Uuid::new_v4()));
         let mut file = File::create(&path)
             .map_err(|e| err!("error.cannotWriteFile", path = path.display(), message = e))?;
         // Values are double-quoted, which is the one form of an option file value that may hold
@@ -106,7 +106,7 @@ struct PgPassFile {
 
 impl PgPassFile {
     fn new(host: &str, port: u16, user: &str, password: &str) -> Result<Self, AppError> {
-        let path = std::env::temp_dir().join(format!("mixdb-{}.pgpass", uuid::Uuid::new_v4()));
+        let path = std::env::temp_dir().join(format!("mixlab-{}.pgpass", uuid::Uuid::new_v4()));
         let mut file = File::create(&path)
             .map_err(|e| err!("error.cannotWriteFile", path = path.display(), message = e))?;
         // The format is `host:port:database:user:password`, one entry per line, with `:` and `\`
@@ -1303,7 +1303,7 @@ const ARCHIVE_MAGIC: u32 = 0x8199_e26d;
 ///
 /// An archive begins with its magic number, then a header document, then one metadata document per
 /// collection — and each of those names the database it came from. Only the first is read: an
-/// archive written by MixDB holds one database, being dumped with `--db`.
+/// archive written by MixLab holds one database, being dumped with `--db`.
 ///
 /// This is needed because `mongorestore` puts documents back into the namespaces the archive
 /// names, and the only way to send them somewhere else is to tell it what to rename *from*.
@@ -1788,7 +1788,7 @@ mod tests {
             .to_writer(&mut archive)
             .unwrap();
         let path =
-            std::env::temp_dir().join(format!("mixdb-test-{}.archive", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("mixlab-test-{}.archive", uuid::Uuid::new_v4()));
         std::fs::write(&path, &archive).unwrap();
 
         let found = super::archive_database(&path.to_string_lossy());
@@ -1888,7 +1888,7 @@ mod tests {
     impl Written {
         fn new() -> Self {
             let path =
-                std::env::temp_dir().join(format!("mixdb-test-{}.sql", uuid::Uuid::new_v4()));
+                std::env::temp_dir().join(format!("mixlab-test-{}.sql", uuid::Uuid::new_v4()));
             std::fs::write(&path, b"").unwrap();
             Self(path)
         }

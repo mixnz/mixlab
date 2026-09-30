@@ -236,7 +236,7 @@ Thêm vào `query.*` của [`en.ts`](../../apps/desktop/src/modules/db/i18n/en.t
 
 ## Rủi ro và những chỗ dễ sai
 
-- **Sort chỉ sắp những dòng đã về.** Một kết quả bị cắt ở 1000 dòng, hoặc bị `LIMIT` mà MixDB tự
+- **Sort chỉ sắp những dòng đã về.** Một kết quả bị cắt ở 1000 dòng, hoặc bị `LIMIT` mà the standalone client tự
   thêm, sắp giảm dần **không** cho ra giá trị lớn nhất của bảng. Tooltip của header nói thẳng câu
   đó. Đây là hiểu nhầm dễ xảy ra nhất trong cả đợt này.
 - **Kết quả rỗng sau khi lọc.** `emptyLabel` hiện tại nói "The result set is empty", sai khi thật ra

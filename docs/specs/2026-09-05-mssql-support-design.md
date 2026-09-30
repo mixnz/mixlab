@@ -9,7 +9,7 @@ Ngày: 2026-09-05
 
 ## Mục tiêu
 
-Thêm SQL Server làm một `DbKind` đầy đủ trong MixDB, ngang hàng với MySQL/PostgreSQL/ClickHouse:
+Thêm SQL Server làm một `DbKind` đầy đủ trong the standalone client, ngang hàng với MySQL/PostgreSQL/ClickHouse:
 kết nối (kể cả qua SSH tunnel có sẵn), duyệt database/schema/table, đọc và sửa dữ liệu qua Data
 tab, chạy script tay qua Query tab, sửa cấu trúc qua Structure tab, và dump/restore. Vì đây là một
 engine hoàn toàn mới (không phải mở thêm một tính năng trên engine đã có, như các spec ClickHouse
@@ -18,7 +18,7 @@ trước), khối lượng việc tương đương với lúc PostgreSQL đượ
 `SqlApi`, giống cách ClickHouse được mở dần qua nhiều spec (`...-ddl-design.md`,
 `...-row-writes-design.md`, `...-dump-restore-design.md`, `...-query-dml-design.md`).
 
-Xong toàn bộ 8 plan: mở MixDB, thêm connection SQL Server (`192.168.50.86:1433`, user `sa`, pass
+Xong toàn bộ 8 plan: mở the standalone client, thêm connection SQL Server (`192.168.50.86:1433`, user `sa`, pass
 `admin` — server test hiện có), thấy sidebar liệt kê database/table, mở một bảng thấy dữ liệu phân
 trang lọc được, sửa/thêm/xoá dòng, mở Query tab gõ T-SQL nhiều câu (kể cả nhiều batch ngăn bởi
 `GO`), mở Structure tab thêm/sửa/xoá cột và index, và Dump/Restore ra file `.sql` chạy lại được.

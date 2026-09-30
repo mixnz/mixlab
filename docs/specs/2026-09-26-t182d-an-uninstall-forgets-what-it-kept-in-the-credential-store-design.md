@@ -85,7 +85,7 @@ credential has no open handle that has to close first.
 
 - **The pre-T126 `<service-id>/<user>` entries under `mixengine`.** They have no home prefix, so no
   uninstall of one home can claim them. No release predates T126, so no user's machine has any.
-- **The `MixDB` service.** A standalone MixDB may still be installed and in use (T104, D4).
+- **The `<Old>` service.** A standalone client may still be installed and in use (T104, D4).
 - **The device on the sync server.** The uninstall forgets this machine's sign-in but does not tell
   the server. The device stays in the account's device list until it is removed from another
   machine. Revoking it would mean the daemon talking to the sync server, which is the window's job,

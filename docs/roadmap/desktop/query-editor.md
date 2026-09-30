@@ -175,9 +175,9 @@ A `@codemirror/lint` source that runs on the parsed document and reports, with a
 statement without running it:
 
 ```sql
-SET @mixdb_check = ?;            -- the statement text, bound
-PREPARE mixdb_check FROM @mixdb_check;
-DEALLOCATE PREPARE mixdb_check;
+SET @<old>_check = ?;            -- the statement text, bound
+PREPARE <old>_check FROM @<old>_check;
+DEALLOCATE PREPARE <old>_check;
 ```
 
 `PREPARE` cannot take a placeholder directly — its argument must be a string literal or a user

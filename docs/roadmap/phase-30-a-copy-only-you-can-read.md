@@ -154,7 +154,7 @@ Decision: [ADR 0045](../decisions/0045-mixlab-has-an-account-and-mixengine-does-
       the default is open, and a field nobody there needs is one somebody fills with a password.
       Plain `http` is accepted only for a server on this machine. And **MixLab's privacy policy
       moved into this repository's handbook** (`docs/guide/*/privacy.md`), because the one the app
-      linked to was MixDB's and said there was no server of ours — which sync made false; the
+      linked to was the standalone client's and said there was no server of ours — which sync made false; the
       settings hint that said the same was rewritten with it. The screen has not been looked at by
       anybody but its author's type checker: every row is off by default, and the first person to
       sign up against `sync-0` is the first to see it.

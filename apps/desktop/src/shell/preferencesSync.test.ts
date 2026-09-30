@@ -13,7 +13,7 @@ function memory(initial: Record<string, string> = {}): PreferenceStorage & { dat
 
 describe("preferences in sync", () => {
   it("are the four keys that are set, and nothing else in storage", async () => {
-    const storage = memory({ "mixdb-theme": "dark", "mixdb-lang": "vi", "mixdb-session": "{}" });
+    const storage = memory({ "mixlab-theme": "dark", "mixlab-lang": "vi", "mixlab-session": "{}" });
     const items = await preferencesCollection(() => storage, () => {}).read();
     expect(items).toEqual([
       { id: "theme", data: "dark" },
@@ -22,14 +22,14 @@ describe("preferences in sync", () => {
   });
 
   it("write through, forget what was removed, and say so once", async () => {
-    const storage = memory({ "mixdb-accent": "red" });
+    const storage = memory({ "mixlab-accent": "red" });
     const announce = vi.fn();
     await preferencesCollection(() => storage, announce).write({
       upserts: [{ id: "theme", data: "light" }],
       removed: ["accent"],
     });
-    expect(storage.data.get("mixdb-theme")).toBe("light");
-    expect(storage.data.has("mixdb-accent")).toBe(false);
+    expect(storage.data.get("mixlab-theme")).toBe("light");
+    expect(storage.data.has("mixlab-accent")).toBe(false);
     expect(announce).toHaveBeenCalledOnce();
   });
 
@@ -37,10 +37,10 @@ describe("preferences in sync", () => {
     const storage = memory();
     const announce = vi.fn();
     const skipped = await preferencesCollection(() => storage, announce).write({
-      upserts: [{ id: "mixdb-session", data: "{}" }, { id: "theme", data: 3 }],
+      upserts: [{ id: "mixlab-session", data: "{}" }, { id: "theme", data: 3 }],
       removed: [],
     });
-    expect(skipped).toEqual(["mixdb-session", "theme"]);
+    expect(skipped).toEqual(["mixlab-session", "theme"]);
     expect(storage.data.size).toBe(0);
     expect(announce).not.toHaveBeenCalled();
   });

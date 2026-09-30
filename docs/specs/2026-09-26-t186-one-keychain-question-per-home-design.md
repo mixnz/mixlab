@@ -117,9 +117,9 @@ question, not this task's.
 
 ## What is deliberately left
 
-- **A standalone MixDB** reading `mixengine` entries by address (T84). On macOS it will no longer
+- **A standalone client** reading `mixengine` entries by address (T84). On macOS it will no longer
   find what the daemon keeps in the vault, and it will show an empty password field. The window is
-  the only database client (ADR 0038), and MixDB's own history ended at 0.0.33.
+  the only database client (ADR 0038), and the standalone client's own history ended at 0.0.33.
 - **The pre-T126 per-item entries.** They are unchanged, as D1 says.
 
 ## What changes

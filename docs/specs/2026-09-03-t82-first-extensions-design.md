@@ -87,7 +87,7 @@ manifest there yet.
 - **Signing phpMyAdmin in with a database password.** D6.
 - **A php-fpm pool of the extension's own.** What auto-login needs, and it is **T82a**.
 - **More than one server in a generated configuration.** D5's honest consequence.
-- **MixDB.** T83 and T84, and D8 is what this task leaves them.
+- **The standalone client.** T83 and T84, and D8 is what this task leaves them.
 - **A `[recipe] front_end` fragment.** T81c wired it; none of these three declares one, which is
   what T81c said would be true.
 

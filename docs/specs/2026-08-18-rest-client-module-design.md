@@ -9,7 +9,7 @@ Ngày: 2026-08-18
 
 ## Mục tiêu
 
-MixDB là một shell cộng một module. Hôm nay chỉ có `db`. Spec này mô tả module thứ hai: một REST
+The standalone client là một shell cộng một module. Hôm nay chỉ có `db`. Spec này mô tả module thứ hai: một REST
 client — soạn request HTTP, gửi, xem response — sống cạnh `db` mà không ai trong hai bên biết
 khái niệm của bên kia.
 
@@ -38,7 +38,7 @@ Ghi ra để không bị kéo vào:
   được. Cắt vì phạm vi, không vì khó — xem mục 4.
 - **Không tách DNS / TCP / TLS timing.** Chỉ tổng thời gian và thời điểm nhận xong header.
 - **Không session restore.** Các tab request đang mở mất khi thoát app, giống mọi tab khác của
-  MixDB. Thứ đáng giữ được giữ theo cách khác — xem mục 2.
+  the standalone client. Thứ đáng giữ được giữ theo cách khác — xem mục 2.
 - **Không đụng ba splitter của module db.** Viết `Splitter` dùng chung và dùng nó ở module rest;
   chuyển ba chỗ kia sang là một commit riêng, quyết định sau.
 - **Không thêm jsdom hay test component.** Repo cố ý chỉ test logic thuần.

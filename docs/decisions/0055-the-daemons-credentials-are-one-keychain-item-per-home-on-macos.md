@@ -52,7 +52,7 @@ The design is [the T186 spec](../specs/2026-09-26-t186-one-keychain-question-per
 - After an update on macOS: one question for the daemon per home, one for the window reading
   managed databases, one for the window's own `vault`. Three at most, none on the other two
   systems. Zero needs a signed release.
-- A standalone MixDB reading `mixengine` entries by address no longer finds them on macOS. The
+- A standalone client reading `mixengine` entries by address no longer finds them on macOS. The
   window is the only database client (0038).
 - A per-item entry left from before this is not read. It stays in the Keychain until somebody
   removes it.

@@ -366,7 +366,7 @@ reason.
 
 **The second criterion was not met until 2026-09-06, and this is where that is written down rather
 than discovered.** Two things it promised had no method behind them — the Dashboard's disk usage and
-the Settings screen's default web server — and both were found by **MixDB reading this page against
+the Settings screen's default web server — and both were found by **The standalone client reading this page against
 the API** while writing its own Phase 4 spec, not by anybody here. That is the arrangement
 [ADR 0011](../decisions/0011-no-gui-in-this-repository.md) accepted working as designed and costing
 what it costs: a claim made on paper in this repository is checked by somebody else's code, later.

@@ -1,5 +1,6 @@
 import { announcePreferencesChanged } from "../core/preferences";
 import type { SyncableCollection, SyncItem } from "../core/syncCollection";
+import { ACCENT_KEY, LANGUAGE_KEY, MODULES_KEY, THEME_KEY } from "./storageKeys";
 
 /**
  * The shell's own preferences, one record per `localStorage` key (D5). An allow-list: the session,
@@ -10,10 +11,10 @@ import type { SyncableCollection, SyncItem } from "../core/syncCollection";
  * one a person typed into the devtools.
  */
 const KEYS: Record<string, string> = {
-  theme: "mixdb-theme",
-  accent: "mixdb-accent",
-  language: "mixdb-lang",
-  modules: "mixdb-modules",
+  theme: THEME_KEY,
+  accent: ACCENT_KEY,
+  language: LANGUAGE_KEY,
+  modules: MODULES_KEY,
 };
 
 /** What the collection needs of `localStorage`, so a test can hand it a map instead. */

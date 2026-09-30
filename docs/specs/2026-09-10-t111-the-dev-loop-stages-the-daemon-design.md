@@ -121,7 +121,7 @@ one function that returns that list, and `program_path` is rewritten over it so 
 shows is the list the lookup walked, not a second description of it.
 
 The gate's copy changes with it. After ADR 0027 the *not installed* state has one meaning — the
-install is incomplete — and *Install MixEngine* was MixDB's sentence for a machine that had never
+install is incomplete — and *Install MixEngine* was the standalone client's sentence for a machine that had never
 had it:
 
 | Key | Was | Becomes |
@@ -190,7 +190,7 @@ contributor sees `src-tauri/target/debug` and knows which command they skipped.
 ## Out of scope
 
 - **`npm run build:app`**, Tauri's own bundling, whose `bundle.targets` in `tauri.conf.json` still
-  lists NSIS, DMG, AppImage and `.deb` from MixDB. Packaging is `packaging/`'s, and pruning that
+  lists NSIS, DMG, AppImage and `.deb` from the standalone client. Packaging is `packaging/`'s, and pruning that
   list is its own small task.
 - **Starting the daemon when the tab opens.** The gate's *Start* button stays a button, for the
   reason `MixEngineTab.tsx` gives: opening a tab is cheap, starting a daemon is not.

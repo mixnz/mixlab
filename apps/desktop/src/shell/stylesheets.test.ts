@@ -36,8 +36,8 @@ describe("stylesheets", () => {
       offenders(sheets, (css) => /data-glass|glass-(scrim|sheet|pill)|--glass-|--rail-filter/.test(css)),
     ).toEqual([]);
     expect(
-      // A class name "glass" / "glass-pill" follows a space or a quote; "mixdb-glass", the retired
-      // storage key that themeModel.ts and profiles.ts still name, follows a hyphen and is allowed.
+      // A class name "glass" / "glass-pill" follows a space or a quote; the retired glass key
+      // that themeModel.ts still names follows a hyphen and is allowed.
       offenders(sources, (src) => /GlassFilter|glass\.css|useGlass|[\s`"']glass(-pill)?[`"']/.test(src)),
     ).toEqual([]);
   });

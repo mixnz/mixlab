@@ -38,7 +38,7 @@ optional TCP listener requiring `Authorization: Bearer` was left out of T8 as *"
 and a second access-control story for a case nobody has yet"*.
 
 And there is no case. Not one extension in the plan calls the daemon API: Mailpit is an SMTP server
-and a web UI, phpMyAdmin and Adminer talk to a database, and MixDB is handed a connection by `mix`
+and a web UI, phpMyAdmin and Adminer talk to a database, and the standalone client is handed a connection by `mix`
 rather than asking for one. T82's and T83's extensions want a supervised process, a generated site
 and a URL scheme — none of them wants a method.
 

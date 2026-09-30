@@ -1,5 +1,5 @@
 -- T165. `desktop-app` is no longer an extension kind (ADR 0038): the only application a database is
--- handed to is the MixLab window this install came with. A home that installed one -- MixDB, the only
+-- handed to is the MixLab window this install came with. A home that installed one -- the standalone client, the only
 -- entry of that kind the registry ever published -- still holds its row, and this build's manifest
 -- reader cannot read what that row stores, so the row goes before anything opens the table.
 --

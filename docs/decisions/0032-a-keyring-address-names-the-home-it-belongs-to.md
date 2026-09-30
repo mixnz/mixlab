@@ -66,7 +66,7 @@ is left behind is an entry nothing writes any more.
 ## Consequences
 
 **The published convention changes shape, and no client breaks.** `SecretAddress` is a value the
-daemon *returns* — `database.client`, `database.credentials`, `database.open` — and MixDB reads
+daemon *returns* — `database.client`, `database.credentials`, `database.open` — and the standalone client reads
 `secret_key` out of the handoff URL rather than composing one
 (`apps/desktop/src-tauri/src/modules/db/handoff.rs`). A client that composed the string itself would
 break; none in this workspace does, and the field's own documentation has said it is composed by

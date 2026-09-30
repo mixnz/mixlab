@@ -53,11 +53,11 @@ profile — a sidebar instead of a tab strip, say — is not this phase and has 
 - [x] **T110** The bridge when a module is hidden (D11, last paragraph). The Services screen's
       *open* button, drawn from `database.client` as today, offers two things when `db` is off:
       enable the built-in client and open the tab, or hand off to an external client through
-      `database.open` where one is installed. A `mixdb://` handoff that arrives with `db` hidden
+      `database.open` where one is installed. A `<old>://` handoff that arrives with `db` hidden
       enables it for that tab and says so in the tab. Nothing the daemon answers changes.
       Design: [2026-09-10-t110-the-bridge-when-a-module-is-hidden-design.md](../specs/2026-09-10-t110-the-bridge-when-a-module-is-hidden-design.md).
       **Two things this task settled.** The enabling belongs at the tab-request queue and not at
-      either caller: the *open* button and a `mixdb://` URL already push through the same queue, so
+      either caller: the *open* button and a `<old>://` URL already push through the same queue, so
       one step in `Workspace`'s drain covers both, generically, for any module — and it fixes what
       T108 left, where a handoff to a hidden module opened a tab the visibility effect dropped on
       the same commit. And "enables it for that tab" is the setting and not a second, tab-scoped
@@ -68,5 +68,5 @@ profile — a sidebar instead of a tab strip, say — is not this phase and has 
 
 **Milestone M13** — a fresh install shows the first-run screen; choosing *MixEngine* leaves a
 window whose every tab, shortcut and Settings pane is about the daemon; turning *Database tools*
-on in Settings brings the four modules back with everything a MixDB user had saved; turning them
+on in Settings brings the four modules back with everything a standalone-client user had saved; turning them
 off again closes their tabs and hides them without deleting anything.

@@ -4,7 +4,7 @@ import type { Snippet } from "./snippets";
  * The snippet set shipped with the app.
  *
  * **Constants in code, not going through the store.** The consequences are right both ways:
- * upgrading MixDB updates this set along with it, and what users write themselves is never
+ * upgrading MixLab updates this set along with it, and what users write themselves is never
  * overwritten by an upgrade.
  *
  * Built-in snippets cannot be edited or deleted. Wanting a different version means adding a

@@ -38,7 +38,7 @@ pub async fn mixengine_start(chosen: Option<health::ChosenPaths>) -> Result<Stri
     health::start_daemon(chosen).await
 }
 
-/// Both reads below return a bare `Value`, not decoded into a struct of MixDB's own.
+/// Both reads below return a bare `Value`, not decoded into a struct of MixLab's own.
 ///
 /// Rust reads no field in these two answers — it forwards them. A struct here would be a second
 /// hand-written copy of a contract that already has a generated one in
@@ -185,7 +185,7 @@ pub async fn mixengine_sites(project: Option<String>) -> Result<Value, AppError>
     rpc::call("site.list", params).await
 }
 
-/// Always looks up by domain — MixDB does not use `SiteRef::Path`; only a CLI standing in a
+/// Always looks up by domain — MixLab does not use `SiteRef::Path`; only a CLI standing in a
 /// directory needs it.
 #[tauri::command]
 pub async fn mixengine_site(domain: String) -> Result<Value, AppError> {

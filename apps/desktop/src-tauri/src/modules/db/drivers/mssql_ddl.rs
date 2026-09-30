@@ -998,9 +998,9 @@ mod index_tests {
             columns: vec![column("customer"), column("placed")],
         };
         assert_eq!(
-            create_index_statements("mixdb_agent_test", "sales", "orders", &spec).unwrap(),
+            create_index_statements("mixlab_agent_test", "sales", "orders", &spec).unwrap(),
             vec![
-                "CREATE UNIQUE NONCLUSTERED INDEX [orders_customer] ON [mixdb_agent_test].[sales].[orders] ([customer], [placed])"
+                "CREATE UNIQUE NONCLUSTERED INDEX [orders_customer] ON [mixlab_agent_test].[sales].[orders] ([customer], [placed])"
             ]
         );
     }

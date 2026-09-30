@@ -11,9 +11,9 @@ Roadmap task T188, in [phase 31](../roadmap/phase-31-mixlab-updates-itself.md), 
 
 T187 built the whole updater and put the offer in two places: a strip across the top of the window,
 shown once per version, and Settings → Updates, where *Install* downloads, swaps and relaunches in
-one click. MixDB had something people liked better: a panel in the bottom-right corner that said a
+one click. The standalone client had something people liked better: a panel in the bottom-right corner that said a
 release was out, downloaded it when asked, and then asked again before installing. It was removed
-by T106 along with MixDB's own updater, and nothing replaced the corner.
+by T106 along with the standalone client's own updater, and nothing replaced the corner.
 
 This task brings the corner back on top of T187's machinery. **It changes D9 of the T187 design**
 and nothing else in it: the feed, the placement, the lock, the swap and the recovery stay as built.

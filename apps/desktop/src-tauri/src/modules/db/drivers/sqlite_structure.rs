@@ -12,7 +12,7 @@
 //! * A row count is counted, not estimated. There is no `information_schema.tables` holding a
 //!   figure to read; `COUNT(*)` is the only answer there is.
 //! * Sizes come from `dbstat`, a virtual table that walks the file's pages. It exists because
-//!   MixDB bundles its own SQLite with `SQLITE_ENABLE_DBSTAT_VTAB` — see the `libsqlite3-sys`
+//!   MixLab bundles its own SQLite with `SQLITE_ENABLE_DBSTAT_VTAB` — see the `libsqlite3-sys`
 //!   entry in `Cargo.toml`. A build linked against a system SQLite may not have it, so a failure
 //!   reads as "sizes unknown" rather than failing the tab.
 //! * A column's collation is not reported at all. It is not in `pragma_table_info`, and the only
@@ -619,7 +619,7 @@ mod tests {
         let (_fixture, pool) = Fixture::open().await;
         let stats = table_stats(&pool).await.unwrap();
         let post = stats.iter().find(|s| s.name == "post").unwrap();
-        /* `dbstat` is a compile-time option, and this asserts the one MixDB ships with — see the
+        /* `dbstat` is a compile-time option, and this asserts the one MixLab ships with — see the
         `libsqlite3-sys` entry in Cargo.toml. If this ever fails, the build has stopped bundling
         its own SQLite and the Statistics tab has quietly gone to zeroes. */
         assert!(post.data_size > 0, "no data size: dbstat is missing");

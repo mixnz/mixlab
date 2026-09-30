@@ -1,12 +1,12 @@
-//! Bringing a MixDB user's data across, once, on the first launch of MixLab.
+//! Bringing a standalone-client user's data across, once, on the first launch of MixLab.
 //!
 //! A changed bundle identifier is a changed application-data directory and a changed keyring
-//! namespace, so a person who was using MixDB opens a window that has never seen any of their
+//! namespace, so a person who was using the standalone client opens a window that has never seen any of their
 //! saved connections. This module is what puts them back. It is written to the T104 design's D5,
 //! which is worth reading before changing anything here; the three rules it turns on are:
 //!
 //! - **The old directory and the old keyring entries are never written or deleted.** A standalone
-//!   MixDB may still be installed and still be in use, and this is somebody's data either way.
+//!   The standalone client may still be installed and still be in use, and this is somebody's data either way.
 //! - **It runs once.** A marker file in the new directory says that it has, and the presence of
 //!   that file alone is what a second launch reads.
 //! - **Nothing from the webview's `localStorage` comes across** — theme, accent, the tab strip of
@@ -18,7 +18,7 @@
 //! created before `setup` and the webview cannot deliver an IPC message until the event loop runs,
 //! which is after `build()` returns, so that is the one moment in which no `Store.load` can race
 //! it. Copying the credentials must not hold the window shut, because on macOS the first read of
-//! MixDB's items raises a Keychain authorization dialog for an application the Keychain has never
+//! The standalone client's items raises a Keychain authorization dialog for an application the Keychain has never
 //! seen — so it runs on a thread of its own.
 
 use std::collections::BTreeSet;
@@ -28,17 +28,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::AppHandle;
 
-/// The bundle identifier MixDB is installed under.
+/// The bundle identifier the standalone client is installed under.
 ///
-/// Tauri keys the application-data directory on the identifier and on nothing else, so MixDB's
+/// Tauri keys the application-data directory on the identifier and on nothing else, so the standalone client's
 /// directory is this application's own with the name swapped — checked on Windows against a real
-/// install, `%APPDATA%\io.github.haiquang9994.mixdb` beside `%APPDATA%\io.github.mixnz.mixlab`.
+/// install, [`LEGACY_IDENTIFIER`] under `%APPDATA%` beside `%APPDATA%\io.github.mixnz.mixlab`.
 const LEGACY_IDENTIFIER: &str = "io.github.haiquang9994.mixdb";
 
 /// Written into the new directory when the import has run.
 ///
 /// Its presence is the whole of "do not look again". Its contents are for whoever reads a support
-/// thread, and for T108, which starts a user whose data came from MixDB on the *Everything*
+/// thread, and for T108, which starts a user whose data came from the standalone client on the *Everything*
 /// profile rather than on *MixEngine*.
 pub const MARKER: &str = "mixdb-import.json";
 
@@ -84,7 +84,7 @@ struct Plan {
     marker: Marker,
 }
 
-/// MixDB's application-data directory, given this application's own.
+/// The standalone client's application-data directory, given this application's own.
 fn legacy_dir(app_data: &Path) -> Option<PathBuf> {
     let legacy = app_data.parent()?.join(LEGACY_IDENTIFIER);
     (legacy != app_data).then_some(legacy)
@@ -162,7 +162,7 @@ fn accounts_of(ids: &BTreeSet<String>) -> Vec<String> {
 /// The synchronous half: the store files, and the marker.
 ///
 /// `None` — nothing to do — for every one of: the marker is already there, the new directory
-/// already holds a store file, there is no directory above this one, MixDB's is not there, or it
+/// already holds a store file, there is no directory above this one, the standalone client's is not there, or it
 /// holds no store files. None of those is a failure.
 fn copy_stores(new_dir: &Path) -> Option<Plan> {
     if new_dir.join(MARKER).exists() || !store_files(new_dir).is_empty() {
@@ -273,7 +273,7 @@ fn copy_credentials(mut plan: Plan) {
     write_marker(&plan.dir, &plan.marker);
 }
 
-/// Brings a MixDB user's data across, if there is any and if this is the first launch.
+/// Brings a standalone-client user's data across, if there is any and if this is the first launch.
 ///
 /// Everything here is best effort: an import that cannot run leaves a window that opens on an
 /// empty connection list, which is what a new machine looks like anyway. Nothing propagates out,
@@ -301,7 +301,7 @@ fn marker_in(dir: &Path) -> bool {
     dir.join(MARKER).exists()
 }
 
-/// Whether a MixDB user's data was brought across on this machine.
+/// Whether a standalone-client user's data was brought across on this machine.
 ///
 /// T108's third question. The window asks it on exactly one launch — a webview profile with no
 /// shell settings at all — to tell a fresh install from an imported one: the import copies store
@@ -315,7 +315,10 @@ pub fn import_happened(app: AppHandle) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{accounts_of, copy_stores, ids_in, is_store_file, legacy_dir, marker_in, MARKER};
+    use super::{
+        accounts_of, copy_stores, ids_in, is_store_file, legacy_dir, marker_in, LEGACY_IDENTIFIER,
+        MARKER,
+    };
     use serde_json::json;
     use std::collections::BTreeSet;
     use std::path::Path;
@@ -329,18 +332,18 @@ mod tests {
         assert!(is_store_file(Path::new("/x/known_hosts.json")));
         assert!(!is_store_file(Path::new("/x/.window-state.json")));
         assert!(!is_store_file(&Path::new("/x").join(MARKER)));
-        assert!(!is_store_file(Path::new("/x/mixdb.log")));
+        assert!(!is_store_file(Path::new("/x/old.log")));
         assert!(!is_store_file(Path::new("/x/tools")));
     }
 
-    /// MixDB's directory is this one's with the identifier swapped — Tauri keys it on the
+    /// The standalone client's directory is this one's with the identifier swapped — Tauri keys it on the
     /// identifier and on nothing else.
     #[test]
-    fn the_legacy_directory_is_the_sibling_named_after_mixdb() {
+    fn the_legacy_directory_is_the_sibling_named_after_the_old_identifier() {
         let ours = Path::new("/home/a/.local/share/io.github.mixnz.mixlab");
         assert_eq!(
             legacy_dir(ours).unwrap(),
-            Path::new("/home/a/.local/share/io.github.haiquang9994.mixdb")
+            Path::new("/home/a/.local/share").join(LEGACY_IDENTIFIER)
         );
         assert!(legacy_dir(Path::new("/")).is_none());
     }
@@ -381,7 +384,7 @@ mod tests {
     #[test]
     fn an_import_copies_the_stores_once() {
         let root = tempfile::tempdir().unwrap();
-        let old = root.path().join("io.github.haiquang9994.mixdb");
+        let old = root.path().join(LEGACY_IDENTIFIER);
         let new = root.path().join("io.github.mixnz.mixlab");
         std::fs::create_dir_all(old.join("tools")).unwrap();
         std::fs::write(
@@ -391,14 +394,15 @@ mod tests {
         .unwrap();
         std::fs::write(old.join("known_hosts.json"), r#"{"h:22":"SHA256:x"}"#).unwrap();
         std::fs::write(old.join(".window-state.json"), r#"{"main":{}}"#).unwrap();
-        std::fs::write(old.join("mixdb.log"), "noise").unwrap();
+        std::fs::write(old.join("old.log"), "noise").unwrap();
 
-        let plan = copy_stores(&new).expect("a directory with MixDB's beside it is imported");
+        let plan = copy_stores(&new)
+            .expect("a directory with the standalone client's beside it is imported");
 
         assert!(new.join("connections.json").is_file());
         assert!(new.join("known_hosts.json").is_file());
         assert!(!new.join(".window-state.json").exists());
-        assert!(!new.join("mixdb.log").exists());
+        assert!(!new.join("old.log").exists());
         assert!(new.join(MARKER).is_file());
         assert_eq!(
             plan.accounts,
@@ -412,11 +416,11 @@ mod tests {
     }
 
     /// A directory somebody is already using is not imported into, marker or no marker: whatever
-    /// is in there is newer than anything MixDB has.
+    /// is in there is newer than anything the standalone client has.
     #[test]
     fn a_directory_already_in_use_is_left_alone() {
         let root = tempfile::tempdir().unwrap();
-        let old = root.path().join("io.github.haiquang9994.mixdb");
+        let old = root.path().join(LEGACY_IDENTIFIER);
         let new = root.path().join("io.github.mixnz.mixlab");
         std::fs::create_dir_all(&old).unwrap();
         std::fs::create_dir_all(&new).unwrap();
@@ -427,7 +431,7 @@ mod tests {
         assert!(!new.join(MARKER).exists());
     }
 
-    /// No MixDB on this machine is the ordinary case, and it is not a failure.
+    /// No standalone client on this machine is the ordinary case, and it is not a failure.
     #[test]
     fn nothing_to_import_is_not_a_failure() {
         let root = tempfile::tempdir().unwrap();
@@ -437,7 +441,7 @@ mod tests {
         assert!(copy_stores(&new).is_none());
     }
 
-    /// T108 asks one question of this module: did a MixDB user's data come across on this machine?
+    /// T108 asks one question of this module: did a standalone-client user's data come across on this machine?
     /// The marker is the whole answer, and it is written inside `setup()` — before the event loop
     /// that carries the question — so by the time the window can ask, the answer is final.
     #[test]

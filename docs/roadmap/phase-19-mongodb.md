@@ -33,7 +33,7 @@ became installable.
 
 ## The window
 
-- [x] **T155** MixLab opens it. `mixdb://connect?kind=mongodb` and the Services screen's Open both
+- [x] **T155** MixLab opens it. `<old>://connect?kind=mongodb` and the Services screen's Open both
       build one `mongodb://…?directConnection=true` URI, and `database.client` answers
       `creates_databases` so the Create form is not drawn for a server that makes none. Design D6.
 

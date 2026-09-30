@@ -34,8 +34,8 @@ Written down so nothing below is built twice:
   number chords from `MODULES`, `App.tsx` registers its handlers from that same derivation,
   `SettingsModal` builds its pane column from `MODULES`, and `session.ts` is handed the ids rather
   than reading them. There is no second list to find.
-- **T104's import leaves a marker.** `src-tauri/src/import.rs` writes `mixdb-import.json` into the
-  application-data directory when, and only when, a MixDB user's stores came across. Its doc
+- **T104's import leaves a marker.** `src-tauri/src/import.rs` writes `<old>-import.json` into the
+  application-data directory when, and only when, a standalone-client user's stores came across. Its doc
   comment already says it is there for this task.
 - **The webview's `localStorage` did not come across.** The import is explicit about it: a profile
   keyed by the bundle identifier, unreachable from the process, and theme and the last tab strip
@@ -47,7 +47,7 @@ Written down so nothing below is built twice:
 
 `MODULES` becomes `[mixengine, db, rest, terminal, tools]`.
 
-D11's table asks for *Everything* to be "all five, MixDB's order with `mixengine` first". That
+D11's table asks for *Everything* to be "all five, the standalone client's order with `mixengine` first". That
 ordering can live in the stored value or in the registry, and only one of those two is safe.
 
 In the stored value, order becomes user state with no control that sets it: the checkboxes below
@@ -68,14 +68,14 @@ visibleModules(enabled) === MODULES.filter((m) => enabled.includes(m.id))
 `enabledModules` is therefore a **set**, stored as an array and read as one. Order never comes out
 of it.
 
-**This remaps `Ctrl/Cmd+1 … 5` for anyone who was using MixDB**: `Ctrl+1` was Database and becomes
+**This remaps `Ctrl/Cmd+1 … 5` for anyone who was using the standalone client**: `Ctrl+1` was Database and becomes
 MixEngine. It is a deliberate change and it goes in the changelog. The `[+]` menu leads with
 MixEngine for the same reason — this is MixEngine's window now.
 
 ## D2 — `enabledModules`, and where it lives
 
-`localStorage`, key `mixdb-modules`, beside `mixdb-theme`, `mixdb-accent`, `mixdb-glass` and
-`mixdb-session`. The prefix is the origin's rather than the product's; renaming all five is a
+`localStorage`, key `<old>-modules`, beside `<old>-theme`, `<old>-accent`, `<old>-glass` and
+`<old>-session`. The prefix is the origin's rather than the product's; renaming all five is a
 migration for nothing, and mixing two prefixes in one origin is worse than an old name.
 
 A new file, `src/shell/profiles.ts`, holds the mechanism. It names no module — the ids come from
@@ -103,7 +103,7 @@ no modules in it. The other two are in D5 and D6.
 ## D3 — First run, and the three things that are not one
 
 D11 says the screen appears on "a directory with no settings". Taken literally — *no
-`mixdb-modules` key* — it fires in a case it must not: a **MixLab user upgrading past this task**
+`<old>-modules` key* — it fires in a case it must not: a **MixLab user upgrading past this task**
 has a theme, a session and four modules' worth of saved work, and no `enabledModules`, and would
 be handed the *MixEngine* preset and watch their database tabs disappear. That is the exact user
 phase 12 spent itself bringing across.
@@ -117,7 +117,7 @@ else the import marker is there       → Everything, written down.     (one inv
 else                                  → the first-run screen.
 ```
 
-**Question 2** is `mixdb-session`, `mixdb-theme`, `mixdb-accent`, `mixdb-glass` or `mixdb-lang`:
+**Question 2** is `<old>-session`, `<old>-theme`, `<old>-accent`, `<old>-glass` or `<old>-lang`:
 any of them present means this webview profile has been used by a build older than this task.
 None of them can be written before the first-run screen is answered — `theme.ts` only ever
 *removes* a key for a default value, the language is changed from inside Settings, and
@@ -138,7 +138,7 @@ caller that needs a value without asking.
 `src-tauri/src/import.rs` gains one:
 
 ```rust
-/// Whether a MixDB user's data was brought across on this machine — the marker T104 leaves.
+/// Whether a standalone-client user's data was brought across on this machine — the marker T104 leaves.
 #[tauri::command]
 pub fn import_happened(app: AppHandle) -> bool;
 ```
@@ -294,7 +294,7 @@ nothing — but it must not be mistaken for a capability gate later.
 the *profile* prefers — the Dashboard for *MixEngine* and *Everything*, a Database tab for
 *Database tools* — is T109's, and it changes this one function.
 
-**It is not T110.** A `mixdb://` handoff that arrives while `db` is hidden still opens its tab:
+**It is not T110.** A `<old>://` handoff that arrives while `db` is hidden still opens its tab:
 `takeTabRequests` is handed all five ids, so nothing is left rotting in the backend's queue, and
 `moduleById` draws the tab because `MODULES` is unchanged. What that tab should *say*, and what the
 Services screen's *open* button should offer instead, is T110's.
@@ -322,6 +322,6 @@ In Rust: `import_happened`'s free function over a directory with and without the
 
 Neither says anything about CSS or about whether the command is registered — `npm run dev:app` and
 a click are what prove those, on the four paths worth walking by hand: a profile wiped to nothing
-(the screen), a profile with a session and no `mixdb-modules` (*Everything*, no screen), turning
+(the screen), a profile with a session and no `<old>-modules` (*Everything*, no screen), turning
 *Database tools* off with tabs open (one confirmation, four tabs gone, a MixEngine tab left), and
 turning them back on (four panes in the `[+]` menu, every saved connection still there).

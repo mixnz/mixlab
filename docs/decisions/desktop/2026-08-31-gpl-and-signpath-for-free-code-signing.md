@@ -1,6 +1,6 @@
 # GPL-3.0, so that code signing can be free
 
-MixDB is licensed GNU GPL-3.0-or-later. The licence was not chosen on its own merits: it was chosen
+The standalone client is licensed GNU GPL-3.0-or-later. The licence was not chosen on its own merits: it was chosen
 because it is the entry ticket to free code signing, and that in turn was chosen because the
 unsigned-binary warning is the first thing a new Windows user meets.
 
@@ -29,7 +29,7 @@ satisfied.
 
 All three satisfy SignPath. The repository was already public, so what a licence changes here is
 not whether anyone can *read* the code — that was given up already — but whether they can reuse it.
-GPL keeps the most: a fork stays open, and nobody can take MixDB closed and sell the closed version.
+GPL keeps the most: a fork stays open, and nobody can take the standalone client closed and sell the closed version.
 
 The dependency tree permitted the choice rather than forcing it. A scan of all 766 crates and 26
 shipped npm packages found nothing copyleft and nothing proprietary — MIT, Apache-2.0, BSD, ISC,
@@ -44,7 +44,7 @@ Zlib, MPL-2.0, BSL-1.0, CC0 and the OFL for the bundled font. Two consequences w
 Dual licensing. The same source cannot also be sold under a separate proprietary licence — that is
 precisely what SignPath excludes.
 
-Selling MixDB is *not* foreclosed. Open source does not mean free of charge, and a paid Store
+Selling the standalone client is *not* foreclosed. Open source does not mean free of charge, and a paid Store
 listing over GPL source is lawful. It is only commercially weak, because anyone may rebuild or
 redistribute what they receive. That is a business limit, not a licence violation, and the
 distinction matters if the question is ever revisited.
@@ -65,6 +65,6 @@ put the listing in breach.
 The operational half — how signing is wired into the release, and the ordering trap that will break
 the updater if it is got wrong — was in `docs/RELEASING.md` under *Signing*, and the public
 statements were `site/code-signing/` (required by SignPath) and `site/privacy/`. All three stayed
-behind in the archived `mixnz/mixdb` repository when the application moved here
+behind in the archived `mixnz/<old>` repository when the application moved here
 (ADR 0027, phase 11): this decision was never enacted — the licence stayed MIT OR Apache-2.0 —
 and code signing remains parked for MixEngine as a whole.

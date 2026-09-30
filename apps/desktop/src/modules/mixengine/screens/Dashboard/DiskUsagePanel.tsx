@@ -16,7 +16,7 @@ interface Props {
 }
 
 /** Why a category can or cannot be cleaned — the four `Reclaim` variants, one sentence each; the
- *  daemon says so rather than MixDB inferring it from the category name (just as the `Reclaim`
+ *  daemon says so rather than MixLab inferring it from the category name (just as the `Reclaim`
  *  doc comment says). */
 function reclaimNote(category: CategoryUsage, t: ReturnType<typeof useTranslation>["t"]): string {
   const { reclaim } = category;

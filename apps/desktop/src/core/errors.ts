@@ -26,7 +26,7 @@ type Translate = (key: TranslationKey, vars?: Record<string, string | number>) =
 /**
  * The message for a rejected command, in the current language.
  *
- * An error MixDB doesn't recognise — anything thrown that isn't an `AppError`, which in practice
+ * An error MixLab doesn't recognise — anything thrown that isn't an `AppError`, which in practice
  * means a bug in the webview rather than a failure in the backend — is shown as its own text
  * instead of being swallowed: something unreadable on screen beats nothing on screen.
  */

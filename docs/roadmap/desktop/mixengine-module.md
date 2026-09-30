@@ -1,6 +1,6 @@
-# Roadmap — module `mixengine` trong MixDB
+# Roadmap — module `mixengine` trong the standalone client
 
-Kế hoạch dựng phần UI để quản lý **MixEngine** ngay trong MixDB. Viết 2026-09-06, trước khi có
+Kế hoạch dựng phần UI để quản lý **MixEngine** ngay trong the standalone client. Viết 2026-09-06, trước khi có
 dòng code nào. Năm pha; mỗi pha tự chạy được và để lại một tab dùng được.
 
 **Trạng thái (cập nhật 2026-09-07): Pha 0–4 đã xong**, trừ đúng một hàng — "default web server"
@@ -45,10 +45,10 @@ một daemon (`mixengined`) và **cố ý không có GUI** — [ADR 0011](https:
 
 Bên đó đã chuẩn bị sẵn cho một client đồ họa ở repo khác: `client-surface.md` liệt kê 9 màn hình một
 GUI phải dựng được và chứng minh trên giấy rằng API đủ cho từng cái. Roadmap này nhận danh sách đó
-làm phạm vi, và MixDB là client ấy.
+làm phạm vi, và the standalone client là client ấy.
 
-Hai app đã biết nhau một chiều rồi: MixEngine gọi MixDB là extension kiểu `desktop-app`
-(`DesktopClient.name` = `"MixDB"`), và `database.open` bắn `mixdb://connect?…` sang. Phía nhận đã có
+Hai app đã biết nhau một chiều rồi: MixEngine gọi the standalone client là extension kiểu `desktop-app`
+(`DesktopClient.name` = `"the standalone client"`), và `database.open` bắn `<old>://connect?…` sang. Phía nhận đã có
 trong repo này — [`handoff.rs`](../../../apps/desktop/src-tauri/src/modules/db/handoff.rs) và
 [spec T83](../../specs/2026-09-03-mixengine-connection-handoff-design.md). Pha 0 dưới
 đây là đường đó, và nó **đã hoàn tất**; ghi lại ở đây vì nó là nền của màn hình Services ở Pha 3,
@@ -78,7 +78,7 @@ canh hợp đồng, chép tay là tự nguyện làm lệch.
 **Nghiệp vụ ở lại phía daemon.** Client không suy ra trạng thái, không tự ghép địa chỉ keyring, không
 tự dò filesystem tìm ứng dụng. Mọi thứ đó đều đã là một câu trả lời trong API.
 
-## Ranh giới trong MixDB
+## Ranh giới trong the standalone client
 
 ```
 src/modules/mixengine/
@@ -153,7 +153,7 @@ Hai chi tiết dễ bỏ sót, cả hai đều đã có:
 - **Gõ tay vào ô mật khẩu thì xoá `keyringRef`** ([DbTab.tsx:109](../../../apps/desktop/src/modules/db/DbTab.tsx)). Thứ
   trong ô không còn là thứ tham chiếu trỏ tới nữa, nên giữ tham chiếu lại là nói dối về nguồn.
 - **Một `secret_key` không có `secret` đứng sau thì không thành tham chiếu.** Đây chính là hình dạng
-  của một link `mixdb://` bấm từ trình duyệt: nó nêu được `secret_key` tuỳ ý, nhưng không đặt được
+  của một link `<old>://` bấm từ trình duyệt: nó nêu được `secret_key` tuỳ ý, nhưng không đặt được
   biến môi trường cho process nó mở. Test canh điều này là
   `a_secret_key_without_a_proven_secret_is_not_a_keyring_ref`.
 
@@ -243,7 +243,7 @@ tắt được, và một thao tác cần quyền quản trị hiện ra đầy 
   được xem/start/stop, mọi sửa khác phải từ chối kèm đúng câu lệnh gỡ extension đó.
 - **T2.2 — Tạo và sửa site.** `site.create` / `site.update`: doc root, `kind`
   (`php-fpm` · `static` · `reverse-proxy` · `node-app`), phiên bản PHP, service liên kết, domain phụ.
-  Lộ đường doc root và URL duyệt được, để MixDB tự mở trình duyệt / file manager / terminal — MixDB
+  Lộ đường doc root và URL duyệt được, để the standalone client tự mở trình duyệt / file manager / terminal — the standalone client
   đã có sẵn cả ba đường đó.
 - **T2.3 — Chia sẻ LAN.** `site.share` trả interface, address, URL; `site.unshare` rút về. Máy có
   nhiều mạng thì daemon **từ chối chứ không tự chọn**, và nêu tên các ứng viên để UI mời chọn.
@@ -291,8 +291,8 @@ thông báo nói vì sao nó tắt.
   affordance vắng mặt kèm một câu giải thích, đừng vẽ như một thất bại của người dùng.
 - **T3.5 — `database.open`, nhìn từ phía trong.** Đây chính là đường đã đẻ ra Pha 0: daemon đọc
   credential đúng khoảnh khắc bàn giao, tự khởi động client tìm được với mật khẩu trong environment
-  của process đó, và trả về **địa chỉ** nó đọc từ đâu, không trả **giá trị**. Trong MixDB, "Open in
-  MixDB" ở màn hình này không nên đi vòng qua OS: nó là một tab mới ngay trong app.
+  của process đó, và trả về **địa chỉ** nó đọc từ đâu, không trả **giá trị**. Trong the standalone client, "Open in
+  the standalone client" ở màn hình này không nên đi vòng qua OS: nó là một tab mới ngay trong app.
 - **T3.6 — Logs.** `GET /logs/{service_id}?tail=N&follow=1`, SSE đóng khung như `/events`. `tail` một
   mình là ảnh chụp rồi kết thúc; `follow` giữ kết nối. **Log không bao giờ là event** — bus 1024
   message của `/events` là 1024 thay đổi trạng thái, một service ở chế độ debug sẽ ăn hết nó và làm
@@ -333,9 +333,9 @@ cuối [spec](../../specs/2026-09-07-mixengine-metrics-settings-design.md)).
   trên đó lẫn database nó quản. Nếu nó khai `signs_in`, tài khoản đó phải hiện **giữa** danh sách
   quyền chứ không phải bên cạnh tên miền, kèm đúng ba câu: tài khoản nào, mật khẩu lấy từ keyring lúc
   pool khởi động, và không gì ghi nó xuống đĩa.
-- **T4.5 — *(đã xong, `00eed71` #42)* `desktop-app` là chính MixDB.** `ExtensionPlan.client` là `installed { program }` hoặc
+- **T4.5 — *(đã xong, `00eed71` #42)* `desktop-app` là chính the standalone client.** `ExtensionPlan.client` là `installed { program }` hoặc
   `not_installed { searched }`. MixEngine **tìm** ứng dụng chứ không cài nó, nên version của entry
-  không phải câu trả lời của máy này. Một màn hình MixDB tự nói về chính mình ở đây là chuyện dễ vẽ
+  không phải câu trả lời của máy này. Một màn hình the standalone client tự nói về chính mình ở đây là chuyện dễ vẽ
   sai — giữ nó là một câu, không phải một luồng cài đặt.
 - **T4.6 — *(đã xong, trừ một hàng)* Settings.** Root directory, TLD quản lý, updates,
   `daemon.doctor` và `daemon.doctor_repair` xong. Autostart là một công tắc đọc từ
@@ -385,12 +385,12 @@ giờ mọc thêm field, vì đó là thứ client đọc trước khi biết c�
 
 ## Ngoài phạm vi
 
-- Không dựng lại `mix` CLI trong MixDB. Mọi method mutating đều đã gọi được từ CLI, đó là bảo đảm của
+- Không dựng lại `mix` CLI trong the standalone client. Mọi method mutating đều đã gọi được từ CLI, đó là bảo đảm của
   họ chứ không phải việc của ta.
 - Không quản lý MixEngine trên máy khác. Daemon không có đường mạng có xác thực, và cố ý như vậy.
 - Không đọc/ghi thẳng SQLite hay file config của MixEngine. Chỉ đi qua API.
 - Không tự cài MixEngine. Không tìm thấy daemon thì nói ở đâu đã tìm và link tới trang cài đặt —
-  đúng như MixEngine làm với MixDB theo chiều ngược lại.
+  đúng như MixEngine làm với the standalone client theo chiều ngược lại.
 
 ## Câu còn để ngỏ
 

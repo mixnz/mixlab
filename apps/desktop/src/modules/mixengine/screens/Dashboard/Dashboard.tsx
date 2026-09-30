@@ -934,7 +934,7 @@ export default function Dashboard({
                     const id = menu.id;
                     setMenu(null);
                     // A `db` tab in this window; the password travels neither way through here (T83).
-                    void api.databaseOpenInMixDB(id).catch((e: unknown) => setError(errorMessage(t, e)));
+                    void api.databaseExploreData(id).catch((e: unknown) => setError(errorMessage(t, e)));
                   }}
                 >
                   <DatabaseGenericIcon size={14} />

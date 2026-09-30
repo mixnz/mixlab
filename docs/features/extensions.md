@@ -12,7 +12,7 @@ MinIO, MeiliSearch — installable in one click, managed by the same supervisor 
 | `recipe` | Config-only addition | extra Caddy directives, a php.ini profile | Merged into config generation |
 
 **There was a fourth kind, `desktop-app`, and it is gone** — [ADR 0038](../decisions/0038-the-window-is-the-only-desktop-database-client.md),
-roadmap task **T165**. Its one entry was MixDB, which became MixLab, the window every installer ships.
+roadmap task **T165**. Its one entry was the standalone client, which became MixLab, the window every installer ships.
 
 **`[recipe]` may accompany any kind, and `kind = "recipe"` means an extension that is *only* that.**
 The table above called `recipe` "config-only" and T82 asks for Mailpit *"with the `sendmail_path`
@@ -178,7 +178,7 @@ handoff is asked for** and placed in the started window's environment — never 
 argument, a file or a log (T83). A one-shot connection file was refused because a password on disk
 for the length of a race is still a password on disk. The keyring convention below means a connection
 the window saves points at MixEngine's credential instead of holding a second copy (T84). The scheme
-is `mixlab`; the `mixdb` one MixDB registered is no longer answered (ADR 0047).
+is `mixlab`; the `<old>` one the standalone client registered is no longer answered (ADR 0047).
 
 **Opening is a capability, not a button.** This section said *offer it on every database
 service* because it was written while a GUI was still planned inside this workspace, and
@@ -191,7 +191,7 @@ in the CLI is a gap in the product. The desktop application renders the button f
 methods — and inside its own window the *open* goes in-process, never through `mixlab://` (the
 design's D10) — which is why the demand is written down in [client-surface.md](client-surface.md)
 rather than assumed. Design:
-[docs/specs/2026-09-03-t83-mixdb-connection-handoff-design.md](../specs/2026-09-03-t83-mixdb-connection-handoff-design.md).
+[docs/specs/2026-09-03-t83-a-connection-handed-to-the-window-design.md](../specs/2026-09-03-t83-a-connection-handed-to-the-window-design.md).
 
 Detection answers a state, not a launch — **two of them, and neither is an error**: `installed`, with
 the window this install would start, and `no_client` for an install with none, which is the headless
@@ -255,7 +255,7 @@ names it alike, because a rule published to another application must not be two 
 agree by inspection.
 
 Design:
-[docs/specs/2026-09-04-t84-mixdb-in-the-registry-and-one-keyring-design.md](../specs/2026-09-04-t84-mixdb-in-the-registry-and-one-keyring-design.md).
+[docs/specs/2026-09-04-t84-the-window-in-the-registry-and-one-keyring-design.md](../specs/2026-09-04-t84-the-window-in-the-registry-and-one-keyring-design.md).
 
 
 ## web-app extensions

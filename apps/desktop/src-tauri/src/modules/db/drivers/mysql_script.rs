@@ -216,7 +216,7 @@ fn problem(error: &sqlx::Error) -> Option<SqlProblem> {
 ///
 /// Unlike {@link run} this does keep the connection: it fires on a debounce while someone types,
 /// and a handshake per pause would cost more than it saves. What it leaves on the session is
-/// bounded and known — the `USE`, and `@mixdb_check` holding the last statement's text — and no
+/// bounded and known — the `USE`, and `@mixlab_check` holding the last statement's text — and no
 /// query in the app reads either: everything else names its database in full or binds it as a
 /// parameter to `information_schema`.
 pub async fn validate(
@@ -242,13 +242,13 @@ pub async fn validate(
         }
     }
 
-    sqlx::query("SET @mixdb_check = ?")
+    sqlx::query("SET @mixlab_check = ?")
         .bind(sql)
         .execute(&mut *conn)
         .await
         .map_err(map_error)?;
 
-    match sqlx::raw_sql("PREPARE mixdb_check FROM @mixdb_check")
+    match sqlx::raw_sql("PREPARE mixlab_check FROM @mixlab_check")
         .execute(&mut *conn)
         .await
     {
@@ -256,7 +256,7 @@ pub async fn validate(
             // Ignored on purpose: the plan is gone when the connection goes back to the pool
             // either way, and a failure to tidy up is not something to report as a problem with
             // the user's statement.
-            let _ = sqlx::raw_sql("DEALLOCATE PREPARE mixdb_check")
+            let _ = sqlx::raw_sql("DEALLOCATE PREPARE mixlab_check")
                 .execute(&mut *conn)
                 .await;
             Ok(None)

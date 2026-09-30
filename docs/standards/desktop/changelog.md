@@ -3,7 +3,7 @@
 A change a user would notice gets a line in the repository's root [CHANGELOG.md](../../../CHANGELOG.md)
 **as part of the work**, not at release time — under the root's own rule,
 [standards/changelog.md](../changelog.md), which this page agrees with. It goes under
-`## [Unreleased]`, and under one of three headings. (`apps/desktop/CHANGELOG.md` is MixDB's history,
+`## [Unreleased]`, and under one of three headings. (`apps/desktop/CHANGELOG.md` is the standalone client's history,
 frozen at 0.0.33; nothing is added there.)
 
 ```markdown
@@ -64,7 +64,7 @@ The same test decides it every time: *which released version had this bug?* No a
 
 ## What the tooling expected, and no longer does
 
-MixDB had `npm run notes` to draft this section from commits, and `set-version` to cut it into a
+The standalone client had `npm run notes` to draft this section from commits, and `set-version` to cut it into a
 release; both left with the merge into MixEngine (phase 11, T101), whose release is cut from the
 root `Cargo.toml` and whose notes come from the root changelog —
 [build-and-release.md](../../operations/build-and-release.md). Released sections are never edited.

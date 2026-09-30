@@ -1,7 +1,7 @@
 /**
  * The webview's own right-click menu, taken off it.
  *
- * MixDB is a desktop application that happens to be drawn by a webview, and the menu the webview
+ * MixLab is a desktop application that happens to be drawn by a webview, and the menu the webview
  * offers on a right-click is a browser's: Back, Reload, Save as, Print, View source. None of it
  * means anything here, and two of the entries are actively harmful — a reload drops every open
  * connection, every unsaved query draft and every staged edit, exactly as `Ctrl+R` would if it were

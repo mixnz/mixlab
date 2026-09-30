@@ -32,7 +32,7 @@ export const IGNORED_MENTIONS = new Set([
   'docs/adding-a-version.md',
   'docs/the-archive.md',
   'docs/roadmap.md',
-  // MixDB's own tree, cited by the records written there (a desktop decision and a review).
+  // The standalone client's own tree, cited by the records written there (a desktop decision and a review).
   'docs/RELEASING.md',
 ]);
 

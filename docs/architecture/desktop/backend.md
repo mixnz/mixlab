@@ -1,6 +1,6 @@
 # Backend
 
-Rust, crate `mixdb` (lib name `tauri_app_lib`), edition 2021, async on Tokio.
+Rust, crate `mixlab` (lib name `tauri_app_lib`), edition 2021, async on Tokio.
 
 ## Layout
 

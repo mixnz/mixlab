@@ -525,21 +525,21 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       besides. **Adminer keeps its login form**: phpMyAdmin publishes a supported signed-in mode and
       Adminer does not, and guessing at an unsupported seam for a credential this consequential is
       not a trade this task takes — its manifest needs one line the day upstream grows one.
-- [x] **T83** **MixDB integration** — design in
-      [docs/specs/2026-09-03-t83-mixdb-connection-handoff-design.md](../specs/2026-09-03-t83-mixdb-connection-handoff-design.md).
+- [x] **T83** **The standalone client integration** — design in
+      [docs/specs/2026-09-03-t83-a-connection-handed-to-the-window-design.md](../specs/2026-09-03-t83-a-connection-handed-to-the-window-design.md).
       A `DesktopApps` capability on `Host` — find by the manifest's per-OS hint, start with an
       environment — and two methods: `database.client`, which answers per service what a client
       would speak and whether one is here as **three states, none an error** (`installed`,
       `not_installed` with where the system looked, `no_client`), and `database.open`, which
       starts the instance on `database.create`'s road, reads the account's password from the
-      keyring at that moment and starts the located binary directly with a `mixdb://` URL as its
+      keyring at that moment and starts the located binary directly with a `<old>://` URL as its
       argument and the password in **that process's environment alone** — `MIXENGINE_DB_PASSWORD`,
       T82a's name, named in the URL so the contract describes itself. **The scheme is a wire format,
       not a dispatch**: handing the URL to the OS could not carry the environment and would hand a
-      credential to whatever program registered `mixdb://`, which MixDB has not yet and any program
+      credential to whatever program registered `<old>://`, which the standalone client has not yet and any program
       could. **Measured, and the reason the Windows lookup changed**: Tauri's NSIS installer writes
-      no App Paths entry — this machine's MixDB is `Uninstall\MixDB` with
-      `DisplayIcon = "…\mixdb.exe"` — so the hint stays a file name and the uninstall table is read
+      no App Paths entry — this machine's the standalone client is `Uninstall\the standalone client` with
+      `DisplayIcon = "…\<old>.exe"` — so the hint stays a file name and the uninstall table is read
       too, case-insensitively. **A clean exit inside the one-second judgement is `handed_on`** rather
       than a failure, because that is what a single-instance application does when a copy is already
       running, and a design that read it as failure would fail on the commonest case; a non-zero
@@ -548,19 +548,19 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       and no variable, and `--user` on it is refused; memcached is "not a database a desktop client
       opens" — a state to `client`, a refusal to `open`. The (P) proof is `cli/tests/database.rs`
       asking each system's own lookup for an application no machine has; the credential's path is
-      proved once, on Linux, by a script that records presence and never value. What `mixdb` owes
+      proved once, on Linux, by a script that records presence and never value. What `<old>` owes
       is a contract in `features/extensions.md`: read the URL, read the variable, forget the
       variable, open the tab. **(P)**
-- [x] **T84** **MixDB as a `desktop-app` registry entry + a shared keyring naming convention** —
+- [x] **T84** **The standalone client as a `desktop-app` registry entry + a shared keyring naming convention** —
       design in
-      [docs/specs/2026-09-04-t84-mixdb-in-the-registry-and-one-keyring-design.md](../specs/2026-09-04-t84-mixdb-in-the-registry-and-one-keyring-design.md).
+      [docs/specs/2026-09-04-t84-the-window-in-the-registry-and-one-keyring-design.md](../specs/2026-09-04-t84-the-window-in-the-registry-and-one-keyring-design.md).
       **The entry names no artifact, and that absence *is* the entry** — which overturns
-      `features/extensions.md`'s *"MixDB's own release artifacts … so users can install it from
-      inside MixEngine"*, on three grounds each sufficient alone. There is nothing to unpack: MixDB
+      `features/extensions.md`'s *"the standalone client's own release artifacts … so users can install it from
+      inside MixEngine"*, on three grounds each sufficient alone. There is nothing to unpack: the standalone client
       publishes an NSIS installer, a disk image, an AppImage and a Debian package, and `Installer`
       verifies a hash and unpacks an archive. Running a downloaded installer would be arbitrary code
       arriving through the door built for supervised services, which is `mixengine-elevate`'s
-      boundary read backwards. And MixDB updates itself, so a version MixEngine installed would be
+      boundary read backwards. And the standalone client updates itself, so a version MixEngine installed would be
       permanently behind the one on the machine with nothing able to tell them apart. So a
       `desktop-app` entry carries how to *find* an application somebody else installed, and its
       `version` is **the entry's** rather than the machine's — which is why `extension.plan` grew
@@ -568,11 +568,11 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       other, and `homepage` beside it. An install that wrote a row and an empty directory is
       otherwise a success that produced nothing a person can see, and the only state explaining it
       lived behind `database.client`, which needs a database to ask about. The hints are what the
-      three installers actually write — `mixdb.exe`, `io.github.haiquang9994.mixdb`,
-      `mixdb.desktop` — and an AppImage nobody integrated is `not_installed`, honestly.
-      **The namespace is the convention; the key is the message.** T83 measured that MixDB
-      registered no URL scheme; it now declares `deep-link` for `mixdb`, so a `mixdb://` URL is
-      something any web page can make the user's own MixDB receive — and that one expired
+      three installers actually write — `<old>.exe`, `io.github.haiquang9994.<old>`,
+      `<old>.desktop` — and an AppImage nobody integrated is `not_installed`, honestly.
+      **The namespace is the convention; the key is the message.** T83 measured that the standalone client
+      registered no URL scheme; it now declares `deep-link` for `<old>`, so a `<old>://` URL is
+      something any web page can make the user's own the standalone client receive — and that one expired
       measurement is what shapes the whole second half. A URL allowed to name the *credential
       store's namespace* would be a way to read any secret on the machine and post it to a
       stranger's server as a password, so `mixengine` is compiled in on both sides and never
@@ -586,10 +586,10 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       recipe and still reads nothing, which is what makes the convention askable before anything is
       opened. **And three compositions became one**: `Context::secret_address`, the handoff's and
       the daemon's now all call `services::handoff::secret_key`, since a rule published to another
-      application must not be `format!`s that agree by inspection. What `mixdb` owes is the
+      application must not be `format!`s that agree by inspection. What `<old>` owes is the
       receiver's half — save the address and not the password, honour a reference only from a
       handoff that arrived on `argv` of a fresh process, ask again when the entry is gone — and
-      `mixnz/mixengine-packages` owes `data/extensions/mixdb.toml`, the same file as the fixture.
+      `mixnz/mixengine-packages` owes `data/extensions/<old>.toml`, the same file as the fixture.
       **(P)**
 - [x] **T77b** A password a person can read, and a password a person chooses — design in
       [docs/specs/2026-09-06-t77b-a-password-a-person-can-read-and-choose-design.md](../specs/2026-09-06-t77b-a-password-a-person-can-read-and-choose-design.md).
@@ -605,7 +605,7 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       somebody adds a field. **(P)**
 
 **Milestone M8** — capture a project as a blueprint, apply it to a new one, open its database in
-MixDB, and test it from a phone.
+The standalone client, and test it from a phone.
 
 ---
 

@@ -47,8 +47,8 @@ judged … the task that makes MongoDB installable is where it is read."*
   lack.
 - **MixLab's Mongo connection is one URI.** `ConnectionConfig.uri` carries host, port and default
   database for kind `mongo`; `username`, `password` and `database` are ignored for that kind. The
-  `mixdb://connect` parser (`src-tauri/src/modules/db/handoff.rs`) refuses `kind=mongo` today, and
-  `open_in_mixdb.rs` maps only `mysql`, `postgres` and `redis`.
+  `<old>://connect` parser (`src-tauri/src/modules/db/handoff.rs`) refuses `kind=mongo` today, and
+  `open_in_<old>.rs` maps only `mysql`, `postgres` and `redis`.
 - **`mixengine-elevate` refuses to open a database's port to the network** by a compiled-in list,
   `NEVER = [3306, 5432, 6379, 11211, 1025, 8025]` in `firewall.rs`.
 
@@ -234,7 +234,7 @@ pub fn mongo_uri(host: &str, port: u16, database: Option<&str>) -> Result<String
 It answers `mongodb://<host>:<port>/<database>?directConnection=true`, where:
 
 - `host` is accepted only as an IP address or a name made of ASCII letters, digits, `.` and `-`;
-  anything else is `error.handoffInvalid`. The URL a web page can hand `mixdb://` is the reason: a
+  anything else is `error.handoffInvalid`. The URL a web page can hand `<old>://` is the reason: a
   host of `a/?authSource=x` would otherwise write options into the connection string. An IPv6
   address is bracketed.
 - `database` is percent-encoded outside RFC 3986's unreserved set, and omitted — `/?…` — when
@@ -244,7 +244,7 @@ It answers `mongodb://<host>:<port>/<database>?directConnection=true`, where:
 
 `parse` accepts `kind=mongodb` and fills `ConnectionConfig { kind: Mongo, uri: Some(mongo_uri(…)),
 username: None, password: None, database: None, … }`. `kind=mongo` stays refused, as the existing
-test asserts: the word on the wire is the protocol's. `open_in_mixdb.rs` maps `"mongodb"` to
+test asserts: the word on the wire is the protocol's. `open_in_<old>.rs` maps `"mongodb"` to
 `DbKind::Mongo` and fills `uri` the same way, with `database` the argument it was given.
 
 **A MongoDB handoff dials at once**: `arrivesConnected` answers `true` for kind `mongo` as it does
@@ -271,7 +271,7 @@ the calls it could already make, so `PROTOCOL_VERSION` does not move. `bindings/
 refusals and catalogue answers (`recipe.rs`'s table tests grow a `mongodb` row: no administrator, no
 certificate, one hour idle, 27017, `mongod` and `mongos` among the programs no client may front);
 `requirements::unmet` for each branch of D5; the platform function's answer on the machine running
-the test; `handoff::mongo_uri` and `parse` for accepted and refused hosts; `open_in_mixdb`'s mapping;
+the test; `handoff::mongo_uri` and `parse` for accepted and refused hosts; `open_in_<old>`'s mapping;
 `handoffArrival` and the `requirementStep` label in vitest; the daemon's `database.client` answering
 `creates_databases` for MariaDB (`true`), Redis and MongoDB (`false`) and memcached (absent);
 `firewall.rs` refusing 27017.
@@ -322,7 +322,7 @@ macOS, and a block in `.github/scripts/test-no-network.sh` for Linux, with
   rendering through `Display`/`label`, MixLab's label, bindings. D5.
 - **T154** — The `mongodb` recipe: `DatabaseProtocol::Mongodb`, the recipe and its template, the
   catalogue, `NEVER` gains 27017, bindings, the feature spec and the guide. D1–D4.
-- **T155** — MixLab opens it: `creates_databases`, `mongo_uri`, `parse`, `open_in_mixdb`,
+- **T155** — MixLab opens it: `creates_databases`, `mongo_uri`, `parse`, `open_in_<old>`,
   `arrivesConnected`, `DatabasePanel`, bindings. D6.
 - **T156** — A real MongoDB judges the recipe: `tests/mongodb.rs`, the CI steps, the namespace
   script. D7.

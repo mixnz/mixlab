@@ -1,3 +1,4 @@
+import { SESSION_KEY as STORAGE_KEY } from "./storageKeys";
 import type { TabInfo } from "./tabs";
 
 /**
@@ -23,7 +24,6 @@ import type { TabInfo } from "./tabs";
  * mean an empty tab bar for the first frame of every launch.
  */
 
-const STORAGE_KEY = "mixdb-session";
 
 /** One tab as it is stored. A subset of {@link TabInfo}, and deliberately not that type: adding a
  *  field there must not silently start writing it to disk. */

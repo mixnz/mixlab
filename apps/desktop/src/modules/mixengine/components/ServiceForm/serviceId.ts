@@ -21,7 +21,7 @@ export function serviceIdFrom(packageName: string, instance: string): ServiceId 
 /**
  * A home has exactly one front end, so its id carries no `@`.
  *
- * **This is a copy of a rule that lives in the daemon, and MixDB cannot look it up.**
+ * **This is a copy of a rule that lives in the daemon, and MixLab cannot look it up.**
  * `package.list` has no field saying how many instances a package allows (see `PackageSummary`,
  * `PackageRelease`) — the rule lives in the recipe. The daemon has the final word: `service.create`
  * with `caddy@main` is refused with `invalid_argument` and "there is one caddy, so its id carries
@@ -34,7 +34,7 @@ export function serviceIdFrom(packageName: string, instance: string): ServiceId 
  *
  * `true` for unknown names: most of the remaining packages are databases and caches, and a new
  * package whose instance-name field the form silently hides is a package that cannot get a second
- * instance from MixDB.
+ * instance from MixLab.
  */
 export function takesInstanceName(packageName: string): boolean {
   return !FRONT_ENDS.has(packageName.toLowerCase());

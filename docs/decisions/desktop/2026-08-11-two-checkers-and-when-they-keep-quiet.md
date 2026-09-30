@@ -16,7 +16,7 @@ what makes it safe to fire at a half-typed `DELETE`, and it was checked rather t
 exactly as they were.
 
 `PREPARE` will not take a placeholder for the text it prepares, so the statement goes into a user
-variable first (`SET @mixdb_check = ?`), which *can* be bound. No user text is ever interpolated
+variable first (`SET @<old>_check = ?`), which *can* be bound. No user text is ever interpolated
 into SQL.
 
 Neither is enough alone: only the server knows the dialect of the version actually connected, and

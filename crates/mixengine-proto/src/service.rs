@@ -189,7 +189,7 @@ impl<'de> serde::Deserialize<'de> for ServiceId {
 /// by `mixengine_core::services::handoff::secret_key`.
 ///
 /// **Published rather than internal, and here rather than in `mixengine-platform`** — roadmap task
-/// **T84**, the design's D6. MixDB reads credentials MixEngine stored, and the only way two
+/// **T84**, the design's D6. MixLab reads credentials MixEngine stored, and the only way two
 /// applications agree on a namespace without one of them hardcoding the other's is for the namespace
 /// to be part of the contract. It is the `service` half of every [`EnvValue::Keyring`] this
 /// workspace builds and of every [`SecretAddress`](crate::SecretAddress) it answers with.

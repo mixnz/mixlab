@@ -41,7 +41,7 @@ another home running the same binary) is reported as such, rather than as os err
 Keychain, Credential Manager or Secret Service
 ([ADR 0052](../decisions/0052-a-build-that-is-not-a-release-keeps-its-own-credentials.md)). An unsigned
 daemon is a stranger to the Keychain after every rebuild, and a file never has to ask anybody. The
-cost is the hand-off: MixDB and the desktop window read a managed database's password from the
+cost is the hand-off: MixLab reads a managed database's password from the
 machine's store, so to work on that path start the daemon with `--credential-store os`
 (`MIXENGINE_CREDENTIAL_STORE=os`).
 
@@ -1327,7 +1327,7 @@ job's real assertion lives: an empty archive is a perfectly valid archive, and a
 helper in it installs cleanly and leaves the machine one file short of being able to elevate.
 T103, ADR 0027: the desktop application under apps/desktop. Its frontend's build, tests and
 lint, then its own Cargo workspace's clippy and tests — on one OS, because nearly all of it is
-pure logic (MixDB's own CI made the same choice), and `build` is what proves the window links
+pure logic (the standalone client's own CI made the same choice), and `build` is what proves the window links
 on all three. It gates `release` the way `bindings` does, and for the same reason: a type
 reshaped in `mixengine-proto` fails `tsc` here, in the same run — the check ADR 0011 gave up.
 
@@ -1406,7 +1406,7 @@ other toolchain in this product is: "whatever the runner has" is not reproducibl
 T103: the window is built on the host of these two legs, not in the container — the
 manylinux image is AlmaLinux 8, whose WebKitGTK is the 4.0 API on libsoup 2, and Tauri 2
 links 4.1 on libsoup 3. The container step does not care what its host runs, so the host
-is pinned to 22.04 to give the window the glibc 2.35 floor MixDB's own releases had.
+is pinned to 22.04 to give the window the glibc 2.35 floor the standalone client's own releases had.
 
 ### `binaries`
 

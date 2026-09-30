@@ -3,7 +3,7 @@ import type { DatabaseClientReport, DesktopClient } from "@mixengine/api";
 /**
  * The module a database service opens into.
  *
- * The one id this module names, and the frontend half of `open_in_mixdb.rs`'s `module_id: "db"` —
+ * The one id this module names, and the frontend half of `explore_data.rs`'s `module_id: "db"` —
  * a bridge between two modules is by definition one naming the other.
  */
 export const DATABASE_MODULE_ID = "db";

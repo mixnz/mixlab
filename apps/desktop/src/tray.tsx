@@ -8,6 +8,7 @@ import { blockNativeContextMenu } from "./core/nativeContextMenu";
 import { logError } from "./core/log";
 import { IS_MAC, IS_WINDOWS } from "./core/platform";
 import { readEnabledModules, visibleModules } from "./shell/profiles";
+import { ACCENT_KEY, LANGUAGE_KEY, MODULES_KEY, THEME_KEY } from "./shell/storageKeys";
 import TrayFrame from "./shell/tray/TrayFrame";
 import { traySections } from "./shell/tray/sections";
 /* The tokens, the ground and the theme the main window draws with. `shell/theme` applies the stored
@@ -38,7 +39,7 @@ window.addEventListener("unhandledrejection", (e) => void logError("tray", e.rea
 /* The main window writes the theme, the accent, the language and the module set into the storage
    both windows share, and the `storage` event is how this one hears. Reloading is the whole answer:
    the panel reads everything again whenever it is shown anyway, and it is hidden when this runs. */
-const FOLLOWED = new Set(["mixdb-theme", "mixdb-accent", "mixdb-lang", "mixdb-modules"]);
+const FOLLOWED = new Set([THEME_KEY, ACCENT_KEY, LANGUAGE_KEY, MODULES_KEY]);
 window.addEventListener("storage", (e) => {
   if (e.key === null || FOLLOWED.has(e.key)) window.location.reload();
 });

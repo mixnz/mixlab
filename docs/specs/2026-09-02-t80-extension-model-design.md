@@ -164,7 +164,7 @@ that user, which is the same set.
 Making it a boundary means requiring a token on *every* connection, `mix` included — a second
 access-control story, which is exactly what the same document already refused for the TCP listener,
 in the words *"a second transport and a second access-control story for a case nobody has yet"*. And
-there is no case: not one extension in the plan (Mailpit, phpMyAdmin, Adminer, MixDB) calls the
+there is no case: not one extension in the plan (Mailpit, phpMyAdmin, Adminer, the standalone client) calls the
 daemon API.
 
 So `[permissions] services` stays in the manifest as a **declaration shown before an extension is
@@ -200,7 +200,7 @@ way to have one.
   internal domain by whoever generates the site), `runtime = { kind = "php", requires = "^8.1" }`
   using the existing `VersionConstraint`, and `template` (a file inside the extension rendered into
   the app's own configuration, so an upgrade does not clobber what a person changed).
-- `[desktop-app]` — `scheme` (`"mixdb"`) and per-OS detection hints. T80 only declares them; finding
+- `[desktop-app]` — `scheme` (`"<old>"`) and per-OS detection hints. T80 only declares them; finding
   an installed application and following a URL scheme are both platform-layer work, and are T83's.
 - `[recipe]` — two forms, both with a consumer named in the roadmap: `php_ini` (key/value applied to
   every managed PHP, which is `sendmail_path`) and `front_end` (a directive fragment). No third form
@@ -223,7 +223,7 @@ default — the same answer a compiled-in recipe gets when it says nothing.
 
 **`stop` and `reload` may not be their `command` forms.** Both carry a `program: PathBuf`, so
 allowing them means a second program to render and a second place to repeat D4's path rule, for a
-capability none of Mailpit, phpMyAdmin, Adminer or MixDB needs. `signal` and `kill` are accepted;
+capability none of Mailpit, phpMyAdmin, Adminer or the standalone client needs. `signal` and `kill` are accepted;
 `command` is refused, saying that a stop command is a second program and arrives with something that
 needs one. What this leaves the render layer is two templates — `ReadyTemplate` and
 `HealthProbeTemplate` — rather than four.
@@ -303,7 +303,7 @@ neither, so T81 adds the third — with the migration, in the task that writes r
 
 ## Testing
 
-- **Four fixtures, and they are the real manifests** — Mailpit, phpMyAdmin, MixDB and a
+- **Four fixtures, and they are the real manifests** — Mailpit, phpMyAdmin, the standalone client and a
   `sendmail_path` recipe: the files T82 and T83 will ship. The format is tried against its actual
   consumers rather than against examples written to fit it.
 - **A refusal table**: an absolute path; a literal `0.0.0.0`; a literal `127.0.0.1`; `lan` under
@@ -319,7 +319,7 @@ neither, so T81 adds the third — with the migration, in the task that writes r
 ## Risks
 
 - **The `[web-app]`, `[desktop-app]` and `[recipe]` tables have no consumer yet.** Each is designed
-  from a task that names what it needs — T82's phpMyAdmin and `sendmail_path`, T83's MixDB handoff —
+  from a task that names what it needs — T82's phpMyAdmin and `sendmail_path`, T83's the standalone client handoff —
   and each is kept to that. `schema` is the escape: a field added later is a schema a build can
   refuse to read, which is the versioning the registry section already asks for.
 - **`0.0.0.0` will read as alarming** in `mix extension inspect` output for a `lan` extension. The

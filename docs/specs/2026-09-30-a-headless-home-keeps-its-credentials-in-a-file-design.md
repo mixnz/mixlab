@@ -179,7 +179,7 @@ the root, and `mix uninstall` removes it with the home (ADR 0052's consequences,
 ## D6. The window on the same machine is unchanged
 
 Two places in the window read MixEngine's credentials straight from the OS store: *Explore data* on
-the dashboard ([open_in_mixdb.rs](../../apps/desktop/src-tauri/src/modules/mixengine/open_in_mixdb.rs)),
+the dashboard ([explore_data.rs](../../apps/desktop/src-tauri/src/modules/mixengine/explore_data.rs)),
 and the `db` toolbox's saved connection, which keeps a `keyringRef` and resolves it on every load
 ([savedConnections.ts](../../apps/desktop/src/modules/db/savedConnections.ts)). Against a `home`
 store both would find nothing — and **neither meets one**, because D2 lets a home choose the file

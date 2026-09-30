@@ -503,7 +503,7 @@ pub(super) fn display_type(name: &str, max_length: i16, precision: u8, scale: u8
 /// wrap the **whole** expression come off — `(a)+(b)` opens and closes twice and keeps both.
 ///
 /// Writing DDL puts them back: SQL Server accepts a `DEFAULT` either way, and re-wrapping is what
-/// makes what MixDB writes read the way what SSMS writes does. That is Plan 6's problem, not this
+/// makes what MixLab writes read the way what SSMS writes does. That is Plan 6's problem, not this
 /// one's.
 pub(super) fn strip_default_parens(definition: &str) -> String {
     let mut current = definition.trim();

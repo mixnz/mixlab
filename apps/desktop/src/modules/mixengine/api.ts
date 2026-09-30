@@ -174,7 +174,7 @@ export function serviceStartProject(project: string): Promise<unknown> {
  *
  * Each message is **raw** JSON: the caller parses it, because an unknown `type` has to be
  * ignorable rather than break anything. MixEngine's events are internally tagged, and a variant
- * born in a later version has to reach an older MixDB as an object it recognises and ignores.
+ * born in a later version has to reach an older MixLab as an object it recognises and ignores.
  */
 export function watch(onMessage: (raw: string) => void): Promise<void> {
   const channel = new Channel<string>();
@@ -506,8 +506,8 @@ export function serviceAdopt(service: string): Promise<ServiceSummary> {
 
 /** Returns nothing — success means a new `db` tab has been queued to open; see
  *  `Handoff`/`crate::launch::request` on the Rust side. */
-export function databaseOpenInMixDB(service: string, database?: string): Promise<void> {
-  return invoke("mixengine_database_open_in_mixdb", { service, database });
+export function databaseExploreData(service: string, database?: string): Promise<void> {
+  return invoke("mixengine_database_explore_data", { service, database });
 }
 
 /** Opens a service's log stream. The same pattern as `watch`/`unwatch` — a new `Channel`, and the

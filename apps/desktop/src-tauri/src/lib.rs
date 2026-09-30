@@ -116,7 +116,7 @@ pub fn run() {
     let hidden = opening.hidden;
     builder
         .setup(move |app| {
-            /* Before anything else: a MixDB user's stores, copied while nothing else can touch
+            /* Before anything else: a standalone-client user's stores, copied while nothing else can touch
             the directory. `setup` runs inside `build()`, before the event loop that would
             deliver the webview's first `Store.load` — which is the only moment in which that
             copy is race-free. The credentials follow on a thread of their own; the module's

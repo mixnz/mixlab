@@ -15,7 +15,7 @@ refusal that makes "exactly one front end" a rule something can break rather tha
 there being only one recipe. There was no shape for the port-80 grant either; **T42** gave it one,
 and it is not the same shape on the three operating systems.
 
-MixDB's Phase 4 spec is what asked the question out loud, writing a Settings screen against
+The standalone client's Phase 4 spec is what asked the question out loud, writing a Settings screen against
 [../features/client-surface.md](../features/client-surface.md). The finding: *which web server is
 active* has no readable or writable state anywhere. `front_end::held_by` derives it by scanning the
 table and uses it only to **refuse** a second front end; no RPC answers it, `Config` has no field

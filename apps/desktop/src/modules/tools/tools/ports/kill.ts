@@ -22,7 +22,7 @@ export function killByPort(os: KillOs, port: number): string {
 }
 
 /**
- * Which OS the machine running MixDB is — only to set the picker's **default value**.
+ * Which OS the machine running MixLab is — only to set the picker's **default value**.
  *
  * The picker can still be changed by hand, and that is deliberate: people on Windows often need
  * the kill command for a Linux server open in the Terminal tab next door.

@@ -25,7 +25,7 @@ chấp nhận; không phải việc của spec này.
   cùng luồng cài/gỡ có tiến độ — theo đúng ý bạn: "package cần một luồng cài đặt y hệt Runtimes".
 - **Services chi tiết**: mở từ một hàng ở Dashboard, xem giới hạn CPU/RAM (và watchdog bộ nhớ nơi máy
   không tự ép được), đổi ngưỡng tự dừng khi rảnh (idle), và với một service database: tạo
-  database/account, và "Open" mở thẳng một tab `db` trong MixDB — không vòng qua OS.
+  database/account, và "Open" mở thẳng một tab `db` trong the standalone client — không vòng qua OS.
 - **Logs**: tail sống theo từng service, lọc theo stream, lộ đường file để mở thư mục chứa.
 
 ## Vì sao có Projects trong Pha này
@@ -33,7 +33,7 @@ chấp nhận; không phải việc của spec này.
 Pha 2 chủ động không dựng Projects — quyết định (a) trong
 [2026-09-06-mixengine-sites-domains-design.md](2026-09-06-mixengine-sites-domains-design.md), Câu hỏi
 1: dropdown gọi thẳng `project.list`, máy chưa có project nào thì tự đăng ký bằng
-`mix project add <thư mục>`. Bàn lại trong buổi viết spec này, quyết định đảo ngược: MixDB dựng hẳn
+`mix project add <thư mục>`. Bàn lại trong buổi viết spec này, quyết định đảo ngược: the standalone client dựng hẳn
 một màn hình quản lý — không chỉ vì Sites cần nó, mà vì `project.*` đã có đủ method
 (`list, create, show, update, delete, export` — tên thật xác nhận qua `rpc.rs`, xem Hiện trạng) để một
 màn hình đầy đủ không phải chắp vá. Đây **là**
@@ -42,7 +42,7 @@ thế nào.
 
 ## Phi mục tiêu
 
-- Blueprints, Extensions (nghĩa "extension sản phẩm" — Mailpit, phpMyAdmin, chính MixDB — namespace
+- Blueprints, Extensions (nghĩa "extension sản phẩm" — Mailpit, phpMyAdmin, chính the standalone client — namespace
   `extension.*`), Settings, Metrics — Pha 4.
 - **Tạo/xoá một service instance mới** (`service.create`/`service.delete` — cả hai đều tồn tại thật,
   xác nhận qua `rpc.rs`). Cài một package (mục 2) chỉ là "phiên bản này đã có trên đĩa" — dùng nó để
@@ -83,7 +83,7 @@ chiếu trực tiếp — `site.*`, `domain.*`, `cert.*` nếu cần mở rộng
 của tài liệu là gợi ý, không phải nguồn cuối; đối chiếu bằng bindings đã vendor mới nhất hoặc gọi thử
 lên daemon thật, đừng lặp lại việc phải xác nhận từng namespace một bằng tay.
 
-Không có source nào "mới hơn" một cách đáng tin: `bindings/` là bản MixDB này chép lúc Pha 1, còn hai
+Không có source nào "mới hơn" một cách đáng tin: `bindings/` là bản the standalone client này chép lúc Pha 1, còn hai
 file `.md` là snapshot lấy về hôm nay nhưng viết bởi người, sửa chậm hơn code — đúng cùng một bệnh
 roadmap này vừa tự mắc ở header của nó. Kết luận rút ra không phải "tin cái nào" mà là: **đừng viết
 code dựa một mình vào tài liệu — chạy `npm run bindings` lấy bản mới nhất trước khi bắt đầu Pha này,
@@ -241,7 +241,7 @@ tên module rồi đoán nội dung, thay vì mở file ra đọc.** Việc củ
 - **Không cần `job.list` hay `job.status` để vẽ một job vừa tự mình tạo ra** — id đã có ngay trong câu
   trả lời của `runtime.install`/`package.install`, và mọi bước tiếp theo tới qua stream đang mở sẵn.
 - **Cần `job.status` (hoặc `job.list` lọc `state: running`) đúng một lần: lúc mở màn hình.** Một job
-  đang chạy từ trước khi màn hình này mở (cài một bản PHP từ CLI, rồi mở MixDB) không có `job_progress`
+  đang chạy từ trước khi màn hình này mở (cài một bản PHP từ CLI, rồi mở the standalone client) không có `job_progress`
   nào cho UI thấy nó bắt đầu — nhưng vì `JobRow` không mang version, một job "mồ côi" kiểu này không
   có hàng nào để gắn vào; cách xử lý thực tế là bảng "có thể cài" tự đọc `installed`/`stale` lại khi
   focus quay lại tab, không cố gắn job cũ vào một hàng.
@@ -289,14 +289,14 @@ chọn "n phút", không một checkbox.
   memcached) đều là **trạng thái phải vẽ**, không phải lỗi — đúng luật roadmap đã ghi hai lần.
 - **"Open" — không đi qua `database.open`.** Đây là điểm khác với luồng OS-handoff Pha 0.
   `database.open` khởi động một **process ngoài** với `DesktopClient` tìm được — và với service kiểu
-  `mysql`/`postgres`, `DesktopClient` đó chính là MixDB (`extension: "desktop-app"`, `name: "MixDB"`,
-  đã đăng ký từ Pha 0). Gọi `database.open` từ trong MixDB nghĩa là MixDB tự bảo daemon **mở một tiến
-  trình MixDB khác** — vòng ra ngoài rồi vòng lại, đúng thứ roadmap T3.5 nói "không nên đi qua OS".
+  `mysql`/`postgres`, `DesktopClient` đó chính là the standalone client (`extension: "desktop-app"`, `name: "the standalone client"`,
+  đã đăng ký từ Pha 0). Gọi `database.open` từ trong the standalone client nghĩa là the standalone client tự bảo daemon **mở một tiến
+  trình the standalone client khác** — vòng ra ngoài rồi vòng lại, đúng thứ roadmap T3.5 nói "không nên đi qua OS".
 
   **Sửa lại so với bản nháp trước: cơ chế mở tab đã có sẵn, không cần API mới — bản nháp trước đọc
   nhầm `shell/launch.rs`/`launch.ts` là "chỉ dành cho OS-handoff", trong khi đọc lại code thì
   `crate::launch::request` là một hàm Rust bình thường, gọi được từ bất kỳ command nào, không chỉ từ
-  chỗ nhận URL `mixdb://`.** Pha 0 đã dùng đúng nó cho việc này: `handoff::accept()`
+  chỗ nhận URL `<old>://`.** Pha 0 đã dùng đúng nó cho việc này: `handoff::accept()`
   ([handoff.rs:189-206](../../apps/desktop/src-tauri/src/modules/db/handoff.rs)) dựng một `Handoff`, gọi
   `HandoffState::keep()` lấy một id, rồi gọi thẳng `crate::launch::request(app, TabRequest { module_id:
   "db", state: json!({"handoffId": id}) })` — không có gì trong hàm đó nhắc tới nguồn gốc URL. Pha 3
@@ -339,7 +339,7 @@ mở song song khi trang Logs đang mở, đóng khi rời trang.
 đường file trên đĩa", nhưng không field nào trên `LogLine`/`LogFrame` mang một đường dẫn, và đây là
 chủ đích của ADR 0009: daemon không bao giờ trả layout lưu trữ của nó cho client — một phần vì một
 client không cùng máy (thiết kế tương lai) không có gì để mở đường dẫn đó. `LogExcerpt` cũng không
-phải type của trang này (xác nhận ở Hiện trạng) — nó thuộc `daemon.bundle`, Pha 4. MixDB tiêu thụ log
+phải type của trang này (xác nhận ở Hiện trạng) — nó thuộc `daemon.bundle`, Pha 4. The standalone client tiêu thụ log
 **chỉ qua stream** (`tail`/`follow`), không có đường vòng qua file — kể cả khi daemon chạy cùng máy.
 Roadmap nên bỏ câu "lộ luôn đường file trên đĩa" khỏi T3.6.
 
@@ -355,7 +355,7 @@ Phần thuần, không cần daemon nào:
 | `logState`/parser SSE `/logs` | `line`/`historic`/`gap` phân biệt đúng; `gap` không làm mất các dòng trước nó |
 | `limitsForm` | `support.cpu = "unsupported"` ẩn control CPU; `advisory` vẽ khác `hard`; gửi lại luôn cả ba field của `ResourceLimits` |
 | `idleSelect` | ba trạng thái map đúng `null`/`0`/`n` hai chiều |
-| Đường "Open in MixDB" | dựng đúng `ConnectionConfig` từ `DatabaseClientReport` + mật khẩu resolve được; `protocol: null` hoặc `client: "no_client"` không hiện nút |
+| Đường "Open in the standalone client" | dựng đúng `ConnectionConfig` từ `DatabaseClientReport` + mật khẩu resolve được; `protocol: null` hoặc `client: "no_client"` không hiện nút |
 
 **Không test được bằng vitest**, cần MixEngine thật: `package.*` có đúng như bindings suy ra không —
 đây là namespace duy nhất trong bảng ở Hiện trạng còn chưa đối chiếu trực tiếp với `rpc.rs`;
@@ -398,14 +398,14 @@ Pha này chưa đối chiếu trực tiếp với `rpc.rs` — cụ thể là `p
 tra") và mọi type mới `runtime.list_extensions`/`set_extension` có thể kéo theo mà bindings hiện tại
 chưa vendor đủ.
 
-**D2 — "Open in MixDB" dùng lại nguyên đường Pha 0 đã đi: `Handoff` + `HandoffState` +
+**D2 — "Open in the standalone client" dùng lại nguyên đường Pha 0 đã đi: `Handoff` + `HandoffState` +
 `crate::launch::request`, gọi thẳng từ một Tauri command mới, không qua URL.** Không phải hai hướng
 spec bản trước cân nhắc ("API event bus mới" so với "mượn hàng đợi OS-handoff") — cả hai giả định sai
 rằng `launch::request` gắn với nguồn gốc OS. Đọc lại `launch.rs`: đó là một hàm nhận `TabRequest {
 module_id, state }` rồi đẩy vào một hàng đợi và bắn một sự kiện — không tham số nào nói tới URL hay
 tiến trình khác. `handoff::accept()` (Pha 0) đã gọi đúng nó theo cách này rồi; Database (Pha 3) gọi lại
 y hệt, chỉ khác nguồn tạo `Handoff` là `database.client` + `secrets_resolve_mixengine` gọi thẳng trong
-Rust thay vì đọc một URL `mixdb://`. Không thêm API mới ở `shell/`, không sửa `DbTab.tsx`. Xem mục 4
+Rust thay vì đọc một URL `<old>://`. Không thêm API mới ở `shell/`, không sửa `DbTab.tsx`. Xem mục 4
 cho các bước cụ thể.
 
 **D3 — `RuntimeCatalogue.stale` và `PackageCatalogue.stale` vẽ cùng một component.** Cùng hình dạng,
@@ -415,7 +415,7 @@ cùng lý do tồn tại (cache không refresh được vẫn dùng được, im
 **D4 — Projects là mục sidebar thứ hai, ngay sau Dashboard, trước Sites.** Site cần chọn Project lúc
 tạo, nên thứ tự sidebar nên đi trước thứ nó phục vụ. Đây là mục **ngoài** 9 màn hình `client-surface.md`
 liệt kê — comment ở [Sidebar.tsx:6](../../apps/desktop/src/modules/mixengine/components/Sidebar/Sidebar.tsx)
-("Chín mục cố định của `client-surface.md`") phải sửa lại, ghi rõ Projects là một mục MixDB tự thêm và
+("Chín mục cố định của `client-surface.md`") phải sửa lại, ghi rõ Projects là một mục the standalone client tự thêm và
 vì sao (Sites không dùng được nếu không có project nào, và `project.*` đã đủ method cho một màn hình
 đầy đủ chứ không phải nửa vời).
 

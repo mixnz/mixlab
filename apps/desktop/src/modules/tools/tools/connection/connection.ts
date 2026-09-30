@@ -1,7 +1,7 @@
 import type { EnvPair } from "../env/env";
 
 /**
- * Splits and builds connection strings for the four kinds of DB MixDB supports.
+ * Splits and builds connection strings for the four kinds of DB MixLab supports.
  *
  * The tool opens no connection to check whether the string is right — it only reads and writes.
  */

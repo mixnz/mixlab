@@ -89,7 +89,7 @@ if (drawingOf(edgeSvg) !== drawingOf(paddedSvg)) {
 console.log(`Rendering ${edgeName} edge to edge into ${relative(root, iconsDir)} …`);
 tauriIcon(edgeToEdge);
 
-const scratch = mkdtempSync(join(tmpdir(), "mixdb-icons-"));
+const scratch = mkdtempSync(join(tmpdir(), "mixlab-icons-"));
 try {
   const paddedOut = join(scratch, "icons");
   console.log(`Rendering ${paddedName} with the Dock margin, keeping only icon.icns …`);

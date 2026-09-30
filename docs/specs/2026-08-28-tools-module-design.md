@@ -9,7 +9,7 @@ Ngày: 2026-08-28
 
 ## Mục tiêu
 
-MixDB là một shell cộng các module. Hôm nay có ba: `db`, `rest` và `terminal`. Spec này mô tả module
+The standalone client là một shell cộng các module. Hôm nay có ba: `db`, `rest` và `terminal`. Spec này mô tả module
 thứ tư — `tools` — một tập tiện ích nhỏ mà dev chạm tới **trong lúc đang làm việc với DB, API hoặc
 máy chủ**, sống cạnh ba module kia mà không bên nào biết khái niệm của bên nào.
 
@@ -282,7 +282,7 @@ Thứ tự stage của pipeline: `$match` (từ `WHERE`) → `$group` → `$matc
 `$sort` → `$skip` → `$limit`. Hai `$match` ở hai vị trí khác nhau chính là chỗ `WHERE` khác `HAVING`,
 và đặt sai thì kết quả sai mà không ai thấy.
 
-Đầu ra là cú pháp **mongosh**, in xuống dòng thụt lề, dán thẳng vào Mongo workspace của MixDB được.
+Đầu ra là cú pháp **mongosh**, in xuống dòng thụt lề, dán thẳng vào Mongo workspace của standalone-client được.
 
 ### 4.4 Hai chỗ tinh
 

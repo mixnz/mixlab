@@ -59,7 +59,7 @@ function megabytes(bytes: number): string {
 
 /**
  * The dump and restore tools: where each one was found, and what can be done about it — download
- * MixDB's own copy, delete that copy again, or point the app at one already on this machine.
+ * MixLab's own copy, delete that copy again, or point the app at one already on this machine.
  *
  * A download is tens of megabytes and takes minutes, so it is not left to a button that says
  * "working": the bar below the suite carries the stage it is in, the megabytes so far, and — once
@@ -211,8 +211,8 @@ function ToolsSection() {
 
       {SUITES.map(({ suite, labelKey, noDownloadKey }) => {
         const members = tools.filter((tool) => tool.suite === suite);
-        // Only a copy MixDB downloaded can be removed; what was already on the machine is not
-        // MixDB's to delete.
+        // Only a copy MixLab downloaded can be removed; what was already on the machine is not
+        // MixLab's to delete.
         const downloaded = members.some((tool) => tool.source === "downloaded");
         // Only this suite's own errand quiets this suite's buttons: the other one downloads to a
         // staging directory and unpacks to an install directory of its own, so the two never meet.

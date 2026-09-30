@@ -50,21 +50,21 @@ export function rowsFrom(list: ServiceSummary[]): ServiceRow[] {
 export function needsResync(raw: string): boolean {
   try {
     const { type } = JSON.parse(raw) as { type?: unknown };
-    return type === "resync" || type === "mixdb_disconnected";
+    return type === "resync" || type === "mixlab_disconnected";
   } catch {
     return false;
   }
 }
 
 /** Whether it is a `job_finished` — for any job. The Dashboard rereads `daemon.status` when it sees
- *  one, because a finished `elevation.grant` (from the dialog, from the CLI, or from another MixDB
+ *  one, because a finished `elevation.grant` (from the dialog, from the CLI, or from another MixLab
  *  window) changes the waiting count without the daemon emitting any event of its own for that
  *  (`elevation_required` only fires when the queue *grows*). */
 /** The event stream ended — the daemon stopped, or was stopped from somewhere else (T168: the tray). */
 export function isDisconnected(raw: string): boolean {
   try {
     const { type } = JSON.parse(raw) as { type?: unknown };
-    return type === "mixdb_disconnected";
+    return type === "mixlab_disconnected";
   } catch {
     return false;
   }
@@ -119,7 +119,7 @@ export function applyEvent(
 
   switch (event.type) {
     case "resync":
-    case "mixdb_disconnected":
+    case "mixlab_disconnected":
       return { rows, resync: true };
 
     case "service_state_changed": {

@@ -638,7 +638,7 @@ function checkStatement(
     }
 
     if (token.kind === "word" && dialect.reserved.has(token.value.toLowerCase())) continue;
-    // A name followed by `(` is a function, and MixDB does not carry a list of every function
+    // A name followed by `(` is a function, and MixLab does not carry a list of every function
     // MySQL and its plugins have.
     if (code[i + 1]?.raw === "(") continue;
     if (code[i - 1]?.raw === "." || wordAt(code, i - 1) === "AS") continue;

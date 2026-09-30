@@ -95,7 +95,7 @@ A new top-level folder is created once three documents fit nowhere above.
 
 ### decisions
 - [decisions/README.md](decisions/README.md) — ADR index and template; MixLab's four dated
-  decisions from MixDB are indexed there too
+  decisions from the standalone client are indexed there too
 
 ### roadmap
 - [todo.md](roadmap/todo.md) — the index: phases, task ranges, milestones, where we are

@@ -1,19 +1,19 @@
 # What `cargo audit` is told to pass over, and why. Read by the Advisories workflow.
 #
 # An ignore here is a claim, not a shrug: each one says why this advisory cannot reach a user of
-# MixDB, and it is meant to be deleted the moment that stops being true. Anything not listed fails
+# MixLab, and it is meant to be deleted the moment that stops being true. Anything not listed fails
 # the check — which is the only way the check is worth running at all.
 
 [advisories]
 ignore = [
   # `rsa` 0.10.0-rc — the Marvin timing side-channel, and there is no fixed version to move to.
   # It arrives under `russh`, which is the SSH tunnel and the terminal. The attack recovers a
-  # private key from an attacker who can time many decryptions with it; MixDB is the client, it
+  # private key from an attacker who can time many decryptions with it; MixLab is the client, it
   # decrypts nothing for anyone, and the far end that would have to be doing the timing is the SSH
   # server the user chose to trust with a shell. Delete this line the day russh ships a fix.
   "RUSTSEC-2023-0071",
 
-  # `rkyv` 0.7 — out-of-bounds reads on a malformed archive. MixDB does not build this crate at
+  # `rkyv` 0.7 — out-of-bounds reads on a malformed archive. MixLab does not build this crate at
   # all: it is an optional dependency of `rust_decimal` whose feature nothing turns on, so it sits
   # in Cargo.lock and appears in no dependency graph. Checked, not assumed — `cargo tree -e all -i
   # rkyv --target all` prints nothing. cargo-audit reads the lock file, which cannot see that.

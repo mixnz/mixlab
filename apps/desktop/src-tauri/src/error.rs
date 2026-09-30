@@ -2,7 +2,7 @@
 //! rather than an English sentence.
 //!
 //! The backend is where things go wrong, but it is not where the user is told about it. Writing
-//! the message here would mean writing it in one language, and MixDB is bilingual — so what
+//! the message here would mean writing it in one language, and MixLab is bilingual — so what
 //! crosses the boundary is `{ code, params }`, and `src/errors.ts` turns that into the sentence
 //! the user reads in whichever language the app is set to.
 //!

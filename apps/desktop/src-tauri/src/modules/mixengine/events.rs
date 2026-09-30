@@ -1,7 +1,7 @@
 //! Keeps `GET /events` open and pushes each message up to the UI.
 //!
 //! **Nothing is interpreted here** — it carries raw JSON. MixEngine's events are internally tagged,
-//! and a variant born in a later version has to reach an older MixDB as an object it can ignore,
+//! and a variant born in a later version has to reach an older MixLab as an object it can ignore,
 //! not as a parse error. Understanding the payload is the frontend's job.
 //!
 //! **Events are best-effort and never the only way to know the state.** Two things the frontend
@@ -22,9 +22,10 @@ use super::sse::Frames;
 use super::state::MixEngineState;
 use super::transport;
 
-/// The message MixDB emits itself when the stream drops. The name has a `mixdb_` prefix so it can
-/// never collide with a MixEngine `type`, including one added in a later version.
-pub const DISCONNECTED: &str = r#"{"type":"mixdb_disconnected"}"#;
+/// The message the window emits itself when the stream drops. The name has a `mixlab_` prefix so
+/// it can never collide with a MixEngine `type`, including one added in a later version: the daemon
+/// names no event after the window.
+pub const DISCONNECTED: &str = r#"{"type":"mixlab_disconnected"}"#;
 
 /// Opens the stream and runs until cancelled or until the connection drops.
 ///

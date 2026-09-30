@@ -1,7 +1,7 @@
 import type { Language } from "../i18n";
 
 /**
- * Pages of MixDB's own that the app sends a user out to.
+ * Pages of MixLab's own that the app sends a user out to.
  *
  * Not in `version.ts`, which owns the release page: that is where a person goes to fetch a build,
  * and part of how the product is installed, while this is a document a user goes to read. They also
@@ -11,7 +11,7 @@ import type { Language } from "../i18n";
 
 /**
  * The privacy policy: a page of the handbook (`docs/guide/<lang>/privacy.md`), published by the
- * Pages workflow, in the language the app is set to. It replaced MixDB's page, which said there was
+ * Pages workflow, in the language the app is set to. It replaced the standalone client's page, which said there was
  * no server of ours — true until sync.
  */
 export function privacyPolicyUrl(lang: Language): string {

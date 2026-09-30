@@ -13,7 +13,7 @@ import { toolsModule } from "../modules/tools";
  *  **The order is the app's order.** The `[+]` menu, `Ctrl/Cmd+1 … N` and the Settings dialog's
  *  pane column all draw the visible modules in this order and never in the order a stored setting
  *  happens to carry — see `shell/profiles.ts`. MixEngine leads because this is MixEngine's window;
- *  the four that follow are in the order MixDB listed them.
+ *  the four that follow are in the order the standalone client listed them.
  *
  *  **The first entry a profile shows is the tab it opens by default** — T109. There is no constant
  *  for it: `defaultModuleId` is a filter's first element, so the default is a module this list has

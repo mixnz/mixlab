@@ -34,7 +34,7 @@ interface Props {
  * for this — see `useWorkspaceError`.
  *
  * Covers exactly the workspace rather than portalling out to `document.body`: background tabs in
- * MixDB stay mounted and are only `display: none`, so a popup fixed to the viewport would cover the
+ * MixLab stay mounted and are only `display: none`, so a popup fixed to the viewport would cover the
  * tab being viewed because another tab's tunnel dropped.
  *
  * Returns `null` when there is nothing to say — including for connections not going through a

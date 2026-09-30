@@ -3,36 +3,36 @@ status: implemented
 date: 2026-09-03
 ---
 
-# Nhận kết nối từ MixEngine: `mixdb://connect` và mật khẩu trong môi trường
+# Nhận kết nối từ MixEngine: `<old>://connect` và mật khẩu trong môi trường
 
 Ngày: 2026-09-03
 
 ## Mục tiêu
 
-MixEngine (task T83 bên đó) tìm MixDB đã cài trên máy, **chạy thẳng binary** với một URL làm
+MixEngine (task T83 bên đó) tìm the standalone client đã cài trên máy, **chạy thẳng binary** với một URL làm
 `argv[1]` và mật khẩu nằm trong **biến môi trường của đúng tiến trình đó** — không có trong URL,
 không có trên dòng lệnh, không có trên đĩa:
 
 ```
-mixdb.exe "mixdb://connect?kind=mysql&host=127.0.0.1&port=3306&user=root&database=blog&label=mariadb%40main&password_env=MIXENGINE_DB_PASSWORD"
+<old>.exe "<old>://connect?kind=mysql&host=127.0.0.1&port=3306&user=root&database=blog&label=mariadb%40main&password_env=MIXENGINE_DB_PASSWORD"
    với MIXENGINE_DB_PASSWORD=<mật khẩu>   (chỉ trong env của tiến trình này)
 ```
 
 Spec này là **phía nhận** của hợp đồng đó. Sau khi làm xong:
 
-- `mix database open mariadb@main` trên máy có MixDB → MixDB mở lên với một tab tên `mariadb@main`
+- `mix database open mariadb@main` trên máy có the standalone client → the standalone client mở lên với một tab tên `mariadb@main`
   **đã nối sẵn** vào server đó, đăng nhập bằng `root`, không phải gõ gì.
-- MixDB **đang mở sẵn** thì lệnh đó mở **thêm một tab** trong cửa sổ đang có và tự nối; tiến trình
+- The standalone client **đang mở sẵn** thì lệnh đó mở **thêm một tab** trong cửa sổ đang có và tự nối; tiến trình
   thứ hai thoát mã 0 trong vài chục mili giây (MixEngine đọc đó là `handed_on`).
 - Biến môi trường chứa mật khẩu bị **xoá khỏi tiến trình ngay dòng đầu của `run()`**, trước khi
   Tauri sinh thread, trước khi WebView2 fork helper, trước khi module terminal mở shell nào. Shell
-  mở trong MixDB không in ra được nó.
+  mở trong the standalone client không in ra được nó.
 - Mật khẩu không bao giờ vào `connections.json`, `localStorage`, log hay `Debug`. Nó chỉ đi từ env
   → RAM → form → `connect_db`, đúng đường mọi mật khẩu gõ tay đang đi.
-- Scheme `mixdb://` được đăng ký với hệ điều hành (NSIS, `Info.plist`, `.desktop`), nên một link
-  `mixdb://connect?...` trong trình duyệt cũng mở được MixDB — chỉ là **không có mật khẩu**, vì
+- Scheme `<old>://` được đăng ký với hệ điều hành (NSIS, `Info.plist`, `.desktop`), nên một link
+  `<old>://connect?...` trong trình duyệt cũng mở được the standalone client — chỉ là **không có mật khẩu**, vì
   không ai đặt được env cho một link.
-- Chạy MixDB lần hai không có URL (bấm icon lần nữa) → cửa sổ đang mở được đưa lên trước, tiến
+- Chạy the standalone client lần hai không có URL (bấm icon lần nữa) → cửa sổ đang mở được đưa lên trước, tiến
   trình thứ hai thoát. Đây là hệ quả miễn phí của kênh single-instance.
 
 ## Phi mục tiêu
@@ -64,7 +64,7 @@ Spec này là **phía nhận** của hợp đồng đó. Sau khi làm xong:
 | [`src/modules/db/tabState.ts`](../../apps/desktop/src/modules/db/tabState.ts) | `parseDbTabState` — nơi validate khe đó, chỉ id |
 | [`src/modules/db/DbTab.tsx`](../../apps/desktop/src/modules/db/DbTab.tsx) | `connect(config, title, savedId)`, `formFrom(config)`, `restoreTried` |
 | `Cargo.lock` | `url 2.5`, `libc`, `tokio` (`full` → có `net`, named pipe trên Windows) đều đã là dep gián tiếp |
-| `tauri.conf.json` | `identifier = io.github.haiquang9994.mixdb` — tên của mutex/socket/pipe bên dưới |
+| `tauri.conf.json` | `identifier = io.github.haiquang9994.<old>` — tên của mutex/socket/pipe bên dưới |
 
 Ba điều đo được, quyết định thiết kế:
 
@@ -73,7 +73,7 @@ Ba điều đo được, quyết định thiết kế:
    trình thứ hai không có đường sang tiến trình thứ nhất qua nó.
 2. **`tauri-plugin-deep-link` trên Windows/Linux cũng tự đọc `argv` lúc `setup`** và phát
    `deep-link://new-url` nếu `argv[1]` là URL đúng scheme. Trên macOS nó nhận Apple Event
-   (`RunEvent::Opened`) sau `setup`. Nghĩa là nếu MixDB vừa tự đọc `argv` vừa nghe sự kiện của
+   (`RunEvent::Opened`) sau `setup`. Nghĩa là nếu the standalone client vừa tự đọc `argv` vừa nghe sự kiện của
    plugin trên Windows/Linux thì một lần chạy thành hai tab.
 3. **Mật khẩu phải được đọc trước `tauri::Builder`.** Builder sinh thread; WebView2 fork helper kế
    thừa env; `portable-pty` mở shell kế thừa env. Chỉ có `main` đơn luồng ở dòng đầu `run()` là
@@ -85,7 +85,7 @@ Ba điều đo được, quyết định thiết kế:
 mà test:
 
 ```
-mixdb://connect?kind=<mysql|postgres|redis>&host=<h>&port=<p>[&user=<u>][&database=<d>]&label=<l>[&password_env=<NAME>]
+<old>://connect?kind=<mysql|postgres|redis>&host=<h>&port=<p>[&user=<u>][&database=<d>]&label=<l>[&password_env=<NAME>]
 ```
 
 - `kind`, `host`, `port` bắt buộc. `user`, `database` chỉ có khi có gì để nói (Redis không có
@@ -102,12 +102,12 @@ của chính nó, rồi thoát 0.
 ### Luật tên biến
 
 `password_env` được tin **có điều kiện**: tên phải khớp `^MIX[A-Z0-9]*_[A-Z0-9_]*PASSWORD$` —
-`MIXENGINE_DB_PASSWORD`, `MIXDB_PASSWORD`, `MIXENGINE_REDIS_PASSWORD` đều qua; `PATH`, `HOME`,
+`MIXENGINE_DB_PASSWORD`, `<OLD>_PASSWORD`, `MIXENGINE_REDIS_PASSWORD` đều qua; `PATH`, `HOME`,
 `DB_PASSWORD`, `PGPASSWORD` không.
 
 Lý do: một khi scheme được đăng ký với OS (mục 6), **bất kỳ trang web nào** cũng phát được
-`mixdb://connect?host=attacker&password_env=SOME_VAR`. Windows/Linux khởi động MixDB với URL đó làm
-`argv[1]` — y hệt cách MixEngine gọi — và nếu MixDB đọc bất kỳ biến nào URL chỉ định thì một cú
+`<old>://connect?host=attacker&password_env=SOME_VAR`. Windows/Linux khởi động the standalone client với URL đó làm
+`argv[1]` — y hệt cách MixEngine gọi — và nếu the standalone client đọc bất kỳ biến nào URL chỉ định thì một cú
 click gửi `$SOME_VAR` của người dùng tới `attacker` dưới dạng mật khẩu MySQL. Giới hạn vào
 namespace `MIX*_PASSWORD` là chỗ chặn: không ai export một biến tên như thế trong session của mình
 ngoài MixEngine, và MixEngine đặt nó **chỉ** cho tiến trình nó khởi động. Tên không khớp → coi như
@@ -121,7 +121,7 @@ Biến bị **xoá dù đọc được hay không**, và dù URL có hợp lệ 
 ```
 src-tauri/src/
   launch.rs              Tiến trình này được mở với cái gì; hàng đợi "mở tab" cho frontend
-  instance.rs            Kênh giữa hai tiến trình MixDB: named pipe / Unix socket
+  instance.rs            Kênh giữa hai tiến trình the standalone client: named pipe / Unix socket
   modules/db/handoff.rs  URL → ConnectionConfig; kho tạm; lệnh handoff_take
 ```
 
@@ -137,7 +137,7 @@ pub fn credential_name(url: &str) -> Option<String>;
 pub fn parse(url: &str, secret: Option<String>) -> Result<Handoff, AppError>;
 ```
 
-`parse` dùng `url::Url` (đã có trong cây dep): scheme phải là `mixdb`, host phải là `connect`,
+`parse` dùng `url::Url` (đã có trong cây dep): scheme phải là `<old>`, host phải là `connect`,
 `query_pairs()` lo percent-decoding. `kind` ánh xạ thẳng sang `DbKind` (`mysql`, `postgres`,
 `redis`); `host` không rỗng; `port` là `u16` khác 0; `user` → `username`, `database` → `database`,
 `secret` → `password`; `label` vắng thì `host:port`. `use_ssl` để `None` — "thử TLS, không có thì
@@ -166,7 +166,7 @@ Kho tạm là nơi duy nhất mật khẩu nằm trong RAM phía Rust ngoài `Co
 ### `launch.rs` — tiến trình này được mở với cái gì
 
 ```rust
-/// argv[1] nếu là `mixdb://…`, và mật khẩu lấy ra khỏi env — đọc **một lần, dòng đầu `run()`**.
+/// argv[1] nếu là `<old>://…`, và mật khẩu lấy ra khỏi env — đọc **một lần, dòng đầu `run()`**.
 pub struct Opening { pub url: Option<String>, pub secret: Option<String> }   // Debug che secret
 
 impl Opening {
@@ -225,7 +225,7 @@ hai cửa sổ trong một cuộc đua hiếm, không mất gì.
 so với `libc::getuid()`; không phải của mình thì không gửi, không xoá, chạy như tiến trình thứ nhất
 không có kênh. Đây là lý do duy nhất thêm `libc` (chỉ `cfg(unix)`). Trên Windows, một tiến trình
 khác trong phiên tạo pipe cùng tên trước là chiếm được — cùng lớp rủi ro với `FindWindow` của
-plugin single-instance, và cùng câu trả lời: mô hình bảo mật của cả MixDB lẫn MixEngine là một
+plugin single-instance, và cùng câu trả lời: mô hình bảo mật của cả the standalone client lẫn MixEngine là một
 máy một người dùng. Ghi vào phần rủi ro, không giải.
 
 ## 3. Vì sao là kênh riêng chứ không phải plugin
@@ -236,7 +236,7 @@ nó. Hai lựa chọn còn lại:
 
 - **Plugin + không mật khẩu khi đã mở sẵn**: tab mở ra với form điền sẵn, ô mật khẩu trống. Đúng
   hợp đồng về mặt an toàn, sai về mặt mục đích: trường hợp phổ biến nhất của `mix database open` là
-  MixDB đang mở, và đó là trường hợp phải gõ mật khẩu.
+  the standalone client đang mở, và đó là trường hợp phải gõ mật khẩu.
 - **Kênh riêng** (~200 dòng, hai nhánh OS, một test round-trip): tab mở ra và tự nối. Người dùng đã
   chọn cái này.
 
@@ -285,7 +285,7 @@ export function takeHandoff(id: string): Promise<Handoff>;
      đường MixEngine.
    - **không có mật khẩu mà server có tài khoản** → không nối. Form đã điền đủ, dòng trạng thái nói
      "Nhập mật khẩu để kết nối", con trỏ đặt sẵn trong ô mật khẩu (`ConnectionForm` nhận
-     `focusPassword`, một bộ đếm). Đây là đường link `mixdb://` từ trình duyệt hay tài liệu: cùng
+     `focusPassword`, một bộ đếm). Đây là đường link `<old>://` từ trình duyệt hay tài liệu: cùng
      một URL nhưng không có env đứng sau, và nối bằng mật khẩu rỗng chỉ để nhận "access denied"
      thì không giúp ai.
 
@@ -303,7 +303,7 @@ pub fn run() {
     let opening = launch::Opening::from_process();
     let context = tauri::generate_context!();
 
-    // Có MixDB đang chạy → nó nhận, ta xong. exit 0 là "handed_on" với MixEngine.
+    // Có the standalone client đang chạy → nó nhận, ta xong. exit 0 là "handed_on" với MixEngine.
     if launch::forward(&context.config().identifier, &opening) { return; }
 
     let builder = tauri::Builder::default()
@@ -335,18 +335,18 @@ pub fn run() {
 `tauri.conf.json`:
 
 ```json
-"plugins": { "deep-link": { "desktop": { "schemes": ["mixdb"] } } }
+"plugins": { "deep-link": { "desktop": { "schemes": ["<old>"] } } }
 ```
 
-Bundler đọc nó: NSIS ghi `HKCU\Software\Classes\mixdb`, `Info.plist` có `CFBundleURLTypes`, `.deb`
-có `MimeType=x-scheme-handler/mixdb` trong `.desktop`. AppImage thì không có installer nào ghi gì,
-nên chỉ trên Linux MixDB gọi `register_all()` lúc chạy: nó ghi
-`~/.local/share/applications/mixdb-handler.desktop` và gọi `xdg-mime` — lỗi (không có `xdg-mime`,
+Bundler đọc nó: NSIS ghi `HKCU\Software\Classes\<old>`, `Info.plist` có `CFBundleURLTypes`, `.deb`
+có `MimeType=x-scheme-handler/<old>` trong `.desktop`. AppImage thì không có installer nào ghi gì,
+nên chỉ trên Linux the standalone client gọi `register_all()` lúc chạy: nó ghi
+`~/.local/share/applications/<old>-handler.desktop` và gọi `xdg-mime` — lỗi (không có `xdg-mime`,
 thư mục không ghi được) bỏ qua, vì scheme là tiện ích chứ không phải điều kiện để app chạy.
 
 Không cần entry trong `capabilities/default.json`: frontend không gọi lệnh nào của plugin.
 
-MixEngine không cần scheme này (D1 bên đó: nó chạy thẳng binary, không hỏi OS ai sở hữu `mixdb://`).
+MixEngine không cần scheme này (D1 bên đó: nó chạy thẳng binary, không hỏi OS ai sở hữu `<old>://`).
 Đăng ký là để link trong tài liệu, trong trình duyệt hoạt động — và là lý do luật tên biến ở mục 1
 phải có.
 
@@ -371,7 +371,7 @@ chứa mật khẩu — cùng kiểu test `a_connection_never_prints_what_it_kno
 - `handoff::credential_name`: `MIXENGINE_DB_PASSWORD` qua; `PATH`, `DB_PASSWORD`, `PGPASSWORD`,
   `mixengine_db_password` không.
 - `Opening::from_args` với closure env giả: URL có `password_env` → closure được hỏi đúng tên, và
-  đúng một lần; URL không có → không hỏi; `argv[1]` không phải `mixdb://` → `url = None` và không
+  đúng một lần; URL không có → không hỏi; `argv[1]` không phải `<old>://` → `url = None` và không
   hỏi; URL hỏng nhưng có `password_env` hợp lệ → vẫn hỏi (biến vẫn bị rút).
 - `Debug` của `Opening` và `Handoff` không chứa mật khẩu.
 
@@ -387,19 +387,19 @@ dòng → `on_line` nhận đúng dòng đó và `forward` trả `true`; `forwar
 
 ```powershell
 $env:MIXENGINE_DB_PASSWORD = "…"
-& "$env:LOCALAPPDATA\MixDB\mixdb.exe" "mixdb://connect?kind=mysql&host=192.168.50.86&port=3307&user=root&label=mysql%4057&password_env=MIXENGINE_DB_PASSWORD"
+& "$env:LOCALAPPDATA\the standalone client\<old>.exe" "<old>://connect?kind=mysql&host=192.168.50.86&port=3307&user=root&label=mysql%4057&password_env=MIXENGINE_DB_PASSWORD"
 ```
 
 Lần một: cửa sổ mở, tab `mysql@57` nối sẵn. Lần hai (đang mở): tab thứ hai trong cùng cửa sổ, tiến
-trình thứ hai thoát 0 tức thì (`$LASTEXITCODE`). Mở terminal trong MixDB, `echo
+trình thứ hai thoát 0 tức thì (`$LASTEXITCODE`). Mở terminal trong the standalone client, `echo
 $env:MIXENGINE_DB_PASSWORD` → trống. `Get-Content connections.json` → không có mật khẩu.
 
 ## 9. Rủi ro và câu trả lời
 
 | Rủi ro | Trả lời |
 | --- | --- |
-| Trang web phát `mixdb://…&password_env=X` để đọc env người dùng | Mục 1: chỉ `MIX*_PASSWORD`; và biến đó chỉ tồn tại trong tiến trình MixEngine khởi động |
-| Trang web phát `mixdb://connect?host=…` để MixDB nối tới host lạ | Không có mật khẩu thì không nối (mục 4): tab hiện form với host lạ trong đó, người dùng là người bấm Connect. Redis không có tài khoản thì vẫn nối — cái giá của một scheme công khai, và không có gì rò rỉ |
+| Trang web phát `<old>://…&password_env=X` để đọc env người dùng | Mục 1: chỉ `MIX*_PASSWORD`; và biến đó chỉ tồn tại trong tiến trình MixEngine khởi động |
+| Trang web phát `<old>://connect?host=…` để the standalone client nối tới host lạ | Không có mật khẩu thì không nối (mục 4): tab hiện form với host lạ trong đó, người dùng là người bấm Connect. Redis không có tài khoản thì vẫn nối — cái giá của một scheme công khai, và không có gì rò rỉ |
 | Helper của WebView2 / shell trong terminal kế thừa mật khẩu | `remove_var` ở dòng đầu `run()`, trước builder |
 | Tiến trình thứ hai bị coi là thất bại | Thoát 0 trong vài chục ms; `forward` có timeout 3s để không bao giờ treo quá "một giây phán xét" của MixEngine mà không có lý do |
 | Cửa sổ thứ nhất treo | Timeout → tiến trình thứ hai tự mở cửa sổ; pipe/socket tạo thất bại → chạy không kênh |
@@ -411,7 +411,7 @@ $env:MIXENGINE_DB_PASSWORD` → trống. `Get-Content connections.json` → khô
 
 ## 10. Những gì để lại
 
-- **Keyring chung với MixEngine** (T84 bên đó): khi nó có, `password_env` có thể vắng và MixDB đọc
+- **Keyring chung với MixEngine** (T84 bên đó): khi nó có, `password_env` có thể vắng và the standalone client đọc
   mật khẩu từ kho OS theo `label`. Cấu trúc ở đây không cản: `secret: None` đã là một nhánh có sẵn.
 - **`mongo` trong URL**: nếu một ngày MixEngine quản MongoDB, `parse` thêm một nhánh dựng `uri`
   từ năm trường. Không làm trước.

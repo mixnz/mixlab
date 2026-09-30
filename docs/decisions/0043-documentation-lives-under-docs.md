@@ -7,7 +7,7 @@
 
 Until T169 the engineering documentation lived in `.claude/`: architecture, features, standards,
 operations, decisions, roadmap and reviews, beside the agent tooling's own configuration, with a
-second tree under `.claude/desktop/` carried over from MixDB when
+second tree under `.claude/desktop/` carried over from the standalone client when
 [ADR 0027](0027-the-desktop-client-lives-in-this-repository.md) brought the application home. Dated
 designs lived in a third place, `docs/superpowers/specs/`, named after the plugin that first wrote
 them, and only about ten of 137 said whether they had been built, in five different spellings.
@@ -27,7 +27,7 @@ already dead. The full account is in
 - `.claude/` holds only agent configuration — `commands/`, `skills/`, settings — and a README that
   points here.
 - The desktop application's documents are a `desktop/` subfolder of the folder that fits. Its
-  review ids are their own namespace, cited as "desktop R3"; its four dated decisions from MixDB
+  review ids are their own namespace, cited as "desktop R3"; its four dated decisions from the standalone client
   keep their names.
 - A new top-level folder is created once three documents fit nowhere else.
 - Every spec opens with a `status`/`date` header. The status is one of `draft`, `approved`,

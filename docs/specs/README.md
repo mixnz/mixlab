@@ -7,7 +7,7 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | Date | Spec | Task | Status |
 | --- | --- | --- | --- |
 | 2026-08-18 | [Một nơi nhận phím tắt Ctrl/Cmd](2026-08-18-global-shortcuts-design.md) |  | implemented |
-| 2026-08-18 | [Tách MixDB thành shell + module](2026-08-18-module-architecture-design.md) |  | implemented |
+| 2026-08-18 | [Tách the standalone client thành shell + module](2026-08-18-module-architecture-design.md) |  | implemented |
 | 2026-08-18 | [Module REST client](2026-08-18-rest-client-module-design.md) |  | implemented |
 | 2026-08-19 | [T31a — Install a service package, and create a service](2026-08-19-t31a-service-packages-design.md) | T31a | implemented |
 | 2026-08-19 | [T32 — php-fpm pools](2026-08-19-t32-php-fpm-pools-design.md) | T32 | implemented |
@@ -66,19 +66,19 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-09-02 | [T80 — the extension model (design)](2026-09-02-t80-extension-model-design.md) | T80 | implemented |
 | 2026-09-02 | [T81 — the extension registry, and installing what it lists (design)](2026-09-02-t81-extension-registry-and-lifecycle-design.md) | T81 | implemented |
 | 2026-09-02 | [T81a — publishing the extension registry (design)](2026-09-02-t81a-publishing-the-extension-registry-design.md) | T81a | implemented |
-| 2026-09-03 | [Nhận kết nối từ MixEngine: `mixdb://connect` và mật khẩu trong môi trường](2026-09-03-mixengine-connection-handoff-design.md) |  | implemented |
+| 2026-09-03 | [Nhận kết nối từ MixEngine: `<old>://connect` và mật khẩu trong môi trường](2026-09-03-mixengine-connection-handoff-design.md) |  | implemented |
 | 2026-09-03 | [T81b — the site a `web-app` extension is served on (design)](2026-09-03-t81b-extension-sites-design.md) | T81b | implemented |
 | 2026-09-03 | [T81c — wiring `[recipe] front_end` fragments (design)](2026-09-03-t81c-front-end-fragments-design.md) | T81c | implemented |
 | 2026-09-03 | [T82 — the first three extensions (design)](2026-09-03-t82-first-extensions-design.md) | T82 | implemented |
 | 2026-09-03 | [T82a — phpMyAdmin signs itself in (design)](2026-09-03-t82a-a-pool-of-the-extensions-own-design.md) | T82a | implemented |
-| 2026-09-03 | [T83 — MixDB integration: the connection handoff (design)](2026-09-03-t83-mixdb-connection-handoff-design.md) | T83 | implemented |
+| 2026-09-03 | [T83 — the standalone client integration: the connection handoff (design)](2026-09-03-t83-a-connection-handed-to-the-window-design.md) | T83 | implemented |
 | 2026-09-04 | [ClickHouse: DDL (database, table, column)](2026-09-04-clickhouse-ddl-design.md) |  | implemented |
 | 2026-09-04 | [ClickHouse: dump/restore](2026-09-04-clickhouse-dump-restore-design.md) |  | implemented |
 | 2026-09-04 | [ClickHouse: index DDL (data skipping index + rebuild ORDER BY)](2026-09-04-clickhouse-index-ddl-design.md) |  | implemented |
 | 2026-09-04 | [ClickHouse: mở Query tab cho DML](2026-09-04-clickhouse-query-dml-design.md) |  | implemented |
 | 2026-09-04 | [ClickHouse: ghi dòng qua lưới (insert / update / delete)](2026-09-04-clickhouse-row-writes-design.md) |  | implemented |
 | 2026-09-04 | [SQLite: dump dữ liệu + sửa cột đầy đủ (đóng nốt D3, D4)](2026-09-04-sqlite-completion-design.md) |  | implemented |
-| 2026-09-04 | [T84 — MixDB in the registry, and one keyring both applications read (design)](2026-09-04-t84-mixdb-in-the-registry-and-one-keyring-design.md) | T84 | implemented |
+| 2026-09-04 | [T84 — the standalone client in the registry, and one keyring both applications read (design)](2026-09-04-t84-the-window-in-the-registry-and-one-keyring-design.md) | T84 | implemented |
 | 2026-09-04 | [T85 — Installers, and a helper in a directory the user cannot write (design)](2026-09-04-t85-installers-design.md) | T85 | implemented |
 | 2026-09-04 | [T85a — The second architecture, and the roadmap's own premise corrected (design)](2026-09-04-t85a-second-architecture-design.md) | T85a | implemented |
 | 2026-09-04 | [T85b — `ServiceInstaller`, and the console window nobody asked for (design)](2026-09-04-t85b-autostart-design.md) | T85b | implemented |
@@ -183,4 +183,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-09-29 | [T192 — The tray is MixLab's](2026-09-29-t192-the-tray-is-mixlabs-design.md) | T192 | implemented |
 | 2026-09-29 | [T193 — A line shows its newest, and updates in place](2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md) | T193a, T193b, T193c, T193d | implemented |
 | 2026-09-30 | [A headless home keeps its credentials in a file](2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md) | T194a, T194b, T194c, T194d, T194e, T194f | approved |
-| 2026-09-30 | [What is left of MixDB becomes MixLab](2026-09-30-t176g-what-is-left-of-mixdb-becomes-mixlab-design.md) | T176g | approved |
+| 2026-09-30 | [What is left of the standalone client becomes MixLab](2026-09-30-t176g-the-old-name-leaves-the-window-design.md) | T176g | implemented |

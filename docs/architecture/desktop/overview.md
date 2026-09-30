@@ -1,6 +1,6 @@
 # Architecture overview
 
-MixDB is a Tauri 2 desktop app: a React webview for the UI, a Rust process for everything that
+MixLab is a Tauri 2 desktop app: a React webview for the UI, a Rust process for everything that
 touches a network or a disk.
 
 ```
@@ -153,7 +153,7 @@ Mongo is configured as a single connection string, not host/port/user/password �
     passphrase) — the OS credential store, through the `secrets_*` commands
     ([src-tauri/src/secrets.rs](../../../apps/desktop/src-tauri/src/secrets.rs)): Windows Credential Manager, the
     macOS Keychain, the Secret Service on Linux. One JSON entry per connection id, under the
-    service name `MixDB`.
+    service name `MixLab`.
 
   A connection saved by an older build, with its password still in the file, is moved across the
   first time it is read and the file rewritten without it.
@@ -168,7 +168,7 @@ Mongo is configured as a single connection string, not host/port/user/password �
   `terminal-settings.json` (font, scrollback, cursor, default shell). A server's password and key
   passphrase go through the same `secrets_*` commands; a local shell has nothing to put there. The
   file keeps its name from when the list held only servers.
-- **Theme** (`mixdb-theme`) and **language** (`mixdb-lang`) — `localStorage`, not the store.
+- **Theme** (`mixlab-theme`) and **language** (`mixlab-lang`) — `localStorage`, not the store.
 
 Every one of those files is the module's own. There is no shared persistence layer to add a key to,
 and adding one would be the first thing that made two modules care what the other keeps.
@@ -201,8 +201,8 @@ preload lives in [public/theme-preload.js](../../../apps/desktop/public/theme-pr
 That policy reaches further than the app's own document. A frame with no response of its own —
 `srcdoc`, `data:`, `blob:` — inherits it, and nothing inside such a frame can lift it: CSP policies
 intersect, so a `<meta http-equiv>` there only ever tightens. The REST response Preview needs the
-opposite, so it is **served**: `modules/rest/preview.rs` registers the `mixdb-preview` scheme and
+opposite, so it is **served**: `modules/rest/preview.rs` registers the `mixlab-preview` scheme and
 answers with the response body under a policy of its own, which is what the pane's two switches
-actually pick. `frame-src` in the config names that scheme in both its forms — `mixdb-preview:` and
-the `http://mixdb-preview.localhost` that Windows and Android rewrite it to — and it is the only
+actually pick. `frame-src` in the config names that scheme in both its forms — `mixlab-preview:` and
+the `http://mixlab-preview.localhost` that Windows and Android rewrite it to — and it is the only
 frame source the app allows.

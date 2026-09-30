@@ -23,11 +23,11 @@ packaging scripts own: `packaging/windows/mixengine.nsi` writes `InstallDir`,
 
 The second is **where the window is**. `mix database open` starts a desktop client the daemon found
 through `mixengine-platform`'s `DesktopApps::locate`, whose hint comes from a `desktop-app`
-extension's manifest — `mixdb.exe`, `io.github.haiquang9994.mixdb`, `mixdb.desktop`. Those three
-name *standalone MixDB*. The merged application is `mixlab`, `io.github.mixnz.mixlab`,
+extension's manifest — `<old>.exe`, `io.github.haiquang9994.<old>`, `<old>.desktop`. Those three
+name *standalone client*. The merged application is `mixlab`, `io.github.mixnz.mixlab`,
 `mixlab.desktop`, it is installed by MixEngine's own installers, and no hint anywhere names it. On a
 machine that installed MixEngine after T105, `mix database open mariadb` finds nothing at all unless
-the person also installs the `mixdb` extension and standalone MixDB beside it — which is the two
+the person also installs the `<old>` extension and standalone client beside it — which is the two
 downloads ADR 0027 exists to remove.
 
 This task answers both from `mixengine-platform`, and holds the first answer to the packaging
@@ -41,12 +41,12 @@ Written down so nothing below is built twice:
   `InstallLocation`, the `.pkg` places `MixLab.app` in `/Applications`, and the `.deb` and `.rpm`
   place `/usr/share/applications/mixlab.desktop`. What is *not* registered anywhere is the window
   inside a portable archive or an AppImage, and that is the case the design below is shaped by.
-- **The handoff already survives a running window.** `launch::forward` sends the `mixdb://` URL
+- **The handoff already survives a running window.** `launch::forward` sends the `<old>://` URL
   *and the credential* over `instance`'s channel to the copy already running, which exits 0 — read
   by `desktop::launch` as `Started::HandedOn`. T83's "a tab in the running window, password in the
   environment and nowhere else" needs no new work; it needs the window to be *found*.
-- **`mixdb://` is the merged application's scheme.** NSIS registers `Software\Classes\mixdb` at
-  `mixlab.exe`, `packaging/linux/mixlab.desktop` declares `MimeType=x-scheme-handler/mixdb`, and
+- **`<old>://` is the merged application's scheme.** NSIS registers `Software\Classes\<old>` at
+  `mixlab.exe`, `packaging/linux/mixlab.desktop` declares `MimeType=x-scheme-handler/<old>`, and
   `modules/db/handoff.rs` refuses any other scheme.
 - **`application_file_name` and `application_root` already exist** (T106), and are the two halves of
   "a windowed application on macOS is a directory". This task adds the third.
@@ -154,8 +154,8 @@ The implementation is one shared function, `crate::desktop::locate_window`, call
 `Apps` — `launch`'s arrangement — with the per-OS half in `sys::install`.
 
 The mock gains a window of its own, set by `MockHost::with_window`, separate from the application
-`with_desktop_app` installs: a test has to be able to say *this machine has MixLab and not MixDB*,
-*MixDB and not MixLab*, and *both*.
+`with_desktop_app` installs: a test has to be able to say *this machine has MixLab and not the standalone client*,
+*the standalone client and not MixLab*, and *both*.
 
 ## D4 — The daemon prefers its own window, and says when it did not
 
@@ -165,7 +165,7 @@ hint, and asks `locate`. It gains a step in front, and the two steps together an
 ```
 the window answers when
     there is no `desktop-app` extension installed
-  or the installed one's scheme is the window's own (`mixdb`)
+  or the installed one's scheme is the window's own (`<old>`)
   and `locate_window` found it
 otherwise the extension answers, exactly as it does today
 ```
@@ -173,13 +173,13 @@ otherwise the extension answers, exactly as it does today
 **Why the scheme condition and not "the window always wins".** A `desktop-app` extension is a general
 mechanism: a future entry could name some other client, for some other scheme, and a window asked
 first unconditionally would shadow it — silently, since both arms of `DesktopClient` look the same to
-a reader. The window is MixEngine's client *for `mixdb://`*, and that is what the condition says. It
+a reader. The window is MixEngine's client *for `<old>://`*, and that is what the condition says. It
 also leaves `crates/mixengine-cli/tests/database.rs`'s `nowhere` fixture — scheme `nowhere` —
 answering exactly what it answers today.
 
 **Why the window wins over the extension and not the other way round.** On a machine with both, MixLab
-is the client MixEngine installed, updates and supports; standalone MixDB is the one this phase
-exists to stop requiring. `mixnz/mixdb` is archived the day M12 ships.
+is the client MixEngine installed, updates and supports; standalone client is the one this phase
+exists to stop requiring. `mixnz/<old>` is archived the day M12 ships.
 
 Three consequences, each a sentence in the code:
 
@@ -194,7 +194,7 @@ Three consequences, each a sentence in the code:
   between two reads" — goes. `locate_client` returns the scheme it resolved beside the state and the
   application, in one private struct, and that race goes with it.
 - **`NoClient` is unchanged**, and so is its advice. A headless install has no window, no extension
-  and nothing to open a database with, and `mix extension install mixdb` is still what to do.
+  and nothing to open a database with, and `mix extension install <old>` is still what to do.
 
 ## D5 — The window's four names live in one module
 
@@ -208,15 +208,15 @@ A new `crates/mixengine-core/src/window.rs` holds all four:
 pub const EXECUTABLE: &str = "mixlab";     // packaging/common.sh's MIX_WINDOW
 pub const BUNDLE: &str = "MixLab.app";     // packaging/common.sh's MIX_WINDOW_APP
 pub const NAME: &str = "MixLab";           // tauri.conf.json's productName
-pub const SCHEME: &str = "mixdb";          // what every installer registers
+pub const SCHEME: &str = "<old>";          // what every installer registers
 ```
 
 `updates::apply` re-exports the first two under the names it already publishes
 (`pub use crate::window::{BUNDLE as WINDOW_BUNDLE, EXECUTABLE as WINDOW};`), so every existing path,
 link and test keeps working and there is one definition.
 
-**`SCHEME` stays `mixdb` and is not renamed to `mixlab`.** Every MixDB install on every machine has
-registered `mixdb://` with its operating system, links in the wild use it, and a scheme is a name
+**`SCHEME` stays `<old>` and is not renamed to `mixlab`.** Every the standalone client install on every machine has
+registered `<old>://` with its operating system, links in the wild use it, and a scheme is a name
 other software already holds — D10 says it stays, and this is the constant that says so.
 
 ## D6 — The install location is declared once, and packaging reads it
@@ -253,7 +253,7 @@ one directory up.
 
 A second, smaller pin: `window::SCHEME` against `packaging/linux/mixlab.desktop`'s
 `MimeType=x-scheme-handler/…`. The daemon writes that scheme into every handoff URL; the desktop
-entry is what makes a `mixdb://` link reach the window at all; a rename of one alone is a URL nobody
+entry is what makes a `<old>://` link reach the window at all; a rename of one alone is a URL nobody
 answers.
 
 ## Error handling
@@ -280,9 +280,9 @@ something a person can check.
   a fake "running executable" — the shared function takes the directory as an argument so the test
   does not have to be the program it is testing.
 - **`mixengine-daemon`, on the mock.** The window answers and carries no extension; the window
-  answers even with the `mixdb` extension installed and MixDB present; an extension for another
+  answers even with the `<old>` extension installed and the standalone client present; an extension for another
   scheme is *not* shadowed; no window and no extension is `NoClient`; the URL a window handoff
-  produces carries the `mixdb` scheme and the credential goes in the environment and not the
+  produces carries the `<old>` scheme and the credential goes in the environment and not the
   arguments — the existing recorder assertion, against the new path.
 - **`mixengine-core`, packaging.** The two pins in D6.
 - **`apps/desktop`.** `health.rs`'s remaining test — there is always a program to try — and the four
@@ -293,14 +293,14 @@ something a person can check.
 
 ## What this task does not do
 
-- **It does not change `mixdb://`, `launch.rs` or `instance.rs`**, which the roadmap says stay. The
+- **It does not change `<old>://`, `launch.rs` or `instance.rs`**, which the roadmap says stay. The
   forwarding, the credential over the channel and the single-instance judgement are T83's and T106's
   and are already what M12 needs.
 - **It does not make `mix database open` install anything.** A machine with no window and no
   extension is told what to install, as today.
-- **It does not teach `NotInstalled`'s `searched` to mention both lookups.** When the `mixdb`
-  extension is installed, MixDB is missing *and* this install has no window, what is printed is where
-  MixDB was looked for. Naming both places is a better sentence and a bigger change to a proto field
+- **It does not teach `NotInstalled`'s `searched` to mention both lookups.** When the `<old>`
+  extension is installed, the standalone client is missing *and* this install has no window, what is printed is where
+  the standalone client was looked for. Naming both places is a better sentence and a bigger change to a proto field
   two clients render; it belongs with the profile work in T108 if anywhere.
 - **It does not touch `mixengine_core::elevation::helper`'s "beside the program" fallback**, which
   answers a different question — which file to hand the elevation prompt — and is argued in T85's D1.

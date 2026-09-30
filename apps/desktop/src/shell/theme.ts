@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { onPreferencesChanged } from "../core/preferences";
 import { IS_MAC, IS_WINDOWS } from "../core/platform";
+import { ACCENT_KEY as ACCENT_STORAGE_KEY, THEME_KEY as STORAGE_KEY } from "./storageKeys";
 import { clearRetiredKeys, resolveTheme } from "./themeModel";
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -34,9 +35,6 @@ export const ACCENT_COLORS: AccentColor[] = [
 ];
 
 const DEFAULT_ACCENT: AccentColor = "mint";
-
-const STORAGE_KEY = "mixdb-theme";
-const ACCENT_STORAGE_KEY = "mixdb-accent";
 
 function readStoredTheme(): ThemeMode {
   const stored = localStorage.getItem(STORAGE_KEY);

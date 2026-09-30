@@ -189,7 +189,7 @@ several `/events` subscribers, since `mix` and MixLab watch at the same time.
 
 **A stream that ended is reopened.** The panel outlives many daemons — it is never destroyed, and
 *Stop MixEngine* ends the very stream it is listening on. So `daemonWatch.ts` forgets a channel that
-reported `mixdb_disconnected`, and the panel calls `ensureDaemonWatch()` whenever it finds the daemon
+reported `<old>_disconnected`, and the panel calls `ensureDaemonWatch()` whenever it finds the daemon
 running again.
 
 The alternative was one stream in Rust fanned out to every window. It was rejected because it moves

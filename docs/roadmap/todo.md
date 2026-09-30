@@ -38,11 +38,11 @@ done
 | [5 — HTTPS](phase-5-https.md) | Green padlock, automatically, forever | T48–T54, T98 | 9 / 9 | **M5** `https://blog.test` trusted in every browser |
 | ~~6 — Desktop GUI~~ | **Withdrawn** — a GUI is a client in its own repository, see [ADR 0011](../decisions/0011-no-gui-in-this-repository.md) | — | — | ~~M6~~ |
 | [7 — Efficiency](phase-7-efficiency.md) | Deliver the promise that idle costs nothing | T68–T73 | 10 / 10 | **M7** 30 idle minutes leaves only the daemon and the web server — **met**, both halves measured by `bench` |
-| [8 — Differentiators](phase-8-differentiators.md) | LAN sharing, blueprints, extensions, MixDB | T74–T84, T77b, T125–T125a | 25 / 25 | **M8** capture, apply, open in MixDB, test from a phone |
+| [8 — Differentiators](phase-8-differentiators.md) | LAN sharing, blueprints, extensions, the standalone client | T74–T84, T77b, T125–T125a | 25 / 25 | **M8** capture, apply, open in the standalone client, test from a phone |
 | [9 — Ship](phase-9-ship.md) | Installers, updates, docs, beta | T56, T85–T92, T94–T95 | 20 / 21 | **M9 — v0.0.1** |
-| [10 — Client surface](phase-10-client-surface.md) | What `client-surface.md` claims about itself is true | T96–T97, T183 | 3 / 3 | **M10** MixDB's Dashboard and Settings draw whole, with no business logic in the client — **met** |
-| [11 — The desktop app comes home](phase-11-the-desktop-app-comes-home.md) | MixDB's application builds and tests from this repository, unchanged | T100–T103 | 4 / 4 | **M11** the window builds green in this repo's CI on three OSes and behaves as MixDB 0.0.33 |
-| [12 — One product](phase-12-one-product.md) | One installer, one updater, a MixDB user's data comes across | T104–T107, T111, T165 | 7 / 7 | **M12** one download installs five binaries and either updater replaces all five; `mixnz/mixdb` archived |
+| [10 — Client surface](phase-10-client-surface.md) | What `client-surface.md` claims about itself is true | T96–T97, T183 | 3 / 3 | **M10** the standalone client's Dashboard and Settings draw whole, with no business logic in the client — **met** |
+| [11 — The desktop app comes home](phase-11-the-desktop-app-comes-home.md) | The standalone client's application builds and tests from this repository, unchanged | T100–T103 | 4 / 4 | **M11** the window builds green in this repo's CI on three OSes and behaves as the standalone client 0.0.33 |
+| [12 — One product](phase-12-one-product.md) | One installer, one updater, a standalone-client user's data comes across | T104–T107, T111, T165 | 7 / 7 | **M12** one download installs five binaries and either updater replaces all five; `mixnz/<old>` archived |
 | [13 — Profiles](phase-13-profiles.md) | A person who never wanted a database client never sees one | T108–T110 | 3 / 3 | **M13** first-run picks a profile; *MixEngine* hides the toolbox, Settings brings it back |
 | [14 — A window a new user can start from](phase-14-a-window-a-new-user-can-start-from.md) | One button makes a working site, a reboot keeps it, the menu can be read | T112–T129 | 22 / 22 | **M14** one button and one prompt on a fresh install open a working `https://<name>.test`, and a restart leaves it serving |
 | [15 — What a terminal inherits](phase-15-what-a-terminal-inherits.md) | A terminal can open its databases, run its global tools, and reach its own HTTPS sites | T130–T134 | 5 / 5 | **M15** `mysqldump` is a command, `npm install -g yarn` makes `yarn` one, and a Node program fetches `https://<site>.test` |
@@ -59,7 +59,7 @@ done
 | [26 — A window that builds in under ten](phase-26-a-window-that-builds-in-under-ten.md) | The longest leg of `build` finishes in ten minutes, with no cache and no change to what a tag builds | T173a–T173c | 3 / 3 | **M26** `window (windows-latest)` finishes in 10 minutes or less and `build`'s artifacts and probes are unchanged — **met**, measured by run 35489039746: 9.1 minutes, 34 jobs green, fifteen artifact names identical |
 | [27 — A rehearsal of the release build](phase-27-a-rehearsal-of-the-release-build.md) | What a release is built with is built every week, so a tag is never the first time | T174a–T174d | 4 / 4 | **M27** a `release-exact` run on `master` is green inside every timeout, happens weekly unasked, and the checklist names it before tagging — **two halves met** by run 35491317573 (LTO links; the widest leg uses half its timeout), the weekly one waits for the first Monday after this lands |
 | [28 — Dependencies that earn their place](phase-28-dependencies-that-earn-their-place.md) | Nothing is compiled, shipped or audited because a plugin's default feature asked for it | T175a–T175c | 3 / 3 | **M28** no `image` and no `moxcms` in the window's `--timings`, terminal paste still works, and both the bson and the db-crate questions are answered with a number — **met**, 898 units against 908, and two measured refusals |
-| [29 — One name to find it by](phase-29-one-name-to-find-it-by.md) | One name for the product, and the engine keeps its own where that is still the right word | T176a–T176g | 6 / 7 | **M29** searching for MixLab reaches the repository, the handbook and the download page, the *do I need both* question is answered in one sentence, and no identifier moved — **met**, and the redirects were measured rather than predicted |
+| [29 — One name to find it by](phase-29-one-name-to-find-it-by.md) | One name for the product, and the engine keeps its own where that is still the right word | T176a–T176g | 7 / 7 | **M29** searching for MixLab reaches the repository, the handbook and the download page, the *do I need both* question is answered in one sentence, and no identifier moved — **met**, and the redirects were measured rather than predicted |
 | [30 — A copy only you can read](phase-30-a-copy-only-you-can-read.md) | A person's second machine has what they ticked, and the server that carried it cannot read it | T177a–T178d | 19 / 19 | **M30** two machines agree on exactly what was ticked, a revoked device stops syncing, and the server's database yields no plaintext — **the CI half met** by run 35646590878, conformance green against both servers; **the two-machine half met** 2026-09-22 by hand: rows not ticked stayed home, edits and deletions crossed, a removed machine was signed out, a move worked, and the self-hosted server's SQLite held no plaintext beyond the email and device name D1 allows |
 | [31 — MixLab updates itself](phase-31-mixlab-updates-itself.md) | A MixLab user is told about a release and installs it from MixLab; MixEngine never looks or installs unasked | T187a–T187g | 7 / 7 | **M31** on Windows, a MixLab whose MixEngine never started comes back on the next release from Settings with no `mixengined` at any point, one with MixEngine running keeps its services, and an idle `mixengined` makes no request to the feed |
 | [32 — The tray is MixLab's](phase-32-the-tray-is-mixlabs.md) | MixLab runs in the background on every preset; a module lends the tray a section | T192a–T192e | 5 / 5 | **M32** on *Database tools*, a terminal session survives the close button and the icon brings it back; with MixEngine visible the panel works as M22 says |
@@ -208,26 +208,26 @@ Design: [2026-09-11-a-window-a-new-user-can-start-from-design.md](../specs/2026-
 
 **Phase 11 is done — 4 of 4 — and M11 is reached; phase 12 is next.** Phases 0 to 10 are done and
 v0.0.1 shipped. [ADR 0027](../decisions/0027-the-desktop-client-lives-in-this-repository.md)
-reverses ADR 0011, and MixDB — already a complete client of this API — now lives under
+reverses ADR 0011, and the standalone client — already a complete client of this API — now lives under
 `apps/desktop/`, builds and tests in this repository's CI on three operating systems, and opens
-against a running daemon as MixDB 0.0.33 did ([phase 11](phase-11-the-desktop-app-comes-home.md)).
+against a running daemon as the standalone client 0.0.33 did ([phase 11](phase-11-the-desktop-app-comes-home.md)).
 What comes now makes it MixEngine's window, named MixLab (phase 12), and makes its database client
 optional to look at (phase 13). The design for all three is one document,
 [2026-09-08-the-desktop-client-in-this-repository-design.md](../specs/2026-09-08-the-desktop-client-in-this-repository-design.md).
 **Phase 12's tasks are done; what M12 still wants is the clean-machine smoke on each OS.** T104 gave
-the application MixLab's name, identity and this workspace's version, and brings a MixDB user's data
+the application MixLab's name, identity and this workspace's version, and brings a standalone-client user's data
 across once; T105 put it in all six installers and added a **headless** archive per OS/arch for the
 machine that has no display — one download now installs five binaries. T105a closed the one line
 T105 left open: the AppImage does **not** carry WebKitGTK
 ([ADR 0028](../decisions/0028-the-appimage-does-not-carry-webkitgtk.md)), the window's floor is the
 distribution's and is measured off the binary on every Linux leg, and `AppRun` names which floor a
-machine missed. T106 left one updater — MixDB's plugin, key and feed are gone, the payload carries
+machine missed. T106 left one updater — the standalone client's plugin, key and feed are gone, the payload carries
 the window, and it relaunches itself after its own executable is swapped. T107 made *where
 MixEngine is* and *where its window is* one answer each, in `mixengine-platform`, held to the
 packaging scripts that write them: `mix database open` from a terminal now lands in a tab in the
-running MixLab, on an install that has no `mixdb` extension at all.
+running MixLab, on an install that has no `<old>` extension at all.
 Two debts phase 11 left where they were found: `[daemon] ipc_path` in `config.toml` is parsed and
-used by nothing, and MixDB's `tool-downloads.yml` is not wired into this CI.
+used by nothing, and the standalone client's `tool-downloads.yml` is not wired into this CI.
 
 **Phase 0 is done**, and **M0 is reached**: `mix status` starts a daemon if there is none, talks to
 it over the local endpoint and prints what it says, in both renderings, proved end to end by
@@ -405,7 +405,7 @@ question open, and the answer was yes.
 | ~~**No disk-usage-by-category or cleanup method exists**~~ — **closed by T96**: `daemon.disk_usage` and `daemon.cleanup`, reachable as `mix disk` and `mix cleanup` | nothing | [phase 10](phase-10-client-surface.md) |
 | ~~**Which web server is active has no readable/writable state**~~ — **closed by T97**, on [ADR 0026](../decisions/0026-the-active-front-end-is-a-row-and-switching-it-is-a-job.md): the reading is `ServiceSummary::role` and the switch is `service.set_front_end`, reachable as `mix service front-end` and `mix service set-front-end` | nothing | [phase 10](phase-10-client-surface.md) |
 
-**One of the three gaps MixDB's Phase 4 spec found is closed by reading it rather than by building
+**One of the three gaps the standalone client's Phase 4 spec found is closed by reading it rather than by building
 anything.** `ServiceSummary` carries no CPU or RSS, and it should not: those live in
 `MetricsSample`, keyed by `MetricsSubject::Service(id)`, and putting them on the summary would break
 the invariant T71 exists to hold. The fast cadence is 1 Hz **only while somebody is subscribed to

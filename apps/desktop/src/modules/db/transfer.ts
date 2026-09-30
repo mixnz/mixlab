@@ -6,7 +6,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
  *
  * The two are not measured the same way and the numbers should not be read as if they were. A
  * restore's is a count: the file is of a known size and every byte of it is fed to the client by
- * MixDB. A dump's is an estimate, built from the tables mysqldump says it has reached and the size
+ * MixLab. A dump's is an estimate, built from the tables mysqldump says it has reached and the size
  * of the file it is writing — the tool keeps no count of its own to ask for.
  */
 export interface TransferProgress {

@@ -21,7 +21,7 @@ export function canEditSite(owner: SiteOwner): boolean {
  *
  * The same rule the Dashboard follows for `service_state_changed`: events are best-effort, but when
  * one arrives it is the real source, not a guess. An unknown `type` or a broken payload is ignored,
- * not thrown — a variant born in a later version has to reach an older MixDB as an ignorable
+ * not thrown — a variant born in a later version has to reach an older MixLab as an ignorable
  * object.
  */
 export function applySharingChange(rows: SiteRow[], raw: string): SiteRow[] {

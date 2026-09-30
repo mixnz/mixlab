@@ -86,7 +86,7 @@ export interface TraySectionProps {
 }
 
 /**
- * One thing MixDB can open a tab of.
+ * One thing MixLab can open a tab of.
  *
  * Deliberately without lifecycle hooks or an event bus between modules: a module cleans up in its
  * own `useEffect` and saves through its own store, and inventing a need nobody has yet is how a

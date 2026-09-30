@@ -28,7 +28,7 @@ export const REST_SHORTCUTS: ShortcutGroup[] = [
       { id: "rest.newRequest", chord: { key: "n" }, labelKey: "rest.shortcutNewRequest" },
       /* Shares `Ctrl/Cmd+W` with the shell's `app.closeTab`. `decide()` resolves a clash in favour
          of whichever handler started listening last, which is this one — and it is registered only
-         while a request tab is open, so an empty REST workspace still closes the MixDB tab. */
+         while a request tab is open, so an empty REST workspace still closes the MixLab tab. */
       { id: "rest.closeRequest", chord: { key: "w" }, labelKey: "rest.shortcutCloseRequest" },
       { id: "rest.history", chord: { key: "h" }, labelKey: "rest.shortcutHistory" },
     ],

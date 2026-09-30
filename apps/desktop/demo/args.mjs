@@ -71,10 +71,10 @@ export function parseArgs(argv, sceneIds) {
 export function storageFor(scene, theme) {
   const tabId = `demo-${scene.id}`;
   return {
-    "mixdb-modules": JSON.stringify(MODULE_IDS),
-    "mixdb-theme": theme,
-    "mixdb-lang": "en",
-    "mixdb-session": JSON.stringify({
+    "mixlab-modules": JSON.stringify(MODULE_IDS),
+    "mixlab-theme": theme,
+    "mixlab-lang": "en",
+    "mixlab-session": JSON.stringify({
       tabs: [{ id: tabId, moduleId: scene.moduleId, title: scene.tabTitle, state: scene.state }],
       activeId: tabId,
     }),

@@ -8,7 +8,7 @@
 //!
 //! On macOS all of them share one entry — the vault — rather than keeping one each. The Keychain
 //! asks before it hands an item to an application it does not recognise, and it decides what it
-//! recognises from the application's code signature; MixDB is not signed, so every update is a
+//! recognises from the application's code signature; MixLab is not signed, so every update is a
 //! stranger to it. The question is asked once per *item*, which with an entry each meant one
 //! dialog per saved connection: ten of them at once on the first look at the Database tab. All of
 //! them in a single item is one dialog, and the read is cached for the run, so it is one dialog
@@ -54,10 +54,10 @@ impl std::fmt::Debug for Redacted {
 /// The name this application's entries appear under in the OS credential store.
 const SERVICE: &str = "MixLab";
 
-/// The name they appeared under while this application was MixDB.
+/// The name they appeared under while this application was the standalone client.
 ///
 /// Read once, by the import on the first launch after the rename (`crate::import`), and never
-/// written to or deleted from: a standalone MixDB may still be installed and still be in use, and
+/// written to or deleted from: a standalone client may still be installed and still be in use, and
 /// those entries are its own. See the T104 design, D4.
 pub const LEGACY_SERVICE: &str = "MixDB";
 
@@ -91,7 +91,7 @@ trait Store {
 /// The credential store of the machine this is running on, under one service name.
 ///
 /// The name is a field rather than the constant it used to be because two of them are addressed
-/// from here: this application's own and — read-only — the one MixDB used. MixEngine's is read
+/// from here: this application's own and — read-only — the one the standalone client used. MixEngine's is read
 /// through `mixengine_platform` instead (`read_mixengine_entry`, T186).
 struct OsStore {
     service: &'static str,
@@ -214,7 +214,7 @@ impl<S: Store> Keeper<S> {
     /// read: on macOS it is a second guarded operation on the same item, so a user who answered
     /// the first dialog with a plain *Allow* is asked again, and a *Deny* there must not take the
     /// connection list down with it. What is left behind then is a stale duplicate — the vault is
-    /// what MixDB reads and writes from that point on — and it goes when the connection is next
+    /// what MixLab reads and writes from that point on — and it goes when the connection is next
     /// saved.
     fn load(&self, id: &str) -> Result<Secrets, AppError> {
         if !self.vaulted {
@@ -422,12 +422,12 @@ fn read_mixengine_entry(key: &str) -> Result<Option<String>, AppError> {
         .map_err(|e| err!("error.cannotReadPassword", message = e))
 }
 
-/// Every account's secrets as MixDB left them, and the accounts that could not be read.
+/// Every account's secrets as the standalone client left them, and the accounts that could not be read.
 ///
-/// Reads and nothing else — no write, no delete, no move into a vault. MixDB may still be
+/// Reads and nothing else — no write, no delete, no move into a vault. The standalone client may still be
 /// installed and in use, and its entries are its own (T104, D5).
 ///
-/// Two shapes, because MixDB wrote two: one entry per account on Windows and Linux, and on macOS a
+/// Two shapes, because the standalone client wrote two: one entry per account on Windows and Linux, and on macOS a
 /// single `vault` account holding every account's secrets in one object — with a per-account entry
 /// still possible beside it for a connection saved before the vault existed. Generic over the
 /// store so both are tested against a `HashMap` rather than against the developer's keychain.
@@ -816,7 +816,7 @@ mod tests {
         assert_eq!(store.reads_of(VAULT), 0);
     }
 
-    /// MixDB on Windows and Linux: an entry per account. The reader takes what the store files
+    /// The standalone client on Windows and Linux: an entry per account. The reader takes what the store files
     /// name and leaves everything else, the entries themselves included.
     #[test]
     fn the_legacy_reader_takes_per_account_entries_and_writes_nothing() {
@@ -837,7 +837,7 @@ mod tests {
         );
     }
 
-    /// MixDB on macOS: one `vault` entry holding every account. Read once, and left alone.
+    /// The standalone client on macOS: one `vault` entry holding every account. Read once, and left alone.
     #[test]
     fn the_legacy_reader_takes_the_vault() {
         let store = Arc::new(MemoryStore::default());
@@ -858,7 +858,7 @@ mod tests {
         assert!(store.has(VAULT));
     }
 
-    /// A connection MixDB saved before the vault existed keeps an entry of its own beside it. The
+    /// A connection the standalone client saved before the vault existed keeps an entry of its own beside it. The
     /// reader looks there second, and still moves nothing.
     #[test]
     fn the_legacy_reader_falls_back_to_a_pre_vault_entry() {
@@ -899,7 +899,7 @@ mod tests {
     #[test]
     #[ignore]
     fn secrets_survive_a_round_trip_through_the_os_store() {
-        let id = format!("mixdb-test-{}", uuid::Uuid::new_v4());
+        let id = format!("mixlab-test-{}", uuid::Uuid::new_v4());
 
         assert!(super::load(&id).unwrap().is_empty());
 

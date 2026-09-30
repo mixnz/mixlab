@@ -58,7 +58,7 @@ Nút Drop trên dòng đó vẫn tắt (không có khái niệm "xoá" sorting k
   khi rỗng, `ORDER BY (a, b)` khi có key) — `PARTITION BY`, `TTL`, `SETTINGS`, `COMMENT` mỗi cái một
   dòng riêng bao quanh, và index phụ (`INDEX name expr TYPE ... GRANULARITY n`) nằm ngay trong khối
   cột. Một `PRIMARY KEY (...)` khai riêng (khác `ORDER BY`) cũng là dòng riêng, đứng trước `ORDER BY`.
-- `EXCHANGE TABLES a AND b` chạy atomic trên database `mixdb_agent_test` (engine `Atomic`, mặc định
+- `EXCHANGE TABLES a AND b` chạy atomic trên database `<old>_agent_test` (engine `Atomic`, mặc định
   của ClickHouse hiện đại) — verify bằng cách tráo hai bảng có dữ liệu khác nhau, dữ liệu đi đúng
   theo tên sau khi tráo.
 - `ADD INDEX ... GRANULARITY` **không bắt buộc** — bỏ qua thì server tự áp `GRANULARITY 1`. Luôn gửi
@@ -180,7 +180,7 @@ rollback nếu lỗi giữa chừng (xem D8). `Modal` mở với `locked={saving
 
 ```
 current_ddl = SHOW CREATE TABLE db.table
-temp_name   = "{table}__mixdb_rebuild_{unix_millis}"   -- có timestamp, không bao giờ đụng
+temp_name   = "{table}__<old>_rebuild_{unix_millis}"   -- có timestamp, không bao giờ đụng
                                                          -- bảng tạm còn sót từ lần chạy trước
 new_ddl     = current_ddl với dòng "ORDER BY ..." thay bằng "ORDER BY (col1, col2, ...)"
               (hoặc "ORDER BY tuple()" nếu danh sách rỗng), và tên bảng đổi sang temp_name
@@ -223,7 +223,7 @@ là đã xử lý hết):**
 - Không huỷ được giữa chừng (`cancellable: false` sẵn có cho ClickHouse) — bảng lớn nghĩa là spinner
   treo nhiều phút, không có nút Huỷ.
 - Nếu app/kết nối rớt giữa chừng, `temp_name` là một bảng thật, hiện trong danh sách bảng của sidebar
-  nếu người dùng mở lại — tên đã đủ tự giải thích (`__mixdb_rebuild_<timestamp>`) để không gây hoang
+  nếu người dùng mở lại — tên đã đủ tự giải thích (`__<old>_rebuild_<timestamp>`) để không gây hoang
   mang, nhưng không có cơ chế dọn tự động nào khác ngoài việc người dùng tự xoá.
 
 **D9 — Không tiền-hạn chế theo engine trong `SkipIndexDialog`** — thêm skip index chạy được trên bất
@@ -316,7 +316,7 @@ src/modules/db/i18n/en.ts, vi.ts
   `"ngrambf_v1(3, 256, 2, 0)"` → tách đúng 4 phần tử, giữ khoảng trắng đã trim.
 - `rebuild_order_by`'s phần dựng câu (tách khỏi phần gửi HTTP): regex thay đúng dòng `ORDER BY` giữ
   nguyên `PARTITION BY`/`TTL`/`SETTINGS`/`COMMENT`/index phụ trong khối cột; tên bảng tạm có đúng
-  hậu tố `__mixdb_rebuild_<millis>`; trường hợp `ORDER BY` rỗng (`tuple()`) và có sẵn `PRIMARY KEY`
+  hậu tố `__<old>_rebuild_<millis>`; trường hợp `ORDER BY` rỗng (`tuple()`) và có sẵn `PRIMARY KEY`
   riêng (không bị đụng).
 - `modify_skip_index`: đúng thứ tự hai câu lệnh, `DROP INDEX` trước `ADD INDEX`.
 - Chuỗi câu lệnh `add_skip_index` cho từng TYPE: đúng cú pháp `INDEX name expr TYPE
@@ -337,7 +337,7 @@ src/modules/db/i18n/en.ts, vi.ts
 - Xoá skip index.
 - Rebuild sorting key trên một bảng có dữ liệu thật — xác nhận `SHOW CREATE TABLE` sau đó ra đúng
   `ORDER BY` mới, dữ liệu còn nguyên (so `count()` và vài dòng mẫu trước/sau), không còn bảng tạm nào
-  sót lại (`SHOW TABLES` không còn `__mixdb_rebuild_...`).
+  sót lại (`SHOW TABLES` không còn `__<old>_rebuild_...`).
 - Rebuild trên bảng có `PRIMARY KEY` khai riêng khác `ORDER BY`, chọn key mới không chứa PK cũ làm
   tiền tố — xác nhận lỗi CREATE rõ ràng, bảng gốc không đổi, không có bảng tạm sót lại.
 - Nút Edit dòng `sorting_key` bị tắt trên một bảng test dựng với tên engine không thuộc whitelist

@@ -4,7 +4,7 @@ import { createStore, jsonFile, useStore } from "../../core/jsonStore";
  * Every script the Query tab has run, newest first.
  *
  * The thing an editor is asked for most often is the query from twenty minutes ago — the one that
- * was right, before it was edited into something else. Nothing in MixDB used to remember it.
+ * was right, before it was edited into something else. Nothing in MixLab used to remember it.
  *
  * Shared across tabs the way the connection list is: one list in memory, written through here, so
  * a query run in one tab is in the history of the next one opened. Entries are stamped with the

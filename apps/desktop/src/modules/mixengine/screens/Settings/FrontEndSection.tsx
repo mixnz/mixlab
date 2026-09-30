@@ -46,7 +46,7 @@ function activeFrontEnd(services: ServiceSummary[]): FrontEndServer | null | und
  * "Default web server" — `service.set_front_end`, T97 / ADR 0026.
  *
  * **Read from `ServiceSummary.role`; there is no separate read method.** The row with
- * `role: front_end` also carries `server`, exactly the value `FrontEndSwitch.server` takes — MixDB
+ * `role: front_end` also carries `server`, exactly the value `FrontEndSwitch.server` takes — MixLab
  * does not map package names to meanings (ADR 0026: "no client may map a package name to a role").
  * The choice list is the two closed values of `FrontEndServer`; for a server not yet installed the
  * daemon refuses with the install command in `hint`, shown through `errorMessage` like every other

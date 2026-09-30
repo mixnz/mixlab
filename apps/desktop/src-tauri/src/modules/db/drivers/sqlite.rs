@@ -87,7 +87,7 @@ pub async fn connect(path: &str) -> Result<SqlitePool, AppError> {
 ///
 /// **Refuses a path that already holds a file.** The save dialog this is called after will have
 /// asked about replacing one, and a yes there must not reach here as "delete that database and put
-/// an empty one in its place": nothing else in MixDB deletes a database file, and a New button is
+/// an empty one in its place": nothing else in MixLab deletes a database file, and a New button is
 /// not where that should start.
 pub async fn create_file(path: &str) -> Result<(), AppError> {
     let path = path.trim();
@@ -108,7 +108,7 @@ pub async fn create_file(path: &str) -> Result<(), AppError> {
         .map_err(map_error)?;
 
     /* Opening alone leaves a file of zero bytes. SQLite reads that back as an empty database and
-    so would MixDB, but another tool looking at the header would see nothing to recognise — so
+    so would MixLab, but another tool looking at the header would see nothing to recognise — so
     one harmless write is made to lay the header down. `user_version` is a value SQLite keeps
     for the application and reads no meaning into; setting it to the zero it already is changes
     nothing but the fact that the file has been written to. */
@@ -124,7 +124,7 @@ pub async fn create_file(path: &str) -> Result<(), AppError> {
 ///
 /// `os` is the file's name rather than a machine's: the header line reads "SQLite 3.x on blog.db",
 /// which is the useful thing to say when what you are connected to is a path. The engine is the one
-/// compiled into MixDB — a SQLite database file has no server to ask.
+/// compiled into MixLab — a SQLite database file has no server to ask.
 pub async fn server_info(pool: &SqlitePool) -> Result<ServerInfo, AppError> {
     let version: String = sqlx::query("select sqlite_version()")
         .fetch_one(pool)
@@ -855,7 +855,7 @@ pub(super) mod tests {
     impl Fixture {
         pub async fn open() -> (Self, SqlitePool) {
             let path =
-                std::env::temp_dir().join(format!("mixdb-sqlite-{}.db", uuid::Uuid::new_v4()));
+                std::env::temp_dir().join(format!("mixlab-sqlite-{}.db", uuid::Uuid::new_v4()));
             // The one place in the app that creates a database file, and it is a test: `connect`
             // never does — see D5 of the plan this was built from.
             let pool = SqlitePoolOptions::new()
@@ -1152,7 +1152,7 @@ pub(super) mod tests {
 
     #[tokio::test]
     async fn a_missing_file_is_an_error_and_stays_missing() {
-        let path = std::env::temp_dir().join(format!("mixdb-absent-{}.db", uuid::Uuid::new_v4()));
+        let path = std::env::temp_dir().join(format!("mixlab-absent-{}.db", uuid::Uuid::new_v4()));
         let error = connect(path.to_str().unwrap())
             .await
             .expect_err("should refuse");
@@ -1164,7 +1164,7 @@ pub(super) mod tests {
 
     #[tokio::test]
     async fn a_created_file_is_an_empty_database_that_opens() {
-        let path = std::env::temp_dir().join(format!("mixdb-new-{}.db", uuid::Uuid::new_v4()));
+        let path = std::env::temp_dir().join(format!("mixlab-new-{}.db", uuid::Uuid::new_v4()));
         create_file(path.to_str().unwrap()).await.unwrap();
 
         // Not zero bytes: one write is made so the file carries SQLite's header and another tool
@@ -1183,7 +1183,7 @@ pub(super) mod tests {
         pool.close().await;
 
         /* The save dialog will have asked about replacing it and been told yes. That must not
-        reach here as "delete that database": nothing else in MixDB deletes a database file. */
+        reach here as "delete that database": nothing else in MixLab deletes a database file. */
         let error = create_file(fixture.path.to_str().unwrap())
             .await
             .expect_err("should refuse");

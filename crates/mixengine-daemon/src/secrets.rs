@@ -185,7 +185,7 @@ mod tests {
     fn an_address_with_no_home_has_no_fallback() {
         let host = machine();
 
-        for address in ["root", OLD, "extensions/mixdb/config"] {
+        for address in ["root", OLD, "extensions/phpmyadmin/config"] {
             assert_eq!(
                 secret_blocking(host.as_ref(), KEYRING_SERVICE, address).expect("a read"),
                 None,

@@ -149,7 +149,7 @@ cách `reload()` đã khoá theo `active` ở [Dashboard.tsx:115-117](../../apps
     double-count.
   - Type export phía TypeScript cố ý khai `String` trần (`ts(as = "String")`) — ngữ pháp
     `"daemon" | "service:<id>"` nằm trong `MetricsSubject::parse` phía Rust, TypeScript không kiểm
-    chứng được (T56). **MixDB phải tự viết helper parse/dựng chuỗi này phía client** (đúng
+    chứng được (T56). **The standalone client phải tự viết helper parse/dựng chuỗi này phía client** (đúng
     `metricsSubjectFor` ở bảng Kiểm thử bên dưới) — không phải thứ suy ra được từ kiểu dữ liệu.
 
 ### Disk usage + cleanup
@@ -293,8 +293,8 @@ có gì poll cả, ở đây có poll nhưng chết ở lần lỗi đầu tiên
 
 `daemon.bundle(DiagnosticsBundle {})` (đối tượng rỗng, không tham số thật) → `BundleReport { path,
 bytes, taken_at, members: Member[], omitted: Omission[] }`. Một nút "Xuất diagnostics", hiện `path`
-kèm nút mở thư mục chứa — tái dùng đúng khả năng mở file manager MixDB đã có sẵn cho Sites (Pha 2,
-roadmap: "MixDB đã có sẵn cả ba đường đó"), không viết lại. `omitted` vẽ thành một dòng phụ nói rõ
+kèm nút mở thư mục chứa — tái dùng đúng khả năng mở file manager the standalone client đã có sẵn cho Sites (Pha 2,
+roadmap: "the standalone client đã có sẵn cả ba đường đó"), không viết lại. `omitted` vẽ thành một dòng phụ nói rõ
 phần nào không nằm trong archive, không trình bày archive như đã đầy đủ (đúng câu T4.8 đã ghi).
 
 ### Default web server — chưa vẽ được, chỗ để dành
@@ -341,7 +341,7 @@ Phần thuần, không cần daemon:
   màn giữ mount cùng lúc theo kiến trúc `mountedScreens`) — đặt tên và một dòng comment ở đầu
   `metrics.rs` nói rõ lý do tách, như `state.rs` đã làm cho `LogsState`/`MixEngineState`.
 - **Đóng stream `/metrics` theo `active` mà quên trường hợp component unmount thẳng** (đóng tab, tắt
-  MixDB) — `useEffect` cleanup phải chạy ở cả hai đường, không chỉ ở nhánh `active` đổi giá trị.
+  the standalone client) — `useEffect` cleanup phải chạy ở cả hai đường, không chỉ ở nhánh `active` đổi giá trị.
   Quên một trong hai là daemon kẹt ở lấy mẫu 1 Hz vĩnh viễn dù không ai còn xem — đúng bất biến T71
   spec này vừa dựa vào để thiết kế, vi phạm ngay trong lúc build.
 - **Re-vendor lên `0.0.4` đổi `DatabaseCreate`/`PackageFilter`/`RuntimeFilter`** (thêm field optional)
@@ -409,7 +409,7 @@ Một câu hỏi thật còn treo, và hai câu hỏi cũ của roadmap spec nà
    - **Ghi**: `service.set_front_end` — một job (dừng server cũ, khởi động server mới), không phải
      ghi vào một setting. Không có method đọc riêng: đọc lại đúng `ServiceSummary.role` từ
      `service.list` — cuộc gọi Dashboard **đã** làm mỗi lần `reload()`.
-   - Giá trị `server` đọc từ hàng đang active chính là giá trị `set_front_end` nhận vào — **MixDB
+   - Giá trị `server` đọc từ hàng đang active chính là giá trị `set_front_end` nhận vào — **The standalone client
      không cần tự map tên package sang một ý nghĩa** ở phía client.
 
    Hành động: kiểm lại trang Releases của `mixnz/mixengine` trước khi bắt tay dựng đúng một hàng này
@@ -417,7 +417,7 @@ Một câu hỏi thật còn treo, và hai câu hỏi cũ của roadmap spec nà
 2. **Vendor bindings bằng cách nào** — câu hỏi mở gốc của roadmap, spec này chỉ làm một lần bump tay
    (D0), không thiết kế script `scripts/` tự động hoá việc này cho các lần sau.
 3. **Không có bước xác minh chữ ký `.minisig`** trước khi vendor — đã tìm khắp repo
-   (`grep -rl minisig`) và không thấy chỗ nào MixDB xác minh chữ ký MixEngine trước khi tin nội dung
+   (`grep -rl minisig`) và không thấy chỗ nào the standalone client xác minh chữ ký MixEngine trước khi tin nội dung
    tải về, kể cả cho tarball `bindings` lẫn binary. D0 tải và giải nén trực tiếp, cùng mức tin cậy
    spec trước đã ngầm chấp nhận — một bước xác minh thật (khoá công khai của MixEngine ở đâu, verify
    bằng gì) vẫn là việc chưa ai thiết kế.

@@ -26,7 +26,7 @@ MixEngine's engineering documentation is good. What is wrong is where it lives.
      `**Status:** accepted`, `**Status:** draft 3, 2026-09-19`, and so on. None of those says
      whether the design was ever built.
    - `.claude/desktop/architecture/` covers the desktop application.
-3. **`.claude/desktop/` is a second, parallel tree**, carried over from MixDB when ADR 0027 brought
+3. **`.claude/desktop/` is a second, parallel tree**, carried over from the standalone client when ADR 0027 brought
    the application home. It has its own `architecture/`, `conventions/`, `decisions/`, `reviews/`
    and `notes/`. Several files exist twice: `plans-and-specs.md`, `changelog.md` and `icons.md`.
    Its README still calls it `.agent/`, and `apps/desktop/CLAUDE.md` still labels links `.agent/…`.
@@ -99,7 +99,7 @@ docs/
   features/              what each user-facing feature must do; authoritative
   specs/                 dated designs, one per piece of work (was docs/superpowers/specs/)
   decisions/             ADRs 0001–0043
-    desktop/             the four decisions MixDB recorded, dated, kept as written
+    desktop/             the four decisions the standalone client recorded, dated, kept as written
   standards/             how we write code here
     desktop/             MixLab's conventions
   operations/            build, packaging, release
@@ -190,7 +190,7 @@ These are the only prose edits this work makes.
 - **`docs/standards/plans-and-specs.md`**
   - Says `docs/specs/` and `docs/plans/`.
   - Absorbs the desktop copy; its extra "not from `CHANGELOG.md`" clause is kept.
-- **`docs/decisions/README.md`** gains a *Desktop (recorded in MixDB)* section that indexes the four
+- **`docs/decisions/README.md`** gains a *Desktop (recorded in the standalone client)* section that indexes the four
   dated files. They keep their dated names: renumbering them would make them look like decisions
   this repository took.
 - **`docs/reviews/desktop/README.md`** states that ids in this folder are their own namespace and
@@ -262,12 +262,12 @@ in the plan so it can be reviewed:
    `[~]` counts as open. Three specs have no exact line: `t167`, `t168` and this one. Their work
    is written as lettered sub-tasks (`T168a`–`T168g`), so when there is no exact line the lookup
    reads every sub-task: the task is done only when all of them are `[x]`.
-2. **Specs without a task id** (30). Most are designs from the MixDB period: the REST client, the
+2. **Specs without a task id** (30). Most are designs from the standalone client's period: the REST client, the
    terminal, the tools module, ClickHouse, MSSQL. Each is read by hand against the code it
    describes, and gets `implemented`, `abandoned` or `superseded`.
 3. **Pairs where one design replaced another**, read by hand. Candidates:
    - `t40-elevate` and `t40a-elevation`;
-   - `mixengine-connection-handoff` and `t83-mixdb-connection-handoff`;
+   - `mixengine-connection-handoff` and `t83-a-connection-handed-to-the-window`;
    - `module-architecture` and the phase 11 design;
    - the four `mixengine-*` client designs of 2026-09-06/07 and the phase 11–12 specs that
      replaced them.

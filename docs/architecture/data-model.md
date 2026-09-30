@@ -24,7 +24,7 @@ because the file is one any local process can rewrite.
 
 ## SQLite
 
-Accessed via `sqlx` (compile-time-checked queries, same as MixDB), WAL mode, `foreign_keys=ON`,
+Accessed via `sqlx` (compile-time-checked queries, same as MixLab's window), WAL mode, `foreign_keys=ON`,
 `synchronous=NORMAL`, a five-second busy timeout and a pool of four connections. Every one of those
 is set explicitly rather than left to sqlx's defaults, which the next release is free to change.
 

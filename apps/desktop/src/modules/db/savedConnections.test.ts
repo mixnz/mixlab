@@ -17,7 +17,7 @@ describe("readSecrets", () => {
   });
 
   /* The point of a keyringRef: Save must not go on writing a copy of MixEngine's password into
-     MixDB's own credential store just because `config.password` still holds the value resolved
+     MixLab's own credential store just because `config.password` still holds the value resolved
      for display. */
   it("leaves the password out when a keyringRef is given", () => {
     expect(readSecrets(config, "mariadb@main/root")).toEqual({});

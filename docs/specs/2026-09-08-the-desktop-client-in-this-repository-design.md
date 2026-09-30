@@ -18,7 +18,7 @@ task:
 
 ## Goal
 
-MixDB — a Tauri 2 + React 19 desktop application whose fifth module is already a complete client
+The standalone client — a Tauri 2 + React 19 desktop application whose fifth module is already a complete client
 of MixEngine's API — moves into this repository and becomes MixEngine's desktop application,
 **MixLab**. The daemon, the CLI and everything a terminal calls keep MixEngine's name; only the
 window is MixLab. After
@@ -30,15 +30,15 @@ the three phases below:
   client; a person who wants the database client, the HTTP client, the terminal and the tools turns
   them on in Settings;
 - the CLI-only distribution keeps existing, as a headless archive beside the installers;
-- nothing MixDB does today is lost, and nothing a MixDB user has saved is lost.
+- nothing the standalone client does today is lost, and nothing a standalone-client user has saved is lost.
 
 What this design does **not** do: redesign any screen. The shell, the tab strip and every module
-arrive as they are in MixDB 0.0.33. Reshaping the window per audience is later work, and it will
+arrive as they are in the standalone client 0.0.33. Reshaping the window per audience is later work, and it will
 have its own spec.
 
 ## What is being moved
 
-| MixDB | Size | Becomes |
+| The standalone client | Size | Becomes |
 | --- | --- | --- |
 | `src/` — React frontend, five modules, shell, i18n | ~100k lines TS/CSS, 1547 vitest tests | `apps/desktop/src/` |
 | `src-tauri/` — Rust: drivers, SSH, pty, REST, the MixEngine transport | ~36k lines | `apps/desktop/src-tauri/`, its own Cargo workspace |
@@ -74,8 +74,8 @@ never sees the desktop crate; `cargo` invoked in `apps/desktop/src-tauri` sees o
 path dependencies. `docs/README.md`'s table gains a `desktop/` row, and `CLAUDE.md`'s workspace
 layout gains `apps/desktop/`.
 
-The git history comes along: `git subtree add --prefix=apps/desktop <mixdb> master` in the
-commit that lands T101, so `git log --follow` on any moved file reaches its MixDB history. No
+The git history comes along: `git subtree add --prefix=apps/desktop <<old>> master` in the
+commit that lands T101, so `git log --follow` on any moved file reaches its the standalone client history. No
 `filter-repo` rewrite of either side.
 
 ### D2. The dependency rule, and its test
@@ -103,7 +103,7 @@ inside a hundred-thousand-line import.
 
 ### D4. Bindings are imported, not vendored
 
-`src/modules/mixengine/api/types/` — MixDB's vendored copy of `bindings/` — is deleted. A Vite and
+`src/modules/mixengine/api/types/` — the standalone client's vendored copy of `bindings/` — is deleted. A Vite and
 TypeScript path alias, `@mixengine/api`, resolves to `../../bindings` and the module imports from
 that. `scripts/fetch-bindings.mjs` is retired.
 
@@ -121,11 +121,11 @@ desktop crate resolves the home the way `mixengine-cli/src/home.rs` does — `MI
 `Host::home_dirs().default_home()`, made absolute and passed through `paths::in_full` — and then
 takes `ipc::Endpoint::in_run_dir` and `ipc::Connection::connect` from `mixengine-platform`.
 `Connection` already retries a busy pipe and already refuses an endpoint another account holds
-(`Error::EndpointNotOurs`, carrying the account), so the owner check MixDB's T1.3 wrote is the
+(`Error::EndpointNotOurs`, carrying the account), so the owner check the standalone client's T1.3 wrote is the
 platform's from now on, and `windows-sys` leaves the desktop crate's manifest with it. The
 fingerprint pin the desktop kept becomes a test on the platform side, where the function lives.
 
-**`[daemon] ipc_path` is not read any more.** MixDB honoured that key because `config.toml`'s
+**`[daemon] ipc_path` is not read any more.** the standalone client honoured that key because `config.toml`'s
 template offers it. `mixengine-core` parses it and nothing — not `Paths`, not the daemon — ever
 uses it, and `mix` never reads it either. A client that dialled a configured path would be dialling
 somewhere no daemon listens. The key stays a config-file debt for this repository, noted in
@@ -134,15 +134,15 @@ computes its endpoint from the home alone, like the CLI.
 
 ### D6. Identity and version
 
-| | MixDB | Desktop app |
+| | The standalone client | Desktop app |
 | --- | --- | --- |
-| Product name | MixDB | **MixLab** |
-| Identifier | `io.github.haiquang9994.mixdb` | `io.github.mixnz.mixlab` |
-| Executable | `mixdb` / `MixDB.exe` / `MixDB.app` | `mixlab` / `MixLab.exe` / `MixLab.app` |
+| Product name | The standalone client | **MixLab** |
+| Identifier | `io.github.haiquang9994.<old>` | `io.github.mixnz.mixlab` |
+| Executable | `<old>` / `<Old>.exe` / `<Old>.app` | `mixlab` / `MixLab.exe` / `MixLab.app` |
 | Version | its own, `set-version` across seven files | the workspace's, from the root `Cargo.toml` |
-| Icon | MixDB's two SVGs | MixLab's own mark — it exists, and the owner hands the SVGs to T104 (below) |
-| Window title | MixDB | MixLab |
-| URL scheme | `mixdb://` | `mixdb://`, kept — see D10 |
+| Icon | The standalone client's two SVGs | MixLab's own mark — it exists, and the owner hands the SVGs to T104 (below) |
+| Window title | The standalone client | MixLab |
+| URL scheme | `<old>://` | `<old>://`, kept — see D10 |
 
 **The logo is decided and is not in this repository yet.** A ring open at the lower right, an
 `ML` ligature inside it whose `L` runs out through the gap, stroked in a gradient from deep blue at
@@ -152,7 +152,7 @@ wordmark with *Mix* at weight 500 and *Lab* at 700, the letters outlined so no f
 the file; and a single-colour version of each. Brand blue `#2D86E0`; the light-surface gradient
 runs `#1A57C4 → #2D86E0 → #35CDEB` and the dark-surface one `#2D86E0 → #4AA8F5 → #5FE1F7`. T104
 receives the SVGs from the project owner, places the mark at `apps/desktop/public/logo.svg` and
-the padded macOS variant at `public/logo-macos.svg` where MixDB's `npm run icons` already reads
+the padded macOS variant at `public/logo-macos.svg` where the standalone client's `npm run icons` already reads
 them, uses the small cut for the 16 px and 32 px sizes, and regenerates `src-tauri/icons/`. The
 proposal itself lives outside the repository and is not linked from it.
 
@@ -160,7 +160,7 @@ proposal itself lives outside the repository and is not linked from it.
 `mixengine-elevate`, `mixengine-shim`, `MIXENGINE_HOME`, the home directory, the keyring namespace
 `mixengine` the daemon's credentials live under, the installer names and the release feed all keep
 MixEngine's name: a terminal user never meets the word MixLab, and a MixLab user sees MixEngine as
-the thing the Dashboard manages. What takes the new name is what belonged to MixDB — the
+the thing the Dashboard manages. What takes the new name is what belonged to the standalone client — the
 application identifier, the executable, the window, and the toolbox's own keyring service (D7).
 
 The version is written in three places the desktop build reads — `package.json`,
@@ -170,42 +170,42 @@ against `packaging/common.sh`, gains a check that all three carry `[workspace.pa
 Cutting a release stays a bump of the root `Cargo.toml`, and a forgotten desktop file is a red
 test rather than a window reporting the previous version.
 
-**That check lands with T104, not T101.** Through phase 11 the application keeps MixDB's version
-(`0.0.33`) and MixDB's Tauri updater, which reads `mixnz/mixdb`'s feed. Lowering the version to the
+**That check lands with T104, not T101.** Through phase 11 the application keeps the standalone client's version
+(`0.0.33`) and the standalone client's Tauri updater, which reads `mixnz/<old>`'s feed. Lowering the version to the
 workspace's `0.0.6` while that updater is still wired would have every phase-11 build offer to
-"update" itself to standalone MixDB 0.0.33 — and on Windows that means downloading and running
-MixDB's installer over whatever directory the test build sits in. The version becomes MixEngine's in
+"update" itself to standalone client 0.0.33 — and on Windows that means downloading and running
+The standalone client's installer over whatever directory the test build sits in. The version becomes MixEngine's in
 the same task that gives the application MixEngine's name, two tasks before the updater leaves.
 
 `apps/desktop/CHANGELOG.md` is frozen at 0.0.33 with one line at its top saying so. From the merge
 on, the root `CHANGELOG.md` is the only one, under [changelog.md](../standards/changelog.md).
 
-### D7. A MixDB user's data comes across, once, and the old copy is never touched
+### D7. A standalone-client user's data comes across, once, and the old copy is never touched
 
 A changed identifier is a changed application-data directory and a changed keyring namespace.
 On the desktop application's first launch — the new directory holds no store files — it looks for
-MixDB's directory for this platform and, if present, imports:
+The standalone client's directory for this platform and, if present, imports:
 
 - every `tauri-plugin-store` file at the top of that directory — today `connections.json`,
   `query-drafts.json`, `rest-environments.json`, `rest-history.json`, `terminal-hosts.json`,
   `terminal-settings.json` and `tool-usage.json`, copied by pattern rather than by list so a file
   a module adds later comes across too;
 - for every saved connection, host and secret-marked environment variable named in those files,
-  the credential under keyring service `MixDB` — read by account, written under service `MixLab`.
+  the credential under keyring service `<Old>` — read by account, written under service `MixLab`.
   Nothing enumerates the store; the store files say which accounts exist;
 - nothing else. Logs, caches and downloaded dump tools are not user data, and neither is what the
   shell keeps in the webview's `localStorage` — theme, accent, the tab strip of the last session,
   a skipped update version. That storage belongs to WebView2's or WebKit's own profile, keyed by
-  identifier, and none of it is something a person made. A MixDB user opens the new window on the
+  identifier, and none of it is something a person made. A standalone-client user opens the new window on the
   default theme with an empty strip and every saved connection in place.
 
 Three rules. **The old directory and the old keyring entries are never deleted or written**: a
-standalone MixDB may still be installed and still be in use. **Import runs once**: a marker file in
+standalone client may still be installed and still be in use. **Import runs once**: a marker file in
 the new directory records the date and the source, and a second launch does not look again.
 **A `keyringRef` into MixEngine's own namespace is copied as it is**: those entries belong to the
 daemon, are already under service `mixengine`, and change hands with nothing.
 
-An import that finds MixDB data sets the profile to *Everything* (D11); a fresh machine gets
+An import that finds the standalone client data sets the profile to *Everything* (D11); a fresh machine gets
 *MixEngine*.
 
 ### D8. Packaging: a fifth binary, and the same six installers
@@ -218,7 +218,7 @@ crate; `packaging.rs` checks the list as before. Each `build` leg runs `npm ci &
 
 | Platform | What the installer places |
 | --- | --- |
-| Windows NSIS, per-user | the five executables in one directory; Start Menu and optional desktop shortcut to `MixLab.exe`; `mixdb://` registered to it |
+| Windows NSIS, per-user | the five executables in one directory; Start Menu and optional desktop shortcut to `MixLab.exe`; `<old>://` registered to it |
 | Windows portable zip | one `mixengine/` directory with the five |
 | macOS `.pkg` | four binaries to `/usr/local/bin`, `MixLab.app` to `/Applications` |
 | Linux `.deb` / `.rpm` | five to `/usr/bin`, a `.desktop` file and icon for the window |
@@ -232,7 +232,7 @@ its point.
 ### D9. One updater: MixEngine's
 
 `tauri-plugin-updater` and `tauri-plugin-process` leave the desktop crate, and with them the Tauri
-`latest.json`, the `.sig` files, the `update-notes.yml` workflow and MixDB's minisign key. The
+`latest.json`, the `.sig` files, the `update-notes.yml` workflow and the standalone client's minisign key. The
 Update pane already calls `daemon.update_status | update_check | update_decide | update_apply`; it
 stays on those.
 
@@ -256,16 +256,16 @@ that packaging and the desktop crate both read, replacing `health.rs`'s hand-kep
 
 ### D10. `mix database open` still opens a window
 
-`database.open`, the `desktop-app` extension kind and MixDB's registry entry are unchanged. What
+`database.open`, the `desktop-app` extension kind and the standalone client's registry entry are unchanged. What
 changes is what they find: `mixengine-platform`'s desktop-application lookup learns the merged
 application's install location, and the merged application keeps `launch.rs`, `instance.rs` and
-the `mixdb://` scheme, so `mix database open mariadb` from a terminal opens a Database tab in the
+the `<old>://` scheme, so `mix database open mariadb` from a terminal opens a Database tab in the
 running window, with the password in the environment variable and never on the command line, as
-T83 specified. A standalone MixDB still installed is found the way it is today.
+T83 specified. A standalone client still installed is found the way it is today.
 
-Inside the window, *open* on a database service goes through `open_in_mixdb.rs`'s in-process
+Inside the window, *open* on a database service goes through `open_in_<old>.rs`'s in-process
 path — `database.credentials`, a `Handoff`, a tab — and never through the OS. That is already how
-MixDB 0.0.33 behaves; the rename is cosmetic.
+The standalone client 0.0.33 behaves; the rename is cosmetic.
 
 ### D11. Profiles: a visibility setting with three presets
 
@@ -280,7 +280,7 @@ and every place that enumerates modules reads through `visibleModules()` instead
 | Preset | `enabledModules` | Default tab |
 | --- | --- | --- |
 | **MixEngine** | `mixengine` | Dashboard |
-| **Everything** | all five, MixDB's order with `mixengine` first | Dashboard |
+| **Everything** | all five, the standalone client's order with `mixengine` first | Dashboard |
 | **Database tools** | `db`, `rest`, `terminal`, `tools` | Database |
 
 A preset is a shortcut to a set; the Settings pane also offers the five checkboxes, so a person
@@ -307,10 +307,10 @@ The five `build` legs gain a Node setup and the steps in D8. **The two Linux leg
 on the runner, not in the manylinux container**: the container is AlmaLinux 8, whose WebKitGTK is
 the 4.0 API on libsoup 2, and Tauri 2 links 4.1 on libsoup 3. So those legs' hosts are pinned to
 `ubuntu-22.04` and `ubuntu-22.04-arm` — the container step is indifferent to its host, and the
-window gets the glibc 2.35 floor MixDB's own releases had rather than whatever `ubuntu-latest`
+window gets the glibc 2.35 floor the standalone client's own releases had rather than whatever `ubuntu-latest`
 carries this month. `lint`'s `cargo deny` does not reach the nested workspace; the `desktop` job
-runs `cargo audit` there against `apps/desktop/src-tauri/.cargo/audit.toml`, which is MixDB's
-`audit.yml` policy and its two documented ignores. MixDB's `ci.yml`, `release.yml`,
+runs `cargo audit` there against `apps/desktop/src-tauri/.cargo/audit.toml`, which is the standalone client's
+`audit.yml` policy and its two documented ignores. The standalone client's `ci.yml`, `release.yml`,
 `tool-downloads.yml` and `update-notes.yml` are not moved: the first two are replaced by the jobs
 above, the third becomes a step of `desktop` that only reads, and the fourth has nothing to write
 once D9 lands.
@@ -319,7 +319,7 @@ Versions in the release feed, the archive names and the handbook's install page 
 shape; the artifacts merely carry one more file. The handbook gains a page for the window,
 in both languages, under [ADR 0021](../decisions/0021-the-handbook-is-one-corpus-published-three-ways.md)'s rules.
 
-### D13. What `mixnz/mixdb` does after this
+### D13. What `mixnz/<old>` does after this
 
 Nothing lands there after T101 except a README pointing here. When M12 ships — one installer, one
 updater — its last release notes name the MixEngine release that replaces it, and the repository
@@ -329,7 +329,7 @@ it does today, because nothing on the API side changes for it.
 ## Error handling
 
 - **D7 import** — a store file that fails to parse is skipped and named in the log; a keyring
-  entry that cannot be read leaves the saved connection with no password, which is the state MixDB
+  entry that cannot be read leaves the saved connection with no password, which is the state the standalone client
   already renders as *ask again*. An import never blocks the window from opening.
 - **D9 apply** — a payload missing the desktop executable is a feed the desktop application refuses
   with the reason, since `provides` is what the updater reads and an entry absent from it is a
@@ -337,7 +337,7 @@ it does today, because nothing on the API side changes for it.
   release-day discovery.
 - **D9 launch** — `mixengined` found nowhere is the third of `health.rs`'s three states, *no
   MixEngine here*, which is already drawn distinctly from *not running* and *not answering*.
-- **D11 hidden module** — a `mixdb://` handoff arriving while `db` is hidden enables the module
+- **D11 hidden module** — a `<old>://` handoff arriving while `db` is hidden enables the module
   for that tab and says so in the tab, rather than dropping a connection somebody just asked for.
 
 ## Testing
@@ -351,7 +351,7 @@ it does today, because nothing on the API side changes for it.
   `mixengine-testkit` as a dev-dependency, the one edge into this workspace the layering test
   allows there.
 - **Import**: vitest over the pure half (which files, which accounts, the marker) and one Rust test
-  with a fabricated MixDB directory and a throwaway keyring service.
+  with a fabricated the standalone client directory and a throwaway keyring service.
 - **Updater**: `feed-check.sh` for the fifth `provides`; a `core::updates` unit test that an
   archive with five binaries applied over a directory holding four writes four.
 - **Profiles**: vitest over `visibleModules()`, the shortcut mapping and session restore; the

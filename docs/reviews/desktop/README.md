@@ -1,6 +1,6 @@
 # Technical review notes
 
-**These ids are their own namespace.** This folder numbers its findings from `R1`, as MixDB did,
+**These ids are their own namespace.** This folder numbers its findings from `R1`, as the standalone client did,
 independently of [the workspace's reviews](../README.md). Cite one as "desktop R3"; a bare `R3`
 means the workspace's.
 

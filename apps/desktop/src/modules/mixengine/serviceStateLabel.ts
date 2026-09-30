@@ -10,7 +10,7 @@ import type { ServiceState, StoppedBy } from "@mixengine/api";
  *
  * **`null` rather than a guessed key.** `ServiceState` is a closed enum — its doc says plainly "a
  * state machine with room for one more state is one nobody can reason about" — but what is read
- * here is a string a daemon sends, and the daemon may be newer than the running MixDB. An unknown
+ * here is a string a daemon sends, and the daemon may be newer than the running MixLab. An unknown
  * state has to show up exactly as the daemon wrote it, not turn into an empty cell or a
  * translation key that does not exist.
  */

@@ -164,10 +164,10 @@ pub fn accept<R: Runtime>(app: &AppHandle<R>, url: &str, secret: Option<String>)
     match host.as_deref() {
         Some("connect") => {
             if let Err(error) = handoff::accept(app, url, secret) {
-                eprintln!("mixdb: ignoring the connection this was started with: {error}");
+                eprintln!("mixlab: ignoring the connection this was started with: {error}");
             }
         }
-        _ => eprintln!("mixdb: ignoring a URL nothing here answers: {url}"),
+        _ => eprintln!("mixlab: ignoring a URL nothing here answers: {url}"),
     }
 }
 
@@ -283,7 +283,7 @@ fn received<R: Runtime>(app: &AppHandle<R>, line: &str) {
         Ok(Message { url: None, .. }) => bring_to_front(app),
         Err(e) => {
             bring_to_front(app);
-            eprintln!("mixdb: ignoring a line from another copy: {e}");
+            eprintln!("mixlab: ignoring a line from another copy: {e}");
         }
     }
 }

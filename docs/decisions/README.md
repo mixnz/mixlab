@@ -46,7 +46,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0044](0044-mixlab-is-the-product-and-mixengine-is-the-engine.md) | MixLab is the product; MixEngine is the engine inside it and the headless distribution | Accepted; decision 6 superseded by 0046, decision 5 by 0049 |
 | [0045](0045-mixlab-has-an-account-and-mixengine-does-not.md) | MixLab has an end-to-end encrypted account; MixEngine has none, and its server is its own repository | Accepted; decision 4 superseded by 0046 |
 | [0046](0046-the-sync-server-lives-beside-the-client-it-serves.md) | The sync server lives in this repository, under `server/`, so one CI run proves both halves agree | Accepted |
-| [0047](0047-the-url-scheme-is-mixlab.md) | The URL scheme is `mixlab://`; `mixdb://` is no longer answered | Accepted |
+| [0047](0047-the-url-scheme-is-mixlab.md) | The URL scheme is `mixlab://`; `<old>://` is no longer answered | Accepted |
 | [0048](0048-a-file-a-package-manager-placed-leaves-with-the-package.md) | A file a package manager placed leaves with the package; `mix uninstall` keeps a packaged helper on Linux | Accepted |
 | [0049](0049-a-download-is-named-after-what-it-installs.md) | A download is named after what it installs: `mixlab-…` with the window, `mixengine-…-headless` without | Accepted; its list of downloads amended by 0053 |
 | [0050](0050-a-copy-the-pkg-installed-is-updated-by-the-pkg.md) | A copy the `.pkg` installed is updated by the `.pkg`, through Installer.app | Accepted; extended to the Linux packages by 0053 |
@@ -59,7 +59,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0057](0057-a-runtime-s-commands-are-in-bin-only-while-it-is-installed.md) | A runtime's commands are in `bin/` only while it is installed | Accepted |
 | [0058](0058-the-tray-is-mixlabs-and-a-module-lends-it-a-section.md) | The tray is MixLab's, and a module lends it a section | Accepted |
 
-### Desktop (recorded in MixDB)
+### Desktop (recorded in the standalone client)
 
 Four decisions the desktop application took before it came to this repository
 ([ADR 0027](0027-the-desktop-client-lives-in-this-repository.md)). They keep their dated names:

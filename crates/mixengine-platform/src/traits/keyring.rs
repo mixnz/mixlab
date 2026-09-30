@@ -5,7 +5,7 @@ use crate::Result;
 /// The application-side namespace every credential MixEngine owns is stored under.
 ///
 /// **Re-exported from `mixengine-proto`** — roadmap task **T84** moved the constant to the layer
-/// that owns the wire, because it stopped being ours alone: MixDB reads the entries MixEngine
+/// that owns the wire, because it stopped being ours alone: MixLab reads the entries MixEngine
 /// writes, so the namespace is part of a published contract rather than an internal agreement
 /// between a recipe and a daemon. Kept visible from here so that every caller of a [`Keyring`]
 /// method still names the constant beside the trait that takes it.

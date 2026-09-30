@@ -4,11 +4,11 @@
 pub mod commands;
 pub mod endpoint;
 pub mod events;
+pub mod explore_data;
 pub mod for_update;
 pub mod health;
 pub mod logs;
 pub mod metrics;
-pub mod open_in_mixdb;
 pub mod rpc;
 pub mod sse;
 pub mod state;

@@ -100,7 +100,7 @@ const [tabs, setTabs] = useState<TabInfo[]>(() =>
 ```
 
 So the default only ever decides **the very first tab of a profile that has no session**, and **the
-tab after the last one is closed**. An imported MixDB user — T104's marker, T108's *Everything* —
+tab after the last one is closed**. An imported the standalone client user — T104's marker, T108's *Everything* —
 has a session, and sees the tabs they left open, in the order they left them, exactly as before.
 
 ## D4 — `DEFAULT_MODULE_ID` goes
@@ -133,14 +133,14 @@ edges where a bad value actually arrives.
 
 ## D6 — What this is not
 
-**It is not T110.** A `mixdb://` handoff that arrives while `db` is hidden still opens its tab:
+**It is not T110.** A `<old>://` handoff that arrives while `db` is hidden still opens its tab:
 `takeTabRequests` is handed all five ids and names the module itself, so no default is consulted.
 What that tab should say, and what the Services screen's *open* button should offer, is T110's.
 
 **It is not a redesign.** The *MixEngine* profile gets the same tab strip, now opening on the
 Dashboard. A sidebar instead of a tab strip has no spec and is not this phase.
 
-**It changes no stored value.** `mixdb-modules` keeps its shape and its meaning, and a profile
+**It changes no stored value.** `<old>-modules` keeps its shape and its meaning, and a profile
 written by T108 is read by this build with no migration.
 
 ## Verification
@@ -160,7 +160,7 @@ adds neither.
   `DEFAULT_MODULE_ID` case goes with the constant.
 
 Nothing here says anything about CSS or about what a window looks like on the way up. Two paths are
-worth walking by hand with `npm run dev:app`, on a profile with `mixdb-session` cleared:
+worth walking by hand with `npm run dev:app`, on a profile with `<old>-session` cleared:
 
 - *Everything* opens on a MixEngine tab showing the Dashboard, and `Ctrl/Cmd+T` opens another;
 - *Database tools* opens on a Database tab, and `Ctrl/Cmd+T` opens another.

@@ -70,7 +70,7 @@ bindings đã vendor (không type `ExtensionConfigure` nào) là hai nguồn đ�
 `blueprint.capture` (`BlueprintCapture { project: ProjectRef, name, description?, overwrite }`) →
 `BlueprintSummary`. `project` tái dùng đúng dropdown `project.list` màn hình Sites (Pha 2)/Projects
 (Pha 3) đã dùng — `ProjectRef::Name` gửi tên đã chọn, không phải `ProjectRef::Path` (đường đó dành
-cho CLI đứng trong thư mục project, MixDB luôn biết tên qua danh sách). `overwrite` mặc định `false`
+cho CLI đứng trong thư mục project, the standalone client luôn biết tên qua danh sách). `overwrite` mặc định `false`
 — **không có `blueprint.delete`, nên một slug gõ nhầm và không tick overwrite là vĩnh viễn kẹt ở tên
 đó**; dialog capture nên cảnh báo rõ hơn form Save thông thường, không chỉ một checkbox im lặng.
 
@@ -194,10 +194,10 @@ signed, network } })` — bốn field của `consent` **phải đúng những g�
 consent không khớp registry hiện tại. UI giữ nguyên object `ExtensionPlan` vừa nhận, trích bốn field
 đó ra khi gửi, không hỏi lại người dùng lần hai.
 
-**Cảnh báo tự-tham-chiếu (`kind: "desktop-app"`, và entry đó là chính MixDB).** Roadmap T4.5 đã nêu
+**Cảnh báo tự-tham-chiếu (`kind: "desktop-app"`, và entry đó là chính the standalone client).** Roadmap T4.5 đã nêu
 đúng vấn đề: MixEngine tìm ứng dụng desktop chứ không cài nó, và nếu registry có một entry đại diện
-chính MixDB (cùng cơ chế Pha 0 dùng để MixEngine tự nhận diện MixDB qua `database.open`/
-`DesktopClient`), màn hình Extensions của MixDB không được vẽ một nút "Cài đặt" cho chính ứng dụng
+chính the standalone client (cùng cơ chế Pha 0 dùng để MixEngine tự nhận diện the standalone client qua `database.open`/
+`DesktopClient`), màn hình Extensions của standalone-client không được vẽ một nút "Cài đặt" cho chính ứng dụng
 đang chạy nó. **Chưa xác nhận được cách nhận ra trường hợp này** — không có field nào trên
 `ExtensionOffer`/`ExtensionPlan` tự nói "đây là bạn"; `ExtensionId` là kiểu duy nhất có thể so khớp
 được, nhưng giá trị hằng số MixEngine dùng cho entry đó (nếu có thật) không nằm trong bất cứ tài liệu
@@ -233,7 +233,7 @@ Phần thuần, không cần daemon:
 
 **Không test được bằng vitest, cần MixEngine thật:**
 
-- Registry thật có entry `kind: "desktop-app"` đại diện MixDB không, và `ExtensionId` của nó là gì —
+- Registry thật có entry `kind: "desktop-app"` đại diện the standalone client không, và `ExtensionId` của nó là gì —
   điều kiện cần để đóng phần "cảnh báo tự-tham-chiếu" ở trên.
 - `extension.plan` cho một `ExtensionOrigin::Path` trỏ tới một manifest cục bộ có trả đủ field như
   đường `Registry` không, hay một số field (vd. `homepage`) luôn rỗng cho nguồn `Path`.
@@ -246,7 +246,7 @@ Phần thuần, không cần daemon:
   nhắc lại đúng bẫy spec Pha 3 đã tự mắc một lần.** `ExtensionsPanel.tsx` đã tồn tại ở
   [screens/Packages/ExtensionsPanel.tsx](../../apps/desktop/src/modules/mixengine/screens/Packages/ExtensionsPanel.tsx)
   — đó là PHP extension theo từng bản (`runtime.list_extensions`/`set_extension`), **không liên quan
-  gì** tới màn hình Extensions (sản phẩm: Mailpit, phpMyAdmin, MixDB, `extension.*`) spec này dựng.
+  gì** tới màn hình Extensions (sản phẩm: Mailpit, phpMyAdmin, the standalone client, `extension.*`) spec này dựng.
   Đặt tên component mới (`screens/Extensions/`) để không ai đọc lướt tưởng hai thứ là một, và một dòng
   comment ở đầu mỗi file nói rõ namespace nào.
 - **`ExtensionOrigin::Path` có thể trỏ tới một extension đã cài rồi** — không field nào trên

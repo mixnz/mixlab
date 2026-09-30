@@ -128,6 +128,10 @@ src-tauri/src/       Rust backend
   `src-tauri/src/secrets.rs`, never into an item beside it. Twice this has regressed (per-connection
   entries, then sync's `sync-master-key`); `sync_and_the_connections_are_one_visit_to_the_store` is
   the test that says so.
+- **This app is MixLab, and its old name appears nowhere but in the values that fix up a user's
+  machine**: `import.rs`'s identifier and marker, `secrets.rs`'s `LEGACY_SERVICE`, the storage
+  keys in `public/storage-keys.js`, `shell/themeModel.ts` and `modules/terminal/settings.ts`, and
+  the installer's scheme cleanup. Not in an identifier, a comment, a log line or a doc.
 - Commit messages need a `type(scope): message` prefix (see the global rules).
 - **Never link to a file under `docs/plans/`.** Those are local-only implementation
   plans, gitignored and absent on every other machine. Link to `docs/specs/` instead —
@@ -142,7 +146,7 @@ src-tauri/src/       Rust backend
   [standards/changelog.md](../../docs/standards/changelog.md) and this application's own
   [conventions/changelog.md](../../docs/standards/desktop/changelog.md) — one short line each,
   and a fix to something still unreleased is not a `Fixed` entry. This directory's `CHANGELOG.md`
-  is MixDB's history, frozen at 0.0.33.
+  is the standalone client's history, frozen at 0.0.33.
 
 ## Where to read more
 

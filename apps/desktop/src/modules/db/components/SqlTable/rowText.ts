@@ -27,7 +27,7 @@ export function quoteIdentifier(name: string): string {
  *
  * These are MySQL's default escapes. A server running under `NO_BACKSLASH_ESCAPES` reads a
  * backslash as an ordinary character and would take such a value back in changed; that mode is one
- * this app never sets, and the statements here are written to be pasted into MixDB's own Query tab
+ * this app never sets, and the statements here are written to be pasted into MixLab's own Query tab
  * or a `mysql` client, where the default is what applies.
  */
 const ESCAPED: Record<string, string> = {

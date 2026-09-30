@@ -242,7 +242,7 @@ src/modules/db/sql/SqlWorkspace.tsx  + prop dataReadOnly, chỉ SqlTable dùng n
 
 ## Rủi ro
 
-- **Nhận nhầm mutation_id (D4).** Hai mutation nộp gần như đồng thời trên cùng bảng (từ MixDB hoặc
+- **Nhận nhầm mutation_id (D4).** Hai mutation nộp gần như đồng thời trên cùng bảng (từ the standalone client hoặc
   từ nơi khác) có thể làm bước "tìm mutation_id mới" ra 0 hoặc >1 kết quả — trường hợp đó tiếp tục
   poll tới timeout thay vì đoán (đã sửa ở D4). **Đã xác minh bằng server thật** (`clickhouse-test-
   server`, ClickHouse 26.8): round-trip insert → update (kể cả khớp qua `IS NULL`) → delete, cộng

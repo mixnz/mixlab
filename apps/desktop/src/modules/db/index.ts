@@ -11,7 +11,7 @@ import { connectionSecretsSyncable, connectionsSyncable } from "./sync";
    heaviest thing in the bundle — CodeMirror here, xterm in the terminal — and a launch that parses
    all three to show one is paying for two nobody asked for. Everything else in this file stays
    eager: the icon and the label are on the tab strip before any tab of this kind exists. */
-/** Database: the module MixDB started as. */
+/** Database: the module MixLab started as. */
 export const dbModule: ModuleDefinition = {
   id: "db",
   labelKey: "app.moduleDatabase",

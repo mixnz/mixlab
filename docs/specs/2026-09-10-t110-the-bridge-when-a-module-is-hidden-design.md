@@ -14,7 +14,7 @@ Roadmap task [T110](../roadmap/phase-13-profiles.md), on
 T108 gave the window a profile and T109 gave it a first tab. Both of them left the same hole, and
 T108's "What this is not" names it twice: a person who turned the database client off can still
 reach two things that want to open a database tab — the Services screen's *open* button, and a
-`mixdb://` URL — and neither of them knows the module is gone.
+`<old>://` URL — and neither of them knows the module is gone.
 
 Today the second one is worse than doing nothing. `takeTabRequests` is handed all five ids on
 purpose, so the request is drained and a tab is opened; the visibility effect then runs on the very
@@ -29,8 +29,8 @@ is renamed and no stored value changes shape.
 Written down so nothing below is built twice:
 
 - **The Services screen's *open* button already goes through the tab-request queue.**
-  `mixengine_database_open_in_mixdb` builds a `Handoff`, keeps it, and calls `launch::request` with
-  `TabRequest { module_id: "db" }` — the same queue `mixdb://connect` pushes into from
+  `mixengine_database_open_in_<old>` builds a `Handoff`, keeps it, and calls `launch::request` with
+  `TabRequest { module_id: "db" }` — the same queue `<old>://connect` pushes into from
   `handoff::accept`. There is one door into a database tab, not two, and the enabling therefore
   belongs at that door rather than at either caller.
 - **`database.client` already distinguishes this window from a client that is not it.** T107:
@@ -47,7 +47,7 @@ Written down so nothing below is built twice:
   that second way, and it needs no third rule.
 - **A module may import from `src/shell/`; the shared layer may not import from a module.** The
   eslint boundary in `apps/desktop/eslint.config.js` is one-directional, and the mixengine module's
-  own backend already names `"db"` in `open_in_mixdb.rs`.
+  own backend already names `"db"` in `open_in_<old>.rs`.
 - **`apps/desktop` has no DOM test environment.** 141 test files, all of them over pure functions.
   Anything this task wants proved has to be a function that takes values and returns one.
 
@@ -207,11 +207,11 @@ else. No context: `shell/module.ts` says out loud that there is no event bus bet
 ambient shell state read from anywhere inside a module is the first half of one.
 
 The id itself is a named constant in the mixengine module, beside the one its own backend already
-hardcodes in `open_in_mixdb.rs`:
+hardcodes in `open_in_<old>.rs`:
 
 ```ts
 /** The module a database service opens into. The one id this module names, and the frontend half
- *  of `open_in_mixdb.rs`'s `module_id: "db"`. */
+ *  of `open_in_<old>.rs`'s `module_id: "db"`. */
 const DATABASE_MODULE_ID = "db";
 ```
 
@@ -246,7 +246,7 @@ gap that leaves is D6's, and it is not this task's.
 
 ### What the two controls do
 
-- **`builtInAfterEnabling`** calls `databaseOpenInMixDB`, unchanged. The module is turned on by
+- **`builtInAfterEnabling`** calls `databaseOpenInthe standalone client`, unchanged. The module is turned on by
   D1, at the queue, because that is where the request lands. The button's label says what it is
   about to do; it does not do it itself.
 - **`external`** calls a new command over `database.open`, and the password never enters this
@@ -271,7 +271,7 @@ The two entrances end up behaving differently on purpose:
 | | asks first | says so afterwards |
 | --- | --- | --- |
 | the *open* button, `db` hidden | yes — two controls instead of one | yes |
-| a `mixdb://` URL, `db` hidden | no — there is nobody to ask | yes |
+| a `<old>://` URL, `db` hidden | no — there is nobody to ask | yes |
 
 The button asks because there is a person standing in front of it who turned the module off. The URL
 does not, because a URL arrives at a window that may not even be in front, and the alternative — a
@@ -281,7 +281,7 @@ modal asking permission for a connection MixEngine handed over on the command li
 The notice appears on both, and the redundancy on the button path is deliberate: the person agreed
 to open a tab, not necessarily to have `Ctrl/Cmd+1` mean something else afterwards.
 
-**A `mixdb://` URL is registered with the OS, so a web page can send one.** That was already true
+**A `<old>://` URL is registered with the OS, so a web page can send one.** That was already true
 before this task, and such a URL already opened a database tab; what is new is that it can turn a
 module's visibility on. This is visibility and not capability — T108's D8 — every module's commands
 are registered in every build and a hidden module's files are on disk either way. The notice is what

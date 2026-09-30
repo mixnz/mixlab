@@ -41,7 +41,7 @@ Bốn cái đầu thừa hưởng từ spec mẹ và giai đoạn này không xi
 
 Thêm ba cái của riêng giai đoạn này:
 
-- **Không quét máy khác.** Chỉ cổng của máy đang chạy MixDB. Xem 2.1.
+- **Không quét máy khác.** Chỉ cổng của máy đang chạy the standalone client. Xem 2.1.
 - **Không lấy đường dẫn tiến trình.** Xem 2.4.
 - **Không bịa JDBC cho MongoDB và Redis.** Xem 4.3.
 
@@ -113,7 +113,7 @@ Tên là `listening_ports` chứ không phải `scan_port` như bản phác củ
 bảng** cổng đang nghe chứ không tra từng cổng một, và `scan_port` sẽ mô tả sai việc nó làm. Mở tool
 ra là thấy ngay máy này đang mở những gì, có ô lọc theo số cổng cho người đã biết mình tìm gì.
 
-Chỉ máy đang chạy MixDB. Quét máy khác đòi một đường đi qua SSH mà tool này không có, và nó là một
+Chỉ máy đang chạy the standalone client. Quét máy khác đòi một đường đi qua SSH mà tool này không có, và nó là một
 thiết kế riêng nếu có ai cần.
 
 ```rust
@@ -246,7 +246,7 @@ Cùng một luật với tool Chuyển đổi ở giai đoạn 3: tool không đ
 ### 3.3 Bộ sẵn có nằm trong code
 
 Bộ sẵn có là một hằng số trong `builtin.ts`, **không đi qua store**. Hệ quả là hai chiều và cả hai
-đều đúng: nâng bản MixDB thì bộ sẵn có được cập nhật theo, và thứ người dùng tự viết thì không bao
+đều đúng: nâng bản the standalone client thì bộ sẵn có được cập nhật theo, và thứ người dùng tự viết thì không bao
 giờ bị một bản nâng cấp ghi đè.
 
 Snippet sẵn có không sửa và không xoá được. Muốn một bản khác đi thì thêm một snippet của mình —

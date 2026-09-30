@@ -307,7 +307,7 @@ function QueryEditor({
             ...problemRange(statement, problem.line),
             severity: problem.severity,
             message: problem.message,
-            // Named, so it reads as the server's opinion rather than as MixDB's — which matters
+            // Named, so it reads as the server's opinion rather than as MixLab's — which matters
             // most for the warnings, where the server may simply be looking somewhere else.
             // The engine that actually answered: PostgreSQL's complaint attributed to MySQL is a
             // worse label than none, and the same goes for a third engine attributed to either.
@@ -484,7 +484,7 @@ function QueryEditor({
     setStatementsSent(statements.length);
 
     const startedAt = Date.now();
-    // Remembered as the user wrote it, not as it was sent: a `LIMIT` MixDB added is not part of
+    // Remembered as the user wrote it, not as it was sent: a `LIMIT` MixLab added is not part of
     // the query they would want back.
     /* Nothing is remembered for a connection nobody saved. History is filed under the saved
        connection's id, so an unsaved one wrote every run under `""`: a row the dialog never

@@ -18,8 +18,8 @@ system, a Playwright suite and a second release pipeline, all built and then aba
 Three forces argue against building it here.
 
 **It is the second of something that already exists.** ADR 0001 chose this architecture partly
-because the neighbouring project [MixDB](https://github.com/mixnz/mixdb) is Tauri + React +
-Rust and the stack was already known. MixDB does not merely know the stack — it *is* an installed,
+because the neighbouring project [the standalone client](https://github.com/mixnz/<old>) is Tauri + React +
+Rust and the stack was already known. The standalone client does not merely know the stack — it *is* an installed,
 released Tauri application with a design system, i18n, an installer and an updater. Phase 6 rebuilds
 each of those next door (T55 shell, T57 Vite + TanStack Query + i18n + theming, T67 Playwright), and
 leaves two application shells, two updaters, two installers and two release pipelines to maintain.
@@ -46,11 +46,11 @@ graphical client and no frontend toolchain.
 1. **The API is the product surface.** The JSON-RPC API and the TypeScript bindings generated from
    `mixengine-proto` (`ts-rs`) are a released artifact, versioned like any other. Generating and
    publishing them stays on the plan; consuming them does not happen here.
-2. **A GUI is a client, and no client is privileged.** MixEngine names no official front end. MixDB
+2. **A GUI is a client, and no client is privileged.** MixEngine names no official front end. The standalone client
    is expected to be the first consumer and is welcome to be, but nothing in this repository depends
    on it, detects it as a client, or shapes an API method around it. The one-directional coupling
    already stated in [extensions.md](../features/extensions.md) — MixEngine knows how to hand a
-   connection to MixDB, MixDB need not know MixEngine exists — is unchanged by this ADR, because it
+   connection to the standalone client, the standalone client need not know MixEngine exists — is unchanged by this ADR, because it
    describes a different relationship: a database client we launch, not a front end we depend on.
 3. **The screens survive as requirements on the API.** `features/gui.md` becomes
    [client-surface.md](../features/client-surface.md): the nine screens stay, stripped of stack and
@@ -95,7 +95,7 @@ would have to be revisited first if that audience assumption ever changes.
 - **Park Phase 6 rather than delete it.** Cheaper today and closes nothing. Rejected because it
   leaves `updates.md` and `build-and-release.md` resting on a Tauri updater that may never ship —
   a contradiction that costs nothing right up to the day it costs a release.
-- **Make MixDB the official front end and let it carry `mixengined`.** Least total work: one
+- **Make the standalone client the official front end and let it carry `mixengined`.** Least total work: one
   installer, one updater, one release. Rejected on two grounds — MixEngine could no longer be
   released, scripted or run on a server without a database client attached, and an API with exactly
   one consumer drifts into that consumer's shape, which is the failure ADR 0001 was written to

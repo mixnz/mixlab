@@ -64,7 +64,7 @@ function DatabaseActions({
    *  none. One suite per kind, named the same — see `ToolSuite`.
    *
    *  SQLite is the `null`: there is no `sqlitedump` to go and fetch, and the format is simple
-   *  enough that MixDB writes the SQL itself. Everything below that would install or check for
+   *  enough that MixLab writes the SQL itself. Everything below that would install or check for
    *  tools is skipped for it rather than asking about a download that does not exist.
    *
    *  ClickHouse is `null` too, for the same shape of reason: dump/restore runs entirely over the

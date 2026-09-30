@@ -63,7 +63,7 @@ Nguồn: mục "Những gì để lại" của
   the Query tab is not wired to this flag yet"*. Phase này nối dây đúng như đã dự tính, không cần
   field mới trên `SqlDialect`.
 - `clickhouse_script::run()` gửi mỗi statement qua `query_in_database`, luôn nối `\nFORMAT JSON`.
-  **Xác minh trên server thật (26.8, `mixdb_agent_test`, dọn sạch sau khi test) rằng điều này vỡ với
+  **Xác minh trên server thật (26.8, `<old>_agent_test`, dọn sạch sau khi test) rằng điều này vỡ với
   DML:**
   - `INSERT INTO t (...) VALUES (...)\nFORMAT JSON` → `400`, `Code: 27. ... Cannot parse input:
     expected '(' before: 'FORMAT JSON'` — `FORMAT` sau `VALUES` bị hiểu là định dạng *dữ liệu đầu
@@ -249,7 +249,7 @@ bị khoá tay giữ nguyên `query.readOnlyBlocked` như cũ.
   - `ALTER TABLE t DROP COLUMN x, UPDATE y = 1 WHERE z = 2` (nhiều mệnh đề) → **không** nhận diện.
   - `ALTER TABLE t DROP COLUMN x` → không nhận diện là D3-shape (đi nhánh DROP hiện có, không đổi).
   - `ALTER TABLE t DELETE WHERE id = 1` → không nhận diện (D2 — ngoài phạm vi).
-- Test tay trên server thật (`mixdb_agent_test`) trước khi coi plan xong, tương tự cách D4 của spec
+- Test tay trên server thật (`<old>_agent_test`) trước khi coi plan xong, tương tự cách D4 của spec
   row-writes từng bắt được lỗi so khớp `command` sai:
   - `INSERT` qua Query tab → `kind: "affected"`, số đúng bằng số dòng vừa gõ.
   - `ALTER TABLE ... UPDATE ... WHERE` khớp nhiều dòng → chạy xong, dữ liệu đổi đúng, không timeout
@@ -290,7 +290,7 @@ bị khoá tay giữ nguyên `query.readOnlyBlocked` như cũ.
   qua Query tab.
 - **`ALTER TABLE t DELETE WHERE ...`** — xem D2, có thể mở nếu có nhu cầu thật.
 - **`ALTER TABLE` nhiều mệnh đề gộp** — xem D3/Rủi ro, có thể mở rộng tokenizer nếu cần.
-- **Nhãn "Chỉ đọc" của `clickhouseReadOnly`/`dump`/`restore`** — chữ hiện tại ("MixDB only reads
+- **Nhãn "Chỉ đọc" của `clickhouseReadOnly`/`dump`/`restore`** — chữ hiện tại ("the standalone client only reads
   from ClickHouse for now") đã sai từ trước phase này (grid/DDL đã ghi được) và càng sai hơn sau
   phase này; nằm ngoài phạm vi (khoá đó chỉ dùng cho `dump`/`restore`/index, chưa động tới trong
   spec này) — để phase dump/restore sửa cùng lúc.

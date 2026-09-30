@@ -77,7 +77,7 @@ every dark rule is written twice — once under `:root[data-theme="dark"]` and a
 `@media (prefers-color-scheme: dark) { :root:not([data-theme]) }` — in `App.css` and in thirteen
 other stylesheets. Doubling the token set would double that. Instead `theme-preload.js` and
 `theme.ts` resolve *system* through `matchMedia` and write `light` or `dark`, `theme.ts` follows
-the media query while *system* is chosen, and the stored preference stays `mixdb-theme` as it is.
+the media query while *system* is chosen, and the stored preference stays `<old>-theme` as it is.
 Every `:root:not([data-theme])` block is then dead and is deleted.
 
 ### D2 — The accent picker stays, and mint is the new default
@@ -108,7 +108,7 @@ pressed `0.30`, soft border `0.45`, focus halo `0.20` dark / `0.30` light.
 `glass.css`, `GlassFilter`, `glass.test.ts`, the Appearance switch and its four i18n keys, the
 `data-glass` attribute and every `glass` hook in component and module stylesheets are deleted.
 `--rail-bg` and `--rail-filter` collapse to plain colours. On first load after the change
-`theme.ts` removes the `mixdb-glass` key from `localStorage` so nothing stale is left behind.
+`theme.ts` removes the `<old>-glass` key from `localStorage` so nothing stale is left behind.
 
 ### D4 — Geist replaces Fira Code and the system sans
 
@@ -644,7 +644,7 @@ where they describe tokens.
   place in a form, and the edge it shows on focus (`--accent-text`) does clear 3:1.
 - **Fonts**: `fonts.test.ts` updated for the Geist stacks; still no stylesheet names a font.
 - **Glass**: `glass.test.ts` deleted with the feature; a test asserts `theme.ts` clears
-  `mixdb-glass`.
+  `<old>-glass`.
 - **Badge** (T158): MonogramBadge's letters and hue are a pure function with unit tests — stable
   across calls, eight hues reachable, empty name handled.
 - **Connection string** (T162): a pure function with unit tests per engine, asserting no password

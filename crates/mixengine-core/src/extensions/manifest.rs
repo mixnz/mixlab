@@ -942,7 +942,7 @@ mod tests {
     /// says so is refused by the reader like any other word it does not know.
     #[test]
     fn desktop_app_is_not_a_kind() {
-        let text = with_body("desktop-app", "[desktop-app]\nscheme = \"mixdb\"\n");
+        let text = with_body("desktop-app", "[desktop-app]\nscheme = \"otherapp\"\n");
 
         assert!(matches!(parse(&text), Err(Error::ExtensionManifest { .. })));
     }

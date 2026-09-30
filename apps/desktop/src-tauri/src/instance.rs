@@ -1,4 +1,4 @@
-//! The channel between two copies of MixDB, so that a second start hands its command line to the
+//! The channel between two copies of MixLab, so that a second start hands its command line to the
 //! window already open and exits.
 //!
 //! One line of text each way: the caller writes a line, the listener answers `ok`. What the line
@@ -166,13 +166,13 @@ mod sys {
         let mut server = match ServerOptions::new().first_pipe_instance(true).create(&path) {
             Ok(server) => server,
             Err(e) => {
-                eprintln!("mixdb: not listening for other copies: {e}");
+                eprintln!("mixlab: not listening for other copies: {e}");
                 return;
             }
         };
         loop {
             if let Err(e) = server.connect().await {
-                eprintln!("mixdb: a copy could not reach this one: {e}");
+                eprintln!("mixlab: a copy could not reach this one: {e}");
                 continue;
             }
             let connected = server;
@@ -181,7 +181,7 @@ mod sys {
             server = match ServerOptions::new().create(&path) {
                 Ok(server) => server,
                 Err(e) => {
-                    eprintln!("mixdb: stopped listening for other copies: {e}");
+                    eprintln!("mixlab: stopped listening for other copies: {e}");
                     super::answer(connected, &on_line).await;
                     return;
                 }
@@ -238,7 +238,7 @@ mod sys {
     pub async fn serve(path: PathBuf, on_line: impl Fn(String) + Send + Sync + 'static) {
         if !ours(&path) {
             eprintln!(
-                "mixdb: not listening for other copies: {} is not this user's",
+                "mixlab: not listening for other copies: {} is not this user's",
                 path.display()
             );
             return;
@@ -248,7 +248,7 @@ mod sys {
         // two starts can land here, and the answer is the same: this copy does not listen.
         if path.exists() {
             if std::os::unix::net::UnixStream::connect(&path).is_ok() {
-                eprintln!("mixdb: another copy is already listening");
+                eprintln!("mixlab: another copy is already listening");
                 return;
             }
             let _ = std::fs::remove_file(&path);
@@ -256,14 +256,14 @@ mod sys {
         let listener = match tokio::net::UnixListener::bind(&path) {
             Ok(listener) => listener,
             Err(e) => {
-                eprintln!("mixdb: not listening for other copies: {e}");
+                eprintln!("mixlab: not listening for other copies: {e}");
                 return;
             }
         };
         loop {
             match listener.accept().await {
                 Ok((stream, _)) => super::answer(stream, &on_line).await,
-                Err(e) => eprintln!("mixdb: a copy could not reach this one: {e}"),
+                Err(e) => eprintln!("mixlab: a copy could not reach this one: {e}"),
             }
         }
     }
@@ -279,7 +279,7 @@ mod tests {
     use std::time::Duration;
 
     fn test_endpoint() -> Endpoint {
-        Endpoint::named(&format!("mixdb-test-{}", uuid::Uuid::new_v4()))
+        Endpoint::named(&format!("mixlab-test-{}", uuid::Uuid::new_v4()))
     }
 
     /// Keeps trying for a moment: the listener binds on a task of its own and may not be there on

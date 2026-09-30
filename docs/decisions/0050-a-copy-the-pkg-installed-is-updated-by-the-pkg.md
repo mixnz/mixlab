@@ -70,7 +70,7 @@ for the password.**
 
 6. **It starts with the release after the one that ships it.** The code that updates is the code
    already installed, so the first release carrying this cannot be reached this way; its `.pkg` has
-   to be installed by hand once. v0.0.7, the first release of MixLab (MixDB and MixEngine as one
+   to be installed by hand once. v0.0.7, the first release of MixLab (the standalone client and MixEngine as one
    product), is published without it. A `.pkg` user therefore installs v0.0.8 by hand, and
    v0.0.8 → v0.0.9 is the first update that goes through Installer.app.
 

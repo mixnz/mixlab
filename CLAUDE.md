@@ -143,6 +143,11 @@ cd apps/desktop/src-tauri && cargo fmt --check && cargo clippy --locked --all-ta
 - **Never link to a file under `docs/plans/`.** Those are local-only implementation
   plans, gitignored and absent on every other machine. Link to `docs/specs/` instead —
   see [docs/standards/plans-and-specs.md](docs/standards/plans-and-specs.md).
+- **The window is MixLab, and nothing here uses its old name.** Code, comments, messages and every
+  document call it MixLab, or "the `db` module" for the database client. The old name survives only
+  as a literal value MixLab needs to fix up what the standalone client left on a user's machine —
+  its keyring service, its data directory, its URL scheme, the storage keys earlier builds wrote —
+  and in the two changelogs' released entries. A new occurrence anywhere else is a mistake.
 - When splitting a batch of fixes across subagents, group the work by the invariant the findings
   share, not by the file they sit in — two agents editing around one invariant undo each other.
 - Adding to or editing the **blueprint gallery** leaves a second repository stale: `mixengine-packages`

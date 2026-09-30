@@ -3,7 +3,7 @@
  * this (see `PackageSummary`/`PackageRelease`).
  *
  * `"other"` is the catch-all for every unknown name, not an error case: a package MixEngine adds
- * later (a registry newer than the running MixDB) still has to show up somewhere, and must not
+ * later (a registry newer than the running MixLab) still has to show up somewhere, and must not
  * silently vanish because the lookup table lacks its name.
  */
 export type PackageCategory = "web" | "database" | "cache" | "other";

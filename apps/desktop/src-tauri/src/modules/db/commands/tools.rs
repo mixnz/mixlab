@@ -1,4 +1,4 @@
-//! The dump and restore tools: what MixDB can find, download and be pointed at.
+//! The dump and restore tools: what MixLab can find, download and be pointed at.
 //!
 //! Commands of this module rather than of the app: a suite is one engine's pair of
 //! programs (`mysqldump` and `mysql`, `pg_dump` and `psql`, `mongodump` and
@@ -13,7 +13,7 @@ use crate::error::AppError;
 use crate::modules::db::drivers::tools;
 use tauri::{AppHandle, Emitter};
 
-/// Every dump tool and where it stands: a path the user chose, a copy MixDB downloaded, something
+/// Every dump tool and where it stands: a path the user chose, a copy MixLab downloaded, something
 /// already on the machine, or nothing at all.
 ///
 /// Off the runtime, like everything else here: finding a tool walks `PATH` stat-ing candidates,
@@ -32,7 +32,7 @@ pub async fn dumptools_ready(app: AppHandle, suite: String) -> Result<bool, AppE
     in_background(move || Ok(tools::installed(suite, &dir))).await
 }
 
-/// Whether MixDB can fetch this suite for itself on this platform — MySQL publishes a plain
+/// Whether MixLab can fetch this suite for itself on this platform — MySQL publishes a plain
 /// archive for Windows only, so everywhere else its tools have to come from the machine.
 #[tauri::command]
 pub async fn dumptools_downloadable(suite: String) -> Result<bool, AppError> {
@@ -51,7 +51,7 @@ pub async fn dumptools_set_path(
     in_background(move || tools::set_path(tool, path.as_deref(), &dir)).await
 }
 
-/// Deletes the copy MixDB downloaded. What was already on the machine is left where it is.
+/// Deletes the copy MixLab downloaded. What was already on the machine is left where it is.
 #[tauri::command]
 pub async fn dumptools_uninstall(app: AppHandle, suite: String) -> Result<(), AppError> {
     let suite = tools::Suite::parse(&suite)?;

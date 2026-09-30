@@ -32,7 +32,7 @@ URL and the download page all say MixEngine.
 
 - The two longest-lived things on a user's machine already say MixLab: the desktop binary is
   `mixlab` in `MIX_BINARIES` (`packaging/common.sh`), and the credential store's service name is
-  `MixLab` (`apps/desktop/src-tauri/src/secrets.rs`), with `MixDB` kept read-only beside it.
+  `MixLab` (`apps/desktop/src-tauri/src/secrets.rs`), with `<Old>` kept read-only beside it.
 - The documentation already splits by audience. [../README.md](../README.md) says `guide/` is for
   *"whoever uses MixEngine"* and everything else is for *"whoever builds it"*. That is 32 files
   against 272.

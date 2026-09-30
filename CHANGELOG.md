@@ -9,6 +9,9 @@
   MixLab).
 
 ### Changed
+- MixLab no longer calls itself MixDB anywhere: not in its messages in a terminal, and not in the
+  names of the temporary tables it creates while it changes a table. Your theme, language, modules
+  and open tabs carry over.
 - Switching between light and dark in Settings fades from one to the other instead of flashing.
 - Languages and Packages list the newest version of each first, both what is installed and what
   you can download.

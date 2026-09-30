@@ -325,7 +325,7 @@ src/modules/db/components/ColumnDialog/ColumnDialog.tsx
   có dòng mới xuất hiện hay không (mutation bất đồng bộ) hay lệnh trả lời ngay (đồng bộ).~~
   **Đã làm 2026-09-04, kết quả trong D5: đồng bộ, không cần `run_mutation_and_wait`.**
 - **Còn phải kiểm tay:** đổi kiểu thất bại vì dữ liệu (`String` chứa chữ → `UInt64`) trên một bảng
-  thật qua UI — xác nhận thông báo lỗi của MixDB nói được cho người dùng biết bảng đang hỏng và
+  thật qua UI — xác nhận thông báo lỗi của standalone-client nói được cho người dùng biết bảng đang hỏng và
   cách thoát (xem rủi ro mới ở D5).
 - Sửa comment-only, default-only, đổi tên-only trên cùng một cột — xác nhận đúng câu lệnh tối
   thiểu được gửi (đối chiếu `system.query_log` nếu cần).

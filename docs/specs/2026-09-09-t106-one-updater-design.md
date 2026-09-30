@@ -13,11 +13,11 @@ Roadmap task [T106](../roadmap/phase-12-one-product.md), on
 Two updaters ship in this repository today. One is MixEngine's: a signed `latest.json`, a payload
 archive of the release's binaries, a write probe, a smoke test, a rename-then-place swap and a
 rollback — `crates/mixengine-core/src/updates/`, and it has replaced `mix`, `mixengined` and
-`mixengine-shim` since T88. The other is MixDB's: `tauri-plugin-updater`, a second minisign key
-compiled into `tauri.conf.json`, a feed hosted at `mixnz/mixdb`, and a plugin that replaces the
+`mixengine-shim` since T88. The other is the standalone client's: `tauri-plugin-updater`, a second minisign key
+compiled into `tauri.conf.json`, a feed hosted at `mixnz/<old>`, and a plugin that replaces the
 *running bundle* on macOS and Linux. T104 stopped the second one being *called* — `SELF_UPDATE_FEED`
-is `false`, and the comment there says why: a window on `0.0.6` offered MixDB `0.0.33` would have
-overwritten itself with standalone MixDB. It stayed wired for this task.
+is `false`, and the comment there says why: a window on `0.0.6` offered the standalone client `0.0.33` would have
+overwritten itself with standalone client. It stayed wired for this task.
 
 This task removes it, and finishes the first one. What is left after it is one feed, one key, one
 payload, one swap, and a window that comes back on the new version by itself.
@@ -50,13 +50,13 @@ Removed, in one commit, with nothing left behind:
 | --- | --- |
 | `tauri-plugin-updater`, `tauri-plugin-process` | `apps/desktop/src-tauri/Cargo.toml`, `lib.rs` |
 | `@tauri-apps/plugin-updater`, `@tauri-apps/plugin-process` | `apps/desktop/package.json` and its lock |
-| `plugins.updater` — MixDB's public key, `mixnz/mixdb`'s endpoint, `installMode` | `tauri.conf.json` |
+| `plugins.updater` — the standalone client's public key, `mixnz/<old>`'s endpoint, `installMode` | `tauri.conf.json` |
 | `bundle.createUpdaterArtifacts` | `tauri.conf.json` — it configures a plugin that is gone |
 | `updater:default`, `process:allow-restart` | `capabilities/default.json` |
 
-`update-notes.yml`, MixDB's `latest.json` and its `.sig` files need no removal here: D12 said in
+`update-notes.yml`, the standalone client's `latest.json` and its `.sig` files need no removal here: D12 said in
 as many words that those workflows are not moved, and none of them is in this repository. What they
-were is a thing `mixnz/mixdb` did, and D13 archives that repository when M12 ships — this is the
+were is a thing `mixnz/<old>` did, and D13 archives that repository when M12 ships — this is the
 release that lets it.
 
 **The key is the point.** `tauri.conf.json` carries a base64 minisign public key that is not

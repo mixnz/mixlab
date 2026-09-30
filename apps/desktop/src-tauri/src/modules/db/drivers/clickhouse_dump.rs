@@ -116,7 +116,7 @@ pub(super) fn strip_database_qualifiers(sql: &str, database: &str) -> String {
 
         // A bare (unquoted) identifier — the same check without quotes. Checked against the test
         // server: `SHOW CREATE TABLE` only backtick-quotes a *column* name, not the table/database
-        // name itself when it needs no quoting — `CREATE TABLE mixdb_agent_test.events (...)`, no
+        // name itself when it needs no quoting — `CREATE TABLE mixlab_agent_test.events (...)`, no
         // backticks around either half. This branch is the common case, not a defensive fallback.
         if c.is_alphabetic() || c == '_' {
             let start = i;

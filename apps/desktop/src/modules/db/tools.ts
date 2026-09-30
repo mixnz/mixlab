@@ -5,7 +5,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
  *  needs. Only two of them are ever downloadable — PostgreSQL publishes no client-only archive. */
 export type ToolSuite = "mysql" | "postgres" | "mongo";
 
-/** Where a tool was found. `custom` is a path picked in Settings, `downloaded` a copy MixDB
+/** Where a tool was found. `custom` is a path picked in Settings, `downloaded` a copy MixLab
  *  fetched for itself, and `system` something already installed on the machine. */
 export type ToolSource = "custom" | "downloaded" | "system";
 
@@ -16,7 +16,7 @@ export interface ToolStatus {
   /** Where it is, or null when it is nowhere to be found. */
   path: string | null;
   source: ToolSource | null;
-  /** Whether MixDB can fetch this tool for itself here. The same answer for every tool of a
+  /** Whether MixLab can fetch this tool for itself here. The same answer for every tool of a
    *  suite — MySQL publishes a plain archive for Windows only, so on macOS and Linux its tools
    *  have to come from the machine. */
   downloadable: boolean;
@@ -137,7 +137,7 @@ export async function toolsInstall(suite: ToolSuite): Promise<void> {
   }
 }
 
-/** Deletes MixDB's own copy. Tools found on the machine itself are left alone. */
+/** Deletes MixLab's own copy. Tools found on the machine itself are left alone. */
 export function toolsUninstall(suite: ToolSuite): Promise<void> {
   // "Downloaded and ready to use" stops being true the moment the user asks for it to go, so the
   // line saying so goes with the click rather than waiting out the rest of its few seconds.

@@ -141,7 +141,7 @@ side would cost the refactor it was meant to justify.
 
 The refactor is not small either. `db` reaches `crate::error` 37 times, and `crate::ssh`,
 `crate::platform`, `crate::secrets` and `crate::launch` besides; `launch.rs` and
-`modules/mixengine/open_in_mixdb.rs` reach back into `db`. A split needs a third crate for the
+`modules/mixengine/open_in_<old>.rs` reach back into `db`. A split needs a third crate for the
 shared halves and a cut through the `db` ↔ `launch` cycle, and it must keep ADR 0027, which
 `apps/desktop/src-tauri/tests/layering.rs` checks.
 

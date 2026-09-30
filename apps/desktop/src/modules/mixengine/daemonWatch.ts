@@ -15,7 +15,7 @@ import * as api from "./api";
  * without touching the daemon.
  */
 /** What `src-tauri/src/modules/mixengine/events.rs` sends when the stream ends. */
-const DISCONNECTED = '{"type":"mixdb_disconnected"}';
+const DISCONNECTED = '{"type":"mixlab_disconnected"}';
 
 const listeners = new Set<(raw: string) => void>();
 let watching: Promise<void> | null = null;

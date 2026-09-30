@@ -104,7 +104,7 @@ async function persist(list: SavedConnection[]): Promise<void> {
 /**
  * Every saved connection, credentials included.
  *
- * A connection saved by a version of MixDB that kept passwords in the file is moved across on the
+ * A connection saved by a version of the standalone client that kept passwords in the file is moved across on the
  * way through: its credentials go to the credential store and the file is rewritten without them.
  * That happens once, silently — the user has nothing to decide here.
  */

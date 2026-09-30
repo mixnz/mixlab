@@ -10,7 +10,7 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
 **This phase exists because of one sentence the file writes about itself.** Its acceptance criteria
 end with *"Every screen above can be assembled from documented methods and events, with no method
 existing solely to serve one of them"* — and that sentence was false in two places. Both
-were found by **MixDB reading the file against the API** while writing its own Phase 4 spec, which
+were found by **The standalone client reading the file against the API** while writing its own Phase 4 spec, which
 is the failure mode [ADR 0011](../decisions/0011-no-gui-in-this-repository.md) accepted when it put
 the graphical client in another repository: a claim made on paper here is checked by somebody else's
 code, later, and the two tasks below are the bill for it. Neither was needed for v0.0.1 and neither
@@ -79,7 +79,7 @@ subscription that is supposed to gate it.
       a `VERSION` column, and MixLab draws it beside the id. Design:
       [docs/specs/2026-09-24-t183-a-service-says-which-version-it-runs-design.md](../specs/2026-09-24-t183-a-service-says-which-version-it-runs-design.md).
 
-**Milestone M10 — MixDB's Dashboard and Settings screens draw whole, with no business logic in the
+**Milestone M10 — the standalone client's Dashboard and Settings screens draw whole, with no business logic in the
 client.** Not *a client can call these methods*: the test is that the screen `client-surface.md`
 describes can be built from what is documented, which is the claim the file has been making since it
 was written and has not been able to keep. **Reached with T97.**

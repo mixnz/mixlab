@@ -593,7 +593,7 @@ pub(super) fn temp_table_name(table: &str) -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or(0);
-    format!("{table}__mixdb_rebuild_{millis}")
+    format!("{table}__mixlab_rebuild_{millis}")
 }
 
 /// Turns `SHOW CREATE TABLE`'s own text into the `CREATE TABLE` for the rebuild copy: renamed to
@@ -722,7 +722,7 @@ mod tests {
     #[test]
     fn the_temp_name_carries_the_original_and_a_timestamp() {
         let name = temp_table_name("orders");
-        let suffix = name.strip_prefix("orders__mixdb_rebuild_").expect(&name);
+        let suffix = name.strip_prefix("orders__mixlab_rebuild_").expect(&name);
         assert!(suffix.parse::<u128>().is_ok(), "{suffix}");
     }
 
@@ -736,13 +736,13 @@ mod tests {
         let rebuilt = rebuild_ddl(
             SHOW_CREATE_WITH_EVERY_CLAUSE,
             "shop",
-            "orders__mixdb_rebuild_1",
+            "orders__mixlab_rebuild_1",
             "ORDER BY (c)",
         )
         .unwrap();
         assert_eq!(
             rebuilt,
-            "CREATE TABLE `shop`.`orders__mixdb_rebuild_1`\n(\n    `a` UInt64,\n    `b` UInt64,\n    `c` String,\n    INDEX ix1 c TYPE minmax GRANULARITY 1\n)\nENGINE = MergeTree\nPARTITION BY toYYYYMM(ts)\nORDER BY (c)\nTTL ts + toIntervalDay(30)\nSETTINGS index_granularity = 4096\nCOMMENT 'test comment'"
+            "CREATE TABLE `shop`.`orders__mixlab_rebuild_1`\n(\n    `a` UInt64,\n    `b` UInt64,\n    `c` String,\n    INDEX ix1 c TYPE minmax GRANULARITY 1\n)\nENGINE = MergeTree\nPARTITION BY toYYYYMM(ts)\nORDER BY (c)\nTTL ts + toIntervalDay(30)\nSETTINGS index_granularity = 4096\nCOMMENT 'test comment'"
         );
     }
 
@@ -752,13 +752,13 @@ mod tests {
         let rebuilt = rebuild_ddl(
             show_create,
             "shop",
-            "orders__mixdb_rebuild_2",
+            "orders__mixlab_rebuild_2",
             "ORDER BY (id)",
         )
         .unwrap();
         assert_eq!(
             rebuilt,
-            "CREATE TABLE `shop`.`orders__mixdb_rebuild_2`\n(\n    `id` UInt64\n)\nENGINE = MergeTree\nORDER BY (id)\nSETTINGS index_granularity = 8192"
+            "CREATE TABLE `shop`.`orders__mixlab_rebuild_2`\n(\n    `id` UInt64\n)\nENGINE = MergeTree\nORDER BY (id)\nSETTINGS index_granularity = 8192"
         );
     }
 

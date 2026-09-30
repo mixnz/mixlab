@@ -50,7 +50,7 @@ export interface SavedConnection {
    *  that would insert, edit, rename, drop or delete is greyed out — the point being the production
    *  server sitting one line above the staging one in the sidebar. It is a reminder, not a
    *  permission: the credential decides what the server actually allows, and this only decides what
-   *  MixDB will send.
+   *  MixLab will send.
    *
    *  Offered for every kind, because a production Mongo or Redis server is as easy to mistake for
    *  its staging twin as a MySQL one is. */
@@ -62,7 +62,7 @@ export interface SavedConnection {
    *  Safe to keep in `connections.json` in plain text, unlike a password: it is a name, not a
    *  secret — reading the credential it names still requires the OS credential store to hand it
    *  over. Set means Save must write this address instead of copying MixEngine's password into
-   *  MixDB's own vault; the password shown in the form is resolved from it fresh on every load, and
+   *  MixLab's own vault; the password shown in the form is resolved from it fresh on every load, and
    *  reads as empty rather than an error when MixEngine no longer has that entry. */
   keyringRef?: string;
 }

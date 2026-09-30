@@ -12,7 +12,7 @@ the window an updater of MixLab's own
 gave three reasons. All three were true on 2026-08-22, and the seventeen days since have changed
 what each one weighs.
 
-**The client it anticipated was built, next door, and it is complete.** MixDB grew a fifth module,
+**The client it anticipated was built, next door, and it is complete.** the standalone client grew a fifth module,
 `mixengine`, between 2026-09-04 and 2026-09-07: every one of the nine screens
 [client-surface.md](../features/client-surface.md) lists, the transport over the Unix socket and
 the Windows named pipe with the owner check R1 asked for, the three SSE streams, autostart of
@@ -28,7 +28,7 @@ desktop client needs is still waiting to be built underneath it.
 
 **Two products are what users are refusing.** People who want MixEngine do not want to download a
 second application to get a window; and people who already have a database client they like do not
-want MixDB's one imposed as the price of that window. Both complaints are about *packaging*, and
+want the standalone client's one imposed as the price of that window. Both complaints are about *packaging*, and
 neither is answerable while the two are released from two repositories on two cadences with two
 installers and two updaters.
 
@@ -90,21 +90,21 @@ Five rules replace ADR 0011's single one.
    Two lock files are the cost; the root workspace's guarantees are what they buy. Folding it in is
    allowed later, as its own decision, when there is a reason.
 
-**The licence is MIT OR Apache-2.0 for everything here**, as both repositories already state. MixDB's
+**The licence is MIT OR Apache-2.0 for everything here**, as both repositories already state. The standalone client's
 note about GPL-3.0 for SignPath code signing recorded an option that was never taken; it comes
 along as history and is not adopted. Code signing stays where [parked.md](../roadmap/parked.md)
 put it.
 
-**`mixnz/mixdb` is archived once the merged product ships**, with its last release pointing here.
-Until then it stays what users have installed. The `desktop-app` extension kind, MixDB's registry
+**`mixnz/<old>` is archived once the merged product ships**, with its last release pointing here.
+Until then it stays what users have installed. The `desktop-app` extension kind, the standalone client's registry
 entry and `database.open` are unchanged: they exist for an external client, and an installed
-standalone MixDB is one for as long as anybody keeps it.
+standalone client is one for as long as anybody keeps it.
 
 ## Consequences
 
 **Easy.** One download, one version number, one release pipeline, one changelog. The API gains
 back what ADR 0011 gave up: a type reshaped in `mixengine-proto` fails the desktop typecheck in the
-same CI run, not in another repository weeks later. The borrowed pieces MixDB kept in step by hand
+same CI run, not in another repository weeks later. The borrowed pieces the standalone client kept in step by hand
 — the vendored bindings, the pipe-name fingerprint copied from `mixengine-platform` — become
 imports. A person who wants only the terminal still has it; a person who wants only a window has it
 without a database client in the way.
@@ -124,14 +124,14 @@ by a compiler as well as by reading.
 
 ## Alternatives considered
 
-- **Keep two repositories; have MixEngine's installer bundle MixDB's release.** Answers "one
+- **Keep two repositories; have MixEngine's installer bundle the standalone client's release.** Answers "one
   download" and nothing else: two updaters that do not know about each other, two pipelines, and a
   profile that hides the toolbox has no clean seam to live in. Rejected.
 - **One Cargo workspace from the start.** Cleaner in the long run. Rejected for now because it
   reopens `deny.toml`, the TLS-stack choice and the helper's dependency budget in the same change
   that moves a hundred thousand lines — three decisions hidden inside a relocation. Point 5 leaves
   the door open.
-- **Move MixEngine into the `mixdb` repository.** The daemon is the product and carries the heavier
+- **Move MixEngine into the `<old>` repository.** The daemon is the product and carries the heavier
   CI; a client is what moves. Rejected.
 - **Keep the Tauri updater for the window and MixEngine's for the daemon.** Two programs replacing
   files in one directory on two schedules, one of which restarts the other. Rejected on sight.

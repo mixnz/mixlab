@@ -10,7 +10,7 @@ Ngày: 2026-08-29
 
 ## Mục tiêu
 
-MixDB trông như một công cụ có người chọn cho nó một hình hài, chứ không như một app vừa được
+The standalone client trông như một công cụ có người chọn cho nó một hình hài, chứ không như một app vừa được
 dựng xong và chưa ai ngồi xuống nhìn.
 
 Sau khi làm xong:

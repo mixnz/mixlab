@@ -24,7 +24,7 @@ every child in the console subsystem a brand new one. `netstat`, `tasklist`, `ls
 `wsl.exe`, a `--version` probe: each one flashes a real black window over the app and vanishes.
 
 This is not cosmetic. A window that appears without being asked for and disappears before it can be
-read is what malware looks like to a user, and MixDB has been reported for exactly that before. A
+read is what malware looks like to a user, and the standalone client has been reported for exactly that before. A
 tool that runs for forty milliseconds is the worst case, not the mildest one — the flash is all the
 user sees.
 

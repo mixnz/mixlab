@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { onPreferencesChanged } from "../core/preferences";
+import { LANGUAGE_KEY as STORAGE_KEY } from "../shell/storageKeys";
 import { EN, VI } from "./dicts";
 
 /** Every module's strings and the shared ones, as one object — see {@link ./dicts}. */
@@ -7,7 +8,6 @@ export type TranslationDict = typeof EN;
 export type Language = "en" | "vi";
 
 const DICTS: Record<Language, TranslationDict> = { en: EN, vi: VI };
-const STORAGE_KEY = "mixdb-lang";
 
 type DotPaths<T, Prefix extends string = ""> = {
   [K in keyof T & string]: T[K] extends string

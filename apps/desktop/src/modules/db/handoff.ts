@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { ConnectionConfig } from "./types";
 
 /**
- * A connection another program handed to MixDB — MixEngine's `mix database open` — as it is
+ * A connection another program handed to MixLab — MixEngine's `mix database open` — as it is
  * taken by the tab opened for it.
  *
  * The backend read it off a `mixlab://connect?…` URL and the password off one environment

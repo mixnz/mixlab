@@ -244,7 +244,7 @@ src/modules/db/components/DatabaseActions/DatabaseActions.tsx
   escape) — hai chỗ cần nhìn trước 1 ký tự mà state machine phải giữ được qua ranh giới chunk.
   `Tracker`'s progress: trọng số bằng nhau/khác nhau giữa các bảng cho ra `%` hợp lý.
 
-**Bằng tay, ghi vào báo cáo cuối** (server thật `mixdb_agent_test`, theo tiền lệ các spec ClickHouse
+**Bằng tay, ghi vào báo cáo cuối** (server thật `<old>_agent_test`, theo tiền lệ các spec ClickHouse
 trước):
 
 - Dump `all` một database có: bảng MergeTree thường, một `VIEW`, một `MATERIALIZED VIEW` có `TO`

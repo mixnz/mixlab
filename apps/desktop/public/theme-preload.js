@@ -4,7 +4,7 @@
 (function () {
   try {
     // Always a theme, never absent: *system* is resolved here too, the same way theme.ts does.
-    var stored = localStorage.getItem("mixdb-theme");
+    var stored = localStorage.getItem("mixlab-theme");
     var theme =
       stored === "light" || stored === "dark"
         ? stored

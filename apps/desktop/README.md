@@ -61,7 +61,7 @@ nơi duy nhất ghi điều đó.
 - *Encoding & IDs* — Base64/Hex/URL encode-decode và hash (MD5, SHA), đọc JWT ra header, payload và hạn dùng (chỉ đọc, không kiểm chữ ký).
 - *Time* — đọc timestamp Unix (giây/mili/micro) hay ISO 8601 rồi đổi qua lại theo múi giờ chọn sẵn; múi giờ được nhớ giữa các phiên.
 - *Connection & infrastructure* — tách chuỗi kết nối ra host/user/database rồi xuất lại thành URI, JDBC, `.env` hoặc `docker -e`; đổi `.env` qua JSON/`export`/`docker -e`; liệt kê cổng đang nghe trên máy kèm PID và tên tiến trình; và một cheatsheet lệnh có tham số điền vào chỗ trống, thêm được snippet của riêng bạn.
-- Nội dung ô vào/ra không bao giờ xuống đĩa — các tool này hay nhận token và chuỗi kết nối có mật khẩu. Phần cổng cũng chỉ đọc: lệnh giết tiến trình được in ra để bạn tự chạy, MixDB không chạy hộ.
+- Nội dung ô vào/ra không bao giờ xuống đĩa — các tool này hay nhận token và chuỗi kết nối có mật khẩu. Phần cổng cũng chỉ đọc: lệnh giết tiến trình được in ra để bạn tự chạy, MixLab không chạy hộ.
 
 ## Kiến trúc
 
@@ -129,17 +129,17 @@ Quy trình phát hành: [docs/operations/releasing.md](../../docs/operations/rel
 
 ## Quyền riêng tư
 
-MixDB không thu thập gì về bạn: không tài khoản, không máy chủ của riêng nó, không analytics hay
-telemetry. App chỉ tự ra mạng để hỏi GitHub xem có bản mới không, và để tải công cụ dump/restore
-khi chính bạn bấm tải.
+MixLab không thu thập thông tin gì về bạn: không analytics, không telemetry, không báo lỗi tự
+gửi đi. Dịch vụ duy nhất của chúng tôi là đồng bộ, và nó chỉ chạy khi bạn đăng nhập. MixLab mã hoá
+dữ liệu ngay trên máy bạn, nên máy chủ đồng bộ giữ được nhưng không đọc được.
 
-Bản đầy đủ — kể cả đường dẫn tới nơi app lưu dữ liệu trên từng hệ điều hành — nằm ở
-[chính sách quyền riêng tư](https://mixnz.github.io/mixdb/privacy).
+Bản đầy đủ, kể cả nơi app lưu dữ liệu trên từng hệ điều hành, nằm ở
+[chính sách quyền riêng tư](https://mixnz.github.io/mixlab/vi/privacy/).
 
 ## Giấy phép
 
 Copyright © 2026 mixnz (Nguyễn Hải Quang).
 
-MixDB phát hành song song theo hai giấy phép, bạn chọn một trong hai:
+MixLab phát hành song song theo hai giấy phép, bạn chọn một trong hai:
 [Apache License 2.0](../../LICENSE-APACHE) hoặc [MIT License](../../LICENSE-MIT). Bạn được tự do dùng, sửa,
 phân phối lại, kể cả trong phần mềm đóng nguồn, miễn giữ lại thông báo bản quyền.

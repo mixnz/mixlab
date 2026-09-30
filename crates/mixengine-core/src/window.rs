@@ -33,7 +33,7 @@ pub const NAME: &str = "MixLab";
 ///
 /// **The product's name, and nothing else answers** — ADR 0047. The NSIS installer writes
 /// `Software\Classes\mixlab`, `packaging/linux/mixlab.desktop` declares
-/// `x-scheme-handler/mixlab`, and the window refuses any other scheme, `mixdb` included.
+/// `x-scheme-handler/mixlab`, and the window refuses any other scheme, the old one included.
 pub const SCHEME: &str = "mixlab";
 
 /// The application identifier: `apps/desktop/src-tauri/tauri.conf.json`'s `identifier`.

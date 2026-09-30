@@ -1392,7 +1392,7 @@ mod tests {
         );
 
         // **And it is the shared composition, not a second one that agrees today** — roadmap task
-        // **T84**. This address is published to MixDB, which reads the entry MixEngine wrote.
+        // **T84**. This address is published to MixLab, which reads the entry MixEngine wrote.
         assert_eq!(
             context.secret_address(ROOT),
             crate::services::handoff::secret_key(

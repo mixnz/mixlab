@@ -1,6 +1,6 @@
 //! The things every corner of the app needed and each wrote out for itself.
 //!
-//! None of them is about a database, a terminal or a request — they are about the machine MixDB is
+//! None of them is about a database, a terminal or a request — they are about the machine MixLab is
 //! running on and the runtime it is running in, which is why they are here at the crate root rather
 //! than in whichever module happened to want them first.
 
@@ -26,7 +26,7 @@ where
         .map_err(|e| err!("error.backgroundTaskFailed", message = e))?
 }
 
-/// Where MixDB keeps what it remembers between runs: the tools it downloaded, and the SSH host
+/// Where MixLab keeps what it remembers between runs: the tools it downloaded, and the SSH host
 /// keys it has seen.
 pub fn app_data_dir<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<PathBuf, AppError> {
     app.path()

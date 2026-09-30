@@ -326,7 +326,7 @@ struct Args {
     /// A release uses `os` and refuses `home`. Any other build defaults to `home`, because an
     /// unsigned daemon is a stranger to the Keychain after every rebuild and asks for the login
     /// password to read what the last one wrote. Pass `os` to a development build to work on the
-    /// hand-off to MixDB or the desktop window, which read the machine's store.
+    /// hand-off to MixLab, which reads the machine's store.
     #[arg(long, value_enum, env = "MIXENGINE_CREDENTIAL_STORE")]
     credential_store: Option<credentials::Store>,
 

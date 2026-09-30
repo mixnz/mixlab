@@ -15,7 +15,7 @@ and [ADR 0027](../decisions/0027-the-desktop-client-lives-in-this-repository.md)
 One download installs everything. After this task every MixEngine installer places **five**
 executables instead of four — the daemon, the CLI, the shim, the privileged helper and **MixLab**,
 the window — and a Windows user gets a Start Menu entry, an optional desktop shortcut and a
-`mixdb://` handler; a macOS user gets `MixLab.app` in `/Applications`; a Linux user gets a menu
+`<old>://` handler; a macOS user gets `MixLab.app` in `/Applications`; a Linux user gets a menu
 entry and an icon, with WebKitGTK declared as the runtime dependency the four binaries never had;
 and an AppImage opens the window when double-clicked while `./mixengine-*.AppImage status` keeps
 working.
@@ -103,7 +103,7 @@ build step; the arrangement here keeps it true.
 
 | Platform | Artifact | What it places |
 | --- | --- | --- |
-| Windows | `mixengine-<v>-windows-<arch>-setup.exe` | the five in `$LOCALAPPDATA\Programs\MixEngine`; a Start Menu shortcut; an optional desktop shortcut; `mixdb://` |
+| Windows | `mixengine-<v>-windows-<arch>-setup.exe` | the five in `$LOCALAPPDATA\Programs\MixEngine`; a Start Menu shortcut; an optional desktop shortcut; `<old>://` |
 | Windows | `mixengine-<v>-windows-<arch>.zip` | one `mixengine/` directory with the five |
 | Windows | `mixengine-<v>-windows-<arch>-headless.zip` | one `mixengine/` directory with the four |
 | macOS | `mixengine-<v>-macos-universal.pkg` | four to `/usr/local/bin` and `/Library/PrivilegedHelperTools`, `MixLab.app` to `/Applications` |
@@ -150,16 +150,16 @@ Section /o "Desktop shortcut for MixLab" SecDesktop
 uses) takes the defaults — so the probe's readings are unchanged and no unattended install grows a
 desktop icon nobody asked for.
 
-**`mixdb://` is registered per user**, under `HKCU\Software\Classes\mixdb`, with `URL Protocol`, a
+**`<old>://` is registered per user**, under `HKCU\Software\Classes\<old>`, with `URL Protocol`, a
 `DefaultIcon` and a `shell\open\command` of `"$INSTDIR\mixlab.exe" "%1"`. Taking the scheme over
-from a standalone MixDB that is still installed is intended — D10 of the merge design says the
-merged application is what `mixdb://` opens.
+from a standalone client that is still installed is intended — D10 of the merge design says the
+merged application is what `<old>://` opens.
 
-**The uninstaller may not simply delete that key.** A standalone MixDB may still be installed and
+**The uninstaller may not simply delete that key.** A standalone client may still be installed and
 still be in use, and D7's rule is that the old copy is never touched. So `un.RemoveScheme` reads
 `shell\open\command` back, looks for `$INSTDIR` inside it with the `StrFind` macro the file already
-has, and deletes the key only when the command it finds is ours. A machine where MixDB re-registered
-itself after us keeps MixDB's handler, which is the correct outcome and the quiet one.
+has, and deletes the key only when the command it finds is ours. A machine where the standalone client re-registered
+itself after us keeps the standalone client's handler, which is the correct outcome and the quiet one.
 
 ### D5. Linux: a `.desktop` file, two icons, and WebKitGTK declared
 
@@ -174,7 +174,7 @@ Exec=mixlab %u
 Icon=mixlab
 Terminal=false
 Categories=Development;
-MimeType=x-scheme-handler/mixdb;
+MimeType=x-scheme-handler/<old>;
 ```
 
 No `StartupWMClass`: what GTK reports for this window has not been measured, and a wrong value there
@@ -187,7 +187,7 @@ placeholder — stays exactly where it is, as the AppImage's AppDir icon, and is
 
 `MimeType` is written and **no cache is updated**, because neither package has a maintainer script
 and that is on purpose (`build-deb.sh`'s own header). A menu entry works regardless — menus read
-`/usr/share/applications` directly — while `xdg-open mixdb://…` reaches MixLab once anything on the
+`/usr/share/applications` directly — while `xdg-open <old>://…` reaches MixLab once anything on the
 machine next runs `update-desktop-database`, which every desktop environment's own package triggers
 routinely. Buying the rest of that with a `postinst` would cost the invariant that nothing runs at
 install time, and it is not worth it.
@@ -221,7 +221,7 @@ those reach either branch.
 a double click now opens a window, and a desktop environment that integrates the image should not
 wrap it in a terminal. Its `Name` stays **MixEngine** — the AppImage is the whole product, not the
 window — and its `Exec` stays `mix` with no `%u`, since with an argument `AppRun` runs the CLI.
-`mixdb://` on an AppImage is not offered, here or in D8.
+`<old>://` on an AppImage is not offered, here or in D8.
 
 **The AppImage does not carry WebKitGTK**, contrary to one line of D8. `appimagetool` bundles no
 libraries; doing it would mean `linuxdeploy` and its GTK plugin, a dependency and a failure mode of
@@ -312,7 +312,7 @@ a directory, and `rm -f` would leave the probe's own installation on the machine
 | An installer was built without the window | the per-script content check stops the leg, as it does for the other four |
 | A headless archive contains the window | the headless check stops the leg |
 | WebKitGTK absent on a user's machine | `.deb`/`.rpm` refuse to install and say which package; the AppImage prints one line naming it |
-| A standalone MixDB owns `mixdb://` at uninstall time | our uninstaller leaves the key alone |
+| A standalone client owns `<old>://` at uninstall time | our uninstaller leaves the key alone |
 
 ## Testing
 

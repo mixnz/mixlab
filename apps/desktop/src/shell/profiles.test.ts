@@ -133,10 +133,10 @@ describe("resolveStoredModules", () => {
   });
 
   /* The window this task is most able to hurt: a MixLab install from before T108. It has a theme
-     and a session and four modules' worth of saved work, and no `mixdb-modules` — and handing it
+     and a session and four modules' worth of saved work, and no `mixlab-modules` — and handing it
      the MixEngine preset would make its database tabs disappear on an upgrade. */
   it("gives a window that predates this setting everything", () => {
-    for (const key of ["mixdb-session", "mixdb-theme", "mixdb-accent", "mixdb-glass", "mixdb-lang"]) {
+    for (const key of ["mixlab-session", "mixlab-theme", "mixlab-accent", "mixlab-lang"]) {
       expect(resolveStoredModules(storageOf({ [key]: "x" }), KNOWN)).toEqual(
         MODULE_PRESETS.everything,
       );
@@ -158,7 +158,7 @@ describe("resolveStoredModules", () => {
   /* An unusable value in a profile that has been used still lands on Everything: the two questions
      are asked in order, and the second one does not care why the first had no answer. */
   it("still answers everything when an unusable value sits beside a used profile", () => {
-    const storage = storageOf({ [MODULES_STORAGE_KEY]: "{", "mixdb-session": "x" });
+    const storage = storageOf({ [MODULES_STORAGE_KEY]: "{", "mixlab-session": "x" });
     expect(resolveStoredModules(storage, KNOWN)).toEqual(MODULE_PRESETS.everything);
   });
 });
