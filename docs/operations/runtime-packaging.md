@@ -5,7 +5,32 @@ OS/arch combinations, and keeping it current.
 
 ## The package index
 
-A single signed `index.json`, published in its own repository and CDN-cached:
+Two encodings of one list, published side by side as assets of the `index` release of
+[`mixengine-packages`](https://github.com/mixnz/mixengine-packages):
+
+- **`index-v2.json`**, the one MixEngine reads since T196: a small signed root naming every kind and
+  the sha256 and size of that kind's file, and beside it one unsigned `index-v2-<kind>.json` per
+  kind. A kind file is believed only because the signed root states its hash, so one signature
+  covers all of them. A kind file carries no URLs: an artifact is at
+  `{base_url}/{kind}-{version}/{kind}-{version}-{os}-{arch}.{format}`, with `base_url` stated once in
+  the root. The design is
+  [2026-09-30-t196-mixengine-reads-index-schema-2-design.md](../specs/2026-09-30-t196-mixengine-reads-index-schema-2-design.md).
+- **`index.json`**, schema 1, the whole list in one signed document. Every MixEngine before T196
+  reads it, and it is generated for as long as the packaging repository chooses to.
+
+What the daemon fetches, by case (measured on 2026-09-30: root 1,914 bytes, signature 308 bytes,
+18 kind files 151,117 bytes in all):
+
+| Case | Fetched |
+| --- | --- |
+| A check with nothing published | the signature |
+| A check after a PHP release, on a machine that has read PHP | signature, root, `index-v2-php.json` |
+| A first listing of runtimes | signature, root, and the six runtime kinds |
+
+A kind file that does not match the root costs that kind only: the lists name it under
+`unavailable`, and every other kind is listed as usual.
+
+Schema 1, as it has been published since T20a:
 
 ```json
 {
@@ -30,7 +55,8 @@ A single signed `index.json`, published in its own repository and CDN-cached:
 - Signed with Ed25519 (minisign); the public key is compiled into the binary and rotated only via an
   app update.
 - Every artifact is verified by SHA-256 *after* download; a mismatch deletes the file and fails loudly.
-- The client caches the index for 6 hours and works offline against the cache.
+- The client caches the index for 6 hours and works offline against the cache. After six hours it
+  asks for the signature first, and asks for nothing else when that has not changed.
 - Old versions are never removed from the index — a blueprint pinning PHP 8.1.29 must keep working.
   This is why the index points at **our own mirror and never at an upstream URL**: upstreams prune.
   Artifacts are GitHub release assets of
@@ -830,6 +856,12 @@ unused versions" — which respects project pins.
 
 ## Offline and mirrors
 
-- `MIXENGINE_INDEX_URL` and `MIXENGINE_MIRROR_URL` let a team host their own mirror; the signature
-  requirement stays.
+- `MIXENGINE_INDEX_URL` (with `MIXENGINE_INDEX_KEY`) lets a team host its own mirror; the signature
+  requirement stays. The URL names a document, and the schema 2 set is looked for beside it, so a
+  mirror of the index is a copy of the whole `index` release. A mirror that holds only
+  `index.json` still works: when `index-v2.json.minisig` answers `404`, MixEngine reads
+  `index.json` whole, as before T196, on every check.
+- Where artifacts are downloaded from is the root's `base_url`, so a mirror of the artifacts
+  changes that one string and signs the root with its own key. `MIXENGINE_MIRROR_URL` is read by
+  nothing.
 - `mix runtime install --from ./php-8.3.12.zip --sha256 …` for air-gapped machines.

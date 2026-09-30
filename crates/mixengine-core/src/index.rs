@@ -2,12 +2,17 @@
 //!
 //! # One verification path, two sources
 //!
-//! An index arrives either from the network or from the cache on disk, and **both go through the
-//! same function**. Re-verifying a file this process wrote a minute ago looks redundant and is not:
-//! the cache is an ordinary file in the user's home that any local process can rewrite, and a client
-//! that trusts it because it trusted the network once has moved the trust boundary from "we signed
-//! this" to "nothing on this machine touched it". Verification costs a BLAKE2b hash and one Ed25519
-//! check over about fifty kilobytes, which is nothing next to the question it answers.
+//! A signed document arrives either from the network or from the cache on disk, and **both go
+//! through the same function**: [`Client`]'s for a single document, and for the package index the
+//! two doors [`PackageIndex`] has — one for its signed root, one for a kind file, which is believed
+//! because that root states its hash. Re-verifying a file this process wrote a minute ago looks
+//! redundant and is not: the cache is an ordinary file in the user's home that any local process can
+//! rewrite, and a client that trusts it because it trusted the network once has moved the trust
+//! boundary from "we signed this" to "nothing on this machine touched it".
+//!
+//! It is also cheap. The package index's root was 1,914 bytes on 2026-09-30 — one BLAKE2b hash and
+//! one Ed25519 check — and its largest kind file 30,670, one SHA-256. A file this process has
+//! already verified and that has not changed since is not read again at all.
 //!
 //! # Why the network lives here rather than in the daemon
 //!
@@ -67,7 +72,8 @@ pub const PUBLIC_KEY: &str = "RWSUOSSPLuuv4OGGJTNtxoUeKFOWBAQ8UwqucFPqcJ8hAdoRZC
 /// Where the index is published.
 ///
 /// A GitHub release asset whose tag is moved rather than added to, so the URL never changes while
-/// the document behind it does.
+/// the document behind it does. It names schema 1's `index.json`; [`PackageIndex`] reads the
+/// schema 2 set published beside it, and this document only where that set is not.
 pub const DEFAULT_URL: &str =
     "https://github.com/mixnz/mixengine-packages/releases/download/index/index.json";
 
@@ -276,8 +282,10 @@ pub struct Catalogue<D> {
 
 /// A signed document this client knows how to read — roadmap task **T81**.
 ///
-/// **Two documents are published, not one** (the T81 design's D1 and D3): `index.json` says what
-/// can be installed, `extensions.json` says which extensions exist. They want identical treatment —
+/// **More than one document is published** (the T81 design's D1 and D3): the package index says
+/// what can be installed, `extensions.json` says which extensions exist, and `latest.json` which
+/// release of MixEngine is newest. The package index is read by [`PackageIndex`] since roadmap task
+/// **T196**, and through this trait only where a source has nothing but `index.json`. They want identical treatment —
 /// verify before parse, cache, refuse to be walked backwards — and they must not share a cache
 /// file or a rollback mark, or a registry fetched at noon would look like an index rolled back to
 /// noon. So the client is generic over the document and this trait is everything it needs to know

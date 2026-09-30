@@ -184,4 +184,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-09-29 | [T193 — A line shows its newest, and updates in place](2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md) | T193a, T193b, T193c, T193d | implemented |
 | 2026-09-30 | [A headless home keeps its credentials in a file](2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md) | T194a, T194b, T194c, T194d, T194e, T194f | implemented |
 | 2026-09-30 | [What is left of the standalone client becomes MixLab](2026-09-30-t176g-the-old-name-leaves-the-window-design.md) | T176g | implemented |
-| 2026-09-30 | [T196 — MixEngine reads index schema 2](2026-09-30-t196-mixengine-reads-index-schema-2-design.md) | T196a, T196b, T196c, T196d, T196e | approved |
+| 2026-09-30 | [T196 — MixEngine reads index schema 2](2026-09-30-t196-mixengine-reads-index-schema-2-design.md) | T196a, T196b, T196c, T196d, T196e | implemented |

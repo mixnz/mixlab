@@ -107,8 +107,9 @@ impl Default for IndexSource {
 /// The index and the download pipeline, shared by everything that installs anything.
 ///
 /// **One per daemon, and not one per namespace.** `runtime.*` and `package.*` both read the same
-/// signed document and both write into the same `cache/`, so two clients would be two processes
-/// worth of refresh racing over one `index.json` and two installers sharing one `downloads/`. The
+/// signed index and both write into the same `cache/`, so two clients would be two processes'
+/// worth of refresh racing over one set of cached files and two installers sharing one
+/// `downloads/`. The
 /// pair is built once, where the public key is checked, and handed to both.
 #[derive(Debug)]
 pub(crate) struct Fetcher {

@@ -1,4 +1,8 @@
-//! The shape of `index.json`, as it is actually published.
+//! The packages an index describes, as every encoding of it decodes to.
+//!
+//! [`schema1`](super::schema1) reads them straight out of `index.json`, and
+//! [`schema2`](super::schema2) puts them back together from a kind file — the same values either
+//! way. What follows is the history of their shape, and it still holds.
 //!
 //! Written against the document at
 //! <https://github.com/mixnz/mixengine-packages/releases/download/index/index.json> rather

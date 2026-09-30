@@ -266,6 +266,9 @@ const KNOWN_EMPTY: &[(&str, &str, Os, Arch)] = &[
     // no Windows artifact exists and an ARM64 Windows machine has nothing to emulate either.
     ("redis", "7.2.15", Os::Windows, Arch::X86_64),
     ("redis", "7.2.15", Os::Windows, Arch::Aarch64),
+    // The same line's next patch, published since, for the same reason.
+    ("redis", "7.2.16", Os::Windows, Arch::X86_64),
+    ("redis", "7.2.16", Os::Windows, Arch::Aarch64),
 ];
 
 /// The kinds this build can install: `RuntimeKind::ALL`, and every recipe's package but `php-fpm`.
@@ -320,9 +323,46 @@ async fn the_published_index_verifies_against_the_key_in_this_build() {
         .expect("the compiled-in key parses")
         .all()
         .await
-        .expect("the published index verifies against the compiled-in key");
+        .expect("the published schema 2 set verifies against the compiled-in key");
 
     let index = catalogue.index;
+    assert!(
+        index.missing().is_empty(),
+        "every kind the root names is readable: {:?}",
+        index.missing()
+    );
+
+    // **The client's half of the publisher's `verify.py`** — roadmap task T196: the set decodes to
+    // what `index.json` lists, value for value. Both are read in the same second, and a publish
+    // landing between the two reads is the one way this can differ without anything being wrong.
+    let other = tempfile::tempdir().expect("a second cache directory");
+    let schema1 = Client::<mixengine_core::index::schema1::Document>::with(
+        mixengine_core::index::DEFAULT_URL,
+        mixengine_core::index::PUBLIC_KEY,
+        other.path(),
+    )
+    .expect("a client")
+    .catalogue()
+    .await
+    .expect("index.json verifies against the compiled-in key")
+    .index;
+    assert_eq!(
+        schema1.generated_at,
+        index.generated_at(),
+        "the two encodings were published together"
+    );
+
+    let by_name =
+        |package: &&mixengine_core::index::Package| (package.kind.clone(), package.version.clone());
+    let mut from_set: Vec<&mixengine_core::index::Package> = index.packages().collect();
+    let mut from_document: Vec<&mixengine_core::index::Package> = schema1.packages.iter().collect();
+    from_set.sort_by_key(by_name);
+    from_document.sort_by_key(by_name);
+    assert!(
+        from_set == from_document,
+        "schema 2 decodes to something index.json does not say"
+    );
+
     let kinds = installable_kinds();
     println!(
         "index generated {} — {} packages, {} artifacts, {} kinds this build can install",

@@ -65,7 +65,7 @@ done
 | [32 — The tray is MixLab's](phase-32-the-tray-is-mixlabs.md) | MixLab runs in the background on every preset; a module lends the tray a section | T192a–T192e | 5 / 5 | **M32** on *Database tools*, a terminal session survives the close button and the icon brings it back; with MixEngine visible the panel works as M22 says |
 | [33 — A line shows its newest](phase-33-a-line-shows-its-newest.md) | The available list is one row per line, and an installed version updates to its line's newest patch on a click | T193a–T193d | 4 / 4 | **M33** PHP 8.4.24 serving a site updates to 8.4.25 from MixLab with its extensions kept and 8.4.24 gone; a MariaDB 11.4 instance updates within its line with its data intact |
 | [34 — A headless host](phase-34-a-headless-host.md) | A Linux release with no desktop runs databases, keeps their passwords, and comes back after a reboot on its own | T194a–T195 | 6 / 7 | **M34** on an Ubuntu 24.04 server reached only over SSH, a MariaDB first-runs on the file store, survives a daemon restart, and answers after an unattended reboot |
-| [35 — An index that stays small](phase-35-an-index-that-stays-small.md) | The package index costs one small request when nothing was published, and only the kinds a home uses when something was | T196a–T196e | 0 / 5 | **M35** an idle daemon asks for one signature every six hours, a fresh home listing runtimes fetches six kind files and not eighteen, and an upgraded home cannot be walked backwards |
+| [35 — An index that stays small](phase-35-an-index-that-stays-small.md) | The package index costs one small request when nothing was published, and only the kinds a home uses when something was | T196a–T196e | 5 / 5 | **M35** an idle daemon asks for one signature every six hours, a fresh home listing runtimes fetches six kind files and not eighteen, and an upgraded home cannot be walked backwards |
 
 [Parked](parked.md) — revisit deliberately, do not start early.
 
@@ -75,6 +75,14 @@ spared `docs/roadmap/`, reading the number as a milestone still ahead rather tha
 half of a rename — which is exactly the reading a version that never shipped invites.
 
 ## Where we are
+
+**Phase 35 is built: 5 of 5, and M35 is met by tests against a signed registry.** The package
+index is read as `mixengine-packages`' schema 2: a signed root of about two kilobytes and one file
+per kind, named by hash. A daemon whose cache is past six hours asks for a 308-byte signature and
+stops there when nothing was published; a release of one kind costs that kind's file; a kind file
+that does not match costs that kind and is named in the lists. The published set was read through
+the new client on 2026-09-30 and decodes to exactly what `index.json` says.
+Design: [2026-09-30-t196-mixengine-reads-index-schema-2-design.md](../specs/2026-09-30-t196-mixengine-reads-index-schema-2-design.md).
 
 **Phase 33 is built: 4 of 4, and M33 is met on Windows.** The available lists show one row per
 version line, and an installed runtime or server updates to the newest patch of its line, carrying

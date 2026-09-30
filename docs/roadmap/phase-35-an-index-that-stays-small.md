@@ -10,17 +10,17 @@ Design: [2026-09-30-t196-mixengine-reads-index-schema-2-design.md](../specs/2026
 
 ---
 
-- [ ] **T196a** The schema 2 documents and their decoding into the existing `Package` and
+- [x] **T196a** The schema 2 documents and their decoding into the existing `Package` and
       `Artifact`; `Index` as a view over the kinds that were asked for.
-- [ ] **T196b** `MockRegistry` serves the schema 2 set beside `index.json`, its half-published
+- [x] **T196b** `MockRegistry` serves the schema 2 set beside `index.json`, its half-published
       states, and a log of what was requested.
-- [ ] **T196c** `index::PackageIndex`: signature first, the root, kinds by hash, the cache and its
+- [x] **T196c** `index::PackageIndex`: signature first, the root, kinds by hash, the cache and its
       invariant, what is kept in memory, the schema 1 cache carried across, and the fallback for a
       source with no schema 2.
-- [ ] **T196d** The daemon asks for kinds: `Fetcher`, every caller, `unavailable` on both
+- [x] **T196d** The daemon asks for kinds: `Fetcher`, every caller, `unavailable` on both
       catalogues with its line in `mix` and in MixLab's Packages screen, and the cleanup list.
       Bindings.
-- [ ] **T196e** `runtime-packaging.md`, the comments in `index.rs`, the published-index test
+- [x] **T196e** `runtime-packaging.md`, the comments in `index.rs`, the published-index test
       reading the set and comparing it with `index.json`, the changelog, and the design flipped to
       `implemented`.
 
