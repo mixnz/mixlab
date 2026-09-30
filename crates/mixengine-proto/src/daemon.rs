@@ -135,6 +135,27 @@ pub struct CredentialsStatus {
     pub choosable: bool,
 }
 
+/// What `daemon.set_credential_store` takes — roadmap task **T194**.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct CredentialStoreSet {
+    /// The store the home should keep its passwords in from the next start.
+    pub store: CredentialStore,
+}
+
+/// What `daemon.set_credential_store` answers — roadmap task **T194**.
+///
+/// **Two stores, because a switch applies at the next start**: the running daemon keeps the host it
+/// was built with, and a client says so when the two differ.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct CredentialStoreChange {
+    /// What the home has recorded, and the next start will use.
+    pub recorded: CredentialStore,
+    /// What this daemon is running on until it stops.
+    pub running: CredentialStore,
+}
+
 /// What this daemon's own DNS server is doing, and what it costs when it is not — roadmap task
 /// **T44**, which also closes T46a.
 ///

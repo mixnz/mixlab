@@ -203,6 +203,10 @@ async fn call_method(
                     no_params(params.as_ref())?;
                     encode_result(&api.daemon_shutdown().await)
                 }
+                rpc::method::DAEMON_SET_CREDENTIAL_STORE => {
+                    let asked: mixengine_proto::CredentialStoreSet = arguments(params)?;
+                    encode_result(&api.set_credential_store(asked).await.map_err(refused)?)
+                }
 
                 rpc::method::UPDATE_STATUS => {
                     no_params(params.as_ref())?;
@@ -1150,6 +1154,43 @@ impl Api {
             self.paths.credentials_file(),
         ));
         report
+    }
+
+    /// `daemon.set_credential_store` — roadmap task T194, D4. Records the store the next start
+    /// uses; the running daemon keeps the host it was built with.
+    ///
+    /// # Errors
+    ///
+    /// `precondition_failed` with the sentence [`crate::credentials::switch`] gives, or the wire
+    /// error of a database that could not be read or written.
+    async fn set_credential_store(
+        &self,
+        asked: mixengine_proto::CredentialStoreSet,
+    ) -> Result<mixengine_proto::CredentialStoreChange, Error> {
+        let release = mixengine_platform::RELEASE;
+        let to = crate::credentials::Store::from(asked.store);
+        let from = crate::credentials::recorded(&self.store)
+            .await?
+            .unwrap_or(crate::credentials::Store::default_for(release));
+
+        if from != to {
+            crate::credentials::check_switch(
+                &self.store,
+                self.paths.credentials_file(),
+                release,
+                std::env::consts::OS,
+                from,
+                to,
+            )
+            .await
+            .map_err(|why| Error::new(ErrorCode::PreconditionFailed, why))?;
+            crate::credentials::record(&self.store, to).await?;
+        }
+
+        Ok(mixengine_proto::CredentialStoreChange {
+            recorded: to.into(),
+            running: self.credentials.store.into(),
+        })
     }
 
     /// `daemon.status` — every fact this build actually has.

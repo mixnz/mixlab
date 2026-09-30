@@ -3537,6 +3537,27 @@ pub(crate) fn database_credentials(
     )
 }
 
+/// `mix daemon credential-store` — what was recorded, and when it applies (T194).
+pub(crate) fn credential_store_change(change: mixengine_proto::CredentialStoreChange) -> String {
+    let word = |store| match store {
+        mixengine_proto::CredentialStore::Os => "the system's credential store",
+        mixengine_proto::CredentialStore::Home => "a file in this home",
+    };
+
+    if change.recorded == change.running {
+        format!(
+            "this home keeps its passwords in {}\n",
+            word(change.recorded)
+        )
+    } else {
+        format!(
+            "this home keeps its passwords in {} from the next start; run `mix daemon stop`, and \
+             the next `mix` command starts it there\n",
+            word(change.recorded)
+        )
+    }
+}
+
 /// Where a credential is, in words — roadmap task T194, D5. A home that keeps its passwords in a
 /// file says so; any other answer, an older daemon's included, names the store's namespace as it
 /// always has.

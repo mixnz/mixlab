@@ -216,6 +216,11 @@ binaries. What they state is what the daemon **writes** —
    **Save battery is a switch over `service.save_resources` / `service.set_save_resources`** (T167b,
    ADR 0041): off unless a person turned it on, and while it is off nothing is idle-stopped. It is
    also `mix service save-resources`.
+   **Where the passwords are is `daemon.status`'s `credentials`, and a switch is
+   `daemon.set_credential_store`** (T194, [ADR 0059](../decisions/0059-a-linux-release-may-keep-a-homes-credentials-in-a-file.md)):
+   the store, and whether this daemon would accept the other one, which only a Linux release with
+   no keyring and a development build do. The switch applies at the next start. It is also
+   `mix daemon credential-store`.
    **A `.pkg` copy updates through `update.hand_over` and `update.finish`** (T88f, ADR 0050):
    `update.status` carries `installer` for a copy the macOS `.pkg` installed (its placement stays
    `managed` on the wire) and `installed` once the new binary is on disk. `update.hand_over` opens

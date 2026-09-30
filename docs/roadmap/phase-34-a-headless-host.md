@@ -18,7 +18,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       default, and `credentials::choose` accepting `home` on a Linux release only. **(P)**
 - [x] **T194c** The absent-store hint names `mix daemon credential-store home` ahead of the D-Bus
       workarounds; nothing switches on its own.
-- [ ] **T194d** `daemon.set_credential_store`, refused while the current store holds anything for
+- [x] **T194d** `daemon.set_credential_store`, refused while the current store holds anything for
       this home, effective at the next start; `mix daemon credential-store`, and MixLab's
       *Credentials* section in Settings → MixEngine.
 - [x] **T194e** `credentials` on `daemon.status` and in `mix status`, the doctor note, the startup

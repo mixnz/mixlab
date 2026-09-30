@@ -82,8 +82,8 @@ pub use cert_api::{
 };
 pub use crash::{CRASH_FORMAT, CrashLocation, CrashReport};
 pub use daemon::{
-    CredentialStore, CredentialsStatus, DaemonShutdown, DaemonStatus, DaemonVersion, DnsMode,
-    DnsStatus, Health,
+    CredentialStore, CredentialStoreChange, CredentialStoreSet, CredentialsStatus, DaemonShutdown,
+    DaemonStatus, DaemonVersion, DnsMode, DnsStatus, Health,
 };
 pub use database::{
     DatabaseAccount, DatabaseClientReport, DatabaseCredentials, DatabaseHandoff, DatabaseProtocol,

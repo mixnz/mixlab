@@ -305,6 +305,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         mixengine::commands::mixengine_service_set_autostart,
         mixengine::commands::mixengine_service_save_resources,
         mixengine::commands::mixengine_service_set_save_resources,
+        mixengine::commands::mixengine_daemon_set_credential_store,
         mixengine::commands::mixengine_service_start_project,
         mixengine::commands::mixengine_service_set_front_end,
         mixengine::commands::mixengine_service_create,

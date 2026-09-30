@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { autostartPresentation, doctorChecksInOrder } from "./settingsState";
+import { autostartPresentation, credentialsPresentation, doctorChecksInOrder } from "./settingsState";
 
 describe("autostartPresentation", () => {
   it("is unsupported when this machine has no mechanism", () => {
@@ -49,5 +49,18 @@ describe("doctorChecksInOrder", () => {
       { name: "c", outcome: { outcome: "skipped" as const, because: "x" } },
     ];
     expect(doctorChecksInOrder({ checks }).map((c) => c.name)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("credentialsPresentation", () => {
+  it("draws nothing for a daemon that predates the member", () => {
+    expect(credentialsPresentation(undefined)).toBeNull();
+    expect(credentialsPresentation(null)).toBeNull();
+  });
+
+  it("offers the other store only when the daemon would accept it", () => {
+    expect(credentialsPresentation({ store: "os", choosable: true })).toEqual({ store: "os", switchTo: "home" });
+    expect(credentialsPresentation({ store: "home", choosable: true })).toEqual({ store: "home", switchTo: "os" });
+    expect(credentialsPresentation({ store: "os", choosable: false })).toEqual({ store: "os", switchTo: null });
   });
 });

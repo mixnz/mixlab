@@ -48,6 +48,8 @@ export * from "./CommandSource";
 export * from "./CrashLocation";
 export * from "./CrashReport";
 export * from "./CredentialStore";
+export * from "./CredentialStoreChange";
+export * from "./CredentialStoreSet";
 export * from "./CredentialsStatus";
 export * from "./DaemonEvent";
 export * from "./DaemonShutdown";
