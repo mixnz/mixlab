@@ -1039,23 +1039,42 @@ async fn an_unreachable_signature_is_not_a_reason_to_fall_back() {
     assert_eq!(registry.requests(), ["/index-v2.json.minisig"]);
 }
 
-/// Each file has its own limit. The registry cannot stall, so the limit is what shrinks: one no
-/// request can meet.
+/// Each file has its own limit, and a server that never answers is given up on when it runs out —
+/// not after the thirty seconds a whole request had before T196.
+///
+/// **A socket that accepts and never answers**, rather than a limit too short for anything: a limit
+/// of one nanosecond was this test until CI's ubuntu runner answered over loopback before the timer
+/// was ever looked at (run 36798571660). A connection the operating system accepts into the backlog
+/// and nobody reads is a request that cannot succeed on any machine.
 #[tokio::test]
 async fn a_file_is_given_up_on_after_its_own_limit() {
     let cache = tempfile::tempdir().expect("a cache directory");
     let registry = MockRegistry::start(&index_at("2026-09-30T00:00:00Z")).await;
+    let silent = std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))
+        .expect("bind a loopback port that nobody will read");
+    let url = format!(
+        "http://{}/index.json",
+        silent.local_addr().expect("the bound port")
+    );
 
-    let refusal = client(&registry, cache.path())
-        .with_timeout(Duration::from_nanos(1))
+    let started = std::time::Instant::now();
+    let refusal = PackageIndex::with(&url, registry.public_key(), cache.path())
+        .expect("a client")
+        .with_timeout(Duration::from_millis(200))
         .kinds(&["php"])
         .await
-        .expect_err("nothing arrives in a nanosecond");
+        .expect_err("a server that never answers is not an index");
+    let took = started.elapsed();
 
     assert!(
         matches!(refusal, mixengine_core::Error::IndexTransport { .. }),
         "expected a transport failure, got {refusal:?}"
     );
+    assert!(
+        took < Duration::from_secs(10),
+        "the file's own limit ended it, not the transport's thirty seconds: took {took:?}"
+    );
+    drop(silent);
 }
 
 /// Falling back to schema 1 removes the schema 2 set, and only the set: a file somebody else put in
