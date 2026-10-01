@@ -8,20 +8,26 @@
 //! message went nowhere at all.
 //!
 //! **The report carries no message and the log does.** Everything in a
-//! [`CrashReport`] is a constant of this build, a literal from `std` or `tokio`, or a symbol name,
-//! which is what makes the file attachable to a public bug report without being read first. The
-//! message is `format!`-ed from whatever was in scope and can carry a path, so it goes to
-//! `daemon.log` — where paths a person chose already are, and always have been.
+//! [`CrashReport`] is a constant of this build, a literal from `std` or `tokio`, a symbol name, an
+//! offset into the executable or its build identifier, which is what makes the file attachable to a
+//! public bug report without being read first. The message is `format!`-ed from whatever was in
+//! scope and can carry a path, so it goes to `daemon.log` — where paths a person chose already are,
+//! and always have been.
+//!
+//! **A release build records offsets, not names** (T91a): its symbols ship beside the download, and
+//! `scripts/symbolize.mjs` turns a report's offsets back into names with them.
 //!
 //! **Nothing here sends anything anywhere.** See
-//! `docs/decisions/0022-a-crash-report-is-recorded-by-default-and-sent-by-nothing.md`.
+//! `docs/decisions/0022-a-crash-report-is-recorded-by-default-and-sent-by-nothing.md` and
+//! `docs/decisions/0060-a-crash-report-carries-offsets-and-the-release-keeps-the-symbols.md`.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::SystemTime;
 
+use mixengine_platform::crash_image::{self, Image};
 use mixengine_proto::{
-    CRASH_FORMAT, Check, CrashLocation, CrashReport, DaemonVersion, Outcome, Timestamp,
+    CRASH_FORMAT, Check, CrashFrame, CrashLocation, CrashReport, DaemonVersion, Outcome, Timestamp,
 };
 
 /// How many reports are kept.
@@ -124,6 +130,9 @@ impl Reports {
     pub(crate) fn install(&self) {
         let reports = self.clone();
         let previous = std::panic::take_hook();
+        // Read here, once, because it walks headers and allocates: the hook only measures
+        // addresses against it (T91a).
+        let image = crash_image::current();
 
         std::panic::set_hook(Box::new(move |info| {
             if INSIDE.with(|inside| inside.replace(true)) {
@@ -138,13 +147,11 @@ impl Reports {
 
             // 1. The evidence, first.
             let wrote = reports.enabled.then(|| {
-                let backtrace = std::backtrace::Backtrace::force_capture().to_string();
-
                 reports.record(
                     Timestamp::from_system_time(SystemTime::now()),
                     thread,
                     at.map(|at| (at.file(), at.line(), at.column())),
-                    &backtrace,
+                    capture(image.as_ref()),
                 )
             });
 
@@ -189,7 +196,7 @@ impl Reports {
         at: Timestamp,
         thread: Option<&str>,
         location: Option<(&str, u32, u32)>,
-        backtrace: &str,
+        stack: Stack,
     ) -> std::io::Result<PathBuf> {
         let report = CrashReport {
             format: CRASH_FORMAT,
@@ -203,9 +210,9 @@ impl Reports {
                 line,
                 column,
             }),
-            frames: Vec::new(),
-            symbols: frames(backtrace),
-            build_id: None,
+            frames: stack.frames,
+            symbols: stack.symbols,
+            build_id: stack.build_id,
         };
 
         let bytes = serde_json::to_vec_pretty(&report).map_err(std::io::Error::other)?;
@@ -319,6 +326,55 @@ pub(crate) fn check(reports: &Reports) -> Check {
     }
 }
 
+/// What the hook took of the panicking thread's stack — T91a.
+#[derive(Debug, Default)]
+struct Stack {
+    /// Offsets into the executable, innermost first; a frame outside it has none.
+    frames: Vec<CrashFrame>,
+
+    /// Names, where this build resolved them itself: a debug build. Not paired with `frames`.
+    symbols: Vec<String>,
+
+    /// The executable's build identifier, which a symbol file is matched against.
+    build_id: Option<String>,
+}
+
+/// The panicking thread's stack, as a report records it.
+///
+/// **A release build resolves no names here** (T91a, D3): its symbols are not in the binary to
+/// resolve, and symbolising inside a panic hook is the hook's heaviest and most lock-prone work —
+/// on Windows it takes dbghelp's lock and may search a symbol path for a `.pdb` that is not there.
+/// A debug build keeps every symbol, so it also renders `std`'s backtrace, filtered by
+/// [`symbol_names`] exactly as format 1 was.
+///
+/// Without an [`Image`] the frames are still counted, each without an offset, so the depth of the
+/// stack survives a platform that could not describe its executable.
+fn capture(image: Option<&Image>) -> Stack {
+    let mut addresses = Vec::with_capacity(MAX_FRAMES);
+    crash_image::return_addresses(&mut addresses, MAX_FRAMES);
+
+    let frames = addresses
+        .iter()
+        .map(|&address| CrashFrame {
+            offset: image
+                .and_then(|image| image.offset_of(address))
+                .map(|offset| format!("{offset:#x}")),
+        })
+        .collect();
+
+    let symbols = if cfg!(debug_assertions) {
+        symbol_names(&std::backtrace::Backtrace::force_capture().to_string())
+    } else {
+        Vec::new()
+    };
+
+    Stack {
+        frames,
+        symbols,
+        build_id: image.and_then(|image| image.build_id.clone()),
+    }
+}
+
 /// Clears the re-entrancy flag however the hook ends.
 #[derive(Debug)]
 struct Leaving;
@@ -329,7 +385,8 @@ impl Drop for Leaving {
     }
 }
 
-/// The symbol names in a rendered backtrace, and nothing else.
+/// The symbol names in a rendered backtrace, and nothing else — what a debug build puts in
+/// `symbols`.
 ///
 /// `std::backtrace::Backtrace` offers no structured access on stable, so this reads its `Display`:
 /// a frame header is `<n>: <symbol>`, and every `at <path>:<line>:<col>` continuation is dropped
@@ -338,7 +395,7 @@ impl Drop for Leaving {
 /// **The parse is best-effort and the guarantee does not rest on it.** A frame that still contains a
 /// path separator is dropped, which a Rust symbol never is — so a change to that format costs
 /// frames rather than the promise this module exists to keep.
-fn frames(rendered: &str) -> Vec<String> {
+fn symbol_names(rendered: &str) -> Vec<String> {
     rendered
         .lines()
         .filter_map(|line| {
@@ -442,7 +499,7 @@ mod tests {
 ";
 
         assert_eq!(
-            frames(rendered),
+            symbol_names(rendered),
             [
                 "mixengine_daemon::crash::tests::sample",
                 "core::ops::function::FnOnce::call_once",
@@ -457,7 +514,7 @@ mod tests {
     fn a_frame_that_still_looks_like_a_path_is_dropped() {
         let rendered = "   0: /usr/lib/libc.so.6: something\n   1: mixengine_daemon::main\n";
 
-        assert_eq!(frames(rendered), ["mixengine_daemon::main"]);
+        assert_eq!(symbol_names(rendered), ["mixengine_daemon::main"]);
     }
 
     /// A real capture survives the filter. The claim is about `std`'s behaviour, so
@@ -465,7 +522,7 @@ mod tests {
     #[test]
     fn a_real_backtrace_survives_the_filter_with_no_separator_in_it() {
         let rendered = std::backtrace::Backtrace::force_capture().to_string();
-        let found = frames(&rendered);
+        let found = symbol_names(&rendered);
 
         assert!(!found.is_empty(), "{rendered}");
         assert!(found.len() <= MAX_FRAMES);
@@ -487,7 +544,13 @@ mod tests {
                 Timestamp(1_757_000_000_000),
                 Some("tokio-runtime-worker"),
                 Some(("crates/mixengine-daemon/src/services/mod.rs", 412, 9)),
-                "   0: mixengine_daemon::services::start\n",
+                Stack {
+                    frames: vec![CrashFrame {
+                        offset: Some("0x1a2b".to_owned()),
+                    }],
+                    symbols: vec!["mixengine_daemon::services::start".to_owned()],
+                    build_id: Some("deadbeef".to_owned()),
+                },
             )
             .expect("a report is written");
 
@@ -505,6 +568,45 @@ mod tests {
         assert_eq!(written.thread.as_deref(), Some("tokio-runtime-worker"));
         assert_eq!(written.location.expect("a location").line, 412);
         assert_eq!(written.symbols, ["mixengine_daemon::services::start"]);
+        assert_eq!(written.frames[0].offset.as_deref(), Some("0x1a2b"));
+        assert_eq!(written.build_id.as_deref(), Some("deadbeef"));
+    }
+
+    /// A real capture, in this test binary: every frame inside the executable is an offset into it,
+    /// the identifier is the executable's own, and — this being a debug build — the names come
+    /// with it. A release build's half of the same function is the `cfg!` it branches on.
+    #[test]
+    fn a_capture_measures_frames_against_the_executable() {
+        let image = crash_image::current().expect("this platform describes its executable");
+        let stack = capture(Some(&image));
+
+        assert!(!stack.frames.is_empty());
+        assert!(stack.frames.len() <= MAX_FRAMES);
+        assert!(
+            stack.frames.iter().any(|frame| frame.offset.is_some()),
+            "{:?}",
+            stack.frames
+        );
+        for offset in stack
+            .frames
+            .iter()
+            .filter_map(|frame| frame.offset.as_deref())
+        {
+            assert!(offset.starts_with("0x"), "{offset}");
+        }
+        assert_eq!(stack.build_id, image.build_id);
+        assert_eq!(stack.symbols.is_empty(), !cfg!(debug_assertions));
+    }
+
+    /// Without a description of the executable the stack keeps its depth and loses only the
+    /// offsets, which is the shape a platform that cannot answer leaves.
+    #[test]
+    fn without_an_image_frames_are_counted_and_carry_no_offset() {
+        let stack = capture(None);
+
+        assert!(!stack.frames.is_empty());
+        assert!(stack.frames.iter().all(|frame| frame.offset.is_none()));
+        assert_eq!(stack.build_id, None);
     }
 
     /// Two panics in the same millisecond of one process is what a crash loop looks like, and
@@ -515,8 +617,12 @@ mod tests {
         let reports = reports(home.path());
         let at = Timestamp(1_757_000_000_000);
 
-        let first = reports.record(at, None, None, "").expect("written");
-        let second = reports.record(at, None, None, "").expect("written");
+        let first = reports
+            .record(at, None, None, Stack::default())
+            .expect("written");
+        let second = reports
+            .record(at, None, None, Stack::default())
+            .expect("written");
 
         assert_ne!(first, second);
         assert_eq!(files(home.path()).len(), 2);
@@ -531,7 +637,12 @@ mod tests {
 
         for millis in 0..=last {
             reports
-                .record(Timestamp(1_757_000_000_000 + millis), None, None, "")
+                .record(
+                    Timestamp(1_757_000_000_000 + millis),
+                    None,
+                    None,
+                    Stack::default(),
+                )
                 .expect("written");
         }
 
@@ -557,7 +668,9 @@ mod tests {
                 Timestamp(1_757_000_000_000),
                 Some("tokio-runtime-worker"),
                 Some(("crates/mixengine-daemon/src/sites.rs", 8, 1)),
-                "   0: mixengine_daemon::sites::create\n",
+                // A real capture, so the offsets and the build id are the ones a real executable
+                // gives, not ones a test chose.
+                capture(crash_image::current().as_ref()),
             )
             .expect("written");
 
@@ -566,6 +679,9 @@ mod tests {
         assert!(!text.contains("C:\\Users"), "{text}");
         assert!(!text.contains("hunter2"), "{text}");
         assert!(!text.contains("message"), "{text}");
+        // Where this binary was built, which a `.pdb` path in a CodeView record would carry.
+        assert!(!text.contains(env!("CARGO_MANIFEST_DIR")), "{text}");
+        assert!(!text.contains(&home.path().display().to_string()), "{text}");
     }
 
     /// A report that will not parse is named rather than swallowed, and does not stop the rest being
@@ -576,7 +692,7 @@ mod tests {
         let reports = reports(home.path());
 
         reports
-            .record(Timestamp(1_757_000_000_000), None, None, "")
+            .record(Timestamp(1_757_000_000_000), None, None, Stack::default())
             .expect("written");
         std::fs::write(
             home.path().join("crash-1757000000001-1-9.json"),
@@ -599,7 +715,12 @@ mod tests {
 
         for millis in 0..3 {
             reports
-                .record(Timestamp(1_757_000_000_000 + millis), None, None, "")
+                .record(
+                    Timestamp(1_757_000_000_000 + millis),
+                    None,
+                    None,
+                    Stack::default(),
+                )
                 .expect("written");
         }
 
@@ -662,7 +783,7 @@ mod tests {
         let home = tempfile::TempDir::new().expect("a temporary directory");
         let reports = reports(home.path());
         reports
-            .record(Timestamp(1_757_000_000_000), None, None, "")
+            .record(Timestamp(1_757_000_000_000), None, None, Stack::default())
             .expect("written");
 
         let Outcome::Note { because } = check(&reports).outcome else {
