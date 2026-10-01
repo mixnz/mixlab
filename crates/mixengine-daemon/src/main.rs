@@ -658,6 +658,8 @@ async fn run() -> anyhow::Result<()> {
     // somebody is watching stderr, and none of them has a log to be written to yet. The `--detach`
     // parent returns above this and installs nothing, for the same reason.
     crash::Reports::new(&home.paths, home.config.crash.enabled).install();
+    #[cfg(feature = "crash-probe")]
+    crash::probe::raise_if_asked();
 
     tracing::info!(
         version = env!("CARGO_PKG_VERSION"),

@@ -93,5 +93,11 @@ mixengine-testkit.workspace = true
 # and a test that proved it by waiting fifteen seconds would be a test nobody runs.
 tokio = { workspace = true, features = ["test-util"] }
 
+[features]
+# T91a: a daemon that panics on request, so CI can prove a stripped release build's crash report
+# symbolises. Nothing that ships enables it — `packaging/stage.sh` passes no features — and without
+# it the code is not compiled at all. See `crash::probe`.
+crash-probe = []
+
 [lints]
 workspace = true

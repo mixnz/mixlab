@@ -375,6 +375,32 @@ fn capture(image: Option<&Image>) -> Stack {
     }
 }
 
+/// A daemon that panics on request, so CI can prove a stripped release build's report symbolises —
+/// T91a.
+///
+/// **Behind the `crash-probe` feature and nothing else.** No build `packaging/stage.sh` makes
+/// enables it, so an installed daemon has no way to be told to panic: the code is not in it. The
+/// `bench` job builds a release daemon with the feature, strips it with `packaging/symbols.sh`,
+/// sets [`VARIABLE`](probe::VARIABLE), and turns the report back into names.
+#[cfg(feature = "crash-probe")]
+pub(crate) mod probe {
+    /// What asks for the panic.
+    pub(crate) const VARIABLE: &str = "MIXENGINE_CRASH_PROBE";
+
+    /// Panic if [`VARIABLE`] is set, from a function the symbol file names.
+    pub(crate) fn raise_if_asked() {
+        if std::env::var_os(VARIABLE).is_some() {
+            raise();
+        }
+    }
+
+    /// Never inlined, so `scripts/symbolize.mjs` has a frame called `crash::probe::raise` to find.
+    #[inline(never)]
+    fn raise() -> ! {
+        panic!("{VARIABLE} asked this daemon to panic");
+    }
+}
+
 /// Clears the re-entrancy flag however the hook ends.
 #[derive(Debug)]
 struct Leaving;
