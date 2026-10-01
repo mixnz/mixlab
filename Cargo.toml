@@ -399,12 +399,6 @@ unimplemented = "deny"
 unwrap_used = "warn"
 
 [profile.release]
-# **Built for size, the daemon included.** `"s"` took a quarter off every binary here (`mixengined`
-# 29.0 to 21.2 MB on Windows) and the work that is bound by CPU stays at `3` below. One profile for
-# all of them, because `"s"` for some and `3` for others is a second profile and a second build of
-# every shared dependency. See D2 of
-# docs/specs/2026-10-01-mixengine-binaries-built-for-size-design.md.
-opt-level = "s"
 codegen-units = 1
 lto = "thin"
 # Debug info goes, symbol names stay — for `mixengined`, whose crash report is worthless without
@@ -414,7 +408,7 @@ strip = "debuginfo"
 # `panic = "abort"` must never be set: the RPC layer catches a panic per request and returns
 # `internal` instead of taking every managed service down with it.
 
-# **T185: the one binary built at `"z"`.** `<root>/bin` holds a copy of it per command name on
+# **T185: the one binary built for size.** `<root>/bin` holds a copy of it per command name on
 # Windows, so a byte here is paid dozens of times. A package override cannot set `lto` or `panic`,
 # and `[profile.release]` keeps `panic = "unwind"` for the daemon's sake — this is what is left.
 [profile.release.package.mixengine-trampoline]
@@ -434,29 +428,6 @@ strip = "symbols"
 strip = "symbols"
 [profile.release.package.mixengine-elevate]
 strip = "symbols"
-
-# **What is bound by CPU stays at full speed.** Inflating and hashing the distributions the daemon
-# installs — several hundred megabytes each — and the SQLite the shim's 15 ms budget (T29) reads;
-# `cc` builds SQLite at the profile's level, which `"s"` would make `-Os`. Not `zstd*`, which only
-# the testkit links, and not `ring` or `aws-lc-sys`, whose bulk work is assembly no opt level
-# reaches. A package override outranks `release-profile`'s `opt-level = 0` on a branch, so these
-# compile at `3` there too.
-[profile.release.package.miniz_oxide]
-opt-level = 3
-[profile.release.package.adler2]
-opt-level = 3
-[profile.release.package.crc32fast]
-opt-level = 3
-[profile.release.package.flate2]
-opt-level = 3
-[profile.release.package.zip]
-opt-level = 3
-[profile.release.package.ruzstd]
-opt-level = 3
-[profile.release.package.sha2]
-opt-level = 3
-[profile.release.package.libsqlite3-sys]
-opt-level = 3
 
 # **The compressors and the hash run optimised even in a debug build (T170c).** The real-server
 # suites pack a distribution of several hundred megabytes into an archive, and the daemon unpacks and
