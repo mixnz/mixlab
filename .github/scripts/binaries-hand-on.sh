@@ -14,6 +14,11 @@ for dir in target/*/release; do
       files+=("$dir/$binary$(mix_exe_suffix)")
     fi
   done
+  # The daemon's symbols on Windows, which the linker writes beside the executable rather than into
+  # it. `packaging/symbols.sh` turns them into the release's symbol archive in `build` — T91a.
+  if [ -f "$dir/mixengined.pdb" ]; then
+    files+=("$dir/mixengined.pdb")
+  fi
 done
 if [ ${#files[@]} -eq 0 ]; then
   echo "nothing under target/*/release to hand on" >&2

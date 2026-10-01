@@ -127,6 +127,17 @@ for binary in $(mix_headless_binaries); do
   cp "$built/$binary$suffix" "$stage/$binary$suffix"
 done
 
+# **The daemon ships without its symbols, and the release keeps them** — roadmap task T91a. The
+# archive goes straight into `dist`, which is what `build` uploads and `release` signs and
+# publishes; the staged copy is stripped in place. Every caller of this file reaches it, so a
+# `.deb`, an `.rpm`, a `.pkg` and a setup all package the stripped daemon. Writing the same archive
+# again on a second call is harmless: it is made from the same binary.
+bash "$MIX_ROOT/packaging/symbols.sh" \
+  --built "$built/mixengined$suffix" \
+  --staged "$stage/mixengined$suffix" \
+  --target "${target:-$(mix_host_target)}" \
+  --out "$MIX_OUT/dist" >&2
+
 # The window, from wherever this leg built it — T105, D2. **Built here only if nothing staged it**:
 # CI runs `packaging/desktop.sh` as a step of its own, and the four Linux packaging scripts each
 # call this file, so without the guard one leg would build a webview application four times.

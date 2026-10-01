@@ -240,6 +240,15 @@ else
       record M6 "the installed mix runs" "no"
       fail "an installed mix would not execute on this machine"
     fi
+    # T91a: the daemon is the one binary `packaging/symbols.sh` strips after the linker signed it,
+    # so its signature is the one that could have stopped matching.
+    record M6 "codesign -dv on the installed mixengined" "$(codesign -dv "$daemon" 2>&1 | tr '\n' ' ' || true)"
+    if "$daemon" --version >/dev/null 2>&1; then
+      record M6 "the installed mixengined runs" "yes — $("$daemon" --version 2>&1 || true)"
+    else
+      record M6 "the installed mixengined runs" "no"
+      fail "an installed mixengined would not execute on this machine"
+    fi
   elif [ "$asked" = "1" ]; then
     void M5 "installer(8) refused, so there is nothing installed to look at"
     void M6 "installer(8) refused, so there is nothing installed to run"
