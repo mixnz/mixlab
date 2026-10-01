@@ -1,7 +1,10 @@
 //! macOS implementations of the platform traits.
 
+// The executable a crash report describes — T91a.
 #[cfg(feature = "host")]
 mod access;
+#[cfg(feature = "host")]
+pub(crate) mod crash_image;
 // What this machine will refuse to load, for want of a signature — T94. Nothing, here.
 #[cfg(feature = "host")]
 mod app_control;

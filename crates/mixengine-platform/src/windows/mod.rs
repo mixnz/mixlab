@@ -1,9 +1,12 @@
 //! Windows implementations of the platform traits.
 
+// The executable a crash report describes, and the unwind it is read with — T91a.
 #[cfg(feature = "host")]
 mod access;
 #[cfg(feature = "ipc")]
 pub(crate) mod activation;
+#[cfg(feature = "host")]
+pub(crate) mod crash_image;
 // What this machine will refuse to load, for want of a signature — T94.
 #[cfg(feature = "host")]
 mod app_control;

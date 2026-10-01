@@ -26,6 +26,9 @@ pub(crate) mod install;
 #[cfg(feature = "ipc")]
 pub(crate) mod ipc;
 pub(crate) mod lock;
+// The calling thread's return addresses, from the unwinder `std` links on both systems — T91a.
+#[cfg(feature = "host")]
+pub(crate) mod unwind;
 // A marked block in a shell profile is POSIX in everything but *which* profiles: the mechanism is
 // written once here, and each system passes its own list in. That is the pattern `access` uses in
 // the other direction — shared code that one OS wraps — rather than a `cfg` inside this directory.

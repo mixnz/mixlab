@@ -130,6 +130,10 @@ windows-sys = { workspace = true, features = [
     # a group without opening every process on the machine (T181). A feature adds modules, not
     # crates.
     "Win32_System_Diagnostics_ToolHelp",
+    # T91a: `RtlCaptureStackBackTrace` for a crash report's frames, and `GetModuleHandleW` for the
+    # base they are measured from. A feature adds modules, not crates.
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_LibraryLoader",
     # A process's resident size, read one pid at a time by a metrics reading on Windows (T190),
     # where `sysinfo` would list the whole machine first. A feature adds modules, not crates.
     "Win32_System_ProcessStatus",
