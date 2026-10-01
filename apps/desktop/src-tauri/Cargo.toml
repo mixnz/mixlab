@@ -216,6 +216,48 @@ tauri-plugin-deep-link = "2"
 # `HKCU\...\Run` on Windows, an XDG autostart entry on Linux, each starting MixLab with `--hidden`.
 tauri-plugin-autostart = "2"
 
+# **MixLab's release profile, built for size.** The root's `[profile.release]` never reaches this
+# workspace, so without this section the window shipped with cargo's defaults — no LTO and 16
+# codegen units — and at 54.5 MB was the largest binary in the install. Measured on Windows:
+# LTO and one codegen unit alone take it to 46.6 MB, and `opt-level = "s"` on top to 32.9 MB.
+# Debug info goes and symbol names stay, as in the root, so a crash report still names functions.
+# `panic` is left at `unwind`. CI's branch builds override lto, codegen-units and opt-level through
+# `.github/actions/release-profile`, exactly as they do for the root.
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
+
+# The CPU-bound crates stay at full speed: the Argon2id derivation behind a sync unlock is slow on
+# purpose, and a smaller build of it would be a slower unlock and nothing else; the ciphers, the
+# hashes and the inflate path read every byte of a sync record or an update payload.
+[profile.release.package.argon2]
+opt-level = 3
+[profile.release.package.blake2]
+opt-level = 3
+[profile.release.package.chacha20]
+opt-level = 3
+[profile.release.package.chacha20poly1305]
+opt-level = 3
+[profile.release.package.poly1305]
+opt-level = 3
+[profile.release.package.sha2]
+opt-level = 3
+[profile.release.package.hkdf]
+opt-level = 3
+[profile.release.package.hmac]
+opt-level = 3
+[profile.release.package.miniz_oxide]
+opt-level = 3
+[profile.release.package.flate2]
+opt-level = 3
+[profile.release.package.zip]
+opt-level = 3
+[profile.release.package.crc32fast]
+opt-level = 3
+[profile.release.package.adler2]
+opt-level = 3
 
 # A workspace of its own, and deliberately empty: without this section cargo would walk up to the
 # repository root, find the workspace there, and refuse a package that is not one of its members.
