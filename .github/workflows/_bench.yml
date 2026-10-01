@@ -218,6 +218,17 @@ jobs:
             'printf "mixengine-ci" | gnome-keyring-daemon --unlock --components=secrets >/dev/null || exit 1
              exec cargo test --release -p mixengine-cli --test warm_start --locked --offline -- --ignored --nocapture'
 
+      # T91a: a stripped release daemon's crash report turns back into names, on every system. Last,
+      # because it builds the daemon again with the `crash-probe` feature — and on Windows with the
+      # release's own flags, which compiles everything again. One leg per system.
+      - name: A stripped daemon's crash report names its frames
+        if: contains(fromJSON('["budgets","all"]'), matrix.group)
+        timeout-minutes: 30
+        shell: bash
+        env:
+          CARGO_NET_OFFLINE: "true"
+        run: bash .github/scripts/crash-symbolises.sh
+
       - uses: ./.github/actions/leg-budget
         if: always()
         with:

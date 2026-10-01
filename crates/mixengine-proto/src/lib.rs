@@ -80,7 +80,7 @@ pub use cert_api::{
     CertStatusQuery, CertStatusReport, Handshake, IssueOutcome, RotateOutcome, SiteCert,
     SiteCertOutcome, SiteCertStatus, Trust, UninstallOutcome, Unusable, Verdict,
 };
-pub use crash::{CRASH_FORMAT, CrashLocation, CrashReport};
+pub use crash::{CRASH_FORMAT, CrashFrame, CrashLocation, CrashReport};
 pub use daemon::{
     CredentialStore, CredentialStoreChange, CredentialStoreSet, CredentialsStatus, DaemonShutdown,
     DaemonStatus, DaemonVersion, DnsMode, DnsStatus, Health,

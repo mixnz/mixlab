@@ -147,8 +147,10 @@ If the daemon runs into a bug in its own code, it writes a small file into `logs
 MixEngine's home. `mix doctor` tells you one is there as a note, never as a problem, so it does
 not change the command's exit code.
 
-**What is in it**: where in MixLab's own source the bug happened, the function names around it,
-which version was running and which operating system. That is the whole list.
+**What is in it**: where in MixLab's own source the bug happened, the positions in the program of
+the functions around it, which version was running and which operating system. That is the whole
+list. The positions are plain numbers that mean something only for that exact version, and
+MixEngine's maintainers turn them back into function names.
 
 **What is not in it**: none of your file paths, none of your site or project names, and no
 passwords. That is true because of what the file is *allowed to hold* rather than because something

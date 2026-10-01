@@ -159,7 +159,8 @@
 
 [crash]
 # When MixEngine hits a bug in itself, it writes a small file to logs/crashes/ saying where in
-# MixEngine's own source it happened and the function names around it. That is all it holds: none of
+# MixEngine's own source it happened and where in the program the functions around it are — numbers
+# that MixEngine's maintainers turn back into names. That is all it holds: none of
 # your paths, none of your site names, no passwords — by what the file is allowed to contain rather
 # than by filtering something out of it afterwards. That is what makes it safe to attach to a public
 # bug report without reading it first.

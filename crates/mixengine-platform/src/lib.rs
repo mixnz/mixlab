@@ -24,6 +24,10 @@ use std::sync::Arc;
 // reasoned about: `cargo doc` refused it.
 #[cfg(feature = "elevated")]
 pub mod elevated;
+// What a crash report needs from the running executable: its base, its range, its build id and
+// the calling thread's return addresses — T91a. The daemon's alone, so `host`.
+#[cfg(feature = "host")]
+pub mod crash_image;
 // Documented by its own `//!` header. Under both features: the daemon reads the block and the
 // helper writes it, and neither is worth a second implementation.
 /// The listener an activator holds, so a stopped service can be started by the connection

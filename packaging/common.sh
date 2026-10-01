@@ -181,6 +181,24 @@ mix_arch_label() {
   esac
 }
 
+# The `RUSTFLAGS` a release of the headless binaries is built with for a target, on top of whatever
+# the environment already sets. One function so that `stage.sh` and the `bench` job's crash check
+# build the same daemon — the check is only worth something if it is.
+#
+# **Windows: the C runtime inside, and line tables in the `.pdb`.** `crt-static` is T150's (see
+# `stage.sh`). Line tables are T91a's: a release `.pdb` without them holds only the public symbols,
+# which after LTO are a minority of the functions, so a crash report's frames resolved to the wrong
+# ones. With them it holds every function's name, address and size. Measured on 2026-10-01 on a
+# small release-profile program: the executable is byte-for-byte the same size with and without
+# them, because MSVC keeps debug information in the `.pdb` alone, and the `.pdb` only ever leaves as
+# the release's symbol archive.
+mix_release_rustflags() {
+  case "$1" in
+    *-windows-msvc) echo "-C target-feature=+crt-static -C debuginfo=line-tables-only" ;;
+    *) echo "" ;;
+  esac
+}
+
 # `.exe` on the one shell that needs it. Written here rather than in each script that appends it,
 # because `stage.sh` and `desktop.sh` have to agree about the name of a file one hands the other.
 mix_exe_suffix() {

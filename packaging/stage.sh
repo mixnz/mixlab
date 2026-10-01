@@ -80,9 +80,11 @@ export MIXENGINE_RELEASE=1
 # statically, because `tauri-build` does so for every Tauri application. Here, and not in
 # `.cargo/config.toml`, which sets no flags: a release is what has to run on a bare machine, and a
 # test build on a developer's machine does not. `--target` is what keeps the flag off build scripts.
-case "${target:-$(mix_host_target)}" in
-  *-windows-msvc) export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C target-feature=+crt-static" ;;
-esac
+# The flags themselves, and T91a's line tables beside them, are `mix_release_rustflags`'s.
+release_flags="$(mix_release_rustflags "${target:-$(mix_host_target)}")"
+if [ -n "$release_flags" ]; then
+  export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }$release_flags"
+fi
 
 if [ -n "$target" ]; then
   built="$MIX_ROOT/target/$target/release"
@@ -126,6 +128,17 @@ suffix="$(mix_exe_suffix)"
 for binary in $(mix_headless_binaries); do
   cp "$built/$binary$suffix" "$stage/$binary$suffix"
 done
+
+# **The daemon ships without its symbols, and the release keeps them** — roadmap task T91a. The
+# archive goes straight into `dist`, which is what `build` uploads and `release` signs and
+# publishes; the staged copy is stripped in place. Every caller of this file reaches it, so a
+# `.deb`, an `.rpm`, a `.pkg` and a setup all package the stripped daemon. Writing the same archive
+# again on a second call is harmless: it is made from the same binary.
+bash "$MIX_ROOT/packaging/symbols.sh" \
+  --built "$built/mixengined$suffix" \
+  --staged "$stage/mixengined$suffix" \
+  --target "${target:-$(mix_host_target)}" \
+  --out "$MIX_OUT/dist" >&2
 
 # The window, from wherever this leg built it — T105, D2. **Built here only if nothing staged it**:
 # CI runs `packaging/desktop.sh` as a step of its own, and the four Linux packaging scripts each

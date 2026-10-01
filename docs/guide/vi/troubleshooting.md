@@ -4,7 +4,7 @@ slug = "troubleshooting"
 order = 14
 summary = "Chạy mix doctor trước, rồi bốn lệnh trả lời đúng những câu hỏi người dùng hay gặp, và một file gom đủ mọi thứ một báo cáo lỗi cần."
 translation_of = "en/troubleshooting.md"
-source_sha256 = "466aae33ce48f3f8a911d58b36cc10cd1a9596caa88c434b9aa6a7ee617b2d72"
+source_sha256 = "82432f94e277f71d30abaab3cdc8e64683209037f5bc6e392b5fcb60b7a3b374"
 +++
 
 # Khi có gì đó không ổn
@@ -149,8 +149,9 @@ Nếu daemon gặp bug trong mã của chính nó, nó ghi một file nhỏ vào
 MixEngine. `mix doctor` cho bạn biết có file như vậy, dưới dạng ghi chú chứ không phải vấn đề, nên
 không làm đổi mã thoát của lệnh.
 
-**Trong file có gì**: bug xảy ra ở đâu trong mã nguồn của MixLab, tên các hàm xung quanh, phiên
-bản đang chạy và hệ điều hành nào. Chỉ có vậy.
+**Trong file có gì**: bug xảy ra ở đâu trong mã nguồn của MixLab, vị trí trong chương trình của các
+hàm xung quanh, phiên bản đang chạy và hệ điều hành nào. Chỉ có vậy. Các vị trí này chỉ là những con
+số, và chỉ có nghĩa với đúng phiên bản đó. Người bảo trì MixEngine sẽ đổi chúng lại thành tên hàm.
 
 **Trong file không có gì**: không có đường dẫn nào của bạn, không có tên site hay project, và không
 có mật khẩu. Điều này đúng vì file *chỉ được phép chứa* những gì kể trên, chứ không phải vì có gì
