@@ -21,6 +21,7 @@
 - Switching between light and dark in Settings fades from one to the other instead of flashing.
 - Languages and Packages list the newest version of each first, both what is installed and what
   you can download.
+- MixLab is about half its old size on Linux and macOS, and a third smaller on Windows.
 
 ### Fixed
 - MixEngine's screens show that they are loading while they wait for MixEngine's answer, instead
