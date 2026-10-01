@@ -137,6 +137,50 @@ struct State {
 
     /// Whether falling back to schema 1 has been said. Once per daemon run.
     fell_back: bool,
+
+    /// When the network last failed to answer — see [`RETRY_AFTER`].
+    unreachable_at: Option<std::time::Instant>,
+}
+
+/// How long after the network failed a call is answered from the cache without asking again.
+///
+/// A choice, not a measurement: long enough to cover the calls one screen makes together, which
+/// would otherwise queue behind the failing one and each wait out a timeout of their own; short
+/// enough that a network that came back is used again within a minute. A refresh a person asked
+/// for is never held back by it.
+const RETRY_AFTER: Duration = Duration::from_secs(60);
+
+/// Remember when the network failed, if that is what `refusal` is.
+///
+/// **Only a failure that came out of the HTTP client counts** — no connection, a timeout, a server
+/// answering `5xx`. A root missing beside its signature is a publish half way through, and a
+/// signature that does not verify or a root from the past is a server that answered; none of those
+/// is a reason to stop asking.
+fn note_unreachable(state: &mut State, refusal: &Error) {
+    if let Error::IndexTransport { source, .. } = refusal
+        && source.downcast_ref::<reqwest::Error>().is_some()
+    {
+        state.unreachable_at = Some(std::time::Instant::now());
+    }
+}
+
+/// Whether `name` is a file [`PackageIndex`] writes in its cache directory: the root, its
+/// signature, a kind's file, or one of those half written.
+///
+/// **One rule for everything that removes them** — falling back to schema 1 here, and
+/// `daemon.cleanup` in the daemon — so a file somebody else put beside them stays theirs.
+#[must_use]
+pub fn is_cache_file(name: &str) -> bool {
+    let name = name.strip_suffix(".part").unwrap_or(name);
+
+    name == schema2::ROOT
+        || name
+            .strip_prefix(schema2::ROOT)
+            .is_some_and(|rest| rest == SIGNATURE_SUFFIX)
+        || name
+            .strip_prefix("index-v2-")
+            .and_then(|rest| rest.strip_suffix(".json"))
+            .is_some_and(schema2::is_kind_name)
 }
 
 /// Which kinds a caller wants.
@@ -334,13 +378,31 @@ impl PackageIndex {
         .flatten()
         .max();
 
+        // **A network that failed a moment ago is not asked again at once** — the calls queued
+        // behind a slow failure are answered from the cache rather than each waiting out a timeout
+        // of their own. Only with something cached to answer from, and never for a caller who
+        // asked for a refresh.
+        let cached = held.is_some() || one.is_some();
+        if !force
+            && cached
+            && state
+                .unreachable_at
+                .is_some_and(|at| at.elapsed() < RETRY_AFTER)
+        {
+            return self.keep(state, held, one, None, want).await;
+        }
+
         match self.refresh_root(state, held.as_ref(), floor).await {
             Ok(Refreshed::Unchanged(held) | Refreshed::New(held)) => {
+                state.unreachable_at = None;
                 self.collect(state, held, Freshness::Fetched, true, want)
                     .await
             }
             Ok(Refreshed::NoSchema2) => self.through_schema1(state, held, floor, want).await,
-            Err(refusal) => self.keep(state, held, one, refusal, want).await,
+            Err(refusal) => {
+                note_unreachable(state, &refusal);
+                self.keep(state, held, one, Some(refusal), want).await
+            }
         }
     }
 
@@ -355,37 +417,49 @@ impl PackageIndex {
         state: &mut State,
         held: Option<HeldRoot>,
         one: Option<(Stamp, Index)>,
-        refusal: Error,
+        refusal: Option<Error>,
         want: Want<'_>,
     ) -> Result<Catalogue<Index>> {
+        // [`None`] is a network that failed a moment ago and was not asked again: said once, when
+        // it failed, and not on every call answered from the cache since.
         match (held, one) {
             (Some(held), _) => {
                 let age = age(held.stamp);
-                tracing::warn!(
-                    url = %self.root_url,
-                    age_hours = age.as_secs() / 3600,
-                    error = %refusal,
-                    document = LABEL,
-                    "keeping the cached document; the published one was not usable"
-                );
+                if let Some(refusal) = &refusal {
+                    tracing::warn!(
+                        url = %self.root_url,
+                        age_hours = age.as_secs() / 3600,
+                        error = %refusal,
+                        document = LABEL,
+                        "keeping the cached document; the published one was not usable"
+                    );
+                }
                 self.collect(state, held, Freshness::Stale { age }, true, want)
                     .await
             }
             (None, Some((stamp, index))) => {
                 let age = age(stamp);
-                tracing::warn!(
-                    url = %self.root_url,
-                    age_hours = age.as_secs() / 3600,
-                    error = %refusal,
-                    document = LABEL,
-                    "keeping the cached index.json; the published index was not usable"
-                );
+                if let Some(refusal) = &refusal {
+                    tracing::warn!(
+                        url = %self.root_url,
+                        age_hours = age.as_secs() / 3600,
+                        error = %refusal,
+                        document = LABEL,
+                        "keeping the cached index.json; the published index was not usable"
+                    );
+                }
                 Ok(Catalogue {
                     index,
                     freshness: Freshness::Stale { age },
                 })
             }
-            (None, None) => Err(refusal),
+            (None, None) => Err(refusal.unwrap_or_else(|| Error::IndexTransport {
+                document: LABEL,
+                url: self.root_url.clone(),
+                source: Box::new(std::io::Error::other(
+                    "the package index could not be reached a moment ago",
+                )),
+            })),
         }
     }
 
@@ -409,6 +483,7 @@ impl PackageIndex {
             Ok(read) => {
                 // One layout on disk at a time: what was just stored is `index.json`.
                 if read.freshness == Freshness::Fetched {
+                    state.unreachable_at = None;
                     self.forget_set(state);
                 }
                 Ok(Catalogue {
@@ -416,7 +491,10 @@ impl PackageIndex {
                     freshness: read.freshness,
                 })
             }
-            Err(refusal) => self.keep(state, held, None, refusal, want).await,
+            Err(refusal) => {
+                note_unreachable(state, &refusal);
+                self.keep(state, held, None, Some(refusal), want).await
+            }
         }
     }
 
@@ -424,11 +502,7 @@ impl PackageIndex {
     fn forget_set(&self, state: &mut State) {
         if let Ok(entries) = std::fs::read_dir(&self.cache_dir) {
             for entry in entries.flatten() {
-                if entry
-                    .file_name()
-                    .to_str()
-                    .is_some_and(|name| name.starts_with("index-v2"))
-                {
+                if entry.file_name().to_str().is_some_and(is_cache_file) {
                     let _ = std::fs::remove_file(entry.path());
                 }
             }
@@ -720,16 +794,19 @@ impl PackageIndex {
         let path = self.path(name);
         let part = self.path(&format!("{name}.part"));
 
-        std::fs::write(&part, bytes).map_err(|source| Error::Io {
-            action: "write",
-            path: part.clone(),
-            source,
-        })?;
-        std::fs::rename(&part, &path).map_err(|source| Error::Io {
-            action: "replace",
-            path,
-            source,
-        })
+        // A write that fails half way takes its `.part` with it: nothing reads one, and nothing
+        // else would ever remove it.
+        let failed = |action, path, source| {
+            let _ = std::fs::remove_file(&part);
+            Error::Io {
+                action,
+                path,
+                source,
+            }
+        };
+
+        std::fs::write(&part, bytes).map_err(|source| failed("write", part.clone(), source))?;
+        std::fs::rename(&part, &path).map_err(|source| failed("replace", path, source))
     }
 
     /// Steps 1 to 4 of the contract. `held` is the cached root, when there is one that verifies.

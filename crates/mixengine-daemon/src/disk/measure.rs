@@ -28,28 +28,13 @@ const SERVICES: &str = "services";
 /// `mixengine_supervisor::logs::CURRENT_LOG_FILE_NAME` is.
 const CURRENT_LOG: &str = "current.log";
 
-/// The documents the package index, the extension registry and the update feed cache at the top
-/// of `cache/`.
+/// The documents the extension registry, the update feed and a schema 1 package index cache at
+/// the top of `cache/`.
 ///
-/// The package index is one of two layouts, never both — `index.json`, or since roadmap task
-/// **T196** a signed root beside one file per kind, which [`is_kind_file`] recognises.
-const CACHED_DOCUMENTS: [&str; 5] = [
-    "index.json",
-    "index-v2.json",
-    "index-v2.json.minisig",
-    "extensions.json",
-    "latest.json",
-];
-
-/// Whether `name` is one kind's file of the package index: `index-v2-<kind>.json`.
-///
-/// By the index's own rule for a kind name rather than by prefix alone, so a file somebody left
-/// beside them is still theirs.
-fn is_kind_file(name: &str) -> bool {
-    name.strip_prefix("index-v2-")
-        .and_then(|rest| rest.strip_suffix(".json"))
-        .is_some_and(mixengine_core::index::schema2::is_kind_name)
-}
+/// The package index is one of two layouts, never both: `index.json`, or since roadmap task
+/// **T196** a signed root beside one file per kind, which the index client itself recognises —
+/// [`mixengine_core::index::packages::is_cache_file`], one rule for everything that removes them.
+const CACHED_DOCUMENTS: [&str; 3] = ["index.json", "extensions.json", "latest.json"];
 
 /// The three directories under `cache/` whose contents are ours to empty.
 ///
@@ -227,17 +212,22 @@ fn is_rotated(name: &str, live: &str) -> bool {
 pub(super) fn reclaimable_cache(cache: &Path) -> Reclaimable {
     let mut reclaimable = Reclaimable::default();
 
-    let kind_files = std::fs::read_dir(cache)
+    let index_files = std::fs::read_dir(cache)
         .into_iter()
         .flatten()
         .flatten()
-        .filter(|entry| entry.file_name().to_str().is_some_and(is_kind_file))
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .is_some_and(mixengine_core::index::packages::is_cache_file)
+        })
         .map(|entry| entry.path());
 
     for path in CACHED_DOCUMENTS
         .iter()
         .map(|document| cache.join(document))
-        .chain(kind_files)
+        .chain(index_files)
     {
         if let Ok(meta) = std::fs::symlink_metadata(&path)
             && meta.is_file()
@@ -450,14 +440,20 @@ mod tests {
             ("index-v2-notes.txt", 50),
             ("index-v2-Not_A_Kind.json", 60),
             ("index-v3.json", 70),
+            ("index-v2-php.json.part", 3),
+            ("index-v2.json.minisig.part", 5),
+            ("index-v2-notes.txt.part", 80),
         ] {
             std::fs::write(cache.join(path), vec![0u8; bytes]).expect("a file");
         }
 
         let reclaimable = reclaimable_cache(&cache);
 
-        assert_eq!(reclaimable.bytes, 100, "only the index's own files");
-        assert_eq!(reclaimable.files, 4);
+        assert_eq!(
+            reclaimable.bytes, 108,
+            "only the index's own files, and what a write of one left half done"
+        );
+        assert_eq!(reclaimable.files, 6);
         assert!(
             reclaimable
                 .targets
