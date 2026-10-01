@@ -43,7 +43,13 @@ const SETTLE: Duration = Duration::from_millis(250);
 pub(crate) fn start(shims: Arc<Shims>, store: Store) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         let changed = Arc::new(Notify::new());
-        let mut heard = false;
+
+        // **The first watch is followed by a scan too**, as every later one is. `bin/` was filled
+        // before this task ran, and the watch is armed only now: a tool installed in between was
+        // in neither, and nothing would ever have scanned for it. Run 36798571660 lost `yarn`
+        // there, on a Windows runner that installed it the moment the daemon said it was
+        // listening.
+        let mut heard = true;
 
         loop {
             let _watch = arm(&store, &changed).await;
@@ -108,6 +114,7 @@ async fn arm(store: &Store, changed: &Arc<Notify>) -> Option<mixengine_platform:
         notifier.notify_one();
     });
 
+    let failed = unwatched.len();
     for unwatched in unwatched {
         tracing::warn!(
             directory = %unwatched.path.display(),
@@ -115,6 +122,12 @@ async fn arm(store: &Store, changed: &Arc<Notify>) -> Option<mixengine_platform:
             "a runtime's bindir cannot be watched; `mix path rescan` finds a tool installed into it"
         );
     }
+
+    // Said, so that a tool that never became a command can be placed before or after this line.
+    tracing::debug!(
+        bindirs = bindirs.len() - failed,
+        "watching runtimes' bindirs for installed tools"
+    );
 
     Some(watch)
 }
