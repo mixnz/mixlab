@@ -547,6 +547,11 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       thread holds, so a panic inside the logging sink would have its own log line take a mutex that
       thread already owns. Named rather than closed — the file is written *first*, so the evidence
       survives a hang.
+- [ ] **T91a** A crash report records offsets into the executable, and the release keeps the
+      daemon's symbols beside the download instead of inside it.
+      Design: [2026-10-01-a-crash-report-names-its-frames-after-the-fact-design.md](../specs/2026-10-01-a-crash-report-names-its-frames-after-the-fact-design.md).
+      On Windows every release report so far has been nameless, because the `.pdb` was never shipped;
+      on Linux and macOS the symbol table was 17–18% of `mixengined`.
 - [x] **T92** Public beta: the packaging pipeline running for all runtimes across six OS/arch targets
       ([../operations/runtime-packaging.md](../operations/runtime-packaging.md)).
       Design: [2026-09-05-t92-the-six-target-matrix-design.md](../specs/2026-09-05-t92-the-six-target-matrix-design.md).
