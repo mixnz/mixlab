@@ -220,14 +220,18 @@ tauri-plugin-autostart = "2"
 # workspace, so without this section the window shipped with cargo's defaults — no LTO and 16
 # codegen units — and at 54.5 MB was the largest binary in the install. Measured on Windows:
 # LTO and one codegen unit alone take it to 46.6 MB, and `opt-level = "s"` on top to 32.9 MB.
-# Debug info goes and symbol names stay, as in the root, so a crash report still names functions.
-# `panic` is left at `unwind`. CI's branch builds override lto, codegen-units and opt-level through
+# Symbols go too, unlike the root, whose daemon keeps them for "copy diagnostics": nothing in the
+# window reads them, and on Linux and macOS they were a third of the file — 104,080 of them, 19 MB
+# of an arm64 slice that is 26.8 MB without them. Windows never shipped them, its linker writes a
+# `.pdb` that nothing keeps. See the design in
+# docs/specs/2026-10-01-the-window-ships-without-its-symbol-table-design.md. `panic` is left at
+# `unwind`. CI's branch builds override lto, codegen-units and opt-level through
 # `.github/actions/release-profile`, exactly as they do for the root.
 [profile.release]
 opt-level = "s"
 lto = "thin"
 codegen-units = 1
-strip = "debuginfo"
+strip = "symbols"
 
 # The CPU-bound crates stay at full speed: the Argon2id derivation behind a sync unlock is slow on
 # purpose, and a smaller build of it would be a slower unlock and nothing else; the ciphers, the
