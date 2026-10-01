@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-01
 ---
 
@@ -144,3 +144,36 @@ No screen. This changes how four of MixEngine's executables are compiled and how
 that carries them is. Nothing they do changes, so nothing in the window that drives them does.
 MixLab's Settings → Updates downloads a smaller payload, and that is the only place a person could
 notice.
+
+## Outcome
+
+**D1 shipped; D2 was measured and dropped**, by the rule above.
+
+Two `bench` pairs against `master`, dispatched together each time (runs 36857786884 and 36857791892,
+then 36878623762 and 36878631817). Every budget stayed green on both refs, but the shim's
+resolution, the figure its 15 ms budget gates, came out slower on the branch both times on ubuntu
+and macOS: +10% and +17%, then +28% and +21% on ubuntu (p50 0.56–0.67 ms on `master`); +93% and
++231%, then +46% and +72% on macOS. Windows was faster both times. Idle footprint, cold path and
+warm start were within the noise or better.
+
+The `release-exact` build of D2 (run 36859833025) showed a second reason. `"s"` inlines less, so
+`mixengined`, the one binary that keeps its symbols, grew from 43,845 to 60,476 of them on Linux
+x86_64. Its code shrank from 27.1 to 21.6 MB, but its symbol table grew from 5.5 to 9.0 MB, and the
+file shrank only 6%. On macOS arm64 the external symbols went from 5,286 to 21,320 and the dyld
+export trie from 0.33 to 2.19 MB, as the window's had under thin LTO, and the file grew 3%. Windows,
+whose symbols live in the `.pdb`, saw the whole 21–25%.
+
+D1 alone, from `release-exact` run 36881455711 against 36841381812:
+
+| Target | `mix` | `mixengine-shim` | `mixengine-elevate` |
+| --- | --- | --- | --- |
+| Linux x86_64 | 9.61 → 7.90 MB (−18%) | 6.31 → 5.25 MB (−17%) | 1.28 → 1.00 MB (−22%) |
+| Linux aarch64 | 9.01 → 6.83 MB (−24%) | 6.22 → 4.87 MB (−22%) | 1.35 → 0.99 MB (−27%) |
+| macOS universal | 15.23 → 12.65 MB (−17%) | 11.22 → 9.32 MB (−17%) | 2.51 → 1.97 MB (−22%) |
+| Windows x86_64, aarch64 | unchanged | unchanged | unchanged |
+
+`mixengined` and `mixengine-trampoline` are unchanged everywhere.
+
+Two leads for a later spec, neither built here. `opt-level = 3` overrides on `mixengine-core`,
+`mixengine-shim` and `tokio` might keep the resolution fast under `"s"`. And
+`-Wl,-no_exported_symbols` on `mixengined` for macOS would remove the export trie it grows.
