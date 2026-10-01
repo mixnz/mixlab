@@ -185,6 +185,6 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-09-30 | [A headless home keeps its credentials in a file](2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md) | T194a, T194b, T194c, T194d, T194e, T194f | implemented |
 | 2026-09-30 | [What is left of the standalone client becomes MixLab](2026-09-30-t176g-the-old-name-leaves-the-window-design.md) | T176g | implemented |
 | 2026-09-30 | [T196 — MixEngine reads index schema 2](2026-09-30-t196-mixengine-reads-index-schema-2-design.md) | T196a, T196b, T196c, T196d, T196e | implemented |
-| 2026-10-01 | [A crash report names its frames after the fact](2026-10-01-a-crash-report-names-its-frames-after-the-fact-design.md) | T91a | approved |
+| 2026-10-01 | [A crash report names its frames after the fact](2026-10-01-a-crash-report-names-its-frames-after-the-fact-design.md) | T91a | implemented |
 | 2026-10-01 | [MixEngine's binaries are built for size](2026-10-01-mixengine-binaries-built-for-size-design.md) |  | implemented |
 | 2026-10-01 | [The window ships without its symbol table](2026-10-01-the-window-ships-without-its-symbol-table-design.md) |  | implemented |

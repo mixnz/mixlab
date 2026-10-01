@@ -547,7 +547,7 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       thread holds, so a panic inside the logging sink would have its own log line take a mutex that
       thread already owns. Named rather than closed — the file is written *first*, so the evidence
       survives a hang.
-- [ ] **T91a** A crash report records offsets into the executable, and the release keeps the
+- [x] **T91a** A crash report records offsets into the executable, and the release keeps the
       daemon's symbols beside the download instead of inside it.
       Design: [2026-10-01-a-crash-report-names-its-frames-after-the-fact-design.md](../specs/2026-10-01-a-crash-report-names-its-frames-after-the-fact-design.md).
       On Windows every release report so far has been nameless, because the `.pdb` was never shipped;

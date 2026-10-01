@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-01
 task: T91a
 ---
@@ -280,6 +280,34 @@ so `"s"` stays a spec of its own.
 ## Roadmap
 
 **T91a**, under T91 in [phase 9](../roadmap/phase-9-ship.md), pointing here.
+
+## Outcome
+
+Built as designed, with the three corrections D4 and D5 record: the `.pdb` and its executable
+travel together, a Windows release is built with line tables, and the script reads the symbols
+itself because rustup's `llvm-tools` has no `llvm-symbolizer`.
+
+`mixengined` as it ships, from `release-exact` run 36915070507 against 36841381812:
+
+| Target | Before | After | Change |
+| --- | --- | --- | --- |
+| Linux x86_64 | 32.55 MB | 27.12 MB | −16.7% |
+| Linux aarch64 | 29.95 MB | 23.11 MB | −22.8% |
+| macOS universal | 55.21 MB | 46.02 MB | −16.7% |
+| Windows x86_64 | 29.27 MB | 29.31 MB | +0.12%, the new code; the `.pdb` does not ship |
+
+Verified:
+
+- The `bench` job's end-to-end check (run 36906744850) passed on Linux, Windows and macOS. In each,
+  a stripped release daemon panicked and its report read back as `mixengined::crash::probe::raise`.
+- On an Apple-silicon Mac (2026-10-02), with the headless `.pkg` of run 36915070507:
+  - the arm64 slice's ad-hoc signature verifies after the strip;
+  - the stripped daemon serves `mix status`;
+  - each symbol archive's `LC_UUID` equals its slice's;
+  - a local probe build symbolised the same way.
+- The x86_64 slice was never signed by the linker, before this change or after it.
+  `packaging/symbols.sh` verifies a signature only where the unstripped slice had one, which
+  the first `build` run (36910692417) showed was needed.
 
 ## MixLab
 

@@ -23,6 +23,7 @@
   you can download.
 - MixLab is about half its old size on Linux and macOS, and a third smaller on Windows.
 - On Linux and macOS, `mix` and the helper programs beside it are about a fifth smaller.
+- On Linux and macOS, the MixEngine daemon is about a sixth smaller.
 
 ### Fixed
 - MixEngine's screens show that they are loading while they wait for MixEngine's answer, instead
