@@ -203,7 +203,9 @@ impl Reports {
                 line,
                 column,
             }),
-            frames: frames(backtrace),
+            frames: Vec::new(),
+            symbols: frames(backtrace),
+            build_id: None,
         };
 
         let bytes = serde_json::to_vec_pretty(&report).map_err(std::io::Error::other)?;
@@ -251,7 +253,7 @@ impl Reports {
             let read = std::fs::read(&path)
                 .map_err(|error| error.to_string())
                 .and_then(|bytes| {
-                    serde_json::from_slice::<CrashReport>(&bytes).map_err(|error| error.to_string())
+                    CrashReport::from_json(&bytes).map_err(|error| error.to_string())
                 });
 
             match read {
@@ -502,7 +504,7 @@ mod tests {
         assert_eq!(written.format, CRASH_FORMAT);
         assert_eq!(written.thread.as_deref(), Some("tokio-runtime-worker"));
         assert_eq!(written.location.expect("a location").line, 412);
-        assert_eq!(written.frames, ["mixengine_daemon::services::start"]);
+        assert_eq!(written.symbols, ["mixengine_daemon::services::start"]);
     }
 
     /// Two panics in the same millisecond of one process is what a crash loop looks like, and
@@ -695,7 +697,7 @@ mod tests {
         let raised_here = files(home.path()).into_iter().any(|path| {
             std::fs::read(path)
                 .ok()
-                .and_then(|bytes| serde_json::from_slice::<CrashReport>(&bytes).ok())
+                .and_then(|bytes| CrashReport::from_json(&bytes).ok())
                 .and_then(|report| report.location)
                 .is_some_and(|at| at.file.ends_with("crash.rs"))
         });

@@ -46,6 +46,7 @@ export * from "./CleanupReport";
 export * from "./CommandConflict";
 export * from "./CommandOrigin";
 export * from "./CommandSource";
+export * from "./CrashFrame";
 export * from "./CrashLocation";
 export * from "./CrashReport";
 export * from "./CredentialStore";
