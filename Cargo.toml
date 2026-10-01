@@ -401,8 +401,9 @@ unwrap_used = "warn"
 [profile.release]
 codegen-units = 1
 lto = "thin"
-# Debug info goes, symbol names stay: a daemon crash report is worthless without function names,
-# and "copy diagnostics" (T66) is meant to produce something a human can act on.
+# Debug info goes, symbol names stay — for `mixengined`, whose crash report is worthless without
+# function names, and "copy diagnostics" (T66) is meant to produce something a human can act on. The
+# binaries that read no symbols of their own drop them below.
 strip = "debuginfo"
 # `panic = "abort"` must never be set: the RPC layer catches a panic per request and returns
 # `internal` instead of taking every managed service down with it.
@@ -414,6 +415,19 @@ strip = "debuginfo"
 opt-level = "z"
 strip = "symbols"
 codegen-units = 1
+
+# **`mix`, the shim and the helper ship without symbols.** None of them installs a panic hook or
+# reads a backtrace — `mixengined`'s `crash.rs` is the only one in `crates/` — and on Linux and
+# macOS the table was 17–22% of each file; Windows keeps it in a `.pdb` already. `strip` acts when the
+# binary is linked, so an override on its own package is enough. The helper's version does not move
+# for this: `helper-lock` fingerprints its sources and dependencies, not the profile (T182b's D1).
+# See docs/specs/2026-10-01-mixengine-binaries-built-for-size-design.md, D1.
+[profile.release.package.mixengine-cli]
+strip = "symbols"
+[profile.release.package.mixengine-shim]
+strip = "symbols"
+[profile.release.package.mixengine-elevate]
+strip = "symbols"
 
 # **The compressors and the hash run optimised even in a debug build (T170c).** The real-server
 # suites pack a distribution of several hundred megabytes into an archive, and the daemon unpacks and
