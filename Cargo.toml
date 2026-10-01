@@ -438,3 +438,13 @@ opt-level = 3
 opt-level = 3
 [profile.dev.package.sha2]
 opt-level = 3
+
+# **Dependencies keep file and line, not full debug info.** Every test file is a program of its
+# own, and linking a hundred and forty of them with every dependency's full debug info is what ran
+# a 16 GB Windows machine out of memory during a clean `cargo test --workspace --no-run`. Measured
+# on 2026-10-01, one clean build each: 459 s, 24 GB of `target/` and 40 MB of memory left at the
+# worst moment; with this, 398 s, 19 GB and 2.8 GB left. A panic inside a dependency still names its
+# file and line, which is what a backtrace is read for; what is lost is a debugger showing a
+# dependency's local variables. This workspace's own crates keep their full debug info.
+[profile.dev.package."*"]
+debug = "line-tables-only"
