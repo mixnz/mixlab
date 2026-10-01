@@ -28,7 +28,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0019](0019-an-added-response-member-is-optional.md) | A member added to a response is optional on the wire, and the protocol does not bump for it | Accepted |
 | [0020](0020-the-published-contract-is-the-shape-the-daemon-writes.md) | The published contract is the shape the daemon writes, not everything it accepts | Accepted |
 | [0021](0021-the-handbook-is-one-corpus-published-three-ways.md) | The handbook is one Markdown corpus published three ways, and help is not an API method | Accepted |
-| [0022](0022-a-crash-report-is-recorded-by-default-and-sent-by-nothing.md) | A crash report is recorded by default and sent by nothing | Accepted |
+| [0022](0022-a-crash-report-is-recorded-by-default-and-sent-by-nothing.md) | A crash report is recorded by default and sent by nothing | Accepted; its field list widened by 0060 |
 | [0023](0023-an-arm64-windows-machine-runs-the-x86_64-build.md) | An ARM64 Windows machine installs the x86_64 build, and is told that it did | Accepted |
 | [0024](0024-a-build-that-is-not-a-release-keeps-its-own-home.md) | A build that is not a release keeps its own home | Accepted |
 | [0025](0025-a-credential-is-answered-only-by-a-method-that-exists-to-answer-it.md) | A credential is answered only by a method that exists to answer it | Accepted |
@@ -59,6 +59,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0057](0057-a-runtime-s-commands-are-in-bin-only-while-it-is-installed.md) | A runtime's commands are in `bin/` only while it is installed | Accepted |
 | [0058](0058-the-tray-is-mixlabs-and-a-module-lends-it-a-section.md) | The tray is MixLab's, and a module lends it a section | Accepted |
 | [0059](0059-a-linux-release-may-keep-a-homes-credentials-in-a-file.md) | A Linux release may keep a home's credentials in a file | Accepted |
+| [0060](0060-a-crash-report-carries-offsets-and-the-release-keeps-the-symbols.md) | A crash report carries offsets, and the release keeps the symbols | Accepted |
 
 ### Desktop (recorded in the standalone client)
 
