@@ -55,6 +55,12 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$out"
 
+# Write the archive from `$work`. From inside `$out`, under its bare name: Git Bash's GNU tar reads
+# `C:` at the front of an archive path as a remote host, and CI's `RUNNER_TEMP` on Windows is one.
+pack() {
+  (cd "$out" && tar -czf "$(basename "$archive")" -C "$work" "$@")
+}
+
 # The identifier a symbol file and a report are matched by, as each platform's own tool prints it —
 # the same spelling `mixengine_platform::crash_image` writes into a report.
 build_id() {
@@ -81,7 +87,7 @@ case "$target" in
     # ships, since nothing is stripped on this system.
     cp "$built" "$work/mixengined.exe"
     cp "$pdb" "$work/mixengined.pdb"
-    tar -czf "$archive" -C "$work" mixengined.exe mixengined.pdb
+    pack mixengined.exe mixengined.pdb
     ;;
 
   *-linux-* | *-apple-darwin)
@@ -128,7 +134,7 @@ case "$target" in
       }
     fi
 
-    tar -czf "$archive" -C "$work" mixengined.sym
+    pack mixengined.sym
     ;;
 
   *)
