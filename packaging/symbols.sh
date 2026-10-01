@@ -119,8 +119,10 @@ case "$target" in
     fi
 
     # Apple's strip rewrites a binary the linker ad-hoc signed; an Apple-silicon Mac will not run one
-    # whose signature no longer matches it.
-    if [[ "$target" == *-apple-darwin ]]; then
+    # whose signature no longer matches it. **Only where there was one to keep**: the linker signs
+    # arm64 slices and leaves x86_64 ones unsigned, which an Intel Mac runs as they are — so
+    # `x86_64-apple-darwin` has nothing to verify, before the strip or after it (run 36910692417).
+    if [[ "$target" == *-apple-darwin ]] && codesign --verify "$built" 2>/dev/null; then
       codesign --verify --verbose=2 "$staged"
     fi
 
