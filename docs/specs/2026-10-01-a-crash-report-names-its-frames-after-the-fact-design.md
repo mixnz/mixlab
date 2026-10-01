@@ -169,7 +169,8 @@ calls `stage.sh` again with `MIX_PREBUILT=1` to copy rather than compile. So:
 - **`binaries-hand-on.sh` also carries `mixengined.pdb`** on Windows. The unstripped Linux and macOS
   executables are what it carries already.
 - **`stage.sh`, per target,** copies the daemon's symbols aside: the unstripped executable on Linux
-  and macOS, the `.pdb` on Windows. It writes them as
+  and macOS, the `.pdb` and the executable it belongs to on Windows (the executable's sections place
+  the `.pdb`'s symbols, and its CodeView record is the build identifier). It writes them as
   `$MIX_OUT/dist/mixengined-<version>-<target>.sym.tar.gz`, then strips the copy it stages:
   `objcopy --strip-all` on Linux, `strip` on macOS. Each macOS slice is stripped and keeps its own
   symbol file before `packaging/macos/build.sh` joins the two with `lipo`, because each slice has
@@ -183,6 +184,16 @@ calls `stage.sh` again with `MIX_PREBUILT=1` to copy rather than compile. So:
   and helpers by `mixlab-<version>-…` and `mixengine-elevate-<helper version>-…`, and
   `mixengined-<version>-<target>.sym.tar.gz` matches neither. A rename that started with either
   prefix would put a symbol file in front of every updater.
+
+**A Windows release is built with line tables** (`-C debuginfo=line-tables-only`, beside T150's
+`crt-static`, both from `mix_release_rustflags` in `packaging/common.sh`). Found while building D5,
+on 2026-10-01: a release `.pdb` without them holds only the public symbols, which after LTO are a
+minority of the functions, and a release daemon's report read through them put most frames in the
+wrong function (`crash::probe::raise` read as `RawVec::grow_one`). With them the `.pdb` holds every
+function's name, address and size. On a small release-profile program the executable is
+byte-for-byte the same size with and without them, because MSVC keeps debug information in the
+`.pdb` alone; the daemon's `.pdb` grows from 6.8 MB to 78 MB, and travels only in the symbol archive. Linux and macOS need nothing of the kind: their
+symbol tables already list every function.
 
 **Checks the strip must pass**, in `stage.sh` itself, which already opens what it made: the build
 identifier is the same in the stripped binary and in its symbol file (`objcopy --strip-all` keeps
@@ -199,9 +210,16 @@ bundle's `crashes.json`:
    `os`/`arch`, through `gh`, and checks its minisign signature against `packaging/updates.pub`.
 2. It refuses to go on when the symbol file's build identifier is not the report's `build_id`. A
    report from a self-built binary therefore says so, instead of printing confident wrong names.
-3. It runs **`llvm-symbolizer`** (rustup's `llvm-tools` component), which reads ELF, Mach-O and PDB
-   alike, over `offset − 1` for each frame, and prints the frames as names. On Windows it passes
-   `--relative-address`.
+3. It reads the symbols **itself**, and looks each frame up at `offset − 1`:
+   - `.symtab` on Linux;
+   - `LC_SYMTAB` on macOS;
+   - on Windows, the procedures each module records in the `.pdb`, placed by the executable's
+     sections, with the public symbols as a fallback.
+
+   It undoes Rust's v0 and legacy mangling and prints the frames as names. The design first named
+   `llvm-symbolizer` from rustup's `llvm-tools`, but that component does not ship it, which was
+   checked on 2026-10-01. A system LLVM would be one more thing every reader and every CI leg had
+   to install. Reading the three formats takes Node and nothing else.
 
 Nothing it prints is written back into the report, the bundle or anywhere else.
 
@@ -245,10 +263,11 @@ so `"s"` stays a spec of its own.
   - a format-1 file loads and keeps `format: 1`;
   - *"nothing a panic said reaches the file"* still holds with the new fields.
 - `mixengine-platform`, on each OS, against its own test binary: a base, a range that contains a
-  function of the test, and a build identifier equal to what `llvm-readobj` reports for the same
-  file.
+  function of the test, a build identifier, and return addresses inside the range. That the
+  identifier is the one a symbol file carries is proved end to end below, where the script reads it
+  from the file.
 - **End to end, on all three OSes, in CI.** A panic in a release-profile daemon, stripped by
-  `stage.sh`, gives a report that `scripts/symbolize.mjs` turns back into `mixengine_daemon::` names
+  `stage.sh`, gives a report that `scripts/symbolize.mjs` turns back into `mixengined::` names
   using the symbol file from the same run. **A Cargo feature, `crash-probe`, is how it panics.**
   With it, `main` panics right after `Reports::install` when `MIXENGINE_CRASH_PROBE` is set; without
   it, which is every build `stage.sh` makes, the code is not compiled. A test-only binary linking the

@@ -7,7 +7,7 @@
 # Writes `<out>/mixengined-<version>-<target>.sym.tar.gz` from the binary cargo wrote, which still
 # has its symbol table (`strip = "debuginfo"` in the root's release profile), then strips the staged
 # copy in place. On Windows the symbols were never in the executable: the archive holds the linker's
-# `.pdb`, and nothing is stripped.
+# `.pdb` and the executable it belongs to, and nothing is stripped.
 #
 # **The archive's name is chosen to stay out of the update feed.** `feed.sh` picks its payloads by
 # `mixlab-<version>-…` and its helpers by `mixengine-elevate-<version>-…`; a rename that started
@@ -76,8 +76,12 @@ case "$target" in
       echo "binaries-hand-on.sh carries it from the job that built it" >&2
       exit 1
     }
+    # The executable too: its sections place the `.pdb`'s symbols, and its CodeView record is the
+    # build identifier `scripts/symbolize.mjs` checks a report against. It is the very file that
+    # ships, since nothing is stripped on this system.
+    cp "$built" "$work/mixengined.exe"
     cp "$pdb" "$work/mixengined.pdb"
-    tar -czf "$archive" -C "$work" mixengined.pdb
+    tar -czf "$archive" -C "$work" mixengined.exe mixengined.pdb
     ;;
 
   *-linux-* | *-apple-darwin)

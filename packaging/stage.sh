@@ -80,9 +80,11 @@ export MIXENGINE_RELEASE=1
 # statically, because `tauri-build` does so for every Tauri application. Here, and not in
 # `.cargo/config.toml`, which sets no flags: a release is what has to run on a bare machine, and a
 # test build on a developer's machine does not. `--target` is what keeps the flag off build scripts.
-case "${target:-$(mix_host_target)}" in
-  *-windows-msvc) export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C target-feature=+crt-static" ;;
-esac
+# The flags themselves, and T91a's line tables beside them, are `mix_release_rustflags`'s.
+release_flags="$(mix_release_rustflags "${target:-$(mix_host_target)}")"
+if [ -n "$release_flags" ]; then
+  export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }$release_flags"
+fi
 
 if [ -n "$target" ]; then
   built="$MIX_ROOT/target/$target/release"

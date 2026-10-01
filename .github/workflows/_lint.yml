@@ -56,6 +56,12 @@ jobs:
           node --test scripts/check-client-surface.test.mjs
           node scripts/check-client-surface.mjs
 
+      # T91a: the script that turns a crash report's offsets back into names reads three object
+      # formats and undoes two manglings by hand, so its parsers are tested on their own. The `bench`
+      # job proves it against a real stripped daemon on every system. Needs only Node.
+      - name: Crash report symbolisation
+        run: node --test scripts/symbolize.test.mjs
+
       # No toolchain action: rust-toolchain.toml is the single source of truth for the version and
       # for the clippy/rustfmt components. Given no argument, `rustup toolchain install` installs
       # exactly what that file pins — note that `rustup show` stopped installing anything in 1.28.

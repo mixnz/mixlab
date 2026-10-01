@@ -32,7 +32,9 @@ the deadlock 0022 accepted as a named hazard.
    of their own.
 3. **The release keeps the daemon's symbols beside the download.** Packaging strips the shipped
    `mixengined` and writes its symbols as `mixengined-<version>-<target>.sym.tar.gz`, which the
-   release signs and publishes like every other asset, outside the update feed.
+   release signs and publishes like every other asset, outside the update feed. A Windows release
+   is built with line tables, which go into the `.pdb` alone: without them its symbols are the
+   public ones only, and after LTO those miss most functions.
 4. **Names are restored by whoever reads the report**, with `scripts/symbolize.mjs`, which refuses
    a symbol file whose build identifier is not the report's.
 
@@ -49,8 +51,7 @@ stays out of the report, and `mixengine-elevate`, `mix` and the shim install no 
 
 **Hard, and accepted:**
 
-- **A report alone no longer reads as names.** Someone has to run the script, with `gh` and
-  rustup's `llvm-tools`. Before, the reader of a Linux or macOS report needed nothing; now every
+- **A report alone no longer reads as names.** Someone has to run the script, with Node and `gh`. Before, the reader of a Linux or macOS report needed nothing; now every
   reader needs the script. Windows reports were unreadable either way.
 - **A self-built release cannot be symbolised from a published asset.** Its build identifier
   matches nothing published, and the script says so rather than guess.
