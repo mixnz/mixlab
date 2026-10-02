@@ -245,6 +245,9 @@ impl<S: Store> Keeper<S> {
     /// Under the vault this clears the pre-vault entry for this id as well. Nearly always there is
     /// none and this costs a lookup that finds nothing; when there is one, this is what stops an
     /// old copy of a password outliving the password itself.
+    ///
+    /// A save that would leave the vault as it is writes nothing. The pre-vault entry is still
+    /// cleared: that lookup is not a write, and a leftover is exactly what it is there to remove.
     fn save(&self, id: &str, secrets: &Secrets) -> Result<(), AppError> {
         if !self.vaulted {
             if secrets.is_empty() {
@@ -262,8 +265,12 @@ impl<S: Store> Keeper<S> {
         } else {
             next.insert(id.to_string(), secrets.clone());
         }
-        self.flush(&next)?;
-        *vault = next;
+        // The same vault is not written again: on macOS a write moves the item's modification
+        // date and may narrow its trust to this build, for a change nobody made.
+        if next != *vault {
+            self.flush(&next)?;
+            *vault = next;
+        }
         self.store.forget(id)
     }
 
@@ -318,6 +325,10 @@ impl<S: Store> Keeper<S> {
         };
         if let Some(replaced) = replaced {
             scrub(replaced);
+        }
+        if next == *vault {
+            scrub_vault(next);
+            return Ok(());
         }
         match self.flush(&next) {
             Ok(()) => {
@@ -517,6 +528,9 @@ mod tests {
     struct MemoryStore {
         items: Mutex<HashMap<String, String>>,
         reads: Mutex<Vec<String>>,
+        /// Every account written, in order — a write on macOS is what moves the item's
+        /// modification date, and possibly what narrows its trust to this build.
+        writes: Mutex<Vec<String>>,
         /// Makes every write fail, standing in for a credential store that is locked, full, or
         /// whose dialog the user answered with *Deny*.
         refuse_writes: Mutex<bool>,
@@ -546,6 +560,15 @@ mod tests {
                 .filter(|asked| *asked == account)
                 .count()
         }
+
+        fn writes_of(&self, account: &str) -> usize {
+            self.writes
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|written| *written == account)
+                .count()
+        }
     }
 
     impl Store for Arc<MemoryStore> {
@@ -558,6 +581,7 @@ mod tests {
             if *self.refuse_writes.lock().unwrap() {
                 return Err(crate::err!("error.cannotSavePassword"));
             }
+            self.writes.lock().unwrap().push(account.to_string());
             self.seed(account, value);
             Ok(())
         }
@@ -766,6 +790,53 @@ mod tests {
 
         keeper.delete("a").unwrap();
         assert!(!store.has(VAULT), "an empty vault is still deleted");
+    }
+
+    /// A save that changes nothing writes nothing. On macOS a write moves the vault's modification
+    /// date, and saving a pin, a sidebar width or a sync page that brought the same password must
+    /// not be one.
+    #[test]
+    fn saving_what_is_already_there_writes_nothing() {
+        let (store, keeper) = vaulted();
+        keeper.save("a", &secrets("hunter2")).unwrap();
+
+        keeper.save("a", &secrets("hunter2")).unwrap();
+        // Deleting what was never there changes nothing either.
+        keeper.delete("never-saved").unwrap();
+
+        assert_eq!(store.writes_of(VAULT), 1);
+        assert_eq!(keeper.load("a").unwrap(), secrets("hunter2"));
+
+        keeper.save("a", &secrets("changed")).unwrap();
+        assert_eq!(store.writes_of(VAULT), 2, "a real change is still written");
+    }
+
+    /// The same for sync's own entry: a refresh that hands back the token already kept writes
+    /// nothing, and a new token is written.
+    #[test]
+    fn writing_the_same_own_value_writes_nothing() {
+        let (store, keeper) = vaulted();
+        keeper.write_own("sync-master-key", "one").unwrap();
+
+        keeper.write_own("sync-master-key", "one").unwrap();
+        keeper.forget_own("never-kept").unwrap();
+        assert_eq!(store.writes_of(VAULT), 1);
+
+        keeper.write_own("sync-master-key", "two").unwrap();
+        assert_eq!(store.writes_of(VAULT), 2);
+    }
+
+    /// Skipping the write does not skip the cleanup: a connection deleted before anything read it
+    /// still takes its pre-vault entry with it.
+    #[test]
+    fn deleting_an_unread_leftover_still_removes_it() {
+        let (store, keeper) = vaulted();
+        store.seed("old", &serde_json::to_string(&secrets("legacy")).unwrap());
+
+        keeper.delete("old").unwrap();
+
+        assert!(!store.has("old"));
+        assert_eq!(store.writes_of(VAULT), 0);
     }
 
     /// Without the vault, sync's entry is an item of its own, as a connection's is.
