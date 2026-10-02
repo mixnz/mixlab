@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-02
 ---
 
@@ -107,6 +107,38 @@ installed `/Applications/MixLab.app`: `codesign --verify --strict --deep` must p
   - installed over the current release, MixLab launches, opens a saved connection, and the
     Keychain asks no more than once.
 - A full `release-exact` run before the branch merges.
+
+## Outcome
+
+**D1 as written, without its fallback.** CI's macOS `build` leg (run 36973490349) signed the bundle
+and `codesign --verify --strict --deep` passed in `build.sh`. The probe's new M6 line passed on the
+installed copy. On an Apple-silicon Mac, with the same package, on 2026-10-02:
+
+- `codesign -dv`: `Identifier=io.github.mixnz.mixlab`, `flags=0x2(adhoc)`, `Info.plist entries=16`,
+  `Sealed Resources version=2 rules=13 files=2`. Both slices are signed (`--arch x86_64` and
+  `--arch arm64`). `--verify --strict --deep` passes before the install and after it.
+- `Contents/Resources/mixengine-elevate` is byte-for-byte the staged helper and the release's
+  `mixengine-elevate-0.1.4-macos-universal` asset. `codesign` sealed it as a resource and accepted it
+  as it is, linker-signed universal Mach-O and all, so the fallback was not needed.
+- Installed over the released 0.0.13, MixLab launched and opened a saved connection.
+
+**The Keychain asked twice, and this change is not why.** The Verification above expected at most
+one prompt. The branch build's first launch asked for two items: `mixengine` and `MixLab`. A control
+answered it. The control was a 0.0.13 package built before this change (run 36920716165), carrying
+only the linker's signature, with a code hash the Keychain had not seen. Its first launch asked for
+the same two items, at launch, before any connection was opened. So every new build costs two
+prompts:
+
+- one for `MixLab`'s vault, which `apps/desktop/CLAUDE.md` keeps to one item;
+- one for a `mixengine` item that MixLab reads at start-up, which that rule does not cover.
+
+Putting the branch build back after the control asked once more, for `MixLab` alone. The vault's
+modification time moves on every launch, so MixLab writes it at start-up. The observed hypothesis
+is that the write leaves the item trusting only the build that made it. The two start-up accesses
+are a question for MixLab's secrets code, not for how the bundle is signed, and they are left to a
+task of their own.
+
+No changelog line: nothing a person meets changes with this.
 
 ## MixLab
 
