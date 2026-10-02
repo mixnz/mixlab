@@ -40,7 +40,7 @@ interface Secrets extends SshSecrets {
  * app deliberately doesn't parse for anything but cosmetics.
  *
  * `keyringRef` set means `config.password` is only ever a copy resolved from MixEngine's own
- * keyring entry for display — it must not be written here too, or every Save would leave behind
+ * keyring entry to connect — it must not be written here too, or every Save would leave behind
  * exactly the duplicate the reference exists to avoid.
  */
 export function readSecrets(config: ConnectionConfig, keyringRef?: string): Secrets {
@@ -81,12 +81,30 @@ export function deleteSecrets(id: string): Promise<void> {
   return invoke<void>("secrets_delete", { id });
 }
 
-/** The password `keyringRef` names, or `undefined` when MixEngine no longer has that entry — a
- *  normal end, not an error: the connection reads as one with no password saved. */
-function resolveKeyringRef(keyringRef: string): Promise<string | undefined> {
-  return invoke<string | null>("secrets_resolve_mixengine", { key: keyringRef }).then(
-    (password) => password ?? undefined,
-  );
+/**
+ * `config` with the password `keyringRef` names filled in — what connecting needs, and nothing
+ * else does. Asked only when the box is empty: a password typed over the reference, or one a
+ * handoff brought along, is used as it is.
+ *
+ * This is the one place a saved connection reaches MixEngine's keyring. Listing, syncing and
+ * saving never do, so a launch asks the Keychain about MixLab's own vault and nothing else
+ * (ADR 0056). `undefined` when MixEngine no longer has the entry — a normal end, not an error:
+ * the connection dials with no password, as one that never had one saved would.
+ */
+export async function withResolvedPassword(
+  config: ConnectionConfig,
+  keyringRef: string | null | undefined,
+): Promise<ConnectionConfig> {
+  if (!keyringRef || config.password) return config;
+  const password = await invoke<string | null>("secrets_resolve_mixengine", { key: keyringRef });
+  return { ...config, password: password ?? undefined };
+}
+
+/** Whether a tab restored as connected dials again at launch. Not one whose password is
+ *  MixEngine's: that would be a second Keychain question before anybody asked to connect. It comes
+ *  back as its form, and Connect resolves it. */
+export function reconnectsOnRestore(entry: SavedConnection): boolean {
+  return !entry.keyringRef;
 }
 
 /** What is actually on disk, credentials already removed. */
@@ -126,10 +144,6 @@ export async function loadSavedConnections(): Promise<SavedConnection[]> {
         await saveSecrets(entry.id, { ...kept, ...inFile });
       }
       const config = withSecrets(entry.config, { ...kept, ...inFile });
-      // A reference wins over anything above: this entry was never meant to keep its own copy, so
-      // the password shown is always resolved fresh from MixEngine's keyring rather than read
-      // back from this app's own store.
-      if (entry.keyringRef) config.password = await resolveKeyringRef(entry.keyringRef);
       return { ...entry, config };
     }),
   );
