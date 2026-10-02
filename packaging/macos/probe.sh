@@ -249,6 +249,17 @@ else
       record M6 "the installed mixengined runs" "no"
       fail "an installed mixengined would not execute on this machine"
     fi
+    # The window, signed ad-hoc as a whole bundle by `macos/build.sh` — see
+    # docs/specs/2026-10-02-mixlab-app-is-signed-ad-hoc-as-a-bundle-design.md. Asked of the copy
+    # the installer wrote, because a seal the install broke is the failure this would miss elsewhere.
+    record M6 "codesign -dv on the installed $MIX_WINDOW_APP" "$(codesign -dv "$window" 2>&1 | tr '\n' ' ' || true)"
+    if codesign --verify --strict --deep "$window" 2>/dev/null; then
+      record M6 "the installed $MIX_WINDOW_APP verifies --strict --deep" "yes"
+    else
+      record M6 "the installed $MIX_WINDOW_APP verifies --strict --deep" \
+        "no — $(codesign --verify --strict --deep "$window" 2>&1 | tr '\n' ' ' || true)"
+      fail "the installed $MIX_WINDOW_APP is not a validly signed bundle"
+    fi
   elif [ "$asked" = "1" ]; then
     void M5 "installer(8) refused, so there is nothing installed to look at"
     void M6 "installer(8) refused, so there is nothing installed to run"
