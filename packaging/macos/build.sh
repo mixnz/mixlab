@@ -15,9 +15,9 @@
 source "$(dirname "${BASH_SOURCE[0]}")/../common.sh"
 
 # `ditto` is what copies an application bundle on this system; `PlistBuddy` is how the bundle is
-# asked what it will launch. Both are in the box on every macOS, and named here on this file's own
-# rule that a missing tool says which.
-mix_require lipo pkgbuild pkgutil ditto
+# asked what it will launch; `codesign` signs the window as a bundle. All are in the box on every
+# macOS, and named here on this file's own rule that a missing tool says which.
+mix_require lipo pkgbuild pkgutil ditto codesign
 
 version="$(mix_version)"
 dist="$MIX_OUT/dist"
@@ -123,6 +123,23 @@ chmod 755 \
   "$root/Library/PrivilegedHelperTools/dev.mixengine.elevate" \
   "$root/Applications/$MIX_WINDOW_APP/Contents/Resources/mixengine-elevate" \
   "$root/Applications/$MIX_WINDOW_APP/Contents/MacOS/$window_exe"
+
+# **MixLab.app is signed ad-hoc as a whole bundle** — the design in
+# docs/specs/2026-10-02-mixlab-app-is-signed-ad-hoc-as-a-bundle-design.md. Until this, only the
+# arm64 executable carried the linker's signature: `Info.plist` was not bound, the resources were not
+# sealed, the x86_64 slice was unsigned, and `codesign --verify --strict` refused every build.
+#
+# **Here, and not through Tauri's `signingIdentity`**, because the lines above change the bundle
+# after Tauri built it — the helper copy and the modes — and a seal made before them would be broken
+# on every install. This is the bundle's last change before `pkgbuild`.
+#
+# **Ad-hoc, `-`: no certificate, and two things stay exactly as they were.** Gatekeeper still warns
+# about the `.pkg`, which only a Developer ID and notarization end, and the Keychain still treats every
+# build as a new identity, because an ad-hoc requirement is that build's own code hash. A Developer ID
+# would replace `-` on this line.
+codesign --force --deep --sign - "$root/Applications/$MIX_WINDOW_APP"
+codesign --verify --strict --deep --verbose=2 "$root/Applications/$MIX_WINDOW_APP"
+codesign -dv --verbose=2 "$root/Applications/$MIX_WINDOW_APP"
 
 # **T95: a release must not admit to being a development build.** `mixengine_platform::RELEASE` is
 # compiled in from `MIXENGINE_RELEASE`, which `packaging/stage.sh` exports; if that ever stops
