@@ -127,7 +127,9 @@ src-tauri/src/       Rust backend
   everything MixLab keeps under service `MixLab` goes into the one `vault` item in
   `src-tauri/src/secrets.rs`, never into an item beside it. Twice this has regressed (per-connection
   entries, then sync's `sync-master-key`); `sync_and_the_connections_are_one_visit_to_the_store` is
-  the test that says so.
+  the test that says so. Nothing on the launch path reads MixEngine's `mixengine` item either: a
+  saved connection's `keyringRef` is resolved only in `connect` (`withResolvedPassword`), and the
+  vault is written only when it changes.
 - **This app is MixLab, and its old name appears nowhere but in the values that fix up a user's
   machine**: `import.rs`'s identifier and marker, `secrets.rs`'s `LEGACY_SERVICE`, the storage
   keys in `public/storage-keys.js`, `shell/themeModel.ts` and `modules/terminal/settings.ts`, and

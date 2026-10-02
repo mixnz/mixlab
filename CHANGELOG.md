@@ -28,6 +28,9 @@
 ### Fixed
 - MixEngine's screens show that they are loading while they wait for MixEngine's answer, instead
   of saying there is nothing there or showing a blank page.
+- On macOS, the first launch of a new version asks for your Keychain password once instead of
+  twice. A connection MixEngine handed over reads its password when you press Connect, and a tab
+  left connected to one opens on its form.
 
 ## v0.0.13
 
