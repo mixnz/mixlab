@@ -188,3 +188,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-01 | [A crash report names its frames after the fact](2026-10-01-a-crash-report-names-its-frames-after-the-fact-design.md) | T91a | implemented |
 | 2026-10-01 | [MixEngine's binaries are built for size](2026-10-01-mixengine-binaries-built-for-size-design.md) |  | implemented |
 | 2026-10-01 | [The window ships without its symbol table](2026-10-01-the-window-ships-without-its-symbol-table-design.md) |  | implemented |
+| 2026-10-02 | [MixLab.app is signed ad-hoc as a bundle](2026-10-02-mixlab-app-is-signed-ad-hoc-as-a-bundle-design.md) |  | implemented |
