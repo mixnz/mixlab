@@ -416,6 +416,7 @@ function ConnectionForm({
                         ref={passwordRef}
                         type={passwordShown ? "text" : "password"}
                         value={password}
+                        placeholder={form.keyringRef ? t("connection.passwordFromMixEngine") : undefined}
                         onChange={(e) => set("password", e.target.value)}
                         autoComplete="new-password"
                       />

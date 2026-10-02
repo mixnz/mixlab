@@ -8,6 +8,7 @@ import {
   useSavedConnectionsLoaded,
 } from "./savedConnectionsStore";
 import type { ConnectionConfig, DbKind, SavedConnection } from "./types";
+import { reconnectsOnRestore, withResolvedPassword } from "./savedConnections";
 import { parseDbTabState } from "./tabState";
 import { takeHandoff } from "./handoff";
 import { arrivesConnected } from "./handoffArrival";
@@ -436,17 +437,28 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
    * the only source — the Connect button passes nothing and has to fall back to `editingId`, or
    * the commonest path of all (click a connection, press Connect) would leave the tab pointing at
    * nothing and reopening blank next launch.
+   *
+   * `keyringRef` follows the config it belongs to: the form's when the form is what dials, the
+   * entry's when `openAndConnect` passes one, and none for a handoff, which brought its password.
    */
-  async function connect(overrideConfig?: ConnectionConfig, title?: string, savedId?: string) {
+  async function connect(
+    overrideConfig?: ConnectionConfig,
+    title?: string,
+    savedId?: string,
+    keyringRef: string | null = overrideConfig ? null : form.keyringRef,
+  ) {
     if (connectingRef.current) return;
     // Read the form before the flag goes up: anything that threw between the two would leave the
     // flag raised with no `finally` to lower it, and the tab stuck on "Connecting…" for good.
-    const config = overrideConfig ?? configFrom(form);
+    const typed = overrideConfig ?? configFrom(form);
     connectingRef.current = true;
     setConnecting(true);
     setError("");
     setStatus(t("connection.connecting"));
     try {
+      // MixEngine's password is read here and nowhere earlier: a launch asks the Keychain about
+      // MixLab's vault alone (ADR 0056), and this is the moment someone asked to connect.
+      const config = await withResolvedPassword(typed, keyringRef);
       const id = await invoke<string>("connect_db", { config });
       /* The tab was closed while this was dialling — over an SSH tunnel to a server that is slow to
          answer, that is a wait long enough to close a tab in. This is the only moment anyone knows
@@ -501,7 +513,7 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
 
   function openAndConnect(entry: SavedConnection) {
     applySavedConnection(entry);
-    connect(entry.config, entry.name, entry.id);
+    connect(entry.config, entry.name, entry.id, entry.keyringRef ?? null);
   }
 
   /* The tab coming back to what it had open, once, the first time it is looked at — which for a
@@ -516,13 +528,16 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
      that tab opened blank under a title naming a connection it no longer pointed at.
 
      `openAndConnect` and `applySavedConnection` are deliberately not dependencies; they are rebuilt
-     every render. */
+     every render.
+
+     A tab whose password is MixEngine's comes back as its form even if it was connected: dialling
+     it would be a second Keychain question before anybody asked to connect. */
   useEffect(() => {
     if (restoreTried.current || restoredState === null || !("savedId" in restoredState) || !savedConnectionsLoaded) return;
     restoreTried.current = true;
     const entry = savedConnections.find((c) => c.id === restoredState.savedId);
     if (entry === undefined) return;
-    if (restoredState.connected) openAndConnect(entry);
+    if (restoredState.connected && reconnectsOnRestore(entry)) openAndConnect(entry);
     else applySavedConnection(entry);
   }, [restoredState, savedConnectionsLoaded, savedConnections]);
 
