@@ -6,6 +6,10 @@
 - MixLab installs with one command: `curl -fsSL https://mixnz.github.io/mixlab/install.sh | sh`
   on macOS and Linux, `irm https://mixnz.github.io/mixlab/install.ps1 | iex` on Windows. It picks
   the installer for your machine and checks its signature first.
+- In MixLab, a site's ⋮ menu on the Sites screen starts it, stops it or deletes it.
+- A runtime install or a blueprint being applied can be cancelled from MixLab.
+- Domains shows the certificate each site is actually served with, and what is wrong with it.
+- Projects writes a project's `mixengine.toml` with one click.
 
 ## v0.0.14
 
