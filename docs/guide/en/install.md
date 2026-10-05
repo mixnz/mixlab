@@ -17,12 +17,6 @@ beside it. Pick the file for your system below. Installing changes as little as 
 added to your certificate store, your DNS settings or your firewall until the day you ask for
 something that needs it. [What MixLab asks permission for](./permissions.md) has the detail.
 
-**No stable release exists yet.** Every download link below is a permanent URL that GitHub always
-resolves to whichever release is newest and *not* a pre-release, so once the first one ships these
-links go live with no edit to this page. Until then, get the newest pre-release by hand from
-[the releases page](https://github.com/mixnz/mixlab/releases). Right now that is
-`v0.0.14`.
-
 ## One command
 
 On macOS or Linux:
@@ -39,7 +33,7 @@ irm https://mixnz.github.io/mixlab/install.ps1 | iex
 
 It picks the installer for your system below, checks its checksum and its signature against
 MixLab's key before running it, and then runs it the way each section describes. Add `--headless`
-(`-Headless` on Windows) for the command-line programs without the window, `--version 0.0.14` for
+(`-Headless` on Windows) for the command-line programs without the window, `--version 0.0.13` for
 an older release, and `--dry-run` to see what it would download and run without installing
 anything. Options go after `sh -s --` on macOS and Linux, and on Windows through
 `& ([scriptblock]::Create((irm https://mixnz.github.io/mixlab/install.ps1))) -Headless`.
