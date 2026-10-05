@@ -74,6 +74,87 @@ check "every name, unversioned" "10" "$(print_names '' | wc -l | tr -d ' ')"
 check "every name, versioned" "10" "$(print_names 0.0.14 | wc -l | tr -d ' ')"
 check "no name twice" "10" "$(print_names 0.0.14 | sort -u | wc -l | tr -d ' ')"
 
+# A signed release served from this machine: a throwaway key, a fake artifact signed the way
+# packaging/sign.sh signs (trusted comment `mixengine <version> <file>`), and a .sha256 beside it.
+work="$(mktemp -d)"
+server_pid=""
+cleanup() {
+  if [ -n "$server_pid" ]; then
+    kill "$server_pid" 2>/dev/null || true
+    wait "$server_pid" 2>/dev/null || true
+  fi
+  rm -rf "$work"
+}
+trap cleanup EXIT
+
+password="not-the-release-key"
+printf '%s\n%s\n' "$password" "$password" |
+  minisign -G -p "$work/test.pub" -s "$work/test.key" >/dev/null 2>&1
+key="$(sed -n '2p' "$work/test.pub" | tr -d '\r')"
+
+release="$work/release/download/v9.9.9"
+mkdir -p "$release"
+name="mixengine-headless_9.9.9-1_amd64.deb"
+echo "a package" >"$release/$name"
+(cd "$release" && file_sha256 "$name" | awk -v n="$name" '{ print $1 "  " n }' >"$name.sha256")
+printf '%s\n' "$password" |
+  minisign -S -H -s "$work/test.key" -t "mixengine 9.9.9 $name" -m "$release/$name" >/dev/null 2>&1
+# The same bytes signed for another file, which must be refused under this name.
+cp "$release/$name" "$release/other.deb"
+printf '%s\n' "$password" |
+  minisign -S -H -s "$work/test.key" -t "mixengine 9.9.9 mixlab_9.9.9-1_amd64.deb" \
+    -m "$release/other.deb" >/dev/null 2>&1
+
+port=8765
+(cd "$work/release" && exec python3 -m http.server "$port" >/dev/null 2>&1) &
+server_pid=$!
+base="http://127.0.0.1:$port/download/v9.9.9"
+tries=0
+until url_answers "$base/$name"; do
+  tries=$((tries + 1))
+  [ "$tries" -lt 50 ] || { echo "the test server did not start" >&2; exit 1; }
+  sleep 0.1
+done
+
+got="$work/got"
+mkdir -p "$got"
+fetch "$base/$name" "$got/$name"
+fetch "$base/$name.sha256" "$got/$name.sha256"
+fetch "$base/$name.minisig" "$got/$name.minisig"
+check "a file answers" "yes" "$(url_answers "$base/$name" && echo yes || echo no)"
+check "a missing file does not" "no" "$(url_answers "$base/nothing.deb" && echo yes || echo no)"
+check "the checksum matches" "yes" "$(check_sha256 "$got/$name" "$got/$name.sha256" && echo yes || echo no)"
+
+echo "tampered" >>"$got/$name"
+check "a changed file fails its checksum" "no" \
+  "$(check_sha256 "$got/$name" "$got/$name.sha256" && echo yes || echo no)"
+fetch "$base/$name" "$got/$name"
+
+ms="$(command -v minisign)"
+check "the signature and its name" "9.9.9" \
+  "$(check_signature "$ms" "$key" "$got/$name" "$name" "" 2>/dev/null)"
+check "and the version asked for" "9.9.9" \
+  "$(check_signature "$ms" "$key" "$got/$name" "$name" 9.9.9 2>/dev/null)"
+check "another version is refused" "refused" \
+  "$(check_signature "$ms" "$key" "$got/$name" "$name" 9.9.8 2>/dev/null || echo refused)"
+check "another key is refused" "refused" \
+  "$(check_signature "$ms" "$MIXLAB_PUBKEY" "$got/$name" "$name" "" 2>/dev/null || echo refused)"
+
+cp "$release/other.deb" "$got/$name"
+cp "$release/other.deb.minisig" "$got/$name.minisig"
+check "a file signed under another name is refused" "refused" \
+  "$(check_signature "$ms" "$key" "$got/$name" "$name" "" 2>/dev/null || echo refused)"
+
+# An Intel Mac with no minisign stops, and says what to install.
+intel="$( (
+  PATH="/nonexistent"
+  minisign_for macos x86_64 "$work" 2>&1
+) || echo refused)"
+case "$intel" in
+  *"brew install minisign"*refused) check "an intel mac is refused" "ok" "ok" ;;
+  *) check "an intel mac is refused" "brew install minisign … refused" "$intel" ;;
+esac
+
 if [ "$failures" -ne 0 ]; then
   echo "$failures check(s) failed" >&2
   exit 1

@@ -165,6 +165,99 @@ print_names() {
   done
 }
 
+fetch() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL --retry 3 -o "$2" "$1"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q -O "$2" "$1"
+  else
+    die "neither curl nor wget is installed. install one of them, then run this again"
+  fi
+}
+
+url_answers() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsIL -o /dev/null "$1"
+  else
+    wget -q --spider "$1"
+  fi
+}
+
+file_sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{ print $1 }'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{ print $1 }'
+  else
+    die "neither sha256sum nor shasum is installed. install coreutils, then run this again"
+  fi
+}
+
+# A broken or truncated download. Not a signature: anybody who could replace the file could
+# replace this beside it.
+check_sha256() {
+  cs_expected="$(awk 'NR == 1 { print $1 }' "$2")"
+  [ -n "$cs_expected" ] && [ "$(file_sha256 "$1")" = "$cs_expected" ]
+}
+
+# A minisign on PATH, or the pinned one for this run. Prints its path.
+minisign_for() {
+  if command -v minisign >/dev/null 2>&1; then
+    command -v minisign
+    return 0
+  fi
+  mf_work="$3"
+  case "$1/$2" in
+    linux/x86_64 | linux/aarch64)
+      mf_archive="minisign-0.12-linux.tar.gz"
+      mf_sum="$MINISIGN_LINUX_SHA256"
+      mf_bin="minisign-linux/$2/minisign"
+      ;;
+    macos/aarch64)
+      mf_archive="minisign-0.12-macos.zip"
+      mf_sum="$MINISIGN_MACOS_SHA256"
+      mf_bin="minisign"
+      ;;
+    macos/x86_64)
+      die "this intel mac has no minisign, and none is published for it. run brew install minisign, then run this again"
+      ;;
+    *) die "no minisign for $1 $2. install minisign, then run this again" ;;
+  esac
+  say "minisign is not installed, so this run fetches minisign 0.12 and removes it afterwards"
+  fetch "$MINISIGN_URL/$mf_archive" "$mf_work/$mf_archive"
+  [ "$(file_sha256 "$mf_work/$mf_archive")" = "$mf_sum" ] ||
+    die "the minisign download does not match its pinned checksum. run this again later"
+  mkdir -p "$mf_work/minisign"
+  case "$mf_archive" in
+    *.tar.gz) tar -xzf "$mf_work/$mf_archive" -C "$mf_work/minisign" ;;
+    *.zip) unzip -q -o "$mf_work/$mf_archive" -d "$mf_work/minisign" ;;
+  esac || die "cannot unpack minisign. install minisign, then run this again"
+  chmod +x "$mf_work/minisign/$mf_bin"
+  echo "$mf_work/minisign/$mf_bin"
+}
+
+# The signature, then what it vouches for: packaging/sign.sh signs every artifact with the trusted
+# comment `mixengine <version> <file>`. Prints the signed version.
+check_signature() {
+  sg_out="$("$1" -V -H -P "$2" -m "$3" 2>&1)" || {
+    say "the signature does not match: $sg_out"
+    return 1
+  }
+  sg_comment="$(printf '%s\n' "$sg_out" | sed -n 's/^Trusted comment: //p')"
+  sg_product="$(printf '%s\n' "$sg_comment" | awk '{ print $1 }')"
+  sg_version="$(printf '%s\n' "$sg_comment" | awk '{ print $2 }')"
+  sg_file="$(printf '%s\n' "$sg_comment" | awk '{ print $3 }')"
+  if [ "$sg_product" != mixengine ] || [ "$sg_file" != "$4" ]; then
+    say "the signature vouches for '$sg_comment', not for $4"
+    return 1
+  fi
+  if [ -n "$5" ] && [ "$sg_version" != "$5" ]; then
+    say "the signature is for version $sg_version, not $5"
+    return 1
+  fi
+  printf '%s\n' "$sg_version"
+}
+
 main() {
   :
 }
