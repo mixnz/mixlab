@@ -3,7 +3,7 @@
 # its checksum, its signature and the name the signature vouches for, and runs it.
 #
 #   curl -fsSL https://mixnz.github.io/mixlab/install.sh | sh
-#   curl -fsSL https://mixnz.github.io/mixlab/install.sh | sh -s -- --headless --version 0.0.14
+#   curl -fsSL https://mixnz.github.io/mixlab/install.sh | sh -s -- --headless --version 0.0.13
 #
 # Roadmap task T197.
 # Design: docs/specs/2026-10-05-t197-one-command-installs-mixlab-design.md
@@ -13,6 +13,8 @@
 # download cut off halfway defines functions and runs nothing. POSIX sh, because `curl | sh` runs
 # whatever `sh` is; there is no `local`, so each function prefixes its variables.
 
+# Examples name 0.0.13, a fixed older release, never the current one: scripts/set-version.mjs refuses
+# a bump while packaging/ types out the version it is moving from.
 MIXLAB_RELEASES="https://github.com/mixnz/mixlab/releases"
 # packaging/updates.pub, line 2. .github/scripts/test-install.sh fails when the two differ.
 MIXLAB_PUBKEY="RWSELKuybM79fmLhYywhXv8mdDvB3LPCC3TyHTdm2svTti6clLkck051"
@@ -330,8 +332,8 @@ main() {
         shift
         ;;
       --version)
-        [ $# -ge 2 ] || die "--version needs a version, such as --version 0.0.14"
-        m_version="$(normalize_version "$2")" || die "$2 is not a version. use one such as 0.0.14"
+        [ $# -ge 2 ] || die "--version needs a version, such as --version 0.0.13"
+        m_version="$(normalize_version "$2")" || die "$2 is not a version. use one such as 0.0.13"
         shift 2
         ;;
       --dry-run)
@@ -341,7 +343,7 @@ main() {
       --print-names)
         m_names_version=""
         if [ -n "${2:-}" ]; then
-          m_names_version="$(normalize_version "$2")" || die "$2 is not a version. use one such as 0.0.14"
+          m_names_version="$(normalize_version "$2")" || die "$2 is not a version. use one such as 0.0.13"
         fi
         print_names "$m_names_version"
         return 0

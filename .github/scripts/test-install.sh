@@ -23,13 +23,22 @@ check() {
 check "the embedded key is packaging/updates.pub's" \
   "$(sed -n '2p' "$root/packaging/updates.pub" | tr -d '\r')" "$MIXLAB_PUBKEY"
 
-check "a plain version" "0.0.14" "$(normalize_version 0.0.14)"
-check "a tag" "0.0.14" "$(normalize_version v0.0.14)"
+# The current release is never written in these files: scripts/set-version.mjs refuses a bump while
+# packaging/ or .github/ types it out, so every example names a fixed older release instead.
+current="$(sed -n 's/^version = "\(.*\)"$/\1/p' "$root/Cargo.toml" | head -n 1)"
+for typed in packaging/install/install.sh packaging/install/install.ps1 \
+  .github/scripts/test-install.sh .github/scripts/test-install.ps1; do
+  check "$typed does not name the current release" "no" \
+    "$(grep -E "(^|[^0-9.])$(printf '%s' "$current" | sed 's/\./\\./g')([^0-9]|$)" "$root/$typed" >/dev/null && echo yes || echo no)"
+done
+
+check "a plain version" "0.0.13" "$(normalize_version 0.0.13)"
+check "a tag" "0.0.13" "$(normalize_version v0.0.13)"
 check "two numbers is not a version" "refused" "$(normalize_version 0.14 || echo refused)"
 check "letters are not a version" "refused" "$(normalize_version 0.0.x || echo refused)"
 check "an empty version" "refused" "$(normalize_version '' || echo refused)"
 
-check "0.0.14 >= 0.0.8" "yes" "$(version_at_least 0.0.14 0.0.8 && echo yes || echo no)"
+check "0.0.13 >= 0.0.8" "yes" "$(version_at_least 0.0.13 0.0.8 && echo yes || echo no)"
 check "0.0.7 < 0.0.8" "no" "$(version_at_least 0.0.7 0.0.8 && echo yes || echo no)"
 check "glibc 2.39 >= 2.35" "yes" "$(version_at_least 2.39 2.35 && echo yes || echo no)"
 check "glibc 2.31 < 2.35" "no" "$(version_at_least 2.31 2.35 && echo yes || echo no)"
@@ -44,35 +53,35 @@ check "i686 is refused" "refused" "$(machine_arch i686 || echo refused)"
 check "macos window" "mixlab-macos-universal.pkg" "$(artifact_name macos aarch64 '' window '')"
 check "macos headless" "mixengine-macos-universal-headless.pkg" \
   "$(artifact_name macos x86_64 '' headless '')"
-check "macos window, versioned" "mixlab-0.0.14-macos-universal.pkg" \
-  "$(artifact_name macos aarch64 '' window 0.0.14)"
-check "macos headless, versioned" "mixengine-0.0.14-macos-universal-headless.pkg" \
-  "$(artifact_name macos aarch64 '' headless 0.0.14)"
+check "macos window, versioned" "mixlab-0.0.13-macos-universal.pkg" \
+  "$(artifact_name macos aarch64 '' window 0.0.13)"
+check "macos headless, versioned" "mixengine-0.0.13-macos-universal-headless.pkg" \
+  "$(artifact_name macos aarch64 '' headless 0.0.13)"
 check "deb window" "mixlab_amd64.deb" "$(artifact_name linux x86_64 apt window '')"
 check "deb headless arm" "mixengine-headless_arm64.deb" \
   "$(artifact_name linux aarch64 apt headless '')"
-check "deb window, versioned" "mixlab_0.0.14-1_amd64.deb" \
-  "$(artifact_name linux x86_64 apt window 0.0.14)"
-check "deb headless, versioned" "mixengine-headless_0.0.14-1_arm64.deb" \
-  "$(artifact_name linux aarch64 apt headless 0.0.14)"
+check "deb window, versioned" "mixlab_0.0.13-1_amd64.deb" \
+  "$(artifact_name linux x86_64 apt window 0.0.13)"
+check "deb headless, versioned" "mixengine-headless_0.0.13-1_arm64.deb" \
+  "$(artifact_name linux aarch64 apt headless 0.0.13)"
 check "rpm window" "mixlab-x86_64.rpm" "$(artifact_name linux x86_64 dnf window '')"
 check "rpm headless zypper" "mixengine-headless-aarch64.rpm" \
   "$(artifact_name linux aarch64 zypper headless '')"
-check "rpm window, versioned" "mixlab-0.0.14-1.x86_64.rpm" \
-  "$(artifact_name linux x86_64 dnf window 0.0.14)"
-check "rpm headless, versioned" "mixengine-headless-0.0.14-1.aarch64.rpm" \
-  "$(artifact_name linux aarch64 zypper headless 0.0.14)"
+check "rpm window, versioned" "mixlab-0.0.13-1.x86_64.rpm" \
+  "$(artifact_name linux x86_64 dnf window 0.0.13)"
+check "rpm headless, versioned" "mixengine-headless-0.0.13-1.aarch64.rpm" \
+  "$(artifact_name linux aarch64 zypper headless 0.0.13)"
 check "an unknown manager is refused" "refused" \
   "$(artifact_name linux x86_64 pacman window '' || echo refused)"
 
 check "latest" "https://github.com/mixnz/mixlab/releases/latest/download" "$(release_base '')"
-check "a version" "https://github.com/mixnz/mixlab/releases/download/v0.0.14" \
-  "$(release_base 0.0.14)"
+check "a version" "https://github.com/mixnz/mixlab/releases/download/v0.0.13" \
+  "$(release_base 0.0.13)"
 
 # 2 flavours x (1 macOS package + 2 architectures x 2 Linux families) = 10.
 check "every name, unversioned" "10" "$(print_names '' | wc -l | tr -d ' ')"
-check "every name, versioned" "10" "$(print_names 0.0.14 | wc -l | tr -d ' ')"
-check "no name twice" "10" "$(print_names 0.0.14 | sort -u | wc -l | tr -d ' ')"
+check "every name, versioned" "10" "$(print_names 0.0.13 | wc -l | tr -d ' ')"
+check "no name twice" "10" "$(print_names 0.0.13 | sort -u | wc -l | tr -d ' ')"
 
 # A signed release served from this machine: a throwaway key, a fake artifact signed the way
 # packaging/sign.sh signs (trusted comment `mixengine <version> <file>`), and a .sha256 beside it.
@@ -169,7 +178,7 @@ check "a bad version" "refused" "$(sh "$script" --version 1.2 2>/dev/null || ech
 check "a version before 0.0.8" "refused" "$(sh "$script" --version 0.0.7 2>/dev/null || echo refused)"
 check "--help says how to pass options" "yes" \
   "$(sh "$script" --help 2>&1 | grep -q -- 'sh -s -- --headless' && echo yes || echo no)"
-check "--print-names" "10" "$(sh "$script" --print-names 0.0.14 | wc -l | tr -d ' ')"
+check "--print-names" "10" "$(sh "$script" --print-names 0.0.13 | wc -l | tr -d ' ')"
 check "--print-names with a bad version" "refused" "$(sh "$script" --print-names 1.2 2>/dev/null || echo refused)"
 
 # A dry run against the published releases; skipped with no network.

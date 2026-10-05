@@ -3,7 +3,7 @@
 # administrator prompt.
 #
 #   irm https://mixnz.github.io/mixlab/install.ps1 | iex
-#   & ([scriptblock]::Create((irm https://mixnz.github.io/mixlab/install.ps1))) -Headless -Version 0.0.14
+#   & ([scriptblock]::Create((irm https://mixnz.github.io/mixlab/install.ps1))) -Headless -Version 0.0.13
 #
 # Roadmap task T197.
 # Design: docs/specs/2026-10-05-t197-one-command-installs-mixlab-design.md
@@ -29,7 +29,7 @@ function Write-MixLabLine([string]$Message) {
 
 function ConvertTo-MixLabVersion([string]$Raw) {
     $v = $Raw -replace '^v', ''
-    if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "$Raw is not a version. use one such as 0.0.14" }
+    if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "$Raw is not a version. use one such as 0.0.13" }
     $v
 }
 
