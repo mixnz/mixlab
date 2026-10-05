@@ -49,6 +49,8 @@ committed_reference="$guide/en/cli.md"
 # Build the whole site into $1.
 mix_build_site() {
   cargo run --quiet -p mixengine-docs --example build-site -- "$1"
+  # T197: the one-command installers are served beside the handbook, from whatever is on master.
+  cp "$MIX_ROOT/packaging/install/install.sh" "$MIX_ROOT/packaging/install/install.ps1" "$1/"
 }
 
 # Print the command reference as `mix` generates it.
@@ -119,7 +121,8 @@ case "$mode" in
     site="$work/site"
     mix_build_site "$site"
 
-    for file in index.html index.json llms.txt robots.txt sitemap.xml style.css .nojekyll; do
+    for file in index.html index.json llms.txt robots.txt sitemap.xml style.css .nojekyll \
+      install.sh install.ps1; do
       test -f "$site/$file" || {
         echo "the site is missing $file" >&2
         exit 1

@@ -80,6 +80,8 @@ jobs:
           MIX_SIGN_SECRET_KEY: ${{ secrets.UPDATE_SECRET_KEY }}
           MIX_SIGN_PASSWORD: ${{ secrets.UPDATE_PASSWORD }}
         run: bash packaging/sign.sh
+      - name: Every file the install scripts can choose is in this release (T197)
+        run: bash .github/scripts/install-names.sh "${GITHUB_REF_NAME#v}" target/packaging/dist
 
       # A draft, which a person publishes. The unsigned-binary warning goes at the top of the notes.
       - name: Assemble the draft release

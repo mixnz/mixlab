@@ -73,9 +73,16 @@ jobs:
         with:
           path: target/site
 
+  # T197: the install scripts are served from this site, so a script that fails its checks or its
+  # dry run against the newest release is never deployed. The real installs run when CI is asked.
+  install:
+    uses: ./.github/workflows/_install.yml
+    with:
+      real: false
+
   deploy:
     name: deploy
-    needs: build
+    needs: [build, install]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:

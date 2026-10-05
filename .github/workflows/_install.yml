@@ -1,0 +1,117 @@
+# T197: the one-command installers. `check` is static and offline; `dry-run` asks the newest
+# published release for every URL the scripts would fetch; `install` installs the headless package
+# for real on five systems. pages.yml calls this with `real: false` and deploys only if it passes.
+# Design: docs/specs/2026-10-05-t197-one-command-installs-mixlab-design.md
+name: install
+
+on:
+  workflow_call:
+    inputs:
+      jobs:
+        type: string
+        default: ''
+      real:
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: check
+    if: ${{ inputs.jobs == '' || inputs.jobs == 'all' || inputs.jobs == 'install' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install minisign
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes minisign
+      - name: shellcheck
+        run: shellcheck -s sh packaging/install/install.sh .github/scripts/test-install.sh
+      - name: The sh script's tests, under dash
+        run: dash .github/scripts/test-install.sh
+      - name: The PowerShell script's tests, and PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          ./.github/scripts/test-install.ps1
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          Invoke-ScriptAnalyzer -Path packaging/install/install.ps1,.github/scripts/test-install.ps1 `
+            -Severity Warning,Error -ExcludeRule PSAvoidUsingWriteHost -EnableExit
+
+  dry-run:
+    name: dry run (${{ matrix.os }})
+    if: ${{ inputs.jobs == '' || inputs.jobs == 'all' || inputs.jobs == 'install' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every URL answers
+        if: runner.os != 'Windows'
+        run: |
+          sh packaging/install/install.sh --dry-run
+          sh packaging/install/install.sh --dry-run --headless
+      - name: Every URL answers (PowerShell 7)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./packaging/install/install.ps1 -DryRun
+          ./packaging/install/install.ps1 -DryRun -Headless
+      - name: Every URL answers (Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./packaging/install/install.ps1 -DryRun -Headless
+
+  install:
+    name: install (${{ matrix.name }})
+    if: ${{ inputs.real && (inputs.jobs == '' || inputs.jobs == 'all' || inputs.jobs == 'install') }}
+    needs: [check, dry-run]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: ubuntu, os: ubuntu-latest, how: host }
+          - { name: fedora, os: ubuntu-latest, how: container, image: 'fedora:41', prep: 'dnf install -y tar gzip' }
+          - { name: opensuse, os: ubuntu-latest, how: container, image: 'opensuse/leap:15.6', prep: 'zypper --non-interactive install curl tar gzip' }
+          - { name: macos, os: macos-latest, how: host }
+          - { name: windows, os: windows-latest, how: host }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: The newest release
+        id: latest
+        shell: bash
+        run: echo "version=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName | ltrimstr("v")')" >>"$GITHUB_OUTPUT"
+      - name: Install on the runner
+        if: matrix.how == 'host' && runner.os != 'Windows'
+        run: |
+          sh packaging/install/install.sh --headless
+          mix --version | tee version.txt
+          grep -qx "mix ${{ steps.latest.outputs.version }}" version.txt
+      - name: Install in a container, as root, with no minisign
+        if: matrix.how == 'container'
+        run: |
+          docker run --rm -v "$PWD:/src:ro" "${{ matrix.image }}" sh -c '
+            set -e
+            ${{ matrix.prep }}
+            sh /src/packaging/install/install.sh --headless
+            mix --version' | tee version.txt
+          grep -qx "mix ${{ steps.latest.outputs.version }}" version.txt
+      - name: Install on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./packaging/install/install.ps1 -Headless
+          $dir = (Get-ItemProperty 'HKCU:\Software\MixEngine').InstallDir
+          $out = & (Join-Path $dir 'mix.exe') --version
+          Write-Host $out
+          if ($out -ne "mix ${{ steps.latest.outputs.version }}") { throw "expected mix ${{ steps.latest.outputs.version }}" }
