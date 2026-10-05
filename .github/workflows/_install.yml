@@ -67,6 +67,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: ./packaging/install/install.ps1 -DryRun -Headless
+      - name: The PowerShell script's tests, under Windows PowerShell 5.1
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./.github/scripts/test-install.ps1
 
   install:
     name: install (${{ matrix.name }})

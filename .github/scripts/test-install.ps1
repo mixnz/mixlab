@@ -49,6 +49,23 @@ if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) {
 $work = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
 New-Item -ItemType Directory -Path $work | Out-Null
 try {
+    # A minisign that refuses, writing to stderr: Windows PowerShell 5.1 turns that stderr into a
+    # terminating NativeCommandError under -ErrorAction Stop, and PowerShell 7 does the same with
+    # $PSNativeCommandUseErrorActionPreference. Either way the script's own message must come out.
+    if ($IsWindows -or $PSVersionTable.PSVersion.Major -lt 6) {
+        $fake = Join-Path $work 'fake-minisign.cmd'
+        "@echo Signature verification failed 1>&2`r`n@exit /b 1" | Set-Content -Encoding ASCII $fake
+    } else {
+        $fake = Join-Path $work 'fake-minisign'
+        "#!/bin/sh`necho 'Signature verification failed' >&2`nexit 1" | Set-Content $fake
+        chmod +x $fake
+    }
+    $ErrorActionPreference = 'Stop'
+    $PSNativeCommandUseErrorActionPreference = $true
+    $why = try { Test-MixLabSignature -Minisign $fake -Key 'k' -File $fake -Name 'x' -Version '' | Out-Null; 'accepted' } catch { $_.Exception.Message }
+    $PSNativeCommandUseErrorActionPreference = $false
+    Assert-Same 'a refused signature says so in the script''s words' $true ($why -like 'the signature does not match*')
+
     'a package' | Set-Content -NoNewline (Join-Path $work 'x.exe')
     $hash = (Get-FileHash -Algorithm SHA256 (Join-Path $work 'x.exe')).Hash.ToLowerInvariant()
     "$hash  x.exe" | Set-Content (Join-Path $work 'x.exe.sha256')

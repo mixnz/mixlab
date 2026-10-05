@@ -83,8 +83,15 @@ function Get-MixLabMinisign([string]$Arch, [string]$Work) {
 }
 
 function Test-MixLabSignature([string]$Minisign, [string]$Key, [string]$File, [string]$Name, [string]$Version) {
-    $out = & $Minisign -V -H -P $Key -m $File 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) { throw "the signature does not match: $out" }
+    # minisign writes its refusal to stderr. Under -ErrorAction Stop, Windows PowerShell 5.1 (and
+    # PowerShell 7 with $PSNativeCommandUseErrorActionPreference) would turn that into its own
+    # NativeCommandError; the exit code is what decides here, and the message is ours.
+    $ErrorActionPreference = 'Continue'
+    $PSNativeCommandUseErrorActionPreference = $false
+    $out = (& $Minisign -V -H -P $Key -m $File 2>&1 | ForEach-Object { "$_" }) -join "`n"
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
+    if ($code -ne 0) { throw "the signature does not match: $out" }
     $comment = ($out -split "`n" | Where-Object { $_ -like 'Trusted comment: *' } | Select-Object -First 1)
     $parts = ($comment -replace '^Trusted comment: ', '').Trim() -split ' '
     if ($parts.Count -ne 3 -or $parts[0] -ne 'mixengine' -or $parts[2] -ne $Name) {
