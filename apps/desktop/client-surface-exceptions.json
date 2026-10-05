@@ -15,17 +15,17 @@
     "metrics.snapshot": "A one-off reading for `mix`; the window draws the live metrics stream.",
     "runtime.resolve": "Answers for a working directory, which a terminal has and the window does not; the window shows a project's pins from project.show.",
     "path.rescan": "The daemon watches each runtime's bindir and rescans when one changes; the command is for a person in a terminal whose bindir could not be watched.",
-    "extension.inspect": "Reads a local extension.toml for an extension's author; the window installs from the registry."
+    "extension.inspect": "Reads a local extension.toml for an extension's author; the window installs from the registry.",
+    "job.list": "A history for a person in a terminal; the window follows jobs live through the event stream, and a job that fails says why on the screen that started it.",
+    "cert.ca_rotate": "Replacing the authority is for a key that has leaked and breaks every cached chain; `mix cert ca-rotate` is where that is done, deliberately.",
+    "cert.ca_uninstall": "Removing trust while keeping MixEngine is uninstall's business (T87, `mix uninstall`); the window's CA block only repairs trust."
   },
   "knownGaps": {
     "site.start": "The Sites screen cannot start serving a stopped site.",
     "site.stop": "The Sites screen cannot stop serving a site.",
     "site.delete": "The Sites screen cannot delete a site.",
     "job.cancel": "A running install or apply has no Cancel in the window.",
-    "job.list": "The window has no history of the jobs the daemon ran.",
     "cert.status": "The window cannot show the certificate a site's front end actually presents.",
-    "cert.ca_rotate": "The window cannot rotate this home's certificate authority.",
-    "cert.ca_uninstall": "The window cannot take this home's authority out of the trust stores on its own.",
     "project.export": "The Projects screen cannot write a project's mixengine.toml."
   }
 }
