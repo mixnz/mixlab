@@ -190,3 +190,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-01 | [The window ships without its symbol table](2026-10-01-the-window-ships-without-its-symbol-table-design.md) |  | implemented |
 | 2026-10-02 | [A launch touches one Keychain item](2026-10-02-a-launch-touches-one-keychain-item-design.md) |  | implemented |
 | 2026-10-02 | [MixLab.app is signed ad-hoc as a bundle](2026-10-02-mixlab-app-is-signed-ad-hoc-as-a-bundle-design.md) |  | implemented |
+| 2026-10-05 | [One command installs MixLab](2026-10-05-t197-one-command-installs-mixlab-design.md) | T197 | approved |
