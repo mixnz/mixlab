@@ -346,15 +346,15 @@ main() {
     *) die "this script is for macOS and Linux. on windows run: irm https://mixnz.github.io/mixlab/install.ps1 | iex" ;;
   esac
   m_arch="$(machine_arch "$(uname -m)")" ||
-    die "there is no build for $(uname -m). see ${MIXLAB_HANDBOOK}#from-source"
+    die "there is no build for $(uname -m). see From source at ${MIXLAB_HANDBOOK}"
 
   m_manager=""
   if [ "$m_os" = linux ]; then
     m_manager="$(linux_manager)" ||
-      die "this linux has no apt-get, dnf or zypper, so no package fits it. see ${MIXLAB_HANDBOOK}#from-source"
+      die "this linux has no apt-get, dnf or zypper, so no package fits it. see From source at ${MIXLAB_HANDBOOK}"
     m_glibc="$(glibc_version)"
     [ -n "$m_glibc" ] ||
-      die "this linux has no glibc (musl?), which every build needs. see ${MIXLAB_HANDBOOK}#from-source"
+      die "this linux has no glibc (musl?), which every build needs. see From source at ${MIXLAB_HANDBOOK}"
     version_at_least "$m_glibc" "$MIXLAB_GLIBC_HEADLESS" ||
       die "this linux has glibc $m_glibc; the programs need $MIXLAB_GLIBC_HEADLESS or newer"
     if [ "$m_flavour" = window ] && ! version_at_least "$m_glibc" "$MIXLAB_GLIBC_WINDOW"; then
@@ -366,7 +366,7 @@ main() {
   fi
 
   m_name="$(artifact_name "$m_os" "$m_arch" "$m_manager" "$m_flavour" "$m_version")" ||
-    die "no package for this machine. see ${MIXLAB_HANDBOOK}#from-source"
+    die "no package for this machine. see From source at ${MIXLAB_HANDBOOK}"
   m_base="$(release_base "$m_version")"
 
   if [ "$m_dry" = 1 ]; then
