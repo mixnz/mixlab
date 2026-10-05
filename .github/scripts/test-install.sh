@@ -170,6 +170,7 @@ check "a version before 0.0.8" "refused" "$(sh "$script" --version 0.0.7 2>/dev/
 check "--help says how to pass options" "yes" \
   "$(sh "$script" --help 2>&1 | grep -q -- 'sh -s -- --headless' && echo yes || echo no)"
 check "--print-names" "10" "$(sh "$script" --print-names 0.0.14 | wc -l | tr -d ' ')"
+check "--print-names with a bad version" "refused" "$(sh "$script" --print-names 1.2 2>/dev/null || echo refused)"
 
 # A dry run against the published releases; skipped with no network.
 if url_answers "https://github.com/mixnz/mixlab/releases/latest" 2>/dev/null; then
@@ -187,6 +188,23 @@ printf '#!/bin/sh\nif read -r line; then echo "read: $line"; else echo closed; f
 chmod +x "$stdin_probe"
 check "an install command runs with stdin closed" "closed" \
   "$(echo "leftover script" | run_install "" "$stdin_probe")"
+
+# A path with a space stays one argument: TMPDIR may contain one. run_install is replaced for this
+# check by one that prints each argument on its own line.
+spaced="$work/with space/x.pkg"
+args_of() {
+  (
+    run_install() {
+      shift
+      printf '%s\n' "$@"
+    }
+    install_package "" "$@"
+  )
+}
+check "macos keeps a spaced path whole" "$spaced" "$(args_of macos "" "$spaced" | sed -n '3p')"
+check "apt keeps a spaced path whole" "$spaced" "$(args_of linux apt "$spaced" | sed -n '6p')"
+check "dnf keeps a spaced path whole" "$spaced" "$(args_of linux dnf "$spaced" | sed -n '4p')"
+check "zypper keeps a spaced path whole" "$spaced" "$(args_of linux zypper "$spaced" | sed -n '5p')"
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures check(s) failed" >&2

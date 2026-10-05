@@ -293,16 +293,30 @@ install_command() {
   esac
 }
 
+# PREFIX OS MANAGER FILE: the install itself, with FILE kept one argument whatever TMPDIR holds.
+# install_command above is the same command as text, for --dry-run to print.
+install_package() {
+  ip_prefix="$1"
+  case "$2/$3" in
+    macos/*) run_install "$ip_prefix" installer -pkg "$4" -target / ;;
+    linux/apt) run_install "$ip_prefix" env DEBIAN_FRONTEND=noninteractive apt-get install -y "$4" ;;
+    linux/dnf) run_install "$ip_prefix" dnf install -y "$4" ;;
+    linux/zypper) run_install "$ip_prefix" zypper --non-interactive install --allow-unsigned-rpm "$4" ;;
+    *) return 1 ;;
+  esac
+}
+
 # PREFIX COMMAND… with stdin closed: under `curl | sh` stdin is the rest of this script, and sudo
 # asks for its password on the terminal, not on stdin.
 run_install() {
   ri_prefix="$1"
   shift
   say "running: ${ri_prefix:+$ri_prefix }$*"
-  # Word splitting is wanted: the prefix is empty or `sudo`, and every path is under mktemp's
-  # directory, which has no spaces.
-  # shellcheck disable=SC2086
-  $ri_prefix "$@" </dev/null
+  if [ -n "$ri_prefix" ]; then
+    "$ri_prefix" "$@" </dev/null
+  else
+    "$@" </dev/null
+  fi
 }
 
 main() {
@@ -325,7 +339,11 @@ main() {
         shift
         ;;
       --print-names)
-        print_names "${2:+$(normalize_version "$2")}"
+        m_names_version=""
+        if [ -n "${2:-}" ]; then
+          m_names_version="$(normalize_version "$2")" || die "$2 is not a version. use one such as 0.0.14"
+        fi
+        print_names "$m_names_version"
         return 0
         ;;
       -h | --help)
@@ -419,8 +437,7 @@ main() {
     run_install "$m_prefix" env DEBIAN_FRONTEND=noninteractive apt-get update ||
       die "apt-get update failed. fix the package lists, then run this again"
   fi
-  # shellcheck disable=SC2046
-  run_install "$m_prefix" $(install_command "$m_os" "$m_manager" "$m_work/$m_name") ||
+  install_package "$m_prefix" "$m_os" "$m_manager" "$m_work/$m_name" ||
     die "the installer failed. its own message is above"
 
   if [ "$m_flavour" = headless ]; then
