@@ -31,6 +31,8 @@
 - On macOS, the first launch of a new version asks for your Keychain password once instead of
   twice. A connection MixEngine handed over reads its password when you press Connect, and a tab
   left connected to one opens on its form.
+- Starting a database whose password is in the Keychain no longer fails while macOS is still asking
+  you to allow it. The service waits for your answer, then starts.
 
 ## v0.0.13
 
