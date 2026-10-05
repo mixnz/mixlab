@@ -1,5 +1,6 @@
 import pkg from "../../package.json";
 import { returns, type Handlers } from "../ipc/dispatch";
+import { demoOptions } from "./options";
 
 /** The shell's own commands and the plugins every screen may touch, answered neutrally. */
 export const pluginHandlers: Handlers = {
@@ -7,9 +8,14 @@ export const pluginHandlers: Handlers = {
   "plugin:app|name": returns("MixLab"),
   // Error-level calls are recorded by the dispatcher before this answers.
   "plugin:log|log": returns(null),
-  "plugin:opener|open_url": returns(null),
+  // A clip that films the browser draws one for this (`demo/browser/overlay.ts`); nothing else listens.
+  "plugin:opener|open_url": (args) => {
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("demo:open-url", { detail: args.url }));
+    return null;
+  },
   "plugin:opener|open_path": returns(null),
-  "plugin:dialog|open": returns(null),
+  // A clip that picks a folder says which; everywhere else the picker is dismissed.
+  "plugin:dialog|open": () => demoOptions().folder ?? null,
   "plugin:dialog|save": returns(null),
   "plugin:clipboard-manager|write_text": returns(null),
   "plugin:clipboard-manager|read_text": returns(""),

@@ -39,6 +39,7 @@ a line in `src/shell/registry.ts` — see
 | `npm run build:app` | Full production bundle into `src-tauri/target/release/bundle/` |
 | `npm run icons` | Rebuild `src-tauri/icons/` from the SVGs in `public/`; macOS gets the padded one, and its menu bar the tray template (T168) |
 | `npm run screenshots` | The six promotional images — Dashboard, Sites, Database, REST, Terminal, Tools — from sample data, dark and light, raw and framed, into `screenshots/out/`. `-- --check` renders every scene and writes nothing (CI runs it). See [demo-screenshots.md](../../docs/standards/desktop/demo-screenshots.md) |
+| `npm run clips` | The promotional clips — New site, and Quick start building Laravel then opening it in a browser — from sample data, dark and light, as MP4 plus start/end posters into `screenshots/out/clips/`. Needs ffmpeg; `-- --check` films without encoding. See [demo-screenshots.md](../../docs/standards/desktop/demo-screenshots.md#clips) |
 
 Releasing is the repository's — [build-and-release.md](../../docs/operations/build-and-release.md):
 one release ships MixLab and the MixEngine binaries together, from one feed. The app icon, and why there are two logo files, is

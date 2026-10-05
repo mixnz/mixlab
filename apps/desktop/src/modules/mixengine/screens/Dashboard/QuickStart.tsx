@@ -90,6 +90,7 @@ export default function QuickStart({ onCreated }: { onCreated: () => void }) {
             <Select
               value={slug}
               onChange={setSlug}
+              demo="qs-stack"
               disabled={phase.kind !== "form"}
               searchable
               searchPlaceholder={t("mixengine.quickStart.searchStacks")}
@@ -104,6 +105,7 @@ export default function QuickStart({ onCreated }: { onCreated: () => void }) {
             {t("mixengine.quickStart.name")}
             <Input
               value={project}
+              data-demo="qs-project"
               disabled={phase.kind !== "form"}
               onChange={(e) => setProject(e.target.value)}
             />
@@ -113,7 +115,7 @@ export default function QuickStart({ onCreated }: { onCreated: () => void }) {
             {t("mixengine.quickStart.folder")}
             <div className={styles.folderRow}>
               <Input value={root} disabled={phase.kind !== "form"} readOnly />
-              <Button onClick={() => void browse()} disabled={phase.kind !== "form"}>
+              <Button data-demo="qs-folder" onClick={() => void browse()} disabled={phase.kind !== "form"}>
                 {t("mixengine.quickStart.browse")}
               </Button>
             </div>
@@ -121,6 +123,7 @@ export default function QuickStart({ onCreated }: { onCreated: () => void }) {
 
           <Button
             variant="primary"
+            data-demo="qs-create"
             disabled={
               phase.kind !== "form" || chosen === undefined || !canStart(project, root)
             }

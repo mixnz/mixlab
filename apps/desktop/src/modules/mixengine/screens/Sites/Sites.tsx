@@ -237,7 +237,7 @@ export default function Sites({ active }: { active: boolean }) {
                 ...projectNames.map((name) => ({ value: name, label: name })),
               ]}
             />
-            <Button size="large" variant="primary" onClick={() => setCreating(true)}>
+            <Button size="large" variant="primary" data-demo="new-site" onClick={() => setCreating(true)}>
               <PlusIcon size={15} />
               {t("mixengine.sites.newSite")}
             </Button>

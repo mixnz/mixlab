@@ -88,6 +88,7 @@ export default function SiteFields({
         <Textarea
           mono
           maxRows={6}
+          data-demo="site-domains"
           value={value.domainsText}
           disabled={disabled}
           onChange={(e) => set({ domainsText: e.target.value })}
@@ -294,6 +295,7 @@ export default function SiteFields({
         <div className={styles.tiles}>
           <SwitchTile
             label={t("mixengine.sites.form.https")}
+            demo="site-https"
             checked={value.https}
             disabled={disabled}
             // Dropping HTTPS drops the redirect too: there is no HTTPS address to redirect to.

@@ -17,7 +17,8 @@
     "dev:app": "node scripts/stage-daemon.mjs",
     "build:app": "tauri build",
     "icons": "node scripts/make-icons.mjs",
-    "screenshots": "node demo/capture.mjs"
+    "screenshots": "node demo/capture.mjs",
+    "clips": "node demo/clip.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",

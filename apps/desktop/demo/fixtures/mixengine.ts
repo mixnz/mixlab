@@ -1,5 +1,7 @@
 import type { Channel } from "@tauri-apps/api/core";
 import type {
+  BlueprintApply,
+  BlueprintApplyResponse,
   BlueprintList,
   BlueprintSummary,
   DaemonStatus,
@@ -7,14 +9,18 @@ import type {
   DiskUsage,
   ElevationStatus,
   HomePrevious,
+  JobSummary,
   MetricsFrame,
   PackageFoundList,
   PathReport,
+  ProjectDetail,
   ProjectList,
   RuntimeFoundList,
   ServiceFoundList,
   ServiceList,
   ServiceSummary,
+  SiteCreate,
+  SiteCreation,
   SiteDetail,
   SiteList,
   SiteSummary,
@@ -22,6 +28,9 @@ import type {
 import type { PresenceReport } from "../../src/modules/mixengine/api";
 import pkg from "../../package.json";
 import { returns, type Handlers } from "../ipc/dispatch";
+import { demoOptions } from "./options";
+import { createApplyRunner } from "./laravelApply";
+import { createSiteRegistry } from "./siteRegistry";
 import { HOUR, MINUTE, NOW } from "./time";
 
 /**
@@ -84,7 +93,7 @@ function databaseClient(serviceId: string): DatabaseClientReport {
 
 const project = (name: string) => ({ type: "project" as const, name });
 
-const SITES: SiteSummary[] = [
+export const SITES: SiteSummary[] = [
   {
     domain: "acme-shop.test",
     owner: project("acme-shop"),
@@ -147,6 +156,27 @@ function siteDetail(domain: string): SiteDetail {
       { service: "redis@main", state: "running" },
     ],
   };
+}
+
+/** The pool `SERVICES` runs for `blog` — what the daemon resolves a new php-fpm site to here. */
+const DEFAULT_POOL = "php-fpm@8.3";
+
+const sites = createSiteRegistry({
+  sites: SITES,
+  projects: PROJECTS.projects,
+  without: demoOptions().sitesWithout,
+  fresh: demoOptions().fresh,
+  defaultPool: DEFAULT_POOL,
+  detailOf: (site) => siteDetail(site.domain),
+});
+
+/** The Laravel blueprint apply the quick-start clip films; it holds the daemon's watch channel. */
+const applying = createApplyRunner({ registry: sites, now: NOW });
+
+function projectDetail(name: string): ProjectDetail {
+  const found = sites.projects().projects.find((p) => p.name === name);
+  if (found === undefined) throw new Error(`demo: no project named ${name}`);
+  return { project: found, pins: [] };
 }
 
 const STATUS: DaemonStatus = {
@@ -226,7 +256,8 @@ function blueprint(slug: string, name: string, description: string): BlueprintSu
 
 const BLUEPRINTS: BlueprintList = {
   blueprints: [
-    blueprint("laravel", "Laravel", "PHP 8.4, Caddy, PostgreSQL and Redis, with a .test domain."),
+    // The gallery manifest's own description (`crates/mixengine-core/src/blueprints/gallery/laravel.toml`).
+    blueprint("laravel", "Laravel", "Laravel on PHP-FPM, with MariaDB and Redis"),
     blueprint("wordpress", "WordPress", "PHP 8.3 and MariaDB, ready for wp-cli."),
     blueprint("nextjs", "Next.js", "Node 22 behind HTTPS, with PostgreSQL."),
   ],
@@ -255,9 +286,11 @@ export const mixengineHandlers: Handlers = {
   mixengine_presence: returns<PresenceReport>({ presence: "running", searched: [] }),
   mixengine_status: returns<DaemonStatus>(STATUS),
   mixengine_services: returns<ServiceList>({ services: SERVICES }),
-  mixengine_sites: returns<SiteList>({ sites: SITES }),
-  mixengine_site: (args): SiteDetail => siteDetail(args.domain as string),
-  mixengine_projects: returns<ProjectList>(PROJECTS),
+  mixengine_sites: (args): SiteList => sites.list(args.project as string | undefined),
+  mixengine_site: (args): SiteDetail => sites.detail(args.domain as string),
+  mixengine_site_create: (args): SiteCreation => sites.create(args.params as SiteCreate),
+  mixengine_project_show: (args): ProjectDetail => projectDetail(args.name as string),
+  mixengine_projects: (): ProjectList => sites.projects(),
   mixengine_disk_usage: returns<DiskUsage>(DISK),
   // Set up already, so the Dashboard's PATH reminder stays out of the pictures.
   mixengine_path_status: returns<PathReport>({
@@ -274,7 +307,12 @@ export const mixengineHandlers: Handlers = {
   mixengine_elevation_status: returns<ElevationStatus>(ELEVATION),
   mixengine_blueprints: returns<BlueprintList>(BLUEPRINTS),
   mixengine_database_client: (args): DatabaseClientReport => databaseClient(args.service as string),
-  mixengine_watch: returns(null),
+  mixengine_watch: (args) => applying.watch(args.onEvent as Channel<string>),
+  mixengine_blueprint_apply: (args): BlueprintApplyResponse => applying.apply(args.params as BlueprintApply),
+  mixengine_job_status: (args): JobSummary => applying.jobStatus(args.job as number),
+  mixengine_job_logs_watch: (args) => applying.logsWatch(args.onLine as Channel<string>),
+  mixengine_logs_unwatch: () => applying.logsUnwatch(),
+  mixengine_service_start_project: returns(null),
   mixengine_unwatch: returns(null),
   mixengine_metrics_watch: (args) => {
     const channel = args.onFrame as Channel<string>;

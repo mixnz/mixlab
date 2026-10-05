@@ -55,6 +55,8 @@ interface SelectProps<T extends string | number> {
    * constraint, so `^8.3` and `8.3` have to stay reachable beside the exact versions installed.
    * Restricted to a string value, because anything committed here is what somebody typed. */
   freeText?: T extends string ? boolean : never;
+  /** `data-demo` on the trigger, for the promotional clips (`demo/clips.mjs`). Inert everywhere else. */
+  demo?: string;
 }
 
 const MENU_GAP = 4;
@@ -97,6 +99,7 @@ function Select<T extends string | number>({
   searchable = false,
   searchPlaceholder,
   freeText = false as T extends string ? boolean : never,
+  demo,
 }: SelectProps<T>) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -425,6 +428,7 @@ function Select<T extends string | number>({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
+        data-demo={demo}
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : openMenu())}
         onKeyDown={onKeyDown}

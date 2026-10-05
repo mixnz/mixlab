@@ -212,7 +212,7 @@ export default function AfterApply({ applied, onFinished }: Props) {
                 ) : (
                   <>
                     <p>{t("mixengine.afterApply.ready", { url: phase.url })}</p>
-                    <Button variant="primary" onClick={() => void openUrl(phase.url ?? "")}>
+                    <Button variant="primary" data-demo="open-site" onClick={() => void openUrl(phase.url ?? "")}>
                       {t("mixengine.afterApply.open", { url: phase.url })}
                     </Button>
                   </>

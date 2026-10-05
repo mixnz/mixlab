@@ -128,6 +128,7 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
         {
           kind: "confirm",
           label: t("common.save"),
+          demo: "site-save",
           onClick: () => void submit(),
           disabled: !editing && (project === "" || noProjects),
           busy: saving ? t("mixengine.sites.form.saving") : undefined,
@@ -149,6 +150,7 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
                     disabled={saving}
                     options={projectNames.map((name) => ({ value: name, label: name }))}
                     placeholder={t("mixengine.sites.form.project")}
+                    demo="site-project"
                   />
                 )}
               </label>

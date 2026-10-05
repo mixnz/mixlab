@@ -143,6 +143,7 @@ function Modal({
         disabled={action.disabled}
         busy={action.busy}
         autoFocus={action.autoFocus}
+        data-demo={action.demo}
         onClick={() => press(action)}
       >
         {action.icon}

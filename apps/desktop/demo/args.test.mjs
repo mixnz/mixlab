@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { modifierFor, parseArgs, storageFor } from "./args.mjs";
+import { modifierFor, parseArgs, parseClipArgs, storageFor } from "./args.mjs";
 
 const IDS = ["hero", "sites", "database"];
 
@@ -46,5 +46,32 @@ describe("modifierFor", () => {
     expect(modifierFor("mac")).toBe("Meta");
     expect(modifierFor("windows")).toBe("Control");
     expect(modifierFor("linux")).toBe("Control");
+  });
+});
+
+describe("parseClipArgs", () => {
+  const CLIPS = ["new-site"];
+
+  it("defaults to every clip, both themes, macOS, a full run", () => {
+    expect(parseClipArgs([], CLIPS)).toEqual({
+      check: false,
+      full: true,
+      clips: CLIPS,
+      themes: ["dark", "light"],
+      platform: "mac",
+    });
+  });
+
+  it("narrows by clip and theme", () => {
+    expect(parseClipArgs(["--clip", "new-site", "--theme", "dark"], CLIPS)).toMatchObject({
+      full: false,
+      clips: ["new-site"],
+      themes: ["dark"],
+    });
+  });
+
+  it("names what it does not know, and the command it belongs to", () => {
+    expect(() => parseClipArgs(["--clip", "nope"], CLIPS)).toThrow('unknown clip "nope"');
+    expect(() => parseClipArgs(["--scene", "hero"], CLIPS)).toThrow("Usage: npm run clips");
   });
 });

@@ -241,6 +241,7 @@ export default function ApplyDialog({
     actions.push({
       kind: "confirm",
       label: t("mixengine.blueprints.apply.preview"),
+      demo: "apply-preview",
       onClick: () => void preview(),
       disabled: project.trim() === "" || root.trim() === "",
       busy: busy ? t("mixengine.blueprints.apply.previewing") : undefined,
@@ -258,6 +259,7 @@ export default function ApplyDialog({
         scaffoldConsentState(plan.steps, scaffoldAgreed) === "declined"
           ? t("mixengine.blueprints.apply.applyWithoutCommand")
           : t("mixengine.blueprints.apply.applyButton"),
+      demo: "apply-run",
       onClick: () => void apply(plan, prerequisitesAgreed),
       disabled:
         !canApply(plan.steps, choices) || !requirementsAllowApply(phase.needs, prerequisitesAgreed),
@@ -269,6 +271,7 @@ export default function ApplyDialog({
     actions.push({
       kind: "confirm",
       label: t("mixengine.blueprints.apply.close"),
+      demo: "apply-close",
       onClick: () => onDone(applied),
       closes: true,
     });
@@ -368,6 +371,7 @@ export default function ApplyDialog({
                             className={styles.checkbox}
                             label={t("mixengine.blueprints.apply.scaffoldConsent")}
                             checked={scaffoldAgreed}
+                            data-demo="apply-scaffold"
                             onChange={(e) => setScaffoldAgreed(e.target.checked)}
                           />
                           {/* `mix`'s `[y/N]` question, drawn as an interface. Not ticking is an
@@ -406,7 +410,7 @@ export default function ApplyDialog({
                 exactly then. */}
             {(phase.kind === "running" || logEntries.length > 0) && (
               <div className={styles.output}>
-                <Button onClick={() => setShowLog((v) => !v)}>
+                <Button data-demo="apply-log" onClick={() => setShowLog((v) => !v)}>
                   {showLog
                     ? t("mixengine.blueprints.apply.hideLog")
                     : t("mixengine.blueprints.apply.viewLog")}

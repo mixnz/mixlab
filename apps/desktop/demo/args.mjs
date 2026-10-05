@@ -26,11 +26,11 @@ function assertKnown(values, known, what) {
   }
 }
 
-export function parseArgs(argv, sceneIds) {
+function parseRun(argv, ids, { flag, key, noun, command }) {
   const options = {
     check: false,
     full: true,
-    scenes: [...sceneIds],
+    [key]: [...ids],
     themes: [...THEMES],
     platform: "mac",
   };
@@ -40,14 +40,14 @@ export function parseArgs(argv, sceneIds) {
       options.check = true;
       continue;
     }
-    if (arg === "--scene" || arg === "--theme" || arg === "--platform") {
+    if (arg === flag || arg === "--theme" || arg === "--platform") {
       const value = argv[i + 1];
       if (value === undefined || value.startsWith("--")) throw new Error(`${arg} needs a value`);
       i++;
       const values = value.split(",");
-      if (arg === "--scene") {
-        assertKnown(values, sceneIds, "scene");
-        options.scenes = values;
+      if (arg === flag) {
+        assertKnown(values, ids, noun);
+        options[key] = values;
         options.full = false;
       } else if (arg === "--theme") {
         assertKnown(values, THEMES, "theme");
@@ -60,11 +60,19 @@ export function parseArgs(argv, sceneIds) {
       continue;
     }
     throw new Error(
-      `unknown argument ${arg}. Usage: npm run screenshots -- [--check] ` +
-        `[--scene ${sceneIds.join(",")}] [--theme dark,light] [--platform mac|windows|linux]`,
+      `unknown argument ${arg}. Usage: npm run ${command} -- [--check] ` +
+        `[${flag} ${ids.join(",")}] [--theme dark,light] [--platform mac|windows|linux]`,
     );
   }
   return options;
+}
+
+export function parseArgs(argv, sceneIds) {
+  return parseRun(argv, sceneIds, { flag: "--scene", key: "scenes", noun: "scene", command: "screenshots" });
+}
+
+export function parseClipArgs(argv, clipIds) {
+  return parseRun(argv, clipIds, { flag: "--clip", key: "clips", noun: "clip", command: "clips" });
 }
 
 /** Everything the window reads from `localStorage` on the way up, for one scene. */

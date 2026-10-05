@@ -56,3 +56,44 @@ screen — it always opens on Dashboard — so its scenes carry no slot and reac
 
 An `act` may press a shortcut the module registers, find text the fixtures own, or take the only
 element of its kind. Never interface copy and never a CSS class: those are what a redesign changes.
+
+## Clips
+
+`npm run clips` films short flows the same way: the real frontend, the same fixtures, and a cursor
+that glides to what it presses. Two clips today: `new-site` (the Sites screen's New site) and
+`quick-start` (the Dashboard's Quick start building the Laravel blueprint, then a browser opening
+the site). The design is
+[the clips spec](../../specs/2026-10-05-demo-clips-design.md).
+
+```bash
+npm run clips                                  # every clip, dark and light
+npm run clips -- --clip new-site --theme dark  # one clip
+npm run clips -- --check                       # film every clip, encode nothing
+```
+
+A full run needs ffmpeg (`winget install Gyan.FFmpeg`, `brew install ffmpeg`,
+`apt install ffmpeg`, or `FFMPEG=<path to the binary>`). Output lands in
+`apps/desktop/screenshots/out/clips/`: `<clip>-<theme>.mp4` (H.264, 2080×1300, 24 fps) and the
+`-start.png` / `-end.png` posters.
+
+A clip is declared in `demo/clips.mjs`: a module, an optional `setup` that runs before filming,
+and `steps` — `click`, `type`, `select` (opens, then picks the option whose text matches),
+`waitFor` (until an element appears, for timing the app decides, such as a job finishing) and
+`pause`. Steps aim only at `data-demo` hooks in `src/`; `clips.test.mjs` fails when one is
+missing. What a clip needs the fixtures to do differently goes in its `fixtures`, which the
+fixtures read through `demo/fixtures/options.ts`: `sitesWithout` (domains to start without),
+`fresh` (no project and no site, so Quick start is offered), `folder` (what the folder picker
+answers) and `browser` (draw a browser window when MixLab opens a URL, `demo/browser/overlay.ts`,
+showing the vendored `demo/browser/laravel-welcome.html`). A clip's `still` names an element
+photographed once the film stops, written as `<clip>-<theme>-<suffix>.png`.
+
+The Laravel apply (`demo/fixtures/laravelApply.ts`) mirrors the gallery's `laravel.toml`, which
+its test reads; change the blueprint and the test says so. When Laravel redraws its welcome page,
+refresh `laravel-welcome.html` by hand from a fresh `composer create-project laravel/laravel`.
+
+| Line | Meaning | What to do |
+| --- | --- | --- |
+| `failed     step N, <step>: …` | That step did not find or could not use its element | Put the `data-demo` hook back on the element, or update the step |
+| `failed     the last frame is the first` | The flow changed nothing on screen | A step is acting on the wrong element |
+| `failed     X MB is over the 1.50 MB budget` | The encoded clip is too heavy for the website | Shorten the pauses, or the flow |
+| `note       X MB, over 1.00 MB` | Within budget, but heavier than wanted | The same, when convenient |

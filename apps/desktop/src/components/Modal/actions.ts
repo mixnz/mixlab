@@ -18,6 +18,8 @@ export interface ModalAction {
   busy?: string;
   icon?: ReactNode;
   autoFocus?: boolean;
+  /** `data-demo` on the button, for the promotional clips (`demo/clips.mjs`). Inert everywhere else. */
+  demo?: string;
 }
 
 export type ActionVariant = "default" | "primary" | "danger";
