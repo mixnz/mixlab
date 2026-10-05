@@ -258,8 +258,176 @@ check_signature() {
   printf '%s\n' "$sg_version"
 }
 
+usage() {
+  cat <<'USAGE'
+Installs MixLab, or with --headless the command-line programs alone.
+
+  curl -fsSL https://mixnz.github.io/mixlab/install.sh | sh
+  curl -fsSL https://mixnz.github.io/mixlab/install.sh | sh -s -- --headless
+
+Options:
+  --headless         the four command-line programs, without the MixLab window
+  --version X.Y.Z    that release instead of the newest
+  --dry-run          say what would be downloaded and run, check the URLs, install nothing
+  -h, --help         this text
+USAGE
+}
+
+root_prefix() {
+  if [ "$(id -u)" = 0 ]; then
+    echo ""
+  elif command -v sudo >/dev/null 2>&1; then
+    echo sudo
+  else
+    return 1
+  fi
+}
+
+install_command() {
+  case "$1/$2" in
+    macos/*) echo "installer -pkg $3 -target /" ;;
+    linux/apt) echo "env DEBIAN_FRONTEND=noninteractive apt-get install -y $3" ;;
+    linux/dnf) echo "dnf install -y $3" ;;
+    linux/zypper) echo "zypper --non-interactive install --allow-unsigned-rpm $3" ;;
+    *) return 1 ;;
+  esac
+}
+
+# PREFIX COMMAND… with stdin closed: under `curl | sh` stdin is the rest of this script, and sudo
+# asks for its password on the terminal, not on stdin.
+run_install() {
+  ri_prefix="$1"
+  shift
+  say "running: ${ri_prefix:+$ri_prefix }$*"
+  # Word splitting is wanted: the prefix is empty or `sudo`, and every path is under mktemp's
+  # directory, which has no spaces.
+  # shellcheck disable=SC2086
+  $ri_prefix "$@" </dev/null
+}
+
 main() {
-  :
+  m_flavour="window"
+  m_version=""
+  m_dry=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --headless)
+        m_flavour="headless"
+        shift
+        ;;
+      --version)
+        [ $# -ge 2 ] || die "--version needs a version, such as --version 0.0.14"
+        m_version="$(normalize_version "$2")" || die "$2 is not a version. use one such as 0.0.14"
+        shift 2
+        ;;
+      --dry-run)
+        m_dry=1
+        shift
+        ;;
+      --print-names)
+        print_names "${2:+$(normalize_version "$2")}"
+        return 0
+        ;;
+      -h | --help)
+        usage
+        return 0
+        ;;
+      *) die "unknown option $1. run with --help to see the options" ;;
+    esac
+  done
+
+  if [ -n "$m_version" ] && ! version_at_least "$m_version" "$MIXLAB_OLDEST"; then
+    die "this script installs $MIXLAB_OLDEST or newer. download $m_version from $MIXLAB_RELEASES/tag/v$m_version"
+  fi
+
+  case "$(uname -s)" in
+    Darwin) m_os="macos" ;;
+    Linux) m_os="linux" ;;
+    *) die "this script is for macOS and Linux. on windows run: irm https://mixnz.github.io/mixlab/install.ps1 | iex" ;;
+  esac
+  m_arch="$(machine_arch "$(uname -m)")" ||
+    die "there is no build for $(uname -m). see ${MIXLAB_HANDBOOK}#from-source"
+
+  m_manager=""
+  if [ "$m_os" = linux ]; then
+    m_manager="$(linux_manager)" ||
+      die "this linux has no apt-get, dnf or zypper, so no package fits it. see ${MIXLAB_HANDBOOK}#from-source"
+    m_glibc="$(glibc_version)"
+    [ -n "$m_glibc" ] ||
+      die "this linux has no glibc (musl?), which every build needs. see ${MIXLAB_HANDBOOK}#from-source"
+    version_at_least "$m_glibc" "$MIXLAB_GLIBC_HEADLESS" ||
+      die "this linux has glibc $m_glibc; the programs need $MIXLAB_GLIBC_HEADLESS or newer"
+    if [ "$m_flavour" = window ] && ! version_at_least "$m_glibc" "$MIXLAB_GLIBC_WINDOW"; then
+      die "this linux has glibc $m_glibc; the window needs $MIXLAB_GLIBC_WINDOW. run again with --headless for the command-line programs"
+    fi
+    if [ "$m_flavour" = window ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
+      say "no desktop here; MixLab's window needs one. --headless is the package for a server"
+    fi
+  fi
+
+  m_name="$(artifact_name "$m_os" "$m_arch" "$m_manager" "$m_flavour" "$m_version")" ||
+    die "no package for this machine. see ${MIXLAB_HANDBOOK}#from-source"
+  m_base="$(release_base "$m_version")"
+
+  if [ "$m_dry" = 1 ]; then
+    say "found $m_os $m_arch${m_manager:+ with $m_manager}"
+    m_failed=0
+    for m_url in "$m_base/$m_name" "$m_base/$m_name.sha256" "$m_base/$m_name.minisig"; do
+      echo "$m_url"
+      url_answers "$m_url" || {
+        say "no answer from $m_url"
+        m_failed=1
+      }
+    done
+    if ! command -v minisign >/dev/null 2>&1; then
+      case "$m_os/$m_arch" in
+        linux/*) m_pinned="$MINISIGN_URL/minisign-0.12-linux.tar.gz" ;;
+        macos/aarch64) m_pinned="$MINISIGN_URL/minisign-0.12-macos.zip" ;;
+        *) m_pinned="" ;;
+      esac
+      if [ -n "$m_pinned" ]; then
+        echo "$m_pinned"
+        url_answers "$m_pinned" || {
+          say "no answer from $m_pinned"
+          m_failed=1
+        }
+      fi
+    fi
+    install_command "$m_os" "$m_manager" "<downloaded $m_name>"
+    return "$m_failed"
+  fi
+
+  m_prefix="$(root_prefix)" ||
+    die "installing needs root, and this account has no sudo. run this as root"
+
+  m_work="$(mktemp -d)" || die "cannot make a temporary directory"
+  trap 'rm -rf "$m_work"' EXIT
+  trap 'exit 1' INT TERM
+
+  say "downloading $m_name"
+  for m_part in "$m_name" "$m_name.sha256" "$m_name.minisig"; do
+    fetch "$m_base/$m_part" "$m_work/$m_part" || die "cannot download $m_base/$m_part. check the connection, then run this again"
+  done
+  check_sha256 "$m_work/$m_name" "$m_work/$m_name.sha256" ||
+    die "$m_name does not match its checksum. run this again; if it keeps failing, the download is being changed on the way"
+  m_minisign="$(minisign_for "$m_os" "$m_arch" "$m_work")" || exit 1
+  m_signed="$(check_signature "$m_minisign" "$MIXLAB_PUBKEY" "$m_work/$m_name" "$m_name" "$m_version")" ||
+    die "$m_name is not signed by MixLab. nothing was installed"
+  say "$m_name is version $m_signed, signed by MixLab"
+
+  if [ "$m_manager" = apt ]; then
+    run_install "$m_prefix" env DEBIAN_FRONTEND=noninteractive apt-get update ||
+      die "apt-get update failed. fix the package lists, then run this again"
+  fi
+  # shellcheck disable=SC2046
+  run_install "$m_prefix" $(install_command "$m_os" "$m_manager" "$m_work/$m_name") ||
+    die "the installer failed. its own message is above"
+
+  if [ "$m_flavour" = headless ]; then
+    say "installed. open a new terminal and run: mix status"
+  else
+    say "installed. open MixLab, or in a new terminal run: mix status"
+  fi
 }
 
 [ "${MIXLAB_INSTALL_SOURCED:-}" = 1 ] || main "$@"

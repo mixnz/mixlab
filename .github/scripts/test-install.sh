@@ -155,6 +155,39 @@ case "$intel" in
   *) check "an intel mac is refused" "brew install minisign … refused" "$intel" ;;
 esac
 
+check "macos command" "installer -pkg /t/x.pkg -target /" "$(install_command macos '' /t/x.pkg)"
+check "apt command" "env DEBIAN_FRONTEND=noninteractive apt-get install -y /t/x.deb" \
+  "$(install_command linux apt /t/x.deb)"
+check "dnf command" "dnf install -y /t/x.rpm" "$(install_command linux dnf /t/x.rpm)"
+check "zypper command" "zypper --non-interactive install --allow-unsigned-rpm /t/x.rpm" \
+  "$(install_command linux zypper /t/x.rpm)"
+
+# main, run as the user runs it, through the script file.
+script="$root/packaging/install/install.sh"
+check "an unknown option" "refused" "$(sh "$script" --nope 2>/dev/null || echo refused)"
+check "a bad version" "refused" "$(sh "$script" --version 1.2 2>/dev/null || echo refused)"
+check "a version before 0.0.8" "refused" "$(sh "$script" --version 0.0.7 2>/dev/null || echo refused)"
+check "--help says how to pass options" "yes" \
+  "$(sh "$script" --help 2>&1 | grep -q -- 'sh -s -- --headless' && echo yes || echo no)"
+check "--print-names" "10" "$(sh "$script" --print-names 0.0.14 | wc -l | tr -d ' ')"
+
+# A dry run against the published releases; skipped with no network.
+if url_answers "https://github.com/mixnz/mixlab/releases/latest" 2>/dev/null; then
+  dry="$(sh "$script" --dry-run --headless 2>&1)" || dry="FAILED: $dry"
+  case "$dry" in
+    *FAILED*) check "a dry run" "passes" "$dry" ;;
+    *"/releases/latest/download/"*".minisig"*) check "a dry run" "ok" "ok" ;;
+    *) check "a dry run lists the signature" "a .minisig URL" "$dry" ;;
+  esac
+fi
+
+# The installer gets no stdin: under `curl | sh` it would be reading the rest of the script.
+stdin_probe="$work/probe.sh"
+printf '#!/bin/sh\nif read -r line; then echo "read: $line"; else echo closed; fi\n' >"$stdin_probe"
+chmod +x "$stdin_probe"
+check "an install command runs with stdin closed" "closed" \
+  "$(echo "leftover script" | run_install "" "$stdin_probe")"
+
 if [ "$failures" -ne 0 ]; then
   echo "$failures check(s) failed" >&2
   exit 1
