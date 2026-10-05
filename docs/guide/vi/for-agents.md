@@ -4,7 +4,7 @@ slug = "for-agents"
 order = 16
 summary = "Mọi trang của cẩm nang này đều là Markdown thuần tại một địa chỉ dễ đoán, kèm một manifest, một file gộp, và cùng nội dung đó nằm sẵn trong chương trình mix."
 translation_of = "en/for-agents.md"
-source_sha256 = "e5c3c52dc4f9915d0d306121802f8c2cd240333baa06df788dc3e6d742c243ac"
+source_sha256 = "0a63d9b206f61e4db5b61f197b315fa5209b18f0fcdd0abcb3edaf38f6f94646"
 +++
 
 # Đọc cẩm nang này bằng chương trình
@@ -41,6 +41,8 @@ tắt, cộng thêm các tài nguyên máy đọc được liệt kê bên dư�
 | `/en/llms-full.txt` | Mọi trang tiếng Anh nối lại, để gửi một request thay vì mười sáu |
 | `/vi/llms-full.txt` | Tương tự, bằng tiếng Việt |
 | `/llms.txt` | Mục lục nói ở trên |
+| `/install.sh` | Script cài bằng một lệnh cho macOS và Linux |
+| `/install.ps1` | Script tương tự cho Windows PowerShell |
 | `/index.json` | Manifest nói ở dưới |
 | `/sitemap.xml`, `/robots.txt` | Cho crawler |
 

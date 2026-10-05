@@ -4,7 +4,7 @@ slug = "install"
 order = 2
 summary = "Bộ cài cho hệ điều hành của bạn, nó đụng vào những gì, cố ý không đụng vào những gì, và cách kiểm tra file vừa tải."
 translation_of = "en/install.md"
-source_sha256 = "a869ae806a4a0b22bc9eadae24843d558ea8916e0ce3b0c8d3bb425894d0cdbc"
+source_sha256 = "ed2f6dafd616c4292bff268a498fb0598ba28d70c0b731473fc6bdc06a7999a9"
 +++
 
 # Cài đặt MixLab
@@ -23,6 +23,39 @@ tính năng cần tới chúng. Chi tiết xem ở [MixLab xin quyền để là
 tới bản mới nhất *không phải* pre-release. Vì vậy khi bản ổn định đầu tiên ra mắt, các link này sẽ
 tự hoạt động mà không cần sửa trang này. Trong lúc chờ, bạn lấy bản pre-release mới nhất thủ công
 tại [trang releases](https://github.com/mixnz/mixlab/releases). Hiện tại đó là `v0.0.14`.
+
+## Một lệnh
+
+Trên macOS hoặc Linux:
+
+```bash
+curl -fsSL https://mixnz.github.io/mixlab/install.sh | sh
+```
+
+Trên Windows, mở PowerShell:
+
+```powershell
+irm https://mixnz.github.io/mixlab/install.ps1 | iex
+```
+
+Lệnh này tự chọn bộ cài hợp với máy bạn trong các mục bên dưới, kiểm checksum và chữ ký bằng khoá
+của MixLab, rồi mới chạy bộ cài như từng mục mô tả. Thêm `--headless` (trên Windows là `-Headless`)
+nếu chỉ cần các chương trình dòng lệnh, không cần cửa sổ; `--version 0.0.14` để cài một bản cũ hơn;
+`--dry-run` để xem nó sẽ tải và chạy gì mà không cài gì cả. Trên macOS và Linux, tuỳ chọn đặt sau
+`sh -s --`. Trên Windows thì truyền qua
+`& ([scriptblock]::Create((irm https://mixnz.github.io/mixlab/install.ps1))) -Headless`.
+
+Muốn đọc script trước khi chạy thì tải nó về trước:
+
+```bash
+curl -fsSLO https://mixnz.github.io/mixlab/install.sh
+less install.sh
+sh install.sh
+```
+
+Script cần `minisign` để kiểm chữ ký. Máy chưa có thì nó tải tạm một bản cho lần chạy đó, trừ Mac
+chip Intel: ở đó bạn cần `brew install minisign` trước. Mọi thứ nó tải về đều bị xoá khi chạy xong,
+chỉ còn lại những gì bộ cài đã cài.
 
 ## Bạn đang cài những gì
 
@@ -48,6 +81,8 @@ cũng không cần cài WebKitGTK. Link nằm trong từng mục bên dưới, v
 container, hay bất kỳ máy nào không có màn hình.
 
 ## Windows
+
+Hoặc cài bằng mục *Một lệnh* ở trên.
 
 [**Tải bộ cài**](https://github.com/mixnz/mixlab/releases/latest/download/mixlab-windows-x86_64-setup.exe)
 · [bộ cài headless](https://github.com/mixnz/mixlab/releases/latest/download/mixengine-windows-x86_64-headless-setup.exe)
@@ -78,6 +113,8 @@ gắn với từng file chứ không gắn với dự án.
 
 ## macOS
 
+Hoặc cài bằng mục *Một lệnh* ở trên.
+
 [**Tải gói cài**](https://github.com/mixnz/mixlab/releases/latest/download/mixlab-macos-universal.pkg)
 · [gói headless](https://github.com/mixnz/mixlab/releases/latest/download/mixengine-macos-universal-headless.pkg)
 
@@ -101,6 +138,8 @@ Với một sản phẩm dòng lệnh thì đây là cách nên dùng trước t
 cũng đặt luôn chương trình phụ trợ cần quyền quản trị vào máy cho bạn.
 
 ## Linux
+
+Hoặc cài bằng mục *Một lệnh* ở trên.
 
 [**`.deb`**](https://github.com/mixnz/mixlab/releases/latest/download/mixlab_amd64.deb)
 · [**`.rpm`**](https://github.com/mixnz/mixlab/releases/latest/download/mixlab-x86_64.rpm)

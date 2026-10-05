@@ -23,6 +23,39 @@ links go live with no edit to this page. Until then, get the newest pre-release 
 [the releases page](https://github.com/mixnz/mixlab/releases). Right now that is
 `v0.0.14`.
 
+## One command
+
+On macOS or Linux:
+
+```bash
+curl -fsSL https://mixnz.github.io/mixlab/install.sh | sh
+```
+
+On Windows, in PowerShell:
+
+```powershell
+irm https://mixnz.github.io/mixlab/install.ps1 | iex
+```
+
+It picks the installer for your system below, checks its checksum and its signature against
+MixLab's key before running it, and then runs it the way each section describes. Add `--headless`
+(`-Headless` on Windows) for the command-line programs without the window, `--version 0.0.14` for
+an older release, and `--dry-run` to see what it would download and run without installing
+anything. Options go after `sh -s --` on macOS and Linux, and on Windows through
+`& ([scriptblock]::Create((irm https://mixnz.github.io/mixlab/install.ps1))) -Headless`.
+
+If you would rather read a script before running it, download it first:
+
+```bash
+curl -fsSLO https://mixnz.github.io/mixlab/install.sh
+less install.sh
+sh install.sh
+```
+
+It needs `minisign` to check the signature. When you have none it fetches one for the length of the
+run, except on an Intel Mac, where it asks you to `brew install minisign` first. Everything it
+downloads is deleted when it finishes; what stays is what the installer installed.
+
 ## What you are installing
 
 Five programs, and it is worth knowing what each is before one of them surprises you.
@@ -47,6 +80,8 @@ Linux no WebKitGTK to install. It is linked in each section below and is what a 
 image, or any machine with no display wants.
 
 ## Windows
+
+Or install with the *One command* above.
 
 [**Download the installer**](https://github.com/mixnz/mixlab/releases/latest/download/mixlab-windows-x86_64-setup.exe)
 · [headless installer](https://github.com/mixnz/mixlab/releases/latest/download/mixengine-windows-x86_64-headless-setup.exe)
@@ -76,6 +111,8 @@ release, because reputation with no publisher identity accrues to a file rather 
 
 ## macOS
 
+Or install with the *One command* above.
+
 [**Download the package**](https://github.com/mixnz/mixlab/releases/latest/download/mixlab-macos-universal.pkg)
 · [headless package](https://github.com/mixnz/mixlab/releases/latest/download/mixengine-macos-universal-headless.pkg)
 
@@ -99,6 +136,8 @@ That is the instruction to reach for first on a command-line product. The packag
 it also places the privileged helper for you.
 
 ## Linux
+
+Or install with the *One command* above.
 
 [**`.deb`**](https://github.com/mixnz/mixlab/releases/latest/download/mixlab_amd64.deb)
 · [**`.rpm`**](https://github.com/mixnz/mixlab/releases/latest/download/mixlab-x86_64.rpm)

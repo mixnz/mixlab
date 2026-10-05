@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+- MixLab installs with one command: `curl -fsSL https://mixnz.github.io/mixlab/install.sh | sh`
+  on macOS and Linux, `irm https://mixnz.github.io/mixlab/install.ps1 | iex` on Windows. It picks
+  the installer for your machine and checks its signature first.
+
 ## v0.0.14
 
 ### Added

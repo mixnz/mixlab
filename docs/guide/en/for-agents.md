@@ -38,6 +38,8 @@ summary, plus the machine-readable resources below.
 | `/en/llms-full.txt` | Every English page concatenated, for one request instead of sixteen |
 | `/vi/llms-full.txt` | The same, in Vietnamese |
 | `/llms.txt` | The index above |
+| `/install.sh` | The one-command installer for macOS and Linux |
+| `/install.ps1` | The same, for Windows PowerShell |
 | `/index.json` | The manifest below |
 | `/sitemap.xml`, `/robots.txt` | For crawlers |
 
