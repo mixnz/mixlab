@@ -243,6 +243,11 @@ export default {
       edit: "Edit",
       delete: "Delete",
       empty: "No projects yet.",
+      exportManifest: "Write manifest",
+      exporting: "Writing",
+      exportCreated: "Wrote {{path}}.",
+      exportUpdated: "Updated {{path}}. Comments and anything written by hand were kept.",
+      exportOmitted: "A manifest holds one site, so these were left out: {{sites}}.",
       deleteTitle: "Delete project?",
       deleteMessage:
         "Only the registration is removed. The directory and mixengine.toml (if any) are left exactly as they are.",

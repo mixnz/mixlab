@@ -18,6 +18,7 @@ import type { ProjectDetail } from "@mixengine/api";
 import type { ProjectCreate } from "@mixengine/api";
 import type { ProjectUpdate } from "@mixengine/api";
 import type { ProjectRemoval } from "@mixengine/api";
+import type { ProjectExport } from "@mixengine/api";
 import type { ProjectSummary } from "@mixengine/api";
 import type { RuntimeKind } from "@mixengine/api";
 import type { RuntimeList } from "@mixengine/api";
@@ -283,6 +284,12 @@ export function projectUpdate(input: ProjectUpdate): Promise<ProjectSummary> {
 /** The directory and `mixengine.toml` are kept — only the registration is removed. */
 export function projectDelete(name: string): Promise<ProjectRemoval> {
   return invoke<ProjectRemoval>("mixengine_project_delete", { name });
+}
+
+/** Writes `<root>/mixengine.toml`, merging into one that is there. `sites_omitted` names the sites
+ *  the file could not hold, since a manifest has one `[site]`. */
+export function projectExport(name: string): Promise<ProjectExport> {
+  return invoke<ProjectExport>("mixengine_project_export", { name });
 }
 
 /** `domain.dns_status` is both the listing and the diagnosis of one name — leave `domain` empty to

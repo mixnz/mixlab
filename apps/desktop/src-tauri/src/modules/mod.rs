@@ -284,6 +284,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         mixengine::commands::mixengine_project_create,
         mixengine::commands::mixengine_project_update,
         mixengine::commands::mixengine_project_delete,
+        mixengine::commands::mixengine_project_export,
         mixengine::commands::mixengine_runtime_list_installed,
         mixengine::commands::mixengine_runtime_list_available,
         mixengine::commands::mixengine_runtime_install,

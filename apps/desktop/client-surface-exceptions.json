@@ -20,7 +20,5 @@
     "cert.ca_rotate": "Replacing the authority is for a key that has leaked and breaks every cached chain; `mix cert ca-rotate` is where that is done, deliberately.",
     "cert.ca_uninstall": "Removing trust while keeping MixEngine is uninstall's business (T87, `mix uninstall`); the window's CA block only repairs trust."
   },
-  "knownGaps": {
-    "project.export": "The Projects screen cannot write a project's mixengine.toml."
-  }
+  "knownGaps": {}
 }

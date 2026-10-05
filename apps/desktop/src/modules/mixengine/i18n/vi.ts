@@ -238,6 +238,11 @@ const vi: typeof en = {
       edit: "Sửa",
       delete: "Xoá",
       empty: "Chưa có project nào.",
+      exportManifest: "Ghi manifest",
+      exporting: "Đang ghi",
+      exportCreated: "Đã ghi {{path}}.",
+      exportUpdated: "Đã cập nhật {{path}}. Comment và phần bạn tự viết vẫn giữ nguyên.",
+      exportOmitted: "Mỗi manifest chỉ chứa một site, nên các site này không được ghi: {{sites}}.",
       deleteTitle: "Xoá project?",
       deleteMessage:
         "Chỉ gỡ đăng ký. Thư mục và mixengine.toml (nếu có) được giữ nguyên, không đụng tới.",

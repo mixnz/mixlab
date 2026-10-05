@@ -6,6 +6,7 @@ import ConfirmDialog from "../../../../components/ConfirmDialog";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
 import LoadingState from "../../../../components/LoadingState";
+import NoticeBanner from "../../../../components/NoticeBanner";
 import PageHeader from "../../../../components/PageHeader";
 import Table from "../../../../components/Table";
 import { copyText } from "../../../../core/clipboard";
@@ -36,6 +37,9 @@ export default function Projects({ active, onOpenSites }: Props) {
   const [editing, setEditing] = useState<ProjectDetail | null>(null);
   const [detail, setDetail] = useState<ProjectDetail | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  /** The project whose manifest is being written. */
+  const [exporting, setExporting] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
   const { t } = useTranslation();
 
   const reload = useCallback(async () => {
@@ -77,6 +81,31 @@ export default function Projects({ active, onOpenSites }: Props) {
     }
   }
 
+  /**
+   * Writes the project's `mixengine.toml`. No confirmation: the daemon merges into a file that is
+   * there rather than rewriting it, so nothing a person wrote is lost.
+   */
+  async function exportManifest(name: string) {
+    setExporting(name);
+    try {
+      const written = await api.projectExport(name);
+      const said = written.created
+        ? t("mixengine.projects.exportCreated", { path: written.path })
+        : t("mixengine.projects.exportUpdated", { path: written.path });
+      const omitted = written.sites_omitted ?? [];
+      setNotice(
+        omitted.length === 0
+          ? said
+          : `${said} ${t("mixengine.projects.exportOmitted", { sites: omitted.join(", ") })}`,
+      );
+      void reload();
+    } catch (e) {
+      setError(errorMessage(t, e));
+    } finally {
+      setExporting(null);
+    }
+  }
+
   async function confirmDelete(name: string) {
     try {
       await api.projectDelete(name);
@@ -93,6 +122,7 @@ export default function Projects({ active, onOpenSites }: Props) {
   return (
     <div className={`mixengine-page ${styles.projects}`}>
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
+      {notice !== "" && <NoticeBanner message={notice} onDismiss={() => setNotice("")} />}
 
       <PageHeader
         title={t("mixengine.sidebar.projects")}
@@ -161,6 +191,14 @@ export default function Projects({ active, onOpenSites }: Props) {
                       </Button>
                       <Button size="small" onClick={() => void edit(row.name)}>
                         {t("mixengine.projects.edit")}
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => void exportManifest(row.name)}
+                        disabled={exporting !== null && exporting !== row.name}
+                        busy={exporting === row.name ? t("mixengine.projects.exporting") : undefined}
+                      >
+                        {t("mixengine.projects.exportManifest")}
                       </Button>
                       <Button size="small" variant="danger" onClick={() => setDeleting(row.name)}>
                         {t("mixengine.projects.delete")}

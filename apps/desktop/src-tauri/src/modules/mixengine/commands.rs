@@ -270,6 +270,13 @@ pub async fn mixengine_project_delete(name: String) -> Result<Value, AppError> {
     rpc::call("project.delete", json!({ "project": { "name": name } })).await
 }
 
+/// `project.export` — writes the project into `<root>/mixengine.toml`. Merges into an existing
+/// file rather than rewriting it, so comments and a hand-written `[site]` survive.
+#[tauri::command]
+pub async fn mixengine_project_export(name: String) -> Result<Value, AppError> {
+    rpc::call("project.export", json!({ "project": { "name": name } })).await
+}
+
 /// `domain.dns_status` is both `domain.list` and the diagnosis of one name — leave `domain` empty
 /// to see every name.
 #[tauri::command]
