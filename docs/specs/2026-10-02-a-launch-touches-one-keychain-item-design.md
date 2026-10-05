@@ -117,16 +117,49 @@ so the comparison costs nothing there and covers every caller: db, terminal, RES
 ## D3. What stays a write on every launch
 
 Sync's refresh rotation (writer 1) still writes once per launch for a signed-in machine with rows
-on. It writes after the launch has read the vault, so it raises no prompt of its own. If the
+on. It writes after the launch has read the vault, so it raises no prompt of its own. With every
+row off, a signed-in machine writes nothing (D4). If the
 unverified ACL hypothesis holds, the write narrows the item's trust to the current build. For a
 person who only moves forward through releases that costs nothing, because every new build asks
 once anyway. Going back to a build that was allowed earlier would ask again, which matches the
 reinstall observation. Keeping the refresh token outside the Keychain to avoid this would be a
 security change for a downgrade convenience, so it is not proposed.
 
+## D4. The closing date at launch opens no session
+
+Found on the Mac (see *Outcome*): with every sync row off, a signed-in machine still wrote the
+vault once per launch. `Workspace.tsx` reads the server's closing date (D4b of the T177 spec) at
+launch through `sync_closing_here`, and `SyncState::closing_on` got it by opening a session. Opening
+one refreshes, and the refresh is writer 1 above, whatever the rows say.
+
+`closing_on` no longer opens a session. A run that has one reads `limits.closing_on` from it; a run
+that has none asks the saved server's `/v1/capabilities`, which needs no session, as the sign-in
+form already does through `sync_server_closing`. The banner still shows at launch. A signed-in
+machine with every row off makes that one unauthenticated request and writes nothing.
+
+Test: `the_closing_date_at_launch_refreshes_nothing` in `sync/session.rs`, against a local server
+that answers capabilities and a `Keeping` that counts what it keeps.
+
+## D5. A service start waits for the person answering the Keychain
+
+Also found on the Mac. Starting MixEngine's MariaDB from a build the `mixengine` item did not trust
+yet raised the Keychain dialog, and the service went to `Failed` three seconds later while the
+dialog was still on screen: `daemon.log` said `no answer within 3s`. The start path in
+`crates/mixengine-daemon/src/services/runner.rs` bounded the read by `ENVIRONMENT`, which exists so
+that a read that never returns cannot hold a stop or a daemon shutdown.
+
+The start path now waits on the runner's cancellation beside the read, so a stop or a shutdown ends
+the wait at once and leaves the service `Stopped`, and it is bounded by `START_ENVIRONMENT`, two
+minutes, long enough for a person to answer. The read is still kept for the next attempt to join.
+The stop path keeps `ENVIRONMENT` and its budget unchanged. This is MixEngine's daemon, not MixLab:
+the window only shows the service as `Starting` for longer.
+
+Test: `a_stop_ends_a_start_still_waiting_on_the_keyring` in `runner.rs`, and the existing
+`a_start_that_gave_up_on_a_keyring_read_does_not_start_a_second_one`.
+
 ## MixLab
 
-All of this is MixLab's own window. The `db` module's saved connection list and connect path
+All of this is MixLab's own window, except D5, which is the daemon's start path and adds no screen. The `db` module's saved connection list and connect path
 (D1), and `secrets.rs`'s Keeper (D2). No daemon method is added or changed, and MixEngine is not
 involved at start-up any more, which is the point of D1 under ADR 0056. A person sees no new
 screen. A launch of a new build asks once, and a restored MixEngine-backed tab waits for Connect.

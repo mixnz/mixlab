@@ -129,7 +129,8 @@ src-tauri/src/       Rust backend
   entries, then sync's `sync-master-key`); `sync_and_the_connections_are_one_visit_to_the_store` is
   the test that says so. Nothing on the launch path reads MixEngine's `mixengine` item either: a
   saved connection's `keyringRef` is resolved only in `connect` (`withResolvedPassword`), and the
-  vault is written only when it changes.
+  vault is written only when it changes. Reading sync's closing date at launch opens no session,
+  because a session refresh rotates the token and writes the vault.
 - **This app is MixLab, and its old name appears nowhere but in the values that fix up a user's
   machine**: `import.rs`'s identifier and marker, `secrets.rs`'s `LEGACY_SERVICE`, the storage
   keys in `public/storage-keys.js`, `shell/themeModel.ts` and `modules/terminal/settings.ts`, and
