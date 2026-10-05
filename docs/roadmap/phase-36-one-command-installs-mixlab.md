@@ -10,7 +10,7 @@ Design: [2026-10-05-t197-one-command-installs-mixlab-design.md](../specs/2026-10
 
 ---
 
-- [ ] **T197** **(P)** `install.sh` and `install.ps1` on `master`, published by the handbook's site;
+- [x] **T197** **(P)** `install.sh` and `install.ps1` on `master`, published by the handbook's site;
       they choose the file for the system, check its checksum and signature, and run the installer.
       The dry-run and headless-install checks against the newest release, and the install page in
       English and Vietnamese.
