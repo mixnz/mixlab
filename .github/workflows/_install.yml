@@ -37,9 +37,16 @@ jobs:
         shell: pwsh
         run: |
           ./.github/scripts/test-install.ps1
-          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
-          Invoke-ScriptAnalyzer -Path packaging/install/install.ps1,.github/scripts/test-install.ps1 `
-            -Severity Warning,Error -ExcludeRule PSAvoidUsingWriteHost -EnableExit
+          if (-not (Get-Module -ListAvailable PSScriptAnalyzer)) {
+            Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          }
+          # One file per call: -Path takes a single path. Collected, so every finding is printed
+          # before the step fails, which -EnableExit would not do past the first file.
+          $findings = foreach ($file in 'packaging/install/install.ps1', '.github/scripts/test-install.ps1') {
+            Invoke-ScriptAnalyzer -Path $file -Severity Warning,Error -ExcludeRule PSAvoidUsingWriteHost
+          }
+          $findings | Format-Table -AutoSize -Wrap ScriptName, Line, RuleName, Message | Out-String -Width 200
+          if ($findings) { exit 1 }
 
   dry-run:
     name: dry run (${{ matrix.os }})
