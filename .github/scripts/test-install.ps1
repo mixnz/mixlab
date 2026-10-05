@@ -64,6 +64,9 @@ try {
     $PSNativeCommandUseErrorActionPreference = $true
     $why = try { Test-MixLabSignature -Minisign $fake -Key 'k' -File $fake -Name 'x' -Version '' | Out-Null; 'accepted' } catch { $_.Exception.Message }
     $PSNativeCommandUseErrorActionPreference = $false
+    # The fake exits 1 on purpose, and the runner's PowerShell wrapper ends with
+    # `exit $LASTEXITCODE`: left as it is, a passing test fails the step.
+    $global:LASTEXITCODE = 0
     Assert-Same 'a refused signature says so in the script''s words' $true ($why -like 'the signature does not match*')
 
     'a package' | Set-Content -NoNewline (Join-Path $work 'x.exe')

@@ -156,6 +156,8 @@ check "a file signed under another name is refused" "refused" \
 
 # An Intel Mac with no minisign stops, and says what to install.
 intel="$( (
+  # An empty search path is the point: this is a machine with no minisign.
+  # shellcheck disable=SC2123
   PATH="/nonexistent"
   minisign_for macos x86_64 "$work" 2>&1
 ) || echo refused)"
@@ -193,6 +195,8 @@ fi
 
 # The installer gets no stdin: under `curl | sh` it would be reading the rest of the script.
 stdin_probe="$work/probe.sh"
+# Single quotes on purpose: $line belongs to the probe, not to this script.
+# shellcheck disable=SC2016
 printf '#!/bin/sh\nif read -r line; then echo "read: $line"; else echo closed; fi\n' >"$stdin_probe"
 chmod +x "$stdin_probe"
 check "an install command runs with stdin closed" "closed" \
