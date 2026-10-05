@@ -8,7 +8,14 @@ import Table from "../../../../components/Table";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
-import { buildCertRows, type CertRow } from "../../certTable";
+import type { SiteCertStatus } from "@mixengine/api";
+import {
+  buildCertRows,
+  servedByDomain,
+  servedCell,
+  type CertRow,
+  type ServedCell,
+} from "../../certTable";
 import styles from "./CertTable.module.css";
 
 type Translate = ReturnType<typeof useTranslation>["t"];
@@ -52,6 +59,42 @@ function outcomeTone(row: CertRow): StatusTone {
   }
 }
 
+/** The Served pill's word — one explicit branch per word, no key built from a string. */
+function servedWord(word: Exclude<ServedCell["word"], "unchecked">, t: Translate): string {
+  switch (word) {
+    case "served":
+      return t("mixengine.domains.certs.served.served");
+    case "no_certificate":
+      return t("mixengine.domains.certs.served.no_certificate");
+    case "names_differ":
+      return t("mixengine.domains.certs.served.names_differ");
+    case "not_served":
+      return t("mixengine.domains.certs.served.not_served");
+    case "served_certificate_differs":
+      return t("mixengine.domains.certs.served.served_certificate_differs");
+    case "not_trusted":
+      return t("mixengine.domains.certs.served.not_trusted");
+    case "expiring":
+      return t("mixengine.domains.certs.served.expiring");
+  }
+}
+
+/** The Served cell: a dash until the row has been checked, a pill naming what is wrong after. */
+function ServedPill({ cell }: { cell: ServedCell }) {
+  const { t } = useTranslation();
+  if (cell.word === "unchecked") return <span className={styles.none}>—</span>;
+
+  const hint =
+    cell.word === "served_certificate_differs"
+      ? t("mixengine.domains.certs.servedDiffersHint")
+      : (cell.because ?? undefined);
+  return (
+    <StatusPill tone={cell.tone} title={hint}>
+      {servedWord(cell.word, t)}
+    </StatusPill>
+  );
+}
+
 /**
  * Each site's certificate — T2.7.
  *
@@ -71,6 +114,11 @@ export default function CertTable({
   /** False until the first read has answered: the table is drawn empty until then. */
   const [loaded, setLoaded] = useState(false);
   const [reissuing, setReissuing] = useState<string | null>(null);
+  /** The answer of `cert.status`, or `null` before anybody asked. Back to `null` after anything that
+   *  may have changed what is served (a job finished, the screen reopened): what was checked then
+   *  is not known to hold now. */
+  const [served, setServed] = useState<Record<string, SiteCertStatus> | null>(null);
+  const [checking, setChecking] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -86,11 +134,33 @@ export default function CertTable({
     void reload();
   }, [reload, revision]);
 
+  useEffect(() => {
+    setServed(null);
+  }, [revision]);
+
+  async function checkServed() {
+    setChecking(true);
+    try {
+      setServed(servedByDomain(await api.certStatus()));
+    } catch (e) {
+      onError(errorMessage(t, e));
+    } finally {
+      setChecking(false);
+    }
+  }
+
   async function reissue(domain: string) {
     setReissuing(domain);
     try {
       const [row] = buildCertRows(await api.certs(domain));
       if (row) setRows((current) => current.map((r) => (r.domain === domain ? row : r)));
+      // What was checked is no longer what is on disk.
+      setServed((current) => {
+        if (current === null || !(domain in current)) return current;
+        const next = { ...current };
+        delete next[domain];
+        return next;
+      });
     } catch (e) {
       onError(errorMessage(t, e));
     } finally {
@@ -99,7 +169,20 @@ export default function CertTable({
   }
 
   return (
-    <Card title={t("mixengine.domains.certs.title")} count={loaded ? rows.length : undefined} flush>
+    <Card
+      title={t("mixengine.domains.certs.title")}
+      count={loaded ? rows.length : undefined}
+      flush
+      actions={
+        <Button
+          size="small"
+          onClick={() => void checkServed()}
+          busy={checking ? t("mixengine.domains.certs.checkingServed") : undefined}
+        >
+          {t("mixengine.domains.certs.checkServed")}
+        </Button>
+      }
+    >
       <Table aria-label={t("mixengine.domains.certs.title")}>
         <thead>
           <tr>
@@ -107,6 +190,7 @@ export default function CertTable({
             <th>{t("mixengine.domains.certs.columnNames")}</th>
             <th data-align="end">{t("mixengine.domains.certs.columnDaysLeft")}</th>
             <th>{t("mixengine.domains.certs.columnStatus")}</th>
+            <th>{t("mixengine.domains.certs.columnServed")}</th>
             <th data-align="end">{t("mixengine.domains.certs.columnActions")}</th>
           </tr>
         </thead>
@@ -145,6 +229,9 @@ export default function CertTable({
                 <StatusPill tone={outcomeTone(row)} title={outcomeLabel(row, t)}>
                   {outcomeWord(row, t)}
                 </StatusPill>
+              </td>
+              <td>
+                <ServedPill cell={servedCell(served?.[row.domain])} />
               </td>
               <td data-align="end" data-nowrap>
                 <Button

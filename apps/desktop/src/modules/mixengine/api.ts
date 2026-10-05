@@ -69,6 +69,7 @@ import type { ServiceWalk } from "@mixengine/api";
 import type { DomainStatusReport } from "@mixengine/api";
 import type { CaStatus } from "@mixengine/api";
 import type { CertIssueReport } from "@mixengine/api";
+import type { CertStatusReport } from "@mixengine/api";
 import type { BlueprintList } from "@mixengine/api";
 import type { BlueprintSummary } from "@mixengine/api";
 import type { BlueprintCapture } from "@mixengine/api";
@@ -315,6 +316,12 @@ export function caRepair(input: DoctorRepair): Promise<unknown> {
  *  and reissues. */
 export function certs(domain?: string): Promise<CertIssueReport> {
   return invoke<CertIssueReport>("mixengine_certs", { domain });
+}
+
+/** What the running front end presents, through a TLS handshake per site. Reads only, and slow
+ *  when the front end is down, so it is asked for rather than read on every reload. */
+export function certStatus(domain?: string): Promise<CertStatusReport> {
+  return invoke<CertStatusReport>("mixengine_cert_status", { domain });
 }
 
 export function runtimesInstalled(kind?: RuntimeKind): Promise<RuntimeList> {

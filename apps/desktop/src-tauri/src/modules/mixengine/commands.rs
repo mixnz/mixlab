@@ -309,6 +309,14 @@ pub async fn mixengine_certs(domain: Option<String>) -> Result<Value, AppError> 
     rpc::call("cert.issue", json!({ "site": site })).await
 }
 
+/// `cert.status` — what the running front end presents for each site, through a live TLS
+/// handshake. Reads only. Leave `domain` empty for every site.
+#[tauri::command]
+pub async fn mixengine_cert_status(domain: Option<String>) -> Result<Value, AppError> {
+    let site = domain.map(|d| json!({ "domain": d }));
+    rpc::call("cert.status", json!({ "site": site })).await
+}
+
 /// `filter` has the shape of `RuntimeFilter` — empty (`{}`) shows all four kinds.
 #[tauri::command]
 pub async fn mixengine_runtime_list_installed(filter: Value) -> Result<Value, AppError> {

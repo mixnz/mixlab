@@ -340,6 +340,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         mixengine::commands::mixengine_ca_status,
         mixengine::commands::mixengine_ca_repair,
         mixengine::commands::mixengine_certs,
+        mixengine::commands::mixengine_cert_status,
         mixengine::commands::mixengine_blueprints,
         mixengine::commands::mixengine_blueprint_capture,
         mixengine::commands::mixengine_blueprint_import,
