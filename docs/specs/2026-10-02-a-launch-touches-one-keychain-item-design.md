@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-02
 ---
 
@@ -196,3 +196,45 @@ signed in and the `connections` row on:
 
 1. Was the test Mac signed in to sync, and which rows were on? That tells which writer moved the
    timestamps. The fix covers both, but the Outcome should say which.
+
+## Outcome
+
+Measured on 2026-10-05 on the same Apple-silicon Mac (Darwin 24.6.0), over an installed, allowed
+0.0.13 (ad-hoc, `io.github.mixnz.mixlab`), with `mariadb@main` (a `keyringRef`) left connected in a
+restored Database tab. Dates are the vault's `mdat`; each write was also seen in the unified log as
+one `SecKeychainItemModifyAttributesAndData` from `mixlab`.
+
+**Round A, every sync row off, signed in.** CI run 37286302350 (`35a80dff`, window only):
+
+| Step | Dialogs | `mdat` |
+| --- | --- | --- |
+| Before install | | `20261005091405Z` |
+| Launch 1 | 1, `MixLab`; the tab came back as its form with the hint | `20261005091700Z` |
+| Launch 2 | 0 | `20261005092344Z` |
+| Connect | 1, `mixengine`, only on Connect (inferred from the log: one read at Connect, then the ACL commit *Always Allow* makes); connected | |
+
+The vault still moved on every launch. That was D4's writer, `closing_on` opening a session, and is
+how D4 and D5 came to be added. CI run 37292601711 (`115b142c`, window and daemon):
+
+| Step | Dialogs | `mdat` |
+| --- | --- | --- |
+| Before install | | `20261005094248Z` |
+| Launch 1 | 1, `MixLab`; the tab came back as its form with the hint | `20261005094248Z` |
+| Launch 2 | 0 | `20261005094248Z` |
+| Start `mariadb@main` | 1, from `mixengined`; the service stayed `Starting` for 27 s and went `Running` once allowed | |
+| Connect | 1, from `MixLab`, on Connect; connected | `20261005094248Z` |
+
+**Round B, signed in, all eleven rows on.** Same build:
+
+| Step | Dialogs | `mdat` |
+| --- | --- | --- |
+| After turning the rows on | | `20261005110739Z` |
+| Launch 1 | 0 | `20261005110948Z` |
+| Launch 2 | 0 | `20261005111049Z` |
+
+One write per launch, the refresh rotation D3 keeps.
+
+**Open question 1.** The test Mac was signed in to `sync-0.lab.mixnz.com` with all eleven rows on.
+The write on every launch came from sync's refresh-token rotation, and it did not need a row on:
+`closing_on` refreshed at launch for any signed-in machine (D4). Writer 2 never showed, since no
+launch here wrote more than once.
