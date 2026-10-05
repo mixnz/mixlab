@@ -487,6 +487,15 @@ const vi: typeof en = {
       stateDisabled: "Đang tắt",
       filterAllProjects: "Mọi project",
       edit: "Sửa",
+      rowMenu: "Thêm hành động",
+      start: "Bật",
+      stop: "Tắt",
+      delete: "Xoá",
+      deleteSharedHint: "Ngừng share site này trước khi xoá.",
+      deleteTitle: "Xoá {{domain}}?",
+      deleteMessage:
+        "Các domain của site được trả lại để site khác dùng. Thư mục doc root và mọi file trong đó vẫn ở trên đĩa.",
+      deleted: "Đã xoá {{domain}}. File của nó vẫn nằm ở {{path}}.",
       form: {
         createTitle: "Site mới",
         editTitle: "Sửa site",

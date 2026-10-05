@@ -492,6 +492,15 @@ export default {
       stateDisabled: "Disabled",
       filterAllProjects: "All projects",
       edit: "Edit",
+      rowMenu: "More actions",
+      start: "Start",
+      stop: "Stop",
+      delete: "Delete",
+      deleteSharedHint: "Stop sharing this site before you delete it.",
+      deleteTitle: "Delete {{domain}}?",
+      deleteMessage:
+        "Its domains are freed for another site. The doc root and every file in it stay on disk.",
+      deleted: "{{domain}} was deleted. Its files are still in {{path}}.",
       form: {
         createTitle: "New site",
         editTitle: "Edit site",

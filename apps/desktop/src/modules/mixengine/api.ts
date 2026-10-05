@@ -9,6 +9,7 @@ import type { SiteCreate } from "@mixengine/api";
 import type { SiteCreation } from "@mixengine/api";
 import type { SiteDetail } from "@mixengine/api";
 import type { SiteList } from "@mixengine/api";
+import type { SiteRemoval } from "@mixengine/api";
 import type { SiteShare } from "@mixengine/api";
 import type { SiteSharing } from "@mixengine/api";
 import type { SiteUpdate } from "@mixengine/api";
@@ -238,6 +239,22 @@ export function siteShare(input: SiteShare): Promise<SiteSharing> {
 
 export function siteUnshare(domain: string): Promise<unknown> {
   return invoke("mixengine_site_unshare", { domain });
+}
+
+/** Serves the site again. A flag and a re-render of the front end's configuration: no service is
+ *  started by it, which is still Open's job. */
+export function siteStart(domain: string): Promise<SiteDetail> {
+  return invoke<SiteDetail>("mixengine_site_start", { domain });
+}
+
+/** Stops serving the site and keeps its declaration; the services it uses keep running. */
+export function siteStop(domain: string): Promise<SiteDetail> {
+  return invoke<SiteDetail>("mixengine_site_stop", { domain });
+}
+
+/** Refused for an extension's site. The doc root is kept on disk, and `doc_root_kept` names it. */
+export function siteDelete(domain: string): Promise<SiteRemoval> {
+  return invoke<SiteRemoval>("mixengine_site_delete", { domain });
 }
 
 export function projects(): Promise<ProjectList> {

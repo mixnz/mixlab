@@ -217,6 +217,25 @@ pub async fn mixengine_site_unshare(domain: String) -> Result<Value, AppError> {
     rpc::call("site.unshare", json!({ "site": { "domain": domain } })).await
 }
 
+/// Serves the site again: a flag and a re-render of the front end's configuration, never a process.
+/// Answers the `SiteDetail` it now is.
+#[tauri::command]
+pub async fn mixengine_site_start(domain: String) -> Result<Value, AppError> {
+    rpc::call("site.start", json!({ "site": { "domain": domain } })).await
+}
+
+/// Stops serving the site and keeps its declaration; the services it uses keep running.
+#[tauri::command]
+pub async fn mixengine_site_stop(domain: String) -> Result<Value, AppError> {
+    rpc::call("site.stop", json!({ "site": { "domain": domain } })).await
+}
+
+/// Answers `SiteRemoval`: the doc root is kept on disk and named, which the UI has to say.
+#[tauri::command]
+pub async fn mixengine_site_delete(domain: String) -> Result<Value, AppError> {
+    rpc::call("site.delete", json!({ "site": { "domain": domain } })).await
+}
+
 /// Only to build the project dropdown in the create-site dialog — not a Projects screen.
 #[tauri::command]
 pub async fn mixengine_projects() -> Result<Value, AppError> {
