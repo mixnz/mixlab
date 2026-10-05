@@ -66,12 +66,18 @@ export const SCENES = [
     id: "tools",
     moduleId: "tools",
     tabTitle: "Tools",
-    state: { toolId: "jwt" },
+    state: { toolId: "diff" },
     headline: "Tools",
-    description: "JWT, JSON, regex, timestamps, diffs and more — offline, next to your code.",
-    // The JWT decoder has exactly one textarea: its input.
+    description: "Diffs, JSON, regex, JWTs, timestamps and more. Offline, next to your code.",
+    // The diff fills the width and its colours read at a glance, where the JWT decoder left half the
+    // image empty. Its two textareas are the only ones on screen, left then right. The view modes are
+    // the last tablist on the page (the tab strip is the first), in `VIEW_MODES` order: unified,
+    // then split.
     act: async ({ page, constants }) => {
-      await page.locator("textarea").first().fill(constants.jwt);
+      const fields = page.locator("textarea");
+      await fields.nth(0).fill(constants.diffLeft);
+      await fields.nth(1).fill(constants.diffRight);
+      await page.locator('[role="tablist"]').last().locator('[role="tab"]').nth(1).click();
     },
   },
 ];

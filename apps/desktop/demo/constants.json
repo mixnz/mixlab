@@ -4,5 +4,6 @@
   "requestId": "demo-paid-orders",
   "shellName": "bash",
   "cwd": "~/Sites/acme-shop",
-  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfNDgyMSIsIm5hbWUiOiJBZGEgTmd1eWVuIiwiZW1haWwiOiJhZGFAYWNtZS50ZXN0Iiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzY4NDcyNjQwLCJleHAiOjE3Njg0NzYyNDB9.YWNtZS1zaG9wLWRlbW8tc2lnbmF0dXJlLTAwMDEhIQ"
+  "diffLeft": "{\n  \"name\": \"acme-shop\",\n  \"version\": \"1.4.2\",\n  \"port\": 8080,\n  \"database\": {\n    \"host\": \"127.0.0.1\",\n    \"pool\": 10\n  },\n  \"features\": [\"checkout\", \"search\"],\n  \"logLevel\": \"info\"\n}",
+  "diffRight": "{\n  \"name\": \"acme-shop\",\n  \"version\": \"1.5.0\",\n  \"port\": 8443,\n  \"database\": {\n    \"host\": \"127.0.0.1\",\n    \"pool\": 20\n  },\n  \"features\": [\"checkout\", \"search\", \"wishlist\"],\n  \"logLevel\": \"info\",\n  \"https\": true\n}"
 }
