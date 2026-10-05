@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.14
+
 ### Added
 - MixEngine runs databases on a Linux server with no desktop: `mix daemon credential-store home`
   keeps that home's passwords in a file only your account can read.
