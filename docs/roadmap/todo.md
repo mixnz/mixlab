@@ -67,6 +67,7 @@ done
 | [34 — A headless host](phase-34-a-headless-host.md) | A Linux release with no desktop runs databases, keeps their passwords, and comes back after a reboot on its own | T194a–T195 | 6 / 7 | **M34** on an Ubuntu 24.04 server reached only over SSH, a MariaDB first-runs on the file store, survives a daemon restart, and answers after an unattended reboot |
 | [35 — An index that stays small](phase-35-an-index-that-stays-small.md) | The package index costs one small request when nothing was published, and only the kinds a home uses when something was | T196a–T196e | 5 / 5 | **M35** an idle daemon asks for one signature every six hours, a fresh home listing runtimes fetches six kind files and not eighteen, and an upgraded home cannot be walked backwards |
 | [36 — One command installs MixLab](phase-36-one-command-installs-mixlab.md) | One line in a terminal picks, checks and installs the right installer | T197 | 1 / 1 | **M36** `curl … \| sh` and `irm … \| iex` install the headless programs on a clean Linux, macOS and Windows runner, and `mix --version` names the release |
+| [37 — The window closes its known gaps](phase-37-the-window-closes-its-known-gaps.md) | Every daemon method a person in the window needs has its button; the rest say why not | T199 | 0 / 1 | **M37** `check-client-surface` reports 0 known gaps |
 
 [Parked](parked.md) — revisit deliberately, do not start early.
 
