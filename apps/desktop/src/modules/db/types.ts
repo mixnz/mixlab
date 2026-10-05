@@ -62,8 +62,9 @@ export interface SavedConnection {
    *  Safe to keep in `connections.json` in plain text, unlike a password: it is a name, not a
    *  secret — reading the credential it names still requires the OS credential store to hand it
    *  over. Set means Save must write this address instead of copying MixEngine's password into
-   *  MixLab's own vault; the password shown in the form is resolved from it fresh on every load, and
-   *  reads as empty rather than an error when MixEngine no longer has that entry. */
+   *  MixLab's own vault. The password is resolved from it only to connect
+   *  (`withResolvedPassword`), never when the list is read, and reads as empty rather than an
+   *  error when MixEngine no longer has that entry. */
   keyringRef?: string;
 }
 

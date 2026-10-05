@@ -103,12 +103,13 @@ const GONE_FLOOR: Duration = Duration::from_millis(100);
 /// a kill; a start refuses ([`Runner::environment`]), because carrying on would be the empty
 /// password that function exists to prevent.
 ///
-/// The start path is the one that could hang a whole daemon, and did until it was bounded here.
-/// The read happens on a blocking task and holds no cancellation point, so a service sitting in
+/// The start path is the one that could hang a whole daemon, and did until it was bounded. The
+/// read happens on a blocking task and holds no cancellation point, so a service sitting in
 /// [`Runner::attempt`] when a shutdown arrives never reaches its token: the cancellation releases
 /// nothing, [`Registry::stop_one`](super::Registry) waits on a task that is not coming back, and
 /// the answer to `daemon.shutdown` — with the root token and the daemon behind it — waits with it.
-/// A `--detach`ed daemon on Windows has no console event to fall back on either.
+/// A `--detach`ed daemon on Windows has no console event to fall back on either. The start path
+/// now waits on that token beside the read, and is bounded by [`START_ENVIRONMENT`] instead.
 ///
 /// Generous against an unlocked store, which answers in milliseconds, and short against a person who
 /// is not at the machine.
@@ -120,6 +121,27 @@ const GONE_FLOOR: Duration = Duration::from_millis(100);
 /// nothing is counting, and the budget is what it gets when something is — the same arrangement
 /// [`GONE`] and [`FLUSH`] are in, and for the same reason.
 const ENVIRONMENT: Duration = Duration::from_secs(3);
+
+/// How long a start waits for its environment before it fails.
+///
+/// **Long enough for a person to answer the OS.** On macOS the first read of a Keychain item by a
+/// build the item does not trust yet raises a dialog, and the read returns only once somebody has
+/// clicked it; a locked keyring on Linux asks for a password the same way. Bounded by
+/// [`ENVIRONMENT`], the start failed while the dialog was still on screen, and the person who then
+/// allowed it found a `Failed` service and had to ask again.
+///
+/// A start can afford what a stop cannot, because a stop or a shutdown is not kept waiting by it:
+/// [`Runner::environment`] waits on the runner's cancellation as well, and leaves the moment it
+/// fires. What is left to bound is a person who is not at the machine, and the read is joined
+/// by the next attempt rather than begun again either way — see [`Runner::reading`].
+///
+/// Three seconds under test, where the keyring is a mock with a set delay and a test that waited
+/// two minutes for a deadline would be a test nobody runs.
+const START_ENVIRONMENT: Duration = if cfg!(test) {
+    ENVIRONMENT
+} else {
+    Duration::from_secs(120)
+};
 
 /// How long the last lines of a stopped service are waited for.
 ///
@@ -693,10 +715,18 @@ impl Runner {
 
     async fn attempt(&mut self, restarts: &mut Restarts) -> After {
         let env = match self.environment().await {
-            Ok(env) => env,
+            Ok(Some(env)) => env,
+
+            // Asked to stop while the keyring was still being read. Nothing was started, so this
+            // goes straight through `Stopping`, as a stop during a backoff does.
+            Ok(None) => {
+                self.stopped_before_running().await;
+
+                return After::Done;
+            }
 
             // A credential the spec names and the keyring does not hold, or one it will not answer
-            // for inside `ENVIRONMENT`. The process was never started, which is exactly what
+            // for inside `START_ENVIRONMENT`. The process was never started, which is exactly what
             // `SpawnFailed` says — and the entry is named in `daemon.log` and never in the event,
             // because the event is rendered in a GUI.
             Err(error) => {
@@ -1865,12 +1895,7 @@ impl Runner {
             biased;
 
             () = self.cancel.cancelled() => {
-                // Nothing is running to stop — the process is already gone — so this goes straight
-                // through `Stopping` to the state a user asked for.
-                let reason = self.stopping_because();
-
-                self.move_to(ServiceState::Stopping, reason.clone()).await;
-                self.move_to(ServiceState::Stopped, reason).await;
+                self.stopped_before_running().await;
 
                 Released::Stopped
             }
@@ -1879,6 +1904,16 @@ impl Runner {
 
             () = tokio::time::sleep(after) => Released::Elapsed,
         }
+    }
+
+    /// A stop that found no process to stop — one that arrived during a backoff, or while a start
+    /// was still reading its environment — goes straight through `Stopping` to the state a user
+    /// asked for.
+    async fn stopped_before_running(&self) {
+        let reason = self.stopping_because();
+
+        self.move_to(ServiceState::Stopping, reason.clone()).await;
+        self.move_to(ServiceState::Stopped, reason).await;
     }
 
     /// Take the request this start has just answered, so that no later crash is released by it.
@@ -2107,11 +2142,14 @@ impl Runner {
     /// worth listing nor worth asking for, which is why the walk stops there ([`OnFailure::Stop`]).
     ///
     /// **An environment that will not *arrive* is an environment that is not there**, which is why
-    /// [`ENVIRONMENT`] bounds this exactly as it bounds the stop path's read. The answer is the same
-    /// one a missing credential gets and for the same reason: what the spec asked for is not
-    /// available, so the process is not started. It reaches the user as
-    /// [`StateReason::SpawnFailed`], which says precisely that, and the reason it did not arrive is
-    /// named in `daemon.log` where a locked keyring can be acted on.
+    /// [`START_ENVIRONMENT`] bounds this. The answer is the same one a missing credential gets and
+    /// for the same reason: what the spec asked for is not available, so the process is not
+    /// started. It reaches the user as [`StateReason::SpawnFailed`], which says precisely that, and
+    /// the reason it did not arrive is named in `daemon.log` where a locked keyring can be acted on.
+    ///
+    /// **[`None`] is a stop that arrived first.** The runner's cancellation is waited on beside the
+    /// read, so a `mix stop` or a daemon shutdown is not held for as long as a person takes to
+    /// answer the OS's dialog. The caller owes that stop its `Stopped`, as a backoff does.
     ///
     /// Giving up on the read leaves the blocking task where it is, still waiting on the store — see
     /// [`Runner::where_commands_run`], which pays the same price for the same reason. What it does
@@ -2121,7 +2159,7 @@ impl Runner {
     /// why this takes `&mut self` — see [`Runner::reading`]. A start is retried, so a price the stop
     /// path pays once per service was being paid once per attempt here, and against a keyring that
     /// never answers that is tokio's blocking pool filling up with reads nobody is waiting for.
-    async fn environment(&mut self) -> anyhow::Result<BTreeMap<String, String>> {
+    async fn environment(&mut self) -> anyhow::Result<Option<BTreeMap<String, String>>> {
         // Taken rather than borrowed: whichever arm below runs, this handle is either finished with
         // or put back, and a `take` is what stops a `?` in between leaving a live read behind.
         let mut reading = match self.reading.take() {
@@ -2131,7 +2169,17 @@ impl Runner {
 
         // `&mut` so that the timeout drops the borrow and not the handle — the read this gives up on
         // is the one the next attempt is going to wait for.
-        let walked = tokio::time::timeout(ENVIRONMENT, &mut reading).await;
+        let walked = tokio::select! {
+            biased;
+
+            () = self.cancel.cancelled() => {
+                self.reading = Some(reading);
+
+                return Ok(None);
+            }
+
+            walked = tokio::time::timeout(START_ENVIRONMENT, &mut reading) => walked,
+        };
 
         let (env, failed) = match walked {
             Ok(joined) => joined?,
@@ -2142,14 +2190,15 @@ impl Runner {
                 self.reading = Some(reading);
 
                 anyhow::bail!(
-                    "no answer within {ENVIRONMENT:?}; a locked OS keyring is the usual reason"
+                    "no answer within {START_ENVIRONMENT:?}; a locked OS keyring, or a keyring \
+                     dialog nobody answered, is the usual reason"
                 )
             }
         };
 
         match failed.into_iter().next() {
             Some((name, error)) => Err(error.context(format!("the environment entry {name}"))),
-            None => Ok(env),
+            None => Ok(Some(env)),
         }
     }
 
@@ -2846,7 +2895,7 @@ mod tests {
 
     /// **A start that gave up on a keyring read joins it next time instead of starting another.**
     ///
-    /// [`ENVIRONMENT`] bounds the read and cannot abort it: the walk is a blocking task,
+    /// [`START_ENVIRONMENT`] bounds the read and cannot abort it: the walk is a blocking task,
     /// `spawn_blocking` has no cancellation, and dropping the handle only stops *this* task waiting.
     /// One parked thread is what the bound was worth paying; one per attempt is not — a start is
     /// retried by every restart the policy grants and by every `service.start` a client sends, so a
@@ -2856,14 +2905,14 @@ mod tests {
     /// **Asserted by the clock rather than by counting threads**, which is what the mock keyring can
     /// support: the store answers a second after the first attempt has given up, so an attempt that
     /// joined the read in flight hears it a second later and one that started a fresh read waits the
-    /// whole of `ENVIRONMENT` again. The gap between those two is the test.
+    /// whole of `START_ENVIRONMENT` again. The gap between those two is the test.
     #[tokio::test]
     async fn a_start_that_gave_up_on_a_keyring_read_does_not_start_a_second_one() {
         let (_home, paths, store) = home(&["mariadb"]).await;
 
-        // Longer than `ENVIRONMENT`, so the first attempt always ends at its deadline; and only just,
+        // Longer than `START_ENVIRONMENT`, so the first attempt always ends at its deadline; and only just,
         // so the answer lands while the second attempt is waiting for it.
-        let answers_after = ENVIRONMENT + Duration::from_secs(1);
+        let answers_after = START_ENVIRONMENT + Duration::from_secs(1);
 
         let mut runner = adopted_runner(
             spec("mariadb")
@@ -2898,10 +2947,10 @@ mod tests {
         let took = began.elapsed();
 
         assert!(
-            took < ENVIRONMENT,
+            took < START_ENVIRONMENT,
             "the second attempt waited {took:?}, which is a read of its own: the one already in \
              flight answers {:?} after the first attempt gave up",
-            answers_after - ENVIRONMENT
+            answers_after - START_ENVIRONMENT
         );
         assert!(
             format!("{second}").contains("MARIADB_ROOT_PASSWORD"),
@@ -2910,6 +2959,51 @@ mod tests {
         assert!(
             runner.reading.is_none(),
             "the read finished, so there is nothing left for a third attempt to join"
+        );
+    }
+
+    /// **A stop does not wait for a start's keyring read.** [`START_ENVIRONMENT`] is long enough for
+    /// a person to answer the OS's dialog, which is too long for a `mix stop` or a shutdown to sit
+    /// behind; the runner's cancellation is what ends the wait, and the read is kept for the next
+    /// attempt to join.
+    #[tokio::test]
+    async fn a_stop_ends_a_start_still_waiting_on_the_keyring() {
+        let (_home, paths, store) = home(&["mariadb"]).await;
+
+        let mut runner = adopted_runner(
+            spec("mariadb")
+                .env_from_keyring("MARIADB_ROOT_PASSWORD", "mixengine", "mariadb@main/root")
+                .build()
+                .expect("a usable spec"),
+            &paths,
+            &store,
+            START_ENVIRONMENT + Duration::from_secs(5),
+        );
+
+        let cancel = runner.cancel.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(200)).await;
+            cancel.cancel();
+        });
+
+        let began = Instant::now();
+        let env = runner
+            .environment()
+            .await
+            .expect("a stop is not a failure to resolve");
+        let took = began.elapsed();
+
+        assert!(
+            env.is_none(),
+            "the stop arrived first, so nothing was resolved"
+        );
+        assert!(
+            took < START_ENVIRONMENT,
+            "the start waited {took:?} after a stop at 200ms; the stop should have ended it"
+        );
+        assert!(
+            runner.reading.is_some(),
+            "the read the stop interrupted is the one the next attempt has to join"
         );
     }
 }

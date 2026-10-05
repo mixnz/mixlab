@@ -801,19 +801,34 @@ impl SyncState {
         .await
     }
 
-    /// The signed-in server's closing date (D4b), opening the session if this run has not — so the
-    /// window can warn at launch rather than after the first sync. `None` when signed out, and then
-    /// nothing is asked.
+    /// The signed-in server's closing date (D4b), read at launch so the window can warn before the
+    /// first sync. `None` when signed out, and then nothing is asked.
+    ///
+    /// **It does not open a session.** Opening one refreshes, and a refresh rotates the refresh
+    /// token and writes it to the credential store — on macOS a write to the one vault item, on
+    /// every launch of a machine that is signed in, whether or not any sync row is on. The date is
+    /// in `/v1/capabilities`, which needs no session, so a run that has not opened one asks that
+    /// instead, and one that has reads what its session was handed.
     pub async fn closing_on(&self) -> Result<Option<i64>, AppError> {
-        let signed_in = {
+        let (saved, opened) = {
             let mut inner = self.inner.lock().await;
             self.load(&mut inner).await?;
-            inner.saved.is_some()
+            let opened = inner
+                .session
+                .as_ref()
+                .map(|session| session.limits.closing_on);
+            (inner.saved.clone(), opened)
         };
-        if !signed_in {
+        let Some(saved) = saved else {
             return Ok(None);
+        };
+        if let Some(closing_on) = opened {
+            return Ok(closing_on);
         }
-        Ok(self.session(None).await?.limits.closing_on)
+        Ok(Account::new(&saved.server, saved.access.as_deref())?
+            .capabilities()
+            .await?
+            .closing_on)
     }
 
     /// Freeze without a move, for `tests/sync_live.rs` alone: in the product a freeze is only ever
@@ -1366,5 +1381,90 @@ mod tests {
     #[tokio::test]
     async fn signed_out_has_no_closing_date() {
         assert_eq!(state().closing_on().await.unwrap(), None);
+    }
+
+    /// Counts what is kept, so a test can say a refresh did not happen: a refresh is what keeps.
+    #[derive(Default)]
+    struct Counting {
+        inner: InMemory,
+        kept: std::sync::atomic::AtomicUsize,
+    }
+
+    impl Keeping for Counting {
+        fn load(&self) -> Result<Option<Saved>, AppError> {
+            self.inner.load()
+        }
+        fn keep(&self, saved: &Saved) -> Result<(), AppError> {
+            self.kept.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            self.inner.keep(saved)
+        }
+        fn forget(&self) -> Result<(), AppError> {
+            self.inner.forget()
+        }
+    }
+
+    /// A server that answers every request with the same capabilities, and records each request's
+    /// first line.
+    async fn capabilities_server(closing_on: i64) -> (String, Arc<std::sync::Mutex<Vec<String>>>) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let asked = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let recorded = asked.clone();
+        let body = serde_json::json!({
+            "protocolVersions": ["1"],
+            "maxRecordBytes": 1,
+            "maxBatchOperations": 1,
+            "maxBatchBytes": 1,
+            "maxPageRecords": 1,
+            "accountQuotaBytes": 1,
+            "tombstoneRetentionDays": 1,
+            "closingOn": closing_on,
+            "features": [],
+        })
+        .to_string();
+        tokio::spawn(async move {
+            while let Ok((mut socket, _)) = listener.accept().await {
+                let mut head = vec![0u8; 4096];
+                let read = socket.read(&mut head).await.unwrap_or(0);
+                let head = String::from_utf8_lossy(&head[..read]).into_owned();
+                let line = head.lines().next().unwrap_or_default();
+                let line = line.rsplit_once(' ').map_or(line, |(line, _)| line);
+                recorded.lock().unwrap().push(line.to_owned());
+                let answer = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\
+                     connection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = socket.write_all(answer.as_bytes()).await;
+            }
+        });
+        (base, asked)
+    }
+
+    /// **Reading the closing date at launch keeps nothing.** It used to open a session, which
+    /// refreshes, which rotates the refresh token and writes the vault on every launch of a
+    /// signed-in machine — with every sync row off. The date comes from `/v1/capabilities`, which
+    /// needs no session.
+    #[tokio::test]
+    async fn the_closing_date_at_launch_refreshes_nothing() {
+        let (base, asked) = capabilities_server(1_900_000_000).await;
+        let keeping = Arc::new(Counting::default());
+        let saved = Saved::from_json(&format!(
+            r#"{{"server":"{base}","access":null,"email":"e","deviceId":"d","refreshToken":"r","masterKey":"m"}}"#
+        ))
+        .unwrap();
+        keeping.inner.keep(&saved).unwrap();
+        let path = std::env::temp_dir().join(format!("sync-{}.db", uuid::Uuid::new_v4()));
+        let state = SyncState::new(keeping.clone(), Ok(path));
+
+        assert_eq!(state.closing_on().await.unwrap(), Some(1_900_000_000));
+        assert_eq!(
+            keeping.kept.load(std::sync::atomic::Ordering::SeqCst),
+            0,
+            "nothing was kept, so no refresh token was spent"
+        );
+        assert_eq!(*asked.lock().unwrap(), ["GET /v1/capabilities"]);
     }
 }

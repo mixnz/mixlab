@@ -17,6 +17,9 @@ const dbEn = {
     connecting: "Connecting...",
     /* A `mixlab://` link opened from a browser: everything but the password came with it. */
     handoffNeedsPassword: "Enter the password to connect.",
+    // In the empty password box of a connection MixEngine handed over: the password is read from
+    // MixEngine's keyring when Connect is pressed, and not before.
+    passwordFromMixEngine: "Filled in from MixEngine when you connect",
     // On the button at the end of the workspace tabs. What it does is not "disconnect" alone —
     // the connection form comes back, still holding this connection, so it says where you land.
     disconnectHint: "Close this connection and go back to the connection form",

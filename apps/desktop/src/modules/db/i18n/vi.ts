@@ -11,6 +11,7 @@ const dbVi: DbDict = {
     tunnelFailed: "\u2717 {{error}}",
     connecting: "Đang kết nối...",
     handoffNeedsPassword: "Nhập mật khẩu để kết nối.",
+    passwordFromMixEngine: "MixEngine điền vào khi kết nối",
     disconnectHint: "Đóng kết nối này và quay lại màn hình kết nối",
     connectedStatus: "Đã kết nối ({{id}})",
     fallbackTitle: "{{kind}} \u00b7 {{host}}",
