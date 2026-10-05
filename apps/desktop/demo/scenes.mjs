@@ -21,7 +21,7 @@ export const SCENES = [
     moduleId: "mixengine",
     tabTitle: "MixEngine",
     headline: "Your whole local stack, one window",
-    description: "PHP, Node and Python side by side, databases and HTTPS domains — no Docker, no config files.",
+    description: "PHP, Node and Python side by side, databases and HTTPS domains. No Docker, no config files.",
   },
   {
     id: "sites",
