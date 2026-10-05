@@ -194,6 +194,8 @@ export default {
       resetConfirm: "Reset the password",
       noServices: "Nothing is set up yet.",
       job: "Working",
+      cancelJob: "Cancel",
+      cancelling: "Cancelling",
       elevationWaiting: "{{count}} waiting for an administrator",
       diskUsage: {
         title: "Disk usage",
@@ -768,6 +770,11 @@ export default {
         applyWithoutCommand: "Set up without running the command",
         applying: "Applying…",
         running: "Running…",
+        cancelApply: "Cancel apply",
+        cancelling: "Cancelling",
+        cancelNote:
+          "Stopping after the current step. What is already set up stays, and applying again picks up from there.",
+        cancelled: "Apply cancelled. What was already set up stays; apply again to finish.",
         viewLog: "View output",
         hideLog: "Hide output",
         doneTitle: "Done",

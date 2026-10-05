@@ -92,6 +92,12 @@
   color: var(--text-muted);
 }
 
+/* Pushed to the row's end so the button sits in one place whatever the message's length. */
+.jobCancel {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .service {
   display: flex;
   align-items: center;

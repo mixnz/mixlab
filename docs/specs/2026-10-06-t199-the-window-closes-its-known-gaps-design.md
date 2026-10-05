@@ -87,13 +87,17 @@ Cancelling mark is a set of job ids local to the Dashboard, dropped for an id wh
 The same Cancel appears in the Blueprints `ApplyDialog` while its job runs, because a person
 applying a blueprint is in that modal on the Blueprints screen, not on the Dashboard. There it
 needs a sentence: cancelling an apply **stops without rolling back** (phase 8, T77), and applying
-again continues from what is there. The dialog says so beside the button.
+again continues from what is there.
 
-**A cancelled apply must end the dialog.** Today `ApplyDialog` leaves its `running` phase only for
-a job whose outcome is `succeeded` with a `BlueprintApplied` or `failed` (`jobFailureMessage`); a
-`cancelled` ending matches neither, so the dialog would sit in `running` for good. A cancelled
-job moves it to the `failed` phase with the sentence above as its message, and Close calls
-`onDone(null)` as a failure does.
+**A cancelled apply ends in one of two ways, and the dialog handles both.** The daemon's apply
+loop checks the token between steps and, when it is set, stops and returns the steps it ran — so
+the job ends as `succeeded`, with a short list. The dialog remembers that Cancel was pressed and
+says so above that list. A step that gives up *because* of the cancellation ends the job as
+`cancelled` instead (`jobs.rs`: an error while cancelled), which `ApplyDialog` today matches
+neither as applied nor as failed, so it would sit in `running` for good; that ending moves it to
+the `failed` phase with the cancelled sentence, and Close calls `onDone(null)` as a failure does.
+The note that the apply stops after the current step appears once Cancel is pressed, not
+throughout every apply.
 
 ## D3 — Domains: what the front end presents
 

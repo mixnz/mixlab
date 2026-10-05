@@ -739,6 +739,13 @@ pub async fn mixengine_job_status(job: i64) -> Result<Value, AppError> {
     rpc::call("job.status", json!({ "job": job })).await
 }
 
+/// `job.cancel` — asks, and answers the `JobSummary` as it stands, which may still say `running`:
+/// cancellation is cooperative, and `job_finished` is what says the work stopped.
+#[tauri::command]
+pub async fn mixengine_job_cancel(job: i64) -> Result<Value, AppError> {
+    rpc::call("job.cancel", json!({ "job": job })).await
+}
+
 /// `extension.list` — every extension this home has installed. The Tauri command name follows the
 /// `mixengine_runtime_list_installed`/`mixengine_package_list` pattern already used for the
 /// installed/available pair.

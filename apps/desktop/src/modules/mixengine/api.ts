@@ -576,6 +576,12 @@ export function jobStatus(job: number): Promise<JobSummary> {
   return invoke<JobSummary>("mixengine_job_status", { job });
 }
 
+/** Asks a job to stop — asking is all it does. The work ends when it next looks, and `job_finished`
+ *  is what says it did; cancelling a job that has already ended is not an error. */
+export function jobCancel(job: number): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_job_cancel", { job });
+}
+
 /** A job's real output (e.g. a blueprint's `[scaffold]` command) — the same pattern as
  *  `logsWatch`, with a different Rust-side route (`GET /logs/job/{id}` instead of
  *  `/logs/service/{id}`). */

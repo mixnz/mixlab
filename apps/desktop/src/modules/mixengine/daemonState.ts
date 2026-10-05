@@ -80,6 +80,28 @@ export function isJobFinished(raw: string): boolean {
 }
 
 /**
+ * The jobs a Cancel was pressed for, after a message: a `job_finished` takes its id out.
+ *
+ * **Only `job_finished` does.** `job.cancel` is cooperative and its answer may still say `running`;
+ * a job that never looks at its token runs to its end, and its button stays busy until then,
+ * because that is what is happening. Returns the same set when nothing changed, so React skips
+ * the render.
+ */
+export function forgetFinished(cancelling: ReadonlySet<number>, raw: string): ReadonlySet<number> {
+  let event: { type?: unknown; job?: unknown };
+  try {
+    event = JSON.parse(raw) as { type?: unknown; job?: unknown };
+  } catch {
+    return cancelling;
+  }
+  if (event.type !== "job_finished" || typeof event.job !== "number") return cancelling;
+  if (!cancelling.has(event.job)) return cancelling;
+  const next = new Set(cancelling);
+  next.delete(event.job);
+  return next;
+}
+
+/**
  * Whether this message changes a row of the service table.
  *
  * Split from [`applyEvent`] because the answer depends only on the message — and because the only

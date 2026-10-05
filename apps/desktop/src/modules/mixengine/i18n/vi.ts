@@ -189,6 +189,8 @@ const vi: typeof en = {
       resetConfirm: "Đặt lại mật khẩu",
       noServices: "Chưa có gì được dựng.",
       job: "Đang chạy",
+      cancelJob: "Huỷ",
+      cancelling: "Đang huỷ",
       elevationWaiting: "{{count}} thao tác đang chờ quyền quản trị",
       diskUsage: {
         title: "Dung lượng đĩa",
@@ -758,6 +760,11 @@ const vi: typeof en = {
         applyWithoutCommand: "Cài môi trường, không chạy lệnh",
         applying: "Đang apply…",
         running: "Đang chạy…",
+        cancelApply: "Huỷ apply",
+        cancelling: "Đang huỷ",
+        cancelNote:
+          "Đang dừng sau bước hiện tại. Những gì đã dựng xong vẫn giữ lại, apply lần nữa sẽ làm tiếp từ đó.",
+        cancelled: "Đã huỷ apply. Những gì đã dựng xong vẫn còn, apply lại để làm nốt.",
         viewLog: "Xem output",
         hideLog: "Ẩn output",
         doneTitle: "Xong",

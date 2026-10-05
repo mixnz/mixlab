@@ -161,6 +161,12 @@ export function blueprintAppliedFrom(job: JobSummary): BlueprintApplied | null {
   return job.outcome.result as BlueprintApplied;
 }
 
+/** Whether a job ended because somebody cancelled it: neither applied nor failed, and a phase of
+ *  its own to the dialog following it. */
+export function jobWasCancelled(job: JobSummary): boolean {
+  return job.outcome?.ending === "cancelled";
+}
+
 /** `null` when the job did not fail (including still running, including cancelled) — a
  *  cancellation is not an error to show. */
 export function jobFailureMessage(job: JobSummary): string | null {
