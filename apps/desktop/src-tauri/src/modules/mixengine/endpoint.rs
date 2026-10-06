@@ -4,9 +4,10 @@
 //! (`crates/mixengine-cli/src/home.rs`): `MIXENGINE_HOME` wins, then a development checkout's
 //! suggested home when `mixengine_platform::home` lets it stand (T166), then the platform, and
 //! the result is made absolute and spelled in full rather than canonicalised, and the endpoint is
-//! computed from `<home>/run`. Nothing here reads `config.toml`: `[daemon] ipc_path` is parsed by
+//! computed from `<home>/run`. Nothing here reads `config.toml`: `[daemon] ipc_path` was parsed by
 //! the daemon's own config and used by nothing, so honouring it — as this file did until phase 11,
-//! T102 — was dialling somewhere no daemon listens.
+//! T102 — was dialling somewhere no daemon listens. The key has since been retired from the
+//! template; a file that still carries it is read and ignored.
 
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};

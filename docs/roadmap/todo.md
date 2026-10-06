@@ -78,6 +78,27 @@ half of a rename — which is exactly the reading a version that never shipped i
 
 ## Where we are
 
+**Phase 37 is built — 2 of 2, and M37 is met: `node scripts/check-client-surface.mjs` reports 0
+known gaps.** Nine daemon methods had sat in `knownGaps` since T182i: things `mix` could do and a
+person in MixLab could not. Six are buttons now — Start, Stop and Delete in a site's row menu,
+Cancel on a running job and on a blueprint being applied, *Check served* on Domains, *Write
+manifest* on Projects — and three (`job.list`, `cert.ca_rotate`, `cert.ca_uninstall`) are `cliOnly`
+with their reasons written down. Deleting a shared site withdraws the share on the road
+`site.unshare` takes (T199a), so the window's guard against it went with it. The exceptions file's
+`knownGaps` is empty, and that list only shrinks.
+Design: [2026-10-06-t199-the-window-closes-its-known-gaps-design.md](../specs/2026-10-06-t199-the-window-closes-its-known-gaps-design.md).
+
+**Phase 36 is built — 1 of 1, and M36 is met by CI against the newest release.** One line in a
+terminal installs MixLab on a new machine: `install.sh` on macOS and Linux, `install.ps1` on
+Windows, both kept on `master` and served by the handbook's site, so a fix to either needs no
+release. The script picks the file for the system, the architecture and the package family, checks
+the `.sha256` and then the `.minisig` — fetching a pinned minisign for the run on a machine that has
+none — and refuses a validly signed file served under another name. CI run 37427456570 on
+2026-10-06 dry-ran both scripts on the three runners and installed the headless package for real on
+Ubuntu, in Fedora and openSUSE containers, on macOS and on Windows, with `mix --version` naming the
+release each time.
+Design: [2026-10-05-t197-one-command-installs-mixlab-design.md](../specs/2026-10-05-t197-one-command-installs-mixlab-design.md).
+
 **Phase 35 is built: 5 of 5, and M35 is met by tests against a signed registry.** The package
 index is read as `mixengine-packages`' schema 2: a signed root of about two kilobytes and one file
 per kind, named by hash. A daemon whose cache is past six hours asks for a 308-byte signature and
@@ -205,8 +226,12 @@ environment a shim hands over had never said anything. Two decisions came out of
 **Phase 14's tasks are done, and what M14 still wants is the clean-machine smoke on each
 OS**: a fresh install, one button, one prompt, a browser on a working `https://<name>.test`, and
 then a restart that leaves it serving. Everything below that line is automated and green.
-**The restart half also wants a decision, not just a run** — since T129 nothing ticks the front
-end's `autostart`, so today that restart serves nothing until somebody ticks it once.
+The restart half once wanted a decision as well as a run — since T129 nothing ticked the front
+end's `autostart`, so a restart served nothing until somebody ticked it once.
+[ADR 0041](../decisions/0041-mixengine-stops-nothing-a-person-did-not-ask-it-to.md) took that
+decision in phase 21: a front end is created with `autostart` on unless asked otherwise, and a
+one-time migration turned it on for the rows that already existed. The clean-machine smoke is the
+one thing M14 still waits on.
 
 **Phase 13 is done — 3 of 3.** The window has a profile (T108), a first tab
 that follows it (T109) and a bridge for a handoff to a module somebody turned off (T110). What
@@ -237,8 +262,11 @@ the window, and it relaunches itself after its own executable is swapped. T107 m
 MixEngine is* and *where its window is* one answer each, in `mixengine-platform`, held to the
 packaging scripts that write them: `mix database open` from a terminal now lands in a tab in the
 running MixLab, on an install that has no `<old>` extension at all.
-Two debts phase 11 left where they were found: `[daemon] ipc_path` in `config.toml` is parsed and
-used by nothing, and the standalone client's `tool-downloads.yml` is not wired into this CI.
+Of the two debts phase 11 left where they were found, one is closed: `[daemon] ipc_path` in
+`config.toml`, parsed and used by nothing, is gone from the template and retired in `Config` the way
+`[bin]` was (ADR 0057) — still read, so a home that uncommented it still starts, and the daemon logs
+that it does nothing. The other stands: the standalone client's `tool-downloads.yml` is not wired
+into this CI.
 
 **Phase 0 is done**, and **M0 is reached**: `mix status` starts a daemon if there is none, talks to
 it over the local endpoint and prints what it says, in both renderings, proved end to end by

@@ -19,10 +19,6 @@
 #format = "text"
 
 [daemon]
-# Where the daemon listens for the CLI and the GUI. Left unset it picks a socket under run/ — a
-# named pipe on Windows — which is the right answer unless that filesystem cannot host one.
-#ipc_path = "/example/mixengined.sock"
-
 # How long "mix daemon stop" may spend stopping services, in total, before it kills what is left.
 #
 # The total and not the allowance of each one: a service already says how many seconds it needs in

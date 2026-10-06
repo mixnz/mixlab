@@ -221,9 +221,6 @@ user's edits survive every update; a missing file means "all defaults".
 level = "info"          # error | warn | info | debug | trace
 format = "text"         # text | json
 
-[daemon]
-ipc_path = "…"          # unset: a socket under run/, a named pipe on Windows
-
 [paths]                 # absolute, or relative to MIXENGINE_HOME
 runtimes = "…"
 packages = "…"

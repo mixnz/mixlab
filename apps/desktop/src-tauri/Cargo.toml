@@ -191,7 +191,8 @@ tokio = { version = "1.53.1", features = ["full", "test-util"] }
 # A temporary home for the transport test to bind a real endpoint under.
 tempfile = "3"
 # `tests/layering.rs` reads this crate's own manifest. Nothing shipped parses TOML any more: the
-# `[daemon] ipc_path` reading that used to is a knob the daemon never honoured (T102).
+# `[daemon] ipc_path` reading that used to was a knob the daemon never honoured (T102), since
+# retired from `config.toml` altogether.
 toml = "1"
 # `Signer`, so the feed tests sign a document with a key made for the test (T187). Allowed as a
 # dev-dependency by tests/layering.rs, and never linked into the shipped window.

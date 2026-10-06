@@ -38,7 +38,6 @@ fn a_missing_file_means_defaults() {
     assert_eq!(config, Config::default());
     assert_eq!(config.log.level, LogLevel::Info);
     assert_eq!(config.log.format, LogFormat::Text);
-    assert_eq!(config.daemon.ipc_path, None);
     assert_eq!(config.daemon.shutdown_grace_seconds, 10);
 }
 
@@ -129,9 +128,9 @@ fn a_daemon_section_without_the_budget_still_gets_the_default() {
     // The section is present and the key is not, which is the one arrangement the checking of this
     // value could quietly break: a bound expressed as a field-level `default` would replace the
     // section's own, and the absent key would start meaning zero — "kill everything at once" — for
-    // everybody who ever set an `ipc_path`.
+    // everybody whose file has the header and nothing under it.
     let home = TempDir::new().unwrap();
-    let path = write(&home, "[daemon]\nipc_path = \"/tmp/mixengined.sock\"\n");
+    let path = write(&home, "[daemon]\n");
 
     let config = config::load(&path).unwrap();
 
@@ -187,7 +186,6 @@ level = "trace"
 format = "json"
 
 [daemon]
-ipc_path = "/run/user/1000/mixengined.sock"
 shutdown_grace_seconds = 30
 
 [dns]
@@ -215,7 +213,7 @@ logs = "logs-elsewhere"
             },
             retired_bin: mixengine_core::config::RetiredBin::default(),
             daemon: Daemon {
-                ipc_path: Some(PathBuf::from("/run/user/1000/mixengined.sock")),
+                retired_ipc_path: None,
                 shutdown_grace_seconds: 30,
             },
             dns: Dns {
@@ -407,16 +405,23 @@ fn a_network_share_is_a_directory_like_any_other() {
 }
 
 #[test]
-fn an_empty_ipc_path_is_refused() {
+fn a_retired_ipc_path_is_read_and_ignored() {
+    // Every released template offered `#ipc_path`, and nothing ever read it. A home whose owner
+    // uncommented the line must still start: `Daemon` is `deny_unknown_fields`, so the key has to
+    // stay known, and it has to change nothing else in the section.
     let home = TempDir::new().unwrap();
-    let path = write(&home, "[daemon]\nipc_path = \"\"\n");
-
-    let error = config::load(&path).unwrap_err();
-
-    assert!(
-        matches!(error, mixengine_core::Error::Config { .. }),
-        "{error:?}"
+    let path = write(
+        &home,
+        "[daemon]\nipc_path = \"/tmp/mixengined.sock\"\nshutdown_grace_seconds = 30\n",
     );
+
+    let config = config::load(&path).unwrap();
+
+    assert_eq!(
+        config.daemon.retired_ipc_path,
+        Some(PathBuf::from("/tmp/mixengined.sock"))
+    );
+    assert_eq!(config.daemon.shutdown_grace_seconds, 30);
 }
 
 #[test]
@@ -512,7 +517,6 @@ fn every_key_the_template_documents_is_a_real_key() {
     );
     // The rest have no default to show and carry an example instead — which must still be parsed
     // as the right type, not silently ignored.
-    assert!(config.daemon.ipc_path.is_some());
     // The port depends on the machine, so the template shows an example rather than a default.
     assert!(config.dns.port.is_some());
     assert!(config.paths.runtimes.is_some());

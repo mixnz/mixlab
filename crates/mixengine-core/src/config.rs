@@ -104,14 +104,16 @@ pub enum LogFormat {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Daemon {
-    /// Where the daemon listens for clients: a Unix socket path or a Windows named pipe.
+    /// `ipc_path`, which nothing has ever read.
     ///
-    /// `None` means "wherever the platform layer puts it", which is the answer for almost
-    /// everyone. It exists because the default lands under `run/`, and a `MIXENGINE_HOME` on a
-    /// filesystem that cannot host a socket (a network share, a path over the 108-byte `sun_path`
-    /// limit) needs a way out that is not "move everything".
-    #[serde(default, deserialize_with = "named_path")]
-    pub ipc_path: Option<PathBuf>,
+    /// The template offered it as "where the daemon listens", and `mixengine-core` parsed it, but
+    /// the endpoint has always been `mixengine-platform`'s answer, computed from `<home>/run`:
+    /// neither the daemon nor `mix` ever looked here, and MixLab stopped looking in phase 11
+    /// (T102). The key is **read and ignored, never refused**, the way [`RetiredBin`] is: the
+    /// struct is `deny_unknown_fields`, `config.toml` is never rewritten, and a home whose owner
+    /// uncommented the template's line must still start. The daemon logs that it does nothing.
+    #[serde(rename = "ipc_path")]
+    pub retired_ipc_path: Option<PathBuf>,
 
     /// How long the whole of a `daemon.shutdown` may spend stopping services, in seconds.
     ///
@@ -163,7 +165,7 @@ const MAX_SHUTDOWN_GRACE_SECONDS: u64 = 600;
 impl Default for Daemon {
     fn default() -> Self {
         Self {
-            ipc_path: None,
+            retired_ipc_path: None,
             shutdown_grace_seconds: DEFAULT_SHUTDOWN_GRACE_SECONDS,
         }
     }
@@ -942,30 +944,6 @@ fn check_relocation(candidate: &Path) -> std::result::Result<(), String> {
     Ok(())
 }
 
-/// Refuse an empty path where a name is required.
-///
-/// Deliberately *not* the checks [`relocation`] runs: a listening address is not a place data is
-/// written to, it is never joined to the home, the platform layer has the final say over what shape
-/// it may take (T7), and a socket path resolved against the wrong drive fails loudly at bind time
-/// instead of quietly storing a database somewhere nobody will look.
-fn named_path<'de, D>(deserializer: D) -> std::result::Result<Option<PathBuf>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let path = Option::<PathBuf>::deserialize(deserializer)?;
-
-    if path
-        .as_deref()
-        .is_some_and(|path| path.as_os_str().is_empty())
-    {
-        return Err(serde::de::Error::custom(
-            "the path is empty; remove the key to use the default",
-        ));
-    }
-
-    Ok(path)
-}
-
 /// Does anything survive resolving `.` and `..` — is there a directory here at all?
 ///
 /// Counts how deep the path ends up, purely lexically: `bulk/runtimes` is two down and fine,
@@ -1028,8 +1006,8 @@ fn is_drive_relative(path: &Path) -> bool {
 /// Refuse a shutdown budget longer than [`MAX_SHUTDOWN_GRACE_SECONDS`].
 ///
 /// Refused rather than quietly lowered, which is the answer this file gives to every other value
-/// it will not take: an empty `ipc_path` and a relocation that names nothing are both errors
-/// carrying a sentence about what to write instead, and nothing here rewrites a setting behind the
+/// it will not take: a relocation that names nothing is an error carrying a sentence about what
+/// to write instead, and nothing here rewrites a setting behind the
 /// user's back. Two things make that the right answer for this key in particular rather than merely
 /// the consistent one. A budget is a *promise about how long a stop takes*, so silently turning an
 /// hour into ten minutes would be exactly the surprise the key was set to avoid, and it would

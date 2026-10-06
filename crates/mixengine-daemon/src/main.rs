@@ -681,6 +681,12 @@ async fn run() -> anyhow::Result<()> {
              tool installed into a runtime as it lands; the line can be removed"
         );
     }
+    if home.config.daemon.retired_ipc_path.is_some() {
+        tracing::info!(
+            "`[daemon] ipc_path` in config.toml has never done anything: the daemon listens where \
+             the platform puts the endpoint, under run/; the line can be removed"
+        );
+    }
 
     // **Before `Store::open`, and that ordering is the point of taking it here.** `sqlx-sqlite`
     // implements the migration lock as a no-op, SQLite having no advisory lock to use, so two
