@@ -16,6 +16,7 @@ mod ssh;
 /// it; this is wired too (`sync::commands`), and public on top of that.
 pub mod sync;
 mod tray;
+mod uninstall;
 mod updater;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -152,6 +153,16 @@ pub fn run() {
             {
                 use tauri::Manager as _;
                 app.manage(updater::commands::UpdaterState::default());
+            }
+
+            // T182a: MixLab ▸ Remove MixLab from this Mac…, on a `.pkg` copy of a release. Its
+            // state is managed everywhere, so the label command has something to answer.
+            {
+                use tauri::Manager as _;
+                app.manage(uninstall::menu::UninstallMenu::default());
+                if let Err(error) = uninstall::menu::install(app.handle()) {
+                    log::warn!("the Remove MixLab menu item could not be added: {error}");
+                }
             }
 
             launch::start(app.handle(), opening);

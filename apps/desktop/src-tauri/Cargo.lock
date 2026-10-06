@@ -3850,6 +3850,7 @@ dependencies = [
  "log",
  "minisign-verify",
  "mixengine-platform",
+ "mixengine-proto",
  "mixengine-testkit",
  "mongodb",
  "objc2",
