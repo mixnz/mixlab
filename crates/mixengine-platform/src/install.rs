@@ -349,6 +349,117 @@ pub fn remove_helper() -> Result<HelperRemoval> {
     crate::sys::install::remove_helper()
 }
 
+/// What the macOS `.pkg` places as root outside the home — roadmap task **T182a**, spec D2.
+///
+/// **Constants, never a request's**: the privileged helper removes exactly these, so a daemon that
+/// has been talked into anything cannot aim the removal elsewhere.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PackagePaths {
+    /// `/usr/local/bin/{mix,mixengined,mixengine-shim,mixengine-trampoline}`.
+    pub binaries: Vec<PathBuf>,
+    /// `/Applications/MixLab.app`.
+    pub bundle: PathBuf,
+    /// The identifier the bundle must carry to be removed.
+    pub bundle_identifier: String,
+    /// The package receipt, `dev.mixengine.cli`.
+    pub receipt: String,
+}
+
+/// What [`remove_package`] did.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct PackageRemoval {
+    /// Paths that are gone now.
+    pub removed: Vec<PathBuf>,
+    /// A bundle at the bundle's path that is not MixLab's, left alone: the identifier it carried,
+    /// or `no Info.plist`.
+    pub kept_bundle: Option<String>,
+    /// Whether the package database forgot the receipt in this run.
+    pub receipt_forgotten: bool,
+}
+
+/// [`PackagePaths`] on macOS; `None` elsewhere, where nothing places the program this way.
+#[must_use]
+pub fn package_paths() -> Option<PackagePaths> {
+    crate::sys::install::package_paths()
+}
+
+/// The `CFBundleIdentifier` in `<bundle>/Contents/Info.plist`, read from the XML Tauri writes.
+/// `None` when there is no plist or no such key.
+#[must_use]
+pub fn bundle_identifier(bundle: &std::path::Path) -> Option<String> {
+    let plist = std::fs::read_to_string(bundle.join("Contents/Info.plist")).ok()?;
+    let after = plist.split("<key>CFBundleIdentifier</key>").nth(1)?;
+    let start = after.find("<string>")? + "<string>".len();
+    let end = after[start..].find("</string>")? + start;
+    Some(after[start..end].trim().to_owned())
+}
+
+/// Ask the package database to forget `receipt`: `Ok(true)` forgotten, `Ok(false)` there was none.
+///
+/// # Errors
+///
+/// When `pkgutil` could not be run or refused, and on a system with no receipts.
+#[cfg(feature = "elevated")]
+pub fn forget_receipt(receipt: &str) -> std::io::Result<bool> {
+    crate::sys::install::forget_receipt(receipt)
+}
+
+/// Take the program the `.pkg` placed off this machine — roadmap task **T182a**.
+///
+/// The binaries go whatever they are (absent is fine); the bundle goes **only** when its
+/// `Info.plist` names [`PackagePaths::bundle_identifier`], so somebody else's application at that
+/// path is left alone and named; then `forget` is asked about the receipt. Every step reads *absent*
+/// on a second run, so a removal that stopped part-way is finished by running it again.
+///
+/// # Errors
+///
+/// [`Error::Io`](crate::Error::Io) for a path that is there and cannot be removed, and for a
+/// receipt the database could not be asked about.
+#[cfg(feature = "elevated")]
+pub fn remove_package(
+    paths: &PackagePaths,
+    forget: &mut dyn FnMut(&str) -> std::io::Result<bool>,
+) -> Result<PackageRemoval> {
+    let mut removal = PackageRemoval::default();
+
+    for binary in &paths.binaries {
+        match std::fs::remove_file(binary) {
+            Ok(()) => removal.removed.push(binary.clone()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(source) => {
+                return Err(crate::Error::Io {
+                    action: "remove",
+                    path: binary.clone(),
+                    source,
+                });
+            }
+        }
+    }
+
+    if paths.bundle.symlink_metadata().is_ok() {
+        match bundle_identifier(&paths.bundle) {
+            Some(identifier) if identifier == paths.bundle_identifier => {
+                std::fs::remove_dir_all(&paths.bundle).map_err(|source| crate::Error::Io {
+                    action: "remove",
+                    path: paths.bundle.clone(),
+                    source,
+                })?;
+                removal.removed.push(paths.bundle.clone());
+            }
+            Some(other) => removal.kept_bundle = Some(other),
+            None => removal.kept_bundle = Some("no Info.plist".to_owned()),
+        }
+    }
+
+    removal.receipt_forgotten = forget(&paths.receipt).map_err(|source| crate::Error::Io {
+        action: "forget the package receipt",
+        path: PathBuf::from(&paths.receipt),
+        source,
+    })?;
+
+    Ok(removal)
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -542,5 +653,126 @@ mod tests {
             program.display()
         );
         assert_eq!(application_root(&program), placed);
+    }
+}
+
+/// What the macOS `.pkg` places and how it is taken back off — roadmap task **T182a**, spec D2.
+#[cfg(test)]
+mod package_tests {
+    use super::*;
+
+    /// A plist written the way Tauri writes it: XML, one key per line.
+    fn write_bundle(root: &std::path::Path, identifier: Option<&str>) -> PathBuf {
+        let bundle = root.join("MixLab.app");
+        std::fs::create_dir_all(bundle.join("Contents/MacOS")).expect("the bundle");
+        std::fs::write(bundle.join("Contents/MacOS/mixlab"), b"program").expect("the program");
+        if let Some(identifier) = identifier {
+            std::fs::write(
+                bundle.join("Contents/Info.plist"),
+                format!(
+                    "<plist><dict>\n<key>CFBundleIdentifier</key>\n<string>{identifier}</string>\n</dict></plist>"
+                ),
+            )
+            .expect("the plist");
+        }
+        bundle
+    }
+
+    const NAMES: [&str; 4] = [
+        "mix",
+        "mixengined",
+        "mixengine-shim",
+        "mixengine-trampoline",
+    ];
+
+    fn paths_under(root: &std::path::Path, identifier: Option<&str>) -> PackagePaths {
+        let bin = root.join("bin");
+        std::fs::create_dir_all(&bin).expect("bin");
+        for name in NAMES {
+            std::fs::write(bin.join(name), b"program").expect("a binary");
+        }
+        PackagePaths {
+            binaries: NAMES.iter().map(|name| bin.join(name)).collect(),
+            bundle: write_bundle(root, identifier),
+            bundle_identifier: "io.github.mixnz.mixlab".to_owned(),
+            receipt: "dev.mixengine.cli".to_owned(),
+        }
+    }
+
+    #[test]
+    fn the_bundle_identifier_is_read_out_of_info_plist() {
+        let root = tempfile::tempdir().expect("a directory");
+        let bundle = write_bundle(root.path(), Some("io.github.mixnz.mixlab"));
+        assert_eq!(
+            bundle_identifier(&bundle).as_deref(),
+            Some("io.github.mixnz.mixlab")
+        );
+        assert_eq!(bundle_identifier(&root.path().join("nothing.app")), None);
+    }
+
+    #[cfg(feature = "elevated")]
+    #[test]
+    fn the_package_is_removed_and_the_receipt_forgotten() {
+        let root = tempfile::tempdir().expect("a directory");
+        let paths = paths_under(root.path(), Some("io.github.mixnz.mixlab"));
+        let mut forgotten = Vec::new();
+        let removal = remove_package(&paths, &mut |receipt| {
+            forgotten.push(receipt.to_owned());
+            Ok(true)
+        })
+        .expect("a removal");
+
+        assert_eq!(removal.removed.len(), 5, "{removal:?}");
+        assert!(removal.kept_bundle.is_none());
+        assert!(removal.receipt_forgotten);
+        assert_eq!(forgotten, ["dev.mixengine.cli"]);
+        for path in paths.binaries.iter().chain([&paths.bundle]) {
+            assert!(!path.exists(), "{}", path.display());
+        }
+    }
+
+    /// A bundle at the path that is not MixLab is somebody else's, and is left alone and named.
+    #[cfg(feature = "elevated")]
+    #[test]
+    fn a_bundle_of_another_identity_is_kept_and_named() {
+        let root = tempfile::tempdir().expect("a directory");
+        let paths = paths_under(root.path(), Some("com.example.other"));
+        let removal = remove_package(&paths, &mut |_| Ok(false)).expect("a removal");
+
+        assert_eq!(removal.kept_bundle.as_deref(), Some("com.example.other"));
+        assert!(paths.bundle.exists());
+        assert_eq!(removal.removed.len(), 4);
+        assert!(!removal.receipt_forgotten);
+    }
+
+    /// Run twice, the second run finds nothing and says so: an uninstall can always be finished.
+    #[cfg(feature = "elevated")]
+    #[test]
+    fn a_second_run_reads_absent() {
+        let root = tempfile::tempdir().expect("a directory");
+        let paths = paths_under(root.path(), Some("io.github.mixnz.mixlab"));
+        remove_package(&paths, &mut |_| Ok(true)).expect("the first run");
+        let again = remove_package(&paths, &mut |_| Ok(false)).expect("the second run");
+        assert_eq!(again, PackageRemoval::default());
+    }
+
+    #[test]
+    fn package_paths_are_the_pkgs_on_macos_and_none_elsewhere() {
+        let paths = package_paths();
+        if !cfg!(target_os = "macos") {
+            assert_eq!(paths, None);
+            return;
+        }
+        let paths = paths.expect("macOS names the .pkg's paths");
+        assert_eq!(paths.bundle, PathBuf::from("/Applications/MixLab.app"));
+        assert_eq!(paths.receipt, "dev.mixengine.cli");
+        assert_eq!(paths.bundle_identifier, "io.github.mixnz.mixlab");
+        assert_eq!(paths.binaries.len(), 4);
+        assert!(
+            paths
+                .binaries
+                .iter()
+                .all(|path| path.starts_with("/usr/local/bin"))
+        );
     }
 }
