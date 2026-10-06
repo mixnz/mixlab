@@ -15,5 +15,8 @@ Design: [2026-10-06-t199-the-window-closes-its-known-gaps-design.md](../specs/20
       `cert.ca_rotate` and `cert.ca_uninstall` move to `cliOnly` with their reasons. Deleting a
       shared site is refused in the window until the daemon withdraws the share on delete, which
       is a task of its own.
+- [x] **T199a** `site.delete` withdraws a shared site's share on `site.unshare`'s road: the
+      firewall plan, the listener and the mDNS name, under the sharing lock. The window's guard
+      against deleting a shared site goes with it.
 
 **M37** `node scripts/check-client-surface.mjs` reports 0 known gaps.

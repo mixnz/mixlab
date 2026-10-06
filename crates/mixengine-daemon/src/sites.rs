@@ -578,10 +578,19 @@ impl Sites {
 
     /// `site.delete` — take the row, and leave the files.
     ///
+    /// **A shared site takes its share with it** — roadmap task **T199a**. The firewall rule and the
+    /// mDNS name a share put outside the front end are reconciled from the rows, so once the row is
+    /// gone the next reconciliation withdraws them; this is that reconciliation, in `unshare`'s
+    /// order. Without it they stayed until the daemon next started, opening a port for a site
+    /// nothing declared. Under the sharing lock for `unshare`'s reason: the watcher reads the same
+    /// rows on a timer.
+    ///
     /// # Errors
     ///
     /// `not_found` for a site matching nothing, and the wire error of a row that cannot be removed.
     pub(crate) async fn delete(&self, query: &SiteQuery) -> Result<SiteRemoval, Error> {
+        let _sharing = self.sharing.lock().await;
+
         let (removed, holder) = self.expect(&query.site).await?;
         self.editable(&removed, &holder)?;
 
@@ -590,7 +599,22 @@ impl Sites {
             .map_err(|error| error.to_wire())?;
 
         self.wants_the_hosts_file().await;
-        self.now_serves_what_it_declares().await?;
+
+        match removed.sharing.is_some() {
+            // The rule first, then the listener it was protecting, then the name — `unshare`'s order.
+            // No certificate is reissued: the site it named is gone.
+            true => {
+                tracing::info!(
+                    site = removed.id,
+                    "a deleted site was shared; its share is withdrawn with it"
+                );
+                self.wants_the_firewall().await?;
+                self.now_serves_what_it_declares().await?;
+                self.advertises_what_it_declares().await?;
+                self.announce(&removed, None, mixengine_proto::SharingChange::Requested {});
+            }
+            false => self.now_serves_what_it_declares().await?,
+        }
 
         Ok(SiteRemoval {
             domains_released: removed.domains.clone(),

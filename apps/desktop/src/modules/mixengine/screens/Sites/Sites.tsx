@@ -34,7 +34,6 @@ import { subscribeDaemonWatch } from "../../daemonWatch";
 import {
   applySharingChange,
   canEditSite,
-  deleteBlock,
   formatRemaining,
   siteVisit,
   type SiteRow,
@@ -262,8 +261,6 @@ export default function Sites({ active }: { active: boolean }) {
     }
   }
 
-  const menuDeleteBlock = menuRow === undefined ? null : deleteBlock(menuRow);
-
   return (
     <div className={`mixengine-page ${styles.sites}`}>
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
@@ -445,14 +442,10 @@ export default function Sites({ active }: { active: boolean }) {
           <button
             type="button"
             className="context-menu-delete"
-            disabled={menuDeleteBlock !== null}
-            title={
-              menuDeleteBlock === "extension"
-                ? t("mixengine.sites.editDisabledHint")
-                : menuDeleteBlock === "shared"
-                  ? t("mixengine.sites.deleteSharedHint")
-                  : undefined
-            }
+            // An extension's site is the daemon's to refuse, as it refuses an edit. A shared one is
+            // deleted with its share withdrawn (T199a).
+            disabled={!canEditSite(menuRow.owner)}
+            title={canEditSite(menuRow.owner) ? undefined : t("mixengine.sites.editDisabledHint")}
             onClick={() => {
               const domain = menuRow.domain;
               setMenu(null);

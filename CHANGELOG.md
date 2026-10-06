@@ -16,6 +16,8 @@
   "Not searched" with a Fix button that had nothing to fix.
 
 ### Fixed
+- Deleting a shared site also closes the firewall rule and the local network name it was shared
+  under. Before, they stayed until MixEngine next started.
 - Icon sizes in the tables of Sites, Domains, Packages and Add-ons now match Dashboard and Projects.
 
 ## v0.0.14

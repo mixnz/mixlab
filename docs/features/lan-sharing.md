@@ -66,6 +66,9 @@ Enabling sharing for a site:
   **What this build does not catch, said plainly**: two networks that hand the same interface the
   same address. SSID and the gateway's MAC address are the signals that would, and both are per-OS
   code this build has not written — T76, D3. That share stays up.
+- **Deleting a shared site withdraws its share.** `site.delete` takes `site.unshare`'s road for
+  what lives outside the front end: the firewall rule first, then the listener, then the mDNS name.
+  Before T199a the rule and the name outlived the row until the daemon next started.
 - **Optional time limit** (`--for 2h`), default off. Measured from when the share *began* and not
   from the command that set it, so re-sharing extends nothing — and a length shorter than the site
   has already been shared for is refused rather than honoured, because a URL that is dead when it is

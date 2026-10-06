@@ -196,7 +196,7 @@ impl super::Sites {
     /// A home with nothing shared wants the empty plan, which is the revoke — and queues it only
     /// where this home has rules to revoke, because a prompt that changes nothing is a prompt
     /// somebody still has to answer (T180).
-    async fn wants_the_firewall(&self) -> Result<(), Error> {
+    pub(super) async fn wants_the_firewall(&self) -> Result<(), Error> {
         let records = sites::records(&self.store, None)
             .await
             .map_err(|error| error.to_wire())?;
