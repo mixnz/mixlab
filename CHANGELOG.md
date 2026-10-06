@@ -11,6 +11,10 @@
 - Domains shows the certificate each site is actually served with, and what is wrong with it.
 - Projects writes a project's `mixengine.toml` with one click.
 
+### Changed
+- On Windows and macOS, the Domains screen says browsers follow the system store, instead of
+  "Not searched" with a Fix button that had nothing to fix.
+
 ## v0.0.14
 
 ### Added

@@ -672,7 +672,8 @@ const vi: typeof en = {
           partly: "Tin một phần",
           noStore: "Không có kho",
           noneFound: "Không thấy",
-          notSearched: "Chưa tìm",
+          noTool: "Chưa tìm được",
+          notSearched: "Theo kho hệ thống",
           unknown: "Không rõ",
         },
         ready: "Sẵn sàng",
@@ -685,7 +686,8 @@ const vi: typeof en = {
         },
         browsers: {
           noTool: "Không tìm được: {{reason}}",
-          notSearched: "Chưa tìm: {{reason}}",
+          notSearched:
+            "MixEngine không kiểm riêng trình duyệt trên hệ thống này. Chrome, Edge và Safari đọc kho hệ thống ở dòng trên.",
           unknown: "Không đọc được: {{reason}}",
         },
       },

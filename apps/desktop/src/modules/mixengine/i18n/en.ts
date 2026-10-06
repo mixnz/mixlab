@@ -682,7 +682,8 @@ export default {
           partly: "Partly trusted",
           noStore: "No store",
           noneFound: "None found",
-          notSearched: "Not searched",
+          noTool: "Not searched",
+          notSearched: "System store",
           unknown: "Unknown",
         },
         ready: "Ready",
@@ -695,7 +696,8 @@ export default {
         },
         browsers: {
           noTool: "Could not search: {{reason}}",
-          notSearched: "Not searched yet: {{reason}}",
+          notSearched:
+            "MixEngine does not check browsers separately on this system. Chrome, Edge and Safari read the system store above.",
           unknown: "Could not tell: {{reason}}",
         },
       },
