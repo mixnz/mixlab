@@ -492,6 +492,9 @@ impl Uninstall {
             ResidueId::PortAccess,
             ResidueId::FirewallRules,
             ResidueId::TrustStore,
+            // T182a, D2: after every row the program's own files serve, before the helper and its
+            // log, so a failure part-way leaves the program in place to finish the job.
+            ResidueId::Package,
             ResidueId::PrivilegedHelper,
             ResidueId::AuditLog,
         ] {
@@ -610,8 +613,8 @@ impl Uninstall {
             // records nothing for it, because the line would recreate the file.
             ResidueId::AuditLog => Some(PrivilegedOp::AuditLogRemove {}),
 
-            // The `Package` row arrives with T182a's inventory; until then nothing plans it.
-            ResidueId::Package => None,
+            // T182a: the program the `.pkg` placed, after everything else it serves is undone.
+            ResidueId::Package => Some(PrivilegedOp::PackageRemove {}),
 
             // The four that need no token, and the directories the daemon removes as it exits.
             ResidueId::BrowserTrust
@@ -918,6 +921,7 @@ fn needs_the_helper(id: ResidueId) -> bool {
             | ResidueId::PortAccess
             | ResidueId::FirewallRules
             | ResidueId::TrustStore
+            | ResidueId::Package
             | ResidueId::PrivilegedHelper
             | ResidueId::AuditLog
     )
@@ -1014,6 +1018,7 @@ fn settle(
                 | (PrivilegedOp::FirewallApply { .. }, ResidueId::FirewallRules)
                 | (PrivilegedOp::TrustCaRemove { .. }, ResidueId::TrustStore)
                 | (PrivilegedOp::HelperRemove {}, ResidueId::PrivilegedHelper)
+                | (PrivilegedOp::PackageRemove {}, ResidueId::Package)
                 | (PrivilegedOp::AuditLogRemove {}, ResidueId::AuditLog)
         )
     });
@@ -1149,13 +1154,14 @@ mod tests {
     /// afterwards; settled in between, every complete uninstall reported the home as waiting for a
     /// prompt and then kept it for that reason. Found by CI on 2026-09-04.
     #[test]
-    fn the_helper_answers_for_seven_rows_and_the_home_is_not_one_of_them() {
+    fn the_helper_answers_for_eight_rows_and_the_home_is_not_one_of_them() {
         for id in [
             ResidueId::HostsBlock,
             ResidueId::ResolverWiring,
             ResidueId::PortAccess,
             ResidueId::FirewallRules,
             ResidueId::TrustStore,
+            ResidueId::Package,
             ResidueId::PrivilegedHelper,
             ResidueId::AuditLog,
         ] {
@@ -1233,6 +1239,33 @@ mod tests {
                 "{settled:?}"
             );
         }
+    }
+
+    /// T182a: a package row whose operation is still in the queue is waiting for permission, which
+    /// is a different sentence from one the helper applied and left behind.
+    #[test]
+    fn a_package_row_whose_removal_is_still_queued_says_so() {
+        let package = Residue {
+            id: ResidueId::Package,
+            what: "the program itself".to_owned(),
+            location: "dev.mixengine.cli".to_owned(),
+            outcome: Removal::Planned {
+                how: "remove it".to_owned(),
+            },
+        };
+        let waiting = [mixengine_proto::PendingOp {
+            id: mixengine_proto::PendingOpId(1),
+            op: PrivilegedOp::PackageRemove {},
+            description: String::new(),
+            requested_at: mixengine_proto::Timestamp(0),
+        }];
+
+        let settled = settle(package.clone(), package, true, &waiting);
+
+        assert!(
+            matches!(&settled.outcome, Removal::Failed { because } if because.contains("waiting for permission")),
+            "{settled:?}"
+        );
     }
 
     /// One row, planned, for the two above to work on.

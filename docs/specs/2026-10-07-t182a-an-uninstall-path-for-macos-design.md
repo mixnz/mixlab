@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 date: 2026-10-07
 task: T182a
 ---
@@ -157,11 +157,14 @@ enqueues `PackageRemove` with the other privileged rows. Without it, nothing cha
 every caller from before this reads what it read before
 ([ADR 0019](../decisions/0019-an-added-response-member-is-optional.md)).
 
-- **Only a copy the receipt names.** The row is planned when `install::receipt_of(<daemon exe>)`
-  answers `dev.mixengine.cli`, the reading T88f already takes at start. On any other macOS copy, on
-  Windows and on Linux, `package: true` plans the row as `Kept` with a reason (*not placed by the
-  `.pkg`*; *the Windows uninstaller removes the program*; *the package manager removes the
-  program*, naming it from `install::packaged_by`), and enqueues nothing.
+- **Every plan on a copy an installer placed carries the row; only `package: true` on a `.pkg`
+  copy plans it.** The daemon's placement, read from the receipt at start (T88f), decides: a `.pkg`
+  copy gets `Planned` with `package: true`, `Absent` when its files are already gone, and `Kept`
+  naming `mix uninstall --package` without the flag; a `.deb` or `.rpm` copy gets `Kept` naming
+  `sudo apt remove <package>` or `sudo dnf remove <package>`; a Windows copy gets `Kept` saying the
+  Windows uninstaller removes the program. A copy no installer placed has no row. That makes D5's
+  hint and D6's printed command one row, which `mix` and the window render, with nothing enqueued
+  outside the `.pkg` case.
 - **It goes last among the privileged rows, and it is settled like them** (T182b, D7): still there
   afterwards is `Failed`, the uninstall is not finished, the daemon stays up, and the same command
   finishes it next time (P1).
