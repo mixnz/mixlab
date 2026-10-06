@@ -498,7 +498,6 @@ const vi: typeof en = {
       start: "Bật",
       stop: "Tắt",
       delete: "Xoá",
-      deleteSharedHint: "Ngừng share site này trước khi xoá.",
       deleteTitle: "Xoá {{domain}}?",
       deleteMessage:
         "Các domain của site được trả lại để site khác dùng. Thư mục doc root và mọi file trong đó vẫn ở trên đĩa.",

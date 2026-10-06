@@ -398,3 +398,74 @@ async fn a_length_shorter_than_the_share_has_lasted_is_refused() {
         "a refused share leaves the site exactly as it was"
     );
 }
+
+/// The firewall operations waiting in the queue that still open a port, as `elevation.status`
+/// lists them.
+async fn ports_queued_open(client: &mut Client) -> Vec<Value> {
+    let status = client.call("elevation.status", Value::Null).await;
+
+    status["pending"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|pending| pending["op"]["op"] == "firewall-apply")
+        .filter(|pending| {
+            pending["op"]["plan"]["ports"]
+                .as_array()
+                .is_some_and(|ports| !ports.is_empty())
+        })
+        .collect()
+}
+
+/// **Deleting a shared site withdraws the share** — roadmap task **T199a**.
+///
+/// `site.delete` used to take the row and re-render the front end, and leave the two things a share
+/// put outside the front end: the firewall rule and the mDNS name. They stayed until the daemon next
+/// started, opening a port for a site nothing declared. The firewall half is what this asserts,
+/// because it is the half a test can read without a network: the queue holds the rule the share
+/// wanted, and after the delete it holds none.
+#[tokio::test]
+async fn deleting_a_shared_site_withdraws_its_share() {
+    let Some(interface) = shareable_or_skip("deleting_a_shared_site_withdraws_its_share") else {
+        return;
+    };
+
+    let home = Home::new();
+    let _daemon = Daemon::start(&home);
+    home.wait_until_listening().await;
+
+    let repository = repository();
+    let mut client = Client::connect(&home).await;
+    a_site(&mut client, repository.path()).await;
+
+    client
+        .call(
+            "site.share",
+            json!({"site": {"domain": "blog.test"}, "interface": &interface}),
+        )
+        .await;
+
+    // **The control.** Without it, an empty queue after the delete would pass just as well on a
+    // machine where sharing never queued a rule in the first place.
+    let before = ports_queued_open(&mut client).await;
+    assert!(
+        !before.is_empty(),
+        "a share queues the rule that opens its ports: {}",
+        home.daemon_log()
+    );
+
+    client
+        .call("site.delete", json!({"site": {"domain": "blog.test"}}))
+        .await;
+
+    let after = ports_queued_open(&mut client).await;
+    assert!(
+        after.is_empty(),
+        "the delete left a rule opening ports for a site that is gone: {after:?}\n--- daemon ---\n{}",
+        home.daemon_log()
+    );
+
+    home.wait_until_daemon_log_says("a deleted site was shared")
+        .await;
+}

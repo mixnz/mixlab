@@ -503,7 +503,6 @@ export default {
       start: "Start",
       stop: "Stop",
       delete: "Delete",
-      deleteSharedHint: "Stop sharing this site before you delete it.",
       deleteTitle: "Delete {{domain}}?",
       deleteMessage:
         "Its domains are freed for another site. The doc root and every file in it stay on disk.",

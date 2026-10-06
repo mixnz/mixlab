@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   applySharingChange,
   canEditSite,
-  deleteBlock,
   formatRemaining,
   joinDocRoot,
   relativeToRoot,
@@ -19,29 +18,6 @@ describe("canEditSite", () => {
 
   it("an extension-owned site cannot", () => {
     expect(canEditSite({ type: "extension", id: "ext.mailhog" })).toBe(false);
-  });
-});
-
-describe("deleteBlock", () => {
-  const project = { type: "project", name: "blog" } as const;
-  const extension = { type: "extension", id: "ext.mailhog" } as const;
-  const row = (owner: SiteRow["owner"], shared: boolean) =>
-    ({ domain: "blog.test", owner, sharing: shared ? { until: null } : null }) as unknown as SiteRow;
-
-  it("an unshared project site can be deleted", () => {
-    expect(deleteBlock(row(project, false))).toBeNull();
-  });
-
-  it("an extension's site cannot", () => {
-    expect(deleteBlock(row(extension, false))).toBe("extension");
-  });
-
-  it("a shared project site has to be unshared first", () => {
-    expect(deleteBlock(row(project, true))).toBe("shared");
-  });
-
-  it("a shared extension site says extension, the reason that does not go away", () => {
-    expect(deleteBlock(row(extension, true))).toBe("extension");
   });
 });
 
