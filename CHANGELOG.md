@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+- On a Mac, MixLab ▸ Remove MixLab from this Mac… removes everything in one go, after showing you
+  what it will undo. From a terminal, `mix uninstall --package` does the same.
+- On Linux, `mix uninstall` now tells you the command that removes the package itself.
+
 ### Fixed
 - Answering `mix self-update`, `mix elevation grant` or a server switch after half a minute no
   longer fails with "the connection to the daemon failed: Broken pipe". `mix` reconnects on its own.

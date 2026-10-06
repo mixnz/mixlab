@@ -225,10 +225,17 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       `## MixLab`.
 - [x] **T182h** The uninstaller leaves a copy of the state in each kept folder, and a fresh home
       offers to restore projects, sites, domains and services from it. After T182g. Spec D5, D6.
-- [ ] **T182a** An uninstall path for macOS and Linux, which have no uninstaller to hang T182 on:
-      for example an *Uninstall MixLab…* item in the macOS app that runs the whole removal, deletes
-      the `.app` and quits, so the app never outlives it. Until then the handbook's order stands:
-      `mix uninstall`, then the package.
+- [ ] **T182a** An uninstall path for macOS and Linux, which have no uninstaller to hang T182 on.
+      On macOS, **MixLab ▸ Remove MixLab from this Mac…** runs the whole removal through
+      `daemon.uninstall { package: true }`: one more helper operation, `package-remove`, removes
+      what the `.pkg` placed, and the application quits, so it never outlives the act.
+      `mix uninstall --package` does the same from a terminal. On Linux the plan's `package` row
+      names the `apt` or `dnf` command that removes the package.
+      Design: [2026-10-07-t182a-an-uninstall-path-for-macos-design.md](../specs/2026-10-07-t182a-an-uninstall-path-for-macos-design.md).
+      Left open until `packaging/macos/uninstall-check.md` has been walked on a real install.
+- [ ] **T182j** A *Remove MixLab…* item in the Linux window, which has to run `pkexec apt remove`
+      or hand the package to the software centre: a design of its own. After T182a; the T182a
+      design, D6.
 - [x] **T88** Auto-update, MixEngine's own: `mix self-update` against `latest.json` on GitHub
       Releases via the stable asset URL (not the API), signature verified before the JSON is parsed,
       daemon check at startup + 24 h interval, silent on failure, consent prompt with notes and size,
