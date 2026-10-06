@@ -20,6 +20,7 @@ mod firewall;
 mod helper;
 mod hosts;
 mod ops;
+mod package;
 mod port_access;
 mod request;
 mod resolver;

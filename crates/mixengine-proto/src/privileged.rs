@@ -69,7 +69,7 @@ pub fn helper_candidate_signature(home: &std::path::Path) -> PathBuf {
 /// **Not the product's.** Two releases' helpers would otherwise always differ, and keeping the
 /// installed helper in step would cost a prompt at every update. `crates/mixengine-elevate/helper.lock`
 /// decides when this changes, and `packaging/helper-lock.sh --bump` is what changes it.
-pub const HELPER_VERSION: &str = "0.1.4";
+pub const HELPER_VERSION: &str = "0.1.5";
 
 /// What a candidate helper's *signed* trusted comment says it is — roadmap task **T88a**.
 ///

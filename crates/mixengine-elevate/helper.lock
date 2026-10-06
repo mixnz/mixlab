@@ -1,5 +1,5 @@
 {
-  "version": "0.1.4",
+  "version": "0.1.5",
   "baseline": {
     "version": "0.1.4",
     "fingerprint": "a4c00e7ec42f166f6c0a6920c4253164ae77f0a21259fd591c6bc33926e5d0c3"
@@ -12,6 +12,7 @@
     "crates/mixengine-elevate/src/hosts.rs",
     "crates/mixengine-elevate/src/main.rs",
     "crates/mixengine-elevate/src/ops.rs",
+    "crates/mixengine-elevate/src/package.rs",
     "crates/mixengine-elevate/src/port_access.rs",
     "crates/mixengine-elevate/src/request.rs",
     "crates/mixengine-elevate/src/resolver.rs",
