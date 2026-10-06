@@ -8,6 +8,7 @@ import ConfirmDialog from "../../../../components/ConfirmDialog";
 import ContextMenu from "../../../../components/ContextMenu";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import IconTile from "../../../../components/IconTile";
 import LoadingState from "../../../../components/LoadingState";
 import NoticeBanner from "../../../../components/NoticeBanner";
 import PageHeader from "../../../../components/PageHeader";
@@ -324,9 +325,9 @@ export default function Sites({ active }: { active: boolean }) {
                   <tr key={row.domain}>
                     <td>
                       <span className={styles.domain}>
-                        <span className={row.https ? styles.lockOn : styles.lockOff} aria-hidden="true">
-                          <LockIcon size={14} />
-                        </span>
+                        <IconTile tone={row.https ? "success" : "neutral"}>
+                          <LockIcon size={16} />
+                        </IconTile>
                         <Button
                           variant="link"
                           disabled={opening !== null}

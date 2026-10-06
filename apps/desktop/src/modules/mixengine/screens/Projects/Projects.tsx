@@ -5,6 +5,7 @@ import Card from "../../../../components/Card";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import IconTile from "../../../../components/IconTile";
 import LoadingState from "../../../../components/LoadingState";
 import NoticeBanner from "../../../../components/NoticeBanner";
 import PageHeader from "../../../../components/PageHeader";
@@ -155,9 +156,9 @@ export default function Projects({ active, onOpenSites }: Props) {
                 <tr key={row.name}>
                   <td>
                     <span className={styles.name}>
-                      <span className={styles.folder} aria-hidden="true">
-                        <FolderIcon size={17} />
-                      </span>
+                      <IconTile tone="coral">
+                        <FolderIcon size={16} />
+                      </IconTile>
                       <Button variant="link" onClick={() => void showDetail(row.name)}>
                         {row.name}
                       </Button>

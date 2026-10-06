@@ -15,6 +15,9 @@
 - On Windows and macOS, the Domains screen says browsers follow the system store, instead of
   "Not searched" with a Fix button that had nothing to fix.
 
+### Fixed
+- Icon sizes in the tables of Sites, Domains, Packages and Add-ons now match Dashboard and Projects.
+
 ## v0.0.14
 
 ### Added

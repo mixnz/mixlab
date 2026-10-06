@@ -11,18 +11,6 @@
   font-weight: 600;
 }
 
-.folder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  background: rgb(var(--cat-coral-rgb) / var(--cat-wash-alpha));
-  color: var(--cat-coral);
-}
-
 .root {
   display: flex;
   align-items: center;

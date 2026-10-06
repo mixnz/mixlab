@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
 import EmptyState from "../../../../components/EmptyState";
+import IconTile from "../../../../components/IconTile";
 import LoadingState from "../../../../components/LoadingState";
 import ErrorBanner from "../../../../components/ErrorBanner";
 import PageHeader from "../../../../components/PageHeader";
@@ -130,9 +131,11 @@ export default function Domains({ active }: { active: boolean }) {
                 <tr key={row.domain}>
                   <td data-nowrap>
                     <span className={styles.domain}>
-                      <span className={row.because == null ? styles.globeOk : styles.globeBad} aria-hidden="true">
-                        <GlobeIcon size={14} />
-                      </span>
+                      {/* Success when nothing is wrong with the name, danger when the daemon wrote a
+                          `because`. */}
+                      <IconTile tone={row.because == null ? "success" : "danger"}>
+                        <GlobeIcon size={16} />
+                      </IconTile>
                       {row.domain}
                     </span>
                   </td>

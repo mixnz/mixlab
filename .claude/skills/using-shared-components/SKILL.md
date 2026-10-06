@@ -36,9 +36,13 @@ added the parts a screen is built from:
 | `PageHeader` | a screen's title, badges, description and actions |
 | `Table` | a semantic table of managed things at `--row-h`; `data-align="end"` for action cells |
 | `MonogramBadge` | two letters and a hue *derived* from a name — never a table of names |
+| `IconTile` | an icon in a tinted square, on `MonogramBadge`'s sizes — a folder, a lock, a globe |
 | `Popover` | an anchored panel that is neither a menu nor a listbox |
 | `EmptyState` | nothing to show, said as a sentence with a way forward |
 | `RadioCard` | one of a few exclusive choices as a card; a real radio, so arrow keys walk the group |
+
+**A `Table` row's leading badge or tile is 34px**, `MonogramBadge` and `IconTile` alike: rows
+of one height, in screen after screen, drifted to 28, 30 and 34 when each was sized by hand.
 
 Sizes come from the density tokens (`--control-h*`, `--row-h`), so none of these takes a density
 prop: a region that holds rows sets `data-density="compact"` on its root.
