@@ -74,7 +74,7 @@ npm run clips -- --check                       # film every clip, encode nothing
 A full run needs ffmpeg (`winget install Gyan.FFmpeg`, `brew install ffmpeg`,
 `apt install ffmpeg`, or `FFMPEG=<path to the binary>`). Output lands in
 `apps/desktop/screenshots/out/clips/`: `<clip>-<theme>.mp4` (H.264, 2080×1300, 24 fps) and the
-`-start.png` / `-end.png` posters.
+`-start` / `-end` posters, each as PNG and as WebP (quality 80; a WebP over 150 KB is noted).
 
 A clip is declared in `demo/clips.mjs`: a module, an optional `setup` that runs before filming,
 and `steps` — `click`, `type`, `select` (opens, then picks the option whose text matches),

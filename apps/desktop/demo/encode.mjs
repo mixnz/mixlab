@@ -47,6 +47,14 @@ export function videoArgs(outPath) {
   ];
 }
 
+/** Bytes a WebP poster should stay under; over it is printed, never a failure. */
+export const POSTER_BUDGET = 150_000;
+
+/** The poster as WebP: the website shows it first, so it is the page's largest paint. */
+export function posterWebpArgs(inPath, outPath) {
+  return ["-y", "-loglevel", "error", "-i", inPath, "-vf", SCALE_FILTER, "-c:v", "libwebp", "-quality", "80", outPath];
+}
+
 export function posterArgs(inPath, outPath) {
   return ["-y", "-loglevel", "error", "-i", inPath, "-vf", SCALE_FILTER, outPath];
 }

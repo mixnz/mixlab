@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUDGET, FPS, budgetVerdict, findFfmpeg, formatMB, posterArgs, resample, videoArgs } from "./encode.mjs";
+import { BUDGET, FPS, POSTER_BUDGET, budgetVerdict, findFfmpeg, formatMB, posterArgs, posterWebpArgs, resample, videoArgs } from "./encode.mjs";
 
 describe("resample", () => {
   it("shows, at each tick, the last frame that had arrived, and holds the last until the end", () => {
@@ -50,6 +50,29 @@ describe("ffmpeg arguments", () => {
       "scale=2080:1300:flags=lanczos",
       "out.png",
     ]);
+  });
+});
+
+describe("WebP posters", () => {
+  it("scale to the video's size and encode at quality 80", () => {
+    expect(posterWebpArgs("in.png", "out.webp")).toEqual([
+      "-y",
+      "-loglevel",
+      "error",
+      "-i",
+      "in.png",
+      "-vf",
+      "scale=2080:1300:flags=lanczos",
+      "-c:v",
+      "libwebp",
+      "-quality",
+      "80",
+      "out.webp",
+    ]);
+  });
+
+  it("have their own budget, well under the PNG's", () => {
+    expect(POSTER_BUDGET).toBe(150_000);
   });
 });
 

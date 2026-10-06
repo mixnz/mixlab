@@ -20,7 +20,9 @@ import {
   budgetVerdict,
   findFfmpeg,
   formatMB,
+  POSTER_BUDGET,
   posterArgs,
+  posterWebpArgs,
 } from "./encode.mjs";
 import { writeVideo } from "./ffmpeg.mjs";
 import { installCursor, removeCursor, runStep, startRecording } from "./recorder.mjs";
@@ -57,6 +59,12 @@ async function encode(ffmpeg, clip, name, recording, report) {
     await writeFile(last, frames.at(-1).data);
     await run(ffmpeg, posterArgs(first, join(CLIPS_OUT, `${name}-start.png`)));
     await run(ffmpeg, posterArgs(last, join(CLIPS_OUT, `${name}-end.png`)));
+    for (const [frame, which] of [[first, "start"], [last, "end"]]) {
+      const webp = join(CLIPS_OUT, `${name}-${which}.webp`);
+      await run(ffmpeg, posterWebpArgs(frame, webp));
+      const bytes = (await stat(webp)).size;
+      if (bytes > POSTER_BUDGET) report.notes.push(`${which} poster ${formatMB(bytes)}, over ${formatMB(POSTER_BUDGET)}`);
+    }
     // Already at 2×, and sized by the element rather than the window: written as taken.
     if (recording.still) await writeFile(join(CLIPS_OUT, `${name}-${clip.still.suffix}.png`), recording.still);
     const { size } = await stat(video);
