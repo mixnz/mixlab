@@ -1,0 +1,61 @@
+.tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* The radii follow `MonogramBadge`'s, size for size. */
+.size28,
+.size30 {
+  border-radius: var(--radius-sm);
+}
+
+.size28 {
+  width: 28px;
+  height: 28px;
+}
+
+.size30 {
+  width: 30px;
+  height: 30px;
+}
+
+.size34 {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.size38 {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+}
+
+.size50 {
+  width: 50px;
+  height: 50px;
+  border-radius: 13px;
+}
+
+.success {
+  background: rgb(var(--success-rgb) / 0.14);
+  color: var(--success);
+}
+
+.danger {
+  background: rgb(var(--danger-rgb) / 0.14);
+  color: var(--danger);
+}
+
+.neutral {
+  background: var(--neutral-bg);
+  color: var(--text-faint);
+}
+
+.coral {
+  background: rgb(var(--cat-coral-rgb) / var(--cat-wash-alpha));
+  color: var(--cat-coral);
+}

@@ -11,6 +11,7 @@
 //! What is installed is a [`FakePackage`] containing the `fakeservice` binary under the name the
 //! index publishes it as, so the post-install check spawns something that really runs.
 
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
@@ -340,11 +341,27 @@ fn arch() -> &'static str {
     std::env::consts::ARCH
 }
 
+/// Where every daemon this home has run writes its standard error, appended rather than replaced
+/// so a [`Fixture::reinstall`] keeps what the daemon before it said.
+///
+/// **Kept because a panic goes nowhere else.** `daemon.log` is written by the daemon's own logger,
+/// which a panic bypasses, and run 37414570632 lost a daemon between two requests with nothing
+/// left to read: `ConnectionReset` and two `null`s where the reason should have been.
+fn stderr_file(home: &Path) -> PathBuf {
+    home.join("daemon.stderr")
+}
+
 /// The daemon process, killed when the test ends however it ends.
 struct Daemon(Child);
 
 impl Daemon {
     fn start(home: &Home, registry: &MockRegistry) -> Self {
+        let stderr = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(stderr_file(home.path()))
+            .expect("a file for the daemon's standard error");
+
         Self(
             Command::new(env!("CARGO_BIN_EXE_mixengined"))
                 .arg("--home")
@@ -357,7 +374,7 @@ impl Daemon {
                 .arg("--index-key")
                 .arg(registry.public_key())
                 .stdout(Stdio::null())
-                .stderr(Stdio::null())
+                .stderr(stderr)
                 .spawn()
                 .expect("the daemon binary runs"),
         )
@@ -376,6 +393,10 @@ impl Drop for Daemon {
 /// One connection to the daemon.
 struct Client {
     sender: hyper::client::conn::http1::SendRequest<Full<Bytes>>,
+    /// The home's directory, for what a failed request prints: the daemon's log and its stderr.
+    home: PathBuf,
+    /// `daemon.log`, read the same way.
+    daemon_log: PathBuf,
 }
 
 impl Client {
@@ -390,7 +411,24 @@ impl Client {
 
         tokio::spawn(driver);
 
-        Self { sender }
+        Self {
+            sender,
+            home: home.path().to_path_buf(),
+            daemon_log: home.daemon_log_file(),
+        }
+    }
+
+    /// What the daemon said, for a request that got no answer: a panic is in its stderr, and
+    /// anything it logged on the way there is in its log.
+    fn said(&self) -> String {
+        let read = |path: &Path| {
+            std::fs::read_to_string(path).unwrap_or_else(|error| format!("(unreadable: {error})"))
+        };
+        format!(
+            "--- the daemon's stderr ---\n{}\n--- daemon.log ---\n{}",
+            read(&stderr_file(&self.home)),
+            read(&self.daemon_log)
+        )
     }
 
     /// Call a method and hand back its `result`, insisting it succeeded.
@@ -432,7 +470,10 @@ impl Client {
             .await
             .expect("the connection is still open");
 
-        let response = self.sender.send_request(request).await.expect("an answer");
+        let response = match self.sender.send_request(request).await {
+            Ok(response) => response,
+            Err(error) => panic!("{method}: no answer: {error:?}\n{}", self.said()),
+        };
         assert_eq!(response.status(), StatusCode::OK, "{method}");
 
         let bytes = response

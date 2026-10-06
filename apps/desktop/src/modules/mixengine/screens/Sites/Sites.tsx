@@ -1,16 +1,30 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useState } from "react";
 
+import ActionBar from "../../../../components/ActionBar";
 import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
+import ConfirmDialog from "../../../../components/ConfirmDialog";
+import ContextMenu from "../../../../components/ContextMenu";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import IconTile from "../../../../components/IconTile";
 import LoadingState from "../../../../components/LoadingState";
+import NoticeBanner from "../../../../components/NoticeBanner";
 import PageHeader from "../../../../components/PageHeader";
 import Select from "../../../../components/Select";
 import StatusPill from "../../../../components/StatusPill";
 import Table from "../../../../components/Table";
-import { FolderIcon, GlobeIcon, LockIcon, PlusIcon } from "../../../../icons";
+import {
+  FolderIcon,
+  GlobeIcon,
+  LockIcon,
+  MoreIcon,
+  PlayIcon,
+  PlusIcon,
+  StopIcon,
+  TrashIcon,
+} from "../../../../icons";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
@@ -20,6 +34,7 @@ import { subscribeDaemonWatch } from "../../daemonWatch";
 import {
   applySharingChange,
   canEditSite,
+  deleteBlock,
   formatRemaining,
   siteVisit,
   type SiteRow,
@@ -94,7 +109,16 @@ export default function Sites({ active }: { active: boolean }) {
    * another row — is smaller than a table that misstates what it is doing.
    */
   const [opening, setOpening] = useState<string | null>(null);
+  /** A row's ⋮ menu and where it was opened; `null` means no menu is open. */
+  const [menu, setMenu] = useState<{ domain: string; x: number; y: number } | null>(null);
+  /** The domain whose Delete is being confirmed. */
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
   const { t } = useTranslation();
+
+  /** The row whose menu is open, looked up on every render rather than captured when the menu
+   *  opened: a reread under an open menu must not leave it acting on the row as it used to be. */
+  const menuRow = menu === null ? undefined : rows.find((row) => row.domain === menu.domain);
 
   // `filterOverride` is the way out of `setState`'s one-beat delay: the effect below that refreshes
   // the project list computes a valid filter and then needs to read sites *right away* with that
@@ -211,9 +235,39 @@ export default function Sites({ active }: { active: boolean }) {
     }
   }
 
+  /**
+   * Start or stop serving a site. The answer is the site as it now stands, so the row is replaced
+   * with it rather than reread: the State pill changes the moment the daemon says so.
+   */
+  async function toggleServing(row: SiteRow) {
+    try {
+      const detail =
+        row.state === "enabled" ? await api.siteStop(row.domain) : await api.siteStart(row.domain);
+      setRows((current) => current.map((r) => (r.domain === row.domain ? detail.site : r)));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }
+
+  async function confirmDelete(domain: string) {
+    try {
+      const removal = await api.siteDelete(domain);
+      setNotice(t("mixengine.sites.deleted", { domain, path: removal.doc_root_kept }));
+      void reload();
+    } catch (e) {
+      setError(errorMessage(t, e));
+    } finally {
+      // Closed either way, as Projects' delete is: a refusal is read in the banner behind it.
+      setDeleting(null);
+    }
+  }
+
+  const menuDeleteBlock = menuRow === undefined ? null : deleteBlock(menuRow);
+
   return (
     <div className={`mixengine-page ${styles.sites}`}>
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
+      {notice !== "" && <NoticeBanner message={notice} onDismiss={() => setNotice("")} />}
 
       <PageHeader
         title={t("mixengine.sidebar.sites")}
@@ -271,9 +325,9 @@ export default function Sites({ active }: { active: boolean }) {
                   <tr key={row.domain}>
                     <td>
                       <span className={styles.domain}>
-                        <span className={row.https ? styles.lockOn : styles.lockOff} aria-hidden="true">
-                          <LockIcon size={14} />
-                        </span>
+                        <IconTile tone={row.https ? "success" : "neutral"}>
+                          <LockIcon size={16} />
+                        </IconTile>
                         <Button
                           variant="link"
                           disabled={opening !== null}
@@ -348,6 +402,20 @@ export default function Sites({ active }: { active: boolean }) {
                         >
                           {t("mixengine.sites.edit")}
                         </Button>
+                        <ActionBar
+                          actions={[
+                            {
+                              key: "menu",
+                              icon: MoreIcon,
+                              label: t("mixengine.sites.rowMenu"),
+                              disabled: opening !== null,
+                              onClick: (event) => {
+                                const at = event.currentTarget.getBoundingClientRect();
+                                setMenu({ domain: row.domain, x: at.left, y: at.bottom });
+                              },
+                            },
+                          ]}
+                        />
                       </span>
                     </td>
                   </tr>
@@ -357,6 +425,56 @@ export default function Sites({ active }: { active: boolean }) {
           </Table>
         )}
       </Card>
+
+      {menu !== null && menuRow !== undefined && (
+        <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
+          <button
+            type="button"
+            onClick={() => {
+              const row = menuRow;
+              setMenu(null);
+              void toggleServing(row);
+            }}
+          >
+            {menuRow.state === "enabled" ? <StopIcon size={14} /> : <PlayIcon size={14} />}
+            {menuRow.state === "enabled" ? t("mixengine.sites.stop") : t("mixengine.sites.start")}
+          </button>
+
+          <div className="context-menu-separator" />
+
+          <button
+            type="button"
+            className="context-menu-delete"
+            disabled={menuDeleteBlock !== null}
+            title={
+              menuDeleteBlock === "extension"
+                ? t("mixengine.sites.editDisabledHint")
+                : menuDeleteBlock === "shared"
+                  ? t("mixengine.sites.deleteSharedHint")
+                  : undefined
+            }
+            onClick={() => {
+              const domain = menuRow.domain;
+              setMenu(null);
+              setDeleting(domain);
+            }}
+          >
+            <TrashIcon size={14} />
+            {t("mixengine.sites.delete")}
+          </button>
+        </ContextMenu>
+      )}
+
+      {deleting && (
+        <ConfirmDialog
+          title={t("mixengine.sites.deleteTitle", { domain: deleting })}
+          message={t("mixengine.sites.deleteMessage")}
+          confirmLabel={t("mixengine.sites.delete")}
+          danger
+          onCancel={() => setDeleting(null)}
+          onConfirm={() => void confirmDelete(deleting)}
+        />
+      )}
 
       {creating && (
         <SiteForm

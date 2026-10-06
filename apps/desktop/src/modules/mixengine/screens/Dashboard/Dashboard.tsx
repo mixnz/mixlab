@@ -44,6 +44,7 @@ import ServiceForm from "../../components/ServiceForm";
 import {
   applyEvent,
   applyJob,
+  forgetFinished,
   isJobFinished,
   movesARow,
   needsResync,
@@ -124,6 +125,8 @@ export default function Dashboard({
    *  `elevation.status`. */
   const [waiting, setWaiting] = useState(0);
   const [jobs, setJobs] = useState<JobRow[]>([]);
+  /** The jobs Cancel was pressed for, until their `job_finished` — see `forgetFinished`. */
+  const [cancelling, setCancelling] = useState<ReadonlySet<number>>(() => new Set());
   /** The latest `/metrics` frame, or `null` when there is none yet (the stream is not open, or no
    *  frame has arrived). */
   const [frame, setFrame] = useState<MetricsFrame | null>(null);
@@ -414,6 +417,7 @@ export default function Dashboard({
         }
       }
       setJobs((current) => applyJob(current, raw));
+      setCancelling((current) => forgetFinished(current, raw));
       // Events are best-effort: when the bus on the other side overflows or the connection drops,
       // reread instead of trusting what is on the screen. Outside the updater, because updaters
       // run twice under StrictMode. `job_finished` is also a reason to reread: a finished
@@ -537,6 +541,25 @@ export default function Dashboard({
     menuReport !== undefined && opensADatabase(menuReport) ? menuReport : undefined;
 
   /** The state as a pill tone: whether it is serving, not which of the seven states it is in. */
+  /**
+   * Asks a running job to stop. No confirmation: a cancelled install is rerun with one click. The
+   * button stays busy until `job_finished`, not until this call answers — cancellation is
+   * cooperative, and the work may still be going when it does.
+   */
+  async function cancelJob(id: number) {
+    setCancelling((current) => new Set(current).add(id));
+    try {
+      await api.jobCancel(id);
+    } catch (e) {
+      setCancelling((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      setError(errorMessage(t, e));
+    }
+  }
+
   function pillTone(state: string | null | undefined, stoppedBy?: StoppedBy | null): StatusTone {
     const tone = serviceStateTone(state, stoppedBy);
     if (tone === "ok") return "success";
@@ -705,6 +728,14 @@ export default function Dashboard({
                 <span>{job.kind || t("mixengine.dashboard.job")}</span>
                 <progress value={job.percent} max={100} />
                 <span className={styles.jobMessage}>{job.message}</span>
+                <Button
+                  size="small"
+                  className={styles.jobCancel}
+                  onClick={() => void cancelJob(job.id)}
+                  busy={cancelling.has(job.id) ? t("mixengine.dashboard.cancelling") : undefined}
+                >
+                  {t("mixengine.dashboard.cancelJob")}
+                </Button>
               </li>
             ))}
           </ul>

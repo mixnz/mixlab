@@ -9,6 +9,7 @@ import {
   describePlanAction,
   failedSteps,
   jobFailureMessage,
+  jobWasCancelled,
   scaffoldConsentState,
   scaffoldLeftCommand,
   scaffoldStepIndex,
@@ -288,6 +289,13 @@ describe("blueprintAppliedFrom / jobFailureMessage", () => {
     const cancelled = job({ ending: "cancelled" });
     expect(blueprintAppliedFrom(cancelled)).toBeNull();
     expect(jobFailureMessage(cancelled)).toBeNull();
+  });
+
+  it("says a cancelled job was cancelled, and no other ending", () => {
+    expect(jobWasCancelled(job({ ending: "cancelled" }))).toBe(true);
+    expect(jobWasCancelled(job({ ending: "failed", error: { code: "internal", message: "x" } }))).toBe(false);
+    expect(jobWasCancelled(job({ ending: "succeeded", result: null }))).toBe(false);
+    expect(jobWasCancelled(job(null))).toBe(false);
   });
 
   it("returns null for a job with no outcome yet", () => {

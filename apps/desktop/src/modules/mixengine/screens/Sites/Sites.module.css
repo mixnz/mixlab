@@ -15,28 +15,6 @@
   font-weight: 600;
 }
 
-/* A lock in the success tone when the site is served over HTTPS, neutral when it is not. */
-.lockOn,
-.lockOff {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-sm);
-}
-
-.lockOn {
-  background: rgb(var(--success-rgb) / 0.14);
-  color: var(--success);
-}
-
-.lockOff {
-  background: var(--neutral-bg);
-  color: var(--text-faint);
-}
-
 .owner {
   display: inline-flex;
   align-items: center;

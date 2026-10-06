@@ -10,29 +10,6 @@
   font-weight: 600;
 }
 
-/* A globe in the success tone when nothing is wrong with the domain, in the danger tone when the
-   daemon wrote a `because`. */
-.globeOk,
-.globeBad {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-sm);
-}
-
-.globeOk {
-  background: rgb(var(--success-rgb) / 0.14);
-  color: var(--success);
-}
-
-.globeBad {
-  background: rgb(var(--danger-rgb) / 0.14);
-  color: var(--danger);
-}
-
 .yes {
   color: var(--success);
 }

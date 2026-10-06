@@ -157,7 +157,7 @@ export default function PackageList({
                     <tr className={update.kind === "none" ? undefined : styles.withUpdate}>
                       <td data-nowrap>
                         <span className={styles.name}>
-                          <MonogramBadge name={row.package} size={28} />
+                          <MonogramBadge name={row.package} size={34} />
                           {row.package}
                         </span>
                       </td>

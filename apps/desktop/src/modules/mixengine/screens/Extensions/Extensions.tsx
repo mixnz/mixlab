@@ -154,7 +154,7 @@ export default function Extensions({ active }: { active: boolean }) {
               <tr key={row.id}>
                 <td data-nowrap>
                   <span className={styles.name}>
-                    <MonogramBadge name={row.name} size={28} />
+                    <MonogramBadge name={row.name} size={34} />
                     {row.name}
                   </span>
                 </td>
@@ -217,7 +217,7 @@ export default function Extensions({ active }: { active: boolean }) {
                 <tr key={offer.id}>
                   <td data-nowrap>
                     <span className={styles.name}>
-                      <MonogramBadge name={offer.name} size={28} />
+                      <MonogramBadge name={offer.name} size={34} />
                       {offer.name}
                     </span>
                   </td>

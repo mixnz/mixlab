@@ -9,6 +9,7 @@ import type { SiteCreate } from "@mixengine/api";
 import type { SiteCreation } from "@mixengine/api";
 import type { SiteDetail } from "@mixengine/api";
 import type { SiteList } from "@mixengine/api";
+import type { SiteRemoval } from "@mixengine/api";
 import type { SiteShare } from "@mixengine/api";
 import type { SiteSharing } from "@mixengine/api";
 import type { SiteUpdate } from "@mixengine/api";
@@ -17,6 +18,7 @@ import type { ProjectDetail } from "@mixengine/api";
 import type { ProjectCreate } from "@mixengine/api";
 import type { ProjectUpdate } from "@mixengine/api";
 import type { ProjectRemoval } from "@mixengine/api";
+import type { ProjectExport } from "@mixengine/api";
 import type { ProjectSummary } from "@mixengine/api";
 import type { RuntimeKind } from "@mixengine/api";
 import type { RuntimeList } from "@mixengine/api";
@@ -68,6 +70,7 @@ import type { ServiceWalk } from "@mixengine/api";
 import type { DomainStatusReport } from "@mixengine/api";
 import type { CaStatus } from "@mixengine/api";
 import type { CertIssueReport } from "@mixengine/api";
+import type { CertStatusReport } from "@mixengine/api";
 import type { BlueprintList } from "@mixengine/api";
 import type { BlueprintSummary } from "@mixengine/api";
 import type { BlueprintCapture } from "@mixengine/api";
@@ -240,6 +243,22 @@ export function siteUnshare(domain: string): Promise<unknown> {
   return invoke("mixengine_site_unshare", { domain });
 }
 
+/** Serves the site again. A flag and a re-render of the front end's configuration: no service is
+ *  started by it, which is still Open's job. */
+export function siteStart(domain: string): Promise<SiteDetail> {
+  return invoke<SiteDetail>("mixengine_site_start", { domain });
+}
+
+/** Stops serving the site and keeps its declaration; the services it uses keep running. */
+export function siteStop(domain: string): Promise<SiteDetail> {
+  return invoke<SiteDetail>("mixengine_site_stop", { domain });
+}
+
+/** Refused for an extension's site. The doc root is kept on disk, and `doc_root_kept` names it. */
+export function siteDelete(domain: string): Promise<SiteRemoval> {
+  return invoke<SiteRemoval>("mixengine_site_delete", { domain });
+}
+
 export function projects(): Promise<ProjectList> {
   return invoke<ProjectList>("mixengine_projects");
 }
@@ -265,6 +284,12 @@ export function projectUpdate(input: ProjectUpdate): Promise<ProjectSummary> {
 /** The directory and `mixengine.toml` are kept — only the registration is removed. */
 export function projectDelete(name: string): Promise<ProjectRemoval> {
   return invoke<ProjectRemoval>("mixengine_project_delete", { name });
+}
+
+/** Writes `<root>/mixengine.toml`, merging into one that is there. `sites_omitted` names the sites
+ *  the file could not hold, since a manifest has one `[site]`. */
+export function projectExport(name: string): Promise<ProjectExport> {
+  return invoke<ProjectExport>("mixengine_project_export", { name });
 }
 
 /** `domain.dns_status` is both the listing and the diagnosis of one name — leave `domain` empty to
@@ -298,6 +323,12 @@ export function caRepair(input: DoctorRepair): Promise<unknown> {
  *  and reissues. */
 export function certs(domain?: string): Promise<CertIssueReport> {
   return invoke<CertIssueReport>("mixengine_certs", { domain });
+}
+
+/** What the running front end presents, through a TLS handshake per site. Reads only, and slow
+ *  when the front end is down, so it is asked for rather than read on every reload. */
+export function certStatus(domain?: string): Promise<CertStatusReport> {
+  return invoke<CertStatusReport>("mixengine_cert_status", { domain });
 }
 
 export function runtimesInstalled(kind?: RuntimeKind): Promise<RuntimeList> {
@@ -557,6 +588,12 @@ export function blueprintApply(input: BlueprintApply): Promise<BlueprintApplyRes
  *  stream. */
 export function jobStatus(job: number): Promise<JobSummary> {
   return invoke<JobSummary>("mixengine_job_status", { job });
+}
+
+/** Asks a job to stop — asking is all it does. The work ends when it next looks, and `job_finished`
+ *  is what says it did; cancelling a job that has already ended is not an error. */
+export function jobCancel(job: number): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_job_cancel", { job });
 }
 
 /** A job's real output (e.g. a blueprint's `[scaffold]` command) — the same pattern as

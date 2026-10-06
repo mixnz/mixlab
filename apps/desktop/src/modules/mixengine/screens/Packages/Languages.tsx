@@ -416,7 +416,7 @@ export default function Languages({ active }: { active: boolean }) {
                     <tr className={update.kind === "none" ? undefined : styles.withUpdate}>
                       <td data-nowrap>
                         <span className={styles.name}>
-                          <MonogramBadge name={row.kind} size={28} />
+                          <MonogramBadge name={row.kind} size={34} />
                           {row.kind === "php" ? (
                             // PHP alone has extensions to show under its row.
                             <Button

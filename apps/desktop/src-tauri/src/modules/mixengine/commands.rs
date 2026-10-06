@@ -217,6 +217,25 @@ pub async fn mixengine_site_unshare(domain: String) -> Result<Value, AppError> {
     rpc::call("site.unshare", json!({ "site": { "domain": domain } })).await
 }
 
+/// Serves the site again: a flag and a re-render of the front end's configuration, never a process.
+/// Answers the `SiteDetail` it now is.
+#[tauri::command]
+pub async fn mixengine_site_start(domain: String) -> Result<Value, AppError> {
+    rpc::call("site.start", json!({ "site": { "domain": domain } })).await
+}
+
+/// Stops serving the site and keeps its declaration; the services it uses keep running.
+#[tauri::command]
+pub async fn mixengine_site_stop(domain: String) -> Result<Value, AppError> {
+    rpc::call("site.stop", json!({ "site": { "domain": domain } })).await
+}
+
+/// Answers `SiteRemoval`: the doc root is kept on disk and named, which the UI has to say.
+#[tauri::command]
+pub async fn mixengine_site_delete(domain: String) -> Result<Value, AppError> {
+    rpc::call("site.delete", json!({ "site": { "domain": domain } })).await
+}
+
 /// Only to build the project dropdown in the create-site dialog — not a Projects screen.
 #[tauri::command]
 pub async fn mixengine_projects() -> Result<Value, AppError> {
@@ -249,6 +268,13 @@ pub async fn mixengine_project_update(params: Value) -> Result<Value, AppError> 
 #[tauri::command]
 pub async fn mixengine_project_delete(name: String) -> Result<Value, AppError> {
     rpc::call("project.delete", json!({ "project": { "name": name } })).await
+}
+
+/// `project.export` — writes the project into `<root>/mixengine.toml`. Merges into an existing
+/// file rather than rewriting it, so comments and a hand-written `[site]` survive.
+#[tauri::command]
+pub async fn mixengine_project_export(name: String) -> Result<Value, AppError> {
+    rpc::call("project.export", json!({ "project": { "name": name } })).await
 }
 
 /// `domain.dns_status` is both `domain.list` and the diagnosis of one name — leave `domain` empty
@@ -288,6 +314,14 @@ pub async fn mixengine_ca_repair(params: Value) -> Result<Value, AppError> {
 pub async fn mixengine_certs(domain: Option<String>) -> Result<Value, AppError> {
     let site = domain.map(|d| json!({ "domain": d }));
     rpc::call("cert.issue", json!({ "site": site })).await
+}
+
+/// `cert.status` — what the running front end presents for each site, through a live TLS
+/// handshake. Reads only. Leave `domain` empty for every site.
+#[tauri::command]
+pub async fn mixengine_cert_status(domain: Option<String>) -> Result<Value, AppError> {
+    let site = domain.map(|d| json!({ "domain": d }));
+    rpc::call("cert.status", json!({ "site": site })).await
 }
 
 /// `filter` has the shape of `RuntimeFilter` — empty (`{}`) shows all four kinds.
@@ -718,6 +752,13 @@ pub async fn mixengine_blueprint_apply(params: Value) -> Result<Value, AppError>
 #[tauri::command]
 pub async fn mixengine_job_status(job: i64) -> Result<Value, AppError> {
     rpc::call("job.status", json!({ "job": job })).await
+}
+
+/// `job.cancel` — asks, and answers the `JobSummary` as it stands, which may still say `running`:
+/// cancellation is cooperative, and `job_finished` is what says the work stopped.
+#[tauri::command]
+pub async fn mixengine_job_cancel(job: i64) -> Result<Value, AppError> {
+    rpc::call("job.cancel", json!({ "job": job })).await
 }
 
 /// `extension.list` — every extension this home has installed. The Tauri command name follows the

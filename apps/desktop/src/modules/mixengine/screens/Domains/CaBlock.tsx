@@ -36,8 +36,12 @@ function browsersLine(browsers: Exclude<Browsers, { state: "reached" }>, t: Tran
   switch (browsers.state) {
     case "no_tool":
       return t("mixengine.domains.ca.browsers.noTool", { reason: browsers.because });
+    // The window's own sentence rather than the daemon's `because`, which is English and reads as
+    // "not done yet". What it must not claim is what Firefox reads: that is measured on Windows
+    // only (`mixengine-platform`'s `BrowserSurvey::NotSearched`), so the sentence names the
+    // browsers that read the system store everywhere they run.
     case "not_searched":
-      return t("mixengine.domains.ca.browsers.notSearched", { reason: browsers.because });
+      return t("mixengine.domains.ca.browsers.notSearched");
     case "unknown":
       return t("mixengine.domains.ca.browsers.unknown", { reason: browsers.because });
   }
@@ -73,6 +77,7 @@ function browsersPill(browsers: Browsers, t: Translate): Pill {
       return { tone: "warning", word: t("mixengine.domains.ca.pill.partly") };
     }
     case "no_tool":
+      return { tone: "neutral", word: t("mixengine.domains.ca.pill.noTool") };
     case "not_searched":
       return { tone: "neutral", word: t("mixengine.domains.ca.pill.notSearched") };
     case "unknown":
@@ -182,7 +187,10 @@ export default function CaBlock({
           <StatusPill tone={browsersPill(status.browsers, t).tone}>
             {browsersPill(status.browsers, t).word}
           </StatusPill>
-          <span className={styles.explain}>
+          <span
+            className={styles.explain}
+            title={status.browsers.state === "not_searched" ? status.browsers.because : undefined}
+          >
             {status.browsers.state === "reached" ? (
               <ul className={styles.databases}>
                 {status.browsers.databases.map((db) => (
@@ -201,15 +209,19 @@ export default function CaBlock({
               browsersLine(status.browsers, t)
             )}
           </span>
-          <Button
-            variant="soft"
-            className={styles.repair}
-            onClick={() => void repair()}
-            busy={repairing ? t("mixengine.domains.ca.repairing") : undefined}
-          >
-            <LockIcon size={14} />
-            {t("mixengine.domains.ca.repair")}
-          </Button>
+          {/* Nothing to fix where MixEngine keeps no browser database of its own: the repair would
+              write into none, and a button offered there reads as a fault. */}
+          {status.browsers.state !== "not_searched" && (
+            <Button
+              variant="soft"
+              className={styles.repair}
+              onClick={() => void repair()}
+              busy={repairing ? t("mixengine.domains.ca.repairing") : undefined}
+            >
+              <LockIcon size={14} />
+              {t("mixengine.domains.ca.repair")}
+            </Button>
+          )}
         </div>
       </div>
 

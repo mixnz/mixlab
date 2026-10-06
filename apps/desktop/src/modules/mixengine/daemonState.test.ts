@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyEvent,
   applyJob,
+  forgetFinished,
   movesARow,
   needsResync,
   rowsFrom,
@@ -113,6 +114,27 @@ describe("applyEvent", () => {
   it("does not answer to the field name the architecture note used", () => {
     const raw = JSON.stringify({ type: "service_state_changed", id: "caddy@main", to: "running" });
     expect(applyEvent(rows, raw).rows).toEqual(rows);
+  });
+});
+
+describe("forgetFinished", () => {
+  const held: ReadonlySet<number> = new Set([7, 9]);
+
+  it("takes out the job a job_finished names", () => {
+    const next = forgetFinished(held, JSON.stringify({ type: "job_finished", job: 7, ending: "cancelled" }));
+    expect([...next]).toEqual([9]);
+  });
+
+  it("keeps the same set for a job nobody pressed Cancel on", () => {
+    expect(forgetFinished(held, JSON.stringify({ type: "job_finished", job: 3, ending: "succeeded" }))).toBe(held);
+  });
+
+  it("keeps the same set for progress, which says the work is still going", () => {
+    expect(forgetFinished(held, JSON.stringify({ type: "job_progress", job: 7, percent: 50 }))).toBe(held);
+  });
+
+  it("a garbage payload does not throw", () => {
+    expect(forgetFinished(held, "not json")).toBe(held);
   });
 });
 

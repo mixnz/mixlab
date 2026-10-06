@@ -17,6 +17,21 @@ export function canEditSite(owner: SiteOwner): boolean {
 }
 
 /**
+ * Why Delete is greyed out for this row, or `null` when it is not.
+ *
+ * `"extension"` first: the daemon refuses to delete an extension's site whatever its state.
+ * `"shared"` because `site.delete` re-renders the front end and the hosts file but leaves the
+ * firewall rule and the mDNS name a share opened — so the window asks for the unshare first rather
+ * than composing the two calls itself, which would be choosing an order of operations that is the
+ * daemon's to choose.
+ */
+export function deleteBlock(row: SiteRow): "extension" | "shared" | null {
+  if (!canEditSite(row.owner)) return "extension";
+  if (row.sharing) return "shared";
+  return null;
+}
+
+/**
  * Applies `site_sharing_changed` to the site table.
  *
  * The same rule the Dashboard follows for `service_state_changed`: events are best-effort, but when

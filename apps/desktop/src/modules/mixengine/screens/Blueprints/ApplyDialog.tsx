@@ -29,6 +29,7 @@ import {
   canApply,
   describePlanAction,
   jobFailureMessage,
+  jobWasCancelled,
   scaffoldConsentState,
   scaffoldLeftCommand,
   scaffoldStepIndex,
@@ -96,6 +97,10 @@ export default function ApplyDialog({
   // Agreement to install what the plan's releases lack on this machine — T152.
   const [prerequisitesAgreed, setPrerequisitesAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** Cancel was pressed on the running apply. Kept past the ending: an apply cancelled between two
+   *  steps stops there and still **succeeds** with the steps it ran (the daemon's apply loop), so
+   *  the done view is the only place left to say the list is short because somebody asked. */
+  const [cancelAsked, setCancelAsked] = useState(false);
   const [error, setError] = useState("");
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [showLog, setShowLog] = useState(false);
@@ -202,6 +207,10 @@ export default function ApplyDialog({
         const failure = jobFailureMessage(job);
         if (applied) setPhase({ kind: "done", applied });
         else if (failure !== null) setPhase({ kind: "failed", message: failure });
+        // A step that gave up because of the cancellation ends the job as `cancelled`, which is
+        // neither of the two above: without this the dialog would stay on "Running…" for good.
+        else if (jobWasCancelled(job))
+          setPhase({ kind: "failed", message: t("mixengine.blueprints.apply.cancelled") });
       })
       .catch((e: unknown) => setError(errorMessage(t, e)));
     return () => {
@@ -264,6 +273,22 @@ export default function ApplyDialog({
       disabled:
         !canApply(plan.steps, choices) || !requirementsAllowApply(phase.needs, prerequisitesAgreed),
       busy: busy ? t("mixengine.blueprints.apply.applying") : undefined,
+    });
+  }
+  if (phase.kind === "running") {
+    const jobId = phase.jobId;
+    actions.push({
+      kind: "secondary",
+      label: t("mixengine.blueprints.apply.cancelApply"),
+      disabled: cancelAsked,
+      busy: cancelAsked ? t("mixengine.blueprints.apply.cancelling") : undefined,
+      onClick: () => {
+        setCancelAsked(true);
+        api.jobCancel(jobId).catch((e: unknown) => {
+          setCancelAsked(false);
+          setError(errorMessage(t, e));
+        });
+      },
     });
   }
   if (phase.kind === "done" || phase.kind === "failed") {
@@ -402,6 +427,7 @@ export default function ApplyDialog({
                 <p>{t("mixengine.blueprints.apply.running")}</p>
                 <progress value={running?.percent ?? 0} max={100} />
                 <p>{running?.message ?? ""}</p>
+                {cancelAsked && <NoticeBanner message={t("mixengine.blueprints.apply.cancelNote")} />}
               </div>
             )}
 
@@ -436,6 +462,8 @@ export default function ApplyDialog({
             {phase.kind === "done" && (
               <div className={styles.done}>
                 <h4>{t("mixengine.blueprints.apply.doneTitle")}</h4>
+
+                {cancelAsked && <NoticeBanner message={t("mixengine.blueprints.apply.cancelled")} />}
 
                 {/* At the **top** of the list, not the tenth line. And in the app's own words: the
                     `why` the daemon returns ends with a hint to run
