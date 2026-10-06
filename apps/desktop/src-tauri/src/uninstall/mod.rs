@@ -43,6 +43,20 @@ pub fn own_directories(report: &Value) -> Vec<PathBuf> {
         .unwrap_or_default()
 }
 
+/// Whether the daemon said the uninstall finished: nothing still waiting for permission and nothing
+/// left behind. Only a finished one ends the daemon (ADR 0051, decision 1), so only then is there
+/// an ending to wait for — `mix uninstall`'s `finished_uninstall`, read off the same report.
+pub fn finished(report: &Value) -> bool {
+    !report["items"].as_array().is_some_and(|items| {
+        items.iter().any(|row| {
+            matches!(
+                row["outcome"]["removal"].as_str(),
+                Some("enqueued" | "failed")
+            )
+        })
+    })
+}
+
 /// What the window can see for itself once the daemon has gone (spec D4, step 6).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ReadBack {
@@ -146,6 +160,23 @@ mod tests {
                 PathBuf::from("/u/Library/Caches/x"),
             ]
         );
+    }
+
+    /// A declined prompt or a row left behind does not finish the uninstall, and the daemon stays
+    /// up for the next run (ADR 0051): the window must not wait two minutes for it to end.
+    #[test]
+    fn only_a_report_with_nothing_waiting_or_left_is_finished() {
+        let report = |removal: &str| {
+            serde_json::json!({ "items": [
+                { "id": "home", "location": "/h", "outcome": { "removal": "on_exit", "what": "" } },
+                { "id": "hosts_block", "location": "/etc/hosts", "outcome": { "removal": removal, "what": "" } },
+            ]})
+        };
+
+        assert!(finished(&report("removed")));
+        assert!(finished(&report("absent")));
+        assert!(!finished(&report("enqueued")), "a declined prompt");
+        assert!(!finished(&report("failed")), "a row still there");
     }
 
     /// The item exists only on a released macOS copy the `.pkg` placed.

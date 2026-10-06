@@ -10,7 +10,7 @@ use crate::modules::mixengine::for_uninstall;
 use crate::updater::placement::{self, PKG_RECEIPT};
 
 use super::menu::UninstallMenu;
-use super::{offered, own_directories, read_back, Outcome};
+use super::{finished, offered, own_directories, read_back, Outcome};
 
 /// How long a daemon removing its home is given to end: `mix uninstall` allows the same (T182b, D8).
 const GONE_WITHIN: Duration = Duration::from_secs(120);
@@ -58,7 +58,8 @@ pub async fn uninstall_run(
 
     let daemon = for_uninstall::ensure_daemon().await?;
     let report = for_uninstall::run(keep_home, keep_relocated).await?;
-    let gone = for_uninstall::wait_gone(&daemon, GONE_WITHIN).await;
+    // A declined prompt or a row left behind keeps the daemon up for the next run: nothing to wait for.
+    let gone = finished(&report) && for_uninstall::wait_gone(&daemon, GONE_WITHIN).await;
 
     let bundle = crate::relaunch::origin()
         .map(|origin| origin.root.clone())
