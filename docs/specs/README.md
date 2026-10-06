@@ -192,4 +192,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-02 | [MixLab.app is signed ad-hoc as a bundle](2026-10-02-mixlab-app-is-signed-ad-hoc-as-a-bundle-design.md) |  | implemented |
 | 2026-10-05 | [Demo clips — the screenshot rig, recording a short flow as video](2026-10-05-demo-clips-design.md) |  | implemented |
 | 2026-10-05 | [One command installs MixLab](2026-10-05-t197-one-command-installs-mixlab-design.md) | T197 | implemented |
-| 2026-10-06 | [T199 — The window closes its known gaps](2026-10-06-t199-the-window-closes-its-known-gaps-design.md) | T199 | approved |
+| 2026-10-06 | [T199 — The window closes its known gaps](2026-10-06-t199-the-window-closes-its-known-gaps-design.md) | T199 | implemented |

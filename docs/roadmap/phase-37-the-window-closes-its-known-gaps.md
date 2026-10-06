@@ -10,7 +10,7 @@ Design: [2026-10-06-t199-the-window-closes-its-known-gaps-design.md](../specs/20
 
 ---
 
-- [ ] **T199** Start/Stop and Delete in the Sites row menu, Cancel on a running job and in a
+- [x] **T199** Start/Stop and Delete in the Sites row menu, Cancel on a running job and in a
       blueprint apply, Check served on the Domains screen, Write manifest on Projects; `job.list`,
       `cert.ca_rotate` and `cert.ca_uninstall` move to `cliOnly` with their reasons. Deleting a
       shared site is refused in the window until the daemon withdraws the share on delete, which
