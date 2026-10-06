@@ -159,7 +159,7 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-09-23 | [T176f: A download is named after what it installs](2026-09-23-t176f-a-download-is-named-after-what-it-installs-design.md) | T176f | implemented |
 | 2026-09-23 | [T179: A want that is gone leaves the queue](2026-09-23-t179-a-want-that-is-gone-leaves-the-queue-design.md) | T179 | implemented |
 | 2026-09-23 | [T180: A firewall prompt with work behind it](2026-09-23-t180-a-firewall-prompt-with-work-behind-it-design.md) | T180 | implemented |
-| 2026-09-23 | [A `.pkg` is updated by its installer](2026-09-23-t88f-a-pkg-is-updated-by-its-installer-design.md) | T88f | approved |
+| 2026-09-23 | [A `.pkg` is updated by its installer](2026-09-23-t88f-a-pkg-is-updated-by-its-installer-design.md) | T88f | implemented |
 | 2026-09-24 | [A reading refreshes only the groups it measures](2026-09-24-t181-a-reading-refreshes-only-the-groups-it-measures-design.md) | T181 | implemented |
 | 2026-09-24 | [Removing MixLab is one act](2026-09-24-t182-removing-mixlab-is-one-act-design.md) | T182 | approved |
 | 2026-09-24 | [A service says which version it runs](2026-09-24-t183-a-service-says-which-version-it-runs-design.md) | T183 | implemented |

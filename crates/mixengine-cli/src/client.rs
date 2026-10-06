@@ -25,6 +25,12 @@ use serde_json::Value;
 use crate::autostart::Autostart;
 use crate::error::to_wire;
 
+/// How long the daemon lets a kept-alive connection sit without a request before it closes it:
+/// `HEADER_TIMEOUT` in `mixengine-daemon/src/api/http.rs`, which a test here reads back. Not a
+/// constant in `mixengine-proto`, because the helper is built from every file of that crate and a
+/// value it never uses would still move `HELPER_VERSION`.
+const DAEMON_IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
 /// A daemon, connected and known to speak this protocol.
 #[derive(Debug)]
 pub(crate) struct Client {
@@ -37,6 +43,15 @@ pub(crate) struct Client {
     /// What the handshake learned, kept so a command can report the daemon's build without asking
     /// twice.
     daemon: DaemonVersion,
+
+    /// Where this connection was dialled, for dialling again after an idle.
+    endpoint: Endpoint,
+
+    /// When the daemon last answered on this connection. The daemon closes a connection that has
+    /// sent no request for [`DAEMON_IDLE_TIMEOUT`] — the limit applies to every request
+    /// on a kept-alive connection, not only the first — and a person at a consent prompt takes
+    /// longer than that. See [`Client::call`].
+    answered_at: std::time::Instant,
 }
 
 impl Client {
@@ -98,7 +113,37 @@ impl Client {
             sender,
             calls,
             daemon,
+            endpoint: endpoint.clone(),
+            answered_at: std::time::Instant::now(),
         })
+    }
+
+    /// Dial the same endpoint again and start over on the new connection.
+    ///
+    /// Never starts a daemon: this runs after one answered on this very endpoint, so nothing
+    /// listening now is a daemon that went away, which is the caller's to report.
+    async fn redial(&mut self) -> Result<(), Error> {
+        let connection = Connection::connect(&self.endpoint)
+            .await
+            .map_err(|error| to_wire(&error))?;
+
+        let (mut sender, driver) = hyper::client::conn::http1::handshake(TokioIo::new(connection))
+            .await
+            .map_err(|error| transport(&error))?;
+
+        tokio::spawn(async move {
+            let _ = driver.await;
+        });
+
+        let mut calls = 0;
+        let daemon = handshake(&mut sender, &mut calls).await?;
+
+        self.sender = sender;
+        self.calls = calls;
+        self.daemon = daemon;
+        self.answered_at = std::time::Instant::now();
+
+        Ok(())
     }
 
     /// Wait until nothing answers on `endpoint`, or until the budget runs out.
@@ -214,7 +259,20 @@ impl Client {
         method: &str,
         params: Option<Value>,
     ) -> Result<Value, Error> {
-        call(&mut self.sender, &mut self.calls, method, params).await
+        // **Dial again after an idle, rather than find out by writing.** The daemon closes a
+        // connection that has sent nothing for `DAEMON_IDLE_TIMEOUT`, and `hyper` on this side
+        // does not notice until it writes into it: `mix self-update` answered *Broken pipe* to the
+        // `i` a person typed after reading the offer for 35 seconds. Decided by the clock and not by
+        // the error, so no request is ever sent twice; half the limit leaves room for a clock that
+        // is not the daemon's.
+        if self.answered_at.elapsed() >= DAEMON_IDLE_TIMEOUT / 2 {
+            self.redial().await?;
+        }
+
+        let answer = call(&mut self.sender, &mut self.calls, method, params).await;
+        self.answered_at = std::time::Instant::now();
+
+        answer
     }
 }
 
@@ -485,6 +543,166 @@ fn transport(error: &hyper::Error) -> Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use mixengine_platform::ipc::{Accepted, Listener};
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+
+    /// A daemon that answers every call with a `daemon.version`, on as many connections as are
+    /// dialled, and counts them. Enough HTTP/1.1 to satisfy `hyper`: one request per read, the
+    /// body sized by `content-length`, and a keep-alive response.
+    struct FakeDaemon {
+        endpoint: Endpoint,
+        connections: Arc<AtomicUsize>,
+        _run: tempfile::TempDir,
+    }
+
+    impl FakeDaemon {
+        fn serve() -> Self {
+            let run = tempfile::tempdir().expect("a run directory");
+            let endpoint = Endpoint::in_run_dir(run.path()).expect("an endpoint");
+            let mut listener = Listener::bind(&endpoint).expect("a listener");
+            let connections = Arc::new(AtomicUsize::new(0));
+            let counted = Arc::clone(&connections);
+
+            tokio::spawn(async move {
+                while let Ok(accepted) = listener.accept().await {
+                    let Accepted::Trusted(connection) = accepted else {
+                        continue;
+                    };
+                    counted.fetch_add(1, Ordering::SeqCst);
+                    tokio::spawn(answer(connection));
+                }
+            });
+
+            Self {
+                endpoint,
+                connections,
+                _run: run,
+            }
+        }
+
+        fn connections(&self) -> usize {
+            self.connections.load(Ordering::SeqCst)
+        }
+    }
+
+    async fn answer(mut connection: Connection) {
+        let mut buffer = Vec::new();
+        loop {
+            let headers_end = loop {
+                if let Some(at) = buffer.windows(4).position(|w| w == b"\r\n\r\n") {
+                    break at + 4;
+                }
+                let mut chunk = [0u8; 4096];
+                match connection.read(&mut chunk).await {
+                    Ok(0) | Err(_) => return,
+                    Ok(n) => buffer.extend_from_slice(&chunk[..n]),
+                }
+            };
+
+            let head = String::from_utf8_lossy(&buffer[..headers_end]).to_string();
+            let length: usize = head
+                .lines()
+                .find_map(|line| {
+                    let (name, value) = line.split_once(':')?;
+                    name.eq_ignore_ascii_case("content-length")
+                        .then(|| value.trim().parse().ok())
+                        .flatten()
+                })
+                .unwrap_or(0);
+            while buffer.len() < headers_end + length {
+                let mut chunk = [0u8; 4096];
+                match connection.read(&mut chunk).await {
+                    Ok(0) | Err(_) => return,
+                    Ok(n) => buffer.extend_from_slice(&chunk[..n]),
+                }
+            }
+
+            let request: Value = serde_json::from_slice(&buffer[headers_end..headers_end + length])
+                .expect("a JSON-RPC request");
+            buffer.drain(..headers_end + length);
+
+            let body = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": request["id"],
+                "result": { "version": "0.0.0-fake", "protocol": PROTOCOL_VERSION.0 },
+            })
+            .to_string();
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            if connection.write_all(response.as_bytes()).await.is_err() {
+                return;
+            }
+        }
+    }
+
+    /// The daemon's value, read out of its source: a change there that forgot this side would be a
+    /// `mix` that writes into closed sockets again, and nothing else would notice.
+    #[test]
+    fn the_idle_timeout_is_the_daemons() {
+        let http = include_str!("../../mixengine-daemon/src/api/http.rs");
+        let line = http
+            .lines()
+            .find(|line| line.starts_with("const HEADER_TIMEOUT: Duration = Duration::from_secs("))
+            .expect("the daemon's HEADER_TIMEOUT line");
+        let seconds: u64 = line
+            .trim_start_matches("const HEADER_TIMEOUT: Duration = Duration::from_secs(")
+            .trim_end_matches(");")
+            .parse()
+            .expect("a number of seconds");
+
+        assert_eq!(DAEMON_IDLE_TIMEOUT.as_secs(), seconds);
+    }
+
+    /// Two calls in a row ride one connection: keep-alive is the point of `Client`.
+    #[tokio::test]
+    async fn calls_in_quick_succession_share_one_connection() {
+        let daemon = FakeDaemon::serve();
+        let mut client = Client::connect(&daemon.endpoint, None)
+            .await
+            .expect("a client");
+
+        client
+            .call("daemon.version", None)
+            .await
+            .expect("an answer");
+        client
+            .call("daemon.version", None)
+            .await
+            .expect("an answer");
+
+        assert_eq!(daemon.connections(), 1);
+    }
+
+    /// The daemon closes a connection that sends no request for `DAEMON_IDLE_TIMEOUT`, and a
+    /// person reading a consent prompt takes longer than that: `mix self-update` answered "Broken
+    /// pipe" to the *i* typed after 35 seconds (the T88f check by hand). So a call after that long
+    /// an idle dials again before it sends, rather than writing into a socket the daemon has shut.
+    #[tokio::test]
+    async fn a_call_after_an_idle_the_daemon_would_have_ended_dials_again() {
+        let daemon = FakeDaemon::serve();
+        let mut client = Client::connect(&daemon.endpoint, None)
+            .await
+            .expect("a client");
+        client
+            .call("daemon.version", None)
+            .await
+            .expect("an answer");
+
+        client.answered_at = std::time::Instant::now() - DAEMON_IDLE_TIMEOUT;
+        let answer = client
+            .call("daemon.version", None)
+            .await
+            .expect("an answer on the new connection");
+
+        assert_eq!(answer["version"], "0.0.0-fake");
+        assert_eq!(daemon.connections(), 2);
+    }
 
     #[test]
     fn a_socket_nobody_is_listening_on_is_a_daemon_that_is_not_running() {

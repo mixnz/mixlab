@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-09-23
 task: T88f
 ---
@@ -341,6 +341,73 @@ Strings go through `i18n` in English and Vietnamese, per `writing-user-facing-te
   `/usr/local/bin/mixengine-shim` (D6). Then run it once more, pressing Cancel in Installer.app, and
   check that nothing changed. Run `mix self-update` once over SSH, and check that it prints the
   package path and the `installer` command.
+
+## Checked by hand, 2026-10-07
+
+Mac14,3 (Apple silicon), macOS 15.7.3, starting from a `.pkg` install of v0.0.14: receipt 0.0.14,
+and a daemon still running the 0.0.13 image the 0.0.14 install had replaced, which is the state M3
+describes. Two rounds, because since [T187](2026-09-26-t187-mixlab-updates-itself-design.md) the
+window and `mix` are two paths: MixLab's own updater downloads into its `updates/<version>/` and
+reads neither `--update-url` nor `--update-key`, so Settings → Updates was walked against the real
+feed, 0.0.14 → 0.0.15; `mix self-update` was walked against a local feed signed with a throwaway
+key, 0.0.15 → a 0.0.16 built from this checkout with `MIX_MACOS_SLICES=aarch64`.
+
+**Round 1, Settings → Updates, 0.0.14 → 0.0.15, the real feed.**
+
+- *Download*: `mixlab-0.0.15-macos-universal.pkg`, 54,031,244 bytes, under
+  `~/Library/Application Support/io.github.mixnz.mixlab/updates/0.0.15/`, SHA-256 equal to the
+  feed's `macos`/`aarch64`/`pkg`/`window` row, and **no extended attribute at all**: no
+  `com.apple.quarantine` (D5).
+- *Open installer*, then **Cancel** in Installer.app: receipt 0.0.14; every inode as before
+  (`mixengined` 117489086, `mix` …087, the shim …088, the helper …092, `MixLab.app` …094); the daemon
+  still pid 81670; caddy 81719 and redis@main 85401 running; the package and its `ready` marker
+  kept. Nothing changed.
+- *Open again*, installed: receipt 0.0.15; new inodes (…101, …103, …104, …108, …110) with
+  **modification time `Oct 6 14:43`, when the package was built**, not when it was installed (D6);
+  every binary, `Info.plist` and the helper's `pkg-version` 0.0.15; the daemon still pid 81670 on
+  the unlinked inode …086 (`lsof`); services untouched; `<home>/bin/php` still on the old shim inode
+  …088, the new shim with one link. The pane read `Info.plist` and offered *Finish*.
+- *Finish*: daemon 0.0.15 (pid 92313) on inode …101; caddy and redis@main back; MixLab relaunched
+  (pid 92326) on inode …115; `<home>/bin/php` on the new shim inode …104, 20 links; helper 0.1.4,
+  the version both releases ship. The Keychain asked once for the `MixLab` item, which an ad-hoc
+  signed build costs at every update (`apps/desktop/CLAUDE.md`).
+
+**Round 2, `mix self-update` over SSH, 0.0.15 → 0.0.16, the test feed.**
+
+- The daemon started with `--update-url http://127.0.0.1:8765/latest.json --update-key <test key>`;
+  `mix self-update --check` offered 0.0.16 "through Installer.app". A feed `feed.sh` writes from a
+  one-slice build names the helper `macos-arm64`, which `Arch` refuses (`unknown variant arm64`):
+  corrected by hand, and not a release case, since a tag is always universal (T171).
+- `ssh localhost mix self-update --yes` printed *the installer is open*, the package path under
+  `<home>/cache/updates/0.0.16/` and the `sudo installer -pkg … -target /` line, exit 0, and opened
+  nothing in the SSH session; Installer.app came up on the desktop, in the same audit session
+  (100020) as MixLab and the daemon (D5, M4). The package carried `com.apple.provenance` and no
+  quarantine attribute. A second `update.hand_over` reused the verified file instead of downloading
+  it again.
+- Installed through Installer.app: `--check` printed *0.0.16 is installed. finish it: mix
+  self-update --finish*. `--finish` stopped the daemon and `mix` started the new one: daemon 0.0.16,
+  every binary and the helper's `pkg-version` 0.0.16, shims relinked, `cache/updates/0.0.16`
+  removed, and `--check` answering *not newer than the 0.0.16 this machine is running*.
+
+**Two things diverged, both outside this design, both fixed with the check.**
+
+1. `mix self-update` answered *Broken pipe* to an `i` typed after 35 seconds, over SSH and at the
+   console alike. `mix` holds one HTTP/1.1 connection per run, and the daemon's header-read timeout
+   of 30 seconds applies to every request on a kept-alive connection, so the connection was closed
+   while the person read the offer. `mix elevation grant` and the server-switch prompt sat on the
+   same connection. `Client::call` now dials again after an idle of half that timeout. `mix`
+   keeps its own copy of the value, pinned by a test that reads the daemon's source, rather than a
+   constant in `mixengine-proto`: the helper is built from every file of that crate, and a constant
+   it never uses would still move `HELPER_VERSION` and cost every machine an elevation prompt.
+   Checked again with the fixed `mix` and a feed offering 0.0.17: 35 seconds at the prompt, then
+   the handover printed.
+2. `update.finish` and `update.apply` remembered every service the stop walk reached, so the new
+   daemon started six services where two had been running, and `--check` had said two. The walk
+   takes the whole graph and reports an already-stopped service as stopped. Both now record only the
+   services that were running before the stop (`updates::restorable`), which is what T88 promised.
+
+The Mac stays on the 0.0.16 build until the fixes have been checked against it; the released
+`.pkg` is then installed again by hand.
 
 ## Documentation, when it lands
 

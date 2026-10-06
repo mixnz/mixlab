@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed
+- Answering `mix self-update`, `mix elevation grant` or a server switch after half a minute no
+  longer fails with "the connection to the daemon failed: Broken pipe". `mix` reconnects on its own.
+- After an update, MixEngine starts again only the services that were running. Before, it also
+  started the ones you had stopped.
+
 ## v0.0.15
 
 ### Added
