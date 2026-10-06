@@ -205,6 +205,24 @@ const en = {
     openPage: "Open the download page",
     available: "MixLab {{version}} is available.",
   },
+  // MixLab ▸ Remove MixLab from this Mac… (T182a): the dialog that removes MixLab from a Mac the
+  // .pkg installed it on, then quits.
+  remove: {
+    title: "Remove MixLab from this Mac",
+    menuItem: "Remove MixLab from this Mac…",
+    checking: "Checking what is on this Mac…",
+    intro: "This undoes everything MixEngine changed on this Mac, then removes MixLab itself and quits. You'll be asked for your password once.",
+    blocked: "{{what}} is running from a folder that would be removed: {{by}}",
+    checkAgain: "Check again",
+    deleteData: "Also delete MixLab's data in {{path}}: your databases, certificates and project records",
+    deleteRelocated: "Also delete the folders you moved out of it",
+    remove: "Remove MixLab",
+    removing: "Removing",
+    waiting: "Waiting for your password, then removing.",
+    declined: "You didn't allow the prompt, so nothing was removed. MixLab is still installed.",
+    failed: "Some things could not be removed. MixLab stays installed, so you can run this again once they're fixed.",
+    left: "Still on this Mac:",
+  },
   // What a failed backend command says. The keys here are the `code` an `AppError` carries \u2014 see
   // src-tauri/src/error.rs \u2014 and `{{message}}` is where a driver's own words go, untranslated
   // because they are the server talking and the part worth searching for.
