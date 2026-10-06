@@ -351,6 +351,14 @@ enum Command {
         #[arg(long)]
         keep_relocated: bool,
 
+        /// Also remove the program itself, where the macOS package placed it: the commands in
+        /// /usr/local/bin, MixLab.app and the package receipt.
+        ///
+        /// Without it the program stays, and the plan's `package` row says so. On Linux the package
+        /// manager removes the program, and the row names the command.
+        #[arg(long)]
+        package: bool,
+
         /// With `--dry-run`: print only the relocated directories, one path per line.
         ///
         /// For a program to read. The Windows uninstaller shows them before it asks anything.
@@ -2637,6 +2645,7 @@ async fn run(args: Args) -> Result<ExitCode, Error> {
             dry_run,
             keep_home,
             keep_relocated,
+            package,
             relocated,
             blocked,
             yes,
@@ -2646,6 +2655,7 @@ async fn run(args: Args) -> Result<ExitCode, Error> {
                 dry_run,
                 keep_home,
                 keep_relocated,
+                package,
                 relocated,
                 blocked,
                 yes,
@@ -3222,6 +3232,7 @@ async fn uninstall(
         dry_run,
         keep_home,
         keep_relocated,
+        package,
         relocated,
         blocked,
         yes,
@@ -3252,7 +3263,7 @@ async fn uninstall(
         // T182e: the listing the uninstaller reads while its banner is up names folders and
         // nothing else, so it does not pay for reading the handle table.
         skip_holders: relocated,
-        package: false,
+        package,
     };
 
     let planned: UninstallReport = ask(
@@ -3376,6 +3387,12 @@ async fn uninstall(
         report_left(path);
     }
 
+    // T182a: the program's own files, read back off the disk once the daemon has gone, like the
+    // home. `mix` itself is one of them and goes on running from memory, as the window does.
+    for path in package_left(&report) {
+        report_left(&path);
+    }
+
     if let Some((pid, _)) = daemon.filter(|_| lingering) {
         report_left(&format!("the daemon (pid {pid}) is still running"));
     }
@@ -3386,6 +3403,27 @@ async fn uninstall(
             false => ExitCode::SUCCESS,
         },
     )
+}
+
+/// The `.pkg`'s paths still on disk after a run that says it removed the package — T182a.
+fn package_left(report: &UninstallReport) -> Vec<String> {
+    let removed = report.items.iter().any(|item| {
+        item.id == ResidueId::Package && matches!(item.outcome, Removal::Removed { .. })
+    });
+    if !removed {
+        return Vec::new();
+    }
+    mixengine_platform::install::package_paths()
+        .map(|paths| {
+            paths
+                .binaries
+                .into_iter()
+                .chain([paths.bundle])
+                .filter(|path| path.symlink_metadata().is_ok())
+                .map(|path| path.display().to_string())
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Did the daemon say this uninstall finished, which is what ends it (T182b, D1)?
@@ -3523,6 +3561,7 @@ struct UninstallAsk {
     dry_run: bool,
     keep_home: bool,
     keep_relocated: bool,
+    package: bool,
     relocated: bool,
     blocked: bool,
     yes: bool,
