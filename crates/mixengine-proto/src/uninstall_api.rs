@@ -55,6 +55,12 @@ pub struct UninstallQuery {
     /// banner is up — and reading the handle table costs seconds.
     #[serde(default)]
     pub skip_holders: bool,
+    /// Also remove the program the macOS `.pkg` placed — roadmap task **T182a**.
+    ///
+    /// **Defaults to `false`**: `mix uninstall` keeps meaning *undo what MixLab did*, and the
+    /// `Package` row then says how the program itself goes. Ignored where no `.pkg` placed the copy.
+    #[serde(default)]
+    pub package: bool,
 }
 
 /// What an uninstall found, and what became of each thing.
@@ -161,6 +167,11 @@ pub enum ResidueId {
 
     /// The root-owned record of what ran as root, outside `MIXENGINE_HOME`.
     AuditLog,
+
+    /// The program itself, where an installer placed it — roadmap task **T182a**. On macOS the four
+    /// binaries, the application bundle and the receipt the `.pkg` wrote; elsewhere a `Kept` row
+    /// saying what removes the program.
+    Package,
 
     /// The entry that starts this home's daemon at login.
     AutostartEntry,
@@ -311,6 +322,19 @@ pub enum Removal {
 
 #[cfg(test)]
 mod tests {
+    /// T182a: a query from before `package` existed reads with it off, and the row has its name.
+    #[test]
+    fn a_query_from_before_t182a_reads_with_package_false() {
+        let query: super::UninstallQuery =
+            serde_json::from_value(serde_json::json!({ "keep_home": true })).unwrap();
+
+        assert!(!query.package);
+        assert_eq!(
+            serde_json::to_value(super::ResidueId::Package).unwrap(),
+            serde_json::json!("package")
+        );
+    }
+
     use super::*;
 
     /// T182e. A query from a client that predates `skip_holders` still reads, and looks.

@@ -610,6 +610,9 @@ impl Uninstall {
             // records nothing for it, because the line would recreate the file.
             ResidueId::AuditLog => Some(PrivilegedOp::AuditLogRemove {}),
 
+            // The `Package` row arrives with T182a's inventory; until then nothing plans it.
+            ResidueId::Package => None,
+
             // The four that need no token, and the directories the daemon removes as it exits.
             ResidueId::BrowserTrust
             | ResidueId::AutostartEntry

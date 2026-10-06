@@ -1337,6 +1337,7 @@ mod tests {
             keep_relocated,
             grant: false,
             skip_holders: false,
+            package: false,
         }
     }
 

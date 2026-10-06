@@ -3252,6 +3252,7 @@ async fn uninstall(
         // T182e: the listing the uninstaller reads while its banner is up names folders and
         // nothing else, so it does not pay for reading the handle table.
         skip_holders: relocated,
+        package: false,
     };
 
     let planned: UninstallReport = ask(
