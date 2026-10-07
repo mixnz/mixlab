@@ -114,8 +114,15 @@ MixEngine with a sandbox home: an object written, the service stopped, the exten
 without `--delete-data` and installed again, and the object read back.
 
 **Left as it is:** `weed` creates its local sockets under `/tmp`, named by port, whatever `-dir`
-says, and leaves the two S3 ones behind after a stop. They are named by the port MixEngine
-allocated, so two homes do not collide, and a restart replaces them.
+says, and leaves some behind after a stop: the two S3 ones after a signal, four after a stop
+through MixEngine on macOS. They are named by the port MixEngine allocated, so two homes do not
+collide, and a restart replaces them.
+
+**Measured through MixEngine on all three systems**, each with a sandbox home and an install from
+`--path`: Windows 11 and Ubuntu 24.04 (WSL) on x86-64, macOS 15.7 on arm64. Eight listeners on
+`127.0.0.1` and no others; a bucket created and an object written and read back; the filer page;
+the object still there after an uninstall without `--delete-data` and a second install. A stop
+took 16 s on macOS and 14 s on Linux, both ending in `weed`'s own shutdown inside the 30 s grace.
 
 ### D2 — No change to the format, and none to the schema (T201)
 
