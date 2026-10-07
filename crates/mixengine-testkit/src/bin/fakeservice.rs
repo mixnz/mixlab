@@ -70,6 +70,14 @@ struct Args {
     #[arg(long = "fpm-config", value_name = "PATH")]
     fpm_config: Option<PathBuf>,
 
+    /// Hold a TCP listener on this address for as long as the process lives — roadmap task **T200**.
+    ///
+    /// An extension's `[service]` has to say when it is ready by an address answering (`tcp`,
+    /// `http` or a socket); a log line is not in its vocabulary. This is what lets a suite install
+    /// this program as an extension and see it reach `running`.
+    #[arg(long, value_name = "ADDR")]
+    listen: Option<std::net::SocketAddr>,
+
     /// Wait this many milliseconds before announcing readiness.
     #[arg(long, value_name = "MS", default_value_t = 0)]
     ready_after: u64,
@@ -334,6 +342,10 @@ async fn main() {
     // does not, and telling those two apart is what the supervision tests are for.
     let _lock = args.hold_lock.as_deref().map(hold);
     let _supervised = args.supervise.as_deref().map(supervise);
+    let _listening = args.listen.map(|address| {
+        std::net::TcpListener::bind(address)
+            .unwrap_or_else(|error| panic!("fakeservice cannot listen on {address}: {error}"))
+    });
 
     if let Some(path) = &args.child {
         leave_an_ordinary_child(path);

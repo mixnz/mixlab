@@ -541,3 +541,96 @@ async fn a_reinstalled_web_app_can_be_woken_and_the_old_address_is_free() {
         );
     }
 }
+
+/// A directory holding a `service` extension that really runs: this crate's `fakeservice`, told to
+/// hold the port its ready check dials.
+fn a_running_service() -> tempfile::TempDir {
+    let directory = tempfile::Builder::new()
+        .prefix("mixengine-service-extension")
+        .tempdir()
+        .expect("a temporary directory");
+
+    let program = mixengine_testkit::FakeService::program();
+    std::fs::copy(
+        &program,
+        directory
+            .path()
+            .join(program.file_name().expect("a file name")),
+    )
+    .expect("the fixture program is copied in");
+
+    std::fs::write(
+        directory.path().join("extension.toml"),
+        r#"schema = 1
+
+[extension]
+id = "catcher"
+name = "Catcher"
+version = "1.0.0"
+kind = "service"
+description = "A service that runs until it is stopped"
+
+[ports]
+ui_port = 18025
+
+[service]
+program = "{install_dir}/fakeservice"
+cwd = "{data_dir}"
+args = ["--listen", "{listen}:{ui_port}"]
+ready = { type = "tcp", addr = "{listen}:{ui_port}", timeout = "10s" }
+
+[permissions]
+network = "loopback"
+filesystem = ["own-data"]
+"#,
+    )
+    .expect("a manifest");
+
+    directory
+}
+
+/// **Uninstalling a running `service` extension stops it first, so it can be installed again** —
+/// found by T200's hand check.
+///
+/// The daemon stopped a `web-app`'s pool before the rows went (T82a) and nothing else: a running
+/// Mailpit had its row deleted from under it, its process went on holding its own executable, the
+/// install directory could not be removed (`Access is denied` on Windows), and the next install
+/// was refused because that directory was still there.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_running_service_extension_is_stopped_by_its_uninstall() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    let directory = a_running_service();
+    let path = directory.path().display().to_string();
+
+    let plan = installed(&mut client, &path, &fixture.home).await;
+    let install_dir = std::path::PathBuf::from(
+        plan["install_dir"]
+            .as_str()
+            .expect("the plan names where it installs"),
+    );
+
+    client
+        .call("extension.start", json!({"id": "catcher"}))
+        .await;
+
+    let answer = client
+        .ask(
+            "extension.uninstall",
+            json!({"id": "catcher", "delete_data": true}),
+        )
+        .await;
+    assert!(
+        answer.get("error").is_none(),
+        "uninstalling a running service extension was refused: {answer}\n{}",
+        fixture.home.daemon_log()
+    );
+    assert!(
+        !install_dir.exists(),
+        "the install directory outlived the uninstall: {}\n{}",
+        install_dir.display(),
+        fixture.home.daemon_log()
+    );
+
+    installed(&mut client, &path, &fixture.home).await;
+}

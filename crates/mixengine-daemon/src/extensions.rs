@@ -486,24 +486,49 @@ impl Extensions {
         }
     }
 
-    /// Stop a `web-app`'s pool before its row is deleted — roadmap task **T82a**, its design's D11.
+    /// Stop everything an extension runs before its rows are deleted: a `service`'s own process,
+    /// and a `web-app`'s pool — roadmap tasks **T82a** (the pool, its design's D11) and **T200**
+    /// (the service).
+    ///
+    /// **The service is T200's, found by uninstalling a running Mailpit.** Only the pool used to be
+    /// stopped, so a running service had its row deleted from under it, went on holding its own
+    /// executable, and the install directory could not be removed — on Windows `Access is denied`,
+    /// and the next install refused because the directory was still there.
+    ///
+    /// # Errors
+    ///
+    /// [`Self::stop_one`]'s, and the wire error of a row that cannot be read.
+    async fn stop_what_it_runs(&self, id: &ExtensionId) -> Result<(), Error> {
+        let service = extension_store::get(&self.store, id)
+            .await
+            .map_err(|error| error.to_wire())?
+            .as_ref()
+            .and_then(uninstall::service_of);
+
+        let pool = mixengine_core::extensions::pools::of(&self.store, id)
+            .await
+            .map_err(|error| error.to_wire())?;
+
+        for running in service.iter().chain(pool.iter()) {
+            self.stop_one(running).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Stop one service an extension runs, and refuse if it did not stop.
     ///
     /// **A refusal and not a best effort.** `services::delete` does not look at a process, so a row
-    /// removed from under a live php-fpm would leave a master with no configuration and nothing that
+    /// removed from under a live process would leave it with no configuration and nothing that
     /// knows about it — which is exactly what `service.delete`'s own first refusal exists to
     /// prevent, said here for the caller that does not go through it.
     ///
     /// # Errors
     ///
-    /// [`ErrorCode::PreconditionFailed`] naming the pool and the command that stops it, when the
+    /// [`ErrorCode::PreconditionFailed`] naming the service and the command that stops it, when the
     /// stop did not take.
-    async fn stop_pool(&self, id: &ExtensionId) -> Result<(), Error> {
-        let Some(pool) = mixengine_core::extensions::pools::of(&self.store, id)
-            .await
-            .map_err(|error| error.to_wire())?
-        else {
-            return Ok(());
-        };
+    async fn stop_one(&self, pool: &ServiceId) -> Result<(), Error> {
+        let pool = pool.clone();
 
         if let Ok(graph) = self.services.graph().await
             && let Ok(plan) = graph.stop_plan(std::slice::from_ref(&pool))
@@ -771,7 +796,7 @@ impl Extensions {
         // process. A `web-app` is served rather than run and had nothing to stop until it was given
         // a pool of its own; a row deleted from under a live php-fpm would leave a master with no
         // configuration and nothing left that knows about it.
-        self.stop_pool(&asked.id).await?;
+        self.stop_what_it_runs(&asked.id).await?;
 
         // **Read before the row is gone, and used after it is** — roadmap task **T81c**. Whether
         // this extension put anything in the front end's configuration is a fact about its manifest,
