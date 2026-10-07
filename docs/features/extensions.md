@@ -8,7 +8,7 @@ MinIO, MeiliSearch — installable in one click, managed by the same supervisor 
 | Kind | What it is | Example | How it runs |
 | --- | --- | --- | --- |
 | `web-app` | PHP/Node source served by our stack | phpMyAdmin, Adminer | A generated internal site (`phpmyadmin.mixengine.test`) on a managed runtime |
-| `service` | A binary we supervise | Mailpit, MinIO, MeiliSearch | A `ServiceSpec`, same as any bundled service |
+| `service` | A binary we supervise | Mailpit, SeaweedFS, MeiliSearch | A `ServiceSpec`, same as any bundled service |
 | `recipe` | Config-only addition | extra Caddy directives, a php.ini profile | Merged into config generation |
 
 **There was a fourth kind, `desktop-app`, and it is gone** — [ADR 0038](../decisions/0038-the-window-is-the-only-desktop-database-client.md),
@@ -126,6 +126,16 @@ that reads it and ahead of a release: until that release, an older MixEngine lis
 entry it cannot read and says to update. An installed Mailpit keeps the manifest it was installed
 with, so it gains Open when it is installed again. Design:
 [docs/specs/2026-10-07-t200a-t200b-an-add-ons-page-and-why-a-site-is-down-design.md](../specs/2026-10-07-t200a-t200b-an-add-ons-page-and-why-a-site-is-down-design.md).
+
+**A `service` declares every port its program opens** — **T201**, SeaweedFS. MixEngine allocates the
+`[ports]` a manifest names and nothing else, so a listener the program opens on its own is a port
+nothing stops something else holding. `weed server -s3` opens a gRPC port beside each port it is
+given and two more on fixed defaults, so its manifest names eight ports with a flag each and passes
+`0` for the two it does not need. The same manifest turns off the program's telemetry, readies on an
+HTTP check rather than on the port opening, and gives its stop 30 s, each one measured on all three
+systems through MixEngine. It needed no new key in the format, so it was published ahead of the
+merge that carries its fixture. Design:
+[docs/specs/2026-10-07-t201-seaweedfs-design.md](../specs/2026-10-07-t201-seaweedfs-design.md).
 
 ## Registry
 
@@ -342,6 +352,11 @@ nothing; `extension.install` is a job (download, verify, unpack, rename, allocat
 and `extension.stop` resolve an extension to the `services` row it already **is** and take the walk
 `service.start` takes — they add no supervision of their own, which is what *"managed by the same
 supervisor as everything else"* means in practice.
+
+**MixLab's Add-ons screen shows what a row holds and what it is doing** — **T201**. An installed row
+lists the ports it holds under its description, and a row whose start, stop or switch is in flight
+shows *Starting…* or *Stopping…* with a busy button until the daemon answers, then follows
+`service_state_changed` as the Dashboard does.
 
 **Consent names what was read.** A client shows the plan and sends it back as an
 `ExtensionConsent`; the daemon compares the version, the signature and the network reach against the

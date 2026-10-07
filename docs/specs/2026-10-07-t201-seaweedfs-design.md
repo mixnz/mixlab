@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-07
 task:
   - T201
@@ -183,6 +183,10 @@ The other five extensions considered beside this one, and why each is not here:
 
 - **Add-ons screen** (`screens/Extensions/`): each installed row lists the ports it holds (D5), and
   SeaweedFS has **Open** through `[ui]` (D3).
+- **Added while testing it in the window:** a row whose start, stop, switch or Open is in flight
+  shows *Starting…* or *Stopping…* with a busy button until the daemon answers, and follows
+  `service_state_changed`, as the Dashboard does. A start of SeaweedFS takes up to 20 s, and the row
+  looked as if the press had done nothing.
 
 The client surface is unchanged. Strings go into `en.ts` and `vi.ts` together. The changelog gets:
 - `Added`: SeaweedFS in Add-ons, a local S3;
