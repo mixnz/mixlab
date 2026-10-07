@@ -124,6 +124,15 @@ pub(crate) fn keys(service: &str) -> Result<Vec<String>, KeyringError> {
     Ok(keys)
 }
 
+/// Forget `service`/`key` through `keyring`, as every write here goes. macOS deletes by query
+/// instead (see its module); this store has no access control that a lookup would run into.
+pub(crate) fn forget(service: &str, key: &str) -> Result<(), KeyringError> {
+    match keyring::Entry::new(service, key)?.delete_credential() {
+        Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

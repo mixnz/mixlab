@@ -48,6 +48,31 @@ pub(crate) fn keys(service: &str) -> Result<Vec<String>, KeyringError> {
     }
 }
 
+/// Forget `service`/`account` — roadmap task **T182a**'s walk.
+///
+/// **By query, never by reading first.** `keyring`'s delete finds the item together with its secret
+/// before it deletes, which runs the Keychain's access control: an item another build of this
+/// program wrote — every release is another build, and the window is another program — was refused,
+/// and the uninstall reported it still there. `SecItemDelete` by service and account asks nothing
+/// of the secret, so nothing prompts and nothing refuses. Not there is already forgotten.
+pub(crate) fn forget(service: &str, account: &str) -> Result<(), KeyringError> {
+    forgotten(security_framework::passwords::delete_generic_password(
+        service, account,
+    ))
+}
+
+/// `SecItemDelete`'s answer in `keyring`'s words: not found is nothing to do.
+fn forgotten(deleted: Result<(), security_framework::base::Error>) -> Result<(), KeyringError> {
+    /// `errSecItemNotFound`.
+    const NOT_FOUND: i32 = -25300;
+
+    match deleted {
+        Ok(()) => Ok(()),
+        Err(error) if error.code() == NOT_FOUND => Ok(()),
+        Err(error) => Err(KeyringError::PlatformFailure(Box::new(error))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,5 +91,41 @@ mod tests {
 
         assert_eq!(absent_store(&refused), None);
         assert_eq!(absent_store(&KeyringError::NoEntry), None);
+    }
+
+    /// An item that is not there is already forgotten: `mix uninstall` run twice must not fail the
+    /// second time. Every other refusal is carried as the store's own error.
+    #[test]
+    fn an_item_not_there_is_already_forgotten() {
+        use security_framework::base::Error;
+
+        assert!(forgotten(Err(Error::from_code(-25300))).is_ok());
+        assert!(matches!(
+            forgotten(Err(Error::from_code(-25293))),
+            Err(KeyringError::PlatformFailure(_))
+        ));
+        assert!(forgotten(Ok(())).is_ok());
+    }
+
+    /// **Deleted by query, never by reading first** — the T182a walk. `keyring`'s delete finds the
+    /// item *with its secret* before deleting, which runs the Keychain's access control: an item
+    /// another build of this program wrote (every release is one) was refused, and the uninstall
+    /// left it. `SecItemDelete` by service and account asks nothing of the secret. Ignored because
+    /// it writes the login Keychain of whoever runs it; run by hand with `--ignored`.
+    #[test]
+    #[ignore = "writes and removes an item in this user's login Keychain"]
+    fn a_flat_item_is_forgotten_by_query() {
+        let service = "mixengine-test";
+        let account = "deadbeef0000/forget-by-query";
+        security_framework::passwords::set_generic_password(service, account, b"x").unwrap();
+        assert!(keys(service).unwrap().contains(&account.to_owned()));
+
+        forget(service, account).unwrap();
+
+        assert!(!keys(service).unwrap().contains(&account.to_owned()));
+        assert!(
+            forget(service, account).is_ok(),
+            "a second run reads absent"
+        );
     }
 }
