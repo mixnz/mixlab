@@ -36,3 +36,7 @@ leftover Keychain items, a development home from before v0.0.7 — are recorded 
 
 **M40** `laravel-1` applies on a server that already has a foreign `laravel-1` account, finishes,
 and names the account it used.
+
+**Found on the way, not taken here:** `mix database credentials … | tail -1` prints the password
+indented by two spaces, where its help promises the value alone — a script that pipes it into a
+client is refused. One line in `render.rs`, with the help's promise as the test.

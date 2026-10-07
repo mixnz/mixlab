@@ -187,6 +187,31 @@ unchanged: 2 while running under `--once`, CI's otherwise.
 - **D7.** `scripts/` has no test harness; checked by hand against a run with a red job (one exists:
   `37647792800`) and a green one, and the two sentences pasted into the roadmap line.
 
+## Checked by hand, 2026-10-08
+
+The same Mac and the same development home, on a daemon built from this branch and started by
+`mix` over the home. Staging the case found two things first: the home's root password had come
+apart from the data directory (T126's collision, from the home id change), and `mix service
+reset-credential mariadb@main` put it back with every database kept; and `mix database
+credentials … | tail -1` hands a script the password *indented by two spaces*, so the `mariadb`
+client was refused until the indent was stripped — a fault outside this design, recorded in phase
+40's notes. With a foreign `'laravel-4'@'%'` made at the `mariadb` prompt:
+
+- **M40, D1, D2.** `mix blueprint apply laravel --project laravel-4` printed *done database
+  laravel-4, user laravel-4* and under it *the account laravel-4 is somebody else's, so this
+  project's is laravel-4-2*; `mix database credentials mariadb@main --user laravel-4-2` holds a
+  password; the foreign account's was never touched.
+- **D3, D4.** With `mariadb@main` stopped and its root entry removed from `credentials.json`,
+  `mix service start mariadb@main` answered *mariadb@main failed to start: the environment entry
+  MYSQL_PWD: no credential is stored at mixengine/e0272f2b7089/mariadb@main/root; `mix service
+  reset-credential mariadb@main` generates one for this home and writes it into the data directory,
+  keeping every database*, `mix service list` carried the same sentence under the row, and the
+  named command brought the service back with a regenerated entry.
+- **D5.** All three `.test` diagnostic tests printed their `skipped:` line on this Mac with the
+  released build installed, and `cargo test --workspace` was green with them.
+- **D7.** `watch-ci.sh 37647792800` opened with *2 of 45 jobs failed: test / test
+  (windows-latest), lint / lint*; `37651545855` closed with *success*.
+
 ## Documentation, when it lands
 
 - `docs/features/blueprints.md`: the account a blueprint ends up with, D1's rule and the note.
