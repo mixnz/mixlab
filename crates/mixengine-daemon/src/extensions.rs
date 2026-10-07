@@ -1017,6 +1017,7 @@ fn summary(
             })
             .collect(),
         site,
+        description: Some(installed.manifest.extension.description.clone()),
     }
 }
 

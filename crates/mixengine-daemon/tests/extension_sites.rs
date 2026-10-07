@@ -247,6 +247,12 @@ async fn a_web_app_is_served_on_a_site_only_its_extension_may_edit() {
         extensions["extensions"][0]["site"], "phpmyadmin.mixengine.test",
         "{extensions}"
     );
+    // **T200, D5.** What it is for travels with the listing, read from the manifest it was
+    // installed from.
+    assert_eq!(
+        extensions["extensions"][0]["description"], plan["description"],
+        "{extensions}"
+    );
 
     // Its root is the install directory, and its pool is the one the plan named.
     let site = json!({"site": {"domain": "phpmyadmin.mixengine.test"}});
