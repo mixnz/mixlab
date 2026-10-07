@@ -70,6 +70,7 @@ done
 | [37 — The window closes its known gaps](phase-37-the-window-closes-its-known-gaps.md) | Every daemon method a person in the window needs has its button; the rest say why not | T199–T199a | 2 / 2 | **M37** `check-client-surface` reports 0 known gaps |
 | [38 — An add-on works the moment it is installed](phase-38-an-add-on-works-the-moment-it-is-installed.md) | Installing an add-on shows progress, ends in one row, and a web-app opens at once | T200–T200c | 4 / 4 | **M38** Adminer opens with no daemon restart |
 | [39 — A local S3](phase-39-a-local-s3.md) | A project that stores files in S3 has a local S3, installed as an add-on | T201–T201a | 2 / 2 | **M39** SeaweedFS answers an S3 client on all three systems — **met** |
+| [40 — What the removal walk found](phase-40-what-the-removal-walk-found.md) | A blueprint routes around a taken account name, a failed start says why and names its repair, and the tests and `watch-ci.sh` say what they found | T202–T202c | 4 / 4 | **M40** `laravel-1` applies on a server with a foreign `laravel-1` account, and names the account it used |
 
 [Parked](parked.md) — revisit deliberately, do not start early.
 
@@ -79,6 +80,13 @@ spared `docs/roadmap/`, reading the number as a milestone still ahead rather tha
 half of a rename — which is exactly the reading a version that never shipped invites.
 
 ## Where we are
+
+**Phase 40 is built — 4 of 4; M40 is walked by hand on the Mac that found it, in the design's
+*Checked by hand* section.** A blueprint routes around a taken account name and notes it (T202); a
+failed start says the runner's sentence and a missing credential names `mix service
+reset-credential` (T202a); two tests stopped reading the machine and one occupant outlives the plan
+(T202b); `watch-ci.sh` counts what failed in its last line (T202c).
+Design: [2026-10-08-t202-what-the-removal-walk-found-design.md](../specs/2026-10-08-t202-what-the-removal-walk-found-design.md).
 
 **Phase 37 is built — 2 of 2, and M37 is met: `node scripts/check-client-surface.mjs` reports 0
 known gaps.** Nine daemon methods had sat in `knownGaps` since T182i: things `mix` could do and a

@@ -95,7 +95,13 @@ export function appliedFrom(plan: BlueprintPlan): BlueprintApplied {
     root: plan.root,
     steps: plan.steps.map((step) => ({
       action: step.action,
-      result: step.disposition.disposition === "satisfied" ? { result: "already_true" } : { result: "done" },
+      result:
+        step.disposition.disposition === "satisfied"
+          ? { result: "already_true" }
+          : step.action.action === "create_database"
+            ? // T202, D2: the one step whose outcome can differ from the plan, shown in the demo.
+              { result: "done", note: `the account ${step.action.user} is somebody else's, so this project's is ${step.action.user}-2` }
+            : { result: "done" },
     })),
   };
 }

@@ -2520,9 +2520,11 @@ fn walked(planned: Vec<ServiceId>, walk: services::Walk) -> ServiceWalk {
         planned,
         complete: true,
         reached: walk.reached,
-        failed: walk
-            .failed
-            .map(|(service, reason)| ServiceFailure { service, reason }),
+        failed: walk.failed.map(|(service, fault)| ServiceFailure {
+            service,
+            reason: fault.reason,
+            detail: fault.detail,
+        }),
         blocked: walk.blocked,
     }
 }

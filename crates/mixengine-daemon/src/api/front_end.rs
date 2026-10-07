@@ -660,6 +660,7 @@ impl Api {
                     failed: Some(ServiceFailure {
                         service: id.clone(),
                         reason: None,
+                        detail: None,
                     }),
                     blocked: Vec::new(),
                 }

@@ -78,6 +78,17 @@ async fn a_name_is_added_and_taken_away_and_the_primary_stays() {
 /// The diagnostic on a machine nothing has wired, which is what every machine running this is.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_diagnostic_reports_a_name_nothing_routes_and_says_why() {
+    // **T202b, D5.** A Mac with MixEngine installed routes every `.test` name to that daemon
+    // through `/etc/resolver/test`, so whether `blog.test` resolves here is that daemon's answer
+    // and not this home's. CI's runners never carry the file; a developer's Mac does.
+    if std::path::Path::new("/etc/resolver/test").exists() {
+        eprintln!(
+            "skipped: this machine routes `.test` itself (/etc/resolver/test), so whether \
+             blog.test resolves is not this home's to decide"
+        );
+        return;
+    }
+
     // **CONTROL, before anything is concluded.**
     assert!(
         ("localhost", 80u16)

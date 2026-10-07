@@ -164,7 +164,9 @@ mod tests {
         assert!(!found.is_empty(), "localhost did not resolve");
     }
 
-    /// A name under a TLD reserved to resolve nowhere, on a machine no test wires.
+    /// A name under a TLD reserved to resolve nowhere — `.invalid`, RFC 6761 — on any machine.
+    /// Not `.test`: a Mac with MixEngine installed routes every `.test` name to that daemon through
+    /// `/etc/resolver/test`, and the answer was that daemon's to give (T202b, D5).
     #[tokio::test]
     async fn a_name_nothing_routes_resolves_to_nothing() {
         // **CONTROL, in this test and not only in the one above** — a control taken in another test
@@ -177,7 +179,7 @@ mod tests {
         );
 
         let found = resolves(
-            &format!("t46-{}.test", std::process::id()),
+            &format!("t46-{}.invalid", std::process::id()),
             Duration::from_secs(5),
         )
         .await;

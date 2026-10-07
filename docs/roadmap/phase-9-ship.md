@@ -194,10 +194,13 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       Design: [2026-09-25-t182b-a-helper-that-keeps-up-and-an-uninstall-that-finishes-design.md](../specs/2026-09-25-t182b-a-helper-that-keeps-up-and-an-uninstall-that-finishes-design.md),
       ADR 0053. Left open until the T182b cases in `packaging/windows/uninstall-check.md` have been
       walked on a real install.
-- [ ] **T182c** Authorities from other homes. An uninstall removes only its own home's
-      `MixEngine Local CA`, so a machine that has had several installs or development homes keeps the
-      rest in the trust store for ever (the machine that found T182b held eleven). Decide which of
-      them an uninstall may claim, and how a person removes the others.
+- [ ] **T182c** Authorities and credentials from other homes. An uninstall removes only its own
+      home's `MixEngine Local CA` and its own home's credential-store entries, so a machine that has
+      had several installs or development homes keeps the rest for ever: the machine that found T182b
+      held eleven authorities, and the one that walked T182a held two authorities and five
+      `mixengine` entries (`4621e284fc91/…`, `mariadb@main/root`, `mysql@main/root`) of homes that
+      no longer exist. Decide which of them an uninstall may claim, and how a person removes the
+      others.
 - [x] **T186** One Keychain question per home. On macOS `mixengined` keeps every credential of a
       home in one Keychain item, so an update asks once per home instead of once per password; the
       window reads managed-database passwords through `mixengine-platform` and sees the same item.
