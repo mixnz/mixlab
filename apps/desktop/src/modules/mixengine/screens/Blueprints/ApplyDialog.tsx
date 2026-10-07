@@ -492,6 +492,12 @@ export default function ApplyDialog({
                         {outcome.result.result === "failed" &&
                           t("mixengine.blueprints.apply.stepFailed", { why: outcome.result.why })}
                       </p>
+                      {/* T202, D2: what differed from the plan — the account the project ended up
+                          with, a database that was already there — in the daemon's own sentence,
+                          under the step it is about. */}
+                      {outcome.result.result === "done" && outcome.result.note != null && (
+                        <p className={styles.note}>{outcome.result.note}</p>
+                      )}
                     </li>
                   ))}
                 </ul>

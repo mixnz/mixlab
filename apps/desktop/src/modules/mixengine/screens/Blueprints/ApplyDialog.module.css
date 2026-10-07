@@ -44,6 +44,13 @@
   white-space: pre-wrap;
 }
 
+/* T202: a step's note is the daemon's sentence about what differed from the plan — read after
+   the status line, so it is quieter than it. */
+.step .note {
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
 .blocked {
   color: var(--danger-text);
 }
