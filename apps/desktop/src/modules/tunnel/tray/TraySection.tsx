@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Button from "../../../components/Button";
 import StatusPill from "../../../components/StatusPill";
 import { copyText } from "../../../core/clipboard";
-import { GlobeIcon } from "../../../icons";
+import { TunnelIcon } from "../../../icons";
 import { useTranslation } from "../../../i18n";
 import type { TraySectionProps } from "../../../shell/module";
 import * as api from "../api";
@@ -51,7 +51,7 @@ function TraySection({ focused }: TraySectionProps) {
     <div className={styles.section}>
       <div className={styles.head}>
         <span className={styles.mark}>
-          <GlobeIcon size={16} />
+          <TunnelIcon size={16} />
         </span>
         <span className={styles.name}>{t("tunnelTab.title")}</span>
       </div>

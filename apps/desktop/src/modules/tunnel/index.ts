@@ -1,7 +1,7 @@
 import { lazy } from "react";
 
 import type { ModuleDefinition } from "../../shell/module";
-import { GlobeIcon } from "../../icons";
+import { TunnelIcon } from "../../icons";
 import TunnelSettings from "./components/TunnelSettings";
 
 /* Loaded when the tab is first opened, as the other modules are; the icon and the label are eager,
@@ -11,10 +11,10 @@ import TunnelSettings from "./components/TunnelSettings";
 export const tunnelModule: ModuleDefinition = {
   id: "tunnel",
   labelKey: "app.moduleTunnel",
-  Icon: GlobeIcon,
+  Icon: TunnelIcon,
   defaultTitleKey: "tunnelTab.newTabTitle",
   Tab: lazy(() => import("./TunnelTab")),
   singleTab: true,
-  settings: { labelKey: "tunnelTab.settingsTitle", Icon: GlobeIcon, Section: TunnelSettings },
+  settings: { labelKey: "tunnelTab.settingsTitle", Icon: TunnelIcon, Section: TunnelSettings },
   TraySection: lazy(() => import("./tray/TraySection")),
 };

@@ -51,5 +51,6 @@ export {
   TerminalIcon,
   ToolsIcon,
   TrashIcon,
+  TunnelIcon,
   UploadIcon,
 } from "./icons";

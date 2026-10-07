@@ -447,6 +447,18 @@ export function GlobeIcon(props: IconProps) {
   );
 }
 
+/** A tunnel's mouth: the Tunnel module, which shares an address on this machine through one. Not
+ *  {@link GlobeIcon}, which is the REST client's and the Sites screen's. */
+export function TunnelIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M2.5 20h19" />
+      <path d="M4.5 20v-8a7.5 7.5 0 0 1 15 0v8" />
+      <path d="M9 20v-6.5a3 3 0 0 1 6 0V20" />
+    </Icon>
+  );
+}
+
 /** Send: the one button a request pane is asking for. */
 export function SendIcon(props: IconProps) {
   return (
