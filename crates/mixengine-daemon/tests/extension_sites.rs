@@ -582,6 +582,10 @@ ready = { type = "tcp", addr = "{listen}:{ui_port}", timeout = "10s" }
 [permissions]
 network = "loopback"
 filesystem = ["own-data"]
+
+[ui]
+port = "ui_port"
+path = "/inbox"
 "#,
     )
     .expect("a manifest");
@@ -608,6 +612,18 @@ async fn a_running_service_extension_is_stopped_by_its_uninstall() {
         plan["install_dir"]
             .as_str()
             .expect("the plan names where it installs"),
+    );
+
+    // **T200a, D2.** The page a person opens, rendered by the daemon from the port it allocated.
+    let listed = client.call("extension.list", json!({})).await;
+    let catcher = &listed["extensions"][0];
+    let port = catcher["ports"][0]["wanted"]
+        .as_u64()
+        .expect("the port it holds");
+    assert_eq!(
+        catcher["ui"],
+        format!("http://127.0.0.1:{port}/inbox"),
+        "{listed}"
     );
 
     client

@@ -4131,7 +4131,11 @@ pub(crate) fn installed_extensions(list: &InstalledExtensions) -> String {
                 one.service
                     .as_ref()
                     .map_or_else(|| "—".to_owned(), ToString::to_string),
-                one.site.clone().unwrap_or_else(|| "—".to_owned()),
+                // A web-app's site or a service's page: where it opens (T200a, D3).
+                one.site
+                    .clone()
+                    .or_else(|| one.ui.clone())
+                    .unwrap_or_else(|| "—".to_owned()),
                 match one.ports.is_empty() {
                     true => "—".to_owned(),
                     false => one
@@ -4154,7 +4158,7 @@ pub(crate) fn installed_extensions(list: &InstalledExtensions) -> String {
             "KIND",
             "TRUST",
             "SERVICE",
-            "SITE",
+            "OPENS AT",
             "PORTS",
             "DESCRIPTION",
         ],
@@ -4492,12 +4496,17 @@ mod tests {
                 ports: Vec::new(),
                 site: None,
                 description: Some("Local SMTP capture and web UI".to_owned()),
+                ui: Some("http://127.0.0.1:8025/".to_owned()),
             }],
         };
 
         let rendered = installed_extensions(&list);
 
         assert!(rendered.contains("DESCRIPTION"), "{rendered}");
+        // **T200a, D3.** A service's page sits where a web-app's site does.
+        assert!(rendered.contains("OPENS AT"), "{rendered}");
+        assert!(rendered.contains("http://127.0.0.1:8025/"), "{rendered}");
+        assert!(!rendered.contains(" SITE "), "{rendered}");
         assert!(
             rendered.contains("Local SMTP capture and web UI"),
             "{rendered}"
