@@ -162,6 +162,24 @@ pub struct ServiceList {
 
 /// One service, as the daemon currently sees it. Also the whole of what `service.status` answers.
 ///
+/// Why a service last failed — roadmap task **T200b**, its design's D5.
+///
+/// `detail` is always a sentence: the error the supervisor had when it gave up, or the reason's
+/// own words. That is what lets a client show it without a second table of what each
+/// [`StateReason`] means.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct ServiceFailureNote {
+    /// When it failed.
+    pub at: Timestamp,
+
+    /// The reason the transition recorded.
+    pub reason: StateReason,
+
+    /// What a person reads.
+    pub detail: String,
+}
+
 /// One type for the list and for the single lookup on purpose: they are the same sentence about a
 /// service, so a client renders them with one function and a field added here reaches both.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

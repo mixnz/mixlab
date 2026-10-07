@@ -184,6 +184,10 @@ pub struct ServiceRecord {
     /// What the row says the service is doing.
     pub state: ServiceState,
 
+    /// Why it last failed — roadmap task **T200b**, D5. Written with the move into `failed`,
+    /// cleared by the next move into `running`; a note this build cannot read is [`None`].
+    pub last_failure: Option<mixengine_proto::ServiceFailureNote>,
+
     /// Who left it stopped — roadmap tasks **T70** and **T123**. See [`StoppedBy`].
     pub stopped_by: StoppedBy,
 
@@ -767,7 +771,8 @@ pub async fn record(store: &Store, service: &ServiceId) -> Result<ServiceRecord>
 
     let row = sqlx::query!(
         r#"SELECT s.state, s.pid, s.pid_start_time, s.last_started_at, s.last_exit_code, s.port,
-                  s.stopped_by, s.autostart, coalesce(p.version, r.version) AS version
+                  s.stopped_by, s.autostart, s.last_failure_json,
+                  coalesce(p.version, r.version) AS version
            FROM services s
            LEFT JOIN packages p ON p.id = s.package_id
            LEFT JOIN runtime_installs r ON r.id = s.runtime_install_id
@@ -784,6 +789,7 @@ pub async fn record(store: &Store, service: &ServiceId) -> Result<ServiceRecord>
 
     Ok(ServiceRecord {
         state: parse_state(service, row.state)?,
+        last_failure: failure_note(id, row.last_failure_json.as_deref()),
         stopped_by: StoppedBy::parse(id, &row.stopped_by),
         pid: process_id(row.pid),
         pid_start_time: row.pid_start_time,
@@ -912,7 +918,8 @@ pub async fn declaration(store: &Store, service: &ServiceId) -> Result<Declarati
 pub async fn records(store: &Store) -> Result<BTreeMap<String, ServiceRecord>> {
     let rows = sqlx::query!(
         r#"SELECT s.id, s.state, s.pid, s.pid_start_time, s.last_started_at, s.last_exit_code,
-                  s.port, s.stopped_by, s.autostart, coalesce(p.version, r.version) AS version
+                  s.port, s.stopped_by, s.autostart, s.last_failure_json,
+                  coalesce(p.version, r.version) AS version
            FROM services s
            LEFT JOIN packages p ON p.id = s.package_id
            LEFT JOIN runtime_installs r ON r.id = s.runtime_install_id"#
@@ -930,11 +937,13 @@ pub async fn records(store: &Store) -> Result<BTreeMap<String, ServiceRecord>> {
                 })?;
 
             let stopped_by = StoppedBy::parse(&row.id, &row.stopped_by);
+            let last_failure = failure_note(&row.id, row.last_failure_json.as_deref());
 
             Ok((
                 row.id,
                 ServiceRecord {
                     state,
+                    last_failure,
                     stopped_by,
                     pid: process_id(row.pid),
                     pid_start_time: row.pid_start_time,
@@ -947,6 +956,24 @@ pub async fn records(store: &Store) -> Result<BTreeMap<String, ServiceRecord>> {
             ))
         })
         .collect()
+}
+
+/// A stored failure note, or [`None`] where there is none or it is one this build cannot read —
+/// roadmap task **T200b**. Said in `daemon.log` and not refused: a note is an explanation, and a row
+/// whose explanation a newer build wrote must still list.
+fn failure_note(
+    service: &str,
+    stored: Option<&str>,
+) -> Option<mixengine_proto::ServiceFailureNote> {
+    let stored = stored?;
+
+    match serde_json::from_str(stored) {
+        Ok(note) => Some(note),
+        Err(error) => {
+            tracing::warn!(service, %error, "a failure note this build cannot read is ignored");
+            None
+        }
+    }
 }
 
 /// A stored pid, or [`None`] where the column holds something no pid could be.
@@ -1020,6 +1047,28 @@ pub async fn transition(
     reason: StateReason,
     at: Timestamp,
 ) -> Result<ServiceTransition> {
+    transition_noting(store, service, to, reason, None, at).await
+}
+
+/// [`transition`], carrying the sentence that explains a move into `failed` — roadmap task
+/// **T200b**, its design's D5.
+///
+/// **In the transition's own transaction**, so a row cannot say `failed` without saying why: a note
+/// written beside it could be the one write that did not land. `detail` is used only for a move into
+/// `failed`, and the reason's own words stand in when it is [`None`]. A move into `running` clears
+/// the note — a failure that has been recovered from is history.
+///
+/// # Errors
+///
+/// As [`transition`].
+pub async fn transition_noting(
+    store: &Store,
+    service: &ServiceId,
+    to: ServiceState,
+    reason: StateReason,
+    detail: Option<&str>,
+    at: Timestamp,
+) -> Result<ServiceTransition> {
     let id = service.as_str();
 
     // Not `begin()`: that is a deferred `BEGIN`, which would leave the `UPDATE` below to upgrade a
@@ -1079,6 +1128,30 @@ pub async fn transition(
             service: id.to_owned(),
             expected: from,
         });
+    }
+
+    // **T200b, D5.** The note moves with the state, in this transaction.
+    let note = match to {
+        ServiceState::Failed => Some(
+            serde_json::to_string(&mixengine_proto::ServiceFailureNote {
+                at,
+                reason: reason.clone(),
+                detail: detail.map_or_else(|| reason.to_string(), str::to_owned),
+            })
+            .expect("a note is made of strings and a timestamp"),
+        ),
+        _ => None,
+    };
+
+    if note.is_some() || to == ServiceState::Running {
+        sqlx::query!(
+            "UPDATE services SET last_failure_json = ? WHERE id = ?",
+            note,
+            id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|source| store.failure("write", source))?;
     }
 
     tx.commit()
@@ -1352,6 +1425,95 @@ mod tests {
             state(&store, &id).await.expect("the row"),
             ServiceState::Starting,
             "the value handed back is the value that survived the commit"
+        );
+    }
+
+    /// **T200b, D5.** A move into `failed` keeps the sentence; a move into `running` forgets it.
+    #[tokio::test]
+    async fn a_failure_is_noted_with_its_sentence_and_forgotten_once_running() {
+        let (_home, store) = store().await;
+        let id = service_row(&store, "pool", ServiceState::Starting).await;
+
+        transition_noting(
+            &store,
+            &id,
+            ServiceState::Failed,
+            StateReason::SpawnFailed,
+            Some("the environment entry X: no credential is stored at mixengine/a/b"),
+            NOW,
+        )
+        .await
+        .expect("a starting service can fail");
+
+        let note = record(&store, &id)
+            .await
+            .expect("the row")
+            .last_failure
+            .expect("a note");
+        assert_eq!(note.reason, StateReason::SpawnFailed);
+        assert_eq!(note.at, NOW);
+        assert!(
+            note.detail.contains("no credential is stored"),
+            "{}",
+            note.detail
+        );
+
+        for to in [ServiceState::Starting, ServiceState::Running] {
+            transition(&store, &id, to, StateReason::Requested, NOW)
+                .await
+                .expect("an edge the machine has");
+        }
+        assert_eq!(
+            record(&store, &id).await.expect("the row").last_failure,
+            None,
+            "a failure that has been recovered from is history"
+        );
+    }
+
+    /// **T200b, D5.** With no sentence, the reason's own words are the note — a client never
+    /// translates a `StateReason`.
+    #[tokio::test]
+    async fn a_failure_without_a_sentence_is_noted_in_the_reasons_words() {
+        let (_home, store) = store().await;
+        let id = service_row(&store, "pool", ServiceState::Starting).await;
+
+        transition(
+            &store,
+            &id,
+            ServiceState::Failed,
+            StateReason::SpawnFailed,
+            NOW,
+        )
+        .await
+        .expect("a starting service can fail");
+
+        let note = record(&store, &id)
+            .await
+            .expect("the row")
+            .last_failure
+            .expect("a note");
+        assert_eq!(note.detail, StateReason::SpawnFailed.to_string());
+        assert_eq!(
+            records(&store).await.expect("the rows")["pool"].last_failure,
+            Some(note),
+            "the listing reads the same note"
+        );
+    }
+
+    /// **T200b, Review Focus 3.** A note this build cannot read is no note, not an error.
+    #[tokio::test]
+    async fn an_unreadable_failure_note_reads_as_none() {
+        let (_home, store) = store().await;
+        let id = service_row(&store, "pool", ServiceState::Failed).await;
+        sqlx::query("UPDATE services SET last_failure_json = '{\"kind\":\"from a newer build\"}' WHERE id = ?")
+            .bind(id.as_str())
+            .execute(store.pool())
+            .await
+            .expect("the row");
+
+        assert_eq!(
+            record(&store, &id).await.expect("the row").last_failure,
+            None
         );
     }
 

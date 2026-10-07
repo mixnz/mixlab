@@ -7,8 +7,6 @@ import type { StoppedBy } from "./StoppedBy";
 import type { Timestamp } from "./Timestamp";
 
 /**
- * One service, as the daemon currently sees it. Also the whole of what `service.status` answers.
- *
  * One type for the list and for the single lookup on purpose: they are the same sentence about a
  * service, so a client renders them with one function and a field added here reaches both.
  */

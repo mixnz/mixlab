@@ -281,6 +281,7 @@ export * from "./ServiceCreate";
 export * from "./ServiceCreation";
 export * from "./ServiceDelete";
 export * from "./ServiceFailure";
+export * from "./ServiceFailureNote";
 export * from "./ServiceFound";
 export * from "./ServiceFoundList";
 export * from "./ServiceId";
