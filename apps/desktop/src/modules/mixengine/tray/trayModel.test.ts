@@ -4,7 +4,7 @@ import type { ServiceRow } from "../daemonState";
 import { nextConfirm, serviceCounts, shutdownReport } from "./trayModel";
 
 function row(id: string, state: ServiceRow["state"]): ServiceRow {
-  return { id, state, port: null, autostart: false, stoppedBy: null, version: null };
+  return { id, state, port: null, autostart: false, stoppedBy: null, version: null, lastFailure: null };
 }
 
 describe("the inline confirmation", () => {

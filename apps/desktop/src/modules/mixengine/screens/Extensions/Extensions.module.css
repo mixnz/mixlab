@@ -89,3 +89,15 @@
   line-height: var(--leading-sm);
   color: var(--text-faint);
 }
+
+/* Why what the add-on runs could not start — T200b, D6. */
+.failure {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--danger-text);
+}

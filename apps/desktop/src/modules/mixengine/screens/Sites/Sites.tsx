@@ -28,6 +28,7 @@ import {
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
+import type { ServiceSummary } from "@mixengine/api";
 import type { SiteDetail } from "@mixengine/api";
 import type { SiteSharing } from "@mixengine/api";
 import { subscribeDaemonWatch } from "../../daemonWatch";
@@ -39,6 +40,7 @@ import {
   type SiteRow,
 } from "../../siteState";
 import { takePendingSitesFilter } from "../../sitesNavigation";
+import { siteFailure } from "../../failureState";
 import ShareDialog from "./ShareDialog";
 import SiteForm from "./SiteForm";
 import styles from "./Sites.module.css";
@@ -90,6 +92,8 @@ function SharingCell({
  */
 export default function Sites({ active }: { active: boolean }) {
   const [rows, setRows] = useState<SiteRow[]>([]);
+  /** Every service, for why a site's pool could not start — T200b, D6. */
+  const [services, setServices] = useState<ServiceSummary[]>([]);
   /** False until the first read has answered — until then an empty `rows` means "not known yet",
    *  not "no sites". A later read under another filter keeps the old rows up, as every reread does. */
   const [loaded, setLoaded] = useState(false);
@@ -126,8 +130,12 @@ export default function Sites({ active }: { active: boolean }) {
     async (filterOverride?: string) => {
       const filter = filterOverride ?? projectFilter;
       try {
-        const list = await api.sites(filter === "" ? undefined : filter);
+        const [list, listed] = await Promise.all([
+          api.sites(filter === "" ? undefined : filter),
+          api.services(),
+        ]);
         setRows(list.sites);
+        setServices(listed.services);
         setError("");
       } catch (e) {
         setError(errorMessage(t, e));
@@ -192,6 +200,32 @@ export default function Sites({ active }: { active: boolean }) {
       setEditing(await api.site(domain));
     } catch (e) {
       setError(errorMessage(t, e));
+    }
+  }
+
+  /** Why this site's pool could not start, and the way to try again — T200b, D6. This is where
+   *  MixEngine's starting page sends a person. */
+  function failureLine(row: SiteRow) {
+    const failure = siteFailure(row, services);
+    if (failure === null) return null;
+    return (
+      <span className={styles.failure}>
+        {t("mixengine.sites.couldNotStart", { service: failure.service, detail: failure.detail })}
+        <Button size="small" onClick={() => void startAgain(failure.service)}>
+          {t("mixengine.sites.startAgain")}
+        </Button>
+      </span>
+    );
+  }
+
+  async function startAgain(service: string) {
+    setError("");
+    try {
+      await api.serviceAction(service, "start");
+    } catch (e) {
+      setError(errorMessage(t, e));
+    } finally {
+      void reload();
     }
   }
 
@@ -337,6 +371,7 @@ export default function Sites({ active }: { active: boolean }) {
                           <span className={styles.opening}>{t("mixengine.sites.opening")}</span>
                         )}
                       </span>
+                      {failureLine(row)}
                     </td>
                     <td>
                       <span className={styles.owner}>

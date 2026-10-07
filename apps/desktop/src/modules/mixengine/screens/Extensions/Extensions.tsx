@@ -19,7 +19,9 @@ import * as api from "../../api";
 import type { ExtensionOffer } from "@mixengine/api";
 import type { ExtensionOrigin } from "@mixengine/api";
 import type { ExtensionSummary } from "@mixengine/api";
+import type { ServiceSummary } from "@mixengine/api";
 import type { SiteSummary } from "@mixengine/api";
+import { serviceFailure, type Failure } from "../../failureState";
 import StaleBadge from "../../components/StaleBadge";
 import Checkbox from "../../../../components/Checkbox";
 import { serviceStateKey, serviceStateTone } from "../../serviceStateLabel";
@@ -70,6 +72,8 @@ export default function Extensions({ active }: { active: boolean }) {
   const [unreadable, setUnreadable] = useState(0);
   const [stale, setStale] = useState(false);
   const [serviceState, setServiceState] = useState<Record<string, string | null | undefined>>({});
+  /** Every service, for why an add-on's process could not start — T200b, D6. */
+  const [allServices, setAllServices] = useState<ServiceSummary[]>([]);
   const [error, setError] = useState("");
   const [installingSource, setInstallingSource] = useState<ExtensionOrigin | null>(null);
   const [uninstalling, setUninstalling] = useState<ExtensionSummary | null>(null);
@@ -104,6 +108,7 @@ export default function Extensions({ active }: { active: boolean }) {
         const states: Record<string, string | null | undefined> = {};
         for (const svc of services.services) states[svc.id] = svc.state;
         setServiceState(states);
+        setAllServices(services.services);
         setError(stillShow);
       } catch (e) {
         setError(errorMessage(t, e));
@@ -241,7 +246,7 @@ export default function Extensions({ active }: { active: boolean }) {
     return key === null ? kind : t(key);
   }
 
-  function nameCell(name: string, description: string | null) {
+  function nameCell(name: string, description: string | null, failure: Failure | null = null) {
     return (
       <span className={styles.name}>
         <MonogramBadge name={name} size={34} />
@@ -252,9 +257,22 @@ export default function Extensions({ active }: { active: boolean }) {
               {description}
             </span>
           )}
+          {failure !== null && (
+            <span className={styles.failure} title={failure.detail}>
+              {t("mixengine.extensions.couldNotStart", { service: failure.service, detail: failure.detail })}
+            </span>
+          )}
         </span>
       </span>
     );
+  }
+
+  /** Why what this add-on runs could not start — T200b, D6: a web-app's pool, a service itself. */
+  function failureOf(row: ExtensionSummary, site: SiteSummary | null): Failure | null {
+    if (row.kind === "web-app") {
+      return serviceFailure(site?.kind.kind === "php-fpm" ? site.kind.pool : null, allServices);
+    }
+    return row.kind === "service" ? serviceFailure(row.id, allServices) : null;
   }
 
   function stateCell(row: ExtensionSummary, site: SiteSummary | null) {
@@ -404,7 +422,7 @@ export default function Extensions({ active }: { active: boolean }) {
                 const site = row.kind === "web-app" ? webAppSite(row, sites) : null;
                 return (
                   <tr key={row.id}>
-                    <td data-nowrap>{nameCell(row.name, summaryDescription(row))}</td>
+                    <td data-nowrap>{nameCell(row.name, summaryDescription(row), failureOf(row, site))}</td>
                     <td className={styles.version}>{row.version}</td>
                     <td>
                       <span className={styles.tag}>{kindLabel(row.kind)}</span>

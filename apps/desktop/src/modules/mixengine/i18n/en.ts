@@ -493,6 +493,8 @@ export default {
       ownerExtension: "extension: {{id}}",
       editDisabledHint: "Belongs to an extension. Uninstall the extension to remove it.",
       openHint: "Start what this site needs, then open {{url}}",
+      couldNotStart: "{{service}} could not start: {{detail}}",
+      startAgain: "Start again",
       opening: "Starting…",
       sharingIndefinite: "on the LAN",
       sharingUntil: "on the LAN until {{until}}",
@@ -850,6 +852,7 @@ export default {
       siteOn: "On",
       siteOff: "Off",
       siteMissing: "Site missing",
+      couldNotStart: "{{service}} could not start: {{detail}}",
       notForThisSystem: "Not available for this system",
       publishedFor: "Published for {{targets}}",
       kind: {

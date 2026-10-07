@@ -579,8 +579,14 @@ export default function Dashboard({
     return key === null ? (state ?? "—") : t(key);
   }
 
-  /** The sentence the short label leaves out, for the pill's tooltip. */
-  function stateHint(state: string | null | undefined, stoppedBy?: StoppedBy | null): string | undefined {
+  /** The sentence the short label leaves out, for the pill's tooltip — and for a failed service,
+   *  why it failed (T200b, D6). */
+  function stateHint(
+    state: string | null | undefined,
+    stoppedBy?: StoppedBy | null,
+    lastFailure?: string | null,
+  ): string | undefined {
+    if (state === "failed" && lastFailure) return lastFailure;
     const key = serviceStateHint(state, stoppedBy);
     return key === null ? undefined : t(key);
   }
@@ -809,7 +815,7 @@ export default function Dashboard({
                         <StatusPill
                           tone={pillTone(row.state, row.stoppedBy)}
                           pulse={mode === "moving"}
-                          title={stateHint(row.state, row.stoppedBy)}
+                          title={stateHint(row.state, row.stoppedBy, row.lastFailure)}
                         >
                           {stateLabel(row.state, row.stoppedBy)}
                         </StatusPill>

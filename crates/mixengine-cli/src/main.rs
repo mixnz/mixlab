@@ -4133,7 +4133,12 @@ async fn site(
             };
             let detail: SiteDetail =
                 ask(&mut client, rpc::method::SITE_SHOW, encode(&query)).await?;
-            emit(&rendered(json, &detail, || render::site_detail(&detail)))?;
+            // **And why it cannot start, where that is so** — roadmap task **T200b**, D6. Asked of
+            // the listing the daemon already answers; `--json` stays the site alone.
+            let services: ServiceList = ask(&mut client, rpc::method::SERVICE_LIST, None).await?;
+            emit(&rendered(json, &detail, || {
+                render::site_detail(&detail) + &render::site_failures(&detail, &services)
+            }))?;
         }
 
         SiteCommand::Start { site } => {

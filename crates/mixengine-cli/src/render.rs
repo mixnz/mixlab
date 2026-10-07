@@ -826,7 +826,7 @@ pub(crate) fn service_list(list: &ServiceList) -> String {
     // question somebody scanning this table is actually asking: what is running, and what will be
     // running after the next login. `VERSION` beside the id (T183), because the id is a name
     // somebody chose and the version is what it actually is.
-    table(
+    let mut out = table(
         [
             "SERVICE",
             "VERSION",
@@ -837,7 +837,55 @@ pub(crate) fn service_list(list: &ServiceList) -> String {
             "DEPENDS ON",
         ],
         &rows,
-    )
+    );
+
+    // **Why each failed service failed** — roadmap task **T200b**, D6. A line each, after the
+    // table, because the sentence is too long for a column and is the reason anybody reads this.
+    for service in &list.services {
+        if let Some(note) = &service.last_failure {
+            out.push_str(&format!(
+                "{} failed: {}
+",
+                service.id, note.detail
+            ));
+        }
+    }
+
+    out
+}
+
+/// The services `mix site show` cannot start for this site, and why — roadmap task **T200b**, D6.
+///
+/// The site's pool and every service it is linked to, read against the listing. An empty string
+/// when nothing it needs has failed, so the caller can append it whatever it holds.
+pub(crate) fn site_failures(detail: &SiteDetail, services: &ServiceList) -> String {
+    let pool = detail
+        .pool
+        .as_ref()
+        .and_then(|pool| pool.resolved.as_ref().or(pool.declared.as_ref()));
+    let needed = pool
+        .into_iter()
+        .chain(detail.services.iter().map(|link| &link.service));
+
+    let mut out = String::new();
+
+    for id in needed {
+        let note = services
+            .services
+            .iter()
+            .find(|service| &service.id == id)
+            .and_then(|service| service.last_failure.as_ref());
+
+        if let Some(note) = note {
+            out.push_str(&format!(
+                "{id} could not start: {}
+",
+                note.detail
+            ));
+        }
+    }
+
+    out
 }
 
 /// A boolean as a table cell.
@@ -5978,6 +6026,83 @@ mod tests {
         assert!(
             rendered.contains("another service or program on this machine has it"),
             "{rendered}"
+        );
+    }
+
+    /// A failed service with a note, the way the daemon reports one (T200b).
+    fn failed_with(id_value: &str, detail: &str) -> ServiceSummary {
+        ServiceSummary {
+            last_failure: Some(mixengine_proto::ServiceFailureNote {
+                at: Timestamp(1_760_000_000_000),
+                reason: mixengine_proto::StateReason::SpawnFailed,
+                detail: detail.to_owned(),
+            }),
+            ..summary(id_value, Some(ServiceState::Failed))
+        }
+    }
+
+    /// **T200b, D6.** The listing ends with why each failed service failed.
+    #[test]
+    fn a_failed_service_is_followed_by_why() {
+        let rendered = service_list(&ServiceList {
+            services: vec![
+                failed_with("php-fpm@phpmyadmin", "no credential is stored at x"),
+                summary("caddy", Some(ServiceState::Running)),
+            ],
+        });
+
+        assert!(
+            rendered.ends_with(
+                "php-fpm@phpmyadmin failed: no credential is stored at x
+"
+            ),
+            "{rendered}"
+        );
+        assert!(!rendered.contains("caddy failed"), "{rendered}");
+    }
+
+    /// **T200b, D6.** `mix site show` names the service its site cannot start, and why.
+    #[test]
+    fn a_site_whose_pool_failed_says_which_and_why() {
+        let detail: SiteDetail = serde_json::from_value(serde_json::json!({
+            "site": {
+                "domain": "phpmyadmin.mixengine.test",
+                "owner": {"type": "extension", "id": "phpmyadmin"},
+                "kind": {"kind": "php-fpm", "pool": "php-fpm@phpmyadmin"},
+                "doc_root": "",
+                "https": true,
+                "https_redirect": false,
+                "state": "enabled"
+            },
+            "root": "/x",
+            "doc_root_full": "/x",
+            "doc_root_exists": true,
+            "domains": ["phpmyadmin.mixengine.test"],
+            "pool": {"declared": "php-fpm@phpmyadmin", "resolved": "php-fpm@phpmyadmin"},
+            "services": [{"service": "mariadb@main", "state": "running"}]
+        }))
+        .expect("a site detail");
+
+        let services = ServiceList {
+            services: vec![
+                failed_with("php-fpm@phpmyadmin", "no credential is stored at x"),
+                summary("mariadb@main", Some(ServiceState::Running)),
+            ],
+        };
+
+        assert_eq!(
+            site_failures(&detail, &services),
+            "php-fpm@phpmyadmin could not start: no credential is stored at x
+"
+        );
+        assert_eq!(
+            site_failures(
+                &detail,
+                &ServiceList {
+                    services: vec![summary("php-fpm@phpmyadmin", Some(ServiceState::Running))]
+                }
+            ),
+            ""
         );
     }
 
