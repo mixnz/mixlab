@@ -474,3 +474,64 @@ async fn a_web_app_can_be_woken_the_moment_it_is_installed() {
         );
     }
 }
+
+/// **T200, D2.** Uninstalling gives the activator's address back, and a reinstall is woken too.
+///
+/// Before T200 the daemon kept every activator until it exited and skipped any service it already
+/// held, by id alone. An uninstall left the old port listening, and a reinstall under the same id
+/// was given a new port that nothing ever bound — so "uninstall it and install it again" failed
+/// exactly like the first install.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_reinstalled_web_app_can_be_woken_and_the_old_address_is_free() {
+    let fixture = Fixture::start().await;
+    declare::php_pool(&fixture.home.database_file(), "8.3.34").await;
+    declare::database(
+        &fixture.home.database_file(),
+        "mariadb@main",
+        "mariadb",
+        3306,
+    )
+    .await;
+    let mut client = fixture.client().await;
+    let directory = web_app();
+    let path = directory.path().display().to_string();
+    let database = fixture.home.database_file();
+
+    installed(&mut client, &path, &fixture.home).await;
+    let first = declare::activation_port(&database, "php-fpm@phpmyadmin").await;
+
+    client
+        .call(
+            "extension.uninstall",
+            json!({"id": "phpmyadmin", "delete_data": true}),
+        )
+        .await;
+
+    if let Some(port) = first {
+        assert!(
+            !accepts(port),
+            "the activator at 127.0.0.1:{port} outlived the extension it belonged to
+{}",
+            fixture.home.daemon_log()
+        );
+    }
+
+    installed(&mut client, &path, &fixture.home).await;
+    let second = declare::activation_port(&database, "php-fpm@phpmyadmin").await;
+
+    if cfg!(windows) {
+        let port = second.unwrap_or_else(|| {
+            panic!(
+                "the reinstalled pool has no activation port
+{}",
+                fixture.home.daemon_log()
+            )
+        });
+        assert!(
+            accepts(port),
+            "nothing holds the reinstalled pool's activator at 127.0.0.1:{port}
+{}",
+            fixture.home.daemon_log()
+        );
+    }
+}

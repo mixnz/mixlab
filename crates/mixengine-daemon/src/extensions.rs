@@ -797,6 +797,12 @@ impl Extensions {
             .await
             .map_err(|error| error.to_wire())?;
 
+        // **The activator goes with the pool** — T200, D2. After the row, so nothing can wake a
+        // service that no longer exists in between.
+        if let Some(pool) = &removed.pool {
+            crate::services::activate::release(pool).await;
+        }
+
         // **After the row, so a failed uninstall does not lose a secret it still needs** — roadmap
         // task **T82**, the design's D7. Idempotent, so an uninstall of something that never had
         // one costs a keyring call and no error.

@@ -981,6 +981,9 @@ impl Runtimes {
                 .map_err(|error| error.to_wire())?;
 
             tracing::info!(%service, "a pool was removed with the runtime it ran out of");
+
+            // And its activator with it — T200, D2, the same hole `extension.uninstall` had.
+            crate::services::activate::release(service).await;
         }
 
         runtimes::discard(Path::new(&removed.path))

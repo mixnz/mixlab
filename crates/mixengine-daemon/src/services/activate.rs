@@ -74,7 +74,8 @@ pub(crate) enum Refused {
 /// Hold `listen` for as long as the daemon runs, and start `service` for whoever dials it.
 ///
 /// Returns once the listener is bound, so a caller knows the address is taken before it renders a
-/// site file naming it; the accepting runs in a task of its own from there.
+/// site file naming it; the accepting runs in a task of its own from there. Answers the accept
+/// loop's handle, which is what [`release`] stops.
 ///
 /// # Errors
 ///
@@ -85,7 +86,7 @@ pub(crate) async fn spawn(
     service: ServiceId,
     listen: Listen,
     target: Listen,
-) -> mixengine_platform::Result<()> {
+) -> mixengine_platform::Result<tokio::task::JoinHandle<()>> {
     let listener = Activation::bind(&listen).await?;
 
     tracing::debug!(
@@ -94,7 +95,7 @@ pub(crate) async fn spawn(
         "holding an address so a request can start this service"
     );
 
-    tokio::spawn(async move {
+    let accepting = tokio::spawn(async move {
         loop {
             let accepted = match listener.accept().await {
                 Ok(accepted) => accepted,
@@ -126,7 +127,7 @@ pub(crate) async fn spawn(
         }
     });
 
-    Ok(())
+    Ok(accepting)
 }
 
 /// Hold an address for every service in this home that a request may have to start.
@@ -157,16 +158,31 @@ pub(crate) async fn hold_all(
     let mut held = Vec::new();
 
     for (service, (listen, target)) in generator.activators().await? {
-        if holding.contains(&service) {
-            continue;
-        }
-
         let listen = to_listen(&listen);
         let target = to_listen(&target);
 
-        match spawn(Arc::clone(&services), service.clone(), listen, target).await {
-            Ok(()) => {
-                holding.insert(service.clone());
+        match holding.get(&service) {
+            Some(current) if current.listen == listen => continue,
+            // **The row's address moved** — a service reinstalled under the same id (T200, D2).
+            // The old listener goes first, so a port it held can be the new one.
+            Some(_) => {
+                if let Some(old) = holding.remove(&service) {
+                    stop(old).await;
+                }
+            }
+            None => {}
+        }
+
+        match spawn(
+            Arc::clone(&services),
+            service.clone(),
+            listen.clone(),
+            target,
+        )
+        .await
+        {
+            Ok(accepting) => {
+                holding.insert(service.clone(), Held { listen, accepting });
                 held.push(service);
             }
             Err(error) => tracing::warn!(
@@ -179,6 +195,33 @@ pub(crate) async fn hold_all(
     }
 
     Ok(held)
+}
+
+/// Stop holding `service`'s activator, if this daemon holds one — roadmap task **T200**, D2.
+///
+/// **Called once the service's row is gone**, by `extension.uninstall` and `runtime.uninstall`.
+/// Before T200 nothing gave an address back, so an uninstalled pool kept its port until the daemon
+/// exited: the allocator could not hand it out, and a reinstall under the same id was skipped by
+/// [`hold_all`] and never bound at all. A connection already being carried finishes on its own
+/// task; only the accepting stops.
+pub(crate) async fn release(service: &ServiceId) {
+    let held = HOLDING.lock().await.remove(service);
+
+    if let Some(held) = held {
+        stop(held).await;
+        tracing::debug!(
+            service = service.as_str(),
+            "released the address a request could start this service through"
+        );
+    }
+}
+
+/// End one accept loop, and wait until its listener is dropped.
+///
+/// Awaited rather than only aborted: the caller's next step may bind the same address.
+async fn stop(held: Held) {
+    held.accepting.abort();
+    let _ = held.accepting.await;
 }
 
 /// Which services this daemon is already holding an address for.
@@ -195,8 +238,22 @@ pub(crate) async fn hold_all(
 ///
 /// Process-wide, like `ports`' allocation lock and for the same reason: what it guards is a fact
 /// about this operating system, not about any one caller.
-static HOLDING: tokio::sync::Mutex<std::collections::BTreeSet<ServiceId>> =
-    tokio::sync::Mutex::const_new(std::collections::BTreeSet::new());
+///
+/// **A map from service to address, not a set of services** — roadmap task **T200**, D2. A set
+/// could only say *this id is held*, so a service reinstalled under the same id with a new address
+/// was skipped and never bound, and nothing could find the listener to give its port back.
+static HOLDING: tokio::sync::Mutex<std::collections::BTreeMap<ServiceId, Held>> =
+    tokio::sync::Mutex::const_new(std::collections::BTreeMap::new());
+
+/// One activator this daemon holds: where, and the loop accepting there.
+struct Held {
+    /// The address the generator named when it was bound — compared on every [`hold_all`], because
+    /// a service reinstalled under the same id comes back with a different one (T200, D2).
+    listen: Listen,
+
+    /// The accept loop. Aborting it drops the listener, which is what frees the address.
+    accepting: tokio::task::JoinHandle<()>,
+}
 
 /// One address, from the vocabulary a recipe renders in to the one the platform binds.
 ///
@@ -477,5 +534,52 @@ mod tests {
         let mut echoed = [0_u8; 4];
         client.read_exact(&mut echoed).await.expect("a read");
         assert_eq!(&echoed, b"ping", "what the client said first was lost");
+    }
+
+    /// **An activator that is stopped gives its address back** — roadmap task **T200**, D2.
+    ///
+    /// Awaited rather than merely aborted: the caller goes on to let the allocator hand the port out
+    /// again, and a listener dropped "soon" is one a second bind can still collide with.
+    #[tokio::test]
+    async fn a_stopped_activator_gives_its_address_back() {
+        let (home, paths, store) = home(&["waker"]).await;
+        let registry = Arc::new(registry(&paths, &store, Arc::new(Declared(Vec::new()))));
+
+        let listen = somewhere(&home, "activate-release.sock");
+        let target = somewhere(&home, "target-release.sock");
+
+        let accepting = spawn(
+            Arc::clone(&registry),
+            service("waker"),
+            listen.clone(),
+            target,
+        )
+        .await
+        .expect("a bound address");
+
+        stop(Held {
+            listen: listen.clone(),
+            accepting,
+        })
+        .await;
+
+        assert!(
+            dial(&listen).await.is_err(),
+            "a stopped activator still accepts at {listen}"
+        );
+        Activation::bind(&listen)
+            .await
+            .expect("the address can be bound again");
+    }
+
+    /// **Releasing what this daemon never held is nothing** — T200, D2. A service whose bind failed
+    /// at boot is uninstalled like any other.
+    #[tokio::test]
+    async fn releasing_a_service_nothing_holds_does_nothing() {
+        let never = service("never-held");
+
+        release(&never).await;
+
+        assert!(!HOLDING.lock().await.contains_key(&never));
     }
 }
