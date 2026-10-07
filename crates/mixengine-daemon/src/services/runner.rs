@@ -212,11 +212,11 @@ pub(super) enum Readiness {
     /// The ready check passed and the process is there.
     Up,
 
-    /// It is not usable, and this is what was persisted about why.
+    /// It is not usable, and this is the [`super::Fault`] persisted about why.
     ///
-    /// [`None`] is never produced here: it is what the registry reports for a runner that ended
-    /// without deciding at all — see [`super::settled`].
-    Down(Option<StateReason>),
+    /// A fault with no reason is never produced here: it is what the registry reports for a runner
+    /// that ended without deciding at all — see [`super::settled`].
+    Down(super::Fault),
 }
 
 impl Readiness {
@@ -225,7 +225,19 @@ impl Readiness {
     ///
     /// Exhaustive over [`ServiceState`], which is closed for readers exactly like this one: a state
     /// added without a decision here would be a service the walk silently misjudges.
-    fn of(state: ServiceState, reason: StateReason, restart: RestartPolicy) -> Self {
+    fn of(
+        state: ServiceState,
+        reason: StateReason,
+        restart: RestartPolicy,
+        detail: Option<&str>,
+    ) -> Self {
+        let down = |reason: StateReason| {
+            Self::Down(super::Fault {
+                reason: Some(reason),
+                detail: detail.map(str::to_owned),
+            })
+        };
+
         match state {
             // `Degraded` is up on purpose: a service answering badly is the amber case the GUI
             // shows and `mix doctor` explains, not an absent one, and a dependent that refused to
@@ -249,13 +261,11 @@ impl Readiness {
             // `Failed`, so a walk that waited for it to *give up* would wait for ever, and the first
             // attempt is the only answer there is.
             ServiceState::Restarting => match restart {
-                RestartPolicy::Always { .. } => Self::Down(Some(reason)),
+                RestartPolicy::Always { .. } => down(reason),
                 _ => Self::Deciding,
             },
 
-            ServiceState::Stopping | ServiceState::Stopped | ServiceState::Failed => {
-                Self::Down(Some(reason))
-            }
+            ServiceState::Stopping | ServiceState::Stopped | ServiceState::Failed => down(reason),
         }
     }
 }
@@ -2046,7 +2056,7 @@ impl Runner {
         // Sent whether or not anything is listening: `send_replace` keeps the value for whoever asks
         // next, where `send` would report a walk that has already had its answer as a failure.
         self.readiness
-            .send_replace(Readiness::of(to, reason, self.spec.restart()));
+            .send_replace(Readiness::of(to, reason, self.spec.restart(), detail));
 
         true
     }

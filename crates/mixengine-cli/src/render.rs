@@ -1106,11 +1106,13 @@ pub(crate) fn service_walk(walked: Walked, walk: &ServiceWalk) -> String {
         return format!("{} {}\n", walked.reached(), names(&walk.reached));
     };
 
-    // A reason is `None` only when the failure was the daemon's own — a database that would not
-    // take the write. There is nothing to render and inventing one would be worse than saying so.
-    let mut rendered = match &failure.reason {
-        Some(reason) => format!("{} {}: {reason}\n", failure.service, walked.failed()),
-        None => format!(
+    // The runner's sentence first (T202a, D3), the state machine's reason when there is none, and
+    // the admission when there is neither — a reason is `None` only when the failure was the
+    // daemon's own, and inventing one would be worse than saying so.
+    let mut rendered = match (&failure.detail, &failure.reason) {
+        (Some(detail), _) => format!("{} {}: {detail}\n", failure.service, walked.failed()),
+        (None, Some(reason)) => format!("{} {}: {reason}\n", failure.service, walked.failed()),
+        (None, None) => format!(
             "{} {}: mixengined did not say why; logs/daemon.log has it\n",
             failure.service,
             walked.failed()
@@ -6266,6 +6268,36 @@ mod tests {
         assert_eq!(
             service_walk(Walked::Stop, &walk),
             "stopped mariadb@main, php-fpm@8.3\n"
+        );
+    }
+
+    /// T202a, D3. A walk's failure prints the runner's detail before the reason's own sentence.
+    #[test]
+    fn a_walks_failure_prints_the_runners_detail_first() {
+        let walk = ServiceWalk {
+            planned: vec![id("db")],
+            complete: true,
+            reached: vec![],
+            failed: Some(mixengine_proto::ServiceFailure {
+                service: id("db"),
+                reason: Some(StateReason::SpawnFailed),
+                detail: Some(
+                    "the environment entry MYSQL_PWD: no credential is stored at mixengine/h/db/root"
+                        .to_owned(),
+                ),
+            }),
+            blocked: vec![],
+        };
+
+        let rendered = service_walk(Walked::Start, &walk);
+
+        assert!(
+            rendered.contains("db failed to start: the environment entry MYSQL_PWD"),
+            "{rendered}"
+        );
+        assert!(
+            !rendered.contains("could not be started at all"),
+            "{rendered}"
         );
     }
 
