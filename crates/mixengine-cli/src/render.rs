@@ -3994,6 +3994,13 @@ pub(crate) fn blueprint_applied(applied: &BlueprintApplied) -> String {
             },
             action_said(&step.action)
         ));
+
+        // **T202, D2.** What differed from the plan, under the step it belongs to: fourteen
+        // spaces, which is the two of the indent plus the eleven of the status column plus its
+        // trailing space, so the sentence lines up with the action it is about.
+        if let StepResult::Done { note: Some(note) } = &step.result {
+            out.push_str(&format!("              {note}\n"));
+        }
     }
 
     for step in &applied.steps {
@@ -5197,6 +5204,43 @@ mod tests {
         assert!(!rendered.contains("not run"), "{rendered}");
         assert!(rendered.contains("exited with 1"), "{rendered}");
         assert!(super::blueprint_had_a_failed_step(&applied));
+    }
+
+    /// T202, D2. What differed from the plan sits under the step it belongs to, indented past the
+    /// status column, so the account a project ended up with is found where the step is.
+    #[test]
+    fn a_done_step_with_a_note_prints_it_under_the_step() {
+        let applied = BlueprintApplied {
+            blueprint: "laravel".to_owned(),
+            project: "shop".to_owned(),
+            root: "/tmp/shop".to_owned(),
+            steps: vec![StepOutcome {
+                action: PlanAction::CreateDatabase {
+                    package: "mariadb".to_owned(),
+                    instance: "main".to_owned(),
+                    database: "shop".to_owned(),
+                    user: "shop".to_owned(),
+                },
+                result: StepResult::Done {
+                    note: Some(
+                        "the account shop is somebody else's, so this project's is shop-2"
+                            .to_owned(),
+                    ),
+                },
+            }],
+        };
+
+        let rendered = super::blueprint_applied(&applied);
+
+        let lines: Vec<&str> = rendered.lines().collect();
+        let step = lines
+            .iter()
+            .position(|line| line.starts_with("  done"))
+            .expect("the step line");
+        assert_eq!(
+            lines[step + 1],
+            "              the account shop is somebody else's, so this project's is shop-2"
+        );
     }
 
     /// An import says which of the two things a person now has, because it is the only moment they
