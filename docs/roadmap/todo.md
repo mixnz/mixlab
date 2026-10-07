@@ -70,6 +70,7 @@ done
 | [37 — The window closes its known gaps](phase-37-the-window-closes-its-known-gaps.md) | Every daemon method a person in the window needs has its button; the rest say why not | T199–T199a | 2 / 2 | **M37** `check-client-surface` reports 0 known gaps |
 | [38 — An add-on works the moment it is installed](phase-38-an-add-on-works-the-moment-it-is-installed.md) | Installing an add-on shows progress, ends in one row, and a web-app opens at once | T200–T200c | 4 / 4 | **M38** Adminer opens with no daemon restart |
 | [39 — A local S3](phase-39-a-local-s3.md) | A project that stores files in S3 has a local S3, installed as an add-on | T201–T201a | 2 / 2 | **M39** SeaweedFS answers an S3 client on all three systems — **met** |
+| [41 — A tunnel of MixLab's own](phase-41-a-tunnel-of-mixlabs-own.md) | Share a local address on the internet from MixLab; a preset reaches modules added later | T203–T203b | 0 / 3 | **M41** a dev server opens from another network through the Tunnel tab |
 
 [Parked](parked.md) — revisit deliberately, do not start early.
 
