@@ -12,12 +12,18 @@ function memory(initial: Record<string, string> = {}): PreferenceStorage & { dat
 }
 
 describe("preferences in sync", () => {
-  it("are the four keys that are set, and nothing else in storage", async () => {
-    const storage = memory({ "mixlab-theme": "dark", "mixlab-lang": "vi", "mixlab-session": "{}" });
+  it("are the five keys that are set, and nothing else in storage", async () => {
+    const storage = memory({
+      "mixlab-theme": "dark",
+      "mixlab-lang": "vi",
+      "mixlab-modules-preset": "everything",
+      "mixlab-session": "{}",
+    });
     const items = await preferencesCollection(() => storage, () => {}).read();
     expect(items).toEqual([
       { id: "theme", data: "dark" },
       { id: "language", data: "vi" },
+      { id: "modulesPreset", data: "everything" },
     ]);
   });
 

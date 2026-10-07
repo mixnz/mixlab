@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { onPreferencesChanged } from "../core/preferences";
 import type { ModuleDefinition } from "./module";
 import { MODULES, MODULE_PRESETS, PRESET_IDS, type PresetId } from "./registry";
-import { ACCENT_KEY, LANGUAGE_KEY, MODULES_KEY, SESSION_KEY, THEME_KEY } from "./storageKeys";
+import { ACCENT_KEY, LANGUAGE_KEY, MODULES_KEY, MODULES_PRESET_KEY, SESSION_KEY, THEME_KEY } from "./storageKeys";
 
 /**
  * Which modules this window draws.
@@ -106,6 +106,37 @@ export function defaultModuleId(visible: ModuleDefinition[]): string {
  *  session — a handful of strings about the window, read once on the way up. */
 export const MODULES_STORAGE_KEY = MODULES_KEY;
 
+/** Where the preset beside the list is kept — T203, D0. */
+export { MODULES_PRESET_KEY };
+
+/** The mark for a set that is not a preset. */
+const CUSTOM = "custom";
+
+/**
+ * What each preset held before T203. A home no T203 build has written holds one of these lists and
+ * no mark, and that list means the preset. Not `MODULE_PRESETS`, which now says something else.
+ */
+export const PRESETS_BEFORE_T203: Record<PresetId, string[]> = {
+  mixengine: ["mixengine"],
+  everything: ["mixengine", "db", "rest", "terminal", "tools"],
+  databaseTools: ["db", "rest", "terminal", "tools"],
+};
+
+function sameSet(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((id) => b.includes(id));
+}
+
+/** The mark written beside `enabled`: the preset it is, or `custom`. */
+export function presetMark(enabled: string[]): PresetId | typeof CUSTOM {
+  return presetOf(enabled) ?? CUSTOM;
+}
+
+/** The mark as stored, or `null` for none or one this build does not know. */
+function readMark(raw: string | null): PresetId | typeof CUSTOM | null {
+  if (raw === CUSTOM) return CUSTOM;
+  return PRESET_IDS.find((id) => id === raw) ?? null;
+}
+
 /** Keys a build older than the module set wrote. Any one of them present means this webview
  *  profile has been used before — see {@link resolveStoredModules}. `public/storage-keys.js` has
  *  already moved them to these names by the time this is read. */
@@ -137,15 +168,36 @@ export interface ShellStorage {
  * {@link importHappened}.
  */
 export function resolveStoredModules(storage: ShellStorage, knownIds: string[]): string[] | null {
+  let list: string[] | null = null;
   const raw = storage.getItem(MODULES_STORAGE_KEY);
   if (raw !== null) {
     try {
-      const stored = normalizeModules(JSON.parse(raw), knownIds);
-      if (stored) return stored;
+      list = normalizeModules(JSON.parse(raw), knownIds);
     } catch {
       // A half-written or hand-edited value is no setting at all, and falls through to the next
       // question — which is the same treatment `parseSession` gives an unreadable session.
     }
+  }
+  const mark = readMark(storage.getItem(MODULES_PRESET_KEY));
+  const known = (ids: string[]) => ids.filter((id) => knownIds.includes(id));
+
+  // A preset mark wins while the list beside it agrees with it — this build's composition or the
+  // one before T203. A list that says anything else was changed where the mark is unknown, by a
+  // build that writes only the list, and the person's change wins (T203, D0).
+  if (mark !== null && mark !== CUSTOM) {
+    if (list === null || sameSet(list, MODULE_PRESETS[mark]) || sameSet(list, PRESETS_BEFORE_T203[mark])) {
+      return known(MODULE_PRESETS[mark]);
+    }
+    return list;
+  }
+  if (list !== null) {
+    // No mark at all: a home from before T203, whose list is a preset's old composition or not.
+    if (mark === null) {
+      const stored = list;
+      const was = PRESET_IDS.find((id) => sameSet(stored, PRESETS_BEFORE_T203[id]));
+      if (was) return known(MODULE_PRESETS[was]);
+    }
+    return list;
   }
   if (LEGACY_SHELL_KEYS.some((key) => storage.getItem(key) !== null)) {
     return MODULE_PRESETS.everything;
@@ -167,6 +219,7 @@ export function readEnabledModules(): string[] | null {
 export function writeEnabledModules(enabled: string[]): void {
   try {
     localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(enabled));
+    localStorage.setItem(MODULES_PRESET_KEY, presetMark(enabled));
   } catch {
     /* see above */
   }

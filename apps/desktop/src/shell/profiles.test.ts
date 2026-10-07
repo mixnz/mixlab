@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { MODULES, MODULE_PRESETS } from "./registry";
 import {
+  MODULES_PRESET_KEY,
   MODULES_STORAGE_KEY,
+  PRESETS_BEFORE_T203,
   defaultModuleId,
   normalizeModules,
+  presetMark,
   presetOf,
   resolveStoredModules,
   visibleModules,
@@ -160,5 +163,60 @@ describe("resolveStoredModules", () => {
   it("still answers everything when an unusable value sits beside a used profile", () => {
     const storage = storageOf({ [MODULES_STORAGE_KEY]: "{", "mixlab-session": "x" });
     expect(resolveStoredModules(storage, KNOWN)).toEqual(MODULE_PRESETS.everything);
+  });
+});
+
+/* T203, D0. The mark beside the list: a preset id, `custom`, or absent on a home no T203 build has
+   written yet. */
+describe("resolveStoredModules with a preset mark", () => {
+  const list = (ids: string[]) => JSON.stringify(ids);
+
+  it("shows this build's composition of a marked preset", () => {
+    const storage = storageOf({
+      [MODULES_STORAGE_KEY]: list(PRESETS_BEFORE_T203.everything),
+      [MODULES_PRESET_KEY]: "everything",
+    });
+    expect(resolveStoredModules(storage, KNOWN)).toEqual(MODULE_PRESETS.everything);
+  });
+
+  it("reads a list equal to a preset's composition before T203, with no mark, as that preset", () => {
+    const storage = storageOf({ [MODULES_STORAGE_KEY]: list(PRESETS_BEFORE_T203.databaseTools) });
+    expect(resolveStoredModules(storage, KNOWN)).toEqual(MODULE_PRESETS.databaseTools);
+  });
+
+  it("a set that equals an old preset but is marked custom stays custom", () => {
+    const storage = storageOf({
+      [MODULES_STORAGE_KEY]: list(PRESETS_BEFORE_T203.everything),
+      [MODULES_PRESET_KEY]: "custom",
+    });
+    expect(resolveStoredModules(storage, KNOWN)).toEqual(PRESETS_BEFORE_T203.everything);
+  });
+
+  it("lets a list changed where the mark is unknown win over the mark", () => {
+    const storage = storageOf({
+      [MODULES_STORAGE_KEY]: list(["mixengine", "db"]),
+      [MODULES_PRESET_KEY]: "everything",
+    });
+    expect(resolveStoredModules(storage, KNOWN)).toEqual(["mixengine", "db"]);
+  });
+
+  it("answers a mark that arrived before its list", () => {
+    const storage = storageOf({ [MODULES_PRESET_KEY]: "mixengine" });
+    expect(resolveStoredModules(storage, KNOWN)).toEqual(MODULE_PRESETS.mixengine);
+  });
+
+  it("ignores a mark that is not a preset", () => {
+    const storage = storageOf({
+      [MODULES_STORAGE_KEY]: list(["db"]),
+      [MODULES_PRESET_KEY]: "quantum",
+    });
+    expect(resolveStoredModules(storage, KNOWN)).toEqual(["db"]);
+  });
+});
+
+describe("presetMark", () => {
+  it("is the preset a set is, or custom", () => {
+    expect(presetMark(MODULE_PRESETS.everything)).toBe("everything");
+    expect(presetMark(["db"])).toBe("custom");
   });
 });

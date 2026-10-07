@@ -1,6 +1,6 @@
 import { announcePreferencesChanged } from "../core/preferences";
 import type { SyncableCollection, SyncItem } from "../core/syncCollection";
-import { LANGUAGE_KEY, MODULES_KEY, PALETTE_KEY, THEME_KEY } from "./storageKeys";
+import { LANGUAGE_KEY, MODULES_KEY, MODULES_PRESET_KEY, PALETTE_KEY, THEME_KEY } from "./storageKeys";
 
 /**
  * The shell's own preferences, one record per `localStorage` key (D5). An allow-list: the session,
@@ -16,6 +16,7 @@ const KEYS: Record<string, string> = {
   palette: PALETTE_KEY,
   language: LANGUAGE_KEY,
   modules: MODULES_KEY,
+  modulesPreset: MODULES_PRESET_KEY,
 };
 
 /** What the collection needs of `localStorage`, so a test can hand it a map instead. */
