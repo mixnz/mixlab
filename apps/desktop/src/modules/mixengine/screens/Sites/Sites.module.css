@@ -75,3 +75,17 @@
   font-weight: 400;
   color: var(--text-muted);
 }
+
+/* Why the site's pool could not start — T200b, D6. */
+.failure {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: 400;
+  color: var(--danger-text);
+  white-space: normal;
+}

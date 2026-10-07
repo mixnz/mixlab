@@ -2204,7 +2204,19 @@ async fn record(
     to: ServiceState,
     reason: StateReason,
 ) -> bool {
-    match services::transition(store, service, to, reason, now()).await {
+    record_noting(store, events, service, to, reason, None).await
+}
+
+/// [`record`], with the sentence that explains a move into `failed` — roadmap task **T200b**, D5.
+async fn record_noting(
+    store: &Store,
+    events: &Events,
+    service: &ServiceId,
+    to: ServiceState,
+    reason: StateReason,
+    detail: Option<&str>,
+) -> bool {
+    match services::transition_noting(store, service, to, reason, detail, now()).await {
         Ok(change) => {
             events.publish(DaemonEvent::ServiceStateChanged(change));
 

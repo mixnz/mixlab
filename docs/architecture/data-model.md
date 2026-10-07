@@ -61,8 +61,10 @@ packages(id, name, version, install_path, installed_at, source_url, sha256)
 -- Service instances ---------------------------------------------------------
 services(id, package_id, runtime_install_id, instance_name, state, autostart, port,
          bind_addr, data_dir, config_overrides_json, limits_json, idle_minutes,
-         last_started_at, last_exit_code, pid, pid_start_time)
+         last_started_at, last_exit_code, pid, pid_start_time, last_failure_json)
    -- id is the human-stable ServiceId, e.g. "mariadb@main", "php-fpm@8.3.33"
+   -- last_failure_json: why it last failed (T200b), written with the move into
+   --   failed and cleared by the next move into running
    -- the instance half is the FULL version for a pool: runtime_installs is
    --   UNIQUE (kind, version) over the full version, so 8.3.33 and 8.3.34 can both
    --   be installed and "php-fpm@8.3" would name neither

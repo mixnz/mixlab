@@ -162,6 +162,24 @@ pub struct ServiceList {
 
 /// One service, as the daemon currently sees it. Also the whole of what `service.status` answers.
 ///
+/// Why a service last failed — roadmap task **T200b**, its design's D5.
+///
+/// `detail` is always a sentence: the error the supervisor had when it gave up, or the reason's
+/// own words. That is what lets a client show it without a second table of what each
+/// [`StateReason`] means.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct ServiceFailureNote {
+    /// When it failed.
+    pub at: Timestamp,
+
+    /// The reason the transition recorded.
+    pub reason: StateReason,
+
+    /// What a person reads.
+    pub detail: String,
+}
+
 /// One type for the list and for the single lookup on purpose: they are the same sentence about a
 /// service, so a client renders them with one function and a field added here reaches both.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -270,6 +288,13 @@ pub struct ServiceSummary {
     /// this build cannot parse.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<PackageVersion>,
+
+    /// Why it failed, while it is `failed` — roadmap task **T200b**, D5.
+    ///
+    /// On `stopped_by`'s rule: the row keeps the note after a person stops a failed service, and no
+    /// listing shows a failure the state no longer claims. Optional on the wire (ADR 0019).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_failure: Option<ServiceFailureNote>,
 }
 
 /// Who left a service stopped — the wire half of `mixengine-core`'s `StoppedBy`, and of the
@@ -704,6 +729,7 @@ mod tests {
             autostart: false,
             stopped_by: None,
             version: None,
+            last_failure: None,
         }
     }
 
@@ -950,12 +976,14 @@ mod tests {
             autostart: false,
             stopped_by: None,
             version: None,
+            last_failure: None,
         };
 
         let encoded = serde_json::to_value(&summary).unwrap();
         assert!(encoded.get("state").is_none(), "{encoded}");
         assert!(encoded.get("role").is_none(), "{encoded}");
         assert!(encoded.get("version").is_none(), "{encoded}");
+        assert!(encoded.get("last_failure").is_none(), "{encoded}");
         assert_eq!(encoded["supervised"], false);
         assert_eq!(
             serde_json::from_value::<ServiceSummary>(encoded).unwrap(),

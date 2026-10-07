@@ -13,8 +13,8 @@ import {
 } from "./daemonState";
 
 const rows: ServiceRow[] = [
-  { id: "mariadb@main", state: "running", port: 3306, autostart: true, stoppedBy: null, version: "11.4.3" },
-  { id: "caddy@main", state: "stopped", port: null, autostart: false, stoppedBy: null, version: null },
+  { id: "mariadb@main", state: "running", port: 3306, autostart: true, stoppedBy: null, version: "11.4.3", lastFailure: null },
+  { id: "caddy@main", state: "stopped", port: null, autostart: false, stoppedBy: null, version: null, lastFailure: null },
 ];
 
 describe("rowsFrom", () => {
@@ -36,7 +36,7 @@ describe("rowsFrom", () => {
     ]);
 
     expect(made).toEqual([
-      { id: "redis@main", state: "stopped", port: null, autostart: true, stoppedBy: null, version: null },
+      { id: "redis@main", state: "stopped", port: null, autostart: true, stoppedBy: null, version: null, lastFailure: null },
     ]);
   });
 
@@ -55,6 +55,24 @@ describe("rowsFrom", () => {
     };
     expect(rowsFrom([{ ...base, version: "5.7.44" }])[0].version).toBe("5.7.44");
     expect(rowsFrom([base])[0].version).toBeNull();
+  });
+
+  /* T200b, D6: why a failed service failed is what its pill's tooltip says — and only while it is
+     failed, so a row the state has moved past shows nothing stale. */
+  it("carries why a failed service failed, and nothing for one that is not failed", () => {
+    const note = { at: 1_760_000_000_000, reason: { kind: "spawn_failed" as const }, detail: "no credential" };
+    const base = {
+      id: "php-fpm@phpmyadmin",
+      supervised: false,
+      pid: null,
+      last_started_at: null,
+      last_exit_code: null,
+      depends_on: [],
+      autostart: false,
+      last_failure: note,
+    };
+    expect(rowsFrom([{ ...base, state: "failed" }])[0].lastFailure).toBe("no credential");
+    expect(rowsFrom([{ ...base, state: "running" }])[0].lastFailure).toBeNull();
   });
 });
 
@@ -242,9 +260,36 @@ describe("stoppedBy from a transition", () => {
     expect(stoppedByReason({ kind: 3 })).toBeNull();
 
     const started = applyEvent(
-      [{ id: "caddy@main", state: "stopped", port: null, autostart: false, stoppedBy: "daemon", version: null }],
+      [{ id: "caddy@main", state: "stopped", port: null, autostart: false, stoppedBy: "daemon", version: null, lastFailure: null }],
       JSON.stringify({ type: "service_state_changed", service: "caddy@main", to: "starting", reason: { kind: "requested" } }),
     ).rows[0];
     expect(started.stoppedBy).toBeNull();
+  });
+});
+
+describe("applyEvent and why a service failed", () => {
+  const row = {
+    id: "php-fpm@phpmyadmin",
+    state: "starting" as const,
+    port: null,
+    autostart: false,
+    stoppedBy: null,
+    version: null,
+    lastFailure: "old reason",
+  };
+  const moved = (to: string) =>
+    JSON.stringify({ type: "service_state_changed", service: "php-fpm@phpmyadmin", from: "starting", to, reason: { kind: "requested" } });
+
+  /* T200b, D6: the event carries the reason and never the sentence, so a move into `failed` asks
+     for `service.list` again, which has it. */
+  it("asks for the listing again when a service fails", () => {
+    expect(applyEvent([row], moved("failed")).resync).toBe(true);
+  });
+
+  /* And any other move leaves the old sentence behind, rather than showing a failure that is over. */
+  it("forgets the sentence once the service has moved on", () => {
+    const after = applyEvent([row], moved("running"));
+    expect(after.resync).toBe(false);
+    expect(after.rows[0].lastFailure).toBeNull();
   });
 });

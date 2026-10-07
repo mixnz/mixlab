@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT s.state, s.pid, s.pid_start_time, s.last_started_at, s.last_exit_code, s.port,\n                  s.stopped_by, s.autostart, coalesce(p.version, r.version) AS version\n           FROM services s\n           LEFT JOIN packages p ON p.id = s.package_id\n           LEFT JOIN runtime_installs r ON r.id = s.runtime_install_id\n           WHERE s.id = ?",
+  "query": "SELECT s.state, s.pid, s.pid_start_time, s.last_started_at, s.last_exit_code, s.port,\n                  s.stopped_by, s.autostart, s.last_failure_json,\n                  coalesce(p.version, r.version) AS version\n           FROM services s\n           LEFT JOIN packages p ON p.id = s.package_id\n           LEFT JOIN runtime_installs r ON r.id = s.runtime_install_id\n           WHERE s.id = ?",
   "describe": {
     "columns": [
       {
@@ -92,8 +92,19 @@
         }
       },
       {
-        "name": "version",
+        "name": "last_failure_json",
         "ordinal": 8,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "services",
+            "name": "last_failure_json"
+          }
+        }
+      },
+      {
+        "name": "version",
+        "ordinal": 9,
         "type_info": "Text",
         "origin": "Expression"
       }
@@ -110,8 +121,9 @@
       true,
       false,
       false,
+      true,
       true
     ]
   },
-  "hash": "4ed16294093eacd5a8cd1cf9b25a7608549942523a23af9f73df7ea5101ba1d3"
+  "hash": "0753779cbd44f312a924a19bc878d99f5e64872936c6e16252f8b1b41f0ede0e"
 }

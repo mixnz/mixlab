@@ -727,8 +727,9 @@ impl Runner {
 
             // A credential the spec names and the keyring does not hold, or one it will not answer
             // for inside `START_ENVIRONMENT`. The process was never started, which is exactly what
-            // `SpawnFailed` says — and the entry is named in `daemon.log` and never in the event,
-            // because the event is rendered in a GUI.
+            // `SpawnFailed` says. The event stays the reason alone; the sentence naming the entry —
+            // its address, never its value — goes on the row (T200b, D5), which is what lets this
+            // machine's own MixLab and `mix` say why instead of `daemon.log` alone.
             Err(error) => {
                 tracing::error!(
                     service = self.spec.id().as_str(),
@@ -736,7 +737,9 @@ impl Runner {
                     "cannot resolve the environment this service is to be started with"
                 );
 
-                return self.give_up(StateReason::SpawnFailed).await;
+                return self
+                    .give_up(StateReason::SpawnFailed, Some(format!("{error:#}")))
+                    .await;
             }
         };
 
@@ -759,7 +762,9 @@ impl Runner {
                     "cannot start this service"
                 );
 
-                return self.give_up(StateReason::SpawnFailed).await;
+                return self
+                    .give_up(StateReason::SpawnFailed, Some(format!("{error:#}")))
+                    .await;
             }
         };
 
@@ -925,6 +930,7 @@ impl Runner {
                     conflict
                         .or(refused)
                         .unwrap_or(StateReason::ReadyTimeout { after }),
+                    None,
                 )
                 .await
             }
@@ -942,7 +948,7 @@ impl Runner {
                 self.kill(supervised, capture).await;
                 self.record_exit(None).await;
 
-                self.give_up(reason).await
+                self.give_up(reason, None).await
             }
         }
     }
@@ -1862,7 +1868,7 @@ impl Runner {
                     (reason, _) => reason,
                 };
 
-                self.give_up(reason).await
+                self.give_up(reason, None).await
             }
 
             // The `Restarting` is what answers a walk that is waiting on this service, which is why
@@ -1945,8 +1951,9 @@ impl Runner {
     }
 
     /// Move to `Failed` for `reason`. Whoever is waiting on this service is answered by that move.
-    async fn give_up(&self, reason: StateReason) -> After {
-        self.move_to(ServiceState::Failed, reason).await;
+    async fn give_up(&self, reason: StateReason, detail: Option<String>) -> After {
+        self.move_to_noting(ServiceState::Failed, reason, detail.as_deref())
+            .await;
 
         After::Done
     }
@@ -2011,12 +2018,24 @@ impl Runner {
     /// nothing may be told about a move that did not happen. A state that would not persist leaves
     /// the readiness as it was — the service really is still whatever the row still says.
     async fn move_to(&self, to: ServiceState, reason: StateReason) -> bool {
-        let persisted = super::record(
+        self.move_to_noting(to, reason, None).await
+    }
+
+    /// [`Runner::move_to`], with the sentence that explains a move into `failed` — roadmap task
+    /// **T200b**, D5. Written in the transition's own transaction, by `transition_noting`.
+    async fn move_to_noting(
+        &self,
+        to: ServiceState,
+        reason: StateReason,
+        detail: Option<&str>,
+    ) -> bool {
+        let persisted = super::record_noting(
             &self.store,
             &self.events,
             self.spec.id(),
             to,
             reason.clone(),
+            detail,
         )
         .await;
 
@@ -2962,6 +2981,44 @@ mod tests {
         assert!(
             runner.reading.is_none(),
             "the read finished, so there is nothing left for a third attempt to join"
+        );
+    }
+
+    /// **A spawn that failed keeps its sentence on the row** — T200b, D5. Before it, `daemon.log`
+    /// was the only place a missing credential was named.
+    #[tokio::test]
+    async fn a_spawn_that_failed_leaves_its_sentence_on_the_row() {
+        let (_home, paths, store) = home(&["mariadb"]).await;
+        sqlx::query("UPDATE services SET state = 'starting' WHERE id = 'mariadb'")
+            .execute(store.pool())
+            .await
+            .expect("the row");
+
+        let mut runner = adopted_runner(
+            spec("mariadb")
+                .env_from_keyring("MARIADB_ROOT_PASSWORD", "mixengine", "mariadb@main/root")
+                .build()
+                .expect("a usable spec"),
+            &paths,
+            &store,
+            Duration::ZERO,
+        );
+        let mut restarts = Restarts::under(runner.spec.restart());
+
+        runner.attempt(&mut restarts).await;
+
+        let note =
+            mixengine_core::services::record(&store, &ServiceId::parse("mariadb").expect("an id"))
+                .await
+                .expect("the row")
+                .last_failure
+                .expect("a note");
+        assert_eq!(note.reason, StateReason::SpawnFailed);
+        assert!(
+            note.detail
+                .contains("no credential is stored at mixengine/mariadb@main/root"),
+            "{}",
+            note.detail
         );
     }
 

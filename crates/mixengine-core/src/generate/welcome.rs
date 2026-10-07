@@ -177,7 +177,11 @@ mod tests {
             .expect("the page renders")
             .expect("a php site has one");
         assert!(page.contains("blog.test"), "{page}");
-        assert!(page.contains("Open MixLab"), "{page}");
+        // **T200b, D7.** Two places that say why — MixLab's Sites, and `mix site show` for a home
+        // with no window — and never the reason itself: a shared site is served to the LAN.
+        assert!(page.contains("Sites screen"), "{page}");
+        assert!(page.contains("mix site show blog.test"), "{page}");
+        assert!(!page.contains("credential"), "{page}");
         for fact in ["127.0.0.1", "9000", "/Users/", "/home/", "root@"] {
             assert!(!page.contains(fact), "the page names {fact}: {page}");
         }

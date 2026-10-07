@@ -488,6 +488,8 @@ const vi: typeof en = {
       ownerExtension: "extension: {{id}}",
       editDisabledHint: "Thuộc một extension. Gỡ extension đó để gỡ mục này.",
       openHint: "Bật những gì site này cần, rồi mở {{url}}",
+      couldNotStart: "{{service}} không khởi động được: {{detail}}",
+      startAgain: "Khởi động lại",
       opening: "Đang bật…",
       sharingIndefinite: "đang chia sẻ LAN",
       sharingUntil: "chia sẻ LAN tới {{until}}",
@@ -839,6 +841,7 @@ const vi: typeof en = {
       siteOn: "Đang bật",
       siteOff: "Đang tắt",
       siteMissing: "Không thấy site",
+      couldNotStart: "{{service}} không khởi động được: {{detail}}",
       notForThisSystem: "Không có bản cho hệ điều hành này",
       publishedFor: "Có bản cho {{targets}}",
       kind: {

@@ -415,6 +415,13 @@ pub struct ExtensionSummary {
     /// Optional on the wire (ADR 0019): a daemon older than T200 leaves it out.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+
+    /// The page a person opens, for a `service` that declares `[ui]` — roadmap task **T200a**, D2.
+    ///
+    /// Rendered by the daemon from the port it allocated, so a client only opens it and never
+    /// guesses which port is a page. Optional on the wire (ADR 0019).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ui: Option<String>,
 }
 
 /// Every extension this home has installed.

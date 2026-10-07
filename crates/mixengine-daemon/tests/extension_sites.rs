@@ -434,6 +434,23 @@ fn accepts(port: u16) -> bool {
     .is_ok()
 }
 
+/// Whether *this home's daemon* still takes connections on `port` for a service whose row is gone.
+///
+/// **Not whether anything listens there.** A suite runs many daemons at once and each hands out
+/// ports from the same range, so a port one released can be bound by another a moment later — which
+/// is how "nothing accepts on it" went red on CI while the release had worked. An activator that
+/// outlived its service accepts the connection and then cannot read the row, and says so in this
+/// home's log; another program on the port says nothing here.
+async fn still_served_here(home: &Home, port: u16) -> bool {
+    if !accepts(port) {
+        return false;
+    }
+
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    home.daemon_log()
+        .contains("cannot read the row of a service a connection asked for")
+}
+
 /// **T200, D1.** A web-app's pool can be woken by a request the moment the install ends.
 ///
 /// The pool is created by the install, outside boot, so it has neither an activation port nor a
@@ -515,9 +532,8 @@ async fn a_reinstalled_web_app_can_be_woken_and_the_old_address_is_free() {
 
     if let Some(port) = first {
         assert!(
-            !accepts(port),
-            "the activator at 127.0.0.1:{port} outlived the extension it belonged to
-{}",
+            !still_served_here(&fixture.home, port).await,
+            "the activator at 127.0.0.1:{port} outlived the extension it belonged to\n{}",
             fixture.home.daemon_log()
         );
     }
@@ -582,6 +598,10 @@ ready = { type = "tcp", addr = "{listen}:{ui_port}", timeout = "10s" }
 [permissions]
 network = "loopback"
 filesystem = ["own-data"]
+
+[ui]
+port = "ui_port"
+path = "/inbox"
 "#,
     )
     .expect("a manifest");
@@ -610,6 +630,18 @@ async fn a_running_service_extension_is_stopped_by_its_uninstall() {
             .expect("the plan names where it installs"),
     );
 
+    // **T200a, D2.** The page a person opens, rendered by the daemon from the port it allocated.
+    let listed = client.call("extension.list", json!({})).await;
+    let catcher = &listed["extensions"][0];
+    let port = catcher["ports"][0]["wanted"]
+        .as_u64()
+        .expect("the port it holds");
+    assert_eq!(
+        catcher["ui"],
+        format!("http://127.0.0.1:{port}/inbox"),
+        "{listed}"
+    );
+
     client
         .call("extension.start", json!({"id": "catcher"}))
         .await;
@@ -633,4 +665,57 @@ async fn a_running_service_extension_is_stopped_by_its_uninstall() {
     );
 
     installed(&mut client, &path, &fixture.home).await;
+}
+
+/// **Deleting a pool gives its activator's address back** — T200b's follow-through on T200's D2.
+///
+/// `extension.uninstall` and `runtime.uninstall` released an activator with its service;
+/// `service.delete` did not, so a deleted pool's port stayed bound until the daemon exited. The
+/// activator here is the one boot gives a pool, which is why the daemon is started twice.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_deleted_pool_gives_its_activators_address_back() {
+    let home = Home::new();
+    {
+        let _first = Daemon::start(&home);
+        home.wait_until_listening().await;
+        declare::php_pool(&home.database_file(), "8.3.34").await;
+    }
+
+    let _daemon = Daemon::start(&home);
+    home.wait_until_listening().await;
+    let mut client = Client::connect(&home).await;
+
+    if cfg!(windows) {
+        // Boot gives ports and binds them in a task of its own, after the API is already answering.
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        let port = loop {
+            if let Some(port) =
+                declare::activation_port(&home.database_file(), "php-fpm@8.3.34").await
+                && accepts(port)
+            {
+                break port;
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "boot never bound the pool's activator\n{}",
+                home.daemon_log()
+            );
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        };
+
+        // The probe above is a connection, and a connection is what wakes a pool: stop it, since
+        // `service.delete` refuses a running service.
+        client
+            .call("service.stop", json!({"service": "php-fpm@8.3.34"}))
+            .await;
+        client
+            .call("service.delete", json!({"service": "php-fpm@8.3.34"}))
+            .await;
+
+        assert!(
+            !still_served_here(&home, port).await,
+            "the activator at 127.0.0.1:{port} outlived the pool it belonged to\n{}",
+            home.daemon_log()
+        );
+    }
 }

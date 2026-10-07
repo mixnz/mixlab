@@ -1043,6 +1043,13 @@ fn summary(
             .collect(),
         site,
         description: Some(installed.manifest.extension.description.clone()),
+        // `127.0.0.1` whatever the network reach: it is where the person's browser is (T200a, D1).
+        ui: installed.manifest.ui.as_ref().and_then(|ui| {
+            installed
+                .ports
+                .get(&ui.port)
+                .map(|port| format!("http://127.0.0.1:{port}{}", ui.path))
+        }),
     }
 }
 

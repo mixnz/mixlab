@@ -116,6 +116,17 @@ environment value is either a bare literal (`TZ = "UTC"`) or
 An extension that needs more than this is not an extension: what it wants is a client's standing,
 through the same door `mix` uses.
 
+**A `service` may name the page a person opens** — **T200a**. `[ui]` holds a `[ports]` key and an
+optional `path` (`/` when left out), and never an address: the daemon renders
+`http://127.0.0.1:<allocated port><path>` into `ExtensionSummary.ui`, because `127.0.0.1` is where
+the person's browser is. It is refused on a `web-app`, whose page is its site, and on a `recipe`. The
+manifest reader refuses unknown keys, so every build before T200a reads a registry entry with `[ui]`
+as one it cannot read. Mailpit's published entry gained it with **T200c**, at the `master` commit
+that reads it and ahead of a release: until that release, an older MixEngine lists Mailpit as an
+entry it cannot read and says to update. An installed Mailpit keeps the manifest it was installed
+with, so it gains Open when it is installed again. Design:
+[docs/specs/2026-10-07-t200a-t200b-an-add-ons-page-and-why-a-site-is-down-design.md](../specs/2026-10-07-t200a-t200b-an-add-ons-page-and-why-a-site-is-down-design.md).
+
 ## Registry
 
 **`extensions.json`, published beside `index.json` and signed with the same key** — **T81**. Under
