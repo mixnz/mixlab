@@ -25,7 +25,7 @@ leftover Keychain items, a development home from before v0.0.7 — are recorded 
       process could not be started at all*; and a database service's missing superuser entry says
       in the same note that `mix service reset-credential <id>` generates one and keeps every
       database (T127).
-- [ ] **T202b** Tests that read the machine: the lookup test asks for a `.invalid` name (RFC 6761),
+- [x] **T202b** Tests that read the machine: the lookup test asks for a `.invalid` name (RFC 6761),
       the doctor test skips with a printed reason on a Mac that routes `.test` itself
       (`/etc/resolver/test`), and the uninstall occupant sleeps six hundred seconds, not thirty.
 - [ ] **T202c** `scripts/watch-ci.sh` closes `--once` with the failed jobs counted and named, and
