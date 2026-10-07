@@ -65,6 +65,15 @@ impl Record {
             .collect()
     }
 
+    /// The records without the one for `pid`.
+    pub fn without(records: &[Record], pid: u32) -> Vec<Record> {
+        records
+            .iter()
+            .copied()
+            .filter(|record| record.pid != pid)
+            .collect()
+    }
+
     /// Every line that reads as a record; anything else is skipped.
     pub fn parse_all(text: &str) -> Vec<Record> {
         text.lines()
@@ -139,6 +148,30 @@ mod tests {
         ];
         assert_eq!(Record::parse_all(&Record::render_all(&records)), records);
         assert!(Record::parse_all("garbage\n43\n").is_empty());
+    }
+
+    /// A stopped tunnel leaves the file, so the file only ever names what still runs — found on macOS,
+    /// where it kept every pid ever started until the next launch.
+    #[test]
+    fn a_stopped_tunnel_leaves_the_records() {
+        let records = vec![
+            Record {
+                pid: 41,
+                started: 7,
+            },
+            Record {
+                pid: 42,
+                started: 9,
+            },
+        ];
+        assert_eq!(
+            Record::without(&records, 41),
+            vec![Record {
+                pid: 42,
+                started: 9
+            }]
+        );
+        assert_eq!(Record::without(&records, 99), records);
     }
 
     #[test]

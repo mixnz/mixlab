@@ -48,6 +48,8 @@ type Entries = Arc<Mutex<BTreeMap<u32, Entry>>>;
 pub struct Tunnels {
     next: Mutex<u32>,
     entries: Entries,
+    /// The macOS records file, known once a tunnel has started, so a stop can take its line out.
+    records: Mutex<Option<PathBuf>>,
 }
 
 impl Tunnels {
@@ -89,6 +91,7 @@ impl Tunnels {
         .map_err(|e| err!("error.tunnelCannotStart", message = e))?;
         let stderr = child.take_stderr();
         remember(records, &child);
+        *self.records.lock().unwrap_or_else(|e| e.into_inner()) = Some(records.to_path_buf());
 
         let info = TunnelInfo {
             id,
@@ -122,6 +125,7 @@ impl Tunnels {
             entry.process.take()
         });
         if let Some(mut process) = process {
+            self.forget(process.pid());
             let _ = process.stop();
         }
         lock(&self.entries).remove(&id);
@@ -145,6 +149,31 @@ impl Tunnels {
         for mut process in processes {
             let _ = process.stop();
         }
+        // Nothing runs any more, so there is nothing for the next start to end.
+        if let Some(records) = self
+            .records
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+        {
+            let _ = std::fs::remove_file(records);
+        }
+    }
+
+    /// Takes one stopped tunnel's line out of the macOS records file.
+    fn forget(&self, pid: u32) {
+        if !cfg!(target_os = "macos") {
+            return;
+        }
+        let guard = self.records.lock().unwrap_or_else(|e| e.into_inner());
+        let Some(records) = guard.as_ref() else {
+            return;
+        };
+        let kept = Record::without(
+            &Record::parse_all(&std::fs::read_to_string(records).unwrap_or_default()),
+            pid,
+        );
+        let _ = std::fs::write(records, Record::render_all(&kept));
     }
 }
 

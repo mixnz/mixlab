@@ -66,6 +66,13 @@ function TraySection({ focused }: TraySectionProps) {
                 <span className={styles.url} title={info.url ?? undefined}>
                   {info.url ?? ""}
                 </span>
+                {info.hint && (
+                  <span className={styles.hint}>
+                    {info.hint === "allowedHosts"
+                      ? t("tunnelTab.hintAllowedHosts")
+                      : t("tunnelTab.hintNothingListening", { target: info.target })}
+                  </span>
+                )}
               </span>
               <StatusPill tone={rowTone(info)} pulse={info.state === "connecting"}>
                 {info.state === "open"

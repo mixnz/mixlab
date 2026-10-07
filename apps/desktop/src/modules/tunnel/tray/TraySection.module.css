@@ -76,3 +76,11 @@
 .url {
   color: var(--text-secondary);
 }
+
+/* What the tab says under a tunnel's URL, said here too: a person who only looks at the tray should
+   not have to open the window to learn why a link answers 502. */
+.hint {
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--text-secondary);
+}
