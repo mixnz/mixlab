@@ -611,7 +611,10 @@ export default function Dashboard({
         badges={
           status && (
             <>
-              <StatusPill tone="neutral" className={styles.version}>
+              {/* Green, like the tray's "Running" pill: this page exists only while the daemon
+                  answers, so the engine it names is up. A neutral dot here read as "stopped"
+                  beside the services pill, about the one thing on the page that cannot be. */}
+              <StatusPill tone="success" className={styles.version}>
                 {t("mixengine.dashboard.versionBadge", { version: status.version })}
               </StatusPill>
               {movingCount > 0 ? (
@@ -682,7 +685,7 @@ export default function Dashboard({
               onClick={() => void stopAll()}
               disabled={rows.every((row) => row.state !== "running") || Object.keys(busy).length > 0}
             >
-              <StopIcon size={13} />
+              <StopIcon size={15} />
               {t("mixengine.dashboard.stopAll")}
             </Button>
             <Button size="large" variant="primary" onClick={() => setCreating(true)}>
@@ -865,7 +868,7 @@ export default function Dashboard({
                             aria-label={t("mixengine.dashboard.startService", { service: row.id })}
                             onClick={() => void act(row.id, "start")}
                           >
-                            <PlayIcon size={11} />
+                            <PlayIcon size={13} />
                             {t("mixengine.dashboard.start")}
                           </Button>
                         )}

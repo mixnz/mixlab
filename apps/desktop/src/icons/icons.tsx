@@ -275,12 +275,14 @@ export function PinIcon(props: IconProps) {
 /** Run or start something — the SQL editor's Run button, a service's Start. Filled, so it holds
  * its shape at the button's font size the way an outlined triangle would not; its corners are
  * rounded to match the round joins of the rest of the set, and its centroid sits on the grid's
- * centre so it does not lean left inside a square button. Paired with {@link StopIcon}. */
+ * centre so it does not lean left inside a square button. Paired with {@link StopIcon}, and as
+ * tall as it — 14 units — so a Start and a Stop button drawn at the same `size` carry the same
+ * weight: at 11.6 the triangle sat visibly lower than the square beside it. */
 export function PlayIcon(props: IconProps) {
   return (
     <Icon {...props}>
       <path
-        d="M8.5 6.2v11.6a1 1 0 0 0 1.5.9l9-5.8a1 1 0 0 0 0-1.8l-9-5.8a1 1 0 0 0-1.5.9z"
+        d="M8 6.1v11.8a1.1 1.1 0 0 0 1.65.95l10.2-5.9a1.1 1.1 0 0 0 0-1.9L9.65 5.15A1.1 1.1 0 0 0 8 6.1z"
         fill="currentColor"
         stroke="none"
       />
@@ -396,14 +398,16 @@ export function KeyboardIcon(props: IconProps) {
  * it reads as a dot at the small sizes it is used at instead of as a thin ring. */
 /** The MixEngine module in the `[+]` menu: a chip with its pins — the processor the whole
  * environment runs on. Two pins a side rather than three, so the gaps between them survive the
- * 14px the tab strip draws it at. The earlier drawing, a block seen from the side with a ring at
- * its centre, read as an eye at that size. */
+ * 14px the tab strip draws it at. Laid out `2..22` on the grid, the extent [`SettingsIcon`] and
+ * [`KeyboardIcon`] use, because a chip's pins carry no visual weight: drawn any smaller, its body
+ * sat as a dark knot beside the cog and the globe in the Settings sidebar. The earlier drawing, a
+ * block seen from the side with a ring at its centre, read as an eye at that size. */
 export function EngineIcon(props: IconProps) {
   return (
     <Icon {...props}>
-      <rect x="7" y="7" width="10" height="10" rx="1.5" />
-      <rect x="10" y="10" width="4" height="4" />
-      <path d="M9.5 7V4M14.5 7V4M9.5 20v-3M14.5 20v-3M7 9.5H4M7 14.5H4M20 9.5h-3M20 14.5h-3" />
+      <rect x="5" y="5" width="14" height="14" rx="2" />
+      <rect x="9.5" y="9.5" width="5" height="5" />
+      <path d="M9 5V2M15 5V2M9 22v-3M15 22v-3M5 9H2M5 15H2M22 9h-3M22 15h-3" />
     </Icon>
   );
 }

@@ -394,7 +394,7 @@ function TraySection({ shown, focused, dismiss }: TraySectionProps) {
                         aria-label={t("mixengine.dashboard.startService", { service: row.id })}
                         onClick={() => void act(row.id, "start")}
                       >
-                        <PlayIcon size={11} />
+                        <PlayIcon size={13} />
                         {t("mixengine.dashboard.start")}
                       </Button>
                     )}
