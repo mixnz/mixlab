@@ -19,7 +19,7 @@ leftover Keychain items, a development home from before v0.0.7 — are recorded 
       `note` that names the account used and says when the database was already there, printed by
       `mix blueprint apply` and shown under the step in MixLab's apply dialog. No account's
       password is ever reset.
-- [ ] **T202a** A start that fails carries the note it wrote: `Registry::start` hands back the
+- [x] **T202a** A start that fails carries the note it wrote: `Registry::start` hands back the
       runner's detail with the reason, so `service.start`, the blueprint and *Start again* say
       *did not start: the environment entry MYSQL_PWD: no credential is stored at …* instead of *the
       process could not be started at all*; and a database service's missing superuser entry says

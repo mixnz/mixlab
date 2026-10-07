@@ -2265,6 +2265,7 @@ impl Runner {
             .collect();
 
         let host = Arc::clone(&self.host);
+        let own = self.spec.id().clone();
 
         tokio::task::spawn_blocking(move || {
             let mut env = BTreeMap::new();
@@ -2284,7 +2285,10 @@ impl Runner {
                             .map_err(anyhow::Error::from)
                             .and_then(|secret| {
                                 secret.ok_or_else(|| {
-                                    anyhow::anyhow!("no credential is stored at {service}/{key}")
+                                    anyhow::anyhow!(
+                                        "no credential is stored at {service}/{key}{}",
+                                        repair_for(&own, &key)
+                                    )
                                 })
                             })
                     }
@@ -2308,6 +2312,29 @@ impl Runner {
             (env, failed)
         })
     }
+}
+
+/// The second half of a missing-credential sentence, for the one entry `mix service
+/// reset-credential` can write back — roadmap task **T202a**, D4.
+///
+/// **This service's own entry, by its address.** A recipe's ritual declares one secret of its own
+/// (`root`, `postgres`), at `<home>/<this service>/<account>`; every other `Keyring` entry a spec
+/// names is another service's — phpMyAdmin reading its database's superuser — and
+/// `reset-credential` on *this* service would be refused. The address is the rule because the
+/// runner holds the spec and not the recipe, and the spec's id is in every address of its own.
+fn repair_for(own: &ServiceId, key: &str) -> String {
+    let names_itself = mixengine_core::services::handoff::secret_key_before_homes(key)
+        .and_then(|rest| rest.split_once('/'))
+        .is_some_and(|(service, _)| service == own.as_str());
+
+    if !names_itself {
+        return String::new();
+    }
+
+    format!(
+        "; `mix service reset-credential {own}` generates one for this home and writes it into \
+         the data directory, keeping every database"
+    )
 }
 
 /// Poll an adopted process until it has gone. `false` if it had not within [`GONE`].
@@ -3063,6 +3090,73 @@ mod tests {
             printed.contains("no credential is stored at mixengine/mariadb@main/root"),
             "what `%error` prints has to say why, not only which entry: {printed}"
         );
+    }
+
+    /// T202a, D4. The entry that is this service's own — the one `mix service reset-credential`
+    /// can write back — names the repair in the same sentence, so Sites, `mix service list` and
+    /// the start error all carry it with no second lookup.
+    #[tokio::test]
+    async fn a_missing_credential_of_the_services_own_names_the_repair() {
+        let (_home, paths, store) = home(&["mariadb"]).await;
+
+        let mut runner = adopted_runner(
+            spec("mariadb")
+                .env_from_keyring(
+                    "MARIADB_ROOT_PASSWORD",
+                    "mixengine",
+                    "0123456789ab/mariadb/root",
+                )
+                .build()
+                .expect("a usable spec"),
+            &paths,
+            &store,
+            Duration::ZERO,
+        );
+
+        let error = runner
+            .environment()
+            .await
+            .expect_err("the mock keyring holds no credential under that name");
+
+        let printed = format!("{error}");
+        assert!(
+            printed.contains("no credential is stored at mixengine/0123456789ab/mariadb/root"),
+            "{printed}"
+        );
+        assert!(
+            printed.contains("`mix service reset-credential mariadb` generates one for this home"),
+            "{printed}"
+        );
+    }
+
+    /// Review focus 5. Another service's entry — phpMyAdmin reading its database's root — is not
+    /// one `reset-credential php-fpm@phpmyadmin` could write, so the sentence stops at the address.
+    #[tokio::test]
+    async fn a_missing_credential_of_another_service_names_no_repair() {
+        let (_home, paths, store) = home(&["mariadb"]).await;
+
+        let mut runner = adopted_runner(
+            spec("mariadb")
+                .env_from_keyring(
+                    "MIXENGINE_DB_PASSWORD",
+                    "mixengine",
+                    "0123456789ab/php-fpm@phpmyadmin/root",
+                )
+                .build()
+                .expect("a usable spec"),
+            &paths,
+            &store,
+            Duration::ZERO,
+        );
+
+        let error = runner
+            .environment()
+            .await
+            .expect_err("the mock keyring holds no credential under that name");
+
+        let printed = format!("{error}");
+        assert!(printed.contains("no credential is stored at"), "{printed}");
+        assert!(!printed.contains("reset-credential"), "{printed}");
     }
 
     /// **A stop does not wait for a start's keyring read.** [`START_ENVIRONMENT`] is long enough for
