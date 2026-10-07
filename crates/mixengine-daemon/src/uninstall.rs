@@ -886,8 +886,13 @@ fn forgotten(before: usize, left: mixengine_platform::Result<usize>) -> Removal 
         Ok(left) => Removal::Failed {
             because: format!("{left} of {before} are still in this user's credential store"),
         },
+        // The whole chain, down to the store's own code: "cannot forget the credential" alone
+        // says nothing a person can act on, and the T182a walk had to find the cause elsewhere.
         Err(error) => Removal::Failed {
-            because: format!("the credential store could not be read back: {error}"),
+            because: format!(
+                "the credential store could not be read back: {}",
+                mixengine_proto::flatten(&error)
+            ),
         },
     }
 }
