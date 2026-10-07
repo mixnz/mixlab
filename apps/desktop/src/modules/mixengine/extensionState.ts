@@ -66,6 +66,9 @@ const STOPPABLE = new Set(["running", "starting", "degraded", "restarting"]);
  * one action its state allows, where the screen used to show Start and Stop side by side whatever
  * the state was. `stopping` offers nothing, because it is on its way to the answer already. An
  * unknown state offers Start, the action that can do no harm to a service that is not running.
+ *
+ * **A service that declares its page opens it, whatever its state** (T200a, D3): Open starts it
+ * first when it is not running, so the person does not have to.
  */
 export function rowActions(
   row: ExtensionSummary,
@@ -76,9 +79,15 @@ export function rowActions(
     case "web-app":
       if (site === null) return [];
       return site.state === "enabled" ? ["open", "turnOff"] : ["open", "turnOn"];
-    case "service":
-      if (serviceState === "stopping") return [];
-      return serviceState != null && STOPPABLE.has(serviceState) ? ["stop"] : ["start"];
+    case "service": {
+      const run: RowAction[] =
+        serviceState === "stopping"
+          ? []
+          : serviceState != null && STOPPABLE.has(serviceState)
+            ? ["stop"]
+            : ["start"];
+      return row.ui ? ["open", ...run] : run;
+    }
     default:
       return [];
   }

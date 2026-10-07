@@ -121,6 +121,13 @@ describe("rowActions", () => {
     expect(rowActions(service, "stopping", null)).toEqual([]);
   });
 
+  it("opens a service that declares its page, whatever its state", () => {
+    const page = summary({ kind: "service", site: null, ui: "http://127.0.0.1:8025/" });
+    expect(rowActions(page, "stopped", null)).toEqual(["open", "start"]);
+    expect(rowActions(page, "running", null)).toEqual(["open", "stop"]);
+    expect(rowActions(summary({ kind: "service", site: null }), "running", null)).toEqual(["stop"]);
+  });
+
   it("offers a config add-on nothing to run", () => {
     expect(rowActions(summary({ kind: "recipe", site: null }), undefined, null)).toEqual([]);
   });

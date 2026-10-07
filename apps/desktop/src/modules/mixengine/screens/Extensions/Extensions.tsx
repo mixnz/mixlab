@@ -183,6 +183,22 @@ export default function Extensions({ active }: { active: boolean }) {
     }
   }
 
+  /** A service's own page — T200a, D3. Started first when it is not running, the way Sites' Open
+   *  starts a project's services; a start that fails opens nothing and says why. */
+  async function openPage(row: ExtensionSummary) {
+    if (!row.ui) return;
+    setError("");
+    try {
+      if (!["running", "starting", "degraded"].includes(serviceState[row.id] ?? "")) {
+        await api.extensionStart(row.id);
+        void reload();
+      }
+      await openUrl(row.ui);
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }
+
   /** A `web-app` is turned on and off as its site — T200, D6. */
   async function switchSite(site: SiteSummary, on: boolean) {
     setError("");
@@ -264,11 +280,14 @@ export default function Extensions({ active }: { active: boolean }) {
     switch (action) {
       case "open":
         return (
-          site && (
-            <Button key={action} size="small" variant="soft" onClick={() => void visitSite(site)}>
-              {t("mixengine.extensions.open")}
-            </Button>
-          )
+          <Button
+            key={action}
+            size="small"
+            variant="soft"
+            onClick={() => void (site ? visitSite(site) : openPage(row))}
+          >
+            {t("mixengine.extensions.open")}
+          </Button>
         );
       case "turnOn":
         return (
