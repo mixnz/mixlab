@@ -319,6 +319,10 @@ impl Api {
             .await
             .map_err(|error| error.to_wire())?;
 
+        // **Its activator goes with it**, as with `extension.uninstall` and `runtime.uninstall`
+        // (T200, D2): otherwise a deleted pool's port stays bound until the daemon exits.
+        crate::services::activate::release(id).await;
+
         let data = column.map_or_else(|| self.data_directory(id), PathBuf::from);
 
         mixengine_core::runtimes::discard(&self.paths.etc().join(id.as_str()))

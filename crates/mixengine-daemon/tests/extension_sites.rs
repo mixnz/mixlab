@@ -650,3 +650,56 @@ async fn a_running_service_extension_is_stopped_by_its_uninstall() {
 
     installed(&mut client, &path, &fixture.home).await;
 }
+
+/// **Deleting a pool gives its activator's address back** — T200b's follow-through on T200's D2.
+///
+/// `extension.uninstall` and `runtime.uninstall` released an activator with its service;
+/// `service.delete` did not, so a deleted pool's port stayed bound until the daemon exited. The
+/// activator here is the one boot gives a pool, which is why the daemon is started twice.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_deleted_pool_gives_its_activators_address_back() {
+    let home = Home::new();
+    {
+        let _first = Daemon::start(&home);
+        home.wait_until_listening().await;
+        declare::php_pool(&home.database_file(), "8.3.34").await;
+    }
+
+    let _daemon = Daemon::start(&home);
+    home.wait_until_listening().await;
+    let mut client = Client::connect(&home).await;
+
+    if cfg!(windows) {
+        // Boot gives ports and binds them in a task of its own, after the API is already answering.
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        let port = loop {
+            if let Some(port) =
+                declare::activation_port(&home.database_file(), "php-fpm@8.3.34").await
+                && accepts(port)
+            {
+                break port;
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "boot never bound the pool's activator\n{}",
+                home.daemon_log()
+            );
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        };
+
+        // The probe above is a connection, and a connection is what wakes a pool: stop it, since
+        // `service.delete` refuses a running service.
+        client
+            .call("service.stop", json!({"service": "php-fpm@8.3.34"}))
+            .await;
+        client
+            .call("service.delete", json!({"service": "php-fpm@8.3.34"}))
+            .await;
+
+        assert!(
+            !accepts(port),
+            "the activator at 127.0.0.1:{port} outlived the pool it belonged to\n{}",
+            home.daemon_log()
+        );
+    }
+}
