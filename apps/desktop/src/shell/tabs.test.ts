@@ -111,6 +111,7 @@ describe("openableModules", () => {
       "rest",
       "terminal",
       "tools",
+      "tunnel",
     ]);
   });
 

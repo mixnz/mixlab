@@ -13,4 +13,8 @@ export const ACCENT_KEY = "mixlab-accent";
 export const PALETTE_KEY = "mixlab-palette";
 export const LANGUAGE_KEY = "mixlab-lang";
 export const MODULES_KEY = "mixlab-modules";
+/** Which preset `MODULES_KEY` is, `custom` for a set of somebody's own, absent on a home no build of
+ *  T203 has written. A key the standalone client never had, so `public/storage-keys.js` has nothing
+ *  to move for it. */
+export const MODULES_PRESET_KEY = "mixlab-modules-preset";
 export const SESSION_KEY = "mixlab-session";

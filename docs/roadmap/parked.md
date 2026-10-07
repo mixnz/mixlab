@@ -15,7 +15,10 @@
   ([design](../specs/2026-10-05-t197-one-command-installs-mixlab-design.md)).
 - Optional Docker escape hatch for exotic services (see
   [ADR 0003](../decisions/0003-no-container-isolation.md)).
-- Remote tunnels (Cloudflare/ngrok) as an extension.
+- **Sharing a MixEngine site on the internet.** A quick tunnel for any local address is MixLab's
+  Tunnel tab (phase 41). A *site* needs the front end to answer the tunnel's own host for it, a
+  temporary alias the daemon adds and removes, or the application builds every link for
+  `<domain>.test`; see the T203 design's *Out of scope*.
 - Team-shared blueprint registries.
 - Editor extensions (VS Code / JetBrains) as additional API clients.
 - Xdebug one-click profiles and a built-in profiler view.

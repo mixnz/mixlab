@@ -32,6 +32,7 @@ describe("moduleTabShortcuts", () => {
       "2",
       "3",
       "4",
+      "5",
     ]);
     expect(moduleTabShortcuts(databaseTools)[0].moduleId).toBe("db");
   });

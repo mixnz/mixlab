@@ -35,6 +35,7 @@ const vi: SharedDict = {
     moduleRest: "REST",
     moduleTerminal: "Terminal",
     moduleTools: "Công cụ",
+    moduleTunnel: "Tunnel",
     moduleMixEngine: "MixEngine",
   },
   profiles: {

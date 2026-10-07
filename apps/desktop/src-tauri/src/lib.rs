@@ -1,6 +1,7 @@
 // First, and with `macro_use`: the `err!` macro it defines is used by every module below it.
 #[macro_use]
 mod error;
+mod downloads;
 
 mod import;
 mod instance;
@@ -112,6 +113,7 @@ pub fn run() {
     let builder = modules::mixengine::register(builder);
     let builder = modules::rest::register(builder);
     let builder = modules::terminal::register(builder);
+    let builder = modules::tunnel::register(builder);
     let builder = tray::register(builder);
 
     let hidden = opening.hidden;
@@ -185,13 +187,24 @@ pub fn run() {
             directory walk and a delete of several hundred megabytes. */
             let handle = app.handle().clone();
             std::thread::spawn(move || modules::db::sweep_downloads(&handle));
+
+            /* What a crashed MixLab left running as a tunnel, on macOS: the next start ends it
+            (T203, D3). Windows and Linux need nothing here; their kernels did it at the crash. */
+            if let Ok(data) = platform::app_data_dir(app.handle()) {
+                modules::tunnel::state::sweep(&modules::tunnel::state::records_path(&data));
+            }
             Ok(())
         })
         .invoke_handler(modules::handler())
         .build(context)
         .expect("error while building tauri application")
         .run(|app, event| match event {
-            tauri::RunEvent::Exit => launch::stop(app),
+            tauri::RunEvent::Exit => {
+                // Every tunnel ends with MixLab, never later (T203, D3).
+                use tauri::Manager as _;
+                app.state::<modules::tunnel::state::Tunnels>().stop_all();
+                launch::stop(app);
+            }
             /* macOS never starts a second MixLab: opening it from Finder, Launchpad or Spotlight
             while it runs reopens this process instead, so a start after closing to the tray lands
             here rather than on the single-instance endpoint. `has_visible_windows` is not asked:

@@ -10,6 +10,8 @@ import terminalEn from "../modules/terminal/i18n/en";
 import terminalVi from "../modules/terminal/i18n/vi";
 import toolsEn from "../modules/tools/i18n/en";
 import toolsVi from "../modules/tools/i18n/vi";
+import tunnelEn from "../modules/tunnel/i18n/en";
+import tunnelVi from "../modules/tunnel/i18n/vi";
 
 /*
  * The dictionaries, assembled from the shared half and each module's own.
@@ -31,6 +33,7 @@ export const EN = {
   ...restEn,
   ...terminalEn,
   ...toolsEn,
+  ...tunnelEn,
   error: {
     ...shared.error,
     ...dbEn.error,
@@ -38,6 +41,7 @@ export const EN = {
     ...restEn.error,
     ...terminalEn.error,
     ...toolsEn.error,
+    ...tunnelEn.error,
   },
 };
 
@@ -48,6 +52,7 @@ export const VI = {
   ...restVi,
   ...terminalVi,
   ...toolsVi,
+  ...tunnelVi,
   error: {
     ...sharedVi.error,
     ...dbVi.error,
@@ -55,6 +60,7 @@ export const VI = {
     ...restVi.error,
     ...terminalVi.error,
     ...toolsVi.error,
+    ...tunnelVi.error,
   },
 };
 

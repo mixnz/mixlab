@@ -5,6 +5,7 @@ pub mod mixengine;
 pub mod rest;
 pub mod terminal;
 pub mod tools;
+pub mod tunnel;
 
 /// Every command of every module.
 ///
@@ -23,6 +24,11 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         crate::secrets::secrets_delete,
         crate::secrets::secrets_resolve_mixengine,
         crate::launch::launch_take_requests,
+        crate::modules::tunnel::commands::tunnel_binary,
+        crate::modules::tunnel::commands::tunnel_download,
+        crate::modules::tunnel::commands::tunnel_start,
+        crate::modules::tunnel::commands::tunnel_stop,
+        crate::modules::tunnel::commands::tunnel_list,
         crate::import::import_happened,
         crate::relaunch::relaunch_app,
         // ── updates (T187) ──

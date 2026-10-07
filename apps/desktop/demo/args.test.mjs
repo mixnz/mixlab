@@ -31,7 +31,7 @@ describe("storageFor", () => {
   it("seeds a window that skips first run and restores one active tab", () => {
     const scene = { id: "hero", moduleId: "mixengine", tabTitle: "MixEngine", state: { screen: "dashboard" } };
     const storage = storageFor(scene, "light");
-    expect(JSON.parse(storage["mixlab-modules"])).toEqual(["mixengine", "db", "rest", "terminal", "tools"]);
+    expect(JSON.parse(storage["mixlab-modules"])).toEqual(["mixengine", "db", "rest", "terminal", "tools", "tunnel"]);
     expect(storage["mixlab-theme"]).toBe("light");
     expect(storage["mixlab-lang"]).toBe("en");
     expect(JSON.parse(storage["mixlab-session"])).toEqual({
