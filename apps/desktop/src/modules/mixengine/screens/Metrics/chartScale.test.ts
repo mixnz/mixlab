@@ -41,7 +41,8 @@ describe("CPU_UNIT labels", () => {
      whole machine. */
   it("writes a tooltip value with one decimal, as Task Manager does", () => {
     expect(CPU_UNIT.value(12.3456789)).toBe("12.3%");
-    expect(CPU_UNIT.value(0.02)).toBe("<0.1%");
+    expect(CPU_UNIT.value(0.02)).toBe("0.0%");
+    expect(CPU_UNIT.value(0.07)).toBe("0.1%");
   });
 });
 

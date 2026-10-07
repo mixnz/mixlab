@@ -1899,6 +1899,52 @@ async fn an_upgrade_asked_to_keep_keeps_the_old_version() {
     );
 }
 
+/// **An update that kept its old version is not offered again**: `8.3.33` stays beside `8.3.34`
+/// because it was asked to, and offering the same move for as long as it stays would only ask the
+/// question that was just answered. Once `8.3.34` is gone, the offer is back.
+#[tokio::test]
+async fn an_update_that_kept_its_version_is_not_offered_again() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+    let job = client
+        .call(
+            "runtime.install",
+            json!({"kind": "php", "version": "8.3.33"}),
+        )
+        .await;
+    assert_eq!(
+        client.finished(job["id"].clone()).await["state"],
+        "succeeded"
+    );
+
+    let job = client
+        .call(
+            "runtime.upgrade",
+            json!({"kind": "php", "from": "8.3.33", "keep": true}),
+        )
+        .await;
+    let finished = client.finished(job["id"].clone()).await;
+    assert_eq!(finished["state"], "succeeded", "{finished}");
+
+    let catalogue = client.call("runtime.list_available", json!({})).await;
+    assert_eq!(catalogue["updates"], json!([]), "{catalogue}");
+
+    client
+        .call(
+            "runtime.uninstall",
+            json!({"kind": "php", "version": "8.3.34"}),
+        )
+        .await;
+    let catalogue = client.call("runtime.list_available", json!({})).await;
+    assert_eq!(
+        catalogue["updates"],
+        json!([{
+            "kind": "php", "from": "8.3.33", "to": "8.3.34", "to_installed": false, "needs": []
+        }]),
+        "{catalogue}"
+    );
+}
+
 /// **Review focus 4.**
 #[tokio::test]
 async fn an_upgrade_to_an_installed_version_moves_without_downloading() {

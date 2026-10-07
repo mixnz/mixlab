@@ -16,7 +16,7 @@ import { configureTray } from "../core/window";
 import { logError } from "../core/log";
 import { useScrollAcceleration } from "../core/scroll";
 import { useShortcut, useShortcutDispatcher } from "../core/shortcuts";
-import { useAccent, useTheme } from "./theme";
+import { useTheme } from "./theme";
 import { useTranslation } from "../i18n";
 import { useUpdates } from "./update";
 import type { TabBadge } from "./module";
@@ -140,8 +140,7 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
   const openable = useMemo(() => openableModules(visible, tabs), [visible, openModuleKey]);
   const openableIds = useMemo(() => openable.map((m) => m.id), [openable]);
   const shortcuts = useMemo(() => shortcutsFor(visible, openable), [visible, openable]);
-  const [theme, setTheme] = useTheme();
-  const [accent, setAccent] = useAccent();
+  const { theme, colorTheme, setTheme, setColorTheme } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
   /** The pane Settings opens on this time; `undefined` is its own default. */
   const [settingsSection, setSettingsSection] = useState<string | undefined>(undefined);
@@ -601,8 +600,8 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
         <SettingsModal
           theme={theme}
           onThemeChange={setTheme}
-          accent={accent}
-          onAccentChange={setAccent}
+          colorTheme={colorTheme}
+          onColorThemeChange={setColorTheme}
           shortcuts={shortcuts}
           modules={{
             enabled,

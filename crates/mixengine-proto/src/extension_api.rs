@@ -407,6 +407,21 @@ pub struct ExtensionSummary {
     /// The domain it is served on, for a `web-app` — roadmap task **T81b**.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub site: Option<String>,
+
+    /// What it is for, from the manifest it was installed from — roadmap task **T200**, D5.
+    ///
+    /// The listing of what *could* be installed always said this, and the listing of what *is*
+    /// did not, so an add-on lost its one sentence of explanation the moment somebody installed it.
+    /// Optional on the wire (ADR 0019): a daemon older than T200 leaves it out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// The page a person opens, for a `service` that declares `[ui]` — roadmap task **T200a**, D2.
+    ///
+    /// Rendered by the daemon from the port it allocated, so a client only opens it and never
+    /// guesses which port is a page. Optional on the wire (ADR 0019).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ui: Option<String>,
 }
 
 /// Every extension this home has installed.

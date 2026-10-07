@@ -26,6 +26,10 @@ export interface ServiceRow {
   /** The version of the program the service is running — T183. `null` when the daemon does not
    *  send it (an old daemon, an extension's service…), and then nothing is drawn. */
   version: string | null;
+  /** Why it failed, while it is failed — T200b, D6. The pill's tooltip; `null` otherwise, and from
+   *  a daemon that does not send it. An event moving the state does not carry it, so only rereading
+   *  `service.list` fills it in. */
+  lastFailure: string | null;
 }
 
 /** A `service.list` answer, as rows. */
@@ -37,6 +41,7 @@ export function rowsFrom(list: ServiceSummary[]): ServiceRow[] {
     autostart: service.autostart,
     stoppedBy: service.stopped_by ?? null,
     version: service.version ?? null,
+    lastFailure: service.state === "failed" ? (service.last_failure?.detail ?? null) : null,
   }));
 }
 
@@ -156,9 +161,11 @@ export function applyEvent(
       // Build no row for an unknown service: `service.list` is where a row is born, and it knows
       // things this event does not carry.
       const stoppedBy = to === "stopped" ? stoppedByReason(event.reason) : null;
+      // T200b, D6: the event carries the reason and never the sentence, so a move into `failed`
+      // asks for `service.list` again, which has it; any other move leaves the old sentence behind.
       return {
-        rows: rows.map((row) => (row.id === id ? { ...row, state: to, stoppedBy } : row)),
-        resync: false,
+        rows: rows.map((row) => (row.id === id ? { ...row, state: to, stoppedBy, lastFailure: null } : row)),
+        resync: to === "failed",
       };
     }
 

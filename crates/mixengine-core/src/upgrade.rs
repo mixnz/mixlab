@@ -6,6 +6,8 @@
 //! there, so the one move that touches several tables is one transaction, and [`move_back`] undoes
 //! it exactly.
 
+pub mod kept;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 

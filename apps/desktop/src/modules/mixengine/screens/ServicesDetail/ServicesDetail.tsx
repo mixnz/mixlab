@@ -276,7 +276,7 @@ export default function ServicesDetail({ active }: { active: boolean }) {
                     disabled={current === undefined || mode !== "down"}
                     onClick={() => void act(selected, "start")}
                   >
-                    <PlayIcon size={13} />
+                    <PlayIcon size={14} />
                     {t("mixengine.dashboard.start")}
                   </Button>
                   <Button
@@ -285,7 +285,7 @@ export default function ServicesDetail({ active }: { active: boolean }) {
                     disabled={current === undefined || mode !== "up"}
                     onClick={() => void act(selected, "stop")}
                   >
-                    <StopIcon size={13} className={styles.stopMark} />
+                    <StopIcon size={14} className={styles.stopMark} />
                     {t("mixengine.dashboard.stop")}
                   </Button>
                   <Button

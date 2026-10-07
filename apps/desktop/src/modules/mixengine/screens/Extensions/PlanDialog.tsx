@@ -11,7 +11,8 @@ import styles from "./PlanDialog.module.css";
 interface Props {
   source: ExtensionOrigin;
   onCancel: () => void;
-  onInstalled: () => void;
+  /** The daemon accepted the install job: which add-on, and the job to follow. */
+  onStarted: (id: string, job: number) => void;
 }
 
 /**
@@ -20,8 +21,12 @@ interface Props {
  * `extension.plan` is the only step — `extension.inspect` is not called first (Decision D2, spec).
  * Sign-in (`site.signs_in`) is drawn **inside** the permissions block, not next to the domain
  * (spec, section 2).
+ *
+ * Closes once the daemon has accepted the install job; the screen follows the job on its row
+ * (T200, D3). A modal locked for a minute-long download would hold the whole window. The id comes
+ * from the plan because a path install's id is unknown until its manifest has been read.
  */
-export default function PlanDialog({ source, onCancel, onInstalled }: Props) {
+export default function PlanDialog({ source, onCancel, onStarted }: Props) {
   const { t } = useTranslation();
   const [plan, setPlan] = useState<ExtensionPlan | null>(null);
   const [error, setError] = useState("");
@@ -40,7 +45,7 @@ export default function PlanDialog({ source, onCancel, onInstalled }: Props) {
     setError("");
     try {
       // `consent` is taken verbatim from `plan` — not rebuilt from input; see Decision D3.
-      await api.extensionInstall({
+      const job = await api.extensionInstall({
         source,
         consent: {
           id: plan.id,
@@ -49,7 +54,7 @@ export default function PlanDialog({ source, onCancel, onInstalled }: Props) {
           network: plan.permissions.network,
         },
       });
-      onInstalled();
+      onStarted(plan.id, job.id);
     } catch (e) {
       setError(errorMessage(t, e));
     } finally {

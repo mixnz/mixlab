@@ -1,0 +1,21 @@
+/* `.group`, `.groupLabel` and `.hint` have twins in the shell's `SettingsModal.module.css` and in
+   the REST module's `RestSettings.module.css`, copied for the reason given there. */
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.groupLabel {
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--text-muted);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--text-muted);
+}

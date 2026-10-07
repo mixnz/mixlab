@@ -156,3 +156,18 @@
   border-color: rgb(var(--danger-rgb) / 0.55);
   color: var(--danger-text);
 }
+
+/* A service's CPU: the ring, then the number. */
+.cpu {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Under the table: how many there are, in words, for the eye that skips the filter's counts. */
+.footer {
+  padding: 12px 22px;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}

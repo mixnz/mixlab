@@ -61,8 +61,10 @@ packages(id, name, version, install_path, installed_at, source_url, sha256)
 -- Service instances ---------------------------------------------------------
 services(id, package_id, runtime_install_id, instance_name, state, autostart, port,
          bind_addr, data_dir, config_overrides_json, limits_json, idle_minutes,
-         last_started_at, last_exit_code, pid, pid_start_time)
+         last_started_at, last_exit_code, pid, pid_start_time, last_failure_json)
    -- id is the human-stable ServiceId, e.g. "mariadb@main", "php-fpm@8.3.33"
+   -- last_failure_json: why it last failed (T200b), written with the move into
+   --   failed and cleared by the next move into running
    -- the instance half is the FULL version for a pool: runtime_installs is
    --   UNIQUE (kind, version) over the full version, so 8.3.33 and 8.3.34 can both
    --   be installed and "php-fpm@8.3" would name neither
@@ -160,6 +162,9 @@ pending_privileged_ops(id, op, dedupe_key, requested_at)
    -- a producer that enqueues on every start writes one row, and the row keeps the moment the
    -- machine first needed it
 settings(key, value_json)
+   -- small records with no table of their own; `upgrade.kept` maps each runtime or package
+   -- version an update kept to the version it moved to, so the listing stops offering that same
+   -- update (`core::upgrade::kept`); uninstalling the version clears its entry
 ```
 
 **Two kinds of moment, stored two ways.** Most `_at` columns are ISO-8601 text: they are written

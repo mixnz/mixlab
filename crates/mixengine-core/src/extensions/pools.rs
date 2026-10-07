@@ -298,7 +298,7 @@ pub struct Credential {
     /// The keyring service name: [`mixengine_platform::KEYRING_SERVICE`].
     pub keyring_service: String,
 
-    /// The entry within it — `<service-id>/<administrator>`, which is what
+    /// The entry within it — `<home-id>/<service-id>/<administrator>`, which is what
     /// [`Context::secret_address`](crate::generate::recipe::Context::secret_address) composes for
     /// the database's own recipe and what `services::databases` wrote it under.
     pub keyring_key: String,
@@ -338,6 +338,9 @@ pub async fn credentials(store: &Store) -> Result<BTreeMap<ServiceId, Credential
     let mut carried: BTreeMap<ServiceId, Credential> = BTreeMap::new();
     let mut shared: Vec<ServiceId> = Vec::new();
 
+    // Read once and only when a pool will need it is not worth the branch: one row per walk.
+    let home = crate::home::id(store).await?;
+
     for site in crate::sites::records(store, None).await? {
         let SiteKind::PhpFpm { pool: Some(pool) } = &site.kind else {
             continue;
@@ -376,7 +379,14 @@ pub async fn credentials(store: &Store) -> Result<BTreeMap<ServiceId, Credential
                     Credential {
                         env: CREDENTIAL_ENV.to_owned(),
                         keyring_service: mixengine_platform::KEYRING_SERVICE.to_owned(),
-                        keyring_key: format!("{}/{}", endpoint.service, endpoint.user),
+                        // **Through the one composition** (T84), so the address carries the home
+                        // T126 put in front of every other one. Spelled by hand here it asked for
+                        // `mariadb@main/root`, which nothing writes, and the pool never started.
+                        keyring_key: crate::services::handoff::secret_key(
+                            &home,
+                            &endpoint.service,
+                            &endpoint.user,
+                        ),
                         database: endpoint.service,
                     },
                 );
@@ -444,6 +454,7 @@ mod tests {
     async fn a_signing_in_web_app_names_the_keyring_entry_its_pool_will_read() {
         let (_home, store) = a_home().await;
         a_phpmyadmin(&store, true).await;
+        let home = crate::home::id(&store).await.expect("this home's id");
 
         let resolved = credentials(&store).await.expect("a resolution");
         let pool = ServiceId::parse("php-fpm@phpmyadmin").expect("an id");
@@ -454,8 +465,13 @@ mod tests {
             credential.keyring_service,
             mixengine_platform::KEYRING_SERVICE
         );
+        // **With the home in front** — T126 moved every address under the home it belongs to
+        // (ADR 0032), and the entry this pool has to read is the one the database's own recipe
+        // wrote through `Context::secret_address`. Without the prefix the pool asks for an address
+        // nothing writes, and a signing-in web-app never starts.
         assert_eq!(
-            credential.keyring_key, "mariadb@main/root",
+            credential.keyring_key,
+            format!("{home}/mariadb@main/root"),
             "the address `Context::secret_address` composes for the database's own recipe"
         );
         assert_eq!(credential.database.as_str(), "mariadb@main");

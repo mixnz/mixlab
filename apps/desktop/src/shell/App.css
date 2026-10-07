@@ -205,8 +205,9 @@
   --accent-on-solid: var(--c-mint-on-solid);
   --accent-rgb: var(--c-mint-rgb);
 
-  /* Every palette stays defined whichever one is in force, so the swatches in Settings can each
-     paint themselves from their own `--c-<name>`. Each hue's `-text` reads at 4.5:1 on every
+  /* The fixed hues. Mint is the accent of Light and Dark; a colour theme brings its own (foot of the
+     file). The others are named directly by components that need a hue that does not move with the
+     theme — amber for a read-only connection, orange for a Redis key. Each hue's `-text` reads at 4.5:1 on every
      surface above and on its own wash, and its `-on-solid` reads at 4.5:1 on its fill — its
      `-solid` where it has one — asserted by `contrast.test.ts`, not by eye. Mint has one because it
      is too light to carry white and near-black ink on it reads muddy, so what it fills under ink on
@@ -272,88 +273,6 @@
      connection. */
   --readonly: var(--c-amber-text);
   --readonly-rgb: var(--c-amber-rgb);
-}
-
-/* Which hue the accent points at. Mint is the default and is set on `:root` above, so it needs no
-   attribute — `applyAccent` in theme.ts leaves the attribute off for it. */
-:root[data-accent="blue"] {
-  --accent: var(--c-blue);
-  --accent-solid: var(--c-blue);
-  --accent-text: var(--c-blue-text);
-  --accent-on-solid: var(--c-blue-on-solid);
-  --accent-rgb: var(--c-blue-rgb);
-}
-
-:root[data-accent="indigo"] {
-  --accent: var(--c-indigo);
-  --accent-solid: var(--c-indigo);
-  --accent-text: var(--c-indigo-text);
-  --accent-on-solid: var(--c-indigo-on-solid);
-  --accent-rgb: var(--c-indigo-rgb);
-}
-
-:root[data-accent="violet"] {
-  --accent: var(--c-violet);
-  --accent-solid: var(--c-violet);
-  --accent-text: var(--c-violet-text);
-  --accent-on-solid: var(--c-violet-on-solid);
-  --accent-rgb: var(--c-violet-rgb);
-}
-
-:root[data-accent="magenta"] {
-  --accent: var(--c-magenta);
-  --accent-solid: var(--c-magenta);
-  --accent-text: var(--c-magenta-text);
-  --accent-on-solid: var(--c-magenta-on-solid);
-  --accent-rgb: var(--c-magenta-rgb);
-}
-
-:root[data-accent="orange"] {
-  --accent: var(--c-orange);
-  --accent-solid: var(--c-orange);
-  --accent-text: var(--c-orange-text);
-  --accent-on-solid: var(--c-orange-on-solid);
-  --accent-rgb: var(--c-orange-rgb);
-}
-
-:root[data-accent="amber"] {
-  --accent: var(--c-amber);
-  --accent-solid: var(--c-amber);
-  --accent-text: var(--c-amber-text);
-  --accent-on-solid: var(--c-amber-on-solid);
-  --accent-rgb: var(--c-amber-rgb);
-}
-
-:root[data-accent="green"] {
-  --accent: var(--c-green);
-  --accent-solid: var(--c-green);
-  --accent-text: var(--c-green-text);
-  --accent-on-solid: var(--c-green-on-solid);
-  --accent-rgb: var(--c-green-rgb);
-}
-
-:root[data-accent="teal"] {
-  --accent: var(--c-teal);
-  --accent-solid: var(--c-teal);
-  --accent-text: var(--c-teal-text);
-  --accent-on-solid: var(--c-teal-on-solid);
-  --accent-rgb: var(--c-teal-rgb);
-}
-
-:root[data-accent="cyan"] {
-  --accent: var(--c-cyan);
-  --accent-solid: var(--c-cyan);
-  --accent-text: var(--c-cyan-text);
-  --accent-on-solid: var(--c-cyan-on-solid);
-  --accent-rgb: var(--c-cyan-rgb);
-}
-
-:root[data-accent="slate"] {
-  --accent: var(--c-slate);
-  --accent-solid: var(--c-slate);
-  --accent-text: var(--c-slate-text);
-  --accent-on-solid: var(--c-slate-on-solid);
-  --accent-rgb: var(--c-slate-rgb);
 }
 
 /* Compact density, for regions that hold rows: the connected database workspace, REST's tables
@@ -788,39 +707,41 @@ textarea:focus {
 }
 
 :root[data-theme="dark"] {
-  --page-bg: #0e131c;
-  --chrome-bg: #0b1017;
-  --sidebar-bg: #111722;
-  --surface-bg: #131a25;
-  --surface-sunken: #0f151f;
-  --table-head-bg: #111823;
-  --control-bg: #0b1017;
-  --button-bg: #151c28;
-  --popover-bg: #161e2b;
-  --popover-hover-bg: #212b3b;
-  --option-selected-hover-bg: #283447;
-  --track-bg: #0b1017;
-  --neutral-bg: #1a2230;
-  --hover-bg: #161e2b;
-  --active-bg: #1c2534;
-  --choice-active-bg: #1c2533;
-  --option-selected-bg: #1c2533;
-  --scrim: rgb(4 7 11 / 0.68);
+  /* Neutral black, the redesign's dark: no blue in the greys, so the accent is the only colour on
+     the page. The navy dark that came before lives on as the first colour theme, below. */
+  --page-bg: #0a0a0a;
+  --chrome-bg: #141414;
+  --sidebar-bg: #141414;
+  --surface-bg: #141414;
+  --surface-sunken: #0a0a0a;
+  --table-head-bg: #171717;
+  --control-bg: #0f0f0f;
+  --button-bg: #1f1f1f;
+  --popover-bg: #1f1f1f;
+  --popover-hover-bg: #2d2d2d;
+  --option-selected-hover-bg: #333333;
+  --track-bg: #0a0a0a;
+  --neutral-bg: #1f1f1f;
+  --hover-bg: #1a1a1a;
+  --active-bg: #272727;
+  --choice-active-bg: #2d2d2d;
+  --option-selected-bg: #272727;
+  --scrim: rgb(0 0 0 / 0.7);
 
-  --border-soft: #1b2330;
-  --border: #1f2836;
-  --chrome-border: #1c2432;
-  --control-border: #222b3a;
-  --border-strong: #2a3446;
-  --border-hover: #3a4760;
-  --scrollbar-thumb: #243041;
-  --scrollbar-thumb-hover: #34425a;
+  --border-soft: #1f1f1f;
+  --border: #2a2a2a;
+  --chrome-border: #2a2a2a;
+  --control-border: #383838;
+  --border-strong: #383838;
+  --border-hover: #474747;
+  --scrollbar-thumb: #333333;
+  --scrollbar-thumb-hover: #474747;
 
-  --text: #e6eaf0;
-  --text-secondary: #a7b0bf;
-  --text-muted: #8391a5;
-  --text-faint: #6b7688;
-  --text-disabled: #5a6679;
+  --text: #fafafa;
+  --text-secondary: #b5b5ba;
+  --text-muted: #a1a1a8;
+  --text-faint: #75757c;
+  --text-disabled: #5e5e64;
 
   --success: #5ccb93;
   --success-text: #7dd8aa;
@@ -864,9 +785,9 @@ textarea:focus {
   --sql-operator: #8b949e;
   --sql-punctuation: #8b949e;
 
-  --ansi-background: #0b1017;
-  --ansi-foreground: #e6eaf0;
-  --ansi-black: #1f2836;
+  --ansi-background: #0f0f0f;
+  --ansi-foreground: #fafafa;
+  --ansi-black: #2a2a2a;
   --ansi-red: #f08a80;
   --ansi-green: #7dd8aa;
   --ansi-yellow: #e9b54a;
@@ -885,13 +806,13 @@ textarea:focus {
   --ansi-match: #5a4b00;
   --ansi-match-active: #a07800;
 
-  /* The dark cast of every hue. Which one `--accent` points at was settled by `[data-accent]` and
-     holds through the theme, so only the palettes are restated. */
-  --c-mint: #5ec4a1;
-  --c-mint-solid: #5ec4a1;
-  --c-mint-text: #5ec4a1;
-  --c-mint-on-solid: #062117;
-  --c-mint-rgb: 94 196 161;
+  /* The dark cast of every hue: the accent is mint's, and the rest are named by the components
+     that need a fixed hue. */
+  --c-mint: #34d399;
+  --c-mint-solid: #34d399;
+  --c-mint-text: #34d399;
+  --c-mint-on-solid: #04261a;
+  --c-mint-rgb: 52 211 153;
 
   --c-blue: #6f9fd8;
   --c-blue-text: #8fb6e4;
@@ -942,4 +863,430 @@ textarea:focus {
   --c-slate-text: #adbac7;
   --c-slate-on-solid: #0b1017;
   --c-slate-rgb: 147 164 181;
+}
+
+/* The colour themes (Settings → Appearance → Colour): each a dark ground with its own accent, laid
+   over the dark theme above, so everything a theme does not restate — status, categories, SQL, the
+   terminal's hues — stays the dark theme's. `applyTheme` in theme.ts writes `data-theme="dark"`
+   and `data-palette` together; Light, Dark and System carry no palette and the fixed mint accent.
+   `contrast.test.ts` checks every one of them the way it checks Light and Dark. Each block also
+   matches its swatch in Settings, so the swatch paints itself with the theme it stands for. */
+[data-palette-swatch="navy"],
+:root[data-theme="dark"][data-palette="navy"] {
+  --page-bg: #0e131c;
+  --chrome-bg: #0b1017;
+  --sidebar-bg: #111722;
+  --surface-bg: #131a25;
+  --surface-sunken: #0f151f;
+  --table-head-bg: #111823;
+  --control-bg: #0b1017;
+  --button-bg: #151c28;
+  --popover-bg: #161e2b;
+  --popover-hover-bg: #212b3b;
+  --option-selected-hover-bg: #283447;
+  --track-bg: #0b1017;
+  --neutral-bg: #1a2230;
+  --hover-bg: #161e2b;
+  --active-bg: #1c2534;
+  --choice-active-bg: #1c2533;
+  --option-selected-bg: #1c2533;
+  --border-soft: #1b2330;
+  --border: #1f2836;
+  --chrome-border: #1c2432;
+  --control-border: #222b3a;
+  --border-strong: #2a3446;
+  --border-hover: #3a4760;
+  --scrollbar-thumb: #243041;
+  --scrollbar-thumb-hover: #34425a;
+  --text: #e6eaf0;
+  --text-secondary: #a7b0bf;
+  --text-muted: #8391a5;
+  --text-faint: #6b7688;
+  --text-disabled: #5a6679;
+  --ansi-background: #0b1017;
+  --ansi-foreground: #e6eaf0;
+  --ansi-black: #1f2836;
+  --accent: #5ec4a1;
+  --accent-solid: #5ec4a1;
+  --accent-text: #5ec4a1;
+  --accent-on-solid: #062117;
+  --accent-rgb: 94 196 161;
+}
+
+[data-palette-swatch="dim"],
+:root[data-theme="dark"][data-palette="dim"] {
+  --page-bg: #16191e;
+  --chrome-bg: #1c2026;
+  --sidebar-bg: #1c2026;
+  --surface-bg: #1c2026;
+  --surface-sunken: #16191e;
+  --table-head-bg: #1f242b;
+  --control-bg: #14171b;
+  --button-bg: #262b33;
+  --popover-bg: #262b33;
+  --popover-hover-bg: #30373f;
+  --option-selected-hover-bg: #363e48;
+  --track-bg: #16191e;
+  --neutral-bg: #262b33;
+  --hover-bg: #222730;
+  --active-bg: #2c323b;
+  --choice-active-bg: #30373f;
+  --option-selected-bg: #2c323b;
+  --border-soft: #232830;
+  --border: #2a3038;
+  --chrome-border: #2a3038;
+  --control-border: #333a44;
+  --border-strong: #333a44;
+  --border-hover: #3e4651;
+  --scrollbar-thumb: #333a44;
+  --scrollbar-thumb-hover: #3e4651;
+  --text: #e6edf5;
+  --text-secondary: #9fb0c3;
+  --text-muted: #8d99a9;
+  --text-faint: #737f90;
+  --text-disabled: #55606e;
+  --ansi-background: #14171b;
+  --ansi-foreground: #e6edf5;
+  --ansi-black: #2a3038;
+  --accent: #34d399;
+  --accent-solid: #34d399;
+  --accent-text: #34d399;
+  --accent-on-solid: #04261a;
+  --accent-rgb: 52 211 153;
+}
+
+[data-palette-swatch="midnight"],
+:root[data-theme="dark"][data-palette="midnight"] {
+  --page-bg: #121422;
+  --chrome-bg: #17192b;
+  --sidebar-bg: #17192b;
+  --surface-bg: #17192b;
+  --surface-sunken: #121422;
+  --table-head-bg: #1a1c30;
+  --control-bg: #11121e;
+  --button-bg: #202239;
+  --popover-bg: #202239;
+  --popover-hover-bg: #292c46;
+  --option-selected-hover-bg: #2e3150;
+  --track-bg: #121422;
+  --neutral-bg: #202239;
+  --hover-bg: #1c1e36;
+  --active-bg: #252842;
+  --choice-active-bg: #292c46;
+  --option-selected-bg: #252842;
+  --border-soft: #1d1f36;
+  --border: #24263e;
+  --chrome-border: #24263e;
+  --control-border: #2b2e4c;
+  --border-strong: #2b2e4c;
+  --border-hover: #35385a;
+  --scrollbar-thumb: #2b2e4c;
+  --scrollbar-thumb-hover: #35385a;
+  --text: #e3e5f8;
+  --text-secondary: #8f95d3;
+  --text-muted: #8085b6;
+  --text-faint: #666b9d;
+  --text-disabled: #4a4e79;
+  --ansi-background: #11121e;
+  --ansi-foreground: #e3e5f8;
+  --ansi-black: #24263e;
+  --accent: #8b8df0;
+  --accent-solid: #8b8df0;
+  --accent-text: #8b8df0;
+  --accent-on-solid: #0f1024;
+  --accent-rgb: 139 141 240;
+}
+
+[data-palette-swatch="forest"],
+:root[data-theme="dark"][data-palette="forest"] {
+  --page-bg: #151f1a;
+  --chrome-bg: #1b2721;
+  --sidebar-bg: #1b2721;
+  --surface-bg: #1b2721;
+  --surface-sunken: #151f1a;
+  --table-head-bg: #1e2c25;
+  --control-bg: #131c18;
+  --button-bg: #25342d;
+  --popover-bg: #25342d;
+  --popover-hover-bg: #2f4138;
+  --option-selected-hover-bg: #344a3f;
+  --track-bg: #151f1a;
+  --neutral-bg: #25342d;
+  --hover-bg: #213129;
+  --active-bg: #2b3d34;
+  --choice-active-bg: #2f4138;
+  --option-selected-bg: #2b3d34;
+  --border-soft: #22312a;
+  --border: #293931;
+  --chrome-border: #293931;
+  --control-border: #31463c;
+  --border-strong: #31463c;
+  --border-hover: #3c5348;
+  --scrollbar-thumb: #31463c;
+  --scrollbar-thumb-hover: #3c5348;
+  --text: #e4f7ee;
+  --text-secondary: #9bc7b1;
+  --text-muted: #8aac9b;
+  --text-faint: #709382;
+  --text-disabled: #527162;
+  --ansi-background: #131c18;
+  --ansi-foreground: #e4f7ee;
+  --ansi-black: #293931;
+  --accent: #5fc97a;
+  --accent-solid: #5fc97a;
+  --accent-text: #5fc97a;
+  --accent-on-solid: #07170d;
+  --accent-rgb: 95 201 122;
+}
+
+[data-palette-swatch="plum"],
+:root[data-theme="dark"][data-palette="plum"] {
+  --page-bg: #1c151f;
+  --chrome-bg: #241b27;
+  --sidebar-bg: #241b27;
+  --surface-bg: #241b27;
+  --surface-sunken: #1c151f;
+  --table-head-bg: #291e2c;
+  --control-bg: #1a131c;
+  --button-bg: #302534;
+  --popover-bg: #302534;
+  --popover-hover-bg: #3c2f41;
+  --option-selected-hover-bg: #44344a;
+  --track-bg: #1c151f;
+  --neutral-bg: #302534;
+  --hover-bg: #2d2131;
+  --active-bg: #382b3d;
+  --choice-active-bg: #3c2f41;
+  --option-selected-bg: #382b3d;
+  --border-soft: #2d2231;
+  --border: #352939;
+  --chrome-border: #352939;
+  --control-border: #413146;
+  --border-strong: #413146;
+  --border-hover: #4d3c53;
+  --scrollbar-thumb: #413146;
+  --scrollbar-thumb-hover: #4d3c53;
+  --text: #f2e4f7;
+  --text-secondary: #bc9bc7;
+  --text-muted: #a38aac;
+  --text-faint: #8a7093;
+  --text-disabled: #695271;
+  --ansi-background: #1a131c;
+  --ansi-foreground: #f2e4f7;
+  --ansi-black: #352939;
+  --accent: #b493f7;
+  --accent-solid: #b493f7;
+  --accent-text: #b493f7;
+  --accent-on-solid: #170d21;
+  --accent-rgb: 180 147 247;
+}
+
+[data-palette-swatch="ocean"],
+:root[data-theme="dark"][data-palette="ocean"] {
+  --page-bg: #121d22;
+  --chrome-bg: #17252b;
+  --sidebar-bg: #17252b;
+  --surface-bg: #17252b;
+  --surface-sunken: #121d22;
+  --table-head-bg: #1a2a30;
+  --control-bg: #111a1e;
+  --button-bg: #203139;
+  --popover-bg: #203139;
+  --popover-hover-bg: #293d46;
+  --option-selected-hover-bg: #2e4650;
+  --track-bg: #121d22;
+  --neutral-bg: #203139;
+  --hover-bg: #1c2e36;
+  --active-bg: #253942;
+  --choice-active-bg: #293d46;
+  --option-selected-bg: #253942;
+  --border-soft: #1d2e36;
+  --border: #24363e;
+  --chrome-border: #24363e;
+  --control-border: #2b424c;
+  --border-strong: #2b424c;
+  --border-hover: #354f5a;
+  --scrollbar-thumb: #2b424c;
+  --scrollbar-thumb-hover: #354f5a;
+  --text: #e3f2f8;
+  --text-secondary: #8fbfd3;
+  --text-muted: #80a6b6;
+  --text-faint: #668d9d;
+  --text-disabled: #4a6b79;
+  --ansi-background: #111a1e;
+  --ansi-foreground: #e3f2f8;
+  --ansi-black: #24363e;
+  --accent: #40b8e0;
+  --accent-solid: #40b8e0;
+  --accent-text: #40b8e0;
+  --accent-on-solid: #04161d;
+  --accent-rgb: 64 184 224;
+}
+
+[data-palette-swatch="ember"],
+:root[data-theme="dark"][data-palette="ember"] {
+  --page-bg: #1e1916;
+  --chrome-bg: #26201c;
+  --sidebar-bg: #26201c;
+  --surface-bg: #26201c;
+  --surface-sunken: #1e1916;
+  --table-head-bg: #2b231f;
+  --control-bg: #1b1714;
+  --button-bg: #332b26;
+  --popover-bg: #332b26;
+  --popover-hover-bg: #3f3530;
+  --option-selected-hover-bg: #483d36;
+  --track-bg: #1e1916;
+  --neutral-bg: #332b26;
+  --hover-bg: #302722;
+  --active-bg: #3b312c;
+  --choice-active-bg: #3f3530;
+  --option-selected-bg: #3b312c;
+  --border-soft: #302823;
+  --border: #382f2a;
+  --chrome-border: #382f2a;
+  --control-border: #443933;
+  --border-strong: #443933;
+  --border-hover: #51453e;
+  --scrollbar-thumb: #443933;
+  --scrollbar-thumb-hover: #51453e;
+  --text: #f5ebe6;
+  --text-secondary: #c3ac9f;
+  --text-muted: #a9978d;
+  --text-faint: #907e73;
+  --text-disabled: #6e5e55;
+  --ansi-background: #1b1714;
+  --ansi-foreground: #f5ebe6;
+  --ansi-black: #382f2a;
+  --accent: #f0913f;
+  --accent-solid: #f0913f;
+  --accent-text: #f0913f;
+  --accent-on-solid: #1f0f03;
+  --accent-rgb: 240 145 63;
+}
+
+[data-palette-swatch="rose"],
+:root[data-theme="dark"][data-palette="rose"] {
+  --page-bg: #1e1619;
+  --chrome-bg: #271b20;
+  --sidebar-bg: #271b20;
+  --surface-bg: #271b20;
+  --surface-sunken: #1e1619;
+  --table-head-bg: #2c1e24;
+  --control-bg: #1b1417;
+  --button-bg: #34252b;
+  --popover-bg: #34252b;
+  --popover-hover-bg: #402f36;
+  --option-selected-hover-bg: #49353d;
+  --track-bg: #1e1619;
+  --neutral-bg: #34252b;
+  --hover-bg: #312128;
+  --active-bg: #3c2b32;
+  --choice-active-bg: #402f36;
+  --option-selected-bg: #3c2b32;
+  --border-soft: #312228;
+  --border: #392930;
+  --chrome-border: #392930;
+  --control-border: #45323a;
+  --border-strong: #45323a;
+  --border-hover: #523d46;
+  --scrollbar-thumb: #45323a;
+  --scrollbar-thumb-hover: #523d46;
+  --text: #f6e5ec;
+  --text-secondary: #c59dae;
+  --text-muted: #aa8c98;
+  --text-faint: #91727f;
+  --text-disabled: #6f545f;
+  --ansi-background: #1b1417;
+  --ansi-foreground: #f6e5ec;
+  --ansi-black: #392930;
+  --accent: #ec78bb;
+  --accent-solid: #ec78bb;
+  --accent-text: #ec78bb;
+  --accent-on-solid: #220a17;
+  --accent-rgb: 236 120 187;
+}
+
+[data-palette-swatch="graphite"],
+:root[data-theme="dark"][data-palette="graphite"] {
+  --page-bg: #1b1a19;
+  --chrome-bg: #23221f;
+  --sidebar-bg: #23221f;
+  --surface-bg: #23221f;
+  --surface-sunken: #1b1a19;
+  --table-head-bg: #272623;
+  --control-bg: #191816;
+  --button-bg: #2f2d2a;
+  --popover-bg: #2f2d2a;
+  --popover-hover-bg: #3a3835;
+  --option-selected-hover-bg: #42403c;
+  --track-bg: #1b1a19;
+  --neutral-bg: #2f2d2a;
+  --hover-bg: #2b2a27;
+  --active-bg: #363431;
+  --choice-active-bg: #3a3835;
+  --option-selected-bg: #363431;
+  --border-soft: #2c2a27;
+  --border: #33322f;
+  --chrome-border: #33322f;
+  --control-border: #3e3c39;
+  --border-strong: #3e3c39;
+  --border-hover: #4b4944;
+  --scrollbar-thumb: #3e3c39;
+  --scrollbar-thumb-hover: #4b4944;
+  --text: #f0eeeb;
+  --text-secondary: #b7b3ab;
+  --text-muted: #a09d96;
+  --text-faint: #87837c;
+  --text-disabled: #66635d;
+  --ansi-background: #191816;
+  --ansi-foreground: #f0eeeb;
+  --ansi-black: #33322f;
+  --accent: #e0ac2b;
+  --accent-solid: #e0ac2b;
+  --accent-text: #e0ac2b;
+  --accent-on-solid: #1a1303;
+  --accent-rgb: 224 172 43;
+}
+
+[data-palette-swatch="nord"],
+:root[data-theme="dark"][data-palette="nord"] {
+  --page-bg: #1a1f29;
+  --chrome-bg: #202631;
+  --sidebar-bg: #202631;
+  --surface-bg: #202631;
+  --surface-sunken: #1a1f29;
+  --table-head-bg: #232937;
+  --control-bg: #191d26;
+  --button-bg: #29313f;
+  --popover-bg: #29313f;
+  --popover-hover-bg: #333b4b;
+  --option-selected-hover-bg: #394255;
+  --track-bg: #1a1f29;
+  --neutral-bg: #29313f;
+  --hover-bg: #252d3c;
+  --active-bg: #2f3747;
+  --choice-active-bg: #333b4b;
+  --option-selected-bg: #2f3747;
+  --border-soft: #262e3c;
+  --border: #2d3544;
+  --chrome-border: #2d3544;
+  --control-border: #363f51;
+  --border-strong: #363f51;
+  --border-hover: #404a5e;
+  --scrollbar-thumb: #363f51;
+  --scrollbar-thumb-hover: #404a5e;
+  --text: #e3eaf8;
+  --text-secondary: #98a9ca;
+  --text-muted: #8794af;
+  --text-faint: #6d7b96;
+  --text-disabled: #505c73;
+  --ansi-background: #191d26;
+  --ansi-foreground: #e3eaf8;
+  --ansi-black: #2d3544;
+  --accent: #88c0d0;
+  --accent-solid: #88c0d0;
+  --accent-text: #88c0d0;
+  --accent-on-solid: #0e1a20;
+  --accent-rgb: 136 192 208;
 }

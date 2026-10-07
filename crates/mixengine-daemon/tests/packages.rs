@@ -973,6 +973,30 @@ async fn a_package_catalogue_says_lines_and_updates_too() {
     );
 }
 
+/// An update that kept its old version is not offered again, as for runtimes.
+#[tokio::test]
+async fn a_package_update_that_kept_its_version_is_not_offered_again() {
+    let fixture = Fixture::start_with(two_patches).await;
+    let mut client = fixture.client().await;
+    assert_eq!(client.install(VERSION).await["state"], "succeeded");
+
+    let job = client
+        .call(
+            "package.upgrade",
+            json!({"package": PACKAGE, "from": VERSION, "keep": true}),
+        )
+        .await;
+    let finished = client.finished(job["id"].clone()).await;
+    assert_eq!(finished["state"], "succeeded", "{finished}");
+    assert_eq!(
+        finished["outcome"]["result"]["old"]["state"], "kept",
+        "{finished}"
+    );
+
+    let catalogue = client.call("package.list_available", json!({})).await;
+    assert_eq!(catalogue["updates"], json!([]), "{catalogue}");
+}
+
 /// `fakeservice@main` on `version`, started.
 async fn a_running_instance(client: &mut Client, version: &str) {
     client

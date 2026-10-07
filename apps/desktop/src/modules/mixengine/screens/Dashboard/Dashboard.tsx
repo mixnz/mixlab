@@ -53,11 +53,16 @@ import {
   type ServiceRow,
 } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
+import { failureMayHaveChanged } from "../../failureState";
+import CpuRing from "../../components/CpuRing";
 import DaemonUsage from "../../components/DaemonUsage";
+import { serviceBadge } from "../../serviceBadge";
+import { useCpuScale } from "../../cpuScale";
 import type { MetricsFrame } from "@mixengine/api";
 import {
   DAEMON_SUBJECT,
   formatBytes,
+  cpuShare,
   formatCpu,
   metricsSubjectFor,
   parseMetricsFrame,
@@ -171,6 +176,7 @@ export default function Dashboard({
   /** The home path was just copied, for the button to say so for a moment. */
   const [homeCopied, setHomeCopied] = useState(false);
   const { t } = useTranslation();
+  const cpuScale = useCpuScale();
 
   /**
    * The order between reads and events — see `readOrder.ts`.
@@ -423,7 +429,8 @@ export default function Dashboard({
       // run twice under StrictMode. `job_finished` is also a reason to reread: a finished
       // `elevation.grant` changes the "N waiting" count with no event of its own saying so (see
       // `isJobFinished`).
-      if (needsResync(raw) || isJobFinished(raw)) void reload();
+      // A service that has just failed carries its sentence in `service.list` only (T200b, D6).
+      if (needsResync(raw) || isJobFinished(raw) || failureMayHaveChanged(raw)) void reload();
       // An event that changes a row, arriving while a `service.list` is on its way back, means that
       // snapshot may have been read *before* this event — the client cannot tell. Note it here so
       // that read requests one more when it lands. Outside the updater, for the same reason as the
@@ -574,8 +581,14 @@ export default function Dashboard({
     return key === null ? (state ?? "—") : t(key);
   }
 
-  /** The sentence the short label leaves out, for the pill's tooltip. */
-  function stateHint(state: string | null | undefined, stoppedBy?: StoppedBy | null): string | undefined {
+  /** The sentence the short label leaves out, for the pill's tooltip — and for a failed service,
+   *  why it failed (T200b, D6). */
+  function stateHint(
+    state: string | null | undefined,
+    stoppedBy?: StoppedBy | null,
+    lastFailure?: string | null,
+  ): string | undefined {
+    if (state === "failed" && lastFailure) return lastFailure;
     const key = serviceStateHint(state, stoppedBy);
     return key === null ? undefined : t(key);
   }
@@ -588,6 +601,7 @@ export default function Dashboard({
     filter === "all" ? true : filter === "running" ? isServing(row.state) : !isServing(row.state),
   );
   const daemon = readingFor(frame, DAEMON_SUBJECT);
+  const rowIds = rows.map((row) => row.id);
 
   function copyHome(home: string) {
     void copyText(home).then(() => {
@@ -605,7 +619,10 @@ export default function Dashboard({
         badges={
           status && (
             <>
-              <StatusPill tone="neutral" className={styles.version}>
+              {/* Green, like the tray's "Running" pill: this page exists only while the daemon
+                  answers, so the engine it names is up. A neutral dot here read as "stopped"
+                  beside the services pill, about the one thing on the page that cannot be. */}
+              <StatusPill tone="success" className={styles.version}>
                 {t("mixengine.dashboard.versionBadge", { version: status.version })}
               </StatusPill>
               {movingCount > 0 ? (
@@ -648,7 +665,7 @@ export default function Dashboard({
                   with "—" instead of appearing later and pushing the whole screen down — `frame`
                   goes back to `null` every time the tab is left, so that jump would repeat on every
                   return. */}
-              <DaemonUsage reading={daemon} cores={frame?.cores ?? 1} />
+              <DaemonUsage inline reading={daemon} cores={frame?.cores ?? 1} />
             </div>
           )
         }
@@ -676,7 +693,7 @@ export default function Dashboard({
               onClick={() => void stopAll()}
               disabled={rows.every((row) => row.state !== "running") || Object.keys(busy).length > 0}
             >
-              <StopIcon size={13} />
+              <StopIcon size={15} />
               {t("mixengine.dashboard.stopAll")}
             </Button>
             <Button size="large" variant="primary" onClick={() => setCreating(true)}>
@@ -777,11 +794,12 @@ export default function Dashboard({
               {shown.map((row) => {
                 const reading = readingFor(frame, metricsSubjectFor(row.id));
                 const mode = toggleMode(row.state, busy[row.id] !== undefined);
+                const badge = serviceBadge(row.id, rowIds);
                 return (
                   <tr key={row.id}>
                     <td>
                       <span className={styles.service}>
-                        <MonogramBadge name={row.id} size={34} />
+                        <MonogramBadge name={badge.name} tag={badge.tag} size={34} />
                         <span className={styles.serviceName} title={row.id}>
                           {row.id}
                         </span>
@@ -799,7 +817,7 @@ export default function Dashboard({
                         <StatusPill
                           tone={pillTone(row.state, row.stoppedBy)}
                           pulse={mode === "moving"}
-                          title={stateHint(row.state, row.stoppedBy)}
+                          title={stateHint(row.state, row.stoppedBy, row.lastFailure)}
                         >
                           {stateLabel(row.state, row.stoppedBy)}
                         </StatusPill>
@@ -821,7 +839,12 @@ export default function Dashboard({
                     {/* Absent from the frame is "—", not 0%: an idle service and a service that
                         could not be measured are two different statements. */}
                     <td className={styles.mono} data-nowrap>
-                      {formatCpu(reading?.cpu_percent ?? null, frame?.cores ?? 1)}
+                      <span className={styles.cpu}>
+                        {reading !== null && (
+                          <CpuRing size={18} share={cpuShare(reading.cpu_percent ?? 0, frame?.cores ?? 1, cpuScale)} />
+                        )}
+                        {formatCpu(reading?.cpu_percent ?? null, frame?.cores ?? 1, cpuScale)}
+                      </span>
                     </td>
                     <td className={styles.mono} data-nowrap>
                       {reading === null ? "—" : formatBytes(reading.rss_bytes)}
@@ -842,7 +865,7 @@ export default function Dashboard({
                             aria-label={t("mixengine.dashboard.stopService", { service: row.id })}
                             onClick={() => void act(row.id, "stop")}
                           >
-                            <StopIcon size={11} className={styles.stopMark} />
+                            <StopIcon size={13} className={styles.stopMark} />
                             {t("mixengine.dashboard.stop")}
                           </Button>
                         ) : (
@@ -853,18 +876,22 @@ export default function Dashboard({
                             aria-label={t("mixengine.dashboard.startService", { service: row.id })}
                             onClick={() => void act(row.id, "start")}
                           >
-                            <PlayIcon size={11} />
+                            <PlayIcon size={13} />
                             {t("mixengine.dashboard.start")}
                           </Button>
                         )}
-                        <Button
-                          size="small"
-                          onClick={() => void act(row.id, "restart")}
-                          disabled={busy[row.id] !== undefined || mode !== "up"}
-                        >
-                          <ReloadIcon size={13} />
-                          {t("mixengine.dashboard.restart")}
-                        </Button>
+                        {/* A stopped service has nothing to restart: Start alone, not a greyed
+                            Restart beside it. */}
+                        {mode !== "down" && (
+                          <Button
+                            size="small"
+                            onClick={() => void act(row.id, "restart")}
+                            disabled={busy[row.id] !== undefined || mode !== "up"}
+                          >
+                            <ReloadIcon size={13} />
+                            {t("mixengine.dashboard.restart")}
+                          </Button>
+                        )}
                         {/* Never greyed: autostart and the logs are there for *every* service. */}
                         <ActionBar
                           actions={[
@@ -886,6 +913,15 @@ export default function Dashboard({
               })}
             </tbody>
           </Table>
+        )}
+        {loaded && rows.length > 0 && (
+          <div className={styles.footer}>
+            {t("mixengine.dashboard.footerSummary", {
+              total: rows.length,
+              running: runningCount,
+              stopped: rows.length - runningCount,
+            })}
+          </div>
         )}
       </Card>
 

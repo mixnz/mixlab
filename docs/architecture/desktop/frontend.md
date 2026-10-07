@@ -1,7 +1,7 @@
 # Frontend
 
 React 19 + TypeScript, built by Vite. No router, no state library, no CSS framework — state is
-local `useState` plus the i18n context, with the theme and accent hooks persisting to
+local `useState` plus the i18n context, with the theme hook persisting the mode and the colour theme to
 `localStorage`.
 
 ## Entry path
@@ -14,7 +14,7 @@ shell's frame, `shell/tray/TrayFrame.tsx` — the slide, the dismissal and a hea
 Quit MixLab — around the `TraySection` of every visible module that lends one; only `mixengine`
 does, and with none there is no panel and the icon opens the main window
 ([ADR 0058](../../decisions/0058-the-tray-is-mixlabs-and-a-module-lends-it-a-section.md)). It reloads
-itself when the main window changes the theme, accent, language or module set in the storage both
+itself when the main window changes the theme, colour theme, language or module set in the storage both
 windows share. Each window has its own JavaScript context, so its own `daemonWatch.ts` channel; the backend
 keeps one `/events` stream per window label.
 
@@ -246,10 +246,12 @@ accent cast so white type clears 4.5:1; dark mode fills with `--accent` and uses
 A destructive confirm stays `default` and keeps its red: filling it would dress the dangerous
 choice as the recommended one.
 
-### The accent
+### The accent and the colour themes
 
-The accent is user-chosen (Settings → Accent colour), so **no module may name a hue**. Three tokens
-are the whole interface:
+The theme is one of four modes (Settings → Appearance): Light, Dark, System — which settles to one
+of those two — and Colour, which picks one of ten colour themes. Light and Dark carry the mint
+accent; a colour theme brings its own ground and its own accent together. Either way the accent can
+change under a module, so **no module may name a hue**. Three tokens are the whole interface:
 
 | Token | For |
 | --- | --- |
@@ -257,17 +259,17 @@ are the whole interface:
 | `--accent-text` | Text on the page — the readable cast, darker in light mode, lighter in dark |
 | `--accent-rgb` | Bare channels, so a rule mixes its own wash: `rgb(var(--accent-rgb) / 0.15)` |
 
-Behind them, `shell/App.css` defines all ten palettes as `--c-<name>` / `-text` / `-rgb`, and
-`:root[data-accent="<name>"]` points the three tokens at one of them. Every palette stays defined
-whichever one is in force — that is what lets the swatch row in `SettingsModal` show all ten at
-once, each button carrying only `--accent-swatch: var(--c-<name>)`. The dark theme restates the
-`--c-*` values and nothing else, so accent and swatches follow the theme with no
-`[data-theme][data-accent]` selectors.
+A colour theme is `data-theme="dark"` with `data-palette="<name>"` beside it, and its block at the
+foot of `shell/App.css` restates the surfaces, lines, text and accent over the dark theme, so every
+rule written for dark holds for it. The same block also matches `[data-palette-swatch="<name>"]`,
+which is how each swatch in Settings paints itself in the theme it stands for. The fixed hues
+`--c-<name>` stay for the few components that need a hue that does not move — amber for a
+read-only connection.
 
-Adding an eleventh colour: values in both halves of `shell/App.css`, the name in `ACCENT_COLORS`
-(`src/shell/theme.ts`), and `settings.accent<Name>` in `src/i18n/en.ts` and `vi.ts`. The hue must clear 4.5:1 against
-the light page in its `-text` cast — the accent carries text — and must not read as the red that
-means destructive, since the accent also marks selected rows.
+Adding an eleventh colour theme: a block in `shell/App.css`, the name in `COLOR_THEMES`
+(`src/shell/themeModel.ts`), and `settings.colorTheme<Name>` in `src/i18n/en.ts` and `vi.ts`.
+`contrast.test.ts` checks it like Light and Dark: text on every surface, the accent as text, on its
+wash and under its ink.
 
 ## Types
 

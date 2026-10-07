@@ -40,3 +40,64 @@
   margin-top: 8px;
   font-size: var(--text-md);
 }
+/* The name and, under it, what the add-on is for — T200, D5. */
+.nameText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.description {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--text-secondary);
+}
+
+/* An install's progress on its own row — T200, D3. */
+.progress {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 180px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.progress progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--accent);
+}
+
+.progressText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* An offer this machine has no artifact for — T200, D8. */
+.unavailable {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--text-faint);
+}
+
+/* Why what the add-on runs could not start — T200b, D6. */
+.failure {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--danger-text);
+}

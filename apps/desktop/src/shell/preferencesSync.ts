@@ -1,18 +1,19 @@
 import { announcePreferencesChanged } from "../core/preferences";
 import type { SyncableCollection, SyncItem } from "../core/syncCollection";
-import { ACCENT_KEY, LANGUAGE_KEY, MODULES_KEY, THEME_KEY } from "./storageKeys";
+import { LANGUAGE_KEY, MODULES_KEY, PALETTE_KEY, THEME_KEY } from "./storageKeys";
 
 /**
  * The shell's own preferences, one record per `localStorage` key (D5). An allow-list: the session,
  * the tab layout and anything else in storage are this machine's.
  *
  * Values travel as the strings they are stored as. Each owner already checks what it reads — an
- * unknown theme reads as the default — so a value another machine sends is no more trusted than
+ * unknown theme reads as the default. An `accent` from a build before colour themes is not on the
+ * list, so it is skipped rather than written — so a value another machine sends is no more trusted than
  * one a person typed into the devtools.
  */
 const KEYS: Record<string, string> = {
   theme: THEME_KEY,
-  accent: ACCENT_KEY,
+  palette: PALETTE_KEY,
   language: LANGUAGE_KEY,
   modules: MODULES_KEY,
 };

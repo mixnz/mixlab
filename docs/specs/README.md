@@ -194,3 +194,5 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-05 | [One command installs MixLab](2026-10-05-t197-one-command-installs-mixlab-design.md) | T197 | implemented |
 | 2026-10-06 | [T199 — The window closes its known gaps](2026-10-06-t199-the-window-closes-its-known-gaps-design.md) | T199 | implemented |
 | 2026-10-07 | [An uninstall path for macOS, and the shape for Linux](2026-10-07-t182a-an-uninstall-path-for-macos-design.md) | T182a | implemented |
+| 2026-10-07 | [T200 — An add-on works the moment it is installed](2026-10-07-t200-an-add-on-works-the-moment-it-is-installed-design.md) | T200 | implemented |
+| 2026-10-07 | [T200a, T200b — An add-on's own page, and why a site is down](2026-10-07-t200a-t200b-an-add-ons-page-and-why-a-site-is-down-design.md) | T200a, T200b, T200c | implemented |

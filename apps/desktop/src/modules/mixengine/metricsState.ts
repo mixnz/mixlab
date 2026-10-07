@@ -94,15 +94,25 @@ export function machineShare(percentOfOneCore: number, cores: number): number {
   return percentOfOneCore / Math.max(1, cores);
 }
 
+/** What a CPU percentage is a percentage of: the whole machine, as Task Manager shows it, or one
+ *  core, as `top` does — where a process busy on two cores reads 200%. Settings → MixEngine. */
+export type CpuScale = "machine" | "core";
+
+/** `cpu_percent` (a share of one core) on the chosen scale. */
+export function cpuShare(percentOfOneCore: number, cores: number, scale: CpuScale): number {
+  return scale === "core" ? percentOfOneCore : machineShare(percentOfOneCore, cores);
+}
+
 /**
- * CPU as Task Manager shows it: a percentage of the whole machine, one decimal place.
+ * CPU with one decimal place, on the chosen scale — the whole machine unless told otherwise.
  *
- * Non-zero but rounding to `0.0` shows `<0.1%`, so a running process never looks like it is doing
- * nothing; not measured yet shows `—`.
+ * Rounds the way the eye expects at the bottom: above 0.05 is at least `0.1%`, so a working process
+ * never reads as idle, and 0.05 or less is `0.0%`. Not measured yet shows `—`.
  */
-export function formatCpu(percentOfOneCore: number | null, cores: number): string {
+export function formatCpu(percentOfOneCore: number | null, cores: number, scale: CpuScale = "machine"): string {
   if (percentOfOneCore === null) return "—";
-  const share = machineShare(percentOfOneCore, cores);
-  if (share > 0 && share < 0.05) return "<0.1%";
+  const share = cpuShare(percentOfOneCore, cores, scale);
+  if (share <= 0.05) return "0.0%";
+  if (share < 0.1) return "0.1%";
   return `${share.toFixed(1)}%`;
 }

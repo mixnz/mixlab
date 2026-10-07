@@ -1,62 +1,52 @@
 import { useEffect, useState } from "react";
 import { onPreferencesChanged } from "../core/preferences";
 import { IS_MAC, IS_WINDOWS } from "../core/platform";
-import { ACCENT_KEY as ACCENT_STORAGE_KEY, THEME_KEY as STORAGE_KEY } from "./storageKeys";
-import { clearRetiredKeys, resolveTheme } from "./themeModel";
+import { PALETTE_KEY, THEME_KEY as STORAGE_KEY } from "./storageKeys";
+import {
+  clearRetiredKeys,
+  DEFAULT_COLOR_THEME,
+  parseColorTheme,
+  parseThemeMode,
+  resolvePalette,
+  resolveTheme,
+  type ColorTheme,
+  type ThemeMode,
+} from "./themeModel";
 
-export type ThemeMode = "light" | "dark" | "system";
-
-/** The accent a user can pick; the palette each one resolves to lives in App.css. */
-export type AccentColor =
-  | "mint"
-  | "blue"
-  | "indigo"
-  | "violet"
-  | "magenta"
-  | "orange"
-  | "amber"
-  | "green"
-  | "teal"
-  | "cyan"
-  | "slate";
-
-export const ACCENT_COLORS: AccentColor[] = [
-  "mint",
-  "blue",
-  "indigo",
-  "violet",
-  "magenta",
-  "orange",
-  "amber",
-  "green",
-  "teal",
-  "cyan",
-  "slate",
-];
-
-const DEFAULT_ACCENT: AccentColor = "mint";
+export { COLOR_THEMES } from "./themeModel";
+export type { ColorTheme, ThemeMode } from "./themeModel";
 
 function readStoredTheme(): ThemeMode {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === "light" || stored === "dark" ? stored : "system";
+  return parseThemeMode(localStorage.getItem(STORAGE_KEY));
 }
 
-function readStoredAccent(): AccentColor {
-  const stored = localStorage.getItem(ACCENT_STORAGE_KEY);
-  return ACCENT_COLORS.includes(stored as AccentColor) ? (stored as AccentColor) : DEFAULT_ACCENT;
+function readStoredColorTheme(): ColorTheme {
+  return parseColorTheme(localStorage.getItem(PALETTE_KEY));
 }
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
-/* The attribute always names a theme; only the stored preference remembers that it was *system*. */
-function applyTheme(theme: ThemeMode): void {
+/* The attribute always names a theme; only the stored preference remembers that it was *system*.
+   A colour theme is `data-theme="dark"` plus `data-palette`, which App.css lays over dark. */
+function applyTheme(theme: ThemeMode, colorTheme: ColorTheme = readStoredColorTheme()): void {
   const prefersDark = window.matchMedia(DARK_QUERY).matches;
-  document.documentElement.setAttribute("data-theme", resolveTheme(theme, prefersDark));
+  const root = document.documentElement;
+  root.setAttribute("data-theme", resolveTheme(theme, prefersDark));
+  const palette = resolvePalette(theme, colorTheme);
+  if (palette === null) root.removeAttribute("data-palette");
+  else root.setAttribute("data-palette", palette);
   if (theme === "system") {
     localStorage.removeItem(STORAGE_KEY);
   } else {
     localStorage.setItem(STORAGE_KEY, theme);
   }
+}
+
+/* The colour theme is remembered whatever the mode, so switching to Light and back to Colour
+   returns to the one that was picked. The first is the absence of the key. */
+function storeColorTheme(colorTheme: ColorTheme): void {
+  if (colorTheme === DEFAULT_COLOR_THEME) localStorage.removeItem(PALETTE_KEY);
+  else localStorage.setItem(PALETTE_KEY, colorTheme);
 }
 
 /* A theme the user picks fades in rather than landing in one frame: a whole window flipping from
@@ -65,26 +55,13 @@ function applyTheme(theme: ThemeMode): void {
    Only the click is animated — the first paint, a synced preference and the OS switching under
    *system* still apply at once. A webview without view transitions, or a user who asked for less
    motion, gets the switch as it always was. */
-function applyThemeSmoothly(theme: ThemeMode): void {
+function applyThemeSmoothly(theme: ThemeMode, colorTheme: ColorTheme): void {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduced || typeof document.startViewTransition !== "function") {
-    applyTheme(theme);
+    applyTheme(theme, colorTheme);
     return;
   }
-  document.startViewTransition(() => applyTheme(theme));
-}
-
-/* The default is what `:root` already carries, so the attribute is left off for it rather than
-   written out, which keeps the DOM clean for the common case. */
-function applyAccent(accent: AccentColor): void {
-  const root = document.documentElement;
-  if (accent === DEFAULT_ACCENT) {
-    root.removeAttribute("data-accent");
-    localStorage.removeItem(ACCENT_STORAGE_KEY);
-  } else {
-    root.setAttribute("data-accent", accent);
-    localStorage.setItem(ACCENT_STORAGE_KEY, accent);
-  }
+  document.startViewTransition(() => applyTheme(theme, colorTheme));
 }
 
 /* Which webview is drawing the window, as an attribute CSS can select on.
@@ -104,7 +81,7 @@ function applyPlatform(): void {
 }
 
 /* Read before React mounts: the stored choice has to be on the root element for the very first
-   paint, otherwise the window flashes the default accent on every launch.
+   paint, otherwise the window flashes the default theme on every launch.
 
    The theme is here too, and it is the one of them that is applied twice: `theme-preload.js`
    sets it earlier still, before the bundle has even been fetched, which is what stops a dark app
@@ -114,7 +91,6 @@ function applyPlatform(): void {
    to notice. Applying it again costs one attribute write against a value that is already there. */
 applyPlatform();
 applyTheme(readStoredTheme());
-applyAccent(readStoredAccent());
 clearRetiredKeys(localStorage);
 
 /* Under *system* the window follows the OS while it is open, not only when it starts. */
@@ -125,29 +101,36 @@ window.matchMedia(DARK_QUERY).addEventListener("change", () => {
 /* Another machine's preference, written by sync (T177d): the page follows at once. */
 onPreferencesChanged(() => {
   applyTheme(readStoredTheme());
-  applyAccent(readStoredAccent());
 });
 
-export function useTheme(): [ThemeMode, (theme: ThemeMode) => void] {
-  const [theme, setTheme] = useState<ThemeMode>(readStoredTheme);
-  useEffect(() => onPreferencesChanged(() => setTheme(readStoredTheme())), []);
+/** The mode and the colour theme together: Settings changes either, and both decide the page. */
+export function useTheme(): {
+  theme: ThemeMode;
+  colorTheme: ColorTheme;
+  setTheme: (theme: ThemeMode) => void;
+  setColorTheme: (colorTheme: ColorTheme) => void;
+} {
+  const [theme, setThemeState] = useState<ThemeMode>(readStoredTheme);
+  const [colorTheme, setColorThemeState] = useState<ColorTheme>(readStoredColorTheme);
+  useEffect(
+    () =>
+      onPreferencesChanged(() => {
+        setThemeState(readStoredTheme());
+        setColorThemeState(readStoredColorTheme());
+      }),
+    [],
+  );
 
-  function updateTheme(next: ThemeMode) {
-    applyThemeSmoothly(next);
-    setTheme(next);
+  function setTheme(next: ThemeMode) {
+    applyThemeSmoothly(next, colorTheme);
+    setThemeState(next);
   }
 
-  return [theme, updateTheme];
-}
-
-export function useAccent(): [AccentColor, (accent: AccentColor) => void] {
-  const [accent, setAccent] = useState<AccentColor>(readStoredAccent);
-  useEffect(() => onPreferencesChanged(() => setAccent(readStoredAccent())), []);
-
-  function updateAccent(next: AccentColor) {
-    applyAccent(next);
-    setAccent(next);
+  function setColorTheme(next: ColorTheme) {
+    storeColorTheme(next);
+    applyThemeSmoothly(theme, next);
+    setColorThemeState(next);
   }
 
-  return [accent, updateAccent];
+  return { theme, colorTheme, setTheme, setColorTheme };
 }
