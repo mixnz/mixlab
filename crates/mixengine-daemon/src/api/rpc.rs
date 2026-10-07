@@ -3043,8 +3043,11 @@ mod tests {
             serde_json::from_value(answer["result"].clone())
                 .unwrap_or_else(|error| panic!("{error}: {answer}"));
 
-        // Eleven rows before any relocation, and this fixture relocates nothing.
-        assert_eq!(report.items.len(), 11, "{report:?}");
+        // Eleven rows before any relocation, and this fixture relocates nothing. On Windows a
+        // twelfth: the fixture's copy is self-updatable, which there is what the installer placed,
+        // so the plan keeps a `package` row naming the Windows uninstaller (T182a, D3).
+        let expected = if cfg!(windows) { 12 } else { 11 };
+        assert_eq!(report.items.len(), expected, "{report:?}");
 
         for item in &report.items {
             assert!(!item.what.is_empty(), "{item:?}");

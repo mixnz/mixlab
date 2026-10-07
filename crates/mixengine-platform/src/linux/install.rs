@@ -187,6 +187,19 @@ pub(crate) fn application_executable(
     placed.to_path_buf()
 }
 
+/// Only the macOS `.pkg` places the program this way — roadmap task **T182a**.
+pub(crate) fn package_paths() -> Option<crate::install::PackagePaths> {
+    None
+}
+
+/// No package receipts on this system.
+#[cfg(feature = "elevated")]
+pub(crate) fn forget_receipt(_receipt: &str) -> std::io::Result<bool> {
+    Err(std::io::Error::other(
+        "this system keeps no package receipts",
+    ))
+}
+
 #[cfg(test)]
 mod application_tests {
     use std::path::{Path, PathBuf};
@@ -224,17 +237,4 @@ mod application_tests {
 
         assert!(said.contains("/usr/bin"), "{said}");
     }
-}
-
-/// Only the macOS `.pkg` places the program this way — roadmap task **T182a**.
-pub(crate) fn package_paths() -> Option<crate::install::PackagePaths> {
-    None
-}
-
-/// No package receipts on this system.
-#[cfg(feature = "elevated")]
-pub(crate) fn forget_receipt(_receipt: &str) -> std::io::Result<bool> {
-    Err(std::io::Error::other(
-        "this system keeps no package receipts",
-    ))
 }
