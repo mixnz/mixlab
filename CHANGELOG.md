@@ -6,8 +6,11 @@
 - On a Mac, MixLab ▸ Remove MixLab from this Mac… removes everything in one go, after showing you
   what it will undo. From a terminal, `mix uninstall --package` does the same.
 - On Linux, `mix uninstall` now tells you the command that removes the package itself.
+- SeaweedFS in Add-ons: a local S3 for the files your project stores in the cloud. Its S3 port shows on its row in Add-ons and in `mix extension list`.
 
 ### Changed
+- The Add-ons screen shows the ports each add-on holds, such as Mailpit's SMTP port.
+- Starting, stopping or turning on an add-on shows that it is under way on its row, as the Dashboard does, until it has finished.
 - MixLab has a new Dashboard, a black Dark theme and ten colour themes in place of the accent colour, and shows CPU per core or for the whole machine.
 - The Add-ons screen shows an install's progress, lists each add-on once with what it is for, and opens or turns a web add-on on and off from its own row. `mix extension list` shows what each one is for too.
 - A site that cannot start says why, on the Sites and Add-ons screens and in `mix site show`, and MixEngine's starting page says where to look.

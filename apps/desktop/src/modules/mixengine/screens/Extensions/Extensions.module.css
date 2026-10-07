@@ -58,6 +58,20 @@
   color: var(--text-secondary);
 }
 
+/* The ports an installed add-on holds — T201, D5. The description's metrics, so the two lines sit
+   on one rhythm; tabular figures so a column of port numbers does not shimmer. */
+.ports {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
 /* An install's progress on its own row — T200, D3. */
 .progress {
   display: inline-flex;
