@@ -121,9 +121,10 @@ optional `path` (`/` when left out), and never an address: the daemon renders
 `http://127.0.0.1:<allocated port><path>` into `ExtensionSummary.ui`, because `127.0.0.1` is where
 the person's browser is. It is refused on a `web-app`, whose page is its site, and on a `recipe`. The
 manifest reader refuses unknown keys, so every build before T200a reads a registry entry with `[ui]`
-as one it cannot read — which is why Mailpit's published entry gains it only after the release that
-reads it (**T200c**), and why an installed Mailpit keeps the manifest it was installed with until it
-is installed again. Design:
+as one it cannot read. Mailpit's published entry gained it with **T200c**, at the `master` commit
+that reads it and ahead of a release: until that release, an older MixEngine lists Mailpit as an
+entry it cannot read and says to update. An installed Mailpit keeps the manifest it was installed
+with, so it gains Open when it is installed again. Design:
 [docs/specs/2026-10-07-t200a-t200b-an-add-ons-page-and-why-a-site-is-down-design.md](../specs/2026-10-07-t200a-t200b-an-add-ons-page-and-why-a-site-is-down-design.md).
 
 ## Registry

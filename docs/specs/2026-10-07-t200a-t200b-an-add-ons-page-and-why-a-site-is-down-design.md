@@ -4,6 +4,7 @@ date: 2026-10-07
 task:
   - T200a
   - T200b
+  - T200c
 ---
 
 # T200a, T200b — An add-on's own page, and why a site is down
@@ -91,7 +92,7 @@ held in `extension_ports`. The client only opens what it is given.
 - **`mix extension list`.** The `SITE` column becomes `OPENS AT`. It holds the site's domain for a
   `web-app` and the `ui` address for a service.
 
-### D4 — Publishing Mailpit's `[ui]` waits for a release that can read it (T200a → T200c)
+### D4 — Mailpit's `[ui]` is published once `master` can read it (T200a → T200c)
 
 The manifest reader uses `deny_unknown_fields`. Every MixEngine already released counts a
 registry entry with a `[ui]` table as *"an entry this build cannot read"*, and drops it from
@@ -101,14 +102,20 @@ So the change ships in two steps:
 
 1. **This task (T200a):** the reader, the surfaces, and the testkit fixture
    `fixtures/extensions/mailpit.toml` with `[ui] port = "ui_port"`.
-2. **T200c, after the release that carries T200a:** the same line in
+2. **T200c, as soon as T200a is on `master`:** the same lines in
    `mixengine-packages/data/extensions/mailpit.toml`, published by its `publish-extensions`
-   workflow at that release's full commit SHA.
+   workflow at that merge's full commit SHA. The generator is built from that commit, so it is the
+   earliest commit whose reader accepts `[ui]`. That repository's `check-extensions` builds the
+   generator from `master` too, so the manifest change is pushed only after the merge.
 
-During the window between the two steps, people on the new release see Mailpit without Open,
-which is today's behaviour. After T200c, people on older releases see one entry their build cannot
-read, with the existing *"update MixEngine to see it"* line. That cost is bounded and says what to
-do; publishing first would cost the same thing and arrive before the update that cures it.
+**Published ahead of a release, and what that costs.** This document first said T200c would wait
+for the release that carries T200a. It was decided instead to publish when T200a reaches
+`master`, so the work ends in one piece rather than as a task left waiting on a release date.
+Until that release ships, a MixEngine already installed (v0.0.15 and earlier) reads Mailpit's
+entry as *"an entry this build cannot read"* and says to update. It no longer offers Mailpit in
+`mix extension available` or in MixLab's Available card. A Mailpit already installed keeps
+running as before, because its row holds the manifest it was installed with. The release that
+carries T200a lifts the restriction.
 
 **An installed Mailpit keeps the manifest it was installed with.** Nothing re-reads the registry
 into an installed row (T81). It gets Open after it is uninstalled and installed again, and the
@@ -204,7 +211,7 @@ screen says why, and `mix site show {{ domain }}` does too. Reload this page onc
 The client surface is unchanged: `extension.start`, `service.start`, `service.list` and
 `site.list` are already reachable, and D2 and D5 add response members, not methods. Strings go
 into `en.ts` and `vi.ts` together. The changelog gets:
-- `Added`: Mailpit's page opens from Add-ons once T200c has published it;
+- `Added`: Mailpit's page opens from Add-ons; a Mailpit installed before needs installing again;
 - `Changed`: a site that cannot start says why in Sites, Add-ons and `mix site show`.
 
 ## Acceptance
@@ -220,4 +227,4 @@ into `en.ts` and `vi.ts` together. The changelog gets:
   - after the cause is fixed and the service reaches `running`, the note is gone.
 
   The starting page names Sites and `mix site show`, and contains no failure text.
-- **T200c** (after the release): Mailpit installed from the registry opens its page from Add-ons.
+- **T200c**: Mailpit installed from the registry opens its page from Add-ons.

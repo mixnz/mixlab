@@ -21,9 +21,9 @@ T200a and T200b: [2026-10-07-t200a-t200b-an-add-ons-page-and-why-a-site-is-down-
       *Open* from it — Mailpit's UI. A format change here and a publish in `mixengine-packages`.
 - [x] **T200b** The starting page's *"Open MixLab to see why"* has somewhere to point: a wake the
       activator refused is shown beside the site it belongs to.
-- [ ] **T200c** Publish Mailpit's `[ui]` from `mixengine-packages`, after the release that carries
-      T200a: every earlier build reads an entry with `[ui]` as one it cannot read, so the reader
-      ships first.
+- [x] **T200c** Publish Mailpit's `[ui]` from `mixengine-packages` at the `master` commit that
+      carries T200a. Builds released before it read the entry as one they cannot read until they
+      are updated; an installed Mailpit keeps running and gains Open when installed again.
 
 **M38** Adminer installed from the window opens to its login page on all three systems with no
 daemon restart.

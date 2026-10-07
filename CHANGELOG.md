@@ -6,7 +6,7 @@
 - MixLab has a new Dashboard, a black Dark theme and ten colour themes in place of the accent colour, and shows CPU per core or for the whole machine.
 - The Add-ons screen shows an install's progress, lists each add-on once with what it is for, and opens or turns a web add-on on and off from its own row. `mix extension list` shows what each one is for too.
 - A site that cannot start says why, on the Sites and Add-ons screens and in `mix site show`, and MixEngine's starting page says where to look.
-- An add-on with a web page, such as Mailpit, can be opened from the Add-ons screen once its registry entry declares one.
+- Mailpit's web page opens from the Add-ons screen. A Mailpit installed before this needs installing again to get the Open button.
 
 ### Fixed
 - A version you keep when updating no longer offers the same update again, in `mix` and MixLab.
