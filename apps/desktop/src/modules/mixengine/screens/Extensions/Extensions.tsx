@@ -31,14 +31,19 @@ import { jobFinished, jobFor } from "../../runtimeState";
 import { jobFailureMessage } from "../../blueprintPlan";
 import { siteVisit } from "../../siteState";
 import {
+  heldPorts,
   installable,
   installsWithoutARow,
   kindKey,
   notInstalled,
+  pendingLabelKey,
   publishedTargets,
   rowActions,
+  rowMoving,
+  serviceStatesAfter,
   summaryDescription,
   webAppSite,
+  type PendingAction,
   type RowAction,
 } from "../../extensionState";
 import PlanDialog from "./PlanDialog";
@@ -73,6 +78,8 @@ export default function Extensions({ active }: { active: boolean }) {
   const [unreadable, setUnreadable] = useState(0);
   const [stale, setStale] = useState(false);
   const [serviceState, setServiceState] = useState<Record<string, string | null | undefined>>({});
+  /** What each row has sent and not heard back about, by add-on id — the Dashboard's `busy`. */
+  const [acting, setActing] = useState<Record<string, PendingAction>>({});
   /** Every service, for why an add-on's process could not start — T200b, D6. */
   const [allServices, setAllServices] = useState<ServiceSummary[]>([]);
   const [error, setError] = useState("");
@@ -141,6 +148,8 @@ export default function Extensions({ active }: { active: boolean }) {
   useEffect(() => {
     return subscribeDaemonWatch((raw) => {
       setJobs((current) => applyJob(current, raw));
+      // `starting`, then `running`: a row follows its service as the Dashboard's does.
+      setServiceState((current) => serviceStatesAfter(current, raw));
       // A service that has just failed, or come back: its line under the name follows (T200b, D6).
       if (failureMayHaveChanged(raw)) void reload();
       const finished = jobFinished(raw);
@@ -172,13 +181,31 @@ export default function Extensions({ active }: { active: boolean }) {
 
   /** `extension.*` and not `service.*` — see this plan's Global Constraints. */
   async function toggle(row: ExtensionSummary, action: "start" | "stop") {
+    await whilePending(row.id, action, () =>
+      action === "start" ? api.extensionStart(row.id) : api.extensionStop(row.id),
+    );
+  }
+
+  /** Send one action from a row and hold the row in its in-between state until it answers, the
+   *  Dashboard's `run`: a start can take twenty seconds, and a row that looks idle all the while
+   *  reads as a press that did nothing. Rereads once it is over, whichever way it went. */
+  async function whilePending(id: string, action: PendingAction, send: () => Promise<unknown>) {
     setError("");
+    setActing((current) => ({ ...current, [id]: action }));
+    // Carried into the reread, which otherwise clears the banner it is about to need.
+    let failure = "";
     try {
-      if (action === "start") await api.extensionStart(row.id);
-      else await api.extensionStop(row.id);
-      void reload();
+      await send();
     } catch (e) {
-      setError(errorMessage(t, e));
+      failure = errorMessage(t, e);
+      setError(failure);
+    } finally {
+      setActing((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      void reload(failure);
     }
   }
 
@@ -198,8 +225,12 @@ export default function Extensions({ active }: { active: boolean }) {
     setError("");
     try {
       if (!["running", "starting", "degraded"].includes(serviceState[row.id] ?? "")) {
-        await api.extensionStart(row.id);
-        void reload();
+        let started = false;
+        await whilePending(row.id, "start", async () => {
+          await api.extensionStart(row.id);
+          started = true;
+        });
+        if (!started) return;
       }
       await openUrl(row.ui);
     } catch (e) {
@@ -208,15 +239,10 @@ export default function Extensions({ active }: { active: boolean }) {
   }
 
   /** A `web-app` is turned on and off as its site — T200, D6. */
-  async function switchSite(site: SiteSummary, on: boolean) {
-    setError("");
-    try {
-      if (on) await api.siteStart(site.domain);
-      else await api.siteStop(site.domain);
-      void reload();
-    } catch (e) {
-      setError(errorMessage(t, e));
-    }
+  async function switchSite(row: ExtensionSummary, site: SiteSummary, on: boolean) {
+    await whilePending(row.id, on ? "turnOn" : "turnOff", () =>
+      on ? api.siteStart(site.domain) : api.siteStop(site.domain),
+    );
   }
 
   async function confirmUninstall() {
@@ -249,7 +275,12 @@ export default function Extensions({ active }: { active: boolean }) {
     return key === null ? kind : t(key);
   }
 
-  function nameCell(name: string, description: string | null, failure: Failure | null = null) {
+  function nameCell(
+    name: string,
+    description: string | null,
+    failure: Failure | null = null,
+    ports: string | null = null,
+  ) {
     return (
       <span className={styles.name}>
         <MonogramBadge name={name} size={34} />
@@ -258,6 +289,11 @@ export default function Extensions({ active }: { active: boolean }) {
           {description !== null && (
             <span className={styles.description} title={description}>
               {description}
+            </span>
+          )}
+          {ports !== null && (
+            <span className={styles.ports} title={ports}>
+              {t("mixengine.extensions.ports", { ports })}
             </span>
           )}
           {failure !== null && (
@@ -279,6 +315,14 @@ export default function Extensions({ active }: { active: boolean }) {
   }
 
   function stateCell(row: ExtensionSummary, site: SiteSummary | null) {
+    const inFlight = acting[row.id];
+    if (inFlight !== undefined) {
+      return (
+        <StatusPill tone="warning" pulse>
+          {t(pendingLabelKey(inFlight))}
+        </StatusPill>
+      );
+    }
     if (row.kind === "web-app") {
       if (site === null) {
         return <StatusPill tone="danger">{t("mixengine.extensions.siteMissing")}</StatusPill>;
@@ -291,7 +335,12 @@ export default function Extensions({ active }: { active: boolean }) {
     }
     if (row.kind === "service") {
       return (
-        <StatusPill tone={pillTone(serviceState[row.id])}>{stateLabel(serviceState[row.id])}</StatusPill>
+        <StatusPill
+          tone={pillTone(serviceState[row.id])}
+          pulse={rowMoving(row, serviceState[row.id], undefined)}
+        >
+          {stateLabel(serviceState[row.id])}
+        </StatusPill>
       );
     }
     return <span className={styles.none}>—</span>;
@@ -313,7 +362,7 @@ export default function Extensions({ active }: { active: boolean }) {
       case "turnOn":
         return (
           site && (
-            <Button key={action} size="small" variant="positive" onClick={() => void switchSite(site, true)}>
+            <Button key={action} size="small" variant="positive" onClick={() => void switchSite(row, site, true)}>
               {t("mixengine.extensions.turnOn")}
             </Button>
           )
@@ -321,7 +370,7 @@ export default function Extensions({ active }: { active: boolean }) {
       case "turnOff":
         return (
           site && (
-            <Button key={action} size="small" onClick={() => void switchSite(site, false)}>
+            <Button key={action} size="small" onClick={() => void switchSite(row, site, false)}>
               {t("mixengine.extensions.turnOff")}
             </Button>
           )
@@ -432,7 +481,7 @@ export default function Extensions({ active }: { active: boolean }) {
                 const site = row.kind === "web-app" ? webAppSite(row, sites) : null;
                 return (
                   <tr key={row.id}>
-                    <td data-nowrap>{nameCell(row.name, summaryDescription(row), failureOf(row, site))}</td>
+                    <td data-nowrap>{nameCell(row.name, summaryDescription(row), failureOf(row, site), heldPorts(row))}</td>
                     <td className={styles.version}>{row.version}</td>
                     <td>
                       <span className={styles.tag}>{kindLabel(row.kind)}</span>
@@ -440,10 +489,19 @@ export default function Extensions({ active }: { active: boolean }) {
                     <td>{stateCell(row, site)}</td>
                     <td data-align="end" data-nowrap>
                       <span className={styles.rowActions}>
-                        {rowActions(row, serviceState[row.id], site).map((action) =>
-                          actionButton(row, site, action),
+                        {acting[row.id] !== undefined ? (
+                          <Button size="small" busy={t(pendingLabelKey(acting[row.id]))} />
+                        ) : (
+                          rowActions(row, serviceState[row.id], site).map((action) =>
+                            actionButton(row, site, action),
+                          )
                         )}
-                        <Button size="small" variant="danger" onClick={() => setUninstalling(row)}>
+                        <Button
+                          size="small"
+                          variant="danger"
+                          disabled={acting[row.id] !== undefined}
+                          onClick={() => setUninstalling(row)}
+                        >
                           {t("mixengine.extensions.uninstall")}
                         </Button>
                       </span>

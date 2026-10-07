@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { ExtensionOffer, ExtensionSummary, SiteSummary } from "@mixengine/api";
 
 import {
+  heldPorts,
+  pendingLabelKey,
+  rowMoving,
+  serviceStatesAfter,
   installsWithoutARow,
   installable,
   kindKey,
@@ -143,5 +147,73 @@ describe("installsWithoutARow", () => {
       "probe",
     ]);
     expect(installsWithoutARow({}, [], [])).toEqual([]);
+  });
+});
+
+describe("heldPorts", () => {
+  it("lists every port an add-on holds as name and number, in the daemon's order", () => {
+    const row = summary({
+      kind: "service",
+      ports: [
+        { name: "s3_port", wanted: 8333 },
+        { name: "filer_port", wanted: 18888 },
+      ],
+    });
+
+    expect(heldPorts(row)).toBe("s3_port 8333 · filer_port 18888");
+  });
+
+  it("is null for an add-on that holds none, so no empty line is drawn", () => {
+    expect(heldPorts(summary({ ports: [] }))).toBeNull();
+  });
+});
+
+describe("pendingLabelKey", () => {
+  it("says starting for what brings something up, and stopping for what takes it down", () => {
+    expect(pendingLabelKey("start")).toBe("mixengine.extensions.starting");
+    expect(pendingLabelKey("turnOn")).toBe("mixengine.extensions.starting");
+    expect(pendingLabelKey("stop")).toBe("mixengine.extensions.stopping");
+    expect(pendingLabelKey("turnOff")).toBe("mixengine.extensions.stopping");
+  });
+});
+
+describe("rowMoving", () => {
+  const service = summary({ id: "seaweedfs", kind: "service", site: null });
+
+  it("is moving while an action sent from this row has not come back", () => {
+    expect(rowMoving(service, "stopped", "start")).toBe(true);
+    expect(rowMoving(summary(), undefined, "turnOn")).toBe(true);
+  });
+
+  it("is moving while the daemon says the service is between states", () => {
+    expect(rowMoving(service, "starting", undefined)).toBe(true);
+    expect(rowMoving(service, "stopping", undefined)).toBe(true);
+  });
+
+  it("is still when nothing is in flight and the service has settled", () => {
+    expect(rowMoving(service, "running", undefined)).toBe(false);
+    expect(rowMoving(service, "stopped", undefined)).toBe(false);
+    expect(rowMoving(summary(), undefined, undefined)).toBe(false);
+  });
+});
+
+describe("serviceStatesAfter", () => {
+  const before = { seaweedfs: "stopped", mailpit: "running" };
+
+  it("moves the one service a state change names", () => {
+    const after = serviceStatesAfter(
+      before,
+      JSON.stringify({ type: "service_state_changed", service: "seaweedfs", from: "stopped", to: "starting" }),
+    );
+
+    expect(after).toEqual({ seaweedfs: "starting", mailpit: "running" });
+  });
+
+  it("hands back the same table for anything else, so the screen does not redraw", () => {
+    expect(serviceStatesAfter(before, JSON.stringify({ type: "job_progress", job: 1 }))).toBe(before);
+    expect(serviceStatesAfter(before, "not json")).toBe(before);
+    expect(serviceStatesAfter(before, JSON.stringify({ type: "service_state_changed", service: "seaweedfs" }))).toBe(
+      before,
+    );
   });
 });

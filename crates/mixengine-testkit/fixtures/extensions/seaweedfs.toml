@@ -1,0 +1,110 @@
+schema = 1
+
+[extension]
+id = "seaweedfs"
+name = "SeaweedFS"
+version = "4.48.0"
+kind = "service"
+description = "A local S3 for the files your project stores in the cloud"
+homepage = "https://github.com/seaweedfs/seaweedfs"
+
+# Five targets, because upstream publishes no Windows on ARM. Each archive holds one binary at its
+# top level — `weed`, mode 0755, or `weed.exe` on Windows — so `{install_dir}/weed` names it on every
+# one. The hashes are the digests GitHub publishes for release 4.48; the Windows, Linux x86-64 and
+# macOS arm64 archives were downloaded and matched them.
+[artifact.windows-x86_64]
+url = "https://github.com/seaweedfs/seaweedfs/releases/download/4.48/windows_amd64.zip"
+sha256 = "fe90c04c0620ad1a1c756f86cd5e1443773f56a446688077a4bb5ec04c3cc874"
+size = 47000874
+
+[artifact.macos-x86_64]
+url = "https://github.com/seaweedfs/seaweedfs/releases/download/4.48/darwin_amd64.tar.gz"
+sha256 = "425ef61d2ee773d5d5175003f38bd6cc891070ae6319370354aaf5378c45d5b3"
+size = 47134256
+
+[artifact.macos-aarch64]
+url = "https://github.com/seaweedfs/seaweedfs/releases/download/4.48/darwin_arm64.tar.gz"
+sha256 = "faa194e72a346755dc4404288b0561eb3c260351702901d8363024d5099bdd7d"
+size = 42699632
+
+[artifact.linux-x86_64]
+url = "https://github.com/seaweedfs/seaweedfs/releases/download/4.48/linux_amd64.tar.gz"
+sha256 = "4a7d108384d044d95212d1342cdda9533fa55842c1c9b41f606ca3c8a9561124"
+size = 46067365
+
+[artifact.linux-aarch64]
+url = "https://github.com/seaweedfs/seaweedfs/releases/download/4.48/linux_arm64.tar.gz"
+sha256 = "557e92c38c5c7d180748eb8e2b2b45e426f8e5282a4caca8e098a90d09f03a07"
+size = 40558283
+
+# **Every port `weed server -s3` opens** — MixEngine's roadmap task T201, its design's D1. Left to
+# itself `weed` opens a gRPC port beside each of these at the port + 10000, and MixEngine allocates
+# what is named here and nothing else. Measured on 4.48 (`lsof` on macOS, `Get-NetTCPConnection` on
+# Windows, `ss` on Linux): with Iceberg and Lance switched off below, these eight and no others, all
+# on `{listen}`. The wanted numbers are upstream's defaults; the allocator moves any that is taken,
+# and `volume_port` often is.
+[ports]
+master_port = 9333
+master_grpc_port = 19333
+volume_port = 8080
+volume_grpc_port = 18080
+filer_port = 8888
+filer_grpc_port = 18888
+s3_port = 8333
+s3_grpc_port = 18333
+
+# The filer serves a file browser; the master's page is for debugging the cluster.
+[ui]
+port = "filer_port"
+
+[service]
+# No `.exe`: a path with no extension is resolved to one on Windows, as Mailpit's is.
+program = "{install_dir}/weed"
+cwd = "{data_dir}"
+args = [
+    "server",
+    "-s3",
+    "-ip",
+    "{listen}",
+    "-dir",
+    "{data_dir}",
+    "-master.port",
+    "{master_port}",
+    "-master.port.grpc",
+    "{master_grpc_port}",
+    "-volume.port",
+    "{volume_port}",
+    "-volume.port.grpc",
+    "{volume_grpc_port}",
+    "-filer.port",
+    "{filer_port}",
+    "-filer.port.grpc",
+    "{filer_grpc_port}",
+    "-s3.port",
+    "{s3_port}",
+    "-s3.port.grpc",
+    "{s3_grpc_port}",
+    # Two more listeners on fixed ports (8181, 9101) that a local S3 does not need — D1.
+    "-s3.port.iceberg",
+    "0",
+    "-s3.port.lance",
+    "0",
+    # Nothing is reported to telemetry.seaweedfs.com — D1a. A Go boolean takes its value after `=`.
+    "-master.telemetry=false",
+    # A pause for a cluster to stop sending writes, which one machine has no use for — D1c.
+    "-volume.preStopSeconds",
+    "0",
+]
+# **`/healthz` and not the port** — D1b. On a restart the S3 port opens before the master has a
+# leader. Even `/healthz` is about two seconds early: reads fail with a 500 until the volume server
+# has re-registered, which S3 clients retry. A restart took 13 to 20 s, a first start 4.
+ready = { type = "http", url = "http://{listen}:{s3_port}/healthz", expect_status = 200, timeout = "60s" }
+# `weed` takes 16 s to leave after a signal, most of it the filer closing its gRPC streams — D1c.
+stop = { type = "signal", grace = "30s" }
+
+# **No S3 credentials** — the design's D4. Loopback only, as Redis and MongoDB are; keys would have
+# to be on disk for `weed` to read them. Its log says `Failed to load IAM configuration` at every
+# start; buckets and objects work without credentials regardless.
+[permissions]
+network = "loopback"
+filesystem = ["own-data"]

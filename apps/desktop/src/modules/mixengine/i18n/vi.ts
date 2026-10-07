@@ -842,6 +842,9 @@ const vi: typeof en = {
       siteOff: "Đang tắt",
       siteMissing: "Không thấy site",
       couldNotStart: "{{service}} không khởi động được: {{detail}}",
+      ports: "Cổng: {{ports}}",
+      starting: "Đang bật…",
+      stopping: "Đang tắt…",
       notForThisSystem: "Không có bản cho hệ điều hành này",
       publishedFor: "Có bản cho {{targets}}",
       kind: {

@@ -1,4 +1,4 @@
-//! The four `extension.toml` fixtures — roadmap task **T80**, made true by **T82** and **T82a**.
+//! The `extension.toml` fixtures — roadmap task **T80**, made true by **T82** and **T82a**.
 //!
 //! **These are the manifests T82 shipped**, not examples written to fit the parser. A format proved
 //! against files invented for it proves only that it is self-consistent; these are the kinds as the
@@ -6,8 +6,9 @@
 //! and it did: T80's `[web-app].root = "{install_dir}/app"` and its `template` field were both wrong
 //! about the real artifacts, which is what T82's design D1 and its roadmap line record.
 //!
-//! **Three of them carry the real hashes**, which T80 said they never would. That rule was written
-//! when a hash here could only go stale; what changed is that these are now the same bytes
+//! **Every one that downloads something carries the real hash**, which T80 said none ever would.
+//! That rule was written when a hash here could only go stale; what changed is that these are now
+//! the same bytes
 //! `mixnz/mixengine-packages` publishes under `data/extensions/`, and a fixture that agreed with the
 //! roster about everything except the one field somebody would copy is a trap rather than a
 //! precaution. Nothing in this workspace downloads one of these, so a hash that goes stale costs a
@@ -29,3 +30,8 @@ pub const ADMINER: &str = include_str!("../fixtures/extensions/adminer.toml");
 
 /// A `recipe` and nothing else.
 pub const SENDMAIL: &str = include_str!("../fixtures/extensions/sendmail.toml");
+
+/// A `service` with eight ports, every one passed with its own flag — roadmap task **T201**. Its
+/// gRPC ports are the reason: `weed` opens one beside each port it is given unless told which, and a
+/// port MixEngine did not allocate is a port nothing stops something else holding.
+pub const SEAWEEDFS: &str = include_str!("../fixtures/extensions/seaweedfs.toml");
