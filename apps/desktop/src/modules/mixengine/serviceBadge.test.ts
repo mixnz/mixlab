@@ -21,6 +21,13 @@ describe("serviceBadge", () => {
     expect(serviceBadge("php-fpm@8", versions).tag).toBe("8");
   });
 
+  it("tags only a version, never an instance named for something else", () => {
+    const shared = ["php-fpm@8.5.11", "php-fpm@phpmyadmin", "mariadb@main", "mariadb@reset"];
+    expect(serviceBadge("php-fpm@8.5.11", shared).tag).toBe("8.5");
+    expect(serviceBadge("php-fpm@phpmyadmin", shared).tag).toBeUndefined();
+    expect(serviceBadge("mariadb@main", shared).tag).toBeUndefined();
+  });
+
   it("takes an id without an instance as it is", () => {
     expect(serviceBadge("caddy", ids)).toEqual({ name: "caddy", tag: undefined });
     expect(serviceBadge("@odd", ids)).toEqual({ name: "@odd", tag: undefined });
