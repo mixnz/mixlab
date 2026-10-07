@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use mixengine_platform::process::{spawn_supervised, Limits, OutputPipe, Supervised};
 use tauri::{AppHandle, Emitter, Runtime};
 
-use super::process::{hint_for, public_url, Hint, Record};
+use super::process::{blocks_the_host, hint_for, public_url, Hint, Record};
 use crate::error::AppError;
 
 /// Said whenever the list changes; carries nothing, and the listener reads `tunnel_list`.
@@ -163,6 +163,7 @@ fn read_output<R: Runtime>(
     if let Some(stderr) = stderr {
         for line in BufReader::new(stderr).lines().map_while(Result::ok) {
             let mut changed = false;
+            let mut opened = None;
             {
                 let mut guard = lock(entries);
                 let Some(entry) = guard.get_mut(&id) else {
@@ -174,8 +175,9 @@ fn read_output<R: Runtime>(
                 }
                 if entry.info.url.is_none() {
                     if let Some(url) = public_url(&line) {
-                        entry.info.url = Some(url);
+                        entry.info.url = Some(url.clone());
                         entry.info.state = "open";
+                        opened = Some(url);
                         changed = true;
                     }
                 }
@@ -189,6 +191,10 @@ fn read_output<R: Runtime>(
             if changed {
                 let _ = app.emit(CHANGED_EVENT, ());
             }
+            if let Some(url) = opened {
+                let (app, entries) = (app.clone(), Arc::clone(entries));
+                std::thread::spawn(move || check_the_host(&app, &entries, id, &url));
+            }
         }
     }
     // The output closed: the process has gone, on its own or because it was stopped.
@@ -201,6 +207,37 @@ fn read_output<R: Runtime>(
     });
     if let Some(mut process) = process {
         let _ = process.wait();
+    }
+    let _ = app.emit(CHANGED_EVENT, ());
+}
+
+/// One `GET /` through a tunnel that has just opened — T203, D4. A dev server that refuses the
+/// tunnel's host (Vite 5 and later) answers `403 Blocked request`, which reads as a broken tunnel
+/// when it is a setting; the row then names `server.allowedHosts`. One request, once: the module does
+/// not watch the traffic.
+fn check_the_host<R: Runtime>(app: &AppHandle<R>, entries: &Entries, id: u32, url: &str) {
+    let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    else {
+        return;
+    };
+    let blocked = runtime.block_on(async {
+        let response = reqwest::Client::new()
+            .get(url)
+            .timeout(std::time::Duration::from_secs(15))
+            .send()
+            .await
+            .ok()?;
+        let status = response.status().as_u16();
+        let body = response.text().await.unwrap_or_default();
+        Some(blocks_the_host(status, &body))
+    });
+    if blocked != Some(true) {
+        return;
+    }
+    if let Some(entry) = lock(entries).get_mut(&id) {
+        entry.info.hint = Some(Hint::AllowedHosts);
     }
     let _ = app.emit(CHANGED_EVENT, ());
 }
