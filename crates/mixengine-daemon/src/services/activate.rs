@@ -15,12 +15,13 @@
 //! the same case here. The waiting client is the one a web-only design would never have met, and it
 //! is most of what T70a will need.
 //!
-//! # Three answers, and each of them is bounded
+//! # Four answers, and each of them is bounded
 //!
 //! | The service is | This does |
 //! | --- | --- |
 //! | stopped, and nobody meant it to stay down | start it, wait, proxy |
 //! | stopped, and a person stopped it | close the connection |
+//! | failed | start it, at most once per [`RETRY_FAILED_AFTER`]; otherwise close (T200) |
 //! | running | proxy straight through |
 //!
 //! The middle row is the design's D8 and it is not a detail: `mix service stop mariadb@main`
@@ -33,7 +34,13 @@
 //! rebooted answered 502 until somebody started its pool by hand. Three of the four ways a service
 //! arrives at `stopped` are not a decision anybody made, and only the fourth may forbid a wake.
 //!
-//! The third row is not a special case for its own sake — a service that is running and whose
+//! **The failed row is T200's.** It used to fall to the last one, so a pool whose start had failed
+//! was dialled anyway and logged as running. It is tried again, because a `failed` row survives a
+//! restart and nothing else would ever start a web-app's pool once its cause is fixed — but not by
+//! every connection, since a front end retrying every fifty milliseconds would repeat one failure a
+//! hundred times.
+//!
+//! The last row is not a special case for its own sake — a service that is running and whose
 //! primary address was refused anyway is a fault this is not the place to diagnose, and proxying is
 //! both the honest answer and the harmless one.
 //!
@@ -69,6 +76,10 @@ pub(crate) enum Refused {
 
     /// It started, and then nothing answered at its own address.
     NotListening,
+
+    /// Its last start failed, and a connection already tried it again moments ago — found by T200.
+    /// See [`RETRY_FAILED_AFTER`].
+    Failed,
 }
 
 /// Hold `listen` for as long as the daemon runs, and start `service` for whoever dials it.
@@ -327,14 +338,24 @@ async fn ensure_running(services: &Registry, service: &ServiceId) -> Result<(), 
         }
     };
 
-    if record.state != ServiceState::Stopped {
+    match record.state {
+        ServiceState::Stopped => {
+            if !record.stopped_by.may_be_woken() {
+                return Err(Refused::StoppedOnPurpose);
+            }
+        }
+
+        // **Failed is not running** (T200). Proxying to it dialled a process that never existed and
+        // logged it as one that runs. Tried again, but not by every connection: see `retry_due`.
+        ServiceState::Failed => {
+            if !retry_due(service) {
+                return Err(Refused::Failed);
+            }
+        }
+
         // Running, starting, or on its way down. Proxy and let the dial say whether anything is
         // there — a service in trouble is not this function's to diagnose.
-        return Ok(());
-    }
-
-    if !record.stopped_by.may_be_woken() {
-        return Err(Refused::StoppedOnPurpose);
+        _ => return Ok(()),
     }
 
     let Ok(graph) = services.graph().await else {
@@ -352,6 +373,42 @@ async fn ensure_running(services: &Registry, service: &ServiceId) -> Result<(), 
     }
 
     Ok(())
+}
+
+/// How long a failed service is left alone after a connection tried to start it — roadmap task
+/// **T200**.
+///
+/// A front end retries a refused upstream every fifty milliseconds for five seconds, so without a
+/// pause one page load is a hundred starts failing for the same reason. Ten seconds is past that
+/// window, and short enough that a person who fixed the cause and reloads is not kept waiting.
+const RETRY_FAILED_AFTER: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// When a connection last tried to start each failed service.
+///
+/// In memory and not on the row: it is a rate, not a fact about the service, and a daemon that
+/// restarts is one that may try again at once.
+static TRIED: std::sync::Mutex<std::collections::BTreeMap<ServiceId, std::time::Instant>> =
+    std::sync::Mutex::new(std::collections::BTreeMap::new());
+
+/// Whether a connection may try to start this failed service now, and if so, mark that it did.
+///
+/// **A failed service is tried again, and not by every connection** — T200. Refusing it for good
+/// would leave a web-app down after its cause was fixed, because a `failed` row survives a restart
+/// and nothing in a site starts its pool; trying on every connection would repeat one failure a
+/// hundred times a page load.
+fn retry_due(service: &ServiceId) -> bool {
+    let now = std::time::Instant::now();
+    let mut tried = TRIED
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+
+    match tried.get(service) {
+        Some(last) if now.duration_since(*last) < RETRY_FAILED_AFTER => false,
+        _ => {
+            tried.insert(service.clone(), now);
+            true
+        }
+    }
 }
 
 #[cfg(test)]
@@ -417,6 +474,39 @@ mod tests {
             ensure_running(&registry, &service("waker")).await,
             Err(Refused::StoppedOnPurpose),
             "a service that has never run was read as one its owner had stopped"
+        );
+    }
+
+    /// **A service that failed is tried again, once in a while, and never proxied to as running** —
+    /// found by T200.
+    ///
+    /// Everything but `stopped` used to read as *running*, so a pool whose start had failed was
+    /// dialled anyway and `daemon.log` said *"the service is running and nothing answers"* about a
+    /// process that never existed. Refusing it for good would be worse: a `failed` row survives a
+    /// daemon restart, and nothing in a web-app's site starts its pool, so a cause fixed afterwards
+    /// would leave the site down until somebody found `mix service start`. So the first connection
+    /// tries a start, and the ones right behind it — a front end retries every fifty milliseconds —
+    /// are refused instead of each repeating the same failure.
+    #[tokio::test]
+    async fn a_failed_service_is_tried_again_once_and_not_on_every_connection() {
+        let (_home, paths, store) = home(&["waker"]).await;
+        sqlx::query("UPDATE services SET state = 'failed' WHERE id = 'waker'")
+            .execute(store.pool())
+            .await
+            .expect("the row");
+
+        // Nothing is declared, so the start the first connection tries fails for an honest reason.
+        let registry = registry(&paths, &store, Arc::new(Declared(Vec::new())));
+
+        assert_eq!(
+            ensure_running(&registry, &service("waker")).await,
+            Err(Refused::WouldNotStart),
+            "the first connection to a failed service tries to start it"
+        );
+        assert_eq!(
+            ensure_running(&registry, &service("waker")).await,
+            Err(Refused::Failed),
+            "a connection right behind it repeated a start that had just failed"
         );
     }
 
