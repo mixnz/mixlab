@@ -161,9 +161,11 @@ export function applyEvent(
       // Build no row for an unknown service: `service.list` is where a row is born, and it knows
       // things this event does not carry.
       const stoppedBy = to === "stopped" ? stoppedByReason(event.reason) : null;
+      // T200b, D6: the event carries the reason and never the sentence, so a move into `failed`
+      // asks for `service.list` again, which has it; any other move leaves the old sentence behind.
       return {
-        rows: rows.map((row) => (row.id === id ? { ...row, state: to, stoppedBy } : row)),
-        resync: false,
+        rows: rows.map((row) => (row.id === id ? { ...row, state: to, stoppedBy, lastFailure: null } : row)),
+        resync: to === "failed",
       };
     }
 

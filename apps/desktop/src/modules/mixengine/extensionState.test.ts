@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ExtensionOffer, ExtensionSummary, SiteSummary } from "@mixengine/api";
 
 import {
+  installsWithoutARow,
   installable,
   kindKey,
   notInstalled,
@@ -130,5 +131,17 @@ describe("rowActions", () => {
 
   it("offers a config add-on nothing to run", () => {
     expect(rowActions(summary({ kind: "recipe", site: null }), undefined, null)).toEqual([]);
+  });
+});
+
+describe("installsWithoutARow", () => {
+  /* An install from a folder has no Available row to show its progress on; it gets one of its own
+     under Installed until the job ends. */
+  it("is an install whose add-on is neither offered nor installed", () => {
+    const following = { probe: 7, mailpit: 8, adminer: 9 };
+    expect(installsWithoutARow(following, [offer("mailpit", false)], [summary({ id: "adminer" })])).toEqual([
+      "probe",
+    ]);
+    expect(installsWithoutARow({}, [], [])).toEqual([]);
   });
 });

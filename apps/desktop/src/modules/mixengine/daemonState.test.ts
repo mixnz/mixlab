@@ -266,3 +266,30 @@ describe("stoppedBy from a transition", () => {
     expect(started.stoppedBy).toBeNull();
   });
 });
+
+describe("applyEvent and why a service failed", () => {
+  const row = {
+    id: "php-fpm@phpmyadmin",
+    state: "starting" as const,
+    port: null,
+    autostart: false,
+    stoppedBy: null,
+    version: null,
+    lastFailure: "old reason",
+  };
+  const moved = (to: string) =>
+    JSON.stringify({ type: "service_state_changed", service: "php-fpm@phpmyadmin", from: "starting", to, reason: { kind: "requested" } });
+
+  /* T200b, D6: the event carries the reason and never the sentence, so a move into `failed` asks
+     for `service.list` again, which has it. */
+  it("asks for the listing again when a service fails", () => {
+    expect(applyEvent([row], moved("failed")).resync).toBe(true);
+  });
+
+  /* And any other move leaves the old sentence behind, rather than showing a failure that is over. */
+  it("forgets the sentence once the service has moved on", () => {
+    const after = applyEvent([row], moved("running"));
+    expect(after.resync).toBe(false);
+    expect(after.rows[0].lastFailure).toBeNull();
+  });
+});

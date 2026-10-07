@@ -21,7 +21,7 @@ import type { ExtensionOrigin } from "@mixengine/api";
 import type { ExtensionSummary } from "@mixengine/api";
 import type { ServiceSummary } from "@mixengine/api";
 import type { SiteSummary } from "@mixengine/api";
-import { serviceFailure, type Failure } from "../../failureState";
+import { failureMayHaveChanged, serviceFailure, type Failure } from "../../failureState";
 import StaleBadge from "../../components/StaleBadge";
 import Checkbox from "../../../../components/Checkbox";
 import { serviceStateKey, serviceStateTone } from "../../serviceStateLabel";
@@ -32,6 +32,7 @@ import { jobFailureMessage } from "../../blueprintPlan";
 import { siteVisit } from "../../siteState";
 import {
   installable,
+  installsWithoutARow,
   kindKey,
   notInstalled,
   publishedTargets,
@@ -140,13 +141,15 @@ export default function Extensions({ active }: { active: boolean }) {
   useEffect(() => {
     return subscribeDaemonWatch((raw) => {
       setJobs((current) => applyJob(current, raw));
+      // A service that has just failed, or come back: its line under the name follows (T200b, D6).
+      if (failureMayHaveChanged(raw)) void reload();
       const finished = jobFinished(raw);
       if (finished !== null && Object.values(installingJobRef.current).includes(finished.id)) {
         // For a failed install, `job_finished` is the only place that says why.
         settle(finished.id, finished.error === null ? "" : errorMessage(t, finished.error));
       }
     });
-  }, [settle, t]);
+  }, [reload, settle, t]);
 
   /** The plan was accepted and the job is running. **Asked once more, at once** — a path install
    *  can end before this id is stored, and its `job_finished` would then pass unrecognised and
@@ -341,23 +344,7 @@ export default function Extensions({ active }: { active: boolean }) {
   /** What an offer's last cell holds: its install's progress, why it cannot be installed here, or
    *  the button — T200, D3 and D8. */
   function offerCell(offer: ExtensionOffer) {
-    const job = jobFor(jobs, installingJob[offer.id]);
-    if (job) {
-      return (
-        <span className={styles.progress}>
-          <progress value={job.percent} max={100} />
-          <span className={styles.progressText}>{job.message}</span>
-        </span>
-      );
-    }
-    if (installingJob[offer.id] !== undefined) {
-      // Accepted, and no progress reported yet.
-      return (
-        <span className={styles.progress}>
-          <progress />
-        </span>
-      );
-    }
+    if (installingJob[offer.id] !== undefined) return progressOf(offer.id);
     if (!installable(offer.artifact)) {
       return (
         <span
@@ -385,6 +372,18 @@ export default function Extensions({ active }: { active: boolean }) {
   }
 
   const offers = notInstalled(available);
+  const pending = installsWithoutARow(installingJob, available, installed);
+
+  /** The progress of one install, or an indeterminate bar until the job first reports. */
+  function progressOf(id: string) {
+    const job = jobFor(jobs, installingJob[id]);
+    return (
+      <span className={styles.progress}>
+        {job ? <progress value={job.percent} max={100} /> : <progress />}
+        {job && <span className={styles.progressText}>{job.message}</span>}
+      </span>
+    );
+  }
 
   return (
     <div className={`mixengine-page ${styles.extensions}`}>
@@ -404,7 +403,7 @@ export default function Extensions({ active }: { active: boolean }) {
       <Card title={t("mixengine.extensions.installedTitle")} count={loaded ? installed.length : undefined} flush>
         {!loaded ? (
           <LoadingState />
-        ) : installed.length === 0 ? (
+        ) : installed.length === 0 && pending.length === 0 ? (
           <EmptyState title={t("mixengine.extensions.installedEmpty")} />
         ) : (
           <Table aria-label={t("mixengine.extensions.installedTitle")}>
@@ -418,6 +417,17 @@ export default function Extensions({ active }: { active: boolean }) {
               </tr>
             </thead>
             <tbody>
+              {pending.map((id) => (
+                <tr key={`installing-${id}`}>
+                  <td data-nowrap>{nameCell(id, null)}</td>
+                  <td />
+                  <td />
+                  <td />
+                  <td data-align="end" data-nowrap>
+                    {progressOf(id)}
+                  </td>
+                </tr>
+              ))}
               {installed.map((row) => {
                 const site = row.kind === "web-app" ? webAppSite(row, sites) : null;
                 return (

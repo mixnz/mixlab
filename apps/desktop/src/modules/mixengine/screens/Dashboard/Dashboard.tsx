@@ -53,6 +53,7 @@ import {
   type ServiceRow,
 } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
+import { failureMayHaveChanged } from "../../failureState";
 import CpuRing from "../../components/CpuRing";
 import DaemonUsage from "../../components/DaemonUsage";
 import { serviceBadge } from "../../serviceBadge";
@@ -428,7 +429,8 @@ export default function Dashboard({
       // run twice under StrictMode. `job_finished` is also a reason to reread: a finished
       // `elevation.grant` changes the "N waiting" count with no event of its own saying so (see
       // `isJobFinished`).
-      if (needsResync(raw) || isJobFinished(raw)) void reload();
+      // A service that has just failed carries its sentence in `service.list` only (T200b, D6).
+      if (needsResync(raw) || isJobFinished(raw) || failureMayHaveChanged(raw)) void reload();
       // An event that changes a row, arriving while a `service.list` is on its way back, means that
       // snapshot may have been read *before* this event — the client cannot tell. Note it here so
       // that read requests one more when it lands. Outside the updater, for the same reason as the

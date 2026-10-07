@@ -40,7 +40,7 @@ import {
   type SiteRow,
 } from "../../siteState";
 import { takePendingSitesFilter } from "../../sitesNavigation";
-import { siteFailure } from "../../failureState";
+import { failureMayHaveChanged, siteFailure } from "../../failureState";
 import ShareDialog from "./ShareDialog";
 import SiteForm from "./SiteForm";
 import styles from "./Sites.module.css";
@@ -192,6 +192,13 @@ export default function Sites({ active }: { active: boolean }) {
   useEffect(() => {
     return subscribeDaemonWatch((raw) => {
       setRows((current) => applySharingChange(current, raw));
+      // A pool that has just failed, or come back: its line under the domain follows (T200b, D6).
+      if (failureMayHaveChanged(raw)) {
+        void api.services().then(
+          (listed) => setServices(listed.services),
+          () => undefined,
+        );
+      }
     });
   }, []);
 

@@ -20,3 +20,15 @@ export function serviceFailure(id: string | null | undefined, services: ServiceS
 export function siteFailure(site: SiteSummary, services: ServiceSummary[]): Failure | null {
   return site.kind.kind === "php-fpm" ? serviceFailure(site.kind.pool, services) : null;
 }
+
+/** Whether a daemon message may have started or ended a failure — T200b, D6: a move into `failed`,
+ *  or out of it into `running`. The event carries the state and never the sentence, so a screen
+ *  showing failures reads `service.list` again when this says so. */
+export function failureMayHaveChanged(raw: string): boolean {
+  try {
+    const event = JSON.parse(raw) as { type?: unknown; to?: unknown };
+    return event.type === "service_state_changed" && (event.to === "failed" || event.to === "running");
+  } catch {
+    return false;
+  }
+}

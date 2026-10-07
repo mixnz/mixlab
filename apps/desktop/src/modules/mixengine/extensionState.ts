@@ -92,3 +92,15 @@ export function rowActions(
       return [];
   }
 }
+
+/** The add-ons being installed that no card has a row for — an install from a folder, which the
+ *  registry does not offer — so the Installed card can show their progress until the job ends. */
+export function installsWithoutARow(
+  following: Record<string, number>,
+  offers: ExtensionOffer[],
+  installed: ExtensionSummary[],
+): string[] {
+  return Object.keys(following).filter(
+    (id) => !offers.some((offer) => offer.id === id) && !installed.some((row) => row.id === id),
+  );
+}
