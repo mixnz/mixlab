@@ -27,6 +27,7 @@ use mixengine_proto::{
 use tokio::sync::Mutex;
 
 use crate::error::ToWire as _;
+use crate::services::databases::Making;
 
 /// What a database will be handed to: which state to report, and what to start — roadmap tasks
 /// **T107** and **T165**.
@@ -80,6 +81,17 @@ impl Databases {
     /// `not_found` for a service this home does not declare; `conflict` for an account MixEngine
     /// holds no credential for; `precondition_failed` for an instance that will not start.
     pub(crate) async fn create(&self, asked: &DatabaseCreate) -> Result<DatabaseAccount, Error> {
+        self.make(asked).await.map_err(Making::into_wire)
+    }
+
+    /// [`Databases::create`], with the one refusal the blueprint's step reads by type — roadmap
+    /// task **T202**, D1.
+    ///
+    /// # Errors
+    ///
+    /// [`Making::Foreign`] for an account on the server this home holds no credential for; every
+    /// other refusal of [`Databases::create`] as [`Making::Failed`].
+    pub(crate) async fn make(&self, asked: &DatabaseCreate) -> Result<DatabaseAccount, Making> {
         // Refused before the instance is started, on `blueprint.capture`'s reasoning: a name that
         // was never going to work should not first cost a database server coming up.
         let database = validated_identifier(&asked.database).map_err(|error| error.to_wire())?;

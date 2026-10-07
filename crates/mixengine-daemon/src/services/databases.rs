@@ -75,12 +75,48 @@ pub(crate) fn decide(found: Found, stored: Option<String>, chosen: Option<String
     }
 }
 
+/// Why a database and its account were not made — roadmap task **T202**, D1.
+///
+/// **One refusal by type, everything else already on the wire.** The blueprint's database step
+/// retries with another name on [`Foreign`](Self::Foreign) and must not on anything else; the
+/// wire `Error`'s `conflict` code is shared with refusals that are not this one, so the step
+/// cannot read the code. Every other error was already in wire form when this enum was
+/// introduced, and stays that way.
+#[derive(Debug)]
+pub(crate) enum Making {
+    /// The account is on the server and this home holds no credential for it (T77a, D3).
+    Foreign { service: ServiceId, user: String },
+
+    /// Any other refusal.
+    Failed(Error),
+}
+
+impl Making {
+    /// The wire error a client receives, which for a foreign account is T77a's sentence and hint.
+    pub(crate) fn into_wire(self) -> Error {
+        match self {
+            Self::Foreign { service, user } => mixengine_core::Error::AccountNotOurs {
+                service: service.as_str().to_owned(),
+                user,
+            }
+            .to_wire(),
+            Self::Failed(error) => error,
+        }
+    }
+}
+
+impl From<Error> for Making {
+    fn from(error: Error) -> Self {
+        Self::Failed(error)
+    }
+}
+
 /// The account's password: the one already stored, or a new one stored before anything runs.
 ///
 /// # Errors
 ///
-/// [`ErrorCode::Conflict`] for [`Account::Foreign`]; a machine with no credential store, which
-/// fails here and therefore fails with nothing created.
+/// [`Making::Foreign`] for [`Account::Foreign`]; a machine with no credential store, which fails
+/// here and therefore fails with nothing created, as [`Making::Failed`].
 pub(crate) async fn account_password(
     host: &Arc<dyn Host>,
     address: &str,
@@ -88,7 +124,7 @@ pub(crate) async fn account_password(
     user: &str,
     found: Found,
     chosen: Option<String>,
-) -> Result<String, Error> {
+) -> Result<String, Making> {
     match decide(found, read(host, address).await?, chosen) {
         Account::Stored(password) => Ok(password),
 
@@ -98,11 +134,10 @@ pub(crate) async fn account_password(
             Ok(password)
         }
 
-        Account::Foreign => Err(mixengine_core::Error::AccountNotOurs {
-            service: service.as_str().to_owned(),
+        Account::Foreign => Err(Making::Foreign {
+            service: service.clone(),
             user: user.to_owned(),
-        }
-        .to_wire()),
+        }),
 
         Account::Generate => {
             let secret = mixengine_platform::generate_secret(SECRET_LENGTH)
@@ -119,16 +154,16 @@ pub(crate) async fn account_password(
 ///
 /// # Errors
 ///
-/// An instance whose first run never stored a superuser credential; everything
-/// [`account_password`] refuses; and whatever a failed statement reports, carrying what the client
-/// printed.
+/// [`Making::Foreign`] for an account this home holds no credential for; as [`Making::Failed`],
+/// an instance whose first run never stored a superuser credential, and whatever a failed
+/// statement reports, carrying what the client printed.
 pub(crate) async fn ensure(
     host: &Arc<dyn Host>,
     provisioning: &Provisioning,
     service: &ServiceId,
     ask: &Ask,
     chosen: Option<String>,
-) -> Result<Provisioned, Error> {
+) -> Result<Provisioned, Making> {
     let root = read(host, &provisioning.root_address())
         .await?
         .ok_or_else(|| {
@@ -517,11 +552,14 @@ mod tests {
     }
 
     /// **Design D3's third branch**, as the error a client renders.
+    /// **A foreign account is a refusal the caller can read by type** — roadmap task **T202**, D1.
+    /// The blueprint's step retries on exactly this and on nothing else, and `ErrorCode::Conflict`
+    /// is shared with refusals it must not retry on.
     #[tokio::test]
     async fn an_account_we_hold_no_credential_for_is_refused() {
         let (_, host) = host(true);
 
-        let error = account_password(
+        let refused = account_password(
             &host,
             "mariadb@main/blog",
             &service(),
@@ -535,6 +573,17 @@ mod tests {
         .await
         .expect_err("it refuses");
 
+        let Making::Foreign {
+            service: named,
+            user,
+        } = &refused
+        else {
+            panic!("a foreign account is refused by type: {refused:?}");
+        };
+        assert_eq!(named, &service());
+        assert_eq!(user, "blog");
+
+        let error = refused.into_wire();
         assert_eq!(error.code, ErrorCode::Conflict);
         assert!(error.message.contains("blog"), "{}", error.message);
     }
