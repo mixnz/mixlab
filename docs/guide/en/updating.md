@@ -60,7 +60,7 @@ the replacement rides along with the next prompt MixLab needs anyway.
 checks it against the signed release, and opens it in Installer.app. Nothing stops while you go
 through the installer, and cancelling it costs nothing.
 
-When the installer is done, run `mix self-update --finish`, or press **Finish update** in MixLab.
+When the installer is done, run `mix self-update --finish`, or press **Finish** in MixLab.
 MixEngine restarts on the new version and starts the services that were running.
 
 Over SSH, the installer opens on the Mac's own screen. `mix self-update` also prints the path of the

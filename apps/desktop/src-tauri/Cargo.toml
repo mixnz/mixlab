@@ -88,6 +88,10 @@ http-body-util = "0.1"
 # not a capability this one uses. This replaced a hand-kept copy of the pipe-name fingerprint, a
 # named-pipe dial and an owner check read through `windows-sys` (phase 11, T102).
 mixengine-platform = { path = "../../../crates/mixengine-platform", default-features = false, features = ["default"] }
+# The daemon's wire types, for the one seam that decodes a job and a report rather than forwarding
+# them: the removal of T182a (`modules::mixengine::for_uninstall`). ADR 0027 allows it, and
+# `tests/layering.rs` holds the line at proto and platform.
+mixengine-proto = { path = "../../../crates/mixengine-proto" }
 futures-util = "0.3.33"
 async-trait = "0.1.91"
 base64 = "0.23.1"

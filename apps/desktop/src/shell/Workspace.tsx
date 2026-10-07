@@ -6,6 +6,8 @@ import ClosingStrip from "./components/ClosingStrip";
 import SettingsModal from "./components/SettingsModal";
 import TabNotice from "./components/TabNotice";
 import UpdatePanel from "./components/UpdatePanel";
+import RemoveDialog from "./components/RemoveDialog";
+import { onUninstallRequest, uninstallMenuLabel } from "./uninstall";
 import ContextMenu from "../components/ContextMenu";
 import { moveTab, Tab, TabAction, tabKeyDown, TabStrip, TabTitle, useTabReorder } from "../components/TabStrip";
 import { CloudDownloadIcon, CloudUploadIcon, PlusIcon, SettingsIcon } from "../icons";
@@ -145,6 +147,18 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
   /* MixLab's own updater — T187. Here rather than in the pane, so the Settings button can say that
      a release is waiting whatever modules are visible, and the pane reads the same state. */
   const updates = useUpdates(settingsOpen);
+  /* MixLab ▸ Remove MixLab from this Mac…: T182a. The menu item is Rust's, built before any string
+     was loaded, so its text is sent from here; where there is no item the command does nothing. */
+  const [removeOpen, setRemoveOpen] = useState(false);
+  useEffect(() => {
+    const unlisten = onUninstallRequest(() => setRemoveOpen(true));
+    return () => {
+      void unlisten.then((stop) => stop());
+    };
+  }, []);
+  useEffect(() => {
+    void uninstallMenuLabel(t("remove.menuItem")).catch(() => {});
+  }, [t]);
   /* The release on the Settings button's dot: offered, downloading or ready to install. *Later*
      hides the corner panel and not the dot, which interrupts nothing (T188 D1). */
   const pendingView = updates.view === "offer" || updates.view === "downloading" || updates.view === "ready";
@@ -579,6 +593,8 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
           setSettingsOpen(true);
         }}
       />
+
+      {removeOpen && <RemoveDialog onClose={() => setRemoveOpen(false)} />}
 
       {settingsOpen && (
         <SettingsModal

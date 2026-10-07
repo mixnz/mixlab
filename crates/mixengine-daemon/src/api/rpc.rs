@@ -1425,14 +1425,19 @@ impl Api {
         // Everything that can refuse, before anything is stopped.
         let staged = self.updates.stage(&apply.version).await?;
 
+        // Read before the stop, because the stop walk reaches every service in the plan and
+        // reports an already-stopped one as stopped: what the new daemon starts again is the
+        // services that were running, not the whole machine (`updates::restorable`).
+        let running = self.running_services().await;
         let stopped = self.stop_everything().await.map_err(|error| {
             // The services are still running: `stop_everything` builds the plan before it walks it,
             // and this is the failure to build one.
             tracing::warn!(%error, "an update could not work out the order to stop services in");
             error
         })?;
+        let restarting = crate::updates::restorable(&stopped.reached, &running);
 
-        self.updates.remember(&staged.to, &stopped.reached).await?;
+        self.updates.remember(&staged.to, &restarting).await?;
 
         let swapped = match mixengine_core::updates::apply::swap(
             &staged.staged,
@@ -1465,11 +1470,11 @@ impl Api {
             to = %staged.to,
             replaced = ?swapped.replaced,
             kept = ?swapped.kept,
-            restarting = stopped.reached.len(),
+            restarting = restarting.len(),
             "this daemon has been replaced and is stopping so the new one can start"
         );
 
-        Ok(crate::updates::applied(&staged, &swapped, stopped.reached))
+        Ok(crate::updates::applied(&staged, &swapped, restarting))
     }
 
     /// `update.hand_over` — the next `.pkg`, verified and open in Installer.app (T88f). Nothing
@@ -1490,12 +1495,15 @@ impl Api {
     async fn update_finish(&self, _finish: UpdateFinish) -> Result<UpdateApplied, Error> {
         let to = self.updates.finishable().await?;
 
+        // As in `update_apply`: the running services, read before the stop walk reaches the rest.
+        let running = self.running_services().await;
         let stopped = self.stop_everything().await.map_err(|error| {
             tracing::warn!(%error, "an update could not work out the order to stop services in");
             error
         })?;
+        let restarting = crate::updates::restorable(&stopped.reached, &running);
 
-        self.updates.remember(&to, &stopped.reached).await?;
+        self.updates.remember(&to, &restarting).await?;
         self.updates.forget_handover().await;
 
         // From here there is no way of leaving this daemon running, which is `update_apply`'s rule.
@@ -1504,7 +1512,7 @@ impl Api {
         tracing::info!(
             from = env!("CARGO_PKG_VERSION"),
             %to,
-            restarting = stopped.reached.len(),
+            restarting = restarting.len(),
             "the .pkg has installed; this daemon is stopping so the new one can start"
         );
 
@@ -1514,7 +1522,7 @@ impl Api {
             directory: self.updates.directory().display().to_string(),
             replaced: Vec::new(),
             kept: Vec::new(),
-            restarting: stopped.reached,
+            restarting,
         })
     }
 
@@ -3035,8 +3043,11 @@ mod tests {
             serde_json::from_value(answer["result"].clone())
                 .unwrap_or_else(|error| panic!("{error}: {answer}"));
 
-        // Eleven rows before any relocation, and this fixture relocates nothing.
-        assert_eq!(report.items.len(), 11, "{report:?}");
+        // Eleven rows before any relocation, and this fixture relocates nothing. On Windows a
+        // twelfth: the fixture's copy is self-updatable, which there is what the installer placed,
+        // so the plan keeps a `package` row naming the Windows uninstaller (T182a, D3).
+        let expected = if cfg!(windows) { 12 } else { 11 };
+        assert_eq!(report.items.len(), expected, "{report:?}");
 
         for item in &report.items {
             assert!(!item.what.is_empty(), "{item:?}");

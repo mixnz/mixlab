@@ -190,6 +190,24 @@ const vi: SharedDict = {
     openPage: "Mở trang tải về",
     available: "Đã có MixLab {{version}}.",
   },
+  // MixLab ▸ Gỡ MixLab khỏi máy Mac này… (T182a).
+  remove: {
+    title: "Gỡ MixLab khỏi máy Mac này",
+    menuItem: "Gỡ MixLab khỏi máy Mac này…",
+    checking: "Đang xem máy này có gì…",
+    intro: "MixLab sẽ trả lại mọi thứ MixEngine đã đổi trên máy, rồi tự gỡ chính nó và thoát. Bạn chỉ cần nhập mật khẩu một lần.",
+    blocked: "{{what}}: {{by}}",
+    checkAgain: "Kiểm tra lại",
+    deleteData: "Xoá luôn dữ liệu của MixLab trong {{path}}: database, chứng chỉ và hồ sơ dự án",
+    deleteRelocated: "Xoá luôn các thư mục bạn đã chuyển ra ngoài",
+    remove: "Gỡ MixLab",
+    removing: "Đang gỡ",
+    waiting: "Đang chờ bạn nhập mật khẩu để gỡ.",
+    declined: "Bạn chưa cho phép nên chưa gỡ gì. MixLab vẫn còn trên máy.",
+    failed: "Còn vài thứ chưa gỡ được. MixLab vẫn còn trên máy, sửa xong thì chạy lại.",
+    daemonStayed: "Đã gỡ hết, nhưng MixEngine vẫn đang chạy. Tắt nó rồi chạy lại để xong hẳn.",
+    left: "Vẫn còn trên máy:",
+  },
   // Messages when a backend command fails. The key here is exactly the `code` `AppError` carries
   // — see src-tauri/src/error.rs. `{{message}}` is the driver's verbatim text, not translated: it
   // is the server speaking, and also the part most worth looking up.
@@ -207,6 +225,9 @@ const vi: SharedDict = {
       "Pipe của MixEngine ở {{endpoint}} đang do {{owner}} giữ, không phải tài khoản này.",
     mixengineRefused: "MixEngine từ chối: {{message}}",
     mixengineStartFailed: "Không khởi động được MixEngine: {{message}}",
+    uninstallNoDaemon: "Không khởi động được MixEngine nên chưa gỡ gì. Từ terminal: mix uninstall --package",
+    uninstallFailed: "Việc gỡ đã dừng: {{message}}",
+    uninstallUnavailable: "Bản MixLab này không được cài từ gói macOS nên không tự gỡ được.",
     updateDaemonWouldNotStop: "MixEngine không dừng trong 30 giây nên chưa có gì bị thay. Thử lại sau một lúc.",
     updateNoBuild: "Bản phát hành này chưa có bản cho máy này.",
     updateLocked: "Đang có một lần cập nhật khác chạy (tiến trình {{pid}}). Thử lại khi nó xong.",

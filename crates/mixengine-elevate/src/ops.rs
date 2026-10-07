@@ -90,6 +90,7 @@ pub(crate) fn apply(
         // Roadmap task T87, and the two operations whose target is this binary's own business —
         // see `crate::helper` and `crate::audit` for why neither carries a field to aim.
         PrivilegedOp::HelperRemove {} => crate::helper::remove(),
+        PrivilegedOp::PackageRemove {} => crate::package::remove(),
         PrivilegedOp::AuditLogRemove {} => match crate::audit::path() {
             Ok(log) => crate::audit::remove(&log),
             // The same refusal `main` makes of an unreadable audit path, at the granularity of one
@@ -292,6 +293,7 @@ mod tests {
 
         for (op, named) in [
             (PrivilegedOp::HelperRemove {}, "helper-remove"),
+            (PrivilegedOp::PackageRemove {}, "package-remove"),
             (PrivilegedOp::AuditLogRemove {}, "audit-log-remove"),
         ] {
             let outcome = apply(&op, false, &caller, directory.path());

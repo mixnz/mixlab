@@ -156,12 +156,21 @@ impl<K: Keyring> Keyring for Vaulted<K> {
         if let Some(found) = vault.entries.get(rest) {
             return Ok(Some(found.clone()));
         }
-        if fresh || vault.wrote {
-            return Ok(None);
+        if !fresh && !vault.wrote {
+            self.load(&mut held, home, "read")?;
+            if let Some(found) = held[home].entries.get(rest) {
+                return Ok(Some(found.clone()));
+            }
         }
 
-        self.load(&mut held, home, "read")?;
-        Ok(held[home].entries.get(rest).cloned())
+        // **A daemon from before T186 kept this password as an item of its own**, under the account
+        // `<home>/<rest>`, and a vault that does not hold it is not the last word: the item is read
+        // where that daemon left it. Listed first, which asks the store nothing it would prompt for,
+        // so a key nobody ever kept still costs no visit (T186's promise, the test above).
+        if self.inner.keys(service)?.iter().any(|flat| flat == key) {
+            return self.inner.secret(service, key);
+        }
+        Ok(None)
     }
 
     fn set_secret(&self, service: &str, key: &str, secret: &str) -> Result<()> {
@@ -195,12 +204,15 @@ impl<K: Keyring> Keyring for Vaulted<K> {
             .expect("loaded above")
             .entries
             .remove(rest)
-            .is_none()
+            .is_some()
         {
-            return Ok(());
+            self.save(&mut held, home)?;
         }
 
-        self.save(&mut held, home)
+        // And the item a daemon from before T186 would have kept under this very name, which `keys`
+        // lists as it is: an uninstall that forgot the vault's entry alone left it behind. The
+        // inner store's forget is idempotent, so a name it never held costs nothing.
+        self.inner.forget_secret(service, key)
     }
 
     fn keys(&self, service: &str) -> Result<Vec<String>> {
@@ -415,6 +427,55 @@ mod tests {
 
         assert!(store.items.lock().unwrap().is_empty());
         assert!(vault.keys(SERVICE).unwrap().is_empty());
+    }
+
+    /// A daemon from before T186 wrote each password as an item of its own, under the account
+    /// `<home>/<rest>`. `keys` lists such an item as it is, so a reader and an uninstall that took
+    /// the vault path alone found nothing there: the password unreadable, the item never forgotten
+    /// ("3 of 3 are still in this user's credential store", found by the T182a walk).
+    #[test]
+    fn a_key_an_older_daemon_kept_flat_is_read_and_forgotten() {
+        let store = Arc::new(Counting::default());
+        let vault = vaulted(&store);
+        let key = format!("{HOME}/mariadb@main/root");
+        store.set_secret(SERVICE, &key, "flat").unwrap();
+
+        assert_eq!(
+            vault.secret(SERVICE, &key).unwrap().as_deref(),
+            Some("flat")
+        );
+        assert_eq!(vault.keys(SERVICE).unwrap(), vec![key.clone()]);
+
+        vault.forget_secret(SERVICE, &key).unwrap();
+
+        assert!(
+            store.items.lock().unwrap().is_empty(),
+            "the flat item is gone"
+        );
+        assert!(vault.keys(SERVICE).unwrap().is_empty());
+    }
+
+    /// Both shapes at once: the vault's entry wins the read, and a forget takes both.
+    #[test]
+    fn a_vault_entry_shadows_a_flat_item_and_a_forget_takes_both() {
+        let store = Arc::new(Counting::default());
+        let vault = vaulted(&store);
+        let key = format!("{HOME}/mariadb@main/root");
+        store.set_secret(SERVICE, &key, "flat").unwrap();
+        vault.set_secret(SERVICE, &key, "vaulted").unwrap();
+
+        assert_eq!(
+            vault.secret(SERVICE, &key).unwrap().as_deref(),
+            Some("vaulted")
+        );
+
+        vault.forget_secret(SERVICE, &key).unwrap();
+
+        assert!(
+            store.items.lock().unwrap().is_empty(),
+            "{:?}",
+            store.items.lock().unwrap()
+        );
     }
 
     #[test]

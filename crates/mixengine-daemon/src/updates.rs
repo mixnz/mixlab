@@ -1192,3 +1192,52 @@ pub(crate) fn applied(
         restarting,
     }
 }
+
+/// What the new daemon starts again after an update: the services the stop walk reached **that
+/// were running before it** — roadmap task **T88**, "restore running services".
+///
+/// The stop walk takes the whole graph in reverse dependency order, and `stop_one` reports a
+/// service that was already stopped as stopped, so `reached` holds every service in the plan.
+/// Recording that list would start every service on the machine at the next start, including the
+/// ones a person had stopped on purpose; the T88f check by hand found exactly that. The order is
+/// the walk's, which is what `restore_after_update` replays.
+pub(crate) fn restorable(reached: &[ServiceId], running: &[ServiceId]) -> Vec<ServiceId> {
+    reached
+        .iter()
+        .filter(|id| running.contains(id))
+        .cloned()
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn id(name: &str) -> ServiceId {
+        ServiceId::parse(name).expect("a service id")
+    }
+
+    /// The stop walk reaches every service in the plan, running or not, and `stop_one` counts a
+    /// service that was already stopped as stopped. Found by the T88f check by hand: a `.pkg`
+    /// update with two services running started six, four of which the person had stopped.
+    #[test]
+    fn a_service_that_was_stopped_before_the_update_is_not_restored() {
+        let reached = vec![id("redis@main"), id("mariadb@main"), id("caddy")];
+        let running = vec![id("caddy"), id("redis@main")];
+
+        assert_eq!(
+            restorable(&reached, &running),
+            vec![id("redis@main"), id("caddy")]
+        );
+    }
+
+    /// The order is the stop walk's, which is reverse dependency order — what the new daemon
+    /// replays in reverse to start them again.
+    #[test]
+    fn the_restore_list_keeps_the_stop_walk_order() {
+        let reached = vec![id("php-fpm@8.4"), id("caddy"), id("mariadb@main")];
+        let running = vec![id("mariadb@main"), id("caddy"), id("php-fpm@8.4")];
+
+        assert_eq!(restorable(&reached, &running), reached);
+    }
+}

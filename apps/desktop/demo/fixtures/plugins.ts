@@ -24,4 +24,6 @@ export const pluginHandlers: Handlers = {
   import_happened: returns(false),
   // Every window asks for the tray icon on start (T168); a picture has no tray to put one in.
   tray_configure: returns(null),
+  // Every window sends the Remove MixLab menu item its text (T182a); a picture has no menu bar.
+  uninstall_menu_label: returns(null),
 };

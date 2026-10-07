@@ -127,7 +127,12 @@ too.
   them, and exits, as `update.apply` does after its swap. Nothing in MixEngine elevates, and the
   `.pkg` has no scripts. `mix self-update` always prints the package's path and the `installer`
   command, because over SSH the installer opens on the Mac's own screen. The first release carrying
-  this cannot reach itself: a `.pkg` user installs it by hand once.
+  this cannot reach itself: a `.pkg` user installs it by hand once. Since T187 MixLab's own updater
+  takes the same path from Settings → Updates without the daemon: it downloads the `.pkg` itself,
+  reads the new version from the bundle's `Info.plist`, and *Finish* stops and starts a running
+  daemon ([ADR 0056](../decisions/0056-mixlab-stands-without-mixengine.md)). On either path the new
+  daemon starts again the services that were running before the stop, not every service the stop
+  order reached. Checked by hand on 2026-10-07; the readings are in the design.
 - **A Linux copy the `.deb` or the `.rpm` installed is updated by the next package of its kind** —
   roadmap task **T182b**, D5, [ADR 0053](../decisions/0053-the-helper-has-its-own-version-and-follows-the-product.md).
   The receipt is the package database that owns `mixengined` (`dpkg:<package>` or

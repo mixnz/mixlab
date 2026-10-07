@@ -47,4 +47,4 @@ target: TrustTarget, } | { "op": "firewall-apply",
 /**
  * What should end up open, and under what name.
  */
-plan: FirewallPlan, } | { "op": "helper-install", } | { "op": "helper-replace", } | { "op": "helper-remove", } | { "op": "audit-log-remove", };
+plan: FirewallPlan, } | { "op": "helper-install", } | { "op": "helper-replace", } | { "op": "helper-remove", } | { "op": "package-remove", } | { "op": "audit-log-remove", };

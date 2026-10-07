@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+- On a Mac, MixLab ▸ Remove MixLab from this Mac… removes everything in one go, after showing you
+  what it will undo. From a terminal, `mix uninstall --package` does the same.
+- On Linux, `mix uninstall` now tells you the command that removes the package itself.
+
 ### Changed
 - MixLab has a new Dashboard, a black Dark theme and ten colour themes in place of the accent colour, and shows CPU per core or for the whole machine.
 - The Add-ons screen shows an install's progress, lists each add-on once with what it is for, and opens or turns a web add-on on and off from its own row. `mix extension list` shows what each one is for too.
@@ -13,6 +18,13 @@
 - An add-on's site, such as Adminer, opens right after it is installed or reinstalled, without restarting MixEngine.
 - phpMyAdmin starts and signs in to your database again. It was looking for the database password under an old name.
 - Uninstalling an add-on that is running, such as Mailpit, stops it first, so it can be installed again. An install also clears what an earlier failed uninstall left behind.
+- Answering `mix self-update`, `mix elevation grant` or a server switch after half a minute no
+  longer fails with "the connection to the daemon failed: Broken pipe". `mix` reconnects on its own.
+- After an update, MixEngine starts again only the services that were running. Before, it also
+  started the ones you had stopped.
+- Removing MixLab with its data now forgets every password MixEngine kept in the macOS Keychain,
+  including the ones an older MixEngine or MixLab wrote. Before, those rows failed and the
+  removal stopped there.
 
 ## v0.0.15
 

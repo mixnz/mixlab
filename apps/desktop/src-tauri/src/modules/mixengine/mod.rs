@@ -5,6 +5,7 @@ pub mod commands;
 pub mod endpoint;
 pub mod events;
 pub mod explore_data;
+pub mod for_uninstall;
 pub mod for_update;
 pub mod health;
 pub mod logs;
