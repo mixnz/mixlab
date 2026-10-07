@@ -125,9 +125,16 @@ function naming(pathspecs) {
 }
 
 // `common.sh` and the packaging README walk `0.0.1-beta.1` through Debian's and RPM's version
-// ordering as a worked example. That is prose about one particular past tag — the one exception on
-// this side, and the reason it is named here rather than discovered again every release.
-const typedOut = naming(["packaging", ".github", ":!packaging/common.sh", ":!packaging/README.md"]);
+// ordering as a worked example, and `macos/uninstall-check.md` records which released `.pkg` the
+// removal was walked over by hand (T182a). Both are prose about one particular past tag, and the
+// reason they are named here rather than discovered again every release.
+const typedOut = naming([
+  "packaging",
+  ".github",
+  ":!packaging/common.sh",
+  ":!packaging/README.md",
+  ":!packaging/macos/uninstall-check.md",
+]);
 
 if (typedOut.length > 0) {
   console.error(`set-version: ${current} is typed out in these, which are supposed to derive it:`);
