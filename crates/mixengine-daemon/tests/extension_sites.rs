@@ -5,6 +5,7 @@
 //! stopping it, that removing the PHP it runs on is refused by name, and that an uninstall takes
 //! it away and says so. The PHP is a row and a pool row (`declare::php_pool`), not a download.
 
+use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
@@ -416,4 +417,60 @@ async fn a_web_app_with_no_matching_php_is_refused_at_plan() {
             .is_some_and(|hint| hint.contains("mix runtime")),
         "{refused}"
     );
+}
+
+/// Whether something accepts a TCP connection on this loopback port.
+fn accepts(port: u16) -> bool {
+    TcpStream::connect_timeout(
+        &SocketAddr::from((Ipv4Addr::LOCALHOST, port)),
+        Duration::from_secs(2),
+    )
+    .is_ok()
+}
+
+/// **T200, D1.** A web-app's pool can be woken by a request the moment the install ends.
+///
+/// The pool is created by the install, outside boot, so it has neither an activation port nor a
+/// listener until something gives it one — and a site naming a pool that nothing can wake answers
+/// 502 until the daemon is restarted. That is what a person installing Adminer met. A pool on a
+/// Unix socket derives its activator from its own path, so only a TCP pool has a port to assert.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_web_app_can_be_woken_the_moment_it_is_installed() {
+    let fixture = Fixture::start().await;
+    declare::php_pool(&fixture.home.database_file(), "8.3.34").await;
+    declare::database(
+        &fixture.home.database_file(),
+        "mariadb@main",
+        "mariadb",
+        3306,
+    )
+    .await;
+    let mut client = fixture.client().await;
+    let directory = web_app();
+    let path = directory.path().display().to_string();
+
+    installed(&mut client, &path, &fixture.home).await;
+
+    let port = declare::activation_port(&fixture.home.database_file(), "php-fpm@phpmyadmin").await;
+
+    if cfg!(windows) {
+        let port = port.unwrap_or_else(|| {
+            panic!(
+                "a TCP pool created by an install has no activation port
+{}",
+                fixture.home.daemon_log()
+            )
+        });
+        assert!(
+            accepts(port),
+            "nothing holds the activator's address 127.0.0.1:{port} after the install
+{}",
+            fixture.home.daemon_log()
+        );
+    } else {
+        assert_eq!(
+            port, None,
+            "a socket pool's activator is derived from its path, never allocated"
+        );
+    }
 }

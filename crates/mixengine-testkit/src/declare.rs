@@ -288,6 +288,31 @@ pub async fn home_id(database: &Path) -> String {
     serde_json::from_str(&json).unwrap_or_else(|error| panic!("an id spelled as JSON: {error}"))
 }
 
+/// The activation port a service's row holds, or [`None`] where it holds none — roadmap task
+/// **T200**.
+///
+/// Read rather than asked for, as [`home_id`] is: no method answers it, because an activator's
+/// address is the front end's business and never a client's. What a suite needs it for is to dial
+/// the address a site file names after the pool's own.
+///
+/// # Panics
+///
+/// If the database cannot be opened, the row is not there, or the column holds a number that is
+/// not a port.
+pub async fn activation_port(database: &Path, service: &str) -> Option<u16> {
+    let pool = open(database).await;
+
+    let port: Option<i64> = sqlx::query_scalar("SELECT activation_port FROM services WHERE id = ?")
+        .bind(service)
+        .fetch_one(&pool)
+        .await
+        .unwrap_or_else(|error| panic!("the row of {service}: {error}"));
+
+    pool.close().await;
+
+    port.map(|port| u16::try_from(port).unwrap_or_else(|_| panic!("{port} is not a port")))
+}
+
 /// [`database`], for a test that has no runtime of its own — roadmap task **T83**.
 ///
 /// The end-to-end suite of `mix database client` is made of plain `#[test]` functions, as

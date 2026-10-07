@@ -324,6 +324,11 @@ impl Extensions {
             .map_err(|error| error.to_wire())?;
 
         if let Some(site) = &site {
+            // **Before the site is declared**, so the first file the front end reads already names
+            // the activator after the pool — T200, D1.
+            handle.progress(86, "making its pool reachable").await;
+            self.make_pool_reachable().await;
+
             handle.progress(88, "writing its configuration").await;
             self.configure_one(&installed).await?;
 
@@ -436,6 +441,48 @@ impl Extensions {
                 "web-app extensions were moved onto pools of their own and the front end was not \
                  told; the next `mix site` call renders it"
             );
+        }
+    }
+
+    /// Give a pool this install just created the address a request wakes it through — roadmap task
+    /// **T200**, its design's D1.
+    ///
+    /// **`runtime.install`'s two repairs, in its order** (T72a): `activation::ensure` allocates the
+    /// activation port a TCP pool needs, and `hold_all` binds every activator not yet held. Without
+    /// them the pool gets both only at the next daemon start, and until then its site answers 502
+    /// behind MixEngine's starting page — which is how a person met it.
+    ///
+    /// **Reported and never fatal**, on T72a's reasoning: the next daemon start makes both repairs
+    /// again, where failing the install would leave a downloaded extension half-written.
+    async fn make_pool_reachable(&self) {
+        if let Err(error) = mixengine_core::services::activation::ensure(
+            &self.store,
+            self.host.as_ref(),
+            &crate::services::catalogue(),
+        )
+        .await
+        {
+            tracing::warn!(
+                %error,
+                "a web-app's pool could not be given an activation port; the next daemon start \
+                 will try again"
+            );
+        }
+
+        match crate::services::activate::hold_all(
+            Arc::clone(&self.services),
+            &self.paths,
+            &self.store,
+            self.host.as_ref(),
+        )
+        .await
+        {
+            Ok(held) if held.is_empty() => {}
+            Ok(held) => tracing::info!(services = ?held, "a request can now start these services"),
+            Err(error) => tracing::warn!(
+                %error,
+                "a web-app's pool cannot be started by a request until this daemon is restarted"
+            ),
         }
     }
 
