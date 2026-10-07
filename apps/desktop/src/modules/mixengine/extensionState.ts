@@ -5,6 +5,8 @@ import type {
   SiteSummary,
 } from "@mixengine/api";
 
+import { toggleMode } from "./serviceStateLabel";
+
 /** The offers a person can still install — T200, D4. An installed add-on is one card up, and a
  *  second row for it was the screen saying the same thing twice. */
 export function notInstalled(offers: ExtensionOffer[]): ExtensionOffer[] {
@@ -111,4 +113,43 @@ export function installsWithoutARow(
   return Object.keys(following).filter(
     (id) => !offers.some((offer) => offer.id === id) && !installed.some((row) => row.id === id),
   );
+}
+
+/** What a row has sent and not yet heard back about — the Dashboard's in-flight rule, on Add-ons. */
+export type PendingAction = "start" | "stop" | "turnOn" | "turnOff";
+
+/** The word a row shows while its action is in flight. A lookup rather than `${action}ing`, for the
+ *  Dashboard's reason: a key built by concatenation is a key nobody can grep for. */
+export function pendingLabelKey(action: PendingAction): "mixengine.extensions.starting" | "mixengine.extensions.stopping" {
+  return action === "start" || action === "turnOn" ? "mixengine.extensions.starting" : "mixengine.extensions.stopping";
+}
+
+/** Whether a row is between states: an action from it is still in flight, or the daemon says its
+ *  service is `starting`, `stopping` or `restarting`. A start can take twenty seconds, and a row that
+ *  looks idle all the while reads as a press that did nothing. */
+export function rowMoving(
+  row: ExtensionSummary,
+  serviceState: string | null | undefined,
+  pending: PendingAction | undefined,
+): boolean {
+  if (pending !== undefined) return true;
+  return row.kind === "service" && toggleMode(serviceState, false) === "moving";
+}
+
+/** The service states after one daemon message. Only `service_state_changed` moves a state, and it
+ *  names the field `service` (see `daemonState.applyEvent`). Anything else hands back the same
+ *  table, so a stream of job progress does not redraw the screen. */
+export function serviceStatesAfter(
+  states: Record<string, string | null | undefined>,
+  raw: string,
+): Record<string, string | null | undefined> {
+  let event: { type?: unknown; service?: unknown; to?: unknown };
+  try {
+    event = JSON.parse(raw) as typeof event;
+  } catch {
+    return states;
+  }
+  if (event.type !== "service_state_changed") return states;
+  if (typeof event.service !== "string" || typeof event.to !== "string") return states;
+  return { ...states, [event.service]: event.to };
 }
