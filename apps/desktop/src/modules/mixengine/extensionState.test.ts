@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ExtensionOffer, ExtensionSummary, SiteSummary } from "@mixengine/api";
 
 import {
+  heldPorts,
   installsWithoutARow,
   installable,
   kindKey,
@@ -143,5 +144,23 @@ describe("installsWithoutARow", () => {
       "probe",
     ]);
     expect(installsWithoutARow({}, [], [])).toEqual([]);
+  });
+});
+
+describe("heldPorts", () => {
+  it("lists every port an add-on holds as name and number, in the daemon's order", () => {
+    const row = summary({
+      kind: "service",
+      ports: [
+        { name: "s3_port", wanted: 8333 },
+        { name: "filer_port", wanted: 18888 },
+      ],
+    });
+
+    expect(heldPorts(row)).toBe("s3_port 8333 · filer_port 18888");
+  });
+
+  it("is null for an add-on that holds none, so no empty line is drawn", () => {
+    expect(heldPorts(summary({ ports: [] }))).toBeNull();
   });
 });

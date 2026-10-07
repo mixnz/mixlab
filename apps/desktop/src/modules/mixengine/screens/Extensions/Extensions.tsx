@@ -31,6 +31,7 @@ import { jobFinished, jobFor } from "../../runtimeState";
 import { jobFailureMessage } from "../../blueprintPlan";
 import { siteVisit } from "../../siteState";
 import {
+  heldPorts,
   installable,
   installsWithoutARow,
   kindKey,
@@ -249,7 +250,12 @@ export default function Extensions({ active }: { active: boolean }) {
     return key === null ? kind : t(key);
   }
 
-  function nameCell(name: string, description: string | null, failure: Failure | null = null) {
+  function nameCell(
+    name: string,
+    description: string | null,
+    failure: Failure | null = null,
+    ports: string | null = null,
+  ) {
     return (
       <span className={styles.name}>
         <MonogramBadge name={name} size={34} />
@@ -258,6 +264,11 @@ export default function Extensions({ active }: { active: boolean }) {
           {description !== null && (
             <span className={styles.description} title={description}>
               {description}
+            </span>
+          )}
+          {ports !== null && (
+            <span className={styles.ports} title={ports}>
+              {t("mixengine.extensions.ports", { ports })}
             </span>
           )}
           {failure !== null && (
@@ -432,7 +443,7 @@ export default function Extensions({ active }: { active: boolean }) {
                 const site = row.kind === "web-app" ? webAppSite(row, sites) : null;
                 return (
                   <tr key={row.id}>
-                    <td data-nowrap>{nameCell(row.name, summaryDescription(row), failureOf(row, site))}</td>
+                    <td data-nowrap>{nameCell(row.name, summaryDescription(row), failureOf(row, site), heldPorts(row))}</td>
                     <td className={styles.version}>{row.version}</td>
                     <td>
                       <span className={styles.tag}>{kindLabel(row.kind)}</span>

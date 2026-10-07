@@ -47,6 +47,14 @@ export function summaryDescription(row: ExtensionSummary): string | null {
   return text === "" ? null : text;
 }
 
+/** The ports an installed add-on holds, as `name number` pairs — T201, D5. The S3 endpoint of
+ *  SeaweedFS and the SMTP port of Mailpit are what a person needs after installing, and no other
+ *  screen shows them. `null` when it holds none, so the row draws no empty line. */
+export function heldPorts(row: ExtensionSummary): string | null {
+  if (row.ports.length === 0) return null;
+  return row.ports.map((port) => `${port.name} ${port.wanted}`).join(" · ");
+}
+
 /** The site a `web-app` is served on, from `site.list` — T200, D6. `null` when the add-on names
  *  none or the listing has no such site, which only a broken install produces. */
 export function webAppSite(row: ExtensionSummary, sites: SiteSummary[]): SiteSummary | null {

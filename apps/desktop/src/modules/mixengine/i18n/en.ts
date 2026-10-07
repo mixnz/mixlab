@@ -853,6 +853,7 @@ export default {
       siteOff: "Off",
       siteMissing: "Site missing",
       couldNotStart: "{{service}} could not start: {{detail}}",
+      ports: "Ports: {{ports}}",
       notForThisSystem: "Not available for this system",
       publishedFor: "Published for {{targets}}",
       kind: {
