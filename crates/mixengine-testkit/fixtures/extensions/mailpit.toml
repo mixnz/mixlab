@@ -45,8 +45,9 @@ size = 9821099
 ui_port = 8025
 smtp_port = 1025
 
-# The page a person opens — MixEngine's roadmap task T200a. Every MixEngine before it reads this
-# entry as one it cannot read, so the registry's copy gains it only after a release that can (T200c).
+# The page a person opens — MixEngine's roadmap task T200a, published with T200c. A MixEngine from
+# before T200a reads an entry carrying `[ui]` as one it cannot read and says to update; once updated,
+# Mailpit is offered again, and an installed one gains Open when it is installed again.
 [ui]
 port = "ui_port"
 
