@@ -56,9 +56,44 @@ pub(crate) fn keys(service: &str) -> Result<Vec<String>, KeyringError> {
 /// and the uninstall reported it still there. `SecItemDelete` by service and account asks nothing
 /// of the secret, so nothing prompts and nothing refuses. Not there is already forgotten.
 pub(crate) fn forget(service: &str, account: &str) -> Result<(), KeyringError> {
-    forgotten(security_framework::passwords::delete_generic_password(
-        service, account,
-    ))
+    match security_framework::passwords::delete_generic_password(service, account) {
+        // **What another program wrote, Apple's own tool deletes** — the T182a walk. The Keychain
+        // refuses a delete from a program that is not in the item's access list, and to it every
+        // release of this program, and the window, is another program: `errSecInvalidOwnerEdit`
+        // (-25244), or `errSecAuthFailed` (-25293) on an older system. `security` is let through,
+        // and it deletes by service and account exactly as the call above would have.
+        Err(error) if the_owner_refused(&error) => {
+            let output = std::process::Command::new(SECURITY)
+                .args(["delete-generic-password", "-s", service, "-a", account])
+                .output()
+                .map_err(|error| KeyringError::PlatformFailure(Box::new(error)))?;
+            tool_said(
+                output.status.code().unwrap_or(-1),
+                &String::from_utf8_lossy(&output.stderr),
+            )
+        }
+        deleted => forgotten(deleted),
+    }
+}
+
+/// Part of the base system, and named absolutely so the caller's `PATH` cannot decide what runs.
+const SECURITY: &str = "/usr/bin/security";
+
+/// Whether the Keychain refused the delete over who wrote the item.
+fn the_owner_refused(error: &security_framework::base::Error) -> bool {
+    /// `errSecInvalidOwnerEdit`, and `errSecAuthFailed`.
+    const OWNER: [i32; 2] = [-25244, -25293];
+    OWNER.contains(&error.code())
+}
+
+/// `security delete-generic-password`'s answer, in `keyring`'s words: deleted, or never there.
+fn tool_said(code: i32, stderr: &str) -> Result<(), KeyringError> {
+    if code == 0 || stderr.contains("could not be found") {
+        return Ok(());
+    }
+    Err(KeyringError::PlatformFailure(Box::new(
+        std::io::Error::other(format!("security exited with {code}: {}", stderr.trim())),
+    )))
 }
 
 /// `SecItemDelete`'s answer in `keyring`'s words: not found is nothing to do.
@@ -105,6 +140,31 @@ mod tests {
             Err(KeyringError::PlatformFailure(_))
         ));
         assert!(forgotten(Ok(())).is_ok());
+    }
+
+    /// The Keychain refuses to let one program delete what another wrote, with
+    /// `errSecInvalidOwnerEdit` or `errSecAuthFailed`, and every release of this program is another
+    /// program to it. Those two go to Apple's own tool, which the Keychain lets through; nothing
+    /// else does.
+    #[test]
+    fn only_a_refusal_over_the_owner_goes_to_the_apple_tool() {
+        use security_framework::base::Error;
+
+        assert!(the_owner_refused(&Error::from_code(-25244)));
+        assert!(the_owner_refused(&Error::from_code(-25293)));
+        assert!(!the_owner_refused(&Error::from_code(-25300)));
+        assert!(!the_owner_refused(&Error::from_code(-25291)));
+    }
+
+    /// What the tool says is read the way `forgotten` reads the API: gone or never there is done.
+    #[test]
+    fn the_apple_tools_answer_is_read_like_the_apis() {
+        assert!(tool_said(0, "").is_ok());
+        assert!(tool_said(44, "security: SecKeychainSearchCopyNext: The specified item could not be found in the keychain.").is_ok());
+        assert!(matches!(
+            tool_said(1, "security: something else"),
+            Err(KeyringError::PlatformFailure(_))
+        ));
     }
 
     /// **Deleted by query, never by reading first** — the T182a walk. `keyring`'s delete finds the
