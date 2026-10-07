@@ -71,12 +71,11 @@ impl Keyring for Secrets {
     }
 
     fn forget_secret(&self, service: &str, key: &str) -> Result<()> {
-        match entry(service, key)?.delete_credential() {
-            // Idempotent by contract: the caller asked for there to be no credential here, and
-            // there is none. See `Keyring::forget_secret`.
-            Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
-            Err(source) => Err(failure("forget", service, key, source)),
-        }
+        // Idempotent by contract: the caller asked for there to be no credential here, and each
+        // system's `forget` answers a credential that is not there with `Ok`. See
+        // `Keyring::forget_secret`. Per system because macOS has to delete by query (its module).
+        crate::sys::secrets::forget(service, key)
+            .map_err(|source| failure("forget", service, key, source))
     }
 
     fn keys(&self, service: &str) -> Result<Vec<String>> {

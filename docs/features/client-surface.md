@@ -201,7 +201,10 @@ binaries. What they state is what the daemon **writes** —
    ([ADR 0051](../decisions/0051-an-uninstall-ends-what-it-undoes.md)). A finished uninstall ends
    the daemon, so a window offering one would outlive what it undid. It belongs to the Windows
    uninstaller and to `mix uninstall`, which call `daemon.uninstall_plan` first and always, then
-   `daemon.uninstall`. The plan names any process running from a directory that would go
+   `daemon.uninstall`. **On macOS the uninstaller is MixLab itself**, because a `.pkg` leaves none
+   ([T182a](../specs/2026-10-07-t182a-an-uninstall-path-for-macos-design.md)): **MixLab ▸ Remove
+   MixLab from this Mac…** runs the same two methods with `package: true`, removes the program with
+   everything else, and quits, so it never outlives the act. The window calls them nowhere else. The plan names any process running from a directory that would go
    (`blocked`), and the act refuses while one is; `keep_home` and `keep_relocated` are the two
    offers to leave data alone. The report is a measurement of the machine afterwards, and the
    caller reads the `on_exit` rows back off disk once the daemon has gone.

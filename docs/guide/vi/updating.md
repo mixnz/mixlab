@@ -4,7 +4,7 @@ slug = "updating"
 order = 12
 summary = "Cập nhật do bạn quyết, có kiểm tra chữ ký, và có chạy thử trước khi thay bất cứ thứ gì. Riêng một chương trình cố ý không bao giờ được thay theo đường này."
 translation_of = "en/updating.md"
-source_sha256 = "ce33cbe6a39e692dc8972efdfeb22922b34a06df7a170c928665c3f0a8fa89c3"
+source_sha256 = "5136a2a4d66d887007d2329327b2724d4c5b58fabaf21a74c7c94dcffe23d23f"
 +++
 
 # Cập nhật MixLab
@@ -61,7 +61,7 @@ thế đi kèm lần xin quyền kế tiếp mà MixLab vốn cũng phải hỏi
 kiểm tra với bản phát hành đã ký, rồi mở bằng Installer.app. Trong lúc bạn cài, không có gì bị dừng,
 và bấm Cancel cũng không mất gì.
 
-Cài xong thì chạy `mix self-update --finish`, hoặc bấm **Hoàn tất cập nhật** trong MixLab. MixEngine
+Cài xong thì chạy `mix self-update --finish`, hoặc bấm **Hoàn tất** trong MixLab. MixEngine
 khởi động lại ở bản mới và chạy lại các service đang chạy trước đó.
 
 Nếu bạn SSH vào máy, Installer hiện trên màn hình của chính máy Mac đó. `mix self-update` in

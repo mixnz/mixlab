@@ -1118,3 +1118,27 @@ async fn a_kept_home_keeps_its_passwords() {
         "{left}"
     );
 }
+
+/// T182a: `--package` is a flag of the plan too. A development daemon was placed by no installer,
+/// so here the row is absent (or, on a Windows checkout, kept); on a `.pkg` install it is `planned`.
+/// What must not happen is an unknown flag, or a dry run that claims a removal.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_dry_run_with_package_shows_the_package_row_and_removes_nothing() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+
+    let output = home.mix(&["uninstall", "--dry-run", "--package", "--json"]);
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+
+    let report = json(&output);
+    let items = report["items"].as_array().expect("a list of rows");
+    if let Some(package) = items.iter().find(|row| row["id"] == "package") {
+        assert!(
+            matches!(
+                package["outcome"]["removal"].as_str(),
+                Some("planned" | "absent" | "kept")
+            ),
+            "{package}"
+        );
+    }
+}

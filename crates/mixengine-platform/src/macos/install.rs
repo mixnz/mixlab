@@ -63,6 +63,55 @@ pub(crate) fn window_dirs(directory: Option<&std::path::Path>) -> Vec<PathBuf> {
 }
 
 /// Where a macOS application bundle keeps the files that are not its executable.
+/// The command-line programs the `.pkg` places in [`BIN`] — roadmap task **T182a**, spec D2. The
+/// names `packaging/common.sh` lists; `mixengine-core/tests/packaging.rs` holds the two in step.
+const PACKAGE_BINARIES: [&str; 4] = [
+    "mix",
+    "mixengined",
+    "mixengine-shim",
+    "mixengine-trampoline",
+];
+
+/// The window's bundle in [`APPLICATIONS`], as `packaging/macos/build.sh` places it.
+const WINDOW_BUNDLE: &str = "MixLab.app";
+
+/// The identifier `apps/desktop/src-tauri/tauri.conf.json` gives the window. A bundle at
+/// [`WINDOW_BUNDLE`]'s path is removed only when it carries this one.
+const WINDOW_BUNDLE_IDENTIFIER: &str = "io.github.mixnz.mixlab";
+
+/// The receipt `pkgbuild --identifier` writes.
+const RECEIPT: &str = "dev.mixengine.cli";
+
+/// What the `.pkg` places as root outside the home — roadmap task **T182a**.
+pub(crate) fn package_paths() -> Option<crate::install::PackagePaths> {
+    Some(crate::install::PackagePaths {
+        binaries: PACKAGE_BINARIES
+            .iter()
+            .map(|name| PathBuf::from(BIN).join(name))
+            .collect(),
+        bundle: PathBuf::from(APPLICATIONS).join(WINDOW_BUNDLE),
+        bundle_identifier: WINDOW_BUNDLE_IDENTIFIER.to_owned(),
+        receipt: RECEIPT.to_owned(),
+    })
+}
+
+/// `pkgutil --forget`, named absolutely so the caller's `PATH` cannot decide what runs. Exit 0 is
+/// forgotten; a receipt the database does not hold is nothing to forget.
+#[cfg(feature = "elevated")]
+pub(crate) fn forget_receipt(receipt: &str) -> std::io::Result<bool> {
+    let output = std::process::Command::new("/usr/sbin/pkgutil")
+        .args(["--forget", receipt])
+        .output()?;
+    if output.status.success() {
+        return Ok(true);
+    }
+    let said = String::from_utf8_lossy(&output.stderr);
+    if said.contains("No receipt") {
+        return Ok(false);
+    }
+    Err(std::io::Error::other(said.trim().to_owned()))
+}
+
 const RESOURCES: &str = "Contents/Resources";
 
 /// What the source inside the bundle is called — the name every other system's copy has.

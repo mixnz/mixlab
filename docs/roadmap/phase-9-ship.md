@@ -225,10 +225,18 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       `## MixLab`.
 - [x] **T182h** The uninstaller leaves a copy of the state in each kept folder, and a fresh home
       offers to restore projects, sites, domains and services from it. After T182g. Spec D5, D6.
-- [ ] **T182a** An uninstall path for macOS and Linux, which have no uninstaller to hang T182 on:
-      for example an *Uninstall MixLab…* item in the macOS app that runs the whole removal, deletes
-      the `.app` and quits, so the app never outlives it. Until then the handbook's order stands:
-      `mix uninstall`, then the package.
+- [x] **T182a** An uninstall path for macOS and Linux, which have no uninstaller to hang T182 on.
+      On macOS, **MixLab ▸ Remove MixLab from this Mac…** runs the whole removal through
+      `daemon.uninstall { package: true }`: one more helper operation, `package-remove`, removes
+      what the `.pkg` placed, and the application quits, so it never outlives the act.
+      `mix uninstall --package` does the same from a terminal. On Linux the plan's `package` row
+      names the `apt` or `dnf` command that removes the package.
+      Design: [2026-10-07-t182a-an-uninstall-path-for-macos-design.md](../specs/2026-10-07-t182a-an-uninstall-path-for-macos-design.md).
+      Walked on a real install on 2026-10-07 (`packaging/macos/uninstall-check.md`); the readings
+      are in the design.
+- [ ] **T182j** A *Remove MixLab…* item in the Linux window, which has to run `pkexec apt remove`
+      or hand the package to the software centre: a design of its own. After T182a; the T182a
+      design, D6.
 - [x] **T88** Auto-update, MixEngine's own: `mix self-update` against `latest.json` on GitHub
       Releases via the stable asset URL (not the API), signature verified before the JSON is parsed,
       daemon check at startup + 24 h interval, silent on failure, consent prompt with notes and size,
@@ -343,7 +351,7 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       ([ADR 0048](../decisions/0048-a-file-a-package-manager-placed-leaves-with-the-package.md)).
       Design: [2026-09-22-t88e-a-file-a-package-placed-leaves-with-the-package-design.md](../specs/2026-09-22-t88e-a-file-a-package-placed-leaves-with-the-package-design.md).
 
-- [ ] **T88f** A `.pkg` install cannot update itself. The `.pkg` writes `/usr/local/bin`,
+- [x] **T88f** A `.pkg` install cannot update itself. The `.pkg` writes `/usr/local/bin`,
       `/Applications/MixLab.app` and the installed helper as root, so T88's updater refuses it and
       `elevation.upgrade` refuses its helper. That is the default macOS install, left to find and
       run the next `.pkg` by hand every release. On an Intel Mac where Homebrew owns `/usr/local`,
@@ -354,9 +362,11 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       `open` from the daemon. The spec lists them.
       Design: [2026-09-23-t88f-a-pkg-is-updated-by-its-installer-design.md](../specs/2026-09-23-t88f-a-pkg-is-updated-by-its-installer-design.md),
       and [ADR 0050](../decisions/0050-a-copy-the-pkg-installed-is-updated-by-the-pkg.md).
-      **Readings taken 2026-09-24 and the code built.** What is left is the design's check by hand
-      on a Mac, which needs a v0.0.8 `.pkg` and a test feed offering a later build; this is ticked
-      once it has been run.
+      **Readings taken 2026-09-24, the code built, and checked by hand on 2026-10-07** from a
+      `.pkg` install, in MixLab against the real feed and over SSH with `mix self-update` against a
+      test feed. The check found two faults outside the design and fixed them with it: a `mix`
+      prompt that outlived the daemon's idle timeout, and an update that started the services a
+      person had stopped. The spec records the readings.
 
 - [x] **T88c** `daemon.status` is not backwards compatible within one protocol version, and the
       sentence written for exactly that case no longer reaches anybody. Every field added to

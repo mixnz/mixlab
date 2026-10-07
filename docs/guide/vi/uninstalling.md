@@ -4,7 +4,7 @@ slug = "uninstalling"
 order = 13
 summary = "Hoàn tác mọi thứ MixLab đã ghi bên ngoài thư mục của nó, xem danh sách trước khi đồng ý, và giữ lại cơ sở dữ liệu nếu bạn muốn."
 translation_of = "en/uninstalling.md"
-source_sha256 = "f71a93e21c7b671daa39466ba021fc4261c0fd81dc216c54bfbdd662c4beae67"
+source_sha256 = "c06aa2e236ad0d7d2be0e1d9c2a5f56d4cfe13be2200de376a906d70feb241f4"
 +++
 
 # Gỡ MixLab
@@ -33,8 +33,19 @@ Tiếp theo là một hộp thoại quản trị để hoàn tác các thay đ�
 lượt chương trình. Nếu bạn từ chối hộp thoại, không có gì bị xoá và MixLab vẫn còn nguyên. Khi nào
 sẵn sàng thì chạy Uninstall lại.
 
-Phần còn lại của trang này là cùng việc đó nhưng làm bằng `mix`, cũng là cách làm trên macOS và
-Linux.
+## Trên Mac, MixLab tự lo hết
+
+Nếu bạn cài MixLab bằng file `.pkg`, chọn **MixLab ▸ Gỡ MixLab khỏi máy Mac này…** (giao diện
+tiếng Anh ghi *Remove MixLab from this Mac…*). MixLab liệt kê mọi thứ nó sẽ trả lại, và mọi thứ
+đang chặn, ví dụ một `node` bạn chạy qua shim. Tắt thứ đó rồi bấm **Kiểm tra lại**. Nó hỏi hai lựa
+chọn giống bộ gỡ trên Windows, mặc định đều không tick.
+
+Bấm **Gỡ MixLab** thì bạn nhập mật khẩu một lần. Xong việc, MixLab tự thoát và không để lại gì:
+không còn lệnh nào trong `/usr/local/bin`, không còn ứng dụng, không còn receipt của gói. Nếu bạn
+từ chối hộp thoại, không có gì bị xoá và mục menu vẫn còn đó.
+
+Phần còn lại của trang này là cùng việc đó nhưng làm bằng `mix`, cũng là cách làm trên Linux, hoặc
+trên Mac từ terminal.
 
 ## Xem danh sách trước
 
@@ -126,18 +137,32 @@ mới, vì mật khẩu cũ đã mất cùng home.
 
 ## Rồi gỡ chính chương trình
 
-`mix uninstall` gỡ những gì MixLab đã làm. Còn gỡ bản thân MixLab là việc của trình quản lý
-gói, và tuỳ vào cách bạn đã cài:
+`mix uninstall` gỡ những gì MixLab đã làm. Còn bản thân chương trình thì tuỳ cách bạn đã cài.
+
+Trên Mac, thêm `--package` là cùng hộp thoại quản trị đó gỡ luôn chương trình: các lệnh trong
+`/usr/local/bin`, `MixLab.app` và receipt của gói.
 
 ```bash
-sudo dpkg -r mixlab
-sudo rpm -e mixlab
-sudo rm -rf /usr/local/bin/mix /usr/local/bin/mixengined /usr/local/bin/mixengine-shim \
-  /Applications/MixLab.app
+mix uninstall --package
 ```
 
-Trên Windows, bộ gỡ của bộ cài đã làm luôn phần này. Trên macOS, dòng thứ ba ở trên xoá những gì
-`.pkg` đã đặt vào, **MixLab** cũng nằm trong đó.
+Trên Linux, trình quản lý gói lo phần này, và `mix uninstall` in sẵn lệnh khi chạy xong:
+
+```bash
+sudo apt remove mixlab
+sudo dnf remove mixlab
+```
+
+Trên Windows, bộ gỡ của bộ cài đã làm luôn phần này.
+
+Một máy Mac không có ai đăng nhập ở màn hình thì không hiện được hộp thoại quản trị. Khi đó, gỡ
+chương trình bằng tay:
+
+```bash
+sudo rm -rf /usr/local/bin/mix /usr/local/bin/mixengined /usr/local/bin/mixengine-shim \
+  /usr/local/bin/mixengine-trampoline /Applications/MixLab.app
+sudo pkgutil --forget dev.mixengine.cli
+```
 
 ## Những gì cố ý không tự động
 

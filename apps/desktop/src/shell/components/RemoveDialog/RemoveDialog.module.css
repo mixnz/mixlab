@@ -1,0 +1,63 @@
+/* The Remove MixLab dialog: T182a. A sentence, what is in the way, the rows, then the two choices. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.intro {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--text-secondary);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.row + .row {
+  border-top: 1px solid var(--border-soft);
+}
+
+/* Nothing there, or kept: shown so the list is the whole plan, and quiet so the eye goes to the rest. */
+.quiet {
+  color: var(--text-faint);
+}
+
+.location {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paths {
+  margin: 0 0 0 26px;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--text-muted);
+}

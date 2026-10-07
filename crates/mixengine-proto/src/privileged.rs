@@ -636,6 +636,14 @@ pub enum PrivilegedOp {
     /// the constant. The T87 design, D8.
     HelperRemove {},
 
+    /// Remove what the macOS `.pkg` placed outside the home — roadmap task **T182a**.
+    ///
+    /// **It carries nothing, on [`HelperRemove`](Self::HelperRemove)'s rule**: the four command-line
+    /// binaries, the application bundle and the package receipt are constants compiled into
+    /// `mixengine-platform`, so this is not a *delete this as root* primitive a daemon could aim. The
+    /// bundle goes only when its `Info.plist` names MixLab. Other systems answer `Unsupported`.
+    PackageRemove {},
+
     /// Remove the root-owned record of what ran as root — roadmap task **T87**.
     ///
     /// **The one thing outside `MIXENGINE_HOME` that no other operation can reach.** The log lives
@@ -667,6 +675,7 @@ impl PrivilegedOp {
         "helper-install",
         "helper-replace",
         "helper-remove",
+        "package-remove",
         "audit-log-remove",
     ];
 
@@ -732,6 +741,9 @@ impl PrivilegedOp {
             }
             // No opposite: nothing installs the log, the helper creates it on its first elevated
             // run. One value of one question, so the name is the whole key.
+            // One value of one question — is the program the package placed still here? — with no
+            // opposite: the package installs it, nothing here does.
+            Self::PackageRemove {} => "package".to_owned(),
             Self::AuditLogRemove {} => "audit-log".to_owned(),
         }
     }
@@ -763,7 +775,8 @@ impl PrivilegedOp {
             Self::HelperReplace {} => true,
             // Both removals reach inside a directory only an administrator can write, for that same
             // reason and with the same consequence.
-            Self::HelperRemove {} | Self::AuditLogRemove {} => true,
+            // The package's files are root's, and so is the receipt database.
+            Self::HelperRemove {} | Self::PackageRemove {} | Self::AuditLogRemove {} => true,
         }
     }
 
@@ -783,6 +796,7 @@ impl PrivilegedOp {
             Self::HelperInstall {} => "helper-install",
             Self::HelperReplace {} => "helper-replace",
             Self::HelperRemove {} => "helper-remove",
+            Self::PackageRemove {} => "package-remove",
             Self::AuditLogRemove {} => "audit-log-remove",
         }
     }
@@ -835,6 +849,10 @@ impl PrivilegedOp {
                                       machine"
                     .to_owned()
             }
+            Self::PackageRemove {} => "remove the program the macOS package installed: the \
+                                       command-line tools, the MixLab application and the \
+                                       package receipt"
+                .to_owned(),
             Self::AuditLogRemove {} => {
                 "remove the root-owned log of everything MixEngine has ever \
                                         done as an administrator, and the directory holding it"
@@ -1242,7 +1260,28 @@ mod tests {
 
         assert_eq!(encoded["op"], PrivilegedOp::Probe {}.name());
         assert!(PrivilegedOp::ALL.contains(&PrivilegedOp::Probe {}.name()));
-        assert_eq!(PrivilegedOp::ALL.len(), 13, "ALL and the enum have drifted");
+        assert_eq!(PrivilegedOp::ALL.len(), 14, "ALL and the enum have drifted");
+    }
+
+    /// T182a, D2: the one operation that removes the program itself carries nothing, like the two
+    /// removals before it, needs a token, and has a key of its own.
+    #[test]
+    fn package_remove_carries_nothing_needs_a_token_and_has_its_own_key() {
+        let op = PrivilegedOp::PackageRemove {};
+
+        assert_eq!(op.name(), "package-remove");
+        assert!(PrivilegedOp::ALL.contains(&op.name()));
+        assert!(op.requires_elevation());
+        assert_eq!(op.dedupe_key(), "package");
+        assert_eq!(
+            serde_json::to_value(&op).unwrap(),
+            serde_json::json!({ "op": "package-remove" })
+        );
+        assert!(
+            !op.describe().contains('/'),
+            "no path in the sentence: {}",
+            op.describe()
+        );
     }
 
     /// The operation carries nothing, so its dedupe key is its name and two enqueues are one row

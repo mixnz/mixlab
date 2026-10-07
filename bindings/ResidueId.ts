@@ -9,4 +9,4 @@
  * `Hash` and `Ord` because the daemon keys a map on it while it works through the list, and a test
  * sorts it to prove no two variants share a spelling. Both are free on a fieldless enum.
  */
-export type ResidueId = "hosts_block" | "resolver_wiring" | "port_access" | "firewall_rules" | "trust_store" | "browser_trust" | "privileged_helper" | "audit_log" | "autostart_entry" | "path_entry" | "completed_binary" | "window_data" | "window_cache" | "credentials" | "window_credentials" | "home" | "relocated_directory" | "in_use";
+export type ResidueId = "hosts_block" | "resolver_wiring" | "port_access" | "firewall_rules" | "trust_store" | "browser_trust" | "privileged_helper" | "audit_log" | "package" | "autostart_entry" | "path_entry" | "completed_binary" | "window_data" | "window_cache" | "credentials" | "window_credentials" | "home" | "relocated_directory" | "in_use";

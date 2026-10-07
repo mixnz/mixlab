@@ -57,6 +57,25 @@ pub(crate) async fn take(
 
     rows.push(privileged_helper().await);
     rows.push(audit_log());
+
+    // T182a: the program itself, where an installer placed it. Read here, from the disk, like
+    // every other row; whether it goes is the query's `package`.
+    let present: Vec<std::path::PathBuf> = mixengine_platform::install::package_paths()
+        .map(|paths| {
+            paths
+                .binaries
+                .into_iter()
+                .chain([paths.bundle])
+                .filter(|path| there(path))
+                .collect()
+        })
+        .unwrap_or_default();
+    rows.extend(package_row(&PackageReading {
+        os: std::env::consts::OS,
+        placement: uninstall.updates.placement(),
+        asked: query.package,
+        present,
+    }));
     rows.push(autostart_entry(uninstall));
     rows.push(path_entry(uninstall).await);
 
@@ -920,6 +939,84 @@ fn helper_row(path: Option<&Path>, present: bool, packaged: Option<String>) -> R
     }
 }
 
+/// What [`package_row`] decides from, read by [`take`] and written by hand in tests.
+pub(crate) struct PackageReading<'a> {
+    /// `std::env::consts::OS`.
+    pub(crate) os: &'a str,
+    /// Who placed this copy, from the daemon's start (T88f's reading of the receipt).
+    pub(crate) placement: &'a mixengine_core::updates::Placement,
+    /// The query's `package`.
+    pub(crate) asked: bool,
+    /// Which of the `.pkg`'s paths are on disk now.
+    pub(crate) present: Vec<std::path::PathBuf>,
+}
+
+/// **7a.** The program itself, where an installer placed it — roadmap task **T182a**, spec D3.
+///
+/// On a copy the macOS `.pkg` placed, `Planned` when asked for and `Kept` naming the flag when not;
+/// on a copy a Linux package or the Windows installer placed, `Kept` naming what removes it there.
+/// A copy no installer placed has no row: nothing here would ever remove it, and nothing should.
+pub(crate) fn package_row(reading: &PackageReading<'_>) -> Option<Residue> {
+    use mixengine_core::updates::Placement;
+
+    let what = "the program itself: its commands, the MixLab application and the package receipt"
+        .to_owned();
+
+    let (location, outcome) = match reading.placement {
+        Placement::Installer { receipt, .. } if reading.os == "macos" && receipt == PKG_RECEIPT => {
+            let outcome = match (reading.asked, reading.present.is_empty()) {
+                (true, true) => Removal::Absent {},
+                (true, false) => Removal::Planned {
+                    how: PrivilegedOp::PackageRemove {}.describe(),
+                },
+                (false, _) => Removal::Kept {
+                    because: "it stays unless asked for: `mix uninstall --package` removes it as \
+                              well"
+                        .to_owned(),
+                },
+            };
+            (receipt.clone(), outcome)
+        }
+        Placement::Installer { receipt, .. } => (
+            receipt.clone(),
+            Removal::Kept {
+                because: package_manager_sentence(receipt),
+            },
+        ),
+        Placement::SelfUpdatable { directory } if reading.os == "windows" => (
+            directory.display().to_string(),
+            Removal::Kept {
+                because: "the Windows uninstaller removes the program".to_owned(),
+            },
+        ),
+        _ => return None,
+    };
+
+    Some(Residue {
+        id: ResidueId::Package,
+        what,
+        location,
+        outcome,
+    })
+}
+
+/// The receipt `mixengine_platform` reads off the macOS package database for a `.pkg` copy.
+const PKG_RECEIPT: &str = "dev.mixengine.cli";
+
+/// How the program goes where a package manager owns it — `dpkg:<name>` and `rpm:<name>` are how
+/// `mixengine-platform` spells those receipts.
+fn package_manager_sentence(receipt: &str) -> String {
+    match receipt.split_once(':') {
+        Some(("dpkg", package)) => {
+            format!("it came with the {package} package: `sudo apt remove {package}` removes it")
+        }
+        Some(("rpm", package)) => {
+            format!("it came with the {package} package: `sudo dnf remove {package}` removes it")
+        }
+        _ => format!("it came with the {receipt} package, and removing that package removes it"),
+    }
+}
+
 /// **8.** The root-owned record of what ran as root, outside `MIXENGINE_HOME`.
 fn audit_log() -> Residue {
     let what = "the log of everything MixEngine has done as an administrator".to_owned();
@@ -1120,6 +1217,110 @@ fn trust_place(method: mixengine_platform::TrustStoreMethod) -> &'static str {
 mod tests {
     use super::*;
     use mixengine_platform::occupants::{HeldItem, Holder};
+
+    fn pkg_placement() -> mixengine_core::updates::Placement {
+        mixengine_core::updates::Placement::Installer {
+            directory: "/usr/local/bin".into(),
+            receipt: "dev.mixengine.cli".to_owned(),
+        }
+    }
+
+    fn reading<'a>(
+        os: &'a str,
+        placement: &'a mixengine_core::updates::Placement,
+        asked: bool,
+        present: &[&str],
+    ) -> PackageReading<'a> {
+        PackageReading {
+            os,
+            placement,
+            asked,
+            present: present.iter().map(std::path::PathBuf::from).collect(),
+        }
+    }
+
+    /// T182a, D3: a `.pkg` copy whose removal was asked for plans the package, named by its receipt.
+    #[test]
+    fn a_pkg_copy_asked_for_plans_the_package_row() {
+        let placement = pkg_placement();
+        let row = package_row(&reading(
+            "macos",
+            &placement,
+            true,
+            &["/Applications/MixLab.app"],
+        ))
+        .expect("a row");
+
+        assert_eq!(row.id, ResidueId::Package);
+        assert!(matches!(row.outcome, Removal::Planned { .. }), "{row:?}");
+        assert_eq!(row.location, "dev.mixengine.cli");
+    }
+
+    /// Not asked for, the program stays and the row says how to remove it too.
+    #[test]
+    fn a_pkg_copy_not_asked_for_keeps_the_row_naming_the_flag() {
+        let placement = pkg_placement();
+        let row = package_row(&reading(
+            "macos",
+            &placement,
+            false,
+            &["/usr/local/bin/mix"],
+        ))
+        .expect("a row");
+
+        assert!(
+            matches!(&row.outcome, Removal::Kept { because } if because.contains("mix uninstall --package")),
+            "{row:?}"
+        );
+    }
+
+    /// A second run after the package went finds nothing there, which is not a failure.
+    #[test]
+    fn a_package_row_with_nothing_there_is_absent() {
+        let placement = pkg_placement();
+        let row = package_row(&reading("macos", &placement, true, &[])).expect("a row");
+
+        assert!(matches!(row.outcome, Removal::Absent {}), "{row:?}");
+    }
+
+    /// Where no `.pkg` placed the copy, the row is kept with the sentence that removes the program
+    /// there; a copy no installer placed has no row at all.
+    #[test]
+    fn package_is_kept_with_a_reason_where_no_pkg_placed_the_copy() {
+        let deb = mixengine_core::updates::Placement::Installer {
+            directory: "/usr/bin".into(),
+            receipt: "dpkg:mixlab".to_owned(),
+        };
+        let row = package_row(&reading("linux", &deb, true, &[])).expect("a row");
+        assert!(
+            matches!(&row.outcome, Removal::Kept { because } if because.contains("sudo apt remove mixlab")),
+            "{row:?}"
+        );
+
+        let rpm = mixengine_core::updates::Placement::Installer {
+            directory: "/usr/bin".into(),
+            receipt: "rpm:mixlab".to_owned(),
+        };
+        let row = package_row(&reading("linux", &rpm, true, &[])).expect("a row");
+        assert!(
+            matches!(&row.outcome, Removal::Kept { because } if because.contains("sudo dnf remove mixlab")),
+            "{row:?}"
+        );
+
+        let swap = mixengine_core::updates::Placement::SelfUpdatable {
+            directory: "C:\\MixLab".into(),
+        };
+        let row = package_row(&reading("windows", &swap, true, &[])).expect("a row");
+        assert!(
+            matches!(&row.outcome, Removal::Kept { because } if because.contains("Windows uninstaller")),
+            "{row:?}"
+        );
+
+        let dev = mixengine_core::updates::Placement::SelfUpdatable {
+            directory: "/work/target/debug".into(),
+        };
+        assert!(package_row(&reading("macos", &dev, true, &[])).is_none());
+    }
 
     fn held(path: &str, movable: bool, holders: &[(u32, &str)]) -> HeldItem {
         HeldItem {
@@ -1337,6 +1538,7 @@ mod tests {
             keep_relocated,
             grant: false,
             skip_holders: false,
+            package: false,
         }
     }
 

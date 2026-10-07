@@ -102,3 +102,21 @@ fn the_updater_names_no_mixengine_crate() {
         );
     }
 }
+
+/// T182a: removing MixLab is the shell's, as updating it is (ADR 0056 rule 3). Nothing under
+/// `src/uninstall/` names a MixEngine crate; what it needs from the daemon it asks
+/// `modules::mixengine::for_uninstall` for.
+#[test]
+fn the_removal_names_no_mixengine_crate() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/uninstall");
+    for entry in std::fs::read_dir(&root).expect("src/uninstall exists") {
+        let path = entry.unwrap().path();
+        let text = std::fs::read_to_string(&path).unwrap();
+        let shipped = text.split("#[cfg(test)]").next().unwrap_or_default();
+        assert!(
+            !shipped.contains("mixengine_"),
+            "{} names a mixengine crate outside its tests (ADR 0056 rule 3)",
+            path.display()
+        );
+    }
+}

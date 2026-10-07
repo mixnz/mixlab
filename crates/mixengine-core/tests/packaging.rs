@@ -458,3 +458,42 @@ fn every_download_link_carries_the_prefix_of_what_it_installs() {
         }
     }
 }
+
+/// The helper removes what `packaging/macos/build.sh` places, by constants of its own — roadmap task
+/// **T182a**, spec D2: the four command-line binaries of `MIX_BINARIES` (all but the helper and the
+/// window), the bundle `MIX_WINDOW_APP`, and MixLab's identifier.
+#[test]
+fn the_package_paths_the_helper_removes_are_what_the_pkg_places() {
+    let paths = mixengine_platform::install::package_paths();
+    if !cfg!(target_os = "macos") {
+        assert_eq!(paths, None);
+        return;
+    }
+    let paths = paths.expect("macOS names the .pkg's paths");
+
+    let mut names: Vec<String> = paths
+        .binaries
+        .iter()
+        .map(|path| {
+            path.file_name()
+                .expect("a name")
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    names.sort();
+
+    let window = assigned("MIX_WINDOW");
+    let mut expected: Vec<String> = declared("MIX_BINARIES")
+        .into_iter()
+        .filter(|name| name != "mixengine-elevate" && *name != window)
+        .collect();
+    expected.sort();
+
+    assert_eq!(names, expected);
+    assert_eq!(
+        paths.bundle.file_name().expect("a name").to_string_lossy(),
+        assigned("MIX_WINDOW_APP")
+    );
+    assert_eq!(paths.bundle_identifier, mixengine_core::window::IDENTIFIER);
+}

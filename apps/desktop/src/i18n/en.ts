@@ -206,6 +206,25 @@ const en = {
     openPage: "Open the download page",
     available: "MixLab {{version}} is available.",
   },
+  // MixLab ▸ Remove MixLab from this Mac… (T182a): the dialog that removes MixLab from a Mac the
+  // .pkg installed it on, then quits.
+  remove: {
+    title: "Remove MixLab from this Mac",
+    menuItem: "Remove MixLab from this Mac…",
+    checking: "Checking what is on this Mac…",
+    intro: "This undoes everything MixEngine changed on this Mac, then removes MixLab itself and quits. You'll be asked for your password once.",
+    blocked: "{{what}}: {{by}}",
+    checkAgain: "Check again",
+    deleteData: "Also delete MixLab's data in {{path}}: your databases, certificates and project records",
+    deleteRelocated: "Also delete the folders you moved out of it",
+    remove: "Remove MixLab",
+    removing: "Removing",
+    waiting: "Waiting for your password, then removing.",
+    declined: "You didn't allow the prompt, so nothing was removed. MixLab is still installed.",
+    failed: "Some things could not be removed. MixLab stays installed, so you can run this again once they're fixed.",
+    daemonStayed: "Everything was removed, but MixEngine is still running. Quit it and run this again to finish.",
+    left: "Still on this Mac:",
+  },
   // What a failed backend command says. The keys here are the `code` an `AppError` carries \u2014 see
   // src-tauri/src/error.rs \u2014 and `{{message}}` is where a driver's own words go, untranslated
   // because they are the server talking and the part worth searching for.
@@ -223,6 +242,9 @@ const en = {
       "The MixEngine pipe at {{endpoint}} is held by {{owner}}, not by this account.",
     mixengineRefused: "MixEngine refused: {{message}}",
     mixengineStartFailed: "Could not start MixEngine: {{message}}",
+    uninstallNoDaemon: "MixEngine could not be started, so nothing was removed. From a terminal: mix uninstall --package",
+    uninstallFailed: "The removal stopped: {{message}}",
+    uninstallUnavailable: "This copy of MixLab was not installed from the macOS package, so it can't remove itself.",
     updateDaemonWouldNotStop: "MixEngine did not stop within 30 seconds, so nothing was replaced. Try again in a moment.",
     updateNoBuild: "This release has no build for this machine.",
     updateLocked: "Another update is running (process {{pid}}). Try again when it finishes.",

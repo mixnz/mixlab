@@ -40,4 +40,11 @@ grant: boolean,
  * that wants only the folders named — the uninstaller's `--relocated` listing, read while a
  * banner is up — and reading the handle table costs seconds.
  */
-skip_holders: boolean, };
+skip_holders: boolean, 
+/**
+ * Also remove the program the macOS `.pkg` placed — roadmap task **T182a**.
+ *
+ * **Defaults to `false`**: `mix uninstall` keeps meaning *undo what MixLab did*, and the
+ * `Package` row then says how the program itself goes. Ignored where no `.pkg` placed the copy.
+ */
+package: boolean, };

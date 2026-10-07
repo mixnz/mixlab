@@ -43,6 +43,12 @@ const MAX_BODY: usize = 1024 * 1024;
 /// blocker, and this is the one that matters here: a connection that opens and then says nothing
 /// would otherwise hold a task for as long as the daemon runs. The body is bounded by [`MAX_BODY`]
 /// rather than by a clock, because a slow client is not a fault and a large one is already refused.
+///
+/// **It applies to every request on a kept-alive connection, not only the first**, so a client that
+/// holds one connection for a whole run has to dial again after an idle this long. `mix` keeps a
+/// copy of this value (`client::DAEMON_IDLE_TIMEOUT`), held equal by a test that reads this line,
+/// rather than a shared constant in `mixengine-proto`: the helper is built from every file of that
+/// crate, and a constant it never uses would still move `HELPER_VERSION`.
 const HEADER_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// What every route answers with.

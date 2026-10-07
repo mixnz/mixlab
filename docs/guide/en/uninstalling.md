@@ -32,7 +32,19 @@ Then one administrator prompt undoes the machine changes listed below, and the p
 decline the prompt, nothing is removed and MixLab stays installed. Run Uninstall again when you are
 ready.
 
-The rest of this page is the same work done with `mix`, which is how you do it on macOS and Linux.
+## On a Mac, MixLab does all of it
+
+If you installed MixLab from the `.pkg`, choose **MixLab ▸ Remove MixLab from this Mac…**. MixLab
+lists everything it will undo, and anything in the way, such as a `node` you started through a
+shim. Close that and press **Check again**. It asks the same two things as the Windows uninstaller,
+both unticked.
+
+**Remove MixLab** asks for your password once. When it is done, MixLab quits, and nothing of it is
+left: not the commands in `/usr/local/bin`, not the application, not the package receipt. If you
+decline the prompt, nothing is removed and the menu item is still there.
+
+The rest of this page is the same work done with `mix`, which is how you do it on Linux, or on a
+Mac from a terminal.
 
 ## See the list first
 
@@ -125,18 +137,32 @@ admin password is new, because the old one went with the home.
 
 ## Then remove the program itself
 
-`mix uninstall` removes what MixLab did. Removing MixLab is your package manager's job, and it
-depends on how you installed it:
+`mix uninstall` removes what MixLab did. The program itself depends on how you installed it.
+
+On a Mac, add `--package` and the same administrator prompt removes the program too: the commands
+in `/usr/local/bin`, `MixLab.app` and the package receipt.
 
 ```bash
-sudo dpkg -r mixlab
-sudo rpm -e mixlab
-sudo rm -rf /usr/local/bin/mix /usr/local/bin/mixengined /usr/local/bin/mixengine-shim \
-  /Applications/MixLab.app
+mix uninstall --package
 ```
 
-On Windows, the installer's own uninstaller already did this part. On macOS, the third line above is
-what the `.pkg` placed, **MixLab** included.
+On Linux, the package manager removes it, and `mix uninstall` prints the command when it is done:
+
+```bash
+sudo apt remove mixlab
+sudo dnf remove mixlab
+```
+
+On Windows, the installer's own uninstaller already did this part.
+
+A Mac with no one logged in at the screen cannot show the administrator prompt. There, remove the
+program by hand:
+
+```bash
+sudo rm -rf /usr/local/bin/mix /usr/local/bin/mixengined /usr/local/bin/mixengine-shim \
+  /usr/local/bin/mixengine-trampoline /Applications/MixLab.app
+sudo pkgutil --forget dev.mixengine.cli
+```
 
 ## What is deliberately not automatic
 
