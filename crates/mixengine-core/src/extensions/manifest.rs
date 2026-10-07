@@ -82,6 +82,31 @@ pub struct ExtensionManifest {
 
     /// `[recipe]`, which may accompany any kind (the T80 design, D7).
     pub recipe: Option<RecipeTable>,
+
+    /// `[ui]`, the page a person opens — roadmap task **T200a**. A `service`'s only.
+    pub ui: Option<UiTable>,
+}
+
+/// `[ui]` — the port a person opens in a browser — roadmap task **T200a**, its design's D1.
+///
+/// **A port's name and a path, never an address.** The address renders as
+/// `http://127.0.0.1:<allocated port><path>`: `127.0.0.1` is where the person's browser is, and a
+/// host written in a manifest is refused everywhere else (T80). Only a `service` may carry one; a
+/// web-app's page is its site.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct UiTable {
+    /// A key of `[ports]`.
+    pub port: String,
+
+    /// Where on that port, starting with `/`.
+    #[serde(default = "root_path")]
+    pub path: String,
+}
+
+/// `[ui].path` when a manifest leaves it out.
+fn root_path() -> String {
+    "/".to_owned()
 }
 
 /// `[extension]`.
@@ -479,6 +504,10 @@ struct Raw {
     web_app: Option<WebApp>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     recipe: Option<RecipeTable>,
+    // **Through `Raw` as well as the checked type** (T200a, D1): an installed row and a published
+    // entry are both this shape, and a `[ui]` dropped here would vanish from both.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    ui: Option<UiTable>,
 }
 
 impl From<&ExtensionManifest> for Raw {
@@ -504,6 +533,7 @@ impl From<&ExtensionManifest> for Raw {
             service,
             web_app,
             recipe: manifest.recipe.clone(),
+            ui: manifest.ui.clone(),
         }
     }
 }
@@ -591,6 +621,7 @@ fn checked(raw: Raw) -> Result<ExtensionManifest> {
     check_reach(&id, kind, raw.permissions.network)?;
     check_label(&id, &body)?;
     check_config(&id, &body)?;
+    check_ui(&id, kind, &raw.ports, raw.ui.as_ref())?;
 
     Ok(ExtensionManifest {
         schema: raw.schema,
@@ -600,7 +631,51 @@ fn checked(raw: Raw) -> Result<ExtensionManifest> {
         permissions: raw.permissions,
         body,
         recipe: raw.recipe,
+        ui: raw.ui,
     })
+}
+
+/// `[ui]`'s rules — roadmap task **T200a**, its design's D1.
+///
+/// # Errors
+///
+/// [`Error::ExtensionTableUnexpected`] for a `[ui]` on anything but a `service`, and
+/// [`Error::ExtensionField`] naming `ui.port` or `ui.path`.
+fn check_ui(
+    id: &ExtensionId,
+    kind: ExtensionKind,
+    ports: &BTreeMap<String, u16>,
+    ui: Option<&UiTable>,
+) -> Result<()> {
+    let Some(ui) = ui else {
+        return Ok(());
+    };
+
+    if kind != ExtensionKind::Service {
+        return Err(Error::ExtensionTableUnexpected {
+            id: id.as_str().to_owned(),
+            kind: kind.as_str(),
+            table: "ui",
+        });
+    }
+
+    if !ports.contains_key(&ui.port) {
+        return Err(Error::ExtensionField {
+            id: id.as_str().to_owned(),
+            field: "ui.port".to_owned(),
+            reason: format!("names `{}`, which `[ports]` does not declare", ui.port),
+        });
+    }
+
+    if !ui.path.starts_with('/') {
+        return Err(Error::ExtensionField {
+            id: id.as_str().to_owned(),
+            field: "ui.path".to_owned(),
+            reason: "has to start with `/`".to_owned(),
+        });
+    }
+
+    Ok(())
 }
 
 /// Pair `kind` with the one table it is allowed, refusing the other.
@@ -1309,5 +1384,87 @@ mod tests {
                  <?php\n{config_line}\n\"\"\"\n"
             ),
         )
+    }
+
+    /// A `service` with one port and no `[ui]`, for the `[ui]` tests to add one to.
+    const SMALL_SERVICE: &str = r#"
+schema = 1
+
+[extension]
+id = "catcher"
+name = "Catcher"
+version = "1.0.0"
+kind = "service"
+
+[ports]
+ui_port = 18025
+
+[service]
+program = "{install_dir}/catcher"
+cwd = "{data_dir}"
+args = ["--listen", "{listen}:{ui_port}"]
+ready = { type = "tcp", addr = "{listen}:{ui_port}", timeout = "10s" }
+
+[permissions]
+network = "loopback"
+filesystem = ["own-data"]
+"#;
+
+    /// **T200a, D1.** `[ui]` names a port the manifest declares, and survives `to_value`.
+    #[test]
+    fn a_service_names_the_port_a_person_opens() {
+        let text = format!("{SMALL_SERVICE}\n[ui]\nport = \"ui_port\"\n");
+        let read = parse(&text).expect("a manifest with [ui]");
+        assert_eq!(
+            read.ui,
+            Some(UiTable {
+                port: "ui_port".to_owned(),
+                path: "/".to_owned()
+            })
+        );
+
+        let stored = to_value(&read);
+        assert_eq!(stored["ui"]["port"], "ui_port", "{stored}");
+        let back = read_value(stored).expect("the stored shape reads back");
+        assert_eq!(back.ui, read.ui);
+    }
+
+    /// **T200a, D1.** A manifest with no `[ui]` — every one installed before T200a — reads as none,
+    /// and is stored without one.
+    #[test]
+    fn a_manifest_without_ui_has_none() {
+        let read = parse(SMALL_SERVICE).expect("a manifest");
+        assert_eq!(read.ui, None);
+        assert!(to_value(&read).get("ui").is_none());
+    }
+
+    /// **T200a, D1.** The port has to be one `[ports]` declares, and the path has to be a path.
+    #[test]
+    fn a_ui_naming_no_port_or_no_path_is_refused() {
+        for (table, field) in [
+            ("[ui]\nport = \"web\"\n", "ui.port"),
+            ("[ui]\nport = \"ui_port\"\npath = \"inbox\"\n", "ui.path"),
+        ] {
+            let text = format!("{SMALL_SERVICE}\n{table}");
+            let refused = parse(&text).expect_err("refused");
+            assert!(
+                matches!(&refused, Error::ExtensionField { field: f, .. } if f == field),
+                "{refused}"
+            );
+        }
+    }
+
+    /// **T200a, D1.** A web-app's page is its site.
+    #[test]
+    fn ui_is_refused_on_a_web_app() {
+        let text = format!(
+            "{}\n[ui]\nport = \"x\"\n",
+            mixengine_testkit::extension::ADMINER
+        );
+        let refused = parse(&text).expect_err("refused");
+        assert!(
+            matches!(refused, Error::ExtensionTableUnexpected { table: "ui", .. }),
+            "{refused}"
+        );
     }
 }

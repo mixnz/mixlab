@@ -45,6 +45,11 @@ size = 9821099
 ui_port = 8025
 smtp_port = 1025
 
+# The page a person opens — MixEngine's roadmap task T200a. Every MixEngine before it reads this
+# entry as one it cannot read, so the registry's copy gains it only after a release that can (T200c).
+[ui]
+port = "ui_port"
+
 [service]
 # No `.exe` here and none needed: a path with no extension is resolved to one on Windows, so the
 # same line names `mailpit.exe` there and `mailpit` everywhere else.
