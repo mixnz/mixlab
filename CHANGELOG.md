@@ -12,6 +12,9 @@
   longer fails with "the connection to the daemon failed: Broken pipe". `mix` reconnects on its own.
 - After an update, MixEngine starts again only the services that were running. Before, it also
   started the ones you had stopped.
+- Removing MixLab with its data now forgets every password MixEngine kept in the macOS Keychain,
+  including the ones an older MixEngine or MixLab wrote. Before, those rows failed and the
+  removal stopped there.
 
 ## v0.0.15
 

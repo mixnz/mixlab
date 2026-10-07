@@ -359,6 +359,28 @@ left four six-byte lock files in `/Library/Logs/MixEngine`** (`hosts.lock`, `res
 never removed by any uninstall before this; `audit-log-remove` now takes the helper's `.lock` files
 with the log, and the second run left no directory at all.
 
+**The data box ticked (D4 steps 3 to 6, T182's D4), on a later build.** Same home, caddy and redis
+running, the box ticked, the prompt allowed. Before the fixes below the two *credential* rows,
+`mariadb@main/root` and `mariadb@main/laravel-2`, settled as `failed` and the window stayed with
+the report, three faults deep. First, the T186 vault answered nothing for an item an older daemon
+had kept flat in the Keychain under `<home>/<rest>`, so the store never tried to forget it; the
+vault now reads and forgets a listed flat item too. Second, the keyring crate's delete reads the
+secret before it deletes, which runs the item's access control and, for an item another build
+wrote, fails with an access prompt the daemon cannot answer (*UNIX[No such file or directory]*);
+the macOS store now deletes by service and account, which asks nothing. Third, `SecItemDelete`
+refuses an item another program wrote with `errSecInvalidOwnerEdit`, which is what every item the
+window or an earlier build created is; the store now hands that one refusal to
+`/usr/bin/security delete-generic-password`, which this Mac let through without a prompt. The
+credential row's failure also quotes the store's whole error chain now, where before it read only
+*the credential store failed*. With all three, the run finished: every row `removed`, the
+application quit on its own, the home (956 MB) and the window's three directories
+(`Application Support`, `Caches`, `WebKit` under `io.github.mixnz.mixlab`) were gone, the
+Keychain held neither `MixLab/vault` nor this home's two `mixengine` items, `/etc/resolver` kept
+only `lc`, no helper, no log directory, no LaunchAgent, no process, and the two other homes'
+authorities stayed (T182c). The Keychain also holds some thirty `mixengine` items under home ids
+no install here ever had (`<id>/extensions/phpmyadmin/config`), written by a test run that used a
+temporary home against the real Keychain; this walk left them, and they are a task of their own.
+
 **From a terminal over SSH (D5).** With the test build: `mix uninstall --dry-run --package` showed
 the `package` row as `would`; without the flag it showed `kept`, *it stays unless asked for:
 `mix uninstall --package` removes it as well*. The released 0.0.15 `mix`, tried first by mistake,
