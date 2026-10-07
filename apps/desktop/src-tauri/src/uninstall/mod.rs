@@ -68,6 +68,14 @@ pub struct ReadBack {
     pub left: Vec<String>,
 }
 
+impl ReadBack {
+    /// The program is off this Mac: nothing of it can be seen. What decides between exiting and
+    /// staying to say what is left, whatever the daemon answered or failed to.
+    pub fn program_gone(&self) -> bool {
+        !self.bundle_left && !self.receipt_left && self.left.is_empty()
+    }
+}
+
 /// Remove the window's own directories once more, then read the bundle and the receipt.
 pub fn read_back(bundle: &Path, receipt: &str, own: &[PathBuf]) -> ReadBack {
     let left = own
@@ -177,6 +185,30 @@ mod tests {
         assert!(finished(&report("absent")));
         assert!(!finished(&report("enqueued")), "a declined prompt");
         assert!(!finished(&report("failed")), "a row still there");
+    }
+
+    /// Whether the program is off this Mac: the bundle and the receipt gone, nothing of the window's
+    /// own left. What decides between exiting and staying to say what is left, whatever the daemon's
+    /// answer was.
+    #[test]
+    fn the_program_is_gone_when_nothing_of_it_can_be_seen() {
+        let gone = ReadBack::default();
+        assert!(gone.program_gone());
+        assert!(!ReadBack {
+            bundle_left: true,
+            ..ReadBack::default()
+        }
+        .program_gone());
+        assert!(!ReadBack {
+            receipt_left: true,
+            ..ReadBack::default()
+        }
+        .program_gone());
+        assert!(!ReadBack {
+            left: vec!["/x".to_owned()],
+            ..ReadBack::default()
+        }
+        .program_gone());
     }
 
     /// The item exists only on a released macOS copy the `.pkg` placed.

@@ -57,21 +57,28 @@ pub async fn uninstall_run(
     let _ = crate::login_item::login_item_set(app.clone(), false);
 
     let daemon = for_uninstall::ensure_daemon().await?;
-    let report = for_uninstall::run(keep_home, keep_relocated).await?;
-    // A declined prompt or a row left behind keeps the daemon up for the next run: nothing to wait for.
-    let gone = finished(&report) && for_uninstall::wait_gone(&daemon, GONE_WITHIN).await;
-
     let bundle = crate::relaunch::origin()
         .map(|origin| origin.root.clone())
         .ok_or_else(|| err!("error.relaunchNoExecutable"))?;
-    let read = read_back(&bundle, PKG_RECEIPT, &own_directories(&report));
 
-    if gone && !read.bundle_left && !read.receipt_left && read.left.is_empty() {
-        // **`std::process::exit`, not `app.exit`.** The window-state plugin and the exit hooks
-        // would write into the directories just removed. The single-instance endpoint is the one
-        // thing worth taking back, and `launch::stop` only removes.
-        crate::launch::stop(&app);
-        std::process::exit(0);
+    // **The disk decides, not the daemon's answer.** The daemon answers the job before it exits,
+    // but a connection that ended first would leave a window whose bundle is gone showing an
+    // error: so a failed call is read back like a report, and a Mac with nothing left is left.
+    let report = match for_uninstall::run(keep_home, keep_relocated).await {
+        Ok(report) => report,
+        Err(error) => {
+            if read_back(&bundle, PKG_RECEIPT, &[]).program_gone() {
+                leave(&app);
+            }
+            return Err(error);
+        }
+    };
+    // A declined prompt or a row left behind keeps the daemon up for the next run: nothing to wait for.
+    let gone = finished(&report) && for_uninstall::wait_gone(&daemon, GONE_WITHIN).await;
+
+    let read = read_back(&bundle, PKG_RECEIPT, &own_directories(&report));
+    if gone && read.program_gone() {
+        leave(&app);
     }
 
     Ok(Outcome {
@@ -81,6 +88,14 @@ pub async fn uninstall_run(
         receipt_left: read.receipt_left,
         left: read.left,
     })
+}
+
+/// End this process with nothing written. **`std::process::exit`, not `app.exit`**: the
+/// window-state plugin and the exit hooks would write into the directories just removed. The
+/// single-instance endpoint is the one thing worth taking back, and `launch::stop` only removes.
+fn leave(app: &AppHandle) -> ! {
+    crate::launch::stop(app);
+    std::process::exit(0)
 }
 
 /// The frontend's translated text onto the menu item, which Rust built before any string was
