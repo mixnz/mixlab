@@ -6277,6 +6277,7 @@ mod tests {
             reached: vec![id("db")],
             failed: Some(mixengine_proto::ServiceFailure {
                 service: id("web"),
+                detail: None,
                 reason: Some(StateReason::CrashLoop {
                     attempts: 5,
                     window: mixengine_proto::Millis::from_secs(300),
@@ -6310,6 +6311,7 @@ mod tests {
             reached: Vec::new(),
             failed: Some(mixengine_proto::ServiceFailure {
                 service: id("postgres@main"),
+                detail: None,
                 reason: Some(StateReason::SuperuserRefused {
                     said: "FATAL:  password authentication failed for user \"postgres\"".to_owned(),
                 }),
@@ -6441,6 +6443,7 @@ mod tests {
                 reached: Vec::new(),
                 failed: Some(mixengine_proto::ServiceFailure {
                     service: id("db"),
+                    detail: None,
                     reason: None,
                 }),
                 blocked: Vec::new(),

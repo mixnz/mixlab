@@ -553,6 +553,12 @@ pub struct ServiceFailure {
     /// render; a client meeting one says so rather than inventing a reason.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<StateReason>,
+
+    /// What the runner wrote about it — the same sentence `ServiceSummary.last_failure` carries
+    /// (T200b) — so the first thing a client prints is the runner's and not the state machine's.
+    /// Roadmap task **T202a**, D3. [`None`] where the reason is, and for a daemon from before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
 }
 
 /// One service data directory an earlier home left under `data/`, with no service row — roadmap
@@ -601,6 +607,37 @@ mod tests {
 
     fn service(id: &str) -> ServiceId {
         ServiceId::parse(id).expect("a valid service id")
+    }
+
+    /// T202a, D3. A failure written by a daemon from before the detail still reads, and the detail
+    /// the runner persisted travels with the reason.
+    #[test]
+    fn a_service_failure_reads_without_a_detail_and_carries_one() {
+        let bare: ServiceFailure =
+            serde_json::from_str(r#"{"service":"mariadb@main"}"#).expect("reads");
+        assert_eq!(bare.detail, None);
+        assert_eq!(bare.reason, None);
+
+        let told = ServiceFailure {
+            service: service("mariadb@main"),
+            reason: Some(StateReason::SpawnFailed),
+            detail: Some(
+                "the environment entry MYSQL_PWD: no credential is stored at x".to_owned(),
+            ),
+        };
+        let json = serde_json::to_value(&told).expect("writes");
+        assert_eq!(
+            json["detail"],
+            "the environment entry MYSQL_PWD: no credential is stored at x"
+        );
+        assert_eq!(
+            serde_json::to_value(ServiceFailure {
+                detail: None,
+                ..told
+            })
+            .expect("writes")["detail"],
+            serde_json::Value::Null
+        );
     }
 
     /// **T182g.** A found instance that can be adopted says with what, and leaves out the two
@@ -999,6 +1036,7 @@ mod tests {
             reached: Vec::new(),
             failed: Some(ServiceFailure {
                 service: service("mariadb@main"),
+                detail: None,
                 reason: Some(StateReason::ReadyTimeout {
                     after: crate::Millis::from_secs(10),
                 }),
