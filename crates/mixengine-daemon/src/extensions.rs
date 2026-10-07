@@ -324,6 +324,11 @@ impl Extensions {
             .map_err(|error| error.to_wire())?;
 
         if let Some(site) = &site {
+            // **Before the site is declared**, so the first file the front end reads already names
+            // the activator after the pool — T200, D1.
+            handle.progress(86, "making its pool reachable").await;
+            self.make_pool_reachable().await;
+
             handle.progress(88, "writing its configuration").await;
             self.configure_one(&installed).await?;
 
@@ -439,24 +444,91 @@ impl Extensions {
         }
     }
 
-    /// Stop a `web-app`'s pool before its row is deleted — roadmap task **T82a**, its design's D11.
+    /// Give a pool this install just created the address a request wakes it through — roadmap task
+    /// **T200**, its design's D1.
+    ///
+    /// **`runtime.install`'s two repairs, in its order** (T72a): `activation::ensure` allocates the
+    /// activation port a TCP pool needs, and `hold_all` binds every activator not yet held. Without
+    /// them the pool gets both only at the next daemon start, and until then its site answers 502
+    /// behind MixEngine's starting page — which is how a person met it.
+    ///
+    /// **Reported and never fatal**, on T72a's reasoning: the next daemon start makes both repairs
+    /// again, where failing the install would leave a downloaded extension half-written.
+    async fn make_pool_reachable(&self) {
+        if let Err(error) = mixengine_core::services::activation::ensure(
+            &self.store,
+            self.host.as_ref(),
+            &crate::services::catalogue(),
+        )
+        .await
+        {
+            tracing::warn!(
+                %error,
+                "a web-app's pool could not be given an activation port; the next daemon start \
+                 will try again"
+            );
+        }
+
+        match crate::services::activate::hold_all(
+            Arc::clone(&self.services),
+            &self.paths,
+            &self.store,
+            self.host.as_ref(),
+        )
+        .await
+        {
+            Ok(held) if held.is_empty() => {}
+            Ok(held) => tracing::info!(services = ?held, "a request can now start these services"),
+            Err(error) => tracing::warn!(
+                %error,
+                "a web-app's pool cannot be started by a request until this daemon is restarted"
+            ),
+        }
+    }
+
+    /// Stop everything an extension runs before its rows are deleted: a `service`'s own process,
+    /// and a `web-app`'s pool — roadmap tasks **T82a** (the pool, its design's D11) and **T200**
+    /// (the service).
+    ///
+    /// **The service is T200's, found by uninstalling a running Mailpit.** Only the pool used to be
+    /// stopped, so a running service had its row deleted from under it, went on holding its own
+    /// executable, and the install directory could not be removed — on Windows `Access is denied`,
+    /// and the next install refused because the directory was still there.
+    ///
+    /// # Errors
+    ///
+    /// [`Self::stop_one`]'s, and the wire error of a row that cannot be read.
+    async fn stop_what_it_runs(&self, id: &ExtensionId) -> Result<(), Error> {
+        let service = extension_store::get(&self.store, id)
+            .await
+            .map_err(|error| error.to_wire())?
+            .as_ref()
+            .and_then(uninstall::service_of);
+
+        let pool = mixengine_core::extensions::pools::of(&self.store, id)
+            .await
+            .map_err(|error| error.to_wire())?;
+
+        for running in service.iter().chain(pool.iter()) {
+            self.stop_one(running).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Stop one service an extension runs, and refuse if it did not stop.
     ///
     /// **A refusal and not a best effort.** `services::delete` does not look at a process, so a row
-    /// removed from under a live php-fpm would leave a master with no configuration and nothing that
+    /// removed from under a live process would leave it with no configuration and nothing that
     /// knows about it — which is exactly what `service.delete`'s own first refusal exists to
     /// prevent, said here for the caller that does not go through it.
     ///
     /// # Errors
     ///
-    /// [`ErrorCode::PreconditionFailed`] naming the pool and the command that stops it, when the
+    /// [`ErrorCode::PreconditionFailed`] naming the service and the command that stops it, when the
     /// stop did not take.
-    async fn stop_pool(&self, id: &ExtensionId) -> Result<(), Error> {
-        let Some(pool) = mixengine_core::extensions::pools::of(&self.store, id)
-            .await
-            .map_err(|error| error.to_wire())?
-        else {
-            return Ok(());
-        };
+    async fn stop_one(&self, pool: &ServiceId) -> Result<(), Error> {
+        let pool = pool.clone();
 
         if let Ok(graph) = self.services.graph().await
             && let Ok(plan) = graph.stop_plan(std::slice::from_ref(&pool))
@@ -724,7 +796,7 @@ impl Extensions {
         // process. A `web-app` is served rather than run and had nothing to stop until it was given
         // a pool of its own; a row deleted from under a live php-fpm would leave a master with no
         // configuration and nothing left that knows about it.
-        self.stop_pool(&asked.id).await?;
+        self.stop_what_it_runs(&asked.id).await?;
 
         // **Read before the row is gone, and used after it is** — roadmap task **T81c**. Whether
         // this extension put anything in the front end's configuration is a fact about its manifest,
@@ -749,6 +821,12 @@ impl Extensions {
         let removed = uninstall::uninstall(&self.store, &self.paths, &asked.id, asked.delete_data)
             .await
             .map_err(|error| error.to_wire())?;
+
+        // **The activator goes with the pool** — T200, D2. After the row, so nothing can wake a
+        // service that no longer exists in between.
+        if let Some(pool) = &removed.pool {
+            crate::services::activate::release(pool).await;
+        }
 
         // **After the row, so a failed uninstall does not lose a secret it still needs** — roadmap
         // task **T82**, the design's D7. Idempotent, so an uninstall of something that never had
@@ -964,6 +1042,7 @@ fn summary(
             })
             .collect(),
         site,
+        description: Some(installed.manifest.extension.description.clone()),
     }
 }
 

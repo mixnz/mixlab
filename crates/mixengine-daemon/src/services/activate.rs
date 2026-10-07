@@ -15,12 +15,13 @@
 //! the same case here. The waiting client is the one a web-only design would never have met, and it
 //! is most of what T70a will need.
 //!
-//! # Three answers, and each of them is bounded
+//! # Four answers, and each of them is bounded
 //!
 //! | The service is | This does |
 //! | --- | --- |
 //! | stopped, and nobody meant it to stay down | start it, wait, proxy |
 //! | stopped, and a person stopped it | close the connection |
+//! | failed | start it, at most once per [`RETRY_FAILED_AFTER`]; otherwise close (T200) |
 //! | running | proxy straight through |
 //!
 //! The middle row is the design's D8 and it is not a detail: `mix service stop mariadb@main`
@@ -33,7 +34,13 @@
 //! rebooted answered 502 until somebody started its pool by hand. Three of the four ways a service
 //! arrives at `stopped` are not a decision anybody made, and only the fourth may forbid a wake.
 //!
-//! The third row is not a special case for its own sake — a service that is running and whose
+//! **The failed row is T200's.** It used to fall to the last one, so a pool whose start had failed
+//! was dialled anyway and logged as running. It is tried again, because a `failed` row survives a
+//! restart and nothing else would ever start a web-app's pool once its cause is fixed — but not by
+//! every connection, since a front end retrying every fifty milliseconds would repeat one failure a
+//! hundred times.
+//!
+//! The last row is not a special case for its own sake — a service that is running and whose
 //! primary address was refused anyway is a fault this is not the place to diagnose, and proxying is
 //! both the honest answer and the harmless one.
 //!
@@ -69,12 +76,17 @@ pub(crate) enum Refused {
 
     /// It started, and then nothing answered at its own address.
     NotListening,
+
+    /// Its last start failed, and a connection already tried it again moments ago — found by T200.
+    /// See [`RETRY_FAILED_AFTER`].
+    Failed,
 }
 
 /// Hold `listen` for as long as the daemon runs, and start `service` for whoever dials it.
 ///
 /// Returns once the listener is bound, so a caller knows the address is taken before it renders a
-/// site file naming it; the accepting runs in a task of its own from there.
+/// site file naming it; the accepting runs in a task of its own from there. Answers the accept
+/// loop's handle, which is what [`release`] stops.
 ///
 /// # Errors
 ///
@@ -85,7 +97,7 @@ pub(crate) async fn spawn(
     service: ServiceId,
     listen: Listen,
     target: Listen,
-) -> mixengine_platform::Result<()> {
+) -> mixengine_platform::Result<tokio::task::JoinHandle<()>> {
     let listener = Activation::bind(&listen).await?;
 
     tracing::debug!(
@@ -94,7 +106,7 @@ pub(crate) async fn spawn(
         "holding an address so a request can start this service"
     );
 
-    tokio::spawn(async move {
+    let accepting = tokio::spawn(async move {
         loop {
             let accepted = match listener.accept().await {
                 Ok(accepted) => accepted,
@@ -126,7 +138,7 @@ pub(crate) async fn spawn(
         }
     });
 
-    Ok(())
+    Ok(accepting)
 }
 
 /// Hold an address for every service in this home that a request may have to start.
@@ -157,16 +169,31 @@ pub(crate) async fn hold_all(
     let mut held = Vec::new();
 
     for (service, (listen, target)) in generator.activators().await? {
-        if holding.contains(&service) {
-            continue;
-        }
-
         let listen = to_listen(&listen);
         let target = to_listen(&target);
 
-        match spawn(Arc::clone(&services), service.clone(), listen, target).await {
-            Ok(()) => {
-                holding.insert(service.clone());
+        match holding.get(&service) {
+            Some(current) if current.listen == listen => continue,
+            // **The row's address moved** — a service reinstalled under the same id (T200, D2).
+            // The old listener goes first, so a port it held can be the new one.
+            Some(_) => {
+                if let Some(old) = holding.remove(&service) {
+                    stop(old).await;
+                }
+            }
+            None => {}
+        }
+
+        match spawn(
+            Arc::clone(&services),
+            service.clone(),
+            listen.clone(),
+            target,
+        )
+        .await
+        {
+            Ok(accepting) => {
+                holding.insert(service.clone(), Held { listen, accepting });
                 held.push(service);
             }
             Err(error) => tracing::warn!(
@@ -179,6 +206,33 @@ pub(crate) async fn hold_all(
     }
 
     Ok(held)
+}
+
+/// Stop holding `service`'s activator, if this daemon holds one — roadmap task **T200**, D2.
+///
+/// **Called once the service's row is gone**, by `extension.uninstall` and `runtime.uninstall`.
+/// Before T200 nothing gave an address back, so an uninstalled pool kept its port until the daemon
+/// exited: the allocator could not hand it out, and a reinstall under the same id was skipped by
+/// [`hold_all`] and never bound at all. A connection already being carried finishes on its own
+/// task; only the accepting stops.
+pub(crate) async fn release(service: &ServiceId) {
+    let held = HOLDING.lock().await.remove(service);
+
+    if let Some(held) = held {
+        stop(held).await;
+        tracing::debug!(
+            service = service.as_str(),
+            "released the address a request could start this service through"
+        );
+    }
+}
+
+/// End one accept loop, and wait until its listener is dropped.
+///
+/// Awaited rather than only aborted: the caller's next step may bind the same address.
+async fn stop(held: Held) {
+    held.accepting.abort();
+    let _ = held.accepting.await;
 }
 
 /// Which services this daemon is already holding an address for.
@@ -195,8 +249,22 @@ pub(crate) async fn hold_all(
 ///
 /// Process-wide, like `ports`' allocation lock and for the same reason: what it guards is a fact
 /// about this operating system, not about any one caller.
-static HOLDING: tokio::sync::Mutex<std::collections::BTreeSet<ServiceId>> =
-    tokio::sync::Mutex::const_new(std::collections::BTreeSet::new());
+///
+/// **A map from service to address, not a set of services** — roadmap task **T200**, D2. A set
+/// could only say *this id is held*, so a service reinstalled under the same id with a new address
+/// was skipped and never bound, and nothing could find the listener to give its port back.
+static HOLDING: tokio::sync::Mutex<std::collections::BTreeMap<ServiceId, Held>> =
+    tokio::sync::Mutex::const_new(std::collections::BTreeMap::new());
+
+/// One activator this daemon holds: where, and the loop accepting there.
+struct Held {
+    /// The address the generator named when it was bound — compared on every [`hold_all`], because
+    /// a service reinstalled under the same id comes back with a different one (T200, D2).
+    listen: Listen,
+
+    /// The accept loop. Aborting it drops the listener, which is what frees the address.
+    accepting: tokio::task::JoinHandle<()>,
+}
 
 /// One address, from the vocabulary a recipe renders in to the one the platform binds.
 ///
@@ -270,14 +338,24 @@ async fn ensure_running(services: &Registry, service: &ServiceId) -> Result<(), 
         }
     };
 
-    if record.state != ServiceState::Stopped {
+    match record.state {
+        ServiceState::Stopped => {
+            if !record.stopped_by.may_be_woken() {
+                return Err(Refused::StoppedOnPurpose);
+            }
+        }
+
+        // **Failed is not running** (T200). Proxying to it dialled a process that never existed and
+        // logged it as one that runs. Tried again, but not by every connection: see `retry_due`.
+        ServiceState::Failed => {
+            if !retry_due(service) {
+                return Err(Refused::Failed);
+            }
+        }
+
         // Running, starting, or on its way down. Proxy and let the dial say whether anything is
         // there — a service in trouble is not this function's to diagnose.
-        return Ok(());
-    }
-
-    if !record.stopped_by.may_be_woken() {
-        return Err(Refused::StoppedOnPurpose);
+        _ => return Ok(()),
     }
 
     let Ok(graph) = services.graph().await else {
@@ -295,6 +373,42 @@ async fn ensure_running(services: &Registry, service: &ServiceId) -> Result<(), 
     }
 
     Ok(())
+}
+
+/// How long a failed service is left alone after a connection tried to start it — roadmap task
+/// **T200**.
+///
+/// A front end retries a refused upstream every fifty milliseconds for five seconds, so without a
+/// pause one page load is a hundred starts failing for the same reason. Ten seconds is past that
+/// window, and short enough that a person who fixed the cause and reloads is not kept waiting.
+const RETRY_FAILED_AFTER: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// When a connection last tried to start each failed service.
+///
+/// In memory and not on the row: it is a rate, not a fact about the service, and a daemon that
+/// restarts is one that may try again at once.
+static TRIED: std::sync::Mutex<std::collections::BTreeMap<ServiceId, std::time::Instant>> =
+    std::sync::Mutex::new(std::collections::BTreeMap::new());
+
+/// Whether a connection may try to start this failed service now, and if so, mark that it did.
+///
+/// **A failed service is tried again, and not by every connection** — T200. Refusing it for good
+/// would leave a web-app down after its cause was fixed, because a `failed` row survives a restart
+/// and nothing in a site starts its pool; trying on every connection would repeat one failure a
+/// hundred times a page load.
+fn retry_due(service: &ServiceId) -> bool {
+    let now = std::time::Instant::now();
+    let mut tried = TRIED
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+
+    match tried.get(service) {
+        Some(last) if now.duration_since(*last) < RETRY_FAILED_AFTER => false,
+        _ => {
+            tried.insert(service.clone(), now);
+            true
+        }
+    }
 }
 
 #[cfg(test)]
@@ -360,6 +474,39 @@ mod tests {
             ensure_running(&registry, &service("waker")).await,
             Err(Refused::StoppedOnPurpose),
             "a service that has never run was read as one its owner had stopped"
+        );
+    }
+
+    /// **A service that failed is tried again, once in a while, and never proxied to as running** —
+    /// found by T200.
+    ///
+    /// Everything but `stopped` used to read as *running*, so a pool whose start had failed was
+    /// dialled anyway and `daemon.log` said *"the service is running and nothing answers"* about a
+    /// process that never existed. Refusing it for good would be worse: a `failed` row survives a
+    /// daemon restart, and nothing in a web-app's site starts its pool, so a cause fixed afterwards
+    /// would leave the site down until somebody found `mix service start`. So the first connection
+    /// tries a start, and the ones right behind it — a front end retries every fifty milliseconds —
+    /// are refused instead of each repeating the same failure.
+    #[tokio::test]
+    async fn a_failed_service_is_tried_again_once_and_not_on_every_connection() {
+        let (_home, paths, store) = home(&["waker"]).await;
+        sqlx::query("UPDATE services SET state = 'failed' WHERE id = 'waker'")
+            .execute(store.pool())
+            .await
+            .expect("the row");
+
+        // Nothing is declared, so the start the first connection tries fails for an honest reason.
+        let registry = registry(&paths, &store, Arc::new(Declared(Vec::new())));
+
+        assert_eq!(
+            ensure_running(&registry, &service("waker")).await,
+            Err(Refused::WouldNotStart),
+            "the first connection to a failed service tries to start it"
+        );
+        assert_eq!(
+            ensure_running(&registry, &service("waker")).await,
+            Err(Refused::Failed),
+            "a connection right behind it repeated a start that had just failed"
         );
     }
 
@@ -477,5 +624,52 @@ mod tests {
         let mut echoed = [0_u8; 4];
         client.read_exact(&mut echoed).await.expect("a read");
         assert_eq!(&echoed, b"ping", "what the client said first was lost");
+    }
+
+    /// **An activator that is stopped gives its address back** — roadmap task **T200**, D2.
+    ///
+    /// Awaited rather than merely aborted: the caller goes on to let the allocator hand the port out
+    /// again, and a listener dropped "soon" is one a second bind can still collide with.
+    #[tokio::test]
+    async fn a_stopped_activator_gives_its_address_back() {
+        let (home, paths, store) = home(&["waker"]).await;
+        let registry = Arc::new(registry(&paths, &store, Arc::new(Declared(Vec::new()))));
+
+        let listen = somewhere(&home, "activate-release.sock");
+        let target = somewhere(&home, "target-release.sock");
+
+        let accepting = spawn(
+            Arc::clone(&registry),
+            service("waker"),
+            listen.clone(),
+            target,
+        )
+        .await
+        .expect("a bound address");
+
+        stop(Held {
+            listen: listen.clone(),
+            accepting,
+        })
+        .await;
+
+        assert!(
+            dial(&listen).await.is_err(),
+            "a stopped activator still accepts at {listen}"
+        );
+        Activation::bind(&listen)
+            .await
+            .expect("the address can be bound again");
+    }
+
+    /// **Releasing what this daemon never held is nothing** — T200, D2. A service whose bind failed
+    /// at boot is uninstalled like any other.
+    #[tokio::test]
+    async fn releasing_a_service_nothing_holds_does_nothing() {
+        let never = service("never-held");
+
+        release(&never).await;
+
+        assert!(!HOLDING.lock().await.contains_key(&never));
     }
 }

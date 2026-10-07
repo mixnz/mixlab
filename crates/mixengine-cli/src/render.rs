@@ -4116,7 +4116,7 @@ pub(crate) fn installed_extensions(list: &InstalledExtensions) -> String {
         return "nothing is installed; `mix extension available` lists what could be\n".to_owned();
     }
 
-    let rows: Vec<[String; 7]> = list
+    let rows: Vec<[String; 8]> = list
         .extensions
         .iter()
         .map(|one| {
@@ -4141,12 +4141,23 @@ pub(crate) fn installed_extensions(list: &InstalledExtensions) -> String {
                         .collect::<Vec<_>>()
                         .join(" "),
                 },
+                // Last, so a long sentence pushes nothing else out of line — T200, D5.
+                one.description.clone().unwrap_or_default(),
             ]
         })
         .collect();
 
     table(
-        ["ID", "VERSION", "KIND", "TRUST", "SERVICE", "SITE", "PORTS"],
+        [
+            "ID",
+            "VERSION",
+            "KIND",
+            "TRUST",
+            "SERVICE",
+            "SITE",
+            "PORTS",
+            "DESCRIPTION",
+        ],
         &rows,
     )
 }
@@ -4465,6 +4476,33 @@ mod tests {
     };
 
     use super::*;
+
+    /// **T200, D5.** The listing says what each extension is for, last, where a long sentence
+    /// pushes nothing else out of line.
+    #[test]
+    fn an_installed_extension_is_listed_with_what_it_is_for() {
+        let list = InstalledExtensions {
+            extensions: vec![mixengine_proto::ExtensionSummary {
+                id: mixengine_proto::ExtensionId::parse("mailpit").expect("an id"),
+                name: "Mailpit".to_owned(),
+                version: PackageVersion::parse("1.31.0".to_owned()).expect("a version"),
+                kind: ExtensionKind::Service,
+                signed: true,
+                service: None,
+                ports: Vec::new(),
+                site: None,
+                description: Some("Local SMTP capture and web UI".to_owned()),
+            }],
+        };
+
+        let rendered = installed_extensions(&list);
+
+        assert!(rendered.contains("DESCRIPTION"), "{rendered}");
+        assert!(
+            rendered.contains("Local SMTP capture and web UI"),
+            "{rendered}"
+        );
+    }
 
     /// One offered release, at whatever execution the daemon reported — roadmap task **T92**.
     fn offered(version: &str, execution: Option<Execution>) -> RuntimeRelease {

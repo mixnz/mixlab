@@ -387,6 +387,13 @@ the stop-then-this order `uninstall`'s own note already states for a `service` â
 `services::delete` looks at no process, and `extension.uninstall` answers with the pool it removed
 rather than leaving a `mix service list` entry to be discovered.
 
+**And it is reachable before the job ends** â€” **T200**. A pool created by an install has neither
+an activation port nor a listener, so the install gives it both the way `runtime.install` does
+(T72a) before the site is declared, and an uninstall releases the activator with the pool. Without
+that, a `web-app` answered 502 behind the starting page until the daemon was restarted, and a
+reinstall under the same id never got its new address bound at all. Design:
+[docs/specs/2026-10-07-t200-an-add-on-works-the-moment-it-is-installed-design.md](../specs/2026-10-07-t200-an-add-on-works-the-moment-it-is-installed-design.md).
+
 ## Acceptance criteria
 
 - Install Mailpit from the registry and have PHP `mail()` captured, with no manual php.ini edit

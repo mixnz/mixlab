@@ -43,4 +43,12 @@ ports: Array<PortWish>,
 /**
  * The domain it is served on, for a `web-app` — roadmap task **T81b**.
  */
-site?: string | null, };
+site?: string | null, 
+/**
+ * What it is for, from the manifest it was installed from — roadmap task **T200**, D5.
+ *
+ * The listing of what *could* be installed always said this, and the listing of what *is*
+ * did not, so an add-on lost its one sentence of explanation the moment somebody installed it.
+ * Optional on the wire (ADR 0019): a daemon older than T200 leaves it out.
+ */
+description?: string | null, };

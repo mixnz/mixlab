@@ -5,6 +5,7 @@
 //! stopping it, that removing the PHP it runs on is refused by name, and that an uninstall takes
 //! it away and says so. The PHP is a row and a pool row (`declare::php_pool`), not a download.
 
+use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
@@ -246,6 +247,12 @@ async fn a_web_app_is_served_on_a_site_only_its_extension_may_edit() {
         extensions["extensions"][0]["site"], "phpmyadmin.mixengine.test",
         "{extensions}"
     );
+    // **T200, D5.** What it is for travels with the listing, read from the manifest it was
+    // installed from.
+    assert_eq!(
+        extensions["extensions"][0]["description"], plan["description"],
+        "{extensions}"
+    );
 
     // Its root is the install directory, and its pool is the one the plan named.
     let site = json!({"site": {"domain": "phpmyadmin.mixengine.test"}});
@@ -416,4 +423,214 @@ async fn a_web_app_with_no_matching_php_is_refused_at_plan() {
             .is_some_and(|hint| hint.contains("mix runtime")),
         "{refused}"
     );
+}
+
+/// Whether something accepts a TCP connection on this loopback port.
+fn accepts(port: u16) -> bool {
+    TcpStream::connect_timeout(
+        &SocketAddr::from((Ipv4Addr::LOCALHOST, port)),
+        Duration::from_secs(2),
+    )
+    .is_ok()
+}
+
+/// **T200, D1.** A web-app's pool can be woken by a request the moment the install ends.
+///
+/// The pool is created by the install, outside boot, so it has neither an activation port nor a
+/// listener until something gives it one — and a site naming a pool that nothing can wake answers
+/// 502 until the daemon is restarted. That is what a person installing Adminer met. A pool on a
+/// Unix socket derives its activator from its own path, so only a TCP pool has a port to assert.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_web_app_can_be_woken_the_moment_it_is_installed() {
+    let fixture = Fixture::start().await;
+    declare::php_pool(&fixture.home.database_file(), "8.3.34").await;
+    declare::database(
+        &fixture.home.database_file(),
+        "mariadb@main",
+        "mariadb",
+        3306,
+    )
+    .await;
+    let mut client = fixture.client().await;
+    let directory = web_app();
+    let path = directory.path().display().to_string();
+
+    installed(&mut client, &path, &fixture.home).await;
+
+    let port = declare::activation_port(&fixture.home.database_file(), "php-fpm@phpmyadmin").await;
+
+    if cfg!(windows) {
+        let port = port.unwrap_or_else(|| {
+            panic!(
+                "a TCP pool created by an install has no activation port
+{}",
+                fixture.home.daemon_log()
+            )
+        });
+        assert!(
+            accepts(port),
+            "nothing holds the activator's address 127.0.0.1:{port} after the install
+{}",
+            fixture.home.daemon_log()
+        );
+    } else {
+        assert_eq!(
+            port, None,
+            "a socket pool's activator is derived from its path, never allocated"
+        );
+    }
+}
+
+/// **T200, D2.** Uninstalling gives the activator's address back, and a reinstall is woken too.
+///
+/// Before T200 the daemon kept every activator until it exited and skipped any service it already
+/// held, by id alone. An uninstall left the old port listening, and a reinstall under the same id
+/// was given a new port that nothing ever bound — so "uninstall it and install it again" failed
+/// exactly like the first install.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_reinstalled_web_app_can_be_woken_and_the_old_address_is_free() {
+    let fixture = Fixture::start().await;
+    declare::php_pool(&fixture.home.database_file(), "8.3.34").await;
+    declare::database(
+        &fixture.home.database_file(),
+        "mariadb@main",
+        "mariadb",
+        3306,
+    )
+    .await;
+    let mut client = fixture.client().await;
+    let directory = web_app();
+    let path = directory.path().display().to_string();
+    let database = fixture.home.database_file();
+
+    installed(&mut client, &path, &fixture.home).await;
+    let first = declare::activation_port(&database, "php-fpm@phpmyadmin").await;
+
+    client
+        .call(
+            "extension.uninstall",
+            json!({"id": "phpmyadmin", "delete_data": true}),
+        )
+        .await;
+
+    if let Some(port) = first {
+        assert!(
+            !accepts(port),
+            "the activator at 127.0.0.1:{port} outlived the extension it belonged to
+{}",
+            fixture.home.daemon_log()
+        );
+    }
+
+    installed(&mut client, &path, &fixture.home).await;
+    let second = declare::activation_port(&database, "php-fpm@phpmyadmin").await;
+
+    if cfg!(windows) {
+        let port = second.unwrap_or_else(|| {
+            panic!(
+                "the reinstalled pool has no activation port
+{}",
+                fixture.home.daemon_log()
+            )
+        });
+        assert!(
+            accepts(port),
+            "nothing holds the reinstalled pool's activator at 127.0.0.1:{port}
+{}",
+            fixture.home.daemon_log()
+        );
+    }
+}
+
+/// A directory holding a `service` extension that really runs: this crate's `fakeservice`, told to
+/// hold the port its ready check dials.
+fn a_running_service() -> tempfile::TempDir {
+    let directory = tempfile::Builder::new()
+        .prefix("mixengine-service-extension")
+        .tempdir()
+        .expect("a temporary directory");
+
+    let program = mixengine_testkit::FakeService::program();
+    std::fs::copy(
+        &program,
+        directory
+            .path()
+            .join(program.file_name().expect("a file name")),
+    )
+    .expect("the fixture program is copied in");
+
+    std::fs::write(
+        directory.path().join("extension.toml"),
+        r#"schema = 1
+
+[extension]
+id = "catcher"
+name = "Catcher"
+version = "1.0.0"
+kind = "service"
+description = "A service that runs until it is stopped"
+
+[ports]
+ui_port = 18025
+
+[service]
+program = "{install_dir}/fakeservice"
+cwd = "{data_dir}"
+args = ["--listen", "{listen}:{ui_port}"]
+ready = { type = "tcp", addr = "{listen}:{ui_port}", timeout = "10s" }
+
+[permissions]
+network = "loopback"
+filesystem = ["own-data"]
+"#,
+    )
+    .expect("a manifest");
+
+    directory
+}
+
+/// **Uninstalling a running `service` extension stops it first, so it can be installed again** —
+/// found by T200's hand check.
+///
+/// The daemon stopped a `web-app`'s pool before the rows went (T82a) and nothing else: a running
+/// Mailpit had its row deleted from under it, its process went on holding its own executable, the
+/// install directory could not be removed (`Access is denied` on Windows), and the next install
+/// was refused because that directory was still there.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_running_service_extension_is_stopped_by_its_uninstall() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    let directory = a_running_service();
+    let path = directory.path().display().to_string();
+
+    let plan = installed(&mut client, &path, &fixture.home).await;
+    let install_dir = std::path::PathBuf::from(
+        plan["install_dir"]
+            .as_str()
+            .expect("the plan names where it installs"),
+    );
+
+    client
+        .call("extension.start", json!({"id": "catcher"}))
+        .await;
+
+    let answer = client
+        .ask(
+            "extension.uninstall",
+            json!({"id": "catcher", "delete_data": true}),
+        )
+        .await;
+    assert!(
+        answer.get("error").is_none(),
+        "uninstalling a running service extension was refused: {answer}\n{}",
+        fixture.home.daemon_log()
+    );
+    assert!(
+        !install_dir.exists(),
+        "the install directory outlived the uninstall: {}\n{}",
+        install_dir.display(),
+        fixture.home.daemon_log()
+    );
+
+    installed(&mut client, &path, &fixture.home).await;
 }

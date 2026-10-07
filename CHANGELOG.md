@@ -4,9 +4,13 @@
 
 ### Changed
 - MixLab has a new Dashboard, a black Dark theme and ten colour themes in place of the accent colour, and shows CPU per core or for the whole machine.
+- The Add-ons screen shows an install's progress, lists each add-on once with what it is for, and opens or turns a web add-on on and off from its own row. `mix extension list` shows what each one is for too.
 
 ### Fixed
 - A version you keep when updating no longer offers the same update again, in `mix` and MixLab.
+- An add-on's site, such as Adminer, opens right after it is installed or reinstalled, without restarting MixEngine.
+- phpMyAdmin starts and signs in to your database again. It was looking for the database password under an old name.
+- Uninstalling an add-on that is running, such as Mailpit, stops it first, so it can be installed again. An install also clears what an earlier failed uninstall left behind.
 
 ## v0.0.15
 

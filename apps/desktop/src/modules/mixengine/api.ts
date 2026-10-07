@@ -631,9 +631,10 @@ export function extensionPlan(input: ExtensionPlanRequest): Promise<ExtensionPla
 }
 
 /** `input.consent` must be taken verbatim from the `ExtensionPlan` just received — see Decision D3
- *  in the spec. */
-export function extensionInstall(input: ExtensionInstall): Promise<unknown> {
-  return invoke("mixengine_extension_install", { params: input });
+ *  in the spec. Answers the job the install runs as (T200, D3): the install is not done when this
+ *  returns. */
+export function extensionInstall(input: ExtensionInstall): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_extension_install", { params: input });
 }
 
 export function extensionUninstall(input: ExtensionUninstall): Promise<ExtensionRemoval> {
