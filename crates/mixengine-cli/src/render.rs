@@ -3983,7 +3983,7 @@ pub(crate) fn blueprint_applied(applied: &BlueprintApplied) -> String {
         out.push_str(&format!(
             "  {:<11} {}\n",
             match &step.result {
-                StepResult::Done => "done",
+                StepResult::Done { .. } => "done",
                 StepResult::AlreadyTrue => "already",
                 StepResult::NotRun { .. } => "not run",
                 // **A step that ran and did not succeed** — roadmap task **T78a**. Told apart from
@@ -5144,7 +5144,7 @@ mod tests {
                         root: "/tmp/shop".to_owned(),
                         pins: std::collections::BTreeMap::new(),
                     },
-                    result: StepResult::Done,
+                    result: StepResult::Done { note: None },
                 },
                 StepOutcome {
                     action: PlanAction::InstallRuntime {

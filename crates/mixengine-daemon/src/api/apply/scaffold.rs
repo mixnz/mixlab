@@ -326,7 +326,7 @@ pub(crate) async fn run_command(
                 drain(&mut lines, sink, &mut last);
 
                 return match exit.is_success() {
-                    true => StepResult::Done,
+                    true => StepResult::Done { note: None },
                     false => StepResult::Failed {
                         why: failure_in(command, exit.code(), &last, root),
                     },
@@ -470,7 +470,7 @@ mod tests {
         )
         .await;
 
-        assert_eq!(result, StepResult::Done, "{result:?}");
+        assert_eq!(result, StepResult::Done { note: None }, "{result:?}");
         assert!(root.path().join("made.txt").is_file());
     }
 
@@ -540,7 +540,7 @@ mod tests {
         )
         .await;
 
-        assert_eq!(result, StepResult::Done);
+        assert_eq!(result, StepResult::Done { note: None });
         assert!(
             collected
                 .0

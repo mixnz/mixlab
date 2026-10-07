@@ -301,7 +301,7 @@ impl Api {
                 if registered.is_some_and(|project| {
                     mixengine_platform::paths::in_full(&project.root) == here
                 }) {
-                    return Ok(StepResult::Done);
+                    return Ok(StepResult::Done { note: None });
                 }
 
                 context
@@ -319,7 +319,7 @@ impl Api {
                     })
                     .await?;
 
-                Ok(StepResult::Done)
+                Ok(StepResult::Done { note: None })
             }
 
             PlanAction::EnsureService {
@@ -361,7 +361,7 @@ impl Api {
 
                 context.ensured.push(id);
 
-                Ok(StepResult::Done)
+                Ok(StepResult::Done { note: None })
             }
 
             PlanAction::CreateDatabase {
@@ -391,7 +391,7 @@ impl Api {
                     })
                     .await?;
 
-                Ok(StepResult::Done)
+                Ok(StepResult::Done { note: None })
             }
 
             PlanAction::InstallRuntime { kind, .. } => {
@@ -414,7 +414,7 @@ impl Api {
                     )
                     .await?;
 
-                Ok(StepResult::Done)
+                Ok(StepResult::Done { note: None })
             }
 
             PlanAction::InstallPackage { package, .. } => {
@@ -435,7 +435,7 @@ impl Api {
                     )
                     .await?;
 
-                Ok(StepResult::Done)
+                Ok(StepResult::Done { note: None })
             }
 
             PlanAction::CreateSite {
@@ -480,7 +480,7 @@ impl Api {
                     })
                     .await?;
 
-                Ok(StepResult::Done)
+                Ok(StepResult::Done { note: None })
             }
 
             PlanAction::AddDomain { domain, .. } => {
@@ -502,7 +502,7 @@ impl Api {
                     })
                     .await?;
 
-                Ok(StepResult::Done)
+                Ok(StepResult::Done { note: None })
             }
 
             PlanAction::IssueCertificate { domains } => {
@@ -522,7 +522,7 @@ impl Api {
                     // issued this one, and an issue that finds a usable certificate says `Reused` —
                     // which is `already true` and not a second certificate.
                     Ok(report) => Ok(match report.sites.first().map(|one| &one.outcome) {
-                        Some(IssueOutcome::Issued {}) => StepResult::Done,
+                        Some(IssueOutcome::Issued {}) => StepResult::Done { note: None },
 
                         Some(IssueOutcome::Refused { because }) => StepResult::NotRun {
                             why: format!("no certificate was issued for {name}: {because}"),
@@ -601,7 +601,7 @@ impl Api {
                 // index does not offer would be the expensive direction to be wrong in. The line
                 // says which one, so it can be turned on by hand.
                 match turned {
-                    Ok(()) => Ok(StepResult::Done),
+                    Ok(()) => Ok(StepResult::Done { note: None }),
 
                     Err(reason) => Ok(StepResult::NotRun {
                         why: format!("the PHP extension {name} was not turned on: {reason}"),
