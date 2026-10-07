@@ -1,6 +1,7 @@
 // First, and with `macro_use`: the `err!` macro it defines is used by every module below it.
 #[macro_use]
 mod error;
+mod downloads;
 
 mod import;
 mod instance;
