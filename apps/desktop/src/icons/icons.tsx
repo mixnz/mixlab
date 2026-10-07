@@ -394,13 +394,16 @@ export function KeyboardIcon(props: IconProps) {
 
 /** A status marker rather than an action — currently the "unsaved changes" bullet. Filled, so
  * it reads as a dot at the small sizes it is used at instead of as a thin ring. */
-/** The MixEngine module in the `[+]` menu: a running machine, seen from the side — a block with
- *  intake and exhaust, and one moving part at its centre. */
+/** The MixEngine module in the `[+]` menu: a chip with its pins — the processor the whole
+ * environment runs on. Two pins a side rather than three, so the gaps between them survive the
+ * 14px the tab strip draws it at. The earlier drawing, a block seen from the side with a ring at
+ * its centre, read as an eye at that size. */
 export function EngineIcon(props: IconProps) {
   return (
     <Icon {...props}>
-      <path d="M4 9h3l2-3h6l2 3h3v6h-3l-2 3H9l-2-3H4z" />
-      <circle cx="12" cy="12" r="2.5" />
+      <rect x="7" y="7" width="10" height="10" rx="1.5" />
+      <rect x="10" y="10" width="4" height="4" />
+      <path d="M9.5 7V4M14.5 7V4M9.5 20v-3M14.5 20v-3M7 9.5H4M7 14.5H4M20 9.5h-3M20 14.5h-3" />
     </Icon>
   );
 }
