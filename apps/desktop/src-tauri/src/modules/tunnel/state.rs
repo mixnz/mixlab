@@ -111,7 +111,7 @@ impl Tunnels {
 
         let entries = Arc::clone(&self.entries);
         let app = app.clone();
-        std::thread::spawn(move || read_output(&app, &entries, id, &target, stderr));
+        std::thread::spawn(move || read_output(&app, &entries, id, stderr));
         Ok(info)
     }
 
@@ -157,7 +157,6 @@ fn read_output<R: Runtime>(
     app: &AppHandle<R>,
     entries: &Entries,
     id: u32,
-    target: &str,
     stderr: Option<OutputPipe>,
 ) {
     if let Some(stderr) = stderr {
@@ -182,7 +181,7 @@ fn read_output<R: Runtime>(
                     }
                 }
                 if entry.info.hint.is_none() {
-                    if let Some(hint) = hint_for(target, &line) {
+                    if let Some(hint) = hint_for(&line) {
                         entry.info.hint = Some(hint);
                         changed = true;
                     }

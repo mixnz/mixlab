@@ -7,7 +7,7 @@ export interface TunnelInfo {
   url: string | null;
   state: "connecting" | "open" | "failed";
   detail: string | null;
-  hint: "allowedHosts" | "tryIpv4" | null;
+  hint: "allowedHosts" | "nothingListening" | null;
 }
 
 /** The pill's tone: in transition while connecting, good once open, bad once failed. */

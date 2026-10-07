@@ -33,7 +33,7 @@ const tunnelVi = {
     downloading: "Đang tải…",
     using: "Đang dùng {{path}}",
     hintAllowedHosts: "Dev server từ chối địa chỉ của tunnel. Thêm nó vào server.allowedHosts trong cấu hình Vite.",
-    hintTryIpv4: "Không có gì trả lời ở ::1. Thử 127.0.0.1 thay cho localhost.",
+    hintNothingListening: "Không có gì trả lời ở {{target}}. Chạy server lên, hoặc kiểm lại cổng.",
     pathLabel: "Đường dẫn cloudflared",
     pathHint: "Để trống thì dùng bản trong PATH, hoặc bản MixLab tải về.",
   },

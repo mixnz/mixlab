@@ -175,9 +175,11 @@ LAN publishes something that is not this person's to publish.
 - **No scheme means `http://`.** An `https://` target is passed as it is, and cloudflared checks its
   certificate: a local server with a self-signed one fails, and the row shows cloudflared's error.
   Turning verification off is not offered.
-- **The host is passed as typed.** `localhost` may resolve to `::1` while the server listens on
-  `127.0.0.1`, which reads as a refused connection; the row says to try `127.0.0.1` when cloudflared
-  reports one.
+- **The host is passed as typed.** cloudflared tries both addresses of `localhost` itself, so a
+  server listening on `127.0.0.1` only is reached through `localhost` (measured on 2026.10.0).
+- **Nothing listening is named.** A request through a tunnel whose target has nothing on it makes
+  cloudflared log *Unable to reach the origin service*, and the row then says nothing answered at
+  that address, so a 502 in the visitor's browser has a reason on this machine.
 
 What a person is shown before the first start, every time, in one line under the field: *Anyone
 with the link can open this while the tunnel runs.* Quick tunnels have no access control, and that
@@ -230,9 +232,9 @@ line, *No tunnel running*.
 
 ## Open questions
 
-1. **A `~/.cloudflared/config.yml` on the machine.** cloudflared reads it even for a quick tunnel, and
-   a config written for a named tunnel can change what a quick tunnel does. Should the module pass
-   `--config` pointing at an empty file of its own? T203a measures what happens with one present.
+None left. **A `~/.cloudflared/config.yml` on the machine** was the last: measured on 2026.10.0 with a
+named tunnel's config in `~/.cloudflared`, a quick tunnel still opens and serves, and passing an
+empty `--config` only adds an error line. The module passes no `--config`.
 
 ## MixLab
 

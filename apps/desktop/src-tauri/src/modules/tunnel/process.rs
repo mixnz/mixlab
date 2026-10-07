@@ -5,8 +5,9 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Hint {
-    /// `localhost` dialled `::1` and the server listens on `127.0.0.1` only.
-    TryIpv4,
+    /// A request reached the tunnel and nothing answered at the target: the server is not running,
+    /// or listens on another port.
+    NothingListening,
     /// The dev server refused the tunnel's host — Vite's `server.allowedHosts`.
     AllowedHosts,
 }
@@ -24,10 +25,12 @@ pub fn public_url(line: &str) -> Option<String> {
         .then(|| candidate.to_owned())
 }
 
-/// What to suggest for a line that reports a failure reaching the target.
-pub fn hint_for(target: &str, line: &str) -> Option<Hint> {
-    let refused = line.contains("connection refused") && line.contains("[::1]");
-    (refused && target.contains("://localhost")).then_some(Hint::TryIpv4)
+/// What to suggest for one line of cloudflared's output. A refused connection to the target reads
+/// the same for `localhost` and `127.0.0.1`: cloudflared tries both addresses of `localhost` itself
+/// (measured on 2026.10.0), so the only useful thing to say is that nothing answered.
+pub fn hint_for(line: &str) -> Option<Hint> {
+    line.contains("Unable to reach the origin service")
+        .then_some(Hint::NothingListening)
 }
 
 /// Whether a response is a dev server refusing the tunnel's host — Vite 5 and later.
@@ -98,11 +101,17 @@ mod tests {
         assert_eq!(public_url("see https://developers.cloudflare.com/x"), None);
     }
 
+    /// The line cloudflared 2026.10.0 printed, measured, when a request reached the tunnel and
+    /// nothing listened on the target — for `localhost` and `127.0.0.1` alike, since cloudflared
+    /// tries both addresses of `localhost` itself.
     #[test]
-    fn a_refused_connection_to_localhost_suggests_127_0_0_1() {
-        let line = "ERR  error=\"Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:5173: connect: connection refused\"";
-        assert_eq!(hint_for("http://localhost:5173", line), Some(Hint::TryIpv4));
-        assert_eq!(hint_for("http://127.0.0.1:5173", line), None);
+    fn nothing_listening_at_the_target_is_named() {
+        let line = "2026-10-07T19:12:15Z ERR  error=\"Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp 127.0.0.1:8097: connect: connection refused\" connIndex=0 event=1 ingressRule=0 originService=http://localhost:8097";
+        assert_eq!(hint_for(line), Some(Hint::NothingListening));
+        assert_eq!(
+            hint_for("2026-10-07T19:10:51Z ERR Connection terminated connIndex=0"),
+            None
+        );
     }
 
     #[test]

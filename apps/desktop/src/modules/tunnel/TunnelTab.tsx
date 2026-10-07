@@ -99,7 +99,7 @@ export default function TunnelTab(_props: ModuleTabProps) {
 
   function hintText(info: TunnelInfo): string | null {
     if (info.hint === "allowedHosts") return t("tunnelTab.hintAllowedHosts");
-    if (info.hint === "tryIpv4") return t("tunnelTab.hintTryIpv4");
+    if (info.hint === "nothingListening") return t("tunnelTab.hintNothingListening", { target: info.target });
     return null;
   }
 

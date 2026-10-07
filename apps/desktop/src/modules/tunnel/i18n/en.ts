@@ -33,7 +33,7 @@ const tunnelEn = {
     downloading: "Downloading…",
     using: "Using {{path}}",
     hintAllowedHosts: "The dev server refused the tunnel's address. Add it to server.allowedHosts in your Vite config.",
-    hintTryIpv4: "Nothing answered on ::1. Try 127.0.0.1 instead of localhost.",
+    hintNothingListening: "Nothing answered at {{target}}. Start the server, or check its port.",
     pathLabel: "cloudflared path",
     pathHint: "Leave empty to use one on PATH, or the one MixLab downloads.",
   },
