@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.16
+
 ### Added
 - MixLab's Tunnel tab shares an address on this machine on the internet, such as a dev server, through a Cloudflare quick tunnel. MixEngine is not needed.
 - On a Mac, MixLab ▸ Remove MixLab from this Mac… removes everything in one go, after showing you
