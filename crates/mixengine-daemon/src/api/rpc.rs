@@ -2482,6 +2482,10 @@ pub(super) fn summary(
             .map(|record| record.stopped_by.into()),
         // The row's parent's version (T183), on `port`'s rule: no row, no version to report.
         version: record.and_then(|record| record.version.clone()),
+        // Only about a service that *is* failed (T200b, D5), on `stopped_by`'s rule above.
+        last_failure: record
+            .filter(|record| record.state == mixengine_proto::ServiceState::Failed)
+            .and_then(|record| record.last_failure.clone()),
     }
 }
 

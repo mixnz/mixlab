@@ -5911,6 +5911,7 @@ mod tests {
             autostart: false,
             stopped_by: None,
             version: None,
+            last_failure: None,
         }
     }
 

@@ -735,3 +735,42 @@ fn found_and_adopt_reach_the_daemon_from_the_command_line() {
     );
     assert!(said.contains("mix service found"), "{said}");
 }
+
+/// **A failed service says why in its own listing** — roadmap task **T200b**, D5.
+///
+/// The sentence was in `daemon.log` and nowhere a client could read it, so MixLab's "see why" had
+/// nothing to show. A stop asked of a failed service has no process to stop and leaves it failed,
+/// so it goes on saying why: the failure is still the state.
+#[test]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "the fakeservice recipe is compiled into debug builds only"
+)]
+fn a_failed_service_carries_why_while_it_is_failed() {
+    let (home, _daemon) = running(&[Service::new("fakeservice@main")
+        .never_ready()
+        .ready_timeout(1_000)]);
+
+    let output = home.mix(&["service", "start"]);
+    assert!(!output.status.success(), "{}", stdout(&output));
+
+    let failed: Value = json(&home.mix(&["service", "status", "fakeservice@main", "--json"]));
+    assert_eq!(failed["state"], "failed", "{failed}");
+    assert!(
+        failed["last_failure"]["detail"]
+            .as_str()
+            .is_some_and(|detail| detail.contains("not ready within")),
+        "a failed service does not say why: {failed}\n{}",
+        home.daemon_log()
+    );
+
+    let stopped = home.mix(&["service", "stop", "fakeservice@main"]);
+    assert!(stopped.status.success(), "{}", stdout(&stopped));
+
+    let after: Value = json(&home.mix(&["service", "status", "fakeservice@main", "--json"]));
+    assert_eq!(after["state"], "failed", "{after}");
+    assert_eq!(
+        after["last_failure"], failed["last_failure"],
+        "a stop with nothing to stop changed why it failed: {after}"
+    );
+}

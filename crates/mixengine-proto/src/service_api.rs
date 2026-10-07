@@ -288,6 +288,13 @@ pub struct ServiceSummary {
     /// this build cannot parse.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<PackageVersion>,
+
+    /// Why it failed, while it is `failed` — roadmap task **T200b**, D5.
+    ///
+    /// On `stopped_by`'s rule: the row keeps the note after a person stops a failed service, and no
+    /// listing shows a failure the state no longer claims. Optional on the wire (ADR 0019).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_failure: Option<ServiceFailureNote>,
 }
 
 /// Who left a service stopped — the wire half of `mixengine-core`'s `StoppedBy`, and of the
@@ -722,6 +729,7 @@ mod tests {
             autostart: false,
             stopped_by: None,
             version: None,
+            last_failure: None,
         }
     }
 
@@ -968,12 +976,14 @@ mod tests {
             autostart: false,
             stopped_by: None,
             version: None,
+            last_failure: None,
         };
 
         let encoded = serde_json::to_value(&summary).unwrap();
         assert!(encoded.get("state").is_none(), "{encoded}");
         assert!(encoded.get("role").is_none(), "{encoded}");
         assert!(encoded.get("version").is_none(), "{encoded}");
+        assert!(encoded.get("last_failure").is_none(), "{encoded}");
         assert_eq!(encoded["supervised"], false);
         assert_eq!(
             serde_json::from_value::<ServiceSummary>(encoded).unwrap(),
