@@ -1,7 +1,6 @@
-import type { CSSProperties } from "react";
 import SegmentedControl from "../../../components/SegmentedControl";
-import type { AccentColor, ThemeMode } from "../../theme";
-import { ACCENT_COLORS } from "../../theme";
+import type { ColorTheme, ThemeMode } from "../../theme";
+import { COLOR_THEMES } from "../../theme";
 import type { Language, TranslationKey } from "../../../i18n";
 import { useTranslation } from "../../../i18n";
 import styles from "./SettingsModal.module.css";
@@ -9,23 +8,24 @@ import styles from "./SettingsModal.module.css";
 interface Props {
   theme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
-  accent: AccentColor;
-  onAccentChange: (accent: AccentColor) => void;
+  colorTheme: ColorTheme;
+  onColorThemeChange: (colorTheme: ColorTheme) => void;
 }
 
-/** `blue` -> `settings.accentBlue`, the label beside each swatch. */
-function accentLabelKey(accent: AccentColor): TranslationKey {
-  return `settings.accent${accent.charAt(0).toUpperCase()}${accent.slice(1)}` as TranslationKey;
+/** `dim` -> `settings.colorThemeDim`, the name under each swatch. */
+function colorThemeLabelKey(colorTheme: ColorTheme): TranslationKey {
+  return `settings.colorTheme${colorTheme.charAt(0).toUpperCase()}${colorTheme.slice(1)}` as TranslationKey;
 }
 
 /**
- * Everything about how the app looks and reads: light or dark, which accent, which language.
+ * Everything about how the app looks and reads: light, dark or a colour theme, and which language.
  *
- * The three sit together because they are the settings a user changes on a whim and sees the
- * result of immediately — unlike the tools and the updater, which are errands.
+ * They sit together because they are the settings a user changes on a whim and sees the result of
+ * immediately — unlike the tools and the updater, which are errands.
  */
-function AppearanceSection({ theme, onThemeChange, accent, onAccentChange }: Props) {
+function AppearanceSection({ theme, onThemeChange, colorTheme, onColorThemeChange }: Props) {
   const { t, lang, setLang } = useTranslation();
+  const colorMode = theme === "color";
 
   return (
     <>
@@ -43,28 +43,47 @@ function AppearanceSection({ theme, onThemeChange, accent, onAccentChange }: Pro
             { value: "system", label: t("settings.themeSystem") },
             { value: "light", label: t("settings.themeLight") },
             { value: "dark", label: t("settings.themeDark") },
+            { value: "color", label: t("settings.themeColor") },
           ]}
         />
       </div>
 
       <div className={styles.section}>
-        <span className={styles.sectionLabel}>{t("settings.accent")}</span>
-        <div className={styles.accentOptions}>
-          {ACCENT_COLORS.map((opt) => {
-            const label = t(accentLabelKey(opt));
+        <span className={styles.sectionLabel} id="settings-color-theme-label">
+          {t("settings.colorTheme")}
+        </span>
+        {/* Shown under every mode, so it is there to be found, but only Colour lets it be used:
+            Light, Dark and System each have their own ground and accent. */}
+        {!colorMode && <p className={styles.hint}>{t("settings.colorThemeHint")}</p>}
+        <div
+          className={styles.colorThemes}
+          role="group"
+          aria-labelledby="settings-color-theme-label"
+          aria-disabled={!colorMode}
+        >
+          {COLOR_THEMES.map((opt) => {
+            const label = t(colorThemeLabelKey(opt));
+            const active = colorMode && opt === colorTheme;
             return (
               <button
                 key={opt}
                 type="button"
-                className={opt === accent ? `${styles.accentOption} ${styles.accentOptionActive}` : styles.accentOption}
-                /* The palette lives in App.css; the swatch only names which hue it is,
-                   so it picks up that colour's light and dark cast on its own. */
-                style={{ "--accent-swatch": `var(--c-${opt})` } as CSSProperties}
-                onClick={() => onAccentChange(opt)}
+                className={active ? `${styles.colorTheme} ${styles.colorThemeActive}` : styles.colorTheme}
+                onClick={() => onColorThemeChange(opt)}
+                disabled={!colorMode}
+                aria-pressed={active}
                 title={label}
-                aria-label={label}
-                aria-pressed={opt === accent}
-              />
+              >
+                {/* The preview takes the theme's own tokens (App.css), so it shows that theme's
+                    ground, surface and accent whatever is in force around it. */}
+                <span className={styles.colorThemePreview} data-palette-swatch={opt} aria-hidden="true">
+                  <span className={styles.colorThemeSurface}>
+                    <span className={styles.colorThemeLine} />
+                    <span className={styles.colorThemeAccent} />
+                  </span>
+                </span>
+                <span className={styles.colorThemeName}>{label}</span>
+              </button>
             );
           })}
         </div>

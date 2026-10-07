@@ -461,12 +461,12 @@ export function PowerIcon(props: IconProps) {
 }
 
 /** Stop something running — a service, or a request in flight on {@link SendIcon}'s button.
- * Filled like {@link PlayIcon}, its pair, and a little smaller than the triangle's extent: a
- * square carries more ink than a triangle, so matching their sizes would make Stop the louder. */
+ * Filled like {@link PlayIcon}, its pair. Big enough to read as a square at a row button's size:
+ * at 11px a smaller one shrank to a red speck nobody recognised as Stop. */
 export function StopIcon(props: IconProps) {
   return (
     <Icon {...props}>
-      <rect x="6.5" y="6.5" width="11" height="11" rx="2.5" fill="currentColor" stroke="none" />
+      <rect x="5" y="5" width="14" height="14" rx="3" fill="currentColor" stroke="none" />
     </Icon>
   );
 }

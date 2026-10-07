@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ComponentType } from "react";
-import type { AccentColor, ThemeMode } from "../../theme";
+import type { ColorTheme, ThemeMode } from "../../theme";
 import type { TranslationKey } from "../../../i18n";
 import type { IconProps } from "../../../icons";
 import type { ShortcutGroup } from "../../../core/shortcuts";
@@ -30,8 +30,8 @@ import Modal, { ModalBody } from "../../../components/Modal";
 interface SettingsModalProps {
   theme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
-  accent: AccentColor;
-  onAccentChange: (accent: AccentColor) => void;
+  colorTheme: ColorTheme;
+  onColorThemeChange: (colorTheme: ColorTheme) => void;
   /** The catalogue the dispatcher was handed — see {@link ShortcutsSection}. */
   shortcuts: ShortcutGroup[];
   /** Which modules this window draws, and how to change it. */
@@ -49,7 +49,7 @@ type SectionId = string;
 /**
  * Everything about the app rather than about a connection.
  *
- * It is a list of panes rather than one long scroll: theme, accent and language are settings, the
+ * It is a list of panes rather than one long scroll: theme, colour theme and language are settings, the
  * dump tools are a downloader, and the last one is about the application itself — three things that
  * happen to live behind the same door, and reading as one column made the door look busier than
  * what is behind it.
@@ -57,8 +57,8 @@ type SectionId = string;
 function SettingsModal({
   theme,
   onThemeChange,
-  accent,
-  onAccentChange,
+  colorTheme,
+  onColorThemeChange,
   shortcuts,
   modules,
   onClose,
@@ -152,8 +152,8 @@ function SettingsModal({
                 <AppearanceSection
                   theme={theme}
                   onThemeChange={onThemeChange}
-                  accent={accent}
-                  onAccentChange={onAccentChange}
+                  colorTheme={colorTheme}
+                  onColorThemeChange={onColorThemeChange}
                 />
               </div>
               <div

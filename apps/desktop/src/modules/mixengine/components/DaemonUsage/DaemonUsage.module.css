@@ -67,3 +67,41 @@
   box-shadow: none;
 }
 
+
+/* The Dashboard's line: a separator from the home folder before it, then words, no box. */
+.inline {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  height: 28px;
+  padding-left: 16px;
+  border-left: 1px solid var(--border-strong);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.inlineCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inlineName {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Wide enough for "CPU 12.3%" in mono, so the value changing every second does not push RAM
+   sideways. */
+.inlineValue {
+  min-width: 9ch;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.inline .liveDot {
+  width: 6px;
+  height: 6px;
+  box-shadow: none;
+}

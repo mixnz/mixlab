@@ -1,4 +1,5 @@
 .badge {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -89,4 +90,21 @@
 .neutral {
   background: var(--neutral-bg);
   color: var(--text-muted);
+}
+
+/* Sits over the badge's bottom-right corner, on the surface colour so it reads over the wash. */
+.tag {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-bg);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 12px;
+  letter-spacing: 0;
 }

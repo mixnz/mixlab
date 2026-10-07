@@ -11,7 +11,8 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { MetricsHistory } from "@mixengine/api";
 import { segmentsFor } from "../../metricsHistoryState";
-import { DAEMON_SUBJECT, machineShare, metricsSubjectFor } from "../../metricsState";
+import { useCpuScale } from "../../cpuScale";
+import { DAEMON_SUBJECT, cpuShare, metricsSubjectFor } from "../../metricsState";
 import Chart from "./Chart";
 import { CPU_UNIT, RSS_UNIT, windowStart } from "./chartScale";
 import styles from "./Metrics.module.css";
@@ -40,6 +41,7 @@ export default function Metrics({ active }: { active: boolean }) {
   const [loadedAt, setLoadedAt] = useState(() => Date.now());
   const [error, setError] = useState("");
   const { t } = useTranslation();
+  const cpuScale = useCpuScale();
 
   // The service list only builds the picker — read once when the screen is first visited; no
   // stream needs following, because this is not a live state table like the Dashboard.
@@ -118,10 +120,10 @@ export default function Metrics({ active }: { active: boolean }) {
                 to={to}
                 unit={CPU_UNIT}
                 label={t("mixengine.metrics.cpu")}
-                // Rows are stored as a percentage of one core; drawn as a percentage of the whole
-                // machine, like Task Manager (T190c).
-                avg={(m) => (m.cpu_avg === null ? null : machineShare(m.cpu_avg, cores))}
-                peak={(m) => (m.cpu_peak === null ? null : machineShare(m.cpu_peak, cores))}
+                // Rows are stored as a percentage of one core; drawn on the scale Settings names,
+                // the whole machine unless told otherwise (T190c).
+                avg={(m) => (m.cpu_avg === null ? null : cpuShare(m.cpu_avg, cores, cpuScale))}
+                peak={(m) => (m.cpu_peak === null ? null : cpuShare(m.cpu_peak, cores, cpuScale))}
                 hue="sky"
               />
             </section>

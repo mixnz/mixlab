@@ -13,6 +13,7 @@ import { useTranslation } from "../../../i18n";
 import type { TraySectionProps } from "../../../shell/module";
 import * as api from "../api";
 import DaemonUsage from "../components/DaemonUsage";
+import { serviceBadge } from "../serviceBadge";
 import { applyEvent, needsResync, rowsFrom, type ServiceRow } from "../daemonState";
 import { ensureDaemonWatch, subscribeDaemonWatch } from "../daemonWatch";
 import { serviceStateHint, serviceStateKey, serviceStateTone, toggleMode } from "../serviceStateLabel";
@@ -352,9 +353,13 @@ function TraySection({ shown, focused, dismiss }: TraySectionProps) {
               {rows.map((row) => {
                 const pending = busy[row.id];
                 const mode = toggleMode(row.state, pending !== undefined);
+                const badge = serviceBadge(
+                  row.id,
+                  rows.map((other) => other.id),
+                );
                 return (
                   <li key={row.id} className={styles.row}>
-                    <MonogramBadge name={row.id} size={30} />
+                    <MonogramBadge name={badge.name} tag={badge.tag} size={30} />
                     <div className={styles.rowText}>
                       <span className={styles.rowName} title={row.id}>
                         {row.id}
@@ -377,7 +382,7 @@ function TraySection({ shown, focused, dismiss }: TraySectionProps) {
                         aria-label={t("mixengine.dashboard.stopService", { service: row.id })}
                         onClick={() => void act(row.id, "stop")}
                       >
-                        <StopIcon size={11} />
+                        <StopIcon size={13} />
                         {t("mixengine.dashboard.stop")}
                       </Button>
                     ) : (

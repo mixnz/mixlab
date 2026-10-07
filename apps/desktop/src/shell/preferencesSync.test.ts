@@ -22,14 +22,14 @@ describe("preferences in sync", () => {
   });
 
   it("write through, forget what was removed, and say so once", async () => {
-    const storage = memory({ "mixlab-accent": "red" });
+    const storage = memory({ "mixlab-palette": "dim" });
     const announce = vi.fn();
     await preferencesCollection(() => storage, announce).write({
       upserts: [{ id: "theme", data: "light" }],
-      removed: ["accent"],
+      removed: ["palette"],
     });
     expect(storage.data.get("mixlab-theme")).toBe("light");
-    expect(storage.data.has("mixlab-accent")).toBe(false);
+    expect(storage.data.has("mixlab-palette")).toBe(false);
     expect(announce).toHaveBeenCalledOnce();
   });
 
@@ -37,10 +37,14 @@ describe("preferences in sync", () => {
     const storage = memory();
     const announce = vi.fn();
     const skipped = await preferencesCollection(() => storage, announce).write({
-      upserts: [{ id: "mixlab-session", data: "{}" }, { id: "theme", data: 3 }],
+      upserts: [
+        { id: "mixlab-session", data: "{}" },
+        { id: "theme", data: 3 },
+        { id: "accent", data: "blue" },
+      ],
       removed: [],
     });
-    expect(skipped).toEqual(["mixlab-session", "theme"]);
+    expect(skipped).toEqual(["mixlab-session", "theme", "accent"]);
     expect(storage.data.size).toBe(0);
     expect(announce).not.toHaveBeenCalled();
   });

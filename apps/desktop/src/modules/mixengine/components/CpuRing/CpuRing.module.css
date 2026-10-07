@@ -1,0 +1,18 @@
+/* A CPU share as a ring: the Dashboard's daemon line and its service table. */
+.ring {
+  flex-shrink: 0;
+}
+
+.track,
+.arc {
+  fill: none;
+}
+
+.track {
+  stroke: var(--border-strong);
+}
+
+.arc {
+  stroke: var(--accent);
+  stroke-linecap: round;
+}

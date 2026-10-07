@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DAEMON_SUBJECT,
   formatBytes,
+  cpuShare,
   formatCpu,
   machineShare,
   metricsSubjectFor,
@@ -94,8 +95,15 @@ describe("formatCpu", () => {
     expect(formatCpu(7.3, 12)).toBe("0.6%");
   });
 
-  it("never shows a running process as doing nothing", () => {
-    expect(formatCpu(0.53, 12)).toBe("<0.1%");
+  it("shows anything above 0.05 as at least 0.1, and the rest as 0.0", () => {
+    expect(formatCpu(0.72, 12)).toBe("0.1%");
+    expect(formatCpu(0.6, 12)).toBe("0.0%");
+    expect(formatCpu(0.53, 12)).toBe("0.0%");
+  });
+
+  it("shows a share of one core when asked", () => {
+    expect(formatCpu(150, 12, "core")).toBe("150.0%");
+    expect(formatCpu(0.07, 12, "core")).toBe("0.1%");
   });
 
   it("shows zero as zero and an unmeasured figure as a dash", () => {
@@ -105,6 +113,13 @@ describe("formatCpu", () => {
 
   it("treats a machine of no cores as one", () => {
     expect(formatCpu(50, 0)).toBe("50.0%");
+  });
+});
+
+describe("cpuShare", () => {
+  it("divides by the cores only on the machine scale", () => {
+    expect(cpuShare(150, 12, "machine")).toBe(12.5);
+    expect(cpuShare(150, 12, "core")).toBe(150);
   });
 });
 

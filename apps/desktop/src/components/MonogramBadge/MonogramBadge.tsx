@@ -8,12 +8,15 @@ interface Props {
   name: string;
   size?: MonogramSize;
   className?: string;
+  /** A few characters pinned to the corner — the version that tells two instances of one package
+   *  apart when their letters and hue are the same. */
+  tag?: string;
 }
 
 /** Two letters in a tinted square: a name made recognisable at a glance in a list or a table.
  *  Decorative — the name it stands for is always written beside it — so it is hidden from
  *  assistive technology. */
-function MonogramBadge({ name, size = 30, className }: Props) {
+function MonogramBadge({ name, size = 30, className, tag }: Props) {
   const hue = monogramHue(name);
   return (
     <span
@@ -23,6 +26,7 @@ function MonogramBadge({ name, size = 30, className }: Props) {
       }`}
     >
       {monogramLetters(name)}
+      {tag !== undefined && tag !== "" && <span className={styles.tag}>{tag}</span>}
     </span>
   );
 }

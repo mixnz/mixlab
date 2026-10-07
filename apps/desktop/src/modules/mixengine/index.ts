@@ -2,6 +2,7 @@ import { lazy } from "react";
 
 import { EngineIcon } from "../../icons";
 import type { ModuleDefinition } from "../../shell/module";
+import MixEngineSettings from "./components/MixEngineSettings";
 
 /* Loaded when a tab of this module is first opened, not at start-up — for the same reason as the
    other four modules. The icon and label are eager: they are on the tab strip before any tab of
@@ -21,4 +22,5 @@ export const mixengineModule: ModuleDefinition = {
   /* Loaded when the tray's frame first draws this section — T168, T192. The main window never
      loads it. */
   TraySection: lazy(() => import("./tray/TraySection")),
+  settings: { labelKey: "mixengine.settingsTitle", Icon: EngineIcon, Section: MixEngineSettings },
 };

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import appCss from "./App.css?raw";
+import { COLOR_THEMES } from "./themeModel";
 
 /**
  * WCAG contrast of the pairs the design promises, read off `App.css` itself.
  *
- * A theme is the `:root` block with the `:root[data-theme="dark"]` block laid over it. Values are
+ * A theme is the `:root` block with the `:root[data-theme="dark"]` block laid over it, and a colour
+ * theme is that with its `[data-palette]` block laid over in turn. Values are
  * resolved through `var()` inside that map, colours are `#rrggbb`, and a wash is a `-rgb` token at
  * an alpha composited over the surface it sits on — which is what the eye actually reads.
  */
@@ -24,10 +26,11 @@ function block(selector: string): Theme {
 
 const light = block(":root");
 const dark = new Map([...light, ...block(':root[data-theme="dark"]')]);
-const THEMES: [string, Theme][] = [
-  ["light", light],
-  ["dark", dark],
-];
+const palettes: [string, Theme][] = COLOR_THEMES.map((id) => [
+  id,
+  new Map([...dark, ...block(`:root[data-theme="dark"][data-palette="${id}"]`)]),
+]);
+const THEMES: [string, Theme][] = [["light", light], ["dark", dark], ...palettes];
 
 function value(theme: Theme, name: string): string {
   const raw = theme.get(name);
@@ -92,6 +95,14 @@ describe("contrast", () => {
     expect(light.size).toBeGreaterThan(50);
   });
 
+  it("gives every colour theme its ground and its accent", () => {
+    for (const [, theme] of palettes) {
+      for (const name of ["--page-bg", "--surface-bg", "--text", "--accent", "--accent-on-solid"]) {
+        expect(theme.get(name)).not.toBe(dark.get(name));
+      }
+    }
+  });
+
   it("text tokens read on every surface", () => {
     expect(
       failures((theme, fail) => {
@@ -112,6 +123,18 @@ describe("contrast", () => {
           const fill = theme.has(`--c-${h}-solid`) ? `--c-${h}-solid` : `--c-${h}`;
           atLeast(ratio(colour(theme, `--c-${h}-on-solid`), colour(theme, fill)), 4.5, `--c-${h}-on-solid on ${fill}`, fail);
         }
+      }),
+    ).toEqual([]);
+  });
+
+  it("the accent in force reads as text, on its wash, and under its ink", () => {
+    expect(
+      failures((theme, fail) => {
+        const text = colour(theme, "--accent-text");
+        for (const s of SURFACES) atLeast(ratio(text, colour(theme, s)), 4.5, `--accent-text on ${s}`, fail);
+        const washed = wash(channels(theme, "--accent-rgb"), ACCENT_WASH, colour(theme, "--surface-bg"));
+        atLeast(ratio(text, washed), 4.5, "--accent-text on its wash", fail);
+        atLeast(ratio(colour(theme, "--accent-on-solid"), colour(theme, "--accent-solid")), 4.5, "--accent-on-solid", fail);
       }),
     ).toEqual([]);
   });
@@ -154,6 +177,7 @@ describe("contrast", () => {
     const EXEMPT: Record<string, string[]> = {
       light: ["--ansi-white", "--ansi-bright-white"],
       dark: ["--ansi-black"],
+      ...Object.fromEntries(COLOR_THEMES.map((id) => [id, ["--ansi-black"]])),
     };
     const out: string[] = [];
     for (const [name, theme] of THEMES) {
