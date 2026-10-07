@@ -5,6 +5,7 @@ pub mod mixengine;
 pub mod rest;
 pub mod terminal;
 pub mod tools;
+pub mod tunnel;
 
 /// Every command of every module.
 ///
