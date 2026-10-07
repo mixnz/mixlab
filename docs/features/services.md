@@ -218,6 +218,20 @@ log in to bring them back together: every way of changing the copy inside the di
 password that was lost. `mix service reset-credential <service>` — `service.reset_credential` —
 is the way out, and T127 is where it was added.
 
+**A service that cannot start says why in the first sentence, and a missing credential of its own
+names this command** — roadmap task **T202a**. The runner writes what stopped the start beside the
+reason (`last_failure`, T200b), and a walk now carries that sentence to `service.start`, to the
+blueprint's step and to the Sites screen's *Start again*, so *mariadb@main did not start: the
+environment entry MYSQL_PWD: no credential is stored at mixengine/<home>/mariadb@main/root* is what a
+person reads, not *the process could not be started at all*. When the entry that is missing is the
+service's own — the address names this service — the same sentence ends with *`mix service
+reset-credential mariadb@main` generates one for this home and writes it into the data directory,
+keeping every database*, because that is the command that writes it back; another service's entry
+(phpMyAdmin's read of its database's superuser) gets no such pointer, since a reset of *that*
+service would be refused. This is the case a home meets after its `mixengine.db` was recreated
+beside initialised data directories: the data is there, the home id is new, and nothing holds the
+password under the new address.
+
 **It is the ritual's own password step and nothing else.** A ritual is *create the directory, then
 set the password through a server that listens on nothing*; a repair is the second half, against a
 directory that is already full. Each recipe declares it beside its ritual, because the mechanisms

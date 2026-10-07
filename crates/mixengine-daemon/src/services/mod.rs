@@ -357,16 +357,43 @@ impl Drop for Stopping {
 }
 
 /// How a start of one service ended, for the walk that is waiting on it.
+/// What was persisted about a service that did not get where a walk wanted it — roadmap task
+/// **T202a**, D3: the reason the state machine recorded, and the sentence the runner wrote beside
+/// it (T200b's `last_failure`), which is the one a person reads first.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct Fault {
+    /// [`None`] when the failure was the daemon's own — a database that would not take the write,
+    /// a runner task that panicked — which is in `daemon.log` and is not a state a client could
+    /// render.
+    pub(crate) reason: Option<StateReason>,
+
+    /// What the runner wrote, where it wrote anything.
+    pub(crate) detail: Option<String>,
+}
+
+impl Fault {
+    /// A failure nothing was persisted about.
+    pub(crate) fn unexplained() -> Self {
+        Self::default()
+    }
+
+    /// The sentence a caller prints: the detail, else the reason, else nothing after the colon.
+    pub(crate) fn said(&self, failed: &ServiceId) -> String {
+        match (&self.detail, &self.reason) {
+            (Some(detail), _) => format!("{failed} did not start: {detail}"),
+            (None, Some(reason)) => format!("{failed} did not start: {reason}"),
+            (None, None) => format!("{failed} did not start"),
+        }
+    }
+}
+
 #[derive(Debug)]
 enum Start {
     /// The service is up. Traffic can be routed to it, and the next tier may start.
     Ready,
 
-    /// It is not, and this is what was persisted about why.
-    ///
-    /// [`None`] when the failure was the daemon's own — a database that would not take the write, a
-    /// runner task that panicked — which is in `daemon.log` and is not a state a client could render.
-    Failed(Option<StateReason>),
+    /// It is not, and this is the [`Fault`] persisted about why.
+    Failed(Fault),
 }
 
 /// What a walk did.
@@ -379,13 +406,13 @@ pub(crate) struct Walk {
     /// Services that reached what the walk was aiming for, in the order they got there.
     pub(crate) reached: Vec<ServiceId>,
 
-    /// The service that stopped the walk, and what was persisted about it.
+    /// The service that stopped the walk, and the [`Fault`] persisted about it.
     ///
-    /// [`None`] as the reason when the failure was the daemon's own — see [`Start::Failed`] — and
+    /// An unexplained fault when the failure was the daemon's own — see [`Start::Failed`] — and
     /// for the one failure a *stop* has, which is a survivor that would not die: there is no
     /// persisted reason to quote there, because the row is deliberately left in the state it was
     /// already in. See [`Registry::stop`].
-    pub(crate) failed: Option<(ServiceId, Option<StateReason>)>,
+    pub(crate) failed: Option<(ServiceId, Fault)>,
 
     /// Services never tried, because something they depend on failed.
     pub(crate) blocked: Vec<ServiceId>,
@@ -869,22 +896,21 @@ impl Registry {
         match self.start(&graph, &plan).await.failed {
             None => Ok(()),
 
-            Some((failed, reason)) => {
+            Some((failed, fault)) => {
                 // **The one start failure this daemon can do better than "read the log"** — roadmap
                 // task **T127a**. T127 built the repair and reached it from the provisioning probe,
                 // which is a *running* server; this is the same sentence for a database that never
                 // got there.
-                let hint = match &reason {
+                let hint = match &fault.reason {
                     Some(StateReason::SuperuserRefused { .. }) => databases::repair_hint(&failed),
                     _ => format!("`mix service logs {failed}` has what it printed"),
                 };
 
+                // The runner's sentence first (T202a, D3): what it wrote beside the reason is what
+                // a person acts on, and the state machine's word is the fallback.
                 Err(mixengine_proto::Error::new(
                     mixengine_proto::ErrorCode::PreconditionFailed,
-                    match reason {
-                        Some(reason) => format!("{failed} did not start: {reason}"),
-                        None => format!("{failed} did not start"),
-                    },
+                    fault.said(&failed),
                 )
                 .with_hint(hint))
             }
@@ -1429,15 +1455,15 @@ impl Registry {
                     "the plan names a service the graph does not hold"
                 );
 
-                walk.failed = Some((id.clone(), None));
+                walk.failed = Some((id.clone(), Fault::unexplained()));
                 break;
             };
 
             match self.begin(spec, because.clone()).await {
                 Start::Ready => walk.reached.push(id.clone()),
 
-                Start::Failed(reason) => {
-                    walk.failed = Some((id.clone(), reason));
+                Start::Failed(fault) => {
+                    walk.failed = Some((id.clone(), fault));
                     break;
                 }
             }
@@ -1478,7 +1504,7 @@ impl Registry {
                 // No reason to carry: what a client would render here is the state the row is still
                 // in, which it can already read, and the sentence saying why is the runner's own
                 // `error!` in `daemon.log`.
-                walk.failed = Some((id.clone(), None));
+                walk.failed = Some((id.clone(), Fault::unexplained()));
                 break;
             }
 
@@ -1733,9 +1759,12 @@ impl Registry {
                 "this service has never been started here and its first run did not finish"
             );
 
-            return Start::Failed(Some(StateReason::FirstRunFailed {
-                detail: error.message.clone(),
-            }));
+            return Start::Failed(Fault {
+                reason: Some(StateReason::FirstRunFailed {
+                    detail: error.message.clone(),
+                }),
+                detail: None,
+            });
         }
 
         let (mut readiness, asked) = {
@@ -1753,7 +1782,7 @@ impl Registry {
                     "refusing to start this service: the daemon is shutting down"
                 );
 
-                return Start::Failed(None);
+                return Start::Failed(Fault::unexplained());
             }
 
             let supervised = running
@@ -2159,7 +2188,7 @@ pub(crate) async fn stop_then_start(
     // would not stop is always in it, because it was supervised when `restarted` read the set.
     if let Some((refused, _)) = registry.stop(down).await.failed {
         return Walk {
-            failed: Some((refused, None)),
+            failed: Some((refused, Fault::unexplained())),
             ..Walk::default()
         };
     }
@@ -2261,7 +2290,7 @@ async fn settled(readiness: &mut watch::Receiver<Readiness>) -> Start {
         }
 
         if readiness.changed().await.is_err() {
-            return Start::Failed(None);
+            return Start::Failed(Fault::unexplained());
         }
     }
 }
@@ -2285,7 +2314,7 @@ async fn settled_after_asking(
     before: Readiness,
 ) -> Start {
     if readiness.changed().await.is_err() {
-        return decided_by(before).unwrap_or(Start::Failed(None));
+        return decided_by(before).unwrap_or(Start::Failed(Fault::unexplained()));
     }
 
     settled(readiness).await
@@ -2295,7 +2324,7 @@ async fn settled_after_asking(
 fn decided_by(readiness: Readiness) -> Option<Start> {
     match readiness {
         Readiness::Up => Some(Start::Ready),
-        Readiness::Down(reason) => Some(Start::Failed(reason)),
+        Readiness::Down(fault) => Some(Start::Failed(fault)),
         Readiness::Deciding => None,
     }
 }
@@ -2969,6 +2998,66 @@ mod tests {
         assert!(budget.remaining().expect("still under way") <= Duration::from_secs(2));
     }
 
+    /// T202a, D3. The detail the runner persisted with the reason reaches the walk, so the
+    /// sentence a caller prints first is the runner's. A spec that names a credential nothing
+    /// holds is the failure that found this.
+    #[tokio::test]
+    async fn a_walk_carries_the_detail_the_runner_wrote_with_the_reason() {
+        let (_home, paths, store) = home(&["mariadb"]).await;
+        let declared = Declared(vec![
+            spec("mariadb")
+                .env_from_keyring("MARIADB_ROOT_PASSWORD", "mixengine", "mariadb/root")
+                .build()
+                .expect("a usable spec"),
+        ]);
+        let registry = registry(&paths, &store, Arc::new(declared));
+
+        let graph = registry.graph().await.expect("one declared service");
+        let plan = graph.start_plan([&service("mariadb")]).expect("a plan");
+        let walk = registry.start(&graph, &plan).await;
+
+        let (failed, fault) = walk.failed.expect("the start failed");
+        assert_eq!(failed, service("mariadb"));
+        assert_eq!(fault.reason, Some(StateReason::SpawnFailed));
+        assert!(
+            fault.detail.as_deref().is_some_and(|detail| {
+                detail.contains("no credential is stored at mixengine/mariadb/root")
+            }),
+            "{fault:?}"
+        );
+    }
+
+    /// T202a, D3. `ensure_running` says the detail first, and the reason when there is no detail.
+    #[tokio::test]
+    async fn ensure_running_says_the_runners_detail_before_the_state_machines_reason() {
+        let (_home, paths, store) = home(&["mariadb"]).await;
+        let declared = Declared(vec![
+            spec("mariadb")
+                .env_from_keyring("MARIADB_ROOT_PASSWORD", "mixengine", "mariadb/root")
+                .build()
+                .expect("a usable spec"),
+        ]);
+        let registry = registry(&paths, &store, Arc::new(declared));
+
+        let error = registry
+            .ensure_running(&service("mariadb"))
+            .await
+            .expect_err("it cannot start");
+
+        assert!(
+            error
+                .message
+                .starts_with("mariadb did not start: the environment entry"),
+            "{}",
+            error.message
+        );
+        assert!(
+            !error.message.contains("could not be started at all"),
+            "the state machine's sentence is not the first one any more: {}",
+            error.message
+        );
+    }
+
     /// **A grace no clock can name is a shutdown that bounds nothing, and not one that panics.**
     ///
     /// `Instant + Duration` panics on overflow, and the signal half of a shutdown runs on the
@@ -3002,7 +3091,7 @@ mod tests {
         let walk = registry.start(&graph, &plan).await;
 
         assert!(
-            matches!(&walk.failed, Some((id, None)) if id == &service("caddy")),
+            matches!(&walk.failed, Some((id, fault)) if id == &service("caddy") && fault.reason.is_none()),
             "a shutdown whose budget could not be expressed is still a shutdown, and it starts \
              nothing: {walk:?}"
         );
@@ -3232,7 +3321,7 @@ mod tests {
             "a service still claiming a supervisor has not been stopped: {walk:?}"
         );
         assert!(
-            matches!(&walk.failed, Some((id, None)) if id == &service("caddy")),
+            matches!(&walk.failed, Some((id, fault)) if id == &service("caddy") && fault.reason.is_none()),
             "the walk names the service it could not take down, with nothing to quote as a \
              reason: {walk:?}"
         );
@@ -3336,7 +3425,7 @@ mod tests {
         assert!(
             matches!(
                 &walk.failed,
-                Some((id, Some(StateReason::ReadyTimeout { after })))
+                Some((id, Fault { reason: Some(StateReason::ReadyTimeout { after }), .. }))
                     if id == &service("slow") && *after == Millis(750)
             ),
             "a ready timeout says how long it waited: {walk:?}"
@@ -3391,7 +3480,7 @@ mod tests {
         assert!(
             matches!(
                 &walk.failed,
-                Some((id, Some(StateReason::PortInUse { port, program: Some(program), .. })))
+                Some((id, Fault { reason: Some(StateReason::PortInUse { port, program: Some(program), .. }), .. }))
                     if id == &service("slow") && *port == 3306 && program == "mysqld.exe"
             ),
             "the reason names the program on the port, not the symptom: {walk:?}"
@@ -3489,7 +3578,7 @@ mod tests {
         assert!(
             matches!(
                 &walk.failed,
-                Some((id, Some(StateReason::Requested))) if id == &service("slow")
+                Some((id, Fault { reason: Some(StateReason::Requested), .. })) if id == &service("slow")
             ),
             "a service stopped before it was ready did not come up, and says why: {walk:?}"
         );
@@ -3559,7 +3648,7 @@ mod tests {
         assert!(
             matches!(
                 &walk.failed,
-                Some((id, Some(StateReason::Exited { code: Some(3) })))
+                Some((id, Fault { reason: Some(StateReason::Exited { code: Some(3) }), .. }))
                     if id == &service("db")
             ),
             "the walk says how the attempt ended rather than that the policy ran out: {walk:?}"
@@ -3620,7 +3709,7 @@ mod tests {
         assert!(
             matches!(
                 &walk.failed,
-                Some((id, Some(StateReason::CrashLoop { attempts: 2, .. })))
+                Some((id, Fault { reason: Some(StateReason::CrashLoop { attempts: 2, .. }), .. }))
                     if id == &service("db")
             ),
             "the walk is answered by the policy running out, not by one crash: {walk:?}"
@@ -3738,7 +3827,7 @@ mod tests {
         assert!(
             matches!(
                 &again.failed,
-                Some((id, Some(StateReason::Exited { code: Some(3) })))
+                Some((id, Fault { reason: Some(StateReason::Exited { code: Some(3) }), .. }))
                     if id == &service("db")
             ),
             "the walk is answered by the attempt the request caused: {again:?}"
@@ -4321,7 +4410,7 @@ mod tests {
 
         assert!(walk.reached.is_empty(), "{walk:?}");
         assert!(
-            matches!(&walk.failed, Some((id, None)) if id == &service("caddy")),
+            matches!(&walk.failed, Some((id, fault)) if id == &service("caddy") && fault.reason.is_none()),
             "the walk names the service it would not start, with nothing to quote as a reason: \
              {walk:?}"
         );
@@ -4358,7 +4447,7 @@ mod tests {
             .expect("the start was refused rather than waited on");
 
         assert!(
-            matches!(&walk.failed, Some((id, None)) if id == &service("caddy")),
+            matches!(&walk.failed, Some((id, fault)) if id == &service("caddy") && fault.reason.is_none()),
             "a cancelled root token is a daemon that starts nothing: {walk:?}"
         );
         assert!(lock(&signalled.running).is_empty(), "{walk:?}");

@@ -197,14 +197,17 @@ async fn a_program_running_from_the_home_blocks_with_exit_code_three() {
     let home = Home::new();
     let _daemon = home.start_daemon();
 
+    // **Ten minutes, not thirty seconds** (T202b, D6): under a full parallel run the daemon's start
+    // and the plan once took longer than the occupant lived, and the plan found nothing in the way.
+    // The occupant is killed below whatever happens.
     let (source, args): (std::path::PathBuf, &[&str]) = if cfg!(windows) {
         (
             std::path::PathBuf::from(std::env::var("SystemRoot").expect("SystemRoot"))
                 .join(r"System32\PING.EXE"),
-            &["-n", "30", "127.0.0.1"],
+            &["-n", "600", "127.0.0.1"],
         )
     } else {
-        (std::path::PathBuf::from("/bin/sleep"), &["30"])
+        (std::path::PathBuf::from("/bin/sleep"), &["600"])
     };
     let directory = home.path().join("t182-occupant");
     std::fs::create_dir_all(&directory).expect("a directory in the home");

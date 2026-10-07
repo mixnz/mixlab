@@ -76,6 +76,17 @@ async fn every_check_is_reported_and_named() {
 /// healthy machine cannot demonstrate.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_name_nothing_resolves_is_a_problem_and_a_non_zero_exit() {
+    // **T202b, D5.** A Mac with MixEngine installed routes every `.test` name to that daemon
+    // through `/etc/resolver/test`, so whether `blog.test` resolves here is that daemon's answer
+    // and not this home's. CI's runners never carry the file; a developer's Mac does.
+    if std::path::Path::new("/etc/resolver/test").exists() {
+        eprintln!(
+            "skipped: this machine routes `.test` itself (/etc/resolver/test), so whether \
+             blog.test resolves is not this home's to decide"
+        );
+        return;
+    }
+
     let home = Home::new();
     let _daemon = home.start_daemon();
     let repository = tempfile::Builder::new()

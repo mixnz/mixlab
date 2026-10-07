@@ -8,7 +8,13 @@
  * hosts entry and issues the certificate — and the steps that follow it report
  * [`AlreadyTrue`](Self::AlreadyTrue).
  */
-export type StepResult = { "result": "done" } | { "result": "already_true" } | { "result": "not_run", 
+export type StepResult = { "result": "done", 
+/**
+ * What differs from the plan, in one sentence a client prints under the step — roadmap
+ * task **T202**, D2: the account used when the plan's was somebody else's, a database
+ * that was already there. `None` when nothing does, which is the common case.
+ */
+note?: string | null, } | { "result": "already_true" } | { "result": "not_run", 
 /**
  * The reason, in the words a client prints.
  */

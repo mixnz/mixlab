@@ -97,6 +97,8 @@ reported=""
 status=""
 total="?"
 settled=0
+failed=0
+failed_names=""
 
 poll() {
   # One call, not two: the status and job-count lines come out first, the settled jobs after them.
@@ -104,7 +106,11 @@ poll() {
     --jq '"status\t" + .status, "total\t" + (.jobs | length | tostring),
           (.jobs[] | select(.status == "completed") | .conclusion + "\t" + .name)')"
 
+  # Counted afresh on every poll — these are the run's totals, not this poll's news — so the
+  # closing line can say how many failed and which, whatever was already printed above it (T202c).
   settled=0
+  failed=0
+  failed_names=""
   while IFS=$'\t' read -r field name; do
     [ -z "$name" ] && continue
     case "$field" in
@@ -113,6 +119,14 @@ poll() {
     esac
 
     settled=$((settled + 1))
+    case "$field" in
+      success | skipped) ;;
+      *)
+        failed=$((failed + 1))
+        failed_names="${failed_names:+$failed_names, }$name"
+        ;;
+    esac
+
     case "$reported" in *"|$name|"*) continue ;; esac
     reported="$reported|$name|"
 
@@ -130,7 +144,13 @@ EOF
 if [ "$once" -eq 1 ]; then
   poll
   if [ "$status" != "completed" ]; then
-    echo "run $run: $status — $settled/$total jobs settled"
+    # The count is in the last line because the last line is what a reader keeps (T202c): two
+    # FAILED rows among forty-three ok rows were once read as a green run.
+    if [ "$failed" -gt 0 ]; then
+      echo "run $run: $status — $settled/$total jobs settled, $failed failed: $failed_names"
+    else
+      echo "run $run: $status — $settled/$total jobs settled"
+    fi
     exit 2
   fi
 else
@@ -166,7 +186,12 @@ if [ "$conclusion" = "success" ]; then
 fi
 
 echo
-echo "run $run: $conclusion — the failing steps:"
+if [ "$failed" -gt 0 ]; then
+  echo "run $run: $conclusion — $failed of $total jobs failed: $failed_names"
+else
+  echo "run $run: $conclusion"
+fi
+echo "the failing steps:"
 echo
 
 log="${TMPDIR:-/tmp}/mixengine-ci-$run.log"

@@ -52,6 +52,16 @@ needs_npm_safe_dir = true # optional, default false — this command takes its p
 
 ## Capture
 
+**The account a project ends up with is the plan's, or the next free one** — roadmap task **T202**.
+`database.create` refuses an account that is on the server and that MixEngine holds no credential
+for (T77a: a keyring entry is the deed of ownership, and a blueprint has nobody at the keyboard to
+pick another name), so the apply tries `<user>-2` … `<user>-9` against the same database and takes
+the first that is free or ours; a long name is cut so the suffix fits thirty-two characters. The
+step's outcome carries a `note` saying which account the project got, and whether the database was
+already there and left as it was — `mix blueprint apply` prints it under the step and MixLab shows
+it there. Nine foreign names end in T77a's refusal, naming the last one tried. No account's
+password is ever reset: the apply routes around a foreign account, never through it.
+
 `blueprint.capture { project, name }` reads the project's resolved state — runtime versions, linked
 services and their versions, PHP extensions, site kind and HTTPS — and writes the manifest. It
 captures *what is actually in use*, not the global defaults, and it never captures data,

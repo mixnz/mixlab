@@ -18,4 +18,10 @@ service: ServiceId,
  * supervising task that panicked. That is in `daemon.log` and is not a state a client could
  * render; a client meeting one says so rather than inventing a reason.
  */
-reason?: StateReason | null, };
+reason?: StateReason | null, 
+/**
+ * What the runner wrote about it — the same sentence `ServiceSummary.last_failure` carries
+ * (T200b) — so the first thing a client prints is the runner's and not the state machine's.
+ * Roadmap task **T202a**, D3. [`None`] where the reason is, and for a daemon from before it.
+ */
+detail?: string | null, };

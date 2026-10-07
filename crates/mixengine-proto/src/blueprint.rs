@@ -329,7 +329,13 @@ pub struct StepOutcome {
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub enum StepResult {
     /// This apply did it.
-    Done,
+    Done {
+        /// What differs from the plan, in one sentence a client prints under the step — roadmap
+        /// task **T202**, D2: the account used when the plan's was somebody else's, a database
+        /// that was already there. `None` when nothing does, which is the common case.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        note: Option<String>,
+    },
 
     /// It was already so.
     AlreadyTrue,
@@ -617,6 +623,27 @@ pub enum Disposition {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// T202, D2. A `done` written by a build from before the note still reads, a `done` with
+    /// nothing to say still writes as before, and a note round-trips.
+    #[test]
+    fn a_done_step_reads_without_a_note_and_carries_one() {
+        let bare: StepResult = serde_json::from_str(r#"{"result":"done"}"#).expect("reads");
+        assert_eq!(bare, StepResult::Done { note: None });
+
+        assert_eq!(
+            serde_json::to_value(StepResult::Done { note: None }).expect("writes"),
+            serde_json::json!({ "result": "done" })
+        );
+
+        let said = "the account shop is somebody else's, so this project's is shop-2";
+        let json = serde_json::to_value(StepResult::Done {
+            note: Some(said.to_owned()),
+        })
+        .expect("writes");
+        assert_eq!(json["result"], "done");
+        assert_eq!(json["note"], said);
+    }
 
     /// **T152.** A dry run from before T152 has no `needs`, and still parses.
     #[test]
