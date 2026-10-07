@@ -582,6 +582,17 @@ async fn a_domain_is_added_and_taken_away_and_the_primary_is_neither() {
 async fn the_diagnostic_names_the_site_and_says_what_is_missing() {
     use std::net::ToSocketAddrs as _;
 
+    // **T202b, D5.** A Mac with MixEngine installed routes every `.test` name to that daemon
+    // through `/etc/resolver/test`, so whether `blog.test` resolves here is that daemon's answer
+    // and not this home's. CI's runners never carry the file; a developer's Mac does.
+    if std::path::Path::new("/etc/resolver/test").exists() {
+        eprintln!(
+            "skipped: this machine routes `.test` itself (/etc/resolver/test), so whether \
+             blog.test resolves is not this home's to decide"
+        );
+        return;
+    }
+
     assert!(
         ("localhost", 80u16)
             .to_socket_addrs()

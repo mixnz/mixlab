@@ -26,11 +26,13 @@ leftover Keychain items, a development home from before v0.0.7 — are recorded 
       in the same note that `mix service reset-credential <id>` generates one and keeps every
       database (T127).
 - [x] **T202b** Tests that read the machine: the lookup test asks for a `.invalid` name (RFC 6761),
-      the doctor test skips with a printed reason on a Mac that routes `.test` itself
+      the three `.test` diagnostic tests skip with a printed reason on a Mac that routes `.test` itself
       (`/etc/resolver/test`), and the uninstall occupant sleeps six hundred seconds, not thirty.
-- [ ] **T202c** `scripts/watch-ci.sh` closes `--once` with the failed jobs counted and named, and
+      The skip was seen on the Mac that found it, with the released build installed.
+- [x] **T202c** `scripts/watch-ci.sh` closes `--once` with the failed jobs counted and named, and
       opens a failed run's report with the same line, so a reader of the last line cannot take a red
-      run for green.
+      run for green. Checked against run 37647792800 (*2 of 45 jobs failed: test / test
+      (windows-latest), lint / lint*) and 37651545855 (*success*).
 
 **M40** `laravel-1` applies on a server that already has a foreign `laravel-1` account, finishes,
 and names the account it used.

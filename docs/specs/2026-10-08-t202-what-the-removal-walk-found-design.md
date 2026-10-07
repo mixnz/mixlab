@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-08
 task:
   - T202
@@ -133,8 +133,9 @@ the first sentence alone.
 
 **D5 — Tests that need "a name nothing routes" ask for one no machine routes (T202b).** The lookup
 test asks for `t46-<pid>.invalid`: RFC 6761 reserves `.invalid` to resolve nowhere, and MixEngine
-never wires it. The doctor test cannot move its site off `.test`, so it does what `sharing.rs` and
-`limits.rs` do on a machine that lacks what they need: when `/etc/resolver/test` exists it prints
+never wires it. The doctor test, `domain.rs`'s *a name nothing routes* test and the daemon's
+`sites.rs` diagnostic test cannot move their site off `.test`, so they do what `sharing.rs` and
+`limits.rs` do on a machine that lacks what they need: when `/etc/resolver/test` exists they print
 *skipped: this machine routes `.test` itself (`/etc/resolver/test`), so whether blog.test resolves is
 not this home's to decide* and returns. CI's runners never carry that file; a developer's Mac with
 MixEngine installed does, and now says so rather than failing. Linux and Windows machines with an

@@ -139,7 +139,9 @@ except on `master` and on a tag, which are never cancelled so that those refs ke
 history of what they were told.
 
 `scripts/ask-ci.sh` is those two commands with the push in front, and `scripts/watch-ci.sh` waits
-for the verdict and prints the failing steps rather than a URL.
+for the verdict and prints the failing steps rather than a URL — and closes with the failed jobs
+counted and named (*2 of 45 jobs failed: lint / lint, …*), under `--once` too, so the last line of
+its output cannot read as green when it is not (T202c).
 
 **And `scripts/gate.sh` in front of the push.** rustfmt, clippy, rustdoc with `-D warnings`,
 `helper-lock.sh --check` and `check-docs.mjs` answer in about a minute here, where a red CI run
