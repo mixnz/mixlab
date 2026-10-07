@@ -4,7 +4,7 @@
  */
 
 /** The registry's module ids — `scenes.test.mjs` asserts this list still matches `MODULES`. */
-export const MODULE_IDS = ["mixengine", "db", "rest", "terminal", "tools"];
+export const MODULE_IDS = ["mixengine", "db", "rest", "terminal", "tools", "tunnel"];
 
 export const THEMES = ["dark", "light"];
 

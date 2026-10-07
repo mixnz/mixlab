@@ -6,6 +6,7 @@ import { mixengineModule } from "../modules/mixengine";
 import { restModule } from "../modules/rest";
 import { terminalModule } from "../modules/terminal";
 import { toolsModule } from "../modules/tools";
+import { tunnelModule } from "../modules/tunnel";
 
 /** Every module the app can open a tab of. Adding one is a line here — and this is the only file
  *  outside `src/modules/` that names any of them.
@@ -24,6 +25,7 @@ export const MODULES: ModuleDefinition[] = [
   restModule,
   terminalModule,
   toolsModule,
+  tunnelModule,
 ];
 
 /** Every collection the account screen can offer (D5), in the app's order. The one place a
@@ -49,7 +51,7 @@ export const PRESET_IDS: PresetId[] = ["mixengine", "everything", "databaseTools
 export const MODULE_PRESETS: Record<PresetId, string[]> = {
   mixengine: ["mixengine"],
   everything: MODULES.map((m) => m.id),
-  databaseTools: ["db", "rest", "terminal", "tools"],
+  databaseTools: ["db", "rest", "terminal", "tools", "tunnel"],
 };
 
 export function moduleById(id: string): ModuleDefinition {

@@ -42,6 +42,7 @@ const en = {
     moduleRest: "REST",
     moduleTerminal: "Terminal",
     moduleTools: "Tools",
+    moduleTunnel: "Tunnel",
     moduleMixEngine: "MixEngine",
   },
   /* Which modules this window draws — T108. The first-run screen and the Settings pane share these
