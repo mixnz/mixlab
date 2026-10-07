@@ -16,4 +16,5 @@ export const tunnelModule: ModuleDefinition = {
   Tab: lazy(() => import("./TunnelTab")),
   singleTab: true,
   settings: { labelKey: "tunnelTab.settingsTitle", Icon: GlobeIcon, Section: TunnelSettings },
+  TraySection: lazy(() => import("./tray/TraySection")),
 };

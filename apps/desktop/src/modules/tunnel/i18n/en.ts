@@ -21,7 +21,7 @@ const tunnelEn = {
     forTesting: "Quick tunnels are for testing. Cloudflare promises no uptime, and Server-Sent Events do not work.",
     running: "Tunnels",
     stateConnecting: "Connecting…",
-    stateOpen: "Open",
+    stateOpen: "Running",
     stateFailed: "Stopped",
     empty: "No tunnel running.",
     columnAddress: "Address",
@@ -34,7 +34,7 @@ const tunnelEn = {
     using: "Using {{path}}",
     hintAllowedHosts: "The dev server refused the tunnel's address. Add it to server.allowedHosts in your Vite config.",
     hintTryIpv4: "Nothing answered on ::1. Try 127.0.0.1 instead of localhost.",
-    pathLabel: "cloudflared to use",
+    pathLabel: "cloudflared path",
     pathHint: "Leave empty to use one on PATH, or the one MixLab downloads.",
   },
   error: {

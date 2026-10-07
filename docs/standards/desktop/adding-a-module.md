@@ -1,7 +1,7 @@
 # Adding a module
 
-A module is one kind of thing a tab can hold. There are three — `db`, `rest` and `terminal` — and
-the steps below are what each of them did. Read the newest one alongside this: `terminal` is the
+A module is one kind of thing a tab can hold. There are six — `mixengine`, `db`, `rest`, `terminal`,
+`tools` and `tunnel` — and the steps below are what each of them did. Read the newest one alongside this: `terminal` is the
 module that has been through the fewest changes of mind.
 
 The shell knows only what [`src/shell/module.ts`](../../../apps/desktop/src/shell/module.ts) declares, so a module

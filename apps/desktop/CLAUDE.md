@@ -14,6 +14,7 @@ MixLab is a desktop app built with **Tauri 2 + React 19 + TypeScript** (frontend
 - **`rest`** — an HTTP client: saved requests, environments, history, and a response pane.
 - **`terminal`** — a shell on this machine or on a server over SSH, with saved hosts.
 - **`tools`** — small utilities that run in this process.
+- **`tunnel`** — a Cloudflare quick tunnel to an address on this machine, ended with MixLab.
 - **`mixengine`** — the one module that talks to the MixEngine daemon, and an **optional** one.
 
 **MixLab comes first; MixEngine is an add-on.** Many users never start the daemon, so the shell and
