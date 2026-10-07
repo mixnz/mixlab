@@ -319,4 +319,56 @@ mod tests {
             "{refusal}"
         );
     }
+
+    /// **An install takes the place of what a broken uninstall left behind** — found by T200's hand
+    /// check.
+    ///
+    /// An uninstall that deleted the rows and then could not remove the directory — a running
+    /// Mailpit holding its own executable on Windows — left a directory nothing owns, and every
+    /// install after it was refused with *"… is already installed"* about an extension that was not.
+    /// A directory with no row is MixEngine's own leftover, so the install clears it and goes on.
+    /// The data directory is not touched: keeping it is a promise the uninstall made.
+    #[tokio::test]
+    async fn an_install_takes_the_place_of_a_directory_no_row_owns() {
+        let (_home, source, paths, store, one) =
+            installed(mixengine_testkit::extension::MAILPIT).await;
+        std::fs::write(one.data_dir.join("captured.db"), b"mail").expect("something worth keeping");
+
+        // What the interrupted uninstall left: the rows gone, the directory and its files not.
+        crate::services::delete(&store, one.id.service_id())
+            .await
+            .expect("the service row");
+        extension_store::forget(&store, &one.id)
+            .await
+            .expect("the extension row");
+        std::fs::write(one.install_dir.join("left-behind"), b"stale").expect("a stale file");
+
+        let text = mixengine_testkit::extension::MAILPIT;
+        let manifest =
+            manifest::read(std::path::Path::new("extension.toml"), text).expect("a fixture parses");
+
+        let again = install::install(
+            &store,
+            &paths,
+            &mixengine_platform::mock::Host::with_home("/mixengine"),
+            Request {
+                manifest: &manifest,
+                source: Source::Path,
+                from: Some(source.path()),
+                at: Timestamp::parse_rfc3339("2026-09-02T09:00:00Z").expect("a timestamp"),
+            },
+            &Quiet,
+        )
+        .await
+        .expect("an install over a directory no row owns");
+
+        assert!(
+            !again.install_dir.join("left-behind").exists(),
+            "the leftover was kept inside the new install"
+        );
+        assert!(
+            again.data_dir.join("captured.db").is_file(),
+            "the install deleted data the uninstall had promised to keep"
+        );
+    }
 }

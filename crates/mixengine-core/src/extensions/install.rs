@@ -403,6 +403,22 @@ pub async fn install<W: Watcher>(
         });
     }
 
+    // **A directory no row owns is a leftover, and this install takes its place** — found by T200.
+    // An uninstall deletes the rows before the directory, so one that could not finish — a running
+    // Mailpit holding its own executable on Windows — left files nothing owns, and every install
+    // after it was refused as "already installed" about an extension that was not. The row was
+    // checked just above, so what is here is MixEngine's own debris. A removal that fails still
+    // stops the install, naming the path, rather than unpacking over something half-deleted. The
+    // data directory is not touched: keeping it is a promise the uninstall made.
+    if install_dir.exists() {
+        tracing::info!(
+            extension = %id,
+            path = %install_dir.display(),
+            "an install directory no row owns is left from an earlier uninstall; it is replaced"
+        );
+        crate::paths::remove_dir(&install_dir).await?;
+    }
+
     // Decided before the download for the reason the plan is: a name that is taken and a PHP that
     // is missing are both things to refuse before a byte arrives — roadmap task **T81b**.
     let site = site_for(store, paths, manifest).await?;
