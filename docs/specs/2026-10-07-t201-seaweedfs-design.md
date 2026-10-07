@@ -88,8 +88,8 @@ machine unasked, and nothing in `permissions` describes a call out, so the fixtu
 ### D1b — Ready when S3 answers HTTP, with a margin on restart (T201)
 
 `ready` is `GET http://{listen}:{s3_port}/healthz`, expecting 200. `services.port` is the port
-`ready` watches (T81, D8), so `mix service list` shows the S3 port, the address an application is
-given.
+`ready` watches (T81, D8), so `mix service status seaweedfs` shows the S3 port, the address an
+application is given.
 
 **A TCP check is too early, and no check is exact.** On a restart with existing data, the S3 port
 opens before the master has become raft leader, and `/healthz` turns 200 about two seconds before
@@ -107,6 +107,11 @@ machine has no use for; the fixture passes `0`, and a stop then takes 16 s, most
 closing its gRPC streams. `stop` is a signal with a 30 s grace, so the default 10 s does not end
 every stop in a kill. A kill is not a loss: after `taskkill /F` on Windows the object was there on
 the next start.
+
+**On Windows the grace is never used.** `mix service stop seaweedfs` returns at once: `weed` exits on
+the console control event without running its shutdown, the way a kill does. Measured through
+MixEngine with a sandbox home: an object written, the service stopped, the extension uninstalled
+without `--delete-data` and installed again, and the object read back.
 
 **Left as it is:** `weed` creates its local sockets under `/tmp`, named by port, whatever `-dir`
 says, and leaves the two S3 ones behind after a stop. They are named by the port MixEngine
