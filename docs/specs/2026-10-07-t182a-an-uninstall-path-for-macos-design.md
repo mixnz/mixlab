@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-07
 task: T182a
 ---
@@ -318,6 +318,55 @@ path in step 6 is the window's own, as the updater's placement probe already is.
   `security find-certificate -c "MixEngine Local CA"`, `ls /Library/PrivilegedHelperTools` and
   `ls ~/Library/LaunchAgents`. Once more declining the prompt: nothing changed, the item still
   there. Once more from a terminal over SSH: `mix uninstall --dry-run --package` shows the row.
+
+## Checked by hand, 2026-10-07
+
+Mac14,3, macOS 15.7.3, starting from the released v0.0.15 `.pkg` with a home holding two Laravel
+sites, caddy and redis running. The walk used a `.pkg` built from this branch
+(`MIX_MACOS_SLICES=aarch64`, still 0.0.15, helper 0.1.5) installed over the release; the daemon
+reported the installed helper as 0.1.5 at its first start, with no prompt (T182b, D2's first row).
+
+**The item and the plan (D1, D4 steps 1 and 2).** *MixLab ▸ Remove MixLab from this Mac…* sits
+above Quit with a separator of its own. The dialog listed every row of the plan in the daemon's
+order, the kept rows dimmed, the `package` row reading *the program itself: its commands, the
+MixLab application and the package receipt* at `dev.mixengine.cli`, and one checkbox, since the
+home has no relocated directory. With the data box unticked nothing was blocked: a kept home is not
+searched (T182, D4). Ticked, five `node` processes running from `runtimes/node/24.21.0/bin/node`
+(one started for the walk, four from this editor's Playwright plugin, which this Mac's `PATH`
+resolves to MixEngine's `node`) appeared as banners with their pids, and **Remove MixLab** was
+disabled. Closing them and *Check again* cleared the banners.
+
+**The prompt declined (D4 step 4, P2).** The daemon raised its one prompt; Cancel left the receipt
+at 0.0.15, the four binaries, the bundle, the helper, the resolver files, the authority, the daemon
+(same pid) and the window (same pid) as they were, and the queue held only the three first-start
+operations the daemon itself had queued (T182b, D6 restored it). Before the fix below the dialog
+read the report as a failure, because after a decline the daemon settles the privileged rows as
+`failed`, *still waiting for permission* (T182b, D7), and offered no way to try again; after it the
+dialog says *You didn't allow the prompt, so nothing was removed. MixLab is still installed.* and
+offers *Check again*. The MixEngine tab's own *MixEngine needs an administrator* dialog was drawn
+over the removal while the queue held its operations; the removal dialog now sits above it.
+
+**A finished run (D4 steps 4 to 6, P1), twice.** With the data box unticked: the application quit
+on its own within seconds of the prompt. Afterwards `/usr/local/bin` held no `mix*`,
+`/Applications/MixLab.app` was gone, `pkgutil --pkg-info dev.mixengine.cli` answered *No receipt*,
+`/etc/hosts` and `/etc/pf.conf` named nothing of MixEngine's, `/etc/resolver` kept only another
+product's `lc`, the pf anchor and `/Library/LaunchDaemons/dev.mixengine.pf.plist` were gone, the
+helper was gone, no LaunchAgent, no `mixlab` or `mixengined` process, and the System keychain held
+two *MixEngine Local CA* authorities where it had held three: this home's went, the other two are
+T182c's. The home (956 MB) and the window's data directory stayed, as the box said. **The first run
+left four six-byte lock files in `/Library/Logs/MixEngine`** (`hosts.lock`, `resolver.lock`,
+`trust.lock`, `port-access.lock`), written by the helper's own operations beside the audit log and
+never removed by any uninstall before this; `audit-log-remove` now takes the helper's `.lock` files
+with the log, and the second run left no directory at all.
+
+**From a terminal over SSH (D5).** With the test build: `mix uninstall --dry-run --package` showed
+the `package` row as `would`; without the flag it showed `kept`, *it stays unless asked for:
+`mix uninstall --package` removes it as well*. The released 0.0.15 `mix`, tried first by mistake,
+refused `--package` as an unknown argument, which is what an unreleased flag does.
+
+**Reinstall.** The released `.pkg` installed again over the empty machine; the daemon started on the
+kept home with both sites listed and queued the resolver, packet-filter and authority operations
+for the next prompt, as a first start does.
 
 ## Documentation, when it lands
 

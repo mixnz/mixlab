@@ -35,3 +35,10 @@ undo. Then:
 5. **From a terminal.** Install the package again and start MixEngine. Over SSH,
    `mix uninstall --dry-run --package` shows the `package` row as `would`, and `mix uninstall`
    without the flag shows it as `kept`, naming `mix uninstall --package`.
+
+## Walked 2026-10-07
+
+Mac14,3, macOS 15.7.3, a `.pkg` built from the T182a branch over the released v0.0.15. Every case
+above held; what the walk found and fixed before it was ticked is recorded in the design's
+*Checked by hand* section: a declined prompt read as a failure, the MixEngine tab's prompt dialog
+drawn over the removal, and four `.lock` files left in `/Library/Logs/MixEngine`.
