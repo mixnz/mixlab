@@ -23,6 +23,7 @@ mod harness;
 
 use harness::frontend::request_as;
 use harness::php_site;
+use harness::stderr;
 
 /// **A site serves PHP through the front end.**
 ///
@@ -132,4 +133,125 @@ async fn a_site_is_still_served_after_its_php_is_updated() {
         "the site is served by the new pool: {answer}\n--- daemon ---\n{}",
         served.home.daemon_log()
     );
+}
+
+/// What the probe web-app's page prints, unique so no other site's answer can pass for it.
+const PROBE_SAYS: &str = "served by the probe web-app";
+
+/// How long the front end is given to serve a site an install just declared — `frontend.rs`'
+/// `EVENTUALLY`, for its reason: a reload on a machine that may be compiling something else.
+const PROBE_PATIENCE: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// A folder holding a web-app with no artifact and no database: a manifest and one page.
+fn probe_web_app() -> tempfile::TempDir {
+    let directory = tempfile::Builder::new()
+        .prefix("mixengine-probe")
+        .tempdir()
+        .expect("a temporary directory");
+
+    std::fs::write(
+        directory.path().join("extension.toml"),
+        r#"schema = 1
+
+[extension]
+id = "probe"
+name = "Probe"
+version = "1.0.0"
+kind = "web-app"
+description = "A page that says it was served"
+
+[web-app]
+root = "{install_dir}"
+domain = "probe"
+
+[web-app.runtime]
+kind = "php"
+requires = "8"
+
+[permissions]
+services = []
+network = "loopback"
+filesystem = ["own-data"]
+"#,
+    )
+    .expect("a manifest");
+
+    std::fs::write(
+        directory.path().join("index.php"),
+        format!("<?php echo '{PROBE_SAYS}';\n"),
+    )
+    .expect("a page");
+
+    directory
+}
+
+/// **A web-app is served on its first request, and again after a reinstall** — roadmap task
+/// **T200**, D1 and D2.
+///
+/// The person who installed Adminer got MixEngine's starting page instead, because nothing could
+/// wake the pool the install had just created. This is that path with a real Caddy and a real PHP:
+/// install, request, uninstall, install, request — and no daemon restart anywhere in it.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs a real Caddy and a real PHP — see the module note, and the `caddy` and `php` steps in _services.yml"]
+async fn a_web_app_is_served_the_moment_it_is_installed() {
+    let served = php_site::served(php_site::FRONT, &php_site::runtimes()[..1]).await;
+    let directory = probe_web_app();
+    let path = directory.path().display().to_string();
+
+    for round in ["first install", "reinstall"] {
+        let output = served
+            .home
+            .mix(&["extension", "install", "--path", &path, "--yes"]);
+        assert!(
+            output.status.success(),
+            "{round}: the install failed: {}\n{}",
+            stderr(&output),
+            served.home.daemon_log()
+        );
+
+        // **Polled, because the front end reloads after the job has ended**, and a Caddy that has
+        // not read the new site yet answers an empty 200 for a host it does not know. A pool nothing
+        // can wake answers MixEngine's starting page for the whole wait instead, which is the
+        // failure this test exists for.
+        let deadline = std::time::Instant::now() + PROBE_PATIENCE;
+        loop {
+            let answer = request_as(served.port, "/", "probe.mixengine.test");
+
+            if answer
+                .as_deref()
+                .is_some_and(|body| body.contains("200") && body.contains(PROBE_SAYS))
+            {
+                break;
+            }
+
+            assert!(
+                std::time::Instant::now() < deadline,
+                "{round}: the web-app was not served
+--- answered ---
+{}
+--- rendered ---
+{}
+                 --- daemon.log ---
+{}",
+                answer.unwrap_or_else(|| "nothing at all".to_owned()),
+                served
+                    .home
+                    .site_file(php_site::FRONT, "probe.mixengine.test"),
+                served.home.daemon_log()
+            );
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+
+        if round == "first install" {
+            let output = served
+                .home
+                .mix(&["extension", "uninstall", "probe", "--delete-data"]);
+            assert!(
+                output.status.success(),
+                "the uninstall failed: {}\n{}",
+                stderr(&output),
+                served.home.daemon_log()
+            );
+        }
+    }
 }
