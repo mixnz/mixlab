@@ -160,6 +160,9 @@ pending_privileged_ops(id, op, dedupe_key, requested_at)
    -- a producer that enqueues on every start writes one row, and the row keeps the moment the
    -- machine first needed it
 settings(key, value_json)
+   -- small records with no table of their own; `upgrade.kept` maps each runtime or package
+   -- version an update kept to the version it moved to, so the listing stops offering that same
+   -- update (`core::upgrade::kept`); uninstalling the version clears its entry
 ```
 
 **Two kinds of moment, stored two ways.** Most `_at` columns are ISO-8601 text: they are written

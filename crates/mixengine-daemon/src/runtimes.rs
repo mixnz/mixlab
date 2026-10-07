@@ -37,6 +37,7 @@ use std::time::SystemTime;
 
 use mixengine_core::index::{self, Index, Package, Selection, Target};
 use mixengine_core::install::Installer;
+use mixengine_core::upgrade::kept::{self, Family};
 use mixengine_core::{Paths, Store, paths, resolve, runtimes};
 use mixengine_proto::{
     CatalogueGap, Error, ErrorCode, Execution, JobId, JobKind, JobSummary, PackageVersion,
@@ -286,6 +287,9 @@ impl Runtimes {
         let installed = runtimes::records(&self.store, filter.kind)
             .await
             .map_err(|error| error.to_wire())?;
+        let kept = kept::all(&self.store)
+            .await
+            .map_err(|error| error.to_wire())?;
         let facts = requirements::facts();
 
         let mut runtimes = Vec::new();
@@ -345,11 +349,24 @@ impl Runtimes {
                     continue;
                 };
 
+                let to_installed = installed
+                    .iter()
+                    .any(|other| other.kind == kind && other.version == to);
+                // Already run, and it kept `have` beside `to`: asking again would only repeat it.
+                if kept::already_kept(
+                    &kept,
+                    Family::Runtime,
+                    name,
+                    have.version.as_str(),
+                    to.as_str(),
+                    to_installed,
+                ) {
+                    continue;
+                }
+
                 updates.push(RuntimeUpdate {
                     kind,
-                    to_installed: installed
-                        .iter()
-                        .any(|other| other.kind == kind && other.version == to),
+                    to_installed,
                     needs: Some(requirements::of(
                         &catalogue.index,
                         name,
@@ -984,6 +1001,19 @@ impl Runtimes {
         let default_cleared = runtimes::forget(&self.store, target.kind, &target.version)
             .await
             .map_err(|error| error.to_wire())?;
+
+        // A copy installed again later starts with no history of an update it was kept beside.
+        // The runtime is gone either way, so a note that cannot be cleared is a warning.
+        if let Err(error) = kept::forget(
+            &self.store,
+            Family::Runtime,
+            target.kind.as_str(),
+            target.version.as_str(),
+        )
+        .await
+        {
+            tracing::warn!(%error, "could not forget the update this runtime was kept beside");
+        }
 
         tracing::info!(
             kind = target.kind.as_str(),

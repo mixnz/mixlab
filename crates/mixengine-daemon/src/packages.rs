@@ -31,6 +31,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use mixengine_core::generate::Catalogue;
+use mixengine_core::upgrade::kept::{self, Family};
 use mixengine_core::{Paths, Store, packages, paths};
 use mixengine_proto::{
     Error, ErrorCode, JobId, JobKind, JobSummary, PackageCatalogue, PackageFilter, PackageInstall,
@@ -149,6 +150,9 @@ impl Packages {
         let installed = packages::records(&self.store, filter.package.as_deref())
             .await
             .map_err(|error| error.to_wire())?;
+        let kept = kept::all(&self.store)
+            .await
+            .map_err(|error| error.to_wire())?;
         let facts = requirements::facts();
 
         let mut offered = Vec::new();
@@ -206,11 +210,24 @@ impl Packages {
                     continue;
                 };
 
+                let to_installed = installed
+                    .iter()
+                    .any(|other| other.package == name && other.version == to);
+                // Already run, and it kept `have` beside `to` — as for runtimes.
+                if kept::already_kept(
+                    &kept,
+                    Family::Package,
+                    name,
+                    have.version.as_str(),
+                    to.as_str(),
+                    to_installed,
+                ) {
+                    continue;
+                }
+
                 updates.push(PackageUpdate {
                     package: name.to_owned(),
-                    to_installed: installed
-                        .iter()
-                        .any(|other| other.package == name && other.version == to),
+                    to_installed,
                     needs: Some(requirements::of(
                         &catalogue.index,
                         name,
@@ -699,6 +716,18 @@ impl Packages {
         packages::forget(&self.store, &target.package, &target.version)
             .await
             .map_err(|error| error.to_wire())?;
+
+        // As for runtimes: the package is gone, so a note that cannot be cleared is a warning.
+        if let Err(error) = kept::forget(
+            &self.store,
+            Family::Package,
+            &target.package,
+            target.version.as_str(),
+        )
+        .await
+        {
+            tracing::warn!(%error, "could not forget the update this package was kept beside");
+        }
 
         tracing::info!(
             package = target.package,

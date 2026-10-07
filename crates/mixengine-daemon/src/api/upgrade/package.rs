@@ -315,6 +315,21 @@ impl Api {
             }
         };
 
+        // Kept, so the listing would offer this same update again for as long as `from` stays.
+        // The update itself is done: a note that cannot be written is a warning, not a failure.
+        if matches!(plan.old, OldVersion::Kept { .. })
+            && let Err(error) = mixengine_core::upgrade::kept::remember(
+                &self.store,
+                mixengine_core::upgrade::kept::Family::Package,
+                package,
+                from.as_str(),
+                to.as_str(),
+            )
+            .await
+        {
+            tracing::warn!(%error, "could not remember the version this update kept");
+        }
+
         Ok(plan)
     }
 

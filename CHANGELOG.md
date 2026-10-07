@@ -5,6 +5,9 @@
 ### Changed
 - MixLab has a new Dashboard, a black Dark theme and ten colour themes in place of the accent colour, and shows CPU per core or for the whole machine.
 
+### Fixed
+- A version you keep when updating no longer offers the same update again, in `mix` and MixLab.
+
 ## v0.0.15
 
 ### Added
