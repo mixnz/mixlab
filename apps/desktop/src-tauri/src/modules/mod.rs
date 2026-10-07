@@ -38,7 +38,6 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         crate::updater::commands::update_version_on_disk,
         crate::updater::commands::update_finish,
         crate::tray::tray_configure,
-        crate::uninstall::commands::uninstall_available,
         crate::uninstall::commands::uninstall_plan,
         crate::uninstall::commands::uninstall_run,
         crate::uninstall::commands::uninstall_menu_label,

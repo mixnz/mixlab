@@ -204,6 +204,7 @@ const vi: SharedDict = {
     waiting: "Đang chờ bạn nhập mật khẩu để gỡ.",
     declined: "Bạn chưa cho phép nên chưa gỡ gì. MixLab vẫn còn trên máy.",
     failed: "Còn vài thứ chưa gỡ được. MixLab vẫn còn trên máy, sửa xong thì chạy lại.",
+    daemonStayed: "Đã gỡ hết, nhưng MixEngine vẫn đang chạy. Tắt nó rồi chạy lại để xong hẳn.",
     left: "Vẫn còn trên máy:",
   },
   // Messages when a backend command fails. The key here is exactly the `code` `AppError` carries

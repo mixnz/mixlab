@@ -1,5 +1,5 @@
 /** What the *Remove MixLab* dialog draws, decided from values alone: T182a spec D4. */
-import type { Plan, PlanRow } from "./api";
+import type { Outcome, Plan, PlanRow } from "./api";
 
 export type Stage = "checking" | "plan" | "removing" | "failed";
 
@@ -37,6 +37,19 @@ export function declined(report: Plan): boolean {
   return !report.items.some(
     (row) => removal(row) === "removed" || removal(row) === "on_exit" || removal(row) === "on_restart",
   );
+}
+
+export type Verdict = "declined" | "daemonStayed" | "failed";
+
+/**
+ * Why the window is still here after a run: the prompt was declined (nothing changed), the daemon
+ * finished but did not end in time, or something is left behind. In that order: a report with
+ * nothing removed is a decline whatever else it says.
+ */
+export function verdict(outcome: Outcome): Verdict {
+  if (declined(outcome.report)) return "declined";
+  if (!outcome.gone && failedRows(outcome.report).length === 0 && outcome.left.length === 0) return "daemonStayed";
+  return "failed";
 }
 
 /** The rows the act left on the machine. */

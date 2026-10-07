@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Plan, PlanRow } from "./api";
-import { blockedRows, canRemove, declined, failedRows, relocatedRows } from "./view";
+import { blockedRows, canRemove, declined, failedRows, relocatedRows, verdict } from "./view";
+import type { Outcome } from "./api";
 
 const row = (id: string, removal: string, extra: Record<string, string> = {}): PlanRow => ({
   id,
@@ -49,5 +50,19 @@ describe("the Remove MixLab dialog's state", () => {
     const report: Plan = { items: [row("package", "failed", { because: "still here" }), row("home", "on_exit")] };
     expect(failedRows(report).map((r) => r.id)).toEqual(["package"]);
     expect(declined(report)).toBe(false);
+  });
+
+  it("tells a declined prompt, a daemon that stayed and rows left behind apart", () => {
+    const outcome = (items: Plan["items"], gone: boolean, left: string[] = []): Outcome => ({
+      report: { items },
+      gone,
+      bundleLeft: false,
+      receiptLeft: false,
+      left,
+    });
+    expect(verdict(outcome([row("package", "failed", { because: "waiting" })], false))).toBe("declined");
+    expect(verdict(outcome([row("home", "on_exit"), row("package", "removed")], false))).toBe("daemonStayed");
+    expect(verdict(outcome([row("home", "on_exit"), row("package", "failed", { because: "still here" })], false))).toBe("failed");
+    expect(verdict(outcome([row("home", "on_exit"), row("package", "removed")], true, ["/Applications/MixLab.app"]))).toBe("failed");
   });
 });

@@ -24,11 +24,6 @@ pub fn available() -> bool {
     )
 }
 
-#[tauri::command]
-pub fn uninstall_available() -> bool {
-    available()
-}
-
 /// The plan, with the two choices as they stand. Starts the daemon when none runs: the one job the
 /// window starts MixEngine for on its own, because only the daemon knows its traces (spec D4).
 #[tauri::command]

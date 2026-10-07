@@ -221,6 +221,7 @@ const en = {
     waiting: "Waiting for your password, then removing.",
     declined: "You didn't allow the prompt, so nothing was removed. MixLab is still installed.",
     failed: "Some things could not be removed. MixLab stays installed, so you can run this again once they're fixed.",
+    daemonStayed: "Everything was removed, but MixEngine is still running. Quit it and run this again to finish.",
     left: "Still on this Mac:",
   },
   // What a failed backend command says. The keys here are the `code` an `AppError` carries \u2014 see

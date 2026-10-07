@@ -9,14 +9,15 @@ import { useTranslation } from "../../../i18n";
 import {
   blockedRows,
   canRemove,
-  declined,
   failedRows,
   relocatedRows,
+  verdict,
   uninstallPlan,
   uninstallRun,
   type Outcome,
   type Plan,
   type Stage,
+  type Verdict,
 } from "../../uninstall";
 import styles from "./RemoveDialog.module.css";
 
@@ -68,6 +69,12 @@ function RemoveDialog({ onClose }: Props) {
     setStage("failed");
   };
 
+  /* Spelled out so each key stays greppable as a literal. */
+  const verdictMessages: Record<Verdict, string> = {
+    declined: t("remove.declined"),
+    daemonStayed: t("remove.daemonStayed"),
+    failed: t("remove.failed"),
+  };
   const blocked = plan ? blockedRows(plan) : [];
   const relocated = plan ? relocatedRows(plan) : [];
   const home = plan?.items.find((row) => row.id === "home")?.location ?? "";
@@ -104,14 +111,13 @@ function RemoveDialog({ onClose }: Props) {
               <div className={styles.stack}>
                 <p className={styles.intro}>{t("remove.intro")}</p>
 
-                {outcome && declined(outcome.report) && <NoticeBanner message={t("remove.declined")} />}
-                {outcome && !declined(outcome.report) && <NoticeBanner message={t("remove.failed")} />}
+                {outcome && <NoticeBanner message={verdictMessages[verdict(outcome)]} />}
                 {stage === "failed" && (
                   <div>
                     <Button onClick={() => void check()}>{t("remove.checkAgain")}</Button>
                   </div>
                 )}
-                {outcome && !declined(outcome.report) && left.length > 0 && (
+                {outcome && verdict(outcome) === "failed" && left.length > 0 && (
                   <div>
                     <p className={styles.intro}>{t("remove.left")}</p>
                     <ul className={styles.paths}>

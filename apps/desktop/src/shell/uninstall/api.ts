@@ -23,7 +23,6 @@ export interface Outcome {
   left: string[];
 }
 
-export const uninstallAvailable = () => invoke<boolean>("uninstall_available");
 export const uninstallPlan = (keepHome: boolean, keepRelocated: boolean) =>
   invoke<Plan>("uninstall_plan", { keepHome, keepRelocated });
 /** Ends the process when the removal finished; returns only when the window is still needed. */
