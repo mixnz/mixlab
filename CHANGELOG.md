@@ -14,6 +14,8 @@
 - Mailpit's web page opens from the Add-ons screen. A Mailpit installed before this needs installing again to get the Open button.
 
 ### Fixed
+- A blueprint whose database account name is already taken on the server picks the next free one
+  (`shop-2`, `shop-3`, …) and says so under the step, instead of stopping there.
 - A version you keep when updating no longer offers the same update again, in `mix` and MixLab.
 - An add-on's site, such as Adminer, opens right after it is installed or reinstalled, without restarting MixEngine.
 - phpMyAdmin starts and signs in to your database again. It was looking for the database password under an old name.

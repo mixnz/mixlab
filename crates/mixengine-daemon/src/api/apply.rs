@@ -15,6 +15,7 @@
 //! reorder them — the invariant T77 wrote down, and the only way `--dry-run` can promise to match
 //! the real run.
 
+mod account;
 mod ledger;
 pub(crate) mod scaffold;
 mod steps;
@@ -240,6 +241,13 @@ impl Api {
                 }
             };
 
+            // **What differed from the plan is said as it happens** (T202, D2), on the bar and in
+            // the log, and kept in the outcome for whoever reads the report afterwards.
+            if let StepResult::Done { note: Some(note) } = &result {
+                handle.progress(percent, note.clone()).await;
+                log.record(narration(Stream::Stdout, note.clone()));
+            }
+
             outcomes.push(StepOutcome {
                 action: step.action.clone(),
                 result,
@@ -380,18 +388,29 @@ impl Api {
                     name: database.clone(),
                 });
 
-                self.databases
-                    .create(&DatabaseCreate {
+                // **The plan's name, or the next free one** (T202, D1) — `database.create` refuses
+                // an account somebody else made, and a blueprint has nobody at the keyboard to
+                // pick another. The note is D2's sentence, for the step's outcome and the log.
+                let made = account::with_a_free_name(
+                    self.databases.as_ref(),
+                    &DatabaseCreate {
                         service,
                         database: database.clone(),
                         user: Some(user.clone()),
                         // A blueprint never names a password — T77b's `--password` is a person
                         // choosing one at the keyboard, not a value a plan can carry.
                         password: None,
-                    })
-                    .await?;
+                    },
+                )
+                .await?;
 
-                Ok(StepResult::Done { note: None })
+                tracing::info!(
+                    database,
+                    user = made.account.user,
+                    "the blueprint's database and the account that reaches it are there"
+                );
+
+                Ok(StepResult::Done { note: made.note })
             }
 
             PlanAction::InstallRuntime { kind, .. } => {

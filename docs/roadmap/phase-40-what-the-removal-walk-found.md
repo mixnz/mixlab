@@ -13,7 +13,7 @@ leftover Keychain items, a development home from before v0.0.7 — are recorded 
 
 ---
 
-- [ ] **T202** A foreign account gets the blueprint a name of its own. When `database.create`
+- [x] **T202** A foreign account gets the blueprint a name of its own. When `database.create`
       refuses the plan's account as somebody else's (T77a, D3), the apply step tries `<user>-2`…`-9`
       against the same database and takes the first that is free or ours; `StepResult::Done` gains a
       `note` that names the account used and says when the database was already there, printed by
