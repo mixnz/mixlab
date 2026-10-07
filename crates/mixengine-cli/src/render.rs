@@ -3594,8 +3594,10 @@ pub(crate) fn database_credentials(
     answer: &DatabaseCredentials,
     store: Option<mixengine_proto::CredentialStore>,
 ) -> String {
+    // The value at the start of its own line, not indented under the two above: `tail -1` takes
+    // the whole line, and a client handed `  value` is handed a different password.
     format!(
-        "password for {} on {}\n  stored in {}\n  {}",
+        "password for {} on {}\n  stored in {}\n{}",
         answer.user,
         answer.service,
         where_kept(&answer.secret, store),
@@ -6808,6 +6810,27 @@ mod tests {
                 user: Made::Existing,
             },
         }
+    }
+
+    /// T77b, D3: the last line is the password and nothing else, so `| tail -1` hands a script the
+    /// value a client accepts. It carried the block's two-space indent until the T202 walk piped it
+    /// into `mariadb -p` and was refused.
+    #[test]
+    fn the_last_line_of_the_credentials_is_the_password_alone() {
+        let answer = DatabaseCredentials {
+            service: ServiceId::parse("mariadb@main").expect("an id"),
+            user: "blog".to_owned(),
+            secret: SecretAddress::of("mariadb@main/blog"),
+            password: "s3cr3t-value".to_owned(),
+        };
+
+        let rendered = database_credentials(&answer, None);
+
+        assert_eq!(
+            rendered.lines().last(),
+            Some("s3cr3t-value"),
+            "{rendered:?}"
+        );
     }
 
     /// T194, D5: a home that keeps its passwords in a file says so where it says where one is.

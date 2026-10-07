@@ -17,6 +17,8 @@
 - Mailpit's web page opens from the Add-ons screen. A Mailpit installed before this needs installing again to get the Open button.
 
 ### Fixed
+- `mix database credentials … | tail -1` gives the password alone again. It carried two leading
+  spaces, so a script that passed it to a database client was refused.
 - A blueprint whose database account name is already taken on the server picks the next free one
   (`shop-2`, `shop-3`, …) and says so under the step, instead of stopping there.
 - A service that cannot start says why in the first sentence — the missing password, the entry
