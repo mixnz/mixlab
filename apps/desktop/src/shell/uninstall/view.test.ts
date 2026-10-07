@@ -31,6 +31,20 @@ describe("the Remove MixLab dialog's state", () => {
     expect(declined({ items: [row("hosts_block", "removed", { what: "" })] })).toBe(false);
   });
 
+  it("a declined prompt reads as failed rows still waiting, and nothing removed", () => {
+    // What the daemon reports after a declined grant (T182b, D7): the privileged rows are failed,
+    // still waiting for permission, and nothing was removed or is going.
+    const report: Plan = {
+      items: [
+        row("resolver_wiring", "failed", { because: "this is still here, and the operation that removes it is still waiting for permission" }),
+        row("package", "failed", { because: "this is still here, and the operation that removes it is still waiting for permission" }),
+        row("home", "kept", { because: "you asked" }),
+      ],
+    };
+    expect(declined(report)).toBe(true);
+    expect(declined({ items: [row("package", "failed", { because: "still here" }), row("home", "on_exit")] })).toBe(false);
+  });
+
   it("names the rows still there after the act", () => {
     const report: Plan = { items: [row("package", "failed", { because: "still here" }), row("home", "on_exit")] };
     expect(failedRows(report).map((r) => r.id)).toEqual(["package"]);

@@ -26,12 +26,16 @@ export function canRemove(stage: Stage, plan: Plan | null): boolean {
   return stage === "plan" && plan !== null && blockedRows(plan).length === 0;
 }
 
-/** The prompt was declined: nothing went, and something is still waiting for permission. */
+/**
+ * Nothing was removed and nothing is going: what a declined prompt leaves (ADR 0051, decision 3).
+ * Read off the outcome rather than off the daemon's sentences: after a decline the privileged rows
+ * are `failed`, still waiting for permission (T182b, D7), and a grant that failed before changing
+ * anything reads the same way, which is the same thing to say.
+ */
 export function declined(report: Plan): boolean {
   const removal = (row: PlanRow) => row.outcome.removal;
-  return (
-    report.items.some((row) => removal(row) === "enqueued") &&
-    !report.items.some((row) => removal(row) === "removed" || removal(row) === "on_exit")
+  return !report.items.some(
+    (row) => removal(row) === "removed" || removal(row) === "on_exit" || removal(row) === "on_restart",
   );
 }
 

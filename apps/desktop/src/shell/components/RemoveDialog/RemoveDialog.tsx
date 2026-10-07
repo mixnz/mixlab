@@ -78,6 +78,9 @@ function RemoveDialog({ onClose }: Props) {
       title={t("remove.title")}
       size="normal"
       fixedHeight
+      /* Above the MixEngine module's own "needs an administrator" dialog (the default layer), which
+         the uninstall's queued operations make it draw: the one prompt is this dialog's to wait for. */
+      layer={90}
       locked={stage === "removing"}
       onClose={onClose}
       footerNote={stage === "removing" ? t("remove.waiting") : undefined}
@@ -103,7 +106,12 @@ function RemoveDialog({ onClose }: Props) {
 
                 {outcome && declined(outcome.report) && <NoticeBanner message={t("remove.declined")} />}
                 {outcome && !declined(outcome.report) && <NoticeBanner message={t("remove.failed")} />}
-                {left.length > 0 && (
+                {stage === "failed" && (
+                  <div>
+                    <Button onClick={() => void check()}>{t("remove.checkAgain")}</Button>
+                  </div>
+                )}
+                {outcome && !declined(outcome.report) && left.length > 0 && (
                   <div>
                     <p className={styles.intro}>{t("remove.left")}</p>
                     <ul className={styles.paths}>
@@ -117,6 +125,7 @@ function RemoveDialog({ onClose }: Props) {
                 {blocked.map((row) => (
                   <NoticeBanner key={`${row.location}${row.by}`} message={t("remove.blocked", { what: row.what, by: row.by })} />
                 ))}
+                {/* `remove.blocked` is "{{what}}: {{by}}": the daemon's sentence already says what to do. */}
                 {blocked.length > 0 && (
                   <div>
                     <Button onClick={() => void check()}>{t("remove.checkAgain")}</Button>

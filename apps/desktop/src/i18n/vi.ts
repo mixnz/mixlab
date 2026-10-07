@@ -195,7 +195,7 @@ const vi: SharedDict = {
     menuItem: "Gỡ MixLab khỏi máy Mac này…",
     checking: "Đang xem máy này có gì…",
     intro: "MixLab sẽ trả lại mọi thứ MixEngine đã đổi trên máy, rồi tự gỡ chính nó và thoát. Bạn chỉ cần nhập mật khẩu một lần.",
-    blocked: "{{what}} đang chạy từ một thư mục sắp bị xoá: {{by}}",
+    blocked: "{{what}}: {{by}}",
     checkAgain: "Kiểm tra lại",
     deleteData: "Xoá luôn dữ liệu của MixLab trong {{path}}: database, chứng chỉ và hồ sơ dự án",
     deleteRelocated: "Xoá luôn các thư mục bạn đã chuyển ra ngoài",

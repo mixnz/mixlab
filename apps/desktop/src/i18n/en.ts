@@ -212,7 +212,7 @@ const en = {
     menuItem: "Remove MixLab from this Mac…",
     checking: "Checking what is on this Mac…",
     intro: "This undoes everything MixEngine changed on this Mac, then removes MixLab itself and quits. You'll be asked for your password once.",
-    blocked: "{{what}} is running from a folder that would be removed: {{by}}",
+    blocked: "{{what}}: {{by}}",
     checkAgain: "Check again",
     deleteData: "Also delete MixLab's data in {{path}}: your databases, certificates and project records",
     deleteRelocated: "Also delete the folders you moved out of it",

@@ -134,6 +134,22 @@ pub(crate) fn remove(log: &Path) -> OpOutcome {
     }
 
     if let Some(directory) = log.parent() {
+        // **The helper's own lock files go with the log** — T182a's walk found four of them left
+        // behind (`hosts.lock`, `resolver.lock`, `trust.lock`, `port-access.lock`), each written by
+        // one of the platform's operations beside the log. A `.lock` in this directory is the
+        // helper's by construction: `directory()` refuses one an ordinary account created.
+        if let Ok(entries) = std::fs::read_dir(directory) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().is_some_and(|ext| ext == "lock")
+                    && path.is_file()
+                    && std::fs::remove_file(&path).is_ok()
+                {
+                    removed.push(path.display().to_string());
+                }
+            }
+        }
+
         // Every error swallowed on purpose: "not empty" and "not there" are both correct outcomes
         // here, and neither is worth failing an uninstall over.
         if std::fs::remove_dir(directory).is_ok() {
@@ -285,6 +301,34 @@ mod tests {
         assert!(matches!(outcome, OpOutcome::Applied { .. }), "{outcome:?}");
         assert!(!log.exists());
         assert!(directory.exists(), "not ours to empty");
+    }
+
+    /// The lock files the helper's own operations leave beside the log (`hosts.lock`,
+    /// `resolver.lock`, …) are the helper's, and an uninstall that left four of them behind was not
+    /// finished — found by T182a's walk. They go with the log, and so does the directory.
+    #[test]
+    fn removing_the_log_takes_the_helpers_own_lock_files_with_it() {
+        let parent = tempfile::TempDir::new().unwrap();
+        let directory = parent.path().join("MixEngine");
+        std::fs::create_dir(&directory).unwrap();
+        let log = directory.join(FILE_NAME);
+        append(&log, &entry("1000", "n", "probe", &OpOutcome::AlreadyDone)).unwrap();
+        for name in [
+            "hosts.lock",
+            "resolver.lock",
+            "trust.lock",
+            "port-access.lock",
+        ] {
+            std::fs::write(directory.join(name), b"12345\n").unwrap();
+        }
+
+        let outcome = remove(&log);
+
+        assert!(matches!(outcome, OpOutcome::Applied { .. }), "{outcome:?}");
+        assert!(
+            !directory.exists(),
+            "the locks and the directory go with the log"
+        );
     }
 
     /// Nothing there is the answer, not a fault: an uninstall run twice must not fail the second
