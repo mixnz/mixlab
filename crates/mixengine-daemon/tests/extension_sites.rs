@@ -434,6 +434,23 @@ fn accepts(port: u16) -> bool {
     .is_ok()
 }
 
+/// Whether *this home's daemon* still takes connections on `port` for a service whose row is gone.
+///
+/// **Not whether anything listens there.** A suite runs many daemons at once and each hands out
+/// ports from the same range, so a port one released can be bound by another a moment later — which
+/// is how "nothing accepts on it" went red on CI while the release had worked. An activator that
+/// outlived its service accepts the connection and then cannot read the row, and says so in this
+/// home's log; another program on the port says nothing here.
+async fn still_served_here(home: &Home, port: u16) -> bool {
+    if !accepts(port) {
+        return false;
+    }
+
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    home.daemon_log()
+        .contains("cannot read the row of a service a connection asked for")
+}
+
 /// **T200, D1.** A web-app's pool can be woken by a request the moment the install ends.
 ///
 /// The pool is created by the install, outside boot, so it has neither an activation port nor a
@@ -515,9 +532,8 @@ async fn a_reinstalled_web_app_can_be_woken_and_the_old_address_is_free() {
 
     if let Some(port) = first {
         assert!(
-            !accepts(port),
-            "the activator at 127.0.0.1:{port} outlived the extension it belonged to
-{}",
+            !still_served_here(&fixture.home, port).await,
+            "the activator at 127.0.0.1:{port} outlived the extension it belonged to\n{}",
             fixture.home.daemon_log()
         );
     }
@@ -697,7 +713,7 @@ async fn a_deleted_pool_gives_its_activators_address_back() {
             .await;
 
         assert!(
-            !accepts(port),
+            !still_served_here(&home, port).await,
             "the activator at 127.0.0.1:{port} outlived the pool it belonged to\n{}",
             home.daemon_log()
         );
