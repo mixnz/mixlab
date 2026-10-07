@@ -168,8 +168,8 @@ const FLUSH: Duration = Duration::from_secs(2);
 /// will not resolve is logged and the service is given `StateReason::SpawnFailed`, so what this type
 /// has to carry is a sentence for `daemon.log`. Three unrelated things produce one — a
 /// `mixengine_platform` keyring failure, a credential the store simply does not hold, and the
-/// blocking task not finishing — and the `.context("the environment entry …")` that names which
-/// variable it was is the part a reader needs. A typed enum here would be three variants that exist
+/// blocking task not finishing — and the `"the environment entry …: <cause>"` that names which
+/// variable it was, and why, is the part a reader needs. A typed enum here would be three variants that exist
 /// to be `Display`ed and one place where a `From` has to be written.
 type Resolved = (BTreeMap<String, String>, Vec<(String, anyhow::Error)>);
 
@@ -2197,7 +2197,10 @@ impl Runner {
         };
 
         match failed.into_iter().next() {
-            Some((name, error)) => Err(error.context(format!("the environment entry {name}"))),
+            // **The cause in the message itself**, because the caller logs this with `%error`,
+            // which prints the top of a chain and not the chain — a `.context` here hid *why* from
+            // `daemon.log` (found by T200).
+            Some((name, error)) => Err(anyhow::anyhow!("the environment entry {name}: {error:#}")),
             None => Ok(Some(env)),
         }
     }
@@ -2959,6 +2962,39 @@ mod tests {
         assert!(
             runner.reading.is_none(),
             "the read finished, so there is nothing left for a third attempt to join"
+        );
+    }
+
+    /// **A missing credential says so in the line the log prints** — found by T200.
+    ///
+    /// The caller logs the error with `%error`, which prints the top of an `anyhow` chain and not
+    /// the chain. With the cause behind a `.context`, `daemon.log` read *"the environment entry
+    /// MIXENGINE_DB_PASSWORD"* and nothing else, and a phpMyAdmin that could not find its database's
+    /// password failed to start without a word about why.
+    #[tokio::test]
+    async fn a_missing_credential_is_named_in_the_error_a_log_prints() {
+        let (_home, paths, store) = home(&["mariadb"]).await;
+
+        let mut runner = adopted_runner(
+            spec("mariadb")
+                .env_from_keyring("MARIADB_ROOT_PASSWORD", "mixengine", "mariadb@main/root")
+                .build()
+                .expect("a usable spec"),
+            &paths,
+            &store,
+            Duration::ZERO,
+        );
+
+        let error = runner
+            .environment()
+            .await
+            .expect_err("the mock keyring holds no credential under that name");
+
+        let printed = format!("{error}");
+        assert!(printed.contains("MARIADB_ROOT_PASSWORD"), "{printed}");
+        assert!(
+            printed.contains("no credential is stored at mixengine/mariadb@main/root"),
+            "what `%error` prints has to say why, not only which entry: {printed}"
         );
     }
 
