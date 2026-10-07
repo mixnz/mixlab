@@ -69,12 +69,48 @@ Each is passed with its own flag (`-master.port`, `-master.port.grpc`, and so on
 derives nothing. The wanted numbers are upstream's defaults. The allocator moves any that is
 taken; `volume_port = 8080` will often be.
 
-**`ready` is the S3 port** (`{listen}:{s3_port}`). `services.port` is the port `ready` watches
-(T81, D8), so `mix service list` shows the S3 port, the address an application is given.
+**Two more listeners are switched off, not allocated.** 4.48 also opens an Iceberg REST catalog on
+8181 (`-s3.port.iceberg`) and a Lance namespace server on 9101 (`-s3.port.lance`), both fixed
+defaults and both on unless given `0`. Nothing a local S3 is for needs either, so the fixture passes
+`0` for both rather than allocating two more ports.
 
-**The flags are not final until a real run confirms them.** Their names, whether 4.48 still opens
-a gRPC port for S3, and whether `-ip` alone binds and advertises are measured in T201, against all
-three platforms, before the fixture is final.
+**Measured on 4.48** (`weed server -s3 -ip 127.0.0.1` with every port given): macOS 15.7 on arm64,
+Windows 11 on x86-64, Ubuntu 24.04 on x86-64 under WSL. With the two ports above set to `0`, the
+process listens on exactly the eight ports `[ports]` names, all on `127.0.0.1`, on all three. `-ip`
+alone binds them; `-ip.bind` is not needed. A data directory whose path has a space works.
+
+### D1a — No telemetry (T201)
+
+The master reports anonymous cluster statistics to `telemetry.seaweedfs.com` once 10 GiB are
+stored, unless told `-master.telemetry=false`. MixEngine does not send anything from a person's
+machine unasked, and nothing in `permissions` describes a call out, so the fixture turns it off.
+
+### D1b — Ready when S3 answers HTTP, with a margin on restart (T201)
+
+`ready` is `GET http://{listen}:{s3_port}/healthz`, expecting 200. `services.port` is the port
+`ready` watches (T81, D8), so `mix service list` shows the S3 port, the address an application is
+given.
+
+**A TCP check is too early, and no check is exact.** On a restart with existing data, the S3 port
+opens before the master has become raft leader, and `/healthz` turns 200 about two seconds before
+the volume server has re-registered its volumes. An object read in those two seconds gets
+`500 InternalError` ("volume id … not found"); nothing on any port answers differently in that
+window. S3 clients retry a 500, so `/healthz` is the honest choice: it is later than the port
+opening and as late as anything `weed` reports. The timeout is 60 s, because a restart took 13 to
+20 s against 4 s for a first start.
+
+### D1c — A stop is given 30 seconds (T201)
+
+`weed` takes 25 to 26 s to leave after `SIGTERM` (macOS and Linux). Ten of them are the volume
+server's `-volume.preStopSeconds`, a pause for a cluster to stop sending it writes, which a single
+machine has no use for; the fixture passes `0`, and a stop then takes 16 s, most of it the filer
+closing its gRPC streams. `stop` is a signal with a 30 s grace, so the default 10 s does not end
+every stop in a kill. A kill is not a loss: after `taskkill /F` on Windows the object was there on
+the next start.
+
+**Left as it is:** `weed` creates its local sockets under `/tmp`, named by port, whatever `-dir`
+says, and leaves the two S3 ones behind after a stop. They are named by the port MixEngine
+allocated, so two homes do not collide, and a restart replaces them.
 
 ### D2 — No change to the format, and none to the schema (T201)
 
@@ -84,15 +120,21 @@ before T200a count it as *"an entry this build cannot read"*, as they already co
 
 ### D3 — `[ui]` opens the filer's page (T201)
 
-The filer serves a file browser on its HTTP port. `[ui] port = "filer_port"` gives the row
-**Open** through what T200a built. The master's status page is for someone debugging the cluster
-and is not the page a person opens. T201 confirms that the filer's page exists in 4.48.
+The filer serves a file browser on its HTTP port (measured: `200 text/html`, "SeaweedFS Filer").
+`[ui] port = "filer_port"` gives the row **Open** through what T200a built. The master's status
+page is for someone debugging the cluster and is not the page a person opens.
 
 ### D4 — No authentication on the S3 API (T201)
 
 `weed` serves S3 without credentials unless it is given an identity file. The extension declares
 `network = "loopback"`, so only this machine can reach it, the same answer MixEngine gives Redis and
 MongoDB, which run with no accounts. An application's S3 client accepts any access key against it.
+
+**Its log says otherwise at every start**, and is wrong about what matters: `Failed to load IAM
+configuration: no signing key found for STS service`, and from the second start a warning that the
+SSE-S3 key is stored on the filer in plaintext. Measured on all three systems: a bucket is created,
+an object written and read back, with no credentials. The lines are noise for this use, and a
+person reading `mix service logs seaweedfs` should not take them for a failure.
 
 **Rejected: generating an identity file with keys.** The keys would have to be on disk for `weed`
 to read them, and "secrets are never on disk" is a rule this format keeps. A person who wants keys
