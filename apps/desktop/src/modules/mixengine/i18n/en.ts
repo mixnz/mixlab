@@ -278,6 +278,16 @@ export default {
         sourceManifest: "from {{path}}",
         sourceRow: "from this project's own setting",
         unresolved: "Not installed: {{hint}}",
+        declaredTitle: "Sites in mixengine.toml",
+        declaredDescription:
+          "The sites this file describes. Add creates one here from what the file says.",
+        declaredColumnDomain: "Domain",
+        declaredColumnState: "State",
+        declaredHere: "In this project",
+        declaredMissing: "Not here yet",
+        declaredElsewhere: "Held by {{owner}}",
+        declaredAdd: "Add",
+        declaredAdding: "Adding",
       },
     },
     upgrade: {

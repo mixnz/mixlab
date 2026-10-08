@@ -9,6 +9,7 @@ import IconTile from "../../../../components/IconTile";
 import LoadingState from "../../../../components/LoadingState";
 import NoticeBanner from "../../../../components/NoticeBanner";
 import PageHeader from "../../../../components/PageHeader";
+import StatusPill from "../../../../components/StatusPill";
 import Table from "../../../../components/Table";
 import { copyText } from "../../../../core/clipboard";
 import { errorMessage } from "../../../../core/errors";
@@ -17,6 +18,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { ProjectDetail } from "@mixengine/api";
 import type { ProjectSummary } from "@mixengine/api";
+import { declaredSiteRows } from "../../declaredSites";
 import { formatPins } from "../../projectPins";
 import ProjectForm from "./ProjectForm";
 import styles from "./Projects.module.css";
@@ -40,6 +42,8 @@ export default function Projects({ active, onOpenSites }: Props) {
   const [deleting, setDeleting] = useState<string | null>(null);
   /** The project whose manifest is being written. */
   const [exporting, setExporting] = useState<string | null>(null);
+  /** The declared site being created from the manifest. */
+  const [adopting, setAdopting] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const { t } = useTranslation();
 
@@ -79,6 +83,19 @@ export default function Projects({ active, onOpenSites }: Props) {
       setEditing(await api.projectShow(name));
     } catch (e) {
       setError(errorMessage(t, e));
+    }
+  }
+
+  /** Creates one site the manifest declares, every field falling through to the file (T204). */
+  async function adoptSite(project: string, domain: string) {
+    setAdopting(domain);
+    try {
+      await api.siteCreate({ project: { name: project }, from: domain });
+      setDetail(await api.projectShow(project));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    } finally {
+      setAdopting(null);
     }
   }
 
@@ -238,6 +255,66 @@ export default function Projects({ active, onOpenSites }: Props) {
               </li>
             ))}
           </ul>
+        </Card>
+      )}
+
+      {detail && declaredSiteRows(detail.declared_sites).length > 0 && (
+        <Card
+          title={t("mixengine.projects.detail.declaredTitle")}
+          description={t("mixengine.projects.detail.declaredDescription")}
+          count={detail.project.name}
+          flush
+        >
+          <Table aria-label={t("mixengine.projects.detail.declaredTitle")}>
+            <thead>
+              <tr>
+                <th>{t("mixengine.projects.detail.declaredColumnDomain")}</th>
+                <th>{t("mixengine.projects.detail.declaredColumnState")}</th>
+                <th data-align="end">{t("mixengine.sites.columnActions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {declaredSiteRows(detail.declared_sites).map((site) => (
+                <tr key={site.domain}>
+                  <td>
+                    <code>{site.domain}</code>
+                  </td>
+                  <td>
+                    {site.status === "here" && (
+                      <StatusPill tone="success">
+                        {t("mixengine.projects.detail.declaredHere")}
+                      </StatusPill>
+                    )}
+                    {site.status === "missing" && (
+                      <StatusPill tone="neutral">
+                        {t("mixengine.projects.detail.declaredMissing")}
+                      </StatusPill>
+                    )}
+                    {site.status === "elsewhere" && (
+                      <StatusPill tone="warning">
+                        {t("mixengine.projects.detail.declaredElsewhere", { owner: site.owner ?? "" })}
+                      </StatusPill>
+                    )}
+                  </td>
+                  <td data-align="end">
+                    {site.canAdd && (
+                      <Button
+                        size="small"
+                        onClick={() => void adoptSite(detail.project.name, site.domain)}
+                        busy={
+                          adopting === site.domain
+                            ? t("mixengine.projects.detail.declaredAdding")
+                            : undefined
+                        }
+                      >
+                        {t("mixengine.projects.detail.declaredAdd")}
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
         </Card>
       )}
 

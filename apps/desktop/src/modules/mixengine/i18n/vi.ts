@@ -273,6 +273,16 @@ const vi: typeof en = {
         sourceManifest: "từ {{path}}",
         sourceRow: "từ cài đặt riêng của project",
         unresolved: "Chưa cài: {{hint}}",
+        declaredTitle: "Site trong mixengine.toml",
+        declaredDescription:
+          "Các site mà file này mô tả. Bấm Thêm để tạo site trên máy này theo đúng nội dung file.",
+        declaredColumnDomain: "Domain",
+        declaredColumnState: "Trạng thái",
+        declaredHere: "Đã có trong project",
+        declaredMissing: "Chưa có trên máy này",
+        declaredElsewhere: "Thuộc {{owner}}",
+        declaredAdd: "Thêm",
+        declaredAdding: "Đang thêm",
       },
     },
     upgrade: {
