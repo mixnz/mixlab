@@ -286,8 +286,8 @@ export function projectDelete(name: string): Promise<ProjectRemoval> {
   return invoke<ProjectRemoval>("mixengine_project_delete", { name });
 }
 
-/** Writes `<root>/mixengine.toml`, merging into one that is there. `sites_omitted` names the sites
- *  the file could not hold, since a manifest has one `[site]`. */
+/** Writes `<root>/mixengine.toml` with every site, merging into one that is there. `sites_kept`
+ *  names the site entries the file holds that this home has no site for, left as written. */
 export function projectExport(name: string): Promise<ProjectExport> {
   return invoke<ProjectExport>("mixengine_project_export", { name });
 }

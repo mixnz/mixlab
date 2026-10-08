@@ -13,9 +13,10 @@ path: string,
  */
 created: boolean, 
 /**
- * The sites that were not written, because a manifest holds one `[site]` (spec D9).
+ * The `domain` of each site entry in the file this home has no site for — roadmap task
+ * **T204**, spec D4.
  *
- * Their primary domains, so a person knows what the file does not say — a limit of the file
- * format rather than of the model.
+ * Left exactly as written, because an export never deletes; named here, because an entry
+ * nobody is told about is a site a colleague will adopt without anyone here having it.
  */
-sites_omitted?: Array<string>, };
+sites_kept?: Array<string>, };

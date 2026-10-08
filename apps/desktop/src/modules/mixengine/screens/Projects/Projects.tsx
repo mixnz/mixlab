@@ -93,11 +93,11 @@ export default function Projects({ active, onOpenSites }: Props) {
       const said = written.created
         ? t("mixengine.projects.exportCreated", { path: written.path })
         : t("mixengine.projects.exportUpdated", { path: written.path });
-      const omitted = written.sites_omitted ?? [];
+      const kept = written.sites_kept ?? [];
       setNotice(
-        omitted.length === 0
+        kept.length === 0
           ? said
-          : `${said} ${t("mixengine.projects.exportOmitted", { sites: omitted.join(", ") })}`,
+          : `${said} ${t("mixengine.projects.exportKept", { sites: kept.join(", ") })}`,
       );
       void reload();
     } catch (e) {

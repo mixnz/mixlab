@@ -2710,13 +2710,27 @@ pub(crate) fn project_removal(removal: &ProjectRemoval) -> String {
 
 /// `mix project export` — which file, and whether it had to be made.
 pub(crate) fn project_export(exported: &ProjectExport) -> String {
-    match exported.created {
+    let mut out = match exported.created {
         true => format!("wrote {}\n", exported.path),
         false => format!(
             "updated {}; everything else in it is untouched\n",
             exported.path
         ),
+    };
+
+    // **T204, D4.** What the file still declares that this home does not have, left as written.
+    if !exported.sites_kept.is_empty() {
+        let names = match exported.sites_kept.len() {
+            1 => "that name",
+            _ => "those names",
+        };
+        out.push_str(&format!(
+            "kept {} in mixengine.toml, though no site here has {names}\n",
+            exported.sites_kept.join(", ")
+        ));
     }
+
+    out
 }
 
 /// `mix site list` — every site, and what serves it.
@@ -7243,6 +7257,25 @@ mod grant_problems {
         assert!(
             rendered.contains("php 8.4.24 was kept: the front end refused the sites"),
             "{rendered}"
+        );
+    }
+
+    /// **T204, D4.** An export names the entries it left, and says nothing when there are none.
+    #[test]
+    fn an_export_names_the_site_entries_it_kept() {
+        let mut exported = ProjectExport {
+            path: "/srv/blog/mixengine.toml".to_owned(),
+            created: false,
+            sites_kept: Vec::new(),
+        };
+        assert!(!project_export(&exported).contains("kept"));
+
+        exported.sites_kept = vec!["old.test".to_owned()];
+        assert!(
+            project_export(&exported)
+                .contains("kept old.test in mixengine.toml, though no site here has that name"),
+            "{}",
+            project_export(&exported)
         );
     }
 }

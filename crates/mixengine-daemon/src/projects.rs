@@ -172,7 +172,8 @@ impl Projects {
         })
     }
 
-    /// `project.export` — put the project into `<root>/mixengine.toml`, keeping everything else.
+    /// `project.export` — put the project and every site into `<root>/mixengine.toml`, keeping
+    /// everything else.
     ///
     /// # Errors
     ///
@@ -203,7 +204,7 @@ impl Projects {
         Ok(ProjectExport {
             path: manifest::at(&found.root).display().to_string(),
             created: written.created,
-            sites_omitted: Vec::new(),
+            sites_kept: written.sites_kept,
         })
     }
 
