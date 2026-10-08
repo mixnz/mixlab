@@ -603,6 +603,11 @@ design are linked decisions.
 5. Smoke-test each installer *from that draft* on a clean VM: install → create site → HTTPS →
    uninstall → verify nothing left behind. Then edit the notes and publish the draft by hand.
 
+   **Publishing starts `install.yml`** (T197a), which installs the headless package through
+   `install.sh` and `install.ps1` on five systems — the first time anything installs the release
+   just made public through the one-line command. Read it before announcing the release:
+   `gh run list --workflow install.yml --limit 1`.
+
    **Say in the notes what the updater will and will not replace** — roadmap task **T106**. From the
    release that lands it, the payload carries MixLab and `mix self-update` replaces it — but only
    where it is installed beside the binaries. An install from before that release has no window at

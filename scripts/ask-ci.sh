@@ -14,10 +14,11 @@
 # working tree is the only one it can check.
 #
 # **`--jobs` narrows the question, and a narrowed answer is not an answer about the workspace.**
-# The groups are the job names in `ci.yml` — `lint test system bench bindings docs desktop build install` —
+# The groups are the job names in `ci.yml` — `lint test system bench bindings docs desktop build` —
 # and `all` is the default, so a run covers everything unless somebody asked it not to. It is there
-# for the loop where one job is red and the other eight have nothing to say about it yet: ask for
-# that job, fix it, and ask for `all` before believing anything.
+# for the loop where one job is red and the other seven have nothing to say about it yet: ask for
+# that job, fix it, and ask for `all` before believing anything. The installers' real installs
+# are not a group here: they are `install.yml`, asked for with `gh workflow run install.yml --ref`.
 #
 # `ci.yml` fires by itself on a `v*` tag and on nothing else, so every branch — `master` too —
 # has to ask. This is the two commands that asking is: push the ref, then dispatch a run on it.
@@ -57,17 +58,17 @@ for arg in "$@"; do
 done
 
 if [ "$want_jobs" -eq 1 ]; then
-  echo "--jobs needs a group: all lint test system bench bindings docs desktop build install" >&2
+  echo "--jobs needs a group: all lint test system bench bindings docs desktop build" >&2
   exit 64
 fi
 
 # **Refused here rather than by GitHub.** A `choice` input rejects an unknown value with an API
 # error that says nothing about which words are allowed, and a typo should not cost a round trip.
 case "$jobs" in
-  "" | all | lint | test | system | bench | bindings | docs | desktop | build | install) ;;
+  "" | all | lint | test | system | bench | bindings | docs | desktop | build) ;;
   *)
     echo "unknown job group: $jobs" >&2
-    echo "one of: all lint test system bench bindings docs desktop build install" >&2
+    echo "one of: all lint test system bench bindings docs desktop build" >&2
     exit 64
     ;;
 esac

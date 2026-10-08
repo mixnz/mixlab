@@ -1,0 +1,41 @@
+# The one-command installers, installed for real (T197a).
+#
+# **Why this is its own file and not a job in `ci.yml`.** Every check in `_install.yml` runs the
+# script from the checkout against the newest *published* release, never against what the run
+# built, so on a commit that leaves `packaging/install/` alone the answer cannot change — only the
+# world outside can make it red. And on a tag's run it is worse than idle: the new release is still a
+# draft, so it installs the previous one and gates nothing. The lint and the dry runs gate every
+# deploy in `pages.yml`; the real installs live here, at the three moments they say something.
+#
+# - **A release is published.** The one moment the newest release changes, and the first time
+#   anything installs the version a person just made public.
+# - **Weekly.** Distribution images, the pinned minisign and the published assets move on their own,
+#   and a week is how long a broken `curl … | sh` may go unnoticed.
+# - **Asked for**, after editing either script: `gh workflow run install.yml --ref <branch>`.
+name: install scripts
+
+on:
+  release:
+    # `released`, not `published`: a prerelease is never what `gh release view` calls the newest, so
+    # installing on one would check the release before it.
+    types: [released]
+  schedule:
+    # Tuesdays, 03:00 UTC, a day after `release-rehearsal.yml`. A GitHub schedule reads this file
+    # from the default branch, runs late under load, is occasionally skipped, and is disabled after
+    # 60 days without activity in this repository.
+    - cron: '0 3 * * 2'
+  workflow_dispatch:
+
+# One run at a time. The newer request is the one worth having, as everywhere else here.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    uses: ./.github/workflows/_install.yml
+    with:
+      real: true

@@ -185,6 +185,12 @@ deploys only when the lint and the dry runs pass**, so a broken script never rea
 real installs are too slow for every push to `master` and run when CI is asked, as the rest of it
 is.
 
+**Amended by T197a (2026-10-08).** The real installs are no longer a job of `ci.yml`. They test
+the newest published release and never what a run built, so there they could only fail for reasons
+outside the commit, and on a tag's run they installed the previous release, since the new one is
+still a draft. `.github/workflows/install.yml` runs them when a release is published, every
+Tuesday, and when asked; `pages.yml` keeps the lint and the dry runs in front of every deploy.
+
 ## What this does not do
 
 - **No Homebrew, winget or Scoop.** Each one is a repository or a pull request somewhere else, to be

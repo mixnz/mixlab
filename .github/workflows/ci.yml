@@ -15,7 +15,7 @@ on:
         description: "Which jobs to run. `all` is every one of them."
         type: choice
         default: all
-        options: [all, lint, test, system, bench, bindings, docs, desktop, build, install]
+        options: [all, lint, test, system, bench, bindings, docs, desktop, build]
       # T174a: `release-exact` builds what a tag builds, from whatever ref this runs on — no LTO,
       # codegen-units, optimisation-level or macOS-slice override. It is how a release's
       # configuration gets built before the release, rather than for the first time during it.
@@ -86,11 +86,6 @@ jobs:
     with:
       jobs: ${{ inputs.jobs }}
       profile: ${{ inputs.profile }}
-
-  install:
-    uses: ./.github/workflows/_install.yml
-    with:
-      jobs: ${{ inputs.jobs }}
 
   release:
     needs: [preflight, lint, test, build]

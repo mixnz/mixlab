@@ -66,7 +66,7 @@ done
 | [33 — A line shows its newest](phase-33-a-line-shows-its-newest.md) | The available list is one row per line, and an installed version updates to its line's newest patch on a click | T193a–T193d | 4 / 4 | **M33** PHP 8.4.24 serving a site updates to 8.4.25 from MixLab with its extensions kept and 8.4.24 gone; a MariaDB 11.4 instance updates within its line with its data intact |
 | [34 — A headless host](phase-34-a-headless-host.md) | A Linux release with no desktop runs databases, keeps their passwords, and comes back after a reboot on its own | T194a–T195 | 6 / 7 | **M34** on an Ubuntu 24.04 server reached only over SSH, a MariaDB first-runs on the file store, survives a daemon restart, and answers after an unattended reboot |
 | [35 — An index that stays small](phase-35-an-index-that-stays-small.md) | The package index costs one small request when nothing was published, and only the kinds a home uses when something was | T196a–T196e | 5 / 5 | **M35** an idle daemon asks for one signature every six hours, a fresh home listing runtimes fetches six kind files and not eighteen, and an upgraded home cannot be walked backwards |
-| [36 — One command installs MixLab](phase-36-one-command-installs-mixlab.md) | One line in a terminal picks, checks and installs the right installer | T197 | 1 / 1 | **M36** `curl … \| sh` and `irm … \| iex` install the headless programs on a clean Linux, macOS and Windows runner, and `mix --version` names the release |
+| [36 — One command installs MixLab](phase-36-one-command-installs-mixlab.md) | One line in a terminal picks, checks and installs the right installer | T197–T197a | 2 / 2 | **M36** `curl … \| sh` and `irm … \| iex` install the headless programs on a clean Linux, macOS and Windows runner, and `mix --version` names the release |
 | [37 — The window closes its known gaps](phase-37-the-window-closes-its-known-gaps.md) | Every daemon method a person in the window needs has its button; the rest say why not | T199–T199a | 2 / 2 | **M37** `check-client-surface` reports 0 known gaps |
 | [38 — An add-on works the moment it is installed](phase-38-an-add-on-works-the-moment-it-is-installed.md) | Installing an add-on shows progress, ends in one row, and a web-app opens at once | T200–T200c | 4 / 4 | **M38** Adminer opens with no daemon restart |
 | [39 — A local S3](phase-39-a-local-s3.md) | A project that stores files in S3 has a local S3, installed as an add-on | T201–T201a | 2 / 2 | **M39** SeaweedFS answers an S3 client on all three systems — **met** |
@@ -99,7 +99,7 @@ with their reasons written down. Deleting a shared site withdraws the share on t
 `knownGaps` is empty, and that list only shrinks.
 Design: [2026-10-06-t199-the-window-closes-its-known-gaps-design.md](../specs/2026-10-06-t199-the-window-closes-its-known-gaps-design.md).
 
-**Phase 36 is built — 1 of 1, and M36 is met by CI against the newest release.** One line in a
+**Phase 36 is built — 2 of 2, and M36 is met by CI against the newest release.** One line in a
 terminal installs MixLab on a new machine: `install.sh` on macOS and Linux, `install.ps1` on
 Windows, both kept on `master` and served by the handbook's site, so a fix to either needs no
 release. The script picks the file for the system, the architecture and the package family, checks
@@ -107,7 +107,8 @@ the `.sha256` and then the `.minisig` — fetching a pinned minisign for the run
 none — and refuses a validly signed file served under another name. CI run 37427456570 on
 2026-10-06 dry-ran both scripts on the three runners and installed the headless package for real on
 Ubuntu, in Fedora and openSUSE containers, on macOS and on Windows, with `mix --version` naming the
-release each time.
+release each time. Since T197a those real installs are `install.yml`, run when a release is
+published and every week, rather than a job of `ci.yml`.
 Design: [2026-10-05-t197-one-command-installs-mixlab-design.md](../specs/2026-10-05-t197-one-command-installs-mixlab-design.md).
 
 **Phase 35 is built: 5 of 5, and M35 is met by tests against a signed registry.** The package
