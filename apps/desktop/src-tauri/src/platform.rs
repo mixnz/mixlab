@@ -72,6 +72,26 @@ pub fn saved_maximized<R: tauri::Runtime>(app: &AppHandle<R>, label: &str) -> bo
         .unwrap_or(false)
 }
 
+/// Lets the next child process handle Ctrl+C — roadmap task **T205c**.
+///
+/// A launcher that starts MixLab with `CREATE_NEW_PROCESS_GROUP` sets "ignore Ctrl+C" on it, and
+/// every child inherits that: a local PowerShell tab then ignored the key while Git Bash, whose
+/// runtime turns the byte into its own signal, still stopped. Clearing it is harmless here, since a
+/// GUI process has no console for a Ctrl+C to arrive on, and cheap enough to do before every spawn.
+///
+/// Does nothing anywhere else, so callers need no `cfg` of their own.
+pub fn process_ctrl_c() {
+    #[cfg(windows)]
+    {
+        #[link(name = "kernel32")]
+        extern "system" {
+            fn SetConsoleCtrlHandler(handler: *const std::ffi::c_void, add: i32) -> i32;
+        }
+        // SAFETY: a null handler with FALSE only clears this process's "ignore Ctrl+C" flag.
+        unsafe { SetConsoleCtrlHandler(std::ptr::null(), 0) };
+    }
+}
+
 /// Shows `window` maximized in a single `ShowWindow`, so nothing smaller or emptier reaches the
 /// screen first.
 ///

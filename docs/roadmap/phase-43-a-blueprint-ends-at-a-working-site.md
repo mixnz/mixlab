@@ -33,13 +33,13 @@ T205a–T205c: [2026-10-09-t205a-t205c-what-hand-testing-the-gallery-left-open-d
       entry by entry (names and bytes; a zip's own bytes carry checkout times), each file published
       as itself byte for byte, and names a starter the release holds that the tree dropped;
       `gallery.yml` dispatches on a `starters/**` push.
-- [ ] **T205c** **(P)** Ctrl+C in a local Terminal tab did not stop a running command in
-      PowerShell, while Git Bash in the same window did: found by hand on 2026-10-08 with the
-      window started from a background process with no console of its own. Started from a
-      terminal it works, so a shell can inherit "ignore Ctrl+C" from however MixLab itself was
-      launched. Make the PTY's child reset that (`SetConsoleCtrlHandler(NULL, FALSE)` or a
-      process-creation flag) so the key works however MixLab started, and measure it from the
-      Start menu, a shortcut and the tray.
+- [x] **T205c** **(P)** Ctrl+C in a local Terminal tab did not stop a running command in
+      PowerShell, while Git Bash in the same window did (found by hand on 2026-10-08, the window
+      started from a background process with no console): a launcher's `CREATE_NEW_PROCESS_GROUP`
+      sets "ignore Ctrl+C", and every ConPTY child inherited it. `platform::process_ctrl_c` clears
+      the flag with `SetConsoleCtrlHandler(NULL, FALSE)` before each local spawn;
+      `ctrl_c_reaches_a_shell_started_while_ignoring_it` sets the flag in a process of its own and
+      watches `ping` say `Control-C`. Windows only: the flag does not exist elsewhere.
 - [ ] **T205d** Django on Windows ARM64 has no PostgreSQL driver: `psycopg-binary` 3.3.6 ships no
       CPython 3.13 wheel for it (measured 2026-10-09), so the blueprint's first step fails there.
       Measure whether the pure `psycopg` with the `libpq.dll` MixEngine's PostgreSQL package

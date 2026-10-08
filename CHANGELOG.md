@@ -30,6 +30,7 @@
   back to it as you left it.
 
 ### Fixed
+- Ctrl+C stops a command in a PowerShell tab however MixLab was started.
 - Exporting a project with more than one site now writes every site into `mixengine.toml`, each with
   the services it uses. It used to leave all of them and their services out. Entries for sites this
   machine does not have are kept, and the export names them.
