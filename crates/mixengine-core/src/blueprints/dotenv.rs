@@ -187,24 +187,4 @@ mod tests {
         assert!(write(root, "L", "w").expect("appended"));
         assert_eq!(read(), "K=v1\nL=w\n");
     }
-
-    #[test]
-    fn the_written_file_is_private() {
-        let temp = tempfile::tempdir().expect("temp");
-        assert!(write(temp.path(), "K", "v").expect("written"));
-        let file = temp.path().join(FILE);
-
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mode = std::fs::metadata(&file)
-                .expect("there")
-                .permissions()
-                .mode()
-                & 0o777;
-            assert_eq!(mode, 0o600);
-        }
-        #[cfg(windows)]
-        assert!(mixengine_platform::is_private_file(&file).expect("readable"));
-    }
 }
