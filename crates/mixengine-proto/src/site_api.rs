@@ -157,12 +157,19 @@ impl SiteState {
 /// Create a site under a project.
 ///
 /// Every field but the project falls through — the argument, then `[site]` in the project's
-/// manifest, then a default — which is what makes `site.create { project }` the import (spec D7).
+/// manifest, then a default — which is what makes `site.create { project }` the import (spec D7),
+/// and `site.create { project, from }` the import of one of several (roadmap task **T204**).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct SiteCreate {
     /// Which project it belongs to.
     pub project: ProjectRef,
+
+    /// Which of the manifest's sites to fall through to, by any of its names — roadmap task
+    /// **T204**, spec D5. Needed when the file declares more than one and the request names no
+    /// domain that picks one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
 
     /// Ordered; the head is the primary. Falls through to `[site] domain` + `aliases`, then to
     /// `<slug>.test`.

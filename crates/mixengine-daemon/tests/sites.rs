@@ -865,3 +865,129 @@ async fn sharing_refuses_an_interface_this_machine_does_not_have() {
         .await;
     assert!(after["site"]["sharing"].is_null(), "{after}");
 }
+
+const THREE_SITES: &str = "[project]\nname = \"shop\"\n\n\
+    [[sites]]\ndomain = \"web.shop.test\"\nkind = \"static\"\nhttps = false\n\n\
+    [[sites]]\ndomain = \"api.shop.test\"\nkind = \"reverse-proxy\"\n\
+    upstream = \"http://127.0.0.1:5173\"\nhttps = false\nservices = []\n\n\
+    [[sites]]\ndomain = \"admin.shop.test\"\nkind = \"static\"\nhttps = false\n";
+
+/// **T204, D5.** Several sites and nothing named is refused, and the refusal is the command.
+#[tokio::test]
+async fn several_sites_and_nothing_named_is_refused_with_the_command() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    let repository = repository(Some(THREE_SITES));
+    client
+        .call(
+            "project.create",
+            json!({"root": as_string(repository.path())}),
+        )
+        .await;
+
+    let refused = client
+        .refuse("site.create", json!({"project": {"name": "shop"}}))
+        .await;
+
+    assert_eq!(refused["data"]["code"], "invalid_argument", "{refused}");
+    let message = refused["message"].as_str().unwrap_or_default();
+    assert!(message.contains("3 sites"), "{refused}");
+    assert!(message.contains("admin.shop.test"), "{refused}");
+    assert!(
+        refused["data"]["hint"]
+            .as_str()
+            .is_some_and(|hint| hint.contains("--from")),
+        "{refused}"
+    );
+
+    let list = client
+        .call("site.list", json!({"project": {"name": "shop"}}))
+        .await;
+    assert_eq!(list["sites"], json!([]), "nothing was invented: {list}");
+}
+
+/// **T204, D5.** `from` adopts one entry whole, and an unknown one is `not_found` naming the rest.
+#[tokio::test]
+async fn from_adopts_the_entry_it_names() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    let repository = repository(Some(THREE_SITES));
+    client
+        .call(
+            "project.create",
+            json!({"root": as_string(repository.path())}),
+        )
+        .await;
+
+    let created = client
+        .call(
+            "site.create",
+            json!({"project": {"name": "shop"}, "from": "api.shop.test"}),
+        )
+        .await;
+    assert_eq!(
+        created["site"]["site"]["domain"], "api.shop.test",
+        "{created}"
+    );
+    assert_eq!(
+        created["site"]["site"]["kind"]["kind"], "reverse-proxy",
+        "{created}"
+    );
+
+    let refused = client
+        .refuse(
+            "site.create",
+            json!({"project": {"name": "shop"}, "from": "nope.test"}),
+        )
+        .await;
+    assert_eq!(refused["data"]["code"], "not_found", "{refused}");
+    assert!(
+        refused["data"]["hint"]
+            .as_str()
+            .is_some_and(|hint| hint.contains("web.shop.test")),
+        "{refused}"
+    );
+}
+
+/// **T204, D3.** A legacy `[site]` with no `services` key links every `[[services]]` entry, as it
+/// always did; an entry with `services = []` links none.
+#[tokio::test]
+async fn an_entry_with_no_services_key_links_every_service() {
+    let fixture = Fixture::start().await;
+    mixengine_testkit::declare::database(
+        &fixture.home.database_file(),
+        "mariadb@main",
+        "mariadb",
+        3306,
+    )
+    .await;
+    let mut client = fixture.client().await;
+    let legacy = repository(Some(
+        "[project]\nname = \"old\"\n\n[site]\ndomain = \"old.test\"\nkind = \"static\"\n\
+         https = false\n\n[[services]]\nname = \"mariadb\"\n",
+    ));
+    client
+        .call("project.create", json!({"root": as_string(legacy.path())}))
+        .await;
+
+    let created = client
+        .call("site.create", json!({"project": {"name": "old"}}))
+        .await;
+    assert_eq!(
+        created["site"]["services"].as_array().map(Vec::len),
+        Some(1),
+        "{created}"
+    );
+
+    let empty = repository(Some(
+        "[project]\nname = \"new\"\n\n[site]\ndomain = \"new.test\"\nkind = \"static\"\n\
+         https = false\nservices = []\n\n[[services]]\nname = \"mariadb\"\n",
+    ));
+    client
+        .call("project.create", json!({"root": as_string(empty.path())}))
+        .await;
+    let created = client
+        .call("site.create", json!({"project": {"name": "new"}}))
+        .await;
+    assert_eq!(created["site"]["services"], json!([]), "{created}");
+}

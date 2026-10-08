@@ -958,12 +958,18 @@ enum SiteCommand {
     /// Declare a site under a project.
     ///
     /// With nothing but a project named, whatever the `[site]` and `[[services]]` in that project's
-    /// `mixengine.toml` say is used. That is how you adopt a colleague's site.
+    /// `mixengine.toml` say is used. That is how you adopt a colleague's site. With several sites in
+    /// the file, `--from` says which.
     #[command(alias = "import")]
     Create {
         /// The project. Defaults to whichever project the current directory is in.
         #[arg(long, value_name = "PROJECT")]
         project: Option<String>,
+
+        /// Which site in `mixengine.toml` to adopt, by any of its names. Needed when the file
+        /// declares more than one.
+        #[arg(long, value_name = "DOMAIN")]
+        from: Option<String>,
 
         /// A domain. The first is the primary; repeat for aliases. Defaults to `<project>.test`.
         #[arg(long = "domain", value_name = "DOMAIN")]
@@ -4126,6 +4132,7 @@ async fn site(
     match command {
         SiteCommand::Create {
             project,
+            from,
             domains,
             doc_root,
             kind,
@@ -4143,6 +4150,7 @@ async fn site(
         } => {
             let create = SiteCreate {
                 project: whose(project)?,
+                from,
                 domains: (!domains.is_empty()).then_some(domains),
                 doc_root,
                 kind: site_kind(kind, upstream, port, pool)?,

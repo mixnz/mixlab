@@ -95,6 +95,155 @@ impl TryFrom<Sections> for Manifest {
     }
 }
 
+/// Which of a manifest's sites a `site.create` falls through to — roadmap task **T204**, spec D5.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Choice<'a> {
+    /// The entry, when one was chosen.
+    pub site: Option<&'a ManifestSite>,
+
+    /// Where the new site's links come from when the request names none.
+    pub services: ServicesFrom<'a>,
+}
+
+/// Where a new site's links fall through to.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ServicesFrom<'a> {
+    /// The chosen entry's own `services`.
+    Listed(&'a [ServiceId]),
+
+    /// Every `[[services]]` entry: a chosen entry with no `services` key, or a file declaring no
+    /// site — which is everything a manifest meant before T204.
+    Every,
+
+    /// None. The request describes a site a several-site file does not, and guessing that it wants
+    /// every service the others use is the invented default T39a's D10 refused.
+    Nothing,
+}
+
+/// Why no entry could be chosen.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Unchosen {
+    /// `from` names no entry.
+    NotDeclared {
+        /// What `from` said.
+        name: String,
+        /// Every entry's name, in file order.
+        declared: Vec<String>,
+    },
+
+    /// Several entries and nothing to choose between them by.
+    Ambiguous {
+        /// Every entry's name, in file order.
+        declared: Vec<String>,
+    },
+
+    /// Two entries answer to one name.
+    NamedTwice {
+        /// The name both answer to.
+        name: String,
+        /// The first entry's position, counted from 1 as a person reads the file.
+        first: usize,
+        /// The second's.
+        second: usize,
+    },
+}
+
+impl Manifest {
+    /// Choose the entry a `site.create` falls through to: `from`, then `domains[0]`, then the only
+    /// one — spec D5.
+    ///
+    /// `default_domain` is what an entry with no `domain` is called, which is the name
+    /// `site.create` would give it (`<slug>.test`).
+    ///
+    /// # Errors
+    ///
+    /// [`Unchosen`], each variant one refusal of D5.
+    pub fn choose<'a>(
+        &'a self,
+        from: Option<&str>,
+        domains: Option<&[String]>,
+        default_domain: &str,
+    ) -> std::result::Result<Choice<'a>, Unchosen> {
+        let declared = || {
+            self.sites
+                .iter()
+                .map(|site| {
+                    site.domain
+                        .clone()
+                        .unwrap_or_else(|| default_domain.to_owned())
+                })
+                .collect::<Vec<_>>()
+        };
+
+        let site = match (from, domains.and_then(<[String]>::first)) {
+            (Some(name), _) => {
+                Some(named(&self.sites, name, default_domain)?.ok_or_else(|| {
+                    Unchosen::NotDeclared {
+                        name: name.to_owned(),
+                        declared: declared(),
+                    }
+                })?)
+            }
+            (None, Some(primary)) => match named(&self.sites, primary, default_domain)? {
+                Some(site) => Some(site),
+                None if self.sites.len() == 1 => self.sites.first(),
+                None => None,
+            },
+            (None, None) => match self.sites.len() {
+                0 => None,
+                1 => self.sites.first(),
+                _ => {
+                    return Err(Unchosen::Ambiguous {
+                        declared: declared(),
+                    });
+                }
+            },
+        };
+
+        let services = match site {
+            Some(site) => site
+                .services
+                .as_deref()
+                .map_or(ServicesFrom::Every, ServicesFrom::Listed),
+            None if self.sites.len() > 1 => ServicesFrom::Nothing,
+            None => ServicesFrom::Every,
+        };
+
+        Ok(Choice { site, services })
+    }
+}
+
+/// The one entry answering to `name`, by its `domain` (or the default, when it has none) or any
+/// alias.
+fn named<'a>(
+    sites: &'a [ManifestSite],
+    name: &str,
+    default_domain: &str,
+) -> std::result::Result<Option<&'a ManifestSite>, Unchosen> {
+    let mut hit: Option<(usize, &'a ManifestSite)> = None;
+
+    for (position, site) in sites.iter().enumerate() {
+        let answers = site.domain.as_deref().unwrap_or(default_domain) == name
+            || site.aliases.iter().any(|alias| alias == name);
+
+        if !answers {
+            continue;
+        }
+
+        if let Some((first, _)) = hit {
+            return Err(Unchosen::NamedTwice {
+                name: name.to_owned(),
+                first: first + 1,
+                second: position + 1,
+            });
+        }
+
+        hit = Some((position, site));
+    }
+
+    Ok(hit.map(|(_, site)| site))
+}
+
 /// `[site]` — what is served out of this directory, and at what name.
 ///
 /// Every field is optional because every one of them falls through to a default the daemon knows
@@ -1570,5 +1719,136 @@ name = \"redis\"
             assert!(!after.contains("upstream"), "{after}");
             assert!(!after.contains("port"), "{after}");
         }
+    }
+
+    fn declaring(text: &str) -> Manifest {
+        toml::from_str(text).expect("a manifest")
+    }
+
+    const THREE: &str = "[[sites]]\ndomain = \"web.test\"\naliases = [\"www.web.test\"]\n\n\
+                         [[sites]]\ndomain = \"api.test\"\nservices = [\"redis\"]\n\n\
+                         [[sites]]\ndomain = \"admin.test\"\nservices = []\n";
+
+    /// **T204, D5, step 1.** `from` picks by any of an entry's names.
+    #[test]
+    fn from_picks_an_entry_by_any_of_its_names() {
+        let manifest = declaring(THREE);
+
+        let chosen = manifest
+            .choose(Some("www.web.test"), None, "blog.test")
+            .expect("chosen");
+
+        assert_eq!(
+            chosen.site.and_then(|site| site.domain.as_deref()),
+            Some("web.test")
+        );
+        assert_eq!(
+            chosen.services,
+            ServicesFrom::Every,
+            "no `services` key: every one"
+        );
+    }
+
+    /// **T204, D5, step 1.** A `from` naming nothing the file declares is `NotDeclared`, carrying
+    /// what it does declare.
+    #[test]
+    fn from_naming_nothing_is_not_declared() {
+        let manifest = declaring(THREE);
+
+        assert_eq!(
+            manifest.choose(Some("nope.test"), None, "blog.test"),
+            Err(Unchosen::NotDeclared {
+                name: "nope.test".to_owned(),
+                declared: vec!["web.test".into(), "api.test".into(), "admin.test".into()],
+            })
+        );
+    }
+
+    /// **T204, D5, step 2.** A named domain picks its entry; one the file does not describe picks
+    /// none, and no services fall through.
+    #[test]
+    fn a_named_domain_picks_its_entry_or_none() {
+        let manifest = declaring(THREE);
+        let redis = [ServiceId::parse("redis").expect("an id")];
+
+        let api = manifest
+            .choose(None, Some(&["api.test".to_owned()]), "blog.test")
+            .expect("chosen");
+        assert_eq!(api.services, ServicesFrom::Listed(&redis));
+
+        let other = manifest
+            .choose(None, Some(&["other.test".to_owned()]), "blog.test")
+            .expect("chosen");
+        assert_eq!(other.site, None);
+        assert_eq!(other.services, ServicesFrom::Nothing);
+    }
+
+    /// **T204, D5, steps 2 and 3.** One entry is today's behaviour: chosen whatever the domain.
+    #[test]
+    fn one_entry_is_chosen_as_it_always_was() {
+        let manifest = declaring("[site]\ndomain = \"blog.test\"\n");
+
+        for domains in [None, Some(vec!["other.test".to_owned()])] {
+            let chosen = manifest
+                .choose(None, domains.as_deref(), "blog.test")
+                .expect("chosen");
+            assert!(chosen.site.is_some());
+            assert_eq!(chosen.services, ServicesFrom::Every);
+        }
+    }
+
+    /// **T204, D5, step 3.** Several and nothing named is refused rather than guessed.
+    #[test]
+    fn several_and_nothing_named_is_ambiguous() {
+        assert!(matches!(
+            declaring(THREE).choose(None, None, "blog.test"),
+            Err(Unchosen::Ambiguous { declared }) if declared.len() == 3
+        ));
+    }
+
+    /// **T204, D5.** No site at all: the defaults, with `[[services]]` as before.
+    #[test]
+    fn no_entry_falls_through_to_every_service() {
+        let manifest = Manifest::default();
+
+        let chosen = manifest.choose(None, None, "blog.test").expect("chosen");
+
+        assert_eq!(chosen.site, None);
+        assert_eq!(chosen.services, ServicesFrom::Every);
+    }
+
+    /// **T204, D5.** Two entries answering to one name is refused at the point of choosing,
+    /// numbered the way a person counts them.
+    #[test]
+    fn named_twice() {
+        let manifest = declaring(
+            "[[sites]]\ndomain = \"a.test\"\n\n\
+             [[sites]]\ndomain = \"b.test\"\naliases = [\"a.test\"]\n",
+        );
+
+        assert_eq!(
+            manifest.choose(Some("a.test"), None, "blog.test"),
+            Err(Unchosen::NamedTwice {
+                name: "a.test".into(),
+                first: 1,
+                second: 2
+            })
+        );
+    }
+
+    /// **T204, D7.** An entry with no `domain` answers to the name `site.create` would give it.
+    #[test]
+    fn an_entry_with_no_domain_answers_to_the_default() {
+        let manifest =
+            declaring("[[sites]]\ndoc_root = \"public\"\n\n[[sites]]\ndomain = \"b.test\"\n");
+
+        let chosen = manifest
+            .choose(Some("blog.test"), None, "blog.test")
+            .expect("chosen");
+
+        assert_eq!(
+            chosen.site.and_then(|site| site.doc_root.as_deref()),
+            Some("public")
+        );
     }
 }
