@@ -183,6 +183,117 @@ fn limits_can_be_set_on_a_child_that_is_already_running() {
     let _ = child.stop();
 }
 
+/// **A stop returns once every process in the group has ended, not only the one it started.**
+///
+/// CI run 37679651605: `mysqld.exe` on Windows is a monitor that starts the real server as a child.
+/// The stop killed the job, waited for the monitor, and called the service stopped — and the reset
+/// that ran 60 ms later met the child still holding `ibdata1` (`The innodb_system data file
+/// 'ibdata1' must be writable`). `TerminateJobObject` returns before its members have gone, so
+/// waiting on the leader says nothing about the rest.
+///
+/// `cmd /c ping` is the same shape: a leader, and the process doing the work as its child. Tried
+/// more than once, because what it catches is a race and one try can lose it.
+#[cfg(windows)]
+#[test]
+fn a_stopped_group_has_no_process_left_running() {
+    for attempt in 1..=10 {
+        let mut leader = a_long_lived_child(&Limits::default());
+        let child = the_child_of(leader.pid(), "PING.EXE");
+
+        let stopped = leader.stop();
+
+        let still_running = child.still_running();
+        assert!(
+            !still_running,
+            "attempt {attempt}: `stop` returned ({stopped:?}) while pid {} — the leader {}'s child, \
+             in the same job — was still running; the next start would meet whatever it holds",
+            child.pid,
+            leader.pid(),
+        );
+    }
+}
+
+/// A handle on a process, opened only to be asked whether it has ended.
+#[cfg(windows)]
+struct Watched {
+    pid: u32,
+    handle: std::os::windows::io::OwnedHandle,
+}
+
+#[cfg(windows)]
+impl Watched {
+    /// Whether the process is still running, asked without waiting.
+    fn still_running(&self) -> bool {
+        use std::os::windows::io::AsRawHandle as _;
+        use windows_sys::Win32::Foundation::WAIT_TIMEOUT;
+        use windows_sys::Win32::System::Threading::WaitForSingleObject;
+
+        #[expect(
+            unsafe_code,
+            reason = "the handle is owned by this value and the call does not close it"
+        )]
+        let waited = unsafe { WaitForSingleObject(self.handle.as_raw_handle().cast(), 0) };
+
+        waited == WAIT_TIMEOUT
+    }
+}
+
+/// The child called `program` that `leader` has started, opened before anything kills it.
+///
+/// **By name, because `cmd` has two children.** The other is the `conhost.exe` the console driver
+/// starts for it, which is not the service's work, holds none of its files, and goes in its own
+/// time once its last client has gone.
+///
+/// Polled for, because `cmd` starts it a moment after it is started itself.
+#[cfg(windows)]
+fn the_child_of(leader: u32, program: &str) -> Watched {
+    use std::os::windows::io::FromRawHandle as _;
+    use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_SYNCHRONIZE};
+
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    let mut system = sysinfo::System::new();
+
+    loop {
+        system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+
+        let child = system.processes().iter().find_map(|(pid, process)| {
+            let named = process.name().eq_ignore_ascii_case(program);
+            let started_by = process.parent().map(sysinfo::Pid::as_u32) == Some(leader);
+
+            (named && started_by).then(|| pid.as_u32())
+        });
+
+        if let Some(pid) = child {
+            #[expect(
+                unsafe_code,
+                reason = "OpenProcess takes three integers; the handle it returns is owned at once"
+            )]
+            let handle = unsafe { OpenProcess(PROCESS_SYNCHRONIZE, 0, pid) };
+
+            assert!(
+                !handle.is_null(),
+                "pid {pid}, the {program} {leader} started, could not be opened: {}",
+                std::io::Error::last_os_error()
+            );
+
+            #[expect(
+                unsafe_code,
+                reason = "the handle was just returned by OpenProcess and nothing else owns it"
+            )]
+            let handle = unsafe { std::os::windows::io::OwnedHandle::from_raw_handle(handle) };
+
+            return Watched { pid, handle };
+        }
+
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the leader {leader} started no {program} within ten seconds"
+        );
+
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
 /// A child that stays up long enough to be asked something, started with `limits`.
 ///
 /// Its own helper rather than [`saying_a_word`]'s program: that one exits as soon as it has printed,

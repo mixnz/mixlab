@@ -154,8 +154,15 @@ async fn repairable(data: &Path) -> Result<(), Error> {
 /// Windows; a child that outlived its parent held the directory and answered `The innodb_system data
 /// file 'ibdata1' must be writable` — a sentence about a live process wearing the words of a file
 /// permission, which sends whoever reads it to `icacls`. The supervisor kills the whole process
-/// group, so this should never fire, and the sentence it produces when it does is the whole value of
-/// having it.
+/// group, and waits for all of it to have gone, so this should never fire, and the sentence it
+/// produces when it does is the whole value of having it.
+///
+/// **Two questions, because the first alone missed the case it was written for.** Writing a new file
+/// proves the directory is there and ours; it says nothing about the files already in it, and CI run
+/// 37679651605 wrote and removed the probe while a killed server's child still held `ibdata1`. So the
+/// handle table is asked too, for anything inside the directory another process holds open — on
+/// Windows, the one system where a held file refuses the server that comes next. **Nobody is spared**:
+/// a server left from this daemon's own stop is exactly what is being looked for.
 async fn writable(data: &Path) -> Result<(), Error> {
     let probe = data.join(PROBE);
 
@@ -167,7 +174,7 @@ async fn writable(data: &Path) -> Result<(), Error> {
                 tracing::warn!(path = %probe.display(), %error, "a reset probe file could not be removed");
             }
 
-            Ok(())
+            unheld(data).await
         }
 
         Err(source) => Err(Error::new(
@@ -184,6 +191,47 @@ async fn writable(data: &Path) -> Result<(), Error> {
              that started it",
         )),
     }
+}
+
+/// Whether any process holds a file open inside `data` — the second of [`writable`]'s questions.
+///
+/// Off the runtime, because reading the handle table blocks for as long as
+/// [`HELD_BUDGET`](mixengine_platform::occupants::HELD_BUDGET) allows. A blocking task that did not
+/// finish answers nothing found: the step that follows still fails on its own, only less clearly.
+async fn unheld(data: &Path) -> Result<(), Error> {
+    let directory = data.to_path_buf();
+
+    let held = tokio::task::spawn_blocking(move || {
+        mixengine_platform::occupants::held_under(&[directory], None)
+    })
+    .await
+    .unwrap_or_default();
+
+    let Some(first) = held.first() else {
+        return Ok(());
+    };
+
+    let holders = first
+        .holders
+        .iter()
+        .map(|holder| format!("{} (pid {})", holder.name, holder.pid))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    Err(Error::new(
+        ErrorCode::PreconditionFailed,
+        format!(
+            "{} is held open by {holders}, so a server started on {} now would refuse it as not \
+             writable",
+            first.path.display(),
+            data.display()
+        ),
+    )
+    .with_hint(
+        "stop that process and run the reset again; a database server this daemon stopped a moment \
+         ago may still be leaving, and one it does not supervise was left by an older run or \
+         started by hand",
+    ))
 }
 
 /// The credentials this ritual names, read from the keyring and generated where there is none.
@@ -384,6 +432,44 @@ mod tests {
         assert!(
             !data.join(PROBE).exists(),
             "the writability check left its probe behind"
+        );
+    }
+
+    /// A file held open inside the directory is found, though a new file can be written beside it.
+    ///
+    /// **The case the probe file alone passed.** CI run 37679651605: a killed `mysqld.exe`'s child
+    /// still held `ibdata1`, the probe was written and removed without complaint, and the server the
+    /// reset then started said `ibdata1` "must be writable". What a person needs is the file and who
+    /// holds it, and the refusal is asserted to name both.
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn a_file_held_open_in_the_data_directory_is_named() {
+        use std::os::windows::fs::OpenOptionsExt as _;
+
+        let home = tempfile::tempdir().expect("a directory");
+        let data = home.path().to_path_buf();
+        let held = data.join("ibdata1");
+
+        std::fs::write(&held, b"a database").expect("contents");
+
+        let _holding = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .share_mode(0)
+            .open(&held)
+            .expect("the file can be held");
+
+        let refused = writable(&data)
+            .await
+            .expect_err("a file in it is held open");
+
+        assert_eq!(refused.code, ErrorCode::PreconditionFailed, "{refused:?}");
+        assert!(refused.message.contains("ibdata1"), "{refused:?}");
+        assert!(
+            refused
+                .message
+                .contains(&format!("pid {}", std::process::id())),
+            "the refusal does not name who holds it: {refused:?}"
         );
     }
 
