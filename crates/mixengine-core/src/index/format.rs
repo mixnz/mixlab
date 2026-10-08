@@ -134,6 +134,11 @@ pub struct Artifact {
     /// What this build can offer, split by whether it can be turned off.
     #[serde(default, skip_serializing_if = "Extensions::is_empty")]
     pub extensions: Extensions,
+
+    /// What this cell cannot do that its siblings can, and why — the publisher's words, read and
+    /// shown, never judged (roadmap task **T206**, D2). Empty for an entry written before T206.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub lacks: BTreeMap<String, String>,
 }
 
 /// What the publisher measured off the finished artifact, as preconditions on the machine.
@@ -707,6 +712,32 @@ impl Index {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **What a cell cannot do reaches MixEngine** — roadmap task **T206**, D2.
+    #[test]
+    fn an_artifact_carries_what_it_lacks() {
+        let artifact: Artifact = serde_json::from_value(serde_json::json!({
+            "os": "windows", "arch": "x86_64", "url": "https://x.invalid/r.zip",
+            "sha256": "00", "size": 1, "provides": { "ruby": "bin/ruby.exe" },
+            "lacks": { "native gems": "no compiler" }
+        }))
+        .expect("reads");
+        assert_eq!(
+            artifact.lacks.get("native gems").map(String::as_str),
+            Some("no compiler")
+        );
+    }
+
+    /// An entry written before T206 lacks nothing, and reads.
+    #[test]
+    fn an_artifact_without_lacks_lacks_nothing() {
+        let artifact: Artifact = serde_json::from_value(serde_json::json!({
+            "os": "linux", "arch": "x86_64", "url": "https://x.invalid/r.tar.zst",
+            "sha256": "00", "size": 1, "provides": { "ruby": "bin/ruby" }
+        }))
+        .expect("reads");
+        assert!(artifact.lacks.is_empty());
+    }
     use crate::index::schema1::Document;
 
     #[test]

@@ -81,6 +81,7 @@ fn artifact(url: String, packed: &Packed, provides: &[(&str, &str)]) -> Artifact
         requires: Requires::default(),
         extension_dir: None,
         extensions: Extensions::default(),
+        lacks: std::collections::BTreeMap::new(),
     }
 }
 

@@ -232,6 +232,7 @@ fn artifact_for_host(manifest: &ExtensionManifest) -> Result<Option<Artifact>> {
         requires: crate::index::Requires::default(),
         extension_dir: None,
         extensions: crate::index::Extensions::default(),
+        lacks: std::collections::BTreeMap::new(),
     }))
 }
 

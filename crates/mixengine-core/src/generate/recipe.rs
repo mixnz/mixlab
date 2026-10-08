@@ -1388,6 +1388,9 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
 #[derive(Debug, Clone, Default)]
 pub struct Catalogue {
     recipes: BTreeMap<String, Arc<dyn Recipe>>,
+
+    /// Packages this build installs, lists and removes but never runs — roadmap task **T206a**.
+    toolchains: std::collections::BTreeSet<String>,
 }
 
 impl Catalogue {
@@ -1409,6 +1412,7 @@ impl Catalogue {
             .with(Arc::new(super::recipes::PhpFpm))
             .with(Arc::new(super::recipes::Postgres))
             .with(Arc::new(super::recipes::Redis))
+            .with_toolchain("msys2")
     }
 
     /// The same catalogue, with `recipe` in it.
@@ -1432,6 +1436,31 @@ impl Catalogue {
     /// For the message a service belonging to something else produces.
     pub fn packages(&self) -> impl Iterator<Item = &str> + '_ {
         self.recipes.keys().map(String::as_str)
+    }
+
+    /// A package this build installs, lists and removes but never runs — roadmap task **T206a**,
+    /// D5. A toolchain has no recipe because there is nothing in it to supervise: `msys2` is the
+    /// devkit RubyInstaller's Ruby needs to build gems with C extensions.
+    #[must_use]
+    pub fn with_toolchain(mut self, package: &str) -> Self {
+        self.toolchains.insert(package.to_owned());
+        self
+    }
+
+    /// Every toolchain this build knows.
+    pub fn toolchains(&self) -> impl Iterator<Item = &str> + '_ {
+        self.toolchains.iter().map(String::as_str)
+    }
+
+    /// Everything `package.install` may take: what this build runs, then what it only installs.
+    pub fn installable(&self) -> impl Iterator<Item = &str> + '_ {
+        self.packages().chain(self.toolchains())
+    }
+
+    /// Whether `package` is a toolchain rather than a server.
+    #[must_use]
+    pub fn is_toolchain(&self, package: &str) -> bool {
+        self.toolchains.contains(package)
     }
 }
 
@@ -1492,6 +1521,17 @@ pub(super) fn render(recipe: &dyn Recipe, context: &Context) -> Result<Vec<Docum
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **`msys2` is installable and never runnable** — roadmap task **T206a**, D5.
+    #[test]
+    fn msys2_is_installable_and_never_runnable() {
+        let catalogue = Catalogue::builtin();
+        assert!(catalogue.installable().any(|name| name == "msys2"));
+        assert!(catalogue.is_toolchain("msys2"));
+        assert!(!catalogue.packages().any(|name| name == "msys2"));
+        assert!(catalogue.recipe("msys2").is_none());
+        assert!(!catalogue.is_toolchain("caddy"));
+    }
 
     /// **Every database names its superuser, and nothing else names anything** — roadmap task
     /// **T82**, the design's D5.

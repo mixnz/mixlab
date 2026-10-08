@@ -73,6 +73,21 @@ impl Api {
     ) -> Result<ServiceCreation, Error> {
         let package = create.id.name();
 
+        // **A toolchain is installed, never run** — roadmap task **T206a**, D5. Said before the
+        // generic refusal below, whose list of what can run would not name it.
+        if catalogue.is_toolchain(package) {
+            return Err(Error::new(
+                ErrorCode::InvalidArgument,
+                format!(
+                    "{package} is a toolchain, not a server: there is nothing in it to run as a \
+                     service"
+                ),
+            )
+            .with_hint(
+                "the runtimes that need it find it by themselves; `mix package list` shows it",
+            ));
+        }
+
         let Some(recipe) = catalogue.recipe(package) else {
             let known = catalogue.packages().collect::<Vec<_>>().join(", ");
 

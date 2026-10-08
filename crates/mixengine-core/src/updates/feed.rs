@@ -168,6 +168,7 @@ impl InstallerArtifact {
             requires: crate::index::Requires::default(),
             extension_dir: None,
             extensions: crate::index::Extensions::default(),
+            lacks: std::collections::BTreeMap::new(),
         }
     }
 }

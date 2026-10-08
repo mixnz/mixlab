@@ -1502,6 +1502,34 @@ const RUNS_HEADING: &str = "RUNS";
 /// The column that says what a release lacks on this machine — roadmap task **T151**.
 const NEEDS_HEADING: &str = "NEEDS";
 
+/// The column that says what a release cannot do on this cell — roadmap task **T206**, D3.
+const LACKS_HEADING: &str = "LACKS";
+
+/// The keys of what a release lacks, in the publisher's words; blank when it lacks nothing.
+fn lacks(lacks: &std::collections::BTreeMap<String, String>) -> String {
+    lacks.keys().cloned().collect::<Vec<_>>().join(", ")
+}
+
+/// The line `mix runtime install` ends with when the release cannot build native gems — roadmap
+/// task **T206**, D3. It names the devkit only where one is offered for this machine, with the
+/// newest version offered, since `mix package install` takes one.
+pub(crate) fn lacks_after_install(
+    lacks: &std::collections::BTreeMap<String, String>,
+    devkit: Option<&str>,
+) -> Option<String> {
+    if !lacks.contains_key("native gems") {
+        return None;
+    }
+
+    Some(match devkit {
+        Some(version) => format!(
+            "This Ruby cannot build gems with C extensions. `mix package install msys2 {version}` \
+             adds the toolchain.\n"
+        ),
+        None => "This Ruby cannot build gems with C extensions on this machine.\n".to_owned(),
+    })
+}
+
 /// What one release lacks, in the few words a cell has room for; blank for a release lacking nothing.
 fn needs(needs: Option<&Vec<Requirement>>) -> String {
     needs
@@ -1747,6 +1775,7 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue, lines: &Lines) -> 
 
     let emulated = emulation_column(shown.iter().map(|release| release.execution));
     let lacking = any_lacking(shown.iter().map(|release| release.needs.as_ref()));
+    let lacked = shown.iter().any(|release| !release.lacks.is_empty());
 
     if let Some(note) = &emulated {
         rendered.push_str(note);
@@ -1761,6 +1790,9 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue, lines: &Lines) -> 
     }
     if lacking {
         headings.push(NEEDS_HEADING);
+    }
+    if lacked {
+        headings.push(LACKS_HEADING);
     }
 
     let rows: Vec<Vec<String>> = shown
@@ -1781,6 +1813,9 @@ pub(crate) fn runtime_catalogue(catalogue: &RuntimeCatalogue, lines: &Lines) -> 
             }
             if lacking {
                 row.push(needs(release.needs.as_ref()));
+            }
+            if lacked {
+                row.push(lacks(&release.lacks));
             }
             row
         })
@@ -4615,6 +4650,7 @@ mod tests {
             needs: None,
             line: None,
             newest_in_line: None,
+            lacks: std::collections::BTreeMap::new(),
         }
     }
 
@@ -4765,6 +4801,56 @@ mod tests {
                 "nothing unread, nothing said"
             );
         }
+    }
+
+    /// **What a cell cannot do has a column of its own** — roadmap task **T206**, D3, on `NEEDS`'
+    /// rule: drawn only when some row lacks something.
+    #[test]
+    fn a_lacks_column_appears_only_when_a_row_lacks_something() {
+        let catalogue_of = |runtimes| RuntimeCatalogue {
+            runtimes,
+            stale: false,
+            updates: None,
+            unavailable: None,
+        };
+
+        let mut ruby = offered("3.4.11", None);
+        ruby.lacks
+            .insert("native gems".to_owned(), "no compiler".to_owned());
+        ruby.lacks.insert("yjit".to_owned(), "not built".to_owned());
+
+        let rendered = runtime_catalogue(&catalogue_of(vec![ruby]), &EVERY_LINE);
+        assert!(rendered.contains("LACKS"), "{rendered}");
+        assert!(rendered.contains("native gems, yjit"), "{rendered}");
+
+        let plain = runtime_catalogue(&catalogue_of(vec![offered("3.4.11", None)]), &EVERY_LINE);
+        assert!(!plain.contains("LACKS"), "{plain}");
+    }
+
+    /// **The install names the devkit where one is offered**, and only the gap where none is.
+    #[test]
+    fn the_install_names_the_devkit_where_one_is_offered() {
+        let lacks = std::collections::BTreeMap::from([("native gems".to_owned(), "x".to_owned())]);
+        // With the version: `mix package install` takes one, and a line naming a command that
+        // refuses to run is worse than none.
+        let said = lacks_after_install(&lacks, Some("2026.10.08")).expect("a line");
+        assert!(
+            said.contains("`mix package install msys2 2026.10.08`"),
+            "{said}"
+        );
+        let alone = lacks_after_install(&lacks, None).expect("a line");
+        assert!(!alone.contains("msys2"), "{alone}");
+    }
+
+    /// Nothing lacked, nothing said — every Ruby on macOS and Linux.
+    #[test]
+    fn no_line_when_nothing_is_lacked() {
+        assert_eq!(
+            lacks_after_install(&std::collections::BTreeMap::new(), Some("1")),
+            None
+        );
+        let yjit_only = std::collections::BTreeMap::from([("yjit".to_owned(), "x".to_owned())]);
+        assert_eq!(lacks_after_install(&yjit_only, Some("1")), None);
     }
 
     /// **T151.** The column appears only when a row lacks something, on `RUNS`' reasoning.

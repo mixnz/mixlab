@@ -88,7 +88,7 @@ pub struct KindFile {
 
 /// What an artifact says that is not about its bytes.
 ///
-/// **Only these four fields are read.** The reference decoder spreads the shape over the artifact,
+/// **Only these five fields are read** (`lacks` since T206). The reference decoder spreads the shape over the artifact,
 /// so a shape carrying `sha256` would win there; here a shape has nowhere to put one.
 #[derive(Debug, Clone, Deserialize)]
 struct Shape {
@@ -99,6 +99,8 @@ struct Shape {
     extension_dir: Option<String>,
     #[serde(default)]
     extensions: Extensions,
+    #[serde(default)]
+    lacks: BTreeMap<String, String>,
 }
 
 /// One version, before its kind and its shapes are put back.
@@ -179,6 +181,7 @@ pub fn decode(file: KindFile, base_url: &str) -> Result<Vec<Package>, String> {
                 requires: shape.requires.clone(),
                 extension_dir: shape.extension_dir.clone(),
                 extensions: shape.extensions.clone(),
+                lacks: shape.lacks.clone(),
             });
         }
 
@@ -227,6 +230,27 @@ mod tests {
 
     fn read(value: serde_json::Value) -> KindFile {
         serde_json::from_value(value).expect("a kind file")
+    }
+
+    /// **`lacks` travels in the shape**, where the packaging repository's encoder puts every field
+    /// that is not about the bytes — roadmap task **T206**, D1.
+    #[test]
+    fn a_shape_carries_what_its_cells_lack() {
+        let mut file = php();
+        file["shapes"][1]["lacks"] = serde_json::json!({ "native gems": "no compiler" });
+
+        let packages = decode(read(file), BASE).expect("decodes");
+        let windows = packages[0]
+            .artifacts
+            .iter()
+            .find(|artifact| artifact.os == Os::Windows)
+            .expect("the windows cell");
+
+        assert_eq!(
+            windows.lacks.get("native gems").map(String::as_str),
+            Some("no compiler")
+        );
+        assert!(packages[0].artifacts[0].lacks.is_empty());
     }
 
     /// The whole claim of the format: an encoding of schema 1 and nothing more.

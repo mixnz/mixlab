@@ -87,7 +87,10 @@ binaries. What they state is what the daemon **writes** —
    mark each release's `line` and `newest_in_line` and list `updates`, so a client groups and
    offers *Update* without comparing versions. `runtime.upgrade_plan` / `package.upgrade_plan` answer
    what an update would move, and `runtime.upgrade` / `package.upgrade` run it as a job whose result
-   is that plan, marked. The Languages tab and each Packages tab draw *N more* under a line and
+   is that plan, marked. **What a release lacks** (`RuntimeRelease.lacks`, T206) is a quiet mark on
+   its Languages row with the publisher's reason as its tooltip; a Ruby that cannot build native
+   gems carries an *Install devkit* button where a `msys2` is offered, which is `package.install`.
+   The Languages tab and each Packages tab draw *N more* under a line and
    *Update to …* on an installed row, with the plan in the confirmation.
    **And what could not be read — T196**: the package index is one file per kind, and a file that
    does not match the signed root costs that kind only. Both lists carry `unavailable`, one

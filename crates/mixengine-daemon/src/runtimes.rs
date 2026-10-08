@@ -331,6 +331,11 @@ impl Runtimes {
                     needs: chosen.map(|_| {
                         requirements::of(&catalogue.index, name, &package.version, &facts)
                     }),
+                    // **What this cell cannot do**, read off the artifact this machine would take
+                    // — roadmap task **T206**, D2.
+                    lacks: chosen
+                        .map(|chosen| chosen.artifact.lacks.clone())
+                        .unwrap_or_default(),
                 });
                 offered.push(version);
             }

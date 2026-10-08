@@ -6113,6 +6113,7 @@ async fn install(
         return Ok(ExitCode::FAILURE);
     };
 
+    let (kind, version) = (target.kind, target.version.clone());
     let asked = RuntimeInstall {
         target,
         install_prerequisites,
@@ -6129,10 +6130,71 @@ async fn install(
 
     emit(&rendered(json, &finished, || render::job_status(&finished)))?;
 
+    if render::job_succeeded(&finished) && !json {
+        said_what_it_lacks(client, kind, &version).await?;
+    }
+
     Ok(match render::job_succeeded(&finished) {
         true => ExitCode::SUCCESS,
         false => ExitCode::FAILURE,
     })
+}
+
+/// Say what the release just installed cannot do, and what adds it — roadmap task **T206**, D3.
+///
+/// **From the cached index, and never at the install's expense.** A listing that cannot be read
+/// costs this line and nothing else: the install has already succeeded.
+async fn said_what_it_lacks(
+    client: &mut Client,
+    kind: RuntimeKind,
+    version: &PackageVersion,
+) -> Result<(), Error> {
+    let Ok(catalogue) = ask::<RuntimeCatalogue>(
+        client,
+        rpc::method::RUNTIME_LIST_AVAILABLE,
+        encode(&RuntimeFilter {
+            kind: Some(kind),
+            ..RuntimeFilter::default()
+        }),
+    )
+    .await
+    else {
+        return Ok(());
+    };
+
+    let Some(release) = catalogue
+        .runtimes
+        .iter()
+        .find(|release| release.kind == kind && &release.version == version)
+    else {
+        return Ok(());
+    };
+
+    let offered = ask::<PackageCatalogue>(
+        client,
+        rpc::method::PACKAGE_LIST_AVAILABLE,
+        encode(&PackageFilter {
+            package: Some("msys2".to_owned()),
+            ..PackageFilter::default()
+        }),
+    )
+    .await
+    .ok();
+    let newest = offered.as_ref().and_then(|catalogue| {
+        catalogue
+            .packages
+            .iter()
+            .map(|release| &release.version)
+            .max_by(|a, b| a.cmp_precedence(b))
+    });
+
+    if let Some(line) =
+        render::lacks_after_install(&release.lacks, newest.map(|version| version.as_str()))
+    {
+        emit(&line)?;
+    }
+
+    Ok(())
 }
 
 /// Poll a job until it ends, saying on stderr what it is doing as that changes.

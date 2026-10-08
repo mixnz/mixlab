@@ -308,6 +308,12 @@ const vi: typeof en = {
       willBeKept: "{{subject}} {{from}} được giữ lại: {{because}}",
     },
     packages: {
+      lacks: {
+        nativeGems: "không build được gem native",
+        yjit: "không có YJIT",
+        devkitInstalled: "build gem native bằng devkit",
+        installDevkit: "Cài devkit ({{size}})",
+      },
       tabLanguages: "Ngôn ngữ",
       about: "Ngôn ngữ, máy chủ và các phiên bản máy này đang giữ.",
       onDisk: {

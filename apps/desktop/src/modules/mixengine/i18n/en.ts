@@ -313,6 +313,12 @@ export default {
       willBeKept: "{{subject}} {{from}} stays installed: {{because}}",
     },
     packages: {
+      lacks: {
+        nativeGems: "can't build native gems",
+        yjit: "no YJIT",
+        devkitInstalled: "builds native gems with the devkit",
+        installDevkit: "Install devkit ({{size}})",
+      },
       tabLanguages: "Languages",
       about: "Languages, servers and the versions of each this machine keeps.",
       onDisk: {

@@ -75,4 +75,9 @@ line?: string | null,
  * Whether this is the release its line is represented by: the newest stable one, or the newest
  * pre-release in a line that has no stable release yet. [`None`] as for `line`.
  */
-newest_in_line?: boolean | null, };
+newest_in_line?: boolean | null, 
+/**
+ * What this release cannot do on the cell this machine would install, and why — the index's
+ * `lacks`, in the publisher's words (roadmap task **T206**, D2). Empty when it lacks nothing.
+ */
+lacks?: { [key in string]: string }, };

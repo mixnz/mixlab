@@ -390,6 +390,11 @@ pub struct RuntimeRelease {
     /// pre-release in a line that has no stable release yet. [`None`] as for `line`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub newest_in_line: Option<bool>,
+
+    /// What this release cannot do on the cell this machine would install, and why — the index's
+    /// `lacks`, in the publisher's words (roadmap task **T206**, D2). Empty when it lacks nothing.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub lacks: std::collections::BTreeMap<String, String>,
 }
 
 /// One installed version and the newer release of its line the index offers — roadmap task
@@ -548,6 +553,22 @@ pub struct RuntimeFoundList {
 mod tests {
     use super::*;
 
+    /// **An older daemon's row reads, and a release lacking nothing says nothing** — T206, D2.
+    #[test]
+    fn a_release_lacking_nothing_writes_no_lacks() {
+        let release: RuntimeRelease = serde_json::from_value(serde_json::json!({
+            "kind": "ruby", "version": "3.4.11", "channel": "stable", "bytes": 1, "installed": false
+        }))
+        .expect("an older daemon's row reads");
+        assert!(release.lacks.is_empty());
+        assert!(
+            serde_json::to_value(&release)
+                .expect("writes")
+                .get("lacks")
+                .is_none()
+        );
+    }
+
     fn version(text: &str) -> PackageVersion {
         PackageVersion::parse(text).expect("a valid version")
     }
@@ -598,6 +619,7 @@ mod tests {
             needs: None,
             line: None,
             newest_in_line: None,
+            lacks: std::collections::BTreeMap::new(),
         };
 
         let encoded = serde_json::to_value(&release).unwrap();

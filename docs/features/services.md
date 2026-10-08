@@ -353,6 +353,14 @@ database, since `GRANT ALL ON DATABASE` has not carried `CREATE` on `public` sin
 There is no `database.drop`. Removing a database destroys data, and nothing has asked for it — see
 [blueprints.md](blueprints.md) for what a blueprint rollback does instead.
 
+## Toolchains: packages nothing runs
+
+`msys2` is in the catalogue as a **toolchain** (roadmap task **T206a**): `package.install`,
+`package.list_available` and `package.uninstall` take it like any package, and `service.create`
+refuses it with a sentence saying so. It has no recipe because there is nothing to supervise, and
+it adds no command to `bin/`: what uses it is the Ruby shim, through `MSYS2_PATH`
+([runtime-versions.md](runtime-versions.md)).
+
 ## The commands a package brings with it
 
 **An installed database puts its clients on the PATH** — roadmap task **T130**,

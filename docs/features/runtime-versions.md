@@ -239,6 +239,26 @@ the move if the front end refuses them), stops the old pool and removes the old 
 between lines is refused: that is a switch. `mix runtime upgrade`, and *Update* on the installed
 row in MixLab. Design: [T193](../specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md).
 
+## What a release lacks, and Ruby's devkit on Windows
+
+**An index entry may say what its cell cannot do that the other cells of the same version can** —
+roadmap task **T206** ([design](../specs/2026-10-08-t206-ruby-on-windows-builds-native-gems-design.md)).
+The packaging repository writes it as `lacks`, a map from a capability to the reason, and the only
+release carrying one today is Ruby on Windows: RubyInstaller's build has no YJIT and no compiler, so
+`gem install` of a gem with a C extension answers `MSYS2 could not be found`. MixEngine reads the
+field and shows it, and judges none of it: `runtime.list_available` carries it on each release,
+`mix runtime available` draws a `LACKS` column when a row has one, `mix runtime install` ends with a
+line when the release cannot build native gems, and MixLab's Languages tab marks the row.
+
+**The compiler is a package of its own, `msys2`** (T206a): MSYS2 with the toolchain RubyInstaller's
+`ridk install 3` would add, built and smoke-tested by the packaging repository for Windows x86_64
+(UCRT gcc) and Windows ARM64 (clang). It is a *toolchain*: `package.install` installs it, lists it
+and removes it, and `service.create` refuses it, because nothing in it runs. **The shim points every
+Ruby command at the newest installed one through `MSYS2_PATH`**, the first place RubyInstaller looks
+(`ruby_installer/runtime/msys2_installation.rb`), so one install serves every Ruby version and no Ruby
+directory is written to. A session that already exports `MSYS2_PATH` keeps its own value, on
+`GOTOOLCHAIN`'s rule. Nothing is set for any other language, or where no `msys2` is installed.
+
 ## PHP extensions
 
 Per-version, since that is how PHP works. **Landed with T28**, and three things about it are written

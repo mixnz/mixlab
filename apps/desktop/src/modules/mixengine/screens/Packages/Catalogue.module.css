@@ -124,6 +124,14 @@ tbody tr.withUpdate > td {
   color: var(--warning-text);
 }
 
+.lacks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .install {
   justify-self: end;
   width: 104px;

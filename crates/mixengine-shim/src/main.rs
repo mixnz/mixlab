@@ -113,7 +113,7 @@ fn run(invoked: &Path, arguments: &[OsString]) -> Result<i32, Refusal> {
     // kind named the file; the `via` kind names what runs it, resolved for the same directory and
     // under its own override variable, so `MIXENGINE_PHP=8.1 composer install` means what it says.
     // The environment is the program's: PHP's own directory on the PATH, PHP's generated ini set.
-    let (program, root, kind, version, arguments, java) = match command.via {
+    let (program, root, kind, version, arguments, java, devkit_path) = match command.via {
         None => (
             own.program,
             own.root,
@@ -121,6 +121,7 @@ fn run(invoked: &Path, arguments: &[OsString]) -> Result<i32, Refusal> {
             own.version,
             arguments.to_vec(),
             own.java,
+            own.devkit,
         ),
         Some(via) => {
             let runner = resolved(via, via.as_str()).map_err(|refusal| Refusal {
@@ -139,11 +140,19 @@ fn run(invoked: &Path, arguments: &[OsString]) -> Result<i32, Refusal> {
                 runner.version,
                 handed,
                 runner.java,
+                runner.devkit,
             )
         }
     };
 
-    let environment = surroundings(kind, &program, &root, &version, java.as_deref());
+    let environment = surroundings(
+        kind,
+        &program,
+        &root,
+        &version,
+        java.as_deref(),
+        devkit_path.as_deref(),
+    );
 
     become_program(&program, &arguments, &environment)
 }
@@ -374,6 +383,7 @@ async fn global(
             root,
             &version,
             None,
+            installed_devkit(store, kind).await.as_deref(),
         ),
     ))
 }
@@ -460,6 +470,10 @@ struct Resolution {
     /// `provides.java` of the same install, for a Java command — what `JAVA_HOME` is derived from
     /// (roadmap task **T27e**, its design's D5). [`None`] for every other kind.
     java: Option<PathBuf>,
+
+    /// The newest installed `msys2`, for a Ruby command — what `MSYS2_PATH` names (roadmap task
+    /// **T206a**, D6). [`None`] for every other kind, and where none is installed.
+    devkit: Option<PathBuf>,
 }
 
 /// Everything the fronted program is given beside its own arguments.
@@ -479,6 +493,7 @@ fn surroundings(
     root: &Path,
     version: &PackageVersion,
     java: Option<&Path>,
+    devkit_path: Option<&Path>,
 ) -> BTreeMap<String, OsString> {
     let mut environment = BTreeMap::new();
 
@@ -508,8 +523,68 @@ fn surroundings(
         &mut environment,
     );
     java_home(java, &mut environment);
+    devkit(
+        kind,
+        devkit_path,
+        std::env::var_os(MSYS2_PATH).as_deref(),
+        &mut environment,
+    );
 
     environment
+}
+
+/// The variable RubyInstaller looks at first for an MSYS2 — roadmap task **T206a**, D6.
+const MSYS2_PATH: &str = "MSYS2_PATH";
+
+/// Point a Ruby at the installed devkit, unless the person's session already points it somewhere.
+///
+/// **First in RubyInstaller's own search** (`msys2_installation.rb`, `iterate_msys_paths`), so one
+/// `msys2` package serves every installed Ruby and no Ruby directory is written to. The session's
+/// value stands, on [`toolchain`]'s rule: whoever exported it meant it.
+fn devkit(
+    kind: RuntimeKind,
+    installed: Option<&Path>,
+    session: Option<&OsStr>,
+    environment: &mut BTreeMap<String, OsString>,
+) {
+    if kind != RuntimeKind::Ruby || session.is_some_and(|value| !value.is_empty()) {
+        return;
+    }
+
+    if let Some(installed) = installed {
+        environment.insert(MSYS2_PATH.to_owned(), installed.as_os_str().to_owned());
+    }
+}
+
+/// The newest of the installed `msys2` versions, by release order (`2026.10.08` after `2026.9.30`).
+fn newest_devkit(installed: &[(&str, &str)]) -> Option<PathBuf> {
+    installed
+        .iter()
+        .filter_map(|(version, path)| {
+            Some((PackageVersion::parse((*version).to_owned()).ok()?, *path))
+        })
+        .max_by(|(one, _), (two, _)| one.cmp_precedence(two))
+        .map(|(_, path)| PathBuf::from(path))
+}
+
+/// The devkit a Ruby command should be pointed at, read from this home — roadmap task **T206a**.
+///
+/// **A read that fails is no devkit, never a refusal**: the shim's job is to start the program, and
+/// a Ruby that cannot build a native gem is still a Ruby.
+async fn installed_devkit(store: &Store, kind: RuntimeKind) -> Option<PathBuf> {
+    if kind != RuntimeKind::Ruby {
+        return None;
+    }
+
+    let installed = mixengine_core::packages::records(store, Some("msys2"))
+        .await
+        .unwrap_or_default();
+    let pairs: Vec<(&str, &str)> = installed
+        .iter()
+        .map(|row| (row.version.as_str(), row.path.as_str()))
+        .collect();
+
+    newest_devkit(&pairs)
 }
 
 /// The variable Maven, Gradle and a JVM's own children read to find a JDK.
@@ -700,11 +775,14 @@ fn resolved(kind: RuntimeKind, executable: &str) -> Result<Resolution, Refusal> 
             _ => None,
         };
 
+        let devkit = installed_devkit(&store, kind).await;
+
         Ok(Resolution {
             program,
             root,
             version: resolved.runtime.version,
             java,
+            devkit,
         })
     })
 }
@@ -869,6 +947,67 @@ fn hint_for(error: &mixengine_core::Error) -> Option<String> {
 mod tests {
     use super::*;
 
+    /// **A Ruby is pointed at the installed devkit** — roadmap task **T206a**, D6.
+    #[test]
+    fn a_ruby_is_pointed_at_the_installed_devkit() {
+        let mut environment = BTreeMap::new();
+        devkit(
+            RuntimeKind::Ruby,
+            Some(Path::new("/home/packages/msys2/2026.10.08")),
+            None,
+            &mut environment,
+        );
+        assert_eq!(
+            environment.get(MSYS2_PATH),
+            Some(&OsString::from("/home/packages/msys2/2026.10.08"))
+        );
+    }
+
+    #[test]
+    fn no_devkit_no_variable() {
+        let mut environment = BTreeMap::new();
+        devkit(RuntimeKind::Ruby, None, None, &mut environment);
+        assert!(!environment.contains_key(MSYS2_PATH));
+    }
+
+    /// **The session's own value stands**, on `toolchain`'s rule.
+    #[test]
+    fn a_session_msys2_path_stands() {
+        let mut environment = BTreeMap::new();
+        devkit(
+            RuntimeKind::Ruby,
+            Some(Path::new("/home/packages/msys2/2026.10.08")),
+            Some(OsStr::new("C:/msys64")),
+            &mut environment,
+        );
+        assert!(
+            !environment.contains_key(MSYS2_PATH),
+            "the session's own value is left to stand"
+        );
+    }
+
+    #[test]
+    fn other_languages_are_told_nothing() {
+        let mut environment = BTreeMap::new();
+        devkit(
+            RuntimeKind::Php,
+            Some(Path::new("/home/packages/msys2/x")),
+            None,
+            &mut environment,
+        );
+        assert!(environment.is_empty());
+    }
+
+    /// **Release order, not text order**: `2026.10.08` is newer than `2026.9.30`.
+    #[test]
+    fn the_newest_devkit_is_chosen() {
+        let chosen = newest_devkit(&[
+            ("2026.9.30", "/p/msys2/2026.9.30"),
+            ("2026.10.08", "/p/msys2/2026.10.08"),
+        ]);
+        assert_eq!(chosen.as_deref(), Some(Path::new("/p/msys2/2026.10.08")));
+    }
+
     /// T25 left this note: "No `PHPRC`, no `GEM_HOME` — the rest are files T28's `conf.d` model
     /// generates, and a variable pointing at a file nothing writes is worse than no variable."
     /// Something writes them now.
@@ -895,6 +1034,7 @@ mod tests {
             &root.join("runtimes/php/8.3.33/bin/php"),
             root,
             &version,
+            None,
             None,
         );
 
@@ -927,6 +1067,7 @@ mod tests {
             &home.path().join("runtimes/node/20.11.0/bin/node"),
             home.path(),
             &version,
+            None,
             None,
         );
 

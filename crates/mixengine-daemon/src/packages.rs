@@ -138,7 +138,8 @@ impl Packages {
     ) -> Result<PackageCatalogue, Error> {
         let wanted: Vec<String> = match filter.package.as_deref() {
             Some(package) => vec![self.runnable(package)?],
-            None => self.catalogue.packages().map(str::to_owned).collect(),
+            // **Toolchains too** — roadmap task **T206a**: installable, never run.
+            None => self.catalogue.installable().map(str::to_owned).collect(),
         };
 
         let names: Vec<&str> = wanted.iter().map(String::as_str).collect();
@@ -745,12 +746,14 @@ impl Packages {
     /// since T81, when a catalogue stopped being made only of literals — an extension's recipe is
     /// built at run time out of a row.
     fn runnable(&self, package: &str) -> Result<String, Error> {
+        // **What it installs, not only what it runs** — roadmap task **T206a**: a toolchain is a
+        // package nothing starts, and `service.create` is where that is refused.
         self.catalogue
-            .packages()
+            .installable()
             .find(|known| *known == package)
             .map(str::to_owned)
             .ok_or_else(|| {
-                let known = self.catalogue.packages().collect::<Vec<_>>().join(", ");
+                let known = self.catalogue.installable().collect::<Vec<_>>().join(", ");
 
                 Error::new(
                     ErrorCode::InvalidArgument,

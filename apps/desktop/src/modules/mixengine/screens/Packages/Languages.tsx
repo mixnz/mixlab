@@ -11,12 +11,13 @@ import OnDiskCard from "./OnDiskCard";
 import Input from "../../../../components/Input";
 import MonogramBadge from "../../../../components/MonogramBadge";
 import NoticeBanner from "../../../../components/NoticeBanner";
+import StatusPill from "../../../../components/StatusPill";
 import Table from "../../../../components/Table";
 import { errorMessage } from "../../../../core/errors";
 import { ChevronDownIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
-import type { PackageVersion, RuntimeKind, RuntimeRelease } from "@mixengine/api";
+import type { PackageRelease, PackageVersion, RuntimeKind, RuntimeRelease } from "@mixengine/api";
 import type { RuntimeSummary, RuntimeUpdate, UpgradePlan } from "@mixengine/api";
 import type { CatalogueGap } from "@mixengine/api";
 import RequirementDialog from "../../components/RequirementDialog";
@@ -46,7 +47,12 @@ import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
 import { updateRowState } from "../../updateRow";
 import ExtensionsPanel from "./ExtensionsPanel";
+import { DEVKIT_PACKAGE, devkitOffer, lacksLabels } from "./devkit";
+import { formatBytes } from "../../metricsState";
 import styles from "./Catalogue.module.css";
+
+/** The key the devkit's install job is followed under, beside the runtimes' `kind@version` keys. */
+const DEVKIT_JOB = "devkit";
 
 export default function Languages({ active }: { active: boolean }) {
   const [installed, setInstalled] = useState<RuntimeSummary[]>([]);
@@ -72,6 +78,11 @@ export default function Languages({ active }: { active: boolean }) {
   const [adopting, setAdopting] = useState<string | null>(null);
   // What an install said about this machine and went on anyway — T27e.
   const [notice, setNotice] = useState("");
+  // The devkit a Windows Ruby needs to build native gems, and whether it is here — T206a.
+  const [devkit, setDevkit] = useState<{ release: PackageRelease | null; installed: boolean }>({
+    release: null,
+    installed: false,
+  });
   // T193b: what the index has newer in each installed version's line, and the update being asked.
   const [updates, setUpdates] = useState<RuntimeUpdate[]>([]);
   const [upgrading, setUpgrading] = useState<{ update: RuntimeUpdate; plan: UpgradePlan } | null>(null);
@@ -107,6 +118,12 @@ export default function Languages({ active }: { active: boolean }) {
         setUnavailable(avail.unavailable ?? []);
         setUpdates(avail.updates ?? []);
         setError(stillShow);
+        // Read beside the rest and never at its expense: a listing that fails here costs the
+        // devkit button, not the screen (T206a).
+        void api
+          .packagesAvailable(DEVKIT_PACKAGE)
+          .then((catalogue) => setDevkit(devkitOffer(catalogue)))
+          .catch(() => setDevkit({ release: null, installed: false }));
       } catch (e) {
         setError(errorMessage(t, e));
       } finally {
@@ -216,6 +233,54 @@ export default function Languages({ active }: { active: boolean }) {
     } catch (e) {
       setError(errorMessage(t, e));
     }
+  }
+
+  // The devkit's job rides in `installingJob` under its own key, so the watch above reloads this
+  // screen, the devkit's state included, when it ends — T206a.
+  async function installDevkit(release: PackageRelease) {
+    setError("");
+    try {
+      const job = await api.packageInstall({ package: DEVKIT_PACKAGE, version: release.version });
+      setInstallingJob((current) => ({ ...current, [DEVKIT_JOB]: job.id }));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }
+
+  /** What one release cannot do on this machine, and, for native gems, the devkit — T206. */
+  function lacksMarks(release: RuntimeRelease): ReactNode {
+    const marks = lacksLabels(release);
+    if (marks.length === 0) return null;
+    const devkitJob = jobFor(jobs, installingJob[DEVKIT_JOB]);
+    return (
+      <span className={styles.lacks}>
+        {marks.map(({ key, reason }) => {
+          const nativeGems = key === "native gems";
+          const label = nativeGems
+            ? devkit.installed
+              ? t("mixengine.packages.lacks.devkitInstalled")
+              : t("mixengine.packages.lacks.nativeGems")
+            : key === "yjit"
+              ? t("mixengine.packages.lacks.yjit")
+              : key;
+          return (
+            <Fragment key={key}>
+              <StatusPill tone={nativeGems && devkit.installed ? "success" : "neutral"} title={reason}>
+                {label}
+              </StatusPill>
+              {nativeGems && !devkit.installed && devkit.release !== null &&
+                (devkitJob ? (
+                  <span className={styles.progressText}>{devkitJob.message}</span>
+                ) : (
+                  <Button size="small" variant="soft" onClick={() => void installDevkit(devkit.release!)}>
+                    {t("mixengine.packages.lacks.installDevkit", { size: formatBytes(devkit.release.bytes) })}
+                  </Button>
+                ))}
+            </Fragment>
+          );
+        })}
+      </span>
+    );
   }
 
   async function uninstall(target: RuntimeSummary, force: boolean) {
@@ -363,6 +428,7 @@ export default function Languages({ active }: { active: boolean }) {
         >
           {needs.join(", ")}
         </span>
+        {lacksMarks(release)}
         {job ? (
           <span className={styles.progress}>
             <progress value={job.percent} max={100} />

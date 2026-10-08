@@ -7,6 +7,11 @@
   `mix project show` lists the sites in the file and which ones this machine does not have yet.
 - In MixLab, a project's panel on the Projects screen lists the sites in its `mixengine.toml`. Add
   creates a missing one from what the file says.
+- Ruby on Windows can build gems with C extensions, such as the ones Rails needs. Install the
+  devkit with `mix package install msys2 <version>`, or from the Ruby row in MixLab's Languages
+  tab. `mix runtime install ruby` names the version to use.
+- `mix runtime available` and MixLab's Languages tab say what a release cannot do on this machine,
+  such as a Windows Ruby that has no compiler.
 
 ### Fixed
 - Exporting a project with more than one site now writes every site into `mixengine.toml`, each with
