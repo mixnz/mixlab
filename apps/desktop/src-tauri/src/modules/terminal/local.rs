@@ -567,16 +567,25 @@ mod tests {
 
     #[test]
     fn prepending_keeps_spaces_and_unicode() {
-        let prepend = vec![r"C:\Users\Nguyễn Văn\MixEngine\bin".to_owned()];
-        let inherited = std::env::join_paths([r"C:\Windows", r"C:\Program Files\Git\bin"]).ok();
+        // Each system's own spelling: `:` separates a PATH outside Windows, so a drive letter
+        // there is not a path `join_paths` accepts.
+        let (bin, inherited) = match cfg!(windows) {
+            true => (
+                r"C:\Users\Nguyễn Văn\MixEngine\bin",
+                [r"C:\Windows", r"C:\Program Files\Git\bin"],
+            ),
+            false => (
+                "/home/Nguyễn Văn/MixEngine/bin",
+                ["/usr/bin", "/opt/Git Tools/bin"],
+            ),
+        };
+        let prepend = vec![bin.to_owned()];
+        let inherited = std::env::join_paths(inherited).ok();
 
         let joined = joined_path(&prepend, inherited).expect("a PATH");
         let parts: Vec<_> = std::env::split_paths(&joined).collect();
 
-        assert_eq!(
-            parts[0],
-            std::path::PathBuf::from(r"C:\Users\Nguyễn Văn\MixEngine\bin")
-        );
+        assert_eq!(parts[0], std::path::PathBuf::from(bin));
         assert_eq!(parts.len(), 3);
     }
 
