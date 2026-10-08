@@ -27,11 +27,12 @@ T205a–T205c: [2026-10-09-t205a-t205c-what-hand-testing-the-gallery-left-open-d
       URL of the database it made to `.env`, private to this account. Rails reads
       `DEVELOPMENT_DATABASE_URL` through an application template, so `bin/rails test` keeps its own
       database; Django's template reads `DATABASE_URL`.
-- [ ] **T205b** `check-blueprints` compares the signed gallery with `master` and nothing else: the
-      starters `publish-blueprints` zips beside it (`express-mongodb`, `django`, `php-mysql`,
-      `static`) can drift from `src/blueprints/starters/` with no reminder. Compare each published
-      `<name>-starter.zip` with a zip of the tree, as the publish run's own verify step already
-      does.
+- [x] **T205b** `check-blueprints` compared the signed gallery with `master` and nothing else, so
+      the starters `publish-blueprints` puts beside it could drift from `src/blueprints/starters/`
+      with no reminder. `tools/blueprints.py --starters` now compares each `<name>-starter.zip`
+      entry by entry (names and bytes; a zip's own bytes carry checkout times), each file published
+      as itself byte for byte, and names a starter the release holds that the tree dropped;
+      `gallery.yml` dispatches on a `starters/**` push.
 - [ ] **T205c** **(P)** Ctrl+C in a local Terminal tab did not stop a running command in
       PowerShell, while Git Bash in the same window did: found by hand on 2026-10-08 with the
       window started from a background process with no console of its own. Started from a
