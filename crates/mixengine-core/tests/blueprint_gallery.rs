@@ -164,22 +164,24 @@ fn only_the_command_that_names_itself_after_the_directory_asks_for_an_npm_name()
 /// **WordPress is the one archive, and the one file at schema 2** — roadmap task **T205**, D2 and
 /// ADR 0061: every other gallery file stays readable by every installed build.
 #[test]
-fn only_the_archive_entries_are_schema_2() {
+fn only_archive_and_dotenv_entries_are_schema_2() {
     // `wordpress` borrows its publisher's release; `express-mongodb` unpacks a starter this
     // repository writes (`src/blueprints/starters/`), because no maintained initialiser makes an
     // Express server that talks to MongoDB; `php-mysql` and `static` unpack one only into an
-    // empty folder (`when_empty`), so a cloned repository keeps its own files.
+    // empty folder (`when_empty`), so a cloned repository keeps its own files. `rails` and `django`
+    // offer their database URL as a `.env` key (T205a), which changes the apply too.
     for entry in ENTRIES {
         let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
         let is_archive = matches!(
             entry.slug,
             "wordpress" | "express-mongodb" | "php-mysql" | "static"
         );
+        let offers_dotenv = matches!(entry.slug, "rails" | "django");
 
         assert_eq!(manifest.archive.is_some(), is_archive, "{}", entry.slug);
         assert_eq!(
             entry.manifest.starts_with("schema = 2\n"),
-            is_archive,
+            is_archive || offers_dotenv,
             "{} is written at the wrong schema",
             entry.slug
         );
@@ -197,17 +199,23 @@ const STARTERS: &str = "https://github.com/mixnz/mixengine-packages/releases/dow
 #[test]
 fn every_starter_archive_is_in_the_tree() {
     let starters = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/blueprints/starters");
+    // A folder is published zipped as `<name>-starter.zip`; a file directly under `starters/`
+    // (T205a's `rails-template.rb`) is published as itself.
     let starter = |slug: &str, url: &str| -> Option<String> {
         let file = url.strip_prefix(STARTERS)?;
-        let name = file
-            .strip_suffix("-starter.zip")
-            .unwrap_or_else(|| panic!("{slug}: {file} is not <name>-starter.zip"));
-        let folder = starters.join(name);
+        if let Some(name) = file.strip_suffix("-starter.zip") {
+            let folder = starters.join(name);
+            assert!(
+                folder.is_dir() && std::fs::read_dir(&folder).unwrap().next().is_some(),
+                "{slug}: starters/{name} is not in the tree"
+            );
+            return Some(name.to_string());
+        }
         assert!(
-            folder.is_dir() && std::fs::read_dir(&folder).unwrap().next().is_some(),
-            "{slug}: starters/{name} is not in the tree"
+            starters.join(file).is_file(),
+            "{slug}: starters/{file} is not in the tree"
         );
-        Some(name.to_string())
+        None
     };
 
     for entry in ENTRIES {
@@ -260,6 +268,13 @@ fn django_starts_from_a_template_that_admits_its_test_domain() {
     assert!(settings.contains("ALLOWED_HOSTS = ['.test', 'localhost', '127.0.0.1', '[::1]']"));
     assert!(settings.contains("CSRF_TRUSTED_ORIGINS = ['https://*.test']"));
     assert!(settings.contains("SECRET_KEY = '{{ secret_key }}'"));
+    // T205a: the database MixEngine made, read from `.env`, and `.env` kept out of git.
+    assert!(settings.contains("_dotenv('DATABASE_URL')"));
+    assert!(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src/blueprints/starters/django/.gitignore")
+            .is_file()
+    );
 }
 
 /// **Whether the browser opens by itself** — T205, D7 and the last column of D13's table: it
@@ -363,6 +378,43 @@ fn rails_new_carries_the_database_account() {
         })
         .expect("rails new is a step");
     assert!(step.credentials, "rails new does not carry credentials");
+}
+
+/// **Rails and Django read the database MixEngine made from `.env`** — roadmap task **T205a**.
+/// Rails under `DEVELOPMENT_DATABASE_URL`, because it merges `DATABASE_URL` into whichever
+/// environment runs and `bin/rails test` would purge the development database; and each shows the
+/// account, for a person who left the box unticked.
+#[test]
+fn rails_and_django_offer_their_database_url_and_show_the_account() {
+    for (slug, key) in [
+        ("rails", "DEVELOPMENT_DATABASE_URL"),
+        ("django", "DATABASE_URL"),
+    ] {
+        let entry = ENTRIES.iter().find(|entry| entry.slug == slug).unwrap();
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        assert_eq!(
+            manifest
+                .services
+                .iter()
+                .find_map(|service| service.dotenv.as_deref()),
+            Some(key),
+            "{slug}"
+        );
+        assert!(
+            manifest.next_steps.iter().any(|step| step.credentials),
+            "{slug}"
+        );
+    }
+
+    let rails = ENTRIES.iter().find(|entry| entry.slug == "rails").unwrap();
+    let rails = manifest::read(rails.manifest).expect("a gallery blueprint");
+    assert!(
+        rails
+            .next_steps
+            .iter()
+            .filter_map(|step| step.run.as_deref())
+            .any(|run| run.contains(&format!("-m {STARTERS}rails-template.rb")))
+    );
 }
 
 /// **A web installer on PostgreSQL is told so** — measured on `craft`: its installer offers MySQL

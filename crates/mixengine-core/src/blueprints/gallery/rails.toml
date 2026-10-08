@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [blueprint]
 name = "Ruby on Rails"
@@ -24,6 +24,7 @@ name = "postgres"
 instance = "main"
 database = "{project}"
 user = "{project}"
+dotenv = "DEVELOPMENT_DATABASE_URL"
 
 [[next_steps]]
 kind = "once"
@@ -32,11 +33,11 @@ note = "Installs into the runtime this project pins, which its other projects sh
 
 [[next_steps]]
 kind = "once"
-run = "rails new . --database=postgresql"
+run = "rails new . --database=postgresql -m https://github.com/mixnz/mixengine-packages/releases/download/blueprints/rails-template.rb"
 note = "It runs bundle install, which on Windows needs the same devkit."
 credentials = true
 
 [[next_steps]]
 kind = "serve"
 run = "ruby bin/rails server -p 3000"
-note = "Its pages need the database: set DATABASE_URL to postgres://user:password@127.0.0.1:port/database from the account above, or put the same in config/database.yml."
+note = "Reads the database from DEVELOPMENT_DATABASE_URL in .env, which MixEngine wrote if you agreed when applying; otherwise set it to postgres://user:password@127.0.0.1:port/database from the account above."
