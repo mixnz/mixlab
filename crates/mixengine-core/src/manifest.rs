@@ -14,7 +14,7 @@
 //! # The writer edits; it does not rewrite
 //!
 //! This file lives in the user's repository, under version control, with their comments and their
-//! key order in it — and, after T39a, a `[site]` block they wrote by hand. Serialising a fresh
+//! key order in it — and, after T39a, a `[site]` or `[[sites]]` block they wrote by hand. Serialising a fresh
 //! document over it would destroy all of that, and would do it to the one file whose entire purpose
 //! is to be read by a person. So [`write()`] edits a `toml_edit` document: it sets `[project] name`
 //! and the `[runtimes]` keys it owns, and leaves every other byte alone.
@@ -334,11 +334,23 @@ pub struct Export {
     /// `[runtimes]`, the keys this export owns.
     pub pins: BTreeMap<RuntimeKind, VersionConstraint>,
 
-    /// The project's site, when it has exactly one.
+    /// Every site of the project, in `sites::records` order — roadmap task **T204**.
     ///
-    /// **A manifest holds one `[site]`** — a limit of the file format rather than of the model — so
-    /// a project with two writes none, and the omitted names come back in `ProjectExport`.
-    pub site: Option<ExportSite>,
+    /// Written as `[site]` or `[[sites]]` by spec D1's table; which entry is whose is D2's.
+    pub sites: Vec<ExportSite>,
+}
+
+/// What [`write()`] did — roadmap task **T204**.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Written {
+    /// Whether the file had to be created.
+    pub created: bool,
+
+    /// The `domain` of each site entry no site of the project holds, left exactly as written.
+    ///
+    /// An export never deletes (T39a's D9), so it says what it left in the same answer that left
+    /// it — spec D4.
+    pub sites_kept: Vec<String>,
 }
 
 /// `[site]`, as an export writes it.
@@ -364,6 +376,10 @@ pub struct ExportSite {
 /// One `[[services]]` entry, as an export writes it.
 #[derive(Debug, Clone)]
 pub struct ExportService {
+    /// The id exactly as the site links it, which is what the site's `services = [...]` names —
+    /// roadmap task **T204**. `name` and `instance` are its halves spelled out for `[[services]]`;
+    /// this is kept whole because a single-instance package (`caddy`) has no `@main` to add.
+    pub link: ServiceId,
     /// The package.
     pub name: String,
     /// The instance, spelled out even when it is `main`, because the file is read by a person.
@@ -372,17 +388,19 @@ pub struct ExportService {
     pub version: Option<PackageVersion>,
 }
 
-/// Set `[project] name` and these `[runtimes]` keys in `<directory>/mixengine.toml`.
+/// Set `[project] name`, these `[runtimes]` keys, and every site in `<directory>/mixengine.toml`.
 ///
-/// Answers whether the file had to be created. Keys this call does not name are left as they are —
-/// a pin the user wrote and MixEngine does not know about is still theirs.
+/// Answers whether the file had to be created and which site entries it left. Keys this call does
+/// not name are left as they are — a pin the user wrote and MixEngine does not know about is still
+/// theirs.
 ///
 /// # Errors
 ///
 /// [`Error::Manifest`] for an existing file that does not parse — refused before a byte is written,
 /// so a broken manifest is never made worse — [`Error::ManifestEdit`] for one that parses as TOML
-/// but not as a document this can edit, and [`Error::Io`] when the file cannot be read or written.
-pub fn write(directory: &Path, export: &Export) -> Result<bool> {
+/// but not as a document this can edit, including a `sites` key that is not a list of `[[sites]]`
+/// tables, and [`Error::Io`] when the file cannot be read or written.
+pub fn write(directory: &Path, export: &Export) -> Result<Written> {
     let path = at(directory);
 
     // Validated through the reader first, so the failure a caller sees for a broken file is the
@@ -418,78 +436,17 @@ pub fn write(directory: &Path, export: &Export) -> Result<bool> {
         }
     });
 
-    if let Some(site) = &export.site {
-        set(&mut document, "site", |table| {
-            table["domain"] = toml_edit::value(site.domain.as_str());
+    let sites_kept =
+        write_sites(&mut document, &export.sites).map_err(|reason| Error::ManifestEdit {
+            path: path.clone(),
+            reason,
+        })?;
 
-            // Written even when empty, because an alias removed in the database and left in the
-            // file would be a file that disagrees with the home it came from — and `aliases` is a
-            // key this export owns outright, unlike an entry of `[[services]]`.
-            let mut aliases = toml_edit::Array::new();
-            for alias in &site.aliases {
-                aliases.push(alias.as_str());
-            }
-            table["aliases"] = toml_edit::value(aliases);
-
-            table["doc_root"] = toml_edit::value(site.doc_root.as_str());
-            table["https"] = toml_edit::value(site.https);
-
-            // Exhaustive, so a fifth kind is a compile error here rather than a key silently
-            // missing from somebody's manifest.
-            match &site.kind {
-                SiteKind::PhpFpm { .. } => {
-                    table["kind"] = toml_edit::value("php-fpm");
-                }
-                SiteKind::Static => {
-                    table["kind"] = toml_edit::value("static");
-                }
-                SiteKind::ReverseProxy { upstream } => {
-                    table["kind"] = toml_edit::value("reverse-proxy");
-                    table["upstream"] = toml_edit::value(upstream.as_str());
-                }
-                SiteKind::NodeApp { port } => {
-                    table["kind"] = toml_edit::value("node-app");
-                    table["port"] = toml_edit::value(i64::from(*port));
-                }
-            }
-
-            // **Written whole, and written even when empty** — roadmap task **T135**, on
-            // `aliases`' rule and for its reason: a route removed in the database and left in the
-            // file would be a file that disagrees with the home it came from, and this is a key the
-            // export owns outright.
-            let mut routes = toml_edit::ArrayOfTables::new();
-
-            for route in &site.routes {
-                let mut entry = toml_edit::Table::new();
-                entry["path"] = toml_edit::value(route.path.as_str());
-
-                // Exhaustive, so a fourth target is a compile error here rather than a key silently
-                // missing from somebody's manifest.
-                match &route.target {
-                    mixengine_proto::RouteTarget::Proxy { upstream } => {
-                        entry["target"] = toml_edit::value("proxy");
-                        entry["upstream"] = toml_edit::value(upstream.as_str());
-                    }
-                    mixengine_proto::RouteTarget::PhpFpm { pool } => {
-                        entry["target"] = toml_edit::value("php-fpm");
-
-                        if let Some(pool) = pool {
-                            entry["pool"] = toml_edit::value(pool.as_str());
-                        }
-                    }
-                    mixengine_proto::RouteTarget::Static { root } => {
-                        entry["target"] = toml_edit::value("static");
-                        entry["root"] = toml_edit::value(root.as_str());
-                    }
-                }
-
-                routes.push(entry);
-            }
-
-            table["routes"] = toml_edit::Item::ArrayOfTables(routes);
-        });
-
-        merge_services(&mut document, &site.services);
+    // **The union of every site's links** — roadmap task **T204**, spec D3. It used to be the one
+    // site's, and only when there was exactly one, so a project with two exported no services.
+    let services = every_service(&export.sites);
+    if !services.is_empty() {
+        merge_services(&mut document, &services);
     }
 
     std::fs::write(&path, document.to_string()).map_err(|source| Error::Io {
@@ -500,7 +457,223 @@ pub fn write(directory: &Path, export: &Export) -> Result<bool> {
 
     tracing::info!(path = %path.display(), created, "a project manifest was written");
 
-    Ok(created)
+    Ok(Written {
+        created,
+        sites_kept,
+    })
+}
+
+/// `[site]` or `[[sites]]`, in the form spec D1's table picks; answers the entries it kept.
+///
+/// The file has already been read through [`read()`], so it never holds both forms here.
+fn write_sites(
+    document: &mut toml_edit::DocumentMut,
+    sites: &[ExportSite],
+) -> std::result::Result<Vec<String>, String> {
+    let many = document.contains_key("sites");
+
+    if sites.is_empty() {
+        return Ok(declared_domains(document));
+    }
+
+    if !many && sites.len() == 1 {
+        set(document, "site", |table| fill(table, &sites[0]));
+        return Ok(Vec::new());
+    }
+
+    // From here the file is, or becomes, `[[sites]]`. A `[site]` a person wrote is carried over
+    // as the first entry — its keys, their order and the comment above its header with it.
+    let single = document.remove("site");
+    let item = document
+        .entry("sites")
+        .or_insert_with(|| toml_edit::Item::ArrayOfTables(toml_edit::ArrayOfTables::new()));
+
+    if item.as_array().is_some_and(toml_edit::Array::is_empty) {
+        *item = toml_edit::Item::ArrayOfTables(toml_edit::ArrayOfTables::new());
+    }
+
+    let Some(entries) = item.as_array_of_tables_mut() else {
+        return Err(
+            "`sites` is not a list of `[[sites]]` tables, so no site can be written into it"
+                .to_owned(),
+        );
+    };
+
+    if let Some(toml_edit::Item::Table(table)) = single {
+        let prefix = table.decor().prefix().cloned();
+        entries.push(table);
+
+        if let (Some(prefix), Some(first)) = (prefix, entries.iter_mut().last()) {
+            first.decor_mut().set_prefix(prefix);
+        }
+    }
+
+    // **D2: an entry belongs to the site holding its `domain` among any of its names.** A domain
+    // belongs to one site in a home, so at most one site matches; the first entry to claim a site
+    // has it, and a later one for the same site is kept and reported.
+    let mut owner = vec![None; entries.len()];
+    let mut taken = vec![false; sites.len()];
+
+    for (position, entry) in entries.iter().enumerate() {
+        let Some(domain) = entry.get("domain").and_then(toml_edit::Item::as_str) else {
+            continue;
+        };
+
+        if let Some(index) =
+            (0..sites.len()).find(|&index| !taken[index] && holds(&sites[index], domain))
+        {
+            taken[index] = true;
+            owner[position] = Some(index);
+        }
+    }
+
+    let mut kept = Vec::new();
+
+    for (position, entry) in entries.iter_mut().enumerate() {
+        match owner[position] {
+            Some(index) => fill(entry, &sites[index]),
+            None => kept.push(entry_name(entry)),
+        }
+    }
+
+    for (index, site) in sites.iter().enumerate() {
+        if !taken[index] {
+            let mut fresh = toml_edit::Table::new();
+            fill(&mut fresh, site);
+            entries.push(fresh);
+        }
+    }
+
+    Ok(kept)
+}
+
+/// Whether `domain` is one of this site's names.
+fn holds(site: &ExportSite, domain: &str) -> bool {
+    site.domain == domain || site.aliases.iter().any(|alias| alias == domain)
+}
+
+/// What an entry is called in a report: its `domain`, or `(no domain)` for one that names none.
+fn entry_name(entry: &toml_edit::Table) -> String {
+    entry
+        .get("domain")
+        .and_then(toml_edit::Item::as_str)
+        .unwrap_or("(no domain)")
+        .to_owned()
+}
+
+/// Every site entry the file holds, by name — what an export with no site leaves.
+fn declared_domains(document: &toml_edit::DocumentMut) -> Vec<String> {
+    if let Some(table) = document.get("site").and_then(toml_edit::Item::as_table) {
+        return vec![entry_name(table)];
+    }
+
+    document
+        .get("sites")
+        .and_then(toml_edit::Item::as_array_of_tables)
+        .map(|entries| entries.iter().map(entry_name).collect())
+        .unwrap_or_default()
+}
+
+/// Every service any site links, once each, by `name` + `instance`.
+fn every_service(sites: &[ExportSite]) -> Vec<ExportService> {
+    let mut every: Vec<ExportService> = Vec::new();
+
+    for service in sites.iter().flat_map(|site| &site.services) {
+        if !every
+            .iter()
+            .any(|known| known.name == service.name && known.instance == service.instance)
+        {
+            every.push(service.clone());
+        }
+    }
+
+    every
+}
+
+/// Write one site's owned keys into its table, leaving every other key as it is.
+fn fill(table: &mut toml_edit::Table, site: &ExportSite) {
+    table.set_implicit(false);
+    table["domain"] = toml_edit::value(site.domain.as_str());
+
+    // Written even when empty, because an alias removed in the database and left in the file
+    // would be a file that disagrees with the home it came from — and `aliases` is a key this
+    // export owns outright, unlike an entry of `[[services]]`.
+    let mut aliases = toml_edit::Array::new();
+    for alias in &site.aliases {
+        aliases.push(alias.as_str());
+    }
+    table["aliases"] = toml_edit::value(aliases);
+
+    table["doc_root"] = toml_edit::value(site.doc_root.as_str());
+    table["https"] = toml_edit::value(site.https);
+
+    // **Every kind's payload is this export's**, so a site that changed kind does not leave the
+    // old one's key behind — roadmap task **T204**, spec D2. Removed before the match writes the
+    // current kind's.
+    table.remove("upstream");
+    table.remove("port");
+
+    // Exhaustive, so a fifth kind is a compile error here rather than a key silently missing from
+    // somebody's manifest.
+    match &site.kind {
+        SiteKind::PhpFpm { .. } => {
+            table["kind"] = toml_edit::value("php-fpm");
+        }
+        SiteKind::Static => {
+            table["kind"] = toml_edit::value("static");
+        }
+        SiteKind::ReverseProxy { upstream } => {
+            table["kind"] = toml_edit::value("reverse-proxy");
+            table["upstream"] = toml_edit::value(upstream.as_str());
+        }
+        SiteKind::NodeApp { port } => {
+            table["kind"] = toml_edit::value("node-app");
+            table["port"] = toml_edit::value(i64::from(*port));
+        }
+    }
+
+    // **Written whole, and written even when empty** — roadmap task **T135**, on `aliases`' rule
+    // and for its reason: a route removed in the database and left in the file would be a file
+    // that disagrees with the home it came from, and this is a key the export owns outright.
+    let mut routes = toml_edit::ArrayOfTables::new();
+
+    for route in &site.routes {
+        let mut entry = toml_edit::Table::new();
+        entry["path"] = toml_edit::value(route.path.as_str());
+
+        // Exhaustive, so a fourth target is a compile error here rather than a key silently
+        // missing from somebody's manifest.
+        match &route.target {
+            mixengine_proto::RouteTarget::Proxy { upstream } => {
+                entry["target"] = toml_edit::value("proxy");
+                entry["upstream"] = toml_edit::value(upstream.as_str());
+            }
+            mixengine_proto::RouteTarget::PhpFpm { pool } => {
+                entry["target"] = toml_edit::value("php-fpm");
+
+                if let Some(pool) = pool {
+                    entry["pool"] = toml_edit::value(pool.as_str());
+                }
+            }
+            mixengine_proto::RouteTarget::Static { root } => {
+                entry["target"] = toml_edit::value("static");
+                entry["root"] = toml_edit::value(root.as_str());
+            }
+        }
+
+        routes.push(entry);
+    }
+
+    table["routes"] = toml_edit::Item::ArrayOfTables(routes);
+
+    // **Written whole, and written even when empty** — roadmap task **T204**, spec D3, on
+    // `aliases`' rule: a link removed in the database and left here would be a file that disagrees
+    // with the home it came from.
+    let mut links = toml_edit::Array::new();
+    for service in &site.services {
+        links.push(service.link.to_string());
+    }
+    table["services"] = toml_edit::value(links);
 }
 
 /// Add and update `[[services]]`; never delete.
@@ -579,11 +752,33 @@ mod tests {
         tempfile::tempdir().expect("a temporary directory")
     }
 
-    fn export(site: Option<ExportSite>) -> Export {
+    fn export(sites: Vec<ExportSite>) -> Export {
         Export {
             name: "blog".to_owned(),
             pins: pins(&[(RuntimeKind::Php, "^8.3")]),
-            site,
+            sites,
+        }
+    }
+
+    fn site(domain: &str, aliases: &[&str]) -> ExportSite {
+        ExportSite {
+            domain: domain.to_owned(),
+            aliases: aliases.iter().map(|alias| (*alias).to_owned()).collect(),
+            doc_root: String::new(),
+            https: false,
+            kind: mixengine_proto::SiteKind::Static,
+            routes: Vec::new(),
+            services: Vec::new(),
+        }
+    }
+
+    fn linked(id: &str, version: &str) -> ExportService {
+        let link = ServiceId::parse(id).expect("an id");
+        ExportService {
+            name: link.name().to_owned(),
+            instance: link.instance().unwrap_or("main").to_owned(),
+            link,
+            version: Some(PackageVersion::parse(version).expect("a version")),
         }
     }
 
@@ -616,7 +811,7 @@ mod tests {
 
         write(
             home.path(),
-            &export(Some(ExportSite {
+            &export(vec![ExportSite {
                 domain: "blog.test".to_owned(),
                 aliases: Vec::new(),
                 doc_root: String::new(),
@@ -624,7 +819,7 @@ mod tests {
                 kind: mixengine_proto::SiteKind::NodeApp { port: 3000 },
                 routes: routes.clone(),
                 services: Vec::new(),
-            })),
+            }]),
         )
         .expect("a manifest");
 
@@ -658,7 +853,7 @@ mod tests {
 
         write(
             home.path(),
-            &export(Some(ExportSite {
+            &export(vec![ExportSite {
                 domain: "blog.test".to_owned(),
                 aliases: vec!["api.blog.test".to_owned()],
                 doc_root: "public".to_owned(),
@@ -666,11 +861,12 @@ mod tests {
                 kind: mixengine_proto::SiteKind::PhpFpm { pool: None },
                 routes: Vec::new(),
                 services: vec![ExportService {
+                    link: ServiceId::parse("mariadb@main").expect("an id"),
                     name: "mariadb".to_owned(),
                     instance: "main".to_owned(),
                     version: Some(PackageVersion::parse("11.4.2").expect("a version")),
                 }],
-            })),
+            }]),
         )
         .expect("it is written");
 
@@ -706,7 +902,7 @@ mod tests {
 
         write(
             home.path(),
-            &export(Some(ExportSite {
+            &export(vec![ExportSite {
                 domain: "app.test".to_owned(),
                 aliases: Vec::new(),
                 doc_root: String::new(),
@@ -716,7 +912,7 @@ mod tests {
                 },
                 routes: Vec::new(),
                 services: Vec::new(),
-            })),
+            }]),
         )
         .expect("it is written");
 
@@ -750,7 +946,7 @@ mod tests {
         let home = somewhere();
         std::fs::write(at(home.path()), "[site]\ndomain = \"typed.test\"\n").expect("a manifest");
 
-        write(home.path(), &export(None)).expect("it is written");
+        write(home.path(), &export(Vec::new())).expect("it is written");
 
         let after = std::fs::read_to_string(at(home.path())).expect("the file");
         assert!(after.contains("typed.test"), "{after}");
@@ -996,7 +1192,9 @@ name = \"redis\"
                         name = \"redis\"\n";
         std::fs::write(at(home.path()), original).expect("a manifest");
 
-        let created = write(home.path(), &export(None)).expect("it is written");
+        let created = write(home.path(), &export(Vec::new()))
+            .expect("it is written")
+            .created;
 
         let after = std::fs::read_to_string(at(home.path())).expect("the file");
 
@@ -1039,7 +1237,9 @@ name = \"redis\"
     fn a_directory_with_no_manifest_gets_one_written() {
         let home = somewhere();
 
-        let created = write(home.path(), &export(None)).expect("it is written");
+        let created = write(home.path(), &export(Vec::new()))
+            .expect("it is written")
+            .created;
 
         assert!(created);
         assert_eq!(
@@ -1173,5 +1373,202 @@ name = \"redis\"
 
         assert_eq!(manifest.sites.len(), 2);
         assert_eq!(manifest.runtimes.len(), 1);
+    }
+
+    /// **T204, D1.** Two sites into a file with none is `[[sites]]`, each with its own links, and
+    /// `[[services]]` is the union.
+    #[test]
+    fn two_sites_are_written_as_many_with_their_own_services() {
+        let home = somewhere();
+        let mut web = site("web.test", &[]);
+        web.services = vec![linked("mariadb@main", "11.4.2")];
+        let mut api = site("api.test", &[]);
+        api.services = vec![
+            linked("mariadb@main", "11.4.2"),
+            linked("redis@main", "7.4.1"),
+        ];
+
+        let written = write(home.path(), &export(vec![web, api])).expect("it is written");
+        let after = std::fs::read_to_string(at(home.path())).expect("the file");
+
+        assert!(written.sites_kept.is_empty(), "{written:?}");
+        assert!(!after.contains("[site]"), "{after}");
+        assert_eq!(after.matches("[[sites]]").count(), 2, "{after}");
+        assert!(after.contains("services = [\"mariadb@main\"]"), "{after}");
+        assert!(
+            after.contains("services = [\"mariadb@main\", \"redis@main\"]"),
+            "{after}"
+        );
+        assert_eq!(
+            after.matches("[[services]]").count(),
+            2,
+            "one entry per service: {after}"
+        );
+
+        let sites = read(&at(home.path()))
+            .expect("it parses")
+            .expect("it is there")
+            .sites;
+        assert_eq!(sites.len(), 2);
+        assert_eq!(sites[1].services.as_ref().map(Vec::len), Some(2));
+    }
+
+    /// **T204, D1.** One site stays `[site]`, the form every released build reads.
+    #[test]
+    fn one_site_is_still_written_as_one() {
+        let home = somewhere();
+
+        write(home.path(), &export(vec![site("blog.test", &[])])).expect("it is written");
+        let after = std::fs::read_to_string(at(home.path())).expect("the file");
+
+        assert!(after.contains("[site]"), "{after}");
+        assert!(!after.contains("[[sites]]"), "{after}");
+        assert!(
+            after.contains("services = []"),
+            "D3: written in both forms: {after}"
+        );
+    }
+
+    /// **T204, D1.** A file already in `[[sites]]` stays there when only one site is left, so the
+    /// diff shows the sites changing rather than the form.
+    #[test]
+    fn a_file_in_many_stays_in_many_with_one_site() {
+        let home = somewhere();
+        std::fs::write(at(home.path()), "[[sites]]\ndomain = \"blog.test\"\n").expect("a manifest");
+
+        write(home.path(), &export(vec![site("blog.test", &[])])).expect("it is written");
+        let after = std::fs::read_to_string(at(home.path())).expect("the file");
+
+        assert_eq!(after.matches("[[sites]]").count(), 1, "{after}");
+        assert!(!after.contains("[site]"), "{after}");
+    }
+
+    /// **T204, D1.** A `[site]` a person wrote becomes the first `[[sites]]`, with its comment, its
+    /// unknown key and their order.
+    #[test]
+    fn a_single_site_becomes_the_first_of_many_with_its_comment_and_keys() {
+        let home = somewhere();
+        std::fs::write(
+            at(home.path()),
+            "[project]\nname = \"blog\"\n\n# the main site\n[site]\ndomain = \"blog.test\"\n\
+             # nothing in this build reads this\nlegacy = 1\n",
+        )
+        .expect("a manifest");
+
+        write(
+            home.path(),
+            &export(vec![site("blog.test", &[]), site("shop.test", &[])]),
+        )
+        .expect("it is written");
+        let after = std::fs::read_to_string(at(home.path())).expect("the file");
+
+        assert!(!after.contains("[site]"), "{after}");
+        let first = after.find("[[sites]]").expect("an entry");
+        let comment = after.find("# the main site").expect("the comment survives");
+        assert!(
+            comment < first,
+            "the comment stays above its header: {after}"
+        );
+        assert!(
+            after.contains("# nothing in this build reads this\nlegacy = 1"),
+            "{after}"
+        );
+        let blog = after.find("domain = \"blog.test\"").expect("blog");
+        let shop = after.find("domain = \"shop.test\"").expect("shop");
+        assert!(blog < shop, "the converted entry is first: {after}");
+    }
+
+    /// **T204, D2.** An entry belongs to the site holding its `domain` among any of its names, so a
+    /// renamed primary updates the entry rather than adding a second one.
+    #[test]
+    fn an_entry_is_found_by_an_alias_after_the_primary_moved() {
+        let home = somewhere();
+        std::fs::write(
+            at(home.path()),
+            "[[sites]]\ndomain = \"blog.test\"\nnote = \"kept\"\n\n\
+             [[sites]]\ndomain = \"shop.test\"\n",
+        )
+        .expect("a manifest");
+
+        let written = write(
+            home.path(),
+            &export(vec![
+                site("www.blog.test", &["blog.test"]),
+                site("shop.test", &[]),
+            ]),
+        )
+        .expect("it is written");
+        let after = std::fs::read_to_string(at(home.path())).expect("the file");
+
+        assert!(written.sites_kept.is_empty(), "{written:?}");
+        assert_eq!(after.matches("[[sites]]").count(), 2, "{after}");
+        assert!(after.contains("domain = \"www.blog.test\""), "{after}");
+        assert!(after.contains("aliases = [\"blog.test\"]"), "{after}");
+        assert!(
+            after.contains("note = \"kept\""),
+            "an unowned key survives: {after}"
+        );
+    }
+
+    /// **T204, D2 and D4.** An entry no site holds is left byte for byte and named; so is a second
+    /// entry for a site an earlier one already took.
+    #[test]
+    fn an_entry_no_site_holds_is_kept_and_named() {
+        let home = somewhere();
+        std::fs::write(
+            at(home.path()),
+            "[[sites]]\ndomain = \"old.test\"   # deleted here, still in git\n\n\
+             [[sites]]\ndomain = \"blog.test\"\n\n[[sites]]\ndomain = \"www.blog.test\"\n",
+        )
+        .expect("a manifest");
+
+        let written = write(
+            home.path(),
+            &export(vec![
+                site("blog.test", &["www.blog.test"]),
+                site("new.test", &[]),
+            ]),
+        )
+        .expect("it is written");
+        let after = std::fs::read_to_string(at(home.path())).expect("the file");
+
+        assert_eq!(written.sites_kept, ["old.test", "www.blog.test"]);
+        assert!(
+            after.contains("domain = \"old.test\"   # deleted here, still in git"),
+            "{after}"
+        );
+        assert!(after.contains("domain = \"new.test\""), "{after}");
+    }
+
+    /// **T204, D4.** A project with no site leaves a hand-written one and names it.
+    #[test]
+    fn no_site_names_every_entry_it_left() {
+        let home = somewhere();
+        std::fs::write(at(home.path()), "[site]\ndomain = \"typed.test\"\n").expect("a manifest");
+
+        let written = write(home.path(), &export(Vec::new())).expect("it is written");
+
+        assert_eq!(written.sites_kept, ["typed.test"]);
+    }
+
+    /// **T204, D2.** The kind's payload keys are owned, so a proxy that became static loses its
+    /// `upstream` in either form.
+    #[test]
+    fn a_kind_that_changed_takes_its_old_payload_with_it() {
+        for original in [
+            "[site]\ndomain = \"app.test\"\nkind = \"reverse-proxy\"\n\
+             upstream = \"http://127.0.0.1:1\"\n",
+            "[[sites]]\ndomain = \"app.test\"\nkind = \"node-app\"\nport = 3000\n",
+        ] {
+            let home = somewhere();
+            std::fs::write(at(home.path()), original).expect("a manifest");
+
+            write(home.path(), &export(vec![site("app.test", &[])])).expect("it is written");
+            let after = std::fs::read_to_string(at(home.path())).expect("the file");
+
+            assert!(after.contains("kind = \"static\""), "{after}");
+            assert!(!after.contains("upstream"), "{after}");
+            assert!(!after.contains("port"), "{after}");
+        }
     }
 }

@@ -185,34 +185,25 @@ impl Projects {
             .await
             .map_err(|error| error.to_wire())?;
 
-        // **A manifest holds one `[site]`** (spec D9). More than one and none is written, with the
-        // names carried back — a limit of the file format rather than of the model, and one a
-        // person can act on only if they are told about it.
-        let (site, sites_omitted) = match sites.len() {
-            1 => (Some(self.exported(&sites[0]).await?), Vec::new()),
-            _ => (
-                None,
-                sites
-                    .iter()
-                    .filter_map(|site| site.domains.first().cloned())
-                    .collect(),
-            ),
-        };
+        let mut exported = Vec::with_capacity(sites.len());
+        for site in &sites {
+            exported.push(self.exported(site).await?);
+        }
 
-        let created = manifest::write(
+        let written = manifest::write(
             &found.root,
             &manifest::Export {
                 name: found.name.clone(),
                 pins: found.pins.clone(),
-                site,
+                sites: exported,
             },
         )
         .map_err(|error| error.to_wire())?;
 
         Ok(ProjectExport {
             path: manifest::at(&found.root).display().to_string(),
-            created,
-            sites_omitted,
+            created: written.created,
+            sites_omitted: Vec::new(),
         })
     }
 
@@ -232,6 +223,7 @@ impl Projects {
                 .map_err(|error| error.to_wire())?;
 
             services.push(manifest::ExportService {
+                link: service.clone(),
                 name: service.name().to_owned(),
                 instance: service.instance().unwrap_or("main").to_owned(),
                 version,
