@@ -410,7 +410,7 @@ Steps for every entry (indicative; the implementation measures each):
 | `php-mysql`, `static` | none (welcome page) | yes |
 | `drupal` | open `/core/install.php` (*cred*) | yes, on the installer |
 | `wordpress` | **archive** (D2); open `/wp-admin/install.php` (*cred*) | yes, on the installer |
-| `craft` | open `/admin/install` (*cred*) | yes, on the installer |
+| `craft` | open `/admin/install` (*cred*; note: choose PostgreSQL) | yes, on the installer |
 | `statamic` | once `php please make:user` (*opt*); open `/cp` | yes, on `/cp` |
 | `nextjs` | serve `npm run dev` (note: port 3000) | no |
 | `strapi` | once `npx create-strapi@latest .`; serve `npm run develop` (note: port 1337) | no |
@@ -433,6 +433,11 @@ Steps for every entry (indicative; the implementation measures each):
   `credentials`, the panel's database block names the port beside the host, and the server's note
   says to set `DATABASE_URL` (`rails_new_carries_the_database_account`). The password is never put
   in a Terminal tab or target (D8).
+- **`craft`'s installer is told PostgreSQL.** It offers MySQL first, and kept against PostgreSQL's
+  port it waited and failed on *MySQL server has gone away* (found by hand, 2026-10-08). Until its
+  `.env` names a database, every Craft page also takes about 50 s, retrying the default MySQL
+  account; that is Craft's, not the server's. The `open` step's note names the driver
+  (`an_installer_on_postgres_says_postgres`).
 - **Django names its package `config` and not `{project}`.** `startproject` takes a Python
   identifier, and the slug of `My Blog` is `my-blog`. `python -m django` rather than
   `django-admin` needs nothing on `PATH` beyond the `python` shim.

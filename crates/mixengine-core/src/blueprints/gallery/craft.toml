@@ -32,4 +32,5 @@ needs_empty_dir = true
 [[next_steps]]
 kind = "open"
 path = "/admin/install"
+note = "Choose PostgreSQL as the driver, then fill in the database below."
 credentials = true

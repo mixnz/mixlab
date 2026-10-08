@@ -277,6 +277,31 @@ fn rails_new_carries_the_database_account() {
     assert!(step.credentials, "rails new does not carry credentials");
 }
 
+/// **A web installer on PostgreSQL is told so** — measured on `craft`: its installer offers MySQL
+/// first, and a person who kept it against PostgreSQL's port waited on *MySQL server has gone
+/// away*. An `open` step that asks for the database names the driver when it is not MySQL's.
+#[test]
+fn an_installer_on_postgres_says_postgres() {
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        if !manifest.services.iter().any(|service| service.name == "postgres") {
+            continue;
+        }
+        for step in &manifest.next_steps {
+            if step.kind != mixengine_proto::NextStepKind::Open || !step.credentials {
+                continue;
+            }
+            let note = step.note.as_deref().unwrap_or("");
+            assert!(
+                note.contains("PostgreSQL"),
+                "{}: the installer at {:?} does not say PostgreSQL",
+                entry.slug,
+                step.path
+            );
+        }
+    }
+}
+
 /// **Every step expands for a name that is not a slug** — T205's review focus: `My Blog` must
 /// become `my-blog`, never reach a command as itself, and never leave the token behind.
 #[test]
