@@ -261,6 +261,7 @@ export default {
       cannotPromptReason: "This machine cannot raise a permission prompt right now: {{reason}}",
     },
     projects: {
+      rowMenu: "More actions",
       details: "Details",
       newProject: "New project",
       about: "Folders on this computer that MixEngine serves as local sites.",
@@ -521,7 +522,6 @@ export default {
     },
     sites: {
       nextSteps: "What to run",
-      noNextSteps: "This site's project has no steps from a blueprint.",
       columnDomain: "Domain",
       columnOwner: "Owner",
       columnKind: "Kind",

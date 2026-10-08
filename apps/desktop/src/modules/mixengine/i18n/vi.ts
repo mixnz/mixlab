@@ -256,6 +256,7 @@ const vi: typeof en = {
       cannotPromptReason: "Máy này hiện không thể bật lời hỏi quyền: {{reason}}",
     },
     projects: {
+      rowMenu: "Thêm hành động",
       details: "Chi tiết",
       newProject: "Tạo project",
       about: "Các thư mục trên máy này mà MixEngine phục vụ thành site cục bộ.",
@@ -516,7 +517,6 @@ const vi: typeof en = {
     },
     sites: {
       nextSteps: "Lệnh cần chạy",
-      noNextSteps: "Dự án của site này không có bước nào từ blueprint.",
       columnDomain: "Domain",
       columnOwner: "Chủ sở hữu",
       columnKind: "Loại",

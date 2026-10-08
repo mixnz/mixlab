@@ -1,8 +1,10 @@
 import { Fragment, useCallback, useEffect, useState, type MouseEvent } from "react";
 
+import ActionBar from "../../../../components/ActionBar";
 import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
+import ContextMenu from "../../../../components/ContextMenu";
 import EmptyState from "../../../../components/EmptyState";
 import ErrorBanner from "../../../../components/ErrorBanner";
 import IconTile from "../../../../components/IconTile";
@@ -12,7 +14,17 @@ import PageHeader from "../../../../components/PageHeader";
 import Table from "../../../../components/Table";
 import { copyText } from "../../../../core/clipboard";
 import { errorMessage } from "../../../../core/errors";
-import { ChevronDownIcon, CopyIcon, FolderIcon, GlobeIcon, PlusIcon } from "../../../../icons";
+import {
+  ChevronDownIcon,
+  CopyIcon,
+  FolderIcon,
+  GlobeIcon,
+  MoreIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+  UploadIcon,
+} from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { ProjectDetail } from "@mixengine/api";
@@ -49,6 +61,9 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
   /** The address of the shown project's first site, for the steps panel's `open` rows — T205. */
   const [detailUrl, setDetailUrl] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  /** The row whose ⋮ menu is open, and where — the actions used less often live there, as on the
+   *  Sites screen, so a row shows what is done every day and nothing else. */
+  const [menu, setMenu] = useState<{ name: string; x: number; y: number } | null>(null);
   /** The project whose manifest is being written. */
   const [exporting, setExporting] = useState<string | null>(null);
   /** The declared site being created from the manifest. */
@@ -267,20 +282,19 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
                             <GlobeIcon size={14} />
                             {t("mixengine.projects.openSites")}
                           </Button>
-                          <Button size="small" onClick={() => void edit(row.name)}>
-                            {t("mixengine.projects.edit")}
-                          </Button>
-                          <Button
-                            size="small"
-                            onClick={() => void exportManifest(row.name)}
-                            disabled={exporting !== null && exporting !== row.name}
-                            busy={exporting === row.name ? t("mixengine.projects.exporting") : undefined}
-                          >
-                            {t("mixengine.projects.exportManifest")}
-                          </Button>
-                          <Button size="small" variant="danger" onClick={() => setDeleting(row.name)}>
-                            {t("mixengine.projects.delete")}
-                          </Button>
+                          <ActionBar
+                            actions={[
+                              {
+                                key: "menu",
+                                icon: MoreIcon,
+                                label: t("mixengine.projects.rowMenu"),
+                                onClick: (event) => {
+                                  const at = event.currentTarget.getBoundingClientRect();
+                                  setMenu({ name: row.name, x: at.left, y: at.bottom });
+                                },
+                              },
+                            ]}
+                          />
                         </span>
                       </td>
                     </tr>
@@ -309,6 +323,49 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
           </Table>
         )}
       </Card>
+
+      {menu !== null && (
+        <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
+          <button
+            type="button"
+            onClick={() => {
+              const name = menu.name;
+              setMenu(null);
+              void edit(name);
+            }}
+          >
+            <PencilIcon size={14} />
+            {t("mixengine.projects.edit")}
+          </button>
+          <button
+            type="button"
+            disabled={exporting !== null}
+            onClick={() => {
+              const name = menu.name;
+              setMenu(null);
+              void exportManifest(name);
+            }}
+          >
+            <UploadIcon size={14} />
+            {exporting === menu.name ? t("mixengine.projects.exporting") : t("mixengine.projects.exportManifest")}
+          </button>
+
+          <div className="context-menu-separator" />
+
+          <button
+            type="button"
+            className="context-menu-delete"
+            onClick={() => {
+              const name = menu.name;
+              setMenu(null);
+              setDeleting(name);
+            }}
+          >
+            <TrashIcon size={14} />
+            {t("mixengine.projects.delete")}
+          </button>
+        </ContextMenu>
+      )}
 
       {creating && (
         <ProjectForm

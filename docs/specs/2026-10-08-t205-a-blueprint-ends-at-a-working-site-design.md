@@ -297,10 +297,20 @@ A half-read list of instructions is worse than none.
   their tab*, below), so Run brings the Terminal tab to the front and `AfterApply` waits in the
   MixEngine tab with the password and the remaining steps; going back to that tab finds it as it
   was left.
-- **The same panel**, without Run/Save's first-run framing, is drawn on the **Sites** detail and the
-  **Projects** panel from `ProjectDetail.next_steps`, so closing the dialog loses nothing. There,
-  a step with `credentials` carries a link to the site's database on the Dashboard, where the
-  existing password control lives (D5 says why the account is not repeated here).
+- **The same panel**, without Run/Save's first-run framing, is drawn on the **Projects** screen
+  from `ProjectDetail.next_steps`, so closing the dialog loses nothing. A project's row opens **in
+  place**, under itself, through its *Details* button or a click anywhere on the row, and holds
+  the project's runtimes, the sites its `mixengine.toml` declares and its steps; one row is open
+  at a time. *Why in place:* the first version drew all three as cards under the whole table, and
+  with ten projects a click on the first opened nothing anyone could see. The row keeps the Sites
+  screen's layout (no leading chevron), and its less common actions (Edit, Write manifest, Delete)
+  sit in a ⋮ menu, as Sites' do. There, a step with `credentials` carries a link to the site's
+  database on the Dashboard, where the existing password control lives (D5 says why the account
+  is not repeated here).
+- **One place to read the steps.** *What to run* in a site's ⋮ menu on the Sites screen goes to
+  the Projects screen with that project's row open (`projectsNavigation.ts`), and an apply that has
+  just finished leaves its project to be opened there on the next visit; neither draws a copy of
+  the panel of its own.
 
 ### D9 — Terminal: a local target carries `env` and `pathPrepend`
 
@@ -459,7 +469,9 @@ Steps for every entry (indicative; the implementation measures each):
   when there are steps: Copy and Run per row, Save as Terminal target on `serve` rows, Run the
   required steps, and the credentials block (D8). Its three-call chain (grant,
   `service.start { project }`, `site.list`) is unchanged.
-- **Sites detail and Projects panel:** the same steps panel from `ProjectDetail.next_steps`.
+- **Projects screen:** a project's row opens in place with its runtimes, declared sites and the
+  same steps panel from `ProjectDetail.next_steps`; Sites' *What to run* and a finished apply both
+  land there with that row open.
 - **Terminal module:** `env` and `pathPrepend` for local targets, under the form's *Advanced*,
   closed unless the target sets one (D9); `onRestore` (D10); the one-shot `run` state arriving
   through the launch queue, and the `saveTarget` action (D11). All generic Terminal features that
