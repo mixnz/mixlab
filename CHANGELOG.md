@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Added
+- `mix site create --from <domain>` adopts one site from a `mixengine.toml` that lists several.
+  `mix project show` lists the sites in the file and which ones this machine does not have yet.
+- In MixLab, a project's panel on the Projects screen lists the sites in its `mixengine.toml`. Add
+  creates a missing one from what the file says.
+
+### Fixed
+- Exporting a project with more than one site now writes every site into `mixengine.toml`, each with
+  the services it uses. It used to leave all of them and their services out. Entries for sites this
+  machine does not have are kept, and the export names them.
+
 ## v0.0.16
 
 ### Added

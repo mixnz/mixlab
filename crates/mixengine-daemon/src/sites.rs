@@ -163,6 +163,39 @@ fn owned_by_an_extension(domain: &str, id: &ExtensionId) -> Error {
     .with_hint(format!("`mix extension uninstall {id}` removes it"))
 }
 
+/// A manifest that names no single site to fall through to, as the refusal a person reads —
+/// roadmap task **T204**, spec D5.
+fn unchosen(why: manifest::Unchosen) -> Error {
+    match why {
+        manifest::Unchosen::NotDeclared { name, declared } => Error::new(
+            ErrorCode::NotFound,
+            format!("mixengine.toml declares no site called {name}"),
+        )
+        .with_hint(format!("it declares {}", declared.join(", "))),
+        manifest::Unchosen::Ambiguous { declared } => Error::new(
+            ErrorCode::InvalidArgument,
+            format!(
+                "mixengine.toml declares {} sites: {}",
+                declared.len(),
+                declared.join(", ")
+            ),
+        )
+        .with_hint(format!(
+            "`mix site create --from {}` adopts one",
+            declared.first().map_or("<domain>", String::as_str)
+        )),
+        manifest::Unchosen::NamedTwice {
+            name,
+            first,
+            second,
+        } => Error::new(
+            ErrorCode::InvalidArgument,
+            format!("mixengine.toml names {name} in two sites, entries {first} and {second}"),
+        )
+        .with_hint("a domain belongs to one site; remove it from one of them"),
+    }
+}
+
 impl Sites {
     /// The one of these the API holds.
     pub(crate) fn new(
@@ -298,11 +331,23 @@ impl Sites {
     /// root, and a kind whose payload is wrong; `already_exists` for a domain another site owns.
     pub(crate) async fn create(&self, create: &SiteCreate) -> Result<SiteCreation, Error> {
         let project = self.project(&create.project).await?;
-        let manifest =
-            manifest::read(&manifest::at(&project.root)).map_err(|error| error.to_wire())?;
-        let declared = manifest
-            .as_ref()
-            .and_then(|manifest| manifest.site.as_ref());
+        let manifest = manifest::read(&manifest::at(&project.root))
+            .map_err(|error| error.to_wire())?
+            .unwrap_or_default();
+
+        // What an entry with no `domain` answers to, which is the name the default below gives it.
+        // A name that slugs to nothing names no entry, and the default refuses it in its own words.
+        let default_domain = domains::default_for(&project.name).unwrap_or_default();
+
+        // **Which entry, before any field falls through to it** — roadmap task **T204**, spec D5.
+        let chosen = manifest
+            .choose(
+                create.from.as_deref(),
+                create.domains.as_deref(),
+                &default_domain,
+            )
+            .map_err(unchosen)?;
+        let declared = chosen.site;
 
         // The fall-through, in the order spec D7 writes it: the argument, the manifest, the default.
         let domains = match &create.domains {
@@ -343,7 +388,11 @@ impl Sites {
 
         let services = match &create.services {
             Some(services) => services.clone(),
-            None => self.linked(manifest.as_ref()).await?,
+            None => match chosen.services {
+                manifest::ServicesFrom::Listed(ids) => self.resolved(ids).await?,
+                manifest::ServicesFrom::Every => self.linked(&manifest).await?,
+                manifest::ServicesFrom::Nothing => Vec::new(),
+            },
         };
 
         // **Falls through to `[[site.routes]]`, on `kind`'s rule** — roadmap task **T135**. An
@@ -1014,42 +1063,13 @@ impl Sites {
     /// because this machine has MariaDB 11.5 would break the clean-machine case the import path
     /// exists for. It is written to `daemon.log` at `info` and no further — there is no field on
     /// [`SiteDetail`] for it, and inventing one here would be an API this spec did not agree.
-    async fn linked(&self, manifest: Option<&manifest::Manifest>) -> Result<Vec<ServiceId>, Error> {
-        let Some(manifest) = manifest else {
-            return Ok(Vec::new());
-        };
-
+    async fn linked(&self, manifest: &manifest::Manifest) -> Result<Vec<ServiceId>, Error> {
         let mut linked = Vec::with_capacity(manifest.services.len());
 
         for declared in &manifest.services {
-            let spelled = match &declared.instance {
-                Some(instance) => vec![format!("{}@{}", declared.name, instance)],
-                None => vec![declared.name.clone(), format!("{}@main", declared.name)],
-            };
-
-            let mut found = None;
-
-            for candidate in spelled {
-                let Ok(id) = ServiceId::parse(candidate) else {
-                    continue;
-                };
-
-                if services::record(&self.store, &id).await.is_ok() {
-                    found = Some(id);
-                    break;
-                }
-            }
-
-            let id = found.ok_or_else(|| {
-                Error::new(
-                    ErrorCode::NotFound,
-                    format!("the manifest declares {}, which is not here", declared.name),
-                )
-                .with_hint(format!(
-                    "`mix service create {}` declares it, or drop it from mixengine.toml",
-                    declared.name
-                ))
-            })?;
+            let id = self
+                .lookup(&declared.name, declared.instance.as_deref())
+                .await?;
 
             if let Some(wanted) = &declared.version {
                 tracing::info!(
@@ -1064,6 +1084,44 @@ impl Sites {
         }
 
         Ok(linked)
+    }
+
+    /// A site entry's own `services = [...]`, as ids this home has — roadmap task **T204**.
+    async fn resolved(&self, wanted: &[ServiceId]) -> Result<Vec<ServiceId>, Error> {
+        let mut linked = Vec::with_capacity(wanted.len());
+
+        for id in wanted {
+            linked.push(self.lookup(id.name(), id.instance()).await?);
+        }
+
+        Ok(linked)
+    }
+
+    /// One service the manifest names, looked up the way `[[services]]` always has been: an
+    /// absent instance tries the bare name, then `name@main`.
+    async fn lookup(&self, name: &str, instance: Option<&str>) -> Result<ServiceId, Error> {
+        let spelled = match instance {
+            Some(instance) => vec![format!("{name}@{instance}")],
+            None => vec![name.to_owned(), format!("{name}@main")],
+        };
+
+        for candidate in spelled {
+            let Ok(id) = ServiceId::parse(candidate) else {
+                continue;
+            };
+
+            if services::record(&self.store, &id).await.is_ok() {
+                return Ok(id);
+            }
+        }
+
+        Err(Error::new(
+            ErrorCode::NotFound,
+            format!("the manifest declares {name}, which is not here"),
+        )
+        .with_hint(format!(
+            "`mix service create {name}` declares it, or drop it from mixengine.toml"
+        )))
     }
 
     /// One record as the wire describes it: the summary, the two pool answers, and the links with

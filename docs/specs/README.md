@@ -199,3 +199,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-07 | [T201 — SeaweedFS, a local S3, as an extension](2026-10-07-t201-seaweedfs-design.md) | T201, T201a | implemented |
 | 2026-10-08 | [T202 — What the removal walk found (design)](2026-10-08-t202-what-the-removal-walk-found-design.md) | T202, T202a, T202b, T202c | implemented |
 | 2026-10-08 | [T203 — A `tunnel` module: share a local address on the internet with cloudflared](2026-10-08-t203-a-tunnel-module-design.md) | T203, T203a, T203b | implemented |
+| 2026-10-08 | [T204 — A manifest holds every site (design)](2026-10-08-t204-a-manifest-holds-every-site-design.md) | T204 | implemented |

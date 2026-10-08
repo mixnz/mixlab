@@ -72,6 +72,7 @@ done
 | [39 — A local S3](phase-39-a-local-s3.md) | A project that stores files in S3 has a local S3, installed as an add-on | T201–T201a | 2 / 2 | **M39** SeaweedFS answers an S3 client on all three systems — **met** |
 | [40 — What the removal walk found](phase-40-what-the-removal-walk-found.md) | A blueprint routes around a taken account name, a failed start says why and names its repair, and the tests and `watch-ci.sh` say what they found | T202–T202c | 4 / 4 | **M40** `laravel-1` applies on a server with a foreign `laravel-1` account, and names the account it used |
 | [41 — A tunnel of MixLab's own](phase-41-a-tunnel-of-mixlabs-own.md) | Share a local address on the internet from MixLab; a preset reaches modules added later | T203–T203b | 3 / 3 | **M41** a dev server opens from another network through the Tunnel tab — **met** on Windows and macOS; Linux by CI build |
+| [42 — A manifest holds every site](phase-42-a-manifest-holds-every-site.md) | `mixengine.toml` holds every site of a project, and adopting a checkout gets all of them | T204–T204a | 1 / 2 | **M42** a three-site project survives export, delete and re-create, from `mix` and from MixLab |
 
 [Parked](parked.md) — revisit deliberately, do not start early.
 
@@ -81,6 +82,12 @@ spared `docs/roadmap/`, reading the number as a milestone still ahead rather tha
 half of a rename — which is exactly the reading a version that never shipped invites.
 
 ## Where we are
+
+**Phase 42 is under way — 1 of 2.** `mixengine.toml` holds every site of a project as `[[sites]]`,
+each with its own services; `project.export` writes them all and names the entries it kept,
+`mix site create --from` adopts one, and `project.show` and MixLab's project panel list which are
+missing (T204). Blueprints describing several sites are T204a, with a design of their own.
+Design: [2026-10-08-t204-a-manifest-holds-every-site-design.md](../specs/2026-10-08-t204-a-manifest-holds-every-site-design.md).
 
 **Phase 40 is built — 4 of 4; M40 is walked by hand on the Mac that found it, in the design's
 *Checked by hand* section.** A blueprint routes around a taken account name and notes it (T202); a

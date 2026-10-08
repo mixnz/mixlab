@@ -478,6 +478,8 @@ impl Api {
                 self.sites
                     .create(&SiteCreate {
                         project: ProjectRef::Name(context.project.clone()),
+                        // Every field is named, so nothing falls through to the manifest's sites.
+                        from: None,
                         domains: Some(domains),
                         doc_root: Some(doc_root.clone()),
                         kind: Some(kind.clone()),

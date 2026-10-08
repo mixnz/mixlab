@@ -66,6 +66,8 @@ export * from "./DatabaseCredentialsQuery";
 export * from "./DatabaseHandoff";
 export * from "./DatabaseOpen";
 export * from "./DatabaseProtocol";
+export * from "./DeclaredSite";
+export * from "./DeclaredSiteState";
 export * from "./DesktopClient";
 export * from "./DiagnosticsBundle";
 export * from "./DiskCategory";

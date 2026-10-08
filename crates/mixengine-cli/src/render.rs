@@ -33,23 +33,24 @@ use mixengine_proto::{
     CaRotateReport, CaState, CaStatus, CaUninstallReport, CertIssueReport, CertProblem, CertState,
     CertStatusReport, Cleanup, CleanupReport, CommandSource, DaemonShutdown, DaemonStatus,
     DaemonVersion, DatabaseAccount, DatabaseClientReport, DatabaseCredentials, DatabaseHandoff,
-    DesktopClient, DiskUsage, Disposition, DnsMode, DoctorReport, DomainStatusReport,
-    ElevationStatus, Enforcement, Execution, ExtensionCatalogue, ExtensionChange,
-    ExtensionInspection, ExtensionKind, ExtensionList, ExtensionPlan, ExtensionRemoval,
-    ExtensionSource, FilesystemReach, FrontEndOutcome, FrontEndReport, GrantOutcome, Handshake,
-    IdleExemption, IdleProbe, IdleReport, IdleSource, InstalledExtensions, IssueOutcome, JobList,
-    JobOutcome, JobState, JobSummary, Launch, Linkage, Made, MemoryMeasure, MemoryWatchdog,
-    MetricsFrame, MetricsHistory, NetworkReach, OldVersion, Outcome, PROTOCOL_VERSION,
-    PackageCatalogue, PackageList, PackageRelease, PackageRemoval, PackageVersion, PathReport,
-    PinSource, PlanAction, PlanStep, PoolOutcome, Priority, ProjectDetail, ProjectExport,
-    ProjectList, ProjectRemoval, RecipeAddition, Reclaim, Removal, RepairReport, Requirement,
-    ResolvedRuntime, RotateOutcome, RuntimeCatalogue, RuntimeList, RuntimeRelease, RuntimeRemoval,
-    RuntimeSource, RuntimeSummary, ServiceCreation, ServiceId, ServiceLimitsReport, ServiceList,
-    ServiceRemoval, ServiceState, ServiceSummary, ServiceWalk, SignatureCheck, SiteDetail,
-    SiteKind, SiteList, SiteOwner, SiteRemoval, SiteSharing, StateReason, StepResult,
-    StorageChoice, StorageReport, Timestamp, Trust, UninstallOutcome, UninstallReport, Unusable,
-    UpdateApplied, UpdateHandedOver, UpdatePlacement, UpdateStatus, UpgradeItem, UpgradeOutcome,
-    UpgradePlan, Uptime, Verdict, WhenExceeded, privileged::ElevationOutcome,
+    DeclaredSiteState, DesktopClient, DiskUsage, Disposition, DnsMode, DoctorReport,
+    DomainStatusReport, ElevationStatus, Enforcement, Execution, ExtensionCatalogue,
+    ExtensionChange, ExtensionInspection, ExtensionKind, ExtensionList, ExtensionPlan,
+    ExtensionRemoval, ExtensionSource, FilesystemReach, FrontEndOutcome, FrontEndReport,
+    GrantOutcome, Handshake, IdleExemption, IdleProbe, IdleReport, IdleSource, InstalledExtensions,
+    IssueOutcome, JobList, JobOutcome, JobState, JobSummary, Launch, Linkage, Made, MemoryMeasure,
+    MemoryWatchdog, MetricsFrame, MetricsHistory, NetworkReach, OldVersion, Outcome,
+    PROTOCOL_VERSION, PackageCatalogue, PackageList, PackageRelease, PackageRemoval,
+    PackageVersion, PathReport, PinSource, PlanAction, PlanStep, PoolOutcome, Priority,
+    ProjectDetail, ProjectExport, ProjectList, ProjectRemoval, RecipeAddition, Reclaim, Removal,
+    RepairReport, Requirement, ResolvedRuntime, RotateOutcome, RuntimeCatalogue, RuntimeList,
+    RuntimeRelease, RuntimeRemoval, RuntimeSource, RuntimeSummary, ServiceCreation, ServiceId,
+    ServiceLimitsReport, ServiceList, ServiceRemoval, ServiceState, ServiceSummary, ServiceWalk,
+    SignatureCheck, SiteDetail, SiteKind, SiteList, SiteOwner, SiteRemoval, SiteSharing,
+    StateReason, StepResult, StorageChoice, StorageReport, Timestamp, Trust, UninstallOutcome,
+    UninstallReport, Unusable, UpdateApplied, UpdateHandedOver, UpdatePlacement, UpdateStatus,
+    UpgradeItem, UpgradeOutcome, UpgradePlan, Uptime, Verdict, WhenExceeded,
+    privileged::ElevationOutcome,
 };
 
 /// `mix cert ca-status`, for a person.
@@ -2666,31 +2667,46 @@ pub(crate) fn project_detail(detail: &ProjectDetail) -> String {
 
     if detail.pins.is_empty() {
         out.push_str("\nno runtimes are pinned\n");
-        return out;
-    }
-
-    out.push_str(&format!(
-        "\n{:<8}  {:<10}  {:<10}  {}\n",
-        "RUNTIME", "PINNED", "RESOLVES", "FROM"
-    ));
-
-    for pin in &detail.pins {
-        let from = match &pin.source {
-            PinSource::Registered => "this home".to_owned(),
-            PinSource::Manifest { path } => path.clone(),
-        };
-
+    } else {
         out.push_str(&format!(
-            "{:<8}  {:<10}  {:<10}  {}\n",
-            pin.kind.as_str(),
-            pin.constraint.as_str(),
-            pin.resolved.as_ref().map_or("—", PackageVersion::as_str),
-            from
+            "\n{:<8}  {:<10}  {:<10}  {}\n",
+            "RUNTIME", "PINNED", "RESOLVES", "FROM"
         ));
+
+        for pin in &detail.pins {
+            let from = match &pin.source {
+                PinSource::Registered => "this home".to_owned(),
+                PinSource::Manifest { path } => path.clone(),
+            };
+
+            out.push_str(&format!(
+                "{:<8}  {:<10}  {:<10}  {}\n",
+                pin.kind.as_str(),
+                pin.constraint.as_str(),
+                pin.resolved.as_ref().map_or("—", PackageVersion::as_str),
+                from
+            ));
+        }
+
+        for hint in detail.pins.iter().filter_map(|pin| pin.hint.as_ref()) {
+            out.push_str(&format!("\n{hint}\n"));
+        }
     }
 
-    for hint in detail.pins.iter().filter_map(|pin| pin.hint.as_ref()) {
-        out.push_str(&format!("\n{hint}\n"));
+    // **T204, D7.** What mixengine.toml declares, and the command for each one not here yet.
+    if !detail.declared_sites.is_empty() {
+        out.push_str(&format!("\n{:<28}  {}\n", "IN MIXENGINE.TOML", "HERE"));
+
+        for site in &detail.declared_sites {
+            let here = match &site.state {
+                DeclaredSiteState::Here => "yes".to_owned(),
+                DeclaredSiteState::Missing => {
+                    format!("no; `mix site create --from {}` adopts it", site.domain)
+                }
+                DeclaredSiteState::Elsewhere { owner } => format!("no; {owner} holds it"),
+            };
+            out.push_str(&format!("{:<28}  {here}\n", site.domain));
+        }
     }
 
     out
@@ -2710,13 +2726,27 @@ pub(crate) fn project_removal(removal: &ProjectRemoval) -> String {
 
 /// `mix project export` — which file, and whether it had to be made.
 pub(crate) fn project_export(exported: &ProjectExport) -> String {
-    match exported.created {
+    let mut out = match exported.created {
         true => format!("wrote {}\n", exported.path),
         false => format!(
             "updated {}; everything else in it is untouched\n",
             exported.path
         ),
+    };
+
+    // **T204, D4.** What the file still declares that this home does not have, left as written.
+    if !exported.sites_kept.is_empty() {
+        let names = match exported.sites_kept.len() {
+            1 => "that name",
+            _ => "those names",
+        };
+        out.push_str(&format!(
+            "kept {} in mixengine.toml, though no site here has {names}\n",
+            exported.sites_kept.join(", ")
+        ));
     }
+
+    out
 }
 
 /// `mix site list` — every site, and what serves it.
@@ -6993,6 +7023,65 @@ mod tests {
         assert!(rendered.contains("LEFT"), "{rendered}");
         assert!(rendered.contains("2 file(s)"), "{rendered}");
         assert!(rendered.contains("the file is open"), "{rendered}");
+    }
+
+    /// **T204, D4.** An export names the entries it left, and says nothing when there are none.
+    #[test]
+    fn an_export_names_the_site_entries_it_kept() {
+        let mut exported = ProjectExport {
+            path: "/srv/blog/mixengine.toml".to_owned(),
+            created: false,
+            sites_kept: Vec::new(),
+        };
+        assert!(!project_export(&exported).contains("kept"));
+
+        exported.sites_kept = vec!["old.test".to_owned()];
+        assert!(
+            project_export(&exported)
+                .contains("kept old.test in mixengine.toml, though no site here has that name"),
+            "{}",
+            project_export(&exported)
+        );
+    }
+
+    /// **T204, D7.** The declared sites print even with no pins, each with what to do.
+    #[test]
+    fn a_project_lists_the_sites_its_manifest_declares() {
+        let detail = ProjectDetail {
+            project: mixengine_proto::ProjectSummary {
+                name: "shop".to_owned(),
+                root: "/srv/shop".to_owned(),
+                created_at: "2026-10-08T00:00:00Z".to_owned(),
+                manifest: Some("/srv/shop/mixengine.toml".to_owned()),
+                keep_warm: false,
+            },
+            pins: Vec::new(),
+            declared_sites: vec![
+                mixengine_proto::DeclaredSite {
+                    domain: "web.test".into(),
+                    aliases: Vec::new(),
+                    state: mixengine_proto::DeclaredSiteState::Here,
+                },
+                mixengine_proto::DeclaredSite {
+                    domain: "api.test".into(),
+                    aliases: Vec::new(),
+                    state: mixengine_proto::DeclaredSiteState::Missing,
+                },
+                mixengine_proto::DeclaredSite {
+                    domain: "taken.test".into(),
+                    aliases: Vec::new(),
+                    state: mixengine_proto::DeclaredSiteState::Elsewhere {
+                        owner: "blog".into(),
+                    },
+                },
+            ],
+        };
+
+        let out = project_detail(&detail);
+
+        assert!(out.contains("no runtimes are pinned"), "{out}");
+        assert!(out.contains("mix site create --from api.test"), "{out}");
+        assert!(out.contains("blog holds it"), "{out}");
     }
 }
 

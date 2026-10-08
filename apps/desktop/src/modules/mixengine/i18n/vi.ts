@@ -250,7 +250,7 @@ const vi: typeof en = {
       exporting: "Đang ghi",
       exportCreated: "Đã ghi {{path}}.",
       exportUpdated: "Đã cập nhật {{path}}. Comment và phần bạn tự viết vẫn giữ nguyên.",
-      exportOmitted: "Mỗi manifest chỉ chứa một site, nên các site này không được ghi: {{sites}}.",
+      exportKept: "mixengine.toml còn liệt kê {{sites}}, nhưng máy này không có site nào như vậy. Các mục đó được giữ nguyên.",
       deleteTitle: "Xoá project?",
       deleteMessage:
         "Chỉ gỡ đăng ký. Thư mục và mixengine.toml (nếu có) được giữ nguyên, không đụng tới.",
@@ -273,6 +273,16 @@ const vi: typeof en = {
         sourceManifest: "từ {{path}}",
         sourceRow: "từ cài đặt riêng của project",
         unresolved: "Chưa cài: {{hint}}",
+        declaredTitle: "Site trong mixengine.toml",
+        declaredDescription:
+          "Các site mà file này mô tả. Bấm Thêm để tạo site trên máy này theo đúng nội dung file.",
+        declaredColumnDomain: "Domain",
+        declaredColumnState: "Trạng thái",
+        declaredHere: "Đã có trong project",
+        declaredMissing: "Chưa có trên máy này",
+        declaredElsewhere: "Thuộc {{owner}}",
+        declaredAdd: "Thêm",
+        declaredAdding: "Đang thêm",
       },
     },
     upgrade: {

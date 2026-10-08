@@ -520,7 +520,8 @@ mix site <COMMAND>
 Declare a site under a project.
 
 With nothing but a project named, whatever the `[site]` and `[[services]]` in that project's
-`mixengine.toml` say is used. That is how you adopt a colleague's site.
+`mixengine.toml` say is used. That is how you adopt a colleague's site. With several sites in the
+file, `--from` says which.
 
 ```
 mix site create [OPTIONS]
@@ -529,6 +530,7 @@ mix site create [OPTIONS]
 | Flag | What it does |
 | --- | --- |
 | `--project` `<PROJECT>` | The project. Defaults to whichever project the current directory is in |
+| `--from` `<DOMAIN>` | Which site in `mixengine.toml` to adopt, by any of its names. Needed when the file declares more than one |
 | `--domain` `<DOMAIN>` | A domain. The first is the primary; repeat for aliases. Defaults to `<project>.test` |
 | `--doc-root` `<DIR>` | What is served, relative to the project's root. Defaults to the root itself |
 | `--kind` `<KIND>` | What serves it |

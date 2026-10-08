@@ -255,7 +255,7 @@ export default {
       exporting: "Writing",
       exportCreated: "Wrote {{path}}.",
       exportUpdated: "Updated {{path}}. Comments and anything written by hand were kept.",
-      exportOmitted: "A manifest holds one site, so these were left out: {{sites}}.",
+      exportKept: "mixengine.toml also lists {{sites}}, which no site here uses. Those entries were left as they were.",
       deleteTitle: "Delete project?",
       deleteMessage:
         "Only the registration is removed. The directory and mixengine.toml (if any) are left exactly as they are.",
@@ -278,6 +278,16 @@ export default {
         sourceManifest: "from {{path}}",
         sourceRow: "from this project's own setting",
         unresolved: "Not installed: {{hint}}",
+        declaredTitle: "Sites in mixengine.toml",
+        declaredDescription:
+          "The sites this file describes. Add creates one here from what the file says.",
+        declaredColumnDomain: "Domain",
+        declaredColumnState: "State",
+        declaredHere: "In this project",
+        declaredMissing: "Not here yet",
+        declaredElsewhere: "Held by {{owner}}",
+        declaredAdd: "Add",
+        declaredAdding: "Adding",
       },
     },
     upgrade: {

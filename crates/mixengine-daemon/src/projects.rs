@@ -172,7 +172,8 @@ impl Projects {
         })
     }
 
-    /// `project.export` — put the project into `<root>/mixengine.toml`, keeping everything else.
+    /// `project.export` — put the project and every site into `<root>/mixengine.toml`, keeping
+    /// everything else.
     ///
     /// # Errors
     ///
@@ -185,34 +186,25 @@ impl Projects {
             .await
             .map_err(|error| error.to_wire())?;
 
-        // **A manifest holds one `[site]`** (spec D9). More than one and none is written, with the
-        // names carried back — a limit of the file format rather than of the model, and one a
-        // person can act on only if they are told about it.
-        let (site, sites_omitted) = match sites.len() {
-            1 => (Some(self.exported(&sites[0]).await?), Vec::new()),
-            _ => (
-                None,
-                sites
-                    .iter()
-                    .filter_map(|site| site.domains.first().cloned())
-                    .collect(),
-            ),
-        };
+        let mut exported = Vec::with_capacity(sites.len());
+        for site in &sites {
+            exported.push(self.exported(site).await?);
+        }
 
-        let created = manifest::write(
+        let written = manifest::write(
             &found.root,
             &manifest::Export {
                 name: found.name.clone(),
                 pins: found.pins.clone(),
-                site,
+                sites: exported,
             },
         )
         .map_err(|error| error.to_wire())?;
 
         Ok(ProjectExport {
             path: manifest::at(&found.root).display().to_string(),
-            created,
-            sites_omitted,
+            created: written.created,
+            sites_kept: written.sites_kept,
         })
     }
 
@@ -232,6 +224,7 @@ impl Projects {
                 .map_err(|error| error.to_wire())?;
 
             services.push(manifest::ExportService {
+                link: service.clone(),
                 name: service.name().to_owned(),
                 instance: service.instance().unwrap_or("main").to_owned(),
                 version,
@@ -276,15 +269,25 @@ impl Projects {
             })
     }
 
-    /// One record, with the pins it actually resolves by.
+    /// One record, with the pins it actually resolves by and the sites its manifest declares.
     async fn detail(&self, project: projects::ProjectRecord) -> Result<ProjectDetail, Error> {
-        let pins = projects::effective_pins(&self.store, &project)
+        // Read once, for both halves — roadmap task **T204**.
+        let manifest =
+            manifest::read(&manifest::at(&project.root)).map_err(|error| error.to_wire())?;
+        let pins = projects::effective_pins_with(&self.store, &project, manifest.as_ref())
             .await
             .map_err(|error| error.to_wire())?;
+        let declared_sites = match &manifest {
+            Some(manifest) => projects::declared_sites(&self.store, &project, manifest)
+                .await
+                .map_err(|error| error.to_wire())?,
+            None => Vec::new(),
+        };
 
         Ok(ProjectDetail {
             project: summary(&project),
             pins,
+            declared_sites,
         })
     }
 }

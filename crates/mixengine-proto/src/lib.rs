@@ -129,8 +129,9 @@ pub use package_api::{
 };
 pub use path_api::{CommandConflict, CommandOrigin, CommandSource, PathPlace, PathReport};
 pub use project_api::{
-    PinSource, ProjectCreate, ProjectDetail, ProjectExport, ProjectList, ProjectPin, ProjectQuery,
-    ProjectRef, ProjectRemoval, ProjectSummary, ProjectUpdate,
+    DeclaredSite, DeclaredSiteState, PinSource, ProjectCreate, ProjectDetail, ProjectExport,
+    ProjectList, ProjectPin, ProjectQuery, ProjectRef, ProjectRemoval, ProjectSummary,
+    ProjectUpdate,
 };
 pub use repair_api::{Action, DoctorRepair, Repair, RepairReport};
 pub use requirement::{Need, RedistributableArch, Remedy, Requirement, Requirements};

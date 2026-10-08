@@ -8,13 +8,20 @@ import type { SiteRoute } from "./SiteRoute";
  * Create a site under a project.
  *
  * Every field but the project falls through — the argument, then `[site]` in the project's
- * manifest, then a default — which is what makes `site.create { project }` the import (spec D7).
+ * manifest, then a default — which is what makes `site.create { project }` the import (spec D7),
+ * and `site.create { project, from }` the import of one of several (roadmap task **T204**).
  */
 export type SiteCreate = { 
 /**
  * Which project it belongs to.
  */
 project: ProjectRef, 
+/**
+ * Which of the manifest's sites to fall through to, by any of its names — roadmap task
+ * **T204**, spec D5. Needed when the file declares more than one and the request names no
+ * domain that picks one.
+ */
+from?: string | null, 
 /**
  * Ordered; the head is the primary. Falls through to `[site] domain` + `aliases`, then to
  * `<slug>.test`.

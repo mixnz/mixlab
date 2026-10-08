@@ -359,58 +359,208 @@ async fn an_export_writes_the_project_into_the_manifest_and_keeps_the_rest() {
     assert!(written.contains("php = \"^8.3\""), "{written}");
 }
 
-/// **D9.** An export sends the site, because a file with the runtimes and not the site loses the
-/// thing worth sending. A project with two sites writes neither, and says which.
+/// **T204, D1 and D4.** Two sites are both written, and an entry the home has no site for is kept
+/// and named rather than deleted.
 #[tokio::test]
-async fn an_export_writes_the_site_and_names_the_ones_it_could_not() {
+async fn an_export_writes_every_site_and_names_what_it_kept() {
     let fixture = Fixture::start().await;
     let mut client = fixture.client().await;
-    let repository = repository(None);
+    let repository = repository(Some("[[sites]]\ndomain = \"old.test\"\n"));
     let root = as_string(repository.path());
 
     client
         .call("project.create", json!({"root": root, "name": "blog"}))
         .await;
-    client
-        .call(
-            "site.create",
-            json!({
-                "project": {"name": "blog"},
-                "domains": ["blog.test"],
-                "kind": {"kind": "static"},
-            }),
-        )
-        .await;
+    for domain in ["blog.test", "shop.test"] {
+        client
+            .call(
+                "site.create",
+                json!({
+                    "project": {"name": "blog"},
+                    "domains": [domain],
+                    "kind": {"kind": "static"},
+                }),
+            )
+            .await;
+    }
 
     let exported = client
         .call("project.export", json!({"project": {"name": "blog"}}))
         .await;
-    assert_eq!(
-        exported["sites_omitted"],
-        Value::Null,
-        "one site is written, so nothing is omitted: {exported}"
-    );
+    assert_eq!(exported["sites_kept"], json!(["old.test"]), "{exported}");
+    assert!(exported.get("sites_omitted").is_none(), "{exported}");
 
     let written = std::fs::read_to_string(repository.path().join("mixengine.toml"))
         .expect("the manifest that was written");
+    assert_eq!(written.matches("[[sites]]").count(), 3, "{written}");
     assert!(written.contains("domain = \"blog.test\""), "{written}");
-    assert!(written.contains("kind = \"static\""), "{written}");
+    assert!(written.contains("domain = \"shop.test\""), "{written}");
+}
 
-    // A second site, and the file format's own limit is reported rather than half-honoured.
+/// **T204, D7.** `project.show` lists what the file declares, and which of it is here, missing, or
+/// held by another project.
+#[tokio::test]
+async fn a_project_shows_the_sites_its_manifest_declares() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    let other = repository(None);
+    client
+        .call(
+            "project.create",
+            json!({"root": as_string(other.path()), "name": "other"}),
+        )
+        .await;
     client
         .call(
             "site.create",
             json!({
-                "project": {"name": "blog"},
-                "domains": ["shop.test"],
+                "project": {"name": "other"},
+                "domains": ["taken.test"],
                 "kind": {"kind": "static"},
             }),
         )
         .await;
 
-    let again = client
-        .call("project.export", json!({"project": {"name": "blog"}}))
+    let repository = repository(Some(
+        "[[sites]]\ndomain = \"here.test\"\nkind = \"static\"\n\n\
+         [[sites]]\ndomain = \"missing.test\"\naliases = [\"www.missing.test\"]\n\n\
+         [[sites]]\ndomain = \"taken.test\"\n",
+    ));
+    client
+        .call(
+            "project.create",
+            json!({"root": as_string(repository.path()), "name": "blog"}),
+        )
         .await;
-    let omitted = again["sites_omitted"].as_array().expect("a list");
-    assert_eq!(omitted.len(), 2, "{again}");
+    client
+        .call(
+            "site.create",
+            json!({"project": {"name": "blog"}, "from": "here.test"}),
+        )
+        .await;
+
+    let shown = client
+        .call("project.show", json!({"project": {"name": "blog"}}))
+        .await;
+
+    assert_eq!(
+        shown["declared_sites"],
+        json!([
+            {"domain": "here.test", "aliases": [], "state": {"is": "here"}},
+            {"domain": "missing.test", "aliases": ["www.missing.test"], "state": {"is": "missing"}},
+            {"domain": "taken.test", "aliases": [], "state": {"is": "elsewhere", "owner": "other"}},
+        ]),
+        "{shown}"
+    );
+
+    let bare = client
+        .call("project.show", json!({"project": {"name": "other"}}))
+        .await;
+    assert!(
+        bare.get("declared_sites").is_none(),
+        "no manifest, no member: {bare}"
+    );
+}
+
+/// **M42.** A project with three sites of three kinds, each linking differently, is exported,
+/// forgotten and registered again from the same directory; `from` brings each site back whole.
+#[tokio::test]
+async fn three_sites_survive_export_delete_and_create() {
+    let fixture = Fixture::start().await;
+    mixengine_testkit::declare::database(
+        &fixture.home.database_file(),
+        "mariadb@main",
+        "mariadb",
+        3306,
+    )
+    .await;
+    let mut client = fixture.client().await;
+    let repository = repository(None);
+    let root = as_string(repository.path());
+
+    client
+        .call("project.create", json!({"root": root, "name": "ezweb"}))
+        .await;
+    let wanted = [
+        json!({
+            "project": {"name": "ezweb"},
+            "domains": ["ezweb.test", "www.ezweb.test"],
+            "kind": {"kind": "static"},
+            "services": ["mariadb@main"],
+            "https": false,
+        }),
+        json!({
+            "project": {"name": "ezweb"},
+            "domains": ["ezportal.test"],
+            "kind": {"kind": "reverse-proxy", "upstream": "http://127.0.0.1:5173"},
+            "services": [],
+            "https": false,
+        }),
+        json!({
+            "project": {"name": "ezweb"},
+            "domains": ["ezwebsite.test"],
+            "kind": {"kind": "node-app", "port": 3000},
+            "services": [],
+            "https": false,
+            "routes": [{"path": "/api", "target": "proxy", "upstream": "http://127.0.0.1:3003"}],
+        }),
+    ];
+    let mut before = Vec::new();
+    for create in &wanted {
+        before.push(client.call("site.create", create.clone()).await["site"].clone());
+    }
+
+    let exported = client
+        .call("project.export", json!({"project": {"name": "ezweb"}}))
+        .await;
+    assert!(exported.get("sites_kept").is_none(), "{exported}");
+
+    client
+        .call("project.delete", json!({"project": {"name": "ezweb"}}))
+        .await;
+    client.call("project.create", json!({"root": root})).await;
+
+    for (domain, original) in ["ezweb.test", "ezportal.test", "ezwebsite.test"]
+        .iter()
+        .zip(&before)
+    {
+        let again = client
+            .call(
+                "site.create",
+                json!({"project": {"name": "ezweb"}, "from": domain}),
+            )
+            .await["site"]
+            .clone();
+
+        assert_eq!(again["domains"], original["domains"], "{domain}");
+        assert_eq!(
+            again["services"].as_array().map(Vec::len),
+            original["services"].as_array().map(Vec::len),
+            "{domain}"
+        );
+        assert_eq!(again["site"]["kind"], original["site"]["kind"], "{domain}");
+        assert_eq!(
+            again["site"]["routes"], original["site"]["routes"],
+            "{domain}"
+        );
+        assert_eq!(
+            again["site"]["https"], original["site"]["https"],
+            "{domain}"
+        );
+    }
+
+    let shown = client
+        .call("project.show", json!({"project": {"name": "ezweb"}}))
+        .await;
+    let states: Vec<&Value> = shown["declared_sites"]
+        .as_array()
+        .expect("a list")
+        .iter()
+        .map(|site| &site["state"]["is"])
+        .collect();
+    assert_eq!(
+        states,
+        [&json!("here"), &json!("here"), &json!("here")],
+        "{shown}"
+    );
 }

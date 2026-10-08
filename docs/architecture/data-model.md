@@ -260,12 +260,20 @@ name = "blog"
 php = "8.3"          # range or exact; resolved against installed versions
 node = "22"
 
-[site]
+[[sites]]
 domain = "blog.test"
-aliases = ["api.blog.test"]
+aliases = ["www.blog.test"]
 doc_root = "public"
 kind = "php-fpm"
 https = true
+services = ["mariadb@main", "redis"]   # this site's links; absent means every [[services]] entry
+
+[[sites]]
+domain = "api.blog.test"
+kind = "reverse-proxy"
+upstream = "http://127.0.0.1:3000"
+https = true
+services = []
 
 [[services]]
 name = "mariadb"
@@ -276,6 +284,11 @@ database = "blog"     # preserved, not interpreted — Phase 8's `blueprint.appl
 [[services]]
 name = "redis"
 ```
+
+A project with one site writes it as `[site]`, with the same keys, which is the form every build
+before T204 reads; a file holding both forms is refused. `[[services]]` is what a colleague has to
+have, and each site's `services` is what it links. `site.create { from }` adopts one entry
+([T204](../specs/2026-10-08-t204-a-manifest-holds-every-site-design.md)).
 
 Resolution order for "which PHP is this?": explicit CLI flag → `mixengine.toml` walking up from cwd →
 project record in SQLite → global default. Implemented once in `core::resolve`, used by shims, the

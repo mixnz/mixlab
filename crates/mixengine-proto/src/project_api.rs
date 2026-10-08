@@ -144,6 +144,13 @@ pub struct ProjectDetail {
     /// there is not — because that is what the shim will do, and a panel showing anything else is
     /// a panel that lies.
     pub pins: Vec<ProjectPin>,
+
+    /// The sites its `mixengine.toml` declares, in file order — roadmap task **T204**, spec D7.
+    ///
+    /// What lets a client offer the import at all: until T204 only `site.create` read the file,
+    /// and only at the moment of creating.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub declared_sites: Vec<DeclaredSite>,
 }
 
 /// One language's pin, where it was read, and whether this machine can satisfy it.
@@ -186,6 +193,41 @@ pub enum PinSource {
     },
 }
 
+/// One site a project's `mixengine.toml` declares, and whether this home has it — roadmap task
+/// **T204**, spec D7.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct DeclaredSite {
+    /// The entry's `domain`, or `<slug>.test` for one that names none — the name `site.create`
+    /// would give it, and the one `from` answers to.
+    pub domain: String,
+
+    /// Every other name it answers to.
+    pub aliases: Vec<String>,
+
+    /// Whether a site here holds it, and whose.
+    pub state: DeclaredSiteState,
+}
+
+/// Whether a declared site is here — spec D7.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "is", rename_all = "snake_case")]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub enum DeclaredSiteState {
+    /// A site of this project holds the domain.
+    Here,
+
+    /// No site in this home holds it; `site.create { from: domain }` adopts it.
+    Missing,
+
+    /// Another project's site holds it, or an extension's, so adopting it here would be
+    /// `already_exists`.
+    Elsewhere {
+        /// That project's name, or that extension's id.
+        owner: String,
+    },
+}
+
 /// What `project.delete` answers.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -214,12 +256,13 @@ pub struct ProjectExport {
     /// Whether the file was made, or an existing one merged into.
     pub created: bool,
 
-    /// The sites that were not written, because a manifest holds one `[site]` (spec D9).
+    /// The `domain` of each site entry in the file this home has no site for — roadmap task
+    /// **T204**, spec D4.
     ///
-    /// Their primary domains, so a person knows what the file does not say — a limit of the file
-    /// format rather than of the model.
+    /// Left exactly as written, because an export never deletes; named here, because an entry
+    /// nobody is told about is a site a colleague will adopt without anyone here having it.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub sites_omitted: Vec<String>,
+    pub sites_kept: Vec<String>,
 }
 
 #[cfg(test)]
