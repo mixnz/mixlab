@@ -31,6 +31,18 @@ pub struct Entry {
 /// Every blueprint this build ships, in slug order — which is the order a listing shows them in.
 pub const ENTRIES: &[Entry] = &[
     Entry {
+        slug: "cakephp",
+        manifest: include_str!("gallery/cakephp.toml"),
+    },
+    Entry {
+        slug: "codeigniter",
+        manifest: include_str!("gallery/codeigniter.toml"),
+    },
+    Entry {
+        slug: "craft",
+        manifest: include_str!("gallery/craft.toml"),
+    },
+    Entry {
         slug: "django",
         manifest: include_str!("gallery/django.toml"),
     },
@@ -63,6 +75,10 @@ pub const ENTRIES: &[Entry] = &[
         manifest: include_str!("gallery/rails.toml"),
     },
     Entry {
+        slug: "statamic",
+        manifest: include_str!("gallery/statamic.toml"),
+    },
+    Entry {
         slug: "static",
         manifest: include_str!("gallery/static.toml"),
     },
@@ -82,12 +98,16 @@ pub const ENTRIES: &[Entry] = &[
         slug: "wordpress",
         manifest: include_str!("gallery/wordpress.toml"),
     },
+    Entry {
+        slug: "yii",
+        manifest: include_str!("gallery/yii.toml"),
+    },
 ];
 
 /// What a seed did, for the one line the daemon logs.
 ///
 /// [`crate::shims::Refreshed`]'s shape, and its reason: the ordinary start writes nothing, so what
-/// is worth logging is the exception rather than the thirteen names.
+/// is worth logging is the exception rather than every name.
 #[derive(Debug, Default)]
 pub struct Seeded {
     /// The rows this call wrote, because they were missing or held different bytes.
@@ -103,9 +123,9 @@ pub struct Seeded {
 /// Put every blueprint this build ships into this home, writing only what differs.
 ///
 /// **One read, then only the writes that are needed** (D4). Every CLI test in this workspace starts
-/// a daemon and every daemon start calls this; thirteen file writes and thirteen upserts on each of those is a
-/// cost with nothing on the other side of it, since the bytes are identical every time. It is
-/// `bin/`'s rule one object along — see [`crate::shims::refresh`].
+/// a daemon and every daemon start calls this; a file write and an upsert per entry on each of
+/// those is a cost with nothing on the other side of it, since the bytes are identical every time.
+/// It is `bin/`'s rule one object along — see [`crate::shims::refresh`].
 ///
 /// **A row whose source is not `builtin` is left alone** (D6), whatever its slug: a capture over a
 /// gallery name makes that slug this machine's own for good.
@@ -116,7 +136,7 @@ pub struct Seeded {
 /// which [`ENTRIES`]' round-trip test is what stops reaching one; [`crate::Error::Database`] when
 /// the table cannot be read or written, and [`crate::Error::Io`] when a rendering cannot be.
 pub async fn seed(store: &Store, paths: &Paths) -> Result<Seeded> {
-    // Every row rather than the thirteen by name: `sqlx::query!` needs its SQL literal, so an `IN` list
+    // Every row rather than the gallery by name: `sqlx::query!` needs its SQL literal, so an `IN` list
     // would have to be as long as `ENTRIES` and stay in step with it by hand. A home holds a
     // handful of blueprints, and this is one statement either way.
     let rows = sqlx::query!(

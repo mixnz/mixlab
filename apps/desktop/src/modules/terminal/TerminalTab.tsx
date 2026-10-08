@@ -35,6 +35,12 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
      than read live: `start` writes the new value as soon as the session opens, and reading that
      back would make the tab restore itself from itself. */
   const [restoredState] = useState(() => parseTerminalTabState(restored));
+  /* A target another module drafted for this tab — T205, D11. Shown in the form, unsaved, until
+     the person saves or opens it; the tab's stored state keeps it until then, so closing the app
+     does not lose it. */
+  const [draft, setDraft] = useState(() =>
+    restoredState?.kind === "draft" ? restoredState.target : null,
+  );
   /* Calling `useSavedTargets` here is what starts the read `useSavedTargetsLoaded` is waiting for
      — until now only `TargetForm` called it, and the form is not present while the tab is
      restoring. */
@@ -102,6 +108,7 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
   }, []);
 
   function start(next: TerminalChoice) {
+    setDraft(null);
     setLastTried(next);
     setExit(null);
     setOpening(true);
@@ -119,6 +126,12 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
      here". A dead session not yet dismissed is kept — the "session ended" screen with its
      Reconnect button is still that target's screen — and `failed` keeps it too, because a failed
      SSH is not leaving. */
+  /** The drafted target has been saved: the tab no longer holds a draft of its own. */
+  const draftSaved = useCallback(() => {
+    setDraft(null);
+    onStateChange(undefined);
+  }, [onStateChange]);
+
   function dismiss() {
     setExit(null);
     setChoice(null);
@@ -139,6 +152,11 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
      still opens its shell, just with no command left to type on its behalf. */
   useEffect(() => {
     if (restoreTried.current || restoredState === null) return;
+    // A draft opens no session: the form shows it, from `draft` above.
+    if (restoredState.kind === "draft") {
+      restoreTried.current = true;
+      return;
+    }
 
     if (restoredState.kind === "ssh") {
       if (!savedTargetsLoaded) return;
@@ -149,12 +167,15 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
       // when the entry has been deleted outright.
       if (entry === undefined || entry.kind !== "ssh") return;
       // `config` here is already complete — `savedTargets.ts` merges the secrets from the keyring
-      // in before handing it out.
+      // in before handing it out. What the restored tab does with its commands is the entry's
+      // `onRestore` — T205, D10.
+      const onRestore = entry.onRestore ?? "run";
       start({
         kind: "ssh",
         config: entry.config,
         targetId: entry.id,
-        runOnConnect: entry.runOnConnect ?? null,
+        runOnConnect: onRestore === "none" ? null : (entry.runOnConnect ?? null),
+        press: onRestore === "run",
       });
       return;
     }
@@ -175,14 +196,41 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
        `restateTab` ignores an id no longer in the list. */
     localShells()
       .then((shells) => {
-        const shell = shells.find((s) => s.name === restoredState.shellName);
+        /* `""` is the machine's default shell: `local.rs` lists the shells "in suggested order —
+           the first one is the default". A tab handed over by another module names no shell,
+           because it cannot know this machine's names (T205). */
+        const shell =
+          restoredState.shellName === ""
+            ? shells[0]
+            : shells.find((s) => s.name === restoredState.shellName);
         if (shell === undefined) return;
+        const local = saved?.kind === "local" ? saved : undefined;
+        /* Lines handed over once (T205, D8): typed now, and gone from the state `start` writes
+           back, so the next launch reopens a plain shell. */
+        if (restoredState.run !== undefined) {
+          start({
+            kind: "local",
+            shell,
+            cwd: restoredState.cwd,
+            targetId: null,
+            runOnConnect: restoredState.run.join("\n"),
+            press: restoredState.press ?? true,
+            env: restoredState.env ?? null,
+            pathPrepend: restoredState.pathPrepend ?? null,
+          });
+          return;
+        }
+        const onRestore = saved?.onRestore ?? "run";
         start({
           kind: "local",
           shell,
           cwd: restoredState.cwd,
           targetId: saved?.id ?? null,
-          runOnConnect: saved?.kind === "local" ? (saved.runOnConnect ?? null) : null,
+          runOnConnect: onRestore === "none" || local === undefined ? null : (local.runOnConnect ?? null),
+          press: onRestore === "run",
+          // The live entry's, where there is one: editing it makes every tab pointing at it follow.
+          env: local ? (local.env ?? null) : (restoredState.env ?? null),
+          pathPrepend: local ? (local.pathPrepend ?? null) : (restoredState.pathPrepend ?? null),
         });
       })
       // If shell detection fails the tab opens on the form, just as before this feature existed.
@@ -211,6 +259,7 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
             key={generation}
             target={target}
             runOnConnect={choice?.runOnConnect ?? null}
+            pressEnter={choice?.press ?? true}
             active={active}
             onOpened={opened}
             onExit={setExit}
@@ -234,7 +283,13 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
           )}
         </>
       ) : (
-        <TargetForm onOpen={start} onError={showError} initial={lastTried} />
+        <TargetForm
+          onOpen={start}
+          onError={showError}
+          initial={lastTried}
+          draft={draft}
+          onDraftSaved={draftSaved}
+        />
       )}
     </div>
   );

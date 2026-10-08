@@ -52,8 +52,15 @@ pub async fn terminal_open(
         /* Off the runtime: opening a pty is ConPTY on Windows and `forkpty` on Unix, both
         blocking, and the shell behind it may be on a network drive or a WSL distribution that
         has to start first. */
-        TerminalTarget::Local { shell, args, cwd } => {
-            in_background(move || local::spawn(shell, args, cwd, size, sink)).await?
+        TerminalTarget::Local {
+            shell,
+            args,
+            cwd,
+            env,
+            path_prepend,
+        } => {
+            in_background(move || local::spawn(shell, args, cwd, &env, &path_prepend, size, sink))
+                .await?
         }
         // Failed authentication, a changed fingerprint, an unreachable server — all of them fail
         // here, before there is any session to put in the map. That is what the frontend brings
@@ -219,6 +226,8 @@ mod tests {
             Some(shell.to_string()),
             args,
             None,
+            &std::collections::BTreeMap::new(),
+            &[],
             TerminalSize { cols: 80, rows: 24 },
             sink,
         )

@@ -302,3 +302,27 @@ describe("blueprintAppliedFrom / jobFailureMessage", () => {
     expect(blueprintAppliedFrom(job(null))).toBeNull();
   });
 });
+
+/* T205, D2: an archive the daemon downloads is consented to like a command it runs. */
+describe("archives", () => {
+  it("treats an archive like a command for consent", () => {
+    const plan = {
+      blueprint: "wordpress", project: "wp", root: "/p", trusted: true, source: "builtin",
+      steps: [{ action: { action: "fetch_archive", url: "https://wordpress.org/latest.zip", strip: "wordpress" },
+                disposition: { disposition: "confirm", what: "https://wordpress.org/latest.zip" }, elevates: false }],
+    } as unknown as BlueprintPlan;
+
+    expect(scaffoldStepIndex(plan.steps)).toBe(0);
+    expect(buildScaffoldConsent(plan, plan.steps[0])).toEqual({
+      command: "", archive: "https://wordpress.org/latest.zip", untrusted: false,
+    });
+  });
+
+  it("names an archive left out", () => {
+    const applied = {
+      blueprint: "wordpress", project: "wp", root: "/p",
+      steps: [{ action: { action: "fetch_archive", url: "https://wordpress.org/latest.zip" }, result: { result: "not_run", why: "w" } }],
+    } as unknown as BlueprintApplied;
+    expect(scaffoldLeftCommand(applied)).toBe("https://wordpress.org/latest.zip");
+  });
+});

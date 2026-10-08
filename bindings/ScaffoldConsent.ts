@@ -9,9 +9,14 @@
  */
 export type ScaffoldConsent = { 
 /**
- * The command as it was shown, `{project}` already expanded.
+ * The command as it was shown, `{project}` already expanded. Empty for an archive.
  */
 command: string, 
+/**
+ * The archive URL as it was shown — roadmap task **T205**, D2. Exactly one of `command` and
+ * this names what the plan showed.
+ */
+archive?: string | null, 
 /**
  * Whether the person was told this blueprint is nobody's to vouch for.
  *

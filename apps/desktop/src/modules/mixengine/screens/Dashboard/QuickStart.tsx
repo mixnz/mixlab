@@ -36,7 +36,14 @@ type Phase =
  * Close button: services not started, domain not resolved, and no way to the site just built. This
  * card now only asks three questions, opens `ApplyDialog`, then gets an address back.
  */
-export default function QuickStart({ onCreated }: { onCreated: () => void }) {
+export default function QuickStart({
+  onCreated,
+  terminalVisible,
+}: {
+  onCreated: () => void;
+  /** Whether this window draws the Terminal module, for the steps after an apply — T205. */
+  terminalVisible: boolean;
+}) {
   const [available, setAvailable] = useState<BlueprintSummary[]>([]);
   const [slug, setSlug] = useState("");
   const [project, setProject] = useState("");
@@ -141,7 +148,6 @@ export default function QuickStart({ onCreated }: { onCreated: () => void }) {
           blueprint={phase.blueprint}
           initialProject={project}
           initialRoot={root}
-          withFrontEnd
           onCancel={() => setPhase({ kind: "form" })}
           onDone={(applied) => {
             if (applied === null) {
@@ -166,6 +172,7 @@ export default function QuickStart({ onCreated }: { onCreated: () => void }) {
       {phase.kind === "settling" && (
         <AfterApply
           applied={phase.applied}
+          terminalVisible={terminalVisible}
           onFinished={(url) => {
             setPhase({ kind: "done", url });
             onCreated();

@@ -18,7 +18,9 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { ProjectDetail } from "@mixengine/api";
 import type { ProjectSummary } from "@mixengine/api";
+import NextStepsPanel from "../../components/NextStepsPanel";
 import { declaredSiteRows } from "../../declaredSites";
+import { siteUrl } from "../../siteState";
 import { formatPins } from "../../projectPins";
 import ProjectForm from "./ProjectForm";
 import styles from "./Projects.module.css";
@@ -27,10 +29,14 @@ interface Props {
   active: boolean;
   /** Over to the Sites screen, filtered to this project — see `sitesNavigation.ts`. */
   onOpenSites: (project: string) => void;
+  /** Over to the Dashboard, where a database's sign-in details are shown — T205, D8. */
+  onOpenDashboard: () => void;
+  /** Whether this window draws the Terminal module, for the steps panel — T205. */
+  terminalVisible: boolean;
 }
 
 /** Every project registered in the home — create, edit (name/root/pins), delete. */
-export default function Projects({ active, onOpenSites }: Props) {
+export default function Projects({ active, onOpenSites, onOpenDashboard, terminalVisible }: Props) {
   const [rows, setRows] = useState<ProjectSummary[]>([]);
   /** False until the first read has answered — until then an empty `rows` means "not known yet",
    *  not "no projects". */
@@ -39,6 +45,8 @@ export default function Projects({ active, onOpenSites }: Props) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ProjectDetail | null>(null);
   const [detail, setDetail] = useState<ProjectDetail | null>(null);
+  /** The address of the shown project's first site, for the steps panel's `open` rows — T205. */
+  const [detailUrl, setDetailUrl] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   /** The project whose manifest is being written. */
   const [exporting, setExporting] = useState<string | null>(null);
@@ -70,9 +78,17 @@ export default function Projects({ active, onOpenSites }: Props) {
     if (active) void reload();
   }, [active, reload]);
 
+  /** The project's detail, and the address its steps open — read together. */
+  async function readDetail(name: string) {
+    const [shown, listed] = await Promise.all([api.projectShow(name), api.sites(name)]);
+    const first = listed.sites[0];
+    setDetail(shown);
+    setDetailUrl(first === undefined ? null : siteUrl(first));
+  }
+
   async function showDetail(name: string) {
     try {
-      setDetail(await api.projectShow(name));
+      await readDetail(name);
     } catch (e) {
       setError(errorMessage(t, e));
     }
@@ -91,7 +107,7 @@ export default function Projects({ active, onOpenSites }: Props) {
     setAdopting(domain);
     try {
       await api.siteCreate({ project: { name: project }, from: domain });
-      setDetail(await api.projectShow(project));
+      await readDetail(project);
     } catch (e) {
       setError(errorMessage(t, e));
     } finally {
@@ -315,6 +331,20 @@ export default function Projects({ active, onOpenSites }: Props) {
               ))}
             </tbody>
           </Table>
+        </Card>
+      )}
+
+      {detail?.next_steps && (
+        <Card title={t("mixengine.projects.detail.stepsTitle")} count={detail.project.name}>
+          <NextStepsPanel
+            project={detail.project.name}
+            root={detail.project.root}
+            siteUrl={detailUrl}
+            steps={detail.next_steps}
+            terminalVisible={terminalVisible}
+            onShowDatabase={onOpenDashboard}
+            titled={false}
+          />
         </Card>
       )}
 

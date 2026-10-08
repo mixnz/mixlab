@@ -28,10 +28,12 @@ export function answerSubjectFor(step: PlanStep): AnswerSubject | null {
   return null;
 }
 
-/** `-1` when the plan has no `run_scaffold` step — there is always at most one such step in a
- *  plan. */
+/** `-1` when the plan has no scaffold step — a `run_scaffold`, or since T205 a `fetch_archive`;
+ *  there is always at most one in a plan. */
 export function scaffoldStepIndex(steps: PlanStep[]): number {
-  return steps.findIndex((step) => step.action.action === "run_scaffold");
+  return steps.findIndex(
+    (step) => step.action.action === "run_scaffold" || step.action.action === "fetch_archive",
+  );
 }
 
 /**
@@ -62,9 +64,10 @@ export function scaffoldConsentState(
  */
 export function scaffoldLeftCommand(applied: BlueprintApplied): string | null {
   for (const outcome of applied.steps) {
-    if (outcome.action.action !== "run_scaffold") continue;
     if (outcome.result.result !== "not_run") continue;
-    return outcome.action.command;
+    if (outcome.action.action === "run_scaffold") return outcome.action.command;
+    // An archive left out is named by its address (T205, D2).
+    if (outcome.action.action === "fetch_archive") return outcome.action.url;
   }
   return null;
 }
@@ -113,10 +116,16 @@ export function buildAnswers(
   return answers;
 }
 
-/** `command` is exactly the string the step showed — not anything the user typed again. */
+/** `command` is exactly the string the step showed — not anything the user typed again. For an
+ *  archive it is empty and `archive` is the address the step showed (T205, D2). */
 export function buildScaffoldConsent(plan: BlueprintPlan, step: PlanStep): ScaffoldConsent | null {
-  if (step.action.action !== "run_scaffold") return null;
-  return { command: step.action.command, untrusted: !plan.trusted };
+  if (step.action.action === "run_scaffold") {
+    return { command: step.action.command, untrusted: !plan.trusted };
+  }
+  if (step.action.action === "fetch_archive") {
+    return { command: "", archive: step.action.url, untrusted: !plan.trusted };
+  }
+  return null;
 }
 
 /** One human-readable sentence for each `PlanAction` — ten variants, ten i18n keys. */
@@ -151,6 +160,8 @@ export function describePlanAction(
         : t(`${base}.set_php_extension_pending`, { name: action.name });
     case "run_scaffold":
       return t(`${base}.run_scaffold`, { command: action.command });
+    case "fetch_archive":
+      return t(`${base}.fetch_archive`, { url: action.url });
   }
 }
 

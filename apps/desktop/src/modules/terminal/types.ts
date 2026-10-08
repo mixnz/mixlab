@@ -32,6 +32,13 @@ export type { SshAuth, SshConfig } from "../../core/ssh";
  */
 export type SavedTarget = SavedLocalTarget | SavedSshTarget;
 
+/**
+ * What a tab restored on the next launch does with its target's `runOnConnect` — T205, D10.
+ * `run` types and presses Enter, as every entry did before; `type` leaves the last line waiting
+ * for Enter; `none` opens the shell and types nothing.
+ */
+export type OnRestore = "run" | "type" | "none";
+
 interface SavedTargetBase {
   id: string;
   name: string;
@@ -45,6 +52,8 @@ interface SavedTargetBase {
    * `savedTargets.ts`.
    */
   runOnConnect?: string;
+  /** Absent reads as `run`. */
+  onRestore?: OnRestore;
 }
 
 /** A shell on this machine. `shellName` rather than a path — `powershell`, `wsl:Ubuntu`: the name
@@ -54,6 +63,10 @@ export interface SavedLocalTarget extends SavedTargetBase {
   kind: "local";
   shellName: string;
   cwd: string | null;
+  /** Variables set in the shell, in plain text beside the rest of the entry — T205, D9. */
+  env?: Record<string, string>;
+  /** Directories put ahead of the inherited `PATH` — T205, D9. */
+  pathPrepend?: string[];
 }
 
 /** An SSH server. `config` here is always complete — `savedTargets.ts` merges the secret part in
@@ -67,7 +80,14 @@ export interface SavedSshTarget extends SavedTargetBase {
  *  flattens `SshConfig`'s four fields because on the Rust side it is a newtype variant in an enum
  *  with a `tag`. */
 export type TerminalTarget =
-  | { type: "local"; shell: string; args: string[]; cwd: string | null }
+  | {
+      type: "local";
+      shell: string;
+      args: string[];
+      cwd: string | null;
+      env?: Record<string, string>;
+      pathPrepend?: string[];
+    }
   | ({ type: "ssh" } & SshConfig);
 
 /**
@@ -82,10 +102,15 @@ export type TerminalChoice =
       cwd: string | null;
       targetId: string | null;
       runOnConnect: string | null;
+      /** Whether `runOnConnect`'s last line is followed by Enter — T205, D10. */
+      press: boolean;
+      env: Record<string, string> | null;
+      pathPrepend: string[] | null;
     }
   | {
       kind: "ssh";
       config: SshConfig;
       targetId: string | null;
       runOnConnect: string | null;
+      press: boolean;
     };

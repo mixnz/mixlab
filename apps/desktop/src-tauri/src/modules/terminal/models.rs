@@ -28,6 +28,13 @@ pub enum TerminalTarget {
         #[serde(default)]
         args: Vec<String>,
         cwd: Option<String>,
+        /// Extra variables for the shell — T205, D9. Generic: this module knows nothing of what
+        /// they mean.
+        #[serde(default)]
+        env: std::collections::BTreeMap<String, String>,
+        /// Directories put ahead of the inherited `PATH` — T205, D9.
+        #[serde(default, rename = "pathPrepend")]
+        path_prepend: Vec<String>,
     },
     /// The server the session opens on. Exactly the `SshConfig` the tunnel uses — those four
     /// fields are the four fields of an SSH server, not of whatever sits at the other end.

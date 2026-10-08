@@ -151,6 +151,11 @@ pub struct ProjectDetail {
     /// and only at the moment of creating.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub declared_sites: Vec<DeclaredSite>,
+
+    /// What its blueprint says is left to do, read through `projects.blueprint_id` — roadmap task
+    /// **T205**, D5. [`None`] for a project made by hand or applied before T205.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_steps: Option<crate::NextSteps>,
 }
 
 /// One language's pin, where it was read, and whether this machine can satisfy it.

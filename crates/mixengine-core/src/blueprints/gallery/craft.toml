@@ -1,0 +1,35 @@
+schema = 1
+
+[blueprint]
+name = "Craft CMS"
+description = "Craft CMS on PHP-FPM with PostgreSQL, served from web/"
+created_at = "2026-10-08T00:00:00Z"
+
+[blueprint.created_on]
+os = "any"
+version = "0.0.1"
+
+[runtimes]
+php = "8.4"
+composer = "2"
+
+[site]
+kind = "php-fpm"
+doc_root = "web"
+https = true
+domain_pattern = "{project}.test"
+
+[[services]]
+name = "postgres"
+instance = "main"
+database = "{project}"
+user = "{project}"
+
+[scaffold]
+command = "composer create-project craftcms/craft . --no-interaction"
+needs_empty_dir = true
+
+[[next_steps]]
+kind = "open"
+path = "/admin/install"
+credentials = true

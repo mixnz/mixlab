@@ -23,3 +23,8 @@ domain_pattern = "{project}.test"
 command = "npx --yes create-next-app@latest . --yes"
 needs_empty_dir = true
 needs_npm_safe_dir = true
+
+[[next_steps]]
+kind = "serve"
+run = "npm run dev"
+note = "Next.js listens on 3000; a second project on that port will not start."

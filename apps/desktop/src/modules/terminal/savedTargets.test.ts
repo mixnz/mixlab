@@ -112,6 +112,17 @@ describe("parseSavedTarget", () => {
     });
   });
 
+  /* T205, D9 and D10: what a local target sets in its shell, and what a restored tab does. */
+  it("reads onRestore, env and pathPrepend, and defaults onRestore to run", () => {
+    const entry = parseSavedTarget({
+      id: "t-1", name: "a", kind: "local", shellName: "pwsh", cwd: "/p",
+      env: { MIXENGINE_HOME: "/h" }, pathPrepend: ["/h/bin"], onRestore: "type",
+    });
+    expect(entry).toMatchObject({ env: { MIXENGINE_HOME: "/h" }, pathPrepend: ["/h/bin"], onRestore: "type" });
+    expect(parseSavedTarget({ id: "t-2", name: "b", kind: "local", shellName: "pwsh" })?.onRestore ?? "run").toBe("run");
+    expect(parseSavedTarget({ id: "t-3", name: "c", kind: "local", shellName: "pwsh", onRestore: "bogus" })?.onRestore).toBeUndefined();
+  });
+
   /* An entry from the old version, when the list only held servers. Nothing is guessed: there was
      no other kind back then, so `ssh` is what it always was. */
   it("reads an entry written before there were kinds as a server", () => {

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE projects SET blueprint_id = ?1 WHERE name = ?2 AND blueprint_id IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "13c8150545adf1e0a4756dc169bf0d6e25423d309630280df9c818f2cc9cfea6"
+}

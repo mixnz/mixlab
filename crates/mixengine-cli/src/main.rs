@@ -6253,14 +6253,29 @@ fn agreed_to_scaffold(
     run_untrusted_scaffold: bool,
     json: bool,
 ) -> Result<Option<ScaffoldConsent>, Error> {
-    let Some(command) = plan.steps.iter().find_map(|step| match &step.action {
-        PlanAction::RunScaffold { command } => Some(command.clone()),
+    // **A command or an archive** — roadmap task **T205**, D2. What is shown and agreed to is the
+    // command, or the archive's URL; the consent names whichever it was.
+    let Some((command, archive)) = plan.steps.iter().find_map(|step| match &step.action {
+        PlanAction::RunScaffold { command } => Some((command.clone(), false)),
+        PlanAction::FetchArchive { url, .. } => Some((url.clone(), true)),
         _ => None,
     }) else {
         return Ok(None);
     };
 
     let untrusted = !plan.trusted;
+    let consent = |untrusted: bool| match archive {
+        true => ScaffoldConsent {
+            command: String::new(),
+            archive: Some(command.clone()),
+            untrusted,
+        },
+        false => ScaffoldConsent {
+            command: command.clone(),
+            archive: None,
+            untrusted,
+        },
+    };
 
     let given = match untrusted {
         true => run_untrusted_scaffold,
@@ -6268,7 +6283,7 @@ fn agreed_to_scaffold(
     };
 
     if given {
-        return Ok(Some(ScaffoldConsent { command, untrusted }));
+        return Ok(Some(consent(untrusted)));
     }
 
     // The flag for the other kind of blueprint is not an answer about this one, and saying so is
@@ -6309,11 +6324,19 @@ fn agreed_to_scaffold(
 
     let vouched = vouching(untrusted, plan.signature);
 
-    match confirm::ask(&format!(
-        "{vouched} It wants to run, in the new project's directory:\n\n    {command}\n\nRun it? \
-         [y/N] "
-    )) {
-        confirm::Answer::Yes => Ok(Some(ScaffoldConsent { command, untrusted })),
+    let question = match archive {
+        true => format!(
+            "{vouched} It wants to download and unpack, into the new project's directory:\n\n    \
+             {command}\n\nDo it? [y/N] "
+        ),
+        false => format!(
+            "{vouched} It wants to run, in the new project's directory:\n\n    {command}\n\nRun \
+             it? [y/N] "
+        ),
+    };
+
+    match confirm::ask(&question) {
+        confirm::Answer::Yes => Ok(Some(consent(untrusted))),
 
         // Declining leaves the step as a sentence and applies everything else, which is what the
         // daemon does with an apply that carries no consent at all.
@@ -7260,6 +7283,39 @@ fn for_seconds(text: &str) -> Result<u64, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **`--run-scaffold` agrees to an archive by its URL** — roadmap task **T205**, D2. The
+    /// consent names what the plan showed, and an archive shows a URL, not a command.
+    #[test]
+    fn the_scaffold_flag_agrees_to_an_archive_by_its_url() {
+        let url = "https://wordpress.org/latest.zip";
+        let plan = BlueprintPlan {
+            blueprint: "wordpress".to_owned(),
+            project: "wp".to_owned(),
+            root: "/tmp/wp".to_owned(),
+            steps: vec![mixengine_proto::PlanStep {
+                action: PlanAction::FetchArchive {
+                    url: url.to_owned(),
+                    strip: Some("wordpress".to_owned()),
+                },
+                disposition: mixengine_proto::Disposition::Confirm {
+                    what: url.to_owned(),
+                },
+                elevates: false,
+            }],
+            source: mixengine_proto::BlueprintSource::Builtin,
+            trusted: true,
+            signature: None,
+        };
+
+        let consent = agreed_to_scaffold(&plan, true, false, true)
+            .expect("an answer")
+            .expect("a consent");
+
+        assert_eq!(consent.archive.as_deref(), Some(url));
+        assert_eq!(consent.command, "");
+        assert!(!consent.untrusted);
+    }
 
     /// T182e. The uninstaller reads `mix` through `nsExec`, which decodes in the ANSI code page, so
     /// under `MIXENGINE_PLAIN_TEXT` the typographic characters become their ASCII look-alikes — the

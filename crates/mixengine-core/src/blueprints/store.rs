@@ -337,7 +337,7 @@ mod tests {
 
     fn a_manifest(name: &str) -> BlueprintManifest {
         BlueprintManifest {
-            schema: manifest::SCHEMA,
+            schema: 1,
             blueprint: Header {
                 name: name.to_owned(),
                 description: String::new(),
@@ -352,6 +352,8 @@ mod tests {
             services: Vec::new(),
             php: None,
             scaffold: None,
+            archive: None,
+            next_steps: Vec::new(),
         }
     }
 

@@ -548,6 +548,12 @@ export function databaseExploreData(service: string, database?: string): Promise
   return invoke("mixengine_database_explore_data", { service, database });
 }
 
+/** Open a Terminal tab with a state the Terminal module validates (T205, D11). Returns nothing —
+ *  success means the tab has been queued to open, as for `databaseExploreData`. */
+export function openTerminal(state: unknown): Promise<void> {
+  return invoke("mixengine_open_terminal", { state });
+}
+
 /** Opens a service's log stream. The same pattern as `watch`/`unwatch` — a new `Channel`, and the
  *  caller parses the raw JSON. */
 export function logsWatch(

@@ -82,6 +82,7 @@ import FoundServices from "./FoundServices";
 import RestorePrevious from "./RestorePrevious";
 import PathNudge from "./PathNudge";
 import QuickStart from "./QuickStart";
+import { TERMINAL_MODULE_ID } from "../../nextSteps";
 import { shouldOfferQuickStart } from "../../quickStart";
 import type { SiteSummary } from "@mixengine/api";
 import styles from "./Dashboard.module.css";
@@ -705,7 +706,12 @@ export default function Dashboard({
       />
 
       {/* Above the service table, and only when this home has no site yet — T117. */}
-      {shouldOfferQuickStart(sites) && <QuickStart onCreated={() => void readSites()} />}
+      {shouldOfferQuickStart(sites) && (
+        <QuickStart
+          onCreated={() => void readSites()}
+          terminalVisible={isModuleVisible(TERMINAL_MODULE_ID)}
+        />
+      )}
       <PathNudge active={active} />
       {/* T182h: a copy of an earlier install's state, while this home has nothing of its own. */}
       <RestorePrevious active={active} onRestored={() => void reload()} />

@@ -2744,6 +2744,11 @@ pub(crate) fn project_detail(detail: &ProjectDetail) -> String {
         }
     }
 
+    // **T205, D6.** What the project's blueprint says is left to do.
+    if let Some(steps) = &detail.next_steps {
+        out.push_str(&next_steps_said(steps));
+    }
+
     out
 }
 
@@ -4082,6 +4087,49 @@ pub(crate) fn blueprint_applied(applied: &BlueprintApplied) -> String {
         }
     }
 
+    if let Some(steps) = &applied.next_steps {
+        out.push_str(&next_steps_said(steps));
+    }
+
+    out
+}
+
+/// The steps a blueprint left, one line each — roadmap task **T205**, D6.
+fn next_steps_said(steps: &mixengine_proto::NextSteps) -> String {
+    use mixengine_proto::NextStepKind;
+
+    let mut out = String::from("\nNext, in the project directory:\n");
+
+    for step in &steps.steps {
+        let what = match step.kind {
+            NextStepKind::Open => format!("open {}", step.path.as_deref().unwrap_or("/")),
+            _ => step.run.clone().unwrap_or_default(),
+        };
+
+        let mut tail = Vec::new();
+        if step.kind == NextStepKind::Serve {
+            tail.push("(keeps running)");
+        }
+        if step.optional {
+            tail.push("(optional)");
+        }
+        if let Some(note) = step.note.as_deref() {
+            tail.push(note);
+        }
+
+        match tail.is_empty() {
+            true => out.push_str(&format!("  {what}\n")),
+            false => out.push_str(&format!("  {what}   {}\n", tail.join(" "))),
+        }
+    }
+
+    // **D12**: the same file the scaffold came from, so the same caution.
+    if !steps.trusted {
+        out.push_str(
+            "These come from a blueprint nobody vouches for; read them before running them.\n",
+        );
+    }
+
     out
 }
 
@@ -4214,6 +4262,7 @@ fn action_said(action: &PlanAction) -> String {
             ),
         },
         PlanAction::RunScaffold { command } => format!("run `{command}`"),
+        PlanAction::FetchArchive { url, .. } => format!("download and unpack {url}"),
         _ => "something this build cannot describe".to_owned(),
     }
 }
@@ -5255,6 +5304,84 @@ mod tests {
         }
     }
 
+    /// **What is left to do ends the report** — roadmap task **T205**, D6. A `serve` step says it
+    /// keeps running, an optional one says so, and an `open` step names its path.
+    #[test]
+    fn an_apply_with_steps_ends_with_what_to_run() {
+        let step = |kind, run: Option<&str>, path: Option<&str>, note: Option<&str>, optional| {
+            mixengine_proto::NextStep {
+                kind,
+                run: run.map(str::to_owned),
+                path: path.map(str::to_owned),
+                note: note.map(str::to_owned),
+                optional,
+                credentials: false,
+                site: None,
+            }
+        };
+        let applied = BlueprintApplied {
+            blueprint: "nextjs".to_owned(),
+            project: "shop".to_owned(),
+            root: "/tmp/shop".to_owned(),
+            steps: Vec::new(),
+            next_steps: Some(mixengine_proto::NextSteps {
+                trusted: true,
+                steps: vec![
+                    step(
+                        mixengine_proto::NextStepKind::Once,
+                        Some("npm install"),
+                        None,
+                        None,
+                        false,
+                    ),
+                    step(
+                        mixengine_proto::NextStepKind::Serve,
+                        Some("npm run dev"),
+                        None,
+                        Some("port 3000"),
+                        false,
+                    ),
+                    step(
+                        mixengine_proto::NextStepKind::Open,
+                        None,
+                        Some("/cp"),
+                        None,
+                        true,
+                    ),
+                ],
+            }),
+            database: None,
+        };
+
+        let said = blueprint_applied(&applied);
+        assert!(said.contains("Next, in the project directory:"), "{said}");
+        assert!(said.contains("  npm install\n"), "{said}");
+        assert!(
+            said.contains("  npm run dev   (keeps running) port 3000\n"),
+            "{said}"
+        );
+        assert!(said.contains("  open /cp   (optional)\n"), "{said}");
+        assert!(!said.contains("nobody vouches"), "{said}");
+    }
+
+    /// **Untrusted steps say so** — T205, D12.
+    #[test]
+    fn untrusted_steps_are_read_before_they_are_run() {
+        let said = next_steps_said(&mixengine_proto::NextSteps {
+            trusted: false,
+            steps: vec![mixengine_proto::NextStep {
+                kind: mixengine_proto::NextStepKind::Once,
+                run: Some("npm install".to_owned()),
+                path: None,
+                note: None,
+                optional: false,
+                credentials: false,
+                site: None,
+            }],
+        });
+        assert!(said.contains("nobody vouches"), "{said}");
+    }
+
     /// **Every step, and the one that did not run said in full** — roadmap task T78. A scaffold
     /// command nobody ran is the one line a person has to act on themselves, so it is not folded
     /// into a count.
@@ -5289,6 +5416,8 @@ mod tests {
                     },
                 },
             ],
+            next_steps: None,
+            database: None,
         };
 
         let rendered = super::blueprint_applied(&applied);
@@ -5316,6 +5445,8 @@ mod tests {
                     why: "`composer install` exited with 1".to_owned(),
                 },
             }],
+            next_steps: None,
+            database: None,
         };
 
         let rendered = super::blueprint_applied(&applied);
@@ -5348,6 +5479,8 @@ mod tests {
                     ),
                 },
             }],
+            next_steps: None,
+            database: None,
         };
 
         let rendered = super::blueprint_applied(&applied);
@@ -7161,6 +7294,7 @@ mod tests {
                     },
                 },
             ],
+            next_steps: None,
         };
 
         let out = project_detail(&detail);

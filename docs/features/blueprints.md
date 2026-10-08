@@ -219,7 +219,7 @@ untrusted content when the blueprint came from someone else. **T78a** is what bu
   runs exactly where it used to. A root that does not exist yet is empty — that is the ordinary
   case, since the apply is what creates it — and a root whose listing fails is not judged, on the
   same rule as the program check: a false `blocked` stops a blueprint that would have worked.
-  The three gallery blueprints carrying a command all set it, asserted over the shipped set in
+  Every gallery blueprint with a scaffold sets it, asserted over the shipped set in
   `crates/mixengine-core/tests/blueprint_gallery.rs`.
 - **A command that names itself after its directory says so too, and the name is checked before the
   contents** — roadmap task **T120c**. `[scaffold] needs_npm_safe_dir = true` means this command
@@ -241,6 +241,18 @@ untrusted content when the blueprint came from someone else. **T78a** is what bu
   nowhere near the block, which is what D3's *declared, never inferred* is about: a guess may add a
   hint after a failure, never refuse somebody up front. Only `nextjs` declares it, asserted over the
   shipped set.
+- **Or a release archive, downloaded and unpacked** — roadmap task **T205**
+  ([design](../specs/2026-10-08-t205-a-blueprint-ends-at-a-working-site-design.md), D2). `[scaffold] archive = "https://…"`, with an optional `strip` naming the
+  archive's single top-level folder, is the form for a project that ships as a zip and has no
+  initialiser to run: WordPress is the one in the gallery. It is the other half of the same key, so
+  `archive` and `command` exclude each other and a manifest with both or neither is unreadable;
+  only `https://` is read, and no checksum is pinned, because `latest.zip` changes with every
+  release. It is consented to exactly as a command is, since the PHP files it writes run the
+  moment somebody opens the site: the plan shows the URL where it would show a command, and the
+  `ScaffoldConsent` names it in `archive`. It unpacks into a staging directory under the home's
+  `cache/` and moves the contents into the project root, refuses a download past 1 GiB, and keeps
+  every other rule here: `needs_empty_dir`, cancellable, no timeout, a failed step rather than a
+  failed apply. It needs schema 2, which ADR 0061 writes only for a blueprint that uses it.
 - **No timeout.** Any number would kill a legitimate `composer install` on a slow line; the bound is
   that the job is visible and `job.cancel` stops it — killing the process *group*, so what a package
   manager forked goes with it.
@@ -274,10 +286,10 @@ untrusted content when the blueprint came from someone else. **T78a** is what bu
 
 ## Built-in gallery
 
-Thirteen blueprints ship **inside the binary** and are seeded into every home as `builtin` rows the
-first time a daemon starts there: `django`, `drupal`, `express-mongodb`, `laravel`,
-`laravel-mongodb`, `nextjs`, `php-mysql`, `rails`, `static`, `strapi`, `symfony`, `vite`,
-`wordpress`. They are trusted without a signature check,
+The gallery ships **inside the binary** and is seeded into every home as `builtin` rows the first
+time a daemon starts there: `cakephp`, `codeigniter`, `craft`, `django`, `drupal`,
+`express-mongodb`, `laravel`, `laravel-mongodb`, `nextjs`, `php-mysql`, `rails`, `statamic`,
+`static`, `strapi`, `symfony`, `vite`, `wordpress`, `yii`. They are trusted without a signature check,
 because a signature travelling in the same binary as the key it would be checked against proves
 nothing the binary has not already proved — publishing them as signed files for hand import is T79a.
 
@@ -291,7 +303,11 @@ this product is asked most often and had no answer for; and `strapi` is the only
 database, a pairing `nextjs` leaves untouched. The two MongoDB entries — T164 — close the gap phase
 19 opened: every PHP MixEngine installs carries the `mongodb` extension and MixLab browses a
 MongoDB, and nothing in the gallery asked for one. `laravel-mongodb` is the only entry that turns
-that extension on, and `express-mongodb` the only `node-app` with a document store. Both name the
+that extension on, and `express-mongodb` the only `node-app` with a document store. The five PHP
+frameworks of T205 each close one more: `cakephp` is the only `webroot`, `codeigniter` the only
+framework on MySQL, `craft` the only PHP project on PostgreSQL, `statamic` the only PHP project with
+no service at all (it keeps its content in flat files), and `yii` the only `web` that is an
+application rather than a CMS. Both name the
 service and **no `database`**: the recipe runs without accounts and makes no databases — one exists
 once something writes to it — so the key would plan a step the apply is refused at. And both say in
 their description that MongoDB needs a processor with AVX, which is the first requirement in the
@@ -302,11 +318,12 @@ an entry that existed to complete a table is the change this section exists to a
 
 Seeding **compares before it writes**, so the ordinary daemon start touches nothing, and a row whose
 source is `captured` or `imported` is never overwritten: capturing over `laravel` makes that slug
-this machine's own for good. There is no `blueprint.delete` in this build, so the thirteen are in every
-home for good as well.
+this machine's own for good. There is no `blueprint.delete` in this build, so every gallery entry
+is in every home for good as well.
 
-Five of them carry a `[scaffold]` — `laravel`, `laravel-mongodb`, `symfony`, `nextjs` and `drupal`
-— and eight deliberately do not. A gallery command has to be non-interactive (there is no timeout, so a prompt
+Most carry a `[scaffold]`: a command for `cakephp`, `codeigniter`, `craft`, `drupal`, `laravel`,
+`laravel-mongodb`, `nextjs`, `statamic`, `symfony` and `yii`, and an archive for `wordpress`. The
+rest deliberately do not. A gallery command has to be non-interactive (there is no timeout, so a prompt
 would hang a job), spelled the same for `cmd.exe` and `sh`, with a program for its first word — the
 plan reads it as one (T78b) — and it may not write into a shared runtime: that last rule is what
 removes Django's `pip install django` and Rails' `gem install rails`, both of which reach every
@@ -315,8 +332,8 @@ project using that runtime. The first rule is what removes `vite` and `strapi`: 
 waiting on a prompt waits for good. `php-mysql` has no initialiser to run at all, which is the whole
 of what it offers. `express-mongodb` has only `express-generator`, unmaintained and a major version
 of Express behind. `laravel-mongodb` runs `laravel`'s command and no more: the `composer require
-mongodb/laravel-mongodb` after it would be a second command joined to the first, so its description
-carries it instead. The gallery sells a stack, not a scaffold.
+mongodb/laravel-mongodb` after it would be a second command joined to the first, so it is a step
+the person runs (below). The gallery sells a stack, not a scaffold.
 
 **A blueprint with no scaffold is a complete blueprint.** Since T124 an apply that writes no source
 code ends at a page that says so, and the two things people actually do with these entries are
@@ -326,6 +343,32 @@ and apply the stack over it — which is the flow a `[scaffold]` with `needs_emp
 They double as end-to-end tests of the whole system, but **not of the cross-OS criterion below** — a
 hand-written manifest is byte-identical on all three systems, so what proves that one is a real
 capture taken on Windows and committed as a fixture.
+
+## What is left to do
+
+**A blueprint says what to run after it, and MixEngine never runs it** — roadmap task **T205**
+([design](../specs/2026-10-08-t205-a-blueprint-ends-at-a-working-site-design.md)). `[[next_steps]]` lists the commands that end at a working site, in three kinds:
+`once` (run one time: `npm install`, `php artisan migrate`), `serve` (keeps running:
+`npm run dev`) and `open` (finish in the browser: `/wp-admin/install.php`). Each takes a `note`,
+`optional` when the site answers without it, and `credentials` when it needs the database account
+the apply made. A `run` line follows the scaffold's rules, because it must mean the same thing in
+`cmd.exe`, PowerShell and `sh`: one line with a program for its first word, no shell operators, no
+`\`, and `{project}` as the only token. A step that breaks one makes the manifest unreadable,
+named by its position.
+
+**Guidance, not supervision.** The daemon starts no site program: a dev server belongs in a terminal
+where a person sees it and stops it, and a supervised one would be a second process manager beside
+the services. So the steps are data. The apply answers them as `BlueprintApplied.next_steps`, with
+the blueprint's trust; `project.show` reads them again through the blueprint the project was made
+from (`projects.blueprint_id`, no migration); `mix blueprint apply` prints them; and MixLab draws a
+panel whose **Run** opens a Terminal tab with the project's toolchain on `PATH`. A step from a
+blueprint nobody vouches for is typed there and left for the person's Enter, never pressed.
+
+**The browser opens by itself when nothing is left.** MixLab sends `front_end: true` on every apply,
+because its question is always *give me a site that works*, and opens the site when no step failed
+and no step is needed; with an `open` step, on that step's page. Every gallery entry says what is
+left: `nextjs`, `strapi`, `express-mongodb`, `django`, `rails` and `vite` need a step before the site
+answers, and the PHP entries answer at once, on their installer where they have one.
 
 ## The gallery as signed files
 

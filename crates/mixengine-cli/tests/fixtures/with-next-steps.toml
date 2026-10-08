@@ -1,0 +1,25 @@
+schema = 1
+
+[blueprint]
+name = "With next steps"
+description = "A static site and the commands a person still runs"
+created_at = "2026-10-08T00:00:00Z"
+
+[blueprint.created_on]
+os = "any"
+version = "0.0.1"
+
+[site]
+kind = "static"
+doc_root = ""
+https = false
+domain_pattern = "{project}.test"
+
+[[next_steps]]
+kind = "once"
+run = "npm install {project}"
+
+[[next_steps]]
+kind = "serve"
+run = "npm run dev"
+note = "port 3000"

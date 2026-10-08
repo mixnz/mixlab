@@ -26,10 +26,10 @@ use std::sync::Arc;
 
 use mixengine_core::blueprints::manifest::BlueprintManifest;
 use mixengine_proto::{
-    AnswerSubject, BlueprintApplied, BlueprintApply, BlueprintApplyResponse, BlueprintPlan,
-    DatabaseCreate, Disposition, DomainAdd, Error, ErrorCode, ExtensionChoice, IssueOutcome,
-    JobKind, LogLine, LogSubject, PackageTarget, PackageVersion, PlanAction, PlanStep,
-    ProjectCreate, ProjectRef, Requirement, RuntimeKind, RuntimeTarget, ScaffoldConsent,
+    AnswerSubject, AppliedDatabase, BlueprintApplied, BlueprintApply, BlueprintApplyResponse,
+    BlueprintPlan, DatabaseCreate, Disposition, DomainAdd, Error, ErrorCode, ExtensionChoice,
+    IssueOutcome, JobKind, LogLine, LogSubject, PackageTarget, PackageVersion, PlanAction,
+    PlanStep, ProjectCreate, ProjectRef, Requirement, RuntimeKind, RuntimeTarget, ScaffoldConsent,
     ServiceCreate, ServiceId, SiteCreate, SiteRef, StepOutcome, StepResult, Stream, Timestamp,
     VersionAnswer, rpc,
 };
@@ -163,6 +163,7 @@ impl Api {
             consent,
             autostart,
             resolved,
+            database: None,
         };
 
         // **Opened once, before the first step** — roadmap task **T120**, its design's D5. The ring
@@ -261,6 +262,14 @@ impl Api {
             project: plan.project.clone(),
             root: plan.root.clone(),
             steps: outcomes,
+            // **What is left to do** — roadmap task **T205**, D6: the blueprint's steps for this
+            // project, expanded, with the row's trust beside them.
+            next_steps: mixengine_core::blueprints::steps::of_manifest(
+                manifest,
+                &plan.project,
+                plan.trusted,
+            ),
+            database: context.database.clone(),
         })
     }
 
@@ -309,6 +318,12 @@ impl Api {
                 if registered.is_some_and(|project| {
                     mixengine_platform::paths::in_full(&project.root) == here
                 }) {
+                    // **The project points at its blueprint** — roadmap task **T205**, D5. Only where
+                    // none is recorded, so a resumed apply mends an older row and never repoints one.
+                    mixengine_core::projects::adopt_blueprint(&self.store, name, &plan.blueprint)
+                        .await
+                        .map_err(|error| error.to_wire())?;
+
                     return Ok(StepResult::Done { note: None });
                 }
 
@@ -326,6 +341,12 @@ impl Api {
                         pins: Some(pins.clone()),
                     })
                     .await?;
+
+                // **The project points at its blueprint** — roadmap task **T205**, D5. Only where
+                // none is recorded, so a resumed apply mends an older row and never repoints one.
+                mixengine_core::projects::adopt_blueprint(&self.store, name, &plan.blueprint)
+                    .await
+                    .map_err(|error| error.to_wire())?;
 
                 Ok(StepResult::Done { note: None })
             }
@@ -394,7 +415,7 @@ impl Api {
                 let made = account::with_a_free_name(
                     self.databases.as_ref(),
                     &DatabaseCreate {
-                        service,
+                        service: service.clone(),
                         database: database.clone(),
                         user: Some(user.clone()),
                         // A blueprint never names a password — T77b's `--password` is a person
@@ -409,6 +430,13 @@ impl Api {
                     user = made.account.user,
                     "the blueprint's database and the account that reaches it are there"
                 );
+
+                // **What really happened, for the apply's answer** — roadmap task **T205**, D6.
+                context.database = Some(AppliedDatabase {
+                    service,
+                    database: made.account.database.clone(),
+                    user: made.account.user.clone(),
+                });
 
                 Ok(StepResult::Done { note: made.note })
             }
@@ -657,6 +685,41 @@ impl Api {
                     .await;
 
                 Ok(outcome)
+            }
+
+            PlanAction::FetchArchive { url, strip } => {
+                // **A failure is a failed step, not a failed apply** — roadmap task **T205**, D2, on
+                // the scaffold's own rule: the project it made works, and tearing it down over a
+                // download is the more expensive direction to be wrong in.
+                let installer = mixengine_core::install::Installer::new(self.paths().cache())
+                    .map_err(|error| error.to_wire())?;
+                let staging = self
+                    .paths()
+                    .cache()
+                    .join("scaffold")
+                    .join(handle.id().to_string());
+
+                handle.progress(from, format!("downloading {url}")).await;
+
+                let outcome = mixengine_core::blueprints::archive::fetch(
+                    &installer,
+                    url,
+                    strip.as_deref(),
+                    &staging,
+                    &context.root,
+                )
+                .await;
+
+                handle
+                    .progress(to, "the blueprint's archive is unpacked")
+                    .await;
+
+                Ok(match outcome {
+                    Ok(()) => StepResult::Done { note: None },
+                    Err(error) => StepResult::Failed {
+                        why: format!("{url} was not unpacked: {error}"),
+                    },
+                })
             }
 
             other => Err(Error::new(
@@ -917,37 +980,43 @@ fn questions(plan: &BlueprintPlan) -> Vec<AnswerSubject> {
 fn consent_refusal(plan: &BlueprintPlan, consent: Option<&ScaffoldConsent>) -> Option<Error> {
     let consent = consent?;
 
-    let planned_step = plan
-        .steps
-        .iter()
-        .find(|step| matches!(step.action, PlanAction::RunScaffold { .. }));
+    // **A command or an archive, whichever this plan has** — roadmap task **T205**, D2. Both are
+    // the one step a person agrees to, and the consent names what was shown: the command, or the
+    // URL.
+    let planned_step = plan.steps.iter().find(|step| {
+        matches!(
+            step.action,
+            PlanAction::RunScaffold { .. } | PlanAction::FetchArchive { .. }
+        )
+    });
     let planned = planned_step.and_then(|step| match &step.action {
         PlanAction::RunScaffold { command } => Some(command.as_str()),
+        PlanAction::FetchArchive { url, .. } => Some(url.as_str()),
         _ => None,
     });
+    let agreed = consent
+        .archive
+        .as_deref()
+        .unwrap_or(consent.command.as_str());
 
     let Some(planned) = planned else {
         return Some(
             Error::new(
                 ErrorCode::InvalidArgument,
                 format!(
-                    "nothing in this plan runs `{}`; this agrees to a plan made against \
-                     another blueprint, or another moment",
-                    consent.command
+                    "nothing in this plan runs `{agreed}`; this agrees to a plan made against \
+                     another blueprint, or another moment"
                 ),
             )
             .with_hint("`mix blueprint apply --dry-run` prints the steps this plan does have"),
         );
     };
 
-    if planned != consent.command {
+    if planned != agreed {
         return Some(
             Error::new(
                 ErrorCode::InvalidArgument,
-                format!(
-                    "this plan runs `{planned}`, and what was agreed to was `{}`",
-                    consent.command
-                ),
+                format!("this plan runs `{planned}`, and what was agreed to was `{agreed}`"),
             )
             .with_hint("the blueprint changed since the plan was read; read it again"),
         );
@@ -1180,6 +1249,7 @@ mod tests {
             Some(&ScaffoldConsent {
                 command: "composer create-project laravel/laravel .".to_owned(),
                 untrusted: false,
+                archive: None,
             }),
         )
         .expect("a refusal");
@@ -1203,6 +1273,7 @@ mod tests {
             Some(&ScaffoldConsent {
                 command: "rm -rf /".to_owned(),
                 untrusted: false,
+                archive: None,
             }),
         )
         .expect("it is refused");
@@ -1225,6 +1296,7 @@ mod tests {
             Some(&ScaffoldConsent {
                 command: "printf hello".to_owned(),
                 untrusted: false,
+                archive: None,
             }),
         )
         .expect("it is refused");
@@ -1244,6 +1316,7 @@ mod tests {
             Some(&ScaffoldConsent {
                 command: "printf hello".to_owned(),
                 untrusted: true,
+                archive: None,
             }),
         )
         .expect("it is refused");
@@ -1262,10 +1335,41 @@ mod tests {
                 Some(&ScaffoldConsent {
                     command: "printf hello".to_owned(),
                     untrusted: false,
+                    archive: None,
                 }),
             )
             .is_some()
         );
+    }
+
+    /// **A consent names the archive it agreed to** — roadmap task **T205**, D2.
+    #[test]
+    fn a_consent_naming_the_archive_is_accepted_and_another_url_is_refused() {
+        let url = "https://wordpress.org/latest.zip";
+        let mut plan = a_plan(vec![step(
+            PlanAction::FetchArchive {
+                url: url.to_owned(),
+                strip: None,
+            },
+            Disposition::Confirm {
+                what: url.to_owned(),
+            },
+        )]);
+        plan.trusted = true;
+        plan.source = mixengine_proto::BlueprintSource::Captured;
+
+        let agreed = ScaffoldConsent {
+            command: String::new(),
+            archive: Some(url.to_owned()),
+            untrusted: false,
+        };
+        assert!(consent_refusal(&plan, Some(&agreed)).is_none());
+
+        let other = ScaffoldConsent {
+            archive: Some("https://evil.example/latest.zip".to_owned()),
+            ..agreed
+        };
+        assert!(consent_refusal(&plan, Some(&other)).is_some());
     }
 
     /// **No consent is not a refusal**: everything else is applied and the step says what was left.
@@ -1287,6 +1391,7 @@ mod tests {
                 Some(&ScaffoldConsent {
                     command: "printf hello".to_owned(),
                     untrusted: true,
+                    archive: None,
                 }),
             )
             .is_none()

@@ -168,6 +168,8 @@ fn detect_unix(found: &mut Vec<LocalShell>) {
     }
 }
 
+use std::collections::BTreeMap;
+use std::ffi::OsString;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::{Arc, Mutex as StdMutex};
@@ -209,10 +211,33 @@ fn pty_size(size: TerminalSize) -> PtySize {
 /// Three flows run in parallel after this function returns: one thread reading the pty, one thread
 /// writing to the pty, one thread waiting on the child process. There is only one way out, and the
 /// order on it is the real order — see where `exit_rx` is awaited below.
+/// A `cwd` that is not a directory is said, not silently replaced by the home directory — T205,
+/// D11: a target outlives the project it was made for.
+fn check_cwd(cwd: Option<&str>) -> Result<Option<&str>, AppError> {
+    match cwd {
+        Some(dir) if !Path::new(dir).is_dir() => Err(err!("error.terminalCwdMissing", path = dir)),
+        other => Ok(other),
+    }
+}
+
+/// `prepend` ahead of `inherited`, joined by this OS's rule — T205, D9.
+fn joined_path(prepend: &[String], inherited: Option<OsString>) -> Option<OsString> {
+    if prepend.is_empty() {
+        return None;
+    }
+    let mut parts: Vec<PathBuf> = prepend.iter().map(PathBuf::from).collect();
+    if let Some(inherited) = inherited {
+        parts.extend(std::env::split_paths(&inherited));
+    }
+    std::env::join_paths(parts).ok()
+}
+
 pub fn spawn(
     shell: Option<String>,
     args: Vec<String>,
     cwd: Option<String>,
+    env: &BTreeMap<String, String>,
+    path_prepend: &[String],
     size: TerminalSize,
     out: OutputSink,
 ) -> Result<Session, AppError> {
@@ -238,12 +263,18 @@ pub fn spawn(
     for arg in &args {
         command.arg(arg);
     }
-    if let Some(dir) = cwd.as_deref().filter(|dir| Path::new(dir).is_dir()) {
+    if let Some(dir) = check_cwd(cwd.as_deref())? {
         command.cwd(dir);
     }
     // What xterm.js can draw. Without it, a shell on Unix treats the terminal as dumb and turns off
     // colour entirely.
     command.env("TERM", "xterm-256color");
+    for (key, value) in env {
+        command.env(key, value);
+    }
+    if let Some(path) = joined_path(path_prepend, std::env::var_os("PATH")) {
+        command.env("PATH", path);
+    }
 
     let mut child = pair
         .slave
@@ -373,6 +404,8 @@ pub fn spawn(
 
 #[cfg(test)]
 mod tests {
+    use super::check_cwd;
+    use super::joined_path;
     use super::login_args;
     use super::parse_wsl_list;
     use super::spawn;
@@ -465,6 +498,8 @@ mod tests {
             Some(shell.to_string()),
             args,
             None,
+            &std::collections::BTreeMap::new(),
+            &[],
             TerminalSize { cols: 80, rows: 24 },
             sink,
         )
@@ -511,6 +546,8 @@ mod tests {
             None,
             Vec::new(),
             None,
+            &std::collections::BTreeMap::new(),
+            &[],
             TerminalSize { cols: 80, rows: 24 },
             sink,
         )
@@ -525,6 +562,36 @@ mod tests {
         assert!(
             matches!(seen.last(), Some(Output::Exit { .. })),
             "khung cuối cùng phải là Exit, thấy: {seen:?}",
+        );
+    }
+
+    #[test]
+    fn prepending_keeps_spaces_and_unicode() {
+        let prepend = vec![r"C:\Users\Nguyễn Văn\MixEngine\bin".to_owned()];
+        let inherited = std::env::join_paths([r"C:\Windows", r"C:\Program Files\Git\bin"]).ok();
+
+        let joined = joined_path(&prepend, inherited).expect("a PATH");
+        let parts: Vec<_> = std::env::split_paths(&joined).collect();
+
+        assert_eq!(
+            parts[0],
+            std::path::PathBuf::from(r"C:\Users\Nguyễn Văn\MixEngine\bin")
+        );
+        assert_eq!(parts.len(), 3);
+    }
+
+    #[test]
+    fn nothing_to_prepend_changes_nothing() {
+        assert_eq!(joined_path(&[], None), None);
+    }
+
+    #[test]
+    fn a_missing_cwd_is_refused_by_name() {
+        let gone = std::env::temp_dir().join("mixlab-cwd-that-is-not-there");
+        let error = check_cwd(Some(gone.to_string_lossy().as_ref())).expect_err("refused");
+        assert!(
+            format!("{error:?}").contains("terminalCwdMissing"),
+            "{error:?}"
         );
     }
 }

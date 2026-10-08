@@ -71,6 +71,16 @@ pub fn render_starting(
     .map(Some)
 }
 
+/// One command the page names — roadmap task **T205**, D6. Never anything about a database.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct WelcomeStep {
+    /// The command, expanded.
+    pub run: String,
+
+    /// Its one sentence, when it has one.
+    pub note: Option<String>,
+}
+
 /// What the template is told to say about one site.
 #[derive(Debug, serde::Serialize)]
 pub struct WelcomePage<'a> {
@@ -82,6 +92,10 @@ pub struct WelcomePage<'a> {
 
     /// The one sentence that is true for this kind.
     pub what_to_do: String,
+
+    /// What the site's blueprint says to run, in order — roadmap task **T205**, D6. Empty where
+    /// it says nothing, and then the kind's sentence stands alone.
+    pub steps: &'a [WelcomeStep],
 }
 
 /// What to say about a site of this kind.
@@ -97,7 +111,12 @@ pub struct WelcomePage<'a> {
 /// A php-fpm site's upstream is deliberately absent from what this returns: it is a socket path on
 /// two of the three systems, which is exactly the kind of fact D5 keeps off a page the local
 /// network can fetch. The sentence that kind needs is about a file anyway.
-pub fn page<'a>(primary: &'a str, kind: &ServedKind, doc_root: &str) -> WelcomePage<'a> {
+pub fn page<'a>(
+    primary: &'a str,
+    kind: &ServedKind,
+    doc_root: &str,
+    steps: &'a [WelcomeStep],
+) -> WelcomePage<'a> {
     let where_files_go = where_files_go(doc_root);
 
     let (name, what_to_do) = match kind {
@@ -125,10 +144,18 @@ pub fn page<'a>(primary: &'a str, kind: &ServedKind, doc_root: &str) -> WelcomeP
         ),
     };
 
+    // **The blueprint's own words, where it has them** — roadmap task **T205**, D6. The kind's
+    // sentence says *start your development server*; the steps say which command that is.
+    let what_to_do = match steps.is_empty() {
+        true => what_to_do,
+        false => "Run these in the project directory, then reload this page.".to_owned(),
+    };
+
     WelcomePage {
         domain: primary,
         kind: name,
         what_to_do,
+        steps,
     }
 }
 
@@ -219,11 +246,12 @@ mod tests {
                 activator: None,
             },
             "public",
+            &[],
         );
         assert!(php.what_to_do.contains("index.php"), "{}", php.what_to_do);
         assert!(php.what_to_do.contains("public"), "{}", php.what_to_do);
 
-        let node = page("app.test", &ServedKind::NodeApp { port: 3000 }, "");
+        let node = page("app.test", &ServedKind::NodeApp { port: 3000 }, "", &[]);
         assert!(
             node.what_to_do.contains("3000"),
             "the page must name the port nothing is listening on: {}",
@@ -237,11 +265,47 @@ mod tests {
                 rewrite: None,
             },
             "",
+            &[],
         );
         assert!(
             proxy.what_to_do.contains("http://127.0.0.1:8000"),
             "{}",
             proxy.what_to_do
+        );
+    }
+
+    /// **A site with steps names the commands and nothing else** — roadmap task **T205**, D6.
+    #[test]
+    fn a_site_with_steps_names_the_commands_and_nothing_else() {
+        let steps = vec![
+            WelcomeStep {
+                run: "npm install".to_owned(),
+                note: None,
+            },
+            WelcomeStep {
+                run: "npm run dev".to_owned(),
+                note: Some("port 3000".to_owned()),
+            },
+        ];
+        let page = page("shop.test", &ServedKind::NodeApp { port: 3000 }, "", &steps);
+        let rendered = render(&id(), &page).expect("renders");
+
+        assert!(rendered.contains("npm install"), "{rendered}");
+        assert!(rendered.contains("npm run dev"), "{rendered}");
+        assert!(rendered.contains("port 3000"), "{rendered}");
+        assert!(
+            !rendered.contains("Start your development server"),
+            "{rendered}"
+        );
+    }
+
+    #[test]
+    fn a_site_without_steps_keeps_the_kinds_sentence() {
+        let page = page("shop.test", &ServedKind::NodeApp { port: 3000 }, "", &[]);
+        let rendered = render(&id(), &page).expect("renders");
+        assert!(
+            rendered.contains("Start your development server"),
+            "{rendered}"
         );
     }
 
@@ -260,6 +324,7 @@ mod tests {
                     activator: None,
                 },
                 "public",
+                &[],
             ),
         )
         .expect("a page");
@@ -276,7 +341,7 @@ mod tests {
     fn the_rendered_page_names_nothing_about_this_machine() {
         let rendered = render(
             &id(),
-            &page("blog.test", &ServedKind::Static, "the project root"),
+            &page("blog.test", &ServedKind::Static, "the project root", &[]),
         )
         .expect("a page");
 
@@ -293,7 +358,8 @@ mod tests {
     /// machine with no connection, at the exact moment this feature exists to make an impression.
     #[test]
     fn the_page_fetches_nothing() {
-        let rendered = render(&id(), &page("blog.test", &ServedKind::Static, "")).expect("a page");
+        let rendered =
+            render(&id(), &page("blog.test", &ServedKind::Static, "", &[])).expect("a page");
 
         for fetch in ["http://", "https://", "<script", "<img", "@import"] {
             assert!(

@@ -304,6 +304,86 @@ pub struct BlueprintApplied {
     /// resumed apply legible: a second run whose every line says *already true* is the proof that
     /// the first one finished.
     pub steps: Vec<StepOutcome>,
+
+    /// What is left to do, from the blueprint's `[[next_steps]]` — roadmap task **T205**, D6.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_steps: Option<NextSteps>,
+
+    /// The account the database step really used, when there was one — T205, D6.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub database: Option<AppliedDatabase>,
+}
+
+/// What kind of thing a person still has to do after an apply — roadmap task **T205**, D4.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub enum NextStepKind {
+    /// A command to run one time.
+    Once,
+    /// A command that keeps running; the site answers while it does.
+    Serve,
+    /// Something to finish in the browser.
+    Open,
+}
+
+/// One thing a blueprint says is left to do — roadmap task **T205**, D4.
+///
+/// **The same type in a manifest and on the wire.** A manifest holds it with `{project}` in it; an
+/// answer holds it expanded. Nothing else differs, so one type carries both.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct NextStep {
+    /// What it is.
+    pub kind: NextStepKind,
+
+    /// The command, for `once` and `serve`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run: Option<String>,
+
+    /// Where in the site, for `open`; starts with `/`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+
+    /// One sentence shown under the step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+
+    /// The site answers without this step.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+
+    /// This step needs the database account the apply created.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub credentials: bool,
+
+    /// Which site it belongs to. Absent in schema 1 and 2; T204a defines it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub site: Option<String>,
+}
+
+/// A project's steps, and whether the blueprint they came from is trusted — T205, D12.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct NextSteps {
+    /// The blueprint row's own `trusted`.
+    pub trusted: bool,
+
+    /// In order; `{project}` already expanded.
+    pub steps: Vec<NextStep>,
+}
+
+/// The account an apply's `CreateDatabase` step really used, after T202's free-name walk. Never a
+/// password.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct AppliedDatabase {
+    /// The server it lives on.
+    pub service: crate::ServiceId,
+    /// The database.
+    pub database: String,
+    /// The account.
+    pub user: String,
 }
 
 /// One step, and what became of it.
@@ -570,6 +650,17 @@ pub enum PlanAction {
     RunScaffold {
         /// The exact command, shown before anything runs it.
         command: String,
+    },
+
+    /// Download a release archive and unpack it into the project directory — roadmap task
+    /// **T205**, D2.
+    FetchArchive {
+        /// `https://` only; the format comes from its suffix.
+        url: String,
+
+        /// The archive's single top-level folder whose contents become the project root.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        strip: Option<String>,
     },
 }
 
@@ -911,5 +1002,56 @@ mod tests {
         }
 
         assert_eq!(SignatureCheck::parse("revoked"), None);
+    }
+    #[test]
+    fn a_next_step_writes_only_what_it_carries() {
+        let step = NextStep {
+            kind: NextStepKind::Serve,
+            run: Some("npm run dev".to_owned()),
+            path: None,
+            note: None,
+            optional: false,
+            credentials: false,
+            site: None,
+        };
+
+        assert_eq!(
+            serde_json::to_value(&step).expect("writes"),
+            serde_json::json!({ "kind": "serve", "run": "npm run dev" })
+        );
+
+        let read: NextStep =
+            serde_json::from_str(r#"{"kind":"open","path":"/cp","optional":true}"#).expect("reads");
+        assert_eq!(read.kind, NextStepKind::Open);
+        assert!(read.optional);
+        assert!(!read.credentials);
+    }
+
+    #[test]
+    fn fetch_archive_is_tagged_like_the_other_actions() {
+        let action = PlanAction::FetchArchive {
+            url: "https://wordpress.org/latest.zip".to_owned(),
+            strip: Some("wordpress".to_owned()),
+        };
+
+        assert_eq!(
+            serde_json::to_value(&action).expect("writes"),
+            serde_json::json!({
+                "action": "fetch_archive",
+                "url": "https://wordpress.org/latest.zip",
+                "strip": "wordpress"
+            })
+        );
+    }
+
+    #[test]
+    fn an_applied_report_from_an_older_daemon_still_reads() {
+        let applied: BlueprintApplied = serde_json::from_str(
+            r#"{"blueprint":"laravel","project":"shop","root":"/x","steps":[]}"#,
+        )
+        .expect("reads");
+
+        assert_eq!(applied.next_steps, None);
+        assert_eq!(applied.database, None);
     }
 }

@@ -21,10 +21,18 @@ import {
 } from "../../savedTargetsStore";
 import { loadTerminalSettings } from "../../settingsStore";
 import { shellLabel } from "../../shells";
-import type { LocalShell, SavedTarget, SshAuth, SshConfig, TerminalChoice } from "../../types";
+import type { DraftTarget } from "../../tabState";
+import { formatEnvLines, parseEnvLines, parsePathLines } from "../../targetEnv";
+import type {
+  LocalShell,
+  OnRestore,
+  SavedTarget,
+  SshAuth,
+  SshConfig,
+  TerminalChoice,
+} from "../../types";
 import SavedTargetList from "./SavedTargetList";
 import styles from "./TargetForm.module.css";
-
 
 /**
  * A saved target reduced to exactly "what it is" — without `id`.
@@ -45,23 +53,32 @@ interface Props {
   /** The tab that was just tried and failed. The form rebuilds exactly what the user typed — a form
    *  wiped clean after every wrong password is a form nobody can use. */
   initial: TerminalChoice | null;
+  /** A target another module drafted, shown unsaved for the person to check — T205, D11. Read
+   *  once, when the form mounts. */
+  draft?: DraftTarget | null;
+  /** The draft has been saved as an entry of its own. */
+  onDraftSaved?: () => void;
 }
 
 /** The screen a terminal tab shows before there is a session: pick this machine or a server. */
-function TargetForm({ onOpen, onError, initial }: Props) {
+function TargetForm({ onOpen, onError, initial, draft = null, onDraftSaved }: Props) {
   const { t } = useTranslation();
   const targets = useSavedTargets();
   const targetsLoaded = useSavedTargetsLoaded();
 
-  const [kind, setKind] = useState<"local" | "ssh">(initial?.kind ?? "local");
+  const [kind, setKind] = useState<"local" | "ssh">(draft ? "local" : (initial?.kind ?? "local"));
 
   /** The saved target the form is holding, or `null` when it was typed by hand. */
   const [targetId, setTargetId] = useState<string | null>(initial?.targetId ?? null);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(draft?.name ?? "");
   /** A snapshot of the saved target when it was loaded, so the Update button knows whether
    *  anything has changed. */
   const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
-  const [runOnConnect, setRunOnConnect] = useState(initial?.runOnConnect ?? "");
+  const [runOnConnect, setRunOnConnect] = useState(
+    draft?.runOnConnect ?? initial?.runOnConnect ?? "",
+  );
+  /** The draft this form opened on, while it is still unsaved: it says so above the form. */
+  const [drafted, setDrafted] = useState(draft !== null);
   /** The saved entry this form holds changed or went away somewhere else, while it held edits. */
   const [stale, setStale] = useState<"changed" | "removed" | null>(null);
 
@@ -70,8 +87,33 @@ function TargetForm({ onOpen, onError, initial }: Props) {
   /* The name rather than the path, both in state and as the `Select`'s value: the name is what goes
      to disk, so a saved row can be loaded into the form even before the machine's shell list has
      finished reading. */
-  const [shellName, setShellName] = useState(initial?.kind === "local" ? initial.shell.name : "");
-  const [cwd, setCwd] = useState(initial?.kind === "local" ? (initial.cwd ?? "") : "");
+  const [shellName, setShellName] = useState(
+    draft ? draft.shellName : initial?.kind === "local" ? initial.shell.name : "",
+  );
+  const [cwd, setCwd] = useState(
+    draft ? draft.cwd : initial?.kind === "local" ? (initial.cwd ?? "") : "",
+  );
+  /* What the shell is given beside its directory, as the lines the person types — T205, D9. */
+  const [envText, setEnvText] = useState(
+    draft
+      ? formatEnvLines(draft.env)
+      : initial?.kind === "local"
+        ? formatEnvLines(initial.env ?? undefined)
+        : "",
+  );
+  const [pathText, setPathText] = useState(
+    draft
+      ? draft.pathPrepend.join("\n")
+      : initial?.kind === "local"
+        ? (initial.pathPrepend ?? []).join("\n")
+        : "",
+  );
+  /** What a tab restored on the next launch does with *Run on connect* — T205, D10. Not part of a
+   *  session, so it is read off the saved entry once that is found. */
+  const [onRestore, setOnRestore] = useState<OnRestore>(draft?.onRestore ?? "run");
+  /* A draft from a blueprint nobody vouches for keeps its `onRestore` until it is saved: saving is
+     the person putting their name to it. */
+  const restoreLocked = drafted && draft?.lockRestore === true;
 
   // SSH
   const [host, setHost] = useState(initial?.kind === "ssh" ? initial.config.host : "");
@@ -151,6 +193,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
       return;
     }
     setName(entry.name);
+    setOnRestore(entry.onRestore ?? "run");
     setSavedSnapshot(snapshotOf(entry));
   }, [targetsLoaded, targets]);
 
@@ -160,6 +203,14 @@ function TargetForm({ onOpen, onError, initial }: Props) {
   useLayoutEffect(() => {
     applyLatest.current = applyTarget;
   });
+
+  /* The variables as typed, or the first line that is not `KEY=value`: such a form neither saves
+     nor opens, and says which line. Declared above the first `buildTarget` call, which runs
+     during render: below it, they would not exist yet. */
+  const parsedEnv = parseEnvLines(envText);
+  const envError = "error" in parsedEnv ? parsedEnv.error : null;
+  const env = "env" in parsedEnv && Object.keys(parsedEnv.env).length > 0 ? parsedEnv.env : undefined;
+  const pathPrepend = parsePathLines(pathText);
 
   /* The saved entry this form holds can change under it: sync brings a newer one, or another tab
      updates or deletes it. An untouched form follows; edits are the person's and stay, and they
@@ -203,10 +254,11 @@ function TargetForm({ onOpen, onError, initial }: Props) {
 
   /** Which target the form describes, under the id passed in. An empty field is written as
    *  `undefined` rather than `""`: absence is the default, so an entry not using that field does
-   *  not carry a dead line around. */
+   *  not carry a dead line around. `onRestore` likewise: `run` is what an absent one means. */
   function buildTarget(id: string): SavedTarget {
     const trimmedName = name.trim();
     const opening = runOnConnect.trim() || undefined;
+    const restore = onRestore === "run" ? {} : { onRestore };
     if (kind === "local") {
       return {
         id,
@@ -215,9 +267,19 @@ function TargetForm({ onOpen, onError, initial }: Props) {
         shellName,
         cwd: cwd.trim() || null,
         runOnConnect: opening,
+        ...restore,
+        ...(env === undefined ? {} : { env }),
+        ...(pathPrepend.length === 0 ? {} : { pathPrepend }),
       };
     }
-    return { id, name: trimmedName, kind: "ssh", config: buildConfig(), runOnConnect: opening };
+    return {
+      id,
+      name: trimmedName,
+      kind: "ssh",
+      config: buildConfig(),
+      runOnConnect: opening,
+      ...restore,
+    };
   }
 
   /** Enough for an attempt to mean something: an address, a user, and whatever the chosen
@@ -232,21 +294,29 @@ function TargetForm({ onOpen, onError, initial }: Props) {
   function buildChoice(): TerminalChoice | null {
     const opening = runOnConnect.trim() || null;
     if (kind === "local") {
-      return chosenShell
+      return chosenShell && envError === null
         ? {
             kind: "local",
             shell: chosenShell,
             cwd: cwd.trim() || null,
             targetId,
             runOnConnect: opening,
+            press: true,
+            env: env ?? null,
+            pathPrepend: pathPrepend.length === 0 ? null : pathPrepend,
           }
         : null;
     }
-    return sshReady ? { kind: "ssh", config: buildConfig(), targetId, runOnConnect: opening } : null;
+    return sshReady
+      ? { kind: "ssh", config: buildConfig(), targetId, runOnConnect: opening, press: true }
+      : null;
   }
 
-  /** Enough to save: a name, and for this machine a real shell whose name can be saved. */
-  const savable = name.trim() !== "" && (kind === "ssh" || chosenShell !== undefined);
+  /** Enough to save: a name, for this machine a real shell whose name can be saved, and variables
+   *  that read. */
+  const savable =
+    name.trim() !== "" &&
+    (kind === "ssh" || (chosenShell !== undefined && envError === null));
 
   /* The Update button is dead when the form holds exactly what was saved. Only asked when there is
      an entry to compare against: for a hand-typed target the button is Save, and Save is never
@@ -255,12 +325,14 @@ function TargetForm({ onOpen, onError, initial }: Props) {
 
   function applyTarget(entry: SavedTarget) {
     setStale(null);
+    setDrafted(false);
     // The targets column is always there, even while the form is on the other kind — clicking a
     // row without the form switching kind would look like the click did nothing.
     setKind(entry.kind);
     setTargetId(entry.id);
     setName(entry.name);
     setRunOnConnect(entry.runOnConnect ?? "");
+    setOnRestore(entry.onRestore ?? "run");
     setSavedSnapshot(snapshotOf(entry));
     // The name has been looked for already, and it is this one. The effect above has no turn left
     // to overwrite it.
@@ -268,6 +340,8 @@ function TargetForm({ onOpen, onError, initial }: Props) {
     if (entry.kind === "local") {
       setShellName(entry.shellName);
       setCwd(entry.cwd ?? "");
+      setEnvText(formatEnvLines(entry.env));
+      setPathText((entry.pathPrepend ?? []).join("\n"));
       /* And clear the other branch. Without clearing, switching to the SSH tab afterwards would
          show the address and password of another server — the one loaded before — while the left
          column highlights a local row, and the Update button stands ready to turn that row into a
@@ -278,6 +352,8 @@ function TargetForm({ onOpen, onError, initial }: Props) {
     // Symmetrically: another local row's starting directory has no business here any more. The
     // shell name stays — it belongs to no row; it is what the "This machine" tab opens by default.
     setCwd("");
+    setEnvText("");
+    setPathText("");
     setHost(entry.config.host);
     setPort(entry.config.port);
     setUsername(entry.config.username);
@@ -296,7 +372,13 @@ function TargetForm({ onOpen, onError, initial }: Props) {
     applyTarget(entry);
     const opening = entry.runOnConnect ?? null;
     if (entry.kind === "ssh") {
-      onOpen({ kind: "ssh", config: entry.config, targetId: entry.id, runOnConnect: opening });
+      onOpen({
+        kind: "ssh",
+        config: entry.config,
+        targetId: entry.id,
+        runOnConnect: opening,
+        press: true,
+      });
       return;
     }
     /* The shell has been removed from the machine — a deleted WSL distro, an uninstalled Git Bash.
@@ -304,7 +386,16 @@ function TargetForm({ onOpen, onError, initial }: Props) {
        pick another; there is nothing broken to report. */
     const shell = shells.find((s) => s.name === entry.shellName);
     if (shell === undefined) return;
-    onOpen({ kind: "local", shell, cwd: entry.cwd, targetId: entry.id, runOnConnect: opening });
+    onOpen({
+      kind: "local",
+      shell,
+      cwd: entry.cwd,
+      targetId: entry.id,
+      runOnConnect: opening,
+      press: true,
+      env: entry.env ?? null,
+      pathPrepend: entry.pathPrepend ?? null,
+    });
   }
 
   /** Clears the SSH half of the form. Separate because `applyTarget` needs it too: loading a local
@@ -324,12 +415,23 @@ function TargetForm({ onOpen, onError, initial }: Props) {
    *  and both kinds can be saved now. */
   function clearForm() {
     setStale(null);
+    setDrafted(false);
     setTargetId(null);
     setName("");
     setSavedSnapshot(null);
     setRunOnConnect("");
+    setOnRestore("run");
     setCwd("");
+    setEnvText("");
+    setPathText("");
     resetSshFields();
+  }
+
+  /** A saved draft is an entry like any other from here on. */
+  function settleDraft() {
+    if (!drafted) return;
+    setDrafted(false);
+    onDraftSaved?.();
   }
 
   async function saveTarget() {
@@ -343,6 +445,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
         setTargetId(entry.id);
       }
       setSavedSnapshot(snapshotOf(entry));
+      settleDraft();
     } catch (e) {
       onError(errorMessage(t, e));
     }
@@ -357,6 +460,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
       await addTarget(entry);
       setTargetId(entry.id);
       setSavedSnapshot(snapshotOf(entry));
+      settleDraft();
     } catch (e) {
       onError(errorMessage(t, e));
     }
@@ -400,6 +504,8 @@ function TargetForm({ onOpen, onError, initial }: Props) {
             { value: "ssh", label: t("terminal.targetSsh") },
           ]}
         />
+
+        {drafted && <NoticeBanner message={t("terminal.draftNotice")} />}
 
         {/* Outside both branches: both kinds can be saved, so both have a name. */}
         <div className={styles.row}>
@@ -458,6 +564,32 @@ function TargetForm({ onOpen, onError, initial }: Props) {
                 />
                 <Button onClick={() => void browseDirectory()}>{t("terminal.browse")}</Button>
               </div>
+            </div>
+
+            <div className={styles.row}>
+              <label htmlFor="terminal-env">{t("terminal.envLabel")}</label>
+              <Textarea
+                id="terminal-env"
+                value={envText}
+                onChange={(e) => setEnvText(e.target.value)}
+              />
+              {envError === null ? (
+                <p className={styles.hint}>{t("terminal.envHint")}</p>
+              ) : (
+                <p className={styles.error} role="alert">
+                  {t("terminal.envLineInvalid", { line: envError })}
+                </p>
+              )}
+            </div>
+
+            <div className={styles.row}>
+              <label htmlFor="terminal-path">{t("terminal.pathLabel")}</label>
+              <Textarea
+                id="terminal-path"
+                value={pathText}
+                onChange={(e) => setPathText(e.target.value)}
+              />
+              <p className={styles.hint}>{t("terminal.pathHint")}</p>
             </div>
           </>
         ) : (
@@ -550,6 +682,29 @@ function TargetForm({ onOpen, onError, initial }: Props) {
             onChange={(e) => setRunOnConnect(e.target.value)}
           />
           <p className={styles.hint}>{t("terminal.runOnConnectHint")}</p>
+        </div>
+
+        {/* For both kinds, and only meaningful with something to run: a tab restored on the next
+            launch runs it, types it and waits, or just opens — T205, D10. */}
+        <div className={styles.row}>
+          <span>{t("terminal.onRestoreLabel")}</span>
+          <SegmentedControl
+            aria-label={t("terminal.onRestoreLabel")}
+            value={onRestore}
+            onChange={setOnRestore}
+            segments={(["run", "type", "none"] as const).map((value) => ({
+              value,
+              label: t(
+                value === "run"
+                  ? "terminal.onRestoreRun"
+                  : value === "type"
+                    ? "terminal.onRestoreType"
+                    : "terminal.onRestoreNone",
+              ),
+              disabled: runOnConnect.trim() === "" || restoreLocked,
+            }))}
+          />
+          {restoreLocked && <p className={styles.hint}>{t("terminal.restoreLocked")}</p>}
         </div>
 
         {stale === "changed" && (

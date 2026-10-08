@@ -6,6 +6,7 @@
 export * from "./Action";
 export * from "./AnswerSubject";
 export * from "./ApiAccess";
+export * from "./AppliedDatabase";
 export * from "./ArtifactAvailability";
 export * from "./AutostartMechanism";
 export * from "./AutostartReport";
@@ -174,6 +175,9 @@ export * from "./Millis";
 export * from "./MismatchAnswer";
 export * from "./Need";
 export * from "./NetworkReach";
+export * from "./NextStep";
+export * from "./NextStepKind";
+export * from "./NextSteps";
 export * from "./OldVersion";
 export * from "./Omission";
 export * from "./OpOutcome";

@@ -1,6 +1,6 @@
 import { Store } from "@tauri-apps/plugin-store";
 import { invoke } from "@tauri-apps/api/core";
-import type { SavedTarget, SshConfig } from "./types";
+import type { OnRestore, SavedTarget, SshConfig } from "./types";
 import { dedupeById, upsertById } from "../../core/byId";
 import { mergeSshSecrets, splitSshSecrets, type SshSecrets } from "../../core/ssh";
 
@@ -60,18 +60,49 @@ export function parseSavedTarget(value: unknown): SavedTarget | null {
   if (typeof entry.id !== "string" || entry.id === "") return null;
   if (typeof entry.name !== "string") return null;
   const runOnConnect = typeof entry.runOnConnect === "string" ? entry.runOnConnect : undefined;
+  // Only the three words; anything else reads as absent, which is `run` — T205, D10.
+  const onRestore = ON_RESTORE.find((word) => word === entry.onRestore);
+  const restore = onRestore === undefined ? {} : { onRestore };
 
   if (entry.kind === "local") {
     if (typeof entry.shellName !== "string" || entry.shellName === "") return null;
     const cwd = typeof entry.cwd === "string" ? entry.cwd : null;
-    return { id: entry.id, name: entry.name, kind: "local", shellName: entry.shellName, cwd, runOnConnect };
+    const env = stringMap(entry.env);
+    const pathPrepend = stringList(entry.pathPrepend);
+    return {
+      id: entry.id,
+      name: entry.name,
+      kind: "local",
+      shellName: entry.shellName,
+      cwd,
+      runOnConnect,
+      ...restore,
+      ...(env === undefined ? {} : { env }),
+      ...(pathPrepend === undefined ? {} : { pathPrepend }),
+    };
   }
 
   // `undefined` also lands here: see the comment on the function.
   if (entry.kind !== undefined && entry.kind !== "ssh") return null;
   const config = parseSshConfig(entry.config);
   if (config === null) return null;
-  return { id: entry.id, name: entry.name, kind: "ssh", config, runOnConnect };
+  return { id: entry.id, name: entry.name, kind: "ssh", config, runOnConnect, ...restore };
+}
+
+const ON_RESTORE: readonly OnRestore[] = ["run", "type", "none"];
+
+/** An object whose every value is a string, or `undefined` — T205, D9. */
+function stringMap(value: unknown): Record<string, string> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (!entries.every(([, item]) => typeof item === "string")) return undefined;
+  return Object.fromEntries(entries) as Record<string, string>;
+}
+
+/** An array of strings, or `undefined` — T205, D9. */
+function stringList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) return undefined;
+  return value as string[];
 }
 
 /**

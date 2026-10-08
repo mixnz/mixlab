@@ -284,10 +284,16 @@ impl Projects {
             None => Vec::new(),
         };
 
+        // **Read through the project's blueprint** — roadmap task **T205**, D5.
+        let next_steps = mixengine_core::blueprints::steps::of_project(&self.store, &project)
+            .await
+            .map_err(|error| error.to_wire())?;
+
         Ok(ProjectDetail {
             project: summary(&project),
             pins,
             declared_sites,
+            next_steps,
         })
     }
 }

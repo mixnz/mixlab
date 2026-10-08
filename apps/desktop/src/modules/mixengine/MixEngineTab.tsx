@@ -39,6 +39,7 @@ import {
   type StorageRow,
 } from "./storagePicker";
 import type { MixEngineScreen } from "./tabState";
+import { TERMINAL_MODULE_ID } from "./nextSteps";
 import "./mixengine.css";
 
 /** How often the gate asks whether a daemon has come up somewhere else — the tray, `mix`. */
@@ -328,9 +329,13 @@ export default function MixEngineTab({
               requestSitesFilter(project);
               selectScreen("sites");
             }}
+            onOpenDashboard={() => selectScreen("dashboard")}
+            terminalVisible={isModuleVisible(TERMINAL_MODULE_ID)}
           />
         ))}
-        {pane("sites", (active) => <Sites active={active} />)}
+        {pane("sites", (active) => (
+          <Sites active={active} terminalVisible={isModuleVisible(TERMINAL_MODULE_ID)} />
+        ))}
         {pane("domains", (active) => <Domains active={active} />)}
         {pane("packages", (active) => <Packages active={active} />)}
         {/* A callback rather than a link: a home with no PHP on it has nothing for this screen to
@@ -348,7 +353,9 @@ export default function MixEngineTab({
         ))}
         {pane("servicesDetail", (active) => <ServicesDetail active={active} />)}
         {pane("logs", (active) => <Logs active={active} />)}
-        {pane("blueprints", (active) => <Blueprints active={active} />)}
+        {pane("blueprints", (active) => (
+          <Blueprints active={active} terminalVisible={isModuleVisible(TERMINAL_MODULE_ID)} />
+        ))}
         {pane("extensions", (active) => <Extensions active={active} />)}
         {pane("metrics", (active) => <Metrics active={active} />)}
         {pane("settings", (active) => (

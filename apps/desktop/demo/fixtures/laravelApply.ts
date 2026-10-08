@@ -129,6 +129,8 @@ function describe(action: PlanAction): string {
       return `turning on the PHP extension ${action.name}`;
     case "run_scaffold":
       return "the blueprint's own command";
+    case "fetch_archive":
+      return `downloading ${action.url}`;
   }
 }
 

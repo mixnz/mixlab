@@ -2,7 +2,7 @@ schema = 1
 
 [blueprint]
 name = "Laravel + MongoDB"
-description = "Laravel on PHP-FPM, with MongoDB - then composer require mongodb/laravel-mongodb (MongoDB needs a processor with AVX)"
+description = "Laravel on PHP-FPM, with MongoDB (MongoDB needs a processor with AVX)"
 created_at = "2026-09-17T00:00:00Z"
 
 [blueprint.created_on]
@@ -30,3 +30,9 @@ extensions = ["mongodb"]
 [scaffold]
 command = "composer create-project laravel/laravel . --no-interaction"
 needs_empty_dir = true
+
+[[next_steps]]
+kind = "once"
+run = "composer require mongodb/laravel-mongodb"
+note = "MongoDB's driver for Eloquent."
+optional = true

@@ -10,6 +10,7 @@ pub mod for_update;
 pub mod health;
 pub mod logs;
 pub mod metrics;
+pub mod open_terminal;
 pub mod rpc;
 pub mod sse;
 pub mod state;

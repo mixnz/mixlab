@@ -1083,6 +1083,36 @@ pub enum Error {
         expected: u64,
     },
 
+    /// A blueprint's archive is past the ceiling an apply downloads — roadmap task **T205**, D2.
+    ///
+    /// Its own variant rather than [`Error::ArtifactTooLarge`], whose sentence is about a signed
+    /// index: an archive has no index, and the number here is this build's, not a publisher's.
+    #[error("{url} is larger than the {limit} bytes a blueprint's archive may be")]
+    ArchiveTooLarge {
+        /// The address.
+        url: String,
+        /// The ceiling.
+        limit: u64,
+    },
+
+    /// An archive's suffix names no format this build unpacks — roadmap task **T205**, D2.
+    #[error("{url} is not a .zip, .tar.gz or .tar.zst, so this build cannot unpack it")]
+    ArchiveFormatUnknown {
+        /// The address.
+        url: String,
+    },
+
+    /// `strip` names a folder the archive does not have at its top level — roadmap task **T205**.
+    #[error("{url} has no top-level folder {strip}; it has: {}", found.join(", "))]
+    ArchiveStripMissing {
+        /// The address.
+        url: String,
+        /// What the blueprint said.
+        strip: String,
+        /// What the archive's top level holds.
+        found: Vec<String>,
+    },
+
     /// A download does not hash to what the signed index promised.
     ///
     /// The download is deleted, which

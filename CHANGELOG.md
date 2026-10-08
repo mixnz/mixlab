@@ -12,6 +12,18 @@
   tab. `mix runtime install ruby` names the version to use.
 - `mix runtime available` and MixLab's Languages tab say what a release cannot do on this machine,
   such as a Windows Ruby that has no compiler.
+- Applying a blueprint ends with what is left to run, such as `npm run dev` for Next.js. In MixLab,
+  Run opens each one in a Terminal tab with the project's runtimes on PATH, and Save keeps a dev
+  server as a Terminal target.
+- The WordPress blueprint downloads and unpacks WordPress into the project, after you agree to it.
+- Blueprints for CakePHP, CodeIgniter, Craft CMS, Statamic and Yii.
+- A Terminal target on this machine can set environment variables and folders ahead of PATH, and
+  can choose what a tab does with its commands when it comes back: run them, type them, or just
+  open.
+
+### Changed
+- Applying a blueprint in MixLab sets up a web server when the home has none, and opens the site
+  in your browser when nothing is left to run.
 
 ### Fixed
 - Exporting a project with more than one site now writes every site into `mixengine.toml`, each with

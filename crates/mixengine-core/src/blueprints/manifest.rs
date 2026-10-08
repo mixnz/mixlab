@@ -1,5 +1,5 @@
 //! The blueprint manifest: `schema`, `[blueprint]`, `[runtimes]`, `[site]`, `[[services]]`,
-//! `[php]` and `[scaffold]`.
+//! `[php]`, `[scaffold]` and `[[next_steps]]`.
 //!
 //! **Its own type rather than `mixengine.toml`'s** — the T77 design, D1. The two files overlap but
 //! are not one: a blueprint carries `domain_pattern` where a project manifest carries `domain` and
@@ -21,8 +21,8 @@ use mixengine_proto::{RuntimeKind, SiteKind, VersionConstraint};
 
 use crate::{Error, Result};
 
-/// The only schema this build writes, and the highest one it reads.
-pub const SCHEMA: u32 = 1;
+/// The highest schema this build reads. What it writes is [`schema_of`]'s answer (ADR 0061).
+pub const SCHEMA: u32 = 2;
 
 /// The instance name that means "one of this project's own".
 ///
@@ -32,7 +32,12 @@ pub const SCHEMA: u32 = 1;
 pub const PER_PROJECT: &str = "per-project";
 
 /// A blueprint, as its file says it.
+///
+/// Read through `RawManifest`, which is where the rules a TOML parser cannot state are checked:
+/// `[scaffold]` names a command or an archive and not both (D2), and every `[[next_steps]]` entry
+/// is one a person can run unchanged in any shell (D4) — roadmap task **T205**.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(try_from = "RawManifest")]
 pub struct BlueprintManifest {
     /// The format version. Refused on the way in when it is higher than [`SCHEMA`].
     pub schema: u32,
@@ -41,19 +46,15 @@ pub struct BlueprintManifest {
     pub blueprint: Header,
 
     /// The languages it needs, by kind.
-    #[serde(default)]
     pub runtimes: BTreeMap<RuntimeKind, VersionConstraint>,
 
     /// What is served, when the blueprint describes a site at all.
-    #[serde(default)]
     pub site: Option<BlueprintSite>,
 
     /// The services it needs, in the order the file lists them.
-    #[serde(default)]
     pub services: Vec<BlueprintService>,
 
     /// What PHP has to be able to load.
-    #[serde(default)]
     pub php: Option<Php>,
 
     /// A command to run in the new project's directory.
@@ -62,8 +63,15 @@ pub struct BlueprintManifest {
     /// execute on somebody else's machine. A hand-written or gallery blueprint may carry one, and
     /// since roadmap task **T78a** an apply runs it — in the new project's directory, and only
     /// after somebody has agreed to the exact command, per apply, never on import.
-    #[serde(default)]
     pub scaffold: Option<Scaffold>,
+
+    /// A release archive to unpack into the new project's directory — roadmap task **T205**, D2.
+    /// Read from the same `[scaffold]` table as [`Self::scaffold`]; at most one of the two is set.
+    pub archive: Option<Archive>,
+
+    /// What is left for a person to do after the apply — roadmap task **T205**, D4. Read with
+    /// `{project}` unexpanded, and kept that way: the steps are expanded where they are read.
+    pub next_steps: Vec<mixengine_proto::NextStep>,
 }
 
 /// `[blueprint]`.
@@ -199,6 +207,204 @@ pub struct Scaffold {
     pub needs_npm_safe_dir: bool,
 }
 
+/// `[scaffold] archive` — roadmap task **T205**, D2.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Archive {
+    /// `https://` only.
+    pub url: String,
+
+    /// The single top-level folder whose contents become the project root.
+    pub strip: Option<String>,
+
+    /// Whether the directory must be empty; the same meaning as [`Scaffold::needs_empty_dir`].
+    pub needs_empty_dir: bool,
+}
+
+/// The file as TOML says it, before the rules of D2 and D4 are checked.
+#[derive(serde::Deserialize)]
+struct RawManifest {
+    schema: u32,
+    blueprint: Header,
+    #[serde(default)]
+    runtimes: BTreeMap<RuntimeKind, VersionConstraint>,
+    #[serde(default)]
+    site: Option<BlueprintSite>,
+    #[serde(default)]
+    services: Vec<BlueprintService>,
+    #[serde(default)]
+    php: Option<Php>,
+    #[serde(default)]
+    scaffold: Option<RawScaffold>,
+    #[serde(default)]
+    next_steps: Vec<mixengine_proto::NextStep>,
+}
+
+/// `[scaffold]` before it is known to be a command or an archive.
+#[derive(serde::Deserialize)]
+struct RawScaffold {
+    #[serde(default)]
+    command: Option<String>,
+    #[serde(default)]
+    archive: Option<String>,
+    #[serde(default)]
+    strip: Option<String>,
+    #[serde(default)]
+    needs_empty_dir: bool,
+    #[serde(default)]
+    needs_npm_safe_dir: bool,
+}
+
+/// The longest `run` a step may carry (D4).
+const RUN_LIMIT: usize = 512;
+
+/// What a `run` may not contain, so it means one thing in `cmd.exe`, PowerShell and `sh` (D4).
+const FORBIDDEN: &[&str] = &["&&", "||", ";", "|", ">", "<", "`", "$", "%", "\\"];
+
+impl TryFrom<RawManifest> for BlueprintManifest {
+    type Error = String;
+
+    fn try_from(raw: RawManifest) -> std::result::Result<Self, String> {
+        let (scaffold, archive) = match raw.scaffold {
+            None => (None, None),
+            Some(table) => match (table.command, table.archive) {
+                (Some(_), Some(_)) => {
+                    return Err(
+                        "[scaffold] names both a command and an archive; it takes one".to_owned(),
+                    );
+                }
+                (None, None) => {
+                    return Err("[scaffold] names neither a command nor an archive".to_owned());
+                }
+                (Some(command), None) => (
+                    Some(Scaffold {
+                        command,
+                        needs_empty_dir: table.needs_empty_dir,
+                        needs_npm_safe_dir: table.needs_npm_safe_dir,
+                    }),
+                    None,
+                ),
+                (None, Some(url)) => {
+                    if !url.starts_with("https://") {
+                        return Err(format!(
+                            "[scaffold] archive {url} is not an https:// address"
+                        ));
+                    }
+                    if table.needs_npm_safe_dir {
+                        return Err(
+                            "[scaffold] needs_npm_safe_dir describes a command, and this \
+                                    scaffold is an archive"
+                                .to_owned(),
+                        );
+                    }
+                    if let Some(strip) = &table.strip
+                        && !super::archive::is_folder_name(strip)
+                    {
+                        return Err(format!(
+                            "[scaffold] strip {strip:?} is not one folder name at the archive's \
+                             top level"
+                        ));
+                    }
+                    (
+                        None,
+                        Some(Archive {
+                            url,
+                            strip: table.strip,
+                            needs_empty_dir: table.needs_empty_dir,
+                        }),
+                    )
+                }
+            },
+        };
+
+        for (index, step) in raw.next_steps.iter().enumerate() {
+            checked_step(step).map_err(|reason| format!("next_steps[{}]: {reason}", index + 1))?;
+        }
+
+        Ok(Self {
+            schema: raw.schema,
+            blueprint: raw.blueprint,
+            runtimes: raw.runtimes,
+            site: raw.site,
+            services: raw.services,
+            php: raw.php,
+            scaffold,
+            archive,
+            next_steps: raw.next_steps,
+        })
+    }
+}
+
+/// D4's rules for one step.
+fn checked_step(step: &mixengine_proto::NextStep) -> std::result::Result<(), String> {
+    use mixengine_proto::NextStepKind;
+
+    // **Refused until a blueprint can have several sites** — T204a defines what it names.
+    if step.site.is_some() {
+        return Err("`site` names one of several sites, and this blueprint has one".to_owned());
+    }
+
+    match step.kind {
+        NextStepKind::Open => {
+            if step.run.is_some() {
+                return Err("an `open` step has no `run`".to_owned());
+            }
+            if let Some(path) = &step.path
+                && !path.starts_with('/')
+            {
+                return Err(format!("`path` {path} has to start with /"));
+            }
+            Ok(())
+        }
+        NextStepKind::Once | NextStepKind::Serve => {
+            if step.path.is_some() {
+                return Err("only an `open` step has a `path`".to_owned());
+            }
+            let Some(run) = &step.run else {
+                return Err("a `once` or `serve` step needs `run`".to_owned());
+            };
+            checked_run(run)
+        }
+    }
+}
+
+/// D4: one line a person can run unchanged in any shell this product meets.
+fn checked_run(run: &str) -> std::result::Result<(), String> {
+    if run.trim().is_empty() {
+        return Err("`run` is empty".to_owned());
+    }
+    if run.contains('\n') || run.contains('\r') {
+        return Err("`run` is one line".to_owned());
+    }
+    if run.len() > RUN_LIMIT {
+        return Err(format!("`run` is longer than {RUN_LIMIT} characters"));
+    }
+    if let Some(found) = FORBIDDEN.iter().find(|token| run.contains(**token)) {
+        return Err(format!(
+            "`run` contains `{found}`, which does not mean the same in every shell"
+        ));
+    }
+
+    // `{project}` is the only token; any other brace pair is a token from somewhere else.
+    let without = run.replace("{project}", "");
+    if without.contains('{') || without.contains('}') {
+        return Err("`run` may use {project} and no other token".to_owned());
+    }
+
+    Ok(())
+}
+
+/// The schema a manifest is written at: the lowest that holds it (ADR 0061).
+///
+/// **A key that changes what an apply does raises it; a key that only informs does not.** An
+/// archive changes the apply, so it is schema 2; `[[next_steps]]` informs, so it is invisible here.
+#[must_use]
+pub fn schema_of(manifest: &BlueprintManifest) -> u32 {
+    match manifest.archive {
+        Some(_) => 2,
+        None => 1,
+    }
+}
+
 impl<'de> serde::Deserialize<'de> for BlueprintSite {
     fn deserialize<D: serde::Deserializer<'de>>(
         deserializer: D,
@@ -321,7 +527,7 @@ pub fn render(manifest: &BlueprintManifest) -> String {
     use toml_edit::{Array, DocumentMut, Item, Table, value};
 
     let mut document = DocumentMut::new();
-    document["schema"] = value(i64::from(manifest.schema));
+    document["schema"] = value(i64::from(schema_of(manifest)));
 
     let mut header = Table::new();
     header["name"] = value(&manifest.blueprint.name);
@@ -467,6 +673,49 @@ pub fn render(manifest: &BlueprintManifest) -> String {
         }
 
         document["scaffold"] = Item::Table(table);
+    } else if let Some(archive) = &manifest.archive {
+        let mut table = Table::new();
+        table["archive"] = value(&archive.url);
+        if let Some(strip) = &archive.strip {
+            table["strip"] = value(strip);
+        }
+        if archive.needs_empty_dir {
+            table["needs_empty_dir"] = value(true);
+        }
+        document["scaffold"] = Item::Table(table);
+    }
+
+    // **Last**, as an array of tables must be: TOML puts tables after the values of the table they
+    // sit in — roadmap task **T205**, D4.
+    if !manifest.next_steps.is_empty() {
+        let mut steps = toml_edit::ArrayOfTables::new();
+
+        for step in &manifest.next_steps {
+            let mut entry = Table::new();
+            entry["kind"] = value(match step.kind {
+                mixengine_proto::NextStepKind::Once => "once",
+                mixengine_proto::NextStepKind::Serve => "serve",
+                mixengine_proto::NextStepKind::Open => "open",
+            });
+            if let Some(run) = &step.run {
+                entry["run"] = value(run);
+            }
+            if let Some(path) = &step.path {
+                entry["path"] = value(path);
+            }
+            if let Some(note) = &step.note {
+                entry["note"] = value(note);
+            }
+            if step.optional {
+                entry["optional"] = value(true);
+            }
+            if step.credentials {
+                entry["credentials"] = value(true);
+            }
+            steps.push(entry);
+        }
+
+        document["next_steps"] = Item::ArrayOfTables(steps);
     }
 
     document.to_string()
@@ -478,7 +727,7 @@ mod tests {
 
     fn a_manifest() -> BlueprintManifest {
         BlueprintManifest {
-            schema: SCHEMA,
+            schema: 1,
             blueprint: Header {
                 name: "laravel-php82".to_owned(),
                 description: "Laravel + MariaDB".to_owned(),
@@ -513,6 +762,8 @@ mod tests {
                 extensions: vec!["redis".to_owned(), "xdebug".to_owned()],
             }),
             scaffold: None,
+            archive: None,
+            next_steps: Vec::new(),
         }
     }
 
@@ -741,12 +992,12 @@ command = "composer create-project laravel/laravel {project}"
     /// A file from a build that knew more than this one is refused by name rather than half-read.
     #[test]
     fn a_newer_schema_is_refused_by_name() {
-        let text = render(&a_manifest()).replace("schema = 1", "schema = 2");
+        let text = render(&a_manifest()).replace("schema = 1", "schema = 3");
 
         assert!(
             matches!(
                 read(&text),
-                Err(Error::UnknownBlueprintSchema { schema: 2, ref name }) if name == "laravel-php82"
+                Err(Error::UnknownBlueprintSchema { schema: 3, ref name }) if name == "laravel-php82"
             ),
             "{:?}",
             read(&text)
@@ -774,5 +1025,196 @@ doc_root = "public"
 "#;
 
         assert!(matches!(read(text), Err(Error::BlueprintManifest { .. })));
+    }
+    fn with_scaffold(table: &str) -> String {
+        format!(
+            "schema = 2\n\n[blueprint]\nname = \"wp\"\ncreated_at = \"2026-10-08T00:00:00Z\"\n\n\
+             [blueprint.created_on]\nos = \"any\"\nversion = \"0.0.1\"\n\n[scaffold]\n{table}\n"
+        )
+    }
+
+    fn with_steps(steps: &str) -> String {
+        format!(
+            "schema = 1\n\n[blueprint]\nname = \"x\"\ncreated_at = \"2026-10-08T00:00:00Z\"\n\n\
+             [blueprint.created_on]\nos = \"any\"\nversion = \"0.0.1\"\n\n{steps}\n"
+        )
+    }
+
+    fn refusal(text: &str) -> String {
+        match read(text) {
+            Err(error) => format!("{error:?}"),
+            Ok(_) => panic!("read accepted:\n{text}"),
+        }
+    }
+
+    #[test]
+    fn an_archive_scaffold_reads_and_renders_at_schema_2() {
+        let text = with_scaffold(
+            "archive = \"https://wordpress.org/latest.zip\"\nstrip = \"wordpress\"\nneeds_empty_dir = true",
+        );
+        let manifest = read(&text).expect("reads");
+
+        assert!(manifest.scaffold.is_none());
+        assert_eq!(
+            manifest.archive,
+            Some(Archive {
+                url: "https://wordpress.org/latest.zip".to_owned(),
+                strip: Some("wordpress".to_owned()),
+                needs_empty_dir: true,
+            })
+        );
+        assert_eq!(schema_of(&manifest), 2);
+        assert!(render(&manifest).starts_with("schema = 2\n"));
+        assert_eq!(read(&render(&manifest)).expect("round trip"), manifest);
+    }
+
+    #[test]
+    fn a_manifest_without_an_archive_renders_at_schema_1_whatever_it_said() {
+        let mut manifest = a_manifest();
+        manifest.schema = 2;
+
+        assert_eq!(schema_of(&manifest), 1);
+        assert!(render(&manifest).starts_with("schema = 1\n"));
+    }
+
+    #[test]
+    fn an_archive_and_a_command_together_are_refused() {
+        let text =
+            with_scaffold("command = \"composer install\"\narchive = \"https://x.org/a.zip\"");
+        assert!(refusal(&text).contains("both"), "{}", refusal(&text));
+    }
+
+    #[test]
+    fn a_scaffold_with_neither_is_refused() {
+        let text = with_scaffold("needs_empty_dir = true");
+        assert!(refusal(&text).contains("neither"), "{}", refusal(&text));
+    }
+
+    #[test]
+    fn a_plain_http_archive_is_refused() {
+        let text = with_scaffold("archive = \"http://wordpress.org/latest.zip\"");
+        assert!(refusal(&text).contains("https"), "{}", refusal(&text));
+    }
+
+    /// **`strip` names one folder at the archive's top level, and nothing else.** A path in it
+    /// would move whatever it reaches outside the unpacked tree into the project, and the consent
+    /// a person gives names the URL, not this.
+    #[test]
+    fn a_strip_that_is_not_one_folder_name_is_refused() {
+        for strip in [
+            "..",
+            "../outside",
+            "a/b",
+            "a\\\\b",
+            "C:\\\\Users",
+            "/etc",
+            ".",
+            "",
+        ] {
+            let text = with_scaffold(&format!(
+                "archive = \"https://x.org/a.zip\"\nstrip = \"{strip}\""
+            ));
+            assert!(
+                refusal(&text).contains("strip"),
+                "{strip}: {}",
+                refusal(&text)
+            );
+        }
+    }
+
+    #[test]
+    fn an_npm_name_check_beside_an_archive_is_refused() {
+        let text = with_scaffold("archive = \"https://x.org/a.zip\"\nneeds_npm_safe_dir = true");
+        assert!(
+            refusal(&text).contains("needs_npm_safe_dir"),
+            "{}",
+            refusal(&text)
+        );
+    }
+
+    #[test]
+    fn next_steps_read_render_and_do_not_raise_the_schema() {
+        let text = with_steps(
+            "[[next_steps]]\nkind = \"once\"\nrun = \"npm install\"\n\n\
+             [[next_steps]]\nkind = \"serve\"\nrun = \"npm run dev\"\nnote = \"port 3000\"\n\n\
+             [[next_steps]]\nkind = \"open\"\npath = \"/wp-admin/install.php\"\ncredentials = true\noptional = true",
+        );
+        let manifest = read(&text).expect("reads");
+
+        assert_eq!(manifest.next_steps.len(), 3);
+        assert_eq!(manifest.next_steps[1].note.as_deref(), Some("port 3000"));
+        assert!(manifest.next_steps[2].credentials);
+        assert_eq!(schema_of(&manifest), 1);
+        assert_eq!(read(&render(&manifest)).expect("round trip"), manifest);
+    }
+
+    #[test]
+    fn an_unknown_key_inside_a_step_is_ignored() {
+        let text = with_steps(
+            "[[next_steps]]\nkind = \"once\"\nrun = \"npm install\"\ndone_when = \"node_modules\"",
+        );
+        assert_eq!(read(&text).expect("reads").next_steps.len(), 1);
+    }
+
+    #[test]
+    fn every_run_rule_is_refused_naming_the_step() {
+        for bad in [
+            "npm install && npm run dev",
+            "npm install || true",
+            "cd x; npm i",
+            "ls | wc",
+            "echo > x",
+            "sort < x",
+            "echo `id`",
+            "echo $HOME",
+            "echo %PATH%",
+            r"vendor\bin\pest",
+            "",
+        ] {
+            let text = with_steps(&format!(
+                "[[next_steps]]\nkind = \"once\"\nrun = \"npm install\"\n\n\
+                 [[next_steps]]\nkind = \"once\"\nrun = {bad:?}"
+            ));
+            let said = refusal(&text);
+            assert!(said.contains("next_steps[2]"), "{bad:?}: {said}");
+        }
+
+        let long = "a".repeat(513);
+        let text = with_steps(&format!(
+            "[[next_steps]]\nkind = \"once\"\nrun = \"{long}\""
+        ));
+        assert!(refusal(&text).contains("512"));
+    }
+
+    #[test]
+    fn a_token_other_than_project_is_refused() {
+        let text = with_steps("[[next_steps]]\nkind = \"once\"\nrun = \"echo {domain}\"");
+        assert!(refusal(&text).contains("{project}"));
+    }
+
+    #[test]
+    fn run_on_open_and_path_elsewhere_are_refused() {
+        assert!(
+            refusal(&with_steps(
+                "[[next_steps]]\nkind = \"open\"\nrun = \"npm i\""
+            ))
+            .contains("open")
+        );
+        assert!(
+            refusal(&with_steps(
+                "[[next_steps]]\nkind = \"once\"\nrun = \"npm i\"\npath = \"/x\""
+            ))
+            .contains("path")
+        );
+        assert!(refusal(&with_steps("[[next_steps]]\nkind = \"serve\"")).contains("run"));
+        assert!(
+            refusal(&with_steps("[[next_steps]]\nkind = \"open\"\npath = \"x\"")).contains("/")
+        );
+    }
+
+    #[test]
+    fn a_site_on_a_step_is_refused_until_a_blueprint_has_several() {
+        let text = with_steps("[[next_steps]]\nkind = \"once\"\nrun = \"npm i\"\nsite = \"web\"");
+        assert!(refusal(&text).contains("site"));
     }
 }

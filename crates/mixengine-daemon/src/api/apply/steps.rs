@@ -48,6 +48,10 @@ pub(crate) struct Context {
     /// an instance: a step that planned `Satisfied` never reaches `service.create`, which is what
     /// makes "only what this apply made" true by construction rather than by a check.
     pub(crate) autostart: bool,
+
+    /// The account the `CreateDatabase` step really used — roadmap task **T205**, D6. Reported in
+    /// the apply's answer, which is the one place it is known: T202 may have chosen another name.
+    pub(crate) database: Option<mixengine_proto::AppliedDatabase>,
 }
 
 impl Context {
@@ -110,10 +114,15 @@ pub(crate) fn untouched_with_consent(
         // With a consent it was refused before the job existed; without one it was never going to
         // run. Either way the sentence carries the command and the reason.
         Disposition::Blocked { reason }
-            if matches!(step.action, PlanAction::RunScaffold { .. }) =>
+            if matches!(
+                step.action,
+                PlanAction::RunScaffold { .. } | PlanAction::FetchArchive { .. }
+            ) =>
         {
+            // The command, or the archive's URL — roadmap task **T205**, D2.
             let command = match &step.action {
                 PlanAction::RunScaffold { command } => command.as_str(),
+                PlanAction::FetchArchive { url, .. } => url.as_str(),
                 _ => "",
             };
 
@@ -183,6 +192,7 @@ pub(crate) fn describe(action: &PlanAction) -> String {
         PlanAction::IssueCertificate { .. } => "issuing the certificate".to_owned(),
         PlanAction::SetPhpExtension { name, .. } => format!("turning on the PHP extension {name}"),
         PlanAction::RunScaffold { .. } => "the blueprint's own command".to_owned(),
+        PlanAction::FetchArchive { url, .. } => format!("downloading {url}"),
         _ => "a step this build does not know".to_owned(),
     }
 }
@@ -232,12 +242,52 @@ mod tests {
         assert!(why.contains("--run-scaffold"), "{why}");
     }
 
+    /// **An archive nothing agreed to is left with its URL** — roadmap task **T205**, D2.
+    #[test]
+    fn an_archive_nobody_agreed_to_is_left_with_its_url() {
+        let archive = PlanStep {
+            action: PlanAction::FetchArchive {
+                url: "https://x.org/a.zip".to_owned(),
+                strip: None,
+            },
+            disposition: Disposition::Confirm {
+                what: "https://x.org/a.zip".to_owned(),
+            },
+            elevates: false,
+        };
+        let Some(StepResult::NotRun { why }) = untouched_with_consent(&archive, None) else {
+            panic!("an archive is left rather than fetched");
+        };
+        assert!(why.contains("https://x.org/a.zip"), "{why}");
+    }
+
+    /// **And a blocked archive is a sentence, never work** — the executor must not reach it.
+    #[test]
+    fn a_blocked_archive_is_left_with_its_url_and_reason() {
+        let archive = PlanStep {
+            action: PlanAction::FetchArchive {
+                url: "https://x.org/a.zip".to_owned(),
+                strip: None,
+            },
+            disposition: Disposition::Blocked {
+                reason: "the directory holds README".to_owned(),
+            },
+            elevates: false,
+        };
+        let Some(StepResult::NotRun { why }) = untouched_with_consent(&archive, None) else {
+            panic!("a blocked archive is left");
+        };
+        assert!(why.contains("https://x.org/a.zip"), "{why}");
+        assert!(why.contains("README"), "{why}");
+    }
+
     /// And with a consent it is work, which is the executor's to do.
     #[test]
     fn a_scaffold_somebody_agreed_to_is_work() {
         let consent = ScaffoldConsent {
             command: "composer install".to_owned(),
             untrusted: false,
+            archive: None,
         };
 
         assert_eq!(
@@ -347,6 +397,7 @@ mod tests {
         let consent = ScaffoldConsent {
             command: "composer install".to_owned(),
             untrusted: false,
+            archive: None,
         };
 
         for consent in [None, Some(&consent)] {

@@ -1,7 +1,7 @@
 //! The blueprints this build ships — roadmap task **T79**.
 //!
 //! Out here rather than beside the code because these are assertions about the *shipped set*: that
-//! the thirteen files are readable, that each one is its own rendering, and that seeding a real home
+//! the files are readable, that each one is its own rendering, and that seeding a real home
 //! with them is idempotent.
 
 use mixengine_core::blueprints::gallery::{self, ENTRIES};
@@ -34,12 +34,15 @@ fn every_gallery_blueprint_is_its_own_rendering() {
 
 /// The set the roadmap names, spelled the way a person types it on a command line.
 #[test]
-fn the_gallery_is_the_thirteen_the_roadmap_names() {
+fn the_gallery_is_the_set_the_roadmap_names() {
     let slugs: Vec<_> = ENTRIES.iter().map(|entry| entry.slug).collect();
 
     assert_eq!(
         slugs,
         [
+            "cakephp",
+            "codeigniter",
+            "craft",
             "django",
             "drupal",
             "express-mongodb",
@@ -48,11 +51,13 @@ fn the_gallery_is_the_thirteen_the_roadmap_names() {
             "nextjs",
             "php-mysql",
             "rails",
+            "statamic",
             "static",
             "strapi",
             "symfony",
             "vite",
-            "wordpress"
+            "wordpress",
+            "yii"
         ],
         "the gallery is listed in slug order, which is the order a listing shows it in"
     );
@@ -63,7 +68,7 @@ fn the_gallery_is_the_thirteen_the_roadmap_names() {
     }
 }
 
-/// **Five carry a command and eight do not** — D8. Asserted rather than left to a reading of the
+/// **Ten carry a command and the rest do not** — D8, widened by T205's five PHP entries. Asserted rather than left to a reading of the
 /// files, because a scaffold added to `wordpress` or `django` by a later edit is exactly the change
 /// this task decided against.
 ///
@@ -80,12 +85,21 @@ fn the_gallery_is_the_thirteen_the_roadmap_names() {
 /// MongoDB's Eloquent driver would be a second command joined to the first, so its
 /// `[blueprint] description` says it instead.
 #[test]
-fn only_the_five_that_can_run_a_command_carry_one() {
+fn only_the_entries_that_can_run_a_command_carry_one() {
     for entry in ENTRIES {
         let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
         let expected = matches!(
             entry.slug,
-            "laravel" | "laravel-mongodb" | "symfony" | "nextjs" | "drupal"
+            "laravel"
+                | "laravel-mongodb"
+                | "symfony"
+                | "nextjs"
+                | "drupal"
+                | "cakephp"
+                | "codeigniter"
+                | "craft"
+                | "statamic"
+                | "yii"
         );
 
         assert_eq!(
@@ -143,6 +157,64 @@ fn only_the_command_that_names_itself_after_the_directory_asks_for_an_npm_name()
             entry.slug,
             scaffold.needs_npm_safe_dir
         );
+    }
+}
+
+/// **WordPress is the one archive, and the one file at schema 2** — roadmap task **T205**, D2 and
+/// ADR 0061: every other gallery file stays readable by every installed build.
+#[test]
+fn only_wordpress_is_an_archive_and_only_it_is_schema_2() {
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        let is_wordpress = entry.slug == "wordpress";
+
+        assert_eq!(manifest.archive.is_some(), is_wordpress, "{}", entry.slug);
+        assert_eq!(
+            entry.manifest.starts_with("schema = 2\n"),
+            is_wordpress,
+            "{} is written at the wrong schema",
+            entry.slug
+        );
+    }
+}
+
+/// **Whether the browser opens by itself** — T205, D7 and the last column of D13's table: it
+/// opens when no `once` or `serve` step is needed.
+#[test]
+fn whether_the_browser_opens_by_itself_matches_the_design() {
+    use mixengine_proto::NextStepKind;
+
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        let needed = manifest
+            .next_steps
+            .iter()
+            .any(|step| step.kind != NextStepKind::Open && !step.optional);
+
+        let expected = !matches!(
+            entry.slug,
+            "nextjs" | "strapi" | "express-mongodb" | "django" | "rails" | "vite"
+        );
+        assert_eq!(
+            !needed, expected,
+            "{} opens the browser by itself: {}",
+            entry.slug, !needed
+        );
+    }
+}
+
+/// **Every step expands for a name that is not a slug** — T205's review focus: `My Blog` must
+/// become `my-blog`, never reach a command as itself, and never leave the token behind.
+#[test]
+fn every_gallery_step_expands_for_a_name_with_spaces() {
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        for step in mixengine_core::blueprints::steps::expanded(&manifest.next_steps, "My Blog") {
+            if let Some(run) = step.run {
+                assert!(!run.contains("{project}"), "{}: {run}", entry.slug);
+                assert!(!run.contains("My Blog"), "{}: {run}", entry.slug);
+            }
+        }
     }
 }
 
@@ -370,12 +442,12 @@ async fn every_gallery_blueprint_plans_on_a_machine_with_nothing_installed() {
     }
 }
 
-/// **On a machine without `composer`, the four that run it are blocked at exactly one step and
-/// it is the command** — roadmap task **T78b**. The gap the product does not close (T25 keeps
-/// `composer` out of the shims) is on the screen rather than at the end of the job, and the other
-/// nine plan clean because `npx` is a shim every home has.
+/// **On a machine without `composer`, the entries that run it are blocked at exactly one step
+/// and it is the command** — roadmap task **T78b**, widened by T205's five PHP entries. The gap
+/// the product does not close (T25 keeps `composer` out of the shims) is on the screen rather than
+/// at the end of the job, and the others plan clean because `npx` is a shim every home has.
 #[tokio::test]
-async fn without_composer_only_the_four_that_need_it_are_blocked_and_only_at_the_command() {
+async fn without_composer_only_the_entries_that_need_it_are_blocked_and_only_at_the_command() {
     for entry in ENTRIES {
         let planned = planned_with(entry.slug, &["npx"]).await;
         let blocked: Vec<_> = planned
@@ -385,7 +457,8 @@ async fn without_composer_only_the_four_that_need_it_are_blocked_and_only_at_the
             .collect();
 
         match entry.slug {
-            "laravel" | "laravel-mongodb" | "symfony" | "drupal" => {
+            "laravel" | "laravel-mongodb" | "symfony" | "drupal" | "cakephp" | "codeigniter"
+            | "craft" | "statamic" | "yii" => {
                 assert_eq!(blocked.len(), 1, "{}: {:?}", entry.slug, planned.steps);
                 assert!(
                     matches!(blocked[0].action, PlanAction::RunScaffold { .. }),
@@ -408,10 +481,10 @@ async fn without_composer_only_the_four_that_need_it_are_blocked_and_only_at_the
     }
 }
 
-/// **The four that run Composer ask for it** — roadmap task **T27c**, its design's D6 — so a machine
-/// without one reads `create composer 2` where T78b had it read `blocked`.
+/// **The entries that run Composer ask for it** — roadmap task **T27c**, its design's D6 — so a
+/// machine without one reads `create composer 2` where T78b had it read `blocked`.
 #[tokio::test]
-async fn the_four_composer_blueprints_ask_for_it_and_nothing_else_does() {
+async fn the_composer_blueprints_ask_for_it_and_nothing_else_does() {
     for entry in ENTRIES {
         let planned = planned(entry.slug).await;
         let asks = planned.steps.iter().any(|step| {
@@ -427,7 +500,15 @@ async fn the_four_composer_blueprints_ask_for_it_and_nothing_else_does() {
             asks,
             matches!(
                 entry.slug,
-                "laravel" | "laravel-mongodb" | "symfony" | "drupal"
+                "laravel"
+                    | "laravel-mongodb"
+                    | "symfony"
+                    | "drupal"
+                    | "cakephp"
+                    | "codeigniter"
+                    | "craft"
+                    | "statamic"
+                    | "yii"
             ),
             "{}: {:?}",
             entry.slug,

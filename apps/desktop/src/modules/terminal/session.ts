@@ -8,7 +8,14 @@ export type TerminalBadgeMark = { type: "local" } | { type: "ssh" } | { type: "e
 /** What the user chose, reduced to what Rust needs. The display label stays here. */
 export function terminalTarget(choice: TerminalChoice): TerminalTarget {
   if (choice.kind === "local") {
-    return { type: "local", shell: choice.shell.path, args: choice.shell.args, cwd: choice.cwd };
+    return {
+      type: "local",
+      shell: choice.shell.path,
+      args: choice.shell.args,
+      cwd: choice.cwd,
+      env: choice.env ?? undefined,
+      pathPrepend: choice.pathPrepend ?? undefined,
+    };
   }
   return { type: "ssh", ...choice.config };
 }
@@ -58,11 +65,14 @@ export function terminalBadgeMarks(
  *
  * Here rather than in `TerminalView` because it is pure: the same reason `terminalTarget` is here.
  */
-export function openingKeystrokes(text: string | null | undefined): string | null {
+export function openingKeystrokes(text: string | null | undefined, press = true): string | null {
   if (!text) return null;
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line !== "");
-  return lines.length === 0 ? null : lines.map((line) => `${line}\r`).join("");
+  if (lines.length === 0) return null;
+  // Without `press`, the last line is typed and left for the person's Enter — T205, D10.
+  const typed = lines.join("\r");
+  return press ? `${typed}\r` : typed;
 }

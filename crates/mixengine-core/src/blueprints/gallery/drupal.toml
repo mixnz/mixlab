@@ -28,3 +28,8 @@ user = "{project}"
 [scaffold]
 command = "composer create-project drupal/recommended-project . --no-interaction"
 needs_empty_dir = true
+
+[[next_steps]]
+kind = "open"
+path = "/core/install.php"
+credentials = true

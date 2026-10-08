@@ -37,6 +37,9 @@ interface Props {
    *  exactly once per session — including a session born from the Reconnect button, since that is
    *  also an entry into that machine. */
   runOnConnect: string | null;
+  /** Whether the last line of `runOnConnect` is followed by Enter. `false` types it and leaves it
+   *  for the person to run — T205, D10. */
+  pressEnter: boolean;
   /** A background tab stays mounted and keeps receiving bytes — this only decides focus and when
    *  to measure again. */
   active: boolean;
@@ -58,6 +61,7 @@ interface Props {
 function TerminalView({
   target,
   runOnConnect,
+  pressEnter,
   active,
   onOpened,
   onExit,
@@ -108,6 +112,8 @@ function TerminalView({
   tRef.current = t;
   const runOnConnectRef = useRef(runOnConnect);
   runOnConnectRef.current = runOnConnect;
+  const pressEnterRef = useRef(pressEnter);
+  pressEnterRef.current = pressEnter;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -202,7 +208,7 @@ function TerminalView({
         term.write(new Uint8Array(message));
         if (!greeted) {
           greeted = true;
-          const keys = openingKeystrokes(runOnConnectRef.current);
+          const keys = openingKeystrokes(runOnConnectRef.current, pressEnterRef.current);
           // A failure stays silent, just like any other typing: the session is still open, and the
           // user can keep typing.
           if (keys) void writeSession(id, keys).catch(() => {});

@@ -24,7 +24,14 @@ import styles from "./Blueprints.module.css";
 /** The blueprint list of this home — capture, import, apply. There is no edit/delete
  *  (`blueprint.delete` does not exist) — overwriting on capture/import is the only way to replace a
  *  slug. */
-export default function Blueprints({ active }: { active: boolean }) {
+export default function Blueprints({
+  active,
+  terminalVisible,
+}: {
+  active: boolean;
+  /** Whether this window draws the Terminal module, for the steps after an apply — T205. */
+  terminalVisible: boolean;
+}) {
   const [rows, setRows] = useState<BlueprintSummary[]>([]);
   /** False until the first read has answered — until then an empty `rows` means "not known yet",
    *  not "no blueprints". */
@@ -175,7 +182,11 @@ export default function Blueprints({ active }: { active: boolean }) {
       {/* Brought up **after** `ApplyDialog` closes, not nested inside it: both are `Modal`s, and
           `Modal` listens for Escape at `window` level — stacked, one key closes both. */}
       {settling && (
-        <AfterApply applied={settling} onFinished={() => setSettling(null)} />
+        <AfterApply
+          applied={settling}
+          onFinished={() => setSettling(null)}
+          terminalVisible={terminalVisible}
+        />
       )}
     </div>
   );

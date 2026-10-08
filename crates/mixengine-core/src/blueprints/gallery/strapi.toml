@@ -2,7 +2,7 @@ schema = 1
 
 [blueprint]
 name = "Strapi"
-description = "A Strapi server on port 1337, with PostgreSQL - create or clone your app here first"
+description = "A Strapi server on port 1337, with PostgreSQL"
 created_at = "2026-09-13T00:00:00Z"
 
 [blueprint.created_on]
@@ -24,3 +24,13 @@ name = "postgres"
 instance = "main"
 database = "{project}"
 user = "{project}"
+
+[[next_steps]]
+kind = "once"
+run = "npx create-strapi@latest ."
+note = "It asks a few questions; answer them in the tab."
+
+[[next_steps]]
+kind = "serve"
+run = "npm run develop"
+note = "Strapi listens on 1337."

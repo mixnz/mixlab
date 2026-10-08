@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 import Button from "../../../../components/Button";
@@ -8,8 +8,10 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { BlueprintApplied } from "@mixengine/api";
 import { describePlanAction, failedSteps } from "../../blueprintPlan";
+import { openAddress, opensByItself } from "../../nextSteps";
 import { siteUrl } from "../../siteState";
 import ElevationDialog from "../ElevationDialog";
+import NextStepsPanel from "../NextStepsPanel";
 import styles from "./AfterApply.module.css";
 
 /** How far along the three-step chain we are. */
@@ -35,6 +37,9 @@ interface Props {
 
   /** The user closes this block. `url` is the address found, or `null` if there is no site. */
   onFinished: (url: string | null) => void;
+
+  /** Whether this window draws the Terminal module, for the steps panel's buttons — T205. */
+  terminalVisible: boolean;
 }
 
 /**
@@ -72,17 +77,28 @@ interface Props {
  * `Modal` listens for Escape at `window` level: with two stacked, one Escape closes both. So
  * `ApplyDialog` closes first, then the screen that called it brings this component up in its place.
  *
- * **Offer the address, do not navigate by itself.** The first version opened the browser right
- * away once the init command had run; after trying it, this popup turned out to do enough to *show
- * people the result*, and pulling a browser window up in front of someone is a side effect they did
- * not ask for. The button is here; the click is theirs.
+ * **The browser opens by itself when the site works** — T205, D7. Applying a blueprint is asking
+ * for a site that works, so a site that answers is the end of that request, and making people find
+ * the button to see it is one click too many. It does not open when a step failed, or when the
+ * blueprint says a step is still needed (a dev server to start, an install to run): then the steps
+ * panel below says what is left, and the address is there for when it is done.
  */
-export default function AfterApply({ applied, onFinished }: Props) {
+export default function AfterApply({ applied, onFinished, terminalVisible }: Props) {
   const project = applied.project;
   const failed = failedSteps(applied);
   const [phase, setPhase] = useState<Phase>({ kind: "checking" });
   const [error, setError] = useState("");
   const { t } = useTranslation();
+  // Opened once, whatever re-renders follow.
+  const openedByItself = useRef(false);
+  const nextSteps = applied.next_steps ?? null;
+
+  useEffect(() => {
+    if (phase.kind !== "ready" || phase.url === null || openedByItself.current) return;
+    if (!opensByItself(applied)) return;
+    openedByItself.current = true;
+    void openUrl(openAddress(phase.url, nextSteps?.steps ?? []));
+  }, [phase, applied, nextSteps]);
 
   // The rights pass. Runs exactly once, as soon as this block comes up.
   useEffect(() => {
@@ -163,7 +179,7 @@ export default function AfterApply({ applied, onFinished }: Props) {
       title={heading}
       onClose={() => onFinished(done ? phase.url : null)}
       locked={!done}
-      size="small"
+      size={nextSteps ? "normal" : "small"}
       actions={[
         {
           kind: "cancel",
@@ -218,6 +234,17 @@ export default function AfterApply({ applied, onFinished }: Props) {
                   </>
                 )}
               </div>
+            )}
+
+            {done && nextSteps && (
+              <NextStepsPanel
+                project={applied.project}
+                root={applied.root}
+                siteUrl={phase.url}
+                steps={nextSteps}
+                database={applied.database}
+                terminalVisible={terminalVisible}
+              />
             )}
           </ModalBody>
           <ModalErrors messages={[error]} />

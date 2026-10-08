@@ -13,6 +13,9 @@ const bash: TerminalChoice = {
   cwd: null,
   targetId: null,
   runOnConnect: null,
+  press: true,
+  env: null,
+  pathPrepend: null,
 };
 
 const ubuntu: TerminalChoice = {
@@ -21,6 +24,9 @@ const ubuntu: TerminalChoice = {
   cwd: "D:\\work",
   targetId: null,
   runOnConnect: null,
+  press: true,
+  env: null,
+  pathPrepend: null,
 };
 
 const config: SshConfig = {
@@ -30,7 +36,7 @@ const config: SshConfig = {
   auth: { type: "password", password: "hunter2" },
 };
 
-const remote: TerminalChoice = { kind: "ssh", config, targetId: null, runOnConnect: null };
+const remote: TerminalChoice = { kind: "ssh", config, targetId: null, runOnConnect: null, press: true };
 
 describe("terminalTarget", () => {
   it("sends the path and the args, not the display name", () => {
@@ -40,6 +46,13 @@ describe("terminalTarget", () => {
       args: [],
       cwd: null,
     });
+  });
+
+  /* T205, D9: what a saved local target sets in its shell reaches Rust as it was saved. */
+  it("carries a local target's variables and PATH prefix", () => {
+    expect(
+      terminalTarget({ ...bash, env: { MIXENGINE_HOME: "C:\\h" }, pathPrepend: ["C:\\h\\bin"] }),
+    ).toMatchObject({ env: { MIXENGINE_HOME: "C:\\h" }, pathPrepend: ["C:\\h\\bin"] });
   });
 
   it("carries a WSL distribution through as arguments", () => {
@@ -136,5 +149,12 @@ describe("openingKeystrokes", () => {
     expect(openingKeystrokes(null)).toBeNull();
     expect(openingKeystrokes("")).toBeNull();
     expect(openingKeystrokes("   \n\n  ")).toBeNull();
+  });
+
+  /* T205, D10: a restored tab or an untrusted project's step is typed and left for the person to
+     run. Earlier lines still run; only the last one waits. */
+  it("types without Enter when asked not to press it", () => {
+    expect(openingKeystrokes("npm run dev", false)).toBe("npm run dev");
+    expect(openingKeystrokes("a\nb", false)).toBe("a\rb");
   });
 });

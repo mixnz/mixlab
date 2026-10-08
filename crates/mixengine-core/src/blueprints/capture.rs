@@ -30,7 +30,6 @@ use mixengine_proto::{RuntimeKind, RuntimeSource, ServiceId, SiteKind, VersionCo
 
 use crate::blueprints::manifest::{
     BlueprintManifest, BlueprintService, BlueprintSite, Header, PER_PROJECT, Php, Provenance,
-    SCHEMA,
 };
 use crate::projects::ProjectRecord;
 use crate::{Error, Result, Store, manifest, resolve, services, sites};
@@ -114,7 +113,9 @@ pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManife
     };
 
     Ok(BlueprintManifest {
-        schema: SCHEMA,
+        // **The lowest schema, because capture never writes an archive** — ADR 0061. `SCHEMA` is
+        // what this build reads, not what a capture holds.
+        schema: 1,
         blueprint: Header {
             name: asked.name.to_owned(),
             description: asked.description.to_owned(),
@@ -177,6 +178,13 @@ pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManife
         },
         // **Never.** Capture does not invent a command to execute on somebody else's machine.
         scaffold: None,
+        archive: None,
+        // **As the blueprint has them** — roadmap task **T205**, D5. Unexpanded in the row, so
+        // nothing here turns a slug back into `{project}`.
+        next_steps: crate::blueprints::steps::declared(store, project.id)
+            .await?
+            .map(|(manifest, _)| manifest.next_steps)
+            .unwrap_or_default(),
     })
 }
 

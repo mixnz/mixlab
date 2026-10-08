@@ -24,3 +24,16 @@ name = "postgres"
 instance = "main"
 database = "{project}"
 user = "{project}"
+
+[[next_steps]]
+kind = "once"
+run = "python -m pip install django"
+note = "Installs into the runtime this project pins, which its other projects share."
+
+[[next_steps]]
+kind = "once"
+run = "python -m django startproject config ."
+
+[[next_steps]]
+kind = "serve"
+run = "python manage.py runserver 127.0.0.1:8000"

@@ -184,6 +184,10 @@ pub struct Served {
     /// Empty for a site served from the owner's root itself, which is what the column holds.
     pub doc_root_relative: String,
 
+    /// What the welcome page lists — roadmap task **T205**, D6. Empty for an extension's site and
+    /// for a project whose blueprint names no steps.
+    pub steps: Vec<crate::generate::welcome::WelcomeStep>,
+
     /// What it serves, and what that kind needs to know.
     pub kind: ServedKind,
 
@@ -347,15 +351,44 @@ pub(super) async fn served(
     certs: &Path,
     extensions: &BTreeMap<String, crate::extensions::store::Installed>,
 ) -> Result<Vec<Served>> {
-    let rows = sqlx::query!("SELECT id, root_path FROM projects")
-        .fetch_all(store.pool())
-        .await
-        .map_err(|source| store.failure("read", source))?;
+    // **The blueprint each project came from, beside its root** — roadmap task **T205**, D6: the
+    // welcome page lists what that blueprint says to run.
+    let rows = sqlx::query!(
+        r#"SELECT p.id AS "id!: i64", p.root_path AS "root_path!: String",
+                  p.name AS "name!: String", b.manifest_toml AS "manifest?: String"
+           FROM projects p LEFT JOIN blueprints b ON b.id = p.blueprint_id"#
+    )
+    .fetch_all(store.pool())
+    .await
+    .map_err(|source| store.failure("read", source))?;
 
-    let roots: BTreeMap<i64, String> = rows
-        .into_iter()
-        .map(|row| (row.id, row.root_path))
-        .collect();
+    let mut roots: BTreeMap<i64, String> = BTreeMap::new();
+    let mut welcome_steps: BTreeMap<i64, Vec<crate::generate::welcome::WelcomeStep>> =
+        BTreeMap::new();
+
+    for row in rows {
+        // A row whose manifest does not read is a page with no steps, never a render that fails:
+        // the page is a courtesy, and the site it sits in front of matters more.
+        if let Some(manifest) = row
+            .manifest
+            .as_deref()
+            .and_then(|text| crate::blueprints::manifest::read(text).ok())
+        {
+            let steps = crate::blueprints::steps::expanded(&manifest.next_steps, &row.name)
+                .into_iter()
+                .filter(|step| step.kind != mixengine_proto::NextStepKind::Open)
+                .filter_map(|step| {
+                    Some(crate::generate::welcome::WelcomeStep {
+                        run: step.run?,
+                        note: step.note,
+                    })
+                })
+                .collect();
+            welcome_steps.insert(row.id, steps);
+        }
+
+        roots.insert(row.id, row.root_path);
+    }
 
     let mut served = Vec::new();
 
@@ -503,6 +536,12 @@ pub(super) async fn served(
             }),
             doc_root: under(&root, &record.doc_root),
             doc_root_relative: record.doc_root.clone(),
+            steps: match &record.owner {
+                SiteOwner::Project(project) => {
+                    welcome_steps.get(project).cloned().unwrap_or_default()
+                }
+                SiteOwner::Extension(_) => Vec::new(),
+            },
             domains: record.domains,
             kind,
             routes,

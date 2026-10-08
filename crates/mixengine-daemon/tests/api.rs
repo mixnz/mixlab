@@ -483,6 +483,9 @@ async fn a_fresh_home_holds_the_gallery() {
     assert_eq!(
         slugs,
         [
+            "cakephp",
+            "codeigniter",
+            "craft",
             "django",
             "drupal",
             "express-mongodb",
@@ -491,11 +494,13 @@ async fn a_fresh_home_holds_the_gallery() {
             "nextjs",
             "php-mysql",
             "rails",
+            "statamic",
             "static",
             "strapi",
             "symfony",
             "vite",
-            "wordpress"
+            "wordpress",
+            "yii"
         ],
         "{answer}"
     );

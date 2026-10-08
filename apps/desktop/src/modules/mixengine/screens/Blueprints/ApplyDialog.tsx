@@ -57,15 +57,6 @@ interface Props {
 
   /** Prefills the directory, for the same reason. */
   initialRoot?: string;
-
-  /**
-   * Also installs a web server if this home has none yet — `BlueprintApply.front_end`, T115.
-   *
-   * **Off** by default: an apply is about one project, while setting up the machine it runs on is
-   * a broader matter and has to be asked. Quick Start is the only place that turns it on, because
-   * its question really is *give me a site that works*.
-   */
-  withFrontEnd?: boolean;
 }
 
 type Phase =
@@ -86,7 +77,6 @@ export default function ApplyDialog({
   onDone,
   initialProject = "",
   initialRoot = "",
-  withFrontEnd = false,
 }: Props) {
   const { t } = useTranslation();
   const [project, setProject] = useState(initialProject);
@@ -125,7 +115,9 @@ export default function ApplyDialog({
         // without `--path`, because there nobody picks a directory at all.
         root_is_parent: false,
         dry_run: true,
-        front_end: withFrontEnd,
+        // **Always on** — T205, D7. MixLab's question is always *give me a site that works*, and a
+        // home that already has a front end is left as it is by the daemon.
+        front_end: true,
         // **Always off, and no prop turns it on** — `BlueprintApply.autostart` (T116) is a required
         // field, so it is sent rather than left out. This window does not decide on anyone's behalf
         // which services start along with MixEngine: an apply flagging everything it *creates* is
@@ -137,7 +129,9 @@ export default function ApplyDialog({
       });
       if (response.outcome === "planned") {
         setChoices({});
-        setScaffoldAgreed(false);
+        // Ticked for a blueprint someone vouches for, which is what the person picked it for; left
+        // for them to tick on one nobody vouches for — T205.
+        setScaffoldAgreed(response.plan.trusted);
         setPrerequisitesAgreed(false);
         setPhase({ kind: "plan", plan: response.plan, needs: response.needs ?? [] });
       }
@@ -170,7 +164,7 @@ export default function ApplyDialog({
         scaffold: scaffold ?? undefined,
         // Sent on both passes: the plan people read must be the plan that runs, so a flag that
         // changes the plan must not be added after the dry run.
-        front_end: withFrontEnd,
+        front_end: true,
         // Sent on both passes, for the same reason: see the dry run above.
         autostart: false,
       });
@@ -383,10 +377,20 @@ export default function ApplyDialog({
                           </Button>
                         </div>
                       )}
-                      {step.action.action === "run_scaffold" && (
+                      {(step.action.action === "run_scaffold" ||
+                        step.action.action === "fetch_archive") && (
                         <div className={styles.scaffold}>
-                          <p>{t("mixengine.blueprints.apply.scaffoldTitle")}</p>
-                          <code>{step.action.command}</code>
+                          {step.action.action === "run_scaffold" ? (
+                            <>
+                              <p>{t("mixengine.blueprints.apply.scaffoldTitle")}</p>
+                              <code>{step.action.command}</code>
+                            </>
+                          ) : (
+                            <>
+                              <p>{t("mixengine.blueprints.apply.archiveTitle")}</p>
+                              <code>{step.action.url}</code>
+                            </>
+                          )}
                           {!phase.plan.trusted && (
                             <p className={styles.blocked}>
                               {t("mixengine.blueprints.apply.scaffoldUntrusted")}

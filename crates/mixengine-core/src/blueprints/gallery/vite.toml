@@ -2,7 +2,7 @@ schema = 1
 
 [blueprint]
 name = "Vite"
-description = "A Vite build served as files over HTTPS, from dist/ - run npm install, then npm run build"
+description = "A Vite build served as files over HTTPS, from dist/"
 created_at = "2026-09-13T00:00:00Z"
 
 [blueprint.created_on]
@@ -17,3 +17,17 @@ kind = "static"
 doc_root = "dist"
 https = true
 domain_pattern = "{project}.test"
+
+[[next_steps]]
+kind = "once"
+run = "npm create vite@latest ."
+note = "It asks which framework; answer in the tab."
+
+[[next_steps]]
+kind = "once"
+run = "npm install"
+
+[[next_steps]]
+kind = "once"
+run = "npm run build"
+note = "The site serves dist/, which this writes."

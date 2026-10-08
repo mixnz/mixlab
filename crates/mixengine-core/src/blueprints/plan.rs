@@ -356,6 +356,49 @@ pub async fn plan(
         });
     }
 
+    if let Some(archive) = &manifest.archive {
+        // **The scaffold's place and the scaffold's gate** — roadmap task **T205**, D2. Unpacking
+        // is not running, but the PHP it writes runs the moment somebody opens the site, so the
+        // URL is shown and agreed to exactly as a command is.
+        let disposition = if !crate::blueprints::archive::format_known(&archive.url) {
+            let file = archive
+                .url
+                .split(['?', '#'])
+                .next()
+                .unwrap_or(&archive.url)
+                .rsplit('/')
+                .next()
+                .unwrap_or_default();
+            let suffix = file
+                .rsplit_once('.')
+                .map(|(_, extension)| format!(".{extension}"))
+                .unwrap_or_else(|| "no suffix".to_owned());
+
+            Disposition::Blocked {
+                reason: format!(
+                    "{} ends in {suffix}, and this build unpacks .zip, .tar.gz and .tar.zst",
+                    archive.url
+                ),
+            }
+        } else {
+            match archive.needs_empty_dir.then(|| occupied(root)).flatten() {
+                Some(reason) => Disposition::Blocked { reason },
+                None => Disposition::Confirm {
+                    what: archive.url.clone(),
+                },
+            }
+        };
+
+        steps.push(PlanStep {
+            action: PlanAction::FetchArchive {
+                url: archive.url.clone(),
+                strip: archive.strip.clone(),
+            },
+            disposition,
+            elevates: false,
+        });
+    }
+
     Ok(BlueprintPlan {
         blueprint: blueprint.to_owned(),
         project: project.to_owned(),
@@ -834,7 +877,7 @@ async fn php_of(store: &Store, pin: Option<&VersionConstraint>) -> Result<Option
 /// space this value reaches refuses `{project}` on its own rule, so the refusal happens at plan time
 /// and names the token that could not be expanded, rather than a substitution nobody asked for
 /// reaching a shell.
-fn expand(value: &str, handle: Option<&str>) -> String {
+pub(crate) fn expand(value: &str, handle: Option<&str>) -> String {
     match handle {
         Some(handle) => value.replace(TOKEN, handle),
         None => value.to_owned(),
@@ -1019,7 +1062,7 @@ mod tests {
 
     fn a_manifest() -> BlueprintManifest {
         BlueprintManifest {
-            schema: crate::blueprints::manifest::SCHEMA,
+            schema: 1,
             blueprint: Header {
                 name: "blog-stack".to_owned(),
                 description: String::new(),
@@ -1054,6 +1097,8 @@ mod tests {
                 extensions: vec!["xdebug".to_owned()],
             }),
             scaffold: None,
+            archive: None,
+            next_steps: Vec::new(),
         }
     }
 
@@ -1639,7 +1684,7 @@ mod tests {
             PlanAction::AddDomain { .. } => 4,
             PlanAction::IssueCertificate { .. } => 5,
             PlanAction::SetPhpExtension { .. } => 6,
-            PlanAction::RunScaffold { .. } => 7,
+            PlanAction::RunScaffold { .. } | PlanAction::FetchArchive { .. } => 7,
             _ => 8,
         };
 
@@ -2290,6 +2335,107 @@ mod tests {
             "only the scaffold is blocked: {:?}",
             planned.steps
         );
+    }
+
+    /// A manifest whose scaffold is an archive — roadmap task **T205**, D2.
+    fn fetching(url: &str) -> crate::blueprints::manifest::BlueprintManifest {
+        let mut manifest = a_manifest();
+        manifest.archive = Some(crate::blueprints::manifest::Archive {
+            url: url.to_owned(),
+            strip: Some("wordpress".to_owned()),
+            needs_empty_dir: true,
+        });
+        manifest
+    }
+
+    async fn planned_for(
+        store: &Store,
+        temp: &tempfile::TempDir,
+        root: &Path,
+        manifest: crate::blueprints::manifest::BlueprintManifest,
+    ) -> BlueprintPlan {
+        plan(
+            store,
+            &Catalogue::builtin(),
+            &Wanted {
+                blueprint: "wordpress",
+                filed: &captured(manifest),
+                project: "wp",
+                root,
+                answers: &[],
+                scaffold_path: &a_path_holding(temp, &[]),
+                front_end: false,
+            },
+        )
+        .await
+        .expect("a plan")
+    }
+
+    /// **The scaffold's gate, with the URL where the command would be** — T205, D2.
+    #[tokio::test]
+    async fn an_archive_is_something_to_agree_to_naming_its_url() {
+        let (temp, store) = home().await;
+        let root = temp.path().join("wp");
+        let planned = planned_for(
+            &store,
+            &temp,
+            &root,
+            fetching("https://wordpress.org/latest.zip"),
+        )
+        .await;
+
+        let step = step_of(&planned, |action| {
+            matches!(action, PlanAction::FetchArchive { .. })
+        });
+        assert_eq!(
+            step.disposition,
+            Disposition::Confirm {
+                what: "https://wordpress.org/latest.zip".to_owned()
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn an_archive_into_a_full_directory_is_blocked() {
+        let (temp, store) = home().await;
+        let root = temp.path().join("wp");
+        std::fs::create_dir_all(&root).expect("root");
+        std::fs::write(root.join("README"), "x").expect("a file");
+
+        let planned = planned_for(
+            &store,
+            &temp,
+            &root,
+            fetching("https://wordpress.org/latest.zip"),
+        )
+        .await;
+        let step = step_of(&planned, |action| {
+            matches!(action, PlanAction::FetchArchive { .. })
+        });
+        assert!(
+            matches!(step.disposition, Disposition::Blocked { .. }),
+            "{:?}",
+            step.disposition
+        );
+    }
+
+    #[tokio::test]
+    async fn an_archive_of_an_unknown_format_is_blocked_by_its_suffix() {
+        let (temp, store) = home().await;
+        let planned = planned_for(
+            &store,
+            &temp,
+            &temp.path().join("wp"),
+            fetching("https://x.org/a.rar"),
+        )
+        .await;
+        let step = step_of(&planned, |action| {
+            matches!(action, PlanAction::FetchArchive { .. })
+        });
+        let Disposition::Blocked { reason } = &step.disposition else {
+            panic!("{:?}", step.disposition)
+        };
+        assert!(reason.contains(".rar"), "{reason}");
     }
 
     /// A manifest whose command takes its package name from the directory it runs in.

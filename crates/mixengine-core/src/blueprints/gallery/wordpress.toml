@@ -1,8 +1,8 @@
-schema = 1
+schema = 2
 
 [blueprint]
 name = "WordPress"
-description = "WordPress on PHP-FPM with MariaDB — unpack WordPress into the project root"
+description = "WordPress on PHP-FPM with MariaDB"
 created_at = "2026-09-01T00:00:00Z"
 
 [blueprint.created_on]
@@ -23,3 +23,13 @@ name = "mariadb"
 instance = "main"
 database = "{project}"
 user = "{project}"
+
+[scaffold]
+archive = "https://wordpress.org/latest.zip"
+strip = "wordpress"
+needs_empty_dir = true
+
+[[next_steps]]
+kind = "open"
+path = "/wp-admin/install.php"
+credentials = true

@@ -147,4 +147,12 @@ name: string, } | { "action": "run_scaffold",
 /**
  * The exact command, shown before anything runs it.
  */
-command: string, };
+command: string, } | { "action": "fetch_archive", 
+/**
+ * `https://` only; the format comes from its suffix.
+ */
+url: string, 
+/**
+ * The archive's single top-level folder whose contents become the project root.
+ */
+strip?: string | null, };

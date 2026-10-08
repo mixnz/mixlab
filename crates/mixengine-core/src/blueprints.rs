@@ -15,11 +15,13 @@
 //! - [`trust`] answers the one question T78a added: did the gallery sign this, or did somebody
 //!   hand it over.
 
+pub mod archive;
 pub mod capture;
 pub mod gallery;
 pub mod manifest;
 pub mod plan;
 pub mod program;
+pub mod steps;
 pub mod store;
 pub mod trust;
 

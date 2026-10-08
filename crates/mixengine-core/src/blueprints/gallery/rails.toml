@@ -2,7 +2,7 @@ schema = 1
 
 [blueprint]
 name = "Ruby on Rails"
-description = "Rails behind a reverse proxy, with PostgreSQL - run bundle install, then rails server"
+description = "Rails behind a reverse proxy, with PostgreSQL"
 created_at = "2026-09-13T00:00:00Z"
 
 [blueprint.created_on]
@@ -24,3 +24,17 @@ name = "postgres"
 instance = "main"
 database = "{project}"
 user = "{project}"
+
+[[next_steps]]
+kind = "once"
+run = "gem install rails"
+note = "Installs into the runtime this project pins, which its other projects share. On Windows, install the devkit first: the Install devkit button on the Ruby row of the Languages tab, or mix package install msys2 with a version from mix package available."
+
+[[next_steps]]
+kind = "once"
+run = "rails new . --database=postgresql"
+note = "It runs bundle install, which on Windows needs the same devkit."
+
+[[next_steps]]
+kind = "serve"
+run = "ruby bin/rails server -p 3000"

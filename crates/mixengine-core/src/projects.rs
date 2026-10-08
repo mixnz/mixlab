@@ -192,6 +192,28 @@ pub async fn create(
     })
 }
 
+/// Record which blueprint made a project — roadmap task **T205**, D5.
+///
+/// **Only where none is recorded.** A resumed apply sets it on a row an earlier build left `NULL`;
+/// nothing replaces a blueprint already named. `project.create` never calls this, so a project made
+/// by hand names no blueprint.
+///
+/// # Errors
+///
+/// [`Error::Database`] when the row cannot be written.
+pub async fn adopt_blueprint(store: &Store, project: &str, blueprint: &str) -> Result<()> {
+    sqlx::query!(
+        "UPDATE projects SET blueprint_id = ?1 WHERE name = ?2 AND blueprint_id IS NULL",
+        blueprint,
+        project
+    )
+    .execute(store.pool())
+    .await
+    .map_err(|source| store.failure("write", source))?;
+
+    Ok(())
+}
+
 /// Every service a keep-warm project reaches, and which project reaches it — roadmap task **T69**.
 ///
 /// **One join, and it is `sites.php_service_id`.** That is the whole of what today's schema knows

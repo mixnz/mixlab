@@ -187,8 +187,14 @@ pub struct BlueprintApply {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct ScaffoldConsent {
-    /// The command as it was shown, `{project}` already expanded.
+    /// The command as it was shown, `{project}` already expanded. Empty for an archive.
+    #[serde(default)]
     pub command: String,
+
+    /// The archive URL as it was shown — roadmap task **T205**, D2. Exactly one of `command` and
+    /// this names what the plan showed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archive: Option<String>,
 
     /// Whether the person was told this blueprint is nobody's to vouch for.
     ///
@@ -302,6 +308,7 @@ mod tests {
     fn a_consent_carries_the_command_and_what_was_said_about_it() {
         let consent = ScaffoldConsent {
             command: "composer create-project laravel/laravel shop".to_owned(),
+            archive: None,
             untrusted: true,
         };
 
@@ -368,5 +375,18 @@ mod tests {
             .to_string(),
             "mariadb@main"
         );
+    }
+    #[test]
+    fn a_consent_to_an_archive_names_the_url_and_no_command() {
+        let consent: ScaffoldConsent =
+            serde_json::from_str(r#"{"archive":"https://wordpress.org/latest.zip"}"#)
+                .expect("reads");
+
+        assert_eq!(consent.command, "");
+        assert_eq!(
+            consent.archive.as_deref(),
+            Some("https://wordpress.org/latest.zip")
+        );
+        assert!(!consent.untrusted);
     }
 }

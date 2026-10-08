@@ -36,3 +36,16 @@ extensions = ["redis"]
 [scaffold]
 command = "composer create-project laravel/laravel . --no-interaction"
 needs_empty_dir = true
+
+[[next_steps]]
+kind = "once"
+run = "php artisan migrate"
+note = "Laravel starts on SQLite; set DB_* in .env to the database below first."
+optional = true
+credentials = true
+
+[[next_steps]]
+kind = "serve"
+run = "npm run dev"
+note = "Vite, for editing the front end."
+optional = true

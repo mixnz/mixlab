@@ -18,6 +18,8 @@ p { margin: 0 0 1rem; }
 .dim { color: var(--dim); }
 .what { border-left: 3px solid var(--line); padding-left: 1rem; }
 footer { margin-top: 2rem; font-size: .875rem; color: var(--dim); }
+.steps { padding-left: 1.25rem; }
+code { font: .9375rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 </style>
 </head>
 <body>
@@ -25,6 +27,11 @@ footer { margin-top: 2rem; font-size: .875rem; color: var(--dim); }
 <h1>{{ domain }}</h1>
 <p class="dim">MixEngine is serving this site as {{ kind }}. There is nothing to serve yet.</p>
 <p class="what">{{ what_to_do }}</p>
+{% if steps %}
+<ol class="steps">
+{% for step in steps %}<li><code>{{ step.run }}</code>{% if step.note %} <span class="dim">{{ step.note }}</span>{% endif %}</li>
+{% endfor %}</ol>
+{% endif %}
 <footer>This page is MixEngine's, not your site's. It stops appearing as soon as your site answers.</footer>
 </main>
 </body>

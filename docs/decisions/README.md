@@ -60,6 +60,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0058](0058-the-tray-is-mixlabs-and-a-module-lends-it-a-section.md) | The tray is MixLab's, and a module lends it a section | Accepted |
 | [0059](0059-a-linux-release-may-keep-a-homes-credentials-in-a-file.md) | A Linux release may keep a home's credentials in a file | Accepted |
 | [0060](0060-a-crash-report-carries-offsets-and-the-release-keeps-the-symbols.md) | A crash report carries offsets, and the release keeps the symbols | Accepted |
+| [0061](0061-a-blueprint-is-written-at-the-lowest-schema-that-holds-it.md) | A blueprint is written at the lowest schema that holds it | Accepted |
 
 ### Desktop (recorded in the standalone client)
 

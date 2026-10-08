@@ -10,7 +10,7 @@ Design: [2026-10-08-t205-a-blueprint-ends-at-a-working-site-design.md](../specs/
 
 ---
 
-- [ ] **T205** **(P)** `[scaffold] archive` (schema 2, ADR 0061: a blueprint is written at the
+- [x] **T205** **(P)** `[scaffold] archive` (schema 2, ADR 0061: a blueprint is written at the
       lowest schema that holds it) and WordPress built on it; `[[next_steps]]` with `once`, `serve`
       and `open`, read through `projects.blueprint_id` and shown by `AfterApply`, the Sites and
       Projects screens, the welcome page and `mix`; every MixLab apply asks for a front end, ticks a

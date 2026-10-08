@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT b.manifest_toml AS \"manifest!: String\", b.trusted AS \"trusted!: bool\"\n           FROM projects p JOIN blueprints b ON b.id = p.blueprint_id\n           WHERE p.id = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "manifest!: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "blueprints",
+            "name": "manifest_toml"
+          }
+        }
+      },
+      {
+        "name": "trusted!: bool",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "blueprints",
+            "name": "trusted"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "1a91396316e39495f2c24f5a9a0ac7feb67214776f444c076fd372fc47d22787"
+}

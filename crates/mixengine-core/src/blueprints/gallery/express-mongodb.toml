@@ -2,7 +2,7 @@ schema = 1
 
 [blueprint]
 name = "Express + MongoDB"
-description = "A Node.js server on port 3000, with MongoDB - create or clone your app here first (MongoDB needs a processor with AVX)"
+description = "A Node.js server on port 3000, with MongoDB (MongoDB needs a processor with AVX)"
 created_at = "2026-09-17T00:00:00Z"
 
 [blueprint.created_on]
@@ -22,3 +22,16 @@ domain_pattern = "{project}.test"
 [[services]]
 name = "mongodb"
 instance = "main"
+
+[[next_steps]]
+kind = "once"
+run = "npm init -y"
+
+[[next_steps]]
+kind = "once"
+run = "npm install express mongodb"
+
+[[next_steps]]
+kind = "serve"
+run = "node index.js"
+note = "Write index.js first; it listens on 3000."

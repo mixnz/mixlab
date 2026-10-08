@@ -75,8 +75,50 @@ describe("parseTerminalTabState", () => {
     expect(parseTerminalTabState({ kind: "ssh", targetId: "" })).toBeNull();
     expect(parseTerminalTabState({ kind: "ssh", targetId: 7 })).toBeNull();
     expect(parseTerminalTabState({ kind: "local" })).toBeNull();
-    expect(parseTerminalTabState({ kind: "local", shellName: "" })).toBeNull();
     expect(parseTerminalTabState({ kind: "local", shellName: "pwsh", cwd: 7 })).toBeNull();
+  });
+
+  /* `""` is the machine's default shell — T205: the launch queue that hands a tab over cannot know
+     this machine's shell names. */
+  it("reads an empty shell name as the default shell", () => {
+    expect(parseTerminalTabState({ kind: "local", shellName: "" })).toEqual({
+      kind: "local",
+      shellName: "",
+      cwd: null,
+      targetId: undefined,
+    });
+  });
+
+  /* T205, D8: a tab another module hands over runs its lines once and is a plain shell after. */
+  it("reads a one-shot local state with its run lines", () => {
+    expect(
+      parseTerminalTabState({
+        kind: "local", shellName: "", cwd: "/p", env: { A: "1" }, pathPrepend: ["/b"],
+        run: ["npm install", "npm run dev"], press: false,
+      }),
+    ).toEqual({
+      kind: "local", shellName: "", cwd: "/p", targetId: undefined, env: { A: "1" },
+      pathPrepend: ["/b"], run: ["npm install", "npm run dev"], press: false,
+    });
+  });
+
+  it("never writes run back", () => {
+    const state = tabStateFor({
+      kind: "local", shell: { name: "pwsh", path: "pwsh", args: [] }, cwd: "/p", targetId: null,
+      runOnConnect: "npm run dev", press: true, env: { A: "1" }, pathPrepend: ["/b"],
+    });
+    expect(state).toEqual({ kind: "local", shellName: "pwsh", cwd: "/p", targetId: undefined, env: { A: "1" }, pathPrepend: ["/b"] });
+  });
+
+  /* T205, D11: a target another module drafts, for the person to check and save. */
+  it("reads a draft and refuses one with no name or cwd", () => {
+    const target = {
+      name: "shop · npm run dev", shellName: "", cwd: "/p", env: {}, pathPrepend: [],
+      runOnConnect: "npm run dev", onRestore: "type",
+    };
+    expect(parseTerminalTabState({ kind: "draft", target })).toEqual({ kind: "draft", target });
+    expect(parseTerminalTabState({ kind: "draft", target: { ...target, name: "" } })).toBeNull();
+    expect(parseTerminalTabState({ kind: "draft", target: { ...target, cwd: 3 } })).toBeNull();
   });
 
   /* An unreadable id does not break the whole state: the shell and directory can still reopen the
@@ -100,6 +142,9 @@ describe("tabStateFor", () => {
         cwd: "C:\\src",
         targetId: null,
         runOnConnect: null,
+        press: true,
+        env: null,
+        pathPrepend: null,
       }),
     ).toEqual({
       kind: "local",
@@ -111,7 +156,7 @@ describe("tabStateFor", () => {
 
   it("keeps the saved target's id, nothing from its config", () => {
     expect(
-      tabStateFor({ kind: "ssh", config: CONFIG, targetId: "t-1", runOnConnect: null }),
+      tabStateFor({ kind: "ssh", config: CONFIG, targetId: "t-1", runOnConnect: null, press: true }),
     ).toEqual({
       kind: "ssh",
       targetId: "t-1",
@@ -123,7 +168,7 @@ describe("tabStateFor", () => {
      edit the command, and an old tab still runs the old one. */
   it("does not copy the startup command out of the saved target", () => {
     expect(
-      tabStateFor({ kind: "ssh", config: CONFIG, targetId: "t-1", runOnConnect: "cd ~/a" }),
+      tabStateFor({ kind: "ssh", config: CONFIG, targetId: "t-1", runOnConnect: "cd ~/a", press: true }),
     ).toEqual({ kind: "ssh", targetId: "t-1" });
     expect(
       tabStateFor({
@@ -132,6 +177,9 @@ describe("tabStateFor", () => {
         cwd: null,
         targetId: "t-2",
         runOnConnect: "npm run dev",
+        press: true,
+        env: null,
+        pathPrepend: null,
       }),
     ).toEqual({ kind: "local", shellName: "wsl:Ubuntu", cwd: null, targetId: "t-2" });
   });
@@ -140,7 +188,7 @@ describe("tabStateFor", () => {
     // There is no id to point at, and the password must not be written out — so nothing is
     // written at all.
     expect(
-      tabStateFor({ kind: "ssh", config: CONFIG, targetId: null, runOnConnect: null }),
+      tabStateFor({ kind: "ssh", config: CONFIG, targetId: null, runOnConnect: null, press: true }),
     ).toBeUndefined();
   });
 });

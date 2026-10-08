@@ -377,6 +377,7 @@ impl Recipe for Nginx {
                     site.primary(),
                     &site.kind,
                     &site.doc_root_relative,
+                    &site.steps,
                 );
 
                 documents.push(Document::new(
@@ -921,6 +922,7 @@ mod tests {
             https: true,
             https_redirect: false,
             certificate: None,
+            steps: Vec::new(),
         }];
 
         let rendered = Nginx.sites(&context, &served).expect("one site")[0]
@@ -961,6 +963,7 @@ mod tests {
                 https: true,
                 https_redirect: false,
                 certificate: None,
+                steps: Vec::new(),
             },
             Served {
                 shared: None,
@@ -975,6 +978,7 @@ mod tests {
                 https: true,
                 https_redirect: false,
                 certificate: None,
+                steps: Vec::new(),
             },
             Served {
                 shared: None,
@@ -986,6 +990,7 @@ mod tests {
                 https: true,
                 https_redirect: false,
                 certificate: None,
+                steps: Vec::new(),
             },
         ];
 
@@ -1507,6 +1512,7 @@ mod tests {
                 key: std::path::PathBuf::from("/certs/blog.test.key"),
                 fingerprint: "ab".repeat(32),
             }),
+            steps: Vec::new(),
         }
     }
 
@@ -1543,6 +1549,7 @@ mod tests {
                 key: PathBuf::from("/home/someone/.mixengine/certs/sites/blog.test.key"),
                 fingerprint: "ab".repeat(32),
             }),
+            steps: Vec::new(),
         }
     }
 
@@ -1577,6 +1584,7 @@ mod tests {
             https: false,
             https_redirect: false,
             certificate: None,
+            steps: Vec::new(),
         });
 
         assert!(
@@ -1619,6 +1627,7 @@ mod tests {
                 https: false,
                 https_redirect: false,
                 certificate: None,
+                steps: Vec::new(),
             })
             .collect();
 
@@ -1668,6 +1677,7 @@ mod tests {
             https: false,
             https_redirect: false,
             certificate: None,
+            steps: Vec::new(),
         });
 
         assert!(
@@ -1793,6 +1803,7 @@ zz
                     https: false,
                     https_redirect: false,
                     certificate: None,
+                    steps: Vec::new(),
                 }],
             )
             .expect("one site")[0]
@@ -1817,6 +1828,7 @@ zz
             https: false,
             https_redirect: false,
             certificate: None,
+            steps: Vec::new(),
         }
     }
 
@@ -1867,6 +1879,7 @@ zz
             https: false,
             https_redirect: false,
             certificate: None,
+            steps: Vec::new(),
         });
 
         // The directive rather than the whole file: the comment above it names the shape a
@@ -1895,6 +1908,7 @@ zz
             https: false,
             https_redirect: false,
             certificate: None,
+            steps: Vec::new(),
         };
 
         let rendered = Nginx

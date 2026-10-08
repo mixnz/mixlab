@@ -636,3 +636,63 @@ async fn an_apply_starts_what_the_project_needs_and_leaves_the_rest_alone() {
         "no site of this project declares it, and `--start` is not a machine-wide switch: {listed}"
     );
 }
+
+/// **The steps a blueprint declares reach the person, and its projects keep them** — roadmap task
+/// **T205**, D5 and D6. The apply's answer carries them expanded, `project show` reads them back
+/// through `blueprint_id`, and a capture of the applied project writes them back with the token,
+/// not the slug.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_applied_blueprints_next_steps_are_reported_kept_and_captured() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+
+    let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/with-next-steps.toml");
+    home.mix(&["blueprint", "import", &fixture.display().to_string()]);
+
+    let directory = repository();
+    let into = directory.path().join("app").display().to_string();
+
+    // `--json` streams the plan, the job's lines and the job; the last line is what was applied.
+    let streamed = stdout(&home.mix(&[
+        "blueprint",
+        "apply",
+        "with-next-steps",
+        "--project",
+        "My App",
+        "--path",
+        &into,
+        "--json",
+    ]));
+    let applied: Value = serde_json::from_str(streamed.lines().last().expect("a last line"))
+        .expect("the applied report");
+    let steps = &applied["next_steps"];
+    assert_eq!(steps["trusted"], false, "an unsigned import: {applied}");
+    assert_eq!(steps["steps"][0]["run"], "npm install my-app", "{applied}");
+    assert_eq!(steps["steps"][1]["kind"], "serve", "{applied}");
+
+    let shown = json(&home.mix(&["project", "show", "My App", "--json"]));
+    assert_eq!(shown["next_steps"], *steps, "{shown}");
+
+    let printed = stdout(&home.mix(&["project", "show", "My App"]));
+    assert!(printed.contains("npm install my-app"), "{printed}");
+
+    let captured = json(&home.mix(&[
+        "blueprint",
+        "capture",
+        "again",
+        "--project",
+        "My App",
+        "--json",
+    ]));
+    let rendered = std::fs::read_to_string(
+        captured["file"]
+            .as_str()
+            .expect("the capture names its file"),
+    )
+    .expect("the rendering");
+    assert!(
+        rendered.contains("run = \"npm install {project}\""),
+        "{rendered}"
+    );
+}
