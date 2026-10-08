@@ -104,7 +104,7 @@ const terminalEn = {
     envLineInvalid: "Line {{line}} is not KEY=value.",
     pathLabel: "Put ahead of PATH",
     pathHint: "One folder per line.",
-    onRestoreLabel: "When the tab comes back",
+    onRestoreLabel: "When this target opens",
     onRestoreRun: "Run the commands",
     onRestoreType: "Type them, wait for Enter",
     onRestoreNone: "Just open",

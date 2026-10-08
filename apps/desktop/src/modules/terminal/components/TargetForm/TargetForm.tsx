@@ -22,6 +22,7 @@ import {
 } from "../../savedTargetsStore";
 import { loadTerminalSettings } from "../../settingsStore";
 import { shellLabel } from "../../shells";
+import { openingFor } from "../../session";
 import { formatEnvLines, parseEnvLines, parsePathLines } from "../../targetEnv";
 import type {
   LocalShell,
@@ -287,15 +288,14 @@ function TargetForm({ onOpen, onError, initial }: Props) {
             shell: chosenShell,
             cwd: cwd.trim() || null,
             targetId,
-            runOnConnect: opening,
-            press: true,
+            ...openingFor(opening, onRestore),
             env: env ?? null,
             pathPrepend: pathPrepend.length === 0 ? null : pathPrepend,
           }
         : null;
     }
     return sshReady
-      ? { kind: "ssh", config: buildConfig(), targetId, runOnConnect: opening, press: true }
+      ? { kind: "ssh", config: buildConfig(), targetId, ...openingFor(opening, onRestore) }
       : null;
   }
 
@@ -363,8 +363,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
         kind: "ssh",
         config: entry.config,
         targetId: entry.id,
-        runOnConnect: opening,
-        press: true,
+        ...openingFor(opening, entry.onRestore),
       });
       return;
     }
@@ -378,8 +377,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
       shell,
       cwd: entry.cwd,
       targetId: entry.id,
-      runOnConnect: opening,
-      press: true,
+      ...openingFor(opening, entry.onRestore),
       env: entry.env ?? null,
       pathPrepend: entry.pathPrepend ?? null,
     });

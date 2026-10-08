@@ -24,6 +24,41 @@
   font-weight: 600;
 }
 
+/* A Ruby that cannot build the gems the steps need, said above them with the way out beside it. */
+.devkit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--warning-text);
+  border-radius: var(--radius-lg);
+  color: var(--warning-text);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.devkit > p {
+  margin: 0;
+}
+
+/* The devkit's install, with its percent and the step it is on: minutes of a bare *Installing*
+   read as a hang. */
+.devkitProgress {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 4px;
+  width: 200px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 16px;
+}
+
+.devkitProgress > progress {
+  width: 100%;
+}
+
 .steps {
   display: flex;
   flex-direction: column;

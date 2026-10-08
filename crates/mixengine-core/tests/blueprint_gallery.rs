@@ -272,7 +272,11 @@ fn rails_new_carries_the_database_account() {
     let step = manifest
         .next_steps
         .iter()
-        .find(|step| step.run.as_deref().is_some_and(|run| run.starts_with("rails new")))
+        .find(|step| {
+            step.run
+                .as_deref()
+                .is_some_and(|run| run.starts_with("rails new"))
+        })
         .expect("rails new is a step");
     assert!(step.credentials, "rails new does not carry credentials");
 }
@@ -284,7 +288,11 @@ fn rails_new_carries_the_database_account() {
 fn an_installer_on_postgres_says_postgres() {
     for entry in ENTRIES {
         let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
-        if !manifest.services.iter().any(|service| service.name == "postgres") {
+        if !manifest
+            .services
+            .iter()
+            .any(|service| service.name == "postgres")
+        {
             continue;
         }
         for step in &manifest.next_steps {

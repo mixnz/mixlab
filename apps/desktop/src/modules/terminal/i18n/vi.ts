@@ -104,7 +104,7 @@ const terminalVi: TerminalDict = {
     envLineInvalid: "Dòng {{line}} không phải dạng KEY=value.",
     pathLabel: "Thêm vào đầu PATH",
     pathHint: "Mỗi dòng một thư mục.",
-    onRestoreLabel: "Khi tab được mở lại",
+    onRestoreLabel: "Khi mở mục này",
     onRestoreRun: "Chạy lệnh",
     onRestoreType: "Gõ sẵn, chờ Enter",
     onRestoreNone: "Chỉ mở",

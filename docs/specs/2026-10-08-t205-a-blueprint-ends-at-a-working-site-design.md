@@ -307,6 +307,24 @@ A half-read list of instructions is worse than none.
   sit in a ⋮ menu, as Sites' do. There, a step with `credentials` carries a link to the site's
   database on the Dashboard, where the existing password control lives (D5 says why the account
   is not repeated here).
+- **A Ruby that cannot build the gems is said above the steps** (T206a's devkit, where the steps
+  are). Measured by hand: `rails new` on a Windows Ruby with no `msys2` ran `bundle install`, which
+  stopped at the first gem with a C extension, and `rails server` then listed sixty missing gems; a
+  note under `gem install rails` had said so, and a note is not read before Run. The panel reads
+  the Ruby the project resolves to, whether its release `lacks` `native gems`, and whether a
+  devkit is installed (`devkitNeed.ts`). When one is missing it says so above the rows with
+  **Install devkit (size)** beside it, the Languages tab's button, and *Run the required steps* is
+  disabled until the install's job ends.
+- **And it is offered before the apply, where the decision is made.** The Apply dialog's plan reads
+  the Ruby line the blueprint pins (`register_project`'s `pins.ruby`, `planDevkitNeed`) and, when
+  that line cannot build native gems and no devkit is installed, shows *Install the devkit with it
+  (size)*, ticked. The devkit installs as its own job beside the apply. One install job for the
+  whole window (`devkitInstall.ts`), so the panel that follows shows it under way rather than
+  offering it twice.
+- **On the Languages tab** a Ruby row carries one mark, its reasons on hover, inside the row's
+  *needs* cell: the row is a six-column grid, and the first version's two marks and a button were a
+  seventh child that pushed *Install* onto the next line. The devkit is offered once, above the
+  list, and only where a Ruby is installed: someone who does not use Ruby is not asked about it.
 - **One place to read the steps.** *What to run* in a site's ⋮ menu on the Sites screen goes to
   the Projects screen with that project's row open (`projectsNavigation.ts`), and an apply that has
   just finished leaves its project to be opened there on the next visit; neither draws a copy of
@@ -329,20 +347,23 @@ A half-read list of instructions is worse than none.
   project's pinned versions from `cwd`, whether or not the person ever ran `mix path install`.
   The Terminal module learns none of this: to it these are two generic fields.
 
-### D10 — Terminal: what a restored tab does with its commands
+### D10 — Terminal: what a target's opening does with its commands
 
 Today a restored tab always reopens its session and always types its target's *Run on connect*
 with Enter (`TerminalTab.tsx`, the restore effect). For a dev-server target, every launch of
 MixLab would start every such server at once. Every saved target, local and SSH, gains:
 
-| `onRestore` | A restored tab |
+| `onRestore` | Opening the target, or a tab MixLab restores |
 |---|---|
 | `run` | opens and types the commands **with** Enter. This is the default, so a target written before this field keeps today's behaviour |
 | `type` | opens and types the commands **without** Enter, leaving them on the prompt |
 | `none` | opens the shell at `cwd`, or connects the SSH session, and types nothing |
 
-- It applies to restoring only. Opening a target by hand still runs its commands, because the
-  click is the request.
+- It applies to **every opening** of the target: the Open button, a double click in the list, and a
+  tab MixLab restores (`openingFor` in `session.ts`). The form names it *When this target opens*.
+  *Why not restoring only, as first written:* measured by hand, a target set to *Just open* or
+  *Type them* still ran its commands when opened from the list, which is not what anyone choosing
+  those means; the field name *When the tab comes back* did not say otherwise clearly enough.
 - `openingKeystrokes` gains a `press: boolean` argument, which keeps it pure.
 - The form shows it as a three-way choice beneath *Run on connect*, disabled while that field is
   empty.

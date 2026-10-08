@@ -10,7 +10,7 @@ import TerminalView from "./components/TerminalView";
 import { useSavedTargets, useSavedTargetsLoaded } from "./savedTargetsStore";
 import { useTerminalSettings } from "./settingsStore";
 import { parseTerminalTabState, tabStateFor } from "./tabState";
-import { terminalBadgeMarks, terminalTarget, terminalTitle } from "./session";
+import { openingFor, terminalBadgeMarks, terminalTarget, terminalTitle } from "./session";
 import type { TerminalChoice } from "./types";
 import "./terminal.css";
 
@@ -151,13 +151,11 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
       // `config` here is already complete — `savedTargets.ts` merges the secrets from the keyring
       // in before handing it out. What the restored tab does with its commands is the entry's
       // `onRestore` — T205, D10.
-      const onRestore = entry.onRestore ?? "run";
       start({
         kind: "ssh",
         config: entry.config,
         targetId: entry.id,
-        runOnConnect: onRestore === "none" ? null : (entry.runOnConnect ?? null),
-        press: onRestore === "run",
+        ...openingFor(entry.runOnConnect, entry.onRestore),
       });
       return;
     }
@@ -202,14 +200,12 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
           });
           return;
         }
-        const onRestore = saved?.onRestore ?? "run";
         start({
           kind: "local",
           shell,
           cwd: restoredState.cwd,
           targetId: saved?.id ?? null,
-          runOnConnect: onRestore === "none" || local === undefined ? null : (local.runOnConnect ?? null),
-          press: onRestore === "run",
+          ...openingFor(local?.runOnConnect, local?.onRestore),
           // The live entry's, where there is one: editing it makes every tab pointing at it follow.
           env: local ? (local.env ?? null) : (restoredState.env ?? null),
           pathPrepend: local ? (local.pathPrepend ?? null) : (restoredState.pathPrepend ?? null),

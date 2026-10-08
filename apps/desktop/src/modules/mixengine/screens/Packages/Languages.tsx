@@ -47,7 +47,7 @@ import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
 import { updateRowState } from "../../updateRow";
 import ExtensionsPanel from "./ExtensionsPanel";
-import { DEVKIT_PACKAGE, devkitOffer, lacksLabels } from "./devkit";
+import { anyLacksNativeGems, DEVKIT_PACKAGE, devkitOffer, lacksLabels, lacksReason } from "./devkit";
 import { formatBytes } from "../../metricsState";
 import styles from "./Catalogue.module.css";
 
@@ -247,39 +247,56 @@ export default function Languages({ active }: { active: boolean }) {
     }
   }
 
-  /** What one release cannot do on this machine, and, for native gems, the devkit — T206. */
-  function lacksMarks(release: RuntimeRelease): ReactNode {
+  /**
+   * What one release cannot do on this machine, as **one** mark — T206. Its every reason is the
+   * tooltip. The devkit is not offered here: one install serves every Ruby, so it is offered once,
+   * above the list (`devkitNotice`). Measured by hand, two marks and a button on every Ruby row
+   * overflowed the row onto the next.
+   */
+  function lacksMark(release: RuntimeRelease): ReactNode {
     const marks = lacksLabels(release);
     if (marks.length === 0) return null;
+    const nativeGems = marks.some(({ key }) => key === "native gems");
+    const label = nativeGems
+      ? devkit.installed
+        ? t("mixengine.packages.lacks.devkitInstalled")
+        : t("mixengine.packages.lacks.nativeGems")
+      : marks[0].key === "yjit"
+        ? t("mixengine.packages.lacks.yjit")
+        : marks[0].key;
+    return (
+      <StatusPill
+        className={styles.lacks}
+        tone={nativeGems && devkit.installed ? "success" : "neutral"}
+        title={lacksReason(release)}
+      >
+        {label}
+      </StatusPill>
+    );
+  }
+
+  /** The devkit, offered once above the list when a Ruby is installed here and Ruby here cannot
+   *  build native gems. Only then: someone who does not use Ruby has nothing to do with it, and the
+   *  mark on a Ruby row already says so before they install one. */
+  function devkitNotice(): ReactNode {
+    if (!installed.some((row) => row.kind === "ruby")) return null;
+    if (!anyLacksNativeGems(available)) return null;
+    if (devkit.installed) {
+      return <p className={styles.devkitNotice}>{t("mixengine.packages.lacks.devkitReady")}</p>;
+    }
+    if (devkit.release === null) return null;
     const devkitJob = jobFor(jobs, installingJob[DEVKIT_JOB]);
     return (
-      <span className={styles.lacks}>
-        {marks.map(({ key, reason }) => {
-          const nativeGems = key === "native gems";
-          const label = nativeGems
-            ? devkit.installed
-              ? t("mixengine.packages.lacks.devkitInstalled")
-              : t("mixengine.packages.lacks.nativeGems")
-            : key === "yjit"
-              ? t("mixengine.packages.lacks.yjit")
-              : key;
-          return (
-            <Fragment key={key}>
-              <StatusPill tone={nativeGems && devkit.installed ? "success" : "neutral"} title={reason}>
-                {label}
-              </StatusPill>
-              {nativeGems && !devkit.installed && devkit.release !== null &&
-                (devkitJob ? (
-                  <span className={styles.progressText}>{devkitJob.message}</span>
-                ) : (
-                  <Button size="small" variant="soft" onClick={() => void installDevkit(devkit.release!)}>
-                    {t("mixengine.packages.lacks.installDevkit", { size: formatBytes(devkit.release.bytes) })}
-                  </Button>
-                ))}
-            </Fragment>
-          );
-        })}
-      </span>
+      <div className={styles.devkitNotice}>
+        <p>{t("mixengine.packages.lacks.devkitAbout")}</p>
+        {devkitJob ? (
+          <span className={styles.progressText}>{devkitJob.message}</span>
+        ) : (
+          <Button size="small" variant="soft" onClick={() => devkit.release && void installDevkit(devkit.release)}>
+            {t("mixengine.packages.lacks.installDevkit", { size: formatBytes(devkit.release.bytes) })}
+          </Button>
+        )}
+      </div>
     );
   }
 
@@ -422,13 +439,17 @@ export default function Languages({ active }: { active: boolean }) {
         </span>
         <span className={styles.version}>{release.version}</span>
         <span className={styles.tag}>{release.channel}</span>
-        <span
-          className={styles.needs}
-          title={libraries.length > 0 ? libraries.join(", ") : t("mixengine.requirements.columnNeeds")}
-        >
-          {needs.join(", ")}
+        {/* One grid cell for both: the row is six columns, and a seventh child starts a new row,
+            which is what pushed Install onto the next line (T206). */}
+        <span className={styles.needsCell}>
+          <span
+            className={styles.needs}
+            title={libraries.length > 0 ? libraries.join(", ") : t("mixengine.requirements.columnNeeds")}
+          >
+            {needs.join(", ")}
+          </span>
+          {lacksMark(release)}
         </span>
-        {lacksMarks(release)}
         {job ? (
           <span className={styles.progress}>
             <progress value={job.percent} max={100} />
@@ -576,27 +597,30 @@ export default function Languages({ active }: { active: boolean }) {
         ) : lineGroups.length === 0 ? (
           filter.trim() !== "" && <EmptyState title={t("mixengine.packages.noMatches")} />
         ) : (
-          <ul className={styles.available}>
-            {lineGroups.map((group) => (
-              <Fragment key={group.key}>
-                {releaseRow(
-                  group.head,
-                  false,
-                  group.others.length > 0 && (
-                    <Button
-                      variant="link"
-                      className={styles.moreInLine}
-                      aria-expanded={group.open}
-                      onClick={() => toggleLine(group.key)}
-                    >
-                      {t("mixengine.packages.moreInLine", { count: group.others.length })}
-                    </Button>
-                  ),
-                )}
-                {group.open && group.others.map((release) => releaseRow(release, true, null))}
-              </Fragment>
-            ))}
-          </ul>
+          <>
+            {devkitNotice()}
+            <ul className={styles.available}>
+              {lineGroups.map((group) => (
+                <Fragment key={group.key}>
+                  {releaseRow(
+                    group.head,
+                    false,
+                    group.others.length > 0 && (
+                      <Button
+                        variant="link"
+                        className={styles.moreInLine}
+                        aria-expanded={group.open}
+                        onClick={() => toggleLine(group.key)}
+                      >
+                        {t("mixengine.packages.moreInLine", { count: group.others.length })}
+                      </Button>
+                    ),
+                  )}
+                  {group.open && group.others.map((release) => releaseRow(release, true, null))}
+                </Fragment>
+              ))}
+            </ul>
+          </>
         )}
       </Card>
 

@@ -1,5 +1,5 @@
 import { shellLabel } from "./shells";
-import type { TerminalChoice, TerminalTarget } from "./types";
+import type { OnRestore, TerminalChoice, TerminalTarget } from "./types";
 
 /** A mark this tab should carry. `TerminalTab` turns it into a `TabBadge` because that is where
  *  `t` is. */
@@ -75,4 +75,23 @@ export function openingKeystrokes(text: string | null | undefined, press = true)
   // Without `press`, the last line is typed and left for the person's Enter — T205, D10.
   const typed = lines.join("\r");
   return press ? `${typed}\r` : typed;
+}
+
+/**
+ * What a saved target's opening sends, by its *When this target opens* choice — T205, D10.
+ *
+ * Every opening reads it: the Open button, a double click in the list, and a tab MixLab restores.
+ * The first version read it only on a restore, so *Just open* and *Type them* still ran the lines
+ * when the target was opened from the list, which is not what anyone choosing them means. Absent is
+ * `run`, what every entry did before the choice existed.
+ */
+export function openingFor(
+  runOnConnect: string | null | undefined,
+  onRestore: OnRestore | undefined,
+): { runOnConnect: string | null; press: boolean } {
+  const choice = onRestore ?? "run";
+  return {
+    runOnConnect: choice === "none" ? null : (runOnConnect ?? null),
+    press: choice === "run",
+  };
 }

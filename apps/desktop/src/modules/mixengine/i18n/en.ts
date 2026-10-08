@@ -132,6 +132,10 @@ export default {
       none: "Nothing left to adopt.",
     },
     nextSteps: {
+      devkitMissing:
+        "This project's Ruby cannot build gems with C extensions yet, and these steps need it. Install the devkit first.",
+      devkitInstalling: "Installing the devkit",
+      devkitFirst: "Install the devkit first",
       title: "What is left to do",
       runRequired: "Run the required steps",
       runRequiredEnabling: "Turn on Terminal and run the required steps",
@@ -343,6 +347,9 @@ export default {
         yjit: "no YJIT",
         devkitInstalled: "builds native gems with the devkit",
         installDevkit: "Install devkit ({{size}})",
+        devkitAbout:
+          "Ruby on Windows needs the devkit to build gems with C extensions, such as Rails'. One install serves every Ruby version.",
+        devkitReady: "The devkit is installed: every Ruby here builds gems with C extensions.",
       },
       tabLanguages: "Languages",
       about: "Languages, servers and the versions of each this machine keeps.",
@@ -834,6 +841,9 @@ export default {
         choiceUseInstalled: "Use the installed version instead",
         scaffoldTitle: "This blueprint wants to run a command:",
         archiveTitle: "It downloads and unpacks into the project directory:",
+        devkitTitle:
+          "This blueprint's Ruby cannot build gems with C extensions on this machine, and its steps need them.",
+        devkitConsent: "Install the devkit with it ({{size}})",
         scaffoldUntrusted: "Nobody has vouched for this blueprint. Review the command before agreeing.",
         scaffoldConsent: "I've read the command above and agree to run it",
         scaffoldDeclined:

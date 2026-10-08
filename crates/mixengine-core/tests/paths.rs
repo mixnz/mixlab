@@ -207,7 +207,28 @@ fn a_relocated_data_directory_is_made_private_where_it_actually_landed() {
 #[test]
 fn bootstrap_reapplies_permissions_to_a_home_that_already_exists() {
     // An upgrade, or a home restored from a backup, arrives with the permissions of wherever it
-    // has been. Only creating directories would leave it exactly as it was found.
+    // has been. Only creating directories would leave it exactly as it was found. A host that has
+    // restricted nothing is such a home: the directories are there, the restriction is not.
+    let home = TempDir::new().unwrap();
+    let paths = paths_at(home.path());
+    paths.bootstrap(&recording_host()).unwrap();
+
+    let restored = recording_host();
+    paths.bootstrap(&restored).unwrap();
+
+    assert_eq!(
+        restored.restricted().len(),
+        paths.private_directories().len()
+    );
+}
+
+/// **A home already restricted is left alone** — found by hand on 2026-10-08 (T206e): on Windows
+/// restricting the root rewrites the inherited permissions of every file under it, and with the
+/// 54,000 files of an installed `msys2` every daemon start waited minutes on `icacls` before it
+/// opened its pipe, so MixLab could not start MixEngine at all. Whether the restriction is in force
+/// is one listing of the directory itself; only a directory that is not gets rewritten.
+#[test]
+fn bootstrap_leaves_a_home_that_is_already_restricted_alone() {
     let host = recording_host();
     let home = TempDir::new().unwrap();
     let paths = paths_at(home.path());
@@ -216,7 +237,7 @@ fn bootstrap_reapplies_permissions_to_a_home_that_already_exists() {
     let after_first = host.restricted().len();
     paths.bootstrap(&host).unwrap();
 
-    assert_eq!(host.restricted().len(), after_first * 2);
+    assert_eq!(host.restricted().len(), after_first);
 }
 
 #[test]
