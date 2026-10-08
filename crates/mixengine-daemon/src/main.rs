@@ -3,6 +3,7 @@
 mod adopt;
 mod api;
 mod autostart;
+mod background;
 mod bin_watch;
 mod blueprints;
 mod certs;
@@ -510,8 +511,31 @@ fn as_arg(value: impl ValueEnum) -> String {
         .to_owned()
 }
 
-#[tokio::main]
-async fn main() -> ExitCode {
+fn main() -> ExitCode {
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprintln!("Error: cannot start the async runtime: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let code = runtime.block_on(exit_code());
+
+    // **Not the runtime's own drop**, which waits for every blocking thread still running, for as
+    // long as it runs — CI run 37679651605. By here the store is closed, the lock released and every
+    // `spawn_blocking` somebody awaited has returned; what is left is work whose owner was stopped at
+    // shutdown, and a daemon that has finished must not stay alive for it.
+    runtime.shutdown_background();
+
+    code
+}
+
+/// [`run`], and what its failure is turned into.
+async fn exit_code() -> ExitCode {
     let Err(error) = run().await else {
         return ExitCode::SUCCESS;
     };
@@ -1348,6 +1372,10 @@ async fn serve(
     // cancels the same object, and every service the registry supervises hangs a child token off it.
     let shutdown = CancellationToken::new();
 
+    // The work a start leaves running behind it, owned so that none of it outlives the store it
+    // reads — see `background`. Stopped beside the clients, before `serve` returns.
+    let mut background = background::Background::new();
+
     // Made here rather than inside the API, because the API is no longer the only publisher: the
     // registry announces every state change it persists, from tasks that outlive any one request.
     let events = api::Events::new();
@@ -1610,7 +1638,7 @@ async fn serve(
     // `tests/api.rs`' twenty-four daemons stopped answering.
     //
     // Nothing about it can fail the start, on the rule the block above follows.
-    tokio::spawn({
+    background.spawn("trust bundle", {
         let paths = paths.clone();
         let host = Arc::clone(&host);
         let store = store.clone();
@@ -1644,7 +1672,7 @@ async fn serve(
     // Spawned for the block above's reason, and it matters more here: this is one `keytool` per
     // installed JDK, each of them a JVM start, and none of it may stand between the bind and
     // `accept`. A home with no Java spends one query on it.
-    tokio::spawn({
+    background.spawn("jdk trust stores", {
         let store = store.clone();
         let certs = paths.certs().to_path_buf();
 
@@ -1808,7 +1836,7 @@ async fn serve(
     //
     // Being a moment late costs nothing it could cost: nothing dials an activator until a site is
     // being served, and a site is served by a front end this daemon has not started yet.
-    tokio::spawn({
+    background.spawn("activation ports", {
         let services = Arc::clone(&services);
         let paths = paths.clone();
         let store = store.clone();
@@ -1985,7 +2013,7 @@ async fn serve(
             .map(|left| left.found.subject.name().to_owned())
             .collect();
 
-        tokio::spawn(async move {
+        background.spawn("adopt left installs", async move {
             let names: Vec<&str> = names.iter().map(String::as_str).collect();
             let catalogue = match fetcher.index.kinds(&names).await {
                 Ok(catalogue) => catalogue,
@@ -2119,7 +2147,7 @@ async fn serve(
     // Spawned rather than awaited, for the reason the activation block gives in as many words: the
     // endpoint is bound and the accept loop is still below, and every moment spent here is a moment
     // a queued client waits for its answer.
-    tokio::spawn({
+    background.spawn("php extension pools", {
         let extensions = Arc::clone(&api.extensions);
 
         async move {
@@ -2155,7 +2183,7 @@ async fn serve(
     // Spawned rather than awaited, on the extension-configuration block's reasoning in as many
     // words: the endpoint is bound and the accept loop is still below, and every moment spent here
     // is a moment a queued client waits for its answer.
-    tokio::spawn({
+    background.spawn("restore after update", {
         let updates = Arc::clone(&updates);
         let services = Arc::clone(&services);
 
@@ -2173,7 +2201,7 @@ async fn serve(
     // After the update's own restore, so a start that follows an update reads the helper the update
     // left. Spawned for the same reason as the block above, and because fetching this release's
     // signed helper can wait on the network, which a start must never do.
-    tokio::spawn({
+    background.spawn("helper handshake", {
         let elevation = Arc::clone(&elevation);
         let updates = Arc::clone(&updates);
         let paths = paths.clone();
@@ -2330,15 +2358,17 @@ async fn serve(
         }
     }
 
-    shut_down(
-        connections,
-        if on_the_os_clock {
-            SIGNAL_CLIENT_GRACE
-        } else {
-            CLIENT_GRACE
-        },
-    )
-    .await;
+    let grace = if on_the_os_clock {
+        SIGNAL_CLIENT_GRACE
+    } else {
+        CLIENT_GRACE
+    };
+
+    // **Together, inside the one grace** — CI run 37679651605. The work a start left running reads
+    // and writes the store `main` closes next; left to run on, the trust bundle's `conf.d` pass met
+    // a closed store and a daemon asked to stop stayed alive for forty seconds. Run beside the
+    // clients rather than after them, so the shutdown's arithmetic has no new term in it.
+    tokio::join!(shut_down(connections, grace), background.shut_down(grace));
 
     // Read after the clients have gone, so an uninstall that was still writing its answer has
     // finished writing it.

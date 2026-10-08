@@ -501,8 +501,11 @@ impl Supervised {
     /// grace period after it ends in.
     ///
     /// Reaps the child afterwards, so the pid is not left to a zombie on Unix — which also means the
-    /// call returns only once the process this handle names is really gone. Other members of the
-    /// group are not waited for, having never been this process's children.
+    /// call returns only once the process this handle names is really gone. **On Windows every other
+    /// member of the job is waited for too**, because a killed job's members leave in their own time
+    /// and the one still leaving holds its files: `mysqld.exe` runs the real server as a child of a
+    /// monitor, and a reset that started once the monitor alone had gone met `ibdata1` still held.
+    /// On Unix the other members are not waited for, having never been this process's children.
     ///
     /// **The group is killed even when the leader has already exited**, and that is the correction
     /// T15 owed T13. A php-fpm master that crashed leaves its pool holding the port; a wrapper script

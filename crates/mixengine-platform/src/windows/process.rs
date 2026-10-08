@@ -50,7 +50,7 @@ use std::os::windows::process::{CommandExt as _, ExitStatusExt as _};
 use std::path::Path;
 use std::process::{Command, ExitStatus};
 use std::sync::{Mutex, PoisonError};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use windows_sys::Win32::Foundation::{
     CloseHandle, ERROR_ACCESS_DENIED, ERROR_INVALID_PARAMETER, FILETIME, GetHandleInformation,
@@ -549,24 +549,193 @@ impl Group {
     ///
     /// Exit code 1, so a service killed this way is not mistaken for one that stopped successfully
     /// by whatever reads the status afterwards.
+    ///
+    /// **Returns once every member has ended, not once the kill was accepted.** `TerminateJobObject`
+    /// only starts each member on its way out, and a member's open files are released when it has
+    /// gone. CI run 37679651605 is what that costs: `mysqld.exe` runs the real server as a child of a
+    /// monitor, the stop waited for the monitor alone, and the credential reset started 60 ms later
+    /// met the child still holding `ibdata1`. So the members are opened **before** the kill — a
+    /// process that has left the job's list may not have finished leaving, and could no longer be
+    /// found to wait for — and each is waited for afterwards. A member that appeared in the meantime
+    /// is caught by asking again, until the job is empty or [`GROUP_GONE`] has passed.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Os`] if the kill is refused, or a member is still running when [`GROUP_GONE`] has
+    /// passed.
     pub(crate) fn terminate(&self, _pid: u32) -> Result<()> {
-        #[expect(
-            unsafe_code,
-            reason = "the handle is owned by this value and is not closed by the call; the exit \
-                      code is passed by value"
-        )]
-        let terminated = unsafe { TerminateJobObject(self.job, 1) };
+        let deadline = Instant::now() + GROUP_GONE;
 
-        if terminated == 0 {
-            return Err(Error::Os {
-                action: "stop a supervised process group",
-                source: io::Error::last_os_error(),
-            });
+        loop {
+            let members = self.members();
+
+            #[expect(
+                unsafe_code,
+                reason = "the handle is owned by this value and is not closed by the call; the \
+                          exit code is passed by value"
+            )]
+            let terminated = unsafe { TerminateJobObject(self.job, 1) };
+
+            if terminated == 0 {
+                return Err(Error::Os {
+                    action: "stop a supervised process group",
+                    source: io::Error::last_os_error(),
+                });
+            }
+
+            if members.is_empty() {
+                return Ok(());
+            }
+
+            if Instant::now() >= deadline {
+                return Err(still_running());
+            }
+
+            for member in &members {
+                let left = deadline.saturating_duration_since(Instant::now());
+                let patience = u32::try_from(left.as_millis()).unwrap_or(u32::MAX);
+
+                #[expect(
+                    unsafe_code,
+                    reason = "the handle is owned by `members` and the call does not close it"
+                )]
+                let waited =
+                    unsafe { WaitForSingleObject(member.as_raw_handle().cast(), patience) };
+
+                if waited != WAIT_OBJECT_0 {
+                    return Err(still_running());
+                }
+            }
         }
+    }
 
-        Ok(())
+    /// Every process in the job now, each opened so that it can be waited for.
+    ///
+    /// **Checked to be a member after it is opened**, because a pid read from the list may belong to
+    /// somebody else by the time it is opened if its process ended in between — and opened with the
+    /// query right as well as `SYNCHRONIZE`, because `IsProcessInJob` refuses a handle without it. A member that cannot
+    /// be opened has ended, which is what it would be waited for to do.
+    fn members(&self) -> Vec<OwnedHandle> {
+        use std::os::windows::io::FromRawHandle as _;
+        use windows_sys::Win32::Foundation::ERROR_MORE_DATA;
+        use windows_sys::Win32::System::JobObjects::{
+            IsProcessInJob, JOBOBJECT_BASIC_PROCESS_ID_LIST, JobObjectBasicProcessIdList,
+            QueryInformationJobObject,
+        };
+        use windows_sys::Win32::System::Threading::PROCESS_SYNCHRONIZE;
+
+        /// Where the list of ids begins, in `usize`s — the buffer below is made of them, which is
+        /// what keeps the header read through it aligned.
+        const HEADER: usize = std::mem::offset_of!(JOBOBJECT_BASIC_PROCESS_ID_LIST, ProcessIdList)
+            / size_of::<usize>();
+
+        let mut room = 16usize;
+
+        let pids: Vec<u32> = loop {
+            let mut buffer = vec![0usize; HEADER + room];
+
+            #[expect(
+                unsafe_code,
+                reason = "the pointer and the length describe `buffer`, which this frame owns and \
+                          which is aligned for the struct the kernel writes into it"
+            )]
+            let queried = unsafe {
+                QueryInformationJobObject(
+                    self.job,
+                    JobObjectBasicProcessIdList,
+                    buffer.as_mut_ptr().cast(),
+                    u32::try_from(buffer.len() * size_of::<usize>()).unwrap_or(u32::MAX),
+                    std::ptr::null_mut(),
+                )
+            };
+
+            #[expect(
+                unsafe_code,
+                reason = "the buffer starts with the struct's header, written by the kernel or \
+                          still zero"
+            )]
+            let header = unsafe { &*buffer.as_ptr().cast::<JOBOBJECT_BASIC_PROCESS_ID_LIST>() };
+            let assigned = header.NumberOfAssignedProcesses as usize;
+
+            if queried == 0 {
+                let error = io::Error::last_os_error();
+
+                // A job grown since the last ask. Anything else is nothing to wait for: the kill
+                // still happens, and the leader is still waited for by the caller.
+                if error.raw_os_error() == Some(ERROR_MORE_DATA as i32) && assigned > room {
+                    room = assigned;
+                    continue;
+                }
+
+                break Vec::new();
+            }
+
+            let listed = (header.NumberOfProcessIdsInList as usize).min(room);
+
+            break buffer[HEADER..HEADER + listed]
+                .iter()
+                .filter_map(|&pid| u32::try_from(pid).ok())
+                .collect();
+        };
+
+        pids.into_iter()
+            .filter_map(|pid| {
+                #[expect(
+                    unsafe_code,
+                    reason = "OpenProcess takes three integers; the handle it returns is owned at \
+                              once"
+                )]
+                let process = unsafe {
+                    OpenProcess(
+                        PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
+                        0,
+                        pid,
+                    )
+                };
+
+                if process.is_null() {
+                    return None;
+                }
+
+                #[expect(
+                    unsafe_code,
+                    reason = "the handle was just returned by OpenProcess and nothing else owns it"
+                )]
+                let process = unsafe { OwnedHandle::from_raw_handle(process.cast()) };
+
+                let mut member = 0;
+
+                #[expect(
+                    unsafe_code,
+                    reason = "both handles are owned and outlive the call; the answer is written \
+                              into a local"
+                )]
+                let asked = unsafe {
+                    IsProcessInJob(process.as_raw_handle().cast(), self.job, &raw mut member)
+                };
+
+                (asked != 0 && member != 0).then_some(process)
+            })
+            .collect()
     }
 }
+
+/// What [`Group::terminate`] says when [`GROUP_GONE`] has passed with a member still running.
+fn still_running() -> Error {
+    Error::Os {
+        action: "wait for a supervised process group to end after killing it",
+        source: io::Error::new(
+            io::ErrorKind::TimedOut,
+            format!("a member was still running after {GROUP_GONE:?}"),
+        ),
+    }
+}
+
+/// How long [`Group::terminate`] waits for a killed job to empty.
+///
+/// A killed process ends in milliseconds; this is the bound for one that has I/O the kernel must
+/// cancel first, and it is what keeps a stop from waiting for ever on a member that will not go.
+const GROUP_GONE: Duration = Duration::from_secs(5);
 
 /// When the process with this id began, as a `FILETIME` — 100-nanosecond ticks since 1601.
 ///
