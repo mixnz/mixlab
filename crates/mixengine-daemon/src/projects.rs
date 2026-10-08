@@ -269,15 +269,25 @@ impl Projects {
             })
     }
 
-    /// One record, with the pins it actually resolves by.
+    /// One record, with the pins it actually resolves by and the sites its manifest declares.
     async fn detail(&self, project: projects::ProjectRecord) -> Result<ProjectDetail, Error> {
-        let pins = projects::effective_pins(&self.store, &project)
+        // Read once, for both halves — roadmap task **T204**.
+        let manifest =
+            manifest::read(&manifest::at(&project.root)).map_err(|error| error.to_wire())?;
+        let pins = projects::effective_pins_with(&self.store, &project, manifest.as_ref())
             .await
             .map_err(|error| error.to_wire())?;
+        let declared_sites = match &manifest {
+            Some(manifest) => projects::declared_sites(&self.store, &project, manifest)
+                .await
+                .map_err(|error| error.to_wire())?,
+            None => Vec::new(),
+        };
 
         Ok(ProjectDetail {
             project: summary(&project),
             pins,
+            declared_sites,
         })
     }
 }

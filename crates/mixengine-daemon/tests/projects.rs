@@ -396,3 +396,68 @@ async fn an_export_writes_every_site_and_names_what_it_kept() {
     assert!(written.contains("domain = \"blog.test\""), "{written}");
     assert!(written.contains("domain = \"shop.test\""), "{written}");
 }
+
+/// **T204, D7.** `project.show` lists what the file declares, and which of it is here, missing, or
+/// held by another project.
+#[tokio::test]
+async fn a_project_shows_the_sites_its_manifest_declares() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    let other = repository(None);
+    client
+        .call(
+            "project.create",
+            json!({"root": as_string(other.path()), "name": "other"}),
+        )
+        .await;
+    client
+        .call(
+            "site.create",
+            json!({
+                "project": {"name": "other"},
+                "domains": ["taken.test"],
+                "kind": {"kind": "static"},
+            }),
+        )
+        .await;
+
+    let repository = repository(Some(
+        "[[sites]]\ndomain = \"here.test\"\nkind = \"static\"\n\n\
+         [[sites]]\ndomain = \"missing.test\"\naliases = [\"www.missing.test\"]\n\n\
+         [[sites]]\ndomain = \"taken.test\"\n",
+    ));
+    client
+        .call(
+            "project.create",
+            json!({"root": as_string(repository.path()), "name": "blog"}),
+        )
+        .await;
+    client
+        .call(
+            "site.create",
+            json!({"project": {"name": "blog"}, "from": "here.test"}),
+        )
+        .await;
+
+    let shown = client
+        .call("project.show", json!({"project": {"name": "blog"}}))
+        .await;
+
+    assert_eq!(
+        shown["declared_sites"],
+        json!([
+            {"domain": "here.test", "aliases": [], "state": {"is": "here"}},
+            {"domain": "missing.test", "aliases": ["www.missing.test"], "state": {"is": "missing"}},
+            {"domain": "taken.test", "aliases": [], "state": {"is": "elsewhere", "owner": "other"}},
+        ]),
+        "{shown}"
+    );
+
+    let bare = client
+        .call("project.show", json!({"project": {"name": "other"}}))
+        .await;
+    assert!(
+        bare.get("declared_sites").is_none(),
+        "no manifest, no member: {bare}"
+    );
+}

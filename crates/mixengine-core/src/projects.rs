@@ -26,10 +26,11 @@ use std::path::{Path, PathBuf};
 
 use mixengine_platform::paths::in_full;
 use mixengine_proto::{
-    PackageVersion, PinSource, ProjectPin, ProjectRef, RuntimeKind, ServiceId, Timestamp,
-    VersionConstraint,
+    DeclaredSite, DeclaredSiteState, PackageVersion, PinSource, ProjectPin, ProjectRef,
+    RuntimeKind, ServiceId, Timestamp, VersionConstraint,
 };
 
+use crate::sites::SiteOwner;
 use crate::{Error, Result, Store};
 
 /// The longest a project's name may be.
@@ -499,9 +500,22 @@ fn missing(id: &str) -> Error {
 /// [`Error::Manifest`] for a manifest at the root that does not parse, and [`Error::Database`] when
 /// the installed set cannot be read.
 pub async fn effective_pins(store: &Store, project: &ProjectRecord) -> Result<Vec<ProjectPin>> {
-    let path = crate::manifest::at(&project.root);
-    let manifest = crate::manifest::read(&path)?;
-    let manifest_path = path.display().to_string();
+    let manifest = crate::manifest::read(&crate::manifest::at(&project.root))?;
+    effective_pins_with(store, project, manifest.as_ref()).await
+}
+
+/// [`effective_pins`] over a manifest the caller has already read — roadmap task **T204**, so
+/// `project.show` reads the file once for its pins and its declared sites.
+///
+/// # Errors
+///
+/// [`Error::Database`] when the installed set cannot be read.
+pub async fn effective_pins_with(
+    store: &Store,
+    project: &ProjectRecord,
+    manifest: Option<&crate::manifest::Manifest>,
+) -> Result<Vec<ProjectPin>> {
+    let manifest_path = crate::manifest::at(&project.root).display().to_string();
 
     let mut effective: BTreeMap<RuntimeKind, (VersionConstraint, PinSource)> = project
         .pins
@@ -510,11 +524,11 @@ pub async fn effective_pins(store: &Store, project: &ProjectRecord) -> Result<Ve
         .collect();
 
     if let Some(manifest) = manifest {
-        for (kind, constraint) in manifest.runtimes {
+        for (kind, constraint) in &manifest.runtimes {
             effective.insert(
-                kind,
+                *kind,
                 (
-                    constraint,
+                    constraint.clone(),
                     PinSource::Manifest {
                         path: manifest_path.clone(),
                     },
@@ -540,6 +554,60 @@ pub async fn effective_pins(store: &Store, project: &ProjectRecord) -> Result<Ve
     }
 
     Ok(pins)
+}
+
+/// The sites a manifest declares, each with whether a site here holds it — roadmap task **T204**,
+/// spec D7.
+///
+/// # Errors
+///
+/// [`Error::Database`] when a table cannot be read.
+pub async fn declared_sites(
+    store: &Store,
+    project: &ProjectRecord,
+    manifest: &crate::manifest::Manifest,
+) -> Result<Vec<DeclaredSite>> {
+    // The name an entry with no `domain` is created under. A project name that slugs to nothing
+    // gives such an entry no name, and it is not listed: `site.create` would refuse it anyway.
+    let default_domain = crate::domains::default_for(&project.name).unwrap_or_default();
+    let projects = records(store).await?;
+    let mut declared = Vec::with_capacity(manifest.sites.len());
+
+    for site in &manifest.sites {
+        let domain = site
+            .domain
+            .clone()
+            .unwrap_or_else(|| default_domain.clone())
+            .to_ascii_lowercase();
+
+        if domain.is_empty() {
+            continue;
+        }
+
+        let state = match crate::sites::by_domain(store, &domain).await? {
+            None => DeclaredSiteState::Missing,
+            Some(found) => match &found.owner {
+                SiteOwner::Project(id) if *id == project.id => DeclaredSiteState::Here,
+                SiteOwner::Project(id) => DeclaredSiteState::Elsewhere {
+                    owner: projects
+                        .iter()
+                        .find(|other| other.id == *id)
+                        .map_or_else(|| id.to_string(), |other| other.name.clone()),
+                },
+                SiteOwner::Extension(id) => DeclaredSiteState::Elsewhere {
+                    owner: id.as_str().to_owned(),
+                },
+            },
+        };
+
+        declared.push(DeclaredSite {
+            domain,
+            aliases: site.aliases.clone(),
+            state,
+        });
+    }
+
+    Ok(declared)
 }
 
 /// A project whose pin a removal would leave with no answer.
