@@ -73,6 +73,7 @@ done
 | [40 — What the removal walk found](phase-40-what-the-removal-walk-found.md) | A blueprint routes around a taken account name, a failed start says why and names its repair, and the tests and `watch-ci.sh` say what they found | T202–T202c | 4 / 4 | **M40** `laravel-1` applies on a server with a foreign `laravel-1` account, and names the account it used |
 | [41 — A tunnel of MixLab's own](phase-41-a-tunnel-of-mixlabs-own.md) | Share a local address on the internet from MixLab; a preset reaches modules added later | T203–T203b | 3 / 3 | **M41** a dev server opens from another network through the Tunnel tab — **met** on Windows and macOS; Linux by CI build |
 | [42 — A manifest holds every site](phase-42-a-manifest-holds-every-site.md) | `mixengine.toml` holds every site of a project, and adopting a checkout gets all of them | T204–T204a | 1 / 2 | **M42** a three-site project survives export, delete and re-create, from `mix` and from MixLab |
+| [43 — A blueprint ends at a working site](phase-43-a-blueprint-ends-at-a-working-site.md) | After an apply in MixLab, a person sees their website, or the commands that bring it up one click away in the Terminal | T205 | 0 / 1 | **M43** `laravel` and `wordpress` open in the browser on their own, and `nextjs` serves after one click |
 
 [Parked](parked.md) — revisit deliberately, do not start early.
 

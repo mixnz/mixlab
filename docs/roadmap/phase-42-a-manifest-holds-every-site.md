@@ -19,8 +19,8 @@ Design: [2026-10-08-t204-a-manifest-holds-every-site-design.md](../specs/2026-10
       Built after T204 and T205. On T205's rule (its ADR) a blueprint is rendered at the lowest
       schema that holds it, so only a blueprint with more than one site is written at 3. T204a
       decides what `[[next_steps]] site` names (the `[[sites]]` entry, probably), requires it when
-      there are several sites, and ties each `serve` step to one site. A migration it needs is
-      numbered after T205's `0003`.
+      there are several sites, and ties each `serve` step to one site. T205 adds no migration:
+      its steps are read through `projects.blueprint_id`.
 
 **M42** A project with three sites of three kinds is exported, deleted and re-created from the same
 directory, and each site comes back with its domains, kind, routes and services, from `mix` and from
