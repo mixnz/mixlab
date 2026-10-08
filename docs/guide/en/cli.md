@@ -742,6 +742,7 @@ mix blueprint apply <BLUEPRINT> [OPTIONS]
 | `--use-installed` | Answer every version question by using what this machine already has |
 | `--run-scaffold` | Run the blueprint's own `[scaffold]` command without asking first. For a blueprint the gallery signed. An unsigned one takes the other flag, and neither covers the other: a script that runs somebody's unsigned command should say so on the line that does it. |
 | `--run-untrusted-scaffold` | Run an **untrusted** blueprint's own `[scaffold]` command without asking first. Nothing vouches for what this runs. The command is still printed before it starts. |
+| `--write-dotenv` | Write the database's URL, password included, to the project's `.env` without asking first, for every key the blueprint offers |
 | `--grant` | Spend the one elevation prompt at the end without asking first |
 | `--install-prerequisites` | Install what the blueprint's releases need of this machine first, without asking: the Microsoft Visual C++ Redistributable, on Windows. Windows still asks for approval. This is a flag of its own rather than part of `--yes`, because an apply asks several questions and one flag answering all of them would answer ones nobody read. |
 | `--ignore-requirements` | Apply even though MixEngine judges this machine lacks something the releases need |

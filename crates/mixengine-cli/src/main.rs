@@ -808,6 +808,11 @@ enum BlueprintCommand {
         #[arg(long)]
         run_untrusted_scaffold: bool,
 
+        /// Write the database's URL, password included, to the project's `.env` without asking
+        /// first, for every key the blueprint offers.
+        #[arg(long)]
+        write_dotenv: bool,
+
         /// Spend the one elevation prompt at the end without asking first.
         #[arg(long)]
         grant: bool,
@@ -4711,6 +4716,7 @@ async fn blueprint(
             start,
             run_scaffold,
             run_untrusted_scaffold,
+            write_dotenv,
             grant,
             install_prerequisites,
             ignore_requirements,
@@ -4786,6 +4792,10 @@ async fn blueprint(
             // this plan and the apply below cannot be run under it.
             let consent = agreed_to_scaffold(plan, run_scaffold, run_untrusted_scaffold, json)?;
 
+            // **Its own question** — roadmap task **T205a**. The line holds a password, so it is
+            // asked apart from the command and never answered by `--run-scaffold`.
+            let dotenv = agreed_to_dotenv(plan, write_dotenv, json);
+
             // **Asked once for the whole plan** (T152, D7), after the version and scaffold questions
             // so every question the apply raises is answered before any of it starts.
             let Some(agreed) = agreed_to_prerequisites(needs, install_prerequisites, json)? else {
@@ -4796,6 +4806,7 @@ async fn blueprint(
             apply.dry_run = false;
             apply.answers = answers;
             apply.scaffold = consent;
+            apply.dotenv = dotenv;
 
             let started: BlueprintApplyResponse =
                 ask(&mut client, rpc::method::BLUEPRINT_APPLY, encode(&apply)).await?;
@@ -6354,6 +6365,45 @@ fn agreed_to_scaffold(
     }
 }
 
+/// The `.env` keys the person agrees to have written — roadmap task **T205a**.
+///
+/// Asked once per key, after the scaffold's question. **Nobody to ask writes nothing**, the
+/// scaffold's rule for a question with a safe default: the project works without the line, and the
+/// step's outcome says how to set it.
+fn agreed_to_dotenv(plan: &BlueprintPlan, write_dotenv: bool, json: bool) -> Vec<String> {
+    let unasked = |key: &str| {
+        let _ = writeln!(
+            std::io::stderr(),
+            "mix: {key} was not written to .env; nothing here could be asked. `--write-dotenv` \
+             agrees to it."
+        );
+        false
+    };
+
+    plan.steps
+        .iter()
+        .filter_map(|step| match (&step.action, &step.disposition) {
+            (PlanAction::WriteDotenv { key, .. }, Disposition::Confirm { .. }) => Some(key.clone()),
+            _ => None,
+        })
+        .filter(|key| {
+            if write_dotenv {
+                return true;
+            }
+            if json {
+                return unasked(key);
+            }
+            match confirm::ask(&format!(
+                "\nWrite {key}, with the database password, to .env? [y/N] "
+            )) {
+                confirm::Answer::Yes => true,
+                confirm::Answer::No => false,
+                confirm::Answer::Unanswerable => unasked(key),
+            }
+        })
+        .collect()
+}
+
 /// What a person is told about the blueprint whose command they are being asked to run.
 ///
 /// **Which kind of untrusted, and not merely that it is** — roadmap task **T79b**. This is the
@@ -7354,6 +7404,46 @@ mod tests {
                 .expect("no question")
                 .is_none()
         );
+    }
+
+    fn plan_writing(key: &str) -> BlueprintPlan {
+        BlueprintPlan {
+            blueprint: "rails".to_owned(),
+            project: "blog".to_owned(),
+            root: "/tmp/blog".to_owned(),
+            steps: vec![mixengine_proto::PlanStep {
+                action: PlanAction::WriteDotenv {
+                    key: key.to_owned(),
+                    path: ".env".to_owned(),
+                },
+                disposition: mixengine_proto::Disposition::Confirm {
+                    what: format!("{key} in .env"),
+                },
+                elevates: false,
+            }],
+            source: mixengine_proto::BlueprintSource::Builtin,
+            trusted: true,
+            signature: None,
+        }
+    }
+
+    /// **`--write-dotenv` agrees to every key; `--json` without it to none** — roadmap task
+    /// **T205a**.
+    #[test]
+    fn the_dotenv_flag_agrees_to_each_key_and_a_json_run_to_none() {
+        let plan = plan_writing("DATABASE_URL");
+        assert_eq!(
+            agreed_to_dotenv(&plan, true, true),
+            vec!["DATABASE_URL".to_owned()]
+        );
+        assert!(agreed_to_dotenv(&plan, false, true).is_empty());
+    }
+
+    #[test]
+    fn a_satisfied_key_is_not_asked_about() {
+        let mut plan = plan_writing("DATABASE_URL");
+        plan.steps[0].disposition = mixengine_proto::Disposition::Satisfied;
+        assert!(agreed_to_dotenv(&plan, true, false).is_empty());
     }
 
     /// T182e. The uninstaller reads `mix` through `nsExec`, which decodes in the ANSI code page, so

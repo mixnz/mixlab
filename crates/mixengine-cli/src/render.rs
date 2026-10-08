@@ -4263,6 +4263,9 @@ fn action_said(action: &PlanAction) -> String {
         },
         PlanAction::RunScaffold { command } => format!("run `{command}`"),
         PlanAction::FetchArchive { url, .. } => format!("download and unpack {url}"),
+        PlanAction::WriteDotenv { key, path } => {
+            format!("write {key} to {path}, with the database password")
+        }
         _ => "something this build cannot describe".to_owned(),
     }
 }
