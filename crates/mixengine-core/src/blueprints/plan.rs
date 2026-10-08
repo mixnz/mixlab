@@ -403,6 +403,34 @@ pub async fn plan(
         });
     }
 
+    // **After the scaffold, and asked for** — roadmap task **T205a**. After, because
+    // `create-project .` refuses a folder that already holds a `.env`; asked, because it writes a
+    // password into the person's own file. A key already there is theirs (`Satisfied`).
+    if let Some(key) = manifest
+        .services
+        .iter()
+        .find_map(|service| service.dotenv.as_ref())
+    {
+        use crate::blueprints::dotenv;
+
+        let present = std::fs::read_to_string(root.join(dotenv::FILE))
+            .is_ok_and(|text| dotenv::has_key(&text, key));
+        let action = PlanAction::WriteDotenv {
+            key: key.clone(),
+            path: dotenv::FILE.to_owned(),
+        };
+        steps.push(match present {
+            true => satisfied(action),
+            false => PlanStep {
+                action,
+                disposition: Disposition::Confirm {
+                    what: format!("{key} in {}", dotenv::FILE),
+                },
+                elevates: false,
+            },
+        });
+    }
+
     Ok(BlueprintPlan {
         blueprint: blueprint.to_owned(),
         project: project.to_owned(),
@@ -2364,6 +2392,90 @@ mod tests {
             when_empty: true,
         });
         manifest
+    }
+
+    fn offering_dotenv() -> crate::blueprints::manifest::BlueprintManifest {
+        let mut manifest = a_manifest();
+        manifest.services = vec![BlueprintService {
+            name: "postgres".to_owned(),
+            version: None,
+            instance: Some("main".to_owned()),
+            database: Some("{project}".to_owned()),
+            user: Some("{project}".to_owned()),
+            dotenv: Some("DATABASE_URL".to_owned()),
+        }];
+        manifest
+    }
+
+    /// **The `.env` line is asked for, and after the scaffold** — roadmap task **T205a**. After,
+    /// because `create-project .` refuses a folder that already holds a `.env`.
+    #[tokio::test]
+    async fn a_dotenv_key_is_asked_for_after_the_scaffold() {
+        let (temp, store) = home().await;
+        let mut manifest = offering_dotenv();
+        manifest.archive = starting("https://x.org/static-starter.zip").archive;
+
+        let planned = planned_for(&store, &temp, &temp.path().join("site"), manifest).await;
+        let at = |wanted: fn(&PlanAction) -> bool| {
+            planned
+                .steps
+                .iter()
+                .position(|step| wanted(&step.action))
+                .expect("planned")
+        };
+        assert!(
+            at(|action| matches!(action, PlanAction::FetchArchive { .. }))
+                < at(|action| matches!(action, PlanAction::WriteDotenv { .. }))
+        );
+
+        let step = step_of(&planned, |action| {
+            matches!(action, PlanAction::WriteDotenv { .. })
+        });
+        assert_eq!(
+            step.action,
+            PlanAction::WriteDotenv {
+                key: "DATABASE_URL".to_owned(),
+                path: ".env".to_owned()
+            }
+        );
+        assert_eq!(
+            step.disposition,
+            Disposition::Confirm {
+                what: "DATABASE_URL in .env".to_owned()
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn a_dotenv_key_already_there_is_satisfied() {
+        let (temp, store) = home().await;
+        let root = temp.path().join("site");
+        std::fs::create_dir_all(&root).expect("root");
+        std::fs::write(root.join(".env"), "export DATABASE_URL=mine\n").expect("env");
+
+        let planned = planned_for(&store, &temp, &root, offering_dotenv()).await;
+        let step = step_of(&planned, |action| {
+            matches!(action, PlanAction::WriteDotenv { .. })
+        });
+        assert_eq!(step.disposition, Disposition::Satisfied);
+    }
+
+    #[tokio::test]
+    async fn a_dotenv_key_missing_from_an_existing_env_is_asked_for() {
+        let (temp, store) = home().await;
+        let root = temp.path().join("site");
+        std::fs::create_dir_all(&root).expect("root");
+        std::fs::write(root.join(".env"), "OTHER=1").expect("env");
+
+        let planned = planned_for(&store, &temp, &root, offering_dotenv()).await;
+        let step = step_of(&planned, |action| {
+            matches!(action, PlanAction::WriteDotenv { .. })
+        });
+        assert!(
+            matches!(step.disposition, Disposition::Confirm { .. }),
+            "{:?}",
+            step.disposition
+        );
     }
 
     /// **A starter steps aside for code already there** — roadmap task **T205**. A folder somebody

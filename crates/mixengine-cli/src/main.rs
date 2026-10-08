@@ -4739,6 +4739,8 @@ async fn blueprint(
                 // Filled in below, once the plan says whether there is a command to agree to and
                 // who wrote it — roadmap task **T78a**.
                 scaffold: None,
+                // Filled in below, once the plan says which `.env` keys it offers — T205a.
+                dotenv: Vec::new(),
                 // Carried on the dry run as well as on the real one, which is what keeps the
                 // feature's own acceptance criterion true: `--dry-run` prints the actions the real
                 // run performs, so a flag that changed the plan may not be added afterwards.

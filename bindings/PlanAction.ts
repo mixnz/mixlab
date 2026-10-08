@@ -155,4 +155,12 @@ url: string,
 /**
  * The archive's single top-level folder whose contents become the project root.
  */
-strip?: string | null, };
+strip?: string | null, } | { "action": "write_dotenv", 
+/**
+ * The variable name.
+ */
+key: string, 
+/**
+ * Relative to the project root: `.env`.
+ */
+path: string, };
