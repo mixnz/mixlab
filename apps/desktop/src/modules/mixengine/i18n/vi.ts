@@ -832,6 +832,8 @@ const vi: typeof en = {
         scaffoldTitle: "Blueprint này muốn chạy một lệnh:",
         archiveTitle: "Nó tải về và giải nén vào thư mục dự án:",
         archiveSkipped: "Thư mục đã có file nên bản khởi đầu không được giải nén. File của bạn giữ nguyên.",
+        dotenvConsent: "Ghi {{key}}, kèm mật khẩu database, vào .env",
+        dotenvLeft: "Chưa ghi {{key}} vào .env. Tự đặt nó bằng mật khẩu hiện bên dưới.",
         devkitTitle:
           "Ruby của blueprint này chưa build được gem có phần C trên máy này, mà các bước của nó cần.",
         devkitConsent: "Cài devkit cùng lúc ({{size}})",
@@ -872,6 +874,7 @@ const vi: typeof en = {
           set_php_extension_pending: "Bật PHP extension {{name}} trên bản PHP vừa cài ở trên",
           run_scaffold: "Chạy: {{command}}",
           fetch_archive: "Tải và giải nén {{url}}",
+          write_dotenv: "Ghi {{key}} vào {{path}}",
         },
       },
     },
