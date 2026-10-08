@@ -78,8 +78,9 @@ fn the_gallery_is_the_set_the_roadmap_names() {
 /// removes Django's `pip install django` and Rails' `gem install rails`, both of which reach every
 /// project using that runtime. `vite` and `strapi` are kept out by the first: `create-vite` and
 /// `create-strapi-app` ask questions no flag reliably silences. And `php-mysql` is the kind of
-/// project that has no initialiser at all, which is the point of it. `express-mongodb` has one only
-/// in `express-generator`, which is unmaintained and writes an Express a major version behind.
+/// project that has no initialiser at all, which is the point of it. `express-mongodb` would have
+/// only `express-generator`, unmaintained and an Express a major version behind, so it unpacks a
+/// starter this repository writes instead (an archive, not a command).
 ///
 /// `laravel-mongodb` runs `laravel`'s command and stops there: the `composer require` that adds
 /// MongoDB's Eloquent driver would be a second command joined to the first, so its
@@ -163,16 +164,49 @@ fn only_the_command_that_names_itself_after_the_directory_asks_for_an_npm_name()
 /// **WordPress is the one archive, and the one file at schema 2** — roadmap task **T205**, D2 and
 /// ADR 0061: every other gallery file stays readable by every installed build.
 #[test]
-fn only_wordpress_is_an_archive_and_only_it_is_schema_2() {
+fn only_the_archive_entries_are_schema_2() {
+    // `wordpress` borrows its publisher's release; `express-mongodb` unpacks a starter this
+    // repository writes (`src/blueprints/starters/`), because no maintained initialiser makes an
+    // Express server that talks to MongoDB.
     for entry in ENTRIES {
         let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
-        let is_wordpress = entry.slug == "wordpress";
+        let is_archive = matches!(entry.slug, "wordpress" | "express-mongodb");
 
-        assert_eq!(manifest.archive.is_some(), is_wordpress, "{}", entry.slug);
+        assert_eq!(manifest.archive.is_some(), is_archive, "{}", entry.slug);
         assert_eq!(
             entry.manifest.starts_with("schema = 2\n"),
-            is_wordpress,
+            is_archive,
             "{} is written at the wrong schema",
+            entry.slug
+        );
+    }
+}
+
+/// Where the gallery's own starters are published: beside the signed gallery, on the release the
+/// packaging repository's `publish-blueprints` moves, so one run publishes both from one commit.
+const STARTERS: &str = "https://github.com/mixnz/mixengine-packages/releases/download/blueprints/";
+
+/// **A starter the gallery names is a starter this tree holds**, under the folder its `strip`
+/// names: `publish-blueprints` zips `starters/<name>/` as `<name>-starter.zip` with `<name>/` at its
+/// top, and a URL with nothing behind it would fail the apply on a 404.
+#[test]
+fn every_starter_archive_is_in_the_tree() {
+    let starters = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/blueprints/starters");
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        let Some(archive) = manifest.archive.as_ref() else {
+            continue;
+        };
+        let Some(file) = archive.url.strip_prefix(STARTERS) else {
+            continue;
+        };
+        let name = file
+            .strip_suffix("-starter.zip")
+            .unwrap_or_else(|| panic!("{}: {file} is not <name>-starter.zip", entry.slug));
+        assert_eq!(archive.strip.as_deref(), Some(name), "{}", entry.slug);
+        assert!(
+            starters.join(name).join("package.json").is_file(),
+            "{}: starters/{name} is not in the tree",
             entry.slug
         );
     }

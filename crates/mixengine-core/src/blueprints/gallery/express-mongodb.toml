@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [blueprint]
 name = "Express + MongoDB"
@@ -23,16 +23,16 @@ domain_pattern = "{project}.test"
 name = "mongodb"
 instance = "main"
 
-[[next_steps]]
-kind = "once"
-run = "npm init -y"
+[scaffold]
+archive = "https://github.com/mixnz/mixengine-packages/releases/download/blueprints/express-mongodb-starter.zip"
+strip = "express-mongodb"
+needs_empty_dir = true
 
 [[next_steps]]
 kind = "once"
-run = "npm install express mongodb"
+run = "npm install"
 
 [[next_steps]]
 kind = "serve"
-run = "node index.js"
-note = "Write index.js first; it listens on 3000."
-optional = true
+run = "npm start"
+note = "Express on 3000. If MongoDB is not on 27017, set MONGODB_URI to mongodb://127.0.0.1:port/database first."

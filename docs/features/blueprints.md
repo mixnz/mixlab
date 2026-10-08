@@ -330,8 +330,12 @@ removes Django's `pip install django` and Rails' `gem install rails`, both of wh
 project using that runtime. The first rule is what removes `vite` and `strapi`: `create-vite` and
 `create-strapi-app` ask questions that no flag reliably silences, and a job with no timeout that is
 waiting on a prompt waits for good. `php-mysql` has no initialiser to run at all, which is the whole
-of what it offers. `express-mongodb` has only `express-generator`, unmaintained and a major version
-of Express behind. `laravel-mongodb` runs `laravel`'s command and no more: the `composer require
+of what it offers. `express-mongodb` would have only `express-generator`, unmaintained and a major
+version of Express behind, so it unpacks a **starter this repository writes** instead: an Express 5
+server that reads `PORT` and `MONGODB_URI` and says on its page whether MongoDB answers. Its source
+is `crates/mixengine-core/src/blueprints/starters/express-mongodb/`, and the packaging repository's
+`publish-blueprints` zips it beside the signed gallery as `express-mongodb-starter.zip`, from the
+same commit (`every_starter_archive_is_in_the_tree`). `laravel-mongodb` runs `laravel`'s command and no more: the `composer require
 mongodb/laravel-mongodb` after it would be a second command joined to the first, so it is a step
 the person runs (below). The gallery sells a stack, not a scaffold.
 

@@ -445,7 +445,7 @@ Steps for every entry (indicative; the implementation measures each):
 | `statamic` | once `php please make:user` (*opt*); open `/cp` | yes, on `/cp` |
 | `nextjs` | serve `npm run dev` (note: port 3000) | no |
 | `strapi` | once `npx create-strapi@latest .`; serve `npm run develop` (note: port 1337) | no |
-| `express-mongodb` | once `npm init -y`; once `npm install express mongodb`; serve `node index.js` (*opt*; note: write `index.js` first) | no |
+| `express-mongodb` | **archive** (a starter of this repository's); once `npm install`; serve `npm start` (note: `MONGODB_URI` when MongoDB is not on 27017) | no |
 | `django` | once `python -m pip install django` (note: installs into the runtime this project pins, shared with other projects on it); once `python -m django startproject config .`; serve `python manage.py runserver 127.0.0.1:8000` | no |
 | `rails` | once `gem install rails` (same note); once `rails new . --database=postgresql` (*cred*); serve `ruby bin/rails server -p 3000` (note: set `DATABASE_URL` from the account) | no |
 | `vite` | once `npm create vite@latest .`; once `npm install`; once `npm run build` | no |
@@ -457,8 +457,12 @@ Steps for every entry (indicative; the implementation measures each):
   shipped set (`every_npm_run_step_comes_after_its_packages_are_installed`).
 - **Run the required steps has to be able to finish, and the site has to answer after it.** Two
   more entries failed that by hand. `express-mongodb` required `node index.js`, a file nothing
-  writes, so the button always ended at *Cannot find module*: the step is optional now, since the
-  file is the person's code (`no_required_step_runs_a_file_nothing_creates`). `rails new
+  writes, so the button always ended at *Cannot find module* (`no_required_step_runs_a_file_nothing_creates`).
+  Making the step optional left a blueprint with no site at all, so it now unpacks a **starter**:
+  an Express 5 server reading `PORT` and `MONGODB_URI`, whose page says whether MongoDB answers.
+  Its source sits beside the gallery (`src/blueprints/starters/express-mongodb/`), and
+  `publish-blueprints` zips it onto the same release as the signed gallery, from the same commit
+  (`every_starter_archive_is_in_the_tree`). Its steps are `npm install` and `npm start`. `rails new
   --database=postgresql` points at `<name>_development` with no account while MixEngine made the
   database `{project}` with one, so every page answered *ConnectionNotEstablished*: the step carries
   `credentials`, the panel's database block names the port beside the host, and the server's note
