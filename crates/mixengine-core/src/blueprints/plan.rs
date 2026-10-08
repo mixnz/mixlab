@@ -1096,6 +1096,7 @@ mod tests {
                 instance: Some("main".to_owned()),
                 database: Some("{project}".to_owned()),
                 user: Some("{project}".to_owned()),
+                dotenv: None,
             }],
             php: Some(Php {
                 extensions: vec!["xdebug".to_owned()],

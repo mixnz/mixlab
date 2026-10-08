@@ -155,6 +155,11 @@ pub struct BlueprintService {
     /// The account to create, `{project}` allowed. **Never a password.**
     #[serde(default)]
     pub user: Option<String>,
+
+    /// The `.env` key an apply offers to write this database's URL under — roadmap task
+    /// **T205a**. Written only when the person agrees, and only on a service with an account.
+    #[serde(default)]
+    pub dotenv: Option<String>,
 }
 
 /// `[php]`.
@@ -343,6 +348,8 @@ impl TryFrom<RawManifest> for BlueprintManifest {
             checked_step(step).map_err(|reason| format!("next_steps[{}]: {reason}", index + 1))?;
         }
 
+        checked_dotenv(&raw.services)?;
+
         Ok(Self {
             schema: raw.schema,
             blueprint: raw.blueprint,
@@ -355,6 +362,39 @@ impl TryFrom<RawManifest> for BlueprintManifest {
             next_steps: raw.next_steps,
         })
     }
+}
+
+/// `[[services]] dotenv`'s rules — roadmap task **T205a**: on a service with an account, a
+/// variable name, and on one service only, since an apply remembers one database.
+fn checked_dotenv(services: &[BlueprintService]) -> std::result::Result<(), String> {
+    let mut offered = services
+        .iter()
+        .filter_map(|service| service.dotenv.as_deref().map(|key| (service, key)));
+
+    let Some((service, key)) = offered.next() else {
+        return Ok(());
+    };
+    if service.database.is_none() || service.user.is_none() {
+        return Err(format!(
+            "[[services]] {} names dotenv {key} and no database and user to write it for",
+            service.name
+        ));
+    }
+    if !super::dotenv::is_key(key) {
+        return Err(format!(
+            "[[services]] {} dotenv {key:?} is not a variable name: letters, digits and _, not \
+             starting with a digit",
+            service.name
+        ));
+    }
+    if offered.next().is_some() {
+        return Err(
+            "dotenv is on more than one service; an apply writes one database's URL, so it takes \
+             one service"
+                .to_owned(),
+        );
+    }
+    Ok(())
 }
 
 /// D4's rules for one step.
@@ -419,12 +459,17 @@ fn checked_run(run: &str) -> std::result::Result<(), String> {
 /// The schema a manifest is written at: the lowest that holds it (ADR 0061).
 ///
 /// **A key that changes what an apply does raises it; a key that only informs does not.** An
-/// archive changes the apply, so it is schema 2; `[[next_steps]]` informs, so it is invisible here.
+/// archive and a `dotenv` change the apply, so either is schema 2 (T205, T205a); `[[next_steps]]`
+/// informs, so it is invisible here.
 #[must_use]
 pub fn schema_of(manifest: &BlueprintManifest) -> u32 {
-    match manifest.archive {
-        Some(_) => 2,
-        None => 1,
+    let offers_dotenv = manifest
+        .services
+        .iter()
+        .any(|service| service.dotenv.is_some());
+    match manifest.archive.is_some() || offers_dotenv {
+        true => 2,
+        false => 1,
     }
 }
 
@@ -663,6 +708,9 @@ pub fn render(manifest: &BlueprintManifest) -> String {
             if let Some(user) = &service.user {
                 table["user"] = value(user);
             }
+            if let Some(dotenv) = &service.dotenv {
+                table["dotenv"] = value(dotenv);
+            }
 
             services.push(table);
         }
@@ -783,6 +831,7 @@ mod tests {
                 instance: Some("main".to_owned()),
                 database: Some("{project}".to_owned()),
                 user: Some("{project}".to_owned()),
+                dotenv: None,
             }],
             php: Some(Php {
                 extensions: vec!["redis".to_owned(), "xdebug".to_owned()],
@@ -1149,6 +1198,56 @@ doc_root = "public"
     fn when_empty_on_a_command_is_refused() {
         let text = with_scaffold("command = \"composer install\"\nwhen_empty = true");
         assert!(refusal(&text).contains("when_empty"), "{}", refusal(&text));
+    }
+
+    fn with_services(services: &str) -> String {
+        format!(
+            "schema = 2\n\n[blueprint]\nname = \"x\"\ncreated_at = \"2026-10-09T00:00:00Z\"\n\n\
+             [blueprint.created_on]\nos = \"any\"\nversion = \"0.0.1\"\n\n{services}\n"
+        )
+    }
+
+    /// **`dotenv` reads, renders and round-trips, at schema 2** — roadmap task **T205a**.
+    #[test]
+    fn a_dotenv_key_round_trips_at_schema_2() {
+        let text = with_services(
+            "[[services]]\nname = \"postgres\"\ndatabase = \"{project}\"\nuser = \"{project}\"\n\
+             dotenv = \"DATABASE_URL\"",
+        );
+        let manifest = read(&text).expect("reads");
+
+        assert_eq!(manifest.services[0].dotenv.as_deref(), Some("DATABASE_URL"));
+        assert_eq!(schema_of(&manifest), 2);
+        assert!(render(&manifest).contains("dotenv = \"DATABASE_URL\""));
+        assert_eq!(read(&render(&manifest)).expect("round trip"), manifest);
+    }
+
+    #[test]
+    fn dotenv_without_an_account_is_refused() {
+        let text = with_services("[[services]]\nname = \"redis\"\ndotenv = \"REDIS_URL\"");
+        assert!(refusal(&text).contains("dotenv"), "{}", refusal(&text));
+    }
+
+    #[test]
+    fn dotenv_that_is_not_a_variable_name_is_refused() {
+        let text = with_services(
+            "[[services]]\nname = \"postgres\"\ndatabase = \"d\"\nuser = \"u\"\n\
+             dotenv = \"DATABASE-URL\"",
+        );
+        assert!(
+            refusal(&text).contains("DATABASE-URL"),
+            "{}",
+            refusal(&text)
+        );
+    }
+
+    #[test]
+    fn dotenv_on_a_second_service_is_refused() {
+        let text = with_services(
+            "[[services]]\nname = \"postgres\"\ndatabase = \"d\"\nuser = \"u\"\ndotenv = \"A\"\n\n\
+             [[services]]\nname = \"mysql\"\ndatabase = \"d\"\nuser = \"u\"\ndotenv = \"B\"",
+        );
+        assert!(refusal(&text).contains("one service"), "{}", refusal(&text));
     }
 
     #[test]
