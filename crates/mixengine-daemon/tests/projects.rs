@@ -461,3 +461,106 @@ async fn a_project_shows_the_sites_its_manifest_declares() {
         "no manifest, no member: {bare}"
     );
 }
+
+/// **M42.** A project with three sites of three kinds, each linking differently, is exported,
+/// forgotten and registered again from the same directory; `from` brings each site back whole.
+#[tokio::test]
+async fn three_sites_survive_export_delete_and_create() {
+    let fixture = Fixture::start().await;
+    mixengine_testkit::declare::database(
+        &fixture.home.database_file(),
+        "mariadb@main",
+        "mariadb",
+        3306,
+    )
+    .await;
+    let mut client = fixture.client().await;
+    let repository = repository(None);
+    let root = as_string(repository.path());
+
+    client
+        .call("project.create", json!({"root": root, "name": "ezweb"}))
+        .await;
+    let wanted = [
+        json!({
+            "project": {"name": "ezweb"},
+            "domains": ["ezweb.test", "www.ezweb.test"],
+            "kind": {"kind": "static"},
+            "services": ["mariadb@main"],
+            "https": false,
+        }),
+        json!({
+            "project": {"name": "ezweb"},
+            "domains": ["ezportal.test"],
+            "kind": {"kind": "reverse-proxy", "upstream": "http://127.0.0.1:5173"},
+            "services": [],
+            "https": false,
+        }),
+        json!({
+            "project": {"name": "ezweb"},
+            "domains": ["ezwebsite.test"],
+            "kind": {"kind": "node-app", "port": 3000},
+            "services": [],
+            "https": false,
+            "routes": [{"path": "/api", "target": "proxy", "upstream": "http://127.0.0.1:3003"}],
+        }),
+    ];
+    let mut before = Vec::new();
+    for create in &wanted {
+        before.push(client.call("site.create", create.clone()).await["site"].clone());
+    }
+
+    let exported = client
+        .call("project.export", json!({"project": {"name": "ezweb"}}))
+        .await;
+    assert!(exported.get("sites_kept").is_none(), "{exported}");
+
+    client
+        .call("project.delete", json!({"project": {"name": "ezweb"}}))
+        .await;
+    client.call("project.create", json!({"root": root})).await;
+
+    for (domain, original) in ["ezweb.test", "ezportal.test", "ezwebsite.test"]
+        .iter()
+        .zip(&before)
+    {
+        let again = client
+            .call(
+                "site.create",
+                json!({"project": {"name": "ezweb"}, "from": domain}),
+            )
+            .await["site"]
+            .clone();
+
+        assert_eq!(again["domains"], original["domains"], "{domain}");
+        assert_eq!(
+            again["services"].as_array().map(Vec::len),
+            original["services"].as_array().map(Vec::len),
+            "{domain}"
+        );
+        assert_eq!(again["site"]["kind"], original["site"]["kind"], "{domain}");
+        assert_eq!(
+            again["site"]["routes"], original["site"]["routes"],
+            "{domain}"
+        );
+        assert_eq!(
+            again["site"]["https"], original["site"]["https"],
+            "{domain}"
+        );
+    }
+
+    let shown = client
+        .call("project.show", json!({"project": {"name": "ezweb"}}))
+        .await;
+    let states: Vec<&Value> = shown["declared_sites"]
+        .as_array()
+        .expect("a list")
+        .iter()
+        .map(|site| &site["state"]["is"])
+        .collect();
+    assert_eq!(
+        states,
+        [&json!("here"), &json!("here"), &json!("here")],
+        "{shown}"
+    );
+}

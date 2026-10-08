@@ -223,8 +223,16 @@ fn named<'a>(
     let mut hit: Option<(usize, &'a ManifestSite)> = None;
 
     for (position, site) in sites.iter().enumerate() {
-        let answers = site.domain.as_deref().unwrap_or(default_domain) == name
-            || site.aliases.iter().any(|alias| alias == name);
+        // In any case, on [`holds`]' reasoning: MixLab sends the lowercase name the daemon lists.
+        let answers = site
+            .domain
+            .as_deref()
+            .unwrap_or(default_domain)
+            .eq_ignore_ascii_case(name)
+            || site
+                .aliases
+                .iter()
+                .any(|alias| alias.eq_ignore_ascii_case(name));
 
         if !answers {
             continue;
@@ -696,9 +704,14 @@ fn write_sites(
     Ok(kept)
 }
 
-/// Whether `domain` is one of this site's names.
+/// Whether `domain` is one of this site's names, in any case: the daemon stores names lowercased,
+/// and a person writing the file may not have.
 fn holds(site: &ExportSite, domain: &str) -> bool {
-    site.domain == domain || site.aliases.iter().any(|alias| alias == domain)
+    site.domain.eq_ignore_ascii_case(domain)
+        || site
+            .aliases
+            .iter()
+            .any(|alias| alias.eq_ignore_ascii_case(domain))
 }
 
 /// What an entry is called in a report: its `domain`, or `(no domain)` for one that names none.
@@ -1850,5 +1863,48 @@ name = \"redis\"
             chosen.site.and_then(|site| site.doc_root.as_deref()),
             Some("public")
         );
+    }
+
+    /// **T204, final review.** A domain is a name whatever its case, as the daemon stores it, so a
+    /// hand-written `Blog.test` answers the `from` MixLab sends, which is lowercase.
+    #[test]
+    fn from_matches_a_name_whatever_its_case() {
+        let manifest = declaring(
+            "[[sites]]\ndomain = \"Blog.test\"\n\n[[sites]]\ndomain = \"shop.test\"\n\
+             aliases = [\"WWW.shop.test\"]\n",
+        );
+
+        for name in ["blog.test", "www.shop.test"] {
+            assert!(
+                manifest
+                    .choose(Some(name), None, "x.test")
+                    .expect("chosen")
+                    .site
+                    .is_some(),
+                "{name}"
+            );
+        }
+    }
+
+    /// **T204, final review.** An export finds the entry a person wrote in another case, rather
+    /// than keeping it and adding a second one for the same site.
+    #[test]
+    fn an_entry_is_matched_whatever_the_case_of_its_domain() {
+        let home = somewhere();
+        std::fs::write(
+            at(home.path()),
+            "[[sites]]\ndomain = \"Blog.test\"\n\n[[sites]]\ndomain = \"shop.test\"\n",
+        )
+        .expect("a manifest");
+
+        let written = write(
+            home.path(),
+            &export(vec![site("blog.test", &[]), site("shop.test", &[])]),
+        )
+        .expect("it is written");
+        let after = std::fs::read_to_string(at(home.path())).expect("the file");
+
+        assert!(written.sites_kept.is_empty(), "{written:?}");
+        assert_eq!(after.matches("[[sites]]").count(), 2, "{after}");
     }
 }

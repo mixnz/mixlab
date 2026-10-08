@@ -79,8 +79,10 @@ Of those choices, capture takes only the ones turned **on**. A blueprint says wh
 loaded; turning something off on the receiving machine would change the PHP every other project
 there runs, which is harm it was never asked to do.
 
-A project with more than one site is **refused** rather than reduced to its first: a manifest has one
-`[site]`, and losing the others silently is worse than saying so. `[[sites]]` is where that widens.
+A project with more than one site is **refused** rather than reduced to its first: a blueprint has one
+`[site]`, and losing the others silently is worse than saying so. The project manifest gained
+`[[sites]]` in T204 ([design](../specs/2026-10-08-t204-a-manifest-holds-every-site-design.md)), and
+blueprints follow in T204a.
 
 ## Apply
 

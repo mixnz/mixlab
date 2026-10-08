@@ -108,8 +108,30 @@ With that file present, `mix project create` and then `mix site create` with no 
 what the file says. That is what adopting somebody else's checkout looks like: clone, two commands,
 and the same PHP version and the same domain as the person who wrote it.
 
-Going the other way, `mix project export` writes the current project into `<root>/mixengine.toml`,
-keeping everything else already in the file.
+A project with more than one site writes each one as a `[[sites]]` entry, and each entry says which
+services that site uses:
+
+```toml
+[[sites]]
+domain = "blog.test"
+doc_root = "public"
+kind = "php-fpm"
+services = ["mariadb@main"]
+
+[[sites]]
+domain = "admin.blog.test"
+kind = "reverse-proxy"
+upstream = "http://127.0.0.1:3000"
+services = []
+```
+
+`mix project show` lists the sites in the file and says which ones this machine does not have yet.
+Adopt each with `mix site create --from <domain>`. In MixLab, open the project on the Projects
+screen and press **Add** next to each missing site.
+
+Going the other way, `mix project export` writes the current project and every site into
+`<root>/mixengine.toml`, keeping everything else already in the file. An entry for a site this
+machine does not have is left as it is, and the export names it.
 
 ## Which version does this directory use?
 

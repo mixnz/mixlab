@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-08
 task: T204
 ---
@@ -49,8 +49,8 @@ MixLab. A file written by a build from before this task keeps meaning what it me
 - **Blueprints.** A blueprint is its own type (`core::blueprints::manifest`, T77's D1), with its own
   `schema`, its own `domain_pattern`, a gallery published as signed files from `mixengine-packages`,
   and an apply plan whose resume rule is "this project has a site" (`plan.rs`, `has_a_site`).
-  Widening it means `schema = 2`, one `CreateSite` step per entry with its own resume identity, and
-  a re-publish in the other repository. That is a different set of problems, so it is **T204a**,
+  Widening it means `schema = 3` (T205 takes 2), one `CreateSite` step per entry with its own
+  resume identity, and a re-publish in the other repository. That is a different set of problems, so it is **T204a**,
   with a design of its own. Until then `blueprint.capture` keeps refusing a project with several
   sites (`ProjectHasSeveralSites`). That refusal was already the honest answer, and it stays honest.
 - **Adopting every site in one call.** See D6.
@@ -76,9 +76,10 @@ neither:
   exactly as before. A several-site file reaches an older build as an unknown section, which that
   build already ignores, and that is today's result for such a project anyway: no site.
 
-The decision that would need an ADR is the blueprint `schema` bump, because it reaches
-`mixengine-packages` and every published gallery file. That decision belongs to T204a, and T204a's
-design decides whether it needs an ADR.
+The decision that would need an ADR is how the blueprint `schema` moves, because it reaches
+`mixengine-packages` and every published gallery file. T205 records that rule in an ADR of its own
+(a blueprint is rendered at the lowest schema that holds it), and T204a follows it: only a blueprint
+with more than one site is written at `schema = 3`.
 
 ## Decisions
 

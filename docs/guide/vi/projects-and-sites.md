@@ -4,7 +4,7 @@ slug = "projects-and-sites"
 order = 4
 summary = "Hai khái niệm cốt lõi của MixLab, mỗi cái quản những gì, và cách một bản checkout mang theo cấu hình của chính nó."
 translation_of = "en/projects-and-sites.md"
-source_sha256 = "1f1833a6e87f005e4f4d884a319ca4e9d82c9019a6a58f088ac5b820f799f1a0"
+source_sha256 = "0f44171f590d77a8cb3c343673f340089ffc430a75f66fc7f0715b73e0f9db1c"
 +++
 
 # Dự án và site
@@ -112,8 +112,30 @@ Khi có file này, chạy `mix project create` rồi `mix site create` không c�
 làm đúng như file mô tả. Nhận checkout của người khác trông đúng như vậy: clone về, gõ hai lệnh, và
 bạn có cùng phiên bản PHP, cùng tên miền với người đã viết file đó.
 
-Theo chiều ngược lại, `mix project export` ghi project hiện tại ra `<root>/mixengine.toml`, và giữ
-nguyên mọi thứ khác đã có trong file.
+Project có nhiều site thì mỗi site là một mục `[[sites]]`, và mỗi mục ghi rõ site đó dùng service
+nào:
+
+```toml
+[[sites]]
+domain = "blog.test"
+doc_root = "public"
+kind = "php-fpm"
+services = ["mariadb@main"]
+
+[[sites]]
+domain = "admin.blog.test"
+kind = "reverse-proxy"
+upstream = "http://127.0.0.1:3000"
+services = []
+```
+
+`mix project show` liệt kê các site trong file và cho biết site nào máy này chưa có. Tạo từng site
+bằng `mix site create --from <domain>`. Trong MixLab, mở project ở màn Projects rồi bấm **Thêm**
+cạnh site còn thiếu.
+
+Theo chiều ngược lại, `mix project export` ghi project hiện tại cùng mọi site của nó ra
+`<root>/mixengine.toml`, và giữ nguyên mọi thứ khác đã có trong file. Mục nào ứng với site mà máy
+này không có thì vẫn được giữ, và lệnh export sẽ nêu tên mục đó.
 
 ## Thư mục này dùng phiên bản nào?
 
