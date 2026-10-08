@@ -6,7 +6,7 @@
 //! one is gone and `resolve` is a caller.
 //!
 //! **Unknown sections are still allowed through.** `[site]` and `[[services]]` have types as of
-//! T39a, but the file also has to hold what T43 and Phase 8 will add, and a `deny_unknown_fields`
+//! T39a, and `[[sites]]` as of T204, but the file also has to hold what T43 and Phase 8 will add, and a `deny_unknown_fields`
 //! here would make this build refuse the manifests those tasks write. What is still closed is the
 //! map inside `[runtimes]` — a key naming a language MixEngine does not manage is a pin that would
 //! silently do nothing — and the two typed sections' own required keys.
@@ -22,7 +22,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use mixengine_proto::{PackageVersion, RuntimeKind, SiteKind, VersionConstraint};
+use mixengine_proto::{PackageVersion, RuntimeKind, ServiceId, SiteKind, VersionConstraint};
 
 use crate::{Error, Result};
 
@@ -35,22 +35,64 @@ pub const FILE_NAME: &str = "mixengine.toml";
 /// document it edits rather than through a field nothing reads, so a section T43 adds survives an
 /// export without this type having to hold it.
 #[derive(Debug, Default, PartialEq, Eq, serde::Deserialize)]
+#[serde(try_from = "Sections")]
 pub struct Manifest {
     /// `[project]`, when the file has one.
-    #[serde(default)]
     pub project: Option<Project>,
 
     /// The versions this project wants, by language.
-    #[serde(default)]
     pub runtimes: BTreeMap<RuntimeKind, VersionConstraint>,
 
-    /// `[site]`, when the file declares one.
-    #[serde(default)]
-    pub site: Option<ManifestSite>,
+    /// `[site]` or `[[sites]]`, in the order the file writes them — roadmap task **T204**.
+    ///
+    /// **One list for both spellings**, so no caller asks which one a file used: `[site]` is a
+    /// list of one, and is what every file written before T204 holds. The form only matters to the
+    /// writer, which reads it off the document it edits.
+    pub sites: Vec<ManifestSite>,
 
     /// `[[services]]`, in the order the file lists them.
-    #[serde(default)]
     pub services: Vec<ManifestService>,
+}
+
+/// The sections exactly as the file spells them, before `[site]` and `[[sites]]` become one list.
+#[derive(serde::Deserialize)]
+struct Sections {
+    #[serde(default)]
+    project: Option<Project>,
+    #[serde(default)]
+    runtimes: BTreeMap<RuntimeKind, VersionConstraint>,
+    #[serde(default)]
+    site: Option<ManifestSite>,
+    #[serde(default)]
+    sites: Option<Vec<ManifestSite>>,
+    #[serde(default)]
+    services: Vec<ManifestService>,
+}
+
+impl TryFrom<Sections> for Manifest {
+    type Error = String;
+
+    /// **Both spellings at once is refused** (T204, D1): a file holding both was meant one way, and
+    /// picking either would apply something its author did not write.
+    fn try_from(sections: Sections) -> std::result::Result<Self, String> {
+        let sites = match (sections.site, sections.sites) {
+            (Some(_), Some(_)) => {
+                return Err(
+                    "the file declares both `[site]` and `[[sites]]`; keep one of them".to_owned(),
+                );
+            }
+            (Some(site), None) => vec![site],
+            (None, Some(sites)) => sites,
+            (None, None) => Vec::new(),
+        };
+
+        Ok(Self {
+            project: sections.project,
+            runtimes: sections.runtimes,
+            sites,
+            services: sections.services,
+        })
+    }
 }
 
 /// `[site]` — what is served out of this directory, and at what name.
@@ -84,6 +126,13 @@ pub struct ManifestSite {
     /// Empty where the file names none, which is every manifest written before T135. The daemon is
     /// what sorts them into match order; a file is what somebody typed.
     pub routes: Vec<mixengine_proto::SiteRoute>,
+
+    /// `services = [...]`: the ids this site links — roadmap task **T204**, spec D3.
+    ///
+    /// **Absent is not empty.** [`None`] falls through to every `[[services]]` entry, which is
+    /// what every file written before T204 means. `Some(vec![])` links none. An id without an
+    /// instance is looked up the way `[[services]]` is: the bare name, then `name@main`.
+    pub services: Option<Vec<ServiceId>>,
 }
 
 impl<'de> serde::Deserialize<'de> for ManifestSite {
@@ -139,6 +188,25 @@ impl<'de> serde::Deserialize<'de> for ManifestSite {
             .transpose()?
             .unwrap_or_default();
 
+        // **Read before the kind, and harmless to it either way**, on `routes`' reasoning —
+        // roadmap task **T204**.
+        let services = table
+            .get("services")
+            .map(|value| {
+                value
+                    .as_array()
+                    .ok_or_else(|| D::Error::custom("`services` is a list of service ids"))?
+                    .iter()
+                    .map(|value| {
+                        let text = value
+                            .as_str()
+                            .ok_or_else(|| D::Error::custom("a service id is a string"))?;
+                        ServiceId::parse(text).map_err(D::Error::custom)
+                    })
+                    .collect::<std::result::Result<Vec<_>, _>>()
+            })
+            .transpose()?;
+
         // Absent is `None`; present and wrong is the file being wrong, which the enum decides.
         let kind = match table.contains_key("kind") {
             true => Some(SiteKind::deserialize(table.clone()).map_err(D::Error::custom)?),
@@ -152,6 +220,7 @@ impl<'de> serde::Deserialize<'de> for ManifestSite {
             https: table.get("https").and_then(toml::Value::as_bool),
             kind,
             routes,
+            services,
         })
     }
 }
@@ -560,7 +629,7 @@ mod tests {
         .expect("a manifest");
 
         let manifest = read(&at(home.path())).expect("a read").expect("a manifest");
-        let site = manifest.site.expect("a site");
+        let site = manifest.sites.into_iter().next().expect("a site");
 
         assert_eq!(site.routes, routes);
         assert_eq!(
@@ -663,7 +732,9 @@ mod tests {
         let read_back = read(&at(home.path()))
             .expect("it parses")
             .expect("it is there")
-            .site
+            .sites
+            .into_iter()
+            .next()
             .expect("a [site]");
         assert_eq!(
             read_back.kind,
@@ -699,7 +770,9 @@ mod tests {
         let site = read(&at(home.path()))
             .expect("it parses")
             .expect("it is there")
-            .site
+            .sites
+            .into_iter()
+            .next()
             .expect("a [site]");
 
         assert_eq!(site.domain.as_deref(), Some("blog.test"));
@@ -723,7 +796,9 @@ mod tests {
         let site = read(&at(home.path()))
             .expect("it parses")
             .expect("it is there")
-            .site
+            .sites
+            .into_iter()
+            .next()
             .expect("a [site]");
 
         assert_eq!(
@@ -976,5 +1051,127 @@ name = \"redis\"
                 .as_deref(),
             Some("blog")
         );
+    }
+
+    /// **T204, D1.** `[[sites]]` reads as its entries, in file order.
+    #[test]
+    fn several_sites_read_in_the_order_the_file_writes_them() {
+        let home = somewhere();
+        std::fs::write(
+            at(home.path()),
+            "[[sites]]\ndomain = \"web.test\"\nkind = \"static\"\n\n\
+             [[sites]]\ndomain = \"api.test\"\nkind = \"reverse-proxy\"\n\
+             upstream = \"http://127.0.0.1:3000\"\n",
+        )
+        .expect("a manifest");
+
+        let sites = read(&at(home.path()))
+            .expect("it parses")
+            .expect("it is there")
+            .sites;
+
+        assert_eq!(sites.len(), 2);
+        assert_eq!(sites[0].domain.as_deref(), Some("web.test"));
+        assert_eq!(sites[1].domain.as_deref(), Some("api.test"));
+    }
+
+    /// **T204, D1.** One `[site]` is a list of one, which every file written before T204 is.
+    #[test]
+    fn a_single_site_reads_as_a_list_of_one() {
+        let home = somewhere();
+        std::fs::write(at(home.path()), "[site]\ndomain = \"blog.test\"\n").expect("a manifest");
+
+        let sites = read(&at(home.path()))
+            .expect("it parses")
+            .expect("it is there")
+            .sites;
+
+        assert_eq!(sites.len(), 1);
+        assert_eq!(sites[0].domain.as_deref(), Some("blog.test"));
+    }
+
+    /// **T204, D1.** Both forms at once is a file whose author meant one of them, and choosing would
+    /// apply something they did not write.
+    #[test]
+    fn a_file_with_both_forms_is_refused() {
+        let home = somewhere();
+        std::fs::write(
+            at(home.path()),
+            "[site]\ndomain = \"a.test\"\n\n[[sites]]\ndomain = \"b.test\"\n",
+        )
+        .expect("a manifest");
+
+        let error = read(&at(home.path())).expect_err("two answers to one question");
+
+        assert!(
+            matches!(&error, Error::Manifest { path, .. } if path.ends_with(FILE_NAME)),
+            "{error:?}"
+        );
+        assert!(format!("{error:?}").contains("[[sites]]"), "{error:?}");
+    }
+
+    /// **T204, D3.** An absent `services` is not an empty one: absent falls through to every
+    /// `[[services]]` entry, and `[]` links none.
+    #[test]
+    fn an_absent_services_list_is_told_apart_from_an_empty_one() {
+        let home = somewhere();
+        std::fs::write(
+            at(home.path()),
+            "[[sites]]\ndomain = \"a.test\"\n\n\
+             [[sites]]\ndomain = \"b.test\"\nservices = []\n\n\
+             [[sites]]\ndomain = \"c.test\"\nservices = [\"mariadb@main\", \"redis\"]\n",
+        )
+        .expect("a manifest");
+
+        let sites = read(&at(home.path()))
+            .expect("it parses")
+            .expect("it is there")
+            .sites;
+
+        assert_eq!(sites[0].services, None);
+        assert_eq!(sites[1].services, Some(Vec::new()));
+        assert_eq!(
+            sites[2].services,
+            Some(vec![
+                ServiceId::parse("mariadb@main").expect("an id"),
+                ServiceId::parse("redis").expect("an id"),
+            ])
+        );
+    }
+
+    /// **T204, D3.** A `services` entry that cannot be an id is the file being wrong.
+    #[test]
+    fn a_services_entry_that_is_not_an_id_is_refused() {
+        let home = somewhere();
+        std::fs::write(
+            at(home.path()),
+            "[site]\ndomain = \"a.test\"\nservices = [\"Not An Id\"]\n",
+        )
+        .expect("a manifest");
+
+        assert!(matches!(
+            read(&at(home.path())),
+            Err(Error::Manifest { .. })
+        ));
+    }
+
+    /// **T204, D5.** A duplicate domain is refused where a site is chosen, never here, so the shim's
+    /// `resolve` keeps working in that directory.
+    #[test]
+    fn a_duplicate_domain_still_reads() {
+        let home = somewhere();
+        std::fs::write(
+            at(home.path()),
+            "[runtimes]\nphp = \"8.3\"\n\n[[sites]]\ndomain = \"a.test\"\n\n\
+             [[sites]]\ndomain = \"a.test\"\n",
+        )
+        .expect("a manifest");
+
+        let manifest = read(&at(home.path()))
+            .expect("it parses")
+            .expect("it is there");
+
+        assert_eq!(manifest.sites.len(), 2);
+        assert_eq!(manifest.runtimes.len(), 1);
     }
 }

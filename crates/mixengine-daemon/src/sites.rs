@@ -302,7 +302,7 @@ impl Sites {
             manifest::read(&manifest::at(&project.root)).map_err(|error| error.to_wire())?;
         let declared = manifest
             .as_ref()
-            .and_then(|manifest| manifest.site.as_ref());
+            .and_then(|manifest| manifest.sites.first());
 
         // The fall-through, in the order spec D7 writes it: the argument, the manifest, the default.
         let domains = match &create.domains {
