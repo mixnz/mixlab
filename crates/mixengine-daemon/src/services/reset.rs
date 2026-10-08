@@ -441,11 +441,13 @@ mod tests {
     /// still held `ibdata1`, the probe was written and removed without complaint, and the server the
     /// reset then started said `ibdata1` "must be writable". What a person needs is the file and who
     /// holds it, and the refusal is asserted to name both.
-    #[cfg(windows)]
+    ///
+    /// **Run everywhere, and answered differently by design.** Only Windows refuses a server a file
+    /// another process holds, so only there is a held file a reason to refuse; elsewhere the same
+    /// directory is repairable. A plain open is enough to be seen: the handle table lists every
+    /// holder, and nobody is spared.
     #[tokio::test]
     async fn a_file_held_open_in_the_data_directory_is_named() {
-        use std::os::windows::fs::OpenOptionsExt as _;
-
         let home = tempfile::tempdir().expect("a directory");
         let data = home.path().to_path_buf();
         let held = data.join("ibdata1");
@@ -455,13 +457,17 @@ mod tests {
         let _holding = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .share_mode(0)
             .open(&held)
             .expect("the file can be held");
 
-        let refused = writable(&data)
-            .await
-            .expect_err("a file in it is held open");
+        let answered = writable(&data).await;
+
+        if !cfg!(windows) {
+            answered.expect("a held file stops nothing on this system");
+            return;
+        }
+
+        let refused = answered.expect_err("a file in it is held open");
 
         assert_eq!(refused.code, ErrorCode::PreconditionFailed, "{refused:?}");
         assert!(refused.message.contains("ibdata1"), "{refused:?}");
