@@ -446,7 +446,7 @@ Steps for every entry (indicative; the implementation measures each):
 | `nextjs` | serve `npm run dev` (note: port 3000) | no |
 | `strapi` | once `npx create-strapi@latest .`; serve `npm run develop` (note: port 1337) | no |
 | `express-mongodb` | **archive** (a starter of this repository's); once `npm install`; serve `npm start` (note: `MONGODB_URI` when MongoDB is not on 27017) | no |
-| `django` | once `python -m pip install django` (note: installs into the runtime this project pins, shared with other projects on it); once `python -m django startproject config .`; serve `python manage.py runserver 127.0.0.1:8000` | no |
+| `django` | once `python -m pip install django` (note: installs into the runtime this project pins, shared with other projects on it); once `python -m django startproject --template <django-starter.zip> config .` (note: the .test domain is allowed); serve `python manage.py runserver 127.0.0.1:8000` | no |
 | `rails` | once `gem install rails` (same note); once `rails new . --database=postgresql` (*cred*); serve `ruby bin/rails server -p 3000` (note: set `DATABASE_URL` from the account) | no |
 | `vite` | once `npm create vite@latest .`; once `npm install`; once `npm run build` | no |
 
@@ -476,6 +476,14 @@ Steps for every entry (indicative; the implementation measures each):
 - **Django names its package `config` and not `{project}`.** `startproject` takes a Python
   identifier, and the slug of `My Blog` is `my-blog`. `python -m django` rather than
   `django-admin` needs nothing on `PATH` beyond the `python` shim.
+- **Django starts from the gallery's template.** The stock `startproject` leaves `ALLOWED_HOSTS`
+  empty, which under `DEBUG` admits only `localhost`, so every page through the site answered
+  *DisallowedHost* (found by hand, 2026-10-08), and a form posted over HTTPS would fail Django's
+  origin check next. `starters/django/` is Django's own template with `.test` allowed and
+  `https://*.test` trusted, published as `django-starter.zip` like the Express starter; Django
+  renders it and still makes each project's `SECRET_KEY`
+  (`django_starts_from_a_template_that_admits_its_test_domain`). Its database stays SQLite: wiring
+  the PostgreSQL MixEngine made is the same manual step as Rails' `DATABASE_URL`.
 - **`rails` after `gem install`** reaches the person's `PATH` through T131's globals shim. Two
   things are measured before the entry is written: that this holds on Windows, and whether
   `--database=postgresql` builds the `pg` gem there. If it does not, the step drops the flag and

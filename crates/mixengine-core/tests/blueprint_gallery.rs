@@ -186,30 +186,76 @@ fn only_the_archive_entries_are_schema_2() {
 /// packaging repository's `publish-blueprints` moves, so one run publishes both from one commit.
 const STARTERS: &str = "https://github.com/mixnz/mixengine-packages/releases/download/blueprints/";
 
-/// **A starter the gallery names is a starter this tree holds**, under the folder its `strip`
-/// names: `publish-blueprints` zips `starters/<name>/` as `<name>-starter.zip` with `<name>/` at its
-/// top, and a URL with nothing behind it would fail the apply on a 404.
+/// **A starter the gallery names is a starter this tree holds**: `publish-blueprints` zips
+/// `starters/<name>/` as `<name>-starter.zip` with `<name>/` at its top, and a URL with nothing
+/// behind it would fail the apply on a 404. An archive scaffold strips that folder by name; a step
+/// may name one too (`django`'s `startproject --template`, which strips it by itself).
 #[test]
 fn every_starter_archive_is_in_the_tree() {
     let starters = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/blueprints/starters");
-    for entry in ENTRIES {
-        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
-        let Some(archive) = manifest.archive.as_ref() else {
-            continue;
-        };
-        let Some(file) = archive.url.strip_prefix(STARTERS) else {
-            continue;
-        };
+    let starter = |slug: &str, url: &str| -> Option<String> {
+        let file = url.strip_prefix(STARTERS)?;
         let name = file
             .strip_suffix("-starter.zip")
-            .unwrap_or_else(|| panic!("{}: {file} is not <name>-starter.zip", entry.slug));
-        assert_eq!(archive.strip.as_deref(), Some(name), "{}", entry.slug);
+            .unwrap_or_else(|| panic!("{slug}: {file} is not <name>-starter.zip"));
+        let folder = starters.join(name);
         assert!(
-            starters.join(name).join("package.json").is_file(),
-            "{}: starters/{name} is not in the tree",
-            entry.slug
+            folder.is_dir() && std::fs::read_dir(&folder).unwrap().next().is_some(),
+            "{slug}: starters/{name} is not in the tree"
         );
+        Some(name.to_string())
+    };
+
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        if let Some(archive) = manifest.archive.as_ref()
+            && let Some(name) = starter(entry.slug, &archive.url)
+        {
+            assert_eq!(
+                archive.strip.as_deref(),
+                Some(name.as_str()),
+                "{}",
+                entry.slug
+            );
+        }
+        for step in &manifest.next_steps {
+            let Some(run) = step.run.as_deref() else {
+                continue;
+            };
+            for word in run.split_whitespace() {
+                starter(entry.slug, word);
+            }
+        }
     }
+}
+
+/// **A Django project answers on its `.test` domain** — measured on `django`: the stock
+/// `startproject` leaves `ALLOWED_HOSTS` empty, which under `DEBUG` admits only `localhost`, so
+/// every page through MixEngine's site was *DisallowedHost*; and a form posted over HTTPS needs its
+/// origin trusted as well. The gallery's template says both.
+#[test]
+fn django_starts_from_a_template_that_admits_its_test_domain() {
+    let entry = ENTRIES.iter().find(|entry| entry.slug == "django").unwrap();
+    let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+    let start = manifest
+        .next_steps
+        .iter()
+        .filter_map(|step| step.run.as_deref())
+        .find(|run| run.contains("startproject"))
+        .expect("a startproject step");
+    assert!(
+        start.contains(&format!("--template {STARTERS}django-starter.zip")),
+        "{start}"
+    );
+
+    let settings = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src/blueprints/starters/django/project_name/settings.py-tpl"),
+    )
+    .expect("the template's settings");
+    assert!(settings.contains("ALLOWED_HOSTS = ['.test', 'localhost', '127.0.0.1', '[::1]']"));
+    assert!(settings.contains("CSRF_TRUSTED_ORIGINS = ['https://*.test']"));
+    assert!(settings.contains("SECRET_KEY = '{{ secret_key }}'"));
 }
 
 /// **Whether the browser opens by itself** — T205, D7 and the last column of D13's table: it

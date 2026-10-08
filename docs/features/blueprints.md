@@ -335,7 +335,10 @@ version of Express behind, so it unpacks a **starter this repository writes** in
 server that reads `PORT` and `MONGODB_URI` and says on its page whether MongoDB answers. Its source
 is `crates/mixengine-core/src/blueprints/starters/express-mongodb/`, and the packaging repository's
 `publish-blueprints` zips it beside the signed gallery as `express-mongodb-starter.zip`, from the
-same commit (`every_starter_archive_is_in_the_tree`). `laravel-mongodb` runs `laravel`'s command and no more: the `composer require
+same commit (`every_starter_archive_is_in_the_tree`). `django`'s step names a starter too: a
+`startproject --template` that is Django's own project template plus `.test` in `ALLOWED_HOSTS` and
+`https://*.test` in `CSRF_TRUSTED_ORIGINS`, since the stock template answers every page served
+through MixEngine with *DisallowedHost*. `laravel-mongodb` runs `laravel`'s command and no more: the `composer require
 mongodb/laravel-mongodb` after it would be a second command joined to the first, so it is a step
 the person runs (below). The gallery sells a stack, not a scaffold.
 
