@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [blueprint]
 name = "Static site"
@@ -14,3 +14,8 @@ kind = "static"
 doc_root = ""
 https = true
 domain_pattern = "{project}.test"
+
+[scaffold]
+archive = "https://github.com/mixnz/mixengine-packages/releases/download/blueprints/static-starter.zip"
+strip = "static"
+when_empty = true

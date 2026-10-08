@@ -831,6 +831,7 @@ const vi: typeof en = {
         choiceUseInstalled: "Dùng bản đã cài",
         scaffoldTitle: "Blueprint này muốn chạy một lệnh:",
         archiveTitle: "Nó tải về và giải nén vào thư mục dự án:",
+        archiveSkipped: "Thư mục đã có file nên bản khởi đầu không được giải nén. File của bạn giữ nguyên.",
         devkitTitle:
           "Ruby của blueprint này chưa build được gem có phần C trên máy này, mà các bước của nó cần.",
         devkitConsent: "Cài devkit cùng lúc ({{size}})",

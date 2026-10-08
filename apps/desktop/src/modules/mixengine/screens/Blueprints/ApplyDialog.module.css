@@ -55,6 +55,11 @@
   color: var(--danger-text);
 }
 
+/* T205: a starter skipped over files already there; nothing to agree to, so quieter than a block. */
+.hint {
+  color: var(--text-muted);
+}
+
 .choice {
   display: flex;
   align-items: center;

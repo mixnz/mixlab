@@ -400,8 +400,15 @@ export default function ApplyDialog({
                           </Button>
                         </div>
                       )}
+                      {step.action.action === "fetch_archive" &&
+                        step.disposition.disposition === "satisfied" && (
+                          <p className={styles.hint}>
+                            {t("mixengine.blueprints.apply.archiveSkipped")}
+                          </p>
+                        )}
                       {(step.action.action === "run_scaffold" ||
-                        step.action.action === "fetch_archive") && (
+                        step.action.action === "fetch_archive") &&
+                        i === scaffoldStepIndex(phase.plan.steps) && (
                         <div className={styles.scaffold}>
                           {step.action.action === "run_scaffold" ? (
                             <>

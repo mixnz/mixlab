@@ -71,6 +71,16 @@ describe("scaffoldStepIndex", () => {
     expect(scaffoldStepIndex(steps)).toBe(1);
     expect(scaffoldStepIndex(steps.slice(0, 1))).toBe(-1);
   });
+
+  // T205: `php-mysql` and `static` skip their starter over a cloned folder; nothing to agree to.
+  it("skips a starter archive planned satisfied", () => {
+    const skipped = step({
+      action: { action: "fetch_archive", url: "https://x.org/static-starter.zip", strip: "static" },
+      disposition: { disposition: "satisfied" },
+    });
+    expect(scaffoldStepIndex([skipped])).toBe(-1);
+    expect(scaffoldConsentState([skipped], false)).toBe("none");
+  });
 });
 
 describe("scaffoldConsentState", () => {

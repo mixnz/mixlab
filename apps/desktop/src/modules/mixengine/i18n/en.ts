@@ -841,6 +841,7 @@ export default {
         choiceUseInstalled: "Use the installed version instead",
         scaffoldTitle: "This blueprint wants to run a command:",
         archiveTitle: "It downloads and unpacks into the project directory:",
+        archiveSkipped: "The folder already has files, so the starter is not unpacked. Your files stay as they are.",
         devkitTitle:
           "This blueprint's Ruby cannot build gems with C extensions on this machine, and its steps need them.",
         devkitConsent: "Install the devkit with it ({{size}})",

@@ -36,8 +36,8 @@ After `blueprint.apply` from MixLab:
 
 - **Every PHP blueprint, and `static`, opens in the browser and shows the application's own page**
   (or its web installer) with no step left for the person. The two that bring no source on
-  purpose, `static` and `php-mysql`, open on MixEngine's welcome page, which says where to put the
-  files (T124). `vite` is static too, but needs a build first, so it belongs to the next point.
+  purpose, `static` and `php-mysql`, open on a starter page of their own, unpacked only into an
+  empty folder (`when_empty`, D2); over a cloned repository they leave its files alone. `vite` is static too, but needs a build first, so it belongs to the next point.
 - **A blueprint whose site is a program shows what to run,** with each command one click from
   running in a MixLab Terminal tab that has the project's runtimes on its `PATH`. Those commands can
   be saved as a Terminal target before anything runs, so the person can start the site later.
@@ -115,6 +115,14 @@ needs_empty_dir = true
 - **`archive` and `command` are mutually exclusive.** A manifest with both, or with neither, is
   refused at read time. `needs_empty_dir` keeps its meaning. `needs_npm_safe_dir` is refused beside
   `archive`, because it describes a command.
+- **`when_empty = true` unpacks a starter only into an empty folder** (added 2026-10-09, for
+  `php-mysql` and `static`). Those two have no initialiser, and are applied as often over a cloned
+  repository as into a new folder. `needs_empty_dir` would block the second; no key at all would
+  unpack the starter's `index.php` over the clone's. With `when_empty`, a root holding anything
+  plans the step `satisfied`: nothing is downloaded or overwritten, the apply goes on, and there is
+  no consent to ask (`mix` asks no `[y/N]`, MixLab draws no checkbox and says the folder is kept).
+  It is refused beside `needs_empty_dir`, which contradicts it, and beside `command`, where a
+  scaffold that skipped itself over a full folder would do nothing where it is most often run.
 - **`https://` only**, refused at read time otherwise. **No checksum** (decided 2026-10-08):
   `latest.zip` changes with every WordPress release, so a pinned hash would break the gallery entry
   within weeks. HTTPS plus the consent below is the trust.
@@ -438,7 +446,7 @@ Steps for every entry (indicative; the implementation measures each):
 | `laravel` | once `php artisan migrate` (*opt*, *cred*; note: set `DB_*` in `.env` first, since Laravel starts on SQLite); once `npm install` (*opt*); serve `npm run dev` (*opt*; note: Vite, for editing assets) | yes |
 | `laravel-mongodb` | once `composer require mongodb/laravel-mongodb` (*opt*; moved out of `description`) | yes |
 | `symfony`, `cakephp`, `codeigniter`, `yii` | none | yes |
-| `php-mysql`, `static` | none (welcome page) | yes |
+| `php-mysql`, `static` | **archive**, `when_empty` (a starter page of this repository's); no steps | yes |
 | `drupal` | open `/core/install.php` (*cred*) | yes, on the installer |
 | `wordpress` | **archive** (D2); open `/wp-admin/install.php` (*cred*) | yes, on the installer |
 | `craft` | open `/admin/install` (*cred*; note: choose PostgreSQL) | yes, on the installer |
@@ -527,14 +535,16 @@ Steps for every entry (indicative; the implementation measures each):
 ## Testing
 
 - **Manifest** (`blueprints/manifest.rs`): `archive` with `command` refused, and neither refused;
-  `http://` refused; `needs_npm_safe_dir` beside `archive` refused. Each `run` rule in D4 refused,
+  `http://` refused; `needs_npm_safe_dir` beside `archive` refused; `when_empty` round-trips, and
+  is refused beside `needs_empty_dir` and beside `command`. Each `run` rule in D4 refused,
   naming the step's position. `site` refused in schema 1 and 2. `render` writes `schema = 1` without
   `archive` and `2` with it. `schema = 3` is refused by name.
 - **Gallery** (`tests/blueprint_gallery.rs`): `ENTRIES` is eighteen. Each file is its own rendering.
-  Only `wordpress` is schema 2. The set carrying a `command` and the set carrying an `archive` are
+  Only the archive entries (`wordpress`, `express-mongodb`, `php-mysql`, `static`) are schema 2. The set carrying a `command` and the set carrying an `archive` are
   each asserted by name. Every `run` in the gallery passes D4.
 - **Plan and apply** (`plan.rs`, `api/apply.rs`): `FetchArchive` is planned where `RunScaffold`
-  would be. It is blocked on a non-empty root, and on a suffix outside `archive::Format`. A consent
+  would be. It is blocked on a non-empty root, and on a suffix outside `archive::Format`; with
+  `when_empty` it is `satisfied` on a non-empty root and asks for consent on an empty one. A consent
   naming a different URL is refused. A `strip` that is missing fails the step and names the
   archive's top level. An entry escaping the root is refused (already covered in `archive.rs`, so
   reached here through one fixture). The staging directory is gone after success and after failure.

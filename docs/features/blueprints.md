@@ -342,10 +342,14 @@ through MixEngine with *DisallowedHost*. `laravel-mongodb` runs `laravel`'s comm
 mongodb/laravel-mongodb` after it would be a second command joined to the first, so it is a step
 the person runs (below). The gallery sells a stack, not a scaffold.
 
-**A blueprint with no scaffold is a complete blueprint.** Since T124 an apply that writes no source
-code ends at a page that says so, and the two things people actually do with these entries are
-served equally: apply onto an empty directory and put the code in afterwards, or clone a repository
-and apply the stack over it — which is the flow a `[scaffold]` with `needs_empty_dir` refuses.
+**A blueprint with no framework still starts with a page.** `php-mysql` and `static` unpack a
+starter page of this repository's (`starters/php-mysql/`, `starters/static/`) with
+`[scaffold] when_empty = true`, so the two things people actually do with these entries are served
+equally: apply onto an empty directory and get a page that names the blueprint and says what to
+edit, or clone a repository and apply the stack over it, where the starter is skipped (`satisfied`)
+and nothing of the clone is overwritten. `needs_empty_dir` would refuse that second flow. The three
+starter pages (`express-mongodb` too) share one look, light and dark, with nothing loaded from
+elsewhere.
 
 They double as end-to-end tests of the whole system, but **not of the cross-OS criterion below** — a
 hand-written manifest is byte-identical on all three systems, so what proves that one is a real

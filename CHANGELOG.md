@@ -16,6 +16,7 @@
   Run opens each one in a Terminal tab with the project's runtimes on PATH, and Save keeps a dev
   server in the Terminal's list.
 - The WordPress blueprint downloads and unpacks WordPress into the project, after you agree to it.
+- The PHP with MySQL and Static site blueprints start with a page of their own in an empty folder, and leave a cloned project's files alone.
 - Blueprints for CakePHP, CodeIgniter, Craft CMS, Statamic and Yii.
 - A Terminal target on this machine can set environment variables and folders ahead of PATH, and
   can choose what a tab does with its commands when it comes back: run them, type them, or just

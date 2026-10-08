@@ -167,10 +167,14 @@ fn only_the_command_that_names_itself_after_the_directory_asks_for_an_npm_name()
 fn only_the_archive_entries_are_schema_2() {
     // `wordpress` borrows its publisher's release; `express-mongodb` unpacks a starter this
     // repository writes (`src/blueprints/starters/`), because no maintained initialiser makes an
-    // Express server that talks to MongoDB.
+    // Express server that talks to MongoDB; `php-mysql` and `static` unpack one only into an
+    // empty folder (`when_empty`), so a cloned repository keeps its own files.
     for entry in ENTRIES {
         let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
-        let is_archive = matches!(entry.slug, "wordpress" | "express-mongodb");
+        let is_archive = matches!(
+            entry.slug,
+            "wordpress" | "express-mongodb" | "php-mysql" | "static"
+        );
 
         assert_eq!(manifest.archive.is_some(), is_archive, "{}", entry.slug);
         assert_eq!(
