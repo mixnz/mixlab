@@ -587,11 +587,15 @@ pub fn write(directory: &Path, export: &Export) -> Result<Written> {
         table["name"] = toml_edit::value(export.name.as_str());
     });
 
-    set(&mut document, "runtimes", |table| {
-        for (kind, constraint) in &export.pins {
-            table[kind.as_str()] = toml_edit::value(constraint.as_str());
-        }
-    });
+    // **No pins, no table** — an empty `[runtimes]` says nothing and reads as if something were
+    // meant to be there. A table the file already has is left as it is either way.
+    if !export.pins.is_empty() {
+        set(&mut document, "runtimes", |table| {
+            for (kind, constraint) in &export.pins {
+                table[kind.as_str()] = toml_edit::value(constraint.as_str());
+            }
+        });
+    }
 
     let sites_kept =
         write_sites(&mut document, &export.sites).map_err(|reason| Error::ManifestEdit {
@@ -770,10 +774,15 @@ fn fill(table: &mut toml_edit::Table, site: &ExportSite) {
     table["https"] = toml_edit::value(site.https);
 
     // **Every kind's payload is this export's**, so a site that changed kind does not leave the
-    // old one's key behind — roadmap task **T204**, spec D2. Removed before the match writes the
-    // current kind's.
-    table.remove("upstream");
-    table.remove("port");
+    // old one's key behind — roadmap task **T204**, spec D2. Only the keys the current kind does
+    // not use are removed: the one it does use is overwritten where it stands, so an export with
+    // nothing new to say moves no line in somebody's diff.
+    if !matches!(site.kind, SiteKind::ReverseProxy { .. }) {
+        table.remove("upstream");
+    }
+    if !matches!(site.kind, SiteKind::NodeApp { .. }) {
+        table.remove("port");
+    }
 
     // Exhaustive, so a fifth kind is a compile error here rather than a key silently missing from
     // somebody's manifest.
@@ -1906,5 +1915,56 @@ name = \"redis\"
 
         assert!(written.sites_kept.is_empty(), "{written:?}");
         assert_eq!(after.matches("[[sites]]").count(), 2, "{after}");
+    }
+
+    /// **T204, checked by hand.** A kind that did not change keeps its payload key where the file
+    /// had it, so an export with nothing new to say shows no moved line in a diff.
+    #[test]
+    fn a_kind_that_stayed_keeps_its_payload_where_it_was() {
+        for original in [
+            "[site]\ndomain = \"app.test\"\nkind = \"reverse-proxy\"\n\
+             upstream = \"http://127.0.0.1:5173\"\nhttps = false\n",
+            "[[sites]]\ndomain = \"app.test\"\nkind = \"reverse-proxy\"\n\
+             upstream = \"http://127.0.0.1:5173\"\nhttps = false\n",
+        ] {
+            let home = somewhere();
+            std::fs::write(at(home.path()), original).expect("a manifest");
+
+            let mut proxy = site("app.test", &[]);
+            proxy.kind = mixengine_proto::SiteKind::ReverseProxy {
+                upstream: "http://127.0.0.1:5173".to_owned(),
+            };
+            write(home.path(), &export(vec![proxy])).expect("it is written");
+            let after = std::fs::read_to_string(at(home.path())).expect("the file");
+
+            let upstream = after.find("upstream =").expect("the upstream");
+            let https = after.find("https =").expect("https");
+            assert!(
+                upstream < https,
+                "the upstream stayed where it was: {after}"
+            );
+        }
+    }
+
+    /// **T204, checked by hand.** A project with no pins writes no empty `[runtimes]`, and leaves a
+    /// hand-written one as it is.
+    #[test]
+    fn no_pins_write_no_runtimes_table() {
+        let nothing = |sites| Export {
+            name: "blog".to_owned(),
+            pins: BTreeMap::new(),
+            sites,
+        };
+
+        let home = somewhere();
+        write(home.path(), &nothing(Vec::new())).expect("it is written");
+        let after = std::fs::read_to_string(at(home.path())).expect("the file");
+        assert!(!after.contains("[runtimes]"), "{after}");
+
+        let home = somewhere();
+        std::fs::write(at(home.path()), "[runtimes]\nphp = \"8.2\"\n").expect("a manifest");
+        write(home.path(), &nothing(Vec::new())).expect("it is written");
+        let after = std::fs::read_to_string(at(home.path())).expect("the file");
+        assert!(after.contains("[runtimes]\nphp = \"8.2\""), "{after}");
     }
 }
