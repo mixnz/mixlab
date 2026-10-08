@@ -187,6 +187,10 @@ runs through the copy beside the program. The residual below states what that co
   when a person chooses it with `mix daemon credential-store home`
   ([ADR 0059](../decisions/0059-a-linux-release-may-keep-a-homes-credentials-in-a-file.md)): safe
   from other accounts, readable from a backup or a removed disk, and `mix doctor` says so.
+- A project's `.env` holds a database password only when the person ticks the box in MixLab's
+  apply, or passes `mix blueprint apply --write-dotenv` or answers its question (T205a). The file
+  is then private to this account, as the CA's key is, and nothing else MixEngine writes holds the
+  password.
 
 ## Client authentication
 

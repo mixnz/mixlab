@@ -7,6 +7,7 @@ Part of the [build plan](todo.md). Legend: `[ ]` todo · `[~]` in progress · `[
 has a platform-layer component and needs verification on Windows + macOS + Linux.
 
 Design: [2026-10-08-t205-a-blueprint-ends-at-a-working-site-design.md](../specs/2026-10-08-t205-a-blueprint-ends-at-a-working-site-design.md).
+T205a–T205c: [2026-10-09-t205a-t205c-what-hand-testing-the-gallery-left-open-design.md](../specs/2026-10-09-t205a-t205c-what-hand-testing-the-gallery-left-open-design.md).
 
 ---
 
@@ -18,13 +19,14 @@ Design: [2026-10-08-t205-a-blueprint-ends-at-a-working-site-design.md](../specs/
       `pathPrepend` for local targets, `onRestore`, and one-shot and draft tabs from MixEngine; five
       PHP blueprints (`cakephp`, `codeigniter`, `craft`, `statamic`, `yii`) and steps for the whole
       gallery; `mixengine-packages` re-publishes.
-- [ ] **T205a** A framework blueprint on PostgreSQL still starts on a database of its own: found by
-      hand on 2026-10-08. `rails new --database=postgresql` points at `<name>_development` with no
-      account, and Django's template stays on SQLite, so the database MixEngine made under the
-      project's name sits unused until the person sets `DATABASE_URL` (Rails) or `DATABASES`
-      (Django) by hand, with the password from MixLab's panel. Write it for them without putting
-      the password in a Terminal tab, a target or a gallery file (T205's D8): an `.env` the
-      framework already reads, or the server step's environment.
+- [x] **T205a** A framework blueprint on PostgreSQL started on a database of its own (found by
+      hand on 2026-10-08): `rails new --database=postgresql` pointed at `<name>_development` with no
+      account, and Django's template stayed on SQLite. `[[services]] dotenv` now plans a
+      `write_dotenv` step after the scaffold, and with the person's agreement (a box in MixLab,
+      ticked for a signed blueprint; `--write-dotenv` or a question in `mix`) the apply appends the
+      URL of the database it made to `.env`, private to this account. Rails reads
+      `DEVELOPMENT_DATABASE_URL` through an application template, so `bin/rails test` keeps its own
+      database; Django's template reads `DATABASE_URL`.
 - [ ] **T205b** `check-blueprints` compares the signed gallery with `master` and nothing else: the
       starters `publish-blueprints` zips beside it (`express-mongodb`, `django`, `php-mysql`,
       `static`) can drift from `src/blueprints/starters/` with no reminder. Compare each published
@@ -37,6 +39,10 @@ Design: [2026-10-08-t205-a-blueprint-ends-at-a-working-site-design.md](../specs/
       launched. Make the PTY's child reset that (`SetConsoleCtrlHandler(NULL, FALSE)` or a
       process-creation flag) so the key works however MixLab started, and measure it from the
       Start menu, a shortcut and the tray.
+- [ ] **T205d** Django on Windows ARM64 has no PostgreSQL driver: `psycopg-binary` 3.3.6 ships no
+      CPython 3.13 wheel for it (measured 2026-10-09), so the blueprint's first step fails there.
+      Measure whether the pure `psycopg` with the `libpq.dll` MixEngine's PostgreSQL package
+      carries is enough.
 
 **M43** On all three systems, `laravel` and `wordpress` applied from MixLab's Blueprints screen on a
 home with no web server open in the browser on their own, and `nextjs` serves its page after one

@@ -17,6 +17,7 @@
   server in the Terminal's list.
 - The WordPress blueprint downloads and unpacks WordPress into the project, after you agree to it.
 - The PHP with MySQL and Static site blueprints start with a page of their own in an empty folder, and leave a cloned project's files alone.
+- Applying the Rails or Django blueprint can write the database address to the project's .env, so the site reaches the database MixEngine made.
 - Blueprints for CakePHP, CodeIgniter, Craft CMS, Statamic and Yii.
 - A Terminal target on this machine can set environment variables and folders ahead of PATH, and
   can choose what a tab does with its commands when it comes back: run them, type them, or just
