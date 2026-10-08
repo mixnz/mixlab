@@ -35,3 +35,4 @@ run = "npm install express mongodb"
 kind = "serve"
 run = "node index.js"
 note = "Write index.js first; it listens on 3000."
+optional = true

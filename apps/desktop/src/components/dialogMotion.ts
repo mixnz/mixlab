@@ -41,7 +41,7 @@ export function isUnhandledEscape(e: KeyboardEvent): boolean {
  * one sign, from out here, that a dialog its caller kept mounted through its own answer has more
  * to say. Left out, a dialog closes once and never again. See [`exit`](./dialogExit.ts).
  */
-export function useDialogExit(question?: unknown) {
+export function useDialogExit(question?: unknown, visible?: () => boolean) {
   /* Every dialog in the app calls this hook, which makes it the one place that knows a dialog is
      up — so it is where the count is kept. Ten dialogs, and not one of their files has to say so.
      The count is what a global shortcut asks before acting: the keyboard belongs to whatever is on
@@ -49,7 +49,9 @@ export function useDialogExit(question?: unknown) {
 
      It stays up through the exit animation, because the dialog is still on screen for those 130ms
      and still holds the keyboard. */
-  useEffect(() => enterModal(), []);
+  // `visible`: a dialog drawn into a tab counts only while that tab is on screen (`Modal/host`).
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- read through a ref by the caller; counted once per mount
+  useEffect(() => enterModal(visible), []);
 
   const [closing, setClosing] = useState(false);
   const [settled, setSettled] = useState(false);

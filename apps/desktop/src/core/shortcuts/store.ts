@@ -16,7 +16,9 @@ export interface Registration {
  * ceremony for a list two entries long.
  */
 const registrations: Registration[] = [];
-let depth = 0;
+/** One entry per dialog or menu up. `visible` is how one that belongs to a tab says whether that
+ *  tab is the one on screen; absent, it is up for the whole window. */
+const modals = new Set<{ visible?: () => boolean }>();
 let catalogue: ShortcutGroup[] = [];
 
 /** Starts listening; the returned function stops. Order matters — see {@link enabledIds}. */
@@ -45,18 +47,21 @@ export function run(id: string): void {
 
 /** Marks a dialog or menu as up; the returned function marks it down again. Idempotent, so a
  *  disposer called twice — which is what StrictMode does to an effect — cannot unbalance the
- *  count. */
-export function enterModal(): () => void {
-  depth += 1;
-  let left = false;
+ *  count.
+ *
+ *  `visible` is for a dialog that belongs to a tab: it holds the keyboard only while that tab is
+ *  on screen, so one left open in a tab out of sight does not silence the tab in front. */
+export function enterModal(visible?: () => boolean): () => void {
+  const entry = { visible };
+  modals.add(entry);
   return () => {
-    if (left) return;
-    left = true;
-    depth -= 1;
+    modals.delete(entry);
   };
 }
 
 export function modalDepth(): number {
+  let depth = 0;
+  for (const entry of modals) if (entry.visible === undefined || entry.visible()) depth += 1;
   return depth;
 }
 

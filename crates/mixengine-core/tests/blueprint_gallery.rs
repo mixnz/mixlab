@@ -203,6 +203,80 @@ fn whether_the_browser_opens_by_itself_matches_the_design() {
     }
 }
 
+/// **An `npm run` step has its packages installed before it** — measured on `laravel`, whose
+/// `composer create-project` writes a `package.json` and installs nothing from it, so `npm run dev`
+/// answered *Cannot find package 'vite'*. An earlier step installs them (`npm install`, a
+/// `npx create-…` initialiser), or the scaffold does (`create-next-app` through `npx`).
+#[test]
+fn every_npm_run_step_comes_after_its_packages_are_installed() {
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        let mut installed = manifest
+            .scaffold
+            .as_ref()
+            .is_some_and(|scaffold| scaffold.command.starts_with("npx "));
+
+        for step in &manifest.next_steps {
+            let Some(run) = step.run.as_deref() else {
+                continue;
+            };
+            if run.starts_with("npm run ") {
+                assert!(
+                    installed,
+                    "{}: `{run}` comes before anything installs its packages",
+                    entry.slug
+                );
+            }
+            if run.starts_with("npm install") || run.starts_with("npx create-") {
+                installed = true;
+            }
+        }
+    }
+}
+
+/// **A step the person has to write code for is never required** — measured on `express-mongodb`,
+/// whose required `node index.js` ran a file nothing creates, so *Run the required steps* always
+/// ended at *Cannot find module*. Run the required steps has to be able to finish.
+#[test]
+fn no_required_step_runs_a_file_nothing_creates() {
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        for step in &manifest.next_steps {
+            let Some(run) = step.run.as_deref() else {
+                continue;
+            };
+            let runs_a_file = run
+                .strip_prefix("node ")
+                .is_some_and(|file| file.ends_with(".js"));
+            assert!(
+                !runs_a_file || step.optional,
+                "{}: `{run}` is required and nothing writes its file",
+                entry.slug
+            );
+        }
+    }
+}
+
+/// **A framework that reads its own database settings says where they are** — measured on
+/// `rails`: `rails new --database=postgresql` points at `<name>_development` with no account, so
+/// `rails server` answered every page with *ConnectionNotEstablished* while MixEngine's database
+/// sat there under another name. The step that writes the settings carries `credentials`, so the
+/// panel draws the account beside it.
+#[test]
+fn rails_new_carries_the_database_account() {
+    let entry = ENTRIES
+        .iter()
+        .find(|entry| entry.slug == "rails")
+        .expect("rails is in the gallery");
+    let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+    let step = manifest
+        .next_steps
+        .iter()
+        .find(|step| step.run.as_deref().is_some_and(|run| run.starts_with("rails new")))
+        .expect("rails new is a step");
+    assert!(step.credentials, "rails new does not carry credentials");
+}
+
 /// **Every step expands for a name that is not a slug** — T205's review focus: `My Blog` must
 /// become `my-blog`, never reach a command as itself, and never leave the token behind.
 #[test]

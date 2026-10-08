@@ -45,7 +45,13 @@ optional = true
 credentials = true
 
 [[next_steps]]
+kind = "once"
+run = "npm install"
+note = "Installs what npm run dev needs. composer create-project does not; run it once before."
+optional = true
+
+[[next_steps]]
 kind = "serve"
 run = "npm run dev"
-note = "Vite, for editing the front end."
+note = "Vite, for editing the front end. Run npm install first."
 optional = true

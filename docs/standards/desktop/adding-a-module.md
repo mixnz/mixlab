@@ -73,6 +73,11 @@ contract is as small as it is.
    dialog builds its list from `MODULES`, so the module names its own pane and the shell never
    learns what is in it.
 
+   **Actions another module may ask for**, if any, through `ModuleDefinition.actions`: named
+   functions that validate their own payload, called with `callModuleAction(id, name, payload)`
+   from `core/moduleActions.ts`. The way to ask a module for something without opening a tab and
+   without importing it.
+
 ## Backend, if it needs one
 
 7. **`src-tauri/src/modules/<id>/mod.rs`** with a `register`:

@@ -5,6 +5,7 @@ import { TerminalIcon } from "../../icons";
 import TerminalSettings from "./components/TerminalSettings";
 import { TERMINAL_SHORTCUTS } from "./shortcuts";
 import { hostSecretsSyncable, hostsSyncable, settingsSyncable } from "./sync";
+import { saveDraftTarget } from "./draftTarget";
 
 /* Loaded when a tab of this module is first opened, not at launch. The workspace behind it is the
    heaviest thing in the bundle — CodeMirror here, xterm in the terminal — and a launch that parses
@@ -20,4 +21,6 @@ export const terminalModule: ModuleDefinition = {
   settings: { labelKey: "terminal.settingsTitle", Icon: TerminalIcon, Section: TerminalSettings },
   shortcuts: TERMINAL_SHORTCUTS,
   syncable: [settingsSyncable, hostsSyncable, hostSecretsSyncable],
+  // What the MixEngine module's *Save as Terminal target* asks for — T205.
+  actions: { saveTarget: saveDraftTarget },
 };

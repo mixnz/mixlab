@@ -4,6 +4,27 @@
   min-height: 0;
 }
 
+/* The column the form sits in, scrolling on its own when the pane is shorter than the form. */
+.formScroll {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The choices of *When the tab comes back*, one card each. */
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* *Advanced*, a link-sized toggle at the start of the row. */
+.advancedToggle {
+  align-self: flex-start;
+}
+
 /* The form is a card in the middle of the pane: the same surface, hairline and radius `Card` has. */
 .form {
   display: flex;

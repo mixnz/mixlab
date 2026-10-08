@@ -41,6 +41,12 @@ export function useSavedTargetsLoaded(): boolean {
    `terminal-hosts.json` and the credential store — and the list it returns becomes the new
    snapshot. */
 
+/** The list once it has been read — for a caller outside React, such as the `saveTarget` action. */
+export async function currentTargets(): Promise<SavedTarget[]> {
+  await store.ready();
+  return store.get();
+}
+
 export async function addTarget(target: SavedTarget): Promise<void> {
   store.publish(await addSavedTarget(target));
 }

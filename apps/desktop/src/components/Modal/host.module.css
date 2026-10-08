@@ -1,0 +1,8 @@
+/* The layer a tab's dialogs are drawn into: over the tab's pane, under nothing else of the window.
+   It takes no clicks itself, so an empty layer is invisible to the pane beneath it; what is drawn
+   into it takes them back (`surface.module.css`, `.hosted`). */
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}

@@ -4,6 +4,7 @@ import Button from "../../../../components/Button";
 import Input, { Textarea } from "../../../../components/Input";
 import NoticeBanner from "../../../../components/NoticeBanner";
 import Select from "../../../../components/Select";
+import RadioCard from "../../../../components/RadioCard";
 import SegmentedControl from "../../../../components/SegmentedControl";
 import { errorMessage } from "../../../../core/errors";
 import { savedChange } from "../../../../core/followSaved";
@@ -21,7 +22,6 @@ import {
 } from "../../savedTargetsStore";
 import { loadTerminalSettings } from "../../settingsStore";
 import { shellLabel } from "../../shells";
-import type { DraftTarget } from "../../tabState";
 import { formatEnvLines, parseEnvLines, parsePathLines } from "../../targetEnv";
 import type {
   LocalShell,
@@ -33,6 +33,13 @@ import type {
 } from "../../types";
 import SavedTargetList from "./SavedTargetList";
 import styles from "./TargetForm.module.css";
+
+/** What a restored tab does with *Run on connect* — T205, D10 — as the form offers it. */
+const ON_RESTORE_CHOICES = [
+  { value: "run", label: "terminal.onRestoreRun", description: "terminal.onRestoreRunHint" },
+  { value: "type", label: "terminal.onRestoreType", description: "terminal.onRestoreTypeHint" },
+  { value: "none", label: "terminal.onRestoreNone", description: "terminal.onRestoreNoneHint" },
+] as const;
 
 /**
  * A saved target reduced to exactly "what it is" — without `id`.
@@ -53,32 +60,23 @@ interface Props {
   /** The tab that was just tried and failed. The form rebuilds exactly what the user typed — a form
    *  wiped clean after every wrong password is a form nobody can use. */
   initial: TerminalChoice | null;
-  /** A target another module drafted, shown unsaved for the person to check — T205, D11. Read
-   *  once, when the form mounts. */
-  draft?: DraftTarget | null;
-  /** The draft has been saved as an entry of its own. */
-  onDraftSaved?: () => void;
 }
 
 /** The screen a terminal tab shows before there is a session: pick this machine or a server. */
-function TargetForm({ onOpen, onError, initial, draft = null, onDraftSaved }: Props) {
+function TargetForm({ onOpen, onError, initial }: Props) {
   const { t } = useTranslation();
   const targets = useSavedTargets();
   const targetsLoaded = useSavedTargetsLoaded();
 
-  const [kind, setKind] = useState<"local" | "ssh">(draft ? "local" : (initial?.kind ?? "local"));
+  const [kind, setKind] = useState<"local" | "ssh">(initial?.kind ?? "local");
 
   /** The saved target the form is holding, or `null` when it was typed by hand. */
   const [targetId, setTargetId] = useState<string | null>(initial?.targetId ?? null);
-  const [name, setName] = useState(draft?.name ?? "");
+  const [name, setName] = useState("");
   /** A snapshot of the saved target when it was loaded, so the Update button knows whether
    *  anything has changed. */
   const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
-  const [runOnConnect, setRunOnConnect] = useState(
-    draft?.runOnConnect ?? initial?.runOnConnect ?? "",
-  );
-  /** The draft this form opened on, while it is still unsaved: it says so above the form. */
-  const [drafted, setDrafted] = useState(draft !== null);
+  const [runOnConnect, setRunOnConnect] = useState(initial?.runOnConnect ?? "");
   /** The saved entry this form holds changed or went away somewhere else, while it held edits. */
   const [stale, setStale] = useState<"changed" | "removed" | null>(null);
 
@@ -87,33 +85,22 @@ function TargetForm({ onOpen, onError, initial, draft = null, onDraftSaved }: Pr
   /* The name rather than the path, both in state and as the `Select`'s value: the name is what goes
      to disk, so a saved row can be loaded into the form even before the machine's shell list has
      finished reading. */
-  const [shellName, setShellName] = useState(
-    draft ? draft.shellName : initial?.kind === "local" ? initial.shell.name : "",
-  );
-  const [cwd, setCwd] = useState(
-    draft ? draft.cwd : initial?.kind === "local" ? (initial.cwd ?? "") : "",
-  );
+  const [shellName, setShellName] = useState(initial?.kind === "local" ? initial.shell.name : "");
+  const [cwd, setCwd] = useState(initial?.kind === "local" ? (initial.cwd ?? "") : "");
   /* What the shell is given beside its directory, as the lines the person types — T205, D9. */
   const [envText, setEnvText] = useState(
-    draft
-      ? formatEnvLines(draft.env)
-      : initial?.kind === "local"
-        ? formatEnvLines(initial.env ?? undefined)
-        : "",
+    initial?.kind === "local" ? formatEnvLines(initial.env ?? undefined) : "",
   );
   const [pathText, setPathText] = useState(
-    draft
-      ? draft.pathPrepend.join("\n")
-      : initial?.kind === "local"
-        ? (initial.pathPrepend ?? []).join("\n")
-        : "",
+    initial?.kind === "local" ? (initial.pathPrepend ?? []).join("\n") : "",
   );
+  /* The two fields above sit under *Advanced*, closed: most targets set neither, and a form that
+     grows by two boxes for everyone is a form whose buttons fall off the pane. Open whenever there
+     is something in them, so nothing a target sets is hidden from the person editing it. */
+  const [advanced, setAdvanced] = useState(envText !== "" || pathText !== "");
   /** What a tab restored on the next launch does with *Run on connect* — T205, D10. Not part of a
    *  session, so it is read off the saved entry once that is found. */
-  const [onRestore, setOnRestore] = useState<OnRestore>(draft?.onRestore ?? "run");
-  /* A draft from a blueprint nobody vouches for keeps its `onRestore` until it is saved: saving is
-     the person putting their name to it. */
-  const restoreLocked = drafted && draft?.lockRestore === true;
+  const [onRestore, setOnRestore] = useState<OnRestore>("run");
 
   // SSH
   const [host, setHost] = useState(initial?.kind === "ssh" ? initial.config.host : "");
@@ -325,7 +312,6 @@ function TargetForm({ onOpen, onError, initial, draft = null, onDraftSaved }: Pr
 
   function applyTarget(entry: SavedTarget) {
     setStale(null);
-    setDrafted(false);
     // The targets column is always there, even while the form is on the other kind — clicking a
     // row without the form switching kind would look like the click did nothing.
     setKind(entry.kind);
@@ -342,6 +328,7 @@ function TargetForm({ onOpen, onError, initial, draft = null, onDraftSaved }: Pr
       setCwd(entry.cwd ?? "");
       setEnvText(formatEnvLines(entry.env));
       setPathText((entry.pathPrepend ?? []).join("\n"));
+      setAdvanced(entry.env !== undefined || entry.pathPrepend !== undefined);
       /* And clear the other branch. Without clearing, switching to the SSH tab afterwards would
          show the address and password of another server — the one loaded before — while the left
          column highlights a local row, and the Update button stands ready to turn that row into a
@@ -415,7 +402,6 @@ function TargetForm({ onOpen, onError, initial, draft = null, onDraftSaved }: Pr
    *  and both kinds can be saved now. */
   function clearForm() {
     setStale(null);
-    setDrafted(false);
     setTargetId(null);
     setName("");
     setSavedSnapshot(null);
@@ -425,13 +411,6 @@ function TargetForm({ onOpen, onError, initial, draft = null, onDraftSaved }: Pr
     setEnvText("");
     setPathText("");
     resetSshFields();
-  }
-
-  /** A saved draft is an entry like any other from here on. */
-  function settleDraft() {
-    if (!drafted) return;
-    setDrafted(false);
-    onDraftSaved?.();
   }
 
   async function saveTarget() {
@@ -445,7 +424,6 @@ function TargetForm({ onOpen, onError, initial, draft = null, onDraftSaved }: Pr
         setTargetId(entry.id);
       }
       setSavedSnapshot(snapshotOf(entry));
-      settleDraft();
     } catch (e) {
       onError(errorMessage(t, e));
     }
@@ -460,7 +438,6 @@ function TargetForm({ onOpen, onError, initial, draft = null, onDraftSaved }: Pr
       await addTarget(entry);
       setTargetId(entry.id);
       setSavedSnapshot(snapshotOf(entry));
-      settleDraft();
     } catch (e) {
       onError(errorMessage(t, e));
     }
@@ -490,257 +467,271 @@ function TargetForm({ onOpen, onError, initial, draft = null, onDraftSaved }: Pr
         onNew={clearForm}
       />
 
-      <div className={styles.form}>
-        {/* The two kinds of target. Buttons rather than a `Select`: there are only two, and the
-            chosen one decides the whole rest of the form — worth seeing both at once. */}
-        <SegmentedControl
-          block
-          mode="tabs"
-          aria-label={t("terminal.newTabTitle")}
-          value={kind}
-          onChange={setKind}
-          segments={[
-            { value: "local", label: t("terminal.targetLocal") },
-            { value: "ssh", label: t("terminal.targetSsh") },
-          ]}
-        />
-
-        {drafted && <NoticeBanner message={t("terminal.draftNotice")} />}
-
-        {/* Outside both branches: both kinds can be saved, so both have a name. */}
-        <div className={styles.row}>
-          <label htmlFor="terminal-target-name">{t("terminal.targetName")}</label>
-          <Input
-            id="terminal-target-name"
-            value={name}
-            placeholder={
-              kind === "local"
-                ? t("terminal.targetNamePlaceholderLocal")
-                : t("terminal.targetNamePlaceholderSsh")
-            }
-            onChange={(e) => setName(e.target.value)}
+      {/* The form scrolls on its own, beside the list: a pane shorter than the form still reaches
+          its buttons. */}
+      <div className={styles.formScroll}>
+        <div className={styles.form}>
+          {/* The two kinds of target. Buttons rather than a `Select`: there are only two, and the
+              chosen one decides the whole rest of the form — worth seeing both at once. */}
+          <SegmentedControl
+            block
+            mode="tabs"
+            aria-label={t("terminal.newTabTitle")}
+            value={kind}
+            onChange={setKind}
+            segments={[
+              { value: "local", label: t("terminal.targetLocal") },
+              { value: "ssh", label: t("terminal.targetSsh") },
+            ]}
           />
-        </div>
 
-        {kind === "local" ? (
-          <>
-            <div className={styles.row}>
-              {/* `Select` does not take an `id`, so its label is `ariaLabel` rather than
-                  `htmlFor` */}
-              <span>{t("terminal.shell")}</span>
-              <Select
-                value={shellName}
-                options={shells.map((shell) => ({
-                  value: shell.name,
-                  label: (
-                    <span className={styles.shellOption}>
-                      <ShellIcon name={shell.name} />
-                      {shellLabel(shell.name)}
-                    </span>
-                  ),
-                  // The label is a node, so the search box cannot read it; this is the text it
-                  // reads.
-                  searchText: shellLabel(shell.name),
-                }))}
-                onChange={setShellName}
-                ariaLabel={t("terminal.shell")}
-                /* A machine where no shell was detected, and a saved row pointing at a shell
-                   removed from the machine, both show up as an empty field — but they are not the
-                   same thing, and "no shell found" is flatly wrong when the list below has five. */
-                placeholder={
-                  shells.length === 0 ? t("terminal.noShells") : t("terminal.pickShell")
-                }
-              />
-            </div>
+          {/* Outside both branches: both kinds can be saved, so both have a name. */}
+          <div className={styles.row}>
+            <label htmlFor="terminal-target-name">{t("terminal.targetName")}</label>
+            <Input
+              id="terminal-target-name"
+              value={name}
+              placeholder={
+                kind === "local"
+                  ? t("terminal.targetNamePlaceholderLocal")
+                  : t("terminal.targetNamePlaceholderSsh")
+              }
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
 
-            <div className={styles.row}>
-              <label htmlFor="terminal-cwd">{t("terminal.startIn")}</label>
-              <div className={styles.withButton}>
-                <Input
-                  id="terminal-cwd"
-                  value={cwd}
-                  placeholder={t("terminal.startInPlaceholder")}
-                  onChange={(e) => setCwd(e.target.value)}
-                />
-                <Button onClick={() => void browseDirectory()}>{t("terminal.browse")}</Button>
-              </div>
-            </div>
-
-            <div className={styles.row}>
-              <label htmlFor="terminal-env">{t("terminal.envLabel")}</label>
-              <Textarea
-                id="terminal-env"
-                value={envText}
-                onChange={(e) => setEnvText(e.target.value)}
-              />
-              {envError === null ? (
-                <p className={styles.hint}>{t("terminal.envHint")}</p>
-              ) : (
-                <p className={styles.error} role="alert">
-                  {t("terminal.envLineInvalid", { line: envError })}
-                </p>
-              )}
-            </div>
-
-            <div className={styles.row}>
-              <label htmlFor="terminal-path">{t("terminal.pathLabel")}</label>
-              <Textarea
-                id="terminal-path"
-                value={pathText}
-                onChange={(e) => setPathText(e.target.value)}
-              />
-              <p className={styles.hint}>{t("terminal.pathHint")}</p>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={styles.columns}>
+          {kind === "local" ? (
+            <>
               <div className={styles.row}>
-                <label htmlFor="terminal-host">{t("terminal.host")}</label>
-                <Input id="terminal-host" value={host} onChange={(e) => setHost(e.target.value)} />
-              </div>
-              <div className={`${styles.row} ${styles.narrow}`}>
-                <label htmlFor="terminal-port">{t("terminal.port")}</label>
-                <Input
-                  id="terminal-port"
-                  type="number"
-                  value={port}
-                  onChange={(e) => setPort(Number(e.target.value))}
+                {/* `Select` does not take an `id`, so its label is `ariaLabel` rather than
+                    `htmlFor` */}
+                <span>{t("terminal.shell")}</span>
+                <Select
+                  value={shellName}
+                  options={shells.map((shell) => ({
+                    value: shell.name,
+                    label: (
+                      <span className={styles.shellOption}>
+                        <ShellIcon name={shell.name} />
+                        {shellLabel(shell.name)}
+                      </span>
+                    ),
+                    // The label is a node, so the search box cannot read it; this is the text it
+                    // reads.
+                    searchText: shellLabel(shell.name),
+                  }))}
+                  onChange={setShellName}
+                  ariaLabel={t("terminal.shell")}
+                  /* A machine where no shell was detected, and a saved row pointing at a shell
+                     removed from the machine, both show up as an empty field — but they are not the
+                     same thing, and "no shell found" is flatly wrong when the list below has five. */
+                  placeholder={
+                    shells.length === 0 ? t("terminal.noShells") : t("terminal.pickShell")
+                  }
                 />
               </div>
-            </div>
 
-            <div className={styles.row}>
-              <label htmlFor="terminal-user">{t("terminal.username")}</label>
-              <Input
-                id="terminal-user"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
-
-            <div className={styles.row}>
-              <span>{t("terminal.authMethod")}</span>
-              <Select
-                value={authType}
-                options={[
-                  { value: "password", label: t("terminal.authPassword") },
-                  { value: "privatekey", label: t("terminal.authPrivateKey") },
-                ]}
-                onChange={(value) => setAuthType(value)}
-                ariaLabel={t("terminal.authMethod")}
-              />
-            </div>
-
-            {authType === "password" ? (
               <div className={styles.row}>
-                <label htmlFor="terminal-password">{t("terminal.password")}</label>
-                <Input
-                  id="terminal-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            ) : (
-              <>
-                <div className={styles.row}>
-                  <label htmlFor="terminal-key">{t("terminal.privateKeyFile")}</label>
-                  <div className={styles.withButton}>
-                    <Input
-                      id="terminal-key"
-                      value={keyPath}
-                      placeholder={PRIVATE_KEY_PLACEHOLDER}
-                      onChange={(e) => setKeyPath(e.target.value)}
-                    />
-                    <Button onClick={() => void browseKeyFile()}>{t("terminal.browse")}</Button>
-                  </div>
-                </div>
-                <div className={styles.row}>
-                  <label htmlFor="terminal-passphrase">{t("terminal.keyPassphrase")}</label>
+                <label htmlFor="terminal-cwd">{t("terminal.startIn")}</label>
+                <div className={styles.withButton}>
                   <Input
-                    id="terminal-passphrase"
-                    type="password"
-                    value={passphrase}
-                    onChange={(e) => setPassphrase(e.target.value)}
+                    id="terminal-cwd"
+                    value={cwd}
+                    placeholder={t("terminal.startInPlaceholder")}
+                    onChange={(e) => setCwd(e.target.value)}
+                  />
+                  <Button onClick={() => void browseDirectory()}>{t("terminal.browse")}</Button>
+                </div>
+              </div>
+
+              <Button
+                variant="link"
+                size="small"
+                className={styles.advancedToggle}
+                aria-expanded={advanced}
+                onClick={() => setAdvanced((open) => !open)}
+              >
+                {advanced ? t("terminal.advancedHide") : t("terminal.advancedShow")}
+              </Button>
+
+              {advanced && (
+                <>
+                  <div className={styles.row}>
+                    <label htmlFor="terminal-env">{t("terminal.envLabel")}</label>
+                    <Textarea
+                      id="terminal-env"
+                      value={envText}
+                      onChange={(e) => setEnvText(e.target.value)}
+                    />
+                    {envError === null ? (
+                      <p className={styles.hint}>{t("terminal.envHint")}</p>
+                    ) : (
+                      <p className={styles.error} role="alert">
+                        {t("terminal.envLineInvalid", { line: envError })}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className={styles.row}>
+                    <label htmlFor="terminal-path">{t("terminal.pathLabel")}</label>
+                    <Textarea
+                      id="terminal-path"
+                      value={pathText}
+                      onChange={(e) => setPathText(e.target.value)}
+                    />
+                    <p className={styles.hint}>{t("terminal.pathHint")}</p>
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <div className={styles.columns}>
+                <div className={styles.row}>
+                  <label htmlFor="terminal-host">{t("terminal.host")}</label>
+                  <Input id="terminal-host" value={host} onChange={(e) => setHost(e.target.value)} />
+                </div>
+                <div className={`${styles.row} ${styles.narrow}`}>
+                  <label htmlFor="terminal-port">{t("terminal.port")}</label>
+                  <Input
+                    id="terminal-port"
+                    type="number"
+                    value={port}
+                    onChange={(e) => setPort(Number(e.target.value))}
                   />
                 </div>
-              </>
+              </div>
+
+              <div className={styles.row}>
+                <label htmlFor="terminal-user">{t("terminal.username")}</label>
+                <Input
+                  id="terminal-user"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+
+              <div className={styles.row}>
+                <span>{t("terminal.authMethod")}</span>
+                <Select
+                  value={authType}
+                  options={[
+                    { value: "password", label: t("terminal.authPassword") },
+                    { value: "privatekey", label: t("terminal.authPrivateKey") },
+                  ]}
+                  onChange={(value) => setAuthType(value)}
+                  ariaLabel={t("terminal.authMethod")}
+                />
+              </div>
+
+              {authType === "password" ? (
+                <div className={styles.row}>
+                  <label htmlFor="terminal-password">{t("terminal.password")}</label>
+                  <Input
+                    id="terminal-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className={styles.row}>
+                    <label htmlFor="terminal-key">{t("terminal.privateKeyFile")}</label>
+                    <div className={styles.withButton}>
+                      <Input
+                        id="terminal-key"
+                        value={keyPath}
+                        placeholder={PRIVATE_KEY_PLACEHOLDER}
+                        onChange={(e) => setKeyPath(e.target.value)}
+                      />
+                      <Button onClick={() => void browseKeyFile()}>{t("terminal.browse")}</Button>
+                    </div>
+                  </div>
+                  <div className={styles.row}>
+                    <label htmlFor="terminal-passphrase">{t("terminal.keyPassphrase")}</label>
+                    <Input
+                      id="terminal-passphrase"
+                      type="password"
+                      value={passphrase}
+                      onChange={(e) => setPassphrase(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Outside both branches, just like the Name field: a shell on this machine also has a few
+              lines to retype on every opening, and `cd` through the Start in field only covers the
+              first of them. */}
+          <div className={styles.row}>
+            <label htmlFor="terminal-run-on-connect">{t("terminal.runOnConnect")}</label>
+            <Textarea
+              id="terminal-run-on-connect"
+              value={runOnConnect}
+              placeholder={t("terminal.runOnConnectPlaceholder")}
+              onChange={(e) => setRunOnConnect(e.target.value)}
+            />
+            <p className={styles.hint}>{t("terminal.runOnConnectHint")}</p>
+          </div>
+
+          {/* For both kinds, and only meaningful with something to run: a tab restored on the next
+              launch runs it, types it and waits, or just opens — T205, D10. */}
+          <div className={styles.row}>
+            <span id="terminal-on-restore">{t("terminal.onRestoreLabel")}</span>
+            {/* Cards rather than a segmented control: each choice needs its sentence, and three
+                labels of different lengths in one strip read as uneven buttons. */}
+            <div className={styles.choices} role="radiogroup" aria-labelledby="terminal-on-restore">
+              {ON_RESTORE_CHOICES.map(({ value, label, description }) => (
+                <RadioCard
+                  key={value}
+                  name="terminal-on-restore"
+                  checked={onRestore === value}
+                  disabled={runOnConnect.trim() === ""}
+                  onChange={() => setOnRestore(value)}
+                  label={t(label)}
+                  description={t(description)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {stale === "changed" && (
+            <div className={styles.savedElsewhere}>
+              <NoticeBanner message={t("terminal.changedElsewhere")} />
+              <Button
+                size="small"
+                onClick={() => {
+                  const entry = targets.find((target) => target.id === targetId);
+                  if (entry) applyTarget(entry);
+                }}
+              >
+                {t("terminal.loadNewVersion")}
+              </Button>
+            </div>
+          )}
+          {stale === "removed" && (
+            <NoticeBanner message={t("terminal.removedElsewhere")} onDismiss={() => setStale(null)} />
+          )}
+
+          <div className={styles.actions}>
+            <Button disabled={!savable || unchanged} onClick={() => void saveTarget()}>
+              {targetId ? t("terminal.updateTarget") : t("terminal.saveTarget")}
+            </Button>
+            {targetId && (
+              <Button disabled={!savable} onClick={() => void saveAsNew()}>
+                {t("terminal.saveAsNew")}
+              </Button>
             )}
-          </>
-        )}
-
-        {/* Outside both branches, just like the Name field: a shell on this machine also has a few
-            lines to retype on every opening, and `cd` through the Start in field only covers the
-            first of them. */}
-        <div className={styles.row}>
-          <label htmlFor="terminal-run-on-connect">{t("terminal.runOnConnect")}</label>
-          <Textarea
-            id="terminal-run-on-connect"
-            value={runOnConnect}
-            placeholder={t("terminal.runOnConnectPlaceholder")}
-            onChange={(e) => setRunOnConnect(e.target.value)}
-          />
-          <p className={styles.hint}>{t("terminal.runOnConnectHint")}</p>
-        </div>
-
-        {/* For both kinds, and only meaningful with something to run: a tab restored on the next
-            launch runs it, types it and waits, or just opens — T205, D10. */}
-        <div className={styles.row}>
-          <span>{t("terminal.onRestoreLabel")}</span>
-          <SegmentedControl
-            aria-label={t("terminal.onRestoreLabel")}
-            value={onRestore}
-            onChange={setOnRestore}
-            segments={(["run", "type", "none"] as const).map((value) => ({
-              value,
-              label: t(
-                value === "run"
-                  ? "terminal.onRestoreRun"
-                  : value === "type"
-                    ? "terminal.onRestoreType"
-                    : "terminal.onRestoreNone",
-              ),
-              disabled: runOnConnect.trim() === "" || restoreLocked,
-            }))}
-          />
-          {restoreLocked && <p className={styles.hint}>{t("terminal.restoreLocked")}</p>}
-        </div>
-
-        {stale === "changed" && (
-          <div className={styles.savedElsewhere}>
-            <NoticeBanner message={t("terminal.changedElsewhere")} />
             <Button
-              size="small"
-              onClick={() => {
-                const entry = targets.find((target) => target.id === targetId);
-                if (entry) applyTarget(entry);
-              }}
+              variant="primary"
+              disabled={choice === null}
+              onClick={() => choice && onOpen(choice)}
             >
-              {t("terminal.loadNewVersion")}
+              {kind === "local" ? t("terminal.open") : t("terminal.connect")}
             </Button>
           </div>
-        )}
-        {stale === "removed" && (
-          <NoticeBanner message={t("terminal.removedElsewhere")} onDismiss={() => setStale(null)} />
-        )}
-
-        <div className={styles.actions}>
-          <Button disabled={!savable || unchanged} onClick={() => void saveTarget()}>
-            {targetId ? t("terminal.updateTarget") : t("terminal.saveTarget")}
-          </Button>
-          {targetId && (
-            <Button disabled={!savable} onClick={() => void saveAsNew()}>
-              {t("terminal.saveAsNew")}
-            </Button>
-          )}
-          <Button
-            variant="primary"
-            disabled={choice === null}
-            onClick={() => choice && onOpen(choice)}
-          >
-            {kind === "local" ? t("terminal.open") : t("terminal.connect")}
-          </Button>
         </div>
       </div>
     </div>

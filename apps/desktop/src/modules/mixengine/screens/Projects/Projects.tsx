@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState, type MouseEvent } from "react";
 
 import Button from "../../../../components/Button";
 import Card from "../../../../components/Card";
@@ -9,19 +9,17 @@ import IconTile from "../../../../components/IconTile";
 import LoadingState from "../../../../components/LoadingState";
 import NoticeBanner from "../../../../components/NoticeBanner";
 import PageHeader from "../../../../components/PageHeader";
-import StatusPill from "../../../../components/StatusPill";
 import Table from "../../../../components/Table";
 import { copyText } from "../../../../core/clipboard";
 import { errorMessage } from "../../../../core/errors";
-import { CopyIcon, FolderIcon, GlobeIcon, PlusIcon } from "../../../../icons";
+import { ChevronDownIcon, CopyIcon, FolderIcon, GlobeIcon, PlusIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { ProjectDetail } from "@mixengine/api";
 import type { ProjectSummary } from "@mixengine/api";
-import NextStepsPanel from "../../components/NextStepsPanel";
-import { declaredSiteRows } from "../../declaredSites";
+import { takePendingProjectDetail } from "../../projectsNavigation";
 import { siteUrl } from "../../siteState";
-import { formatPins } from "../../projectPins";
+import ProjectDetailPanel from "./ProjectDetailPanel";
 import ProjectForm from "./ProjectForm";
 import styles from "./Projects.module.css";
 
@@ -44,6 +42,9 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ProjectDetail | null>(null);
+  /** The project whose row is open, and what has been read of it — T205: a row opens in place,
+   *  under itself, so what someone just clicked is where they are looking. */
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<ProjectDetail | null>(null);
   /** The address of the shown project's first site, for the steps panel's `open` rows — T205. */
   const [detailUrl, setDetailUrl] = useState<string | null>(null);
@@ -63,8 +64,8 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
       // The pins panel follows the list: a project that is gone — deleted here, by `mix`, or
       // forgotten by a blueprint that failed — takes its panel with it rather than leaving a card
       // about something the table no longer shows.
-      setDetail((shown) =>
-        shown && list.projects.some((row) => row.name === shown.project.name) ? shown : null,
+      setExpanded((open) =>
+        open !== null && list.projects.some((row) => row.name === open) ? open : null,
       );
     } catch (e) {
       setError(errorMessage(t, e));
@@ -86,12 +87,40 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
     setDetailUrl(first === undefined ? null : siteUrl(first));
   }
 
-  async function showDetail(name: string) {
+  /** Opens `name`'s row, or closes it when it is the open one. One open at a time. */
+  async function toggle(name: string) {
+    if (expanded === name) {
+      setExpanded(null);
+      return;
+    }
+    setExpanded(name);
+    setDetail(null);
     try {
       await readDetail(name);
     } catch (e) {
+      setExpanded(null);
       setError(errorMessage(t, e));
     }
+  }
+
+  /* Another screen sent someone to one project — the Sites screen's *What to run*, an apply that
+     has just finished: its row is opened, once (`projectsNavigation.ts`). */
+  useEffect(() => {
+    if (!active) return;
+    const wanted = takePendingProjectDetail();
+    if (wanted === null) return;
+    setExpanded(wanted);
+    setDetail(null);
+    readDetail(wanted).catch((e: unknown) => {
+      setExpanded(null);
+      setError(errorMessage(t, e));
+    });
+  }, [active, t]);
+
+  /** A click anywhere on a row opens it, except on the row's own buttons. */
+  function rowClick(e: MouseEvent<HTMLTableRowElement>, name: string) {
+    if ((e.target as HTMLElement).closest("button, a, input")) return;
+    void toggle(name);
   }
 
   async function edit(name: string) {
@@ -185,168 +214,101 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr key={row.name}>
-                  <td>
-                    <span className={styles.name}>
-                      <IconTile tone="coral">
-                        <FolderIcon size={16} />
-                      </IconTile>
-                      <Button variant="link" onClick={() => void showDetail(row.name)}>
-                        {row.name}
-                      </Button>
-                    </span>
-                  </td>
-                  <td>
-                    <span className={styles.root}>
-                      <span className={styles.rootPath} title={row.root}>
-                        {row.root}
-                      </span>
-                      <Button
-                        size="small"
-                        variant="ghost"
-                        className={styles.copy}
-                        aria-label={t("mixengine.projects.copyRoot")}
-                        title={t("mixengine.projects.copyRoot")}
-                        onClick={() => void copyText(row.root)}
-                      >
-                        <CopyIcon size={13} />
-                      </Button>
-                    </span>
-                  </td>
-                  <td className={row.manifest ? undefined : styles.none}>
-                    {row.manifest ? t("mixengine.projects.present") : t("mixengine.projects.notFound")}
-                  </td>
-                  <td data-align="end" data-nowrap>
-                    <span className={styles.rowActions}>
-                      <Button size="small" onClick={() => onOpenSites(row.name)}>
-                        <GlobeIcon size={14} />
-                        {t("mixengine.projects.openSites")}
-                      </Button>
-                      <Button size="small" onClick={() => void edit(row.name)}>
-                        {t("mixengine.projects.edit")}
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => void exportManifest(row.name)}
-                        disabled={exporting !== null && exporting !== row.name}
-                        busy={exporting === row.name ? t("mixengine.projects.exporting") : undefined}
-                      >
-                        {t("mixengine.projects.exportManifest")}
-                      </Button>
-                      <Button size="small" variant="danger" onClick={() => setDeleting(row.name)}>
-                        {t("mixengine.projects.delete")}
-                      </Button>
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((row) => {
+                const open = expanded === row.name;
+                return (
+                  <Fragment key={row.name}>
+                    <tr
+                      className={open ? `${styles.row} ${styles.open}` : styles.row}
+                      onClick={(e) => rowClick(e, row.name)}
+                    >
+                      <td>
+                        <span className={styles.name}>
+                          <IconTile tone="coral">
+                            <FolderIcon size={16} />
+                          </IconTile>
+                          {row.name}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={styles.root}>
+                          <span className={styles.rootPath} title={row.root}>
+                            {row.root}
+                          </span>
+                          <Button
+                            size="small"
+                            variant="ghost"
+                            className={styles.copy}
+                            aria-label={t("mixengine.projects.copyRoot")}
+                            title={t("mixengine.projects.copyRoot")}
+                            onClick={() => void copyText(row.root)}
+                          >
+                            <CopyIcon size={13} />
+                          </Button>
+                        </span>
+                      </td>
+                      <td className={row.manifest ? undefined : styles.none}>
+                        {row.manifest ? t("mixengine.projects.present") : t("mixengine.projects.notFound")}
+                      </td>
+                      <td data-align="end" data-nowrap>
+                        <span className={styles.rowActions}>
+                          {/* At the head of the row's buttons rather than before its name, so a
+                              row here is laid out as a row on the Sites screen is. */}
+                          <Button
+                            size="small"
+                            className={open ? `${styles.details} ${styles.detailsOpen}` : styles.details}
+                            aria-expanded={open}
+                            onClick={() => void toggle(row.name)}
+                          >
+                            {t("mixengine.projects.details")}
+                            <ChevronDownIcon size={14} />
+                          </Button>
+                          <Button size="small" onClick={() => onOpenSites(row.name)}>
+                            <GlobeIcon size={14} />
+                            {t("mixengine.projects.openSites")}
+                          </Button>
+                          <Button size="small" onClick={() => void edit(row.name)}>
+                            {t("mixengine.projects.edit")}
+                          </Button>
+                          <Button
+                            size="small"
+                            onClick={() => void exportManifest(row.name)}
+                            disabled={exporting !== null && exporting !== row.name}
+                            busy={exporting === row.name ? t("mixengine.projects.exporting") : undefined}
+                          >
+                            {t("mixengine.projects.exportManifest")}
+                          </Button>
+                          <Button size="small" variant="danger" onClick={() => setDeleting(row.name)}>
+                            {t("mixengine.projects.delete")}
+                          </Button>
+                        </span>
+                      </td>
+                    </tr>
+                    {open && (
+                      <tr className={styles.detailRow}>
+                        <td colSpan={4}>
+                          {detail?.project.name === row.name ? (
+                            <ProjectDetailPanel
+                              detail={detail}
+                              siteUrl={detailUrl}
+                              terminalVisible={terminalVisible}
+                              onOpenDashboard={onOpenDashboard}
+                              adopting={adopting}
+                              onAdopt={(domain) => void adoptSite(row.name, domain)}
+                            />
+                          ) : (
+                            <LoadingState compact />
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </Table>
         )}
       </Card>
-
-      {detail && (
-        <Card
-          title={t("mixengine.projects.detail.pinsTitle")}
-          count={detail.project.name}
-          actions={
-            <Button size="small" onClick={() => setDetail(null)}>
-              {t("common.close")}
-            </Button>
-          }
-        >
-          <ul className={styles.pins}>
-            {formatPins(detail.pins).map((pin) => (
-              <li key={pin.kind}>
-                <strong>{pin.kind}</strong> <code>{pin.constraint}</code> —{" "}
-                {pin.sourceLabel === "manifest"
-                  ? t("mixengine.projects.detail.sourceManifest", { path: pin.sourcePath ?? "" })
-                  : t("mixengine.projects.detail.sourceRow")}
-                {pin.resolvedVersion
-                  ? ` → ${pin.resolvedVersion}`
-                  : pin.hint
-                    ? ` — ${t("mixengine.projects.detail.unresolved", { hint: pin.hint })}`
-                    : ""}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {detail && declaredSiteRows(detail.declared_sites).length > 0 && (
-        <Card
-          title={t("mixengine.projects.detail.declaredTitle")}
-          description={t("mixengine.projects.detail.declaredDescription")}
-          count={detail.project.name}
-          flush
-        >
-          <Table aria-label={t("mixengine.projects.detail.declaredTitle")}>
-            <thead>
-              <tr>
-                <th>{t("mixengine.projects.detail.declaredColumnDomain")}</th>
-                <th>{t("mixengine.projects.detail.declaredColumnState")}</th>
-                <th data-align="end">{t("mixengine.sites.columnActions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {declaredSiteRows(detail.declared_sites).map((site) => (
-                <tr key={site.domain}>
-                  <td>
-                    <code>{site.domain}</code>
-                  </td>
-                  <td>
-                    {site.status === "here" && (
-                      <StatusPill tone="success">
-                        {t("mixengine.projects.detail.declaredHere")}
-                      </StatusPill>
-                    )}
-                    {site.status === "missing" && (
-                      <StatusPill tone="neutral">
-                        {t("mixengine.projects.detail.declaredMissing")}
-                      </StatusPill>
-                    )}
-                    {site.status === "elsewhere" && (
-                      <StatusPill tone="warning">
-                        {t("mixengine.projects.detail.declaredElsewhere", { owner: site.owner ?? "" })}
-                      </StatusPill>
-                    )}
-                  </td>
-                  <td data-align="end">
-                    {site.canAdd && (
-                      <Button
-                        size="small"
-                        onClick={() => void adoptSite(detail.project.name, site.domain)}
-                        busy={
-                          adopting === site.domain
-                            ? t("mixengine.projects.detail.declaredAdding")
-                            : undefined
-                        }
-                      >
-                        {t("mixengine.projects.detail.declaredAdd")}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </Card>
-      )}
-
-      {detail?.next_steps && (
-        <Card title={t("mixengine.projects.detail.stepsTitle")} count={detail.project.name}>
-          <NextStepsPanel
-            project={detail.project.name}
-            root={detail.project.root}
-            siteUrl={detailUrl}
-            steps={detail.next_steps}
-            terminalVisible={terminalVisible}
-            onShowDatabase={onOpenDashboard}
-            titled={false}
-          />
-        </Card>
-      )}
 
       {creating && (
         <ProjectForm
@@ -366,7 +328,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
           onSaved={() => {
             // Pins are what an edit changes, so a panel open on this project is closed rather than
             // left showing the old ones — and re-reading it by name would fail after a rename.
-            if (detail?.project.name === editing.project.name) setDetail(null);
+            if (expanded === editing.project.name) setExpanded(null);
             setEditing(null);
             void reload();
           }}

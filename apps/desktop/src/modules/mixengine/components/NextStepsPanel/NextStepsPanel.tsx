@@ -5,15 +5,17 @@ import Button from "../../../../components/Button";
 import NoticeBanner from "../../../../components/NoticeBanner";
 import StatusPill from "../../../../components/StatusPill";
 import { copyText } from "../../../../core/clipboard";
+import { callModuleAction } from "../../../../core/moduleActions";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { AppliedDatabase, NextStep, NextSteps } from "@mixengine/api";
 import {
-  draftState,
   oneShotState,
   openAddress,
   requiredRuns,
+  targetToSave,
+  TERMINAL_MODULE_ID,
   type Toolchain,
 } from "../../nextSteps";
 import styles from "./NextStepsPanel.module.css";
@@ -56,6 +58,11 @@ export default function NextStepsPanel({
   // Where the project's runtimes are, for the shell a step runs in (D9). `null` while it is read.
   const [toolchain, setToolchain] = useState<Toolchain | null>(null);
   const [password, setPassword] = useState<string | null>(null);
+  /** The database service's port, read from `service.list`: a framework's settings need it, and
+   *  `BlueprintApplied.database` does not carry it. */
+  const [port, setPort] = useState<number | null>(null);
+  /** The `serve` lines saved as Terminal targets while this panel has been up. */
+  const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -69,6 +76,23 @@ export default function NextStepsPanel({
       live = false;
     };
   }, [t]);
+
+  const service = database?.service ?? null;
+  useEffect(() => {
+    if (service === null) return;
+    let live = true;
+    api
+      .services()
+      .then((list) => {
+        const row = list.services.find((candidate) => candidate.id === service);
+        if (live) setPort(row?.port ?? null);
+      })
+      // Without it the block still names the host, the database and the account.
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [service]);
 
   const required = requiredRuns(steps.steps);
   const wantsCredentials = steps.steps.some((step) => step.credentials === true);
@@ -88,6 +112,18 @@ export default function NextStepsPanel({
       oneShotState(required.first, root, toolchain, steps.trusted),
       ...required.furtherServes.map((serve) => oneShotState([serve], root, toolchain, steps.trusted)),
     ]);
+  }
+
+  /** Saves the line as a Terminal target, here and now — no tab is opened over this panel. */
+  async function save(run: string) {
+    if (toolchain === null) return;
+    setError("");
+    try {
+      await callModuleAction(TERMINAL_MODULE_ID, "saveTarget", targetToSave(project, root, run, toolchain));
+      setSaved((current) => new Set(current).add(run));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
   }
 
   async function reveal() {
@@ -156,15 +192,10 @@ export default function NextStepsPanel({
           {step.kind === "serve" && (
             <Button
               size="small"
-              disabled={toolchain === null}
-              onClick={() =>
-                toolchain &&
-                void hand([draftState(project, root, run, toolchain, steps.trusted)])
-              }
+              disabled={toolchain === null || saved.has(run)}
+              onClick={() => void save(run)}
             >
-              {terminalVisible
-                ? t("mixengine.nextSteps.save")
-                : t("mixengine.nextSteps.saveEnabling")}
+              {saved.has(run) ? t("mixengine.nextSteps.saved") : t("mixengine.nextSteps.save")}
             </Button>
           )}
         </div>
@@ -201,6 +232,7 @@ export default function NextStepsPanel({
             {(
               [
                 ["host", "127.0.0.1"],
+                ...(port === null ? [] : [["port", String(port)] as const]),
                 ["database", database.database],
                 ["user", database.user],
               ] as const

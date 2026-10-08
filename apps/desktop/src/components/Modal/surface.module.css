@@ -56,6 +56,23 @@
   overflow: hidden;
 }
 
+/* Drawn into a tab's layer (`host.tsx`) rather than over the window: placed and sized by the tab's
+   pane, and taking back the clicks the empty layer lets through. */
+.overlay.hosted,
+.dialog.hosted {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.dialog.hosted {
+  width: min(var(--dialog-width), calc(100% - 2rem));
+  max-height: calc(100% - 4rem);
+}
+
+.dialog.hosted.fixedHeight {
+  height: min(640px, calc(100% - 4rem));
+}
+
 .small {
   --dialog-width: 460px;
 }

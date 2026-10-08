@@ -108,8 +108,11 @@ const terminalEn = {
     onRestoreRun: "Run the commands",
     onRestoreType: "Type them, wait for Enter",
     onRestoreNone: "Just open",
-    draftNotice: "Check these, then save or open.",
-    restoreLocked: "Typed, not run, until you save it: it came from a blueprint nobody vouches for.",
+    onRestoreRunHint: "Typed and run as soon as the shell answers.",
+    onRestoreTypeHint: "Typed for you; press Enter to run them.",
+    onRestoreNoneHint: "The shell opens with nothing typed.",
+    advancedShow: "Advanced",
+    advancedHide: "Hide advanced",
   },
   error: {
     terminalSpawnFailed: "Could not start the shell: {{message}}",

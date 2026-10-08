@@ -1,3 +1,4 @@
+import type { ModuleAction } from "../core/moduleActions";
 import type { ComponentType, ReactNode } from "react";
 import type { ShortcutGroup } from "../core/shortcuts";
 import type { IconProps } from "../icons";
@@ -133,4 +134,7 @@ export interface ModuleDefinition {
   /** The collections this module lends to sync (the design's D5). The shell offers them and
    *  never learns what an item is — see `core/syncCollection.ts`. */
   syncable?: SyncableCollection[];
+  /** What this module lets another one ask of it, by name — `core/moduleActions.ts`. The shell
+   *  hands them over and never learns what they do. */
+  actions?: Record<string, ModuleAction>;
 }

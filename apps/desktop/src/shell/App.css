@@ -424,6 +424,8 @@ button.brand-settings.has-update::after {
 }
 
 .tab-panel {
+  /* The box a tab's dialogs are laid out in — `components/Modal/host.tsx`. */
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;

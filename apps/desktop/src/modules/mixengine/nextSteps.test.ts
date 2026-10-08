@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BlueprintApplied, NextStep } from "@mixengine/api";
-import { draftState, oneShotState, openAddress, opensByItself, requiredRuns } from "./nextSteps";
+import { oneShotState, targetToSave, openAddress, opensByItself, requiredRuns } from "./nextSteps";
 
 const once = (run: string, optional = false): NextStep => ({ kind: "once", run, optional });
 const serve = (run: string, optional = false): NextStep => ({ kind: "serve", run, optional });
@@ -55,14 +55,13 @@ describe("terminal states", () => {
     });
   });
 
-  it("a draft starts typed-not-run, and locked when untrusted", () => {
-    expect(draftState("shop", "/p", "npm run dev", toolchain, false)).toEqual({
-      kind: "draft",
-      target: {
-        name: "shop · npm run dev", shellName: "", cwd: "/p",
-        env: { MIXENGINE_HOME: toolchain.home }, pathPrepend: [toolchain.bin],
-        runOnConnect: "npm run dev", onRestore: "type", lockRestore: true,
-      },
+  /* What *Save as Terminal target* asks the Terminal to save: a dev server's line, typed and left
+     for Enter when the tab comes back, so reopening MixLab never starts a server by itself. */
+  it("a target to save is the serve line, typed-not-run on restore", () => {
+    expect(targetToSave("shop", "/p", "npm run dev", toolchain)).toEqual({
+      name: "shop · npm run dev", shellName: "", cwd: "/p",
+      env: { MIXENGINE_HOME: toolchain.home }, pathPrepend: [toolchain.bin],
+      runOnConnect: "npm run dev", onRestore: "type",
     });
   });
 });

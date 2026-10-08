@@ -108,8 +108,11 @@ const terminalVi: TerminalDict = {
     onRestoreRun: "Chạy lệnh",
     onRestoreType: "Gõ sẵn, chờ Enter",
     onRestoreNone: "Chỉ mở",
-    draftNotice: "Xem lại rồi lưu hoặc mở.",
-    restoreLocked: "Chỉ gõ sẵn, không tự chạy, cho tới khi bạn lưu: nó đến từ một blueprint chưa ai ký.",
+    onRestoreRunHint: "Gõ và chạy ngay khi shell sẵn sàng.",
+    onRestoreTypeHint: "Gõ sẵn, bạn nhấn Enter để chạy.",
+    onRestoreNoneHint: "Mở shell, không gõ gì.",
+    advancedShow: "Nâng cao",
+    advancedHide: "Ẩn phần nâng cao",
   },
   error: {
     terminalSpawnFailed: "Không khởi động được shell: {{message}}",
