@@ -48,24 +48,19 @@ export function oneShotState(lines: string[], root: string, toolchain: Toolchain
   return { kind: "local", shellName: "", cwd: root, ...environment(toolchain), run: lines, press };
 }
 
-/** The Terminal's draft state for one `serve` step (D11). */
-export function draftState(
-  project: string,
-  root: string,
-  serve: string,
-  toolchain: Toolchain,
-  trusted: boolean,
-): unknown {
+/**
+ * The target *Save as Terminal target* asks the Terminal module to save for one `serve` step
+ * (D11): its `saveTarget` action, through `core/moduleActions.ts`. Saved there and then, with no
+ * tab opened over what the person is reading. `onRestore: "type"` whatever the trust: a tab that
+ * comes back with MixLab types the server's line and waits, so a launch never starts one by itself.
+ */
+export function targetToSave(project: string, root: string, serve: string, toolchain: Toolchain): unknown {
   return {
-    kind: "draft",
-    target: {
-      name: `${project} · ${serve}`,
-      shellName: "",
-      cwd: root,
-      ...environment(toolchain),
-      runOnConnect: serve,
-      onRestore: "type",
-      ...(trusted ? {} : { lockRestore: true }),
-    },
+    name: `${project} · ${serve}`,
+    shellName: "",
+    cwd: root,
+    ...environment(toolchain),
+    runOnConnect: serve,
+    onRestore: "type",
   };
 }

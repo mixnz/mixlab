@@ -28,12 +28,18 @@ export function answerSubjectFor(step: PlanStep): AnswerSubject | null {
   return null;
 }
 
-/** `-1` when the plan has no scaffold step — a `run_scaffold`, or since T205 a `fetch_archive`;
- *  there is always at most one in a plan. */
+/** `-1` when the plan has no scaffold step to agree to — a `run_scaffold`, or since T205 a
+ *  `fetch_archive`; there is always at most one in a plan. A starter planned `satisfied` over a
+ *  full folder will not run, so it asks nothing. */
 export function scaffoldStepIndex(steps: PlanStep[]): number {
   return steps.findIndex(
-    (step) => step.action.action === "run_scaffold" || step.action.action === "fetch_archive",
+    (step) => isScaffoldAction(step) && step.disposition.disposition !== "satisfied",
   );
+}
+
+/** Whether the step is the blueprint's own command or archive, whatever its disposition. */
+export function isScaffoldAction(step: PlanStep): boolean {
+  return step.action.action === "run_scaffold" || step.action.action === "fetch_archive";
 }
 
 /**

@@ -9,6 +9,7 @@ import * as api from "../../api";
 import type { BlueprintApplied } from "@mixengine/api";
 import { describePlanAction, failedSteps } from "../../blueprintPlan";
 import { openAddress, opensByItself } from "../../nextSteps";
+import { requestProjectDetail } from "../../projectsNavigation";
 import { siteUrl } from "../../siteState";
 import ElevationDialog from "../ElevationDialog";
 import NextStepsPanel from "../NextStepsPanel";
@@ -92,6 +93,11 @@ export default function AfterApply({ applied, onFinished, terminalVisible }: Pro
   // Opened once, whatever re-renders follow.
   const openedByItself = useRef(false);
   const nextSteps = applied.next_steps ?? null;
+
+  // The project just made is the one the Projects screen opens on next, with its steps — T205.
+  useEffect(() => {
+    if (phase.kind === "ready") requestProjectDetail(applied.project);
+  }, [phase.kind, applied.project]);
 
   useEffect(() => {
     if (phase.kind !== "ready" || phase.url === null || openedByItself.current) return;

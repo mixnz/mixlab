@@ -4,6 +4,7 @@ import { useTranslation } from "../../i18n";
 import { CloseIcon } from "../../icons";
 import Button from "../Button";
 import { isUnhandledEscape, useDialogExit } from "../dialogMotion";
+import { hostShown, useDialogHost } from "./host";
 import { actionVariant, arrangeActions, type ModalAction } from "./actions";
 import { FOCUSABLE, nextFocusIndex } from "./focus";
 import surface from "./surface.module.css";
@@ -59,9 +60,11 @@ interface ModalProps {
  * dialog left the user with no focus at all, which for anyone on a keyboard means starting again
  * from the top of the document.
  *
- * Rendered into `document.body` rather than in place: the dialog is fixed to the viewport, and a
- * caller deep inside a scrolling panel shouldn't have to care whether some ancestor of theirs
- * establishes a containing block for it.
+ * Rendered into a layer rather than in place, so a caller deep inside a scrolling panel shouldn't
+ * have to care whether some ancestor of theirs establishes a containing block for it. **Which
+ * layer is decided by where it was opened** (`host.tsx`): one opened in a tab is drawn over that
+ * tab's pane and hides with it, so it never holds the whole window; one opened anywhere else is
+ * drawn into `document.body`, over the window.
  */
 function Modal({
   title,
@@ -78,17 +81,29 @@ function Modal({
   children,
 }: ModalProps) {
   const { t } = useTranslation();
-  const { close, cls, onEntered } = useDialogExit(question);
+  const host = useDialogHost();
+  /* Inside a tab whose layer has not mounted yet: wait that one commit rather than open over the
+     window and then move. */
+  const waiting = host !== null && host.element === null;
+  /* Read by the window's listeners and by the shortcut count, which outlive any one render. */
+  const hostRef = useRef(host);
+  hostRef.current = host;
+  const shown = useRef(() => {
+    const current = hostRef.current;
+    return current === null || (current.element !== null && hostShown(current.element));
+  }).current;
+  const { close, cls, onEntered } = useDialogExit(question, shown);
   const dialog = useRef<HTMLDivElement | null>(null);
   const quiet = locked || !closable;
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (isUnhandledEscape(e) && !quiet) close(onClose);
+      // A dialog in a tab out of sight is not the one Escape is for.
+      if (isUnhandledEscape(e) && !quiet && shown()) close(onClose);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [close, onClose, quiet]);
+  }, [close, onClose, quiet, shown]);
 
   /**
    * Focus in on the way up, and back where it was on the way out.
@@ -103,6 +118,7 @@ function Modal({
    * it, closing a dialog drops focus onto `<body>` and the next Tab starts at the top of the app.
    */
   useEffect(() => {
+    if (waiting) return;
     const returnTo = document.activeElement as HTMLElement | null;
     const box = dialog.current;
     if (box && !box.contains(document.activeElement)) {
@@ -113,7 +129,7 @@ function Modal({
       // a row the dialog itself has just deleted.
       if (returnTo?.isConnected) returnTo.focus();
     };
-  }, []);
+  }, [waiting]);
 
   /** Tab, kept inside. On the dialog rather than on the window, so a press that reaches here is
    *  one nothing inside the dialog wanted for itself. */
@@ -152,16 +168,20 @@ function Modal({
     );
   }
 
+  if (waiting) return null;
+  const hosted = host?.element ?? null;
+
   const row = actions === undefined ? null : arrangeActions(actions);
   const layerStyle =
     layer === undefined ? undefined : ({ "--dialog-layer": layer } as CSSProperties);
   const panel = [surface.dialog, surface[size]];
   if (fixedHeight) panel.push(surface.fixedHeight);
+  if (hosted) panel.push(surface.hosted);
 
   return createPortal(
     <>
       <div
-        className={cls(surface.overlay)}
+        className={cls(hosted ? `${surface.overlay} ${surface.hosted}` : surface.overlay)}
         style={layerStyle}
         onClick={quiet ? undefined : () => close(onClose)}
       />
@@ -209,7 +229,7 @@ function Modal({
         )}
       </div>
     </>,
-    document.body,
+    hosted ?? document.body,
   );
 }
 

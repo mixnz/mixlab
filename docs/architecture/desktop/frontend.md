@@ -47,6 +47,20 @@ and no event bus. It keeps exactly one thing for a module: an opaque per-tab slo
 `onStateChange`, which the shell writes to `localStorage` with the session and never reads. See
 [overview](overview.md) and [adding-a-module](../../standards/desktop/adding-a-module.md).
 
+**Two ways one module reaches another, and neither is an import.** A request for a *tab* goes
+through the launch queue (`crate::launch::request`), and the state it carries is validated by the
+receiving module as any restored tab's is. A request that opens nothing goes through a **module
+action**: `ModuleDefinition.actions` lends named functions, the registry hands them to
+[`core/moduleActions.ts`](../../../apps/desktop/src/core/moduleActions.ts), and a caller names the
+lender's id and the action. The Terminal's `saveTarget` is the first, called by MixEngine's
+*Save as Terminal target* (T205).
+
+**A dialog belongs to its tab.** Each tab's pane carries a layer
+([`components/Modal/host.tsx`](../../../apps/desktop/src/components/Modal/host.tsx), provided by
+`Workspace`), and a `Modal` opened inside a tab is drawn into it: it covers that tab and not the
+tab strip, hides when another tab comes to the front, and is there again on the way back. One
+opened outside every tab, such as the Settings dialog, still covers the window.
+
 **The boundary is not typechecked.** A primitive that imports from `modules/db/` compiles fine.
 What catches it is a grep, which is part of adding a module.
 
@@ -159,7 +173,8 @@ table cannot describe an app that does not exist.
   `Ctrl+A` from painting the app blue behind an open dialog, which is what the shell used to do
   unconditionally.
 - **Context comes from three places, none of them a guess:** `enabled` is the pane's own React
-  state, `modalDepth` is counted by [`dialogMotion`](../../../apps/desktop/src/components/dialogMotion.ts) and
+  state, `modalDepth` (only the dialogs on screen: one in a tab out of sight is not counted) is
+  counted by [`dialogMotion`](../../../apps/desktop/src/components/dialogMotion.ts) and
   [`ContextMenu`](../../../apps/desktop/src/components/ContextMenu.tsx), and `typing` is
   [`textEntry`](../../../apps/desktop/src/core/textEntry.ts). No component scans the document for `[role="dialog"]`
   any more.

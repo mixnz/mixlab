@@ -6254,12 +6254,18 @@ fn agreed_to_scaffold(
     json: bool,
 ) -> Result<Option<ScaffoldConsent>, Error> {
     // **A command or an archive** — roadmap task **T205**, D2. What is shown and agreed to is the
-    // command, or the archive's URL; the consent names whichever it was.
-    let Some((command, archive)) = plan.steps.iter().find_map(|step| match &step.action {
-        PlanAction::RunScaffold { command } => Some((command.clone(), false)),
-        PlanAction::FetchArchive { url, .. } => Some((url.clone(), true)),
-        _ => None,
-    }) else {
+    // command, or the archive's URL; the consent names whichever it was. A starter planned
+    // `Satisfied` over a full folder will not run, so there is nothing to agree to.
+    let Some((command, archive)) = plan
+        .steps
+        .iter()
+        .filter(|step| step.disposition != mixengine_proto::Disposition::Satisfied)
+        .find_map(|step| match &step.action {
+            PlanAction::RunScaffold { command } => Some((command.clone(), false)),
+            PlanAction::FetchArchive { url, .. } => Some((url.clone(), true)),
+            _ => None,
+        })
+    else {
         return Ok(None);
     };
 
@@ -7315,6 +7321,37 @@ mod tests {
         assert_eq!(consent.archive.as_deref(), Some(url));
         assert_eq!(consent.command, "");
         assert!(!consent.untrusted);
+    }
+
+    /// **A starter skipped over a full folder asks nothing** — roadmap task **T205**. `php-mysql`
+    /// and `static` plan their archive `Satisfied` over a cloned repository, so there is nothing to
+    /// agree to: no `[y/N]` is printed for a step that will not run, and `--run-scaffold` spends
+    /// no consent on it.
+    #[test]
+    fn a_satisfied_archive_asks_for_no_consent() {
+        let url = "https://x.org/static-starter.zip";
+        let plan = BlueprintPlan {
+            blueprint: "static".to_owned(),
+            project: "site".to_owned(),
+            root: "/tmp/site".to_owned(),
+            steps: vec![mixengine_proto::PlanStep {
+                action: PlanAction::FetchArchive {
+                    url: url.to_owned(),
+                    strip: Some("static".to_owned()),
+                },
+                disposition: mixengine_proto::Disposition::Satisfied,
+                elevates: false,
+            }],
+            source: mixengine_proto::BlueprintSource::Builtin,
+            trusted: true,
+            signature: None,
+        };
+
+        assert!(
+            agreed_to_scaffold(&plan, true, false, false)
+                .expect("no question")
+                .is_none()
+        );
     }
 
     /// T182e. The uninstaller reads `mix` through `nsExec`, which decodes in the ANSI code page, so

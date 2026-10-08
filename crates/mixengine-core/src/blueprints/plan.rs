@@ -380,6 +380,10 @@ pub async fn plan(
                     archive.url
                 ),
             }
+        } else if archive.when_empty && occupied(root).is_some() {
+            // **A starter steps aside for code already there**: a cloned folder keeps its own
+            // files, and the apply goes on around them.
+            Disposition::Satisfied
         } else {
             match archive.needs_empty_dir.then(|| occupied(root)).flatten() {
                 Some(reason) => Disposition::Blocked { reason },
@@ -2344,8 +2348,65 @@ mod tests {
             url: url.to_owned(),
             strip: Some("wordpress".to_owned()),
             needs_empty_dir: true,
+            when_empty: false,
         });
         manifest
+    }
+
+    /// A starter unpacked only into an empty folder: `php-mysql`'s and `static`'s shape.
+    fn starting(url: &str) -> crate::blueprints::manifest::BlueprintManifest {
+        let mut manifest = a_manifest();
+        manifest.archive = Some(crate::blueprints::manifest::Archive {
+            url: url.to_owned(),
+            strip: Some("static".to_owned()),
+            needs_empty_dir: false,
+            when_empty: true,
+        });
+        manifest
+    }
+
+    /// **A starter steps aside for code already there** — roadmap task **T205**. A folder somebody
+    /// cloned keeps its own `index.html`; the archive is neither unpacked over it nor a reason to
+    /// stop the apply.
+    #[tokio::test]
+    async fn a_starter_into_a_full_directory_is_satisfied() {
+        let (temp, store) = home().await;
+        let root = temp.path().join("site");
+        std::fs::create_dir_all(&root).expect("root");
+        std::fs::write(root.join("index.html"), "mine").expect("a file");
+
+        let planned = planned_for(
+            &store,
+            &temp,
+            &root,
+            starting("https://x.org/static-starter.zip"),
+        )
+        .await;
+        let step = step_of(&planned, |action| {
+            matches!(action, PlanAction::FetchArchive { .. })
+        });
+        assert_eq!(step.disposition, Disposition::Satisfied);
+    }
+
+    #[tokio::test]
+    async fn a_starter_into_an_empty_directory_is_agreed_to() {
+        let (temp, store) = home().await;
+        let planned = planned_for(
+            &store,
+            &temp,
+            &temp.path().join("site"),
+            starting("https://x.org/static-starter.zip"),
+        )
+        .await;
+        let step = step_of(&planned, |action| {
+            matches!(action, PlanAction::FetchArchive { .. })
+        });
+        assert_eq!(
+            step.disposition,
+            Disposition::Confirm {
+                what: "https://x.org/static-starter.zip".to_owned()
+            }
+        );
     }
 
     async fn planned_for(

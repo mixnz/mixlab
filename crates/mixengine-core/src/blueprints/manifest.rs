@@ -218,6 +218,13 @@ pub struct Archive {
 
     /// Whether the directory must be empty; the same meaning as [`Scaffold::needs_empty_dir`].
     pub needs_empty_dir: bool,
+
+    /// Whether the archive is unpacked only into an empty directory and skipped over a full one —
+    /// a starter, which a folder somebody cloned has no use for (T205, `php-mysql` and `static`).
+    ///
+    /// Where [`Archive::needs_empty_dir`] blocks the apply, this plans the step `Satisfied`: the
+    /// code already there is the code the site serves, and nothing of it is overwritten.
+    pub when_empty: bool,
 }
 
 /// The file as TOML says it, before the rules of D2 and D4 are checked.
@@ -252,6 +259,8 @@ struct RawScaffold {
     needs_empty_dir: bool,
     #[serde(default)]
     needs_npm_safe_dir: bool,
+    #[serde(default)]
+    when_empty: bool,
 }
 
 /// The longest `run` a step may carry (D4).
@@ -275,6 +284,13 @@ impl TryFrom<RawManifest> for BlueprintManifest {
                 (None, None) => {
                     return Err("[scaffold] names neither a command nor an archive".to_owned());
                 }
+                (Some(_), None) if table.when_empty => {
+                    return Err(
+                        "[scaffold] when_empty describes an archive, and this scaffold \
+                                is a command"
+                            .to_owned(),
+                    );
+                }
                 (Some(command), None) => (
                     Some(Scaffold {
                         command,
@@ -296,6 +312,12 @@ impl TryFrom<RawManifest> for BlueprintManifest {
                                 .to_owned(),
                         );
                     }
+                    if table.when_empty && table.needs_empty_dir {
+                        return Err("[scaffold] when_empty skips the archive over a full \
+                                    directory and needs_empty_dir blocks the apply there; it \
+                                    takes one"
+                            .to_owned());
+                    }
                     if let Some(strip) = &table.strip
                         && !super::archive::is_folder_name(strip)
                     {
@@ -310,6 +332,7 @@ impl TryFrom<RawManifest> for BlueprintManifest {
                             url,
                             strip: table.strip,
                             needs_empty_dir: table.needs_empty_dir,
+                            when_empty: table.when_empty,
                         }),
                     )
                 }
@@ -681,6 +704,9 @@ pub fn render(manifest: &BlueprintManifest) -> String {
         }
         if archive.needs_empty_dir {
             table["needs_empty_dir"] = value(true);
+        }
+        if archive.when_empty {
+            table["when_empty"] = value(true);
         }
         document["scaffold"] = Item::Table(table);
     }
@@ -1061,6 +1087,7 @@ doc_root = "public"
                 url: "https://wordpress.org/latest.zip".to_owned(),
                 strip: Some("wordpress".to_owned()),
                 needs_empty_dir: true,
+                when_empty: false,
             })
         );
         assert_eq!(schema_of(&manifest), 2);
@@ -1088,6 +1115,40 @@ doc_root = "public"
     fn a_scaffold_with_neither_is_refused() {
         let text = with_scaffold("needs_empty_dir = true");
         assert!(refusal(&text).contains("neither"), "{}", refusal(&text));
+    }
+
+    /// **`when_empty` reads, renders and round-trips** — a starter that is unpacked only into an
+    /// empty folder and skipped over a clone (T205, `php-mysql` and `static`).
+    #[test]
+    fn an_archive_unpacked_only_when_empty_round_trips() {
+        let text = with_scaffold(
+            "archive = \"https://x.org/a-starter.zip\"\nstrip = \"a\"\nwhen_empty = true",
+        );
+        let manifest = read(&text).expect("reads");
+
+        let archive = manifest.archive.as_ref().expect("an archive");
+        assert!(archive.when_empty);
+        assert!(!archive.needs_empty_dir);
+        assert!(render(&manifest).contains("when_empty = true"));
+        assert_eq!(read(&render(&manifest)).expect("round trip"), manifest);
+    }
+
+    /// **`when_empty` and `needs_empty_dir` contradict each other**: one skips the archive over a
+    /// full folder, the other blocks the apply there.
+    #[test]
+    fn when_empty_beside_needs_empty_dir_is_refused() {
+        let text = with_scaffold(
+            "archive = \"https://x.org/a.zip\"\nneeds_empty_dir = true\nwhen_empty = true",
+        );
+        assert!(refusal(&text).contains("when_empty"), "{}", refusal(&text));
+    }
+
+    /// **`when_empty` describes an archive.** A command that skipped itself over a full folder
+    /// would be a scaffold that silently did nothing where it is most often run.
+    #[test]
+    fn when_empty_on_a_command_is_refused() {
+        let text = with_scaffold("command = \"composer install\"\nwhen_empty = true");
+        assert!(refusal(&text).contains("when_empty"), "{}", refusal(&text));
     }
 
     #[test]

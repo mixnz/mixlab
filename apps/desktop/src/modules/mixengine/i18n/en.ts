@@ -132,13 +132,17 @@ export default {
       none: "Nothing left to adopt.",
     },
     nextSteps: {
+      devkitMissing:
+        "This project's Ruby cannot build gems with C extensions yet, and these steps need it. Install the devkit first.",
+      devkitInstalling: "Installing the devkit",
+      devkitFirst: "Install the devkit first",
       title: "What is left to do",
       runRequired: "Run the required steps",
       runRequiredEnabling: "Turn on Terminal and run the required steps",
       run: "Run",
       runEnabling: "Turn on Terminal and run",
       save: "Save as Terminal target",
-      saveEnabling: "Turn on Terminal and save",
+      saved: "Saved in Terminal",
       copy: "Copy",
       open: "Open",
       optional: "optional",
@@ -146,6 +150,7 @@ export default {
         "These come from a blueprint nobody vouches for. Run types them and waits for Enter.",
       credentialsTitle: "The database this project uses",
       host: "Host",
+      port: "Port",
       database: "Database",
       user: "User",
       password: "Password",
@@ -260,6 +265,8 @@ export default {
       cannotPromptReason: "This machine cannot raise a permission prompt right now: {{reason}}",
     },
     projects: {
+      rowMenu: "More actions",
+      details: "Details",
       newProject: "New project",
       about: "Folders on this computer that MixEngine serves as local sites.",
       copyRoot: "Copy the project's folder path",
@@ -340,6 +347,9 @@ export default {
         yjit: "no YJIT",
         devkitInstalled: "builds native gems with the devkit",
         installDevkit: "Install devkit ({{size}})",
+        devkitAbout:
+          "Ruby on Windows needs the devkit to build gems with C extensions, such as Rails'. One install serves every Ruby version.",
+        devkitReady: "The devkit is installed: every Ruby here builds gems with C extensions.",
       },
       tabLanguages: "Languages",
       about: "Languages, servers and the versions of each this machine keeps.",
@@ -519,7 +529,6 @@ export default {
     },
     sites: {
       nextSteps: "What to run",
-      noNextSteps: "This site's project has no steps from a blueprint.",
       columnDomain: "Domain",
       columnOwner: "Owner",
       columnKind: "Kind",
@@ -832,6 +841,10 @@ export default {
         choiceUseInstalled: "Use the installed version instead",
         scaffoldTitle: "This blueprint wants to run a command:",
         archiveTitle: "It downloads and unpacks into the project directory:",
+        archiveSkipped: "The folder already has files, so the starter is not unpacked. Your files stay as they are.",
+        devkitTitle:
+          "This blueprint's Ruby cannot build gems with C extensions on this machine, and its steps need them.",
+        devkitConsent: "Install the devkit with it ({{size}})",
         scaffoldUntrusted: "Nobody has vouched for this blueprint. Review the command before agreeing.",
         scaffoldConsent: "I've read the command above and agree to run it",
         scaffoldDeclined:

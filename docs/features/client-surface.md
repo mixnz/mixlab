@@ -202,8 +202,9 @@ binaries. What they state is what the daemon **writes** —
    command line writes its own. **What is left after an apply** (T205): a `FetchArchive` step is
    consented to like a `RunScaffold`, naming the URL; `BlueprintApplied.next_steps` and
    `ProjectDetail.next_steps` carry the commands the blueprint says end at a working site, and a
-   client shows them with their trust. MixLab draws them after an apply, on the Projects screen and
-   from a site's menu on the Sites screen, and hands each to a Terminal tab rather than running it.
+   client shows them with their trust. MixLab draws them after an apply and in a project's row on
+   the Projects screen, where a site's *What to run* on the Sites screen leads, and hands each to a
+   Terminal tab rather than running it.
 7a. **Taking MixEngine off this machine is not a screen of a graphical client**
    ([ADR 0051](../decisions/0051-an-uninstall-ends-what-it-undoes.md)). A finished uninstall ends
    the daemon, so a window offering one would outlive what it undid. It belongs to the Windows

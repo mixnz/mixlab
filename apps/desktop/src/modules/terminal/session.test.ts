@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  openingFor,
   openingKeystrokes,
   terminalBadgeMarks,
   terminalTarget,
@@ -156,5 +157,21 @@ describe("openingKeystrokes", () => {
   it("types without Enter when asked not to press it", () => {
     expect(openingKeystrokes("npm run dev", false)).toBe("npm run dev");
     expect(openingKeystrokes("a\nb", false)).toBe("a\rb");
+  });
+});
+
+/* Measured by hand: *Just open* and *Type them* still ran the commands when the target was opened
+   from the list, because the choice was only read when MixLab restored a tab. It is the choice for
+   every opening of the target. */
+describe("openingFor", () => {
+  it("runs the lines for run, types them for type, and sends nothing for none", () => {
+    expect(openingFor("npm run dev", "run")).toEqual({ runOnConnect: "npm run dev", press: true });
+    expect(openingFor("npm run dev", "type")).toEqual({ runOnConnect: "npm run dev", press: false });
+    expect(openingFor("npm run dev", "none")).toEqual({ runOnConnect: null, press: false });
+  });
+
+  it("reads an absent choice as run, and an empty box as nothing to send", () => {
+    expect(openingFor("ls", undefined)).toEqual({ runOnConnect: "ls", press: true });
+    expect(openingFor(undefined, "run")).toEqual({ runOnConnect: null, press: true });
   });
 });

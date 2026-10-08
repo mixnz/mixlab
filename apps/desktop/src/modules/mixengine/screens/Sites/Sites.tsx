@@ -32,20 +32,17 @@ import * as api from "../../api";
 import type { ServiceSummary } from "@mixengine/api";
 import type { SiteDetail } from "@mixengine/api";
 import type { SiteSharing } from "@mixengine/api";
-import type { ProjectDetail } from "@mixengine/api";
 import { subscribeDaemonWatch } from "../../daemonWatch";
 import {
   applySharingChange,
   canEditSite,
   formatRemaining,
-  siteUrl,
   siteVisit,
   type SiteRow,
 } from "../../siteState";
 import { takePendingSitesFilter } from "../../sitesNavigation";
 import { failureMayHaveChanged, siteFailure } from "../../failureState";
 import ShareDialog from "./ShareDialog";
-import StepsDialog from "./StepsDialog";
 import SiteForm from "./SiteForm";
 import styles from "./Sites.module.css";
 
@@ -96,14 +93,12 @@ function SharingCell({
  */
 export default function Sites({
   active,
-  terminalVisible,
+  onOpenProject,
 }: {
   active: boolean;
-  /** Whether this window draws the Terminal module, for a project's steps — T205. */
-  terminalVisible: boolean;
+  /** Over to the Projects screen with this project's row open — its steps live there (T205). */
+  onOpenProject: (project: string) => void;
 }) {
-  /** The project whose steps are shown, with the address of the site they were asked from. */
-  const [stepsFor, setStepsFor] = useState<{ detail: ProjectDetail; url: string } | null>(null);
 
   const [rows, setRows] = useState<SiteRow[]>([]);
   /** Every service, for why a site's pool could not start — T200b, D6. */
@@ -284,17 +279,6 @@ export default function Sites({
       setRows((current) =>
         current.map((row) => (row.domain === domain ? { ...row, sharing: null } : row)),
       );
-    } catch (e) {
-      setError(errorMessage(t, e));
-    }
-  }
-
-  /** The site's project and what its blueprint says is left to run — T205, D8. */
-  async function showSteps(row: SiteRow) {
-    if (row.owner.type !== "project") return;
-    try {
-      const detail = await api.projectShow(row.owner.name);
-      setStepsFor({ detail, url: siteUrl(row) });
     } catch (e) {
       setError(errorMessage(t, e));
     }
@@ -509,9 +493,9 @@ export default function Sites({
             <button
               type="button"
               onClick={() => {
-                const row = menuRow;
+                const owner = menuRow.owner;
                 setMenu(null);
-                void showSteps(row);
+                if (owner.type === "project") onOpenProject(owner.name);
               }}
             >
               <TerminalIcon size={14} />
@@ -538,15 +522,6 @@ export default function Sites({
             {t("mixengine.sites.delete")}
           </button>
         </ContextMenu>
-      )}
-
-      {stepsFor && (
-        <StepsDialog
-          detail={stepsFor.detail}
-          url={stepsFor.url}
-          terminalVisible={terminalVisible}
-          onClose={() => setStepsFor(null)}
-        />
       )}
 
       {deleting && (

@@ -40,6 +40,7 @@ import {
 } from "./storagePicker";
 import type { MixEngineScreen } from "./tabState";
 import { TERMINAL_MODULE_ID } from "./nextSteps";
+import { requestProjectDetail } from "./projectsNavigation";
 import "./mixengine.css";
 
 /** How often the gate asks whether a daemon has come up somewhere else — the tray, `mix`. */
@@ -334,7 +335,13 @@ export default function MixEngineTab({
           />
         ))}
         {pane("sites", (active) => (
-          <Sites active={active} terminalVisible={isModuleVisible(TERMINAL_MODULE_ID)} />
+          <Sites
+            active={active}
+            onOpenProject={(project) => {
+              requestProjectDetail(project);
+              selectScreen("projects");
+            }}
+          />
         ))}
         {pane("domains", (active) => <Domains active={active} />)}
         {pane("packages", (active) => <Packages active={active} />)}

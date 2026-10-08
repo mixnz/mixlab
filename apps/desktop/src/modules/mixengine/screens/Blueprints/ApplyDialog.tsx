@@ -38,6 +38,11 @@ import { applyJob, type JobRow } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
 import { applyLogFrame, type LogEntry } from "../../logState";
 import { jobFor } from "../../runtimeState";
+import { installDevkit } from "../../devkitInstall";
+import { planDevkitNeed } from "../../devkitNeed";
+import { formatBytes } from "../../metricsState";
+import { DEVKIT_PACKAGE, devkitOffer } from "../Packages/devkit";
+import type { PackageRelease } from "@mixengine/api";
 import styles from "./ApplyDialog.module.css";
 
 interface Props {
@@ -86,6 +91,11 @@ export default function ApplyDialog({
   const [scaffoldAgreed, setScaffoldAgreed] = useState(false);
   // Agreement to install what the plan's releases lack on this machine — T152.
   const [prerequisitesAgreed, setPrerequisitesAgreed] = useState(false);
+  /* A Ruby this blueprint pins that cannot build gems with C extensions, and the devkit to install
+     with the apply — T206a, asked where the decision is made. Ticked by default: the steps after
+     the apply need it, and a project made without it is half built. */
+  const [devkit, setDevkit] = useState<{ offer: PackageRelease | null } | null>(null);
+  const [devkitAgreed, setDevkitAgreed] = useState(true);
   const [busy, setBusy] = useState(false);
   /** Cancel was pressed on the running apply. Kept past the ending: an apply cancelled between two
    *  steps stops there and still **succeeds** with the steps it ran (the daemon's apply loop), so
@@ -134,6 +144,14 @@ export default function ApplyDialog({
         setScaffoldAgreed(response.plan.trusted);
         setPrerequisitesAgreed(false);
         setPhase({ kind: "plan", plan: response.plan, needs: response.needs ?? [] });
+        setDevkit(null);
+        setDevkitAgreed(true);
+        // Beside the plan and never at its expense: a listing that fails costs the offer.
+        void Promise.all([api.runtimesAvailable("ruby"), api.packagesAvailable(DEVKIT_PACKAGE)])
+          .then(([runtimes, packages]) =>
+            setDevkit(planDevkitNeed(response.plan, runtimes.runtimes, devkitOffer(packages))),
+          )
+          .catch(() => setDevkit(null));
       }
     } catch (e) {
       setError(errorMessage(t, e));
@@ -170,6 +188,11 @@ export default function ApplyDialog({
       });
       if (response.outcome === "started") {
         setPhase({ kind: "running", jobId: response.job.id });
+        // The devkit installs beside the apply, as its own job: nothing in the apply waits on it.
+        if (devkitAgreed && devkit?.offer) {
+          const offer = devkit.offer;
+          installDevkit(offer).catch((e: unknown) => setError(errorMessage(t, e)));
+        }
       }
     } catch (e) {
       setError(errorMessage(t, e));
@@ -377,8 +400,15 @@ export default function ApplyDialog({
                           </Button>
                         </div>
                       )}
+                      {step.action.action === "fetch_archive" &&
+                        step.disposition.disposition === "satisfied" && (
+                          <p className={styles.hint}>
+                            {t("mixengine.blueprints.apply.archiveSkipped")}
+                          </p>
+                        )}
                       {(step.action.action === "run_scaffold" ||
-                        step.action.action === "fetch_archive") && (
+                        step.action.action === "fetch_archive") &&
+                        i === scaffoldStepIndex(phase.plan.steps) && (
                         <div className={styles.scaffold}>
                           {step.action.action === "run_scaffold" ? (
                             <>
@@ -418,6 +448,19 @@ export default function ApplyDialog({
                     </li>
                   ))}
                 </ul>
+                {devkit?.offer && (
+                  <div className={styles.scaffold}>
+                    <p>{t("mixengine.blueprints.apply.devkitTitle")}</p>
+                    <Checkbox
+                      className={styles.checkbox}
+                      label={t("mixengine.blueprints.apply.devkitConsent", {
+                        size: formatBytes(devkit.offer.bytes),
+                      })}
+                      checked={devkitAgreed}
+                      onChange={(e) => setDevkitAgreed(e.target.checked)}
+                    />
+                  </div>
+                )}
                 <PrerequisitesNotice
                   needs={phase.needs}
                   agreed={prerequisitesAgreed}

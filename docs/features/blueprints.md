@@ -330,15 +330,26 @@ removes Django's `pip install django` and Rails' `gem install rails`, both of wh
 project using that runtime. The first rule is what removes `vite` and `strapi`: `create-vite` and
 `create-strapi-app` ask questions that no flag reliably silences, and a job with no timeout that is
 waiting on a prompt waits for good. `php-mysql` has no initialiser to run at all, which is the whole
-of what it offers. `express-mongodb` has only `express-generator`, unmaintained and a major version
-of Express behind. `laravel-mongodb` runs `laravel`'s command and no more: the `composer require
+of what it offers. `express-mongodb` would have only `express-generator`, unmaintained and a major
+version of Express behind, so it unpacks a **starter this repository writes** instead: an Express 5
+server that reads `PORT` and `MONGODB_URI` and says on its page whether MongoDB answers. Its source
+is `crates/mixengine-core/src/blueprints/starters/express-mongodb/`, and the packaging repository's
+`publish-blueprints` zips it beside the signed gallery as `express-mongodb-starter.zip`, from the
+same commit (`every_starter_archive_is_in_the_tree`). `django`'s step names a starter too: a
+`startproject --template` that is Django's own project template plus `.test` in `ALLOWED_HOSTS` and
+`https://*.test` in `CSRF_TRUSTED_ORIGINS`, since the stock template answers every page served
+through MixEngine with *DisallowedHost*. `laravel-mongodb` runs `laravel`'s command and no more: the `composer require
 mongodb/laravel-mongodb` after it would be a second command joined to the first, so it is a step
 the person runs (below). The gallery sells a stack, not a scaffold.
 
-**A blueprint with no scaffold is a complete blueprint.** Since T124 an apply that writes no source
-code ends at a page that says so, and the two things people actually do with these entries are
-served equally: apply onto an empty directory and put the code in afterwards, or clone a repository
-and apply the stack over it — which is the flow a `[scaffold]` with `needs_empty_dir` refuses.
+**A blueprint with no framework still starts with a page.** `php-mysql` and `static` unpack a
+starter page of this repository's (`starters/php-mysql/`, `starters/static/`) with
+`[scaffold] when_empty = true`, so the two things people actually do with these entries are served
+equally: apply onto an empty directory and get a page that names the blueprint and says what to
+edit, or clone a repository and apply the stack over it, where the starter is skipped (`satisfied`)
+and nothing of the clone is overwritten. `needs_empty_dir` would refuse that second flow. The three
+starter pages (`express-mongodb` too) share one look, light and dark, with nothing loaded from
+elsewhere.
 
 They double as end-to-end tests of the whole system, but **not of the cross-OS criterion below** — a
 hand-written manifest is byte-identical on all three systems, so what proves that one is a real

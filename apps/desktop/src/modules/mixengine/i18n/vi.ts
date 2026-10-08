@@ -130,13 +130,17 @@ const vi: typeof en = {
       none: "Không còn gì để nhận lại.",
     },
     nextSteps: {
+      devkitMissing:
+        "Ruby của project này chưa build được gem có phần C, mà các bước dưới cần nó. Cài devkit trước đã.",
+      devkitInstalling: "Đang cài devkit",
+      devkitFirst: "Cài devkit trước đã",
       title: "Việc còn lại",
       runRequired: "Chạy các bước bắt buộc",
       runRequiredEnabling: "Bật Terminal và chạy các bước bắt buộc",
       run: "Chạy",
       runEnabling: "Bật Terminal và chạy",
       save: "Lưu thành mục Terminal",
-      saveEnabling: "Bật Terminal và lưu",
+      saved: "Đã lưu vào Terminal",
       copy: "Sao chép",
       open: "Mở",
       optional: "không bắt buộc",
@@ -144,6 +148,7 @@ const vi: typeof en = {
         "Các lệnh này đến từ một blueprint chưa ai ký. Nút Chạy chỉ gõ sẵn và chờ bạn nhấn Enter.",
       credentialsTitle: "Cơ sở dữ liệu của project này",
       host: "Host",
+      port: "Cổng",
       database: "Cơ sở dữ liệu",
       user: "Tài khoản",
       password: "Mật khẩu",
@@ -255,6 +260,8 @@ const vi: typeof en = {
       cannotPromptReason: "Máy này hiện không thể bật lời hỏi quyền: {{reason}}",
     },
     projects: {
+      rowMenu: "Thêm hành động",
+      details: "Chi tiết",
       newProject: "Tạo project",
       about: "Các thư mục trên máy này mà MixEngine phục vụ thành site cục bộ.",
       copyRoot: "Sao chép đường dẫn thư mục của project",
@@ -335,6 +342,9 @@ const vi: typeof en = {
         yjit: "không có YJIT",
         devkitInstalled: "build gem native bằng devkit",
         installDevkit: "Cài devkit ({{size}})",
+        devkitAbout:
+          "Ruby trên Windows cần devkit để build gem có phần C, như các gem của Rails. Cài một lần, dùng cho mọi phiên bản Ruby.",
+        devkitReady: "Đã có devkit: mọi Ruby ở đây build được gem có phần C.",
       },
       tabLanguages: "Ngôn ngữ",
       about: "Ngôn ngữ, máy chủ và các phiên bản máy này đang giữ.",
@@ -514,7 +524,6 @@ const vi: typeof en = {
     },
     sites: {
       nextSteps: "Lệnh cần chạy",
-      noNextSteps: "Dự án của site này không có bước nào từ blueprint.",
       columnDomain: "Domain",
       columnOwner: "Chủ sở hữu",
       columnKind: "Loại",
@@ -822,6 +831,10 @@ const vi: typeof en = {
         choiceUseInstalled: "Dùng bản đã cài",
         scaffoldTitle: "Blueprint này muốn chạy một lệnh:",
         archiveTitle: "Nó tải về và giải nén vào thư mục dự án:",
+        archiveSkipped: "Thư mục đã có file nên bản khởi đầu không được giải nén. File của bạn giữ nguyên.",
+        devkitTitle:
+          "Ruby của blueprint này chưa build được gem có phần C trên máy này, mà các bước của nó cần.",
+        devkitConsent: "Cài devkit cùng lúc ({{size}})",
         scaffoldUntrusted: "Không ai bảo chứng cho blueprint này. Đọc kỹ lệnh trước khi đồng ý.",
         scaffoldConsent: "Tôi đã đọc lệnh trên và đồng ý chạy nó",
         scaffoldDeclined:

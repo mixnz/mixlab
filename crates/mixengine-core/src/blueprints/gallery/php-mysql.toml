@@ -1,8 +1,8 @@
-schema = 1
+schema = 2
 
 [blueprint]
 name = "PHP with MySQL"
-description = "Plain PHP on PHP-FPM with MySQL - no framework; put your index.php in the project root"
+description = "Plain PHP on PHP-FPM with MySQL - no framework; starts with an index.php in the project root"
 created_at = "2026-09-13T00:00:00Z"
 
 [blueprint.created_on]
@@ -23,3 +23,8 @@ name = "mysql"
 instance = "main"
 database = "{project}"
 user = "{project}"
+
+[scaffold]
+archive = "https://github.com/mixnz/mixengine-packages/releases/download/blueprints/php-mysql-starter.zip"
+strip = "php-mysql"
+when_empty = true

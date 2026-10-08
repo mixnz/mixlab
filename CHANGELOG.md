@@ -14,8 +14,9 @@
   such as a Windows Ruby that has no compiler.
 - Applying a blueprint ends with what is left to run, such as `npm run dev` for Next.js. In MixLab,
   Run opens each one in a Terminal tab with the project's runtimes on PATH, and Save keeps a dev
-  server as a Terminal target.
+  server in the Terminal's list.
 - The WordPress blueprint downloads and unpacks WordPress into the project, after you agree to it.
+- The PHP with MySQL and Static site blueprints start with a page of their own in an empty folder, and leave a cloned project's files alone.
 - Blueprints for CakePHP, CodeIgniter, Craft CMS, Statamic and Yii.
 - A Terminal target on this machine can set environment variables and folders ahead of PATH, and
   can choose what a tab does with its commands when it comes back: run them, type them, or just
@@ -24,6 +25,8 @@
 ### Changed
 - Applying a blueprint in MixLab sets up a web server when the home has none, and opens the site
   in your browser when nothing is left to run.
+- A dialog in MixLab covers only the tab it was opened in. You can switch to another tab and come
+  back to it as you left it.
 
 ### Fixed
 - Exporting a project with more than one site now writes every site into `mixengine.toml`, each with

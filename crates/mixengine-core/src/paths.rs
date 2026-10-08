@@ -468,7 +468,15 @@ impl Paths {
         for directory in self.directories() {
             create_dir(directory)?;
 
-            if private.contains(&directory) {
+            // **Only where the restriction is not already in force** — roadmap task **T206e**. On
+            // Windows, restricting the root rewrites the inherited permissions of every file under
+            // it, and with an installed `msys2` that is 54,000 files: every start waited minutes on
+            // `icacls` before the pipe opened. Asking is one listing of the directory itself. A
+            // question that cannot be answered falls through to the restriction, which reports
+            // what is wrong as it always has.
+            if private.contains(&directory)
+                && !access.is_restricted_to_owner(directory).unwrap_or(false)
+            {
                 access.restrict_to_owner(directory)?;
             }
         }

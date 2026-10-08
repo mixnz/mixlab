@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Button from "../components/Button";
 import LoadingOverlay from "../components/LoadingOverlay";
+import { DialogHost } from "../components/Modal";
 import ErrorBoundary from "../components/ErrorBoundary";
 import ClosingStrip from "./components/ClosingStrip";
 import SettingsModal from "./components/SettingsModal";
@@ -567,17 +568,20 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
               className={noticeModuleId ? "tab-panel tab-panel-noticed" : "tab-panel"}
               style={{ display: tab.id === activeId ? "flex" : "none" }}
             >
-              <div className="tab-panel-stack">
-                {noticeModuleId && (
-                  <TabNotice
-                    message={t("profiles.turnedOn", {
-                      module: t(moduleById(noticeModuleId).labelKey),
-                    })}
-                    onDismiss={() => setEnabledFor((prev) => forgetNotice(prev, tab.id))}
-                  />
-                )}
-                <div className="tab-panel-body">{pane}</div>
-              </div>
+              {/* The tab's dialogs are drawn over its pane and hide with it — `Modal/host.tsx`. */}
+              <DialogHost>
+                <div className="tab-panel-stack">
+                  {noticeModuleId && (
+                    <TabNotice
+                      message={t("profiles.turnedOn", {
+                        module: t(moduleById(noticeModuleId).labelKey),
+                      })}
+                      onDismiss={() => setEnabledFor((prev) => forgetNotice(prev, tab.id))}
+                    />
+                  )}
+                  <div className="tab-panel-body">{pane}</div>
+                </div>
+              </DialogHost>
             </div>
           );
         })}

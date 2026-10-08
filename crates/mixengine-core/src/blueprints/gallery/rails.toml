@@ -34,7 +34,9 @@ note = "Installs into the runtime this project pins, which its other projects sh
 kind = "once"
 run = "rails new . --database=postgresql"
 note = "It runs bundle install, which on Windows needs the same devkit."
+credentials = true
 
 [[next_steps]]
 kind = "serve"
 run = "ruby bin/rails server -p 3000"
+note = "Its pages need the database: set DATABASE_URL to postgres://user:password@127.0.0.1:port/database from the account above, or put the same in config/database.yml."

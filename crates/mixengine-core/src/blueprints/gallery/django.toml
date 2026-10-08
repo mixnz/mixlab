@@ -32,7 +32,8 @@ note = "Installs into the runtime this project pins, which its other projects sh
 
 [[next_steps]]
 kind = "once"
-run = "python -m django startproject config ."
+run = "python -m django startproject --template https://github.com/mixnz/mixengine-packages/releases/download/blueprints/django-starter.zip config ."
+note = "Django's own project template, with the .test domain in ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS."
 
 [[next_steps]]
 kind = "serve"

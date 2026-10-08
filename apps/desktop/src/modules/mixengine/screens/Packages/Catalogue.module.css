@@ -118,18 +118,43 @@ tbody tr.withUpdate > td {
 }
 
 /* What a release lacks on this machine - T151. Quiet, because most rows say nothing here. */
+/* Column five: what a release needs, then what it lacks. */
+.needsCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .needs {
   min-width: 0;
   font-size: var(--text-sm);
   color: var(--warning-text);
 }
 
+/* One mark a row, never wider than its text and never wrapped: a second line would push into the
+   row below. */
 .lacks {
-  display: inline-flex;
-  flex-wrap: wrap;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* The devkit, offered once at the head of the list (T206a). */
+.devkitNotice {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.devkitNotice > p {
+  margin: 0;
 }
 
 .install {

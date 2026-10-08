@@ -10,7 +10,7 @@ import TerminalView from "./components/TerminalView";
 import { useSavedTargets, useSavedTargetsLoaded } from "./savedTargetsStore";
 import { useTerminalSettings } from "./settingsStore";
 import { parseTerminalTabState, tabStateFor } from "./tabState";
-import { terminalBadgeMarks, terminalTarget, terminalTitle } from "./session";
+import { openingFor, terminalBadgeMarks, terminalTarget, terminalTitle } from "./session";
 import type { TerminalChoice } from "./types";
 import "./terminal.css";
 
@@ -35,12 +35,6 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
      than read live: `start` writes the new value as soon as the session opens, and reading that
      back would make the tab restore itself from itself. */
   const [restoredState] = useState(() => parseTerminalTabState(restored));
-  /* A target another module drafted for this tab — T205, D11. Shown in the form, unsaved, until
-     the person saves or opens it; the tab's stored state keeps it until then, so closing the app
-     does not lose it. */
-  const [draft, setDraft] = useState(() =>
-    restoredState?.kind === "draft" ? restoredState.target : null,
-  );
   /* Calling `useSavedTargets` here is what starts the read `useSavedTargetsLoaded` is waiting for
      — until now only `TargetForm` called it, and the form is not present while the tab is
      restoring. */
@@ -108,7 +102,6 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
   }, []);
 
   function start(next: TerminalChoice) {
-    setDraft(null);
     setLastTried(next);
     setExit(null);
     setOpening(true);
@@ -126,12 +119,6 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
      here". A dead session not yet dismissed is kept — the "session ended" screen with its
      Reconnect button is still that target's screen — and `failed` keeps it too, because a failed
      SSH is not leaving. */
-  /** The drafted target has been saved: the tab no longer holds a draft of its own. */
-  const draftSaved = useCallback(() => {
-    setDraft(null);
-    onStateChange(undefined);
-  }, [onStateChange]);
-
   function dismiss() {
     setExit(null);
     setChoice(null);
@@ -152,11 +139,6 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
      still opens its shell, just with no command left to type on its behalf. */
   useEffect(() => {
     if (restoreTried.current || restoredState === null) return;
-    // A draft opens no session: the form shows it, from `draft` above.
-    if (restoredState.kind === "draft") {
-      restoreTried.current = true;
-      return;
-    }
 
     if (restoredState.kind === "ssh") {
       if (!savedTargetsLoaded) return;
@@ -169,13 +151,11 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
       // `config` here is already complete — `savedTargets.ts` merges the secrets from the keyring
       // in before handing it out. What the restored tab does with its commands is the entry's
       // `onRestore` — T205, D10.
-      const onRestore = entry.onRestore ?? "run";
       start({
         kind: "ssh",
         config: entry.config,
         targetId: entry.id,
-        runOnConnect: onRestore === "none" ? null : (entry.runOnConnect ?? null),
-        press: onRestore === "run",
+        ...openingFor(entry.runOnConnect, entry.onRestore),
       });
       return;
     }
@@ -220,14 +200,12 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
           });
           return;
         }
-        const onRestore = saved?.onRestore ?? "run";
         start({
           kind: "local",
           shell,
           cwd: restoredState.cwd,
           targetId: saved?.id ?? null,
-          runOnConnect: onRestore === "none" || local === undefined ? null : (local.runOnConnect ?? null),
-          press: onRestore === "run",
+          ...openingFor(local?.runOnConnect, local?.onRestore),
           // The live entry's, where there is one: editing it makes every tab pointing at it follow.
           env: local ? (local.env ?? null) : (restoredState.env ?? null),
           pathPrepend: local ? (local.pathPrepend ?? null) : (restoredState.pathPrepend ?? null),
@@ -283,13 +261,7 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
           )}
         </>
       ) : (
-        <TargetForm
-          onOpen={start}
-          onError={showError}
-          initial={lastTried}
-          draft={draft}
-          onDraftSaved={draftSaved}
-        />
+        <TargetForm onOpen={start} onError={showError} initial={lastTried} />
       )}
     </div>
   );

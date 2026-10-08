@@ -110,17 +110,6 @@ describe("parseTerminalTabState", () => {
     expect(state).toEqual({ kind: "local", shellName: "pwsh", cwd: "/p", targetId: undefined, env: { A: "1" }, pathPrepend: ["/b"] });
   });
 
-  /* T205, D11: a target another module drafts, for the person to check and save. */
-  it("reads a draft and refuses one with no name or cwd", () => {
-    const target = {
-      name: "shop · npm run dev", shellName: "", cwd: "/p", env: {}, pathPrepend: [],
-      runOnConnect: "npm run dev", onRestore: "type",
-    };
-    expect(parseTerminalTabState({ kind: "draft", target })).toEqual({ kind: "draft", target });
-    expect(parseTerminalTabState({ kind: "draft", target: { ...target, name: "" } })).toBeNull();
-    expect(parseTerminalTabState({ kind: "draft", target: { ...target, cwd: 3 } })).toBeNull();
-  });
-
   /* An unreadable id does not break the whole state: the shell and directory can still reopen the
      tab, there is just no entry to look up the startup command in. */
   it("drops a broken id on the local branch but still keeps the shell", () => {

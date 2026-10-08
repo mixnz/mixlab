@@ -78,8 +78,9 @@ fn the_gallery_is_the_set_the_roadmap_names() {
 /// removes Django's `pip install django` and Rails' `gem install rails`, both of which reach every
 /// project using that runtime. `vite` and `strapi` are kept out by the first: `create-vite` and
 /// `create-strapi-app` ask questions no flag reliably silences. And `php-mysql` is the kind of
-/// project that has no initialiser at all, which is the point of it. `express-mongodb` has one only
-/// in `express-generator`, which is unmaintained and writes an Express a major version behind.
+/// project that has no initialiser at all, which is the point of it. `express-mongodb` would have
+/// only `express-generator`, unmaintained and an Express a major version behind, so it unpacks a
+/// starter this repository writes instead (an archive, not a command).
 ///
 /// `laravel-mongodb` runs `laravel`'s command and stops there: the `composer require` that adds
 /// MongoDB's Eloquent driver would be a second command joined to the first, so its
@@ -163,19 +164,102 @@ fn only_the_command_that_names_itself_after_the_directory_asks_for_an_npm_name()
 /// **WordPress is the one archive, and the one file at schema 2** — roadmap task **T205**, D2 and
 /// ADR 0061: every other gallery file stays readable by every installed build.
 #[test]
-fn only_wordpress_is_an_archive_and_only_it_is_schema_2() {
+fn only_the_archive_entries_are_schema_2() {
+    // `wordpress` borrows its publisher's release; `express-mongodb` unpacks a starter this
+    // repository writes (`src/blueprints/starters/`), because no maintained initialiser makes an
+    // Express server that talks to MongoDB; `php-mysql` and `static` unpack one only into an
+    // empty folder (`when_empty`), so a cloned repository keeps its own files.
     for entry in ENTRIES {
         let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
-        let is_wordpress = entry.slug == "wordpress";
+        let is_archive = matches!(
+            entry.slug,
+            "wordpress" | "express-mongodb" | "php-mysql" | "static"
+        );
 
-        assert_eq!(manifest.archive.is_some(), is_wordpress, "{}", entry.slug);
+        assert_eq!(manifest.archive.is_some(), is_archive, "{}", entry.slug);
         assert_eq!(
             entry.manifest.starts_with("schema = 2\n"),
-            is_wordpress,
+            is_archive,
             "{} is written at the wrong schema",
             entry.slug
         );
     }
+}
+
+/// Where the gallery's own starters are published: beside the signed gallery, on the release the
+/// packaging repository's `publish-blueprints` moves, so one run publishes both from one commit.
+const STARTERS: &str = "https://github.com/mixnz/mixengine-packages/releases/download/blueprints/";
+
+/// **A starter the gallery names is a starter this tree holds**: `publish-blueprints` zips
+/// `starters/<name>/` as `<name>-starter.zip` with `<name>/` at its top, and a URL with nothing
+/// behind it would fail the apply on a 404. An archive scaffold strips that folder by name; a step
+/// may name one too (`django`'s `startproject --template`, which strips it by itself).
+#[test]
+fn every_starter_archive_is_in_the_tree() {
+    let starters = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/blueprints/starters");
+    let starter = |slug: &str, url: &str| -> Option<String> {
+        let file = url.strip_prefix(STARTERS)?;
+        let name = file
+            .strip_suffix("-starter.zip")
+            .unwrap_or_else(|| panic!("{slug}: {file} is not <name>-starter.zip"));
+        let folder = starters.join(name);
+        assert!(
+            folder.is_dir() && std::fs::read_dir(&folder).unwrap().next().is_some(),
+            "{slug}: starters/{name} is not in the tree"
+        );
+        Some(name.to_string())
+    };
+
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        if let Some(archive) = manifest.archive.as_ref()
+            && let Some(name) = starter(entry.slug, &archive.url)
+        {
+            assert_eq!(
+                archive.strip.as_deref(),
+                Some(name.as_str()),
+                "{}",
+                entry.slug
+            );
+        }
+        for step in &manifest.next_steps {
+            let Some(run) = step.run.as_deref() else {
+                continue;
+            };
+            for word in run.split_whitespace() {
+                starter(entry.slug, word);
+            }
+        }
+    }
+}
+
+/// **A Django project answers on its `.test` domain** — measured on `django`: the stock
+/// `startproject` leaves `ALLOWED_HOSTS` empty, which under `DEBUG` admits only `localhost`, so
+/// every page through MixEngine's site was *DisallowedHost*; and a form posted over HTTPS needs its
+/// origin trusted as well. The gallery's template says both.
+#[test]
+fn django_starts_from_a_template_that_admits_its_test_domain() {
+    let entry = ENTRIES.iter().find(|entry| entry.slug == "django").unwrap();
+    let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+    let start = manifest
+        .next_steps
+        .iter()
+        .filter_map(|step| step.run.as_deref())
+        .find(|run| run.contains("startproject"))
+        .expect("a startproject step");
+    assert!(
+        start.contains(&format!("--template {STARTERS}django-starter.zip")),
+        "{start}"
+    );
+
+    let settings = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src/blueprints/starters/django/project_name/settings.py-tpl"),
+    )
+    .expect("the template's settings");
+    assert!(settings.contains("ALLOWED_HOSTS = ['.test', 'localhost', '127.0.0.1', '[::1]']"));
+    assert!(settings.contains("CSRF_TRUSTED_ORIGINS = ['https://*.test']"));
+    assert!(settings.contains("SECRET_KEY = '{{ secret_key }}'"));
 }
 
 /// **Whether the browser opens by itself** — T205, D7 and the last column of D13's table: it
@@ -200,6 +284,113 @@ fn whether_the_browser_opens_by_itself_matches_the_design() {
             "{} opens the browser by itself: {}",
             entry.slug, !needed
         );
+    }
+}
+
+/// **An `npm run` step has its packages installed before it** — measured on `laravel`, whose
+/// `composer create-project` writes a `package.json` and installs nothing from it, so `npm run dev`
+/// answered *Cannot find package 'vite'*. An earlier step installs them (`npm install`, a
+/// `npx create-…` initialiser), or the scaffold does (`create-next-app` through `npx`).
+#[test]
+fn every_npm_run_step_comes_after_its_packages_are_installed() {
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        let mut installed = manifest
+            .scaffold
+            .as_ref()
+            .is_some_and(|scaffold| scaffold.command.starts_with("npx "));
+
+        for step in &manifest.next_steps {
+            let Some(run) = step.run.as_deref() else {
+                continue;
+            };
+            if run.starts_with("npm run ") {
+                assert!(
+                    installed,
+                    "{}: `{run}` comes before anything installs its packages",
+                    entry.slug
+                );
+            }
+            if run.starts_with("npm install") || run.starts_with("npx create-") {
+                installed = true;
+            }
+        }
+    }
+}
+
+/// **A step the person has to write code for is never required** — measured on `express-mongodb`,
+/// whose required `node index.js` ran a file nothing creates, so *Run the required steps* always
+/// ended at *Cannot find module*. Run the required steps has to be able to finish.
+#[test]
+fn no_required_step_runs_a_file_nothing_creates() {
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        for step in &manifest.next_steps {
+            let Some(run) = step.run.as_deref() else {
+                continue;
+            };
+            let runs_a_file = run
+                .strip_prefix("node ")
+                .is_some_and(|file| file.ends_with(".js"));
+            assert!(
+                !runs_a_file || step.optional,
+                "{}: `{run}` is required and nothing writes its file",
+                entry.slug
+            );
+        }
+    }
+}
+
+/// **A framework that reads its own database settings says where they are** — measured on
+/// `rails`: `rails new --database=postgresql` points at `<name>_development` with no account, so
+/// `rails server` answered every page with *ConnectionNotEstablished* while MixEngine's database
+/// sat there under another name. The step that writes the settings carries `credentials`, so the
+/// panel draws the account beside it.
+#[test]
+fn rails_new_carries_the_database_account() {
+    let entry = ENTRIES
+        .iter()
+        .find(|entry| entry.slug == "rails")
+        .expect("rails is in the gallery");
+    let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+    let step = manifest
+        .next_steps
+        .iter()
+        .find(|step| {
+            step.run
+                .as_deref()
+                .is_some_and(|run| run.starts_with("rails new"))
+        })
+        .expect("rails new is a step");
+    assert!(step.credentials, "rails new does not carry credentials");
+}
+
+/// **A web installer on PostgreSQL is told so** — measured on `craft`: its installer offers MySQL
+/// first, and a person who kept it against PostgreSQL's port waited on *MySQL server has gone
+/// away*. An `open` step that asks for the database names the driver when it is not MySQL's.
+#[test]
+fn an_installer_on_postgres_says_postgres() {
+    for entry in ENTRIES {
+        let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
+        if !manifest
+            .services
+            .iter()
+            .any(|service| service.name == "postgres")
+        {
+            continue;
+        }
+        for step in &manifest.next_steps {
+            if step.kind != mixengine_proto::NextStepKind::Open || !step.credentials {
+                continue;
+            }
+            let note = step.note.as_deref().unwrap_or("");
+            assert!(
+                note.contains("PostgreSQL"),
+                "{}: the installer at {:?} does not say PostgreSQL",
+                entry.slug,
+                step.path
+            );
+        }
     }
 }
 

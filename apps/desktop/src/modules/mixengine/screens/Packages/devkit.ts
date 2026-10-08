@@ -10,6 +10,19 @@ export function lacksLabels(release: RuntimeRelease): { key: string; reason: str
     .map(([key, reason]) => ({ key, reason }));
 }
 
+/** Every reason a release lacks something, one a line, for the tooltip of its single mark. */
+export function lacksReason(release: RuntimeRelease): string {
+  return lacksLabels(release)
+    .map(({ reason }) => reason)
+    .join("\n");
+}
+
+/** Whether any Ruby here cannot build gems with C extensions — the devkit is offered once, above
+ *  the list, rather than on every row: one install serves every Ruby. */
+export function anyLacksNativeGems(releases: RuntimeRelease[]): boolean {
+  return releases.some((release) => release.lacks?.["native gems"] !== undefined);
+}
+
 /** Release order on dotted numbers: `2026.10.08` comes after `2026.9.30`. */
 function compareReleases(a: string, b: string): number {
   const left = a.split(".").map(Number);

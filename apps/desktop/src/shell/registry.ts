@@ -1,3 +1,4 @@
+import { provideModuleActions } from "../core/moduleActions";
 import type { SyncableCollection } from "../core/syncCollection";
 import type { ModuleDefinition } from "./module";
 import { preferencesSyncable } from "./preferencesSync";
@@ -27,6 +28,10 @@ export const MODULES: ModuleDefinition[] = [
   toolsModule,
   tunnelModule,
 ];
+
+/* What each module lends the others — `core/moduleActions.ts`. Here, beside `MODULES`, because
+   this is the one place a module is joined to the app. */
+for (const m of MODULES) provideModuleActions(m.id, m.actions ?? {});
 
 /** Every collection the account screen can offer (D5), in the app's order. The one place a
  *  collection is joined to the app, the way `MODULES` is for tabs. */

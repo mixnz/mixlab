@@ -36,8 +36,8 @@ After `blueprint.apply` from MixLab:
 
 - **Every PHP blueprint, and `static`, opens in the browser and shows the application's own page**
   (or its web installer) with no step left for the person. The two that bring no source on
-  purpose, `static` and `php-mysql`, open on MixEngine's welcome page, which says where to put the
-  files (T124). `vite` is static too, but needs a build first, so it belongs to the next point.
+  purpose, `static` and `php-mysql`, open on a starter page of their own, unpacked only into an
+  empty folder (`when_empty`, D2); over a cloned repository they leave its files alone. `vite` is static too, but needs a build first, so it belongs to the next point.
 - **A blueprint whose site is a program shows what to run,** with each command one click from
   running in a MixLab Terminal tab that has the project's runtimes on its `PATH`. Those commands can
   be saved as a Terminal target before anything runs, so the person can start the site later.
@@ -115,6 +115,14 @@ needs_empty_dir = true
 - **`archive` and `command` are mutually exclusive.** A manifest with both, or with neither, is
   refused at read time. `needs_empty_dir` keeps its meaning. `needs_npm_safe_dir` is refused beside
   `archive`, because it describes a command.
+- **`when_empty = true` unpacks a starter only into an empty folder** (added 2026-10-09, for
+  `php-mysql` and `static`). Those two have no initialiser, and are applied as often over a cloned
+  repository as into a new folder. `needs_empty_dir` would block the second; no key at all would
+  unpack the starter's `index.php` over the clone's. With `when_empty`, a root holding anything
+  plans the step `satisfied`: nothing is downloaded or overwritten, the apply goes on, and there is
+  no consent to ask (`mix` asks no `[y/N]`, MixLab draws no checkbox and says the folder is kept).
+  It is refused beside `needs_empty_dir`, which contradicts it, and beside `command`, where a
+  scaffold that skipped itself over a full folder would do nothing where it is most often run.
 - **`https://` only**, refused at read time otherwise. **No checksum** (decided 2026-10-08):
   `latest.zip` changes with every WordPress release, so a pinned hash would break the gallery entry
   within weeks. HTTPS plus the consent below is the trust.
@@ -276,8 +284,9 @@ A half-read list of instructions is worse than none.
 
 - **`once` and `serve` rows:** the command in monospace, its `note`, an *optional* mark where it
   applies, then **Copy** and **Run** (a Terminal tab with that one line, D11). A `serve` row adds
-  **Save as Terminal target** (a draft, D11). Saving without running is the ordinary case for
-  someone who will start work tomorrow.
+  **Save as Terminal target**, which saves the target there and then and turns into *Saved in
+  Terminal* (D11). Saving without running is the ordinary case for someone who will start work
+  tomorrow, and a button that says Save has to leave something saved.
 - **Above the rows, Run the required steps**, shown when at least one step is not `optional`. It
   opens one tab that runs the required `once` steps in order, then the first required `serve`.
   Each further required `serve` gets a tab of its own, because a process that keeps running holds
@@ -288,13 +297,46 @@ A half-read list of instructions is worse than none.
   the database's host, port, name and user from `BlueprintApplied.database`, each with Copy, and a
   **Reveal password** control that calls `database.credentials`. Credentials never enter a
   Terminal target, a tab state or the welcome page.
-- **With the Terminal module hidden** (`isModuleVisible("terminal")` is false), the two buttons
-  read *Turn on Terminal and run* / *… and save*, which is the `builtInAfterEnabling` precedent from
-  T110. Copy always works.
-- **The same panel**, without Run/Save's first-run framing, is drawn on the **Sites** detail and the
-  **Projects** panel from `ProjectDetail.next_steps`, so closing the dialog loses nothing. There,
-  a step with `credentials` carries a link to the site's database on the Dashboard, where the
-  existing password control lives (D5 says why the account is not repeated here).
+- **With the Terminal module hidden** (`isModuleVisible("terminal")` is false), the Run buttons
+  read *Turn on Terminal and run*, which is the `builtInAfterEnabling` precedent from T110: the
+  shell turns a module on for a tab request that names it. Save opens no tab, so it keeps its
+  label, and the target is there when Terminal is turned on. Copy always works.
+- **The panel stays where it is.** A dialog belongs to the tab that opened it (*Dialogs belong to
+  their tab*, below), so Run brings the Terminal tab to the front and `AfterApply` waits in the
+  MixEngine tab with the password and the remaining steps; going back to that tab finds it as it
+  was left.
+- **The same panel**, without Run/Save's first-run framing, is drawn on the **Projects** screen
+  from `ProjectDetail.next_steps`, so closing the dialog loses nothing. A project's row opens **in
+  place**, under itself, through its *Details* button or a click anywhere on the row, and holds
+  the project's runtimes, the sites its `mixengine.toml` declares and its steps; one row is open
+  at a time. *Why in place:* the first version drew all three as cards under the whole table, and
+  with ten projects a click on the first opened nothing anyone could see. The row keeps the Sites
+  screen's layout (no leading chevron), and its less common actions (Edit, Write manifest, Delete)
+  sit in a ⋮ menu, as Sites' do. There, a step with `credentials` carries a link to the site's
+  database on the Dashboard, where the existing password control lives (D5 says why the account
+  is not repeated here).
+- **A Ruby that cannot build the gems is said above the steps** (T206a's devkit, where the steps
+  are). Measured by hand: `rails new` on a Windows Ruby with no `msys2` ran `bundle install`, which
+  stopped at the first gem with a C extension, and `rails server` then listed sixty missing gems; a
+  note under `gem install rails` had said so, and a note is not read before Run. The panel reads
+  the Ruby the project resolves to, whether its release `lacks` `native gems`, and whether a
+  devkit is installed (`devkitNeed.ts`). When one is missing it says so above the rows with
+  **Install devkit (size)** beside it, the Languages tab's button, and *Run the required steps* is
+  disabled until the install's job ends.
+- **And it is offered before the apply, where the decision is made.** The Apply dialog's plan reads
+  the Ruby line the blueprint pins (`register_project`'s `pins.ruby`, `planDevkitNeed`) and, when
+  that line cannot build native gems and no devkit is installed, shows *Install the devkit with it
+  (size)*, ticked. The devkit installs as its own job beside the apply. One install job for the
+  whole window (`devkitInstall.ts`), so the panel that follows shows it under way rather than
+  offering it twice.
+- **On the Languages tab** a Ruby row carries one mark, its reasons on hover, inside the row's
+  *needs* cell: the row is a six-column grid, and the first version's two marks and a button were a
+  seventh child that pushed *Install* onto the next line. The devkit is offered once, above the
+  list, and only where a Ruby is installed: someone who does not use Ruby is not asked about it.
+- **One place to read the steps.** *What to run* in a site's ⋮ menu on the Sites screen goes to
+  the Projects screen with that project's row open (`projectsNavigation.ts`), and an apply that has
+  just finished leaves its project to be opened there on the next visit; neither draws a copy of
+  the panel of its own.
 
 ### D9 — Terminal: a local target carries `env` and `pathPrepend`
 
@@ -313,31 +355,34 @@ A half-read list of instructions is worse than none.
   project's pinned versions from `cwd`, whether or not the person ever ran `mix path install`.
   The Terminal module learns none of this: to it these are two generic fields.
 
-### D10 — Terminal: what a restored tab does with its commands
+### D10 — Terminal: what a target's opening does with its commands
 
 Today a restored tab always reopens its session and always types its target's *Run on connect*
 with Enter (`TerminalTab.tsx`, the restore effect). For a dev-server target, every launch of
 MixLab would start every such server at once. Every saved target, local and SSH, gains:
 
-| `onRestore` | A restored tab |
+| `onRestore` | Opening the target, or a tab MixLab restores |
 |---|---|
 | `run` | opens and types the commands **with** Enter. This is the default, so a target written before this field keeps today's behaviour |
 | `type` | opens and types the commands **without** Enter, leaving them on the prompt |
 | `none` | opens the shell at `cwd`, or connects the SSH session, and types nothing |
 
-- It applies to restoring only. Opening a target by hand still runs its commands, because the
-  click is the request.
+- It applies to **every opening** of the target: the Open button, a double click in the list, and a
+  tab MixLab restores (`openingFor` in `session.ts`). The form names it *When this target opens*.
+  *Why not restoring only, as first written:* measured by hand, a target set to *Just open* or
+  *Type them* still ran its commands when opened from the list, which is not what anyone choosing
+  those means; the field name *When the tab comes back* did not say otherwise clearly enough.
 - `openingKeystrokes` gains a `press: boolean` argument, which keeps it pure.
 - The form shows it as a three-way choice beneath *Run on connect*, disabled while that field is
   empty.
-- Targets drafted from an apply (D11) start at `type`.
+- Targets saved from an apply (D11) start at `type`.
 
-### D11 — Terminal: a one-shot run and a draft, through the launch queue
+### D11 — Terminal: a one-shot run through the launch queue, and a save through a module action
 
-The `mixengine` module never imports `terminal`. Both entries go through `launch::request` with
-`module_id: "terminal"`, which is the path `explore_data.rs` uses for `db`. The Rust side of
-MixEngine builds the request, and the Terminal module validates what arrives
-(`parseTerminalTabState`), as it already does for every restored state.
+The `mixengine` module never imports `terminal`. A run opens a tab, so it goes through
+`launch::request` with `module_id: "terminal"`, which is the path `explore_data.rs` uses for `db`;
+the Terminal module validates what arrives (`parseTerminalTabState`), as it already does for every
+restored state. A save opens nothing, so it goes through a **module action** instead (below).
 
 - **One-shot run.** `TerminalTabState`'s local branch gains `env` and `pathPrepend` (persisted) and
   `run` (a list of lines, **never persisted**). The tab types `run` once, then writes its state
@@ -345,11 +390,22 @@ MixEngine builds the request, and the Terminal module validates what arrives
   runs nothing. This widens the line `tabState.ts` draws (*ids only, `cwd` the one path*) by two
   fields that are facts about this machine, like `cwd`. Losing them on restore would hand the person
   the system's `npm` without a word, which is the worse failure.
-- **Draft.** A new state, `{ kind: "draft", target: SavedLocalTarget-shaped }`, opens the
-  *TargetForm* filled in and unsaved: name `<project> · <run>`, the default shell, `cwd` = project
-  root, D9's `env` and `pathPrepend`, *Run on connect* = the `serve` line, and `onRestore = "type"`.
-  The person reviews it and presses **Save** or **Open**. The Terminal module stays the only writer
-  of its store, and the person sees exactly what will be kept. One draft opens per `serve` step.
+- **Save, as a module action.** `ModuleDefinition` gains `actions`, named functions one module
+  lends the others; the registry hands them to `core/moduleActions.ts`, and another module calls
+  one by the lender's id, with a payload the lender validates. The Terminal lends `saveTarget`:
+  name `<project> · <run>`, the shell a new tab would open (Settings' default, else the first
+  detected), `cwd` = project root, D9's `env` and `pathPrepend`, *Run on connect* = the `serve`
+  line, and `onRestore = "type"`. It saves through its own `addTarget`, so the store and sync stay
+  the Terminal's, and it answers with the entry's id, which is what lets the button say *Saved*. A
+  second press finds the entry already saved for the same name, folder and command and makes no
+  second row.
+
+  *Why not a draft tab, as first built.* The first version opened a Terminal tab holding the
+  target filled in and **unsaved**, for the person to check and save. Measured by hand: the button
+  said Save and saved nothing, the tab opened behind the dialog the button was in so nothing seemed
+  to happen at all, and the form was taller than the pane with its Save button out of reach. A
+  person who pressed Save and found no target on the next launch reads that as MixLab losing their
+  work. The person can still check and edit the entry: it is in the Terminal's list like any other.
 - A target outlives its project. When `cwd` no longer exists, the Terminal says so on open instead
   of starting the shell in the home directory.
 
@@ -359,8 +415,8 @@ MixEngine builds the request, and the Terminal module validates what arrives
 `false` for an `imported` blueprint whose signature is `missing` or `rejected`. The panel words it the way
 T79b does (*unsigned*, *mismatched*). For such a project:
 - **Run** and **Run the required steps** type the lines without Enter, and the panel says why.
-- A draft's `onRestore` is locked to `type` until the target is saved (after that the person owns
-  it).
+- A saved target's `onRestore` is `type` (D11), for every blueprint, so no launch of MixLab starts
+  a server from a saved line by itself; the person can change it on the entry.
 
 The steps came from the same file as the scaffold, so they get the same gate.
 
@@ -387,24 +443,55 @@ Steps for every entry (indicative; the implementation measures each):
 
 | Blueprint | Steps | Opens by itself (D7) |
 |---|---|---|
-| `laravel` | once `php artisan migrate` (*opt*, *cred*; note: set `DB_*` in `.env` first, since Laravel starts on SQLite); serve `npm run dev` (*opt*; note: Vite, for editing assets) | yes |
+| `laravel` | once `php artisan migrate` (*opt*, *cred*; note: set `DB_*` in `.env` first, since Laravel starts on SQLite); once `npm install` (*opt*); serve `npm run dev` (*opt*; note: Vite, for editing assets) | yes |
 | `laravel-mongodb` | once `composer require mongodb/laravel-mongodb` (*opt*; moved out of `description`) | yes |
 | `symfony`, `cakephp`, `codeigniter`, `yii` | none | yes |
-| `php-mysql`, `static` | none (welcome page) | yes |
+| `php-mysql`, `static` | **archive**, `when_empty` (a starter page of this repository's); no steps | yes |
 | `drupal` | open `/core/install.php` (*cred*) | yes, on the installer |
 | `wordpress` | **archive** (D2); open `/wp-admin/install.php` (*cred*) | yes, on the installer |
-| `craft` | open `/admin/install` (*cred*) | yes, on the installer |
+| `craft` | open `/admin/install` (*cred*; note: choose PostgreSQL) | yes, on the installer |
 | `statamic` | once `php please make:user` (*opt*); open `/cp` | yes, on `/cp` |
 | `nextjs` | serve `npm run dev` (note: port 3000) | no |
 | `strapi` | once `npx create-strapi@latest .`; serve `npm run develop` (note: port 1337) | no |
-| `express-mongodb` | once `npm init -y`; once `npm install express mongodb`; serve `node index.js` (note: write `index.js` first) | no |
-| `django` | once `python -m pip install django` (note: installs into the runtime this project pins, shared with other projects on it); once `python -m django startproject config .`; serve `python manage.py runserver 127.0.0.1:8000` | no |
-| `rails` | once `gem install rails` (same note); once `rails new . --database=postgresql`; serve `ruby bin/rails server -p 3000` | no |
+| `express-mongodb` | **archive** (a starter of this repository's); once `npm install`; serve `npm start` (note: `MONGODB_URI` when MongoDB is not on 27017) | no |
+| `django` | once `python -m pip install django` (note: installs into the runtime this project pins, shared with other projects on it); once `python -m django startproject --template <django-starter.zip> config .` (note: the .test domain is allowed); serve `python manage.py runserver 127.0.0.1:8000` | no |
+| `rails` | once `gem install rails` (same note); once `rails new . --database=postgresql` (*cred*); serve `ruby bin/rails server -p 3000` (note: set `DATABASE_URL` from the account) | no |
 | `vite` | once `npm create vite@latest .`; once `npm install`; once `npm run build` | no |
 
+- **`laravel` installs its npm packages as a step of its own.** `composer create-project` writes
+  `package.json` and installs nothing from it, so `npm run dev` without `npm install` before it
+  answered *Cannot find package 'vite'* (found by hand, 2026-10-08). Every `npm run` step in the
+  gallery now comes after a step or a scaffold that installs its packages, asserted over the
+  shipped set (`every_npm_run_step_comes_after_its_packages_are_installed`).
+- **Run the required steps has to be able to finish, and the site has to answer after it.** Two
+  more entries failed that by hand. `express-mongodb` required `node index.js`, a file nothing
+  writes, so the button always ended at *Cannot find module* (`no_required_step_runs_a_file_nothing_creates`).
+  Making the step optional left a blueprint with no site at all, so it now unpacks a **starter**:
+  an Express 5 server reading `PORT` and `MONGODB_URI`, whose page says whether MongoDB answers.
+  Its source sits beside the gallery (`src/blueprints/starters/express-mongodb/`), and
+  `publish-blueprints` zips it onto the same release as the signed gallery, from the same commit
+  (`every_starter_archive_is_in_the_tree`). Its steps are `npm install` and `npm start`. `rails new
+  --database=postgresql` points at `<name>_development` with no account while MixEngine made the
+  database `{project}` with one, so every page answered *ConnectionNotEstablished*: the step carries
+  `credentials`, the panel's database block names the port beside the host, and the server's note
+  says to set `DATABASE_URL` (`rails_new_carries_the_database_account`). The password is never put
+  in a Terminal tab or target (D8).
+- **`craft`'s installer is told PostgreSQL.** It offers MySQL first, and kept against PostgreSQL's
+  port it waited and failed on *MySQL server has gone away* (found by hand, 2026-10-08). Until its
+  `.env` names a database, every Craft page also takes about 50 s, retrying the default MySQL
+  account; that is Craft's, not the server's. The `open` step's note names the driver
+  (`an_installer_on_postgres_says_postgres`).
 - **Django names its package `config` and not `{project}`.** `startproject` takes a Python
   identifier, and the slug of `My Blog` is `my-blog`. `python -m django` rather than
   `django-admin` needs nothing on `PATH` beyond the `python` shim.
+- **Django starts from the gallery's template.** The stock `startproject` leaves `ALLOWED_HOSTS`
+  empty, which under `DEBUG` admits only `localhost`, so every page through the site answered
+  *DisallowedHost* (found by hand, 2026-10-08), and a form posted over HTTPS would fail Django's
+  origin check next. `starters/django/` is Django's own template with `.test` allowed and
+  `https://*.test` trusted, published as `django-starter.zip` like the Express starter; Django
+  renders it and still makes each project's `SECRET_KEY`
+  (`django_starts_from_a_template_that_admits_its_test_domain`). Its database stays SQLite: wiring
+  the PostgreSQL MixEngine made is the same manual step as Rails' `DATABASE_URL`.
 - **`rails` after `gem install`** reaches the person's `PATH` through T131's globals shim. Two
   things are measured before the entry is written: that this holds on Windows, and whether
   `--database=postgresql` builds the `pg` gem there. If it does not, the step drops the flag and
@@ -423,11 +510,21 @@ Steps for every entry (indicative; the implementation measures each):
   when there are steps: Copy and Run per row, Save as Terminal target on `serve` rows, Run the
   required steps, and the credentials block (D8). Its three-call chain (grant,
   `service.start { project }`, `site.list`) is unchanged.
-- **Sites detail and Projects panel:** the same steps panel from `ProjectDetail.next_steps`.
-- **Terminal module:** `env` and `pathPrepend` for local targets (D9), `onRestore` (D10), one-shot
-  `run` and `draft` states arriving through the launch queue (D11). All three are generic
-  Terminal features that name nothing from MixEngine. `npm run lint` keeps proving that `mixengine`
-  imports nothing from `terminal`.
+- **Projects screen:** a project's row opens in place with its runtimes, declared sites and the
+  same steps panel from `ProjectDetail.next_steps`; Sites' *What to run* and a finished apply both
+  land there with that row open.
+- **Terminal module:** `env` and `pathPrepend` for local targets, under the form's *Advanced*,
+  closed unless the target sets one (D9); `onRestore` (D10); the one-shot `run` state arriving
+  through the launch queue, and the `saveTarget` action (D11). All generic Terminal features that
+  name nothing from MixEngine. `npm run lint` keeps proving that `mixengine` imports nothing from
+  `terminal`. The form scrolls on its own beside the targets list, so a pane shorter than the form
+  still reaches Save and Open.
+- **Dialogs belong to their tab.** `Modal` was drawn into `document.body`, over the whole window
+  and the tab strip, so a dialog in one tab held every tab and a tab opened from it came up behind
+  it. Each tab's pane now carries a layer (`components/Modal/host.tsx`, provided by `Workspace`), and
+  a `Modal` opened inside a tab is drawn there: it covers that tab only, hides with it, and is there
+  again on the way back. Escape and the shortcut count (`enterModal`) take a dialog into account only
+  while its tab is on screen. A dialog outside any tab, such as Settings, still covers the window.
 - **No new daemon method.** `BlueprintApplied`, `ProjectDetail` and `ScaffoldConsent` gain optional
   members, and `PlanAction` gains `FetchArchive`. `bindings/` is regenerated.
 - **With MixEngine off,** nothing here runs: the panel and both bridges are in the `mixengine`
@@ -438,14 +535,16 @@ Steps for every entry (indicative; the implementation measures each):
 ## Testing
 
 - **Manifest** (`blueprints/manifest.rs`): `archive` with `command` refused, and neither refused;
-  `http://` refused; `needs_npm_safe_dir` beside `archive` refused. Each `run` rule in D4 refused,
+  `http://` refused; `needs_npm_safe_dir` beside `archive` refused; `when_empty` round-trips, and
+  is refused beside `needs_empty_dir` and beside `command`. Each `run` rule in D4 refused,
   naming the step's position. `site` refused in schema 1 and 2. `render` writes `schema = 1` without
   `archive` and `2` with it. `schema = 3` is refused by name.
 - **Gallery** (`tests/blueprint_gallery.rs`): `ENTRIES` is eighteen. Each file is its own rendering.
-  Only `wordpress` is schema 2. The set carrying a `command` and the set carrying an `archive` are
+  Only the archive entries (`wordpress`, `express-mongodb`, `php-mysql`, `static`) are schema 2. The set carrying a `command` and the set carrying an `archive` are
   each asserted by name. Every `run` in the gallery passes D4.
 - **Plan and apply** (`plan.rs`, `api/apply.rs`): `FetchArchive` is planned where `RunScaffold`
-  would be. It is blocked on a non-empty root, and on a suffix outside `archive::Format`. A consent
+  would be. It is blocked on a non-empty root, and on a suffix outside `archive::Format`; with
+  `when_empty` it is `satisfied` on a non-empty root and asks for consent on an empty one. A consent
   naming a different URL is refused. A `strip` that is missing fails the step and names the
   archive's top level. An entry escaping the root is refused (already covered in `archive.rs`, so
   reached here through one fixture). The staging directory is gone after success and after failure.
@@ -470,14 +569,18 @@ Steps for every entry (indicative; the implementation measures each):
   stdin closed, on Windows and on Linux. A command that waits is recorded and goes `--no-scripts`
   (D13).
 - **Desktop** (`vitest`): `openingKeystrokes(text, false)` has no `\r`. `parseTerminalTabState`
-  reads `env`, `pathPrepend` and `draft`, and never returns `run` after the first write. The
+  reads `env` and `pathPrepend`, and never returns `run` after the first write. `saveTarget` saves
+  the entry its payload describes and makes no second row for the same name, folder and command;
+  a dialog out of sight is not counted by `modalDepth`. The
   `onRestore` default is `run` when absent. The panel's choice of which buttons to draw follows
   kinds, `optional`, trust and module visibility. The auto-open decision (D7) is a pure function,
   tested over the gallery's own step lists, and its result matches the last column of D13's table.
 - **By hand in `npm run dev:app`:** `nextjs` from the Blueprints screen on a home with no front end
   ends at the steps panel; Run the required steps shows the Next.js page at `https://<slug>.test`.
   `laravel` opens the browser on its own. `wordpress` opens on its installer, with the credentials
-  block in MixLab. Saving a draft and relaunching MixLab leaves `npm run dev` typed and waiting.
+  block in MixLab. Save as Terminal target says *Saved in Terminal* without leaving the dialog, and
+  relaunching MixLab finds the target in the Terminal's list; opening it leaves `npm run dev` typed
+  and waiting. Run brings the Terminal tab to the front, and the MixEngine tab still holds the dialog.
   Applying from a home whose `mix path` was never installed still gives the tab Node 24.
 
 ## Documentation, when it lands
