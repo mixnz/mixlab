@@ -14,13 +14,14 @@ Design: [2026-10-08-t204-a-manifest-holds-every-site-design.md](../specs/2026-10
       writes every site and reports the entries it kept; `site.create` gains `from`; `project.show`
       lists what the file declares and which of it is here; MixLab's project panel adopts a
       missing site with one button.
-- [ ] **T204a** Blueprints describe several sites: `schema = 3`, one `create_site` step per entry
-      with its own resume identity, capture stops refusing, and `mixengine-packages` re-publishes.
-      Built after T204 and T205. On T205's rule (its ADR) a blueprint is rendered at the lowest
-      schema that holds it, so only a blueprint with more than one site is written at 3. T204a
-      decides what `[[next_steps]] site` names (the `[[sites]]` entry, probably), requires it when
-      there are several sites, and ties each `serve` step to one site. T205 adds no migration:
-      its steps are read through `projects.blueprint_id`.
+- [x] **T204a** Blueprints describe several sites: `[[sites]]` at `schema = 3`, each entry with
+      its own `services`; one create/names/certificate group per site, resumed by any of its
+      names; capture writes every site and refuses only two PHPs; `[[next_steps]] site` names an
+      entry's `domain_pattern` and is required with several sites; `mix` and MixLab group the plan
+      and the steps by site. A site with no list links every service the plan made sure of, which
+      fixes a shared instance left unlinked. No gallery file changes, so `mixengine-packages` has
+      nothing to re-publish (decided 2026-10-09).
+      Design: [2026-10-09-t204a-a-blueprint-holds-many-sites-design.md](../specs/2026-10-09-t204a-a-blueprint-holds-many-sites-design.md).
 
 **M42** A project with three sites of three kinds is exported, deleted and re-created from the same
 directory, and each site comes back with its domains, kind, routes and services, from `mix` and from

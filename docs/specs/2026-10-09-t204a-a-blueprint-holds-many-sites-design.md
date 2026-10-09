@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 date: 2026-10-09
 task: T204a
 ---
@@ -265,7 +265,7 @@ ledger, so a resumed apply that fails never removes what an earlier run made.
 - `mix blueprint capture` stops printing the several-sites refusal and prints the new one (D6).
 - `mix blueprint apply` / `--dry-run` print the plan as today. The groups are already in order and
   each `create_site` line gains its primary domain (read from the `AddDomain` after it, as the
-  executor does), so two sites read as two: `create site shop.test (php-fpm, public)`.
+  executor does), so two sites read as two: `site shop.test: php-fpm at public, https`.
 - Steps with a `site` print it after the kind: `serve (vite.shop.test)  npm run dev`, in
   `mix blueprint apply`'s answer and in `mix project show`.
 

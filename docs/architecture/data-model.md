@@ -299,7 +299,8 @@ daemon and every client alike.
 **Overlapping** with the project manifest rather than the same schema — corrected at T77, which is
 where the two were first read by code. A blueprint carries a `[blueprint]` header, `domain_pattern`
 where `mixengine.toml` carries `domain` and `aliases`, and the `database` and `user` a project
-manifest only passes through. They also have two lifetimes: `mixengine.toml` is a file a person owns
+manifest only passes through. Both hold several sites as `[[sites]]` (T204, T204a), each entry
+naming the services it links. They also have two lifetimes: `mixengine.toml` is a file a person owns
 and this workspace edits byte-preservingly, while a blueprint is generated and disposable. So there
 are two types — `core::manifest` and `core::blueprints::manifest` — sharing the leaf vocabulary
 (`RuntimeKind`, `VersionConstraint`, `SiteKind`, `ServiceId`) and nothing else.

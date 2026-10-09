@@ -4,7 +4,7 @@ slug = "blueprints"
 order = 9
 summary = "Ghi lại một dự án gồm những gì, rồi dựng lại y hệt ở nơi khác, hoặc trên máy của người khác."
 translation_of = "en/blueprints.md"
-source_sha256 = "774595f80d1c9be7da8ac1775a844284e4dea8245909659b5f591146c757df4c"
+source_sha256 = "5f5f1360eb4746975ca84d85884dfe890de010a7d99e4c8f1dd2a9565c24ed26"
 +++
 
 # Blueprint
@@ -14,9 +14,9 @@ source_sha256 = "774595f80d1c9be7da8ac1775a844284e4dea8245909659b5f591146c757df4
 > dòng lệnh. Cả hai đều điều khiển cùng một MixEngine bên dưới, nên mọi khái niệm trong cẩm nang
 > này vẫn áp dụng.
 
-Blueprint là bản ghi mô tả một project gồm những gì: cần PHP nào, dùng service nào, site trông ra
-sao, và tuỳ chọn thêm một lệnh để scaffold ra một bản mới. Đây là cách bạn dựng cùng một môi trường
-hai lần: trên máy thứ hai, cho đồng nghiệp, hoặc cho project tiếp theo có cùng cấu trúc.
+Blueprint là bản ghi mô tả một project gồm những gì: cần PHP nào, dùng service nào, các site trông
+ra sao, và tuỳ chọn thêm một lệnh để scaffold ra một bản mới. Đây là cách bạn dựng cùng một môi
+trường hai lần: trên máy thứ hai, cho đồng nghiệp, hoặc cho project tiếp theo có cùng cấu trúc.
 
 ## Ghi lại một blueprint
 

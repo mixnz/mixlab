@@ -50,6 +50,34 @@ needs_npm_safe_dir = true # optional, default false — this command takes its p
 
 `{project}` is the only templating token; substitution is literal and validated (slug charset).
 
+**A blueprint can describe several sites** — roadmap task **T204a**
+([design](../specs/2026-10-09-t204a-a-blueprint-holds-many-sites-design.md)). `[[sites]]` takes the place of `[site]`, each entry with the keys a
+`[site]` has and a `services` list naming the `[[services]]` entries that site links, by `name` or
+`name@instance` when two share a name:
+
+```toml
+schema = 3
+
+[[sites]]
+kind = "php-fpm"
+doc_root = "public"
+domain_pattern = "{project}.test"
+services = ["mariadb"]
+
+[[sites]]
+kind = "reverse-proxy"
+upstream = "http://127.0.0.1:5173"
+domain_pattern = "vite.{project}.test"
+services = []
+```
+
+A file holding both forms is refused, and so is `[[sites]]` under a schema below 3: a build that
+ignored the key would make a project with no site at all. Without `services` an entry links every
+`[[services]]` entry, which is what `[site]` always means; `[]` links none. On ADR 0061's rule only
+several sites, or one entry naming its links, are written at schema 3; a one-site blueprint is
+written exactly as before, so an older build still reads every gallery file and refuses a
+several-site one by name (`UnknownBlueprintSchema`).
+
 ## Capture
 
 **The account a project ends up with is the plan's, or the next free one** — roadmap task **T202**.
@@ -79,10 +107,12 @@ Of those choices, capture takes only the ones turned **on**. A blueprint says wh
 loaded; turning something off on the receiving machine would change the PHP every other project
 there runs, which is harm it was never asked to do.
 
-A project with more than one site is **refused** rather than reduced to its first: a blueprint has one
-`[site]`, and losing the others silently is worse than saying so. The project manifest gained
-`[[sites]]` in T204 ([design](../specs/2026-10-08-t204-a-manifest-holds-every-site-design.md)), and
-blueprints follow in T204a.
+A project with more than one site **captures every one** (T204a), in primary-domain order: a
+`[[sites]]` entry each, with the services that site links as its `services`, and `[[services]]`
+holding them all once. What it cannot describe is two PHPs: `[runtimes] php` is one version, so a
+project whose php-fpm sites run two is refused as a conflict naming each site and its PHP, rather
+than written down as one of them. Steps the project's blueprint gave with no `site` are given the
+site that blueprint described.
 
 ## Apply
 
@@ -133,6 +163,14 @@ below rather than by a default.
 **Resuming is running it again.** Every action is an *ensure*, so a second apply plans against what
 the first one left: everything already done comes back `Satisfied` and what remains is exactly what
 remains. There is no ledger of half-finished applies to reconcile — the rows are the record.
+
+**Several sites plan as one group each** (T204a): create the site, its names, its certificate, in
+file order. A site is already made when a site of the project answers to any of its names, so a
+resumed apply makes only the one that is missing and gives a lost alias back to its own site; one
+site answering for two entries is refused rather than guessed at. Each site links its own
+`services`, and a site that names none links every service the plan made sure of, including a
+shared instance that was already running. Before T204a that last one was left unlinked, so the
+project's site did not start it.
 
 Version mismatches are surfaced as choices, not silent decisions: *"PHP 8.2.23 is not installed.
 Install it / use installed 8.2.29 / cancel."* **The question is asked by a client and answered in the
@@ -373,7 +411,9 @@ capture taken on Windows and committed as a fixture.
 `once` (run one time: `npm install`, `php artisan migrate`), `serve` (keeps running:
 `npm run dev`) and `open` (finish in the browser: `/wp-admin/install.php`). Each takes a `note`,
 `optional` when the site answers without it, and `credentials` when it needs the database account
-the apply made. A `run` line follows the scaffold's rules, because it must mean the same thing in
+the apply made. With several sites every step also names its `site`, by that entry's
+`domain_pattern` (T204a): a `serve` runs one site's program and an `open` opens one site's address,
+and MixLab groups the steps under their site. A `run` line follows the scaffold's rules, because it must mean the same thing in
 `cmd.exe`, PowerShell and `sh`: one line with a program for its first word, no shell operators, no
 `\`, and `{project}` as the only token. A step that breaks one makes the manifest unreadable,
 named by its position.

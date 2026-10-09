@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- A blueprint can hold several sites. Capturing a project with more than one site writes all of
+  them, and applying it makes each with its own addresses and services.
 - `mix site create --from <domain>` adopts one site from a `mixengine.toml` that lists several.
   `mix project show` lists the sites in the file and which ones this machine does not have yet.
 - In MixLab, a project's panel on the Projects screen lists the sites in its `mixengine.toml`. Add
@@ -30,6 +32,8 @@
   back to it as you left it.
 
 ### Fixed
+- Applying a blueprint links its site to a service that was already running on the machine, so
+  starting the project starts that service too.
 - Ctrl+C stops a command in a PowerShell tab however MixLab was started.
 - Exporting a project with more than one site now writes every site into `mixengine.toml`, each with
   the services it uses. It used to leave all of them and their services out. Entries for sites this

@@ -13,7 +13,7 @@ summary = "Write down what a project is made of, and set the same thing up again
 > applies.
 
 A blueprint is a written record of what a project is made of: which PHP it wants, which services it
-uses, what its site looks like, and optionally a command that scaffolds a fresh copy. It is how you
+uses, what its sites look like, and optionally a command that scaffolds a fresh copy. It is how you
 set the same environment up twice: on a second machine, for a colleague, or for the next project of
 the same shape.
 
