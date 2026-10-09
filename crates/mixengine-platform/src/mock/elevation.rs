@@ -43,6 +43,11 @@ pub(super) struct Prompts {
 
     /// What the helper "said" on stderr, handed back with a `Completed` answer.
     said: Option<String>,
+
+    /// Whether the "helper" leaves a report beside the request, applying every operation in it.
+    /// Without one, `Completed` is a helper that ran and wrote nothing — the default, and T40a's
+    /// reminder that a crash is not a per-OS event.
+    reports: bool,
 }
 
 impl Default for Prompts {
@@ -51,6 +56,7 @@ impl Default for Prompts {
             raised: Mutex::new(Vec::new()),
             answer: ElevationOutcome::Completed,
             said: None,
+            reports: false,
         }
     }
 }
@@ -82,7 +88,15 @@ impl Prompts {
         }
     }
 
-    /// Every prompt this host was asked to raise, in order.
+    /// A prompt that is accepted, and a helper that applies everything it was asked to and says so
+    /// in a report — the one path on which a grant takes rows out of the queue.
+    pub(super) fn applying() -> Self {
+        Self {
+            reports: true,
+            ..Self::default()
+        }
+    }
+
     /// A prompt that is accepted, and a helper that wrote `said` to stderr — the helper that refused
     /// its request, when nothing is written beside it (T166).
     pub(super) fn saying(said: &str) -> Self {
@@ -92,6 +106,7 @@ impl Prompts {
         }
     }
 
+    /// Every prompt this host was asked to raise, in order.
     pub(super) fn raised(&self) -> Vec<Prompt> {
         self.raised
             .lock()
@@ -114,6 +129,10 @@ impl Elevation for Prompts {
     }
 
     fn run(&self, helper: &Path, request: &Path) -> Result<Raised> {
+        if self.reports {
+            report_everything_applied(request);
+        }
+
         self.raised
             .lock()
             .expect("no test panics while holding this")
@@ -128,4 +147,46 @@ impl Elevation for Prompts {
             said: self.said.clone(),
         })
     }
+}
+
+/// Write the report a helper that applied every operation in `request` would leave beside it.
+///
+/// Panics rather than returning an error: a test that asked for a report and got none would fail
+/// later, on an assertion about the queue, a long way from the reason.
+fn report_everything_applied(request: &Path) {
+    use mixengine_proto::privileged::{
+        OpOutcome, PrivilegedOp, PrivilegedRequest, PrivilegedResponse, RESPONSE_FILE_NAME,
+    };
+
+    let text = std::fs::read_to_string(request).expect("the request the daemon just wrote");
+    let asked: PrivilegedRequest = serde_json::from_str(&text).expect("a request this build reads");
+
+    let response = PrivilegedResponse {
+        version: asked.version,
+        elevate_version: "0.0.0-mock".to_owned(),
+        nonce: asked.nonce,
+        elevated: true,
+        supported_ops: PrivilegedOp::ALL
+            .iter()
+            .map(|&name| name.to_owned())
+            .collect(),
+        audit_log: PathBuf::from("audit.log"),
+        results: asked
+            .ops
+            .iter()
+            .map(|_| OpOutcome::Applied {
+                detail: "applied by the mock".to_owned(),
+            })
+            .collect(),
+    };
+
+    let beside = request
+        .parent()
+        .expect("a request lives in its own directory")
+        .join(RESPONSE_FILE_NAME);
+    std::fs::write(
+        beside,
+        serde_json::to_vec(&response).expect("a response encodes"),
+    )
+    .expect("the report is written");
 }

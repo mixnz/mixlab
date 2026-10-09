@@ -6,7 +6,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { GrantOutcome } from "@mixengine/api";
 import type { JobSummary } from "@mixengine/api";
-import { describeOp } from "../../pendingOps";
+import { describeOp, isNothingWaiting } from "../../pendingOps";
 import { useRunningDots } from "../../screens/Settings/useRunningDots";
 import styles from "./ElevationDialog.module.css";
 
@@ -36,7 +36,7 @@ import styles from "./ElevationDialog.module.css";
  * inside the job — closing the dialog as soon as the RPC answered was a real bug: `onClose`
  * triggered the Dashboard's `reload()`, which read `daemon.status` while the queue was still intact
  * (the user had not typed the password yet), and once they had, the daemon emitted no event about
- * the queue (`elevation_required` only fires when the queue *grows*), so the "N waiting" count sat
+ * the queue (`elevation_required` then fired only when the queue *grew*), so the "N waiting" count sat
  * still until someone switched tabs. So this polls `jobStatus` every second until the job finishes,
  * and only then calls `onClose` — and reads the `GrantOutcome` in `result`: `declined` (the
  * password box was closed) keeps the dialog open with a line saying nothing has changed yet and
@@ -117,6 +117,12 @@ export default function ElevationDialog({
     } catch (e) {
       if (!live.current) return;
       setBusy(false);
+      // Somebody allowed this list already — the daemon's own prompt after an update, or another
+      // window. What the person wanted is done, so close as a completed grant would.
+      if (isNothingWaiting(e)) {
+        onClose();
+        return;
+      }
       setNotice(errorMessage(t, e));
       return;
     }

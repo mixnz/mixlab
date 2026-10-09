@@ -7,9 +7,11 @@
  * exactly one prompt for the whole batch. Declining is an outcome the API models, not an error;
  * `elevation.drop` is the way out.
  *
- * The daemon **never** raises the prompt itself — only the client calls `grant`. That is exactly
- * what makes "explain before asking" something that can be said rather than something to arrange
- * afterwards.
+ * Almost always only the client calls `grant`, which is what makes "explain before asking"
+ * something that can be said rather than arranged afterwards. The one exception is the daemon's
+ * first start after an update changed the helper: it raises that prompt itself, while the window
+ * may already be showing the same row — so a list on screen can be answered behind its back, and
+ * the daemon then announces the queue that is left.
  */
 
 /** One row of the list, reduced for drawing. */
@@ -32,6 +34,18 @@ export function pendingFrom(raw: string): unknown[] | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Whether a rejected `elevation.grant` means the queue was already empty.
+ *
+ * `precondition_failed` is the one refusal `grant` gives before it looks at anything but the queue,
+ * and the dialog that asked had simply drawn a list somebody else had already allowed. Nothing
+ * failed, so it is not shown as a failure.
+ */
+export function isNothingWaiting(error: unknown): boolean {
+  const refused = (error ?? {}) as { code?: unknown; params?: { code?: unknown } };
+  return refused.code === "error.mixengineRefused" && refused.params?.code === "precondition_failed";
 }
 
 /**

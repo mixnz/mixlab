@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { describeOp, pendingFrom } from "./pendingOps";
+import { describeOp, isNothingWaiting, pendingFrom } from "./pendingOps";
 
 /** Exactly the shape the daemon sends: `PendingOp` wraps `PrivilegedOp` in the `op` field. */
 const hostsApply = {
@@ -79,5 +79,30 @@ describe("describeOp", () => {
      what travels on the wire, and reading it as if it were a `PendingOp` gives `unknown`. */
   it("does not mistake a bare privileged op for a pending entry", () => {
     expect(describeOp({ op: "hosts-apply", entries: [] }).kind).toBe("unknown");
+  });
+});
+
+describe("isNothingWaiting", () => {
+  /* The daemon raised the helper's prompt itself after an update, the person allowed it, and the
+     dialog drawn from the same queue was still on screen: its "Allow" is answered with this. */
+  it("recognises a grant refused because the queue was already empty", () => {
+    expect(
+      isNothingWaiting({
+        code: "error.mixengineRefused",
+        params: { code: "precondition_failed", message: "nothing is waiting for permission" },
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves every other refusal to be shown", () => {
+    expect(
+      isNothingWaiting({
+        code: "error.mixengineRefused",
+        params: { code: "conflict", message: "a grant is already in flight" },
+      }),
+    ).toBe(false);
+    expect(isNothingWaiting({ code: "error.mixengineUnreachable" })).toBe(false);
+    expect(isNothingWaiting(new Error("boom"))).toBe(false);
+    expect(isNothingWaiting(null)).toBe(false);
   });
 });
