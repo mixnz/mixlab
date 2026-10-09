@@ -27,11 +27,11 @@ use std::sync::Arc;
 use mixengine_core::blueprints::manifest::BlueprintManifest;
 use mixengine_proto::{
     AnswerSubject, AppliedDatabase, BlueprintApplied, BlueprintApply, BlueprintApplyResponse,
-    BlueprintPlan, DatabaseCreate, Disposition, DomainAdd, Error, ErrorCode, ExtensionChoice,
-    IssueOutcome, JobKind, LogLine, LogSubject, PackageTarget, PackageVersion, PlanAction,
-    PlanStep, ProjectCreate, ProjectRef, Requirement, RuntimeKind, RuntimeTarget, ScaffoldConsent,
-    ServiceCreate, ServiceId, SiteCreate, SiteRef, StepOutcome, StepResult, Stream, Timestamp,
-    VersionAnswer, rpc,
+    BlueprintPlan, DatabaseCreate, DatabaseCredentialsQuery, DatabaseProtocol, Disposition,
+    DomainAdd, Error, ErrorCode, ExtensionChoice, IssueOutcome, JobKind, LogLine, LogSubject,
+    PackageTarget, PackageVersion, PlanAction, PlanStep, ProjectCreate, ProjectRef, Requirement,
+    RuntimeKind, RuntimeTarget, ScaffoldConsent, ServiceCreate, ServiceId, SiteCreate, SiteRef,
+    StepOutcome, StepResult, Stream, Timestamp, VersionAnswer, rpc,
 };
 
 use super::Api;
@@ -84,10 +84,15 @@ impl Api {
             return Err(refused);
         }
 
+        if let Some(refused) = dotenv_refusal(&plan, &asked.dotenv) {
+            return Err(refused);
+        }
+
         let kind = JobKind::parse(rpc::method::BLUEPRINT_APPLY)
             .expect("`blueprint.apply` is a method name, which is what a job kind is");
         let api = Arc::clone(self);
         let consent = asked.scaffold.clone();
+        let dotenv = asked.dotenv.clone();
         let autostart = asked.autostart;
         let prerequisites = (asked.install_prerequisites, asked.ignore_requirements);
 
@@ -95,7 +100,14 @@ impl Api {
             .jobs
             .begin(&kind, move |handle| async move {
                 let applied = api
-                    .perform(&plan, &manifest, consent, autostart, prerequisites, &handle)
+                    .perform(
+                        &plan,
+                        &manifest,
+                        (consent, dotenv),
+                        autostart,
+                        prerequisites,
+                        &handle,
+                    )
                     .await;
 
                 // **The ring does not outlive the job it was opened for** — roadmap task **T120**,
@@ -139,7 +151,7 @@ impl Api {
         &self,
         plan: &BlueprintPlan,
         manifest: &BlueprintManifest,
-        consent: Option<ScaffoldConsent>,
+        (consent, dotenv): (Option<ScaffoldConsent>, Vec<String>),
         autostart: bool,
         prerequisites: (bool, bool),
         handle: &JobHandle,
@@ -164,6 +176,7 @@ impl Api {
             autostart,
             resolved,
             database: None,
+            dotenv,
         };
 
         // **Opened once, before the first step** — roadmap task **T120**, its design's D5. The ring
@@ -202,7 +215,11 @@ impl Api {
             // this apply has done, which is what somebody reads *after* it has gone wrong.
             log.record(narration(Stream::Stdout, steps::describe(&step.action)));
 
-            let result = match steps::untouched_with_consent(step, context.consent.as_ref()) {
+            let result = match steps::untouched_with_consent(
+                step,
+                context.consent.as_ref(),
+                &context.dotenv,
+            ) {
                 Some(result) => result,
                 None => {
                     match self
@@ -687,6 +704,10 @@ impl Api {
                 Ok(outcome)
             }
 
+            PlanAction::WriteDotenv { key, path } => {
+                Ok(self.write_dotenv(context, key, path).await)
+            }
+
             PlanAction::FetchArchive { url, strip } => {
                 // **A failure is a failed step, not a failed apply** — roadmap task **T205**, D2, on
                 // the scaffold's own rule: the project it made works, and tearing it down over a
@@ -1157,6 +1178,95 @@ fn refusal(
 ///
 /// [`Stream::Stderr`] for a step that did not go well, on the ordinary convention: a client
 /// colouring its output has something to colour by.
+impl Api {
+    /// The `.env` line — roadmap task **T205a**: the URL of the database this apply made, appended
+    /// to the person's file.
+    ///
+    /// **A failure is a failed step**, as the scaffold's is: the project works, and the person can
+    /// set the key by hand. No sentence here carries the value.
+    async fn write_dotenv(&self, context: &steps::Context, key: &str, path: &str) -> StepResult {
+        // **The account this apply made**, not the plan's: T202 may have renamed it.
+        let Some(made) = context.database.clone() else {
+            return StepResult::Failed {
+                why: format!("{key} was not written to {path}: no database was made"),
+            };
+        };
+
+        let outcome = async {
+            let address = mixengine_core::services::handoff::address(&self.store, &made.service)
+                .await
+                .map_err(|error| error.to_string())?
+                .ok_or_else(|| format!("{} is not a database a client opens", made.service))?;
+            let credentials = self
+                .databases
+                .credentials(&DatabaseCredentialsQuery {
+                    service: made.service.clone(),
+                    user: Some(made.user.clone()),
+                })
+                .await
+                .map_err(|error| error.message)?;
+            let value = dotenv_value(
+                &made,
+                address.protocol,
+                &address.host.to_string(),
+                address.port,
+                &credentials.password,
+            );
+            mixengine_core::blueprints::dotenv::write(&context.root, key, &value)
+                .map_err(|error| error.to_string())
+        }
+        .await;
+
+        match outcome {
+            Ok(true) => StepResult::Done { note: None },
+            Ok(false) => StepResult::AlreadyTrue,
+            Err(why) => StepResult::Failed {
+                why: format!("{key} was not written to {path}: {why}"),
+            },
+        }
+    }
+}
+
+/// A key agreed to that this plan does not write, or [`None`] — roadmap task **T205a**, on
+/// [`consent_refusal`]'s rule: a consent names what was read.
+fn dotenv_refusal(plan: &BlueprintPlan, agreed: &[String]) -> Option<Error> {
+    let offered: Vec<&str> = plan
+        .steps
+        .iter()
+        .filter_map(|step| match &step.action {
+            PlanAction::WriteDotenv { key, .. } => Some(key.as_str()),
+            _ => None,
+        })
+        .collect();
+    let stray = agreed.iter().find(|key| !offered.contains(&key.as_str()))?;
+
+    Some(
+        Error::new(
+            ErrorCode::InvalidArgument,
+            format!("this plan writes no {stray} to .env, and that is what was agreed to"),
+        )
+        .with_hint("the blueprint changed since the plan was read; read it again"),
+    )
+}
+
+/// The URL written for the database this apply made — roadmap task **T205a**.
+fn dotenv_value(
+    made: &AppliedDatabase,
+    protocol: DatabaseProtocol,
+    host: &str,
+    port: u16,
+    password: &str,
+) -> String {
+    mixengine_core::blueprints::dotenv::database_url(
+        protocol.as_str(),
+        &made.user,
+        password,
+        host,
+        port,
+        &made.database,
+    )
+}
+
 fn narration(stream: Stream, text: impl Into<String>) -> LogLine {
     LogLine {
         stream,
@@ -1395,6 +1505,45 @@ mod tests {
                 }),
             )
             .is_none()
+        );
+    }
+
+    /// **A consent names what was read** — roadmap task **T205a**, `consent_refusal`'s rule for
+    /// a `.env` key.
+    #[test]
+    fn a_key_the_plan_does_not_write_is_refused() {
+        let plan = a_plan(vec![step(
+            PlanAction::WriteDotenv {
+                key: "DATABASE_URL".to_owned(),
+                path: ".env".to_owned(),
+            },
+            Disposition::Confirm {
+                what: "DATABASE_URL in .env".to_owned(),
+            },
+        )]);
+        assert!(dotenv_refusal(&plan, &["DATABASE_URL".to_owned()]).is_none());
+        assert!(dotenv_refusal(&plan, &[]).is_none());
+        let refused = dotenv_refusal(&plan, &["OTHER".to_owned()]).expect("refused");
+        assert!(refused.message.contains("OTHER"), "{}", refused.message);
+    }
+
+    /// **The account the apply made**, which T202 may have renamed — roadmap task **T205a**.
+    #[test]
+    fn the_dotenv_url_names_the_account_the_apply_made() {
+        let made = AppliedDatabase {
+            service: mixengine_proto::ServiceId::parse("postgres@main").expect("an id"),
+            database: "blog".to_owned(),
+            user: "blog-2".to_owned(),
+        };
+        assert_eq!(
+            dotenv_value(
+                &made,
+                mixengine_proto::DatabaseProtocol::Postgres,
+                "127.0.0.1",
+                5433,
+                "p@ss"
+            ),
+            "postgres://blog-2:p%40ss@127.0.0.1:5433/blog"
         );
     }
 

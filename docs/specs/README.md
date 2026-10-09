@@ -202,3 +202,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-08 | [T204 — A manifest holds every site (design)](2026-10-08-t204-a-manifest-holds-every-site-design.md) | T204 | implemented |
 | 2026-10-08 | [T205 — A blueprint ends at a working site (design)](2026-10-08-t205-a-blueprint-ends-at-a-working-site-design.md) | T205 | implemented |
 | 2026-10-08 | [T206 — Ruby on Windows builds native gems (design)](2026-10-08-t206-ruby-on-windows-builds-native-gems-design.md) | T206, T206a | implemented |
+| 2026-10-09 | [T205a–T205c — What hand-testing the gallery left open (design)](2026-10-09-t205a-t205c-what-hand-testing-the-gallery-left-open-design.md) | T205a, T205b, T205c | implemented |

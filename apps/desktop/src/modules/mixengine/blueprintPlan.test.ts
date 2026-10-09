@@ -13,6 +13,8 @@ import {
   scaffoldConsentState,
   scaffoldLeftCommand,
   scaffoldStepIndex,
+  dotenvKeys,
+  dotenvLeftKeys,
 } from "./blueprintPlan";
 import type { BlueprintApplied } from "@mixengine/api";
 import type { PlanStep } from "@mixengine/api";
@@ -334,5 +336,43 @@ describe("archives", () => {
       steps: [{ action: { action: "fetch_archive", url: "https://wordpress.org/latest.zip" }, result: { result: "not_run", why: "w" } }],
     } as unknown as BlueprintApplied;
     expect(scaffoldLeftCommand(applied)).toBe("https://wordpress.org/latest.zip");
+  });
+});
+
+// T205a: the `.env` keys a plan asks about, and the ones an apply left unwritten.
+describe("dotenvKeys", () => {
+  const ask = step({
+    action: { action: "write_dotenv", key: "DATABASE_URL", path: ".env" },
+    disposition: { disposition: "confirm", what: "DATABASE_URL in .env" },
+  });
+  const there = step({
+    action: { action: "write_dotenv", key: "OTHER", path: ".env" },
+    disposition: { disposition: "satisfied" },
+  });
+
+  it("lists the keys the plan asks about, not the ones already there", () => {
+    expect(dotenvKeys([ask, there])).toEqual(["DATABASE_URL"]);
+  });
+
+  it("is empty for a plan with no .env line", () => {
+    expect(dotenvKeys([])).toEqual([]);
+  });
+});
+
+describe("dotenvLeftKeys", () => {
+  it("names a key the apply left unwritten", () => {
+    const applied = {
+      steps: [
+        {
+          action: { action: "write_dotenv", key: "DATABASE_URL", path: ".env" },
+          result: { result: "not_run", why: "w" },
+        },
+        {
+          action: { action: "write_dotenv", key: "DONE_KEY", path: ".env" },
+          result: { result: "done" },
+        },
+      ],
+    } as unknown as BlueprintApplied;
+    expect(dotenvLeftKeys(applied)).toEqual(["DATABASE_URL"]);
   });
 });

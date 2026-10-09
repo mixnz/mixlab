@@ -36,6 +36,8 @@ on:
       # binary and only mirrored over there, so a rotation on this side invalidates every file
       # published under the old one without touching a single manifest.
       - 'crates/mixengine-core/src/blueprints/trust.rs'
+      # The starters `publish-blueprints` zips beside the gallery (T205b).
+      - 'crates/mixengine-core/src/blueprints/starters/**'
       # A workflow that stopped working should say so on the commit that broke it.
       - '.github/workflows/gallery.yml'
   workflow_dispatch:

@@ -33,6 +33,8 @@ import {
   scaffoldConsentState,
   scaffoldLeftCommand,
   scaffoldStepIndex,
+  dotenvKeys,
+  dotenvLeftKeys,
 } from "../../blueprintPlan";
 import { applyJob, type JobRow } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
@@ -89,6 +91,8 @@ export default function ApplyDialog({
   const [phase, setPhase] = useState<Phase>({ kind: "form" });
   const [choices, setChoices] = useState<Record<number, MismatchAnswer>>({});
   const [scaffoldAgreed, setScaffoldAgreed] = useState(false);
+  // T205a: one box per `.env` key the plan offers, keyed by the key.
+  const [dotenvAgreed, setDotenvAgreed] = useState<Record<string, boolean>>({});
   // Agreement to install what the plan's releases lack on this machine — T152.
   const [prerequisitesAgreed, setPrerequisitesAgreed] = useState(false);
   /* A Ruby this blueprint pins that cannot build gems with C extensions, and the devkit to install
@@ -142,6 +146,13 @@ export default function ApplyDialog({
         // Ticked for a blueprint someone vouches for, which is what the person picked it for; left
         // for them to tick on one nobody vouches for — T205.
         setScaffoldAgreed(response.plan.trusted);
+        // Ticked for a signed blueprint, as the scaffold's box is; empty for one nobody vouches
+        // for, which could name a key the project reads for something else (T205a).
+        setDotenvAgreed(
+          Object.fromEntries(
+            dotenvKeys(response.plan.steps).map((key) => [key, response.plan.trusted]),
+          ),
+        );
         setPrerequisitesAgreed(false);
         setPhase({ kind: "plan", plan: response.plan, needs: response.needs ?? [] });
         setDevkit(null);
@@ -180,6 +191,7 @@ export default function ApplyDialog({
         install_prerequisites: installPrerequisites,
         answers: buildAnswers(plan.steps, choices),
         scaffold: scaffold ?? undefined,
+        dotenv: dotenvKeys(plan.steps).filter((key) => dotenvAgreed[key]),
         // Sent on both passes: the plan people read must be the plan that runs, so a flag that
         // changes the plan must not be added after the dry run.
         front_end: true,
@@ -406,6 +418,21 @@ export default function ApplyDialog({
                             {t("mixengine.blueprints.apply.archiveSkipped")}
                           </p>
                         )}
+                      {step.action.action === "write_dotenv" &&
+                        step.disposition.disposition === "confirm" && (
+                          <Checkbox
+                            className={styles.checkbox}
+                            label={t("mixengine.blueprints.apply.dotenvConsent", {
+                              key: step.action.key,
+                            })}
+                            checked={dotenvAgreed[step.action.key] ?? false}
+                            onChange={(e) => {
+                              const key = step.action.action === "write_dotenv" ? step.action.key : "";
+                              const checked = e.target.checked;
+                              setDotenvAgreed((agreed) => ({ ...agreed, [key]: checked }));
+                            }}
+                          />
+                        )}
                       {(step.action.action === "run_scaffold" ||
                         step.action.action === "fetch_archive") &&
                         i === scaffoldStepIndex(phase.plan.steps) && (
@@ -526,6 +553,14 @@ export default function ApplyDialog({
                   </div>
                 )}
 
+                {/* T205a: a `.env` key left unwritten, in MixLab's words; the daemon's `why`
+                    names a `mix` flag. */}
+                {dotenvLeftKeys(phase.applied).map((key) => (
+                  <p key={key} className={styles.leftUnrun} role="status">
+                    {t("mixengine.blueprints.apply.dotenvLeft", { key })}
+                  </p>
+                ))}
+
                 <ul className={styles.steps}>
                   {phase.applied.steps.map((outcome, i) => (
                     <li key={i} className={styles.step}>
@@ -535,7 +570,14 @@ export default function ApplyDialog({
                         {outcome.result.result === "already_true" &&
                           t("mixengine.blueprints.apply.stepAlreadyTrue")}
                         {outcome.result.result === "not_run" &&
-                          t("mixengine.blueprints.apply.stepNotRun", { why: outcome.result.why })}
+                          t("mixengine.blueprints.apply.stepNotRun", {
+                            why:
+                              outcome.action.action === "write_dotenv"
+                                ? t("mixengine.blueprints.apply.dotenvLeft", {
+                                    key: outcome.action.key,
+                                  })
+                                : outcome.result.why,
+                          })}
                         {outcome.result.result === "failed" &&
                           t("mixengine.blueprints.apply.stepFailed", { why: outcome.result.why })}
                       </p>

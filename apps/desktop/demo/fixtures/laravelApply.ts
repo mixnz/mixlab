@@ -131,6 +131,8 @@ function describe(action: PlanAction): string {
       return "the blueprint's own command";
     case "fetch_archive":
       return `downloading ${action.url}`;
+    case "write_dotenv":
+      return `writing ${action.key} to ${action.path}`;
   }
 }
 

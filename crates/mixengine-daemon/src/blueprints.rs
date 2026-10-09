@@ -396,6 +396,7 @@ mod tests {
             dry_run: true,
             answers: Vec::new(),
             scaffold: None,
+            dotenv: Vec::new(),
             front_end: false,
             autostart: false,
             install_prerequisites: false,

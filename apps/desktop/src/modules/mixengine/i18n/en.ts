@@ -842,6 +842,8 @@ export default {
         scaffoldTitle: "This blueprint wants to run a command:",
         archiveTitle: "It downloads and unpacks into the project directory:",
         archiveSkipped: "The folder already has files, so the starter is not unpacked. Your files stay as they are.",
+        dotenvConsent: "Write {{key}}, with the database password, to .env",
+        dotenvLeft: "{{key}} was not written to .env. Set it yourself, with the password shown below.",
         devkitTitle:
           "This blueprint's Ruby cannot build gems with C extensions on this machine, and its steps need them.",
         devkitConsent: "Install the devkit with it ({{size}})",
@@ -883,6 +885,7 @@ export default {
           set_php_extension_pending: "Set PHP extension {{name}} on the PHP installed above",
           run_scaffold: "Run: {{command}}",
           fetch_archive: "Download and unpack {{url}}",
+          write_dotenv: "Write {{key}} to {{path}}",
         },
       },
     },

@@ -17,6 +17,7 @@
 
 pub mod archive;
 pub mod capture;
+pub mod dotenv;
 pub mod gallery;
 pub mod manifest;
 pub mod plan;

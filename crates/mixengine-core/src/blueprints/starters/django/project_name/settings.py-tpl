@@ -12,6 +12,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -78,8 +79,45 @@ WSGI_APPLICATION = '{{ project_name }}.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/#databases
 
+# MixEngine's django blueprint can write DATABASE_URL to .env (you agree to it when applying):
+# then this project uses that PostgreSQL database. Without it, SQLite, as Django starts.
+def _dotenv(name):
+    path = BASE_DIR / '.env'
+    if not path.is_file():
+        return None
+    for line in path.read_text(encoding='utf-8').splitlines():
+        line = line.strip().removeprefix('export ').strip()
+        if line.startswith('#') or '=' not in line:
+            continue
+        key, value = line.split('=', 1)
+        if key.strip() == name:
+            return value.strip().strip('"')
+    return None
+
+
+def _database(url):
+    from urllib.parse import unquote, urlsplit
+
+    parts = urlsplit(url)
+    engine = {
+        'postgres': 'django.db.backends.postgresql',
+        'postgresql': 'django.db.backends.postgresql',
+        'mysql': 'django.db.backends.mysql',
+    }[parts.scheme]
+    return {
+        'ENGINE': engine,
+        'NAME': unquote(parts.path.lstrip('/')),
+        'USER': unquote(parts.username or ''),
+        'PASSWORD': unquote(parts.password or ''),
+        'HOST': parts.hostname or '',
+        'PORT': str(parts.port or ''),
+    }
+
+
+_url = os.environ.get('DATABASE_URL') or _dotenv('DATABASE_URL')
+
 DATABASES = {
-    'default': {
+    'default': _database(_url) if _url else {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }

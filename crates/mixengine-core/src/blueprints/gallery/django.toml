@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [blueprint]
 name = "Django"
@@ -24,16 +24,18 @@ name = "postgres"
 instance = "main"
 database = "{project}"
 user = "{project}"
+dotenv = "DATABASE_URL"
 
 [[next_steps]]
 kind = "once"
-run = "python -m pip install django"
-note = "Installs into the runtime this project pins, which its other projects share."
+run = "python -m pip install django psycopg psycopg-binary"
+note = "Installs into the runtime this project pins, which its other projects share. On Windows ARM64 there is no psycopg-binary yet: install Django alone with python -m pip install django, and leave the .env box unticked to stay on SQLite."
 
 [[next_steps]]
 kind = "once"
 run = "python -m django startproject --template https://github.com/mixnz/mixengine-packages/releases/download/blueprints/django-starter.zip config ."
-note = "Django's own project template, with the .test domain in ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS."
+note = "Django's own project template, with the .test domain allowed, and the database read from DATABASE_URL in .env when MixEngine wrote it."
+credentials = true
 
 [[next_steps]]
 kind = "serve"

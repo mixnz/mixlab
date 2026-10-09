@@ -168,7 +168,29 @@ export function describePlanAction(
       return t(`${base}.run_scaffold`, { command: action.command });
     case "fetch_archive":
       return t(`${base}.fetch_archive`, { url: action.url });
+    case "write_dotenv":
+      return t(`${base}.write_dotenv`, { key: action.key, path: action.path });
   }
+}
+
+/** The `.env` keys this plan asks to write, password included (T205a). A key already in `.env`
+ *  plans `satisfied` and asks nothing. */
+export function dotenvKeys(steps: PlanStep[]): string[] {
+  return steps.flatMap((step) =>
+    step.action.action === "write_dotenv" && step.disposition.disposition === "confirm"
+      ? [step.action.key]
+      : [],
+  );
+}
+
+/** The keys an apply left unwritten, said on the *Done* screen in MixLab's words rather than the
+ *  daemon's `why`, whose hint names a `mix` flag (T205a). */
+export function dotenvLeftKeys(applied: BlueprintApplied): string[] {
+  return applied.steps.flatMap((outcome) =>
+    outcome.action.action === "write_dotenv" && outcome.result.result === "not_run"
+      ? [outcome.action.key]
+      : [],
+  );
 }
 
 /** `null` for a job that is unfinished, failed or cancelled — not inferred from `state`; only

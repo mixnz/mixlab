@@ -342,6 +342,17 @@ through MixEngine with *DisallowedHost*. `laravel-mongodb` runs `laravel`'s comm
 mongodb/laravel-mongodb` after it would be a second command joined to the first, so it is a step
 the person runs (below). The gallery sells a stack, not a scaffold.
 
+**A database's URL in `.env`, when the person agrees** — roadmap task **T205a**.
+`[[services]] dotenv = "KEY"` plans a `write_dotenv` step after the scaffold, since
+`create-project .` refuses a folder that holds a `.env`. MixLab draws a box for it, ticked for a
+signed blueprint, and `mix` asks or takes `--write-dotenv`. The URL names the account the apply
+really made (T202 may have renamed it), is appended to `.env` with every other line kept, and leaves
+the file private to this account; a key already there is the person's and is left alone. `rails`
+writes `DEVELOPMENT_DATABASE_URL`, read through an application template
+(`starters/rails-template.rb`, published as itself), because Rails merges `DATABASE_URL` into the
+test environment too; `django` writes `DATABASE_URL`, read by its template's settings. One service
+per manifest may carry the key: an apply remembers one database.
+
 **A blueprint with no framework still starts with a page.** `php-mysql` and `static` unpack a
 starter page of this repository's (`starters/php-mysql/`, `starters/static/`) with
 `[scaffold] when_empty = true`, so the two things people actually do with these entries are served

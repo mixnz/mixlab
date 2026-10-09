@@ -52,6 +52,10 @@ pub(crate) struct Context {
     /// The account the `CreateDatabase` step really used — roadmap task **T205**, D6. Reported in
     /// the apply's answer, which is the one place it is known: T202 may have chosen another name.
     pub(crate) database: Option<mixengine_proto::AppliedDatabase>,
+
+    /// The `.env` keys the request agreed to have written — roadmap task **T205a**. Already
+    /// checked against this plan before the job began.
+    pub(crate) dotenv: Vec<String>,
 }
 
 impl Context {
@@ -89,18 +93,37 @@ pub(crate) fn package_key(package: &str) -> String {
 ///
 /// `consent` is the agreement the request carried, if it carried one — roadmap task **T78a**, its
 /// design's D4. By the time it reaches here it has already been checked against this plan.
+///
+/// `dotenv` is the `.env` keys the request agreed to — roadmap task **T205a**. Apart from
+/// `consent`, because a plan can carry a scaffold and a key at once and one answer must not stand
+/// for the other.
 pub(crate) fn untouched_with_consent(
     step: &PlanStep,
     consent: Option<&ScaffoldConsent>,
+    dotenv: &[String],
 ) -> Option<StepResult> {
-    match &step.disposition {
-        Disposition::Satisfied => Some(StepResult::AlreadyTrue),
+    match (&step.disposition, &step.action) {
+        (Disposition::Satisfied, _) => Some(StepResult::AlreadyTrue),
+
+        // **Its own consent** (T205a). The line holds a password, so it is written only for a key
+        // the request names.
+        (Disposition::Confirm { .. }, PlanAction::WriteDotenv { key, path }) => {
+            match dotenv.iter().any(|agreed| agreed == key) {
+                true => None,
+                false => Some(StepResult::NotRun {
+                    why: format!(
+                        "{key} was not written to {path}: nobody agreed to it; set it from \
+                         `mix database credentials`, or apply again with `--write-dotenv`"
+                    ),
+                }),
+            }
+        }
 
         // **Agreed to, or left** (T78a, D4). A blueprint's own command is arbitrary code from
         // whoever wrote it: with a consent naming it this is work, and without one the step is left
         // as a sentence while everything else is applied — because a blueprint must not become
         // worthless over the one step nobody answered for.
-        Disposition::Confirm { what } => match consent {
+        (Disposition::Confirm { what }, _) => match consent {
             Some(_) => None,
             None => Some(StepResult::NotRun {
                 why: format!(
@@ -113,7 +136,7 @@ pub(crate) fn untouched_with_consent(
         // **Its program is not there, so it is left** — roadmap task **T78b**, its design's D5.
         // With a consent it was refused before the job existed; without one it was never going to
         // run. Either way the sentence carries the command and the reason.
-        Disposition::Blocked { reason }
+        (Disposition::Blocked { reason }, _)
             if matches!(
                 step.action,
                 PlanAction::RunScaffold { .. } | PlanAction::FetchArchive { .. }
@@ -134,10 +157,13 @@ pub(crate) fn untouched_with_consent(
         // Every one of these was refused before the job existed. Reaching one here means the plan
         // changed underneath this apply, which is a failure and not a step outcome — so it is left
         // to the caller, which turns [`None`] into work and finds there is none to do.
-        Disposition::Blocked { .. }
-        | Disposition::Unsupported { .. }
-        | Disposition::Choice { .. }
-        | Disposition::Create => None,
+        (
+            Disposition::Blocked { .. }
+            | Disposition::Unsupported { .. }
+            | Disposition::Choice { .. }
+            | Disposition::Create,
+            _,
+        ) => None,
 
         // A disposition a later build added, met by an executor that cannot know what it means.
         // Refusing to guess is the only safe reading.
@@ -193,6 +219,7 @@ pub(crate) fn describe(action: &PlanAction) -> String {
         PlanAction::SetPhpExtension { name, .. } => format!("turning on the PHP extension {name}"),
         PlanAction::RunScaffold { .. } => "the blueprint's own command".to_owned(),
         PlanAction::FetchArchive { url, .. } => format!("downloading {url}"),
+        PlanAction::WriteDotenv { key, path } => format!("writing {key} to {path}"),
         _ => "a step this build does not know".to_owned(),
     }
 }
@@ -214,12 +241,69 @@ mod tests {
         }
     }
 
+    fn dotenv_step() -> PlanStep {
+        PlanStep {
+            action: PlanAction::WriteDotenv {
+                key: "DATABASE_URL".to_owned(),
+                path: ".env".to_owned(),
+            },
+            disposition: Disposition::Confirm {
+                what: "DATABASE_URL in .env".to_owned(),
+            },
+            elevates: false,
+        }
+    }
+
+    /// **Each consent answers its own step** — roadmap task **T205a**. A plan can carry a
+    /// scaffold and a `.env` key at once, and agreeing to one is not agreeing to the other.
+    #[test]
+    fn a_scaffold_consent_does_not_write_the_key_and_a_key_does_not_run_the_scaffold() {
+        let scaffold = ScaffoldConsent {
+            command: "composer install".to_owned(),
+            archive: None,
+            untrusted: false,
+        };
+        let keys = vec!["DATABASE_URL".to_owned()];
+        let command = PlanStep {
+            action: PlanAction::RunScaffold {
+                command: "composer install".to_owned(),
+            },
+            disposition: Disposition::Confirm {
+                what: "composer install".to_owned(),
+            },
+            elevates: false,
+        };
+
+        assert!(matches!(
+            untouched_with_consent(&dotenv_step(), Some(&scaffold), &[]),
+            Some(StepResult::NotRun { .. })
+        ));
+        assert!(matches!(
+            untouched_with_consent(&command, None, &keys),
+            Some(StepResult::NotRun { .. })
+        ));
+        assert!(untouched_with_consent(&dotenv_step(), None, &keys).is_none());
+        assert!(untouched_with_consent(&command, Some(&scaffold), &[]).is_none());
+    }
+
+    #[test]
+    fn a_key_not_agreed_to_says_what_to_set() {
+        let Some(StepResult::NotRun { why }) = untouched_with_consent(&dotenv_step(), None, &[])
+        else {
+            panic!("not run");
+        };
+        assert!(
+            why.contains("DATABASE_URL") && why.contains("--write-dotenv"),
+            "{why}"
+        );
+    }
+
     /// Every step is reported, including the ones that needed nothing: a second apply whose every
     /// line says *already true* is the proof that the first one finished.
     #[test]
     fn a_step_that_needs_nothing_is_reported_rather_than_left_out() {
         assert_eq!(
-            untouched_with_consent(&step(Disposition::Satisfied), None),
+            untouched_with_consent(&step(Disposition::Satisfied), None, &[]),
             Some(StepResult::AlreadyTrue)
         );
     }
@@ -233,6 +317,7 @@ mod tests {
                 what: "composer install".to_owned(),
             }),
             None,
+            &[],
         );
 
         let Some(StepResult::NotRun { why }) = left else {
@@ -255,7 +340,7 @@ mod tests {
             },
             elevates: false,
         };
-        let Some(StepResult::NotRun { why }) = untouched_with_consent(&archive, None) else {
+        let Some(StepResult::NotRun { why }) = untouched_with_consent(&archive, None, &[]) else {
             panic!("an archive is left rather than fetched");
         };
         assert!(why.contains("https://x.org/a.zip"), "{why}");
@@ -274,7 +359,7 @@ mod tests {
             },
             elevates: false,
         };
-        let Some(StepResult::NotRun { why }) = untouched_with_consent(&archive, None) else {
+        let Some(StepResult::NotRun { why }) = untouched_with_consent(&archive, None, &[]) else {
             panic!("a blocked archive is left");
         };
         assert!(why.contains("https://x.org/a.zip"), "{why}");
@@ -296,6 +381,7 @@ mod tests {
                     what: "composer install".to_owned(),
                 }),
                 Some(&consent),
+                &[]
             ),
             None
         );
@@ -305,7 +391,7 @@ mod tests {
     #[test]
     fn a_step_that_is_work_is_not_decided_here() {
         assert_eq!(
-            untouched_with_consent(&step(Disposition::Create), None),
+            untouched_with_consent(&step(Disposition::Create), None, &[]),
             None
         );
     }
@@ -401,7 +487,8 @@ mod tests {
         };
 
         for consent in [None, Some(&consent)] {
-            let Some(StepResult::NotRun { why }) = untouched_with_consent(&step, consent) else {
+            let Some(StepResult::NotRun { why }) = untouched_with_consent(&step, consent, &[])
+            else {
                 panic!("a blocked scaffold is left rather than run");
             };
             assert!(why.contains("composer install"), "{why}");
@@ -417,7 +504,8 @@ mod tests {
                 &step(Disposition::Blocked {
                     reason: "in the way".to_owned()
                 }),
-                None
+                None,
+                &[]
             ),
             None
         );

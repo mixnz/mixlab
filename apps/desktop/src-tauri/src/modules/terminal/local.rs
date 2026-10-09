@@ -276,6 +276,9 @@ pub fn spawn(
         command.env("PATH", path);
     }
 
+    // T205c: a child inherits "ignore Ctrl+C" from however MixLab was launched.
+    crate::platform::process_ctrl_c();
+
     let mut child = pair
         .slave
         .spawn_command(command)
@@ -592,6 +595,87 @@ mod tests {
     #[test]
     fn nothing_to_prepend_changes_nothing() {
         assert_eq!(joined_path(&[], None), None);
+    }
+
+    /// **Ctrl+C reaches a shell started while this process ignores it** — roadmap task **T205c**.
+    /// A launcher that starts MixLab with `CREATE_NEW_PROCESS_GROUP` hands every child "ignore
+    /// Ctrl+C", and PowerShell then ignored the key. The probe runs in a child process of its own,
+    /// since the flag is process-wide and would leak into every other test here.
+    #[cfg(windows)]
+    #[test]
+    fn ctrl_c_reaches_a_shell_started_while_ignoring_it() {
+        let status = std::process::Command::new(std::env::current_exe().expect("this test"))
+            .args([
+                "--exact",
+                "modules::terminal::local::tests::ctrl_c_probe",
+                "--ignored",
+                "--nocapture",
+            ])
+            .status()
+            .expect("the probe runs");
+        assert!(status.success(), "Ctrl+C did not stop ping in the shell");
+    }
+
+    #[cfg(windows)]
+    #[tokio::test]
+    #[ignore = "run by ctrl_c_reaches_a_shell_started_while_ignoring_it, in a process of its own"]
+    async fn ctrl_c_probe() {
+        #[link(name = "kernel32")]
+        extern "system" {
+            fn SetConsoleCtrlHandler(handler: *const std::ffi::c_void, add: i32) -> i32;
+        }
+        // SAFETY: a null handler with TRUE only sets this process's "ignore Ctrl+C" flag, which is
+        // what the launcher that started MixLab may have done.
+        unsafe { SetConsoleCtrlHandler(std::ptr::null(), 1) };
+
+        let seen: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+        let handle = seen.clone();
+        let sink: OutputSink = Arc::new(move |output| {
+            if let Output::Data(bytes) = output {
+                handle.lock().unwrap().extend(bytes);
+            }
+        });
+        let session = spawn(
+            Some("powershell.exe".to_owned()),
+            vec![
+                "-NoProfile".to_owned(),
+                "-Command".to_owned(),
+                "ping -n 30 127.0.0.1".to_owned(),
+            ],
+            None,
+            &std::collections::BTreeMap::new(),
+            &[],
+            TerminalSize {
+                cols: 120,
+                rows: 30,
+            },
+            sink,
+        )
+        .expect("powershell opens");
+        // ConPTY asks where the cursor is (`ESC[6n`) and draws nothing until it is told; xterm.js
+        // answers in the window, so the probe answers here.
+        session.input.send(b"\x1b[1;1R".to_vec()).expect("sent");
+
+        let text = || String::from_utf8_lossy(&seen.lock().unwrap()).into_owned();
+        let wait_for = |needle: &'static str, seconds: u64| {
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(seconds);
+            async move {
+                while !text().contains(needle) {
+                    assert!(
+                        std::time::Instant::now() < deadline,
+                        "no {needle} within {seconds}s: {}",
+                        text()
+                    );
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                }
+            }
+        };
+
+        // `ping` says `Control-C` when the key reaches it; PowerShell then drops the rest of the
+        // command, so nothing after it is a sign. Ignored, it would go on for thirty seconds.
+        wait_for("Reply from 127.0.0.1", 15).await;
+        session.input.send(vec![0x03]).expect("sent");
+        wait_for("Control-C", 5).await;
     }
 
     #[test]

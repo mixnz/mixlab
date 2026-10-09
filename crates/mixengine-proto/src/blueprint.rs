@@ -662,6 +662,17 @@ pub enum PlanAction {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         strip: Option<String>,
     },
+
+    /// Append the project database's URL to `.env` under `key` — roadmap task **T205a**. Asked
+    /// for (`Confirm`) and answered by [`BlueprintApply::dotenv`](crate::BlueprintApply), apart
+    /// from the scaffold's consent. **Never the value**: it is read when the step runs.
+    WriteDotenv {
+        /// The variable name.
+        key: String,
+
+        /// Relative to the project root: `.env`.
+        path: String,
+    },
 }
 
 /// What this home makes of one action.
@@ -1025,6 +1036,21 @@ mod tests {
         assert_eq!(read.kind, NextStepKind::Open);
         assert!(read.optional);
         assert!(!read.credentials);
+    }
+
+    #[test]
+    fn write_dotenv_is_tagged_like_the_other_actions() {
+        let action = PlanAction::WriteDotenv {
+            key: "DATABASE_URL".to_owned(),
+            path: ".env".to_owned(),
+        };
+        let json = serde_json::to_value(&action).expect("encodes");
+        assert_eq!(json["action"], "write_dotenv");
+        assert_eq!(json["key"], "DATABASE_URL");
+        assert_eq!(
+            serde_json::from_value::<PlanAction>(json).expect("decodes"),
+            action
+        );
     }
 
     #[test]

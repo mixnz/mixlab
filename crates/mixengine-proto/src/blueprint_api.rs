@@ -144,6 +144,13 @@ pub struct BlueprintApply {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scaffold: Option<ScaffoldConsent>,
 
+    /// The `.env` keys the person agreed to have written, password included — roadmap task
+    /// **T205a**. Apart from [`BlueprintApply::scaffold`], since a plan can carry both and one
+    /// consent must not answer the other. A key the plan does not write is refused before
+    /// anything is touched.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dotenv: Vec<String>,
+
     /// Whether to plan a front end where this home has none — roadmap task **T115**.
     ///
     /// `core::sites` renders nothing for a home with no front end and succeeds while doing it, so a

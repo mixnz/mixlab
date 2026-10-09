@@ -276,6 +276,9 @@ async fn linked(
             user: named
                 .and_then(|entry| entry.user.as_deref())
                 .map(|user| tokenised_value(user, &project.name)),
+            // Never captured (T205a): a project's `.env` says nothing about which key a blueprint
+            // should offer, and a manifest that named one would be a guess.
+            dotenv: None,
         });
     }
 
