@@ -147,17 +147,25 @@ pub enum Error {
         schema: u32,
     },
 
-    /// A project holds more than one site, and a blueprint describes one.
+    /// A project's php-fpm sites run more than one PHP, and a blueprint has one — roadmap task
+    /// **T204a**, D6.
     ///
-    /// Refused rather than reduced: capturing the first site would lose the others without saying
-    /// so, and `[[sites]]` is a widening of the manifest format rather than something to guess at
-    /// now. The domains are here because "this project has two sites" sends somebody hunting.
-    #[error("{project} has {} sites ({}), and a blueprint describes one", domains.len(), domains.join(", "))]
-    ProjectHasSeveralSites {
+    /// Refused rather than reduced: writing one version down would change what the other sites run
+    /// on the machine that applies it. The sites are named because "two PHPs" sends somebody
+    /// hunting.
+    #[error(
+        "{project} serves its sites with more than one PHP ({}), and a blueprint has one",
+        sites
+            .iter()
+            .map(|(domain, version)| format!("{domain} on {version}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )]
+    ProjectRunsSeveralPhps {
         /// The project's name.
         project: String,
-        /// Each site's primary domain.
-        domains: Vec<String>,
+        /// Each php-fpm site's primary domain, and the PHP its pool runs.
+        sites: Vec<(String, String)>,
     },
 
     /// A blueprint name is not a slug, and a slug is what a filename stem can be made of.

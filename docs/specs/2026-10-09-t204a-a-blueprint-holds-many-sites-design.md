@@ -236,7 +236,7 @@ ledger, so a resumed apply that fails never removes what an earlier run made.
 ### D6 — Capture writes every site
 
 `ProjectHasSeveralSites` is removed. A project with several sites captures into `[[sites]]`, in
-`sites::records` order, which is creation order and so deterministic (T77's D7):
+`sites::records` order, which is primary-domain order and so deterministic (T77's D7):
 
 - **Each entry** is today's `[site]` capture of that site: kind with its pool dropped, `doc_root`,
   `https`, the tokenised primary and aliases, routes with their pools dropped.

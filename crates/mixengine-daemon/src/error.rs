@@ -343,6 +343,11 @@ impl ToWire for mixengine_core::Error {
 
             Core::BlueprintExists { .. } => Error::new(ErrorCode::AlreadyExists, chain(self)),
 
+            // **About the project, never the daemon failing** — roadmap task **T204a**. The
+            // several-sites refusal this replaced had no arm, and reached clients as `internal`.
+            Core::ProjectRunsSeveralPhps { .. } => Error::new(ErrorCode::Conflict, chain(self))
+                .with_hint("a blueprint has one [runtimes] php; move the sites onto one PHP first"),
+
             Core::BlueprintManifest { .. } | Core::UnknownBlueprintSchema { .. } => {
                 Error::new(ErrorCode::InvalidArgument, chain(self))
             }
