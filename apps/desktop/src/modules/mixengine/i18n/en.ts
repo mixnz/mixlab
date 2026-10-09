@@ -359,6 +359,13 @@ export default {
         removeDevkitConfirmMessage:
           "Ruby here won't build gems with C extensions until the devkit is installed again.",
       },
+      emulated: {
+        mark: "emulated",
+        reason:
+          "There is no build for this machine's processor yet, so MixEngine installs the x86_64 one and the operating system runs it under emulation. It works, a little slower than a native build.",
+        notice:
+          "{{name}} has no build for this machine's processor. Installing the x86_64 build, which the operating system runs under emulation.",
+      },
       tabLanguages: "Languages",
       about: "Languages, servers and the versions of each this machine keeps.",
       onDisk: {

@@ -14,6 +14,7 @@ import StatusPill from "../../../../components/StatusPill";
 import Table from "../../../../components/Table";
 import { useTranslation } from "../../../../i18n";
 import { formatInstalledAt, jobFor, newestFirst, versionKey } from "../../runtimeState";
+import EmulatedMark from "../../components/EmulatedMark";
 import RequirementDialog from "../../components/RequirementDialog";
 import UpdateRow from "../../components/UpdateRow";
 import UpgradeDialog from "../../components/UpgradeDialog";
@@ -97,11 +98,16 @@ export default function PackageList({
         </span>
         <span className={styles.version}>{release.version}</span>
         <span className={styles.tag}>{release.channel}</span>
-        <span
-          className={styles.needs}
-          title={libraries.length > 0 ? libraries.join(", ") : t("mixengine.requirements.columnNeeds")}
-        >
-          {needs.join(", ")}
+        {/* One grid cell for both, as in `Languages.tsx`: the row is six columns, and a seventh
+            child would push Install onto the next line (T206). */}
+        <span className={styles.needsCell}>
+          <span
+            className={styles.needs}
+            title={libraries.length > 0 ? libraries.join(", ") : t("mixengine.requirements.columnNeeds")}
+          >
+            {needs.join(", ")}
+          </span>
+          <EmulatedMark release={release} className={styles.lacks} />
         </span>
         {job ? (
           <span className={styles.progress}>

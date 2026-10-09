@@ -20,6 +20,7 @@ import * as api from "../../api";
 import type { PackageRelease, PackageVersion, RuntimeKind, RuntimeRelease } from "@mixengine/api";
 import type { RuntimeSummary, RuntimeUpdate, UpgradePlan } from "@mixengine/api";
 import type { CatalogueGap } from "@mixengine/api";
+import EmulatedMark, { isEmulated } from "../../components/EmulatedMark";
 import RequirementDialog from "../../components/RequirementDialog";
 import UpdateRow from "../../components/UpdateRow";
 import UpgradeDialog from "../../components/UpgradeDialog";
@@ -196,6 +197,12 @@ export default function Languages({ active }: { active: boolean }) {
   // never in a download that fails at its last step (T151).
   async function install(release: RuntimeRelease) {
     setError("");
+    // Said before the download, as the daemon's first progress line says it to `mix` — ADR 0023.
+    // A job message is overwritten by the next one, so the window keeps it in the banner.
+    const emulated = isEmulated(release)
+      ? t("mixengine.packages.emulated.notice", { name: `${release.kind} ${release.version}` })
+      : "";
+    if (emulated !== "") setNotice(emulated);
     let unmet;
     try {
       ({ unmet } = await api.runtimeRequirements({ kind: release.kind, version: release.version }));
@@ -215,12 +222,11 @@ export default function Languages({ active }: { active: boolean }) {
     // **Said, not asked** — T27e: `mix` prints the same warning and installs, so the window does
     // too rather than putting a dialog in front of a machine that can run this perfectly well.
     if (step.kind === "notice") {
-      setNotice(
-        t("mixengine.requirements.librariesNotice", {
-          name: `${release.kind} ${release.version}`,
-          libraries: splitLibraries(step.needs).libraries.join(", "),
-        }),
-      );
+      const libraries = t("mixengine.requirements.librariesNotice", {
+        name: `${release.kind} ${release.version}`,
+        libraries: splitLibraries(step.needs).libraries.join(", "),
+      });
+      setNotice(emulated === "" ? libraries : `${emulated} ${libraries}`);
       await start(release.kind, release.version, false);
       return;
     }
@@ -505,6 +511,7 @@ export default function Languages({ active }: { active: boolean }) {
           >
             {needs.join(", ")}
           </span>
+          <EmulatedMark release={release} className={styles.lacks} />
           {lacksMark(release)}
         </span>
         {job ? (

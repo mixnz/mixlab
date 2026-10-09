@@ -132,8 +132,8 @@ tbody tr.withUpdate > td {
   color: var(--warning-text);
 }
 
-/* One mark a row, never wider than its text and never wrapped: a second line would push into the
-   row below. */
+/* A mark on a row (what it lacks, or that it runs emulated), never wider than its text and never
+   wrapped: a second line would push into the row below. */
 .lacks {
   flex-shrink: 0;
   white-space: nowrap;

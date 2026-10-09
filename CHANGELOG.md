@@ -14,6 +14,8 @@
   tab. `mix runtime install ruby` names the version to use.
 - `mix runtime available` and MixLab's Languages tab say what a release cannot do on this machine,
   such as a Windows Ruby that has no compiler.
+- On Windows on ARM, MixLab's Languages and Packages tabs mark a release that runs under
+  emulation, and say so when you install it.
 - Applying a blueprint ends with what is left to run, such as `npm run dev` for Next.js. In MixLab,
   Run opens each one in a Terminal tab with the project's runtimes on PATH, and Save keeps a dev
   server in the Terminal's list.

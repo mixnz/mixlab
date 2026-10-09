@@ -353,6 +353,13 @@ const vi: typeof en = {
         removeDevkitConfirmTitle: "Gỡ devkit?",
         removeDevkitConfirmMessage: "Ruby ở đây sẽ không build được gem có phần C cho tới khi cài lại devkit.",
       },
+      emulated: {
+        mark: "giả lập",
+        reason:
+          "Chưa có bản build cho bộ xử lý của máy này, nên MixEngine cài bản x86_64 và hệ điều hành chạy nó qua giả lập. Vẫn chạy được, chỉ chậm hơn bản native một chút.",
+        notice:
+          "{{name}} chưa có bản cho bộ xử lý của máy này. Đang cài bản x86_64, hệ điều hành sẽ chạy nó qua giả lập.",
+      },
       tabLanguages: "Ngôn ngữ",
       about: "Ngôn ngữ, máy chủ và các phiên bản máy này đang giữ.",
       onDisk: {

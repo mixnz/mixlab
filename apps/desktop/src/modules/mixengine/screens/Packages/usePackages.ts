@@ -8,6 +8,7 @@ import type { PackageSummary } from "@mixengine/api";
 import type { PackageFoundList } from "@mixengine/api";
 import type { PackageUpdate, UpgradePlan } from "@mixengine/api";
 import type { CatalogueGap } from "@mixengine/api";
+import { isEmulated } from "../../components/EmulatedMark";
 import { applyJob, type JobRow } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
 import {
@@ -181,6 +182,11 @@ export function usePackages(active: boolean): PackagesState {
   const install = useCallback(
     async (release: PackageRelease) => {
       setError("");
+      // Said before the download, as `Languages` says it — ADR 0023.
+      const emulated = isEmulated(release)
+        ? t("mixengine.packages.emulated.notice", { name: `${release.package} ${release.version}` })
+        : "";
+      if (emulated !== "") setNotice(emulated);
       let unmet;
       try {
         ({ unmet } = await api.packageRequirements({
@@ -202,12 +208,11 @@ export function usePackages(active: boolean): PackagesState {
 
       // **Said, not asked** — T27e, the same rule `Languages` follows and `mix` follows.
       if (step.kind === "notice") {
-        setNotice(
-          t("mixengine.requirements.librariesNotice", {
-            name: `${release.package} ${release.version}`,
-            libraries: splitLibraries(step.needs).libraries.join(", "),
-          }),
-        );
+        const libraries = t("mixengine.requirements.librariesNotice", {
+          name: `${release.package} ${release.version}`,
+          libraries: splitLibraries(step.needs).libraries.join(", "),
+        });
+        setNotice(emulated === "" ? libraries : `${emulated} ${libraries}`);
         await start(release.package, release.version, false);
         return;
       }
