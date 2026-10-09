@@ -705,12 +705,20 @@ async fn a_deleted_pool_gives_its_activators_address_back() {
 
         // The probe above is a connection, and a connection is what wakes a pool: stop it, since
         // `service.delete` refuses a running service.
-        client
-            .call("service.stop", json!({"service": "php-fpm@8.3.34"}))
-            .await;
-        client
-            .call("service.delete", json!({"service": "php-fpm@8.3.34"}))
-            .await;
+        //
+        // **Asked with the daemon's log on failure.** Run 37943878909 refused the delete on
+        // windows-latest twice with "php-fpm@8.3.34 is starting" after the stop had answered, and
+        // left nothing saying what started it again.
+        for method in ["service.stop", "service.delete"] {
+            let answer = client
+                .ask(method, json!({"service": "php-fpm@8.3.34"}))
+                .await;
+            assert!(
+                answer.get("error").is_none(),
+                "{method}: {answer}\n{}",
+                home.daemon_log()
+            );
+        }
 
         assert!(
             !still_served_here(&home, port).await,
