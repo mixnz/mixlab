@@ -37,6 +37,20 @@
   padding: 10px 12px;
 }
 
+/* T204a, D4: a plan that makes several sites names each one above its steps, and indents them, so
+   three sites read as three rather than as one long run of domains. */
+.siteHeading {
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.inSite {
+  margin-left: 12px;
+}
+
 /* A failed step quotes the command's last lines, and the daemon sends them as lines — T120a's D6.
    Without this they arrive as one run-on sentence, because HTML collapses a newline to a space:
    the two npm naming rules read as `... characters * name can no longer ...`. */

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 import Button from "../../../../components/Button";
@@ -45,6 +45,7 @@ import { planDevkitNeed } from "../../devkitNeed";
 import { formatBytes } from "../../metricsState";
 import { DEVKIT_PACKAGE, devkitOffer } from "../Packages/devkit";
 import type { PackageRelease } from "@mixengine/api";
+import { siteOfEachStep } from "../../siteGroups";
 import styles from "./ApplyDialog.module.css";
 
 interface Props {
@@ -285,6 +286,12 @@ export default function ApplyDialog({
       busy: busy ? t("mixengine.blueprints.apply.previewing") : undefined,
     });
   }
+  // **Which site each step is for** — T204a, D4. Read off the plan's order, and only drawn when the
+  // plan makes more than one site: a one-site plan reads as it always has.
+  const planSites = phase.kind === "plan" ? siteOfEachStep(phase.plan.steps.map((step) => step.action)) : [];
+  const severalSites =
+    phase.kind === "plan" && phase.plan.steps.filter((step) => step.action.action === "create_site").length > 1;
+
   if (phase.kind === "plan") {
     // The button says exactly what it is about to do. A generic "Apply" on a plan with an init
     // command not yet agreed to is a button promising to build a project and then building an empty
@@ -371,108 +378,116 @@ export default function ApplyDialog({
                 <h4>{t("mixengine.blueprints.apply.planTitle")}</h4>
                 <ul className={styles.steps}>
                   {phase.plan.steps.map((step, i) => (
-                    <li key={i} className={styles.step}>
-                      <p>{describePlanAction(t, step.action)}</p>
-                      {step.disposition.disposition === "blocked" && (
-                        <p className={styles.blocked}>
-                          {t("mixengine.blueprints.apply.stepBlocked", {
-                            reason: step.disposition.reason,
-                          })}
-                        </p>
+                    <Fragment key={i}>
+                      {/* T204a, D4: with several sites, each site's steps sit under its name. */}
+                      {severalSites && step.action.action === "create_site" && planSites[i] !== null && (
+                        <li className={styles.siteHeading}>
+                          {t("mixengine.blueprints.apply.siteHeading", { domain: planSites[i] })}
+                        </li>
                       )}
-                      {step.disposition.disposition === "unsupported" && (
-                        <p className={styles.blocked}>
-                          {t("mixengine.blueprints.apply.stepUnsupported", {
-                            reason: step.disposition.reason,
-                          })}
-                        </p>
-                      )}
-                      {step.disposition.disposition === "choice" && answerSubjectFor(step) && (
-                        <div className={styles.choice}>
-                          <p>
-                            {t("mixengine.blueprints.apply.choiceInstalled", {
-                              installed: step.disposition.installed,
-                            })}{" "}
-                            —{" "}
-                            {t("mixengine.blueprints.apply.choiceWanted", {
-                              wanted: step.disposition.wanted,
+                      <li className={severalSites && planSites[i] !== null ? `${styles.step} ${styles.inSite}` : styles.step}>
+                        <p>{describePlanAction(t, step.action)}</p>
+                        {step.disposition.disposition === "blocked" && (
+                          <p className={styles.blocked}>
+                            {t("mixengine.blueprints.apply.stepBlocked", {
+                              reason: step.disposition.reason,
                             })}
                           </p>
-                          <Button
-                            variant={choices[i] === "install" ? "primary" : "default"}
-                            onClick={() => setChoices((c) => ({ ...c, [i]: "install" }))}
-                          >
-                            {t("mixengine.blueprints.apply.choiceInstall")}
-                          </Button>
-                          <Button
-                            variant={choices[i] === "use_installed" ? "primary" : "default"}
-                            onClick={() => setChoices((c) => ({ ...c, [i]: "use_installed" }))}
-                          >
-                            {t("mixengine.blueprints.apply.choiceUseInstalled")}
-                          </Button>
-                        </div>
-                      )}
-                      {step.action.action === "fetch_archive" &&
-                        step.disposition.disposition === "satisfied" && (
-                          <p className={styles.hint}>
-                            {t("mixengine.blueprints.apply.archiveSkipped")}
+                        )}
+                        {step.disposition.disposition === "unsupported" && (
+                          <p className={styles.blocked}>
+                            {t("mixengine.blueprints.apply.stepUnsupported", {
+                              reason: step.disposition.reason,
+                            })}
                           </p>
                         )}
-                      {step.action.action === "write_dotenv" &&
-                        step.disposition.disposition === "confirm" && (
-                          <Checkbox
-                            className={styles.checkbox}
-                            label={t("mixengine.blueprints.apply.dotenvConsent", {
-                              key: step.action.key,
-                            })}
-                            checked={dotenvAgreed[step.action.key] ?? false}
-                            onChange={(e) => {
-                              const key = step.action.action === "write_dotenv" ? step.action.key : "";
-                              const checked = e.target.checked;
-                              setDotenvAgreed((agreed) => ({ ...agreed, [key]: checked }));
-                            }}
-                          />
+                        {step.disposition.disposition === "choice" && answerSubjectFor(step) && (
+                          <div className={styles.choice}>
+                            <p>
+                              {t("mixengine.blueprints.apply.choiceInstalled", {
+                                installed: step.disposition.installed,
+                              })}{" "}
+                              —{" "}
+                              {t("mixengine.blueprints.apply.choiceWanted", {
+                                wanted: step.disposition.wanted,
+                              })}
+                            </p>
+                            <Button
+                              variant={choices[i] === "install" ? "primary" : "default"}
+                              onClick={() => setChoices((c) => ({ ...c, [i]: "install" }))}
+                            >
+                              {t("mixengine.blueprints.apply.choiceInstall")}
+                            </Button>
+                            <Button
+                              variant={choices[i] === "use_installed" ? "primary" : "default"}
+                              onClick={() => setChoices((c) => ({ ...c, [i]: "use_installed" }))}
+                            >
+                              {t("mixengine.blueprints.apply.choiceUseInstalled")}
+                            </Button>
+                          </div>
                         )}
-                      {(step.action.action === "run_scaffold" ||
-                        step.action.action === "fetch_archive") &&
-                        i === scaffoldStepIndex(phase.plan.steps) && (
-                        <div className={styles.scaffold}>
-                          {step.action.action === "run_scaffold" ? (
-                            <>
-                              <p>{t("mixengine.blueprints.apply.scaffoldTitle")}</p>
-                              <code>{step.action.command}</code>
-                            </>
-                          ) : (
-                            <>
-                              <p>{t("mixengine.blueprints.apply.archiveTitle")}</p>
-                              <code>{step.action.url}</code>
-                            </>
-                          )}
-                          {!phase.plan.trusted && (
-                            <p className={styles.blocked}>
-                              {t("mixengine.blueprints.apply.scaffoldUntrusted")}
+                        {step.action.action === "fetch_archive" &&
+                          step.disposition.disposition === "satisfied" && (
+                            <p className={styles.hint}>
+                              {t("mixengine.blueprints.apply.archiveSkipped")}
                             </p>
                           )}
-                          <Checkbox
-                            className={styles.checkbox}
-                            label={t("mixengine.blueprints.apply.scaffoldConsent")}
-                            checked={scaffoldAgreed}
-                            data-demo="apply-scaffold"
-                            onChange={(e) => setScaffoldAgreed(e.target.checked)}
-                          />
-                          {/* `mix`'s `[y/N]` question, drawn as an interface. Not ticking is an
-                              answer — the apply still installs the runtime, DB, site and domain,
-                              only the project directory stays empty — and until T121 the desktop
-                              said so nowhere: the user found out on the "Done" screen, lost among
-                              ten other lines. */}
-                          {!scaffoldAgreed && (
-                            <p className={styles.consentWarning} role="status">
-                              {t("mixengine.blueprints.apply.scaffoldDeclined")}
-                            </p>
+                        {step.action.action === "write_dotenv" &&
+                          step.disposition.disposition === "confirm" && (
+                            <Checkbox
+                              className={styles.checkbox}
+                              label={t("mixengine.blueprints.apply.dotenvConsent", {
+                                key: step.action.key,
+                              })}
+                              checked={dotenvAgreed[step.action.key] ?? false}
+                              onChange={(e) => {
+                                const key = step.action.action === "write_dotenv" ? step.action.key : "";
+                                const checked = e.target.checked;
+                                setDotenvAgreed((agreed) => ({ ...agreed, [key]: checked }));
+                              }}
+                            />
                           )}
-                        </div>
-                      )}
-                    </li>
+                        {(step.action.action === "run_scaffold" ||
+                          step.action.action === "fetch_archive") &&
+                          i === scaffoldStepIndex(phase.plan.steps) && (
+                          <div className={styles.scaffold}>
+                            {step.action.action === "run_scaffold" ? (
+                              <>
+                                <p>{t("mixengine.blueprints.apply.scaffoldTitle")}</p>
+                                <code>{step.action.command}</code>
+                              </>
+                            ) : (
+                              <>
+                                <p>{t("mixengine.blueprints.apply.archiveTitle")}</p>
+                                <code>{step.action.url}</code>
+                              </>
+                            )}
+                            {!phase.plan.trusted && (
+                              <p className={styles.blocked}>
+                                {t("mixengine.blueprints.apply.scaffoldUntrusted")}
+                              </p>
+                            )}
+                            <Checkbox
+                              className={styles.checkbox}
+                              label={t("mixengine.blueprints.apply.scaffoldConsent")}
+                              checked={scaffoldAgreed}
+                              data-demo="apply-scaffold"
+                              onChange={(e) => setScaffoldAgreed(e.target.checked)}
+                            />
+                            {/* `mix`'s `[y/N]` question, drawn as an interface. Not ticking is an
+                                answer — the apply still installs the runtime, DB, site and domain,
+                                only the project directory stays empty — and until T121 the desktop
+                                said so nowhere: the user found out on the "Done" screen, lost among
+                                ten other lines. */}
+                            {!scaffoldAgreed && (
+                              <p className={styles.consentWarning} role="status">
+                                {t("mixengine.blueprints.apply.scaffoldDeclined")}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    </Fragment>
                   ))}
                 </ul>
                 {devkit?.offer && (

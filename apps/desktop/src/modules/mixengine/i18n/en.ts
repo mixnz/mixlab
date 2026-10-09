@@ -132,6 +132,7 @@ export default {
       none: "Nothing left to adopt.",
     },
     nextSteps: {
+      forSite: "For {{domain}}",
       devkitMissing:
         "This project's Ruby cannot build gems with C extensions yet, and these steps need it. Install the devkit first.",
       devkitInstalling: "Installing the devkit",
@@ -168,6 +169,8 @@ export default {
         "The site itself is being served at {{url}}, once you have dealt with the above.",
       noSite: "Everything is running. This blueprint made no site, so there is no address to open.",
       open: "Open {{url}}",
+      sites: "This project's sites:",
+      openSite: "Open",
       close: "Close",
     },
     dashboard: {
@@ -833,6 +836,7 @@ export default {
         preview: "Preview",
         previewing: "Loading plan…",
         planTitle: "This will:",
+        siteHeading: "Site {{domain}}",
         stepBlocked: "Blocked: {{reason}}",
         stepUnsupported: "Not supported here: {{reason}}",
         choiceInstalled: "Installed: {{installed}}",

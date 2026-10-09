@@ -24,13 +24,14 @@ import {
   TERMINAL_MODULE_ID,
   type Toolchain,
 } from "../../nextSteps";
+import { addressFor, stepsBySite, type SiteAddresses } from "../../siteGroups";
 import styles from "./NextStepsPanel.module.css";
 
 interface Props {
   project: string;
   root: string;
-  /** The site's address (`siteUrl` from `siteState.ts`), for `open` rows. */
-  siteUrl: string | null;
+  /** Where `open` rows go: the step's own site when it names one, else the first — T204a. */
+  addresses: SiteAddresses;
   steps: NextSteps;
   /** Present only right after an apply (D8): the credentials block is drawn from it. */
   database?: AppliedDatabase | null;
@@ -53,7 +54,7 @@ interface Props {
 export default function NextStepsPanel({
   project,
   root,
-  siteUrl,
+  addresses,
   steps,
   database,
   terminalVisible,
@@ -143,6 +144,7 @@ export default function NextStepsPanel({
   }, [service]);
 
   const required = requiredRuns(steps.steps);
+  const groups = stepsBySite(steps.steps);
   const wantsCredentials = steps.steps.some((step) => step.credentials === true);
 
   async function hand(states: unknown[]) {
@@ -191,8 +193,9 @@ export default function NextStepsPanel({
 
   function row(step: NextStep, i: number) {
     if (step.kind === "open") {
-      if (siteUrl === null) return null;
-      const address = openAddress(siteUrl, [step]);
+      const base = addressFor(addresses, step);
+      if (base === null) return null;
+      const address = openAddress(base, [step]);
       return (
         <li key={i} className={styles.step}>
           <div className={styles.command}>
@@ -301,7 +304,18 @@ export default function NextStepsPanel({
 
       {!steps.trusted && <NoticeBanner message={t("mixengine.nextSteps.untrusted")} />}
 
-      <ul className={styles.steps}>{steps.steps.map(row)}</ul>
+      {/* T204a, D5: with several sites, each site's steps sit under its name. Run the required
+          steps stays over the whole list, since a project's tabs are one project's work. */}
+      {groups.length > 1 ? (
+        groups.map((group) => (
+          <div key={group.site ?? ""} className={styles.siteGroup}>
+            <p className={styles.siteName}>{t("mixengine.nextSteps.forSite", { domain: group.site ?? "" })}</p>
+            <ul className={styles.steps}>{group.steps.map(row)}</ul>
+          </div>
+        ))
+      ) : (
+        <ul className={styles.steps}>{steps.steps.map(row)}</ul>
+      )}
 
       {database && wantsCredentials && (
         <div className={styles.credentials}>

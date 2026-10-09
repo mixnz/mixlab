@@ -37,3 +37,28 @@
   padding-left: 18px;
   overflow-wrap: anywhere;
 }
+
+/* T204a: every address a several-site apply made, one row each with its own Open. */
+.sites {
+  align-self: stretch;
+}
+
+.sites > p {
+  margin: 0;
+}
+
+.sites ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sites li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
