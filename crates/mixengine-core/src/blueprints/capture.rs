@@ -126,42 +126,47 @@ pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManife
             },
         },
         runtimes: runtimes(store, project, php_version.as_ref()).await?,
-        site: site.as_ref().map(|site| BlueprintSite {
-            // The pool is dropped: which pool a site uses is a fact about the machine it was
-            // created on, and the receiving machine decides its own.
-            kind: match &site.kind {
-                SiteKind::PhpFpm { .. } => SiteKind::PhpFpm { pool: None },
-                other => other.clone(),
-            },
-            doc_root: site.doc_root.clone(),
-            https: site.https_enabled,
-            domain_pattern: site
-                .domains
-                .first()
-                .map(|domain| tokenised_domain(domain, &project.name))
-                .unwrap_or_default(),
-            aliases: site
-                .domains
-                .iter()
-                .skip(1)
-                .map(|domain| tokenised_domain(domain, &project.name))
-                .collect(),
-            // **The same rule one table down** — roadmap task **T135**. A route's pool is a fact
-            // about this machine; everything else about the route travels.
-            routes: site
-                .routes
-                .iter()
-                .map(|route| mixengine_proto::SiteRoute {
-                    path: route.path.clone(),
-                    target: match &route.target {
-                        mixengine_proto::RouteTarget::PhpFpm { .. } => {
-                            mixengine_proto::RouteTarget::PhpFpm { pool: None }
-                        }
-                        other => other.clone(),
-                    },
-                })
-                .collect(),
-        }),
+        sites: site
+            .as_ref()
+            .map(|site| BlueprintSite {
+                // The pool is dropped: which pool a site uses is a fact about the machine it was
+                // created on, and the receiving machine decides its own.
+                kind: match &site.kind {
+                    SiteKind::PhpFpm { .. } => SiteKind::PhpFpm { pool: None },
+                    other => other.clone(),
+                },
+                doc_root: site.doc_root.clone(),
+                https: site.https_enabled,
+                domain_pattern: site
+                    .domains
+                    .first()
+                    .map(|domain| tokenised_domain(domain, &project.name))
+                    .unwrap_or_default(),
+                aliases: site
+                    .domains
+                    .iter()
+                    .skip(1)
+                    .map(|domain| tokenised_domain(domain, &project.name))
+                    .collect(),
+                // **The same rule one table down** — roadmap task **T135**. A route's pool is a fact
+                // about this machine; everything else about the route travels.
+                routes: site
+                    .routes
+                    .iter()
+                    .map(|route| mixengine_proto::SiteRoute {
+                        path: route.path.clone(),
+                        target: match &route.target {
+                            mixengine_proto::RouteTarget::PhpFpm { .. } => {
+                                mixengine_proto::RouteTarget::PhpFpm { pool: None }
+                            }
+                            other => other.clone(),
+                        },
+                    })
+                    .collect(),
+                services: None,
+            })
+            .into_iter()
+            .collect(),
         services: linked(
             store,
             project,
@@ -480,7 +485,7 @@ mod tests {
             .await
             .expect("a capture");
 
-        let site = manifest.site.as_ref().expect("a site");
+        let site = manifest.sites.first().expect("a site");
         assert_eq!(site.domain_pattern, "{project}.test");
         assert_eq!(site.aliases, vec!["api.{project}.test".to_owned()]);
         assert_eq!(site.doc_root, "public");
@@ -586,10 +591,7 @@ mod tests {
             .await
             .expect("a capture");
 
-        assert_eq!(
-            manifest.site.expect("a site").domain_pattern,
-            "shop-staging.test"
-        );
+        assert_eq!(manifest.sites[0].domain_pattern, "shop-staging.test");
     }
 
     /// **D6, and the test the whole task is measured by.** Written against the rendered string,

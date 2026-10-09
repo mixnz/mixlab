@@ -194,7 +194,7 @@ pub async fn plan(
     // steps would be a plan out of order. First among the services rather than last, because it is
     // the one every site on the machine is reached through and nothing here depends on it.
     if front_end
-        && manifest.site.is_some()
+        && !manifest.sites.is_empty()
         && services::front_end::held_by(store, catalogue)
             .await?
             .is_none()
@@ -245,7 +245,7 @@ pub async fn plan(
         }
     }
 
-    if let Some(site) = &manifest.site {
+    if let Some(site) = manifest.sites.first() {
         let action = PlanAction::CreateSite {
             kind: match &site.kind {
                 // Which pool a new site uses is decided on the machine that makes it.
@@ -1110,14 +1110,15 @@ mod tests {
             )]
             .into_iter()
             .collect(),
-            site: Some(BlueprintSite {
+            sites: vec![BlueprintSite {
                 kind: SiteKind::PhpFpm { pool: None },
                 doc_root: "public".to_owned(),
                 https: true,
                 domain_pattern: "{project}.test".to_owned(),
                 aliases: Vec::new(),
                 routes: Vec::new(),
-            }),
+                services: None,
+            }],
             services: vec![BlueprintService {
                 name: "mariadb".to_owned(),
                 version: Some(VersionConstraint::parse("11.4.3").expect("a constraint")),
@@ -3157,7 +3158,8 @@ mod tests {
     async fn a_domain_that_is_not_one_is_blocked_at_plan_time() {
         let (temp, store) = home().await;
         let mut manifest = a_manifest();
-        manifest.site.as_mut().expect("a site").domain_pattern = "{project}.example.com".to_owned();
+        manifest.sites.first_mut().expect("a site").domain_pattern =
+            "{project}.example.com".to_owned();
 
         let planned = plan(
             &store,

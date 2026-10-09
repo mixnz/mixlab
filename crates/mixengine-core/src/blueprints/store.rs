@@ -348,7 +348,7 @@ mod tests {
                 },
             },
             runtimes: std::collections::BTreeMap::new(),
-            site: None,
+            sites: Vec::new(),
             services: Vec::new(),
             php: None,
             scaffold: None,
