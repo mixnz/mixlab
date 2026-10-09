@@ -76,4 +76,18 @@ pub trait Keyring: std::fmt::Debug + Send + Sync {
     ///
     /// As [`secret`](Self::secret).
     fn keys(&self, service: &str) -> Result<Vec<String>>;
+
+    /// [`keys`](Self::keys), when listing them asks nothing of the person at the machine, or
+    /// [`None`] when it could.
+    ///
+    /// For a diagnosis, which is worth a log line and not a dialog. macOS keeps each home's
+    /// credentials in one Keychain item (T186), and naming the keys inside means opening every
+    /// home's item — a question per home for a build the Keychain does not recognise.
+    ///
+    /// # Errors
+    ///
+    /// As [`keys`](Self::keys).
+    fn keys_without_asking(&self, service: &str) -> Option<Result<Vec<String>>> {
+        Some(self.keys(service))
+    }
 }

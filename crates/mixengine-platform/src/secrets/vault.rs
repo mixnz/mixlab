@@ -242,6 +242,12 @@ impl<K: Keyring> Keyring for Vaulted<K> {
 
         Ok(keys)
     }
+
+    /// Never here: [`keys`](Self::keys) opens every home's item to name what is inside it, and an
+    /// item this process has not read yet is a Keychain question.
+    fn keys_without_asking(&self, _service: &str) -> Option<Result<Vec<String>>> {
+        None
+    }
 }
 
 /// The shape `mixengine_core::home::HomeId` has: lowercase hex, not empty.
@@ -316,6 +322,18 @@ mod tests {
             SERVICE,
             Arc::new(Mutex::new(HashMap::<String, Held>::new())),
         )
+    }
+
+    /// A diagnosis does not get to open every home's item: on macOS each one is a question.
+    #[test]
+    fn a_vault_is_never_listed_without_asking() {
+        let store = Arc::new(Counting::default());
+        let vault = vaulted(&store);
+        vault
+            .set_secret(SERVICE, "0123456789ab/mariadb@main/root", "a")
+            .expect("a write");
+
+        assert!(vault.keys_without_asking(SERVICE).is_none());
     }
 
     #[test]
