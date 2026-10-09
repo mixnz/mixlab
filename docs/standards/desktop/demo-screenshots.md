@@ -60,9 +60,9 @@ element of its kind. Never interface copy and never a CSS class: those are what 
 ## Clips
 
 `npm run clips` films short flows the same way: the real frontend, the same fixtures, and a cursor
-that glides to what it presses. Two clips today: `new-site` (the Sites screen's New site) and
+that glides to what it presses. Three clips today: `new-site` (the Sites screen's New site),
 `quick-start` (the Dashboard's Quick start building the Laravel blueprint, then a browser opening
-the site). The design is
+the site) and `pin-runtime` (the Projects screen pinning `legacy` to PHP 8.1). The design is
 [the clips spec](../../specs/2026-10-05-demo-clips-design.md).
 
 ```bash
@@ -80,11 +80,13 @@ A clip is declared in `demo/clips.mjs`: a module, an optional `setup` that runs 
 and `steps` — `click`, `type`, `select` (opens, then picks the option whose text matches),
 `waitFor` (until an element appears, for timing the app decides, such as a job finishing) and
 `pause`. Steps aim only at `data-demo` hooks in `src/`; `clips.test.mjs` fails when one is
-missing. What a clip needs the fixtures to do differently goes in its `fixtures`, which the
+missing. A hook carried by every row alike is narrowed by the `data-demo-key` of the row around it,
+a name the fixtures own: `[data-demo-key="legacy"] [data-demo="project-menu"]`. What a clip needs the fixtures to do differently goes in its `fixtures`, which the
 fixtures read through `demo/fixtures/options.ts`: `sitesWithout` (domains to start without),
 `fresh` (no project and no site, so Quick start is offered), `folder` (what the folder picker
 answers) and `browser` (draw a browser window when MixLab opens a URL, `demo/browser/overlay.ts`,
-showing the vendored `demo/browser/laravel-welcome.html`). A clip's `still` names an element
+showing the vendored `demo/browser/laravel-welcome.html`) and `runtimePins` (two projects, `blog`
+and `legacy`, with PHP 8.4.26 and 8.1.34 installed and pins that `project.update` changes). A clip's `still` names an element
 photographed once the film stops, written as `<clip>-<theme>-<suffix>.png`.
 
 The Laravel apply (`demo/fixtures/laravelApply.ts`) mirrors the gallery's `laravel.toml`, which

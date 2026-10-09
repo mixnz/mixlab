@@ -7,6 +7,9 @@ export interface DemoFixtureOptions {
   folder?: string;
   /** Draw a browser window when MixLab opens a URL (`demo/browser/overlay.ts`). */
   browser?: boolean;
+  /** Two projects, `blog` and `legacy`, no site, PHP 8.4.26 (the default) and 8.1.34 installed and
+   *  nothing pinned: the machine the pin-runtime clip pins `legacy` on. */
+  runtimePins?: boolean;
 }
 
 declare global {

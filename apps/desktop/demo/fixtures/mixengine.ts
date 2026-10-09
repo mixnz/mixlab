@@ -16,8 +16,13 @@ import type {
   PathReport,
   ProjectDetail,
   ProjectList,
+  ProjectSummary,
+  ProjectUpdate,
   RuntimeCatalogue,
+  RuntimeKind,
+  RuntimeList,
   RuntimeFoundList,
+  RuntimeSummary,
   ServiceFoundList,
   ServiceList,
   ServiceSummary,
@@ -32,8 +37,9 @@ import pkg from "../../package.json";
 import { returns, type Handlers } from "../ipc/dispatch";
 import { demoOptions } from "./options";
 import { createApplyRunner } from "./laravelApply";
+import { createPinRegistry } from "./pinRegistry";
 import { createSiteRegistry } from "./siteRegistry";
-import { HOUR, MINUTE, NOW } from "./time";
+import { DAY, HOUR, MINUTE, NOW } from "./time";
 
 /**
  * One believable machine: a developer's Mac with two projects, the PHP pools they use, a Node API,
@@ -163,9 +169,38 @@ function siteDetail(domain: string): SiteDetail {
 /** The pool `SERVICES` runs for `blog` — what the daemon resolves a new php-fpm site to here. */
 const DEFAULT_POOL = "php-fpm@8.3";
 
+const MiB = 1024 ** 2;
+
+function php(version: string, mebibytes: number, installedDaysAgo: number, isDefault: boolean): RuntimeSummary {
+  return {
+    kind: "php",
+    version,
+    channel: "stable",
+    path: `${HOME}/runtimes/php/${version}`,
+    installed_at: NOW - installedDaysAgo * DAY,
+    bytes: mebibytes * MiB,
+    default: isDefault,
+  };
+}
+
+/** The PHP builds behind the two pools `SERVICES` runs. */
+const RUNTIMES: RuntimeSummary[] = [php("8.4.26", 32, 12, true), php("8.3.35", 31, 40, false)];
+
+/**
+ * The pin-runtime clip's machine. The versions are the ones `docs/demo/pin-runtime-terminal.md`
+ * recorded `php -v` printing through the real shim, so the clip and the website's terminal agree.
+ */
+const PIN_RUNTIMES: RuntimeSummary[] = [php("8.4.26", 32, 12, true), php("8.1.34", 28, 3, false)];
+const PIN_PROJECTS: ProjectSummary[] = [
+  { name: "blog", root: "/Users/ada/Sites/blog", created_at: "2025-12-18T16:40:00Z", keep_warm: false },
+  { name: "legacy", root: "/Users/ada/Sites/legacy", created_at: "2026-02-09T10:05:00Z", keep_warm: false },
+];
+
+const pinMachine = demoOptions().runtimePins === true;
+
 const sites = createSiteRegistry({
-  sites: SITES,
-  projects: PROJECTS.projects,
+  sites: pinMachine ? [] : SITES,
+  projects: pinMachine ? PIN_PROJECTS : PROJECTS.projects,
   without: demoOptions().sitesWithout,
   fresh: demoOptions().fresh,
   defaultPool: DEFAULT_POOL,
@@ -175,10 +210,25 @@ const sites = createSiteRegistry({
 /** The Laravel blueprint apply the quick-start clip films; it holds the daemon's watch channel. */
 const applying = createApplyRunner({ registry: sites, now: NOW });
 
-function projectDetail(name: string): ProjectDetail {
+const runtimes = createPinRegistry(pinMachine ? PIN_RUNTIMES : RUNTIMES);
+
+function findProject(name: string): ProjectSummary {
   const found = sites.projects().projects.find((p) => p.name === name);
   if (found === undefined) throw new Error(`demo: no project named ${name}`);
-  return { project: found, pins: [] };
+  return found;
+}
+
+function projectDetail(name: string): ProjectDetail {
+  return { project: findProject(name), pins: runtimes.pins(name) };
+}
+
+/** Pins only: no clip renames a project or moves its root. */
+function projectUpdate(params: ProjectUpdate): ProjectSummary {
+  if (!("name" in params.project)) throw new Error("demo: projects are updated by name");
+  if (params.name || params.root) throw new Error("demo: only a project's pins change here");
+  const found = findProject(params.project.name);
+  if (params.pins) runtimes.replace(found.name, params.pins);
+  return found;
 }
 
 const STATUS: DaemonStatus = {
@@ -293,6 +343,9 @@ export const mixengineHandlers: Handlers = {
   mixengine_site_create: (args): SiteCreation => sites.create(args.params as SiteCreate),
   mixengine_project_show: (args): ProjectDetail => projectDetail(args.name as string),
   mixengine_projects: (): ProjectList => sites.projects(),
+  mixengine_project_update: (args): ProjectSummary => projectUpdate(args.params as ProjectUpdate),
+  mixengine_runtime_list_installed: (args): RuntimeList =>
+    runtimes.installed((args.filter as { kind?: RuntimeKind } | undefined)?.kind),
   mixengine_disk_usage: returns<DiskUsage>(DISK),
   // Set up already, so the Dashboard's PATH reminder stays out of the pictures.
   mixengine_path_status: returns<PathReport>({

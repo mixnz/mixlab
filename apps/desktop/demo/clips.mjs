@@ -56,6 +56,28 @@ export const CLIPS = [
       { pause: 3000 },
     ],
   },
+  {
+    id: "pin-runtime",
+    moduleId: "mixengine",
+    tabTitle: "MixEngine",
+    // blog and legacy, PHP 8.4.26 the default and 8.1.34 beside it: the versions the website's
+    // terminal shows `php -v` printing (docs/demo/pin-runtime-terminal.md).
+    fixtures: { runtimePins: true },
+    setup: async ({ page }) => {
+      await page.locator('nav [data-screen="projects"]').click();
+    },
+    // A hook is on every row alike, so `data-demo-key` — the project's name, the runtime's kind —
+    // says which one a step means.
+    steps: [
+      { click: '[data-demo-key="legacy"] [data-demo="project-menu"]' },
+      { click: '[data-demo="project-edit"]' },
+      { click: '[data-demo="project-pins"]' },
+      { select: '[data-demo-key="php"] [data-demo="project-pin"]', option: "8.1.34" },
+      { click: '[data-demo="project-save"]' },
+      { click: '[data-demo-key="legacy"] [data-demo="project-details"]' },
+      { pause: 2500 },
+    ],
+  },
 ];
 
 export function describeStep(step) {

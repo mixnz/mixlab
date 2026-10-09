@@ -235,6 +235,8 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
                     <tr
                       className={open ? `${styles.row} ${styles.open}` : styles.row}
                       onClick={(e) => rowClick(e, row.name)}
+                      // Which row a clip's step means: the hooks below are on every row alike.
+                      data-demo-key={row.name}
                     >
                       <td>
                         <span className={styles.name}>
@@ -273,6 +275,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
                             className={open ? `${styles.details} ${styles.detailsOpen}` : styles.details}
                             aria-expanded={open}
                             onClick={() => void toggle(row.name)}
+                            data-demo="project-details"
                           >
                             {t("mixengine.projects.details")}
                             <ChevronDownIcon size={14} />
@@ -287,6 +290,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
                                 key: "menu",
                                 icon: MoreIcon,
                                 label: t("mixengine.projects.rowMenu"),
+                                demo: "project-menu",
                                 onClick: (event) => {
                                   const at = event.currentTarget.getBoundingClientRect();
                                   setMenu({ name: row.name, x: at.left, y: at.bottom });
@@ -327,6 +331,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
           <button
             type="button"
+            data-demo="project-edit"
             onClick={() => {
               const name = menu.name;
               setMenu(null);

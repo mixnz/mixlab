@@ -38,10 +38,13 @@ const RUNTIME_KINDS: readonly RuntimeKind[] = ["php", "node", "python", "ruby", 
 function Disclosure({
   summary,
   defaultOpen = false,
+  demo,
   children,
 }: {
   summary: ReactNode;
   defaultOpen?: boolean;
+  /** `data-demo` on the summary button, for the promotional clips (`demo/clips.mjs`). */
+  demo?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -52,6 +55,7 @@ function Disclosure({
         className={styles.disclosureSummary}
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
+        data-demo={demo}
       >
         <ChevronRightIcon
           size="1.1em"
@@ -206,6 +210,7 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
           onClick: () => void submit(),
           disabled: root.trim() === "",
           busy: saving ? t("mixengine.projects.form.saving") : undefined,
+          demo: "project-save",
         },
       ]}
     >
@@ -233,14 +238,15 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
               />
             </label>
 
-            <Disclosure summary={t("mixengine.projects.form.pinsSummary")}>
+            <Disclosure summary={t("mixengine.projects.form.pinsSummary")} demo="project-pins">
               {/* `freeText` rather than a plain Select: the value here is a `VersionConstraint`,
                   and the list is only the installed versions — `^8.3` or `8.3` is not in it but
                   still has to be pinnable. */}
               {RUNTIME_KINDS.map((kind) => (
-                <label key={kind} className={styles.field}>
+                <label key={kind} className={styles.field} data-demo-key={kind}>
                   {kind}
                   <Select
+                    demo="project-pin"
                     value={pins[kind]}
                     freeText
                     disabled={saving}

@@ -18,8 +18,16 @@ const SOURCE = readdirSync(SRC, { recursive: true })
 const selectorOf = (step) => step.click ?? step.type ?? step.select ?? step.waitFor;
 
 describe("clips", () => {
-  it("are the two the spec names", () => {
-    expect(CLIPS.map((clip) => clip.id)).toEqual(["new-site", "quick-start"]);
+  it("are the three the spec names", () => {
+    expect(CLIPS.map((clip) => clip.id)).toEqual(["new-site", "quick-start", "pin-runtime"]);
+  });
+
+  it("pin-runtime films the machine the terminal recording was made on, ending on what is pinned", () => {
+    const clip = CLIPS.find((c) => c.id === "pin-runtime");
+    expect(clip.fixtures).toEqual({ runtimePins: true });
+    expect(clip.steps.find((s) => "select" in s).option).toBe("8.1.34");
+    expect(clip.steps.at(-2)).toEqual({ click: '[data-demo-key="legacy"] [data-demo="project-details"]' });
+    expect(clip.steps.at(-1).pause).toBeGreaterThanOrEqual(2000);
   });
 
   it("quick-start films a fresh machine, picks a folder, and keeps the browser as a still", () => {
@@ -52,18 +60,21 @@ describe("clips", () => {
 
     it(`${clip.id}: aims only at data-demo hooks the window actually has`, () => {
       for (const step of clip.steps.filter((s) => !("pause" in s))) {
-        const match = /^\[data-demo="([a-z-]+)"\]$/.exec(selectorOf(step));
+        // An optional scope first: which row or field of several alike, by a name the fixtures own.
+        const match = /^(?:\[data-demo-key="([a-z0-9.-]+)"\] )?\[data-demo="([a-z-]+)"\]$/.exec(selectorOf(step));
         expect(match, describeStep(step)).not.toBeNull();
-        const hook = match[1];
+        if (match[1] !== undefined) expect(SOURCE.includes("data-demo-key="), "no data-demo-key in src/").toBe(true);
+        const hook = match[2];
         const present = [`data-demo="${hook}"`, `demo="${hook}"`, `demo: "${hook}"`].some((s) => SOURCE.includes(s));
         expect(present, `no data-demo="${hook}" in src/`).toBe(true);
       }
     });
 
     it(`${clip.id}: asks the fixtures only what they understand`, () => {
-      const known = ["sitesWithout", "fresh", "folder", "browser"];
+      const known = ["sitesWithout", "fresh", "folder", "browser", "runtimePins"];
       for (const key of Object.keys(clip.fixtures ?? {})) expect(known).toContain(key);
       if (clip.fixtures?.fresh !== undefined) expect(typeof clip.fixtures.fresh).toBe("boolean");
+      if (clip.fixtures?.runtimePins !== undefined) expect(typeof clip.fixtures.runtimePins).toBe("boolean");
     });
 
     it(`${clip.id}: starts without domains the fixtures really have`, () => {

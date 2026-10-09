@@ -22,6 +22,8 @@ export interface ActionBarAction {
   busy?: boolean;
   /** Paints the button as destructive. For actions that lose data, not merely risky ones. */
   danger?: boolean;
+  /** `data-demo` on the button, for the promotional clips (`demo/clips.mjs`). Inert everywhere else. */
+  demo?: string;
 }
 
 interface Props {
@@ -34,7 +36,7 @@ interface Props {
 function ActionBar({ actions, className }: Props) {
   return (
     <div className={`${styles.bar}${className ? ` ${className}` : ""}`}>
-      {actions.map(({ key, icon: ActionIcon, label, onClick, disabled, disabledHint, busy, danger }) => (
+      {actions.map(({ key, icon: ActionIcon, label, onClick, disabled, disabledHint, busy, danger, demo }) => (
         <button
           key={key}
           type="button"
@@ -45,6 +47,7 @@ function ActionBar({ actions, className }: Props) {
           title={disabled && disabledHint ? disabledHint : label}
           disabled={disabled}
           onClick={onClick}
+          data-demo={demo}
         >
           <ActionIcon size={14} className={busy ? styles.spinning : undefined} />
         </button>

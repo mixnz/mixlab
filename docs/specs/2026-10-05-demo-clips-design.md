@@ -224,6 +224,31 @@ whose story ends in the same browser.
 **Budget.** The same 1 MB / 1.5 MB as every clip. If `quick-start` lands over 1 MB, the log pauses
 and the job cadence are what shorten first.
 
+## The pin-runtime clip
+
+Added 2026-10-10, for the website's `#mixengine` section, beside a terminal recording of `php -v`
+changing with the directory ([docs/demo/pin-runtime-terminal.md](../demo/pin-runtime-terminal.md)).
+
+**What is on film** (about 11 s): the Projects screen with two projects, `blog` and `legacy`. The
+`legacy` row's ⋮ menu → **Edit** → the runtime pins section → `php` set to `8.1.34` → **Save**, then
+`legacy`'s **Details** open on `php 8.1.34 … → 8.1.34`, and a pause to read it. `blog` is left alone
+and keeps following the default, 8.4.26.
+
+**Its machine.** `fixtures.runtimePins: true` swaps the projects for `blog` and `legacy` and drops
+the sites, so nothing on the screen contradicts the story. Installed PHP is 8.4.26 (the default) and
+8.1.34 — the versions the terminal recording printed through the real shim, so the two halves
+agree. `demo/fixtures/pinRegistry.ts` (pure, tested in node) answers
+`mixengine_runtime_list_installed`, keeps the pins `mixengine_project_update` replaces, and resolves
+them the way a prefix constraint resolves for `mixengine_project_show`. Without the flag the
+machine lists the PHP builds behind its two pools, 8.4.26 and 8.3.35, and holds no pins, as before.
+
+**Hooks, and which row.** `project-menu` (on `ActionBar`, which gains the same optional `demo`
+field as `ModalAction`), `project-edit`, `project-details`, `project-pins` (the form's disclosure),
+`project-pin` (the pin `Select`) and `project-save`. A row's hooks are the same on every row, so the
+row carries `data-demo-key` — the project's name, or the pin field's runtime kind — and a step is
+scoped by it: `[data-demo-key="legacy"] [data-demo="project-details"]`. The key is fixture text,
+which the selector rule already allows.
+
 ## MixLab
 
 This is tooling for MixLab's own promotional material: it films the Sites screen's **New site**
@@ -241,6 +266,9 @@ inert `data-demo` attributes on those screens, `SiteForm`, `SiteFields`, `ApplyD
 - Quick start fixtures: the dry run's plan matches `laravel.toml` (runtimes, services, site,
   scaffold); a fresh registry is empty and holds `blog.test` after the apply; the job's progress
   events end in a `job_finished` carrying every step `done`.
-- `clips.test.mjs` also checks `quick-start`'s hooks exist and that `fixtures.fresh` is a boolean.
+- `clips.test.mjs` also checks `quick-start`'s hooks exist and that `fixtures.fresh` is a boolean,
+  and that `pin-runtime` runs on `runtimePins`, picks 8.1.34 and ends on `legacy`'s details.
+- `demo/fixtures/pinRegistry.test.ts`: a prefix resolves to the newest installed match, a pin
+  replaces rather than merges, and an unmatched one says so.
 - `npm run screenshots -- --check` and `npm run clips -- --check` both pass.
 - `npm run build` type-checks the new fixture against `SiteCreation`.
