@@ -2204,3 +2204,21 @@ async fn a_list_that_read_everything_has_nothing_unavailable() {
 
     assert_eq!(listed["unavailable"], json!([]), "{listed}");
 }
+
+/// **A restored default is still the default** — roadmap task **T206d**, D3.
+#[tokio::test]
+async fn a_deleted_runtime_folder_is_restored_as_the_default_it_was() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    assert_eq!(client.install(VERSION).await["state"], "succeeded");
+
+    std::fs::remove_dir_all(fixture.installed_at(VERSION)).expect("deleted by hand");
+    let listed = client.call("runtime.list_installed", json!({})).await;
+    assert_eq!(listed["runtimes"][0]["missing"], true, "{listed}");
+
+    let restored = client.install(VERSION).await;
+    assert_eq!(restored["state"], "succeeded", "{restored}");
+    let listed = client.call("runtime.list_installed", json!({})).await;
+    assert_eq!(listed["runtimes"][0]["missing"], false, "{listed}");
+    assert_eq!(listed["runtimes"][0]["default"], true, "{listed}");
+}

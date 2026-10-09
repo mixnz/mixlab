@@ -243,6 +243,62 @@ pub async fn remember(
     })
 }
 
+/// Write a reinstalled runtime over the row it already had — roadmap task **T206d**, D3.
+///
+/// **An `UPDATE`, never a second row**: the id is what a pool's service points at, and `is_default`
+/// is left as it was, so a default that went missing comes back as the default. Called only after
+/// the folder was renamed into place, which is [`remember`]'s ordering.
+///
+/// # Errors
+///
+/// [`Error::NotFound`] when there is no row to restore, and [`Error::Database`] when it cannot be
+/// written.
+pub async fn restore(
+    store: &Store,
+    installation: &Installation,
+    at: Timestamp,
+) -> Result<RuntimeSummary> {
+    let (kind, version) = (installation.kind.as_str(), installation.version.as_str());
+    let (channel, installed_at) = (installation.channel.as_str(), at.to_rfc3339());
+    let path = installation.path.display().to_string();
+    // As in `remember`: a size past `i64` is a formality, and neither map can fail to serialise.
+    let bytes = i64::try_from(installation.bytes).unwrap_or(i64::MAX);
+    let provides =
+        serde_json::to_string(&installation.provides).unwrap_or_else(|_| "{}".to_owned());
+    let extension_dir = installation.extension_dir.clone().unwrap_or_default();
+    let extensions =
+        serde_json::to_string(&installation.extensions).unwrap_or_else(|_| "{}".to_owned());
+
+    let updated = sqlx::query!(
+        "UPDATE runtime_installs
+         SET channel = ?, install_path = ?, installed_at = ?, size_bytes = ?, source_url = ?,
+             sha256 = ?, provides_json = ?, extension_dir = ?, extensions_json = ?
+         WHERE kind = ? AND version = ?",
+        channel,
+        path,
+        installed_at,
+        bytes,
+        installation.url,
+        installation.sha256,
+        provides,
+        extension_dir,
+        extensions,
+        kind,
+        version
+    )
+    .execute(store.pool())
+    .await
+    .map_err(|source| store.failure("write", source))?;
+
+    if updated.rows_affected() == 0 {
+        return Err(missing(installation.kind, &installation.version));
+    }
+
+    tracing::info!(%kind, %version, "a runtime was restored in place");
+
+    record(store, installation.kind, &installation.version).await
+}
+
 /// Forget a runtime whose directory has already gone, and say whether its kind is left with none.
 ///
 /// **Nothing is promoted in its place**, and that stayed true when T24 arrived with the grammar
@@ -638,6 +694,29 @@ mod tests {
 
     fn version(text: &str) -> PackageVersion {
         PackageVersion::parse(text).expect("a valid version")
+    }
+
+    /// **A restored default is still the default** — T206d, D3.
+    #[tokio::test]
+    async fn restoring_a_runtime_keeps_its_default() {
+        let (_home, store) = store().await;
+        remember(&store, &installation(RuntimeKind::Php, "8.3.33"), NOW)
+            .await
+            .expect("recorded");
+        let restored = restore(&store, &installation(RuntimeKind::Php, "8.3.33"), NOW)
+            .await
+            .expect("restored");
+        assert!(restored.default);
+        assert_eq!(records(&store, None).await.expect("a listing").len(), 1);
+    }
+
+    #[tokio::test]
+    async fn restoring_a_runtime_never_recorded_is_not_found() {
+        let (_home, store) = store().await;
+        let error = restore(&store, &installation(RuntimeKind::Php, "8.3.33"), NOW)
+            .await
+            .expect_err("no row");
+        assert!(matches!(error, Error::NotFound { .. }), "{error}");
     }
 
     fn installation(kind: RuntimeKind, text: &str) -> Installation {

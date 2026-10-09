@@ -449,6 +449,39 @@ async fn installing_a_version_that_is_already_here_says_so_rather_than_downloadi
     assert_eq!(error["data"]["code"], "already_exists", "{error}");
 }
 
+/// **A folder deleted by hand reads as missing, and installing it again restores the same row** —
+/// roadmap task **T206d**, D1 and D3.
+#[tokio::test]
+async fn a_deleted_package_folder_is_missing_and_installing_it_again_restores_it() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    assert_eq!(client.install(VERSION).await["state"], "succeeded");
+    client
+        .call(
+            "service.create",
+            json!({"id": "fakeservice@main", "version": VERSION}),
+        )
+        .await;
+
+    std::fs::remove_dir_all(fixture.installed_at(VERSION)).expect("deleted by hand");
+
+    let list = client.call("package.list", json!({})).await;
+    assert_eq!(list["packages"][0]["missing"], true, "{list}");
+
+    let restored = client.install(VERSION).await;
+    assert_eq!(restored["state"], "succeeded", "{restored}");
+    assert_eq!(
+        restored["outcome"]["result"]["missing"], false,
+        "{restored}"
+    );
+    assert_eq!(
+        restored["outcome"]["result"]["services"],
+        json!(["fakeservice@main"]),
+        "the service still points at the same row"
+    );
+    assert!(fixture.installed_at(VERSION).is_dir());
+}
+
 /// The whole point of the task: an installed package becomes a service a person can start.
 #[tokio::test]
 async fn an_installed_package_becomes_a_service_and_can_be_deleted_again() {

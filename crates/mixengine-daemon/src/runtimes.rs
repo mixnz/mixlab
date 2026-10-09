@@ -509,6 +509,9 @@ impl Runtimes {
         }
 
         match runtimes::record(&self.store, target.kind, &target.version).await {
+            // **A recorded version whose folder is gone is installed again** — roadmap task
+            // **T206d**, D3: the install restores the row it already has.
+            Ok(found) if found.is_missing() => {}
             Ok(_) => {
                 return Err(mixengine_core::Error::AlreadyRecorded {
                     kind: target.kind,
@@ -663,6 +666,13 @@ impl Runtimes {
         };
         let marker = mixengine_core::adopt::marker::Marker::runtime(&installation).encode();
 
+        // **Restore or record** — roadmap task **T206d**, D3: decided before the download, because an
+        // install whose row already exists writes over it rather than beside it.
+        let restoring = matches!(
+            runtimes::record(&self.store, kind, version).await,
+            Ok(found) if found.is_missing()
+        );
+
         let smoke = runtimes::smoke_test(kind);
         let installed = match self
             .fetcher
@@ -678,6 +688,16 @@ impl Runtimes {
             .await
         {
             Ok(installed) => installed,
+
+            // The folder came back between the check and the rename. There is nothing to adopt:
+            // the row is already there, and adopting would try to write a second one.
+            Err(mixengine_core::Error::AlreadyInstalled { .. }) if restoring => {
+                return Err(mixengine_core::Error::AlreadyRecorded {
+                    kind,
+                    version: version.clone(),
+                }
+                .to_wire());
+            }
 
             // **T182f, D2.** The directory is there and has no row: an earlier home installed it.
             Err(mixengine_core::Error::AlreadyInstalled { path }) => {
@@ -710,16 +730,16 @@ impl Runtimes {
             Err(error) => return Err(error.to_wire()),
         };
 
-        let record = runtimes::remember(
-            &self.store,
-            &runtimes::Installation {
-                path: installed.path.clone(),
-                bytes: installed.bytes,
-                ..installation
-            },
-            Timestamp::from_system_time(SystemTime::now()),
-        )
-        .await;
+        let installation = runtimes::Installation {
+            path: installed.path.clone(),
+            bytes: installed.bytes,
+            ..installation
+        };
+        let at = Timestamp::from_system_time(SystemTime::now());
+        let record = match restoring {
+            true => runtimes::restore(&self.store, &installation, at).await,
+            false => runtimes::remember(&self.store, &installation, at).await,
+        };
 
         let summary = match record {
             Ok(summary) => summary,
