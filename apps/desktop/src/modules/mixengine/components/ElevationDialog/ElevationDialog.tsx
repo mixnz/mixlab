@@ -6,7 +6,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { GrantOutcome } from "@mixengine/api";
 import type { JobSummary } from "@mixengine/api";
-import { describeOp } from "../../pendingOps";
+import { describeOp, isGrantInFlight, isNothingWaiting, otherGrant } from "../../pendingOps";
 import { useRunningDots } from "../../screens/Settings/useRunningDots";
 import styles from "./ElevationDialog.module.css";
 
@@ -36,11 +36,18 @@ import styles from "./ElevationDialog.module.css";
  * inside the job — closing the dialog as soon as the RPC answered was a real bug: `onClose`
  * triggered the Dashboard's `reload()`, which read `daemon.status` while the queue was still intact
  * (the user had not typed the password yet), and once they had, the daemon emitted no event about
- * the queue (`elevation_required` only fires when the queue *grows*), so the "N waiting" count sat
+ * the queue (`elevation_required` then fired only when the queue *grew*), so the "N waiting" count sat
  * still until someone switched tabs. So this polls `jobStatus` every second until the job finishes,
  * and only then calls `onClose` — and reads the `GrantOutcome` in `result`: `declined` (the
  * password box was closed) keeps the dialog open with a line saying nothing has changed yet and
  * re-enables the Allow button, instead of closing silently and leaving the old count unexplained.
+ *
+ * **A grant somebody else started is followed, not refused.** The daemon raises the helper's
+ * prompt itself on its first start after an update, and on macOS and Linux its password box leaves
+ * this dialog clickable; "Allow" then comes back `conflict`. Rather than show that, the dialog
+ * waits on `elevation.status` until that grant ends and answers with its outcome. Close stays
+ * available meanwhile — that grant is not this dialog's to wait out, and a grant that fails before
+ * recording an outcome would otherwise hold it open for good.
  */
 export default function ElevationDialog({
   pending,
@@ -54,10 +61,12 @@ export default function ElevationDialog({
   onClose: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  /** Waiting on a grant this dialog did not start. */
+  const [following, setFollowing] = useState(false);
   /** The outcome of the last Allow when it did not lead to closing the dialog — a translated
    *  sentence, or `null`. */
   const [notice, setNotice] = useState<string | null>(null);
-  const dots = useRunningDots(busy);
+  const dots = useRunningDots(busy || following);
   const { t } = useTranslation();
   /** Whether still mounted — set to `true` in the effect body rather than only `false` in the
    *  cleanup, because `React.StrictMode` (dev) runs mount → fake unmount → mount again. */
@@ -77,7 +86,10 @@ export default function ElevationDialog({
       return;
     }
     if (summary.outcome?.ending !== "succeeded") return;
-    const grant = summary.outcome.result as GrantOutcome;
+    settleGrant(summary.outcome.result as GrantOutcome);
+  }
+
+  function settleGrant(grant: GrantOutcome) {
     if (grant.outcome === "declined") {
       setNotice(t("mixengine.elevation.declined"));
       return;
@@ -108,6 +120,30 @@ export default function ElevationDialog({
     settle(summary);
   }
 
+  async function followOther(before: number | null) {
+    let status;
+    try {
+      status = await api.elevationStatus();
+    } catch (e) {
+      if (!live.current) return;
+      setFollowing(false);
+      setNotice(errorMessage(t, e));
+      return;
+    }
+    if (!live.current) return;
+    const other = otherGrant(before, status);
+    if (other.state === "waiting") {
+      setTimeout(() => void followOther(before), 1000);
+      return;
+    }
+    setFollowing(false);
+    if (other.state === "emptied") {
+      onClose();
+      return;
+    }
+    settleGrant(other.grant);
+  }
+
   async function grant() {
     setBusy(true);
     setNotice(null);
@@ -117,6 +153,24 @@ export default function ElevationDialog({
     } catch (e) {
       if (!live.current) return;
       setBusy(false);
+      // Somebody allowed this list already — the daemon's own prompt after an update, or another
+      // window. What the person wanted is done, so close as a completed grant would.
+      if (isNothingWaiting(e)) {
+        onClose();
+        return;
+      }
+      if (isGrantInFlight(e)) {
+        setFollowing(true);
+        let before: number | null = null;
+        try {
+          before = (await api.elevationStatus()).last?.job ?? null;
+        } catch {
+          // Unknown: any outcome followOther reads is then taken as the one being waited for.
+        }
+        if (!live.current) return;
+        void followOther(before);
+        return;
+      }
       setNotice(errorMessage(t, e));
       return;
     }
@@ -130,7 +184,7 @@ export default function ElevationDialog({
       onClose={onClose}
       locked={busy}
       footerNote={
-        busy ? (
+        busy || following ? (
           <>
             {t("mixengine.elevation.prompting")}
             {dots}
@@ -145,7 +199,7 @@ export default function ElevationDialog({
                 kind: "confirm" as const,
                 label: t("mixengine.elevation.grant"),
                 onClick: () => void grant(),
-                disabled: busy,
+                disabled: busy || following,
               },
             ]
           : []),
@@ -179,7 +233,9 @@ export default function ElevationDialog({
                   : t("mixengine.elevation.cannotPrompt")}
               </p>
             )}
-            {notice !== null && !busy && <p className={styles.cannotPrompt}>{notice}</p>}
+            {notice !== null && !busy && !following && (
+              <p className={styles.cannotPrompt}>{notice}</p>
+            )}
           </ModalBody>
         </>
       )}

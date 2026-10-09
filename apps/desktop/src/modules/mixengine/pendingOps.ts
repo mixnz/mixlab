@@ -7,9 +7,11 @@
  * exactly one prompt for the whole batch. Declining is an outcome the API models, not an error;
  * `elevation.drop` is the way out.
  *
- * The daemon **never** raises the prompt itself — only the client calls `grant`. That is exactly
- * what makes "explain before asking" something that can be said rather than something to arrange
- * afterwards.
+ * Almost always only the client calls `grant`, which is what makes "explain before asking"
+ * something that can be said rather than arranged afterwards. The one exception is the daemon's
+ * first start after an update changed the helper: it raises that prompt itself, while the window
+ * may already be showing the same row — so a list on screen can be answered behind its back, and
+ * the daemon then announces the queue that is left.
  */
 
 /** One row of the list, reduced for drawing. */
@@ -32,6 +34,71 @@ export function pendingFrom(raw: string): unknown[] | null {
   } catch {
     return null;
   }
+}
+
+/** The `id` of each `PendingOp` that has one. */
+export function pendingIds(ops: unknown[]): number[] {
+  return ops
+    .map((pending) => (pending as { id?: unknown } | null)?.id)
+    .filter((id): id is number => typeof id === "number");
+}
+
+/**
+ * Whether `ops` holds an operation not among `seen` — the queue grew, rather than shrank.
+ *
+ * `elevation_required` is published both ways: when something is queued, and when a grant or a
+ * withdrawal took rows out. Only the first is a reason to put the list in front of anyone; the
+ * second, after a grant that left a failed row behind, would reopen the dialog just answered.
+ */
+export function hasNewOps(seen: ReadonlySet<number>, ops: unknown[]): boolean {
+  return pendingIds(ops).some((id) => !seen.has(id));
+}
+
+/**
+ * Whether a rejected `elevation.grant` means the queue was already empty.
+ *
+ * `precondition_failed` is the one refusal `grant` gives before it looks at anything but the queue,
+ * and the dialog that asked had simply drawn a list somebody else had already allowed. Nothing
+ * failed, so it is not shown as a failure.
+ */
+export function isNothingWaiting(error: unknown): boolean {
+  const refused = (error ?? {}) as { code?: unknown; params?: { code?: unknown } };
+  return refused.code === "error.mixengineRefused" && refused.params?.code === "precondition_failed";
+}
+
+/**
+ * Whether a rejected `elevation.grant` means another grant already holds the one prompt slot —
+ * the daemon's own after an update, or another window's.
+ *
+ * On Windows the consent prompt covers the desktop and "Allow" cannot be reached meanwhile; on
+ * macOS and Linux the password box leaves the window clickable, and this is what comes back.
+ */
+export function isGrantInFlight(error: unknown): boolean {
+  const refused = (error ?? {}) as { code?: unknown; params?: { code?: unknown } };
+  return refused.code === "error.mixengineRefused" && refused.params?.code === "conflict";
+}
+
+/** What `elevation.status` says about a grant somebody else started. */
+export type OtherGrant<Outcome> =
+  | { state: "waiting" }
+  | { state: "emptied" }
+  | { state: "ended"; grant: Outcome };
+
+/**
+ * Has the grant that was in flight ended, read from one `elevation.status`?
+ *
+ * `before` is the `last.job` seen when the conflict came back. A different one is the grant that
+ * was running, ended; an empty queue means it applied everything, whether or not its outcome is
+ * readable. Anything else is still waiting.
+ */
+export function otherGrant<Outcome extends { job: number }>(
+  before: number | null,
+  status: { pending: unknown[]; last?: Outcome | null },
+): OtherGrant<Outcome> {
+  const last = status.last ?? null;
+  if (last !== null && last.job !== before) return { state: "ended", grant: last };
+  if (status.pending.length === 0) return { state: "emptied" };
+  return { state: "waiting" };
 }
 
 /**

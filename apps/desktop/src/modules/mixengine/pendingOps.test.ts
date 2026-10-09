@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { describeOp, pendingFrom } from "./pendingOps";
+import {
+  describeOp,
+  hasNewOps,
+  isGrantInFlight,
+  isNothingWaiting,
+  otherGrant,
+  pendingFrom,
+} from "./pendingOps";
 
 /** Exactly the shape the daemon sends: `PendingOp` wraps `PrivilegedOp` in the `op` field. */
 const hostsApply = {
@@ -79,5 +86,91 @@ describe("describeOp", () => {
      what travels on the wire, and reading it as if it were a `PendingOp` gives `unknown`. */
   it("does not mistake a bare privileged op for a pending entry", () => {
     expect(describeOp({ op: "hosts-apply", entries: [] }).kind).toBe("unknown");
+  });
+});
+
+describe("isNothingWaiting", () => {
+  /* The daemon raised the helper's prompt itself after an update, the person allowed it, and the
+     dialog drawn from the same queue was still on screen: its "Allow" is answered with this. */
+  it("recognises a grant refused because the queue was already empty", () => {
+    expect(
+      isNothingWaiting({
+        code: "error.mixengineRefused",
+        params: { code: "precondition_failed", message: "nothing is waiting for permission" },
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves every other refusal to be shown", () => {
+    expect(
+      isNothingWaiting({
+        code: "error.mixengineRefused",
+        params: { code: "conflict", message: "a grant is already in flight" },
+      }),
+    ).toBe(false);
+    expect(isNothingWaiting({ code: "error.mixengineUnreachable" })).toBe(false);
+    expect(isNothingWaiting(new Error("boom"))).toBe(false);
+    expect(isNothingWaiting(null)).toBe(false);
+  });
+});
+
+describe("isGrantInFlight", () => {
+  it("recognises the refusal of a second grant while one holds the prompt", () => {
+    expect(
+      isGrantInFlight({
+        code: "error.mixengineRefused",
+        params: { code: "conflict", message: "job 12 is already asking for permission" },
+      }),
+    ).toBe(true);
+    expect(
+      isGrantInFlight({
+        code: "error.mixengineRefused",
+        params: { code: "precondition_failed", message: "nothing is waiting for permission" },
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("otherGrant", () => {
+  const waiting = [hostsApply];
+  const declined = { job: 12, outcome: "declined" };
+
+  it("keeps waiting while the last grant is still the one seen before", () => {
+    expect(otherGrant(12, { pending: waiting, last: declined })).toEqual({ state: "waiting" });
+    expect(otherGrant(null, { pending: waiting, last: null })).toEqual({ state: "waiting" });
+  });
+
+  it("hands back the grant that ended since", () => {
+    expect(otherGrant(null, { pending: waiting, last: declined })).toEqual({
+      state: "ended",
+      grant: declined,
+    });
+    expect(otherGrant(11, { pending: [], last: declined })).toEqual({
+      state: "ended",
+      grant: declined,
+    });
+  });
+
+  /* The grant applied everything and this read came before its outcome was recorded, or the queue
+     was emptied some other way: either way there is nothing left to allow. */
+  it("calls an empty queue done even with no new outcome", () => {
+    expect(otherGrant(12, { pending: [], last: declined })).toEqual({ state: "emptied" });
+  });
+});
+
+describe("hasNewOps", () => {
+  const trust = { id: 8, op: { op: "trust-ca-install" }, description: "Trust the CA" };
+
+  it("sees a queue that grew", () => {
+    expect(hasNewOps(new Set(), [hostsApply])).toBe(true);
+    expect(hasNewOps(new Set([7]), [hostsApply, trust])).toBe(true);
+  });
+
+  /* A grant that applied one row and kept a failed one announces the row it kept. The dialog that
+     asked has just closed; opening it again for that row is not something anybody asked for. */
+  it("does not count a queue that shrank, or stayed the same", () => {
+    expect(hasNewOps(new Set([7, 8]), [hostsApply])).toBe(false);
+    expect(hasNewOps(new Set([7]), [hostsApply])).toBe(false);
+    expect(hasNewOps(new Set([7]), [])).toBe(false);
   });
 });

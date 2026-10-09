@@ -314,6 +314,16 @@ impl Host {
         }
     }
 
+    /// A host where the prompt is accepted and the helper applies every operation it is handed,
+    /// leaving the report a real one would — so a grant settles its rows.
+    #[must_use]
+    pub fn applying_elevation(home: impl Into<PathBuf>) -> Self {
+        Self {
+            prompts: elevation::Prompts::applying(),
+            ..Self::with_home(home)
+        }
+    }
+
     /// A host where the prompt is accepted and the helper writes `said` to stderr.
     ///
     /// Pair it with a request nothing answers to reproduce a helper that refused its request: the

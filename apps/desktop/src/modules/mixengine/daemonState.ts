@@ -63,8 +63,8 @@ export function needsResync(raw: string): boolean {
 
 /** Whether it is a `job_finished` — for any job. The Dashboard rereads `daemon.status` when it sees
  *  one, because a finished `elevation.grant` (from the dialog, from the CLI, or from another MixLab
- *  window) changes the waiting count without the daemon emitting any event of its own for that
- *  (`elevation_required` only fires when the queue *grows*). */
+ *  window) changes the waiting count. The daemon now announces the queue a grant left as an
+ *  `elevation_required` too, but events are best-effort, so this reread stays. */
 /** The event stream ended — the daemon stopped, or was stopped from somewhere else (T168: the tray). */
 export function isDisconnected(raw: string): boolean {
   try {

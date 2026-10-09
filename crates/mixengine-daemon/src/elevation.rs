@@ -243,20 +243,34 @@ impl Elevation {
             return Ok(());
         }
 
+        let waiting = self.announce_what_is_left().await?;
+
+        tracing::info!(key, waiting, "a queued operation is no longer needed");
+
+        Ok(())
+    }
+
+    /// Publish the queue as it now stands, after something took rows out of it, and say how many
+    /// are left.
+    ///
+    /// [`DaemonEvent::ElevationRequired`] carries the whole queue, so a shrunken one is announced the
+    /// same way a grown one is, and an empty batch is how a client learns nothing waits any more.
+    /// Without it a window that had drawn the list kept drawing it after the rows were gone, and an
+    /// "Allow" on that list was answered "nothing is waiting for permission".
+    ///
+    /// # Errors
+    ///
+    /// The wire error of a queue that could not be read back.
+    async fn announce_what_is_left(&self) -> Result<usize, Error> {
         let pending = mixengine_core::elevation::pending(&self.store)
             .await
             .map_err(|error| error.to_wire())?;
-
-        tracing::info!(
-            key,
-            waiting = pending.len(),
-            "a queued operation is no longer needed"
-        );
+        let waiting = pending.len();
 
         self.events
             .publish(DaemonEvent::ElevationRequired { pending });
 
-        Ok(())
+        Ok(waiting)
     }
 
     /// Record the firewall plan this machine now holds — roadmap task **T180**.
@@ -1212,6 +1226,15 @@ impl Elevation {
                     self.learn_installed_helper().await;
                 }
 
+                // **Every client that drew the list is told it shrank**, not only the one whose
+                // "Allow" started this grant: the daemon raises a prompt of its own after an update
+                // changed the helper (T182b, D2), while the window already shows the same row.
+                if (settled.applied > 0 || !settled.refused.is_empty())
+                    && let Err(error) = self.announce_what_is_left().await
+                {
+                    tracing::warn!(%error, "could not announce what is left in the queue");
+                }
+
                 // **The sentences, named by the operation they are about** — roadmap task
                 // **T147**. Composed here rather than by a client: what an operation is called and
                 // what it said are both the daemon's to know, and a client joining the two would be
@@ -1798,6 +1821,35 @@ mod tests {
         // And the machine can still be asked: declined is not the same as impossible, which is the
         // distinction `probe()` exists to draw.
         assert!(elevation.summary().await.unwrap().can_prompt);
+    }
+
+    /// A grant that took rows out of the queue announces what is left, so a window that drew the
+    /// list closes it instead of offering an "Allow" the daemon will answer "nothing is waiting".
+    #[tokio::test]
+    async fn a_grant_that_applied_announces_the_queue_it_left() {
+        let (_home, elevation, events, _machine) =
+            registry(mock::Host::applying_elevation("/tmp/mixengine")).await;
+        elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
+        let mut watching = events.subscribe();
+
+        let started = elevation.grant().await.unwrap();
+        let ended = finished(&elevation.jobs, started.id).await;
+        assert_eq!(ended.state, mixengine_proto::JobState::Succeeded);
+        assert_eq!(elevation.summary().await.unwrap().pending, 0);
+
+        let announced = loop {
+            let published =
+                tokio::time::timeout(std::time::Duration::from_secs(5), watching.next())
+                    .await
+                    .expect("an event within five seconds")
+                    .expect("the stream stays open");
+            if let crate::api::events::Frame::Event(DaemonEvent::ElevationRequired { pending }) =
+                published
+            {
+                break pending;
+            }
+        };
+        assert!(announced.is_empty(), "{announced:?}");
     }
 
     /// On Linux the reason is the whole `pkexec` command a person is meant to type. It is worthless
