@@ -84,6 +84,58 @@ pub(crate) fn secret_blocking(
     Ok(Some(found))
 }
 
+/// What the store says around an address a read has just missed — **names and counts, never a
+/// value** — for `daemon.log`.
+///
+/// Written for CI run 37973392777, where a MariaDB first run stored its root credential and the
+/// start 4ms later read nothing at the same address, on a Windows Credential Manager with no cache in
+/// front of it. That log could not tell a credential never written from one written and then not
+/// found, so a miss now says: whether a second read finds it, whether the store *lists* the address,
+/// and how many entries the same home holds. A listed address a read cannot find is the store; an
+/// unlisted one in a home holding others is a write that went elsewhere or a delete.
+///
+/// Blocking, like [`secret_blocking`], and every failure is folded into the sentence: this runs on
+/// a path that has already failed, and a diagnosis that could fail it a second time would hide the
+/// first reason.
+pub(crate) fn after_a_miss(host: &dyn Host, service: &str, address: &str) -> String {
+    let keyring = host.keyring();
+
+    let again = match keyring.secret(service, address) {
+        Ok(Some(_)) => "a second read found it".to_owned(),
+        Ok(None) => "a second read found nothing either".to_owned(),
+        Err(error) => format!("a second read failed: {error}"),
+    };
+
+    let listed = match keyring.keys_without_asking(service) {
+        None => "the store was not listed, since listing it here could raise a dialog".to_owned(),
+        Some(Ok(keys)) => {
+            let named = keys.iter().any(|key| key == address);
+            let home = address
+                .split_once('/')
+                .map(|(home, _)| home)
+                .filter(|_| handoff::secret_key_before_homes(address).is_some());
+
+            let neighbours = match home {
+                Some(home) => {
+                    let prefix = format!("{home}/");
+                    let held = keys.iter().filter(|key| key.starts_with(&prefix)).count();
+                    format!(", and {held} under this home ({home})")
+                }
+                None => String::new(),
+            };
+
+            format!(
+                "the store {} it among {} entries for {service}{neighbours}",
+                if named { "lists" } else { "does not list" },
+                keys.len()
+            )
+        }
+        Some(Err(error)) => format!("the store could not be listed: {error}"),
+    };
+
+    format!("{again}; {listed}")
+}
+
 /// [`secret_blocking`] in the `mixengine` namespace, off the runtime's threads.
 ///
 /// # Errors
@@ -192,5 +244,65 @@ mod tests {
                 "{address}"
             );
         }
+    }
+
+    /// CI run 37973392777's question, from the side that can be asked: a miss says whether the
+    /// store lists the address and how many entries its home holds — and never what one holds.
+    #[test]
+    fn a_miss_says_what_the_store_lists_and_nothing_it_holds() {
+        let host = machine();
+        host.keyring()
+            .set_secret(
+                KEYRING_SERVICE,
+                "0123456789ab/postgres@main/postgres",
+                "s3cret",
+            )
+            .expect("a keyring write");
+        host.keyring()
+            .set_secret(KEYRING_SERVICE, "fedcba987654/mariadb@main/root", "another")
+            .expect("a keyring write");
+
+        let said = after_a_miss(host.as_ref(), KEYRING_SERVICE, NEW);
+
+        assert_eq!(
+            said,
+            "a second read found nothing either; the store does not list it among 2 entries for \
+             mixengine, and 1 under this home (0123456789ab)"
+        );
+        assert!(
+            !said.contains("s3cret") && !said.contains("another"),
+            "{said}"
+        );
+    }
+
+    /// The other answer the log could not give: the address is there, and a read misses it anyway.
+    #[test]
+    fn a_miss_on_an_address_the_store_holds_says_so() {
+        let host = machine();
+        host.keyring()
+            .set_secret(KEYRING_SERVICE, NEW, "this home's")
+            .expect("a keyring write");
+
+        assert_eq!(
+            after_a_miss(host.as_ref(), KEYRING_SERVICE, NEW),
+            "a second read found it; the store lists it among 1 entries for mixengine, and 1 \
+             under this home (0123456789ab)"
+        );
+    }
+
+    /// An address with no home in front has no home to count.
+    #[test]
+    fn a_miss_on_an_address_with_no_home_counts_no_home() {
+        let host = machine();
+
+        assert_eq!(
+            after_a_miss(
+                host.as_ref(),
+                KEYRING_SERVICE,
+                "extensions/phpmyadmin/config"
+            ),
+            "a second read found nothing either; the store does not list it among 0 entries for \
+             mixengine"
+        );
     }
 }

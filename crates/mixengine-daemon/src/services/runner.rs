@@ -2285,6 +2285,19 @@ impl Runner {
                             .map_err(anyhow::Error::from)
                             .and_then(|secret| {
                                 secret.ok_or_else(|| {
+                                    // What the store holds around the miss, for `daemon.log` only:
+                                    // the sentence on the row stays the one a person acts on.
+                                    tracing::warn!(
+                                        service = own.as_str(),
+                                        address = %format!("{service}/{key}"),
+                                        store = %crate::secrets::after_a_miss(
+                                            host.as_ref(),
+                                            &service,
+                                            &key
+                                        ),
+                                        "a credential this service is started with was not found"
+                                    );
+
                                     anyhow::anyhow!(
                                         "no credential is stored at {service}/{key}{}",
                                         repair_for(&own, &key)

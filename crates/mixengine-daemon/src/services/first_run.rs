@@ -165,6 +165,7 @@ async fn store_the_secrets(
         let secret =
             mixengine_platform::generate_secret(spec.length).map_err(|error| error.to_wire())?;
         let (host, key, value) = (Arc::clone(host), address(spec.key), secret.clone());
+        let stored_at = key.clone();
 
         // The keyring blocks, and on Linux it blocks on a D-Bus round trip to a daemon that may be
         // prompting the user to unlock their keyring. `docs/standards/rust.md`'s rule for
@@ -180,6 +181,12 @@ async fn store_the_secrets(
             )
         })?
         .map_err(|error| error.to_wire())?;
+
+        // The address and never the value: what a start that cannot find it is compared against.
+        tracing::info!(
+            address = %format!("{KEYRING_SERVICE}/{stored_at}"),
+            "a credential for this service's first run was stored"
+        );
 
         generated.insert(spec.key.to_owned(), secret);
     }
