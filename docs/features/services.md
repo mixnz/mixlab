@@ -361,6 +361,11 @@ refuses it with a sentence saying so. It has no recipe because there is nothing 
 it adds no command to `bin/`: what uses it is the Ruby shim, through `MSYS2_PATH`
 ([runtime-versions.md](runtime-versions.md)).
 
+A package whose folder was deleted by hand reads as `missing` and is installed again in place, its
+services still pointing at it (T206d); uninstalling the last version of a package removes its empty
+`packages/<name>/` (T206c). Both are described with runtimes, in
+[runtime-versions.md](runtime-versions.md#an-install-whose-folder-is-gone).
+
 ## The commands a package brings with it
 
 **An installed database puts its clients on the PATH** — roadmap task **T130**,
