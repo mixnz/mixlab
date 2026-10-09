@@ -426,6 +426,7 @@ mod tests {
                 doc_root: "public".to_owned(),
                 https: true,
                 routes: Vec::new(),
+                services: None,
             },
             disposition: Disposition::Create,
             elevates: false,

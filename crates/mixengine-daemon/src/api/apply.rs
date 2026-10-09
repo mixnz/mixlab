@@ -507,6 +507,7 @@ impl Api {
                 doc_root,
                 https,
                 routes,
+                ..
             } => {
                 // **The one place the walk looks ahead** (D14): a site cannot be created nameless,
                 // and the names are read off the plan's own steps rather than expanded a second

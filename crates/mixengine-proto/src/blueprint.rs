@@ -599,6 +599,12 @@ pub enum PlanAction {
         /// ships, which is what makes this an addition rather than a change.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         routes: Vec<crate::SiteRoute>,
+
+        /// The services this site links, as their `EnsureService` steps name them — roadmap task
+        /// **T204a**, D3. [`None`] is every service the apply made sure of, which is what a
+        /// one-site blueprint links.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        services: Option<Vec<crate::ServiceId>>,
     },
 
     /// Give the site a name.
