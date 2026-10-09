@@ -383,6 +383,8 @@ const vi: typeof en = {
       setDefault: "Đặt mặc định",
       install: "Cài",
       reinstall: "Cài lại",
+      folderGone: "Thư mục đã mất",
+      reinstallUnavailable: "Phiên bản này không còn được cung cấp. Gỡ nó rồi cài bản khác.",
       uninstall: "Gỡ",
       uninstallConfirmTitle: "Gỡ {{version}}?",
       uninstallForceConfirm: "Vẫn gỡ",

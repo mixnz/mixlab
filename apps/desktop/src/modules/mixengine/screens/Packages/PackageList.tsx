@@ -10,6 +10,7 @@ import OnDiskCard from "./OnDiskCard";
 import Input from "../../../../components/Input";
 import MonogramBadge from "../../../../components/MonogramBadge";
 import NoticeBanner from "../../../../components/NoticeBanner";
+import StatusPill from "../../../../components/StatusPill";
 import Table from "../../../../components/Table";
 import { useTranslation } from "../../../../i18n";
 import { formatInstalledAt, jobFor, newestFirst, versionKey } from "../../runtimeState";
@@ -23,6 +24,7 @@ import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
 import { updateRowState } from "../../updateRow";
 import { packageCategory, type PackageCategory } from "./packageCategories";
+import { releaseToRestore } from "./reinstall";
 import type { PackagesState } from "./usePackages";
 import type { PackageRelease } from "@mixengine/api";
 import styles from "./Catalogue.module.css";
@@ -146,6 +148,11 @@ export default function PackageList({
               {installedInCategory.map((row) => {
                 const key = versionKey(row.package, row.version);
                 const inUse = row.services.length > 0;
+                // Its folder is gone — T206d: the same version, offered again, puts it back.
+                const gone = row.missing === true;
+                const restore = gone
+                  ? releaseToRestore(available, (release) => release.package === row.package, row.version)
+                  : null;
                 const update = updateRowState(
                   state.updates.find(
                     (candidate) => candidate.package === row.package && candidate.from === row.version,
@@ -162,11 +169,30 @@ export default function PackageList({
                         </span>
                       </td>
                       <td className={styles.version}>{row.version}</td>
-                      <td className={styles.muted}>{formatInstalledAt(row.installed_at)}</td>
+                      <td className={styles.muted}>
+                        {gone ? (
+                          <StatusPill tone="warning" title={row.path}>
+                            {t("mixengine.packages.folderGone")}
+                          </StatusPill>
+                        ) : (
+                          formatInstalledAt(row.installed_at)
+                        )}
+                      </td>
                       <td className={inUse ? styles.services : styles.muted}>
                         {inUse ? row.services.join(", ") : "—"}
                       </td>
                       <td data-align="end" data-nowrap>
+                        {gone && (
+                          <Button
+                            size="small"
+                            variant="soft"
+                            disabled={restore === null}
+                            title={restore === null ? t("mixengine.packages.reinstallUnavailable") : undefined}
+                            onClick={() => restore && void state.install(restore)}
+                          >
+                            {t("mixengine.packages.reinstall")}
+                          </Button>
+                        )}
                         <Button
                           size="small"
                           variant="danger"

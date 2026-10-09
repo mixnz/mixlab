@@ -47,6 +47,7 @@ import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
 import { updateRowState } from "../../updateRow";
 import ExtensionsPanel from "./ExtensionsPanel";
+import { releaseToRestore } from "./reinstall";
 import {
   anyLacksNativeGems,
   DEVKIT_PACKAGE,
@@ -548,6 +549,11 @@ export default function Languages({ active }: { active: boolean }) {
               {shownInstalled.map((row) => {
                 const key = versionKey(row.kind, row.version);
                 const open = expanded === key;
+                // Its folder is gone — T206d: the same version, offered again, puts it back.
+                const gone = row.missing === true;
+                const restore = gone
+                  ? releaseToRestore(available, (release) => release.kind === row.kind, row.version)
+                  : null;
                 const update = updateRowState(
                   updates.find(
                     (candidate) => candidate.kind === row.kind && candidate.from === row.version,
@@ -582,7 +588,15 @@ export default function Languages({ active }: { active: boolean }) {
                       <td>
                         <span className={styles.tag}>{row.channel}</span>
                       </td>
-                      <td className={styles.muted}>{formatInstalledAt(row.installed_at)}</td>
+                      <td className={styles.muted}>
+                        {gone ? (
+                          <StatusPill tone="warning" title={row.path}>
+                            {t("mixengine.packages.folderGone")}
+                          </StatusPill>
+                        ) : (
+                          formatInstalledAt(row.installed_at)
+                        )}
+                      </td>
                       <td>
                         {row.default ? (
                           <span className={styles.defaultPill}>{t("mixengine.packages.columnDefault")}</span>
@@ -593,6 +607,17 @@ export default function Languages({ active }: { active: boolean }) {
                         )}
                       </td>
                       <td data-align="end" data-nowrap>
+                        {gone && (
+                          <Button
+                            size="small"
+                            variant="soft"
+                            disabled={restore === null}
+                            title={restore === null ? t("mixengine.packages.reinstallUnavailable") : undefined}
+                            onClick={() => restore && void install(restore)}
+                          >
+                            {t("mixengine.packages.reinstall")}
+                          </Button>
+                        )}
                         <Button size="small" variant="danger" onClick={() => setUninstallTarget(row)}>
                           {t("mixengine.packages.uninstall")}
                         </Button>

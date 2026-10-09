@@ -389,6 +389,8 @@ export default {
       setDefault: "Set as default",
       install: "Install",
       reinstall: "Reinstall",
+      folderGone: "Folder is gone",
+      reinstallUnavailable: "This version isn't offered any more. Uninstall it, then install another.",
       uninstall: "Uninstall",
       uninstallConfirmTitle: "Uninstall {{version}}?",
       uninstallForceConfirm: "Uninstall anyway",
