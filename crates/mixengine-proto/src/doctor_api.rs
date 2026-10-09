@@ -198,6 +198,12 @@ pub enum ProblemId {
     /// and destroys nothing, and a JDK whose `keytool` refuses — a `cacerts` whose password is not
     /// the published default — is reported as untouched rather than silently retried.
     JavaTrustMissing,
+
+    /// A runtime or package is recorded and its folder is gone — roadmap task **T206d**.
+    ///
+    /// Installing the same version again restores it in place, and that is a download somebody
+    /// asks for: `daemon.doctor_repair` leaves it alone.
+    InstallMissing,
 }
 
 #[cfg(test)]

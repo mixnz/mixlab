@@ -128,6 +128,7 @@ impl Doctor {
                 self.java_trust().await,
                 self.commands().await,
                 self.unrecorded().await,
+                self.missing_installs().await,
                 self.dns_server(),
                 self.port_access().await,
                 self.pending_permissions().await,
@@ -537,6 +538,59 @@ impl Doctor {
                     ),
                 },
             },
+        }
+    }
+
+    /// **What is recorded and not on disk** — roadmap task **T206d**, D4. A `Problem` for a folder
+    /// that is gone, which `daemon.doctor_repair` leaves to a person; a `Note` for one this daemon
+    /// cannot read, which may be a drive that is not mounted.
+    async fn missing_installs(&self) -> Check {
+        let name = "installs recorded but not on disk".to_owned();
+
+        let (runtimes, packages) = match (
+            mixengine_core::runtimes::records(&self.store, None).await,
+            mixengine_core::packages::records(&self.store, None).await,
+        ) {
+            (Ok(runtimes), Ok(packages)) => (runtimes, packages),
+            (Err(error), _) | (_, Err(error)) => {
+                return Check {
+                    name,
+                    outcome: Outcome::Skipped {
+                        because: format!("this home's installs could not be read: {error}"),
+                    },
+                };
+            }
+        };
+
+        let rows = runtimes
+            .iter()
+            .map(|runtime| {
+                (
+                    format!("{} {}", runtime.kind, runtime.version),
+                    runtime.path.clone(),
+                    runtime.is_missing(),
+                )
+            })
+            .chain(packages.iter().map(|package| {
+                (
+                    format!("{} {}", package.package, package.version),
+                    package.path.clone(),
+                    package.is_missing(),
+                )
+            }));
+
+        let (mut gone, mut out_of_reach) = (Vec::new(), Vec::new());
+        for (what, path, missing) in rows {
+            if missing {
+                gone.push(format!("{what} ({path})"));
+            } else if let Err(error) = tokio::fs::symlink_metadata(&path).await {
+                out_of_reach.push(format!("{what} ({path}): {error}"));
+            }
+        }
+
+        Check {
+            name,
+            outcome: missing_outcome(&gone, &out_of_reach),
         }
     }
 
@@ -1285,6 +1339,23 @@ fn elsewhere_on_the_path(command: &str, bin: &std::path::Path) -> Option<std::pa
         .find(|candidate| candidate.is_file())
 }
 
+/// What [`Doctor::missing_installs`] decides, as a function of what it read — T206d, D4.
+fn missing_outcome(gone: &[String], out_of_reach: &[String]) -> Outcome {
+    match (gone.is_empty(), out_of_reach.is_empty()) {
+        (true, true) => Outcome::Ok {},
+        (false, _) => Outcome::Problem {
+            id: ProblemId::InstallMissing,
+            because: format!("recorded, and the folder is gone: {}", gone.join(", ")),
+        },
+        (true, false) => Outcome::Note {
+            because: format!(
+                "recorded, and the folder could not be read: {}",
+                out_of_reach.join(", ")
+            ),
+        },
+    }
+}
+
 /// What [`Doctor::go_toolchain`] decides, as a function of what it read.
 ///
 /// `installed` is whether this home holds any Go; the two values are the daemon's own. Out here for
@@ -1705,6 +1776,27 @@ mod tests {
                 "{toolchain:?}: {outcome:?}"
             );
         }
+    }
+
+    /// **Gone is a problem, out of reach is a note** — roadmap task **T206d**, D4.
+    #[test]
+    fn a_gone_install_is_a_problem_and_one_out_of_reach_a_note() {
+        assert!(matches!(super::missing_outcome(&[], &[]), Outcome::Ok {}));
+
+        let gone = vec!["msys2 2026.10.08 (C:/h/packages/msys2/2026.10.08)".to_owned()];
+        match super::missing_outcome(&gone, &[]) {
+            Outcome::Problem { id, because } => {
+                assert_eq!(id, ProblemId::InstallMissing);
+                assert!(because.contains("msys2 2026.10.08"), "{because}");
+            }
+            other => panic!("{other:?}"),
+        }
+
+        let out_of_reach = vec!["ruby 3.4.11 (D:/r): access is denied".to_owned()];
+        assert!(matches!(
+            super::missing_outcome(&[], &out_of_reach),
+            Outcome::Note { .. }
+        ));
     }
 
     /// **A shim leaves a session's `GOTOOLCHAIN` alone**, so one inherited from the daemon's own
