@@ -287,6 +287,12 @@ impl Runtimes {
         let installed = runtimes::records(&self.store, filter.kind)
             .await
             .map_err(|error| error.to_wire())?;
+        // **A version whose folder is gone is not installed here** — roadmap task **T206d**, D2: it is
+        // offered again, which is how it is put back, and it is the base of no update.
+        let installed: Vec<_> = installed
+            .into_iter()
+            .filter(|have| !have.is_missing())
+            .collect();
         let kept = kept::all(&self.store)
             .await
             .map_err(|error| error.to_wire())?;

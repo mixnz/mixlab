@@ -482,6 +482,20 @@ async fn a_deleted_package_folder_is_missing_and_installing_it_again_restores_it
     assert!(fixture.installed_at(VERSION).is_dir());
 }
 
+/// **A version whose folder is gone is offered again** — roadmap task **T206d**, D2. This is what
+/// locks MixLab's steps panel again over a devkit deleted by hand.
+#[tokio::test]
+async fn a_deleted_package_folder_is_offered_as_not_installed() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    assert_eq!(client.install(VERSION).await["state"], "succeeded");
+
+    std::fs::remove_dir_all(fixture.installed_at(VERSION)).expect("deleted by hand");
+
+    let available = client.call("package.list_available", json!({})).await;
+    assert_eq!(available["packages"][0]["installed"], false, "{available}");
+}
+
 /// The whole point of the task: an installed package becomes a service a person can start.
 #[tokio::test]
 async fn an_installed_package_becomes_a_service_and_can_be_deleted_again() {

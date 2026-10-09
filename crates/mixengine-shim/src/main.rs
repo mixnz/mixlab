@@ -579,8 +579,10 @@ async fn installed_devkit(store: &Store, kind: RuntimeKind) -> Option<PathBuf> {
     let installed = mixengine_core::packages::records(store, Some("msys2"))
         .await
         .unwrap_or_default();
+    // **A devkit whose folder is gone is no devkit** — roadmap task **T206d**, D2.
     let pairs: Vec<(&str, &str)> = installed
         .iter()
+        .filter(|row| !row.is_missing())
         .map(|row| (row.version.as_str(), row.path.as_str()))
         .collect();
 
@@ -934,6 +936,10 @@ fn hint_for(error: &mixengine_core::Error) -> Option<String> {
             kind, constraint, ..
         } => Some(resolve::install_command(*kind, constraint)),
 
+        mixengine_core::Error::RuntimeMissing { kind, version, .. } => {
+            Some(resolve::restore_command(*kind, version))
+        }
+
         mixengine_core::Error::NoDefaultRuntime { kind } => Some(format!(
             "`mix runtime list --kind {kind}` shows what is installed, and \
              `mix runtime default {kind} <version>` chooses which one is used here"
@@ -946,6 +952,44 @@ fn hint_for(error: &mixengine_core::Error) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **A devkit whose folder is gone is no devkit**, and one that is there beside it still
+    /// answers — roadmap task **T206d**, D2.
+    #[tokio::test]
+    async fn a_devkit_whose_folder_is_gone_is_skipped() {
+        let home = tempfile::tempdir().expect("a temporary directory");
+        let store = Store::open(&home.path().join(mixengine_core::paths::DATABASE_FILE_NAME))
+            .await
+            .expect("a database");
+        let record = |version: &str| mixengine_core::packages::Installation {
+            package: "msys2".to_owned(),
+            version: mixengine_proto::PackageVersion::parse(version).expect("a version"),
+            path: home.path().join("packages").join("msys2").join(version),
+            bytes: 1,
+            url: "https://example.invalid/msys2".to_owned(),
+            sha256: "00".to_owned(),
+            provides: std::collections::BTreeMap::new(),
+        };
+        let at = mixengine_proto::Timestamp(1_760_000_000_000);
+
+        let older = record("2026.9.30");
+        std::fs::create_dir_all(&older.path).expect("a folder");
+        mixengine_core::packages::remember(&store, &older, at)
+            .await
+            .expect("recorded");
+        // The newer one is recorded and its folder is not there.
+        mixengine_core::packages::remember(&store, &record("2026.10.08"), at)
+            .await
+            .expect("recorded");
+
+        assert_eq!(
+            installed_devkit(&store, RuntimeKind::Ruby).await,
+            Some(older.path.clone())
+        );
+
+        std::fs::remove_dir_all(&older.path).expect("deleted by hand");
+        assert_eq!(installed_devkit(&store, RuntimeKind::Ruby).await, None);
+    }
 
     /// **A Ruby is pointed at the installed devkit** — roadmap task **T206a**, D6.
     #[test]
