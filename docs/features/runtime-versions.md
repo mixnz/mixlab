@@ -259,6 +259,38 @@ Ruby command at the newest installed one through `MSYS2_PATH`**, the first place
 directory is written to. A session that already exports `MSYS2_PATH` keeps its own value, on
 `GOTOOLCHAIN`'s rule. Nothing is set for any other language, or where no `msys2` is installed.
 
+**What a gem's MSYS2 packages bring** (T206b, re-measured on 2026-10-09). A gem that declares
+`msys2_mingw_dependencies`, such as Rails 8's `ruby-vips`, makes RubyInstaller run `pacman -S` inside
+the devkit. pacman installs the package and its dependencies and none of its optional ones, so
+libvips loads without its heif, jxl and magick modules until they are added with `usr/bin/pacman -S`
+from the devkit's folder. The devkit's package database is the one of its build date, and that
+costs nothing measurable: every file a 2026-10-08 database named still downloaded a day later, from
+`mirror.msys2.org` and from `repo.msys2.org`. If a database ever grows old enough for its files to be
+gone, the answer is a newer `msys2` from `mix package available`, never a `pacman -Sy` inside this
+one, which is the partial upgrade MSYS2 does not support. See
+[msys2.md](https://github.com/mixnz/mixengine-packages/blob/master/docs/packages/msys2.md).
+
+## An install whose folder is gone
+
+**A runtime or package whose folder was deleted by hand reads as `missing`** — roadmap task
+**T206d** ([design](../specs/2026-10-09-t206b-t206d-installs-whose-folder-is-gone-design.md)). Nothing
+is stored for it: every read of `runtime_installs` and `packages` asks the disk, and only "not found"
+counts, because a folder out of reach (no access, a drive not mounted) is not a folder gone. The row
+stays until `mix runtime uninstall` or `mix package uninstall` forgets it.
+
+- **What runs skips it.** Under a constraint, the newest version that is there answers; when only a
+  missing version matches, or the default is missing, `php` and every other shim fail with
+  `RuntimeMissing`, naming the install that puts it back and the uninstall that forgets it. A
+  default is never replaced by another version behind a project's back. The Ruby shim points
+  `MSYS2_PATH` only at a devkit that is there.
+- **The catalogue offers it again.** `list_available` marks that version `installed: false` and
+  bases no update on it. **Installing the same version restores it in place**: the row keeps its id,
+  so a runtime stays the default and a package keeps its services.
+- `mix runtime list` and `mix package list` read `missing` in the `INSTALLED` column, `mix doctor`
+  reports `InstallMissing` (left alone by `mix doctor --repair`), and MixLab offers *Reinstall*.
+- **Uninstalling a version removes its kind's folder once it is empty** (T206c), so the last
+  `msys2` leaves no `packages/msys2/` behind.
+
 ## PHP extensions
 
 Per-version, since that is how PHP works. **Landed with T28**, and three things about it are written

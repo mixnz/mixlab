@@ -118,6 +118,34 @@ pub fn create_dir(path: &Path) -> Result<()> {
     })
 }
 
+/// Whether a folder's metadata read says it is gone — roadmap task **T206d**, D1.
+///
+/// **Only `NotFound`.** No access, a drive not mounted, a timeout: each is a folder out of reach, and
+/// nothing here may treat one as deleted. A pure function of the read so every `ErrorKind` can be
+/// tested, which no real path does the same way on three systems.
+#[must_use]
+pub fn gone(read: &std::io::Result<std::fs::Metadata>) -> bool {
+    matches!(read, Err(error) if error.kind() == std::io::ErrorKind::NotFound)
+}
+
+/// [`gone`] for a path, read without following a final link.
+pub async fn is_gone(path: &Path) -> bool {
+    gone(&tokio::fs::symlink_metadata(path).await)
+}
+
+/// Remove a folder if it is empty, and say nothing either way — roadmap task **T206c**.
+///
+/// **The operating system decides**: `remove_dir` refuses a folder that still holds a version or an
+/// install's `.staging` folder, and that refusal is the answer. Housekeeping, so it never fails the
+/// uninstall that asked for it. The one race is an install of another version creating this folder
+/// and its staging folder in the instant between: that install fails naming its staging folder, and
+/// asking again succeeds.
+pub fn remove_if_empty(directory: &Path) {
+    if let Err(error) = std::fs::remove_dir(directory) {
+        tracing::debug!(path = %directory.display(), %error, "an install folder was kept");
+    }
+}
+
 /// A relative path written with `/`, joined onto `base` one part at a time — roadmap task **T191**.
 ///
 /// A manifest's `provides` value, a site's doc root and a route's root are all stored with `/`,
@@ -487,6 +515,56 @@ impl Paths {
 
 #[cfg(test)]
 mod tests {
+    /// **Only "not found" is gone** — roadmap task **T206d**, D1. A folder that is there but out of
+    /// reach is not something to offer a reinstall over.
+    #[test]
+    fn only_not_found_is_gone() {
+        use std::io::{Error, ErrorKind};
+
+        let failed =
+            |kind: ErrorKind| -> std::io::Result<std::fs::Metadata> { Err(Error::from(kind)) };
+        assert!(super::gone(&failed(ErrorKind::NotFound)));
+        for kind in [
+            ErrorKind::PermissionDenied,
+            ErrorKind::TimedOut,
+            ErrorKind::Other,
+        ] {
+            assert!(!super::gone(&failed(kind)), "{kind:?}");
+        }
+        assert!(!super::gone(&std::fs::symlink_metadata(
+            std::env::temp_dir()
+        )));
+    }
+
+    /// **Only an empty folder goes** — roadmap task **T206c**.
+    #[test]
+    fn only_an_empty_folder_is_removed() {
+        let root = tempfile::tempdir().expect("a temporary directory");
+        let empty = root.path().join("empty");
+        let holding = root.path().join("holding");
+        std::fs::create_dir(&empty).expect("a folder");
+        std::fs::create_dir_all(holding.join(".1.0.0.staging")).expect("a staging folder");
+
+        super::remove_if_empty(&empty);
+        super::remove_if_empty(&holding);
+        super::remove_if_empty(&root.path().join("never"));
+
+        assert!(!empty.exists());
+        assert!(
+            holding.is_dir(),
+            "a folder still holding a version or a staging folder stays"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_deleted_folder_is_gone_and_one_that_is_there_is_not() {
+        let root = tempfile::tempdir().expect("a temporary directory");
+        let there = root.path().join("there");
+        std::fs::create_dir(&there).expect("a folder");
+        assert!(!super::is_gone(&there).await);
+        assert!(super::is_gone(&root.path().join("never")).await);
+    }
+
     use super::*;
 
     /// T184: the credentials belong to the home, so no `[paths]` override moves them.

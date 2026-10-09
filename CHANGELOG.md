@@ -32,6 +32,9 @@
   back to it as you left it.
 
 ### Fixed
+- A runtime or package whose folder was deleted by hand now shows as missing in `mix`, `mix doctor`
+  and MixLab, and installing the same version again puts it back.
+- Uninstalling a package's last version no longer leaves its empty folder behind.
 - Applying a blueprint links its site to a service that was already running on the machine, so
   starting the project starts that service too.
 - Ctrl+C stops a command in a PowerShell tab however MixLab was started.

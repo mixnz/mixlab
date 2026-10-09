@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE runtime_installs\n         SET channel = ?, install_path = ?, installed_at = ?, size_bytes = ?, source_url = ?,\n             sha256 = ?, provides_json = ?, extension_dir = ?, extensions_json = ?\n         WHERE kind = ? AND version = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "5f07c8e2d6c056b8bf9e3b289c17a4e811ecafb77c3719f8004209f1eb7105f2"
+}

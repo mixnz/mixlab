@@ -1,4 +1,4 @@
-import type { PackageCatalogue, PackageRelease, RuntimeRelease } from "@mixengine/api";
+import type { PackageCatalogue, PackageRelease, PackageSummary, RuntimeRelease } from "@mixengine/api";
 
 /** The package that gives a Windows Ruby a compiler — roadmap task T206a. */
 export const DEVKIT_PACKAGE = "msys2";
@@ -45,4 +45,25 @@ export function devkitOffer(catalogue: PackageCatalogue): {
     null,
   );
   return { release, installed: releases.some((candidate) => candidate.installed) };
+}
+
+/** Whether a devkit is here, recorded with its folder gone, or neither — T206d. */
+export type DevkitState =
+  | { state: "absent" }
+  | { state: "missing"; version: string }
+  | { state: "present"; version: string };
+
+/** Read from `package.list`, not the catalogue: a catalogue reads a missing devkit as not installed
+ *  and would offer the newest release, leaving the missing row behind — T206d. */
+export function devkitState(packages: PackageSummary[]): DevkitState {
+  const newest = (rows: PackageSummary[]) =>
+    rows.reduce<PackageSummary | null>(
+      (best, next) => (best === null || compareReleases(next.version, best.version) > 0 ? next : best),
+      null,
+    );
+  const recorded = packages.filter((row) => row.package === DEVKIT_PACKAGE);
+  const present = newest(recorded.filter((row) => row.missing !== true));
+  if (present !== null) return { state: "present", version: present.version };
+  const missing = newest(recorded);
+  return missing === null ? { state: "absent" } : { state: "missing", version: missing.version };
 }

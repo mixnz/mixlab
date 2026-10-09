@@ -382,6 +382,14 @@ async fn a_service_package_is_offered_installed_listed_and_removed() {
         !fixture.installed_at(VERSION).exists(),
         "the directory goes with the row"
     );
+    assert!(
+        !fixture
+            .installed_at(VERSION)
+            .parent()
+            .expect("a parent")
+            .exists(),
+        "the package's own folder goes with its last version (T206c)"
+    );
     assert_eq!(
         client.call("package.list", json!({})).await["packages"],
         json!([])
@@ -447,6 +455,53 @@ async fn installing_a_version_that_is_already_here_says_so_rather_than_downloadi
         .await;
 
     assert_eq!(error["data"]["code"], "already_exists", "{error}");
+}
+
+/// **A folder deleted by hand reads as missing, and installing it again restores the same row** —
+/// roadmap task **T206d**, D1 and D3.
+#[tokio::test]
+async fn a_deleted_package_folder_is_missing_and_installing_it_again_restores_it() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    assert_eq!(client.install(VERSION).await["state"], "succeeded");
+    client
+        .call(
+            "service.create",
+            json!({"id": "fakeservice@main", "version": VERSION}),
+        )
+        .await;
+
+    std::fs::remove_dir_all(fixture.installed_at(VERSION)).expect("deleted by hand");
+
+    let list = client.call("package.list", json!({})).await;
+    assert_eq!(list["packages"][0]["missing"], true, "{list}");
+
+    let restored = client.install(VERSION).await;
+    assert_eq!(restored["state"], "succeeded", "{restored}");
+    assert_eq!(
+        restored["outcome"]["result"]["missing"], false,
+        "{restored}"
+    );
+    assert_eq!(
+        restored["outcome"]["result"]["services"],
+        json!(["fakeservice@main"]),
+        "the service still points at the same row"
+    );
+    assert!(fixture.installed_at(VERSION).is_dir());
+}
+
+/// **A version whose folder is gone is offered again** — roadmap task **T206d**, D2. This is what
+/// locks MixLab's steps panel again over a devkit deleted by hand.
+#[tokio::test]
+async fn a_deleted_package_folder_is_offered_as_not_installed() {
+    let fixture = Fixture::start().await;
+    let mut client = fixture.client().await;
+    assert_eq!(client.install(VERSION).await["state"], "succeeded");
+
+    std::fs::remove_dir_all(fixture.installed_at(VERSION)).expect("deleted by hand");
+
+    let available = client.call("package.list_available", json!({})).await;
+    assert_eq!(available["packages"][0]["installed"], false, "{available}");
 }
 
 /// The whole point of the task: an installed package becomes a service a person can start.

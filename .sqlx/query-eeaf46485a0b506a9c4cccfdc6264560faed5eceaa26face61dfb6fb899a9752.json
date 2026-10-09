@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE packages\n         SET install_path = ?, installed_at = ?, source_url = ?, sha256 = ?, size_bytes = ?,\n             provides_json = ?\n         WHERE name = ? AND version = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "eeaf46485a0b506a9c4cccfdc6264560faed5eceaa26face61dfb6fb899a9752"
+}

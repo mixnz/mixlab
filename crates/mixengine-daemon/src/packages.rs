@@ -151,6 +151,12 @@ impl Packages {
         let installed = packages::records(&self.store, filter.package.as_deref())
             .await
             .map_err(|error| error.to_wire())?;
+        // **A version whose folder is gone is not installed here** — roadmap task **T206d**, D2: it is
+        // offered again, which is how it is put back, and it is the base of no update.
+        let installed: Vec<_> = installed
+            .into_iter()
+            .filter(|have| !have.is_missing())
+            .collect();
         let kept = kept::all(&self.store)
             .await
             .map_err(|error| error.to_wire())?;
@@ -377,6 +383,9 @@ impl Packages {
         }
 
         match packages::record(&self.store, package, &target.version).await {
+            // **A recorded version whose folder is gone is installed again** — roadmap task
+            // **T206d**, D3: the install restores the row it already has.
+            Ok(found) if found.is_missing() => {}
             Ok(_) => {
                 return Err(mixengine_core::Error::PackageAlreadyRecorded {
                     package: package.to_owned(),
@@ -514,6 +523,13 @@ impl Packages {
         };
         let marker = mixengine_core::adopt::marker::Marker::package(&installation).encode();
 
+        // **Restore or record** — roadmap task **T206d**, D3: decided before the download, because an
+        // install whose row already exists writes over it rather than beside it.
+        let restoring = matches!(
+            packages::record(&self.store, package, version).await,
+            Ok(found) if found.is_missing()
+        );
+
         let installed = match self
             .fetcher
             .installer
@@ -528,6 +544,16 @@ impl Packages {
             .await
         {
             Ok(installed) => installed,
+
+            // The folder came back between the check and the rename. There is nothing to adopt:
+            // the row is already there, and adopting would try to write a second one.
+            Err(mixengine_core::Error::AlreadyInstalled { .. }) if restoring => {
+                return Err(mixengine_core::Error::PackageAlreadyRecorded {
+                    package: package.to_owned(),
+                    version: version.clone(),
+                }
+                .to_wire());
+            }
 
             // **T182f, D2**, on `runtimes::perform`'s reasoning: an earlier home installed it.
             Err(mixengine_core::Error::AlreadyInstalled { path }) => {
@@ -560,16 +586,16 @@ impl Packages {
             Err(error) => return Err(error.to_wire()),
         };
 
-        let record = packages::remember(
-            &self.store,
-            &packages::Installation {
-                path: installed.path.clone(),
-                bytes: installed.bytes,
-                ..installation
-            },
-            Timestamp::from_system_time(SystemTime::now()),
-        )
-        .await;
+        let installation = packages::Installation {
+            path: installed.path.clone(),
+            bytes: installed.bytes,
+            ..installation
+        };
+        let at = Timestamp::from_system_time(SystemTime::now());
+        let record = match restoring {
+            true => packages::restore(&self.store, &installation, at).await,
+            false => packages::remember(&self.store, &installation, at).await,
+        };
 
         let summary = match record {
             Ok(summary) => summary,
@@ -713,6 +739,11 @@ impl Packages {
         packages::discard(Path::new(&removed.path))
             .await
             .map_err(|error| error.to_wire())?;
+
+        // **And the package's own folder with its last version** — roadmap task **T206c**.
+        if let Some(parent) = Path::new(&removed.path).parent() {
+            mixengine_core::paths::remove_if_empty(parent);
+        }
 
         packages::forget(&self.store, &target.package, &target.version)
             .await

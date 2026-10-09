@@ -1699,6 +1699,21 @@ pub enum Error {
         kind: mixengine_proto::RuntimeKind,
     },
 
+    /// The version asked for is recorded and its folder is gone — roadmap task **T206d**, D2.
+    ///
+    /// **Never answered with another version**: a default that moved because a folder vanished would
+    /// change what a project runs behind its back. What the daemon turns it into is
+    /// `dependency_missing` with [`resolve::restore_command`] as the hint.
+    #[error("{kind} {version} is recorded but its folder is gone ({})", path.display())]
+    RuntimeMissing {
+        /// Which language.
+        kind: mixengine_proto::RuntimeKind,
+        /// Which version.
+        version: mixengine_proto::PackageVersion,
+        /// Where the folder was.
+        path: std::path::PathBuf,
+    },
+
     /// The version resolved, and it publishes no executable under that name.
     ///
     /// Two different disappointments with one message, deliberately, because the person reading it

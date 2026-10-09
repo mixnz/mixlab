@@ -295,16 +295,27 @@ fn stamp() -> mixengine_proto::Timestamp {
 }
 
 /// A PHP recorded as installed, with the pool `pools::ensure` would have made for it — roadmap
-/// task **T81b**.
+/// task **T81b**. Over an empty folder beside the database: since T206d a row whose folder is gone
+/// resolves to nothing.
 async fn php(store: &Store, version: &str) {
+    let folder = store
+        .file()
+        .parent()
+        .expect("the database's folder")
+        .join("runtimes")
+        .join("php")
+        .join(version);
+    std::fs::create_dir_all(&folder).expect("a folder");
+
     sqlx::query(
         "INSERT INTO runtime_installs (kind, version, channel, install_path, installed_at,
                                        size_bytes, source_url, sha256, provides_json)
-         VALUES ('php', ?1, 'stable', '/runtimes/php/' || ?1, '2026-09-03T00:00:00Z', 1,
+         VALUES ('php', ?1, 'stable', ?2, '2026-09-03T00:00:00Z', 1,
                  'https://example.invalid/php', 'ab',
                  '{\"php\":\"bin/php\",\"php-fpm\":\"sbin/php-fpm\"}')",
     )
     .bind(version)
+    .bind(folder.display().to_string())
     .execute(store.pool())
     .await
     .expect("a runtime row");

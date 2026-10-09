@@ -35,7 +35,9 @@
 
 use std::path::{Path, PathBuf};
 
-use mixengine_proto::{ResolvedRuntime, RuntimeKind, RuntimeSource, VersionConstraint};
+use mixengine_proto::{
+    PackageVersion, ResolvedRuntime, RuntimeKind, RuntimeSource, RuntimeSummary, VersionConstraint,
+};
 
 use crate::{Error, Result, Store, runtimes};
 
@@ -60,6 +62,25 @@ pub struct Question<'a> {
 
     /// A flag or an environment variable, already read by the process the user invoked.
     pub explicit: Option<&'a VersionConstraint>,
+}
+
+/// What puts a missing runtime back, or forgets it — roadmap task **T206d**. One sentence for the
+/// daemon's hint and the shim's, so a terminal and MixLab say the same thing.
+#[must_use]
+pub fn restore_command(kind: RuntimeKind, version: &PackageVersion) -> String {
+    format!(
+        "`mix runtime install {kind} {version}` puts it back; \
+         `mix runtime uninstall {kind} {version}` forgets it"
+    )
+}
+
+/// The refusal for one recorded runtime whose folder is gone.
+fn gone(runtime: &RuntimeSummary) -> Error {
+    Error::RuntimeMissing {
+        kind: runtime.kind,
+        version: runtime.version.clone(),
+        path: PathBuf::from(&runtime.path),
+    }
 }
 
 /// Resolve one runtime for one directory.
@@ -92,6 +113,12 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
                 kind: question.kind,
             })?;
 
+        // **Said, never replaced** — roadmap task **T206d**, D2: another version standing in for a
+        // default whose folder vanished would change what a project runs behind its back.
+        if default.is_missing() {
+            return Err(gone(&default));
+        }
+
         return Ok(ResolvedRuntime {
             runtime: default,
             source: RuntimeSource::Default,
@@ -101,10 +128,18 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
 
     // The newest of everything that matches, rather than the first: `8.10.0` and `8.9.0` both answer
     // `^8.3`, and only one of them is what somebody pinning a range meant.
-    let chosen = installed
+    //
+    // **What is there answers first** — roadmap task **T206d**, D2: a version whose folder is gone
+    // is skipped, and said only when nothing that is there matches.
+    let (present, absent): (Vec<_>, Vec<_>) = installed
         .into_iter()
         .filter(|runtime| asked.constraint.matches(&runtime.version))
-        .max_by(|left, right| left.version.cmp_precedence(&right.version));
+        .partition(|runtime| !runtime.is_missing());
+    let newest = |rows: Vec<RuntimeSummary>| {
+        rows.into_iter()
+            .max_by(|left, right| left.version.cmp_precedence(&right.version))
+    };
+    let chosen = newest(present);
 
     match chosen {
         Some(runtime) => {
@@ -122,11 +157,14 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
             })
         }
 
-        None => Err(Error::RuntimeUnresolved {
-            kind: question.kind,
-            constraint: asked.constraint,
-            origin: describe(&asked.source),
-        }),
+        None => match newest(absent) {
+            Some(missing) => Err(gone(&missing)),
+            None => Err(Error::RuntimeUnresolved {
+                kind: question.kind,
+                constraint: asked.constraint,
+                origin: describe(&asked.source),
+            }),
+        },
     }
 }
 
@@ -285,18 +323,19 @@ mod tests {
         (home, store)
     }
 
-    /// Write the rows an install would have written, without the eighty megabytes.
-    async fn install(store: &Store, kind: RuntimeKind, versions: &[&str]) {
+    /// Write the rows an install would have written, over empty folders, without the eighty
+    /// megabytes. Real folders since T206d: a row whose folder is gone resolves to nothing.
+    async fn install(root: &Path, store: &Store, kind: RuntimeKind, versions: &[&str]) {
         for version in versions {
+            let path = root.join("runtimes").join(kind.as_str()).join(version);
+            std::fs::create_dir_all(&path).expect("a folder");
             runtimes::remember(
                 store,
                 &Installation {
                     kind,
                     version: PackageVersion::parse(*version).expect("a version"),
                     channel: PackageChannel::Stable,
-                    path: PathBuf::from("/home/runtimes")
-                        .join(kind.as_str())
-                        .join(version),
+                    path,
                     bytes: 41_000_000,
                     url: format!("https://example.invalid/{kind}-{version}.tar.zst"),
                     sha256: "00".to_owned(),
@@ -337,8 +376,14 @@ mod tests {
     /// of the last and takes it over.
     #[tokio::test]
     async fn each_source_takes_precedence_over_the_one_below_it() {
-        let (_home, store) = store().await;
-        install(&store, RuntimeKind::Php, &["8.1.30", "8.2.20", "8.3.33"]).await;
+        let (home, store) = store().await;
+        install(
+            home.path(),
+            &store,
+            RuntimeKind::Php,
+            &["8.1.30", "8.2.20", "8.3.33"],
+        )
+        .await;
         let (_root, cwd) = tree(&["blog", "public"]);
 
         // 4 — the default, which the first install became.
@@ -431,8 +476,8 @@ mod tests {
     /// registers a project, and the first time the step runs the way a user's machine will run it.
     #[tokio::test]
     async fn a_project_registered_through_the_module_that_registers_them_decides_the_version() {
-        let (_home, store) = store().await;
-        install(&store, RuntimeKind::Php, &["8.1.30", "8.3.33"]).await;
+        let (home, store) = store().await;
+        install(home.path(), &store, RuntimeKind::Php, &["8.1.30", "8.3.33"]).await;
         let (_root, cwd) = tree(&["blog", "public", "assets"]);
         let root = cwd
             .parent()
@@ -484,8 +529,8 @@ mod tests {
     /// already follows one step above, and the behaviour this walk has always had.
     #[tokio::test]
     async fn a_nearer_project_that_pins_nothing_about_this_language_does_not_shadow_an_outer_one() {
-        let (_home, store) = store().await;
-        install(&store, RuntimeKind::Php, &["8.1.30", "8.3.33"]).await;
+        let (home, store) = store().await;
+        install(home.path(), &store, RuntimeKind::Php, &["8.1.30", "8.3.33"]).await;
         let (root, cwd) = tree(&["blog", "packages", "theme", "src"]);
         let inner = root.path().join("blog").join("packages").join("theme");
 
@@ -543,11 +588,85 @@ mod tests {
         );
     }
 
+    /// **One sentence, exactly** — roadmap task **T206d**. The daemon's hint and the shim's read it.
+    #[test]
+    fn the_restore_command_names_both_ways_out() {
+        assert_eq!(
+            restore_command(
+                RuntimeKind::Php,
+                &PackageVersion::parse("8.3.33").expect("a version")
+            ),
+            "`mix runtime install php 8.3.33` puts it back; `mix runtime uninstall php 8.3.33` \
+             forgets it"
+        );
+    }
+
+    /// **A missing default is said, never replaced** — roadmap task **T206d**, D2.
+    #[tokio::test]
+    async fn a_default_whose_folder_is_gone_is_refused_by_name() {
+        let (home, store) = store().await;
+        install(home.path(), &store, RuntimeKind::Php, &["8.3.33", "8.4.1"]).await;
+        std::fs::remove_dir_all(home.path().join("runtimes").join("php").join("8.3.33"))
+            .expect("deleted by hand");
+        let (_root, cwd) = tree(&["blog"]);
+
+        let error = runtime(
+            &store,
+            &Question {
+                kind: RuntimeKind::Php,
+                cwd: Some(&cwd),
+                explicit: None,
+            },
+        )
+        .await
+        .expect_err("the default is gone");
+
+        assert!(
+            matches!(&error, Error::RuntimeMissing { version, .. } if version.as_str() == "8.3.33"),
+            "{error}"
+        );
+    }
+
+    /// **Under a constraint, the newest version that is there answers**, and only a constraint
+    /// nothing present matches is refused as missing — roadmap task **T206d**, D2.
+    #[tokio::test]
+    async fn a_constraint_skips_a_version_whose_folder_is_gone() {
+        let (home, store) = store().await;
+        install(home.path(), &store, RuntimeKind::Php, &["8.3.32", "8.3.33"]).await;
+        let php = home.path().join("runtimes").join("php");
+        std::fs::remove_dir_all(php.join("8.3.33")).expect("deleted by hand");
+        let (_root, cwd) = tree(&["blog"]);
+        let asked = constraint("8.3");
+        let question = Question {
+            kind: RuntimeKind::Php,
+            cwd: Some(&cwd),
+            explicit: Some(&asked),
+        };
+
+        let resolved = runtime(&store, &question).await.expect("8.3.32 is there");
+        assert_eq!(resolved.runtime.version.as_str(), "8.3.32");
+
+        std::fs::remove_dir_all(php.join("8.3.32")).expect("deleted by hand");
+        let error = runtime(&store, &question)
+            .await
+            .expect_err("nothing matching is there");
+        assert!(
+            matches!(&error, Error::RuntimeMissing { version, .. } if version.as_str() == "8.3.33"),
+            "{error}"
+        );
+    }
+
     /// The reason this needed a grammar at all: choosing between two installed versions.
     #[tokio::test]
     async fn a_range_resolves_to_the_newest_installed_version_that_answers_it() {
-        let (_home, store) = store().await;
-        install(&store, RuntimeKind::Php, &["8.3.9", "8.3.33", "8.4.1"]).await;
+        let (home, store) = store().await;
+        install(
+            home.path(),
+            &store,
+            RuntimeKind::Php,
+            &["8.3.9", "8.3.33", "8.4.1"],
+        )
+        .await;
         let (_root, cwd) = tree(&["blog"]);
 
         for (asked, expected) in [("8.3", "8.3.33"), ("^8.3", "8.4.1"), ("8.3.9", "8.3.9")] {
@@ -574,8 +693,8 @@ mod tests {
     /// still is.
     #[tokio::test]
     async fn the_nearest_manifest_that_names_the_language_is_the_one_that_wins() {
-        let (_home, store) = store().await;
-        install(&store, RuntimeKind::Php, &["8.1.30", "8.3.33"]).await;
+        let (home, store) = store().await;
+        install(home.path(), &store, RuntimeKind::Php, &["8.1.30", "8.3.33"]).await;
         let (root, cwd) = tree(&["blog", "public"]);
 
         manifest(root.path(), "[runtimes]\nphp = \"8.3\"\n");
@@ -606,8 +725,8 @@ mod tests {
     /// Sections this build does not read yet must not make it refuse the file — Phase 4 writes them.
     #[tokio::test]
     async fn a_manifest_declaring_more_than_runtimes_is_still_read() {
-        let (_home, store) = store().await;
-        install(&store, RuntimeKind::Php, &["8.3.33"]).await;
+        let (home, store) = store().await;
+        install(home.path(), &store, RuntimeKind::Php, &["8.3.33"]).await;
         let (_root, cwd) = tree(&["blog"]);
 
         manifest(
@@ -634,8 +753,8 @@ mod tests {
     /// rule and the one place it still applies inside this file.
     #[tokio::test]
     async fn a_manifest_that_does_not_parse_names_itself() {
-        let (_home, store) = store().await;
-        install(&store, RuntimeKind::Php, &["8.3.33"]).await;
+        let (home, store) = store().await;
+        install(home.path(), &store, RuntimeKind::Php, &["8.3.33"]).await;
         let (_root, cwd) = tree(&["blog"]);
 
         for body in [
@@ -667,8 +786,8 @@ mod tests {
     /// half of it that tells them what to type.
     #[tokio::test]
     async fn a_constraint_nothing_installed_satisfies_names_what_would_satisfy_it() {
-        let (_home, store) = store().await;
-        install(&store, RuntimeKind::Php, &["8.3.33"]).await;
+        let (home, store) = store().await;
+        install(home.path(), &store, RuntimeKind::Php, &["8.3.33"]).await;
         let (_root, cwd) = tree(&["blog"]);
         manifest(&cwd, "[runtimes]\nphp = \"8.1.30\"\n");
 
@@ -704,8 +823,8 @@ mod tests {
     /// The state a home is left in by uninstalling the last version of a kind, asked about.
     #[tokio::test]
     async fn a_kind_with_no_default_says_so_rather_than_choosing_one() {
-        let (_home, store) = store().await;
-        install(&store, RuntimeKind::Php, &["8.3.33"]).await;
+        let (home, store) = store().await;
+        install(home.path(), &store, RuntimeKind::Php, &["8.3.33"]).await;
         runtimes::forget(
             &store,
             RuntimeKind::Php,
@@ -732,8 +851,8 @@ mod tests {
     /// project — so it is refused rather than answered.
     #[tokio::test]
     async fn a_directory_that_is_not_absolute_is_refused() {
-        let (_home, store) = store().await;
-        install(&store, RuntimeKind::Php, &["8.3.33"]).await;
+        let (home, store) = store().await;
+        install(home.path(), &store, RuntimeKind::Php, &["8.3.33"]).await;
 
         let error = runtime(
             &store,

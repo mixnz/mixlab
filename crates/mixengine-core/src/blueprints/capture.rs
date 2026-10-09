@@ -812,15 +812,19 @@ mod tests {
     /// **D4a.** A version this machine's default decided is this machine's, not the project's.
     #[tokio::test]
     async fn a_runtime_that_only_the_global_default_named_is_not_captured() {
-        let (_temp, store, project) = home("blog").await;
+        let (temp, store, project) = home("blog").await;
+        // A folder that is there: since T206d a default whose folder is gone resolves to nothing.
+        let folder = temp.path().join("runtimes").join("node");
+        std::fs::create_dir_all(&folder).expect("a folder");
 
         sqlx::query(
             r#"INSERT INTO runtime_installs
                    (id, kind, version, channel, install_path, installed_at, size_bytes, source_url,
                     sha256, is_default)
-               VALUES (1, 'node', '22.8.0', 'stable', '/runtimes/node', '2026-09-01T00:00:00Z', 1,
+               VALUES (1, 'node', '22.8.0', 'stable', ?1, '2026-09-01T00:00:00Z', 1,
                        'https://example.invalid/node', 'ab', 1)"#,
         )
+        .bind(folder.display().to_string())
         .execute(store.pool())
         .await
         .expect("a default node");

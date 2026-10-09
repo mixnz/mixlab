@@ -6,4 +6,4 @@
  * **Closed rather than a string.** A repair keyed off a spelling is a repair that silently stops
  * matching; keyed off this, a repair for a condition nothing produces does not compile.
  */
-export type ProblemId = "hosts_block_differs" | "resolver_not_wired" | "ca_not_trusted" | "browsers_not_trusted" | "site_certificate_missing" | "dns_server_unavailable" | "port_access_missing" | "permission_pending" | "domain_unreachable" | "home_permissions_lost" | "port_range_reserved" | "generated_config_stale" | "service_unsupervised" | "application_control_enforced" | "trust_bundle_missing" | "java_trust_missing";
+export type ProblemId = "hosts_block_differs" | "resolver_not_wired" | "ca_not_trusted" | "browsers_not_trusted" | "site_certificate_missing" | "dns_server_unavailable" | "port_access_missing" | "permission_pending" | "domain_unreachable" | "home_permissions_lost" | "port_range_reserved" | "generated_config_stale" | "service_unsupervised" | "application_control_enforced" | "trust_bundle_missing" | "java_trust_missing" | "install_missing";

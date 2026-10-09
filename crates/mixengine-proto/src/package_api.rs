@@ -134,6 +134,22 @@ pub struct PackageSummary {
     /// say which packages are held would be a listing where "why can I not remove this" has no
     /// answer in it. Empty is a package nothing is using.
     pub services: Vec<ServiceId>,
+
+    /// Whether the folder this row names is gone — roadmap task **T206d**.
+    ///
+    /// `Some(true)` only when the folder answered "not found". A folder that cannot be read for any
+    /// other reason is not gone, and reads `Some(false)`. `None` is a daemon from before this
+    /// member (ADR 0019), never "could not tell".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub missing: Option<bool>,
+}
+
+impl PackageSummary {
+    /// Whether this daemon said the folder is gone. `None` is not — roadmap task **T206d**.
+    #[must_use]
+    pub fn is_missing(&self) -> bool {
+        self.missing == Some(true)
+    }
 }
 
 /// What `package.list_available` answers.
@@ -284,6 +300,18 @@ pub struct PackageFoundList {
 mod tests {
     use super::*;
 
+    /// **A daemon from before T206d sends no `missing`** — ADR 0019.
+    #[test]
+    fn an_older_daemon_s_package_reads_without_missing() {
+        let summary: PackageSummary = serde_json::from_value(serde_json::json!({
+            "package": "msys2", "version": "2026.10.08", "path": "/p/msys2/2026.10.08",
+            "installed_at": 1_760_000_000_000_i64, "bytes": 1, "services": []
+        }))
+        .expect("an older daemon's row reads");
+        assert_eq!(summary.missing, None);
+        assert!(!summary.is_missing());
+    }
+
     /// Both halves or it does not decode, on [`PackageTarget`]'s own stated reasoning.
     #[test]
     fn a_target_names_both_halves_or_does_not_decode() {
@@ -318,6 +346,7 @@ mod tests {
             installed_at: Timestamp(1_760_000_000_000),
             bytes: 1024,
             services: vec![ServiceId::parse("mariadb@main").expect("an id")],
+            missing: Some(false),
         };
 
         let encoded = serde_json::to_value(&summary).expect("a summary encodes");

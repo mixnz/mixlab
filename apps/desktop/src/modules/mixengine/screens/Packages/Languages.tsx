@@ -47,7 +47,16 @@ import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
 import { updateRowState } from "../../updateRow";
 import ExtensionsPanel from "./ExtensionsPanel";
-import { anyLacksNativeGems, DEVKIT_PACKAGE, devkitOffer, lacksLabels, lacksReason } from "./devkit";
+import { reinstallState, releaseToRestore } from "./reinstall";
+import {
+  anyLacksNativeGems,
+  DEVKIT_PACKAGE,
+  devkitOffer,
+  devkitState,
+  lacksLabels,
+  lacksReason,
+  type DevkitState,
+} from "./devkit";
 import { formatBytes } from "../../metricsState";
 import styles from "./Catalogue.module.css";
 
@@ -83,6 +92,10 @@ export default function Languages({ active }: { active: boolean }) {
     release: null,
     installed: false,
   });
+  // Whether a devkit is here, recorded with its folder gone, or neither — read from `package.list`,
+  // where the catalogue above cannot tell a missing one from none (T206d).
+  const [devkitHere, setDevkitHere] = useState<DevkitState>({ state: "absent" });
+  const [removingDevkit, setRemovingDevkit] = useState<string | null>(null);
   // T193b: what the index has newer in each installed version's line, and the update being asked.
   const [updates, setUpdates] = useState<RuntimeUpdate[]>([]);
   const [upgrading, setUpgrading] = useState<{ update: RuntimeUpdate; plan: UpgradePlan } | null>(null);
@@ -124,6 +137,10 @@ export default function Languages({ active }: { active: boolean }) {
           .packagesAvailable(DEVKIT_PACKAGE)
           .then((catalogue) => setDevkit(devkitOffer(catalogue)))
           .catch(() => setDevkit({ release: null, installed: false }));
+        void api
+          .packagesInstalled(DEVKIT_PACKAGE)
+          .then((list) => setDevkitHere(devkitState(list.packages)))
+          .catch(() => setDevkitHere({ state: "absent" }));
       } catch (e) {
         setError(errorMessage(t, e));
       } finally {
@@ -237,11 +254,23 @@ export default function Languages({ active }: { active: boolean }) {
 
   // The devkit's job rides in `installingJob` under its own key, so the watch above reloads this
   // screen, the devkit's state included, when it ends — T206a.
-  async function installDevkit(release: PackageRelease) {
+  async function installDevkit(version: string) {
     setError("");
     try {
-      const job = await api.packageInstall({ package: DEVKIT_PACKAGE, version: release.version });
+      const job = await api.packageInstall({ package: DEVKIT_PACKAGE, version });
       setInstallingJob((current) => ({ ...current, [DEVKIT_JOB]: job.id }));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }
+
+  // The devkit's own uninstall — T206d. One install serves every Ruby, so it is removed here, beside
+  // the notice that offered it, as well as from the Packages list.
+  async function removeDevkit(version: string) {
+    setError("");
+    try {
+      await api.packageUninstall({ package: DEVKIT_PACKAGE, version });
+      void reload();
     } catch (e) {
       setError(errorMessage(t, e));
     }
@@ -257,8 +286,9 @@ export default function Languages({ active }: { active: boolean }) {
     const marks = lacksLabels(release);
     if (marks.length === 0) return null;
     const nativeGems = marks.some(({ key }) => key === "native gems");
+    const devkitReady = devkitHere.state === "present";
     const label = nativeGems
-      ? devkit.installed
+      ? devkitReady
         ? t("mixengine.packages.lacks.devkitInstalled")
         : t("mixengine.packages.lacks.nativeGems")
       : marks[0].key === "yjit"
@@ -267,7 +297,7 @@ export default function Languages({ active }: { active: boolean }) {
     return (
       <StatusPill
         className={styles.lacks}
-        tone={nativeGems && devkit.installed ? "success" : "neutral"}
+        tone={nativeGems && devkitReady ? "success" : "neutral"}
         title={lacksReason(release)}
       >
         {label}
@@ -281,18 +311,45 @@ export default function Languages({ active }: { active: boolean }) {
   function devkitNotice(): ReactNode {
     if (!installed.some((row) => row.kind === "ruby")) return null;
     if (!anyLacksNativeGems(available)) return null;
-    if (devkit.installed) {
-      return <p className={styles.devkitNotice}>{t("mixengine.packages.lacks.devkitReady")}</p>;
+    if (devkitHere.state === "present") {
+      return (
+        <div className={styles.devkitNotice}>
+          <p>{t("mixengine.packages.lacks.devkitReady")}</p>
+          <Button size="small" variant="ghost" onClick={() => setRemovingDevkit(devkitHere.version)}>
+            {t("mixengine.packages.lacks.removeDevkit")}
+          </Button>
+        </div>
+      );
+    }
+    const devkitJob = jobFor(jobs, installingJob[DEVKIT_JOB]);
+    // Recorded and its folder gone — T206d: put back that version, or forget it.
+    if (devkitHere.state === "missing") {
+      return (
+        <div className={styles.devkitNotice}>
+          <p>{t("mixengine.packages.lacks.devkitGone")}</p>
+          {devkitJob ? (
+            <span className={styles.progressText}>{devkitJob.message}</span>
+          ) : (
+            <span className={styles.devkitActions}>
+              <Button size="small" variant="soft" onClick={() => void installDevkit(devkitHere.version)}>
+                {t("mixengine.packages.reinstall")}
+              </Button>
+              <Button size="small" variant="ghost" onClick={() => void removeDevkit(devkitHere.version)}>
+                {t("mixengine.packages.lacks.removeDevkit")}
+              </Button>
+            </span>
+          )}
+        </div>
+      );
     }
     if (devkit.release === null) return null;
-    const devkitJob = jobFor(jobs, installingJob[DEVKIT_JOB]);
     return (
       <div className={styles.devkitNotice}>
         <p>{t("mixengine.packages.lacks.devkitAbout")}</p>
         {devkitJob ? (
           <span className={styles.progressText}>{devkitJob.message}</span>
         ) : (
-          <Button size="small" variant="soft" onClick={() => devkit.release && void installDevkit(devkit.release)}>
+          <Button size="small" variant="soft" onClick={() => devkit.release && void installDevkit(devkit.release.version)}>
             {t("mixengine.packages.lacks.installDevkit", { size: formatBytes(devkit.release.bytes) })}
           </Button>
         )}
@@ -492,6 +549,12 @@ export default function Languages({ active }: { active: boolean }) {
               {shownInstalled.map((row) => {
                 const key = versionKey(row.kind, row.version);
                 const open = expanded === key;
+                // Its folder is gone — T206d: the same version, offered again, puts it back.
+                const gone = row.missing === true;
+                const restore = gone
+                  ? releaseToRestore(available, (release) => release.kind === row.kind, row.version)
+                  : null;
+                const reinstall = reinstallState(restore, jobFor(jobs, installingJob[key]) !== undefined);
                 const update = updateRowState(
                   updates.find(
                     (candidate) => candidate.kind === row.kind && candidate.from === row.version,
@@ -526,7 +589,15 @@ export default function Languages({ active }: { active: boolean }) {
                       <td>
                         <span className={styles.tag}>{row.channel}</span>
                       </td>
-                      <td className={styles.muted}>{formatInstalledAt(row.installed_at)}</td>
+                      <td className={styles.muted}>
+                        {gone ? (
+                          <StatusPill tone="warning" title={row.path}>
+                            {t("mixengine.packages.folderGone")}
+                          </StatusPill>
+                        ) : (
+                          formatInstalledAt(row.installed_at)
+                        )}
+                      </td>
                       <td>
                         {row.default ? (
                           <span className={styles.defaultPill}>{t("mixengine.packages.columnDefault")}</span>
@@ -537,6 +608,18 @@ export default function Languages({ active }: { active: boolean }) {
                         )}
                       </td>
                       <td data-align="end" data-nowrap>
+                        {gone && (
+                          <Button
+                            size="small"
+                            variant="soft"
+                            disabled={reinstall === "unavailable"}
+                            busy={reinstall === "running" ? t("mixengine.packages.reinstalling") : undefined}
+                            title={reinstall === "unavailable" ? t("mixengine.packages.reinstallUnavailable") : undefined}
+                            onClick={() => restore && void install(restore)}
+                          >
+                            {t("mixengine.packages.reinstall")}
+                          </Button>
+                        )}
                         <Button size="small" variant="danger" onClick={() => setUninstallTarget(row)}>
                           {t("mixengine.packages.uninstall")}
                         </Button>
@@ -637,6 +720,21 @@ export default function Languages({ active }: { active: boolean }) {
             setForceHint(null);
           }}
           onConfirm={() => void uninstall(uninstallTarget, forceHint !== null)}
+        />
+      )}
+
+      {removingDevkit !== null && (
+        <ConfirmDialog
+          title={t("mixengine.packages.lacks.removeDevkitConfirmTitle")}
+          message={t("mixengine.packages.lacks.removeDevkitConfirmMessage")}
+          confirmLabel={t("mixengine.packages.lacks.removeDevkit")}
+          danger
+          onCancel={() => setRemovingDevkit(null)}
+          onConfirm={() => {
+            const version = removingDevkit;
+            setRemovingDevkit(null);
+            void removeDevkit(version);
+          }}
         />
       )}
 

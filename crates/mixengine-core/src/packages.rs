@@ -139,7 +139,59 @@ pub async fn remember(
         bytes: installation.bytes,
         // Nothing can be an instance of a version that did not exist a moment ago.
         services: Vec::new(),
+        // Read rather than assumed — T206d, D1: the row names the folder, and the folder decides.
+        missing: Some(crate::paths::is_gone(&installation.path).await),
     })
+}
+
+/// Write a reinstalled package over the row it already had — roadmap task **T206d**, D3.
+///
+/// **An `UPDATE`, never a second row**: the id is what `services.package_id` points at, so keeping it
+/// keeps every instance. Called only after the folder was renamed into place, which is
+/// [`remember`]'s ordering.
+///
+/// # Errors
+///
+/// [`Error::NotFound`] when there is no row to restore, and [`Error::Database`] when it cannot be
+/// written.
+pub async fn restore(
+    store: &Store,
+    installation: &Installation,
+    at: Timestamp,
+) -> Result<PackageSummary> {
+    let (package, version) = (&installation.package, installation.version.as_str());
+    let installed_at = at.to_rfc3339();
+    let path = installation.path.display().to_string();
+    // As in `remember`: a size past `i64` is a formality, and the map cannot fail to serialise.
+    let bytes = i64::try_from(installation.bytes).unwrap_or(i64::MAX);
+    let provides =
+        serde_json::to_string(&installation.provides).unwrap_or_else(|_| "{}".to_owned());
+
+    let updated = sqlx::query!(
+        "UPDATE packages
+         SET install_path = ?, installed_at = ?, source_url = ?, sha256 = ?, size_bytes = ?,
+             provides_json = ?
+         WHERE name = ? AND version = ?",
+        path,
+        installed_at,
+        installation.url,
+        installation.sha256,
+        bytes,
+        provides,
+        package,
+        version
+    )
+    .execute(store.pool())
+    .await
+    .map_err(|source| store.failure("write", source))?;
+
+    if updated.rows_affected() == 0 {
+        return Err(missing(package, &installation.version));
+    }
+
+    tracing::info!(%package, %version, "a package was restored in place");
+
+    record(store, package, &installation.version).await
 }
 
 /// Forget a package whose directory has already gone.
@@ -230,7 +282,14 @@ pub async fn records(store: &Store, package: Option<&str>) -> Result<Vec<Package
         }
     }
 
-    Ok(listed.into_values().collect())
+    // **Stamped from the disk on every read** — roadmap task **T206d**, D1: no column, so the answer
+    // is the folder's state now, at one `stat` a row.
+    let mut listed: Vec<PackageSummary> = listed.into_values().collect();
+    for summary in &mut listed {
+        summary.missing = Some(crate::paths::is_gone(Path::new(&summary.path)).await);
+    }
+
+    Ok(listed)
 }
 
 /// One installed package.
@@ -337,6 +396,8 @@ fn summary(
         package,
         path,
         services: Vec::new(),
+        // Stamped from the disk by the reader — T206d, D1.
+        missing: None,
     })
 }
 
@@ -435,6 +496,67 @@ mod tests {
             directory(&paths, "caddy", &version("2.11.4")),
             paths.packages().join("caddy").join("2.11.4")
         );
+    }
+
+    /// **Restored in place, so what points at the row still does** — T206d, D3.
+    #[tokio::test]
+    async fn restoring_a_package_keeps_its_row_and_its_services() {
+        let (_home, store) = store().await;
+        remember(&store, &installation("mariadb", "11.4.9"), NOW)
+            .await
+            .expect("recorded");
+        instantiate(&store, "mariadb@main", "mariadb", "11.4.9").await;
+        let id_before: i64 = sqlx::query_scalar("SELECT id FROM packages")
+            .fetch_one(store.pool())
+            .await
+            .expect("an id");
+
+        let mut again = installation("mariadb", "11.4.9");
+        again.sha256 = "ff".to_owned();
+        let restored = restore(&store, &again, NOW).await.expect("restored");
+
+        let id_after: i64 = sqlx::query_scalar("SELECT id FROM packages")
+            .fetch_one(store.pool())
+            .await
+            .expect("an id");
+        assert_eq!(id_before, id_after);
+        assert_eq!(restored.services.len(), 1, "{restored:?}");
+        let sha: String = sqlx::query_scalar("SELECT sha256 FROM packages")
+            .fetch_one(store.pool())
+            .await
+            .expect("a hash");
+        assert_eq!(sha, "ff");
+    }
+
+    #[tokio::test]
+    async fn restoring_what_was_never_recorded_is_not_found() {
+        let (_home, store) = store().await;
+        let error = restore(&store, &installation("caddy", "2.11.4"), NOW)
+            .await
+            .expect_err("no row");
+        assert!(matches!(error, Error::NotFound { .. }), "{error}");
+    }
+
+    /// **A folder deleted by hand is listed as missing, and the row stays** — T206d, D1.
+    #[tokio::test]
+    async fn a_package_whose_folder_was_deleted_is_listed_as_missing() {
+        let (home, store) = store().await;
+        let folder = home
+            .path()
+            .join("packages")
+            .join("msys2")
+            .join("2026.10.08");
+        std::fs::create_dir_all(&folder).expect("a folder");
+        let mut installing = installation("msys2", "2026.10.08");
+        installing.path = folder.clone();
+
+        let written = remember(&store, &installing, NOW).await.expect("recorded");
+        assert_eq!(written.missing, Some(false));
+
+        std::fs::remove_dir_all(&folder).expect("deleted by hand");
+        let listed = records(&store, None).await.expect("a listing");
+        assert_eq!(listed.len(), 1, "the row stays");
+        assert_eq!(listed[0].missing, Some(true));
     }
 
     /// What was written is what comes back, including the services holding it — which is none.

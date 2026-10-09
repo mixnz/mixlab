@@ -18,23 +18,22 @@ Design: [2026-10-08-t206-ruby-on-windows-builds-native-gems-design.md](../specs/
       ARM64 (clang), signed and smoke-tested like the others; installed into the home with no
       service; the shim sets `MSYS2_PATH` for every Ruby command, leaving a session's own value;
       MixLab's **Install devkit** button; `rails.toml`'s notes name it (on T205's branch).
-- [ ] **T206b** **(P)** A gem that declares `msys2_mingw_dependencies` makes RubyInstaller run
-      pacman inside the installed `msys2`, against the package database of its build date: measured
-      with Rails 8's `ruby-vips`, four packages MSYS2 had since replaced answered 404 and libvips
-      loaded without its heif, jxl and magick modules. Keep that database current, by rebuilding on
-      a schedule or by refreshing it before RubyInstaller installs.
-- [ ] **T206c** `mix package uninstall` leaves the package's empty directory (`packages/msys2/`)
-      behind once its last version is gone.
-- [ ] **T206d** **(P)** A package whose folder was deleted by hand still reads as installed: found
-      by hand on 2026-10-08 with `msys2`, where `mix package list`, `mix doctor` and MixLab all kept
-      saying the devkit was there, the shim kept pointing `MSYS2_PATH` at the missing folder, and
-      MixLab's steps panel unlocked Run over a Ruby that could not build gems. Only
-      `mix package uninstall` repairs it (it already treats an absent folder as removed), and
-      MixLab has no control for a toolchain. Needs a short spec: the daemon marks such a row
-      `missing` and stops counting it installed, without deleting it (a folder can be out of reach,
-      not gone); `mix package list` and `mix doctor` say so and name the uninstall; the shim skips
-      a devkit whose folder is absent; MixLab's Languages tab offers *Reinstall* for a missing
-      devkit and *Remove devkit* for one that is there.
+- [x] **T206b** **(P)** A gem that declares `msys2_mingw_dependencies` makes RubyInstaller run
+      pacman inside the installed `msys2`, against the package database of its build date.
+      Re-measured on 2026-10-09: the libvips install had completed (`transaction completed`), its
+      missing heif, jxl and magick modules are optional dependencies RubyInstaller never installs,
+      and every file the 2026-10-08 database names still downloads. No code: `msys2.md` and
+      `runtime-versions.md` say how to add an optional module, and that a newer devkit, not
+      `pacman -Sy`, answers a database old enough to lose its files
+      ([design](../specs/2026-10-09-t206b-t206d-installs-whose-folder-is-gone-design.md)).
+- [x] **T206c** `mix package uninstall` and `mix runtime uninstall` remove the kind's folder
+      (`packages/msys2/`) once its last version is gone.
+- [x] **T206d** **(P)** A runtime or package whose folder was deleted by hand reads as `missing`,
+      read from the disk on every read: `mix … list`, `mix doctor` (`InstallMissing`) and MixLab say
+      so; what runs and what is offered as installed skip it, and `RuntimeMissing` refuses a missing
+      default rather than replacing it; installing the same version restores the row in place;
+      MixLab offers *Reinstall* for a runtime or package and *Reinstall*/*Remove devkit* for the
+      devkit. Found by hand on 2026-10-08 with `msys2`.
 - [x] **T206e** **(P)** A home with `msys2` installed could not start its daemon in any reasonable
       time on Windows: every start restricted the home's root with `icacls /reset` and
       `/inheritance:r`, which rewrites the inherited permissions of every file under it, and

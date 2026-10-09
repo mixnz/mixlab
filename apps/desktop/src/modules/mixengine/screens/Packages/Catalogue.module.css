@@ -157,6 +157,13 @@ tbody tr.withUpdate > td {
   margin: 0;
 }
 
+/* Reinstall and Remove side by side, at the end of the notice — T206d. */
+.devkitActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
 .install {
   justify-self: end;
   width: 104px;

@@ -51,4 +51,12 @@ bytes: number,
  * `runtime_installs` is what makes that true rather than a convention — and a kind can have
  * none, which is what a home is left with when its only version is uninstalled.
  */
-default: boolean, };
+default: boolean, 
+/**
+ * Whether the folder this row names is gone — roadmap task **T206d**.
+ *
+ * `Some(true)` only when the folder answered "not found". A folder that cannot be read for any
+ * other reason is not gone, and reads `Some(false)`. `None` is a daemon from before this
+ * member (ADR 0019), never "could not tell".
+ */
+missing?: boolean | null, };

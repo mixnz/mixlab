@@ -6201,9 +6201,17 @@ async fn said_what_it_lacks(
             .max_by(|a, b| a.cmp_precedence(b))
     });
 
-    if let Some(line) =
-        render::lacks_after_install(&release.lacks, newest.map(|version| version.as_str()))
-    {
+    // `installed` is the daemon's answer, which since T206d leaves out a devkit whose folder is gone.
+    let installed = offered
+        .as_ref()
+        .is_some_and(|catalogue| catalogue.packages.iter().any(|release| release.installed));
+    let devkit = match (installed, newest) {
+        (true, _) => render::Devkit::Installed,
+        (false, Some(version)) => render::Devkit::Offered(version.as_str()),
+        (false, None) => render::Devkit::NotOffered,
+    };
+
+    if let Some(line) = render::lacks_after_install(&release.lacks, devkit) {
         emit(&line)?;
     }
 

@@ -486,6 +486,13 @@ impl ToWire for mixengine_core::Error {
             // Nothing was asked for and there is nothing to fall back on. Distinct from the above
             // because the way out is different: there is no constraint to satisfy, only a kind with
             // no default — which is what uninstalling the last version leaves behind.
+            // **T206d, D2.** The version is recorded and its folder is gone: the hint is the install
+            // that restores it in place, and the uninstall that forgets it.
+            Core::RuntimeMissing { kind, version, .. } => {
+                Error::new(ErrorCode::DependencyMissing, chain(self))
+                    .with_hint(mixengine_core::resolve::restore_command(*kind, version))
+            }
+
             Core::NoDefaultRuntime { kind } => {
                 Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
                     "`mix runtime list --kind {kind}` shows what is installed, and \
