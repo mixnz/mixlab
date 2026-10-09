@@ -37,18 +37,31 @@ function Get-MixLabArch([string]$Raw) {
     switch ($Raw) {
         'X64' { 'x86_64' }
         'Arm64' { 'aarch64' }
+        '' { throw "could not tell which processor this windows runs on. download the installer from $((Get-MixLabConfig).Releases)/latest" }
         default { throw "there is no build for $Raw windows" }
     }
 }
 
-function Get-MixLabMachineArch {
-    try {
-        [string][System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
-    } catch {
-        # .NET before 4.7.1 has no RuntimeInformation; an x64 process on ARM says AMD64 here, which
-        # still installs the x64 build that ARM Windows runs.
-        if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'Arm64' } else { 'X64' }
+function ConvertFrom-MixLabProcessorArch([string]$Native, [string]$Process) {
+    # PROCESSOR_ARCHITEW6432 is set only in a 32-bit process on 64-bit windows, and names the
+    # machine. An x64 process says AMD64 even on ARM: only windows 11 runs one there, and it runs
+    # the x64 build too. Windows 10 on ARM emulates x86-32 alone, and its 32-bit process says ARM64
+    # through PROCESSOR_ARCHITEW6432 (docs/decisions/0023-an-arm64-windows-machine-runs-the-x86_64-build.md).
+    $raw = if ($Native) { $Native } else { $Process }
+    switch ($raw) {
+        'AMD64' { 'X64' }
+        'ARM64' { 'Arm64' }
+        'x86' { 'X86' }
+        default { $raw }
     }
+}
+
+function Get-MixLabMachineArch {
+    # .NET before 4.7.1 either has no RuntimeInformation, or finds the type and answers nothing for
+    # OSArchitecture without an error, so an empty answer falls through to the environment too.
+    $fromRuntime = try { [string][System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture } catch { '' }
+    if ($fromRuntime) { return $fromRuntime }
+    ConvertFrom-MixLabProcessorArch -Native $env:PROCESSOR_ARCHITEW6432 -Process $env:PROCESSOR_ARCHITECTURE
 }
 
 function Get-MixLabArtifactName([string]$Arch, [string]$Flavour, [string]$Version) {
@@ -112,6 +125,11 @@ function Install-MixLab {
     )
     $ErrorActionPreference = 'Stop'
     $config = Get-MixLabConfig
+    # PowerShell 3 has no Get-FileHash and 4 no Expand-Archive, and both would fail only after the
+    # download. 2 never gets here: it has no irm.
+    if ($PSVersionTable.PSVersion.Major -lt 5) {
+        throw "this script needs windows powershell 5.1, which windows 10 and later have. download the installer from $($config.Releases)/latest"
+    }
     if ($Help) {
         Write-Host @'
 Installs MixLab, or with -Headless the command-line programs alone.
