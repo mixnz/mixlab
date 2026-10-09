@@ -49,6 +49,41 @@ export function isNothingWaiting(error: unknown): boolean {
 }
 
 /**
+ * Whether a rejected `elevation.grant` means another grant already holds the one prompt slot —
+ * the daemon's own after an update, or another window's.
+ *
+ * On Windows the consent prompt covers the desktop and "Allow" cannot be reached meanwhile; on
+ * macOS and Linux the password box leaves the window clickable, and this is what comes back.
+ */
+export function isGrantInFlight(error: unknown): boolean {
+  const refused = (error ?? {}) as { code?: unknown; params?: { code?: unknown } };
+  return refused.code === "error.mixengineRefused" && refused.params?.code === "conflict";
+}
+
+/** What `elevation.status` says about a grant somebody else started. */
+export type OtherGrant<Outcome> =
+  | { state: "waiting" }
+  | { state: "emptied" }
+  | { state: "ended"; grant: Outcome };
+
+/**
+ * Has the grant that was in flight ended, read from one `elevation.status`?
+ *
+ * `before` is the `last.job` seen when the conflict came back. A different one is the grant that
+ * was running, ended; an empty queue means it applied everything, whether or not its outcome is
+ * readable. Anything else is still waiting.
+ */
+export function otherGrant<Outcome extends { job: number }>(
+  before: number | null,
+  status: { pending: unknown[]; last?: Outcome | null },
+): OtherGrant<Outcome> {
+  const last = status.last ?? null;
+  if (last !== null && last.job !== before) return { state: "ended", grant: last };
+  if (status.pending.length === 0) return { state: "emptied" };
+  return { state: "waiting" };
+}
+
+/**
  * One `PendingOp` as three strings to draw.
  *
  * **`PendingOp` wraps `PrivilegedOp`; it is not one.** The real shape is
