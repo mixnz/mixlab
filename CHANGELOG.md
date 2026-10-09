@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.17
+
 ### Added
 - A blueprint can hold several sites. Capturing a project with more than one site writes all of
   them, and applying it makes each with its own addresses and services.

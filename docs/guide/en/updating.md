@@ -75,7 +75,7 @@ replace its files itself. `mix self-update` downloads the next package of the sa
 against the signed release, and prints the command that installs it:
 
 ```bash
-sudo apt install '<the path it printed>/mixlab_0.0.16-1_amd64.deb'
+sudo apt install '<the path it printed>/mixlab_0.0.17-1_amd64.deb'
 ```
 
 On a desktop it also opens the package in your software centre. Once it is installed, finish with

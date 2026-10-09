@@ -1,6 +1,6 @@
 [package]
 name = "mixlab"
-version = "0.0.16"
+version = "0.0.17"
 # Both are read back out into the installer's metadata, so they are what a user sees in
 # Add/Remove Programs rather than notes to ourselves.
 description = "MixLab - MixEngine's desktop application: the daemon's dashboard, a database client, an HTTP client, a terminal and the tools"

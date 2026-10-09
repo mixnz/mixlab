@@ -12,7 +12,7 @@ summary = "Every mix command and every flag, generated from the binary's own def
 > command line. Both drive the same MixEngine underneath, so everything in this handbook still
 > applies.
 
-Every command `mix` accepts, in version 0.0.16. This page is **generated** from the
+Every command `mix` accepts, in version 0.0.17. This page is **generated** from the
 binary's own definitions, so it cannot describe a flag that is not there. It is the one
 page of this handbook that exists in English only, because those definitions are.
 `mix docs cli --lang vi` says why, in Vietnamese.
