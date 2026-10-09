@@ -740,6 +740,11 @@ impl Packages {
             .await
             .map_err(|error| error.to_wire())?;
 
+        // **And the package's own folder with its last version** — roadmap task **T206c**.
+        if let Some(parent) = Path::new(&removed.path).parent() {
+            mixengine_core::paths::remove_if_empty(parent);
+        }
+
         packages::forget(&self.store, &target.package, &target.version)
             .await
             .map_err(|error| error.to_wire())?;

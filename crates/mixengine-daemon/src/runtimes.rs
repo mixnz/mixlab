@@ -1021,6 +1021,11 @@ impl Runtimes {
             .await
             .map_err(|error| error.to_wire())?;
 
+        // **And the language's own folder with its last version** — roadmap task **T206c**.
+        if let Some(parent) = Path::new(&removed.path).parent() {
+            mixengine_core::paths::remove_if_empty(parent);
+        }
+
         // The second directory an uninstall owns, beside the pool's `etc/<service-id>/`.
         if let Err(error) =
             mixengine_core::runtimes::extensions::discard(&self.paths, target.kind, &target.version)

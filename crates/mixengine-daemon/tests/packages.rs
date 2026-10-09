@@ -382,6 +382,14 @@ async fn a_service_package_is_offered_installed_listed_and_removed() {
         !fixture.installed_at(VERSION).exists(),
         "the directory goes with the row"
     );
+    assert!(
+        !fixture
+            .installed_at(VERSION)
+            .parent()
+            .expect("a parent")
+            .exists(),
+        "the package's own folder goes with its last version (T206c)"
+    );
     assert_eq!(
         client.call("package.list", json!({})).await["packages"],
         json!([])

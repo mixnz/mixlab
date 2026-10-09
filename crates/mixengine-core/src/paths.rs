@@ -133,6 +133,19 @@ pub async fn is_gone(path: &Path) -> bool {
     gone(&tokio::fs::symlink_metadata(path).await)
 }
 
+/// Remove a folder if it is empty, and say nothing either way — roadmap task **T206c**.
+///
+/// **The operating system decides**: `remove_dir` refuses a folder that still holds a version or an
+/// install's `.staging` folder, and that refusal is the answer. Housekeeping, so it never fails the
+/// uninstall that asked for it. The one race is an install of another version creating this folder
+/// and its staging folder in the instant between: that install fails naming its staging folder, and
+/// asking again succeeds.
+pub fn remove_if_empty(directory: &Path) {
+    if let Err(error) = std::fs::remove_dir(directory) {
+        tracing::debug!(path = %directory.display(), %error, "an install folder was kept");
+    }
+}
+
 /// A relative path written with `/`, joined onto `base` one part at a time — roadmap task **T191**.
 ///
 /// A manifest's `provides` value, a site's doc root and a route's root are all stored with `/`,
@@ -521,6 +534,26 @@ mod tests {
         assert!(!super::gone(&std::fs::symlink_metadata(
             std::env::temp_dir()
         )));
+    }
+
+    /// **Only an empty folder goes** — roadmap task **T206c**.
+    #[test]
+    fn only_an_empty_folder_is_removed() {
+        let root = tempfile::tempdir().expect("a temporary directory");
+        let empty = root.path().join("empty");
+        let holding = root.path().join("holding");
+        std::fs::create_dir(&empty).expect("a folder");
+        std::fs::create_dir_all(holding.join(".1.0.0.staging")).expect("a staging folder");
+
+        super::remove_if_empty(&empty);
+        super::remove_if_empty(&holding);
+        super::remove_if_empty(&root.path().join("never"));
+
+        assert!(!empty.exists());
+        assert!(
+            holding.is_dir(),
+            "a folder still holding a version or a staging folder stays"
+        );
     }
 
     #[tokio::test]
