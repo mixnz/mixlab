@@ -4019,12 +4019,14 @@ pub(crate) fn blueprint_plan(plan: &BlueprintPlan) -> String {
         plan.blueprint, plan.project, plan.root
     );
 
-    for step in &plan.steps {
+    let actions: Vec<&PlanAction> = plan.steps.iter().map(|step| &step.action).collect();
+
+    for (position, step) in plan.steps.iter().enumerate() {
         out.push_str(&format!(
             "  {:<11} {}
 ",
             disposition_word(&step.disposition),
-            step_said(step)
+            with_site(step_said(step), &actions, position)
         ));
     }
 
@@ -4053,7 +4055,9 @@ pub(crate) fn blueprint_applied(applied: &BlueprintApplied) -> String {
         applied.blueprint, applied.project, applied.root
     );
 
-    for step in &applied.steps {
+    let actions: Vec<&PlanAction> = applied.steps.iter().map(|step| &step.action).collect();
+
+    for (position, step) in applied.steps.iter().enumerate() {
         out.push_str(&format!(
             "  {:<11} {}\n",
             match &step.result {
@@ -4066,7 +4070,7 @@ pub(crate) fn blueprint_applied(applied: &BlueprintApplied) -> String {
                 StepResult::Failed { .. } => "failed",
                 _ => "unknown",
             },
-            action_said(&step.action)
+            with_site(action_said(&step.action), &actions, position)
         ));
 
         // **T202, D2.** What differed from the plan, under the step it belongs to: fourteen
@@ -4094,6 +4098,20 @@ pub(crate) fn blueprint_applied(applied: &BlueprintApplied) -> String {
     out
 }
 
+/// A `site` line with the site it makes — roadmap task **T204a**, D7.
+///
+/// Read off the step after it, as the daemon's executor reads it: a site's names are the `domain`
+/// steps straight after it, so a plan with two sites reads as two rather than as one long run of
+/// names under two identical lines.
+fn with_site(said: String, actions: &[&PlanAction], position: usize) -> String {
+    match (actions.get(position), actions.get(position + 1)) {
+        (Some(PlanAction::CreateSite { .. }), Some(PlanAction::AddDomain { domain, .. })) => {
+            said.replacen("site ", &format!("site {domain}: "), 1)
+        }
+        _ => said,
+    }
+}
+
 /// The steps a blueprint left, one line each — roadmap task **T205**, D6.
 fn next_steps_said(steps: &mixengine_proto::NextSteps) -> String {
     use mixengine_proto::NextStepKind;
@@ -4106,7 +4124,13 @@ fn next_steps_said(steps: &mixengine_proto::NextSteps) -> String {
             _ => step.run.clone().unwrap_or_default(),
         };
 
+        // **Which site it is for**, when the blueprint has several — roadmap task **T204a**, D7.
+        let site = step.site.as_ref().map(|site| format!("({site})"));
+
         let mut tail = Vec::new();
+        if let Some(site) = &site {
+            tail.push(site.as_str());
+        }
         if step.kind == NextStepKind::Serve {
             tail.push("(keeps running)");
         }
@@ -5603,6 +5627,55 @@ mod tests {
             !rendered.contains('\u{2713}') && !rendered.contains('\u{2717}'),
             "a status glyph crept into a file that has never had one:\n{rendered}"
         );
+    }
+
+    /// **T204a, D7.** A plan with two sites says which site each `site` line makes.
+    #[test]
+    fn a_plan_with_two_sites_names_each_one() {
+        let site = || PlanStep {
+            action: PlanAction::CreateSite {
+                kind: mixengine_proto::SiteKind::Static,
+                doc_root: String::new(),
+                https: true,
+                routes: Vec::new(),
+                services: None,
+            },
+            disposition: Disposition::Create,
+            elevates: false,
+        };
+        let name = |domain: &str| PlanStep {
+            action: PlanAction::AddDomain {
+                domain: domain.to_owned(),
+                primary: true,
+            },
+            disposition: Disposition::Create,
+            elevates: true,
+        };
+        let mut plan = a_plan();
+        plan.steps = vec![site(), name("shop.test"), site(), name("docs.shop.test")];
+
+        let rendered = super::blueprint_plan(&plan);
+        assert!(rendered.contains("site shop.test"), "{rendered}");
+        assert!(rendered.contains("site docs.shop.test"), "{rendered}");
+    }
+
+    /// **T204a, D7.** A step that belongs to one site says which.
+    #[test]
+    fn a_step_with_a_site_says_it() {
+        let steps = mixengine_proto::NextSteps {
+            trusted: true,
+            steps: vec![mixengine_proto::NextStep {
+                kind: mixengine_proto::NextStepKind::Serve,
+                run: Some("npm run dev".to_owned()),
+                path: None,
+                note: None,
+                optional: false,
+                credentials: false,
+                site: Some("vite.shop.test".to_owned()),
+            }],
+        };
+
+        assert!(super::next_steps_said(&steps).contains("npm run dev   (vite.shop.test)"));
     }
 
     /// **D11**: said once, at the end, so a person knows before they start rather than four lines
