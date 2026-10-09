@@ -11,10 +11,12 @@ import type {
   HomePrevious,
   JobSummary,
   MetricsFrame,
+  PackageCatalogue,
   PackageFoundList,
   PathReport,
   ProjectDetail,
   ProjectList,
+  RuntimeCatalogue,
   RuntimeFoundList,
   ServiceFoundList,
   ServiceList,
@@ -304,6 +306,10 @@ export const mixengineHandlers: Handlers = {
   mixengine_home_previous: returns<HomePrevious>({}),
   mixengine_runtime_found: returns<RuntimeFoundList>({ found: [] }),
   mixengine_package_found: returns<PackageFoundList>({ found: [] }),
+  // Read only for Ruby's devkit offer beside a blueprint's plan (phase 44). Laravel needs no
+  // devkit, so an empty index keeps the offer out of the clip.
+  mixengine_runtime_list_available: returns<RuntimeCatalogue>({ runtimes: [], stale: false }),
+  mixengine_package_list_available: returns<PackageCatalogue>({ packages: [], stale: false }),
   mixengine_elevation_status: returns<ElevationStatus>(ELEVATION),
   mixengine_blueprints: returns<BlueprintList>(BLUEPRINTS),
   mixengine_database_client: (args): DatabaseClientReport => databaseClient(args.service as string),

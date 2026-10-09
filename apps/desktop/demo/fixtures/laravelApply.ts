@@ -25,12 +25,14 @@ export const JOB_ID = 7;
 /** Between two progress reports: one per step. */
 export const STEP_MS = 170;
 /** Between two lines of `composer create-project` output. */
-export const LOG_MS = 55;
+export const LOG_MS = 30;
 
 const KIND = "blueprint.apply";
 const DOMAIN_OF = (project: string) => `${project}.test`;
 const POOL = "php-fpm@8.4";
 const SCAFFOLD = "composer create-project laravel/laravel . --no-interaction";
+/** The apply's last line of narration, after every step (`api/apply.rs`). */
+const FINISHED = "the apply has finished";
 
 /**
  * Lines of what `composer create-project laravel/laravel . --no-interaction` printed, word for word,
@@ -88,21 +90,30 @@ export function laravelPlan(project: string, root: string): BlueprintPlan {
   };
 }
 
+/** T202, D2: the one step whose outcome can differ from the plan, shown in the demo. */
+function noteFor(action: PlanAction): string | null {
+  return action.action === "create_database"
+    ? `the account ${action.user} is somebody else's, so this project's is ${action.user}-2`
+    : null;
+}
+
 export function appliedFrom(plan: BlueprintPlan): BlueprintApplied {
   return {
     blueprint: plan.blueprint,
     project: plan.project,
     root: plan.root,
-    steps: plan.steps.map((step) => ({
-      action: step.action,
-      result:
-        step.disposition.disposition === "satisfied"
-          ? { result: "already_true" }
-          : step.action.action === "create_database"
-            ? // T202, D2: the one step whose outcome can differ from the plan, shown in the demo.
-              { result: "done", note: `the account ${step.action.user} is somebody else's, so this project's is ${step.action.user}-2` }
-            : { result: "done" },
-    })),
+    steps: plan.steps.map((step) => {
+      const note = noteFor(step.action);
+      return {
+        action: step.action,
+        result:
+          step.disposition.disposition === "satisfied"
+            ? { result: "already_true" }
+            : note
+              ? { result: "done", note }
+              : { result: "done" },
+      };
+    }),
   };
 }
 
@@ -163,31 +174,43 @@ export function createApplyRunner({
   let logs: Sink | null = null;
   let job: JobSummary | null = null;
   const emit = (event: object) => events?.onmessage(JSON.stringify(event));
+  const line = (text: string, at: number) =>
+    logs?.onmessage(JSON.stringify({ type: "line", stream: "stdout", at: now + at, text }));
 
   function run(plan: BlueprintPlan) {
     const total = plan.steps.length;
+    // The daemon narrates every step into the job's log as well as on the bar (T120, D5), and a
+    // note where the outcome differed from the plan (T202, D2): the output pane fills from the
+    // first step, not only once composer runs.
     plan.steps.forEach((step, position) => {
+      const at = position * STEP_MS;
       schedule(() => {
         const percent = Math.floor((position * 100) / total);
         const message = describe(step.action);
         job = { ...(job as JobSummary), percent, message };
-        emit({ type: "job_progress", job: JOB_ID, percent, message, at: now + position * STEP_MS });
-      }, position * STEP_MS);
+        emit({ type: "job_progress", job: JOB_ID, percent, message, at: now + at });
+        line(message, at);
+        const note = step.disposition.disposition === "satisfied" ? null : noteFor(step.action);
+        if (note) {
+          job = { ...(job as JobSummary), message: note };
+          emit({ type: "job_progress", job: JOB_ID, percent, message: note, at: now + at });
+          line(note, at);
+        }
+      }, at);
     });
 
     // Composer prints while the last step — the scaffold — runs, and the job ends after it has.
     const scaffoldAt = (total - 1) * STEP_MS;
     COMPOSER_LOG.forEach((text, i) => {
       const at = scaffoldAt + i * LOG_MS;
-      schedule(() => {
-        logs?.onmessage(JSON.stringify({ type: "line", stream: "stdout", at: now + at, text }));
-      }, at);
+      schedule(() => line(text, at), at);
     });
 
     const end = scaffoldAt + COMPOSER_LOG.length * LOG_MS + STEP_MS;
     schedule(() => {
       const message = "the blueprint's own command has ended";
       emit({ type: "job_progress", job: JOB_ID, percent: 100, message, at: now + end });
+      line(FINISHED, end);
 
       registry.registerProject({
         name: plan.project,

@@ -102,8 +102,10 @@ describe("createApplyRunner", () => {
     flush();
 
     const progress = events.filter((e) => e.type === "job_progress");
-    // One per step, as the daemon reports them (`position * 100 / total`), then the scaffold's end.
-    expect(progress.map((e) => e.percent)).toEqual([0, 7, 14, 21, 28, 35, 42, 50, 57, 64, 71, 78, 85, 92, 100]);
+    // One per step, as the daemon reports them (`position * 100 / total`), the database's note at
+    // its step's percent, then the scaffold's end.
+    expect(progress.map((e) => e.percent)).toEqual([0, 7, 14, 21, 28, 35, 42, 42, 50, 57, 64, 71, 78, 85, 92, 100]);
+    expect(progress[7]).toMatchObject({ message: "the account blog is somebody else's, so this project's is blog-2" });
     expect(progress[0]).toMatchObject({ message: "registering the project blog" });
     expect(progress.at(-1)).toMatchObject({ message: "the blueprint's own command has ended" });
     const finished = events.at(-1);
@@ -114,13 +116,20 @@ describe("createApplyRunner", () => {
     expect(runner.jobStatus(JOB_ID).outcome?.ending).toBe("succeeded");
   });
 
-  it("follows composer's output while the job runs", () => {
+  it("narrates every step into the job's log, then composer's output, then the end", () => {
     const { runner, flush } = setup();
     const lines: { type: string; stream: string; text: string }[] = [];
     runner.apply(request(false));
     runner.logsWatch({ onmessage: (raw: string) => lines.push(JSON.parse(raw)) });
     flush();
-    expect(lines.map((l) => l.text)).toEqual(COMPOSER_LOG);
+    const texts = lines.map((l) => l.text);
+    expect(texts.slice(0, 2)).toEqual(["registering the project blog", "installing php 8.4"]);
+    const database = texts.indexOf("creating the database blog on mariadb");
+    expect(texts[database + 1]).toBe("the account blog is somebody else's, so this project's is blog-2");
+    const scaffold = texts.indexOf("the blueprint's own command");
+    expect(texts.slice(scaffold + 1, scaffold + 1 + COMPOSER_LOG.length)).toEqual(COMPOSER_LOG);
+    expect(texts.at(-1)).toBe("the apply has finished");
+    expect(texts).toHaveLength(14 + 1 + COMPOSER_LOG.length + 1);
     expect(lines.every((l) => l.type === "line" && l.stream === "stdout")).toBe(true);
   });
 });

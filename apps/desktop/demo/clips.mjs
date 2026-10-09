@@ -33,7 +33,8 @@ export const CLIPS = [
     moduleId: "mixengine",
     tabTitle: "MixEngine",
     // A machine with nothing built yet, so the Dashboard offers Quick start; the folder picker
-    // answers the project's folder; opening the site draws a browser (`demo/browser/overlay.ts`).
+    // answers the project's folder; the site opens by itself once it works (T205, D7), and opening
+    // it draws a browser (`demo/browser/overlay.ts`).
     fixtures: { fresh: true, folder: "/Users/ada/Sites/blog", browser: true },
     // The browser window alone, for the website's terminal demo, which ends in the same browser.
     still: { selector: "#__demo-browser", suffix: "browser" },
@@ -43,14 +44,15 @@ export const CLIPS = [
       { click: '[data-demo="qs-folder"]' },
       { click: '[data-demo="qs-create"]' },
       { click: '[data-demo="apply-preview"]' },
-      { click: '[data-demo="apply-scaffold"]' },
+      // A signed blueprint's command comes agreed already (T205a): no step ticks it.
       { click: '[data-demo="apply-run"]' },
       { click: '[data-demo="apply-log"]' },
       // Close appears the moment the job is done: wait for it, then a beat to read "Done".
       { waitFor: '[data-demo="apply-close"]' },
       { pause: 800 },
       { click: '[data-demo="apply-close"]' },
-      { click: '[data-demo="open-site"]' },
+      // The site is ready, and so opens by itself, the moment the open button is drawn.
+      { waitFor: '[data-demo="open-site"]' },
       { pause: 3000 },
     ],
   },
