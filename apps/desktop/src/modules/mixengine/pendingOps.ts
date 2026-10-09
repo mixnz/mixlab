@@ -36,6 +36,24 @@ export function pendingFrom(raw: string): unknown[] | null {
   }
 }
 
+/** The `id` of each `PendingOp` that has one. */
+export function pendingIds(ops: unknown[]): number[] {
+  return ops
+    .map((pending) => (pending as { id?: unknown } | null)?.id)
+    .filter((id): id is number => typeof id === "number");
+}
+
+/**
+ * Whether `ops` holds an operation not among `seen` — the queue grew, rather than shrank.
+ *
+ * `elevation_required` is published both ways: when something is queued, and when a grant or a
+ * withdrawal took rows out. Only the first is a reason to put the list in front of anyone; the
+ * second, after a grant that left a failed row behind, would reopen the dialog just answered.
+ */
+export function hasNewOps(seen: ReadonlySet<number>, ops: unknown[]): boolean {
+  return pendingIds(ops).some((id) => !seen.has(id));
+}
+
 /**
  * Whether a rejected `elevation.grant` means the queue was already empty.
  *

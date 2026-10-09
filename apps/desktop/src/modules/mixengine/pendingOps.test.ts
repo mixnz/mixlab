@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { describeOp, isGrantInFlight, isNothingWaiting, otherGrant, pendingFrom } from "./pendingOps";
+import {
+  describeOp,
+  hasNewOps,
+  isGrantInFlight,
+  isNothingWaiting,
+  otherGrant,
+  pendingFrom,
+} from "./pendingOps";
 
 /** Exactly the shape the daemon sends: `PendingOp` wraps `PrivilegedOp` in the `op` field. */
 const hostsApply = {
@@ -148,5 +155,22 @@ describe("otherGrant", () => {
      was emptied some other way: either way there is nothing left to allow. */
   it("calls an empty queue done even with no new outcome", () => {
     expect(otherGrant(12, { pending: [], last: declined })).toEqual({ state: "emptied" });
+  });
+});
+
+describe("hasNewOps", () => {
+  const trust = { id: 8, op: { op: "trust-ca-install" }, description: "Trust the CA" };
+
+  it("sees a queue that grew", () => {
+    expect(hasNewOps(new Set(), [hostsApply])).toBe(true);
+    expect(hasNewOps(new Set([7]), [hostsApply, trust])).toBe(true);
+  });
+
+  /* A grant that applied one row and kept a failed one announces the row it kept. The dialog that
+     asked has just closed; opening it again for that row is not something anybody asked for. */
+  it("does not count a queue that shrank, or stayed the same", () => {
+    expect(hasNewOps(new Set([7, 8]), [hostsApply])).toBe(false);
+    expect(hasNewOps(new Set([7]), [hostsApply])).toBe(false);
+    expect(hasNewOps(new Set([7]), [])).toBe(false);
   });
 });

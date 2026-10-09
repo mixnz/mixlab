@@ -68,7 +68,7 @@ import {
   parseMetricsFrame,
   readingFor,
 } from "../../metricsState";
-import { pendingFrom } from "../../pendingOps";
+import { hasNewOps, pendingFrom, pendingIds } from "../../pendingOps";
 import {
   DATABASE_MODULE_ID,
   openChoices,
@@ -130,6 +130,9 @@ export default function Dashboard({
   /** How many operations are waiting for rights, per `daemon.status`. Just a number; the list is in
    *  `elevation.status`. */
   const [waiting, setWaiting] = useState(0);
+  /** The ids the last `elevation_required` carried, so a queue that shrank is told from one that
+   *  grew — the event is published both ways. A ledger, not something drawn, hence a ref. */
+  const announced = useRef(new Set<number>());
   const [jobs, setJobs] = useState<JobRow[]>([]);
   /** The jobs Cancel was pressed for, until their `job_finished` — see `forgetFinished`. */
   const [cancelling, setCancelling] = useState<ReadonlySet<number>>(() => new Set());
@@ -403,10 +406,12 @@ export default function Dashboard({
       // never considered a reason to resync.
       const ops = pendingFrom(raw);
       if (ops !== null) {
+        const grew = hasNewOps(announced.current, ops);
+        announced.current = new Set(pendingIds(ops));
         setWaiting(ops.length);
         if (ops.length === 0) {
           setPending(null);
-        } else if (active) {
+        } else if (grew && active) {
           // `elevation_required` only carries `pending` (exactly the shape
           // `{"type":"elevation_required","pending":[…]}`), not `can_prompt`/`reason` — read them
           // again through `elevation.status` before opening the dialog ourselves, to know whether
