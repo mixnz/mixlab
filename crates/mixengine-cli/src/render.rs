@@ -1214,15 +1214,30 @@ pub(crate) fn runtime_list(list: &RuntimeList) -> String {
                     false => MISSING.to_owned(),
                 },
                 size(runtime.bytes),
-                ago(runtime.installed_at, now),
+                // **Gone reads as gone** — roadmap task **T206d**, D4: the date of an install that
+                // is not there would read as one that is.
+                match runtime.is_missing() {
+                    true => "missing".to_owned(),
+                    false => ago(runtime.installed_at, now),
+                },
             ]
         })
         .collect();
 
-    table(
+    let mut said = table(
         ["RUNTIME", "VERSION", "DEFAULT", "SIZE", "INSTALLED"],
         &rows,
-    )
+    );
+    // The same words as `mixengine_core::resolve::restore_command`, written here because `mix`
+    // depends on no core crate.
+    if let Some(gone) = list.runtimes.iter().find(|runtime| runtime.is_missing()) {
+        let (kind, version) = (gone.kind, &gone.version);
+        said.push_str(&format!(
+            "{kind} {version}'s folder is gone: `mix runtime install {kind} {version}` puts it \
+             back; `mix runtime uninstall {kind} {version}` forgets it\n"
+        ));
+    }
+    said
 }
 
 /// `mix runtime ext list`, for a person.
@@ -1305,7 +1320,11 @@ pub(crate) fn package_list(list: &PackageList) -> String {
                 package.package.clone(),
                 package.version.to_string(),
                 size(package.bytes),
-                ago(package.installed_at, now),
+                // **Gone reads as gone** — roadmap task **T206d**, D4.
+                match package.is_missing() {
+                    true => "missing".to_owned(),
+                    false => ago(package.installed_at, now),
+                },
                 match package.services.is_empty() {
                     true => MISSING.to_owned(),
                     false => package
@@ -1319,10 +1338,18 @@ pub(crate) fn package_list(list: &PackageList) -> String {
         })
         .collect();
 
-    table(
+    let mut said = table(
         ["PACKAGE", "VERSION", "SIZE", "INSTALLED", "SERVICES"],
         &rows,
-    )
+    );
+    if let Some(gone) = list.packages.iter().find(|package| package.is_missing()) {
+        let (name, version) = (&gone.package, &gone.version);
+        said.push_str(&format!(
+            "{name} {version}'s folder is gone: `mix package install {name} {version}` puts it \
+             back; `mix package uninstall {name} {version}` forgets it\n"
+        ));
+    }
+    said
 }
 
 /// Which rows of a catalogue to print — roadmap task **T193a**, D3.
@@ -4680,6 +4707,65 @@ mod tests {
     };
 
     use super::*;
+
+    /// **A folder that is gone reads `missing`, and the way back is named** — T206d, D4.
+    #[test]
+    fn a_runtime_whose_folder_is_gone_reads_missing_and_names_the_way_back() {
+        let mut runtime = mixengine_proto::RuntimeSummary {
+            kind: RuntimeKind::Ruby,
+            version: mixengine_proto::PackageVersion::parse("3.4.11").expect("a version"),
+            channel: mixengine_proto::PackageChannel::Stable,
+            path: "/h/runtimes/ruby/3.4.11".to_owned(),
+            installed_at: Timestamp(1_760_000_000_000),
+            bytes: 1,
+            default: true,
+            missing: Some(true),
+        };
+        let said = runtime_list(&mixengine_proto::RuntimeList {
+            runtimes: vec![runtime.clone()],
+        });
+        assert!(said.contains("missing"), "{said}");
+        assert!(
+            said.contains("`mix runtime install ruby 3.4.11` puts it back"),
+            "{said}"
+        );
+        assert!(
+            said.contains("`mix runtime uninstall ruby 3.4.11` forgets it"),
+            "{said}"
+        );
+
+        runtime.missing = Some(false);
+        let said = runtime_list(&mixengine_proto::RuntimeList {
+            runtimes: vec![runtime],
+        });
+        assert!(!said.contains("puts it back"), "{said}");
+    }
+
+    /// The same for a package — T206d, D4.
+    #[test]
+    fn a_package_whose_folder_is_gone_reads_missing_and_names_the_way_back() {
+        let package = mixengine_proto::PackageSummary {
+            package: "msys2".to_owned(),
+            version: mixengine_proto::PackageVersion::parse("2026.10.08").expect("a version"),
+            path: "/h/packages/msys2/2026.10.08".to_owned(),
+            installed_at: Timestamp(1_760_000_000_000),
+            bytes: 1,
+            services: Vec::new(),
+            missing: Some(true),
+        };
+        let said = package_list(&mixengine_proto::PackageList {
+            packages: vec![package],
+        });
+        assert!(said.contains("missing"), "{said}");
+        assert!(
+            said.contains("`mix package install msys2 2026.10.08` puts it back"),
+            "{said}"
+        );
+        assert!(
+            said.contains("`mix package uninstall msys2 2026.10.08` forgets it"),
+            "{said}"
+        );
+    }
 
     /// **T200, D5.** The listing says what each extension is for, last, where a long sentence
     /// pushes nothing else out of line.

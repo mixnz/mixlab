@@ -476,7 +476,8 @@ fn plan_for(id: ProblemId) -> Planned {
             "this build has no way to bind the DNS server again once it has failed to",
         ),
         ProblemId::InstallMissing => Planned::Untouched(
-            "putting an install back is a download somebody asks for: `mix runtime install` or              `mix package install` with the same version restores it, and the uninstall forgets it",
+            "putting an install back is a download somebody asks for: `mix runtime install` or \
+             `mix package install` with the same version restores it, and the uninstall forgets it",
         ),
         ProblemId::ApplicationControlEnforced => Planned::Untouched(
             "turning Smart App Control off cannot be undone without reinstalling Windows, and \

@@ -69,7 +69,8 @@ pub struct Question<'a> {
 #[must_use]
 pub fn restore_command(kind: RuntimeKind, version: &PackageVersion) -> String {
     format!(
-        "`mix runtime install {kind} {version}` puts it back;          `mix runtime uninstall {kind} {version}` forgets it"
+        "`mix runtime install {kind} {version}` puts it back; \
+         `mix runtime uninstall {kind} {version}` forgets it"
     )
 }
 
@@ -584,6 +585,19 @@ mod tests {
             Some("^8.3"),
             "the nearer project pins node and says nothing about php: {:?}",
             resolved.source
+        );
+    }
+
+    /// **One sentence, exactly** — roadmap task **T206d**. The daemon's hint and the shim's read it.
+    #[test]
+    fn the_restore_command_names_both_ways_out() {
+        assert_eq!(
+            restore_command(
+                RuntimeKind::Php,
+                &PackageVersion::parse("8.3.33").expect("a version")
+            ),
+            "`mix runtime install php 8.3.33` puts it back; `mix runtime uninstall php 8.3.33` \
+             forgets it"
         );
     }
 
