@@ -71,6 +71,11 @@ pub enum DaemonEvent {
     /// An enqueue that changed nothing publishes nothing. The same operation asked for twice is one
     /// row (the T40b design, D2), and an event per attempt would put a producer's retry loop on a
     /// client's screen.
+    ///
+    /// **Rows leaving are announced too**: a withdrawal (T179) and a grant that applied or refused
+    /// something publish the queue that is left, so a client that drew the list redraws it — and an
+    /// empty `pending` is how it learns nothing waits any more. A client that opens its list on this
+    /// event tells a queue that grew from one that shrank by the ids it has not seen before.
     ElevationRequired {
         /// Everything waiting, oldest first.
         pending: Vec<PendingOp>,
