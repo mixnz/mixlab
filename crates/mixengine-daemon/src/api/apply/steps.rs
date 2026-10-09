@@ -18,19 +18,15 @@ use mixengine_proto::{
 
 /// What a step needs from this apply that is not in the step itself.
 ///
-/// Carried across the walk rather than recomputed, because the site is where three earlier facts
-/// meet: the project that owns it, the instances the `EnsureService` steps made sure of, and the
-/// names the `AddDomain` steps carry (D14).
+/// Carried across the walk rather than recomputed, because the site is where earlier facts meet:
+/// the project that owns it and the names the `AddDomain` steps carry (D14). The services it links
+/// are read off the plan instead ([`ensured_in`]), since a step planned `Satisfied` is never walked.
 pub(crate) struct Context {
     /// The project's name, which is also what `{project}` was expanded to.
     pub(crate) project: String,
 
     /// Where it lives.
     pub(crate) root: PathBuf,
-
-    /// Every instance the `EnsureService` steps so far have made sure of, in the order they were
-    /// named — which is what the site is linked to when its turn comes (D14).
-    pub(crate) ensured: Vec<ServiceId>,
 
     /// What this apply has made, for the rollback (D4).
     pub(crate) ledger: super::ledger::Ledger,
@@ -171,6 +167,37 @@ pub(crate) fn untouched_with_consent(
             why: "this build does not know what to make of that step".to_owned(),
         }),
     }
+}
+
+/// Every service the plan's `EnsureService` steps name, whatever became of them — roadmap task
+/// **T204a**, D3.
+///
+/// What a site with no list of its own links. Read off the plan rather than collected on the walk:
+/// a shared instance that was already here plans `Satisfied` and is never carried out, and it is no
+/// less this project's service — collecting on the walk made a site on such a home link nothing.
+pub(crate) fn ensured_in(plan: &BlueprintPlan) -> Vec<ServiceId> {
+    plan.steps
+        .iter()
+        .filter_map(|step| match &step.action {
+            PlanAction::EnsureService {
+                package, instance, ..
+            } => super::identity(package, instance).ok(),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The names of the site an `AddDomain` at `position` belongs to — roadmap task **T204a**, D4:
+/// the group that starts at the nearest `CreateSite` before it. Empty for a name with no site
+/// before it, which no plan this build makes holds.
+pub(crate) fn group_names(plan: &BlueprintPlan, position: usize) -> Vec<String> {
+    plan.steps
+        .get(..position)
+        .unwrap_or_default()
+        .iter()
+        .rposition(|step| matches!(step.action, PlanAction::CreateSite { .. }))
+        .map(|start| names_after(plan, start))
+        .unwrap_or_default()
 }
 
 /// The names the `AddDomain` steps immediately after `position` carry.
@@ -431,6 +458,55 @@ mod tests {
             disposition: Disposition::Create,
             elevates: false,
         }
+    }
+
+    /// **T204a, D3.** A shared instance that was already here plans `Satisfied` and is never
+    /// carried out, and the site still links it.
+    #[test]
+    fn every_ensure_in_the_plan_is_linked_whatever_its_disposition() {
+        let ensure = |package: &str, instance: &str, disposition| PlanStep {
+            action: PlanAction::EnsureService {
+                package: package.to_owned(),
+                instance: instance.to_owned(),
+                version: None,
+                dedicated: false,
+            },
+            disposition,
+            elevates: false,
+        };
+        let plan = a_plan(vec![
+            ensure("caddy", "caddy", Disposition::Create),
+            ensure("mariadb", "main", Disposition::Satisfied),
+            ensure("redis", "shop", Disposition::Create),
+        ]);
+
+        assert_eq!(
+            ensured_in(&plan),
+            vec![
+                ServiceId::parse("caddy").expect("an id"),
+                ServiceId::parse("mariadb@main").expect("an id"),
+                ServiceId::parse("redis@shop").expect("an id"),
+            ]
+        );
+    }
+
+    /// **T204a, D4.** A name belongs to the site whose group it is in, and to no other.
+    #[test]
+    fn a_domain_step_knows_the_names_of_its_own_site_only() {
+        let plan = a_plan(vec![
+            a_site(),
+            named("shop.test", true),
+            named("www.shop.test", false),
+            a_site(),
+            named("vite.shop.test", true),
+        ]);
+
+        assert_eq!(
+            group_names(&plan, 2),
+            vec!["shop.test".to_owned(), "www.shop.test".to_owned()]
+        );
+        assert_eq!(group_names(&plan, 4), vec!["vite.shop.test".to_owned()]);
+        assert!(group_names(&a_plan(vec![named("x.test", true)]), 0).is_empty());
     }
 
     /// **D14.** A site's names are the domains the plan adds after it, in the plan's own order —

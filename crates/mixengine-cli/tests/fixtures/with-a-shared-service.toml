@@ -1,0 +1,27 @@
+schema = 1
+
+# One static site and a shared `fakeservice` instance the suite creates first — roadmap task
+# **T204a**, D3.
+#
+# **The instance is already there**, so its `ensure` plans `Satisfied` and is never carried out. The
+# site must still be linked to it: before T204a the site was linked to what the walk *created*, so
+# this blueprint made a site linked to nothing and `--start` had nothing of the project's to start.
+
+[blueprint]
+name = "with-a-shared-service"
+description = "One static site and a shared fixture service"
+created_at = "2026-10-09T00:00:00Z"
+
+[blueprint.created_on]
+os = "windows"
+version = "0.0.6"
+
+[[services]]
+name = "fakeservice"
+instance = "already"
+
+[site]
+kind = "static"
+doc_root = ""
+https = true
+domain_pattern = "{project}.test"
