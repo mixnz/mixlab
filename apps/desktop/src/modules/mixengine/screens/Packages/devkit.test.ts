@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { PackageCatalogue, PackageRelease, RuntimeRelease } from "@mixengine/api";
-import { anyLacksNativeGems, devkitOffer, lacksLabels, lacksReason } from "./devkit";
+import type { PackageCatalogue, PackageRelease, PackageSummary, RuntimeRelease } from "@mixengine/api";
+import { anyLacksNativeGems, devkitOffer, devkitState, lacksLabels, lacksReason } from "./devkit";
 
 const ruby = (lacks?: Record<string, string>) =>
   ({ kind: "ruby", version: "3.4.11", channel: "stable", bytes: 1, installed: false, lacks }) as RuntimeRelease;
@@ -50,5 +50,40 @@ describe("one mark a row", () => {
     expect(anyLacksNativeGems([ruby({ "native gems": "a" }), ruby()])).toBe(true);
     expect(anyLacksNativeGems([ruby({ yjit: "b" })])).toBe(false);
     expect(anyLacksNativeGems([])).toBe(false);
+  });
+});
+
+describe("devkitState", () => {
+  const row = (version: string, missing?: boolean) =>
+    ({
+      package: "msys2",
+      version,
+      path: `/p/msys2/${version}`,
+      installed_at: 0,
+      bytes: 1,
+      services: [],
+      missing,
+    }) as PackageSummary;
+
+  it("is absent with no msys2 recorded", () => {
+    expect(devkitState([])).toEqual({ state: "absent" });
+  });
+
+  it("is present for the newest one that is there, even beside a missing one", () => {
+    expect(devkitState([row("2026.10.08", true), row("2026.9.30", false)])).toEqual({
+      state: "present",
+      version: "2026.9.30",
+    });
+  });
+
+  it("is missing, naming the newest recorded, when none is there", () => {
+    expect(devkitState([row("2026.9.30", true), row("2026.10.08", true)])).toEqual({
+      state: "missing",
+      version: "2026.10.08",
+    });
+  });
+
+  it("reads a daemon from before T206d as present", () => {
+    expect(devkitState([row("2026.10.08")])).toEqual({ state: "present", version: "2026.10.08" });
   });
 });

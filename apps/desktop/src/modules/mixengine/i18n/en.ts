@@ -353,6 +353,11 @@ export default {
         devkitAbout:
           "Ruby on Windows needs the devkit to build gems with C extensions, such as Rails'. One install serves every Ruby version.",
         devkitReady: "The devkit is installed: every Ruby here builds gems with C extensions.",
+        devkitGone: "The devkit's folder is gone, so no Ruby here can build gems with C extensions.",
+        removeDevkit: "Remove devkit",
+        removeDevkitConfirmTitle: "Remove the devkit?",
+        removeDevkitConfirmMessage:
+          "Ruby here won't build gems with C extensions until the devkit is installed again.",
       },
       tabLanguages: "Languages",
       about: "Languages, servers and the versions of each this machine keeps.",
@@ -383,6 +388,7 @@ export default {
       columnDefault: "Default",
       setDefault: "Set as default",
       install: "Install",
+      reinstall: "Reinstall",
       uninstall: "Uninstall",
       uninstallConfirmTitle: "Uninstall {{version}}?",
       uninstallForceConfirm: "Uninstall anyway",
