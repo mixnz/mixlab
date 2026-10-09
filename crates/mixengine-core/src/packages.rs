@@ -139,6 +139,7 @@ pub async fn remember(
         bytes: installation.bytes,
         // Nothing can be an instance of a version that did not exist a moment ago.
         services: Vec::new(),
+        missing: None,
     })
 }
 
@@ -337,6 +338,8 @@ fn summary(
         package,
         path,
         services: Vec::new(),
+        // Stamped from the disk by the reader — T206d, D1.
+        missing: None,
     })
 }
 

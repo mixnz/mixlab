@@ -323,6 +323,22 @@ pub struct RuntimeSummary {
     /// `runtime_installs` is what makes that true rather than a convention — and a kind can have
     /// none, which is what a home is left with when its only version is uninstalled.
     pub default: bool,
+
+    /// Whether the folder this row names is gone — roadmap task **T206d**.
+    ///
+    /// `Some(true)` only when the folder answered "not found". A folder that cannot be read for any
+    /// other reason is not gone, and reads `Some(false)`. `None` is a daemon from before this
+    /// member (ADR 0019), never "could not tell".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub missing: Option<bool>,
+}
+
+impl RuntimeSummary {
+    /// Whether this daemon said the folder is gone. `None` is not — roadmap task **T206d**.
+    #[must_use]
+    pub fn is_missing(&self) -> bool {
+        self.missing == Some(true)
+    }
 }
 
 /// One version the index offers, and whether this machine already has it.
@@ -553,6 +569,20 @@ pub struct RuntimeFoundList {
 mod tests {
     use super::*;
 
+    /// **A daemon from before T206d sends no `missing`**, and a client reads that as not known to
+    /// be gone — ADR 0019.
+    #[test]
+    fn an_older_daemon_s_runtime_reads_without_missing() {
+        let summary: RuntimeSummary = serde_json::from_value(serde_json::json!({
+            "kind": "php", "version": "8.3.33", "channel": "stable",
+            "path": "/r/php/8.3.33", "installed_at": 1_760_000_000_000_i64,
+            "bytes": 1, "default": true
+        }))
+        .expect("an older daemon's row reads");
+        assert_eq!(summary.missing, None);
+        assert!(!summary.is_missing());
+    }
+
     /// **An older daemon's row reads, and a release lacking nothing says nothing** — T206, D2.
     #[test]
     fn a_release_lacking_nothing_writes_no_lacks() {
@@ -685,6 +715,7 @@ mod tests {
                 installed_at: Timestamp(1_760_000_000_000),
                 bytes: 41_000_000,
                 default: false,
+                missing: None,
             },
             source: RuntimeSource::Manifest {
                 path: "/srv/blog/mixengine.toml".to_owned(),
@@ -716,6 +747,7 @@ mod tests {
             installed_at: Timestamp(1_760_000_000_000),
             bytes: 41_000_000,
             default: true,
+            missing: Some(false),
         };
 
         let encoded = serde_json::to_value(&summary).unwrap();

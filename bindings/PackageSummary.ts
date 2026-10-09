@@ -42,4 +42,12 @@ bytes: number,
  * say which packages are held would be a listing where "why can I not remove this" has no
  * answer in it. Empty is a package nothing is using.
  */
-services: Array<ServiceId>, };
+services: Array<ServiceId>, 
+/**
+ * Whether the folder this row names is gone — roadmap task **T206d**.
+ *
+ * `Some(true)` only when the folder answered "not found". A folder that cannot be read for any
+ * other reason is not gone, and reads `Some(false)`. `None` is a daemon from before this
+ * member (ADR 0019), never "could not tell".
+ */
+missing?: boolean | null, };

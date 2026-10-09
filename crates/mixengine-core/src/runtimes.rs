@@ -238,6 +238,7 @@ pub async fn remember(
         installed_at: at,
         bytes: installation.bytes,
         default,
+        missing: None,
     })
 }
 
@@ -559,6 +560,8 @@ fn summary(
         // the whole listing over it would hide the runtime it belongs to.
         bytes: u64::try_from(bytes).unwrap_or(0),
         default: is_default == 1,
+        // Stamped from the disk by the reader — T206d, D1.
+        missing: None,
     })
 }
 
