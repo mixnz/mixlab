@@ -24,7 +24,7 @@ import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
 import { updateRowState } from "../../updateRow";
 import { packageCategory, type PackageCategory } from "./packageCategories";
-import { releaseToRestore } from "./reinstall";
+import { reinstallState, releaseToRestore } from "./reinstall";
 import type { PackagesState } from "./usePackages";
 import type { PackageRelease } from "@mixengine/api";
 import styles from "./Catalogue.module.css";
@@ -153,6 +153,7 @@ export default function PackageList({
                 const restore = gone
                   ? releaseToRestore(available, (release) => release.package === row.package, row.version)
                   : null;
+                const reinstall = reinstallState(restore, jobFor(jobs, installingJob[key]) !== undefined);
                 const update = updateRowState(
                   state.updates.find(
                     (candidate) => candidate.package === row.package && candidate.from === row.version,
@@ -186,8 +187,9 @@ export default function PackageList({
                           <Button
                             size="small"
                             variant="soft"
-                            disabled={restore === null}
-                            title={restore === null ? t("mixengine.packages.reinstallUnavailable") : undefined}
+                            disabled={reinstall === "unavailable"}
+                            busy={reinstall === "running" ? t("mixengine.packages.reinstalling") : undefined}
+                            title={reinstall === "unavailable" ? t("mixengine.packages.reinstallUnavailable") : undefined}
                             onClick={() => restore && void state.install(restore)}
                           >
                             {t("mixengine.packages.reinstall")}

@@ -47,7 +47,7 @@ import { matchesAvailable } from "./availableFilter";
 import { groupByLine } from "./availableLines";
 import { updateRowState } from "../../updateRow";
 import ExtensionsPanel from "./ExtensionsPanel";
-import { releaseToRestore } from "./reinstall";
+import { reinstallState, releaseToRestore } from "./reinstall";
 import {
   anyLacksNativeGems,
   DEVKIT_PACKAGE,
@@ -554,6 +554,7 @@ export default function Languages({ active }: { active: boolean }) {
                 const restore = gone
                   ? releaseToRestore(available, (release) => release.kind === row.kind, row.version)
                   : null;
+                const reinstall = reinstallState(restore, jobFor(jobs, installingJob[key]) !== undefined);
                 const update = updateRowState(
                   updates.find(
                     (candidate) => candidate.kind === row.kind && candidate.from === row.version,
@@ -611,8 +612,9 @@ export default function Languages({ active }: { active: boolean }) {
                           <Button
                             size="small"
                             variant="soft"
-                            disabled={restore === null}
-                            title={restore === null ? t("mixengine.packages.reinstallUnavailable") : undefined}
+                            disabled={reinstall === "unavailable"}
+                            busy={reinstall === "running" ? t("mixengine.packages.reinstalling") : undefined}
+                            title={reinstall === "unavailable" ? t("mixengine.packages.reinstallUnavailable") : undefined}
                             onClick={() => restore && void install(restore)}
                           >
                             {t("mixengine.packages.reinstall")}

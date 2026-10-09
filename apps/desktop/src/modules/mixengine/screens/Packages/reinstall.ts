@@ -8,3 +8,13 @@ export function releaseToRestore<R extends { version: string }>(
 ): R | null {
   return releases.find((release) => matches(release) && release.version === version) ?? null;
 }
+
+/** What a Reinstall button shows: busy while its own install runs, so a second click starts nothing,
+ *  disabled when the catalogue no longer offers the version, and ready otherwise — T206d. */
+export function reinstallState(
+  restore: { version: string } | null,
+  running: boolean,
+): "running" | "unavailable" | "ready" {
+  if (running) return "running";
+  return restore === null ? "unavailable" : "ready";
+}
