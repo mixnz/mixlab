@@ -19,6 +19,11 @@
   Tunnel tab (phase 41). A *site* needs the front end to answer the tunnel's own host for it, a
   temporary alias the daemon adds and removes, or the application builds every link for
   `<domain>.test`; see the T203 design's *Out of scope*.
+- **A PostgreSQL driver for Django on Windows ARM64.** T205d measured that neither PyPI nor
+  MixEngine's own `libpq.dll` gives a native ARM64 Python one. Revisit when the packaging
+  repository's **P7c** publishes a `windows/aarch64` PostgreSQL, or `psycopg-binary` a `win_arm64`
+  wheel; with P7c the step's tab also needs that package's `bin` on `PATH` for the pure
+  `psycopg` to find `libpq.dll`.
 - Team-shared blueprint registries.
 - Editor extensions (VS Code / JetBrains) as additional API clients.
 - Xdebug one-click profiles and a built-in profiler view.

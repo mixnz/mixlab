@@ -27,6 +27,17 @@ Assert-Same 'two numbers' 'refused' (Test-Refused { ConvertTo-MixLabVersion -Raw
 Assert-Same 'X64' 'x86_64' (Get-MixLabArch -Raw 'X64')
 Assert-Same 'Arm64' 'aarch64' (Get-MixLabArch -Raw 'Arm64')
 Assert-Same 'X86 is refused' 'refused' (Test-Refused { Get-MixLabArch -Raw 'X86' })
+Assert-Same 'no answer is refused' 'refused' (Test-Refused { Get-MixLabArch -Raw '' })
+
+# Windows 10 on .NET before 4.7.1: RuntimeInformation answers nothing, and the environment decides.
+Assert-Same 'an x64 process' 'X64' (ConvertFrom-MixLabProcessorArch -Native '' -Process 'AMD64')
+Assert-Same 'an arm64 process' 'Arm64' (ConvertFrom-MixLabProcessorArch -Native '' -Process 'ARM64')
+Assert-Same 'a 32-bit process on x64' 'X64' (ConvertFrom-MixLabProcessorArch -Native 'AMD64' -Process 'x86')
+Assert-Same 'a 32-bit windows' 'X86' (ConvertFrom-MixLabProcessorArch -Native '' -Process 'x86')
+Assert-Same 'nothing set' '' (ConvertFrom-MixLabProcessorArch -Native '' -Process '')
+if ($IsWindows -or $PSVersionTable.PSVersion.Major -lt 6) {
+    Assert-Same 'this machine has an answer' $true ([bool](Get-MixLabMachineArch))
+}
 
 Assert-Same 'window' 'mixlab-windows-x86_64-setup.exe' (Get-MixLabArtifactName -Arch x86_64 -Flavour window -Version '')
 Assert-Same 'headless arm' 'mixengine-windows-aarch64-headless-setup.exe' (Get-MixLabArtifactName -Arch aarch64 -Flavour headless -Version '')

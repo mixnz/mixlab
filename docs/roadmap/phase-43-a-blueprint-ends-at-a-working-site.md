@@ -40,10 +40,23 @@ T205a–T205c: [2026-10-09-t205a-t205c-what-hand-testing-the-gallery-left-open-d
       the flag with `SetConsoleCtrlHandler(NULL, FALSE)` before each local spawn;
       `ctrl_c_reaches_a_shell_started_while_ignoring_it` sets the flag in a process of its own and
       watches `ping` say `Control-C`. Windows only: the flag does not exist elsewhere.
-- [ ] **T205d** Django on Windows ARM64 has no PostgreSQL driver: `psycopg-binary` 3.3.6 ships no
+- [x] **T205d** Django on Windows ARM64 has no PostgreSQL driver: `psycopg-binary` 3.3.6 ships no
       CPython 3.13 wheel for it (measured 2026-10-09), so the blueprint's first step fails there.
-      Measure whether the pure `psycopg` with the `libpq.dll` MixEngine's PostgreSQL package
-      carries is enough.
+      Measured whether the pure `psycopg` with the `libpq.dll` MixEngine's PostgreSQL package
+      carries is enough, on 2026-10-09: **it is not**, so the step's note stays.
+      - **The architectures differ.** The index of `2026-10-09T10:59:23Z` publishes Python 3.13
+        for `windows/aarch64` and PostgreSQL 14–18 for `windows/x86_64` only, so ADR 0023 puts a
+        native Python beside an emulated PostgreSQL. That package's `libpq.dll`, `libssl-3-x64.dll`
+        and `libcrypto-3-x64.dll` are PE machine `0x8664`, and an ARM64 process cannot load an x64
+        DLL. Not run on ARM64 hardware: the rule is the loader's.
+      - **The step's tab has no `libpq.dll` on `PATH`** even where the architectures match. On
+        x86_64, `psycopg` 3.3.6 in a venv of Python 3.13.16 says *libpq library not found*, and
+        loads libpq `180006` once `packages/postgres/18.6/bin` is on `PATH`; the tab prepends only
+        `<home>/bin`, which holds shims and no DLL.
+      - **PyPI has no other way in.** No release of `psycopg-binary`, `psycopg2-binary` or
+        `psycopg2` carries a `win_arm64` file, and `psycopg-c` is source only.
+      - What would close it is [parked](parked.md): a native ARM64 PostgreSQL from the packaging
+        repository's **P7c**, or a `win_arm64` wheel upstream.
 
 **M43** On all three systems, `laravel` and `wordpress` applied from MixLab's Blueprints screen on a
 home with no web server open in the browser on their own, and `nextjs` serves its page after one

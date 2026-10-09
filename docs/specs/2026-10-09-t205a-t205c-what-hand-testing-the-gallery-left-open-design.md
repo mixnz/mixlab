@@ -200,6 +200,9 @@ the person ticks the box or passes `--write-dotenv`, and nothing else MixEngine 
   - A Windows ARM64 PostgreSQL driver is a roadmap follow-up (**T205d**), not a silent fall-back
     to SQLite. The pure `psycopg` finds `libpq.dll` on `PATH`, and MixEngine's PostgreSQL package
     carries one, so that follow-up starts from measuring whether that is enough.
+  - **Measured at T205d (2026-10-09): it is not.** That `libpq.dll` is the x86_64 build ADR 0023
+    installs beside a native ARM64 Python, which cannot load it, and the step's tab does not put
+    it on `PATH`. The note stays; the details are in phase 43.
 
 **Hosting.** `publish-blueprints` gains one rule: *a file directly under `starters/` is uploaded
 as itself*, beside each folder's `<name>-starter.zip`. `every_starter_archive_is_in_the_tree`
