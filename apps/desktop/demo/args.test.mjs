@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { COLOR_THEMES } from "../src/shell/themeModel";
 import { modifierFor, parseArgs, parseClipArgs, storageFor } from "./args.mjs";
 
 const IDS = ["hero", "sites", "database"];
@@ -33,11 +34,20 @@ describe("storageFor", () => {
     const storage = storageFor(scene, "light");
     expect(JSON.parse(storage["mixlab-modules"])).toEqual(["mixengine", "db", "rest", "terminal", "tools", "tunnel"]);
     expect(storage["mixlab-theme"]).toBe("light");
+    expect(storage["mixlab-palette"]).toBeUndefined();
     expect(storage["mixlab-lang"]).toBe("en");
     expect(JSON.parse(storage["mixlab-session"])).toEqual({
       tabs: [{ id: "demo-hero", moduleId: "mixengine", title: "MixEngine", state: { screen: "dashboard" } }],
       activeId: "demo-hero",
     });
+  });
+});
+
+describe("storageFor in dark", () => {
+  it("films the first colour theme", () => {
+    const storage = storageFor({ id: "hero", moduleId: "mixengine", tabTitle: "MixEngine" }, "dark");
+    expect(storage["mixlab-theme"]).toBe("color");
+    expect(storage["mixlab-palette"]).toBe(COLOR_THEMES[0]);
   });
 });
 

@@ -75,12 +75,18 @@ export function parseClipArgs(argv, clipIds) {
   return parseRun(argv, clipIds, { flag: "--clip", key: "clips", noun: "clip", command: "clips" });
 }
 
+/** What dark is filmed in: the first colour theme, navy, the dark MixLab had before the redesign
+ *  (`COLOR_THEMES` in `shell/themeModel.ts`). */
+export const DARK_PALETTE = "navy";
+
 /** Everything the window reads from `localStorage` on the way up, for one scene. */
 export function storageFor(scene, theme) {
   const tabId = `demo-${scene.id}`;
+  const look =
+    theme === "dark" ? { "mixlab-theme": "color", "mixlab-palette": DARK_PALETTE } : { "mixlab-theme": theme };
   return {
     "mixlab-modules": JSON.stringify(MODULE_IDS),
-    "mixlab-theme": theme,
+    ...look,
     "mixlab-lang": "en",
     "mixlab-session": JSON.stringify({
       tabs: [{ id: tabId, moduleId: scene.moduleId, title: scene.tabTitle, state: scene.state }],
