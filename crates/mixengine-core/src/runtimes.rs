@@ -238,7 +238,8 @@ pub async fn remember(
         installed_at: at,
         bytes: installation.bytes,
         default,
-        missing: None,
+        // Read rather than assumed — T206d, D1: the row names the folder, and the folder decides.
+        missing: Some(crate::paths::is_gone(&installation.path).await),
     })
 }
 
@@ -368,7 +369,8 @@ pub async fn records(store: &Store, kind: Option<RuntimeKind>) -> Result<Vec<Run
     .await
     .map_err(|source| store.failure("read", source))?;
 
-    rows.into_iter()
+    let mut listed = rows
+        .into_iter()
         .map(|row| {
             summary(
                 row.kind,
@@ -380,7 +382,15 @@ pub async fn records(store: &Store, kind: Option<RuntimeKind>) -> Result<Vec<Run
                 row.is_default,
             )
         })
-        .collect()
+        .collect::<Result<Vec<_>>>()?;
+
+    // **Stamped from the disk on every read** — roadmap task **T206d**, D1: no column, so the answer
+    // is the folder's state now, at one `stat` a row.
+    for summary in &mut listed {
+        stamp(summary).await;
+    }
+
+    Ok(listed)
 }
 
 /// One installed runtime.
@@ -407,7 +417,7 @@ pub async fn record(
     .map_err(|source| store.failure("read", source))?
     .ok_or_else(|| missing(kind, version))?;
 
-    summary(
+    let mut found = summary(
         row.kind,
         row.version,
         row.channel,
@@ -415,7 +425,15 @@ pub async fn record(
         &row.installed_at,
         row.size_bytes,
         row.is_default,
-    )
+    )?;
+    stamp(&mut found).await;
+
+    Ok(found)
+}
+
+/// Whether the folder a row names is gone, read now — roadmap task **T206d**, D1.
+async fn stamp(summary: &mut RuntimeSummary) {
+    summary.missing = Some(crate::paths::is_gone(Path::new(&summary.path)).await);
 }
 
 /// The program an installed runtime publishes under `executable`, as a path that can be run.

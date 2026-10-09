@@ -118,6 +118,21 @@ pub fn create_dir(path: &Path) -> Result<()> {
     })
 }
 
+/// Whether a folder's metadata read says it is gone — roadmap task **T206d**, D1.
+///
+/// **Only `NotFound`.** No access, a drive not mounted, a timeout: each is a folder out of reach, and
+/// nothing here may treat one as deleted. A pure function of the read so every `ErrorKind` can be
+/// tested, which no real path does the same way on three systems.
+#[must_use]
+pub fn gone(read: &std::io::Result<std::fs::Metadata>) -> bool {
+    matches!(read, Err(error) if error.kind() == std::io::ErrorKind::NotFound)
+}
+
+/// [`gone`] for a path, read without following a final link.
+pub async fn is_gone(path: &Path) -> bool {
+    gone(&tokio::fs::symlink_metadata(path).await)
+}
+
 /// A relative path written with `/`, joined onto `base` one part at a time — roadmap task **T191**.
 ///
 /// A manifest's `provides` value, a site's doc root and a route's root are all stored with `/`,
@@ -487,6 +502,36 @@ impl Paths {
 
 #[cfg(test)]
 mod tests {
+    /// **Only "not found" is gone** — roadmap task **T206d**, D1. A folder that is there but out of
+    /// reach is not something to offer a reinstall over.
+    #[test]
+    fn only_not_found_is_gone() {
+        use std::io::{Error, ErrorKind};
+
+        let failed =
+            |kind: ErrorKind| -> std::io::Result<std::fs::Metadata> { Err(Error::from(kind)) };
+        assert!(super::gone(&failed(ErrorKind::NotFound)));
+        for kind in [
+            ErrorKind::PermissionDenied,
+            ErrorKind::TimedOut,
+            ErrorKind::Other,
+        ] {
+            assert!(!super::gone(&failed(kind)), "{kind:?}");
+        }
+        assert!(!super::gone(&std::fs::symlink_metadata(
+            std::env::temp_dir()
+        )));
+    }
+
+    #[tokio::test]
+    async fn a_deleted_folder_is_gone_and_one_that_is_there_is_not() {
+        let root = tempfile::tempdir().expect("a temporary directory");
+        let there = root.path().join("there");
+        std::fs::create_dir(&there).expect("a folder");
+        assert!(!super::is_gone(&there).await);
+        assert!(super::is_gone(&root.path().join("never")).await);
+    }
+
     use super::*;
 
     /// T184: the credentials belong to the home, so no `[paths]` override moves them.

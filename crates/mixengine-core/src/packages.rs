@@ -139,7 +139,8 @@ pub async fn remember(
         bytes: installation.bytes,
         // Nothing can be an instance of a version that did not exist a moment ago.
         services: Vec::new(),
-        missing: None,
+        // Read rather than assumed — T206d, D1: the row names the folder, and the folder decides.
+        missing: Some(crate::paths::is_gone(&installation.path).await),
     })
 }
 
@@ -231,7 +232,14 @@ pub async fn records(store: &Store, package: Option<&str>) -> Result<Vec<Package
         }
     }
 
-    Ok(listed.into_values().collect())
+    // **Stamped from the disk on every read** — roadmap task **T206d**, D1: no column, so the answer
+    // is the folder's state now, at one `stat` a row.
+    let mut listed: Vec<PackageSummary> = listed.into_values().collect();
+    for summary in &mut listed {
+        summary.missing = Some(crate::paths::is_gone(Path::new(&summary.path)).await);
+    }
+
+    Ok(listed)
 }
 
 /// One installed package.
@@ -438,6 +446,28 @@ mod tests {
             directory(&paths, "caddy", &version("2.11.4")),
             paths.packages().join("caddy").join("2.11.4")
         );
+    }
+
+    /// **A folder deleted by hand is listed as missing, and the row stays** — T206d, D1.
+    #[tokio::test]
+    async fn a_package_whose_folder_was_deleted_is_listed_as_missing() {
+        let (home, store) = store().await;
+        let folder = home
+            .path()
+            .join("packages")
+            .join("msys2")
+            .join("2026.10.08");
+        std::fs::create_dir_all(&folder).expect("a folder");
+        let mut installing = installation("msys2", "2026.10.08");
+        installing.path = folder.clone();
+
+        let written = remember(&store, &installing, NOW).await.expect("recorded");
+        assert_eq!(written.missing, Some(false));
+
+        std::fs::remove_dir_all(&folder).expect("deleted by hand");
+        let listed = records(&store, None).await.expect("a listing");
+        assert_eq!(listed.len(), 1, "the row stays");
+        assert_eq!(listed[0].missing, Some(true));
     }
 
     /// What was written is what comes back, including the services holding it — which is none.
