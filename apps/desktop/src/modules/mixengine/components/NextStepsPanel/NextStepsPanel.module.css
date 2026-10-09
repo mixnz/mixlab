@@ -164,3 +164,18 @@
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
 }
+
+/* T204a: one group per site when the blueprint has several, named above its steps. */
+.siteGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.siteName {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+}

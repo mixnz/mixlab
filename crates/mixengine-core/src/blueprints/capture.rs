@@ -9,8 +9,9 @@
 //! | Key | Read from |
 //! |---|---|
 //! | `[runtimes]` | [`crate::resolve`], keeping only what the project or its manifest decided (D4a) |
-//! | `[site]` | the project's one `sites` row, its `site_domains`, and nothing about ports |
-//! | `[[services]]` | `site_service_links`, minus the front end and minus the pool itself |
+//! | `[site]` / `[[sites]]` | the project's `sites` rows in primary-domain order, their `site_domains`, and nothing about ports (T204a) |
+//! | `[[sites]] services` | each site's `site_service_links`, minus the front end and the pools (T204a) |
+//! | `[[services]]` | every site's links, each once, minus the front end and minus the pools |
 //! | `[[services]] database`, `user` | the project's own `mixengine.toml` (D3) |
 //! | `[php] extensions` | the *choices* on the PHP the pool runs, which are already deviations (D2) |
 //!
@@ -77,56 +78,50 @@ pub struct Asked<'a> {
 ///
 /// # Errors
 ///
-/// [`Error::ProjectHasSeveralSites`] for a project a single `[site]` cannot describe;
-/// [`Error::Database`] when a table cannot be read, and [`Error::Manifest`] when the project's own
-/// `mixengine.toml` does not parse.
+/// [`Error::ProjectRunsSeveralPhps`] for a project whose sites a single `[runtimes] php` cannot
+/// describe; [`Error::Database`] when a table cannot be read, and [`Error::Manifest`] when the
+/// project's own `mixengine.toml` does not parse.
 pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManifest> {
     let project = asked.project;
-    let mut sites = sites::records(store, Some(project.id)).await?;
-
-    if sites.len() > 1 {
-        return Err(Error::ProjectHasSeveralSites {
-            project: project.name.clone(),
-            domains: sites
-                .iter()
-                .map(|site| {
-                    site.domains
-                        .first()
-                        .cloned()
-                        .unwrap_or_else(|| String::from("(no domain)"))
-                })
-                .collect(),
-        });
-    }
-
-    let site = sites.pop();
+    // **Every site, in primary-domain order** — roadmap task **T204a**, D6: `sites::records`'s
+    // own, so capturing twice still writes one file twice.
+    let records = sites::records(store, Some(project.id)).await?;
     let declared = manifest::read(&manifest::at(&project.root))?;
 
-    let pool = site.as_ref().and_then(|site| match &site.kind {
-        SiteKind::PhpFpm { pool } => pool.clone(),
-        _ => None,
-    });
+    let (pool, php_version) = one_php(store, project, &records).await?;
 
-    let php_version = match &pool {
-        Some(pool) => services::version(store, pool).await?,
-        None => None,
+    // Every site's links, each once, in order of first appearance: what `[[services]]` holds.
+    let mut union: Vec<ServiceId> = Vec::new();
+    for record in &records {
+        for service in record.services.iter().filter(|service| kept(service)) {
+            if !union.contains(service) {
+                union.push(service.clone());
+            }
+        }
+    }
+
+    let services = linked(store, project, &union, pool.as_ref(), declared.as_ref()).await?;
+
+    // **How a site names one of those** (D3): by `name`, or `name@instance` as the file writes the
+    // instance when two entries share a name. `linked` keeps `union`'s order one for one.
+    let item_of = |service: &ServiceId| -> Option<String> {
+        let position = union.iter().position(|one| one == service)?;
+        let entry = services.get(position)?;
+        let shared = services
+            .iter()
+            .filter(|other| other.name == entry.name)
+            .count()
+            > 1;
+        Some(match (&entry.instance, shared) {
+            (Some(instance), true) => format!("{}@{instance}", entry.name),
+            _ => entry.name.clone(),
+        })
     };
 
-    Ok(BlueprintManifest {
-        // **The lowest schema, because capture never writes an archive** — ADR 0061. `SCHEMA` is
-        // what this build reads, not what a capture holds.
-        schema: 1,
-        blueprint: Header {
-            name: asked.name.to_owned(),
-            description: asked.description.to_owned(),
-            created_at: asked.created_at.to_owned(),
-            created_on: Provenance {
-                os: asked.os.to_owned(),
-                version: asked.version.to_owned(),
-            },
-        },
-        runtimes: runtimes(store, project, php_version.as_ref()).await?,
-        site: site.as_ref().map(|site| BlueprintSite {
+    let several = records.len() > 1;
+    let sites: Vec<BlueprintSite> = records
+        .iter()
+        .map(|site| BlueprintSite {
             // The pool is dropped: which pool a site uses is a fact about the machine it was
             // created on, and the receiving machine decides its own.
             kind: match &site.kind {
@@ -161,17 +156,67 @@ pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManife
                     },
                 })
                 .collect(),
-        }),
-        services: linked(
-            store,
-            project,
-            site.as_ref()
-                .map(|site| site.services.as_slice())
-                .unwrap_or_default(),
-            pool.as_ref(),
-            declared.as_ref(),
-        )
-        .await?,
+            // **Said for every site when there are several** (D6), `[]` included, so the file
+            // says what each one links rather than falling back to *every service*. One site
+            // links them all, which `[site]` already means.
+            services: several.then(|| {
+                site.services
+                    .iter()
+                    .filter(|service| kept(service))
+                    .filter_map(item_of)
+                    .collect()
+            }),
+        })
+        .collect();
+
+    // **As the blueprint has them** — roadmap task **T205**, D5. Unexpanded in the row, so nothing
+    // here turns a slug back into `{project}`.
+    let next_steps = match crate::blueprints::steps::declared(store, project.id).await? {
+        None => Vec::new(),
+        Some((origin, _)) => {
+            let mut steps = origin.next_steps;
+
+            // **A step with no site, now that there are several** (T204a, D6): it belonged to the
+            // one site its blueprint described, so it goes to the entry with that pattern, or to
+            // the first. Without this, a project that gained a second site by hand would capture
+            // into a file this build refuses to read.
+            if several {
+                let home = origin
+                    .sites
+                    .first()
+                    .map(|site| site.domain_pattern.as_str())
+                    .filter(|pattern| sites.iter().any(|site| site.domain_pattern == *pattern))
+                    .or_else(|| sites.first().map(|site| site.domain_pattern.as_str()))
+                    .map(str::to_owned);
+
+                for step in &mut steps {
+                    if step.site.is_none() {
+                        step.site.clone_from(&home);
+                    }
+                }
+            }
+
+            steps
+        }
+    };
+
+    Ok(BlueprintManifest {
+        // **The lowest schema, because capture never writes an archive** — ADR 0061. `SCHEMA` is
+        // what this build reads, not what a capture holds, and `render` writes several sites at
+        // 3 whatever this says (T204a).
+        schema: 1,
+        blueprint: Header {
+            name: asked.name.to_owned(),
+            description: asked.description.to_owned(),
+            created_at: asked.created_at.to_owned(),
+            created_on: Provenance {
+                os: asked.os.to_owned(),
+                version: asked.version.to_owned(),
+            },
+        },
+        runtimes: runtimes(store, project, php_version.as_ref()).await?,
+        sites,
+        services,
         php: match php_version.as_ref() {
             Some(version) => extensions(store, version).await?,
             None => None,
@@ -179,12 +224,61 @@ pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManife
         // **Never.** Capture does not invent a command to execute on somebody else's machine.
         scaffold: None,
         archive: None,
-        // **As the blueprint has them** — roadmap task **T205**, D5. Unexpanded in the row, so
-        // nothing here turns a slug back into `{project}`.
-        next_steps: crate::blueprints::steps::declared(store, project.id)
-            .await?
-            .map(|(manifest, _)| manifest.next_steps)
-            .unwrap_or_default(),
+        next_steps,
+    })
+}
+
+/// Whether a link is the project's own: not a front end, which belongs to the machine, and not a
+/// php-fpm pool, which `[runtimes] php` already says.
+fn kept(service: &ServiceId) -> bool {
+    !FRONT_ENDS.contains(&service.name()) && service.name() != POOL
+}
+
+/// The PHP the project's php-fpm sites run, and the pool the first of them names — roadmap task
+/// **T204a**, D6.
+///
+/// # Errors
+///
+/// [`Error::ProjectRunsSeveralPhps`] when they run more than one version.
+async fn one_php(
+    store: &Store,
+    project: &ProjectRecord,
+    records: &[sites::SiteRecord],
+) -> Result<(Option<ServiceId>, Option<mixengine_proto::PackageVersion>)> {
+    let mut first: Option<(ServiceId, Option<mixengine_proto::PackageVersion>)> = None;
+    let mut seen: Vec<(String, String)> = Vec::new();
+
+    for record in records {
+        let SiteKind::PhpFpm { pool: Some(pool) } = &record.kind else {
+            continue;
+        };
+        let version = services::version(store, pool).await?;
+
+        if let Some(version) = &version {
+            seen.push((
+                record.domains.first().cloned().unwrap_or_default(),
+                version.as_str().to_owned(),
+            ));
+        }
+        if first.is_none() {
+            first = Some((pool.clone(), version));
+        }
+    }
+
+    let distinct = seen
+        .iter()
+        .map(|(_, version)| version.as_str())
+        .collect::<std::collections::BTreeSet<_>>();
+    if distinct.len() > 1 {
+        return Err(Error::ProjectRunsSeveralPhps {
+            project: project.name.clone(),
+            sites: seen,
+        });
+    }
+
+    Ok(match first {
+        Some((pool, version)) => (Some(pool), version),
+        None => (None, None),
     })
 }
 
@@ -480,7 +574,7 @@ mod tests {
             .await
             .expect("a capture");
 
-        let site = manifest.site.as_ref().expect("a site");
+        let site = manifest.sites.first().expect("a site");
         assert_eq!(site.domain_pattern, "{project}.test");
         assert_eq!(site.aliases, vec!["api.{project}.test".to_owned()]);
         assert_eq!(site.doc_root, "public");
@@ -529,22 +623,190 @@ mod tests {
         assert_eq!(manifest.services[0].instance.as_deref(), Some(PER_PROJECT));
     }
 
-    /// **D5.** Two sites in one project would be silently reduced to one, so it is refused instead —
-    /// and the refusal names them, because "this project has two sites" sends somebody hunting.
+    /// **T204a, D6.** Every site, each with its own links; `[[services]]` the union.
     #[tokio::test]
-    async fn a_project_with_two_sites_is_refused_and_both_are_named() {
+    async fn a_project_with_several_sites_captures_them_all() {
         let (_temp, store, project) = home("blog").await;
         a_php_pool(&store, "8.2.23", "{}").await;
+        a_package(&store, 1, "mariadb", "11.4.3", "main").await;
+        a_package(&store, 2, "redis", "7.2.5", "main").await;
+        a_site(
+            &store,
+            &project,
+            &["blog.test"],
+            &["mariadb@main", "redis@main"],
+        )
+        .await;
+        a_site(&store, &project, &["api.blog.test"], &["redis@main"]).await;
+        a_site(&store, &project, &["docs.blog.test"], &[]).await;
+
+        let manifest = capture(&store, &asked(&project, "blog-stack"))
+            .await
+            .expect("a capture");
+
+        // In primary-domain order, `sites::records`' own, which makes two captures one file.
+        let patterns: Vec<_> = manifest
+            .sites
+            .iter()
+            .map(|site| site.domain_pattern.as_str())
+            .collect();
+        assert_eq!(
+            patterns,
+            [
+                "api.{project}.test",
+                "{project}.test",
+                "docs.{project}.test"
+            ]
+        );
+        assert_eq!(manifest.sites[0].services, Some(vec!["redis".to_owned()]));
+        assert_eq!(
+            manifest.sites[1].services,
+            Some(vec!["mariadb".to_owned(), "redis".to_owned()])
+        );
+        assert_eq!(manifest.sites[2].services, Some(Vec::new()));
+
+        let names: Vec<_> = manifest
+            .services
+            .iter()
+            .map(|service| service.name.as_str())
+            .collect();
+        assert_eq!(names, ["redis", "mariadb"], "in order of first appearance");
+
+        let rendered = render(&manifest);
+        assert!(rendered.starts_with("schema = 3"), "{rendered}");
+        let read_back = crate::blueprints::manifest::read(&rendered).expect("it reads back");
+        assert_eq!(read_back.sites, manifest.sites);
+        assert_eq!(read_back.services, manifest.services);
+    }
+
+    /// **T204a, D3 and D6.** Two links to one package name the instance, as the file writes it.
+    #[tokio::test]
+    async fn two_instances_of_one_package_are_linked_by_instance() {
+        let (_temp, store, project) = home("blog").await;
+        a_php_pool(&store, "8.2.23", "{}").await;
+        a_package(&store, 1, "mariadb", "11.4.3", "main").await;
+        sqlx::query(
+            "INSERT INTO services (id, package_id, instance_name, state, port)
+             VALUES ('mariadb@blog', 1, 'blog', 'stopped', 3307)",
+        )
+        .execute(store.pool())
+        .await
+        .expect("a dedicated instance");
+        a_site(&store, &project, &["blog.test"], &["mariadb@main"]).await;
+        a_site(&store, &project, &["api.blog.test"], &["mariadb@blog"]).await;
+
+        let manifest = capture(&store, &asked(&project, "blog-stack"))
+            .await
+            .expect("a capture");
+
+        let links = |pattern: &str| {
+            manifest
+                .sites
+                .iter()
+                .find(|site| site.domain_pattern == pattern)
+                .and_then(|site| site.services.clone())
+        };
+        assert_eq!(
+            links("{project}.test"),
+            Some(vec!["mariadb@main".to_owned()])
+        );
+        assert_eq!(
+            links("api.{project}.test"),
+            Some(vec![format!("mariadb@{PER_PROJECT}")])
+        );
+        crate::blueprints::manifest::read(&render(&manifest)).expect("a file this build reads");
+    }
+
+    /// **T204a, D6.** A blueprint has one PHP, so two are refused and both are named.
+    #[tokio::test]
+    async fn sites_on_two_phps_are_refused_naming_both() {
+        let (_temp, store, project) = home("blog").await;
+        a_php_pool(&store, "8.2.23", "{}").await;
+        sqlx::query(
+            r#"INSERT INTO runtime_installs
+                   (id, kind, version, channel, install_path, installed_at, size_bytes, source_url,
+                    sha256)
+               VALUES (2, 'php', '8.3.12', 'stable', '/runtimes/php83', '2026-09-01T00:00:00Z', 1,
+                       'https://example.invalid/php', 'ab')"#,
+        )
+        .execute(store.pool())
+        .await
+        .expect("a second runtime");
+        sqlx::query(
+            "INSERT INTO services (id, runtime_install_id, instance_name, state, port)
+             VALUES ('php-fpm@8.3.12', 2, '8.3.12', 'stopped', 9001)",
+        )
+        .execute(store.pool())
+        .await
+        .expect("a second pool");
+
         a_site(&store, &project, &["blog.test"], &[]).await;
-        a_site(&store, &project, &["shop.test"], &[]).await;
+        crate::sites::create(
+            &store,
+            &crate::sites::NewSite {
+                owner: crate::sites::SiteOwner::Project(project.id),
+                doc_root: "public".to_owned(),
+                kind: SiteKind::PhpFpm {
+                    pool: Some(ServiceId::parse("php-fpm@8.3.12").expect("an id")),
+                },
+                https_enabled: true,
+                https_redirect: false,
+                domains: vec!["api.blog.test".to_owned()],
+                services: Vec::new(),
+                routes: Vec::new(),
+            },
+        )
+        .await
+        .expect("a site on the other PHP");
 
         let error = capture(&store, &asked(&project, "blog-stack"))
             .await
-            .expect_err("it refuses");
+            .expect_err("refused");
 
+        assert!(matches!(error, Error::ProjectRunsSeveralPhps { .. }));
         let message = error.to_string();
-        assert!(message.contains("blog.test"), "{message}");
-        assert!(message.contains("shop.test"), "{message}");
+        for part in ["blog.test", "8.2.23", "api.blog.test", "8.3.12"] {
+            assert!(message.contains(part), "{part}: {message}");
+        }
+    }
+
+    /// **T204a, D6.** Steps from a one-site blueprint go to the site that blueprint described, so
+    /// a project that later gained a site still captures into a file this build reads.
+    #[tokio::test]
+    async fn steps_from_a_one_site_blueprint_are_given_its_site() {
+        let (_temp, store, project) = home("blog").await;
+        a_php_pool(&store, "8.2.23", "{}").await;
+        a_site(&store, &project, &["admin.blog.test"], &[]).await;
+        a_site(&store, &project, &["blog.test"], &[]).await;
+
+        let origin = "schema = 1\n\n[blueprint]\nname = \"one\"\ncreated_at = \"x\"\n\n\
+            [blueprint.created_on]\nos = \"any\"\nversion = \"0\"\n\n\
+            [site]\nkind = \"php-fpm\"\ndomain_pattern = \"{project}.test\"\n\n\
+            [[next_steps]]\nkind = \"once\"\nrun = \"php artisan migrate\"\n";
+        sqlx::query(
+            "INSERT INTO blueprints (id, name, manifest_toml, created_at, source, trusted)
+             VALUES ('one', 'one', ?, 'x', 'captured', 1)",
+        )
+        .bind(origin)
+        .execute(store.pool())
+        .await
+        .expect("a blueprint row");
+        sqlx::query("UPDATE projects SET blueprint_id = 'one' WHERE id = ?")
+            .bind(project.id)
+            .execute(store.pool())
+            .await
+            .expect("the project points at it");
+
+        let manifest = capture(&store, &asked(&project, "again"))
+            .await
+            .expect("a capture");
+
+        assert_eq!(
+            manifest.next_steps[0].site.as_deref(),
+            Some("{project}.test"),
+            "the origin's site, not the first one listed"
+        );
+        crate::blueprints::manifest::read(&render(&manifest)).expect("a file this build reads");
     }
 
     /// **D4a.** A version this machine's default decided is this machine's, not the project's.
@@ -586,10 +848,7 @@ mod tests {
             .await
             .expect("a capture");
 
-        assert_eq!(
-            manifest.site.expect("a site").domain_pattern,
-            "shop-staging.test"
-        );
+        assert_eq!(manifest.sites[0].domain_pattern, "shop-staging.test");
     }
 
     /// **D6, and the test the whole task is measured by.** Written against the rendered string,
@@ -600,11 +859,15 @@ mod tests {
         a_php_pool(&store, "8.2.23", r#"{"xdebug":true}"#).await;
         a_package(&store, 1, "mariadb", "11.4.3", "main").await;
         a_site(&store, &project, &["blog.test"], &["mariadb@main"]).await;
+        // **Two sites** — roadmap task **T204a**: `[[sites]]` and its `services` are a second
+        // shape of the file, and they are held to the same rule.
+        a_site(&store, &project, &["api.blog.test"], &["mariadb@main"]).await;
 
         let manifest = capture(&store, &asked(&project, "blog-stack"))
             .await
             .expect("a capture");
         let rendered = render(&manifest);
+        assert!(rendered.contains("[[sites]]"), "{rendered}");
 
         let home_directory = temp.path().display().to_string();
         assert!(

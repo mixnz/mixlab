@@ -6,12 +6,13 @@ import type { ProjectDetail } from "@mixengine/api";
 import NextStepsPanel from "../../components/NextStepsPanel";
 import { declaredSiteRows } from "../../declaredSites";
 import { formatPins } from "../../projectPins";
+import type { SiteAddresses } from "../../siteGroups";
 import styles from "./Projects.module.css";
 
 interface Props {
   detail: ProjectDetail;
-  /** The address of the project's first site, for the steps' `open` rows. */
-  siteUrl: string | null;
+  /** Where the steps' `open` rows go: each step's own site, else the project's first — T204a. */
+  addresses: SiteAddresses;
   terminalVisible: boolean;
   onOpenDashboard: () => void;
   /** The declared site being created, while it is. */
@@ -26,7 +27,7 @@ interface Props {
  */
 export default function ProjectDetailPanel({
   detail,
-  siteUrl,
+  addresses,
   terminalVisible,
   onOpenDashboard,
   adopting,
@@ -111,7 +112,7 @@ export default function ProjectDetailPanel({
           <NextStepsPanel
             project={detail.project.name}
             root={detail.project.root}
-            siteUrl={siteUrl}
+            addresses={addresses}
             steps={detail.next_steps}
             terminalVisible={terminalVisible}
             onShowDatabase={onOpenDashboard}

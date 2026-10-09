@@ -1,0 +1,36 @@
+schema = 3
+
+# Two static sites in one project — roadmap task **T204a**.
+#
+# **Static, so the suite stays offline**, for the reason `with-a-site-and-a-service.toml` gives, and
+# `fakeservice` so a link has something to point at. The first site links it and has an alias; the
+# second links nothing and has none — which is what a site's own `services` (D3) and a site's own
+# names (D4) are about.
+
+[blueprint]
+name = "with-two-sites"
+description = "Two static sites, one linking a fixture service"
+created_at = "2026-10-09T00:00:00Z"
+
+[blueprint.created_on]
+os = "windows"
+version = "0.0.6"
+
+[[sites]]
+kind = "static"
+doc_root = ""
+https = true
+domain_pattern = "{project}.test"
+aliases = ["www.{project}.test"]
+services = ["fakeservice"]
+
+[[sites]]
+kind = "static"
+doc_root = ""
+https = true
+domain_pattern = "docs.{project}.test"
+services = []
+
+[[services]]
+name = "fakeservice"
+instance = "per-project"

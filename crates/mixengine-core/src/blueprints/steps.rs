@@ -30,6 +30,8 @@ pub fn expanded(steps: &[NextStep], project: &str) -> Vec<NextStep> {
             run: expand(&step.run),
             path: expand(&step.path),
             note: expand(&step.note),
+            // A domain pattern, and a client opens the domain — roadmap task **T204a**, D5.
+            site: expand(&step.site),
             ..step.clone()
         })
         .collect()
@@ -100,6 +102,16 @@ mod tests {
             credentials: false,
             site: None,
         }
+    }
+
+    /// **T204a, D5.** A step's site is a domain pattern, and a client opens the domain.
+    #[test]
+    fn a_steps_site_is_expanded_with_the_rest() {
+        let mut step = once("npm run dev");
+        step.site = Some("vite.{project}.test".to_owned());
+
+        let steps = expanded(&[step], "My Blog");
+        assert_eq!(steps[0].site.as_deref(), Some("vite.my-blog.test"));
     }
 
     #[test]

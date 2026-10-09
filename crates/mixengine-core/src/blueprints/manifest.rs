@@ -1,5 +1,5 @@
-//! The blueprint manifest: `schema`, `[blueprint]`, `[runtimes]`, `[site]`, `[[services]]`,
-//! `[php]`, `[scaffold]` and `[[next_steps]]`.
+//! The blueprint manifest: `schema`, `[blueprint]`, `[runtimes]`, `[site]` or `[[sites]]`,
+//! `[[services]]`, `[php]`, `[scaffold]` and `[[next_steps]]`.
 //!
 //! **Its own type rather than `mixengine.toml`'s** — the T77 design, D1. The two files overlap but
 //! are not one: a blueprint carries `domain_pattern` where a project manifest carries `domain` and
@@ -22,7 +22,10 @@ use mixengine_proto::{RuntimeKind, SiteKind, VersionConstraint};
 use crate::{Error, Result};
 
 /// The highest schema this build reads. What it writes is [`schema_of`]'s answer (ADR 0061).
-pub const SCHEMA: u32 = 2;
+pub const SCHEMA: u32 = 3;
+
+/// The schema a blueprint with several sites is written at — roadmap task **T204a**, D2.
+pub const SEVERAL_SITES: u32 = 3;
 
 /// The instance name that means "one of this project's own".
 ///
@@ -48,8 +51,9 @@ pub struct BlueprintManifest {
     /// The languages it needs, by kind.
     pub runtimes: BTreeMap<RuntimeKind, VersionConstraint>,
 
-    /// What is served, when the blueprint describes a site at all.
-    pub site: Option<BlueprintSite>,
+    /// What is served, in the order the file lists it: `[site]` as one entry, `[[sites]]` as its
+    /// entries — roadmap task **T204a**, D1.
+    pub sites: Vec<BlueprintSite>,
 
     /// The services it needs, in the order the file lists them.
     pub services: Vec<BlueprintService>,
@@ -132,6 +136,10 @@ pub struct BlueprintSite {
     /// pool answers is a fact about the machine a blueprint was taken from, and the receiving
     /// machine decides its own.
     pub routes: Vec<mixengine_proto::SiteRoute>,
+
+    /// The `[[services]]` entries this site links, by `name` or `name@instance` — roadmap task
+    /// **T204a**, D3. [`None`] links every one, which is what `[site]` always means.
+    pub services: Option<Vec<String>>,
 }
 
 /// One `[[services]]` entry.
@@ -242,6 +250,8 @@ struct RawManifest {
     #[serde(default)]
     site: Option<BlueprintSite>,
     #[serde(default)]
+    sites: Option<Vec<BlueprintSite>>,
+    #[serde(default)]
     services: Vec<BlueprintService>,
     #[serde(default)]
     php: Option<Php>,
@@ -344,8 +354,47 @@ impl TryFrom<RawManifest> for BlueprintManifest {
             },
         };
 
+        let sites = match (raw.site, raw.sites) {
+            (Some(_), Some(_)) => {
+                return Err(
+                    "the file has both [site] and [[sites]]; a blueprint uses one".to_owned(),
+                );
+            }
+            (Some(site), None) => {
+                if site.services.is_some() {
+                    return Err(
+                        "[site] links every [[services]] entry; `services` belongs on a \
+                                [[sites]] entry"
+                            .to_owned(),
+                    );
+                }
+                vec![site]
+            }
+            (None, Some(sites)) => {
+                // **An older build would apply this as a project with no site** (T204a, D1), so
+                // the file has to say which builds can read it.
+                if raw.schema < SEVERAL_SITES {
+                    return Err(format!(
+                        "[[sites]] needs schema = {SEVERAL_SITES}, and this file says {}",
+                        raw.schema
+                    ));
+                }
+                sites
+            }
+            (None, None) => Vec::new(),
+        };
+
+        checked_names(&sites)?;
+        for (index, site) in sites.iter().enumerate() {
+            for item in site.services.iter().flatten() {
+                linked_service(item, &raw.services)
+                    .map_err(|reason| format!("sites[{}]: {reason}", index + 1))?;
+            }
+        }
+
         for (index, step) in raw.next_steps.iter().enumerate() {
-            checked_step(step).map_err(|reason| format!("next_steps[{}]: {reason}", index + 1))?;
+            checked_step(step, &sites)
+                .map_err(|reason| format!("next_steps[{}]: {reason}", index + 1))?;
         }
 
         checked_dotenv(&raw.services)?;
@@ -354,7 +403,7 @@ impl TryFrom<RawManifest> for BlueprintManifest {
             schema: raw.schema,
             blueprint: raw.blueprint,
             runtimes: raw.runtimes,
-            site: raw.site,
+            sites,
             services: raw.services,
             php: raw.php,
             scaffold,
@@ -397,13 +446,91 @@ fn checked_dotenv(services: &[BlueprintService]) -> std::result::Result<(), Stri
     Ok(())
 }
 
+/// T204a's D1: no name answers for two entries, or twice in one.
+fn checked_names(sites: &[BlueprintSite]) -> std::result::Result<(), String> {
+    let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
+
+    for (index, site) in sites.iter().enumerate() {
+        for name in std::iter::once(&site.domain_pattern).chain(&site.aliases) {
+            if let Some(first) = seen.insert(name.as_str(), index + 1) {
+                return Err(format!(
+                    "sites[{first}] and sites[{}] both answer to {name}",
+                    index + 1
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// The `[[services]]` entry one `services` item names — roadmap task **T204a**, D3: the entry
+/// whose `name` it is, or, written `name@instance`, the one whose `instance` is that as written.
+///
+/// # Errors
+///
+/// The reason, for an item that names no entry or names two.
+pub fn linked_service<'a>(
+    item: &str,
+    services: &'a [BlueprintService],
+) -> std::result::Result<&'a BlueprintService, String> {
+    let (name, instance) = match item.split_once('@') {
+        Some((name, instance)) => (name, Some(instance)),
+        None => (item, None),
+    };
+    let mut found = services.iter().filter(|service| {
+        service.name == name
+            && instance.is_none_or(|instance| service.instance.as_deref() == Some(instance))
+    });
+
+    match (found.next(), found.next()) {
+        (Some(one), None) => Ok(one),
+        (None, _) => Err(format!(
+            "services names {item}, and no [[services]] entry is {item}"
+        )),
+        (Some(_), Some(_)) => Err(format!(
+            "services names {item}, and two [[services]] entries are {name}; name one as \
+             {name}@<instance>"
+        )),
+    }
+}
+
+/// Every entry's `domain_pattern`, for a refusal to list.
+fn patterns(sites: &[BlueprintSite]) -> String {
+    sites
+        .iter()
+        .map(|site| site.domain_pattern.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 /// D4's rules for one step.
-fn checked_step(step: &mixengine_proto::NextStep) -> std::result::Result<(), String> {
+fn checked_step(
+    step: &mixengine_proto::NextStep,
+    sites: &[BlueprintSite],
+) -> std::result::Result<(), String> {
     use mixengine_proto::NextStepKind;
 
-    // **Refused until a blueprint can have several sites** — T204a defines what it names.
-    if step.site.is_some() {
-        return Err("`site` names one of several sites, and this blueprint has one".to_owned());
+    // **With several sites every step belongs to one** — roadmap task **T204a**, D5: a `serve`
+    // runs one site's program and an `open` opens one site's address, so a client is never left
+    // to guess. Named by `domain_pattern`, the identity an entry already has.
+    match (&step.site, sites.len() > 1) {
+        (Some(_), false) => {
+            return Err("`site` names one of several sites, and this blueprint has one".to_owned());
+        }
+        (None, true) => {
+            return Err(format!(
+                "`site` is required when a blueprint has several sites: one of {}",
+                patterns(sites)
+            ));
+        }
+        (Some(named), true) if !sites.iter().any(|site| site.domain_pattern == *named) => {
+            return Err(format!(
+                "`site` {named} is no site's domain_pattern; the sites are {}",
+                patterns(sites)
+            ));
+        }
+        _ => {}
     }
 
     match step.kind {
@@ -456,13 +583,25 @@ fn checked_run(run: &str) -> std::result::Result<(), String> {
     Ok(())
 }
 
+/// Whether the sites are written as `[[sites]]` — roadmap task **T204a**, D2: several of them, or
+/// one whose links `[site]` cannot say.
+#[must_use]
+pub fn writes_sites_table(manifest: &BlueprintManifest) -> bool {
+    manifest.sites.len() > 1 || manifest.sites.iter().any(|site| site.services.is_some())
+}
+
 /// The schema a manifest is written at: the lowest that holds it (ADR 0061).
 ///
 /// **A key that changes what an apply does raises it; a key that only informs does not.** An
 /// archive and a `dotenv` change the apply, so either is schema 2 (T205, T205a); `[[next_steps]]`
-/// informs, so it is invisible here.
+/// informs, so it is invisible here. Several sites change what an apply makes — an older build
+/// would make a project with none — so `[[sites]]` is schema 3 (T204a).
 #[must_use]
 pub fn schema_of(manifest: &BlueprintManifest) -> u32 {
+    if writes_sites_table(manifest) {
+        return SEVERAL_SITES;
+    }
+
     let offers_dotenv = manifest
         .services
         .iter()
@@ -507,6 +646,24 @@ impl<'de> serde::Deserialize<'de> for BlueprintSite {
             .transpose()?
             .unwrap_or_default();
 
+        // **Absent and empty are different** — roadmap task **T204a**, D3: absent links every
+        // `[[services]]` entry, `[]` links none.
+        let services = table
+            .get("services")
+            .map(|value| {
+                value
+                    .as_array()
+                    .ok_or_else(|| D::Error::custom("services is a list of service names"))?
+                    .iter()
+                    .map(|item| {
+                        item.as_str()
+                            .map(str::to_owned)
+                            .ok_or_else(|| D::Error::custom("a service is named by a string"))
+                    })
+                    .collect::<std::result::Result<Vec<_>, _>>()
+            })
+            .transpose()?;
+
         Ok(Self {
             kind: SiteKind::deserialize(table.clone()).map_err(D::Error::custom)?,
             doc_root: text("doc_root").unwrap_or_default(),
@@ -534,6 +691,7 @@ impl<'de> serde::Deserialize<'de> for BlueprintSite {
                 })
                 .transpose()?
                 .unwrap_or_default(),
+            services,
         })
     }
 }
@@ -618,75 +776,15 @@ pub fn render(manifest: &BlueprintManifest) -> String {
         document["runtimes"] = Item::Table(runtimes);
     }
 
-    if let Some(site) = &manifest.site {
-        let mut table = Table::new();
-
-        // The kind renders flat — `kind = "php-fpm"` beside whatever that kind carries — and it is
-        // serialised through `toml::Value` so that one spelling of that shape exists, the same one
-        // the reader above accepts.
-        if let Ok(toml::Value::Table(flat)) = toml::Value::try_from(&site.kind) {
-            for (key, item) in flat {
-                match item {
-                    toml::Value::String(text) => table[key.as_str()] = value(text),
-                    toml::Value::Integer(number) => table[key.as_str()] = value(number),
-                    toml::Value::Boolean(flag) => table[key.as_str()] = value(flag),
-                    // Nothing else is a `SiteKind` payload today, and a variant that grew one would
-                    // rather be missing here — and caught by the round-trip test — than rendered as
-                    // something the reader cannot take back.
-                    _ => {}
-                }
-            }
+    if writes_sites_table(manifest) {
+        // **Several sites, or one naming its links** — roadmap task **T204a**, D2.
+        let mut sites = toml_edit::ArrayOfTables::new();
+        for site in &manifest.sites {
+            sites.push(site_table(site));
         }
-
-        table["doc_root"] = value(&site.doc_root);
-        table["https"] = value(site.https);
-        table["domain_pattern"] = value(&site.domain_pattern);
-
-        if !site.aliases.is_empty() {
-            let mut aliases = Array::new();
-            for alias in &site.aliases {
-                aliases.push(alias.as_str());
-            }
-            table["aliases"] = value(aliases);
-        }
-
-        // **After the scalars**, on this function's own reason for being hand-built: TOML puts
-        // tables after the values of the table they sit in, and an array of tables written before
-        // `doc_root` would move every key after it into the wrong table — roadmap task **T135**.
-        if !site.routes.is_empty() {
-            let mut routes = toml_edit::ArrayOfTables::new();
-
-            for route in &site.routes {
-                let mut entry = Table::new();
-                entry["path"] = value(route.path.as_str());
-
-                // Exhaustive, so a fourth target is a compile error here rather than a key silently
-                // missing from a published manifest.
-                match &route.target {
-                    mixengine_proto::RouteTarget::Proxy { upstream } => {
-                        entry["target"] = value("proxy");
-                        entry["upstream"] = value(upstream.as_str());
-                    }
-                    mixengine_proto::RouteTarget::PhpFpm { pool } => {
-                        entry["target"] = value("php-fpm");
-
-                        if let Some(pool) = pool {
-                            entry["pool"] = value(pool.as_str());
-                        }
-                    }
-                    mixengine_proto::RouteTarget::Static { root } => {
-                        entry["target"] = value("static");
-                        entry["root"] = value(root.as_str());
-                    }
-                }
-
-                routes.push(entry);
-            }
-
-            table["routes"] = Item::ArrayOfTables(routes);
-        }
-
-        document["site"] = Item::Table(table);
+        document["sites"] = Item::ArrayOfTables(sites);
+    } else if let Some(site) = manifest.sites.first() {
+        document["site"] = Item::Table(site_table(site));
     }
 
     if !manifest.services.is_empty() {
@@ -786,6 +884,9 @@ pub fn render(manifest: &BlueprintManifest) -> String {
             if step.credentials {
                 entry["credentials"] = value(true);
             }
+            if let Some(site) = &step.site {
+                entry["site"] = value(site);
+            }
             steps.push(entry);
         }
 
@@ -793,6 +894,90 @@ pub fn render(manifest: &BlueprintManifest) -> String {
     }
 
     document.to_string()
+}
+
+/// One site as its table: `[site]`, or one `[[sites]]` entry.
+fn site_table(site: &BlueprintSite) -> toml_edit::Table {
+    use toml_edit::{Array, Item, Table, value};
+
+    let mut table = Table::new();
+
+    // The kind renders flat — `kind = "php-fpm"` beside whatever that kind carries — and it is
+    // serialised through `toml::Value` so that one spelling of that shape exists, the same one
+    // the reader above accepts.
+    if let Ok(toml::Value::Table(flat)) = toml::Value::try_from(&site.kind) {
+        for (key, item) in flat {
+            match item {
+                toml::Value::String(text) => table[key.as_str()] = value(text),
+                toml::Value::Integer(number) => table[key.as_str()] = value(number),
+                toml::Value::Boolean(flag) => table[key.as_str()] = value(flag),
+                // Nothing else is a `SiteKind` payload today, and a variant that grew one would
+                // rather be missing here — and caught by the round-trip test — than rendered as
+                // something the reader cannot take back.
+                _ => {}
+            }
+        }
+    }
+
+    table["doc_root"] = value(&site.doc_root);
+    table["https"] = value(site.https);
+    table["domain_pattern"] = value(&site.domain_pattern);
+
+    if !site.aliases.is_empty() {
+        let mut aliases = Array::new();
+        for alias in &site.aliases {
+            aliases.push(alias.as_str());
+        }
+        table["aliases"] = value(aliases);
+    }
+
+    // **The links, when the site names them** — roadmap task **T204a**, D3. A scalar, so before
+    // the routes for the reason the next comment gives.
+    if let Some(services) = &site.services {
+        let mut links = Array::new();
+        for item in services {
+            links.push(item.as_str());
+        }
+        table["services"] = value(links);
+    }
+
+    // **After the scalars**, on [`render`]'s own reason for being hand-built: TOML puts
+    // tables after the values of the table they sit in, and an array of tables written before
+    // `doc_root` would move every key after it into the wrong table — roadmap task **T135**.
+    if !site.routes.is_empty() {
+        let mut routes = toml_edit::ArrayOfTables::new();
+
+        for route in &site.routes {
+            let mut entry = Table::new();
+            entry["path"] = value(route.path.as_str());
+
+            // Exhaustive, so a fourth target is a compile error here rather than a key silently
+            // missing from a published manifest.
+            match &route.target {
+                mixengine_proto::RouteTarget::Proxy { upstream } => {
+                    entry["target"] = value("proxy");
+                    entry["upstream"] = value(upstream.as_str());
+                }
+                mixengine_proto::RouteTarget::PhpFpm { pool } => {
+                    entry["target"] = value("php-fpm");
+
+                    if let Some(pool) = pool {
+                        entry["pool"] = value(pool.as_str());
+                    }
+                }
+                mixengine_proto::RouteTarget::Static { root } => {
+                    entry["target"] = value("static");
+                    entry["root"] = value(root.as_str());
+                }
+            }
+
+            routes.push(entry);
+        }
+
+        table["routes"] = Item::ArrayOfTables(routes);
+    }
+
+    table
 }
 
 #[cfg(test)]
@@ -817,14 +1002,15 @@ mod tests {
             )]
             .into_iter()
             .collect(),
-            site: Some(BlueprintSite {
+            sites: vec![BlueprintSite {
                 kind: SiteKind::PhpFpm { pool: None },
                 doc_root: "public".to_owned(),
                 https: true,
                 domain_pattern: "{project}.test".to_owned(),
                 aliases: vec!["api.{project}.test".to_owned()],
                 routes: Vec::new(),
-            }),
+                services: None,
+            }],
             services: vec![BlueprintService {
                 name: "mariadb".to_owned(),
                 version: Some(VersionConstraint::parse("11.4.3").expect("a constraint")),
@@ -933,11 +1119,11 @@ command = "composer create-project laravel/laravel {project}"
         ];
 
         let mut manifest = a_manifest();
-        manifest.site.as_mut().expect("a site").routes = routes.clone();
+        manifest.sites.first_mut().expect("a site").routes = routes.clone();
 
         let rendered = render(&manifest);
         let read_back = read(&rendered).expect("it parses");
-        let site = read_back.site.as_ref().expect("a site");
+        let site = read_back.sites.first().expect("a site");
 
         assert_eq!(site.routes, routes);
         assert_eq!(
@@ -1023,14 +1209,13 @@ command = "composer create-project laravel/laravel {project}"
             SiteKind::NodeApp { port: 3000 },
         ] {
             let mut manifest = a_manifest();
-            manifest.site.as_mut().expect("a site").kind = kind.clone();
+            manifest.sites.first_mut().expect("a site").kind = kind.clone();
 
             let rendered = render(&manifest);
             let read_back = read(&rendered).expect("it parses");
 
             assert_eq!(
-                read_back.site.expect("a site").kind,
-                kind,
+                read_back.sites[0].kind, kind,
                 "{kind:?} did not survive:\n{rendered}"
             );
         }
@@ -1067,12 +1252,12 @@ command = "composer create-project laravel/laravel {project}"
     /// A file from a build that knew more than this one is refused by name rather than half-read.
     #[test]
     fn a_newer_schema_is_refused_by_name() {
-        let text = render(&a_manifest()).replace("schema = 1", "schema = 3");
+        let text = render(&a_manifest()).replace("schema = 1", "schema = 4");
 
         assert!(
             matches!(
                 read(&text),
-                Err(Error::UnknownBlueprintSchema { schema: 3, ref name }) if name == "laravel-php82"
+                Err(Error::UnknownBlueprintSchema { schema: 4, ref name }) if name == "laravel-php82"
             ),
             "{:?}",
             read(&text)
@@ -1373,8 +1558,193 @@ doc_root = "public"
     }
 
     #[test]
-    fn a_site_on_a_step_is_refused_until_a_blueprint_has_several() {
+    fn a_site_on_a_step_is_refused_when_the_blueprint_has_one() {
         let text = with_steps("[[next_steps]]\nkind = \"once\"\nrun = \"npm i\"\nsite = \"web\"");
         assert!(refusal(&text).contains("site"));
+    }
+
+    fn with_body(schema: u32, body: &str) -> String {
+        format!(
+            "schema = {schema}\n\n[blueprint]\nname = \"x\"\ncreated_at = \"2026-10-09T00:00:00Z\"\n\n\
+             [blueprint.created_on]\nos = \"any\"\nversion = \"0.0.1\"\n\n{body}\n"
+        )
+    }
+
+    const TWO_SITES: &str = "[[sites]]\nkind = \"static\"\ndoc_root = \"\"\nhttps = true\n\
+        domain_pattern = \"{project}.test\"\nservices = [\"redis\"]\n\n\
+        [[sites]]\nkind = \"reverse-proxy\"\nupstream = \"http://127.0.0.1:5173\"\ndoc_root = \"\"\n\
+        https = true\ndomain_pattern = \"vite.{project}.test\"\nservices = []\n\n\
+        [[services]]\nname = \"redis\"\ninstance = \"main\"\n";
+
+    /// **T204a, D1.** `[[sites]]` reads as its entries, in order, each with its own links.
+    #[test]
+    fn several_sites_read_in_order_with_their_links() {
+        let manifest = read(&with_body(3, TWO_SITES)).expect("reads");
+
+        assert_eq!(manifest.sites.len(), 2);
+        assert_eq!(manifest.sites[0].domain_pattern, "{project}.test");
+        assert_eq!(manifest.sites[0].services, Some(vec!["redis".to_owned()]));
+        assert_eq!(manifest.sites[1].services, Some(Vec::new()));
+        assert_eq!(schema_of(&manifest), 3);
+
+        let rendered = render(&manifest);
+        assert!(rendered.contains("[[sites]]"), "{rendered}");
+        assert_eq!(read(&rendered).expect("round trip"), manifest);
+    }
+
+    /// **T204a, D1.** `[site]` is still one entry, and links every service.
+    #[test]
+    fn a_single_site_table_is_one_entry_with_no_list_of_links() {
+        let manifest = read(GALLERY_SHAPED).expect("reads");
+
+        assert_eq!(manifest.sites.len(), 1);
+        assert_eq!(manifest.sites[0].services, None);
+    }
+
+    #[test]
+    fn both_forms_in_one_file_are_refused() {
+        let text = with_body(
+            3,
+            &format!("[site]\nkind = \"static\"\ndomain_pattern = \"a.test\"\n\n{TWO_SITES}"),
+        );
+        let said = refusal(&text);
+
+        assert!(
+            said.contains("[site]") && said.contains("[[sites]]"),
+            "{said}"
+        );
+    }
+
+    /// **T204a, D1.** An older build would apply this as a project with no site.
+    #[test]
+    fn several_sites_under_an_older_schema_are_refused_naming_3() {
+        for schema in [1, 2] {
+            let said = refusal(&with_body(schema, TWO_SITES));
+            assert!(said.contains("schema = 3"), "{said}");
+        }
+    }
+
+    #[test]
+    fn a_name_two_entries_answer_to_is_refused_with_both_positions() {
+        let text = with_body(
+            3,
+            "[[sites]]\nkind = \"static\"\ndomain_pattern = \"{project}.test\"\n\n\
+             [[sites]]\nkind = \"static\"\ndomain_pattern = \"api.{project}.test\"\n\
+             aliases = [\"{project}.test\"]\n",
+        );
+        let said = refusal(&text);
+
+        assert!(
+            said.contains("sites[1]") && said.contains("sites[2]"),
+            "{said}"
+        );
+    }
+
+    /// **T204a, D3.** An item names one `[[services]]` entry, by name or by `name@instance`.
+    #[test]
+    fn a_link_names_exactly_one_service() {
+        let services = |item: &str| {
+            with_body(
+                3,
+                &format!(
+                    "[[sites]]\nkind = \"static\"\ndomain_pattern = \"a.test\"\nservices = [{item}]\n\n\
+                     [[sites]]\nkind = \"static\"\ndomain_pattern = \"b.test\"\n\n\
+                     [[services]]\nname = \"mariadb\"\ninstance = \"main\"\n\n\
+                     [[services]]\nname = \"mariadb\"\ninstance = \"per-project\"\n"
+                ),
+            )
+        };
+
+        assert!(refusal(&services("\"redis\"")).contains("redis"));
+        assert!(refusal(&services("\"mariadb\"")).contains("mariadb@"));
+        assert!(read(&services("\"mariadb@per-project\"")).is_ok());
+    }
+
+    #[test]
+    fn services_on_a_single_site_table_is_refused() {
+        let text = with_body(
+            1,
+            "[site]\nkind = \"static\"\ndomain_pattern = \"a.test\"\nservices = []\n",
+        );
+
+        assert!(refusal(&text).contains("services"));
+    }
+
+    /// **T204a, D2.** One entry with no links is a `[site]` again, at the lowest schema.
+    #[test]
+    fn one_entry_without_links_renders_as_a_single_site_table() {
+        let text = with_body(
+            3,
+            "[[sites]]\nkind = \"static\"\ndomain_pattern = \"a.test\"\n",
+        );
+        let manifest = read(&text).expect("reads");
+        let rendered = render(&manifest);
+
+        assert_eq!(schema_of(&manifest), 1);
+        assert!(
+            rendered.contains("[site]") && !rendered.contains("[[sites]]"),
+            "{rendered}"
+        );
+    }
+
+    /// **T204a, D2.** One entry naming its links keeps them, so it stays `[[sites]]` at 3.
+    #[test]
+    fn one_entry_with_links_stays_a_list() {
+        let text = with_body(
+            3,
+            "[[sites]]\nkind = \"static\"\ndomain_pattern = \"a.test\"\nservices = []\n",
+        );
+        let manifest = read(&text).expect("reads");
+
+        assert_eq!(schema_of(&manifest), 3);
+        assert_eq!(read(&render(&manifest)).expect("round trip"), manifest);
+    }
+
+    /// **T204a, D2.** Routes nest under their own entry, after its links.
+    #[test]
+    fn a_routed_entry_round_trips_among_several() {
+        let mut manifest = read(&with_body(3, TWO_SITES)).expect("reads");
+        manifest.sites[0].routes = vec![mixengine_proto::SiteRoute {
+            path: "/api".to_owned(),
+            target: mixengine_proto::RouteTarget::Proxy {
+                upstream: "http://127.0.0.1:3000".to_owned(),
+            },
+        }];
+
+        let rendered = render(&manifest);
+        assert_eq!(read(&rendered).expect("round trip"), manifest, "{rendered}");
+    }
+
+    #[test]
+    fn a_fourth_schema_is_refused_by_name() {
+        let error = read(&with_body(4, "")).expect_err("refused");
+
+        assert!(matches!(
+            error,
+            Error::UnknownBlueprintSchema { schema: 4, .. }
+        ));
+    }
+
+    /// **T204a, D5.** With several sites every step names one, by its `domain_pattern`.
+    #[test]
+    fn a_step_names_its_site_when_there_are_several() {
+        let step = |site: &str| {
+            with_body(
+                3,
+                &format!(
+                    "{TWO_SITES}\n[[next_steps]]\nkind = \"serve\"\nrun = \"npm run dev\"{site}\n"
+                ),
+            )
+        };
+
+        assert!(refusal(&step("")).contains("site"));
+        assert!(refusal(&step("\nsite = \"web\"")).contains("vite.{project}.test"));
+
+        let manifest = read(&step("\nsite = \"vite.{project}.test\"")).expect("reads");
+        assert_eq!(
+            manifest.next_steps[0].site.as_deref(),
+            Some("vite.{project}.test")
+        );
+        assert_eq!(read(&render(&manifest)).expect("round trip"), manifest);
     }
 }

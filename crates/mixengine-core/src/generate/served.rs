@@ -363,8 +363,11 @@ pub(super) async fn served(
     .map_err(|source| store.failure("read", source))?;
 
     let mut roots: BTreeMap<i64, String> = BTreeMap::new();
-    let mut welcome_steps: BTreeMap<i64, Vec<crate::generate::welcome::WelcomeStep>> =
-        BTreeMap::new();
+    // Each step beside the site it names, when it names one — roadmap task **T204a**, D5.
+    let mut welcome_steps: BTreeMap<
+        i64,
+        Vec<(Option<String>, crate::generate::welcome::WelcomeStep)>,
+    > = BTreeMap::new();
 
     for row in rows {
         // A row whose manifest does not read is a page with no steps, never a render that fails:
@@ -378,10 +381,13 @@ pub(super) async fn served(
                 .into_iter()
                 .filter(|step| step.kind != mixengine_proto::NextStepKind::Open)
                 .filter_map(|step| {
-                    Some(crate::generate::welcome::WelcomeStep {
-                        run: step.run?,
-                        note: step.note,
-                    })
+                    Some((
+                        step.site,
+                        crate::generate::welcome::WelcomeStep {
+                            run: step.run?,
+                            note: step.note,
+                        },
+                    ))
                 })
                 .collect();
             welcome_steps.insert(row.id, steps);
@@ -537,9 +543,21 @@ pub(super) async fn served(
             doc_root: under(&root, &record.doc_root),
             doc_root_relative: record.doc_root.clone(),
             steps: match &record.owner {
-                SiteOwner::Project(project) => {
-                    welcome_steps.get(project).cloned().unwrap_or_default()
-                }
+                SiteOwner::Project(project) => welcome_steps
+                    .get(project)
+                    .map(|steps| {
+                        steps
+                            .iter()
+                            // **A step that names a site belongs to that site alone** — roadmap
+                            // task **T204a**, D5. One naming none is the one site's.
+                            .filter(|(site, _)| {
+                                site.as_ref()
+                                    .is_none_or(|site| record.domains.contains(site))
+                            })
+                            .map(|(_, step)| step.clone())
+                            .collect()
+                    })
+                    .unwrap_or_default(),
                 SiteOwner::Extension(_) => Vec::new(),
             },
             domains: record.domains,
@@ -734,6 +752,55 @@ mod tests {
     /// The doc root a template gets is absolute and joined onto the project's root, whatever the row
     /// stores — the row is relative and forward-slashed on every system, and a Caddyfile needs a
     /// path this machine can open.
+    /// **T204a, D5.** Each site's welcome page lists its own steps, not its neighbour's.
+    #[tokio::test]
+    async fn each_site_lists_only_its_own_steps() {
+        let (home, store) = home().await;
+        site(&store, 1, "blog.test", "", "static", "enabled").await;
+        site(&store, 2, "vite.blog.test", "", "static", "enabled").await;
+
+        let manifest = "schema = 3\n\n[blueprint]\nname = \"two\"\ncreated_at = \"x\"\n\n\
+            [blueprint.created_on]\nos = \"any\"\nversion = \"0\"\n\n\
+            [[sites]]\nkind = \"static\"\ndomain_pattern = \"{project}.test\"\n\n\
+            [[sites]]\nkind = \"static\"\ndomain_pattern = \"vite.{project}.test\"\n\n\
+            [[next_steps]]\nkind = \"once\"\nrun = \"composer install\"\nsite = \"{project}.test\"\n\n\
+            [[next_steps]]\nkind = \"serve\"\nrun = \"npm run dev\"\nsite = \"vite.{project}.test\"\n";
+        sqlx::query(
+            "INSERT INTO blueprints (id, name, manifest_toml, created_at, source, trusted)
+             VALUES ('two', 'two', ?, '2026-10-09T00:00:00Z', 'captured', 1)",
+        )
+        .bind(manifest)
+        .execute(store.pool())
+        .await
+        .expect("a blueprint row");
+        sqlx::query("UPDATE projects SET blueprint_id = 'two' WHERE id = 1")
+            .execute(store.pool())
+            .await
+            .expect("the project points at it");
+
+        let served = served(
+            &store,
+            &BTreeMap::new(),
+            &home.path().join("certs"),
+            &BTreeMap::new(),
+        )
+        .await
+        .expect("the sites read");
+
+        let runs = |domain: &str| -> Vec<String> {
+            served
+                .iter()
+                .find(|one| one.primary() == domain)
+                .expect("the site")
+                .steps
+                .iter()
+                .map(|step| step.run.clone())
+                .collect()
+        };
+        assert_eq!(runs("blog.test"), vec!["composer install".to_owned()]);
+        assert_eq!(runs("vite.blog.test"), vec!["npm run dev".to_owned()]);
+    }
+
     #[tokio::test]
     async fn a_doc_root_comes_back_absolute() {
         let (home, store) = home().await;

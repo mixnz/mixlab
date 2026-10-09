@@ -170,7 +170,6 @@ impl Api {
         let mut context = Context {
             project: plan.project.clone(),
             root: PathBuf::from(&plan.root),
-            ensured: Vec::new(),
             ledger: ledger::Ledger::default(),
             consent,
             autostart,
@@ -405,8 +404,6 @@ impl Api {
                 })
                 .await?;
 
-                context.ensured.push(id);
-
                 Ok(StepResult::Done { note: None })
             }
 
@@ -507,6 +504,7 @@ impl Api {
                 doc_root,
                 https,
                 routes,
+                services,
             } => {
                 // **The one place the walk looks ahead** (D14): a site cannot be created nameless,
                 // and the names are read off the plan's own steps rather than expanded a second
@@ -530,8 +528,14 @@ impl Api {
                         kind: Some(kind.clone()),
                         // **The links matter beyond the moment** (D14): a site created without them
                         // has an empty `site_service_links`, and a capture of this project would
-                        // lose every `[[services]]` entry it should have carried.
-                        services: Some(context.ensured.clone()),
+                        // lose every `[[services]]` entry it should have carried. Its own list when
+                        // the blueprint gave one, and otherwise every service the *plan* made sure
+                        // of — a shared instance that was already here is never carried out, and
+                        // is no less this project's (T204a, D3).
+                        services: Some(match services {
+                            Some(listed) => listed.clone(),
+                            None => steps::ensured_in(plan),
+                        }),
                         // **Written with the site, not after it** — roadmap task **T135**. There is
                         // no `AddRoute` step and there should not be: a route is a column of the
                         // site rather than a name the hosts file has to learn, so it costs no
@@ -557,12 +561,22 @@ impl Api {
                     return Ok(StepResult::AlreadyTrue);
                 }
 
+                // **The site this name belongs to** — roadmap task **T204a**, D4: the first
+                // name of its group that already answers. A project may hold several sites, so
+                // its root names none of them; the root is only the answer for a plan with no
+                // group to read, which no plan this build makes is.
+                let mut site = None;
+                for name in steps::group_names(plan, position) {
+                    if name != *domain && self.answers_to(&name).await? {
+                        site = Some(SiteRef::Domain(name));
+                        break;
+                    }
+                }
+
                 self.domains
                     .add(&DomainAdd {
-                        // By the root rather than by a name: the site's own names are what this
-                        // step is adding to, and a blueprint's project holds exactly one site —
-                        // T77 refuses to capture a project with two.
-                        site: SiteRef::Path(context.root.display().to_string()),
+                        site: site
+                            .unwrap_or_else(|| SiteRef::Path(context.root.display().to_string())),
                         domain: domain.clone(),
                         accept_risky_tld: false,
                     })
@@ -948,7 +962,7 @@ impl Api {
 ///
 /// Reaching the error here means the plan changed underneath this apply — a pair that could not be
 /// spelled is `Blocked` at planning time, and a blocked plan never becomes a job.
-fn identity(package: &str, instance: &str) -> Result<ServiceId, Error> {
+pub(crate) fn identity(package: &str, instance: &str) -> Result<ServiceId, Error> {
     ServiceId::parse(package)
         .ok()
         .filter(|bare| bare.as_str() == instance)

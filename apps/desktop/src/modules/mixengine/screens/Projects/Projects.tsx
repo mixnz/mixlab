@@ -30,7 +30,7 @@ import * as api from "../../api";
 import type { ProjectDetail } from "@mixengine/api";
 import type { ProjectSummary } from "@mixengine/api";
 import { takePendingProjectDetail } from "../../projectsNavigation";
-import { siteUrl } from "../../siteState";
+import { siteAddresses, type SiteAddresses } from "../../siteGroups";
 import ProjectDetailPanel from "./ProjectDetailPanel";
 import ProjectForm from "./ProjectForm";
 import styles from "./Projects.module.css";
@@ -58,8 +58,8 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
    *  under itself, so what someone just clicked is where they are looking. */
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<ProjectDetail | null>(null);
-  /** The address of the shown project's first site, for the steps panel's `open` rows — T205. */
-  const [detailUrl, setDetailUrl] = useState<string | null>(null);
+  /** The shown project's site addresses, for the steps panel's `open` rows — T205, T204a. */
+  const [detailAddresses, setDetailAddresses] = useState<SiteAddresses>({ first: null, byDomain: {} });
   const [deleting, setDeleting] = useState<string | null>(null);
   /** The row whose ⋮ menu is open, and where — the actions used less often live there, as on the
    *  Sites screen, so a row shows what is done every day and nothing else. */
@@ -97,9 +97,8 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
   /** The project's detail, and the address its steps open — read together. */
   async function readDetail(name: string) {
     const [shown, listed] = await Promise.all([api.projectShow(name), api.sites(name)]);
-    const first = listed.sites[0];
     setDetail(shown);
-    setDetailUrl(first === undefined ? null : siteUrl(first));
+    setDetailAddresses(siteAddresses(listed.sites, null));
   }
 
   /** Opens `name`'s row, or closes it when it is the open one. One open at a time. */
@@ -304,7 +303,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
                           {detail?.project.name === row.name ? (
                             <ProjectDetailPanel
                               detail={detail}
-                              siteUrl={detailUrl}
+                              addresses={detailAddresses}
                               terminalVisible={terminalVisible}
                               onOpenDashboard={onOpenDashboard}
                               adopting={adopting}

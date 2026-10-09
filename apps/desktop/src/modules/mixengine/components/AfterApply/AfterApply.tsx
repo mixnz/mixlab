@@ -10,7 +10,7 @@ import type { BlueprintApplied } from "@mixengine/api";
 import { describePlanAction, failedSteps } from "../../blueprintPlan";
 import { openAddress, opensByItself } from "../../nextSteps";
 import { requestProjectDetail } from "../../projectsNavigation";
-import { siteUrl } from "../../siteState";
+import { addressFor, firstSiteDomain, siteAddresses, type SiteAddresses } from "../../siteGroups";
 import ElevationDialog from "../ElevationDialog";
 import NextStepsPanel from "../NextStepsPanel";
 import styles from "./AfterApply.module.css";
@@ -20,7 +20,7 @@ type Phase =
   | { kind: "checking" }
   | { kind: "granting"; pending: unknown[]; canPrompt: boolean; reason?: string | null }
   | { kind: "starting" }
-  | { kind: "ready"; url: string | null };
+  | { kind: "ready"; url: string | null; addresses: SiteAddresses | null };
 
 interface Props {
   /**
@@ -103,7 +103,11 @@ export default function AfterApply({ applied, onFinished, terminalVisible }: Pro
     if (phase.kind !== "ready" || phase.url === null || openedByItself.current) return;
     if (!opensByItself(applied)) return;
     openedByItself.current = true;
-    void openUrl(openAddress(phase.url, nextSteps?.steps ?? []));
+    // An `open` step names its own site when the blueprint has several (T204a, D5).
+    const steps = nextSteps?.steps ?? [];
+    const firstOpen = steps.find((step) => step.kind === "open");
+    const base = (firstOpen && phase.addresses && addressFor(phase.addresses, firstOpen)) || phase.url;
+    void openUrl(openAddress(base, steps));
   }, [phase, applied, nextSteps]);
 
   // The rights pass. Runs exactly once, as soon as this block comes up.
@@ -140,20 +144,21 @@ export default function AfterApply({ applied, onFinished, terminalVisible }: Pro
       try {
         await api.serviceStartProject(project);
         const listed = await api.sites(project);
-        const made = listed.sites[0];
-        const url = made === undefined ? null : siteUrl(made);
+        // **The blueprint's first site, not the list's** — T204a: `site.list` is ordered by the
+        // daemon, and with several sites its first row is not the one the blueprint led with.
+        const addresses = siteAddresses(listed.sites, firstSiteDomain(applied.steps.map((one) => one.action)));
         if (!live) return;
-        setPhase({ kind: "ready", url });
+        setPhase({ kind: "ready", url: addresses.first, addresses });
       } catch (e) {
         if (!live) return;
         setError(errorMessage(t, e));
-        setPhase({ kind: "ready", url: null });
+        setPhase({ kind: "ready", url: null, addresses: null });
       }
     })();
     return () => {
       live = false;
     };
-  }, [phase.kind, project, t]);
+  }, [phase.kind, project, applied.steps, t]);
 
   // Closing the rights dialog means going on, not cancelling: `elevation.drop` is not here, so
   // closing only hides it and the queue remains — the Dashboard still counts it. The site should
@@ -239,6 +244,23 @@ export default function AfterApply({ applied, onFinished, terminalVisible }: Pro
                     </Button>
                   </>
                 )}
+                {/* T204a: a blueprint with several sites made several addresses, and each is worth
+                    a click from here rather than a trip to the Sites screen. */}
+                {phase.addresses && Object.keys(phase.addresses.byDomain).length > 1 && (
+                  <div className={styles.sites}>
+                    <p>{t("mixengine.afterApply.sites")}</p>
+                    <ul>
+                      {Object.entries(phase.addresses.byDomain).map(([domain, url]) => (
+                        <li key={domain}>
+                          <code>{url}</code>
+                          <Button size="small" onClick={() => void openUrl(url)}>
+                            {t("mixengine.afterApply.openSite")}
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 
@@ -246,7 +268,7 @@ export default function AfterApply({ applied, onFinished, terminalVisible }: Pro
               <NextStepsPanel
                 project={applied.project}
                 root={applied.root}
-                siteUrl={phase.url}
+                addresses={phase.addresses ?? { first: phase.url, byDomain: {} }}
                 steps={nextSteps}
                 database={applied.database}
                 terminalVisible={terminalVisible}

@@ -194,7 +194,7 @@ pub async fn plan(
     // steps would be a plan out of order. First among the services rather than last, because it is
     // the one every site on the machine is reached through and nothing here depends on it.
     if front_end
-        && manifest.site.is_some()
+        && !manifest.sites.is_empty()
         && services::front_end::held_by(store, catalogue)
             .await?
             .is_none()
@@ -216,10 +216,15 @@ pub async fn plan(
         steps.push(ensure(store, FRONT_END, instance, None, false, answers).await?);
     }
 
+    // Each `[[services]]` entry's id as its `EnsureService` step names it, by position — what a
+    // site's `services` list resolves to (T204a, D3).
+    let mut ensured_ids: Vec<Option<ServiceId>> = Vec::with_capacity(manifest.services.len());
+
     for service in &manifest.services {
         let instance =
             instance_of(store, &service.name, service.instance.as_deref(), project).await;
         let dedicated = service.instance.as_deref() == Some(PER_PROJECT);
+        ensured_ids.push(identity(&service.name, &instance));
 
         steps.push(package(store, &service.name, service.version.as_ref()).await?);
         steps.push(
@@ -245,7 +250,36 @@ pub async fn plan(
         }
     }
 
-    if let Some(site) = &manifest.site {
+    // **One group per site, in file order** — roadmap task **T204a**, D4: create, its names, its
+    // certificate. A group rather than a tier per action kind, because the executor reads a site's
+    // names off the steps straight after it.
+    let several = manifest.sites.len() > 1;
+    let mut claimed: Vec<String> = Vec::new();
+
+    for site in &manifest.sites {
+        let mut names = Vec::new();
+        names.push(expand(&site.domain_pattern, handle));
+        names.extend(site.aliases.iter().map(|alias| expand(alias, handle)));
+
+        // **What this site links, as the ensure steps name it** (D3). The reader already refused an
+        // item naming no entry or two, so a miss here is an id nothing can spell, which `ensure`
+        // has already blocked.
+        let services = site.services.as_ref().map(|items| {
+            items
+                .iter()
+                .filter_map(|item| {
+                    let named =
+                        crate::blueprints::manifest::linked_service(item, &manifest.services)
+                            .ok()?;
+                    let position = manifest
+                        .services
+                        .iter()
+                        .position(|service| std::ptr::eq(service, named))?;
+                    ensured_ids.get(position).cloned().flatten()
+                })
+                .collect()
+        });
+
         let action = PlanAction::CreateSite {
             kind: match &site.kind {
                 // Which pool a new site uses is decided on the machine that makes it.
@@ -259,25 +293,29 @@ pub async fn plan(
             // Carried whole — roadmap task **T135**. A php-fpm route's pool is already `None` in
             // the manifest, on capture's own rule, so there is nothing to clear here.
             routes: site.routes.clone(),
+            services,
         };
 
         // **D2 again, and the step that found it out.** A project this apply already made, already
         // holding its site, is not a second site waiting to be created — and a plan that said
-        // otherwise made a resumed apply fail on `already_exists`. A blueprint has one `[site]` and
-        // T77 refuses to capture a project with two, so *this project has a site* is the whole of
-        // the question.
-        steps.push(match has_a_site(store, mine).await? {
-            true => satisfied(action),
-            false => PlanStep {
+        // otherwise made a resumed apply fail on `already_exists`. Which site is *this* one is
+        // [`made`]'s question (T204a, D4).
+        steps.push(match made(store, mine, several, &names, &claimed).await? {
+            Made::No => PlanStep {
                 action,
                 disposition: Disposition::Create,
                 elevates: false,
             },
+            Made::Yes => satisfied(action),
+            Made::Shared { with } => blocked(
+                action,
+                format!(
+                    "{} and {with} are one site in this project, and the blueprint describes them \
+                     as two",
+                    names[0]
+                ),
+            ),
         });
-
-        let mut names = Vec::new();
-        names.push(expand(&site.domain_pattern, handle));
-        names.extend(site.aliases.iter().map(|alias| expand(alias, handle)));
 
         for (position, domain) in names.iter().enumerate() {
             steps.push(domain_step(store, domain, position == 0, mine).await?);
@@ -293,6 +331,8 @@ pub async fn plan(
                 elevates: true,
             });
         }
+
+        claimed.extend(names);
     }
 
     if let Some(php) = &manifest.php {
@@ -523,15 +563,61 @@ async fn register(
     ))
 }
 
-/// Whether the project this apply is about already holds a site.
+/// Whether a site this apply describes is already made — roadmap task **T204a**, D4.
+enum Made {
+    /// Nothing of this project answers to its names.
+    No,
+
+    /// A site of this project does.
+    Yes,
+
+    /// The site that does also answers to `with`, a name of an entry planned before this one.
+    Shared { with: String },
+}
+
+/// Whether one site is already made.
 ///
-/// [`None`] is a project that does not exist yet, which cannot hold one.
-async fn has_a_site(store: &Store, project: Option<i64>) -> Result<bool> {
+/// **Made when a site of this project answers to any of its names**, primary or alias, so a
+/// renamed primary kept as an alias still finds it. A one-site blueprint keeps the older question
+/// — *does this project have a site* — so a site renamed outright still resumes.
+///
+/// `claimed` is every name of the entries planned before this one: a site holding one of those as
+/// well is two entries collapsed into one site here, which neither merging nor a third site fixes.
+/// [`None`] is a project that does not exist yet, which holds nothing.
+async fn made(
+    store: &Store,
+    project: Option<i64>,
+    several: bool,
+    names: &[String],
+    claimed: &[String],
+) -> Result<Made> {
     let Some(project) = project else {
-        return Ok(false);
+        return Ok(Made::No);
+    };
+    let held = sites::records(store, Some(project)).await?;
+
+    if !several {
+        return Ok(match held.is_empty() {
+            true => Made::No,
+            false => Made::Yes,
+        });
+    }
+
+    let Some(site) = held
+        .iter()
+        .find(|site| site.domains.iter().any(|domain| names.contains(domain)))
+    else {
+        return Ok(Made::No);
     };
 
-    Ok(!sites::records(store, Some(project)).await?.is_empty())
+    Ok(
+        match site.domains.iter().find(|domain| claimed.contains(domain)) {
+            Some(other) => Made::Shared {
+                with: other.clone(),
+            },
+            None => Made::Yes,
+        },
+    )
 }
 
 /// The answer for one language, where somebody gave one.
@@ -1110,14 +1196,15 @@ mod tests {
             )]
             .into_iter()
             .collect(),
-            site: Some(BlueprintSite {
+            sites: vec![BlueprintSite {
                 kind: SiteKind::PhpFpm { pool: None },
                 doc_root: "public".to_owned(),
                 https: true,
                 domain_pattern: "{project}.test".to_owned(),
                 aliases: Vec::new(),
                 routes: Vec::new(),
-            }),
+                services: None,
+            }],
             services: vec![BlueprintService {
                 name: "mariadb".to_owned(),
                 version: Some(VersionConstraint::parse("11.4.3").expect("a constraint")),
@@ -1678,7 +1765,7 @@ mod tests {
     #[tokio::test]
     async fn the_steps_are_in_dependency_order() {
         let (temp, store) = home().await;
-        let mut manifest = a_manifest();
+        let mut manifest = two_sites();
         manifest.scaffold = Some(crate::blueprints::manifest::Scaffold {
             command: "composer create-project laravel/laravel .".to_owned(),
             needs_empty_dir: false,
@@ -1713,12 +1800,14 @@ mod tests {
             PlanAction::InstallPackage { .. }
             | PlanAction::EnsureService { .. }
             | PlanAction::CreateDatabase { .. } => 2,
-            PlanAction::CreateSite { .. } => 3,
-            PlanAction::AddDomain { .. } => 4,
-            PlanAction::IssueCertificate { .. } => 5,
-            PlanAction::SetPhpExtension { .. } => 6,
-            PlanAction::RunScaffold { .. } | PlanAction::FetchArchive { .. } => 7,
-            _ => 8,
+            // **One tier for the sites** (T204a, D4): each site is its own group inside it, which
+            // the assertion at the end of this test says.
+            PlanAction::CreateSite { .. }
+            | PlanAction::AddDomain { .. }
+            | PlanAction::IssueCertificate { .. } => 3,
+            PlanAction::SetPhpExtension { .. } => 4,
+            PlanAction::RunScaffold { .. } | PlanAction::FetchArchive { .. } => 5,
+            _ => 6,
         };
 
         let tiers: Vec<_> = planned
@@ -1754,6 +1843,255 @@ mod tests {
                 "{package}'s steps are out of order: {positions:?}"
             );
         }
+
+        // **Inside the sites tier, each site is its own group** (T204a, D4): create, primary,
+        // aliases, certificate — and the next site starts only after.
+        assert_eq!(
+            site_words(&planned),
+            [
+                "site",
+                "shop.test",
+                "www.shop.test",
+                "cert",
+                "site",
+                "vite.shop.test",
+                "cert"
+            ]
+        );
+    }
+
+    /// Two sites: the PHP app with MariaDB, and a Vite proxy that links nothing (T204a).
+    fn two_sites() -> BlueprintManifest {
+        let mut manifest = a_manifest();
+        manifest.schema = 3;
+        manifest.sites[0].services = Some(vec!["mariadb".to_owned()]);
+        manifest.sites[0].aliases = vec!["www.{project}.test".to_owned()];
+        manifest.sites.push(BlueprintSite {
+            kind: SiteKind::ReverseProxy {
+                upstream: "http://127.0.0.1:5173".to_owned(),
+            },
+            doc_root: String::new(),
+            https: true,
+            domain_pattern: "vite.{project}.test".to_owned(),
+            aliases: Vec::new(),
+            routes: Vec::new(),
+            services: Some(Vec::new()),
+        });
+        manifest
+    }
+
+    async fn planned_two(store: &Store, temp: &tempfile::TempDir, root: &Path) -> BlueprintPlan {
+        plan(
+            store,
+            &Catalogue::builtin(),
+            &Wanted {
+                blueprint: "two",
+                filed: &captured(two_sites()),
+                project: "shop",
+                root,
+                answers: &[],
+                scaffold_path: &a_path_holding(temp, &[]),
+                front_end: false,
+            },
+        )
+        .await
+        .expect("a plan")
+    }
+
+    /// The site actions in order, one short word each, for the order assertions.
+    fn site_words(planned: &BlueprintPlan) -> Vec<String> {
+        planned
+            .steps
+            .iter()
+            .filter_map(|step| match &step.action {
+                PlanAction::CreateSite { .. } => Some("site".to_owned()),
+                PlanAction::AddDomain { domain, .. } => Some(domain.clone()),
+                PlanAction::IssueCertificate { .. } => Some("cert".to_owned()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The disposition of every `CreateSite`, in order.
+    fn site_dispositions(planned: &BlueprintPlan) -> Vec<Disposition> {
+        planned
+            .steps
+            .iter()
+            .filter(|step| matches!(step.action, PlanAction::CreateSite { .. }))
+            .map(|step| step.disposition.clone())
+            .collect()
+    }
+
+    /// A site of `project` answering to `domains`.
+    async fn a_site_holding(store: &Store, project: i64, domains: &[&str]) {
+        sites::create(
+            store,
+            &sites::NewSite {
+                owner: crate::sites::SiteOwner::Project(project),
+                doc_root: "public".to_owned(),
+                kind: SiteKind::Static,
+                https_enabled: true,
+                https_redirect: false,
+                domains: domains.iter().map(|domain| (*domain).to_owned()).collect(),
+                services: Vec::new(),
+                routes: Vec::new(),
+            },
+        )
+        .await
+        .expect("a site");
+    }
+
+    /// **T204a, D4.** One group per site, in file order — the executor reads a site's names off
+    /// the steps straight after it.
+    #[tokio::test]
+    async fn several_sites_plan_one_group_each_in_file_order() {
+        let (temp, store) = home().await;
+        let planned = planned_two(&store, &temp, &temp.path().join("shop")).await;
+
+        assert_eq!(
+            site_words(&planned),
+            [
+                "site",
+                "shop.test",
+                "www.shop.test",
+                "cert",
+                "site",
+                "vite.shop.test",
+                "cert"
+            ]
+        );
+    }
+
+    /// **T204a, D3.** Each site carries what it links, as the ensure steps name it; `[site]`
+    /// carries `None`.
+    #[tokio::test]
+    async fn each_site_carries_its_own_links() {
+        let (temp, store) = home().await;
+        let planned = planned_two(&store, &temp, &temp.path().join("shop")).await;
+
+        let links: Vec<_> = planned
+            .steps
+            .iter()
+            .filter_map(|step| match &step.action {
+                PlanAction::CreateSite { services, .. } => Some(services.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            links,
+            vec![
+                Some(vec![ServiceId::parse("mariadb@main").expect("an id")]),
+                Some(Vec::new()),
+            ]
+        );
+
+        let one = planned_for(&store, &temp, &temp.path().join("one"), a_manifest()).await;
+        assert!(
+            one.steps
+                .iter()
+                .any(|step| matches!(&step.action, PlanAction::CreateSite { services: None, .. }))
+        );
+    }
+
+    /// **T204a, D3.** `per-project` links the project's own instance, as its ensure names it.
+    #[tokio::test]
+    async fn a_link_to_a_dedicated_instance_names_the_projects_own() {
+        let (temp, store) = home().await;
+        let mut manifest = two_sites();
+        manifest.services[0].instance = Some(PER_PROJECT.to_owned());
+
+        let planned = plan(
+            &store,
+            &Catalogue::builtin(),
+            &Wanted {
+                blueprint: "two",
+                filed: &captured(manifest),
+                project: "shop",
+                root: &temp.path().join("shop"),
+                answers: &[],
+                scaffold_path: &a_path_holding(&temp, &[]),
+                front_end: false,
+            },
+        )
+        .await
+        .expect("a plan");
+
+        let first = planned
+            .steps
+            .iter()
+            .find_map(|step| match &step.action {
+                PlanAction::CreateSite { services, .. } => Some(services.clone()),
+                _ => None,
+            })
+            .expect("a site");
+        assert_eq!(
+            first,
+            Some(vec![ServiceId::parse("mariadb@shop").expect("an id")])
+        );
+    }
+
+    /// **T204a, D4.** A resumed apply: site 1 is there, found by an alias; site 2 is not.
+    #[tokio::test]
+    async fn a_site_already_made_is_satisfied_by_any_of_its_names_and_the_other_is_work() {
+        let (temp, store) = home().await;
+        let root = temp.path().join("shop");
+        let project = a_project(&store, "shop", &root).await;
+        a_site_holding(&store, project, &["www.shop.test"]).await;
+
+        let planned = planned_two(&store, &temp, &root).await;
+
+        assert_eq!(
+            site_dispositions(&planned),
+            vec![Disposition::Satisfied, Disposition::Create]
+        );
+    }
+
+    /// **T204a, D4.** One site holding two entries' names is not a guess an apply makes.
+    #[tokio::test]
+    async fn one_site_answering_for_two_entries_blocks_the_second() {
+        let (temp, store) = home().await;
+        let root = temp.path().join("shop");
+        let project = a_project(&store, "shop", &root).await;
+        a_site_holding(&store, project, &["shop.test", "vite.shop.test"]).await;
+
+        let planned = planned_two(&store, &temp, &root).await;
+        let dispositions = site_dispositions(&planned);
+
+        assert_eq!(dispositions[0], Disposition::Satisfied);
+        match &dispositions[1] {
+            Disposition::Blocked { reason } => assert!(
+                reason.contains("shop.test") && reason.contains("vite.shop.test"),
+                "{reason}"
+            ),
+            other => panic!("not blocked: {other:?}"),
+        }
+    }
+
+    /// **T204a, D4.** A one-site blueprint keeps the older question: any site of this project.
+    #[tokio::test]
+    async fn a_one_site_blueprint_resumes_on_any_site_of_the_project() {
+        let (temp, store) = home().await;
+        let root = temp.path().join("shop");
+        let project = a_project(&store, "shop", &root).await;
+        a_site_holding(&store, project, &["renamed.test"]).await;
+
+        let planned = plan(
+            &store,
+            &Catalogue::builtin(),
+            &Wanted {
+                blueprint: "blog-stack",
+                filed: &captured(a_manifest()),
+                project: "shop",
+                root: &root,
+                answers: &[],
+                scaffold_path: nowhere(),
+                front_end: false,
+            },
+        )
+        .await
+        .expect("a plan");
+
+        assert_eq!(site_dispositions(&planned), vec![Disposition::Satisfied]);
     }
 
     /// **D8.** A machine with no MariaDB at all is the ordinary case for the feature's headline
@@ -3157,7 +3495,8 @@ mod tests {
     async fn a_domain_that_is_not_one_is_blocked_at_plan_time() {
         let (temp, store) = home().await;
         let mut manifest = a_manifest();
-        manifest.site.as_mut().expect("a site").domain_pattern = "{project}.example.com".to_owned();
+        manifest.sites.first_mut().expect("a site").domain_pattern =
+            "{project}.example.com".to_owned();
 
         let planned = plan(
             &store,

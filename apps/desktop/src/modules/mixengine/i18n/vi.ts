@@ -130,6 +130,7 @@ const vi: typeof en = {
       none: "Không còn gì để nhận lại.",
     },
     nextSteps: {
+      forSite: "Cho {{domain}}",
       devkitMissing:
         "Ruby của project này chưa build được gem có phần C, mà các bước dưới cần nó. Cài devkit trước đã.",
       devkitInstalling: "Đang cài devkit",
@@ -165,6 +166,8 @@ const vi: typeof en = {
       readyWithTrouble: "Bản thân site vẫn đang được phục vụ tại {{url}}, sau khi bạn xử lý phần trên.",
       noSite: "Mọi thứ đã chạy. Blueprint này không dựng site nào nên không có địa chỉ để mở.",
       open: "Mở {{url}}",
+      sites: "Các site của project này:",
+      openSite: "Mở",
       close: "Đóng",
     },
     dashboard: {
@@ -823,6 +826,7 @@ const vi: typeof en = {
         preview: "Xem trước",
         previewing: "Đang tải plan…",
         planTitle: "Việc sẽ làm:",
+        siteHeading: "Site {{domain}}",
         stepBlocked: "Bị chặn: {{reason}}",
         stepUnsupported: "Máy này không hỗ trợ: {{reason}}",
         choiceInstalled: "Đã cài: {{installed}}",

@@ -696,3 +696,181 @@ async fn an_applied_blueprints_next_steps_are_reported_kept_and_captured() {
         "{rendered}"
     );
 }
+
+/// A fixture blueprint, imported into `home`.
+fn imported(home: &Home, file: &str) {
+    let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures")
+        .join(file);
+    let output = home.mix(&["blueprint", "import", &fixture.display().to_string()]);
+    assert!(
+        output.status.success(),
+        "import {file}: {}",
+        stdout(&output)
+    );
+}
+
+/// What `mix site show` says about one site: its names, and the services it links.
+fn site_shown(home: &Home, domain: &str) -> (Vec<String>, Vec<String>) {
+    let shown = json(&home.mix(&["site", "show", domain, "--json"]));
+    let strings = |values: &Value, key: Option<&str>| -> Vec<String> {
+        values
+            .as_array()
+            .unwrap_or_else(|| panic!("a list in {shown}"))
+            .iter()
+            .map(|value| {
+                key.map_or(value, |key| &value[key])
+                    .as_str()
+                    .unwrap_or_else(|| panic!("a string in {shown}"))
+                    .to_owned()
+            })
+            .collect()
+    };
+
+    (
+        strings(&shown["domains"], None),
+        strings(&shown["services"], Some("service")),
+    )
+}
+
+/// **T204a.** A blueprint with two sites makes both, each with its own names and only its own
+/// links — and applying it again finds nothing left to do.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_blueprint_with_two_sites_makes_both_with_their_own_links() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+    // `fakeservice`'s `packages` row, so its install step plans `Satisfied` and stays offline.
+    mixengine_testkit::declare::package(&home.database_file()).await;
+    imported(&home, "with-two-sites.toml");
+
+    let directory = repository();
+    let into = directory.path().join("shop").display().to_string();
+    let apply = [
+        "blueprint",
+        "apply",
+        "with-two-sites",
+        "--project",
+        "shop",
+        "--path",
+        &into,
+        "--json",
+    ];
+    let applied = home.mix(&apply);
+    assert!(applied.status.success(), "{}", stdout(&applied));
+
+    let (names, links) = site_shown(&home, "shop.test");
+    assert_eq!(names, ["shop.test", "www.shop.test"]);
+    assert_eq!(links, ["fakeservice@shop"]);
+
+    let (names, links) = site_shown(&home, "docs.shop.test");
+    assert_eq!(names, ["docs.shop.test"]);
+    assert!(links.is_empty(), "{links:?}");
+
+    let again = stdout(&home.mix(&apply));
+    assert!(
+        !again.contains("\"result\":\"done\""),
+        "a second apply did work the first one should have done: {again}"
+    );
+}
+
+/// **T204a, D4 — a resumed apply.** Since the first run, the second site was deleted; running the
+/// apply again makes only the missing site, under its own names.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_resumed_apply_makes_only_the_missing_site() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+    // `fakeservice`'s `packages` row, so its install step plans `Satisfied` and stays offline.
+    mixengine_testkit::declare::package(&home.database_file()).await;
+    imported(&home, "with-two-sites.toml");
+
+    let directory = repository();
+    let into = directory.path().join("shop").display().to_string();
+    let apply = [
+        "blueprint",
+        "apply",
+        "with-two-sites",
+        "--project",
+        "shop",
+        "--path",
+        &into,
+        "--json",
+    ];
+    home.mix(&apply);
+    let deleted = home.mix(&["site", "delete", "docs.shop.test"]);
+    assert!(deleted.status.success(), "{}", stdout(&deleted));
+
+    let again = home.mix(&apply);
+    assert!(again.status.success(), "{}", stdout(&again));
+
+    let (names, _) = site_shown(&home, "docs.shop.test");
+    assert_eq!(names, ["docs.shop.test"]);
+    let (names, _) = site_shown(&home, "shop.test");
+    assert_eq!(names, ["shop.test", "www.shop.test"]);
+}
+
+/// **T204a, D4 — a name goes back to its own site.** Both sites are there and the first lost its
+/// alias; running the apply again gives the alias back to that site — not to whichever site the
+/// project's root finds, which with two sites at one root is a guess.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_missing_name_goes_back_to_its_own_site() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+    mixengine_testkit::declare::package(&home.database_file()).await;
+    imported(&home, "with-two-sites.toml");
+
+    let directory = repository();
+    let into = directory.path().join("shop").display().to_string();
+    let apply = [
+        "blueprint",
+        "apply",
+        "with-two-sites",
+        "--project",
+        "shop",
+        "--path",
+        &into,
+        "--json",
+    ];
+    home.mix(&apply);
+    let removed = home.mix(&["domain", "remove", "www.shop.test"]);
+    assert!(removed.status.success(), "{}", stdout(&removed));
+
+    let again = home.mix(&apply);
+    assert!(again.status.success(), "{}", stdout(&again));
+
+    let (names, _) = site_shown(&home, "shop.test");
+    assert_eq!(names, ["shop.test", "www.shop.test"]);
+    let (names, _) = site_shown(&home, "docs.shop.test");
+    assert_eq!(names, ["docs.shop.test"]);
+}
+
+/// **T204a, D3 — and the fix it carries.** A shared instance that was already here plans
+/// `Satisfied`, and the site is still linked to it.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_service_that_was_already_here_is_still_linked() {
+    let home = Home::new();
+    let _daemon = home.start_daemon();
+    mixengine_testkit::create(
+        home.endpoint_ref(),
+        &home.database_file(),
+        &[Service::new("fakeservice@already")],
+    )
+    .await;
+    imported(&home, "with-a-shared-service.toml");
+
+    let directory = repository();
+    let into = directory.path().join("shop").display().to_string();
+    let applied = home.mix(&[
+        "blueprint",
+        "apply",
+        "with-a-shared-service",
+        "--project",
+        "shop",
+        "--path",
+        &into,
+        "--json",
+    ]);
+    assert!(applied.status.success(), "{}", stdout(&applied));
+
+    let (_, links) = site_shown(&home, "shop.test");
+    assert_eq!(links, ["fakeservice@already"]);
+}
