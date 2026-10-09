@@ -1537,24 +1537,39 @@ fn lacks(lacks: &std::collections::BTreeMap<String, String>) -> String {
     lacks.keys().cloned().collect::<Vec<_>>().join(", ")
 }
 
+/// Where the devkit stands, for the line after `mix runtime install` — roadmap task **T206**, D3.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Devkit<'a> {
+    /// One is installed here and its folder is there, so the Ruby builds native gems with it.
+    Installed,
+    /// None is installed, and the index offers this version, the newest.
+    Offered(&'a str),
+    /// None is installed and none is offered for this machine.
+    NotOffered,
+}
+
 /// The line `mix runtime install` ends with when the release cannot build native gems — roadmap
 /// task **T206**, D3. It names the devkit only where one is offered for this machine, with the
-/// newest version offered, since `mix package install` takes one.
+/// newest version offered, since `mix package install` takes one, and says nothing where one is
+/// already installed: that Ruby builds native gems.
 pub(crate) fn lacks_after_install(
     lacks: &std::collections::BTreeMap<String, String>,
-    devkit: Option<&str>,
+    devkit: Devkit<'_>,
 ) -> Option<String> {
     if !lacks.contains_key("native gems") {
         return None;
     }
 
-    Some(match devkit {
-        Some(version) => format!(
+    match devkit {
+        Devkit::Installed => None,
+        Devkit::Offered(version) => Some(format!(
             "This Ruby cannot build gems with C extensions. `mix package install msys2 {version}` \
              adds the toolchain.\n"
-        ),
-        None => "This Ruby cannot build gems with C extensions on this machine.\n".to_owned(),
-    })
+        )),
+        Devkit::NotOffered => {
+            Some("This Ruby cannot build gems with C extensions on this machine.\n".to_owned())
+        }
+    }
 }
 
 /// What one release lacks, in the few words a cell has room for; blank for a release lacking nothing.
@@ -4995,24 +5010,31 @@ mod tests {
         let lacks = std::collections::BTreeMap::from([("native gems".to_owned(), "x".to_owned())]);
         // With the version: `mix package install` takes one, and a line naming a command that
         // refuses to run is worse than none.
-        let said = lacks_after_install(&lacks, Some("2026.10.08")).expect("a line");
+        let said = lacks_after_install(&lacks, Devkit::Offered("2026.10.08")).expect("a line");
         assert!(
             said.contains("`mix package install msys2 2026.10.08`"),
             "{said}"
         );
-        let alone = lacks_after_install(&lacks, None).expect("a line");
+        let alone = lacks_after_install(&lacks, Devkit::NotOffered).expect("a line");
         assert!(!alone.contains("msys2"), "{alone}");
+    }
+
+    /// **A devkit already here leaves nothing to say** — the Ruby builds native gems with it.
+    #[test]
+    fn the_install_says_nothing_when_the_devkit_is_installed() {
+        let lacks = std::collections::BTreeMap::from([("native gems".to_owned(), "x".to_owned())]);
+        assert_eq!(lacks_after_install(&lacks, Devkit::Installed), None);
     }
 
     /// Nothing lacked, nothing said — every Ruby on macOS and Linux.
     #[test]
     fn no_line_when_nothing_is_lacked() {
         assert_eq!(
-            lacks_after_install(&std::collections::BTreeMap::new(), Some("1")),
+            lacks_after_install(&std::collections::BTreeMap::new(), Devkit::Offered("1")),
             None
         );
         let yjit_only = std::collections::BTreeMap::from([("yjit".to_owned(), "x".to_owned())]);
-        assert_eq!(lacks_after_install(&yjit_only, Some("1")), None);
+        assert_eq!(lacks_after_install(&yjit_only, Devkit::Offered("1")), None);
     }
 
     /// **T151.** The column appears only when a row lacks something, on `RUNS`' reasoning.
