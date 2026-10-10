@@ -30,7 +30,7 @@
 //! is already another project's, and a domain another site owns are all `blocked` at this point,
 //! each naming what stands in the way.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use mixengine_proto::{
@@ -355,6 +355,17 @@ pub async fn plan(
         // called `a; rm -rf $HOME` reached the shell as two commands.
         let command = expand(&scaffold.command, handle);
 
+        // **What the runtime steps above will have installed by the time this runs** (T78b, as
+        // T185b left it): every `[runtimes]` kind, since each of their steps ends with that kind
+        // on the disk whatever its disposition, and every kind already there.
+        let mut available: BTreeSet<RuntimeKind> = manifest.runtimes.keys().copied().collect();
+        available.extend(
+            runtimes::records(store, None)
+                .await?
+                .into_iter()
+                .map(|record| record.kind),
+        );
+
         steps.push(PlanStep {
             // Arbitrary code from whoever wrote the blueprint. What answers this is the consent in
             // the apply request (T78a, D4); here it is shown, exactly as it would run — or blocked,
@@ -375,7 +386,11 @@ pub async fn plan(
             // name is going to be refused anyway is work nobody gets back.
             disposition: match unexpanded(&command) {
                 Some(reason) => Disposition::Blocked { reason },
-                None => match crate::blueprints::program::disposition(&command, scaffold_path) {
+                None => match crate::blueprints::program::disposition(
+                    &command,
+                    scaffold_path,
+                    &available,
+                ) {
                     Disposition::Confirm { what } => {
                         let refusal = scaffold
                             .needs_npm_safe_dir
