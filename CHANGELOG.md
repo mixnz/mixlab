@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.0.19
+
+### Fixed
+- Composer blueprints such as Laravel and Symfony can be applied on a machine without PHP or
+  Composer yet. The plan used to say they were blocked. When a command cannot run, the plan now
+  names the runtime it is missing.
+- The colour theme swatches in MixLab's Settings fill their column on macOS.
+- The private key field of an SSH connection shows a proper Windows path as its example,
+  `C:\Users\you\.ssh\id_rsa`.
+
 ## v0.0.18
 
 ### Fixed
