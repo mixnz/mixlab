@@ -437,11 +437,30 @@ mod tests {
         let (_root, home) = a_home();
         let mut child = ping_standing_in(&home.join("data"));
 
-        let found = held_under(std::slice::from_ref(&home), None);
+        // **Asked until the child is standing there, not once.** `spawn` returns before the child
+        // has run its loader, and its working-directory handle is opened during that start: a scan
+        // straight after found nothing of it on a Windows runner (run 38052112508). Bounded, and
+        // the last scan is what a failure prints.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        let found = loop {
+            let found = held_under(std::slice::from_ref(&home), None);
+            if item_held_by(&found, child.id(), "data").is_some()
+                || std::time::Instant::now() >= deadline
+            {
+                break found;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        };
 
         let _ = child.kill();
         let _ = child.wait();
-        let item = item_held_by(&found, child.id(), "data").expect("found");
+        let item = item_held_by(&found, child.id(), "data").unwrap_or_else(|| {
+            panic!(
+                "ping (pid {}) standing in data/ was not among what held the home after 10s: \
+                 {found:?}",
+                child.id()
+            )
+        });
         assert!(!item.movable, "{found:?}");
     }
 
