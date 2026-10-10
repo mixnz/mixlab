@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.18
+
 ### Fixed
 - After an update, MixLab closes the administrator dialog once the helper has been replaced,
   instead of answering Allow with "nothing is waiting for permission".
