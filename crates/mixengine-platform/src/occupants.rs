@@ -327,11 +327,25 @@ mod tests {
         let inside = tempfile::tempdir().expect("tempdir");
         let mut child = start_a_copy(inside.path());
 
+        // **Seen unspared first, so the empty answer below is the spare at work.** No wait is
+        // needed: all this scan reads is the child's executable and parent, and both exist once
+        // `spawn` returns — Unix's only after `exec` succeeded, Windows' `CreateProcess` after
+        // mapping the image.
+        let unspared = processes_under(&[inside.path().to_path_buf()], None);
         let found = processes_under(&[inside.path().to_path_buf()], Some(std::process::id()));
 
         let _ = child.kill();
         let _ = child.wait();
-        assert!(found.is_empty(), "{found:?}");
+        assert!(
+            unspared.iter().any(|occupant| occupant.pid == child.id()),
+            "the copy (pid {}) was not found unspared, so sparing it proves nothing: {unspared:?}",
+            child.id()
+        );
+        assert!(
+            found.is_empty(),
+            "the copy (pid {}) descends from the spared test process, yet was found: {found:?}",
+            child.id()
+        );
     }
 
     #[test]
@@ -386,6 +400,34 @@ mod tests {
             .expect("a process standing in the directory")
     }
 
+    /// Scans `home` unspared until every `(pid, name)` in `holders` is among what holds it, and
+    /// returns that scan.
+    ///
+    /// **Asked until they are there, not once.** `spawn` returns before the child has run its
+    /// loader, and its working-directory handle is opened during that start: a scan straight after
+    /// found nothing of it on a Windows runner (run 38052112508). Bounded at 10s, and a failure
+    /// prints what was missing and the last scan.
+    #[cfg(windows)]
+    fn until_held_by(home: &Path, holders: &[(u32, &str)]) -> Vec<HeldItem> {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        loop {
+            let found = held_under(&[home.to_path_buf()], None);
+            let missing: Vec<&(u32, &str)> = holders
+                .iter()
+                .filter(|(pid, name)| item_held_by(&found, *pid, name).is_none())
+                .collect();
+            if missing.is_empty() {
+                return found;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "after 10s, these (pid, name) were still not among what held {home:?}: \
+                 {missing:?}\n--- last scan ---\n{found:?}"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    }
+
     /// T182e, D1. A watched directory: held, and movable — its watch shares delete and follows a
     /// rename.
     #[cfg(windows)]
@@ -437,31 +479,16 @@ mod tests {
         let (_root, home) = a_home();
         let mut child = ping_standing_in(&home.join("data"));
 
-        // **Asked until the child is standing there, not once.** `spawn` returns before the child
-        // has run its loader, and its working-directory handle is opened during that start: a scan
-        // straight after found nothing of it on a Windows runner (run 38052112508). Bounded, and
-        // the last scan is what a failure prints.
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-        let found = loop {
-            let found = held_under(std::slice::from_ref(&home), None);
-            if item_held_by(&found, child.id(), "data").is_some()
-                || std::time::Instant::now() >= deadline
-            {
-                break found;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(50));
-        };
+        let found = until_held_by(&home, &[(child.id(), "data")]);
 
         let _ = child.kill();
         let _ = child.wait();
-        let item = item_held_by(&found, child.id(), "data").unwrap_or_else(|| {
-            panic!(
-                "ping (pid {}) standing in data/ was not among what held the home after 10s: \
-                 {found:?}",
-                child.id()
-            )
-        });
-        assert!(!item.movable, "{found:?}");
+        let item = item_held_by(&found, child.id(), "data").expect("until_held_by saw it");
+        assert!(
+            !item.movable,
+            "data/, the working directory of ping (pid {}), was reported movable: {found:?}",
+            child.id()
+        );
     }
 
     /// Renaming a directory that is itself open is allowed, so it is not a held item.
@@ -487,11 +514,20 @@ mod tests {
         let _open = std::fs::File::open(home.join("data").join("file")).expect("held");
         let mut child = ping_standing_in(&home.join("data"));
 
+        // **Both seen unspared first**: until the child stands in data/, a spared scan finds
+        // nothing of it whether or not the spare works.
+        until_held_by(&home, &[(child.id(), "data"), (std::process::id(), "file")]);
         let found = held_under(std::slice::from_ref(&home), Some(std::process::id()));
 
         let _ = child.kill();
         let _ = child.wait();
-        assert!(found.is_empty(), "{found:?}");
+        assert!(
+            found.is_empty(),
+            "sparing the test process (pid {}) should leave out it and ping (pid {}), \
+             which held data/file and data/ unspared, yet found: {found:?}",
+            std::process::id(),
+            child.id()
+        );
     }
 
     /// The home as a person might type it still matches.
