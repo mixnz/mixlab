@@ -178,7 +178,7 @@ const vi: SharedDict = {
     skipped: "Bạn đã bỏ qua bản {{version}}. MixLab sẽ báo khi có bản kế tiếp.",
     downloading: "Đang tải {{percent}}%",
     installing: "Đang cài đặt",
-    installerOpen: "Bộ cài đã mở. Cài xong ở đó rồi quay lại đây.",
+    installerOpen: "Bộ cài đã mở. Cài xong ở đó rồi quay lại, MixLab sẽ tự nhận ra bản mới.",
     installerNotOpened: "Đã tải bộ cài. Chạy lệnh này để cài:",
     installerCommand: "Hoặc cài từ terminal:",
     installerFinish: "Hoàn tất",

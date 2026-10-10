@@ -9,6 +9,17 @@ const EVERY_MS = 24 * 60 * 60 * 1000;
 /** How often the installer's result is looked for while it is open — spec D5. */
 const DISK_POLL_MS = 3_000;
 
+/**
+ * Runs `read` at once, then every `ms`; returns the stop. Polling starts when the window gets its
+ * focus back, which is the moment a person returns from the installer: the first read waiting a
+ * whole interval left the pane saying the installer was open for seconds after it had finished.
+ */
+export function pollNowAndEvery(read: () => void, ms: number): () => void {
+  read();
+  const timer = window.setInterval(read, ms);
+  return () => window.clearInterval(timer);
+}
+
 /** The code a rejected command carries, when it carries one. */
 function codeOf(error: unknown): string | undefined {
   return typeof error === "object" && error !== null ? (error as { code?: unknown }).code?.toString() : undefined;
@@ -92,7 +103,7 @@ export function useUpdates(watching: boolean): Updates {
   const polling = handedOver !== null && watching && focused;
   useEffect(() => {
     if (!polling) return;
-    const timer = window.setInterval(
+    return pollNowAndEvery(
       () =>
         void api
           .updateVersionOnDisk()
@@ -100,7 +111,6 @@ export function useUpdates(watching: boolean): Updates {
           .catch(() => undefined),
       DISK_POLL_MS,
     );
-    return () => window.clearInterval(timer);
   }, [polling]);
 
   const run = useCallback(async (work: () => Promise<void>) => {

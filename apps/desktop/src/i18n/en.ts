@@ -194,7 +194,7 @@ const en = {
     skipped: "You skipped {{version}}. MixLab will tell you about the next one.",
     downloading: "Downloading {{percent}}%",
     installing: "Installing",
-    installerOpen: "The installer is open. Finish it there, then come back here.",
+    installerOpen: "The installer is open. Finish it there, then come back. MixLab sees the new version on its own.",
     installerNotOpened: "The installer is downloaded. Run this command to install it:",
     installerCommand: "Or install it from a terminal:",
     installerFinish: "Finish",
