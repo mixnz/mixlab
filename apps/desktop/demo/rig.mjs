@@ -12,13 +12,13 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { createServer } from "vite";
 import { USER_AGENTS, storageFor } from "./args.mjs";
+import { geometryFor } from "./geometry.mjs";
 import { createQuietDetector } from "./readiness.mjs";
 import { CONSTANTS } from "./scenes.mjs";
 
 export const DESKTOP = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const OUT = join(DESKTOP, "screenshots", "out");
-export const VIEWPORT = { width: 1440, height: 900 };
-export const SCALE = 2;
+export { SCALE, VIEWPORT } from "./geometry.mjs";
 const READY_TIMEOUT_MS = 20_000;
 const ACT_TIMEOUT_MS = 10_000;
 
@@ -121,13 +121,14 @@ export async function openScene(
   scene,
   theme,
   options,
-  { reducedMotion = "reduce", fixtures = {}, colorScheme } = {},
+  { reducedMotion = "reduce", fixtures = {}, colorScheme, geometry = geometryFor() } = {},
 ) {
   const name = `${scene.id}-${theme}`;
   const report = { name, problems: [], consoleErrors: [], notes: [] };
   const context = await browser.newContext({
-    viewport: VIEWPORT,
-    deviceScaleFactor: SCALE,
+    // A clip may film a smaller window at a higher scale (`uiScale`); a still never does.
+    viewport: geometry.viewport,
+    deviceScaleFactor: geometry.scale,
     userAgent: USER_AGENTS[options.platform],
     reducedMotion,
     // Only a clip sets it: what a page inside the window (a browser's site) shows follows it.

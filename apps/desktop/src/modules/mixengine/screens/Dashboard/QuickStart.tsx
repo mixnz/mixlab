@@ -75,7 +75,7 @@ export default function QuickStart({
   const chosen = available.find((blueprint) => blueprint.slug === slug);
 
   return (
-    <section className={styles.card}>
+    <section className={styles.card} data-demo-focus="quick-start">
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
 
       <h3 className={styles.title}>{t("mixengine.quickStart.title")}</h3>

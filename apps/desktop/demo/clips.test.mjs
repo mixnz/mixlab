@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 import { BROWSER_ID } from "./browser/overlay";
 import { SITES } from "./fixtures/mixengine";
 import { MODULE_IDS } from "./args.mjs";
-import { CLIPS, describeStep } from "./clips.mjs";
+import { CLIPS, DEFAULT_UI_SCALE, describeStep, geometryOf } from "./clips.mjs";
+import { isWholeGeometry } from "./geometry.mjs";
 
 /* Every hook a clip aims at has to exist in the window: a redesign that drops one fails here,
    before anyone films and wonders why a step times out. */
@@ -28,6 +29,46 @@ describe("clips", () => {
     expect(clip.steps.find((s) => "select" in s).option).toBe("8.1.34");
     expect(clip.steps.at(-2)).toEqual({ click: '[data-demo-key="legacy"] [data-demo="project-details"]' });
     expect(clip.steps.at(-1).pause).toBeGreaterThanOrEqual(2000);
+  });
+
+  it("pin-runtime ends showing both rows and legacy's pins", () => {
+    expect(CLIPS.find((c) => c.id === "pin-runtime").endsShowing).toEqual([
+      '[data-demo-key="blog"]',
+      '[data-demo-key="legacy"]',
+      '[data-demo="project-pin-list"]',
+    ]);
+  });
+
+  it("films at a scale that gives whole pixels, by default and per clip", () => {
+    expect(isWholeGeometry(DEFAULT_UI_SCALE)).toBe(true);
+    for (const clip of CLIPS) {
+      if (clip.uiScale !== undefined) expect(isWholeGeometry(clip.uiScale), clip.id).toBe(true);
+      expect(geometryOf(clip)).toEqual({ viewport: { width: 1280, height: 800 }, scale: 2.25 });
+    }
+  });
+
+  it("quick-start allows the website's camera three zoom changes at most", () => {
+    expect(CLIPS.find((c) => c.id === "quick-start").maxZoomChanges).toBe(3);
+  });
+
+  it("pin-runtime ends framed on the open row and its pins, by a hook", () => {
+    expect(CLIPS.find((c) => c.id === "pin-runtime").steps.at(-1)).toMatchObject({
+      focus: '[data-demo-focus="project-open"]',
+    });
+    expect(SOURCE.includes('"project-open"')).toBe(true);
+    expect(SOURCE.includes('data-demo-fit="text"')).toBe(true);
+  });
+
+  it("the open row is measured by its words, may be framed closer than 2, and the view keeps off the sidebar", () => {
+    expect(SOURCE.includes('data-demo-fit={open ? "text" : undefined}')).toBe(true);
+    expect(SOURCE.includes('data-demo-zoom-max={open ? "3.3" : undefined}')).toBe(true);
+    expect(SOURCE.includes('className="mixengine-screen" data-demo-bounds')).toBe(true);
+  });
+
+  it("the camera's focus blocks exist in the window", () => {
+    for (const hook of ['data-demo-focus="quick-start"', 'demoFocus="projects"']) {
+      expect(SOURCE.includes(hook), `no ${hook} in src/`).toBe(true);
+    }
   });
 
   it("quick-start films a fresh machine, picks a folder, and keeps the browser as a still", () => {
@@ -67,6 +108,31 @@ describe("clips", () => {
         const hook = match[2];
         const present = [`data-demo="${hook}"`, `demo="${hook}"`, `demo: "${hook}"`].some((s) => SOURCE.includes(s));
         expect(present, `no data-demo="${hook}" in src/`).toBe(true);
+      }
+    });
+
+    it(`${clip.id}: a zoom bound, when it has one, is a positive whole number`, () => {
+      if (clip.maxZoomChanges !== undefined) {
+        expect(Number.isInteger(clip.maxZoomChanges) && clip.maxZoomChanges > 0).toBe(true);
+      }
+    });
+
+    it(`${clip.id}: a step's focus is "full" or a selector`, () => {
+      for (const step of clip.steps.filter((s) => "focus" in s)) {
+        expect(typeof step.focus, describeStep(step)).toBe("string");
+        expect(step.focus.length).toBeGreaterThan(0);
+      }
+    });
+
+    it(`${clip.id}: what it ends showing is hooks the window has`, () => {
+      for (const selector of clip.endsShowing ?? []) {
+        const match = /^\[(data-demo|data-demo-key)="([a-z0-9.-]+)"\]$/.exec(selector);
+        expect(match, selector).not.toBeNull();
+        const present =
+          match[1] === "data-demo-key"
+            ? SOURCE.includes("data-demo-key=")
+            : [`data-demo="${match[2]}"`, `demo="${match[2]}"`].some((s) => SOURCE.includes(s));
+        expect(present, `no ${selector} in src/`).toBe(true);
       }
     });
 

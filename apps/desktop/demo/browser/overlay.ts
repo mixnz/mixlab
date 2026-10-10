@@ -12,6 +12,8 @@ export const BROWSER_ID = "__demo-browser";
 const PAGE = "/demo/browser/laravel-welcome.html";
 const SLIDE_MS = 450;
 const LOAD_MS = 600;
+/** The stills' window width (`demo/geometry.mjs`), the one the page inside is laid out for. */
+const STILL_WIDTH = 1440;
 
 const LOCK =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" ' +
@@ -28,6 +30,7 @@ function open(doc: Document, url: string, dark: boolean): void {
   doc.getElementById(BROWSER_ID)?.remove();
   const c = palette(dark);
   const shown = url.replace(/^https:\/\//, "");
+  const zoom = Math.min(1, (doc.defaultView?.innerWidth ?? STILL_WIDTH) / STILL_WIDTH);
 
   const browser = doc.createElement("div");
   browser.id = BROWSER_ID;
@@ -61,7 +64,12 @@ function open(doc: Document, url: string, dark: boolean): void {
     `<span style="color:${c.muted}">https://</span><span style="margin-left:-7px">${shown}</span></span>` +
     `<span style="width:47px"></span></div>` +
     `<div style="height:2px;background:transparent"><div data-loading style="height:2px;width:0;background:${c.accent}"></div></div>` +
-    `<iframe src="${PAGE}" title="${shown}" style="flex:1;width:100%;border:0;background:${dark ? "#0a0a0a" : "#FDFDFC"}"></iframe>`;
+    // The page lays itself out at the width it would have in the stills' window and is shrunk to
+    // fit: a clip filmed larger (`uiScale`) must not push Laravel's page under its desktop
+    // breakpoint, which a 1280-pixel window's 78% does.
+    `<div style="flex:1;position:relative;overflow:hidden">` +
+    `<iframe src="${PAGE}" title="${shown}" style="position:absolute;left:0;top:0;width:${100 / zoom}%;height:${100 / zoom}%;` +
+    `transform:scale(${zoom});transform-origin:0 0;border:0;background:${dark ? "#0a0a0a" : "#FDFDFC"}"></iframe></div>`;
   doc.body.appendChild(browser);
 
   browser.animate(

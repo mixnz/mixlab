@@ -7,8 +7,24 @@
  * at option text the fixtures own — never interface copy, never a CSS class (`clips.test.mjs`
  * checks every hook exists in `src/`).
  *
+ * A clip may also say what its last frame must show (`endsShowing`, checked when filming stops), a
+ * step where the website's camera should look instead of the default (`focus: "full"` or a
+ * selector — docs/specs/2026-10-10-demo-clip-camera-design.md), and its own `uiScale`.
+ *
  * The design is docs/specs/2026-10-05-demo-clips-design.md.
  */
+import { geometryFor } from "./geometry.mjs";
+
+/**
+ * Every clip is filmed with the interface this much larger in the same 2080×1300 frame; a clip may
+ * set its own `uiScale` (1 films it as the stills are). docs/specs/2026-10-10-demo-clip-camera-design.md.
+ */
+export const DEFAULT_UI_SCALE = 1.125;
+
+export function geometryOf(clip) {
+  return geometryFor(clip.uiScale ?? DEFAULT_UI_SCALE);
+}
+
 export const CLIPS = [
   {
     id: "new-site",
@@ -36,6 +52,9 @@ export const CLIPS = [
     // answers the project's folder; the site opens by itself once it works (T205, D7), and opening
     // it draws a browser (`demo/browser/overlay.ts`).
     fixtures: { fresh: true, folder: "/Users/ada/Sites/blog", browser: true },
+    // The website's camera: card, the Apply dialog, the browser — no more
+    // (docs/specs/2026-10-10-demo-clip-camera-shots-design.md).
+    maxZoomChanges: 3,
     // The browser window alone, for the website's terminal demo, which ends in the same browser.
     still: { selector: "#__demo-browser", suffix: "browser" },
     // Laravel is the gallery's first blueprint, so the card opens on it: no step picks it.
@@ -63,6 +82,8 @@ export const CLIPS = [
     // blog and legacy, PHP 8.4.26 the default and 8.1.34 beside it: the versions the website's
     // terminal shows `php -v` printing (docs/demo/pin-runtime-terminal.md).
     fixtures: { runtimePins: true },
+    // The last frame has to show what changed and what did not: both rows, and legacy's pins.
+    endsShowing: ['[data-demo-key="blog"]', '[data-demo-key="legacy"]', '[data-demo="project-pin-list"]'],
     setup: async ({ page }) => {
       await page.locator('nav [data-screen="projects"]').click();
     },
@@ -75,7 +96,8 @@ export const CLIPS = [
       { select: '[data-demo-key="php"] [data-demo="project-pin"]', option: "8.1.34" },
       { click: '[data-demo="project-save"]' },
       { click: '[data-demo-key="legacy"] [data-demo="project-details"]' },
-      { pause: 2500 },
+      // The open row and its pins: what the website's camera ends on.
+      { pause: 2500, focus: '[data-demo-focus="project-open"]' },
     ],
   },
 ];

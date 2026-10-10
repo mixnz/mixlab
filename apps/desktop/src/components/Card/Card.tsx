@@ -15,6 +15,9 @@ interface Props {
   /** Tone of the whole card; `danger` for the one that holds an irreversible action. */
   tone?: "default" | "danger";
   className?: string;
+  /** `data-demo-focus` on the card: a block the promotional clips' camera frames
+   *  (`demo/focus.mjs`). Inert everywhere else. */
+  demoFocus?: string;
   children?: ReactNode;
 }
 
@@ -28,6 +31,7 @@ function Card({
   headingLevel = 2,
   tone = "default",
   className,
+  demoFocus,
   children,
 }: Props) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
@@ -37,6 +41,7 @@ function Card({
       className={`${styles.card}${flush ? ` ${styles.flush}` : ""}${tone === "danger" ? ` ${styles.danger}` : ""}${
         className ? ` ${className}` : ""
       }`}
+      data-demo-focus={demoFocus}
     >
       {hasHeader && (
         <div className={styles.header}>

@@ -205,3 +205,5 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-09 | [T204a — A blueprint holds many sites (design)](2026-10-09-t204a-a-blueprint-holds-many-sites-design.md) | T204a | implemented |
 | 2026-10-09 | [T205a–T205c — What hand-testing the gallery left open (design)](2026-10-09-t205a-t205c-what-hand-testing-the-gallery-left-open-design.md) | T205a, T205b, T205c | implemented |
 | 2026-10-09 | [T206b–T206d — the devkit's package database, an empty folder, and installs whose folder is gone (design)](2026-10-09-t206b-t206d-installs-whose-folder-is-gone-design.md) | T206b, T206c, T206d | implemented |
+| 2026-10-10 | [Demo clip camera — where to look, and a larger window on film](2026-10-10-demo-clip-camera-design.md) |  | implemented |
+| 2026-10-10 | [Demo clip camera, version 2 — shots that hold a zoom and pan, with every action in view](2026-10-10-demo-clip-camera-shots-design.md) |  | implemented |

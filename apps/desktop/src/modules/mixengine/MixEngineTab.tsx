@@ -312,7 +312,8 @@ export default function MixEngineTab({
   return (
     <div className="mixengine-root mixengine-layout">
       <Sidebar screen={screen} onSelect={selectScreen} />
-      <div className="mixengine-screen">
+      {/* The pane beside the sidebar: the promotional clips' camera stays inside it. */}
+      <div className="mixengine-screen" data-demo-bounds>
         {pane("dashboard", (active) => (
           <Dashboard
             active={active}

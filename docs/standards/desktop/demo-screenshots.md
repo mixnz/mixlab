@@ -89,6 +89,29 @@ showing the vendored `demo/browser/laravel-welcome.html`) and `runtimePins` (two
 and `legacy`, with PHP 8.4.26 and 8.1.34 installed and pins that `project.update` changes). A clip's `still` names an element
 photographed once the film stops, written as `<clip>-<theme>-<suffix>.png`.
 
+Every encoded clip also writes `<clip>-<theme>.camera.json` — where the website's camera should
+look, over the mp4's time — `<clip>-<theme>.samples.json`, the raw measurements it came from, and
+`<clip>-<theme>.camera.png`, a contact sheet of one frame a second with the camera drawn on it
+(`wide` solid, `narrow` dashed) and the cursor as a dot, for checking by eye. The camera is cut into
+**shots**: one shot per container framing the steps — a dialog, or a block marked `data-demo-focus`
+(several elements may share one value; `data-demo-fit="text"` measures an element by its words and
+icons; `data-demo-zoom-max` lets a block be framed closer than 2×) — held at one zoom and panned
+inside it as the step's target or what just appeared moves; no container is a whole-frame shot.
+`narrow` keeps 90 % of its container's width, anchored left, and never cuts a dialog's title. A view
+stays inside `data-demo-bounds` (the MixEngine screen beside the sidebar) and its edges never cut a
+table column's text. **Every click, type and select keeps its target and the cursor's flight in view
+in both tracks** — pans are made 0.5 s early for it, and outrank every rule that folds brief pans
+away — and a clip whose camera breaks that writes no camera file. A step may say `focus: "full"` or
+`focus: "<selector>"` instead, and a clip may set `maxZoomChanges`, which the run enforces.
+`npm run clips -- --camera-only` recomputes cameras and contact sheets from the saved samples and
+actions without filming, for a change to the camera's rules.
+Clips are filmed at `uiScale` 1.125 (`DEFAULT_UI_SCALE` in `demo/clips.mjs`): a 1280×800 window at
+device scale 2.25 in the same 2080×1300 frame, so the interface is larger and still drawn sharp. A
+step whose target is not wholly in that frame fails the clip, a scroll to reach one is noted, and
+`endsShowing` lists what the last frame must show. The designs are
+[the camera spec](../../specs/2026-10-10-demo-clip-camera-design.md) and
+[its shots](../../specs/2026-10-10-demo-clip-camera-shots-design.md).
+
 The Laravel apply (`demo/fixtures/laravelApply.ts`) mirrors the gallery's `laravel.toml`, which
 its test reads; change the blueprint and the test says so. When Laravel redraws its welcome page,
 refresh `laravel-welcome.html` by hand from a fresh `composer create-project laravel/laravel`.
@@ -99,3 +122,14 @@ refresh `laravel-welcome.html` by hand from a fresh `composer create-project lar
 | `failed     the last frame is the first` | The flow changed nothing on screen | A step is acting on the wrong element |
 | `failed     X MB is over the 1.50 MB budget` | The encoded clip is too heavy for the website | Shorten the pauses, or the flow |
 | `note       X MB, over 1.00 MB` | Within budget, but heavier than wanted | The same, when convenient |
+| `failed     … is not wholly in the frame` | A step's target is cut off by the clip's window | Change the clip, not the check |
+| `failed     the last frame does not show …` | `endsShowing` names something off-screen, absent or ambiguous at the end | Change the clip |
+| `failed     the screencast's clock is not this machine's` | Frame timestamps and Node's clock disagree | Report it; the camera cannot be timed |
+| `note       step N the target scrolled into view` | Reaching a step's element scrolled something, on film | Fine if intended; otherwise change the clip |
+| `note       camera: N shots; wide …` | What the camera does: shots, zoom changes and pans per track | Read it against the contact sheet |
+| `failed     the camera zooms N times, more than M` | A container changes too often for the clip's `maxZoomChanges` | Look at the contact sheet; a step may need a `focus` |
+| `note       <clip>: light and dark have N and M shots` | The two themes cut differently | Look at both contact sheets |
+| `failed     no <name>.samples.json` | `--camera-only` for a clip never filmed with samples | Film the clip first |
+| `failed     step N (…): its target or cursor leaves the <track> view` | An action is not wholly in a view while it happens; the next line gives its reach and the views | Look at the contact sheet; the rule is in [its shots spec](../../specs/2026-10-10-demo-clip-camera-shots-design.md) |
+| `note       <track> target in view, by step: …` | Every step's action checked in that track | All must be yes for a camera to be written |
+| `note       <track>: step N (…): pan X s before the cursor, not 0.5` | The previous action left less time than the website's pan takes | Fine; the pan still lands before the press |

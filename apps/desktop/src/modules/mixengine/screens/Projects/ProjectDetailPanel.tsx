@@ -38,7 +38,7 @@ export default function ProjectDetailPanel({
 
   return (
     <div className={styles.detail}>
-      <section className={styles.section}>
+      <section className={styles.section} data-demo="project-pin-list" data-demo-focus="project-open" data-demo-fit="text">
         <h4>{t("mixengine.projects.detail.pinsTitle")}</h4>
         <ul className={styles.pins}>
           {formatPins(detail.pins).map((pin) => (

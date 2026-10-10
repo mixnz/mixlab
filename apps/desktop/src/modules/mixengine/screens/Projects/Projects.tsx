@@ -212,7 +212,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
         }
       />
 
-      <Card flush>
+      <Card flush demoFocus="projects">
         {!loaded ? (
           <LoadingState />
         ) : rows.length === 0 ? (
@@ -238,7 +238,13 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
                       // Which row a clip's step means: the hooks below are on every row alike.
                       data-demo-key={row.name}
                     >
-                      <td>
+                      {/* The open row's name and root, with its pins below, are what pin-runtime ends framed on:
+                          measured by their words, and closer than the camera's usual 2×. */}
+                      <td
+                        data-demo-focus={open ? "project-open" : undefined}
+                        data-demo-fit={open ? "text" : undefined}
+                        data-demo-zoom-max={open ? "3.3" : undefined}
+                      >
                         <span className={styles.name}>
                           <IconTile tone="coral">
                             <FolderIcon size={16} />
@@ -246,7 +252,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
                           {row.name}
                         </span>
                       </td>
-                      <td>
+                      <td data-demo-focus={open ? "project-open" : undefined} data-demo-fit={open ? "text" : undefined}>
                         <span className={styles.root}>
                           <span className={styles.rootPath} title={row.root}>
                             {row.root}

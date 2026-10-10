@@ -71,8 +71,15 @@ export function parseArgs(argv, sceneIds) {
   return parseRun(argv, sceneIds, { flag: "--scene", key: "scenes", noun: "scene", command: "screenshots" });
 }
 
+/** `--camera-only` recomputes cameras from a previous run's samples, filming nothing. */
 export function parseClipArgs(argv, clipIds) {
-  return parseRun(argv, clipIds, { flag: "--clip", key: "clips", noun: "clip", command: "clips" });
+  const cameraOnly = argv.includes("--camera-only");
+  const options = parseRun(
+    argv.filter((arg) => arg !== "--camera-only"),
+    clipIds,
+    { flag: "--clip", key: "clips", noun: "clip", command: "clips" },
+  );
+  return { ...options, cameraOnly };
 }
 
 /** What dark is filmed in: the first colour theme, navy, the dark MixLab had before the redesign

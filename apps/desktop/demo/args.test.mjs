@@ -69,7 +69,16 @@ describe("parseClipArgs", () => {
       clips: CLIPS,
       themes: ["dark", "light"],
       platform: "mac",
+      cameraOnly: false,
     });
+  });
+
+  it("recomputes cameras from saved samples with --camera-only", () => {
+    expect(parseClipArgs(["--camera-only", "--clip", "new-site"], CLIPS)).toMatchObject({ cameraOnly: true, clips: ["new-site"] });
+  });
+
+  it("knows --camera-only only for clips", () => {
+    expect(() => parseArgs(["--camera-only"], IDS)).toThrow("unknown argument --camera-only");
   });
 
   it("narrows by clip and theme", () => {
