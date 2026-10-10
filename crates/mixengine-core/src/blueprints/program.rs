@@ -5,9 +5,10 @@
 //! that, and only when the first word is a bare name — every doubt resolves to *not judging*,
 //! because a false `blocked` stops a blueprint that would have worked (the design's D2).
 
+use std::collections::BTreeSet;
 use std::ffi::OsStr;
 
-use mixengine_proto::Disposition;
+use mixengine_proto::{Disposition, RuntimeKind};
 
 /// Words either shell answers itself, without ever consulting `PATH`.
 ///
@@ -59,26 +60,75 @@ pub fn is_an_npm_command(command: &str) -> bool {
     bare_name(command).is_some_and(|name| NPM_FAMILY.contains(&name.to_ascii_lowercase().as_str()))
 }
 
-/// The scaffold step's disposition: `Confirm` unless its program is a bare name nothing on
-/// `scaffold_path` answers to, which is `Blocked` — decided here rather than at the end of a job
-/// (the design's D1 and D3).
-#[must_use]
-pub fn disposition(command: &str, scaffold_path: &OsStr) -> Disposition {
-    match bare_name(command) {
-        Some(name)
-            if mixengine_platform::process::program_on_path(name, scaffold_path).is_none() =>
-        {
-            Disposition::Blocked {
-                reason: format!(
-                    "`{name}` is not on the PATH the command would run with (<home>/bin, then \
-                     the daemon's own PATH)"
-                ),
-            }
+/// The shim `bin/` would hold under `name`, when one of [`crate::shims::COMMANDS`] answers to it.
+///
+/// Compared the way [`crate::shims::dispatch`] compares, case folded only on Windows — but on the
+/// whole word, so `composer.phar` is not taken for the `composer` shim.
+fn shim_named(name: &str) -> Option<&'static crate::shims::Command> {
+    crate::shims::COMMANDS.iter().find(|command| {
+        if cfg!(windows) {
+            command.name.eq_ignore_ascii_case(name)
+        } else {
+            command.name == name
         }
-        _ => Disposition::Confirm {
-            what: command.to_owned(),
-        },
+    })
+}
+
+/// The scaffold step's disposition: `Confirm` unless its program is a bare name nothing will
+/// answer to by the time the step runs, which is `Blocked` — decided here rather than at the end of
+/// a job (the design's D1 and D3).
+///
+/// **`available` is every runtime kind there will be once the plan's runtimes are installed** —
+/// installed already, or in the blueprint's `[runtimes]`. Since T185b `bin/` fronts only what is
+/// installed, so on a fresh machine `bin/composer` is not there when the plan is made and is there
+/// when the scaffold runs: the runtime steps ahead of it put it there. Judging the PATH alone
+/// blocked every Composer entry in the gallery on exactly the machine it was meant for.
+#[must_use]
+pub fn disposition(
+    command: &str,
+    scaffold_path: &OsStr,
+    available: &BTreeSet<RuntimeKind>,
+) -> Disposition {
+    let confirm = || Disposition::Confirm {
+        what: command.to_owned(),
+    };
+
+    let Some(name) = bare_name(command) else {
+        return confirm();
+    };
+
+    let shim = shim_named(name);
+
+    if shim.is_some_and(|shim| {
+        available.contains(&shim.kind) && shim.via.is_none_or(|via| available.contains(&via))
+    }) {
+        return confirm();
     }
+
+    if mixengine_platform::process::program_on_path(name, scaffold_path).is_some() {
+        return confirm();
+    }
+
+    // **The sentence names what is missing**, when that can be told: `composer` installed and no
+    // PHP leaves no `bin/composer` at all, and "not on the PATH" sent somebody who had just
+    // installed Composer looking for a PATH problem.
+    let reason = match shim {
+        Some(shim) if !available.contains(&shim.kind) => format!(
+            "`{name}` comes with the {kind} runtime, which is not installed and this blueprint's \
+             [runtimes] does not ask for",
+            kind = shim.kind
+        ),
+        Some(crate::shims::Command { via: Some(via), .. }) => format!(
+            "`{name}` runs on {via}, which is not installed and this blueprint's [runtimes] does \
+             not ask for"
+        ),
+        _ => format!(
+            "`{name}` is not on the PATH the command would run with (<home>/bin, then the \
+             daemon's own PATH)"
+        ),
+    };
+
+    Disposition::Blocked { reason }
 }
 
 #[cfg(test)]
@@ -146,12 +196,12 @@ mod tests {
     /// PATH it was looked for on (D3).
     #[test]
     fn a_missing_program_is_blocked_with_its_name_and_where_it_was_looked_for() {
-        let judged = disposition("composer create-project laravel/laravel .", OsStr::new(""));
+        let judged = disposition("symfony new .", OsStr::new(""), &BTreeSet::new());
 
         let Disposition::Blocked { reason } = judged else {
             panic!("a missing program is blocked: {judged:?}");
         };
-        assert!(reason.contains("`composer`"), "{reason}");
+        assert!(reason.contains("`symfony`"), "{reason}");
         assert!(reason.contains("<home>/bin"), "{reason}");
         assert!(reason.contains("daemon's own PATH"), "{reason}");
     }
@@ -160,8 +210,67 @@ mod tests {
     #[test]
     fn a_word_that_is_not_judged_is_something_to_agree_to() {
         assert!(matches!(
-            disposition("echo hello> made.txt", OsStr::new("")),
+            disposition("echo hello> made.txt", OsStr::new(""), &BTreeSet::new()),
             Disposition::Confirm { what } if what == "echo hello> made.txt"
         ));
+    }
+
+    /// **A shim the plan's own runtimes will put in `bin/` is there to be run** — T78b as T185b
+    /// left it. `bin/` is empty on a fresh machine and holds `composer` once PHP and Composer are
+    /// installed, which the runtime steps do before the scaffold.
+    #[test]
+    fn a_shim_whose_runtimes_will_be_there_is_something_to_agree_to() {
+        let both = BTreeSet::from([RuntimeKind::Php, RuntimeKind::Composer]);
+
+        assert!(matches!(
+            disposition(
+                "composer create-project laravel/laravel .",
+                OsStr::new(""),
+                &both
+            ),
+            Disposition::Confirm { .. }
+        ));
+        assert!(matches!(
+            disposition(
+                "npx --yes create-next-app@latest .",
+                OsStr::new(""),
+                &BTreeSet::from([RuntimeKind::Node])
+            ),
+            Disposition::Confirm { .. }
+        ));
+    }
+
+    /// **Composer without a PHP is no `composer` at all**, and the reason says which is missing
+    /// rather than pointing at the PATH — reported from a machine with Composer installed alone.
+    #[test]
+    fn a_shim_missing_the_runtime_that_runs_it_names_that_runtime() {
+        let judged = disposition(
+            "composer create-project laravel/laravel .",
+            OsStr::new(""),
+            &BTreeSet::from([RuntimeKind::Composer]),
+        );
+
+        let Disposition::Blocked { reason } = judged else {
+            panic!("composer without a PHP is blocked: {judged:?}");
+        };
+        assert!(reason.contains("`composer` runs on php"), "{reason}");
+    }
+
+    /// And a shim whose own runtime is missing names that one.
+    #[test]
+    fn a_shim_missing_its_own_runtime_names_it() {
+        let judged = disposition("npx create-vite .", OsStr::new(""), &BTreeSet::new());
+
+        let Disposition::Blocked { reason } = judged else {
+            panic!("npx without a Node is blocked: {judged:?}");
+        };
+        assert!(reason.contains("comes with the node runtime"), "{reason}");
+    }
+
+    /// `composer.phar` is a file somebody keeps in their project, not the shim.
+    #[test]
+    fn only_the_whole_word_is_a_shim() {
+        assert!(shim_named("composer.phar").is_none());
+        assert!(shim_named("composer").is_some());
     }
 }

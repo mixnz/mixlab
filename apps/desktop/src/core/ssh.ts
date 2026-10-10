@@ -113,16 +113,14 @@ export function mergeSshSecrets(config: SshConfig, secrets: SshSecrets): SshConf
  * someone looking for `~/.ssh` on a Mac. It stays out of the dictionaries because a path is not
  * language: it follows the machine the app runs on, not the language it was asked to speak.
  *
- * `id_ed25519` and not `id_rsa`: it is what `ssh-keygen` has made by default since OpenSSH 9.5,
- * so it is the name most likely to be in the folder this points at. The two copies of this
- * constant disagreed about that, which is half of why there is now one.
+ * `id_rsa`: the name people recognise from every SSH guide, and the one most older keys carry.
  *
  * Which machine this is comes from {@link ./platform}. Linux is the fallback rather than a third
  * test: WebKitGTK spells its system several ways (`X11`, `Wayland`, `Linux`), and every remaining
  * desktop puts home directories under `/home`.
  */
 export const PRIVATE_KEY_PLACEHOLDER = IS_WINDOWS
-  ? "C:\Users\you\.ssh\id_ed25519"
+  ? "C:\\Users\\you\\.ssh\\id_rsa"
   : IS_MAC
-    ? "/Users/you/.ssh/id_ed25519"
-    : "/home/you/.ssh/id_ed25519";
+    ? "/Users/you/.ssh/id_rsa"
+    : "/home/you/.ssh/id_rsa";

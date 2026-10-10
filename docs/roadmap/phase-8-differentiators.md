@@ -182,6 +182,16 @@ has a platform-layer component and needs verification on Windows + macOS + Linux
       **What it deliberately does not do** is empty the directory. A resumed apply whose first run
       left files behind is now told why rather than failing late, and clearing them stays the
       person's — `project.delete`'s standing rule that the files were never ours is the same rule.
+- [x] **T78d** A `[scaffold]`'s program counts the runtimes the plan installs. T185b made `bin/`
+      front only what is installed, which T78b's check never heard about: on a fresh machine there
+      is no `bin/composer` when the plan is made, so every Composer entry in the gallery planned
+      `blocked` on exactly the machine it was meant for — and on one with Composer installed and no
+      PHP too, since the `composer` shim needs both. A first word that is one of the shim table's
+      commands is now `confirm` when its kind, and the kind it runs through, are in the blueprint's
+      `[runtimes]` or already installed; the runtime steps put it in `bin/` before the scaffold runs.
+      A miss names what is missing — *`composer` runs on php* — rather than the PATH. The gallery
+      suite had handed every plan a `composer` and an `npx`, which is how it hid; it now plans on an
+      empty PATH and checks that each command is a shim its own `[runtimes]` provides.
 - [x] **T79** Built-in blueprint gallery — six blueprints compiled into the binary and seeded as
       `builtin` rows at daemon start, which is the first thing in this product to write that word.
       **Trusted without a signature check**, and that is the departure from what T78a expected of

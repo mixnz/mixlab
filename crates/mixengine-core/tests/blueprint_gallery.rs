@@ -660,13 +660,18 @@ async fn planned(slug: &str) -> mixengine_proto::BlueprintPlan {
     planned_with(slug, GALLERY_PROGRAMS).await
 }
 
-/// **Every one of the thirteen plans without a blocked step** — nothing in the gallery asks for
-/// something this build cannot do on a machine that has nothing installed but the two programs the
-/// gallery's commands name.
+/// **Every gallery plan without a blocked step** — nothing in the gallery asks for something this
+/// build cannot do on a machine that has nothing installed at all.
+///
+/// **Nothing on the PATH either, not even the programs the commands name** — T78b as T185b left
+/// it. `bin/` holds a runtime's commands only once it is installed, so on a fresh machine there is
+/// no `composer` and no `npx` when the plan is made; the entries' own `[runtimes]` put them there
+/// before the command runs. Handing these plans a `composer` hid that every Composer entry was
+/// blocked on exactly the machine it was meant for.
 #[tokio::test]
 async fn every_gallery_blueprint_plans_on_a_machine_with_nothing_installed() {
     for entry in ENTRIES {
-        let planned = planned(entry.slug).await;
+        let planned = planned_with(entry.slug, &[]).await;
 
         assert!(
             !planned.steps.is_empty(),
@@ -685,42 +690,29 @@ async fn every_gallery_blueprint_plans_on_a_machine_with_nothing_installed() {
     }
 }
 
-/// **On a machine without `composer`, the entries that run it are blocked at exactly one step
-/// and it is the command** — roadmap task **T78b**, widened by T205's five PHP entries. The gap
-/// the product does not close (T25 keeps `composer` out of the shims) is on the screen rather than
-/// at the end of the job, and the others plan clean because `npx` is a shim every home has.
+/// **Every command the gallery runs is a shim its own `[runtimes]` provides** — which is what lets
+/// the test above hand it an empty PATH. A gallery entry calling a program no runtime ships would
+/// plan clean in a test with that program lying around and block on somebody's machine.
 #[tokio::test]
-async fn without_composer_only_the_entries_that_need_it_are_blocked_and_only_at_the_command() {
+async fn every_gallery_command_is_provided_by_its_own_runtimes() {
     for entry in ENTRIES {
-        let planned = planned_with(entry.slug, &["npx"]).await;
-        let blocked: Vec<_> = planned
-            .steps
+        let filed = manifest::read(entry.manifest).expect("a manifest");
+        let Some(scaffold) = &filed.scaffold else {
+            continue;
+        };
+        let program = mixengine_core::blueprints::program::bare_name(&scaffold.command)
+            .expect("a gallery command starts with a program");
+        let shim = mixengine_core::shims::COMMANDS
             .iter()
-            .filter(|step| matches!(step.disposition, Disposition::Blocked { .. }))
-            .collect();
+            .find(|command| command.name == program)
+            .unwrap_or_else(|| panic!("{}: `{program}` is no shim", entry.slug));
 
-        match entry.slug {
-            "laravel" | "laravel-mongodb" | "symfony" | "drupal" | "cakephp" | "codeigniter"
-            | "craft" | "statamic" | "yii" => {
-                assert_eq!(blocked.len(), 1, "{}: {:?}", entry.slug, planned.steps);
-                assert!(
-                    matches!(blocked[0].action, PlanAction::RunScaffold { .. }),
-                    "{}: {:?}",
-                    entry.slug,
-                    blocked[0]
-                );
-                assert!(
-                    matches!(
-                        &blocked[0].disposition,
-                        Disposition::Blocked { reason } if reason.contains("`composer`")
-                    ),
-                    "{}: {:?}",
-                    entry.slug,
-                    blocked[0]
-                );
-            }
-            _ => assert!(blocked.is_empty(), "{}: {blocked:?}", entry.slug),
-        }
+        assert!(
+            filed.runtimes.contains_key(&shim.kind)
+                && shim.via.is_none_or(|via| filed.runtimes.contains_key(&via)),
+            "{}: `{program}` needs runtimes its [runtimes] does not ask for",
+            entry.slug
+        );
     }
 }
 
