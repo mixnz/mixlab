@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+- On macOS and Linux, Settings → Updates offers Finish as soon as you come back from the
+  installer, instead of a few seconds later.
+
 ## v0.0.19
 
 ### Fixed
