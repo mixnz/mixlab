@@ -13,6 +13,7 @@
 
 use std::ffi::OsStr;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::Host;
 
@@ -63,15 +64,30 @@ fn decide(host: &dyn Host, value: Option<&OsStr>, release: bool) -> Option<PathB
     let path = std::path::absolute(value).ok()?;
 
     if !host.home_dirs().elevated_can_read(&path) {
-        tracing::warn!(
-            passed_over = %path.display(),
-            "this checkout's home is on a volume the elevation helper cannot read; using the \
-             default home instead"
-        );
+        if first_time(&PASSED_OVER_SAID) {
+            tracing::warn!(
+                passed_over = %path.display(),
+                "this checkout's home is on a volume the elevation helper cannot read; using the \
+                 default home instead"
+            );
+        }
         return None;
     }
 
     Some(path)
+}
+
+/// Whether this process has already said it passed the suggestion over.
+///
+/// **Once a process, because the window asks on every connection** — each RPC call, and each
+/// events, logs and metrics stream, resolves the home afresh, and a dev window opening one screen
+/// printed the same sentence nineteen times in a second. The answer cannot change in between: it is
+/// a function of an environment variable and a path, and neither moves under a running process.
+static PASSED_OVER_SAID: AtomicBool = AtomicBool::new(false);
+
+/// `true` the first time it is asked about `flag`, and never again.
+fn first_time(flag: &AtomicBool) -> bool {
+    !flag.swap(true, Ordering::Relaxed)
 }
 
 #[cfg(test)]
@@ -110,6 +126,25 @@ mod tests {
             .elevated_cannot_read(std::path::absolute("/checkout").unwrap());
 
         assert_eq!(decide(&host, Some(suggested()), false), None);
+    }
+
+    /// Asked twice, the second answer is the first — only the warning is not repeated.
+    #[test]
+    fn a_passed_over_suggestion_stays_passed_over() {
+        let host = mock::Host::with_home("/default")
+            .elevated_cannot_read(std::path::absolute("/checkout").unwrap());
+
+        assert_eq!(decide(&host, Some(suggested()), false), None);
+        assert_eq!(decide(&host, Some(suggested()), false), None);
+    }
+
+    #[test]
+    fn the_warning_is_said_once() {
+        let flag = AtomicBool::new(false);
+
+        assert!(first_time(&flag));
+        assert!(!first_time(&flag));
+        assert!(!first_time(&flag));
     }
 
     #[test]
