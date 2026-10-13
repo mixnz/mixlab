@@ -104,7 +104,9 @@ pub(crate) async fn cert(
     match command {
         CertCommand::CaStatus => {
             let status: CaStatus = ask(&mut client, rpc::method::CERT_CA_STATUS, None).await?;
-            emit(&rendered(json, &status, || render::ca_status(&status)))?;
+            emit(&rendered(json, &status, || {
+                render::cert::ca_status(&status)
+            }))?;
 
             Ok(ExitCode::SUCCESS)
         }
@@ -115,7 +117,9 @@ pub(crate) async fn cert(
             };
             let report: CertStatusReport =
                 ask(&mut client, rpc::method::CERT_STATUS, encode(&request)).await?;
-            emit(&rendered(json, &report, || render::cert_status(&report)))?;
+            emit(&rendered(json, &report, || {
+                render::cert::cert_status(&report)
+            }))?;
 
             Ok(ExitCode::SUCCESS)
         }
@@ -126,7 +130,9 @@ pub(crate) async fn cert(
             };
             let report: CertIssueReport =
                 ask(&mut client, rpc::method::CERT_ISSUE, encode(&request)).await?;
-            emit(&rendered(json, &report, || render::cert_issue(&report)))?;
+            emit(&rendered(json, &report, || {
+                render::cert::cert_issue(&report)
+            }))?;
 
             Ok(ExitCode::SUCCESS)
         }
@@ -150,7 +156,7 @@ pub(crate) async fn cert(
             job_answering(&mut client, started, no_wait, json, |result| {
                 serde_json::from_value::<CaRotateReport>(result)
                     .ok()
-                    .map(|report| render::ca_rotate(&report))
+                    .map(|report| render::cert::ca_rotate(&report))
             })
             .await
         }
@@ -175,7 +181,7 @@ pub(crate) async fn cert(
             job_answering(&mut client, started, no_wait, json, |result| {
                 serde_json::from_value::<CaUninstallReport>(result)
                     .ok()
-                    .map(|report| render::ca_uninstall(&report))
+                    .map(|report| render::cert::ca_uninstall(&report))
             })
             .await
         }
@@ -200,7 +206,7 @@ async fn agreed(client: &mut Client, what: &str, json: bool) -> Result<bool, Err
         true => String::new(),
         false => format!(
             "\n\nthis machine is also holding these, and one prompt covers them all:\n{}",
-            render::elevation_prompt(&waiting)
+            render::elevation::elevation_prompt(&waiting)
         ),
     };
 
@@ -219,7 +225,7 @@ async fn agreed(client: &mut Client, what: &str, json: bool) -> Result<bool, Err
 /// Follow a job to its end and render whatever it produced, or print the job when it produced
 /// nothing this command knows how to read.
 ///
-/// **The result is decoded here and not in [`render::job_status`].** That function tries several
+/// **The result is decoded here and not in [`render::job::job_status`].** That function tries several
 /// types in turn against one `serde_json::Value`, and T54's two reports are similar enough — an
 /// `outcome` and a `status` apiece — that adding them to that chain is how a rotation gets rendered
 /// as a removal. A command knows its own type.
@@ -231,7 +237,9 @@ async fn job_answering(
     render_result: impl Fn(serde_json::Value) -> Option<String>,
 ) -> Result<ExitCode, Error> {
     if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
+        emit(&rendered(json, &started, || {
+            render::job::job_status(&started)
+        }))?;
         return Ok(ExitCode::SUCCESS);
     }
 
@@ -240,12 +248,16 @@ async fn job_answering(
     match finished.outcome.clone() {
         Some(JobOutcome::Succeeded { result }) => match render_result(result.clone()) {
             Some(said) => emit(&rendered(json, &result, || said))?,
-            None => emit(&rendered(json, &finished, || render::job_status(&finished)))?,
+            None => emit(&rendered(json, &finished, || {
+                render::job::job_status(&finished)
+            }))?,
         },
-        _ => emit(&rendered(json, &finished, || render::job_status(&finished)))?,
+        _ => emit(&rendered(json, &finished, || {
+            render::job::job_status(&finished)
+        }))?,
     }
 
-    Ok(match render::job_succeeded(&finished) {
+    Ok(match render::job::job_succeeded(&finished) {
         true => ExitCode::SUCCESS,
         false => ExitCode::FAILURE,
     })

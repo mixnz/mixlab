@@ -1,7 +1,7 @@
 # Phase 45 — Files that fit in one read
 
 *Goal: no source file grows past 1,500 lines, none already past it grows at all, and `mix`'s
-7,651-line `main.rs` becomes one module per command.*
+`main.rs` and `render.rs` (7,651 and 7,741 lines) become one module per command.*
 
 Part of the [build plan](todo.md). Legend: `[ ]` todo · `[~]` in progress · `[x]` done · **(P)** =
 has a platform-layer component and needs verification on Windows + macOS + Linux.
@@ -20,8 +20,10 @@ Design: [2026-10-13-files-that-fit-in-one-read-design.md](../specs/2026-10-13-fi
       `jobs.rs`, `prerequisites.rs`, `upgrades.rs`). A move and only a move: the command reference
       (`packaging/docs.sh --check`) and the unit-test count are unchanged, and `main.rs` leaves the
       baseline.
-- [ ] **T207b** `crates/mixengine-cli/src/render.rs` split the same way, `render/<name>.rs` beside
-      `commands/<name>.rs`. Needs a design of its own for where its tests go.
+- [x] **T207b** `crates/mixengine-cli/src/render.rs` split the same way, `render/<name>.rs` beside
+      `commands/<name>.rs`. Design:
+      [2026-10-13-render-split-by-command-design.md](../specs/2026-10-13-render-split-by-command-design.md).
 
-**M45** `scripts/file-size-baseline.json` no longer names `crates/mixengine-cli/src/main.rs`, and
+**M45** `scripts/file-size-baseline.json` no longer names `crates/mixengine-cli/src/main.rs` or
+`render.rs`, and
 `bash scripts/gate.sh` is green.

@@ -71,7 +71,7 @@ pub(crate) async fn daemon_stop(endpoint: &Endpoint, json: bool) -> Result<ExitC
     let shutdown: DaemonShutdown = ask(&mut client, rpc::method::DAEMON_SHUTDOWN, None).await?;
 
     emit(&rendered(json, &shutdown, || {
-        render::daemon_shutdown(&shutdown)
+        render::daemon::daemon_shutdown(&shutdown)
     }))?;
 
     Ok(match (&shutdown.services.failed, &shutdown.unordered) {
@@ -98,7 +98,7 @@ pub(crate) async fn daemon_credential_store(
     .await?;
 
     emit(&rendered(json, &change, || {
-        render::credential_store_change(change)
+        render::daemon::credential_store_change(change)
     }))?;
 
     Ok(ExitCode::SUCCESS)

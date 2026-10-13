@@ -475,14 +475,18 @@ async fn set_front_end(
     .await?;
 
     if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
+        emit(&rendered(json, &started, || {
+            render::job::job_status(&started)
+        }))?;
         return Ok(ExitCode::SUCCESS);
     }
 
     let finished = follow(client, started, json).await?;
 
     let Some(JobOutcome::Succeeded { result }) = finished.outcome.clone() else {
-        emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+        emit(&rendered(json, &finished, || {
+            render::job::job_status(&finished)
+        }))?;
         return Ok(ExitCode::FAILURE);
     };
 
@@ -497,7 +501,7 @@ async fn set_front_end(
     })?;
 
     emit(&rendered(json, &report, || {
-        render::front_end_report(&report)
+        render::service::front_end_report(&report)
     }))?;
 
     Ok(match report.wanted_more() {
@@ -613,7 +617,9 @@ pub(crate) async fn service(
     let (method, walked, params) = match &command {
         ServiceCommand::List => {
             let list: ServiceList = ask(&mut client, rpc::method::SERVICE_LIST, None).await?;
-            emit(&rendered(json, &list, || render::service_list(&list)))?;
+            emit(&rendered(json, &list, || {
+                render::service::service_list(&list)
+            }))?;
             return Ok(ExitCode::SUCCESS);
         }
 
@@ -624,7 +630,7 @@ pub(crate) async fn service(
             let summary: ServiceSummary =
                 ask(&mut client, rpc::method::SERVICE_STATUS, encode(&query)).await?;
             emit(&rendered(json, &summary, || {
-                render::service_status(&summary)
+                render::service::service_status(&summary)
             }))?;
             return Ok(ExitCode::SUCCESS);
         }
@@ -672,7 +678,9 @@ pub(crate) async fn service(
                 }
             };
 
-            emit(&rendered(json, &report, || render::service_limits(&report)))?;
+            emit(&rendered(json, &report, || {
+                render::service::service_limits(&report)
+            }))?;
             return Ok(ExitCode::SUCCESS);
         }
 
@@ -713,7 +721,9 @@ pub(crate) async fn service(
                 }
             };
 
-            emit(&rendered(json, &report, || render::service_idle(&report)))?;
+            emit(&rendered(json, &report, || {
+                render::service::service_idle(&report)
+            }))?;
             return Ok(ExitCode::SUCCESS);
         }
 
@@ -733,7 +743,9 @@ pub(crate) async fn service(
                 }
             };
 
-            emit(&rendered(json, &answer, || render::save_resources(answer)))?;
+            emit(&rendered(json, &answer, || {
+                render::service::save_resources(answer)
+            }))?;
             return Ok(ExitCode::SUCCESS);
         }
 
@@ -764,7 +776,7 @@ pub(crate) async fn service(
             };
 
             emit(&rendered(json, &summary, || {
-                render::service_autostart(&summary)
+                render::service::service_autostart(&summary)
             }))?;
             return Ok(ExitCode::SUCCESS);
         }
@@ -791,7 +803,7 @@ pub(crate) async fn service(
             let creation: ServiceCreation =
                 ask(&mut client, rpc::method::SERVICE_CREATE, encode(&create)).await?;
             emit(&rendered(json, &creation, || {
-                render::service_creation(&creation)
+                render::service::service_creation(&creation)
             }))?;
             return Ok(ExitCode::SUCCESS);
         }
@@ -799,7 +811,9 @@ pub(crate) async fn service(
         ServiceCommand::Found => {
             let found: mixengine_proto::ServiceFoundList =
                 ask(&mut client, rpc::method::SERVICE_FOUND, None).await?;
-            emit(&rendered(json, &found, || render::service_found(&found)))?;
+            emit(&rendered(json, &found, || {
+                render::service::service_found(&found)
+            }))?;
             return Ok(ExitCode::SUCCESS);
         }
 
@@ -813,7 +827,7 @@ pub(crate) async fn service(
             )
             .await?;
             emit(&rendered(json, &summary, || {
-                render::service_adopted(&summary)
+                render::service::service_adopted(&summary)
             }))?;
             return Ok(ExitCode::SUCCESS);
         }
@@ -826,14 +840,14 @@ pub(crate) async fn service(
                 // `.id` and `.state` where the API names them.
                 Found::On(service) => {
                     emit(&rendered(json, &service, || {
-                        render::front_end(Some(service))
+                        render::service::front_end(Some(service))
                     }))?;
                     Ok(ExitCode::SUCCESS)
                 }
 
                 Found::None => {
                     emit(&rendered(json, &Option::<ServiceSummary>::None, || {
-                        render::front_end(None)
+                        render::service::front_end(None)
                     }))?;
                     Ok(ExitCode::SUCCESS)
                 }
@@ -880,7 +894,7 @@ pub(crate) async fn service(
             let removal: ServiceRemoval =
                 ask(&mut client, rpc::method::SERVICE_DELETE, encode(&asked)).await?;
             emit(&rendered(json, &removal, || {
-                render::service_removal(&removal)
+                render::service::service_removal(&removal)
             }))?;
             return Ok(ExitCode::SUCCESS);
         }
@@ -902,7 +916,7 @@ pub(crate) async fn service(
 
         ServiceCommand::Start(start) => (
             rpc::method::SERVICE_START,
-            render::Walked::Start,
+            render::service::Walked::Start,
             encode(&ServiceTarget {
                 service: start.target.service.clone(),
                 project: start.project.clone().map(ProjectRef::Name),
@@ -911,12 +925,12 @@ pub(crate) async fn service(
         ),
         ServiceCommand::Stop(target) => (
             rpc::method::SERVICE_STOP,
-            render::Walked::Stop,
+            render::service::Walked::Stop,
             encode(&walk_target(target)),
         ),
         ServiceCommand::Restart(target) => (
             rpc::method::SERVICE_RESTART,
-            render::Walked::Restart,
+            render::service::Walked::Restart,
             encode(&walk_target(target)),
         ),
 
@@ -934,7 +948,7 @@ pub(crate) async fn service(
 
             (
                 rpc::method::SERVICE_RESET_CREDENTIAL,
-                render::Walked::ResetCredential,
+                render::service::Walked::ResetCredential,
                 encode(&ResetCredential {
                     service: service.clone(),
                     wait: !*no_wait,
@@ -945,7 +959,7 @@ pub(crate) async fn service(
 
     let walk: ServiceWalk = ask(&mut client, method, params).await?;
     emit(&rendered(json, &walk, || {
-        render::service_walk(walked, &walk)
+        render::service::service_walk(walked, &walk)
     }))?;
 
     Ok(match walk.failed {

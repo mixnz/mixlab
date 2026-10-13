@@ -56,15 +56,18 @@ pub(crate) async fn path(
     let mut client = Client::connect(endpoint, autostart).await?;
 
     let (method, pathed) = match command {
-        PathCommand::Status => (rpc::method::PATH_STATUS, render::Pathed::Asked),
-        PathCommand::Install => (rpc::method::PATH_INSTALL, render::Pathed::Installed),
-        PathCommand::Uninstall => (rpc::method::PATH_UNINSTALL, render::Pathed::Uninstalled),
-        PathCommand::Rescan => (rpc::method::PATH_RESCAN, render::Pathed::Rescanned),
+        PathCommand::Status => (rpc::method::PATH_STATUS, render::path::Pathed::Asked),
+        PathCommand::Install => (rpc::method::PATH_INSTALL, render::path::Pathed::Installed),
+        PathCommand::Uninstall => (
+            rpc::method::PATH_UNINSTALL,
+            render::path::Pathed::Uninstalled,
+        ),
+        PathCommand::Rescan => (rpc::method::PATH_RESCAN, render::path::Pathed::Rescanned),
     };
 
     let report: PathReport = ask(&mut client, method, None).await?;
     emit(&rendered(json, &report, || {
-        render::path_report(pathed, &report)
+        render::path::path_report(pathed, &report)
     }))?;
 
     Ok(ExitCode::SUCCESS)

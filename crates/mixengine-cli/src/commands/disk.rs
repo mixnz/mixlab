@@ -36,7 +36,7 @@ pub(crate) async fn disk(
     )
     .await?;
 
-    emit(&rendered(json, &usage, || render::disk_usage(&usage)))?;
+    emit(&rendered(json, &usage, || render::disk::disk_usage(&usage)))?;
 
     Ok(ExitCode::SUCCESS)
 }
@@ -67,7 +67,7 @@ pub(crate) async fn cleanup(
 
         // Printed and not held back under `--json`, because the question below is refused there
         // anyway: what a person is about to allow is what they are shown.
-        emit(&render::disk_usage(&usage))?;
+        emit(&render::disk::disk_usage(&usage))?;
 
         if !agreed_to_cleanup(&usage, keep_logs, keep_cache, json)? {
             // Saying no is an answer and not a failure — `mix uninstall`'s rule. Nothing went, so
@@ -87,14 +87,18 @@ pub(crate) async fn cleanup(
     .await?;
 
     if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
+        emit(&rendered(json, &started, || {
+            render::job::job_status(&started)
+        }))?;
         return Ok(ExitCode::SUCCESS);
     }
 
     let finished = follow(&mut client, started, json).await?;
 
     let Some(JobOutcome::Succeeded { result }) = finished.outcome.clone() else {
-        emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+        emit(&rendered(json, &finished, || {
+            render::job::job_status(&finished)
+        }))?;
         return Ok(ExitCode::FAILURE);
     };
 
@@ -108,7 +112,9 @@ pub(crate) async fn cleanup(
         )
     })?;
 
-    emit(&rendered(json, &report, || render::cleanup_report(&report)))?;
+    emit(&rendered(json, &report, || {
+        render::disk::cleanup_report(&report)
+    }))?;
 
     Ok(match report.left_behind() {
         true => ExitCode::FAILURE,

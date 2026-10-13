@@ -165,7 +165,9 @@ pub(crate) async fn package(
             };
             let list: PackageList =
                 ask(&mut client, rpc::method::PACKAGE_LIST, encode(&filter)).await?;
-            emit(&rendered(json, &list, || render::package_list(&list)))?;
+            emit(&rendered(json, &list, || {
+                render::package::package_list(&list)
+            }))?;
         }
 
         PackageCommand::Available {
@@ -182,7 +184,10 @@ pub(crate) async fn package(
             )
             .await?;
             emit(&rendered(json, &catalogue, || {
-                render::package_catalogue(&catalogue, &render::Lines { all, line })
+                render::package::package_catalogue(
+                    &catalogue,
+                    &render::catalogue::Lines { all, line },
+                )
             }))?;
         }
 
@@ -222,14 +227,18 @@ pub(crate) async fn package(
                 ask(&mut client, rpc::method::PACKAGE_INSTALL, encode(&asked)).await?;
 
             if no_wait {
-                emit(&rendered(json, &started, || render::job_status(&started)))?;
+                emit(&rendered(json, &started, || {
+                    render::job::job_status(&started)
+                }))?;
                 return Ok(ExitCode::SUCCESS);
             }
 
             let finished = follow(&mut client, started, json).await?;
-            emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+            emit(&rendered(json, &finished, || {
+                render::job::job_status(&finished)
+            }))?;
 
-            return Ok(match render::job_succeeded(&finished) {
+            return Ok(match render::job::job_succeeded(&finished) {
                 true => ExitCode::SUCCESS,
                 false => ExitCode::FAILURE,
             });
@@ -239,7 +248,7 @@ pub(crate) async fn package(
             let found: mixengine_proto::PackageFoundList =
                 ask(&mut client, rpc::method::PACKAGE_FOUND, None).await?;
             emit(&rendered(json, &found, || {
-                render::on_disk(
+                render::catalogue::on_disk(
                     found.found.iter().map(|row| {
                         (
                             format!("{} {}", row.package, row.version),
@@ -260,7 +269,7 @@ pub(crate) async fn package(
             let summary: mixengine_proto::PackageSummary =
                 ask(&mut client, rpc::method::PACKAGE_ADOPT, encode(&target)).await?;
             emit(&rendered(json, &summary, || {
-                render::package_summary(&summary)
+                render::package::package_summary(&summary)
             }))?;
         }
 
@@ -335,7 +344,7 @@ pub(crate) async fn package(
             let removal: PackageRemoval =
                 ask(&mut client, rpc::method::PACKAGE_UNINSTALL, encode(&target)).await?;
             emit(&rendered(json, &removal, || {
-                render::package_removal(&removal)
+                render::package::package_removal(&removal)
             }))?;
         }
     }

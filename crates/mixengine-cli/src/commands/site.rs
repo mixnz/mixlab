@@ -321,7 +321,7 @@ pub(crate) async fn site(
             let creation: SiteCreation =
                 ask(&mut client, rpc::method::SITE_CREATE, encode(&create)).await?;
             emit(&rendered(json, &creation, || {
-                render::site_detail(&creation.site)
+                render::site::site_detail(&creation.site)
             }))?;
         }
 
@@ -330,7 +330,7 @@ pub(crate) async fn site(
                 project: project.map(ProjectRef::Name),
             };
             let list: SiteList = ask(&mut client, rpc::method::SITE_LIST, encode(&query)).await?;
-            emit(&rendered(json, &list, || render::site_list(&list)))?;
+            emit(&rendered(json, &list, || render::site::site_list(&list)))?;
         }
 
         SiteCommand::Show { site } => {
@@ -343,7 +343,8 @@ pub(crate) async fn site(
             // the listing the daemon already answers; `--json` stays the site alone.
             let services: ServiceList = ask(&mut client, rpc::method::SERVICE_LIST, None).await?;
             emit(&rendered(json, &detail, || {
-                render::site_detail(&detail) + &render::site_failures(&detail, &services)
+                render::site::site_detail(&detail)
+                    + &render::site::site_failures(&detail, &services)
             }))?;
         }
 
@@ -353,7 +354,9 @@ pub(crate) async fn site(
             };
             let detail: SiteDetail =
                 ask(&mut client, rpc::method::SITE_START, encode(&query)).await?;
-            emit(&rendered(json, &detail, || render::site_detail(&detail)))?;
+            emit(&rendered(json, &detail, || {
+                render::site::site_detail(&detail)
+            }))?;
         }
 
         SiteCommand::Stop { site } => {
@@ -362,7 +365,9 @@ pub(crate) async fn site(
             };
             let detail: SiteDetail =
                 ask(&mut client, rpc::method::SITE_STOP, encode(&query)).await?;
-            emit(&rendered(json, &detail, || render::site_detail(&detail)))?;
+            emit(&rendered(json, &detail, || {
+                render::site::site_detail(&detail)
+            }))?;
         }
 
         SiteCommand::Update {
@@ -400,7 +405,9 @@ pub(crate) async fn site(
             };
             let detail: SiteDetail =
                 ask(&mut client, rpc::method::SITE_UPDATE, encode(&update)).await?;
-            emit(&rendered(json, &detail, || render::site_detail(&detail)))?;
+            emit(&rendered(json, &detail, || {
+                render::site::site_detail(&detail)
+            }))?;
         }
 
         SiteCommand::Delete { site } => {
@@ -409,7 +416,9 @@ pub(crate) async fn site(
             };
             let removal: SiteRemoval =
                 ask(&mut client, rpc::method::SITE_DELETE, encode(&query)).await?;
-            emit(&rendered(json, &removal, || render::site_removal(&removal)))?;
+            emit(&rendered(json, &removal, || {
+                render::site::site_removal(&removal)
+            }))?;
         }
 
         SiteCommand::Share {
@@ -424,7 +433,9 @@ pub(crate) async fn site(
             };
             let sharing: SiteSharing =
                 ask(&mut client, rpc::method::SITE_SHARE, encode(&request)).await?;
-            emit(&rendered(json, &sharing, || render::site_shared(&sharing)))?;
+            emit(&rendered(json, &sharing, || {
+                render::site::site_shared(&sharing)
+            }))?;
         }
 
         SiteCommand::Unshare { site } => {

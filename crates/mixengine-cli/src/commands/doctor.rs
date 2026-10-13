@@ -31,7 +31,7 @@ pub(crate) async fn doctor(
     )
     .await?;
 
-    emit(&rendered(json, &report, || render::doctor(&report)))?;
+    emit(&rendered(json, &report, || render::doctor::doctor(&report)))?;
 
     // **The exit code is the report and not the call.** A doctor that exits 0 because it managed to
     // ask cannot be used in a script, and the shell is where the second question gets asked.
@@ -82,7 +82,9 @@ pub(crate) async fn bundle(
         })?;
     }
 
-    emit(&rendered(json, &report, || render::bundle(&report, out)))?;
+    emit(&rendered(json, &report, || {
+        render::doctor::bundle(&report, out)
+    }))?;
 
     Ok(ExitCode::SUCCESS)
 }
@@ -110,7 +112,9 @@ pub(crate) async fn self_repair(
     )
     .await?;
 
-    emit(&rendered(json, &repaired, || render::repair(&repaired)))?;
+    emit(&rendered(json, &repaired, || {
+        render::doctor::repair(&repaired)
+    }))?;
 
     // **The exit code is the report and not the call**, as `mix doctor`'s is: everything found was
     // either repaired or queued, or it was not.
@@ -144,15 +148,19 @@ pub(crate) async fn self_repair(
     };
 
     if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
+        emit(&rendered(json, &started, || {
+            render::job::job_status(&started)
+        }))?;
         return Ok(outcome);
     }
 
     let finished = follow(&mut client, started, json).await?;
-    emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+    emit(&rendered(json, &finished, || {
+        render::job::job_status(&finished)
+    }))?;
 
     // A grant that failed is a machine still holding what it held, whatever the repairs did.
-    Ok(match render::job_succeeded(&finished) {
+    Ok(match render::job::job_succeeded(&finished) {
         true => outcome,
         false => ExitCode::FAILURE,
     })

@@ -152,7 +152,7 @@ pub(crate) async fn database(
             let store = credential_store(&mut client, json).await;
 
             emit(&rendered(json, &account, || {
-                render::database_created(&account, store)
+                render::database::database_created(&account, store)
             }))?;
         }
 
@@ -165,7 +165,7 @@ pub(crate) async fn database(
             .await?;
 
             emit(&rendered(json, &report, || {
-                render::database_client(&report)
+                render::database::database_client(&report)
             }))?;
         }
 
@@ -186,7 +186,7 @@ pub(crate) async fn database(
             .await?;
 
             emit(&rendered(json, &handoff, || {
-                render::database_opened(&handoff)
+                render::database::database_opened(&handoff)
             }))?;
 
             // A client that did not open is exit 1 for `mix service start`'s reason: `mix database
@@ -207,7 +207,7 @@ pub(crate) async fn database(
             let store = credential_store(&mut client, json).await;
 
             emit(&rendered(json, &answer, || {
-                render::database_credentials(&answer, store)
+                render::database::database_credentials(&answer, store)
             }))?;
         }
     }

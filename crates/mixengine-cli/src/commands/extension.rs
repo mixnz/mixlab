@@ -120,7 +120,7 @@ pub(crate) async fn extension(
                 ask(&mut client, rpc::method::EXTENSION_INSPECT, encode(&asked)).await?;
 
             emit(&rendered(json, &inspection, || {
-                render::extension_inspection(&inspection)
+                render::extension::extension_inspection(&inspection)
             }))?;
         }
 
@@ -129,7 +129,7 @@ pub(crate) async fn extension(
                 ask(&mut client, rpc::method::EXTENSION_LIST, encode(&())).await?;
 
             emit(&rendered(json, &list, || {
-                render::installed_extensions(&list)
+                render::extension::installed_extensions(&list)
             }))?;
         }
 
@@ -143,7 +143,7 @@ pub(crate) async fn extension(
             .await?;
 
             emit(&rendered(json, &catalogue, || {
-                render::extension_catalogue(&catalogue)
+                render::extension::extension_catalogue(&catalogue)
             }))?;
         }
 
@@ -154,7 +154,9 @@ pub(crate) async fn extension(
             let plan: ExtensionPlan =
                 ask(&mut client, rpc::method::EXTENSION_PLAN, encode(&asked)).await?;
 
-            emit(&rendered(json, &plan, || render::extension_plan(&plan)))?;
+            emit(&rendered(json, &plan, || {
+                render::extension::extension_plan(&plan)
+            }))?;
         }
 
         ExtensionCommand::Install {
@@ -196,14 +198,18 @@ pub(crate) async fn extension(
                 ask(&mut client, rpc::method::EXTENSION_INSTALL, encode(&asked)).await?;
 
             if no_wait {
-                emit(&rendered(json, &started, || render::job_status(&started)))?;
+                emit(&rendered(json, &started, || {
+                    render::job::job_status(&started)
+                }))?;
                 return Ok(ExitCode::SUCCESS);
             }
 
             let finished = follow(&mut client, started, json).await?;
-            emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+            emit(&rendered(json, &finished, || {
+                render::job::job_status(&finished)
+            }))?;
 
-            let succeeded = render::job_succeeded(&finished);
+            let succeeded = render::job::job_succeeded(&finished);
 
             return Ok(match succeeded {
                 true => ExitCode::SUCCESS,
@@ -224,7 +230,7 @@ pub(crate) async fn extension(
             .await?;
 
             emit(&rendered(json, &removal, || {
-                render::extension_removal(&removal)
+                render::extension::extension_removal(&removal)
             }))?;
         }
 
@@ -236,7 +242,7 @@ pub(crate) async fn extension(
                 ask(&mut client, rpc::method::EXTENSION_START, encode(&asked)).await?;
 
             emit(&rendered(json, &walk, || {
-                render::service_walk(render::Walked::Start, &walk)
+                render::service::service_walk(render::service::Walked::Start, &walk)
             }))?;
         }
 
@@ -248,7 +254,7 @@ pub(crate) async fn extension(
                 ask(&mut client, rpc::method::EXTENSION_STOP, encode(&asked)).await?;
 
             emit(&rendered(json, &walk, || {
-                render::service_walk(render::Walked::Stop, &walk)
+                render::service::service_walk(render::service::Walked::Stop, &walk)
             }))?;
         }
     }
@@ -299,7 +305,7 @@ fn agreed_to_install(plan: &ExtensionPlan, json: bool) -> Result<bool, Error> {
     match confirm::ask(&format!(
         "{}
 install it? [y/N] ",
-        render::extension_plan(plan)
+        render::extension::extension_plan(plan)
     )) {
         confirm::Answer::Yes => Ok(true),
 

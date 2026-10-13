@@ -60,17 +60,23 @@ pub(crate) async fn autostart_entry(
     let mut client = Client::connect(endpoint, autostart).await?;
 
     let (method, rendered_as) = match command {
-        AutostartCommand::Status => (rpc::method::AUTOSTART_STATUS, render::Autostarted::Asked),
-        AutostartCommand::Enable => (rpc::method::AUTOSTART_ENABLE, render::Autostarted::Enabled),
+        AutostartCommand::Status => (
+            rpc::method::AUTOSTART_STATUS,
+            render::autostart::Autostarted::Asked,
+        ),
+        AutostartCommand::Enable => (
+            rpc::method::AUTOSTART_ENABLE,
+            render::autostart::Autostarted::Enabled,
+        ),
         AutostartCommand::Disable => (
             rpc::method::AUTOSTART_DISABLE,
-            render::Autostarted::Disabled,
+            render::autostart::Autostarted::Disabled,
         ),
     };
 
     let report: AutostartReport = ask(&mut client, method, None).await?;
     emit(&rendered(json, &report, || {
-        render::autostart_report(rendered_as, &report)
+        render::autostart::autostart_report(rendered_as, &report)
     }))?;
 
     Ok(ExitCode::SUCCESS)

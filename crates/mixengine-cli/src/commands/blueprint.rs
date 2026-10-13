@@ -201,7 +201,7 @@ pub(crate) async fn blueprint(
             )
             .await?;
             emit(&rendered(json, &summary, || {
-                render::blueprint_captured(&summary)
+                render::blueprint::blueprint_captured(&summary)
             }))?;
         }
 
@@ -227,13 +227,15 @@ pub(crate) async fn blueprint(
                 ask(&mut client, rpc::method::BLUEPRINT_IMPORT, encode(&import)).await?;
 
             emit(&rendered(json, &summary, || {
-                render::blueprint_imported(&summary)
+                render::blueprint::blueprint_imported(&summary)
             }))?;
         }
 
         BlueprintCommand::List => {
             let list: BlueprintList = ask(&mut client, rpc::method::BLUEPRINT_LIST, None).await?;
-            emit(&rendered(json, &list, || render::blueprint_list(&list)))?;
+            emit(&rendered(json, &list, || {
+                render::blueprint::blueprint_list(&list)
+            }))?;
         }
 
         BlueprintCommand::Apply {
@@ -305,11 +307,13 @@ pub(crate) async fn blueprint(
                 ));
             };
 
-            emit(&rendered(json, plan, || render::blueprint_plan(plan)))?;
+            emit(&rendered(json, plan, || {
+                render::blueprint::blueprint_plan(plan)
+            }))?;
 
             let needs = needs.as_deref().unwrap_or_default();
             if !json && !needs.is_empty() {
-                emit(&render::requirements(needs))?;
+                emit(&render::prerequisites::requirements(needs))?;
             }
 
             if dry_run {
@@ -365,7 +369,9 @@ pub(crate) async fn blueprint(
             if let Some(watching) = watching {
                 watching.abort();
             }
-            emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+            emit(&rendered(json, &finished, || {
+                render::job::job_status(&finished)
+            }))?;
 
             let mut a_step_failed = false;
 
@@ -373,13 +379,13 @@ pub(crate) async fn blueprint(
                 && let Ok(applied) = serde_json::from_value::<BlueprintApplied>(result.clone())
             {
                 emit(&rendered(json, &applied, || {
-                    render::blueprint_applied(&applied)
+                    render::blueprint::blueprint_applied(&applied)
                 }))?;
 
-                a_step_failed = render::blueprint_had_a_failed_step(&applied);
+                a_step_failed = render::blueprint::blueprint_had_a_failed_step(&applied);
             }
 
-            if !render::job_succeeded(&finished) {
+            if !render::job::job_succeeded(&finished) {
                 return Ok(ExitCode::FAILURE);
             }
 
@@ -421,7 +427,7 @@ pub(crate) async fn blueprint(
             .await?;
 
             emit(&rendered(json, &walk, || {
-                render::service_walk(render::Walked::Start, &walk)
+                render::service::service_walk(render::service::Walked::Start, &walk)
             }))?;
 
             return Ok(match walk.failed {
@@ -543,9 +549,11 @@ async fn granted(client: &mut Client, grant: bool, json: bool) -> Result<ExitCod
 
     let started: JobSummary = ask(client, rpc::method::ELEVATION_GRANT, None).await?;
     let finished = follow(client, started, json).await?;
-    emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+    emit(&rendered(json, &finished, || {
+        render::job::job_status(&finished)
+    }))?;
 
-    Ok(match render::job_succeeded(&finished) {
+    Ok(match render::job::job_succeeded(&finished) {
         true => ExitCode::SUCCESS,
         false => ExitCode::FAILURE,
     })
@@ -559,7 +567,7 @@ fn asked_to_grant(waiting: &ElevationStatus) -> bool {
     matches!(
         confirm::ask(&format!(
             "{}\ngrant now? [y/N] ",
-            render::elevation_prompt(waiting)
+            render::elevation::elevation_prompt(waiting)
         )),
         confirm::Answer::Yes
     )

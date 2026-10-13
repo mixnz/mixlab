@@ -74,21 +74,27 @@ pub(crate) async fn domain(
             };
             let detail: SiteDetail =
                 ask(&mut client, rpc::method::DOMAIN_ADD, encode(&add)).await?;
-            emit(&rendered(json, &detail, || render::site_detail(&detail)))?;
+            emit(&rendered(json, &detail, || {
+                render::site::site_detail(&detail)
+            }))?;
         }
 
         DomainCommand::Remove { domain } => {
             let remove = DomainRemove { domain };
             let detail: SiteDetail =
                 ask(&mut client, rpc::method::DOMAIN_REMOVE, encode(&remove)).await?;
-            emit(&rendered(json, &detail, || render::site_detail(&detail)))?;
+            emit(&rendered(json, &detail, || {
+                render::site::site_detail(&detail)
+            }))?;
         }
 
         DomainCommand::Status { domain } => {
             let query = DomainStatusQuery { domain };
             let report: DomainStatusReport =
                 ask(&mut client, rpc::method::DOMAIN_DNS_STATUS, encode(&query)).await?;
-            emit(&rendered(json, &report, || render::domain_status(&report)))?;
+            emit(&rendered(json, &report, || {
+                render::domain::domain_status(&report)
+            }))?;
         }
     }
 

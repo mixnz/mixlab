@@ -57,7 +57,7 @@ pub(crate) async fn metrics(
         .await?;
 
         emit(&rendered(json, &history, || {
-            render::metrics_history(&history, SystemTime::now())
+            render::metrics::metrics_history(&history, SystemTime::now())
         }))?;
 
         return Ok(ExitCode::SUCCESS);
@@ -85,7 +85,9 @@ pub(crate) async fn metrics(
         },
     };
 
-    emit(&rendered(json, &frame, || render::metrics_frame(&frame)))?;
+    emit(&rendered(json, &frame, || {
+        render::metrics::metrics_frame(&frame)
+    }))?;
 
     Ok(ExitCode::SUCCESS)
 }
@@ -99,7 +101,7 @@ async fn watch_metrics(client: &mut Client, json: bool) -> Result<ExitCode, Erro
             format!(
                 "{}
 ",
-                render::metrics_frame(&frame)
+                render::metrics::metrics_frame(&frame)
             )
         }))?;
     }
