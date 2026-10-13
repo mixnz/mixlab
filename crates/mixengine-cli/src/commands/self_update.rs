@@ -87,7 +87,9 @@ pub(crate) async fn self_update(
     .await?;
 
     if check {
-        emit(&rendered(json, &status, || render::update_status(&status)))?;
+        emit(&rendered(json, &status, || {
+            render::self_update::update_status(&status)
+        }))?;
         return Ok(ExitCode::SUCCESS);
     }
 
@@ -97,7 +99,7 @@ pub(crate) async fn self_update(
     // reason. What a `--json` run gets instead is whichever of the two below turns out to be the
     // answer.
     if !json {
-        emit(&render::update_status(&status))?;
+        emit(&render::self_update::update_status(&status))?;
     }
 
     // **Neither of these is a failure.** A machine that is up to date and a copy of MixEngine that
@@ -111,7 +113,9 @@ pub(crate) async fn self_update(
 
     if refused || status.available.is_none() {
         if json {
-            emit(&rendered(json, &status, || render::update_status(&status)))?;
+            emit(&rendered(json, &status, || {
+                render::self_update::update_status(&status)
+            }))?;
         }
 
         return Ok(ExitCode::SUCCESS);
@@ -134,7 +138,7 @@ pub(crate) async fn self_update(
             .await?;
 
             emit(&rendered(json, &answered, || {
-                render::update_status(&answered)
+                render::self_update::update_status(&answered)
             }))?;
             return Ok(ExitCode::SUCCESS);
         }
@@ -153,7 +157,7 @@ pub(crate) async fn self_update(
         .await?;
 
         emit(&rendered(json, &handed, || {
-            render::update_handed_over(&handed)
+            render::self_update::update_handed_over(&handed)
         }))?;
         return Ok(ExitCode::SUCCESS);
     }
@@ -183,7 +187,9 @@ async fn relaunch(
     // to a process that has already committed to exiting.
     drop(client);
 
-    emit(&rendered(json, applied, || render::update_applied(applied)))?;
+    emit(&rendered(json, applied, || {
+        render::self_update::update_applied(applied)
+    }))?;
 
     // **Bounded.** A daemon that has answered `update.apply` has already stopped its services and
     // cancelled its token, so anything longer than this is a supervised process refusing to die —
