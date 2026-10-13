@@ -11,6 +11,7 @@
 //! own log file, which is coloured on stderr and never in `daemon.log`.
 
 pub(crate) mod catalogue;
+pub(crate) mod prerequisites;
 mod size;
 mod table;
 mod time;
@@ -19,6 +20,7 @@ use catalogue::{
     Lines, MORE_HEADING, NEEDS_HEADING, RUNS_HEADING, any_lacking, emulation_column, more, needs,
     runs, update_lines,
 };
+use prerequisites::requirements;
 use size::size;
 use table::{MISSING, table, table_of};
 use time::{ago, in_time, uptime};
@@ -55,14 +57,14 @@ use mixengine_proto::{
     MetricsFrame, MetricsHistory, NetworkReach, OldVersion, Outcome, PROTOCOL_VERSION,
     PackageCatalogue, PackageList, PackageRelease, PackageRemoval, PackageVersion, PathReport,
     PinSource, PlanAction, PlanStep, PoolOutcome, Priority, ProjectDetail, ProjectExport,
-    ProjectList, ProjectRemoval, RecipeAddition, Reclaim, Removal, RepairReport, Requirement,
-    ResolvedRuntime, RotateOutcome, RuntimeCatalogue, RuntimeList, RuntimeRelease, RuntimeRemoval,
-    RuntimeSource, RuntimeSummary, ServiceCreation, ServiceId, ServiceLimitsReport, ServiceList,
-    ServiceRemoval, ServiceState, ServiceSummary, ServiceWalk, SignatureCheck, SiteDetail,
-    SiteKind, SiteList, SiteOwner, SiteRemoval, SiteSharing, StateReason, StepResult,
-    StorageChoice, StorageReport, Trust, UninstallOutcome, UninstallReport, Unusable,
-    UpdateApplied, UpdateHandedOver, UpdatePlacement, UpdateStatus, UpgradeItem, UpgradeOutcome,
-    UpgradePlan, Verdict, WhenExceeded, privileged::ElevationOutcome,
+    ProjectList, ProjectRemoval, RecipeAddition, Reclaim, Removal, RepairReport, ResolvedRuntime,
+    RotateOutcome, RuntimeCatalogue, RuntimeList, RuntimeRelease, RuntimeRemoval, RuntimeSource,
+    RuntimeSummary, ServiceCreation, ServiceId, ServiceLimitsReport, ServiceList, ServiceRemoval,
+    ServiceState, ServiceSummary, ServiceWalk, SignatureCheck, SiteDetail, SiteKind, SiteList,
+    SiteOwner, SiteRemoval, SiteSharing, StateReason, StepResult, StorageChoice, StorageReport,
+    Trust, UninstallOutcome, UninstallReport, Unusable, UpdateApplied, UpdateHandedOver,
+    UpdatePlacement, UpdateStatus, UpgradeItem, UpgradeOutcome, UpgradePlan, Verdict, WhenExceeded,
+    privileged::ElevationOutcome,
 };
 
 /// `mix cert ca-status`, for a person.
@@ -1513,32 +1515,6 @@ pub(crate) fn lacks_after_install(
             Some("This Ruby cannot build gems with C extensions on this machine.\n".to_owned())
         }
     }
-}
-
-/// What an install lacks here, one line each with what can be done — roadmap task **T151**.
-pub(crate) fn requirements(unmet: &[Requirement]) -> String {
-    let mut rendered = String::from("this machine lacks what it needs:\n");
-    for requirement in unmet {
-        rendered.push_str(&format!(
-            "  - {}: {}\n",
-            requirement.need, requirement.remedy
-        ));
-    }
-    rendered
-}
-
-/// What an install may lack that refuses nothing — roadmap task **T27e**, its design's D16.
-pub(crate) fn advisories(advisories: &[Requirement]) -> String {
-    let named: Vec<String> = advisories
-        .iter()
-        .map(|requirement| requirement.need.label())
-        .collect();
-
-    format!(
-        "warning: this machine's loader does not list {}; install them with this distribution's \
-         package manager; the install goes on\n",
-        named.join(", ")
-    )
 }
 
 /// `mix package uninstall`, for a person.
@@ -4471,8 +4447,8 @@ fn mechanism(mechanism: AutostartMechanism) -> &'static str {
 mod tests {
     use mixengine_proto::{
         CategoryUsage, Cleaned, DiskCategory, Execution, MetricsMinute, MetricsSample,
-        MetricsSubject, Need, PortWish, RedistributableArch, Remedy, RuntimeKind, SecretAddress,
-        ServiceState, StepOutcome, Timestamp, Uptime, VersionConstraint,
+        MetricsSubject, Need, PortWish, RedistributableArch, Remedy, Requirement, RuntimeKind,
+        SecretAddress, ServiceState, StepOutcome, Timestamp, Uptime, VersionConstraint,
     };
 
     use super::*;
@@ -4824,43 +4800,6 @@ mod tests {
         let rendered = runtime_catalogue(&lacking_one, &EVERY_LINE);
         assert!(rendered.contains("NEEDS"), "{rendered}");
         assert!(rendered.contains("Visual C++ 2022 (x64)"), "{rendered}");
-    }
-
-    #[test]
-    fn what_is_lacking_is_said_with_what_can_be_done() {
-        let rendered = requirements(&[Requirement {
-            need: Need::Macos {
-                at_least: "14.0".to_owned(),
-                found: "13.6".to_owned(),
-            },
-            remedy: Remedy::ChooseVersion {
-                version: PackageVersion::parse("8.3.33").unwrap(),
-            },
-        }]);
-
-        assert!(
-            rendered.contains("macOS 14.0 or newer, and this Mac runs 13.6"),
-            "{rendered}"
-        );
-        assert!(
-            rendered.contains("8.3.33 is the newest release that runs here"),
-            "{rendered}"
-        );
-    }
-
-    /// **A warning names the libraries and says the install goes on** — roadmap task **T27e**, D16.
-    #[test]
-    fn a_warning_names_the_libraries_and_says_the_install_goes_on() {
-        let said = advisories(&[Requirement {
-            need: Need::SharedLibrary {
-                soname: "libasound.so.2".to_owned(),
-            },
-            remedy: Remedy::InstallFromDistribution,
-        }]);
-
-        assert!(said.starts_with("warning: "), "{said}");
-        assert!(said.contains("libasound.so.2"), "{said}");
-        assert!(said.contains("goes on"), "{said}");
     }
 
     /// The column exists only where it says something — roadmap task **T92**.

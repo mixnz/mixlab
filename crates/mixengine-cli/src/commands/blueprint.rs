@@ -309,7 +309,7 @@ pub(crate) async fn blueprint(
 
             let needs = needs.as_deref().unwrap_or_default();
             if !json && !needs.is_empty() {
-                emit(&render::requirements(needs))?;
+                emit(&render::prerequisites::requirements(needs))?;
             }
 
             if dry_run {

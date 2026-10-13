@@ -38,7 +38,11 @@ pub(crate) fn agreed_to_prerequisites(
         .cloned()
         .collect();
     if !advisories.is_empty() && !json {
-        let _ = write!(std::io::stderr(), "{}", render::advisories(&advisories));
+        let _ = write!(
+            std::io::stderr(),
+            "{}",
+            render::prerequisites::advisories(&advisories)
+        );
     }
 
     let installable = unmet
@@ -63,7 +67,7 @@ pub(crate) fn agreed_to_prerequisites(
 
     match confirm::ask(&format!(
         "{}install it first? Windows may ask for administrator approval. [y/N] ",
-        render::requirements(unmet)
+        render::prerequisites::requirements(unmet)
     )) {
         confirm::Answer::Yes => Ok(Some(true)),
         confirm::Answer::No => {
