@@ -1,4 +1,6 @@
-# MixEngine build plan
+# MixLab build plan
+
+One plan for the whole repository: MixEngine's phases, then MixLab's from phase 11 on.
 
 Phases are ordered. Work top to bottom — each phase depends on the ones above it. Tick items as they
 land; when new work appears, insert it **where it belongs in the order**, not at the end.

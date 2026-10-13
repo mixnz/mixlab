@@ -9,7 +9,7 @@ MixLab is a desktop app built with **Tauri 2 + React 19 + TypeScript** (frontend
 (backend). It is a **shell** — a tab bar, keyboard shortcuts and a Settings dialog — plus one
 **module** per kind of thing a tab can hold:
 
-- **`db`** — MySQL, PostgreSQL, SQLite, MongoDB, Redis and ClickHouse (read-only) connections,
+- **`db`** — MySQL, PostgreSQL, SQLite, SQL Server, ClickHouse, MongoDB and Redis connections,
   optionally through an SSH tunnel, with saved connections remembered.
 - **`rest`** — an HTTP client: saved requests, environments, history, and a response pane.
 - **`terminal`** — a shell on this machine or on a server over SSH, with saved hosts.
@@ -23,7 +23,7 @@ outside that module may start it. That includes updates: MixLab has its own upda
 Settings → Updates, not in the MixEngine tab
 ([ADR 0056](../../docs/decisions/0056-mixlab-stands-without-mixengine.md)).
 
-The shell knows nothing about any of them. Adding a fourth is a folder under `src/modules/` and
+The shell knows nothing about any of them. Adding another is a folder under `src/modules/` and
 a line in `src/shell/registry.ts` — see
 [docs/standards/desktop/adding-a-module.md](../../docs/standards/desktop/adding-a-module.md).
 
@@ -32,7 +32,7 @@ a line in `src/shell/registry.ts` — see
 | Command | What it does |
 | --- | --- |
 | `npm install` | Install frontend dependencies |
-| `npm run dev:app` | Stage the four headless binaries beside the window, built from the root workspace, then run the full desktop app (Vite + Rust, hot reload) — the normal dev loop. A dev daemon still running from the last window is stopped first (`mix daemon stop` against this checkout's home — `.mixengine-home`, or `MixEngine-dev` for a checkout on an external disk on macOS, ADR 0040). `node scripts/stage-daemon.mjs --stage-only` is the first half alone |
+| `npm run dev:app` | Stage the headless binaries (`MIX_BINARIES` in `packaging/common.sh`, minus the window) beside the window, built from the root workspace, then run the full desktop app (Vite + Rust, hot reload) — the normal dev loop. A dev daemon still running from the last window is stopped first (`mix daemon stop` against this checkout's home — `.mixengine-home`, or `MixEngine-dev` for a checkout on an external disk on macOS, ADR 0040). `node scripts/stage-daemon.mjs --stage-only` is the first half alone |
 | `npm run dev` | Frontend only in a browser; every `invoke` fails, UI-only work |
 | `npm run build` | Typecheck + build frontend (`tsc && vite build`) — the fastest check |
 | `npm test` | Run the vitest suite (`vitest run`) |
@@ -46,7 +46,7 @@ Releasing is the repository's — [build-and-release.md](../../docs/operations/b
 one release ships MixLab and the MixEngine binaries together, from one feed. The app icon, and why there are two logo files, is
 [icons.md](../../docs/standards/desktop/app-icon.md).
 
-There is no linter config. `npm run build` is the fastest verification step; TypeScript runs
+`npm run build` is the fastest verification step; TypeScript runs
 `strict`, `noUnusedLocals` and `noUnusedParameters`, so it catches most mistakes. `npm test` runs
 vitest over the pure-logic modules (virtual rows, SQL statement splitting and guards, column
 parsing, request building, tab badges). None of them say anything about CSS or about whether a
@@ -76,7 +76,8 @@ src/                 React frontend
     DbTab.tsx        Connection form -> connects -> renders one workspace
     sql/             The workspace every SQL engine shares, and the SqlApi/SqlDialect behind it
     mysql/ postgres/ What each SQL engine says for itself: api.ts, dialect.ts, columns.ts
-    sqlite/          The third, and the only one with no server behind it
+    mssql/ clickhouse/  The same files, plus editing.ts and system.ts
+    sqlite/          The only one with no server behind it
     mongo/ redis/    The two with a workspace of their own: <Kind>Workspace.tsx, api.ts
     components/      This module's own components
     i18n/            This module's own strings
@@ -90,16 +91,35 @@ src/                 React frontend
     TerminalTab.tsx  Target form -> a session -> xterm
     api.ts           terminal_open/write/resize/close, the shell list, and the events Channel
     components/  i18n/  terminal.css
+  modules/tools/     Small utilities that run in this process
+    ToolsTab.tsx     The tool list, frequently used first, and the tool that is open
+    registry.ts      TOOLS — every tool; each lives in tools/<name>/
+  modules/tunnel/    A Cloudflare quick tunnel to an address on this machine
+    TunnelTab.tsx    The tab; tray/ is its TraySection, settings.ts what it remembers
+  modules/mixengine/ The only module that talks to the daemon — optional (ADR 0056)
+    MixEngineTab.tsx The daemon's state, then one screen at a time
+    screens/         Dashboard, Sites, Projects, Logs, Settings… one folder each
+    api.ts           Every invoke, typed against @mixengine/api (the root's bindings/)
+    *State.ts        The pure halves of the screens, each with its *.test.ts
 src-tauri/src/       Rust backend
   lib.rs             Tauri builder; reads the opening URL first; each module registers its own state
   error.rs  secrets.rs  ssh/    Shared by every module (the tunnel and open_shell both live in ssh/)
+  platform.rs  downloads.rs     What every module needs of the machine, and a checked file download
   launch.rs  instance.rs  A connection handed over on the command line, and the channel to a running copy
   tray.rs  login_item.rs  The tray icon, its menu and panel window, and MixLab's login entry (T168, T192)
+  sync/              MixLab's sync: keys, the record envelope, the transport, the account (ADR 0046)
+  updater/  relaunch.rs  MixLab's own updater (T187), and starting the window again
+  uninstall/         Removing MixLab from a Mac (T182a)
+  import.rs          A standalone-client user's data, brought across once
   modules/
     mod.rs           handler() — every command of every module, one block each
     db/              commands/, drivers/, handoff.rs, models.rs, state.rs
     rest/            commands.rs, models.rs, state.rs
     terminal/        commands.rs, local.rs, remote.rs, stream.rs, models.rs, state.rs
+    tools/           commands.rs, ports.rs — one command, read-only
+    tunnel/          binary.rs (cloudflared), process.rs, target.rs, commands.rs, state.rs
+    mixengine/       transport.rs, rpc.rs, events.rs, sse.rs — the daemon client; for_update.rs,
+                     for_uninstall.rs — what the shell asks of it
 ```
 
 ## Rules that matter most

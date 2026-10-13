@@ -1,13 +1,15 @@
-# MixEngine documentation
+# MixLab documentation
 
+MixLab is the product and MixEngine one optional module of it
+([ADR 0056](decisions/0056-mixlab-stands-without-mixengine.md)); both are documented here.
 Everything written for people lives in this folder, for two audiences, and the two parts never
 restate each other:
 
 - **[guide/](guide/)** is for whoever *uses* MixEngine: the handbook, sixteen pages in English and
   Vietnamese, published at `https://mixnz.github.io/mixlab/` and compiled into `mix docs` (T90,
   [ADR 0021](decisions/0021-the-handbook-is-one-corpus-published-three-ways.md)).
-- **Everything else** is for whoever *builds* it: why MixEngine is shaped the way it is, and how
-  to change it. [CLAUDE.md](../CLAUDE.md) is the short entry point; this is the detail it keeps out.
+- **Everything else** is for whoever *builds* them: why MixLab and MixEngine are shaped the way
+  they are, and how to change them. [CLAUDE.md](../CLAUDE.md) is the short entry point; this is the detail it keeps out.
 
 `.claude/` holds only the agent tooling's configuration
 ([ADR 0043](decisions/0043-documentation-lives-under-docs.md)). `node scripts/check-docs.mjs`

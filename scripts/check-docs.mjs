@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Check the documentation: every link into it resolves, every spec opens with a status header that
-// agrees with the roadmap, docs/specs/README.md is what this script generates, and no document
-// lives under .claude/ or docs/superpowers/.
+// agrees with the roadmap, docs/specs/README.md is what this script generates, no document
+// lives under .claude/ or docs/superpowers/, and apps/desktop/CLAUDE.md names every module.
 //
 //   node scripts/check-docs.mjs                  check everything
 //   node scripts/check-docs.mjs --only=links     links and layout only
@@ -130,6 +130,35 @@ export function checkMixLabSection(name, text) {
   return [
     `${name}: no \`## MixLab\` section — say which screen does this and how, or why the window has no part in it`,
   ];
+}
+
+const DESKTOP_GUIDE = 'apps/desktop/CLAUDE.md';
+
+/**
+ * apps/desktop/CLAUDE.md names every module and every `db` engine the tree has. It is what an agent
+ * reads first and trusts, and it had drifted: by 2026-10-13 it still said "Adding a fourth" with six
+ * modules, and its Layout knew neither SQL Server nor three of the modules.
+ */
+export function checkDesktopGuide(files, guide) {
+  const ids = (re) => [...new Set(files.map((file) => file.match(re)?.[1]).filter(Boolean))].sort();
+  const frontend = ids(/^apps\/desktop\/src\/modules\/([^/]+)\/index\.ts$/);
+  const backend = ids(/^apps\/desktop\/src-tauri\/src\/modules\/([^/]+)\/mod\.rs$/);
+  const engines = ids(/^apps\/desktop\/src\/modules\/db\/([^/]+)\/api\.ts$/);
+  const layout = guide.match(/^## Layout\n([\s\S]*?)(?=^## )/m)?.[1] ?? '';
+  const backendLayout = layout.slice(layout.indexOf('src-tauri/src/'));
+  const errors = [];
+  const missing = (what) => errors.push(`${DESKTOP_GUIDE}: ${what}`);
+  for (const id of frontend) {
+    if (!new RegExp(`^- \\*\\*\`${id}\`\\*\\*`, 'm').test(guide)) missing(`no bullet for the \`${id}\` module under "What this is"`);
+    if (!layout.includes(`modules/${id}/`)) missing(`Layout does not show src/modules/${id}/`);
+  }
+  for (const id of backend) {
+    if (!new RegExp(`^\\s+${id}/`, 'm').test(backendLayout)) missing(`Layout does not show src-tauri/src/modules/${id}/`);
+  }
+  for (const engine of engines) {
+    if (!new RegExp(`(^|\\s)${engine}/`, 'm').test(layout)) missing(`Layout does not show the db engine folder ${engine}/`);
+  }
+  return errors;
 }
 
 export function roadmapTicks(texts) {
@@ -297,7 +326,8 @@ function main(argv) {
   // Specs first: --write-index has to write docs/specs/README.md before links to it are resolved.
   const specErrors = only === 'links' ? [] : checkSpecs(files, writeIndex);
   const linkErrors = only === 'specs' ? [] : checkLayoutAndLinks(files);
-  const errors = [...linkErrors, ...specErrors];
+  const guideErrors = only === 'specs' ? [] : checkDesktopGuide(files, readFileSync(DESKTOP_GUIDE, 'utf8'));
+  const errors = [...linkErrors, ...guideErrors, ...specErrors];
   if (errors.length === 0) {
     console.log('docs: ok');
     return;

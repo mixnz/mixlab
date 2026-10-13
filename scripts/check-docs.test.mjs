@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   parseFrontMatter, checkSpecHeader, roadmapTicks, taskState, checkSpecAgainstRoadmap,
   stripCode, linkTargets, targetPath, rootedMentions, renderSpecIndex, isIgnoredFile,
-  checkMixLabSection,
+  checkMixLabSection, checkDesktopGuide,
 } from './check-docs.mjs';
 
 const specs = new Set(['2026-08-22-t40a-elevation-design.md']);
@@ -136,4 +136,29 @@ test('an older spec, or one already implemented, is not asked', () => {
     checkMixLabSection('2026-09-28-t190-x-design.md', header(['status: implemented', 'date: 2026-09-28'])),
     [],
   );
+});
+
+test('the desktop guide names every module, backend folder and db engine the tree has', () => {
+  const files = [
+    'apps/desktop/src/modules/db/index.ts',
+    'apps/desktop/src/modules/db/mysql/api.ts',
+    'apps/desktop/src/modules/db/mssql/api.ts',
+    'apps/desktop/src/modules/tunnel/index.ts',
+    'apps/desktop/src-tauri/src/modules/db/mod.rs',
+    'apps/desktop/src-tauri/src/modules/tunnel/mod.rs',
+  ];
+  const guide = (bullets, layout) => `# CLAUDE.md\n\n${bullets}\n\n## Layout\n\n\`\`\`\n${layout}\`\`\`\n\n## Rules\n`;
+  const complete = guide(
+    '- **`db`** — databases.\n- **`tunnel`** — a tunnel.',
+    'src/\n  modules/db/\n    mysql/ mssql/  engines\n  modules/tunnel/\nsrc-tauri/src/\n  modules/\n    db/\n    tunnel/\n',
+  );
+  assert.deepEqual(checkDesktopGuide(files, complete), []);
+
+  const stale = guide('- **`db`** — databases.', 'src/\n  modules/db/\n    mysql/\nsrc-tauri/src/\n  modules/\n    db/\n');
+  const errors = checkDesktopGuide(files, stale).join('\n');
+  assert.match(errors, /no bullet for the `tunnel` module/);
+  assert.match(errors, /does not show src\/modules\/tunnel\//);
+  assert.match(errors, /does not show src-tauri\/src\/modules\/tunnel\//);
+  assert.match(errors, /db engine folder mssql\//);
+  assert.doesNotMatch(errors, /mysql/);
 });
