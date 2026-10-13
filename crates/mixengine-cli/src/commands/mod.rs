@@ -3,4 +3,5 @@
 
 pub(crate) mod daemon;
 pub(crate) mod domain;
+pub(crate) mod path;
 pub(crate) mod status;
