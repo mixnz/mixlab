@@ -76,7 +76,7 @@ pub(crate) async fn elevation(
             let status: ElevationStatus =
                 ask(&mut client, rpc::method::ELEVATION_STATUS, None).await?;
             emit(&rendered(json, &status, || {
-                render::elevation_status(&status)
+                render::elevation::elevation_status(&status)
             }))?;
 
             Ok(ExitCode::SUCCESS)
@@ -131,7 +131,9 @@ pub(crate) async fn elevation(
             let left: ElevationStatus =
                 ask(&mut client, rpc::method::ELEVATION_DROP, encode(&asked)).await?;
 
-            emit(&rendered(json, &left, || render::elevation_status(&left)))?;
+            emit(&rendered(json, &left, || {
+                render::elevation::elevation_status(&left)
+            }))?;
 
             Ok(ExitCode::SUCCESS)
         }
@@ -156,7 +158,7 @@ pub(crate) fn confirmed(waiting: &ElevationStatus, json: bool) -> Result<bool, E
 
     match confirm::ask(&format!(
         "{}\ncontinue? [y/N] ",
-        render::elevation_prompt(waiting)
+        render::elevation::elevation_prompt(waiting)
     )) {
         confirm::Answer::Yes => Ok(true),
 

@@ -200,7 +200,7 @@ async fn agreed(client: &mut Client, what: &str, json: bool) -> Result<bool, Err
         true => String::new(),
         false => format!(
             "\n\nthis machine is also holding these, and one prompt covers them all:\n{}",
-            render::elevation_prompt(&waiting)
+            render::elevation::elevation_prompt(&waiting)
         ),
     };
 

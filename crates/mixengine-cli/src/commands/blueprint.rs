@@ -559,7 +559,7 @@ fn asked_to_grant(waiting: &ElevationStatus) -> bool {
     matches!(
         confirm::ask(&format!(
             "{}\ngrant now? [y/N] ",
-            render::elevation_prompt(waiting)
+            render::elevation::elevation_prompt(waiting)
         )),
         confirm::Answer::Yes
     )
