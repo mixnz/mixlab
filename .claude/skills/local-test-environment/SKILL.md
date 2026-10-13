@@ -1,6 +1,6 @@
 ---
 name: local-test-environment
-description: Use when cargo build or cargo test fails on a developer machine in a way the code does not explain — "Access is denied (os error 5)", WSAEACCES (10013) on a port, a CLI suite naming a package the code supports, a run in WSL that never finishes — and before running mix or mixengined by hand.
+description: Use when cargo build or cargo test fails on a developer machine in a way the code does not explain — "Access is denied (os error 5)", WSAEACCES (10013) on a port, a CLI suite naming a package the code supports, "fakeservice is not there", a run in WSL that never finishes — and before running mix or mixengined by hand.
 ---
 
 # When the machine is the one failing
@@ -17,6 +17,7 @@ the machine. The quickest test is the clean tree: `git stash -u`, run the same c
 | `failed to remove file ...\target\debug\mixengined.exe` · `Access is denied. (os error 5)` | A daemon from a hand run is still alive; Windows locks a running executable. `caddy.exe` supervised from `target\debug` does the same | `Get-Process mixengined,caddy -ErrorAction SilentlyContinue \| Stop-Process -Force`. `mix daemon stop` is not enough when `mix` itself cannot be rebuilt |
 | A `crates/mixengine-cli/tests/` suite says `this build of MixEngine cannot run <package>` right after a change to core | `cargo test -p mixengine-cli --test <suite>` does not rebuild `mixengine-daemon`; the harness starts the old one | `cargo build -p mixengine-daemon -p mixengine-cli` first. `cargo test --workspace` builds everything and is not affected |
 | `dns::server` tests panic with `an ephemeral port is free for both transports` · `os error 10013` | Hyper-V/WSL reserves much of the dynamic port range (`netsh int ipv4 show excludedportrange protocol=udp`) | A property of the machine; let CI answer for the suite |
+| `<target>/debug/fakeservice is not there — supervision tests drive a real process`, on every supervision test of the run within milliseconds | `cargo test -p <one crate>` builds that crate's targets only, and `fakeservice` is a binary of `mixengine-testkit`. A target directory that never ran `--workspace` — WSL's `/tmp/mixtarget`, any new `CARGO_TARGET_DIR` — has none | `cargo build -p mixengine-testkit --bins` once per target directory, then the named suite again. Not the code |
 | `cargo test --workspace` in WSL never ends, and later runs print nothing | `mixengine-platform/tests/secrets.rs` waits forever for a D-Bus secret service WSL does not have, and the stuck `cargo` holds the target directory's lock | In WSL run named suites only (`-p <crate> --test <suite>` or `--lib`). Before trusting a "slow" run, `ps -eo pid,etime,cmd \| grep cargo` and kill the old ones |
 | Red only on the Windows CI leg, green here, and it involves a token, a DACL or a privilege | CI's Windows runner has a full administrator token; a normal shell here has a UAC-filtered one | Reproduce from an elevated shell (below) rather than pushing probes |
 
