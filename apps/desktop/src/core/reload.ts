@@ -8,7 +8,8 @@ import { useShortcut } from "./shortcuts";
  * to press it — except that the webview underneath answers first and reloads the whole app, which
  * drops every open connection, every unsaved query draft and every staged edit with it. So the
  * gesture is intercepted here: in a packaged build none of the reload keys reach the webview at
- * all, and the plain one presses the reload button of whichever pane the user is looking at.
+ * all, and the plain one presses the reload button of whichever pane the user is looking at — or,
+ * with none listening, nothing.
  *
  * The hard reload and `F5` stay live under `npm run dev:app`: that build is being edited while it
  * runs, and taking away the developer's own way of picking up a change would be no kindness.
@@ -26,9 +27,17 @@ function isWebviewReload(e: KeyboardEvent): boolean {
   return e.key === "F5" || (hasPrimaryModifier(e) && e.key.toLowerCase() === "r");
 }
 
-/** Whether this is a reload gesture the webview must not be left to act on. */
+/**
+ * Whether this is a reload gesture the webview must not be left to act on, **other than the plain
+ * `Ctrl+R`**.
+ *
+ * That one is `pane.reload` in the shortcut catalogue, which runs the pane's reload or, with no pane
+ * listening, swallows it. Refusing it here as well would undo that: the listener calling this runs
+ * before the dispatcher's whenever the dispatcher has been re-added, and the dispatcher steps aside
+ * for an event already prevented.
+ */
 export function isBlockedReload(e: KeyboardEvent): boolean {
-  return isPaneReload(e) || (import.meta.env.PROD && isWebviewReload(e));
+  return import.meta.env.PROD && isWebviewReload(e) && !isPaneReload(e);
 }
 
 /** How the shortcut is written in a tooltip, in the platform's own spelling — see

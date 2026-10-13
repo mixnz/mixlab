@@ -98,8 +98,19 @@ function shellShortcuts(visible: ModuleDefinition[], openable: ModuleDefinition[
           unhandled: "swallow",
         },
         /* Not `inModal`: the pane behind a dialog is not the one in front, and a reload fired from
-           behind a confirmation acts on the very thing being asked about. */
-        { id: "pane.reload", chord: { key: "r" }, labelKey: "shortcuts.reload" },
+           behind a confirmation acts on the very thing being asked about.
+
+           `swallow`, because a press no pane answers would otherwise reload the webview and take
+           every open connection with it. That refusal is made here and not by a second keydown
+           listener: two listeners on `window` run in the order they were added, the dispatcher's
+           is re-added whenever the catalogue changes, and a refusal that ran first left the
+           dispatcher looking at an event already prevented — `Ctrl+R` reloaded nothing at all. */
+        {
+          id: "pane.reload",
+          chord: { key: "r" },
+          labelKey: "shortcuts.reload",
+          unhandled: "swallow",
+        },
       ],
     },
   ];

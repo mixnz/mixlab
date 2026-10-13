@@ -145,4 +145,16 @@ describe("Ctrl/Cmd+R", () => {
     const ctx = { modalDepth: 0, enabled: ["pane.reload"] };
     expect(decide(pressR, shortcutsFor(everything), ctx)).toEqual({ do: "run", id: "pane.reload" });
   });
+
+  /* The catalogue is the only thing keeping the key off the webview now — see `isBlockedReload`.
+     Were it to let a press through, the whole app would reload and drop every connection. */
+  it("is kept off the webview when no pane is listening", () => {
+    const ctx = { modalDepth: 0, enabled: [] };
+    expect(decide(pressR, shortcutsFor(everything), ctx)).toEqual({ do: "swallow" });
+  });
+
+  it("is kept off the webview behind a dialog, without reloading the pane under it", () => {
+    const ctx = { modalDepth: 1, enabled: ["pane.reload"] };
+    expect(decide(pressR, shortcutsFor(everything), ctx)).toEqual({ do: "swallow" });
+  });
 });

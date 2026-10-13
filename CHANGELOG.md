@@ -5,6 +5,8 @@
 ### Fixed
 - On macOS and Linux, Settings → Updates offers Finish as soon as you come back from the
   installer, instead of a few seconds later.
+- In MixLab, Ctrl+R (⌘R on a Mac) reloads the table, structure or result on screen again. After
+  tabs had been opened or closed, it could stop doing anything.
 
 ## v0.0.19
 

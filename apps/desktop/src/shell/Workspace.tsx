@@ -358,11 +358,12 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       // Reloading the webview takes every open connection down with it, so no keystroke is left
-      // able to ask for one. What `Ctrl+R` means instead is decided by the pane on screen, which
-      // claims the key for its own reload button — see `useReloadShortcut`.
+      // able to ask for one. The plain `Ctrl+R` is not refused here: it is `pane.reload` on the
+      // registry, which presses the reload button of the pane on screen or swallows the key —
+      // see `useReloadShortcut`.
       //
-      // The last chord not on the registry, and it is not a command: nothing is being asked for
-      // here, only refused. See `isBlockedReload` for what differs between builds.
+      // The rest — `F5`, the hard reload — are not commands: nothing is being asked for here,
+      // only refused. See `isBlockedReload` for what differs between builds.
       if (isBlockedReload(e)) e.preventDefault();
     }
     window.addEventListener("keydown", handleKeyDown);
