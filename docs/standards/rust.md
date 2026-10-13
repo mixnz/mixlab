@@ -104,6 +104,10 @@ the signature.
   their length, and may not grow. Making one shorter means `node scripts/check-file-sizes.mjs
   --shrink` in the same commit, which lowers its entry. Nothing raises one: a file that has to grow
   is a hand edit to the JSON, argued in review — the usual answer is a new module.
+- **A file whose code fits under the limit and whose tests do not** keeps `#[cfg(test)] mod tests;`
+  and moves the module's body to `foo/tests.rs` (T207e). The module is still `foo::tests`, so no
+  test changes its name. A file whose *code* is past the limit is split by capability instead, and
+  its tests go with what they test.
 - Newtypes for identifiers (`SiteId`, `ServiceId`, `RuntimeKind`); no bare `String` IDs crossing a
   function boundary.
 - Public items in `core`, `proto`, `platform` carry doc comments explaining *why*, with `# Errors`
@@ -138,8 +142,9 @@ It fails the build too, and not only review:
 `no_crate_but_platform_compiles_a_line_away_by_operating_system` in
 [workspace_layering.rs](../../crates/mixengine-proto/tests/workspace_layering.rs) scans the `src/` of
 every crate but `platform`, `elevate` and `testkit`. The two files that legitimately hold one are
-listed there with their reason, and a listed file has to keep the attribute inside its test module —
-so a permission cannot quietly widen into the product.
+listed there with their reason, and a listed file has to keep the attribute inside its test module,
+or be a `tests.rs` its parent declares under `#[cfg(test)]` — so a permission cannot quietly widen
+into the product.
 
 **`cfg!` is a different thing and is deliberately allowed.** A `cfg!(windows)` is a *value*: both
 arms compile on every OS, type-check on every OS, and are reachable from a test on every OS, which

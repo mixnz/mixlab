@@ -44,6 +44,8 @@ pub(crate) fn program_dirs() -> Vec<PathBuf> {
 ///
 /// This system's installer places the window beside the other four, so the step in front of this
 /// one has already looked. Present rather than absent so the three systems keep one signature.
+/// `host` only: its one caller here is `desktop`, which the helper's `elevated` build lacks.
+#[cfg(feature = "host")]
 pub(crate) fn window_dirs(_directory: Option<&std::path::Path>) -> Vec<PathBuf> {
     Vec::new()
 }

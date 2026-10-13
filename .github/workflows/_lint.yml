@@ -91,8 +91,10 @@ jobs:
 
       # T40, D8: the helper runs as root, so its dependency tree is a security decision. A change
       # here means reading the diff and committing the updated list in the same change.
+      # Clippy rather than `check`, and with warnings denied: the workspace step above unifies the
+      # platform's features, so an item only `host` reaches looks used there and dead here.
       - name: The elevated helper builds without the rest of the platform
-        run: cargo check -p mixengine-elevate --locked
+        run: cargo clippy -p mixengine-elevate --all-targets --locked -- -D warnings
 
       - name: The elevated helper's dependency budget
         run: |

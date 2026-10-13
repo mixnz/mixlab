@@ -211,3 +211,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-13 | [`render.rs` split by command, its tests beside what they test (design)](2026-10-13-render-split-by-command-design.md) | T207b | implemented |
 | 2026-10-13 | [The daemon's `rpc.rs` split by capability, its tests beside what they test (design)](2026-10-13-t207c-rpc-split-by-capability-design.md) | T207c | implemented |
 | 2026-10-13 | [The daemon's `services/mod.rs` split by capability, its tests beside what they test (design)](2026-10-13-t207d-services-split-by-capability-design.md) | T207d | implemented |
+| 2026-10-14 | [Test modules to their own file, where only the tests push a file past the limit (design)](2026-10-14-t207e-test-modules-to-their-own-file-design.md) | T207e | implemented |
