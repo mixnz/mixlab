@@ -6,16 +6,6 @@ use mixengine_proto::{
     RotateOutcome, Trust, UninstallOutcome, Unusable, Verdict,
 };
 
-/// `mix cert ca-status`, for a person.
-///
-/// **The trust line prints what the daemon said and never a word more.** T48 left it off entirely,
-/// because there was no such fact in the answer and a line implying one would be the client
-/// inventing something — `CLAUDE.md`'s "a client only renders what the daemon returns". T49a put the
-/// fact in the answer, including the case where the daemon could not find out, which prints as
-/// exactly that rather than as "no".
-///
-/// **And it says which store**, because "trusted" and "in this machine's own store, for every
-/// account on it" are different claims and only the second is what happened.
 /// `mix cert issue`, for a person — roadmap task **T50**.
 ///
 /// **A line per site and never a count.** "3 certificates issued" is a number nobody can act on;
@@ -153,6 +143,16 @@ fn advice(domain: &str, problem: CertProblem) -> String {
     }
 }
 
+/// `mix cert ca-status`, for a person.
+///
+/// **The trust line prints what the daemon said and never a word more.** T48 left it off entirely,
+/// because there was no such fact in the answer and a line implying one would be the client
+/// inventing something — `CLAUDE.md`'s "a client only renders what the daemon returns". T49a put the
+/// fact in the answer, including the case where the daemon could not find out, which prints as
+/// exactly that rather than as "no".
+///
+/// **And it says which store**, because "trusted" and "in this machine's own store, for every
+/// account on it" are different claims and only the second is what happened.
 pub(crate) fn ca_status(status: &CaStatus) -> String {
     let mut rendered = certificate(&status.state);
 

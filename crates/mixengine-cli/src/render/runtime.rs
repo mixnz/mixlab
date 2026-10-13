@@ -305,11 +305,6 @@ pub(crate) fn runtime_summary(runtime: &RuntimeSummary) -> String {
     rendered
 }
 
-/// `mix runtime uninstall`, for a person.
-///
-/// The second line is the whole reason the answer is not just the runtime: a kind left with no
-/// default is a kind whose shim resolves to nothing, and the person who caused it is the one who
-/// should hear about it.
 /// `mix runtime resolve`, for a person.
 ///
 /// **The version is the first line and the reason is the last**, in that order because they are read
@@ -340,6 +335,11 @@ pub(crate) fn runtime_resolved(resolved: &ResolvedRuntime) -> String {
     rendered
 }
 
+/// `mix runtime uninstall`, for a person.
+///
+/// The second line is the whole reason the answer is not just the runtime: a kind left with no
+/// default is a kind whose shim resolves to nothing, and the person who caused it is the one who
+/// should hear about it.
 pub(crate) fn runtime_removal(removal: &RuntimeRemoval) -> String {
     let mut rendered = format!(
         "removed {} {}\n",

@@ -156,7 +156,7 @@ fn list(names: &[String]) -> String {
     }
 }
 
-/// "1 operation is" / "3 operations are", so a sentence built from a count reads.
+/// "1 service" / "3 services", so a sentence built from a count reads.
 fn services(count: usize) -> String {
     match count {
         1 => "1 service".to_owned(),

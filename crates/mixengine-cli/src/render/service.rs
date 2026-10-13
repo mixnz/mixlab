@@ -422,14 +422,6 @@ const fn in_the_run_it_names(state: Option<ServiceState>) -> bool {
     }
 }
 
-/// `mix service create`, for a person.
-///
-/// **The second paragraph is the whole reason the answer is not just the service** — roadmap task
-/// **T34c**. A recipe's preferred port is the number a person has in their `.env` and in their
-/// muscle memory, and a service that was quietly given the next one along would be discovered as a
-/// connection that is refused, hours later. So a move is stated at the moment it happens, with as
-/// much of the program that took the port as this machine would give up.
-#[must_use]
 /// `mix service found`, for a person: one line per directory, what opens it or why nothing does.
 pub(crate) fn service_found(found: &mixengine_proto::ServiceFoundList) -> String {
     if found.found.is_empty() {
@@ -458,6 +450,14 @@ pub(crate) fn service_adopted(summary: &ServiceSummary) -> String {
     )
 }
 
+/// `mix service create`, for a person.
+///
+/// **The second paragraph is the whole reason the answer is not just the service** — roadmap task
+/// **T34c**. A recipe's preferred port is the number a person has in their `.env` and in their
+/// muscle memory, and a service that was quietly given the next one along would be discovered as a
+/// connection that is refused, hours later. So a move is stated at the moment it happens, with as
+/// much of the program that took the port as this machine would give up.
+#[must_use]
 pub(crate) fn service_creation(creation: &ServiceCreation) -> String {
     let mut rendered = format!(
         "created {}
@@ -701,7 +701,7 @@ fn watchdog_line(watchdog: Option<MemoryWatchdog>) -> String {
     format!("  {:<9} {:<18} {ending}\n", "watchdog", "checked a minute")
 }
 
-// One field: what was asked for, and what happens to it here.
+/// One field: what was asked for, and what happens to it here.
 fn limit_line(field: &str, asked: &str, verdict: &str) -> String {
     format!("  {field:<9} {asked:<18} {verdict}\n")
 }
