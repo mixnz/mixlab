@@ -55,6 +55,21 @@ two months apart, and passed on both reruns. The fifteen-second limit existed fo
 that was failing — a first start on Windows — so it went to thirty, *and* the daemon now logs what
 the service last printed, because neither of the two failures had left anything to read.
 
+## Two known signatures
+
+**`scripts/watch-ci.sh` prints an extract, and the extract can be the noise.** cargo-deny's container
+prints a `rustup` backtrace ("override toolchain … is not installed") on every run, green ones
+included, then installs the toolchain and carries on. Once it was taken for the failure while the
+real one — a banned crate — sat thirty lines lower. Read the full log the script saved
+(`$TMPDIR/mixengine-ci-<run>.log`), grep to the end of the job's part (`error[`, `banned`,
+`FAILED`), and compare with a recent green run on master to know which lines are always there.
+
+**`warm_start` on `bench (ubuntu-latest)` is bimodal.** Each round of
+`three_services_start_together_inside_the_budget` lands near 4 s or near 12 s, and the 10 s budget
+sits between the two, so the median of five is decided by how many rounds fell slow. Red here is
+not yet a regression: dispatch a run of master at the same time and compare medians. Only a fast
+master beside a slow branch is a regression to look for.
+
 ## What to write in the report
 
 Name the run, the job, the line in the log, and which of the three rows above it was. When it is the
