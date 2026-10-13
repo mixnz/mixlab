@@ -53,11 +53,12 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
       `docs/standards/rust.md` with it. One design, one pull request. Daemon `elevation.rs` (code
       1,474) and `sites.rs` (1,401) leave the baseline with little headroom. Design:
       [2026-10-14-t207e-test-modules-to-their-own-file-design.md](../specs/2026-10-14-t207e-test-modules-to-their-own-file-design.md).
-- [ ] **T207f** The same, where the tests alone are past 1,500 and split by topic into
+- [x] **T207f** The same, where the tests alone are past 1,500 and split by topic into
       `foo/tests/<topic>.rs`: core `blueprints/plan.rs` (tests 2,437) and
       `generate/recipes/nginx.rs` (1,597); and the integration suite
       `crates/mixengine-daemon/tests/runtimes.rs` (2,224), into a directory of modules behind one
-      test binary.
+      test binary. Design:
+      [2026-10-14-t207f-tests-split-by-topic-design.md](../specs/2026-10-14-t207f-tests-split-by-topic-design.md).
 - [ ] **T207g** The desktop's four, under `apps/desktop/CLAUDE.md`'s rules and its own workspace:
       `db/drivers/dump.rs` and `clickhouse.rs` (T207e's move), `mssql.rs` (code 1,649) and
       `SqlTable.tsx` (1,843, a component to split into its parts).
