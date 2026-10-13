@@ -8,5 +8,6 @@ pub(crate) mod database;
 pub(crate) mod domain;
 pub(crate) mod job;
 pub(crate) mod logs;
+pub(crate) mod metrics;
 pub(crate) mod path;
 pub(crate) mod status;
