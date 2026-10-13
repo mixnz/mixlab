@@ -31,7 +31,7 @@ pub(crate) async fn doctor(
     )
     .await?;
 
-    emit(&rendered(json, &report, || render::doctor(&report)))?;
+    emit(&rendered(json, &report, || render::doctor::doctor(&report)))?;
 
     // **The exit code is the report and not the call.** A doctor that exits 0 because it managed to
     // ask cannot be used in a script, and the shell is where the second question gets asked.
@@ -82,7 +82,9 @@ pub(crate) async fn bundle(
         })?;
     }
 
-    emit(&rendered(json, &report, || render::bundle(&report, out)))?;
+    emit(&rendered(json, &report, || {
+        render::doctor::bundle(&report, out)
+    }))?;
 
     Ok(ExitCode::SUCCESS)
 }
@@ -110,7 +112,9 @@ pub(crate) async fn self_repair(
     )
     .await?;
 
-    emit(&rendered(json, &repaired, || render::repair(&repaired)))?;
+    emit(&rendered(json, &repaired, || {
+        render::doctor::repair(&repaired)
+    }))?;
 
     // **The exit code is the report and not the call**, as `mix doctor`'s is: everything found was
     // either repaired or queued, or it was not.
