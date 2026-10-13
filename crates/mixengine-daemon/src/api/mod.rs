@@ -23,6 +23,7 @@ mod adopt_service;
 pub(crate) mod apply;
 mod create;
 mod daemon;
+mod disk;
 pub(crate) mod events;
 mod front_end;
 mod http;

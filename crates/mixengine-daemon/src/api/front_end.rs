@@ -45,7 +45,7 @@ use super::Api;
 use super::target;
 use crate::error::ToWire as _;
 
-/// How many running jobs the conflict check looks at. [`super::rpc`]'s constant, for its reason.
+/// How many running jobs the conflict check looks at. [`super::disk`]'s constant, for its reason.
 const JOBS_LOOKED_AT: u32 = 5;
 
 /// The front end this home is on, as it was before anything moved.
