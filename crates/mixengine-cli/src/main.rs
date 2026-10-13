@@ -36,37 +36,37 @@ use mixengine_proto::{
     AnswerSubject, AutostartReport, BlueprintApplied, BlueprintApply, BlueprintApplyResponse,
     BlueprintCapture, BlueprintImport, BlueprintList, BlueprintPlan, BlueprintSummary,
     BundleReport, CaRotateReport, CaStatus, CaUninstallReport, CertIssue, CertIssueReport,
-    CertStatusQuery, CertStatusReport, CleanupQuery, CleanupReport, CredentialStore,
-    CredentialStoreChange, CredentialStoreSet, DaemonShutdown, DaemonStatus, DatabaseAccount,
-    DatabaseClientQuery, DatabaseClientReport, DatabaseCreate, DatabaseCredentials,
-    DatabaseCredentialsQuery, DatabaseHandoff, DatabaseOpen, DiagnosticsBundle, DiskCategory,
-    DiskUsage, DiskUsageQuery, Disposition, DoctorRepair, DoctorReport, DomainAdd, DomainRemove,
-    DomainStatusQuery, DomainStatusReport, ElevationDrop, ElevationStatus, Error, ErrorCode,
-    ExtensionAvailable, ExtensionCatalogue, ExtensionChange, ExtensionChoice, ExtensionConsent,
-    ExtensionId, ExtensionInspect, ExtensionInspection, ExtensionInstall, ExtensionList,
-    ExtensionOrigin, ExtensionPlan, ExtensionPlanRequest, ExtensionRemoval, ExtensionTarget,
-    ExtensionUninstall, FrontEndReport, FrontEndServer, FrontEndSwitch, IdleReport,
-    InstalledExtensions, JobFilter, JobId, JobList, JobOutcome, JobQuery, JobState, JobSummary,
-    JobWait, LogFrame, MetricsFrame, MetricsHistory, Millis, MismatchAnswer, PackageCatalogue,
-    PackageFilter, PackageInstall, PackageList, PackageRemoval, PackageTarget, PackageUpgrade,
-    PackageUpgradeQuery, PackageVersion, PathReport, PendingOpId, PlanAction, Priority,
-    ProjectCreate, ProjectDetail, ProjectExport, ProjectList, ProjectQuery, ProjectRef,
-    ProjectRemoval, ProjectUpdate, Reclaim, Removal, RepairReport, ResetCredential, ResidueId,
-    ResolvedRuntime, ResourceLimits, RouteTarget, RuntimeCatalogue, RuntimeFilter, RuntimeInstall,
-    RuntimeKind, RuntimeList, RuntimeQuestion, RuntimeRemoval, RuntimeSummary, RuntimeTarget,
-    RuntimeUninstall, RuntimeUpgrade, RuntimeUpgradeQuery, SaveResources, SaveResourcesSet,
-    ScaffoldConsent, ServiceAutostartSet, ServiceCreate, ServiceCreation, ServiceDelete, ServiceId,
-    ServiceIdleSet, ServiceLimitsReport, ServiceLimitsSet, ServiceList, ServiceQuery,
-    ServiceRemoval, ServiceRole, ServiceSummary, ServiceTarget, ServiceWalk, SignatureCheck,
-    SiteCreate, SiteCreation, SiteDetail, SiteKind, SiteList, SiteListQuery, SiteQuery, SiteRef,
-    SiteRemoval, SiteRoute, SiteShare, SiteSharing, SiteState, SiteUpdate, Timestamp,
-    UninstallQuery, UninstallReport, UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide,
-    UpdateDecision, UpdateFinish, UpdateHandOver, UpdateHandedOver, UpdatePlacement, UpdateStatus,
-    UpgradePlan, VersionAnswer, VersionConstraint, rpc,
+    CertStatusQuery, CertStatusReport, CleanupQuery, CleanupReport, CredentialStore, DaemonStatus,
+    DatabaseAccount, DatabaseClientQuery, DatabaseClientReport, DatabaseCreate,
+    DatabaseCredentials, DatabaseCredentialsQuery, DatabaseHandoff, DatabaseOpen,
+    DiagnosticsBundle, DiskCategory, DiskUsage, DiskUsageQuery, Disposition, DoctorRepair,
+    DoctorReport, DomainAdd, DomainRemove, DomainStatusQuery, DomainStatusReport, ElevationDrop,
+    ElevationStatus, Error, ErrorCode, ExtensionAvailable, ExtensionCatalogue, ExtensionChange,
+    ExtensionChoice, ExtensionConsent, ExtensionId, ExtensionInspect, ExtensionInspection,
+    ExtensionInstall, ExtensionList, ExtensionOrigin, ExtensionPlan, ExtensionPlanRequest,
+    ExtensionRemoval, ExtensionTarget, ExtensionUninstall, FrontEndReport, FrontEndServer,
+    FrontEndSwitch, IdleReport, InstalledExtensions, JobFilter, JobId, JobList, JobOutcome,
+    JobQuery, JobState, JobSummary, JobWait, LogFrame, MetricsFrame, MetricsHistory, Millis,
+    MismatchAnswer, PackageCatalogue, PackageFilter, PackageInstall, PackageList, PackageRemoval,
+    PackageTarget, PackageUpgrade, PackageUpgradeQuery, PackageVersion, PathReport, PendingOpId,
+    PlanAction, Priority, ProjectCreate, ProjectDetail, ProjectExport, ProjectList, ProjectQuery,
+    ProjectRef, ProjectRemoval, ProjectUpdate, Reclaim, Removal, RepairReport, ResetCredential,
+    ResidueId, ResolvedRuntime, ResourceLimits, RouteTarget, RuntimeCatalogue, RuntimeFilter,
+    RuntimeInstall, RuntimeKind, RuntimeList, RuntimeQuestion, RuntimeRemoval, RuntimeSummary,
+    RuntimeTarget, RuntimeUninstall, RuntimeUpgrade, RuntimeUpgradeQuery, SaveResources,
+    SaveResourcesSet, ScaffoldConsent, ServiceAutostartSet, ServiceCreate, ServiceCreation,
+    ServiceDelete, ServiceId, ServiceIdleSet, ServiceLimitsReport, ServiceLimitsSet, ServiceList,
+    ServiceQuery, ServiceRemoval, ServiceRole, ServiceSummary, ServiceTarget, ServiceWalk,
+    SignatureCheck, SiteCreate, SiteCreation, SiteDetail, SiteKind, SiteList, SiteListQuery,
+    SiteQuery, SiteRef, SiteRemoval, SiteRoute, SiteShare, SiteSharing, SiteState, SiteUpdate,
+    Timestamp, UninstallQuery, UninstallReport, UpdateApplied, UpdateApply, UpdateCheck,
+    UpdateDecide, UpdateDecision, UpdateFinish, UpdateHandOver, UpdateHandedOver, UpdatePlacement,
+    UpdateStatus, UpgradePlan, VersionAnswer, VersionConstraint, rpc,
 };
 
 use autostart::Autostart;
 use client::{Client, ask, encode};
+use commands::daemon::{DaemonCommand, daemon_credential_store, daemon_stop};
 use commands::status::{status, storage};
 use confirm::unanswered;
 use jobs::follow;
@@ -1748,44 +1748,6 @@ enum JobCommand {
         #[arg(long, short = 'n', value_name = "COUNT", default_value_t = 200)]
         lines: usize,
     },
-}
-
-/// `mix daemon …` — the daemon as a thing in itself, rather than as what answers about services.
-///
-/// `status` is deliberately not here and stays `mix status`: it is the first command anybody types,
-/// and moving it would be renaming the one command that already exists to make room for a namespace.
-#[derive(Debug, Subcommand)]
-enum DaemonCommand {
-    /// Stop the services this home is running, then stop the daemon.
-    Stop,
-
-    /// Choose where this home keeps its passwords from the next start: `os`, the system's
-    /// credential store, or `home`, a file only your account can read.
-    //
-    // Roadmap task T194, ADR 0059. A release takes `home` only on a Linux machine with no
-    // credential store, and the daemon refuses a switch while the current store holds anything.
-    CredentialStore {
-        /// `os` or `home`.
-        store: CredentialStoreArg,
-    },
-}
-
-/// The two stores `mix daemon credential-store` names.
-#[derive(Debug, Clone, Copy, clap::ValueEnum)]
-enum CredentialStoreArg {
-    /// The system's credential store.
-    Os,
-    /// A file in this home, readable by your account only.
-    Home,
-}
-
-impl From<CredentialStoreArg> for CredentialStore {
-    fn from(store: CredentialStoreArg) -> Self {
-        match store {
-            CredentialStoreArg::Os => Self::Os,
-            CredentialStoreArg::Home => Self::Home,
-        }
-    }
 }
 
 /// `mix service …` — one subcommand per `service.*` method, and nothing that is not one.
@@ -6373,35 +6335,6 @@ async fn job(
     })
 }
 
-/// `mix daemon stop`: stop the services, then the daemon.
-///
-/// **The answer arrives before the daemon goes**, which is what makes an exit code possible here at
-/// all: the walk it carries says whether everything this home was running actually stopped, and a
-/// service that refused is worth a non-zero status even though the daemon stopped regardless. What
-/// happens to the connection a moment later is not this command's business — the response has been
-/// read by then.
-///
-/// **A stop that could not be ordered is the same kind of non-zero**, and for the same reason rather
-/// than by analogy: the exit code here has never meant "the daemon stopped" — it means "what was
-/// asked for happened" — and what `mix daemon stop` asks for is every service stopped in dependency
-/// order. A daemon that could not work one out stopped them all at the same moment instead, which is
-/// the arrangement the ordering exists to prevent, and exiting `0` would carry a
-/// `mix daemon stop && …` past it in silence. Both halves are still on stdout in both renderings;
-/// only the status changes.
-async fn daemon_stop(endpoint: &Endpoint, json: bool) -> Result<ExitCode, Error> {
-    let mut client = Client::connect(endpoint, None).await?;
-    let shutdown: DaemonShutdown = ask(&mut client, rpc::method::DAEMON_SHUTDOWN, None).await?;
-
-    emit(&rendered(json, &shutdown, || {
-        render::daemon_shutdown(&shutdown)
-    }))?;
-
-    Ok(match (&shutdown.services.failed, &shutdown.unordered) {
-        (None, None) => ExitCode::SUCCESS,
-        _ => ExitCode::FAILURE,
-    })
-}
-
 /// Which store the daemon keeps passwords in, for a sentence that says where one is — roadmap task
 /// T194. Asked only for a person: `--json` hands back the daemon's own answer and needs no more.
 /// A daemon that cannot say, or predates the member, is answered as it always was.
@@ -6414,30 +6347,6 @@ async fn credential_store(client: &mut Client, json: bool) -> Option<CredentialS
         .ok()
         .and_then(|status| status.credentials)
         .map(|credentials| credentials.store)
-}
-
-/// `mix daemon credential-store` — roadmap task T194.
-async fn daemon_credential_store(
-    store: CredentialStoreArg,
-    endpoint: &Endpoint,
-    autostart: Option<&Autostart>,
-    json: bool,
-) -> Result<ExitCode, Error> {
-    let mut client = Client::connect(endpoint, autostart).await?;
-    let change: CredentialStoreChange = ask(
-        &mut client,
-        rpc::method::DAEMON_SET_CREDENTIAL_STORE,
-        encode(&CredentialStoreSet {
-            store: store.into(),
-        }),
-    )
-    .await?;
-
-    emit(&rendered(json, &change, || {
-        render::credential_store_change(change)
-    }))?;
-
-    Ok(ExitCode::SUCCESS)
 }
 
 /// `mix service …`: one call, one rendering, and an exit code that means what a shell expects.
