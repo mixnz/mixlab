@@ -165,7 +165,9 @@ pub(crate) async fn package(
             };
             let list: PackageList =
                 ask(&mut client, rpc::method::PACKAGE_LIST, encode(&filter)).await?;
-            emit(&rendered(json, &list, || render::package_list(&list)))?;
+            emit(&rendered(json, &list, || {
+                render::package::package_list(&list)
+            }))?;
         }
 
         PackageCommand::Available {
@@ -182,7 +184,10 @@ pub(crate) async fn package(
             )
             .await?;
             emit(&rendered(json, &catalogue, || {
-                render::package_catalogue(&catalogue, &render::catalogue::Lines { all, line })
+                render::package::package_catalogue(
+                    &catalogue,
+                    &render::catalogue::Lines { all, line },
+                )
             }))?;
         }
 
@@ -264,7 +269,7 @@ pub(crate) async fn package(
             let summary: mixengine_proto::PackageSummary =
                 ask(&mut client, rpc::method::PACKAGE_ADOPT, encode(&target)).await?;
             emit(&rendered(json, &summary, || {
-                render::package_summary(&summary)
+                render::package::package_summary(&summary)
             }))?;
         }
 
@@ -339,7 +344,7 @@ pub(crate) async fn package(
             let removal: PackageRemoval =
                 ask(&mut client, rpc::method::PACKAGE_UNINSTALL, encode(&target)).await?;
             emit(&rendered(json, &removal, || {
-                render::package_removal(&removal)
+                render::package::package_removal(&removal)
             }))?;
         }
     }
