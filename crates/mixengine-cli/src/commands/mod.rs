@@ -6,6 +6,7 @@ pub(crate) mod cert;
 pub(crate) mod daemon;
 pub(crate) mod database;
 pub(crate) mod domain;
+pub(crate) mod elevation;
 pub(crate) mod home;
 pub(crate) mod job;
 pub(crate) mod logs;
