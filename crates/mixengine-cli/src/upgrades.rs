@@ -22,7 +22,9 @@ pub(crate) fn upgrade_confirmed(
     // **One document per `--json` run**: the plan is the answer only to a dry run; otherwise the
     // finished job carries the same plan, marked, and is what is printed.
     if !json || dry_run {
-        emit(&rendered(json, plan, || render::upgrade_plan(plan)))?;
+        emit(&rendered(json, plan, || {
+            render::upgrades::upgrade_plan(plan)
+        }))?;
     }
 
     if dry_run {
@@ -63,7 +65,7 @@ pub(crate) async fn finish_upgrade(
     });
 
     emit(&rendered(json, &finished, || match &result {
-        Some(plan) => render::upgrade_plan(plan),
+        Some(plan) => render::upgrades::upgrade_plan(plan),
         None => render::job_status(&finished),
     }))?;
 
