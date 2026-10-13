@@ -44,7 +44,7 @@ pub(crate) async fn home(
             let previous: mixengine_proto::HomePrevious =
                 ask(&mut client, rpc::method::HOME_PREVIOUS, None).await?;
             emit(&rendered(json, &previous, || {
-                render::home_previous(&previous)
+                render::home::home_previous(&previous)
             }))?;
         }
 
@@ -54,7 +54,9 @@ pub(crate) async fn home(
             }
             let report: mixengine_proto::HomeRestoreReport =
                 ask(&mut client, rpc::method::HOME_RESTORE, None).await?;
-            emit(&rendered(json, &report, || render::home_restored(&report)))?;
+            emit(&rendered(json, &report, || {
+                render::home::home_restored(&report)
+            }))?;
         }
     }
 
