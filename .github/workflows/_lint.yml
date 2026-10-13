@@ -42,6 +42,13 @@ jobs:
           node --test scripts/check-docs.test.mjs
           node scripts/check-docs.mjs
 
+      # T207: no source file grows past 1,500 lines, and none of the files already past it grows at
+      # all — scripts/file-size-baseline.json only ever goes down. Needs only Node.
+      - name: File sizes
+        run: |
+          node --test scripts/check-file-sizes.test.mjs
+          node scripts/check-file-sizes.mjs
+
       # A Rust string whose `\` line continuation went missing carries a run of spaces into the
       # message, and neither rustfmt nor clippy notices. Needs only Node, like the step above.
       - name: String continuations

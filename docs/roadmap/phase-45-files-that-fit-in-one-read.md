@@ -10,7 +10,7 @@ Design: [2026-10-13-files-that-fit-in-one-read-design.md](../specs/2026-10-13-fi
 
 ---
 
-- [ ] **T207** `scripts/check-file-sizes.mjs` and its test: a 1,500-line limit on tracked `.rs`,
+- [x] **T207** `scripts/check-file-sizes.mjs` and its test: a 1,500-line limit on tracked `.rs`,
       `.ts`, `.tsx`, `.js`, `.mjs` and `.css` files, and `scripts/file-size-baseline.json` naming
       the 34 files already past it at their current length; red on a new file over the limit, on a
       baselined file that grew, and on one that shrank without `--shrink`. Run by `scripts/gate.sh`
