@@ -40,6 +40,35 @@ Design: [2026-10-13-files-that-fit-in-one-read-design.md](../specs/2026-10-13-fi
       move: 705 unit tests before and after, and `mod.rs` leaves the baseline. Design:
       [2026-10-13-t207d-services-split-by-capability-design.md](../specs/2026-10-13-t207d-services-split-by-capability-design.md).
 
+The 30 files left in the baseline after T207d, grouped by how they split rather than one design
+per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the test module):
+
+- [ ] **T207e** Test modules out to `foo/tests.rs`, for the 15 files whose code is under 1,500 and
+      only the tests push them past it: core `generate.rs`, `services.rs`, `sites.rs`,
+      `manifest.rs`, `elevation.rs`, `blueprints/manifest.rs`,
+      `generate/recipes/{caddy,postgres,mariadb,mysql}.rs`; proto `privileged.rs`; daemon
+      `elevation.rs`, `sites.rs`, `uninstall/inventory.rs`, `api/apply.rs`. `foo.rs` keeps `#[cfg(test)] mod tests;`, the
+      bodies do not change and **test paths stay `foo::tests::x`**, so nextest's filters and the
+      unit-test counts are untouched. The convention (agreed 2026-10-14) goes into
+      `docs/standards/rust.md` with it. One design, one pull request. Daemon `elevation.rs` (code
+      1,474) and `sites.rs` (1,401) leave the baseline with little headroom.
+- [ ] **T207f** The same, where the tests alone are past 1,500 and split by topic into
+      `foo/tests/<topic>.rs`: core `blueprints/plan.rs` (tests 2,437) and
+      `generate/recipes/nginx.rs` (1,597); and the integration suite
+      `crates/mixengine-daemon/tests/runtimes.rs` (2,224), into a directory of modules behind one
+      test binary.
+- [ ] **T207g** The desktop's four, under `apps/desktop/CLAUDE.md`'s rules and its own workspace:
+      `db/drivers/dump.rs` and `clickhouse.rs` (T207e's move), `mssql.rs` (code 1,649) and
+      `SqlTable.tsx` (1,843, a component to split into its parts).
+- [ ] **T207h** Definitions whose code is past 1,500, with little state: proto `service.rs`
+      (code 1,814), core `generate/recipe.rs` (1,521), platform `process.rs` (1,508) and
+      `windows/process.rs` (1,590). By capability, with T207d's script.
+- [ ] **T207i** The daemon's stateful three, each designed as T207d was: `services/runner.rs`
+      (code 2,418; likely a design of its own), `main.rs` (2,439) and `doctor.rs` (1,615).
+- [ ] **T207j** Core `lib.rs` cannot be split by moving: lines 92–1935 are one `enum Error`, and
+      an enum does not span files. Decide between error enums per subject (a change to code, and
+      perhaps an ADR) and keeping it in the baseline with the reason written there.
+
 **M45** `scripts/file-size-baseline.json` no longer names `crates/mixengine-cli/src/main.rs`,
 `render.rs`, `crates/mixengine-daemon/src/api/rpc.rs` or
 `crates/mixengine-daemon/src/services/mod.rs`, and `bash scripts/gate.sh` is green.
