@@ -28,6 +28,9 @@ use tokio_util::sync::CancellationToken;
 
 use super::{Events, Registry, SpecSource};
 
+use mixengine_core::services;
+use mixengine_proto::ServiceState;
+
 /// How long a test waits for something on the other side of the machine.
 ///
 /// Only ever waited out in full when something is wrong. Generous because starting a process on a
@@ -307,4 +310,41 @@ impl SpecSource for Swappable {
     ) -> Pin<Box<dyn Future<Output = mixengine_core::Result<Option<Settings>>> + Send + '_>> {
         Box::pin(std::future::ready(Ok(None)))
     }
+}
+
+/// How long a test listens to prove that nothing happened.
+///
+/// Only ever meaningful against something far longer: what it is weighed against is a thirty
+/// second backoff, and what would break the silence would break it within a millisecond.
+pub(crate) const SILENCE: Duration = Duration::from_secs(2);
+
+/// Wait for a survivor to have gone. `false` if it had not within [`EVENTUALLY`].
+///
+/// Polled rather than asked once: recovery stops a process it cannot supervise and does not wait
+/// for the kernel to get round to it, which is the same thing every other stop in this crate is
+/// polled for.
+pub(crate) async fn gone(service: &mut mixengine_testkit::service::Running) -> bool {
+    let deadline = tokio::time::Instant::now() + EVENTUALLY;
+
+    while service.still_running() {
+        if tokio::time::Instant::now() >= deadline {
+            return false;
+        }
+
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+
+    true
+}
+
+/// The state, pid and last exit code of one row.
+pub(crate) async fn row(store: &Store, id: &ServiceId) -> (ServiceState, Option<i64>) {
+    let state = services::state(store, id).await.expect("the row");
+    let pid: Option<i64> = sqlx::query_scalar("SELECT pid FROM services WHERE id = ?")
+        .bind(id.as_str())
+        .fetch_one(store.pool())
+        .await
+        .expect("the row");
+
+    (state, pid)
 }

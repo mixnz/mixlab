@@ -2353,16 +2353,10 @@ mod tests {
     use mixengine_testkit::FakeService;
 
     use super::fixture::{
-        Declared, EVENTUALLY, Rerendered, Unavailable, arguments, home, registry, registry_on,
-        service, spec,
+        Declared, EVENTUALLY, Rerendered, SILENCE, Unavailable, arguments, gone, home, registry,
+        registry_on, row, service, spec,
     };
     use super::*;
-
-    /// How long a test listens to prove that nothing happened.
-    ///
-    /// Only ever meaningful against something far longer: what it is weighed against is a thirty
-    /// second backoff, and what would break the silence would break it within a millisecond.
-    const SILENCE: Duration = Duration::from_secs(2);
 
     /// A service that dies before it is ever ready, under a policy that never gives up.
     ///
@@ -2466,37 +2460,6 @@ mod tests {
             .expect("the row takes the process the last daemon started");
 
         service
-    }
-
-    /// Wait for a survivor to have gone. `false` if it had not within [`EVENTUALLY`].
-    ///
-    /// Polled rather than asked once: recovery stops a process it cannot supervise and does not wait
-    /// for the kernel to get round to it, which is the same thing every other stop in this crate is
-    /// polled for.
-    async fn gone(service: &mut mixengine_testkit::service::Running) -> bool {
-        let deadline = tokio::time::Instant::now() + EVENTUALLY;
-
-        while service.still_running() {
-            if tokio::time::Instant::now() >= deadline {
-                return false;
-            }
-
-            tokio::time::sleep(Duration::from_millis(25)).await;
-        }
-
-        true
-    }
-
-    /// The state, pid and last exit code of one row.
-    async fn row(store: &Store, id: &ServiceId) -> (ServiceState, Option<i64>) {
-        let state = services::state(store, id).await.expect("the row");
-        let pid: Option<i64> = sqlx::query_scalar("SELECT pid FROM services WHERE id = ?")
-            .bind(id.as_str())
-            .fetch_one(store.pool())
-            .await
-            .expect("the row");
-
-        (state, pid)
     }
 
     /// **The idle sweep may look through the last graph while it is young** — roadmap task T190b.
