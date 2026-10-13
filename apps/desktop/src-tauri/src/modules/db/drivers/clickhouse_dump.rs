@@ -4,6 +4,7 @@
 
 use super::clickhouse::{self, Connection};
 use super::clickhouse_script::{Fed, Scanner};
+use super::clickhouse_structure;
 use super::dump::{self, Tracker};
 use crate::error::AppError;
 
@@ -195,7 +196,7 @@ async fn list_tables_with_engine(
         .filter_map(|row| {
             let name = row.get("name")?.as_str()?.to_string();
             let engine = row.get("engine")?.as_str()?.to_string();
-            let total_bytes = clickhouse::as_u64(row.get("total_bytes")).unwrap_or(0);
+            let total_bytes = clickhouse_structure::as_u64(row.get("total_bytes")).unwrap_or(0);
             Some(TableInfo {
                 name,
                 engine,

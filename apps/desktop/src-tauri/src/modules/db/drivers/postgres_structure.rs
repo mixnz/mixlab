@@ -70,7 +70,7 @@ pub struct TableStructure {
     pub indexes: Vec<TableIndex>,
     /// Always empty: data skipping indices are a ClickHouse-only concept. See
     /// `docs/specs/2026-09-04-clickhouse-index-ddl-design.md`.
-    pub skip_indexes: Vec<super::clickhouse::SkipIndex>,
+    pub skip_indexes: Vec<super::clickhouse_structure::SkipIndex>,
     /// Always `None` — the engine guard in the Structure tab only ever reads this for ClickHouse.
     pub engine: Option<String>,
 }

@@ -69,7 +69,7 @@ pub struct TableStructure {
     /// The primary key first, then the rest by name.
     pub indexes: Vec<TableIndex>,
     /// Always empty: data skipping indices are a ClickHouse-only concept.
-    pub skip_indexes: Vec<super::clickhouse::SkipIndex>,
+    pub skip_indexes: Vec<super::clickhouse_structure::SkipIndex>,
     /// Always `None` — the engine guard in the Structure tab only reads this for ClickHouse.
     pub engine: Option<String>,
 }
