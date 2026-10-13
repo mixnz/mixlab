@@ -94,7 +94,7 @@ fn chosen(line: Option<&str>) -> Choice {
 
 /// Put the question on standard error and read one line back.
 ///
-/// Standard error for [`report_progress`](crate::report_progress)'s reason: what a command answers
+/// Standard error for [`report_progress`](crate::jobs::report_progress)'s reason: what a command answers
 /// with goes to standard output, and a question is not an answer. It also keeps a redirected
 /// `mix … > file` readable, where a prompt written into the file would be a prompt nobody sees.
 pub(crate) fn ask(question: &str) -> Answer {
