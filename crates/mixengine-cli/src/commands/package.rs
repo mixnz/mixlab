@@ -182,7 +182,7 @@ pub(crate) async fn package(
             )
             .await?;
             emit(&rendered(json, &catalogue, || {
-                render::package_catalogue(&catalogue, &render::Lines { all, line })
+                render::package_catalogue(&catalogue, &render::catalogue::Lines { all, line })
             }))?;
         }
 
@@ -239,7 +239,7 @@ pub(crate) async fn package(
             let found: mixengine_proto::PackageFoundList =
                 ask(&mut client, rpc::method::PACKAGE_FOUND, None).await?;
             emit(&rendered(json, &found, || {
-                render::on_disk(
+                render::catalogue::on_disk(
                     found.found.iter().map(|row| {
                         (
                             format!("{} {}", row.package, row.version),

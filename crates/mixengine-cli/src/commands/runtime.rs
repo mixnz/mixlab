@@ -276,7 +276,7 @@ pub(crate) async fn runtime(
             )
             .await?;
             emit(&rendered(json, &catalogue, || {
-                render::runtime_catalogue(&catalogue, &render::Lines { all, line })
+                render::runtime_catalogue(&catalogue, &render::catalogue::Lines { all, line })
             }))?;
         }
 
@@ -369,7 +369,7 @@ pub(crate) async fn runtime(
             let found: mixengine_proto::RuntimeFoundList =
                 ask(&mut client, rpc::method::RUNTIME_FOUND, None).await?;
             emit(&rendered(json, &found, || {
-                render::on_disk(
+                render::catalogue::on_disk(
                     found
                         .found
                         .iter()
