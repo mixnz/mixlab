@@ -1,6 +1,6 @@
 //! `service.create` and `service.delete`: the two ends of a `services` row's life.
 //!
-//! Roadmap task **T31a**. Their own file rather than more of [`super::rpc`], which is already the
+//! Roadmap task **T31a**. Their own file rather than more of [`super::rpc`], which was then the
 //! longest in this crate, and together rather than beside their namespake neighbours because they
 //! are one decision read forwards and backwards: what a create writes is exactly what a delete
 //! takes away, and the second is the first's rollback when a rendering fails.

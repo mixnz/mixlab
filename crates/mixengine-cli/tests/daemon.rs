@@ -12,8 +12,8 @@
 //! or fail for reasons that have nothing to do with `mix daemon stop`. That covers the two about a
 //! shutdown nobody could order as well — an undeclarable source needs a service to be undeclarable,
 //! and this build can declare one only in debug.
-//! What holds in a release run is the layer below: `api/rpc.rs` drives the same case through
-//! `fixture::Unavailable`, and `render.rs` proves the sentence it produces.
+//! What holds in a release run is the layer below: `api/daemon.rs` drives the same case through
+//! `fixture::Unavailable`, and `render/daemon.rs` proves the sentence it produces.
 
 mod harness;
 
