@@ -706,18 +706,39 @@ async fn a_deleted_pool_gives_its_activators_address_back() {
         // The probe above is a connection, and a connection is what wakes a pool: stop it, since
         // `service.delete` refuses a running service.
         //
-        // **Asked with the daemon's log on failure.** Run 37943878909 refused the delete on
-        // windows-latest twice with "php-fpm@8.3.34 is starting" after the stop had answered, and
-        // left nothing saying what started it again.
-        for method in ["service.stop", "service.delete"] {
-            let answer = client
-                .ask(method, json!({"service": "php-fpm@8.3.34"}))
+        // **Again until the delete is taken, because the wake is not the probe's.** The activator
+        // carries each connection in a task of its own, so `accepts` returns before the pool has
+        // been asked to start, and a stop that lands first stops nothing: run 38454459956's log
+        // shows `stopped → starting` six milliseconds before the delete was refused with
+        // "php-fpm@8.3.34 is starting" (37943878909 failed the same way and left no log). Only that
+        // refusal is waited out; anything else fails at once.
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        loop {
+            let stopped = client
+                .ask("service.stop", json!({"service": "php-fpm@8.3.34"}))
                 .await;
             assert!(
-                answer.get("error").is_none(),
-                "{method}: {answer}\n{}",
+                stopped.get("error").is_none(),
+                "service.stop: {stopped}\n{}",
                 home.daemon_log()
             );
+
+            let deleted = client
+                .ask("service.delete", json!({"service": "php-fpm@8.3.34"}))
+                .await;
+            let Some(error) = deleted.get("error") else {
+                break;
+            };
+
+            let woken = error["message"]
+                .as_str()
+                .is_some_and(|message| message.ends_with("is starting"));
+            assert!(
+                woken && tokio::time::Instant::now() < deadline,
+                "service.delete: {deleted}\n{}",
+                home.daemon_log()
+            );
+            tokio::time::sleep(Duration::from_millis(200)).await;
         }
 
         assert!(
