@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 date: 2026-10-14
 task: T207g
 ---
@@ -42,7 +42,8 @@ Measured by listing every item of the block and searching the crate for it:
   four other engines' `_structure.rs`, which report their skip indexes with `clickhouse::SkipIndex`.
 - **`parse_type_full`'s four tests** go with it; the rest of `clickhouse.rs`'s tests stay.
 
-`clickhouse.rs` ends at about 1,450 lines with its tests inline and leaves the baseline.
+`clickhouse.rs` ends at 1,434 lines with its tests inline, `clickhouse_structure.rs` at 452, and
+the first leaves the baseline.
 
 ## D2 — `mssql.rs`: writing a row is a capability of its own
 
@@ -62,12 +63,14 @@ halves, `reset_identity`, and the helpers nothing but they use — `end_transact
 - **Eight tests go with what they test**: the three money tests, the two base64 tests,
   `full_object_name_always_carries_its_schema`, and the two `key_predicate` tests.
 
-That leaves `mssql.rs` at about 1,210 lines of code and about 345 of tests — past 1,500 together,
-under it apart — so its test module then moves to `mssql/tests.rs` by T207e's convention.
+That leaves `mssql.rs` at 1,551 lines (`mssql_editing.rs` 552) — 1,198 of code and 352 of tests,
+past 1,500 together and under it apart — so its test module then moves to `mssql/tests.rs` by
+T207e's convention, and `mssql.rs` ends at 1,198.
 
 ## D3 — `dump.rs`: T207e as it stands
 
-Code 1,395, tests 635: the test module moves to `dump/tests.rs`, nothing else changes.
+Code 1,395, tests 635: the test module moves to `dump/tests.rs` (628 lines after `rustfmt`),
+nothing else changes, and `dump.rs` ends at 1,396.
 
 ## D4 — what a move could change, and why here it does not
 

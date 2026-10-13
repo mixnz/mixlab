@@ -59,7 +59,7 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
       `crates/mixengine-daemon/tests/runtimes.rs` (2,224), into a directory of modules behind one
       test binary. Design:
       [2026-10-14-t207f-tests-split-by-topic-design.md](../specs/2026-10-14-t207f-tests-split-by-topic-design.md).
-- [ ] **T207g** The desktop's three database drivers, under `apps/desktop/CLAUDE.md`'s rules and
+- [x] **T207g** The desktop's three database drivers, under `apps/desktop/CLAUDE.md`'s rules and
       its own workspace, split the way their siblings already are: `clickhouse.rs`'s structure to
       a `clickhouse_structure.rs` like every other engine's, `mssql.rs`'s writes to
       `mssql_editing.rs` and then its tests to `mssql/tests.rs`, and `dump.rs`'s tests to
