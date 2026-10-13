@@ -145,7 +145,7 @@ fn answer(line: Option<&str>) -> Answer {
 /// not the same three: a blueprint's *use what is installed* has nothing to do with an update, and
 /// one function answering both would be a function whose letters mean different things depending on
 /// who called it.
-pub(crate) fn ask_update(question: &str) -> Option<crate::Choice> {
+pub(crate) fn ask_update(question: &str) -> Option<crate::commands::self_update::Choice> {
     let mut error = std::io::stderr();
     let _ = write!(error, "{question}");
     let _ = error.flush();
@@ -167,11 +167,11 @@ pub(crate) fn ask_update(question: &str) -> Option<crate::Choice> {
 /// to see what happens has not chosen to stop every service on this machine and replace the binaries
 /// underneath them. And it is *later* rather than *skip*, because a keystroke should not silently
 /// decide that this version is never offered again.
-fn update_answer(line: &str) -> crate::Choice {
+fn update_answer(line: &str) -> crate::commands::self_update::Choice {
     match line.trim().to_ascii_lowercase().as_str() {
-        "i" | "install" | "y" | "yes" => crate::Choice::Install,
-        "s" | "skip" => crate::Choice::Skip,
-        _ => crate::Choice::Later,
+        "i" | "install" | "y" | "yes" => crate::commands::self_update::Choice::Install,
+        "s" | "skip" => crate::commands::self_update::Choice::Skip,
+        _ => crate::commands::self_update::Choice::Later,
     }
 }
 
@@ -272,15 +272,39 @@ mod tests {
     /// one answer that changes nothing much.
     #[test]
     fn the_update_question_defaults_to_being_asked_again() {
-        assert_eq!(update_answer("i\n"), crate::Choice::Install);
-        assert_eq!(update_answer(" INSTALL "), crate::Choice::Install);
-        assert_eq!(update_answer("yes"), crate::Choice::Install);
-        assert_eq!(update_answer("s"), crate::Choice::Skip);
-        assert_eq!(update_answer("Skip\n"), crate::Choice::Skip);
+        assert_eq!(
+            update_answer("i\n"),
+            crate::commands::self_update::Choice::Install
+        );
+        assert_eq!(
+            update_answer(" INSTALL "),
+            crate::commands::self_update::Choice::Install
+        );
+        assert_eq!(
+            update_answer("yes"),
+            crate::commands::self_update::Choice::Install
+        );
+        assert_eq!(
+            update_answer("s"),
+            crate::commands::self_update::Choice::Skip
+        );
+        assert_eq!(
+            update_answer("Skip\n"),
+            crate::commands::self_update::Choice::Skip
+        );
 
-        assert_eq!(update_answer("\n"), crate::Choice::Later);
-        assert_eq!(update_answer("l"), crate::Choice::Later);
-        assert_eq!(update_answer("what"), crate::Choice::Later);
+        assert_eq!(
+            update_answer("\n"),
+            crate::commands::self_update::Choice::Later
+        );
+        assert_eq!(
+            update_answer("l"),
+            crate::commands::self_update::Choice::Later
+        );
+        assert_eq!(
+            update_answer("what"),
+            crate::commands::self_update::Choice::Later
+        );
     }
 
     /// **A line is the value, with its trailing newline gone** — roadmap task **T77b**. End of

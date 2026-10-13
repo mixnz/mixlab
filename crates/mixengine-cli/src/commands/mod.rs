@@ -19,6 +19,7 @@ pub(crate) mod package;
 pub(crate) mod path;
 pub(crate) mod project;
 pub(crate) mod runtime;
+pub(crate) mod self_update;
 pub(crate) mod service;
 pub(crate) mod site;
 pub(crate) mod status;
