@@ -141,12 +141,16 @@ pub(crate) async fn project(
             };
             let detail: ProjectDetail =
                 ask(&mut client, rpc::method::PROJECT_CREATE, encode(&create)).await?;
-            emit(&rendered(json, &detail, || render::project_detail(&detail)))?;
+            emit(&rendered(json, &detail, || {
+                render::project::project_detail(&detail)
+            }))?;
         }
 
         ProjectCommand::List => {
             let list: ProjectList = ask(&mut client, rpc::method::PROJECT_LIST, None).await?;
-            emit(&rendered(json, &list, || render::project_list(&list)))?;
+            emit(&rendered(json, &list, || {
+                render::project::project_list(&list)
+            }))?;
         }
 
         ProjectCommand::Show { project } => {
@@ -155,7 +159,9 @@ pub(crate) async fn project(
             };
             let detail: ProjectDetail =
                 ask(&mut client, rpc::method::PROJECT_SHOW, encode(&query)).await?;
-            emit(&rendered(json, &detail, || render::project_detail(&detail)))?;
+            emit(&rendered(json, &detail, || {
+                render::project::project_detail(&detail)
+            }))?;
         }
 
         ProjectCommand::Update {
@@ -180,7 +186,9 @@ pub(crate) async fn project(
             };
             let detail: ProjectDetail =
                 ask(&mut client, rpc::method::PROJECT_UPDATE, encode(&update)).await?;
-            emit(&rendered(json, &detail, || render::project_detail(&detail)))?;
+            emit(&rendered(json, &detail, || {
+                render::project::project_detail(&detail)
+            }))?;
         }
 
         ProjectCommand::KeepWarm { project, off } => {
@@ -193,7 +201,9 @@ pub(crate) async fn project(
             };
             let detail: ProjectDetail =
                 ask(&mut client, rpc::method::PROJECT_UPDATE, encode(&update)).await?;
-            emit(&rendered(json, &detail, || render::project_detail(&detail)))?;
+            emit(&rendered(json, &detail, || {
+                render::project::project_detail(&detail)
+            }))?;
         }
 
         ProjectCommand::Delete { project } => {
@@ -203,7 +213,7 @@ pub(crate) async fn project(
             let removal: ProjectRemoval =
                 ask(&mut client, rpc::method::PROJECT_DELETE, encode(&query)).await?;
             emit(&rendered(json, &removal, || {
-                render::project_removal(&removal)
+                render::project::project_removal(&removal)
             }))?;
         }
 
@@ -214,7 +224,7 @@ pub(crate) async fn project(
             let exported: ProjectExport =
                 ask(&mut client, rpc::method::PROJECT_EXPORT, encode(&query)).await?;
             emit(&rendered(json, &exported, || {
-                render::project_export(&exported)
+                render::project::project_export(&exported)
             }))?;
         }
     }
