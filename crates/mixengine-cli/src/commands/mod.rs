@@ -15,6 +15,7 @@ pub(crate) mod home;
 pub(crate) mod job;
 pub(crate) mod logs;
 pub(crate) mod metrics;
+pub(crate) mod package;
 pub(crate) mod path;
 pub(crate) mod project;
 pub(crate) mod site;
