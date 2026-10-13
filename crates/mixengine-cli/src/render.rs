@@ -10,6 +10,10 @@
 //! report or an issue, and escape codes there are noise — the daemon makes the same call about its
 //! own log file, which is coloured on stderr and never in `daemon.log`.
 
+mod table;
+
+use table::{MISSING, table, table_of};
+
 use std::time::SystemTime;
 /// `*.test, *.localhost`, which is how a wildcard route reads in a sentence.
 ///
@@ -1161,9 +1165,6 @@ pub(crate) fn service_walk(walked: Walked, walk: &ServiceWalk) -> String {
 
     rendered
 }
-
-/// What is printed where a service has no value for something.
-const MISSING: &str = "—";
 
 /// What a summary says a service is doing, in one word.
 fn state(service: &ServiceSummary) -> String {
@@ -2585,52 +2586,6 @@ fn names(services: &[ServiceId]) -> String {
             .collect::<Vec<_>>()
             .join(", "),
     }
-}
-
-/// A listing with its headings, every column as wide as its widest cell.
-///
-/// Generic over the number of columns rather than written once per table: four commands here answer
-/// with a listing now, and the alternative is four copies of the same width calculation drifting
-/// apart in how they pad and where they trim.
-fn table<const N: usize>(headings: [&str; N], rows: &[[String; N]]) -> String {
-    let rows: Vec<Vec<String>> = rows.iter().map(|row| row.to_vec()).collect();
-    table_of(&headings, &rows)
-}
-
-/// [`table`] for a column count decided at run time — roadmap task **T151**, where a listing may
-/// grow `RUNS`, `NEEDS`, both or neither.
-pub(crate) fn table_of(headings: &[&str], rows: &[Vec<String>]) -> String {
-    let widths: Vec<usize> = (0..headings.len())
-        .map(|column| {
-            rows.iter()
-                .map(|row| row.get(column).map_or(0, |cell| cell.chars().count()))
-                .chain(std::iter::once(headings[column].chars().count()))
-                .max()
-                .unwrap_or_default()
-        })
-        .collect();
-
-    let mut rendered = String::new();
-    let headings: Vec<String> = headings
-        .iter()
-        .map(|heading| (*heading).to_owned())
-        .collect();
-
-    for row in std::iter::once(&headings).chain(rows.iter()) {
-        let line = row
-            .iter()
-            .zip(&widths)
-            .map(|(cell, width)| format!("{cell:width$}"))
-            .collect::<Vec<_>>()
-            .join("  ");
-
-        // Trimmed, so a table's last column carries no trailing run of spaces into whatever a
-        // person pastes it into.
-        rendered.push_str(line.trim_end());
-        rendered.push('\n');
-    }
-
-    rendered
 }
 
 /// How long ago something happened, from this machine's clock.
