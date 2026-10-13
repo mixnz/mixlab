@@ -10,8 +10,10 @@
 //! report or an issue, and escape codes there are noise — the daemon makes the same call about its
 //! own log file, which is coloured on stderr and never in `daemon.log`.
 
+mod size;
 mod table;
 
+use size::size;
 use table::{MISSING, table, table_of};
 
 use std::time::SystemTime;
@@ -2534,28 +2536,13 @@ fn percent(cpu: Option<f32>, cores: u32) -> String {
 ///
 /// Mebibytes with one decimal, unlike [`size`]: a download is tens or hundreds of them and a service
 /// is often under ten, where whole numbers would round php-fpm and Redis to the same figure.
+///
+/// [`size`]: crate::render::size::size
 fn memory(bytes: u64) -> String {
     #[expect(clippy::cast_precision_loss, reason = "one decimal place of mebibytes")]
     let mib = bytes as f64 / (1u64 << 20) as f64;
 
     format!("{mib:.1} MiB")
-}
-
-/// A number of bytes, at the scale a download is read in.
-///
-/// Whole mebibytes, and never a fraction: what this number answers is "will this take a while and is
-/// there room", and `41 MiB` answers it exactly as well as `40.7 MiB` while being a number a person
-/// takes in at a glance. `--json` carries the byte count, unrounded.
-fn size(bytes: u64) -> String {
-    const MIB: u64 = 1 << 20;
-
-    match bytes {
-        0 => MISSING.to_owned(),
-        // Anything smaller than a mebibyte would round to `0 MiB`, which reads as "nothing" for a
-        // file that is really there.
-        1..MIB => "< 1 MiB".to_owned(),
-        _ => format!("{} MiB", bytes / MIB),
-    }
 }
 
 /// What `mix uninstall` prints when it starts waiting for the directories to go — T182b.
