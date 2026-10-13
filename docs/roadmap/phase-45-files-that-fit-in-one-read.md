@@ -21,7 +21,8 @@ Design: [2026-10-13-files-that-fit-in-one-read-design.md](../specs/2026-10-13-fi
       (`packaging/docs.sh --check`) and the unit-test count are unchanged, and `main.rs` leaves the
       baseline.
 - [ ] **T207b** `crates/mixengine-cli/src/render.rs` split the same way, `render/<name>.rs` beside
-      `commands/<name>.rs`. Needs a design of its own for where its tests go.
+      `commands/<name>.rs`. Design:
+      [2026-10-13-render-split-by-command-design.md](../specs/2026-10-13-render-split-by-command-design.md).
 
 **M45** `scripts/file-size-baseline.json` no longer names `crates/mixengine-cli/src/main.rs`, and
 `bash scripts/gate.sh` is green.
