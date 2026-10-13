@@ -5,7 +5,7 @@
 
 use crate::error::AppError;
 use crate::modules::db::drivers::{
-    dump, mssql, mssql_ddl, mssql_dump, mssql_script, mssql_structure,
+    dump, mssql, mssql_ddl, mssql_dump, mssql_editing, mssql_script, mssql_structure,
 };
 use crate::modules::db::models::{ServerInfo, SqlProblem, StatementResult};
 use crate::modules::db::state::DbState;
@@ -62,7 +62,7 @@ pub async fn mssql_update_row(
     key: Map<String, Value>,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql::update_row(&pool, &database, &table, &updates, &key).await
+    mssql_editing::update_row(&pool, &database, &table, &updates, &key).await
 }
 
 #[tauri::command]
@@ -74,7 +74,7 @@ pub async fn mssql_insert_rows(
     rows: Vec<Map<String, Value>>,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql::insert_rows(&pool, &database, &table, &rows).await
+    mssql_editing::insert_rows(&pool, &database, &table, &rows).await
 }
 
 /// `reset_auto_increment` keeps MySQL's name, the way `commands::postgres` does too — it is the
@@ -90,7 +90,7 @@ pub async fn mssql_delete_rows(
     reset_auto_increment: bool,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql::delete_rows(&pool, &database, &table, &keys, all, reset_auto_increment).await
+    mssql_editing::delete_rows(&pool, &database, &table, &keys, all, reset_auto_increment).await
 }
 
 #[tauri::command]

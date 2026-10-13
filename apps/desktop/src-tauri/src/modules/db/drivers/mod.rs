@@ -9,6 +9,7 @@ pub mod mongo;
 pub mod mssql;
 pub mod mssql_ddl;
 pub mod mssql_dump;
+pub mod mssql_editing;
 pub mod mssql_script;
 pub mod mssql_structure;
 pub mod mysql;

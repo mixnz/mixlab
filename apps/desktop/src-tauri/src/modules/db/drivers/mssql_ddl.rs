@@ -8,9 +8,8 @@
 //! clears it, rather than restating the column whole the way MySQL's `CHANGE COLUMN` or building one
 //! `ALTER COLUMN TYPE ... USING ...` the way PostgreSQL's does — see D15 and this plan's Task 5.
 
-use super::mssql::{
-    end_transaction, map_error, quote_ident, resolve, three_part, Connection, Pool,
-};
+use super::mssql::{map_error, quote_ident, resolve, three_part, Connection, Pool};
+use super::mssql_editing::end_transaction;
 use super::mssql_structure::{IndexColumn, TableIndex};
 use crate::error::AppError;
 use serde::Deserialize;
