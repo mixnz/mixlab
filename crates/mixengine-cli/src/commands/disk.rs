@@ -36,7 +36,7 @@ pub(crate) async fn disk(
     )
     .await?;
 
-    emit(&rendered(json, &usage, || render::disk_usage(&usage)))?;
+    emit(&rendered(json, &usage, || render::disk::disk_usage(&usage)))?;
 
     Ok(ExitCode::SUCCESS)
 }
@@ -67,7 +67,7 @@ pub(crate) async fn cleanup(
 
         // Printed and not held back under `--json`, because the question below is refused there
         // anyway: what a person is about to allow is what they are shown.
-        emit(&render::disk_usage(&usage))?;
+        emit(&render::disk::disk_usage(&usage))?;
 
         if !agreed_to_cleanup(&usage, keep_logs, keep_cache, json)? {
             // Saying no is an answer and not a failure — `mix uninstall`'s rule. Nothing went, so
@@ -112,7 +112,9 @@ pub(crate) async fn cleanup(
         )
     })?;
 
-    emit(&rendered(json, &report, || render::cleanup_report(&report)))?;
+    emit(&rendered(json, &report, || {
+        render::disk::cleanup_report(&report)
+    }))?;
 
     Ok(match report.left_behind() {
         true => ExitCode::FAILURE,
