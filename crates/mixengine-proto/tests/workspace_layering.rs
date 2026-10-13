@@ -186,7 +186,7 @@ const PERMITTED: &[(&str, &str)] = &[
          a mode on two of the three systems and nothing at all on the third",
     ),
     (
-        "mixengine-daemon/src/uninstall/inventory.rs",
+        "mixengine-daemon/src/uninstall/inventory/tests.rs",
         "the test for what a dangling symlink means, on the system that has them",
     ),
     (
