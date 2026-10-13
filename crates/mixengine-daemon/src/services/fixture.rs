@@ -1,13 +1,13 @@
-//! The scaffolding two test modules need: a home with rows in it, and a source of specs.
+//! The scaffolding the registry's tests need: a home with rows in it, and a source of specs.
 //!
 //! **It lives in this crate rather than in `mixengine-testkit` because [`SpecSource`] is this
 //! crate's own trait** — nothing outside the daemon can implement one. What it shares with the
 //! testkit is `FakeService`, which is what every spec here is built around.
 //!
-//! Two callers, which is why it is a module and not a helper in one of them: the registry's own
-//! tests walk plans directly, and the `service.*` handlers (T19a) go through the same registry from
-//! above. A second copy of "a home with a `services` row" would be a second thing to keep in step
-//! with `0001_initial.sql`.
+//! Several callers, which is why it is a module and not a helper in one of them: the registry's
+//! own tests walk plans directly, one module per capability since T207d, and the `service.*`
+//! handlers (T19a) go through the same registry from above. A second copy of "a home with a
+//! `services` row" would be a second thing to keep in step with `0001_initial.sql`.
 
 use std::future::Future;
 use std::path::PathBuf;

@@ -15,23 +15,6 @@ use super::spec::catalogue;
 use super::{Registry, Undeclarable, activate, lock, reset, spec};
 
 impl Registry {
-    /// The declared services, checked and ordered.
-    ///
-    /// Asked afresh rather than cached, because the set is a *rendering* of state that changes —
-    /// a service created, a port edited, a package upgraded — and a graph held from startup would
-    /// answer for a home that no longer exists.
-    ///
-    /// **It is also where a running service learns its configuration moved**, which is roadmap task
-    /// **T31** and is here because this is the only place both halves are visible: the source knows
-    /// what it rewrote, and this map knows what is running. Asking anywhere else would mean either a
-    /// generator that reaches into the registry or a walk that re-reads files it has already
-    /// overwritten. See [`Registry::hand_over`].
-    ///
-    /// # Errors
-    ///
-    /// [`Undeclarable`], which keeps the two apart on purpose: a source that failed is the daemon's
-    /// problem, and a set that is not a graph is the user's declaration and belongs in
-    /// `invalid_argument`.
     /// Bring every service's configuration up to date, and hand any change to whatever is running.
     ///
     /// [`graph`](Self::graph) without the graph, for the caller that changed something a *front end*
@@ -52,6 +35,23 @@ impl Registry {
         self.graph().await.map(drop)
     }
 
+    /// The declared services, checked and ordered.
+    ///
+    /// Asked afresh rather than cached, because the set is a *rendering* of state that changes —
+    /// a service created, a port edited, a package upgraded — and a graph held from startup would
+    /// answer for a home that no longer exists.
+    ///
+    /// **It is also where a running service learns its configuration moved**, which is roadmap task
+    /// **T31** and is here because this is the only place both halves are visible: the source knows
+    /// what it rewrote, and this map knows what is running. Asking anywhere else would mean either a
+    /// generator that reaches into the registry or a walk that re-reads files it has already
+    /// overwritten. See [`Registry::hand_over`].
+    ///
+    /// # Errors
+    ///
+    /// [`Undeclarable`], which keeps the two apart on purpose: a source that failed is the daemon's
+    /// problem, and a set that is not a graph is the user's declaration and belongs in
+    /// `invalid_argument`.
     pub(crate) async fn graph(&self) -> Result<ServiceGraph, Undeclarable> {
         let generated = self
             .specs
@@ -189,32 +189,12 @@ impl Registry {
             .filter(|port| *port != 0)
     }
 
-    /// Tell every service that is running and whose configuration just changed to re-read it.
-    ///
-    /// **A notification and not a command**, which is the whole design: what runs the reload is the
-    /// runner, in the surroundings the service itself was started with, exactly as its health probe
-    /// and its stop command are run. Doing it from here would mean a second, lesser copy of
-    /// [`Surroundings`](mixengine_supervisor::Surroundings) — and it would put a subprocess with a
-    /// thirty-second patience inside `service.list`, which is a call a GUI makes on a timer.
-    ///
-    /// **Only what is up.** A service that is stopped will read the new file when it is started, and
-    /// one in a restart backoff will read it on the attempt after this. Neither is a reload, and
-    /// asking for one would be a command sent to an address nothing is listening on.
-    ///
-    /// A permit left with [`Notify`] rather than a message is what makes this safe to do on every
-    /// walk: a runner busy in a health probe collects it at the top of its next turn, and two walks
-    /// that both find a change while it is busy collapse into the one reload that was needed. The
-    /// service is left alone if it has no [`ReloadBehaviour`](mixengine_proto::ReloadBehaviour) —
-    /// the runner says so once, because a configuration that changed and reached nothing is worth a
-    /// line in `daemon.log`.
     /// Keep what each declared service still has to have done to it once — roadmap task **T33**.
     ///
     /// **Replaced rather than merged**, so a service that stopped declaring a ritual — an override
     /// pointed at a different data directory, a recipe that no longer has one — stops carrying it.
     /// The whole map is at most one entry per declared service, and each holds a cloned
     /// [`Context`](mixengine_core::generate::Context).
-    ///
-    /// [`Notify`]: tokio::sync::Notify
     fn remember_rituals(&self, generated: &[Generated]) {
         let remembered: HashMap<_, _> = generated
             .iter()
@@ -297,6 +277,26 @@ impl Registry {
         lock(&self.provisioning).get(id).cloned()
     }
 
+    /// Tell every service that is running and whose configuration just changed to re-read it.
+    ///
+    /// **A notification and not a command**, which is the whole design: what runs the reload is the
+    /// runner, in the surroundings the service itself was started with, exactly as its health probe
+    /// and its stop command are run. Doing it from here would mean a second, lesser copy of
+    /// [`Surroundings`](mixengine_supervisor::Surroundings) — and it would put a subprocess with a
+    /// thirty-second patience inside `service.list`, which is a call a GUI makes on a timer.
+    ///
+    /// **Only what is up.** A service that is stopped will read the new file when it is started, and
+    /// one in a restart backoff will read it on the attempt after this. Neither is a reload, and
+    /// asking for one would be a command sent to an address nothing is listening on.
+    ///
+    /// A permit left with [`Notify`] rather than a message is what makes this safe to do on every
+    /// walk: a runner busy in a health probe collects it at the top of its next turn, and two walks
+    /// that both find a change while it is busy collapse into the one reload that was needed. The
+    /// service is left alone if it has no [`ReloadBehaviour`](mixengine_proto::ReloadBehaviour) —
+    /// the runner says so once, because a configuration that changed and reached nothing is worth a
+    /// line in `daemon.log`.
+    ///
+    /// [`Notify`]: tokio::sync::Notify
     fn hand_over(&self, generated: &[Generated]) {
         let running = lock(&self.running);
 

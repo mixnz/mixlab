@@ -266,7 +266,6 @@ impl Drop for Stopping {
     }
 }
 
-/// How a start of one service ended, for the walk that is waiting on it.
 /// What was persisted about a service that did not get where a walk wanted it — roadmap task
 /// **T202a**, D3: the reason the state machine recorded, and the sentence the runner wrote beside
 /// it (T200b's `last_failure`), which is the one a person reads first.
@@ -297,6 +296,7 @@ impl Fault {
     }
 }
 
+/// How a start of one service ended, for the walk that is waiting on it.
 #[derive(Debug)]
 enum Start {
     /// The service is up. Traffic can be routed to it, and the next tier may start.
@@ -406,11 +406,6 @@ impl Registry {
         }
     }
 
-    /// Ask one running service to re-read its configuration, and say whether there was one to ask.
-    ///
-    /// [`Registry::hand_over`]'s single-service half, for the one caller whose change is not a file
-    /// this registry generated: a runtime's ini set is rewritten by `runtime.set_extension`, and the
-    /// pool reading it is supervised here.
     /// Write a new set of ceilings into a service that is running now — roadmap task **T68**.
     ///
     /// `false` when nothing is supervising that id, which is not a failure: a stopped service's
@@ -474,6 +469,11 @@ impl Registry {
         true
     }
 
+    /// Ask one running service to re-read its configuration, and say whether there was one to ask.
+    ///
+    /// [`Registry::hand_over`]'s single-service half, for the one caller whose change is not a file
+    /// this registry generated: a runtime's ini set is rewritten by `runtime.set_extension`, and the
+    /// pool reading it is supervised here.
     pub(crate) fn ask_to_reload(&self, id: &ServiceId) -> bool {
         let running = lock(&self.running);
 
@@ -627,7 +627,7 @@ pub(crate) async fn restart(
     walk.failed.is_none().then_some(walk)
 }
 
-// Persist a state change and publish the value that was persisted. `false` if it did not land.
+/// Persist a state change and publish the value that was persisted. `false` if it did not land.
 ///
 /// The one place a `services.state` write happens in this crate, which is what keeps the row and the
 /// event from ever describing different events: what is published is the [`ServiceTransition`] the
