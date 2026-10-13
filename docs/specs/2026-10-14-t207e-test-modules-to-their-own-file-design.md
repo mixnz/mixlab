@@ -38,7 +38,8 @@ Caddyfile fixture written inline — keeps its indentation, because those spaces
 string. The move script finds them with a small lexer (strings, raw strings, escapes, char
 literals, block comments) and counted them on `master` at `098db820`: 221 such lines across
 eleven of the files, none in `postgres.rs`, `mariadb.rs` or the daemon's `sites.rs` and
-`uninstall/inventory.rs`. `rustfmt` then has nothing left to do; `cargo fmt --check` proves it.
+`uninstall/inventory.rs`. `rustfmt` then re-wraps the lines that four columns less now let
+fit in 100 — string contents untouched — and that re-wrap is part of the move, read line by line.
 
 When to use it, for `docs/standards/rust.md`: **a file whose code fits under the limit and whose
 tests do not** moves its test module to `foo/tests.rs` rather than splitting code that has no reason

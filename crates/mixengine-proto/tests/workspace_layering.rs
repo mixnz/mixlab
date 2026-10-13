@@ -166,9 +166,14 @@ const NO_OS_CFG: &[&str] = &[
 /// One `#[cfg(test)]` is what makes "after" mean something — a second one would put a test region
 /// somewhere in the middle and this test would be measuring nothing, so a file that grows one fails
 /// rather than quietly widening its own permission.
+///
+/// **A `foo/tests.rs` is test code from its first line** (T207e): it is the body of the module
+/// `foo.rs` declares as `#[cfg(test)]` directly above `mod tests;`, and the check asserts that pair
+/// in `foo.rs` instead of a line inside the file. `foo.rs` itself is not permitted anything, so an OS
+/// `cfg` there is an offence like any other.
 const PERMITTED: &[(&str, &str)] = &[
     (
-        "mixengine-core/src/generate/recipes/postgres.rs",
+        "mixengine-core/src/generate/recipes/postgres/tests.rs",
         "the tests for the two shapes of `pg_ctl` invocation, which differ by OS",
     ),
     (
@@ -247,6 +252,27 @@ fn no_crate_but_platform_compiles_a_line_away_by_operating_system() {
                 }
                 continue;
             };
+
+            if relative.ends_with("/tests.rs") {
+                let parent = file
+                    .parent()
+                    .expect("a tests.rs sits in its module's directory")
+                    .with_extension("rs");
+                let declared = std::fs::read_to_string(&parent).unwrap_or_default();
+                let declared: Vec<&str> = declared.lines().collect();
+
+                assert!(
+                    declared
+                        .windows(2)
+                        .any(|pair| pair[0].trim() == "#[cfg(test)]"
+                            && pair[1].trim() == "mod tests;"),
+                    "{relative} is permitted an OS cfg for {why} as a test module, but {} does not \
+                     declare it with `#[cfg(test)]` directly above `mod tests;`",
+                    parent.display()
+                );
+
+                continue;
+            }
 
             let tests: Vec<usize> = lines
                 .iter()
