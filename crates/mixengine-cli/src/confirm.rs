@@ -14,6 +14,8 @@
 
 use std::io::{BufRead as _, Write as _};
 
+use mixengine_proto::{Error, ErrorCode};
+
 /// What came back from the keyboard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Answer {
@@ -92,9 +94,10 @@ fn chosen(line: Option<&str>) -> Choice {
 
 /// Put the question on standard error and read one line back.
 ///
-/// Standard error for [`report_progress`](crate::report_progress)'s reason: what a command answers
-/// with goes to standard output, and a question is not an answer. It also keeps a redirected
-/// `mix … > file` readable, where a prompt written into the file would be a prompt nobody sees.
+/// Standard error for [`report_progress`](crate::jobs::report_progress)'s reason: what a command
+/// answers with goes to standard output, and a question is not an answer. It also keeps a
+/// redirected `mix … > file` readable, where a prompt written into the file would be a prompt
+/// nobody sees.
 pub(crate) fn ask(question: &str) -> Answer {
     // Nothing to do about a stderr that will not take it: the read below still happens, and a
     // caller that cannot show the question is one whose answer is about to be `Unanswerable`
@@ -143,7 +146,7 @@ fn answer(line: Option<&str>) -> Answer {
 /// not the same three: a blueprint's *use what is installed* has nothing to do with an update, and
 /// one function answering both would be a function whose letters mean different things depending on
 /// who called it.
-pub(crate) fn ask_update(question: &str) -> Option<crate::Choice> {
+pub(crate) fn ask_update(question: &str) -> Option<crate::commands::self_update::Choice> {
     let mut error = std::io::stderr();
     let _ = write!(error, "{question}");
     let _ = error.flush();
@@ -165,11 +168,11 @@ pub(crate) fn ask_update(question: &str) -> Option<crate::Choice> {
 /// to see what happens has not chosen to stop every service on this machine and replace the binaries
 /// underneath them. And it is *later* rather than *skip*, because a keystroke should not silently
 /// decide that this version is never offered again.
-fn update_answer(line: &str) -> crate::Choice {
+fn update_answer(line: &str) -> crate::commands::self_update::Choice {
     match line.trim().to_ascii_lowercase().as_str() {
-        "i" | "install" | "y" | "yes" => crate::Choice::Install,
-        "s" | "skip" => crate::Choice::Skip,
-        _ => crate::Choice::Later,
+        "i" | "install" | "y" | "yes" => crate::commands::self_update::Choice::Install,
+        "s" | "skip" => crate::commands::self_update::Choice::Skip,
+        _ => crate::commands::self_update::Choice::Later,
     }
 }
 
@@ -204,6 +207,14 @@ pub(crate) fn read_password(prompt: &str) -> Option<String> {
 /// trailing newline is not part of the value — is tested without a terminal to type into.
 fn password_line(line: Option<&str>) -> Option<String> {
     line.map(|line| line.trim_end_matches(['\n', '\r']).to_owned())
+}
+
+pub(crate) fn unanswered() -> Error {
+    Error::new(
+        ErrorCode::InvalidArgument,
+        "nothing answered the question, so nothing was asked of the operating system either",
+    )
+    .with_hint("pass `--yes` to answer in advance")
 }
 
 #[cfg(test)]
@@ -262,15 +273,39 @@ mod tests {
     /// one answer that changes nothing much.
     #[test]
     fn the_update_question_defaults_to_being_asked_again() {
-        assert_eq!(update_answer("i\n"), crate::Choice::Install);
-        assert_eq!(update_answer(" INSTALL "), crate::Choice::Install);
-        assert_eq!(update_answer("yes"), crate::Choice::Install);
-        assert_eq!(update_answer("s"), crate::Choice::Skip);
-        assert_eq!(update_answer("Skip\n"), crate::Choice::Skip);
+        assert_eq!(
+            update_answer("i\n"),
+            crate::commands::self_update::Choice::Install
+        );
+        assert_eq!(
+            update_answer(" INSTALL "),
+            crate::commands::self_update::Choice::Install
+        );
+        assert_eq!(
+            update_answer("yes"),
+            crate::commands::self_update::Choice::Install
+        );
+        assert_eq!(
+            update_answer("s"),
+            crate::commands::self_update::Choice::Skip
+        );
+        assert_eq!(
+            update_answer("Skip\n"),
+            crate::commands::self_update::Choice::Skip
+        );
 
-        assert_eq!(update_answer("\n"), crate::Choice::Later);
-        assert_eq!(update_answer("l"), crate::Choice::Later);
-        assert_eq!(update_answer("what"), crate::Choice::Later);
+        assert_eq!(
+            update_answer("\n"),
+            crate::commands::self_update::Choice::Later
+        );
+        assert_eq!(
+            update_answer("l"),
+            crate::commands::self_update::Choice::Later
+        );
+        assert_eq!(
+            update_answer("what"),
+            crate::commands::self_update::Choice::Later
+        );
     }
 
     /// **A line is the value, with its trailing newline gone** — roadmap task **T77b**. End of

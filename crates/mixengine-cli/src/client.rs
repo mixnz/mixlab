@@ -540,6 +540,39 @@ fn transport(error: &hyper::Error) -> Error {
     )
 }
 
+/// Call a method and decode what it answered.
+///
+/// **Decoded rather than passed through as the [`Value`] it arrived as, even for
+/// `--json`.** The handshake has already established that this daemon speaks our protocol, so a
+/// field this build cannot read is a bug worth reporting as one — and `--json` promising a
+/// `ServiceWalk` means it has to be a `ServiceWalk` that goes out.
+pub(crate) async fn ask<T: serde::de::DeserializeOwned>(
+    client: &mut Client,
+    method: &str,
+    params: Option<serde_json::Value>,
+) -> Result<T, Error> {
+    let result = client.call(method, params).await?;
+
+    serde_json::from_value(result).map_err(|error| {
+        Error::new(
+            ErrorCode::Internal,
+            format!(
+                "mix {} cannot read the answer to {method} from mixengined {}: {error}",
+                env!("CARGO_PKG_VERSION"),
+                client.daemon().version
+            ),
+        )
+    })
+}
+
+/// The parameters of a call, as the wire carries them.
+///
+/// `expect` and not a failure path: every params type here is `mixengine-proto`'s and made of
+/// strings, booleans and options, none of which can fail to serialise.
+pub(crate) fn encode(params: &impl serde::Serialize) -> Option<serde_json::Value> {
+    Some(serde_json::to_value(params).expect("a proto params type always serialises"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
