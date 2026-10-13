@@ -207,3 +207,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-09 | [T206b–T206d — the devkit's package database, an empty folder, and installs whose folder is gone (design)](2026-10-09-t206b-t206d-installs-whose-folder-is-gone-design.md) | T206b, T206c, T206d | implemented |
 | 2026-10-10 | [Demo clip camera — where to look, and a larger window on film](2026-10-10-demo-clip-camera-design.md) |  | implemented |
 | 2026-10-10 | [Demo clip camera, version 2 — shots that hold a zoom and pan, with every action in view](2026-10-10-demo-clip-camera-shots-design.md) |  | implemented |
+| 2026-10-13 | [Files that fit in one read: a size ratchet, and `mix` split by command (design)](2026-10-13-files-that-fit-in-one-read-design.md) | T207, T207a | approved |
