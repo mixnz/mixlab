@@ -2,4 +2,5 @@
 //! [`crate::run`] dispatches to each.
 
 pub(crate) mod daemon;
+pub(crate) mod domain;
 pub(crate) mod status;

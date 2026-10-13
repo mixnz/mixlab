@@ -40,33 +40,34 @@ use mixengine_proto::{
     DatabaseAccount, DatabaseClientQuery, DatabaseClientReport, DatabaseCreate,
     DatabaseCredentials, DatabaseCredentialsQuery, DatabaseHandoff, DatabaseOpen,
     DiagnosticsBundle, DiskCategory, DiskUsage, DiskUsageQuery, Disposition, DoctorRepair,
-    DoctorReport, DomainAdd, DomainRemove, DomainStatusQuery, DomainStatusReport, ElevationDrop,
-    ElevationStatus, Error, ErrorCode, ExtensionAvailable, ExtensionCatalogue, ExtensionChange,
-    ExtensionChoice, ExtensionConsent, ExtensionId, ExtensionInspect, ExtensionInspection,
-    ExtensionInstall, ExtensionList, ExtensionOrigin, ExtensionPlan, ExtensionPlanRequest,
-    ExtensionRemoval, ExtensionTarget, ExtensionUninstall, FrontEndReport, FrontEndServer,
-    FrontEndSwitch, IdleReport, InstalledExtensions, JobFilter, JobId, JobList, JobOutcome,
-    JobQuery, JobState, JobSummary, JobWait, LogFrame, MetricsFrame, MetricsHistory, Millis,
-    MismatchAnswer, PackageCatalogue, PackageFilter, PackageInstall, PackageList, PackageRemoval,
-    PackageTarget, PackageUpgrade, PackageUpgradeQuery, PackageVersion, PathReport, PendingOpId,
-    PlanAction, Priority, ProjectCreate, ProjectDetail, ProjectExport, ProjectList, ProjectQuery,
-    ProjectRef, ProjectRemoval, ProjectUpdate, Reclaim, Removal, RepairReport, ResetCredential,
-    ResidueId, ResolvedRuntime, ResourceLimits, RouteTarget, RuntimeCatalogue, RuntimeFilter,
-    RuntimeInstall, RuntimeKind, RuntimeList, RuntimeQuestion, RuntimeRemoval, RuntimeSummary,
-    RuntimeTarget, RuntimeUninstall, RuntimeUpgrade, RuntimeUpgradeQuery, SaveResources,
-    SaveResourcesSet, ScaffoldConsent, ServiceAutostartSet, ServiceCreate, ServiceCreation,
-    ServiceDelete, ServiceId, ServiceIdleSet, ServiceLimitsReport, ServiceLimitsSet, ServiceList,
-    ServiceQuery, ServiceRemoval, ServiceRole, ServiceSummary, ServiceTarget, ServiceWalk,
-    SignatureCheck, SiteCreate, SiteCreation, SiteDetail, SiteKind, SiteList, SiteListQuery,
-    SiteQuery, SiteRef, SiteRemoval, SiteRoute, SiteShare, SiteSharing, SiteState, SiteUpdate,
-    Timestamp, UninstallQuery, UninstallReport, UpdateApplied, UpdateApply, UpdateCheck,
-    UpdateDecide, UpdateDecision, UpdateFinish, UpdateHandOver, UpdateHandedOver, UpdatePlacement,
-    UpdateStatus, UpgradePlan, VersionAnswer, VersionConstraint, rpc,
+    DoctorReport, ElevationDrop, ElevationStatus, Error, ErrorCode, ExtensionAvailable,
+    ExtensionCatalogue, ExtensionChange, ExtensionChoice, ExtensionConsent, ExtensionId,
+    ExtensionInspect, ExtensionInspection, ExtensionInstall, ExtensionList, ExtensionOrigin,
+    ExtensionPlan, ExtensionPlanRequest, ExtensionRemoval, ExtensionTarget, ExtensionUninstall,
+    FrontEndReport, FrontEndServer, FrontEndSwitch, IdleReport, InstalledExtensions, JobFilter,
+    JobId, JobList, JobOutcome, JobQuery, JobState, JobSummary, JobWait, LogFrame, MetricsFrame,
+    MetricsHistory, Millis, MismatchAnswer, PackageCatalogue, PackageFilter, PackageInstall,
+    PackageList, PackageRemoval, PackageTarget, PackageUpgrade, PackageUpgradeQuery,
+    PackageVersion, PathReport, PendingOpId, PlanAction, Priority, ProjectCreate, ProjectDetail,
+    ProjectExport, ProjectList, ProjectQuery, ProjectRef, ProjectRemoval, ProjectUpdate, Reclaim,
+    Removal, RepairReport, ResetCredential, ResidueId, ResolvedRuntime, ResourceLimits,
+    RouteTarget, RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind, RuntimeList,
+    RuntimeQuestion, RuntimeRemoval, RuntimeSummary, RuntimeTarget, RuntimeUninstall,
+    RuntimeUpgrade, RuntimeUpgradeQuery, SaveResources, SaveResourcesSet, ScaffoldConsent,
+    ServiceAutostartSet, ServiceCreate, ServiceCreation, ServiceDelete, ServiceId, ServiceIdleSet,
+    ServiceLimitsReport, ServiceLimitsSet, ServiceList, ServiceQuery, ServiceRemoval, ServiceRole,
+    ServiceSummary, ServiceTarget, ServiceWalk, SignatureCheck, SiteCreate, SiteCreation,
+    SiteDetail, SiteKind, SiteList, SiteListQuery, SiteQuery, SiteRef, SiteRemoval, SiteRoute,
+    SiteShare, SiteSharing, SiteState, SiteUpdate, Timestamp, UninstallQuery, UninstallReport,
+    UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide, UpdateDecision, UpdateFinish,
+    UpdateHandOver, UpdateHandedOver, UpdatePlacement, UpdateStatus, UpgradePlan, VersionAnswer,
+    VersionConstraint, rpc,
 };
 
 use autostart::Autostart;
 use client::{Client, ask, encode};
 use commands::daemon::{DaemonCommand, daemon_credential_store, daemon_stop};
+use commands::domain::{DomainCommand, domain};
 use commands::status::{status, storage};
 use confirm::unanswered;
 use jobs::follow;
@@ -930,45 +931,6 @@ enum DatabaseCommand {
         /// A database to open at.
         #[arg(long, value_name = "NAME")]
         database: Option<String>,
-    },
-}
-
-/// `mix domain …` — one subcommand per `domain.*` method, and nothing that is not one.
-#[derive(Debug, Subcommand)]
-enum DomainCommand {
-    /// Give a site one more name.
-    ///
-    /// The new name is an alias: the site's primary domain is unchanged, because that is what its
-    /// canonical URL and its certificate are named after.
-    Add {
-        /// The name to add.
-        #[arg(value_name = "DOMAIN")]
-        domain: String,
-
-        /// Any of the site's existing domains.
-        #[arg(long, value_name = "DOMAIN")]
-        site: String,
-
-        /// Accept `.local`, which belongs to mDNS and works until somebody plugs in a printer.
-        #[arg(long = "i-know")]
-        accept_risky_tld: bool,
-    },
-
-    /// Take one name away.
-    ///
-    /// Refused for a site's last domain and for its primary; `mix site update` reorders, and the
-    /// first `--domain` it is given becomes the primary.
-    Remove {
-        /// The name to take away. It names its own site.
-        #[arg(value_name = "DOMAIN")]
-        domain: String,
-    },
-
-    /// What actually happens to a name, as four facts that can fail one at a time.
-    Status {
-        /// One name, or every name this home declares.
-        #[arg(value_name = "DOMAIN")]
-        domain: Option<String>,
     },
 }
 
@@ -3982,49 +3944,6 @@ fn agreed_to_uninstall(
 
         confirm::Answer::Unanswerable => Err(unanswered()),
     }
-}
-
-/// `mix domain` — roadmap task **T46**.
-async fn domain(
-    command: DomainCommand,
-    endpoint: &Endpoint,
-    autostart: Option<&Autostart>,
-    json: bool,
-) -> Result<ExitCode, Error> {
-    let mut client = Client::connect(endpoint, autostart).await?;
-
-    match command {
-        DomainCommand::Add {
-            domain,
-            site,
-            accept_risky_tld,
-        } => {
-            let add = DomainAdd {
-                site: SiteRef::Domain(site),
-                domain,
-                accept_risky_tld,
-            };
-            let detail: SiteDetail =
-                ask(&mut client, rpc::method::DOMAIN_ADD, encode(&add)).await?;
-            emit(&rendered(json, &detail, || render::site_detail(&detail)))?;
-        }
-
-        DomainCommand::Remove { domain } => {
-            let remove = DomainRemove { domain };
-            let detail: SiteDetail =
-                ask(&mut client, rpc::method::DOMAIN_REMOVE, encode(&remove)).await?;
-            emit(&rendered(json, &detail, || render::site_detail(&detail)))?;
-        }
-
-        DomainCommand::Status { domain } => {
-            let query = DomainStatusQuery { domain };
-            let report: DomainStatusReport =
-                ask(&mut client, rpc::method::DOMAIN_DNS_STATUS, encode(&query)).await?;
-            emit(&rendered(json, &report, || render::domain_status(&report)))?;
-        }
-    }
-
-    Ok(ExitCode::SUCCESS)
 }
 
 async fn site(
