@@ -166,7 +166,7 @@ pub(super) fn default_clause(value: &str, is_expression: bool) -> String {
 }
 
 /// What a column is to be declared as — the write-side counterpart of
-/// `clickhouse::StructureColumn`.
+/// `clickhouse_structure::StructureColumn`.
 ///
 /// Narrower than the other three engines' `ColumnSpec` because ClickHouse has less: `nullable`
 /// lives inside `data_type` (`Nullable(T)`, wrapped by the dialog before it is sent), there is no
@@ -251,7 +251,7 @@ pub async fn drop_column(
 }
 
 /// What a data skipping index is declared as — the write-side counterpart of
-/// `clickhouse::SkipIndex`. See the ClickHouse index DDL design doc's D2/D3.
+/// `clickhouse_structure::SkipIndex`. See the ClickHouse index DDL design doc's D2/D3.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SkipIndexSpec {

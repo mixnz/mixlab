@@ -226,13 +226,13 @@ pub async fn create_table(pool: &Pool, database: &str, table: &str) -> Result<()
 
 /// Renames a table within its schema.
 ///
-/// `sp_rename` is the only way SQL Server renames a table — there is no ANSI `RENAME TO`. Its object
-/// name is a **string**, not an identifier (the same stored-procedure convention `mssql::reset_identity`
-/// already relies on for `DBCC CHECKIDENT`), and it cannot move a table to a different schema: unlike
-/// PostgreSQL's two-statement rename-then-`SET SCHEMA`, T-SQL has no schema-moving DDL for a table at
-/// all short of dropping and recreating it. A `new_name` that names a different schema is refused
-/// outright rather than silently kept in the old one — that would be the one outcome a rename can
-/// produce that looks like success and is not.
+/// `sp_rename` is the only way SQL Server renames a table — there is no ANSI `RENAME TO`. Its
+/// object name is a **string**, not an identifier (the same stored-procedure convention
+/// `mssql_editing::reset_identity` already relies on for `DBCC CHECKIDENT`), and it cannot move a
+/// table to a different schema: unlike PostgreSQL's two-statement rename-then-`SET SCHEMA`, T-SQL
+/// has no schema-moving DDL for a table at all short of dropping and recreating it. A `new_name`
+/// that names a different schema is refused outright rather than silently kept in the old one —
+/// that would be the one outcome a rename can produce that looks like success and is not.
 pub async fn rename_table(
     pool: &Pool,
     database: &str,
