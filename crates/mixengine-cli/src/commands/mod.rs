@@ -5,6 +5,7 @@ pub(crate) mod autostart;
 pub(crate) mod cert;
 pub(crate) mod daemon;
 pub(crate) mod database;
+pub(crate) mod doctor;
 pub(crate) mod domain;
 pub(crate) mod elevation;
 pub(crate) mod home;
