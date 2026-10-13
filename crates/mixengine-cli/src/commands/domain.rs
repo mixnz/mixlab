@@ -92,7 +92,9 @@ pub(crate) async fn domain(
             let query = DomainStatusQuery { domain };
             let report: DomainStatusReport =
                 ask(&mut client, rpc::method::DOMAIN_DNS_STATUS, encode(&query)).await?;
-            emit(&rendered(json, &report, || render::domain_status(&report)))?;
+            emit(&rendered(json, &report, || {
+                render::domain::domain_status(&report)
+            }))?;
         }
     }
 
