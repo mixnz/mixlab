@@ -15,4 +15,5 @@ pub(crate) mod logs;
 pub(crate) mod metrics;
 pub(crate) mod path;
 pub(crate) mod project;
+pub(crate) mod site;
 pub(crate) mod status;
