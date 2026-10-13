@@ -25,7 +25,7 @@ Design: [2026-10-13-files-that-fit-in-one-read-design.md](../specs/2026-10-13-fi
       `commands/<name>.rs`. Design:
       [2026-10-13-render-split-by-command-design.md](../specs/2026-10-13-render-split-by-command-design.md).
 
-- [ ] **T207c** `crates/mixengine-daemon/src/api/rpc.rs` split by capability: the routing table
+- [x] **T207c** `crates/mixengine-daemon/src/api/rpc.rs` split by capability: the routing table
       and the protocol stay, every `Api` handler and its helpers move to `api/<capability>.rs`
       (`service`, `service_settings`, `daemon`, `self_update`, `uninstall`, `disk`, `cert`,
       `metrics`), and each test goes with the handler it asserts on, over a shared

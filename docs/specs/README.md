@@ -209,4 +209,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-10 | [Demo clip camera, version 2 — shots that hold a zoom and pan, with every action in view](2026-10-10-demo-clip-camera-shots-design.md) |  | implemented |
 | 2026-10-13 | [Files that fit in one read: a size ratchet, and `mix` split by command (design)](2026-10-13-files-that-fit-in-one-read-design.md) | T207, T207a | implemented |
 | 2026-10-13 | [`render.rs` split by command, its tests beside what they test (design)](2026-10-13-render-split-by-command-design.md) | T207b | implemented |
-| 2026-10-13 | [The daemon's `rpc.rs` split by capability, its tests beside what they test (design)](2026-10-13-t207c-rpc-split-by-capability-design.md) | T207c | approved |
+| 2026-10-13 | [The daemon's `rpc.rs` split by capability, its tests beside what they test (design)](2026-10-13-t207c-rpc-split-by-capability-design.md) | T207c | implemented |
