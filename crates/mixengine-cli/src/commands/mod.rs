@@ -9,6 +9,7 @@ pub(crate) mod disk;
 pub(crate) mod doctor;
 pub(crate) mod domain;
 pub(crate) mod elevation;
+pub(crate) mod extension;
 pub(crate) mod home;
 pub(crate) mod job;
 pub(crate) mod logs;
