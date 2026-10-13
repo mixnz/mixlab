@@ -2,6 +2,7 @@
 //! [`crate::run`] dispatches to each.
 
 pub(crate) mod autostart;
+pub(crate) mod cert;
 pub(crate) mod daemon;
 pub(crate) mod domain;
 pub(crate) mod path;
