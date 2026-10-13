@@ -22,6 +22,7 @@ mod output;
 mod parse;
 mod prerequisites;
 mod render;
+mod upgrades;
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
@@ -73,6 +74,7 @@ use parse::{
     version_constraint,
 };
 use prerequisites::{Agreement, agreed_to_prerequisites, prerequisites_agreed};
+use upgrades::{finish_upgrade, upgrade_confirmed};
 
 /// What `--version` prints.
 ///
@@ -5865,67 +5867,6 @@ async fn runtime(
     }
 
     Ok(ExitCode::SUCCESS)
-}
-
-/// Print the plan, and ask — or answer `true` without asking under `--yes`. T193, D7.
-fn upgrade_confirmed(
-    plan: &UpgradePlan,
-    dry_run: bool,
-    yes: bool,
-    json: bool,
-) -> Result<bool, Error> {
-    // **One document per `--json` run**: the plan is the answer only to a dry run; otherwise the
-    // finished job carries the same plan, marked, and is what is printed.
-    if !json || dry_run {
-        emit(&rendered(json, plan, || render::upgrade_plan(plan)))?;
-    }
-
-    if dry_run {
-        return Ok(false);
-    }
-    if yes {
-        return Ok(true);
-    }
-
-    match confirm::ask(&format!(
-        "\nupdate {} {} to {}? [y/N] ",
-        plan.subject, plan.from, plan.to
-    )) {
-        confirm::Answer::Yes => Ok(true),
-        confirm::Answer::No => {
-            let _ = writeln!(std::io::stderr(), "nothing was changed");
-            Ok(false)
-        }
-        confirm::Answer::Unanswerable => Err(unanswered()),
-    }
-}
-
-/// Follow an update job and print what it did.
-async fn finish_upgrade(
-    client: &mut Client,
-    started: JobSummary,
-    no_wait: bool,
-    json: bool,
-) -> Result<ExitCode, Error> {
-    if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
-        return Ok(ExitCode::SUCCESS);
-    }
-
-    let finished = follow(client, started, json).await?;
-    let result = serde_json::to_value(&finished).ok().and_then(|value| {
-        serde_json::from_value::<UpgradePlan>(value["outcome"]["result"].clone()).ok()
-    });
-
-    emit(&rendered(json, &finished, || match &result {
-        Some(plan) => render::upgrade_plan(plan),
-        None => render::job_status(&finished),
-    }))?;
-
-    Ok(match render::job_succeeded(&finished) {
-        true => ExitCode::SUCCESS,
-        false => ExitCode::FAILURE,
-    })
 }
 
 /// `mix runtime install`: start the download, and follow it unless told not to.
