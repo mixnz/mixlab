@@ -104,7 +104,9 @@ pub(crate) async fn cert(
     match command {
         CertCommand::CaStatus => {
             let status: CaStatus = ask(&mut client, rpc::method::CERT_CA_STATUS, None).await?;
-            emit(&rendered(json, &status, || render::ca_status(&status)))?;
+            emit(&rendered(json, &status, || {
+                render::cert::ca_status(&status)
+            }))?;
 
             Ok(ExitCode::SUCCESS)
         }
@@ -115,7 +117,9 @@ pub(crate) async fn cert(
             };
             let report: CertStatusReport =
                 ask(&mut client, rpc::method::CERT_STATUS, encode(&request)).await?;
-            emit(&rendered(json, &report, || render::cert_status(&report)))?;
+            emit(&rendered(json, &report, || {
+                render::cert::cert_status(&report)
+            }))?;
 
             Ok(ExitCode::SUCCESS)
         }
@@ -126,7 +130,9 @@ pub(crate) async fn cert(
             };
             let report: CertIssueReport =
                 ask(&mut client, rpc::method::CERT_ISSUE, encode(&request)).await?;
-            emit(&rendered(json, &report, || render::cert_issue(&report)))?;
+            emit(&rendered(json, &report, || {
+                render::cert::cert_issue(&report)
+            }))?;
 
             Ok(ExitCode::SUCCESS)
         }
@@ -150,7 +156,7 @@ pub(crate) async fn cert(
             job_answering(&mut client, started, no_wait, json, |result| {
                 serde_json::from_value::<CaRotateReport>(result)
                     .ok()
-                    .map(|report| render::ca_rotate(&report))
+                    .map(|report| render::cert::ca_rotate(&report))
             })
             .await
         }
@@ -175,7 +181,7 @@ pub(crate) async fn cert(
             job_answering(&mut client, started, no_wait, json, |result| {
                 serde_json::from_value::<CaUninstallReport>(result)
                     .ok()
-                    .map(|report| render::ca_uninstall(&report))
+                    .map(|report| render::cert::ca_uninstall(&report))
             })
             .await
         }
