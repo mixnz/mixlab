@@ -215,7 +215,7 @@ pub(super) enum Readiness {
     /// It is not usable, and this is the [`super::Fault`] persisted about why.
     ///
     /// A fault with no reason is never produced here: it is what the registry reports for a runner
-    /// that ended without deciding at all — see [`super::settled`].
+    /// that ended without deciding at all — see [`super::start::settled`].
     Down(super::Fault),
 }
 
