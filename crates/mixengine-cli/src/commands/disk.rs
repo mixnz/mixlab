@@ -121,7 +121,7 @@ pub(crate) async fn cleanup(
 /// **Nothing to take is a yes.** A command that asked *"remove nothing?"* would be one people learn
 /// to answer without reading, which is the habit the question exists to prevent.
 ///
-/// **`--json` never asks**, on [`agreed_to_uninstall`](crate::agreed_to_uninstall)'s rule and for its reason.
+/// **`--json` never asks**, on [`agreed_to_uninstall`](crate::commands::uninstall::agreed_to_uninstall)'s rule and for its reason.
 fn agreed_to_cleanup(
     usage: &DiskUsage,
     keep_logs: bool,

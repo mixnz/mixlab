@@ -22,3 +22,4 @@ pub(crate) mod runtime;
 pub(crate) mod service;
 pub(crate) mod site;
 pub(crate) mod status;
+pub(crate) mod uninstall;
