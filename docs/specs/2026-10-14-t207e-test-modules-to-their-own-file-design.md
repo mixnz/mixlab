@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 date: 2026-10-14
 task: T207e
 ---
@@ -107,8 +107,14 @@ read:
 
 1. **core** (ten files) — with D3's change to `workspace_layering.rs` and the convention in
    `docs/standards/rust.md`.
-2. **proto** (`privileged.rs`).
-3. **daemon** (four files) — `PERMITTED`'s `inventory.rs` entry renamed.
+2. **daemon** (four files) — `PERMITTED`'s `inventory.rs` entry renamed.
+3. **proto** (`privileged.rs`) — last, because it is the one file of the fifteen built into the
+   privileged helper. `packaging/helper-lock.sh` fingerprints the *contents* of every file the
+   helper compiles, so taking the test module out of `privileged.rs` changes the fingerprint
+   though nothing in the helper's behaviour does, and the pre-commit hook asks for a bump:
+   `HELPER_VERSION` 0.1.7 → 0.1.8, agreed on 2026-10-14. The lock compares against the last
+   release, so later tasks that touch the helper before the next one (T207h) need no second
+   bump. None of T207a–d touched a file the helper compiles.
 
 Each commit is checked before it is made:
 
