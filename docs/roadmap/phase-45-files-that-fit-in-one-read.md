@@ -1,7 +1,8 @@
 # Phase 45 — Files that fit in one read
 
-*Goal: no source file grows past 1,500 lines, none already past it grows at all, and `mix`'s
-`main.rs` and `render.rs` (7,651 and 7,741 lines) become one module per command.*
+*Goal: no source file grows past 1,500 lines, none already past it grows at all, `mix`'s
+`main.rs` and `render.rs` (7,651 and 7,741 lines) become one module per command, and the daemon's
+`api/rpc.rs` (5,683) keeps the routing table and hands every handler to its capability.*
 
 Part of the [build plan](todo.md). Legend: `[ ]` todo · `[~]` in progress · `[x]` done · **(P)** =
 has a platform-layer component and needs verification on Windows + macOS + Linux.
@@ -24,6 +25,13 @@ Design: [2026-10-13-files-that-fit-in-one-read-design.md](../specs/2026-10-13-fi
       `commands/<name>.rs`. Design:
       [2026-10-13-render-split-by-command-design.md](../specs/2026-10-13-render-split-by-command-design.md).
 
-**M45** `scripts/file-size-baseline.json` no longer names `crates/mixengine-cli/src/main.rs` or
-`render.rs`, and
-`bash scripts/gate.sh` is green.
+- [ ] **T207c** `crates/mixengine-daemon/src/api/rpc.rs` split by capability: the routing table
+      and the protocol stay, every `Api` handler and its helpers move to `api/<capability>.rs`
+      (`service`, `service_settings`, `daemon`, `self_update`, `uninstall`, `disk`, `cert`,
+      `metrics`), and each test goes with the handler it asserts on, over a shared
+      `api/test_daemon.rs`. A move and only a move: 705 unit tests before and after, and `rpc.rs`
+      leaves the baseline. Design:
+      [2026-10-13-t207c-rpc-split-by-capability-design.md](../specs/2026-10-13-t207c-rpc-split-by-capability-design.md).
+
+**M45** `scripts/file-size-baseline.json` no longer names `crates/mixengine-cli/src/main.rs`,
+`render.rs` or `crates/mixengine-daemon/src/api/rpc.rs`, and `bash scripts/gate.sh` is green.
