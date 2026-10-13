@@ -33,17 +33,16 @@ use clap::{CommandFactory as _, Parser, Subcommand};
 use mixengine_platform::ipc::Endpoint;
 use mixengine_proto::{
     AnswerSubject, BlueprintApplied, BlueprintApply, BlueprintApplyResponse, BlueprintCapture,
-    BlueprintImport, BlueprintList, BlueprintPlan, BlueprintSummary, CleanupQuery, CleanupReport,
-    DaemonStatus, DiskCategory, DiskUsage, DiskUsageQuery, Disposition, ElevationStatus, Error,
-    ErrorCode, ExtensionAvailable, ExtensionCatalogue, ExtensionChange, ExtensionChoice,
-    ExtensionConsent, ExtensionId, ExtensionInspect, ExtensionInspection, ExtensionInstall,
-    ExtensionList, ExtensionOrigin, ExtensionPlan, ExtensionPlanRequest, ExtensionRemoval,
-    ExtensionTarget, ExtensionUninstall, FrontEndReport, FrontEndServer, FrontEndSwitch,
-    IdleReport, InstalledExtensions, JobId, JobOutcome, JobSummary, MismatchAnswer,
+    BlueprintImport, BlueprintList, BlueprintPlan, BlueprintSummary, DaemonStatus, Disposition,
+    ElevationStatus, Error, ErrorCode, ExtensionAvailable, ExtensionCatalogue, ExtensionChange,
+    ExtensionChoice, ExtensionConsent, ExtensionId, ExtensionInspect, ExtensionInspection,
+    ExtensionInstall, ExtensionList, ExtensionOrigin, ExtensionPlan, ExtensionPlanRequest,
+    ExtensionRemoval, ExtensionTarget, ExtensionUninstall, FrontEndReport, FrontEndServer,
+    FrontEndSwitch, IdleReport, InstalledExtensions, JobId, JobOutcome, JobSummary, MismatchAnswer,
     PackageCatalogue, PackageFilter, PackageInstall, PackageList, PackageRemoval, PackageTarget,
     PackageUpgrade, PackageUpgradeQuery, PackageVersion, PlanAction, Priority, ProjectCreate,
     ProjectDetail, ProjectExport, ProjectList, ProjectQuery, ProjectRef, ProjectRemoval,
-    ProjectUpdate, Reclaim, Removal, ResetCredential, ResidueId, ResolvedRuntime, ResourceLimits,
+    ProjectUpdate, Removal, ResetCredential, ResidueId, ResolvedRuntime, ResourceLimits,
     RouteTarget, RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind, RuntimeList,
     RuntimeQuestion, RuntimeRemoval, RuntimeSummary, RuntimeTarget, RuntimeUninstall,
     RuntimeUpgrade, RuntimeUpgradeQuery, SaveResources, SaveResourcesSet, ScaffoldConsent,
@@ -63,6 +62,7 @@ use commands::autostart::{AutostartCommand, autostart_entry};
 use commands::cert::{CertCommand, cert};
 use commands::daemon::{DaemonCommand, daemon_credential_store, daemon_stop};
 use commands::database::{DatabaseCommand, database};
+use commands::disk::{cleanup, disk};
 use commands::doctor::{bundle, doctor, self_repair};
 use commands::domain::{DomainCommand, domain};
 use commands::elevation::{ElevationCommand, elevation};
@@ -2271,154 +2271,6 @@ async fn project(
     }
 
     Ok(ExitCode::SUCCESS)
-}
-
-/// `mix disk` — roadmap task **T96**.
-///
-/// **`refresh: true`, always.** The daemon keeps a reading for a minute so that a dashboard
-/// re-reading on every event does not walk `runtimes/` each time; somebody who typed a command is
-/// asking about now, and a stale figure under a command they just ran would read as a command that
-/// did nothing.
-async fn disk(
-    endpoint: &Endpoint,
-    autostart: Option<&Autostart>,
-    json: bool,
-) -> Result<ExitCode, Error> {
-    let mut client = Client::connect(endpoint, autostart).await?;
-
-    let usage: DiskUsage = ask(
-        &mut client,
-        rpc::method::DAEMON_DISK_USAGE,
-        encode(&DiskUsageQuery { refresh: true }),
-    )
-    .await?;
-
-    emit(&rendered(json, &usage, || render::disk_usage(&usage)))?;
-
-    Ok(ExitCode::SUCCESS)
-}
-
-/// `mix cleanup` — roadmap task **T96**.
-///
-/// **What is about to go is read and shown first**, on `mix uninstall`'s rule: `daemon.disk_usage`
-/// is the plan half of this pair, and a command that deleted before anybody had seen the number
-/// would be the *"measured and deleted in one breath"* T96 exists to refuse.
-async fn cleanup(
-    endpoint: &Endpoint,
-    autostart: Option<&Autostart>,
-    json: bool,
-    keep_logs: bool,
-    keep_cache: bool,
-    yes: bool,
-    no_wait: bool,
-) -> Result<ExitCode, Error> {
-    let mut client = Client::connect(endpoint, autostart).await?;
-
-    if !yes {
-        let usage: DiskUsage = ask(
-            &mut client,
-            rpc::method::DAEMON_DISK_USAGE,
-            encode(&DiskUsageQuery { refresh: true }),
-        )
-        .await?;
-
-        // Printed and not held back under `--json`, because the question below is refused there
-        // anyway: what a person is about to allow is what they are shown.
-        emit(&render::disk_usage(&usage))?;
-
-        if !agreed_to_cleanup(&usage, keep_logs, keep_cache, json)? {
-            // Saying no is an answer and not a failure — `mix uninstall`'s rule. Nothing went, so
-            // the same command works when the person is ready.
-            return Ok(ExitCode::SUCCESS);
-        }
-    }
-
-    let started: JobSummary = ask(
-        &mut client,
-        rpc::method::DAEMON_CLEANUP,
-        encode(&CleanupQuery {
-            keep_logs,
-            keep_cache,
-        }),
-    )
-    .await?;
-
-    if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
-        return Ok(ExitCode::SUCCESS);
-    }
-
-    let finished = follow(&mut client, started, json).await?;
-
-    let Some(JobOutcome::Succeeded { result }) = finished.outcome.clone() else {
-        emit(&rendered(json, &finished, || render::job_status(&finished)))?;
-        return Ok(ExitCode::FAILURE);
-    };
-
-    let report: CleanupReport = serde_json::from_value(result).map_err(|error| {
-        Error::new(
-            ErrorCode::Internal,
-            format!(
-                "mix {} cannot read the cleanup report: {error}",
-                env!("CARGO_PKG_VERSION")
-            ),
-        )
-    })?;
-
-    emit(&rendered(json, &report, || render::cleanup_report(&report)))?;
-
-    Ok(match report.left_behind() {
-        true => ExitCode::FAILURE,
-        false => ExitCode::SUCCESS,
-    })
-}
-
-/// Ask, once, in front of the table that was just printed — roadmap task **T96**.
-///
-/// **Nothing to take is a yes.** A command that asked *"remove nothing?"* would be one people learn
-/// to answer without reading, which is the habit the question exists to prevent.
-///
-/// **`--json` never asks**, on [`agreed_to_uninstall`]'s rule and for its reason.
-fn agreed_to_cleanup(
-    usage: &DiskUsage,
-    keep_logs: bool,
-    keep_cache: bool,
-    json: bool,
-) -> Result<bool, Error> {
-    let asked_for: u64 = usage
-        .categories
-        .iter()
-        .filter(|category| match category.id {
-            DiskCategory::Logs => !keep_logs,
-            DiskCategory::Cache => !keep_cache,
-            _ => false,
-        })
-        .map(|category| match category.reclaim {
-            Reclaim::ByCleanup { bytes, .. } => bytes,
-            _ => 0,
-        })
-        .sum();
-
-    if asked_for == 0 {
-        return Ok(true);
-    }
-
-    if json {
-        return Err(unanswered());
-    }
-
-    match confirm::ask("\nremove them? nothing else is touched. [y/N] ") {
-        confirm::Answer::Yes => Ok(true),
-
-        confirm::Answer::No => {
-            // On stderr, beside the question it answers. Stdout carried the table above.
-            let _ = writeln!(std::io::stderr(), "nothing was removed");
-
-            Ok(false)
-        }
-
-        confirm::Answer::Unanswerable => Err(unanswered()),
-    }
 }
 
 /// `mix uninstall` — roadmap task **T87**.
