@@ -13,6 +13,7 @@
 
 mod autostart;
 mod client;
+mod commands;
 mod confirm;
 mod docs;
 mod error;
@@ -58,14 +59,15 @@ use mixengine_proto::{
     ServiceIdleSet, ServiceLimitsReport, ServiceLimitsSet, ServiceList, ServiceQuery,
     ServiceRemoval, ServiceRole, ServiceSummary, ServiceTarget, ServiceWalk, SignatureCheck,
     SiteCreate, SiteCreation, SiteDetail, SiteKind, SiteList, SiteListQuery, SiteQuery, SiteRef,
-    SiteRemoval, SiteRoute, SiteShare, SiteSharing, SiteState, SiteUpdate, StorageReport,
-    Timestamp, UninstallQuery, UninstallReport, UpdateApplied, UpdateApply, UpdateCheck,
-    UpdateDecide, UpdateDecision, UpdateFinish, UpdateHandOver, UpdateHandedOver, UpdatePlacement,
-    UpdateStatus, UpgradePlan, VersionAnswer, VersionConstraint, rpc,
+    SiteRemoval, SiteRoute, SiteShare, SiteSharing, SiteState, SiteUpdate, Timestamp,
+    UninstallQuery, UninstallReport, UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide,
+    UpdateDecision, UpdateFinish, UpdateHandOver, UpdateHandedOver, UpdatePlacement, UpdateStatus,
+    UpgradePlan, VersionAnswer, VersionConstraint, rpc,
 };
 
 use autostart::Autostart;
 use client::{Client, ask, encode};
+use commands::status::{status, storage};
 use confirm::unanswered;
 use jobs::follow;
 use output::{emit, rendered, report};
@@ -6434,59 +6436,6 @@ async fn daemon_credential_store(
     emit(&rendered(json, &change, || {
         render::credential_store_change(change)
     }))?;
-
-    Ok(ExitCode::SUCCESS)
-}
-
-/// `mix storage`: where this home's growing directories are — roadmap task **T145**.
-///
-/// **Neither asynchronous nor connected**, which is what makes it the odd one in the match above.
-/// Every other command sends a request; this one runs `mixengined --storage` and reads the document
-/// it printed. It has to: whether the choice is still free is a count of rows, `mix` links neither
-/// `mixengine-core` nor `sqlx`, and there may be no daemon — a person asking this is usually asking
-/// it *before* the first start.
-///
-/// `--json` hands back what the daemon printed, unchanged. Re-serialising a document this client
-/// only parsed in order to print it would be a second chance to render it differently.
-fn storage(root: &Path, json: bool) -> Result<ExitCode, Error> {
-    let answered = autostart::ask(root, &["--storage"])?;
-
-    if json {
-        println!("{answered}");
-        return Ok(ExitCode::SUCCESS);
-    }
-
-    let report: StorageReport = serde_json::from_str(&answered).map_err(|source| {
-        Error::new(
-            ErrorCode::Internal,
-            format!("mixengined described this home in a way this `mix` cannot read: {source}"),
-        )
-        .with_hint(
-            "the two binaries are from different releases; reinstall MixEngine so that \
-                    `mix` and `mixengined` come from one",
-        )
-    })?;
-
-    print!("{}", render::storage(&report));
-
-    Ok(ExitCode::SUCCESS)
-}
-
-/// `mix status`: what the daemon says about itself.
-async fn status(
-    endpoint: &Endpoint,
-    autostart: Option<&Autostart>,
-    json: bool,
-) -> Result<ExitCode, Error> {
-    let mut client = Client::connect(endpoint, autostart).await?;
-    let status: DaemonStatus = ask(&mut client, rpc::method::DAEMON_STATUS, None).await?;
-
-    match json {
-        // The newline is here rather than in `render`, which builds a document and does not know
-        // whether it is the last thing on the stream. The human rendering ends in one already.
-        true => emit(&format!("{}\n", render::status_json(&status)))?,
-        false => emit(&render::status(&status))?,
-    }
 
     Ok(ExitCode::SUCCESS)
 }
