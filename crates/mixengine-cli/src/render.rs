@@ -29,6 +29,7 @@ mod size;
 pub(crate) mod status;
 mod table;
 mod time;
+pub(crate) mod uninstall;
 pub(crate) mod upgrades;
 
 use blueprint::next_steps_said;
@@ -42,26 +43,8 @@ use mixengine_proto::{
     ExtensionCatalogue, ExtensionInspection, ExtensionKind, ExtensionPlan, ExtensionRemoval,
     FilesystemReach, InstalledExtensions, Launch, Made, NetworkReach, Outcome, PackageVersion,
     PinSource, ProjectDetail, ProjectExport, ProjectList, ProjectRemoval, RecipeAddition, Reclaim,
-    Removal, RepairReport, UninstallReport,
+    RepairReport,
 };
-
-/// What `mix uninstall` prints when it starts waiting for the directories to go — T182b.
-pub(crate) fn uninstall_removing(directories: usize, bytes: u64) -> String {
-    let what = match directories {
-        1 => "1 folder".to_owned(),
-        count => format!("{count} folders"),
-    };
-
-    match bytes {
-        0 => format!("removing {what}, this can take a minute"),
-        _ => format!("removing {what} ({}), this can take a minute", size(bytes)),
-    }
-}
-
-/// And every so often while it waits, so a person can see it has not stopped.
-pub(crate) fn uninstall_still_removing(waited: std::time::Duration) -> String {
-    format!("still removing, {}s so far", waited.as_secs())
-}
 
 /// `mix project list` — every registered project, and whether it has a manifest.
 pub(crate) fn project_list(list: &ProjectList) -> String {
@@ -255,43 +238,6 @@ pub(crate) fn repair(report: &RepairReport) -> String {
     out
 }
 
-/// `mix uninstall`, as a person reads it — roadmap task **T87**.
-///
-/// **Every row, in the daemon's order, whatever it answered.** A rendering that hid the `absent`
-/// rows would leave a person unable to tell *"there was no resolver wiring"* from *"the resolver
-/// wiring was not looked at"*, on the one command whose whole promise is that nothing is left
-/// behind.
-///
-/// **And the place is printed under every row, including the absent ones**, because the place is what
-/// somebody goes and checks afterwards. A row saying "nothing there" without saying *where* is a row
-/// nobody can verify.
-pub(crate) fn uninstall_report(report: &UninstallReport) -> String {
-    let mut out = String::new();
-
-    for item in &report.items {
-        let (mark, sentence) = match &item.outcome {
-            Removal::Absent {} => ("nothing  ", None),
-            Removal::Planned { how } => ("would    ", Some(how)),
-            Removal::Removed { what } => ("removed  ", Some(what)),
-            Removal::Enqueued { what } => ("waiting  ", Some(what)),
-            Removal::OnExit { what } => ("going    ", Some(what)),
-            Removal::OnRestart { what } => ("restart  ", Some(what)),
-            Removal::Kept { because } => ("kept     ", Some(because)),
-            Removal::Failed { because } => ("LEFT     ", Some(because)),
-            Removal::Blocked { by } => ("BLOCKED  ", Some(by)),
-        };
-
-        out.push_str(&format!("{mark}{}\n", item.what));
-        out.push_str(&format!("         {}\n", item.location));
-
-        if let Some(sentence) = sentence {
-            out.push_str(&format!("         {sentence}\n"));
-        }
-    }
-
-    out
-}
-
 /// `daemon.disk_usage`, as a person reads it — roadmap task **T96**.
 ///
 /// **Every row carries what would take it back**, because the question somebody has when they look
@@ -365,6 +311,8 @@ fn reclaim(reclaim: &Reclaim) -> String {
 /// **Every row, whatever it answered**, on [`uninstall_report`]'s rule: a report that printed only
 /// what it removed would leave somebody unable to tell *"there were no rotated log files"* from
 /// *"the logs were not looked at"*.
+///
+/// [`uninstall_report`]: crate::render::uninstall::uninstall_report
 pub(crate) fn cleanup_report(report: &CleanupReport) -> String {
     let mut out = String::new();
 
@@ -1350,23 +1298,6 @@ mod tests {
         assert!(rendered.contains("this build can read"));
         assert!(rendered.contains("2 entries this build cannot read"));
         assert!(rendered.contains("update MixEngine"));
-    }
-
-    /// T182b. The wait for the folders to go says how much is going, and then that it is still going.
-    #[test]
-    fn the_wait_for_a_removal_says_what_it_is_waiting_for() {
-        assert_eq!(
-            uninstall_removing(3, 1_073_741_824),
-            "removing 3 folders (1024 MiB), this can take a minute"
-        );
-        assert_eq!(
-            uninstall_removing(1, 0),
-            "removing 1 folder, this can take a minute"
-        );
-        assert_eq!(
-            uninstall_still_removing(std::time::Duration::from_millis(20_400)),
-            "still removing, 20s so far"
-        );
     }
 
     /// It says where the credential is and never what it is — the T77a design, D11. The test is the

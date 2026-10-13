@@ -109,7 +109,7 @@ pub(crate) async fn uninstall(
     // the answer, so there it is printed either way.
     if dry_run || !json {
         emit(&rendered(json, &planned, || {
-            render::uninstall_report(&planned)
+            render::uninstall::uninstall_report(&planned)
         }))?;
     }
 
@@ -173,7 +173,7 @@ pub(crate) async fn uninstall(
     })?;
 
     emit(&rendered(json, &report, || {
-        render::uninstall_report(&report)
+        render::uninstall::uninstall_report(&report)
     }))?;
 
     let still_there = left_behind(&report, endpoint, daemon, removing).await;
@@ -426,7 +426,7 @@ async fn left_behind(
     let _ = writeln!(
         std::io::stderr(),
         "{}",
-        render::uninstall_removing(going.len(), removing)
+        render::uninstall::uninstall_removing(going.len(), removing)
     );
 
     if !Client::gone(endpoint, GOING).await {
@@ -466,7 +466,7 @@ async fn left_behind(
             let _ = writeln!(
                 std::io::stderr(),
                 "{}",
-                render::uninstall_still_removing(began.elapsed())
+                render::uninstall::uninstall_still_removing(began.elapsed())
             );
         }
 
