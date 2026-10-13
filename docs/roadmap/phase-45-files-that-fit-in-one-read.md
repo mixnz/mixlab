@@ -59,9 +59,12 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
       `crates/mixengine-daemon/tests/runtimes.rs` (2,224), into a directory of modules behind one
       test binary. Design:
       [2026-10-14-t207f-tests-split-by-topic-design.md](../specs/2026-10-14-t207f-tests-split-by-topic-design.md).
-- [ ] **T207g** The desktop's four, under `apps/desktop/CLAUDE.md`'s rules and its own workspace:
-      `db/drivers/dump.rs` and `clickhouse.rs` (T207e's move), `mssql.rs` (code 1,649) and
-      `SqlTable.tsx` (1,843, a component to split into its parts).
+- [ ] **T207g** The desktop's three database drivers, under `apps/desktop/CLAUDE.md`'s rules and
+      its own workspace, split the way their siblings already are: `clickhouse.rs`'s structure to
+      a `clickhouse_structure.rs` like every other engine's, `mssql.rs`'s writes to
+      `mssql_editing.rs` and then its tests to `mssql/tests.rs`, and `dump.rs`'s tests to
+      `dump/tests.rs`. Design:
+      [2026-10-14-t207g-desktop-drivers-split-design.md](../specs/2026-10-14-t207g-desktop-drivers-split-design.md).
 - [ ] **T207h** Definitions whose code is past 1,500, with little state: proto `service.rs`
       (code 1,814), core `generate/recipe.rs` (1,521), platform `process.rs` (1,508) and
       `windows/process.rs` (1,590). By capability, with T207d's script.
@@ -70,6 +73,10 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
 - [ ] **T207j** Core `lib.rs` cannot be split by moving: lines 92–1935 are one `enum Error`, and
       an enum does not span files. Decide between error enums per subject (a change to code, and
       perhaps an ADR) and keeping it in the baseline with the reason written there.
+- [ ] **T207k** The desktop's `db/components/SqlTable/SqlTable.tsx` (1,843): one React component
+      whose callbacks share its state, so not a move — custom hooks for what it does (editing a
+      cell, selecting rows, the filters it remembers) and components for what it draws, verified in
+      the running window and `npm run screenshots -- --check`. Split out of T207g on 2026-10-14.
 
 **M45** `scripts/file-size-baseline.json` no longer names `crates/mixengine-cli/src/main.rs`,
 `render.rs`, `crates/mixengine-daemon/src/api/rpc.rs` or
