@@ -41,7 +41,7 @@ pub(crate) fn storage(root: &Path, json: bool) -> Result<ExitCode, Error> {
         )
     })?;
 
-    print!("{}", render::storage(&report));
+    print!("{}", render::status::storage(&report));
 
     Ok(ExitCode::SUCCESS)
 }
@@ -58,8 +58,8 @@ pub(crate) async fn status(
     match json {
         // The newline is here rather than in `render`, which builds a document and does not know
         // whether it is the last thing on the stream. The human rendering ends in one already.
-        true => emit(&format!("{}\n", render::status_json(&status)))?,
-        false => emit(&render::status(&status))?,
+        true => emit(&format!("{}\n", render::status::status_json(&status)))?,
+        false => emit(&render::status::status(&status))?,
     }
 
     Ok(ExitCode::SUCCESS)
