@@ -15,7 +15,6 @@
     "crates/mixengine-daemon/tests/runtimes.rs": 2224,
     "crates/mixengine-platform/src/process.rs": 1614,
     "crates/mixengine-platform/src/windows/process.rs": 1781,
-    "crates/mixengine-proto/src/privileged.rs": 2049,
     "crates/mixengine-proto/src/service.rs": 2631
   }
 }
