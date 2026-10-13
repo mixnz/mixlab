@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import type { ModuleTabProps } from "../../shell/module";
 import { useTranslation } from "../../i18n";
 import Input from "../../components/Input";
@@ -42,13 +42,13 @@ function ToolsTab({ onTitleChange, onStateChange, restored }: ModuleTabProps) {
   const selected = TOOLS.find((tool) => tool.id === selectedId) ?? null;
 
   // The tab title is the tool's name, not "Tools": three Tools tabs open at once can be told apart.
-  // `onTitleChange` is not in the deps — the shell returns a new closure on every render, and
-  // `shell/tabs.ts` names the loop that listing it would create.
+  // `onTitleChange` is reached through an effect event rather than listed — the shell returns a
+  // new closure on every render, and `shell/tabs.ts` names the loop that listing it would create.
   // `lang` next to `t`: `t` is a single function for the app's whole lifetime, so `lang` is what
   // signals that the text has changed and the title needs rebuilding. See `i18n/index.tsx`.
+  const reportTitle = useEffectEvent((title: string) => onTitleChange(title));
   useEffect(() => {
-    onTitleChange(selected ? t(selected.labelKey) : t("toolbox.newTabTitle"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    reportTitle(selected ? t(selected.labelKey) : t("toolbox.newTabTitle"));
   }, [selected, t, lang]);
 
   const pick = (id: string) => {

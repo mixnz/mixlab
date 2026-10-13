@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useState } from "react";
 
 import ActionBar from "../../../../components/ActionBar";
 import Button from "../../../../components/Button";
@@ -170,32 +170,32 @@ export default function Sites({
    * filtered by project X") — merged together because both decide which filter is right before
    * calling `site.list`.
    */
+  // An effect event, so `reload` and `projectFilter` are read as they stand when the screen comes
+  // into view rather than listed: this is the refresh for a new `active` turn, not an effect that
+  // should rerun every time `projectFilter` changes by itself (SiteForm already has its own
+  // `reload()` for that once it saves).
+  const refreshOnShow = useEffectEvent(async (isLive: () => boolean) => {
+    const requested = takePendingSitesFilter();
+    try {
+      const list = await api.projects();
+      if (!isLive()) return;
+      const names = list.projects.map((p) => p.name);
+      setProjectNames(names);
+      const wanted = requested ?? projectFilter;
+      const valid = wanted !== "" && names.includes(wanted) ? wanted : "";
+      if (valid !== projectFilter) setProjectFilter(valid);
+      await reload(valid);
+    } catch (e) {
+      if (isLive()) setError(errorMessage(t, e));
+    }
+  });
   useEffect(() => {
     if (!active) return;
     let live = true;
-    void (async () => {
-      const requested = takePendingSitesFilter();
-      try {
-        const list = await api.projects();
-        if (!live) return;
-        const names = list.projects.map((p) => p.name);
-        setProjectNames(names);
-        const wanted = requested ?? projectFilter;
-        const valid = wanted !== "" && names.includes(wanted) ? wanted : "";
-        if (valid !== projectFilter) setProjectFilter(valid);
-        await reload(valid);
-      } catch (e) {
-        if (live) setError(errorMessage(t, e));
-      }
-    })();
+    void refreshOnShow(() => live);
     return () => {
       live = false;
     };
-    // `reload`/`projectFilter` are deliberately read from the closure at the time the effect runs,
-    // not from deps: this is the refresh for a new `active` turn, not an effect that should rerun
-    // every time `projectFilter` changes by itself (SiteForm already has its own `reload()` for
-    // that once it saves).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   useEffect(() => {

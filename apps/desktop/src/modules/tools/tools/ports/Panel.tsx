@@ -50,10 +50,8 @@ function PortsPanel() {
         setPorts([]);
       })
       .finally(() => setBusy(false));
-    // `t` is not in the deps: it changes when the user switches language, and a rescan for that
-    // reason is a wasted scan.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // `t` is one function for the life of the app, so a language switch is not a rescan.
+  }, [t]);
 
   useEffect(load, [load]);
 
