@@ -313,7 +313,7 @@ mix blueprint apply <slug> --project <name> [--path <dir>] --dry-run [--json]
 `--path` absent means `<cwd>/<project>`. `apply` without `--dry-run` is sent, and the daemon's
 `Unsupported` is what gets printed.
 
-The plan renders as words, not glyphs — [`render.rs`](../../crates/mixengine-cli/src/render.rs)
+The plan renders as words, not glyphs — [`render/`](../../crates/mixengine-cli/src/render/)
 does not contain a single `✓` or `✗`, and a non-ASCII status column on a Windows console is a
 rendering problem this product does not need:
 
