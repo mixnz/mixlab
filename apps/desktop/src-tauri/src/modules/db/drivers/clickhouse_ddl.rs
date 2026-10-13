@@ -7,10 +7,8 @@
 //! where a test can read it and sending is left as `execute_check`. There is no transaction here —
 //! ClickHouse has none — so a run of statements that fails partway leaves exactly what already ran.
 
-use super::clickhouse::{
-    as_u64, execute_check, qualified, query, quote_ident, quote_literal, structure_columns,
-    Connection, StructureColumn,
-};
+use super::clickhouse::{execute_check, qualified, query, quote_ident, quote_literal, Connection};
+use super::clickhouse_structure::{as_u64, structure_columns, StructureColumn};
 use crate::error::AppError;
 use serde::Deserialize;
 

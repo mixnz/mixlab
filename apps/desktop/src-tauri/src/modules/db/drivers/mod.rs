@@ -2,6 +2,7 @@ pub mod clickhouse;
 pub mod clickhouse_ddl;
 pub mod clickhouse_dump;
 pub mod clickhouse_script;
+pub mod clickhouse_structure;
 pub mod dump;
 pub mod filters;
 pub mod mongo;

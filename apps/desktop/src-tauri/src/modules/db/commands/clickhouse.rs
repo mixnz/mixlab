@@ -1,7 +1,7 @@
 use super::{clickhouse_connection, reporter, Transfer};
 use crate::error::AppError;
 use crate::modules::db::drivers::{
-    clickhouse, clickhouse_ddl, clickhouse_dump, clickhouse_script, dump,
+    clickhouse, clickhouse_ddl, clickhouse_dump, clickhouse_script, clickhouse_structure, dump,
 };
 use crate::modules::db::models::{ServerInfo, SqlProblem, StatementResult};
 use crate::modules::db::state::DbState;
@@ -55,9 +55,9 @@ pub async fn clickhouse_table_structure(
     id: String,
     database: String,
     table: String,
-) -> Result<clickhouse::TableStructure, AppError> {
+) -> Result<clickhouse_structure::TableStructure, AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::table_structure(&conn, &database, &table).await
+    clickhouse_structure::table_structure(&conn, &database, &table).await
 }
 
 #[tauri::command]
@@ -65,9 +65,9 @@ pub async fn clickhouse_table_stats(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<Vec<clickhouse::TableStats>, AppError> {
+) -> Result<Vec<clickhouse_structure::TableStats>, AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::table_stats(&conn, &database).await
+    clickhouse_structure::table_stats(&conn, &database).await
 }
 
 #[tauri::command]
@@ -75,9 +75,9 @@ pub async fn clickhouse_schema_outline(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<clickhouse::SchemaOutline, AppError> {
+) -> Result<clickhouse_structure::SchemaOutline, AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::schema_outline(&conn, &database).await
+    clickhouse_structure::schema_outline(&conn, &database).await
 }
 
 /// `run_id` is taken, like the other three engines', but never stored: there is no
