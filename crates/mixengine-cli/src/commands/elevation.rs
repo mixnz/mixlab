@@ -102,14 +102,18 @@ pub(crate) async fn elevation(
             let started: JobSummary = ask(&mut client, rpc::method::ELEVATION_GRANT, None).await?;
 
             if no_wait {
-                emit(&rendered(json, &started, || render::job_status(&started)))?;
+                emit(&rendered(json, &started, || {
+                    render::job::job_status(&started)
+                }))?;
                 return Ok(ExitCode::SUCCESS);
             }
 
             let finished = follow(&mut client, started, json).await?;
-            emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+            emit(&rendered(json, &finished, || {
+                render::job::job_status(&finished)
+            }))?;
 
-            Ok(match render::job_succeeded(&finished) {
+            Ok(match render::job::job_succeeded(&finished) {
                 true => ExitCode::SUCCESS,
                 false => ExitCode::FAILURE,
             })

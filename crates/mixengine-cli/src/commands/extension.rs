@@ -196,14 +196,18 @@ pub(crate) async fn extension(
                 ask(&mut client, rpc::method::EXTENSION_INSTALL, encode(&asked)).await?;
 
             if no_wait {
-                emit(&rendered(json, &started, || render::job_status(&started)))?;
+                emit(&rendered(json, &started, || {
+                    render::job::job_status(&started)
+                }))?;
                 return Ok(ExitCode::SUCCESS);
             }
 
             let finished = follow(&mut client, started, json).await?;
-            emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+            emit(&rendered(json, &finished, || {
+                render::job::job_status(&finished)
+            }))?;
 
-            let succeeded = render::job_succeeded(&finished);
+            let succeeded = render::job::job_succeeded(&finished);
 
             return Ok(match succeeded {
                 true => ExitCode::SUCCESS,

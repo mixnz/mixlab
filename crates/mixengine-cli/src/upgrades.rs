@@ -55,7 +55,9 @@ pub(crate) async fn finish_upgrade(
     json: bool,
 ) -> Result<ExitCode, Error> {
     if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
+        emit(&rendered(json, &started, || {
+            render::job::job_status(&started)
+        }))?;
         return Ok(ExitCode::SUCCESS);
     }
 
@@ -66,10 +68,10 @@ pub(crate) async fn finish_upgrade(
 
     emit(&rendered(json, &finished, || match &result {
         Some(plan) => render::upgrades::upgrade_plan(plan),
-        None => render::job_status(&finished),
+        None => render::job::job_status(&finished),
     }))?;
 
-    Ok(match render::job_succeeded(&finished) {
+    Ok(match render::job::job_succeeded(&finished) {
         true => ExitCode::SUCCESS,
         false => ExitCode::FAILURE,
     })

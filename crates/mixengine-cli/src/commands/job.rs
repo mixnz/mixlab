@@ -107,7 +107,7 @@ pub(crate) async fn job(
                 encode(&JobFilter { state, limit }),
             )
             .await?;
-            emit(&rendered(json, &list, || render::job_list(&list)))?;
+            emit(&rendered(json, &list, || render::job::job_list(&list)))?;
             return Ok(ExitCode::SUCCESS);
         }
 
@@ -138,11 +138,11 @@ pub(crate) async fn job(
     };
 
     let job: JobSummary = ask(&mut client, method, params).await?;
-    emit(&rendered(json, &job, || render::job_status(&job)))?;
+    emit(&rendered(json, &job, || render::job::job_status(&job)))?;
 
     // A wait that ran out is not a success either: it is what a script blocks on, and exiting zero
     // there would carry it past a download that is still running.
-    Ok(match !verdict || render::job_succeeded(&job) {
+    Ok(match !verdict || render::job::job_succeeded(&job) {
         true => ExitCode::SUCCESS,
         false => ExitCode::FAILURE,
     })

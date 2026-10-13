@@ -219,7 +219,7 @@ async fn agreed(client: &mut Client, what: &str, json: bool) -> Result<bool, Err
 /// Follow a job to its end and render whatever it produced, or print the job when it produced
 /// nothing this command knows how to read.
 ///
-/// **The result is decoded here and not in [`render::job_status`].** That function tries several
+/// **The result is decoded here and not in [`render::job::job_status`].** That function tries several
 /// types in turn against one `serde_json::Value`, and T54's two reports are similar enough — an
 /// `outcome` and a `status` apiece — that adding them to that chain is how a rotation gets rendered
 /// as a removal. A command knows its own type.
@@ -231,7 +231,9 @@ async fn job_answering(
     render_result: impl Fn(serde_json::Value) -> Option<String>,
 ) -> Result<ExitCode, Error> {
     if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
+        emit(&rendered(json, &started, || {
+            render::job::job_status(&started)
+        }))?;
         return Ok(ExitCode::SUCCESS);
     }
 
@@ -240,12 +242,16 @@ async fn job_answering(
     match finished.outcome.clone() {
         Some(JobOutcome::Succeeded { result }) => match render_result(result.clone()) {
             Some(said) => emit(&rendered(json, &result, || said))?,
-            None => emit(&rendered(json, &finished, || render::job_status(&finished)))?,
+            None => emit(&rendered(json, &finished, || {
+                render::job::job_status(&finished)
+            }))?,
         },
-        _ => emit(&rendered(json, &finished, || render::job_status(&finished)))?,
+        _ => emit(&rendered(json, &finished, || {
+            render::job::job_status(&finished)
+        }))?,
     }
 
-    Ok(match render::job_succeeded(&finished) {
+    Ok(match render::job::job_succeeded(&finished) {
         true => ExitCode::SUCCESS,
         false => ExitCode::FAILURE,
     })

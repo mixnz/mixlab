@@ -144,15 +144,19 @@ pub(crate) async fn self_repair(
     };
 
     if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
+        emit(&rendered(json, &started, || {
+            render::job::job_status(&started)
+        }))?;
         return Ok(outcome);
     }
 
     let finished = follow(&mut client, started, json).await?;
-    emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+    emit(&rendered(json, &finished, || {
+        render::job::job_status(&finished)
+    }))?;
 
     // A grant that failed is a machine still holding what it held, whatever the repairs did.
-    Ok(match render::job_succeeded(&finished) {
+    Ok(match render::job::job_succeeded(&finished) {
         true => outcome,
         false => ExitCode::FAILURE,
     })

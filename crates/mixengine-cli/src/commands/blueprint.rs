@@ -365,7 +365,9 @@ pub(crate) async fn blueprint(
             if let Some(watching) = watching {
                 watching.abort();
             }
-            emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+            emit(&rendered(json, &finished, || {
+                render::job::job_status(&finished)
+            }))?;
 
             let mut a_step_failed = false;
 
@@ -379,7 +381,7 @@ pub(crate) async fn blueprint(
                 a_step_failed = render::blueprint_had_a_failed_step(&applied);
             }
 
-            if !render::job_succeeded(&finished) {
+            if !render::job::job_succeeded(&finished) {
                 return Ok(ExitCode::FAILURE);
             }
 
@@ -543,9 +545,11 @@ async fn granted(client: &mut Client, grant: bool, json: bool) -> Result<ExitCod
 
     let started: JobSummary = ask(client, rpc::method::ELEVATION_GRANT, None).await?;
     let finished = follow(client, started, json).await?;
-    emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+    emit(&rendered(json, &finished, || {
+        render::job::job_status(&finished)
+    }))?;
 
-    Ok(match render::job_succeeded(&finished) {
+    Ok(match render::job::job_succeeded(&finished) {
         true => ExitCode::SUCCESS,
         false => ExitCode::FAILURE,
     })

@@ -5,7 +5,7 @@
     "apps/desktop/src-tauri/src/modules/db/drivers/dump.rs": 2029,
     "apps/desktop/src-tauri/src/modules/db/drivers/mssql.rs": 2088,
     "apps/desktop/src/modules/db/components/SqlTable/SqlTable.tsx": 1843,
-    "crates/mixengine-cli/src/render.rs": 4947,
+    "crates/mixengine-cli/src/render.rs": 4872,
     "crates/mixengine-core/src/blueprints/manifest.rs": 1750,
     "crates/mixengine-core/src/blueprints/plan.rs": 3588,
     "crates/mixengine-core/src/elevation.rs": 1522,

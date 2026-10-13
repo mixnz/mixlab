@@ -147,14 +147,18 @@ pub(crate) async fn uninstall(
     .await?;
 
     if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
+        emit(&rendered(json, &started, || {
+            render::job::job_status(&started)
+        }))?;
         return Ok(ExitCode::SUCCESS);
     }
 
     let finished = follow(&mut client, started, json).await?;
 
     let Some(JobOutcome::Succeeded { result }) = finished.outcome.clone() else {
-        emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+        emit(&rendered(json, &finished, || {
+            render::job::job_status(&finished)
+        }))?;
         return Ok(ExitCode::FAILURE);
     };
 

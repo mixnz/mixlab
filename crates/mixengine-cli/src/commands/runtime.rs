@@ -500,19 +500,23 @@ async fn install(
     let started: JobSummary = ask(client, rpc::method::RUNTIME_INSTALL, encode(&asked)).await?;
 
     if no_wait {
-        emit(&rendered(json, &started, || render::job_status(&started)))?;
+        emit(&rendered(json, &started, || {
+            render::job::job_status(&started)
+        }))?;
         return Ok(ExitCode::SUCCESS);
     }
 
     let finished = follow(client, started, json).await?;
 
-    emit(&rendered(json, &finished, || render::job_status(&finished)))?;
+    emit(&rendered(json, &finished, || {
+        render::job::job_status(&finished)
+    }))?;
 
-    if render::job_succeeded(&finished) && !json {
+    if render::job::job_succeeded(&finished) && !json {
         said_what_it_lacks(client, kind, &version).await?;
     }
 
-    Ok(match render::job_succeeded(&finished) {
+    Ok(match render::job::job_succeeded(&finished) {
         true => ExitCode::SUCCESS,
         false => ExitCode::FAILURE,
     })
