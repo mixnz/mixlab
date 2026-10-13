@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 date: 2026-10-13
 task: T207d
 ---
@@ -75,7 +75,7 @@ module of the crate and resolves the same.
 | Module | Items (in their order in `mod.rs`) | Lines today (approx.) | Called from |
 | --- | --- | --- | --- |
 | `graph.rs` (new) | `reconfigure`, `graph`, `graph_for_sweep`, `forget_graph`, `front_end_program`, `front_end_tls_port`, `remember_rituals`, `ritual_for`, `has_credential_reset`, `reset_credential`, `remember_provisioning`, `provisioning_for`, `hand_over`, `wakeable_at` | 594–871, 999–1015, 1611–1640 | `graph` from every walk and ~15 files outside; `ritual_for` from `begin` (start); `provisioning_for` from `supervise` (start) and `databases.rs`; `remember_*`, `hand_over` only from `graph` |
-| `start.rs` (new) | `Start`; `ensure_running`, `start`, `start_because`, `begin`, `supervise`, `block`; `settled`, `settled_after_asking`, `decided_by` | 390–398, 872–920, 1429–1484, 1692–1940, 2048–2113, 2269–2332 | `start` from api, `activate`, `hold`, `idle`, `updates`, `stop_then_start`; `start_because` from `autostart`; `supervise` also from `reconcile` (recovery); `ensure_running` from `databases.rs` |
+| `start.rs` (new) | `ensure_running`, `start`, `start_because`, `begin`, `supervise`, `block`; `settled`, `settled_after_asking`, `decided_by` | 872–920, 1429–1484, 1692–1940, 2048–2113, 2269–2332 | `start` from api, `activate`, `hold`, `idle`, `updates`, `stop_then_start`; `start_because` from `autostart`; `supervise` also from `reconcile` (recovery); `ensure_running` from `databases.rs` |
 | `stop.rs` (new) | `stop`, `stop_because`, `stop_one`, `claim_stop` | 1485–1543, 1941–2047 | `stop` from api, `idle`, `extensions`, `stop_then_start`; `claim_stop` also from `shut_down` (shutdown) |
 | `shutdown.rs` (new) | `Budget`, `Deadlines`, `impl Budget`; `stopping_within`, `is_shutting_down`, `shut_down` | 64–157, 540–593, 1544–1600 | `Budget` from `mod.rs` (the field) and `runner.rs`; `stopping_within` from `api/daemon.rs` and `main.rs`; `shut_down` from `main.rs`, `api/test_daemon.rs` |
 | `recovery.rs` (new) | `Recovery`, `impl Recovery`; `recover`, `reconcile_stranded`, `reconcile`, `discard`; `survivor` | 421–461, 1016–1428, 2115–2143 | `recover` from `main.rs`; `reconcile_stranded` from `repair.rs`; the rest only from inside |
@@ -86,28 +86,28 @@ Where the rule left a choice, and what was chosen:
 | --- | --- | --- |
 | `ensure_running` | `start.rs`, not `graph.rs` where it sits | it builds a plan and hands it to `start`; its own doc says it is "not a second start path" |
 | `wakeable_at` | `graph.rs` | it renders the declarations through `spec::generator` and answers from that; it reads no runner |
-| `Start` | `start.rs` | used only by `begin`, `settled*`, `decided_by`. `Walk`'s doc links `[`Start::Failed`]`, which gains a reference link (D7 kind 4) |
+| `Start` | stays in `mod.rs`, beside `Fault` and `Walk` | used only by `begin`, `settled*` and `decided_by`, but `Walk`'s doc links `[`Start::Failed`]`, and rustdoc does not resolve a link to a private item of a sibling module. With `Fault` and `Walk` it is the vocabulary a walk answers in |
 | `Recovery` | `recovery.rs` | named only by `recover`, `reconcile_stranded`, `reconcile` and its test; outside, `main.rs` reads its fields through the returned value and never names the type |
-| `Budget` | `shutdown.rs` | it is what a shutdown grants; its doc is task T9a's shutdown budget. `runner.rs` reads it and names it by its new path (D6) |
+| `Budget` | `shutdown.rs`, re-exported by `mod.rs` | it is what a shutdown grants; its doc is task T9a's shutdown budget. `mod.rs` imports it for its field anyway, and `pub(crate) use shutdown::Budget;` keeps `runner.rs` and `main.rs` naming `super::Budget` and `services::Budget`: the new path pushed five lines of those two baselined files past 100 columns (D6) |
 | `is_shutting_down` | `shutdown.rs` | read by `begin` and `start_because` and `api/daemon.rs`, but it is the question "has a shutdown begun", answered from the flag `stopping_within` and `shut_down` set |
 | The module for the declared set | named `graph.rs`, not `declared.rs` | `services::declared` is already a re-exported function (`pub(crate) use spec::{…, declared}`), and a module of the same name beside it would read as the same thing |
 
-Each file's length after the move, measured by running the move script over the whole sequence on
-a scratch copy of `master` and formatting each step with `cargo fmt`:
+Each file's length after the move, as landed (each step moved by script, formatted with
+`cargo fmt`, then the links of D7 kind 4 written by hand):
 
 | File | Lines | Unit tests |
 | --- | --- | --- |
-| `mod.rs` | 713 | 1 |
-| `graph.rs` | 543 | 5 |
-| `start.rs` | 1,191 | 14 |
-| `stop.rs` | 546 | 6 |
-| `shutdown.rs` | 623 | 7 |
-| `recovery.rs` | 962 | 8 |
-| `watchdog.rs` | 652 (516 today) | +1 |
-| `fixture.rs` | 352 (310 today) | 0 |
+| `mod.rs` | 727 | 1 |
+| `graph.rs` | 549 | 5 |
+| `start.rs` | 1,184 | 14 |
+| `stop.rs` | 549 | 6 |
+| `shutdown.rs` | 625 | 7 |
+| `recovery.rs` | 967 | 8 |
+| `watchdog.rs` | 654 (516 before) | +1 |
+| `fixture.rs` | 350 (310 before) | 0 |
 
-`mod.rs` after each step: 4,613 → 4,577 (fixture), 4,062 (graph), 2,899 (start), 2,379 (stop),
-1,784 (shutdown), 847 (recovery), 713 (watchdog). It leaves the baseline at the recovery step.
+`mod.rs` after each step: 4,613 → 4,576 (fixture), 4,062 (graph), 2,909 (start), 2,390 (stop),
+1,796 (shutdown), 860 (recovery), 727 (watchdog). It leaves the baseline at the recovery step.
 
 The largest is `start.rs`; nothing enters the baseline, and `mod.rs` leaves it.
 
@@ -116,7 +116,7 @@ The largest is `start.rs`; nothing enters the baseline, and `mod.rs` leaves it.
 Five plain `mod` lines, in the alphabetical order the existing list keeps: `mod graph;`,
 `mod recovery;`, `mod shutdown;`, `mod start;`, `mod stop;`. None is `pub(crate)`: nothing outside
 `services` names a path into them, because every caller outside reaches a method on `Registry`
-(whose path is unchanged) — except two doc links, which D6 lists.
+(whose path is unchanged), and `Budget` is re-exported (D2).
 
 ## D4 — a test goes with the function it is written about
 
@@ -172,24 +172,30 @@ explicit import shadows a glob one, exactly as the test function shadows the glo
   narrows**: from `services` it is `pub(in crate)`, from `services::shutdown` it is
   `pub(in crate::services)`. The only callers are in `runner.rs`, inside `services`. This is the
   one change of meaning in the task and it is a narrowing the compiler checks.
-- `Deadlines`, `begin`, `block`, `stop_one`, `reconcile`, `discard`, `survivor`, `settled`,
-  `settled_after_asking`, `decided_by`, `Start`, `remember_rituals`, `remember_provisioning`,
-  `hand_over` stay private: each is called only from its new file.
+- **`settled`**: private → `pub(super)`, for one doc link: `runner.rs`'s `Readiness::Down` says
+  *see [`super::settled`]*, now `super::start::settled`, and rustdoc does not resolve a link to a
+  private item of a sibling module.
+- `Deadlines`, `begin`, `block`, `stop_one`, `reconcile`, `discard`, `survivor`,
+  `settled_after_asking`, `decided_by`, `remember_rituals`, `remember_provisioning`, `hand_over`
+  stay private: each is called only from its new file. `Start` stays private in `mod.rs`.
 - Everything already `pub(crate)` stays `pub(crate)`.
-- No `pub(crate) use` re-export from `mod.rs`: a caller names where an item is, as T207a–c chose.
+- One `pub(crate) use` re-export, `shutdown::Budget`, for D2's reason. Otherwise a caller names
+  where an item is, as T207a–c chose.
 
 ## D6 — what callers change
 
 Almost nothing, because a method is called on a `Registry` and its file is not in the call:
 
-- `runner.rs`: `super::Budget` → `super::shutdown::Budget` in the field type (line 433) and in four
-  doc links (87, 424, 1708, 1762); `use super::super::Budget;` in its tests →
-  `use super::super::shutdown::Budget;`; the doc link `[`super::settled`]` (218) →
-  `[`super::start::settled`]`. Same lengths ± a few characters; `runner.rs` is in the baseline and
-  does not grow by a line.
-- `main.rs:188`: the doc link `services::Budget` → `services::shutdown::Budget`.
-- `mod.rs`: `use shutdown::Budget;` for the field; its `use runner::{Readiness, Runner, gone};`
-  loses `gone` with recovery and `Runner` with start; `Adopted`, `StartTime`, `Notify`,
+- `runner.rs`: the doc link `[`super::settled`]` (218) → `[`super::start::settled`]`, the one
+  line it changes; it is in the baseline and does not grow. Its five uses of `super::Budget` and
+  `main.rs:188`'s `services::Budget` stay as they are, through the re-export.
+- Doc links that crossed a file, as reference links at the end of their doc block (D7 kind 4):
+  `[`Notify`]` and `[`first_run::ensure`]` in `graph.rs`; `[`ServiceSpec`]` on the `specs` field in
+  `mod.rs`; `[`ServiceState::is_supervised`]` and the `runner` module in `stop.rs` and
+  `recovery.rs`, where the inline `(runner)` becomes `[runner]` so the line keeps its length; and
+  `start.rs`'s `(runner::Readiness::of)` becomes `(Readiness::of)`, which it imports.
+- `mod.rs`: `pub(crate) use shutdown::Budget;` for the field; its
+  `use runner::{Readiness, Runner, gone};` loses `gone` with recovery and `Runner` with start; `Adopted`, `StartTime`, `Notify`,
   `JoinHandle`, `LogSubject` and the rest of its `use` lines lose whatever no remaining item uses,
   commit by commit, as clippy reports them.
 - Links by `Registry::method` (`databases.rs:243`, `runner.rs:397`, `runner.rs:1191`, `spec.rs:107`,
@@ -234,8 +240,8 @@ describes, because an item was inserted between a doc and its function at some p
 
 A move does not fix them. Each stays above the item it is attached to: `reconfigure` and `graph`
 both go to `graph.rs` in order; `remember_rituals` and `hand_over` both to `graph.rs`;
-`set_limits` and `ask_to_reload` both stay in `mod.rs`; `Fault` stays in `mod.rs` and keeps
-`Start`'s line while `Start` goes to `start.rs` without it. They are fixed in a commit of their own
+`set_limits` and `ask_to_reload` both stay in `mod.rs`; `Fault` and `Start` both stay in
+`mod.rs`. They are fixed in a commit of their own
 after the last move (D9).
 
 ### Order of commits
@@ -247,7 +253,7 @@ What a sibling calls first, so no file ever reaches into one that is about to mo
 2. **`graph.rs`** — `ritual_for` and `provisioning_for` leave before `start.rs` calls them.
 3. **`start.rs`** — `supervise` leaves before `recovery.rs` calls it.
 4. **`stop.rs`** — `claim_stop` leaves before `shutdown.rs` calls it.
-5. **`shutdown.rs`** — and `runner.rs`'s and `main.rs`'s paths to `Budget` with it.
+5. **`shutdown.rs`** — with the re-export of `Budget` in `mod.rs`.
 6. **`recovery.rs`**.
 7. **`watchdog.rs`**'s test.
 
@@ -262,7 +268,7 @@ were.
 
 - **State and construction.** Every field is declared in `mod.rs` and built in `Registry::new`,
   which does not move or change. `Budget::default()` is called there and resolves to the same type
-  through `use shutdown::Budget;`.
+  through `pub(crate) use shutdown::Budget;`.
 - **Locks and their order.** The one order that matters — `running` before `stopping`, documented
   on the `stopping` field — is taken inside `stop_one` (stop) and `shut_down` (shutdown), each
   holding `running` while it calls `claim_stop`, which takes `stopping`. Bodies do not change, so
@@ -289,8 +295,10 @@ were.
   Windows run cannot see is what the moved code *calls* on other OSes:
   `mixengine_platform::process::sweep_stale_groups` (Linux cgroups) at the top of `recover`, and
   `Adopted::identify`/`stop` in recovery. Those calls do not change, but the recovery and stop tests
-  exercise them differently per OS, so they are run on Linux through WSL before the push, and
-  `cargo check --all-targets --target aarch64-apple-darwin` covers macOS (`before-pushing` skill).
+  exercise them differently per OS, so they are run on Linux through WSL before the push. macOS
+  cannot be checked from here for this crate — the daemon pulls a build script that needs a C
+  compiler for macOS, which is why the `before-pushing` skill checks only `mixengine-platform` and
+  `mixengine-elevate` there — and nothing in it is gated on macOS; CI's macOS leg answers for it.
 - **Method resolution.** Inherent methods of `Registry` resolve the same from any module, and
   their names are already unique on the type.
 - **Tests and their selection.** Test paths change (`services::tests::x` →
@@ -308,7 +316,8 @@ code, somewhere else":
 - The five misattached doc blocks above: `graph`'s doc moved from above `reconfigure` to above
   `graph`; `hand_over`'s from above `remember_rituals` to above `hand_over`; `ask_to_reload`'s from
   above `set_limits` to above `ask_to_reload`; `Start`'s line from above `Fault` to above `Start`
-  (in `start.rs`); `record`'s `//` made `///`. Pure moves of doc lines, no wording changed; the
+  (both in `mod.rs`); `record`'s `//` made `///`. `hand_over`'s doc takes the `[`Notify`]`
+  reference link with it. Pure moves of doc lines, no wording changed; the
   rustdoc of each item then says what it is about.
 - `fixture.rs`'s `//!` ("The scaffolding two test modules need … Two callers"): after the move it
   is used by six test modules in `services` plus `api`. Reworded to drop the count.
@@ -341,7 +350,7 @@ What proves nothing changed, before the first commit and after each:
   `node scripts/check-file-sizes.mjs --shrink` once those are green.
 - **`cargo check --workspace --release --all-targets`**, for `cfg(debug_assertions)`.
 - **Linux through WSL** per the `before-pushing` skill (`mixengine-testkit --bins` built first, per
-  `local-test-environment`), and macOS by `cargo check --target aarch64-apple-darwin`.
+  `local-test-environment`); macOS as D8 says.
 
 No new tests: there is no new behaviour.
 
@@ -361,8 +370,8 @@ Nothing cross-cutting is decided.
 
 ## Documentation, when it lands
 
-- `docs/roadmap/phase-45-files-that-fit-in-one-read.md`: T207d added with this spec (`[ ]`),
-  ticked when it lands; the goal line and **M45** gain `services/mod.rs`.
+- `docs/roadmap/phase-45-files-that-fit-in-one-read.md`: T207d added with this spec, ticked
+  when it lands; the goal line and **M45** gain `services/mod.rs`.
   `docs/roadmap/todo.md`'s row for phase 45 says `T207–T207d` and counts five tasks.
 - This spec flipped to `implemented` in the commit that ticks T207d, and `docs/specs/README.md`
   regenerated.

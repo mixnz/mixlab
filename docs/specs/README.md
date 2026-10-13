@@ -210,4 +210,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-13 | [Files that fit in one read: a size ratchet, and `mix` split by command (design)](2026-10-13-files-that-fit-in-one-read-design.md) | T207, T207a | implemented |
 | 2026-10-13 | [`render.rs` split by command, its tests beside what they test (design)](2026-10-13-render-split-by-command-design.md) | T207b | implemented |
 | 2026-10-13 | [The daemon's `rpc.rs` split by capability, its tests beside what they test (design)](2026-10-13-t207c-rpc-split-by-capability-design.md) | T207c | implemented |
-| 2026-10-13 | [The daemon's `services/mod.rs` split by capability, its tests beside what they test (design)](2026-10-13-t207d-services-split-by-capability-design.md) | T207d | draft |
+| 2026-10-13 | [The daemon's `services/mod.rs` split by capability, its tests beside what they test (design)](2026-10-13-t207d-services-split-by-capability-design.md) | T207d | implemented |

@@ -33,7 +33,7 @@ Design: [2026-10-13-files-that-fit-in-one-read-design.md](../specs/2026-10-13-fi
       `api/test_daemon.rs`. A move and only a move: 705 unit tests before and after, and `rpc.rs`
       leaves the baseline. Design:
       [2026-10-13-t207c-rpc-split-by-capability-design.md](../specs/2026-10-13-t207c-rpc-split-by-capability-design.md).
-- [ ] **T207d** `crates/mixengine-daemon/src/services/mod.rs` split by capability: the `Registry`,
+- [x] **T207d** `crates/mixengine-daemon/src/services/mod.rs` split by capability: the `Registry`,
       its fields and the types they are made of stay, and its operations move to
       `services/<capability>.rs` (`graph`, `start`, `stop`, `shutdown`, `recovery`), each test with
       the method it asserts on, its shared helpers in `services/fixture.rs`. A move and only a
