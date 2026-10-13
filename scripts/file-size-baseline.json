@@ -23,7 +23,7 @@
     "crates/mixengine-daemon/src/doctor.rs": 2055,
     "crates/mixengine-daemon/src/elevation.rs": 2825,
     "crates/mixengine-daemon/src/main.rs": 2683,
-    "crates/mixengine-daemon/src/services/mod.rs": 2909,
+    "crates/mixengine-daemon/src/services/mod.rs": 2390,
     "crates/mixengine-daemon/src/services/runner.rs": 3219,
     "crates/mixengine-daemon/src/sites.rs": 1575,
     "crates/mixengine-daemon/src/uninstall/inventory.rs": 1745,
