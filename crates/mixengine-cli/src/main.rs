@@ -33,38 +33,39 @@ use std::time::SystemTime;
 use clap::{CommandFactory as _, Parser, Subcommand};
 use mixengine_platform::ipc::Endpoint;
 use mixengine_proto::{
-    AnswerSubject, AutostartReport, BlueprintApplied, BlueprintApply, BlueprintApplyResponse,
-    BlueprintCapture, BlueprintImport, BlueprintList, BlueprintPlan, BlueprintSummary,
-    BundleReport, CaRotateReport, CaStatus, CaUninstallReport, CertIssue, CertIssueReport,
-    CertStatusQuery, CertStatusReport, CleanupQuery, CleanupReport, CredentialStore, DaemonStatus,
-    DatabaseAccount, DatabaseClientQuery, DatabaseClientReport, DatabaseCreate,
-    DatabaseCredentials, DatabaseCredentialsQuery, DatabaseHandoff, DatabaseOpen,
-    DiagnosticsBundle, DiskCategory, DiskUsage, DiskUsageQuery, Disposition, DoctorRepair,
-    DoctorReport, ElevationDrop, ElevationStatus, Error, ErrorCode, ExtensionAvailable,
-    ExtensionCatalogue, ExtensionChange, ExtensionChoice, ExtensionConsent, ExtensionId,
-    ExtensionInspect, ExtensionInspection, ExtensionInstall, ExtensionList, ExtensionOrigin,
-    ExtensionPlan, ExtensionPlanRequest, ExtensionRemoval, ExtensionTarget, ExtensionUninstall,
-    FrontEndReport, FrontEndServer, FrontEndSwitch, IdleReport, InstalledExtensions, JobFilter,
-    JobId, JobList, JobOutcome, JobQuery, JobState, JobSummary, JobWait, LogFrame, MetricsFrame,
-    MetricsHistory, Millis, MismatchAnswer, PackageCatalogue, PackageFilter, PackageInstall,
-    PackageList, PackageRemoval, PackageTarget, PackageUpgrade, PackageUpgradeQuery,
-    PackageVersion, PendingOpId, PlanAction, Priority, ProjectCreate, ProjectDetail, ProjectExport,
-    ProjectList, ProjectQuery, ProjectRef, ProjectRemoval, ProjectUpdate, Reclaim, Removal,
-    RepairReport, ResetCredential, ResidueId, ResolvedRuntime, ResourceLimits, RouteTarget,
-    RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind, RuntimeList, RuntimeQuestion,
-    RuntimeRemoval, RuntimeSummary, RuntimeTarget, RuntimeUninstall, RuntimeUpgrade,
-    RuntimeUpgradeQuery, SaveResources, SaveResourcesSet, ScaffoldConsent, ServiceAutostartSet,
-    ServiceCreate, ServiceCreation, ServiceDelete, ServiceId, ServiceIdleSet, ServiceLimitsReport,
-    ServiceLimitsSet, ServiceList, ServiceQuery, ServiceRemoval, ServiceRole, ServiceSummary,
-    ServiceTarget, ServiceWalk, SignatureCheck, SiteCreate, SiteCreation, SiteDetail, SiteKind,
-    SiteList, SiteListQuery, SiteQuery, SiteRef, SiteRemoval, SiteRoute, SiteShare, SiteSharing,
-    SiteState, SiteUpdate, Timestamp, UninstallQuery, UninstallReport, UpdateApplied, UpdateApply,
-    UpdateCheck, UpdateDecide, UpdateDecision, UpdateFinish, UpdateHandOver, UpdateHandedOver,
-    UpdatePlacement, UpdateStatus, UpgradePlan, VersionAnswer, VersionConstraint, rpc,
+    AnswerSubject, BlueprintApplied, BlueprintApply, BlueprintApplyResponse, BlueprintCapture,
+    BlueprintImport, BlueprintList, BlueprintPlan, BlueprintSummary, BundleReport, CaRotateReport,
+    CaStatus, CaUninstallReport, CertIssue, CertIssueReport, CertStatusQuery, CertStatusReport,
+    CleanupQuery, CleanupReport, CredentialStore, DaemonStatus, DatabaseAccount,
+    DatabaseClientQuery, DatabaseClientReport, DatabaseCreate, DatabaseCredentials,
+    DatabaseCredentialsQuery, DatabaseHandoff, DatabaseOpen, DiagnosticsBundle, DiskCategory,
+    DiskUsage, DiskUsageQuery, Disposition, DoctorRepair, DoctorReport, ElevationDrop,
+    ElevationStatus, Error, ErrorCode, ExtensionAvailable, ExtensionCatalogue, ExtensionChange,
+    ExtensionChoice, ExtensionConsent, ExtensionId, ExtensionInspect, ExtensionInspection,
+    ExtensionInstall, ExtensionList, ExtensionOrigin, ExtensionPlan, ExtensionPlanRequest,
+    ExtensionRemoval, ExtensionTarget, ExtensionUninstall, FrontEndReport, FrontEndServer,
+    FrontEndSwitch, IdleReport, InstalledExtensions, JobFilter, JobId, JobList, JobOutcome,
+    JobQuery, JobState, JobSummary, JobWait, LogFrame, MetricsFrame, MetricsHistory, Millis,
+    MismatchAnswer, PackageCatalogue, PackageFilter, PackageInstall, PackageList, PackageRemoval,
+    PackageTarget, PackageUpgrade, PackageUpgradeQuery, PackageVersion, PendingOpId, PlanAction,
+    Priority, ProjectCreate, ProjectDetail, ProjectExport, ProjectList, ProjectQuery, ProjectRef,
+    ProjectRemoval, ProjectUpdate, Reclaim, Removal, RepairReport, ResetCredential, ResidueId,
+    ResolvedRuntime, ResourceLimits, RouteTarget, RuntimeCatalogue, RuntimeFilter, RuntimeInstall,
+    RuntimeKind, RuntimeList, RuntimeQuestion, RuntimeRemoval, RuntimeSummary, RuntimeTarget,
+    RuntimeUninstall, RuntimeUpgrade, RuntimeUpgradeQuery, SaveResources, SaveResourcesSet,
+    ScaffoldConsent, ServiceAutostartSet, ServiceCreate, ServiceCreation, ServiceDelete, ServiceId,
+    ServiceIdleSet, ServiceLimitsReport, ServiceLimitsSet, ServiceList, ServiceQuery,
+    ServiceRemoval, ServiceRole, ServiceSummary, ServiceTarget, ServiceWalk, SignatureCheck,
+    SiteCreate, SiteCreation, SiteDetail, SiteKind, SiteList, SiteListQuery, SiteQuery, SiteRef,
+    SiteRemoval, SiteRoute, SiteShare, SiteSharing, SiteState, SiteUpdate, Timestamp,
+    UninstallQuery, UninstallReport, UpdateApplied, UpdateApply, UpdateCheck, UpdateDecide,
+    UpdateDecision, UpdateFinish, UpdateHandOver, UpdateHandedOver, UpdatePlacement, UpdateStatus,
+    UpgradePlan, VersionAnswer, VersionConstraint, rpc,
 };
 
 use autostart::Autostart;
 use client::{Client, ask, encode};
+use commands::autostart::{AutostartCommand, autostart_entry};
 use commands::daemon::{DaemonCommand, daemon_credential_store, daemon_stop};
 use commands::domain::{DomainCommand, domain};
 use commands::path::{PathCommand, path};
@@ -1193,34 +1194,6 @@ enum SiteStateArg {
     Enabled,
     /// Declare it and do not serve it.
     Disabled,
-}
-
-/// `mix autostart …` — one subcommand per `autostart.*` method.
-///
-/// **None of the three takes an argument**, for `mix path`'s reason above: there is one entry per
-/// user and one home this can be about, and an argument would be a command for registering
-/// arbitrary programs to run at somebody's login.
-///
-/// **`mix autostart` and not `mix daemon autostart`.** `daemon.*` is about the daemon that is
-/// running; a logon task, a LaunchAgent and a systemd user unit outlive every daemon that ever
-/// registered them.
-#[derive(Debug, Subcommand)]
-enum AutostartCommand {
-    /// Say whether this home's daemon starts when you log in.
-    Status,
-
-    /// Register it.
-    ///
-    /// Does **not** start the daemon: there is one running, and it is the one answering this. What
-    /// it changes is what happens at your next login. Idempotent, and it says which of the two it
-    /// did.
-    Enable,
-
-    /// Remove it.
-    ///
-    /// Does **not** stop the daemon that is running. Turning off "start at login" is not a request
-    /// to lose the daemon you are using.
-    Disable,
 }
 
 /// `mix elevation …` — one subcommand per `elevation.*` method, and nothing that is not one.
@@ -5018,41 +4991,6 @@ async fn package(
             }))?;
         }
     }
-
-    Ok(ExitCode::SUCCESS)
-}
-
-/// `mix autostart …`: one call, one rendering — roadmap task **T85b**.
-///
-/// No exit code of its own, on `mix path`'s rule: each of these either did what it said or failed
-/// outright, and a machine with no mechanism at all is something to report rather than a failure of
-/// the command.
-///
-/// **The `autostart` parameter is not what this command is about.** It is the client's own — the
-/// thing that starts a daemon when none answers, in [`crate::autostart`] — and every command in this
-/// file takes it under that name. The two meet here and nowhere else, which is why this function is
-/// `autostart_entry` and the parameter is left alone.
-async fn autostart_entry(
-    command: AutostartCommand,
-    endpoint: &Endpoint,
-    autostart: Option<&Autostart>,
-    json: bool,
-) -> Result<ExitCode, Error> {
-    let mut client = Client::connect(endpoint, autostart).await?;
-
-    let (method, rendered_as) = match command {
-        AutostartCommand::Status => (rpc::method::AUTOSTART_STATUS, render::Autostarted::Asked),
-        AutostartCommand::Enable => (rpc::method::AUTOSTART_ENABLE, render::Autostarted::Enabled),
-        AutostartCommand::Disable => (
-            rpc::method::AUTOSTART_DISABLE,
-            render::Autostarted::Disabled,
-        ),
-    };
-
-    let report: AutostartReport = ask(&mut client, method, None).await?;
-    emit(&rendered(json, &report, || {
-        render::autostart_report(rendered_as, &report)
-    }))?;
 
     Ok(ExitCode::SUCCESS)
 }
