@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import {
   mongoCollectionPage,
   mongoDeleteDocument,
@@ -262,10 +262,11 @@ function NoSqlTable({
    * written against. That shape is what a later visit checks it by: conditions the workspace has
    * let go of are filed straight back from here, and only the token tells them apart from
    * conditions that still mean something. */
-  function rememberFilters() {
+  // A callback rather than an effect event: the collection swap below calls it during render.
+  const rememberFilters = useCallback(() => {
     const { key, ...remembered } = filterStateRef.current;
     filterCache.set(key, remembered);
-  }
+  }, [filterCache]);
 
   // Everything above is about one collection, and the page and the applied filters are what the
   // fetch below reads. They are swapped over here, during the render that first sees a new
@@ -316,7 +317,7 @@ function NoSqlTable({
     return () => {
       rememberFilters();
     };
-  }, [filterCache]);
+  }, [rememberFilters]);
 
   /** The list as it stands, for the write on the way out — the same reason `filterStateRef` exists:
    *  a cleanup runs long after the last render and cannot read the state itself. */
@@ -351,6 +352,26 @@ function NoSqlTable({
     setReloadToken((n) => n + 1);
   }, []);
 
+  /** Marks the documents a remembered collection came back with as loaded — or not — for the fetch
+   *  below.
+   *
+   *  What those documents were read with, so the fetch can tell that nothing is owed — but only if
+   *  the bar is asking the same question they answer. The two are kept apart (the bar in
+   *  `filterCache`, the documents here), and conditions applied while a read was still out are
+   *  filed with nothing to match, so the pair has to be checked rather than assumed. By value: the
+   *  arrays come from different places, and the fetch's own identity check is the one that has to
+   *  be satisfied afterwards, which is why this render's array is what gets marked.
+   *
+   *  An effect event because it reads the applied filters and the reload token as they stand, and
+   *  must not be what makes the collection swap below run: a condition applied is a refetch, not a
+   *  collection put back from memory. */
+  const markRememberedDocuments = useEffectEvent((cached: DocumentRequest) => {
+    requestRef.current =
+      JSON.stringify(cached.filters) === JSON.stringify(appliedFilters)
+        ? { ...cached, filters: appliedFilters, reloadToken }
+        : null;
+  });
+
   // Runs when the selected collection changes, and when the database's shape does (not on
   // page/pageSize changes). A collection that has been here before is put back as it was left —
   // its documents included, so the trip costs nothing and shows what it showed; otherwise the
@@ -368,16 +389,7 @@ function NoSqlTable({
       setDocuments(cached.documents);
       setTotal(cached.total);
       setTarget({ connectionId, database: selectedDb, collection: selectedCollection });
-      // What those documents were read with, so the fetch below can tell that nothing is owed — but
-      // only if the bar is asking the same question they answer. The two are kept apart (the bar in
-      // `filterCache`, the documents here), and conditions applied while a read was still out are
-      // filed with nothing to match, so the pair has to be checked rather than assumed. By value:
-      // the arrays come from different places, and the fetch's own identity check is the one that
-      // has to be satisfied afterwards, which is why this render's array is what gets marked.
-      requestRef.current =
-        JSON.stringify(cached.request.filters) === JSON.stringify(appliedFilters)
-          ? { ...cached.request, filters: appliedFilters, reloadToken }
-          : null;
+      markRememberedDocuments(cached.request);
     } else {
       setDocuments([]);
       setTotal(0);
@@ -388,24 +400,26 @@ function NoSqlTable({
     }
     // `schemaToken` is in here as well as the collection: a change the app made to this database
     // leaves what is on screen describing something the server no longer has, and running this
-    // again is what empties the list and marks a read owed.
-  }, [connectionId, selectedDb, selectedCollection, schemaToken]);
-
-  const request: DocumentRequest = {
-    connectionId,
-    db: selectedDb,
-    collection: selectedCollection,
-    page,
-    pageSize,
-    filters: appliedFilters,
-    reloadToken,
-    schemaToken,
-  };
+    // again is what empties the list and marks a read owed. The cache is the workspace's, one for
+    // its life, so it never runs it.
+  }, [connectionId, selectedDb, selectedCollection, schemaToken, documentCache]);
 
   useEffect(() => {
     // Nothing is read for a tab nobody is looking at: the sidebar walked while the Stats tab is up
     // would otherwise send a page of documents and a count per collection passed over.
     if (!active) return;
+    // Built here rather than during render: it is this read's, and every field of it is already
+    // something this effect runs again for.
+    const request: DocumentRequest = {
+      connectionId,
+      db: selectedDb,
+      collection: selectedCollection,
+      page,
+      pageSize,
+      filters: appliedFilters,
+      reloadToken,
+      schemaToken,
+    };
     if (sameRequest(requestRef.current, request)) return;
 
     const db = selectedDb;
@@ -460,6 +474,9 @@ function NoSqlTable({
     schemaToken,
     active,
     onError,
+    // One each for the life of the workspace, so listing them costs no read.
+    documentCache,
+    t,
   ]);
 
   // Back to where the list was left. `scrollPosRef` is the only record of that: hiding the pane
@@ -498,7 +515,7 @@ function NoSqlTable({
         setWriteCount((n) => n - 1);
       }
     },
-    [target, onError],
+    [target, onError, t],
   );
 
   /** The page as it stands, for the adopt below — which runs from a card's write and can land after
@@ -555,7 +572,7 @@ function NoSqlTable({
         setWriteCount((n) => n - 1);
       }
     },
-    [target, flushAll, reload, onError, onDocumentsChanged],
+    [target, flushAll, reload, onError, onDocumentsChanged, t],
   );
 
   /** Runs `action` once every card has written out its staged edits. Costs nothing when
@@ -568,7 +585,7 @@ function NoSqlTable({
         .catch((e) => onError(errorMessage(t, e)))
         .finally(action);
     },
-    [flushAll, onError],
+    [flushAll, onError, t],
   );
 
   /** Runs the filter bar's rows against the collection. Like a reload, whatever the cards have

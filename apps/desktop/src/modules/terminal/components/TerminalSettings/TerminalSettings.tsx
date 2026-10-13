@@ -51,7 +51,7 @@ function TerminalSettings() {
       // being swallowed.
       .catch((e) => setError(errorMessage(t, e)));
     // Once: a machine's shell list does not change midway.
-  }, []);
+  }, [t]);
 
   /* Also once, and for the same reason — fonts installed on the machine do not sprout while the
      dialog is open. Measured with a canvas, so it can only run once there is a DOM, i.e. in an

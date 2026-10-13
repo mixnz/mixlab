@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Button from "../../../../components/Button";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
 import ContextMenu from "../../../../components/ContextMenu";
@@ -69,7 +69,7 @@ function RequestList({
   onPin,
   onDelete,
 }: Props) {
-  const { t, lang } = useTranslation();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState("");
   const [openGroups, setOpenGroups] = useState({ saved: true, recent: true });
   const [menu, setMenu] = useState<MenuState | null>(null);
@@ -77,18 +77,20 @@ function RequestList({
   const [deleting, setDeleting] = useState<RestRequest | null>(null);
 
   /** What a row shows: the name, else the URL cut down, else that it has neither yet. */
-  const label = (request: RestRequest) =>
-    request.name !== "" ? request.name : shortUrl(request.url) || t("rest.untitled");
+  const label = useCallback(
+    (request: RestRequest) =>
+      request.name !== "" ? request.name : shortUrl(request.url) || t("rest.untitled"),
+    [t],
+  );
 
+  // No `lang` here: this holds a function, not words. `t` reads the current dictionary each time
+  // it is called, and the rows are filtered afresh on every render, a language switch included.
   const match = useMemo(() => {
     const needle = filter.trim().toLowerCase();
     if (needle === "") return () => true;
     return (request: RestRequest) =>
       label(request).toLowerCase().includes(needle) || request.url.toLowerCase().includes(needle);
-    // `label` is rebuilt each render and depends only on `t`, so the filter follows the language.
-  // `lang` beside `t`: `t` is one function for the life of the app now, so it is `lang` that says
-  // this holds words and has to be built again when they change. See `i18n/index.tsx`.
-  }, [filter, t, lang]);
+  }, [filter, label]);
 
   /** Deleting from Recent asks nothing: the group empties itself anyway, and the row came from a
    *  paste rather than from a decision. Saved is asked about, as before. */

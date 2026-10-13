@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import type { RedisKeyInfo } from "../../redis/api";
 import {
   ancestorPaths,
@@ -106,11 +106,14 @@ function RedisKeyList({
 
   // A path means something else under a different separator, so what was open under the old one
   // says nothing about the new one — the tree starts closed again, reopened only down to the
-  // selected key so it doesn't vanish out from under the selection. `selectedKey` is read here
-  // but is deliberately not a dependency: selecting a key must not close the tree around it.
-  useEffect(() => {
-    setExpanded(ancestorPaths(selectedKey, separator));
+  // selected key so it doesn't vanish out from under the selection. `selectedKey` is read through
+  // an effect event rather than listed: selecting a key must not close the tree around it.
+  const closeTreeFor = useEffectEvent((nextSeparator: string) => {
+    setExpanded(ancestorPaths(selectedKey, nextSeparator));
     setRevealed(ROW_REVEAL_STEP);
+  });
+  useEffect(() => {
+    closeTreeFor(separator);
   }, [separator]);
 
   // A shorter list than last render is a different list — a rescan, another database, a deleted

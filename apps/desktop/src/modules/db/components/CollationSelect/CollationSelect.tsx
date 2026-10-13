@@ -80,8 +80,7 @@ function CollationSelect({ value, collations, placeholder, ariaLabel, disabled, 
       list.splice(1, 0, { value: current, label: current });
     }
     return list;
-  // `lang` beside `t`: `t` is one function for the life of the app now, so it is `lang` that says
-  // this holds words and has to be built again when they change. See `i18n/index.tsx`.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `lang` beside `t`: `t` is one function for the life of the app, so `lang` is what rebuilds these words when they change. See `i18n/index.tsx`.
   }, [collations, current, placeholder, t, lang]);
 
   if (collations.length === 0) {

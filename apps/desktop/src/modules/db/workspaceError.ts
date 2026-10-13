@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "../../i18n";
 
 /**
@@ -25,16 +25,24 @@ export function reachesErrorBanner(message: string, lostMessage: string | null):
  *
  * Returns exactly the shape of `useState`, so `setError("")` to dismiss the banner still works as
  * before: only that one sentence is swallowed, and the empty string is not that sentence.
+ *
+ * The setter is one function for the life of the workspace, as `useState`'s is. It asks which
+ * sentence to swallow at the moment it is called rather than when it was made: a setter rebuilt
+ * whenever the language or the tunnel changed had to be listed in every effect that reports an
+ * error, and listing it would re-run them — re-reading a collection list and dropping the
+ * selection — for no more than a change of language.
  */
 export function useWorkspaceError(tunnelled: boolean): [string, (message: string) => void] {
   const { t } = useTranslation();
   const [error, setError] = useState("");
-  const lostMessage = tunnelled ? t("error.connectionLost") : null;
+  const tunnelledRef = useRef(tunnelled);
+  tunnelledRef.current = tunnelled;
   const report = useCallback(
     (message: string) => {
+      const lostMessage = tunnelledRef.current ? t("error.connectionLost") : null;
       if (reachesErrorBanner(message, lostMessage)) setError(message);
     },
-    [lostMessage]
+    [t]
   );
   return [error, report];
 }

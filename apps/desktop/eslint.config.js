@@ -48,13 +48,13 @@ export default tseslint.config(
 
       "react-hooks/rules-of-hooks": "error",
 
-      /* A warning, and `npm run lint` pins the count so it can only fall — see package.json.
-         An error today would mean fifty judgement calls made in an afternoon, and the honest
-         answer to most of them is a disable comment, which is an error rule talked out of its
-         job. A ceiling says the true thing instead: new code may not add one, and the backlog is
-         a backlog. The bug this rule was brought in for is already dealt with at its source —
-         `t` no longer changes identity, so no callback can be holding an old one. */
-      "react-hooks/exhaustive-deps": "warn",
+      /* An error now that the backlog is gone. It was a warning under a ceiling that could only
+         fall while there were fifty of them; they were worked off by what each one was: a value
+         that never changes identity (`t`, the workspace's caches and error setter) listed, a
+         parent's callback or a value an effect must not re-run for reached through
+         `useEffectEvent`, a helper called during render made a `useCallback`. A disable comment
+         is for a dependency left out or added on purpose, and says why after its `--`. */
+      "react-hooks/exhaustive-deps": "error",
     },
   },
 

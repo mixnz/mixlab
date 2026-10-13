@@ -232,7 +232,7 @@ function RedisWorkspace({
       .then(setDatabases)
       .catch((e) => setLocalError(errorMessage(t, e)))
       .finally(() => setDatabasesLoading(false));
-  }, [connectionId]);
+  }, [connectionId, setLocalError, t]);
 
   useEffect(() => loadDatabases(), [loadDatabases]);
 
@@ -295,7 +295,7 @@ function RedisWorkspace({
     return () => {
       scanRun.current += 1;
     };
-  }, [connectionId, appliedPattern, selectedDb, scanId, keyLimit]);
+  }, [connectionId, appliedPattern, selectedDb, scanId, keyLimit, setLocalError, t]);
 
   /** Appends one more slice of a keyspace the sweep gave up on at its ceiling. The
    * order is not settled at that point and cannot be, so this is the one path where new names
@@ -416,8 +416,7 @@ function RedisWorkspace({
       optionLabel: t("redis.scanLimitOption", { n: limit.toLocaleString() }),
       searchText: String(limit),
     }));
-  // `lang` beside `t`: `t` is one function for the life of the app now, so it is `lang` that says
-  // this holds words and has to be built again when they change. See `i18n/index.tsx`.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `lang` beside `t`: `t` is one function for the life of the app, so `lang` is what rebuilds these words when they change. See `i18n/index.tsx`.
   }, [keyLimit, t, lang]);
 
   return (

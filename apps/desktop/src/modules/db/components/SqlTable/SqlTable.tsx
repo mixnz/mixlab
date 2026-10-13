@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ActionBar from "../../../../components/ActionBar";
 import CellDialog from "../../../../components/CellDialog";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
@@ -335,11 +335,12 @@ function SqlTable({
    * nothing in it, and filing that away would read on the way back in as a bar deliberately
    * emptied — leaving the table with no `id =` row to start from, for good.
    */
-  function rememberFilters() {
+  // A callback rather than an effect event: the table swap below calls it during render.
+  const rememberFilters = useCallback(() => {
     const { key, rows, applied, schemaToken: token } = filterStateRef.current;
     if (filtersSeededForRef.current !== key) return;
     filterCache.set(key, { rows, applied, schemaToken: token });
-  }
+  }, [filterCache]);
 
   // What the fetch below reads — the page, the order and the conditions — is about one table, so
   // it is swapped over here, during the render that first sees a new table, rather than from an
@@ -383,7 +384,7 @@ function SqlTable({
     return () => {
       rememberFilters();
     };
-  }, [filterCache]);
+  }, [rememberFilters]);
 
   /** The grid as it stands, for the write on the way out — the same reason `filterStateRef` exists:
    *  a cleanup runs long after the last render and cannot read the state itself. */
@@ -548,7 +549,7 @@ function SqlTable({
     setEditingCellState(next);
   }
 
-  function measureColumnWidths() {
+  const measureColumnWidths = useCallback(() => {
     // A tab that is up but not on show has no layout at all, so every header comes back 0 wide.
     // Recording that would leave the edit input pinned to nothing; what was measured while the tab
     // was last looked at stays until it can be measured again.
@@ -559,7 +560,7 @@ function SqlTable({
       if (el) widths[c] = el.offsetWidth;
     }
     setColumnWidths(widths);
-  }
+  }, [columns]);
 
   useEffect(() => {
     currentTableRef.current = { db: selectedDb, table: selectedTable };
@@ -589,7 +590,7 @@ function SqlTable({
    * dozen elements — and it is stable however narrow the column gets, since both of these are
    * inline boxes with widths of their own rather than things that shrink to fit.
    */
-  function headerExtras(): number[] {
+  const headerExtras = useCallback((): number[] => {
     return columns.map((c) => {
       const th = thRefs.current.get(c);
       if (!th) return 0;
@@ -604,7 +605,7 @@ function SqlTable({
       }
       return Math.ceil(width);
     });
-  }
+  }, [columns]);
 
   // What every column is pinned to while the page is windowed, measured over the whole page against
   // a canvas rather than by laying the rows out — see `virtualRows.ts`. Before paint, so the first
@@ -628,7 +629,7 @@ function SqlTable({
       headerExtras()
     );
     setGridColumns(widths && { widths, total: widths.reduce((sum, w) => sum + w, 0) });
-  }, [virtual, columns, rows, columnMeta, active]);
+  }, [virtual, columns, rows, columnMeta, active, headerExtras]);
 
   // Re-measure each column's rendered width whenever the data or layout that
   // could affect it changes, so the edit input/textarea can be pinned to it
@@ -636,7 +637,7 @@ function SqlTable({
   // own intrinsic size, causing a visible jump when entering edit mode).
   useLayoutEffect(() => {
     measureColumnWidths();
-  }, [columns, rows, layoutWidth, gridColumns, active]);
+  }, [columns, rows, layoutWidth, gridColumns, active, measureColumnWidths]);
 
   useEffect(() => {
     function onResize() {
@@ -644,7 +645,26 @@ function SqlTable({
     }
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [columns]);
+  }, [measureColumnWidths]);
+
+  /** Marks the rows a remembered table came back with as loaded — or not — for the fetch below.
+   *
+   *  What those rows were read with, so the fetch can tell that nothing is owed — but only if the
+   *  bar is asking the same question the rows answer. The two are kept apart (the bar in
+   *  `filterCache`, the rows here), and conditions applied while a read was still out are filed
+   *  with no rows to match, so the pair has to be checked rather than assumed. By value: the arrays
+   *  come from different places, and the fetch's own identity check is the one that has to be
+   *  satisfied afterwards, which is why this render's array is what gets marked as loaded.
+   *
+   *  An effect event because it reads the applied filters and the reload token as they stand, and
+   *  must not be what makes the table swap below run: a condition applied is a refetch, not a
+   *  table put back from memory. */
+  const markRememberedRows = useEffectEvent((cached: TableRequest) => {
+    requestRef.current =
+      JSON.stringify(cached.filters) === JSON.stringify(appliedFilters)
+        ? { ...cached, filters: appliedFilters, reloadToken }
+        : null;
+  });
 
   // Runs when the selected table changes, and when the database's shape does (not on page/pageSize
   // changes). A table that has been here before is put back as it was left — its rows included, so
@@ -672,16 +692,7 @@ function SqlTable({
       setTotal(cached.total);
       setFilterRows(remembered?.rows ?? initialFilterRows(cached.columns, "eq"));
       filtersSeededForRef.current = key;
-      // What those rows were read with, so the fetch below can tell that nothing is owed — but only
-      // if the bar is asking the same question the rows answer. The two are kept apart (the bar in
-      // `filterCache`, the rows here), and conditions applied while a read was still out are filed
-      // with no rows to match, so the pair has to be checked rather than assumed. By value: the
-      // arrays come from different places, and the fetch's own identity check is the one that has to
-      // be satisfied afterwards, which is why this render's array is what gets marked as loaded.
-      requestRef.current =
-        JSON.stringify(cached.request.filters) === JSON.stringify(appliedFilters)
-          ? { ...cached.request, filters: appliedFilters, reloadToken }
-          : null;
+      markRememberedRows(cached.request);
     } else {
       setRows([]);
       setTotal(0);
@@ -698,8 +709,9 @@ function SqlTable({
     }
     // `schemaToken` is in here as well as the table: a change the app made to this database leaves
     // what is on screen describing a shape the server no longer has, and running this again is what
-    // empties the grid and marks a read owed.
-  }, [selectedDb, selectedTable, schemaToken]);
+    // empties the grid and marks a read owed. The two caches are the workspace's, one each for its
+    // life, so they never run it.
+  }, [selectedDb, selectedTable, schemaToken, tableCache, filterCache]);
 
   // The indices in `selectedRows` only mean anything for the rows currently on
   // screen, so any refetch — a new page, a new size, a new order, a reload, a
@@ -716,22 +728,23 @@ function SqlTable({
     setExpandedCell(null);
   }, [selectedDb, selectedTable, page, pageSize, sort, appliedFilters, reloadToken]);
 
-  const request: TableRequest = {
-    connectionId,
-    db: selectedDb,
-    table: selectedTable,
-    page,
-    pageSize,
-    sort,
-    filters: appliedFilters,
-    reloadToken,
-    schemaToken,
-  };
-
   useEffect(() => {
     // Nothing is read for a tab nobody is looking at: the sidebar walked while the Structure tab is
     // up would otherwise send a page of rows and a count per table passed over.
     if (!active) return;
+    // Built here rather than during render: it is this read's, and every field of it is already
+    // something this effect runs again for.
+    const request: TableRequest = {
+      connectionId,
+      db: selectedDb,
+      table: selectedTable,
+      page,
+      pageSize,
+      sort,
+      filters: appliedFilters,
+      reloadToken,
+      schemaToken,
+    };
     if (sameRequest(requestRef.current, request)) return;
 
     const db = selectedDb;
@@ -803,6 +816,12 @@ function SqlTable({
     reloadToken,
     schemaToken,
     active,
+    // One each for the life of the workspace — the engine's api, its caches, the setter its error
+    // banner reads — so listing them costs no read.
+    api,
+    tableCache,
+    onError,
+    t,
   ]);
 
   function commitEditingCell() {

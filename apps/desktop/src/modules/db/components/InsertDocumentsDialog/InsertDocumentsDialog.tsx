@@ -117,7 +117,7 @@ function InsertDocumentsDialog({ collection, seedDocs, nextIds, onCancel, onSubm
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   async function addDraft() {
     setAddingDraft(true);

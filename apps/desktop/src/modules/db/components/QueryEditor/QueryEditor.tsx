@@ -246,10 +246,15 @@ function QueryEditor({
    * statement as the script changes, and asks again for the same script when Run is pressed. */
   const split = useRef<{ doc: string; statements: SqlStatement[] } | null>(null);
 
-  function statementsOf(doc: string): SqlStatement[] {
-    if (split.current?.doc !== doc) split.current = { doc, statements: splitStatements(doc, dialect.syntax) };
-    return split.current.statements;
-  }
+  // `dialect` is the engine's own constant, so this is one function for the life of the workspace
+  // and listing it below rebuilds nothing.
+  const statementsOf = useCallback(
+    (doc: string): SqlStatement[] => {
+      if (split.current?.doc !== doc) split.current = { doc, statements: splitStatements(doc, dialect.syntax) };
+      return split.current.statements;
+    },
+    [dialect.syntax],
+  );
 
   /** Where the statement covering `pos` sits — what the editor draws its highlight over, so the
    * boundaries the server will split the script on are visible while it is written. Nothing runs
@@ -257,7 +262,7 @@ function QueryEditor({
   const statementRange = useCallback((doc: string, pos: number) => {
     const statement = statementAt(doc, statementsOf(doc), pos);
     return statement && { from: statement.from, to: statement.to };
-  }, []);
+  }, [statementsOf]);
 
   /** Whether a script is in flight, where the error checker can read it. The checker is built once
    *  per schema and would otherwise be holding the value `running` had when it was built. */
@@ -316,7 +321,7 @@ function QueryEditor({
         ];
       },
     }),
-    [outline, api, connectionId, database, t]
+    [outline, api, connectionId, database, dialect, statementsOf, t]
   );
 
   /**
@@ -394,9 +399,8 @@ function QueryEditor({
         return { from: reference.from, to: reference.to, open: () => onOpenTable(name) };
       },
     };
-  // `lang` beside `t`: `t` is one function for the life of the app now, so it is `lang` that says
-  // this holds words and has to be built again when they change. See `i18n/index.tsx`.
-  }, [outline, onOpenTable, t, lang]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `lang` beside `t`: `t` is one function for the life of the app, so `lang` is what rebuilds these words when they change. See `i18n/index.tsx`.
+  }, [outline, onOpenTable, dialect, statementsOf, t, lang]);
 
   /** Every keystroke lands here, and almost every one of them ends without a render: React drops a
    *  state write that changes nothing, and this one changes twice in a script's life.

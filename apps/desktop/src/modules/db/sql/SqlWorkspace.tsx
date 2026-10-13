@@ -252,7 +252,7 @@ function SqlWorkspace({
     } finally {
       setDatabasesLoading(false);
     }
-  }, [api, connectionId]);
+  }, [api, connectionId, setLocalError, t]);
 
   useEffect(() => {
     void loadDatabases();
@@ -343,7 +343,7 @@ function SqlWorkspace({
     return () => {
       tablesRun.current += 1;
     };
-  }, [api, connectionId, selectedDb]);
+  }, [api, connectionId, selectedDb, setLocalError, t]);
 
   // A table the list no longer holds — dropped from in here, or gone from the server by the time it
   // was read again — has nothing left to pin above it.
@@ -402,7 +402,7 @@ function SqlWorkspace({
       setSelectedTable(table);
       setContentMode("data");
     },
-    [selectedDb, tokenFor],
+    [selectedDb, tokenFor, tableCache, filterCache],
   );
 
   /** Reads the sidebar's list of tables again, and nothing else. What follows a table created,
@@ -423,7 +423,7 @@ function SqlWorkspace({
       .finally(() => {
         if (tablesRun.current === mine) setTablesLoading(false);
       });
-  }, [api, connectionId, selectedDb]);
+  }, [api, connectionId, selectedDb, setLocalError, t]);
 
   /** The sidebar's reload button, and what a restore leaves behind: the list read again, and
    * everything remembered about the database let go with it. */

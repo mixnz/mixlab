@@ -250,10 +250,12 @@ function TableStructure({
     // `schemaToken` is in here so that a change made while a read is still out drops that read
     // rather than letting it land: columns filed under the shape before are turned down when read
     // back, and with nothing else moving there would be nothing left to ask for them again.
-  }, [api, connectionId, selectedDb, selectedTable, tableKey, active, structure, schemaToken]);
+  }, [api, connectionId, selectedDb, selectedTable, tableKey, active, structure, schemaToken, onError, structureCache, t]);
 
-  const columns = structure?.columns ?? [];
-  const indexes = structure?.indexes ?? [];
+  // Memoized because the grids below are, on these: a fresh `[]` each render while nothing is
+  // loaded would rebuild them on every render for no change at all.
+  const columns = useMemo(() => structure?.columns ?? [], [structure]);
+  const indexes = useMemo(() => structure?.indexes ?? [], [structure]);
   const skipIndexes = structure?.skipIndexes ?? [];
   const engine = structure?.engine ?? null;
   const busy = loading || saving;

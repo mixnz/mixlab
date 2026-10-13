@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fileInto } from "../../../../core/paneCache";
 import { gridStyle, useVirtualRows, widestValues } from "../../../../core/virtualRows";
 import ActionBar from "../../../../components/ActionBar";
@@ -187,10 +187,13 @@ function DatabaseStats({
   /** Files what is known about the selected database, letting the database read longest ago go once
    *  the cache is full — the only way anything is written here, so nothing gets past that ceiling.
    *  The render that would draw it is asked for at the same time, for the reason above. */
-  function fileStats(entry: RememberedStats) {
-    fileInto(cache, database, entry, STATS_CACHE_LIMIT);
-    setCacheToken((n) => n + 1);
-  }
+  const fileStats = useCallback(
+    (entry: RememberedStats) => {
+      fileInto(cache, database, entry, STATS_CACHE_LIMIT);
+      setCacheToken((n) => n + 1);
+    },
+    [cache, database],
+  );
 
   useEffect(() => {
     // Nothing to do until the tab is looked at, and nothing to do once it has been read: this is
@@ -236,7 +239,7 @@ function DatabaseStats({
     // `schemaToken` is in here so that a change made while a read is still out drops that read
     // rather than letting it land: figures filed under the shape before are turned down when read
     // back, and with nothing else moving there would be nothing left to ask for them again.
-  }, [kind, optionalSql, connectionId, database, active, stats, schemaToken, onError]);
+  }, [kind, optionalSql, connectionId, database, active, stats, schemaToken, onError, cache, fileStats, t]);
 
   /** Drops this database's figures, which is what makes the effect above read them again. The order
    *  they were in stays: it is the user's choice, not something the server said. */

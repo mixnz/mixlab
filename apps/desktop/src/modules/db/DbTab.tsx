@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   addConnection,
@@ -219,8 +219,11 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
       ),
     [connectionId, kind, activeReadOnly, t],
   );
+  // An effect event: the shell hands down a fresh `onBadgesChange` every render, and depending on
+  // it would send the badges up again on every one of them.
+  const reportBadges = useEffectEvent((next: TabBadge[]) => onBadgesChange(next));
   useEffect(() => {
-    onBadgesChange(badges);
+    reportBadges(badges);
   }, [badges]);
 
   function changeKind(next: DbKind) {
@@ -527,18 +530,21 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
      left behind, which is the whole of the promise — the second half of it used to be missing, and
      that tab opened blank under a title naming a connection it no longer pointed at.
 
-     `openAndConnect` and `applySavedConnection` are deliberately not dependencies; they are rebuilt
-     every render.
+     `openAndConnect` and `applySavedConnection` are rebuilt every render, so they are reached
+     through an effect event rather than listed.
 
      A tab whose password is MixEngine's comes back as its form even if it was connected: dialling
      it would be a second Keychain question before anybody asked to connect. */
+  const restoreEntry = useEffectEvent((entry: SavedConnection, connected: boolean) => {
+    if (connected && reconnectsOnRestore(entry)) openAndConnect(entry);
+    else applySavedConnection(entry);
+  });
   useEffect(() => {
     if (restoreTried.current || restoredState === null || !("savedId" in restoredState) || !savedConnectionsLoaded) return;
     restoreTried.current = true;
     const entry = savedConnections.find((c) => c.id === restoredState.savedId);
     if (entry === undefined) return;
-    if (restoredState.connected && reconnectsOnRestore(entry)) openAndConnect(entry);
-    else applySavedConnection(entry);
+    restoreEntry(entry, restoredState.connected);
   }, [restoredState, savedConnectionsLoaded, savedConnections]);
 
   /* A tab opened for a connection another program handed over. Once, like the restore above and

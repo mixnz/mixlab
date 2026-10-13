@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDownIcon } from "../../icons";
 import { useTranslation } from "../../i18n";
@@ -188,7 +188,7 @@ function Select<T extends string | number>({
 
   /** Measures the trigger and works out where the menu goes. Positioned off the full list, not
    * the filtered one, so the menu doesn't hop around the trigger as the query narrows it. */
-  function measureMenu(): React.CSSProperties {
+  const measureMenu = useCallback((): React.CSSProperties => {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return UNMEASURED;
     const rows = options.length + (searching ? 1 : 0);
@@ -213,7 +213,7 @@ function Select<T extends string | number>({
         ? { bottom: window.innerHeight - rect.top + MENU_GAP, maxHeight: spaceAbove }
         : { top: rect.bottom + MENU_GAP, maxHeight: spaceBelow }),
     };
-  }
+  }, [options.length, searching]);
 
   /** Measures before opening rather than after, so the menu is in place on the very first render.
    * A menu that spends a frame at `UNMEASURED` is hidden, and a hidden search box cannot take
@@ -234,7 +234,7 @@ function Select<T extends string | number>({
   useLayoutEffect(() => {
     if (!open) return;
     setMenuStyle(measureMenu());
-  }, [open, options.length, searching]);
+  }, [open, measureMenu]);
 
   // `width: max-content` is the widest option — until something takes a few pixels back out of it
   // again: the frame drawn around the list, the scrollbar that appears once the list is long

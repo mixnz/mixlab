@@ -193,7 +193,7 @@ function MongoWorkspace({
     } finally {
       setDatabasesLoading(false);
     }
-  }, [connectionId]);
+  }, [connectionId, setLocalError, t]);
 
   useEffect(() => {
     void loadDatabases();
@@ -261,7 +261,7 @@ function MongoWorkspace({
     return () => {
       collectionsRun.current += 1;
     };
-  }, [connectionId, selectedDb]);
+  }, [connectionId, selectedDb, setLocalError, t]);
 
   /** Reads the sidebar's list of collections again, and nothing else. What follows a collection
    * created, renamed or dropped: the list is out of date, but every other collection in the
@@ -282,7 +282,7 @@ function MongoWorkspace({
       .finally(() => {
         if (collectionsRun.current === mine) setCollectionsLoading(false);
       });
-  }, [connectionId, selectedDb]);
+  }, [connectionId, selectedDb, setLocalError, t]);
 
   /** The sidebar's reload button, and what a restore leaves behind: the list read again, and
    * everything remembered about the database let go with it. */

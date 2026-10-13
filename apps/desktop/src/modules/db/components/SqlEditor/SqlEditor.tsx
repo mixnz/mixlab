@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useLayoutEffect, useRef, type Ref } from "react";
+import { useEffect, useEffectEvent, useImperativeHandle, useLayoutEffect, useRef, type Ref } from "react";
 import type { SQLDialect, SQLNamespace } from "@codemirror/lang-sql";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
@@ -184,6 +184,11 @@ function SqlEditor({
     focus: () => view.current?.focus(),
   }));
 
+  // What the editor opens with. An effect event because `initialValue` is what to open with, not
+  // something to keep up with: rebuilding the editor around it would throw away the undo history
+  // every time the script changed.
+  const openingText = useEffectEvent(() => carried.current ?? initialValue);
+
   // Built once. `placeholder` and `ariaLabel` are in the deps because they are translated strings:
   // switching language rebuilds the editor, which costs the undo history and nothing else.
   useEffect(() => {
@@ -193,7 +198,7 @@ function SqlEditor({
     const state = EditorState.create({
       // What the last editor had, if there was one. Only a language switch rebuilds this, and it
       // costs the undo history — it must not also cost the script.
-      doc: carried.current ?? initialValue,
+      doc: openingText(),
       extensions: [
         editorSetup({
           placeholder,
@@ -223,9 +228,6 @@ function SqlEditor({
       created.destroy();
       view.current = null;
     };
-    // `initialValue` is deliberately not a dependency: it is what to open with, not something to
-    // keep up with, and rebuilding the editor around it would throw away the undo history every
-    // time the script changed.
   }, [placeholder, ariaLabel]);
 
   // The schema arrives after the editor does — one read of the database, a moment behind the tab
@@ -238,7 +240,7 @@ function SqlEditor({
     // nothing. Left alone they would keep underlining every table in the script as unknown until
     // the next keystroke.
     requestRecheck(current);
-  }, [schema, database]);
+  }, [schema, database, dialect]);
 
   return <div className={styles.editor} ref={host} />;
 }

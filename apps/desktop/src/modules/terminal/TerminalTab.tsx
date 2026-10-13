@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import Button from "../../components/Button";
 import ErrorBanner from "../../components/ErrorBanner";
 import { TerminalIcon } from "../../icons";
@@ -85,8 +85,11 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
     [choice, exit, t],
   );
 
+  // An effect event: the shell hands down a fresh `onBadgesChange` every render, and depending on
+  // it would send the badges up again on every one of them.
+  const reportBadges = useEffectEvent((next: typeof badges) => onBadgesChange(next));
   useEffect(() => {
-    onBadgesChange(badges);
+    reportBadges(badges);
   }, [badges]);
 
   const showError = useCallback((message: string) => setError(message), []);
@@ -110,6 +113,10 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
        the shell compares by reference and writes only once per session opening. */
     onStateChange(tabStateFor(next));
   }
+
+  /** `start`, for the restore below: `start` is rebuilt every render and closes over the shell's
+   *  `onStateChange`, so the effect reaches it this way rather than listing it. */
+  const startRestored = useEffectEvent((next: TerminalChoice) => start(next));
 
   /* Drops the dead session and goes back to the target picker. `lastTried` stays, so the form
      rebuilds exactly what was just opened — reopening the old one is one click, and so is switching
@@ -151,7 +158,7 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
       // `config` here is already complete — `savedTargets.ts` merges the secrets from the keyring
       // in before handing it out. What the restored tab does with its commands is the entry's
       // `onRestore` — T205, D10.
-      start({
+      startRestored({
         kind: "ssh",
         config: entry.config,
         targetId: entry.id,
@@ -188,7 +195,7 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
         /* Lines handed over once (T205, D8): typed now, and gone from the state `start` writes
            back, so the next launch reopens a plain shell. */
         if (restoredState.run !== undefined) {
-          start({
+          startRestored({
             kind: "local",
             shell,
             cwd: restoredState.cwd,
@@ -200,7 +207,7 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
           });
           return;
         }
-        start({
+        startRestored({
           kind: "local",
           shell,
           cwd: restoredState.cwd,

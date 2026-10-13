@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import Splitter, { clampRatio, clampSize } from "../../components/Splitter";
 import { moveId, Tab, TabStrip, tabKeyDown } from "../../components/TabStrip";
@@ -269,9 +269,10 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
 
   /* Written from an effect rather than from each of the handlers that move the strip — there are
      six of them, and one forgotten is a tab that comes back wrong. `currentId` and not `activeId`
-     because that is the tab actually on screen. `onStateChange` is deliberately not a dependency:
-     `App` hands down a fresh closure every render, and the shell compares state by identity, so
-     depending on it is the render loop named at the top of `shell/tabs.ts`. */
+     because that is the tab actually on screen. `onStateChange` is reached through an effect event
+     rather than listed: `App` hands down a fresh closure every render, and the shell compares state
+     by identity, so depending on it is the render loop named at the top of `shell/tabs.ts`. */
+  const reportState = useEffectEvent((state: unknown) => onStateChange(state));
   useEffect(() => {
     if (!restoreTried.current) return;
     if (restoreApplied.current !== null) {
@@ -279,7 +280,7 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
       if (openIds !== restoreApplied.current) return;
       restoreApplied.current = null;
     }
-    onStateChange(openIds.length === 0 ? undefined : { openIds, activeId: currentId });
+    reportState(openIds.length === 0 ? undefined : { openIds, activeId: currentId });
   }, [openIds, currentId]);
 
   function open(id: string) {
@@ -520,6 +521,9 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
    * at a text box is that box's, and a dialog or menu that is up holds the keyboard the same way it
    * holds every shortcut.
    */
+  // `pasteInto` is remade every render; through an effect event the listener always runs the
+  // current one without being re-subscribed for it.
+  const pasteText = useEffectEvent((text: string) => pasteInto(text));
   useEffect(() => {
     if (!active || activeRequest !== undefined) return;
     function onPaste(event: ClipboardEvent) {
@@ -531,12 +535,10 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
       ) {
         return;
       }
-      if (pasteInto(event.clipboardData?.getData("text") ?? "")) event.preventDefault();
+      if (pasteText(event.clipboardData?.getData("text") ?? "")) event.preventDefault();
     }
     document.addEventListener("paste", onPaste);
     return () => document.removeEventListener("paste", onPaste);
-    // `pasteInto` is remade every render but reads only `activeRequest`, which is in the list, so
-    // the handler this subscribed is never one render behind what it decides from.
   }, [active, activeRequest]);
 
   const requestTab = currentId === null ? "params" : (requestTabs[currentId] ?? "params");

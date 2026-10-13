@@ -84,7 +84,7 @@ function ToolsSection() {
     toolsStatus()
       .then(setTools)
       .catch((e) => onError(errorMessage(t, e)));
-  }, [onError]);
+  }, [onError, t]);
 
   // On the way in, and whenever an install starts or ends — including one this screen was closed
   // for and knows nothing about. Keyed by which suites are running rather than by the map itself,

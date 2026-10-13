@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import Button from "../../../../components/Button";
 import Input, { Textarea } from "../../../../components/Input";
@@ -126,6 +126,9 @@ function TargetForm({ onOpen, onError, initial }: Props) {
       : "",
   );
 
+  // `onError` is the parent's and may be a fresh closure each render; the read below runs once.
+  const reportError = useEffectEvent((e: unknown) => onError(errorMessage(t, e)));
+
   useEffect(() => {
     /* Two reads in parallel rather than in sequence, and `loadTerminalSettings` rather than
        `currentTerminalSettings`: the store loads its file asynchronously, so asking it right now
@@ -144,7 +147,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
         const dir = settings.defaultCwd;
         if (dir) setCwd((current) => current || dir);
       })
-      .catch((e) => onError(errorMessage(t, e)));
+      .catch((e) => reportError(e));
     // Runs only once: a machine's shell list does not change midway.
   }, []);
 
@@ -168,11 +171,16 @@ function TargetForm({ onOpen, onError, initial }: Props) {
    *
    * Waits for `targetsLoaded` because the list is empty until the file has been read, and before
    * that every id looks deleted.
+   *
+   * `targetId` is read, not listed: this waits on the list, and an id the user picks or saves later
+   * is not the one the tab came back with.
    */
+  const currentTargetId = useEffectEvent(() => targetId);
   useEffect(() => {
-    if (namedInitial.current || targetId === null || !targetsLoaded) return;
+    const id = currentTargetId();
+    if (namedInitial.current || id === null || !targetsLoaded) return;
     namedInitial.current = true;
-    const entry = targets.find((target) => target.id === targetId);
+    const entry = targets.find((target) => target.id === id);
     if (entry === undefined) {
       /* That row was deleted while the session was running. The form keeps everything it has — it
          can still reopen — but stops pointing at an id with nothing behind it, so the button no

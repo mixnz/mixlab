@@ -156,7 +156,7 @@ function RedisValue({
     return () => {
       cancelled = true;
     };
-  }, [connectionId, keyName, onError]);
+  }, [connectionId, keyName, onError, t]);
 
   useEffect(() => load(), [load]);
 
