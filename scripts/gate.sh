@@ -43,6 +43,9 @@ check() {
 
 check "rustfmt" cargo fmt --all --check
 check "clippy" cargo clippy --workspace --all-targets --all-features -- -D warnings
+# The helper on its own: the line above unifies the platform's features, so an item only `host`
+# reaches looks used there and is dead in the `elevated` build the helper compiles.
+check "helper clippy" cargo clippy -p mixengine-elevate --all-targets -- -D warnings
 check "rustdoc" env RUSTDOCFLAGS="-D warnings" \
   cargo doc --workspace --no-deps --document-private-items --all-features
 check "the helper's version" bash packaging/helper-lock.sh --check

@@ -91,9 +91,12 @@ pub(crate) fn run<'a>(
 /// Only for a tool whose exit status carries no information the caller needs. Everything that
 /// changes the machine goes through [`run`], where a refusal is a refusal.
 ///
+/// `host` only: every caller is, and the helper's `elevated`-only build would carry it unused.
+///
 /// # Errors
 ///
 /// [`Error::Command`] where the tool could not be started at all.
+#[cfg(feature = "host")]
 pub(crate) fn output_of<'a>(
     command: &'static str,
     args: impl IntoIterator<Item = &'a OsStr>,
