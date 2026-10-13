@@ -698,3 +698,297 @@ pub(super) fn is_empty_document(overrides: &str) -> bool {
     serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(overrides)
         .is_ok_and(|document| document.is_empty())
 }
+
+#[cfg(test)]
+mod tests {
+    use mixengine_proto::{Millis, ServiceSpec, StopBehaviour};
+    use serde_json::Value;
+
+    use super::*;
+    use crate::api::test_daemon::{Daemon, daemon, daemon_on, undeclared};
+    use crate::services::fixture;
+
+    /// A home reached through one front end, declared and rowed.
+    ///
+    /// **Its program is the one inside the installed package**, unlike [`fixture::spec`]'s, and it
+    /// has to be: on Linux the port-80 grant is an attribute of *that file*, so a fixture pointing
+    /// at the fake service somewhere else would be a home whose front end could never be found to
+    /// hold one.
+    fn front_end(id: &str) -> Arc<fixture::Declared> {
+        Arc::new(fixture::Declared(vec![
+            ServiceSpec::builder(
+                fixture::service(id),
+                mixengine_core::generate::program(&packages_root(), id),
+            )
+            .cwd(std::env::temp_dir())
+            .ready(mixengine_proto::ReadyCheck::LogPattern {
+                regex: mixengine_testkit::service::READY_LINE.to_owned(),
+                timeout: Millis::from_secs(20),
+            })
+            .restart(mixengine_proto::RestartPolicy::Never)
+            .stop(StopBehaviour::Signal { grace: Millis(500) })
+            .build()
+            .expect("a usable spec"),
+        ]))
+    }
+
+    /// Where the switch tests say a package was installed.
+    ///
+    /// **Absolute on all three systems, which `fixture::home`'s `/packages/x` is not.** That value
+    /// is a path on Unix and a *relative* one on Windows — no drive letter — and these are the first
+    /// tests to build a spec's program out of an install path rather than out of the fake service's
+    /// own, which is where a spec refuses it. Nothing is ever run from here.
+    fn packages_root() -> std::path::PathBuf {
+        match cfg!(windows) {
+            true => std::path::PathBuf::from(r"C:\packages\x"),
+            false => std::path::PathBuf::from("/packages/x"),
+        }
+    }
+
+    /// Put every installed package where [`packages_root`] says, and install `also` beside them.
+    ///
+    /// The `also` half is what a home looks like the moment after `mix package install nginx` and
+    /// before anything has been created from it: a `packages` row that no service is an instance of.
+    async fn installed(daemon: &Daemon, also: &[&str]) {
+        let root = packages_root().display().to_string();
+
+        for package in also {
+            sqlx::query(
+                "INSERT INTO packages (name, version, install_path, installed_at, source_url,
+                                       sha256)
+                 VALUES (?, '1.0.0', ?, '2026-09-07T00:00:00Z', 'https://example', 'ab')",
+            )
+            .bind(package)
+            .bind(&root)
+            .execute(daemon.api.store.pool())
+            .await
+            .expect("an installed package");
+        }
+
+        sqlx::query("UPDATE packages SET install_path = ?")
+            .bind(&root)
+            .execute(daemon.api.store.pool())
+            .await
+            .expect("a readable table");
+    }
+
+    /// The report a finished switch left behind, or the reason there is not one.
+    async fn switched(daemon: &Daemon, params: Value) -> mixengine_proto::FrontEndReport {
+        let started: JobSummary = serde_json::from_value(
+            daemon.ask(rpc::method::SERVICE_SET_FRONT_END, params).await["result"].clone(),
+        )
+        .expect("a job");
+
+        let finished = daemon
+            .api
+            .jobs
+            .wait(started.id, Millis::from_secs(30))
+            .await
+            .expect("a job that ends");
+
+        match finished.outcome {
+            Some(mixengine_proto::JobOutcome::Succeeded { result }) => {
+                serde_json::from_value(result).expect("a front-end report")
+            }
+            other => panic!("the switch did not finish: {other:?}"),
+        }
+    }
+
+    /// **T97.** A switch installs nothing, so a server that is not here is a refusal with the
+    /// command that would put it here — not a job that downloads forty megabytes.
+    #[tokio::test]
+    async fn a_switch_to_a_server_that_is_not_installed_is_refused_with_the_way_to_install_it() {
+        let daemon = undeclared().await;
+
+        let answer = daemon
+            .ask(
+                rpc::method::SERVICE_SET_FRONT_END,
+                serde_json::json!({"server": "nginx"}),
+            )
+            .await;
+
+        assert_eq!(answer["error"]["data"]["code"], "precondition_failed");
+        assert!(
+            answer["error"]["data"]["hint"]
+                .as_str()
+                .is_some_and(|hint| hint.contains("mix package install nginx")),
+            "{answer}"
+        );
+    }
+
+    /// **T97.** Asking for the server a home is already on is a question with an answer, and not a
+    /// refusal: a switch clicked on the option that is already selected is an ordinary thing to
+    /// happen, and refusing it would make a client suppress the call.
+    #[tokio::test]
+    async fn a_switch_to_the_server_a_home_is_already_on_moves_nothing() {
+        let daemon = daemon(front_end("nginx"), &["nginx"]).await;
+        installed(&daemon, &[]).await;
+
+        let report = switched(&daemon, serde_json::json!({"server": "nginx"})).await;
+
+        assert!(
+            matches!(
+                report.outcome,
+                mixengine_proto::FrontEndOutcome::Unchanged {}
+            ),
+            "{report:?}"
+        );
+        assert_eq!(report.was, report.now);
+        assert_eq!(
+            report.was.as_ref().map(ServiceId::as_str),
+            Some("nginx"),
+            "and the home is still on it"
+        );
+    }
+
+    /// **T97, and ADR 0026's hardest sentence.** A machine that has granted port 80 to the front end
+    /// this home is on and not to the one it is being asked to move to **stays where it was**.
+    ///
+    /// The outcome a switch must never produce is a home whose sites are rendered for a server that
+    /// cannot answer, so this is refused before anything is stopped — and the grant it asked for is
+    /// left waiting, which is what makes `mix elevation grant` and the same command again work.
+    #[tokio::test]
+    async fn a_machine_that_will_not_grant_the_new_front_end_keeps_the_one_it_had() {
+        let daemon = daemon_on(front_end("nginx"), &["nginx"], |home| {
+            mixengine_platform::mock::Host::with_port_access_for(
+                home,
+                mixengine_platform::PortAccessMethod::Capability,
+                "nginx",
+            )
+        })
+        .await;
+        installed(&daemon, &["caddy"]).await;
+
+        let report = switched(&daemon, serde_json::json!({"server": "caddy"})).await;
+
+        assert!(
+            matches!(
+                report.outcome,
+                mixengine_proto::FrontEndOutcome::NotGranted { .. }
+            ),
+            "{report:?}"
+        );
+        assert_eq!(
+            report.now.as_ref().map(ServiceId::as_str),
+            Some("nginx"),
+            "the home did not move"
+        );
+        assert!(
+            report.answering,
+            "and what it is on can still answer, which is what was being protected"
+        );
+        assert_eq!(
+            mixengine_core::services::front_end::held_by(
+                &daemon.api.store,
+                &crate::services::catalogue()
+            )
+            .await
+            .expect("a readable table"),
+            Some("nginx".to_owned()),
+            "the row is untouched"
+        );
+        assert_eq!(
+            daemon
+                .api
+                .elevation
+                .status()
+                .await
+                .expect("a readable queue")
+                .pending
+                .len(),
+            1,
+            "and the grant it asked for is waiting, so allowing it and asking again works"
+        );
+    }
+
+    /// **T97.** The rule is *do not make it worse*, not *require a grant*.
+    ///
+    /// A Linux home where nobody ever granted has a front end that cannot bind 80 and therefore does
+    /// not start. Refusing to move it would trap somebody on a server that cannot answer in order to
+    /// protect them from a server that cannot answer — so this switch goes ahead, and the report
+    /// says the home still cannot answer rather than pretending the switch fixed it.
+    #[tokio::test]
+    async fn a_switch_from_a_front_end_that_cannot_answer_either_goes_ahead_and_says_so() {
+        let daemon = daemon_on(front_end("nginx"), &["nginx"], |home| {
+            mixengine_platform::mock::Host::without_port_access(
+                home,
+                mixengine_platform::PortAccessMethod::Capability,
+                "nobody has granted anything on this machine",
+            )
+        })
+        .await;
+        installed(&daemon, &["caddy"]).await;
+
+        let report = switched(&daemon, serde_json::json!({"server": "caddy"})).await;
+
+        assert!(
+            matches!(
+                report.outcome,
+                mixengine_proto::FrontEndOutcome::Switched { .. }
+            ),
+            "{report:?}"
+        );
+        assert_eq!(report.now.as_ref().map(ServiceId::as_str), Some("caddy"));
+        assert!(
+            !report.answering,
+            "and it is still a home whose front end cannot bind 80, which is the truth"
+        );
+    }
+
+    /// **T97.** The row moves, what is about the home's front end travels with it, and what belonged
+    /// to the program that is going is named rather than silently dropped.
+    #[tokio::test]
+    async fn a_switch_carries_the_home_s_own_settings_and_names_what_it_left() {
+        let daemon = daemon(front_end("nginx"), &["nginx"]).await;
+
+        sqlx::query(
+            "UPDATE services
+                SET autostart = 1, bind_addr = '0.0.0.0',
+                    config_overrides_json = '{\"worker_processes\":4}'
+              WHERE id = 'nginx'",
+        )
+        .execute(daemon.api.store.pool())
+        .await
+        .expect("a front end somebody had configured");
+        installed(&daemon, &["caddy"]).await;
+
+        let report = switched(&daemon, serde_json::json!({"server": "caddy"})).await;
+
+        assert_eq!(report.was.as_ref().map(ServiceId::as_str), Some("nginx"));
+        assert_eq!(report.now.as_ref().map(ServiceId::as_str), Some("caddy"));
+        assert_eq!(
+            mixengine_core::services::front_end::held_by(
+                &daemon.api.store,
+                &crate::services::catalogue()
+            )
+            .await
+            .expect("a readable table"),
+            Some("caddy".to_owned()),
+            "exactly one front end, and it is the new one"
+        );
+
+        let moved =
+            mixengine_core::services::declaration(&daemon.api.store, &fixture::service("caddy"))
+                .await
+                .expect("the new row");
+
+        assert!(moved.autostart, "starting with the daemon is about the job");
+        assert_eq!(
+            moved.bind_addr.as_deref(),
+            Some("0.0.0.0"),
+            "and so is the address this home's front end answers on"
+        );
+        assert!(
+            crate::api::front_end::is_empty_document(&moved.overrides),
+            "an nginx.conf setting is a syntax error in a Caddyfile, so it does not travel"
+        );
+        assert!(
+            report
+                .not_carried
+                .iter()
+                .any(|left| left.contains("overriding")),
+            "and what did not travel is named: {:?}",
+            report.not_carried
+        );
+    }
+}
