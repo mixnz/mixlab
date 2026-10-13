@@ -201,7 +201,7 @@ pub(crate) async fn blueprint(
             )
             .await?;
             emit(&rendered(json, &summary, || {
-                render::blueprint_captured(&summary)
+                render::blueprint::blueprint_captured(&summary)
             }))?;
         }
 
@@ -227,13 +227,15 @@ pub(crate) async fn blueprint(
                 ask(&mut client, rpc::method::BLUEPRINT_IMPORT, encode(&import)).await?;
 
             emit(&rendered(json, &summary, || {
-                render::blueprint_imported(&summary)
+                render::blueprint::blueprint_imported(&summary)
             }))?;
         }
 
         BlueprintCommand::List => {
             let list: BlueprintList = ask(&mut client, rpc::method::BLUEPRINT_LIST, None).await?;
-            emit(&rendered(json, &list, || render::blueprint_list(&list)))?;
+            emit(&rendered(json, &list, || {
+                render::blueprint::blueprint_list(&list)
+            }))?;
         }
 
         BlueprintCommand::Apply {
@@ -305,7 +307,9 @@ pub(crate) async fn blueprint(
                 ));
             };
 
-            emit(&rendered(json, plan, || render::blueprint_plan(plan)))?;
+            emit(&rendered(json, plan, || {
+                render::blueprint::blueprint_plan(plan)
+            }))?;
 
             let needs = needs.as_deref().unwrap_or_default();
             if !json && !needs.is_empty() {
@@ -375,10 +379,10 @@ pub(crate) async fn blueprint(
                 && let Ok(applied) = serde_json::from_value::<BlueprintApplied>(result.clone())
             {
                 emit(&rendered(json, &applied, || {
-                    render::blueprint_applied(&applied)
+                    render::blueprint::blueprint_applied(&applied)
                 }))?;
 
-                a_step_failed = render::blueprint_had_a_failed_step(&applied);
+                a_step_failed = render::blueprint::blueprint_had_a_failed_step(&applied);
             }
 
             if !render::job::job_succeeded(&finished) {
