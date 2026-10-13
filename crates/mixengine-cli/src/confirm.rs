@@ -14,6 +14,8 @@
 
 use std::io::{BufRead as _, Write as _};
 
+use mixengine_proto::{Error, ErrorCode};
+
 /// What came back from the keyboard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Answer {
@@ -204,6 +206,14 @@ pub(crate) fn read_password(prompt: &str) -> Option<String> {
 /// trailing newline is not part of the value — is tested without a terminal to type into.
 fn password_line(line: Option<&str>) -> Option<String> {
     line.map(|line| line.trim_end_matches(['\n', '\r']).to_owned())
+}
+
+pub(crate) fn unanswered() -> Error {
+    Error::new(
+        ErrorCode::InvalidArgument,
+        "nothing answered the question, so nothing was asked of the operating system either",
+    )
+    .with_hint("pass `--yes` to answer in advance")
 }
 
 #[cfg(test)]

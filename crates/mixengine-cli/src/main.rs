@@ -64,6 +64,7 @@ use mixengine_proto::{
 
 use autostart::Autostart;
 use client::{Client, ask, encode};
+use confirm::unanswered;
 use output::{emit, rendered, report};
 use parse::{
     for_seconds, idle_after, job_state, pin, runtime_kind, runtime_version, service_id,
@@ -5644,14 +5645,6 @@ fn unanswerable_question() -> Error {
     .with_hint(
         "`--install-missing` installs what it asks for; `--use-installed` takes what is here",
     )
-}
-
-fn unanswered() -> Error {
-    Error::new(
-        ErrorCode::InvalidArgument,
-        "nothing answered the question, so nothing was asked of the operating system either",
-    )
-    .with_hint("pass `--yes` to answer in advance")
 }
 
 /// What somebody said in advance about a machine that lacks something — roadmap task **T151**.
