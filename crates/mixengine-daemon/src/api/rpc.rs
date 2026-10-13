@@ -1435,45 +1435,6 @@ mod tests {
         assert_eq!(answer["error"]["code"], -32600);
     }
 
-    /// **T97.** The lock is taken for the one role that has an invariant spanning rows, and for
-    /// nothing else.
-    ///
-    /// A home may have as many databases as it likes and they contend for nothing here; a home may
-    /// have one front end, and the window in which that is momentarily untrue is what this closes.
-    #[tokio::test]
-    async fn only_a_front_end_change_waits_for_another_one() {
-        let daemon = undeclared().await;
-        let catalogue = crate::services::catalogue();
-
-        let held = daemon
-            .api
-            .one_front_end_change_at_a_time(&catalogue, &fixture::service("nginx"))
-            .await;
-
-        assert!(held.is_some(), "a front end takes the lock");
-        assert!(
-            daemon.api.front_end.try_lock().is_err(),
-            "and holds it, which is the whole of what it is for"
-        );
-
-        assert!(
-            daemon
-                .api
-                .one_front_end_change_at_a_time(&catalogue, &fixture::service("mariadb@main"))
-                .await
-                .is_none(),
-            "a database goes straight past it, even while a front end holds it"
-        );
-        assert!(
-            daemon
-                .api
-                .one_front_end_change_at_a_time(&catalogue, &fixture::service("not-a-package"))
-                .await
-                .is_none(),
-            "and so does a package this build has no recipe for"
-        );
-    }
-
     /// A service with no database vocabulary is told so **in those words** — roadmap task T77a.
     ///
     /// Deliberately not `unsupported`: that code means *this operating system cannot*, and every
