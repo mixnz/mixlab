@@ -15,6 +15,14 @@ use crate::confirm::unanswered;
 use crate::output::{emit, rendered};
 use crate::{confirm, render};
 
+/// What `mix self-update` was asked to do: its three flags.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SelfUpdateAsk {
+    pub(crate) check: bool,
+    pub(crate) yes: bool,
+    pub(crate) finish: bool,
+}
+
 /// `mix self-update` — roadmap task **T88**.
 ///
 /// **The daemon does the update and this waits for it.** `mix` may depend on `mixengine-platform`
@@ -39,14 +47,6 @@ use crate::{confirm, render};
 /// protocol than the `mix` still running from the old image, and a protocol-mismatch error at the
 /// end of a successful update would be the worst possible last line. `--detach` exiting zero *is*
 /// the readiness probe, which is what `autostart.rs` already documents.
-/// What `mix self-update` was asked to do: its three flags.
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct SelfUpdateAsk {
-    pub(crate) check: bool,
-    pub(crate) yes: bool,
-    pub(crate) finish: bool,
-}
-
 pub(crate) async fn self_update(
     endpoint: &Endpoint,
     autostart: Option<&Autostart>,

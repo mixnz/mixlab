@@ -1,5 +1,5 @@
-//! `mix home`: restoring what a previous copy of the home left. Not [`crate::home`](mod@crate::home),
-//! which decides which home `mix` talks about.
+//! `mix home`: restoring what a previous copy of the home left. Not
+//! [`crate::home`](mod@crate::home), which decides which home `mix` talks about.
 
 use std::io::Write as _;
 use std::process::ExitCode;

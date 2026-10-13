@@ -15,7 +15,7 @@ Design: [2026-10-13-files-that-fit-in-one-read-design.md](../specs/2026-10-13-fi
       the 34 files already past it at their current length; red on a new file over the limit, on a
       baselined file that grew, and on one that shrank without `--shrink`. Run by `scripts/gate.sh`
       and CI's `lint` job; documented in `docs/standards/rust.md` and `CLAUDE.md`.
-- [ ] **T207a** `crates/mixengine-cli/src/main.rs` moved into `commands/<name>.rs`, one module per
+- [x] **T207a** `crates/mixengine-cli/src/main.rs` moved into `commands/<name>.rs`, one module per
       command, with the helpers several commands share at the crate root (`output.rs`, `parse.rs`,
       `jobs.rs`, `prerequisites.rs`, `upgrades.rs`). A move and only a move: the command reference
       (`packaging/docs.sh --check`) and the unit-test count are unchanged, and `main.rs` leaves the

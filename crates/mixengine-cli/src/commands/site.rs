@@ -240,9 +240,10 @@ pub(crate) enum SiteCommand {
 
 /// Which site a command is about.
 ///
-/// **The default is the directory you are in**, on [`WhichProject`](crate::commands::project::WhichProject)'s rule: with no argument `mix`
-/// sends the working directory and the daemon walks up to the nearest registered project, then to
-/// its site. A project holding several is refused there, naming them — which is a sentence this
+/// **The default is the directory you are in**, on
+/// [`WhichProject`](crate::commands::project::WhichProject)'s rule: with no argument `mix` sends
+/// the working directory and the daemon walks up to the nearest registered project, then to its
+/// site. A project holding several is refused there, naming them — which is a sentence this
 /// client only prints.
 #[derive(Debug, clap::Args)]
 pub(crate) struct WhichSite {

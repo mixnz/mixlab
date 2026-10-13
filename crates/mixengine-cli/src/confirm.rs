@@ -94,9 +94,10 @@ fn chosen(line: Option<&str>) -> Choice {
 
 /// Put the question on standard error and read one line back.
 ///
-/// Standard error for [`report_progress`](crate::jobs::report_progress)'s reason: what a command answers
-/// with goes to standard output, and a question is not an answer. It also keeps a redirected
-/// `mix … > file` readable, where a prompt written into the file would be a prompt nobody sees.
+/// Standard error for [`report_progress`](crate::jobs::report_progress)'s reason: what a command
+/// answers with goes to standard output, and a question is not an answer. It also keeps a
+/// redirected `mix … > file` readable, where a prompt written into the file would be a prompt
+/// nobody sees.
 pub(crate) fn ask(question: &str) -> Answer {
     // Nothing to do about a stderr that will not take it: the read below still happens, and a
     // caller that cannot show the question is one whose answer is about to be `Unanswerable`

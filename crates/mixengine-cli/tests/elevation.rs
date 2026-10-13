@@ -17,7 +17,7 @@
 //! There is no `mix elevation enqueue` and never will be: what needs an administrator's permission
 //! is decided by the operation that needs it, and a command that let a person queue an arbitrary
 //! privileged operation would be a client deciding what runs as root. See
-//! `crates/mixengine-cli/src/main.rs`.
+//! `crates/mixengine-cli/src/commands/elevation.rs`.
 
 mod harness;
 

@@ -13,7 +13,8 @@ use crate::{autostart, render};
 
 /// `mix storage`: where this home's growing directories are — roadmap task **T145**.
 ///
-/// **Neither asynchronous nor connected**, which is what makes it the odd one in the match above.
+/// **Neither asynchronous nor connected**, which is what makes it the odd one in
+/// [`run`](crate::run)'s match.
 /// Every other command sends a request; this one runs `mixengined --storage` and reads the document
 /// it printed. It has to: whether the choice is still free is a count of rows, `mix` links neither
 /// `mixengine-core` nor `sqlx`, and there may be no daemon — a person asking this is usually asking

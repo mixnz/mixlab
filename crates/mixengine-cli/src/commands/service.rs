@@ -596,10 +596,10 @@ fn agreed_to_reset(service: &ServiceId) -> Result<bool, Error> {
 /// `mix service …`: one call, one rendering, and an exit code that means what a shell expects.
 ///
 /// **A walk that failed is an answer and not an error**, which is why this returns an
-/// [`ExitCode`] rather than reporting through [`report`](crate::output::report): a plan of six services where the fourth
-/// fails leaves three running, one failed and two never tried, and all of that goes to stdout in
-/// both renderings. What the failure changes is the exit status, so `mix service start db && …`
-/// stops where a person reading the output would.
+/// [`ExitCode`] rather than reporting through [`report`](crate::output::report): a plan of six
+/// services where the fourth fails leaves three running, one failed and two never tried, and all
+/// of that goes to stdout in both renderings. What the failure changes is the exit status, so
+/// `mix service start db && …` stops where a person reading the output would.
 pub(crate) async fn service(
     command: ServiceCommand,
     endpoint: &Endpoint,

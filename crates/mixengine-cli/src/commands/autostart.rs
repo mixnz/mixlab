@@ -1,4 +1,5 @@
-//! `mix autostart`: the login entry that starts the daemon. Not [`crate::autostart`], which starts one on demand.
+//! `mix autostart`: the login entry that starts the daemon. Not [`crate::autostart`], which starts
+//! one on demand.
 
 use std::process::ExitCode;
 
@@ -13,9 +14,10 @@ use crate::render;
 
 /// `mix autostart …` — one subcommand per `autostart.*` method.
 ///
-/// **None of the three takes an argument**, for `mix path`'s reason above: there is one entry per
-/// user and one home this can be about, and an argument would be a command for registering
-/// arbitrary programs to run at somebody's login.
+/// **None of the three takes an argument**, for `mix path`'s reason
+/// ([`PathCommand`](crate::commands::path::PathCommand)): there is one entry per user and one home
+/// this can be about, and an argument would be a command for registering arbitrary programs to run
+/// at somebody's login.
 ///
 /// **`mix autostart` and not `mix daemon autostart`.** `daemon.*` is about the daemon that is
 /// running; a logon task, a LaunchAgent and a systemd user unit outlive every daemon that ever

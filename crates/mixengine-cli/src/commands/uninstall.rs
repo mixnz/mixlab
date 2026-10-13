@@ -330,7 +330,8 @@ fn print_the_daemons_note(pid: u32) {
 /// What `mix uninstall` exits with when a process is in the way — the T182 design, D4.
 const BLOCKED: u8 = 3;
 
-/// What `mix uninstall` was asked to do: its six flags, on [`SelfUpdateAsk`](crate::commands::self_update::SelfUpdateAsk)'s precedent.
+/// What `mix uninstall` was asked to do: its six flags, on
+/// [`SelfUpdateAsk`](crate::commands::self_update::SelfUpdateAsk)'s precedent.
 #[derive(Debug, Clone, Copy)]
 #[expect(
     clippy::struct_excessive_bools,
