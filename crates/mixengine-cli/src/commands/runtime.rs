@@ -259,7 +259,9 @@ pub(crate) async fn runtime(
                 encode(&filter),
             )
             .await?;
-            emit(&rendered(json, &list, || render::runtime_list(&list)))?;
+            emit(&rendered(json, &list, || {
+                render::runtime::runtime_list(&list)
+            }))?;
         }
 
         RuntimeCommand::Available {
@@ -276,7 +278,10 @@ pub(crate) async fn runtime(
             )
             .await?;
             emit(&rendered(json, &catalogue, || {
-                render::runtime_catalogue(&catalogue, &render::catalogue::Lines { all, line })
+                render::runtime::runtime_catalogue(
+                    &catalogue,
+                    &render::catalogue::Lines { all, line },
+                )
             }))?;
         }
 
@@ -361,7 +366,7 @@ pub(crate) async fn runtime(
             let removal: RuntimeRemoval =
                 ask(&mut client, rpc::method::RUNTIME_UNINSTALL, encode(&asked)).await?;
             emit(&rendered(json, &removal, || {
-                render::runtime_removal(&removal)
+                render::runtime::runtime_removal(&removal)
             }))?;
         }
 
@@ -387,7 +392,7 @@ pub(crate) async fn runtime(
             )
             .await?;
             emit(&rendered(json, &summary, || {
-                render::runtime_summary(&summary)
+                render::runtime::runtime_summary(&summary)
             }))?;
         }
 
@@ -399,7 +404,7 @@ pub(crate) async fn runtime(
             )
             .await?;
             emit(&rendered(json, &summary, || {
-                render::runtime_summary(&summary)
+                render::runtime::runtime_summary(&summary)
             }))?;
         }
 
@@ -420,7 +425,9 @@ pub(crate) async fn runtime(
                         encode(&runtime),
                     )
                     .await?;
-                    emit(&rendered(json, &list, || render::extension_list(&list)))?;
+                    emit(&rendered(json, &list, || {
+                        render::runtime::extension_list(&list)
+                    }))?;
                 }
 
                 Some((name, enabled)) => {
@@ -436,7 +443,7 @@ pub(crate) async fn runtime(
                     )
                     .await?;
                     emit(&rendered(json, &change, || {
-                        render::extension_change(&change)
+                        render::runtime::extension_change(&change)
                     }))?;
                 }
             }
@@ -447,7 +454,7 @@ pub(crate) async fn runtime(
             let resolved: ResolvedRuntime =
                 ask(&mut client, rpc::method::RUNTIME_RESOLVE, encode(&question)).await?;
             emit(&rendered(json, &resolved, || {
-                render::runtime_resolved(&resolved)
+                render::runtime::runtime_resolved(&resolved)
             }))?;
         }
     }
@@ -564,12 +571,12 @@ async fn said_what_it_lacks(
         .as_ref()
         .is_some_and(|catalogue| catalogue.packages.iter().any(|release| release.installed));
     let devkit = match (installed, newest) {
-        (true, _) => render::Devkit::Installed,
-        (false, Some(version)) => render::Devkit::Offered(version.as_str()),
-        (false, None) => render::Devkit::NotOffered,
+        (true, _) => render::runtime::Devkit::Installed,
+        (false, Some(version)) => render::runtime::Devkit::Offered(version.as_str()),
+        (false, None) => render::runtime::Devkit::NotOffered,
     };
 
-    if let Some(line) = render::lacks_after_install(&release.lacks, devkit) {
+    if let Some(line) = render::runtime::lacks_after_install(&release.lacks, devkit) {
         emit(&line)?;
     }
 
