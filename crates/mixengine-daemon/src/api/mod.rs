@@ -35,6 +35,7 @@ mod service;
 mod service_settings;
 #[cfg(test)]
 mod test_daemon;
+mod uninstall;
 mod upgrade;
 
 pub(crate) use rpc::on_a_blocking_thread;
