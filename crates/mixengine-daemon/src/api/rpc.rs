@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use mixengine_proto::rpc::{self, Id, Request, Response, RpcCode, RpcError};
 use mixengine_proto::{
-    BlueprintApply, BlueprintCapture, BlueprintImport, CaRotateQuery, CaStatus, CaStatusQuery,
+    BlueprintApply, BlueprintCapture, BlueprintImport, CaRotateQuery, CaStatusQuery,
     CaUninstallQuery, CertIssue, CertStatusQuery, CleanupQuery, DatabaseClientQuery,
     DatabaseCreate, DatabaseCredentialsQuery, DatabaseOpen, DiagnosticsBundle, DiskUsageQuery,
     DoctorRepair, DomainAdd, DomainRemove, DomainStatusQuery, ElevationDrop, Error, ErrorCode,
@@ -1102,15 +1102,6 @@ impl Failure {
 }
 
 impl Api {
-    /// What this home's certificate authority is (T48).
-    ///
-    /// Reads, and never makes: the making happens once at start, so that T49's trust-store install
-    /// falls inside the same first-run elevation batch as the resolver and the port grant. A method
-    /// that generated on demand would move that install behind a prompt of its own.
-    async fn ca_status(&self) -> Result<CaStatus, Error> {
-        self.certificates.status().await
-    }
-
     /// `metrics.snapshot` — every subject's reading, taken now.
     ///
     /// **A reading rather than the last one taken**, which is what the method's own documentation

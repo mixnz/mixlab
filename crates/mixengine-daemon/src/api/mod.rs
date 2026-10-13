@@ -21,6 +21,7 @@
 // started with (T78b, D3).
 mod adopt_service;
 pub(crate) mod apply;
+mod cert;
 mod create;
 mod daemon;
 mod disk;
