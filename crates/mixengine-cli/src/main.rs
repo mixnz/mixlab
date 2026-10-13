@@ -65,6 +65,7 @@ use commands::cert::{CertCommand, cert};
 use commands::daemon::{DaemonCommand, daemon_credential_store, daemon_stop};
 use commands::database::{DatabaseCommand, database};
 use commands::domain::{DomainCommand, domain};
+use commands::home::{HomeCommand, home};
 use commands::job::{JobCommand, job};
 use commands::logs::logs;
 use commands::metrics::metrics;
@@ -1965,68 +1966,6 @@ fn agreed_to_switch(list: &ServiceList, server: FrontEndServer, json: bool) -> R
             Ok(false)
         }
 
-        confirm::Answer::Unanswerable => Err(unanswered()),
-    }
-}
-
-/// `mix home …` — what an earlier install left a copy of, and bringing it back (T182h).
-#[derive(Debug, Subcommand)]
-enum HomeCommand {
-    /// Say what the copy an earlier install left in its kept folders holds, if there is one.
-    Previous,
-
-    /// Restore that copy into this home: projects, sites, domains and services.
-    ///
-    /// Every database gets a new admin password and is left stopped; the databases in it are kept.
-    Restore {
-        /// Do not ask first.
-        #[arg(long, short = 'y')]
-        yes: bool,
-    },
-}
-
-/// `mix home previous` and `mix home restore`.
-async fn home(
-    endpoint: &Endpoint,
-    autostart: Option<&Autostart>,
-    json: bool,
-    command: &HomeCommand,
-) -> Result<ExitCode, Error> {
-    let mut client = Client::connect(endpoint, autostart).await?;
-
-    match command {
-        HomeCommand::Previous => {
-            let previous: mixengine_proto::HomePrevious =
-                ask(&mut client, rpc::method::HOME_PREVIOUS, None).await?;
-            emit(&rendered(json, &previous, || {
-                render::home_previous(&previous)
-            }))?;
-        }
-
-        HomeCommand::Restore { yes } => {
-            if !*yes && !agreed_to_restore()? {
-                return Ok(ExitCode::SUCCESS);
-            }
-            let report: mixengine_proto::HomeRestoreReport =
-                ask(&mut client, rpc::method::HOME_RESTORE, None).await?;
-            emit(&rendered(json, &report, || render::home_restored(&report)))?;
-        }
-    }
-
-    Ok(ExitCode::SUCCESS)
-}
-
-fn agreed_to_restore() -> Result<bool, Error> {
-    match confirm::ask(
-        "\nThe projects, sites and services an earlier install left a copy of come back into this \
-         home.\nEvery database gets a new admin password and stays stopped; the databases in it are \
-         kept.\n\nrestore? [y/N] ",
-    ) {
-        confirm::Answer::Yes => Ok(true),
-        confirm::Answer::No => {
-            let _ = writeln!(std::io::stderr(), "nothing was changed");
-            Ok(false)
-        }
         confirm::Answer::Unanswerable => Err(unanswered()),
     }
 }
