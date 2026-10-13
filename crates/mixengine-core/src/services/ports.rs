@@ -210,7 +210,7 @@ fn moved(host: &dyn Host, preferred: u16) -> PortMoved {
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use std::net::{Ipv4Addr, TcpListener};
     use std::sync::atomic::{AtomicU16, Ordering};
 
@@ -281,7 +281,7 @@ mod tests {
     /// test that means to hold it to the letter has to know that the next number up is free as well
     /// — otherwise the allocator stepping over a third program is indistinguishable from the
     /// allocator getting the rule wrong.
-    fn a_free_run(run: u16) -> u16 {
+    pub(in crate::services) fn a_free_run(run: u16) -> u16 {
         let base = FIRST_PORT + NEXT_WINDOW.fetch_add(WINDOW, Ordering::Relaxed);
 
         // The property this whole function exists for, asserted rather than hoped for: enough calls

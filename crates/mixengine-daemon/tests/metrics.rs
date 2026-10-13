@@ -1,7 +1,7 @@
 //! What a real daemon says it is costing — roadmap task **T71**.
 //!
 //! The arithmetic is settled against invented readings beside `metrics::minutes`, the reading itself
-//! against a table in `mixengine-platform`, and the two methods against a fixture in `api::rpc`.
+//! against a table in `mixengine-platform`, and the two methods in `api::metrics`' tests.
 //! What is left is the wiring, and it is the half most easily wrong in a way nothing else notices:
 //! **that the loop runs at all without anybody asking, and that opening the stream is what makes it
 //! run every second.**

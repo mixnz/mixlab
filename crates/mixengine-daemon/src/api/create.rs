@@ -1,6 +1,6 @@
 //! `service.create` and `service.delete`: the two ends of a `services` row's life.
 //!
-//! Roadmap task **T31a**. Their own file rather than more of [`super::rpc`], which is already the
+//! Roadmap task **T31a**. Their own file rather than more of [`super::rpc`], which was then the
 //! longest in this crate, and together rather than beside their namespake neighbours because they
 //! are one decision read forwards and backwards: what a create writes is exactly what a delete
 //! takes away, and the second is the first's rollback when a rendering fails.
@@ -228,7 +228,7 @@ impl Api {
         // an override the recipe does not know is refused *here*, with the row already gone.
         match self.services.graph().await {
             Ok(graph) => Ok(ServiceCreation {
-                service: super::rpc::summary(
+                service: super::service::summary(
                     &graph,
                     catalogue,
                     &create.id,
@@ -328,7 +328,7 @@ impl Api {
         }
 
         // Read before anything is removed, because afterwards there is nothing left to describe.
-        let removed = super::rpc::summary(&graph, catalogue, id, Some(&record), &supervised);
+        let removed = super::service::summary(&graph, catalogue, id, Some(&record), &supervised);
 
         let column = mixengine_core::services::delete(&self.store, id)
             .await
@@ -446,5 +446,50 @@ mod autostart_tests {
             "anything else stays off"
         );
         assert!(autostart_for(Some(true), &Role::Other));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::api::test_daemon::undeclared;
+    use crate::services::fixture;
+
+    /// **T97.** The lock is taken for the one role that has an invariant spanning rows, and for
+    /// nothing else.
+    ///
+    /// A home may have as many databases as it likes and they contend for nothing here; a home may
+    /// have one front end, and the window in which that is momentarily untrue is what this closes.
+    #[tokio::test]
+    async fn only_a_front_end_change_waits_for_another_one() {
+        let daemon = undeclared().await;
+        let catalogue = crate::services::catalogue();
+
+        let held = daemon
+            .api
+            .one_front_end_change_at_a_time(&catalogue, &fixture::service("nginx"))
+            .await;
+
+        assert!(held.is_some(), "a front end takes the lock");
+        assert!(
+            daemon.api.front_end.try_lock().is_err(),
+            "and holds it, which is the whole of what it is for"
+        );
+
+        assert!(
+            daemon
+                .api
+                .one_front_end_change_at_a_time(&catalogue, &fixture::service("mariadb@main"))
+                .await
+                .is_none(),
+            "a database goes straight past it, even while a front end holds it"
+        );
+        assert!(
+            daemon
+                .api
+                .one_front_end_change_at_a_time(&catalogue, &fixture::service("not-a-package"))
+                .await
+                .is_none(),
+            "and so does a package this build has no recipe for"
+        );
     }
 }

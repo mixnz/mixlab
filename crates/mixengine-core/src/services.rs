@@ -1935,9 +1935,9 @@ mod tests {
         let (_home, store) = store().await;
         package(&store, "mariadb").await;
 
-        let squatter =
-            std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).expect("a squatter");
-        let preferred = squatter.local_addr().expect("its address").port();
+        let preferred = ports::tests::a_free_run(2);
+        let _squatter = std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, preferred))
+            .expect("a squatter");
 
         let written = create(
             &store,

@@ -16,6 +16,9 @@
 //! back-pressure, where the event bus holds 1024: for a metric the old value is worth nothing and
 //! the next one is a second away, so there is nothing to replay and nothing to ask the client to
 //! re-fetch.
+//!
+//! **`metrics.snapshot` and `metrics.history` are here too** — the two methods a client asks once
+//! rather than streams (roadmap tasks T71 and T190c).
 
 use std::convert::Infallible;
 use std::sync::Arc;
@@ -29,6 +32,8 @@ use tokio::sync::broadcast;
 
 use super::Api;
 use super::http::ResponseBody;
+use crate::error::ToWire as _;
+use mixengine_proto::{Error, ErrorCode, MetricsHistory, MetricsHistoryQuery};
 
 /// One frame, as an SSE `data:` line.
 ///
@@ -93,11 +98,55 @@ pub(super) fn stream(api: &Arc<Api>) -> Response<ResponseBody> {
     response
 }
 
+impl Api {
+    /// `metrics.snapshot` — every subject's reading, taken now.
+    ///
+    /// **A reading rather than the last one taken**, which is what the method's own documentation
+    /// promises: between clients this daemon samples once a minute, so the cached tick would answer
+    /// a person with a number up to a minute old and would not mention a service that started ten
+    /// seconds ago. Reuse of a reading younger than a second happens inside the loop, which is the
+    /// only thing that measures.
+    ///
+    /// # Errors
+    ///
+    /// [`ErrorCode::Internal`] when the sampling loop is gone, which happens only while this daemon
+    /// is shutting down — and is worth saying rather than answering with an empty frame that would
+    /// read as a machine using nothing.
+    pub(super) async fn metrics_snapshot(&self) -> Result<MetricsFrame, Error> {
+        self.metrics.snapshot().await.ok_or_else(|| {
+            Error::new(
+                ErrorCode::Internal,
+                "this daemon is no longer measuring anything",
+            )
+            .with_hint("it is shutting down; ask the one that starts next")
+        })
+    }
+
+    /// `metrics.history` — the 24-hour history, one row per subject per minute.
+    ///
+    /// # Errors
+    ///
+    /// Whatever [`mixengine_core::metrics::history`] reports when the table cannot be read.
+    pub(super) async fn metrics_history(
+        &self,
+        query: &MetricsHistoryQuery,
+    ) -> Result<MetricsHistory, Error> {
+        // The machine's logical processors ride along (T190c), so a client draws the rows as a
+        // share of the machine without asking a second question.
+        let cores = self.elevation.host().resource_control().support().cores;
+
+        mixengine_core::metrics::history(&self.store, query, self.metrics.retention_hours(), cores)
+            .await
+            .map_err(|error| error.to_wire())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use mixengine_proto::{MetricsSample, MetricsSubject, Timestamp};
 
     use super::*;
+    use crate::api::test_daemon::call;
 
     #[test]
     fn a_frame_goes_out_as_one_sse_data_line() {
@@ -117,5 +166,43 @@ mod tests {
         assert!(text.starts_with("data: {"));
         assert!(text.ends_with("\n\n"), "one blank line ends an SSE frame");
         assert_eq!(text.matches("data: ").count(), 1);
+    }
+
+    #[tokio::test]
+    async fn a_history_read_answers_with_what_this_home_keeps() {
+        let answer = call(r#"{"jsonrpc":"2.0","method":"metrics.history","id":1}"#).await;
+
+        assert_eq!(answer["result"]["retention_hours"], 24);
+        assert_eq!(
+            answer["result"]["minutes"].as_array().map(Vec::len),
+            Some(0),
+            "a home that has measured nothing has no rows, which is an answer and not a failure"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_history_read_refuses_a_subject_it_cannot_read() {
+        let answer = call(
+            r#"{"jsonrpc":"2.0","method":"metrics.history","params":{"subject":"nonsense"},"id":1}"#,
+        )
+        .await;
+
+        assert_eq!(answer["error"]["code"], -32602);
+        assert_eq!(answer["error"]["data"]["code"], "invalid_argument");
+    }
+
+    #[tokio::test]
+    async fn a_snapshot_with_no_loop_behind_it_says_so_rather_than_waiting() {
+        // The fixture builds a sampler and keeps only its handle, which is the shape a daemon has
+        // while it is shutting down. The answer has to be an error: an empty frame would read as a
+        // machine using nothing.
+        let answer = call(r#"{"jsonrpc":"2.0","method":"metrics.snapshot","id":1}"#).await;
+
+        assert_eq!(answer["error"]["data"]["code"], "internal");
+        assert!(
+            answer["error"]["data"]["hint"]
+                .as_str()
+                .is_some_and(|hint| hint.contains("shutting down"))
+        );
     }
 }

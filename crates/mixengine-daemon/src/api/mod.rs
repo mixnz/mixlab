@@ -21,7 +21,10 @@
 // started with (T78b, D3).
 mod adopt_service;
 pub(crate) mod apply;
+mod cert;
 mod create;
+mod daemon;
+mod disk;
 pub(crate) mod events;
 mod front_end;
 mod http;
@@ -29,6 +32,12 @@ mod logs;
 mod metrics;
 mod restore;
 mod rpc;
+mod self_update;
+mod service;
+mod service_settings;
+#[cfg(test)]
+mod test_daemon;
+mod uninstall;
 mod upgrade;
 
 pub(crate) use rpc::on_a_blocking_thread;

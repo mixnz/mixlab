@@ -4,8 +4,9 @@
 //! reason no unit test can get around: what an update is *about* is a running daemon replacing the
 //! binaries it and its client are executing, and then a different process coming up out of them.
 //! Every part of that is proved where it lives — the feed's verification in `core::index`, the swap
-//! and its rollback in `core::updates::apply`, the refusals in `api/rpc.rs` — and none of it proves
-//! that a person typing two words ends up running the new build with the same services up.
+//! and its rollback in `core::updates::apply`, the refusals in `api/self_update.rs` — and none of
+//! it proves that a person typing two words ends up running the new build with the same services
+//! up.
 //!
 //! **So this copies `mix` and `mixengined` into a directory of its own** and drives them from there.
 //! A test that swapped the binaries in `target/debug` would replace the ones `cargo test` is running

@@ -22,7 +22,7 @@
 //!
 //! [`perform`] is everything between the stop and the start, and it stops nothing. The walk belongs
 //! to the API, which has the graph, and to the registry, which has the supervisors; what a reset
-//! *is* — a stop, these steps, and putting back what went down — is `api::rpc`.
+//! *is* — a stop, these steps, and putting back what went down — is `api::service`.
 
 use std::collections::BTreeMap;
 use std::path::Path;
