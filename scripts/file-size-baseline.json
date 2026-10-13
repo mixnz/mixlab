@@ -20,7 +20,7 @@
     "crates/mixengine-core/src/services.rs": 2294,
     "crates/mixengine-core/src/sites.rs": 2671,
     "crates/mixengine-daemon/src/api/apply.rs": 1729,
-    "crates/mixengine-daemon/src/api/rpc.rs": 5683,
+    "crates/mixengine-daemon/src/api/rpc.rs": 5240,
     "crates/mixengine-daemon/src/doctor.rs": 2055,
     "crates/mixengine-daemon/src/elevation.rs": 2825,
     "crates/mixengine-daemon/src/main.rs": 2683,

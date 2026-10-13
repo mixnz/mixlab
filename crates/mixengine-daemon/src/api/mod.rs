@@ -29,6 +29,8 @@ mod logs;
 mod metrics;
 mod restore;
 mod rpc;
+#[cfg(test)]
+mod test_daemon;
 mod upgrade;
 
 pub(crate) use rpc::on_a_blocking_thread;
