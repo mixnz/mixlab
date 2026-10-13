@@ -14,19 +14,18 @@ use mixengine_proto::{
     DoctorRepair, DomainAdd, DomainRemove, DomainStatusQuery, ElevationDrop, Error, ErrorCode,
     ExtensionAvailable, ExtensionChoice, ExtensionInspect, ExtensionInstall, ExtensionPlanRequest,
     ExtensionTarget, ExtensionUninstall, FrontEndSwitch, JobFilter, JobList, JobQuery, JobWait,
-    MetricsFrame, MetricsHistory, MetricsHistoryQuery, PackageFilter, PackageInstall,
-    PackageTarget, PackageUpgrade, PackageUpgradeQuery, ProjectCreate, ProjectQuery, ProjectUpdate,
-    ResetCredential, RuntimeFilter, RuntimeInstall, RuntimeQuestion, RuntimeTarget,
-    RuntimeUninstall, RuntimeUpgrade, RuntimeUpgradeQuery, SaveResourcesSet, ServiceAutostartSet,
-    ServiceCreate, ServiceDelete, ServiceIdleSet, ServiceLimitsSet, ServiceQuery, ServiceTarget,
-    SiteCreate, SiteListQuery, SiteQuery, SiteShare, SiteUpdate, UninstallQuery, UpdateApply,
-    UpdateCheck, UpdateDecide, UpdateFinish, UpdateHandOver,
+    MetricsHistoryQuery, PackageFilter, PackageInstall, PackageTarget, PackageUpgrade,
+    PackageUpgradeQuery, ProjectCreate, ProjectQuery, ProjectUpdate, ResetCredential,
+    RuntimeFilter, RuntimeInstall, RuntimeQuestion, RuntimeTarget, RuntimeUninstall,
+    RuntimeUpgrade, RuntimeUpgradeQuery, SaveResourcesSet, ServiceAutostartSet, ServiceCreate,
+    ServiceDelete, ServiceIdleSet, ServiceLimitsSet, ServiceQuery, ServiceTarget, SiteCreate,
+    SiteListQuery, SiteQuery, SiteShare, SiteUpdate, UninstallQuery, UpdateApply, UpdateCheck,
+    UpdateDecide, UpdateFinish, UpdateHandOver,
 };
 use serde_json::Value;
 use tracing::Instrument as _;
 
 use super::Api;
-use crate::error::ToWire as _;
 
 /// Answer a `POST /rpc` body.
 ///
@@ -1101,46 +1100,6 @@ impl Failure {
     }
 }
 
-impl Api {
-    /// `metrics.snapshot` — every subject's reading, taken now.
-    ///
-    /// **A reading rather than the last one taken**, which is what the method's own documentation
-    /// promises: between clients this daemon samples once a minute, so the cached tick would answer
-    /// a person with a number up to a minute old and would not mention a service that started ten
-    /// seconds ago. Reuse of a reading younger than a second happens inside the loop, which is the
-    /// only thing that measures.
-    ///
-    /// # Errors
-    ///
-    /// [`ErrorCode::Internal`] when the sampling loop is gone, which happens only while this daemon
-    /// is shutting down — and is worth saying rather than answering with an empty frame that would
-    /// read as a machine using nothing.
-    async fn metrics_snapshot(&self) -> Result<MetricsFrame, Error> {
-        self.metrics.snapshot().await.ok_or_else(|| {
-            Error::new(
-                ErrorCode::Internal,
-                "this daemon is no longer measuring anything",
-            )
-            .with_hint("it is shutting down; ask the one that starts next")
-        })
-    }
-
-    /// `metrics.history` — the 24-hour history, one row per subject per minute.
-    ///
-    /// # Errors
-    ///
-    /// Whatever [`mixengine_core::metrics::history`] reports when the table cannot be read.
-    async fn metrics_history(&self, query: &MetricsHistoryQuery) -> Result<MetricsHistory, Error> {
-        // The machine's logical processors ride along (T190c), so a client draws the rows as a
-        // share of the machine without asking a second question.
-        let cores = self.elevation.host().resource_control().support().cores;
-
-        mixengine_core::metrics::history(&self.store, query, self.metrics.retention_hours(), cores)
-            .await
-            .map_err(|error| error.to_wire())
-    }
-}
-
 /// Serialise an answer.
 ///
 /// The failure case is unreachable — every type in it is one of ours — and is answered with a
@@ -1166,44 +1125,6 @@ mod tests {
     /// Whether a response says the call succeeded.
     fn succeeded(response: &Response) -> bool {
         matches!(response.outcome, ResponseOutcome::Success { .. })
-    }
-
-    #[tokio::test]
-    async fn a_history_read_answers_with_what_this_home_keeps() {
-        let answer = call(r#"{"jsonrpc":"2.0","method":"metrics.history","id":1}"#).await;
-
-        assert_eq!(answer["result"]["retention_hours"], 24);
-        assert_eq!(
-            answer["result"]["minutes"].as_array().map(Vec::len),
-            Some(0),
-            "a home that has measured nothing has no rows, which is an answer and not a failure"
-        );
-    }
-
-    #[tokio::test]
-    async fn a_history_read_refuses_a_subject_it_cannot_read() {
-        let answer = call(
-            r#"{"jsonrpc":"2.0","method":"metrics.history","params":{"subject":"nonsense"},"id":1}"#,
-        )
-        .await;
-
-        assert_eq!(answer["error"]["code"], -32602);
-        assert_eq!(answer["error"]["data"]["code"], "invalid_argument");
-    }
-
-    #[tokio::test]
-    async fn a_snapshot_with_no_loop_behind_it_says_so_rather_than_waiting() {
-        // The fixture builds a sampler and keeps only its handle, which is the shape a daemon has
-        // while it is shutting down. The answer has to be an error: an empty frame would read as a
-        // machine using nothing.
-        let answer = call(r#"{"jsonrpc":"2.0","method":"metrics.snapshot","id":1}"#).await;
-
-        assert_eq!(answer["error"]["data"]["code"], "internal");
-        assert!(
-            answer["error"]["data"]["hint"]
-                .as_str()
-                .is_some_and(|hint| hint.contains("shutting down"))
-        );
     }
 
     #[tokio::test]
