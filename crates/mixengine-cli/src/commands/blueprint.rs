@@ -421,7 +421,7 @@ pub(crate) async fn blueprint(
             .await?;
 
             emit(&rendered(json, &walk, || {
-                render::service_walk(render::Walked::Start, &walk)
+                render::service::service_walk(render::service::Walked::Start, &walk)
             }))?;
 
             return Ok(match walk.failed {

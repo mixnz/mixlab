@@ -236,7 +236,7 @@ pub(crate) async fn extension(
                 ask(&mut client, rpc::method::EXTENSION_START, encode(&asked)).await?;
 
             emit(&rendered(json, &walk, || {
-                render::service_walk(render::Walked::Start, &walk)
+                render::service::service_walk(render::service::Walked::Start, &walk)
             }))?;
         }
 
@@ -248,7 +248,7 @@ pub(crate) async fn extension(
                 ask(&mut client, rpc::method::EXTENSION_STOP, encode(&asked)).await?;
 
             emit(&rendered(json, &walk, || {
-                render::service_walk(render::Walked::Stop, &walk)
+                render::service::service_walk(render::service::Walked::Stop, &walk)
             }))?;
         }
     }
