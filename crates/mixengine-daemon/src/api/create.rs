@@ -228,7 +228,7 @@ impl Api {
         // an override the recipe does not know is refused *here*, with the row already gone.
         match self.services.graph().await {
             Ok(graph) => Ok(ServiceCreation {
-                service: super::rpc::summary(
+                service: super::service::summary(
                     &graph,
                     catalogue,
                     &create.id,
@@ -328,7 +328,7 @@ impl Api {
         }
 
         // Read before anything is removed, because afterwards there is nothing left to describe.
-        let removed = super::rpc::summary(&graph, catalogue, id, Some(&record), &supervised);
+        let removed = super::service::summary(&graph, catalogue, id, Some(&record), &supervised);
 
         let column = mixengine_core::services::delete(&self.store, id)
             .await

@@ -29,6 +29,7 @@ mod logs;
 mod metrics;
 mod restore;
 mod rpc;
+mod service;
 #[cfg(test)]
 mod test_daemon;
 mod upgrade;
