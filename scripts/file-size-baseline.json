@@ -8,7 +8,6 @@
     "crates/mixengine-daemon/src/main.rs": 2683,
     "crates/mixengine-daemon/src/services/runner.rs": 3219,
     "crates/mixengine-platform/src/process.rs": 1614,
-    "crates/mixengine-platform/src/windows/process.rs": 1781,
-    "crates/mixengine-proto/src/service.rs": 1954
+    "crates/mixengine-platform/src/windows/process.rs": 1781
   }
 }
