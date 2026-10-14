@@ -44,6 +44,7 @@ import {
 import { csvText, insertStatements, jsonText, spreadsheetText } from "./rowText";
 import { displayValue, isMultilineType, nextSort, normalizeCellValue } from "./cells";
 import { rememberedFilters, type FilterCache } from "./filters";
+import useRowSelection from "./useRowSelection";
 import type { SqlColumnMeta } from "../../types";
 import { cacheKey as tableCacheKey } from "../../schemaTokens";
 import styles from "./SqlTable.module.css";
@@ -453,13 +454,8 @@ function SqlTable({
     if (columnsVirtual) colView.onScroll();
   }
 
-  // Selected rows are held as indices into the current page: selection is a
-  // property of what is on screen, and every path that replaces the rows
-  // (paging, reloading, switching table) clears it.
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-  // Where a shift-click range starts. A ref rather than state because it is
-  // only ever read from inside an event handler.
-  const anchorRowRef = useRef<number | null>(null);
+  const { selectedRows, clearSelection, selectRow, selectAllRows, selectOnly, selectedRowsInOrder } =
+    useRowSelection(rows);
   /** The right-click menu, and where it was opened — see {@link CellMenu}. */
   const [menu, setMenu] = useState<CellMenu | null>(null);
   const closeMenu = useCallback(() => setMenu(null), []);
@@ -479,11 +475,6 @@ function SqlTable({
   // form being closed. The rows a clone starts from are read at render time rather than stored
   // here, so they are the ones on screen when the form mounts, staged edits included.
   const [insertMode, setInsertMode] = useState<"new" | "clone" | null>(null);
-
-  function clearSelection() {
-    setSelectedRows(new Set());
-    anchorRowRef.current = null;
-  }
 
   /** Hands the keyboard back to the grid. A dialog opened from here takes focus and leaves it on
    * the body when it closes, which would silence the grid's own shortcuts until the next click. */
@@ -673,7 +664,7 @@ function SqlTable({
     setMenu(null);
     setHeaderMenu(null);
     setExpandedCell(null);
-  }, [selectedDb, selectedTable, page, pageSize, sort, appliedFilters, reloadToken]);
+  }, [selectedDb, selectedTable, page, pageSize, sort, appliedFilters, reloadToken, clearSelection]);
 
   useEffect(() => {
     // Nothing is read for a tab nobody is looking at: the sidebar walked while the Structure tab is
@@ -906,15 +897,6 @@ function SqlTable({
     setPage(0);
   }
 
-  /** The selected rows themselves, in the order they sit on screen — `selectedRows` holds their
-   * indices, and a Set keeps no order of its own. */
-  function selectedRowsInOrder(): Record<string, unknown>[] {
-    return [...selectedRows]
-      .sort((a, b) => a - b)
-      .map((i) => rows[i])
-      .filter((row): row is Record<string, unknown> => row !== undefined);
-  }
-
   /** Identifies one row to the server: its primary key columns, or — when the table has none —
    * every column, the same fallback an update uses. */
   function rowKey(row: Record<string, unknown>): Record<string, string | null> {
@@ -995,33 +977,6 @@ function SqlTable({
     setEditValue(displayValue(rows[rowIndex]?.[col]));
   }
 
-  /** Extends, toggles or replaces the selection the way a list does: plain click selects the one
-   * row, the platform's own modifier toggles it, shift takes everything between the anchor and it. */
-  function selectRow(rowIndex: number, e: React.MouseEvent) {
-    const toggle = hasPrimaryModifier(e);
-    const anchor = anchorRowRef.current;
-    if (e.shiftKey && anchor !== null) {
-      const from = Math.min(anchor, rowIndex);
-      const to = Math.max(anchor, rowIndex);
-      setSelectedRows((prev) => {
-        const next = toggle ? new Set(prev) : new Set<number>();
-        for (let i = from; i <= to; i++) next.add(i);
-        return next;
-      });
-      return;
-    }
-    anchorRowRef.current = rowIndex;
-    if (toggle) {
-      setSelectedRows((prev) => {
-        const next = new Set(prev);
-        if (!next.delete(rowIndex)) next.add(rowIndex);
-        return next;
-      });
-      return;
-    }
-    setSelectedRows(new Set([rowIndex]));
-  }
-
   function handleCellMouseDown(e: React.MouseEvent<HTMLTableCellElement>, rowIndex: number, col: string) {
     // A secondary click belongs to `handleCellContextMenu`, which decides the selection for itself.
     // On a Mac that gesture is also `Ctrl+Click`, and WebKit spells it as a plain button-0
@@ -1070,10 +1025,7 @@ function SqlTable({
     // A staged edit is written out first, exactly as leaving the cell by any other route does: the
     // entries below copy `rows`, and a value still sitting in the input is not in them yet.
     void commitAndExit();
-    if (!selectedRows.has(rowIndex)) {
-      setSelectedRows(new Set([rowIndex]));
-      anchorRowRef.current = rowIndex;
-    }
+    if (!selectedRows.has(rowIndex)) selectOnly(rowIndex);
     setMenu({ rowIndex, col, x: e.clientX, y: e.clientY });
   }
 
@@ -1161,8 +1113,7 @@ function SqlTable({
     "grid.selectAll",
     () => {
       if (rows.length === 0) return;
-      setSelectedRows(new Set(rows.map((_, i) => i)));
-      anchorRowRef.current = 0;
+      selectAllRows();
       // Delete and Escape act on the selection and are the grid's own keys, so the keyboard is
       // handed to it — otherwise a selection made from across the pane could not be acted on
       // without a click.
