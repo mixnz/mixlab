@@ -164,8 +164,9 @@ export default function useGridLayout({
   });
 
   /** Every move of the scrollbar, noted so that the position survives the grid being hidden,
-   *  swapped for another table or unmounted — see {@link scrollPosRef}. A box with no layout is
-   *  not believed: it reports the top, and that is the one answer that must not be filed. */
+   *  swapped for another table or unmounted — see `scrollPosRef` in `useTableData`. A box with no
+   *  layout is not believed: it reports the top, and that is the one answer that must not be
+   *  filed. */
   function handleScroll() {
     const node = scrollRef.current;
     if (node && node.clientHeight > 0) {
@@ -265,7 +266,8 @@ export default function useGridLayout({
   })();
 
   /** The columns each drawn row actually builds cells for. The whole set until they are worth
-   *  windowing, and the header keeps the whole set either way — see the note over `<thead>`. */
+   *  windowing, and the header keeps the whole set either way — see the note over `<GridHeader>` in
+   *  `SqlTable.tsx`. */
   const drawnColumns = columnsVirtual ? columns.slice(colView.first, colView.last) : columns;
 
   return {

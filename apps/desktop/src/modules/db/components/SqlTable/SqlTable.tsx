@@ -237,7 +237,7 @@ function SqlTable({
     // And back to the head of it: what the first page is worth is the rows at its top, and an offset
     // carried over from halfway down page five would land the grid in the middle of page one instead.
     // The horizontal position stays — that says which columns are being read, which a reload does not
-    // change. Read by the layout effect above when the new rows arrive.
+    // change. Read by `useGridLayout`'s layout effect when the new rows arrive.
     scrollPosRef.current = { ...scrollPosRef.current, top: 0 };
     setPage(0);
     setReloadToken((n) => n + 1);
@@ -583,8 +583,8 @@ function SqlTable({
             // What a row would hold if all of it were built. Once the columns are windowed the body
             // rows hold only the drawn ones, and a reader counting cells would otherwise be told
             // the table is sixteen columns wide and put the wrong header to every value in it. The
-            // header row is exempt from the matching `aria-colindex` below: it never drops a cell,
-            // so its columns are already where they are counted to be.
+            // header row is exempt from the matching `aria-colindex` in `GridBody`: it never drops a
+            // cell, so its columns are already where they are counted to be.
             aria-colcount={columns.length}
             // Rows pinned whenever they are windowed; columns pinned once they have been measured.
             // Two classes because they answer to different conditions — the measuring can fail in a

@@ -1,5 +1,9 @@
 import type { ChangeEvent, KeyboardEvent, MouseEvent, RefObject } from "react";
-import { cellPreview, type useVirtualColumns, type useVirtualRows } from "../../../../core/virtualRows";
+import {
+  cellPreview,
+  type useVirtualColumns,
+  type useVirtualRows,
+} from "../../../../core/virtualRows";
 import type { SqlColumnMeta } from "../../types";
 import { displayValue, isMultilineType } from "./cells";
 import type { EditingCell, PendingRow } from "./useCellEditing";
@@ -26,10 +30,15 @@ interface Props {
   handleEditKeyDown: (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleInputBlur: (rowIndex: number, col: string) => void;
   handleCellMouseDown: (e: MouseEvent<HTMLTableCellElement>, rowIndex: number, col: string) => void;
-  handleCellContextMenu: (e: MouseEvent<HTMLTableCellElement>, rowIndex: number, col: string) => void;
+  handleCellContextMenu: (
+    e: MouseEvent<HTMLTableCellElement>,
+    rowIndex: number,
+    col: string,
+  ) => void;
 }
 
-/** The grid's rows: the drawn window of them, the cell open for editing, and the cells being read. */
+/** The grid's rows: the drawn window of them, the cell open for editing, and the cells being
+ *  read. */
 function GridBody({
   rows,
   columns,
@@ -76,14 +85,14 @@ function GridBody({
           >
             {/* The columns outside the window, as one cell spanning them. It needs no
                 width of its own: a fixed layout takes every column's from the colgroup
-                above, which holds all of them whether or not a cell was built for them, so
-                the space left here is the space those columns were measured to want. */}
+                `SqlTable` draws, which holds all of them whether or not a cell was built for
+                them, so the space left here is the space those columns were measured to want. */}
             {columnsVirtual && colView.first > 0 && (
               <td colSpan={colView.first} aria-hidden="true" />
             )}
             {drawnColumns.map((c, at) => {
               // Where this cell sits in the whole table rather than in what was drawn —
-              // see `aria-colcount` above. One-based, as the attribute counts.
+              // see `aria-colcount` on the table in `SqlTable`. One-based, as the attribute counts.
               const colIndex = colView.first + at + 1;
               const isEditing = editingCell?.rowIndex === i && editingCell.col === c;
               if (isEditing) {

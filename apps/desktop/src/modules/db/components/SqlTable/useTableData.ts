@@ -7,7 +7,14 @@ import type { FilterOperator, SqlFilter } from "../../sql/filters";
 import type { SqlColumnMeta } from "../../types";
 import { cacheKey as tableCacheKey } from "../../schemaTokens";
 import { rememberedFilters, type FilterCache } from "./filters";
-import { fileTable, rememberedTable, sameRequest, type Sort, type TableCache, type TableRequest } from "./request";
+import {
+  fileTable,
+  rememberedTable,
+  sameRequest,
+  type Sort,
+  type TableCache,
+  type TableRequest,
+} from "./request";
 
 const DEFAULT_PAGE_SIZE = 1000;
 
@@ -242,8 +249,9 @@ export default function useTableData({
     // the render that saw the table change — see the note there.
     const key = tableCacheKey(selectedDb, selectedTable);
     const cached = rememberedTable(tableCache, key, schemaToken);
-    // Where the grid goes back to once its rows are in the DOM — see the layout effect below. Set
-    // here rather than left to the box itself, which is at the top whatever the last table did.
+    // Where the grid goes back to once its rows are in the DOM — see `useGridLayout`'s layout
+    // effect. Set here rather than left to the box itself, which is at the top whatever the last
+    // table did.
     scrollPosRef.current = { top: cached?.scrollTop ?? 0, left: cached?.scrollLeft ?? 0 };
     // A table that has been here before gets its own bar back; only a first visit is seeded with
     // the opening `id =` row.

@@ -177,8 +177,8 @@ export default function useCellEditing({
   async function moveEditTo(rowIndex: number, col: string) {
     // The one door into edit mode — a double-click and a Tab both come through here — so this is
     // the one place a read-only connection has to be turned away. Nothing is said about it: a cell
-    // that simply does not open reads as a grid for looking at, and the reason is on the buttons
-    // below, where someone who wants to change something is already looking.
+    // that simply does not open reads as a grid for looking at, and the reason is on the footer's
+    // buttons, where someone who wants to change something is already looking.
     if (readOnly) return;
     const leavingRow = editingCellRef.current?.rowIndex;
     commitEditingCell();
