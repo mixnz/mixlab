@@ -34,6 +34,10 @@
 //! [updates.md](../../../docs/features/updates.md) for what a rotation therefore costs and for
 //! the shape of the mitigation nobody has needed yet.
 
+mod error;
+
+pub use error::UpdateError;
+
 pub mod apply;
 pub mod complete;
 pub mod feed;

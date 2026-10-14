@@ -630,16 +630,16 @@ impl ToWire for mixengine_core::Error {
             Core::Platform(error) => error.to_wire(),
 
             // A copy the `.pkg` installed, asked to swap in place: the way that works is named.
-            Core::UpdateUsesInstaller { .. } => {
+            Core::Update(mixengine_core::UpdateError::UpdateUsesInstaller { .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self))
                     .with_hint("`mix self-update` opens the next .pkg in Installer.app")
             }
 
-            Core::InstallerUnavailable { .. } => {
+            Core::Update(mixengine_core::UpdateError::InstallerUnavailable { .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self))
             }
 
-            Core::UpdateNotInstalled { .. } => {
+            Core::Update(mixengine_core::UpdateError::UpdateNotInstalled { .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
                     "finish the installation in Installer.app, then run `mix self-update --finish`",
                 )
