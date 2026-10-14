@@ -110,6 +110,7 @@
     "crates/mixengine-proto/src/runtime.rs",
     "crates/mixengine-proto/src/runtime_api.rs",
     "crates/mixengine-proto/src/service.rs",
+    "crates/mixengine-proto/src/service/policy.rs",
     "crates/mixengine-proto/src/service_api.rs",
     "crates/mixengine-proto/src/site_api.rs",
     "crates/mixengine-proto/src/state.rs",
