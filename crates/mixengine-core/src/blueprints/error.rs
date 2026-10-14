@@ -5,7 +5,6 @@
 
 /// The ways reading, naming and fetching a blueprint can fail
 #[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
 pub enum BlueprintError {
     /// A blueprint manifest does not parse.
     ///

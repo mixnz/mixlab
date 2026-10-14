@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 /// The ways asking the privileged helper can fail
 #[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
 pub enum ElevationError {
     /// `mixengine-elevate` is neither installed nor beside the program that went looking for it.
     ///

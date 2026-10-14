@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 /// The ways recording, resolving and restoring runtimes and packages can fail.
 #[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
 pub enum RuntimeError {
     /// Something is already installed where this one was going.
     ///

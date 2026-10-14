@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 /// The ways reading the signed index and installing what it names can fail.
 #[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
 pub enum InstallError {
     /// The package index could not be fetched.
     ///

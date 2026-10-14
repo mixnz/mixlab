@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 /// The ways updating MixEngine and its helper can fail
 #[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
 pub enum UpdateError {
     /// A `settings` row could not be written as JSON — roadmap task **T88**.
     ///

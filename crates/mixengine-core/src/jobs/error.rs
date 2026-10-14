@@ -5,7 +5,6 @@
 
 /// The ways a job's row and its life can fail.
 #[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
 pub enum JobError {
     /// Something tried to move a job that is already over.
     ///

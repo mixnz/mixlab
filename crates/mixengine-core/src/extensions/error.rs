@@ -5,7 +5,6 @@
 
 /// The ways an extension, its manifest and its registry can be wrong.
 #[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
 pub enum ExtensionError {
     /// An `extension.toml` does not parse — roadmap task **T80**.
     ///

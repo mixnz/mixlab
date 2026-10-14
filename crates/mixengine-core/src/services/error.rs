@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 /// The ways a service's state, settings, generated configuration and ports can be wrong.
 #[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
 pub enum ServiceError {
     /// A database or account name is not one this build will put in a statement.
     ///

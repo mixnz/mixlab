@@ -22,6 +22,7 @@ use mixengine_core::BlueprintError;
 use mixengine_core::ElevationError;
 use mixengine_core::ExtensionError;
 use mixengine_core::InstallError;
+use mixengine_core::JobError;
 use mixengine_core::ProjectError;
 use mixengine_core::RuntimeError;
 use mixengine_core::ServiceError;
@@ -135,568 +136,615 @@ impl ToWire for mixengine_core::Error {
                 ),
             },
 
-            // **Reachable by a client since T23, and unclassified before it.** T20 and T21 landed
-            // every variant below with no method in front of them, so each fell into the `internal`
-            // arm at the bottom of this match — which was true of nothing except that nobody could
-            // reach them. `runtime.*` is what made them a user's problem, so this is where they get
-            // a code and a way out.
-            //
-            // The split that matters is *whose fault it is*, because that is what decides where a
-            // person is sent: a document or an archive that verified and is then unusable is one we
-            // published, and a signature or a checksum that does not match is somebody between us
-            // and them. Only the first is `internal`.
-            Core::Install(InstallError::IndexTransport { .. })
-            | Core::Install(InstallError::ArtifactTransport { .. }) => {
-                Error::new(ErrorCode::Io, chain(self)).with_hint(
-                    "MixEngine fetches the version list and every runtime over the internet; a \
-                     machine that is offline, or behind a proxy that needs a certificate this one \
-                     does not trust, is the usual reason it cannot",
+            Core::Install(error) => match error {
+                // **Reachable by a client since T23, and unclassified before it.** T20 and T21
+                // landed every variant below with no method in front of them, so each fell into the
+                // `internal` arm at the bottom of this match — which was true of nothing except
+                // that nobody could reach them. `runtime.*` is what made them a user's problem, so
+                // this is where they get a code and a way out.
+                //
+                // The split that matters is *whose fault it is*, because that is what decides where
+                // a person is sent: a document or an archive that verified and is then unusable is
+                // one we published, and a signature or a checksum that does not match is somebody
+                // between us and them. Only the first is `internal`.
+                InstallError::IndexTransport { .. }
+                | InstallError::ArtifactTransport { .. } => {
+                    Error::new(ErrorCode::Io, chain(self)).with_hint(
+                        "MixEngine fetches the version list and every runtime over the internet; a \
+                         machine that is offline, or behind a proxy that needs a certificate this one \
+                         does not trust, is the usual reason it cannot",
+                    )
+                }
+
+                // The download stopped part way after every resume attempt, and what is on disk is
+                // *kept*: asking again continues from it rather than starting over, which is the
+                // one thing worth telling somebody who is about to try.
+                InstallError::ArtifactIncomplete { .. } => {
+                    Error::new(ErrorCode::Io, chain(self))
+                        .with_hint("what arrived is kept; asking again resumes from it")
+                }
+
+                // The one failure that cannot happen by accident, and the one place this daemon
+                // refuses something that verified as well-formed. `precondition_failed` rather than
+                // `internal`: nothing here is broken, and what has to change is which server is
+                // being asked.
+                InstallError::IndexSignature { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
+                        "the index is signed by MixEngine and checked before it is read; a mirror \
+                         serving somebody else's document, or an index published by a team using its \
+                         own key, needs that key given to `mixengined --index-key`",
+                    )
+                }
+
+                // The root is ours and this file is not the one it names. Nothing here is broken
+                // and nothing was kept: the list is read again without it, and the next ask tries
+                // again.
+                InstallError::IndexKind { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
+                        "this file did not match what the signed index says it should be, which \
+                         usually means the index was being published at that moment; ask again in a \
+                         minute",
+                    )
+                }
+
+                // Bytes that are ours by signature and then do not match what the index says they
+                // hash to, or are longer than it says they are. A corrupted transfer or a mirror
+                // serving something else; either way the download has been deleted and the next
+                // step is the same one.
+                InstallError::ArtifactChecksum { .. }
+                | InstallError::ArtifactTooLarge { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
+                        "the download did not match what the signed index publishes for it and has \
+                         been discarded; asking again fetches it afresh",
+                    )
+                }
+
+                // An archive shape, or a document version, from a pipeline newer than this build.
+                // Not a bug and not a dead end: the update is the fix, and saying so beats the
+                // field-by-field confusion a best-effort parse would produce.
+                InstallError::IndexSchema { .. }
+                | InstallError::ArtifactFormat { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self))
+                        .with_hint("this release of MixEngine is older than what it is being offered")
+                }
+
+                // A correctly signed index from before a security release, replayed. The cached
+                // document is kept, so nothing was lost — what is worth saying is that the *server*
+                // is behind.
+                InstallError::IndexRolledBack { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
+                        "the index already held is newer and is still being used; a mirror that has \
+                         stopped syncing is the usual reason a server offers an older one",
+                    )
+                }
+
+                // The archive names a path outside where it is being unpacked: the oldest attack
+                // there is against an installer, and one a correct signature says nothing about.
+                // Nothing was written — the staging directory it was going into is gone.
+                InstallError::UnsafeArchiveEntry { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
+                        "nothing was unpacked; please report this, quoting the archive named above",
+                    )
+                }
+
+                // Past the signature and past the checksum, so these bytes *are* the ones we
+                // published and they are unusable: our packaging, our bug. The same relationship
+                // `IndexUnreadable` has to `IndexSignature`, one layer down.
+                InstallError::IndexUnreadable { .. }
+                | InstallError::ArchiveUnreadable { .. }
+                | InstallError::MissingFromArtifact { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self)).with_hint(
+                        "this is a bug in what MixEngine published rather than on this machine; \
+                         `logs/daemon.log` has the detail a report needs",
+                    )
+                }
+
+                // **What a checksum cannot say.** The bytes are ours and this machine will not run
+                // them: a missing VC++ redistributable, a glibc older than the build's floor, an
+                // image the loader refuses. `dependency_missing` is the code that tells a GUI to
+                // offer the thing that is missing, which is exactly the shape of every one of
+                // those.
+                InstallError::SmokeTestFailed { .. } => {
+                    Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(
+                        "nothing was installed; the runtime was run once from a staging directory and \
+                         would not start, so the message above is the operating system's own",
+                    )
+                }
+
+                // Logged where it happens and reported by `mix doctor`, never answered to a
+                // request: nothing a client asks for fails because a JDK's store could not be
+                // written — T27e.
+                InstallError::KeytoolRefused { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self))
+                }
+
+                // A broken build: the key compiled into this binary is not a key. Nothing a user
+                // did and nothing they can do.
+                InstallError::IndexKey { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self))
+                }
+
+                // Never reaches a client as an error: the job registry judges an ending by the
+                // token rather than by what the work returned, so work that gave up when asked is
+                // recorded as *cancelled*. Classified all the same, because a value that can be
+                // constructed can be rendered.
+                InstallError::InstallCancelled => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self))
+                        .with_hint("what had been downloaded is kept; asking again resumes from it")
+                }
+
+                // Never given a code of their own: what the `_` arm below gives every other error.
+                InstallError::Timestamp { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            },
+
+            Core::Runtime(error) => match error {
+                // `UnsupportedPlatform` and not `InvalidArgument`: the request is well formed and
+                // is answerable on another machine — the same name is a module on Windows and
+                // linked in on the Unix cells — so what refuses it is this build rather than the
+                // sentence.
+                RuntimeError::ExtensionCompiledIn { .. } => {
+                    Error::new(ErrorCode::UnsupportedPlatform, chain(self)).with_hint(
+                        "this build has it linked in, so it is always loaded; nothing can unload it \
+                         short of a build that ships it as a module",
+                    )
+                }
+
+                // Two ways of saying "it is already here", and they are deliberately different
+                // variants one layer down: `AlreadyInstalled` is a directory, `AlreadyRecorded` is
+                // a row. A client cannot act differently on them, so they share a code and a hint.
+                RuntimeError::AlreadyInstalled { .. }
+                | RuntimeError::AlreadyRecorded { .. }
+                | RuntimeError::PackageAlreadyRecorded { .. } => {
+                    Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(
+                        "an installed version is never overwritten; uninstall it first if it is to be \
+                         replaced",
+                    )
+                }
+
+                // A directory an earlier home installed and this one could not check — roadmap task
+                // T182f. Recorded by hand once it can be checked, or removed.
+                RuntimeError::UnrecordedInstall { path, .. } => {
+                    Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
+                        "`mix runtime adopt` or `mix package adopt` records it once it can be checked, \
+                         or remove {} and install again",
+                        path.display()
+                    ))
+                }
+
+                // A hand-edited database, or a row from a build that knew a channel this one does
+                // not. The same reading `UnknownServiceState` gets, and the same code.
+                RuntimeError::UnreadableRuntimeRow { .. }
+                | RuntimeError::UnreadablePackageRow { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self)).with_hint(UNREADABLE_ROW)
+                }
+
+                // **The one failure `runtime.resolve` exists to produce well.**
+                // `dependency_missing` is the code the feature spec names, and the hint is the
+                // whole value of the answer: what to type. A range cannot become an install command
+                // — inventing a version would be inventing a release — so it becomes the listing
+                // instead.
+                RuntimeError::RuntimeUnresolved {
+                    kind, constraint, ..
+                } => Error::new(ErrorCode::DependencyMissing, chain(self))
+                    .with_hint(mixengine_core::resolve::install_command(*kind, constraint)),
+
+                // Nothing was asked for and there is nothing to fall back on. Distinct from the
+                // above because the way out is different: there is no constraint to satisfy, only a
+                // kind with no default — which is what uninstalling the last version leaves behind.
+                // **T206d, D2.** The version is recorded and its folder is gone: the hint is the
+                // install that restores it in place, and the uninstall that forgets it.
+                RuntimeError::RuntimeMissing { kind, version, .. } => {
+                    Error::new(ErrorCode::DependencyMissing, chain(self))
+                        .with_hint(mixengine_core::resolve::restore_command(*kind, version))
+                }
+
+                RuntimeError::NoDefaultRuntime { kind } => {
+                    Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
+                        "`mix runtime list --kind {kind}` shows what is installed, and \
+                         `mix runtime default {kind} <version>` chooses which one is used here"
+                    ))
+                }
+
+                // The version is there and the program is not, which no client can produce today —
+                // the shim is what looks an executable up, and it resolves in its own process
+                // without a daemon. Classified anyway, on `InstallCancelled`'s reasoning: a variant
+                // that can be constructed can be rendered, and `internal` would be the wrong word
+                // for the case this actually covers, which is a runtime installed before its
+                // executables were recorded.
+                RuntimeError::RuntimeProvidesNothing { kind, version, .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
+                        "`mix runtime install {kind} {version}` after uninstalling it records what the \
+                         build publishes"
+                    ))
+                }
+
+                // A broken installation rather than anything the caller did, which is what
+                // `internal` means here — but the hint is worth having anyway, because the one
+                // thing a person can do about it is reinstall, and nothing in the message says so.
+                RuntimeError::ShimMissing { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self)).with_hint(
+                        "a release ships mixengined and mixengine-shim in one directory; reinstall \
+                     MixEngine, or build the whole workspace if this is a development tree",
+                    )
+                }
+
+                // Never given a code of their own: what the `_` arm below gives every other error.
+                RuntimeError::RestoreRefused { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            },
+
+            Core::Service(error) => match error {
+                // The third way of saying "it is already here", and the one whose repair is
+                // different: a service is not replaced by installing something, it is replaced by
+                // deleting it.
+                ServiceError::ServiceAlreadyDeclared { .. } => {
+                    Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(
+                        "`mix service delete` first; deleting a service keeps its data directory",
+                    )
+                }
+
+                // The fourth, and the one whose repair is a different *argument* rather than a
+                // different call: nothing has to be deleted, the create has to name somewhere else.
+                // The message already carries the service that got there first, so the hint spends
+                // itself on what to do about it.
+                ServiceError::DataDirectoryTaken { holder, .. } => {
+                    Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
+                        "give this one a directory of its own, or `mix service delete {holder}` if it \
+                         is the one that should go; two servers over one data directory corrupt it"
+                    ))
+                }
+
+                ServiceError::InvalidDatabaseName { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                        "a database and its account are named like a project: lower-case letters, \
+                         digits and hyphens, up to thirty-two characters",
+                    )
+                }
+
+                // The message never carries the value — `ServiceError::InvalidPassword` has none to
+                // leak.
+                ServiceError::InvalidPassword { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                        "1 to 128 printable ASCII characters, and none of: a quote, a backslash, or \
+                         whitespace",
+                    )
+                }
+
+                // `conflict` rather than `already_exists`: what is refused is not the name being
+                // taken but MixEngine being unable to prove the account is its own to change —
+                // T77a's D3.
+                ServiceError::AccountNotOurs { .. } => Error::new(
+                    ErrorCode::Conflict,
+                    chain(self),
                 )
-            }
+                .with_hint(
+                    "MixEngine only manages an account whose password it holds; `--user` picks another \
+                     name, or drop that account on the server first",
+                ),
 
-            // The download stopped part way after every resume attempt, and what is on disk is
-            // *kept*: asking again continues from it rather than starting over, which is the one
-            // thing worth telling somebody who is about to try.
-            Core::Install(InstallError::ArtifactIncomplete { .. }) => {
-                Error::new(ErrorCode::Io, chain(self))
-                    .with_hint("what arrived is kept; asking again resumes from it")
-            }
+                // **Not `unsupported`**, which means *this operating system cannot* and would be a
+                // lie about the machine: every system this ships to runs Redis, and Redis is what
+                // has no databases. The same distinction T77 drew for `blueprint.apply`.
+                ServiceError::NoDatabaseVocabulary { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                        "only the database servers have databases; `mix service list` shows what this \
+                         home runs",
+                    )
+                }
 
-            // The one failure that cannot happen by accident, and the one place this daemon refuses
-            // something that verified as well-formed. `precondition_failed` rather than `internal`:
-            // nothing here is broken, and what has to change is which server is being asked.
-            Core::Install(InstallError::IndexSignature { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
-                    "the index is signed by MixEngine and checked before it is read; a mirror \
-                     serving somebody else's document, or an index published by a team using its \
-                     own key, needs that key given to `mixengined --index-key`",
-                )
-            }
+                // **The generated-configuration family — roadmap task T30.** What separates these
+                // is the same thing that separates the index failures above: whose fault it is. An
+                // override is the user's, a template and a recipe are ours, and a row that cannot
+                // be read back is neither — it is a database somebody edited.
+                //
+                // All three of these are a person's own overrides, and the message already names
+                // the setting — the ones that exist, the shape it had to be, or what is wrong with
+                // the value the recipe was handed. The hint says the thing the message cannot: that
+                // being refused is the *feature*, because the alternative is a setting silently
+                // doing nothing.
+                ServiceError::UnknownSetting { .. }
+                | ServiceError::SettingType { .. }
+                | ServiceError::SettingValue { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                        "MixEngine refuses a setting it does not know rather than ignoring it, so that \
+                         a typo cannot look like a setting that is in effect",
+                    )
+                }
 
-            // The root is ours and this file is not the one it names. Nothing here is broken and
-            // nothing was kept: the list is read again without it, and the next ask tries again.
-            Core::Install(InstallError::IndexKind { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
-                    "this file did not match what the signed index says it should be, which \
-                     usually means the index was being published at that moment; ask again in a \
-                     minute",
-                )
-            }
+                // The service's own program said no. Nothing was installed — the rendering is
+                // judged in a staging directory — and saying so is the whole point: a user who has
+                // just been told their configuration is broken will otherwise assume their site is
+                // down.
+                ServiceError::ConfigRejected { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                        "nothing was installed and the configuration that is live is the last one that \
+                         worked; the service reading it has not been disturbed",
+                    )
+                }
 
-            // Bytes that are ours by signature and then do not match what the index says they hash
-            // to, or are longer than it says they are. A corrupted transfer or a mirror serving
-            // something else; either way the download has been deleted and the next step is the
-            // same one.
-            Core::Install(InstallError::ArtifactChecksum { .. })
-            | Core::Install(InstallError::ArtifactTooLarge { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
-                    "the download did not match what the signed index publishes for it and has \
-                     been discarded; asking again fetches it afresh",
-                )
-            }
+                // A `packages.name` this build has no recipe for: a home written by a newer
+                // MixEngine, or a service an extension declared and then went away. Not `internal`,
+                // because nothing is broken here and the way out is a version rather than a bug
+                // report.
+                ServiceError::NoRecipe { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
+                        "what MixEngine can run is compiled into it; this home describes a service \
+                         from a newer release, or from an extension that is no longer installed",
+                    )
+                }
 
-            // An archive shape, or a document version, from a pipeline newer than this build. Not a
-            // bug and not a dead end: the update is the fix, and saying so beats the field-by-field
-            // confusion a best-effort parse would produce.
-            Core::Install(InstallError::IndexSchema { .. })
-            | Core::Install(InstallError::ArtifactFormat { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self))
-                    .with_hint("this release of MixEngine is older than what it is being offered")
-            }
+                // Ours: a template that does not render, or a recipe that produced a spec the
+                // supervisor will not take. An override can *reach* both, which is why they are not
+                // unreachable, but neither is a mistake a user could have avoided.
+                ServiceError::TemplateBroken { .. }
+                | ServiceError::Unrunnable { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self)).with_hint(
+                        "this is a bug in MixEngine's own configuration templates rather than on this \
+                         machine; `logs/daemon.log` has the detail a report needs",
+                    )
+                }
 
-            // A correctly signed index from before a security release, replayed. The cached document
-            // is kept, so nothing was lost — what is worth saying is that the *server* is behind.
-            Core::Install(InstallError::IndexRolledBack { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
-                    "the index already held is newer and is still being used; a mirror that has \
-                     stopped syncing is the usual reason a server offers an older one",
-                )
-            }
+                // Never given a code of their own: what the `_` arm below gives every other error.
+                ServiceError::IllegalTransition { .. } | ServiceError::StateRaced { .. } | ServiceError::UnknownServiceState { .. } | ServiceError::UnreadableServiceRow { .. } | ServiceError::UnreadableServiceDocument { .. } | ServiceError::PortsExhausted { .. } | ServiceError::ServiceProvidesNothing { .. } | ServiceError::PackageProvidesNothing { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            },
 
-            // The archive names a path outside where it is being unpacked: the oldest attack there
-            // is against an installer, and one a correct signature says nothing about. Nothing was
-            // written — the staging directory it was going into is gone.
-            Core::Install(InstallError::UnsafeArchiveEntry { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
-                    "nothing was unpacked; please report this, quoting the archive named above",
-                )
-            }
+            Core::Project(error) => match error {
+                // The fifth way of saying "it is already here", and its repair is a different
+                // argument rather than a different call: the message already names the project in
+                // the way, so the hint spends itself on what to do about it.
+                ProjectError::ProjectRootTaken { holder, .. } => {
+                    Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
+                        "`mix project show {holder}` is the one that has it; one directory is one \
+                         project"
+                    ))
+                }
 
-            // Past the signature and past the checksum, so these bytes *are* the ones we published
-            // and they are unusable: our packaging, our bug. The same relationship
-            // `IndexUnreadable` has to `IndexSignature`, one layer down.
-            Core::Install(InstallError::IndexUnreadable { .. })
-            | Core::Install(InstallError::ArchiveUnreadable { .. })
-            | Core::Install(InstallError::MissingFromArtifact { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self)).with_hint(
-                    "this is a bug in what MixEngine published rather than on this machine; \
-                     `logs/daemon.log` has the detail a report needs",
-                )
-            }
+                ProjectError::ProjectNameTaken { .. } => {
+                    Error::new(ErrorCode::AlreadyExists, chain(self))
+                        .with_hint("`mix project list` shows the names that are taken")
+                }
 
-            // **What a checksum cannot say.** The bytes are ours and this machine will not run them:
-            // a missing VC++ redistributable, a glibc older than the build's floor, an image the
-            // loader refuses. `dependency_missing` is the code that tells a GUI to offer the thing
-            // that is missing, which is exactly the shape of every one of those.
-            Core::Install(InstallError::SmokeTestFailed { .. }) => {
-                Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(
-                    "nothing was installed; the runtime was run once from a staging directory and \
-                     would not start, so the message above is the operating system's own",
-                )
-            }
+                // The user's own argument, and the message already says which rule it broke.
+                ProjectError::InvalidProjectName { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                        "a project name is a handle: up to sixty-four characters, no path separators \
+                         and no control characters",
+                    )
+                }
 
-            // Logged where it happens and reported by `mix doctor`, never answered to a request:
-            // nothing a client asks for fails because a JDK's store could not be written — T27e.
-            Core::Install(InstallError::KeytoolRefused { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self))
-            }
+                ProjectError::InvalidDomain { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self))
+                        .with_hint("a domain is lowercase ASCII labels on .test, .localhost or .local")
+                }
 
-            // A broken build: the key compiled into this binary is not a key. Nothing a user did and
-            // nothing they can do.
-            Core::Install(InstallError::IndexKey { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self))
-            }
+                ProjectError::UnmanagedTld { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                        "use .test; it is reserved for exactly this and resolves nowhere else",
+                    )
+                }
 
-            // `UnsupportedPlatform` and not `InvalidArgument`: the request is well formed and is
-            // answerable on another machine — the same name is a module on Windows and linked in on
-            // the Unix cells — so what refuses it is this build rather than the sentence.
-            Core::Runtime(RuntimeError::ExtensionCompiledIn { .. }) => {
-                Error::new(ErrorCode::UnsupportedPlatform, chain(self)).with_hint(
-                    "this build has it linked in, so it is always loaded; nothing can unload it \
-                     short of a build that ships it as a module",
-                )
-            }
+                ProjectError::RiskyTld { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self))
+                        .with_hint("`--i-know` accepts it anyway; .test avoids the question")
+                }
 
-            // Two ways of saying "it is already here", and they are deliberately different variants
-            // one layer down: `AlreadyInstalled` is a directory, `AlreadyRecorded` is a row. A
-            // client cannot act differently on them, so they share a code and a hint.
-            Core::Runtime(RuntimeError::AlreadyInstalled { .. })
-            | Core::Runtime(RuntimeError::AlreadyRecorded { .. })
-            | Core::Runtime(RuntimeError::PackageAlreadyRecorded { .. }) => {
-                Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(
-                    "an installed version is never overwritten; uninstall it first if it is to be \
-                     replaced",
-                )
-            }
+                ProjectError::DomainTaken { .. } => {
+                    Error::new(ErrorCode::AlreadyExists, chain(self))
+                        .with_hint("`mix site update` can move it, or pick another name")
+                }
 
-            // A directory an earlier home installed and this one could not check — roadmap task
-            // T182f. Recorded by hand once it can be checked, or removed.
-            Core::Runtime(RuntimeError::UnrecordedInstall { path, .. }) => {
-                Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
-                    "`mix runtime adopt` or `mix package adopt` records it once it can be checked, \
-                     or remove {} and install again",
-                    path.display()
-                ))
-            }
+                ProjectError::LastDomain { .. } => {
+                    Error::new(ErrorCode::Conflict, chain(self))
+                        .with_hint("`mix site delete` removes the site itself")
+                }
 
-            // The third way of saying "it is already here", and the one whose repair is different:
-            // a service is not replaced by installing something, it is replaced by deleting it.
-            Core::Service(ServiceError::ServiceAlreadyDeclared { .. }) => {
-                Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(
-                    "`mix service delete` first; deleting a service keeps its data directory",
-                )
-            }
+                ProjectError::PrimaryDomain { .. } => {
+                    Error::new(ErrorCode::Conflict, chain(self)).with_hint(
+                        "`mix site update --domain <new-primary> --domain <the-rest>` reorders",
+                    )
+                }
 
-            // The fourth, and the one whose repair is a different *argument* rather than a
-            // different call: nothing has to be deleted, the create has to name somewhere else.
-            // The message already carries the service that got there first, so the hint spends
-            // itself on what to do about it.
-            Core::Service(ServiceError::DataDirectoryTaken { holder, .. }) => {
-                Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
-                    "give this one a directory of its own, or `mix service delete {holder}` if it \
-                     is the one that should go; two servers over one data directory corrupt it"
-                ))
-            }
+                ProjectError::DocRootOutsideProject { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self))
+                        .with_hint("a doc root is a directory inside the project's own root")
+                }
 
-            // The fifth way of saying "it is already here", and its repair is a different argument
-            // rather than a different call: the message already names the project in the way, so
-            // the hint spends itself on what to do about it.
-            Core::Project(ProjectError::ProjectRootTaken { holder, .. }) => {
-                Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
-                    "`mix project show {holder}` is the one that has it; one directory is one \
-                     project"
-                ))
-            }
+                ProjectError::HttpsRedirectNeedsHttps => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self))
+                        .with_hint("`--https true` first, or leave `--https-redirect` unset")
+                }
+                ProjectError::UnreadableProjectRow { .. }
+                | ProjectError::UnreadableSiteRow { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self)).with_hint(UNREADABLE_ROW)
+                }
 
-            Core::Project(ProjectError::ProjectNameTaken { .. }) => {
-                Error::new(ErrorCode::AlreadyExists, chain(self))
-                    .with_hint("`mix project list` shows the names that are taken")
-            }
+                // The user's own file, one directory out from `Core::Config` and given the same
+                // code — and the same hint would be wrong: `mixengine.toml` is checked into their
+                // repository, so "delete it and a fresh one will be written" is advice about
+                // somebody else's file.
+                ProjectError::Manifest { path, .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(format!(
+                        "only the `[runtimes]` table of {} is read while resolving a version; the \
+                         languages it may name are php, node, python and ruby",
+                        path.display()
+                    ))
+                }
 
-            // The user's own argument, and the message already says which rule it broke.
-            Core::Project(ProjectError::InvalidProjectName { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
-                    "a project name is a handle: up to sixty-four characters, no path separators \
-                     and no control characters",
-                )
-            }
+                // The user's file again, and the same code: what a person does about either is open
+                // the file. The hint differs because the repair does — nothing here is about
+                // `[runtimes]`.
+                ProjectError::ManifestEdit { path, .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(format!(
+                        "{} could not be rewritten with the project in it; check that it is a TOML \
+                         file this user can write",
+                        path.display()
+                    ))
+                }
 
-            Core::Service(ServiceError::InvalidDatabaseName { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
-                    "a database and its account are named like a project: lower-case letters, \
-                     digits and hyphens, up to thirty-two characters",
-                )
-            }
+                // A client sent a directory that means nothing to a daemon. The message names it,
+                // and what to do about it is the caller's own bug rather than the user's.
+                ProjectError::NotAbsolute { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                        "a directory is resolved by walking up from it, so it has to be one this \
+                         machine can find on its own",
+                    )
+                }
+            },
 
-            // The message never carries the value — `ServiceError::InvalidPassword` has none to
-            // leak.
-            Core::Service(ServiceError::InvalidPassword { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
-                    "1 to 128 printable ASCII characters, and none of: a quote, a backslash, or \
-                     whitespace",
-                )
-            }
+            Core::Blueprint(error) => match error {
+                // **T77 left these four in the catch-all below**, so a mistyped blueprint name
+                // reached a client as an internal error. Found while adding the three above; fixed
+                // here rather than left for whoever meets it next.
+                BlueprintError::InvalidBlueprintName { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                        "a blueprint name is a filename stem: lower-case letters, digits and hyphens",
+                    )
+                }
 
-            // `conflict` rather than `already_exists`: what is refused is not the name being taken
-            // but MixEngine being unable to prove the account is its own to change — T77a's D3.
-            Core::Service(ServiceError::AccountNotOurs { .. }) => Error::new(
-                ErrorCode::Conflict,
-                chain(self),
-            )
-            .with_hint(
-                "MixEngine only manages an account whose password it holds; `--user` picks another \
-                 name, or drop that account on the server first",
-            ),
+                BlueprintError::BlueprintExists { .. } => {
+                    Error::new(ErrorCode::AlreadyExists, chain(self))
+                }
 
-            // **Not `unsupported`**, which means *this operating system cannot* and would be a lie
-            // about the machine: every system this ships to runs Redis, and Redis is what has no
-            // databases. The same distinction T77 drew for `blueprint.apply`.
-            Core::Service(ServiceError::NoDatabaseVocabulary { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
-                    "only the database servers have databases; `mix service list` shows what this \
-                     home runs",
-                )
-            }
+                // **About the project, never the daemon failing** — roadmap task **T204a**. The
+                // several-sites refusal this replaced had no arm, and reached clients as
+                // `internal`.
+                BlueprintError::ProjectRunsSeveralPhps { .. } => {
+                    Error::new(ErrorCode::Conflict, chain(self)).with_hint(
+                        "a blueprint has one [runtimes] php; move the sites onto one PHP first",
+                    )
+                }
 
-            // **T77 left these four in the catch-all below**, so a mistyped blueprint name reached a
-            // client as an internal error. Found while adding the three above; fixed here rather
-            // than left for whoever meets it next.
-            Core::Blueprint(BlueprintError::InvalidBlueprintName { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
-                    "a blueprint name is a filename stem: lower-case letters, digits and hyphens",
-                )
-            }
+                BlueprintError::BlueprintManifest { .. }
+                | BlueprintError::UnknownBlueprintSchema { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self))
+                }
 
-            Core::Blueprint(BlueprintError::BlueprintExists { .. }) => {
-                Error::new(ErrorCode::AlreadyExists, chain(self))
-            }
+                BlueprintError::UnknownBlueprintSource { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self)).with_hint(
+                        "this home holds a blueprint filed by a newer MixEngine than the one running",
+                    )
+                }
 
-            // **About the project, never the daemon failing** — roadmap task **T204a**. The
-            // several-sites refusal this replaced had no arm, and reached clients as `internal`.
-            Core::Blueprint(BlueprintError::ProjectRunsSeveralPhps { .. }) => {
-                Error::new(ErrorCode::Conflict, chain(self)).with_hint(
-                    "a blueprint has one [runtimes] php; move the sites onto one PHP first",
-                )
-            }
+                // The signature is a property of the file somebody named, so the file is the
+                // argument that was wrong. Classified here rather than left to the `_ => internal`
+                // arm, which is where T77 left four variants and T78 had to come back for them.
+                BlueprintError::BlueprintSignature { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self))
+                        .with_hint("it can still be imported; it will be marked untrusted for good")
+                }
 
-            Core::Blueprint(BlueprintError::BlueprintManifest { .. })
-            | Core::Blueprint(BlueprintError::UnknownBlueprintSchema { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self))
-            }
+                BlueprintError::BlueprintKey { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self))
+                }
 
-            Core::Blueprint(BlueprintError::UnknownBlueprintSource { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self)).with_hint(
-                    "this home holds a blueprint filed by a newer MixEngine than the one running",
-                )
-            }
+                // Never given a code of their own: what the `_` arm below gives every other error.
+                BlueprintError::ArchiveTooLarge { .. } | BlueprintError::ArchiveFormatUnknown { .. } | BlueprintError::ArchiveStripMissing { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            },
 
-            // The signature is a property of the file somebody named, so the file is the argument
-            // that was wrong. Classified here rather than left to the `_ => internal` arm, which is
-            // where T77 left four variants and T78 had to come back for them.
-            Core::Blueprint(BlueprintError::BlueprintSignature { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self))
-                    .with_hint("it can still be imported; it will be marked untrusted for good")
-            }
+            Core::Extension(error) => match error {
+                // **Every one of them classified, none left to the catch-all** — roadmap task T80.
+                // T77 left four blueprint variants falling through, and a mistyped name reached a
+                // client as an internal error; the whole set is spelled out here rather than
+                // repeating that. All are `InvalidArgument` because all of them are about the file
+                // the caller handed in, and the one thing they need is where to look.
+                ExtensionError::ExtensionManifest { .. }
+                | ExtensionError::UnknownExtensionSchema { .. }
+                | ExtensionError::ExtensionTableUnexpected { .. }
+                | ExtensionError::ExtensionTableMissing { .. }
+                | ExtensionError::ExtensionField { .. }
+                | ExtensionError::ExtensionIdTaken { .. }
+                | ExtensionError::ExtensionSpec { .. } => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                        "an extension declares itself in `extension.toml`, in its own directory",
+                    )
+                }
 
-            Core::Blueprint(BlueprintError::BlueprintKey { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self))
-            }
+                // **A precondition rather than an invalid argument** — roadmap task **T82a**. The
+                // id somebody typed is a real service; what is wrong is the state of this home, in
+                // which that service is one extension's own process and holds a credential no
+                // project's PHP may read.
+                ExtensionError::ExtensionPoolNotShared { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
+                        "a web-app extension is served on a pool of its own, which carries a database \
+                         superuser's password; name the shared `php-fpm@<version>` instead",
+                    )
+                }
 
-            // **Every one of them classified, none left to the catch-all** — roadmap task T80.
-            // T77 left four blueprint variants falling through, and a mistyped name reached a
-            // client as an internal error; the whole set is spelled out here rather than repeating
-            // that. All are `InvalidArgument` because all of them are about the file the caller
-            // handed in, and the one thing they need is where to look.
-            Core::Extension(ExtensionError::ExtensionManifest { .. })
-            | Core::Extension(ExtensionError::UnknownExtensionSchema { .. })
-            | Core::Extension(ExtensionError::ExtensionTableUnexpected { .. })
-            | Core::Extension(ExtensionError::ExtensionTableMissing { .. })
-            | Core::Extension(ExtensionError::ExtensionField { .. })
-            | Core::Extension(ExtensionError::ExtensionIdTaken { .. })
-            | Core::Extension(ExtensionError::ExtensionSpec { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
-                    "an extension declares itself in `extension.toml`, in its own directory",
-                )
-            }
+                // **The same shape for a `web-app`'s database** — roadmap task **T82**. An
+                // administrative interface onto a server this machine does not run is an install
+                // whose stated effect cannot happen, and the way out is the same kind of sentence:
+                // what to create. `internal` was what it reached a client as before this arm, which
+                // is the trap T77a's four blueprint variants fell into.
+                ExtensionError::ExtensionNoDatabase { engines, .. } => {
+                    Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
+                        "`mix service create {}@main <version>` gives this machine one",
+                        engines.first().map_or("mariadb", String::as_str)
+                    ))
+                }
 
-            // **A precondition rather than an invalid argument** — roadmap task **T82a**. The id
-            // somebody typed is a real service; what is wrong is the state of this home, in which
-            // that service is one extension's own process and holds a credential no project's PHP
-            // may read.
-            Core::Extension(ExtensionError::ExtensionPoolNotShared { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
-                    "a web-app extension is served on a pool of its own, which carries a database \
-                     superuser's password; name the shared `php-fpm@<version>` instead",
-                )
-            }
+                // Never given a code of their own: what the `_` arm below gives every other error.
+                ExtensionError::ExtensionEntry { .. } | ExtensionError::ExtensionAlreadyInstalled { .. } | ExtensionError::UnreadableExtensionRow { .. } | ExtensionError::ExtensionNotAService { .. } | ExtensionError::ExtensionNoArtifact { .. } | ExtensionError::RegistryPublicKeyShape { .. } | ExtensionError::RegistryKeyMismatch { .. } | ExtensionError::ExtensionFileName { .. } | ExtensionError::RegistryUnreadable { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            },
 
-            Core::Project(ProjectError::InvalidDomain { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self))
-                    .with_hint("a domain is lowercase ASCII labels on .test, .localhost or .local")
-            }
+            Core::Elevation(error) => match error {
+                // The one a person can act on, and the reason it is not `internal` like its
+                // shim-shaped sibling: nothing can be granted until this file is there, and saying
+                // so at the method that needs it is what makes the sentence useful.
+                //
+                // **Per OS and not one sentence copied from `ShimMissing`'s.** The shim really does
+                // always ship beside `mixengined`; the elevate helper does not — a `.pkg`, a `.deb`
+                // or an `.rpm` writes it straight to this system's protected directory and
+                // "reinstall" is the only fix, while the NSIS installer and the portable archives
+                // keep a copy beside the program that survives an uninstall on their own.
+                // `missing_helper_advice` is the one place that distinction is written down, so
+                // this arm and its sibling cannot drift apart again.
+                ElevationError::ElevateMissing { .. } => {
+                    Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
+                        "{}, or build the whole workspace if this is a development tree",
+                        mixengine_platform::install::missing_helper_advice()
+                    ))
+                }
 
-            Core::Project(ProjectError::UnmanagedTld { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
-                    "use .test; it is reserved for exactly this and resolves nowhere else",
-                )
-            }
+                // **Not `dependency_missing`, because nothing is missing** — T85's D5. The file is
+                // there and this daemon will not run it as an administrator, which is a state of
+                // the machine rather than an incomplete install, and the hint therefore says what
+                // to look at instead of saying "reinstall".
+                ElevationError::ElevateUntrusted { path, .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
+                        "MixEngine will not run {} as an administrator until that file and the \
+                         directory holding it belong to one; check who owns them, and reinstall if \
+                         you cannot account for how they came to belong to anybody else",
+                        path.display()
+                    ))
+                }
 
-            Core::Project(ProjectError::RiskyTld { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self))
-                    .with_hint("`--i-know` accepts it anyway; .test avoids the question")
-            }
+                // A caller bug: `elevation.grant` refuses an empty queue before it composes a
+                // request.
+                ElevationError::ElevateRequestEmpty => {
+                    Error::new(ErrorCode::InvalidArgument, chain(self))
+                }
 
-            Core::Project(ProjectError::DomainTaken { .. }) => {
-                Error::new(ErrorCode::AlreadyExists, chain(self))
-                    .with_hint("`mix site update` can move it, or pick another name")
-            }
+                // T40a is explicit that `Completed` means the helper ran, not that it left a
+                // report, so this is a state rather than an impossibility — and one nothing a user
+                // typed caused.
+                ElevationError::ElevateReportMissing { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self)).with_hint(
+                        "the elevated helper ended without writing its answer; `logs/daemon.log` has \
+                         the detail, and nothing was applied that it did not report",
+                    )
+                }
 
-            Core::Project(ProjectError::LastDomain { .. }) => {
-                Error::new(ErrorCode::Conflict, chain(self))
-                    .with_hint("`mix site delete` removes the site itself")
-            }
+                ElevationError::ElevateReportUnreadable { .. }
+                | ElevationError::ElevateReportMismatched { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self)).with_hint(
+                        "the helper beside this daemon is not the one it expects; reinstall MixEngine",
+                    )
+                }
 
-            Core::Project(ProjectError::PrimaryDomain { .. }) => {
-                Error::new(ErrorCode::Conflict, chain(self)).with_hint(
-                    "`mix site update --domain <new-primary> --domain <the-rest>` reorders",
-                )
-            }
-
-            Core::Project(ProjectError::DocRootOutsideProject { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self))
-                    .with_hint("a doc root is a directory inside the project's own root")
-            }
-
-            Core::Project(ProjectError::HttpsRedirectNeedsHttps) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self))
-                    .with_hint("`--https true` first, or leave `--https-redirect` unset")
-            }
-
-            // Never reaches a client as an error: the job registry judges an ending by the token
-            // rather than by what the work returned, so work that gave up when asked is recorded as
-            // *cancelled*. Classified all the same, because a value that can be constructed can be
-            // rendered.
-            Core::Install(InstallError::InstallCancelled) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self))
-                    .with_hint("what had been downloaded is kept; asking again resumes from it")
-            }
-
-            // A hand-edited database, or a row from a build that knew a channel this one does not.
-            // The same reading `UnknownServiceState` gets, and the same code.
-            Core::Runtime(RuntimeError::UnreadableRuntimeRow { .. })
-            | Core::Runtime(RuntimeError::UnreadablePackageRow { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self)).with_hint(UNREADABLE_ROW)
-            }
-            Core::Project(ProjectError::UnreadableProjectRow { .. })
-            | Core::Project(ProjectError::UnreadableSiteRow { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self)).with_hint(UNREADABLE_ROW)
-            }
-
-            // The user's own file, one directory out from `Core::Config` and given the same code —
-            // and the same hint would be wrong: `mixengine.toml` is checked into their repository,
-            // so "delete it and a fresh one will be written" is advice about somebody else's file.
-            Core::Project(ProjectError::Manifest { path, .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(format!(
-                    "only the `[runtimes]` table of {} is read while resolving a version; the \
-                     languages it may name are php, node, python and ruby",
-                    path.display()
-                ))
-            }
-
-            // The user's file again, and the same code: what a person does about either is open the
-            // file. The hint differs because the repair does — nothing here is about `[runtimes]`.
-            Core::Project(ProjectError::ManifestEdit { path, .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(format!(
-                    "{} could not be rewritten with the project in it; check that it is a TOML \
-                     file this user can write",
-                    path.display()
-                ))
-            }
-
-            // A client sent a directory that means nothing to a daemon. The message names it, and
-            // what to do about it is the caller's own bug rather than the user's.
-            Core::Project(ProjectError::NotAbsolute { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
-                    "a directory is resolved by walking up from it, so it has to be one this \
-                     machine can find on its own",
-                )
-            }
-
-            // **The one failure `runtime.resolve` exists to produce well.** `dependency_missing` is
-            // the code the feature spec names, and the hint is the whole value of the answer: what
-            // to type. A range cannot become an install command — inventing a version would be
-            // inventing a release — so it becomes the listing instead.
-            Core::Runtime(RuntimeError::RuntimeUnresolved {
-                kind, constraint, ..
-            }) => Error::new(ErrorCode::DependencyMissing, chain(self))
-                .with_hint(mixengine_core::resolve::install_command(*kind, constraint)),
-
-            // **The same shape for a `web-app`'s database** — roadmap task **T82**. An
-            // administrative interface onto a server this machine does not run is an install whose
-            // stated effect cannot happen, and the way out is the same kind of sentence: what to
-            // create. `internal` was what it reached a client as before this arm, which is the trap
-            // T77a's four blueprint variants fell into.
-            Core::Extension(ExtensionError::ExtensionNoDatabase { engines, .. }) => {
-                Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
-                    "`mix service create {}@main <version>` gives this machine one",
-                    engines.first().map_or("mariadb", String::as_str)
-                ))
-            }
-
-            // Nothing was asked for and there is nothing to fall back on. Distinct from the above
-            // because the way out is different: there is no constraint to satisfy, only a kind with
-            // no default — which is what uninstalling the last version leaves behind.
-            // **T206d, D2.** The version is recorded and its folder is gone: the hint is the install
-            // that restores it in place, and the uninstall that forgets it.
-            Core::Runtime(RuntimeError::RuntimeMissing { kind, version, .. }) => {
-                Error::new(ErrorCode::DependencyMissing, chain(self))
-                    .with_hint(mixengine_core::resolve::restore_command(*kind, version))
-            }
-
-            Core::Runtime(RuntimeError::NoDefaultRuntime { kind }) => {
-                Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
-                    "`mix runtime list --kind {kind}` shows what is installed, and \
-                     `mix runtime default {kind} <version>` chooses which one is used here"
-                ))
-            }
-
-            // The version is there and the program is not, which no client can produce today — the
-            // shim is what looks an executable up, and it resolves in its own process without a
-            // daemon. Classified anyway, on `InstallCancelled`'s reasoning: a variant that can be
-            // constructed can be rendered, and `internal` would be the wrong word for the case this
-            // actually covers, which is a runtime installed before its executables were recorded.
-            Core::Runtime(RuntimeError::RuntimeProvidesNothing { kind, version, .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
-                    "`mix runtime install {kind} {version}` after uninstalling it records what the \
-                     build publishes"
-                ))
-            }
-
-            // **The generated-configuration family — roadmap task T30.** What separates these is the
-            // same thing that separates the index failures above: whose fault it is. An override is
-            // the user's, a template and a recipe are ours, and a row that cannot be read back is
-            // neither — it is a database somebody edited.
-            //
-            // All three of these are a person's own overrides, and the message already names the
-            // setting — the ones that exist, the shape it had to be, or what is wrong with the value
-            // the recipe was handed. The hint says the thing the message cannot: that being refused
-            // is the *feature*, because the alternative is a setting silently doing nothing.
-            Core::Service(ServiceError::UnknownSetting { .. })
-            | Core::Service(ServiceError::SettingType { .. })
-            | Core::Service(ServiceError::SettingValue { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
-                    "MixEngine refuses a setting it does not know rather than ignoring it, so that \
-                     a typo cannot look like a setting that is in effect",
-                )
-            }
-
-            // The service's own program said no. Nothing was installed — the rendering is judged in
-            // a staging directory — and saying so is the whole point: a user who has just been told
-            // their configuration is broken will otherwise assume their site is down.
-            Core::Service(ServiceError::ConfigRejected { .. }) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
-                    "nothing was installed and the configuration that is live is the last one that \
-                     worked; the service reading it has not been disturbed",
-                )
-            }
-
-            // A `packages.name` this build has no recipe for: a home written by a newer MixEngine,
-            // or a service an extension declared and then went away. Not `internal`, because
-            // nothing is broken here and the way out is a version rather than a bug report.
-            Core::Service(ServiceError::NoRecipe { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
-                    "what MixEngine can run is compiled into it; this home describes a service \
-                     from a newer release, or from an extension that is no longer installed",
-                )
-            }
-
-            // Ours: a template that does not render, or a recipe that produced a spec the supervisor
-            // will not take. An override can *reach* both, which is why they are not unreachable,
-            // but neither is a mistake a user could have avoided.
-            Core::Service(ServiceError::TemplateBroken { .. })
-            | Core::Service(ServiceError::Unrunnable { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self)).with_hint(
-                    "this is a bug in MixEngine's own configuration templates rather than on this \
-                     machine; `logs/daemon.log` has the detail a report needs",
-                )
-            }
-
-            // A broken installation rather than anything the caller did, which is what `internal`
-            // means here — but the hint is worth having anyway, because the one thing a person can
-            // do about it is reinstall, and nothing in the message says so.
-            Core::Runtime(RuntimeError::ShimMissing { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self)).with_hint(
-                    "a release ships mixengined and mixengine-shim in one directory; reinstall \
-                 MixEngine, or build the whole workspace if this is a development tree",
-                )
-            }
-
-            // The one a person can act on, and the reason it is not `internal` like its shim-shaped
-            // sibling: nothing can be granted until this file is there, and saying so at the method
-            // that needs it is what makes the sentence useful.
-            //
-            // **Per OS and not one sentence copied from `ShimMissing`'s.** The shim really does
-            // always ship beside `mixengined`; the elevate helper does not — a `.pkg`, a `.deb` or
-            // an `.rpm` writes it straight to this system's protected directory and "reinstall" is
-            // the only fix, while the NSIS installer and the portable archives keep a copy beside
-            // the program that survives an uninstall on their own. `missing_helper_advice` is the
-            // one place that distinction is written down, so this arm and its sibling cannot drift
-            // apart again.
-            Core::Elevation(ElevationError::ElevateMissing { .. }) => {
-                Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
-                    "{}, or build the whole workspace if this is a development tree",
-                    mixengine_platform::install::missing_helper_advice()
-                ))
-            }
-
-            // **Not `dependency_missing`, because nothing is missing** — T85's D5. The file is
-            // there and this daemon will not run it as an administrator, which is a state of the
-            // machine rather than an incomplete install, and the hint therefore says what to look
-            // at instead of saying "reinstall".
-            Core::Elevation(ElevationError::ElevateUntrusted { path, .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
-                    "MixEngine will not run {} as an administrator until that file and the \
-                     directory holding it belong to one; check who owns them, and reinstall if \
-                     you cannot account for how they came to belong to anybody else",
-                    path.display()
-                ))
-            }
-
-            // A caller bug: `elevation.grant` refuses an empty queue before it composes a request.
-            Core::Elevation(ElevationError::ElevateRequestEmpty) => {
-                Error::new(ErrorCode::InvalidArgument, chain(self))
-            }
-
-            // T40a is explicit that `Completed` means the helper ran, not that it left a report, so
-            // this is a state rather than an impossibility — and one nothing a user typed caused.
-            Core::Elevation(ElevationError::ElevateReportMissing { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self)).with_hint(
-                    "the elevated helper ended without writing its answer; `logs/daemon.log` has \
-                     the detail, and nothing was applied that it did not report",
-                )
-            }
-
-            Core::Elevation(ElevationError::ElevateReportUnreadable { .. })
-            | Core::Elevation(ElevationError::ElevateReportMismatched { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self)).with_hint(
-                    "the helper beside this daemon is not the one it expects; reinstall MixEngine",
-                )
-            }
-
-            // Unreachable: a `PrivilegedOp` is one of ours and holds nothing serde can refuse.
-            Core::Elevation(ElevationError::OpUnwritable { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self))
-            }
+                // Unreachable: a `PrivilegedOp` is one of ours and holds nothing serde can refuse.
+                ElevationError::OpUnwritable { .. } => {
+                    Error::new(ErrorCode::Internal, chain(self))
+                }
+            },
 
             // The message already ends in "unset it to use this platform's default location",
             // which is the entire advice available; a hint here would be the same sentence twice.
@@ -706,21 +754,36 @@ impl ToWire for mixengine_core::Error {
             // through `chain` here would print a `#[error(transparent)]` message twice.
             Core::Platform(error) => error.to_wire(),
 
-            // A copy the `.pkg` installed, asked to swap in place: the way that works is named.
-            Core::Update(UpdateError::UpdateUsesInstaller { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self))
-                    .with_hint("`mix self-update` opens the next .pkg in Installer.app")
-            }
+            Core::Update(error) => match error {
+                // A copy the `.pkg` installed, asked to swap in place: the way that works is named.
+                UpdateError::UpdateUsesInstaller { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self))
+                        .with_hint("`mix self-update` opens the next .pkg in Installer.app")
+                }
 
-            Core::Update(UpdateError::InstallerUnavailable { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self))
-            }
+                UpdateError::InstallerUnavailable { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self))
+                }
 
-            Core::Update(UpdateError::UpdateNotInstalled { .. }) => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
-                    "finish the installation in Installer.app, then run `mix self-update --finish`",
-                )
-            }
+                UpdateError::UpdateNotInstalled { .. } => {
+                    Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
+                        "finish the installation in Installer.app, then run `mix self-update --finish`",
+                    )
+                }
+
+                // Never given a code of their own: what the `_` arm below gives every other error.
+                UpdateError::SettingUnwritable { .. } | UpdateError::UpdateNotWritable { .. } | UpdateError::UpdateNotOffered { .. } | UpdateError::UpdateUnavailable { .. } | UpdateError::HelperSignature { .. } | UpdateError::HelperStampUnreadable { .. } | UpdateError::HelperNotForThisMachine { .. } | UpdateError::HelperUnavailable { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            },
+
+            Core::Job(error) => match error {
+                // Never given a code of their own: what the `_` arm below gives every other error.
+                JobError::JobEnded { .. }
+                | JobError::IllegalJobTransition { .. }
+                | JobError::UnknownJobState { .. }
+                | JobError::UnknownJobKind { .. }
+                | JobError::UnreadableJobRow { .. }
+                | JobError::JobOutcomeUnwritable { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            },
 
             // `mixengine_core::Error` is `#[non_exhaustive]`, so this arm is mandatory rather than
             // chosen. A variant that lands in it is one nobody has classified yet, and `internal`

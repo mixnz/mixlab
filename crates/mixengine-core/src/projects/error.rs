@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 /// The ways a project, its manifest, its sites and their domains can be wrong.
 #[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
 pub enum ProjectError {
     /// A `mixengine.toml` in the user's repository does not parse.
     ///
