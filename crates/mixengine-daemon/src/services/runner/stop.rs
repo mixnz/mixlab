@@ -324,7 +324,7 @@ impl Runner {
     /// whole of what is left therefore overran the budget by that tail once per service — three
     /// services on Windows was a budget of two and a half seconds and a walk of eight and a half,
     /// against an OS ceiling of five. So what is kept back here is exactly
-    /// [`CEILING_RESERVE`](crate::CEILING_RESERVE) one level down: a shutdown subtracts from an OS
+    /// [`CEILING_RESERVE`](crate::serve::CEILING_RESERVE) one level down: a shutdown subtracts from an OS
     /// ceiling what it still has to do after the last service stops, and a service subtracts from
     /// the budget what it still has to do after its own request to stop.
     ///
@@ -449,7 +449,7 @@ impl Runner {
     /// holding a copy of the service's stdout keeps the pipe open for the whole of [`FLUSH`]. Left
     /// uncapped, a walk of three services would spend six seconds past a total somebody was told —
     /// which on Windows is the daemon being terminated in the middle of `Store::close`, the one
-    /// outcome [`CEILING_RESERVE`](crate::CEILING_RESERVE) exists to prevent.
+    /// outcome [`CEILING_RESERVE`](crate::serve::CEILING_RESERVE) exists to prevent.
     pub(super) async fn kill(&self, supervised: Supervised, mut capture: Capture) -> Capture {
         let service = self.spec.id().clone();
         let flush = self.within_budget(FLUSH);

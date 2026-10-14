@@ -41,7 +41,7 @@ const DETACH_POLL: Duration = Duration::from_millis(50);
 /// up — roadmap task T10's window, `Store::open` mid-migration — and standing aside for that one
 /// stays right: it will answer, and the parent waits for it.
 ///
-/// [`CLIENT_GRACE`]: crate::CLIENT_GRACE
+/// [`CLIENT_GRACE`]: crate::serve::CLIENT_GRACE
 const HANDOFF: Duration = Duration::from_secs(5);
 
 /// How often the lock is asked for again during that.

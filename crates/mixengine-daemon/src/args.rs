@@ -196,7 +196,7 @@ impl Args {
 
     /// Both of them, as [`serve`] takes them.
     ///
-    /// [`serve`]: crate::serve
+    /// [`serve`]: crate::serve::serve
     pub(crate) fn sources(&self) -> Sources {
         Sources {
             index: self.index_source(),
@@ -227,7 +227,7 @@ pub(crate) struct Launch {
 /// overridden the same way, and a third signed document would join them here rather than widen a
 /// signature again.
 ///
-/// [`serve`]: crate::serve
+/// [`serve`]: crate::serve::serve
 #[derive(Debug)]
 pub(crate) struct Sources {
     /// The package index: what can be installed, and where to get it.
