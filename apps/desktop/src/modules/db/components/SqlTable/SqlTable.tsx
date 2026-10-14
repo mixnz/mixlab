@@ -7,9 +7,8 @@ import FilterBar, { type FilterBarHandle } from "../FilterBar";
 import InsertRowsDialog from "../InsertRowsDialog";
 import LoadingOverlay from "../../../../components/LoadingOverlay";
 import Pagination from "../../../../components/Pagination";
-import Tooltip from "../../../../components/Tooltip";
 import Checkbox from "../../../../components/Checkbox";
-import { ChevronDownIcon, ChevronUpIcon, CopyIcon, PlusIcon, ReloadIcon, TrashIcon } from "../../../../icons";
+import { CopyIcon, PlusIcon, ReloadIcon, TrashIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import { errorMessage } from "../../../../core/errors";
 import { copyText } from "../../../../core/clipboard";
@@ -19,11 +18,13 @@ import { useReloadShortcut, withReloadShortcut } from "../../../../core/reload";
 import { useShortcut } from "../../../../core/shortcuts";
 import { filterRowFor, toQueryFilters } from "../../filters";
 import { FILTER_OPERATORS, operatorArity, type FilterOperator } from "../../sql/filters";
-import { cellPreview, gridStyle } from "../../../../core/virtualRows";
+import { gridStyle } from "../../../../core/virtualRows";
 import type { TableCache, TableRequest } from "./request";
 import { csvText, insertStatements, jsonText, spreadsheetText } from "./rowText";
-import { displayValue, isMultilineType, nextSort, normalizeCellValue } from "./cells";
+import { displayValue, nextSort, normalizeCellValue } from "./cells";
 import type { FilterCache } from "./filters";
+import GridBody from "./GridBody";
+import GridHeader from "./GridHeader";
 import useCellEditing from "./useCellEditing";
 import useGridLayout, { EDIT_COLUMN, ROW_HEIGHT } from "./useGridLayout";
 import useRowSelection from "./useRowSelection";
@@ -634,193 +635,35 @@ function SqlTable({
                 `measureColumnWidths` reads each column's laid-out width for the edit input. Both
                 would come back short for every column that had been left out, and the widths they
                 feed are what the window itself is worked out from. */}
-            <thead>
-              <tr>
-                {columns.map((c) => {
-                  const sorted = sort?.column === c ? sort : null;
-                  const foreignKey = columnMeta[c]?.foreignKey ?? null;
-                  return (
-                    <th
-                      key={c}
-                      ref={(el) => {
-                        if (el) thRefs.current.set(c, el);
-                        else thRefs.current.delete(c);
-                      }}
-                      className={styles.headerCell}
-                      // `aria-sort` is what tells a screen reader the grid is ordered by this
-                      // column; the chevron only says it to the eye.
-                      aria-sort={sorted ? (sorted.desc ? "descending" : "ascending") : "none"}
-                      // On a Mac the secondary click is also `Ctrl+Click`, which WebKit reports as
-                      // an ordinary click on top of the `contextmenu` — without this, asking the
-                      // header for its menu would re-sort the grid underneath it.
-                      onClick={(e) => {
-                        if (IS_MAC && e.ctrlKey) return;
-                        void toggleSort(c);
-                      }}
-                      // The header name cannot be selected — `.headerCell` turns that off so that
-                      // clicking a column repeatedly to cycle its sort does not start highlighting
-                      // it — so the menu is the only way to take a copy of it.
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setHeaderMenu({ col: c, x: e.clientX, y: e.clientY });
-                      }}
-                    >
-                      {/* Around the name rather than around the whole cell, and not only because a
-                          hook cannot be called from this loop: the FK chip beside it has a tooltip
-                          of its own, and a cell-wide one would still count as hovered while the
-                          pointer sat on the chip — two bubbles at once. Side by side, entering one
-                          leaves the other. */}
-                      <Tooltip
-                        text={t(
-                          sorted
-                            ? sorted.desc
-                              ? "sqlTable.sortDesc"
-                              : "sqlTable.sortAsc"
-                            : "sqlTable.sortNone",
-                          { column: c },
-                        )}
-                      >
-                        {c}
-                      </Tooltip>
-                      {foreignKey && (
-                        // Its own tooltip, so what the column points at is readable without having
-                        // to remember the schema. Drawn by the app rather than by `title`, which
-                        // would have put it in the system's font rather than the one the grid is
-                        // drawn in.
-                        <Tooltip
-                          text={t("sqlTable.foreignKey", {
-                            table: foreignKey.table,
-                            column: foreignKey.column,
-                          })}
-                        >
-                          <span className={styles.fkBadge}>FK</span>
-                        </Tooltip>
-                      )}
-                      {/* Always rendered, empty when unsorted: the column is measured for the
-                          edit input's width, and an indicator that comes and goes would change
-                          that width under it. */}
-                      <span className={styles.sortIcon}>
-                        {sorted && (sorted.desc ? <ChevronDownIcon /> : <ChevronUpIcon />)}
-                      </span>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {/* The rows outside the window, as the height they would have taken. Two elements
-                  instead of hundreds, and the scrollbar is the length it would have been. Always
-                  both, even at zero height: a spacer that disappeared at the end of the page would
-                  hand `tr:last-child` to a real row and change the table's height at exactly the
-                  point a scroll is trying to settle. */}
-              {virtual && (
-                <tr className={styles.spacer} style={{ height: view.padTop }} aria-hidden="true">
-                  <td colSpan={columns.length} />
-                </tr>
-              )}
-              {rows.slice(view.first, view.last).map((row, offset) => {
-                // The index into the page, not into what is drawn. Every other part of this
-                // component — the selection, the staged edit, the delete keys — is indexed the same
-                // way, so windowing the rows changes none of it.
-                const i = view.first + offset;
-                return (
-                  <tr
-                    key={i}
-                    className={selectedRows.has(i) ? styles.rowSelected : undefined}
-                    aria-selected={selectedRows.has(i)}
-                  >
-                    {/* The columns outside the window, as one cell spanning them. It needs no
-                        width of its own: a fixed layout takes every column's from the colgroup
-                        above, which holds all of them whether or not a cell was built for them, so
-                        the space left here is the space those columns were measured to want. */}
-                    {columnsVirtual && colView.first > 0 && (
-                      <td colSpan={colView.first} aria-hidden="true" />
-                    )}
-                    {drawnColumns.map((c, at) => {
-                      // Where this cell sits in the whole table rather than in what was drawn —
-                      // see `aria-colcount` above. One-based, as the attribute counts.
-                      const colIndex = colView.first + at + 1;
-                      const isEditing = editingCell?.rowIndex === i && editingCell.col === c;
-                      if (isEditing) {
-                        const multiline = isMultilineType(columnMeta[c]?.dataType);
-                        const cellWidth = columnWidths[c];
-                        return (
-                          <td
-                            key={c}
-                            aria-colindex={colIndex}
-                            className={styles.cellEditing}
-                            style={cellWidth ? { width: cellWidth } : undefined}
-                          >
-                            {multiline ? (
-                              <textarea
-                                ref={editInputRef as React.RefObject<HTMLTextAreaElement>}
-                                value={editValue}
-                                onChange={handleEditChange}
-                                onKeyDown={handleEditKeyDown}
-                                onBlur={() => handleInputBlur(i, c)}
-                                className={styles.cellTextarea}
-                                rows={1}
-                                autoComplete="off"
-                                autoCorrect="off"
-                                autoCapitalize="off"
-                                spellCheck={false}
-                              />
-                            ) : (
-                              <input
-                                ref={editInputRef as React.RefObject<HTMLInputElement>}
-                                type="text"
-                                value={editValue}
-                                onChange={handleEditChange}
-                                onKeyDown={handleEditKeyDown}
-                                onBlur={() => handleInputBlur(i, c)}
-                                className={styles.cellInput}
-                                autoComplete="off"
-                                autoCorrect="off"
-                                autoCapitalize="off"
-                                spellCheck={false}
-                              />
-                            )}
-                          </td>
-                        );
-                      }
-                      const raw = row[c];
-                      const isNull = raw === null || raw === undefined;
-                      // What the cell draws, not the value: see `cellPreview`.
-                      const value = cellPreview(displayValue(raw));
-                      const isDirty =
-                        pendingRowRef.current?.rowIndex === i &&
-                        Object.prototype.hasOwnProperty.call(pendingRowRef.current.changes, c);
-                      const cellClassName = [isNull && styles.cellNull, isDirty && styles.cellDirty]
-                        .filter(Boolean)
-                        .join(" ");
-                      return (
-                        <td
-                          key={c}
-                          aria-colindex={colIndex}
-                          title={value}
-                          className={cellClassName || undefined}
-                          onMouseDown={(e) => handleCellMouseDown(e, i, c)}
-                          // Only on a cell being read. The cell open for editing is the branch
-                          // above and deliberately has none: right-clicking inside its input is
-                          // the webview's own cut/copy/paste, which nothing here replaces.
-                          onContextMenu={(e) => handleCellContextMenu(e, i, c)}
-                        >
-                          {value}
-                        </td>
-                      );
-                    })}
-                    {columnsVirtual && colView.last < columns.length && (
-                      <td colSpan={columns.length - colView.last} aria-hidden="true" />
-                    )}
-                  </tr>
-                );
-              })}
-              {virtual && (
-                <tr className={styles.spacer} style={{ height: view.padBottom }} aria-hidden="true">
-                  <td colSpan={columns.length} />
-                </tr>
-              )}
-            </tbody>
+            <GridHeader
+              columns={columns}
+              columnMeta={columnMeta}
+              sort={sort}
+              thRefs={thRefs}
+              toggleSort={toggleSort}
+              setHeaderMenu={setHeaderMenu}
+            />
+            <GridBody
+              rows={rows}
+              columns={columns}
+              columnMeta={columnMeta}
+              virtual={virtual}
+              view={view}
+              columnsVirtual={columnsVirtual}
+              colView={colView}
+              drawnColumns={drawnColumns}
+              selectedRows={selectedRows}
+              editingCell={editingCell}
+              editValue={editValue}
+              editInputRef={editInputRef}
+              columnWidths={columnWidths}
+              pendingRowRef={pendingRowRef}
+              handleEditChange={handleEditChange}
+              handleEditKeyDown={handleEditKeyDown}
+              handleInputBlur={handleInputBlur}
+              handleCellMouseDown={handleCellMouseDown}
+              handleCellContextMenu={handleCellContextMenu}
+            />
           </table>
           {!loading && rows.length === 0 && <p className="muted">{t("sqlTable.noRows")}</p>}
         </div>

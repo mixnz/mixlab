@@ -12,6 +12,13 @@ export interface EditingCell {
   col: string;
 }
 
+/** The row edited but not yet written: the cells changed, and what they held before. */
+export interface PendingRow {
+  rowIndex: number;
+  changes: Record<string, string | null>;
+  original: Record<string, unknown>;
+}
+
 interface Options {
   api: SqlApi;
   connectionId: string;
@@ -47,11 +54,7 @@ export default function useCellEditing({
   const [editingCell, setEditingCellState] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState("");
   const editingCellRef = useRef<EditingCell | null>(null);
-  const pendingRowRef = useRef<{
-    rowIndex: number;
-    changes: Record<string, string | null>;
-    original: Record<string, unknown>;
-  } | null>(null);
+  const pendingRowRef = useRef<PendingRow | null>(null);
   const editInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const currentTableRef = useRef({ db: selectedDb, table: selectedTable });
 
