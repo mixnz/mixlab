@@ -1,7 +1,7 @@
 {
   "limit": 1500,
   "files": {
-    "apps/desktop/src/modules/db/components/SqlTable/SqlTable.tsx": 1843,
+    "apps/desktop/src/modules/db/components/SqlTable/SqlTable.tsx": 1790,
     "crates/mixengine-core/src/lib.rs": 1943
   }
 }
