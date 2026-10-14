@@ -80,7 +80,7 @@ pub(crate) fn beside(program: &std::path::Path) -> PathBuf {
         .join(format!("mixengine-elevate{}", std::env::consts::EXE_SUFFIX))
 }
 
-/// What to tell a person who ran into `mixengine_core::Error::ElevateMissing` on this machine.
+/// What to tell a person who ran into `ElevationError::ElevateMissing` on this machine.
 ///
 /// **Per OS and not one sentence**, because "reinstall" is not always the answer and "it ships
 /// beside the program" is not always true. A `.pkg`, a `.deb` or an `.rpm` runs as root during

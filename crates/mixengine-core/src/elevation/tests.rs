@@ -121,7 +121,13 @@ fn a_helper_that_is_not_beside_the_daemon_is_named_rather_than_searched_for() {
 
     let error = helper(&program, None).expect_err("nothing was put there");
 
-    assert!(matches!(error, Error::ElevateMissing { .. }), "{error}");
+    assert!(
+        matches!(
+            error,
+            Error::Elevation(crate::ElevationError::ElevateMissing { .. })
+        ),
+        "{error}"
+    );
     assert!(
         error
             .to_string()
@@ -243,7 +249,13 @@ fn which_helper_is_run_and_when_nothing_is() {
         unread,
     )
     .expect_err("a helper somebody else can rewrite is not run as root");
-    assert!(matches!(error, Error::ElevateUntrusted { .. }), "{error}");
+    assert!(
+        matches!(
+            error,
+            Error::Elevation(crate::ElevationError::ElevateUntrusted { .. })
+        ),
+        "{error}"
+    );
     assert!(
         error.to_string().contains("/system belongs to 501"),
         "{error}"
@@ -255,12 +267,24 @@ fn which_helper_is_run_and_when_nothing_is() {
         unread,
     )
     .expect_err("a helper whose owner cannot be read is not run as root");
-    assert!(matches!(error, Error::ElevateUntrusted { .. }), "{error}");
+    assert!(
+        matches!(
+            error,
+            Error::Elevation(crate::ElevationError::ElevateUntrusted { .. })
+        ),
+        "{error}"
+    );
 
     // Nothing anywhere, and the message names the platform's first entry — the place this
     // system's installer is supposed to have left one.
     let error = choose(None, neither).expect_err("there is no helper at all");
-    assert!(matches!(error, Error::ElevateMissing { .. }), "{error}");
+    assert!(
+        matches!(
+            error,
+            Error::Elevation(crate::ElevationError::ElevateMissing { .. })
+        ),
+        "{error}"
+    );
     assert!(
         error.to_string().contains(&bundle.display().to_string()),
         "{error}"
@@ -274,7 +298,13 @@ fn which_helper_is_run_and_when_nothing_is() {
 fn a_system_with_no_sources_at_all_is_still_a_refusal() {
     let error = choose(None, Vec::new).expect_err("there is nothing to install from");
 
-    assert!(matches!(error, Error::ElevateMissing { .. }), "{error}");
+    assert!(
+        matches!(
+            error,
+            Error::Elevation(crate::ElevationError::ElevateMissing { .. })
+        ),
+        "{error}"
+    );
 }
 
 /// T88d. `helper` on a directory with nothing beside it and nothing installed keeps the shape
@@ -286,7 +316,13 @@ fn nothing_installed_and_nothing_shipped_is_elevate_missing() {
     let error =
         helper(&empty.path().join("mixengined"), None).expect_err("there is no helper anywhere");
 
-    assert!(matches!(error, Error::ElevateMissing { .. }), "{error}");
+    assert!(
+        matches!(
+            error,
+            Error::Elevation(crate::ElevationError::ElevateMissing { .. })
+        ),
+        "{error}"
+    );
 }
 
 /// D5's table, one row at a time. Four outcomes delete and exactly one is kept — the only one
@@ -530,7 +566,13 @@ fn a_request_with_nothing_in_it_is_refused_before_it_is_written() {
     )
     .expect_err("an empty batch asks for nothing");
 
-    assert!(matches!(error, Error::ElevateRequestEmpty), "{error}");
+    assert!(
+        matches!(
+            error,
+            Error::Elevation(crate::ElevationError::ElevateRequestEmpty)
+        ),
+        "{error}"
+    );
 }
 
 /// T40a is explicit that `Completed` means the helper *ran*, not that it left a report — a crash
@@ -549,7 +591,10 @@ fn a_request_with_no_report_beside_it_says_exactly_that() {
     let error = read_report(&request).expect_err("nothing was written beside it");
 
     assert!(
-        matches!(error, Error::ElevateReportMissing { .. }),
+        matches!(
+            error,
+            Error::Elevation(crate::ElevationError::ElevateReportMissing { .. })
+        ),
         "{error}"
     );
 }
@@ -560,19 +605,19 @@ fn a_request_with_no_report_beside_it_says_exactly_that() {
 fn a_missing_report_carries_what_the_helper_said() {
     let path = PathBuf::from("/home/run/elevate/x/response.json");
 
-    let silent = Error::ElevateReportMissing {
+    let silent = Error::Elevation(crate::ElevationError::ElevateReportMissing {
         path: path.clone(),
         said: None,
-    };
+    });
     assert_eq!(
         silent.to_string(),
         "the elevation helper left no report beside /home/run/elevate/x/response.json"
     );
 
-    let said = Error::ElevateReportMissing {
+    let said = Error::Elevation(crate::ElevationError::ElevateReportMissing {
         path,
         said: Some("mixengine-elevate: cannot read request.json: Operation not permitted".into()),
-    };
+    });
     assert_eq!(
         said.to_string(),
         "the elevation helper left no report beside /home/run/elevate/x/response.json: \
@@ -610,7 +655,10 @@ fn a_report_answering_another_request_is_refused() {
     let error = read_report(&request).expect_err("the nonce does not match");
 
     assert!(
-        matches!(error, Error::ElevateReportMismatched { .. }),
+        matches!(
+            error,
+            Error::Elevation(crate::ElevationError::ElevateReportMismatched { .. })
+        ),
         "{error}"
     );
 }
@@ -647,7 +695,10 @@ fn a_report_with_the_wrong_number_of_outcomes_is_refused() {
     let error = read_report(&request).expect_err("two were sent and one came back");
 
     assert!(
-        matches!(error, Error::ElevateReportMismatched { .. }),
+        matches!(
+            error,
+            Error::Elevation(crate::ElevationError::ElevateReportMismatched { .. })
+        ),
         "{error}"
     );
 }

@@ -575,17 +575,18 @@ impl ToWire for mixengine_core::Error {
             // the program that survives an uninstall on their own. `missing_helper_advice` is the
             // one place that distinction is written down, so this arm and its sibling cannot drift
             // apart again.
-            Core::ElevateMissing { .. } => Error::new(ErrorCode::DependencyMissing, chain(self))
-                .with_hint(format!(
+            Core::Elevation(mixengine_core::ElevationError::ElevateMissing { .. }) => {
+                Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
                     "{}, or build the whole workspace if this is a development tree",
                     mixengine_platform::install::missing_helper_advice()
-                )),
+                ))
+            }
 
             // **Not `dependency_missing`, because nothing is missing** — T85's D5. The file is
             // there and this daemon will not run it as an administrator, which is a state of the
             // machine rather than an incomplete install, and the hint therefore says what to look
             // at instead of saying "reinstall".
-            Core::ElevateUntrusted { path, .. } => {
+            Core::Elevation(mixengine_core::ElevationError::ElevateUntrusted { path, .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
                     "MixEngine will not run {} as an administrator until that file and the \
                      directory holding it belong to one; check who owns them, and reinstall if \
@@ -595,24 +596,30 @@ impl ToWire for mixengine_core::Error {
             }
 
             // A caller bug: `elevation.grant` refuses an empty queue before it composes a request.
-            Core::ElevateRequestEmpty => Error::new(ErrorCode::InvalidArgument, chain(self)),
+            Core::Elevation(mixengine_core::ElevationError::ElevateRequestEmpty) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self))
+            }
 
             // T40a is explicit that `Completed` means the helper ran, not that it left a report, so
             // this is a state rather than an impossibility — and one nothing a user typed caused.
-            Core::ElevateReportMissing { .. } => Error::new(ErrorCode::Internal, chain(self))
-                .with_hint(
+            Core::Elevation(mixengine_core::ElevationError::ElevateReportMissing { .. }) => {
+                Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "the elevated helper ended without writing its answer; `logs/daemon.log` has \
                      the detail, and nothing was applied that it did not report",
-                ),
+                )
+            }
 
-            Core::ElevateReportUnreadable { .. } | Core::ElevateReportMismatched { .. } => {
+            Core::Elevation(mixengine_core::ElevationError::ElevateReportUnreadable { .. })
+            | Core::Elevation(mixengine_core::ElevationError::ElevateReportMismatched { .. }) => {
                 Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "the helper beside this daemon is not the one it expects; reinstall MixEngine",
                 )
             }
 
             // Unreachable: a `PrivilegedOp` is one of ours and holds nothing serde can refuse.
-            Core::OpUnwritable { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            Core::Elevation(mixengine_core::ElevationError::OpUnwritable { .. }) => {
+                Error::new(ErrorCode::Internal, chain(self))
+            }
 
             // The message already ends in "unset it to use this platform's default location",
             // which is the entire advice available; a hint here would be the same sentence twice.

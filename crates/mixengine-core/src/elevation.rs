@@ -8,6 +8,10 @@
 //! `tests/elevation.rs` can build a request with the shipped code, run the **real** helper under an
 //! ordinary token, and read the report back with the shipped code. See the T40b design, D3.
 
+mod error;
+
+pub use error::ElevationError;
+
 use std::path::{Path, PathBuf};
 
 use mixengine_proto::privileged::{
@@ -26,10 +30,11 @@ use crate::{Error, Result, Store};
 ///
 /// # Errors
 ///
-/// [`Error::OpUnwritable`], which cannot happen — a [`PrivilegedOp`] is one of ours and holds
+/// [`ElevationError::OpUnwritable`], which cannot happen — a [`PrivilegedOp`] is one of ours and holds
 /// nothing serde can refuse. Mapped rather than unwrapped, because nothing in this crate panics.
 fn canonical(op: &PrivilegedOp) -> Result<String> {
-    serde_json::to_string(op).map_err(|source| Error::OpUnwritable { source })
+    serde_json::to_string(op)
+        .map_err(|source| Error::Elevation(crate::ElevationError::OpUnwritable { source }))
 }
 
 /// Put an operation in the queue, and hand back the whole queue when that changed something.
@@ -53,7 +58,7 @@ fn canonical(op: &PrivilegedOp) -> Result<String> {
 ///
 /// # Errors
 ///
-/// [`Error::OpUnwritable`] when the operation cannot be encoded, and [`Error::Database`] when the row
+/// [`ElevationError::OpUnwritable`] when the operation cannot be encoded, and [`Error::Database`] when the row
 /// cannot be written.
 pub async fn enqueue(
     store: &Store,
@@ -385,9 +390,9 @@ impl Request {
 ///
 /// # Errors
 ///
-/// [`Error::ElevateRequestEmpty`] when `ops` is empty — the helper refuses an empty batch outright,
+/// [`ElevationError::ElevateRequestEmpty`] when `ops` is empty — the helper refuses an empty batch outright,
 /// with no response file and exit 65, so it is refused here where the message can say why;
-/// [`Error::Platform`] when the OS will not produce random bytes; [`Error::OpUnwritable`] when an
+/// [`Error::Platform`] when the OS will not produce random bytes; [`ElevationError::OpUnwritable`] when an
 /// operation cannot be encoded; and [`Error::Io`] naming the file that could not be written.
 pub fn write_request(
     directory: &Path,
@@ -396,7 +401,7 @@ pub fn write_request(
     version: mixengine_proto::ProtocolVersion,
 ) -> Result<Request> {
     if ops.is_empty() {
-        return Err(Error::ElevateRequestEmpty);
+        return Err(Error::Elevation(crate::ElevationError::ElevateRequestEmpty));
     }
 
     crate::paths::create_dir(directory)?;
@@ -406,7 +411,8 @@ pub fn write_request(
     let encoded = ops
         .iter()
         .map(|waiting| {
-            serde_json::to_value(&waiting.op).map_err(|source| Error::OpUnwritable { source })
+            serde_json::to_value(&waiting.op)
+                .map_err(|source| Error::Elevation(crate::ElevationError::OpUnwritable { source }))
         })
         .collect::<Result<Vec<_>>>()?;
 
@@ -418,7 +424,8 @@ pub fn write_request(
     };
 
     let path = directory.join(REQUEST_FILE_NAME);
-    let text = serde_json::to_vec(&body).map_err(|source| Error::OpUnwritable { source })?;
+    let text = serde_json::to_vec(&body)
+        .map_err(|source| Error::Elevation(crate::ElevationError::OpUnwritable { source }))?;
 
     std::fs::write(&path, text).map_err(|source| Error::Io {
         action: "write",
@@ -443,10 +450,10 @@ pub fn write_request(
 ///
 /// # Errors
 ///
-/// [`Error::ElevateReportMissing`] when there is nothing beside the request — **a real state and not
+/// [`ElevationError::ElevateReportMissing`] when there is nothing beside the request — **a real state and not
 /// an impossibility**: `Completed` means the helper ran, not that it left a report, because a crash
-/// is not a per-OS event. [`Error::ElevateReportUnreadable`] when it is not JSON this build can read,
-/// [`Error::ElevateReportMismatched`] when it answers something else, and [`Error::Io`] when the file
+/// is not a per-OS event. [`ElevationError::ElevateReportUnreadable`] when it is not JSON this build can read,
+/// [`ElevationError::ElevateReportMismatched`] when it answers something else, and [`Error::Io`] when the file
 /// is there and cannot be read.
 pub fn read_report(request: &Request) -> Result<PrivilegedResponse> {
     let path = request.directory.join(RESPONSE_FILE_NAME);
@@ -455,7 +462,9 @@ pub fn read_report(request: &Request) -> Result<PrivilegedResponse> {
         Ok(text) => text,
         Err(source) if source.kind() == std::io::ErrorKind::NotFound => {
             // What the helper said is the launcher's to know, not this reader's; the daemon adds it.
-            return Err(Error::ElevateReportMissing { path, said: None });
+            return Err(Error::Elevation(
+                crate::ElevationError::ElevateReportMissing { path, said: None },
+            ));
         }
         Err(source) => {
             return Err(Error::Io {
@@ -466,17 +475,20 @@ pub fn read_report(request: &Request) -> Result<PrivilegedResponse> {
         }
     };
 
-    let response: PrivilegedResponse =
-        serde_json::from_str(&text).map_err(|source| Error::ElevateReportUnreadable {
+    let response: PrivilegedResponse = serde_json::from_str(&text).map_err(|source| {
+        Error::Elevation(crate::ElevationError::ElevateReportUnreadable {
             path: path.clone(),
             source,
-        })?;
+        })
+    })?;
 
     if response.nonce != request.nonce {
-        return Err(Error::ElevateReportMismatched {
-            path,
-            why: "it answers a different request".to_owned(),
-        });
+        return Err(Error::Elevation(
+            crate::ElevationError::ElevateReportMismatched {
+                path,
+                why: "it answers a different request".to_owned(),
+            },
+        ));
     }
 
     // **At or above the floor, rather than exactly this build's** — roadmap task T88a. The helper is
@@ -486,25 +498,29 @@ pub fn read_report(request: &Request) -> Result<PrivilegedResponse> {
     // so what the version says is which build answered rather than which request it answered — and
     // the caller reads it to learn the ceiling every later request to that helper is marked at.
     if response.version < mixengine_proto::PROTOCOL_MINIMUM {
-        return Err(Error::ElevateReportMismatched {
-            path,
-            why: format!(
-                "it speaks protocol {} and this daemon no longer serves anything below {}",
-                response.version.0,
-                mixengine_proto::PROTOCOL_MINIMUM.0
-            ),
-        });
+        return Err(Error::Elevation(
+            crate::ElevationError::ElevateReportMismatched {
+                path,
+                why: format!(
+                    "it speaks protocol {} and this daemon no longer serves anything below {}",
+                    response.version.0,
+                    mixengine_proto::PROTOCOL_MINIMUM.0
+                ),
+            },
+        ));
     }
 
     if response.results.len() != request.ids.len() {
-        return Err(Error::ElevateReportMismatched {
-            path,
-            why: format!(
-                "{} operations were sent and {} outcomes came back",
-                request.ids.len(),
-                response.results.len()
-            ),
-        });
+        return Err(Error::Elevation(
+            crate::ElevationError::ElevateReportMismatched {
+                path,
+                why: format!(
+                    "{} operations were sent and {} outcomes came back",
+                    request.ids.len(),
+                    response.results.len()
+                ),
+            },
+        ));
     }
 
     Ok(response)
@@ -557,9 +573,9 @@ pub(crate) enum Trust {
 ///
 /// # Errors
 ///
-/// [`Error::ElevateMissing`] when there is no helper anywhere, which the daemon answers as
+/// [`ElevationError::ElevateMissing`] when there is no helper anywhere, which the daemon answers as
 /// `dependency_missing`: nothing can be granted, and the fix is a reinstall rather than a retry.
-/// [`Error::ElevateUntrusted`] when the installed one is not an administrator's — the one case that
+/// [`ElevationError::ElevateUntrusted`] when the installed one is not an administrator's — the one case that
 /// is **not** answered by falling back.
 pub fn helper(program: &Path, installed: Option<&Path>) -> Result<PathBuf> {
     let installed = installed
@@ -670,15 +686,20 @@ pub(crate) fn choose(
         // configuration at exactly the moment somebody has arranged for it — and that arrangement
         // is the one the root-owned directory exists to prevent. `elevation.status` reports this
         // through its `reason`, so it is on the screen before anybody clicks Allow.
-        Some((path, Trust::Writable(why))) => return Err(Error::ElevateUntrusted { path, why }),
+        Some((path, Trust::Writable(why))) => {
+            return Err(Error::Elevation(crate::ElevationError::ElevateUntrusted {
+                path,
+                why,
+            }));
+        }
 
         // Not knowing is not knowing it is safe. A daemon that cannot find out whether the file it
         // is about to run as root belongs to root has not learned that it does.
         Some((path, Trust::Unknown(why))) => {
-            return Err(Error::ElevateUntrusted {
+            return Err(Error::Elevation(crate::ElevationError::ElevateUntrusted {
                 path,
                 why: format!("this machine would not say who owns it: {why}"),
-            });
+            }));
         }
 
         None => {}
@@ -697,7 +718,9 @@ pub(crate) fn choose(
     sources
         .into_iter()
         .find_map(|(path, exists)| exists.then_some(path))
-        .ok_or(Error::ElevateMissing { path: looked })
+        .ok_or(Error::Elevation(crate::ElevationError::ElevateMissing {
+            path: looked,
+        }))
 }
 
 /// Why a file about to be handed to an elevation prompt is not an administrator's, or [`None`] when
