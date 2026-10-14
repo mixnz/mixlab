@@ -81,6 +81,7 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
       whose callbacks share its state, so not a move — custom hooks for what it does (editing a
       cell, selecting rows, the filters it remembers) and components for what it draws, verified in
       the running window and `npm run screenshots -- --check`. Split out of T207g on 2026-10-14.
+      Design: [2026-10-14-t207k-sql-table-hooks-design.md](../specs/2026-10-14-t207k-sql-table-hooks-design.md).
 - [x] **T207l** The daemon's `main.rs` (code 2,439): `serve` is one function of 1,180 lines, forty
       startup steps sharing dozens of locals, so not a move — the steps become functions with the
       state they share passed explicitly, in the order a start needs, and `Args` and `detach` move
