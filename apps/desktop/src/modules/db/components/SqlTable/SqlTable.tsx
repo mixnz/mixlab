@@ -36,16 +36,12 @@ import {
 import { csvText, insertStatements, jsonText, spreadsheetText } from "./rowText";
 import { displayValue, isMultilineType, nextSort, normalizeCellValue } from "./cells";
 import { rememberedFilters, type FilterCache } from "./filters";
+import useCellEditing from "./useCellEditing";
 import useGridLayout, { EDIT_COLUMN, ROW_HEIGHT } from "./useGridLayout";
 import useRowSelection from "./useRowSelection";
 import type { SqlColumnMeta } from "../../types";
 import { cacheKey as tableCacheKey } from "../../schemaTokens";
 import styles from "./SqlTable.module.css";
-
-interface EditingCell {
-  rowIndex: number;
-  col: string;
-}
 
 /** Which cell the right-click menu was opened on, and where the pointer was when it was. Null
  *  while the menu is closed. */
@@ -299,16 +295,32 @@ function SqlTable({
   // request otherwise unchanged.
   const [reloadToken, setReloadToken] = useState(0);
 
-  const [editingCell, setEditingCellState] = useState<EditingCell | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const editingCellRef = useRef<EditingCell | null>(null);
-  const pendingRowRef = useRef<{
-    rowIndex: number;
-    changes: Record<string, string | null>;
-    original: Record<string, unknown>;
-  } | null>(null);
-  const editInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
-  const currentTableRef = useRef({ db: selectedDb, table: selectedTable });
+  const {
+    editingCell,
+    editValue,
+    editingCellRef,
+    pendingRowRef,
+    editInputRef,
+    commitAndExit,
+    cancelEdit,
+    moveEditTo,
+    handleInputBlur,
+    handleEditChange,
+    handleEditKeyDown,
+  } = useCellEditing({
+    api,
+    connectionId,
+    selectedDb,
+    selectedTable,
+    schemaToken,
+    rows,
+    setRows,
+    columns,
+    primaryKey,
+    tableCache,
+    readOnly,
+    onError,
+  });
   const {
     tableRef,
     thRefs,
@@ -362,29 +374,6 @@ function SqlTable({
     scrollRef.current?.focus({ preventScroll: true });
   }
 
-  function setEditingCell(next: EditingCell | null) {
-    editingCellRef.current = next;
-    setEditingCellState(next);
-  }
-
-  useEffect(() => {
-    currentTableRef.current = { db: selectedDb, table: selectedTable };
-  }, [selectedDb, selectedTable]);
-
-  useEffect(() => {
-    const el = editInputRef.current;
-    if (!editingCell || !el) return;
-    el.focus();
-    el.select();
-  }, [editingCell]);
-
-  useEffect(() => {
-    const el = editInputRef.current;
-    if (!editingCell || !(el instanceof HTMLTextAreaElement)) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [editValue, editingCell]);
-
   /** Marks the rows a remembered table came back with as loaded — or not — for the fetch below.
    *
    *  What those rows were read with, so the fetch can tell that nothing is owed — but only if the
@@ -409,8 +398,6 @@ function SqlTable({
   // the trip costs nothing and shows what it showed; otherwise everything is cleared so the grid
   // stays hidden until the fetch below resolves.
   useEffect(() => {
-    setEditingCell(null);
-    pendingRowRef.current = null;
     // The page, the size, the sort and the applied filters have already been put back above, during
     // the render that saw the table change — see the note there.
     const key = tableCacheKey(selectedDb, selectedTable);
@@ -562,91 +549,6 @@ function SqlTable({
     t,
   ]);
 
-  function commitEditingCell() {
-    const cell = editingCellRef.current;
-    if (!cell) return;
-    const { rowIndex, col } = cell;
-    const row = rows[rowIndex];
-    if (!row) return;
-    const oldNorm = normalizeCellValue(row[col]);
-    const newVal = editValue === "NULL" ? null : editValue;
-    if (newVal === oldNorm) return;
-    const prev = pendingRowRef.current;
-    const sameRow = prev && prev.rowIndex === rowIndex;
-    const changes = { ...(sameRow ? prev.changes : {}), [col]: newVal };
-    const original = { ...(sameRow ? prev.original : {}) };
-    if (!(col in original)) original[col] = row[col];
-    pendingRowRef.current = { rowIndex, changes, original };
-    // Optimistically reflect the edit in read mode immediately — the actual
-    // UPDATE is still batched/deferred via pendingRowRef.
-    setRows((prevRows) => prevRows.map((r, i) => (i === rowIndex ? { ...r, [col]: newVal } : r)));
-  }
-
-  async function flushPendingRow() {
-    const pending = pendingRowRef.current;
-    pendingRowRef.current = null;
-    if (!pending || Object.keys(pending.changes).length === 0) return;
-    const row = rows[pending.rowIndex];
-    if (!row) return;
-    const dbAtFlush = selectedDb;
-    const tableAtFlush = selectedTable;
-    const keyCols = primaryKey.length > 0 ? primaryKey : columns;
-    const key: Record<string, string | null> = {};
-    for (const c of keyCols) {
-      // Key columns already optimistically edited must use their pre-edit
-      // value — `row` reflects the optimistic update, not what's in MySQL yet.
-      key[c] = c in pending.original ? normalizeCellValue(pending.original[c]) : normalizeCellValue(row[c]);
-    }
-    try {
-      await api.updateRow(connectionId, dbAtFlush, tableAtFlush, pending.changes, key);
-    } catch (e) {
-      onError(errorMessage(t, e));
-      // The value MySQL refused is on screen and may already be filed away: the grid is put away as
-      // it stands the moment the user leaves the table, which is exactly what they do while a write
-      // is still out. Nothing here can be rolled back in the cache — the entry was written from a
-      // render that had the edit in it — so it goes, and the next visit reads the row as the server
-      // has it. Free while the table is still up: the rows are held in state, and the entry is
-      // written again from them on the way out.
-      tableCache.delete(tableCacheKey(dbAtFlush, tableAtFlush));
-      // On screen, only if the grid is still showing the table the write was for. Otherwise there is
-      // nothing of this row rendered to put back, and the rows in hand belong to another table.
-      if (currentTableRef.current.db !== dbAtFlush || currentTableRef.current.table !== tableAtFlush) {
-        return;
-      }
-      setRows((prevRows) =>
-        prevRows.map((r, i) => (i === pending.rowIndex ? { ...r, ...pending.original } : r)),
-      );
-    }
-  }
-
-  async function commitAndExit() {
-    commitEditingCell();
-    setEditingCell(null);
-    await flushPendingRow();
-  }
-
-  /**
-   * Backs out of the open editor and puts the row back the way the server has it — the text being
-   * typed goes, and so do the cells of the same row already staged but not yet written.
-   *
-   * This is Escape, and it is also what `Ctrl+F` does on its way out of the grid. Leaving a cell is
-   * normally taken as agreeing to what is in it, because the user pointed at somewhere else in the
-   * table; a shortcut aimed at the filter bar says nothing about the edit, and writing it to the
-   * server on the strength of that is a change nobody asked for.
-   */
-  function cancelEdit() {
-    const cell = editingCellRef.current;
-    if (!cell) return;
-    const pending = pendingRowRef.current;
-    if (pending && pending.rowIndex === cell.rowIndex) {
-      pendingRowRef.current = null;
-      setRows((prevRows) =>
-        prevRows.map((r, i) => (i === pending.rowIndex ? { ...r, ...pending.original } : r)),
-      );
-    }
-    setEditingCell(null);
-  }
-
   /** Refetches the table from its first page. Waits for a staged edit to be written first, so the
    * rows that come back include it rather than overwriting it with the pre-edit values.
    *
@@ -760,21 +662,6 @@ function SqlTable({
     } finally {
       setDeleting(false);
     }
-  }
-
-  async function moveEditTo(rowIndex: number, col: string) {
-    // The one door into edit mode — a double-click and a Tab both come through here — so this is
-    // the one place a read-only connection has to be turned away. Nothing is said about it: a cell
-    // that simply does not open reads as a grid for looking at, and the reason is on the buttons
-    // below, where someone who wants to change something is already looking.
-    if (readOnly) return;
-    const leavingRow = editingCellRef.current?.rowIndex;
-    commitEditingCell();
-    if (leavingRow !== undefined && leavingRow !== rowIndex) {
-      await flushPendingRow();
-    }
-    setEditingCell({ rowIndex, col });
-    setEditValue(displayValue(rows[rowIndex]?.[col]));
   }
 
   function handleCellMouseDown(e: React.MouseEvent<HTMLTableCellElement>, rowIndex: number, col: string) {
@@ -932,58 +819,6 @@ function SqlTable({
     },
     active,
   );
-
-  function handleInputBlur(rowIndex: number, col: string) {
-    const current = editingCellRef.current;
-    if (!current || current.rowIndex !== rowIndex || current.col !== col) return;
-    void commitAndExit();
-  }
-
-  function handleEditChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    setEditValue(e.target.value);
-  }
-
-  function handleEditKeyDown(e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    const cell = editingCellRef.current;
-    if (!cell) return;
-    if (e.key === "Escape") {
-      e.preventDefault();
-      cancelEdit();
-      return;
-    }
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      void commitAndExit();
-      return;
-    }
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const colIdx = columns.indexOf(cell.col);
-      const nextColIdx = colIdx + (e.shiftKey ? -1 : 1);
-      if (nextColIdx < 0 || nextColIdx >= columns.length) return;
-      void moveEditTo(cell.rowIndex, columns[nextColIdx]);
-      return;
-    }
-    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-      e.preventDefault();
-      const nextRow = cell.rowIndex + (e.key === "ArrowUp" ? -1 : 1);
-      if (nextRow < 0 || nextRow >= rows.length) return;
-      void moveEditTo(nextRow, cell.col);
-      return;
-    }
-    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-      const target = e.currentTarget;
-      const atStart = target.selectionStart === 0 && target.selectionEnd === 0;
-      const atEnd = target.selectionStart === target.value.length && target.selectionEnd === target.value.length;
-      if (e.key === "ArrowLeft" && !atStart) return;
-      if (e.key === "ArrowRight" && !atEnd) return;
-      const colIdx = columns.indexOf(cell.col);
-      const nextColIdx = colIdx + (e.key === "ArrowLeft" ? -1 : 1);
-      if (nextColIdx < 0 || nextColIdx >= columns.length) return;
-      e.preventDefault();
-      void moveEditTo(cell.rowIndex, columns[nextColIdx]);
-    }
-  }
 
   /** The row the menu was opened on, or null when it is closed — and null again if that row has
    *  gone from under it, which is what stops an entry acting on a row that is no longer there. */
