@@ -38,7 +38,7 @@ use std::time::SystemTime;
 use mixengine_core::index::{self, Index, Package, Selection, Target};
 use mixengine_core::install::Installer;
 use mixengine_core::upgrade::kept::{self, Family};
-use mixengine_core::{Paths, Store, paths, resolve, runtimes};
+use mixengine_core::{Paths, RuntimeError, Store, paths, resolve, runtimes};
 use mixengine_proto::{
     CatalogueGap, Error, ErrorCode, Execution, JobId, JobKind, JobSummary, PackageVersion,
     Requirements, ResolvedRuntime, RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind,
@@ -49,7 +49,6 @@ use mixengine_proto::{
 use crate::error::ToWire as _;
 use crate::jobs::{JobHandle, Jobs};
 use crate::requirements;
-use mixengine_core::RuntimeError;
 
 /// Where the package index is read from, and which key it has to be signed by.
 ///

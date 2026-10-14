@@ -50,14 +50,13 @@ use mixengine_proto::{
     StopBehaviour,
 };
 
-use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::document::{CONFIG, Document, Reason, Validator};
 use crate::generate::recipe::{Endpoints, Instancing, Recipe, Role, TemplateFile, Upstream};
 use crate::generate::served::{Served, ServedKind};
 use crate::generate::settings::{Preset, Setting};
 use crate::install::SmokeTest;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is for, which is also the name the binary is published under.
 const PACKAGE: &str = "nginx";

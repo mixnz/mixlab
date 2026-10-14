@@ -62,8 +62,7 @@ pub use served::{Served, ServedKind, Shared};
 pub use settings::{Preset, Setting, Settings, Value};
 pub use step::{SecretFile, Step};
 
-use crate::ServiceError;
-use crate::{Error, Paths, Result, Store};
+use crate::{Error, Paths, Result, ServiceError, Store};
 
 /// The `services` table, rendered.
 ///

@@ -21,8 +21,7 @@ use std::collections::BTreeMap;
 use mixengine_proto::ServiceId;
 use serde::Serialize;
 
-use crate::ServiceError;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The override key every recipe carries, whether or not it declares anything else.
 ///

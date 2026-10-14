@@ -47,8 +47,7 @@ use super::{
     Catalogue, Client, FETCH_TIMEOUT, FRESH_FOR, Freshness, Got, Index, KindProblem,
     SIGNATURE_SUFFIX, schema1,
 };
-use crate::InstallError;
-use crate::{Error, Result};
+use crate::{Error, InstallError, Result};
 
 /// What this document is called in a log line and in an error.
 const LABEL: &str = <schema1::Document as super::Document>::LABEL;

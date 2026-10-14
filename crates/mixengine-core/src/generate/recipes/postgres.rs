@@ -59,14 +59,13 @@ use mixengine_proto::{
     StopBehaviour,
 };
 
-use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::first_run::{Ritual, SecretSpec, Step};
 use crate::generate::recipe::{
     Claim, ClientCommand, Endpoints, Instancing, Recipe, TemplateFile, Upstream,
 };
 use crate::generate::settings::{Preset, Setting};
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is found under.
 ///

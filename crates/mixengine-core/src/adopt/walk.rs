@@ -7,10 +7,9 @@ use mixengine_proto::{PackageSummary, PackageVersion, RuntimeKind, RuntimeSummar
 
 use super::Subject;
 use super::marker::{self, Marker};
-use crate::RuntimeError;
 use crate::index::{Artifact, Index, Package, Target};
 use crate::install::SmokeTest;
-use crate::{Error, Paths, Result, Store};
+use crate::{Error, Paths, Result, RuntimeError, Store};
 
 /// A directory where an install would be, with no row.
 #[derive(Debug, Clone, PartialEq, Eq)]

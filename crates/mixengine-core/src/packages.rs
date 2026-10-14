@@ -27,8 +27,7 @@ use std::path::{Path, PathBuf};
 
 use mixengine_proto::{PackageSummary, PackageVersion, ServiceId, Timestamp, VersionError};
 
-use crate::RuntimeError;
-use crate::{Error, Paths, Result, Store};
+use crate::{Error, Paths, Result, RuntimeError, Store};
 
 /// Where one version of one package lives.
 ///

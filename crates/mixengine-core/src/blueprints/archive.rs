@@ -7,10 +7,8 @@
 
 use std::path::Path;
 
-use crate::BlueprintError;
-use crate::InstallError;
 use crate::install::archive::{self, Format};
-use crate::{Error, Result};
+use crate::{BlueprintError, Error, InstallError, Result};
 
 /// The largest archive this fetches: 1 GiB (D2).
 pub const LIMIT: u64 = 1 << 30;

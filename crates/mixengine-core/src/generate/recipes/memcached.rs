@@ -44,12 +44,11 @@ use mixengine_proto::{
     HealthCheck, HealthProbe, Millis, ReadyCheck, ServiceSpec, ServiceSpecBuilder, StopBehaviour,
 };
 
-use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::recipe::{Instancing, Recipe, Upstream};
 use crate::generate::settings::{Preset, Setting};
 use crate::install::SmokeTest;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is for, and the one program the package publishes.
 const PACKAGE: &str = "memcached";

@@ -26,9 +26,7 @@ use mixengine_platform::paths::in_full;
 use mixengine_proto::{ExtensionId, RouteTarget, ServiceId, SiteKind, SiteRoute, SiteState};
 use sqlx::Sqlite;
 
-use crate::ExtensionError;
-use crate::ProjectError;
-use crate::{Error, Result, Store};
+use crate::{Error, ExtensionError, ProjectError, Result, Store};
 
 /// Who a site belongs to, which is also what gives its `doc_root` a root — roadmap task **T81b**.
 ///

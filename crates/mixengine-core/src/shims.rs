@@ -55,8 +55,7 @@ use std::path::{Path, PathBuf};
 use mixengine_platform::handover::RESOLVER_POINTER;
 use mixengine_proto::RuntimeKind;
 
-use crate::RuntimeError;
-use crate::{Error, Result};
+use crate::{Error, Result, RuntimeError};
 
 /// One command `<root>/bin` answers to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

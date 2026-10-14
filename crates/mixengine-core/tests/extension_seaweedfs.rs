@@ -10,11 +10,10 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use mixengine_core::ExtensionError;
 use mixengine_core::extensions::install;
 use mixengine_core::extensions::manifest::{self, Body, ExtensionManifest};
 use mixengine_core::extensions::render::{self, Context};
-use mixengine_core::{Error, Paths, Store};
+use mixengine_core::{Error, ExtensionError, Paths, Store};
 use mixengine_proto::{Millis, ReadyCheck, ServiceSpec, StopBehaviour};
 use tempfile::TempDir;
 

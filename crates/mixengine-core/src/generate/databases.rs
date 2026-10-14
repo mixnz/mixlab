@@ -24,8 +24,7 @@ use std::collections::BTreeMap;
 
 use super::context::Context;
 use super::step::Step;
-use crate::ServiceError;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The longest a database or account name may be.
 ///

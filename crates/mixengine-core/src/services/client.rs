@@ -39,10 +39,8 @@ use std::path::PathBuf;
 
 use mixengine_proto::{PackageVersion, ServiceId, VersionError};
 
-use crate::RuntimeError;
-use crate::ServiceError;
 use crate::generate::recipe::Upstream;
-use crate::{Error, Result, Store};
+use crate::{Error, Result, RuntimeError, ServiceError, Store};
 
 /// The install a package's client commands run out of, and where its own server listens.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -32,7 +32,7 @@ use std::time::SystemTime;
 
 use mixengine_core::generate::Catalogue;
 use mixengine_core::upgrade::kept::{self, Family};
-use mixengine_core::{Paths, Store, packages, paths};
+use mixengine_core::{Paths, RuntimeError, Store, packages, paths};
 use mixengine_proto::{
     Error, ErrorCode, JobId, JobKind, JobSummary, PackageCatalogue, PackageFilter, PackageInstall,
     PackageList, PackageRelease, PackageRemoval, PackageSummary, PackageTarget, PackageUpdate,
@@ -43,7 +43,6 @@ use crate::error::ToWire as _;
 use crate::jobs::{JobHandle, Jobs};
 use crate::requirements;
 use crate::runtimes::Fetcher;
-use mixengine_core::RuntimeError;
 
 /// Everything `package.*` needs, and the only thing that starts a package install.
 #[derive(Debug)]

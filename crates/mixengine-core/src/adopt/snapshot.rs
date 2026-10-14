@@ -11,8 +11,7 @@ use mixengine_proto::Timestamp;
 use sqlx::Connection as _;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteConnection};
 
-use crate::RuntimeError;
-use crate::{Error, Result, Store};
+use crate::{Error, Result, RuntimeError, Store};
 
 /// The copy's file name, in each kept folder.
 pub const FILE_NAME: &str = ".mixengine-state.db";

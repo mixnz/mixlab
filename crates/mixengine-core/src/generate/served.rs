@@ -21,9 +21,8 @@ use mixengine_proto::{ServiceId, SiteKind, SiteState};
 use serde::Serialize;
 
 use super::recipe::{Upstream, Upstreams};
-use crate::ServiceError;
 use crate::sites::SiteOwner;
-use crate::{Error, Result, Store};
+use crate::{Error, Result, ServiceError, Store};
 
 /// The certificate a site is served with — roadmap task **T51**.
 ///

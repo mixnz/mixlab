@@ -7,8 +7,7 @@ use std::time::Duration;
 
 use mixengine_platform::process::Ran;
 
-use crate::InstallError;
-use crate::{Error, Result};
+use crate::{Error, InstallError, Result};
 
 /// The password every JDK's `cacerts` ships with — a published default, not a secret (the design's
 /// D8).

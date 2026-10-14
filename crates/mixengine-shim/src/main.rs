@@ -45,9 +45,8 @@ use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
-use mixengine_core::RuntimeError;
 use mixengine_core::config::PathOverrides;
-use mixengine_core::{Paths, Store, paths, resolve, runtimes, shims};
+use mixengine_core::{Paths, RuntimeError, Store, paths, resolve, runtimes, shims};
 use mixengine_platform::handover::{self, Handover};
 use mixengine_platform::process;
 use mixengine_proto::{PackageVersion, RuntimeKind, ServiceId, VersionConstraint};

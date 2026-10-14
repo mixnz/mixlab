@@ -11,8 +11,7 @@ use serde::Serialize;
 
 use super::recipe::{Endpoints, FrontEndAddition, ServiceCertificate, program};
 use super::settings::Settings;
-use crate::ServiceError;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// Everything a template and a [`Recipe`] are told about one service instance.
 ///

@@ -18,15 +18,10 @@
 use std::io;
 use std::path::Path;
 
-use mixengine_core::BlueprintError;
-use mixengine_core::ElevationError;
-use mixengine_core::ExtensionError;
-use mixengine_core::InstallError;
-use mixengine_core::JobError;
-use mixengine_core::ProjectError;
-use mixengine_core::RuntimeError;
-use mixengine_core::ServiceError;
-use mixengine_core::UpdateError;
+use mixengine_core::{
+    BlueprintError, ElevationError, ExtensionError, InstallError, JobError, ProjectError,
+    RuntimeError, ServiceError, UpdateError,
+};
 use mixengine_proto::{Error, ErrorCode};
 
 /// What a row this build cannot decode is told — a runtime's, a package's, a project's or a site's.

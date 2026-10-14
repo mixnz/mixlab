@@ -2,14 +2,13 @@
 //!
 //! Design: `docs/specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md`.
 
-use mixengine_core::Store;
 use mixengine_core::adopt::marker;
 use mixengine_core::adopt::walk::{self, Claimed, Evidence, Found};
+use mixengine_core::{RuntimeError, Store};
 use mixengine_proto::Error;
 
 use crate::error::ToWire as _;
 use crate::jobs::JobHandle;
-use mixengine_core::RuntimeError;
 
 /// An install found its directory already there: record it when its own marker names this install
 /// with the hash the index offers now — spec D2.

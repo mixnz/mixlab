@@ -36,8 +36,7 @@ use std::net::IpAddr;
 use mixengine_platform::Host;
 use mixengine_proto::PortMoved;
 
-use crate::ServiceError;
-use crate::{Result, Store};
+use crate::{Result, ServiceError, Store};
 
 /// The port a service was given, and what it would have preferred.
 #[derive(Debug, Clone, PartialEq, Eq)]

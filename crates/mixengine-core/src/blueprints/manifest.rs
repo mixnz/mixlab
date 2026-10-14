@@ -19,8 +19,7 @@ use std::collections::BTreeMap;
 
 use mixengine_proto::{RuntimeKind, SiteKind, VersionConstraint};
 
-use crate::BlueprintError;
-use crate::{Error, Result};
+use crate::{BlueprintError, Error, Result};
 
 /// The highest schema this build reads. What it writes is [`schema_of`]'s answer (ADR 0061).
 pub const SCHEMA: u32 = 3;

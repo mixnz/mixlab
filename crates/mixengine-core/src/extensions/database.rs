@@ -28,9 +28,8 @@
 use mixengine_proto::ServiceId;
 
 use super::render::DatabaseEndpoint as Endpoint;
-use crate::ExtensionError;
 use crate::generate::Catalogue;
-use crate::{Error, Result, Store};
+use crate::{Error, ExtensionError, Result, Store};
 
 /// The instance a machine picks when it has more than one of an engine.
 ///

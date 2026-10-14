@@ -45,9 +45,8 @@ use std::time::Duration;
 
 use tokio::io::AsyncWriteExt as _;
 
-use crate::RuntimeError;
 use crate::index::Artifact;
-use crate::{Error, Result, paths};
+use crate::{Error, Result, RuntimeError, paths};
 
 pub(crate) mod archive;
 

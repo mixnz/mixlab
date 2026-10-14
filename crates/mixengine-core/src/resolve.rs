@@ -39,9 +39,7 @@ use mixengine_proto::{
     PackageVersion, ResolvedRuntime, RuntimeKind, RuntimeSource, RuntimeSummary, VersionConstraint,
 };
 
-use crate::ProjectError;
-use crate::RuntimeError;
-use crate::{Error, Result, Store, runtimes};
+use crate::{Error, ProjectError, Result, RuntimeError, Store, runtimes};
 
 /// The file a project pins its runtimes in, checked into the user's repository.
 ///

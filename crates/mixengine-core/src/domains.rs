@@ -14,8 +14,7 @@
 
 use mixengine_proto::domains::{MANAGED_TLDS, domain_syntax};
 
-use crate::ProjectError;
-use crate::{Error, Result};
+use crate::{Error, ProjectError, Result};
 
 /// The TLD a site gets when nobody says otherwise.
 ///

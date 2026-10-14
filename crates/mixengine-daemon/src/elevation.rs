@@ -23,7 +23,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-use mixengine_core::{Paths, Store};
+use mixengine_core::{ElevationError, Paths, Store};
 use mixengine_platform::{ElevationSupport, Host};
 use mixengine_proto::privileged::{ElevationOutcome, OpOutcome, PrivilegedOp};
 use mixengine_proto::{
@@ -33,7 +33,6 @@ use mixengine_proto::{
 
 use crate::api::Events;
 use crate::error::ToWire as _;
-use mixengine_core::ElevationError;
 
 /// Where this home records the firewall plan it last had applied — roadmap task **T180**.
 ///

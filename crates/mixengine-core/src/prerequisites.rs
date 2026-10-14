@@ -11,9 +11,8 @@ use std::path::PathBuf;
 use mixengine_proto::RedistributableArch;
 use tokio::io::AsyncWriteExt as _;
 
-use crate::InstallError;
 use crate::install::Installer;
-use crate::{Error, Result};
+use crate::{Error, InstallError, Result};
 
 /// Microsoft's permanent address for the x64 redistributable.
 pub const VISUAL_CPP_X64: &str = "https://aka.ms/vs/17/release/vc_redist.x64.exe";

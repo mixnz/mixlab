@@ -32,8 +32,7 @@ use super::context::{Context, bound};
 use super::document::{Document, Validator};
 use super::served::Served;
 use super::settings::Setting;
-use crate::ServiceError;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// One file a recipe renders, and where it goes under `etc/<service-id>/`.
 ///

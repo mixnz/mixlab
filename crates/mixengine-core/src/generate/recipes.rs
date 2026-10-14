@@ -66,10 +66,9 @@ use std::path::{Path, PathBuf};
 
 use mixengine_proto::Millis;
 
-use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::first_run::Step;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// What `sockaddr_un` can hold, measured against a real server in T33a.
 ///

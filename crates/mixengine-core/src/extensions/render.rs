@@ -25,8 +25,7 @@ use mixengine_proto::{
 use super::manifest::{
     ExtensionManifest, HealthProbeTemplate, HealthTemplate, ReadyTemplate, ServiceTemplate,
 };
-use crate::ExtensionError;
-use crate::{Error, Paths, Result};
+use crate::{Error, ExtensionError, Paths, Result};
 
 /// The three placeholders that are not ports, spelled as they appear in a file.
 pub const INSTALL_DIR: &str = "{install_dir}";

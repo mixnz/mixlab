@@ -42,13 +42,12 @@ use mixengine_proto::{
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::document::Validator;
 use crate::generate::recipe::{Claim, ClientCommand, Instancing, Recipe, TemplateFile, Upstream};
 use crate::generate::settings::{Preset, Setting};
 use crate::install::SmokeTest;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is for.
 const PACKAGE: &str = "redis";

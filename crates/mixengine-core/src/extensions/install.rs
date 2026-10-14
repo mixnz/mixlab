@@ -34,9 +34,6 @@ use mixengine_proto::{
     SiteKind, Timestamp,
 };
 
-use crate::ExtensionError;
-use crate::ProjectError;
-use crate::RuntimeError;
 use crate::extensions::manifest::{Body, ExtensionManifest};
 use crate::extensions::store::{self as extension_store, Installed, Source};
 use crate::extensions::{recipe, render};
@@ -44,7 +41,7 @@ use crate::index::format::{Arch, Artifact, Os};
 use crate::install::{Installer, Watcher};
 use crate::services::{self, Declaration, Origin, Port};
 use crate::sites::{self, SiteOwner};
-use crate::{Error, Paths, Result, Store};
+use crate::{Error, ExtensionError, Paths, ProjectError, Result, RuntimeError, Store};
 
 /// The `[artifact.<target>]` key for something that runs anywhere.
 const ANY: &str = "any";

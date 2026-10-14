@@ -27,8 +27,7 @@ use mixengine_proto::{
     VersionConstraint,
 };
 
-use crate::ExtensionError;
-use crate::{Error, Result};
+use crate::{Error, ExtensionError, Result};
 
 /// The only schema this build writes, and the highest one it reads.
 pub const SCHEMA: u32 = 1;

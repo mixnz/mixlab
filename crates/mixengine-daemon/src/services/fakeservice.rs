@@ -21,9 +21,8 @@
 
 use std::path::PathBuf;
 
-use mixengine_core::Result;
-use mixengine_core::ServiceError;
 use mixengine_core::generate::{Context, Instancing, Preset, Recipe, Setting, TemplateFile};
+use mixengine_core::{Result, ServiceError};
 use mixengine_proto::{
     Millis, ReadyCheck, ReloadBehaviour, RestartPolicy, ServiceSpec, ServiceSpecBuilder,
     StopBehaviour,

@@ -31,8 +31,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crate::ServiceError;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// What a [`Validator`]'s arguments write where the file being checked goes.
 ///

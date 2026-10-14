@@ -14,10 +14,9 @@ use std::path::PathBuf;
 
 use mixengine_proto::{BlueprintSource, BlueprintSummary, SignatureCheck};
 
-use crate::BlueprintError;
 use crate::blueprints::manifest::{self, BlueprintManifest};
 use crate::blueprints::trust::Trust;
-use crate::{Error, Paths, Result, Store};
+use crate::{BlueprintError, Error, Paths, Result, Store};
 
 /// The longest a blueprint name may be.
 ///

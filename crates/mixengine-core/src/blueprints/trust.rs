@@ -14,8 +14,7 @@
 
 use mixengine_proto::SignatureCheck;
 
-use crate::BlueprintError;
-use crate::{Error, Result};
+use crate::{BlueprintError, Error, Result};
 
 /// The key the gallery's blueprints are signed with, compiled in.
 ///

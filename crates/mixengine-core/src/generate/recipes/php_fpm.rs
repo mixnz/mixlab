@@ -77,12 +77,11 @@ use mixengine_proto::{
     ServiceSpec, ServiceSpecBuilder, StopBehaviour,
 };
 
-use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::document::{CONFIG, Validator};
 use crate::generate::recipe::{Instancing, Recipe, Source, TemplateFile, Upstream};
 use crate::generate::settings::{Preset, Setting};
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is found under, which for a pool is the id's own half: a service
 /// is `php-fpm@8.3.33` and the row beneath it names a `php`.

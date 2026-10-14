@@ -24,10 +24,8 @@ use std::path::Path;
 use mixengine_proto::privileged::HelperStamp;
 
 use super::feed::HelperArtifact;
-use crate::InstallError;
-use crate::UpdateError;
 use crate::install::Installer;
-use crate::{Error, Result};
+use crate::{Error, InstallError, Result, UpdateError};
 
 /// The suffix minisign gives a detached signature, and `packaging/sign.sh` writes.
 const SIGNATURE_SUFFIX: &str = ".minisig";

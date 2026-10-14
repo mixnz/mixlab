@@ -48,8 +48,7 @@ use std::time::{Duration, SystemTime};
 
 use minisign_verify::{PublicKey, Signature};
 
-use crate::InstallError;
-use crate::{Error, Result};
+use crate::{Error, InstallError, Result};
 
 pub mod format;
 pub mod packages;

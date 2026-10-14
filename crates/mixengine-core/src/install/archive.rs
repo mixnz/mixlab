@@ -25,8 +25,7 @@
 use std::io::{BufReader, Read};
 use std::path::{Component, Path};
 
-use crate::InstallError;
-use crate::{Error, Result};
+use crate::{Error, InstallError, Result};
 
 /// One of the three shapes the publishing pipeline produces.
 ///

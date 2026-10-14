@@ -25,9 +25,8 @@ use std::path::PathBuf;
 
 use mixengine_proto::{ExtensionId, ExtensionKind, PackageVersion, Timestamp};
 
-use crate::ExtensionError;
 use crate::extensions::manifest::{self, ExtensionManifest};
-use crate::{Error, Result, Store};
+use crate::{Error, ExtensionError, Result, Store};
 
 /// Where an extension came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

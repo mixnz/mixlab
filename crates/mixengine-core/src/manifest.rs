@@ -24,8 +24,7 @@ use std::path::{Path, PathBuf};
 
 use mixengine_proto::{PackageVersion, RuntimeKind, ServiceId, SiteKind, VersionConstraint};
 
-use crate::ProjectError;
-use crate::{Error, Result};
+use crate::{Error, ProjectError, Result};
 
 /// The file a project pins its runtimes in, checked into the user's repository.
 pub const FILE_NAME: &str = "mixengine.toml";

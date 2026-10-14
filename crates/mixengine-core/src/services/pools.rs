@@ -22,9 +22,8 @@
 use mixengine_proto::{PackageVersion, RuntimeKind, ServiceId};
 
 use super::{Declaration, Origin, Port};
-use crate::ServiceError;
 use crate::generate::{Catalogue, Source};
-use crate::{Error, Result, Store};
+use crate::{Error, Result, ServiceError, Store};
 
 /// Give every installed runtime the service its recipe says it should have, and say which were made.
 ///

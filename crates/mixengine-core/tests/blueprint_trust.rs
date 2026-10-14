@@ -5,9 +5,8 @@
 //! key would be a signing key on every user's machine. `verify` takes its key as a parameter for
 //! exactly this reason — see [`mixengine_core::blueprints::trust`].
 
-use mixengine_core::BlueprintError;
-use mixengine_core::Error;
 use mixengine_core::blueprints::trust::{PUBLIC_KEY, verify};
+use mixengine_core::{BlueprintError, Error};
 use mixengine_testkit::Signer;
 
 /// The whole of what a signature buys: these bytes, from that key.

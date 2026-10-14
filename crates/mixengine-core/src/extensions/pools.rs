@@ -35,11 +35,10 @@ use std::collections::BTreeMap;
 
 use mixengine_proto::{ExtensionId, PackageVersion, RuntimeKind, ServiceId, SiteKind};
 
-use crate::ExtensionError;
 use crate::generate::recipe::Recipe as _;
 use crate::services::{Declaration, Origin, Port};
 use crate::sites::SiteOwner;
-use crate::{Error, Paths, Result, Store};
+use crate::{Error, ExtensionError, Paths, Result, Store};
 
 /// The variable a `web-app` declaring `signs_in` finds the database superuser's password in — the
 /// design's D2.

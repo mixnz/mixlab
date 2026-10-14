@@ -7,8 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mixengine_core::RuntimeError;
-use mixengine_core::shims;
+use mixengine_core::{RuntimeError, shims};
 
 /// A `bin/` and a file standing in for the shim binary, in a directory this test owns.
 struct Fixture {

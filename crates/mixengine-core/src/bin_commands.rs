@@ -24,8 +24,7 @@ use std::collections::BTreeMap;
 
 use mixengine_proto::RuntimeKind;
 
-use crate::RuntimeError;
-use crate::{Error, Result, Store};
+use crate::{Error, Result, RuntimeError, Store};
 
 /// Every discovered command, by the name it is typed under.
 ///

@@ -15,10 +15,9 @@
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use mixengine_core::InstallError;
-use mixengine_core::RuntimeError;
 use mixengine_core::index::{Arch, Artifact, Extensions, Os, Requires};
 use mixengine_core::install::{Installed, Installer, SmokeTest, Watcher};
+use mixengine_core::{InstallError, RuntimeError};
 use mixengine_testkit::{FakePackage, MockRegistry, Packed, Packing};
 
 /// The name the fixture's real program is packed under, with whatever suffix this OS needs to be

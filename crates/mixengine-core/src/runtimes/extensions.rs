@@ -18,8 +18,7 @@ use std::path::{Path, PathBuf};
 
 use mixengine_proto::{PackageVersion, RuntimeKind};
 
-use crate::RuntimeError;
-use crate::{Error, Paths, Result, Store};
+use crate::{Error, Paths, Result, RuntimeError, Store};
 
 /// Whether an extension can be turned off at all.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

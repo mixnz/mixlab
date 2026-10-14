@@ -31,11 +31,9 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::ExtensionError;
-use crate::InstallError;
 use crate::extensions::manifest::{self, ExtensionManifest};
 use crate::index::{self, Timestamp};
-use crate::{Error, Result};
+use crate::{Error, ExtensionError, InstallError, Result};
 
 /// The schema this build can read.
 ///

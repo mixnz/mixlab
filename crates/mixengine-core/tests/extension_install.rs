@@ -5,12 +5,10 @@
 
 use std::path::{Path, PathBuf};
 
-use mixengine_core::ProjectError;
-use mixengine_core::RuntimeError;
 use mixengine_core::extensions::install::{self, Plan, Request};
 use mixengine_core::extensions::manifest::{self, ExtensionManifest};
 use mixengine_core::extensions::store::{self as extension_store, Source};
-use mixengine_core::{Paths, Store};
+use mixengine_core::{Paths, ProjectError, RuntimeError, Store};
 use mixengine_platform::mock;
 use tempfile::TempDir;
 

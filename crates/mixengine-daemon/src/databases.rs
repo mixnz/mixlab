@@ -14,10 +14,10 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
-use mixengine_core::Store;
 use mixengine_core::generate::databases::{Ask, validated_identifier};
 use mixengine_core::services::handoff::{self, CREDENTIAL_ENV, Connection};
 use mixengine_core::window;
+use mixengine_core::{ServiceError, Store};
 use mixengine_platform::{InstalledApp, Located, Started};
 use mixengine_proto::{
     DatabaseAccount, DatabaseClientQuery, DatabaseClientReport, DatabaseCreate,
@@ -28,7 +28,6 @@ use tokio::sync::Mutex;
 
 use crate::error::ToWire as _;
 use crate::services::databases::Making;
-use mixengine_core::ServiceError;
 
 /// What a database will be handed to: which state to report, and what to start — roadmap tasks
 /// **T107** and **T165**.

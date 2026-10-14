@@ -29,13 +29,13 @@ use std::collections::BTreeMap;
 
 use mixengine_proto::{RuntimeKind, RuntimeSource, ServiceId, SiteKind, VersionConstraint};
 
-use crate::BlueprintError;
-use crate::RuntimeError;
 use crate::blueprints::manifest::{
     BlueprintManifest, BlueprintService, BlueprintSite, Header, PER_PROJECT, Php, Provenance,
 };
 use crate::projects::ProjectRecord;
-use crate::{Error, Result, Store, manifest, resolve, services, sites};
+use crate::{
+    BlueprintError, Error, Result, RuntimeError, Store, manifest, resolve, services, sites,
+};
 
 /// The token a project's own name is replaced by.
 const TOKEN: &str = "{project}";
