@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ActionBar from "../../../../components/ActionBar";
 import CellDialog from "../../../../components/CellDialog";
-import ConfirmDialog from "../../../../components/ConfirmDialog";
 import ContextMenu from "../../../../components/ContextMenu";
 import FilterBar, { type FilterBarHandle } from "../FilterBar";
 import InsertRowsDialog from "../InsertRowsDialog";
 import LoadingOverlay from "../../../../components/LoadingOverlay";
 import Pagination from "../../../../components/Pagination";
-import Checkbox from "../../../../components/Checkbox";
 import { CopyIcon, PlusIcon, ReloadIcon, TrashIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import { errorMessage } from "../../../../core/errors";
@@ -20,25 +18,18 @@ import { filterRowFor, toQueryFilters } from "../../filters";
 import { FILTER_OPERATORS, operatorArity, type FilterOperator } from "../../sql/filters";
 import { gridStyle } from "../../../../core/virtualRows";
 import type { TableCache, TableRequest } from "./request";
-import { csvText, insertStatements, jsonText, spreadsheetText } from "./rowText";
-import { displayValue, nextSort, normalizeCellValue } from "./cells";
+import { spreadsheetText } from "./rowText";
+import { nextSort, normalizeCellValue } from "./cells";
 import type { FilterCache } from "./filters";
+import DeleteRowsDialog from "./DeleteRowsDialog";
 import GridBody from "./GridBody";
 import GridHeader from "./GridHeader";
+import RowMenu, { type CellMenu } from "./RowMenu";
 import useCellEditing from "./useCellEditing";
 import useGridLayout, { EDIT_COLUMN, ROW_HEIGHT } from "./useGridLayout";
 import useRowSelection from "./useRowSelection";
 import useTableData from "./useTableData";
 import styles from "./SqlTable.module.css";
-
-/** Which cell the right-click menu was opened on, and where the pointer was when it was. Null
- *  while the menu is closed. */
-interface CellMenu {
-  rowIndex: number;
-  col: string;
-  x: number;
-  y: number;
-}
 
 interface Props {
   /** Whether this is what the user is actually looking at — the Data tab, in the connection tab the
@@ -731,91 +722,24 @@ function SqlTable({
         </ContextMenu>
       )}
       {menu !== null && menuRow !== null && (
-        <ContextMenu x={menu.x} y={menu.y} onClose={closeMenu}>
-          <button
-            type="button"
-            onClick={() => {
-              setExpandedCell({ rowIndex: menu.rowIndex, col: menu.col });
-              closeMenu();
-            }}
-          >
-            {t("sqlTable.expandCell")}
-          </button>
-          <button type="button" onClick={() => copyToClipboard(displayValue(menuRow[menu.col]))}>
-            {t("sqlTable.copyCellValue")}
-          </button>
-          {menuForeignKey !== null && (
-            <button type="button" onClick={() => openReferenced(menuForeignKey)}>
-              {t("sqlTable.openReferencedRow", { table: menuForeignKey.table })}
-            </button>
-          )}
-          <div className="context-menu-separator" />
-          <button
-            type="button"
-            onClick={() =>
-              copyToClipboard(
-                insertStatements(selectedTable, insertableColumns, menuRows, null, binaryColumns),
-              )
-            }
-          >
-            {menuRows.length === 1
-              ? t("sqlTable.copyInsert")
-              : t("sqlTable.copyInsertRows", { n: menuRows.length })}
-          </button>
-          {/* Only a table MySQL numbers itself has a column an insert can sensibly leave out.
-              Everywhere else every column is a value somebody has to provide, and an INSERT short
-              of one would simply be refused — so the entry is not offered rather than offered and
-              broken. */}
-          {autoIncrementColumn !== null && (
-            <button
-              type="button"
-              onClick={() =>
-                copyToClipboard(
-                  insertStatements(
-                    selectedTable,
-                    insertableColumns,
-                    menuRows,
-                    autoIncrementColumn,
-                    binaryColumns,
-                  ),
-                )
-              }
-            >
-              {menuRows.length === 1
-                ? t("sqlTable.copyInsertWithout", { column: autoIncrementColumn })
-                : t("sqlTable.copyInsertRowsWithout", {
-                    n: menuRows.length,
-                    column: autoIncrementColumn,
-                  })}
-            </button>
-          )}
-          <button type="button" onClick={() => copyToClipboard(spreadsheetText(columns, menuRows))}>
-            {menuRows.length === 1
-              ? t("sqlTable.copyAsTsv")
-              : t("sqlTable.copyRowsAsTsv", { n: menuRows.length })}
-          </button>
-          <button type="button" onClick={() => copyToClipboard(csvText(columns, menuRows))}>
-            {menuRows.length === 1
-              ? t("sqlTable.copyAsCsv")
-              : t("sqlTable.copyRowsAsCsv", { n: menuRows.length })}
-          </button>
-          <button type="button" onClick={() => copyToClipboard(jsonText(columns, menuRows))}>
-            {menuRows.length === 1
-              ? t("sqlTable.copyAsJson")
-              : t("sqlTable.copyRowsAsJson", { n: menuRows.length })}
-          </button>
-          <div className="context-menu-separator" />
-          <button
-            type="button"
-            disabled={loading || deleting}
-            onClick={() => {
-              closeMenu();
-              void reload();
-            }}
-          >
-            {withReloadShortcut(t("sqlTable.reloadRows"))}
-          </button>
-        </ContextMenu>
+        <RowMenu
+          menu={menu}
+          menuRow={menuRow}
+          menuRows={menuRows}
+          menuForeignKey={menuForeignKey}
+          columns={columns}
+          selectedTable={selectedTable}
+          insertableColumns={insertableColumns}
+          binaryColumns={binaryColumns}
+          autoIncrementColumn={autoIncrementColumn}
+          loading={loading}
+          deleting={deleting}
+          closeMenu={closeMenu}
+          setExpandedCell={setExpandedCell}
+          copyToClipboard={copyToClipboard}
+          openReferenced={openReferenced}
+          reload={reload}
+        />
       )}
       {insertMode !== null && (
         <InsertRowsDialog
@@ -831,43 +755,20 @@ function SqlTable({
         />
       )}
       {confirmingDelete && (
-        <ConfirmDialog
-          title={t("sqlTable.deleteRowsTitle")}
-          message={t("sqlTable.deleteRowsMessage", { n: selectedRows.size })}
-          confirmLabel={t("common.delete")}
-          danger
-          onConfirm={() => void confirmDelete()}
-          onCancel={() => {
-            setConfirmingDelete(false);
-            focusGrid();
-          }}
-        >
-          {(canDeleteWholeTable || canResetAutoIncrement) && (
-            <div className={styles.deleteOptions}>
-              {canDeleteWholeTable && (
-                <Checkbox
-                  className={styles.deleteOption}
-                  label={t("sqlTable.deleteAllRowsOption", { total })}
-                  checked={deleteWholeTable}
-                  onChange={(e) => {
-                    setDeleteWholeTable(e.target.checked);
-                    // The reset only exists because of this option on a multi-page table;
-                    // taking it back takes its follow-up with it.
-                    if (!e.target.checked) setResetAutoIncrement(false);
-                  }}
-                />
-              )}
-              {canResetAutoIncrement && (
-                <Checkbox
-                  className={styles.deleteOption}
-                  label={t("sqlTable.resetAutoIncrementOption", { column: autoIncrementColumn ?? "" })}
-                  checked={resetAutoIncrement}
-                  onChange={(e) => setResetAutoIncrement(e.target.checked)}
-                />
-              )}
-            </div>
-          )}
-        </ConfirmDialog>
+        <DeleteRowsDialog
+          selectedRows={selectedRows}
+          total={total}
+          autoIncrementColumn={autoIncrementColumn}
+          canDeleteWholeTable={canDeleteWholeTable}
+          canResetAutoIncrement={canResetAutoIncrement}
+          deleteWholeTable={deleteWholeTable}
+          setDeleteWholeTable={setDeleteWholeTable}
+          resetAutoIncrement={resetAutoIncrement}
+          setResetAutoIncrement={setResetAutoIncrement}
+          confirmDelete={confirmDelete}
+          setConfirmingDelete={setConfirmingDelete}
+          focusGrid={focusGrid}
+        />
       )}
       {/* The row is looked up at render time rather than held in state, so a value edited or
           reloaded underneath the dialog is the one it shows. A reload that drops the row — a page
