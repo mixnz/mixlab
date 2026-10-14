@@ -1,12 +1,16 @@
 //! How a service is run, as opposed to which service it is: how it is known to be ready and
-//! healthy, restarted, stopped and reloaded, what it may use, when it may be idled and how
-//! much of its output is kept. Each is a field of [`ServiceSpec`](super::ServiceSpec), whose
-//! `validate` enforces the rules between them.
+//! healthy, restarted, stopped and reloaded, what it may use, when it may be idled and how much of
+//! its output is kept. Each is a field of [`ServiceSpec`], whose `validate` enforces the rules
+//! between them.
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use super::ServiceId;
+// For `IdlePolicy`'s doc link alone. A reference link written into the doc would reach the
+// TypeScript binding, which carries a struct's doc comment as it is.
+#[cfg(doc)]
+use super::ServiceSpec;
 use crate::Millis;
 
 /// *Can traffic be routed to it yet?*
@@ -555,8 +559,6 @@ pub enum IdleProbe {
 /// The product's central promise is that idle costs nothing, and this is the mechanism. `None` on a
 /// [`ServiceSpec`] means never idle-stop — correct for the front-end web server, which is the thing
 /// that starts everything else back up. Enforcement is roadmap task T69.
-///
-/// [`ServiceSpec`]: super::ServiceSpec
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct IdlePolicy {
