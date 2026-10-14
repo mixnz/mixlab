@@ -29,4 +29,14 @@ ignore = [
   "RUSTSEC-2026-0098",
   "RUSTSEC-2026-0099",
   "RUSTSEC-2026-0104",
+
+  # `rustls` 0.21 — the same road in: tiberius 0.12.3 pins it, on macOS only, through
+  # `tokio-rustls` 0.24, and the fix is a 0.23 release that line will never get. Neither is reached.
+  # 0346 leaks secrets through the `Debug` of a client session value, which only a
+  # `ClientSessionStore` of one's own would ever format; neither tiberius nor MixLab has one. 0349
+  # downgrades later connections to classical key exchange, which is the only kind rustls 0.21
+  # does — and `trust_cert()` already accepts any certificate, so it weakens nothing that holds.
+  # Delete these with the three above, the day tiberius moves to a current rustls.
+  "RUSTSEC-2026-0346",
+  "RUSTSEC-2026-0349",
 ]

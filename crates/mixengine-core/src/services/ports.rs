@@ -17,7 +17,7 @@
 //! as a running one, because the number is in its rendered configuration and in somebody's `.env`.
 //!
 //! **The search is bounded.** Running out of it is an error, not a longer loop — see
-//! [`Error::PortsExhausted`](crate::Error::PortsExhausted).
+//! [`ServiceError::PortsExhausted`].
 //!
 //! **Allocating and inserting are one critical section**, or two `service.create` calls arriving
 //! together are each handed the same next-free port and the second server fails to bind at start.
@@ -36,7 +36,7 @@ use std::net::IpAddr;
 use mixengine_platform::Host;
 use mixengine_proto::PortMoved;
 
-use crate::{Result, Store};
+use crate::{Result, ServiceError, Store};
 
 /// The port a service was given, and what it would have preferred.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,7 +111,10 @@ pub async fn allocate(
         }
     }
 
-    Err(crate::Error::PortsExhausted { preferred, last })
+    Err(crate::Error::Service(ServiceError::PortsExhausted {
+        preferred,
+        last,
+    }))
 }
 
 /// The lowest free port strictly above `after`, for the activator of the service listening there.
@@ -127,7 +130,7 @@ pub async fn allocate(
 /// # Errors
 ///
 /// [`Error::Database`](crate::Error::Database) when the table cannot be read, and
-/// [`Error::PortsExhausted`](crate::Error::PortsExhausted) when the search runs out — bounded for
+/// [`ServiceError::PortsExhausted`] when the search runs out — bounded for
 /// [`allocate`]'s reason: running out is an error rather than a longer loop.
 pub async fn allocate_activation(
     store: &Store,
@@ -148,10 +151,10 @@ pub async fn allocate_activation(
         }
     }
 
-    Err(crate::Error::PortsExhausted {
+    Err(crate::Error::Service(ServiceError::PortsExhausted {
         preferred: first,
         last,
-    })
+    }))
 }
 
 /// Every port any row in this database holds, whichever column holds it.
@@ -577,7 +580,7 @@ pub(super) mod tests {
         assert!(
             matches!(
                 refused,
-                crate::Error::PortsExhausted { preferred: asked, last: reached }
+                crate::Error::Service(ServiceError::PortsExhausted { preferred: asked, last: reached })
                     if asked == preferred && reached == last
             ),
             "{refused:?}"

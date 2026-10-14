@@ -12,6 +12,7 @@ use mixengine_proto::{Error, ErrorCode, HomePrevious, HomeRestoreReport, Previou
 
 use super::Api;
 use crate::error::ToWire as _;
+use mixengine_core::RuntimeError;
 
 impl Api {
     /// `home.previous` — the newest copy in a kept folder, while this home has nothing of its own.
@@ -57,7 +58,7 @@ impl Api {
         let restored = snapshot::restore(&self.store, &previous.path)
             .await
             .map_err(|error| match error {
-                mixengine_core::Error::RestoreRefused { .. } => {
+                mixengine_core::Error::Runtime(RuntimeError::RestoreRefused { .. }) => {
                     Error::new(ErrorCode::PreconditionFailed, error.to_string())
                 }
                 other => other.to_wire(),

@@ -19,7 +19,7 @@
 //! **The installed versions, and never the downloadable ones.** The feature spec says so, and the
 //! reason is worth keeping in view: the alternative is a `cd` into a directory quietly starting an
 //! eighty-megabyte download. A constraint nothing installed satisfies is
-//! [`Error::RuntimeUnresolved`], whose message names the install command that would fix it.
+//! [`RuntimeError::RuntimeUnresolved`], whose message names the install command that would fix it.
 //!
 //! Which of several matches wins is
 //! [`PackageVersion::cmp_precedence`](mixengine_proto::PackageVersion::cmp_precedence) — the newest, as upstream
@@ -39,7 +39,7 @@ use mixengine_proto::{
     PackageVersion, ResolvedRuntime, RuntimeKind, RuntimeSource, RuntimeSummary, VersionConstraint,
 };
 
-use crate::{Error, Result, Store, runtimes};
+use crate::{Error, ProjectError, Result, RuntimeError, Store, runtimes};
 
 /// The file a project pins its runtimes in, checked into the user's repository.
 ///
@@ -76,29 +76,30 @@ pub fn restore_command(kind: RuntimeKind, version: &PackageVersion) -> String {
 
 /// The refusal for one recorded runtime whose folder is gone.
 fn gone(runtime: &RuntimeSummary) -> Error {
-    Error::RuntimeMissing {
+    Error::Runtime(RuntimeError::RuntimeMissing {
         kind: runtime.kind,
         version: runtime.version.clone(),
         path: PathBuf::from(&runtime.path),
-    }
+    })
 }
 
 /// Resolve one runtime for one directory.
 ///
 /// # Errors
 ///
-/// [`Error::NotAbsolute`] for a relative directory; [`Error::Manifest`] for a `mixengine.toml` that
-/// does not parse; [`Error::UnreadableProjectRow`] for a project row this build cannot read;
-/// [`Error::RuntimeUnresolved`] when nothing installed satisfies what was asked for, and
-/// [`Error::NoDefaultRuntime`] when nothing asked for anything and the kind has no default;
-/// [`Error::Database`] and [`Error::Io`] when a table or a file cannot be read.
+/// [`ProjectError::NotAbsolute`] for a relative directory; [`ProjectError::Manifest`] for a
+/// `mixengine.toml` that does not parse; [`ProjectError::UnreadableProjectRow`] for a project row
+/// this build cannot read; [`RuntimeError::RuntimeUnresolved`] when nothing installed satisfies
+/// what was asked for, and [`RuntimeError::NoDefaultRuntime`] when nothing asked for anything and
+/// the kind has no default; [`Error::Database`] and [`Error::Io`] when a table or a file cannot be
+/// read.
 pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedRuntime> {
     if let Some(cwd) = question.cwd
         && !cwd.is_absolute()
     {
-        return Err(Error::NotAbsolute {
+        return Err(Error::Project(ProjectError::NotAbsolute {
             path: cwd.to_path_buf(),
-        });
+        }));
     }
 
     let installed = runtimes::records(store, Some(question.kind)).await?;
@@ -109,9 +110,9 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
         let default = installed
             .into_iter()
             .find(|runtime| runtime.default)
-            .ok_or(Error::NoDefaultRuntime {
+            .ok_or(Error::Runtime(RuntimeError::NoDefaultRuntime {
                 kind: question.kind,
-            })?;
+            }))?;
 
         // **Said, never replaced** — roadmap task **T206d**, D2: another version standing in for a
         // default whose folder vanished would change what a project runs behind its back.
@@ -159,11 +160,11 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
 
         None => match newest(absent) {
             Some(missing) => Err(gone(&missing)),
-            None => Err(Error::RuntimeUnresolved {
+            None => Err(Error::Runtime(RuntimeError::RuntimeUnresolved {
                 kind: question.kind,
                 constraint: asked.constraint,
                 origin: describe(&asked.source),
-            }),
+            })),
         },
     }
 }
@@ -622,7 +623,7 @@ mod tests {
         .expect_err("the default is gone");
 
         assert!(
-            matches!(&error, Error::RuntimeMissing { version, .. } if version.as_str() == "8.3.33"),
+            matches!(&error, Error::Runtime(RuntimeError::RuntimeMissing { version, .. }) if version.as_str() == "8.3.33"),
             "{error}"
         );
     }
@@ -651,7 +652,7 @@ mod tests {
             .await
             .expect_err("nothing matching is there");
         assert!(
-            matches!(&error, Error::RuntimeMissing { version, .. } if version.as_str() == "8.3.33"),
+            matches!(&error, Error::Runtime(RuntimeError::RuntimeMissing { version, .. }) if version.as_str() == "8.3.33"),
             "{error}"
         );
     }
@@ -776,7 +777,7 @@ mod tests {
             .expect_err("the manifest is wrong");
 
             assert!(
-                matches!(&error, Error::Manifest { path, .. } if path.ends_with(MANIFEST_FILE_NAME)),
+                matches!(&error, Error::Project(ProjectError::Manifest { path, .. }) if path.ends_with(MANIFEST_FILE_NAME)),
                 "{error:?} for {body:?}"
             );
         }
@@ -808,7 +809,7 @@ mod tests {
             "{said}"
         );
         assert!(
-            matches!(&error, Error::RuntimeUnresolved { constraint, .. }
+            matches!(&error, Error::Runtime(RuntimeError::RuntimeUnresolved { constraint, .. })
                 if install_command(RuntimeKind::Php, constraint).contains("install php 8.1.30")),
             "an exact constraint becomes the exact command: {error:?}"
         );
@@ -844,7 +845,10 @@ mod tests {
         .await
         .expect_err("nothing is installed");
 
-        assert!(matches!(error, Error::NoDefaultRuntime { .. }), "{error:?}");
+        assert!(
+            matches!(error, Error::Runtime(RuntimeError::NoDefaultRuntime { .. })),
+            "{error:?}"
+        );
     }
 
     /// A relative directory would be walked from wherever the *daemon* was started, which is nobody's
@@ -865,7 +869,10 @@ mod tests {
         .await
         .expect_err("a relative directory means nothing here");
 
-        assert!(matches!(error, Error::NotAbsolute { .. }), "{error:?}");
+        assert!(
+            matches!(error, Error::Project(ProjectError::NotAbsolute { .. })),
+            "{error:?}"
+        );
     }
 
     /// The walk is the thing a person asking "why is it not taking my pin" needs to see.

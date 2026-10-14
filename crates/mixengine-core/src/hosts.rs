@@ -45,7 +45,8 @@ const LOOPBACK: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 /// # Errors
 ///
 /// [`Error::Database`](crate::Error::Database) when the tables cannot be read, and
-/// [`Error::UnreadableSiteRow`](crate::Error::UnreadableSiteRow) for a row this build cannot decode.
+/// [`ProjectError::UnreadableSiteRow`](crate::ProjectError::UnreadableSiteRow) for a row this build
+/// cannot decode.
 pub async fn desired(store: &Store, wired: &[String]) -> Result<Vec<HostEntry>> {
     let records = crate::sites::records(store, None).await?;
 

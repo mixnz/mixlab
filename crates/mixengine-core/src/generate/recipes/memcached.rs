@@ -48,7 +48,7 @@ use crate::generate::context::Context;
 use crate::generate::recipe::{Instancing, Recipe, Upstream};
 use crate::generate::settings::{Preset, Setting};
 use crate::install::SmokeTest;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is for, and the one program the package publishes.
 const PACKAGE: &str = "memcached";
@@ -212,12 +212,14 @@ impl Recipe for Memcached {
 
 /// Where this instance listens, or the refusal that names the row.
 fn address(context: &Context) -> Result<SocketAddr> {
-    let port = context.port().ok_or_else(|| Error::SettingValue {
-        service: context.service().as_str().to_owned(),
-        key: "port",
-        value: "none".to_owned(),
-        reason: "a cache listens on a TCP port and this service's row carries none; \
+    let port = context.port().ok_or_else(|| {
+        Error::Service(ServiceError::SettingValue {
+            service: context.service().as_str().to_owned(),
+            key: "port",
+            value: "none".to_owned(),
+            reason: "a cache listens on a TCP port and this service's row carries none; \
                  `service.create` allocates one",
+        })
     })?;
 
     Ok(SocketAddr::new(

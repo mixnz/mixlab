@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use mixengine_core::extensions::install::{self, Plan, Request};
 use mixengine_core::extensions::manifest::{self, ExtensionManifest};
 use mixengine_core::extensions::store::{self as extension_store, Source};
-use mixengine_core::{Paths, Store};
+use mixengine_core::{Paths, ProjectError, RuntimeError, Store};
 use mixengine_platform::mock;
 use tempfile::TempDir;
 
@@ -432,7 +432,7 @@ async fn a_web_app_with_no_matching_php_is_refused_before_anything_is_fetched() 
         .expect_err("no PHP answers ^8.1");
 
     assert!(
-        matches!(refusal, mixengine_core::Error::RuntimeUnresolved { ref origin, .. }
+        matches!(refusal, mixengine_core::Error::Runtime(RuntimeError::RuntimeUnresolved { ref origin, .. })
             if origin.contains("phpmyadmin")),
         "{refusal}"
     );
@@ -478,7 +478,7 @@ async fn a_web_app_whose_domain_is_taken_is_refused_naming_the_holder() {
         .expect_err("the name is taken");
 
     assert!(
-        matches!(refusal, mixengine_core::Error::DomainTaken { ref holder, .. }
+        matches!(refusal, mixengine_core::Error::Project(ProjectError::DomainTaken { ref holder, .. })
             if holder == "phpmyadmin.mixengine.test"),
         "{refusal}"
     );

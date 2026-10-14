@@ -25,7 +25,7 @@ use mixengine_proto::{
 use super::manifest::{
     ExtensionManifest, HealthProbeTemplate, HealthTemplate, ReadyTemplate, ServiceTemplate,
 };
-use crate::{Error, Paths, Result};
+use crate::{Error, ExtensionError, Paths, Result};
 
 /// The three placeholders that are not ports, spelled as they appear in a file.
 pub const INSTALL_DIR: &str = "{install_dir}";
@@ -209,9 +209,10 @@ impl Context {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] naming the field and the placeholder. An unknown one is refused rather
-/// than left standing, because a `{home_dir}` that survived into an argument would be a literal
-/// brace handed to a program, which is a bug reported by whatever that program does with it.
+/// [`ExtensionError::ExtensionField`] naming the field and the placeholder. An unknown one is
+/// refused rather than left standing, because a `{home_dir}` that survived into an argument would
+/// be a literal brace handed to a program, which is a bug reported by whatever that program does
+/// with it.
 pub fn text(id: &ExtensionId, field: &str, template: &str, context: &Context) -> Result<String> {
     spelled(id, field, template, context, Destination::Field)
 }
@@ -246,11 +247,11 @@ fn unanswered(name: &str) -> String {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] naming the field, for a `{db_*}` or `{secret}` this context cannot
-/// answer. For four of the five that is a context built without them rather than a manifest that is
-/// wrong, which is why the message says what this home has rather than what the author should have
-/// written; `{db_password_env}` is the exception and names the field that supplies it, because that
-/// field is a manifest's and not a home's.
+/// [`ExtensionError::ExtensionField`] naming the field, for a `{db_*}` or `{secret}` this context
+/// cannot answer. For four of the five that is a context built without them rather than a manifest
+/// that is wrong, which is why the message says what this home has rather than what the author
+/// should have written; `{db_password_env}` is the exception and names the field that supplies it,
+/// because that field is a manifest's and not a home's.
 pub fn php_source(
     id: &ExtensionId,
     field: &str,
@@ -454,8 +455,8 @@ fn copy(rendered: &mut String, literal: &str, in_path: &mut bool, destination: D
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] naming the field, for a path that starts somewhere else or climbs out
-/// with `..`.
+/// [`ExtensionError::ExtensionField`] naming the field, for a path that starts somewhere else or
+/// climbs out with `..`.
 pub fn rooted(
     id: &ExtensionId,
     field: &str,
@@ -529,7 +530,8 @@ fn names_an_address(template: &str) -> bool {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] naming the field, for a written-out address or an unknown placeholder.
+/// [`ExtensionError::ExtensionField`] naming the field, for a written-out address or an unknown
+/// placeholder.
 pub fn value(id: &ExtensionId, field: &str, template: &str, context: &Context) -> Result<String> {
     no_address(id, field, template)?;
 
@@ -546,7 +548,7 @@ pub fn value(id: &ExtensionId, field: &str, template: &str, context: &Context) -
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] naming the field, for a written-out address.
+/// [`ExtensionError::ExtensionField`] naming the field, for a written-out address.
 pub fn fragment(
     id: &ExtensionId,
     field: &str,
@@ -607,12 +609,12 @@ fn url(id: &ExtensionId, field: &str, template: &str, context: &Context) -> Resu
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] for anything the format refuses — an address written out, a path that
-/// does not grow from a placeholder, an unknown placeholder — and [`Error::ExtensionSpec`] where
-/// the rendering is a spec [`ServiceSpec`] will not accept, reported against the extension rather
-/// than against a spec nobody wrote. The rules above are stricter than most of what `validate`
-/// checks, so what reaches that second error is a `restart` policy the manifest is free to state
-/// and the supervisor is not free to run.
+/// [`ExtensionError::ExtensionField`] for anything the format refuses — an address written out, a
+/// path that does not grow from a placeholder, an unknown placeholder — and
+/// [`ExtensionError::ExtensionSpec`] where the rendering is a spec [`ServiceSpec`] will not accept,
+/// reported against the extension rather than against a spec nobody wrote. The rules above are
+/// stricter than most of what `validate` checks, so what reaches that second error is a `restart`
+/// policy the manifest is free to state and the supervisor is not free to run.
 pub fn service_spec(
     manifest: &ExtensionManifest,
     template: &ServiceTemplate,
@@ -622,9 +624,11 @@ pub fn service_spec(
 
     service_builder(manifest, template, context)?
         .build()
-        .map_err(|source| Error::ExtensionSpec {
-            id: id.as_str().to_owned(),
-            source,
+        .map_err(|source| {
+            Error::Extension(ExtensionError::ExtensionSpec {
+                id: id.as_str().to_owned(),
+                source,
+            })
         })
 }
 
@@ -789,11 +793,11 @@ fn socket(
 
 /// One refusal, phrased for whoever wrote the file.
 fn refuse(id: &ExtensionId, field: &str, reason: &str) -> Error {
-    Error::ExtensionField {
+    Error::Extension(ExtensionError::ExtensionField {
         id: id.as_str().to_owned(),
         field: field.to_owned(),
         reason: reason.to_owned(),
-    }
+    })
 }
 
 #[cfg(test)]
@@ -924,7 +928,7 @@ mod tests {
                 .expect_err("nothing answers it");
 
             assert!(
-                matches!(&refusal, Error::ExtensionField { field, .. } if field == "web-app.config.text"),
+                matches!(&refusal, Error::Extension(ExtensionError::ExtensionField { field, .. }) if field == "web-app.config.text"),
                 "{template}: {refusal}"
             );
         }
@@ -1075,7 +1079,10 @@ mod tests {
             let outcome = render(&probe(extra));
 
             assert!(
-                matches!(outcome, Err(Error::ExtensionField { .. })),
+                matches!(
+                    outcome,
+                    Err(Error::Extension(ExtensionError::ExtensionField { .. }))
+                ),
                 "{what} should be refused, got {outcome:?}"
             );
         }
@@ -1088,7 +1095,10 @@ mod tests {
             "ready = { type = \"http\", url = \"http://127.0.0.1:{ui_port}/health\", expect_status = 200, timeout = \"10s\" }",
         ));
 
-        assert!(matches!(outcome, Err(Error::ExtensionField { .. })));
+        assert!(matches!(
+            outcome,
+            Err(Error::Extension(ExtensionError::ExtensionField { .. }))
+        ));
     }
 
     /// And `{listen}` in a url is how the same check is written correctly.
@@ -1111,7 +1121,10 @@ mod tests {
         ));
 
         assert!(
-            matches!(outcome, Err(Error::ExtensionSpec { .. })),
+            matches!(
+                outcome,
+                Err(Error::Extension(ExtensionError::ExtensionSpec { .. }))
+            ),
             "{outcome:?}"
         );
     }
@@ -1255,7 +1268,7 @@ mod tests {
 
         assert!(matches!(
             value(&id, "service.args[0]", "{home_dir}/x", &context),
-            Err(Error::ExtensionField { .. })
+            Err(Error::Extension(ExtensionError::ExtensionField { .. }))
         ));
     }
 
@@ -1274,7 +1287,7 @@ mod tests {
                 &context,
                 Destination::NginxConf,
             ),
-            Err(Error::ExtensionField { .. })
+            Err(Error::Extension(ExtensionError::ExtensionField { .. }))
         ));
     }
 

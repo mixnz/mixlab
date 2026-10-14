@@ -55,7 +55,7 @@ use std::path::{Path, PathBuf};
 use mixengine_platform::handover::RESOLVER_POINTER;
 use mixengine_proto::RuntimeKind;
 
-use crate::{Error, Result};
+use crate::{Error, Result, RuntimeError};
 
 /// One command `<root>/bin` answers to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -517,8 +517,8 @@ pub struct Source {
 ///
 /// # Errors
 ///
-/// [`Error::ShimMissing`] when the shim is not there, which is a broken installation rather than
-/// anything a user did. A missing trampoline is not an error: see the fallback below.
+/// [`RuntimeError::ShimMissing`] when the shim is not there, which is a broken installation rather
+/// than anything a user did. A missing trampoline is not an error: see the fallback below.
 pub fn source(program: &Path) -> Result<Source> {
     let beside = program.parent().unwrap_or_else(|| Path::new("."));
     let resolver = present(beside, BINARY)?;
@@ -543,7 +543,7 @@ fn present(directory: &Path, name: &str) -> Result<PathBuf> {
 
     match file.is_file() {
         true => Ok(file),
-        false => Err(Error::ShimMissing { path: file }),
+        false => Err(Error::Runtime(RuntimeError::ShimMissing { path: file })),
     }
 }
 

@@ -21,7 +21,7 @@ use std::collections::BTreeMap;
 use mixengine_proto::ServiceId;
 use serde::Serialize;
 
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The override key every recipe carries, whether or not it declares anything else.
 ///
@@ -166,9 +166,10 @@ impl Settings {
     ///
     /// # Errors
     ///
-    /// [`Error::UnreadableServiceDocument`] when the column does not hold a JSON object;
-    /// [`Error::UnknownSetting`] when it names a key the recipe does not have, listing the ones it
-    /// does; and [`Error::SettingType`] when a key it does have was given the wrong shape.
+    /// [`ServiceError::UnreadableServiceDocument`] when the column does not hold a JSON object;
+    /// [`ServiceError::UnknownSetting`] when it names a key the recipe does not have, listing the
+    /// ones it does; and [`ServiceError::SettingType`] when a key it does have was given the wrong
+    /// shape.
     pub fn merge(
         declared: &'static [Setting],
         document: &str,
@@ -183,19 +184,21 @@ impl Settings {
         values.insert(EXTRA, Value::Text(String::new()));
 
         let overrides: BTreeMap<String, serde_json::Value> = serde_json::from_str(document)
-            .map_err(|source| Error::UnreadableServiceDocument {
-                service: service.as_str().to_owned(),
-                column: "config_overrides_json",
-                source,
+            .map_err(|source| {
+                Error::Service(ServiceError::UnreadableServiceDocument {
+                    service: service.as_str().to_owned(),
+                    column: "config_overrides_json",
+                    source,
+                })
             })?;
 
         for (key, offered) in overrides {
             let Some((declared_key, current)) = values.get_key_value(key.as_str()) else {
-                return Err(Error::UnknownSetting {
+                return Err(Error::Service(ServiceError::UnknownSetting {
                     service: service.as_str().to_owned(),
                     key,
                     known: values.keys().map(|known| (*known).to_owned()).collect(),
-                });
+                }));
             };
 
             let (declared_key, value) = (*declared_key, current.read_as(&offered));
@@ -205,12 +208,12 @@ impl Settings {
                     values.insert(declared_key, value);
                 }
                 Err(expected) => {
-                    return Err(Error::SettingType {
+                    return Err(Error::Service(ServiceError::SettingType {
                         service: service.as_str().to_owned(),
                         key,
                         expected,
                         found: Value::kind_of(&offered),
-                    });
+                    }));
                 }
             }
         }

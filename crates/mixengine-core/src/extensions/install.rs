@@ -41,7 +41,7 @@ use crate::index::format::{Arch, Artifact, Os};
 use crate::install::{Installer, Watcher};
 use crate::services::{self, Declaration, Origin, Port};
 use crate::sites::{self, SiteOwner};
-use crate::{Error, Paths, Result, Store};
+use crate::{Error, ExtensionError, Paths, ProjectError, Result, RuntimeError, Store};
 
 /// The `[artifact.<target>]` key for something that runs anywhere.
 const ANY: &str = "any";
@@ -145,9 +145,9 @@ pub struct Plan {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionAlreadyInstalled`] when something is already installed under that id;
-/// [`Error::ExtensionNoArtifact`] where nothing is published for this machine; and whatever reading
-/// the manifest reports.
+/// [`ExtensionError::ExtensionAlreadyInstalled`] when something is already installed under that id;
+/// [`ExtensionError::ExtensionNoArtifact`] where nothing is published for this machine; and
+/// whatever reading the manifest reports.
 pub async fn plan(
     store: &Store,
     paths: &Paths,
@@ -157,9 +157,11 @@ pub async fn plan(
     let id = &manifest.extension.id;
 
     if extension_store::exists(store, id).await? {
-        return Err(Error::ExtensionAlreadyInstalled {
-            id: id.as_str().to_owned(),
-        });
+        return Err(Error::Extension(
+            ExtensionError::ExtensionAlreadyInstalled {
+                id: id.as_str().to_owned(),
+            },
+        ));
     }
 
     artifact_for_host(manifest)?;
@@ -194,7 +196,7 @@ pub async fn plan(
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionNoArtifact`], naming what *is* published, so somebody on a machine an
+/// [`ExtensionError::ExtensionNoArtifact`], naming what *is* published, so somebody on a machine an
 /// extension was not built for is told which ones it was.
 fn artifact_for_host(manifest: &ExtensionManifest) -> Result<Option<Artifact>> {
     if manifest.artifacts.is_empty() {
@@ -211,10 +213,10 @@ fn artifact_for_host(manifest: &ExtensionManifest) -> Result<Option<Artifact>> {
         .or_else(|| manifest.artifacts.get(ANY));
 
     let Some(declared) = published else {
-        return Err(Error::ExtensionNoArtifact {
+        return Err(Error::Extension(ExtensionError::ExtensionNoArtifact {
             id: manifest.extension.id.as_str().to_owned(),
             targets: manifest.artifacts.keys().cloned().collect(),
-        });
+        }));
     };
 
     // The index's own artifact type, so the download, the checksum, the unpack, the staging
@@ -254,10 +256,10 @@ fn artifact_for_host(manifest: &ExtensionManifest) -> Result<Option<Artifact>> {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] for a runtime kind other than PHP and for an extension id whose pool
-/// could not be named; [`Error::RuntimeUnresolved`] naming the extension when nothing installed
-/// satisfies `requires`; [`Error::DomainTaken`] naming the holder; and whatever rendering the root
-/// refuses.
+/// [`ExtensionError::ExtensionField`] for a runtime kind other than PHP and for an extension id
+/// whose pool could not be named; [`RuntimeError::RuntimeUnresolved`] naming the extension when
+/// nothing installed satisfies `requires`; [`ProjectError::DomainTaken`] naming the holder; and
+/// whatever rendering the root refuses.
 pub async fn site_for(
     store: &Store,
     paths: &Paths,
@@ -269,13 +271,13 @@ pub async fn site_for(
     let id = &manifest.extension.id;
 
     if app.runtime.kind != mixengine_proto::RuntimeKind::Php {
-        return Err(Error::ExtensionField {
+        return Err(Error::Extension(ExtensionError::ExtensionField {
             id: id.as_str().to_owned(),
             field: "web-app.runtime.kind".to_owned(),
             reason: "may only be `php`: a web-app is served through a php-fpm pool, and nothing \
                      serves another language's source yet"
                 .to_owned(),
-        });
+        }));
     }
 
     let domain = crate::domains::normalised(
@@ -284,10 +286,10 @@ pub async fn site_for(
     )?;
 
     if let Some(holder) = sites::by_domain(store, &domain).await? {
-        return Err(Error::DomainTaken {
+        return Err(Error::Project(ProjectError::DomainTaken {
             domain,
             holder: holder.domains.first().cloned().unwrap_or_default(),
-        });
+        }));
     }
 
     let resolved = crate::resolve::runtime(
@@ -300,13 +302,13 @@ pub async fn site_for(
     )
     .await
     .map_err(|error| match error {
-        Error::RuntimeUnresolved {
+        Error::Runtime(RuntimeError::RuntimeUnresolved {
             kind, constraint, ..
-        } => Error::RuntimeUnresolved {
+        }) => Error::Runtime(RuntimeError::RuntimeUnresolved {
             kind,
             constraint,
             origin: format!("the {id} extension"),
-        },
+        }),
         other => other,
     })?;
 
@@ -399,9 +401,11 @@ pub async fn install<W: Watcher>(
     let install_dir = extension_store::install_dir(paths, id);
 
     if extension_store::exists(store, id).await? {
-        return Err(Error::ExtensionAlreadyInstalled {
-            id: id.as_str().to_owned(),
-        });
+        return Err(Error::Extension(
+            ExtensionError::ExtensionAlreadyInstalled {
+                id: id.as_str().to_owned(),
+            },
+        ));
     }
 
     // **A directory no row owns is a leftover, and this install takes its place** — found by T200.
@@ -600,9 +604,9 @@ async fn write_rows(
 /// Copy a directory tree, for `--path`.
 fn copy_into(from: &Path, into: &Path) -> Result<()> {
     if into.exists() {
-        return Err(Error::AlreadyInstalled {
+        return Err(Error::Runtime(RuntimeError::AlreadyInstalled {
             path: into.to_path_buf(),
-        });
+        }));
     }
 
     crate::paths::create_dir(into)?;

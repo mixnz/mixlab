@@ -65,7 +65,7 @@ use crate::generate::recipe::{
     Claim, ClientCommand, Endpoints, Instancing, Recipe, TemplateFile, Upstream,
 };
 use crate::generate::settings::{Preset, Setting};
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is found under.
 pub const PACKAGE: &str = "mysql";
@@ -488,8 +488,8 @@ fn bootstraps_the_password(version: &str) -> bool {
 ///
 /// # Errors
 ///
-/// [`Error::ServiceProvidesNothing`] for an install missing one of the commands this needs, and
-/// [`Error::SettingValue`] for a credential this recipe will not put in a SQL literal.
+/// [`ServiceError::ServiceProvidesNothing`] for an install missing one of the commands this needs,
+/// and [`ServiceError::SettingValue`] for a credential this recipe will not put in a SQL literal.
 fn steps(context: &Context) -> Result<Vec<Step>> {
     steps_for(
         context,
@@ -610,16 +610,16 @@ fn the_password_step(context: &Context, password: &str, windows: bool) -> Result
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`], naming no value.
+/// [`ServiceError::SettingValue`], naming no value.
 fn refuse_a_password_that_needs_escaping(context: &Context, password: &str) -> Result<()> {
     if password.is_empty() || !password.chars().all(|c| c.is_ascii_alphanumeric()) {
-        return Err(Error::SettingValue {
+        return Err(Error::Service(ServiceError::SettingValue {
             service: context.service().as_str().to_owned(),
             key: "root password",
             value: "<redacted>".to_owned(),
             reason: "a generated credential is alphanumeric so that it needs no escaping in the \
                      statement that sets it; this one is not, which is a bug in whatever made it",
-        });
+        }));
     }
 
     Ok(())
@@ -938,7 +938,8 @@ fn ping(addr: SocketAddr) -> Vec<String> {
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`] when the path this home would need is longer than the kernel accepts.
+/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel
+/// accepts.
 fn socket_path(context: &Context) -> Result<PathBuf> {
     let socket = context
         .run()
@@ -953,14 +954,16 @@ fn socket_path(context: &Context) -> Result<PathBuf> {
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`] when the row carries no port.
+/// [`ServiceError::SettingValue`] when the row carries no port.
 fn address(context: &Context) -> Result<SocketAddr> {
-    let port = context.port().ok_or_else(|| Error::SettingValue {
-        service: context.service().as_str().to_owned(),
-        key: "port",
-        value: "none".to_owned(),
-        reason: "a database listens on a TCP port and this service's row carries none; \
+    let port = context.port().ok_or_else(|| {
+        Error::Service(ServiceError::SettingValue {
+            service: context.service().as_str().to_owned(),
+            key: "port",
+            value: "none".to_owned(),
+            reason: "a database listens on a TCP port and this service's row carries none; \
                  `service.create` allocates one",
+        })
     })?;
 
     Ok(SocketAddr::new(

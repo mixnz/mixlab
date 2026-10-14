@@ -23,7 +23,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-use mixengine_core::{Paths, Store};
+use mixengine_core::{ElevationError, Paths, Store};
 use mixengine_platform::{ElevationSupport, Host};
 use mixengine_proto::privileged::{ElevationOutcome, OpOutcome, PrivilegedOp};
 use mixengine_proto::{
@@ -1165,15 +1165,18 @@ impl Elevation {
                     // What the helper said is the only account of why it left nothing — a refusal
                     // writes no file beside a request it does not trust (T166, D6). `warn`, because
                     // until now it reached nothing above `debug`.
-                    Err(mixengine_core::Error::ElevateReportMissing { path, .. }) => {
+                    Err(mixengine_core::Error::Elevation(
+                        ElevationError::ElevateReportMissing { path, .. },
+                    )) => {
                         tracing::warn!(
                             said = said.as_deref().unwrap_or(""),
                             "the elevation helper ran and left no report"
                         );
                         self.remember(handle, &outcome, 0, asked, Vec::new());
-                        return Err(
-                            mixengine_core::Error::ElevateReportMissing { path, said }.to_wire()
-                        );
+                        return Err(mixengine_core::Error::Elevation(
+                            ElevationError::ElevateReportMissing { path, said },
+                        )
+                        .to_wire());
                     }
                     Err(error) => {
                         self.remember(handle, &outcome, 0, asked, Vec::new());

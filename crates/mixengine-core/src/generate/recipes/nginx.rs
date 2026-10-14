@@ -56,7 +56,7 @@ use crate::generate::recipe::{Endpoints, Instancing, Recipe, Role, TemplateFile,
 use crate::generate::served::{Served, ServedKind};
 use crate::generate::settings::{Preset, Setting};
 use crate::install::SmokeTest;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is for, which is also the name the binary is published under.
 const PACKAGE: &str = "nginx";
@@ -272,8 +272,8 @@ impl Recipe for Nginx {
     ///
     /// # Errors
     ///
-    /// [`Error::TemplateBroken`] naming the site template, and
-    /// [`Error::ServiceProvidesNothing`] for an install that
+    /// [`ServiceError::TemplateBroken`] naming the site template, and
+    /// [`ServiceError::ServiceProvidesNothing`] for an install that
     /// publishes no `fastcgi_params` — a package problem reported while rendering rather than an
     /// `include` of a file that is not there.
     fn sites(&self, context: &Context, served: &[Served]) -> Result<Vec<Document>> {
@@ -555,11 +555,13 @@ fn port(context: &Context, key: &'static str) -> Result<u16> {
     u16::try_from(number)
         .ok()
         .filter(|port| *port != 0)
-        .ok_or_else(|| Error::SettingValue {
-            service: context.service().as_str().to_owned(),
-            key,
-            value: number.to_string(),
-            reason: "a port is a number from 1 to 65535",
+        .ok_or_else(|| {
+            Error::Service(ServiceError::SettingValue {
+                service: context.service().as_str().to_owned(),
+                key,
+                value: number.to_string(),
+                reason: "a port is a number from 1 to 65535",
+            })
         })
 }
 

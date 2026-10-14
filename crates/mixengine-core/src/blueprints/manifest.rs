@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 
 use mixengine_proto::{RuntimeKind, SiteKind, VersionConstraint};
 
-use crate::{Error, Result};
+use crate::{BlueprintError, Error, Result};
 
 /// The highest schema this build reads. What it writes is [`schema_of`]'s answer (ADR 0061).
 pub const SCHEMA: u32 = 3;
@@ -704,8 +704,8 @@ impl<'de> serde::Deserialize<'de> for BlueprintSite {
 ///
 /// # Errors
 ///
-/// [`Error::UnknownBlueprintSchema`] for a newer format, and [`Error::BlueprintManifest`] for a
-/// file that does not parse.
+/// [`BlueprintError::UnknownBlueprintSchema`] for a newer format, and
+/// [`BlueprintError::BlueprintManifest`] for a file that does not parse.
 pub fn read(text: &str) -> Result<BlueprintManifest> {
     /// Just enough to learn the version, and the name to say it with.
     #[derive(serde::Deserialize)]
@@ -722,20 +722,21 @@ pub fn read(text: &str) -> Result<BlueprintManifest> {
         name: String,
     }
 
-    let versioned: Versioned =
-        toml::from_str(text).map_err(|source| Error::BlueprintManifest { source })?;
+    let versioned: Versioned = toml::from_str(text)
+        .map_err(|source| Error::Blueprint(BlueprintError::BlueprintManifest { source }))?;
 
     if versioned.schema > SCHEMA {
-        return Err(Error::UnknownBlueprintSchema {
+        return Err(Error::Blueprint(BlueprintError::UnknownBlueprintSchema {
             name: versioned
                 .blueprint
                 .map(|header| header.name)
                 .unwrap_or_default(),
             schema: versioned.schema,
-        });
+        }));
     }
 
-    toml::from_str(text).map_err(|source| Error::BlueprintManifest { source })
+    toml::from_str(text)
+        .map_err(|source| Error::Blueprint(BlueprintError::BlueprintManifest { source }))
 }
 
 /// Write one, in one fixed order.

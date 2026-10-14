@@ -24,6 +24,7 @@ use mixengine_platform::{Host, KEYRING_SERVICE};
 use mixengine_proto::{Error, ErrorCode, Made, Provisioned, ServiceId};
 
 use crate::error::ToWire as _;
+use mixengine_core::ServiceError;
 
 /// What to do about the account, having probed and asked the keyring.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -95,11 +96,13 @@ impl Making {
     /// The wire error a client receives, which for a foreign account is T77a's sentence and hint.
     pub(crate) fn into_wire(self) -> Error {
         match self {
-            Self::Foreign { service, user } => mixengine_core::Error::AccountNotOurs {
-                service: service.as_str().to_owned(),
-                user,
+            Self::Foreign { service, user } => {
+                mixengine_core::Error::Service(ServiceError::AccountNotOurs {
+                    service: service.as_str().to_owned(),
+                    user,
+                })
+                .to_wire()
             }
-            .to_wire(),
             Self::Failed(error) => error,
         }
     }

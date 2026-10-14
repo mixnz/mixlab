@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use mixengine_core::extensions::install;
 use mixengine_core::extensions::manifest::{self, Body, ExtensionManifest};
 use mixengine_core::extensions::render::{self, Context};
-use mixengine_core::{Error, Paths, Store};
+use mixengine_core::{Error, ExtensionError, Paths, Store};
 use mixengine_proto::{Millis, ReadyCheck, ServiceSpec, StopBehaviour};
 use tempfile::TempDir;
 
@@ -280,7 +280,7 @@ async fn a_machine_with_no_build_is_told_which_ones_exist() {
         .expect_err("nothing is published for this machine");
 
     assert!(
-        matches!(refusal, Error::ExtensionNoArtifact { ref targets, .. } if targets == &["no-such-target"]),
+        matches!(refusal, Error::Extension(ExtensionError::ExtensionNoArtifact { ref targets, .. }) if targets == &["no-such-target"]),
         "{refusal}"
     );
     assert_eq!(

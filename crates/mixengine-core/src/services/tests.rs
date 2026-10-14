@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::*;
+use crate::ServiceError;
 
 /// A `services` row, without the Phase 3 machinery that will eventually create one.
 ///
@@ -377,11 +378,11 @@ async fn an_edge_the_machine_does_not_have_leaves_the_row_alone() {
     assert!(
         matches!(
             error,
-            Error::IllegalTransition {
+            Error::Service(ServiceError::IllegalTransition {
                 from: ServiceState::Stopped,
                 to: ServiceState::Running,
                 ..
-            }
+            })
         ),
         "{error:?}"
     );
@@ -502,7 +503,7 @@ fn a_state_this_build_does_not_know_blames_the_row() {
     let error = parse_state(&id, "crashed".to_owned()).expect_err("not a service state");
 
     assert!(
-        matches!(&error, Error::UnknownServiceState { service, value }
+        matches!(&error, Error::Service(ServiceError::UnknownServiceState { service, value })
             if service == "caddy" && value == "crashed"),
         "{error:?}"
     );
@@ -850,7 +851,10 @@ async fn a_relative_data_directory_is_the_absolute_one_it_resolves_to() {
     .expect_err("the same directory, named the short way");
 
     assert!(
-        matches!(error, Error::DataDirectoryTaken { .. }),
+        matches!(
+            error,
+            Error::Service(ServiceError::DataDirectoryTaken { .. })
+        ),
         "refused for the directory rather than for something else: {error}"
     );
 }

@@ -25,7 +25,7 @@ use mixengine_proto::privileged::HelperStamp;
 
 use super::feed::HelperArtifact;
 use crate::install::Installer;
-use crate::{Error, Result};
+use crate::{Error, InstallError, Result, UpdateError};
 
 /// The suffix minisign gives a detached signature, and `packaging/sign.sh` writes.
 const SIGNATURE_SUFFIX: &str = ".minisig";
@@ -45,43 +45,45 @@ const FETCH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 ///
 /// # Errors
 ///
-/// [`Error::HelperSignature`] when it is not ours, [`Error::HelperStampUnreadable`] when the signed
-/// trusted comment is not the grammar this build reads, and [`Error::HelperNotForThisMachine`] when
-/// it is a correctly signed build for somewhere else.
+/// [`UpdateError::HelperSignature`] when it is not ours, [`UpdateError::HelperStampUnreadable`]
+/// when the signed trusted comment is not the grammar this build reads, and
+/// [`UpdateError::HelperNotForThisMachine`] when it is a correctly signed build for somewhere else.
 pub fn verify(bytes: &[u8], signature: &str, public_key: &str) -> Result<HelperStamp> {
     let key = minisign_verify::PublicKey::from_base64(public_key).map_err(|source| {
-        Error::HelperSignature {
+        Error::Update(UpdateError::HelperSignature {
             what: "this build's update key".to_owned(),
             source: Box::new(source),
-        }
+        })
     })?;
 
-    let decoded =
-        minisign_verify::Signature::decode(signature).map_err(|source| Error::HelperSignature {
+    let decoded = minisign_verify::Signature::decode(signature).map_err(|source| {
+        Error::Update(UpdateError::HelperSignature {
             what: "the signature published beside it".to_owned(),
             source: Box::new(source),
-        })?;
+        })
+    })?;
 
     // `false` refuses minisign's legacy algorithm, as every other verifier in this product does:
     // everything MixEngine publishes is the modern pre-hashed form. The call covers the trusted
     // comment as well as the bytes, which is what makes the stamp below a fact rather than a claim.
-    key.verify(bytes, &decoded, false)
-        .map_err(|source| Error::HelperSignature {
+    key.verify(bytes, &decoded, false).map_err(|source| {
+        Error::Update(UpdateError::HelperSignature {
             what: "the privileged helper this release publishes".to_owned(),
             source: Box::new(source),
-        })?;
+        })
+    })?;
 
     let stamp = HelperStamp::parse(decoded.trusted_comment()).ok_or_else(|| {
-        Error::HelperStampUnreadable {
+        Error::Update(UpdateError::HelperStampUnreadable {
             comment: decoded.trusted_comment().to_owned(),
-        }
+        })
     })?;
 
     if !stamp.is_for_host() {
-        return Err(Error::HelperNotForThisMachine {
+        return Err(Error::Update(UpdateError::HelperNotForThisMachine {
             os: stamp.os,
             arch: stamp.arch,
-        });
+        }));
     }
 
     Ok(stamp)
@@ -100,8 +102,8 @@ pub fn verify(bytes: &[u8], signature: &str, public_key: &str) -> Result<HelperS
 ///
 /// # Errors
 ///
-/// [`Error::ArtifactTransport`] for either fetch, [`Error::Io`] for the directory and the two
-/// files, and whatever [`verify`] refused.
+/// [`InstallError::ArtifactTransport`] for either fetch, [`Error::Io`] for the directory and the
+/// two files, and whatever [`verify`] refused.
 pub async fn stage(
     installer: &Installer,
     artifact: &HelperArtifact,
@@ -114,8 +116,10 @@ pub async fn stage(
 
     let bytes = fetch(http, &artifact.url).await?;
     let signature = fetch(http, &format!("{}{SIGNATURE_SUFFIX}", artifact.url)).await?;
-    let signature = String::from_utf8(signature).map_err(|_| Error::HelperStampUnreadable {
-        comment: "the file published beside it is not a minisign signature".to_owned(),
+    let signature = String::from_utf8(signature).map_err(|_| {
+        Error::Update(UpdateError::HelperStampUnreadable {
+            comment: "the file published beside it is not a minisign signature".to_owned(),
+        })
     })?;
 
     let stamp = verify(&bytes, &signature, public_key)?;
@@ -184,18 +188,22 @@ async fn fetch(http: &reqwest::Client, url: &str) -> Result<Vec<u8>> {
         .send()
         .await
         .and_then(reqwest::Response::error_for_status)
-        .map_err(|source| Error::ArtifactTransport {
-            url: url.to_owned(),
-            source: Box::new(source),
+        .map_err(|source| {
+            Error::Install(InstallError::ArtifactTransport {
+                url: url.to_owned(),
+                source: Box::new(source),
+            })
         })?;
 
     response
         .bytes()
         .await
         .map(|bytes| bytes.to_vec())
-        .map_err(|source| Error::ArtifactTransport {
-            url: url.to_owned(),
-            source: Box::new(source),
+        .map_err(|source| {
+            Error::Install(InstallError::ArtifactTransport {
+                url: url.to_owned(),
+                source: Box::new(source),
+            })
         })
 }
 
@@ -247,7 +255,10 @@ mod tests {
         let error =
             verify(bytes, &signature, &signer.public_key()).expect_err("somebody else's signature");
 
-        assert!(matches!(error, Error::HelperSignature { .. }), "{error:?}");
+        assert!(
+            matches!(error, Error::Update(UpdateError::HelperSignature { .. })),
+            "{error:?}"
+        );
     }
 
     #[test]
@@ -258,7 +269,10 @@ mod tests {
         let error = verify(b"a helper, tampered!", &signature, &signer.public_key())
             .expect_err("bytes that are not the ones signed");
 
-        assert!(matches!(error, Error::HelperSignature { .. }), "{error:?}");
+        assert!(
+            matches!(error, Error::Update(UpdateError::HelperSignature { .. })),
+            "{error:?}"
+        );
     }
 
     #[test]
@@ -272,7 +286,7 @@ mod tests {
             verify(bytes, &signature, &signer.public_key()).expect_err("another machine's build");
 
         assert!(
-            matches!(&error, Error::HelperNotForThisMachine { os, .. } if os == "plan9"),
+            matches!(&error, Error::Update(UpdateError::HelperNotForThisMachine { os, .. }) if os == "plan9"),
             "{error:?}"
         );
     }
@@ -287,7 +301,10 @@ mod tests {
             .expect_err("a comment nothing can read");
 
         assert!(
-            matches!(error, Error::HelperStampUnreadable { .. }),
+            matches!(
+                error,
+                Error::Update(UpdateError::HelperStampUnreadable { .. })
+            ),
             "{error:?}"
         );
     }
@@ -338,7 +355,7 @@ mod tests {
             .expect_err("a key that will not parse");
 
         assert!(
-            matches!(&error, Error::HelperSignature { what, .. } if what.contains("update key")),
+            matches!(&error, Error::Update(UpdateError::HelperSignature { what, .. }) if what.contains("update key")),
             "{error:?}"
         );
     }

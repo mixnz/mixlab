@@ -8,7 +8,7 @@
 use std::path::Path;
 
 use crate::install::archive::{self, Format};
-use crate::{Error, Result};
+use crate::{BlueprintError, Error, InstallError, Result};
 
 /// The largest archive this fetches: 1 GiB (D2).
 pub const LIMIT: u64 = 1 << 30;
@@ -46,9 +46,10 @@ enum Mover {
 ///
 /// # Errors
 ///
-/// [`Error::ArchiveFormatUnknown`] before any download; [`Error::ArtifactTransport`] and
-/// [`Error::ArchiveTooLarge`] for the transfer; [`Error::ArchiveStripMissing`] when `strip` is not
-/// at the archive's top level; and the unpacker's own refusals.
+/// [`BlueprintError::ArchiveFormatUnknown`] before any download;
+/// [`InstallError::ArtifactTransport`] and [`BlueprintError::ArchiveTooLarge`] for the transfer;
+/// [`BlueprintError::ArchiveStripMissing`] when `strip` is not at the archive's top level; and the
+/// unpacker's own refusals.
 pub async fn fetch(
     installer: &crate::install::Installer,
     url: &str,
@@ -67,8 +68,10 @@ async fn fetch_using(
     staging: &Path,
     root: &Path,
 ) -> Result<()> {
-    let format = Format::of(url).ok_or_else(|| Error::ArchiveFormatUnknown {
-        url: url.to_owned(),
+    let format = Format::of(url).ok_or_else(|| {
+        Error::Blueprint(BlueprintError::ArchiveFormatUnknown {
+            url: url.to_owned(),
+        })
     })?;
 
     let _ = tokio::fs::remove_dir_all(staging).await;
@@ -109,11 +112,11 @@ async fn fetch_into(
             let candidate = unpacked.join(strip);
             // The manifest refuses such a `strip`; this is the second wall, for any other caller.
             if !is_folder_name(strip) || !candidate.is_dir() {
-                return Err(Error::ArchiveStripMissing {
+                return Err(Error::Blueprint(BlueprintError::ArchiveStripMissing {
                     url: url.to_owned(),
                     strip: strip.to_owned(),
                     found: top_level(&unpacked),
-                });
+                }));
             }
             candidate
         }
@@ -134,9 +137,11 @@ async fn fetch_into(
 async fn download(http: &reqwest::Client, url: &str, into: &Path) -> Result<()> {
     use tokio::io::AsyncWriteExt;
 
-    let transport = |source: reqwest::Error| Error::ArtifactTransport {
-        url: url.to_owned(),
-        source: Box::new(source),
+    let transport = |source: reqwest::Error| {
+        Error::Install(InstallError::ArtifactTransport {
+            url: url.to_owned(),
+            source: Box::new(source),
+        })
     };
     let write = |source: std::io::Error| Error::Io {
         action: "write",
@@ -157,10 +162,10 @@ async fn download(http: &reqwest::Client, url: &str, into: &Path) -> Result<()> 
     while let Some(chunk) = response.chunk().await.map_err(transport)? {
         written += u64::try_from(chunk.len()).unwrap_or(u64::MAX);
         if written > LIMIT {
-            return Err(Error::ArchiveTooLarge {
+            return Err(Error::Blueprint(BlueprintError::ArchiveTooLarge {
                 url: url.to_owned(),
                 limit: LIMIT,
-            });
+            }));
         }
         file.write_all(&chunk).await.map_err(write)?;
     }
@@ -378,7 +383,10 @@ mod tests {
         .expect_err("refused");
 
         assert!(
-            matches!(error, Error::ArchiveFormatUnknown { .. }),
+            matches!(
+                error,
+                Error::Blueprint(BlueprintError::ArchiveFormatUnknown { .. })
+            ),
             "{error:?}"
         );
     }

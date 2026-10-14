@@ -26,6 +26,10 @@
 //! migrated for the same reason T14 edited it: nothing has shipped, so forward-only has nothing yet
 //! to protect.
 
+mod error;
+
+pub use error::ServiceError;
+
 use std::collections::BTreeMap;
 
 use mixengine_proto::{
@@ -51,8 +55,9 @@ pub use graph::{GraphError, Plan, ServiceGraph};
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when there is no such service; [`Error::UnknownServiceState`] when the row
-/// holds a word this build does not recognise; [`Error::Database`] when the file cannot be read.
+/// [`Error::NotFound`] when there is no such service; [`ServiceError::UnknownServiceState`] when
+/// the row holds a word this build does not recognise; [`Error::Database`] when the file cannot be
+/// read.
 pub async fn state(store: &Store, service: &ServiceId) -> Result<ServiceState> {
     let id = service.as_str();
 
@@ -367,10 +372,11 @@ pub struct Declaration {
 ///
 /// # Errors
 ///
-/// [`Error::ServiceAlreadyDeclared`] when a row with this id exists or the parent already has an
-/// instance of this name, [`Error::DataDirectoryTaken`] when another service is already pointed at
-/// the `data_dir` this one names, [`Error::NotFound`] when the [`Origin`] names a package or a
-/// runtime that is not installed, and [`Error::Database`] when the row cannot be written.
+/// [`ServiceError::ServiceAlreadyDeclared`] when a row with this id exists or the parent already
+/// has an instance of this name, [`ServiceError::DataDirectoryTaken`] when another service is
+/// already pointed at the `data_dir` this one names, [`Error::NotFound`] when the [`Origin`] names
+/// a package or a runtime that is not installed, and [`Error::Database`] when the row cannot be
+/// written.
 pub async fn create(
     store: &Store,
     host: &dyn mixengine_platform::Host,
@@ -399,10 +405,10 @@ pub async fn create(
     if let Some(path) = data_dir
         && let Some(holder) = data_dir::held_by(store, path).await?
     {
-        return Err(Error::DataDirectoryTaken {
+        return Err(Error::Service(ServiceError::DataDirectoryTaken {
             path: path.clone(),
             holder,
-        });
+        }));
     }
 
     let chosen = match *port {
@@ -517,9 +523,9 @@ pub async fn create(
     // `(parent, instance_name)` per kind of parent — and what a person did wrong is the same in all
     // of those cases, they asked for a service that is already here.
     if written.rows_affected() == 0 {
-        return Err(Error::ServiceAlreadyDeclared {
+        return Err(Error::Service(ServiceError::ServiceAlreadyDeclared {
             service: service.clone(),
-        });
+        }));
     }
 
     tracing::info!(%id, origin = ?origin, "a service was created");
@@ -764,8 +770,8 @@ pub async fn version(store: &Store, service: &ServiceId) -> Result<Option<Packag
 /// # Errors
 ///
 /// As [`state`], whose narrower question this answers as well: [`Error::NotFound`] when there is no
-/// such service, [`Error::UnknownServiceState`] when the row holds a word this build does not
-/// recognise, [`Error::Database`] when the file cannot be read.
+/// such service, [`ServiceError::UnknownServiceState`] when the row holds a word this build does
+/// not recognise, [`Error::Database`] when the file cannot be read.
 pub async fn record(store: &Store, service: &ServiceId) -> Result<ServiceRecord> {
     let id = service.as_str();
 
@@ -817,8 +823,8 @@ pub async fn record(store: &Store, service: &ServiceId) -> Result<ServiceRecord>
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when there is no such service, [`Error::UnreadableServiceRow`] when the row
-/// names no parent at all or holds a kind or a version this build cannot read, and
+/// [`Error::NotFound`] when there is no such service, [`ServiceError::UnreadableServiceRow`] when
+/// the row names no parent at all or holds a kind or a version this build cannot read, and
 /// [`Error::Database`] when the file cannot be read.
 pub async fn declaration(store: &Store, service: &ServiceId) -> Result<Declaration> {
     let id = service.as_str();
@@ -842,10 +848,12 @@ pub async fn declaration(store: &Store, service: &ServiceId) -> Result<Declarati
         id: id.to_owned(),
     })?;
 
-    let unreadable = |column: &'static str, value: String| Error::UnreadableServiceRow {
-        service: id.to_owned(),
-        column,
-        value,
+    let unreadable = |column: &'static str, value: String| {
+        Error::Service(ServiceError::UnreadableServiceRow {
+            service: id.to_owned(),
+            column,
+            value,
+        })
     };
 
     // The `CHECK` on the table says exactly one parent is set, so this is a match on which — and
@@ -912,9 +920,9 @@ pub async fn declaration(store: &Store, service: &ServiceId) -> Result<Declarati
 ///
 /// # Errors
 ///
-/// [`Error::UnknownServiceState`] when a row holds a state word this build does not recognise, and
-/// [`Error::Database`] when the file cannot be read. Not [`Error::NotFound`]: a home with no
-/// services has no rows, which is an answer and not a failure.
+/// [`ServiceError::UnknownServiceState`] when a row holds a state word this build does not
+/// recognise, and [`Error::Database`] when the file cannot be read. Not [`Error::NotFound`]: a home
+/// with no services has no rows, which is an answer and not a failure.
 pub async fn records(store: &Store) -> Result<BTreeMap<String, ServiceRecord>> {
     let rows = sqlx::query!(
         r#"SELECT s.id, s.state, s.pid, s.pid_start_time, s.last_started_at, s.last_exit_code,
@@ -930,11 +938,12 @@ pub async fn records(store: &Store) -> Result<BTreeMap<String, ServiceRecord>> {
 
     rows.into_iter()
         .map(|row| {
-            let state =
-                ServiceState::parse(&row.state).ok_or_else(|| Error::UnknownServiceState {
+            let state = ServiceState::parse(&row.state).ok_or_else(|| {
+                Error::Service(ServiceError::UnknownServiceState {
                     service: row.id.clone(),
                     value: row.state,
-                })?;
+                })
+            })?;
 
             let stopped_by = StoppedBy::parse(&row.id, &row.stopped_by);
             let last_failure = failure_note(&row.id, row.last_failure_json.as_deref());
@@ -1030,16 +1039,17 @@ fn exit_code(stored: Option<i64>) -> Option<i32> {
 /// `BEGIN IMMEDIATE` takes the write lock up front, so the two supervisors serialise at the `BEGIN`
 /// — where `busy_timeout` does apply — and the second one reads the state the first one committed
 /// and re-judges its move against it. The `WHERE state = ?` on the `UPDATE` stays as a cheap
-/// assertion that this is really so; [`Error::StateRaced`] is what it reports if it ever is not.
+/// assertion that this is really so; [`ServiceError::StateRaced`] is what it reports if it ever is
+/// not.
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when there is no such service; [`Error::IllegalTransition`] when the machine
-/// has no such edge, which is a bug in the caller rather than a condition to handle;
-/// [`Error::StateRaced`] when something else changed the state in between;
-/// [`Error::UnknownServiceState`] when the row holds a word this build does not recognise; and
-/// [`Error::Database`] when the file cannot be written — including when the write lock could not be
-/// taken within the store's `busy_timeout`.
+/// [`Error::NotFound`] when there is no such service; [`ServiceError::IllegalTransition`] when the
+/// machine has no such edge, which is a bug in the caller rather than a condition to handle;
+/// [`ServiceError::StateRaced`] when something else changed the state in between;
+/// [`ServiceError::UnknownServiceState`] when the row holds a word this build does not recognise;
+/// and [`Error::Database`] when the file cannot be written — including when the write lock could
+/// not be taken within the store's `busy_timeout`.
 pub async fn transition(
     store: &Store,
     service: &ServiceId,
@@ -1091,11 +1101,11 @@ pub async fn transition_noting(
     let from = parse_state(service, stored)?;
 
     if !from.can_become(to) {
-        return Err(Error::IllegalTransition {
+        return Err(Error::Service(ServiceError::IllegalTransition {
             service: id.to_owned(),
             from,
             to,
-        });
+        }));
     }
 
     let (next, current) = (to.as_str(), from.as_str());
@@ -1124,10 +1134,10 @@ pub async fn transition_noting(
     .map_err(|source| store.failure("write", source))?;
 
     if updated.rows_affected() == 0 {
-        return Err(Error::StateRaced {
+        return Err(Error::Service(ServiceError::StateRaced {
             service: id.to_owned(),
             expected: from,
-        });
+        }));
     }
 
     // **T200b, D5.** The note moves with the state, in this transaction.
@@ -1257,9 +1267,11 @@ pub async fn ended(store: &Store, service: &ServiceId, code: Option<i32>) -> Res
 /// is a database edited by hand or written by a version that knew a state this one does not — and
 /// naming the service is what makes either one findable.
 fn parse_state(service: &ServiceId, stored: String) -> Result<ServiceState> {
-    ServiceState::parse(&stored).ok_or_else(|| Error::UnknownServiceState {
-        service: service.as_str().to_owned(),
-        value: stored,
+    ServiceState::parse(&stored).ok_or_else(|| {
+        Error::Service(ServiceError::UnknownServiceState {
+            service: service.as_str().to_owned(),
+            value: stored,
+        })
     })
 }
 

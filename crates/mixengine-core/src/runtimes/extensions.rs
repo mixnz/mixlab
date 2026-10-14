@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 
 use mixengine_proto::{PackageVersion, RuntimeKind};
 
-use crate::{Error, Paths, Result, Store};
+use crate::{Error, Paths, Result, RuntimeError, Store};
 
 /// Whether an extension can be turned off at all.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -175,15 +175,15 @@ impl State {
     ///
     /// # Errors
     ///
-    /// [`Error::ExtensionCompiledIn`] for a name this build links in, and [`Error::NotFound`] for a
-    /// name it has never heard of.
+    /// [`RuntimeError::ExtensionCompiledIn`] for a name this build links in, and
+    /// [`Error::NotFound`] for a name it has never heard of.
     pub fn decide(&self, name: &str, enabled: bool) -> Result<BTreeMap<String, bool>> {
         if self.offered.compiled_in.iter().any(|linked| linked == name) {
-            return Err(Error::ExtensionCompiledIn {
+            return Err(Error::Runtime(RuntimeError::ExtensionCompiledIn {
                 kind: self.kind,
                 version: self.version.clone(),
                 name: name.to_owned(),
-            });
+            }));
         }
 
         if !self.offered.shared.iter().any(|shared| shared == name) {
@@ -409,9 +409,9 @@ impl State {
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when that version is not installed, [`Error::UnreadableRuntimeRow`] when
-/// either JSON column holds something this build cannot read, and [`Error::Database`] when the table
-/// cannot be read.
+/// [`Error::NotFound`] when that version is not installed, [`RuntimeError::UnreadableRuntimeRow`]
+/// when either JSON column holds something this build cannot read, and [`Error::Database`] when the
+/// table cannot be read.
 pub async fn state(store: &Store, kind: RuntimeKind, version: &PackageVersion) -> Result<State> {
     let (kind_column, version_column) = (kind.as_str(), version.as_str());
 
@@ -429,9 +429,11 @@ pub async fn state(store: &Store, kind: RuntimeKind, version: &PackageVersion) -
         id: format!("{kind} {version}"),
     })?;
 
-    let unreadable = |column: &'static str, value: &str| Error::UnreadableRuntimeRow {
-        column,
-        value: value.to_owned(),
+    let unreadable = |column: &'static str, value: &str| {
+        Error::Runtime(RuntimeError::UnreadableRuntimeRow {
+            column,
+            value: value.to_owned(),
+        })
     };
 
     let offered: crate::index::Extensions = serde_json::from_str(&row.extensions_json)
@@ -460,9 +462,11 @@ pub async fn state(store: &Store, kind: RuntimeKind, version: &PackageVersion) -
 ///
 /// # Errors
 ///
-/// Whatever reading the `extensions` table reports, and [`Error::ExtensionField`] for a value whose
-/// placeholders cannot be rendered — which is a manifest that was installed and then could not be
-/// applied, so it is reported rather than skipped.
+/// Whatever reading the `extensions` table reports, and [`ExtensionError::ExtensionField`] for a
+/// value whose placeholders cannot be rendered — which is a manifest that was installed and then
+/// could not be applied, so it is reported rather than skipped.
+///
+/// [`ExtensionError::ExtensionField`]: crate::ExtensionError::ExtensionField
 async fn additions(store: &Store, kind: RuntimeKind) -> Result<Vec<IniAddition>> {
     if kind != RuntimeKind::Php {
         return Ok(Vec::new());
@@ -584,7 +588,7 @@ pub async fn render(paths: &Paths, state: &State) -> Result<bool> {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionCompiledIn`], [`Error::NotFound`] for an unknown name or an uninstalled
+/// [`RuntimeError::ExtensionCompiledIn`], [`Error::NotFound`] for an unknown name or an uninstalled
 /// version, and [`Error::Database`] when the row cannot be written.
 pub async fn choose(
     store: &Store,
@@ -896,7 +900,10 @@ mod tests {
             .expect_err("a static extension is not disableable");
 
         assert!(
-            matches!(error, Error::ExtensionCompiledIn { .. }),
+            matches!(
+                error,
+                Error::Runtime(RuntimeError::ExtensionCompiledIn { .. })
+            ),
             "{error:?}"
         );
         assert!(error.to_string().contains("opcache"));
@@ -1149,7 +1156,10 @@ mod tests {
             .await
             .expect_err("compiled in here");
         assert!(
-            matches!(refused, Error::ExtensionCompiledIn { .. }),
+            matches!(
+                refused,
+                Error::Runtime(RuntimeError::ExtensionCompiledIn { .. })
+            ),
             "{refused:?}"
         );
 

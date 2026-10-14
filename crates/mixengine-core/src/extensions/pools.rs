@@ -38,7 +38,7 @@ use mixengine_proto::{ExtensionId, PackageVersion, RuntimeKind, ServiceId, SiteK
 use crate::generate::recipe::Recipe as _;
 use crate::services::{Declaration, Origin, Port};
 use crate::sites::SiteOwner;
-use crate::{Error, Paths, Result, Store};
+use crate::{Error, ExtensionError, Paths, Result, Store};
 
 /// The variable a `web-app` declaring `signs_in` finds the database superuser's password in — the
 /// design's D2.
@@ -58,11 +58,11 @@ const POOL: &str = crate::generate::recipes::php_fpm::PACKAGE;
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] naming `extension.id` when the composed id is longer than
+/// [`ExtensionError::ExtensionField`] naming `extension.id` when the composed id is longer than
 /// [`ServiceId::MAX_LEN`] — an extension id of 57 characters or more, whose pool nothing could
 /// name. Refused here, which is before anything is fetched, rather than at the insert.
 pub fn id(extension: &ExtensionId) -> Result<ServiceId> {
-    ServiceId::parse(format!("{POOL}@{extension}")).map_err(|_| Error::ExtensionField {
+    ServiceId::parse(format!("{POOL}@{extension}")).map_err(|_| Error::Extension(ExtensionError::ExtensionField {
         id: extension.as_str().to_owned(),
         field: "extension.id".to_owned(),
         reason: format!(
@@ -70,7 +70,7 @@ pub fn id(extension: &ExtensionId) -> Result<ServiceId> {
              characters",
             ServiceId::MAX_LEN
         ),
-    })
+    }))
 }
 
 /// The pool row this extension owns, or [`None`] when there is not one.
@@ -80,8 +80,8 @@ pub fn id(extension: &ExtensionId) -> Result<ServiceId> {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] for an id with no possible pool, and [`Error::Database`] when the
-/// table cannot be read.
+/// [`ExtensionError::ExtensionField`] for an id with no possible pool, and [`Error::Database`] when
+/// the table cannot be read.
 pub async fn of(store: &Store, extension: &ExtensionId) -> Result<Option<ServiceId>> {
     let wanted = id(extension)?;
     let column = wanted.as_str();
@@ -114,7 +114,9 @@ pub async fn of(store: &Store, extension: &ExtensionId) -> Result<Option<Service
 /// # Errors
 ///
 /// Whatever [`crate::services::create`] reports — including [`Error::NotFound`] for a runtime that
-/// is not installed and [`Error::ServiceAlreadyDeclared`] for a pool that is already there.
+/// is not installed and [`ServiceError::ServiceAlreadyDeclared`] for a pool that is already there.
+///
+/// [`ServiceError::ServiceAlreadyDeclared`]: crate::ServiceError::ServiceAlreadyDeclared
 pub async fn create(
     store: &Store,
     host: &dyn mixengine_platform::Host,

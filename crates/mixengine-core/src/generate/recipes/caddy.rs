@@ -85,7 +85,7 @@ use crate::generate::recipe::{Instancing, Recipe, Role, TemplateFile, Upstream};
 use crate::generate::served::{Served, ServedKind};
 use crate::generate::settings::{Preset, Setting};
 use crate::install::SmokeTest;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is for, which is also the name of the binary inside the package.
 ///
@@ -767,11 +767,13 @@ fn port(context: &Context, key: &'static str) -> Result<u16> {
     u16::try_from(number)
         .ok()
         .filter(|port| *port != 0)
-        .ok_or_else(|| Error::SettingValue {
-            service: context.service().as_str().to_owned(),
-            key,
-            value: number.to_string(),
-            reason: "a port is a number from 1 to 65535",
+        .ok_or_else(|| {
+            Error::Service(ServiceError::SettingValue {
+                service: context.service().as_str().to_owned(),
+                key,
+                value: number.to_string(),
+                reason: "a port is a number from 1 to 65535",
+            })
         })
 }
 

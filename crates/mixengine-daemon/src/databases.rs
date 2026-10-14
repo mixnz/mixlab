@@ -14,10 +14,10 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
-use mixengine_core::Store;
 use mixengine_core::generate::databases::{Ask, validated_identifier};
 use mixengine_core::services::handoff::{self, CREDENTIAL_ENV, Connection};
 use mixengine_core::window;
+use mixengine_core::{ServiceError, Store};
 use mixengine_platform::{InstalledApp, Located, Started};
 use mixengine_proto::{
     DatabaseAccount, DatabaseClientQuery, DatabaseClientReport, DatabaseCreate,
@@ -161,9 +161,9 @@ impl Databases {
         }
 
         self.services.provisioning_for(service).ok_or_else(|| {
-            mixengine_core::Error::NoDatabaseVocabulary {
+            mixengine_core::Error::Service(ServiceError::NoDatabaseVocabulary {
                 package: service.name().to_owned(),
-            }
+            })
             .to_wire()
         })
     }

@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use mixengine_platform::process::Ran;
 
-use crate::{Error, Result};
+use crate::{Error, InstallError, Result};
 
 /// The password every JDK's `cacerts` ships with — a published default, not a secret (the design's
 /// D8).
@@ -63,8 +63,8 @@ pub fn exported_is(stdout: &str, der: &[u8]) -> bool {
 ///
 /// # Errors
 ///
-/// [`Error::KeytoolRefused`] when `keytool` cannot be started at all or does not finish. An alias
-/// that is not there is `Ok(false)`, which is what `keytool` says by exiting non-zero.
+/// [`InstallError::KeytoolRefused`] when `keytool` cannot be started at all or does not finish. An
+/// alias that is not there is `Ok(false)`, which is what `keytool` says by exiting non-zero.
 pub async fn holds(keytool: &Path, key_id: &str, der: &[u8]) -> Result<bool> {
     let ran = run(keytool, &exporting(key_id)).await?;
 
@@ -75,8 +75,8 @@ pub async fn holds(keytool: &Path, key_id: &str, der: &[u8]) -> Result<bool> {
 ///
 /// # Errors
 ///
-/// [`Error::KeytoolRefused`] naming `keytool`'s last line — a `cacerts` whose password is not the
-/// published default is the one this build expects to meet.
+/// [`InstallError::KeytoolRefused`] naming `keytool`'s last line — a `cacerts` whose password is
+/// not the published default is the one this build expects to meet.
 pub async fn hold(keytool: &Path, key_id: &str, certificate: &Path) -> Result<()> {
     let args = [
         OsString::from("-importcert"),
@@ -100,7 +100,7 @@ pub async fn hold(keytool: &Path, key_id: &str, certificate: &Path) -> Result<()
 ///
 /// # Errors
 ///
-/// [`Error::KeytoolRefused`] when the alias is there and `keytool` would not delete it.
+/// [`InstallError::KeytoolRefused`] when the alias is there and `keytool` would not delete it.
 pub async fn release(keytool: &Path, key_id: &str) -> Result<()> {
     if !run(keytool, &exporting(key_id)).await?.succeeded() {
         return Ok(());
@@ -139,9 +139,11 @@ async fn run(keytool: &Path, args: &[OsString]) -> Result<Ran> {
 
     mixengine_platform::process::run_once(keytool, args, directory, &BTreeMap::new(), PATIENCE)
         .await
-        .map_err(|error| Error::KeytoolRefused {
-            program: keytool.to_path_buf(),
-            detail: error.to_string(),
+        .map_err(|error| {
+            Error::Install(InstallError::KeytoolRefused {
+                program: keytool.to_path_buf(),
+                detail: error.to_string(),
+            })
         })
 }
 
@@ -151,7 +153,7 @@ fn succeeded(keytool: &Path, ran: &Ran) -> Result<()> {
         return Ok(());
     }
 
-    Err(Error::KeytoolRefused {
+    Err(Error::Install(InstallError::KeytoolRefused {
         program: keytool.to_path_buf(),
         detail: match ran.timed_out() {
             true => format!("it did not finish within {} seconds", PATIENCE.as_secs()),
@@ -160,7 +162,7 @@ fn succeeded(keytool: &Path, ran: &Ran) -> Result<()> {
                 .unwrap_or("it failed and said nothing")
                 .to_owned(),
         },
-    })
+    }))
 }
 
 #[cfg(test)]

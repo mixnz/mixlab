@@ -2,9 +2,9 @@
 //!
 //! Design: `docs/specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md`.
 
-use mixengine_core::Store;
 use mixengine_core::adopt::marker;
 use mixengine_core::adopt::walk::{self, Claimed, Evidence, Found};
+use mixengine_core::{RuntimeError, Store};
 use mixengine_proto::Error;
 
 use crate::error::ToWire as _;
@@ -18,7 +18,7 @@ use crate::jobs::JobHandle;
 ///
 /// # Errors
 ///
-/// The wire form of [`mixengine_core::Error::UnrecordedInstall`] when there is no marker, when it
+/// The wire form of [`RuntimeError::UnrecordedInstall`] when there is no marker, when it
 /// names another install, or when its hash is not the one offered; and the errors of recording it.
 pub(crate) async fn claim_offered(
     store: &Store,
@@ -30,11 +30,13 @@ pub(crate) async fn claim_offered(
         .is_some_and(|marker| marker.names(&found.subject) && marker.sha256() == offered_sha256);
 
     if !offered {
-        return Err(mixengine_core::Error::UnrecordedInstall {
-            path: found.path.clone(),
-            reason: "its marker is missing or names another build".to_owned(),
-        }
-        .to_wire());
+        return Err(
+            mixengine_core::Error::Runtime(RuntimeError::UnrecordedInstall {
+                path: found.path.clone(),
+                reason: "its marker is missing or names another build".to_owned(),
+            })
+            .to_wire(),
+        );
     }
 
     let claimed = walk::claim(store, found, &Evidence::Marker)
@@ -109,7 +111,7 @@ fn smoke_for(
 /// # Errors
 ///
 /// `not_found` when nothing is on disk there; the wire form of
-/// [`mixengine_core::Error::UnrecordedInstall`] when neither check passes; the errors of reading the
+/// [`RuntimeError::UnrecordedInstall`] when neither check passes; the errors of reading the
 /// index and of recording.
 pub(crate) async fn by_hand(
     store: &Store,
@@ -136,7 +138,7 @@ pub(crate) async fn by_hand(
 
     match walk::claim(store, found, &Evidence::Marker).await {
         Ok(claimed) => return Ok(claimed),
-        Err(mixengine_core::Error::UnrecordedInstall { .. }) => {}
+        Err(mixengine_core::Error::Runtime(RuntimeError::UnrecordedInstall { .. })) => {}
         Err(error) => return Err(error.to_wire()),
     }
 

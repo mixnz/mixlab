@@ -12,7 +12,7 @@ use mixengine_proto::RedistributableArch;
 use tokio::io::AsyncWriteExt as _;
 
 use crate::install::Installer;
-use crate::{Error, Result};
+use crate::{Error, InstallError, Result};
 
 /// Microsoft's permanent address for the x64 redistributable.
 pub const VISUAL_CPP_X64: &str = "https://aka.ms/vs/17/release/vc_redist.x64.exe";
@@ -38,8 +38,8 @@ pub const fn url(arch: RedistributableArch) -> &'static str {
 ///
 /// # Errors
 ///
-/// [`Error::ArtifactTransport`] for the fetch, [`Error::ArtifactTooLarge`] past the limit, and
-/// [`Error::Io`] for the file.
+/// [`InstallError::ArtifactTransport`] for the fetch, [`InstallError::ArtifactTooLarge`] past the
+/// limit, and [`Error::Io`] for the file.
 pub async fn download(installer: &Installer, arch: RedistributableArch) -> Result<PathBuf> {
     let url = url(arch);
     crate::paths::create_dir(installer.downloads())?;
@@ -47,9 +47,11 @@ pub async fn download(installer: &Installer, arch: RedistributableArch) -> Resul
         .downloads()
         .join(format!("vc_redist.{}.exe", arch.as_str()));
 
-    let transport = |source: reqwest::Error| Error::ArtifactTransport {
-        url: url.to_owned(),
-        source: Box::new(source),
+    let transport = |source: reqwest::Error| {
+        Error::Install(InstallError::ArtifactTransport {
+            url: url.to_owned(),
+            source: Box::new(source),
+        })
     };
     let write = |source: std::io::Error| Error::Io {
         action: "write",
@@ -73,10 +75,10 @@ pub async fn download(installer: &Installer, arch: RedistributableArch) -> Resul
         if written > LIMIT {
             drop(file);
             let _ = tokio::fs::remove_file(&into).await;
-            return Err(Error::ArtifactTooLarge {
+            return Err(Error::Install(InstallError::ArtifactTooLarge {
                 url: url.to_owned(),
                 expected: LIMIT,
-            });
+            }));
         }
         file.write_all(&chunk).await.map_err(write)?;
     }

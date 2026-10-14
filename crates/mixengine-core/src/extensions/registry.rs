@@ -33,7 +33,7 @@ use std::path::{Path, PathBuf};
 
 use crate::extensions::manifest::{self, ExtensionManifest};
 use crate::index::{self, Timestamp};
-use crate::{Error, Result};
+use crate::{Error, ExtensionError, InstallError, Result};
 
 /// The schema this build can read.
 ///
@@ -161,12 +161,14 @@ pub fn client(
 ///
 /// # Errors
 ///
-/// [`Error::IndexUnreadable`] when the text is not this document.
+/// [`InstallError::IndexUnreadable`] when the text is not this document.
 pub fn parse(text: &str) -> Result<Registry> {
-    serde_json::from_str(text).map_err(|source| Error::IndexUnreadable {
-        document: <Registry as index::Document>::LABEL,
-        url: DEFAULT_URL.to_owned(),
-        source,
+    serde_json::from_str(text).map_err(|source| {
+        Error::Install(InstallError::IndexUnreadable {
+            document: <Registry as index::Document>::LABEL,
+            url: DEFAULT_URL.to_owned(),
+            source,
+        })
     })
 }
 
@@ -198,10 +200,11 @@ pub fn parse(text: &str) -> Result<Registry> {
 ///
 /// # Errors
 ///
-/// [`Error::Io`] for a directory or file that cannot be read; [`Error::RegistryPublicKeyShape`] and
-/// [`Error::RegistryKeyMismatch`] for the key chain; [`Error::ExtensionFileName`] for a stem that
-/// disagrees with its id; everything [`manifest::read`] reports about a file; and
-/// [`Error::RegistryUnreadable`] for the read-back.
+/// [`Error::Io`] for a directory or file that cannot be read;
+/// [`ExtensionError::RegistryPublicKeyShape`] and [`ExtensionError::RegistryKeyMismatch`] for the
+/// key chain; [`ExtensionError::ExtensionFileName`] for a stem that disagrees with its id;
+/// everything [`manifest::read`] reports about a file; and [`ExtensionError::RegistryUnreadable`]
+/// for the read-back.
 pub fn assemble(manifests: &Path, public_key: &Path, generated_at: Timestamp) -> Result<Registry> {
     prove_key(public_key)?;
 
@@ -223,10 +226,10 @@ pub fn assemble(manifests: &Path, public_key: &Path, generated_at: Timestamp) ->
         // `file_stem` is `Some` for every path `toml_files` hands back — each of them ends `.toml`.
         let stem = file.file_stem().unwrap_or_default().to_string_lossy();
         if stem != id {
-            return Err(Error::ExtensionFileName {
+            return Err(Error::Extension(ExtensionError::ExtensionFileName {
                 path: file.display().to_string(),
                 id: id.to_owned(),
-            });
+            }));
         }
 
         entries.push((id.to_owned(), manifest::to_value(&manifest)));
@@ -245,7 +248,9 @@ pub fn assemble(manifests: &Path, public_key: &Path, generated_at: Timestamp) ->
 
     let unreadable = registry.listing().unreadable;
     if unreadable != 0 {
-        return Err(Error::RegistryUnreadable { count: unreadable });
+        return Err(Error::Extension(ExtensionError::RegistryUnreadable {
+            count: unreadable,
+        }));
     }
 
     Ok(registry)
@@ -299,18 +304,18 @@ fn prove_key(path: &Path) -> Result<()> {
 
     // `minisign -G` writes an untrusted comment and one key line, in that order.
     let [_comment, committed] = lines.as_slice() else {
-        return Err(Error::RegistryPublicKeyShape {
+        return Err(Error::Extension(ExtensionError::RegistryPublicKeyShape {
             path: path.display().to_string(),
             lines: lines.len(),
-        });
+        }));
     };
 
     if *committed != index::PUBLIC_KEY {
-        return Err(Error::RegistryKeyMismatch {
+        return Err(Error::Extension(ExtensionError::RegistryKeyMismatch {
             path: path.display().to_string(),
             committed: (*committed).to_owned(),
             compiled: index::PUBLIC_KEY,
-        });
+        }));
     }
 
     Ok(())

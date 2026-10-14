@@ -65,7 +65,7 @@ use crate::generate::recipe::{
     Claim, ClientCommand, Endpoints, Instancing, Recipe, TemplateFile, Upstream,
 };
 use crate::generate::settings::{Preset, Setting};
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is found under.
 ///
@@ -387,9 +387,9 @@ impl Recipe for Postgres {
     ///
     /// # Errors
     ///
-    /// [`Error::ServiceProvidesNothing`] for an install publishing none of the four commands this
-    /// names, and [`Error::SettingValue`] for a row with no port.
-    /// A backend per connection, so the count is the thing this server is actually spending.
+    /// [`ServiceError::ServiceProvidesNothing`] for an install publishing none of the four commands
+    /// this names, and [`ServiceError::SettingValue`] for a row with no port. A backend per
+    /// connection, so the count is the thing this server is actually spending.
     ///
     /// `pg_stat_database` holds the transaction counters and is a table — reachable only by
     /// connecting as a role, which is the same refusal MariaDB's note here records.
@@ -610,7 +610,8 @@ impl Recipe for Postgres {
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`] when the path this home would need is longer than the kernel accepts.
+/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel
+/// accepts.
 fn socket_directory(context: &Context) -> Result<PathBuf> {
     let directory = context.run().to_path_buf();
     let port = context.port().unwrap_or(u16::MAX);
@@ -625,10 +626,10 @@ fn socket_directory(context: &Context) -> Result<PathBuf> {
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`] when the row carries no port. A database nothing can be pointed at is not
-/// a database anybody can use, and the rendered file would say `port = none` — so this is refused
-/// here rather than discovered by a server that will not start.
-/// The table the last provisioning step makes and drops to prove the role can write to `public`.
+/// [`ServiceError::SettingValue`] when the row carries no port. A database nothing can be pointed
+/// at is not a database anybody can use, and the rendered file would say `port = none` — so this is
+/// refused here rather than discovered by a server that will not start. The table the last
+/// provisioning step makes and drops to prove the role can write to `public`.
 const CHECK_TABLE: &str = "mixengine_check";
 
 /// How long a statement against a running server gets — roadmap task **T77a**.
@@ -670,12 +671,14 @@ fn statements_as(addr: SocketAddr, user: &str, database: &str) -> Vec<String> {
 }
 
 fn address(context: &Context) -> Result<SocketAddr> {
-    let port = context.port().ok_or_else(|| Error::SettingValue {
-        service: context.service().as_str().to_owned(),
-        key: "port",
-        value: "none".to_owned(),
-        reason: "a database listens on a TCP port and this service's row carries none; \
+    let port = context.port().ok_or_else(|| {
+        Error::Service(ServiceError::SettingValue {
+            service: context.service().as_str().to_owned(),
+            key: "port",
+            value: "none".to_owned(),
+            reason: "a database listens on a TCP port and this service's row carries none; \
                  `service.create` allocates one",
+        })
     })?;
 
     Ok(SocketAddr::new(
@@ -740,8 +743,8 @@ fn cluster(context: &Context) -> Vec<String> {
 ///
 /// # Errors
 ///
-/// [`Error::ServiceProvidesNothing`] for an install missing `initdb` or `postgres`, and
-/// [`Error::SettingValue`] for a credential this recipe will not put in a SQL literal.
+/// [`ServiceError::ServiceProvidesNothing`] for an install missing `initdb` or `postgres`, and
+/// [`ServiceError::SettingValue`] for a credential this recipe will not put in a SQL literal.
 fn steps(context: &Context) -> Result<Vec<Step>> {
     let password = context.secret(SUPERUSER);
 
@@ -788,16 +791,16 @@ fn reset_steps(context: &Context) -> Result<Vec<Step>> {
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`], naming no value.
+/// [`ServiceError::SettingValue`], naming no value.
 fn refuse_a_password_that_needs_escaping(context: &Context, password: &str) -> Result<()> {
     if password.is_empty() || !password.chars().all(|c| c.is_ascii_alphanumeric()) {
-        return Err(Error::SettingValue {
+        return Err(Error::Service(ServiceError::SettingValue {
             service: context.service().as_str().to_owned(),
             key: "superuser password",
             value: "<redacted>".to_owned(),
             reason: "a generated credential is alphanumeric so that it needs no escaping in the \
                      statement that sets it; this one is not, which is a bug in whatever made it",
-        });
+        }));
     }
 
     Ok(())
@@ -824,7 +827,7 @@ fn refuse_a_password_that_needs_escaping(context: &Context, password: &str) -> R
 ///
 /// # Errors
 ///
-/// [`Error::ServiceProvidesNothing`] for an install that publishes no `initdb`.
+/// [`ServiceError::ServiceProvidesNothing`] for an install that publishes no `initdb`.
 fn create_the_cluster(context: &Context) -> Result<Step> {
     let settings = context.settings();
 
@@ -868,7 +871,7 @@ fn create_the_cluster(context: &Context) -> Result<Step> {
 ///
 /// # Errors
 ///
-/// [`Error::ServiceProvidesNothing`] for an install that publishes no `postgres`.
+/// [`ServiceError::ServiceProvidesNothing`] for an install that publishes no `postgres`.
 fn set_the_password(context: &Context, password: &str) -> Result<Step> {
     Ok(Step {
         label: "set the superuser's password".to_owned(),

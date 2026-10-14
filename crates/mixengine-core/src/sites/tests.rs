@@ -1,4 +1,5 @@
 use super::*;
+use crate::ProjectError;
 use mixengine_proto::Timestamp;
 
 async fn home() -> (tempfile::TempDir, Store, i64) {
@@ -488,7 +489,7 @@ fn a_doc_root_is_relativised_through_whatever_the_filesystem_calls_the_root() {
     // Outside the root is a site whose files belong to somebody else.
     assert!(matches!(
         relative_doc_root(&root, "../elsewhere"),
-        Err(Error::DocRootOutsideProject { .. })
+        Err(Error::Project(ProjectError::DocRootOutsideProject { .. }))
     ));
 }
 
@@ -698,7 +699,10 @@ async fn https_redirect_needs_https_enabled_to_create_a_site() {
     .expect_err("a redirect with nothing to redirect to");
 
     assert!(
-        matches!(refusal, Error::HttpsRedirectNeedsHttps),
+        matches!(
+            refusal,
+            Error::Project(ProjectError::HttpsRedirectNeedsHttps)
+        ),
         "{refusal}"
     );
     assert!(
@@ -744,7 +748,10 @@ async fn https_redirect_needs_https_enabled_to_update_a_site_either_way_it_arriv
     .await
     .expect_err("the site was already plaintext-only");
     assert!(
-        matches!(already_off, Error::HttpsRedirectNeedsHttps),
+        matches!(
+            already_off,
+            Error::Project(ProjectError::HttpsRedirectNeedsHttps)
+        ),
         "{already_off}"
     );
 
@@ -776,7 +783,10 @@ async fn https_redirect_needs_https_enabled_to_update_a_site_either_way_it_arriv
     .await
     .expect_err("this update turns https off and asks for a redirect in the same breath");
     assert!(
-        matches!(turned_off_in_the_same_call, Error::HttpsRedirectNeedsHttps),
+        matches!(
+            turned_off_in_the_same_call,
+            Error::Project(ProjectError::HttpsRedirectNeedsHttps)
+        ),
         "{turned_off_in_the_same_call}"
     );
 }
@@ -1016,7 +1026,7 @@ async fn a_domain_another_site_owns_names_that_site() {
     .expect_err("one domain, one site");
 
     assert!(
-        matches!(&refused, Error::DomainTaken { holder, .. } if holder == "blog.test"),
+        matches!(&refused, Error::Project(ProjectError::DomainTaken { holder, .. }) if holder == "blog.test"),
         "{refused:?}"
     );
 

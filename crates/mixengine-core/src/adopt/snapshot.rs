@@ -11,7 +11,7 @@ use mixengine_proto::Timestamp;
 use sqlx::Connection as _;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteConnection};
 
-use crate::{Error, Result, Store};
+use crate::{Error, Result, RuntimeError, Store};
 
 /// The copy's file name, in each kept folder.
 pub const FILE_NAME: &str = ".mixengine-state.db";
@@ -195,13 +195,15 @@ pub struct Restored {
 ///
 /// # Errors
 ///
-/// [`Error::RestoreRefused`] for a copy a newer build wrote and for a home that already has a
-/// project, a site or a package's service; [`Error::Database`] when either database cannot be read
-/// or written, in which case nothing is kept.
+/// [`RuntimeError::RestoreRefused`] for a copy a newer build wrote and for a home that already has
+/// a project, a site or a package's service; [`Error::Database`] when either database cannot be
+/// read or written, in which case nothing is kept.
 pub async fn restore(store: &Store, copy: &Path) -> Result<Restored> {
-    let refuse = |reason: &str| Error::RestoreRefused {
-        path: copy.to_path_buf(),
-        reason: reason.to_owned(),
+    let refuse = |reason: &str| {
+        Error::Runtime(RuntimeError::RestoreRefused {
+            path: copy.to_path_buf(),
+            reason: reason.to_owned(),
+        })
     };
 
     let previous = summary(copy).await?;
@@ -696,7 +698,10 @@ mod tests {
 
         let refused = restore(&store, &copy).await.expect_err("refused");
 
-        assert!(matches!(refused, Error::RestoreRefused { .. }), "{refused}");
+        assert!(
+            matches!(refused, Error::Runtime(RuntimeError::RestoreRefused { .. })),
+            "{refused}"
+        );
         assert_eq!(count(&store, "SELECT COUNT(*) FROM packages").await, 0);
         assert!(copy.exists(), "the copy is left to try again");
     }
@@ -800,7 +805,10 @@ mod tests {
 
         let refused = restore(&store, &copy).await.expect_err("refused");
 
-        assert!(matches!(refused, Error::RestoreRefused { .. }), "{refused}");
+        assert!(
+            matches!(refused, Error::Runtime(RuntimeError::RestoreRefused { .. })),
+            "{refused}"
+        );
         assert_eq!(count(&store, "SELECT COUNT(*) FROM projects").await, 0);
     }
 

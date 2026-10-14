@@ -1,4 +1,5 @@
 use super::*;
+use crate::BlueprintError;
 
 fn a_manifest() -> BlueprintManifest {
     BlueprintManifest {
@@ -273,7 +274,7 @@ fn a_newer_schema_is_refused_by_name() {
     assert!(
         matches!(
             read(&text),
-            Err(Error::UnknownBlueprintSchema { schema: 4, ref name }) if name == "laravel-php82"
+            Err(Error::Blueprint(BlueprintError::UnknownBlueprintSchema { schema: 4, ref name })) if name == "laravel-php82"
         ),
         "{:?}",
         read(&text)
@@ -300,7 +301,10 @@ kind = "static"
 doc_root = "public"
 "#;
 
-    assert!(matches!(read(text), Err(Error::BlueprintManifest { .. })));
+    assert!(matches!(
+        read(text),
+        Err(Error::Blueprint(BlueprintError::BlueprintManifest { .. }))
+    ));
 }
 fn with_scaffold(table: &str) -> String {
     format!(
@@ -734,7 +738,7 @@ fn a_fourth_schema_is_refused_by_name() {
 
     assert!(matches!(
         error,
-        Error::UnknownBlueprintSchema { schema: 4, .. }
+        Error::Blueprint(BlueprintError::UnknownBlueprintSchema { schema: 4, .. })
     ));
 }
 

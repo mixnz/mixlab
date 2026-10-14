@@ -9,7 +9,7 @@ use super::Subject;
 use super::marker::{self, Marker};
 use crate::index::{Artifact, Index, Package, Target};
 use crate::install::SmokeTest;
-use crate::{Error, Paths, Result, Store};
+use crate::{Error, Paths, Result, RuntimeError, Store};
 
 /// A directory where an install would be, with no row.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -180,14 +180,14 @@ fn visible_dirs(dir: &Path) -> Vec<(String, PathBuf)> {
 ///
 /// # Errors
 ///
-/// [`Error::UnrecordedInstall`] naming the reason; the errors of `remember`.
+/// [`RuntimeError::UnrecordedInstall`] naming the reason; the errors of `remember`.
 pub async fn claim(store: &Store, found: &Found, evidence: &Evidence<'_>) -> Result<Claimed> {
     match attempt(store, found, evidence).await? {
         Ok(claimed) => Ok(claimed),
-        Err(refusal) => Err(Error::UnrecordedInstall {
+        Err(refusal) => Err(Error::Runtime(RuntimeError::UnrecordedInstall {
             path: found.path.clone(),
             reason: refusal.reason(&found.subject),
-        }),
+        })),
     }
 }
 

@@ -45,7 +45,7 @@ use crate::generate::document::Validator;
 use crate::generate::recipe::{Instancing, Recipe, TemplateFile, Upstream};
 use crate::generate::settings::{Preset, Setting};
 use crate::install::SmokeTest;
-use crate::{Error, Result};
+use crate::{Error, Result, ServiceError};
 
 /// The `packages.name` this recipe is for.
 const PACKAGE: &str = "mongodb";
@@ -208,8 +208,8 @@ impl Recipe for Mongodb {
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`] for a bind address that is not a loopback address — including one that
-/// does not parse, which is refused rather than guessed at — and for a row with no port.
+/// [`ServiceError::SettingValue`] for a bind address that is not a loopback address — including one
+/// that does not parse, which is refused rather than guessed at — and for a row with no port.
 fn address(context: &Context) -> Result<SocketAddr> {
     let service = context.service().as_str().to_owned();
 
@@ -218,21 +218,23 @@ fn address(context: &Context) -> Result<SocketAddr> {
         .parse::<IpAddr>()
         .ok()
         .filter(IpAddr::is_loopback)
-        .ok_or_else(|| Error::SettingValue {
+        .ok_or_else(|| Error::Service(ServiceError::SettingValue {
             service: service.clone(),
             key: "bind_addr",
             value: context.bind().to_owned(),
             reason: "MongoDB runs here with no accounts, so on an address a network can reach it \
                      is a database anyone on that network can read and delete; bind it to \
                      127.0.0.1",
-        })?;
+        }))?;
 
-    let port = context.port().ok_or_else(|| Error::SettingValue {
-        service,
-        key: "port",
-        value: "none".to_owned(),
-        reason: "a database listens on a TCP port and this service's row carries none; \
+    let port = context.port().ok_or_else(|| {
+        Error::Service(ServiceError::SettingValue {
+            service,
+            key: "port",
+            value: "none".to_owned(),
+            reason: "a database listens on a TCP port and this service's row carries none; \
                  `service.create` allocates one",
+        })
     })?;
 
     Ok(SocketAddr::new(bind, port))
@@ -439,10 +441,10 @@ mod tests {
             assert!(
                 matches!(
                     refused,
-                    Error::SettingValue {
+                    Error::Service(ServiceError::SettingValue {
                         key: "bind_addr",
                         ..
-                    }
+                    })
                 ),
                 "{bind}: {refused:?}"
             );
@@ -468,7 +470,10 @@ mod tests {
         let refused = Mongodb.spec(&context).expect_err("a port is not optional");
 
         assert!(
-            matches!(refused, Error::SettingValue { key: "port", .. }),
+            matches!(
+                refused,
+                Error::Service(ServiceError::SettingValue { key: "port", .. })
+            ),
             "{refused:?}"
         );
     }

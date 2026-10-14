@@ -5,8 +5,8 @@
 //! key would be a signing key on every user's machine. `verify` takes its key as a parameter for
 //! exactly this reason — see [`mixengine_core::blueprints::trust`].
 
-use mixengine_core::Error;
 use mixengine_core::blueprints::trust::{PUBLIC_KEY, verify};
+use mixengine_core::{BlueprintError, Error};
 use mixengine_testkit::Signer;
 
 /// The whole of what a signature buys: these bytes, from that key.
@@ -33,7 +33,10 @@ fn a_document_that_was_edited_does_not_verify() {
     .expect_err("it does not verify");
 
     assert!(
-        matches!(error, Error::BlueprintSignature { .. }),
+        matches!(
+            error,
+            Error::Blueprint(BlueprintError::BlueprintSignature { .. })
+        ),
         "{error:?}"
     );
 }
@@ -59,7 +62,10 @@ fn a_file_that_is_not_a_signature_is_refused_as_one() {
         verify(b"schema = 1\n", "not a signature", &signer.public_key()).expect_err("refused");
 
     assert!(
-        matches!(error, Error::BlueprintSignature { .. }),
+        matches!(
+            error,
+            Error::Blueprint(BlueprintError::BlueprintSignature { .. })
+        ),
         "{error:?}"
     );
 }
@@ -76,7 +82,10 @@ fn the_compiled_in_key_is_a_key() {
     let error = verify(document, &signer.sign(document), PUBLIC_KEY).expect_err("not this key");
 
     assert!(
-        matches!(error, Error::BlueprintSignature { .. }),
+        matches!(
+            error,
+            Error::Blueprint(BlueprintError::BlueprintSignature { .. })
+        ),
         "a build whose own key will not parse says so differently: {error:?}"
     );
 }

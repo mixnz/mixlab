@@ -29,7 +29,7 @@ use mixengine_proto::ServiceId;
 
 use super::render::DatabaseEndpoint as Endpoint;
 use crate::generate::Catalogue;
-use crate::{Error, Result, Store};
+use crate::{Error, ExtensionError, Result, Store};
 
 /// The instance a machine picks when it has more than one of an engine.
 ///
@@ -49,9 +49,11 @@ const DEFAULT_INSTANCE: &str = "main";
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionNoDatabase`] when this machine declares none of them — a refusal *before* the
-/// download, for [`Error::RuntimeUnresolved`]'s reason. [`Error::Database`] when the tables cannot
-/// be read.
+/// [`ExtensionError::ExtensionNoDatabase`] when this machine declares none of them — a refusal
+/// *before* the download, for [`RuntimeError::RuntimeUnresolved`]'s reason. [`Error::Database`]
+/// when the tables cannot be read.
+///
+/// [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
 pub async fn resolve(store: &Store, id: &str, engines: &[String]) -> Result<Endpoint> {
     for engine in engines {
         if let Some(service) = first_instance_of(store, engine).await?
@@ -61,10 +63,10 @@ pub async fn resolve(store: &Store, id: &str, engines: &[String]) -> Result<Endp
         }
     }
 
-    Err(Error::ExtensionNoDatabase {
+    Err(Error::Extension(ExtensionError::ExtensionNoDatabase {
         id: id.to_owned(),
         engines: engines.to_vec(),
-    })
+    }))
 }
 
 /// Where one service listens and what to connect to it as, or [`None`] for a service that is not a

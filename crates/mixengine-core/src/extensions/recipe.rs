@@ -27,7 +27,7 @@ use crate::extensions::render::{self, Context as RenderContext};
 use crate::extensions::store::Installed;
 use crate::generate::context::Context;
 use crate::generate::recipe::{Instancing, Recipe};
-use crate::{Error, Result};
+use crate::{Error, ExtensionError, Result};
 
 /// The instance name an extension's service is created under, which is the extension's own id.
 ///
@@ -78,10 +78,10 @@ impl Recipe for ExtensionRecipe {
         let _ = context;
 
         let Body::Service(template) = &self.installed.manifest.body else {
-            return Err(Error::ExtensionNotAService {
+            return Err(Error::Extension(ExtensionError::ExtensionNotAService {
                 id: self.installed.id.as_str().to_owned(),
                 kind: self.installed.kind().as_str(),
-            });
+            }));
         };
 
         render::service_builder(&self.installed.manifest, template, &self.context())

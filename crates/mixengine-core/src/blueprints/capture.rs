@@ -33,7 +33,9 @@ use crate::blueprints::manifest::{
     BlueprintManifest, BlueprintService, BlueprintSite, Header, PER_PROJECT, Php, Provenance,
 };
 use crate::projects::ProjectRecord;
-use crate::{Error, Result, Store, manifest, resolve, services, sites};
+use crate::{
+    BlueprintError, Error, Result, RuntimeError, Store, manifest, resolve, services, sites,
+};
 
 /// The token a project's own name is replaced by.
 const TOKEN: &str = "{project}";
@@ -78,9 +80,11 @@ pub struct Asked<'a> {
 ///
 /// # Errors
 ///
-/// [`Error::ProjectRunsSeveralPhps`] for a project whose sites a single `[runtimes] php` cannot
-/// describe; [`Error::Database`] when a table cannot be read, and [`Error::Manifest`] when the
-/// project's own `mixengine.toml` does not parse.
+/// [`BlueprintError::ProjectRunsSeveralPhps`] for a project whose sites a single `[runtimes] php`
+/// cannot describe; [`Error::Database`] when a table cannot be read, and [`ProjectError::Manifest`]
+/// when the project's own `mixengine.toml` does not parse.
+///
+/// [`ProjectError::Manifest`]: crate::ProjectError::Manifest
 pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManifest> {
     let project = asked.project;
     // **Every site, in primary-domain order** — roadmap task **T204a**, D6: `sites::records`'s
@@ -239,7 +243,7 @@ fn kept(service: &ServiceId) -> bool {
 ///
 /// # Errors
 ///
-/// [`Error::ProjectRunsSeveralPhps`] when they run more than one version.
+/// [`BlueprintError::ProjectRunsSeveralPhps`] when they run more than one version.
 async fn one_php(
     store: &Store,
     project: &ProjectRecord,
@@ -270,10 +274,10 @@ async fn one_php(
         .map(|(_, version)| version.as_str())
         .collect::<std::collections::BTreeSet<_>>();
     if distinct.len() > 1 {
-        return Err(Error::ProjectRunsSeveralPhps {
+        return Err(Error::Blueprint(BlueprintError::ProjectRunsSeveralPhps {
             project: project.name.clone(),
             sites: seen,
-        });
+        }));
     }
 
     Ok(match first {
@@ -312,7 +316,10 @@ async fn runtimes(
             Ok(_) => {}
             // A language nothing declares and nothing installs is not a language this project uses.
             // Every other failure is a database that cannot be read, and is worth raising.
-            Err(Error::RuntimeUnresolved { .. } | Error::NoDefaultRuntime { .. }) => {}
+            Err(
+                Error::Runtime(RuntimeError::RuntimeUnresolved { .. })
+                | Error::Runtime(RuntimeError::NoDefaultRuntime { .. }),
+            ) => {}
             Err(other) => return Err(other),
         }
     }
@@ -763,7 +770,10 @@ mod tests {
             .await
             .expect_err("refused");
 
-        assert!(matches!(error, Error::ProjectRunsSeveralPhps { .. }));
+        assert!(matches!(
+            error,
+            Error::Blueprint(BlueprintError::ProjectRunsSeveralPhps { .. })
+        ));
         let message = error.to_string();
         for part in ["blog.test", "8.2.23", "api.blog.test", "8.3.12"] {
             assert!(message.contains(part), "{part}: {message}");

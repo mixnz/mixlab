@@ -18,6 +18,10 @@
 //! needs), and inventing that policy here, before anything has produced a single job, would be
 //! guessing at it. The `events` table beside it has the same shape and the same answer.
 
+mod error;
+
+pub use error::JobError;
+
 use mixengine_proto::{
     JobFilter, JobFinish, JobId, JobKind, JobOutcome, JobProgress, JobState, JobSummary, Timestamp,
 };
@@ -76,8 +80,8 @@ pub async fn create(store: &Store, kind: &JobKind, at: Timestamp) -> Result<JobS
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when there is no such job; [`Error::JobEnded`] when it is over;
-/// [`Error::UnknownJobState`] when the row holds a word this build does not recognise; and
+/// [`Error::NotFound`] when there is no such job; [`JobError::JobEnded`] when it is over;
+/// [`JobError::UnknownJobState`] when the row holds a word this build does not recognise; and
 /// [`Error::Database`] when the row cannot be written.
 pub async fn progress(
     store: &Store,
@@ -128,8 +132,8 @@ pub async fn progress(
 ///
 /// # Errors
 ///
-/// As [`progress`]: [`Error::NotFound`], [`Error::JobEnded`] when something already ended it,
-/// [`Error::UnknownJobState`], and [`Error::Database`].
+/// As [`progress`]: [`Error::NotFound`], [`JobError::JobEnded`] when something already ended it,
+/// [`JobError::UnknownJobState`], and [`Error::Database`].
 pub async fn finish(
     store: &Store,
     job: JobId,
@@ -149,17 +153,17 @@ pub async fn finish(
     // and asserted all the same, on `can_become`'s own principle: the machine is the authority, and
     // a caller that has lost track of it should be told rather than obeyed.
     if !from.can_become(to) {
-        return Err(Error::IllegalJobTransition {
+        return Err(Error::Job(JobError::IllegalJobTransition {
             job: job.0,
             from,
             to,
-        });
+        }));
     }
 
     // Cannot fail: `JobOutcome` is one of ours and holds a `serde_json::Value` that was itself
     // decoded from JSON. Mapped rather than unwrapped because nothing in this crate panics.
     let result = serde_json::to_string(&outcome)
-        .map_err(|source| Error::JobOutcomeUnwritable { job: job.0, source })?;
+        .map_err(|source| Error::Job(JobError::JobOutcomeUnwritable { job: job.0, source }))?;
 
     let (id, state, finished) = (job.0, to.as_str(), at.0);
     let updated = sqlx::query!(
@@ -175,10 +179,10 @@ pub async fn finish(
     .map_err(|source| store.failure("write", source))?;
 
     if updated.rows_affected() == 0 {
-        return Err(Error::JobEnded {
+        return Err(Error::Job(JobError::JobEnded {
             job: job.0,
             state: from,
-        });
+        }));
     }
 
     tx.commit()
@@ -210,8 +214,8 @@ pub async fn finish(
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the rows cannot be read or written, and [`Error::UnknownJobState`] or
-/// [`Error::UnreadableJobRow`] from reading back what was abandoned.
+/// [`Error::Database`] when the rows cannot be read or written, and [`JobError::UnknownJobState`]
+/// or [`JobError::UnreadableJobRow`] from reading back what was abandoned.
 pub async fn abandon(store: &Store, at: Timestamp) -> Result<Vec<JobFinish>> {
     let outcome = JobOutcome::Failed {
         error: mixengine_proto::Error::new(
@@ -223,7 +227,7 @@ pub async fn abandon(store: &Store, at: Timestamp) -> Result<Vec<JobFinish>> {
 
     // Cannot fail: the value is built two statements above out of types this crate owns.
     let result = serde_json::to_string(&outcome)
-        .map_err(|source| Error::JobOutcomeUnwritable { job: 0, source })?;
+        .map_err(|source| Error::Job(JobError::JobOutcomeUnwritable { job: 0, source }))?;
 
     let (state, finished) = (JobState::Failed.as_str(), at.0);
     let abandoned = sqlx::query_scalar!(
@@ -259,8 +263,8 @@ pub async fn abandon(store: &Store, at: Timestamp) -> Result<Vec<JobFinish>> {
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when there is no such job; [`Error::UnknownJobState`] or
-/// [`Error::UnreadableJobRow`] when the row holds something this build cannot read back; and
+/// [`Error::NotFound`] when there is no such job; [`JobError::UnknownJobState`] or
+/// [`JobError::UnreadableJobRow`] when the row holds something this build cannot read back; and
 /// [`Error::Database`] when the file cannot be read.
 pub async fn record(store: &Store, job: JobId) -> Result<JobSummary> {
     let id = job.0;
@@ -358,7 +362,7 @@ async fn running(
     let state = parse_state(job, stored)?;
 
     match state.is_finished() {
-        true => Err(Error::JobEnded { job: id, state }),
+        true => Err(Error::Job(JobError::JobEnded { job: id, state })),
         false => Ok(state),
     }
 }
@@ -389,19 +393,23 @@ fn summary(
 
     let outcome = result_json
         .map(|stored| {
-            serde_json::from_str::<JobOutcome>(&stored).map_err(|source| Error::UnreadableJobRow {
-                job: id,
-                column: "result_json",
-                source,
+            serde_json::from_str::<JobOutcome>(&stored).map_err(|source| {
+                Error::Job(JobError::UnreadableJobRow {
+                    job: id,
+                    column: "result_json",
+                    source,
+                })
             })
         })
         .transpose()?;
 
     Ok(JobSummary {
         id: job,
-        kind: JobKind::parse(&kind).ok_or_else(|| Error::UnknownJobKind {
-            job: id,
-            value: kind,
+        kind: JobKind::parse(&kind).ok_or_else(|| {
+            Error::Job(JobError::UnknownJobKind {
+                job: id,
+                value: kind,
+            })
         })?,
         state,
         // The column is `CHECK`ed to 0–100, so nothing this build or any other could write lands
@@ -417,9 +425,11 @@ fn summary(
 
 /// Turn the stored word into a state, blaming the row rather than the reader.
 fn parse_state(job: JobId, stored: String) -> Result<JobState> {
-    JobState::parse(&stored).ok_or_else(|| Error::UnknownJobState {
-        job: job.0,
-        value: stored,
+    JobState::parse(&stored).ok_or_else(|| {
+        Error::Job(JobError::UnknownJobState {
+            job: job.0,
+            value: stored,
+        })
     })
 }
 
@@ -564,10 +574,10 @@ mod tests {
         assert!(
             matches!(
                 error,
-                Error::JobEnded {
+                Error::Job(JobError::JobEnded {
                     state: JobState::Cancelled,
                     ..
-                }
+                })
             ),
             "{error:?}"
         );
@@ -603,10 +613,10 @@ mod tests {
         assert!(
             matches!(
                 error,
-                Error::JobEnded {
+                Error::Job(JobError::JobEnded {
                     state: JobState::Cancelled,
                     ..
-                }
+                })
             ),
             "{error:?}"
         );
@@ -815,7 +825,7 @@ mod tests {
         let error = parse_state(JobId(3), "done".to_owned()).expect_err("not a job state");
 
         assert!(
-            matches!(&error, Error::UnknownJobState { job: 3, value } if value == "done"),
+            matches!(&error, Error::Job(JobError::UnknownJobState { job: 3, value }) if value == "done"),
             "{error:?}"
         );
     }
@@ -839,11 +849,11 @@ mod tests {
         assert!(
             matches!(
                 &error,
-                Error::UnreadableJobRow {
+                Error::Job(JobError::UnreadableJobRow {
                     job: 3,
                     column: "result_json",
                     ..
-                }
+                })
             ),
             "{error:?}"
         );

@@ -3,6 +3,7 @@ use std::path::Path;
 use mixengine_proto::ServiceId;
 
 use super::*;
+use crate::ServiceError;
 use crate::generate::Upstream;
 use crate::generate::first_run::FirstRun;
 use crate::generate::recipe;
@@ -336,7 +337,7 @@ fn a_home_that_cannot_hold_a_socket_is_refused_by_name() {
         .expect_err("103 characters is 103 characters");
 
     assert!(
-        matches!(&error, Error::SettingValue { key, .. } if *key == "socket"),
+        matches!(&error, Error::Service(ServiceError::SettingValue { key, .. }) if *key == "socket"),
         "{error:?}"
     );
 }
@@ -374,7 +375,7 @@ fn a_service_row_with_no_port_is_refused() {
     let error = address(&context).expect_err("a database listens on a port");
 
     assert!(
-        matches!(&error, Error::SettingValue { key, .. } if *key == "port"),
+        matches!(&error, Error::Service(ServiceError::SettingValue { key, .. }) if *key == "port"),
         "{error:?}"
     );
 }
@@ -518,7 +519,10 @@ fn a_postgres_without_its_own_binaries_is_named() {
     let error = Postgres.spec(&context).expect_err("nothing to run");
 
     assert!(
-        matches!(error, Error::ServiceProvidesNothing { .. }),
+        matches!(
+            error,
+            Error::Service(ServiceError::ServiceProvidesNothing { .. })
+        ),
         "{error:?}"
     );
 }
@@ -706,7 +710,7 @@ fn a_credential_that_would_need_escaping_is_refused() {
     let error = steps(&initialised("a'b")).expect_err("that cannot go in a SQL literal");
 
     assert!(
-        matches!(&error, Error::SettingValue { value, .. } if !value.contains("a'b")),
+        matches!(&error, Error::Service(ServiceError::SettingValue { value, .. }) if !value.contains("a'b")),
         "the refusal quoted the credential: {error:?}"
     );
 }
@@ -716,7 +720,10 @@ fn a_credential_that_would_need_escaping_is_refused() {
 fn no_credential_at_all_is_refused_rather_than_setting_an_empty_password() {
     let error = steps(&context("{}")).expect_err("an empty password is not a password");
 
-    assert!(matches!(error, Error::SettingValue { .. }), "{error:?}");
+    assert!(
+        matches!(error, Error::Service(ServiceError::SettingValue { .. })),
+        "{error:?}"
+    );
 }
 
 /// Two steps, the same two, on every system — which is the difference from MariaDB, whose
@@ -749,7 +756,10 @@ fn a_postgres_that_cannot_bootstrap_is_named() {
     let error = steps(&context).expect_err("there is nothing to create a cluster with");
 
     assert!(
-        matches!(error, Error::ServiceProvidesNothing { .. }),
+        matches!(
+            error,
+            Error::Service(ServiceError::ServiceProvidesNothing { .. })
+        ),
         "{error:?}"
     );
 }

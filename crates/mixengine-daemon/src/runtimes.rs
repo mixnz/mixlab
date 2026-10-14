@@ -38,7 +38,7 @@ use std::time::SystemTime;
 use mixengine_core::index::{self, Index, Package, Selection, Target};
 use mixengine_core::install::Installer;
 use mixengine_core::upgrade::kept::{self, Family};
-use mixengine_core::{Paths, Store, paths, resolve, runtimes};
+use mixengine_core::{Paths, RuntimeError, Store, paths, resolve, runtimes};
 use mixengine_proto::{
     CatalogueGap, Error, ErrorCode, Execution, JobId, JobKind, JobSummary, PackageVersion,
     Requirements, ResolvedRuntime, RuntimeCatalogue, RuntimeFilter, RuntimeInstall, RuntimeKind,
@@ -519,11 +519,13 @@ impl Runtimes {
             // **T206d**, D3: the install restores the row it already has.
             Ok(found) if found.is_missing() => {}
             Ok(_) => {
-                return Err(mixengine_core::Error::AlreadyRecorded {
-                    kind: target.kind,
-                    version: target.version.clone(),
-                }
-                .to_wire());
+                return Err(
+                    mixengine_core::Error::Runtime(RuntimeError::AlreadyRecorded {
+                        kind: target.kind,
+                        version: target.version.clone(),
+                    })
+                    .to_wire(),
+                );
             }
             Err(mixengine_core::Error::NotFound { .. }) => {}
             Err(error) => return Err(error.to_wire()),
@@ -697,16 +699,20 @@ impl Runtimes {
 
             // The folder came back between the check and the rename. There is nothing to adopt:
             // the row is already there, and adopting would try to write a second one.
-            Err(mixengine_core::Error::AlreadyInstalled { .. }) if restoring => {
-                return Err(mixengine_core::Error::AlreadyRecorded {
-                    kind,
-                    version: version.clone(),
-                }
-                .to_wire());
+            Err(mixengine_core::Error::Runtime(RuntimeError::AlreadyInstalled { .. }))
+                if restoring =>
+            {
+                return Err(
+                    mixengine_core::Error::Runtime(RuntimeError::AlreadyRecorded {
+                        kind,
+                        version: version.clone(),
+                    })
+                    .to_wire(),
+                );
             }
 
             // **T182f, D2.** The directory is there and has no row: an earlier home installed it.
-            Err(mixengine_core::Error::AlreadyInstalled { path }) => {
+            Err(mixengine_core::Error::Runtime(RuntimeError::AlreadyInstalled { path })) => {
                 let found = mixengine_core::adopt::walk::Found {
                     subject: mixengine_core::adopt::Subject::Runtime {
                         kind,

@@ -14,7 +14,7 @@
 
 use mixengine_proto::SignatureCheck;
 
-use crate::{Error, Result};
+use crate::{BlueprintError, Error, Result};
 
 /// The key the gallery's blueprints are signed with, compiled in.
 ///
@@ -33,29 +33,30 @@ pub const PUBLIC_KEY: &str = "RWSBNWAf3DM823XHg3Gc/oTuC+0eCaOvI4x9m+djqCKNTsQMpl
 ///
 /// # Errors
 ///
-/// [`Error::BlueprintKey`] when `public_key` is not a minisign key — a broken build, since the only
-/// caller passes [`PUBLIC_KEY`] — and [`Error::BlueprintSignature`] when the signature does not
-/// verify against it: a blueprint edited after it was signed, a signature from another key, or a
-/// file that is not a signature at all.
+/// [`BlueprintError::BlueprintKey`] when `public_key` is not a minisign key — a broken build, since
+/// the only caller passes [`PUBLIC_KEY`] — and [`BlueprintError::BlueprintSignature`] when the
+/// signature does not verify against it: a blueprint edited after it was signed, a signature from
+/// another key, or a file that is not a signature at all.
 pub fn verify(document: &[u8], signature: &str, public_key: &str) -> Result<()> {
     let key = minisign_verify::PublicKey::from_base64(public_key).map_err(|source| {
-        Error::BlueprintKey {
+        Error::Blueprint(BlueprintError::BlueprintKey {
             source: Box::new(source),
-        }
+        })
     })?;
 
     let signature = minisign_verify::Signature::decode(signature).map_err(|source| {
-        Error::BlueprintSignature {
+        Error::Blueprint(BlueprintError::BlueprintSignature {
             source: Box::new(source),
-        }
+        })
     })?;
 
     // `false` refuses minisign's legacy algorithm, as `index` does: everything this project
     // publishes is signed with the current one.
-    key.verify(document, &signature, false)
-        .map_err(|source| Error::BlueprintSignature {
+    key.verify(document, &signature, false).map_err(|source| {
+        Error::Blueprint(BlueprintError::BlueprintSignature {
             source: Box::new(source),
         })
+    })
 }
 
 /// Why a blueprint is or is not trusted, settled once when its row is written — roadmap task

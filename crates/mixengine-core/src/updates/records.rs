@@ -23,6 +23,7 @@
 //! parses means the same thing to every caller here as one that was never written — go and ask
 //! again — and failing a daemon start over a skipped version would be absurd.
 
+use crate::UpdateError;
 use crate::{Result, store::Store};
 
 /// The version somebody answered *skip this one* to.
@@ -127,11 +128,12 @@ pub async fn get<T: serde::de::DeserializeOwned>(store: &Store, key: &str) -> Re
 /// [`crate::Error`] when the row cannot be written, or when `value` cannot be encoded — which is a
 /// bug in the caller rather than anything about this machine.
 pub async fn set<T: serde::Serialize>(store: &Store, key: &str, value: &T) -> Result<()> {
-    let encoded =
-        serde_json::to_string(value).map_err(|source| crate::Error::SettingUnwritable {
+    let encoded = serde_json::to_string(value).map_err(|source| {
+        crate::Error::Update(UpdateError::SettingUnwritable {
             key: key.to_owned(),
             source,
-        })?;
+        })
+    })?;
 
     sqlx::query!(
         "INSERT INTO settings (key, value_json) VALUES (?, ?)

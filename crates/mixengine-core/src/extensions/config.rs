@@ -48,8 +48,10 @@ pub struct Rendered {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] for a `[web-app].root` or a text this home cannot render, and
+/// [`ExtensionError::ExtensionField`] for a `[web-app].root` or a text this home cannot render, and
 /// [`Error::Database`] when the tables cannot be read.
+///
+/// [`ExtensionError::ExtensionField`]: crate::ExtensionError::ExtensionField
 pub async fn of(store: &Store, installed: &Installed, secret: &str) -> Result<Option<Rendered>> {
     let Body::WebApp(app) = &installed.manifest.body else {
         return Ok(None);
@@ -97,8 +99,10 @@ pub async fn of(store: &Store, installed: &Installed, secret: &str) -> Result<Op
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionField`] naming the field, for a root that does not grow from `{install_dir}`
-/// or a text carrying a placeholder this context cannot answer.
+/// [`ExtensionError::ExtensionField`] naming the field, for a root that does not grow from
+/// `{install_dir}` or a text carrying a placeholder this context cannot answer.
+///
+/// [`ExtensionError::ExtensionField`]: crate::ExtensionError::ExtensionField
 pub fn rendered(
     installed: &Installed,
     database: Option<DatabaseEndpoint>,

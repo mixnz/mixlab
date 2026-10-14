@@ -40,7 +40,7 @@ use std::path::PathBuf;
 use mixengine_proto::{PackageVersion, ServiceId, VersionError};
 
 use crate::generate::recipe::Upstream;
-use crate::{Error, Result, Store};
+use crate::{Error, Result, RuntimeError, ServiceError, Store};
 
 /// The install a package's client commands run out of, and where its own server listens.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,17 +76,19 @@ impl Chosen {
     ///
     /// # Errors
     ///
-    /// [`Error::PackageProvidesNothing`], naming the command and listing what this version does
-    /// publish.
+    /// [`ServiceError::PackageProvidesNothing`], naming the command and listing what this version
+    /// does publish.
     pub fn program(&self, package: &str, executable: &str) -> Result<PathBuf> {
         self.provides
             .get(executable)
             .map(|relative| crate::paths::join_stored(&self.install_path, relative))
-            .ok_or_else(|| Error::PackageProvidesNothing {
-                package: package.to_owned(),
-                version: self.version.clone(),
-                executable: executable.to_owned(),
-                known: self.provides.keys().cloned().collect(),
+            .ok_or_else(|| {
+                Error::Service(ServiceError::PackageProvidesNothing {
+                    package: package.to_owned(),
+                    version: self.version.clone(),
+                    executable: executable.to_owned(),
+                    known: self.provides.keys().cloned().collect(),
+                })
             })
     }
 }
@@ -129,8 +131,8 @@ pub fn override_env(package: &str) -> String {
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the rows cannot be read, and [`Error::UnreadablePackageRow`] for a row
-/// this build cannot parse. A package that is not installed is not an error.
+/// [`Error::Database`] when the rows cannot be read, and [`RuntimeError::UnreadablePackageRow`] for
+/// a row this build cannot parse. A package that is not installed is not an error.
 pub async fn claims(
     store: &Store,
     catalogue: &crate::generate::Catalogue,
@@ -236,8 +238,8 @@ struct Instance {
 ///
 /// [`Error::NotFound`] when `asked` names no instance of this package, and when nothing of this
 /// package is installed at all. [`Error::Database`] when the rows cannot be read, and
-/// [`Error::UnreadablePackageRow`] when a recorded version or service id is not one this build can
-/// parse.
+/// [`RuntimeError::UnreadablePackageRow`] when a recorded version or service id is not one this
+/// build can parse.
 pub async fn chosen(
     store: &Store,
     package: &str,
@@ -331,9 +333,11 @@ fn resolved(instance: Option<Instance>, install: &Install) -> Result<Chosen> {
         Some(Upstream::Tcp(address))
     });
 
-    let unreadable = |column: &'static str, value: &str| Error::UnreadablePackageRow {
-        column,
-        value: value.to_owned(),
+    let unreadable = |column: &'static str, value: &str| {
+        Error::Runtime(RuntimeError::UnreadablePackageRow {
+            column,
+            value: value.to_owned(),
+        })
     };
 
     Ok(Chosen {
@@ -392,9 +396,11 @@ async fn newest(store: &Store, package: &str) -> Result<Install> {
 
     for row in rows {
         let version = PackageVersion::parse(row.version.clone()).map_err(
-            |VersionError { value, .. }| Error::UnreadablePackageRow {
-                column: "version",
-                value,
+            |VersionError { value, .. }| {
+                Error::Runtime(RuntimeError::UnreadablePackageRow {
+                    column: "version",
+                    value,
+                })
             },
         )?;
 
