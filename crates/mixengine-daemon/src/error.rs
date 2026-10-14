@@ -28,6 +28,10 @@ use mixengine_core::ServiceError;
 use mixengine_core::UpdateError;
 use mixengine_proto::{Error, ErrorCode};
 
+/// What a row this build cannot decode is told — a runtime's, a package's, a project's or a site's.
+const UNREADABLE_ROW: &str =
+    "the row was written by a different version of MixEngine, or edited by hand";
+
 /// A library error, rendered for the wire.
 ///
 /// A trait rather than `From`, because both types are foreign here and the orphan rule says so —
@@ -490,12 +494,12 @@ impl ToWire for mixengine_core::Error {
             // A hand-edited database, or a row from a build that knew a channel this one does not.
             // The same reading `UnknownServiceState` gets, and the same code.
             Core::Runtime(RuntimeError::UnreadableRuntimeRow { .. })
-            | Core::Runtime(RuntimeError::UnreadablePackageRow { .. })
-            | Core::Project(ProjectError::UnreadableProjectRow { .. })
+            | Core::Runtime(RuntimeError::UnreadablePackageRow { .. }) => {
+                Error::new(ErrorCode::Internal, chain(self)).with_hint(UNREADABLE_ROW)
+            }
+            Core::Project(ProjectError::UnreadableProjectRow { .. })
             | Core::Project(ProjectError::UnreadableSiteRow { .. }) => {
-                Error::new(ErrorCode::Internal, chain(self)).with_hint(
-                    "the row was written by a different version of MixEngine, or edited by hand",
-                )
+                Error::new(ErrorCode::Internal, chain(self)).with_hint(UNREADABLE_ROW)
             }
 
             // The user's own file, one directory out from `Core::Config` and given the same code —
