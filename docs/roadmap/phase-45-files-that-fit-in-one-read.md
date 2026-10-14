@@ -81,10 +81,11 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
       whose callbacks share its state, so not a move — custom hooks for what it does (editing a
       cell, selecting rows, the filters it remembers) and components for what it draws, verified in
       the running window and `npm run screenshots -- --check`. Split out of T207g on 2026-10-14.
-- [ ] **T207l** The daemon's `main.rs` (code 2,439): `serve` is one function of 1,180 lines, forty
+- [x] **T207l** The daemon's `main.rs` (code 2,439): `serve` is one function of 1,180 lines, forty
       startup steps sharing dozens of locals, so not a move — the steps become functions with the
       state they share passed explicitly, in the order a start needs, and `Args` and `detach` move
-      out. Split out of T207i on 2026-10-14.
+      out. Split out of T207i on 2026-10-14. Design:
+      [2026-10-14-t207l-daemon-serve-steps-design.md](../specs/2026-10-14-t207l-daemon-serve-steps-design.md).
 
 **M45** `scripts/file-size-baseline.json` no longer names `crates/mixengine-cli/src/main.rs`,
 `render.rs`, `crates/mixengine-daemon/src/api/rpc.rs` or
