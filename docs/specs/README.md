@@ -215,3 +215,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-14 | [Tests past the limit on their own, split by topic at the boundaries they already have (design)](2026-10-14-t207f-tests-split-by-topic-design.md) | T207f | implemented |
 | 2026-10-14 | [The desktop's three drivers past the limit, split the way their siblings already are (design)](2026-10-14-t207g-desktop-drivers-split-design.md) | T207g | implemented |
 | 2026-10-14 | [Four definition files past the limit, each giving one capability a file of its own (design)](2026-10-14-t207h-definitions-split-by-capability-design.md) | T207h | implemented |
+| 2026-10-14 | [The service runner and the doctor, each one `impl` split by what its methods do (design)](2026-10-14-t207i-runner-and-doctor-split-design.md) | T207i | implemented |
