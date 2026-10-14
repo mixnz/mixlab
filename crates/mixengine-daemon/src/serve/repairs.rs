@@ -23,8 +23,8 @@ pub(super) async fn repair_home(
 
     let adopted = adopt::offline(store, paths).await;
 
-    // `bin/` was filled a few hundred lines up from the rows as they were, and a runtime recorded
-    // here is one whose commands it does not hold yet (T185b).
+    // `bin/` was filled by `projections::refresh_bin` from the rows as they were, and a runtime
+    // recorded here is one whose commands it does not hold yet (T185b).
     if !adopted.claimed.is_empty()
         && let Err(error) = shims.runtimes_changed().await
     {
@@ -56,7 +56,7 @@ pub(super) async fn repair_home(
     // for each, for as long as this daemon runs.
     //
     // **Spawned because of where this sits**, and that is not a preference. The endpoint is bound
-    // and the accept loop is still below, which is the window the `bin/` block far above warns
+    // and the accept loop is still below, which is the window `serve`'s note on `bin/` warns
     // about in as many words: every moment spent here is a moment a queued client waits for its
     // answer. Awaiting these two was measured, before T170's backlog turned that wait from a
     // refusal into a queue, failing three `test (windows-latest)` legs in a row, in three different

@@ -143,13 +143,13 @@ pub(super) async fn certificates(shared: &Shared<'_>, background: &mut backgroun
     // a site this machine shows a padlock for is one a `fetch()` in the same project refuses. The
     // bundle is what they can be pointed at: every root this machine trusts, and then ours.
     //
-    // **Spawned rather than awaited, and that is not a preference.** The endpoint was bound some
-    // way above and the accept loop is still far below, so — as the extension block near the end of
-    // this function says in as many words — every moment spent here is a moment a queued client
-    // waits for its answer. Reading this machine's whole trust store and writing a quarter of a
-    // megabyte is the most expensive thing that was ever put between those two points, and it was
-    // measured: before T170's backlog, when that wait was a refusal on Windows, ten of
-    // `tests/api.rs`' twenty-four daemons stopped answering.
+    // **Spawned rather than awaited, and that is not a preference.** The endpoint is bound before
+    // this step and the accept loop runs after the last one, so — as `started::after_the_api` says
+    // in as many words — every moment spent here is a moment a queued client waits for its answer.
+    // Reading this machine's whole trust store and writing a quarter of a megabyte is the most
+    // expensive thing that was ever put between those two points, and it was measured: before
+    // T170's backlog, when that wait was a refusal on Windows, ten of `tests/api.rs`' twenty-four
+    // daemons stopped answering.
     //
     // Nothing about it can fail the start, on the rule the block above follows.
     background.spawn("trust bundle", {

@@ -5,13 +5,13 @@ use std::sync::Arc;
 
 use super::Shared;
 
-/// **And from here a clock keeps doing it** — roadmap task T52. The block above was the only
-/// renewal this daemon had: a leaf lives 90 days, so a machine switched off and on again stays
-/// current forever, and one whose daemon runs for three months reaches a red padlock with no
-/// defect anywhere in the code.
+/// **And from here a clock keeps doing it** — roadmap task T52. The issuance that ends
+/// [`machine::certificates`](super::machine::certificates) was the only renewal this daemon had: a
+/// leaf lives 90 days, so a machine switched off and on again stays current forever, and one whose
+/// daemon runs for three months reaches a red padlock with no defect anywhere in the code.
 ///
 /// Here rather than beside the DNS server so that it reads as what it is — the standing version
-/// of the block it follows — and before `api::Api::new`, which takes `events`.
+/// of that issuance — and before `api::Api::new`, which takes `events`.
 pub(super) fn start_clocks(shared: &Shared<'_>) -> crate::metrics::sampler::Handle {
     let Shared {
         paths,

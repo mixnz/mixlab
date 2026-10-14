@@ -155,9 +155,9 @@ pub(super) async fn build_clients(
     )
     .map_err(|error| anyhow::anyhow!("{error}"))?;
 
-    // T185a: before the update records are read, which `restore_after_update` does further down.
-    // `bin/` was filled a few hundred lines up without what was missing, so when anything was added
-    // it is filled again.
+    // T185a: before the update records are read, which `restore_after_update` does later, in
+    // `started::after_an_update`. `bin/` was filled by `projections::refresh_bin` without what was
+    // missing, so when anything was added it is filled again.
     if !updates.complete_install().await.is_empty()
         && let Err(error) = shims.runtimes_changed().await
     {

@@ -98,7 +98,7 @@ pub(super) async fn accept_until_stopped(
 /// **Pinned and selected against rather than simply awaited, because this wait is the one part of
 /// a shutdown a person can be trapped in** — roadmap task T9a. Leaving the accept loop used to be
 /// the last time anything read `signals`, although the handlers stay installed for the rest of
-/// this function: on Unix tokio's `SIGINT`/`SIGTERM` handlers are process-global and permanent,
+/// `serve`: on Unix tokio's `SIGINT`/`SIGTERM` handlers are process-global and permanent,
 /// so the default disposition is gone, and a second Ctrl-C during a stop that had wedged on one
 /// service was delivered into a channel nobody was reading and did nothing whatever. The only
 /// escape left was `kill -9`, which is the outcome this task exists to remove.
@@ -125,12 +125,13 @@ pub(super) async fn stop_everything(
         () = &mut stopping => {}
 
         // **An escalation and not an exit.** Returning from `serve` here would skip `Store::close`
-        // and leave behind the `-wal` sidecar every number above is sized around — one bad outcome
-        // traded for a worse one. What a second request means is that the person is no longer
-        // willing to wait for the polite stop, so the budget is narrowed to nothing and every runner
-        // still to reach a stop goes straight to the kill: `Registry::stopping_within` is the
-        // narrow-only mechanism T9a already built for a second shutdown arriving during a first, and
-        // a second answer to the same question here would be one for them to disagree about.
+        // and leave behind the `-wal` sidecar every number in `serve.rs` is sized around — one bad
+        // outcome traded for a worse one. What a second request means is that the person is no
+        // longer willing to wait for the polite stop, so the budget is narrowed to nothing and
+        // every runner still to reach a stop goes straight to the kill: `Registry::stopping_within`
+        // is the narrow-only mechanism T9a already built for a second shutdown arriving during a
+        // first, and a second answer to the same question here would be one for them to disagree
+        // about.
         //
         // Then the *same* future is waited on again rather than dropped, because dropping it detaches
         // the runners it drained out of the registry and the children they own are orphaned instead

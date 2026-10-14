@@ -168,10 +168,10 @@ pub(crate) const CONFIRMATION_REPRIEVE: Duration = Duration::from_millis(250);
 
 /// The handles most steps of a start read, borrowed from [`serve`]'s frame.
 ///
-/// Built once the last of them exists, and passed to a step that reads more than two of them, rather
-/// than one parameter per handle: the step that builds the signed sources reads ten. Every field is a
-/// borrow, so the struct is `Copy` and a step destructures it as `*shared`; a step that changes
-/// something — [`background::Background`] — takes it as a parameter of its own.
+/// Built once the last of them exists, and passed to a step that reads more than two of them,
+/// rather than one parameter per handle: the step that builds the signed sources reads ten. Every
+/// field is a borrow, so the struct is `Copy` and a step destructures it as `*shared`; a step that
+/// changes something — [`background::Background`] — takes it as a parameter of its own.
 #[derive(Clone, Copy)]
 struct Shared<'a> {
     paths: &'a Paths,
@@ -265,7 +265,7 @@ pub(crate) async fn serve(
     ));
 
     // The fourth reader of this path, and the last — roadmap task **T88**. Kept here because
-    // `elevation::Candidates` takes the original by value a few hundred lines down, and because the
+    // `elevation::Candidates` takes the original by value further down, and because the
     // question the updater asks of it is a different one from the other three: not *what shall I
     // run*, but *is the directory this binary sits in one this account may write*.
     let daemon_exe = program.clone();
@@ -283,13 +283,13 @@ pub(crate) async fn serve(
     // person actually meets here is "something else is already listening for this home", and the
     // sentence that says what to do about it is written at the boundary and nowhere else.
     //
-    // **Accepting from here on, not from the loop at the end of this function** (T170). Everything
+    // **Accepting from here on, not from `accept::accept_until_stopped`** (T170). Everything
     // between this line and that loop — recovery, the trust store, the registry — used to be a
     // window in which a bound named pipe had one instance and nobody taking it, so a second client
     // met `ERROR_PIPE_BUSY` and gave up after its second of retries. The backlog accepts now and
     // queues, which is what a Unix socket's listen queue always did: an early client waits for its
-    // answer rather than being told nobody is there. The blocks below that are spawned rather than
-    // awaited still are, because a queued client is still a client waiting.
+    // answer rather than being told nobody is there. The steps below that spawn rather than
+    // await still do, because a queued client is still a client waiting.
     let mut listener = ipc::Listener::bind(endpoint)
         .map_err(|error| error.to_wire())?
         .backlog();
@@ -466,12 +466,12 @@ pub(crate) async fn serve(
     tracing::info!(endpoint = %endpoint, "listening for clients");
 
     // **And what asked to start, starts** — roadmap task T113. The fifth member of the family of
-    // background loops above and the only one that runs *after* this line rather than before it:
-    // those four are sweeps whose first pass must not race the first client, and this one starts
-    // real programs. A daemon that will not answer `daemon.status` until MariaDB's first run has
-    // finished looks hung at exactly the moment somebody is looking at it, and what fills a
-    // dashboard in as it goes is the event stream this walk announces on — which needs a client
-    // able to connect to it.
+    // background loops `clocks` and `started` start and the only one that runs *after* this line
+    // rather than before it: those four are sweeps whose first pass must not race the first client,
+    // and this one starts real programs. A daemon that will not answer `daemon.status` until
+    // MariaDB's first run has finished looks hung at exactly the moment somebody is looking at it,
+    // and what fills a dashboard in as it goes is the event stream this walk announces on — which
+    // needs a client able to connect to it.
     //
     // After recovery for `recover`'s own reason, which is satisfied by everything above: a service
     // recovery adopted is already up, and a walk counts one that is up as reached rather than
