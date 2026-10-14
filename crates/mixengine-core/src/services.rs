@@ -55,8 +55,9 @@ pub use graph::{GraphError, Plan, ServiceGraph};
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when there is no such service; [`ServiceError::UnknownServiceState`] when the row
-/// holds a word this build does not recognise; [`Error::Database`] when the file cannot be read.
+/// [`Error::NotFound`] when there is no such service; [`ServiceError::UnknownServiceState`] when
+/// the row holds a word this build does not recognise; [`Error::Database`] when the file cannot be
+/// read.
 pub async fn state(store: &Store, service: &ServiceId) -> Result<ServiceState> {
     let id = service.as_str();
 
@@ -371,10 +372,11 @@ pub struct Declaration {
 ///
 /// # Errors
 ///
-/// [`ServiceError::ServiceAlreadyDeclared`] when a row with this id exists or the parent already has an
-/// instance of this name, [`ServiceError::DataDirectoryTaken`] when another service is already pointed at
-/// the `data_dir` this one names, [`Error::NotFound`] when the [`Origin`] names a package or a
-/// runtime that is not installed, and [`Error::Database`] when the row cannot be written.
+/// [`ServiceError::ServiceAlreadyDeclared`] when a row with this id exists or the parent already
+/// has an instance of this name, [`ServiceError::DataDirectoryTaken`] when another service is
+/// already pointed at the `data_dir` this one names, [`Error::NotFound`] when the [`Origin`] names
+/// a package or a runtime that is not installed, and [`Error::Database`] when the row cannot be
+/// written.
 pub async fn create(
     store: &Store,
     host: &dyn mixengine_platform::Host,
@@ -768,8 +770,8 @@ pub async fn version(store: &Store, service: &ServiceId) -> Result<Option<Packag
 /// # Errors
 ///
 /// As [`state`], whose narrower question this answers as well: [`Error::NotFound`] when there is no
-/// such service, [`ServiceError::UnknownServiceState`] when the row holds a word this build does not
-/// recognise, [`Error::Database`] when the file cannot be read.
+/// such service, [`ServiceError::UnknownServiceState`] when the row holds a word this build does
+/// not recognise, [`Error::Database`] when the file cannot be read.
 pub async fn record(store: &Store, service: &ServiceId) -> Result<ServiceRecord> {
     let id = service.as_str();
 
@@ -821,8 +823,8 @@ pub async fn record(store: &Store, service: &ServiceId) -> Result<ServiceRecord>
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when there is no such service, [`ServiceError::UnreadableServiceRow`] when the row
-/// names no parent at all or holds a kind or a version this build cannot read, and
+/// [`Error::NotFound`] when there is no such service, [`ServiceError::UnreadableServiceRow`] when
+/// the row names no parent at all or holds a kind or a version this build cannot read, and
 /// [`Error::Database`] when the file cannot be read.
 pub async fn declaration(store: &Store, service: &ServiceId) -> Result<Declaration> {
     let id = service.as_str();
@@ -918,9 +920,9 @@ pub async fn declaration(store: &Store, service: &ServiceId) -> Result<Declarati
 ///
 /// # Errors
 ///
-/// [`ServiceError::UnknownServiceState`] when a row holds a state word this build does not recognise, and
-/// [`Error::Database`] when the file cannot be read. Not [`Error::NotFound`]: a home with no
-/// services has no rows, which is an answer and not a failure.
+/// [`ServiceError::UnknownServiceState`] when a row holds a state word this build does not
+/// recognise, and [`Error::Database`] when the file cannot be read. Not [`Error::NotFound`]: a home
+/// with no services has no rows, which is an answer and not a failure.
 pub async fn records(store: &Store) -> Result<BTreeMap<String, ServiceRecord>> {
     let rows = sqlx::query!(
         r#"SELECT s.id, s.state, s.pid, s.pid_start_time, s.last_started_at, s.last_exit_code,
@@ -1037,16 +1039,17 @@ fn exit_code(stored: Option<i64>) -> Option<i32> {
 /// `BEGIN IMMEDIATE` takes the write lock up front, so the two supervisors serialise at the `BEGIN`
 /// — where `busy_timeout` does apply — and the second one reads the state the first one committed
 /// and re-judges its move against it. The `WHERE state = ?` on the `UPDATE` stays as a cheap
-/// assertion that this is really so; [`ServiceError::StateRaced`] is what it reports if it ever is not.
+/// assertion that this is really so; [`ServiceError::StateRaced`] is what it reports if it ever is
+/// not.
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when there is no such service; [`ServiceError::IllegalTransition`] when the machine
-/// has no such edge, which is a bug in the caller rather than a condition to handle;
+/// [`Error::NotFound`] when there is no such service; [`ServiceError::IllegalTransition`] when the
+/// machine has no such edge, which is a bug in the caller rather than a condition to handle;
 /// [`ServiceError::StateRaced`] when something else changed the state in between;
-/// [`ServiceError::UnknownServiceState`] when the row holds a word this build does not recognise; and
-/// [`Error::Database`] when the file cannot be written — including when the write lock could not be
-/// taken within the store's `busy_timeout`.
+/// [`ServiceError::UnknownServiceState`] when the row holds a word this build does not recognise;
+/// and [`Error::Database`] when the file cannot be written — including when the write lock could
+/// not be taken within the store's `busy_timeout`.
 pub async fn transition(
     store: &Store,
     service: &ServiceId,

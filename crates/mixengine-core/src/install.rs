@@ -45,6 +45,7 @@ use std::time::Duration;
 
 use tokio::io::AsyncWriteExt as _;
 
+use crate::RuntimeError;
 use crate::index::Artifact;
 use crate::{Error, Result, paths};
 
@@ -244,9 +245,9 @@ impl Installer {
     ///
     /// # Errors
     ///
-    /// [`InstallError::IndexTransport`] if the HTTP client cannot be constructed, which is a broken build
-    /// rather than anything a user did — the variant is shared with the index client because both
-    /// describe the same one thing that can go wrong before a request exists.
+    /// [`InstallError::IndexTransport`] if the HTTP client cannot be constructed, which is a broken
+    /// build rather than anything a user did — the variant is shared with the index client because
+    /// both describe the same one thing that can go wrong before a request exists.
     pub fn new(cache_dir: &Path) -> Result<Self> {
         let http = reqwest::Client::builder()
             .connect_timeout(CONNECT_TIMEOUT)
@@ -255,8 +256,8 @@ impl Installer {
             .build()
             .map_err(|source| {
                 Error::Install(InstallError::IndexTransport {
-                    // Not a document at all: the HTTP client itself would not build, which is a broken
-                    // build rather than a fetch of anything.
+                    // Not a document at all: the HTTP client itself would not build, which is a
+                    // broken build rather than a fetch of anything.
                     document: "downloader",
                     url: String::new(),
                     source: Box::new(source),
@@ -297,18 +298,17 @@ impl Installer {
     ///
     /// # Errors
     ///
-    /// [`RuntimeError::AlreadyInstalled`] when something is already at `into`; [`InstallError::ArtifactFormat`]
-    /// for an archive shape this build cannot unpack; [`InstallError::ArtifactTransport`],
-    /// [`InstallError::ArtifactIncomplete`] and [`InstallError::ArtifactTooLarge`] from the download;
-    /// [`InstallError::ArtifactChecksum`] when what arrived is not what the index promised;
-    /// [`InstallError::ArchiveUnreadable`] and [`InstallError::UnsafeArchiveEntry`] from unpacking;
-    /// [`InstallError::MissingFromArtifact`] when the archive does not contain what it said it did;
-    /// [`InstallError::SmokeTestFailed`] when it will not run here; [`InstallError::InstallCancelled`] when asked
-    /// to stop; and [`Error::Io`] when the staging directory or the rename cannot be done.
+    /// [`RuntimeError::AlreadyInstalled`] when something is already at `into`;
+    /// [`InstallError::ArtifactFormat`] for an archive shape this build cannot unpack;
+    /// [`InstallError::ArtifactTransport`], [`InstallError::ArtifactIncomplete`] and
+    /// [`InstallError::ArtifactTooLarge`] from the download; [`InstallError::ArtifactChecksum`]
+    /// when what arrived is not what the index promised; [`InstallError::ArchiveUnreadable`] and
+    /// [`InstallError::UnsafeArchiveEntry`] from unpacking; [`InstallError::MissingFromArtifact`]
+    /// when the archive does not contain what it said it did; [`InstallError::SmokeTestFailed`]
+    /// when it will not run here; [`InstallError::InstallCancelled`] when asked to stop; and
+    /// [`Error::Io`] when the staging directory or the rename cannot be done.
     ///
     /// Every one of them leaves `into` untouched.
-    ///
-    /// [`RuntimeError::AlreadyInstalled`]: crate::RuntimeError::AlreadyInstalled
     pub async fn install<W: Watcher>(
         &self,
         artifact: &Artifact,
@@ -342,7 +342,7 @@ impl Installer {
         watcher: &W,
     ) -> Result<Installed> {
         if into.exists() {
-            return Err(Error::Runtime(crate::RuntimeError::AlreadyInstalled {
+            return Err(Error::Runtime(RuntimeError::AlreadyInstalled {
                 path: into.to_path_buf(),
             }));
         }
@@ -815,8 +815,8 @@ pub fn present(artifact: &Artifact, dir: &Path) -> Result<()> {
 ///
 /// # Errors
 ///
-/// [`InstallError::MissingFromArtifact`] naming the first entry that is not there, or that would lead
-/// outside `dir`.
+/// [`InstallError::MissingFromArtifact`] naming the first entry that is not there, or that would
+/// lead outside `dir`.
 pub fn provided(provides: &BTreeMap<String, String>, url: &str, dir: &Path) -> Result<()> {
     for (executable, relative) in provides {
         let path = Path::new(relative);

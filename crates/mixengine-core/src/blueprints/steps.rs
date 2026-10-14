@@ -58,8 +58,8 @@ pub fn of_manifest(
 ///
 /// # Errors
 ///
-/// [`crate::Error::Database`] for the read, [`BlueprintError::BlueprintManifest`] for a row that does
-/// not parse.
+/// [`crate::Error::Database`] for the read, [`BlueprintError::BlueprintManifest`] for a row that
+/// does not parse.
 ///
 /// [`BlueprintError::BlueprintManifest`]: crate::BlueprintError::BlueprintManifest
 pub async fn declared(store: &Store, project_id: i64) -> Result<Option<(BlueprintManifest, bool)>> {

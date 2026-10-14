@@ -465,8 +465,8 @@ impl Versioned {
     ///
     /// # Errors
     ///
-    /// [`ExtensionError::UnknownExtensionSchema`], naming the extension where the header got far enough to
-    /// say which one it is.
+    /// [`ExtensionError::UnknownExtensionSchema`], naming the extension where the header got far
+    /// enough to say which one it is.
     fn readable(self) -> Result<()> {
         if self.schema > SCHEMA {
             return Err(Error::Extension(ExtensionError::UnknownExtensionSchema {
@@ -549,10 +549,11 @@ impl From<&ExtensionManifest> for Raw {
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionManifest`] for a parse failure; [`ExtensionError::UnknownExtensionSchema`] for a newer
-/// format; [`ExtensionError::ExtensionTableUnexpected`] and [`ExtensionError::ExtensionTableMissing`] where the tables
-/// do not match `kind`; [`ExtensionError::ExtensionField`] for a field the format refuses;
-/// [`ExtensionError::ExtensionIdTaken`] for an id a compiled-in recipe already claims.
+/// [`ExtensionError::ExtensionManifest`] for a parse failure;
+/// [`ExtensionError::UnknownExtensionSchema`] for a newer format;
+/// [`ExtensionError::ExtensionTableUnexpected`] and [`ExtensionError::ExtensionTableMissing`] where
+/// the tables do not match `kind`; [`ExtensionError::ExtensionField`] for a field the format
+/// refuses; [`ExtensionError::ExtensionIdTaken`] for an id a compiled-in recipe already claims.
 pub fn read(path: &Path, text: &str) -> Result<ExtensionManifest> {
     let failed = |source: toml::de::Error| {
         Error::Extension(ExtensionError::ExtensionManifest {
@@ -576,8 +577,8 @@ pub fn read(path: &Path, text: &str) -> Result<ExtensionManifest> {
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionEntry`] when the entry is not a manifest at all, and everything [`read`]
-/// reports about one that is.
+/// [`ExtensionError::ExtensionEntry`] when the entry is not a manifest at all, and everything
+/// [`read`] reports about one that is.
 pub fn read_value(entry: serde_json::Value) -> Result<ExtensionManifest> {
     let failed = |source: serde_json::Error| {
         Error::Extension(ExtensionError::ExtensionEntry {

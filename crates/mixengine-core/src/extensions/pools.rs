@@ -81,8 +81,8 @@ pub fn id(extension: &ExtensionId) -> Result<ServiceId> {
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionField`] for an id with no possible pool, and [`Error::Database`] when the
-/// table cannot be read.
+/// [`ExtensionError::ExtensionField`] for an id with no possible pool, and [`Error::Database`] when
+/// the table cannot be read.
 pub async fn of(store: &Store, extension: &ExtensionId) -> Result<Option<ServiceId>> {
     let wanted = id(extension)?;
     let column = wanted.as_str();

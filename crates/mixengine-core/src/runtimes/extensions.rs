@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 
 use mixengine_proto::{PackageVersion, RuntimeKind};
 
+use crate::RuntimeError;
 use crate::{Error, Paths, Result, Store};
 
 /// Whether an extension can be turned off at all.
@@ -175,13 +176,11 @@ impl State {
     ///
     /// # Errors
     ///
-    /// [`RuntimeError::ExtensionCompiledIn`] for a name this build links in, and [`Error::NotFound`] for a
-    /// name it has never heard of.
-    ///
-    /// [`RuntimeError::ExtensionCompiledIn`]: crate::RuntimeError::ExtensionCompiledIn
+    /// [`RuntimeError::ExtensionCompiledIn`] for a name this build links in, and
+    /// [`Error::NotFound`] for a name it has never heard of.
     pub fn decide(&self, name: &str, enabled: bool) -> Result<BTreeMap<String, bool>> {
         if self.offered.compiled_in.iter().any(|linked| linked == name) {
-            return Err(Error::Runtime(crate::RuntimeError::ExtensionCompiledIn {
+            return Err(Error::Runtime(RuntimeError::ExtensionCompiledIn {
                 kind: self.kind,
                 version: self.version.clone(),
                 name: name.to_owned(),
@@ -411,11 +410,9 @@ impl State {
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when that version is not installed, [`RuntimeError::UnreadableRuntimeRow`] when
-/// either JSON column holds something this build cannot read, and [`Error::Database`] when the table
-/// cannot be read.
-///
-/// [`RuntimeError::UnreadableRuntimeRow`]: crate::RuntimeError::UnreadableRuntimeRow
+/// [`Error::NotFound`] when that version is not installed, [`RuntimeError::UnreadableRuntimeRow`]
+/// when either JSON column holds something this build cannot read, and [`Error::Database`] when the
+/// table cannot be read.
 pub async fn state(store: &Store, kind: RuntimeKind, version: &PackageVersion) -> Result<State> {
     let (kind_column, version_column) = (kind.as_str(), version.as_str());
 
@@ -434,7 +431,7 @@ pub async fn state(store: &Store, kind: RuntimeKind, version: &PackageVersion) -
     })?;
 
     let unreadable = |column: &'static str, value: &str| {
-        Error::Runtime(crate::RuntimeError::UnreadableRuntimeRow {
+        Error::Runtime(RuntimeError::UnreadableRuntimeRow {
             column,
             value: value.to_owned(),
         })
@@ -466,9 +463,9 @@ pub async fn state(store: &Store, kind: RuntimeKind, version: &PackageVersion) -
 ///
 /// # Errors
 ///
-/// Whatever reading the `extensions` table reports, and [`ExtensionError::ExtensionField`] for a value whose
-/// placeholders cannot be rendered — which is a manifest that was installed and then could not be
-/// applied, so it is reported rather than skipped.
+/// Whatever reading the `extensions` table reports, and [`ExtensionError::ExtensionField`] for a
+/// value whose placeholders cannot be rendered — which is a manifest that was installed and then
+/// could not be applied, so it is reported rather than skipped.
 ///
 /// [`ExtensionError::ExtensionField`]: crate::ExtensionError::ExtensionField
 async fn additions(store: &Store, kind: RuntimeKind) -> Result<Vec<IniAddition>> {
@@ -594,8 +591,6 @@ pub async fn render(paths: &Paths, state: &State) -> Result<bool> {
 ///
 /// [`RuntimeError::ExtensionCompiledIn`], [`Error::NotFound`] for an unknown name or an uninstalled
 /// version, and [`Error::Database`] when the row cannot be written.
-///
-/// [`RuntimeError::ExtensionCompiledIn`]: crate::RuntimeError::ExtensionCompiledIn
 pub async fn choose(
     store: &Store,
     kind: RuntimeKind,
@@ -908,7 +903,7 @@ mod tests {
         assert!(
             matches!(
                 error,
-                Error::Runtime(crate::RuntimeError::ExtensionCompiledIn { .. })
+                Error::Runtime(RuntimeError::ExtensionCompiledIn { .. })
             ),
             "{error:?}"
         );
@@ -1164,7 +1159,7 @@ mod tests {
         assert!(
             matches!(
                 refused,
-                Error::Runtime(crate::RuntimeError::ExtensionCompiledIn { .. })
+                Error::Runtime(RuntimeError::ExtensionCompiledIn { .. })
             ),
             "{refused:?}"
         );

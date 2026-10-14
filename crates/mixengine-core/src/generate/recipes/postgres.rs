@@ -388,9 +388,9 @@ impl Recipe for Postgres {
     ///
     /// # Errors
     ///
-    /// [`ServiceError::ServiceProvidesNothing`] for an install publishing none of the four commands this
-    /// names, and [`ServiceError::SettingValue`] for a row with no port.
-    /// A backend per connection, so the count is the thing this server is actually spending.
+    /// [`ServiceError::ServiceProvidesNothing`] for an install publishing none of the four commands
+    /// this names, and [`ServiceError::SettingValue`] for a row with no port. A backend per
+    /// connection, so the count is the thing this server is actually spending.
     ///
     /// `pg_stat_database` holds the transaction counters and is a table — reachable only by
     /// connecting as a role, which is the same refusal MariaDB's note here records.
@@ -611,7 +611,8 @@ impl Recipe for Postgres {
 ///
 /// # Errors
 ///
-/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel accepts.
+/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel
+/// accepts.
 fn socket_directory(context: &Context) -> Result<PathBuf> {
     let directory = context.run().to_path_buf();
     let port = context.port().unwrap_or(u16::MAX);
@@ -626,10 +627,10 @@ fn socket_directory(context: &Context) -> Result<PathBuf> {
 ///
 /// # Errors
 ///
-/// [`ServiceError::SettingValue`] when the row carries no port. A database nothing can be pointed at is not
-/// a database anybody can use, and the rendered file would say `port = none` — so this is refused
-/// here rather than discovered by a server that will not start.
-/// The table the last provisioning step makes and drops to prove the role can write to `public`.
+/// [`ServiceError::SettingValue`] when the row carries no port. A database nothing can be pointed
+/// at is not a database anybody can use, and the rendered file would say `port = none` — so this is
+/// refused here rather than discovered by a server that will not start. The table the last
+/// provisioning step makes and drops to prove the role can write to `public`.
 const CHECK_TABLE: &str = "mixengine_check";
 
 /// How long a statement against a running server gets — roadmap task **T77a**.

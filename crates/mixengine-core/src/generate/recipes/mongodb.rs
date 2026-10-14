@@ -209,8 +209,8 @@ impl Recipe for Mongodb {
 ///
 /// # Errors
 ///
-/// [`ServiceError::SettingValue`] for a bind address that is not a loopback address — including one that
-/// does not parse, which is refused rather than guessed at — and for a row with no port.
+/// [`ServiceError::SettingValue`] for a bind address that is not a loopback address — including one
+/// that does not parse, which is refused rather than guessed at — and for a row with no port.
 fn address(context: &Context) -> Result<SocketAddr> {
     let service = context.service().as_str().to_owned();
 

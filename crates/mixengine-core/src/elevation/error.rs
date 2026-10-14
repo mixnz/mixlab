@@ -11,13 +11,14 @@ use std::path::PathBuf;
 pub enum ElevationError {
     /// `mixengine-elevate` is neither installed nor beside the program that went looking for it.
     ///
-    /// [`RuntimeError::ShimMissing`]'s sibling, but **not the same guarantee**: the shim always ships
-    /// beside `mixengined`, while the elevate helper only does on some releases (the NSIS installer,
-    /// the portable archives) — a `.pkg`, a `.deb` or an `.rpm` writes it straight to this system's
-    /// protected directory instead, so once that installed copy is gone (a `mix uninstall`, say)
-    /// there is nothing beside the program to fall back to either. It is **not** a reason to refuse
-    /// to start — a daemon with no helper anywhere supervises every service in this home perfectly
-    /// well — and it is answered at `elevation.grant`, where somebody can act on it.
+    /// [`RuntimeError::ShimMissing`]'s sibling, but **not the same guarantee**: the shim always
+    /// ships beside `mixengined`, while the elevate helper only does on some releases (the NSIS
+    /// installer, the portable archives) — a `.pkg`, a `.deb` or an `.rpm` writes it straight to
+    /// this system's protected directory instead, so once that installed copy is gone (a `mix
+    /// uninstall`, say) there is nothing beside the program to fall back to either. It is **not** a
+    /// reason to refuse to start — a daemon with no helper anywhere supervises every service in
+    /// this home perfectly well — and it is answered at `elevation.grant`, where somebody can act
+    /// on it.
     ///
     /// [`RuntimeError::ShimMissing`]: crate::RuntimeError::ShimMissing
     #[error("the elevation helper is missing from {}", path.display())]
@@ -113,7 +114,8 @@ pub enum ElevationError {
     },
 }
 
-/// `": <said>"`, or nothing — the tail [`ElevationError::ElevateReportMissing`] gains when the helper said why.
+/// `": <said>"`, or nothing — the tail [`ElevationError::ElevateReportMissing`] gains when the
+/// helper said why.
 fn said_suffix(said: Option<&str>) -> String {
     said.map_or_else(String::new, |said| format!(": {said}"))
 }

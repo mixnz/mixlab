@@ -25,6 +25,7 @@ use mixengine_proto::privileged::HelperStamp;
 
 use super::feed::HelperArtifact;
 use crate::InstallError;
+use crate::UpdateError;
 use crate::install::Installer;
 use crate::{Error, Result};
 
@@ -46,23 +47,19 @@ const FETCH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 ///
 /// # Errors
 ///
-/// [`UpdateError::HelperSignature`] when it is not ours, [`UpdateError::HelperStampUnreadable`] when the signed
-/// trusted comment is not the grammar this build reads, and [`UpdateError::HelperNotForThisMachine`] when
-/// it is a correctly signed build for somewhere else.
-///
-/// [`UpdateError::HelperNotForThisMachine`]: crate::UpdateError::HelperNotForThisMachine
-/// [`UpdateError::HelperSignature`]: crate::UpdateError::HelperSignature
-/// [`UpdateError::HelperStampUnreadable`]: crate::UpdateError::HelperStampUnreadable
+/// [`UpdateError::HelperSignature`] when it is not ours, [`UpdateError::HelperStampUnreadable`]
+/// when the signed trusted comment is not the grammar this build reads, and
+/// [`UpdateError::HelperNotForThisMachine`] when it is a correctly signed build for somewhere else.
 pub fn verify(bytes: &[u8], signature: &str, public_key: &str) -> Result<HelperStamp> {
     let key = minisign_verify::PublicKey::from_base64(public_key).map_err(|source| {
-        Error::Update(crate::UpdateError::HelperSignature {
+        Error::Update(UpdateError::HelperSignature {
             what: "this build's update key".to_owned(),
             source: Box::new(source),
         })
     })?;
 
     let decoded = minisign_verify::Signature::decode(signature).map_err(|source| {
-        Error::Update(crate::UpdateError::HelperSignature {
+        Error::Update(UpdateError::HelperSignature {
             what: "the signature published beside it".to_owned(),
             source: Box::new(source),
         })
@@ -72,20 +69,20 @@ pub fn verify(bytes: &[u8], signature: &str, public_key: &str) -> Result<HelperS
     // everything MixEngine publishes is the modern pre-hashed form. The call covers the trusted
     // comment as well as the bytes, which is what makes the stamp below a fact rather than a claim.
     key.verify(bytes, &decoded, false).map_err(|source| {
-        Error::Update(crate::UpdateError::HelperSignature {
+        Error::Update(UpdateError::HelperSignature {
             what: "the privileged helper this release publishes".to_owned(),
             source: Box::new(source),
         })
     })?;
 
     let stamp = HelperStamp::parse(decoded.trusted_comment()).ok_or_else(|| {
-        Error::Update(crate::UpdateError::HelperStampUnreadable {
+        Error::Update(UpdateError::HelperStampUnreadable {
             comment: decoded.trusted_comment().to_owned(),
         })
     })?;
 
     if !stamp.is_for_host() {
-        return Err(Error::Update(crate::UpdateError::HelperNotForThisMachine {
+        return Err(Error::Update(UpdateError::HelperNotForThisMachine {
             os: stamp.os,
             arch: stamp.arch,
         }));
@@ -107,8 +104,8 @@ pub fn verify(bytes: &[u8], signature: &str, public_key: &str) -> Result<HelperS
 ///
 /// # Errors
 ///
-/// [`InstallError::ArtifactTransport`] for either fetch, [`Error::Io`] for the directory and the two
-/// files, and whatever [`verify`] refused.
+/// [`InstallError::ArtifactTransport`] for either fetch, [`Error::Io`] for the directory and the
+/// two files, and whatever [`verify`] refused.
 pub async fn stage(
     installer: &Installer,
     artifact: &HelperArtifact,
@@ -122,7 +119,7 @@ pub async fn stage(
     let bytes = fetch(http, &artifact.url).await?;
     let signature = fetch(http, &format!("{}{SIGNATURE_SUFFIX}", artifact.url)).await?;
     let signature = String::from_utf8(signature).map_err(|_| {
-        Error::Update(crate::UpdateError::HelperStampUnreadable {
+        Error::Update(UpdateError::HelperStampUnreadable {
             comment: "the file published beside it is not a minisign signature".to_owned(),
         })
     })?;
@@ -261,10 +258,7 @@ mod tests {
             verify(bytes, &signature, &signer.public_key()).expect_err("somebody else's signature");
 
         assert!(
-            matches!(
-                error,
-                Error::Update(crate::UpdateError::HelperSignature { .. })
-            ),
+            matches!(error, Error::Update(UpdateError::HelperSignature { .. })),
             "{error:?}"
         );
     }
@@ -278,10 +272,7 @@ mod tests {
             .expect_err("bytes that are not the ones signed");
 
         assert!(
-            matches!(
-                error,
-                Error::Update(crate::UpdateError::HelperSignature { .. })
-            ),
+            matches!(error, Error::Update(UpdateError::HelperSignature { .. })),
             "{error:?}"
         );
     }
@@ -297,7 +288,7 @@ mod tests {
             verify(bytes, &signature, &signer.public_key()).expect_err("another machine's build");
 
         assert!(
-            matches!(&error, Error::Update(crate::UpdateError::HelperNotForThisMachine { os, .. }) if os == "plan9"),
+            matches!(&error, Error::Update(UpdateError::HelperNotForThisMachine { os, .. }) if os == "plan9"),
             "{error:?}"
         );
     }
@@ -314,7 +305,7 @@ mod tests {
         assert!(
             matches!(
                 error,
-                Error::Update(crate::UpdateError::HelperStampUnreadable { .. })
+                Error::Update(UpdateError::HelperStampUnreadable { .. })
             ),
             "{error:?}"
         );
@@ -366,7 +357,7 @@ mod tests {
             .expect_err("a key that will not parse");
 
         assert!(
-            matches!(&error, Error::Update(crate::UpdateError::HelperSignature { what, .. }) if what.contains("update key")),
+            matches!(&error, Error::Update(UpdateError::HelperSignature { what, .. }) if what.contains("update key")),
             "{error:?}"
         );
     }

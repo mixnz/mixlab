@@ -9,6 +9,7 @@ use mixengine_proto::Error;
 
 use crate::error::ToWire as _;
 use crate::jobs::JobHandle;
+use mixengine_core::RuntimeError;
 
 /// An install found its directory already there: record it when its own marker names this install
 /// with the hash the index offers now — spec D2.
@@ -20,8 +21,6 @@ use crate::jobs::JobHandle;
 ///
 /// The wire form of [`RuntimeError::UnrecordedInstall`] when there is no marker, when it
 /// names another install, or when its hash is not the one offered; and the errors of recording it.
-///
-/// [`RuntimeError::UnrecordedInstall`]: mixengine_core::RuntimeError::UnrecordedInstall
 pub(crate) async fn claim_offered(
     store: &Store,
     found: &Found,
@@ -32,13 +31,13 @@ pub(crate) async fn claim_offered(
         .is_some_and(|marker| marker.names(&found.subject) && marker.sha256() == offered_sha256);
 
     if !offered {
-        return Err(mixengine_core::Error::Runtime(
-            mixengine_core::RuntimeError::UnrecordedInstall {
+        return Err(
+            mixengine_core::Error::Runtime(RuntimeError::UnrecordedInstall {
                 path: found.path.clone(),
                 reason: "its marker is missing or names another build".to_owned(),
-            },
-        )
-        .to_wire());
+            })
+            .to_wire(),
+        );
     }
 
     let claimed = walk::claim(store, found, &Evidence::Marker)
@@ -115,8 +114,6 @@ fn smoke_for(
 /// `not_found` when nothing is on disk there; the wire form of
 /// [`RuntimeError::UnrecordedInstall`] when neither check passes; the errors of reading the
 /// index and of recording.
-///
-/// [`RuntimeError::UnrecordedInstall`]: mixengine_core::RuntimeError::UnrecordedInstall
 pub(crate) async fn by_hand(
     store: &Store,
     found: &Found,
@@ -142,9 +139,7 @@ pub(crate) async fn by_hand(
 
     match walk::claim(store, found, &Evidence::Marker).await {
         Ok(claimed) => return Ok(claimed),
-        Err(mixengine_core::Error::Runtime(mixengine_core::RuntimeError::UnrecordedInstall {
-            ..
-        })) => {}
+        Err(mixengine_core::Error::Runtime(RuntimeError::UnrecordedInstall { .. })) => {}
         Err(error) => return Err(error.to_wire()),
     }
 

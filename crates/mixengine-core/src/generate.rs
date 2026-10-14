@@ -598,8 +598,8 @@ impl Generator {
     ///
     /// # Errors
     ///
-    /// [`ServiceError::ConfigRejected`] carrying what the front end said, and whatever rendering this
-    /// home's declarations costs.
+    /// [`ServiceError::ConfigRejected`] carrying what the front end said, and whatever rendering
+    /// this home's declarations costs.
     pub async fn would_serve(&self, pending: &crate::extensions::store::Installed) -> Result<()> {
         // An extension that adds nothing to the front end changes nothing about its configuration,
         // and judging it would put a process launch into every `extension.install` — including
@@ -732,9 +732,9 @@ impl Generator {
     ///
     /// # Errors
     ///
-    /// [`ExtensionError::ExtensionField`] for a fragment whose placeholders cannot be rendered, naming
-    /// `recipe.front_end[<n>]` — a manifest that was installed and can no longer be applied is
-    /// reported rather than skipped, which is the rule `php_ini` already follows.
+    /// [`ExtensionError::ExtensionField`] for a fragment whose placeholders cannot be rendered,
+    /// naming `recipe.front_end[<n>]` — a manifest that was installed and can no longer be applied
+    /// is reported rather than skipped, which is the rule `php_ini` already follows.
     ///
     /// [`ExtensionError::ExtensionField`]: crate::ExtensionError::ExtensionField
     fn fragments<'a>(

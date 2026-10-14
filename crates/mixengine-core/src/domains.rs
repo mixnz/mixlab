@@ -14,6 +14,7 @@
 
 use mixengine_proto::domains::{MANAGED_TLDS, domain_syntax};
 
+use crate::ProjectError;
 use crate::{Error, Result};
 
 /// The TLD a site gets when nobody says otherwise.
@@ -28,17 +29,14 @@ const RISKY_TLD: &str = "local";
 ///
 /// # Errors
 ///
-/// [`ProjectError::InvalidDomain`] for a name that is not one at all; [`ProjectError::UnmanagedTld`] for a public
-/// suffix; [`ProjectError::RiskyTld`] for `.local` without `accept_risky_tld`.
-///
-/// [`ProjectError::InvalidDomain`]: crate::ProjectError::InvalidDomain
-/// [`ProjectError::RiskyTld`]: crate::ProjectError::RiskyTld
-/// [`ProjectError::UnmanagedTld`]: crate::ProjectError::UnmanagedTld
+/// [`ProjectError::InvalidDomain`] for a name that is not one at all;
+/// [`ProjectError::UnmanagedTld`] for a public suffix; [`ProjectError::RiskyTld`] for `.local`
+/// without `accept_risky_tld`.
 pub fn normalised(domain: &str, accept_risky_tld: bool) -> Result<String> {
     let name = domain.trim().to_ascii_lowercase();
 
     if let Some(because) = domain_syntax(&name) {
-        return Err(Error::Project(crate::ProjectError::InvalidDomain {
+        return Err(Error::Project(ProjectError::InvalidDomain {
             domain: domain.to_owned(),
             because,
         }));
@@ -47,14 +45,14 @@ pub fn normalised(domain: &str, accept_risky_tld: bool) -> Result<String> {
     let tld = name.rsplit('.').next().unwrap_or_default().to_owned();
 
     if !MANAGED_TLDS.contains(&tld.as_str()) {
-        return Err(Error::Project(crate::ProjectError::UnmanagedTld {
+        return Err(Error::Project(ProjectError::UnmanagedTld {
             domain: domain.to_owned(),
             tld,
         }));
     }
 
     if tld == RISKY_TLD && !accept_risky_tld {
-        return Err(Error::Project(crate::ProjectError::RiskyTld {
+        return Err(Error::Project(ProjectError::RiskyTld {
             domain: domain.to_owned(),
         }));
     }
@@ -90,11 +88,9 @@ pub fn slug(name: &str) -> Option<String> {
 /// # Errors
 ///
 /// [`ProjectError::InvalidDomain`] for a name with no ASCII in it to slug.
-///
-/// [`ProjectError::InvalidDomain`]: crate::ProjectError::InvalidDomain
 pub fn default_for(project_name: &str) -> Result<String> {
     let slug = slug(project_name).ok_or_else(|| {
-        Error::Project(crate::ProjectError::InvalidDomain {
+        Error::Project(ProjectError::InvalidDomain {
             domain: project_name.to_owned(),
             because: "there is nothing in the project's name a domain label can be made of",
         })
@@ -132,18 +128,15 @@ pub fn after_adding(current: &[String], domain: &str) -> Vec<String> {
 /// [`ProjectError::LastDomain`] when it is the only one, which is the "at least one" invariant
 /// `0001_initial.sql` records as this layer's to uphold because SQLite cannot express it; and
 /// [`ProjectError::PrimaryDomain`] when it is the head of the list.
-///
-/// [`ProjectError::LastDomain`]: crate::ProjectError::LastDomain
-/// [`ProjectError::PrimaryDomain`]: crate::ProjectError::PrimaryDomain
 pub fn after_removing(current: &[String], domain: &str) -> Result<Vec<String>> {
     if current.len() <= 1 {
-        return Err(Error::Project(crate::ProjectError::LastDomain {
+        return Err(Error::Project(ProjectError::LastDomain {
             domain: domain.to_owned(),
         }));
     }
 
     if current.first().is_some_and(|primary| primary == domain) {
-        return Err(Error::Project(crate::ProjectError::PrimaryDomain {
+        return Err(Error::Project(ProjectError::PrimaryDomain {
             domain: domain.to_owned(),
         }));
     }
@@ -186,7 +179,7 @@ mod tests {
             assert!(
                 matches!(
                     normalised(wrong, false),
-                    Err(Error::Project(crate::ProjectError::InvalidDomain { .. }))
+                    Err(Error::Project(ProjectError::InvalidDomain { .. }))
                 ),
                 "{wrong} was accepted"
             );
@@ -196,7 +189,7 @@ mod tests {
         let long_label = format!("{}.test", "a".repeat(64));
         assert!(matches!(
             normalised(&long_label, false),
-            Err(Error::Project(crate::ProjectError::InvalidDomain { .. }))
+            Err(Error::Project(ProjectError::InvalidDomain { .. }))
         ));
     }
 
@@ -206,7 +199,7 @@ mod tests {
         for public in ["blog.dev", "blog.app", "blog.com"] {
             let error = normalised(public, false).expect_err("a public suffix");
             assert!(
-                matches!(&error, Error::Project(crate::ProjectError::UnmanagedTld { tld, .. }) if !tld.is_empty()),
+                matches!(&error, Error::Project(ProjectError::UnmanagedTld { tld, .. }) if !tld.is_empty()),
                 "{error:?}"
             );
         }
@@ -217,7 +210,7 @@ mod tests {
     fn dot_local_needs_saying_so_out_loud() {
         assert!(matches!(
             normalised("blog.local", false),
-            Err(Error::Project(crate::ProjectError::RiskyTld { .. }))
+            Err(Error::Project(ProjectError::RiskyTld { .. }))
         ));
         assert_eq!(normalised("blog.local", true).unwrap(), "blog.local");
     }
@@ -238,7 +231,7 @@ mod tests {
         assert_eq!(default_for("My Shop").unwrap(), "my-shop.test");
         assert!(matches!(
             default_for("日本語"),
-            Err(Error::Project(crate::ProjectError::InvalidDomain { .. }))
+            Err(Error::Project(ProjectError::InvalidDomain { .. }))
         ));
     }
 
@@ -269,10 +262,7 @@ mod tests {
             .expect_err("a site needs a domain");
 
         assert!(
-            matches!(
-                refused,
-                Error::Project(crate::ProjectError::LastDomain { .. })
-            ),
+            matches!(refused, Error::Project(ProjectError::LastDomain { .. })),
             "{refused:?}"
         );
     }
@@ -286,10 +276,7 @@ mod tests {
         let refused = after_removing(&current, "blog.test").expect_err("the primary stays");
 
         assert!(
-            matches!(
-                refused,
-                Error::Project(crate::ProjectError::PrimaryDomain { .. })
-            ),
+            matches!(refused, Error::Project(ProjectError::PrimaryDomain { .. })),
             "{refused:?}"
         );
     }

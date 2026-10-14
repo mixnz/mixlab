@@ -50,9 +50,9 @@ const DEFAULT_INSTANCE: &str = "main";
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionNoDatabase`] when this machine declares none of them — a refusal *before* the
-/// download, for [`RuntimeError::RuntimeUnresolved`]'s reason. [`Error::Database`] when the tables cannot
-/// be read.
+/// [`ExtensionError::ExtensionNoDatabase`] when this machine declares none of them — a refusal
+/// *before* the download, for [`RuntimeError::RuntimeUnresolved`]'s reason. [`Error::Database`]
+/// when the tables cannot be read.
 ///
 /// [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
 pub async fn resolve(store: &Store, id: &str, engines: &[String]) -> Result<Endpoint> {

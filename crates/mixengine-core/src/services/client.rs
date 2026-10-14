@@ -39,6 +39,7 @@ use std::path::PathBuf;
 
 use mixengine_proto::{PackageVersion, ServiceId, VersionError};
 
+use crate::RuntimeError;
 use crate::ServiceError;
 use crate::generate::recipe::Upstream;
 use crate::{Error, Result, Store};
@@ -77,8 +78,8 @@ impl Chosen {
     ///
     /// # Errors
     ///
-    /// [`ServiceError::PackageProvidesNothing`], naming the command and listing what this version does
-    /// publish.
+    /// [`ServiceError::PackageProvidesNothing`], naming the command and listing what this version
+    /// does publish.
     pub fn program(&self, package: &str, executable: &str) -> Result<PathBuf> {
         self.provides
             .get(executable)
@@ -132,10 +133,8 @@ pub fn override_env(package: &str) -> String {
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the rows cannot be read, and [`RuntimeError::UnreadablePackageRow`] for a row
-/// this build cannot parse. A package that is not installed is not an error.
-///
-/// [`RuntimeError::UnreadablePackageRow`]: crate::RuntimeError::UnreadablePackageRow
+/// [`Error::Database`] when the rows cannot be read, and [`RuntimeError::UnreadablePackageRow`] for
+/// a row this build cannot parse. A package that is not installed is not an error.
 pub async fn claims(
     store: &Store,
     catalogue: &crate::generate::Catalogue,
@@ -241,10 +240,8 @@ struct Instance {
 ///
 /// [`Error::NotFound`] when `asked` names no instance of this package, and when nothing of this
 /// package is installed at all. [`Error::Database`] when the rows cannot be read, and
-/// [`RuntimeError::UnreadablePackageRow`] when a recorded version or service id is not one this build can
-/// parse.
-///
-/// [`RuntimeError::UnreadablePackageRow`]: crate::RuntimeError::UnreadablePackageRow
+/// [`RuntimeError::UnreadablePackageRow`] when a recorded version or service id is not one this
+/// build can parse.
 pub async fn chosen(
     store: &Store,
     package: &str,
@@ -339,7 +336,7 @@ fn resolved(instance: Option<Instance>, install: &Install) -> Result<Chosen> {
     });
 
     let unreadable = |column: &'static str, value: &str| {
-        Error::Runtime(crate::RuntimeError::UnreadablePackageRow {
+        Error::Runtime(RuntimeError::UnreadablePackageRow {
             column,
             value: value.to_owned(),
         })
@@ -402,7 +399,7 @@ async fn newest(store: &Store, package: &str) -> Result<Install> {
     for row in rows {
         let version = PackageVersion::parse(row.version.clone()).map_err(
             |VersionError { value, .. }| {
-                Error::Runtime(crate::RuntimeError::UnreadablePackageRow {
+                Error::Runtime(RuntimeError::UnreadablePackageRow {
                     column: "version",
                     value,
                 })

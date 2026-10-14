@@ -16,6 +16,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use mixengine_core::InstallError;
+use mixengine_core::RuntimeError;
 use mixengine_core::index::{Arch, Artifact, Extensions, Os, Requires};
 use mixengine_core::install::{Installed, Installer, SmokeTest, Watcher};
 use mixengine_testkit::{FakePackage, MockRegistry, Packed, Packing};
@@ -545,7 +546,7 @@ async fn installing_over_a_version_that_is_already_there_is_refused() {
     assert!(
         matches!(
             *refusal,
-            mixengine_core::Error::Runtime(mixengine_core::RuntimeError::AlreadyInstalled { .. })
+            mixengine_core::Error::Runtime(RuntimeError::AlreadyInstalled { .. })
         ),
         "{refusal:?}"
     );

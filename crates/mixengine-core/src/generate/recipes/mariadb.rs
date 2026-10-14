@@ -483,8 +483,8 @@ impl Recipe for Mariadb {
 ///
 /// # Errors
 ///
-/// [`ServiceError::ServiceProvidesNothing`] for an install missing one of the commands this needs, and
-/// [`ServiceError::SettingValue`] for a credential this recipe will not put in a SQL literal.
+/// [`ServiceError::ServiceProvidesNothing`] for an install missing one of the commands this needs,
+/// and [`ServiceError::SettingValue`] for a credential this recipe will not put in a SQL literal.
 fn steps(context: &Context) -> Result<Vec<Step>> {
     let password = context.secret(ROOT);
 
@@ -761,7 +761,8 @@ fn ping(addr: SocketAddr) -> Vec<String> {
 ///
 /// # Errors
 ///
-/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel accepts.
+/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel
+/// accepts.
 fn socket_path(context: &Context) -> Result<PathBuf> {
     let socket = context
         .run()
@@ -776,9 +777,9 @@ fn socket_path(context: &Context) -> Result<PathBuf> {
 ///
 /// # Errors
 ///
-/// [`ServiceError::SettingValue`] when the row carries no port. A database that listens on nothing a client
-/// can be pointed at is not a database anybody can use, and the rendered file would say `port =
-/// none` — so this is refused here rather than discovered by a server that will not start.
+/// [`ServiceError::SettingValue`] when the row carries no port. A database that listens on nothing
+/// a client can be pointed at is not a database anybody can use, and the rendered file would say
+/// `port = none` — so this is refused here rather than discovered by a server that will not start.
 fn address(context: &Context) -> Result<SocketAddr> {
     let port = context.port().ok_or_else(|| {
         Error::Service(ServiceError::SettingValue {

@@ -210,9 +210,10 @@ impl Context {
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionField`] naming the field and the placeholder. An unknown one is refused rather
-/// than left standing, because a `{home_dir}` that survived into an argument would be a literal
-/// brace handed to a program, which is a bug reported by whatever that program does with it.
+/// [`ExtensionError::ExtensionField`] naming the field and the placeholder. An unknown one is
+/// refused rather than left standing, because a `{home_dir}` that survived into an argument would
+/// be a literal brace handed to a program, which is a bug reported by whatever that program does
+/// with it.
 pub fn text(id: &ExtensionId, field: &str, template: &str, context: &Context) -> Result<String> {
     spelled(id, field, template, context, Destination::Field)
 }
@@ -247,11 +248,11 @@ fn unanswered(name: &str) -> String {
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionField`] naming the field, for a `{db_*}` or `{secret}` this context cannot
-/// answer. For four of the five that is a context built without them rather than a manifest that is
-/// wrong, which is why the message says what this home has rather than what the author should have
-/// written; `{db_password_env}` is the exception and names the field that supplies it, because that
-/// field is a manifest's and not a home's.
+/// [`ExtensionError::ExtensionField`] naming the field, for a `{db_*}` or `{secret}` this context
+/// cannot answer. For four of the five that is a context built without them rather than a manifest
+/// that is wrong, which is why the message says what this home has rather than what the author
+/// should have written; `{db_password_env}` is the exception and names the field that supplies it,
+/// because that field is a manifest's and not a home's.
 pub fn php_source(
     id: &ExtensionId,
     field: &str,
@@ -455,8 +456,8 @@ fn copy(rendered: &mut String, literal: &str, in_path: &mut bool, destination: D
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionField`] naming the field, for a path that starts somewhere else or climbs out
-/// with `..`.
+/// [`ExtensionError::ExtensionField`] naming the field, for a path that starts somewhere else or
+/// climbs out with `..`.
 pub fn rooted(
     id: &ExtensionId,
     field: &str,
@@ -530,7 +531,8 @@ fn names_an_address(template: &str) -> bool {
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionField`] naming the field, for a written-out address or an unknown placeholder.
+/// [`ExtensionError::ExtensionField`] naming the field, for a written-out address or an unknown
+/// placeholder.
 pub fn value(id: &ExtensionId, field: &str, template: &str, context: &Context) -> Result<String> {
     no_address(id, field, template)?;
 
@@ -608,12 +610,12 @@ fn url(id: &ExtensionId, field: &str, template: &str, context: &Context) -> Resu
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionField`] for anything the format refuses — an address written out, a path that
-/// does not grow from a placeholder, an unknown placeholder — and [`ExtensionError::ExtensionSpec`] where
-/// the rendering is a spec [`ServiceSpec`] will not accept, reported against the extension rather
-/// than against a spec nobody wrote. The rules above are stricter than most of what `validate`
-/// checks, so what reaches that second error is a `restart` policy the manifest is free to state
-/// and the supervisor is not free to run.
+/// [`ExtensionError::ExtensionField`] for anything the format refuses — an address written out, a
+/// path that does not grow from a placeholder, an unknown placeholder — and
+/// [`ExtensionError::ExtensionSpec`] where the rendering is a spec [`ServiceSpec`] will not accept,
+/// reported against the extension rather than against a spec nobody wrote. The rules above are
+/// stricter than most of what `validate` checks, so what reaches that second error is a `restart`
+/// policy the manifest is free to state and the supervisor is not free to run.
 pub fn service_spec(
     manifest: &ExtensionManifest,
     template: &ServiceTemplate,

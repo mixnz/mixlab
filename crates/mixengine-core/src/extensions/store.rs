@@ -233,8 +233,9 @@ pub async fn forget(store: &Store, id: &ExtensionId) -> Result<()> {
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the tables cannot be read, and [`ExtensionError::UnreadableExtensionRow`] when a
-/// row holds something this build cannot read back.
+/// [`Error::Database`] when the tables cannot be read, and
+/// [`ExtensionError::UnreadableExtensionRow`] when a row holds something this build cannot read
+/// back.
 pub async fn get(store: &Store, id: &ExtensionId) -> Result<Option<Installed>> {
     Ok(all(store)
         .await?

@@ -74,8 +74,8 @@ impl Format {
 /// # Errors
 ///
 /// [`InstallError::UnsafeArchiveEntry`] when an entry names a path outside `into`,
-/// [`InstallError::ArchiveUnreadable`] when the container or the compressor refuses what it was given, and
-/// [`Error::Io`] when the file cannot be opened.
+/// [`InstallError::ArchiveUnreadable`] when the container or the compressor refuses what it was
+/// given, and [`Error::Io`] when the file cannot be opened.
 pub(crate) fn extract(archive: &Path, format: Format, into: &Path) -> Result<()> {
     let file = std::fs::File::open(archive).map_err(|source| Error::Io {
         action: "open",

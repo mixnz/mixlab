@@ -168,8 +168,9 @@ impl Settings {
     /// # Errors
     ///
     /// [`ServiceError::UnreadableServiceDocument`] when the column does not hold a JSON object;
-    /// [`ServiceError::UnknownSetting`] when it names a key the recipe does not have, listing the ones it
-    /// does; and [`ServiceError::SettingType`] when a key it does have was given the wrong shape.
+    /// [`ServiceError::UnknownSetting`] when it names a key the recipe does not have, listing the
+    /// ones it does; and [`ServiceError::SettingType`] when a key it does have was given the wrong
+    /// shape.
     pub fn merge(
         declared: &'static [Setting],
         document: &str,

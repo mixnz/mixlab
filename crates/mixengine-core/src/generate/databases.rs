@@ -142,7 +142,8 @@ pub struct DatabaseAdmin {
 ///
 /// # Errors
 ///
-/// [`ServiceError::InvalidDatabaseName`] naming the rule that was broken, in the words the user is shown.
+/// [`ServiceError::InvalidDatabaseName`] naming the rule that was broken, in the words the user is
+/// shown.
 pub fn validated_identifier(name: &str) -> Result<String> {
     let refuse = |reason: &'static str| {
         Err(Error::Service(ServiceError::InvalidDatabaseName {

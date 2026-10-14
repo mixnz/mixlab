@@ -108,10 +108,10 @@ pub enum ServiceError {
 
     /// A `services` row holds a value this build cannot read back.
     ///
-    /// [`RuntimeError::UnreadableRuntimeRow`]'s sibling on the other table, and reached through the same
-    /// two doors: a database edited by hand, or a row written by a build that knew more than this
-    /// one. `id` has no `CHECK` that says it is a [`mixengine_proto::ServiceId`] and `port` none
-    /// that says it fits in sixteen bits, so the reader is the only thing that refuses.
+    /// [`RuntimeError::UnreadableRuntimeRow`]'s sibling on the other table, and reached through the
+    /// same two doors: a database edited by hand, or a row written by a build that knew more than
+    /// this one. `id` has no `CHECK` that says it is a [`mixengine_proto::ServiceId`] and `port`
+    /// none that says it fits in sixteen bits, so the reader is the only thing that refuses.
     ///
     /// [`RuntimeError::UnreadableRuntimeRow`]: crate::RuntimeError::UnreadableRuntimeRow
     #[error("the {column} of the service {service} is stored as {value}, which cannot be read")]
@@ -126,8 +126,8 @@ pub enum ServiceError {
 
     /// A `*_json` column of a `services` row does not hold the document it is supposed to.
     ///
-    /// The one thing SQLite cannot constrain, as at [`JobError::UnreadableJobRow`]: the column is TEXT,
-    /// and no `CHECK` can say it is an object of overrides or a set of resource limits.
+    /// The one thing SQLite cannot constrain, as at [`JobError::UnreadableJobRow`]: the column is
+    /// TEXT, and no `CHECK` can say it is an object of overrides or a set of resource limits.
     ///
     /// [`JobError::UnreadableJobRow`]: crate::JobError::UnreadableJobRow
     #[error("the {column} of the service {service} is not a document this build can read")]
@@ -313,11 +313,11 @@ pub enum ServiceError {
 
     /// A recipe asked the install behind its service for an executable it does not publish.
     ///
-    /// Distinct from [`RuntimeError::RuntimeProvidesNothing`], which is the shim's question — *which file
-    /// is `php`* — asked of a runtime by kind and version. This one is asked by a **recipe**, of
-    /// whatever the service's row points at, and it names the service because that is what the
-    /// person reading has in their hand. The usual cause is an artifact packed without the SAPI the
-    /// recipe needs: a PHP whose `provides` has `php` and no `php-fpm`.
+    /// Distinct from [`RuntimeError::RuntimeProvidesNothing`], which is the shim's question —
+    /// *which file is `php`* — asked of a runtime by kind and version. This one is asked by a
+    /// **recipe**, of whatever the service's row points at, and it names the service because that
+    /// is what the person reading has in their hand. The usual cause is an artifact packed without
+    /// the SAPI the recipe needs: a PHP whose `provides` has `php` and no `php-fpm`.
     ///
     /// [`RuntimeError::RuntimeProvidesNothing`]: crate::RuntimeError::RuntimeProvidesNothing
     #[error(

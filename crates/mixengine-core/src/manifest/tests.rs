@@ -1,4 +1,5 @@
 use super::*;
+use crate::ProjectError;
 
 fn somewhere() -> tempfile::TempDir {
     tempfile::tempdir().expect("a temporary directory")
@@ -271,7 +272,7 @@ fn a_proxy_with_no_upstream_is_refused_by_the_definition() {
     let error = read(&at(home.path())).expect_err("a proxy with nowhere to go");
 
     assert!(
-        matches!(&error, Error::Project(crate::ProjectError::Manifest { path, .. }) if path.ends_with(FILE_NAME)),
+        matches!(&error, Error::Project(ProjectError::Manifest { path, .. }) if path.ends_with(FILE_NAME)),
         "{error:?}"
     );
 }
@@ -354,7 +355,7 @@ fn a_version_that_is_not_a_constraint_is_refused() {
 
     assert!(matches!(
         read(&at(home.path())),
-        Err(Error::Project(crate::ProjectError::Manifest { .. }))
+        Err(Error::Project(ProjectError::Manifest { .. }))
     ));
 }
 
@@ -423,7 +424,7 @@ fn a_manifest_that_does_not_parse_names_itself() {
         let error = read(&at(home.path())).expect_err("the manifest is wrong");
 
         assert!(
-            matches!(&error, Error::Project(crate::ProjectError::Manifest { path, .. }) if path.ends_with(FILE_NAME)),
+            matches!(&error, Error::Project(ProjectError::Manifest { path, .. }) if path.ends_with(FILE_NAME)),
             "{error:?} for {body:?}"
         );
     }
@@ -556,7 +557,7 @@ fn a_file_with_both_forms_is_refused() {
     let error = read(&at(home.path())).expect_err("two answers to one question");
 
     assert!(
-        matches!(&error, Error::Project(crate::ProjectError::Manifest { path, .. }) if path.ends_with(FILE_NAME)),
+        matches!(&error, Error::Project(ProjectError::Manifest { path, .. }) if path.ends_with(FILE_NAME)),
         "{error:?}"
     );
     assert!(format!("{error:?}").contains("[[sites]]"), "{error:?}");
@@ -603,7 +604,7 @@ fn a_services_entry_that_is_not_an_id_is_refused() {
 
     assert!(matches!(
         read(&at(home.path())),
-        Err(Error::Project(crate::ProjectError::Manifest { .. }))
+        Err(Error::Project(ProjectError::Manifest { .. }))
     ));
 }
 

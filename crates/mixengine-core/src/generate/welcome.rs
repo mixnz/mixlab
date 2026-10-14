@@ -175,8 +175,8 @@ fn where_files_go(doc_root: &str) -> String {
 ///
 /// # Errors
 ///
-/// [`crate::ServiceError::TemplateBroken`] naming the page: the template is this build's, so a refusal here
-/// is a bug of ours rather than a configuration a user can fix.
+/// [`crate::ServiceError::TemplateBroken`] naming the page: the template is this build's, so a
+/// refusal here is a bug of ours rather than a configuration a user can fix.
 pub fn render(service: &ServiceId, page: &WelcomePage<'_>) -> Result<String> {
     crate::generate::served::render(PAGE, "welcome/page.html", service, page)
 }

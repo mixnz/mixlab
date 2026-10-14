@@ -45,6 +45,7 @@ use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
+use mixengine_core::RuntimeError;
 use mixengine_core::config::PathOverrides;
 use mixengine_core::{Paths, Store, paths, resolve, runtimes, shims};
 use mixengine_platform::handover::{self, Handover};
@@ -932,24 +933,20 @@ fn explain(error: &dyn std::error::Error) -> String {
 /// same thing.
 fn hint_for(error: &mixengine_core::Error) -> Option<String> {
     match error {
-        mixengine_core::Error::Runtime(mixengine_core::RuntimeError::RuntimeUnresolved {
+        mixengine_core::Error::Runtime(RuntimeError::RuntimeUnresolved {
             kind,
             constraint,
             ..
         }) => Some(resolve::install_command(*kind, constraint)),
 
-        mixengine_core::Error::Runtime(mixengine_core::RuntimeError::RuntimeMissing {
-            kind,
-            version,
-            ..
-        }) => Some(resolve::restore_command(*kind, version)),
-
-        mixengine_core::Error::Runtime(mixengine_core::RuntimeError::NoDefaultRuntime { kind }) => {
-            Some(format!(
-                "`mix runtime list --kind {kind}` shows what is installed, and \
-             `mix runtime default {kind} <version>` chooses which one is used here"
-            ))
+        mixengine_core::Error::Runtime(RuntimeError::RuntimeMissing { kind, version, .. }) => {
+            Some(resolve::restore_command(*kind, version))
         }
+
+        mixengine_core::Error::Runtime(RuntimeError::NoDefaultRuntime { kind }) => Some(format!(
+            "`mix runtime list --kind {kind}` shows what is installed, and \
+             `mix runtime default {kind} <version>` chooses which one is used here"
+        )),
 
         _ => None,
     }

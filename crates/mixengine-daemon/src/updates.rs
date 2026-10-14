@@ -38,6 +38,7 @@ use mixengine_proto::{
 };
 
 use crate::error::ToWire as _;
+use mixengine_core::UpdateError;
 
 /// Where the update feed comes from, and what verifies it.
 ///
@@ -283,7 +284,7 @@ impl Updates {
             .index
             .helper(os, arch)
             .ok_or_else(|| {
-                mixengine_core::Error::Update(mixengine_core::UpdateError::HelperUnavailable {
+                mixengine_core::Error::Update(UpdateError::HelperUnavailable {
                     os: format!("{os:?}").to_lowercase(),
                     arch: format!("{arch:?}").to_lowercase(),
                 })
@@ -459,33 +460,33 @@ impl Updates {
         let checked = self.checked()?;
 
         if checked.feed.version != version {
-            return Err(mixengine_core::Error::Update(
-                mixengine_core::UpdateError::UpdateNotOffered {
+            return Err(
+                mixengine_core::Error::Update(UpdateError::UpdateNotOffered {
                     asked: version.to_owned(),
                     offered: Some(checked.feed.version.clone()),
-                },
-            )
-            .to_wire());
+                })
+                .to_wire(),
+            );
         }
 
         let directory = match &self.placement {
             updates::Placement::SelfUpdatable { directory } => directory,
             updates::Placement::Managed { directory, because } => {
-                return Err(mixengine_core::Error::Update(
-                    mixengine_core::UpdateError::UpdateNotWritable {
+                return Err(
+                    mixengine_core::Error::Update(UpdateError::UpdateNotWritable {
                         directory: directory.clone(),
                         because: because.clone(),
-                    },
-                )
-                .to_wire());
+                    })
+                    .to_wire(),
+                );
             }
             updates::Placement::Installer { directory, .. } => {
-                return Err(mixengine_core::Error::Update(
-                    mixengine_core::UpdateError::UpdateUsesInstaller {
+                return Err(
+                    mixengine_core::Error::Update(UpdateError::UpdateUsesInstaller {
                         directory: directory.clone(),
-                    },
-                )
-                .to_wire());
+                    })
+                    .to_wire(),
+                );
             }
         };
 
@@ -494,7 +495,7 @@ impl Updates {
             .feed
             .artifact(os, arch)
             .ok_or_else(|| {
-                mixengine_core::Error::Update(mixengine_core::UpdateError::UpdateUnavailable {
+                mixengine_core::Error::Update(UpdateError::UpdateUnavailable {
                     os: format!("{os:?}").to_lowercase(),
                     arch: format!("{arch:?}").to_lowercase(),
                 })
@@ -815,13 +816,13 @@ impl Updates {
         let checked = self.checked()?;
 
         if checked.feed.version != version {
-            return Err(mixengine_core::Error::Update(
-                mixengine_core::UpdateError::UpdateNotOffered {
+            return Err(
+                mixengine_core::Error::Update(UpdateError::UpdateNotOffered {
                     asked: version.to_owned(),
                     offered: Some(checked.feed.version.clone()),
-                },
-            )
-            .to_wire());
+                })
+                .to_wire(),
+            );
         }
 
         let updates::Placement::Installer { .. } = &self.placement else {
@@ -837,7 +838,7 @@ impl Updates {
             .feed
             .installer(os, arch, self.installer_kind(), self.headless())
             .ok_or_else(|| {
-                mixengine_core::Error::Update(mixengine_core::UpdateError::InstallerUnavailable {
+                mixengine_core::Error::Update(UpdateError::InstallerUnavailable {
                     os: format!("{os:?}").to_lowercase(),
                     arch: format!("{arch:?}").to_lowercase(),
                 })
@@ -1001,12 +1002,12 @@ impl Updates {
 
         match self.installed_version().await {
             Some(version) => Ok(version),
-            None => Err(mixengine_core::Error::Update(
-                mixengine_core::UpdateError::UpdateNotInstalled {
+            None => Err(
+                mixengine_core::Error::Update(UpdateError::UpdateNotInstalled {
                     version: handed.version,
-                },
-            )
-            .to_wire()),
+                })
+                .to_wire(),
+            ),
         }
     }
 

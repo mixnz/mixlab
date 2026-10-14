@@ -222,7 +222,7 @@ pub async fn remember(
     // clients asking for the same install at the same moment — and it deserves a sentence naming the
     // version rather than SQLite's.
     if inserted.rows_affected() == 0 {
-        return Err(Error::Runtime(crate::RuntimeError::AlreadyRecorded {
+        return Err(Error::Runtime(RuntimeError::AlreadyRecorded {
             kind: installation.kind,
             version: installation.version.clone(),
         }));
@@ -346,8 +346,8 @@ pub async fn forget(store: &Store, kind: RuntimeKind, version: &PackageVersion) 
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when that version is not installed, [`RuntimeError::UnreadableRuntimeRow`] when the
-/// row cannot be read back, and [`Error::Database`] when it cannot be written.
+/// [`Error::NotFound`] when that version is not installed, [`RuntimeError::UnreadableRuntimeRow`]
+/// when the row cannot be read back, and [`Error::Database`] when it cannot be written.
 pub async fn set_default(
     store: &Store,
     kind: RuntimeKind,
@@ -410,8 +410,8 @@ pub async fn set_default(
 ///
 /// # Errors
 ///
-/// [`RuntimeError::UnreadableRuntimeRow`] when a row holds something this build cannot read back, and
-/// [`Error::Database`] when the table cannot be read.
+/// [`RuntimeError::UnreadableRuntimeRow`] when a row holds something this build cannot read back,
+/// and [`Error::Database`] when the table cannot be read.
 pub async fn records(store: &Store, kind: Option<RuntimeKind>) -> Result<Vec<RuntimeSummary>> {
     let wanted = kind.map(RuntimeKind::as_str);
 
@@ -457,8 +457,8 @@ pub async fn records(store: &Store, kind: Option<RuntimeKind>) -> Result<Vec<Run
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when it is not installed, [`RuntimeError::UnreadableRuntimeRow`] when the row cannot
-/// be read back, and [`Error::Database`] when the table cannot be read.
+/// [`Error::NotFound`] when it is not installed, [`RuntimeError::UnreadableRuntimeRow`] when the
+/// row cannot be read back, and [`Error::Database`] when the table cannot be read.
 pub async fn record(
     store: &Store,
     kind: RuntimeKind,
@@ -514,12 +514,12 @@ async fn stamp(summary: &mut RuntimeSummary) {
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when that version is not installed; [`RuntimeError::UnreadableRuntimeRow`] when the
-/// row cannot be read back, which now includes a `provides_json` that is not a map of strings or
-/// that names a path leading out of the install directory; [`RuntimeError::RuntimeProvidesNothing`] when
-/// the runtime is installed and publishes no such executable — which is also what an install from
-/// before this column existed answers, with an empty list; and [`Error::Database`] when the table
-/// cannot be read.
+/// [`Error::NotFound`] when that version is not installed; [`RuntimeError::UnreadableRuntimeRow`]
+/// when the row cannot be read back, which now includes a `provides_json` that is not a map of
+/// strings or that names a path leading out of the install directory;
+/// [`RuntimeError::RuntimeProvidesNothing`] when the runtime is installed and publishes no such
+/// executable — which is also what an install from before this column existed answers, with an
+/// empty list; and [`Error::Database`] when the table cannot be read.
 pub async fn program(
     store: &Store,
     kind: RuntimeKind,
@@ -539,7 +539,7 @@ pub async fn program(
     .ok_or_else(|| missing(kind, version))?;
 
     let unreadable = |value: &str| {
-        Error::Runtime(crate::RuntimeError::UnreadableRuntimeRow {
+        Error::Runtime(RuntimeError::UnreadableRuntimeRow {
             column: "provides_json",
             value: value.to_owned(),
         })
@@ -549,7 +549,7 @@ pub async fn program(
         serde_json::from_str(&row.provides_json).map_err(|_| unreadable(&row.provides_json))?;
 
     let relative = provides.get(executable).ok_or_else(|| {
-        Error::Runtime(crate::RuntimeError::RuntimeProvidesNothing {
+        Error::Runtime(RuntimeError::RuntimeProvidesNothing {
             kind,
             version: version.clone(),
             executable: executable.to_owned(),
@@ -621,7 +621,7 @@ fn summary(
     is_default: i64,
 ) -> Result<RuntimeSummary> {
     let unreadable = |column: &'static str, value: &str| {
-        Error::Runtime(crate::RuntimeError::UnreadableRuntimeRow {
+        Error::Runtime(RuntimeError::UnreadableRuntimeRow {
             column,
             value: value.to_owned(),
         })
@@ -839,7 +839,7 @@ mod tests {
             .expect_err("it is already there");
 
         assert!(
-            matches!(&error, Error::Runtime(crate::RuntimeError::AlreadyRecorded { version, .. }) if version.as_str() == "8.3.33"),
+            matches!(&error, Error::Runtime(RuntimeError::AlreadyRecorded { version, .. }) if version.as_str() == "8.3.33"),
             "{error:?}"
         );
     }
@@ -1043,7 +1043,7 @@ mod tests {
             .expect_err("the row holds something this build cannot read");
 
             assert!(
-                matches!(&error, Error::Runtime(crate::RuntimeError::UnreadableRuntimeRow { column: named, .. }) if *named == column),
+                matches!(&error, Error::Runtime(RuntimeError::UnreadableRuntimeRow { column: named, .. }) if *named == column),
                 "{error:?} should have named {column}"
             );
         }
@@ -1137,7 +1137,7 @@ mod tests {
             .await
             .expect_err("this artifact ships no pecl");
         assert!(
-            matches!(&error, Error::Runtime(crate::RuntimeError::RuntimeProvidesNothing { known, .. })
+            matches!(&error, Error::Runtime(RuntimeError::RuntimeProvidesNothing { known, .. })
                 if known == &["php".to_owned(), "php-config".to_owned()]),
             "{error:?}"
         );
@@ -1174,7 +1174,7 @@ mod tests {
                 Err(error) => assert!(
                     matches!(
                         &error,
-                        Error::Runtime(crate::RuntimeError::UnreadableRuntimeRow {
+                        Error::Runtime(RuntimeError::UnreadableRuntimeRow {
                             column: "provides_json",
                             ..
                         })
@@ -1202,7 +1202,7 @@ mod tests {
             .expect_err("nothing was recorded");
 
         assert!(
-            matches!(&error, Error::Runtime(crate::RuntimeError::RuntimeProvidesNothing { known, .. }) if known.is_empty()),
+            matches!(&error, Error::Runtime(RuntimeError::RuntimeProvidesNothing { known, .. }) if known.is_empty()),
             "{error:?}"
         );
         assert!(error.to_string().contains("nothing recorded"), "{error}");

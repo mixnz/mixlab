@@ -27,6 +27,7 @@ use mixengine_proto::{ExtensionId, RouteTarget, ServiceId, SiteKind, SiteRoute, 
 use sqlx::Sqlite;
 
 use crate::ExtensionError;
+use crate::ProjectError;
 use crate::{Error, Result, Store};
 
 /// Who a site belongs to, which is also what gives its `doc_root` a root — roadmap task **T81b**.
@@ -68,13 +69,13 @@ impl SiteOwner {
             (None, Some(extension)) => ExtensionId::parse(extension.clone())
                 .map(Self::Extension)
                 .map_err(|_| {
-                    Error::Project(crate::ProjectError::UnreadableSiteRow {
+                    Error::Project(ProjectError::UnreadableSiteRow {
                         site,
                         column: "extension_id",
                         value: extension,
                     })
                 }),
-            (project, extension) => Err(Error::Project(crate::ProjectError::UnreadableSiteRow {
+            (project, extension) => Err(Error::Project(ProjectError::UnreadableSiteRow {
                 site,
                 column: "project_id",
                 value: format!("{project:?} beside extension_id {extension:?}"),
@@ -217,8 +218,6 @@ pub struct Change {
 /// # Errors
 ///
 /// [`ProjectError::DocRootOutsideProject`] for a path that resolves outside the root.
-///
-/// [`ProjectError::DocRootOutsideProject`]: crate::ProjectError::DocRootOutsideProject
 pub fn relative_doc_root(root: &Path, doc_root: &str) -> Result<String> {
     let full = in_full(root);
     let candidate = Path::new(doc_root);
@@ -233,7 +232,7 @@ pub fn relative_doc_root(root: &Path, doc_root: &str) -> Result<String> {
     });
 
     let relative = joined.strip_prefix(&full).map_err(|_| {
-        Error::Project(crate::ProjectError::DocRootOutsideProject {
+        Error::Project(ProjectError::DocRootOutsideProject {
             doc_root: doc_root.to_owned(),
             root: full.display().to_string(),
         })
@@ -271,18 +270,15 @@ fn without_dot_segments(path: &Path) -> PathBuf {
 /// # Errors
 ///
 /// [`ProjectError::DomainTaken`] naming the site already holding one of the domains,
-/// [`ProjectError::HttpsRedirectNeedsHttps`] for `https_redirect: true` beside `https_enabled: false`, and
-/// [`Error::Database`] when the write cannot be made.
-///
-/// [`ProjectError::DomainTaken`]: crate::ProjectError::DomainTaken
-/// [`ProjectError::HttpsRedirectNeedsHttps`]: crate::ProjectError::HttpsRedirectNeedsHttps
+/// [`ProjectError::HttpsRedirectNeedsHttps`] for `https_redirect: true` beside `https_enabled:
+/// false`, and [`Error::Database`] when the write cannot be made.
 pub async fn create(store: &Store, new: &NewSite) -> Result<SiteRecord> {
     // Checked before anything opens a transaction: this is a fact about the two fields `new` already
     // carries, not about a row that could change underneath a concurrent writer — roadmap task
     // **T98**. `sites.https_redirect`'s `CHECK` would refuse the `INSERT` below just as
     // surely, in the words it was written in rather than the ones a caller asked in.
     if new.https_redirect && !new.https_enabled {
-        return Err(Error::Project(crate::ProjectError::HttpsRedirectNeedsHttps));
+        return Err(Error::Project(ProjectError::HttpsRedirectNeedsHttps));
     }
 
     // `BEGIN IMMEDIATE` for `crate::services::transition`'s reason: a deferred `BEGIN` would leave
@@ -362,10 +358,8 @@ pub async fn create(store: &Store, new: &NewSite) -> Result<SiteRecord> {
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the tables cannot be read, and [`ProjectError::UnreadableSiteRow`] for a row
-/// this build cannot make a [`SiteKind`] of.
-///
-/// [`ProjectError::UnreadableSiteRow`]: crate::ProjectError::UnreadableSiteRow
+/// [`Error::Database`] when the tables cannot be read, and [`ProjectError::UnreadableSiteRow`] for
+/// a row this build cannot make a [`SiteKind`] of.
 pub async fn records(store: &Store, project: Option<i64>) -> Result<Vec<SiteRecord>> {
     let rows = sqlx::query!(
         "SELECT id, project_id, extension_id, doc_root, kind, php_service_id, https_enabled,
@@ -403,7 +397,7 @@ pub async fn records(store: &Store, project: Option<i64>) -> Result<Vec<SiteReco
 
         for id in linked {
             services.push(ServiceId::parse(&id).map_err(|_| {
-                Error::Project(crate::ProjectError::UnreadableSiteRow {
+                Error::Project(ProjectError::UnreadableSiteRow {
                     site: row.id,
                     column: "service_id",
                     value: id.clone(),
@@ -549,10 +543,8 @@ pub async fn of_extension(store: &Store, id: &ExtensionId) -> Result<Option<Site
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the table cannot be read, and [`ProjectError::UnreadableSiteRow`] for an
-/// `extension_id` that is not one.
-///
-/// [`ProjectError::UnreadableSiteRow`]: crate::ProjectError::UnreadableSiteRow
+/// [`Error::Database`] when the table cannot be read, and [`ProjectError::UnreadableSiteRow`] for
+/// an `extension_id` that is not one.
 pub async fn frozen_on(store: &Store, pool: &ServiceId) -> Result<Vec<ExtensionId>> {
     let pool_column = pool.as_str();
 
@@ -570,7 +562,7 @@ pub async fn frozen_on(store: &Store, pool: &ServiceId) -> Result<Vec<ExtensionI
     rows.into_iter()
         .map(|row| {
             ExtensionId::parse(row.extension.clone()).map_err(|_| {
-                Error::Project(crate::ProjectError::UnreadableSiteRow {
+                Error::Project(ProjectError::UnreadableSiteRow {
                     site: row.id,
                     column: "extension_id",
                     value: row.extension,
@@ -584,13 +576,10 @@ pub async fn frozen_on(store: &Store, pool: &ServiceId) -> Result<Vec<ExtensionI
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] for a site that is not there, [`ProjectError::DomainTaken`] naming the site holding
-/// a domain being claimed, [`ProjectError::HttpsRedirectNeedsHttps`] for a `https_redirect: Some(true)`
-/// that would leave the site with `https_enabled: false`, and [`Error::Database`] when the write
-/// cannot be made.
-///
-/// [`ProjectError::DomainTaken`]: crate::ProjectError::DomainTaken
-/// [`ProjectError::HttpsRedirectNeedsHttps`]: crate::ProjectError::HttpsRedirectNeedsHttps
+/// [`Error::NotFound`] for a site that is not there, [`ProjectError::DomainTaken`] naming the site
+/// holding a domain being claimed, [`ProjectError::HttpsRedirectNeedsHttps`] for a `https_redirect:
+/// Some(true)` that would leave the site with `https_enabled: false`, and [`Error::Database`] when
+/// the write cannot be made.
 pub async fn update(store: &Store, id: i64, change: &Change) -> Result<SiteRecord> {
     let mut tx = store
         .pool()
@@ -623,7 +612,7 @@ pub async fn update(store: &Store, id: i64, change: &Change) -> Result<SiteRecor
         .extension
         .map(|value| {
             ExtensionId::parse(value.clone()).map_err(|_| {
-                Error::Project(crate::ProjectError::UnreadableSiteRow {
+                Error::Project(ProjectError::UnreadableSiteRow {
                     site: id,
                     column: "extension_id",
                     value,
@@ -642,7 +631,7 @@ pub async fn update(store: &Store, id: i64, change: &Change) -> Result<SiteRecor
     let https_enabled = change.https_enabled.unwrap_or(existing.https_enabled != 0);
 
     if change.https_redirect == Some(true) && !https_enabled {
-        return Err(Error::Project(crate::ProjectError::HttpsRedirectNeedsHttps));
+        return Err(Error::Project(ProjectError::HttpsRedirectNeedsHttps));
     }
 
     // **The cascade nobody asked for in so many words.** `https_enabled` turning off while the
@@ -886,7 +875,7 @@ fn read_route_target(
     config: &str,
 ) -> Result<RouteTarget> {
     let unreadable = |column: &'static str, value: &str| {
-        Error::Project(crate::ProjectError::UnreadableSiteRow {
+        Error::Project(ProjectError::UnreadableSiteRow {
             site,
             column,
             value: value.to_owned(),
@@ -942,7 +931,7 @@ pub fn by_specificity(left: &SiteRoute, right: &SiteRoute) -> std::cmp::Ordering
 /// The inverse of [`columns`] and [`payload`].
 fn read_kind(site: i64, kind: &str, pool: Option<String>, config: &str) -> Result<SiteKind> {
     let unreadable = |column: &'static str, value: &str| {
-        Error::Project(crate::ProjectError::UnreadableSiteRow {
+        Error::Project(ProjectError::UnreadableSiteRow {
             site,
             column,
             value: value.to_owned(),
@@ -992,7 +981,7 @@ fn read_state(site: i64, state: &str) -> Result<SiteState> {
     match state {
         "enabled" => Ok(SiteState::Enabled),
         "disabled" => Ok(SiteState::Disabled),
-        other => Err(Error::Project(crate::ProjectError::UnreadableSiteRow {
+        other => Err(Error::Project(ProjectError::UnreadableSiteRow {
             site,
             column: "state",
             value: other.to_owned(),
@@ -1103,7 +1092,7 @@ fn read_sharing(
     };
 
     let parsed = address.parse::<std::net::Ipv4Addr>().map_err(|_| {
-        Error::Project(crate::ProjectError::UnreadableSiteRow {
+        Error::Project(ProjectError::UnreadableSiteRow {
             site,
             column: "shared_address",
             value: address.clone(),
@@ -1193,7 +1182,7 @@ async fn write_domains(
             let holder = holder(store, tx, domain).await?;
 
             return Err(match holder {
-                Some(holder) => Error::Project(crate::ProjectError::DomainTaken {
+                Some(holder) => Error::Project(ProjectError::DomainTaken {
                     domain: domain.clone(),
                     holder,
                 }),

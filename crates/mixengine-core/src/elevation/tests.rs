@@ -1,4 +1,5 @@
 use super::*;
+use crate::ElevationError;
 
 /// A store on a temporary file, migrated, with nothing in this table.
 async fn store() -> (tempfile::TempDir, Store) {
@@ -124,7 +125,7 @@ fn a_helper_that_is_not_beside_the_daemon_is_named_rather_than_searched_for() {
     assert!(
         matches!(
             error,
-            Error::Elevation(crate::ElevationError::ElevateMissing { .. })
+            Error::Elevation(ElevationError::ElevateMissing { .. })
         ),
         "{error}"
     );
@@ -252,7 +253,7 @@ fn which_helper_is_run_and_when_nothing_is() {
     assert!(
         matches!(
             error,
-            Error::Elevation(crate::ElevationError::ElevateUntrusted { .. })
+            Error::Elevation(ElevationError::ElevateUntrusted { .. })
         ),
         "{error}"
     );
@@ -270,7 +271,7 @@ fn which_helper_is_run_and_when_nothing_is() {
     assert!(
         matches!(
             error,
-            Error::Elevation(crate::ElevationError::ElevateUntrusted { .. })
+            Error::Elevation(ElevationError::ElevateUntrusted { .. })
         ),
         "{error}"
     );
@@ -281,7 +282,7 @@ fn which_helper_is_run_and_when_nothing_is() {
     assert!(
         matches!(
             error,
-            Error::Elevation(crate::ElevationError::ElevateMissing { .. })
+            Error::Elevation(ElevationError::ElevateMissing { .. })
         ),
         "{error}"
     );
@@ -301,7 +302,7 @@ fn a_system_with_no_sources_at_all_is_still_a_refusal() {
     assert!(
         matches!(
             error,
-            Error::Elevation(crate::ElevationError::ElevateMissing { .. })
+            Error::Elevation(ElevationError::ElevateMissing { .. })
         ),
         "{error}"
     );
@@ -319,7 +320,7 @@ fn nothing_installed_and_nothing_shipped_is_elevate_missing() {
     assert!(
         matches!(
             error,
-            Error::Elevation(crate::ElevationError::ElevateMissing { .. })
+            Error::Elevation(ElevationError::ElevateMissing { .. })
         ),
         "{error}"
     );
@@ -567,10 +568,7 @@ fn a_request_with_nothing_in_it_is_refused_before_it_is_written() {
     .expect_err("an empty batch asks for nothing");
 
     assert!(
-        matches!(
-            error,
-            Error::Elevation(crate::ElevationError::ElevateRequestEmpty)
-        ),
+        matches!(error, Error::Elevation(ElevationError::ElevateRequestEmpty)),
         "{error}"
     );
 }
@@ -593,7 +591,7 @@ fn a_request_with_no_report_beside_it_says_exactly_that() {
     assert!(
         matches!(
             error,
-            Error::Elevation(crate::ElevationError::ElevateReportMissing { .. })
+            Error::Elevation(ElevationError::ElevateReportMissing { .. })
         ),
         "{error}"
     );
@@ -605,7 +603,7 @@ fn a_request_with_no_report_beside_it_says_exactly_that() {
 fn a_missing_report_carries_what_the_helper_said() {
     let path = PathBuf::from("/home/run/elevate/x/response.json");
 
-    let silent = Error::Elevation(crate::ElevationError::ElevateReportMissing {
+    let silent = Error::Elevation(ElevationError::ElevateReportMissing {
         path: path.clone(),
         said: None,
     });
@@ -614,7 +612,7 @@ fn a_missing_report_carries_what_the_helper_said() {
         "the elevation helper left no report beside /home/run/elevate/x/response.json"
     );
 
-    let said = Error::Elevation(crate::ElevationError::ElevateReportMissing {
+    let said = Error::Elevation(ElevationError::ElevateReportMissing {
         path,
         said: Some("mixengine-elevate: cannot read request.json: Operation not permitted".into()),
     });
@@ -657,7 +655,7 @@ fn a_report_answering_another_request_is_refused() {
     assert!(
         matches!(
             error,
-            Error::Elevation(crate::ElevationError::ElevateReportMismatched { .. })
+            Error::Elevation(ElevationError::ElevateReportMismatched { .. })
         ),
         "{error}"
     );
@@ -697,7 +695,7 @@ fn a_report_with_the_wrong_number_of_outcomes_is_refused() {
     assert!(
         matches!(
             error,
-            Error::Elevation(crate::ElevationError::ElevateReportMismatched { .. })
+            Error::Elevation(ElevationError::ElevateReportMismatched { .. })
         ),
         "{error}"
     );

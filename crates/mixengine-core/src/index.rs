@@ -415,11 +415,11 @@ impl<D: Document> Client<D> {
     /// # Errors
     ///
     /// Only ever the reason the *last* usable index could not be obtained, because anything that
-    /// goes wrong while there is a cached index falls back to it: [`InstallError::IndexTransport`] when the
-    /// server cannot be reached, [`InstallError::IndexSignature`] when what it served is not ours,
-    /// [`InstallError::IndexUnreadable`] or [`InstallError::IndexSchema`] when it is ours and unusable,
-    /// [`InstallError::IndexRolledBack`] when it is older than what is already held, and [`Error::Io`] when
-    /// the cache cannot be written.
+    /// goes wrong while there is a cached index falls back to it: [`InstallError::IndexTransport`]
+    /// when the server cannot be reached, [`InstallError::IndexSignature`] when what it served is
+    /// not ours, [`InstallError::IndexUnreadable`] or [`InstallError::IndexSchema`] when it is ours
+    /// and unusable, [`InstallError::IndexRolledBack`] when it is older than what is already held,
+    /// and [`Error::Io`] when the cache cannot be written.
     pub async fn refresh(&self) -> Result<Catalogue<D>> {
         self.refresh_not_before(None).await
     }
@@ -554,8 +554,8 @@ impl<D: Document> Client<D> {
     ///
     /// # Errors
     ///
-    /// [`InstallError::IndexSignature`] when the signature does not verify against the compiled-in key,
-    /// [`InstallError::IndexUnreadable`] when what it covered is not JSON we understand, and
+    /// [`InstallError::IndexSignature`] when the signature does not verify against the compiled-in
+    /// key, [`InstallError::IndexUnreadable`] when what it covered is not JSON we understand, and
     /// [`InstallError::IndexSchema`] when it is a document version this build cannot read.
     fn verified(&self, document: &[u8], signature: &str) -> Result<D> {
         verify(&self.key, document, signature).map_err(|source| {

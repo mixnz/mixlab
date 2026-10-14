@@ -614,8 +614,8 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
     ///
     /// # Errors
     ///
-    /// [`ServiceError::TemplateBroken`] naming the site template: a template is this build's, so a refusal
-    /// here is a bug of ours rather than a configuration a user can fix.
+    /// [`ServiceError::TemplateBroken`] naming the site template: a template is this build's, so a
+    /// refusal here is a bug of ours rather than a configuration a user can fix.
     fn sites(&self, context: &Context, served: &[Served]) -> Result<Vec<Document>> {
         let _ = (context, served);
 
@@ -764,9 +764,9 @@ impl Catalogue {
 ///
 /// # Errors
 ///
-/// [`ServiceError::TemplateBroken`], naming the file: a template is this build's, so this is a bug of ours
-/// and not a configuration a user can fix — but which of a service's six files failed is the first
-/// thing anybody needs to know.
+/// [`ServiceError::TemplateBroken`], naming the file: a template is this build's, so this is a bug
+/// of ours and not a configuration a user can fix — but which of a service's six files failed is
+/// the first thing anybody needs to know.
 pub(super) fn render(recipe: &dyn Recipe, context: &Context) -> Result<Vec<Document>> {
     let mut environment = minijinja::Environment::new();
 

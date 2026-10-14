@@ -64,8 +64,8 @@ pub fn exported_is(stdout: &str, der: &[u8]) -> bool {
 ///
 /// # Errors
 ///
-/// [`InstallError::KeytoolRefused`] when `keytool` cannot be started at all or does not finish. An alias
-/// that is not there is `Ok(false)`, which is what `keytool` says by exiting non-zero.
+/// [`InstallError::KeytoolRefused`] when `keytool` cannot be started at all or does not finish. An
+/// alias that is not there is `Ok(false)`, which is what `keytool` says by exiting non-zero.
 pub async fn holds(keytool: &Path, key_id: &str, der: &[u8]) -> Result<bool> {
     let ran = run(keytool, &exporting(key_id)).await?;
 
@@ -76,8 +76,8 @@ pub async fn holds(keytool: &Path, key_id: &str, der: &[u8]) -> Result<bool> {
 ///
 /// # Errors
 ///
-/// [`InstallError::KeytoolRefused`] naming `keytool`'s last line — a `cacerts` whose password is not the
-/// published default is the one this build expects to meet.
+/// [`InstallError::KeytoolRefused`] naming `keytool`'s last line — a `cacerts` whose password is
+/// not the published default is the one this build expects to meet.
 pub async fn hold(keytool: &Path, key_id: &str, certificate: &Path) -> Result<()> {
     let args = [
         OsString::from("-importcert"),

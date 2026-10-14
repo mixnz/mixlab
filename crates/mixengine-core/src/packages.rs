@@ -27,6 +27,7 @@ use std::path::{Path, PathBuf};
 
 use mixengine_proto::{PackageSummary, PackageVersion, ServiceId, Timestamp, VersionError};
 
+use crate::RuntimeError;
 use crate::{Error, Paths, Result, Store};
 
 /// Where one version of one package lives.
@@ -80,10 +81,8 @@ pub struct Installation {
 ///
 /// # Errors
 ///
-/// [`RuntimeError::PackageAlreadyRecorded`] when a row for this name and version already exists, and
-/// [`Error::Database`] when it cannot be written.
-///
-/// [`RuntimeError::PackageAlreadyRecorded`]: crate::RuntimeError::PackageAlreadyRecorded
+/// [`RuntimeError::PackageAlreadyRecorded`] when a row for this name and version already exists,
+/// and [`Error::Database`] when it cannot be written.
 pub async fn remember(
     store: &Store,
     installation: &Installation,
@@ -125,12 +124,10 @@ pub async fn remember(
     // two clients asking for the same install at the same moment — and it deserves a sentence
     // naming the version rather than SQLite's.
     if inserted.rows_affected() == 0 {
-        return Err(Error::Runtime(
-            crate::RuntimeError::PackageAlreadyRecorded {
-                package: installation.package.clone(),
-                version: installation.version.clone(),
-            },
-        ));
+        return Err(Error::Runtime(RuntimeError::PackageAlreadyRecorded {
+            package: installation.package.clone(),
+            version: installation.version.clone(),
+        }));
     }
 
     tracing::info!(%package, %version, "a package was recorded");
@@ -235,10 +232,8 @@ pub async fn forget(store: &Store, package: &str, version: &PackageVersion) -> R
 ///
 /// # Errors
 ///
-/// [`RuntimeError::UnreadablePackageRow`] when a row holds something this build cannot read back, and
-/// [`Error::Database`] when the table cannot be read.
-///
-/// [`RuntimeError::UnreadablePackageRow`]: crate::RuntimeError::UnreadablePackageRow
+/// [`RuntimeError::UnreadablePackageRow`] when a row holds something this build cannot read back,
+/// and [`Error::Database`] when the table cannot be read.
 pub async fn records(store: &Store, package: Option<&str>) -> Result<Vec<PackageSummary>> {
     // One query and a grouped read rather than a listing plus a lookup for each row: the second is
     // N+1 against a table whose whole purpose here is to be joined.
@@ -280,7 +275,7 @@ pub async fn records(store: &Store, package: Option<&str>) -> Result<Vec<Package
             entry
                 .services
                 .push(ServiceId::parse(service.clone()).map_err(|_| {
-                    Error::Runtime(crate::RuntimeError::UnreadablePackageRow {
+                    Error::Runtime(RuntimeError::UnreadablePackageRow {
                         column: "services.id",
                         value: service,
                     })
@@ -302,10 +297,8 @@ pub async fn records(store: &Store, package: Option<&str>) -> Result<Vec<Package
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] when it is not installed, [`RuntimeError::UnreadablePackageRow`] when the row cannot
-/// be read back, and [`Error::Database`] when the table cannot be read.
-///
-/// [`RuntimeError::UnreadablePackageRow`]: crate::RuntimeError::UnreadablePackageRow
+/// [`Error::NotFound`] when it is not installed, [`RuntimeError::UnreadablePackageRow`] when the
+/// row cannot be read back, and [`Error::Database`] when the table cannot be read.
 pub async fn record(
     store: &Store,
     package: &str,
@@ -328,8 +321,6 @@ pub async fn record(
 ///
 /// [`RuntimeError::UnreadablePackageRow`] when a `services.id` cannot be read back as one, and
 /// [`Error::Database`] when the table cannot be read.
-///
-/// [`RuntimeError::UnreadablePackageRow`]: crate::RuntimeError::UnreadablePackageRow
 pub async fn holders(
     store: &Store,
     package: &str,
@@ -352,7 +343,7 @@ pub async fn holders(
     rows.into_iter()
         .map(|id| {
             ServiceId::parse(id.clone()).map_err(|_| {
-                Error::Runtime(crate::RuntimeError::UnreadablePackageRow {
+                Error::Runtime(RuntimeError::UnreadablePackageRow {
                     column: "services.id",
                     value: id,
                 })
@@ -392,7 +383,7 @@ fn summary(
     bytes: i64,
 ) -> Result<PackageSummary> {
     let unreadable = |column: &'static str, value: &str| {
-        Error::Runtime(crate::RuntimeError::UnreadablePackageRow {
+        Error::Runtime(RuntimeError::UnreadablePackageRow {
             column,
             value: value.to_owned(),
         })

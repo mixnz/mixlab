@@ -91,11 +91,12 @@ pub struct Swapped {
 ///
 /// # Errors
 ///
-/// [`InstallError::ArtifactTransport`] and its neighbours from the download, [`InstallError::ArtifactChecksum`]
-/// when what arrived is not what the signed feed promised, [`InstallError::UnsafeArchiveEntry`] from
-/// unpacking, [`InstallError::MissingFromArtifact`] when the payload does not hold what it declared,
-/// [`InstallError::SmokeTestFailed`] when the staged daemon will not run here, and [`Error::Io`] for the
-/// staging directory itself. Every one of them leaves the installed binaries untouched.
+/// [`InstallError::ArtifactTransport`] and its neighbours from the download,
+/// [`InstallError::ArtifactChecksum`] when what arrived is not what the signed feed promised,
+/// [`InstallError::UnsafeArchiveEntry`] from unpacking, [`InstallError::MissingFromArtifact`] when
+/// the payload does not hold what it declared, [`InstallError::SmokeTestFailed`] when the staged
+/// daemon will not run here, and [`Error::Io`] for the staging directory itself. Every one of them
+/// leaves the installed binaries untouched.
 ///
 /// [`InstallError::ArtifactChecksum`]: crate::InstallError::ArtifactChecksum
 /// [`InstallError::ArtifactTransport`]: crate::InstallError::ArtifactTransport

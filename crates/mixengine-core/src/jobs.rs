@@ -153,7 +153,7 @@ pub async fn finish(
     // and asserted all the same, on `can_become`'s own principle: the machine is the authority, and
     // a caller that has lost track of it should be told rather than obeyed.
     if !from.can_become(to) {
-        return Err(Error::Job(crate::JobError::IllegalJobTransition {
+        return Err(Error::Job(JobError::IllegalJobTransition {
             job: job.0,
             from,
             to,
@@ -162,9 +162,8 @@ pub async fn finish(
 
     // Cannot fail: `JobOutcome` is one of ours and holds a `serde_json::Value` that was itself
     // decoded from JSON. Mapped rather than unwrapped because nothing in this crate panics.
-    let result = serde_json::to_string(&outcome).map_err(|source| {
-        Error::Job(crate::JobError::JobOutcomeUnwritable { job: job.0, source })
-    })?;
+    let result = serde_json::to_string(&outcome)
+        .map_err(|source| Error::Job(JobError::JobOutcomeUnwritable { job: job.0, source }))?;
 
     let (id, state, finished) = (job.0, to.as_str(), at.0);
     let updated = sqlx::query!(
@@ -180,7 +179,7 @@ pub async fn finish(
     .map_err(|source| store.failure("write", source))?;
 
     if updated.rows_affected() == 0 {
-        return Err(Error::Job(crate::JobError::JobEnded {
+        return Err(Error::Job(JobError::JobEnded {
             job: job.0,
             state: from,
         }));
@@ -215,8 +214,8 @@ pub async fn finish(
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the rows cannot be read or written, and [`JobError::UnknownJobState`] or
-/// [`JobError::UnreadableJobRow`] from reading back what was abandoned.
+/// [`Error::Database`] when the rows cannot be read or written, and [`JobError::UnknownJobState`]
+/// or [`JobError::UnreadableJobRow`] from reading back what was abandoned.
 pub async fn abandon(store: &Store, at: Timestamp) -> Result<Vec<JobFinish>> {
     let outcome = JobOutcome::Failed {
         error: mixengine_proto::Error::new(
@@ -228,7 +227,7 @@ pub async fn abandon(store: &Store, at: Timestamp) -> Result<Vec<JobFinish>> {
 
     // Cannot fail: the value is built two statements above out of types this crate owns.
     let result = serde_json::to_string(&outcome)
-        .map_err(|source| Error::Job(crate::JobError::JobOutcomeUnwritable { job: 0, source }))?;
+        .map_err(|source| Error::Job(JobError::JobOutcomeUnwritable { job: 0, source }))?;
 
     let (state, finished) = (JobState::Failed.as_str(), at.0);
     let abandoned = sqlx::query_scalar!(
@@ -363,7 +362,7 @@ async fn running(
     let state = parse_state(job, stored)?;
 
     match state.is_finished() {
-        true => Err(Error::Job(crate::JobError::JobEnded { job: id, state })),
+        true => Err(Error::Job(JobError::JobEnded { job: id, state })),
         false => Ok(state),
     }
 }
@@ -395,7 +394,7 @@ fn summary(
     let outcome = result_json
         .map(|stored| {
             serde_json::from_str::<JobOutcome>(&stored).map_err(|source| {
-                Error::Job(crate::JobError::UnreadableJobRow {
+                Error::Job(JobError::UnreadableJobRow {
                     job: id,
                     column: "result_json",
                     source,
@@ -407,7 +406,7 @@ fn summary(
     Ok(JobSummary {
         id: job,
         kind: JobKind::parse(&kind).ok_or_else(|| {
-            Error::Job(crate::JobError::UnknownJobKind {
+            Error::Job(JobError::UnknownJobKind {
                 job: id,
                 value: kind,
             })
@@ -427,7 +426,7 @@ fn summary(
 /// Turn the stored word into a state, blaming the row rather than the reader.
 fn parse_state(job: JobId, stored: String) -> Result<JobState> {
     JobState::parse(&stored).ok_or_else(|| {
-        Error::Job(crate::JobError::UnknownJobState {
+        Error::Job(JobError::UnknownJobState {
             job: job.0,
             value: stored,
         })
@@ -575,7 +574,7 @@ mod tests {
         assert!(
             matches!(
                 error,
-                Error::Job(crate::JobError::JobEnded {
+                Error::Job(JobError::JobEnded {
                     state: JobState::Cancelled,
                     ..
                 })
@@ -614,7 +613,7 @@ mod tests {
         assert!(
             matches!(
                 error,
-                Error::Job(crate::JobError::JobEnded {
+                Error::Job(JobError::JobEnded {
                     state: JobState::Cancelled,
                     ..
                 })
@@ -826,7 +825,7 @@ mod tests {
         let error = parse_state(JobId(3), "done".to_owned()).expect_err("not a job state");
 
         assert!(
-            matches!(&error, Error::Job(crate::JobError::UnknownJobState { job: 3, value }) if value == "done"),
+            matches!(&error, Error::Job(JobError::UnknownJobState { job: 3, value }) if value == "done"),
             "{error:?}"
         );
     }
@@ -850,7 +849,7 @@ mod tests {
         assert!(
             matches!(
                 &error,
-                Error::Job(crate::JobError::UnreadableJobRow {
+                Error::Job(JobError::UnreadableJobRow {
                     job: 3,
                     column: "result_json",
                     ..

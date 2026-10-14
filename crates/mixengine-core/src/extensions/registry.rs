@@ -202,10 +202,11 @@ pub fn parse(text: &str) -> Result<Registry> {
 ///
 /// # Errors
 ///
-/// [`Error::Io`] for a directory or file that cannot be read; [`ExtensionError::RegistryPublicKeyShape`] and
-/// [`ExtensionError::RegistryKeyMismatch`] for the key chain; [`ExtensionError::ExtensionFileName`] for a stem that
-/// disagrees with its id; everything [`manifest::read`] reports about a file; and
-/// [`ExtensionError::RegistryUnreadable`] for the read-back.
+/// [`Error::Io`] for a directory or file that cannot be read;
+/// [`ExtensionError::RegistryPublicKeyShape`] and [`ExtensionError::RegistryKeyMismatch`] for the
+/// key chain; [`ExtensionError::ExtensionFileName`] for a stem that disagrees with its id;
+/// everything [`manifest::read`] reports about a file; and [`ExtensionError::RegistryUnreadable`]
+/// for the read-back.
 pub fn assemble(manifests: &Path, public_key: &Path, generated_at: Timestamp) -> Result<Registry> {
     prove_key(public_key)?;
 

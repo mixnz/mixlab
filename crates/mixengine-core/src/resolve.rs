@@ -32,8 +32,6 @@
 //! being a step nothing has ever taken. Both are walked to the top before the next one starts,
 //! which is the order the feature spec lists and not the same thing as one walk asking both
 //! questions per directory.
-//!
-//! [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
 
 use std::path::{Path, PathBuf};
 
@@ -41,6 +39,8 @@ use mixengine_proto::{
     PackageVersion, ResolvedRuntime, RuntimeKind, RuntimeSource, RuntimeSummary, VersionConstraint,
 };
 
+use crate::ProjectError;
+use crate::RuntimeError;
 use crate::{Error, Result, Store, runtimes};
 
 /// The file a project pins its runtimes in, checked into the user's repository.
@@ -78,7 +78,7 @@ pub fn restore_command(kind: RuntimeKind, version: &PackageVersion) -> String {
 
 /// The refusal for one recorded runtime whose folder is gone.
 fn gone(runtime: &RuntimeSummary) -> Error {
-    Error::Runtime(crate::RuntimeError::RuntimeMissing {
+    Error::Runtime(RuntimeError::RuntimeMissing {
         kind: runtime.kind,
         version: runtime.version.clone(),
         path: PathBuf::from(&runtime.path),
@@ -89,22 +89,17 @@ fn gone(runtime: &RuntimeSummary) -> Error {
 ///
 /// # Errors
 ///
-/// [`ProjectError::NotAbsolute`] for a relative directory; [`ProjectError::Manifest`] for a `mixengine.toml` that
-/// does not parse; [`ProjectError::UnreadableProjectRow`] for a project row this build cannot read;
-/// [`RuntimeError::RuntimeUnresolved`] when nothing installed satisfies what was asked for, and
-/// [`RuntimeError::NoDefaultRuntime`] when nothing asked for anything and the kind has no default;
-/// [`Error::Database`] and [`Error::Io`] when a table or a file cannot be read.
-///
-/// [`RuntimeError::NoDefaultRuntime`]: crate::RuntimeError::NoDefaultRuntime
-/// [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
-/// [`ProjectError::Manifest`]: crate::ProjectError::Manifest
-/// [`ProjectError::NotAbsolute`]: crate::ProjectError::NotAbsolute
-/// [`ProjectError::UnreadableProjectRow`]: crate::ProjectError::UnreadableProjectRow
+/// [`ProjectError::NotAbsolute`] for a relative directory; [`ProjectError::Manifest`] for a
+/// `mixengine.toml` that does not parse; [`ProjectError::UnreadableProjectRow`] for a project row
+/// this build cannot read; [`RuntimeError::RuntimeUnresolved`] when nothing installed satisfies
+/// what was asked for, and [`RuntimeError::NoDefaultRuntime`] when nothing asked for anything and
+/// the kind has no default; [`Error::Database`] and [`Error::Io`] when a table or a file cannot be
+/// read.
 pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedRuntime> {
     if let Some(cwd) = question.cwd
         && !cwd.is_absolute()
     {
-        return Err(Error::Project(crate::ProjectError::NotAbsolute {
+        return Err(Error::Project(ProjectError::NotAbsolute {
             path: cwd.to_path_buf(),
         }));
     }
@@ -117,7 +112,7 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
         let default = installed
             .into_iter()
             .find(|runtime| runtime.default)
-            .ok_or(Error::Runtime(crate::RuntimeError::NoDefaultRuntime {
+            .ok_or(Error::Runtime(RuntimeError::NoDefaultRuntime {
                 kind: question.kind,
             }))?;
 
@@ -167,7 +162,7 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
 
         None => match newest(absent) {
             Some(missing) => Err(gone(&missing)),
-            None => Err(Error::Runtime(crate::RuntimeError::RuntimeUnresolved {
+            None => Err(Error::Runtime(RuntimeError::RuntimeUnresolved {
                 kind: question.kind,
                 constraint: asked.constraint,
                 origin: describe(&asked.source),
@@ -630,7 +625,7 @@ mod tests {
         .expect_err("the default is gone");
 
         assert!(
-            matches!(&error, Error::Runtime(crate::RuntimeError::RuntimeMissing { version, .. }) if version.as_str() == "8.3.33"),
+            matches!(&error, Error::Runtime(RuntimeError::RuntimeMissing { version, .. }) if version.as_str() == "8.3.33"),
             "{error}"
         );
     }
@@ -659,7 +654,7 @@ mod tests {
             .await
             .expect_err("nothing matching is there");
         assert!(
-            matches!(&error, Error::Runtime(crate::RuntimeError::RuntimeMissing { version, .. }) if version.as_str() == "8.3.33"),
+            matches!(&error, Error::Runtime(RuntimeError::RuntimeMissing { version, .. }) if version.as_str() == "8.3.33"),
             "{error}"
         );
     }
@@ -784,7 +779,7 @@ mod tests {
             .expect_err("the manifest is wrong");
 
             assert!(
-                matches!(&error, Error::Project(crate::ProjectError::Manifest { path, .. }) if path.ends_with(MANIFEST_FILE_NAME)),
+                matches!(&error, Error::Project(ProjectError::Manifest { path, .. }) if path.ends_with(MANIFEST_FILE_NAME)),
                 "{error:?} for {body:?}"
             );
         }
@@ -816,7 +811,7 @@ mod tests {
             "{said}"
         );
         assert!(
-            matches!(&error, Error::Runtime(crate::RuntimeError::RuntimeUnresolved { constraint, .. })
+            matches!(&error, Error::Runtime(RuntimeError::RuntimeUnresolved { constraint, .. })
                 if install_command(RuntimeKind::Php, constraint).contains("install php 8.1.30")),
             "an exact constraint becomes the exact command: {error:?}"
         );
@@ -853,10 +848,7 @@ mod tests {
         .expect_err("nothing is installed");
 
         assert!(
-            matches!(
-                error,
-                Error::Runtime(crate::RuntimeError::NoDefaultRuntime { .. })
-            ),
+            matches!(error, Error::Runtime(RuntimeError::NoDefaultRuntime { .. })),
             "{error:?}"
         );
     }
@@ -880,10 +872,7 @@ mod tests {
         .expect_err("a relative directory means nothing here");
 
         assert!(
-            matches!(
-                error,
-                Error::Project(crate::ProjectError::NotAbsolute { .. })
-            ),
+            matches!(error, Error::Project(ProjectError::NotAbsolute { .. })),
             "{error:?}"
         );
     }

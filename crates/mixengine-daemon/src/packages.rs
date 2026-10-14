@@ -43,6 +43,7 @@ use crate::error::ToWire as _;
 use crate::jobs::{JobHandle, Jobs};
 use crate::requirements;
 use crate::runtimes::Fetcher;
+use mixengine_core::RuntimeError;
 
 /// Everything `package.*` needs, and the only thing that starts a package install.
 #[derive(Debug)]
@@ -387,13 +388,13 @@ impl Packages {
             // **T206d**, D3: the install restores the row it already has.
             Ok(found) if found.is_missing() => {}
             Ok(_) => {
-                return Err(mixengine_core::Error::Runtime(
-                    mixengine_core::RuntimeError::PackageAlreadyRecorded {
+                return Err(
+                    mixengine_core::Error::Runtime(RuntimeError::PackageAlreadyRecorded {
                         package: package.to_owned(),
                         version: target.version.clone(),
-                    },
-                )
-                .to_wire());
+                    })
+                    .to_wire(),
+                );
             }
             Err(mixengine_core::Error::NotFound { .. }) => {}
             Err(error) => return Err(error.to_wire()),
@@ -549,22 +550,20 @@ impl Packages {
 
             // The folder came back between the check and the rename. There is nothing to adopt:
             // the row is already there, and adopting would try to write a second one.
-            Err(mixengine_core::Error::Runtime(
-                mixengine_core::RuntimeError::AlreadyInstalled { .. },
-            )) if restoring => {
-                return Err(mixengine_core::Error::Runtime(
-                    mixengine_core::RuntimeError::PackageAlreadyRecorded {
+            Err(mixengine_core::Error::Runtime(RuntimeError::AlreadyInstalled { .. }))
+                if restoring =>
+            {
+                return Err(
+                    mixengine_core::Error::Runtime(RuntimeError::PackageAlreadyRecorded {
                         package: package.to_owned(),
                         version: version.clone(),
-                    },
-                )
-                .to_wire());
+                    })
+                    .to_wire(),
+                );
             }
 
             // **T182f, D2**, on `runtimes::perform`'s reasoning: an earlier home installed it.
-            Err(mixengine_core::Error::Runtime(
-                mixengine_core::RuntimeError::AlreadyInstalled { path },
-            )) => {
+            Err(mixengine_core::Error::Runtime(RuntimeError::AlreadyInstalled { path })) => {
                 let found = mixengine_core::adopt::walk::Found {
                     subject: mixengine_core::adopt::Subject::Package {
                         package: package.to_owned(),

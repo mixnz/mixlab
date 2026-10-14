@@ -7,6 +7,7 @@ use mixengine_proto::{PackageSummary, PackageVersion, RuntimeKind, RuntimeSummar
 
 use super::Subject;
 use super::marker::{self, Marker};
+use crate::RuntimeError;
 use crate::index::{Artifact, Index, Package, Target};
 use crate::install::SmokeTest;
 use crate::{Error, Paths, Result, Store};
@@ -181,12 +182,10 @@ fn visible_dirs(dir: &Path) -> Vec<(String, PathBuf)> {
 /// # Errors
 ///
 /// [`RuntimeError::UnrecordedInstall`] naming the reason; the errors of `remember`.
-///
-/// [`RuntimeError::UnrecordedInstall`]: crate::RuntimeError::UnrecordedInstall
 pub async fn claim(store: &Store, found: &Found, evidence: &Evidence<'_>) -> Result<Claimed> {
     match attempt(store, found, evidence).await? {
         Ok(claimed) => Ok(claimed),
-        Err(refusal) => Err(Error::Runtime(crate::RuntimeError::UnrecordedInstall {
+        Err(refusal) => Err(Error::Runtime(RuntimeError::UnrecordedInstall {
             path: found.path.clone(),
             reason: refusal.reason(&found.subject),
         })),

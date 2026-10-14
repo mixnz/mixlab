@@ -215,10 +215,10 @@ impl Validator {
     ///
     /// # Errors
     ///
-    /// [`ServiceError::ConfigRejected`] when the command says no — carrying whichever line [`Reason`] says
-    /// the program leaves the answer on — or when it does not answer in time. [`Error::Platform`] when the
-    /// program cannot be started at all, which is a recipe naming a binary that is not installed
-    /// rather than a configuration that is wrong.
+    /// [`ServiceError::ConfigRejected`] when the command says no — carrying whichever line
+    /// [`Reason`] says the program leaves the answer on — or when it does not answer in time.
+    /// [`Error::Platform`] when the program cannot be started at all, which is a recipe naming a
+    /// binary that is not installed rather than a configuration that is wrong.
     async fn judge(&self, staging: &Path) -> Result<()> {
         let config = staging.join(&self.entry);
         let args: Vec<OsString> = self
@@ -294,8 +294,8 @@ impl Validator {
 /// # Errors
 ///
 /// [`Error::Io`] naming the file or directory that could not be read, written, renamed or removed;
-/// [`ServiceError::ConfigRejected`] when the validator refuses the staged set — in which case nothing has
-/// been installed or removed, and the staging directory is gone.
+/// [`ServiceError::ConfigRejected`] when the validator refuses the staged set — in which case
+/// nothing has been installed or removed, and the staging directory is gone.
 pub async fn install(
     directory: &Path,
     documents: &[Document],

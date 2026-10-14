@@ -329,8 +329,9 @@ impl Context {
     ///
     /// # Errors
     ///
-    /// [`ServiceError::ServiceProvidesNothing`], naming the service and listing what the install does
-    /// publish — which is the whole of what somebody looking at a PHP packed without a SAPI needs.
+    /// [`ServiceError::ServiceProvidesNothing`], naming the service and listing what the install
+    /// does publish — which is the whole of what somebody looking at a PHP packed without a SAPI
+    /// needs.
     pub fn provided(&self, name: &str) -> Result<PathBuf> {
         self.provides
             .get(name)

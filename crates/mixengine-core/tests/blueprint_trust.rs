@@ -5,6 +5,7 @@
 //! key would be a signing key on every user's machine. `verify` takes its key as a parameter for
 //! exactly this reason — see [`mixengine_core::blueprints::trust`].
 
+use mixengine_core::BlueprintError;
 use mixengine_core::Error;
 use mixengine_core::blueprints::trust::{PUBLIC_KEY, verify};
 use mixengine_testkit::Signer;
@@ -35,7 +36,7 @@ fn a_document_that_was_edited_does_not_verify() {
     assert!(
         matches!(
             error,
-            Error::Blueprint(mixengine_core::BlueprintError::BlueprintSignature { .. })
+            Error::Blueprint(BlueprintError::BlueprintSignature { .. })
         ),
         "{error:?}"
     );
@@ -64,7 +65,7 @@ fn a_file_that_is_not_a_signature_is_refused_as_one() {
     assert!(
         matches!(
             error,
-            Error::Blueprint(mixengine_core::BlueprintError::BlueprintSignature { .. })
+            Error::Blueprint(BlueprintError::BlueprintSignature { .. })
         ),
         "{error:?}"
     );
@@ -84,7 +85,7 @@ fn the_compiled_in_key_is_a_key() {
     assert!(
         matches!(
             error,
-            Error::Blueprint(mixengine_core::BlueprintError::BlueprintSignature { .. })
+            Error::Blueprint(BlueprintError::BlueprintSignature { .. })
         ),
         "a build whose own key will not parse says so differently: {error:?}"
     );

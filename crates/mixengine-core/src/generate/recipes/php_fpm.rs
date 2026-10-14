@@ -542,7 +542,8 @@ const fn listens_on_tcp() -> bool {
 ///
 /// # Errors
 ///
-/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel accepts.
+/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel
+/// accepts.
 fn socket_path(context: &Context) -> Result<PathBuf> {
     let name = context
         .service()
@@ -562,8 +563,8 @@ fn socket_path(context: &Context) -> Result<PathBuf> {
 ///
 /// # Errors
 ///
-/// [`ServiceError::SettingValue`] when the row carries no port, which is a pool created on a system that
-/// does not need one and then run on a system that does.
+/// [`ServiceError::SettingValue`] when the row carries no port, which is a pool created on a system
+/// that does not need one and then run on a system that does.
 fn address(context: &Context) -> Result<SocketAddr> {
     let port = context.port().ok_or_else(|| {
         Error::Service(ServiceError::SettingValue {

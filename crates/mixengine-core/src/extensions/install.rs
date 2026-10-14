@@ -35,6 +35,8 @@ use mixengine_proto::{
 };
 
 use crate::ExtensionError;
+use crate::ProjectError;
+use crate::RuntimeError;
 use crate::extensions::manifest::{Body, ExtensionManifest};
 use crate::extensions::store::{self as extension_store, Installed, Source};
 use crate::extensions::{recipe, render};
@@ -147,8 +149,8 @@ pub struct Plan {
 /// # Errors
 ///
 /// [`ExtensionError::ExtensionAlreadyInstalled`] when something is already installed under that id;
-/// [`ExtensionError::ExtensionNoArtifact`] where nothing is published for this machine; and whatever reading
-/// the manifest reports.
+/// [`ExtensionError::ExtensionNoArtifact`] where nothing is published for this machine; and
+/// whatever reading the manifest reports.
 pub async fn plan(
     store: &Store,
     paths: &Paths,
@@ -257,13 +259,10 @@ fn artifact_for_host(manifest: &ExtensionManifest) -> Result<Option<Artifact>> {
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionField`] for a runtime kind other than PHP and for an extension id whose pool
-/// could not be named; [`RuntimeError::RuntimeUnresolved`] naming the extension when nothing installed
-/// satisfies `requires`; [`ProjectError::DomainTaken`] naming the holder; and whatever rendering the root
-/// refuses.
-///
-/// [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
-/// [`ProjectError::DomainTaken`]: crate::ProjectError::DomainTaken
+/// [`ExtensionError::ExtensionField`] for a runtime kind other than PHP and for an extension id
+/// whose pool could not be named; [`RuntimeError::RuntimeUnresolved`] naming the extension when
+/// nothing installed satisfies `requires`; [`ProjectError::DomainTaken`] naming the holder; and
+/// whatever rendering the root refuses.
 pub async fn site_for(
     store: &Store,
     paths: &Paths,
@@ -290,7 +289,7 @@ pub async fn site_for(
     )?;
 
     if let Some(holder) = sites::by_domain(store, &domain).await? {
-        return Err(Error::Project(crate::ProjectError::DomainTaken {
+        return Err(Error::Project(ProjectError::DomainTaken {
             domain,
             holder: holder.domains.first().cloned().unwrap_or_default(),
         }));
@@ -306,9 +305,9 @@ pub async fn site_for(
     )
     .await
     .map_err(|error| match error {
-        Error::Runtime(crate::RuntimeError::RuntimeUnresolved {
+        Error::Runtime(RuntimeError::RuntimeUnresolved {
             kind, constraint, ..
-        }) => Error::Runtime(crate::RuntimeError::RuntimeUnresolved {
+        }) => Error::Runtime(RuntimeError::RuntimeUnresolved {
             kind,
             constraint,
             origin: format!("the {id} extension"),
@@ -608,7 +607,7 @@ async fn write_rows(
 /// Copy a directory tree, for `--path`.
 fn copy_into(from: &Path, into: &Path) -> Result<()> {
     if into.exists() {
-        return Err(Error::Runtime(crate::RuntimeError::AlreadyInstalled {
+        return Err(Error::Runtime(RuntimeError::AlreadyInstalled {
             path: into.to_path_buf(),
         }));
     }

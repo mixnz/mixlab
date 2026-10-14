@@ -147,10 +147,10 @@ pub enum Error {
     /// `config.toml` could not be written to — roadmap task **T143**.
     ///
     /// [`Error::Config`]'s sibling on the write path, and separate from it for
-    /// [`ProjectError::ManifestEdit`]'s reason: the first says the user's file is wrong, and this says
-    /// this build could not put something into a file that may be perfectly right. It also carries
-    /// a value this build refused, which is a third thing again — the file is fine, the request is
-    /// not.
+    /// [`ProjectError::ManifestEdit`]'s reason: the first says the user's file is wrong, and this
+    /// says this build could not put something into a file that may be perfectly right. It also
+    /// carries a value this build refused, which is a third thing again — the file is fine, the
+    /// request is not.
     #[error("{} could not be edited: {reason}", path.display())]
     ConfigEdit {
         /// The configuration file.
@@ -281,11 +281,13 @@ pub enum Error {
     #[error(transparent)]
     Blueprint(#[from] blueprints::BlueprintError),
 
-    /// The ways recording, resolving and restoring runtimes and packages can fail. — see [`RuntimeError`].
+    /// The ways recording, resolving and restoring runtimes and packages can fail. — see
+    /// [`RuntimeError`].
     #[error(transparent)]
     Runtime(#[from] runtimes::RuntimeError),
 
-    /// The ways a project, its manifest, its sites and their domains can be wrong. — see [`ProjectError`].
+    /// The ways a project, its manifest, its sites and their domains can be wrong. — see
+    /// [`ProjectError`].
     #[error(transparent)]
     Project(#[from] projects::ProjectError),
 
@@ -293,11 +295,13 @@ pub enum Error {
     #[error(transparent)]
     Extension(#[from] extensions::ExtensionError),
 
-    /// The ways reading the signed index and installing what it names can fail. — see [`InstallError`].
+    /// The ways reading the signed index and installing what it names can fail. — see
+    /// [`InstallError`].
     #[error(transparent)]
     Install(#[from] install::InstallError),
 
-    /// The ways a service's state, settings, generated configuration and ports can be wrong. — see [`ServiceError`].
+    /// The ways a service's state, settings, generated configuration and ports can be wrong. — see
+    /// [`ServiceError`].
     #[error(transparent)]
     Service(#[from] services::ServiceError),
 }

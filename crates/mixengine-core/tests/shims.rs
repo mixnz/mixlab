@@ -7,6 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
+use mixengine_core::RuntimeError;
 use mixengine_core::shims;
 
 /// A `bin/` and a file standing in for the shim binary, in a directory this test owns.
@@ -288,7 +289,7 @@ fn the_shim_is_found_beside_the_program_that_asks_for_it() {
     assert!(
         matches!(
             error,
-            mixengine_core::Error::Runtime(mixengine_core::RuntimeError::ShimMissing { .. })
+            mixengine_core::Error::Runtime(RuntimeError::ShimMissing { .. })
         ),
         "{error}"
     );

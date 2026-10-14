@@ -218,8 +218,8 @@ pub(super) fn remove_the_space_free_view(context: &Context, view: &Path) -> Step
 ///
 /// # Errors
 ///
-/// [`ServiceError::SettingValue`] — the variant that names the service and the reason — when the path this
-/// home would need is longer than the kernel accepts.
+/// [`ServiceError::SettingValue`] — the variant that names the service and the reason — when the
+/// path this home would need is longer than the kernel accepts.
 fn within_socket_limit(service: &str, key: &'static str, socket: &Path) -> Result<()> {
     if socket.as_os_str().len() > SOCKET_PATH_LIMIT {
         return Err(Error::Service(ServiceError::SettingValue {
@@ -249,10 +249,11 @@ fn within_socket_limit(service: &str, key: &'static str, socket: &Path) -> Resul
 ///
 /// # Errors
 ///
-/// [`ServiceError::SettingValue`] when the derived path is longer than `sockaddr_un` accepts. Checked
-/// against the derived path and never inherited from `socket`: `.activate` is nine characters, which
-/// is enough to put a home that was just inside the limit outside it, and the failure that would
-/// otherwise follow is a bind refused at run time and a site that 502s for no visible reason.
+/// [`ServiceError::SettingValue`] when the derived path is longer than `sockaddr_un` accepts.
+/// Checked against the derived path and never inherited from `socket`: `.activate` is nine
+/// characters, which is enough to put a home that was just inside the limit outside it, and the
+/// failure that would otherwise follow is a bind refused at run time and a site that 502s for no
+/// visible reason.
 fn activator_socket(service: &str, key: &'static str, socket: &Path) -> Result<PathBuf> {
     let mut name = socket
         .file_stem()

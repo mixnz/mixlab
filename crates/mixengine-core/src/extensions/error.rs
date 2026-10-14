@@ -9,8 +9,8 @@
 pub enum ExtensionError {
     /// An `extension.toml` does not parse — roadmap task **T80**.
     ///
-    /// **The path is here**, unlike [`BlueprintError::BlueprintManifest`], because there is a file to point
-    /// at: an extension is read off disk and never out of a column.
+    /// **The path is here**, unlike [`BlueprintError::BlueprintManifest`], because there is a file
+    /// to point at: an extension is read off disk and never out of a column.
     ///
     /// [`BlueprintError::BlueprintManifest`]: crate::BlueprintError::BlueprintManifest
     #[error("{path} is not an extension manifest this build can read")]
@@ -40,9 +40,9 @@ pub enum ExtensionError {
 
     /// Something is already installed under that id — roadmap task **T81**.
     ///
-    /// Named rather than left to the primary key, on [`RuntimeError::PackageAlreadyRecorded`]'s reasoning:
-    /// the collision is a real case and the sentence a person needs names the extension and the way
-    /// out, which is `mix extension uninstall` and not a constraint.
+    /// Named rather than left to the primary key, on [`RuntimeError::PackageAlreadyRecorded`]'s
+    /// reasoning: the collision is a real case and the sentence a person needs names the extension
+    /// and the way out, which is `mix extension uninstall` and not a constraint.
     ///
     /// [`RuntimeError::PackageAlreadyRecorded`]: crate::RuntimeError::PackageAlreadyRecorded
     #[error("{id} is already installed")]
@@ -53,9 +53,9 @@ pub enum ExtensionError {
 
     /// An `extensions` row holds something this build cannot read back.
     ///
-    /// [`ServiceError::UnreadableServiceRow`]'s twin one table across, and it exists for the same reason:
-    /// a hand-edited database, or one written by a later MixEngine, is answered by naming the row
-    /// and the column rather than by a failure somewhere downstream that mentions neither.
+    /// [`ServiceError::UnreadableServiceRow`]'s twin one table across, and it exists for the same
+    /// reason: a hand-edited database, or one written by a later MixEngine, is answered by naming
+    /// the row and the column rather than by a failure somewhere downstream that mentions neither.
     ///
     /// [`ServiceError::UnreadableServiceRow`]: crate::ServiceError::UnreadableServiceRow
     #[error("the {column} of extension {extension} cannot be read: {value}")]
@@ -71,8 +71,8 @@ pub enum ExtensionError {
     /// A `services` row points at an extension that runs no process — roadmap task **T81**.
     ///
     /// Unreachable through this build's own writes, since only a `service` extension is given a
-    /// row. Named rather than defaulted, on [`ServiceError::UnreadableServiceRow`]'s reasoning: a hand-
-    /// edited database is answered by saying what is wrong with it.
+    /// row. Named rather than defaulted, on [`ServiceError::UnreadableServiceRow`]'s reasoning: a
+    /// hand- edited database is answered by saying what is wrong with it.
     ///
     /// [`ServiceError::UnreadableServiceRow`]: crate::ServiceError::UnreadableServiceRow
     #[error("{id} is a {kind} extension and runs no process")]
@@ -99,9 +99,10 @@ pub enum ExtensionError {
     /// A `web-app` administers a database and this home runs none of the engines it named — roadmap
     /// task **T82**.
     ///
-    /// **Refused before the download**, for [`RuntimeError::RuntimeUnresolved`]'s reason: an install whose
-    /// stated effect cannot happen is worse than one that never started. Like that variant, the
-    /// message names what would satisfy it rather than implying something is broken — nothing is.
+    /// **Refused before the download**, for [`RuntimeError::RuntimeUnresolved`]'s reason: an
+    /// install whose stated effect cannot happen is worse than one that never started. Like that
+    /// variant, the message names what would satisfy it rather than implying something is broken —
+    /// nothing is.
     ///
     /// [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
     #[error(
@@ -135,9 +136,9 @@ pub enum ExtensionError {
 
     /// An extension written by a build whose format this one does not know.
     ///
-    /// Refused rather than half-read, for [`BlueprintError::UnknownBlueprintSchema`]'s reason: a manifest
-    /// whose unknown sections were skipped would install as something other than what its author
-    /// wrote down.
+    /// Refused rather than half-read, for [`BlueprintError::UnknownBlueprintSchema`]'s reason: a
+    /// manifest whose unknown sections were skipped would install as something other than what its
+    /// author wrote down.
     ///
     /// [`BlueprintError::UnknownBlueprintSchema`]: crate::BlueprintError::UnknownBlueprintSchema
     #[error("the extension {id} is schema {schema}, which this build does not read")]

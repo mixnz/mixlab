@@ -29,6 +29,8 @@ use std::collections::BTreeMap;
 
 use mixengine_proto::{RuntimeKind, RuntimeSource, ServiceId, SiteKind, VersionConstraint};
 
+use crate::BlueprintError;
+use crate::RuntimeError;
 use crate::blueprints::manifest::{
     BlueprintManifest, BlueprintService, BlueprintSite, Header, PER_PROJECT, Php, Provenance,
 };
@@ -78,11 +80,10 @@ pub struct Asked<'a> {
 ///
 /// # Errors
 ///
-/// [`BlueprintError::ProjectRunsSeveralPhps`] for a project whose sites a single `[runtimes] php` cannot
-/// describe; [`Error::Database`] when a table cannot be read, and [`ProjectError::Manifest`] when the
-/// project's own `mixengine.toml` does not parse.
+/// [`BlueprintError::ProjectRunsSeveralPhps`] for a project whose sites a single `[runtimes] php`
+/// cannot describe; [`Error::Database`] when a table cannot be read, and [`ProjectError::Manifest`]
+/// when the project's own `mixengine.toml` does not parse.
 ///
-/// [`BlueprintError::ProjectRunsSeveralPhps`]: crate::BlueprintError::ProjectRunsSeveralPhps
 /// [`ProjectError::Manifest`]: crate::ProjectError::Manifest
 pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManifest> {
     let project = asked.project;
@@ -243,8 +244,6 @@ fn kept(service: &ServiceId) -> bool {
 /// # Errors
 ///
 /// [`BlueprintError::ProjectRunsSeveralPhps`] when they run more than one version.
-///
-/// [`BlueprintError::ProjectRunsSeveralPhps`]: crate::BlueprintError::ProjectRunsSeveralPhps
 async fn one_php(
     store: &Store,
     project: &ProjectRecord,
@@ -275,12 +274,10 @@ async fn one_php(
         .map(|(_, version)| version.as_str())
         .collect::<std::collections::BTreeSet<_>>();
     if distinct.len() > 1 {
-        return Err(Error::Blueprint(
-            crate::BlueprintError::ProjectRunsSeveralPhps {
-                project: project.name.clone(),
-                sites: seen,
-            },
-        ));
+        return Err(Error::Blueprint(BlueprintError::ProjectRunsSeveralPhps {
+            project: project.name.clone(),
+            sites: seen,
+        }));
     }
 
     Ok(match first {
@@ -320,8 +317,8 @@ async fn runtimes(
             // A language nothing declares and nothing installs is not a language this project uses.
             // Every other failure is a database that cannot be read, and is worth raising.
             Err(
-                Error::Runtime(crate::RuntimeError::RuntimeUnresolved { .. })
-                | Error::Runtime(crate::RuntimeError::NoDefaultRuntime { .. }),
+                Error::Runtime(RuntimeError::RuntimeUnresolved { .. })
+                | Error::Runtime(RuntimeError::NoDefaultRuntime { .. }),
             ) => {}
             Err(other) => return Err(other),
         }
@@ -775,7 +772,7 @@ mod tests {
 
         assert!(matches!(
             error,
-            Error::Blueprint(crate::BlueprintError::ProjectRunsSeveralPhps { .. })
+            Error::Blueprint(BlueprintError::ProjectRunsSeveralPhps { .. })
         ));
         let message = error.to_string();
         for part in ["blog.test", "8.2.23", "api.blog.test", "8.3.12"] {

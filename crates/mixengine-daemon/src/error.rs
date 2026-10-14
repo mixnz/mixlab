@@ -18,9 +18,14 @@
 use std::io;
 use std::path::Path;
 
+use mixengine_core::BlueprintError;
+use mixengine_core::ElevationError;
 use mixengine_core::ExtensionError;
 use mixengine_core::InstallError;
+use mixengine_core::ProjectError;
+use mixengine_core::RuntimeError;
 use mixengine_core::ServiceError;
+use mixengine_core::UpdateError;
 use mixengine_proto::{Error, ErrorCode};
 
 /// A library error, rendered for the wire.
@@ -251,7 +256,7 @@ impl ToWire for mixengine_core::Error {
             // `UnsupportedPlatform` and not `InvalidArgument`: the request is well formed and is
             // answerable on another machine — the same name is a module on Windows and linked in on
             // the Unix cells — so what refuses it is this build rather than the sentence.
-            Core::Runtime(mixengine_core::RuntimeError::ExtensionCompiledIn { .. }) => {
+            Core::Runtime(RuntimeError::ExtensionCompiledIn { .. }) => {
                 Error::new(ErrorCode::UnsupportedPlatform, chain(self)).with_hint(
                     "this build has it linked in, so it is always loaded; nothing can unload it \
                      short of a build that ships it as a module",
@@ -261,9 +266,9 @@ impl ToWire for mixengine_core::Error {
             // Two ways of saying "it is already here", and they are deliberately different variants
             // one layer down: `AlreadyInstalled` is a directory, `AlreadyRecorded` is a row. A
             // client cannot act differently on them, so they share a code and a hint.
-            Core::Runtime(mixengine_core::RuntimeError::AlreadyInstalled { .. })
-            | Core::Runtime(mixengine_core::RuntimeError::AlreadyRecorded { .. })
-            | Core::Runtime(mixengine_core::RuntimeError::PackageAlreadyRecorded { .. }) => {
+            Core::Runtime(RuntimeError::AlreadyInstalled { .. })
+            | Core::Runtime(RuntimeError::AlreadyRecorded { .. })
+            | Core::Runtime(RuntimeError::PackageAlreadyRecorded { .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(
                     "an installed version is never overwritten; uninstall it first if it is to be \
                      replaced",
@@ -272,7 +277,7 @@ impl ToWire for mixengine_core::Error {
 
             // A directory an earlier home installed and this one could not check — roadmap task
             // T182f. Recorded by hand once it can be checked, or removed.
-            Core::Runtime(mixengine_core::RuntimeError::UnrecordedInstall { path, .. }) => {
+            Core::Runtime(RuntimeError::UnrecordedInstall { path, .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
                     "`mix runtime adopt` or `mix package adopt` records it once it can be checked, \
                      or remove {} and install again",
@@ -302,20 +307,20 @@ impl ToWire for mixengine_core::Error {
             // The fifth way of saying "it is already here", and its repair is a different argument
             // rather than a different call: the message already names the project in the way, so
             // the hint spends itself on what to do about it.
-            Core::Project(mixengine_core::ProjectError::ProjectRootTaken { holder, .. }) => {
+            Core::Project(ProjectError::ProjectRootTaken { holder, .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
                     "`mix project show {holder}` is the one that has it; one directory is one \
                      project"
                 ))
             }
 
-            Core::Project(mixengine_core::ProjectError::ProjectNameTaken { .. }) => {
+            Core::Project(ProjectError::ProjectNameTaken { .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self))
                     .with_hint("`mix project list` shows the names that are taken")
             }
 
             // The user's own argument, and the message already says which rule it broke.
-            Core::Project(mixengine_core::ProjectError::InvalidProjectName { .. }) => {
+            Core::Project(ProjectError::InvalidProjectName { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "a project name is a handle: up to sixty-four characters, no path separators \
                      and no control characters",
@@ -329,7 +334,8 @@ impl ToWire for mixengine_core::Error {
                 )
             }
 
-            // The message never carries the value — `ServiceError::InvalidPassword` has none to leak.
+            // The message never carries the value — `ServiceError::InvalidPassword` has none to
+            // leak.
             Core::Service(ServiceError::InvalidPassword { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "1 to 128 printable ASCII characters, and none of: a quote, a backslash, or \
@@ -361,30 +367,30 @@ impl ToWire for mixengine_core::Error {
             // **T77 left these four in the catch-all below**, so a mistyped blueprint name reached a
             // client as an internal error. Found while adding the three above; fixed here rather
             // than left for whoever meets it next.
-            Core::Blueprint(mixengine_core::BlueprintError::InvalidBlueprintName { .. }) => {
+            Core::Blueprint(BlueprintError::InvalidBlueprintName { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "a blueprint name is a filename stem: lower-case letters, digits and hyphens",
                 )
             }
 
-            Core::Blueprint(mixengine_core::BlueprintError::BlueprintExists { .. }) => {
+            Core::Blueprint(BlueprintError::BlueprintExists { .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self))
             }
 
             // **About the project, never the daemon failing** — roadmap task **T204a**. The
             // several-sites refusal this replaced had no arm, and reached clients as `internal`.
-            Core::Blueprint(mixengine_core::BlueprintError::ProjectRunsSeveralPhps { .. }) => {
+            Core::Blueprint(BlueprintError::ProjectRunsSeveralPhps { .. }) => {
                 Error::new(ErrorCode::Conflict, chain(self)).with_hint(
                     "a blueprint has one [runtimes] php; move the sites onto one PHP first",
                 )
             }
 
-            Core::Blueprint(mixengine_core::BlueprintError::BlueprintManifest { .. })
-            | Core::Blueprint(mixengine_core::BlueprintError::UnknownBlueprintSchema { .. }) => {
+            Core::Blueprint(BlueprintError::BlueprintManifest { .. })
+            | Core::Blueprint(BlueprintError::UnknownBlueprintSchema { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self))
             }
 
-            Core::Blueprint(mixengine_core::BlueprintError::UnknownBlueprintSource { .. }) => {
+            Core::Blueprint(BlueprintError::UnknownBlueprintSource { .. }) => {
                 Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "this home holds a blueprint filed by a newer MixEngine than the one running",
                 )
@@ -393,12 +399,12 @@ impl ToWire for mixengine_core::Error {
             // The signature is a property of the file somebody named, so the file is the argument
             // that was wrong. Classified here rather than left to the `_ => internal` arm, which is
             // where T77 left four variants and T78 had to come back for them.
-            Core::Blueprint(mixengine_core::BlueprintError::BlueprintSignature { .. }) => {
+            Core::Blueprint(BlueprintError::BlueprintSignature { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self))
                     .with_hint("it can still be imported; it will be marked untrusted for good")
             }
 
-            Core::Blueprint(mixengine_core::BlueprintError::BlueprintKey { .. }) => {
+            Core::Blueprint(BlueprintError::BlueprintKey { .. }) => {
                 Error::new(ErrorCode::Internal, chain(self))
             }
 
@@ -430,44 +436,44 @@ impl ToWire for mixengine_core::Error {
                 )
             }
 
-            Core::Project(mixengine_core::ProjectError::InvalidDomain { .. }) => {
+            Core::Project(ProjectError::InvalidDomain { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self))
                     .with_hint("a domain is lowercase ASCII labels on .test, .localhost or .local")
             }
 
-            Core::Project(mixengine_core::ProjectError::UnmanagedTld { .. }) => {
+            Core::Project(ProjectError::UnmanagedTld { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "use .test; it is reserved for exactly this and resolves nowhere else",
                 )
             }
 
-            Core::Project(mixengine_core::ProjectError::RiskyTld { .. }) => {
+            Core::Project(ProjectError::RiskyTld { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self))
                     .with_hint("`--i-know` accepts it anyway; .test avoids the question")
             }
 
-            Core::Project(mixengine_core::ProjectError::DomainTaken { .. }) => {
+            Core::Project(ProjectError::DomainTaken { .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self))
                     .with_hint("`mix site update` can move it, or pick another name")
             }
 
-            Core::Project(mixengine_core::ProjectError::LastDomain { .. }) => {
+            Core::Project(ProjectError::LastDomain { .. }) => {
                 Error::new(ErrorCode::Conflict, chain(self))
                     .with_hint("`mix site delete` removes the site itself")
             }
 
-            Core::Project(mixengine_core::ProjectError::PrimaryDomain { .. }) => {
+            Core::Project(ProjectError::PrimaryDomain { .. }) => {
                 Error::new(ErrorCode::Conflict, chain(self)).with_hint(
                     "`mix site update --domain <new-primary> --domain <the-rest>` reorders",
                 )
             }
 
-            Core::Project(mixengine_core::ProjectError::DocRootOutsideProject { .. }) => {
+            Core::Project(ProjectError::DocRootOutsideProject { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self))
                     .with_hint("a doc root is a directory inside the project's own root")
             }
 
-            Core::Project(mixengine_core::ProjectError::HttpsRedirectNeedsHttps) => {
+            Core::Project(ProjectError::HttpsRedirectNeedsHttps) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self))
                     .with_hint("`--https true` first, or leave `--https-redirect` unset")
             }
@@ -483,10 +489,10 @@ impl ToWire for mixengine_core::Error {
 
             // A hand-edited database, or a row from a build that knew a channel this one does not.
             // The same reading `UnknownServiceState` gets, and the same code.
-            Core::Runtime(mixengine_core::RuntimeError::UnreadableRuntimeRow { .. })
-            | Core::Runtime(mixengine_core::RuntimeError::UnreadablePackageRow { .. })
-            | Core::Project(mixengine_core::ProjectError::UnreadableProjectRow { .. })
-            | Core::Project(mixengine_core::ProjectError::UnreadableSiteRow { .. }) => {
+            Core::Runtime(RuntimeError::UnreadableRuntimeRow { .. })
+            | Core::Runtime(RuntimeError::UnreadablePackageRow { .. })
+            | Core::Project(ProjectError::UnreadableProjectRow { .. })
+            | Core::Project(ProjectError::UnreadableSiteRow { .. }) => {
                 Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "the row was written by a different version of MixEngine, or edited by hand",
                 )
@@ -495,7 +501,7 @@ impl ToWire for mixengine_core::Error {
             // The user's own file, one directory out from `Core::Config` and given the same code —
             // and the same hint would be wrong: `mixengine.toml` is checked into their repository,
             // so "delete it and a fresh one will be written" is advice about somebody else's file.
-            Core::Project(mixengine_core::ProjectError::Manifest { path, .. }) => {
+            Core::Project(ProjectError::Manifest { path, .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(format!(
                     "only the `[runtimes]` table of {} is read while resolving a version; the \
                      languages it may name are php, node, python and ruby",
@@ -505,7 +511,7 @@ impl ToWire for mixengine_core::Error {
 
             // The user's file again, and the same code: what a person does about either is open the
             // file. The hint differs because the repair does — nothing here is about `[runtimes]`.
-            Core::Project(mixengine_core::ProjectError::ManifestEdit { path, .. }) => {
+            Core::Project(ProjectError::ManifestEdit { path, .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(format!(
                     "{} could not be rewritten with the project in it; check that it is a TOML \
                      file this user can write",
@@ -515,7 +521,7 @@ impl ToWire for mixengine_core::Error {
 
             // A client sent a directory that means nothing to a daemon. The message names it, and
             // what to do about it is the caller's own bug rather than the user's.
-            Core::Project(mixengine_core::ProjectError::NotAbsolute { .. }) => {
+            Core::Project(ProjectError::NotAbsolute { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "a directory is resolved by walking up from it, so it has to be one this \
                      machine can find on its own",
@@ -526,10 +532,8 @@ impl ToWire for mixengine_core::Error {
             // the code the feature spec names, and the hint is the whole value of the answer: what
             // to type. A range cannot become an install command — inventing a version would be
             // inventing a release — so it becomes the listing instead.
-            Core::Runtime(mixengine_core::RuntimeError::RuntimeUnresolved {
-                kind,
-                constraint,
-                ..
+            Core::Runtime(RuntimeError::RuntimeUnresolved {
+                kind, constraint, ..
             }) => Error::new(ErrorCode::DependencyMissing, chain(self))
                 .with_hint(mixengine_core::resolve::install_command(*kind, constraint)),
 
@@ -550,12 +554,12 @@ impl ToWire for mixengine_core::Error {
             // no default — which is what uninstalling the last version leaves behind.
             // **T206d, D2.** The version is recorded and its folder is gone: the hint is the install
             // that restores it in place, and the uninstall that forgets it.
-            Core::Runtime(mixengine_core::RuntimeError::RuntimeMissing {
-                kind, version, ..
-            }) => Error::new(ErrorCode::DependencyMissing, chain(self))
-                .with_hint(mixengine_core::resolve::restore_command(*kind, version)),
+            Core::Runtime(RuntimeError::RuntimeMissing { kind, version, .. }) => {
+                Error::new(ErrorCode::DependencyMissing, chain(self))
+                    .with_hint(mixengine_core::resolve::restore_command(*kind, version))
+            }
 
-            Core::Runtime(mixengine_core::RuntimeError::NoDefaultRuntime { kind }) => {
+            Core::Runtime(RuntimeError::NoDefaultRuntime { kind }) => {
                 Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
                     "`mix runtime list --kind {kind}` shows what is installed, and \
                      `mix runtime default {kind} <version>` chooses which one is used here"
@@ -567,14 +571,12 @@ impl ToWire for mixengine_core::Error {
             // daemon. Classified anyway, on `InstallCancelled`'s reasoning: a variant that can be
             // constructed can be rendered, and `internal` would be the wrong word for the case this
             // actually covers, which is a runtime installed before its executables were recorded.
-            Core::Runtime(mixengine_core::RuntimeError::RuntimeProvidesNothing {
-                kind,
-                version,
-                ..
-            }) => Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
-                "`mix runtime install {kind} {version}` after uninstalling it records what the \
+            Core::Runtime(RuntimeError::RuntimeProvidesNothing { kind, version, .. }) => {
+                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
+                    "`mix runtime install {kind} {version}` after uninstalling it records what the \
                      build publishes"
-            )),
+                ))
+            }
 
             // **The generated-configuration family — roadmap task T30.** What separates these is the
             // same thing that separates the index failures above: whose fault it is. An override is
@@ -628,7 +630,7 @@ impl ToWire for mixengine_core::Error {
             // A broken installation rather than anything the caller did, which is what `internal`
             // means here — but the hint is worth having anyway, because the one thing a person can
             // do about it is reinstall, and nothing in the message says so.
-            Core::Runtime(mixengine_core::RuntimeError::ShimMissing { .. }) => {
+            Core::Runtime(RuntimeError::ShimMissing { .. }) => {
                 Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "a release ships mixengined and mixengine-shim in one directory; reinstall \
                  MixEngine, or build the whole workspace if this is a development tree",
@@ -646,7 +648,7 @@ impl ToWire for mixengine_core::Error {
             // the program that survives an uninstall on their own. `missing_helper_advice` is the
             // one place that distinction is written down, so this arm and its sibling cannot drift
             // apart again.
-            Core::Elevation(mixengine_core::ElevationError::ElevateMissing { .. }) => {
+            Core::Elevation(ElevationError::ElevateMissing { .. }) => {
                 Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
                     "{}, or build the whole workspace if this is a development tree",
                     mixengine_platform::install::missing_helper_advice()
@@ -657,7 +659,7 @@ impl ToWire for mixengine_core::Error {
             // there and this daemon will not run it as an administrator, which is a state of the
             // machine rather than an incomplete install, and the hint therefore says what to look
             // at instead of saying "reinstall".
-            Core::Elevation(mixengine_core::ElevationError::ElevateUntrusted { path, .. }) => {
+            Core::Elevation(ElevationError::ElevateUntrusted { path, .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
                     "MixEngine will not run {} as an administrator until that file and the \
                      directory holding it belong to one; check who owns them, and reinstall if \
@@ -667,28 +669,28 @@ impl ToWire for mixengine_core::Error {
             }
 
             // A caller bug: `elevation.grant` refuses an empty queue before it composes a request.
-            Core::Elevation(mixengine_core::ElevationError::ElevateRequestEmpty) => {
+            Core::Elevation(ElevationError::ElevateRequestEmpty) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self))
             }
 
             // T40a is explicit that `Completed` means the helper ran, not that it left a report, so
             // this is a state rather than an impossibility — and one nothing a user typed caused.
-            Core::Elevation(mixengine_core::ElevationError::ElevateReportMissing { .. }) => {
+            Core::Elevation(ElevationError::ElevateReportMissing { .. }) => {
                 Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "the elevated helper ended without writing its answer; `logs/daemon.log` has \
                      the detail, and nothing was applied that it did not report",
                 )
             }
 
-            Core::Elevation(mixengine_core::ElevationError::ElevateReportUnreadable { .. })
-            | Core::Elevation(mixengine_core::ElevationError::ElevateReportMismatched { .. }) => {
+            Core::Elevation(ElevationError::ElevateReportUnreadable { .. })
+            | Core::Elevation(ElevationError::ElevateReportMismatched { .. }) => {
                 Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "the helper beside this daemon is not the one it expects; reinstall MixEngine",
                 )
             }
 
             // Unreachable: a `PrivilegedOp` is one of ours and holds nothing serde can refuse.
-            Core::Elevation(mixengine_core::ElevationError::OpUnwritable { .. }) => {
+            Core::Elevation(ElevationError::OpUnwritable { .. }) => {
                 Error::new(ErrorCode::Internal, chain(self))
             }
 
@@ -701,16 +703,16 @@ impl ToWire for mixengine_core::Error {
             Core::Platform(error) => error.to_wire(),
 
             // A copy the `.pkg` installed, asked to swap in place: the way that works is named.
-            Core::Update(mixengine_core::UpdateError::UpdateUsesInstaller { .. }) => {
+            Core::Update(UpdateError::UpdateUsesInstaller { .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self))
                     .with_hint("`mix self-update` opens the next .pkg in Installer.app")
             }
 
-            Core::Update(mixengine_core::UpdateError::InstallerUnavailable { .. }) => {
+            Core::Update(UpdateError::InstallerUnavailable { .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self))
             }
 
-            Core::Update(mixengine_core::UpdateError::UpdateNotInstalled { .. }) => {
+            Core::Update(UpdateError::UpdateNotInstalled { .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
                     "finish the installation in Installer.app, then run `mix self-update --finish`",
                 )
@@ -1131,12 +1133,11 @@ mod tests {
     /// naming both ways on — with no run of spaces where a line continuation went missing.
     #[test]
     fn an_unrecorded_install_names_adopt_and_the_directory() {
-        let error =
-            mixengine_core::Error::Runtime(mixengine_core::RuntimeError::UnrecordedInstall {
-                path: PathBuf::from("/data/runtimes/node/24.19.0"),
-                reason: "its marker names another install".to_owned(),
-            })
-            .to_wire();
+        let error = mixengine_core::Error::Runtime(RuntimeError::UnrecordedInstall {
+            path: PathBuf::from("/data/runtimes/node/24.19.0"),
+            reason: "its marker names another install".to_owned(),
+        })
+        .to_wire();
 
         assert_eq!(error.code, ErrorCode::AlreadyExists);
         let hint = error.hint.expect("a hint");

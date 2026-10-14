@@ -39,8 +39,8 @@ pub const fn url(arch: RedistributableArch) -> &'static str {
 ///
 /// # Errors
 ///
-/// [`InstallError::ArtifactTransport`] for the fetch, [`InstallError::ArtifactTooLarge`] past the limit, and
-/// [`Error::Io`] for the file.
+/// [`InstallError::ArtifactTransport`] for the fetch, [`InstallError::ArtifactTooLarge`] past the
+/// limit, and [`Error::Io`] for the file.
 pub async fn download(installer: &Installer, arch: RedistributableArch) -> Result<PathBuf> {
     let url = url(arch);
     crate::paths::create_dir(installer.downloads())?;

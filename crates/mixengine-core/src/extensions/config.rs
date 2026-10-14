@@ -99,8 +99,8 @@ pub async fn of(store: &Store, installed: &Installed, secret: &str) -> Result<Op
 ///
 /// # Errors
 ///
-/// [`ExtensionError::ExtensionField`] naming the field, for a root that does not grow from `{install_dir}`
-/// or a text carrying a placeholder this context cannot answer.
+/// [`ExtensionError::ExtensionField`] naming the field, for a root that does not grow from
+/// `{install_dir}` or a text carrying a placeholder this context cannot answer.
 ///
 /// [`ExtensionError::ExtensionField`]: crate::ExtensionError::ExtensionField
 pub fn rendered(

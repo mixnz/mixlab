@@ -11,8 +11,8 @@ use std::path::PathBuf;
 pub enum UpdateError {
     /// A `settings` row could not be written as JSON — roadmap task **T88**.
     ///
-    /// Unreachable for the same reason as [`JobError::JobOutcomeUnwritable`]: every value written to
-    /// that table is one of ours. Reported rather than unwrapped because nothing in this crate
+    /// Unreachable for the same reason as [`JobError::JobOutcomeUnwritable`]: every value written
+    /// to that table is one of ours. Reported rather than unwrapped because nothing in this crate
     /// panics, and named by key so the one line in a log says which setting.
     ///
     /// [`JobError::JobOutcomeUnwritable`]: crate::JobError::JobOutcomeUnwritable

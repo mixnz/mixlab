@@ -132,9 +132,9 @@ pub struct Seeded {
 ///
 /// # Errors
 ///
-/// [`BlueprintError::BlueprintManifest`] for a compiled-in file that does not parse — a broken build,
-/// which [`ENTRIES`]' round-trip test is what stops reaching one; [`crate::Error::Database`] when
-/// the table cannot be read or written, and [`crate::Error::Io`] when a rendering cannot be.
+/// [`BlueprintError::BlueprintManifest`] for a compiled-in file that does not parse — a broken
+/// build, which [`ENTRIES`]' round-trip test is what stops reaching one; [`crate::Error::Database`]
+/// when the table cannot be read or written, and [`crate::Error::Io`] when a rendering cannot be.
 ///
 /// [`BlueprintError::BlueprintManifest`]: crate::BlueprintError::BlueprintManifest
 pub async fn seed(store: &Store, paths: &Paths) -> Result<Seeded> {

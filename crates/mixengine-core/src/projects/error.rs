@@ -56,11 +56,11 @@ pub enum ProjectError {
 
     /// A `projects` row holds a value this build cannot read back.
     ///
-    /// [`RuntimeError::UnreadableRuntimeRow`]'s sibling, and reached through the same two doors: a database
-    /// edited by hand, or a row written by a build that knew more than this one. `runtime_pins_json`
-    /// is TEXT with no `CHECK` available to it, so the reader is the only thing that refuses — but
-    /// only for the language being asked about, since a pin naming a fifth one must not stop this
-    /// build resolving PHP.
+    /// [`RuntimeError::UnreadableRuntimeRow`]'s sibling, and reached through the same two doors: a
+    /// database edited by hand, or a row written by a build that knew more than this one.
+    /// `runtime_pins_json` is TEXT with no `CHECK` available to it, so the reader is the only thing
+    /// that refuses — but only for the language being asked about, since a pin naming a fifth one
+    /// must not stop this build resolving PHP.
     ///
     /// [`RuntimeError::UnreadableRuntimeRow`]: crate::RuntimeError::UnreadableRuntimeRow
     #[error("the project at {root} has a {column} this build cannot read: {value}")]

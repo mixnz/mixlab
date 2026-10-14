@@ -33,6 +33,7 @@ use mixengine_proto::{
 
 use crate::api::Events;
 use crate::error::ToWire as _;
+use mixengine_core::ElevationError;
 
 /// Where this home records the firewall plan it last had applied — roadmap task **T180**.
 ///
@@ -1166,7 +1167,7 @@ impl Elevation {
                     // writes no file beside a request it does not trust (T166, D6). `warn`, because
                     // until now it reached nothing above `debug`.
                     Err(mixengine_core::Error::Elevation(
-                        mixengine_core::ElevationError::ElevateReportMissing { path, .. },
+                        ElevationError::ElevateReportMissing { path, .. },
                     )) => {
                         tracing::warn!(
                             said = said.as_deref().unwrap_or(""),
@@ -1174,7 +1175,7 @@ impl Elevation {
                         );
                         self.remember(handle, &outcome, 0, asked, Vec::new());
                         return Err(mixengine_core::Error::Elevation(
-                            mixengine_core::ElevationError::ElevateReportMissing { path, said },
+                            ElevationError::ElevateReportMissing { path, said },
                         )
                         .to_wire());
                     }

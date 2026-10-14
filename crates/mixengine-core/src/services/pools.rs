@@ -35,8 +35,8 @@ use crate::{Error, Result, Store};
 ///
 /// [`Error::Database`] when the tables cannot be read or written, and whatever
 /// [`create`](super::create) reports for a row that cannot be written — except
-/// [`ServiceError::ServiceAlreadyDeclared`], which is this function's own no-op and is swallowed: two
-/// daemons racing to repair one home is not a failure of either.
+/// [`ServiceError::ServiceAlreadyDeclared`], which is this function's own no-op and is swallowed:
+/// two daemons racing to repair one home is not a failure of either.
 pub async fn ensure(
     store: &Store,
     host: &dyn mixengine_platform::Host,

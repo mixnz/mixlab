@@ -24,6 +24,7 @@ use std::path::{Path, PathBuf};
 
 use mixengine_proto::{PackageVersion, RuntimeKind, ServiceId, SiteKind, VersionConstraint};
 
+use crate::ProjectError;
 use crate::{Error, Result};
 
 /// The file a project pins its runtimes in, checked into the user's repository.
@@ -448,10 +449,8 @@ pub fn at(directory: &Path) -> PathBuf {
 ///
 /// # Errors
 ///
-/// [`ProjectError::Manifest`] for a file that does not parse — including a `[runtimes]` key naming a
-/// language this build does not manage — and [`Error::Io`] for a read that failed some other way.
-///
-/// [`ProjectError::Manifest`]: crate::ProjectError::Manifest
+/// [`ProjectError::Manifest`] for a file that does not parse — including a `[runtimes]` key naming
+/// a language this build does not manage — and [`Error::Io`] for a read that failed some other way.
 pub fn read(path: &Path) -> Result<Option<Manifest>> {
     let text = match std::fs::read_to_string(path) {
         Ok(text) => text,
@@ -473,7 +472,7 @@ pub fn read(path: &Path) -> Result<Option<Manifest>> {
     };
 
     toml::from_str(&text).map(Some).map_err(|source| {
-        Error::Project(crate::ProjectError::Manifest {
+        Error::Project(ProjectError::Manifest {
             path: path.to_path_buf(),
             source,
         })
@@ -555,13 +554,10 @@ pub struct ExportService {
 ///
 /// # Errors
 ///
-/// [`ProjectError::Manifest`] for an existing file that does not parse — refused before a byte is written,
-/// so a broken manifest is never made worse — [`ProjectError::ManifestEdit`] for one that parses as TOML
-/// but not as a document this can edit, including a `sites` key that is not a list of `[[sites]]`
-/// tables, and [`Error::Io`] when the file cannot be read or written.
-///
-/// [`ProjectError::Manifest`]: crate::ProjectError::Manifest
-/// [`ProjectError::ManifestEdit`]: crate::ProjectError::ManifestEdit
+/// [`ProjectError::Manifest`] for an existing file that does not parse — refused before a byte is
+/// written, so a broken manifest is never made worse — [`ProjectError::ManifestEdit`] for one that
+/// parses as TOML but not as a document this can edit, including a `sites` key that is not a list
+/// of `[[sites]]` tables, and [`Error::Io`] when the file cannot be read or written.
 pub fn write(directory: &Path, export: &Export) -> Result<Written> {
     let path = at(directory);
 
@@ -583,7 +579,7 @@ pub fn write(directory: &Path, export: &Export) -> Result<Written> {
 
     let mut document: toml_edit::DocumentMut =
         text.parse().map_err(|error: toml_edit::TomlError| {
-            Error::Project(crate::ProjectError::ManifestEdit {
+            Error::Project(ProjectError::ManifestEdit {
                 path: path.clone(),
                 reason: error.to_string(),
             })
@@ -604,7 +600,7 @@ pub fn write(directory: &Path, export: &Export) -> Result<Written> {
     }
 
     let sites_kept = write_sites(&mut document, &export.sites).map_err(|reason| {
-        Error::Project(crate::ProjectError::ManifestEdit {
+        Error::Project(ProjectError::ManifestEdit {
             path: path.clone(),
             reason,
         })

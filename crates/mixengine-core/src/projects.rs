@@ -104,9 +104,9 @@ pub struct Change {
 ///
 /// # Errors
 ///
-/// [`ProjectError::InvalidProjectName`] for an empty name, one over sixty-four characters, one holding a
-/// control character, and one holding `/` or `\` — a name that carries a path separator can be
-/// neither a command-line handle nor the domain T39a will make of it.
+/// [`ProjectError::InvalidProjectName`] for an empty name, one over sixty-four characters, one
+/// holding a control character, and one holding `/` or `\` — a name that carries a path separator
+/// can be neither a command-line handle nor the domain T39a will make of it.
 pub fn validated_name(name: &str) -> Result<String> {
     let trimmed = name.trim();
 
@@ -123,7 +123,7 @@ pub fn validated_name(name: &str) -> Result<String> {
     };
 
     match refusal {
-        Some(because) => Err(Error::Project(crate::ProjectError::InvalidProjectName {
+        Some(because) => Err(Error::Project(ProjectError::InvalidProjectName {
             name: name.to_owned(),
             because,
         })),
@@ -135,9 +135,10 @@ pub fn validated_name(name: &str) -> Result<String> {
 ///
 /// # Errors
 ///
-/// [`ProjectError::InvalidProjectName`] for a name that is not one; [`ProjectError::ProjectNameTaken`] and
-/// [`ProjectError::ProjectRootTaken`] for the two unique columns, the second naming the project already
-/// holding the directory; and [`Error::Database`] when the row cannot be written.
+/// [`ProjectError::InvalidProjectName`] for a name that is not one;
+/// [`ProjectError::ProjectNameTaken`] and [`ProjectError::ProjectRootTaken`] for the two unique
+/// columns, the second naming the project already holding the directory; and [`Error::Database`]
+/// when the row cannot be written.
 pub async fn create(
     store: &Store,
     registration: &Registration,
@@ -153,7 +154,7 @@ pub async fn create(
     // index cannot — and asked again by the index underneath, which is what makes two clients
     // racing produce a refusal rather than two rows.
     if let Some((_, holder)) = holder(store, &root_column).await? {
-        return Err(Error::Project(crate::ProjectError::ProjectRootTaken {
+        return Err(Error::Project(ProjectError::ProjectRootTaken {
             root: root_column,
             holder,
         }));
@@ -174,13 +175,11 @@ pub async fn create(
 
     if inserted.rows_affected() == 0 {
         return match holder(store, &root_column).await? {
-            Some((_, holder)) => Err(Error::Project(crate::ProjectError::ProjectRootTaken {
+            Some((_, holder)) => Err(Error::Project(ProjectError::ProjectRootTaken {
                 root: root_column,
                 holder,
             })),
-            None => Err(Error::Project(crate::ProjectError::ProjectNameTaken {
-                name,
-            })),
+            None => Err(Error::Project(ProjectError::ProjectNameTaken { name })),
         };
     }
 
@@ -271,8 +270,8 @@ pub async fn kept_warm(store: &Store) -> Result<BTreeMap<ServiceId, String>> {
 ///
 /// # Errors
 ///
-/// [`ProjectError::UnreadableProjectRow`] for a row this build cannot read at all, and [`Error::Database`]
-/// when the table cannot be read.
+/// [`ProjectError::UnreadableProjectRow`] for a row this build cannot read at all, and
+/// [`Error::Database`] when the table cannot be read.
 pub async fn records(store: &Store) -> Result<Vec<ProjectRecord>> {
     let rows = sqlx::query!(
         r#"SELECT id, name, root_path, runtime_pins_json, created_at,
@@ -399,7 +398,7 @@ pub async fn update(store: &Store, id: i64, change: &Change) -> Result<ProjectRe
     if let Some((occupant, holder)) = holder(store, &root_column).await?
         && occupant != id
     {
-        return Err(Error::Project(crate::ProjectError::ProjectRootTaken {
+        return Err(Error::Project(ProjectError::ProjectRootTaken {
             root: root_column,
             holder,
         }));
@@ -422,7 +421,7 @@ pub async fn update(store: &Store, id: i64, change: &Change) -> Result<ProjectRe
         // The name is the other unique column, and SQLite's own message names an index rather than
         // the project. Classified rather than passed through, so a client meets one vocabulary.
         Err(sqlx::Error::Database(failure)) if failure.is_unique_violation() => {
-            return Err(Error::Project(crate::ProjectError::ProjectNameTaken {
+            return Err(Error::Project(ProjectError::ProjectNameTaken {
                 name: project.name,
             }));
         }
@@ -478,7 +477,7 @@ async fn holder(store: &Store, root: &str) -> Result<Option<(i64, String)>> {
 /// A key or a value this build cannot read is left out rather than fatal.
 fn decode(root: &str, column: &str) -> Result<BTreeMap<RuntimeKind, VersionConstraint>> {
     let raw: BTreeMap<String, String> = serde_json::from_str(column).map_err(|_| {
-        Error::Project(crate::ProjectError::UnreadableProjectRow {
+        Error::Project(ProjectError::UnreadableProjectRow {
             root: root.to_owned(),
             column: "runtime_pins_json",
             value: column.to_owned(),
@@ -528,8 +527,8 @@ fn missing(id: &str) -> Error {
 ///
 /// # Errors
 ///
-/// [`ProjectError::Manifest`] for a manifest at the root that does not parse, and [`Error::Database`] when
-/// the installed set cannot be read.
+/// [`ProjectError::Manifest`] for a manifest at the root that does not parse, and
+/// [`Error::Database`] when the installed set cannot be read.
 pub async fn effective_pins(store: &Store, project: &ProjectRecord) -> Result<Vec<ProjectPin>> {
     let manifest = crate::manifest::read(&crate::manifest::at(&project.root))?;
     effective_pins_with(store, project, manifest.as_ref()).await
@@ -1107,7 +1106,7 @@ mod tests {
             .expect_err("the second");
 
         assert!(
-            matches!(&error, Error::Project(crate::ProjectError::ProjectRootTaken { holder, .. }) if holder == "blog"),
+            matches!(&error, Error::Project(ProjectError::ProjectRootTaken { holder, .. }) if holder == "blog"),
             "{error:?}"
         );
     }
@@ -1127,10 +1126,7 @@ mod tests {
             .expect_err("the second");
 
         assert!(
-            matches!(
-                error,
-                Error::Project(crate::ProjectError::ProjectNameTaken { .. })
-            ),
+            matches!(error, Error::Project(ProjectError::ProjectNameTaken { .. })),
             "{error:?}"
         );
     }

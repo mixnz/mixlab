@@ -489,8 +489,8 @@ fn bootstraps_the_password(version: &str) -> bool {
 ///
 /// # Errors
 ///
-/// [`ServiceError::ServiceProvidesNothing`] for an install missing one of the commands this needs, and
-/// [`ServiceError::SettingValue`] for a credential this recipe will not put in a SQL literal.
+/// [`ServiceError::ServiceProvidesNothing`] for an install missing one of the commands this needs,
+/// and [`ServiceError::SettingValue`] for a credential this recipe will not put in a SQL literal.
 fn steps(context: &Context) -> Result<Vec<Step>> {
     steps_for(
         context,
@@ -939,7 +939,8 @@ fn ping(addr: SocketAddr) -> Vec<String> {
 ///
 /// # Errors
 ///
-/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel accepts.
+/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel
+/// accepts.
 fn socket_path(context: &Context) -> Result<PathBuf> {
     let socket = context
         .run()
