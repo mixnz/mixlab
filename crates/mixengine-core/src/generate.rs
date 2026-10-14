@@ -205,8 +205,8 @@ pub struct ServiceDrift {
 /// Which install supplies the binary behind one service, resolved from the two halves of a [`Row`].
 ///
 /// `Parent` and not `Origin`: the public [`services::Origin`](crate::services::Origin) is what a
-/// caller *asks* for and this is what a row *has*, and `recipe.rs` already has a private `Origin` of
-/// its own for the `package` half of a rendering.
+/// caller *asks* for and this is what a row *has*, and `context.rs` already has a private `Origin`
+/// of its own for the `package` half of a rendering.
 #[derive(Debug)]
 struct Parent {
     /// The name the recipe is found under, which is also what `data/<package>` is named after.

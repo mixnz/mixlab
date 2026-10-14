@@ -57,8 +57,8 @@ impl Ran {
     /// One run, described.
     ///
     /// The constructor exists because there are now three callers — the two returns of [`run`] and
-    /// the Windows one-shot in `windows/process.rs` — and a fourth literal `Ran { .. }` is a fourth
-    /// chance for one of them to trim a stream differently from the others.
+    /// the Windows one-shot in `windows/process/child.rs` — and a fourth literal `Ran { .. }` is a
+    /// fourth chance for one of them to trim a stream differently from the others.
     pub(crate) fn new(exit: Option<Exit>, stdout: &[u8], stderr: &[u8]) -> Self {
         Self {
             exit,

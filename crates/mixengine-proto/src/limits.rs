@@ -8,8 +8,8 @@
 //!
 //! The counterpart is `mixengine_platform::process::Limits`, which deliberately does **not** live
 //! here: the spawn layer is compiled by `mixengine-shim` without this crate. So a declared limit
-//! (`ResourceLimits`, in `service.rs`) and an applied one are two types, and the daemon converts —
-//! the T68 design, D9.
+//! (`ResourceLimits`, in `service/policy.rs`) and an applied one are two types, and the daemon
+//! converts — the T68 design, D9.
 
 /// How this system caps a supervised service. One per system, chosen by the system.
 ///
