@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 date: 2026-10-14
 task: T207l
 ---
@@ -21,7 +21,8 @@ becomes the function's doc comment, and the state it uses is passed to it explic
 
 Roadmap: [phase 45](../roadmap/phase-45-files-that-fit-in-one-read.md), task T207l. The
 [parent design](2026-10-13-files-that-fit-in-one-read-design.md)'s D8 (a commit only moves) holds
-for D1 and D2. D3 is the one part of phase 45 that changes code, and D4 says what it must not change.
+for D1 and D2. D3 is the one part of phase 45 that changes code, and D4 says what it must not
+change.
 
 ## D1 — `args.rs`: the command line (a move)
 
@@ -43,38 +44,45 @@ Fields that `run`, `detach` and `serve` read become `pub(crate)`. Their docs do 
 | --- | --- | --- |
 | `serve/projections.rs` | `refresh_bin` (the `bin/` rescan, T26/T185b), `seed_gallery` (T79) | — |
 | `serve.rs`, in place | the endpoint, signals, the root token, `Background`, `Events`, `Jobs`, the host, the `Registry`, DNS, mDNS, `Elevation`, the administrator warning | the shared handles |
-| `serve/recovery.rs` | `report_recovery` (what `services.recover()` found, T18) | — |
+| `serve/recovery.rs` | `recover` (what `services.recover()` found, T18) | — |
 | `serve/machine.rs` | `ask_for_grants` (helper, port access, resolver: T85, T42, T45), `certificates` (discard a staged CA, ensure it, trust store, browsers, trust bundle, JDK trust stores, site certificates: T54, T48, T49a/b, T132, T27e, T50) | — |
 | `serve/clocks.rs` | `start_clocks` (renewal T52, idle T69, sampler T71 and watchdog T71a) | the metrics handle |
 | `serve/repairs.rs` | `repair_home` (offline adoption T182f, pools T32, activation T70/T70a/T123, conf.d T28, abandoned jobs T22) | what adoption left |
-| `serve/sources.rs` | `signed_sources` (transport T72b, fetcher T23, registry T81, runtimes, packages, adopting what was left T182f, the updater T88, `complete_install` T185a, the two "not the published one" lines) | the four clients the API takes |
+| `serve/clients.rs` | `build_clients` (transport T72b, fetcher T23, registry T81, runtimes, packages, adopting what was left T182f, the updater T88, `complete_install` T185a, the two "not the published one" lines) | `Clients`: the four the API takes |
 | `serve.rs`, in place | `api::Api::new` | the API |
-| `serve/started.rs` | `after_the_api` (shared sites T75, extension pools T82/T82a, share revocation T76, restore after update T88, helper handshake T182b) | — |
-| `serve/accept.rs` | `accept_until_stopped` (the accept loop, the stop with its escalation, the clients' grace: T9a, T22, T170), and with it `signalled_budget`, `shut_down`, the shutdown constants and their four tests | — |
+| `serve/started.rs` | `after_the_api` (shared sites T75, extension pools T82/T82a, share revocation T76), `after_an_update` (restore after update T88, helper handshake T182b) | — |
+| `serve/accept.rs` | `accept_until_stopped` (the accept loop, T170), `stop_everything` (services and jobs within the budget with the escalation, then clients and background work: T9a, T22) | the connections, and whether the OS clock started |
 
-**What stays inline in `serve`**: building the shared handles, because each of them is one
-expression and every later step reads it; holding `_watching` (the `bin/` watch is stopped when
-the guard is dropped, so it has to live in `serve`'s frame); `api::Api::new`; the "listening for
-clients" line, then `services::autostart::start`. Estimated size: about 300 lines, most of them the
+**What stays in `serve.rs`**: building the shared handles, because each of them is one expression
+and every later step reads it; holding `_watching` (the `bin/` watch is stopped when the guard is
+dropped, so it has to live in `serve`'s frame); `api::Api::new`; the "listening for clients" line,
+then `services::autostart::start`. Also staying: the shutdown arithmetic: the constants,
+`signalled_budget`, `shut_down` and their four tests. `serve` is 308 lines, most of them the
 existing comments on those handles.
 
-**State passed explicitly.** Most steps read the same few handles: `paths`, `store`, `config`, the
-host, `events`, `jobs`, the `Registry`, `shims`, `Elevation`, the root token. They are gathered in
-one `serve::Shared<'a>` of borrows, built once `Elevation` exists and passed as `&Shared`.
-`Background` is passed separately as `&mut Background`, because it is the one handle a step
-changes. A step that needs only one or two handles takes them directly. One struct of borrows is
-used, not a parameter per handle, because seven parameters is the most clippy allows, and the
-sources step alone reads ten.
+**State passed explicitly.** Ten handles are read by most steps: `paths`, `store`, `config`, the
+host, `events`, `jobs`, the `Registry`, `shims`, `Elevation` and the root token. They are gathered
+in one `serve::Shared<'a>` of borrows, built once `Elevation` exists, and passed as `&Shared`. It is
+`Copy`, so a step destructures `*shared`. `Background` is passed separately as
+`&mut Background`, because it is the one handle a step changes. A step that runs after
+`api::Api::new` takes its handles one by one instead. `Api::new` moves `events` and `shims`, so a
+`Shared` could not outlive that call. Clippy allows at most seven parameters, so `started` is two
+functions and the accept loop is two as well.
+
+**Body edits beyond the move**: `Arc::clone(&x)` became `Arc::clone(x)` where `x` became a
+borrow (clippy's `needless_borrow`), and `Some(daemon_exe.as_path())` became `Some(daemon_exe)`
+(the parameter is a `&Path`).
 
 **Comments.** Each step's `//` block becomes the function's `///` doc, with the same words. Where a
-block points at a position ("a few hundred lines up", "the block above", "far below"), the
-pointer is rewritten to name the step it meant (`refresh_bin`, `certificates`, …). A pointer
-that counts lines is wrong once the lines move. These rewrites go in a commit of their own, after
-the moves.
+block points at a position ("a few hundred lines up", "the block above", "far below") that is now in
+another file, the pointer names the step it meant (`projections::refresh_bin`,
+`machine::certificates`, …). That rewrite is a commit of its own, after the moves.
 
 **The shutdown constants.** `CONFIRMATION_REPRIEVE` is also read as `crate::CONFIRMATION_REPRIEVE`
 by `services/shutdown.rs` and a test in `services/runner/stop.rs`. `main.rs` re-exports it with
-`use serve::accept::CONFIRMATION_REPRIEVE;`, so neither of those files changes.
+`use serve::{CONFIRMATION_REPRIEVE, serve};`, so neither file changes. `CLIENT_GRACE` and
+`CEILING_RESERVE` become `pub(crate)`, because rustdoc does not resolve a link to a private item
+of a module that is not an ancestor, and `detach.rs` and `services/runner/stop.rs` link to them.
 
 ## D4 — what the change must not alter
 
@@ -98,17 +106,15 @@ by `services/shutdown.rs` and a test in `services/runner/stop.rs`. `main.rs` re-
 
 ## D5 — commits
 
-1. `args.rs` (move). 2. `detach.rs` (move). 3. `serve` and its shutdown helpers to `serve.rs` and
-`serve/accept.rs` (move). 4–9. One step module per commit, in the table's order: `projections`,
-`recovery`, `machine`, `clocks`, `repairs`, `sources`, `started`, then `accept_until_stopped`
-taking the loop. 10. The comment pointers. 11. Roadmap, and `main.rs` out of the baseline.
-Each commit gets: clippy and rustdoc with `-D warnings`, `cargo fmt --check`, the unit-test count,
-the literal-set check, and `check-file-sizes --shrink`. The full integration suites run after
-commit 10.
+1. `args.rs` (move). 2. `detach.rs` (move). 3. `serve` and the shutdown arithmetic to `serve.rs`
+(move). 4–10. One step module per commit, in the table's order: `projections`, `recovery`,
+`machine`, `clocks`, `repairs`, `clients`, `started`, `accept`. 11. The comment pointers.
+12. Roadmap, and `main.rs` out of the baseline. Each commit gets: clippy and rustdoc with
+`-D warnings`, `cargo fmt --check`, the unit-test count, and `check-file-sizes --shrink`. The
+literal-set check and the full integration suites run after commit 11.
 
-Expected sizes: `main.rs` about 700, `args.rs` 285, `detach.rs` 230, `serve.rs` about 300, the
-largest step module (`machine.rs`) about 250. `main.rs` leaves the baseline, which then holds two
-files.
+Sizes: `main.rs` 686, `args.rs` 293, `detach.rs` 270, `serve.rs` 671, the largest step module
+(`machine.rs`) 235. `main.rs` leaves the baseline, which then holds two files.
 
 ## MixLab
 
