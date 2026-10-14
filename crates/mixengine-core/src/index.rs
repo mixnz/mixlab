@@ -48,6 +48,7 @@ use std::time::{Duration, SystemTime};
 
 use minisign_verify::{PublicKey, Signature};
 
+use crate::InstallError;
 use crate::{Error, Result};
 
 pub mod format;
@@ -150,10 +151,12 @@ pub(crate) async fn get(
     exact: Option<u64>,
     document: &'static str,
 ) -> Result<Got> {
-    let transport = |source: reqwest::Error| Error::IndexTransport {
-        document,
-        url: url.to_owned(),
-        source: Box::new(source),
+    let transport = |source: reqwest::Error| {
+        Error::Install(InstallError::IndexTransport {
+            document,
+            url: url.to_owned(),
+            source: Box::new(source),
+        })
     };
 
     let response = http
@@ -291,7 +294,7 @@ pub struct Catalogue<D> {
 /// noon. So the client is generic over the document and this trait is everything it needs to know
 /// about one.
 ///
-/// The [`Error::IndexSignature`] family is deliberately *not* generic with it: every variant
+/// The [`InstallError::IndexSignature`] family is deliberately *not* generic with it: every variant
 /// already carries the `url`, which is what says which document failed, and renaming them to
 /// something document-neutral would touch every call site and every test asserting one in order to
 /// rename something that is still accurate — `extensions.json` is an index too.
@@ -334,10 +337,12 @@ impl<D: Document> Client<D> {
     ///
     /// A transport that cannot be built, or a public key that is not one.
     pub fn with(url: &str, public_key: &str, cache_dir: &Path) -> Result<Self> {
-        let http = default_transport().map_err(|source| Error::IndexTransport {
-            document: D::LABEL,
-            url: url.to_owned(),
-            source: Box::new(source),
+        let http = default_transport().map_err(|source| {
+            Error::Install(InstallError::IndexTransport {
+                document: D::LABEL,
+                url: url.to_owned(),
+                source: Box::new(source),
+            })
         })?;
 
         Self::with_transport(url, public_key, cache_dir, http)
@@ -363,8 +368,10 @@ impl<D: Document> Client<D> {
         cache_dir: &Path,
         http: reqwest::Client,
     ) -> Result<Self> {
-        let key = PublicKey::from_base64(public_key).map_err(|source| Error::IndexKey {
-            source: Box::new(source),
+        let key = PublicKey::from_base64(public_key).map_err(|source| {
+            Error::Install(InstallError::IndexKey {
+                source: Box::new(source),
+            })
         })?;
 
         Ok(Self {
@@ -408,10 +415,10 @@ impl<D: Document> Client<D> {
     /// # Errors
     ///
     /// Only ever the reason the *last* usable index could not be obtained, because anything that
-    /// goes wrong while there is a cached index falls back to it: [`Error::IndexTransport`] when the
-    /// server cannot be reached, [`Error::IndexSignature`] when what it served is not ours,
-    /// [`Error::IndexUnreadable`] or [`Error::IndexSchema`] when it is ours and unusable,
-    /// [`Error::IndexRolledBack`] when it is older than what is already held, and [`Error::Io`] when
+    /// goes wrong while there is a cached index falls back to it: [`InstallError::IndexTransport`] when the
+    /// server cannot be reached, [`InstallError::IndexSignature`] when what it served is not ours,
+    /// [`InstallError::IndexUnreadable`] or [`InstallError::IndexSchema`] when it is ours and unusable,
+    /// [`InstallError::IndexRolledBack`] when it is older than what is already held, and [`Error::Io`] when
     /// the cache cannot be written.
     pub async fn refresh(&self) -> Result<Catalogue<D>> {
         self.refresh_not_before(None).await
@@ -486,22 +493,24 @@ impl<D: Document> Client<D> {
             return Ok(());
         };
         if offered.generated_at() < held {
-            return Err(Error::IndexRolledBack {
+            return Err(Error::Install(InstallError::IndexRolledBack {
                 document: D::LABEL,
                 url: self.url.clone(),
                 cached: held.to_string(),
                 offered: offered.generated_at().to_string(),
-            });
+            }));
         }
         Ok(())
     }
 
     /// Fetch the document and its signature, and verify them.
     async fn fetch(&self) -> Result<(Vec<u8>, String, D)> {
-        let transport = |source: reqwest::Error| Error::IndexTransport {
-            document: D::LABEL,
-            url: self.url.clone(),
-            source: Box::new(source),
+        let transport = |source: reqwest::Error| {
+            Error::Install(InstallError::IndexTransport {
+                document: D::LABEL,
+                url: self.url.clone(),
+                source: Box::new(source),
+            })
         };
 
         let document = self
@@ -522,10 +531,12 @@ impl<D: Document> Client<D> {
             .send()
             .await
             .and_then(reqwest::Response::error_for_status)
-            .map_err(|source| Error::IndexTransport {
-                document: D::LABEL,
-                url: signature_url,
-                source: Box::new(source),
+            .map_err(|source| {
+                Error::Install(InstallError::IndexTransport {
+                    document: D::LABEL,
+                    url: signature_url,
+                    source: Box::new(source),
+                })
             })?
             .text()
             .await
@@ -543,30 +554,33 @@ impl<D: Document> Client<D> {
     ///
     /// # Errors
     ///
-    /// [`Error::IndexSignature`] when the signature does not verify against the compiled-in key,
-    /// [`Error::IndexUnreadable`] when what it covered is not JSON we understand, and
-    /// [`Error::IndexSchema`] when it is a document version this build cannot read.
+    /// [`InstallError::IndexSignature`] when the signature does not verify against the compiled-in key,
+    /// [`InstallError::IndexUnreadable`] when what it covered is not JSON we understand, and
+    /// [`InstallError::IndexSchema`] when it is a document version this build cannot read.
     fn verified(&self, document: &[u8], signature: &str) -> Result<D> {
-        verify(&self.key, document, signature).map_err(|source| Error::IndexSignature {
-            document: D::LABEL,
-            url: self.url.clone(),
-            source: Box::new(source),
+        verify(&self.key, document, signature).map_err(|source| {
+            Error::Install(InstallError::IndexSignature {
+                document: D::LABEL,
+                url: self.url.clone(),
+                source: Box::new(source),
+            })
         })?;
 
-        let index: D =
-            serde_json::from_slice(document).map_err(|source| Error::IndexUnreadable {
+        let index: D = serde_json::from_slice(document).map_err(|source| {
+            Error::Install(InstallError::IndexUnreadable {
                 document: D::LABEL,
                 url: self.url.clone(),
                 source,
-            })?;
+            })
+        })?;
 
         if index.schema() != D::SCHEMA {
-            return Err(Error::IndexSchema {
+            return Err(Error::Install(InstallError::IndexSchema {
                 document: D::LABEL,
                 url: self.url.clone(),
                 found: index.schema(),
                 expected: D::SCHEMA,
-            });
+            }));
         }
         Ok(index)
     }
@@ -583,7 +597,7 @@ impl<D: Document> Client<D> {
 
         let index = match self.verified(&document, &signature) {
             Ok(index) => index,
-            Err(refusal @ Error::IndexSignature { .. }) => {
+            Err(refusal @ Error::Install(InstallError::IndexSignature { .. })) => {
                 tracing::warn!(
                     path = %self.cache_file.display(),
                     error = %refusal,

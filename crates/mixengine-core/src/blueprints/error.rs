@@ -100,10 +100,10 @@ pub enum BlueprintError {
 
     /// The gallery key compiled into this binary is not a public key.
     ///
-    /// [`Error::IndexKey`]'s twin: a broken build and nothing a user can act on, reported rather
+    /// [`InstallError::IndexKey`]'s twin: a broken build and nothing a user can act on, reported rather
     /// than unwrapped because nothing in this crate panics.
     ///
-    /// [`Error::IndexKey`]: crate::Error::IndexKey
+    /// [`InstallError::IndexKey`]: crate::InstallError::IndexKey
     #[error("this build's blueprint gallery key is not a valid minisign key")]
     BlueprintKey {
         /// What the parser said.
@@ -113,10 +113,10 @@ pub enum BlueprintError {
 
     /// A blueprint's archive is past the ceiling an apply downloads — roadmap task **T205**, D2.
     ///
-    /// Its own variant rather than [`Error::ArtifactTooLarge`], whose sentence is about a signed
+    /// Its own variant rather than [`InstallError::ArtifactTooLarge`], whose sentence is about a signed
     /// index: an archive has no index, and the number here is this build's, not a publisher's.
     ///
-    /// [`Error::ArtifactTooLarge`]: crate::Error::ArtifactTooLarge
+    /// [`InstallError::ArtifactTooLarge`]: crate::InstallError::ArtifactTooLarge
     #[error("{url} is larger than the {limit} bytes a blueprint's archive may be")]
     ArchiveTooLarge {
         /// The address.

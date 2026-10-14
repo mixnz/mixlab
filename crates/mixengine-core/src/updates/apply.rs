@@ -34,8 +34,10 @@ use crate::{Error, Result};
 /// The executable the smoke test runs, by the name the payload publishes it under.
 ///
 /// Public because it is a name `packaging/` has to keep: a payload whose `provides` does not carry
-/// this key is one [`stage`] refuses with [`Error::MissingFromArtifact`], which is what
+/// this key is one [`stage`] refuses with [`InstallError::MissingFromArtifact`], which is what
 /// `crates/mixengine-core/tests/packaging.rs` checks the release list against.
+///
+/// [`InstallError::MissingFromArtifact`]: crate::InstallError::MissingFromArtifact
 pub const SMOKE_EXECUTABLE: &str = "mixengined";
 
 /// The window's key in a payload's `provides`, and what macOS wraps it in — roadmap tasks **T106**
@@ -89,11 +91,17 @@ pub struct Swapped {
 ///
 /// # Errors
 ///
-/// [`Error::ArtifactTransport`] and its neighbours from the download, [`Error::ArtifactChecksum`]
-/// when what arrived is not what the signed feed promised, [`Error::UnsafeArchiveEntry`] from
-/// unpacking, [`Error::MissingFromArtifact`] when the payload does not hold what it declared,
-/// [`Error::SmokeTestFailed`] when the staged daemon will not run here, and [`Error::Io`] for the
+/// [`InstallError::ArtifactTransport`] and its neighbours from the download, [`InstallError::ArtifactChecksum`]
+/// when what arrived is not what the signed feed promised, [`InstallError::UnsafeArchiveEntry`] from
+/// unpacking, [`InstallError::MissingFromArtifact`] when the payload does not hold what it declared,
+/// [`InstallError::SmokeTestFailed`] when the staged daemon will not run here, and [`Error::Io`] for the
 /// staging directory itself. Every one of them leaves the installed binaries untouched.
+///
+/// [`InstallError::ArtifactChecksum`]: crate::InstallError::ArtifactChecksum
+/// [`InstallError::ArtifactTransport`]: crate::InstallError::ArtifactTransport
+/// [`InstallError::MissingFromArtifact`]: crate::InstallError::MissingFromArtifact
+/// [`InstallError::SmokeTestFailed`]: crate::InstallError::SmokeTestFailed
+/// [`InstallError::UnsafeArchiveEntry`]: crate::InstallError::UnsafeArchiveEntry
 pub async fn stage<W: Watcher>(
     installer: &Installer,
     artifact: &Artifact,

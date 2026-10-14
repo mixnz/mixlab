@@ -19,6 +19,7 @@ use std::io;
 use std::path::Path;
 
 use mixengine_core::ExtensionError;
+use mixengine_core::InstallError;
 use mixengine_proto::{Error, ErrorCode};
 
 /// A library error, rendered for the wire.
@@ -134,7 +135,8 @@ impl ToWire for mixengine_core::Error {
             // person is sent: a document or an archive that verified and is then unusable is one we
             // published, and a signature or a checksum that does not match is somebody between us
             // and them. Only the first is `internal`.
-            Core::IndexTransport { .. } | Core::ArtifactTransport { .. } => {
+            Core::Install(InstallError::IndexTransport { .. })
+            | Core::Install(InstallError::ArtifactTransport { .. }) => {
                 Error::new(ErrorCode::Io, chain(self)).with_hint(
                     "MixEngine fetches the version list and every runtime over the internet; a \
                      machine that is offline, or behind a proxy that needs a certificate this one \
@@ -145,33 +147,38 @@ impl ToWire for mixengine_core::Error {
             // The download stopped part way after every resume attempt, and what is on disk is
             // *kept*: asking again continues from it rather than starting over, which is the one
             // thing worth telling somebody who is about to try.
-            Core::ArtifactIncomplete { .. } => Error::new(ErrorCode::Io, chain(self))
-                .with_hint("what arrived is kept; asking again resumes from it"),
+            Core::Install(InstallError::ArtifactIncomplete { .. }) => {
+                Error::new(ErrorCode::Io, chain(self))
+                    .with_hint("what arrived is kept; asking again resumes from it")
+            }
 
             // The one failure that cannot happen by accident, and the one place this daemon refuses
             // something that verified as well-formed. `precondition_failed` rather than `internal`:
             // nothing here is broken, and what has to change is which server is being asked.
-            Core::IndexSignature { .. } => Error::new(ErrorCode::PreconditionFailed, chain(self))
-                .with_hint(
+            Core::Install(InstallError::IndexSignature { .. }) => {
+                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
                     "the index is signed by MixEngine and checked before it is read; a mirror \
                      serving somebody else's document, or an index published by a team using its \
                      own key, needs that key given to `mixengined --index-key`",
-                ),
+                )
+            }
 
             // The root is ours and this file is not the one it names. Nothing here is broken and
             // nothing was kept: the list is read again without it, and the next ask tries again.
-            Core::IndexKind { .. } => Error::new(ErrorCode::PreconditionFailed, chain(self))
-                .with_hint(
+            Core::Install(InstallError::IndexKind { .. }) => {
+                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
                     "this file did not match what the signed index says it should be, which \
                      usually means the index was being published at that moment; ask again in a \
                      minute",
-                ),
+                )
+            }
 
             // Bytes that are ours by signature and then do not match what the index says they hash
             // to, or are longer than it says they are. A corrupted transfer or a mirror serving
             // something else; either way the download has been deleted and the next step is the
             // same one.
-            Core::ArtifactChecksum { .. } | Core::ArtifactTooLarge { .. } => {
+            Core::Install(InstallError::ArtifactChecksum { .. })
+            | Core::Install(InstallError::ArtifactTooLarge { .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
                     "the download did not match what the signed index publishes for it and has \
                      been discarded; asking again fetches it afresh",
@@ -181,23 +188,25 @@ impl ToWire for mixengine_core::Error {
             // An archive shape, or a document version, from a pipeline newer than this build. Not a
             // bug and not a dead end: the update is the fix, and saying so beats the field-by-field
             // confusion a best-effort parse would produce.
-            Core::IndexSchema { .. } | Core::ArtifactFormat { .. } => {
+            Core::Install(InstallError::IndexSchema { .. })
+            | Core::Install(InstallError::ArtifactFormat { .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self))
                     .with_hint("this release of MixEngine is older than what it is being offered")
             }
 
             // A correctly signed index from before a security release, replayed. The cached document
             // is kept, so nothing was lost — what is worth saying is that the *server* is behind.
-            Core::IndexRolledBack { .. } => Error::new(ErrorCode::PreconditionFailed, chain(self))
-                .with_hint(
+            Core::Install(InstallError::IndexRolledBack { .. }) => {
+                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
                     "the index already held is newer and is still being used; a mirror that has \
                      stopped syncing is the usual reason a server offers an older one",
-                ),
+                )
+            }
 
             // The archive names a path outside where it is being unpacked: the oldest attack there
             // is against an installer, and one a correct signature says nothing about. Nothing was
             // written — the staging directory it was going into is gone.
-            Core::UnsafeArchiveEntry { .. } => {
+            Core::Install(InstallError::UnsafeArchiveEntry { .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
                     "nothing was unpacked; please report this, quoting the archive named above",
                 )
@@ -206,31 +215,37 @@ impl ToWire for mixengine_core::Error {
             // Past the signature and past the checksum, so these bytes *are* the ones we published
             // and they are unusable: our packaging, our bug. The same relationship
             // `IndexUnreadable` has to `IndexSignature`, one layer down.
-            Core::IndexUnreadable { .. }
-            | Core::ArchiveUnreadable { .. }
-            | Core::MissingFromArtifact { .. } => Error::new(ErrorCode::Internal, chain(self))
-                .with_hint(
+            Core::Install(InstallError::IndexUnreadable { .. })
+            | Core::Install(InstallError::ArchiveUnreadable { .. })
+            | Core::Install(InstallError::MissingFromArtifact { .. }) => {
+                Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "this is a bug in what MixEngine published rather than on this machine; \
                      `logs/daemon.log` has the detail a report needs",
-                ),
+                )
+            }
 
             // **What a checksum cannot say.** The bytes are ours and this machine will not run them:
             // a missing VC++ redistributable, a glibc older than the build's floor, an image the
             // loader refuses. `dependency_missing` is the code that tells a GUI to offer the thing
             // that is missing, which is exactly the shape of every one of those.
-            Core::SmokeTestFailed { .. } => Error::new(ErrorCode::DependencyMissing, chain(self))
-                .with_hint(
+            Core::Install(InstallError::SmokeTestFailed { .. }) => {
+                Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(
                     "nothing was installed; the runtime was run once from a staging directory and \
                      would not start, so the message above is the operating system's own",
-                ),
+                )
+            }
 
             // Logged where it happens and reported by `mix doctor`, never answered to a request:
             // nothing a client asks for fails because a JDK's store could not be written — T27e.
-            Core::KeytoolRefused { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            Core::Install(InstallError::KeytoolRefused { .. }) => {
+                Error::new(ErrorCode::Internal, chain(self))
+            }
 
             // A broken build: the key compiled into this binary is not a key. Nothing a user did and
             // nothing they can do.
-            Core::IndexKey { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            Core::Install(InstallError::IndexKey { .. }) => {
+                Error::new(ErrorCode::Internal, chain(self))
+            }
 
             // `UnsupportedPlatform` and not `InvalidArgument`: the request is well formed and is
             // answerable on another machine — the same name is a module on Windows and linked in on
@@ -454,8 +469,10 @@ impl ToWire for mixengine_core::Error {
             // rather than by what the work returned, so work that gave up when asked is recorded as
             // *cancelled*. Classified all the same, because a value that can be constructed can be
             // rendered.
-            Core::InstallCancelled => Error::new(ErrorCode::PreconditionFailed, chain(self))
-                .with_hint("what had been downloaded is kept; asking again resumes from it"),
+            Core::Install(InstallError::InstallCancelled) => {
+                Error::new(ErrorCode::PreconditionFailed, chain(self))
+                    .with_hint("what had been downloaded is kept; asking again resumes from it")
+            }
 
             // A hand-edited database, or a row from a build that knew a channel this one does not.
             // The same reading `UnknownServiceState` gets, and the same code.

@@ -9,6 +9,7 @@
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
+use mixengine_core::InstallError;
 use mixengine_core::generate::Catalogue;
 use mixengine_core::generate::recipes::php_fpm;
 use mixengine_core::index::{Arch, Client, Freshness, Os, PackageIndex, TARGETS};
@@ -155,7 +156,10 @@ async fn a_document_the_signature_does_not_cover_is_refused() {
         .await
         .expect_err("a document nobody signed is not an index");
     assert!(
-        matches!(refusal, mixengine_core::Error::IndexSignature { .. }),
+        matches!(
+            refusal,
+            mixengine_core::Error::Install(InstallError::IndexSignature { .. })
+        ),
         "expected a signature refusal, got {refusal:?}"
     );
 }
@@ -175,7 +179,10 @@ async fn an_index_signed_by_somebody_else_is_refused() {
         .await
         .expect_err("another key is not this build's key");
     assert!(
-        matches!(refusal, mixengine_core::Error::IndexSignature { .. }),
+        matches!(
+            refusal,
+            mixengine_core::Error::Install(InstallError::IndexSignature { .. })
+        ),
         "expected a signature refusal, got {refusal:?}"
     );
 }
@@ -915,11 +922,11 @@ async fn a_root_this_build_cannot_read_is_refused() {
     assert!(
         matches!(
             refusal,
-            mixengine_core::Error::IndexSchema {
+            mixengine_core::Error::Install(InstallError::IndexSchema {
                 found: 3,
                 expected: 2,
                 ..
-            }
+            })
         ),
         "expected a schema refusal, got {refusal:?}"
     );
@@ -1067,7 +1074,10 @@ async fn a_file_is_given_up_on_after_its_own_limit() {
     let took = started.elapsed();
 
     assert!(
-        matches!(refusal, mixengine_core::Error::IndexTransport { .. }),
+        matches!(
+            refusal,
+            mixengine_core::Error::Install(InstallError::IndexTransport { .. })
+        ),
         "expected a transport failure, got {refusal:?}"
     );
     assert!(

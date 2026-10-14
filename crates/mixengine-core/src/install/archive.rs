@@ -25,6 +25,7 @@
 use std::io::{BufReader, Read};
 use std::path::{Component, Path};
 
+use crate::InstallError;
 use crate::{Error, Result};
 
 /// One of the three shapes the publishing pipeline produces.
@@ -72,8 +73,8 @@ impl Format {
 ///
 /// # Errors
 ///
-/// [`Error::UnsafeArchiveEntry`] when an entry names a path outside `into`,
-/// [`Error::ArchiveUnreadable`] when the container or the compressor refuses what it was given, and
+/// [`InstallError::UnsafeArchiveEntry`] when an entry names a path outside `into`,
+/// [`InstallError::ArchiveUnreadable`] when the container or the compressor refuses what it was given, and
 /// [`Error::Io`] when the file cannot be opened.
 pub(crate) fn extract(archive: &Path, format: Format, into: &Path) -> Result<()> {
     let file = std::fs::File::open(archive).map_err(|source| Error::Io {
@@ -158,10 +159,10 @@ fn unpack_zip<R: Read + std::io::Seek>(file: R, archive: &Path, into: &Path) -> 
             None => true,
         };
         if refused {
-            return Err(Error::UnsafeArchiveEntry {
+            return Err(Error::Install(InstallError::UnsafeArchiveEntry {
                 archive: archive.to_path_buf(),
                 entry: entry.name().to_owned(),
-            });
+            }));
         }
     }
 
@@ -197,9 +198,11 @@ fn unpack_tar<R: Read>(reader: R, archive: &Path, into: &Path) -> Result<()> {
             .path()
             .map_err(|source| unreadable(archive, source))?
             .into_owned();
-        let refused = |named: &Path| Error::UnsafeArchiveEntry {
-            archive: archive.to_path_buf(),
-            entry: named.display().to_string(),
+        let refused = |named: &Path| {
+            Error::Install(InstallError::UnsafeArchiveEntry {
+                archive: archive.to_path_buf(),
+                entry: named.display().to_string(),
+            })
         };
 
         // The archive's own root, which is the directory these bytes are already going into.
@@ -232,10 +235,10 @@ fn unreadable(
     archive: &Path,
     source: impl std::error::Error + Send + Sync + 'static,
 ) -> crate::Error {
-    Error::ArchiveUnreadable {
+    Error::Install(InstallError::ArchiveUnreadable {
         archive: archive.to_path_buf(),
         source: Box::new(source),
-    }
+    })
 }
 
 #[cfg(test)]

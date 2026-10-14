@@ -47,6 +47,7 @@ use super::{
     Catalogue, Client, FETCH_TIMEOUT, FRESH_FOR, Freshness, Got, Index, KindProblem,
     SIGNATURE_SUFFIX, schema1,
 };
+use crate::InstallError;
 use crate::{Error, Result};
 
 /// What this document is called in a log line and in an error.
@@ -157,7 +158,7 @@ const RETRY_AFTER: Duration = Duration::from_secs(60);
 /// signature that does not verify or a root from the past is a server that answered; none of those
 /// is a reason to stop asking.
 fn note_unreachable(state: &mut State, refusal: &Error) {
-    if let Error::IndexTransport { source, .. } = refusal
+    if let Error::Install(InstallError::IndexTransport { source, .. }) = refusal
         && source.downcast_ref::<reqwest::Error>().is_some()
     {
         state.unreachable_at = Some(std::time::Instant::now());
@@ -245,10 +246,12 @@ impl PackageIndex {
     ///
     /// A transport that cannot be built, or a public key that is not one.
     pub fn with(url: &str, public_key: &str, cache_dir: &Path) -> Result<Self> {
-        let http = super::default_transport().map_err(|source| Error::IndexTransport {
-            document: LABEL,
-            url: url.to_owned(),
-            source: Box::new(source),
+        let http = super::default_transport().map_err(|source| {
+            Error::Install(InstallError::IndexTransport {
+                document: LABEL,
+                url: url.to_owned(),
+                source: Box::new(source),
+            })
         })?;
 
         Self::with_transport(url, public_key, cache_dir, http)
@@ -266,8 +269,10 @@ impl PackageIndex {
         cache_dir: &Path,
         http: reqwest::Client,
     ) -> Result<Self> {
-        let key = PublicKey::from_base64(public_key).map_err(|source| Error::IndexKey {
-            source: Box::new(source),
+        let key = PublicKey::from_base64(public_key).map_err(|source| {
+            Error::Install(InstallError::IndexKey {
+                source: Box::new(source),
+            })
         })?;
 
         Ok(Self {
@@ -453,12 +458,14 @@ impl PackageIndex {
                     freshness: Freshness::Stale { age },
                 })
             }
-            (None, None) => Err(refusal.unwrap_or_else(|| Error::IndexTransport {
-                document: LABEL,
-                url: self.root_url.clone(),
-                source: Box::new(std::io::Error::other(
-                    "the package index could not be reached a moment ago",
-                )),
+            (None, None) => Err(refusal.unwrap_or_else(|| {
+                Error::Install(InstallError::IndexTransport {
+                    document: LABEL,
+                    url: self.root_url.clone(),
+                    source: Box::new(std::io::Error::other(
+                        "the package index could not be reached a moment ago",
+                    )),
+                })
             })),
         }
     }
@@ -563,7 +570,7 @@ impl PackageIndex {
 
         let root = match self.read_root(&document, &signature, &path.display().to_string()) {
             Ok(root) => root,
-            Err(refusal @ Error::IndexSignature { .. }) => {
+            Err(refusal @ Error::Install(InstallError::IndexSignature { .. })) => {
                 tracing::warn!(
                     path = %path.display(),
                     error = %refusal,
@@ -589,38 +596,41 @@ impl PackageIndex {
     /// In that order, and the order is the point — see [`Client`]'s own note: nothing here parses
     /// a document it has not first established we wrote.
     fn read_root(&self, document: &[u8], signature: &str, from: &str) -> Result<Root> {
-        super::verify(&self.key, document, signature).map_err(|source| Error::IndexSignature {
-            document: LABEL,
-            url: from.to_owned(),
-            source: Box::new(source),
+        super::verify(&self.key, document, signature).map_err(|source| {
+            Error::Install(InstallError::IndexSignature {
+                document: LABEL,
+                url: from.to_owned(),
+                source: Box::new(source),
+            })
         })?;
 
-        let root: Root =
-            serde_json::from_slice(document).map_err(|source| Error::IndexUnreadable {
+        let root: Root = serde_json::from_slice(document).map_err(|source| {
+            Error::Install(InstallError::IndexUnreadable {
                 document: LABEL,
                 url: from.to_owned(),
                 source,
-            })?;
+            })
+        })?;
 
         if root.schema != schema2::SCHEMA {
-            return Err(Error::IndexSchema {
+            return Err(Error::Install(InstallError::IndexSchema {
                 document: LABEL,
                 url: from.to_owned(),
                 found: root.schema,
                 expected: schema2::SCHEMA,
-            });
+            }));
         }
 
         // Every artifact's URL starts with this, so it is an address or the root is unusable.
         if !(root.base_url.starts_with("https://") || root.base_url.starts_with("http://")) {
-            return Err(Error::IndexUnreadable {
+            return Err(Error::Install(InstallError::IndexUnreadable {
                 document: LABEL,
                 url: from.to_owned(),
                 source: <serde_json::Error as serde::de::Error>::custom(format!(
                     "base_url {:?} is not an http or https URL",
                     root.base_url
                 )),
-            });
+            }));
         }
 
         Ok(root)
@@ -638,10 +648,12 @@ impl PackageIndex {
         bytes: &[u8],
         from: &str,
     ) -> Result<Vec<Package>> {
-        let wrong = |problem| Error::IndexKind {
-            kind: kind.to_owned(),
-            url: from.to_owned(),
-            problem,
+        let wrong = |problem| {
+            Error::Install(InstallError::IndexKind {
+                kind: kind.to_owned(),
+                url: from.to_owned(),
+                problem,
+            })
         };
 
         if bytes.len() as u64 != entry.size {
@@ -654,20 +666,21 @@ impl PackageIndex {
             return Err(wrong(KindProblem::Hash));
         }
 
-        let file: KindFile =
-            serde_json::from_slice(bytes).map_err(|source| Error::IndexUnreadable {
+        let file: KindFile = serde_json::from_slice(bytes).map_err(|source| {
+            Error::Install(InstallError::IndexUnreadable {
                 document: LABEL,
                 url: from.to_owned(),
                 source,
-            })?;
+            })
+        })?;
 
         if file.schema != schema2::SCHEMA {
-            return Err(Error::IndexSchema {
+            return Err(Error::Install(InstallError::IndexSchema {
                 document: LABEL,
                 url: from.to_owned(),
                 found: file.schema,
                 expected: schema2::SCHEMA,
-            });
+            }));
         }
         if file.kind != kind {
             return Err(wrong(KindProblem::Named(file.kind)));
@@ -726,10 +739,12 @@ impl PackageIndex {
         entry: Entry,
         base_url: String,
     ) -> Result<FetchedKind> {
-        let wrong = |problem| Error::IndexKind {
-            kind: kind.clone(),
-            url: url.clone(),
-            problem,
+        let wrong = |problem| {
+            Error::Install(InstallError::IndexKind {
+                kind: kind.clone(),
+                url: url.clone(),
+                problem,
+            })
         };
 
         let got = super::get(&http, &url, per_file, entry.size, Some(entry.size), LABEL).await?;
@@ -777,10 +792,12 @@ impl PackageIndex {
 
             // Returning early drops the set, which aborts what is still running.
             while let Some(joined) = running.join_next().await {
-                let one = joined.map_err(|source| Error::IndexTransport {
-                    document: LABEL,
-                    url: self.root_url.clone(),
-                    source: Box::new(source),
+                let one = joined.map_err(|source| {
+                    Error::Install(InstallError::IndexTransport {
+                        document: LABEL,
+                        url: self.root_url.clone(),
+                        source: Box::new(source),
+                    })
                 })?;
                 fetched.push(one?);
             }
@@ -867,26 +884,26 @@ impl PackageIndex {
         )
         .await?;
         let Got::Body(document) = got else {
-            return Err(Error::IndexTransport {
+            return Err(Error::Install(InstallError::IndexTransport {
                 document: LABEL,
                 url: self.root_url.clone(),
                 source: Box::new(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
                     "the signature is published and the root is not",
                 )),
-            });
+            }));
         };
 
         let root = self.read_root(&document, &signature, &self.root_url)?;
         if let Some(floor) = floor
             && root.generated_at < floor
         {
-            return Err(Error::IndexRolledBack {
+            return Err(Error::Install(InstallError::IndexRolledBack {
                 document: LABEL,
                 url: self.root_url.clone(),
                 cached: floor.to_string(),
                 offered: root.generated_at.to_string(),
-            });
+            }));
         }
 
         // 3. Every kind already cached, brought up to the new root — or nothing is stored.
@@ -1078,7 +1095,7 @@ impl PackageIndex {
 
                 // A file that is wrong stays wrong until the root changes. A server that could
                 // not be reached is the network, and the next call tries again.
-                if !matches!(refusal, Error::IndexTransport { .. }) {
+                if !matches!(refusal, Error::Install(InstallError::IndexTransport { .. })) {
                     state
                         .refused
                         .insert(kind.clone(), (held.signature.clone(), reason.clone()));

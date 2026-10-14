@@ -32,6 +32,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::ExtensionError;
+use crate::InstallError;
 use crate::extensions::manifest::{self, ExtensionManifest};
 use crate::index::{self, Timestamp};
 use crate::{Error, Result};
@@ -162,12 +163,14 @@ pub fn client(
 ///
 /// # Errors
 ///
-/// [`Error::IndexUnreadable`] when the text is not this document.
+/// [`InstallError::IndexUnreadable`] when the text is not this document.
 pub fn parse(text: &str) -> Result<Registry> {
-    serde_json::from_str(text).map_err(|source| Error::IndexUnreadable {
-        document: <Registry as index::Document>::LABEL,
-        url: DEFAULT_URL.to_owned(),
-        source,
+    serde_json::from_str(text).map_err(|source| {
+        Error::Install(InstallError::IndexUnreadable {
+            document: <Registry as index::Document>::LABEL,
+            url: DEFAULT_URL.to_owned(),
+            source,
+        })
     })
 }
 

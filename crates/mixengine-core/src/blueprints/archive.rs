@@ -7,6 +7,7 @@
 
 use std::path::Path;
 
+use crate::InstallError;
 use crate::install::archive::{self, Format};
 use crate::{Error, Result};
 
@@ -46,7 +47,7 @@ enum Mover {
 ///
 /// # Errors
 ///
-/// [`BlueprintError::ArchiveFormatUnknown`] before any download; [`Error::ArtifactTransport`] and
+/// [`BlueprintError::ArchiveFormatUnknown`] before any download; [`InstallError::ArtifactTransport`] and
 /// [`BlueprintError::ArchiveTooLarge`] for the transfer; [`BlueprintError::ArchiveStripMissing`] when `strip` is not
 /// at the archive's top level; and the unpacker's own refusals.
 ///
@@ -142,9 +143,11 @@ async fn fetch_into(
 async fn download(http: &reqwest::Client, url: &str, into: &Path) -> Result<()> {
     use tokio::io::AsyncWriteExt;
 
-    let transport = |source: reqwest::Error| Error::ArtifactTransport {
-        url: url.to_owned(),
-        source: Box::new(source),
+    let transport = |source: reqwest::Error| {
+        Error::Install(InstallError::ArtifactTransport {
+            url: url.to_owned(),
+            source: Box::new(source),
+        })
     };
     let write = |source: std::io::Error| Error::Io {
         action: "write",

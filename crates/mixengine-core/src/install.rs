@@ -33,6 +33,10 @@
 //!
 //! [T23]: ../../../docs/roadmap/phase-2-runtimes.md
 
+mod error;
+
+pub use error::InstallError;
+
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::io::Read as _;
@@ -132,7 +136,7 @@ const CHECKED_AT: u8 = 97;
 /// neither has to guess from the shape of a URL what the document it came out of meant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NotAnArchive {
-    /// Refuse it, with [`Error::ArtifactFormat`]. What the package index asks for.
+    /// Refuse it, with [`InstallError::ArtifactFormat`]. What the package index asks for.
     Refuse,
 
     /// Install it as one file, named by the last segment of its URL. What an extension asks for.
@@ -240,7 +244,7 @@ impl Installer {
     ///
     /// # Errors
     ///
-    /// [`Error::IndexTransport`] if the HTTP client cannot be constructed, which is a broken build
+    /// [`InstallError::IndexTransport`] if the HTTP client cannot be constructed, which is a broken build
     /// rather than anything a user did — the variant is shared with the index client because both
     /// describe the same one thing that can go wrong before a request exists.
     pub fn new(cache_dir: &Path) -> Result<Self> {
@@ -249,12 +253,14 @@ impl Installer {
             .read_timeout(READ_TIMEOUT)
             .user_agent(concat!("mixengine/", env!("CARGO_PKG_VERSION")))
             .build()
-            .map_err(|source| Error::IndexTransport {
-                // Not a document at all: the HTTP client itself would not build, which is a broken
-                // build rather than a fetch of anything.
-                document: "downloader",
-                url: String::new(),
-                source: Box::new(source),
+            .map_err(|source| {
+                Error::Install(InstallError::IndexTransport {
+                    // Not a document at all: the HTTP client itself would not build, which is a broken
+                    // build rather than a fetch of anything.
+                    document: "downloader",
+                    url: String::new(),
+                    source: Box::new(source),
+                })
             })?;
 
         Ok(Self {
@@ -291,13 +297,13 @@ impl Installer {
     ///
     /// # Errors
     ///
-    /// [`RuntimeError::AlreadyInstalled`] when something is already at `into`; [`Error::ArtifactFormat`]
-    /// for an archive shape this build cannot unpack; [`Error::ArtifactTransport`],
-    /// [`Error::ArtifactIncomplete`] and [`Error::ArtifactTooLarge`] from the download;
-    /// [`Error::ArtifactChecksum`] when what arrived is not what the index promised;
-    /// [`Error::ArchiveUnreadable`] and [`Error::UnsafeArchiveEntry`] from unpacking;
-    /// [`Error::MissingFromArtifact`] when the archive does not contain what it said it did;
-    /// [`Error::SmokeTestFailed`] when it will not run here; [`Error::InstallCancelled`] when asked
+    /// [`RuntimeError::AlreadyInstalled`] when something is already at `into`; [`InstallError::ArtifactFormat`]
+    /// for an archive shape this build cannot unpack; [`InstallError::ArtifactTransport`],
+    /// [`InstallError::ArtifactIncomplete`] and [`InstallError::ArtifactTooLarge`] from the download;
+    /// [`InstallError::ArtifactChecksum`] when what arrived is not what the index promised;
+    /// [`InstallError::ArchiveUnreadable`] and [`InstallError::UnsafeArchiveEntry`] from unpacking;
+    /// [`InstallError::MissingFromArtifact`] when the archive does not contain what it said it did;
+    /// [`InstallError::SmokeTestFailed`] when it will not run here; [`InstallError::InstallCancelled`] when asked
     /// to stop; and [`Error::Io`] when the staging directory or the rename cannot be done.
     ///
     /// Every one of them leaves `into` untouched.
@@ -343,8 +349,10 @@ impl Installer {
 
         // Read before a byte is fetched. An artifact this build cannot unpack is a refusal that
         // costs nothing now and eighty megabytes later.
-        let refuse = || Error::ArtifactFormat {
-            url: artifact.url.clone(),
+        let refuse = || {
+            Error::Install(InstallError::ArtifactFormat {
+                url: artifact.url.clone(),
+            })
         };
         let unpacking = match (archive::Format::of(&artifact.url), not_an_archive) {
             (Some(format), _) => Unpacking::Archive(format),
@@ -421,12 +429,14 @@ impl Installer {
         for attempt in 1..ATTEMPTS {
             match self.attempt(artifact, part, watcher).await {
                 Ok(()) => return Ok(()),
-                Err(refusal @ Error::ArtifactIncomplete { .. }) => tracing::warn!(
-                    url = %artifact.url,
-                    attempt,
-                    error = %refusal,
-                    "the download ended early; resuming it"
-                ),
+                Err(refusal @ Error::Install(InstallError::ArtifactIncomplete { .. })) => {
+                    tracing::warn!(
+                        url = %artifact.url,
+                        attempt,
+                        error = %refusal,
+                        "the download ended early; resuming it"
+                    )
+                }
                 Err(other) => return Err(other),
             }
         }
@@ -442,7 +452,7 @@ impl Installer {
         watcher: &W,
     ) -> Result<()> {
         if watcher.is_cancelled() {
-            return Err(Error::InstallCancelled);
+            return Err(Error::Install(InstallError::InstallCancelled));
         }
 
         let mut have = match tokio::fs::metadata(part).await {
@@ -462,9 +472,11 @@ impl Installer {
             return Ok(());
         }
 
-        let transport = |source: reqwest::Error| Error::ArtifactTransport {
-            url: artifact.url.clone(),
-            source: Box::new(source),
+        let transport = |source: reqwest::Error| {
+            Error::Install(InstallError::ArtifactTransport {
+                url: artifact.url.clone(),
+                source: Box::new(source),
+            })
         };
 
         let mut request = self.http.get(&artifact.url);
@@ -481,11 +493,11 @@ impl Installer {
         // version, and `error_for_status` below would report it as an HTTP error nobody can act on.
         if status == reqwest::StatusCode::RANGE_NOT_SATISFIABLE && have > 0 {
             remove_file(part).await;
-            return Err(Error::ArtifactIncomplete {
+            return Err(Error::Install(InstallError::ArtifactIncomplete {
                 url: artifact.url.clone(),
                 expected: artifact.size,
                 received: have,
-            });
+            }));
         }
 
         let mut response = response.error_for_status().map_err(transport)?;
@@ -519,7 +531,7 @@ impl Installer {
             if watcher.is_cancelled() {
                 // The part file stays. Somebody who cancels an install at sixty percent and asks
                 // again has not asked for those bytes to be thrown away.
-                return Err(Error::InstallCancelled);
+                return Err(Error::Install(InstallError::InstallCancelled));
             }
 
             written += chunk.len() as u64;
@@ -528,10 +540,10 @@ impl Installer {
                 // else or a stream that never ends. Bounded here rather than by the checksum, so a
                 // disk is not filled to find out.
                 remove_file(part).await;
-                return Err(Error::ArtifactTooLarge {
+                return Err(Error::Install(InstallError::ArtifactTooLarge {
                     url: artifact.url.clone(),
                     expected: artifact.size,
-                });
+                }));
             }
 
             file.write_all(&chunk).await.map_err(|source| Error::Io {
@@ -561,11 +573,11 @@ impl Installer {
         })?;
 
         if written != artifact.size {
-            return Err(Error::ArtifactIncomplete {
+            return Err(Error::Install(InstallError::ArtifactIncomplete {
                 url: artifact.url.clone(),
                 expected: artifact.size,
                 received: written,
-            });
+            }));
         }
 
         Ok(())
@@ -592,11 +604,11 @@ impl Installer {
         // lowercase today and a mirror rewriting the case would be a refusal nobody could diagnose.
         if !found.eq_ignore_ascii_case(&artifact.sha256) {
             remove_file(part).await;
-            return Err(Error::ArtifactChecksum {
+            return Err(Error::Install(InstallError::ArtifactChecksum {
                 url: artifact.url.clone(),
                 expected: artifact.sha256.clone(),
                 found,
-            });
+            }));
         }
 
         Ok(())
@@ -615,7 +627,7 @@ impl Installer {
         watcher: &W,
     ) -> Result<()> {
         if watcher.is_cancelled() {
-            return Err(Error::InstallCancelled);
+            return Err(Error::Install(InstallError::InstallCancelled));
         }
         watcher.report(UNPACKED_AT, "unpacking").await;
 
@@ -654,7 +666,7 @@ impl Installer {
             return Ok(());
         };
         if watcher.is_cancelled() {
-            return Err(Error::InstallCancelled);
+            return Err(Error::Install(InstallError::InstallCancelled));
         }
 
         watcher.report(CHECKED_AT, "checking it runs here").await;
@@ -668,23 +680,23 @@ impl Installer {
 ///
 /// # Errors
 ///
-/// [`Error::MissingFromArtifact`] when `provides` does not name the executable, and
-/// [`Error::SmokeTestFailed`] when it will not start, times out or exits non-zero.
+/// [`InstallError::MissingFromArtifact`] when `provides` does not name the executable, and
+/// [`InstallError::SmokeTestFailed`] when it will not start, times out or exits non-zero.
 pub async fn check_runs(artifact: &Artifact, dir: &Path, smoke: &SmokeTest) -> Result<()> {
-    let relative =
-        artifact
-            .provides
-            .get(&smoke.executable)
-            .ok_or_else(|| Error::MissingFromArtifact {
-                url: artifact.url.clone(),
-                executable: smoke.executable.clone(),
-                path: String::new(),
-            })?;
+    let relative = artifact.provides.get(&smoke.executable).ok_or_else(|| {
+        Error::Install(InstallError::MissingFromArtifact {
+            url: artifact.url.clone(),
+            executable: smoke.executable.clone(),
+            path: String::new(),
+        })
+    })?;
     let program = crate::paths::join_stored(dir, relative);
 
-    let failed = |detail: String| Error::SmokeTestFailed {
-        program: program.clone(),
-        detail,
+    let failed = |detail: String| {
+        Error::Install(InstallError::SmokeTestFailed {
+            program: program.clone(),
+            detail,
+        })
     };
 
     // `current_dir` is the dir directory because that is where the runtime's own files are:
@@ -793,7 +805,7 @@ fn staging_for(into: &Path) -> Result<PathBuf> {
 ///
 /// # Errors
 ///
-/// [`Error::MissingFromArtifact`] naming the first entry that is not there.
+/// [`InstallError::MissingFromArtifact`] naming the first entry that is not there.
 pub fn present(artifact: &Artifact, dir: &Path) -> Result<()> {
     provided(&artifact.provides, &artifact.url, dir)
 }
@@ -803,15 +815,17 @@ pub fn present(artifact: &Artifact, dir: &Path) -> Result<()> {
 ///
 /// # Errors
 ///
-/// [`Error::MissingFromArtifact`] naming the first entry that is not there, or that would lead
+/// [`InstallError::MissingFromArtifact`] naming the first entry that is not there, or that would lead
 /// outside `dir`.
 pub fn provided(provides: &BTreeMap<String, String>, url: &str, dir: &Path) -> Result<()> {
     for (executable, relative) in provides {
         let path = Path::new(relative);
-        let missing = || Error::MissingFromArtifact {
-            url: url.to_owned(),
-            executable: executable.clone(),
-            path: relative.clone(),
+        let missing = || {
+            Error::Install(InstallError::MissingFromArtifact {
+                url: url.to_owned(),
+                executable: executable.clone(),
+                path: relative.clone(),
+            })
         };
 
         // The index is signed, so this cannot be a hostile path — and it is checked anyway, because
@@ -1129,7 +1143,7 @@ mod tests {
 
         assert!(matches!(
             present(&a_bundle_payload(), staging.path()),
-            Err(Error::MissingFromArtifact { .. })
+            Err(Error::Install(InstallError::MissingFromArtifact { .. }))
         ));
     }
 
@@ -1141,7 +1155,7 @@ mod tests {
 
         assert!(matches!(
             present(&a_bundle_payload(), staging.path()),
-            Err(Error::MissingFromArtifact { .. })
+            Err(Error::Install(InstallError::MissingFromArtifact { .. }))
         ));
     }
 }

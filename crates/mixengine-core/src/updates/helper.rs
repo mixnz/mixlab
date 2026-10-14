@@ -24,6 +24,7 @@ use std::path::Path;
 use mixengine_proto::privileged::HelperStamp;
 
 use super::feed::HelperArtifact;
+use crate::InstallError;
 use crate::install::Installer;
 use crate::{Error, Result};
 
@@ -106,7 +107,7 @@ pub fn verify(bytes: &[u8], signature: &str, public_key: &str) -> Result<HelperS
 ///
 /// # Errors
 ///
-/// [`Error::ArtifactTransport`] for either fetch, [`Error::Io`] for the directory and the two
+/// [`InstallError::ArtifactTransport`] for either fetch, [`Error::Io`] for the directory and the two
 /// files, and whatever [`verify`] refused.
 pub async fn stage(
     installer: &Installer,
@@ -192,18 +193,22 @@ async fn fetch(http: &reqwest::Client, url: &str) -> Result<Vec<u8>> {
         .send()
         .await
         .and_then(reqwest::Response::error_for_status)
-        .map_err(|source| Error::ArtifactTransport {
-            url: url.to_owned(),
-            source: Box::new(source),
+        .map_err(|source| {
+            Error::Install(InstallError::ArtifactTransport {
+                url: url.to_owned(),
+                source: Box::new(source),
+            })
         })?;
 
     response
         .bytes()
         .await
         .map(|bytes| bytes.to_vec())
-        .map_err(|source| Error::ArtifactTransport {
-            url: url.to_owned(),
-            source: Box::new(source),
+        .map_err(|source| {
+            Error::Install(InstallError::ArtifactTransport {
+                url: url.to_owned(),
+                source: Box::new(source),
+            })
         })
 }
 

@@ -22,6 +22,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use crate::InstallError;
 use mixengine_proto::Execution;
 use serde::{Deserialize, Serialize};
 
@@ -514,8 +515,10 @@ impl std::str::FromStr for Timestamp {
     type Err = crate::Error;
 
     fn from_str(text: &str) -> crate::Result<Self> {
-        Self::parse(text).ok_or_else(|| crate::Error::Timestamp {
-            text: text.to_owned(),
+        Self::parse(text).ok_or_else(|| {
+            crate::Error::Install(InstallError::Timestamp {
+                text: text.to_owned(),
+            })
         })
     }
 }
