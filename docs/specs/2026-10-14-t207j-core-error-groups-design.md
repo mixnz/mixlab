@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 date: 2026-10-14
 task: T207j
 ---
@@ -44,9 +44,9 @@ users are in one subject goes with that subject even if its name says otherwise.
 
 ## D2 — the shape
 
-Each enum looks like `GraphError`: `#[derive(Debug, thiserror::Error)]`, `#[non_exhaustive]` like
-`Error`, and the variants moved word for word with their doc comments and `#[error]` attributes.
-`Error` gains:
+Each enum looks like `GraphError`: `#[derive(Debug, thiserror::Error)]`, but not `#[non_exhaustive]`
+(D3's second step), and the variants moved word for word with their doc comments and `#[error]`
+attributes. `Error` gains:
 
 ```rust
 /// … — see [`ExtensionError`].
@@ -111,7 +111,31 @@ site, and compiles. Each gets `cargo clippy --workspace --all-targets -D warning
 Then the D3 second step, if the survey allows it. Then `docs/standards/rust.md` gains one
 sentence: a crate's `Error` may wrap per-subject enums the way `GraphError` is wrapped. Then the
 roadmap, with `lib.rs` out of the baseline, which is then empty. The full workspace tests run on
-Windows and on Linux (WSL) before the push.
+Windows before the push, and on Linux and macOS in CI.
+
+## What landed
+
+- **The nine enums**, 100–357 lines each (`jobs/error.rs` and `projects/error.rs` in new
+  directories). `lib.rs` is 310 lines. `said_suffix`, which only `ElevateReportMissing` uses, moved
+  with it.
+- **Names by import.** The rewrite first wrote whole paths (`crate::ExtensionError::…`). A later
+  commit imports each enum instead, folded into the file's braced `use`, and drops the reference
+  links the import makes redundant. A `.into()` form was tried and dropped, because rustfmt puts it
+  on a line of its own and the files only grew. Comment paragraphs that the longer names pushed
+  past 100 columns were refilled, words unchanged.
+- **One file crossed the limit on the way**: `extensions/manifest.rs` (1,470 lines before). Its
+  test module moved to `extensions/manifest/tests.rs`, which is T207e's convention.
+- **The daemon's mapping** is one exhaustive `match` per subject, with no wildcard. The nine enums
+  are not `#[non_exhaustive]`. The one arm that joined two subjects (`Unreadable*Row`) is two arms
+  sharing `UNREADABLE_ROW`. `JobError`, which had no arms, lists its six variants under `internal`.
+  A script compared which arm body every one of the 135 variants reaches, before and after. All
+  135 match, except that four now read their hint from that constant instead of the literal.
+- **Checks:** the 46,067 string literals across `crates/` are the same multiset before and after
+  (with `\`-continuations folded). Every commit passed clippy and rustdoc with `-D warnings`, fmt,
+  and core's 1,193 unit tests plus the daemon's 22 mapping tests. The full workspace passed on
+  Windows. Linux and macOS ran in CI. `extensions::uninstall::tests::the_ports_come_back` failed
+  once in a parallel run and passed alone, three times out of three. It binds a real port, and
+  nothing here touches it.
 
 ## MixLab
 

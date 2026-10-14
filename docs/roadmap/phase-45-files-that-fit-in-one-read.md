@@ -74,7 +74,7 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
       `impl` split by what its methods do, as T207d split `Registry`: `runner/attempt.rs`,
       `stop.rs`, `environment.rs`, `reload.rs`; `doctor/installs.rs`, `trust.rs`. Design:
       [2026-10-14-t207i-runner-and-doctor-split-design.md](../specs/2026-10-14-t207i-runner-and-doctor-split-design.md).
-- [ ] **T207j** Core `lib.rs` cannot be split by moving: lines 92–1935 are one `enum Error`, and
+- [x] **T207j** Core `lib.rs` cannot be split by moving: lines 92–1935 are one `enum Error`, and
       an enum does not span files. Decide between error enums per subject (a change to code, and
       perhaps an ADR) and keeping it in the baseline with the reason written there. Decided on
       2026-10-14: nine per-subject enums wrapped by `Error`, as `GraphError` is. Design:
@@ -93,3 +93,7 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
 **M45** `scripts/file-size-baseline.json` no longer names `crates/mixengine-cli/src/main.rs`,
 `render.rs`, `crates/mixengine-daemon/src/api/rpc.rs` or
 `crates/mixengine-daemon/src/services/mod.rs`, and `bash scripts/gate.sh` is green.
+
+
+Since T207j the size baseline is empty: no source file in the repository is over 1,500 lines, and
+`node scripts/check-file-sizes.mjs` now holds every file to the limit itself.

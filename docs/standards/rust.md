@@ -78,6 +78,11 @@ the signature.
 
 - Every library crate defines its own `Error` enum with `thiserror`. **No `anyhow::Result` in
   library signatures.**
+- That enum may wrap one enum per subject, each in the module of its subject, through a
+  `#[error(transparent)] Subject(#[from] SubjectError)` variant. `mixengine-core` does this: its
+  `Error` holds what every subject shares, and `GraphError`, `JobError`, `ExtensionError` and
+  the rest hold the others. The daemon classifies each subject's errors in a `match` with no
+  wildcard, so a variant added later does not compile until it has a wire code.
 - `mixengine-proto::Error` is the wire error; conversions live at the daemon boundary and always set
   a stable `code` and a useful `hint`.
 - `unwrap()`/`expect()` are allowed only where a panic is genuinely impossible and the message says
