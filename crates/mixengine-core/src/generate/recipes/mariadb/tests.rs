@@ -382,7 +382,7 @@ fn the_credential_is_named_rather_than_carried() {
                 if service == KEYRING_SERVICE
                     && key == &format!(
                         "{}/mariadb@main/root",
-                        crate::generate::recipe::TEST_HOME
+                        crate::generate::context::TEST_HOME
                     )
         ),
         "{:?}",
@@ -584,7 +584,7 @@ fn the_spec_and_the_ritual_name_one_credential() {
     // the root password of every server that was already running.
     assert_eq!(
         context.secret_address(ROOT),
-        format!("{}/mariadb@main/root", crate::generate::recipe::TEST_HOME)
+        format!("{}/mariadb@main/root", crate::generate::context::TEST_HOME)
     );
 
     // **And it is the shared composition, not a second one that agrees today** — roadmap task
@@ -592,7 +592,7 @@ fn the_spec_and_the_ritual_name_one_credential() {
     assert_eq!(
         context.secret_address(ROOT),
         crate::services::handoff::secret_key(
-            &crate::home::HomeId::parse(crate::generate::recipe::TEST_HOME).expect("an id"),
+            &crate::home::HomeId::parse(crate::generate::context::TEST_HOME).expect("an id"),
             context.service(),
             ROOT
         )

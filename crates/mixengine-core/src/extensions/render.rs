@@ -96,7 +96,7 @@ pub struct Context {
 /// 3306"* — so one address form is enough, and a placeholder rendering to nothing on Windows is a
 /// template nobody could write once. There is no password, because the design's D6 says a generated
 /// file does not carry one: where the credential lives stays
-/// [`Context::secret_address`](crate::generate::recipe::Context::secret_address)'s answer.
+/// [`Context::secret_address`](crate::generate::context::Context::secret_address)'s answer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DatabaseEndpoint {
     /// Which service answers — the row `site_service_links` froze at install.

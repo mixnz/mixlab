@@ -38,6 +38,7 @@ use mixengine_platform::PortBinding;
 use mixengine_proto::{FrontEndServer, IdlePolicy, Millis, ResourceLimits, ServiceId, ServiceSpec};
 
 pub mod ca;
+pub mod context;
 pub mod databases;
 pub mod document;
 pub mod first_run;
@@ -48,12 +49,13 @@ pub mod settings;
 pub mod step;
 pub mod welcome;
 
+pub use context::Context;
 pub use databases::{Ask, Credentials, DatabaseAdmin, Found, Provisioning};
 pub use document::{Document, Reason, Validator, Written};
 pub use first_run::{DataDirectory, FirstRun, Ritual, SecretSpec};
 pub use recipe::{
-    Catalogue, Context, Endpoints, FrontEndAddition, Instancing, Recipe, Role, Source,
-    TemplateFile, Upstream, Upstreams, program,
+    Catalogue, Endpoints, FrontEndAddition, Instancing, Recipe, Role, Source, TemplateFile,
+    Upstream, Upstreams, program,
 };
 pub use recipes::{Caddy, Mariadb, PhpFpm, Postgres};
 pub use served::{Served, ServedKind, Shared};

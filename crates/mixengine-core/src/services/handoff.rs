@@ -42,7 +42,7 @@ pub use crate::extensions::pools::CREDENTIAL_ENV;
 ///
 /// **One composition, and roadmap task T84 is why it is here rather than in three places.** Until
 /// this task the string was spelled by
-/// [`Context::secret_address`](crate::generate::recipe::Context::secret_address) for the recipes,
+/// [`Context::secret_address`](crate::generate::context::Context::secret_address) for the recipes,
 /// again by `database.open` for the handoff, and read back by the daemon's credential reader. The
 /// convention is published to another application — MixLab reads these entries — but it reads the
 /// [`SecretAddress`](mixengine_proto::SecretAddress) the daemon *hands it* rather than composing

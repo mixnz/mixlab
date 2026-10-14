@@ -22,7 +22,7 @@
 
 use std::collections::BTreeMap;
 
-use super::recipe::Context;
+use super::context::Context;
 use super::step::Step;
 use crate::{Error, Result};
 

@@ -25,7 +25,8 @@ use mixengine_proto::ServiceSpecBuilder;
 use crate::extensions::manifest::{Body, ExtensionManifest, ReadyTemplate};
 use crate::extensions::render::{self, Context as RenderContext};
 use crate::extensions::store::Installed;
-use crate::generate::recipe::{Context, Instancing, Recipe};
+use crate::generate::context::Context;
+use crate::generate::recipe::{Instancing, Recipe};
 use crate::{Error, Result};
 
 /// The instance name an extension's service is created under, which is the extension's own id.

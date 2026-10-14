@@ -79,8 +79,9 @@ use mixengine_proto::{
     StopBehaviour,
 };
 
+use crate::generate::context::Context;
 use crate::generate::document::{CONFIG, Document, Validator};
-use crate::generate::recipe::{Context, Instancing, Recipe, Role, TemplateFile, Upstream};
+use crate::generate::recipe::{Instancing, Recipe, Role, TemplateFile, Upstream};
 use crate::generate::served::{Served, ServedKind};
 use crate::generate::settings::{Preset, Setting};
 use crate::install::SmokeTest;

@@ -42,10 +42,9 @@ use mixengine_proto::{
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+use crate::generate::context::Context;
 use crate::generate::document::Validator;
-use crate::generate::recipe::{
-    Claim, ClientCommand, Context, Instancing, Recipe, TemplateFile, Upstream,
-};
+use crate::generate::recipe::{Claim, ClientCommand, Instancing, Recipe, TemplateFile, Upstream};
 use crate::generate::settings::{Preset, Setting};
 use crate::install::SmokeTest;
 use crate::{Error, Result};
