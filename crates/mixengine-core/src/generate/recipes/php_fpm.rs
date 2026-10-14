@@ -77,8 +77,9 @@ use mixengine_proto::{
     ServiceSpec, ServiceSpecBuilder, StopBehaviour,
 };
 
+use crate::generate::context::Context;
 use crate::generate::document::{CONFIG, Validator};
-use crate::generate::recipe::{Context, Instancing, Recipe, Source, TemplateFile, Upstream};
+use crate::generate::recipe::{Instancing, Recipe, Source, TemplateFile, Upstream};
 use crate::generate::settings::{Preset, Setting};
 use crate::{Error, Result};
 

@@ -50,9 +50,10 @@ use mixengine_proto::{
     HealthCheck, HealthProbe, Millis, ReadyCheck, ServiceSpec, ServiceSpecBuilder, StopBehaviour,
 };
 
+use crate::generate::context::Context;
 use crate::generate::first_run::{Ritual, SecretSpec, Step};
 use crate::generate::recipe::{
-    Claim, ClientCommand, Context, Endpoints, Instancing, Recipe, TemplateFile, Upstream,
+    Claim, ClientCommand, Endpoints, Instancing, Recipe, TemplateFile, Upstream,
 };
 use crate::generate::settings::{Preset, Setting};
 use crate::{Error, Result};

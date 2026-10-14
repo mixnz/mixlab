@@ -463,7 +463,7 @@ fn the_credential_is_named_rather_than_carried() {
                 if service == KEYRING_SERVICE
                     && key == &format!(
                         "{}/postgres@main/postgres",
-                        crate::generate::recipe::TEST_HOME
+                        crate::generate::context::TEST_HOME
                     )
         ),
         "{:?}",
@@ -586,7 +586,7 @@ fn the_spec_and_the_ritual_name_one_credential() {
         context.secret_address(SUPERUSER),
         format!(
             "{}/postgres@main/postgres",
-            crate::generate::recipe::TEST_HOME
+            crate::generate::context::TEST_HOME
         )
     );
 }

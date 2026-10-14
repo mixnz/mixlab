@@ -44,7 +44,8 @@ use mixengine_proto::{
     HealthCheck, HealthProbe, Millis, ReadyCheck, ServiceSpec, ServiceSpecBuilder, StopBehaviour,
 };
 
-use crate::generate::recipe::{Context, Instancing, Recipe, Upstream};
+use crate::generate::context::Context;
+use crate::generate::recipe::{Instancing, Recipe, Upstream};
 use crate::generate::settings::{Preset, Setting};
 use crate::install::SmokeTest;
 use crate::{Error, Result};

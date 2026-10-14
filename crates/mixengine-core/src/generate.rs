@@ -38,6 +38,7 @@ use mixengine_platform::PortBinding;
 use mixengine_proto::{FrontEndServer, IdlePolicy, Millis, ResourceLimits, ServiceId, ServiceSpec};
 
 pub mod ca;
+pub mod context;
 pub mod databases;
 pub mod document;
 pub mod first_run;
@@ -48,12 +49,13 @@ pub mod settings;
 pub mod step;
 pub mod welcome;
 
+pub use context::Context;
 pub use databases::{Ask, Credentials, DatabaseAdmin, Found, Provisioning};
 pub use document::{Document, Reason, Validator, Written};
 pub use first_run::{DataDirectory, FirstRun, Ritual, SecretSpec};
 pub use recipe::{
-    Catalogue, Context, Endpoints, FrontEndAddition, Instancing, Recipe, Role, Source,
-    TemplateFile, Upstream, Upstreams, program,
+    Catalogue, Endpoints, FrontEndAddition, Instancing, Recipe, Role, Source, TemplateFile,
+    Upstream, Upstreams, program,
 };
 pub use recipes::{Caddy, Mariadb, PhpFpm, Postgres};
 pub use served::{Served, ServedKind, Shared};
@@ -203,8 +205,8 @@ pub struct ServiceDrift {
 /// Which install supplies the binary behind one service, resolved from the two halves of a [`Row`].
 ///
 /// `Parent` and not `Origin`: the public [`services::Origin`](crate::services::Origin) is what a
-/// caller *asks* for and this is what a row *has*, and `recipe.rs` already has a private `Origin` of
-/// its own for the `package` half of a rendering.
+/// caller *asks* for and this is what a row *has*, and `context.rs` already has a private `Origin`
+/// of its own for the `package` half of a rendering.
 #[derive(Debug)]
 struct Parent {
     /// The name the recipe is found under, which is also what `data/<package>` is named after.

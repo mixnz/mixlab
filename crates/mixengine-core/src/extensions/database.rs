@@ -20,7 +20,7 @@
 //!
 //! [`Endpoint`] carries a host, a port and an account name. It carries no credential, because the
 //! design's D6 says a generated file does not hold one — where the password lives stays
-//! [`Context::secret_address`](crate::generate::recipe::Context::secret_address)'s answer, in the
+//! [`Context::secret_address`](crate::generate::context::Context::secret_address)'s answer, in the
 //! keyring. It carries no socket, because every database recipe binds a TCP port on all three
 //! systems (T34c), so one address form is enough and a placeholder that rendered to nothing on
 //! Windows would be a template nobody could write once.

@@ -70,7 +70,7 @@ pub struct Chosen {
 impl Chosen {
     /// The file behind one of this install's published names.
     ///
-    /// [`Context::provided`](crate::generate::recipe::Context::provided) for a client rather than
+    /// [`Context::provided`](crate::generate::context::Context::provided) for a client rather than
     /// for a recipe, and the same join: the path inside the archive belongs to whoever packed it,
     /// so it is read out of the recorded map rather than guessed at from the name.
     ///

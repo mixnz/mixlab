@@ -65,9 +65,11 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
       `mssql_editing.rs` and then its tests to `mssql/tests.rs`, and `dump.rs`'s tests to
       `dump/tests.rs`. Design:
       [2026-10-14-t207g-desktop-drivers-split-design.md](../specs/2026-10-14-t207g-desktop-drivers-split-design.md).
-- [ ] **T207h** Definitions whose code is past 1,500, with little state: proto `service.rs`
+- [x] **T207h** Definitions whose code is past 1,500, with little state: proto `service.rs`
       (code 1,814), core `generate/recipe.rs` (1,521), platform `process.rs` (1,508) and
-      `windows/process.rs` (1,590). By capability, with T207d's script.
+      `windows/process.rs` (1,590), each giving one capability a file: `service/policy.rs`,
+      `generate/context.rs`, `process/once.rs`, `windows/process/child.rs`. Design:
+      [2026-10-14-t207h-definitions-split-by-capability-design.md](../specs/2026-10-14-t207h-definitions-split-by-capability-design.md).
 - [ ] **T207i** The daemon's stateful three, each designed as T207d was: `services/runner.rs`
       (code 2,418; likely a design of its own), `main.rs` (2,439) and `doctor.rs` (1,615).
 - [ ] **T207j** Core `lib.rs` cannot be split by moving: lines 92–1935 are one `enum Error`, and

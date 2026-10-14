@@ -32,8 +32,8 @@ use std::path::PathBuf;
 use mixengine_proto::Millis;
 
 use crate::Result;
+use crate::generate::context::Context;
 use crate::generate::databases::{Ask, Credentials, Found, password_env};
-use crate::generate::recipe::Context;
 use crate::generate::step::Step;
 
 /// Hosts a client on this machine is matched as. See the module note.

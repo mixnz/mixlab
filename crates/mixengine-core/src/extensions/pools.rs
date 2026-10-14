@@ -288,7 +288,7 @@ pub async fn ensure(store: &Store, host: &dyn mixengine_platform::Host) -> Resul
 ///
 /// **An address and never a value.** `mixengine-core` has no business reaching a credential store
 /// (`generate::databases`' D1); what travels here is what the supervisor will look up, so a
-/// [`Context`](crate::generate::recipe::Context) holding one may be `Debug`-printed exactly as it
+/// [`Context`](crate::generate::context::Context) holding one may be `Debug`-printed exactly as it
 /// always could.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Credential {
@@ -299,7 +299,7 @@ pub struct Credential {
     pub keyring_service: String,
 
     /// The entry within it — `<home-id>/<service-id>/<administrator>`, which is what
-    /// [`Context::secret_address`](crate::generate::recipe::Context::secret_address) composes for
+    /// [`Context::secret_address`](crate::generate::context::Context::secret_address) composes for
     /// the database's own recipe and what `services::databases` wrote it under.
     pub keyring_key: String,
 

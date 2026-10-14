@@ -26,7 +26,7 @@ use std::path::{Path, PathBuf};
 
 use mixengine_proto::Millis;
 
-use super::recipe::Context;
+use super::context::Context;
 use crate::{Error, Result, paths};
 
 /// What is appended to a data directory's own name to make the file that says a ritual began in it.

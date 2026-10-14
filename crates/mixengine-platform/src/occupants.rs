@@ -286,11 +286,28 @@ mod tests {
         let copy = directory.join(source.file_name().expect("a file name"));
         std::fs::copy(&source, &copy).expect("copy the program");
 
-        std::process::Command::new(&copy)
-            .args(args)
-            .stdout(std::process::Stdio::null())
-            .spawn()
-            .expect("start the copy")
+        // **Again while Linux says the copy is busy.** `fs::copy` holds it open for writing, and a
+        // test on another thread that forks in that moment hands the descriptor to its child until
+        // the child execs; executing the copy inside that window fails with ETXTBSY. Seen only under
+        // a parallel `cargo test` (nextest runs a test per process), and the window closes at the
+        // other child's exec, so a short retry is the whole fix — it is how cargo and Go handle it.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        loop {
+            match std::process::Command::new(&copy)
+                .args(args)
+                .stdout(std::process::Stdio::null())
+                .spawn()
+            {
+                Ok(child) => return child,
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::ExecutableFileBusy
+                        && std::time::Instant::now() < deadline =>
+                {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+                Err(error) => panic!("start the copy {}: {error}", copy.display()),
+            }
+        }
     }
 
     #[test]

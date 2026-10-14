@@ -2,13 +2,9 @@
   "limit": 1500,
   "files": {
     "apps/desktop/src/modules/db/components/SqlTable/SqlTable.tsx": 1843,
-    "crates/mixengine-core/src/generate/recipe.rs": 1998,
     "crates/mixengine-core/src/lib.rs": 1943,
     "crates/mixengine-daemon/src/doctor.rs": 2055,
     "crates/mixengine-daemon/src/main.rs": 2683,
-    "crates/mixengine-daemon/src/services/runner.rs": 3219,
-    "crates/mixengine-platform/src/process.rs": 1614,
-    "crates/mixengine-platform/src/windows/process.rs": 1781,
-    "crates/mixengine-proto/src/service.rs": 2631
+    "crates/mixengine-daemon/src/services/runner.rs": 3219
   }
 }
