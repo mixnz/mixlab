@@ -37,13 +37,17 @@ pub fn file(paths: &Paths, slug: &str) -> PathBuf {
 ///
 /// # Errors
 ///
-/// [`Error::InvalidBlueprintName`] naming which rule was broken, in the words the user is shown.
+/// [`BlueprintError::InvalidBlueprintName`] naming which rule was broken, in the words the user is shown.
+///
+/// [`BlueprintError::InvalidBlueprintName`]: crate::BlueprintError::InvalidBlueprintName
 pub fn validated_slug(name: &str) -> Result<String> {
     let refuse = |reason: &'static str| {
-        Err(Error::InvalidBlueprintName {
-            name: name.to_owned(),
-            reason,
-        })
+        Err(Error::Blueprint(
+            crate::BlueprintError::InvalidBlueprintName {
+                name: name.to_owned(),
+                reason,
+            },
+        ))
     };
 
     if name.is_empty() {
@@ -83,9 +87,12 @@ pub fn validated_slug(name: &str) -> Result<String> {
 ///
 /// # Errors
 ///
-/// [`Error::InvalidBlueprintName`] for a slug that cannot be a filename;
-/// [`Error::BlueprintExists`] when something is already filed under it and `overwrite` is not set;
+/// [`BlueprintError::InvalidBlueprintName`] for a slug that cannot be a filename;
+/// [`BlueprintError::BlueprintExists`] when something is already filed under it and `overwrite` is not set;
 /// [`Error::Database`] when the row cannot be written, and [`Error::Io`] when the rendering cannot.
+///
+/// [`BlueprintError::BlueprintExists`]: crate::BlueprintError::BlueprintExists
+/// [`BlueprintError::InvalidBlueprintName`]: crate::BlueprintError::InvalidBlueprintName
 pub async fn save(
     store: &Store,
     paths: &Paths,
@@ -123,7 +130,9 @@ pub async fn save(
         .map_err(|error| store.failure("read", error))?;
 
     if existing.is_some() && !overwrite {
-        return Err(Error::BlueprintExists { name: slug });
+        return Err(Error::Blueprint(crate::BlueprintError::BlueprintExists {
+            name: slug,
+        }));
     }
 
     sqlx::query!(
@@ -180,9 +189,11 @@ pub async fn save(
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the table cannot be read, and [`Error::UnknownBlueprintSource`] for a
+/// [`Error::Database`] when the table cannot be read, and [`BlueprintError::UnknownBlueprintSource`] for a
 /// row whose `source` this build does not know — which is a hand-edited database or one written by
 /// a newer build, and either way not something to answer with a guess.
+///
+/// [`BlueprintError::UnknownBlueprintSource`]: crate::BlueprintError::UnknownBlueprintSource
 pub async fn records(store: &Store, paths: &Paths) -> Result<Vec<BlueprintSummary>> {
     let rows = sqlx::query!(
         r#"SELECT id AS "id!: String", name AS "name!: String",
@@ -199,10 +210,10 @@ pub async fn records(store: &Store, paths: &Paths) -> Result<Vec<BlueprintSummar
     rows.into_iter()
         .map(|row| {
             let source = BlueprintSource::parse(&row.source).ok_or_else(|| {
-                Error::UnknownBlueprintSource {
+                Error::Blueprint(crate::BlueprintError::UnknownBlueprintSource {
                     name: row.id.clone(),
                     value: row.source.clone(),
-                }
+                })
             })?;
 
             let signature = recorded(&row.id, row.signature.as_deref());
@@ -250,9 +261,13 @@ pub struct Filed {
 ///
 /// # Errors
 ///
-/// [`Error::NotFound`] for a slug nothing is filed under, [`Error::UnknownBlueprintSchema`] and
-/// [`Error::BlueprintManifest`] from the reader, [`Error::UnknownBlueprintSource`] for a source word
+/// [`Error::NotFound`] for a slug nothing is filed under, [`BlueprintError::UnknownBlueprintSchema`] and
+/// [`BlueprintError::BlueprintManifest`] from the reader, [`BlueprintError::UnknownBlueprintSource`] for a source word
 /// this build does not know, and [`Error::Database`] when the row cannot be read.
+///
+/// [`BlueprintError::BlueprintManifest`]: crate::BlueprintError::BlueprintManifest
+/// [`BlueprintError::UnknownBlueprintSchema`]: crate::BlueprintError::UnknownBlueprintSchema
+/// [`BlueprintError::UnknownBlueprintSource`]: crate::BlueprintError::UnknownBlueprintSource
 pub async fn filed_of(store: &Store, slug: &str) -> Result<Filed> {
     let row = sqlx::query!(
         r#"SELECT manifest_toml AS "manifest_toml!: String", source AS "source!: String",
@@ -269,11 +284,12 @@ pub async fn filed_of(store: &Store, slug: &str) -> Result<Filed> {
         id: slug.to_owned(),
     })?;
 
-    let source =
-        BlueprintSource::parse(&row.source).ok_or_else(|| Error::UnknownBlueprintSource {
+    let source = BlueprintSource::parse(&row.source).ok_or_else(|| {
+        Error::Blueprint(crate::BlueprintError::UnknownBlueprintSource {
             name: slug.to_owned(),
             value: row.source.clone(),
-        })?;
+        })
+    })?;
 
     Ok(Filed {
         manifest: manifest::read(&row.manifest_toml)?,
@@ -300,10 +316,12 @@ pub async fn exists(store: &Store, slug: &str) -> Result<bool> {
 /// The reason a row records, or [`None`] for a word this build does not know — roadmap task
 /// **T79b**, its design's D3.
 ///
-/// Where [`Error::UnknownBlueprintSource`] refuses to guess, this shrugs, and what each column is
+/// Where [`BlueprintError::UnknownBlueprintSource`] refuses to guess, this shrugs, and what each column is
 /// for is the difference: `source` decides what a plan does, and this decides one sentence. A
 /// listing killed by the one field on it that is decoration is the wrong price, so an unreadable
 /// word costs a row its explanation and nothing else.
+///
+/// [`BlueprintError::UnknownBlueprintSource`]: crate::BlueprintError::UnknownBlueprintSource
 fn recorded(slug: &str, word: Option<&str>) -> Option<SignatureCheck> {
     let check = word.and_then(SignatureCheck::parse);
 
@@ -493,9 +511,11 @@ mod tests {
     }
 
     /// **A word this build does not know reads as no reason** — roadmap task **T79b**, its design's
-    /// D3. Where [`Error::UnknownBlueprintSource`] refuses to guess, this shrugs: `source` decides
+    /// D3. Where [`BlueprintError::UnknownBlueprintSource`] refuses to guess, this shrugs: `source` decides
     /// what a plan does and this decides one sentence, so a newer build's word costs a listing its
     /// explanation rather than costing it the listing.
+    ///
+    /// [`BlueprintError::UnknownBlueprintSource`]: crate::BlueprintError::UnknownBlueprintSource
     #[tokio::test]
     async fn a_reason_this_build_does_not_know_reads_as_no_reason() {
         let (_temp, store, paths) = home().await;
@@ -586,7 +606,9 @@ mod tests {
                 false
             )
             .await,
-            Err(Error::BlueprintExists { .. })
+            Err(Error::Blueprint(
+                crate::BlueprintError::BlueprintExists { .. }
+            ))
         ));
 
         save(
@@ -626,7 +648,12 @@ mod tests {
             "dot.",
         ] {
             assert!(
-                matches!(validated_slug(bad), Err(Error::InvalidBlueprintName { .. })),
+                matches!(
+                    validated_slug(bad),
+                    Err(Error::Blueprint(
+                        crate::BlueprintError::InvalidBlueprintName { .. }
+                    ))
+                ),
                 "{bad:?} was accepted"
             );
         }
@@ -671,7 +698,9 @@ mod tests {
 
         assert!(matches!(
             records(&store, &paths).await,
-            Err(Error::UnknownBlueprintSource { .. })
+            Err(Error::Blueprint(
+                crate::BlueprintError::UnknownBlueprintSource { .. }
+            ))
         ));
     }
 }

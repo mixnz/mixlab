@@ -704,8 +704,11 @@ impl<'de> serde::Deserialize<'de> for BlueprintSite {
 ///
 /// # Errors
 ///
-/// [`Error::UnknownBlueprintSchema`] for a newer format, and [`Error::BlueprintManifest`] for a
+/// [`BlueprintError::UnknownBlueprintSchema`] for a newer format, and [`BlueprintError::BlueprintManifest`] for a
 /// file that does not parse.
+///
+/// [`BlueprintError::BlueprintManifest`]: crate::BlueprintError::BlueprintManifest
+/// [`BlueprintError::UnknownBlueprintSchema`]: crate::BlueprintError::UnknownBlueprintSchema
 pub fn read(text: &str) -> Result<BlueprintManifest> {
     /// Just enough to learn the version, and the name to say it with.
     #[derive(serde::Deserialize)]
@@ -722,20 +725,23 @@ pub fn read(text: &str) -> Result<BlueprintManifest> {
         name: String,
     }
 
-    let versioned: Versioned =
-        toml::from_str(text).map_err(|source| Error::BlueprintManifest { source })?;
+    let versioned: Versioned = toml::from_str(text)
+        .map_err(|source| Error::Blueprint(crate::BlueprintError::BlueprintManifest { source }))?;
 
     if versioned.schema > SCHEMA {
-        return Err(Error::UnknownBlueprintSchema {
-            name: versioned
-                .blueprint
-                .map(|header| header.name)
-                .unwrap_or_default(),
-            schema: versioned.schema,
-        });
+        return Err(Error::Blueprint(
+            crate::BlueprintError::UnknownBlueprintSchema {
+                name: versioned
+                    .blueprint
+                    .map(|header| header.name)
+                    .unwrap_or_default(),
+                schema: versioned.schema,
+            },
+        ));
     }
 
-    toml::from_str(text).map_err(|source| Error::BlueprintManifest { source })
+    toml::from_str(text)
+        .map_err(|source| Error::Blueprint(crate::BlueprintError::BlueprintManifest { source }))
 }
 
 /// Write one, in one fixed order.

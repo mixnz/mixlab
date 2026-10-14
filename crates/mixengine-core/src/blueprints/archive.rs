@@ -46,9 +46,13 @@ enum Mover {
 ///
 /// # Errors
 ///
-/// [`Error::ArchiveFormatUnknown`] before any download; [`Error::ArtifactTransport`] and
-/// [`Error::ArchiveTooLarge`] for the transfer; [`Error::ArchiveStripMissing`] when `strip` is not
+/// [`BlueprintError::ArchiveFormatUnknown`] before any download; [`Error::ArtifactTransport`] and
+/// [`BlueprintError::ArchiveTooLarge`] for the transfer; [`BlueprintError::ArchiveStripMissing`] when `strip` is not
 /// at the archive's top level; and the unpacker's own refusals.
+///
+/// [`BlueprintError::ArchiveFormatUnknown`]: crate::BlueprintError::ArchiveFormatUnknown
+/// [`BlueprintError::ArchiveStripMissing`]: crate::BlueprintError::ArchiveStripMissing
+/// [`BlueprintError::ArchiveTooLarge`]: crate::BlueprintError::ArchiveTooLarge
 pub async fn fetch(
     installer: &crate::install::Installer,
     url: &str,
@@ -67,8 +71,10 @@ async fn fetch_using(
     staging: &Path,
     root: &Path,
 ) -> Result<()> {
-    let format = Format::of(url).ok_or_else(|| Error::ArchiveFormatUnknown {
-        url: url.to_owned(),
+    let format = Format::of(url).ok_or_else(|| {
+        Error::Blueprint(crate::BlueprintError::ArchiveFormatUnknown {
+            url: url.to_owned(),
+        })
     })?;
 
     let _ = tokio::fs::remove_dir_all(staging).await;
@@ -109,11 +115,13 @@ async fn fetch_into(
             let candidate = unpacked.join(strip);
             // The manifest refuses such a `strip`; this is the second wall, for any other caller.
             if !is_folder_name(strip) || !candidate.is_dir() {
-                return Err(Error::ArchiveStripMissing {
-                    url: url.to_owned(),
-                    strip: strip.to_owned(),
-                    found: top_level(&unpacked),
-                });
+                return Err(Error::Blueprint(
+                    crate::BlueprintError::ArchiveStripMissing {
+                        url: url.to_owned(),
+                        strip: strip.to_owned(),
+                        found: top_level(&unpacked),
+                    },
+                ));
             }
             candidate
         }
@@ -157,10 +165,10 @@ async fn download(http: &reqwest::Client, url: &str, into: &Path) -> Result<()> 
     while let Some(chunk) = response.chunk().await.map_err(transport)? {
         written += u64::try_from(chunk.len()).unwrap_or(u64::MAX);
         if written > LIMIT {
-            return Err(Error::ArchiveTooLarge {
+            return Err(Error::Blueprint(crate::BlueprintError::ArchiveTooLarge {
                 url: url.to_owned(),
                 limit: LIMIT,
-            });
+            }));
         }
         file.write_all(&chunk).await.map_err(write)?;
     }
@@ -378,7 +386,10 @@ mod tests {
         .expect_err("refused");
 
         assert!(
-            matches!(error, Error::ArchiveFormatUnknown { .. }),
+            matches!(
+                error,
+                Error::Blueprint(crate::BlueprintError::ArchiveFormatUnknown { .. })
+            ),
             "{error:?}"
         );
     }

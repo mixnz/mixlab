@@ -15,6 +15,10 @@
 //! - [`trust`] answers the one question T78a added: did the gallery sign this, or did somebody
 //!   hand it over.
 
+mod error;
+
+pub use error::BlueprintError;
+
 pub mod archive;
 pub mod capture;
 pub mod dotenv;

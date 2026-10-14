@@ -335,35 +335,46 @@ impl ToWire for mixengine_core::Error {
             // **T77 left these four in the catch-all below**, so a mistyped blueprint name reached a
             // client as an internal error. Found while adding the three above; fixed here rather
             // than left for whoever meets it next.
-            Core::InvalidBlueprintName { .. } => {
+            Core::Blueprint(mixengine_core::BlueprintError::InvalidBlueprintName { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "a blueprint name is a filename stem: lower-case letters, digits and hyphens",
                 )
             }
 
-            Core::BlueprintExists { .. } => Error::new(ErrorCode::AlreadyExists, chain(self)),
+            Core::Blueprint(mixengine_core::BlueprintError::BlueprintExists { .. }) => {
+                Error::new(ErrorCode::AlreadyExists, chain(self))
+            }
 
             // **About the project, never the daemon failing** — roadmap task **T204a**. The
             // several-sites refusal this replaced had no arm, and reached clients as `internal`.
-            Core::ProjectRunsSeveralPhps { .. } => Error::new(ErrorCode::Conflict, chain(self))
-                .with_hint("a blueprint has one [runtimes] php; move the sites onto one PHP first"),
+            Core::Blueprint(mixengine_core::BlueprintError::ProjectRunsSeveralPhps { .. }) => {
+                Error::new(ErrorCode::Conflict, chain(self)).with_hint(
+                    "a blueprint has one [runtimes] php; move the sites onto one PHP first",
+                )
+            }
 
-            Core::BlueprintManifest { .. } | Core::UnknownBlueprintSchema { .. } => {
+            Core::Blueprint(mixengine_core::BlueprintError::BlueprintManifest { .. })
+            | Core::Blueprint(mixengine_core::BlueprintError::UnknownBlueprintSchema { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self))
             }
 
-            Core::UnknownBlueprintSource { .. } => Error::new(ErrorCode::Internal, chain(self))
-                .with_hint(
+            Core::Blueprint(mixengine_core::BlueprintError::UnknownBlueprintSource { .. }) => {
+                Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "this home holds a blueprint filed by a newer MixEngine than the one running",
-                ),
+                )
+            }
 
             // The signature is a property of the file somebody named, so the file is the argument
             // that was wrong. Classified here rather than left to the `_ => internal` arm, which is
             // where T77 left four variants and T78 had to come back for them.
-            Core::BlueprintSignature { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint("it can still be imported; it will be marked untrusted for good"),
+            Core::Blueprint(mixengine_core::BlueprintError::BlueprintSignature { .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self))
+                    .with_hint("it can still be imported; it will be marked untrusted for good")
+            }
 
-            Core::BlueprintKey { .. } => Error::new(ErrorCode::Internal, chain(self)),
+            Core::Blueprint(mixengine_core::BlueprintError::BlueprintKey { .. }) => {
+                Error::new(ErrorCode::Internal, chain(self))
+            }
 
             // **Every one of them classified, none left to the catch-all** — roadmap task T80.
             // T77 left four blueprint variants falling through, and a mistyped name reached a
