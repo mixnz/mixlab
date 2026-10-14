@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 date: 2026-10-14
 task: T207i
 ---
@@ -52,11 +52,12 @@ about 1,070 lines with its tests, out of the baseline.
 
 Measured by which `Runner` method each test calls:
 
-- `runner.rs` keeps the four `fold` tests and the three helpers every group's tests build a
-  runner with — `stopped_by_a_command`, `runner`, `adopted_runner` — which become `pub(super)` so
-  the children's test modules reach them as `super::super::tests::…`.
+- `runner.rs` keeps the four `fold` tests and what more than one child's tests use — `SLACK`,
+  `runner`, `adopted_runner` — which become `pub(super)` so the children's test modules reach them
+  as `super::super::tests::…`.
 - `stop.rs`: `a_grace_the_budget_clamps_…`, `a_budget_that_is_already_spent_…`,
-  `without_a_budget_a_specs_grace_period_…`, `a_spent_budget_still_leaves_…` (4).
+  `without_a_budget_a_specs_grace_period_…`, `a_spent_budget_still_leaves_…` (4), and what only
+  they use: `SETTLE`, `BUDGET`, `NeverStops` with its `Stoppable` impl, `stopped_by_a_command`.
 - `environment.rs`: the two environment-deadline tests and the five keyring tests (7).
 - `attempt.rs`: `a_spawn_that_failed_leaves_its_sentence_on_the_row` (1).
 
@@ -94,12 +95,13 @@ the machine checks (`home_permissions` through `application_control`), `generate
 ## D4 — commits
 
 1. `runner/environment.rs`, 2. `runner/reload.rs`, 3. `runner/stop.rs`, 4. `runner/attempt.rs`
-(each moving its tests, and the first making the three shared helpers `pub(super)`),
-5. `doctor/installs.rs`, 6. `doctor/trust.rs`, 7. comments naming an old place, 8. roadmap. Each:
-705 unit tests by `--list`; clippy and rustdoc with `-D warnings`; `git diff --color-moved` leaving
-only `use` lines, the `impl Runner {`/`impl Doctor {` wrappers, the `pub(super)`s, headers, test
-wrappers and reference links; `check-file-sizes --shrink`. Then the gate, WSL, `ask-ci`, one pull
-request, squash-merged.
+(each moving its tests, and the first making the shared helpers `pub(super)`),
+5. `doctor/installs.rs`, 6. `doctor/trust.rs`, 7. roadmap — no comment named an old place, so the
+comments commit had nothing to hold. Each: 705 unit tests by `--list`; clippy and rustdoc with
+`-D warnings`; `git diff --color-moved` leaving only `use` lines, the
+`impl Runner {`/`impl Doctor {` wrappers, the `pub(super)`s, headers, test wrappers, reference links, and the eight `super::` paths
+one module deeper now (inline doc links and calls such as `super::limits::from_proto`);
+`check-file-sizes --shrink`. Then the gate, WSL, `ask-ci`, one pull request, squash-merged.
 
 ## MixLab
 

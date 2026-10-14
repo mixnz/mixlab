@@ -70,7 +70,7 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
       `windows/process.rs` (1,590), each giving one capability a file: `service/policy.rs`,
       `generate/context.rs`, `process/once.rs`, `windows/process/child.rs`. Design:
       [2026-10-14-t207h-definitions-split-by-capability-design.md](../specs/2026-10-14-t207h-definitions-split-by-capability-design.md).
-- [ ] **T207i** The daemon's `services/runner.rs` (code 2,418) and `doctor.rs` (1,615), each one
+- [x] **T207i** The daemon's `services/runner.rs` (code 2,418) and `doctor.rs` (1,615), each one
       `impl` split by what its methods do, as T207d split `Registry`: `runner/attempt.rs`,
       `stop.rs`, `environment.rs`, `reload.rs`; `doctor/installs.rs`, `trust.rs`. Design:
       [2026-10-14-t207i-runner-and-doctor-split-design.md](../specs/2026-10-14-t207i-runner-and-doctor-split-design.md).
