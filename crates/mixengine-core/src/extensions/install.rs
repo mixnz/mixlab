@@ -256,10 +256,11 @@ fn artifact_for_host(manifest: &ExtensionManifest) -> Result<Option<Artifact>> {
 ///
 /// [`Error::ExtensionField`] for a runtime kind other than PHP and for an extension id whose pool
 /// could not be named; [`RuntimeError::RuntimeUnresolved`] naming the extension when nothing installed
-/// satisfies `requires`; [`Error::DomainTaken`] naming the holder; and whatever rendering the root
+/// satisfies `requires`; [`ProjectError::DomainTaken`] naming the holder; and whatever rendering the root
 /// refuses.
 ///
 /// [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
+/// [`ProjectError::DomainTaken`]: crate::ProjectError::DomainTaken
 pub async fn site_for(
     store: &Store,
     paths: &Paths,
@@ -286,10 +287,10 @@ pub async fn site_for(
     )?;
 
     if let Some(holder) = sites::by_domain(store, &domain).await? {
-        return Err(Error::DomainTaken {
+        return Err(Error::Project(crate::ProjectError::DomainTaken {
             domain,
             holder: holder.domains.first().cloned().unwrap_or_default(),
-        });
+        }));
     }
 
     let resolved = crate::resolve::runtime(

@@ -79,10 +79,11 @@ pub struct Asked<'a> {
 /// # Errors
 ///
 /// [`BlueprintError::ProjectRunsSeveralPhps`] for a project whose sites a single `[runtimes] php` cannot
-/// describe; [`Error::Database`] when a table cannot be read, and [`Error::Manifest`] when the
+/// describe; [`Error::Database`] when a table cannot be read, and [`ProjectError::Manifest`] when the
 /// project's own `mixengine.toml` does not parse.
 ///
 /// [`BlueprintError::ProjectRunsSeveralPhps`]: crate::BlueprintError::ProjectRunsSeveralPhps
+/// [`ProjectError::Manifest`]: crate::ProjectError::Manifest
 pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManifest> {
     let project = asked.project;
     // **Every site, in primary-domain order** — roadmap task **T204a**, D6: `sites::records`'s

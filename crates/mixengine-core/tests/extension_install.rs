@@ -478,7 +478,7 @@ async fn a_web_app_whose_domain_is_taken_is_refused_naming_the_holder() {
         .expect_err("the name is taken");
 
     assert!(
-        matches!(refusal, mixengine_core::Error::DomainTaken { ref holder, .. }
+        matches!(refusal, mixengine_core::Error::Project(mixengine_core::ProjectError::DomainTaken { ref holder, .. })
             if holder == "phpmyadmin.mixengine.test"),
         "{refusal}"
     );

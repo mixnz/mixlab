@@ -271,7 +271,7 @@ fn a_proxy_with_no_upstream_is_refused_by_the_definition() {
     let error = read(&at(home.path())).expect_err("a proxy with nowhere to go");
 
     assert!(
-        matches!(&error, Error::Manifest { path, .. } if path.ends_with(FILE_NAME)),
+        matches!(&error, Error::Project(crate::ProjectError::Manifest { path, .. }) if path.ends_with(FILE_NAME)),
         "{error:?}"
     );
 }
@@ -354,7 +354,7 @@ fn a_version_that_is_not_a_constraint_is_refused() {
 
     assert!(matches!(
         read(&at(home.path())),
-        Err(Error::Manifest { .. })
+        Err(Error::Project(crate::ProjectError::Manifest { .. }))
     ));
 }
 
@@ -408,7 +408,7 @@ fn a_directory_with_no_manifest_answers_nothing_rather_than_failing() {
 }
 
 /// A pin that does nothing looks exactly like a pin that does not work, so the file is refused
-/// by name — `Error::Manifest`'s own reasoning, kept when the reader moved here.
+/// by name — `ProjectError::Manifest`'s own reasoning, kept when the reader moved here.
 #[test]
 fn a_manifest_that_does_not_parse_names_itself() {
     let home = somewhere();
@@ -423,7 +423,7 @@ fn a_manifest_that_does_not_parse_names_itself() {
         let error = read(&at(home.path())).expect_err("the manifest is wrong");
 
         assert!(
-            matches!(&error, Error::Manifest { path, .. } if path.ends_with(FILE_NAME)),
+            matches!(&error, Error::Project(crate::ProjectError::Manifest { path, .. }) if path.ends_with(FILE_NAME)),
             "{error:?} for {body:?}"
         );
     }
@@ -556,7 +556,7 @@ fn a_file_with_both_forms_is_refused() {
     let error = read(&at(home.path())).expect_err("two answers to one question");
 
     assert!(
-        matches!(&error, Error::Manifest { path, .. } if path.ends_with(FILE_NAME)),
+        matches!(&error, Error::Project(crate::ProjectError::Manifest { path, .. }) if path.ends_with(FILE_NAME)),
         "{error:?}"
     );
     assert!(format!("{error:?}").contains("[[sites]]"), "{error:?}");
@@ -603,7 +603,7 @@ fn a_services_entry_that_is_not_an_id_is_refused() {
 
     assert!(matches!(
         read(&at(home.path())),
-        Err(Error::Manifest { .. })
+        Err(Error::Project(crate::ProjectError::Manifest { .. }))
     ));
 }
 

@@ -448,8 +448,10 @@ pub fn at(directory: &Path) -> PathBuf {
 ///
 /// # Errors
 ///
-/// [`Error::Manifest`] for a file that does not parse — including a `[runtimes]` key naming a
+/// [`ProjectError::Manifest`] for a file that does not parse — including a `[runtimes]` key naming a
 /// language this build does not manage — and [`Error::Io`] for a read that failed some other way.
+///
+/// [`ProjectError::Manifest`]: crate::ProjectError::Manifest
 pub fn read(path: &Path) -> Result<Option<Manifest>> {
     let text = match std::fs::read_to_string(path) {
         Ok(text) => text,
@@ -470,12 +472,12 @@ pub fn read(path: &Path) -> Result<Option<Manifest>> {
         }
     };
 
-    toml::from_str(&text)
-        .map(Some)
-        .map_err(|source| Error::Manifest {
+    toml::from_str(&text).map(Some).map_err(|source| {
+        Error::Project(crate::ProjectError::Manifest {
             path: path.to_path_buf(),
             source,
         })
+    })
 }
 
 /// What `project.export` puts into somebody's repository.
@@ -553,15 +555,18 @@ pub struct ExportService {
 ///
 /// # Errors
 ///
-/// [`Error::Manifest`] for an existing file that does not parse — refused before a byte is written,
-/// so a broken manifest is never made worse — [`Error::ManifestEdit`] for one that parses as TOML
+/// [`ProjectError::Manifest`] for an existing file that does not parse — refused before a byte is written,
+/// so a broken manifest is never made worse — [`ProjectError::ManifestEdit`] for one that parses as TOML
 /// but not as a document this can edit, including a `sites` key that is not a list of `[[sites]]`
 /// tables, and [`Error::Io`] when the file cannot be read or written.
+///
+/// [`ProjectError::Manifest`]: crate::ProjectError::Manifest
+/// [`ProjectError::ManifestEdit`]: crate::ProjectError::ManifestEdit
 pub fn write(directory: &Path, export: &Export) -> Result<Written> {
     let path = at(directory);
 
     // Validated through the reader first, so the failure a caller sees for a broken file is the
-    // same `Error::Manifest` every other door gives it, naming the same path.
+    // same `ProjectError::Manifest` every other door gives it, naming the same path.
     let created = read(&path)?.is_none() && !path.exists();
 
     let text = match std::fs::read_to_string(&path) {
@@ -577,11 +582,12 @@ pub fn write(directory: &Path, export: &Export) -> Result<Written> {
     };
 
     let mut document: toml_edit::DocumentMut =
-        text.parse()
-            .map_err(|error: toml_edit::TomlError| Error::ManifestEdit {
+        text.parse().map_err(|error: toml_edit::TomlError| {
+            Error::Project(crate::ProjectError::ManifestEdit {
                 path: path.clone(),
                 reason: error.to_string(),
-            })?;
+            })
+        })?;
 
     set(&mut document, "project", |table| {
         table["name"] = toml_edit::value(export.name.as_str());
@@ -597,11 +603,12 @@ pub fn write(directory: &Path, export: &Export) -> Result<Written> {
         });
     }
 
-    let sites_kept =
-        write_sites(&mut document, &export.sites).map_err(|reason| Error::ManifestEdit {
+    let sites_kept = write_sites(&mut document, &export.sites).map_err(|reason| {
+        Error::Project(crate::ProjectError::ManifestEdit {
             path: path.clone(),
             reason,
-        })?;
+        })
+    })?;
 
     // **The union of every site's links** — roadmap task **T204**, spec D3. It used to be the one
     // site's, and only when there was exactly one, so a project with two exported no services.

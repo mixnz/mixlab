@@ -89,21 +89,24 @@ fn gone(runtime: &RuntimeSummary) -> Error {
 ///
 /// # Errors
 ///
-/// [`Error::NotAbsolute`] for a relative directory; [`Error::Manifest`] for a `mixengine.toml` that
-/// does not parse; [`Error::UnreadableProjectRow`] for a project row this build cannot read;
+/// [`ProjectError::NotAbsolute`] for a relative directory; [`ProjectError::Manifest`] for a `mixengine.toml` that
+/// does not parse; [`ProjectError::UnreadableProjectRow`] for a project row this build cannot read;
 /// [`RuntimeError::RuntimeUnresolved`] when nothing installed satisfies what was asked for, and
 /// [`RuntimeError::NoDefaultRuntime`] when nothing asked for anything and the kind has no default;
 /// [`Error::Database`] and [`Error::Io`] when a table or a file cannot be read.
 ///
 /// [`RuntimeError::NoDefaultRuntime`]: crate::RuntimeError::NoDefaultRuntime
 /// [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
+/// [`ProjectError::Manifest`]: crate::ProjectError::Manifest
+/// [`ProjectError::NotAbsolute`]: crate::ProjectError::NotAbsolute
+/// [`ProjectError::UnreadableProjectRow`]: crate::ProjectError::UnreadableProjectRow
 pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedRuntime> {
     if let Some(cwd) = question.cwd
         && !cwd.is_absolute()
     {
-        return Err(Error::NotAbsolute {
+        return Err(Error::Project(crate::ProjectError::NotAbsolute {
             path: cwd.to_path_buf(),
-        });
+        }));
     }
 
     let installed = runtimes::records(store, Some(question.kind)).await?;
@@ -781,7 +784,7 @@ mod tests {
             .expect_err("the manifest is wrong");
 
             assert!(
-                matches!(&error, Error::Manifest { path, .. } if path.ends_with(MANIFEST_FILE_NAME)),
+                matches!(&error, Error::Project(crate::ProjectError::Manifest { path, .. }) if path.ends_with(MANIFEST_FILE_NAME)),
                 "{error:?} for {body:?}"
             );
         }
@@ -876,7 +879,13 @@ mod tests {
         .await
         .expect_err("a relative directory means nothing here");
 
-        assert!(matches!(error, Error::NotAbsolute { .. }), "{error:?}");
+        assert!(
+            matches!(
+                error,
+                Error::Project(crate::ProjectError::NotAbsolute { .. })
+            ),
+            "{error:?}"
+        );
     }
 
     /// The walk is the thing a person asking "why is it not taking my pin" needs to see.

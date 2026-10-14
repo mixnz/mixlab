@@ -285,22 +285,25 @@ impl ToWire for mixengine_core::Error {
             // The fifth way of saying "it is already here", and its repair is a different argument
             // rather than a different call: the message already names the project in the way, so
             // the hint spends itself on what to do about it.
-            Core::ProjectRootTaken { holder, .. } => {
+            Core::Project(mixengine_core::ProjectError::ProjectRootTaken { holder, .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
                     "`mix project show {holder}` is the one that has it; one directory is one \
                      project"
                 ))
             }
 
-            Core::ProjectNameTaken { .. } => Error::new(ErrorCode::AlreadyExists, chain(self))
-                .with_hint("`mix project list` shows the names that are taken"),
+            Core::Project(mixengine_core::ProjectError::ProjectNameTaken { .. }) => {
+                Error::new(ErrorCode::AlreadyExists, chain(self))
+                    .with_hint("`mix project list` shows the names that are taken")
+            }
 
             // The user's own argument, and the message already says which rule it broke.
-            Core::InvalidProjectName { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint(
+            Core::Project(mixengine_core::ProjectError::InvalidProjectName { .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "a project name is a handle: up to sixty-four characters, no path separators \
                      and no control characters",
-                ),
+                )
+            }
 
             Core::InvalidDatabaseName { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
                 .with_hint(
@@ -403,31 +406,47 @@ impl ToWire for mixengine_core::Error {
                 )
             }
 
-            Core::InvalidDomain { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint("a domain is lowercase ASCII labels on .test, .localhost or .local"),
+            Core::Project(mixengine_core::ProjectError::InvalidDomain { .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self))
+                    .with_hint("a domain is lowercase ASCII labels on .test, .localhost or .local")
+            }
 
-            Core::UnmanagedTld { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint("use .test; it is reserved for exactly this and resolves nowhere else"),
+            Core::Project(mixengine_core::ProjectError::UnmanagedTld { .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
+                    "use .test; it is reserved for exactly this and resolves nowhere else",
+                )
+            }
 
-            Core::RiskyTld { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint("`--i-know` accepts it anyway; .test avoids the question"),
+            Core::Project(mixengine_core::ProjectError::RiskyTld { .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self))
+                    .with_hint("`--i-know` accepts it anyway; .test avoids the question")
+            }
 
-            Core::DomainTaken { .. } => Error::new(ErrorCode::AlreadyExists, chain(self))
-                .with_hint("`mix site update` can move it, or pick another name"),
+            Core::Project(mixengine_core::ProjectError::DomainTaken { .. }) => {
+                Error::new(ErrorCode::AlreadyExists, chain(self))
+                    .with_hint("`mix site update` can move it, or pick another name")
+            }
 
-            Core::LastDomain { .. } => Error::new(ErrorCode::Conflict, chain(self))
-                .with_hint("`mix site delete` removes the site itself"),
+            Core::Project(mixengine_core::ProjectError::LastDomain { .. }) => {
+                Error::new(ErrorCode::Conflict, chain(self))
+                    .with_hint("`mix site delete` removes the site itself")
+            }
 
-            Core::PrimaryDomain { .. } => Error::new(ErrorCode::Conflict, chain(self))
-                .with_hint("`mix site update --domain <new-primary> --domain <the-rest>` reorders"),
+            Core::Project(mixengine_core::ProjectError::PrimaryDomain { .. }) => {
+                Error::new(ErrorCode::Conflict, chain(self)).with_hint(
+                    "`mix site update --domain <new-primary> --domain <the-rest>` reorders",
+                )
+            }
 
-            Core::DocRootOutsideProject { .. } => {
+            Core::Project(mixengine_core::ProjectError::DocRootOutsideProject { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self))
                     .with_hint("a doc root is a directory inside the project's own root")
             }
 
-            Core::HttpsRedirectNeedsHttps => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint("`--https true` first, or leave `--https-redirect` unset"),
+            Core::Project(mixengine_core::ProjectError::HttpsRedirectNeedsHttps) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self))
+                    .with_hint("`--https true` first, or leave `--https-redirect` unset")
+            }
 
             // Never reaches a client as an error: the job registry judges an ending by the token
             // rather than by what the work returned, so work that gave up when asked is recorded as
@@ -440,38 +459,42 @@ impl ToWire for mixengine_core::Error {
             // The same reading `UnknownServiceState` gets, and the same code.
             Core::Runtime(mixengine_core::RuntimeError::UnreadableRuntimeRow { .. })
             | Core::Runtime(mixengine_core::RuntimeError::UnreadablePackageRow { .. })
-            | Core::UnreadableProjectRow { .. }
-            | Core::UnreadableSiteRow { .. } => Error::new(ErrorCode::Internal, chain(self))
-                .with_hint(
+            | Core::Project(mixengine_core::ProjectError::UnreadableProjectRow { .. })
+            | Core::Project(mixengine_core::ProjectError::UnreadableSiteRow { .. }) => {
+                Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "the row was written by a different version of MixEngine, or edited by hand",
-                ),
+                )
+            }
 
             // The user's own file, one directory out from `Core::Config` and given the same code —
             // and the same hint would be wrong: `mixengine.toml` is checked into their repository,
             // so "delete it and a fresh one will be written" is advice about somebody else's file.
-            Core::Manifest { path, .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint(format!(
+            Core::Project(mixengine_core::ProjectError::Manifest { path, .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(format!(
                     "only the `[runtimes]` table of {} is read while resolving a version; the \
                      languages it may name are php, node, python and ruby",
                     path.display()
-                )),
+                ))
+            }
 
             // The user's file again, and the same code: what a person does about either is open the
             // file. The hint differs because the repair does — nothing here is about `[runtimes]`.
-            Core::ManifestEdit { path, .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint(format!(
+            Core::Project(mixengine_core::ProjectError::ManifestEdit { path, .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(format!(
                     "{} could not be rewritten with the project in it; check that it is a TOML \
                      file this user can write",
                     path.display()
-                )),
+                ))
+            }
 
             // A client sent a directory that means nothing to a daemon. The message names it, and
             // what to do about it is the caller's own bug rather than the user's.
-            Core::NotAbsolute { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint(
+            Core::Project(mixengine_core::ProjectError::NotAbsolute { .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "a directory is resolved by walking up from it, so it has to be one this \
                      machine can find on its own",
-                ),
+                )
+            }
 
             // **The one failure `runtime.resolve` exists to produce well.** `dependency_missing` is
             // the code the feature spec names, and the hint is the whole value of the answer: what
