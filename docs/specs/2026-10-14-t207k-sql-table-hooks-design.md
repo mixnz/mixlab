@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 date: 2026-10-14
 task: T207k
 ---
@@ -25,19 +25,19 @@ as sibling `.tsx` files that share its stylesheet. `components/TabStrip/` keeps 
 `useX.ts` beside the component. Neither the folder's public entry (`index.ts`) nor
 `SqlWorkspace.tsx`'s import changes.
 
-| File | What it holds | About |
+| File | What it holds | Lines |
 | --- | --- | --- |
-| `cells.ts` | `nextSort`, `normalizeCellValue`, `displayValue`, `isMultilineType` (pure; moved as they are) | 25 |
-| `filters.ts` | `RememberedFilters`, `FilterCache`, `rememberedFilters` (moved; `index.ts` re-exports the two types from here) | 40 |
-| `useTableData.ts` | **What is on screen and where it came from**: page, size, sort, the bar's rows and applied conditions, rows, columns, column metadata, primary key, AUTO_INCREMENT column, total, loading, the reload token, `scrollPosRef` and `requestRef`; the render-time swap to another table and to another schema token; filing the grid and the bar away (on a swap and on unmount); restoring a remembered table; the fetch | 470 |
-| `useCellEditing.ts` | **Editing a cell**: the open cell and its text, the staged row (`pendingRowRef`), `commitEditingCell`, `flushPendingRow`, `commitAndExit`, `cancelEdit`, `moveEditTo`, the input's change, key and blur handlers, the focus and autosize effects, and clearing all of it when the table or the schema token changes | 260 |
-| `useRowSelection.ts` | **Selecting rows**: the set, the shift-click anchor, `clearSelection`, `selectRow`, select-all, `selectedRowsInOrder` | 70 |
-| `useGridLayout.ts` | **Laying the grid out**: the size constants (`VIRTUAL_FROM`, `ROW_HEIGHT`, `EDIT_COLUMN`, …), header refs, measured widths, pinned widths (`gridColumns`), `headerExtras`, the two measuring layout effects and the resize listener, putting the scroll position back, the row and column windows, `handleScroll`, `editingColumnExtra`, `drawnColumns` | 260 |
-| `GridHeader.tsx` | the `<thead>`: sort chevron, FK chip, the two tooltips, sort click and header right-click | 90 |
-| `GridBody.tsx` | the `<tbody>`: spacers, row windows, the cell being edited (input or textarea), the read cells | 140 |
-| `RowMenu.tsx` | the cell right-click menu: expand, copy value, follow the key, the copies, reload | 110 |
-| `DeleteRowsDialog.tsx` | the delete confirmation and its two options | 50 |
-| `SqlTable.tsx` | the component: calls the four hooks, owns the menus, dialogs and the delete and insert state; the actions that combine several hooks (`reload`, `applyFilters`, `toggleSort`, insert, delete, `openReferenced`, copy, the cell mouse and context handlers, the grid's keys, the three shortcuts); and the JSX that puts the parts together: filter bar, scroll box, table, footer, header menu, insert dialog, cell dialog | 550 |
+| `cells.ts` | `nextSort`, `normalizeCellValue`, `displayValue`, `isMultilineType` (pure; moved as they are) | 22 |
+| `filters.ts` | `RememberedFilters`, `FilterCache`, `rememberedFilters` (moved; `index.ts` re-exports the two types from here) | 37 |
+| `useTableData.ts` | **What is on screen and where it came from**: page, size, sort, the bar's rows and applied conditions, rows, columns, column metadata, primary key, AUTO_INCREMENT column, total, loading, the reload token, `scrollPosRef` and `requestRef`; the render-time swap to another table and to another schema token; filing the grid and the bar away (on a swap and on unmount); restoring a remembered table; the fetch | 408 |
+| `useCellEditing.ts` | **Editing a cell**: the open cell and its text, the staged row (`PendingRow`), `commitEditingCell`, `flushPendingRow`, `commitAndExit`, `cancelEdit`, `moveEditTo`, the input's change, key and blur handlers, the focus and autosize effects, and closing the editor when the table or the schema token changes | 257 |
+| `useRowSelection.ts` | **Selecting rows**: the set, the shift-click anchor, `clearSelection`, `selectRow`, `selectAllRows`, `selectOnly`, `selectedRowsInOrder` | 69 |
+| `useGridLayout.ts` | **Laying the grid out**: the size constants (`VIRTUAL_FROM`, `ROW_HEIGHT`, `EDIT_COLUMN`, …), header refs, measured widths, pinned widths (`gridColumns`), `headerExtras`, the two measuring layout effects and the resize listener, putting the scroll position back, the row and column windows, `handleScroll`, `editingColumnExtra`, `drawnColumns` | 286 |
+| `GridHeader.tsx` | the `<thead>`: sort chevron, FK chip, the two tooltips, sort click and header right-click | 100 |
+| `GridBody.tsx` | the `<tbody>`: spacers, row windows, the cell being edited (input or textarea), the read cells | 181 |
+| `RowMenu.tsx` | the cell right-click menu (and its `CellMenu` type): expand, copy value, follow the key, the copies, reload | 147 |
+| `DeleteRowsDialog.tsx` | the delete confirmation and its two options | 79 |
+| `SqlTable.tsx` | the component: calls the four hooks, owns the menus, dialogs and the delete and insert state; the actions that combine several hooks (`reload`, `applyFilters`, `toggleSort`, insert, delete, `openReferenced`, copy, the cell mouse and context handlers, the grid's keys, the three shortcuts); and the JSX that puts the parts together: filter bar, scroll box, table, footer, header menu, insert dialog, cell dialog | 790 |
 
 Every comment moves with the code it describes, word for word. A comment that points at a
 position ("the swap above", "the layout effect below") and now crosses files is rewritten to name
@@ -45,26 +45,33 @@ what it meant, in a commit of its own, as T207l did.
 
 ## D2 — what each hook takes and gives
 
-Hooks are called in the order the component needs them: `useTableData`, then `useCellEditing`
-(needs the rows), then `useRowSelection`, then `useGridLayout` (needs the open cell). Each takes
-one argument object, and returns one object the component destructures.
+Each hook is called where the state it holds was declared, so the hooks run in this order:
+`useTableData`, `useCellEditing` (which needs the rows), `useGridLayout` (which needs the open
+cell), `useRowSelection`. Each takes one argument object and returns one object, which the
+component destructures. A hook that reports an error reads `t` from `useTranslation` itself.
 
-- `useTableData({ active, connectionId, selectedDb, selectedTable, schemaToken, filterCache,
-  tableCache, onError })` returns the state above with its setters. The setters callers use are
-  `setPage`, `setPageSize`, `setSort`, `setRows`, `setFilterRows`, `setAppliedFilters` and
-  `bumpReload` (today's `setReloadToken((n) => n + 1)`, under a name). It also returns
-  `scrollPosRef`, `requestRef`, `filterOperators` and `filterBarRef`.
-- `useCellEditing({ rows, setRows, columns, primaryKey, api, connectionId, selectedDb,
-  selectedTable, schemaToken, tableCache, readOnly, onError })` returns the open cell, its text, the
-  input ref, `pendingRowRef`, the five operations, and the three input handlers.
-- `useRowSelection({ rows })` returns `selectedRows`, `selectRow`, `clearSelection`,
-  `selectAllRows`, `selectedRowsInOrder`, `selectOnly` (a right-click outside the selection), and
-  the anchor.
-- `useGridLayout({ scrollRef, rows, columns, columnMeta, editingCell, active, layoutWidth,
-  selectedDb, selectedTable, scrollPosRef })` returns what the table element, the header and the
-  body read.
+- `useTableData({ api, active, connectionId, selectedDb, selectedTable, schemaToken, filterCache,
+  tableCache, onError })` returns the state above with the setters callers use: `setPage`,
+  `setPageSize`, `setSort`, `setRows`, `setFilterRows`, `setAppliedFilters` and `setReloadToken`.
+  It also returns `scrollPosRef`. `filterOperators` and `filterBarRef` stay in the component,
+  because only its JSX reads them.
+- `useCellEditing({ api, connectionId, selectedDb, selectedTable, schemaToken, rows, setRows,
+  columns, primaryKey, tableCache, readOnly, onError })` returns the open cell, its text, the input
+  ref, `editingCellRef`, `pendingRowRef`, `commitAndExit`, `cancelEdit`, `moveEditTo`, and the
+  three input handlers.
+- `useGridLayout({ scrollRef, scrollPosRef, rows, columns, columnMeta, editingCell, active,
+  layoutWidth, selectedDb, selectedTable })` returns what the table element, the header and the body
+  read.
+- `useRowSelection(rows)` returns `selectedRows`, `clearSelection`, `selectRow`, `selectAllRows`,
+  `selectOnly` (a right-click outside the selection) and `selectedRowsInOrder`.
 
-`scrollRef` is the component's: the scroll box is its element, and two hooks read it.
+`scrollRef` belongs to the component: the scroll box is its element, and two hooks read it.
+
+Some functions had to become stable. Two were plain functions inside the component, which lint
+does not require an effect to list. Now they come from a hook, and the effect that calls them
+lists them. So `clearSelection` and `setEditingCell` are `useCallback`s with no dependencies.
+`scrollRef` and `scrollPosRef` are listed in the scroll-restoring layout effect, now that they are
+parameters. All four are stable, so none of these effects runs at a moment it did not run before.
 
 ## D3 — the components
 
@@ -88,11 +95,13 @@ Not in scope).
     `useTableData`, in that order.
   - The two render-time swaps run before any state they reset is read. They stay at the top of
     `useTableData`.
-- **One order does change.** Closing the cell editor when the table changes was the first two lines
-  of the restore effect. It becomes an effect of its own in `useCellEditing`, with the same
-  dependencies, so it now runs after the fetch effect rather than before it. Nothing the fetch reads
-  is touched by it: the fetch reads the request fields, `requestRef` and `scrollPosRef`, never the
-  editor. Clearing the selection was already its own effect, and it runs after the fetch as before.
+- **What does move**: passive effects that do not read one another's state. The editor's
+  three effects and its close-on-another-table effect run where its state was declared, so
+  closing the editor still runs before the restore effect and the fetch, as it did when it was
+  their first two lines. The data hook's restore and fetch effects now run before the layout hook's
+  resize listener and before the selection-clearing effect, which stays in the component. Neither
+  of those reads anything the fetch or the restore writes, and the restore still runs before the
+  fetch.
 - **Every handler's behaviour**: the same state changes in the same order. An `async` function
   awaits what it awaited.
 - **Rendered output**: the same DOM for the same state. Checked by `npm run screenshots -- --check`
@@ -103,20 +112,26 @@ Not in scope).
   (hook dependency rule included: every `useEffect`/`useCallback`/`useMemo` keeps its dependency
   list, or lint fails).
 
-**The run in a browser.** `npm run dev` with the demo harness (`demo/demo.html`, the sample
-PostgreSQL connection) shows the Data tab of `acme_shop.orders`, 40 rows. The same steps run there
-before the change and after it, and their outcomes are compared:
+**The run in a browser.** This was run, not just planned. The demo harness (`npm run dev`,
+`demo/demo.html`, the sample PostgreSQL connection) shows the Data tab of `acme_shop.orders`,
+40 rows. A script drove 26 steps and recorded the grid after each one:
 
 - sort a column through all three states;
-- apply a filter;
-- select rows with click, modifier-click and shift-click, then `Ctrl+A`, then Escape;
-- open the cell menu and copy a row as TSV;
-- double-click a cell, type, Tab, Escape;
-- double-click, type, Enter. The demo has no `update_row`, so the write fails and the row has to
-  come back with the error shown;
-- open the insert form and cancel it;
-- open the delete confirmation and cancel it;
-- change the page size.
+- select rows with click, Ctrl-click and Shift-click, then `Ctrl+A`, then Escape;
+- open the cell menu and copy a row as TSV. The webview refuses the clipboard, and the error
+  banner says so;
+- double-click a cell, type, Tab (the cell is staged and marked dirty), Escape (the row comes
+  back);
+- double-click, type, Enter. The demo has no `postgres_update_row`, so the write fails, the error is
+  shown, and the row comes back;
+- open the insert form and cancel it; open the delete confirmation and cancel it;
+- go to the next page; type a filter value and apply it.
+
+After each step it recorded: header sort states, row count, three rows' text, the selection, dirty
+cells, the editor's value and focus, menu entries, dialogs, alerts, the pager, the footer buttons'
+enabled state, the bar's values, and the table's DOM length. The recording on `master` (served
+from a separate worktree) and the recording on this branch are **identical in all 26 steps**, and
+the console showed no errors. `npm run screenshots -- --check` renders 12/12 scenes.
 
 A 40-row page is below `VIRTUAL_FROM`, so the windowed path is not drawn there. That path is
 `useVirtualRows`/`useVirtualColumns` in `core/virtualRows.ts`, which this task does not touch,
@@ -126,9 +141,9 @@ called with the same arguments. `gridRows.test.ts` still guards the row height.
 
 1. `cells.ts` and `filters.ts` (moves). 2. `useRowSelection`. 3. `useGridLayout`.
 4. `useCellEditing`. 5. `useTableData`. 6. `GridHeader` and `GridBody`. 7. `RowMenu` and
-`DeleteRowsDialog`. 8. Comment pointers. 9. Roadmap, and the file out of the baseline.
-Each commit gets `npm run build`, `npm test` and `npm run lint`; the browser run happens after commit
-8; and `npm run screenshots -- --check` and the root gate run before the push.
+`DeleteRowsDialog`. 8. Comment pointers. 9. Roadmap. `SqlTable.tsx` left the baseline at commit 4,
+when it reached 1,363 lines. Each commit passed `npm run build`, `npm test` (2,880) and
+`npm run lint`. The 116 string literals of the old file are the same 116 across the new files.
 
 ## MixLab
 

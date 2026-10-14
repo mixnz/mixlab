@@ -77,7 +77,7 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
 - [ ] **T207j** Core `lib.rs` cannot be split by moving: lines 92–1935 are one `enum Error`, and
       an enum does not span files. Decide between error enums per subject (a change to code, and
       perhaps an ADR) and keeping it in the baseline with the reason written there.
-- [ ] **T207k** The desktop's `db/components/SqlTable/SqlTable.tsx` (1,843): one React component
+- [x] **T207k** The desktop's `db/components/SqlTable/SqlTable.tsx` (1,843): one React component
       whose callbacks share its state, so not a move — custom hooks for what it does (editing a
       cell, selecting rows, the filters it remembers) and components for what it draws, verified in
       the running window and `npm run screenshots -- --check`. Split out of T207g on 2026-10-14.
