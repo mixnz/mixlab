@@ -216,3 +216,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-14 | [The desktop's three drivers past the limit, split the way their siblings already are (design)](2026-10-14-t207g-desktop-drivers-split-design.md) | T207g | implemented |
 | 2026-10-14 | [Four definition files past the limit, each giving one capability a file of its own (design)](2026-10-14-t207h-definitions-split-by-capability-design.md) | T207h | implemented |
 | 2026-10-14 | [The service runner and the doctor, each one `impl` split by what its methods do (design)](2026-10-14-t207i-runner-and-doctor-split-design.md) | T207i | implemented |
+| 2026-10-14 | [The daemon's `main.rs`: `Args` and `detach` moved out, `serve` made of its steps (design)](2026-10-14-t207l-daemon-serve-steps-design.md) | T207l | draft |
