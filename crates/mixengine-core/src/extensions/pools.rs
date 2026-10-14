@@ -115,7 +115,9 @@ pub async fn of(store: &Store, extension: &ExtensionId) -> Result<Option<Service
 /// # Errors
 ///
 /// Whatever [`crate::services::create`] reports — including [`Error::NotFound`] for a runtime that
-/// is not installed and [`Error::ServiceAlreadyDeclared`] for a pool that is already there.
+/// is not installed and [`ServiceError::ServiceAlreadyDeclared`] for a pool that is already there.
+///
+/// [`ServiceError::ServiceAlreadyDeclared`]: crate::ServiceError::ServiceAlreadyDeclared
 pub async fn create(
     store: &Store,
     host: &dyn mixengine_platform::Host,

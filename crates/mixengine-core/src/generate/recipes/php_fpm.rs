@@ -77,6 +77,7 @@ use mixengine_proto::{
     ServiceSpec, ServiceSpecBuilder, StopBehaviour,
 };
 
+use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::document::{CONFIG, Validator};
 use crate::generate::recipe::{Instancing, Recipe, Source, TemplateFile, Upstream};
@@ -541,7 +542,7 @@ const fn listens_on_tcp() -> bool {
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`] when the path this home would need is longer than the kernel accepts.
+/// [`ServiceError::SettingValue`] when the path this home would need is longer than the kernel accepts.
 fn socket_path(context: &Context) -> Result<PathBuf> {
     let name = context
         .service()
@@ -561,15 +562,17 @@ fn socket_path(context: &Context) -> Result<PathBuf> {
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`] when the row carries no port, which is a pool created on a system that
+/// [`ServiceError::SettingValue`] when the row carries no port, which is a pool created on a system that
 /// does not need one and then run on a system that does.
 fn address(context: &Context) -> Result<SocketAddr> {
-    let port = context.port().ok_or_else(|| Error::SettingValue {
-        service: context.service().as_str().to_owned(),
-        key: "port",
-        value: "none".to_owned(),
-        reason: "a pool on this system listens on a TCP port and its row carries none; \
+    let port = context.port().ok_or_else(|| {
+        Error::Service(ServiceError::SettingValue {
+            service: context.service().as_str().to_owned(),
+            key: "port",
+            value: "none".to_owned(),
+            reason: "a pool on this system listens on a TCP port and its row carries none; \
                  `runtime.install` allocates one when it creates the pool",
+        })
     })?;
 
     Ok(SocketAddr::new(
@@ -1185,7 +1188,10 @@ mod tests {
         let error = PhpFpm.spec(&context).expect_err("no SAPI to run");
 
         assert!(
-            matches!(error, Error::ServiceProvidesNothing { .. }),
+            matches!(
+                error,
+                Error::Service(ServiceError::ServiceProvidesNothing { .. })
+            ),
             "{error:?}"
         );
     }

@@ -24,6 +24,7 @@ use std::collections::BTreeMap;
 
 use super::context::Context;
 use super::step::Step;
+use crate::ServiceError;
 use crate::{Error, Result};
 
 /// The longest a database or account name may be.
@@ -141,13 +142,13 @@ pub struct DatabaseAdmin {
 ///
 /// # Errors
 ///
-/// [`Error::InvalidDatabaseName`] naming the rule that was broken, in the words the user is shown.
+/// [`ServiceError::InvalidDatabaseName`] naming the rule that was broken, in the words the user is shown.
 pub fn validated_identifier(name: &str) -> Result<String> {
     let refuse = |reason: &'static str| {
-        Err(Error::InvalidDatabaseName {
+        Err(Error::Service(ServiceError::InvalidDatabaseName {
             name: name.to_owned(),
             reason,
-        })
+        }))
     };
 
     if name.is_empty() {
@@ -182,9 +183,10 @@ pub fn validated_identifier(name: &str) -> Result<String> {
 ///
 /// # Errors
 ///
-/// [`Error::InvalidPassword`], which carries no copy of what was refused.
+/// [`ServiceError::InvalidPassword`], which carries no copy of what was refused.
 pub fn validated_password(raw: &str) -> Result<String> {
-    let refuse = |reason: &'static str| Err(Error::InvalidPassword { reason });
+    let refuse =
+        |reason: &'static str| Err(Error::Service(ServiceError::InvalidPassword { reason }));
 
     let len = raw.chars().count();
 
@@ -364,7 +366,7 @@ mod tests {
             assert!(
                 matches!(
                     validated_identifier(refused),
-                    Err(Error::InvalidDatabaseName { .. })
+                    Err(Error::Service(ServiceError::InvalidDatabaseName { .. }))
                 ),
                 "{refused:?} was accepted"
             );
@@ -401,14 +403,14 @@ mod tests {
         assert!(
             matches!(
                 validated_password("a'b"),
-                Err(Error::InvalidPassword { .. })
+                Err(Error::Service(ServiceError::InvalidPassword { .. }))
             ),
             "a single quote ends MariaDB's and PostgreSQL's literal early"
         );
         assert!(
             matches!(
                 validated_password("a\\b"),
-                Err(Error::InvalidPassword { .. })
+                Err(Error::Service(ServiceError::InvalidPassword { .. }))
             ),
             "backslash is MySQL's escape character inside a literal"
         );

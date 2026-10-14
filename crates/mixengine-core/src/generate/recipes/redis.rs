@@ -42,6 +42,7 @@ use mixengine_proto::{
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::document::Validator;
 use crate::generate::recipe::{Claim, ClientCommand, Instancing, Recipe, TemplateFile, Upstream};
@@ -312,12 +313,14 @@ fn address(context: &Context) -> Result<SocketAddr> {
 
 /// The port this row was allocated, or the refusal that names the row.
 fn port(context: &Context) -> Result<u16> {
-    context.port().ok_or_else(|| Error::SettingValue {
-        service: context.service().as_str().to_owned(),
-        key: "port",
-        value: "none".to_owned(),
-        reason: "a cache listens on a TCP port and this service's row carries none; \
+    context.port().ok_or_else(|| {
+        Error::Service(ServiceError::SettingValue {
+            service: context.service().as_str().to_owned(),
+            key: "port",
+            value: "none".to_owned(),
+            reason: "a cache listens on a TCP port and this service's row carries none; \
                  `service.create` allocates one",
+        })
     })
 }
 

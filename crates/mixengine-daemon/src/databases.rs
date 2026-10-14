@@ -28,6 +28,7 @@ use tokio::sync::Mutex;
 
 use crate::error::ToWire as _;
 use crate::services::databases::Making;
+use mixengine_core::ServiceError;
 
 /// What a database will be handed to: which state to report, and what to start — roadmap tasks
 /// **T107** and **T165**.
@@ -161,9 +162,9 @@ impl Databases {
         }
 
         self.services.provisioning_for(service).ok_or_else(|| {
-            mixengine_core::Error::NoDatabaseVocabulary {
+            mixengine_core::Error::Service(ServiceError::NoDatabaseVocabulary {
                 package: service.name().to_owned(),
-            }
+            })
             .to_wire()
         })
     }

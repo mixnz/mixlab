@@ -26,10 +26,10 @@ pub enum JobError {
 
     /// A job was asked to make a move its state machine does not have.
     ///
-    /// A bug in the caller, on [`Error::IllegalTransition`]'s own terms — and unreachable while
+    /// A bug in the caller, on [`ServiceError::IllegalTransition`]'s own terms — and unreachable while
     /// every ending is reachable from `running`, which is why it is asserted rather than assumed.
     ///
-    /// [`Error::IllegalTransition`]: crate::Error::IllegalTransition
+    /// [`ServiceError::IllegalTransition`]: crate::ServiceError::IllegalTransition
     #[error("job #{job} cannot go from {from} to {to}")]
     IllegalJobTransition {
         /// The job.
@@ -44,9 +44,9 @@ pub enum JobError {
     ///
     /// Unreachable through our own writes — the column is `CHECK`ed against the same closed list
     /// [`mixengine_proto::JobState`] is — so it means a database edited by hand, or one written by a
-    /// version that knew a state this one does not. [`Error::UnknownServiceState`]'s sibling.
+    /// version that knew a state this one does not. [`ServiceError::UnknownServiceState`]'s sibling.
     ///
-    /// [`Error::UnknownServiceState`]: crate::Error::UnknownServiceState
+    /// [`ServiceError::UnknownServiceState`]: crate::ServiceError::UnknownServiceState
     #[error("the state of job #{job} is stored as {value}, which is not a job state")]
     UnknownJobState {
         /// The job whose row cannot be read.

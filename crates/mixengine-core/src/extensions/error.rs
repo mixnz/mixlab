@@ -53,11 +53,11 @@ pub enum ExtensionError {
 
     /// An `extensions` row holds something this build cannot read back.
     ///
-    /// [`Error::UnreadableServiceRow`]'s twin one table across, and it exists for the same reason:
+    /// [`ServiceError::UnreadableServiceRow`]'s twin one table across, and it exists for the same reason:
     /// a hand-edited database, or one written by a later MixEngine, is answered by naming the row
     /// and the column rather than by a failure somewhere downstream that mentions neither.
     ///
-    /// [`Error::UnreadableServiceRow`]: crate::Error::UnreadableServiceRow
+    /// [`ServiceError::UnreadableServiceRow`]: crate::ServiceError::UnreadableServiceRow
     #[error("the {column} of extension {extension} cannot be read: {value}")]
     UnreadableExtensionRow {
         /// Which extension's row.
@@ -71,10 +71,10 @@ pub enum ExtensionError {
     /// A `services` row points at an extension that runs no process — roadmap task **T81**.
     ///
     /// Unreachable through this build's own writes, since only a `service` extension is given a
-    /// row. Named rather than defaulted, on [`Error::UnreadableServiceRow`]'s reasoning: a hand-
+    /// row. Named rather than defaulted, on [`ServiceError::UnreadableServiceRow`]'s reasoning: a hand-
     /// edited database is answered by saying what is wrong with it.
     ///
-    /// [`Error::UnreadableServiceRow`]: crate::Error::UnreadableServiceRow
+    /// [`ServiceError::UnreadableServiceRow`]: crate::ServiceError::UnreadableServiceRow
     #[error("{id} is a {kind} extension and runs no process")]
     ExtensionNotAService {
         /// Which extension.

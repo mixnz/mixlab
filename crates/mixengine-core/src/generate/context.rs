@@ -11,6 +11,7 @@ use serde::Serialize;
 
 use super::recipe::{Endpoints, FrontEndAddition, ServiceCertificate, program};
 use super::settings::Settings;
+use crate::ServiceError;
 use crate::{Error, Result};
 
 /// Everything a template and a [`Recipe`] are told about one service instance.
@@ -328,16 +329,18 @@ impl Context {
     ///
     /// # Errors
     ///
-    /// [`Error::ServiceProvidesNothing`], naming the service and listing what the install does
+    /// [`ServiceError::ServiceProvidesNothing`], naming the service and listing what the install does
     /// publish — which is the whole of what somebody looking at a PHP packed without a SAPI needs.
     pub fn provided(&self, name: &str) -> Result<PathBuf> {
         self.provides
             .get(name)
             .map(|relative| crate::paths::join_stored(&self.install_path, relative))
-            .ok_or_else(|| Error::ServiceProvidesNothing {
-                service: self.service.as_str().to_owned(),
-                executable: name.to_owned(),
-                known: self.provides.keys().cloned().collect(),
+            .ok_or_else(|| {
+                Error::Service(ServiceError::ServiceProvidesNothing {
+                    service: self.service.as_str().to_owned(),
+                    executable: name.to_owned(),
+                    known: self.provides.keys().cloned().collect(),
+                })
             })
     }
 

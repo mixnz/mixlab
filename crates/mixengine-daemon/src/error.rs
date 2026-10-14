@@ -20,6 +20,7 @@ use std::path::Path;
 
 use mixengine_core::ExtensionError;
 use mixengine_core::InstallError;
+use mixengine_core::ServiceError;
 use mixengine_proto::{Error, ErrorCode};
 
 /// A library error, rendered for the wire.
@@ -281,7 +282,7 @@ impl ToWire for mixengine_core::Error {
 
             // The third way of saying "it is already here", and the one whose repair is different:
             // a service is not replaced by installing something, it is replaced by deleting it.
-            Core::ServiceAlreadyDeclared { .. } => {
+            Core::Service(ServiceError::ServiceAlreadyDeclared { .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(
                     "`mix service delete` first; deleting a service keeps its data directory",
                 )
@@ -291,7 +292,7 @@ impl ToWire for mixengine_core::Error {
             // different call: nothing has to be deleted, the create has to name somewhere else.
             // The message already carries the service that got there first, so the hint spends
             // itself on what to do about it.
-            Core::DataDirectoryTaken { holder, .. } => {
+            Core::Service(ServiceError::DataDirectoryTaken { holder, .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
                     "give this one a directory of its own, or `mix service delete {holder}` if it \
                      is the one that should go; two servers over one data directory corrupt it"
@@ -321,22 +322,28 @@ impl ToWire for mixengine_core::Error {
                 )
             }
 
-            Core::InvalidDatabaseName { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint(
+            Core::Service(ServiceError::InvalidDatabaseName { .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "a database and its account are named like a project: lower-case letters, \
                      digits and hyphens, up to thirty-two characters",
-                ),
+                )
+            }
 
-            // The message never carries the value — `Core::InvalidPassword` has none to leak.
-            Core::InvalidPassword { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint(
+            // The message never carries the value — `ServiceError::InvalidPassword` has none to leak.
+            Core::Service(ServiceError::InvalidPassword { .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "1 to 128 printable ASCII characters, and none of: a quote, a backslash, or \
                      whitespace",
-                ),
+                )
+            }
 
             // `conflict` rather than `already_exists`: what is refused is not the name being taken
             // but MixEngine being unable to prove the account is its own to change — T77a's D3.
-            Core::AccountNotOurs { .. } => Error::new(ErrorCode::Conflict, chain(self)).with_hint(
+            Core::Service(ServiceError::AccountNotOurs { .. }) => Error::new(
+                ErrorCode::Conflict,
+                chain(self),
+            )
+            .with_hint(
                 "MixEngine only manages an account whose password it holds; `--user` picks another \
                  name, or drop that account on the server first",
             ),
@@ -344,7 +351,7 @@ impl ToWire for mixengine_core::Error {
             // **Not `unsupported`**, which means *this operating system cannot* and would be a lie
             // about the machine: every system this ships to runs Redis, and Redis is what has no
             // databases. The same distinction T77 drew for `blueprint.apply`.
-            Core::NoDatabaseVocabulary { .. } => {
+            Core::Service(ServiceError::NoDatabaseVocabulary { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "only the database servers have databases; `mix service list` shows what this \
                      home runs",
@@ -578,7 +585,9 @@ impl ToWire for mixengine_core::Error {
             // setting — the ones that exist, the shape it had to be, or what is wrong with the value
             // the recipe was handed. The hint says the thing the message cannot: that being refused
             // is the *feature*, because the alternative is a setting silently doing nothing.
-            Core::UnknownSetting { .. } | Core::SettingType { .. } | Core::SettingValue { .. } => {
+            Core::Service(ServiceError::UnknownSetting { .. })
+            | Core::Service(ServiceError::SettingType { .. })
+            | Core::Service(ServiceError::SettingValue { .. }) => {
                 Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "MixEngine refuses a setting it does not know rather than ignoring it, so that \
                      a typo cannot look like a setting that is in effect",
@@ -588,25 +597,28 @@ impl ToWire for mixengine_core::Error {
             // The service's own program said no. Nothing was installed — the rendering is judged in
             // a staging directory — and saying so is the whole point: a user who has just been told
             // their configuration is broken will otherwise assume their site is down.
-            Core::ConfigRejected { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint(
+            Core::Service(ServiceError::ConfigRejected { .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "nothing was installed and the configuration that is live is the last one that \
                      worked; the service reading it has not been disturbed",
-                ),
+                )
+            }
 
             // A `packages.name` this build has no recipe for: a home written by a newer MixEngine,
             // or a service an extension declared and then went away. Not `internal`, because
             // nothing is broken here and the way out is a version rather than a bug report.
-            Core::NoRecipe { .. } => Error::new(ErrorCode::PreconditionFailed, chain(self))
-                .with_hint(
+            Core::Service(ServiceError::NoRecipe { .. }) => {
+                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
                     "what MixEngine can run is compiled into it; this home describes a service \
                      from a newer release, or from an extension that is no longer installed",
-                ),
+                )
+            }
 
             // Ours: a template that does not render, or a recipe that produced a spec the supervisor
             // will not take. An override can *reach* both, which is why they are not unreachable,
             // but neither is a mistake a user could have avoided.
-            Core::TemplateBroken { .. } | Core::Unrunnable { .. } => {
+            Core::Service(ServiceError::TemplateBroken { .. })
+            | Core::Service(ServiceError::Unrunnable { .. }) => {
                 Error::new(ErrorCode::Internal, chain(self)).with_hint(
                     "this is a bug in MixEngine's own configuration templates rather than on this \
                      machine; `logs/daemon.log` has the detail a report needs",
@@ -967,10 +979,10 @@ mod tests {
     /// them is in use.
     #[test]
     fn a_data_directory_already_in_use_is_the_caller_s_to_fix() {
-        let error = mixengine_core::Error::DataDirectoryTaken {
+        let error = mixengine_core::Error::Service(ServiceError::DataDirectoryTaken {
             path: "/srv/db".to_owned(),
             holder: "mariadb@main".to_owned(),
-        }
+        })
         .to_wire();
 
         assert_eq!(error.code, ErrorCode::AlreadyExists);

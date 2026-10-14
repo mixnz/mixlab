@@ -22,6 +22,7 @@
 use std::path::PathBuf;
 
 use mixengine_core::Result;
+use mixengine_core::ServiceError;
 use mixengine_core::generate::{Context, Instancing, Preset, Recipe, Setting, TemplateFile};
 use mixengine_proto::{
     Millis, ReadyCheck, ReloadBehaviour, RestartPolicy, ServiceSpec, ServiceSpecBuilder,
@@ -245,10 +246,10 @@ impl Recipe for Fakeservice {
             // strings, as declared, and one of the strings is not a service id. The `SpecError` it
             // carries says which and why, in the same words a spec that named one would produce.
             let id = mixengine_proto::ServiceId::parse(dependency.clone()).map_err(|source| {
-                mixengine_core::Error::Unrunnable {
+                mixengine_core::Error::Service(ServiceError::Unrunnable {
                     service: context.service().as_str().to_owned(),
                     source,
-                }
+                })
             })?;
 
             builder = builder.depends_on(id);

@@ -52,7 +52,7 @@ struct StartingPage<'a> {
 ///
 /// # Errors
 ///
-/// [`crate::Error::TemplateBroken`] naming the page, as [`render`].
+/// [`crate::ServiceError::TemplateBroken`] naming the page, as [`render`].
 pub fn render_starting(
     service: &ServiceId,
     primary: &str,
@@ -175,7 +175,7 @@ fn where_files_go(doc_root: &str) -> String {
 ///
 /// # Errors
 ///
-/// [`crate::Error::TemplateBroken`] naming the page: the template is this build's, so a refusal here
+/// [`crate::ServiceError::TemplateBroken`] naming the page: the template is this build's, so a refusal here
 /// is a bug of ours rather than a configuration a user can fix.
 pub fn render(service: &ServiceId, page: &WelcomePage<'_>) -> Result<String> {
     crate::generate::served::render(PAGE, "welcome/page.html", service, page)

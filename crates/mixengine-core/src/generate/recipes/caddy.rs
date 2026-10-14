@@ -79,6 +79,7 @@ use mixengine_proto::{
     StopBehaviour,
 };
 
+use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::document::{CONFIG, Document, Validator};
 use crate::generate::recipe::{Instancing, Recipe, Role, TemplateFile, Upstream};
@@ -767,11 +768,13 @@ fn port(context: &Context, key: &'static str) -> Result<u16> {
     u16::try_from(number)
         .ok()
         .filter(|port| *port != 0)
-        .ok_or_else(|| Error::SettingValue {
-            service: context.service().as_str().to_owned(),
-            key,
-            value: number.to_string(),
-            reason: "a port is a number from 1 to 65535",
+        .ok_or_else(|| {
+            Error::Service(ServiceError::SettingValue {
+                service: context.service().as_str().to_owned(),
+                key,
+                value: number.to_string(),
+                reason: "a port is a number from 1 to 65535",
+            })
         })
 }
 

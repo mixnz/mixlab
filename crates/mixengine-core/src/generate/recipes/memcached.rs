@@ -44,6 +44,7 @@ use mixengine_proto::{
     HealthCheck, HealthProbe, Millis, ReadyCheck, ServiceSpec, ServiceSpecBuilder, StopBehaviour,
 };
 
+use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::recipe::{Instancing, Recipe, Upstream};
 use crate::generate::settings::{Preset, Setting};
@@ -212,12 +213,14 @@ impl Recipe for Memcached {
 
 /// Where this instance listens, or the refusal that names the row.
 fn address(context: &Context) -> Result<SocketAddr> {
-    let port = context.port().ok_or_else(|| Error::SettingValue {
-        service: context.service().as_str().to_owned(),
-        key: "port",
-        value: "none".to_owned(),
-        reason: "a cache listens on a TCP port and this service's row carries none; \
+    let port = context.port().ok_or_else(|| {
+        Error::Service(ServiceError::SettingValue {
+            service: context.service().as_str().to_owned(),
+            key: "port",
+            value: "none".to_owned(),
+            reason: "a cache listens on a TCP port and this service's row carries none; \
                  `service.create` allocates one",
+        })
     })?;
 
     Ok(SocketAddr::new(

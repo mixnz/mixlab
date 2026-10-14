@@ -31,6 +31,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use crate::ServiceError;
 use crate::{Error, Result};
 
 /// What a [`Validator`]'s arguments write where the file being checked goes.
@@ -214,7 +215,7 @@ impl Validator {
     ///
     /// # Errors
     ///
-    /// [`Error::ConfigRejected`] when the command says no — carrying whichever line [`Reason`] says
+    /// [`ServiceError::ConfigRejected`] when the command says no — carrying whichever line [`Reason`] says
     /// the program leaves the answer on — or when it does not answer in time. [`Error::Platform`] when the
     /// program cannot be started at all, which is a recipe naming a binary that is not installed
     /// rather than a configuration that is wrong.
@@ -239,7 +240,7 @@ impl Validator {
             return Ok(());
         }
 
-        Err(Error::ConfigRejected {
+        Err(Error::Service(ServiceError::ConfigRejected {
             path: config,
             checker: self.program.clone(),
             // What the program said, or the fact that it said nothing — an empty `detail` would
@@ -257,7 +258,7 @@ impl Validator {
                 .unwrap_or("it refused the file without saying why")
                 .to_owned()
             },
-        })
+        }))
     }
 }
 
@@ -293,7 +294,7 @@ impl Validator {
 /// # Errors
 ///
 /// [`Error::Io`] naming the file or directory that could not be read, written, renamed or removed;
-/// [`Error::ConfigRejected`] when the validator refuses the staged set — in which case nothing has
+/// [`ServiceError::ConfigRejected`] when the validator refuses the staged set — in which case nothing has
 /// been installed or removed, and the staging directory is gone.
 pub async fn install(
     directory: &Path,
@@ -402,7 +403,7 @@ pub async fn install(
 /// # Errors
 ///
 /// [`Error::Io`] naming the file or directory that could not be created or written, and
-/// [`Error::ConfigRejected`] carrying what the validator said.
+/// [`ServiceError::ConfigRejected`] carrying what the validator said.
 pub async fn judge(
     directory: &Path,
     documents: &[Document],

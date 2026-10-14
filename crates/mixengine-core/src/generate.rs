@@ -62,6 +62,7 @@ pub use served::{Served, ServedKind, Shared};
 pub use settings::{Preset, Setting, Settings, Value};
 pub use step::{SecretFile, Step};
 
+use crate::ServiceError;
 use crate::{Error, Paths, Result, Store};
 
 /// The `services` table, rendered.
@@ -252,10 +253,12 @@ impl Parent {
     /// install root — and the answer it gets names the reinstall that would fill it in. See
     /// [`Context::provided`].
     fn of(row: &mut Row, service: &ServiceId) -> Result<Self> {
-        let unreadable = |value: &str| Error::UnreadableServiceRow {
-            service: service.as_str().to_owned(),
-            column: "package_id",
-            value: value.to_owned(),
+        let unreadable = |value: &str| {
+            Error::Service(ServiceError::UnreadableServiceRow {
+                service: service.as_str().to_owned(),
+                column: "package_id",
+                value: value.to_owned(),
+            })
         };
 
         match (
@@ -266,11 +269,11 @@ impl Parent {
         ) {
             (Some(package), Some(version), Some(install_path), Some(provides)) => {
                 let provides = serde_json::from_str(&provides).map_err(|source| {
-                    Error::UnreadableServiceDocument {
+                    Error::Service(ServiceError::UnreadableServiceDocument {
                         service: service.as_str().to_owned(),
                         column: "provides_json",
                         source,
-                    }
+                    })
                 })?;
 
                 return Ok(Self {
@@ -292,11 +295,11 @@ impl Parent {
         ) {
             (Some(_kind), Some(version), Some(install_path), Some(provides)) => {
                 let provides = serde_json::from_str(&provides).map_err(|source| {
-                    Error::UnreadableServiceDocument {
+                    Error::Service(ServiceError::UnreadableServiceDocument {
                         service: service.as_str().to_owned(),
                         column: "provides_json",
                         source,
-                    }
+                    })
                 })?;
 
                 Ok(Self {
@@ -595,7 +598,7 @@ impl Generator {
     ///
     /// # Errors
     ///
-    /// [`Error::ConfigRejected`] carrying what the front end said, and whatever rendering this
+    /// [`ServiceError::ConfigRejected`] carrying what the front end said, and whatever rendering this
     /// home's declarations costs.
     pub async fn would_serve(&self, pending: &crate::extensions::store::Installed) -> Result<()> {
         // An extension that adds nothing to the front end changes nothing about its configuration,
@@ -804,12 +807,13 @@ impl Generator {
         credentials: &BTreeMap<ServiceId, crate::extensions::pools::Credential>,
         saving: bool,
     ) -> Result<Prepared> {
-        let service =
-            ServiceId::parse(row.id.clone()).map_err(|source| Error::UnreadableServiceRow {
+        let service = ServiceId::parse(row.id.clone()).map_err(|source| {
+            Error::Service(ServiceError::UnreadableServiceRow {
                 service: row.id.clone(),
                 column: "id",
                 value: source.to_string(),
-            })?;
+            })
+        })?;
 
         // **An extension brings its own recipe** — roadmap task **T81**, the design's D7. A recipe
         // is what *this build* knows and an extension is what a home installed, so it cannot come
@@ -819,13 +823,13 @@ impl Generator {
         // whole reason an extension is a `services` row at all.
         let (parent, recipe): (Parent, Arc<dyn Recipe>) = match row.extension.take() {
             Some(id) => {
-                let installed = installed
-                    .get(&id)
-                    .ok_or_else(|| Error::UnreadableServiceRow {
+                let installed = installed.get(&id).ok_or_else(|| {
+                    Error::Service(ServiceError::UnreadableServiceRow {
                         service: row.id.clone(),
                         column: "extension_id",
                         value: format!("{id}, which is not an installed extension"),
-                    })?;
+                    })
+                })?;
 
                 (
                     Parent::of_extension(installed),
@@ -839,10 +843,12 @@ impl Generator {
                 let recipe = self
                     .catalogue
                     .recipe(&parent.package)
-                    .ok_or_else(|| Error::NoRecipe {
-                        service: row.id.clone(),
-                        package: parent.package.clone(),
-                        known: self.catalogue.packages().map(str::to_owned).collect(),
+                    .ok_or_else(|| {
+                        Error::Service(ServiceError::NoRecipe {
+                            service: row.id.clone(),
+                            package: parent.package.clone(),
+                            known: self.catalogue.packages().map(str::to_owned).collect(),
+                        })
                     })?
                     .clone();
 
@@ -852,13 +858,13 @@ impl Generator {
 
         let port = match row.port {
             None => None,
-            Some(port) => Some(
-                u16::try_from(port).map_err(|_| Error::UnreadableServiceRow {
+            Some(port) => Some(u16::try_from(port).map_err(|_| {
+                Error::Service(ServiceError::UnreadableServiceRow {
                     service: row.id.clone(),
                     column: "port",
                     value: port.to_string(),
-                })?,
-            ),
+                })
+            })?),
         };
 
         // The activator's own port — roadmap task T70. Read exactly as `port` above is, and
@@ -866,23 +872,23 @@ impl Generator {
         // there is nothing here to compute it from.
         let activation_port = match row.activation_port {
             None => None,
-            Some(port) => Some(
-                u16::try_from(port).map_err(|_| Error::UnreadableServiceRow {
+            Some(port) => Some(u16::try_from(port).map_err(|_| {
+                Error::Service(ServiceError::UnreadableServiceRow {
                     service: row.id.clone(),
                     column: "activation_port",
                     value: port.to_string(),
-                })?,
-            ),
+                })
+            })?),
         };
 
         let settings = Settings::merge(recipe.settings(), &row.overrides, &service)?;
 
         let limits: ResourceLimits = serde_json::from_str(&row.limits).map_err(|source| {
-            Error::UnreadableServiceDocument {
+            Error::Service(ServiceError::UnreadableServiceDocument {
                 service: row.id.clone(),
                 column: "limits_json",
                 source,
-            }
+            })
         })?;
 
         // **The row's half of an idle policy, and its three states — roadmap task T69.** A policy
@@ -901,10 +907,12 @@ impl Generator {
             Some(0) => None,
 
             Some(minutes) => {
-                let minutes = u64::try_from(minutes).map_err(|_| Error::UnreadableServiceRow {
-                    service: row.id.clone(),
-                    column: "idle_minutes",
-                    value: minutes.to_string(),
+                let minutes = u64::try_from(minutes).map_err(|_| {
+                    Error::Service(ServiceError::UnreadableServiceRow {
+                        service: row.id.clone(),
+                        column: "idle_minutes",
+                        value: minutes.to_string(),
+                    })
                 })?;
 
                 Some(Millis::from_secs(minutes.saturating_mul(60)))
@@ -1158,9 +1166,11 @@ impl Generator {
             builder = builder.idle(IdlePolicy { after, probe });
         }
 
-        let spec = builder.build().map_err(|source| Error::Unrunnable {
-            service: context.service.as_str().to_owned(),
-            source,
+        let spec = builder.build().map_err(|source| {
+            Error::Service(ServiceError::Unrunnable {
+                service: context.service.as_str().to_owned(),
+                source,
+            })
         })?;
 
         let first_run = recipe

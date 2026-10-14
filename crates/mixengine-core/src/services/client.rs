@@ -39,6 +39,7 @@ use std::path::PathBuf;
 
 use mixengine_proto::{PackageVersion, ServiceId, VersionError};
 
+use crate::ServiceError;
 use crate::generate::recipe::Upstream;
 use crate::{Error, Result, Store};
 
@@ -76,17 +77,19 @@ impl Chosen {
     ///
     /// # Errors
     ///
-    /// [`Error::PackageProvidesNothing`], naming the command and listing what this version does
+    /// [`ServiceError::PackageProvidesNothing`], naming the command and listing what this version does
     /// publish.
     pub fn program(&self, package: &str, executable: &str) -> Result<PathBuf> {
         self.provides
             .get(executable)
             .map(|relative| crate::paths::join_stored(&self.install_path, relative))
-            .ok_or_else(|| Error::PackageProvidesNothing {
-                package: package.to_owned(),
-                version: self.version.clone(),
-                executable: executable.to_owned(),
-                known: self.provides.keys().cloned().collect(),
+            .ok_or_else(|| {
+                Error::Service(ServiceError::PackageProvidesNothing {
+                    package: package.to_owned(),
+                    version: self.version.clone(),
+                    executable: executable.to_owned(),
+                    known: self.provides.keys().cloned().collect(),
+                })
             })
     }
 }

@@ -22,6 +22,7 @@
 use mixengine_proto::{PackageVersion, RuntimeKind, ServiceId};
 
 use super::{Declaration, Origin, Port};
+use crate::ServiceError;
 use crate::generate::{Catalogue, Source};
 use crate::{Error, Result, Store};
 
@@ -34,7 +35,7 @@ use crate::{Error, Result, Store};
 ///
 /// [`Error::Database`] when the tables cannot be read or written, and whatever
 /// [`create`](super::create) reports for a row that cannot be written — except
-/// [`Error::ServiceAlreadyDeclared`], which is this function's own no-op and is swallowed: two
+/// [`ServiceError::ServiceAlreadyDeclared`], which is this function's own no-op and is swallowed: two
 /// daemons racing to repair one home is not a failure of either.
 pub async fn ensure(
     store: &Store,
@@ -126,7 +127,7 @@ pub async fn ensure(
 
                 // Two daemons repairing one home, or an install racing a boot. The row it wanted is
                 // there, which is what it wanted.
-                Err(Error::ServiceAlreadyDeclared { .. }) => {}
+                Err(Error::Service(ServiceError::ServiceAlreadyDeclared { .. })) => {}
 
                 Err(error) => return Err(error),
             }

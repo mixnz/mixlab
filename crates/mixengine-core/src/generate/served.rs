@@ -21,6 +21,7 @@ use mixengine_proto::{ServiceId, SiteKind, SiteState};
 use serde::Serialize;
 
 use super::recipe::{Upstream, Upstreams};
+use crate::ServiceError;
 use crate::sites::SiteOwner;
 use crate::{Error, Result, Store};
 
@@ -310,7 +311,7 @@ pub enum ServedKind {
 ///
 /// # Errors
 ///
-/// [`Error::TemplateBroken`], naming `template`.
+/// [`ServiceError::TemplateBroken`], naming `template`.
 pub(super) fn render(
     source: &str,
     template: &'static str,
@@ -323,10 +324,12 @@ pub(super) fn render(
 
     environment
         .render_str(source, minijinja::Value::from_serialize(value))
-        .map_err(|source| Error::TemplateBroken {
-            service: service.as_str().to_owned(),
-            file: template,
-            source: Box::new(source),
+        .map_err(|source| {
+            Error::Service(ServiceError::TemplateBroken {
+                service: service.as_str().to_owned(),
+                file: template,
+                source: Box::new(source),
+            })
         })
 }
 

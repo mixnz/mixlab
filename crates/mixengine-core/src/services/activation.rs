@@ -31,7 +31,7 @@ use crate::{Result, Store};
 ///
 /// [`Error::Database`](crate::Error::Database) when the table cannot be read or written, and
 /// whatever [`ports::allocate_activation`](super::ports::allocate_activation) reports — including
-/// [`Error::PortsExhausted`](crate::Error::PortsExhausted) when there is no free number above the
+/// [`ServiceError::PortsExhausted`](crate::ServiceError::PortsExhausted) when there is no free number above the
 /// service's own.
 pub async fn ensure(
     store: &Store,

@@ -66,6 +66,7 @@ use std::path::{Path, PathBuf};
 
 use mixengine_proto::Millis;
 
+use crate::ServiceError;
 use crate::generate::context::Context;
 use crate::generate::first_run::Step;
 use crate::{Error, Result};
@@ -217,18 +218,18 @@ pub(super) fn remove_the_space_free_view(context: &Context, view: &Path) -> Step
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`] — the variant that names the service and the reason — when the path this
+/// [`ServiceError::SettingValue`] — the variant that names the service and the reason — when the path this
 /// home would need is longer than the kernel accepts.
 fn within_socket_limit(service: &str, key: &'static str, socket: &Path) -> Result<()> {
     if socket.as_os_str().len() > SOCKET_PATH_LIMIT {
-        return Err(Error::SettingValue {
+        return Err(Error::Service(ServiceError::SettingValue {
             service: service.to_owned(),
             key,
             value: socket.display().to_string(),
             reason: "a Unix socket path is capped at 103 characters by `sockaddr_un`, and a server \
                      given a longer one aborts after it has started; move the MixEngine home \
                      somewhere shorter",
-        });
+        }));
     }
 
     Ok(())
@@ -248,7 +249,7 @@ fn within_socket_limit(service: &str, key: &'static str, socket: &Path) -> Resul
 ///
 /// # Errors
 ///
-/// [`Error::SettingValue`] when the derived path is longer than `sockaddr_un` accepts. Checked
+/// [`ServiceError::SettingValue`] when the derived path is longer than `sockaddr_un` accepts. Checked
 /// against the derived path and never inherited from `socket`: `.activate` is nine characters, which
 /// is enough to put a home that was just inside the limit outside it, and the failure that would
 /// otherwise follow is a bind refused at run time and a site that 502s for no visible reason.
@@ -331,7 +332,10 @@ mod tests {
             .expect_err("the activator's is nine characters longer and does not");
 
         assert!(
-            matches!(refused, Error::SettingValue { key: "listen", .. }),
+            matches!(
+                refused,
+                Error::Service(ServiceError::SettingValue { key: "listen", .. })
+            ),
             "{refused:?}"
         );
     }

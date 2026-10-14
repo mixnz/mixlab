@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use mixengine_proto::ServiceId;
 
 use super::*;
+use crate::ServiceError;
 use crate::generate::Upstream;
 use crate::generate::first_run::FirstRun;
 use crate::generate::recipe::{self, ServiceCertificate};
@@ -671,7 +672,7 @@ fn a_credential_that_would_need_escaping_is_refused() {
     let error = steps(&initialised("a'b")).expect_err("that cannot go in a SQL literal");
 
     assert!(
-        matches!(&error, Error::SettingValue { value, .. } if !value.contains("a'b")),
+        matches!(&error, Error::Service(ServiceError::SettingValue { value, .. }) if !value.contains("a'b")),
         "the refusal quoted the credential: {error:?}"
     );
 }
@@ -681,7 +682,10 @@ fn a_credential_that_would_need_escaping_is_refused() {
 fn no_credential_at_all_is_refused_rather_than_setting_an_empty_password() {
     let error = steps(&context("{}")).expect_err("an empty password is not a password");
 
-    assert!(matches!(error, Error::SettingValue { .. }), "{error:?}");
+    assert!(
+        matches!(error, Error::Service(ServiceError::SettingValue { .. })),
+        "{error:?}"
+    );
 }
 
 /// The Unix ritual is four steps and the Windows one is two, and the difference is upstream.
@@ -712,7 +716,10 @@ fn a_mariadb_without_its_own_binaries_is_named() {
     let error = Mariadb.spec(&context).expect_err("nothing to run");
 
     assert!(
-        matches!(error, Error::ServiceProvidesNothing { .. }),
+        matches!(
+            error,
+            Error::Service(ServiceError::ServiceProvidesNothing { .. })
+        ),
         "{error:?}"
     );
 }

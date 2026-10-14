@@ -32,6 +32,7 @@ use super::context::{Context, bound};
 use super::document::{Document, Validator};
 use super::served::Served;
 use super::settings::Setting;
+use crate::ServiceError;
 use crate::{Error, Result};
 
 /// One file a recipe renders, and where it goes under `etc/<service-id>/`.
@@ -613,7 +614,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
     ///
     /// # Errors
     ///
-    /// [`Error::TemplateBroken`] naming the site template: a template is this build's, so a refusal
+    /// [`ServiceError::TemplateBroken`] naming the site template: a template is this build's, so a refusal
     /// here is a bug of ours rather than a configuration a user can fix.
     fn sites(&self, context: &Context, served: &[Served]) -> Result<Vec<Document>> {
         let _ = (context, served);
@@ -763,7 +764,7 @@ impl Catalogue {
 ///
 /// # Errors
 ///
-/// [`Error::TemplateBroken`], naming the file: a template is this build's, so this is a bug of ours
+/// [`ServiceError::TemplateBroken`], naming the file: a template is this build's, so this is a bug of ours
 /// and not a configuration a user can fix — but which of a service's six files failed is the first
 /// thing anybody needs to know.
 pub(super) fn render(recipe: &dyn Recipe, context: &Context) -> Result<Vec<Document>> {
@@ -796,10 +797,12 @@ pub(super) fn render(recipe: &dyn Recipe, context: &Context) -> Result<Vec<Docum
             environment
                 .render_str(file.source, &rendering)
                 .map(|contents| Document::new(file.path, contents))
-                .map_err(|source| Error::TemplateBroken {
-                    service: context.service.as_str().to_owned(),
-                    file: file.path,
-                    source: Box::new(source),
+                .map_err(|source| {
+                    Error::Service(ServiceError::TemplateBroken {
+                        service: context.service.as_str().to_owned(),
+                        file: file.path,
+                        source: Box::new(source),
+                    })
                 })
         })
         .collect()
