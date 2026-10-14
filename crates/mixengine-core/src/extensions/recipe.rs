@@ -22,6 +22,7 @@
 
 use mixengine_proto::ServiceSpecBuilder;
 
+use crate::ExtensionError;
 use crate::extensions::manifest::{Body, ExtensionManifest, ReadyTemplate};
 use crate::extensions::render::{self, Context as RenderContext};
 use crate::extensions::store::Installed;
@@ -78,10 +79,10 @@ impl Recipe for ExtensionRecipe {
         let _ = context;
 
         let Body::Service(template) = &self.installed.manifest.body else {
-            return Err(Error::ExtensionNotAService {
+            return Err(Error::Extension(ExtensionError::ExtensionNotAService {
                 id: self.installed.id.as_str().to_owned(),
                 kind: self.installed.kind().as_str(),
-            });
+            }));
         };
 
         render::service_builder(&self.installed.manifest, template, &self.context())

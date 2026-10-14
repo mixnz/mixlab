@@ -729,9 +729,11 @@ impl Generator {
     ///
     /// # Errors
     ///
-    /// [`Error::ExtensionField`] for a fragment whose placeholders cannot be rendered, naming
+    /// [`ExtensionError::ExtensionField`] for a fragment whose placeholders cannot be rendered, naming
     /// `recipe.front_end[<n>]` — a manifest that was installed and can no longer be applied is
     /// reported rather than skipped, which is the rule `php_ini` already follows.
+    ///
+    /// [`ExtensionError::ExtensionField`]: crate::ExtensionError::ExtensionField
     fn fragments<'a>(
         installed: impl Iterator<Item = &'a crate::extensions::store::Installed>,
     ) -> Result<Vec<(FrontEndServer, FrontEndAddition)>> {

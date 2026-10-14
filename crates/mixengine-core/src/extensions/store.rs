@@ -25,6 +25,7 @@ use std::path::PathBuf;
 
 use mixengine_proto::{ExtensionId, ExtensionKind, PackageVersion, Timestamp};
 
+use crate::ExtensionError;
 use crate::extensions::manifest::{self, ExtensionManifest};
 use crate::{Error, Result, Store};
 
@@ -131,7 +132,7 @@ pub fn data_dir(paths: &crate::Paths, id: &ExtensionId) -> PathBuf {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionAlreadyInstalled`] when a row for this id already exists, and
+/// [`ExtensionError::ExtensionAlreadyInstalled`] when a row for this id already exists, and
 /// [`Error::Database`] when it cannot be written.
 pub async fn remember(store: &Store, installed: &Installed) -> Result<()> {
     let id = installed.id.as_str();
@@ -176,9 +177,11 @@ pub async fn remember(store: &Store, installed: &Installed) -> Result<()> {
     // the collision is a real case and it deserves a sentence naming the extension rather than
     // SQLite's.
     if inserted.rows_affected() == 0 {
-        return Err(Error::ExtensionAlreadyInstalled {
-            id: installed.id.as_str().to_owned(),
-        });
+        return Err(Error::Extension(
+            ExtensionError::ExtensionAlreadyInstalled {
+                id: installed.id.as_str().to_owned(),
+            },
+        ));
     }
 
     for (port_name, port) in &installed.ports {
@@ -230,7 +233,7 @@ pub async fn forget(store: &Store, id: &ExtensionId) -> Result<()> {
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the tables cannot be read, and [`Error::UnreadableExtensionRow`] when a
+/// [`Error::Database`] when the tables cannot be read, and [`ExtensionError::UnreadableExtensionRow`] when a
 /// row holds something this build cannot read back.
 pub async fn get(store: &Store, id: &ExtensionId) -> Result<Option<Installed>> {
     Ok(all(store)
@@ -266,10 +269,12 @@ pub async fn all(store: &Store) -> Result<Vec<Installed>> {
     let mut installed = Vec::with_capacity(rows.len());
 
     for row in rows {
-        let unreadable = |column: &'static str, value: String| Error::UnreadableExtensionRow {
-            extension: row.id.clone(),
-            column,
-            value,
+        let unreadable = |column: &'static str, value: String| {
+            Error::Extension(ExtensionError::UnreadableExtensionRow {
+                extension: row.id.clone(),
+                column,
+                value,
+            })
         };
 
         let id =
@@ -419,7 +424,7 @@ mod tests {
         let refusal = remember(&store, &installed).await.expect_err("the second");
 
         assert!(
-            matches!(refusal, Error::ExtensionAlreadyInstalled { ref id } if id == "mailpit"),
+            matches!(refusal, Error::Extension(ExtensionError::ExtensionAlreadyInstalled { ref id }) if id == "mailpit"),
             "{refusal}"
         );
     }

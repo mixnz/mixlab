@@ -26,6 +26,7 @@ use mixengine_platform::paths::in_full;
 use mixengine_proto::{ExtensionId, RouteTarget, ServiceId, SiteKind, SiteRoute, SiteState};
 use sqlx::Sqlite;
 
+use crate::ExtensionError;
 use crate::{Error, Result, Store};
 
 /// Who a site belongs to, which is also what gives its `doc_root` a root — roadmap task **T81b**.
@@ -1310,10 +1311,10 @@ async fn pool_is_free_for<'c>(
         .map_err(|source| store.failure("read", source))?;
 
     match found {
-        Some(extension) => Err(Error::ExtensionPoolNotShared {
+        Some(extension) => Err(Error::Extension(ExtensionError::ExtensionPoolNotShared {
             pool: pool.as_str().to_owned(),
             extension,
-        }),
+        })),
         None => Ok(()),
     }
 }

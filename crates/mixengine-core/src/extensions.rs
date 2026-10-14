@@ -7,6 +7,10 @@
 //! or starts anything — that is T81, which is deliberately handed a format already proved to make
 //! sense rather than one it discovers is wrong five actions into an install.
 
+mod error;
+
+pub use error::ExtensionError;
+
 pub mod config;
 pub mod database;
 pub mod install;
@@ -282,7 +286,10 @@ mod tests {
         let outcome = inspect(&paths, &directory);
 
         assert!(
-            matches!(outcome, Err(Error::ExtensionField { .. })),
+            matches!(
+                outcome,
+                Err(Error::Extension(ExtensionError::ExtensionField { .. }))
+            ),
             "{outcome:?}"
         );
     }

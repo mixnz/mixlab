@@ -27,6 +27,7 @@ use mixengine_proto::{
     VersionConstraint,
 };
 
+use crate::ExtensionError;
 use crate::{Error, Result};
 
 /// The only schema this build writes, and the highest one it reads.
@@ -464,14 +465,14 @@ impl Versioned {
     ///
     /// # Errors
     ///
-    /// [`Error::UnknownExtensionSchema`], naming the extension where the header got far enough to
+    /// [`ExtensionError::UnknownExtensionSchema`], naming the extension where the header got far enough to
     /// say which one it is.
     fn readable(self) -> Result<()> {
         if self.schema > SCHEMA {
-            return Err(Error::UnknownExtensionSchema {
+            return Err(Error::Extension(ExtensionError::UnknownExtensionSchema {
                 id: self.extension.map(|header| header.id).unwrap_or_default(),
                 schema: self.schema,
-            });
+            }));
         }
 
         Ok(())
@@ -548,14 +549,16 @@ impl From<&ExtensionManifest> for Raw {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionManifest`] for a parse failure; [`Error::UnknownExtensionSchema`] for a newer
-/// format; [`Error::ExtensionTableUnexpected`] and [`Error::ExtensionTableMissing`] where the tables
-/// do not match `kind`; [`Error::ExtensionField`] for a field the format refuses;
-/// [`Error::ExtensionIdTaken`] for an id a compiled-in recipe already claims.
+/// [`ExtensionError::ExtensionManifest`] for a parse failure; [`ExtensionError::UnknownExtensionSchema`] for a newer
+/// format; [`ExtensionError::ExtensionTableUnexpected`] and [`ExtensionError::ExtensionTableMissing`] where the tables
+/// do not match `kind`; [`ExtensionError::ExtensionField`] for a field the format refuses;
+/// [`ExtensionError::ExtensionIdTaken`] for an id a compiled-in recipe already claims.
 pub fn read(path: &Path, text: &str) -> Result<ExtensionManifest> {
-    let failed = |source: toml::de::Error| Error::ExtensionManifest {
-        path: path.display().to_string(),
-        source,
+    let failed = |source: toml::de::Error| {
+        Error::Extension(ExtensionError::ExtensionManifest {
+            path: path.display().to_string(),
+            source,
+        })
     };
 
     let versioned: Versioned = toml::from_str(text).map_err(failed)?;
@@ -573,11 +576,13 @@ pub fn read(path: &Path, text: &str) -> Result<ExtensionManifest> {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionEntry`] when the entry is not a manifest at all, and everything [`read`]
+/// [`ExtensionError::ExtensionEntry`] when the entry is not a manifest at all, and everything [`read`]
 /// reports about one that is.
 pub fn read_value(entry: serde_json::Value) -> Result<ExtensionManifest> {
-    let failed = |source: serde_json::Error| Error::ExtensionEntry {
-        source: Box::new(source),
+    let failed = |source: serde_json::Error| {
+        Error::Extension(ExtensionError::ExtensionEntry {
+            source: Box::new(source),
+        })
     };
 
     let versioned: Versioned = serde_json::from_value(entry.clone()).map_err(failed)?;
@@ -606,9 +611,9 @@ fn checked(raw: Raw) -> Result<ExtensionManifest> {
         .packages()
         .any(|package| package == id.as_str())
     {
-        return Err(Error::ExtensionIdTaken {
+        return Err(Error::Extension(ExtensionError::ExtensionIdTaken {
             id: id.as_str().to_owned(),
-        });
+        }));
     }
 
     let body = body(&id, kind, raw.service, raw.web_app)?;
@@ -639,8 +644,8 @@ fn checked(raw: Raw) -> Result<ExtensionManifest> {
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionTableUnexpected`] for a `[ui]` on anything but a `service`, and
-/// [`Error::ExtensionField`] naming `ui.port` or `ui.path`.
+/// [`ExtensionError::ExtensionTableUnexpected`] for a `[ui]` on anything but a `service`, and
+/// [`ExtensionError::ExtensionField`] naming `ui.port` or `ui.path`.
 fn check_ui(
     id: &ExtensionId,
     kind: ExtensionKind,
@@ -652,27 +657,27 @@ fn check_ui(
     };
 
     if kind != ExtensionKind::Service {
-        return Err(Error::ExtensionTableUnexpected {
+        return Err(Error::Extension(ExtensionError::ExtensionTableUnexpected {
             id: id.as_str().to_owned(),
             kind: kind.as_str(),
             table: "ui",
-        });
+        }));
     }
 
     if !ports.contains_key(&ui.port) {
-        return Err(Error::ExtensionField {
+        return Err(Error::Extension(ExtensionError::ExtensionField {
             id: id.as_str().to_owned(),
             field: "ui.port".to_owned(),
             reason: format!("names `{}`, which `[ports]` does not declare", ui.port),
-        });
+        }));
     }
 
     if !ui.path.starts_with('/') {
-        return Err(Error::ExtensionField {
+        return Err(Error::Extension(ExtensionError::ExtensionField {
             id: id.as_str().to_owned(),
             field: "ui.path".to_owned(),
             reason: "has to start with `/`".to_owned(),
-        });
+        }));
     }
 
     Ok(())
@@ -698,18 +703,20 @@ fn body(
 
     for (table, is_present) in present {
         if is_present && own != Some(table) {
-            return Err(Error::ExtensionTableUnexpected {
+            return Err(Error::Extension(ExtensionError::ExtensionTableUnexpected {
                 id: id.as_str().to_owned(),
                 kind: kind.as_str(),
                 table,
-            });
+            }));
         }
     }
 
-    let missing = |table: &'static str| Error::ExtensionTableMissing {
-        id: id.as_str().to_owned(),
-        kind: kind.as_str(),
-        table,
+    let missing = |table: &'static str| {
+        Error::Extension(ExtensionError::ExtensionTableMissing {
+            id: id.as_str().to_owned(),
+            kind: kind.as_str(),
+            table,
+        })
     };
 
     match kind {
@@ -728,13 +735,13 @@ fn check_service(id: &ExtensionId, body: &Body) -> Result<()> {
     };
 
     let refuse = |field: &str| {
-        Err(Error::ExtensionField {
+        Err(Error::Extension(ExtensionError::ExtensionField {
             id: id.as_str().to_owned(),
             field: field.to_owned(),
             reason: "may not be a command: a second program is a second path to render, and \
                      nothing yet needs one"
                 .to_owned(),
-        })
+        }))
     };
 
     if matches!(template.stop, StopBehaviour::Command { .. }) {
@@ -751,14 +758,14 @@ fn check_service(id: &ExtensionId, body: &Body) -> Result<()> {
 /// `web-app` may not ask for the LAN (the T80 design, D8).
 fn check_reach(id: &ExtensionId, kind: ExtensionKind, network: NetworkReach) -> Result<()> {
     if kind == ExtensionKind::WebApp && network == NetworkReach::Lan {
-        return Err(Error::ExtensionField {
+        return Err(Error::Extension(ExtensionError::ExtensionField {
             id: id.as_str().to_owned(),
             field: "permissions.network".to_owned(),
             reason: "may not be `lan` for a web-app: these are administrative interfaces onto \
                      this machine's own databases, and the difference between one of them and a \
                      site somebody chose to share is that nobody chose"
                 .to_owned(),
-        });
+        }));
     }
 
     Ok(())
@@ -775,11 +782,11 @@ fn check_label(id: &ExtensionId, body: &Body) -> Result<()> {
     };
 
     let refuse = |reason: String| {
-        Err(Error::ExtensionField {
+        Err(Error::Extension(ExtensionError::ExtensionField {
             id: id.as_str().to_owned(),
             field: "web-app.domain".to_owned(),
             reason,
-        })
+        }))
     };
 
     if app.domain.contains('.') {
@@ -815,11 +822,11 @@ fn check_config(id: &ExtensionId, body: &Body) -> Result<()> {
     };
 
     let refuse = |field: &str, reason: &str| {
-        Err(Error::ExtensionField {
+        Err(Error::Extension(ExtensionError::ExtensionField {
             id: id.as_str().to_owned(),
             field: field.to_owned(),
             reason: reason.to_owned(),
-        })
+        }))
     };
 
     if let Some(config) = &app.config {
@@ -873,7 +880,7 @@ fn check_config(id: &ExtensionId, body: &Body) -> Result<()> {
             .as_ref()
             .is_some_and(|config| config.text.contains(super::render::PASSWORD_ENV))
     {
-        return Err(Error::ExtensionField {
+        return Err(Error::Extension(ExtensionError::ExtensionField {
             id: id.as_str().to_owned(),
             field: "web-app.database.signs_in".to_owned(),
             reason: format!(
@@ -881,7 +888,7 @@ fn check_config(id: &ExtensionId, body: &Body) -> Result<()> {
                  process that never reads it is consent bought for nothing",
                 super::render::PASSWORD_ENV
             ),
-        });
+        }));
     }
 
     Ok(())
@@ -891,11 +898,11 @@ fn check_config(id: &ExtensionId, body: &Body) -> Result<()> {
 /// of the three the renderer already answers.
 fn placeholder_name(id: &ExtensionId, name: &str) -> Result<()> {
     let refuse = |reason: &str| {
-        Err(Error::ExtensionField {
+        Err(Error::Extension(ExtensionError::ExtensionField {
             id: id.as_str().to_owned(),
             field: format!("ports.{name}"),
             reason: reason.to_owned(),
-        })
+        }))
     };
 
     if name.is_empty() {
@@ -965,7 +972,7 @@ mod tests {
         let refusal = read_value(json).expect_err("refused");
 
         assert!(
-            matches!(refusal, Error::UnknownExtensionSchema { ref id, schema }
+            matches!(refusal, Error::Extension(ExtensionError::UnknownExtensionSchema { ref id, schema })
                 if id == "mailpit" && schema == SCHEMA + 1),
             "{refusal}"
         );
@@ -1009,7 +1016,9 @@ mod tests {
 
         assert!(matches!(
             parse(&text),
-            Err(Error::ExtensionTableUnexpected { .. })
+            Err(Error::Extension(
+                ExtensionError::ExtensionTableUnexpected { .. }
+            ))
         ));
     }
 
@@ -1019,7 +1028,10 @@ mod tests {
     fn desktop_app_is_not_a_kind() {
         let text = with_body("desktop-app", "[desktop-app]\nscheme = \"otherapp\"\n");
 
-        assert!(matches!(parse(&text), Err(Error::ExtensionManifest { .. })));
+        assert!(matches!(
+            parse(&text),
+            Err(Error::Extension(ExtensionError::ExtensionManifest { .. }))
+        ));
     }
 
     /// And a kind with none of its own table is a manifest that says nothing about what it is.
@@ -1029,7 +1041,9 @@ mod tests {
 
         assert!(matches!(
             parse(&text),
-            Err(Error::ExtensionTableMissing { .. })
+            Err(Error::Extension(
+                ExtensionError::ExtensionTableMissing { .. }
+            ))
         ));
     }
 
@@ -1042,7 +1056,10 @@ mod tests {
 
         assert!(matches!(
             parse(&text),
-            Err(Error::UnknownExtensionSchema { schema: 2, .. })
+            Err(Error::Extension(ExtensionError::UnknownExtensionSchema {
+                schema: 2,
+                ..
+            }))
         ));
     }
 
@@ -1055,7 +1072,10 @@ mod tests {
             "[service]\nprogram = \"{install_dir}/x\"\ncwd = \"{data_dir}\"\nready = { type = \"pid_alive\", settle = \"1s\" }\nstop = { type = \"command\", program = \"{install_dir}/stop\", args = [], grace = \"5s\" }\n",
         );
 
-        assert!(matches!(parse(&text), Err(Error::ExtensionField { .. })));
+        assert!(matches!(
+            parse(&text),
+            Err(Error::Extension(ExtensionError::ExtensionField { .. }))
+        ));
     }
 
     /// A key in `[ports]` becomes a placeholder, so it has to be spellable as one.
@@ -1066,7 +1086,10 @@ mod tests {
             "[ports]\n\"ui port\" = 8025\n\n[service]\nprogram = \"{install_dir}/x\"\ncwd = \"{data_dir}\"\nready = { type = \"pid_alive\", settle = \"1s\" }\n",
         );
 
-        assert!(matches!(parse(&text), Err(Error::ExtensionField { .. })));
+        assert!(matches!(
+            parse(&text),
+            Err(Error::Extension(ExtensionError::ExtensionField { .. }))
+        ));
     }
 
     /// **D8.** These are administrative interfaces onto the machine's own databases. The
@@ -1076,7 +1099,10 @@ mod tests {
         let text = mixengine_testkit::extension::PHPMYADMIN
             .replace("network = \"loopback\"", "network = \"lan\"");
 
-        assert!(matches!(parse(&text), Err(Error::ExtensionField { .. })));
+        assert!(matches!(
+            parse(&text),
+            Err(Error::Extension(ExtensionError::ExtensionField { .. }))
+        ));
     }
 
     /// An id a compiled-in recipe already claims would be two definitions of one service.
@@ -1085,7 +1111,10 @@ mod tests {
         let text = with_body("recipe", "[[recipe.php_ini]]\nkey = \"a\"\nvalue = \"b\"\n")
             .replace("id = \"probe\"", "id = \"mariadb\"");
 
-        assert!(matches!(parse(&text), Err(Error::ExtensionIdTaken { .. })));
+        assert!(matches!(
+            parse(&text),
+            Err(Error::Extension(ExtensionError::ExtensionIdTaken { .. }))
+        ));
     }
 
     /// **T81c, D1.** A fragment says which configuration language it is written in, because a
@@ -1112,7 +1141,10 @@ mod tests {
     fn a_fragment_with_no_server_is_refused() {
         let text = with_body("recipe", "[[recipe.front_end]]\nfragment = \"a\"\n");
 
-        assert!(matches!(parse(&text), Err(Error::ExtensionManifest { .. })));
+        assert!(matches!(
+            parse(&text),
+            Err(Error::Extension(ExtensionError::ExtensionManifest { .. }))
+        ));
     }
 
     /// And a third front end is a recipe, a package and a variant, in the task that adds one —
@@ -1124,7 +1156,10 @@ mod tests {
             "[[recipe.front_end]]\nserver = \"apache\"\nfragment = \"a\"\n",
         );
 
-        assert!(matches!(parse(&text), Err(Error::ExtensionManifest { .. })));
+        assert!(matches!(
+            parse(&text),
+            Err(Error::Extension(ExtensionError::ExtensionManifest { .. }))
+        ));
     }
 
     /// An unknown key is a setting somebody believes they made.
@@ -1135,7 +1170,10 @@ mod tests {
             "[[recipe.php_ini]]\nkey = \"a\"\nvalue = \"b\"\nnote = \"c\"\n",
         );
 
-        assert!(matches!(parse(&text), Err(Error::ExtensionManifest { .. })));
+        assert!(matches!(
+            parse(&text),
+            Err(Error::Extension(ExtensionError::ExtensionManifest { .. }))
+        ));
     }
 
     /// **T81b, D4.** `[web-app].domain` is one label placed under `mixengine.test`; a dotted one
@@ -1156,7 +1194,7 @@ mod tests {
 
             let refusal = parse(&text).expect_err(domain);
             assert!(
-                matches!(refusal, Error::ExtensionField { ref field, ref reason, .. }
+                matches!(refusal, Error::Extension(ExtensionError::ExtensionField { ref field, ref reason, .. })
                     if field == "web-app.domain" && reason.contains(expected)),
                 "{domain}: {refusal}"
             );
@@ -1274,7 +1312,7 @@ mod tests {
             let refusal = parse(&text).expect_err("it is refused");
 
             assert!(
-                matches!(&refusal, Error::ExtensionField { field, .. } if field == "web-app.config.path"),
+                matches!(&refusal, Error::Extension(ExtensionError::ExtensionField { field, .. }) if field == "web-app.config.path"),
                 "{path}: {refusal}"
             );
         }
@@ -1288,7 +1326,7 @@ mod tests {
             .expect_err("an empty list is refused");
 
         assert!(
-            matches!(&refusal, Error::ExtensionField { field, .. } if field == "web-app.database.engines"),
+            matches!(&refusal, Error::Extension(ExtensionError::ExtensionField { field, .. }) if field == "web-app.database.engines"),
             "{refusal}"
         );
     }
@@ -1448,7 +1486,7 @@ filesystem = ["own-data"]
             let text = format!("{SMALL_SERVICE}\n{table}");
             let refused = parse(&text).expect_err("refused");
             assert!(
-                matches!(&refused, Error::ExtensionField { field: f, .. } if f == field),
+                matches!(&refused, Error::Extension(ExtensionError::ExtensionField { field: f, .. }) if f == field),
                 "{refused}"
             );
         }
@@ -1463,7 +1501,10 @@ filesystem = ["own-data"]
         );
         let refused = parse(&text).expect_err("refused");
         assert!(
-            matches!(refused, Error::ExtensionTableUnexpected { table: "ui", .. }),
+            matches!(
+                refused,
+                Error::Extension(ExtensionError::ExtensionTableUnexpected { table: "ui", .. })
+            ),
             "{refused}"
         );
     }

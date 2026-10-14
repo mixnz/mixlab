@@ -10,6 +10,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use mixengine_core::ExtensionError;
 use mixengine_core::extensions::install;
 use mixengine_core::extensions::manifest::{self, Body, ExtensionManifest};
 use mixengine_core::extensions::render::{self, Context};
@@ -280,7 +281,7 @@ async fn a_machine_with_no_build_is_told_which_ones_exist() {
         .expect_err("nothing is published for this machine");
 
     assert!(
-        matches!(refusal, Error::ExtensionNoArtifact { ref targets, .. } if targets == &["no-such-target"]),
+        matches!(refusal, Error::Extension(ExtensionError::ExtensionNoArtifact { ref targets, .. }) if targets == &["no-such-target"]),
         "{refusal}"
     );
     assert_eq!(

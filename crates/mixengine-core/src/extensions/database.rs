@@ -28,6 +28,7 @@
 use mixengine_proto::ServiceId;
 
 use super::render::DatabaseEndpoint as Endpoint;
+use crate::ExtensionError;
 use crate::generate::Catalogue;
 use crate::{Error, Result, Store};
 
@@ -49,7 +50,7 @@ const DEFAULT_INSTANCE: &str = "main";
 ///
 /// # Errors
 ///
-/// [`Error::ExtensionNoDatabase`] when this machine declares none of them — a refusal *before* the
+/// [`ExtensionError::ExtensionNoDatabase`] when this machine declares none of them — a refusal *before* the
 /// download, for [`RuntimeError::RuntimeUnresolved`]'s reason. [`Error::Database`] when the tables cannot
 /// be read.
 ///
@@ -63,10 +64,10 @@ pub async fn resolve(store: &Store, id: &str, engines: &[String]) -> Result<Endp
         }
     }
 
-    Err(Error::ExtensionNoDatabase {
+    Err(Error::Extension(ExtensionError::ExtensionNoDatabase {
         id: id.to_owned(),
         engines: engines.to_vec(),
-    })
+    }))
 }
 
 /// Where one service listens and what to connect to it as, or [`None`] for a service that is not a

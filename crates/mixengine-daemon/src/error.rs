@@ -18,6 +18,7 @@
 use std::io;
 use std::path::Path;
 
+use mixengine_core::ExtensionError;
 use mixengine_proto::{Error, ErrorCode};
 
 /// A library error, rendered for the wire.
@@ -384,22 +385,23 @@ impl ToWire for mixengine_core::Error {
             // client as an internal error; the whole set is spelled out here rather than repeating
             // that. All are `InvalidArgument` because all of them are about the file the caller
             // handed in, and the one thing they need is where to look.
-            Core::ExtensionManifest { .. }
-            | Core::UnknownExtensionSchema { .. }
-            | Core::ExtensionTableUnexpected { .. }
-            | Core::ExtensionTableMissing { .. }
-            | Core::ExtensionField { .. }
-            | Core::ExtensionIdTaken { .. }
-            | Core::ExtensionSpec { .. } => Error::new(ErrorCode::InvalidArgument, chain(self))
-                .with_hint(
+            Core::Extension(ExtensionError::ExtensionManifest { .. })
+            | Core::Extension(ExtensionError::UnknownExtensionSchema { .. })
+            | Core::Extension(ExtensionError::ExtensionTableUnexpected { .. })
+            | Core::Extension(ExtensionError::ExtensionTableMissing { .. })
+            | Core::Extension(ExtensionError::ExtensionField { .. })
+            | Core::Extension(ExtensionError::ExtensionIdTaken { .. })
+            | Core::Extension(ExtensionError::ExtensionSpec { .. }) => {
+                Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                     "an extension declares itself in `extension.toml`, in its own directory",
-                ),
+                )
+            }
 
             // **A precondition rather than an invalid argument** — roadmap task **T82a**. The id
             // somebody typed is a real service; what is wrong is the state of this home, in which
             // that service is one extension's own process and holds a credential no project's PHP
             // may read.
-            Core::ExtensionPoolNotShared { .. } => {
+            Core::Extension(ExtensionError::ExtensionPoolNotShared { .. }) => {
                 Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
                     "a web-app extension is served on a pool of its own, which carries a database \
                      superuser's password; name the shared `php-fpm@<version>` instead",
@@ -512,7 +514,7 @@ impl ToWire for mixengine_core::Error {
             // stated effect cannot happen, and the way out is the same kind of sentence: what to
             // create. `internal` was what it reached a client as before this arm, which is the trap
             // T77a's four blueprint variants fell into.
-            Core::ExtensionNoDatabase { engines, .. } => {
+            Core::Extension(ExtensionError::ExtensionNoDatabase { engines, .. }) => {
                 Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
                     "`mix service create {}@main <version>` gives this machine one",
                     engines.first().map_or("mariadb", String::as_str)

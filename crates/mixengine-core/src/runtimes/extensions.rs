@@ -466,9 +466,11 @@ pub async fn state(store: &Store, kind: RuntimeKind, version: &PackageVersion) -
 ///
 /// # Errors
 ///
-/// Whatever reading the `extensions` table reports, and [`Error::ExtensionField`] for a value whose
+/// Whatever reading the `extensions` table reports, and [`ExtensionError::ExtensionField`] for a value whose
 /// placeholders cannot be rendered — which is a manifest that was installed and then could not be
 /// applied, so it is reported rather than skipped.
+///
+/// [`ExtensionError::ExtensionField`]: crate::ExtensionError::ExtensionField
 async fn additions(store: &Store, kind: RuntimeKind) -> Result<Vec<IniAddition>> {
     if kind != RuntimeKind::Php {
         return Ok(Vec::new());
