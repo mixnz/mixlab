@@ -318,7 +318,10 @@ async fn runtimes(
             Ok(_) => {}
             // A language nothing declares and nothing installs is not a language this project uses.
             // Every other failure is a database that cannot be read, and is worth raising.
-            Err(Error::RuntimeUnresolved { .. } | Error::NoDefaultRuntime { .. }) => {}
+            Err(
+                Error::Runtime(crate::RuntimeError::RuntimeUnresolved { .. })
+                | Error::Runtime(crate::RuntimeError::NoDefaultRuntime { .. }),
+            ) => {}
             Err(other) => return Err(other),
         }
     }

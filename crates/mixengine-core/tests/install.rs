@@ -527,7 +527,10 @@ async fn installing_over_a_version_that_is_already_there_is_refused() {
         .expect_err("an install never mutates a version that exists");
 
     assert!(
-        matches!(*refusal, mixengine_core::Error::AlreadyInstalled { .. }),
+        matches!(
+            *refusal,
+            mixengine_core::Error::Runtime(mixengine_core::RuntimeError::AlreadyInstalled { .. })
+        ),
         "{refusal:?}"
     );
     assert!(

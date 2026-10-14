@@ -932,18 +932,24 @@ fn explain(error: &dyn std::error::Error) -> String {
 /// same thing.
 fn hint_for(error: &mixengine_core::Error) -> Option<String> {
     match error {
-        mixengine_core::Error::RuntimeUnresolved {
-            kind, constraint, ..
-        } => Some(resolve::install_command(*kind, constraint)),
+        mixengine_core::Error::Runtime(mixengine_core::RuntimeError::RuntimeUnresolved {
+            kind,
+            constraint,
+            ..
+        }) => Some(resolve::install_command(*kind, constraint)),
 
-        mixengine_core::Error::RuntimeMissing { kind, version, .. } => {
-            Some(resolve::restore_command(*kind, version))
-        }
+        mixengine_core::Error::Runtime(mixengine_core::RuntimeError::RuntimeMissing {
+            kind,
+            version,
+            ..
+        }) => Some(resolve::restore_command(*kind, version)),
 
-        mixengine_core::Error::NoDefaultRuntime { kind } => Some(format!(
-            "`mix runtime list --kind {kind}` shows what is installed, and \
+        mixengine_core::Error::Runtime(mixengine_core::RuntimeError::NoDefaultRuntime { kind }) => {
+            Some(format!(
+                "`mix runtime list --kind {kind}` shows what is installed, and \
              `mix runtime default {kind} <version>` chooses which one is used here"
-        )),
+            ))
+        }
 
         _ => None,
     }

@@ -4,7 +4,7 @@
 //! named three binaries and [`mixengine_core::shims::source`] looked for a fourth beside the
 //! running `mixengined`, so every release built from those scripts installed cleanly, started,
 //! reported itself healthy, and could not run `php` — the `bin/` it fills was empty and
-//! `Error::ShimMissing` was the only sign.
+//! `RuntimeError::ShimMissing` was the only sign.
 //!
 //! The shape is [`mixengine_core::updates`]' own: `include_str!` the committed file, so one that is
 //! deleted or moved is a build error rather than a test that reads nothing and passes.

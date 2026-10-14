@@ -234,7 +234,7 @@ impl ToWire for mixengine_core::Error {
             // `UnsupportedPlatform` and not `InvalidArgument`: the request is well formed and is
             // answerable on another machine — the same name is a module on Windows and linked in on
             // the Unix cells — so what refuses it is this build rather than the sentence.
-            Core::ExtensionCompiledIn { .. } => {
+            Core::Runtime(mixengine_core::RuntimeError::ExtensionCompiledIn { .. }) => {
                 Error::new(ErrorCode::UnsupportedPlatform, chain(self)).with_hint(
                     "this build has it linked in, so it is always loaded; nothing can unload it \
                      short of a build that ships it as a module",
@@ -244,9 +244,9 @@ impl ToWire for mixengine_core::Error {
             // Two ways of saying "it is already here", and they are deliberately different variants
             // one layer down: `AlreadyInstalled` is a directory, `AlreadyRecorded` is a row. A
             // client cannot act differently on them, so they share a code and a hint.
-            Core::AlreadyInstalled { .. }
-            | Core::AlreadyRecorded { .. }
-            | Core::PackageAlreadyRecorded { .. } => {
+            Core::Runtime(mixengine_core::RuntimeError::AlreadyInstalled { .. })
+            | Core::Runtime(mixengine_core::RuntimeError::AlreadyRecorded { .. })
+            | Core::Runtime(mixengine_core::RuntimeError::PackageAlreadyRecorded { .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(
                     "an installed version is never overwritten; uninstall it first if it is to be \
                      replaced",
@@ -255,7 +255,7 @@ impl ToWire for mixengine_core::Error {
 
             // A directory an earlier home installed and this one could not check — roadmap task
             // T182f. Recorded by hand once it can be checked, or removed.
-            Core::UnrecordedInstall { path, .. } => {
+            Core::Runtime(mixengine_core::RuntimeError::UnrecordedInstall { path, .. }) => {
                 Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
                     "`mix runtime adopt` or `mix package adopt` records it once it can be checked, \
                      or remove {} and install again",
@@ -438,8 +438,8 @@ impl ToWire for mixengine_core::Error {
 
             // A hand-edited database, or a row from a build that knew a channel this one does not.
             // The same reading `UnknownServiceState` gets, and the same code.
-            Core::UnreadableRuntimeRow { .. }
-            | Core::UnreadablePackageRow { .. }
+            Core::Runtime(mixengine_core::RuntimeError::UnreadableRuntimeRow { .. })
+            | Core::Runtime(mixengine_core::RuntimeError::UnreadablePackageRow { .. })
             | Core::UnreadableProjectRow { .. }
             | Core::UnreadableSiteRow { .. } => Error::new(ErrorCode::Internal, chain(self))
                 .with_hint(
@@ -477,9 +477,11 @@ impl ToWire for mixengine_core::Error {
             // the code the feature spec names, and the hint is the whole value of the answer: what
             // to type. A range cannot become an install command — inventing a version would be
             // inventing a release — so it becomes the listing instead.
-            Core::RuntimeUnresolved {
-                kind, constraint, ..
-            } => Error::new(ErrorCode::DependencyMissing, chain(self))
+            Core::Runtime(mixengine_core::RuntimeError::RuntimeUnresolved {
+                kind,
+                constraint,
+                ..
+            }) => Error::new(ErrorCode::DependencyMissing, chain(self))
                 .with_hint(mixengine_core::resolve::install_command(*kind, constraint)),
 
             // **The same shape for a `web-app`'s database** — roadmap task **T82**. An
@@ -499,12 +501,12 @@ impl ToWire for mixengine_core::Error {
             // no default — which is what uninstalling the last version leaves behind.
             // **T206d, D2.** The version is recorded and its folder is gone: the hint is the install
             // that restores it in place, and the uninstall that forgets it.
-            Core::RuntimeMissing { kind, version, .. } => {
-                Error::new(ErrorCode::DependencyMissing, chain(self))
-                    .with_hint(mixengine_core::resolve::restore_command(*kind, version))
-            }
+            Core::Runtime(mixengine_core::RuntimeError::RuntimeMissing {
+                kind, version, ..
+            }) => Error::new(ErrorCode::DependencyMissing, chain(self))
+                .with_hint(mixengine_core::resolve::restore_command(*kind, version)),
 
-            Core::NoDefaultRuntime { kind } => {
+            Core::Runtime(mixengine_core::RuntimeError::NoDefaultRuntime { kind }) => {
                 Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
                     "`mix runtime list --kind {kind}` shows what is installed, and \
                      `mix runtime default {kind} <version>` chooses which one is used here"
@@ -516,12 +518,14 @@ impl ToWire for mixengine_core::Error {
             // daemon. Classified anyway, on `InstallCancelled`'s reasoning: a variant that can be
             // constructed can be rendered, and `internal` would be the wrong word for the case this
             // actually covers, which is a runtime installed before its executables were recorded.
-            Core::RuntimeProvidesNothing { kind, version, .. } => {
-                Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
-                    "`mix runtime install {kind} {version}` after uninstalling it records what the \
+            Core::Runtime(mixengine_core::RuntimeError::RuntimeProvidesNothing {
+                kind,
+                version,
+                ..
+            }) => Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
+                "`mix runtime install {kind} {version}` after uninstalling it records what the \
                      build publishes"
-                ))
-            }
+            )),
 
             // **The generated-configuration family — roadmap task T30.** What separates these is the
             // same thing that separates the index failures above: whose fault it is. An override is
@@ -570,10 +574,12 @@ impl ToWire for mixengine_core::Error {
             // A broken installation rather than anything the caller did, which is what `internal`
             // means here — but the hint is worth having anyway, because the one thing a person can
             // do about it is reinstall, and nothing in the message says so.
-            Core::ShimMissing { .. } => Error::new(ErrorCode::Internal, chain(self)).with_hint(
-                "a release ships mixengined and mixengine-shim in one directory; reinstall \
+            Core::Runtime(mixengine_core::RuntimeError::ShimMissing { .. }) => {
+                Error::new(ErrorCode::Internal, chain(self)).with_hint(
+                    "a release ships mixengined and mixengine-shim in one directory; reinstall \
                  MixEngine, or build the whole workspace if this is a development tree",
-            ),
+                )
+            }
 
             // The one a person can act on, and the reason it is not `internal` like its shim-shaped
             // sibling: nothing can be granted until this file is there, and saying so at the method
@@ -1071,11 +1077,12 @@ mod tests {
     /// naming both ways on — with no run of spaces where a line continuation went missing.
     #[test]
     fn an_unrecorded_install_names_adopt_and_the_directory() {
-        let error = mixengine_core::Error::UnrecordedInstall {
-            path: PathBuf::from("/data/runtimes/node/24.19.0"),
-            reason: "its marker names another install".to_owned(),
-        }
-        .to_wire();
+        let error =
+            mixengine_core::Error::Runtime(mixengine_core::RuntimeError::UnrecordedInstall {
+                path: PathBuf::from("/data/runtimes/node/24.19.0"),
+                reason: "its marker names another install".to_owned(),
+            })
+            .to_wire();
 
         assert_eq!(error.code, ErrorCode::AlreadyExists);
         let hint = error.hint.expect("a hint");

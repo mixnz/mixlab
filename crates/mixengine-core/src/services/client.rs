@@ -129,8 +129,10 @@ pub fn override_env(package: &str) -> String {
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the rows cannot be read, and [`Error::UnreadablePackageRow`] for a row
+/// [`Error::Database`] when the rows cannot be read, and [`RuntimeError::UnreadablePackageRow`] for a row
 /// this build cannot parse. A package that is not installed is not an error.
+///
+/// [`RuntimeError::UnreadablePackageRow`]: crate::RuntimeError::UnreadablePackageRow
 pub async fn claims(
     store: &Store,
     catalogue: &crate::generate::Catalogue,
@@ -236,8 +238,10 @@ struct Instance {
 ///
 /// [`Error::NotFound`] when `asked` names no instance of this package, and when nothing of this
 /// package is installed at all. [`Error::Database`] when the rows cannot be read, and
-/// [`Error::UnreadablePackageRow`] when a recorded version or service id is not one this build can
+/// [`RuntimeError::UnreadablePackageRow`] when a recorded version or service id is not one this build can
 /// parse.
+///
+/// [`RuntimeError::UnreadablePackageRow`]: crate::RuntimeError::UnreadablePackageRow
 pub async fn chosen(
     store: &Store,
     package: &str,
@@ -331,9 +335,11 @@ fn resolved(instance: Option<Instance>, install: &Install) -> Result<Chosen> {
         Some(Upstream::Tcp(address))
     });
 
-    let unreadable = |column: &'static str, value: &str| Error::UnreadablePackageRow {
-        column,
-        value: value.to_owned(),
+    let unreadable = |column: &'static str, value: &str| {
+        Error::Runtime(crate::RuntimeError::UnreadablePackageRow {
+            column,
+            value: value.to_owned(),
+        })
     };
 
     Ok(Chosen {
@@ -392,9 +398,11 @@ async fn newest(store: &Store, package: &str) -> Result<Install> {
 
     for row in rows {
         let version = PackageVersion::parse(row.version.clone()).map_err(
-            |VersionError { value, .. }| Error::UnreadablePackageRow {
-                column: "version",
-                value,
+            |VersionError { value, .. }| {
+                Error::Runtime(crate::RuntimeError::UnreadablePackageRow {
+                    column: "version",
+                    value,
+                })
             },
         )?;
 

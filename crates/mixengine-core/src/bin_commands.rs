@@ -30,10 +30,12 @@ use crate::{Error, Result, Store};
 ///
 /// # Errors
 ///
-/// [`Error::Database`] when the table cannot be read, and [`Error::UnreadablePackageRow`] for a row
+/// [`Error::Database`] when the table cannot be read, and [`RuntimeError::UnreadablePackageRow`] for a row
 /// whose `kind` this build does not know — a hand-edited database, or a downgrade past a release
 /// that fronted a language this one does not. Refused rather than skipped, because a skipped row is
 /// a name in `bin/` the shim would then answer with "nothing installed here answers to this".
+///
+/// [`RuntimeError::UnreadablePackageRow`]: crate::RuntimeError::UnreadablePackageRow
 pub async fn all(store: &Store) -> Result<BTreeMap<String, RuntimeKind>> {
     let rows = sqlx::query!("SELECT name, kind FROM bin_commands ORDER BY name")
         .fetch_all(store.pool())
@@ -42,11 +44,12 @@ pub async fn all(store: &Store) -> Result<BTreeMap<String, RuntimeKind>> {
 
     rows.into_iter()
         .map(|row| {
-            let kind =
-                RuntimeKind::parse(&row.kind).ok_or_else(|| Error::UnreadablePackageRow {
+            let kind = RuntimeKind::parse(&row.kind).ok_or_else(|| {
+                Error::Runtime(crate::RuntimeError::UnreadablePackageRow {
                     column: "bin_commands.kind",
                     value: row.kind.clone(),
-                })?;
+                })
+            })?;
 
             Ok((row.name, kind))
         })
@@ -72,10 +75,12 @@ pub async fn kind(store: &Store, name: &str) -> Result<Option<RuntimeKind>> {
 
     found
         .map(|kind| {
-            RuntimeKind::parse(&kind).ok_or(Error::UnreadablePackageRow {
-                column: "bin_commands.kind",
-                value: kind,
-            })
+            RuntimeKind::parse(&kind).ok_or(Error::Runtime(
+                crate::RuntimeError::UnreadablePackageRow {
+                    column: "bin_commands.kind",
+                    value: kind,
+                },
+            ))
         })
         .transpose()
 }

@@ -519,10 +519,12 @@ impl Runtimes {
             // **T206d**, D3: the install restores the row it already has.
             Ok(found) if found.is_missing() => {}
             Ok(_) => {
-                return Err(mixengine_core::Error::AlreadyRecorded {
-                    kind: target.kind,
-                    version: target.version.clone(),
-                }
+                return Err(mixengine_core::Error::Runtime(
+                    mixengine_core::RuntimeError::AlreadyRecorded {
+                        kind: target.kind,
+                        version: target.version.clone(),
+                    },
+                )
                 .to_wire());
             }
             Err(mixengine_core::Error::NotFound { .. }) => {}
@@ -697,16 +699,22 @@ impl Runtimes {
 
             // The folder came back between the check and the rename. There is nothing to adopt:
             // the row is already there, and adopting would try to write a second one.
-            Err(mixengine_core::Error::AlreadyInstalled { .. }) if restoring => {
-                return Err(mixengine_core::Error::AlreadyRecorded {
-                    kind,
-                    version: version.clone(),
-                }
+            Err(mixengine_core::Error::Runtime(
+                mixengine_core::RuntimeError::AlreadyInstalled { .. },
+            )) if restoring => {
+                return Err(mixengine_core::Error::Runtime(
+                    mixengine_core::RuntimeError::AlreadyRecorded {
+                        kind,
+                        version: version.clone(),
+                    },
+                )
                 .to_wire());
             }
 
             // **T182f, D2.** The directory is there and has no row: an earlier home installed it.
-            Err(mixengine_core::Error::AlreadyInstalled { path }) => {
+            Err(mixengine_core::Error::Runtime(
+                mixengine_core::RuntimeError::AlreadyInstalled { path },
+            )) => {
                 let found = mixengine_core::adopt::walk::Found {
                     subject: mixengine_core::adopt::Subject::Runtime {
                         kind,

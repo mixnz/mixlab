@@ -432,7 +432,7 @@ async fn a_web_app_with_no_matching_php_is_refused_before_anything_is_fetched() 
         .expect_err("no PHP answers ^8.1");
 
     assert!(
-        matches!(refusal, mixengine_core::Error::RuntimeUnresolved { ref origin, .. }
+        matches!(refusal, mixengine_core::Error::Runtime(mixengine_core::RuntimeError::RuntimeUnresolved { ref origin, .. })
             if origin.contains("phpmyadmin")),
         "{refusal}"
     );

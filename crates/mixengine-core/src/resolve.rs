@@ -19,7 +19,7 @@
 //! **The installed versions, and never the downloadable ones.** The feature spec says so, and the
 //! reason is worth keeping in view: the alternative is a `cd` into a directory quietly starting an
 //! eighty-megabyte download. A constraint nothing installed satisfies is
-//! [`Error::RuntimeUnresolved`], whose message names the install command that would fix it.
+//! [`RuntimeError::RuntimeUnresolved`], whose message names the install command that would fix it.
 //!
 //! Which of several matches wins is
 //! [`PackageVersion::cmp_precedence`](mixengine_proto::PackageVersion::cmp_precedence) — the newest, as upstream
@@ -32,6 +32,8 @@
 //! being a step nothing has ever taken. Both are walked to the top before the next one starts,
 //! which is the order the feature spec lists and not the same thing as one walk asking both
 //! questions per directory.
+//!
+//! [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
 
 use std::path::{Path, PathBuf};
 
@@ -76,11 +78,11 @@ pub fn restore_command(kind: RuntimeKind, version: &PackageVersion) -> String {
 
 /// The refusal for one recorded runtime whose folder is gone.
 fn gone(runtime: &RuntimeSummary) -> Error {
-    Error::RuntimeMissing {
+    Error::Runtime(crate::RuntimeError::RuntimeMissing {
         kind: runtime.kind,
         version: runtime.version.clone(),
         path: PathBuf::from(&runtime.path),
-    }
+    })
 }
 
 /// Resolve one runtime for one directory.
@@ -89,9 +91,12 @@ fn gone(runtime: &RuntimeSummary) -> Error {
 ///
 /// [`Error::NotAbsolute`] for a relative directory; [`Error::Manifest`] for a `mixengine.toml` that
 /// does not parse; [`Error::UnreadableProjectRow`] for a project row this build cannot read;
-/// [`Error::RuntimeUnresolved`] when nothing installed satisfies what was asked for, and
-/// [`Error::NoDefaultRuntime`] when nothing asked for anything and the kind has no default;
+/// [`RuntimeError::RuntimeUnresolved`] when nothing installed satisfies what was asked for, and
+/// [`RuntimeError::NoDefaultRuntime`] when nothing asked for anything and the kind has no default;
 /// [`Error::Database`] and [`Error::Io`] when a table or a file cannot be read.
+///
+/// [`RuntimeError::NoDefaultRuntime`]: crate::RuntimeError::NoDefaultRuntime
+/// [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
 pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedRuntime> {
     if let Some(cwd) = question.cwd
         && !cwd.is_absolute()
@@ -109,9 +114,9 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
         let default = installed
             .into_iter()
             .find(|runtime| runtime.default)
-            .ok_or(Error::NoDefaultRuntime {
+            .ok_or(Error::Runtime(crate::RuntimeError::NoDefaultRuntime {
                 kind: question.kind,
-            })?;
+            }))?;
 
         // **Said, never replaced** — roadmap task **T206d**, D2: another version standing in for a
         // default whose folder vanished would change what a project runs behind its back.
@@ -159,11 +164,11 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
 
         None => match newest(absent) {
             Some(missing) => Err(gone(&missing)),
-            None => Err(Error::RuntimeUnresolved {
+            None => Err(Error::Runtime(crate::RuntimeError::RuntimeUnresolved {
                 kind: question.kind,
                 constraint: asked.constraint,
                 origin: describe(&asked.source),
-            }),
+            })),
         },
     }
 }
@@ -622,7 +627,7 @@ mod tests {
         .expect_err("the default is gone");
 
         assert!(
-            matches!(&error, Error::RuntimeMissing { version, .. } if version.as_str() == "8.3.33"),
+            matches!(&error, Error::Runtime(crate::RuntimeError::RuntimeMissing { version, .. }) if version.as_str() == "8.3.33"),
             "{error}"
         );
     }
@@ -651,7 +656,7 @@ mod tests {
             .await
             .expect_err("nothing matching is there");
         assert!(
-            matches!(&error, Error::RuntimeMissing { version, .. } if version.as_str() == "8.3.33"),
+            matches!(&error, Error::Runtime(crate::RuntimeError::RuntimeMissing { version, .. }) if version.as_str() == "8.3.33"),
             "{error}"
         );
     }
@@ -808,7 +813,7 @@ mod tests {
             "{said}"
         );
         assert!(
-            matches!(&error, Error::RuntimeUnresolved { constraint, .. }
+            matches!(&error, Error::Runtime(crate::RuntimeError::RuntimeUnresolved { constraint, .. })
                 if install_command(RuntimeKind::Php, constraint).contains("install php 8.1.30")),
             "an exact constraint becomes the exact command: {error:?}"
         );
@@ -844,7 +849,13 @@ mod tests {
         .await
         .expect_err("nothing is installed");
 
-        assert!(matches!(error, Error::NoDefaultRuntime { .. }), "{error:?}");
+        assert!(
+            matches!(
+                error,
+                Error::Runtime(crate::RuntimeError::NoDefaultRuntime { .. })
+            ),
+            "{error:?}"
+        );
     }
 
     /// A relative directory would be walked from wherever the *daemon* was started, which is nobody's

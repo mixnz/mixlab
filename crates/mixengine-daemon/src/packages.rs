@@ -387,10 +387,12 @@ impl Packages {
             // **T206d**, D3: the install restores the row it already has.
             Ok(found) if found.is_missing() => {}
             Ok(_) => {
-                return Err(mixengine_core::Error::PackageAlreadyRecorded {
-                    package: package.to_owned(),
-                    version: target.version.clone(),
-                }
+                return Err(mixengine_core::Error::Runtime(
+                    mixengine_core::RuntimeError::PackageAlreadyRecorded {
+                        package: package.to_owned(),
+                        version: target.version.clone(),
+                    },
+                )
                 .to_wire());
             }
             Err(mixengine_core::Error::NotFound { .. }) => {}
@@ -547,16 +549,22 @@ impl Packages {
 
             // The folder came back between the check and the rename. There is nothing to adopt:
             // the row is already there, and adopting would try to write a second one.
-            Err(mixengine_core::Error::AlreadyInstalled { .. }) if restoring => {
-                return Err(mixengine_core::Error::PackageAlreadyRecorded {
-                    package: package.to_owned(),
-                    version: version.clone(),
-                }
+            Err(mixengine_core::Error::Runtime(
+                mixengine_core::RuntimeError::AlreadyInstalled { .. },
+            )) if restoring => {
+                return Err(mixengine_core::Error::Runtime(
+                    mixengine_core::RuntimeError::PackageAlreadyRecorded {
+                        package: package.to_owned(),
+                        version: version.clone(),
+                    },
+                )
                 .to_wire());
             }
 
             // **T182f, D2**, on `runtimes::perform`'s reasoning: an earlier home installed it.
-            Err(mixengine_core::Error::AlreadyInstalled { path }) => {
+            Err(mixengine_core::Error::Runtime(
+                mixengine_core::RuntimeError::AlreadyInstalled { path },
+            )) => {
                 let found = mixengine_core::adopt::walk::Found {
                     subject: mixengine_core::adopt::Subject::Package {
                         package: package.to_owned(),

@@ -57,9 +57,9 @@ impl Api {
         let restored = snapshot::restore(&self.store, &previous.path)
             .await
             .map_err(|error| match error {
-                mixengine_core::Error::RestoreRefused { .. } => {
-                    Error::new(ErrorCode::PreconditionFailed, error.to_string())
-                }
+                mixengine_core::Error::Runtime(mixengine_core::RuntimeError::RestoreRefused {
+                    ..
+                }) => Error::new(ErrorCode::PreconditionFailed, error.to_string()),
                 other => other.to_wire(),
             })?;
 

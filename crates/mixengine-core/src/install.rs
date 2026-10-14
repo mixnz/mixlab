@@ -291,7 +291,7 @@ impl Installer {
     ///
     /// # Errors
     ///
-    /// [`Error::AlreadyInstalled`] when something is already at `into`; [`Error::ArtifactFormat`]
+    /// [`RuntimeError::AlreadyInstalled`] when something is already at `into`; [`Error::ArtifactFormat`]
     /// for an archive shape this build cannot unpack; [`Error::ArtifactTransport`],
     /// [`Error::ArtifactIncomplete`] and [`Error::ArtifactTooLarge`] from the download;
     /// [`Error::ArtifactChecksum`] when what arrived is not what the index promised;
@@ -301,6 +301,8 @@ impl Installer {
     /// to stop; and [`Error::Io`] when the staging directory or the rename cannot be done.
     ///
     /// Every one of them leaves `into` untouched.
+    ///
+    /// [`RuntimeError::AlreadyInstalled`]: crate::RuntimeError::AlreadyInstalled
     pub async fn install<W: Watcher>(
         &self,
         artifact: &Artifact,
@@ -334,9 +336,9 @@ impl Installer {
         watcher: &W,
     ) -> Result<Installed> {
         if into.exists() {
-            return Err(Error::AlreadyInstalled {
+            return Err(Error::Runtime(crate::RuntimeError::AlreadyInstalled {
                 path: into.to_path_buf(),
-            });
+            }));
         }
 
         // Read before a byte is fetched. An artifact this build cannot unpack is a refusal that

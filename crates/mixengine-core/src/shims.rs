@@ -517,8 +517,10 @@ pub struct Source {
 ///
 /// # Errors
 ///
-/// [`Error::ShimMissing`] when the shim is not there, which is a broken installation rather than
+/// [`RuntimeError::ShimMissing`] when the shim is not there, which is a broken installation rather than
 /// anything a user did. A missing trampoline is not an error: see the fallback below.
+///
+/// [`RuntimeError::ShimMissing`]: crate::RuntimeError::ShimMissing
 pub fn source(program: &Path) -> Result<Source> {
     let beside = program.parent().unwrap_or_else(|| Path::new("."));
     let resolver = present(beside, BINARY)?;
@@ -543,7 +545,9 @@ fn present(directory: &Path, name: &str) -> Result<PathBuf> {
 
     match file.is_file() {
         true => Ok(file),
-        false => Err(Error::ShimMissing { path: file }),
+        false => Err(Error::Runtime(crate::RuntimeError::ShimMissing {
+            path: file,
+        })),
     }
 }
 

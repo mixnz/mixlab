@@ -286,7 +286,10 @@ fn the_shim_is_found_beside_the_program_that_asks_for_it() {
     let error = shims::source(&elsewhere).expect_err("nothing is beside it");
 
     assert!(
-        matches!(error, mixengine_core::Error::ShimMissing { .. }),
+        matches!(
+            error,
+            mixengine_core::Error::Runtime(mixengine_core::RuntimeError::ShimMissing { .. })
+        ),
         "{error}"
     );
 }

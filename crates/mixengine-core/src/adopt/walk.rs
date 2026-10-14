@@ -180,14 +180,16 @@ fn visible_dirs(dir: &Path) -> Vec<(String, PathBuf)> {
 ///
 /// # Errors
 ///
-/// [`Error::UnrecordedInstall`] naming the reason; the errors of `remember`.
+/// [`RuntimeError::UnrecordedInstall`] naming the reason; the errors of `remember`.
+///
+/// [`RuntimeError::UnrecordedInstall`]: crate::RuntimeError::UnrecordedInstall
 pub async fn claim(store: &Store, found: &Found, evidence: &Evidence<'_>) -> Result<Claimed> {
     match attempt(store, found, evidence).await? {
         Ok(claimed) => Ok(claimed),
-        Err(refusal) => Err(Error::UnrecordedInstall {
+        Err(refusal) => Err(Error::Runtime(crate::RuntimeError::UnrecordedInstall {
             path: found.path.clone(),
             reason: refusal.reason(&found.subject),
-        }),
+        })),
     }
 }
 

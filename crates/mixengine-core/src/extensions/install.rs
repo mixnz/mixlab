@@ -255,9 +255,11 @@ fn artifact_for_host(manifest: &ExtensionManifest) -> Result<Option<Artifact>> {
 /// # Errors
 ///
 /// [`Error::ExtensionField`] for a runtime kind other than PHP and for an extension id whose pool
-/// could not be named; [`Error::RuntimeUnresolved`] naming the extension when nothing installed
+/// could not be named; [`RuntimeError::RuntimeUnresolved`] naming the extension when nothing installed
 /// satisfies `requires`; [`Error::DomainTaken`] naming the holder; and whatever rendering the root
 /// refuses.
+///
+/// [`RuntimeError::RuntimeUnresolved`]: crate::RuntimeError::RuntimeUnresolved
 pub async fn site_for(
     store: &Store,
     paths: &Paths,
@@ -300,13 +302,13 @@ pub async fn site_for(
     )
     .await
     .map_err(|error| match error {
-        Error::RuntimeUnresolved {
+        Error::Runtime(crate::RuntimeError::RuntimeUnresolved {
             kind, constraint, ..
-        } => Error::RuntimeUnresolved {
+        }) => Error::Runtime(crate::RuntimeError::RuntimeUnresolved {
             kind,
             constraint,
             origin: format!("the {id} extension"),
-        },
+        }),
         other => other,
     })?;
 
@@ -600,9 +602,9 @@ async fn write_rows(
 /// Copy a directory tree, for `--path`.
 fn copy_into(from: &Path, into: &Path) -> Result<()> {
     if into.exists() {
-        return Err(Error::AlreadyInstalled {
+        return Err(Error::Runtime(crate::RuntimeError::AlreadyInstalled {
             path: into.to_path_buf(),
-        });
+        }));
     }
 
     crate::paths::create_dir(into)?;

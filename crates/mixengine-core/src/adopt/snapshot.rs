@@ -195,13 +195,17 @@ pub struct Restored {
 ///
 /// # Errors
 ///
-/// [`Error::RestoreRefused`] for a copy a newer build wrote and for a home that already has a
+/// [`RuntimeError::RestoreRefused`] for a copy a newer build wrote and for a home that already has a
 /// project, a site or a package's service; [`Error::Database`] when either database cannot be read
 /// or written, in which case nothing is kept.
+///
+/// [`RuntimeError::RestoreRefused`]: crate::RuntimeError::RestoreRefused
 pub async fn restore(store: &Store, copy: &Path) -> Result<Restored> {
-    let refuse = |reason: &str| Error::RestoreRefused {
-        path: copy.to_path_buf(),
-        reason: reason.to_owned(),
+    let refuse = |reason: &str| {
+        Error::Runtime(crate::RuntimeError::RestoreRefused {
+            path: copy.to_path_buf(),
+            reason: reason.to_owned(),
+        })
     };
 
     let previous = summary(copy).await?;
@@ -696,7 +700,13 @@ mod tests {
 
         let refused = restore(&store, &copy).await.expect_err("refused");
 
-        assert!(matches!(refused, Error::RestoreRefused { .. }), "{refused}");
+        assert!(
+            matches!(
+                refused,
+                Error::Runtime(crate::RuntimeError::RestoreRefused { .. })
+            ),
+            "{refused}"
+        );
         assert_eq!(count(&store, "SELECT COUNT(*) FROM packages").await, 0);
         assert!(copy.exists(), "the copy is left to try again");
     }
@@ -800,7 +810,13 @@ mod tests {
 
         let refused = restore(&store, &copy).await.expect_err("refused");
 
-        assert!(matches!(refused, Error::RestoreRefused { .. }), "{refused}");
+        assert!(
+            matches!(
+                refused,
+                Error::Runtime(crate::RuntimeError::RestoreRefused { .. })
+            ),
+            "{refused}"
+        );
         assert_eq!(count(&store, "SELECT COUNT(*) FROM projects").await, 0);
     }
 
