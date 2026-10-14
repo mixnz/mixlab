@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 date: 2026-10-14
 task: T207h
 ---
@@ -73,8 +73,10 @@ These are re-exports from a module to its own parent, which is what a directory 
 - proto: nearly every test builds a `ServiceSpec` and asserts on what `ServiceSpec::validate`
   says about it — the policies included, since their rules are enforced there. The module stays
   whole and moves to `service/tests.rs` (T207e), one commit after the code.
-- core: `a_context_with_no_certificate_renders_a_falsy_group` and `a_template_cannot_see_a_secret`
-  are about `Context`'s rendering and go with it; the other twelve stay.
+- core: all fourteen stay in `recipe.rs`. `a_context_with_no_certificate_renders_a_falsy_group`
+  and `a_template_cannot_see_a_secret` are about `Context`'s rendering, but they build it with the
+  `root()` helper of `recipe.rs`'s private test module, which `context.rs` cannot reach; moving
+  them would have meant a second copy of that helper.
 - platform: the two test modules are about spawning and supervising, and stay.
 
 Unit-test counts per crate are unchanged, counted by `--list` before and after (proto, core,
@@ -96,6 +98,20 @@ platform `--lib`).
   build, where `process` is absent.
 - **No `static`, no `Drop` moves** in any block (searched); `windows/process.rs`'s `HIDING` static
   and `impl Drop for Group` stay where they are.
+
+### As landed
+
+- **Imports on three systems.** `process/once.rs` holds code only Unix compiles, so an import that
+  looks unused on Windows may be used elsewhere. The imports were pruned against Windows, Linux
+  (WSL) and macOS (`--target`) together: what all three left unused went, what only the Unix half
+  uses is gated `#[cfg(not(windows))]`, and `LAST_WORDS`'s re-export `#[cfg(windows)]`, since only
+  `windows/process/child.rs` reads it.
+- **A path one level deeper.** `windows/process/child.rs` calls `restricted::spawn` as
+  `super::super::restricted`, a module of `windows` it used to reach as `super::restricted`.
+- **Doc links that crossed a file** became reference links at the end of their block: two in
+  `service/policy.rs`, six in `generate/context.rs`, four in `process/once.rs`, one in `child.rs`.
+- Three comments named an old place (`limits.rs`, `generate.rs`, `once.rs`) and were fixed in a
+  commit of their own.
 
 ## D6 — commits
 
