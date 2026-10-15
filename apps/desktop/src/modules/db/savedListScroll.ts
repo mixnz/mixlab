@@ -19,8 +19,8 @@ export interface ViewBox {
  * behind the header — after scrolling, the thing just scrolled to is still unreadable. So the
  * arithmetic lives here.
  *
- * Pure, and takes numbers rather than elements: a call from `DbTab` can run in a test without a
- * browser, and all `DbTab` still has to do is read four numbers out of the DOM.
+ * Pure, and takes numbers rather than elements: a call from `useSavedList` can run in a test
+ * without a browser, and all `useSavedList` still has to do is read four numbers out of the DOM.
  */
 export function scrollTopFor(row: RowBox, view: ViewBox, headerHeight: number): number | null {
   /** The top and bottom edges of the part really visible, in the box's content coordinates. */

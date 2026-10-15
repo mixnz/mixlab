@@ -1,7 +1,7 @@
 import type { DbKind } from "./types";
 
 /** One mark this tab's state calls for. Turned into a `TabBadge` — an icon and a translated label —
- *  by `DbTab`, which is the only place with a `t` to hand. */
+ *  by `tab/useTabBadges.tsx`, which is the only place with a `t` to hand. */
 export type DbBadgeMark = { type: "kind"; kind: DbKind } | { type: "readOnly" };
 
 /**

@@ -25,11 +25,12 @@ window, and almost every finding sits in it.
       eslint rule then rejects an import of `invoke` from `@tauri-apps/api/core` in any
       `src/modules/**` file other than an `api.ts`, so the rule is checked by a tool and not
       only written down.
-- [ ] **T208a** `db/DbTab.tsx` (1,038 lines, 17 `useState`) split the way T207k split
+- [x] **T208a** `db/DbTab.tsx` (1,038 lines, 17 `useState`) split the way T207k split
       `SqlTable.tsx`. A hook owns a connection's lifecycle: connect, test the SSH tunnel,
       disconnect, and what a closed tab leaves behind. The tab keeps only the choice between the
       connection form and the workspace. Verified in the running window and with
-      `npm run screenshots -- --check`.
+      `npm run screenshots -- --check`. Design:
+      [2026-10-15-t208a-db-tab-connection-lifecycle-design.md](../specs/2026-10-15-t208a-db-tab-connection-lifecycle-design.md).
 - [ ] **T208b** The same for the next two components of one piece:
       `db/components/TableStructure/TableStructure.tsx` (1,109) and
       `mixengine/screens/Dashboard/Dashboard.tsx` (1,107). Each gets hooks for what it does and

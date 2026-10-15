@@ -41,7 +41,7 @@ const dbEn = {
     kindSqlite: "SQLite",
     kindClickhouse: "ClickHouse",
     kindMssql: "SQL Server",
-    /** Shown where a workspace would be, for a kind `DbTab` has no workspace for: one this
+    /** Shown where a workspace would be, for a kind `ConnectionWorkspace` has no workspace for: one this
      *  build can connect to but not browse yet, or one saved by a newer version. */
     workspaceUnavailable:
       "Connected to {{kind}}. This build of MixLab cannot browse it yet, because there is no workspace for this database kind.",

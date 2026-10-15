@@ -2,7 +2,7 @@ import { PowerIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 
 interface Props {
-  /** Closes the connection and puts the form back. `DbTab.disconnect` is what this reaches. */
+  /** Closes the connection and puts the form back. `useConnection`'s `disconnect` is what this reaches. */
   onDisconnect: () => void;
 }
 

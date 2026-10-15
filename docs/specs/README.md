@@ -219,3 +219,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-14 | [`mixengine-core`'s `Error`, one enum per subject (design)](2026-10-14-t207j-core-error-groups-design.md) | T207j | implemented |
 | 2026-10-14 | [The `db` module's data grid: hooks for what it does, parts for what it draws (design)](2026-10-14-t207k-sql-table-hooks-design.md) | T207k | implemented |
 | 2026-10-14 | [The daemon's `main.rs`: `Args` and `detach` moved out, `serve` made of its steps (design)](2026-10-14-t207l-daemon-serve-steps-design.md) | T207l | implemented |
+| 2026-10-15 | [The `db` tab: a hook for the connection, parts for the form side (design)](2026-10-15-t208a-db-tab-connection-lifecycle-design.md) | T208a | implemented |

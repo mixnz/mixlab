@@ -147,8 +147,8 @@ export interface SqlDialect {
    * row writes shipped before its DDL did, see
    * `docs/specs/2026-09-04-clickhouse-row-writes-design.md`.
    *
-   * True on every engine but ClickHouse. `DbTab` folds this into the same `readOnly` a connection
-   * can be marked with by hand: see `SqlWorkspace`'s `readOnly` prop.
+   * True on every engine but ClickHouse. `ConnectionWorkspace` folds this into the same `readOnly`
+   * a connection can be marked with by hand: see `SqlWorkspace`'s `readOnly` prop.
    *
    * The Query tab's own four DML verbs are an exception to this false: they may be sent even while
    * this is `false`, as long as `rowsWritable` is `true` and the connection itself is not marked
@@ -166,7 +166,7 @@ export interface SqlDialect {
    * itself would carry. See
    * `docs/specs/2026-09-04-clickhouse-dump-restore-design.md`'s D8.
    *
-   * True on every engine, ClickHouse included. `DbTab` folds this into `SqlWorkspace`'s
+   * True on every engine, ClickHouse included. `ConnectionWorkspace` folds this into `SqlWorkspace`'s
    * `dumpRestoreReadOnly` prop, which only `DatabaseActions`' dump/restore buttons read (the Drop
    * button stays on `ddlWritable`/`schemaReadOnly`).
    */
@@ -177,7 +177,7 @@ export interface SqlDialect {
    *
    * Independent of `writable` for the reason that flag's own doc gives. True on every engine,
    * ClickHouse included — see
-   * `docs/specs/2026-09-04-clickhouse-ddl-design.md`. `DbTab` folds this into
+   * `docs/specs/2026-09-04-clickhouse-ddl-design.md`. `ConnectionWorkspace` folds this into
    * `SqlWorkspace`'s `schemaReadOnly` prop, which the Structure tab, the sidebar's "Add table" and
    * the Drop button read.
    */
@@ -187,9 +187,9 @@ export interface SqlDialect {
    * The Data tab's grid may insert, update and delete rows, and the Query tab may send `INSERT`/
    * `UPDATE`/`DELETE`/`TRUNCATE` — independent of `writable`, which gates DDL/dump/restore instead.
    *
-   * True on every engine. `DbTab` folds this into `SqlWorkspace`'s `dataReadOnly` prop, which only
-   * the Data tab's grid reads — the Query tab is not wired to this flag yet (ClickHouse's still
-   * closed there; see the design doc above's "What is left out").
+   * True on every engine. `ConnectionWorkspace` folds this into `SqlWorkspace`'s `dataReadOnly`
+   * prop, which only the Data tab's grid reads — the Query tab is not wired to this flag yet
+   * (ClickHouse's still closed there; see the design doc above's "What is left out").
    */
   rowsWritable: boolean;
 

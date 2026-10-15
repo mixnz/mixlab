@@ -75,6 +75,7 @@ src/                 React frontend
   modules/db/        The database module
     DbTab.tsx        Connection form -> connects -> renders one workspace
     api.ts           Connect, the tunnel, dumps and their tools, a handoff: every invoke no engine owns
+    tab/             DbTab's hooks and parts: the connection's lifecycle, the form, the saved list, the workspace choice
     sql/             The workspace every SQL engine shares, and the SqlApi/SqlDialect behind it
     mysql/ postgres/ What each SQL engine says for itself: api.ts, dialect.ts, columns.ts
     mssql/ clickhouse/  The same files, plus editing.ts and system.ts

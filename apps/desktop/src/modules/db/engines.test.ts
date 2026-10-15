@@ -6,14 +6,14 @@ import { DEFAULT_PORTS, type DbKind } from "./types";
 const ALL_KINDS = Object.keys(DEFAULT_PORTS) as DbKind[];
 
 /**
- * Kinds `DbTab` deliberately has no workspace for. Emptying this list is what finishing an engine
+ * Kinds `ConnectionWorkspace` deliberately has no workspace for. Emptying this list is what finishing an engine
  * looks like; adding to it is what starting one looks like.
  */
 const NO_WORKSPACE: DbKind[] = [];
 
 /**
- * Which branch of `DbTab`'s dispatch claims a kind — mirroring the if-chain at the end of that
- * file, in the order it asks. The two must agree: a branch added or reordered there is a change
+ * Which branch of `ConnectionWorkspace`'s dispatch claims a kind — mirroring the if-chain in
+ * `tab/ConnectionWorkspace.tsx`, in the order it asks. The two must agree: a branch added or reordered there is a change
  * here, the same contract `filters.rs` and `src/filters.ts` keep between them.
  */
 function workspaceFor(kind: DbKind): "sql" | "mongo" | "redis" | "none" {
