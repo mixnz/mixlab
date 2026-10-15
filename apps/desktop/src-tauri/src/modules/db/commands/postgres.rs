@@ -385,7 +385,7 @@ pub async fn postgres_dump(
     let transfer = Transfer::start(&state, &id);
     let cancelled = transfer.flag();
     in_background(move || {
-        dump::postgres_dump(
+        postgres::dump::dump(
             &tool,
             &endpoint.host,
             endpoint.port,
@@ -421,7 +421,7 @@ pub async fn postgres_restore(
     let transfer = Transfer::start(&state, &id);
     let cancelled = transfer.flag();
     in_background(move || {
-        dump::postgres_restore(
+        postgres::dump::restore(
             &tool,
             &endpoint.host,
             endpoint.port,

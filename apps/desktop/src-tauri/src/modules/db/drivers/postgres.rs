@@ -9,6 +9,7 @@
 //!   puts schemas between the database and its tables and two schemas may hold the same name.
 
 pub mod ddl;
+pub mod dump;
 pub mod script;
 pub mod structure;
 

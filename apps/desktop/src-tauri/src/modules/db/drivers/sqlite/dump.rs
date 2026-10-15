@@ -1,10 +1,10 @@
 //! Writing a SQLite schema and its rows out as SQL, and replaying one back in.
 //!
-//! The only dump here that is not a child process. `dump.rs` runs `mysqldump`, `pg_dump` or
-//! `mongodump` — tools MixLab has to find on the machine and offer to download when they are not
-//! there — and SQLite has no equivalent worth carrying: the `sqlite3` shell is the only thing that
-//! dumps one, it is not shipped on Windows, and what it writes for the schema is already sitting in
-//! `sqlite_master` as text.
+//! The only dump here that is not a child process. `mysql/dump.rs`, `postgres/dump.rs` and
+//! `mongo/dump.rs` run `mysqldump`, `pg_dump` or `mongodump` — tools MixLab has to find on the
+//! machine and offer to download when they are not there — and SQLite has no equivalent worth
+//! carrying: the `sqlite3` shell is the only thing that dumps one, it is not shipped on Windows, and
+//! what it writes for the schema is already sitting in `sqlite_master` as text.
 //!
 //! `dump_structure` copies each `CREATE` out of `sqlite_master` verbatim — nothing is regenerated.
 //! `dump_data` cannot do the same trick: every row's value has to come back out as a SQL literal,

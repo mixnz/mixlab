@@ -211,7 +211,7 @@ pub async fn mysql_dump(
     let transfer = Transfer::start(&state, &id);
     let cancelled = transfer.flag();
     in_background(move || {
-        dump::mysql_dump(
+        mysql::dump::dump(
             &tool,
             &endpoint.host,
             endpoint.port,
@@ -252,7 +252,7 @@ pub async fn mysql_restore(
     let transfer = Transfer::start(&state, &id);
     let cancelled = transfer.flag();
     in_background(move || {
-        dump::mysql_restore(
+        mysql::dump::restore(
             &tool,
             &endpoint.host,
             endpoint.port,
