@@ -197,11 +197,29 @@ export default function Dashboard({
    */
   const order = useRef(noReadsYet());
 
+  /**
+   * The disk usage panel's reading — the copy the daemon keeps, up to a minute old.
+   *
+   * **Never awaited by `reload()`.** When the daemon holds no copy — the first read after it starts,
+   * or a return to the tab more than a minute later — this is a walk of the whole home, measured at
+   * twenty seconds on a Windows home of 80,000 files. Joined to the service table's read, it held
+   * that table on a spinner the whole time for the sake of a panel at the bottom of the page.
+   */
+  const readDisk = useCallback(async () => {
+    try {
+      setDisk(await api.diskUsage(false));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }, [t]);
+
   /* Every error passes through here into a human-readable sentence. `errorMessage` translates the
      `code` and fills in `params`, so MixEngine's `hint` reaches the user intact instead of falling
      into a promise nobody catches — a tab standing still, empty and silent, is a worse outcome than
      any message. */
   const reload = useCallback(async () => {
+    // Beside the read below, not inside it: see `readDisk`.
+    void readDisk();
     /* A loop rather than recursion: a `useCallback` cannot call itself. It goes round once more
        exactly when an event slipped in during the read just done, and stops at the first read that
        was not interrupted — each round is a real round trip, so it limits its own pace. */
@@ -210,11 +228,7 @@ export default function Dashboard({
       order.current = began.order;
       let landed;
       try {
-        const [next, list, usage] = await Promise.all([
-          api.status(),
-          api.services(),
-          api.diskUsage(false),
-        ]);
+        const [next, list] = await Promise.all([api.status(), api.services()]);
         landed = readLanded(order.current, began.seq);
         order.current = landed.order;
         // A snapshot that set off before one already drawn must not be drawn: it carries older news
@@ -223,7 +237,6 @@ export default function Dashboard({
           setStatus(next);
           setRows(rowsFrom(list.services));
           setWaiting(next.elevation?.pending ?? 0);
-          setDisk(usage);
           setLoaded(true);
         }
         setError("");
@@ -237,7 +250,7 @@ export default function Dashboard({
       }
       if (!landed.readAgain) return;
     }
-  }, [t]);
+  }, [readDisk, t]);
 
   /**
    * Whether this home has any site yet — the condition for drawing the Quick Start card (T117).
@@ -258,7 +271,7 @@ export default function Dashboard({
   }, []);
 
   /** The disk usage table's "Refresh" button — `refresh: true` walks the disk again, unlike
-   *  `reload()` above, which reads the copy the daemon keeps (up to a minute old) so that every
+   *  `readDisk()` above, which reads the copy the daemon keeps (up to a minute old) so that every
    *  return to the tab does not become a disk walk. */
   const refreshDisk = useCallback(async () => {
     setRefreshingDisk(true);
