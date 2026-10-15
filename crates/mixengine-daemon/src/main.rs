@@ -261,6 +261,15 @@ async fn run() -> anyhow::Result<()> {
              the platform puts the endpoint, under run/; the line can be removed"
         );
     }
+    // A warning rather than the two notes above: whoever set these believed they were steering a
+    // check the daemon no longer makes, and `enabled = false` in particular reads as a promise.
+    if home.config.updates.enabled.is_some() || home.config.updates.check_seconds.is_some() {
+        tracing::warn!(
+            "`[updates] enabled` and `check_seconds` in config.toml no longer do anything since \
+             T187: the daemon never looks for a newer MixEngine on its own, and MixLab checks for \
+             itself; the lines can be removed"
+        );
+    }
 
     // **Before `Store::open`, and that ordering is the point of taking it here.** `sqlx-sqlite`
     // implements the migration lock as a no-op, SQLite having no advisory lock to use, so two
