@@ -7,6 +7,8 @@
   installer, instead of a few seconds later.
 - In MixLab, Ctrl+R (⌘R on a Mac) reloads the table, structure or result on screen again. After
   tabs had been opened or closed, it could stop doing anything.
+- Packages opens faster the first time: what is installed shows at once, and the list of
+  versions to install no longer waits for each language to be downloaded one after another.
 
 ## v0.0.19
 

@@ -67,9 +67,11 @@ const DEVKIT_JOB = "devkit";
 export default function Languages({ active }: { active: boolean }) {
   const [installed, setInstalled] = useState<RuntimeSummary[]>([]);
   const [available, setAvailable] = useState<RuntimeRelease[]>([]);
-  /** False until the first read has answered — until then both lists being empty means "not known
-   *  yet", not "nothing installed". */
-  const [loaded, setLoaded] = useState(false);
+  /** False until the first read has answered — until then an empty list means "not known yet",
+   *  not "nothing installed". Two flags, not one: what is installed is read from this machine and
+   *  answers at once, while the catalogue may wait on the package index's network. */
+  const [installedLoaded, setInstalledLoaded] = useState(false);
+  const [availableLoaded, setAvailableLoaded] = useState(false);
   const [stale, setStale] = useState(false);
   const [unavailable, setUnavailable] = useState<CatalogueGap[]>([]);
   const [jobs, setJobs] = useState<JobRow[]>([]);
@@ -119,18 +121,25 @@ export default function Languages({ active }: { active: boolean }) {
   // screen clean", exactly as before.
   const reload = useCallback(
     async (stillShow = "") => {
+      // Each half is drawn as soon as it answers: the installed table must not wait on a
+      // catalogue that is fetching the package index.
+      const local = Promise.all([api.runtimesInstalled(), api.runtimesFound()])
+        .then(([inst, found]) => {
+          setInstalled(inst.runtimes);
+          setOnDisk(runtimeRowsFrom(found));
+        })
+        .finally(() => setInstalledLoaded(true));
+      const catalogue = api
+        .runtimesAvailable()
+        .then((avail) => {
+          setAvailable(avail.runtimes);
+          setStale(avail.stale);
+          setUnavailable(avail.unavailable ?? []);
+          setUpdates(avail.updates ?? []);
+        })
+        .finally(() => setAvailableLoaded(true));
       try {
-        const [inst, avail, found] = await Promise.all([
-          api.runtimesInstalled(),
-          api.runtimesAvailable(),
-          api.runtimesFound(),
-        ]);
-        setInstalled(inst.runtimes);
-        setOnDisk(runtimeRowsFrom(found));
-        setAvailable(avail.runtimes);
-        setStale(avail.stale);
-        setUnavailable(avail.unavailable ?? []);
-        setUpdates(avail.updates ?? []);
+        await Promise.all([local, catalogue]);
         setError(stillShow);
         // Read beside the rest and never at its expense: a listing that fails here costs the
         // devkit button, not the screen (T206a).
@@ -144,8 +153,6 @@ export default function Languages({ active }: { active: boolean }) {
           .catch(() => setDevkitHere({ state: "absent" }));
       } catch (e) {
         setError(errorMessage(t, e));
-      } finally {
-        setLoaded(true);
       }
     },
     [t],
@@ -535,8 +542,8 @@ export default function Languages({ active }: { active: boolean }) {
 
       <OnDiskCard rows={onDisk} adopting={adopting} onAdopt={(row) => void adopt(row)} />
 
-      <Card title={t("mixengine.packages.installedTitle")} count={loaded ? installed.length : undefined} flush>
-        {!loaded ? (
+      <Card title={t("mixengine.packages.installedTitle")} count={installedLoaded ? installed.length : undefined} flush>
+        {!installedLoaded ? (
           <LoadingState />
         ) : installed.length === 0 ? (
           <EmptyState title={t("mixengine.packages.installedEmpty")} />
@@ -655,7 +662,7 @@ export default function Languages({ active }: { active: boolean }) {
       <Card
         title={t("mixengine.packages.availableTitle")}
         count={
-          loaded ? (
+          availableLoaded ? (
             <>
               {lineGroups.length}
               <StaleBadge stale={stale} />
@@ -682,7 +689,7 @@ export default function Languages({ active }: { active: boolean }) {
         }
         flush
       >
-        {!loaded ? (
+        {!availableLoaded ? (
           <LoadingState />
         ) : lineGroups.length === 0 ? (
           filter.trim() !== "" && <EmptyState title={t("mixengine.packages.noMatches")} />
