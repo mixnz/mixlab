@@ -1,7 +1,8 @@
 //! The walk, and the closed list of what a cleanup may remove — roadmap task **T96**.
 //!
-//! **Nothing here follows a symbolic link.** `read_dir` plus `symlink_metadata`, descending only
-//! into an entry whose own metadata says it is a directory. Without that rule a link somebody put in
+//! **Nothing here follows a symbolic link.** `read_dir` plus each entry's own metadata
+//! (`DirEntry::metadata`, or `symlink_metadata` where there is no entry), descending only into an
+//! entry whose own metadata says it is a directory. Without that rule a link somebody put in
 //! `data/` pointing at `/` is a walk of the whole disk reported as MixEngine's, and a cycle is a
 //! hang.
 //!
@@ -103,17 +104,18 @@ pub(super) fn walk(directory: &Path) -> Measured {
                 continue;
             };
 
-            let path = entry.path();
-
-            // `symlink_metadata` and not `metadata`: the second follows the link, which is both the
-            // wrong size and, for a link to a directory, the wrong tree.
-            let Ok(meta) = std::fs::symlink_metadata(&path) else {
+            // The entry's own metadata, which follows no link — `fs::metadata` would, and that is
+            // both the wrong size and, for a link to a directory, the wrong tree. Not
+            // `symlink_metadata(&path)` either: on Windows that opens every file, and with an
+            // antivirus scanning each open a home of 80,000 files took twenty seconds, while the
+            // entry already carries what the directory listing said.
+            let Ok(meta) = entry.metadata() else {
                 // Gone between the listing and the reading. Ordinary, and not worth a note.
                 continue;
             };
 
             if meta.is_dir() {
-                pending.push(path);
+                pending.push(entry.path());
             } else {
                 measured.bytes = measured.bytes.saturating_add(meta.len());
                 measured.files = measured.files.saturating_add(1);

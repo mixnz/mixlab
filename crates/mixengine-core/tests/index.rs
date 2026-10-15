@@ -706,6 +706,30 @@ async fn a_kind_on_first_use_that_is_wrong_is_missing_and_the_others_answer() {
     assert!(repaired.index.artifact("php", "8.3.33").is_some());
 }
 
+/// Kinds asked for the first time are fetched at once, not one after another: a cold Packages
+/// screen asks for every kind there is, behind the one lock every listing takes, and one round trip
+/// per kind was seconds of Loading.
+#[tokio::test]
+async fn kinds_on_first_use_are_fetched_at_once() {
+    let cache = tempfile::tempdir().expect("a cache directory");
+    let registry = MockRegistry::start(&index_at("2026-09-30T00:00:00Z")).await;
+    registry.slow_kinds(Duration::from_millis(200));
+
+    let read = client(&registry, cache.path())
+        .kinds(&["php", "node"])
+        .await
+        .expect("the index is readable");
+
+    assert!(read.index.artifact("php", "8.3.33").is_some());
+    assert!(read.index.artifact("node", "22.1.0").is_some());
+    assert_eq!(
+        registry.most_kinds_in_flight(),
+        2,
+        "php and node were fetched one after another; requests: {:?}",
+        registry.requests()
+    );
+}
+
 /// Step 5, the other half: a kind that does not match the cached root means the root is behind.
 #[tokio::test]
 async fn a_kind_behind_a_stale_root_is_found_after_one_refresh() {

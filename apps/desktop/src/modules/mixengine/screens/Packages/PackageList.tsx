@@ -44,8 +44,20 @@ export default function PackageList({
   state: PackagesState;
 }) {
   const { t } = useTranslation();
-  const { installed, available, loaded, stale, unavailable, jobs, installingJob, error, clearError, notice, clearNotice } =
-    state;
+  const {
+    installed,
+    available,
+    installedLoaded,
+    availableLoaded,
+    stale,
+    unavailable,
+    jobs,
+    installingJob,
+    error,
+    clearError,
+    notice,
+    clearNotice,
+  } = state;
   const onDisk = packageRowsFrom(state.onDisk, (name) => packageCategory(name) === category);
 
   // Only the "not installed" table is filtered: the table above is what this machine holds, usually
@@ -134,8 +146,8 @@ export default function PackageList({
         onAdopt={(row) => void state.adopt(row.name, row.version)}
       />
 
-      <Card title={t("mixengine.packages.installedTitle")} count={loaded ? installedInCategory.length : undefined} flush>
-        {!loaded ? (
+      <Card title={t("mixengine.packages.installedTitle")} count={installedLoaded ? installedInCategory.length : undefined} flush>
+        {!installedLoaded ? (
           <LoadingState />
         ) : installedInCategory.length === 0 ? (
           <EmptyState title={t("mixengine.packages.installedEmpty")} />
@@ -234,7 +246,7 @@ export default function PackageList({
       <Card
         title={t("mixengine.packages.availableTitle")}
         count={
-          loaded ? (
+          availableLoaded ? (
             <>
               {lineGroups.length}
               <StaleBadge stale={stale} />
@@ -262,7 +274,7 @@ export default function PackageList({
         }
         flush
       >
-        {!loaded ? (
+        {!availableLoaded ? (
           <LoadingState />
         ) : lineGroups.length === 0 ? (
           filter.trim() !== "" && <EmptyState title={t("mixengine.packages.noMatches")} />

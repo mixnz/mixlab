@@ -805,6 +805,49 @@ impl PackageIndex {
         Ok(fetched)
     }
 
+    /// Several kind files, [`AT_ONCE`] at a time, each with its own answer.
+    ///
+    /// Unlike [`Self::fetch_kinds`], a failure ends nothing: a kind that could not be read is
+    /// missing from the view and does not fail the others. A kind whose task did not finish is
+    /// absent from the map, and the caller fetches it again on its own.
+    async fn fetch_each(
+        &self,
+        root: &Root,
+        kinds: &[String],
+    ) -> BTreeMap<String, Result<FetchedKind>> {
+        let mut fetched = BTreeMap::new();
+
+        for batch in kinds.chunks(AT_ONCE) {
+            let mut running = tokio::task::JoinSet::new();
+            // A task that did not finish hands back its id and not its kind, so the kind is kept
+            // beside the id to be named in the warning.
+            let mut named = std::collections::HashMap::new();
+            for kind in batch {
+                let fetching = self.fetching(root, kind);
+                let owned = kind.clone();
+                let task = running.spawn(async move { (owned, fetching.await) });
+                named.insert(task.id(), kind.as_str());
+            }
+
+            while let Some(joined) = running.join_next().await {
+                match joined {
+                    Ok((kind, one)) => {
+                        fetched.insert(kind, one);
+                    }
+                    // Left out of the map, so the caller fetches it again on its own — said here,
+                    // because nothing else would say that a task panicked or was cancelled.
+                    Err(error) => tracing::warn!(
+                        kind = named.get(&error.id()).copied().unwrap_or("unknown"),
+                        %error,
+                        "fetching a kind of the package index did not finish; trying it again alone"
+                    ),
+                }
+            }
+        }
+
+        fetched
+    }
+
     /// Write `bytes` beside `name` and rename over it, so a reader sees the old file or the new one.
     fn store(&self, name: &str, bytes: &[u8]) -> Result<()> {
         let path = self.path(name);
@@ -976,14 +1019,15 @@ impl PackageIndex {
         Ok(Refreshed::New(held))
     }
 
-    /// Fetch a kind nobody has asked for yet, against the cached root, and keep it.
-    async fn first_use(
+    /// Keep a kind nobody had asked for yet, fetched against the cached root by [`Self::fetch_each`].
+    fn first_use(
         &self,
         state: &mut State,
         held: &HeldRoot,
         kind: &str,
+        fetched: Result<FetchedKind>,
     ) -> Result<Arc<[Package]>> {
-        let (_, bytes, packages) = self.fetching(&held.root, kind).await?;
+        let (_, bytes, packages) = fetched?;
         let packages: Arc<[Package]> = packages.into();
         let name = schema2::kind_file(kind);
 
@@ -1031,6 +1075,24 @@ impl PackageIndex {
             let mut kinds: BTreeMap<String, Arc<[Package]>> = BTreeMap::new();
             let mut missing = Vec::new();
 
+            // **Every kind not held yet is fetched at once**, before the walk below: one after
+            // another, a first listing waited one round trip per kind, behind the lock every
+            // listing takes — a cold Packages screen spent seconds on Loading.
+            let unheld: Vec<String> = names
+                .iter()
+                .filter(|kind| {
+                    held.root.kinds.contains_key(*kind)
+                        && schema2::is_kind_name(kind)
+                        && self.cached_kind(state, &held.root, kind).is_none()
+                        && !state
+                            .refused
+                            .get(*kind)
+                            .is_some_and(|(under, _)| *under == held.signature)
+                })
+                .cloned()
+                .collect();
+            let mut fetched = self.fetch_each(&held.root, &unheld).await;
+
             for kind in names {
                 // A kind the root does not name does not exist. One whose name is not a name
                 // never becomes a path or a URL.
@@ -1060,7 +1122,11 @@ impl PackageIndex {
                     continue;
                 }
 
-                let tried = self.first_use(state, &held, &kind).await;
+                let one = match fetched.remove(&kind) {
+                    Some(one) => one,
+                    None => self.fetching(&held.root, &kind).await,
+                };
+                let tried = self.first_use(state, &held, &kind, one);
 
                 let refusal = match tried {
                     Ok(packages) => {

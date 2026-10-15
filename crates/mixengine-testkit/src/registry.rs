@@ -23,6 +23,7 @@ use std::convert::Infallible;
 use std::io::Cursor;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use http_body_util::Full;
 use hyper::body::Bytes;
@@ -61,6 +62,13 @@ struct Published {
     assets: BTreeMap<String, Vec<u8>>,
     cut_after: Option<usize>,
     ranges: Vec<Option<String>>,
+
+    /// How long each kind file is held before it is answered; `None` answers at once.
+    kind_delay: Option<Duration>,
+
+    /// Kind files being answered right now, and the most there have been at once.
+    kinds_in_flight: usize,
+    most_kinds_in_flight: usize,
 }
 
 /// Index schema 2 as this registry serves it: one signed root, one file per kind.
@@ -251,6 +259,9 @@ impl MockRegistry {
             assets: BTreeMap::new(),
             cut_after: None,
             ranges: Vec::new(),
+            kind_delay: None,
+            kinds_in_flight: 0,
+            most_kinds_in_flight: 0,
         }));
 
         let serving = Arc::clone(&published);
@@ -409,6 +420,21 @@ impl MockRegistry {
             .expect("the registry lock")
             .requests
             .clear();
+    }
+
+    /// Hold every kind file for `delay` before answering it, so that requests a client makes at
+    /// once overlap here and [`MockRegistry::most_kinds_in_flight`] can tell.
+    pub fn slow_kinds(&self, delay: Duration) {
+        self.published.lock().expect("the registry lock").kind_delay = Some(delay);
+    }
+
+    /// The most kind files that were being answered at the same moment.
+    #[must_use]
+    pub fn most_kinds_in_flight(&self) -> usize {
+        self.published
+            .lock()
+            .expect("the registry lock")
+            .most_kinds_in_flight
     }
 
     /// Replace what is served at `/extensions.json`, signed with the same key as `/index.json`.
@@ -582,6 +608,24 @@ async fn answer(
             }
         }
     };
+
+    let delay = request
+        .uri()
+        .path()
+        .starts_with("/index-v2-")
+        .then(|| published.lock().expect("the registry lock").kind_delay)
+        .flatten();
+    if let Some(delay) = delay {
+        {
+            let mut published = published.lock().expect("the registry lock");
+            published.kinds_in_flight += 1;
+            published.most_kinds_in_flight = published
+                .most_kinds_in_flight
+                .max(published.kinds_in_flight);
+        }
+        tokio::time::sleep(delay).await;
+        published.lock().expect("the registry lock").kinds_in_flight -= 1;
+    }
 
     Ok(Response::builder()
         .status(status)
