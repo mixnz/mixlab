@@ -24,9 +24,12 @@ import { jobFinished, versionKey } from "../../runtimeState";
 export interface PackagesState {
   installed: PackageSummary[];
   available: PackageRelease[];
-  /** False until the first read has answered — until then both lists being empty means "not known
-   *  yet", not "nothing installed". */
-  loaded: boolean;
+  /** False until the first read of what is installed has answered — until then an empty list means
+   *  "not known yet", not "nothing installed". */
+  installedLoaded: boolean;
+  /** The same for the catalogue, which may wait on the package index's network while the
+   *  installed list has long answered. */
+  availableLoaded: boolean;
   stale: boolean;
   /** What the package index could not be read for (T196); empty when it read everything. */
   unavailable: CatalogueGap[];
@@ -73,7 +76,8 @@ export interface PackagesState {
 export function usePackages(active: boolean): PackagesState {
   const [installed, setInstalled] = useState<PackageSummary[]>([]);
   const [available, setAvailable] = useState<PackageRelease[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [installedLoaded, setInstalledLoaded] = useState(false);
+  const [availableLoaded, setAvailableLoaded] = useState(false);
   const [onDisk, setOnDisk] = useState<PackageFoundList>({ found: [] });
   const [adopting, setAdopting] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
@@ -108,23 +112,28 @@ export function usePackages(active: boolean): PackagesState {
   // just as before.
   const reload = useCallback(
     async (stillShow = "") => {
+      // Each half is drawn as soon as it answers, as `Languages.tsx` does it: the installed table
+      // must not wait on a catalogue that is fetching the package index.
+      const local = Promise.all([api.packagesInstalled(), api.packagesFound()])
+        .then(([inst, found]) => {
+          setInstalled(inst.packages);
+          setOnDisk(found);
+        })
+        .finally(() => setInstalledLoaded(true));
+      const catalogue = api
+        .packagesAvailable()
+        .then((avail) => {
+          setAvailable(avail.packages);
+          setStale(avail.stale);
+          setUnavailable(avail.unavailable ?? []);
+          setUpdates(avail.updates ?? []);
+        })
+        .finally(() => setAvailableLoaded(true));
       try {
-        const [inst, avail, found] = await Promise.all([
-          api.packagesInstalled(),
-          api.packagesAvailable(),
-          api.packagesFound(),
-        ]);
-        setInstalled(inst.packages);
-        setOnDisk(found);
-        setAvailable(avail.packages);
-        setStale(avail.stale);
-        setUnavailable(avail.unavailable ?? []);
-        setUpdates(avail.updates ?? []);
+        await Promise.all([local, catalogue]);
         setError(stillShow);
       } catch (e) {
         setError(errorMessage(t, e));
-      } finally {
-        setLoaded(true);
       }
     },
     [t],
@@ -361,7 +370,8 @@ export function usePackages(active: boolean): PackagesState {
   return {
     installed,
     available,
-    loaded,
+    installedLoaded,
+    availableLoaded,
     stale,
     unavailable,
     jobs,
