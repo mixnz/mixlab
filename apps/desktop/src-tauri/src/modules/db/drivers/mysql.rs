@@ -1,3 +1,4 @@
+pub mod dump;
 pub mod script;
 pub mod structure;
 

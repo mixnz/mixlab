@@ -1,3 +1,5 @@
+pub mod dump;
+
 use super::filters::{split_list_parts, unquote, ListItem};
 use crate::error::AppError;
 use crate::modules::db::models::ServerInfo;

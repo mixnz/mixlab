@@ -38,7 +38,7 @@ pub async fn mongo_dump(
     let cancelled = transfer.flag();
     in_background(move || {
         let endpoint = endpoint.as_ref().map(|(host, port)| (host.as_str(), *port));
-        dump::mongo_dump(
+        mongo::dump::dump(
             &tool,
             &uri,
             endpoint,
@@ -75,7 +75,7 @@ pub async fn mongo_restore(
     let cancelled = transfer.flag();
     in_background(move || {
         let endpoint = endpoint.as_ref().map(|(host, port)| (host.as_str(), *port));
-        dump::mongo_restore(
+        mongo::dump::restore(
             &tool,
             &uri,
             endpoint,
