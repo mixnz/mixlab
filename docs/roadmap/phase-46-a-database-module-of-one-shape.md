@@ -31,11 +31,12 @@ window, and almost every finding sits in it.
       connection form and the workspace. Verified in the running window and with
       `npm run screenshots -- --check`. Design:
       [2026-10-15-t208a-db-tab-connection-lifecycle-design.md](../specs/2026-10-15-t208a-db-tab-connection-lifecycle-design.md).
-- [ ] **T208b** The same for the next two components of one piece:
+- [x] **T208b** The same for the next two components of one piece:
       `db/components/TableStructure/TableStructure.tsx` (1,109) and
       `mixengine/screens/Dashboard/Dashboard.tsx` (1,107). Each gets hooks for what it does and
       components for what it draws. The Dashboard half is checked with MixEngine running and with
-      it stopped.
+      it stopped. Design:
+      [2026-10-15-t208b-table-structure-and-dashboard-hooks-design.md](../specs/2026-10-15-t208b-table-structure-and-dashboard-hooks-design.md).
 - [ ] **T208c** The `db` module's folders follow its engines. The 40-odd files at the root of
       `src/modules/db/` go into folders by subject: `saved/` (connections, their store, their
       scroll), `queries/` (drafts, history, snippets), `sync/` and `tab/`. The components only

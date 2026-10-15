@@ -341,6 +341,14 @@ describe("widestValues", () => {
     expect(widestValues(rows, 1, cell)[0]).toEqual(["aaaa", "bbb", "cc"]);
   });
 
+  it("keeps each value once", () => {
+    // A sizer row keys its cells by value, so a repeat is two React children with one key — and a
+    // repeat says nothing about width the first one did not. A wide table's Type column is the
+    // case: `text`, `text`, `text`.
+    const rows = [["text"], ["text"], ["integer"], ["text"]];
+    expect(widestValues(rows, 1, cell)[0]).toEqual(["integer", "text"]);
+  });
+
   it("measures each column against its own values", () => {
     const rows = [
       ["a", "xxxxx"],

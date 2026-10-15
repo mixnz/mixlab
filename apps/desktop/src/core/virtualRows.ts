@@ -449,6 +449,8 @@ export function widestValues<Row>(
       // that keeps the scan cheap. Everything else is built the way the cell will be drawn.
       const text = typeof raw === "string" ? raw : displayValue(raw);
       const list = picks[c];
+      // Once is enough: a repeat measures nothing new, and the sizer rows key their cells by value.
+      if (list.includes(text)) continue;
       if (list.length < WIDTH_SAMPLES) {
         list.push(text);
         list.sort((a, b) => b.length - a.length);

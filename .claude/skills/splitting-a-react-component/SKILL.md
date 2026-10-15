@@ -48,15 +48,21 @@ helpers; copy it beside the step script you write for the screen.
 2. **Put the script under the repository.** Vite serves the repository root through
    `/@fs/<absolute path>`, and nothing outside it. A git-ignored directory such as `.superpowers/`
    works: `await (0, eval)(await (await fetch("/@fs/C:/…/steps.js")).text())`.
-3. **Stub only what the demo lacks, in the fixture's shape.** Look in `demo/fixtures/*.ts` first. A
+3. **Stub only what the demo lacks, in the fixture's shape.** `window.__demo.unmocked` names every
+   command nothing answered; for each, look in `demo/fixtures/*.ts` or `bindings/` first. A
    stub answering `secrets_load` with `{}`, where the fixture answers `{ password: "demo" }`, made a
    saved entry change under the form, which read as a regression until `master` did the same.
 4. **Prove the recording is deterministic.** Run it twice on `master` and get no differences, then
    keep it in `sessionStorage`. A reload keeps that, and keeps the stubs out of the baseline.
-5. **Check the reload served the new code** with `fetch("/src/…/File.tsx")`. Resource timing stops
-   at 250 entries and cannot tell you.
-6. **Bracket the console.** Errors from HMR while files were being deleted stay in the log, so read
-   only what lies between two `console.error` marks around the run.
+5. **Check the reload served the new code** with `fetch("/src/…/File.tsx")`, looking for a new
+   identifier: Vite rewrites relative imports to absolute paths, so `"./shape"` is never in it.
+   Resource timing stops at 250 entries and cannot tell you.
+6. **Bracket the console.** Errors from HMR while files were half-edited stay in the log, so read
+   only what lies between two `console.error` marks around the run. Read React's warnings there
+   too: T208b's run showed duplicate keys in a sizer row, an old bug the move had only carried.
+
+A tab restored from the session is not mounted until it is shown. To see a screen come up under a
+stub — the MixEngine gate with the daemon "stopped" — install the stub first, then click the tab.
 
 Driving React from a script: set `value` with the native setter and fire `input`. Fire `dblclick`
 and `contextmenu` with `dispatchEvent`. Find fields by their label text, which can change with
