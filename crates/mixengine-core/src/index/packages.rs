@@ -819,15 +819,28 @@ impl PackageIndex {
 
         for batch in kinds.chunks(AT_ONCE) {
             let mut running = tokio::task::JoinSet::new();
+            // A task that did not finish hands back its id and not its kind, so the kind is kept
+            // beside the id to be named in the warning.
+            let mut named = std::collections::HashMap::new();
             for kind in batch {
                 let fetching = self.fetching(root, kind);
-                let kind = kind.clone();
-                running.spawn(async move { (kind, fetching.await) });
+                let owned = kind.clone();
+                let task = running.spawn(async move { (owned, fetching.await) });
+                named.insert(task.id(), kind.as_str());
             }
 
             while let Some(joined) = running.join_next().await {
-                if let Ok((kind, one)) = joined {
-                    fetched.insert(kind, one);
+                match joined {
+                    Ok((kind, one)) => {
+                        fetched.insert(kind, one);
+                    }
+                    // Left out of the map, so the caller fetches it again on its own — said here,
+                    // because nothing else would say that a task panicked or was cancelled.
+                    Err(error) => tracing::warn!(
+                        kind = named.get(&error.id()).copied().unwrap_or("unknown"),
+                        %error,
+                        "fetching a kind of the package index did not finish; trying it again alone"
+                    ),
                 }
             }
         }
