@@ -33,20 +33,23 @@ The database module, under `modules/db/`:
 | `drivers/mysql.rs` | Connect, query, row/value conversion, table data, CRUD. |
 | `drivers/mysql/structure.rs` | Columns and indexes: read, ADD/CHANGE/DROP. |
 | `drivers/mysql/script.rs` | Splits user SQL into statements and runs them one by one. |
+| `drivers/mysql/dump.rs` | Backup and restore with `mysqldump` and `mysql`, the credentials in an option file only this user can read. |
 | `drivers/postgres.rs` | Connect, list, read a page — with a pool **per database**, since a PostgreSQL connection cannot see into another. |
 | `drivers/postgres/structure.rs` | The Structure and Statistics tabs, reported in the shapes `mysql/structure.rs` reports so one grid draws either. |
 | `drivers/postgres/ddl.rs` | Tables, columns and indexes changed — one property at a time, unlike MySQL's `CHANGE COLUMN`. |
 | `drivers/postgres/script.rs` | The counterpart of `mysql/script.rs`: split, run statement by statement, validate one without running it. |
+| `drivers/postgres/dump.rs` | Backup and restore with `pg_dump` and `psql`, the credentials in a password file and the database's name in the environment. |
 | `drivers/sqlite.rs` | Connect to a **file**, read a page, write rows. No endpoint, no tunnel, no TLS — and metadata read through the `pragma_*` table-valued functions, since a `PRAGMA` takes no bind parameters. |
 | `drivers/sqlite/structure.rs` | The Structure and Statistics tabs. Row counts are counted rather than estimated, and sizes come from `dbstat` — which exists because the app bundles its own SQLite. |
 | `drivers/sqlite/ddl.rs` | What SQLite's `ALTER TABLE` can do, which is four things. A column edit that is not a rename is refused by name rather than rebuilt around. |
 | `drivers/sqlite/script.rs` | Split and run. No cancel: the statement runs in this process, so there is no session to stop. |
 | `drivers/sqlite/dump.rs` | Structure out of `sqlite_master` and back in. The one dump that is not a child process. |
 | `drivers/mongo.rs` | Connect, list, find, paging, document CRUD. |
+| `drivers/mongo/dump.rs` | Backup and restore with `mongodump` and `mongorestore`, which take a URI and nothing else. |
 | `drivers/redis.rs` | Connect, SCAN paging, typed value reads, delete. |
 | `drivers/clickhouse.rs` | HTTP interface, no `sqlx` driver exists for it. Read-only in v1: list, table data, structure, stats, schema outline — no write commands are registered at all. |
 | `drivers/clickhouse/script.rs` | Split and run, one request per statement — the HTTP interface refuses a body holding more than one. `validate` runs `EXPLAIN AST`, which parses without executing. |
-| `drivers/dump.rs` | Backup and restore by driving the vendors' own tools — `mysqldump`, `pg_dump`, `mongodump` and their restores. |
+| `drivers/dump.rs` | What every engine's backup shares — the mode, the progress a transfer reports, calling it off — and the child process the vendors' tools run in. |
 | `drivers/tools.rs` | Where those tools come from: the pinned downloads, and `PG_VERSION`. |
 | `drivers/filters.rs` | Shared filter-value parsing (`split_list` etc.). |
 

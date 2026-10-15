@@ -54,12 +54,13 @@ window, and almost every finding sits in it.
       with their `tests.rs`. Only files move: the Rust test count stays at 807. It comes before
       T208f so that the shared trait has one place per engine to be implemented in. Design:
       [2026-10-15-t208d-db-drivers-one-folder-per-engine-design.md](../specs/2026-10-15-t208d-db-drivers-one-folder-per-engine-design.md).
-- [ ] **T208e** Room under the size limit. Seven files are within 125 lines of 1,500:
+- [x] **T208e** Room under the size limit. Seven files are within 125 lines of 1,500:
       `drivers/sqlite/ddl.rs` (1,495), `sync/session.rs` (1,470), `drivers/clickhouse.rs`
       (1,434), `drivers/postgres.rs` (1,426), `drivers/dump.rs` (1,396), `drivers/sqlite.rs`
       (1,385) and `drivers/mysql/structure.rs` (1,378). The next feature in any of them would
       hit the gate. Tests go out to `foo/tests.rs` under T207e's convention, and the files whose
-      code alone is near the limit split by capability, as T207h did.
+      code alone is near the limit split by capability, as T207h did. Design:
+      [2026-10-15-t208e-room-under-the-size-limit-design.md](../specs/2026-10-15-t208e-room-under-the-size-limit-design.md).
 - [ ] **T208f** One command set for the SQL engines. The frontend already sees MySQL, PostgreSQL,
       SQL Server, ClickHouse and SQLite through one `SqlApi`/`SqlDialect`. The Rust does not: it
       has about 25 commands per engine (`mysql_list_tables`, `postgres_list_tables`, …), about
