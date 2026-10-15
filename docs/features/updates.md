@@ -150,7 +150,7 @@ too.
 - The daemon never checks on its own (ADR 0056 rule 8). MixLab checks 30 seconds after its window
   opens and once a day while its automatic switch is on; those failures are silent, because an
   offline machine must never see an error. `[updates] enabled` and `check_seconds` are read and
-  ignored.
+  ignored, whatever they hold, and the daemon logs a warning at start when either is set.
 - `mix self-update --check` forces an immediate check and prints the answer.
 
 ## User flow

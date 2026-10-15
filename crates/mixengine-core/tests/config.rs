@@ -425,6 +425,34 @@ fn a_retired_ipc_path_is_read_and_ignored() {
 }
 
 #[test]
+fn the_retired_update_keys_are_read_and_ignored_whatever_they_hold() {
+    // Before T187 `check_seconds = 0` was refused, and the refusal pointed at `enabled = false`.
+    // Neither key does anything now, so a value that once meant "check constantly" must not be
+    // the one thing that stops a home from starting.
+    let home = TempDir::new().unwrap();
+    let path = write(&home, "[updates]\nenabled = false\ncheck_seconds = 0\n");
+
+    let config = config::load(&path).unwrap();
+
+    assert_eq!(config.updates.enabled, Some(false));
+    assert_eq!(config.updates.check_seconds, Some(0));
+}
+
+#[test]
+fn a_home_that_never_set_the_retired_update_keys_holds_neither() {
+    // The daemon warns when either is `Some`, so an untouched home must hold `None` for both — a
+    // default that filled them in would warn everybody about a line they never wrote.
+    let home = TempDir::new().unwrap();
+    let path = write(&home, "[updates]\n");
+
+    let config = config::load(&path).unwrap();
+
+    assert_eq!(config.updates, Updates::default());
+    assert_eq!(config.updates.enabled, None);
+    assert_eq!(config.updates.check_seconds, None);
+}
+
+#[test]
 fn the_template_as_shipped_changes_nothing() {
     let config: Config = toml::from_str(TEMPLATE).unwrap();
 
@@ -436,6 +464,7 @@ fn the_template_as_shipped_changes_nothing() {
 const RELEASED_TEMPLATES: &[(&str, &str)] = &[
     ("v0.0.1", include_str!("released-templates/v0.0.1.toml")),
     ("v0.0.7", include_str!("released-templates/v0.0.7.toml")),
+    ("v0.0.16", include_str!("released-templates/v0.0.16.toml")),
 ];
 
 /// **`config.toml` is written once and never rewritten**, so a home keeps the template of the

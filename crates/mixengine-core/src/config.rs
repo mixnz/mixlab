@@ -49,7 +49,7 @@ pub struct Config {
     pub sharing: Sharing,
     /// What a site answers when it has nothing to serve.
     pub sites: Sites,
-    /// Looking for a newer MixEngine.
+    /// `[updates]`, which nothing reads any more — see [`Updates`].
     pub updates: Updates,
     /// How often what is running is measured.
     pub metrics: Metrics,
@@ -369,52 +369,18 @@ where
 ///
 /// **Neither key does anything any more** ([ADR 0056](../../../docs/decisions/0056-mixlab-stands-without-mixengine.md)
 /// rule 8): the daemon never reads the update feed unprompted, so there is no check at start and no
-/// clock for them to turn off or to time. They are kept, and still validated, because this struct is
-/// `deny_unknown_fields`: removing them would make every `config.toml` that sets them fail to load.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+/// clock for them to turn off or to time. They are **read and ignored, never refused**, the way
+/// [`RetiredBin`] is: the struct is `deny_unknown_fields`, `config.toml` is never rewritten, and a
+/// home that set either one — to any value, `check_seconds = 0` included — must still start. The
+/// daemon logs that they do nothing.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Updates {
     /// Whether the daemon read the update feed on its own, before T187. Ignored.
-    pub enabled: bool,
+    pub enabled: Option<bool>,
 
     /// How long there was between those checks, before T187. Ignored.
-    #[serde(deserialize_with = "update_check")]
-    pub check_seconds: u64,
-}
-
-/// The default for [`Updates::check_seconds`]: once a day, which is what
-/// `docs/features/updates.md` promises.
-const DEFAULT_UPDATE_CHECK_SECONDS: u64 = 24 * 60 * 60;
-
-/// [`Updates`] writes its own [`Default`] for [`Sharing`]'s reason: a derived one would be zero
-/// seconds and `false`, and neither is this feature's default.
-impl Default for Updates {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            check_seconds: DEFAULT_UPDATE_CHECK_SECONDS,
-        }
-    }
-}
-
-/// Refuse an update check of zero, on [`sharing_check`]'s reasoning.
-///
-/// Somebody who wants no checks at all writes `enabled = false`, which is the key that says so.
-fn update_check<'de, D>(deserializer: D) -> std::result::Result<u64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let seconds = u64::deserialize(deserializer)?;
-
-    if seconds == 0 {
-        return Err(serde::de::Error::custom(format!(
-            "an update check every 0 seconds is a loop with no pause in it rather than a schedule; \
-             give it a number of seconds, set `enabled = false` to stop checking, or remove the key \
-             for the default of {DEFAULT_UPDATE_CHECK_SECONDS}"
-        )));
-    }
-
-    Ok(seconds)
+    pub check_seconds: Option<u64>,
 }
 
 /// What the daemon writes down about a bug in itself — roadmap task **T91**.
@@ -435,7 +401,7 @@ pub struct Crash {
     pub enabled: bool,
 }
 
-/// [`Crash`] writes its own [`Default`] for [`Updates`]' reason: a derived one would be `false`,
+/// [`Crash`] writes its own [`Default`] for [`Sites`]' reason: a derived one would be `false`,
 /// and a crash nobody recorded is a crash nobody can fix — the switch would have to be thrown
 /// *before* the first one, which is the moment its answer is always "no".
 impl Default for Crash {
