@@ -14,7 +14,7 @@ import { useSqlApi, useSqlDialect } from "../../sql/context";
 import { IS_MAC, hasPrimaryModifier } from "../../../../core/platform";
 import { useReloadShortcut, withReloadShortcut } from "../../../../core/reload";
 import { useShortcut } from "../../../../core/shortcuts";
-import { filterRowFor, toQueryFilters } from "../../filters";
+import { filterRowFor, toQueryFilters } from "../../workspace/filters";
 import { FILTER_OPERATORS, operatorArity, type FilterOperator } from "../../sql/filters";
 import { gridStyle } from "../../../../core/virtualRows";
 import type { TableCache, TableRequest } from "./request";

@@ -1,4 +1,4 @@
-import { arityLookup, type FilterOperatorSpec, type QueryFilter } from "../filters";
+import { arityLookup, type FilterOperatorSpec, type QueryFilter } from "../workspace/filters";
 
 /**
  * Every operator a document filter can use, in the order the dropdown offers them. Each `id` is

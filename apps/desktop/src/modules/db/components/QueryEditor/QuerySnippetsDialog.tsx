@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TrashIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
-import { removeSnippet, saveSnippet, useQuerySnippets } from "../../querySnippets";
+import { removeSnippet, saveSnippet, useQuerySnippets } from "../../queries/querySnippets";
 import Button from "../../../../components/Button";
 import Input from "../../../../components/Input";
 import styles from "./QueryEditor.module.css";

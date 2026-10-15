@@ -1,8 +1,8 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../../i18n";
-import { engineCounts, filterConnections } from "../connectionString";
-import { addConnection, updateConnection } from "../savedConnectionsStore";
-import { scrollTopFor } from "../savedListScroll";
+import { engineCounts, filterConnections } from "./connectionString";
+import { addConnection, updateConnection } from "../saved/savedConnectionsStore";
+import { scrollTopFor } from "../saved/savedListScroll";
 import type { DbKind, SavedConnection } from "../types";
 
 interface Options {

@@ -1,4 +1,4 @@
-import { arityLookup, type FilterOperatorSpec, type QueryFilter } from "../filters";
+import { arityLookup, type FilterOperatorSpec, type QueryFilter } from "../workspace/filters";
 
 /** Every operator a filter row can use, in the order the dropdown offers them: comparisons first,
  * then the text matches, then the set/range ones, and the value-less ones last. Each `id` is what

@@ -1,8 +1,8 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "../../../i18n";
 import { takeHandoff } from "../api";
-import { arrivesConnected } from "../handoffArrival";
-import { reconnectsOnRestore } from "../savedConnections";
+import { arrivesConnected } from "./handoffArrival";
+import { reconnectsOnRestore } from "../saved/savedConnections";
 import { parseDbTabState } from "../tabState";
 import type { SavedConnection } from "../types";
 import type { Connection } from "./useConnection";

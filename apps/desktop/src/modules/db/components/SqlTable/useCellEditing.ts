@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "../../../../i18n";
 import { errorMessage } from "../../../../core/errors";
 import type { SqlApi } from "../../sql/api";
-import { cacheKey as tableCacheKey } from "../../schemaTokens";
+import { cacheKey as tableCacheKey } from "../../workspace/schemaTokens";
 import { displayValue, normalizeCellValue } from "./cells";
 import type { TableCache } from "./request";
 

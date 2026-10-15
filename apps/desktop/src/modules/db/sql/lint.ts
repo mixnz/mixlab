@@ -21,7 +21,7 @@ import type { SqlDialect } from "./dialect";
 import { dollarTag, opensEscapeString, type SqlSyntax } from "./syntax";
 import type { TranslationKey } from "../../../i18n";
 import type { SqlSchemaOutline } from "../types";
-import type { SqlStatement } from "../sql/statements";
+import type { SqlStatement } from "./statements";
 
 /**
  * Every word the engine owns, lower-cased — its keywords and its type names, read off the same

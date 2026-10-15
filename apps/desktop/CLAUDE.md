@@ -75,15 +75,20 @@ src/                 React frontend
   modules/db/        The database module
     DbTab.tsx        Connection form -> connects -> renders one workspace
     api.ts           Connect, the tunnel, dumps and their tools, a handoff: every invoke no engine owns
-    tab/             DbTab's hooks and parts: the connection's lifecycle, the form, the saved list, the workspace choice
+    tab/             DbTab's hooks and parts: the connection's lifecycle, the form and its URL, the saved list, the workspace choice
+    saved/           The saved connections: the file, the store every tab shares, the list's scroll
+    queries/         The Query tab's drafts, history and snippets
+    sync/            The saved connections and their secrets as sync records
+    workspace/       What the three workspaces share: sidebar width, banner errors, schema tokens, the filter bar's half
     sql/             The workspace every SQL engine shares, and the SqlApi/SqlDialect behind it
     mysql/ postgres/ What each SQL engine says for itself: api.ts, dialect.ts, columns.ts
     mssql/ clickhouse/  The same files, plus editing.ts and system.ts
     sqlite/          The only one with no server behind it
-    mongo/ redis/    The two with a workspace of their own: <Kind>Workspace.tsx, api.ts
-    components/      This module's own components
+    mongo/ redis/    The two with a workspace of their own: <Kind>Workspace.tsx, api.ts, and components/ only they draw
+    components/      This module's components every engine shares
     i18n/            This module's own strings
     db.css  types.ts Its global styles; the types mirroring the Rust models
+    tabState.ts      What a tab remembers, as in every module
   modules/rest/      The REST client
     RestTab.tsx      Sidebar of saved requests + the request being edited
     api.ts           The only invoke calls here: rest_send, rest_cancel; secrets through core/secrets.ts

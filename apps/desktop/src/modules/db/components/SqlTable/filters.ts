@@ -1,4 +1,4 @@
-import type { FilterRow } from "../../filters";
+import type { FilterRow } from "../../workspace/filters";
 import type { FilterOperator, SqlFilter } from "../../sql/filters";
 
 /** One table's filter bar as it was left behind: the rows still being edited, and the conditions

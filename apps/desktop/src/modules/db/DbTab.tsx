@@ -1,7 +1,7 @@
-import { useSavedConnections, useSavedConnectionsLoaded } from "./savedConnectionsStore";
+import { useSavedConnections, useSavedConnectionsLoaded } from "./saved/savedConnectionsStore";
 import type { SavedConnection } from "./types";
 import ConnectionForm from "./components/ConnectionForm";
-import { configFrom } from "./connectionForm";
+import { configFrom } from "./tab/connectionForm";
 import Button from "../../components/Button";
 import ErrorBanner from "../../components/ErrorBanner";
 import NoticeBanner from "../../components/NoticeBanner";

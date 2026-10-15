@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { useSqlApi, useSqlDialect } from "./context";
 import { cancelTransfer, onTransferProgress, type TransferProgress } from "../api";
-import { filterRowFor } from "../filters";
+import { filterRowFor } from "../workspace/filters";
 import type { FilterOperator } from "./filters";
 import { invalidateSchemaOutline } from "./schemaCache";
-import { cacheKey, useSchemaTokens } from "../schemaTokens";
+import { cacheKey, useSchemaTokens } from "../workspace/schemaTokens";
 import Select from "../../../components/Select";
 import ConfirmDialog from "../../../components/ConfirmDialog";
 import DatabaseActions from "../components/DatabaseActions";
@@ -18,7 +18,7 @@ import TransferOverlay from "../components/TransferOverlay";
 import ErrorBanner from "../../../components/ErrorBanner";
 import DisconnectTab from "../components/DisconnectTab";
 import TunnelBanner from "../components/TunnelBanner";
-import { useWorkspaceError } from "../workspaceError";
+import { useWorkspaceError } from "../workspace/workspaceError";
 import Input from "../../../components/Input";
 import NameDialog from "../../../components/NameDialog";
 import SqlTable from "../components/SqlTable";
@@ -33,12 +33,12 @@ import type { ItemAction } from "../../../components/ItemList";
 import itemListStyles from "../../../components/ItemList/ItemList.module.css";
 import { PlusIcon, ReloadIcon } from "../../../icons";
 import Splitter from "../../../components/Splitter";
-import { useSidebarWidth } from "../sidebarWidth";
+import { useSidebarWidth } from "../workspace/sidebarWidth";
 import { useSidebarKeyboard } from "../../../core/sidebarKeyboard";
 import { useTranslation } from "../../../i18n";
 import { errorMessage } from "../../../core/errors";
 import type { SqlCollation } from "../types";
-import { kindLabel } from "../connectionForm";
+import { kindLabel } from "../tab/connectionForm";
 
 interface Props {
   /** Whether this connection's tab is the one on show. Passed straight through to the content

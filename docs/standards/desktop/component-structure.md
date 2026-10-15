@@ -8,6 +8,7 @@ goes under is the question to settle first:
 | `src/components/` | Primitives: no module's concepts in them, **and** another module would have a real use for them. |
 | `src/shell/components/` | The shell's own — the settings dialog, the update toast. |
 | `src/modules/<id>/components/` | Everything else. This is the default; the bar for the other two is deliberately high. |
+| `src/modules/db/<engine>/components/` | A component only that engine draws — the Mongo document views, the Redis key list. Same folder shape. |
 
 Two decided examples, for calibration. `JsonView` is a primitive: a read-only JSON viewer with no
 BSON in it, which a REST client will want for a response body. `FilterBar` is not, despite the

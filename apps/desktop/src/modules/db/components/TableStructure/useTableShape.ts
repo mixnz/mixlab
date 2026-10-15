@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { errorMessage } from "../../../../core/errors";
 import { fileInto } from "../../../../core/paneCache";
 import { useTranslation } from "../../../../i18n";
-import { cacheKey } from "../../schemaTokens";
+import { cacheKey } from "../../workspace/schemaTokens";
 import { useSqlApi } from "../../sql/context";
 import type { SqlCollation, SqlTableStructure } from "../../types";
 

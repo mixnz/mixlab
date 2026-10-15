@@ -51,7 +51,7 @@ Những gì đã có sẵn và spec này dựa vào:
 | [`shell/module.ts`](../../apps/desktop/src/shell/module.ts) | `ModuleTabProps` |
 | [`shell/App.tsx`](../../apps/desktop/src/shell/App.tsx) | `mounted`, `setTabBadges`, effect ghi session |
 | [`db/DbTab.tsx:563`](../../apps/desktop/src/modules/db/DbTab.tsx#L563) | `openAndConnect(entry)` — áp saved connection vào form rồi nối |
-| [`db/savedConnectionsStore.ts`](../../apps/desktop/src/modules/db/savedConnectionsStore.ts) | `useSavedConnections()` |
+| [`db/savedConnectionsStore.ts`](../../apps/desktop/src/modules/db/saved/savedConnectionsStore.ts) | `useSavedConnections()` |
 | [`rest/RestTab.tsx:191`](../../apps/desktop/src/modules/rest/RestTab.tsx#L191) | `open(id)`, và `openIds`/`activeId` |
 | [`rest/requestsStore.ts`](../../apps/desktop/src/modules/rest/requestsStore.ts) | `useRequestLists()`, `findRequest(lists, id)` |
 | [`terminal/TerminalTab.tsx`](../../apps/desktop/src/modules/terminal/TerminalTab.tsx) | `start(choice)`, `dismiss()` |

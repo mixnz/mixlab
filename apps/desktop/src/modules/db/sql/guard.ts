@@ -13,7 +13,7 @@
 
 import { tokenize, type Token } from "./lint";
 import type { SqlDialect } from "./dialect";
-import type { SqlStatement } from "../sql/statements";
+import type { SqlStatement } from "./statements";
 
 /** One name-or-keyword of a statement that is code rather than comment, string or bracketed
  *  subquery. */

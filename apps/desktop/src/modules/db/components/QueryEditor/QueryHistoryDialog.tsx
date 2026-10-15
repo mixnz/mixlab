@@ -6,7 +6,7 @@ import {
   removeQueryHistoryEntry,
   useQueryHistory,
   type QueryHistoryEntry,
-} from "../../queryHistory";
+} from "../../queries/queryHistory";
 import Button from "../../../../components/Button";
 import Input from "../../../../components/Input";
 import styles from "./QueryEditor.module.css";

@@ -77,7 +77,7 @@ names, data types, nullability, key flags, and the foreign keys pointing out of 
 on first use of the tab.
 
 Frontend cache in `src/modules/db/sql/schemaCache.ts`, keyed by `connectionId + database`, shaped like
-[savedConnectionsStore.ts](../../../apps/desktop/src/modules/db/savedConnectionsStore.ts) (external store + `useSyncExternalStore`)
+[savedConnectionsStore.ts](../../../apps/desktop/src/modules/db/saved/savedConnectionsStore.ts) (external store + `useSyncExternalStore`)
 so several tabs share one copy. Invalidate when the workspace runs DDL or the user hits refresh.
 
 ### Statement splitting on the client
@@ -234,7 +234,7 @@ that from mattering.
   and a shortcut to re-run the last one.
 - **Snippets** — named saved queries, insertable from completion by typing their name.
 
-`src/modules/db/queryDrafts.ts` and `src/modules/db/queryHistory.ts`, both external stores like `savedConnectionsStore`.
+`src/modules/db/queries/queryDrafts.ts` and `src/modules/db/queries/queryHistory.ts`, both external stores like `savedConnectionsStore`.
 
 ## Phase 3 — what makes it stand out
 

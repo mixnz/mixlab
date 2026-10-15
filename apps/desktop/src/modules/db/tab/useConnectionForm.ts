@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { savedChange } from "../../../core/followSaved";
 import { stableStringify } from "../../../core/stableStringify";
 import { useTranslation } from "../../../i18n";
-import { configFrom, formFrom, withKind, type ConnectionForm as FormState } from "../connectionForm";
-import { addConnection, removeConnection, updateConnection } from "../savedConnectionsStore";
+import { configFrom, formFrom, withKind, type ConnectionForm as FormState } from "./connectionForm";
+import { addConnection, removeConnection, updateConnection } from "../saved/savedConnectionsStore";
 import type { ConnectionConfig, DbKind, SavedConnection } from "../types";
 
 interface Options {

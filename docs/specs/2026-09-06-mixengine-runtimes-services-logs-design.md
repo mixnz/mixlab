@@ -122,7 +122,7 @@ giống hệt Runtimes. Xem mục 2.
   `port`, `depends_on`. Không cần gọi gì thêm để vẽ hàng có thể bấm vào; `service.limits`/
   `service.logs` chỉ gọi khi đã vào trang chi tiết.
 - **`readSecrets`/`resolveKeyringRef` của module `db`** (Pha 0,
-  [savedConnections.ts:47,80](../../apps/desktop/src/modules/db/savedConnections.ts)) đã biết đọc một mật khẩu
+  [savedConnections.ts:47,80](../../apps/desktop/src/modules/db/saved/savedConnections.ts)) đã biết đọc một mật khẩu
   từ namespace `mixengine` bằng đúng cặp `service`/`key` một `SecretAddress` mang. Mục 3 dùng lại
   nguyên hàm này, không viết đường đọc keyring thứ hai.
 

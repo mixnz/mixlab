@@ -1,10 +1,10 @@
 import { useTranslation } from "../../../i18n";
-import { kindLabel } from "../connectionForm";
+import { kindLabel } from "./connectionForm";
 import { SQL_ENGINES, isSqlKind } from "../engines";
 import { DatabaseIcon } from "../icons";
 import MongoWorkspace from "../mongo/MongoWorkspace";
 import RedisWorkspace from "../redis/RedisWorkspace";
-import { updateConnection } from "../savedConnectionsStore";
+import { updateConnection } from "../saved/savedConnectionsStore";
 import SqlWorkspace from "../sql/SqlWorkspace";
 import { SqlProvider } from "../sql/context";
 import type { DbKind, SavedConnection } from "../types";

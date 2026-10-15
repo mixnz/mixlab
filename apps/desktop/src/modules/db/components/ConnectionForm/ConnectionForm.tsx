@@ -15,8 +15,8 @@ import { PRIVATE_KEY_PLACEHOLDER } from "../../../../core/ssh";
 import { useTranslation, type TranslationKey } from "../../../../i18n";
 import { errorMessage } from "../../../../core/errors";
 import { createSqliteFile } from "../../sqlite/api";
-import { kindLabel, type ConnectionForm as FormState } from "../../connectionForm";
-import { connectionPlace, connectionString } from "../../connectionString";
+import { kindLabel, type ConnectionForm as FormState } from "../../tab/connectionForm";
+import { connectionPlace, connectionString } from "../../tab/connectionString";
 import type { DbKind } from "../../types";
 import EngineBadge from "../EngineBadge";
 

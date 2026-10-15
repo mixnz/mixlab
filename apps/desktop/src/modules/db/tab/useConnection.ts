@@ -3,8 +3,8 @@ import { errorMessage } from "../../../core/errors";
 import { fileName } from "../../../core/paths";
 import { useTranslation } from "../../../i18n";
 import { connectDb, disconnectDb, testSshTunnel } from "../api";
-import { kindLabel } from "../connectionForm";
-import { withResolvedPassword } from "../savedConnections";
+import { kindLabel } from "./connectionForm";
+import { withResolvedPassword } from "../saved/savedConnections";
 import type { ConnectionConfig, SavedConnection } from "../types";
 import { mongoUriHost } from "./mongoUri";
 

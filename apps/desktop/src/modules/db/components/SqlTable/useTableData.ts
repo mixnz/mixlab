@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
-import { initialFilterRows, type FilterRow } from "../../filters";
+import { initialFilterRows, type FilterRow } from "../../workspace/filters";
 import type { SqlApi } from "../../sql/api";
 import type { FilterOperator, SqlFilter } from "../../sql/filters";
 import type { SqlColumnMeta } from "../../types";
-import { cacheKey as tableCacheKey } from "../../schemaTokens";
+import { cacheKey as tableCacheKey } from "../../workspace/schemaTokens";
 import { rememberedFilters, type FilterCache } from "./filters";
 import {
   fileTable,

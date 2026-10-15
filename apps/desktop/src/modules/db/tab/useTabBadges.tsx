@@ -2,8 +2,8 @@ import { useEffect, useEffectEvent, useMemo } from "react";
 import { LockIcon } from "../../../icons";
 import { useTranslation } from "../../../i18n";
 import type { TabBadge } from "../../../shell/module";
-import { dbBadgeMarks } from "../badges";
-import { kindLabel } from "../connectionForm";
+import { dbBadgeMarks } from "./badges";
+import { kindLabel } from "./connectionForm";
 import { DatabaseIcon } from "../icons";
 import type { DbKind } from "../types";
 

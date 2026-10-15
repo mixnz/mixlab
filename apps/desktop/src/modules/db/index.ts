@@ -4,8 +4,8 @@ import type { ModuleDefinition } from "../../shell/module";
 import { DatabaseGenericIcon } from "../../icons";
 import ToolsSection from "./components/ToolsSection";
 import { DB_SHORTCUTS } from "./shortcuts";
-import { querySnippetsSyncable } from "./querySnippets";
-import { connectionSecretsSyncable, connectionsSyncable } from "./sync";
+import { querySnippetsSyncable } from "./queries/querySnippets";
+import { connectionSecretsSyncable, connectionsSyncable } from "./sync/sync";
 
 /* Loaded when a tab of this module is first opened, not at launch. The workspace behind it is the
    heaviest thing in the bundle — CodeMirror here, xterm in the terminal — and a launch that parses

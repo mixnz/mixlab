@@ -145,8 +145,8 @@ hai phía, không bao giờ đi trên wire) và `key` = `<service-id>/<user>` (�
 | Cờ "đã xác thực bằng env" đi tới lúc Save | `secret.is_some().then(…)` ở [handoff.rs:118](../../../apps/desktop/src-tauri/src/modules/db/handoff.rs) → `handoff_take` → [DbTab.tsx:512](../../../apps/desktop/src/modules/db/DbTab.tsx) → `form.keyringRef` → payload Save |
 | Định dạng tham chiếu | `SavedConnection.keyringRef` — [types.ts:67](../../../apps/desktop/src/modules/db/types.ts); `connections.json` vẫn là text thuần |
 | Đọc namespace ngoài | `MIXENGINE_SERVICE` + `read_mixengine_entry` — [secrets.rs:296](../../../apps/desktop/src-tauri/src/secrets.rs), đi thẳng `Entry::new`, cố ý không qua `Keeper` |
-| Save không copy mật khẩu sang vault mình | `readSecrets(config, keyringRef)` — [savedConnections.ts:47](../../../apps/desktop/src/modules/db/savedConnections.ts) |
-| Đọc hụt thì hỏi lại, không báo lỗi | `resolveKeyringRef` trả `undefined` — [savedConnections.ts:80](../../../apps/desktop/src/modules/db/savedConnections.ts) |
+| Save không copy mật khẩu sang vault mình | `readSecrets(config, keyringRef)` — [savedConnections.ts:47](../../../apps/desktop/src/modules/db/saved/savedConnections.ts) |
+| Đọc hụt thì hỏi lại, không báo lỗi | `resolveKeyringRef` trả `undefined` — [savedConnections.ts:80](../../../apps/desktop/src/modules/db/saved/savedConnections.ts) |
 
 Hai chi tiết dễ bỏ sót, cả hai đều đã có:
 

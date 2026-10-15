@@ -145,7 +145,7 @@ Mongo is configured as a single connection string, not host/port/user/password �
 
 ## Persistence
 
-- **Saved connections** — split in two by [src/modules/db/savedConnections.ts](../../../apps/desktop/src/modules/db/savedConnections.ts),
+- **Saved connections** — split in two by [src/modules/db/saved/savedConnections.ts](../../../apps/desktop/src/modules/db/saved/savedConnections.ts),
   which is the only module that knows about the split:
   - What a connection *is* (host, port, user, database, sidebar width) — `tauri-plugin-store`,
     file `connections.json`, key `saved`. Plain text on purpose.

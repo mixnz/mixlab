@@ -11,7 +11,7 @@ import {
 } from "../../sql/guard";
 import { lintScript, problemRange } from "../../sql/lint";
 import { useSqlDialect } from "../../sql/context";
-import { kindLabel } from "../../connectionForm";
+import { kindLabel } from "../../tab/connectionForm";
 import { referenceAt, type SqlReference } from "../../mysql/reference";
 import { invalidateSchemaOutline, useSchemaOutline } from "../../sql/schemaCache";
 import { useSqlApi } from "../../sql/context";
@@ -51,9 +51,9 @@ import { useTranslation, type TranslationKey } from "../../../../i18n";
 import { errorMessage } from "../../../../core/errors";
 import { MODIFIER_LABEL, shortcutLabel } from "../../../../core/platform";
 import { RELOAD_SHORTCUT, useReloadShortcut } from "../../../../core/reload";
-import { loadDraft, saveDraft, saveDraftNow } from "../../queryDrafts";
-import { recordQuery } from "../../queryHistory";
-import { useQuerySnippets } from "../../querySnippets";
+import { loadDraft, saveDraft, saveDraftNow } from "../../queries/queryDrafts";
+import { recordQuery } from "../../queries/queryHistory";
+import { useQuerySnippets } from "../../queries/querySnippets";
 import type { SqlStatementResult } from "../../types";
 import styles from "./QueryEditor.module.css";
 

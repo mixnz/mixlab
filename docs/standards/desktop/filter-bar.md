@@ -1,11 +1,11 @@
 # Filter bar
 
 The condition bar above a table (MySQL) or document list (Mongo) is split in two: the
-database-agnostic mechanics in `src/modules/db/filters.ts`, and one operator list per *kind* in
+database-agnostic mechanics in `src/modules/db/workspace/filters.ts`, and one operator list per *kind* in
 `src/modules/db/sql/filters.ts` (MySQL and PostgreSQL share it, the way they share the workspace)
 and `src/modules/db/mongo/filters.ts`.
 
-## The shared half — `src/modules/db/filters.ts`
+## The shared half — `src/modules/db/workspace/filters.ts`
 
 - `FilterArity` — how many values an operator reads out of its single text box: `"none"`
   (`IS NULL`, box disabled), `"one"`, `"list"` (comma-separated, for `IN`), `"pair"` (`min,max`,

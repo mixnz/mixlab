@@ -37,13 +37,14 @@ window, and almost every finding sits in it.
       components for what it draws. The Dashboard half is checked with MixEngine running and with
       it stopped. Design:
       [2026-10-15-t208b-table-structure-and-dashboard-hooks-design.md](../specs/2026-10-15-t208b-table-structure-and-dashboard-hooks-design.md).
-- [ ] **T208c** The `db` module's folders follow its engines. The 40-odd files at the root of
+- [x] **T208c** The `db` module's folders follow its engines. The 40-odd files at the root of
       `src/modules/db/` go into folders by subject: `saved/` (connections, their store, their
       scroll), `queries/` (drafts, history, snippets), `sync/` and `tab/`. The components only
       Redis or Mongo draws (`RedisKeyList`, `RedisValue`, `RedisGroupKeys`, `RedisTypeBadge`,
       `Document`, `DocumentNode`, `NoSqlTable`, `InsertDocumentsDialog`) move to `redis/` and
       `mongo/`, so `components/` holds what every engine shares. Only files move: the vitest
-      count stays the same.
+      count stays the same. Design:
+      [2026-10-15-t208c-db-module-folders-design.md](../specs/2026-10-15-t208c-db-module-folders-design.md).
 
 ## The backend
 

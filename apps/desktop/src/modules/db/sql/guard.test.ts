@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { clickhouseAlterUpdate, isRowsDml, unguardedWrites, withAutoLimits, withLimit, writingStatements } from "./guard";
-import { splitStatements } from "../sql/statements";
+import { splitStatements } from "./statements";
 import { mysqlDialect } from "../mysql/dialect";
 import { postgresDialect } from "../postgres/dialect";
 import { clickhouseDialect } from "../clickhouse/dialect";
 import { mssqlDialect } from "../mssql/dialect";
-import { CLICKHOUSE_SYNTAX, MSSQL_SYNTAX, MYSQL_SYNTAX, POSTGRES_SYNTAX } from "../sql/syntax";
+import { CLICKHOUSE_SYNTAX, MSSQL_SYNTAX, MYSQL_SYNTAX, POSTGRES_SYNTAX } from "./syntax";
 
 /**
  * The gates, held against the statements they exist to stop.

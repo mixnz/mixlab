@@ -118,11 +118,12 @@ file. See [component-structure](../../standards/desktop/component-structure.md) 
   `ContextMenu`, `Tooltip`, `JsonView`, `TabStrip`, `Splitter`, plus `dialogMotion` and
   `contextMenuPosition`.
 - **`src/shell/components/`** — `GlassFilter`, `SettingsModal`, `UpdateToast`: the shell's own.
-- **`src/modules/db/components/`** — the grids (`SqlTable`, `NoSqlTable`), the document views
-  (`Document`, `DocumentNode`), the Redis views, `QueryEditor`, `SqlEditor`, `TableStructure`, the
-  dialogs, `FilterBar`, `TransferOverlay`, and `ToolsSection` — which the shell's Settings dialog
-  renders through `ModuleDefinition.settings`, since a dump tool is `mysqldump`, not an app
-  setting.
+- **`src/modules/db/components/`** — the grid (`SqlTable`), `QueryEditor`, `SqlEditor`,
+  `TableStructure`, the dialogs, `FilterBar`, `TransferOverlay`, and `ToolsSection` — which the
+  shell's Settings dialog renders through `ModuleDefinition.settings`, since a dump tool is
+  `mysqldump`, not an app setting. What only one engine draws is in that engine's folder:
+  `mongo/components/` (`NoSqlTable`, `Document`, `DocumentNode`, `InsertDocumentsDialog`) and
+  `redis/components/` (the Redis views).
 - **`src/modules/rest/components/`** — `UrlBar`, `RequestList`, `RequestTabs`, the request panes
   (`AuthPane`, `BodyEditor`, `KeyValueTable`, `MultipartTable`), the response side (`ResponsePane`,
   `ResponseStatusBar`, `HexView`, `HtmlPreview`, `TreeView`), the dialogs, and `RestSettings`.
