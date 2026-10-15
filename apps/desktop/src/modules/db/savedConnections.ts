@@ -1,7 +1,8 @@
 import { Store } from "@tauri-apps/plugin-store";
-import { invoke } from "@tauri-apps/api/core";
 import { dedupeById, upsertById } from "../../core/byId";
+import * as secretStore from "../../core/secrets";
 import { mergeSshSecrets, splitSshSecrets, type SshSecrets } from "../../core/ssh";
+import { resolveMixEngineSecret } from "./api";
 import type { ConnectionConfig, SavedConnection } from "./types";
 
 /**
@@ -10,7 +11,7 @@ import type { ConnectionConfig, SavedConnection } from "./types";
  * `connections.json` holds what a connection *is* — host, port, user, which database — and is
  * plain text on purpose: it is useful to be able to read, copy and edit that list. Everything that
  * would let someone connect goes to the OS credential store instead (Windows Credential Manager,
- * the macOS Keychain, the Secret Service on Linux), reached through the `secrets_*` commands.
+ * the macOS Keychain, the Secret Service on Linux), reached through `core/secrets.ts`.
  *
  * The split is invisible to callers: what goes in and comes out of this module is a whole
  * `SavedConnection`.
@@ -69,16 +70,16 @@ export function withSecrets(config: ConnectionConfig, secrets: Secrets): Connect
 }
 
 export function saveSecrets(id: string, secrets: Secrets): Promise<void> {
-  return invoke<void>("secrets_save", { id, secrets });
+  return secretStore.saveSecrets(id, secrets);
 }
 
 export function loadSecrets(id: string): Promise<Secrets> {
-  return invoke<Secrets>("secrets_load", { id });
+  return secretStore.loadSecrets<Secrets>(id);
 }
 
 /** Forgets a connection's credentials: when it goes, and when sync says another machine cleared them. */
 export function deleteSecrets(id: string): Promise<void> {
-  return invoke<void>("secrets_delete", { id });
+  return secretStore.deleteSecrets(id);
 }
 
 /**
@@ -96,7 +97,7 @@ export async function withResolvedPassword(
   keyringRef: string | null | undefined,
 ): Promise<ConnectionConfig> {
   if (!keyringRef || config.password) return config;
-  const password = await invoke<string | null>("secrets_resolve_mixengine", { key: keyringRef });
+  const password = await resolveMixEngineSecret(keyringRef);
   return { ...config, password: password ?? undefined };
 }
 

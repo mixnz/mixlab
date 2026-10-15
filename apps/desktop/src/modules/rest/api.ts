@@ -1,5 +1,6 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { deleteSecrets, loadSecrets, saveSecrets } from "../../core/secrets";
 import type { RestResponse, WireRequest } from "./types";
 
 /**
@@ -85,15 +86,15 @@ export async function pickFile(): Promise<string | null> {
  * entry rather than storing `{}` — an environment with nothing to hide leaves nothing behind.
  */
 export function envSecretsSave(id: string, secrets: Record<string, string>): Promise<void> {
-  return invoke("secrets_save", { id, secrets });
+  return saveSecrets(id, secrets);
 }
 
 /** What is stored for an environment, or nothing when it has never had a secret in it. */
 export function envSecretsLoad(id: string): Promise<Record<string, string>> {
-  return invoke<Record<string, string>>("secrets_load", { id });
+  return loadSecrets<Record<string, string>>(id);
 }
 
 /** Forgets an environment's secrets, for when the environment itself goes. */
 export function envSecretsDelete(id: string): Promise<void> {
-  return invoke("secrets_delete", { id });
+  return deleteSecrets(id);
 }

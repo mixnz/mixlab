@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import {
   addConnection,
   removeConnection,
@@ -10,7 +9,7 @@ import {
 import type { ConnectionConfig, DbKind, SavedConnection } from "./types";
 import { reconnectsOnRestore, withResolvedPassword } from "./savedConnections";
 import { parseDbTabState } from "./tabState";
-import { takeHandoff } from "./handoff";
+import { connectDb, disconnectDb, takeHandoff, testSshTunnel } from "./api";
 import { arrivesConnected } from "./handoffArrival";
 import { scrollTopFor } from "./savedListScroll";
 import SqlWorkspace from "./sql/SqlWorkspace";
@@ -160,7 +159,7 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
       const id = connectionIdRef.current;
       // Nothing is left to show an error to, and a connection the backend has already forgotten is
       // not a failure worth reporting anywhere.
-      if (id) invoke("disconnect_db", { id }).catch(() => {});
+      if (id) disconnectDb(id).catch(() => {});
     };
   }, []);
 
@@ -424,7 +423,7 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
       return;
     }
     try {
-      await invoke("test_ssh_tunnel", { ssh });
+      await testSshTunnel(ssh);
       setTunnelStatus({ tone: "ok", message: t("connection.tunnelOk") });
     } catch (e) {
       setTunnelStatus({ tone: "error", message: t("connection.tunnelFailed", { error: errorMessage(t, e) }) });
@@ -462,13 +461,13 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
       // MixEngine's password is read here and nowhere earlier: a launch asks the Keychain about
       // MixLab's vault alone (ADR 0056), and this is the moment someone asked to connect.
       const config = await withResolvedPassword(typed, keyringRef);
-      const id = await invoke<string>("connect_db", { config });
+      const id = await connectDb(config);
       /* The tab was closed while this was dialling — over an SSH tunnel to a server that is slow to
          answer, that is a wait long enough to close a tab in. This is the only moment anyone knows
          the id: the unmount cleanup ran while it was still `null`, and nothing else will ever be
          told about it. */
       if (closedRef.current) {
-        invoke("disconnect_db", { id }).catch(() => {});
+        disconnectDb(id).catch(() => {});
         return;
       }
       setConnectionId(id);
@@ -687,7 +686,7 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
    */
   async function disconnect() {
     if (!connectionId) return;
-    await invoke("disconnect_db", { id: connectionId }).catch(() => {});
+    await disconnectDb(connectionId).catch(() => {});
     setConnectionId(null);
     setStatus("");
     /* Named after what the form is holding, which is what every other tab in the app is named

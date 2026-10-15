@@ -36,7 +36,7 @@ a line in `src/shell/registry.ts` — see
 | `npm run dev` | Frontend only in a browser; every `invoke` fails, UI-only work |
 | `npm run build` | Typecheck + build frontend (`tsc && vite build`) — the fastest check |
 | `npm test` | Run the vitest suite (`vitest run`) |
-| `npm run lint` | eslint: hook dependencies, and the rule that nothing outside `src/modules/` imports a module |
+| `npm run lint` | eslint: hook dependencies, the rule that nothing outside `src/modules/` imports a module, and that only an `api.ts` imports `invoke` |
 | `npm run build:app` | Full production bundle into `src-tauri/target/release/bundle/` |
 | `npm run icons` | Rebuild `src-tauri/icons/` from the SVGs in `public/`; macOS gets the padded one, and its menu bar the tray template (T168) |
 | `npm run screenshots` | The six promotional images — Dashboard, Sites, Database, REST, Terminal, Tools — from sample data, dark and light, raw and framed, into `screenshots/out/`. `-- --check` renders every scene and writes nothing (CI runs it). See [demo-screenshots.md](../../docs/standards/desktop/demo-screenshots.md) |
@@ -74,6 +74,7 @@ src/                 React frontend
   icons/  i18n/      Shared icons; the shared dictionaries and dicts.ts, which merges them
   modules/db/        The database module
     DbTab.tsx        Connection form -> connects -> renders one workspace
+    api.ts           Connect, the tunnel, dumps and their tools, a handoff: every invoke no engine owns
     sql/             The workspace every SQL engine shares, and the SqlApi/SqlDialect behind it
     mysql/ postgres/ What each SQL engine says for itself: api.ts, dialect.ts, columns.ts
     mssql/ clickhouse/  The same files, plus editing.ts and system.ts
@@ -84,7 +85,7 @@ src/                 React frontend
     db.css  types.ts Its global styles; the types mirroring the Rust models
   modules/rest/      The REST client
     RestTab.tsx      Sidebar of saved requests + the request being edited
-    api.ts           The only invoke calls here: rest_send, rest_cancel, secrets_*
+    api.ts           The only invoke calls here: rest_send, rest_cancel; secrets through core/secrets.ts
     *.ts  *.test.ts  The pure halves — building a request, interpolating, parsing a paste
     components/  i18n/  rest.css
   modules/terminal/  The terminal
@@ -125,7 +126,8 @@ src-tauri/src/       Rust backend
 ## Rules that matter most
 
 - **Frontend never touches a network or a disk.** No driver, no HTTP request, no shell: it calls
-  `invoke(...)` through its module's `api.ts` and renders what comes back.
+  `invoke(...)` through its module's `api.ts` and renders what comes back. `npm run lint` rejects an
+  `invoke` import anywhere else under `src/modules/`.
 - **Nothing outside `src/modules/<id>/` knows that module's concepts.** No file in `shell/`,
   `core/`, `components/`, `icons/` or `i18n/` may import from `modules/`, with exactly two
   exceptions — `shell/registry.ts` and `i18n/dicts.ts`, the two places a module is joined to the

@@ -1,7 +1,7 @@
 import { Store } from "@tauri-apps/plugin-store";
-import { invoke } from "@tauri-apps/api/core";
 import type { OnRestore, SavedTarget, SshConfig } from "./types";
 import { dedupeById, upsertById } from "../../core/byId";
+import * as secretStore from "../../core/secrets";
 import { mergeSshSecrets, splitSshSecrets, type SshSecrets } from "../../core/ssh";
 
 /**
@@ -10,8 +10,8 @@ import { mergeSshSecrets, splitSshSecrets, type SshSecrets } from "../../core/ss
  * `terminal-hosts.json` holds what a target *is* — the name, and depending on the kind: the shell
  * and its starting directory, or the address, port, user and key path — and it is plain text on
  * purpose: it is the list of places you open often, and being able to read and copy it is handy.
- * What opens the door goes into the operating system's credential store, through the three
- * `secrets_*` commands the db module also uses.
+ * What opens the door goes into the operating system's credential store, through
+ * `core/secrets.ts`, which the db and rest modules also use.
  *
  * `runOnConnect` stays in the file along with the name: it is a few startup command lines, not a
  * secret — and the caption under that field in the form says so plainly, because someone who
@@ -156,16 +156,16 @@ export function withoutSecrets(target: SavedTarget): SavedTarget {
 }
 
 export function saveSecrets(id: string, secrets: HostSecrets): Promise<void> {
-  return invoke<void>("secrets_save", { id, secrets });
+  return secretStore.saveSecrets(id, secrets);
 }
 
 export function loadSecrets(id: string): Promise<HostSecrets> {
-  return invoke<HostSecrets>("secrets_load", { id });
+  return secretStore.loadSecrets<HostSecrets>(id);
 }
 
 /** Forgets a host's credentials: when it goes, and when sync says another machine cleared them. */
 export function deleteSecrets(id: string): Promise<void> {
-  return invoke<void>("secrets_delete", { id });
+  return secretStore.deleteSecrets(id);
 }
 
 /**

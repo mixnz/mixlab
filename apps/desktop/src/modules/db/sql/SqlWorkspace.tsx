@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { useSqlApi, useSqlDialect } from "./context";
-import { cancelTransfer, onTransferProgress, type TransferProgress } from "../transfer";
+import { cancelTransfer, onTransferProgress, type TransferProgress } from "../api";
 import { filterRowFor } from "../filters";
 import type { FilterOperator } from "./filters";
 import { invalidateSchemaOutline } from "./schemaCache";

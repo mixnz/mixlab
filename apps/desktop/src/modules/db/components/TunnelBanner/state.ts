@@ -1,5 +1,5 @@
 import type { AppError } from "../../../../core/errors";
-import type { TunnelState } from "../../tunnel";
+import type { TunnelState } from "../../api";
 
 /**
  * What the banner is saying, if it is saying anything.

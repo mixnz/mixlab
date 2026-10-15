@@ -1,5 +1,12 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import {
+  dumpToolsDownloadable,
+  dumpToolsInstall,
+  dumpToolsReady,
+  dumpToolsSetPath,
+  dumpToolsStatus,
+  dumpToolsUninstall,
+} from "./api";
 
 /** The three sets of tools, one per SQL-or-document engine: each carries the pair its database
  *  needs. Only two of them are ever downloadable — PostgreSQL publishes no client-only archive. */
@@ -23,18 +30,18 @@ export interface ToolStatus {
 }
 
 export function toolsStatus(): Promise<ToolStatus[]> {
-  return invoke<ToolStatus[]>("dumptools_status");
+  return dumpToolsStatus();
 }
 
 /** Whether both of a suite's tools can be found — what the dump and restore buttons ask first. */
 export function toolsReady(suite: ToolSuite): Promise<boolean> {
-  return invoke<boolean>("dumptools_ready", { suite });
+  return dumpToolsReady(suite);
 }
 
 /** Whether there is anywhere to download this suite from on this platform — asked before a button
  *  offers to, since a suite with no archive can only be answered with an error. */
 export function toolsDownloadable(suite: ToolSuite): Promise<boolean> {
-  return invoke<boolean>("dumptools_downloadable", { suite });
+  return dumpToolsDownloadable(suite);
 }
 
 /** The stages an install goes through, in the order they happen. */
@@ -129,7 +136,7 @@ export async function toolsInstall(suite: ToolSuite): Promise<void> {
   await startListening();
   setState(withSuite([suite, null], [suite, undefined]));
   try {
-    await invoke<void>("dumptools_install", { suite });
+    await dumpToolsInstall(suite);
     setState(withSuite([suite, undefined], [suite, Date.now()]));
   } catch (e) {
     setState(withSuite([suite, undefined]));
@@ -142,10 +149,10 @@ export function toolsUninstall(suite: ToolSuite): Promise<void> {
   // "Downloaded and ready to use" stops being true the moment the user asks for it to go, so the
   // line saying so goes with the click rather than waiting out the rest of its few seconds.
   if (state.finished.has(suite)) setState(withSuite(undefined, [suite, undefined]));
-  return invoke<void>("dumptools_uninstall", { suite });
+  return dumpToolsUninstall(suite);
 }
 
 /** Points one tool at a copy chosen by hand, or forgets that choice when given null. */
 export function toolsSetPath(tool: string, path: string | null): Promise<void> {
-  return invoke<void>("dumptools_set_path", { tool, path });
+  return dumpToolsSetPath(tool, path);
 }

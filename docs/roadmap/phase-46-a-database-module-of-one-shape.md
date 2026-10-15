@@ -17,7 +17,7 @@ window, and almost every finding sits in it.
 
 ## The frontend
 
-- [ ] **T208** Every `invoke` of the `db` module goes through `src/modules/db/api.ts`, as
+- [x] **T208** Every `invoke` of the `db` module goes through `src/modules/db/api.ts`, as
       `apps/desktop/CLAUDE.md` already requires. Today `DbTab.tsx`, `tools.ts`, `transfer.ts`,
       `tunnel.ts`, `handoff.ts` and `savedConnections.ts` each call it themselves. `secrets_save`,
       `secrets_load` and `secrets_delete` are wrapped three times, in `db/savedConnections.ts`,

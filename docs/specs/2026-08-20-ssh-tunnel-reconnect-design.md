@@ -292,7 +292,7 @@ Mongo và Redis không cần gì thêm: driver của chúng đã tự thử lạ
 
 | File | Việc |
 | --- | --- |
-| `src/modules/db/tunnel.ts` | `TunnelState`, `onTunnelState(id, cb)` — bản sao đúng khuôn của [`transfer.ts`](../../apps/desktop/src/modules/db/transfer.ts) |
+| `src/modules/db/tunnel.ts` | `TunnelState`, `onTunnelState(id, cb)` — bản sao đúng khuôn của `transfer.ts` (cả hai nay nằm trong [`db/api.ts`](../../apps/desktop/src/modules/db/api.ts), T208) |
 | `src/modules/db/components/TunnelBanner/` | Component + CSS Module + `index.ts`, theo [component-structure](../standards/desktop/component-structure.md) |
 | `src/modules/db/components/TunnelBanner/state.ts` | `nextBannerState(current, event)` — hàm thuần, chỗ duy nhất có gì để test |
 | `sql/SqlWorkspace.tsx`, `mongo/MongoWorkspace.tsx`, `redis/RedisWorkspace.tsx` | Một dòng, ngay trên `<ErrorBanner>` sẵn có |

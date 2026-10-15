@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import { cancelTransfer, onTransferProgress, type TransferProgress } from "../transfer";
+import { cancelTransfer, onTransferProgress, type TransferProgress } from "../api";
 import {
   mongoCreateCollection,
   mongoDropCollection,

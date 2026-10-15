@@ -16,6 +16,9 @@ import reactHooks from "eslint-plugin-react-hooks";
  *   know nothing about `modules/db`, `modules/rest` or `modules/terminal`. A `Button` importing
  *   from a module type-checks; this is what says no, and it says it in the editor rather than in
  *   CI ten minutes later.
+ * - **A module's backend door.** Inside `src/modules/`, only an `api.ts` imports `invoke`, so what
+ *   a module asks of the Rust side is one file to read. A component calling a command itself
+ *   compiles just as well.
  *
  * `docs/standards/desktop/adding-a-module.md` is where the boundary rule is written down. The two
  * exceptions below are the point of it: `shell/registry.ts` joins a module to the tab bar and
@@ -70,6 +73,26 @@ export default tseslint.config(
               group: ["**/modules/*", "**/modules/*/**"],
               message:
                 "The shared layer knows no module. See docs/standards/desktop/adding-a-module.md — only shell/registry.ts and i18n/dicts.ts may name one.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
+    files: ["src/modules/**/*.{ts,tsx}"],
+    ignores: ["src/modules/**/api.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@tauri-apps/api/core",
+              importNames: ["invoke"],
+              message:
+                "A module reaches its backend through its api.ts. Add the command there and call it from here — see apps/desktop/CLAUDE.md.",
             },
           ],
         },

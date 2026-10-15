@@ -3,7 +3,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import Button from "../../../../components/Button";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
-import { onTunnelState, tunnelReconnect } from "../../tunnel";
+import { onTunnelState, tunnelReconnect } from "../../api";
 import { HIDDEN, nextBannerState, popupShows, type BannerState } from "./state";
 import styles from "./TunnelBanner.module.css";
 

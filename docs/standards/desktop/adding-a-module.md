@@ -125,6 +125,11 @@ nothing. A bespoke script stood here in between, and it got this right too; the 
 because one rule deserves one checker, and this one now sits where every other rule about the code
 already lives.
 
+The same command checks the module from the other side: inside `src/modules/`, only a file named
+`api.ts` may import `invoke` from `@tauri-apps/api/core`. A module with several of them — `db` has
+one per engine and one for what no engine owns — still has every command it sends in a file of
+that name. The credential store is `src/core/secrets.ts`, shared by every module that keeps one.
+
 ## What the second and third modules found
 
 All three are settled now, and all three are worth knowing before adding a fourth:
