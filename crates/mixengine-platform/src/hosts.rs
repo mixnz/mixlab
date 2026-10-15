@@ -416,6 +416,30 @@ mod tests {
         assert!(parse(&no_domain).is_err());
     }
 
+    /// [`apply_under`], tried again while the lock reads as taken — for at most two seconds.
+    ///
+    /// **Only a test sees the lock taken here, and only on Unix.** `flock` belongs to the open
+    /// file, and a test elsewhere in this binary that spawns a program forks first: until that
+    /// child reaches `exec`, it holds a copy of every descriptor this one had open, the lock's
+    /// among them. Closing ours then releases nothing, and the next apply finds the lock held by
+    /// a process that never asked for it. Seen once in seventy parallel runs on Linux. The helper
+    /// is one process at a time on a real machine, so the production path stays a refusal.
+    #[cfg(feature = "elevated")]
+    fn apply(file: &Path, entries: &[HostEntry], lock: &Path) -> Change {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        loop {
+            match apply_under(file, entries, lock) {
+                Err(crate::Error::Os { source, .. })
+                    if source.kind() == std::io::ErrorKind::WouldBlock
+                        && std::time::Instant::now() < deadline =>
+                {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+                result => return result.unwrap(),
+            }
+        }
+    }
+
     /// A file the test owns, replaced for real — the whole read-modify-write, not just the splice.
     #[cfg(feature = "elevated")]
     #[test]
@@ -426,7 +450,7 @@ mod tests {
         std::fs::write(&file, REAL).unwrap();
 
         let entries = [entry("127.0.0.1", "blog.test")];
-        let change = apply_under(&file, &entries, &lock).unwrap();
+        let change = apply(&file, &entries, &lock);
 
         assert!(
             matches!(change, Change::Written { entries: 1 }),
@@ -438,13 +462,10 @@ mod tests {
         );
 
         // D1's payoff: the second call is the byte comparison, not a judgement.
-        assert!(matches!(
-            apply_under(&file, &entries, &lock).unwrap(),
-            Change::Unchanged
-        ));
+        assert!(matches!(apply(&file, &entries, &lock), Change::Unchanged));
 
         assert!(matches!(
-            apply_under(&file, &[], &lock).unwrap(),
+            apply(&file, &[], &lock),
             Change::Written { entries: 0 }
         ));
         assert_eq!(std::fs::read_to_string(&file).unwrap(), REAL);
@@ -487,7 +508,7 @@ mod tests {
         std::fs::write(&file, "127.0.0.1 localhost\n").unwrap();
         std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o640)).unwrap();
 
-        apply_under(&file, &[entry("127.0.0.1", "blog.test")], &lock).unwrap();
+        apply(&file, &[entry("127.0.0.1", "blog.test")], &lock);
 
         let mode = std::fs::metadata(&file).unwrap().permissions().mode() & 0o777;
         assert_eq!(mode, 0o640, "the mode came back as {mode:o}");
@@ -502,7 +523,7 @@ mod tests {
         let file = directory.path().join("hosts");
         let lock = directory.path().join("hosts.lock");
 
-        apply_under(&file, &[entry("127.0.0.1", "blog.test")], &lock).unwrap();
+        apply(&file, &[entry("127.0.0.1", "blog.test")], &lock);
 
         assert!(
             std::fs::read_to_string(&file)
@@ -536,7 +557,7 @@ mod tests {
             .output()
             .unwrap();
 
-        apply_under(&file, &[entry("127.0.0.1", "blog.test")], &lock).unwrap();
+        apply(&file, &[entry("127.0.0.1", "blog.test")], &lock);
 
         let after = std::process::Command::new("icacls")
             .arg(&file)
