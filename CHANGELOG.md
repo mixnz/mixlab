@@ -7,6 +7,8 @@
   installer, instead of a few seconds later.
 - In MixLab, Ctrl+R (⌘R on a Mac) reloads the table, structure or result on screen again. After
   tabs had been opened or closed, it could stop doing anything.
+- The MixEngine Dashboard shows its services right away after MixEngine starts. Before, the list
+  waited until the disk usage had been measured, which on Windows could take twenty seconds.
 
 ## v0.0.19
 
