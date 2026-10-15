@@ -5,6 +5,12 @@
 //! and so name a table `schema.table`; closest to `mysql.rs` in connection model, since both reach
 //! every database of the server over one pool rather than dialing again per database.
 
+pub mod ddl;
+pub mod dump;
+pub mod editing;
+pub mod script;
+pub mod structure;
+
 use super::filters::split_list;
 use crate::error::AppError;
 use crate::modules::db::models::ServerInfo;

@@ -1,6 +1,6 @@
 //! The statements that change a SQLite schema — the write half of the Structure tab.
 //!
-//! Shorter than `postgres_ddl.rs` for most of it, and not because SQLite is simpler: `ALTER TABLE`
+//! Shorter than `postgres/ddl.rs` for most of it, and not because SQLite is simpler: `ALTER TABLE`
 //! here does four things and nothing else — rename the table, rename a column, add a column, drop
 //! a column. There is no statement that changes a column's type, its nullability, its default or
 //! its collation, and none that adds a primary key to a table that has none.
@@ -15,7 +15,7 @@
 //! `docs/specs/2026-09-04-sqlite-completion-design.md` (B1-B8) for the decisions this
 //! implements.
 
-use super::sqlite::{map_error, quote_ident};
+use super::{map_error, quote_ident};
 use crate::error::AppError;
 use serde::Deserialize;
 use sqlx::{Row, SqlitePool};
@@ -474,7 +474,7 @@ async fn current_column(
     Ok(CurrentColumn {
         data_type: row.get::<String, _>("type"),
         nullable: row.get::<i64, _>("notnull") == 0,
-        default_value: super::sqlite::split_default(row.get::<Option<String>, _>("dflt_value")).0,
+        default_value: super::split_default(row.get::<Option<String>, _>("dflt_value")).0,
         collation: clause_collation(&clause),
     })
 }
@@ -654,7 +654,7 @@ fn rebuild_blockers(clauses: &[String], column: &str) -> Result<(), AppError> {
 }
 
 /// Whether `column` is a generated column (`hidden` 2 or 3) or the `INTEGER PRIMARY KEY` rowid
-/// alias — the same `hidden`/`pk` reading `sqlite_structure.rs::structure_columns` does, narrowed
+/// alias — the same `hidden`/`pk` reading `sqlite/structure.rs::structure_columns` does, narrowed
 /// to one column (B6 of the design spec).
 async fn generated_or_rowid_alias(
     pool: &SqlitePool,
@@ -721,7 +721,7 @@ async fn rebuild_column(
         suffix_sql
     );
 
-    let columns = super::sqlite_dump::data_columns(pool, table).await?;
+    let columns = super::dump::data_columns(pool, table).await?;
     let column_list = columns
         .iter()
         .map(|c| quote_ident(c))
@@ -906,8 +906,8 @@ async fn temp_table_name(pool: &SqlitePool, table: &str) -> Result<String, AppEr
 
 #[cfg(test)]
 mod tests {
-    use super::super::sqlite::tests::Fixture;
-    use super::super::sqlite_structure::table_structure;
+    use super::super::structure::table_structure;
+    use super::super::tests::Fixture;
     use super::*;
 
     fn column(name: &str, data_type: &str) -> ColumnSpec {
@@ -1328,7 +1328,7 @@ mod tests {
     async fn a_two_column_primary_key_is_not_a_rowid_alias() {
         let (_fixture, pool) = Fixture::open().await;
         // `tag.id` is declared INTEGER and leads the key, but the key is two columns — the exact
-        // shape that is *not* a rowid alias (same fixture note `sqlite_structure.rs` already
+        // shape that is *not* a rowid alias (same fixture note `sqlite/structure.rs` already
         // relies on).
         let (generated, rowid) = generated_or_rowid_alias(&pool, "tag", "id").await.unwrap();
         assert!(!generated);

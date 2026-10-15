@@ -1,3 +1,6 @@
+pub mod script;
+pub mod structure;
+
 use super::filters::{escape_like, split_list};
 use crate::error::AppError;
 use crate::modules::db::models::ServerInfo;
@@ -140,7 +143,7 @@ pub async fn thread_id(conn: &mut sqlx::MySqlConnection) -> Result<u64, AppError
 /// By number and not by the message. `"Unknown thread id"` is the English text of one server
 /// build: a server running under another `lc_messages`, or a MariaDB wording it differently, says
 /// the same thing in words this would not recognise — and the user would be shown an error for a
-/// query that had already finished. `mysql_script::problem` reads numbers for the same reason.
+/// query that had already finished. `script::problem` reads numbers for the same reason.
 pub async fn kill_query(pool: &MySqlPool, thread_id: u64) -> Result<(), AppError> {
     match sqlx::query(sqlx::AssertSqlSafe(format!("KILL QUERY {thread_id}")))
         .execute(pool)
@@ -454,7 +457,7 @@ pub struct TablePage {
 /// them, so the pager measures the filtered table rather than the whole one.
 /// `mariadb` says which of the two servers answered: only MySQL marks an expression default in
 /// `Extra`, and a row started off without that marker is written with the expression's text in it —
-/// see [`super::mysql_structure::mariadb_expression_defaults`].
+/// see [`structure::mariadb_expression_defaults`].
 pub async fn table_data(
     pool: &MySqlPool,
     mariadb: bool,
@@ -482,7 +485,7 @@ pub async fn table_data(
     // Swallowed like the foreign keys above, and for the same reason: a second reading of the same
     // table's metadata that fails where the first succeeded is not worth the rows themselves.
     let expression_defaults = if mariadb {
-        super::mysql_structure::mariadb_expression_defaults(&mut conn, database, table)
+        structure::mariadb_expression_defaults(&mut conn, database, table)
             .await
             .unwrap_or_default()
     } else {

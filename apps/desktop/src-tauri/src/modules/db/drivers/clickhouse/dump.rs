@@ -2,11 +2,11 @@
 //! no child process. See `docs/specs/2026-09-04-clickhouse-dump-restore-design.md` for
 //! the decisions this implements (referenced as D1..D9 below).
 
-use super::clickhouse::{self, Connection};
-use super::clickhouse_script::{Fed, Scanner};
-use super::clickhouse_structure;
-use super::dump::{self, Tracker};
+use super::super::dump::{self, Tracker};
+use super::script::{Fed, Scanner};
+use super::structure;
 use crate::error::AppError;
+use crate::modules::db::drivers::clickhouse::{self, Connection};
 
 /// Removes every `database.` qualifier from `sql` that stands immediately before an identifier —
 /// the leading name of the table/view being created, and every reference to the same database
@@ -196,7 +196,7 @@ async fn list_tables_with_engine(
         .filter_map(|row| {
             let name = row.get("name")?.as_str()?.to_string();
             let engine = row.get("engine")?.as_str()?.to_string();
-            let total_bytes = clickhouse_structure::as_u64(row.get("total_bytes")).unwrap_or(0);
+            let total_bytes = structure::as_u64(row.get("total_bytes")).unwrap_or(0);
             Some(TableInfo {
                 name,
                 engine,
@@ -356,7 +356,7 @@ pub async fn dump_data(
 ///
 /// Every statement runs through `execute_check`, scoped to `database` via the same `?database=`
 /// mechanism the dump's stripped-qualifier statements rely on (D4) — stops at the first one that
-/// fails, reporting that statement and the server's own words, like `sqlite_dump::restore`.
+/// fails, reporting that statement and the server's own words, like `sqlite::dump::restore`.
 pub async fn restore(
     conn: &Connection,
     database: &str,

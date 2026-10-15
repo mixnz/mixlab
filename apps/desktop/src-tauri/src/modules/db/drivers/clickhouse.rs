@@ -14,6 +14,11 @@
 //! shipped after it — see `docs/specs/2026-09-04-clickhouse-row-writes-design.md`. DDL,
 //! dump/restore and the Query tab's own writes are still closed.
 
+pub mod ddl;
+pub mod dump;
+pub mod script;
+pub mod structure;
+
 use super::filters::{escape_like, split_list};
 use crate::error::AppError;
 use crate::modules::db::models::ServerInfo;
@@ -174,7 +179,7 @@ pub(super) async fn query_in_database(
 
 /// Sends one statement and hands back the raw response for the caller to read as a stream, rather
 /// than buffering it into a `String` first the way [`query_with_params`]/[`query_in_database`] do —
-/// for `clickhouse_dump.rs`'s data export, where the whole point is never holding a table's worth of
+/// for `clickhouse/dump.rs`'s data export, where the whole point is never holding a table's worth of
 /// output in memory at once. Checks the status before handing the response back: a failure's body
 /// is still small (ClickHouse's own error text), so reading it here is cheaper than making every
 /// caller re-implement the same check.
@@ -256,7 +261,7 @@ pub(super) fn parse_written_rows(summary_header: &str) -> u64 {
 /// reads back how many rows ClickHouse reports having written, from the `X-ClickHouse-Summary`
 /// response header. This is the only place that count is available: `FORMAT JSON` cannot be
 /// appended to ask for it the way a `SELECT`'s can be, since a synchronous `INSERT` has no result
-/// set of its own to format (see `clickhouse_script.rs`'s module doc — `INSERT ... FORMAT JSON` is
+/// set of its own to format (see `clickhouse/script.rs`'s module doc — `INSERT ... FORMAT JSON` is
 /// parsed as a different statement, not a request for JSON output, checked against the test
 /// server).
 pub(super) async fn execute_with_written_rows(

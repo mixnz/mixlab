@@ -2,7 +2,7 @@
 //! transaction of its own, and the binding and key matching those writes share. The
 //! frontend's half is `src/modules/db/mssql/editing.ts`.
 
-use super::mssql::{
+use super::{
     is_binary_type, map_error, quote_ident, resolve, table_columns, three_part, Connection, Pool,
     MONEY_TYPES,
 };
@@ -427,6 +427,8 @@ async fn reset_identity(
 /// Refused rather than passed through some other way when it does not decode: text that is not
 /// valid base64 did not come out of this app's own grid, and guessing at what the user meant would
 /// silently write something other than what they typed.
+///
+/// [`column_value`]: super::column_value
 pub(super) fn decode_binary(value: &str) -> Result<Vec<u8>, AppError> {
     use base64::Engine;
     base64::engine::general_purpose::STANDARD
@@ -440,6 +442,8 @@ pub(super) fn decode_binary(value: &str) -> Result<Vec<u8>, AppError> {
 /// left unbracketed would break the multi-part name parsing DBCC does on that string, and dropping
 /// `dbo` would leave the server to resolve the unqualified half against whichever schema happens to
 /// be the caller's own default rather than the one this table is actually in (D7).
+///
+/// [`qualify`]: super::qualify
 pub(super) fn full_object_name(schema: &str, table: &str) -> String {
     format!("{}.{}", quote_ident(schema), quote_ident(table))
 }

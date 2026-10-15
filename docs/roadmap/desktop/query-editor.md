@@ -84,7 +84,7 @@ so several tabs share one copy. Invalidate when the workspace runs DDL or the us
 
 Running the statement under the caret, and highlighting it, needs the same split the backend does.
 Port `split_statements` from
-[mysql_script.rs](../../../apps/desktop/src-tauri/src/modules/db/drivers/mysql_script.rs) to `src/modules/db/sql/statements.ts`, returning
+[mysql/script.rs](../../../apps/desktop/src-tauri/src/modules/db/drivers/mysql/script.rs) to `src/modules/db/sql/statements.ts`, returning
 `{ text, verb, from, to }` ranges rather than just text.
 
 > The two splitters must stay in sync. If the Rust one learns something (a `DELIMITER` directive,

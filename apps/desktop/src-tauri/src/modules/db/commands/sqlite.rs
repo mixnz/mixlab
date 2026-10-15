@@ -15,9 +15,7 @@
 //! at all. The attribute keeps the name exactly as it is sent.
 
 use crate::error::AppError;
-use crate::modules::db::drivers::{
-    dump, sqlite, sqlite_ddl, sqlite_dump, sqlite_script, sqlite_structure,
-};
+use crate::modules::db::drivers::{dump, sqlite};
 use crate::modules::db::models::{ServerInfo, SqlProblem, StatementResult};
 use crate::modules::db::state::DbState;
 use serde_json::{Map, Value};
@@ -87,9 +85,9 @@ pub async fn sqlite_table_structure(
     id: String,
     database: String,
     table: String,
-) -> Result<sqlite_structure::TableStructure, AppError> {
+) -> Result<sqlite::structure::TableStructure, AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_structure::table_structure(&pool, &table).await
+    sqlite::structure::table_structure(&pool, &table).await
 }
 
 #[tauri::command]
@@ -97,9 +95,9 @@ pub async fn sqlite_schema_outline(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<sqlite_structure::SchemaOutline, AppError> {
+) -> Result<sqlite::structure::SchemaOutline, AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_structure::schema_outline(&pool, &database).await
+    sqlite::structure::schema_outline(&pool, &database).await
 }
 
 #[allow(unused_variables)]
@@ -108,18 +106,18 @@ pub async fn sqlite_table_stats(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<Vec<sqlite_structure::TableStats>, AppError> {
+) -> Result<Vec<sqlite::structure::TableStats>, AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_structure::table_stats(&pool).await
+    sqlite::structure::table_stats(&pool).await
 }
 
 #[tauri::command]
 pub async fn sqlite_collations(
     state: State<'_, DbState>,
     id: String,
-) -> Result<Vec<sqlite_structure::Collation>, AppError> {
+) -> Result<Vec<sqlite::structure::Collation>, AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_structure::collations(&pool).await
+    sqlite::structure::collations(&pool).await
 }
 
 #[allow(unused_variables)]
@@ -165,7 +163,7 @@ pub async fn sqlite_delete_rows(
 }
 
 /// `collation` is accepted and ignored: a SQLite table carries none of its own — see
-/// `sqlite_ddl::create_table`.
+/// `sqlite::ddl::create_table`.
 #[allow(unused_variables)]
 #[tauri::command]
 pub async fn sqlite_create_table(
@@ -176,7 +174,7 @@ pub async fn sqlite_create_table(
     collation: Option<String>,
 ) -> Result<(), AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_ddl::create_table(&pool, &table).await
+    sqlite::ddl::create_table(&pool, &table).await
 }
 
 #[allow(unused_variables)]
@@ -189,7 +187,7 @@ pub async fn sqlite_rename_table(
     new_name: String,
 ) -> Result<(), AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_ddl::rename_table(&pool, &table, &new_name).await
+    sqlite::ddl::rename_table(&pool, &table, &new_name).await
 }
 
 #[allow(unused_variables)]
@@ -201,7 +199,7 @@ pub async fn sqlite_drop_table(
     table: String,
 ) -> Result<(), AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_ddl::drop_table(&pool, &table).await
+    sqlite::ddl::drop_table(&pool, &table).await
 }
 
 #[allow(unused_variables)]
@@ -211,10 +209,10 @@ pub async fn sqlite_add_column(
     id: String,
     database: String,
     table: String,
-    spec: sqlite_ddl::ColumnSpec,
+    spec: sqlite::ddl::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_ddl::add_column(&pool, &table, &spec).await
+    sqlite::ddl::add_column(&pool, &table, &spec).await
 }
 
 #[allow(unused_variables)]
@@ -225,10 +223,10 @@ pub async fn sqlite_modify_column(
     database: String,
     table: String,
     name: String,
-    spec: sqlite_ddl::ColumnSpec,
+    spec: sqlite::ddl::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_ddl::modify_column(&pool, &table, &name, &spec).await
+    sqlite::ddl::modify_column(&pool, &table, &name, &spec).await
 }
 
 #[allow(unused_variables)]
@@ -241,7 +239,7 @@ pub async fn sqlite_drop_column(
     name: String,
 ) -> Result<(), AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_ddl::drop_column(&pool, &table, &name).await
+    sqlite::ddl::drop_column(&pool, &table, &name).await
 }
 
 #[allow(unused_variables)]
@@ -251,10 +249,10 @@ pub async fn sqlite_add_index(
     id: String,
     database: String,
     table: String,
-    spec: sqlite_ddl::IndexSpec,
+    spec: sqlite::ddl::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_ddl::add_index(&pool, &table, &spec).await
+    sqlite::ddl::add_index(&pool, &table, &spec).await
 }
 
 #[allow(unused_variables)]
@@ -265,10 +263,10 @@ pub async fn sqlite_modify_index(
     database: String,
     table: String,
     name: String,
-    spec: sqlite_ddl::IndexSpec,
+    spec: sqlite::ddl::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_ddl::modify_index(&pool, &table, &name, &spec).await
+    sqlite::ddl::modify_index(&pool, &table, &name, &spec).await
 }
 
 #[allow(unused_variables)]
@@ -281,14 +279,14 @@ pub async fn sqlite_drop_index(
     name: String,
 ) -> Result<(), AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_ddl::drop_index(&pool, &table, &name).await
+    sqlite::ddl::drop_index(&pool, &table, &name).await
 }
 
 /// Runs the user's script.
 ///
 /// `run_id` is accepted for the shape the other two engines have and is not remembered anywhere:
 /// nothing here can be cancelled from outside, so there is no pid to file under it — see
-/// `sqlite_script`.
+/// `sqlite::script`.
 #[allow(unused_variables)]
 #[tauri::command]
 pub async fn sqlite_run_script(
@@ -299,7 +297,7 @@ pub async fn sqlite_run_script(
     database: Option<String>,
 ) -> Result<Vec<StatementResult>, AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_script::run(&pool, &sql).await
+    sqlite::script::run(&pool, &sql).await
 }
 
 /// Asks SQLite to prepare one statement without running it, for the editor's error checking.
@@ -312,7 +310,7 @@ pub async fn sqlite_validate_sql(
     database: Option<String>,
 ) -> Result<Option<SqlProblem>, AppError> {
     let pool = sqlite_pool(&state, &id).await?;
-    sqlite_script::validate(&pool, &sql).await
+    sqlite::script::validate(&pool, &sql).await
 }
 
 /// Writes the schema and/or the rows to `path`, depending on `mode`.
@@ -338,17 +336,17 @@ pub async fn sqlite_dump(
     let path = std::path::Path::new(&path);
 
     if mode != dump::DumpMode::Data {
-        sqlite_dump::dump_structure(&pool, path, &watch).await?;
+        sqlite::dump::dump_structure(&pool, path, &watch).await?;
     }
     if mode != dump::DumpMode::Structure {
         let append = mode == dump::DumpMode::All;
-        sqlite_dump::dump_data(&pool, path, append, &watch).await?;
+        sqlite::dump::dump_data(&pool, path, append, &watch).await?;
     }
     Ok(())
 }
 
 /// Replays a dump file into the open database. No progress in between — see A5 of the design
-/// spec — only one reading before `sqlite_script::run` starts, so the overlay shows movement
+/// spec — only one reading before `sqlite::script::run` starts, so the overlay shows movement
 /// rather than sitting frozen on an empty bar.
 #[allow(unused_variables)]
 #[tauri::command]
@@ -363,5 +361,5 @@ pub async fn sqlite_restore(
     let report = reporter(&app, &id);
     let _transfer = Transfer::start(&state, &id);
     report(dump::Progress::default());
-    sqlite_dump::restore(&pool, std::path::Path::new(&path)).await
+    sqlite::dump::restore(&pool, std::path::Path::new(&path)).await
 }

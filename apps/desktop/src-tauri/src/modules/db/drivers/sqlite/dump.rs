@@ -16,10 +16,10 @@
 //! Restore is complete for either kind of dump: the file is replayed statement by statement, so a
 //! dump written elsewhere — by `sqlite3 .dump`, rows and all — restores in full.
 
-use super::dump;
-use super::sqlite::{map_error, quote_ident};
-use super::sqlite_ddl::quote_string;
-use super::sqlite_script;
+use super::super::dump;
+use super::ddl::quote_string;
+use super::script;
+use super::{map_error, quote_ident};
 use crate::error::AppError;
 use futures_util::TryStreamExt;
 use sqlx::{Row, SqlitePool, TypeInfo, ValueRef};
@@ -87,7 +87,7 @@ pub async fn restore(pool: &SqlitePool, path: &Path) -> Result<(), AppError> {
     let sql = std::fs::read_to_string(path)
         .map_err(|e| err!("error.cannotReadFile", path = path.display(), message = e))?;
 
-    let results = sqlite_script::run(pool, &sql).await?;
+    let results = script::run(pool, &sql).await?;
     if let Some(failed) = results.iter().find(|result| result.error.is_some()) {
         return Err(err!(
             "error.sqliteRestoreFailed",
@@ -177,9 +177,7 @@ pub async fn dump_data(
     use tokio::io::AsyncWriteExt;
 
     let tables = data_tables(pool).await?;
-    let sizes = super::sqlite_structure::page_sizes(pool)
-        .await
-        .unwrap_or_default();
+    let sizes = super::structure::page_sizes(pool).await.unwrap_or_default();
     let weights: Vec<(String, u64)> = tables
         .iter()
         .map(|t| (t.clone(), sizes.get(t).copied().unwrap_or(0).max(1)))
@@ -238,7 +236,7 @@ pub async fn dump_data(
 
 #[cfg(test)]
 mod tests {
-    use super::super::sqlite::tests::Fixture;
+    use super::super::tests::Fixture;
     use super::*;
 
     /// A path in the temp directory that nothing else is using, removed when the test ends.

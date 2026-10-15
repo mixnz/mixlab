@@ -13,9 +13,9 @@ Plan `2026-09-04-sqlite-db-kind.md` (gitignored) để lại đúng hai khoảng
 đặt tên và hoãn có chủ đích khi kind `sqlite` ra đời — D3 và D4. Cả hai đều còn nguyên trong code hôm
 nay:
 
-- **D3 — dump chỉ có structure.** [`sqlite_dump.rs:9-14`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite_dump.rs#L9-L14):
+- **D3 — dump chỉ có structure.** [`sqlite_dump.rs:9-14`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite/dump.rs#L9-L14):
   `SqlDumpMode::Data` và `All` bị từ chối thẳng bằng `error.sqliteDataDumpUnsupported`.
-- **D4 — sửa cột chỉ đổi được tên.** [`sqlite_ddl.rs:242-247`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite_ddl.rs#L242-L247):
+- **D4 — sửa cột chỉ đổi được tên.** [`sqlite_ddl.rs:242-247`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite/ddl.rs#L242-L247):
   đổi kiểu/`NOT NULL`/default/collation đều bị từ chối bằng ba mã lỗi riêng.
 
 Sau spec này: nút Dump cho SQLite mở đủ cả 3 mode (structure/data/all) như ba engine SQL kia; dialog
@@ -43,13 +43,13 @@ kỹ thuật, gộp một spec vì cùng một mục đích ("đóng nốt các 
 
 | Chỗ | Điều spec dựa vào |
 | --- | --- |
-| [`sqlite_dump.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite_dump.rs) | `dump_structure` đọc `sql` từ `sqlite_master` verbatim; `restore` đọc cả file vào RAM rồi gọi `sqlite_script::run` |
-| [`sqlite_script.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite_script.rs) | `split_statements` (riêng, không `pub`) và `run` — bộ chạy script dùng chung với tab Query, không có hook tiến độ/cancel |
+| [`sqlite_dump.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite/dump.rs) | `dump_structure` đọc `sql` từ `sqlite_master` verbatim; `restore` đọc cả file vào RAM rồi gọi `sqlite_script::run` |
+| [`sqlite_script.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite/script.rs) | `split_statements` (riêng, không `pub`) và `run` — bộ chạy script dùng chung với tab Query, không có hook tiến độ/cancel |
 | [`sqlite.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite.rs) | `column_value` — đọc storage class thật của giá trị (`raw.type_info().name()`: `INTEGER`/`REAL`/`BLOB`/khác) thay vì kiểu khai báo của cột, đúng thứ D3 cần để sinh literal đúng; `quote_ident`, `split_default` |
-| [`sqlite_ddl.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite_ddl.rs) | `column_definition` (dựng DDL một cột từ `ColumnSpec`), `quote_string`, `execute_all` (transaction), `modify_column` hiện tại (điểm sẽ rẽ nhánh sang rebuild) |
-| [`sqlite_structure.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite_structure.rs) | `structure_columns` đọc `hidden` từ `pragma_table_xinfo` (`generated = hidden==2\|\|hidden==3`); `page_sizes` (riêng, không `pub`) đọc `dbstat` cho trọng số theo bảng — dùng lại được cho `Tracker` |
+| [`sqlite_ddl.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite/ddl.rs) | `column_definition` (dựng DDL một cột từ `ColumnSpec`), `quote_string`, `execute_all` (transaction), `modify_column` hiện tại (điểm sẽ rẽ nhánh sang rebuild) |
+| [`sqlite_structure.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/sqlite/structure.rs) | `structure_columns` đọc `hidden` từ `pragma_table_xinfo` (`generated = hidden==2\|\|hidden==3`); `page_sizes` (riêng, không `pub`) đọc `dbstat` cho trọng số theo bảng — dùng lại được cho `Tracker` |
 | [`dump.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/dump.rs) | `DumpMode` (structure/data/all), `Progress`, `Watch`, `Tracker` — hạ tầng chung ClickHouse đã dùng, SQLite hiện chưa đụng tới |
-| [`clickhouse_dump.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/clickhouse_dump.rs) | Mẫu dump native không qua child process: `dump_data` stream từng bảng vào file qua `Tracker`, `restore` đọc incremental — SQLite không cần incremental (xem A5) nhưng noi theo cách wiring `Watch`/`Tracker` |
+| [`clickhouse_dump.rs`](../../apps/desktop/src-tauri/src/modules/db/drivers/clickhouse/dump.rs) | Mẫu dump native không qua child process: `dump_data` stream từng bảng vào file qua `Tracker`, `restore` đọc incremental — SQLite không cần incremental (xem A5) nhưng noi theo cách wiring `Watch`/`Tracker` |
 | [`commands/sqlite.rs`](../../apps/desktop/src-tauri/src/modules/db/commands/sqlite.rs) | `sqlite_dump`/`sqlite_restore` hiện không có `app: AppHandle`, không `Transfer::start`, không báo tiến độ — khác hẳn `commands/clickhouse.rs`'s `clickhouse_dump`/`clickhouse_restore` |
 | [`commands/mod.rs`](../../apps/desktop/src-tauri/src/modules/db/commands/mod.rs) | `reporter(&app, &id)`, `Transfer::start`/`.flag()` — hạ tầng wiring dùng chung cho mọi kind |
 | [`src/modules/db/sqlite/api.ts`](../../apps/desktop/src/modules/db/sqlite/api.ts) | `dump`/`restore` đã gọi đúng `invoke`, chỉ cần backend mở mode — **frontend không cần đổi gì cho phần A** |

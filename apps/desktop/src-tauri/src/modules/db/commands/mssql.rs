@@ -4,9 +4,7 @@
 //! reach into over the one pool, never a pool to pick. See `mssql_pool`.
 
 use crate::error::AppError;
-use crate::modules::db::drivers::{
-    dump, mssql, mssql_ddl, mssql_dump, mssql_editing, mssql_script, mssql_structure,
-};
+use crate::modules::db::drivers::{dump, mssql};
 use crate::modules::db::models::{ServerInfo, SqlProblem, StatementResult};
 use crate::modules::db::state::DbState;
 use serde_json::{Map, Value};
@@ -62,7 +60,7 @@ pub async fn mssql_update_row(
     key: Map<String, Value>,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_editing::update_row(&pool, &database, &table, &updates, &key).await
+    mssql::editing::update_row(&pool, &database, &table, &updates, &key).await
 }
 
 #[tauri::command]
@@ -74,7 +72,7 @@ pub async fn mssql_insert_rows(
     rows: Vec<Map<String, Value>>,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_editing::insert_rows(&pool, &database, &table, &rows).await
+    mssql::editing::insert_rows(&pool, &database, &table, &rows).await
 }
 
 /// `reset_auto_increment` keeps MySQL's name, the way `commands::postgres` does too — it is the
@@ -90,7 +88,7 @@ pub async fn mssql_delete_rows(
     reset_auto_increment: bool,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_editing::delete_rows(&pool, &database, &table, &keys, all, reset_auto_increment).await
+    mssql::editing::delete_rows(&pool, &database, &table, &keys, all, reset_auto_increment).await
 }
 
 #[tauri::command]
@@ -113,10 +111,10 @@ pub async fn mssql_table_structure(
     id: String,
     database: String,
     table: String,
-) -> Result<mssql_structure::TableStructure, AppError> {
+) -> Result<mssql::structure::TableStructure, AppError> {
     retry_read!({
         let pool = mssql_pool(&state, &id).await?;
-        mssql_structure::table_structure(&pool, &database, &table).await
+        mssql::structure::table_structure(&pool, &database, &table).await
     })
 }
 
@@ -125,10 +123,10 @@ pub async fn mssql_table_stats(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<Vec<mssql_structure::TableStats>, AppError> {
+) -> Result<Vec<mssql::structure::TableStats>, AppError> {
     retry_read!({
         let pool = mssql_pool(&state, &id).await?;
-        mssql_structure::table_stats(&pool, &database).await
+        mssql::structure::table_stats(&pool, &database).await
     })
 }
 
@@ -136,10 +134,10 @@ pub async fn mssql_table_stats(
 pub async fn mssql_collations(
     state: State<'_, DbState>,
     id: String,
-) -> Result<Vec<mssql_structure::Collation>, AppError> {
+) -> Result<Vec<mssql::structure::Collation>, AppError> {
     retry_read!({
         let pool = mssql_pool(&state, &id).await?;
-        mssql_structure::collations(&pool).await
+        mssql::structure::collations(&pool).await
     })
 }
 
@@ -148,15 +146,15 @@ pub async fn mssql_schema_outline(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<mssql_structure::SchemaOutline, AppError> {
+) -> Result<mssql::structure::SchemaOutline, AppError> {
     retry_read!({
         let pool = mssql_pool(&state, &id).await?;
-        mssql_structure::schema_outline(&pool, &database).await
+        mssql::structure::schema_outline(&pool, &database).await
     })
 }
 
 /// Runs the Query tab's text against SQL Server, batch by batch and statement by statement within
-/// each — see `mssql_script::run`. `USE database` runs before the first statement so an unqualified
+/// each — see `mssql::script::run`. `USE database` runs before the first statement so an unqualified
 /// table name resolves the way it does everywhere else in the workspace, matching MySQL's connection
 /// model (D2): one pool for the whole server, not one per database.
 #[tauri::command]
@@ -171,7 +169,7 @@ pub async fn mssql_run_script(
     // However it ended — finished, failed, or killed from `mssql_cancel_query` — dropping this is
     // what forgets the SPID.
     let _running = RunningQuery::start(&state, &run_id);
-    mssql_script::run(&pool, &sql, database.as_deref(), |spid| {
+    mssql::script::run(&pool, &sql, database.as_deref(), |spid| {
         state
             .running_queries
             .lock()
@@ -181,7 +179,7 @@ pub async fn mssql_run_script(
     .await
 }
 
-/// Stops the run named by `run_id`, if it is still running — see `mssql_script::cancel` for why
+/// Stops the run named by `run_id`, if it is still running — see `mssql::script::cancel` for why
 /// this ends the whole session rather than just the statement (D8), and `DbState::running_queries`
 /// for the map this reads.
 #[tauri::command]
@@ -194,7 +192,7 @@ pub async fn mssql_cancel_query(
     let Some(session_id) = session_id else {
         return Ok(());
     };
-    mssql_script::cancel(&mssql_pool(&state, &id).await?, session_id).await
+    mssql::script::cancel(&mssql_pool(&state, &id).await?, session_id).await
 }
 
 /// Asks SQL Server to parse one statement without running it, for the editor's error checking.
@@ -206,7 +204,7 @@ pub async fn mssql_validate_sql(
     database: Option<String>,
 ) -> Result<Option<SqlProblem>, AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_script::validate(&pool, &sql, database.as_deref()).await
+    mssql::script::validate(&pool, &sql, database.as_deref()).await
 }
 
 #[tauri::command]
@@ -217,7 +215,7 @@ pub async fn mssql_create_database(
     collation: Option<String>,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::create_database(&pool, &name, collation.as_deref()).await
+    mssql::ddl::create_database(&pool, &name, collation.as_deref()).await
 }
 
 #[tauri::command]
@@ -227,7 +225,7 @@ pub async fn mssql_drop_database(
     database: String,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::drop_database(&pool, &database).await
+    mssql::ddl::drop_database(&pool, &database).await
 }
 
 #[tauri::command]
@@ -239,7 +237,7 @@ pub async fn mssql_create_table(
     #[allow(unused_variables)] collation: Option<String>,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::create_table(&pool, &database, &table).await
+    mssql::ddl::create_table(&pool, &database, &table).await
 }
 
 #[tauri::command]
@@ -251,7 +249,7 @@ pub async fn mssql_rename_table(
     new_name: String,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::rename_table(&pool, &database, &table, &new_name).await
+    mssql::ddl::rename_table(&pool, &database, &table, &new_name).await
 }
 
 #[tauri::command]
@@ -262,7 +260,7 @@ pub async fn mssql_drop_table(
     table: String,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::drop_table(&pool, &database, &table).await
+    mssql::ddl::drop_table(&pool, &database, &table).await
 }
 
 #[tauri::command]
@@ -271,10 +269,10 @@ pub async fn mssql_add_column(
     id: String,
     database: String,
     table: String,
-    spec: mssql_ddl::ColumnSpec,
+    spec: mssql::ddl::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::add_column(&pool, &database, &table, &spec).await
+    mssql::ddl::add_column(&pool, &database, &table, &spec).await
 }
 
 #[tauri::command]
@@ -286,7 +284,7 @@ pub async fn mssql_drop_column(
     name: String,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::drop_column(&pool, &database, &table, &name).await
+    mssql::ddl::drop_column(&pool, &database, &table, &name).await
 }
 
 #[tauri::command]
@@ -296,10 +294,10 @@ pub async fn mssql_modify_column(
     database: String,
     table: String,
     name: String,
-    spec: mssql_ddl::ColumnSpec,
+    spec: mssql::ddl::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::modify_column(&pool, &database, &table, &name, &spec).await
+    mssql::ddl::modify_column(&pool, &database, &table, &name, &spec).await
 }
 
 #[tauri::command]
@@ -308,10 +306,10 @@ pub async fn mssql_add_index(
     id: String,
     database: String,
     table: String,
-    spec: mssql_ddl::IndexSpec,
+    spec: mssql::ddl::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::add_index(&pool, &database, &table, &spec).await
+    mssql::ddl::add_index(&pool, &database, &table, &spec).await
 }
 
 #[tauri::command]
@@ -321,10 +319,10 @@ pub async fn mssql_modify_index(
     database: String,
     table: String,
     name: String,
-    spec: mssql_ddl::IndexSpec,
+    spec: mssql::ddl::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::modify_index(&pool, &database, &table, &name, &spec).await
+    mssql::ddl::modify_index(&pool, &database, &table, &name, &spec).await
 }
 
 #[tauri::command]
@@ -336,7 +334,7 @@ pub async fn mssql_drop_index(
     name: String,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql_ddl::drop_index(&pool, &database, &table, &name).await
+    mssql::ddl::drop_index(&pool, &database, &table, &name).await
 }
 
 /// Writes `database` out as SQL — `mode` is `structure`, `data` or `all`. See
@@ -362,17 +360,17 @@ pub async fn mssql_dump(
     };
 
     if mode != dump::DumpMode::Data {
-        mssql_dump::dump_structure(&pool, &database, &path, &watch).await?;
+        mssql::dump::dump_structure(&pool, &database, &path, &watch).await?;
     }
     if mode != dump::DumpMode::Structure {
         let append = mode == dump::DumpMode::All;
-        mssql_dump::dump_data(&pool, &database, &path, append, &watch).await?;
+        mssql::dump::dump_data(&pool, &database, &path, append, &watch).await?;
     }
     Ok(())
 }
 
 /// Replays a dump file into `database`. No progress in between — see the plan's Task 5 — only one
-/// reading before `mssql_script::run` starts, so the overlay shows movement rather than sitting
+/// reading before `mssql::script::run` starts, so the overlay shows movement rather than sitting
 /// frozen on an empty bar, the same as `sqlite_restore`.
 #[allow(unused_variables)]
 #[tauri::command]
@@ -387,5 +385,5 @@ pub async fn mssql_restore(
     let report = reporter(&app, &id);
     let _transfer = Transfer::start(&state, &id);
     report(dump::Progress::default());
-    mssql_dump::restore(&pool, &database, &path).await
+    mssql::dump::restore(&pool, &database, &path).await
 }

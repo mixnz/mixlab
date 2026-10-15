@@ -4,7 +4,7 @@
 use super::{in_background, mysql_connection, mysql_pool, reporter, sql_endpoint, tools_dir};
 use super::{RunningQuery, Transfer};
 use crate::error::AppError;
-use crate::modules::db::drivers::{dump, mysql, mysql_script, mysql_structure, tools};
+use crate::modules::db::drivers::{dump, mysql, tools};
 use crate::modules::db::models::DbKind;
 use crate::modules::db::models::{ServerInfo, SqlProblem, StatementResult};
 use crate::modules::db::state::DbState;
@@ -63,10 +63,10 @@ pub async fn mysql_table_stats(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<Vec<mysql_structure::TableStats>, AppError> {
+) -> Result<Vec<mysql::structure::TableStats>, AppError> {
     retry_read!({
         let pool = mysql_pool(&state, &id).await?;
-        mysql_structure::table_stats(&pool, &database).await
+        mysql::structure::table_stats(&pool, &database).await
     })
 }
 
@@ -129,10 +129,10 @@ pub async fn mysql_table_structure(
     id: String,
     database: String,
     table: String,
-) -> Result<mysql_structure::TableStructure, AppError> {
+) -> Result<mysql::structure::TableStructure, AppError> {
     retry_read!({
         let (pool, mariadb) = mysql_connection(&state, &id).await?;
-        mysql_structure::table_structure(&pool, mariadb, &database, &table).await
+        mysql::structure::table_structure(&pool, mariadb, &database, &table).await
     })
 }
 
@@ -143,10 +143,10 @@ pub async fn mysql_schema_outline(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<mysql_structure::SchemaOutline, AppError> {
+) -> Result<mysql::structure::SchemaOutline, AppError> {
     retry_read!({
         let pool = mysql_pool(&state, &id).await?;
-        mysql_structure::schema_outline(&pool, &database).await
+        mysql::structure::schema_outline(&pool, &database).await
     })
 }
 
@@ -156,10 +156,10 @@ pub async fn mysql_schema_outline(
 pub async fn mysql_collations(
     state: State<'_, DbState>,
     id: String,
-) -> Result<Vec<mysql_structure::Collation>, AppError> {
+) -> Result<Vec<mysql::structure::Collation>, AppError> {
     retry_read!({
         let pool = mysql_pool(&state, &id).await?;
-        mysql_structure::collations(&pool).await
+        mysql::structure::collations(&pool).await
     })
 }
 
@@ -182,7 +182,7 @@ pub async fn mysql_dump(
     // Read through the pool, before the endpoint: the character set the dump is transferred in and
     // the server's own version are properties of the server, not of how the tool is invoked.
     let pool = mysql_pool(&state, &id).await?;
-    let charset = mysql_structure::dump_charset(&pool, &database).await?;
+    let charset = mysql::structure::dump_charset(&pool, &database).await?;
     let version = mysql::server_info(&pool).await.map(|info| info.version);
     // Only MySQL 8.0 and up has the histogram table an 8.0 mysqldump reads by default. MariaDB has
     // it at no version — it numbers itself 10.x and 11.x, so it cannot be told from a modern MySQL
@@ -195,7 +195,7 @@ pub async fn mysql_dump(
     // What each table weighs, for the progress the dump reports. A server that will not say —
     // `information_schema` shows a user only what they have privileges on — leaves the dump to run
     // with a bar that moves without a number, which is not worth refusing to dump over.
-    let tables: Vec<(String, u64)> = mysql_structure::table_stats(&pool, &database)
+    let tables: Vec<(String, u64)> = mysql::structure::table_stats(&pool, &database)
         .await
         .map(|tables| {
             tables
@@ -277,7 +277,7 @@ pub async fn mysql_drop_database(
     database: String,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::drop_database(&pool, &database).await
+    mysql::structure::drop_database(&pool, &database).await
 }
 
 /// Creates a database, for the header's database picker.
@@ -289,7 +289,7 @@ pub async fn mysql_create_database(
     collation: Option<String>,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::create_database(&pool, &name, collation.as_deref()).await
+    mysql::structure::create_database(&pool, &name, collation.as_deref()).await
 }
 
 /// Creates an empty table — one `id` column and its primary key — for the sidebar's add button.
@@ -302,7 +302,7 @@ pub async fn mysql_create_table(
     collation: Option<String>,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::create_table(&pool, &database, &table, collation.as_deref()).await
+    mysql::structure::create_table(&pool, &database, &table, collation.as_deref()).await
 }
 
 /// Renames a table, for the sidebar's context menu.
@@ -315,7 +315,7 @@ pub async fn mysql_rename_table(
     new_name: String,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::rename_table(&pool, &database, &table, &new_name).await
+    mysql::structure::rename_table(&pool, &database, &table, &new_name).await
 }
 
 /// Drops a table and everything in it, for the sidebar's context menu.
@@ -327,7 +327,7 @@ pub async fn mysql_drop_table(
     table: String,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::drop_table(&pool, &database, &table).await
+    mysql::structure::drop_table(&pool, &database, &table).await
 }
 
 #[tauri::command]
@@ -336,10 +336,10 @@ pub async fn mysql_add_column(
     id: String,
     database: String,
     table: String,
-    spec: mysql_structure::ColumnSpec,
+    spec: mysql::structure::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::add_column(&pool, &database, &table, &spec).await
+    mysql::structure::add_column(&pool, &database, &table, &spec).await
 }
 
 #[tauri::command]
@@ -349,10 +349,10 @@ pub async fn mysql_modify_column(
     database: String,
     table: String,
     name: String,
-    spec: mysql_structure::ColumnSpec,
+    spec: mysql::structure::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::modify_column(&pool, &database, &table, &name, &spec).await
+    mysql::structure::modify_column(&pool, &database, &table, &name, &spec).await
 }
 
 #[tauri::command]
@@ -364,7 +364,7 @@ pub async fn mysql_drop_column(
     name: String,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::drop_column(&pool, &database, &table, &name).await
+    mysql::structure::drop_column(&pool, &database, &table, &name).await
 }
 
 #[tauri::command]
@@ -373,10 +373,10 @@ pub async fn mysql_add_index(
     id: String,
     database: String,
     table: String,
-    spec: mysql_structure::IndexSpec,
+    spec: mysql::structure::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::add_index(&pool, &database, &table, &spec).await
+    mysql::structure::add_index(&pool, &database, &table, &spec).await
 }
 
 #[tauri::command]
@@ -386,10 +386,10 @@ pub async fn mysql_modify_index(
     database: String,
     table: String,
     name: String,
-    spec: mysql_structure::IndexSpec,
+    spec: mysql::structure::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::modify_index(&pool, &database, &table, &name, &spec).await
+    mysql::structure::modify_index(&pool, &database, &table, &name, &spec).await
 }
 
 #[tauri::command]
@@ -401,7 +401,7 @@ pub async fn mysql_drop_index(
     name: String,
 ) -> Result<(), AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_structure::drop_index(&pool, &database, &table, &name).await
+    mysql::structure::drop_index(&pool, &database, &table, &name).await
 }
 
 /// Runs the Query tab's editor contents. `database` is the one selected in the header, applied as a
@@ -419,7 +419,7 @@ pub async fn mysql_run_script(
     // However it ended — finished, failed, or killed from `mysql_cancel_query` — dropping this is
     // what forgets the thread id.
     let _running = RunningQuery::start(&state, &run_id);
-    mysql_script::run(&pool, &sql, database.as_deref(), |thread| {
+    mysql::script::run(&pool, &sql, database.as_deref(), |thread| {
         state
             .running_queries
             .lock()
@@ -433,7 +433,7 @@ pub async fn mysql_run_script(
 ///
 /// Read-only in the strongest sense available: the statement is prepared and the plan thrown away,
 /// so not even a `DELETE` handed to this does anything. What comes back is `null` when the server
-/// had nothing to say — see `mysql_script::validate` for why most of what it *does* say is a
+/// had nothing to say — see `mysql::script::validate` for why most of what it *does* say is a
 /// warning rather than an error.
 #[tauri::command]
 pub async fn mysql_validate_sql(
@@ -443,7 +443,7 @@ pub async fn mysql_validate_sql(
     database: Option<String>,
 ) -> Result<Option<SqlProblem>, AppError> {
     let pool = mysql_pool(&state, &id).await?;
-    mysql_script::validate(&pool, &sql, database.as_deref()).await
+    mysql::script::validate(&pool, &sql, database.as_deref()).await
 }
 
 /// Stops the run named by `run_id`, if it is still running.

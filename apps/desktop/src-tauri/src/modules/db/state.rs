@@ -81,7 +81,7 @@ pub struct DbState {
     /// hides all of that today — a second query tab is what would show it.
     ///
     /// A blocking lock rather than an async one: nothing is awaited while it is held, and it has
-    /// to be usable from the plain closure `mysql_script::run` announces the id through.
+    /// to be usable from the plain closure `mysql::script::run` announces the id through.
     pub running_queries: std::sync::Mutex<HashMap<String, u64>>,
     /// The transfer each connection is running, while it runs one.
     ///

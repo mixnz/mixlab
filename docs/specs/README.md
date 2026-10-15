@@ -222,3 +222,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-15 | [The `db` tab: a hook for the connection, parts for the form side (design)](2026-10-15-t208a-db-tab-connection-lifecycle-design.md) | T208a | implemented |
 | 2026-10-15 | [Table Structure and the Dashboard: hooks for what they do, parts for what they draw (design)](2026-10-15-t208b-table-structure-and-dashboard-hooks-design.md) | T208b | implemented |
 | 2026-10-15 | [The `db` module's folders follow its subjects and its engines (design)](2026-10-15-t208c-db-module-folders-design.md) | T208c | implemented |
+| 2026-10-15 | [The db backend's drivers: one folder per engine (design)](2026-10-15-t208d-db-drivers-one-folder-per-engine-design.md) | T208d | implemented |

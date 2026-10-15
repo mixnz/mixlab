@@ -31,21 +31,21 @@ The database module, under `modules/db/`:
 | `state.rs` | `DbState { connections: Mutex<HashMap<String, ActiveConnection>> }`, `DbHandle`. |
 | `handoff.rs` | A `mixlab://connect?…` URL as a `ConnectionConfig`, the rule for which environment variable may hold its password, and `HandoffState`, where it waits for its tab. |
 | `drivers/mysql.rs` | Connect, query, row/value conversion, table data, CRUD. |
-| `drivers/mysql_structure.rs` | Columns and indexes: read, ADD/CHANGE/DROP. |
-| `drivers/mysql_script.rs` | Splits user SQL into statements and runs them one by one. |
+| `drivers/mysql/structure.rs` | Columns and indexes: read, ADD/CHANGE/DROP. |
+| `drivers/mysql/script.rs` | Splits user SQL into statements and runs them one by one. |
 | `drivers/postgres.rs` | Connect, list, read a page — with a pool **per database**, since a PostgreSQL connection cannot see into another. |
-| `drivers/postgres_structure.rs` | The Structure and Statistics tabs, reported in the shapes `mysql_structure.rs` reports so one grid draws either. |
-| `drivers/postgres_ddl.rs` | Tables, columns and indexes changed — one property at a time, unlike MySQL's `CHANGE COLUMN`. |
-| `drivers/postgres_script.rs` | The counterpart of `mysql_script.rs`: split, run statement by statement, validate one without running it. |
+| `drivers/postgres/structure.rs` | The Structure and Statistics tabs, reported in the shapes `mysql/structure.rs` reports so one grid draws either. |
+| `drivers/postgres/ddl.rs` | Tables, columns and indexes changed — one property at a time, unlike MySQL's `CHANGE COLUMN`. |
+| `drivers/postgres/script.rs` | The counterpart of `mysql/script.rs`: split, run statement by statement, validate one without running it. |
 | `drivers/sqlite.rs` | Connect to a **file**, read a page, write rows. No endpoint, no tunnel, no TLS — and metadata read through the `pragma_*` table-valued functions, since a `PRAGMA` takes no bind parameters. |
-| `drivers/sqlite_structure.rs` | The Structure and Statistics tabs. Row counts are counted rather than estimated, and sizes come from `dbstat` — which exists because the app bundles its own SQLite. |
-| `drivers/sqlite_ddl.rs` | What SQLite's `ALTER TABLE` can do, which is four things. A column edit that is not a rename is refused by name rather than rebuilt around. |
-| `drivers/sqlite_script.rs` | Split and run. No cancel: the statement runs in this process, so there is no session to stop. |
-| `drivers/sqlite_dump.rs` | Structure out of `sqlite_master` and back in. The one dump that is not a child process. |
+| `drivers/sqlite/structure.rs` | The Structure and Statistics tabs. Row counts are counted rather than estimated, and sizes come from `dbstat` — which exists because the app bundles its own SQLite. |
+| `drivers/sqlite/ddl.rs` | What SQLite's `ALTER TABLE` can do, which is four things. A column edit that is not a rename is refused by name rather than rebuilt around. |
+| `drivers/sqlite/script.rs` | Split and run. No cancel: the statement runs in this process, so there is no session to stop. |
+| `drivers/sqlite/dump.rs` | Structure out of `sqlite_master` and back in. The one dump that is not a child process. |
 | `drivers/mongo.rs` | Connect, list, find, paging, document CRUD. |
 | `drivers/redis.rs` | Connect, SCAN paging, typed value reads, delete. |
 | `drivers/clickhouse.rs` | HTTP interface, no `sqlx` driver exists for it. Read-only in v1: list, table data, structure, stats, schema outline — no write commands are registered at all. |
-| `drivers/clickhouse_script.rs` | Split and run, one request per statement — the HTTP interface refuses a body holding more than one. `validate` runs `EXPLAIN AST`, which parses without executing. |
+| `drivers/clickhouse/script.rs` | Split and run, one request per statement — the HTTP interface refuses a body holding more than one. `validate` runs `EXPLAIN AST`, which parses without executing. |
 | `drivers/dump.rs` | Backup and restore by driving the vendors' own tools — `mysqldump`, `pg_dump`, `mongodump` and their restores. |
 | `drivers/tools.rs` | Where those tools come from: the pinned downloads, and `PG_VERSION`. |
 | `drivers/filters.rs` | Shared filter-value parsing (`split_list` etc.). |

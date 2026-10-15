@@ -447,7 +447,7 @@ pub struct Progress {
 pub struct Watch<'a> {
     /// `Send + Sync` even though the three child-process-driven dumps below never need it — their
     /// own `Watch` never crosses an `.await`, confined to a `spawn_blocking` closure instead. The
-    /// ClickHouse dump/restore in `clickhouse_dump.rs` runs as a plain `async fn` with no child
+    /// ClickHouse dump/restore in `clickhouse/dump.rs` runs as a plain `async fn` with no child
     /// process to block on, so it holds a `&Watch` across real `.await` points — which tauri only
     /// accepts from a command whose whole future is `Send`. Every closure passed in today already
     /// satisfies this (an `AppHandle`-capturing reporter, an `Arc<AtomicBool>`-capturing cancel
@@ -740,7 +740,7 @@ fn mysqldump_args(
 
 /// Writes `database` to `path` as SQL.
 ///
-/// `charset` is the character set the dump is transferred in — see `mysql_structure::dump_charset`
+/// `charset` is the character set the dump is transferred in — see `mysql::structure::dump_charset`
 /// for how it is chosen. It matters more than it looks: mysqldump converts every string on the way
 /// out to this character set and writes a matching `SET NAMES` into the file, so a wrong one is a
 /// restore where the text comes back mangled.

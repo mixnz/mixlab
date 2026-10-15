@@ -1,12 +1,12 @@
 //! What a SQL Server table is made of, and what every table in a database weighs — the Structure
 //! and Statistics tabs, plus the Query tab's schema outline.
 //!
-//! The shapes reported here are the ones `postgres_structure.rs` reports, because one grid draws
+//! The shapes reported here are the ones `postgres/structure.rs` reports, because one grid draws
 //! either. Where SQL Server has nothing to put in a field it is left at its empty value rather than
 //! dropped: `on_update_current_timestamp` is a MySQL clause with no counterpart here, and
 //! `prefix_length` an index feature SQL Server does not have.
 
-use super::mssql::{
+use super::{
     display_type, extra_tokens, is_rowversion_type, map_error, qualify, quote_ident,
     read_uncommitted, resolve, strip_default_parens, Pool, DEFAULT_SCHEMA,
 };
@@ -69,7 +69,7 @@ pub struct TableStructure {
     /// The primary key first, then the rest by name.
     pub indexes: Vec<TableIndex>,
     /// Always empty: data skipping indices are a ClickHouse-only concept.
-    pub skip_indexes: Vec<super::clickhouse_structure::SkipIndex>,
+    pub skip_indexes: Vec<super::super::clickhouse::structure::SkipIndex>,
     /// Always `None` — the engine guard in the Structure tab only reads this for ClickHouse.
     pub engine: Option<String>,
 }

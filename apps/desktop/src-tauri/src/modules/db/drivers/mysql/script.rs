@@ -3,7 +3,7 @@
 //! comes back is one result per statement — a result set, a count of rows changed, or plain
 //! confirmation that the statement ran.
 
-use super::mysql::{column_value, map_error, quote_ident};
+use super::{column_value, map_error, quote_ident};
 use crate::error::AppError;
 use crate::modules::db::models::{SqlProblem, StatementResult};
 use futures_util::StreamExt;
@@ -313,7 +313,7 @@ pub async fn run(
     // because the tab closed, has to close it too. The pool's permit is held until it does, so
     // this never opens a sixth connection. The cost is one handshake per Run, which is a keypress.
     conn.close_on_drop();
-    announce(super::mysql::thread_id(&mut conn).await?);
+    announce(super::thread_id(&mut conn).await?);
     if let Some(db) = database.filter(|d| !d.is_empty()) {
         // Sent as text, not prepared: MySQL refuses `USE` in the prepared statement protocol
         // (error 1295), and the whole script would fail before its first statement ran.

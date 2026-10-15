@@ -1,5 +1,5 @@
-//! Running whatever T-SQL the user typed in the Query tab. The counterpart of `mysql_script.rs`/
-//! `postgres_script.rs`, and the same three jobs — split a script, run it statement by statement,
+//! Running whatever T-SQL the user typed in the Query tab. The counterpart of `mysql/script.rs`/
+//! `postgres/script.rs`, and the same three jobs — split a script, run it statement by statement,
 //! and answer what the server makes of one statement without running it — plus a fourth SQL Server
 //! alone needs: carving `GO` batches out before any of that starts (D9).
 //!
@@ -14,7 +14,7 @@
 //! `Vec<Vec<Row>>`, its `Done` token silently dropped. `Client::execute` reads the opposite way: it
 //! collects only `Done`/`DoneProc`/`DoneInProc` tokens into an `ExecuteResult`, discarding any row
 //! data those same tokens might have accompanied. `sqlx::raw_sql(...).fetch_many()`, which
-//! `mysql_script`/`postgres_script` use for both at once via `Either<QueryResult, Row>`, has no
+//! `mysql::script`/`postgres::script` use for both at once via `Either<QueryResult, Row>`, has no
 //! `tiberius` equivalent — confirmed by reading `tiberius-0.12.3`'s `result.rs`/`client.rs`, not
 //! assumed.
 //!
@@ -29,7 +29,7 @@
 //! row count `simple_query` cannot give directly is read back with an appended `SELECT @@ROWCOUNT`
 //! in the same batch instead. See [`run_statement`] for the detail.
 
-use super::mssql::{column_value, map_error, quote_ident, Connection, Pool};
+use super::{column_value, map_error, quote_ident, Connection, Pool};
 use crate::error::AppError;
 use crate::modules::db::models::{SqlProblem, StatementResult};
 use deadpool::managed::Object;
@@ -96,7 +96,7 @@ fn split_batches(sql: &str) -> Vec<String> {
 
 /// Splits one `GO` batch into the statements sent one at a time. Only a semicolon outside a string,
 /// a bracketed or double-quoted identifier, and a comment separates two — the same set of rules
-/// `postgres_script::split_statements` reads for PostgreSQL, minus dollar quoting and plus SQL
+/// `postgres::script::split_statements` reads for PostgreSQL, minus dollar quoting and plus SQL
 /// Server's own two quirks:
 ///
 /// * **`"` is always an identifier, never a string** — `QUOTED_IDENTIFIER ON` is the default every
@@ -221,7 +221,7 @@ fn split_script(sql: &str) -> Vec<Statement> {
 }
 
 /// The four verbs whose point is the number of rows they changed, so that a count of zero is still
-/// worth reporting as a count — the same list `postgres_script::is_write_verb` reads, minus MySQL's
+/// worth reporting as a count — the same list `postgres::script::is_write_verb` reads, minus MySQL's
 /// `REPLACE`/`LOAD` and plus `MERGE`, which T-SQL has and MySQL does not.
 fn is_write_verb(verb: &str) -> bool {
     matches!(verb, "INSERT" | "UPDATE" | "DELETE" | "MERGE")
@@ -229,13 +229,13 @@ fn is_write_verb(verb: &str) -> bool {
 
 /// How many rows of one result set are read back. A query without a `TOP` can name more rows than
 /// there is memory for, so the client stops here and says that it did — the same ceiling
-/// `mysql_script`/`postgres_script` use, for the same reason: the grid only ever shows the rows on
+/// `mysql::script`/`postgres::script` use, for the same reason: the grid only ever shows the rows on
 /// screen now.
 const MAX_ROWS: usize = 10_000;
 
 /// The server's own words for one failed statement — never routed through [`map_error`], which
 /// produces a translation code for the *command's* own `Result`, not the per-statement text this
-/// app has always shown the way the server worded it (see `mysql_script`/`postgres_script`, which
+/// app has always shown the way the server worded it (see `mysql::script`/`postgres::script`, which
 /// keep the same distinction).
 fn statement_error(e: tiberius::error::Error) -> String {
     match &e {
@@ -390,7 +390,7 @@ async fn run_statement(
         }
         None => {
             // A count of zero is still reported as `"affected"` for one of the four write verbs —
-            // the same rule `mysql_script`'s callers use: `UPDATE ... 0 rows` says something,
+            // the same rule `mysql::script`'s callers use: `UPDATE ... 0 rows` says something,
             // `SET @x = 1 ... 0 rows` does not.
             let kind = if is_write_verb(&statement.verb) || rows_affected > 0 {
                 "affected"
@@ -414,7 +414,7 @@ async fn run_statement(
 }
 
 /// The session's own SPID, which is what [`cancel`] names to `KILL` — the counterpart of
-/// `mysql::thread_id`/`postgres_script::backend_pid`.
+/// `mysql::thread_id`/`postgres::script::backend_pid`.
 async fn session_id(client: &mut Connection) -> Result<u64, AppError> {
     let row = client
         .simple_query("SELECT @@SPID")
@@ -437,7 +437,7 @@ async fn session_id(client: &mut Connection) -> Result<u64, AppError> {
 /// back to the pool instead would carry whatever the script left set: another database (`USE`), an
 /// open transaction, a temp table, a `SET` no other borrower expects. `Manager::recycle`'s
 /// `SELECT 1` would not catch any of that — only a dead connection fails it. Same reasoning as
-/// `mysql_script::run`'s identical `close_on_drop`.
+/// `mysql::script::run`'s identical `close_on_drop`.
 ///
 /// A statement that fails stops the script: its own result carries the error, and the results
 /// before it are still returned. `announce` is handed the session's SPID once, before the first
@@ -504,7 +504,7 @@ pub async fn run(
 /// not valid") is what the test server actually answers `KILL 99999` with (found live — public
 /// write-ups of this error more often name 6106/6107, kept here too since the exact number is a
 /// documented engine-version quirk, not a stable contract), swallowed the same way
-/// `mysql::kill_query`'s `ER_NO_SUCH_THREAD` and `postgres_script::cancel`'s "a pid the server no
+/// `mysql::kill_query`'s `ER_NO_SUCH_THREAD` and `postgres::script::cancel`'s "a pid the server no
 /// longer has answers false" are. Any other error — permission denied among them — is returned
 /// as-is.
 pub async fn cancel(pool: &Pool, session_id: u64) -> Result<(), AppError> {
@@ -527,10 +527,10 @@ pub async fn cancel(pool: &Pool, session_id: u64) -> Result<(), AppError> {
 /// `SET PARSEONLY ON` makes every statement after it parse-only until `SET PARSEONLY OFF` — the
 /// closest T-SQL equivalent to MySQL's `PREPARE`/PostgreSQL's `Parse` message. It catches less than
 /// either: PARSEONLY does not resolve table or column names, only syntax — so unlike
-/// `mysql_script`/`postgres_script`, there is no "looks wrong now, might not be once a temp table
+/// `mysql::script`/`postgres::script`, there is no "looks wrong now, might not be once a temp table
 /// exists" case to downgrade to a warning here. Everything this returns is a genuine syntax error.
 ///
-/// Runs on a pooled connection kept for reuse across a debounce, like `mysql_script::validate` — not
+/// Runs on a pooled connection kept for reuse across a debounce, like `mysql::script::validate` — not
 /// the session a script runs on, so `PARSEONLY` never leaks onto a connection [`run`] might later
 /// borrow (each call turns it back `OFF` before returning, on success or failure alike).
 pub async fn validate(
@@ -577,7 +577,7 @@ pub async fn validate(
         Err(_) => None,
     };
 
-    // Best-effort, like `mysql_script::validate`'s DEALLOCATE: the connection goes back to the pool
+    // Best-effort, like `mysql::script::validate`'s DEALLOCATE: the connection goes back to the pool
     // either way, and a failure to turn PARSEONLY back off is not the user's statement's problem —
     // `Manager::recycle`'s `SELECT 1` is what actually decides whether this connection is trustworthy
     // enough to hand out again.

@@ -1,14 +1,12 @@
 //! What a PostgreSQL table is made of, and what every table in a database weighs — the Structure
 //! and Statistics tabs.
 //!
-//! The shapes reported here are the ones `mysql_structure.rs` reports, because one grid draws
+//! The shapes reported here are the ones `mysql/structure.rs` reports, because one grid draws
 //! either. Where PostgreSQL has nothing to put in a field, it is left at its empty value rather
 //! than dropped: `on_update_current_timestamp` is a MySQL clause with no counterpart, and
 //! `prefix_length` an index feature PostgreSQL does not have.
 
-use super::postgres::{
-    extra_tokens, map_error, qualify, resolve, system_schema_filter, DEFAULT_SCHEMA,
-};
+use super::{extra_tokens, map_error, qualify, resolve, system_schema_filter, DEFAULT_SCHEMA};
 use crate::error::AppError;
 use serde::Serialize;
 use sqlx::{PgPool, Row};
@@ -70,7 +68,7 @@ pub struct TableStructure {
     pub indexes: Vec<TableIndex>,
     /// Always empty: data skipping indices are a ClickHouse-only concept. See
     /// `docs/specs/2026-09-04-clickhouse-index-ddl-design.md`.
-    pub skip_indexes: Vec<super::clickhouse_structure::SkipIndex>,
+    pub skip_indexes: Vec<super::super::clickhouse::structure::SkipIndex>,
     /// Always `None` — the engine guard in the Structure tab only ever reads this for ClickHouse.
     pub engine: Option<String>,
 }

@@ -1,7 +1,7 @@
 //! What a SQLite table is made of, what every table weighs, and what the Query tab completes
 //! against — the Structure and Statistics tabs, and the schema outline.
 //!
-//! The shapes reported here are the ones `mysql_structure.rs` and `postgres_structure.rs` report,
+//! The shapes reported here are the ones `mysql/structure.rs` and `postgres/structure.rs` report,
 //! because one grid draws all three. Where SQLite has nothing to put in a field it is left at its
 //! empty value rather than dropped: there are no column comments, no index methods to choose
 //! between, and no index prefix lengths.
@@ -19,7 +19,7 @@
 //!   place it exists is the text of the `CREATE TABLE` in `sqlite_master` — parsing which, to fill
 //!   one optional field, would be a SQL parser this module has no other use for.
 
-use super::sqlite::{map_error, quote_ident, split_default};
+use super::{map_error, quote_ident, split_default};
 use crate::error::AppError;
 use serde::Serialize;
 use sqlx::{Row, SqlitePool};
@@ -85,7 +85,7 @@ pub struct TableStructure {
     pub indexes: Vec<TableIndex>,
     /// Always empty: data skipping indices are a ClickHouse-only concept. See
     /// `docs/specs/2026-09-04-clickhouse-index-ddl-design.md`.
-    pub skip_indexes: Vec<super::clickhouse_structure::SkipIndex>,
+    pub skip_indexes: Vec<super::super::clickhouse::structure::SkipIndex>,
     /// Always `None` — the engine guard in the Structure tab only ever reads this for ClickHouse.
     pub engine: Option<String>,
 }
@@ -484,7 +484,7 @@ async fn foreign_key_targets(
 
 #[cfg(test)]
 mod tests {
-    use super::super::sqlite::tests::Fixture;
+    use super::super::tests::Fixture;
     use super::*;
 
     #[tokio::test]

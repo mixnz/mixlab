@@ -48,15 +48,16 @@ window, and almost every finding sits in it.
 
 ## The backend
 
-- [ ] **T208d** `src-tauri/src/modules/db/drivers/` gets one folder per engine:
-      `drivers/<engine>/{mod,ddl,structure,script,dump,editing}.rs`, in place of 28 files named
-      `<engine>_<part>.rs` beside two folders (`mssql/`, `dump/`) that already have that shape.
-      Only files move: the Rust test count stays the same. It comes before T208f so that the
-      shared trait has one place per engine to be implemented in.
+- [x] **T208d** `src-tauri/src/modules/db/drivers/` gets one folder per SQL engine:
+      `drivers/<engine>/{ddl,structure,script,dump,editing}.rs` beside `drivers/<engine>.rs`, in
+      place of 18 files named `<engine>_<part>.rs` — the shape `mssql.rs` and `dump.rs` already had
+      with their `tests.rs`. Only files move: the Rust test count stays at 807. It comes before
+      T208f so that the shared trait has one place per engine to be implemented in. Design:
+      [2026-10-15-t208d-db-drivers-one-folder-per-engine-design.md](../specs/2026-10-15-t208d-db-drivers-one-folder-per-engine-design.md).
 - [ ] **T208e** Room under the size limit. Seven files are within 125 lines of 1,500:
-      `drivers/sqlite_ddl.rs` (1,495), `sync/session.rs` (1,470), `drivers/clickhouse.rs`
+      `drivers/sqlite/ddl.rs` (1,495), `sync/session.rs` (1,470), `drivers/clickhouse.rs`
       (1,434), `drivers/postgres.rs` (1,426), `drivers/dump.rs` (1,396), `drivers/sqlite.rs`
-      (1,385) and `drivers/mysql_structure.rs` (1,378). The next feature in any of them would
+      (1,385) and `drivers/mysql/structure.rs` (1,378). The next feature in any of them would
       hit the gate. Tests go out to `foo/tests.rs` under T207e's convention, and the files whose
       code alone is near the limit split by capability, as T207h did.
 - [ ] **T208f** One command set for the SQL engines. The frontend already sees MySQL, PostgreSQL,

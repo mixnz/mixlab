@@ -1,5 +1,5 @@
-//! Running whatever SQL the user typed, against SQLite — the counterpart of `mysql_script.rs` and
-//! `postgres_script.rs`, and two of their three jobs: split a script, and run it statement by
+//! Running whatever SQL the user typed, against SQLite — the counterpart of `mysql/script.rs` and
+//! `postgres/script.rs`, and two of their three jobs: split a script, and run it statement by
 //! statement.
 //!
 //! The third, stopping a statement that is already running, has no counterpart here. There is no
@@ -17,7 +17,7 @@
 //! splitters must agree on every case. A `;` inside one would split a statement that should not be
 //! split, in the editor and here alike.
 
-use super::sqlite::{column_value, map_error};
+use super::{column_value, map_error};
 use crate::error::AppError;
 use crate::modules::db::models::{SqlProblem, StatementResult};
 use futures_util::StreamExt;
@@ -367,7 +367,7 @@ mod tests {
 
 #[cfg(test)]
 mod run_tests {
-    use super::super::sqlite::tests::Fixture;
+    use super::super::tests::Fixture;
     use super::*;
 
     #[tokio::test]

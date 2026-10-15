@@ -8,6 +8,10 @@
 //! * A table is named by [`qualify`]/[`resolve`] rather than by a bare name, because PostgreSQL
 //!   puts schemas between the database and its tables and two schemas may hold the same name.
 
+pub mod ddl;
+pub mod script;
+pub mod structure;
+
 use super::filters::{escape_like, split_list};
 use crate::error::AppError;
 use crate::modules::db::models::ServerInfo;

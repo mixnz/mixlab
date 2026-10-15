@@ -1,4 +1,4 @@
-//! Running whatever SQL the user typed, against PostgreSQL — the counterpart of `mysql_script.rs`,
+//! Running whatever SQL the user typed, against PostgreSQL — the counterpart of `mysql/script.rs`,
 //! and the same three jobs: split a script, run it statement by statement, and answer what the
 //! server makes of one statement without running it.
 //!
@@ -12,7 +12,7 @@
 //! * **Parse rather than PREPARE.** Checking a statement without running it is a protocol message
 //!   here, not a SQL statement, so the user's text is never interpolated into SQL to check it.
 
-use super::postgres::{column_value, map_error};
+use super::{column_value, map_error};
 use crate::error::AppError;
 use crate::modules::db::models::{SqlProblem, StatementResult};
 use futures_util::StreamExt;

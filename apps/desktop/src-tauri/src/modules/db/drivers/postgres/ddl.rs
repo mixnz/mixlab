@@ -1,6 +1,6 @@
 //! Changing the shape of a PostgreSQL database: its tables, their columns and their indexes.
 //!
-//! The specs come in as `mysql_structure.rs`'s do, because one set of dialogs fills either. What
+//! The specs come in as `mysql/structure.rs`'s do, because one set of dialogs fills either. What
 //! differs is everything about how they are carried out, and three differences shape this module:
 //!
 //! * **A column is changed one property at a time.** MySQL's `CHANGE COLUMN` restates a column
@@ -13,12 +13,12 @@
 //! * **An index is not part of its table.** `CREATE INDEX` stands alone and the index lives in a
 //!   schema of its own accord, so it is named and dropped separately from the table it covers.
 
-use super::postgres::{map_error, qualified_sql, quote_ident, resolve, Pools, FALLBACK_DATABASE};
+use super::{map_error, qualified_sql, quote_ident, resolve, Pools, FALLBACK_DATABASE};
 use crate::error::AppError;
 use serde::Deserialize;
 use sqlx::{PgPool, Row};
 
-/// What a column is to be declared as — `mysql_structure::ColumnSpec` minus the two fields that
+/// What a column is to be declared as — `mysql::structure::ColumnSpec` minus the two fields that
 /// mean nothing here, since one dialog fills both.
 ///
 /// Those two are `onUpdateCurrentTimestamp`, a MySQL clause with no counterpart, and `after`, a
@@ -381,7 +381,7 @@ async fn current_column(
          JOIN pg_type tp ON tp.oid = a.atttypid
          LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
          -- Only an explicit collation, matching what the Structure tab reported and so what the
-         -- dialog was filled from. See `postgres_structure::structure_columns`.
+         -- dialog was filled from. See `structure::structure_columns`.
          LEFT JOIN pg_collation coll
              ON coll.oid = a.attcollation
              AND a.attcollation NOT IN (0, tp.typcollation)

@@ -1,8 +1,6 @@
 use super::{clickhouse_connection, reporter, Transfer};
 use crate::error::AppError;
-use crate::modules::db::drivers::{
-    clickhouse, clickhouse_ddl, clickhouse_dump, clickhouse_script, clickhouse_structure, dump,
-};
+use crate::modules::db::drivers::{clickhouse, dump};
 use crate::modules::db::models::{ServerInfo, SqlProblem, StatementResult};
 use crate::modules::db::state::DbState;
 use serde_json::{Map, Value};
@@ -55,9 +53,9 @@ pub async fn clickhouse_table_structure(
     id: String,
     database: String,
     table: String,
-) -> Result<clickhouse_structure::TableStructure, AppError> {
+) -> Result<clickhouse::structure::TableStructure, AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_structure::table_structure(&conn, &database, &table).await
+    clickhouse::structure::table_structure(&conn, &database, &table).await
 }
 
 #[tauri::command]
@@ -65,9 +63,9 @@ pub async fn clickhouse_table_stats(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<Vec<clickhouse_structure::TableStats>, AppError> {
+) -> Result<Vec<clickhouse::structure::TableStats>, AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_structure::table_stats(&conn, &database).await
+    clickhouse::structure::table_stats(&conn, &database).await
 }
 
 #[tauri::command]
@@ -75,9 +73,9 @@ pub async fn clickhouse_schema_outline(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<clickhouse_structure::SchemaOutline, AppError> {
+) -> Result<clickhouse::structure::SchemaOutline, AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_structure::schema_outline(&conn, &database).await
+    clickhouse::structure::schema_outline(&conn, &database).await
 }
 
 /// `run_id` is taken, like the other three engines', but never stored: there is no
@@ -94,7 +92,7 @@ pub async fn clickhouse_run_script(
     database: Option<String>,
 ) -> Result<Vec<StatementResult>, AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_script::run(&conn, &sql, database.as_deref()).await
+    clickhouse::script::run(&conn, &sql, database.as_deref()).await
 }
 
 #[tauri::command]
@@ -105,7 +103,7 @@ pub async fn clickhouse_validate_sql(
     database: Option<String>,
 ) -> Result<Option<SqlProblem>, AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_script::validate(&conn, &sql, database.as_deref()).await
+    clickhouse::script::validate(&conn, &sql, database.as_deref()).await
 }
 
 #[tauri::command]
@@ -158,7 +156,7 @@ pub async fn clickhouse_create_database(
     collation: Option<String>,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::create_database(&conn, &name).await
+    clickhouse::ddl::create_database(&conn, &name).await
 }
 
 #[tauri::command]
@@ -168,7 +166,7 @@ pub async fn clickhouse_drop_database(
     database: String,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::drop_database(&conn, &database).await
+    clickhouse::ddl::drop_database(&conn, &database).await
 }
 
 /// Creates an empty table — one `id UInt64` column and an empty sorting key — for the sidebar's
@@ -183,7 +181,7 @@ pub async fn clickhouse_create_table(
     engine: String,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::create_table(&conn, &database, &table, &engine).await
+    clickhouse::ddl::create_table(&conn, &database, &table, &engine).await
 }
 
 #[tauri::command]
@@ -195,7 +193,7 @@ pub async fn clickhouse_rename_table(
     new_name: String,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::rename_table(&conn, &database, &table, &new_name).await
+    clickhouse::ddl::rename_table(&conn, &database, &table, &new_name).await
 }
 
 #[tauri::command]
@@ -206,7 +204,7 @@ pub async fn clickhouse_drop_table(
     table: String,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::drop_table(&conn, &database, &table).await
+    clickhouse::ddl::drop_table(&conn, &database, &table).await
 }
 
 #[tauri::command]
@@ -215,10 +213,10 @@ pub async fn clickhouse_add_column(
     id: String,
     database: String,
     table: String,
-    spec: clickhouse_ddl::ColumnSpec,
+    spec: clickhouse::ddl::ColumnSpec,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::add_column(&conn, &database, &table, &spec).await
+    clickhouse::ddl::add_column(&conn, &database, &table, &spec).await
 }
 
 #[tauri::command]
@@ -230,7 +228,7 @@ pub async fn clickhouse_drop_column(
     name: String,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::drop_column(&conn, &database, &table, &name).await
+    clickhouse::ddl::drop_column(&conn, &database, &table, &name).await
 }
 
 #[tauri::command]
@@ -240,10 +238,10 @@ pub async fn clickhouse_modify_column(
     database: String,
     table: String,
     name: String,
-    spec: clickhouse_ddl::ColumnSpec,
+    spec: clickhouse::ddl::ColumnSpec,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::modify_column(&conn, &database, &table, &name, &spec).await
+    clickhouse::ddl::modify_column(&conn, &database, &table, &name, &spec).await
 }
 
 #[tauri::command]
@@ -252,10 +250,10 @@ pub async fn clickhouse_add_skip_index(
     id: String,
     database: String,
     table: String,
-    spec: clickhouse_ddl::SkipIndexSpec,
+    spec: clickhouse::ddl::SkipIndexSpec,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::add_skip_index(&conn, &database, &table, &spec).await
+    clickhouse::ddl::add_skip_index(&conn, &database, &table, &spec).await
 }
 
 #[tauri::command]
@@ -265,10 +263,10 @@ pub async fn clickhouse_modify_skip_index(
     database: String,
     table: String,
     name: String,
-    spec: clickhouse_ddl::SkipIndexSpec,
+    spec: clickhouse::ddl::SkipIndexSpec,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::modify_skip_index(&conn, &database, &table, &name, &spec).await
+    clickhouse::ddl::modify_skip_index(&conn, &database, &table, &name, &spec).await
 }
 
 #[tauri::command]
@@ -280,7 +278,7 @@ pub async fn clickhouse_drop_skip_index(
     name: String,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::drop_skip_index(&conn, &database, &table, &name).await
+    clickhouse::ddl::drop_skip_index(&conn, &database, &table, &name).await
 }
 
 #[tauri::command]
@@ -292,7 +290,7 @@ pub async fn clickhouse_rebuild_order_by(
     columns: Vec<String>,
 ) -> Result<Option<String>, AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::rebuild_order_by(&conn, &database, &table, &columns).await
+    clickhouse::ddl::rebuild_order_by(&conn, &database, &table, &columns).await
 }
 
 #[tauri::command]
@@ -303,7 +301,7 @@ pub async fn clickhouse_row_count(
     table: String,
 ) -> Result<u64, AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse_ddl::row_count(&conn, &database, &table).await
+    clickhouse::ddl::row_count(&conn, &database, &table).await
 }
 
 /// Writes `database` out as SQL — `mode` is `structure`, `data` or `all`. See
@@ -328,11 +326,11 @@ pub async fn clickhouse_dump(
     };
 
     if mode != dump::DumpMode::Data {
-        clickhouse_dump::dump_structure(&conn, &database, &path, &watch).await?;
+        clickhouse::dump::dump_structure(&conn, &database, &path, &watch).await?;
     }
     if mode != dump::DumpMode::Structure {
         let append = mode == dump::DumpMode::All;
-        clickhouse_dump::dump_data(&conn, &database, &path, append, &watch).await?;
+        clickhouse::dump::dump_data(&conn, &database, &path, append, &watch).await?;
     }
     Ok(())
 }
@@ -354,5 +352,5 @@ pub async fn clickhouse_restore(
         report: &report,
         cancel: &|| cancelled.load(Ordering::Relaxed),
     };
-    clickhouse_dump::restore(&conn, &database, &path, &watch).await
+    clickhouse::dump::restore(&conn, &database, &path, &watch).await
 }

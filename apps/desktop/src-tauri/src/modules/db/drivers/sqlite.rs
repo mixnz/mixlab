@@ -10,6 +10,11 @@
 //! mean pasting a table name into SQL text; the functions take it as a parameter like any other
 //! query.
 
+pub mod ddl;
+pub mod dump;
+pub mod script;
+pub mod structure;
+
 use super::filters::{escape_like, split_list};
 use crate::error::AppError;
 use crate::modules::db::models::ServerInfo;
@@ -866,7 +871,7 @@ pub(super) mod tests {
                 )
                 .await
                 .expect("create the fixture database");
-            for statement in include_str!("sqlite_fixture.sql").split(";\n") {
+            for statement in include_str!("sqlite/fixture.sql").split(";\n") {
                 if statement.trim().is_empty() {
                     continue;
                 }

@@ -1,28 +1,28 @@
 //! Dumping a SQL Server database to a `.sql` file and replaying one back in — no external tool
 //! (D10): Microsoft ships nothing free and pinnable equivalent to `pg_dump`/`mysqldump`, so this
 //! regenerates `CREATE TABLE`/`CREATE INDEX` from the same catalogue reads Plan 2's Structure tab
-//! already makes (`mssql_structure::table_structure`) and reuses Plan 6's statement builders
-//! (`mssql_ddl::column_definition`/`create_index_statements`) rather than inventing a second way to
-//! spell either. Closest in shape to `sqlite_dump.rs`, not `clickhouse_dump.rs`: both this file and
+//! already makes (`structure::table_structure`) and reuses Plan 6's statement builders
+//! (`ddl::column_definition`/`create_index_statements`) rather than inventing a second way to
+//! spell either. Closest in shape to `sqlite/dump.rs`, not `clickhouse/dump.rs`: both this file and
 //! SQLite's read rows one Rust value at a time through a normal driver, where ClickHouse's
 //! `FORMAT SQLInsert` has the server generate the `INSERT` text itself — so this file, like
-//! `sqlite_dump.rs`, writes its own value-to-literal conversion (see [`sql_literal`]).
+//! `sqlite/dump.rs`, writes its own value-to-literal conversion (see [`sql_literal`]).
 
-use super::dump::{self, Tracker};
-use super::mssql::{
+use super::super::dump::{self, Tracker};
+use super::ddl::{column_definition, comment_statement, quote_string, ColumnSpec};
+use super::script;
+use super::structure::{self, StructureColumn, TableIndex};
+use super::{
     column_value, is_binary_type, map_error, primary_key, quote_ident, read_uncommitted, resolve,
     select_expr, table_columns, three_part, Pool, DEFAULT_SCHEMA,
 };
-use super::mssql_ddl::{column_definition, comment_statement, quote_string, ColumnSpec};
-use super::mssql_script;
-use super::mssql_structure::{self, StructureColumn, TableIndex};
 use crate::error::AppError;
 use std::collections::HashMap;
 
 /// A table named `schema.table` for the *text this file writes into the dump*, deliberately not
 /// `mssql::three_part` — that helper bakes in a specific database name, which is exactly right for
 /// live Structure-tab DDL (always run against the database currently open) and exactly wrong for a
-/// dump file, which restores under `mssql_script::run`'s own `USE {target}` and must not fight it
+/// dump file, which restores under `script::run`'s own `USE {target}` and must not fight it
 /// with a hardcoded reference back to the database it was dumped from. Confirmed against the live
 /// test server (see this plan's Task 7): a first cut of this file used `three_part` here, and a
 /// restore into a fresh database silently re-ran every `CREATE TABLE`/`INSERT` against the
@@ -34,7 +34,7 @@ fn qualified_ident(schema: &str, table: &str) -> String {
 }
 
 /// The statement that recreates one already-existing index verbatim, from what
-/// `mssql_structure::table_structure` read back — not `mssql_ddl::create_index_statements`, which
+/// `structure::table_structure` read back — not `ddl::create_index_statements`, which
 /// is built for a dialog's freshly-typed `IndexSpec` (an empty name still to be generated, an index
 /// type that still needs validating) and, more importantly, always qualifies through a specific
 /// database name (the same [`qualified_ident`] problem this file works around everywhere else).
@@ -49,7 +49,7 @@ fn qualified_ident(schema: &str, table: &str) -> String {
 ///
 /// `EXEC('...')` rather than a plain `CREATE SCHEMA`: T-SQL only allows `CREATE SCHEMA` as the sole
 /// statement of a batch, and every other line in this file's output sits one-per-line inside a
-/// single batch `mssql_script::run` (Task 5) splits on `;` — wrapping it as dynamic SQL runs it as a
+/// single batch `script::run` (Task 5) splits on `;` — wrapping it as dynamic SQL runs it as a
 /// batch of its own inline, without this file needing to know anything about batch boundaries.
 fn create_schema_statement(schema: &str) -> String {
     let literal = format!("N{}", quote_string(schema));
@@ -82,7 +82,7 @@ fn dump_index_statement(schema: &str, table: &str, index: &TableIndex) -> String
 
 /// Turns a read-back [`StructureColumn`] into the [`ColumnSpec`] shape `column_definition` (Plan 6)
 /// was written for — the two structs carry the same fields under the same names by construction
-/// (`mssql_ddl::ColumnSpec` is `structure_columns`' write-side counterpart), so this is a plain
+/// (`ddl::ColumnSpec` is `structure_columns`' write-side counterpart), so this is a plain
 /// field-for-field copy, not a translation.
 ///
 /// Never called for a `generated` column — see [`computed_column_definition`], which a computed
@@ -103,7 +103,7 @@ fn column_spec_from(column: &StructureColumn) -> ColumnSpec {
     }
 }
 
-/// One computed column's expression, read separately from `mssql_structure::structure_columns`
+/// One computed column's expression, read separately from `structure::structure_columns`
 /// because that read's `default_value` comes from `sys.default_constraints` — which a computed
 /// column has no row in at all. The expression lives in `sys.computed_columns.definition` instead.
 struct ComputedDefinition {
@@ -170,7 +170,7 @@ fn computed_column_definition(name: &str, computed: &ComputedDefinition) -> Stri
 /// every table is written — every foreign key as a trailing `ALTER TABLE ... ADD CONSTRAINT` (a
 /// later task in this plan fills [`write_foreign_keys`] in; this task leaves the call site for it).
 ///
-/// Base tables only (`sys.objects.type = 'U'`, via [`mssql_structure::table_stats`], which already
+/// Base tables only (`sys.objects.type = 'U'`, via [`structure::table_stats`], which already
 /// excludes views for the same reason the Statistics tab does). Every non-`dbo` schema a dumped
 /// table lives in gets a guarded `CREATE SCHEMA` up front (see [`create_schema_statement`]) — a
 /// restore into a fresh database otherwise fails outright the first time a table sits outside `dbo`.
@@ -182,7 +182,7 @@ pub async fn dump_structure(
 ) -> Result<(), AppError> {
     use std::io::Write;
 
-    let tables = mssql_structure::table_stats(pool, database).await?;
+    let tables = structure::table_stats(pool, database).await?;
     let weights: Vec<(String, u64)> = tables.iter().map(|t| (t.name.clone(), 1)).collect();
     let mut tracker = Tracker::new(&weights, path, false);
 
@@ -211,7 +211,7 @@ pub async fn dump_structure(
         }
         let (schema, name) = resolve(&table.name);
         let qualified = qualified_ident(&schema, &name);
-        let structure = mssql_structure::table_structure(pool, database, &table.name).await?;
+        let structure = structure::table_structure(pool, database, &table.name).await?;
         let computed = computed_definitions(pool, database, &schema, &name).await?;
 
         let mut column_lines = Vec::with_capacity(structure.columns.len());
@@ -259,7 +259,7 @@ pub async fn dump_structure(
 
 /// Every view's original `CREATE VIEW` text, oldest first — a view built on top of another one the
 /// same session created earlier is the common case for nesting, and `create_date` approximates that
-/// dependency order the same way `sqlite_dump::dump_structure` relies on `sqlite_master`'s `rowid`
+/// dependency order the same way `sqlite::dump::dump_structure` relies on `sqlite_master`'s `rowid`
 /// (creation order) rather than trying to parse real dependencies out of the view's own SQL text.
 async fn view_definitions(pool: &Pool, database: &str) -> Result<Vec<String>, AppError> {
     let db = quote_ident(database);
@@ -289,13 +289,13 @@ async fn view_definitions(pool: &Pool, database: &str) -> Result<Vec<String>, Ap
 }
 
 /// Writes every view's `CREATE VIEW` text verbatim, after every table so a view selecting from one
-/// has something to select from. Not part of [`mssql_structure::table_stats`]'s table list — that
+/// has something to select from. Not part of [`structure::table_stats`]'s table list — that
 /// list is exactly what the Statistics tab shows, which leaves views out on every engine here
 /// because a view stores nothing of its own to weigh — but a dump's job is different: a database
 /// dumped and restored is missing part of its schema if a view silently drops out, which is what
 /// happened before this was added (see this plan's Task 9).
 ///
-/// Copied as-is rather than regenerated, the same choice `sqlite_dump.rs` makes for every `CREATE`
+/// Copied as-is rather than regenerated, the same choice `sqlite/dump.rs` makes for every `CREATE`
 /// it writes: `sys.sql_modules.definition` is the view's own original text, so whatever schema
 /// qualification (or lack of it) the author wrote is what comes back out. No `data_size`/`rows`
 /// weight applies to a view (it holds none), so this does not update `dump_structure`'s `Tracker`.
@@ -572,7 +572,7 @@ pub async fn dump_data(
 ) -> Result<(), AppError> {
     use tokio::io::AsyncWriteExt;
 
-    let tables = mssql_structure::table_stats(pool, database).await?;
+    let tables = structure::table_stats(pool, database).await?;
     let weights: Vec<(String, u64)> = tables
         .iter()
         .map(|t| (t.name.clone(), t.rows.max(1)))
@@ -596,7 +596,7 @@ pub async fn dump_data(
 
         let (schema, name) = resolve(&table.name);
         // Two names, deliberately not one: `qualified` (no database) is what gets *written into
-        // the file* — `mssql_script::run` (Task 5) puts the target database in scope with its own
+        // the file* — `script::run` (Task 5) puts the target database in scope with its own
         // `USE` before replaying it, and a hardcoded database there would fight that `USE` the way
         // the earlier database-qualification bug did (see this plan's Task 8). `live_qualified`
         // (three-part) is what *this function itself* queries against the pool right now, on a
@@ -711,12 +711,12 @@ pub async fn dump_data(
         .map_err(|e| err!("error.cannotWriteFile", path = path, message = e))
 }
 
-/// Replays a dump file into `database`, one call into `mssql_script::run` (Plan 5) — the same
+/// Replays a dump file into `database`, one call into `script::run` (Plan 5) — the same
 /// `GO`-aware batch splitter the Query tab drives, so a file this app wrote (`GO` never appears in
 /// it, since `dump_structure`/`dump_data` separate statements with `;` alone) and a file written by
 /// hand with `GO` batches both replay correctly.
 ///
-/// No `Watch`, no mid-run cancel and no incremental progress — the same limit `sqlite_dump::restore`
+/// No `Watch`, no mid-run cancel and no incremental progress — the same limit `sqlite::dump::restore`
 /// already accepts, for the same reason: `run` takes the whole script as one call and returns only
 /// once every statement in it has been tried, so there is no point inside it this file could check
 /// a cancel flag from outside.
@@ -724,7 +724,7 @@ pub async fn restore(pool: &Pool, database: &str, path: &str) -> Result<(), AppE
     let sql = std::fs::read_to_string(path)
         .map_err(|e| err!("error.cannotReadFile", path = path, message = e))?;
 
-    let results = mssql_script::run(pool, &sql, Some(database), |_| {}).await?;
+    let results = script::run(pool, &sql, Some(database), |_| {}).await?;
     if let Some(failed) = results.iter().find(|result| result.error.is_some()) {
         return Err(err!(
             "error.mssqlRestoreFailed",
@@ -891,7 +891,7 @@ mod tests {
             index_type: index_type.to_string(),
             columns: columns
                 .iter()
-                .map(|c| super::super::mssql_structure::IndexColumn {
+                .map(|c| super::super::structure::IndexColumn {
                     name: Some(c.to_string()),
                     prefix_length: None,
                 })

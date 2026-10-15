@@ -2,9 +2,10 @@
 
 A new backend call touches five places. Miss one and it fails at runtime, not at build time.
 
-1. **Implement it** in the right `src-tauri/src/modules/db/drivers/*.rs` module, taking the driver handle
-   (`&MySqlPool`, `&mongodb::Client`, `&mut ConnectionManager`) as its first argument and
-   returning `Result<T, String>`.
+1. **Implement it** in the right driver module — `src-tauri/src/modules/db/drivers/<engine>.rs`,
+   or one of its parts under `drivers/<engine>/` (`ddl.rs`, `structure.rs`, `script.rs`…) —
+   taking the driver handle (`&MySqlPool`, `&mongodb::Client`, `&mut ConnectionManager`) as its
+   first argument and returning `Result<T, String>`.
 
 2. **Wrap it** in `src-tauri/src/modules/db/commands/<engine>.rs` as a `#[tauri::command]` that
    takes `state: State<'_, DbState>` plus `id: String`, gets the handle from `mysql_pool` /

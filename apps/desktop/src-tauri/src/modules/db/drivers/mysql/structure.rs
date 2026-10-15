@@ -5,7 +5,7 @@
 //! user has privileges on — so a short list means "this is what you may see", not necessarily
 //! "this is all there is".
 
-use super::mysql::{map_error, quote_ident};
+use super::{map_error, quote_ident};
 use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use sqlx::mysql::MySqlRow;
@@ -107,7 +107,7 @@ pub struct TableStructure {
     pub indexes: Vec<TableIndex>,
     /// Always empty: data skipping indices are a ClickHouse-only concept. See
     /// `docs/specs/2026-09-04-clickhouse-index-ddl-design.md`.
-    pub skip_indexes: Vec<super::clickhouse_structure::SkipIndex>,
+    pub skip_indexes: Vec<super::super::clickhouse::structure::SkipIndex>,
     /// Always `None` — the engine guard in the Structure tab only ever reads this for ClickHouse.
     pub engine: Option<String>,
 }

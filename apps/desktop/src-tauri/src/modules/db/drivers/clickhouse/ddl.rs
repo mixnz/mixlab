@@ -1,14 +1,14 @@
 //! Creating and changing schema on ClickHouse: databases, tables, columns.
 //!
-//! A module of its own rather than more of `clickhouse.rs`, the same way `postgres_ddl.rs` sits
+//! A module of its own rather than more of `clickhouse.rs`, the same way `postgres/ddl.rs` sits
 //! beside `postgres.rs`: that file is what reads, and DDL is a large enough job to stand apart.
 //!
 //! Every statement is built by a pure function and only then sent, so what to *write* is decided
 //! where a test can read it and sending is left as `execute_check`. There is no transaction here —
 //! ClickHouse has none — so a run of statements that fails partway leaves exactly what already ran.
 
-use super::clickhouse::{execute_check, qualified, query, quote_ident, quote_literal, Connection};
-use super::clickhouse_structure::{as_u64, structure_columns, StructureColumn};
+use super::structure::{as_u64, structure_columns, StructureColumn};
+use super::{execute_check, qualified, query, quote_ident, quote_literal, Connection};
 use crate::error::AppError;
 use serde::Deserialize;
 
@@ -79,7 +79,7 @@ pub const ENGINES: [&str; 4] = [
 ///
 /// The engine name goes into the SQL bare — there is no way to quote one — so the only safe thing
 /// to do with it is refuse anything not in [`ENGINES`], the same posture
-/// `mysql_structure::validated_collation` takes for a collation.
+/// `mysql::structure::validated_collation` takes for a collation.
 pub fn create_table_statement(
     database: &str,
     table: &str,
@@ -166,7 +166,7 @@ pub(super) fn default_clause(value: &str, is_expression: bool) -> String {
 }
 
 /// What a column is to be declared as — the write-side counterpart of
-/// `clickhouse_structure::StructureColumn`.
+/// `structure::StructureColumn`.
 ///
 /// Narrower than the other three engines' `ColumnSpec` because ClickHouse has less: `nullable`
 /// lives inside `data_type` (`Nullable(T)`, wrapped by the dialog before it is sent), there is no
@@ -251,7 +251,7 @@ pub async fn drop_column(
 }
 
 /// What a data skipping index is declared as — the write-side counterpart of
-/// `clickhouse_structure::SkipIndex`. See the ClickHouse index DDL design doc's D2/D3.
+/// `structure::SkipIndex`. See the ClickHouse index DDL design doc's D2/D3.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SkipIndexSpec {
@@ -474,7 +474,7 @@ pub async fn rebuild_order_by(
 /// The statements that bring column `current` to what `spec` describes - none at all when nothing
 /// differs.
 ///
-/// The shape of `postgres_ddl::modify_column`: read what the column is now, write only what really
+/// The shape of `postgres::ddl::modify_column`: read what the column is now, write only what really
 /// changed. The reason is stronger here - a `MODIFY COLUMN` that changes the type is a mutation
 /// rewriting every part of the table, and the `ALTER` waits for it (2.7 s over 43 million rows,
 /// measured against the test server) - so emitting one to save a comment charges the user for

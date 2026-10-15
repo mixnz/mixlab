@@ -1,6 +1,6 @@
 //! Changing the shape of a SQL Server database: its databases, tables, columns and indexes.
 //!
-//! Closest to `postgres_ddl.rs` in shape — one dialog fills either `ColumnSpec` or `IndexSpec`, and
+//! Closest to `postgres/ddl.rs` in shape — one dialog fills either `ColumnSpec` or `IndexSpec`, and
 //! most statements run inside a transaction the way PostgreSQL's DDL does (unlike MySQL's, which
 //! auto-commits each one). What differs is the grammar of nearly every statement, and one structural
 //! difference reaches further than any single statement: `ALTER COLUMN` cannot carry a default, an
@@ -8,17 +8,17 @@
 //! clears it, rather than restating the column whole the way MySQL's `CHANGE COLUMN` or building one
 //! `ALTER COLUMN TYPE ... USING ...` the way PostgreSQL's does — see D15 and this plan's Task 5.
 
-use super::mssql::{map_error, quote_ident, resolve, three_part, Connection, Pool};
-use super::mssql_editing::end_transaction;
-use super::mssql_structure::{IndexColumn, TableIndex};
+use super::editing::end_transaction;
+use super::structure::{IndexColumn, TableIndex};
+use super::{map_error, quote_ident, resolve, three_part, Connection, Pool};
 use crate::error::AppError;
 use serde::Deserialize;
 
-/// What a column is to be declared as — the write-side counterpart of `mssql_structure::StructureColumn`.
+/// What a column is to be declared as — the write-side counterpart of `structure::StructureColumn`.
 ///
 /// `after`/`onUpdateCurrentTimestamp`, the two fields MySQL's dialog sends that mean nothing here,
 /// are simply not declared: serde drops a field a struct has no place for, the way
-/// `postgres_ddl::ColumnSpec` already relies on for the same two fields.
+/// `postgres::ddl::ColumnSpec` already relies on for the same two fields.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ColumnSpec {
@@ -63,14 +63,14 @@ pub struct IndexSpec {
     pub columns: Vec<IndexColumnSpec>,
     // A `comment` field is deliberately not declared here: the frontend always sends one
     // (`SqlIndexSpec.comment`), but SQL Server keeps no comment on an index — see
-    // `mssql_structure::TableIndex.comment` — so there is nothing to do with it, and serde drops an
-    // undeclared field rather than erroring on it, the same way `postgres_ddl::ColumnSpec` relies on
+    // `structure::TableIndex.comment` — so there is nothing to do with it, and serde drops an
+    // undeclared field rather than erroring on it, the same way `postgres::ddl::ColumnSpec` relies on
     // for the fields it has no place for.
 }
 
 /// Wraps text as a SQL string literal, doubling the quote that would otherwise end it early. T-SQL
 /// does not backslash-escape a plain literal, so a backslash is left alone — the same rule
-/// `postgres_ddl::quote_string` follows and for the same reason.
+/// `postgres::ddl::quote_string` follows and for the same reason.
 pub(super) fn quote_string(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }
@@ -136,7 +136,7 @@ async fn execute_all_body(
 
 /// Checks a collation name against the one rule every SQL Server collation actually follows
 /// (`Latin1_General_CI_AS`, `SQL_Latin1_General_CP1_CI_AS`, `Vietnamese_CI_AS` — letters, digits and
-/// underscores only), the same check `mysql_structure::validated_collation` runs for the same reason:
+/// underscores only), the same check `mysql::structure::validated_collation` runs for the same reason:
 /// **a collation name cannot be bracket-quoted at all** — `COLLATE [Latin1_General_CI_AS]` is a
 /// syntax error, confirmed against the real test server while writing this (not assumed). So this is
 /// the only guard between user-chosen text and a statement that interpolates it bare.
@@ -228,7 +228,7 @@ pub async fn create_table(pool: &Pool, database: &str, table: &str) -> Result<()
 ///
 /// `sp_rename` is the only way SQL Server renames a table — there is no ANSI `RENAME TO`. Its
 /// object name is a **string**, not an identifier (the same stored-procedure convention
-/// `mssql_editing::reset_identity` already relies on for `DBCC CHECKIDENT`), and it cannot move a
+/// `editing::reset_identity` already relies on for `DBCC CHECKIDENT`), and it cannot move a
 /// table to a different schema: unlike PostgreSQL's two-statement rename-then-`SET SCHEMA`, T-SQL
 /// has no schema-moving DDL for a table at all short of dropping and recreating it. A `new_name`
 /// that names a different schema is refused outright rather than silently kept in the old one —
@@ -258,7 +258,7 @@ pub async fn rename_table(
 }
 
 /// Drops a table and everything in it. Plain `DROP TABLE`, not `IF EXISTS` — the same choice
-/// `postgres_ddl::drop_table` makes, for the same reason: asking to drop something not there is worth
+/// `postgres::ddl::drop_table` makes, for the same reason: asking to drop something not there is worth
 /// being told about.
 pub async fn drop_table(pool: &Pool, database: &str, table: &str) -> Result<(), AppError> {
     if table.trim().is_empty() {
@@ -283,7 +283,7 @@ fn collate_clause(collation: Option<&str>) -> Result<String, AppError> {
 
 /// How a DEFAULT reaches the DDL. An expression goes in as written; anything else is a literal and
 /// is quoted, except `NULL` typed on its own, meant as SQL NULL rather than the four characters — the
-/// same rule `postgres_ddl::default_clause` follows.
+/// same rule `postgres::ddl::default_clause` follows.
 fn default_clause(value: &str, is_expression: bool) -> String {
     let trimmed = value.trim();
     if is_expression {
@@ -325,7 +325,7 @@ pub(super) fn column_definition(spec: &ColumnSpec) -> Result<String, AppError> {
 }
 
 /// Sets, replaces or clears a column's `MS_Description` extended property — the nearest thing SQL
-/// Server has to an inline column comment, and what `mssql_structure::structure_columns` already
+/// Server has to an inline column comment, and what `structure::structure_columns` already
 /// reads back as `comment`. `exists` is whether the column already carries one, since the three
 /// stored procedures below are not interchangeable: asking `sp_addextendedproperty` to add a second
 /// one, or `sp_updateextendedproperty` to update one that is not there, is an error rather than a
@@ -427,7 +427,7 @@ async fn current_column(
 
 /// Every index — plain, unique, or the primary key — that covers `column_id`, full column list
 /// included (not just the one column asked about): dropping and recreating half of a composite index
-/// would silently narrow it. Mirrors `mssql_structure::table_indexes`'s query almost exactly, with an
+/// would silently narrow it. Mirrors `structure::table_indexes`'s query almost exactly, with an
 /// added `EXISTS` to filter to indexes that reach the one column [`modify_column`]/[`drop_column`]
 /// care about.
 async fn dependent_indexes(
@@ -549,7 +549,7 @@ pub async fn drop_column(
 /// The statement that removes an index by name — `DROP CONSTRAINT` for one backing a primary key or
 /// a unique constraint, `DROP INDEX ... ON ...` for a plain or unique index. `sys.indexes` carries
 /// both flags directly (`is_primary_key`, `is_unique_constraint`), unlike PostgreSQL, where the same
-/// question needs a join out to `pg_constraint` (see `postgres_ddl::drop_index_statement`).
+/// question needs a join out to `pg_constraint` (see `postgres::ddl::drop_index_statement`).
 async fn drop_index_statement(
     pool: &Pool,
     database: &str,
@@ -687,7 +687,7 @@ fn create_index_statements(
         quote_ident(&name)
     )])
     // No comment statement: SQL Server keeps no comment on an index — see
-    // `mssql_structure::TableIndex.comment`.
+    // `structure::TableIndex.comment`.
 }
 
 /// Turns one read-back `TableIndex` into the `IndexSpec` that recreates it — used only to put an

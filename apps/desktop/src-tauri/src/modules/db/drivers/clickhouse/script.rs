@@ -1,5 +1,5 @@
 //! Running whatever SQL the Query tab sends, against ClickHouse — the counterpart of
-//! `mysql_script.rs`/`postgres_script.rs`/`sqlite_script.rs`, and two of their three jobs: split a
+//! `mysql/script.rs`/`postgres/script.rs`/`sqlite/script.rs`, and two of their three jobs: split a
 //! script, and run it statement by statement. There is no third: ClickHouse's `KILL QUERY` needs a
 //! `query_id` tracked per request, which nothing here does yet, so the Cancel button is closed —
 //! see `cancellable` on the dialect.
@@ -15,7 +15,7 @@
 //! refuses a body holding more than one — which is the reason this module exists at all rather
 //! than handing `run_script`'s whole text to `query` in one call.
 
-use super::clickhouse::{
+use super::{
     execute_check, execute_with_written_rows, query_in_database, run_mutation_and_wait, Connection,
     QueryResult,
 };
@@ -37,7 +37,7 @@ struct Statement {
 
 /// Where the scanner is inside a statement, resumable across calls to [`Scanner::feed`] so that a
 /// chunk boundary landing mid-comment or mid-string does not read as the end of one — the property
-/// the streaming restore reader in `clickhouse_dump.rs` needs (see that module's doc).
+/// the streaming restore reader in `clickhouse/dump.rs` needs (see that module's doc).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Region {
     /// Not inside a comment or a quoted string. `pending` is the previous character when it might
@@ -71,7 +71,7 @@ pub(super) enum Fed {
 }
 
 /// A statement-boundary scanner, fed one character at a time and resumable across calls — the core
-/// both `split_statements` below (the whole script at once) and `clickhouse_dump.rs`'s restore
+/// both `split_statements` below (the whole script at once) and `clickhouse/dump.rs`'s restore
 /// reader (a file read in chunks) drive, so the two can never disagree about where a statement ends.
 /// Encodes the same rules `split_statements`' own doc lists (checked against the test server): `#`
 /// and `--` open a line comment, `/* */` nests, backtick/double-quote identifiers are backslash-
@@ -695,7 +695,7 @@ mod tests {
     }
 
     /// Runs `sql` through `Scanner`, split into `chunk_size`-character pieces fed one chunk's worth
-    /// of `feed()` calls at a time — the same shape the restore reader in `clickhouse_dump.rs` drives
+    /// of `feed()` calls at a time — the same shape the restore reader in `clickhouse/dump.rs` drives
     /// it in, minus the file I/O. Returns the statement texts it produced.
     fn split_in_chunks(sql: &str, chunk_size: usize) -> Vec<String> {
         let mut scanner = Scanner::new();

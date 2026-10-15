@@ -1,8 +1,8 @@
 //! What a ClickHouse table is made of, and what every table in a database weighs — the
 //! Structure and Statistics tabs, plus the Query tab's schema outline. The shapes are the
-//! ones `postgres_structure.rs` reports, because one grid draws either.
+//! ones `postgres/structure.rs` reports, because one grid draws either.
 
-use super::clickhouse::{query_with_params, Connection};
+use super::{query_with_params, Connection};
 use crate::error::AppError;
 use serde::Serialize;
 use serde_json::Value;
@@ -180,7 +180,7 @@ async fn structure_skip_indexes(
 }
 
 /// `system.tables.engine` for one table — used to guard the sorting-key rebuild (D11): the frontend
-/// disables it outside the four engines `clickhouse_ddl::ENGINES` already whitelists for creation.
+/// disables it outside the four engines `ddl::ENGINES` already whitelists for creation.
 async fn table_engine(
     conn: &Connection,
     database: &str,
@@ -234,10 +234,10 @@ pub(super) async fn structure_columns(
                 .and_then(Value::as_str)
                 .unwrap_or("");
             // `'active'` and `now()` are different things, and `system.columns` tells them apart
-            // by the quotes — see `clickhouse_ddl::read_default`. Without splitting them here every
+            // by the quotes — see `ddl::read_default`. Without splitting them here every
             // default would be marked an expression, and a literal would be quoted a second time on
             // its way back out.
-            let default = super::clickhouse_ddl::read_default(default_expression);
+            let default = super::ddl::read_default(default_expression);
             let is_primary = row
                 .get("is_in_primary_key")
                 .and_then(truthy)

@@ -7,9 +7,7 @@
 use super::{in_background, postgres_pool, postgres_pools, reporter, sql_endpoint, tools_dir};
 use super::{RunningQuery, Transfer};
 use crate::error::AppError;
-use crate::modules::db::drivers::{
-    dump, postgres, postgres_ddl, postgres_script, postgres_structure, tools,
-};
+use crate::modules::db::drivers::{dump, postgres, tools};
 use crate::modules::db::models::DbKind;
 use crate::modules::db::models::{ServerInfo, SqlProblem, StatementResult};
 use crate::modules::db::state::DbState;
@@ -56,10 +54,10 @@ pub async fn postgres_table_stats(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<Vec<postgres_structure::TableStats>, AppError> {
+) -> Result<Vec<postgres::structure::TableStats>, AppError> {
     retry_read!({
         let pool = postgres_pool(&state, &id, &database).await?;
-        postgres_structure::table_stats(&pool).await
+        postgres::structure::table_stats(&pool).await
     })
 }
 
@@ -124,10 +122,10 @@ pub async fn postgres_table_structure(
     id: String,
     database: String,
     table: String,
-) -> Result<postgres_structure::TableStructure, AppError> {
+) -> Result<postgres::structure::TableStructure, AppError> {
     retry_read!({
         let pool = postgres_pool(&state, &id, &database).await?;
-        postgres_structure::table_structure(&pool, &table).await
+        postgres::structure::table_structure(&pool, &table).await
     })
 }
 
@@ -135,10 +133,10 @@ pub async fn postgres_table_structure(
 pub async fn postgres_collations(
     state: State<'_, DbState>,
     id: String,
-) -> Result<Vec<postgres_structure::Collation>, AppError> {
+) -> Result<Vec<postgres::structure::Collation>, AppError> {
     retry_read!({
         let pool = postgres_pool(&state, &id, "").await?;
-        postgres_structure::collations(&pool).await
+        postgres::structure::collations(&pool).await
     })
 }
 
@@ -158,10 +156,10 @@ pub async fn postgres_schema_outline(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<postgres_structure::SchemaOutline, AppError> {
+) -> Result<postgres::structure::SchemaOutline, AppError> {
     retry_read!({
         let pool = postgres_pool(&state, &id, &database).await?;
-        postgres_structure::schema_outline(&pool, &database).await
+        postgres::structure::schema_outline(&pool, &database).await
     })
 }
 
@@ -176,7 +174,7 @@ pub async fn postgres_run_script(
     let pool = postgres_pool(&state, &id, database.as_deref().unwrap_or("")).await?;
     // However it ended, dropping this is what forgets the pid.
     let _running = RunningQuery::start(&state, &run_id);
-    postgres_script::run(&pool, &sql, |pid| {
+    postgres::script::run(&pool, &sql, |pid| {
         state
             .running_queries
             .lock()
@@ -195,7 +193,7 @@ pub async fn postgres_validate_sql(
     database: Option<String>,
 ) -> Result<Option<SqlProblem>, AppError> {
     let pool = postgres_pool(&state, &id, database.as_deref().unwrap_or("")).await?;
-    postgres_script::validate(&pool, &sql).await
+    postgres::script::validate(&pool, &sql).await
 }
 
 /// Stops the run named by `run_id`, if it is still running — see [`DbState::running_queries`].
@@ -214,11 +212,11 @@ pub async fn postgres_cancel_query(
         return Ok(());
     };
     let pool = postgres_pool(&state, &id, database.as_deref().unwrap_or("")).await?;
-    postgres_script::cancel(&pool, pid).await
+    postgres::script::cancel(&pool, pid).await
 }
 
 /// Creates a database, for the header's database picker. `collation` is accepted and ignored: see
-/// `postgres_ddl::create_database`.
+/// `postgres::ddl::create_database`.
 #[tauri::command]
 pub async fn postgres_create_database(
     state: State<'_, DbState>,
@@ -227,7 +225,7 @@ pub async fn postgres_create_database(
     #[allow(unused_variables)] collation: Option<String>,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, "").await?;
-    postgres_ddl::create_database(&pool, &name).await
+    postgres::ddl::create_database(&pool, &name).await
 }
 
 /// Drops a database and every table in it. Takes the whole connection rather than a pool, since the
@@ -239,7 +237,7 @@ pub async fn postgres_drop_database(
     database: String,
 ) -> Result<(), AppError> {
     let pools = postgres_pools(&state, &id).await?;
-    postgres_ddl::drop_database(&pools, &database).await
+    postgres::ddl::drop_database(&pools, &database).await
 }
 
 /// Creates an empty table — one `id` column and its primary key — for the sidebar's add button.
@@ -253,7 +251,7 @@ pub async fn postgres_create_table(
     #[allow(unused_variables)] collation: Option<String>,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres_ddl::create_table(&pool, &table).await
+    postgres::ddl::create_table(&pool, &table).await
 }
 
 #[tauri::command]
@@ -265,7 +263,7 @@ pub async fn postgres_rename_table(
     new_name: String,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres_ddl::rename_table(&pool, &table, &new_name).await
+    postgres::ddl::rename_table(&pool, &table, &new_name).await
 }
 
 #[tauri::command]
@@ -276,7 +274,7 @@ pub async fn postgres_drop_table(
     table: String,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres_ddl::drop_table(&pool, &table).await
+    postgres::ddl::drop_table(&pool, &table).await
 }
 
 #[tauri::command]
@@ -285,10 +283,10 @@ pub async fn postgres_add_column(
     id: String,
     database: String,
     table: String,
-    spec: postgres_ddl::ColumnSpec,
+    spec: postgres::ddl::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres_ddl::add_column(&pool, &table, &spec).await
+    postgres::ddl::add_column(&pool, &table, &spec).await
 }
 
 #[tauri::command]
@@ -298,10 +296,10 @@ pub async fn postgres_modify_column(
     database: String,
     table: String,
     name: String,
-    spec: postgres_ddl::ColumnSpec,
+    spec: postgres::ddl::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres_ddl::modify_column(&pool, &table, &name, &spec).await
+    postgres::ddl::modify_column(&pool, &table, &name, &spec).await
 }
 
 #[tauri::command]
@@ -313,7 +311,7 @@ pub async fn postgres_drop_column(
     name: String,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres_ddl::drop_column(&pool, &table, &name).await
+    postgres::ddl::drop_column(&pool, &table, &name).await
 }
 
 #[tauri::command]
@@ -322,10 +320,10 @@ pub async fn postgres_add_index(
     id: String,
     database: String,
     table: String,
-    spec: postgres_ddl::IndexSpec,
+    spec: postgres::ddl::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres_ddl::add_index(&pool, &table, &spec).await
+    postgres::ddl::add_index(&pool, &table, &spec).await
 }
 
 #[tauri::command]
@@ -335,10 +333,10 @@ pub async fn postgres_modify_index(
     database: String,
     table: String,
     name: String,
-    spec: postgres_ddl::IndexSpec,
+    spec: postgres::ddl::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres_ddl::modify_index(&pool, &table, &name, &spec).await
+    postgres::ddl::modify_index(&pool, &table, &name, &spec).await
 }
 
 #[tauri::command]
@@ -350,7 +348,7 @@ pub async fn postgres_drop_index(
     name: String,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres_ddl::drop_index(&pool, &table, &name).await
+    postgres::ddl::drop_index(&pool, &table, &name).await
 }
 
 /// Writes a PostgreSQL database out as SQL. `mode` is `structure`, `data` or `all`.
@@ -371,7 +369,7 @@ pub async fn postgres_dump(
     // What each table weighs, for the progress the dump reports. A server that will not say leaves
     // the dump to run with a bar that moves without a number, which is not worth refusing over.
     let pool = postgres_pool(&state, &id, &database).await?;
-    let tables: Vec<(String, u64)> = postgres_structure::table_stats(&pool)
+    let tables: Vec<(String, u64)> = postgres::structure::table_stats(&pool)
         .await
         .map(|tables| {
             tables

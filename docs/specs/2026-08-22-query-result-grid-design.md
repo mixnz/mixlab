@@ -52,7 +52,7 @@ Ghi ra để không bị kéo vào:
 | [`rowText.ts:172-201`](../../apps/desktop/src/modules/db/components/SqlTable/rowText.ts#L172-L201) | `delimitedCell` / `csvText` / `spreadsheetText` nhận `Record<string, unknown>` — không dùng lại thẳng cho row positional được |
 | [`rowText.ts:1-7`](../../apps/desktop/src/modules/db/components/SqlTable/rowText.ts#L1-L7) | Comment đầu file: phần escape là "thứ dễ sai âm thầm và không thể thấy sai trên màn hình". Đó là lý do không nhân bản nó |
 | [`QueryEditor.tsx:412`](../../apps/desktop/src/modules/db/components/QueryEditor/QueryEditor.tsx#L412) | `requestRun` đã có `statements` trong tay trước khi gọi `run()` — **M** của dòng tóm tắt lấy ở đây |
-| [`mysql_script.rs:320`](../../apps/desktop/src-tauri/src/modules/db/drivers/mysql_script.rs#L320) | Một câu lệnh lỗi **dừng cả script**. Nên `results.length` có thể nhỏ hơn số câu lệnh đã gửi, và không có gì trên màn hình nói ra điều đó — đây là lý do dòng tóm tắt tồn tại |
+| [`mysql_script.rs:320`](../../apps/desktop/src-tauri/src/modules/db/drivers/mysql/script.rs#L320) | Một câu lệnh lỗi **dừng cả script**. Nên `results.length` có thể nhỏ hơn số câu lệnh đã gửi, và không có gì trên màn hình nói ra điều đó — đây là lý do dòng tóm tắt tồn tại |
 
 ## Quyết định nền: view là một mảng chỉ số
 
