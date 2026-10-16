@@ -93,33 +93,6 @@ fn connect_error(e: sqlx::Error) -> AppError {
     }
 }
 
-pub async fn query(
-    pool: &MySqlPool,
-    sql: &str,
-    database: Option<&str>,
-) -> Result<Vec<Map<String, Value>>, AppError> {
-    // Querying a &Pool directly requires 'static query text (sqlx's Executor
-    // impl for &Pool boxes the acquire+execute future); acquiring a connection
-    // first lets us run borrowed, non-'static SQL text instead.
-    let mut conn = pool.acquire().await.map_err(map_error)?;
-    if let Some(db) = database.filter(|d| !d.is_empty()) {
-        let use_sql = format!("USE {}", quote_ident(db));
-        // Text protocol: `USE` is one of the statements MySQL will not accept as a prepared one.
-        sqlx::raw_sql(sqlx::AssertSqlSafe(use_sql))
-            .execute(&mut *conn)
-            .await
-            .map_err(map_error)?;
-    }
-    // AssertSqlSafe opts out of sqlx's SQL-injection speed bump: this client
-    // runs arbitrary, user-authored SQL by design, not app-embedded queries.
-    let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
-        .fetch_all(&mut *conn)
-        .await
-        .map_err(map_error)?;
-
-    Ok(rows.iter().map(row_to_json).collect())
-}
-
 /// Backtick-quotes an identifier (database/table name) for interpolation into
 /// SQL text, doubling embedded backticks — MySQL's own escaping rule.
 pub(super) fn quote_ident(ident: &str) -> String {

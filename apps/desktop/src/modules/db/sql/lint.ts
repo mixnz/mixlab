@@ -2,7 +2,7 @@
  * Reading a script closely enough to say what is wrong with it, without a server.
  *
  * This is the instant half of the Query tab's error checking. The accurate half is
- * `mysql_validate_sql`, which hands the statement to MySQL itself — but that costs a round trip and
+ * `sql_validate_sql`, which hands the statement to MySQL itself — but that costs a round trip and
  * so runs on a delay, and it only ever looks at one statement. This one runs on every keystroke
  * over the whole script, and knows the one thing the server does not: which tables and columns the
  * user has actually got, from the outline completion is already working from.

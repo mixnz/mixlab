@@ -276,17 +276,6 @@ pub(super) fn system_schema_filter(namespace: &str) -> String {
     )
 }
 
-pub async fn query(pool: &PgPool, sql: &str) -> Result<Vec<Map<String, Value>>, AppError> {
-    // As in `mysql::query`: a borrowed, non-'static statement needs a connection of its own rather
-    // than the pool, and this client runs user-authored SQL by design.
-    let mut conn = pool.acquire().await.map_err(map_error)?;
-    let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
-        .fetch_all(&mut *conn)
-        .await
-        .map_err(map_error)?;
-    Ok(rows.iter().map(row_to_json).collect())
-}
-
 /// What the header shows about the server. `version()` is one sentence carrying both halves —
 /// "PostgreSQL 16.2 on x86_64-pc-linux-gnu, compiled by gcc..." — so the number comes from
 /// `server_version`, which is only the number, and the machine is cut out of the sentence.

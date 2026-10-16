@@ -36,7 +36,7 @@ impl SqlEngine for MssqlEngine {
 
     /// Not `retry_read!`: these three write, and `retry_read!` only bothers to bound because a SELECT
     /// tried again after failing halfway is harmless — an INSERT/UPDATE/DELETE tried again the same way
-    /// could write twice. `postgres_update_row`/`mysql_update_row` skip it for the same reason.
+    /// could write twice. PostgreSQL's and MySQL's `update_row` skip it for the same reason.
     async fn update_row(
         &self,
         database: String,
