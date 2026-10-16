@@ -174,8 +174,7 @@ pub async fn mysql_collations(
 /// Long enough on a real database to need saying how far along it is, which it does on
 /// `transfer://progress` — an estimate built from what mysqldump says it is doing, so the command
 /// returning is still what says the dump is done.
-#[tauri::command]
-pub async fn mysql_dump(
+pub(super) async fn dump(
     app: AppHandle,
     state: State<'_, DbState>,
     id: String,
@@ -242,8 +241,7 @@ pub async fn mysql_dump(
 ///
 /// Reports on `transfer://progress` as the file goes in, which for a restore is a count rather
 /// than an estimate — the file is of a known size and the client is fed it byte by byte.
-#[tauri::command]
-pub async fn mysql_restore(
+pub(super) async fn restore(
     app: AppHandle,
     state: State<'_, DbState>,
     id: String,

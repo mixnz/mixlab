@@ -400,8 +400,7 @@ pub async fn postgres_drop_index(
 ///
 /// Reports on `transfer://progress` as pg_dump names each table it reaches, the same estimate the
 /// MySQL dump gives — so the command returning is still what says the dump is done.
-#[tauri::command]
-pub async fn postgres_dump(
+pub(super) async fn dump(
     app: AppHandle,
     state: State<'_, DbState>,
     id: String,
@@ -450,8 +449,7 @@ pub async fn postgres_dump(
 }
 
 /// Replays a SQL file through psql, into `database`.
-#[tauri::command]
-pub async fn postgres_restore(
+pub(super) async fn restore(
     app: AppHandle,
     state: State<'_, DbState>,
     id: String,

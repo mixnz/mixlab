@@ -377,8 +377,7 @@ pub async fn clickhouse_row_count(
 
 /// Writes `database` out as SQL — `mode` is `structure`, `data` or `all`. See
 /// `docs/specs/2026-09-04-clickhouse-dump-restore-design.md`.
-#[tauri::command]
-pub async fn clickhouse_dump(
+pub(super) async fn dump(
     app: AppHandle,
     state: State<'_, DbState>,
     id: String,
@@ -407,8 +406,7 @@ pub async fn clickhouse_dump(
 }
 
 /// Replays a dump file into `database`.
-#[tauri::command]
-pub async fn clickhouse_restore(
+pub(super) async fn restore(
     app: AppHandle,
     state: State<'_, DbState>,
     id: String,

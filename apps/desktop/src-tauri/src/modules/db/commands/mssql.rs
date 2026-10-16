@@ -385,8 +385,7 @@ pub async fn mssql_drop_index(
 /// Writes `database` out as SQL — `mode` is `structure`, `data` or `all`. See
 /// `docs/specs/2026-09-05-mssql-support-design.md`'s D10 and
 /// `2026-09-05-mssql-plan-7-dump-restore.md` (a local plan, never committed).
-#[tauri::command]
-pub async fn mssql_dump(
+pub(super) async fn dump(
     app: AppHandle,
     state: State<'_, DbState>,
     id: String,
@@ -418,8 +417,7 @@ pub async fn mssql_dump(
 /// reading before `mssql::script::run` starts, so the overlay shows movement rather than sitting
 /// frozen on an empty bar, the same as `sqlite_restore`.
 #[allow(unused_variables)]
-#[tauri::command]
-pub async fn mssql_restore(
+pub(super) async fn restore(
     app: AppHandle,
     state: State<'_, DbState>,
     id: String,

@@ -374,8 +374,7 @@ pub async fn sqlite_validate_sql(
 
 /// Writes the schema and/or the rows to `path`, depending on `mode`.
 #[allow(unused_variables)]
-#[tauri::command]
-pub async fn sqlite_dump(
+pub(super) async fn dump(
     app: AppHandle,
     state: State<'_, DbState>,
     id: String,
@@ -408,8 +407,7 @@ pub async fn sqlite_dump(
 /// spec — only one reading before `sqlite::script::run` starts, so the overlay shows movement
 /// rather than sitting frozen on an empty bar.
 #[allow(unused_variables)]
-#[tauri::command]
-pub async fn sqlite_restore(
+pub(super) async fn restore(
     app: AppHandle,
     state: State<'_, DbState>,
     id: String,
