@@ -1,18 +1,8 @@
-//! SQLite
+//! SQLite's dump and restore, which `sql_dump` and `sql_restore` call once they know the
+//! engine. Every other SQL operation is a `sql_*` command in `sql.rs`, answered by
+//! `drivers::sqlite::engine`.
 //!
-//! Every one of these takes a `database` argument the way the MySQL and PostgreSQL commands do, and
-//! for the same reason — the workspace above hands one down — but there is only ever one value it
-//! can hold: `drivers::sqlite::MAIN_DATABASE`. It is accepted and ignored rather than removed, so
-//! that the shared `SqlApi` on the frontend keeps one shape across all three engines.
-//!
-//! `retry_read!` is not used here. It exists for a pooled connection that died between two
-//! statements; a file that has gone away is not something a second attempt fixes.
-//!
-//! The unused arguments carry `#[allow(unused_variables)]` rather than a leading underscore. The
-//! name of a command's argument is what the frontend's `invoke` has to send, and whether Tauri's
-//! macro strips a `_` on the way to camelCase is a detail nothing in this repo depended on before
-//! — a wrong guess there is a call that fails at runtime with "invalid args" and at build time not
-//! at all. The attribute keeps the name exactly as it is sent.
+//! `sqlite_create_file`, which needs no connection, is here too.
 
 use crate::error::AppError;
 use crate::modules::db::drivers::{dump, sqlite};

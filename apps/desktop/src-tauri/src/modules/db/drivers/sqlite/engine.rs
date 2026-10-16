@@ -1,5 +1,11 @@
 //! SQLite as a [`SqlEngine`]: what each `sql_*` command asks of this engine, answered by
 //! the functions beside this file.
+//!
+//! `database` is taken the way the server engines take it, because the workspace above hands one
+//! down, but it can only ever be `drivers::sqlite::MAIN_DATABASE`, so most methods ignore it.
+//!
+//! `retry_read!` is not used here. It exists for a pooled connection that died between two
+//! statements; a file that has gone away is not something a second attempt fixes.
 
 use crate::error::AppError;
 use crate::modules::db::drivers::sql::engine::SqlEngine;

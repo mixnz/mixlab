@@ -1,5 +1,9 @@
 //! PostgreSQL as a [`SqlEngine`]: what each `sql_*` command asks of this engine, answered by
 //! the functions beside this file.
+//!
+//! `database` means something different here than on MySQL: there it names a database to reach
+//! into from the one connection, here it picks which pool a method runs on. An empty one is the
+//! database the connection was opened on.
 
 use crate::error::AppError;
 use crate::modules::db::drivers::postgres;

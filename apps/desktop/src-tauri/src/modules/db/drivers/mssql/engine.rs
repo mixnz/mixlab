@@ -1,5 +1,8 @@
 //! SQL Server as a [`SqlEngine`]: what each `sql_*` command asks of this engine, answered by
 //! the functions beside this file.
+//!
+//! `database` means what it means on MySQL and not what it means on PostgreSQL: a database to reach
+//! into over the one pool, never a pool to pick.
 
 use crate::error::AppError;
 use crate::modules::db::drivers::mssql;

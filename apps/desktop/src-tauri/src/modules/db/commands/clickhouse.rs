@@ -1,3 +1,7 @@
+//! ClickHouse's dump and restore, which `sql_dump` and `sql_restore` call once they know the
+//! engine. Every other SQL operation is a `sql_*` command in `sql.rs`, answered by
+//! `drivers::clickhouse::engine`.
+
 use super::{clickhouse_connection, reporter, Transfer};
 use crate::error::AppError;
 use crate::modules::db::drivers::{clickhouse, dump};

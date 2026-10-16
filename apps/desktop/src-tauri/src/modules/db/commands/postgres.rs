@@ -1,8 +1,6 @@
-//! PostgreSQL
-//!
-//! Every one of these takes the database as an argument the way the MySQL commands do, but it means
-//! something different: there it names a database to reach into from the one connection, here it
-//! picks which pool the command runs on. See `postgres_pool`.
+//! PostgreSQL's dump and restore, which `sql_dump` and `sql_restore` call once they know the
+//! engine. Every other SQL operation is a `sql_*` command in `sql.rs`, answered by
+//! `drivers::postgres::engine`.
 
 use super::Transfer;
 use super::{in_background, postgres_pool, reporter, sql_endpoint, tools_dir};

@@ -1,5 +1,8 @@
 //! MySQL and MariaDB as a [`SqlEngine`]: what each `sql_*` command asks of this engine, answered by
 //! the functions beside this file.
+//!
+//! Which of MySQL and MariaDB answered is a property of the connection, read once when it was
+//! opened (see `drivers::mysql::detect_mariadb`), and travels in `mariadb`.
 
 use crate::error::AppError;
 use crate::modules::db::drivers::mysql;

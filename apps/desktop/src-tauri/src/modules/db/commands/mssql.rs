@@ -1,7 +1,6 @@
-//! SQL Server
-//!
-//! `database` here means what it means on MySQL and not what it means on PostgreSQL: a database to
-//! reach into over the one pool, never a pool to pick. See `mssql_pool`.
+//! SQL Server's dump and restore, which `sql_dump` and `sql_restore` call once they know the
+//! engine. Every other SQL operation is a `sql_*` command in `sql.rs`, answered by
+//! `drivers::mssql::engine`.
 
 use crate::error::AppError;
 use crate::modules::db::drivers::{dump, mssql};

@@ -1,5 +1,6 @@
-//! Every MySQL and MariaDB command. Which of the two answered is a property of the
-//! connection, read once when it was opened - see `drivers::mysql::detect_mariadb`.
+//! MySQL's and MariaDB's dump and restore, which `sql_dump` and `sql_restore` call once they know the
+//! engine. Every other SQL operation is a `sql_*` command in `sql.rs`, answered by
+//! `drivers::mysql::engine`.
 
 use super::Transfer;
 use super::{in_background, mysql_pool, reporter, sql_endpoint, tools_dir};
