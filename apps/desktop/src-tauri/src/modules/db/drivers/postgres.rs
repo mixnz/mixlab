@@ -15,8 +15,10 @@ pub mod structure;
 
 use super::filters::{escape_like, split_list};
 use crate::error::AppError;
+pub use crate::modules::db::drivers::sql::types::{
+    ColumnMeta, Filter, ForeignKey, PageQuery, TablePage,
+};
 use crate::modules::db::models::ServerInfo;
-use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions, PgRow, PgSslMode};
 use sqlx::{Column, PgPool, Row, TypeInfo};
@@ -351,33 +353,6 @@ pub async fn list_tables(pool: &PgPool) -> Result<Vec<String>, AppError> {
         .collect())
 }
 
-/// The row a foreign key column points at.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ForeignKey {
-    /// [`qualify`]ed, so a key into another schema names a table the sidebar can actually open —
-    /// unlike MySQL, where a cross-schema key has no name the grid could follow.
-    pub table: String,
-    pub column: String,
-}
-
-/// What is known about one column beyond its name — everything a new row has to respect.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ColumnMeta {
-    /// The declared type as PostgreSQL spells it: `character varying(255)`, `integer`, `jsonb`.
-    pub data_type: String,
-    pub nullable: bool,
-    /// The column's DEFAULT as an expression, or `None` when it has none. PostgreSQL keeps every
-    /// default as an expression, so even a literal one arrives cast — `'new'::text`.
-    pub default_value: Option<String>,
-    /// Which of the things the server fills in for itself this column is, as space-separated
-    /// tokens: `identity`, `generated`, `nextval`. Read by `src/postgres/columns.ts`, and the
-    /// counterpart of what `SHOW COLUMNS` calls Extra on MySQL.
-    pub extra: String,
-    pub foreign_key: Option<ForeignKey>,
-}
-
 /// Which columns of the table are foreign keys, and what each one points at.
 ///
 /// Only the constraints the connected user can see are here, and a failure is swallowed by the
@@ -421,17 +396,6 @@ async fn foreign_keys(
             });
     }
     Ok(keys)
-}
-
-/// One condition on the rows a page is cut out of, as the grid's filter bar sends it. The same
-/// shape as MySQL's, and the operator ids are the same — only what they become differs.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Filter {
-    pub column: String,
-    pub operator: String,
-    #[serde(default)]
-    pub value: Option<String>,
 }
 
 /// Turns the filter rows into a WHERE clause and the values to bind into it, in order.
@@ -564,35 +528,6 @@ fn build_where(
         return Ok((String::new(), binds));
     }
     Ok((format!(" WHERE {}", clauses.join(" AND ")), binds))
-}
-
-/// Which page of a table is wanted, and what it is cut out of.
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PageQuery {
-    pub page: i64,
-    pub page_size: i64,
-    /// Ignored unless it names a real column of this table.
-    #[serde(default)]
-    pub sort_column: Option<String>,
-    #[serde(default)]
-    pub sort_desc: bool,
-    /// ANDed together; `total` counts what is left after them.
-    #[serde(default)]
-    pub filters: Vec<Filter>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TablePage {
-    pub columns: Vec<String>,
-    pub column_meta: BTreeMap<String, ColumnMeta>,
-    pub primary_key: Vec<String>,
-    /// The identity or `serial` column, if the table has one — the only kind with a counter worth
-    /// offering to reset after a delete.
-    pub auto_increment_column: Option<String>,
-    pub rows: Vec<Map<String, Value>>,
-    pub total: i64,
 }
 
 /// Reads the columns of one table: the names in table order, with what each one is declared as.

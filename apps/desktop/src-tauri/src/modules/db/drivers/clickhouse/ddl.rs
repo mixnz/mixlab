@@ -188,6 +188,19 @@ pub struct ColumnSpec {
     pub comment: String,
 }
 
+/// What this engine reads of the column the window sends; the rest is not its to use.
+impl From<crate::modules::db::drivers::sql::types::ColumnSpec> for ColumnSpec {
+    fn from(spec: crate::modules::db::drivers::sql::types::ColumnSpec) -> Self {
+        Self {
+            name: spec.name,
+            data_type: spec.data_type,
+            default_value: spec.default_value,
+            default_is_expression: spec.default_is_expression,
+            comment: spec.comment,
+        }
+    }
+}
+
 /// A column declared whole — what follows `ADD COLUMN` and equally what follows `MODIFY COLUMN`,
 /// ClickHouse taking the same syntax in both places. PostgreSQL cannot: there each property is an
 /// `ALTER COLUMN SET ...` of its own.

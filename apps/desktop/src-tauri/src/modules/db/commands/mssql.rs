@@ -269,10 +269,10 @@ pub async fn mssql_add_column(
     id: String,
     database: String,
     table: String,
-    spec: mssql::ddl::ColumnSpec,
+    spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::add_column(&pool, &database, &table, &spec).await
+    mssql::ddl::add_column(&pool, &database, &table, &spec.into()).await
 }
 
 #[tauri::command]
@@ -294,10 +294,10 @@ pub async fn mssql_modify_column(
     database: String,
     table: String,
     name: String,
-    spec: mssql::ddl::ColumnSpec,
+    spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::modify_column(&pool, &database, &table, &name, &spec).await
+    mssql::ddl::modify_column(&pool, &database, &table, &name, &spec.into()).await
 }
 
 #[tauri::command]
@@ -306,10 +306,10 @@ pub async fn mssql_add_index(
     id: String,
     database: String,
     table: String,
-    spec: mssql::ddl::IndexSpec,
+    spec: crate::modules::db::drivers::sql::types::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::add_index(&pool, &database, &table, &spec).await
+    mssql::ddl::add_index(&pool, &database, &table, &spec.into()).await
 }
 
 #[tauri::command]
@@ -319,10 +319,10 @@ pub async fn mssql_modify_index(
     database: String,
     table: String,
     name: String,
-    spec: mssql::ddl::IndexSpec,
+    spec: crate::modules::db::drivers::sql::types::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::modify_index(&pool, &database, &table, &name, &spec).await
+    mssql::ddl::modify_index(&pool, &database, &table, &name, &spec.into()).await
 }
 
 #[tauri::command]

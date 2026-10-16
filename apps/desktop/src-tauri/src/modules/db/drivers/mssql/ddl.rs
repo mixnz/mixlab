@@ -68,6 +68,39 @@ pub struct IndexSpec {
     // for the fields it has no place for.
 }
 
+/// What this engine reads of the column the window sends; the rest is not its to use.
+impl From<crate::modules::db::drivers::sql::types::ColumnSpec> for ColumnSpec {
+    fn from(spec: crate::modules::db::drivers::sql::types::ColumnSpec) -> Self {
+        Self {
+            name: spec.name,
+            data_type: spec.data_type,
+            nullable: spec.nullable,
+            default_value: spec.default_value,
+            default_is_expression: spec.default_is_expression,
+            auto_increment: spec.auto_increment,
+            collation: spec.collation,
+            comment: spec.comment,
+        }
+    }
+}
+
+impl From<crate::modules::db::drivers::sql::types::IndexColumnSpec> for IndexColumnSpec {
+    fn from(spec: crate::modules::db::drivers::sql::types::IndexColumnSpec) -> Self {
+        Self { name: spec.name }
+    }
+}
+
+impl From<crate::modules::db::drivers::sql::types::IndexSpec> for IndexSpec {
+    fn from(spec: crate::modules::db::drivers::sql::types::IndexSpec) -> Self {
+        Self {
+            name: spec.name,
+            kind: spec.kind,
+            index_type: spec.index_type,
+            columns: spec.columns.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
 /// Wraps text as a SQL string literal, doubling the quote that would otherwise end it early. T-SQL
 /// does not backslash-escape a plain literal, so a backslash is left alone — the same rule
 /// `postgres::ddl::quote_string` follows and for the same reason.

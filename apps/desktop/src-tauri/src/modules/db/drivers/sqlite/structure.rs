@@ -21,94 +21,12 @@
 
 use super::{map_error, quote_ident, split_default};
 use crate::error::AppError;
-use serde::Serialize;
+pub use crate::modules::db::drivers::sql::types::{
+    Collation, IndexColumn, OutlineColumn, OutlineTable, SchemaOutline, StructureColumn,
+    TableIndex, TableStats, TableStructure,
+};
 use sqlx::{Row, SqlitePool};
 use std::collections::{BTreeMap, HashMap};
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StructureColumn {
-    pub name: String,
-    /// The declared type as the table's own DDL spells it, which in SQLite decides an affinity
-    /// rather than a type — `VARCHAR(255)` and `TEXT` behave identically, and a column may be
-    /// declared with no type at all.
-    pub data_type: String,
-    pub nullable: bool,
-    pub default_value: Option<String>,
-    pub default_is_expression: bool,
-    /// The `INTEGER PRIMARY KEY` that aliases the rowid — the only column SQLite fills in itself.
-    pub auto_increment: bool,
-    /// Always false. MySQL's `ON UPDATE CURRENT_TIMESTAMP` has no SQLite counterpart; the same
-    /// effect is a trigger, which is not a property of the column.
-    pub on_update_current_timestamp: bool,
-    pub generated: bool,
-    /// Always `None` — see the note at the top of this file.
-    pub collation: Option<String>,
-    /// Always empty: SQLite has no column comments.
-    pub comment: String,
-    /// `PRI`, `UNI`, `MUL` or empty, as MySQL spells it — which kind of key this column leads.
-    pub key: String,
-    /// The tokens described on `sqlite::ColumnMeta::extra`.
-    pub extra: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IndexColumn {
-    /// `None` for an index over an expression rather than a column.
-    pub name: Option<String>,
-    /// Always `None`: SQLite indexes a whole value, and has no counterpart to MySQL's
-    /// index-the-first-n-characters.
-    pub prefix_length: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableIndex {
-    pub name: String,
-    pub unique: bool,
-    pub primary: bool,
-    /// Always `btree`. Every SQLite index is one, which is also why the index dialog offers no
-    /// method to choose — see `sqliteEditing`.
-    pub index_type: String,
-    pub columns: Vec<IndexColumn>,
-    /// Always empty: SQLite has no index comments.
-    pub comment: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStructure {
-    /// In table order, which is the order a `SELECT *` returns them in.
-    pub columns: Vec<StructureColumn>,
-    /// The primary key first, then the rest by name.
-    pub indexes: Vec<TableIndex>,
-    /// Always empty: data skipping indices are a ClickHouse-only concept. See
-    /// `docs/specs/2026-09-04-clickhouse-index-ddl-design.md`.
-    pub skip_indexes: Vec<super::super::clickhouse::structure::SkipIndex>,
-    /// Always `None` — the engine guard in the Structure tab only ever reads this for ClickHouse.
-    pub engine: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Collation {
-    pub name: String,
-    pub charset: String,
-    pub is_default: bool,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStats {
-    pub name: String,
-    /// Counted, not estimated — SQLite keeps no figure to read.
-    pub rows: u64,
-    pub data_size: u64,
-    pub index_size: u64,
-    /// Derived rather than reported: the data size over the counted rows.
-    pub avg_record_size: u64,
-}
 
 /// The name SQLite gives the primary key of a table whose key is the rowid.
 ///
@@ -380,33 +298,6 @@ async fn index_owners(pool: &SqlitePool) -> Result<Vec<(String, String)>, AppErr
         .iter()
         .map(|r| (r.get::<String, _>("name"), r.get::<String, _>("tbl_name")))
         .collect())
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OutlineColumn {
-    pub name: String,
-    pub data_type: String,
-    pub nullable: bool,
-    /// `PRI`, `UNI`, `MUL` or empty, as MySQL spells it — the completion list draws either.
-    pub key: String,
-    /// The `table.column` this one points at, when it is a foreign key.
-    pub references: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OutlineTable {
-    pub name: String,
-    pub columns: Vec<OutlineColumn>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SchemaOutline {
-    /// The database this describes, so a cached outline can be told apart from the one asked for.
-    pub database: String,
-    pub tables: Vec<OutlineTable>,
 }
 
 /// Every table and column of the file, for the Query tab's completion.

@@ -283,10 +283,10 @@ pub async fn postgres_add_column(
     id: String,
     database: String,
     table: String,
-    spec: postgres::ddl::ColumnSpec,
+    spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::add_column(&pool, &table, &spec).await
+    postgres::ddl::add_column(&pool, &table, &spec.into()).await
 }
 
 #[tauri::command]
@@ -296,10 +296,10 @@ pub async fn postgres_modify_column(
     database: String,
     table: String,
     name: String,
-    spec: postgres::ddl::ColumnSpec,
+    spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::modify_column(&pool, &table, &name, &spec).await
+    postgres::ddl::modify_column(&pool, &table, &name, &spec.into()).await
 }
 
 #[tauri::command]
@@ -320,10 +320,10 @@ pub async fn postgres_add_index(
     id: String,
     database: String,
     table: String,
-    spec: postgres::ddl::IndexSpec,
+    spec: crate::modules::db::drivers::sql::types::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::add_index(&pool, &table, &spec).await
+    postgres::ddl::add_index(&pool, &table, &spec.into()).await
 }
 
 #[tauri::command]
@@ -333,10 +333,10 @@ pub async fn postgres_modify_index(
     database: String,
     table: String,
     name: String,
-    spec: postgres::ddl::IndexSpec,
+    spec: crate::modules::db::drivers::sql::types::IndexSpec,
 ) -> Result<(), AppError> {
     let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::modify_index(&pool, &table, &name, &spec).await
+    postgres::ddl::modify_index(&pool, &table, &name, &spec.into()).await
 }
 
 #[tauri::command]

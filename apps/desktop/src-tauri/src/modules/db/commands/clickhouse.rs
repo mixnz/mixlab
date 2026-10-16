@@ -213,10 +213,10 @@ pub async fn clickhouse_add_column(
     id: String,
     database: String,
     table: String,
-    spec: clickhouse::ddl::ColumnSpec,
+    spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::add_column(&conn, &database, &table, &spec).await
+    clickhouse::ddl::add_column(&conn, &database, &table, &spec.into()).await
 }
 
 #[tauri::command]
@@ -238,10 +238,10 @@ pub async fn clickhouse_modify_column(
     database: String,
     table: String,
     name: String,
-    spec: clickhouse::ddl::ColumnSpec,
+    spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
     let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::modify_column(&conn, &database, &table, &name, &spec).await
+    clickhouse::ddl::modify_column(&conn, &database, &table, &name, &spec.into()).await
 }
 
 #[tauri::command]

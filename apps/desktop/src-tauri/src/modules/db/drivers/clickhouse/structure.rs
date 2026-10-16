@@ -4,49 +4,12 @@
 
 use super::{query_with_params, Connection};
 use crate::error::AppError;
+pub use crate::modules::db::drivers::sql::types::{
+    IndexColumn, OutlineColumn, OutlineTable, SchemaOutline, StructureColumn, TableIndex,
+    TableStats, TableStructure,
+};
 use serde::Serialize;
 use serde_json::Value;
-
-/// One column as the Structure tab's column grid shows it — the shape MySQL and PostgreSQL report,
-/// with the fields ClickHouse has nothing to say about left at their empty value rather than
-/// dropped: no `ON UPDATE CURRENT_TIMESTAMP`, no per-column collation to report on a `String`.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StructureColumn {
-    pub name: String,
-    pub data_type: String,
-    pub nullable: bool,
-    pub default_value: Option<String>,
-    pub default_is_expression: bool,
-    pub auto_increment: bool,
-    pub on_update_current_timestamp: bool,
-    pub generated: bool,
-    pub collation: Option<String>,
-    pub comment: String,
-    /// `PRI` for a column in the sorting key, empty otherwise — MySQL's letters, since one grid
-    /// draws either. ClickHouse has no `UNI`/`MUL` to report: uniqueness is not a thing an index
-    /// enforces here.
-    pub key: String,
-    pub extra: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IndexColumn {
-    pub name: Option<String>,
-    pub prefix_length: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableIndex {
-    pub name: String,
-    pub unique: bool,
-    pub primary: bool,
-    pub index_type: String,
-    pub columns: Vec<IndexColumn>,
-    pub comment: String,
-}
 
 /// One data skipping index — ClickHouse's only secondary index, an approximate part-skipping filter
 /// rather than a lookup structure. See the ClickHouse index DDL design doc's D2.
@@ -82,15 +45,6 @@ pub(super) fn parse_type_full(type_full: &str) -> (String, Vec<String>) {
             }
         }
     }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStructure {
-    pub columns: Vec<StructureColumn>,
-    pub indexes: Vec<TableIndex>,
-    pub skip_indexes: Vec<SkipIndex>,
-    pub engine: Option<String>,
 }
 
 /// Everything the Structure tab shows about one table.
@@ -282,18 +236,6 @@ fn truthy(value: &Value) -> Option<bool> {
     }
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStats {
-    pub name: String,
-    pub rows: u64,
-    pub data_size: u64,
-    /// Always 0: ClickHouse stores a MergeTree table's data-skipping indices inline with the data
-    /// parts rather than as separate files with a size of their own to report.
-    pub index_size: u64,
-    pub avg_record_size: u64,
-}
-
 /// What every table in `database` weighs. `total_rows`/`total_bytes` are `NULL` for an engine that
 /// keeps no such count — a `Log` table, a `View` — which reads here as zero rather than as a
 /// missing table.
@@ -332,31 +274,6 @@ pub(super) fn as_u64(value: Option<&Value>) -> Option<u64> {
         Some(Value::Number(n)) => n.as_u64(),
         _ => None,
     }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OutlineColumn {
-    pub name: String,
-    pub data_type: String,
-    pub nullable: bool,
-    pub key: String,
-    /// Always `None`: ClickHouse has no foreign keys to report.
-    pub references: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OutlineTable {
-    pub name: String,
-    pub columns: Vec<OutlineColumn>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SchemaOutline {
-    pub database: String,
-    pub tables: Vec<OutlineTable>,
 }
 
 /// What the Query tab's completion knows about `database`: every table and column of it, in one

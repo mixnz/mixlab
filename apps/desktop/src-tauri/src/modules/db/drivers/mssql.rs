@@ -13,11 +13,13 @@ pub mod structure;
 
 use super::filters::split_list;
 use crate::error::AppError;
+pub use crate::modules::db::drivers::sql::types::{
+    ColumnMeta, Filter, ForeignKey, PageQuery, TablePage,
+};
 use crate::modules::db::models::ServerInfo;
 use deadpool::managed::{
     Manager as ManagerTrait, Metrics, Pool as DeadPool, RecycleError, RecycleResult,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use tiberius::numeric::Decimal;
@@ -540,17 +542,6 @@ pub(super) fn read_uncommitted(sql: &str) -> String {
     )
 }
 
-/// One condition on the rows a page is cut out of, as the grid's filter bar sends it. The same
-/// shape and the same operator ids as MySQL's and PostgreSQL's — only what they become differs.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Filter {
-    pub column: String,
-    pub operator: String,
-    #[serde(default)]
-    pub value: Option<String>,
-}
-
 /// The wildcards out of a value going into a `LIKE`, T-SQL's set of them.
 ///
 /// Not `filters::escape_like`, which is right for the two engines it serves and wrong here twice
@@ -753,58 +744,6 @@ pub(super) fn order_by_clause(
             )
         })
         .unwrap_or_else(|| " ORDER BY (SELECT NULL)".to_string())
-}
-
-/// Which page of a table is wanted, and what it is cut out of.
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PageQuery {
-    pub page: i64,
-    pub page_size: i64,
-    /// Ignored unless it names a real column of this table.
-    #[serde(default)]
-    pub sort_column: Option<String>,
-    #[serde(default)]
-    pub sort_desc: bool,
-    /// ANDed together; `total` counts what is left after them.
-    #[serde(default)]
-    pub filters: Vec<Filter>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TablePage {
-    pub columns: Vec<String>,
-    pub column_meta: BTreeMap<String, ColumnMeta>,
-    pub primary_key: Vec<String>,
-    /// The IDENTITY column, if the table has one — the only kind with a counter worth offering to
-    /// reset after a delete.
-    pub auto_increment_column: Option<String>,
-    pub rows: Vec<Map<String, Value>>,
-    pub total: i64,
-}
-
-/// The row a foreign key column points at.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ForeignKey {
-    /// [`qualify`]ed, so a key into another schema names a table the sidebar can open.
-    pub table: String,
-    pub column: String,
-}
-
-/// What is known about one column beyond its name — everything a new row would have to respect.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ColumnMeta {
-    /// The declared type as a `CREATE TABLE` would write it: `nvarchar(255)`, `decimal(10,2)`.
-    pub data_type: String,
-    pub nullable: bool,
-    /// The column's DEFAULT, without the parentheses the catalogue wraps it in.
-    pub default_value: Option<String>,
-    /// `identity`, `generated`, `rowversion` — see [`extra_tokens`].
-    pub extra: String,
-    pub foreign_key: Option<ForeignKey>,
 }
 
 /// The columns of one table, in table order, with what each one is declared as.
