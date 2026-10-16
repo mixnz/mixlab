@@ -10,6 +10,7 @@
 
 pub mod ddl;
 pub mod dump;
+pub mod engine;
 pub mod script;
 pub mod structure;
 

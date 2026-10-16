@@ -976,6 +976,9 @@ const dbVi: DbDict = {
     // Connection
     unknownConnection: "Kết nối này không còn mở. Kết nối lại để tiếp tục.",
     wrongConnectionKind: "Đây không phải kết nối {{kind}}.",
+    notSqlConnection: "Đây không phải kết nối SQL.",
+    unsupportedOperation: "Cơ sở dữ liệu này không hỗ trợ thao tác đó ({{operation}}).",
+    tableEngineRequired: "Chọn engine cho bảng mới.",
     connectTimeout:
       "Kết nối {{kind}} quá hạn sau {{seconds}} giây. Kiểm tra host, cổng và tường lửa.",
     connectionLost:

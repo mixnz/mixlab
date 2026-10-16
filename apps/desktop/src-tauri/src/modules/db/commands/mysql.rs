@@ -1,7 +1,8 @@
 //! Every MySQL and MariaDB command. Which of the two answered is a property of the
 //! connection, read once when it was opened - see `drivers::mysql::detect_mariadb`.
 
-use super::{in_background, mysql_connection, mysql_pool, reporter, sql_endpoint, tools_dir};
+use super::handle;
+use super::{in_background, mysql_pool, reporter, sql_endpoint, tools_dir};
 use super::{RunningQuery, Transfer};
 use crate::error::AppError;
 use crate::modules::db::drivers::{dump, mysql, tools};
@@ -28,10 +29,7 @@ pub async fn mysql_list_databases(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<Vec<String>, AppError> {
-    retry_read!({
-        let pool = mysql_pool(&state, &id).await?;
-        mysql::list_databases(&pool).await
-    })
+    handle(&state, &id).await?.sql()?.list_databases().await
 }
 
 #[tauri::command]
@@ -39,10 +37,7 @@ pub async fn mysql_server_info(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<ServerInfo, AppError> {
-    retry_read!({
-        let pool = mysql_pool(&state, &id).await?;
-        mysql::server_info(&pool).await
-    })
+    handle(&state, &id).await?.sql()?.server_info().await
 }
 
 #[tauri::command]
@@ -51,10 +46,11 @@ pub async fn mysql_list_tables(
     id: String,
     database: String,
 ) -> Result<Vec<String>, AppError> {
-    retry_read!({
-        let pool = mysql_pool(&state, &id).await?;
-        mysql::list_tables(&pool, &database).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .list_tables(database)
+        .await
 }
 
 /// What every table in the database weighs, for the workspace's Statistics tab.
@@ -64,10 +60,11 @@ pub async fn mysql_table_stats(
     id: String,
     database: String,
 ) -> Result<Vec<mysql::structure::TableStats>, AppError> {
-    retry_read!({
-        let pool = mysql_pool(&state, &id).await?;
-        mysql::structure::table_stats(&pool, &database).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_stats(database)
+        .await
 }
 
 #[tauri::command]
@@ -78,10 +75,11 @@ pub async fn mysql_table_data(
     table: String,
     query: mysql::PageQuery,
 ) -> Result<mysql::TablePage, AppError> {
-    retry_read!({
-        let (pool, mariadb) = mysql_connection(&state, &id).await?;
-        mysql::table_data(&pool, mariadb, &database, &table, &query).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_data(database, table, query)
+        .await
 }
 
 #[tauri::command]
@@ -93,8 +91,11 @@ pub async fn mysql_update_row(
     updates: Map<String, Value>,
     key: Map<String, Value>,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::update_row(&pool, &database, &table, &updates, &key).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .update_row(database, table, updates, key)
+        .await
 }
 
 #[tauri::command]
@@ -105,8 +106,11 @@ pub async fn mysql_insert_rows(
     table: String,
     rows: Vec<Map<String, Value>>,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::insert_rows(&pool, &database, &table, &rows).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .insert_rows(database, table, rows)
+        .await
 }
 
 #[tauri::command]
@@ -119,8 +123,11 @@ pub async fn mysql_delete_rows(
     all: bool,
     reset_auto_increment: bool,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::delete_rows(&pool, &database, &table, &keys, all, reset_auto_increment).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .delete_rows(database, table, keys, all, reset_auto_increment)
+        .await
 }
 
 #[tauri::command]
@@ -130,10 +137,11 @@ pub async fn mysql_table_structure(
     database: String,
     table: String,
 ) -> Result<mysql::structure::TableStructure, AppError> {
-    retry_read!({
-        let (pool, mariadb) = mysql_connection(&state, &id).await?;
-        mysql::structure::table_structure(&pool, mariadb, &database, &table).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_structure(database, table)
+        .await
 }
 
 /// Every table and column of one database, for the Query tab's completion. One read covers the
@@ -144,10 +152,11 @@ pub async fn mysql_schema_outline(
     id: String,
     database: String,
 ) -> Result<mysql::structure::SchemaOutline, AppError> {
-    retry_read!({
-        let pool = mysql_pool(&state, &id).await?;
-        mysql::structure::schema_outline(&pool, &database).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .schema_outline(database)
+        .await
 }
 
 /// The collations this server has, for the column editor's picker. A property of the server rather
@@ -157,10 +166,7 @@ pub async fn mysql_collations(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<Vec<mysql::structure::Collation>, AppError> {
-    retry_read!({
-        let pool = mysql_pool(&state, &id).await?;
-        mysql::structure::collations(&pool).await
-    })
+    handle(&state, &id).await?.sql()?.collations().await
 }
 
 /// Writes a database out as SQL. `mode` is `structure`, `data` or `all`.
@@ -276,8 +282,11 @@ pub async fn mysql_drop_database(
     id: String,
     database: String,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::drop_database(&pool, &database).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_database(database)
+        .await
 }
 
 /// Creates a database, for the header's database picker.
@@ -288,8 +297,11 @@ pub async fn mysql_create_database(
     name: String,
     collation: Option<String>,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::create_database(&pool, &name, collation.as_deref()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .create_database(name, collation)
+        .await
 }
 
 /// Creates an empty table — one `id` column and its primary key — for the sidebar's add button.
@@ -301,8 +313,11 @@ pub async fn mysql_create_table(
     table: String,
     collation: Option<String>,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::create_table(&pool, &database, &table, collation.as_deref()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .create_table(database, table, collation, None)
+        .await
 }
 
 /// Renames a table, for the sidebar's context menu.
@@ -314,8 +329,11 @@ pub async fn mysql_rename_table(
     table: String,
     new_name: String,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::rename_table(&pool, &database, &table, &new_name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .rename_table(database, table, new_name)
+        .await
 }
 
 /// Drops a table and everything in it, for the sidebar's context menu.
@@ -326,8 +344,11 @@ pub async fn mysql_drop_table(
     database: String,
     table: String,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::drop_table(&pool, &database, &table).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_table(database, table)
+        .await
 }
 
 #[tauri::command]
@@ -338,8 +359,11 @@ pub async fn mysql_add_column(
     table: String,
     spec: mysql::structure::ColumnSpec,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::add_column(&pool, &database, &table, &spec).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .add_column(database, table, spec)
+        .await
 }
 
 #[tauri::command]
@@ -351,8 +375,11 @@ pub async fn mysql_modify_column(
     name: String,
     spec: mysql::structure::ColumnSpec,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::modify_column(&pool, &database, &table, &name, &spec).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .modify_column(database, table, name, spec)
+        .await
 }
 
 #[tauri::command]
@@ -363,8 +390,11 @@ pub async fn mysql_drop_column(
     table: String,
     name: String,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::drop_column(&pool, &database, &table, &name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_column(database, table, name)
+        .await
 }
 
 #[tauri::command]
@@ -375,8 +405,11 @@ pub async fn mysql_add_index(
     table: String,
     spec: mysql::structure::IndexSpec,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::add_index(&pool, &database, &table, &spec).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .add_index(database, table, spec)
+        .await
 }
 
 #[tauri::command]
@@ -388,8 +421,11 @@ pub async fn mysql_modify_index(
     name: String,
     spec: mysql::structure::IndexSpec,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::modify_index(&pool, &database, &table, &name, &spec).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .modify_index(database, table, name, spec)
+        .await
 }
 
 #[tauri::command]
@@ -400,8 +436,11 @@ pub async fn mysql_drop_index(
     table: String,
     name: String,
 ) -> Result<(), AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::structure::drop_index(&pool, &database, &table, &name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_index(database, table, name)
+        .await
 }
 
 /// Runs the Query tab's editor contents. `database` is the one selected in the header, applied as a
@@ -415,18 +454,17 @@ pub async fn mysql_run_script(
     sql: String,
     database: Option<String>,
 ) -> Result<Vec<StatementResult>, AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    // However it ended — finished, failed, or killed from `mysql_cancel_query` — dropping this is
-    // what forgets the thread id.
+    let engine = handle(&state, &id).await?.sql()?;
+    // However it ended, dropping this is what forgets the session id.
     let _running = RunningQuery::start(&state, &run_id);
-    mysql::script::run(&pool, &sql, database.as_deref(), |thread| {
+    let announce = |session: u64| {
         state
             .running_queries
             .lock()
             .unwrap()
-            .insert(run_id.clone(), thread);
-    })
-    .await
+            .insert(run_id.clone(), session);
+    };
+    engine.run_script(sql, database, &announce).await
 }
 
 /// Asks MySQL to parse one statement without running it, for the editor's error checking.
@@ -442,8 +480,11 @@ pub async fn mysql_validate_sql(
     sql: String,
     database: Option<String>,
 ) -> Result<Option<SqlProblem>, AppError> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::script::validate(&pool, &sql, database.as_deref()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .validate_sql(sql, database)
+        .await
 }
 
 /// Stops the run named by `run_id`, if it is still running.
@@ -460,9 +501,13 @@ pub async fn mysql_cancel_query(
     id: String,
     run_id: String,
 ) -> Result<(), AppError> {
-    let thread = state.running_queries.lock().unwrap().get(&run_id).copied();
-    let Some(thread) = thread else {
+    let session = state.running_queries.lock().unwrap().get(&run_id).copied();
+    let Some(session) = session else {
         return Ok(());
     };
-    mysql::kill_query(&mysql_pool(&state, &id).await?, thread).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .cancel_query(session)
+        .await
 }

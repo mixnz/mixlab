@@ -1,4 +1,5 @@
-use super::{clickhouse_connection, reporter, Transfer};
+use super::handle;
+use super::{clickhouse_connection, reporter, RunningQuery, Transfer};
 use crate::error::AppError;
 use crate::modules::db::drivers::{clickhouse, dump};
 use crate::modules::db::models::{ServerInfo, SqlProblem, StatementResult};
@@ -12,8 +13,7 @@ pub async fn clickhouse_server_info(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<ServerInfo, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::server_info(&conn).await
+    handle(&state, &id).await?.sql()?.server_info().await
 }
 
 #[tauri::command]
@@ -21,8 +21,7 @@ pub async fn clickhouse_list_databases(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<Vec<String>, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::list_databases(&conn).await
+    handle(&state, &id).await?.sql()?.list_databases().await
 }
 
 #[tauri::command]
@@ -31,8 +30,11 @@ pub async fn clickhouse_list_tables(
     id: String,
     database: String,
 ) -> Result<Vec<String>, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::list_tables(&conn, &database).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .list_tables(database)
+        .await
 }
 
 #[tauri::command]
@@ -43,8 +45,11 @@ pub async fn clickhouse_table_data(
     table: String,
     query: clickhouse::PageQuery,
 ) -> Result<clickhouse::TablePage, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::table_data(&conn, &database, &table, &query).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_data(database, table, query)
+        .await
 }
 
 #[tauri::command]
@@ -54,8 +59,11 @@ pub async fn clickhouse_table_structure(
     database: String,
     table: String,
 ) -> Result<clickhouse::structure::TableStructure, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::structure::table_structure(&conn, &database, &table).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_structure(database, table)
+        .await
 }
 
 #[tauri::command]
@@ -64,8 +72,11 @@ pub async fn clickhouse_table_stats(
     id: String,
     database: String,
 ) -> Result<Vec<clickhouse::structure::TableStats>, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::structure::table_stats(&conn, &database).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_stats(database)
+        .await
 }
 
 #[tauri::command]
@@ -74,8 +85,11 @@ pub async fn clickhouse_schema_outline(
     id: String,
     database: String,
 ) -> Result<clickhouse::structure::SchemaOutline, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::structure::schema_outline(&conn, &database).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .schema_outline(database)
+        .await
 }
 
 /// `run_id` is taken, like the other three engines', but never stored: there is no
@@ -91,8 +105,17 @@ pub async fn clickhouse_run_script(
     sql: String,
     database: Option<String>,
 ) -> Result<Vec<StatementResult>, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::script::run(&conn, &sql, database.as_deref()).await
+    let engine = handle(&state, &id).await?.sql()?;
+    // However it ended, dropping this is what forgets the session id.
+    let _running = RunningQuery::start(&state, &run_id);
+    let announce = |session: u64| {
+        state
+            .running_queries
+            .lock()
+            .unwrap()
+            .insert(run_id.clone(), session);
+    };
+    engine.run_script(sql, database, &announce).await
 }
 
 #[tauri::command]
@@ -102,8 +125,11 @@ pub async fn clickhouse_validate_sql(
     sql: String,
     database: Option<String>,
 ) -> Result<Option<SqlProblem>, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::script::validate(&conn, &sql, database.as_deref()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .validate_sql(sql, database)
+        .await
 }
 
 #[tauri::command]
@@ -115,8 +141,11 @@ pub async fn clickhouse_update_row(
     updates: Map<String, Value>,
     key: Map<String, Value>,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::update_row(&conn, &database, &table, &updates, &key).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .update_row(database, table, updates, key)
+        .await
 }
 
 #[tauri::command]
@@ -129,8 +158,11 @@ pub async fn clickhouse_delete_rows(
     all: bool,
     reset_auto_increment: bool,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::delete_rows(&conn, &database, &table, &keys, all, reset_auto_increment).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .delete_rows(database, table, keys, all, reset_auto_increment)
+        .await
 }
 
 #[tauri::command]
@@ -141,8 +173,11 @@ pub async fn clickhouse_insert_rows(
     table: String,
     rows: Vec<Map<String, Value>>,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::insert_rows(&conn, &database, &table, &rows).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .insert_rows(database, table, rows)
+        .await
 }
 
 /// Creates a database, for the header's database picker. `collation` is taken and dropped:
@@ -165,8 +200,11 @@ pub async fn clickhouse_drop_database(
     id: String,
     database: String,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::drop_database(&conn, &database).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_database(database)
+        .await
 }
 
 /// Creates an empty table — one `id UInt64` column and an empty sorting key — for the sidebar's
@@ -180,8 +218,11 @@ pub async fn clickhouse_create_table(
     table: String,
     engine: String,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::create_table(&conn, &database, &table, &engine).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .create_table(database, table, None, Some(engine))
+        .await
 }
 
 #[tauri::command]
@@ -192,8 +233,11 @@ pub async fn clickhouse_rename_table(
     table: String,
     new_name: String,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::rename_table(&conn, &database, &table, &new_name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .rename_table(database, table, new_name)
+        .await
 }
 
 #[tauri::command]
@@ -203,8 +247,11 @@ pub async fn clickhouse_drop_table(
     database: String,
     table: String,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::drop_table(&conn, &database, &table).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_table(database, table)
+        .await
 }
 
 #[tauri::command]
@@ -215,8 +262,11 @@ pub async fn clickhouse_add_column(
     table: String,
     spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::add_column(&conn, &database, &table, &spec.into()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .add_column(database, table, spec)
+        .await
 }
 
 #[tauri::command]
@@ -227,8 +277,11 @@ pub async fn clickhouse_drop_column(
     table: String,
     name: String,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::drop_column(&conn, &database, &table, &name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_column(database, table, name)
+        .await
 }
 
 #[tauri::command]
@@ -240,8 +293,11 @@ pub async fn clickhouse_modify_column(
     name: String,
     spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::modify_column(&conn, &database, &table, &name, &spec.into()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .modify_column(database, table, name, spec)
+        .await
 }
 
 #[tauri::command]
@@ -252,8 +308,11 @@ pub async fn clickhouse_add_skip_index(
     table: String,
     spec: clickhouse::ddl::SkipIndexSpec,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::add_skip_index(&conn, &database, &table, &spec).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .add_skip_index(database, table, spec)
+        .await
 }
 
 #[tauri::command]
@@ -265,8 +324,11 @@ pub async fn clickhouse_modify_skip_index(
     name: String,
     spec: clickhouse::ddl::SkipIndexSpec,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::modify_skip_index(&conn, &database, &table, &name, &spec).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .modify_skip_index(database, table, name, spec)
+        .await
 }
 
 #[tauri::command]
@@ -277,8 +339,11 @@ pub async fn clickhouse_drop_skip_index(
     table: String,
     name: String,
 ) -> Result<(), AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::drop_skip_index(&conn, &database, &table, &name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_skip_index(database, table, name)
+        .await
 }
 
 #[tauri::command]
@@ -289,8 +354,11 @@ pub async fn clickhouse_rebuild_order_by(
     table: String,
     columns: Vec<String>,
 ) -> Result<Option<String>, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::rebuild_order_by(&conn, &database, &table, &columns).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .rebuild_order_by(database, table, columns)
+        .await
 }
 
 #[tauri::command]
@@ -300,8 +368,11 @@ pub async fn clickhouse_row_count(
     database: String,
     table: String,
 ) -> Result<u64, AppError> {
-    let conn = clickhouse_connection(&state, &id).await?;
-    clickhouse::ddl::row_count(&conn, &database, &table).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .row_count(database, table)
+        .await
 }
 
 /// Writes `database` out as SQL — `mode` is `structure`, `data` or `all`. See

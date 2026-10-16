@@ -1,3 +1,10 @@
+use crate::error::AppError;
+use crate::modules::db::drivers::clickhouse::engine::ClickhouseEngine;
+use crate::modules::db::drivers::mssql::engine::MssqlEngine;
+use crate::modules::db::drivers::mysql::engine::MysqlEngine;
+use crate::modules::db::drivers::postgres::engine::PostgresEngine;
+use crate::modules::db::drivers::sql::engine::SqlEngine;
+use crate::modules::db::drivers::sqlite::engine::SqliteEngine;
 use crate::modules::db::models::ConnectionConfig;
 use crate::ssh::Tunnel;
 use std::collections::HashMap;
@@ -39,6 +46,21 @@ pub enum DbHandle {
     /// between databases with `USE` or a three-part name, so `database` in a command names a
     /// database to reach into rather than a pool to pick.
     Mssql(crate::modules::db::drivers::mssql::Pool),
+}
+
+impl DbHandle {
+    /// This connection as a SQL engine, for the `sql_*` commands. The one place a connection is
+    /// matched on to find its engine; MongoDB and Redis are not one.
+    pub fn sql(self) -> Result<Box<dyn SqlEngine>, AppError> {
+        Ok(match self {
+            DbHandle::Mysql { pool, mariadb } => Box::new(MysqlEngine { pool, mariadb }),
+            DbHandle::Postgres(pools) => Box::new(PostgresEngine(pools)),
+            DbHandle::Mssql(pool) => Box::new(MssqlEngine(pool)),
+            DbHandle::Clickhouse(conn) => Box::new(ClickhouseEngine(conn)),
+            DbHandle::Sqlite(pool) => Box::new(SqliteEngine(pool)),
+            DbHandle::Mongo(_) | DbHandle::Redis(_) => return Err(err!("error.notSqlConnection")),
+        })
+    }
 }
 
 pub struct ActiveConnection {
@@ -94,3 +116,6 @@ pub struct DbState {
     /// second to keep track of.
     pub transfers: std::sync::Mutex<HashMap<String, Cancel>>,
 }
+
+#[cfg(test)]
+mod tests;

@@ -12,6 +12,7 @@
 
 pub mod ddl;
 pub mod dump;
+pub mod engine;
 pub mod script;
 pub mod structure;
 
@@ -782,4 +783,4 @@ async fn reset_sequence(pool: &SqlitePool, table: &str) -> Result<(), AppError> 
 }
 
 #[cfg(test)]
-pub(super) mod tests;
+pub(crate) mod tests;

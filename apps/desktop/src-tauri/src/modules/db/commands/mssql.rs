@@ -11,6 +11,7 @@ use serde_json::{Map, Value};
 use std::sync::atomic::Ordering;
 use tauri::{AppHandle, State};
 
+use super::handle;
 use super::{mssql_pool, reporter, RunningQuery, Transfer};
 
 #[tauri::command]
@@ -18,10 +19,7 @@ pub async fn mssql_list_databases(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<Vec<String>, AppError> {
-    retry_read!({
-        let pool = mssql_pool(&state, &id).await?;
-        mssql::list_databases(&pool).await
-    })
+    handle(&state, &id).await?.sql()?.list_databases().await
 }
 
 #[tauri::command]
@@ -29,10 +27,7 @@ pub async fn mssql_server_info(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<ServerInfo, AppError> {
-    retry_read!({
-        let pool = mssql_pool(&state, &id).await?;
-        mssql::server_info(&pool).await
-    })
+    handle(&state, &id).await?.sql()?.server_info().await
 }
 
 #[tauri::command]
@@ -41,10 +36,11 @@ pub async fn mssql_list_tables(
     id: String,
     database: String,
 ) -> Result<Vec<String>, AppError> {
-    retry_read!({
-        let pool = mssql_pool(&state, &id).await?;
-        mssql::list_tables(&pool, &database).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .list_tables(database)
+        .await
 }
 
 /// Not `retry_read!`: these three write, and `retry_read!` only bothers to bound because a SELECT
@@ -59,8 +55,11 @@ pub async fn mssql_update_row(
     updates: Map<String, Value>,
     key: Map<String, Value>,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::editing::update_row(&pool, &database, &table, &updates, &key).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .update_row(database, table, updates, key)
+        .await
 }
 
 #[tauri::command]
@@ -71,8 +70,11 @@ pub async fn mssql_insert_rows(
     table: String,
     rows: Vec<Map<String, Value>>,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::editing::insert_rows(&pool, &database, &table, &rows).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .insert_rows(database, table, rows)
+        .await
 }
 
 /// `reset_auto_increment` keeps MySQL's name, the way `commands::postgres` does too — it is the
@@ -87,8 +89,11 @@ pub async fn mssql_delete_rows(
     all: bool,
     reset_auto_increment: bool,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::editing::delete_rows(&pool, &database, &table, &keys, all, reset_auto_increment).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .delete_rows(database, table, keys, all, reset_auto_increment)
+        .await
 }
 
 #[tauri::command]
@@ -99,10 +104,11 @@ pub async fn mssql_table_data(
     table: String,
     query: mssql::PageQuery,
 ) -> Result<mssql::TablePage, AppError> {
-    retry_read!({
-        let pool = mssql_pool(&state, &id).await?;
-        mssql::table_data(&pool, &database, &table, &query).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_data(database, table, query)
+        .await
 }
 
 #[tauri::command]
@@ -112,10 +118,11 @@ pub async fn mssql_table_structure(
     database: String,
     table: String,
 ) -> Result<mssql::structure::TableStructure, AppError> {
-    retry_read!({
-        let pool = mssql_pool(&state, &id).await?;
-        mssql::structure::table_structure(&pool, &database, &table).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_structure(database, table)
+        .await
 }
 
 #[tauri::command]
@@ -124,10 +131,11 @@ pub async fn mssql_table_stats(
     id: String,
     database: String,
 ) -> Result<Vec<mssql::structure::TableStats>, AppError> {
-    retry_read!({
-        let pool = mssql_pool(&state, &id).await?;
-        mssql::structure::table_stats(&pool, &database).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_stats(database)
+        .await
 }
 
 #[tauri::command]
@@ -135,10 +143,7 @@ pub async fn mssql_collations(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<Vec<mssql::structure::Collation>, AppError> {
-    retry_read!({
-        let pool = mssql_pool(&state, &id).await?;
-        mssql::structure::collations(&pool).await
-    })
+    handle(&state, &id).await?.sql()?.collations().await
 }
 
 #[tauri::command]
@@ -147,10 +152,11 @@ pub async fn mssql_schema_outline(
     id: String,
     database: String,
 ) -> Result<mssql::structure::SchemaOutline, AppError> {
-    retry_read!({
-        let pool = mssql_pool(&state, &id).await?;
-        mssql::structure::schema_outline(&pool, &database).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .schema_outline(database)
+        .await
 }
 
 /// Runs the Query tab's text against SQL Server, batch by batch and statement by statement within
@@ -165,18 +171,17 @@ pub async fn mssql_run_script(
     sql: String,
     database: Option<String>,
 ) -> Result<Vec<StatementResult>, AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    // However it ended — finished, failed, or killed from `mssql_cancel_query` — dropping this is
-    // what forgets the SPID.
+    let engine = handle(&state, &id).await?.sql()?;
+    // However it ended, dropping this is what forgets the session id.
     let _running = RunningQuery::start(&state, &run_id);
-    mssql::script::run(&pool, &sql, database.as_deref(), |spid| {
+    let announce = |session: u64| {
         state
             .running_queries
             .lock()
             .unwrap()
-            .insert(run_id.clone(), spid);
-    })
-    .await
+            .insert(run_id.clone(), session);
+    };
+    engine.run_script(sql, database, &announce).await
 }
 
 /// Stops the run named by `run_id`, if it is still running — see `mssql::script::cancel` for why
@@ -188,11 +193,15 @@ pub async fn mssql_cancel_query(
     id: String,
     run_id: String,
 ) -> Result<(), AppError> {
-    let session_id = state.running_queries.lock().unwrap().get(&run_id).copied();
-    let Some(session_id) = session_id else {
+    let session = state.running_queries.lock().unwrap().get(&run_id).copied();
+    let Some(session) = session else {
         return Ok(());
     };
-    mssql::script::cancel(&mssql_pool(&state, &id).await?, session_id).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .cancel_query(session)
+        .await
 }
 
 /// Asks SQL Server to parse one statement without running it, for the editor's error checking.
@@ -203,8 +212,11 @@ pub async fn mssql_validate_sql(
     sql: String,
     database: Option<String>,
 ) -> Result<Option<SqlProblem>, AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::script::validate(&pool, &sql, database.as_deref()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .validate_sql(sql, database)
+        .await
 }
 
 #[tauri::command]
@@ -214,8 +226,11 @@ pub async fn mssql_create_database(
     name: String,
     collation: Option<String>,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::create_database(&pool, &name, collation.as_deref()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .create_database(name, collation)
+        .await
 }
 
 #[tauri::command]
@@ -224,8 +239,11 @@ pub async fn mssql_drop_database(
     id: String,
     database: String,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::drop_database(&pool, &database).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_database(database)
+        .await
 }
 
 #[tauri::command]
@@ -236,8 +254,11 @@ pub async fn mssql_create_table(
     table: String,
     #[allow(unused_variables)] collation: Option<String>,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::create_table(&pool, &database, &table).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .create_table(database, table, collation, None)
+        .await
 }
 
 #[tauri::command]
@@ -248,8 +269,11 @@ pub async fn mssql_rename_table(
     table: String,
     new_name: String,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::rename_table(&pool, &database, &table, &new_name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .rename_table(database, table, new_name)
+        .await
 }
 
 #[tauri::command]
@@ -259,8 +283,11 @@ pub async fn mssql_drop_table(
     database: String,
     table: String,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::drop_table(&pool, &database, &table).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_table(database, table)
+        .await
 }
 
 #[tauri::command]
@@ -271,8 +298,11 @@ pub async fn mssql_add_column(
     table: String,
     spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::add_column(&pool, &database, &table, &spec.into()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .add_column(database, table, spec)
+        .await
 }
 
 #[tauri::command]
@@ -283,8 +313,11 @@ pub async fn mssql_drop_column(
     table: String,
     name: String,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::drop_column(&pool, &database, &table, &name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_column(database, table, name)
+        .await
 }
 
 #[tauri::command]
@@ -296,8 +329,11 @@ pub async fn mssql_modify_column(
     name: String,
     spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::modify_column(&pool, &database, &table, &name, &spec.into()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .modify_column(database, table, name, spec)
+        .await
 }
 
 #[tauri::command]
@@ -308,8 +344,11 @@ pub async fn mssql_add_index(
     table: String,
     spec: crate::modules::db::drivers::sql::types::IndexSpec,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::add_index(&pool, &database, &table, &spec.into()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .add_index(database, table, spec)
+        .await
 }
 
 #[tauri::command]
@@ -321,8 +360,11 @@ pub async fn mssql_modify_index(
     name: String,
     spec: crate::modules::db::drivers::sql::types::IndexSpec,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::modify_index(&pool, &database, &table, &name, &spec.into()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .modify_index(database, table, name, spec)
+        .await
 }
 
 #[tauri::command]
@@ -333,8 +375,11 @@ pub async fn mssql_drop_index(
     table: String,
     name: String,
 ) -> Result<(), AppError> {
-    let pool = mssql_pool(&state, &id).await?;
-    mssql::ddl::drop_index(&pool, &database, &table, &name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_index(database, table, name)
+        .await
 }
 
 /// Writes `database` out as SQL — `mode` is `structure`, `data` or `all`. See

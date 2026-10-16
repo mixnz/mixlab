@@ -992,6 +992,9 @@ const dbEn = {
     // Connections
     unknownConnection: "This connection is no longer open. Connect again.",
     wrongConnectionKind: "This is not a {{kind}} connection.",
+    notSqlConnection: "This is not a SQL connection.",
+    unsupportedOperation: "This database does not support that action ({{operation}}).",
+    tableEngineRequired: "Choose a table engine for the new table.",
     connectTimeout:
       "The {{kind}} connection timed out after {{seconds}}s. Check the host, the port and the firewall.",
     connectionLost:

@@ -4,7 +4,8 @@
 //! something different: there it names a database to reach into from the one connection, here it
 //! picks which pool the command runs on. See `postgres_pool`.
 
-use super::{in_background, postgres_pool, postgres_pools, reporter, sql_endpoint, tools_dir};
+use super::handle;
+use super::{in_background, postgres_pool, reporter, sql_endpoint, tools_dir};
 use super::{RunningQuery, Transfer};
 use crate::error::AppError;
 use crate::modules::db::drivers::{dump, postgres, tools};
@@ -20,10 +21,7 @@ pub async fn postgres_list_databases(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<Vec<String>, AppError> {
-    retry_read!({
-        let pool = postgres_pool(&state, &id, "").await?;
-        postgres::list_databases(&pool).await
-    })
+    handle(&state, &id).await?.sql()?.list_databases().await
 }
 
 #[tauri::command]
@@ -31,10 +29,7 @@ pub async fn postgres_server_info(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<ServerInfo, AppError> {
-    retry_read!({
-        let pool = postgres_pool(&state, &id, "").await?;
-        postgres::server_info(&pool).await
-    })
+    handle(&state, &id).await?.sql()?.server_info().await
 }
 
 #[tauri::command]
@@ -43,10 +38,11 @@ pub async fn postgres_list_tables(
     id: String,
     database: String,
 ) -> Result<Vec<String>, AppError> {
-    retry_read!({
-        let pool = postgres_pool(&state, &id, &database).await?;
-        postgres::list_tables(&pool).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .list_tables(database)
+        .await
 }
 
 #[tauri::command]
@@ -55,10 +51,11 @@ pub async fn postgres_table_stats(
     id: String,
     database: String,
 ) -> Result<Vec<postgres::structure::TableStats>, AppError> {
-    retry_read!({
-        let pool = postgres_pool(&state, &id, &database).await?;
-        postgres::structure::table_stats(&pool).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_stats(database)
+        .await
 }
 
 #[tauri::command]
@@ -69,10 +66,11 @@ pub async fn postgres_table_data(
     table: String,
     query: postgres::PageQuery,
 ) -> Result<postgres::TablePage, AppError> {
-    retry_read!({
-        let pool = postgres_pool(&state, &id, &database).await?;
-        postgres::table_data(&pool, &table, &query).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_data(database, table, query)
+        .await
 }
 
 #[tauri::command]
@@ -84,8 +82,11 @@ pub async fn postgres_update_row(
     updates: Map<String, Value>,
     key: Map<String, Value>,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::update_row(&pool, &table, &updates, &key).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .update_row(database, table, updates, key)
+        .await
 }
 
 #[tauri::command]
@@ -96,8 +97,11 @@ pub async fn postgres_insert_rows(
     table: String,
     rows: Vec<Map<String, Value>>,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::insert_rows(&pool, &table, &rows).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .insert_rows(database, table, rows)
+        .await
 }
 
 /// `reset_auto_increment` keeps MySQL's name because it is the frontend's name for the same
@@ -112,8 +116,11 @@ pub async fn postgres_delete_rows(
     all: bool,
     reset_auto_increment: bool,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::delete_rows(&pool, &table, &keys, all, reset_auto_increment).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .delete_rows(database, table, keys, all, reset_auto_increment)
+        .await
 }
 
 #[tauri::command]
@@ -123,10 +130,11 @@ pub async fn postgres_table_structure(
     database: String,
     table: String,
 ) -> Result<postgres::structure::TableStructure, AppError> {
-    retry_read!({
-        let pool = postgres_pool(&state, &id, &database).await?;
-        postgres::structure::table_structure(&pool, &table).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .table_structure(database, table)
+        .await
 }
 
 #[tauri::command]
@@ -134,10 +142,7 @@ pub async fn postgres_collations(
     state: State<'_, DbState>,
     id: String,
 ) -> Result<Vec<postgres::structure::Collation>, AppError> {
-    retry_read!({
-        let pool = postgres_pool(&state, &id, "").await?;
-        postgres::structure::collations(&pool).await
-    })
+    handle(&state, &id).await?.sql()?.collations().await
 }
 
 #[tauri::command]
@@ -157,10 +162,11 @@ pub async fn postgres_schema_outline(
     id: String,
     database: String,
 ) -> Result<postgres::structure::SchemaOutline, AppError> {
-    retry_read!({
-        let pool = postgres_pool(&state, &id, &database).await?;
-        postgres::structure::schema_outline(&pool, &database).await
-    })
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .schema_outline(database)
+        .await
 }
 
 #[tauri::command]
@@ -171,17 +177,17 @@ pub async fn postgres_run_script(
     sql: String,
     database: Option<String>,
 ) -> Result<Vec<StatementResult>, AppError> {
-    let pool = postgres_pool(&state, &id, database.as_deref().unwrap_or("")).await?;
-    // However it ended, dropping this is what forgets the pid.
+    let engine = handle(&state, &id).await?.sql()?;
+    // However it ended, dropping this is what forgets the session id.
     let _running = RunningQuery::start(&state, &run_id);
-    postgres::script::run(&pool, &sql, |pid| {
+    let announce = |session: u64| {
         state
             .running_queries
             .lock()
             .unwrap()
-            .insert(run_id.clone(), pid);
-    })
-    .await
+            .insert(run_id.clone(), session);
+    };
+    engine.run_script(sql, database, &announce).await
 }
 
 /// Asks PostgreSQL to parse one statement without running it, for the editor's error checking.
@@ -192,8 +198,11 @@ pub async fn postgres_validate_sql(
     sql: String,
     database: Option<String>,
 ) -> Result<Option<SqlProblem>, AppError> {
-    let pool = postgres_pool(&state, &id, database.as_deref().unwrap_or("")).await?;
-    postgres::script::validate(&pool, &sql).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .validate_sql(sql, database)
+        .await
 }
 
 /// Stops the run named by `run_id`, if it is still running — see [`DbState::running_queries`].
@@ -205,14 +214,17 @@ pub async fn postgres_cancel_query(
     state: State<'_, DbState>,
     id: String,
     run_id: String,
-    database: Option<String>,
+    #[allow(unused_variables)] database: Option<String>,
 ) -> Result<(), AppError> {
-    let pid = state.running_queries.lock().unwrap().get(&run_id).copied();
-    let Some(pid) = pid else {
+    let session = state.running_queries.lock().unwrap().get(&run_id).copied();
+    let Some(session) = session else {
         return Ok(());
     };
-    let pool = postgres_pool(&state, &id, database.as_deref().unwrap_or("")).await?;
-    postgres::script::cancel(&pool, pid).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .cancel_query(session)
+        .await
 }
 
 /// Creates a database, for the header's database picker. `collation` is accepted and ignored: see
@@ -224,8 +236,11 @@ pub async fn postgres_create_database(
     name: String,
     #[allow(unused_variables)] collation: Option<String>,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, "").await?;
-    postgres::ddl::create_database(&pool, &name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .create_database(name, collation)
+        .await
 }
 
 /// Drops a database and every table in it. Takes the whole connection rather than a pool, since the
@@ -236,8 +251,11 @@ pub async fn postgres_drop_database(
     id: String,
     database: String,
 ) -> Result<(), AppError> {
-    let pools = postgres_pools(&state, &id).await?;
-    postgres::ddl::drop_database(&pools, &database).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_database(database)
+        .await
 }
 
 /// Creates an empty table — one `id` column and its primary key — for the sidebar's add button.
@@ -250,8 +268,11 @@ pub async fn postgres_create_table(
     table: String,
     #[allow(unused_variables)] collation: Option<String>,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::create_table(&pool, &table).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .create_table(database, table, collation, None)
+        .await
 }
 
 #[tauri::command]
@@ -262,8 +283,11 @@ pub async fn postgres_rename_table(
     table: String,
     new_name: String,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::rename_table(&pool, &table, &new_name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .rename_table(database, table, new_name)
+        .await
 }
 
 #[tauri::command]
@@ -273,8 +297,11 @@ pub async fn postgres_drop_table(
     database: String,
     table: String,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::drop_table(&pool, &table).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_table(database, table)
+        .await
 }
 
 #[tauri::command]
@@ -285,8 +312,11 @@ pub async fn postgres_add_column(
     table: String,
     spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::add_column(&pool, &table, &spec.into()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .add_column(database, table, spec)
+        .await
 }
 
 #[tauri::command]
@@ -298,8 +328,11 @@ pub async fn postgres_modify_column(
     name: String,
     spec: crate::modules::db::drivers::sql::types::ColumnSpec,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::modify_column(&pool, &table, &name, &spec.into()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .modify_column(database, table, name, spec)
+        .await
 }
 
 #[tauri::command]
@@ -310,8 +343,11 @@ pub async fn postgres_drop_column(
     table: String,
     name: String,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::drop_column(&pool, &table, &name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_column(database, table, name)
+        .await
 }
 
 #[tauri::command]
@@ -322,8 +358,11 @@ pub async fn postgres_add_index(
     table: String,
     spec: crate::modules::db::drivers::sql::types::IndexSpec,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::add_index(&pool, &table, &spec.into()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .add_index(database, table, spec)
+        .await
 }
 
 #[tauri::command]
@@ -335,8 +374,11 @@ pub async fn postgres_modify_index(
     name: String,
     spec: crate::modules::db::drivers::sql::types::IndexSpec,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::modify_index(&pool, &table, &name, &spec.into()).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .modify_index(database, table, name, spec)
+        .await
 }
 
 #[tauri::command]
@@ -347,8 +389,11 @@ pub async fn postgres_drop_index(
     table: String,
     name: String,
 ) -> Result<(), AppError> {
-    let pool = postgres_pool(&state, &id, &database).await?;
-    postgres::ddl::drop_index(&pool, &table, &name).await
+    handle(&state, &id)
+        .await?
+        .sql()?
+        .drop_index(database, table, name)
+        .await
 }
 
 /// Writes a PostgreSQL database out as SQL. `mode` is `structure`, `data` or `all`.

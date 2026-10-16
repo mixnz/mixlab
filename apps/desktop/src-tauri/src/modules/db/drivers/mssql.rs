@@ -8,6 +8,7 @@
 pub mod ddl;
 pub mod dump;
 pub mod editing;
+pub mod engine;
 pub mod script;
 pub mod structure;
 

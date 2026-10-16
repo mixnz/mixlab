@@ -4,4 +4,5 @@
 //! MongoDB and Redis are not here. They have workspaces of their own and share no operation with
 //! these worth a trait.
 
+pub mod engine;
 pub mod types;
