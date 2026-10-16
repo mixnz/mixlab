@@ -1,6 +1,6 @@
 # 0062. The SQL engines share one command set
 
-**Status**: Proposed
+**Status**: Accepted
 **Date**: 2026-10-15
 
 ## Context

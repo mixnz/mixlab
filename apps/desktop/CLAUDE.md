@@ -80,8 +80,8 @@ src/                 React frontend
     queries/         The Query tab's drafts, history and snippets
     sync/            The saved connections and their secrets as sync records
     workspace/       What the three workspaces share: sidebar width, banner errors, schema tokens, the filter bar's half
-    sql/             The workspace every SQL engine shares, and the SqlApi/SqlDialect behind it
-    mysql/ postgres/ What each SQL engine says for itself: api.ts, dialect.ts, columns.ts
+    sql/             The workspace every SQL engine shares, SqlDialect, and sqlApi: every engine's sql_* invokes
+    mysql/ postgres/ What each SQL engine says for itself: dialect.ts, columns.ts
     mssql/ clickhouse/  The same files, plus editing.ts and system.ts
     sqlite/          The only one with no server behind it
     mongo/ redis/    The two with a workspace of their own: <Kind>Workspace.tsx, api.ts, and components/ only they draw
