@@ -1008,10 +1008,7 @@ const dbEn = {
     /* Refusing rather than replacing: nothing else in MixLab deletes a database file, and a New
        button is not where that should start. */
     sqliteFileExists: "There is already a file at {{path}}. Open it with Browse, or pick another name.",
-    sqliteNoDatabases:
-      "A SQLite database is a file. Creating or deleting one is done in the file manager, not here.",
     clickhouseReadOnly: "MixLab only reads from ClickHouse for now. Nothing here writes to it.",
-    clickhouseOnlyFeature: "This only applies to a ClickHouse connection.",
     clickhouseMutationTimeout:
       "The mutation is still running on the server after 30 seconds. Reload the table to check whether it finished.",
     clickhouseMutationTargetUnknown:

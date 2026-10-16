@@ -988,10 +988,7 @@ const dbVi: DbDict = {
     sqlitePathRequired: "Chọn file database SQLite cần mở.",
     sqliteFileNotFound: "Không có file nào ở {{path}}.",
     sqliteFileExists: "Đã có file ở {{path}}. Dùng Duyệt để mở nó, hoặc chọn tên khác.",
-    sqliteNoDatabases:
-      "Một database SQLite là một file. Tạo hay xoá nó là việc của trình quản lý file, không phải ở đây.",
     clickhouseReadOnly: "MixLab hiện chỉ đọc ClickHouse, chưa ghi được gì vào đó.",
-    clickhouseOnlyFeature: "Cái này chỉ áp dụng cho kết nối ClickHouse.",
     clickhouseMutationTimeout:
       "Thao tác vẫn đang chạy trên server sau 30 giây. Tải lại bảng để xem đã xong chưa.",
     clickhouseMutationTargetUnknown:

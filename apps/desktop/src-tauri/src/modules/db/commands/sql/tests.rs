@@ -55,6 +55,71 @@ fn every_sql_command_is_registered() {
     );
 }
 
+/// The frontend's `sqlApi`, which is the only caller of these commands.
+const SQL_API: &str = include_str!("../../../../../../src/modules/db/sql/api.ts");
+
+/// The keys of the object `sqlApi` hands to `invoke("<name>", …)`, sorted.
+fn invoked_keys(name: &str) -> Vec<String> {
+    let call = format!("(\"{name}\", {{");
+    let start = SQL_API
+        .find(&call)
+        .unwrap_or_else(|| panic!("sqlApi never invokes {name}"))
+        + call.len();
+    let end = start + SQL_API[start..].find('}').unwrap();
+    let mut keys: Vec<String> = SQL_API[start..end]
+        .split(',')
+        .map(|key| key.trim().to_string())
+        .filter(|key| !key.is_empty())
+        .collect();
+    keys.sort();
+    keys
+}
+
+/// The arguments the Rust command takes from the payload, in camelCase as Tauri reads them, sorted.
+fn command_keys(name: &str) -> Vec<String> {
+    let source = include_str!("../sql.rs");
+    let head = format!("pub async fn {name}(");
+    let start = source.find(&head).unwrap() + head.len();
+    let end = start + source[start..].find(") -> ").unwrap();
+    // One parameter per line, as rustfmt lays a signature out; `State<'_, DbState>` has a comma.
+    let mut keys: Vec<String> = source[start..end]
+        .lines()
+        .filter_map(|param| param.split(':').next())
+        .map(str::trim)
+        .filter(|name| !name.is_empty() && *name != "app" && *name != "state")
+        .map(|name| {
+            let mut parts = name.split('_');
+            let first = parts.next().unwrap().to_string();
+            parts.fold(first, |camel, part| {
+                camel + &part[..1].to_uppercase() + &part[1..]
+            })
+        })
+        .collect();
+    keys.sort();
+    keys
+}
+
+/// Every command `sqlApi` calls is one of these, every one of these is called, and each call sends
+/// exactly the keys its command reads. A key spelled differently on the two sides arrives as a
+/// missing argument, which Tauri reports only at the moment of the call.
+#[test]
+fn sql_api_calls_every_command_with_the_arguments_it_reads() {
+    let mut invoked: Vec<&str> = SQL_API
+        .match_indices("(\"sql_")
+        .map(|(at, _)| {
+            let name = &SQL_API[at + 2..];
+            &name[..name.find('"').unwrap()]
+        })
+        .collect();
+    invoked.sort();
+    let mut expected = COMMANDS.to_vec();
+    expected.sort();
+    assert_eq!(invoked, expected);
+    for name in COMMANDS {
+        assert_eq!(invoked_keys(name), command_keys(name), "{name}");
+    }
+}
+
 /// A cancel for a run that registered no session — finished already, or on SQLite or ClickHouse,
 /// which have none — is answered without reaching for the connection at all.
 #[test]

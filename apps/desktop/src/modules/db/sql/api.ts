@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import type {
   SqlCollation,
   SqlColumnSpec,
@@ -259,4 +260,161 @@ export interface SqlApi {
    * parse the text is certain.
    */
   validateSql(id: string, sql: string, database?: string): Promise<SqlProblem | null>;
+}
+
+/**
+ * Every SQL engine's side of {@link SqlApi}: one `sql_*` command each, and nothing else (ADR 0062).
+ *
+ * The backend finds the engine from the connection, so nothing here names one. What tells the
+ * engines apart in the window is the dialect: it decides which controls exist, and so which of
+ * these an engine is ever asked for. One it does not have answers `error.unsupportedOperation`.
+ */
+export const sqlApi: SqlApi = {
+  listDatabases(id) {
+    return invoke<string[]>("sql_list_databases", { id });
+  },
+
+  listTables(id, database) {
+    return invoke<string[]>("sql_list_tables", { id, database });
+  },
+
+  serverInfo(id) {
+    return invoke<SqlServerInfo>("sql_server_info", { id });
+  },
+
+  tableStats(id, database) {
+    return invoke<TableStats[]>("sql_table_stats", { id, database });
+  },
+
+  tableData(id, database, table, query: SqlPageQuery) {
+    return invoke<SqlTablePage>("sql_table_data", { id, database, table, query });
+  },
+
+  updateRow(id, database, table, updates, key) {
+    return invoke<void>("sql_update_row", { id, database, table, updates, key });
+  },
+
+  insertRows(id, database, table, rows) {
+    return invoke<void>("sql_insert_rows", { id, database, table, rows });
+  },
+
+  deleteRows(id, database, table, keys, all, resetAutoIncrement) {
+    return invoke<void>("sql_delete_rows", {
+      id,
+      database,
+      table,
+      keys,
+      all,
+      resetAutoIncrement,
+    });
+  },
+
+  tableStructure(id, database, table) {
+    return invoke<SqlTableStructure>("sql_table_structure", { id, database, table });
+  },
+
+  schemaOutline(id, database) {
+    return invoke<SqlSchemaOutline>("sql_schema_outline", { id, database });
+  },
+
+  collations(id) {
+    return invoke<SqlCollation[]>("sql_collations", { id });
+  },
+
+  dump(id, database, mode: SqlDumpMode, path) {
+    return invoke<void>("sql_dump", { id, database, mode, path });
+  },
+
+  restore(id, database, path) {
+    return invoke<void>("sql_restore", { id, database, path });
+  },
+
+  dropDatabase(id, database) {
+    return invoke<void>("sql_drop_database", { id, database });
+  },
+
+  createDatabase(id, name, collation) {
+    return invoke<void>("sql_create_database", { id, name, collation });
+  },
+
+  createTable(id, database, table, collation, engine) {
+    return invoke<void>("sql_create_table", { id, database, table, collation, engine });
+  },
+
+  renameTable(id, database, table, newName) {
+    return invoke<void>("sql_rename_table", { id, database, table, newName });
+  },
+
+  dropTable(id, database, table) {
+    return invoke<void>("sql_drop_table", { id, database, table });
+  },
+
+  addColumn(id, database, table, spec: SqlColumnSpec) {
+    return invoke<void>("sql_add_column", { id, database, table, spec });
+  },
+
+  modifyColumn(id, database, table, name, spec: SqlColumnSpec) {
+    return invoke<void>("sql_modify_column", { id, database, table, name, spec });
+  },
+
+  dropColumn(id, database, table, name) {
+    return invoke<void>("sql_drop_column", { id, database, table, name });
+  },
+
+  addIndex(id, database, table, spec: SqlIndexSpec) {
+    return invoke<void>("sql_add_index", { id, database, table, spec });
+  },
+
+  modifyIndex(id, database, table, name, spec: SqlIndexSpec) {
+    return invoke<void>("sql_modify_index", { id, database, table, name, spec });
+  },
+
+  dropIndex(id, database, table, name) {
+    return invoke<void>("sql_drop_index", { id, database, table, name });
+  },
+
+  runScript(id, runId, sql, database) {
+    return invoke<SqlStatementResult[]>("sql_run_script", { id, runId, sql, database });
+  },
+
+  cancelQuery(id, runId) {
+    return invoke<void>("sql_cancel_query", { id, runId });
+  },
+
+  validateSql(id, sql, database) {
+    return invoke<SqlProblem | null>("sql_validate_sql", { id, sql, database });
+  },
+
+  addSkipIndex(id, database, table, spec) {
+    return invoke<void>("sql_add_skip_index", { id, database, table, spec });
+  },
+
+  modifySkipIndex(id, database, table, name, spec) {
+    return invoke<void>("sql_modify_skip_index", { id, database, table, name, spec });
+  },
+
+  dropSkipIndex(id, database, table, name) {
+    return invoke<void>("sql_drop_skip_index", { id, database, table, name });
+  },
+
+  rebuildOrderBy(id, database, table, columns) {
+    return invoke<string | null>("sql_rebuild_order_by", { id, database, table, columns });
+  },
+
+  rowCount(id, database, table) {
+    return invoke<number>("sql_row_count", { id, database, table });
+  },
+};
+
+/**
+ * Creates an empty database file at `path`, for the connection form's New button.
+ *
+ * Apart from {@link sqlApi} because it is not part of {@link SqlApi}: every call there acts on
+ * an open connection, and this one runs before there is anything to be connected to.
+ *
+ * Refuses a path that already holds a file. The save dialog will have asked about replacing one,
+ * and a yes there must not reach the backend as "delete that database" — see `create_file`.
+ */
+export function createSqliteFile(path: string): Promise<void> {
+  return invoke<void>("sqlite_create_file", { path });
 }

@@ -1,14 +1,9 @@
-import type { SqlApi } from "./sql/api";
+import { sqlApi, type SqlApi } from "./sql/api";
 import type { SqlDialect } from "./sql/dialect";
-import { mysqlApi } from "./mysql/api";
 import { mysqlDialect } from "./mysql/dialect";
-import { postgresApi } from "./postgres/api";
 import { postgresDialect } from "./postgres/dialect";
-import { sqliteApi } from "./sqlite/api";
 import { sqliteDialect } from "./sqlite/dialect";
-import { clickhouseApi } from "./clickhouse/api";
 import { clickhouseDialect } from "./clickhouse/dialect";
-import { mssqlApi } from "./mssql/api";
 import { mssqlDialect } from "./mssql/dialect";
 import type { DbKind } from "./types";
 
@@ -24,11 +19,11 @@ import type { DbKind } from "./types";
  * know whether a kind has a TLS box at all.
  */
 export const SQL_ENGINES = {
-  mysql: { api: mysqlApi, dialect: mysqlDialect },
-  postgres: { api: postgresApi, dialect: postgresDialect },
-  sqlite: { api: sqliteApi, dialect: sqliteDialect },
-  clickhouse: { api: clickhouseApi, dialect: clickhouseDialect },
-  mssql: { api: mssqlApi, dialect: mssqlDialect },
+  mysql: { api: sqlApi, dialect: mysqlDialect },
+  postgres: { api: sqlApi, dialect: postgresDialect },
+  sqlite: { api: sqlApi, dialect: sqliteDialect },
+  clickhouse: { api: sqlApi, dialect: clickhouseDialect },
+  mssql: { api: sqlApi, dialect: mssqlDialect },
 } as const satisfies Partial<Record<DbKind, { api: SqlApi; dialect: SqlDialect }>>;
 
 export type SqlKind = keyof typeof SQL_ENGINES;
