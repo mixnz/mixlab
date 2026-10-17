@@ -111,3 +111,35 @@ Since T207j the size baseline is empty: no source file in the repository is over
       `App.css`, and the worker's `account.ts`. `scripts/file-size-baseline.json` names them at
       their length, written once, since `--shrink` never adds an entry. From here they only shrink.
       `check-file-sizes.test.mjs` pins the checked-in limit and the baseline's sorted form.
+
+The 48 files T207n named, grouped by how they split and how a split is checked (measured on
+`d612d5d2`). Each task ends with `--shrink`, and after T207q the baseline is empty again.
+
+- [ ] **T207o** Test files past 1,000 split by topic, under T207f's convention: a unit-test hub
+      becomes `foo/tests/<topic>.rs`, and an integration suite becomes `tests/<name>/main.rs`
+      beside its topics, still one binary. Sixteen files: core `blueprints/plan/tests/resolving.rs`,
+      `generate/recipes/caddy/tests.rs` (1,425), `nginx/tests/sites.rs`, `postgres/tests.rs`,
+      `generate/tests.rs`, `manifest/tests.rs`, `services/tests.rs`, `sites/tests.rs` and
+      `tests/index.rs`; daemon `elevation/tests.rs`, `tests/api.rs`, `tests/packages.rs` and
+      `tests/runtimes/install.rs`; cli `tests/harness/frontend.rs`, `tests/mariadb.rs` and
+      `tests/uninstall.rs`. Only tests move: the counts per binary stay the same, and the filters
+      in `.config/nextest.toml` are checked against the new paths.
+- [ ] **T207p** Code past 1,000 in the root workspace, split by capability. Most are one large
+      `impl`, split by what its methods do as T207d and T207i did: core `config.rs`,
+      `generate.rs` (`impl Generator`, 869), `blueprints/plan.rs`, `index/packages.rs`
+      (`impl PackageIndex`, 953), `services.rs` and `sites.rs`; daemon `api/apply.rs`,
+      `api/rpc.rs`, `elevation.rs` (1,478; `impl Elevation`, 1,268), `extensions.rs`,
+      `runtimes.rs` (`impl Runtimes`, 1,000), `sites.rs`, `uninstall.rs`,
+      `uninstall/inventory.rs` and `updates.rs`; platform `process.rs`, `windows/process.rs` and
+      `windows/restricted.rs`; proto `privileged.rs`, `rpc.rs` (`pub mod method`, 942) and
+      `service.rs`; cli `render/service.rs`. That is 22 files, with one commit per crate. The
+      three proto files are in the privileged helper, so `helper-lock.sh --check` decides
+      whether a bump is due. Platform's `process.rs` is checked on Linux through WSL and with
+      macOS clippy, as `before-pushing` says.
+- [ ] **T207q** Outside the root workspace, ten files, each checked by its own project. The
+      desktop's Rust: `db/drivers/{clickhouse,mssql,postgres}.rs` move `table_data` and
+      `build_where` into the engine's folder, and `sync/session.rs` splits `impl SyncState`
+      (1,082). The desktop's frontend: `db/db.css` and `shell/App.css` split by the component
+      they style, verified with `npm run screenshots -- --check`, and `db/i18n/en.ts` and
+      `vi.ts` split by screen with the same keys in both. The server: `native/src/accounts.rs`
+      and `worker/src/account.ts` (1,083), verified by `server/conformance`.
