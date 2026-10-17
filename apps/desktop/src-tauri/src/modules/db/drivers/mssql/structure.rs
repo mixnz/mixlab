@@ -11,68 +11,11 @@ use super::{
     read_uncommitted, resolve, strip_default_parens, Pool, DEFAULT_SCHEMA,
 };
 use crate::error::AppError;
-use serde::Serialize;
+pub use crate::modules::db::drivers::sql::types::{
+    Collation, IndexColumn, OutlineColumn, OutlineTable, SchemaOutline, StructureColumn,
+    TableIndex, TableStats, TableStructure,
+};
 use std::collections::HashMap;
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StructureColumn {
-    pub name: String,
-    /// The full declared type: `nvarchar(255)`, `decimal(10,2)`.
-    pub data_type: String,
-    pub nullable: bool,
-    pub default_value: Option<String>,
-    /// Whether the default is an expression rather than a literal. SQL Server stores both the same
-    /// way — `((0))` and `(getdate())` — so this is read off the shape of what is left after
-    /// `strip_default_parens`: see [`is_expression_default`].
-    pub default_is_expression: bool,
-    pub auto_increment: bool,
-    /// Always false. `ON UPDATE CURRENT_TIMESTAMP` is MySQL's; the same effect here is a trigger,
-    /// which is not a property of the column.
-    pub on_update_current_timestamp: bool,
-    pub generated: bool,
-    pub collation: Option<String>,
-    pub comment: String,
-    /// `PRI`, `UNI`, `MUL` or empty, as MySQL spells it — which kind of key this column leads.
-    pub key: String,
-    /// The tokens described on `mssql::extra_tokens`.
-    pub extra: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IndexColumn {
-    pub name: Option<String>,
-    /// Always `None`: SQL Server indexes a whole value and has no counterpart to MySQL's
-    /// index-the-first-n-characters.
-    pub prefix_length: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableIndex {
-    pub name: String,
-    pub unique: bool,
-    pub primary: bool,
-    /// `clustered` or `nonclustered` — SQL Server's own two, lower-cased the way PostgreSQL's
-    /// access methods arrive.
-    pub index_type: String,
-    pub columns: Vec<IndexColumn>,
-    pub comment: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStructure {
-    /// In table order, which is the order a `SELECT *` returns them in.
-    pub columns: Vec<StructureColumn>,
-    /// The primary key first, then the rest by name.
-    pub indexes: Vec<TableIndex>,
-    /// Always empty: data skipping indices are a ClickHouse-only concept.
-    pub skip_indexes: Vec<super::super::clickhouse::structure::SkipIndex>,
-    /// Always `None` — the engine guard in the Structure tab only reads this for ClickHouse.
-    pub engine: Option<String>,
-}
 
 /// Which kind of key a column leads, as MySQL's `Key` column spells it.
 ///
@@ -291,21 +234,6 @@ async fn table_indexes(
     Ok(indexes)
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStats {
-    /// Qualified the way the sidebar names it — see `mssql::qualify`.
-    pub name: String,
-    /// The catalogue's own count, kept per partition and updated as rows are written. Not a
-    /// `COUNT(*)`: this costs nothing whatever the table holds, which is the trade every engine
-    /// here makes on this tab.
-    pub rows: u64,
-    pub data_size: u64,
-    pub index_size: u64,
-    /// Derived rather than reported — see [`average_record_size`].
-    pub avg_record_size: u64,
-}
-
 /// The data size over the rows, and zero where there are no rows to divide by.
 pub(super) fn average_record_size(data_size: u64, rows: u64) -> u64 {
     data_size.checked_div(rows).unwrap_or(0)
@@ -373,19 +301,6 @@ pub async fn table_stats(pool: &Pool, database: &str) -> Result<Vec<TableStats>,
         .collect())
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Collation {
-    pub name: String,
-    /// Always empty. A SQL Server collation names a code page rather than belonging to a character
-    /// set the way MySQL's do, and `CollationSelect` reads an empty one as "any character set" —
-    /// which is the honest answer here, not a missing one.
-    pub charset: String,
-    /// Whether this is the server's own collation, which is what a database inherits when it is
-    /// created without a `COLLATE` clause.
-    pub is_default: bool,
-}
-
 /// Every collation this server supports, the server's own marked.
 ///
 /// `sys.fn_helpcollations()` is the list SQL Server offers about itself; it is long — a few thousand
@@ -420,39 +335,6 @@ pub async fn collations(pool: &Pool) -> Result<Vec<Collation>, AppError> {
             })
         })
         .collect())
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OutlineColumn {
-    pub name: String,
-    /// The declared type as a `CREATE TABLE` would write it: `nvarchar(255)`, `decimal(10,2)`.
-    pub data_type: String,
-    pub nullable: bool,
-    /// `PRI`, `UNI`, `MUL` or empty — see [`key_marker`].
-    pub key: String,
-    /// The `table.column` this one points at, when it is a foreign key. Qualified the way the
-    /// sidebar names it, so a key across schemas reads as something that can be opened.
-    pub references: Option<String>,
-}
-
-/// One table, with its columns in table order.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OutlineTable {
-    /// Qualified the way the sidebar names it, so completing `sales.` offers that schema's tables
-    /// and an unqualified name completes against `dbo` — which is what an unqualified name in the
-    /// statement being written would resolve to as well.
-    pub name: String,
-    pub columns: Vec<OutlineColumn>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SchemaOutline {
-    /// The database this describes, so a cached outline can be told apart from the one asked for.
-    pub database: String,
-    pub tables: Vec<OutlineTable>,
 }
 
 /// What the Query tab's completion knows about the connected database: every table and column of

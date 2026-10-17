@@ -8,93 +8,12 @@
 
 use super::{extra_tokens, map_error, qualify, resolve, system_schema_filter, DEFAULT_SCHEMA};
 use crate::error::AppError;
-use serde::Serialize;
+pub use crate::modules::db::drivers::sql::types::{
+    Collation, IndexColumn, OutlineColumn, OutlineTable, SchemaOutline, StructureColumn,
+    TableIndex, TableStats, TableStructure,
+};
 use sqlx::{PgPool, Row};
 use std::collections::HashMap;
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StructureColumn {
-    pub name: String,
-    /// The full declared type as PostgreSQL spells it: `character varying(255)`, `numeric(10,2)`.
-    pub data_type: String,
-    pub nullable: bool,
-    pub default_value: Option<String>,
-    /// Always true where there is a default at all: PostgreSQL keeps every default as an
-    /// expression, so even a literal one is stored — and reported — cast, as `'new'::text`.
-    pub default_is_expression: bool,
-    /// An identity column, or the `serial` spelling of one: a column the server numbers itself.
-    pub auto_increment: bool,
-    /// Always false. MySQL's `ON UPDATE CURRENT_TIMESTAMP` has no PostgreSQL counterpart — the
-    /// same effect is a trigger, which is not a property of the column.
-    pub on_update_current_timestamp: bool,
-    pub generated: bool,
-    pub collation: Option<String>,
-    pub comment: String,
-    /// `PRI`, `UNI`, `MUL` or empty, as MySQL spells it — which kind of key this column leads.
-    pub key: String,
-    /// The tokens described on `postgres::ColumnMeta::extra`.
-    pub extra: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IndexColumn {
-    /// `None` for an index over an expression rather than a column.
-    pub name: Option<String>,
-    /// Always `None`: PostgreSQL indexes a whole value, and has no counterpart to MySQL's
-    /// index-the-first-n-characters.
-    pub prefix_length: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableIndex {
-    pub name: String,
-    pub unique: bool,
-    pub primary: bool,
-    /// The access method: `btree`, `hash`, `gin`, `gist`, `brin`, `spgist`.
-    pub index_type: String,
-    pub columns: Vec<IndexColumn>,
-    pub comment: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStructure {
-    /// In table order, which is the order a `SELECT *` returns them in.
-    pub columns: Vec<StructureColumn>,
-    /// The primary key first, then the rest by name.
-    pub indexes: Vec<TableIndex>,
-    /// Always empty: data skipping indices are a ClickHouse-only concept. See
-    /// `docs/specs/2026-09-04-clickhouse-index-ddl-design.md`.
-    pub skip_indexes: Vec<super::super::clickhouse::structure::SkipIndex>,
-    /// Always `None` — the engine guard in the Structure tab only ever reads this for ClickHouse.
-    pub engine: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Collation {
-    pub name: String,
-    pub charset: String,
-    pub is_default: bool,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStats {
-    /// Qualified the way the sidebar names it — see `postgres::qualify`.
-    pub name: String,
-    /// The planner's estimate, from the last `ANALYZE` rather than from counting. It is -1 on a
-    /// table never analysed, which reads here as the zero it is indistinguishable from.
-    pub rows: u64,
-    pub data_size: u64,
-    pub index_size: u64,
-    /// Derived rather than reported: PostgreSQL keeps no average row width, so this is the data
-    /// size over the estimated rows — and inherits that estimate's error.
-    pub avg_record_size: u64,
-}
 
 /// Everything the Structure tab shows about one table: its columns in table order, and its indexes
 /// with the primary key first.
@@ -315,39 +234,6 @@ pub async fn collations(pool: &PgPool) -> Result<Vec<Collation>, AppError> {
             is_default: row.get("is_default"),
         })
         .collect())
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OutlineColumn {
-    pub name: String,
-    /// The declared type as PostgreSQL spells it: `character varying(255)`, `jsonb`.
-    pub data_type: String,
-    pub nullable: bool,
-    /// `PRI`, `UNI`, `MUL` or empty, as MySQL spells it — the completion list draws either.
-    pub key: String,
-    /// The `table.column` this one points at, when it is a foreign key. Qualified the way the
-    /// sidebar names it, so a key across schemas reads as something that can be opened.
-    pub references: Option<String>,
-}
-
-/// One table, with its columns in table order.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OutlineTable {
-    /// Qualified the way the sidebar names it, so completing `sales.` offers that schema's tables
-    /// and an unqualified name completes against `public` — which is what an unqualified name in
-    /// the statement being written would resolve to as well.
-    pub name: String,
-    pub columns: Vec<OutlineColumn>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SchemaOutline {
-    /// The database this describes, so a cached outline can be told apart from the one asked for.
-    pub database: String,
-    pub tables: Vec<OutlineTable>,
 }
 
 /// What the Query tab's completion knows about the connected database: every table and column of

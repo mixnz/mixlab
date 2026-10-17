@@ -496,7 +496,7 @@ pub async fn run(
 /// cannot be measured against an ordinary login (D8 leaves this open rather than resolved against a
 /// login that always passes). Rather than gate the Cancel button on an untested permission probe, it
 /// stays open and any permission error SQL Server gives comes back to the user exactly as the server
-/// worded it — extending `mysql_cancel_query`'s "asking to cancel what already finished is not an
+/// worded it — extending `sql_cancel_query`'s "asking to cancel what already finished is not an
 /// error" with "asking to cancel what you may not kill is the server's answer to give, not this
 /// app's to guess at".
 ///

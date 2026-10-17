@@ -25,11 +25,16 @@ The database module, under `modules/db/`:
 | --- | --- |
 | `mod.rs` | `register(builder)`: puts `DbState` and `HandoffState` in the app. |
 | `commands/mod.rs` | Connecting, disconnecting, and the private helpers the rest are built on: `handle`, `mysql_pool`, `postgres_pool`, `mongo_client`, `redis_connection`, `sql_endpoint`, `in_background`, `app_data_dir`. |
-| `commands/{mysql,postgres,sqlite,mongo,redis,clickhouse,tools}.rs` | The `#[tauri::command]` functions. Thin: look the handle up, delegate to `drivers/`. |
+| `commands/sql.rs` | The 32 `sql_*` commands, one per SQL operation whatever the engine: look the connection up, turn it into a `SqlEngine` with `DbHandle::sql`, and ask it ([ADR 0062](../../decisions/0062-the-sql-engines-share-one-command-set.md)). `sql_dump` and `sql_restore` match the connection once and call that engine's own orchestration. |
+| `commands/{mysql,postgres,mssql,clickhouse,sqlite}.rs` | Each SQL engine's dump and restore orchestration, and SQLite's `sqlite_create_file`. |
+| `commands/{mongo,redis,tools}.rs` | The `#[tauri::command]` functions of the two non-SQL engines and the dump tools. Thin: look the handle up, delegate to `drivers/`. |
 | `commands/handoff.rs` | `handoff_take`: the tab opened for a handed-over connection takes it, once. |
 | `models.rs` | `DbKind`, `ConnectionConfig` — the serde types crossing the boundary. |
-| `state.rs` | `DbState { connections: Mutex<HashMap<String, ActiveConnection>> }`, `DbHandle`. |
+| `state.rs` | `DbState { connections: Mutex<HashMap<String, ActiveConnection>> }`, `DbHandle`, and `DbHandle::sql`, the one place a connection is matched to its SQL engine. |
 | `handoff.rs` | A `mixlab://connect?…` URL as a `ConnectionConfig`, the rule for which environment variable may hold its password, and `HandoffState`, where it waits for its tab. |
+| `drivers/sql.rs`, `drivers/sql/types.rs` | What the five SQL engines share: the shapes that cross to the window, written once. |
+| `drivers/sql/engine.rs` | `SqlEngine`, the trait every SQL engine answers through, its `unsupported` default, and `retry_read!`. |
+| `drivers/<engine>/engine.rs` | That engine's `SqlEngine`: each method calls the functions beside it. |
 | `drivers/mysql.rs` | Connect, query, row/value conversion, table data, CRUD. |
 | `drivers/mysql/structure.rs` | Columns and indexes: read, ADD/CHANGE/DROP. |
 | `drivers/mysql/script.rs` | Splits user SQL into statements and runs them one by one. |
@@ -96,19 +101,34 @@ takes `AppHandle<Wry>`, which satisfies `CommandArg` for that one runtime and no
 
 ## Command shape
 
-Every command follows the same skeleton:
+Every SQL command follows the same skeleton, whichever engine answers it:
 
 ```rust
 #[tauri::command]
-pub async fn mysql_list_tables(
+pub async fn sql_list_tables(
     state: State<'_, DbState>,
     id: String,
     database: String,
-) -> Result<Vec<String>, String> {
-    let pool = mysql_pool(&state, &id).await?;
-    mysql::list_tables(&pool, &database).await
+) -> Result<Vec<String>, AppError> {
+    handle(&state, &id).await?.sql()?.list_tables(database).await
 }
 ```
+
+and each engine answers in its `engine.rs`, with the functions beside it:
+
+```rust
+impl SqlEngine for MysqlEngine {
+    async fn list_tables(&self, database: String) -> Result<Vec<String>, AppError> {
+        retry_read!({
+            let pool = self.pool.clone();
+            mysql::list_tables(&pool, &database).await
+        })
+    }
+}
+```
+
+An operation an engine lacks is the trait's default, `error.unsupportedOperation`. MongoDB's and
+Redis's commands keep the older shape: `mongo_client` / `redis_connection`, then the driver.
 
 Conventions baked into that shape:
 
@@ -120,7 +140,7 @@ Conventions baked into that shape:
   [i18n](../../standards/desktop/i18n.md). A driver's own words are not translated: they ride
   along as `message` under a code like `error.mysql`. Wrapping one failure in another
   (`err!("error.rowFailed", index = i).caused_by(inner)`) gives the outer message a `{{cause}}`.
-- **The connection map is never locked across a query.** `mysql_pool` / `mongo_client` /
+- **The connection map is never locked across a query.** `handle` / `mongo_client` /
   `redis_connection` look the connection up, clone the handle — a pool, a driver client, or an
   `Arc` — and drop the guard before returning it. One lock covers every connection in the app, so
   awaiting under it would make one slow query stop every tab.

@@ -61,14 +61,16 @@ window, and almost every finding sits in it.
       hit the gate. Tests go out to `foo/tests.rs` under T207e's convention, and the files whose
       code alone is near the limit split by capability, as T207h did. Design:
       [2026-10-15-t208e-room-under-the-size-limit-design.md](../specs/2026-10-15-t208e-room-under-the-size-limit-design.md).
-- [ ] **T208f** One command set for the SQL engines. The frontend already sees MySQL, PostgreSQL,
+- [x] **T208f** One command set for the SQL engines. The frontend already sees MySQL, PostgreSQL,
       SQL Server, ClickHouse and SQLite through one `SqlApi`/`SqlDialect`. The Rust does not: it
       has about 25 commands per engine (`mysql_list_tables`, `postgres_list_tables`, …), about
       130 in all, and the same names again in `modules/mod.rs` and in five `api.ts` files. The
       engines get one trait, dispatched on `DbHandle`, and one command per operation
       (`sql_list_tables`, …). The five frontend `api.ts` files then shrink to one. Changing the
       command surface is a cross-cutting decision, so it starts with a design and an ADR. Mongo
-      and Redis keep their own commands.
+      and Redis keep their own commands. Design:
+      [2026-10-15-t208f-one-command-set-for-sql-engines-design.md](../specs/2026-10-15-t208f-one-command-set-for-sql-engines-design.md),
+      [ADR 0062](../decisions/0062-the-sql-engines-share-one-command-set.md).
 - [ ] **T208g** `unwrap()` and `expect()` in code that ships. `src-tauri/src` has about 1,040 of
       them, tests included. The ones outside `#[cfg(test)]` are counted, each one either becomes
       a typed error returned to the window or keeps an `expect` whose message says why it cannot

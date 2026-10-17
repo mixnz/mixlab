@@ -7,7 +7,10 @@
 
 use super::{map_error, quote_ident};
 use crate::error::AppError;
-use serde::{Deserialize, Serialize};
+pub use crate::modules::db::drivers::sql::types::{
+    Collation, ColumnSpec, IndexColumn, IndexSpec, OutlineColumn, OutlineTable, SchemaOutline,
+    StructureColumn, TableIndex, TableStats, TableStructure,
+};
 use sqlx::mysql::MySqlRow;
 use sqlx::{MySqlPool, Row};
 use std::collections::{HashMap, HashSet};
@@ -27,147 +30,6 @@ fn text(row: &MySqlRow, name: &str) -> Option<String> {
 
 fn text_or_empty(row: &MySqlRow, name: &str) -> String {
     text(row, name).unwrap_or_default()
-}
-
-/// One column as the table currently declares it. Carries the parts a definition is written from
-/// plus the read-only facts around them — which key it belongs to, what MySQL computes itself.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StructureColumn {
-    pub name: String,
-    /// The full declared type as MySQL spells it: `varchar(255)`, `int unsigned`, `enum('a','b')`.
-    pub data_type: String,
-    pub nullable: bool,
-    /// The column's DEFAULT, or `None` when it has none — which is also how `DEFAULT NULL` reads,
-    /// the two being the same thing to a nullable column.
-    pub default_value: Option<String>,
-    /// Whether the default above is an expression (`uuid()`) rather than a literal. MySQL 8 is
-    /// what reports this; on 5.7 only the `CURRENT_TIMESTAMP` family is recognisable, and that
-    /// one is recognised from the text itself. MariaDB reports it nowhere, and is read a different
-    /// way entirely — see [`mariadb_default`].
-    pub default_is_expression: bool,
-    pub auto_increment: bool,
-    pub on_update_current_timestamp: bool,
-    /// A column MySQL computes from the others. Its expression is not read here, so the editor
-    /// offers no way to change one — only to drop it.
-    pub generated: bool,
-    pub collation: Option<String>,
-    pub comment: String,
-    /// `PRI`, `UNI`, `MUL` or empty: which kind of key this column is the leading column of.
-    pub key: String,
-    /// `SHOW COLUMNS`' Extra, verbatim — shown as-is so nothing the fields above don't model
-    /// disappears from the grid.
-    pub extra: String,
-}
-
-/// One collation the connected server actually has, with the character set it belongs to.
-///
-/// Read from the server rather than listed here, because which collations exist is a property of
-/// the version and of how the server was built: `utf8mb4_0900_ai_ci` only exists from MySQL 8.0,
-/// `utf8mb3_*` is spelled `utf8_*` before it, and MariaDB has a set of its own.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Collation {
-    pub name: String,
-    pub charset: String,
-    /// Whether this is the character set's default — the collation a column of that charset gets
-    /// when no `COLLATE` is written.
-    pub is_default: bool,
-}
-
-/// One column of an index, in the order the index puts them in.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IndexColumn {
-    /// `None` for a functional index, which indexes an expression rather than a column.
-    pub name: Option<String>,
-    /// How many leading characters are indexed, when only a prefix of the column is.
-    pub prefix_length: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableIndex {
-    pub name: String,
-    pub unique: bool,
-    pub primary: bool,
-    /// `BTREE`, `HASH`, `FULLTEXT` or `SPATIAL` as MySQL reports it — the last two are a kind of
-    /// index rather than a way of storing one, but `information_schema` puts them in this column.
-    pub index_type: String,
-    pub columns: Vec<IndexColumn>,
-    pub comment: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStructure {
-    /// In table order, which is the order a `SELECT *` returns them in.
-    pub columns: Vec<StructureColumn>,
-    /// The primary key first, then the rest as `information_schema` lists them.
-    pub indexes: Vec<TableIndex>,
-    /// Always empty: data skipping indices are a ClickHouse-only concept. See
-    /// `docs/specs/2026-09-04-clickhouse-index-ddl-design.md`.
-    pub skip_indexes: Vec<super::super::clickhouse::structure::SkipIndex>,
-    /// Always `None` — the engine guard in the Structure tab only ever reads this for ClickHouse.
-    pub engine: Option<String>,
-}
-
-/// What a column is to be declared as. The write-side counterpart of {@link StructureColumn}:
-/// only the parts that go into a definition, since the rest is not the editor's to set.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ColumnSpec {
-    pub name: String,
-    pub data_type: String,
-    pub nullable: bool,
-    /// `None` writes no DEFAULT clause at all.
-    #[serde(default)]
-    pub default_value: Option<String>,
-    /// Emits the default as an expression rather than as a quoted literal. The
-    /// `CURRENT_TIMESTAMP` family is recognised without it; this is for the rest (`uuid()`).
-    #[serde(default)]
-    pub default_is_expression: bool,
-    #[serde(default)]
-    pub auto_increment: bool,
-    #[serde(default)]
-    pub on_update_current_timestamp: bool,
-    #[serde(default)]
-    pub collation: Option<String>,
-    #[serde(default)]
-    pub comment: String,
-    /// Where the column goes: `None` leaves it where it is (or appends a new one), `Some("")`
-    /// puts it first, and `Some(name)` puts it directly after that column.
-    #[serde(default)]
-    pub after: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IndexColumnSpec {
-    pub name: String,
-    /// Indexes only the first `n` characters of the column. Required for a `TEXT`/`BLOB` column,
-    /// which cannot be indexed whole.
-    #[serde(default)]
-    pub prefix_length: Option<i64>,
-}
-
-/// What an index is to be created as.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IndexSpec {
-    /// Left empty, MySQL names the index after its first column. Ignored for a primary key,
-    /// which is always called `PRIMARY`.
-    #[serde(default)]
-    pub name: String,
-    /// `index`, `unique`, `fulltext`, `spatial` or `primary`.
-    pub kind: String,
-    /// `BTREE` or `HASH`, or `None` for the storage engine's own default. Only meaningful for a
-    /// plain or unique index — `FULLTEXT` and `SPATIAL` have one structure each.
-    #[serde(default)]
-    pub index_type: Option<String>,
-    pub columns: Vec<IndexColumnSpec>,
-    #[serde(default)]
-    pub comment: String,
 }
 
 /// Wraps text as a SQL string literal, escaping what would otherwise end it early.
@@ -608,39 +470,6 @@ pub async fn table_structure(
     })
 }
 
-/// One column as completion needs to know it: enough to offer the name and to say what it is,
-/// and nothing of what an editor would need to change it.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OutlineColumn {
-    pub name: String,
-    /// The declared type as MySQL spells it: `varchar(255)`, `int unsigned`.
-    pub data_type: String,
-    pub nullable: bool,
-    /// `PRI`, `UNI`, `MUL` or empty: which kind of key this column leads.
-    pub key: String,
-    /// `table.column` this one points at, when it is a foreign key. Shown beside the column in the
-    /// completion list, which is where a join is usually being written.
-    pub references: Option<String>,
-}
-
-/// One table, with its columns in table order.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OutlineTable {
-    pub name: String,
-    pub columns: Vec<OutlineColumn>,
-}
-
-/// Every table and column of one database in a single payload.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SchemaOutline {
-    /// The database this describes, so a cached outline can be told apart from the one asked for.
-    pub database: String,
-    pub tables: Vec<OutlineTable>,
-}
-
 /// What the Query tab's completion knows about the selected database.
 ///
 /// `table_structure` answers the same question for one table and in far more detail. This is the
@@ -750,22 +579,6 @@ pub async fn collations(pool: &MySqlPool) -> Result<Vec<Collation>, AppError> {
         })
         .filter(|collation| !collation.name.is_empty())
         .collect())
-}
-
-/// What one table costs the server: the rows it holds and the bytes they and their indexes take.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStats {
-    pub name: String,
-    /// InnoDB's is an estimate sampled from the index, not a `COUNT(*)` — it can be well off on a
-    /// large table, and so can the average size derived alongside it.
-    pub rows: u64,
-    /// The bytes the rows themselves take, `DATA_LENGTH`.
-    pub data_size: u64,
-    /// The bytes every index on the table takes together, `INDEX_LENGTH`.
-    pub index_size: u64,
-    /// The average bytes per row as the engine reports it, `AVG_ROW_LENGTH`.
-    pub avg_record_size: u64,
 }
 
 /// What every table in the database weighs, listed by name.

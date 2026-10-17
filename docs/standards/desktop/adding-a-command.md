@@ -1,20 +1,44 @@
 # Adding a backend command
 
-A new backend call touches five places. Miss one and it fails at runtime, not at build time.
+A new backend call touches five places. Miss one and it fails at runtime, not at build time. An
+operation of the SQL engines has five places of its own, below; everything else follows the five
+after it.
 
-1. **Implement it** in the right driver module — `src-tauri/src/modules/db/drivers/<engine>.rs`,
-   or one of its parts under `drivers/<engine>/` (`ddl.rs`, `structure.rs`, `script.rs`…) —
-   taking the driver handle (`&MySqlPool`, `&mongodb::Client`, `&mut ConnectionManager`) as its
+## A SQL operation
+
+MySQL, PostgreSQL, SQL Server, ClickHouse and SQLite share one command per operation
+([ADR 0062](../../decisions/0062-the-sql-engines-share-one-command-set.md)):
+
+1. **Declare it** on `SqlEngine` in `src-tauri/src/modules/db/drivers/sql/engine.rs`. If not every
+   engine has it, give it a default body returning `unsupported("<operation>")`. A type that crosses
+   to the window goes in `drivers/sql/types.rs`, matching its TypeScript twin.
+2. **Answer it** in `drivers/<engine>/engine.rs` for each engine that has it, calling the functions
+   beside that file.
+3. **Wrap it** as `sql_<operation>` in `src-tauri/src/modules/db/commands/sql.rs`:
+   `handle(&state, &id).await?.sql()?.<operation>(…).await`, and add the name to `COMMANDS` in
+   `commands/sql/tests.rs`.
+4. **Register it** as `db::commands::sql::sql_<operation>` in `modules/mod.rs`.
+5. **Expose it** on `SqlApi` and in `sqlApi`, both in `src/modules/db/sql/api.ts`. If not every
+   engine has it, the dialect is what hides the control that would call it.
+
+`cargo test` checks steps 3 to 5 against each other: every `sql_*` command is registered, `sqlApi`
+calls each one, and every call sends exactly the arguments its command reads.
+
+## Any other command
+
+1. **Implement it** in the right driver module — `src-tauri/src/modules/db/drivers/mongo.rs` or
+   `redis.rs` for the `db` module —
+   taking the driver handle (`&mongodb::Client`, `&mut ConnectionManager`) as its
    first argument and returning `Result<T, String>`.
 
 2. **Wrap it** in `src-tauri/src/modules/db/commands/<engine>.rs` as a `#[tauri::command]` that
-   takes `state: State<'_, DbState>` plus `id: String`, gets the handle from `mysql_pool` /
+   takes `state: State<'_, DbState>` plus `id: String`, gets the handle from
    `mongo_client` / `redis_connection` (private helpers in `commands/mod.rs`, reached through
    `use super::…`), and delegates:
 
    ```rust
-   let pool = mysql_pool(&state, &id).await?;
-   mysql::list_tables(&pool, &database).await
+   let client = mongo_client(&state, &id).await?;
+   mongo::list_collections(&client, &db).await
    ```
 
    Those helpers release the connection-map lock before returning. Do not lock

@@ -22,30 +22,6 @@ use crate::modules::db::models::{ConnectionConfig, DbKind};
 use crate::modules::db::state::{ActiveConnection, Cancel, DbHandle, DbState};
 use crate::ssh::{self, SshConfig};
 
-/// Runs a **read** command again exactly once, if the first attempt died along with the connection.
-///
-/// Reads only. An `INSERT` run again after losing the connection may become two rows — the
-/// statement may have reached the server and only the answer was lost — so write commands report
-/// the error and leave the decision to the user.
-///
-/// A macro rather than a function taking a closure: an `Fn() -> impl Future` borrowing
-/// `State<'_, DbState>` drags the call into exactly the kind of lifetime trouble not worth
-/// fighting, while a macro just writes the command body twice.
-///
-/// Called as `retry_read!({ ... })` — parentheses around the block, because a macro call opening
-/// with a brace in statement position is parsed as a *statement macro*, not an expression with a
-/// value.
-macro_rules! retry_read {
-    ($body:block) => {{
-        match async { $body }.await {
-            // No sleep between the two attempts: the second one will wait by itself in the pool's
-            // `acquire`, behind the session reopening that is under way.
-            Err(e) if e.code == "error.connectionLost" => async { $body }.await,
-            first => first,
-        }
-    }};
-}
-
 pub mod clickhouse;
 pub mod handoff;
 pub mod mongo;
@@ -53,6 +29,7 @@ pub mod mssql;
 pub mod mysql;
 pub mod postgres;
 pub mod redis;
+pub mod sql;
 pub mod sqlite;
 pub mod tools;
 
@@ -429,18 +406,6 @@ async fn postgres_pool(
     }
 }
 
-/// The whole PostgreSQL connection rather than one of its pools — for `DROP DATABASE`, which has
-/// to close the pool on the database it is dropping before the server will allow it.
-async fn postgres_pools(
-    state: &State<'_, DbState>,
-    id: &str,
-) -> Result<Arc<drivers::postgres::Pools>, AppError> {
-    match handle(state, id).await? {
-        DbHandle::Postgres(pools) => Ok(pools),
-        _ => Err(err!("error.wrongConnectionKind", kind = "PostgreSQL")),
-    }
-}
-
 /// The pool for the one database file `id` names. There is no per-database pool to choose between
 /// the way PostgreSQL has: a SQLite connection is the file, and the file is one database.
 async fn sqlite_pool(state: &State<'_, DbState>, id: &str) -> Result<sqlx::SqlitePool, AppError> {
@@ -660,6 +625,7 @@ impl Drop for Transfer<'_> {
 mod tests {
     use super::{cancel_transfer_in, RunningQuery, Transfer};
     use crate::error::AppError;
+    use crate::modules::db::drivers::sql::engine::retry_read;
     use crate::modules::db::state::DbState;
     use std::cell::Cell;
     use std::sync::atomic::Ordering;

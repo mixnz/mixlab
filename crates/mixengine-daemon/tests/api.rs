@@ -684,7 +684,10 @@ async fn a_bundle_holds_the_members_this_build_declares() {
     let file = std::fs::File::open(path).unwrap_or_else(|error| panic!("{error}: {path}"));
     let mut archive = zip::ZipArchive::new(file).unwrap_or_else(|error| panic!("{error}: {path}"));
 
-    let mut entries: Vec<String> = archive.file_names().map(str::to_owned).collect();
+    let mut entries: Vec<String> = archive
+        .file_names()
+        .map(|name| name.expect("an entry name").into_owned())
+        .collect();
     entries.sort_unstable();
 
     assert_eq!(

@@ -1,4 +1,5 @@
 use super::*;
+use crate::modules::db::drivers::sql::types::IndexColumnSpec;
 
 /// A column spec with nothing set, for a test to change one thing about.
 fn column(name: &str, data_type: &str) -> ColumnSpec {

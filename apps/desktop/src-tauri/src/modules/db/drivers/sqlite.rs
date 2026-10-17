@@ -12,13 +12,16 @@
 
 pub mod ddl;
 pub mod dump;
+pub mod engine;
 pub mod script;
 pub mod structure;
 
 use super::filters::{escape_like, split_list};
 use crate::error::AppError;
+pub use crate::modules::db::drivers::sql::types::{
+    ColumnMeta, Filter, ForeignKey, PageQuery, TablePage,
+};
 use crate::modules::db::models::ServerInfo;
-use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions, SqliteRow};
 use sqlx::{Column, Row, SqlitePool, TypeInfo, ValueRef};
@@ -179,71 +182,6 @@ pub async fn list_tables(pool: &SqlitePool) -> Result<Vec<String>, AppError> {
 /// so that is the one used.
 pub(super) fn quote_ident(ident: &str) -> String {
     format!("\"{}\"", ident.replace('"', "\"\""))
-}
-
-/// One condition from the filter bar. The same three fields the other drivers take, declared here
-/// rather than shared, the way `mysql::Filter` and the Mongo one are.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Filter {
-    pub column: String,
-    pub operator: String,
-    #[serde(default)]
-    pub value: Option<String>,
-}
-
-/// Which page of a table is wanted, and what it is cut out of.
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PageQuery {
-    pub page: i64,
-    pub page_size: i64,
-    /// Ignored unless it names a real column of this table.
-    #[serde(default)]
-    pub sort_column: Option<String>,
-    #[serde(default)]
-    pub sort_desc: bool,
-    /// ANDed together; `total` counts what is left after them.
-    #[serde(default)]
-    pub filters: Vec<Filter>,
-}
-
-/// The row a foreign key column points at.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ForeignKey {
-    pub table: String,
-    pub column: String,
-}
-
-/// What is known about one column beyond its name — everything a new row has to respect.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ColumnMeta {
-    /// The declared type, as the table's own DDL spells it: `TEXT`, `varchar(255)`, or the empty
-    /// string — SQLite lets a column be declared with no type at all, and stores whatever it is
-    /// given regardless of what is written here.
-    pub data_type: String,
-    pub nullable: bool,
-    pub default_value: Option<String>,
-    /// Space-separated tokens, read by `src/modules/db/sqlite/columns.ts`: `rowid` for the
-    /// `INTEGER PRIMARY KEY` that aliases the row id, and `generated` for a computed column.
-    pub extra: String,
-    pub foreign_key: Option<ForeignKey>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TablePage {
-    pub columns: Vec<String>,
-    /// Keyed by column name; `columns` is what carries their order.
-    pub column_meta: BTreeMap<String, ColumnMeta>,
-    pub primary_key: Vec<String>,
-    /// The `INTEGER PRIMARY KEY`, when the table has one — the only column SQLite fills in by
-    /// itself, and so the only counter there is anything to reset.
-    pub auto_increment_column: Option<String>,
-    pub rows: Vec<Map<String, Value>>,
-    pub total: i64,
 }
 
 /// One column of a table, as `pragma_table_xinfo` reports it.
@@ -845,4 +783,4 @@ async fn reset_sequence(pool: &SqlitePool, table: &str) -> Result<(), AppError> 
 }
 
 #[cfg(test)]
-pub(super) mod tests;
+pub(crate) mod tests;

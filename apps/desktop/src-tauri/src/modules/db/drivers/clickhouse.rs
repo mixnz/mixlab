@@ -16,14 +16,16 @@
 
 pub mod ddl;
 pub mod dump;
+pub mod engine;
 pub mod script;
 pub mod structure;
 
 use super::filters::{escape_like, split_list};
 use crate::error::AppError;
+pub use crate::modules::db::drivers::sql::types::{ColumnMeta, Filter, PageQuery, TablePage};
 use crate::modules::db::models::ServerInfo;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -805,30 +807,6 @@ async fn table_columns(
         .collect())
 }
 
-/// What is known about one column beyond its name — the shape the Structure tab and the grid both
-/// read. `foreign_key` is always `None`: ClickHouse has no foreign keys to report.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ColumnMeta {
-    pub data_type: String,
-    pub nullable: bool,
-    pub default_value: Option<String>,
-    pub extra: String,
-    pub foreign_key: Option<Value>,
-}
-
-/// One condition on the rows a page is cut out of, as the grid's filter bar sends it — the same
-/// shape MySQL and PostgreSQL read, minus the two `regexp` operators: `regexpFilter: false` on the
-/// dialect keeps the filter bar from ever offering them for this kind.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Filter {
-    pub column: String,
-    pub operator: String,
-    #[serde(default)]
-    pub value: Option<String>,
-}
-
 /// Turns the filter rows into a `WHERE` clause and the parameters to bind into it, in
 /// `{name:Type}` form — see [`query_with_params`].
 ///
@@ -950,32 +928,6 @@ fn build_where(
         return Ok((String::new(), params));
     }
     Ok((format!(" WHERE {}", clauses.join(" AND ")), params))
-}
-
-/// Which page of a table is wanted, and what it is cut out of — the same shape MySQL and
-/// PostgreSQL take.
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PageQuery {
-    pub page: i64,
-    pub page_size: i64,
-    #[serde(default)]
-    pub sort_column: Option<String>,
-    #[serde(default)]
-    pub sort_desc: bool,
-    #[serde(default)]
-    pub filters: Vec<Filter>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TablePage {
-    pub columns: Vec<String>,
-    pub column_meta: BTreeMap<String, ColumnMeta>,
-    pub primary_key: Vec<String>,
-    pub auto_increment_column: Option<String>,
-    pub rows: Vec<Map<String, Value>>,
-    pub total: i64,
 }
 
 /// Reads one page of a table. `auto_increment_column` is always `None` — v1 never writes, so

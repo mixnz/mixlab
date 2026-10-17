@@ -69,6 +69,36 @@ pub struct IndexSpec {
     pub columns: Vec<IndexColumnSpec>,
 }
 
+/// What this engine reads of the column the window sends; the rest is not its to use.
+impl From<crate::modules::db::drivers::sql::types::ColumnSpec> for ColumnSpec {
+    fn from(spec: crate::modules::db::drivers::sql::types::ColumnSpec) -> Self {
+        Self {
+            name: spec.name,
+            data_type: spec.data_type,
+            nullable: spec.nullable,
+            default_value: spec.default_value,
+            default_is_expression: spec.default_is_expression,
+            collation: spec.collation,
+        }
+    }
+}
+
+impl From<crate::modules::db::drivers::sql::types::IndexColumnSpec> for IndexColumnSpec {
+    fn from(spec: crate::modules::db::drivers::sql::types::IndexColumnSpec) -> Self {
+        Self { name: spec.name }
+    }
+}
+
+impl From<crate::modules::db::drivers::sql::types::IndexSpec> for IndexSpec {
+    fn from(spec: crate::modules::db::drivers::sql::types::IndexSpec) -> Self {
+        Self {
+            name: spec.name,
+            kind: spec.kind,
+            columns: spec.columns.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
 /// Wraps text as a SQL string literal, doubling the quote that would otherwise end it early.
 ///
 /// A backslash is left alone: a SQLite string literal is not backslash-escaped, so doubling them

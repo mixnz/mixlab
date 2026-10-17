@@ -1,11 +1,14 @@
 pub mod dump;
+pub mod engine;
 pub mod script;
 pub mod structure;
 
 use super::filters::{escape_like, split_list};
 use crate::error::AppError;
+pub use crate::modules::db::drivers::sql::types::{
+    ColumnMeta, Filter, ForeignKey, PageQuery, TablePage,
+};
 use crate::modules::db::models::ServerInfo;
-use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sqlx::mysql::{MySqlConnectOptions, MySqlPoolOptions, MySqlRow, MySqlSslMode};
 use sqlx::{Column, MySqlPool, Row, TypeInfo};
@@ -88,33 +91,6 @@ fn connect_error(e: sqlx::Error) -> AppError {
         sqlx::Error::Configuration(_) => err!("error.mysqlSecureAuthRequired"),
         e => err!("error.mysql", message = e),
     }
-}
-
-pub async fn query(
-    pool: &MySqlPool,
-    sql: &str,
-    database: Option<&str>,
-) -> Result<Vec<Map<String, Value>>, AppError> {
-    // Querying a &Pool directly requires 'static query text (sqlx's Executor
-    // impl for &Pool boxes the acquire+execute future); acquiring a connection
-    // first lets us run borrowed, non-'static SQL text instead.
-    let mut conn = pool.acquire().await.map_err(map_error)?;
-    if let Some(db) = database.filter(|d| !d.is_empty()) {
-        let use_sql = format!("USE {}", quote_ident(db));
-        // Text protocol: `USE` is one of the statements MySQL will not accept as a prepared one.
-        sqlx::raw_sql(sqlx::AssertSqlSafe(use_sql))
-            .execute(&mut *conn)
-            .await
-            .map_err(map_error)?;
-    }
-    // AssertSqlSafe opts out of sqlx's SQL-injection speed bump: this client
-    // runs arbitrary, user-authored SQL by design, not app-embedded queries.
-    let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
-        .fetch_all(&mut *conn)
-        .await
-        .map_err(map_error)?;
-
-    Ok(rows.iter().map(row_to_json).collect())
 }
 
 /// Backtick-quotes an identifier (database/table name) for interpolation into
@@ -246,35 +222,6 @@ pub async fn list_tables(pool: &MySqlPool, database: &str) -> Result<Vec<String>
     Ok(rows.iter().map(|r| r.get::<String, _>(0)).collect())
 }
 
-/// The row a foreign key column points at: what it references, not what it is declared as.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ForeignKey {
-    pub table: String,
-    pub column: String,
-}
-
-/// What `SHOW COLUMNS` knows about one column beyond its name — everything a new row has to
-/// respect: the type it is written as, whether it may be left NULL, and what it falls back to
-/// when an INSERT leaves it out.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ColumnMeta {
-    /// The declared type as MySQL spells it, e.g. `varchar(255)` or `int unsigned`.
-    pub data_type: String,
-    pub nullable: bool,
-    /// The column's DEFAULT, or `None` when it has none. An expression default
-    /// (`CURRENT_TIMESTAMP`, `(uuid())`) is reported here too, unquoted and by itself
-    /// indistinguishable from a literal — `extra` is what tells the two apart.
-    pub default_value: Option<String>,
-    /// `SHOW COLUMNS`' Extra: `auto_increment`, `DEFAULT_GENERATED`, `STORED GENERATED`, ...
-    pub extra: String,
-    /// What this column references, when it is part of a foreign key. A column in a composite
-    /// foreign key reports its own half of it; a column under more than one constraint reports
-    /// the first one `information_schema` lists.
-    pub foreign_key: Option<ForeignKey>,
-}
-
 /// Which columns of `table` are foreign keys, and what each one points at.
 ///
 /// Read from `information_schema`, which only ever shows the constraints the connected user has
@@ -313,19 +260,6 @@ async fn foreign_keys(
             });
     }
     Ok(keys)
-}
-
-/// One condition on the rows a page is cut out of — the grid's filter bar sends a list of these,
-/// and they are ANDed together. `value` carries whatever the user typed, as text: the operator is
-/// what says how to read it (a single value, a comma-separated list, a pair), and operators like
-/// `isNull` ignore it entirely.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Filter {
-    pub column: String,
-    pub operator: String,
-    #[serde(default)]
-    pub value: Option<String>,
 }
 
 /// Turns the filter rows into a WHERE clause (leading space included, empty when nothing filters)
@@ -412,41 +346,6 @@ fn build_where(filters: &[Filter], columns: &[String]) -> Result<(String, Vec<St
         return Ok((String::new(), binds));
     }
     Ok((format!(" WHERE {}", clauses.join(" AND ")), binds))
-}
-
-/// Which page of a table is wanted, and what it is cut out of: the page itself, the order the
-/// whole table is put in first, and the filters that narrow it down before either.
-///
-/// One value rather than five loose arguments — `page` and `page_size` are both `i64` and
-/// `sort_desc` is a bare `bool`, so a positional call is one transposition away from silently
-/// reading the wrong page in the wrong order.
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PageQuery {
-    pub page: i64,
-    pub page_size: i64,
-    /// Ignored unless it names a real column of this table.
-    #[serde(default)]
-    pub sort_column: Option<String>,
-    #[serde(default)]
-    pub sort_desc: bool,
-    /// ANDed together; `total` counts what is left after them.
-    #[serde(default)]
-    pub filters: Vec<Filter>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TablePage {
-    pub columns: Vec<String>,
-    /// Keyed by column name; `columns` is what carries their order.
-    pub column_meta: BTreeMap<String, ColumnMeta>,
-    pub primary_key: Vec<String>,
-    /// The AUTO_INCREMENT column, if the table has one. Only such a table has a
-    /// counter worth offering to reset after a delete.
-    pub auto_increment_column: Option<String>,
-    pub rows: Vec<Map<String, Value>>,
-    pub total: i64,
 }
 
 /// Reads one page of a table. `query.sort_column` orders the whole table before the page is cut
