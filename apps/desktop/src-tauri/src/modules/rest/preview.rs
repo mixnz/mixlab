@@ -106,7 +106,7 @@ pub fn respond<R: tauri::Runtime>(
             )
             .header("Content-Security-Policy", csp)
             .body(body)
-            .unwrap(),
+            .expect("a fixed status and ASCII headers always build"),
         None => tauri::http::Response::builder()
             .status(tauri::http::StatusCode::NOT_FOUND)
             .header(
@@ -114,7 +114,7 @@ pub fn respond<R: tauri::Runtime>(
                 "text/plain; charset=utf-8",
             )
             .body(Vec::new())
-            .unwrap(),
+            .expect("a fixed status and ASCII headers always build"),
     }
 }
 

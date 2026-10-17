@@ -221,6 +221,12 @@ tauri-plugin-deep-link = "2"
 # `HKCU\...\Run` on Windows, an XDG autostart entry on Linux, each starting MixLab with `--hidden`.
 tauri-plugin-autostart = "2"
 
+# `unwrap()` is refused in shipped code; `expect()` stays, its message saying why it cannot fail
+# (docs/standards/rust.md). Tests are allowed by the root clippy.toml. The same as the root
+# workspace's `[workspace.lints.clippy]`, which this separate workspace does not inherit.
+[lints.clippy]
+unwrap_used = "warn"
+
 # **MixLab's release profile, built for size.** The root's `[profile.release]` never reaches this
 # workspace, so without this section the window shipped with cargo's defaults — no LTO and 16
 # codegen units — and at 54.5 MB was the largest binary in the install. Measured on Windows:
