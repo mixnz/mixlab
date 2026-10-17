@@ -111,10 +111,12 @@ the signature.
   is a hand edit to the JSON, argued in review — the usual answer is a new module.
 - **A file whose code fits under the limit and whose tests do not** keeps `#[cfg(test)] mod tests;`
   and moves the module's body to `foo/tests.rs` (T207e). The module is still `foo::tests`, so no
-  test changes its name. Tests that would not fit in one file of their own split by topic under
-  that hub, `foo/tests/<topic>.rs`, at the boundaries they already have (T207f); an integration
-  suite does the same as `tests/<name>/main.rs` beside its topics. A file whose *code* is past the
-  limit is split by capability instead, and its tests go with what they test.
+  test changes its name. A file with a second test module moves each to a file of its own name,
+  `foo/claim_tests.rs` beside `foo/tests.rs`, so no test changes its path (T207m). Tests that
+  would not fit in one file of their own split by topic under that hub, `foo/tests/<topic>.rs`, at
+  the boundaries they already have (T207f); an integration suite does the same as
+  `tests/<name>/main.rs` beside its topics. A file whose *code* is past the limit is split by
+  capability instead, and its tests go with what they test.
 - Newtypes for identifiers (`SiteId`, `ServiceId`, `RuntimeKind`); no bare `String` IDs crossing a
   function boundary.
 - Public items in `core`, `proto`, `platform` carry doc comments explaining *why*, with `# Errors`
