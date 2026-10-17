@@ -541,7 +541,12 @@ fn tools_dir(app: &AppHandle) -> Result<PathBuf, AppError> {
 /// Tells whatever transfer this connection is running to stop. Silent when it is running none,
 /// which is every call but the few that matter.
 fn cancel_transfer_in(state: &DbState, id: &str) {
-    if let Some(cancel) = state.transfers.lock().unwrap().get(id) {
+    if let Some(cancel) = state
+        .transfers
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .get(id)
+    {
         cancel.store(true, Ordering::Relaxed);
     }
 }
@@ -577,7 +582,7 @@ impl Drop for RunningQuery<'_> {
         self.state
             .running_queries
             .lock()
-            .unwrap()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .remove(&self.run_id);
     }
 }
@@ -599,7 +604,7 @@ impl<'a> Transfer<'a> {
         state
             .transfers
             .lock()
-            .unwrap()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .insert(id.to_string(), Arc::clone(&cancel));
         Transfer {
             state,
@@ -617,7 +622,11 @@ impl<'a> Transfer<'a> {
 
 impl Drop for Transfer<'_> {
     fn drop(&mut self) {
-        self.state.transfers.lock().unwrap().remove(&self.id);
+        self.state
+            .transfers
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .remove(&self.id);
     }
 }
 
@@ -666,6 +675,41 @@ mod tests {
 
         drop(second);
         assert!(state.running_queries.lock().unwrap().is_empty());
+    }
+
+    /// A command that panicked while it held the registry poisons it. Every later run and cancel in
+    /// every tab used to panic on that from then on; the registry is a map of plain entries, so it
+    /// is used as it stands instead.
+    #[test]
+    fn a_poisoned_registry_still_forgets_a_finished_run() {
+        let state = DbState::default();
+        let running = RunningQuery::start(&state, "run-1");
+        state
+            .running_queries
+            .lock()
+            .unwrap()
+            .insert("run-1".to_string(), 7);
+        std::thread::scope(|scope| {
+            let _ = scope
+                .spawn(|| {
+                    let _held = state.running_queries.lock().unwrap();
+                    panic!("a command that panics while it holds the registry");
+                })
+                .join();
+        });
+        assert!(
+            state.running_queries.is_poisoned(),
+            "the setup must poison the lock"
+        );
+
+        drop(running);
+
+        let left = state
+            .running_queries
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .contains_key("run-1");
+        assert!(!left, "dropping the run removed its entry");
     }
 
     /* What the tab closing has to be able to do, without a database in the room: reach a running

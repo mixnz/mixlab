@@ -39,7 +39,11 @@ impl TerminalState {
     /// both senders, and that is what wakes the threads and tasks still waiting on them — nothing
     /// in there needs the lock, and nothing in there should run while holding it.
     pub fn forget(&self, id: &str) {
-        let gone = self.sessions.lock().unwrap().remove(id);
+        let gone = self
+            .sessions
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .remove(id);
         drop(gone);
     }
 }

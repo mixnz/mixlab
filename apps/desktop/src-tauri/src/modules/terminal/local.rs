@@ -337,7 +337,11 @@ pub fn spawn(
         let master = master.clone();
         move || {
             while let Some(size) = resize_rx.blocking_recv() {
-                if let Some(master) = master.lock().unwrap().as_ref() {
+                if let Some(master) = master
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .as_ref()
+                {
                     let _ = master.resize(pty_size(size));
                 }
             }
@@ -382,7 +386,10 @@ pub fn spawn(
             tokio::time::sleep(EXIT_DRAIN).await;
             // On a blocking thread: closing ConPTY is an OS call that may hang around for a while.
             let _ = tokio::task::spawn_blocking(move || {
-                master.lock().unwrap().take();
+                master
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .take();
             })
             .await;
             if tokio::time::timeout(EXIT_TIMEOUT, &mut drain)

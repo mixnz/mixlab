@@ -54,7 +54,10 @@ pub fn csp(external: bool, scripts: bool) -> String {
 /// served under.
 pub fn open(state: &RestState, html: String, external: bool, scripts: bool) -> String {
     let id = Uuid::new_v4().to_string();
-    let mut kept = state.previews.lock().unwrap();
+    let mut kept = state
+        .previews
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     while kept.len() >= MAX_KEPT {
         kept.remove(0);
     }
@@ -68,7 +71,11 @@ pub fn open(state: &RestState, html: String, external: bool, scripts: bool) -> S
 
 /// Forgets one. Unknown ids are not an error — the cap above may have dropped it already.
 pub fn close(state: &RestState, id: &str) {
-    state.previews.lock().unwrap().retain(|kept| kept.id != id);
+    state
+        .previews
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .retain(|kept| kept.id != id);
 }
 
 /// Serves `<scheme>://localhost/<id>`, or `http://<scheme>.localhost/<id>` on Windows.
@@ -85,7 +92,7 @@ pub fn respond<R: tauri::Runtime>(
     let found = state
         .previews
         .lock()
-        .unwrap()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .iter()
         .find(|kept| kept.id == id)
         .map(|kept| (kept.body.clone(), kept.csp.clone()));

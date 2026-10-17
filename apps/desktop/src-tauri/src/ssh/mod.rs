@@ -402,7 +402,10 @@ impl client::Handler for TunnelHandler {
         match in_background(move || verify_host(&path, &endpoint, &fingerprint)).await {
             Ok(()) => Ok(true),
             Err(e) => {
-                *self.refused.lock().unwrap() = Some(e);
+                *self
+                    .refused
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(e);
                 Ok(false)
             }
         }
@@ -468,7 +471,10 @@ async fn authenticate_inner(
         // A refused key fails the handshake, and what russh reports for that says nothing about
         // the key — the reason the handler wrote down is the one worth showing.
         Err(e) => {
-            let refused = refused.lock().unwrap().take();
+            let refused = refused
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .take();
             return Err(refused.unwrap_or_else(|| err!("error.sshConnectFailed", message = e)));
         }
     };
