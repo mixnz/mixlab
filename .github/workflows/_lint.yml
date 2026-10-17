@@ -42,7 +42,7 @@ jobs:
           node --test scripts/check-docs.test.mjs
           node scripts/check-docs.mjs
 
-      # T207: no source file grows past 1,500 lines, and none of the files already past it grows at
+      # T207: no source file grows past 1,000 lines, and none of the files already past it grows at
       # all — scripts/file-size-baseline.json only ever goes down. Needs only Node.
       - name: File sizes
         run: |

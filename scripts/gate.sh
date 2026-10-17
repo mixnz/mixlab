@@ -50,7 +50,7 @@ check "rustdoc" env RUSTDOCFLAGS="-D warnings" \
   cargo doc --workspace --no-deps --document-private-items --all-features
 check "the helper's version" bash packaging/helper-lock.sh --check
 check "documentation links" node scripts/check-docs.mjs
-# No source file grows past 1,500 lines, and none already past it grows at all (T207).
+# No source file grows past 1,000 lines, and none already past it grows at all (T207, T207n).
 check "file sizes" node scripts/check-file-sizes.mjs
 # A string whose `\` continuation went missing reads "no line              in the hosts file", and
 # neither rustfmt nor the compiler says a word about it.

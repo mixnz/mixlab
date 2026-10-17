@@ -125,7 +125,7 @@ cargo sqlx prepare --workspace -- --all-targets --all-features  # after editing 
 bash packaging/bindings.sh               # after changing a type in mixengine-proto (T56)
 cargo run -p mixengine-cli -- status      # drive the daemon from the CLI
 node scripts/check-docs.mjs              # documentation links + spec status; --write-index after adding a spec
-node scripts/check-file-sizes.mjs        # no file past 1,500 lines grows; --shrink after making one shorter
+node scripts/check-file-sizes.mjs        # no file past 1,000 lines grows; --shrink after making one shorter
 cd apps/desktop && npm ci && npm run build && npm test && npm run lint     # the desktop frontend
 cd apps/desktop/src-tauri && cargo fmt --check && cargo clippy --locked --all-targets -- -D warnings  # its own workspace
 ```

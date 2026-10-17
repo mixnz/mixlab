@@ -104,8 +104,8 @@ the signature.
 
 - Modules by capability, not by layer: `sites/`, `runtimes/`, `certs/` — not `models/`, `utils/`.
   `utils` and `helpers` are banned module names.
-- **No source file over 1,500 lines** — `.rs`, and the desktop's `.ts`, `.tsx`, `.js`, `.mjs` and
-  `.css` alike (T207). The files already past it are named in `scripts/file-size-baseline.json` at
+- **No source file over 1,000 lines** — `.rs`, and the desktop's `.ts`, `.tsx`, `.js`, `.mjs` and
+  `.css` alike (T207; 1,500 until T207n). The files already past it are named in `scripts/file-size-baseline.json` at
   their length, and may not grow. Making one shorter means `node scripts/check-file-sizes.mjs
   --shrink` in the same commit, which lowers its entry. Nothing raises one: a file that has to grow
   is a hand edit to the JSON, argued in review — the usual answer is a new module.

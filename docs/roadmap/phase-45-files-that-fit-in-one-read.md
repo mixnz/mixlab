@@ -105,3 +105,9 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
 
 Since T207j the size baseline is empty: no source file in the repository is over 1,500 lines, and
 `node scripts/check-file-sizes.mjs` now holds every file to the limit itself.
+
+- [x] **T207n** The limit goes down to 1,000 lines, for every counted extension alike. After T207m,
+      48 files are past it: 43 `.rs`, the desktop's `db/i18n/en.ts` and `vi.ts`, `db.css` and
+      `App.css`, and the worker's `account.ts`. `scripts/file-size-baseline.json` names them at
+      their length, written once, since `--shrink` never adds an entry. From here they only shrink.
+      `check-file-sizes.test.mjs` pins the checked-in limit and the baseline's sorted form.
