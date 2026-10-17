@@ -115,7 +115,7 @@ Since T207j the size baseline is empty: no source file in the repository is over
 The 48 files T207n named, grouped by how they split and how a split is checked (measured on
 `d612d5d2`). Each task ends with `--shrink`, and after T207q the baseline is empty again.
 
-- [ ] **T207o** Test files past 1,000 split by topic, under T207f's convention: a unit-test hub
+- [x] **T207o** Test files past 1,000 split by topic, under T207f's convention: a unit-test hub
       becomes `foo/tests/<topic>.rs`, and an integration suite becomes `tests/<name>/main.rs`
       beside its topics, still one binary. Sixteen files: core `blueprints/plan/tests/resolving.rs`,
       `generate/recipes/caddy/tests.rs` (1,425), `nginx/tests/sites.rs`, `postgres/tests.rs`,

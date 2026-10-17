@@ -344,7 +344,7 @@ that says so names the task.
 - [`proto/blueprint_api.rs`](../../crates/mixengine-proto/src/blueprint_api.rs) — `dry_run`'s note
   that `false` is `Unsupported`.
 - [`proto/rpc.rs`](../../crates/mixengine-proto/src/rpc.rs) — the same, on `BLUEPRINT_APPLY`.
-- [`daemon/tests/api.rs`](../../crates/mixengine-daemon/tests/api.rs) — the test asserting the
+- [`daemon/tests/api.rs`](../../crates/mixengine-daemon/tests/api/main.rs) — the test asserting the
   refusal mentions T78; it becomes a test of the apply.
 - [`roadmap/phase-8-differentiators.md`](../roadmap/phase-8-differentiators.md) — T78
   ticked, with what it found in T77's plan (D7, D8) written where the next reader will look.
