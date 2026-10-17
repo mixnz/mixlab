@@ -225,4 +225,5 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-15 | [The db backend's drivers: one folder per engine (design)](2026-10-15-t208d-db-drivers-one-folder-per-engine-design.md) | T208d | implemented |
 | 2026-10-15 | [Room under the size limit for seven backend files (design)](2026-10-15-t208e-room-under-the-size-limit-design.md) | T208e | implemented |
 | 2026-10-15 | [One command set for the SQL engines (design)](2026-10-15-t208f-one-command-set-for-sql-engines-design.md) | T208f | implemented |
+| 2026-10-17 | [Test modules out to their own file, ahead of a 1,000-line limit (design)](2026-10-17-t207m-test-modules-out-before-a-1000-line-limit-design.md) | T207m | approved |
 | 2026-10-17 | [`unwrap()` and `expect()` in the code MixLab ships (design)](2026-10-17-t208g-unwrap-and-expect-in-shipped-code-design.md) | T208g | implemented |

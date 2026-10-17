@@ -89,6 +89,14 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
       state they share passed explicitly, in the order a start needs, and `Args` and `detach` move
       out. Split out of T207i on 2026-10-14. Design:
       [2026-10-14-t207l-daemon-serve-steps-design.md](../specs/2026-10-14-t207l-daemon-serve-steps-design.md).
+- [ ] **T207m** Test modules out to `foo/tests.rs` ahead of a 1,000-line limit. A limit of 1,000
+      would put 76 files in the baseline. In 28 of them the code is under 1,000 and only the
+      inline tests push the file past it: seven of the desktop's (`db/drivers/mongo.rs`,
+      `secrets.rs`, `sync/engine.rs`, …), twelve of core's, five of the daemon's, three of proto's
+      and the shim's `main.rs`. Each moves under T207e's convention. Five files hold a second test
+      module, which moves to a file of its own name (`shims/claim_tests.rs`), so no test changes its
+      path. Lowering the limit itself is a later design. Design:
+      [2026-10-17-t207m-test-modules-out-before-a-1000-line-limit-design.md](../specs/2026-10-17-t207m-test-modules-out-before-a-1000-line-limit-design.md).
 
 **M45** `scripts/file-size-baseline.json` no longer names `crates/mixengine-cli/src/main.rs`,
 `render.rs`, `crates/mixengine-daemon/src/api/rpc.rs` or
