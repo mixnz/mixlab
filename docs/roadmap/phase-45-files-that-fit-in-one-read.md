@@ -89,7 +89,7 @@ per file (measured on `master` at `c2e02e8d`: code before `mod tests`, and the t
       state they share passed explicitly, in the order a start needs, and `Args` and `detach` move
       out. Split out of T207i on 2026-10-14. Design:
       [2026-10-14-t207l-daemon-serve-steps-design.md](../specs/2026-10-14-t207l-daemon-serve-steps-design.md).
-- [ ] **T207m** Test modules out to `foo/tests.rs` ahead of a 1,000-line limit. A limit of 1,000
+- [x] **T207m** Test modules out to `foo/tests.rs` ahead of a 1,000-line limit. A limit of 1,000
       would put 76 files in the baseline. In 28 of them the code is under 1,000 and only the
       inline tests push the file past it: seven of the desktop's (`db/drivers/mongo.rs`,
       `secrets.rs`, `sync/engine.rs`, …), twelve of core's, five of the daemon's, three of proto's
