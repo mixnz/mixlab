@@ -109,8 +109,16 @@ fn status(
 ) -> Result<UpdateStatus, AppError> {
     let placement = placement::read();
     let decision = install::records(app)?.decision();
-    let feed = state.feed.lock().unwrap().clone();
-    let checked_at = state.checked_at.lock().unwrap().clone();
+    let feed = state
+        .feed
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .clone();
+    let checked_at = state
+        .checked_at
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .clone();
     let downloaded = feed.as_ref().and_then(|f| downloaded(app, f, &placement));
     Ok(UpdateStatus {
         current: env!("CARGO_PKG_VERSION").to_owned(),
@@ -135,10 +143,17 @@ pub fn update_status(
     app: AppHandle,
     state: State<'_, UpdaterState>,
 ) -> Result<UpdateStatus, AppError> {
-    let empty = state.feed.lock().unwrap().is_none();
+    let empty = state
+        .feed
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .is_none();
     if empty {
         let cached = cache(&app)?.load(super::PUBLIC_KEY);
-        *state.feed.lock().unwrap() = cached;
+        *state
+            .feed
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = cached;
     }
     status(&app, &state, None)
 }
@@ -162,8 +177,14 @@ pub async fn update_check(
         &cache,
     )
     .await;
-    *state.feed.lock().unwrap() = checked.feed;
-    *state.checked_at.lock().unwrap() = Some(chrono::Utc::now().to_rfc3339());
+    *state
+        .feed
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = checked.feed;
+    *state
+        .checked_at
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(chrono::Utc::now().to_rfc3339());
     status(&app, &state, if force { checked.failure } else { None })
 }
 
@@ -195,7 +216,7 @@ fn offered(state: &UpdaterState) -> Result<Feed, AppError> {
     state
         .feed
         .lock()
-        .unwrap()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .clone()
         .ok_or_else(|| err!("error.updateNoBuild"))
 }

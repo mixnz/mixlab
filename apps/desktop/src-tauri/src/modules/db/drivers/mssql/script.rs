@@ -84,7 +84,9 @@ fn split_batches(sql: &str) -> Vec<String> {
         if is_go_line(line) {
             batches.push(String::new());
         } else {
-            let current = batches.last_mut().unwrap();
+            let current = batches
+                .last_mut()
+                .expect("the fold starts with one batch and only ever adds more");
             if !current.is_empty() {
                 current.push('\n');
             }

@@ -70,7 +70,10 @@ pub async fn terminal_open(
 
     // Opening the same id twice replaces the old session, and its `Drop` cleans up the rest.
     let dead = {
-        let mut sessions = state.sessions.lock().unwrap();
+        let mut sessions = state
+            .sessions
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         sessions.insert(id.clone(), session);
         // Died before making it into the map: drop it right away, because `Exit` has already gone
         // past and will not come back.
@@ -122,7 +125,10 @@ pub async fn terminal_write(
     data: String,
     state: State<'_, TerminalState>,
 ) -> Result<(), AppError> {
-    let sessions = state.sessions.lock().unwrap();
+    let sessions = state
+        .sessions
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let session = sessions
         .get(&id)
         .ok_or_else(|| err!("error.terminalUnknownSession"))?;
@@ -139,7 +145,10 @@ pub async fn terminal_resize(
     rows: u16,
     state: State<'_, TerminalState>,
 ) -> Result<(), AppError> {
-    let sessions = state.sessions.lock().unwrap();
+    let sessions = state
+        .sessions
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let session = sessions
         .get(&id)
         .ok_or_else(|| err!("error.terminalUnknownSession"))?;
@@ -155,7 +164,11 @@ pub async fn terminal_resize(
 /// call.
 #[tauri::command]
 pub async fn terminal_close(id: String, state: State<'_, TerminalState>) -> Result<(), AppError> {
-    state.sessions.lock().unwrap().remove(&id);
+    state
+        .sessions
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .remove(&id);
     Ok(())
 }
 

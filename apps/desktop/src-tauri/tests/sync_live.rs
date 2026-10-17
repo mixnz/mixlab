@@ -16,6 +16,10 @@
 //! `MIXLAB_SYNC_TEST_SERVER_2=http://127.0.0.1:8767` beside `MIXLAB_SYNC_TEST_SERVER` on the test
 //! line.
 
+// A test file: a panic here is a failed test. `clippy.toml` allows that inside a `#[test]`, not in
+// the helpers around one.
+#![allow(clippy::unwrap_used)]
+
 use std::sync::Arc;
 
 use base64::engine::general_purpose::STANDARD;

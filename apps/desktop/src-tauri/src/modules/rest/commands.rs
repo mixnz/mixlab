@@ -26,7 +26,12 @@ fn client_for(
     insecure: bool,
 ) -> Result<reqwest::Client, AppError> {
     let key = (follow, insecure);
-    if let Some(client) = state.clients.lock().unwrap().get(&key) {
+    if let Some(client) = state
+        .clients
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .get(&key)
+    {
         return Ok(client.clone());
     }
     let client = reqwest::Client::builder()
@@ -38,7 +43,11 @@ fn client_for(
         .danger_accept_invalid_certs(insecure)
         .build()
         .map_err(|e| err!("error.restBuildFailed", message = e))?;
-    state.clients.lock().unwrap().insert(key, client.clone());
+    state
+        .clients
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .insert(key, client.clone());
     Ok(client)
 }
 
@@ -184,7 +193,7 @@ pub async fn rest_send(
     state
         .inflight
         .lock()
-        .unwrap()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .insert(req.request_id.clone(), token.clone());
     let started = Instant::now();
 
@@ -194,7 +203,11 @@ pub async fn rest_send(
         result = collect(builder, started) => result,
     };
 
-    state.inflight.lock().unwrap().remove(&req.request_id);
+    state
+        .inflight
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .remove(&req.request_id);
     outcome
 }
 
@@ -202,7 +215,11 @@ pub async fn rest_send(
 /// and this call, which is the commonest way for a Cancel button to be pressed too late.
 #[tauri::command]
 pub async fn rest_cancel(state: State<'_, RestState>, request_id: String) -> Result<(), AppError> {
-    let token = state.inflight.lock().unwrap().remove(&request_id);
+    let token = state
+        .inflight
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .remove(&request_id);
     if let Some(token) = token {
         token.cancel();
     }

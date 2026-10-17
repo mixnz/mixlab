@@ -121,16 +121,26 @@ pub struct InMemory(Mutex<Option<Saved>>);
 
 impl Keeping for InMemory {
     fn load(&self) -> Result<Option<Saved>, AppError> {
-        Ok(self.0.lock().expect("never poisoned").clone())
+        Ok(self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone())
     }
 
     fn keep(&self, saved: &Saved) -> Result<(), AppError> {
-        *self.0.lock().expect("never poisoned") = Some(saved.clone());
+        *self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(saved.clone());
         Ok(())
     }
 
     fn forget(&self) -> Result<(), AppError> {
-        *self.0.lock().expect("never poisoned") = None;
+        *self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = None;
         Ok(())
     }
 }

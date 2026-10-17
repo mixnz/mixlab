@@ -430,7 +430,7 @@ pub async fn sql_run_script(
         state
             .running_queries
             .lock()
-            .unwrap()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .insert(run_id.clone(), session);
     };
     engine.run_script(sql, database, &announce).await
@@ -456,7 +456,12 @@ pub async fn sql_cancel_query(
 
 /// The server session `run_id` is running on, while it runs.
 fn session_of(state: &DbState, run_id: &str) -> Option<u64> {
-    state.running_queries.lock().unwrap().get(run_id).copied()
+    state
+        .running_queries
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .get(run_id)
+        .copied()
 }
 
 /// Writes a database out to `path`. `mode` is `structure`, `data` or `all`.

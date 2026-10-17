@@ -17,6 +17,10 @@
 //! crosses `lend`, `engine` and `store` on two machines at once. Unlike `sync_live.rs`, it needs
 //! no server and runs with the rest of `cargo test`.
 
+// A test file: a panic here is a failed test. `clippy.toml` allows that inside a `#[test]`, not in
+// the helpers around one.
+#![allow(clippy::unwrap_used)]
+
 use std::collections::{BTreeMap, HashSet};
 use std::sync::Mutex;
 
