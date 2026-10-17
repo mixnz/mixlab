@@ -71,10 +71,16 @@ window, and almost every finding sits in it.
       and Redis keep their own commands. Design:
       [2026-10-15-t208f-one-command-set-for-sql-engines-design.md](../specs/2026-10-15-t208f-one-command-set-for-sql-engines-design.md),
       [ADR 0062](../decisions/0062-the-sql-engines-share-one-command-set.md).
-- [ ] **T208g** `unwrap()` and `expect()` in code that ships. `src-tauri/src` has about 1,040 of
+- [x] **T208g** `unwrap()` and `expect()` in code that ships. `src-tauri/src` has about 1,040 of
       them, tests included. The ones outside `#[cfg(test)]` are counted, each one either becomes
       a typed error returned to the window or keeps an `expect` whose message says why it cannot
-      fail, and the count is written down here.
+      fail, and the count is written down here. Counted on 2026-10-17 at `0c2e83ad`: 1,099 calls,
+      1,057 of them in tests. Of the 42 in shipped code, 33 were `std::sync::Mutex` locks, which
+      now take a poisoned guard (`unwrap_or_else(PoisonError::into_inner)`), and 3 became
+      `expect`s. **Shipped code now holds 0 `unwrap()` and 9 `expect()`.** `cargo clippy --lib --
+      -W clippy::unwrap_used` in `src-tauri` is the count, and `[lints.clippy] unwrap_used` keeps
+      it at 0. Design:
+      [2026-10-17-t208g-unwrap-and-expect-in-shipped-code-design.md](../specs/2026-10-17-t208g-unwrap-and-expect-in-shipped-code-design.md).
 
 **M46** No file under `src/modules/` imports `invoke` except an `api.ts`. `DbTab.tsx`,
 `TableStructure.tsx` and `Dashboard.tsx` are each under 500 lines. `modules/mod.rs` registers one
