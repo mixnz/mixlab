@@ -101,7 +101,7 @@ sha2 = "0.10"
 minisign-verify = "0.2.5"
 # Reading the Windows payload, which is a zip — T187, spec D4. The version and features the root
 # workspace pins, so both trees read archives the same way.
-zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9.0.4", default-features = false, features = ["deflate-flate2"] }
 # T177a — the sync envelope. Pure Rust, no C and no second TLS stack: the promise that the server
 # cannot read a record is a property of this handful of crates and of `src/sync/crypto.rs`.
 argon2 = "0.5"

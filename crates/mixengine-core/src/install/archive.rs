@@ -160,7 +160,11 @@ fn unpack_zip<R: Read + std::io::Seek>(file: R, archive: &Path, into: &Path) -> 
         if refused {
             return Err(Error::Install(InstallError::UnsafeArchiveEntry {
                 archive: archive.to_path_buf(),
-                entry: entry.name().to_owned(),
+                // A name that will not decode is still named, as best its bytes allow.
+                entry: entry.name().map_or_else(
+                    |_| String::from_utf8_lossy(entry.name_raw()).into_owned(),
+                    std::borrow::Cow::into_owned,
+                ),
             }));
         }
     }

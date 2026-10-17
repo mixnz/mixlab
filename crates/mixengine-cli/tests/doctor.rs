@@ -397,7 +397,7 @@ fn unpacked(path: &str) -> Vec<(String, Vec<u8>)> {
     (0..archive.len())
         .map(|index| {
             let mut entry = archive.by_index(index).expect("an entry of this archive");
-            let name = entry.name().to_owned();
+            let name = entry.name().expect("an entry name").into_owned();
             let mut bytes = Vec::new();
             entry.read_to_end(&mut bytes).expect("an entry reads");
             (name, bytes)
