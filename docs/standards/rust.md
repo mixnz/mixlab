@@ -115,8 +115,11 @@ the signature.
   `foo/claim_tests.rs` beside `foo/tests.rs`, so no test changes its path (T207m). Tests that
   would not fit in one file of their own split by topic under that hub, `foo/tests/<topic>.rs`, at
   the boundaries they already have (T207f); an integration suite does the same as
-  `tests/<name>/main.rs` beside its topics. A file whose *code* is past the limit is split by
-  capability instead, and its tests go with what they test.
+  `tests/<name>/main.rs` beside its topics. A topic that outgrows the limit splits into siblings
+  under the same hub, and a suite moved into a directory names a shared module with
+  `#[path = "../<module>/mod.rs"]`. A topic sits one module below the file it came from, so an
+  explicit `super::` in its code becomes `super::super::` (T207o). A file whose *code* is past the
+  limit is split by capability instead, and its tests go with what they test.
 - Newtypes for identifiers (`SiteId`, `ServiceId`, `RuntimeKind`); no bare `String` IDs crossing a
   function boundary.
 - Public items in `core`, `proto`, `platform` carry doc comments explaining *why*, with `# Errors`

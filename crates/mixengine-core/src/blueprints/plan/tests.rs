@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 
 use crate::blueprints::manifest::{BlueprintService, BlueprintSite, Header, Php, Provenance};
 
+mod installed;
 mod names;
 mod resolving;
 mod scaffold;
@@ -223,4 +224,22 @@ async fn planned_for(
     )
     .await
     .expect("a plan")
+}
+
+/// A project registered at `root`, as the two resumption tests need one.
+async fn a_project(store: &Store, name: &str, root: &std::path::Path) -> i64 {
+    std::fs::create_dir_all(root).expect("a directory");
+
+    crate::projects::create(
+        store,
+        &crate::projects::Registration {
+            name: name.to_owned(),
+            root: root.to_path_buf(),
+            pins: BTreeMap::new(),
+        },
+        mixengine_proto::Timestamp::from_system_time(std::time::SystemTime::UNIX_EPOCH),
+    )
+    .await
+    .expect("a project")
+    .id
 }
