@@ -123,7 +123,8 @@ The 48 files T207n named, grouped by how they split and how a split is checked (
       `tests/index.rs`; daemon `elevation/tests.rs`, `tests/api.rs`, `tests/packages.rs` and
       `tests/runtimes/install.rs`; cli `tests/harness/frontend.rs`, `tests/mariadb.rs` and
       `tests/uninstall.rs`. Only tests move: the counts per binary stay the same, and the filters
-      in `.config/nextest.toml` are checked against the new paths.
+      in `.config/nextest.toml` are checked against the new paths. Design:
+      [2026-10-17-t207o-test-files-split-by-topic-design.md](../specs/2026-10-17-t207o-test-files-split-by-topic-design.md).
 - [ ] **T207p** Code past 1,000 in the root workspace, split by capability. Most are one large
       `impl`, split by what its methods do as T207d and T207i did: core `config.rs`,
       `generate.rs` (`impl Generator`, 869), `blueprints/plan.rs`, `index/packages.rs`
