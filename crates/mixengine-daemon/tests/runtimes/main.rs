@@ -26,6 +26,7 @@ use serde_json::{Value, json};
 
 mod install;
 mod listing;
+mod markers;
 mod upgrade;
 
 /// How long a job is given to finish before the test gives up on it.
