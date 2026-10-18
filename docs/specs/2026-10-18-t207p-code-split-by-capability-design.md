@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-18
 task: T207p
 ---
@@ -60,7 +60,7 @@ what stays in the parent.
 | `index/packages.rs` (1,178) | `packages/root.rs` | `cached_root`, `read_root`, `refresh_root` | 245 | ~700 |
 | | `packages/kinds.rs` | `read_kind`, `cached_kind`, `fetch_kind`, `fetching`, `fetch_kinds`, `fetch_each`, `store` | 230 | |
 | `services.rs` (1,280) | `services/write.rs` | `create`, `delete`, `set_idle`, `set_autostart`, `idle_minutes`, `set_limits` (366–734) | 370 | ~620 |
-| | `services/transition.rs` | `failure_note` through `transition_noting`, `started`, `ended` (970–1262) | 290 | |
+| | `services/transitions.rs` | `failure_note` through `transition_noting`, `started`, `ended` (970–1262) | 290 | |
 | `sites.rs` (1,402) | `sites/rows.rs` | the columns and payloads a kind and a route write, their inverses, the state word, and `write_domains`, `write_links`, `write_routes` (817–988, 1141–1260) | 290 | ~820 |
 | | `sites/sharing.rs` | the shared URL and mDNS name, `name_taken`, `web_port`, `read_sharing`, `set_sharing` (990–1139) | 150 | |
 | | `sites/checks.rs` | `pool_is_free_for`, `declared_services_exist`, `holder` (1262–1398) | 140 | |
@@ -69,7 +69,7 @@ what stays in the parent.
 
 | File | Moves to | What | Lines | Left |
 | --- | --- | --- | --- | --- |
-| `api/apply.rs` (1,294) | `apply/requirements.rs` | `resolve`, `install_targets`, `blueprint_needs`, `meet_requirements`, `installed_package` | 190 | ~780 |
+| `api/apply.rs` (1,294) | `apply/prerequisites.rs` | `resolve`, `install_targets`, `blueprint_needs`, `meet_requirements`, `installed_package` | 190 | ~780 |
 | | `apply/consent.rs` | `identity`, `questions`, `consent_refusal`, `refusal` | 225 | |
 | | `apply/dotenv.rs` | `write_dotenv` and its `impl Api`, `dotenv_refusal`, `dotenv_value` | 100 | |
 | `api/rpc.rs` (1,329) | `rpc/table.rs` | the routing table (D3) | 790 | ~540 |
@@ -81,10 +81,10 @@ what stays in the parent.
 | | `runtimes/uninstall.rs` | `uninstall` | 170 | |
 | `sites.rs` (1,403) | `sites/checked.rs` | what a request is checked and resolved against: `expect`, `checked`, `settled`, `resolved_pool`, `routes`, `repaired`, and the free route checks `natively` through `route_list_is_writable` | 400 | ~750 |
 | | `sites/lookup.rs` | `project`, `project_by_id`, `holder_of`, `editable`, the adopted-site steps, `linked`, `lookup`, `detail` | 255 | |
-| `uninstall.rs` (1,305) | `uninstall/settle.rs` | what a run leaves and how it is answered: `drop_helper_installations`, `aligned`, `forgotten`, `keep_credentials`, `needs_the_helper`, `remove_completed`, `settle` | 250 | ~815 |
+| `uninstall.rs` (1,305) | `uninstall/outcome.rs` | what a run leaves and how it is answered: `drop_helper_installations`, `aligned`, `forgotten`, `keep_credentials`, `needs_the_helper`, `remove_completed`, `settle` | 250 | ~815 |
 | | `uninstall/tests.rs` | the inline tests | 240 | |
 | `uninstall/inventory.rs` (1,218) | `inventory/machine.rs` | the machine's rows: `hosts_block`, `resolver_wiring`, `port_access`, `firewall_rules`, `certificate_rows`, `browser_row` | 330 | ~750 |
-| | `inventory/credentials.rs` | `credentials`, `credential_rows` | 140 | |
+| | `inventory/credential_store.rs` | `credentials`, `credential_rows` | 140 | |
 | `updates.rs` (1,255) | `updates/install.rs` | `complete_install`, `restore_after_update`, `start_again`, `release`, `installer_of` | 235 | ~810 |
 | | `updates/hand_over.rs` | `hand_over`, `fetch_package`, `installed_version`, `settle_handover`, `finishable` | 210 | |
 
@@ -95,7 +95,7 @@ what stays in the parent.
 | `process.rs` (1,250) | `process/adopted.rs` | `Adopted` and its `impl`, re-exported | 150 | ~900 |
 | | `process/table.rs` | what the OS says about a pid: `StartTime`, the start-time read, the parent table, `Usage` and its read, re-exported | 95 | |
 | | `process/tests.rs` | the inline tests | 106 | |
-| `windows/process.rs` (1,384) | `windows/process/group.rs` | the job object: `Group`, its `unsafe impl Send`/`Sync`, `group()`, its `impl` and its `impl Drop` | 540 | ~845 |
+| `windows/process.rs` (1,384) | `windows/process/job.rs` | the job object: `Group`, its `unsafe impl Send`/`Sync`, `group()`, its `impl` and its `impl Drop` | 540 | ~845 |
 | `windows/restricted.rs` (1,313) | `restricted/spawn.rs` | starting a child under a token: `spawn`, `spawn_raw`, `spawn_from`, `pipe`, `command_line`, `append`, `AttributeList` with its `impl Drop` | 455 | ~590 |
 | | `restricted/tests.rs` | the inline tests | 268 | |
 
@@ -106,8 +106,7 @@ them.
 
 | File | Moves to | What | Lines | Left |
 | --- | --- | --- | --- | --- |
-| `privileged.rs` (1,174) | `privileged/describe.rs` | `PrivilegedOp::describe` in an `impl` of its own, and the `describe_*` functions | 240 | ~845 |
-| | `privileged/response.rs` | `PrivilegedResponse` and `OpOutcome`, re-exported | 90 | |
+| `privileged.rs` (1,174) | `privileged/describe.rs` | `PrivilegedOp::describe` in an `impl` of its own, and the `describe_*` functions | 240 | ~920 |
 | `rpc.rs` (1,413) | `rpc/method.rs` | the inline `pub mod method { … }`, dedented under T207e's rule | 942 | ~470 |
 | `service.rs` (1,136) | `service/validate.rs` | `ServiceSpec::validate` in an `impl` of its own, and `check_program` | 265 | ~870 |
 
@@ -121,6 +120,14 @@ them.
 
 Afterwards the longest of these files is the daemon's `rpc/table.rs` at about 800. All 22 leave the
 baseline, and no new file enters it.
+
+**As built.** Five children have a different name from the first draft of this table. A child named
+after a function in its parent (`group`, `transition`, `settle`, `credentials`) makes a doc link to
+that function ambiguous, and `apply/requirements` would clash with the `crate::requirements` that
+`apply.rs` imports. They are `job`, `transitions`, `outcome`, `credential_store` and
+`prerequisites`. `PrivilegedResponse` and `OpOutcome` stay in `privileged.rs`: `ts-rs` names each
+type's export test after the module it is defined in, so moving them would give two tests new
+paths, against D1.4. `privileged.rs` is about 920 lines without that move.
 
 ## D3 — the routing table, the one change that is not a move
 
