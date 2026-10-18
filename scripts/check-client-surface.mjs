@@ -29,11 +29,11 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(fileURLToPath(import.meta.url), '..', '..');
-const RPC = 'crates/mixengine-proto/src/rpc.rs';
+const RPC = 'crates/mixengine-proto/src/rpc/method.rs';
 const WINDOW = 'apps/desktop/src-tauri/src';
 const EXCEPTIONS = 'apps/desktop/client-surface-exceptions.json';
 
-/** The method names in `rpc.rs`: every `&str` constant whose value has a dot in it. */
+/** The method names in `rpc/method.rs`: every `&str` constant whose value has a dot in it. */
 export function daemonMethods(source) {
   const names = [...source.matchAll(/pub const [A-Z0-9_]+: &str = "([a-z_]+\.[a-z_.]+)";/g)].map(
     ([, name]) => name,

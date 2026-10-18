@@ -1,3 +1,5 @@
+use mixengine_proto::{RouteTarget, SiteRoute};
+
 use super::*;
 
 /// T191 D3: a static route's root reaches the wire as this system spells a path.

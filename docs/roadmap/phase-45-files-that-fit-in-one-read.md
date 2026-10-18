@@ -125,7 +125,7 @@ The 48 files T207n named, grouped by how they split and how a split is checked (
       `tests/uninstall.rs`. Only tests move: the counts per binary stay the same, and the filters
       in `.config/nextest.toml` are checked against the new paths. Design:
       [2026-10-17-t207o-test-files-split-by-topic-design.md](../specs/2026-10-17-t207o-test-files-split-by-topic-design.md).
-- [ ] **T207p** Code past 1,000 in the root workspace, split by capability. Most are one large
+- [x] **T207p** Code past 1,000 in the root workspace, split by capability. Most are one large
       `impl`, split by what its methods do as T207d and T207i did: core `config.rs`,
       `generate.rs` (`impl Generator`, 869), `blueprints/plan.rs`, `index/packages.rs`
       (`impl PackageIndex`, 953), `services.rs` and `sites.rs`; daemon `api/apply.rs`,
@@ -136,7 +136,8 @@ The 48 files T207n named, grouped by how they split and how a split is checked (
       `service.rs`; cli `render/service.rs`. That is 22 files, with one commit per crate. The
       three proto files are in the privileged helper, so `helper-lock.sh --check` decides
       whether a bump is due. Platform's `process.rs` is checked on Linux through WSL and with
-      macOS clippy, as `before-pushing` says.
+      macOS clippy, as `before-pushing` says. Design:
+      [2026-10-18-t207p-code-split-by-capability-design.md](../specs/2026-10-18-t207p-code-split-by-capability-design.md).
 - [ ] **T207q** Outside the root workspace, ten files, each checked by its own project. The
       desktop's Rust: `db/drivers/{clickhouse,mssql,postgres}.rs` move `table_data` and
       `build_where` into the engine's folder, and `sync/session.rs` splits `impl SyncState`
