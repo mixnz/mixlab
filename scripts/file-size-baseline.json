@@ -10,15 +10,6 @@
     "apps/desktop/src/modules/db/i18n/vi.ts": 1131,
     "apps/desktop/src/shell/App.css": 1294,
     "crates/mixengine-cli/src/render/service.rs": 1250,
-    "crates/mixengine-daemon/src/api/apply.rs": 1293,
-    "crates/mixengine-daemon/src/api/rpc.rs": 1328,
-    "crates/mixengine-daemon/src/elevation.rs": 1478,
-    "crates/mixengine-daemon/src/extensions.rs": 1166,
-    "crates/mixengine-daemon/src/runtimes.rs": 1371,
-    "crates/mixengine-daemon/src/sites.rs": 1402,
-    "crates/mixengine-daemon/src/uninstall.rs": 1304,
-    "crates/mixengine-daemon/src/uninstall/inventory.rs": 1217,
-    "crates/mixengine-daemon/src/updates.rs": 1254,
     "server/native/src/accounts.rs": 1013,
     "server/worker/src/account.ts": 1083
   }
