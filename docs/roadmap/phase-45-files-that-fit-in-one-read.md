@@ -136,7 +136,8 @@ The 48 files T207n named, grouped by how they split and how a split is checked (
       `service.rs`; cli `render/service.rs`. That is 22 files, with one commit per crate. The
       three proto files are in the privileged helper, so `helper-lock.sh --check` decides
       whether a bump is due. Platform's `process.rs` is checked on Linux through WSL and with
-      macOS clippy, as `before-pushing` says.
+      macOS clippy, as `before-pushing` says. Design:
+      [2026-10-18-t207p-code-split-by-capability-design.md](../specs/2026-10-18-t207p-code-split-by-capability-design.md).
 - [ ] **T207q** Outside the root workspace, ten files, each checked by its own project. The
       desktop's Rust: `db/drivers/{clickhouse,mssql,postgres}.rs` move `table_data` and
       `build_where` into the engine's folder, and `sync/session.rs` splits `impl SyncState`
