@@ -1,6 +1,9 @@
 //! What the home already holds: packages, the project this apply made, pins and the answers to them.
 
+use mixengine_proto::{AnswerSubject, MismatchAnswer};
+
 use super::*;
+use crate::sites;
 
 /// **D8.** A machine with no MariaDB at all is the ordinary case for the feature's headline
 /// scenario — a blueprint from somebody else's machine — and the plan says so before anything is

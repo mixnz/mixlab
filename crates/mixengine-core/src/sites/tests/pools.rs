@@ -1,5 +1,7 @@
 //! Routes, pools, the services a project needs and the links a site makes.
 
+use mixengine_proto::RouteTarget;
+
 use super::*;
 
 /// **Routes round-trip, replace as a whole, and go when the site does** — roadmap task

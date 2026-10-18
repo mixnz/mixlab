@@ -2,6 +2,7 @@
 //! extensions, sites and the versions it pins.
 
 use super::*;
+use crate::sites;
 
 /// **A plan names the project the way it will be registered** — roadmap task **T128**.
 ///
