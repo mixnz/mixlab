@@ -9,6 +9,7 @@ use crate::generate::recipe::FrontEndAddition;
 use crate::generate::served::Shared;
 use crate::generate::settings::Settings;
 
+mod listening;
 mod server;
 mod sites;
 
@@ -66,4 +67,54 @@ fn context_on(overrides: &str, port: Option<u16>) -> Context {
         .expect("a package publishing what a generated configuration includes");
 
     context.with_endpoints(endpoints)
+}
+
+/// A document root on whichever system this is compiled for.
+fn doc_root() -> PathBuf {
+    if cfg!(windows) {
+        PathBuf::from(r"C:\src\blog\public")
+    } else {
+        PathBuf::from("/src/blog/public")
+    }
+}
+
+/// A php-fpm site at `blog.test`, on the static fixture's domain and certificate.
+fn a_php_site() -> Served {
+    Served {
+        kind: ServedKind::PhpFpm {
+            upstream: Upstream::Tcp("127.0.0.1:9000".parse().expect("an address")),
+            activator: None,
+        },
+        ..a_static_site()
+    }
+}
+
+/// A static site at `blog.test` with a certificate, so both shapes of the template are
+/// reachable from one fixture.
+fn a_static_site() -> Served {
+    Served {
+        shared: None,
+        domains: vec!["blog.test".to_owned()],
+        routes: Vec::new(),
+        doc_root: doc_root(),
+        doc_root_relative: "public".to_owned(),
+        kind: ServedKind::Static,
+        https: true,
+        https_redirect: false,
+        certificate: Some(crate::generate::served::SiteCertificate {
+            certificate: std::path::PathBuf::from("/certs/blog.test.crt"),
+            key: std::path::PathBuf::from("/certs/blog.test.key"),
+            fingerprint: "ab".repeat(32),
+        }),
+        steps: Vec::new(),
+    }
+}
+
+/// One site through the real recipe.
+fn render_site(site: &Served) -> String {
+    Nginx
+        .sites(&context("{}"), std::slice::from_ref(site))
+        .expect("one site file")[0]
+        .contents()
+        .to_owned()
 }

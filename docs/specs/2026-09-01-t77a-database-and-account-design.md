@@ -152,7 +152,7 @@ to the new database** and creates and drops a table in it — a real table in `p
 which is also the only thing that proves D6's ownership, and a temporary one would not.
 
 The reason this is a step rather than an assertion in a test is
-[`tests/mariadb.rs`](../../crates/mixengine-cli/tests/mariadb.rs)'s own finding: on macOS a
+[`tests/mariadb.rs`](../../crates/mixengine-cli/tests/mariadb/main.rs)'s own finding: on macOS a
 keychain item carries an ACL naming the application that created it, so a **test process** reading
 the daemon's credential raises a dialog nobody can answer — measured once at twenty-seven minutes
 before the job timed out. The daemon already holds the password, so the proof costs it one local
@@ -250,7 +250,7 @@ keyring holds, so the three branches are a table test with no process and no dat
 adopted-and-realigned, refused. The rule the whole task rests on is provable in milliseconds.
 
 **Against real servers, and reading no credential.** Extending
-[`tests/mariadb.rs`](../../crates/mixengine-cli/tests/mariadb.rs),
+[`tests/mariadb.rs`](../../crates/mixengine-cli/tests/mariadb/main.rs),
 [`tests/mysql.rs`](../../crates/mixengine-cli/tests/mysql.rs) and
 [`tests/postgres.rs`](../../crates/mixengine-cli/tests/postgres.rs), which already install and
 start a server: `mix database create` succeeds — which by D13 *is* the assertion that the credential

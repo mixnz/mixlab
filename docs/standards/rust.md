@@ -115,8 +115,11 @@ the signature.
   `foo/claim_tests.rs` beside `foo/tests.rs`, so no test changes its path (T207m). Tests that
   would not fit in one file of their own split by topic under that hub, `foo/tests/<topic>.rs`, at
   the boundaries they already have (T207f); an integration suite does the same as
-  `tests/<name>/main.rs` beside its topics. A file whose *code* is past the limit is split by
-  capability instead, and its tests go with what they test.
+  `tests/<name>/main.rs` beside its topics. A topic that outgrows the limit splits into siblings
+  under the same hub, and a suite moved into a directory names a shared module with
+  `#[path = "../<module>/mod.rs"]`. A topic sits one module below the file it came from, so an
+  explicit `super::` in its code becomes `super::super::` (T207o). A file whose *code* is past the
+  limit is split by capability instead, and its tests go with what they test.
 - Newtypes for identifiers (`SiteId`, `ServiceId`, `RuntimeKind`); no bare `String` IDs crossing a
   function boundary.
 - Public items in `core`, `proto`, `platform` carry doc comments explaining *why*, with `# Errors`
@@ -152,8 +155,8 @@ It fails the build too, and not only review:
 [workspace_layering.rs](../../crates/mixengine-proto/tests/workspace_layering.rs) scans the `src/` of
 every crate but `platform`, `elevate` and `testkit`. The two files that legitimately hold one are
 listed there with their reason, and a listed file has to keep the attribute inside its test module,
-or be a `tests.rs` its parent declares under `#[cfg(test)]` — so a permission cannot quietly widen
-into the product.
+or be a `tests.rs` its parent declares under `#[cfg(test)]`, or a topic such a `tests.rs` declares —
+so a permission cannot quietly widen into the product.
 
 **`cfg!` is a different thing and is deliberately allowed.** A `cfg!(windows)` is a *value*: both
 arms compile on every OS, type-check on every OS, and are reachable from a test on every OS, which

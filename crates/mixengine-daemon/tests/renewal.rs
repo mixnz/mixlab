@@ -20,6 +20,9 @@ use mixengine_platform::ipc::Connection;
 use mixengine_testkit::Home;
 use serde_json::{Value, json};
 
+/// What the renewal loop says once it has replaced a certificate and handed it to the generator.
+const RENEWED: &str = "renewed certificates and told the front end";
+
 struct Daemon(Child);
 
 impl Daemon {
@@ -117,7 +120,8 @@ fn certs_of(home: &Home) -> std::path::PathBuf {
     .to_path_buf()
 }
 
-/// Leave this site holding a certificate with twenty days on it, and answer with its bytes.
+/// Leave this site holding a certificate with twenty days on it, and answer with its bytes and how
+/// long the daemon's log was once they were on disk.
 ///
 /// **The pair is removed before it is written**, which is not tidiness. `leaf::ensure` asks whether
 /// what is already there is reusable *as of the `now` it is given*, and a certificate issued today
@@ -126,8 +130,14 @@ fn certs_of(home: &Home) -> std::path::PathBuf {
 ///
 /// **And it retries**, because the loop under test is running the whole time this happens: it can
 /// issue a fresh certificate between the removal and the write, which is the state being arranged
-/// rather than a failure. In practice it does not, and one attempt is what this costs.
-fn backdate(certs: &Path, certificate: &Path, key: &Path) -> Vec<u8> {
+/// rather than a failure.
+///
+/// **That same pass says it renewed**, which is why the length of the log is part of the answer. A
+/// renewal line written before it is about a certificate this test removed, and only one written
+/// after it can be about the one this test arranged. Taking it after the write rather than before
+/// the removal is what leaves those earlier passes out: on a loaded machine one landed in the
+/// window in about one run of five.
+fn backdate(home: &Home, certs: &Path, certificate: &Path, key: &Path) -> (Vec<u8>, usize) {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
 
     loop {
@@ -151,7 +161,7 @@ fn backdate(certs: &Path, certificate: &Path, key: &Path) -> Vec<u8> {
             mixengine_proto::CertState::Present { cert }
                 if cert.days_left <= mixengine_core::certs::leaf::RENEW_WITHIN_DAYS
         ) {
-            return written;
+            return (written, home.daemon_log().len());
         }
 
         assert!(
@@ -205,16 +215,48 @@ async fn a_running_daemon_renews_a_certificate_that_is_running_out() {
     let key = mixengine_core::certs::leaf::key_path(&certs, "blog.test");
     assert!(certificate.exists(), "the site was issued no certificate");
 
-    let backdated = backdate(&certs, &certificate, &key);
+    // **The state the race leaves, made certain.** `backdate` removes the pair before it writes, and
+    // a pass of the loop that lands in between finds the certificate missing, issues one and says
+    // it renewed — before the certificate this test waits on exists. Under a loaded machine that
+    // was 69 runs in 320; here it is every run, so the wait below is proved against it each time.
+    std::fs::remove_file(&certificate).expect("the certificate is removed");
+    std::fs::remove_file(&key).expect("the key is removed");
+    home.wait_until_daemon_log_says(RENEWED).await;
 
-    home.wait_until_daemon_log_says("renewed certificates and told the front end")
-        .await;
+    let (backdated, mark) = backdate(&home, &certs, &certificate, &key);
 
-    let renewed = std::fs::read(&certificate).expect("the renewed certificate is readable");
-    assert_ne!(
-        renewed, backdated,
-        "the daemon said it renewed and the certificate on disk is still the old one"
-    );
+    // **Both halves, waited for together.** A certificate on disk that is not the backdated one says
+    // a renewal ran after it was written; a renewal line after `mark` says one was handed to the
+    // generator after that. Either alone is satisfied by the pass the lines above arranged.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    loop {
+        let on_disk = std::fs::read(&certificate).ok();
+        let log = home.daemon_log();
+        let replaced = on_disk.as_ref().is_some_and(|bytes| *bytes != backdated);
+        let told = said_after(&log, mark, RENEWED);
+
+        if replaced && told {
+            return;
+        }
+
+        assert!(
+            std::time::Instant::now() < deadline,
+            "waited 30s for a renewal of the backdated certificate: replaced on disk {replaced}, \
+             {RENEWED:?} after byte {mark} of the log {told}\n--- daemon.log ---\n{log}"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+}
+
+/// Whether `log` says `wanted` anywhere from byte `mark` on.
+///
+/// Bytes rather than a `&str` slice, because `mark` is the length of a log the daemon was still
+/// writing, which can fall inside a character.
+fn said_after(log: &str, mark: usize, wanted: &str) -> bool {
+    log.as_bytes().get(mark..).is_some_and(|tail| {
+        tail.windows(wanted.len())
+            .any(|window| window == wanted.as_bytes())
+    })
 }
 
 /// **The half of T52 that already worked and had no test behind it.**

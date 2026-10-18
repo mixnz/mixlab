@@ -115,7 +115,7 @@ Since T207j the size baseline is empty: no source file in the repository is over
 The 48 files T207n named, grouped by how they split and how a split is checked (measured on
 `d612d5d2`). Each task ends with `--shrink`, and after T207q the baseline is empty again.
 
-- [ ] **T207o** Test files past 1,000 split by topic, under T207f's convention: a unit-test hub
+- [x] **T207o** Test files past 1,000 split by topic, under T207f's convention: a unit-test hub
       becomes `foo/tests/<topic>.rs`, and an integration suite becomes `tests/<name>/main.rs`
       beside its topics, still one binary. Sixteen files: core `blueprints/plan/tests/resolving.rs`,
       `generate/recipes/caddy/tests.rs` (1,425), `nginx/tests/sites.rs`, `postgres/tests.rs`,
@@ -123,7 +123,8 @@ The 48 files T207n named, grouped by how they split and how a split is checked (
       `tests/index.rs`; daemon `elevation/tests.rs`, `tests/api.rs`, `tests/packages.rs` and
       `tests/runtimes/install.rs`; cli `tests/harness/frontend.rs`, `tests/mariadb.rs` and
       `tests/uninstall.rs`. Only tests move: the counts per binary stay the same, and the filters
-      in `.config/nextest.toml` are checked against the new paths.
+      in `.config/nextest.toml` are checked against the new paths. Design:
+      [2026-10-17-t207o-test-files-split-by-topic-design.md](../specs/2026-10-17-t207o-test-files-split-by-topic-design.md).
 - [ ] **T207p** Code past 1,000 in the root workspace, split by capability. Most are one large
       `impl`, split by what its methods do as T207d and T207i did: core `config.rs`,
       `generate.rs` (`impl Generator`, 869), `blueprints/plan.rs`, `index/packages.rs`
