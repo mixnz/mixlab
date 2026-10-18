@@ -28,9 +28,6 @@
     "crates/mixengine-platform/src/process.rs": 1249,
     "crates/mixengine-platform/src/windows/process.rs": 1383,
     "crates/mixengine-platform/src/windows/restricted.rs": 1312,
-    "crates/mixengine-proto/src/privileged.rs": 1173,
-    "crates/mixengine-proto/src/rpc.rs": 1412,
-    "crates/mixengine-proto/src/service.rs": 1135,
     "server/native/src/accounts.rs": 1013,
     "server/worker/src/account.ts": 1083
   }
