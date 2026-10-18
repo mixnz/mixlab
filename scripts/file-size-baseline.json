@@ -25,9 +25,6 @@
     "crates/mixengine-daemon/src/uninstall.rs": 1304,
     "crates/mixengine-daemon/src/uninstall/inventory.rs": 1217,
     "crates/mixengine-daemon/src/updates.rs": 1254,
-    "crates/mixengine-platform/src/process.rs": 1249,
-    "crates/mixengine-platform/src/windows/process.rs": 1383,
-    "crates/mixengine-platform/src/windows/restricted.rs": 1312,
     "server/native/src/accounts.rs": 1013,
     "server/worker/src/account.ts": 1083
   }
