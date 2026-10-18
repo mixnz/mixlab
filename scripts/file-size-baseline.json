@@ -9,7 +9,6 @@
     "apps/desktop/src/modules/db/i18n/en.ts": 1156,
     "apps/desktop/src/modules/db/i18n/vi.ts": 1131,
     "apps/desktop/src/shell/App.css": 1294,
-    "crates/mixengine-cli/src/render/service.rs": 1250,
     "server/native/src/accounts.rs": 1013,
     "server/worker/src/account.ts": 1083
   }
