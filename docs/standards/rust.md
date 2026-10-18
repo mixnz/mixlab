@@ -155,8 +155,8 @@ It fails the build too, and not only review:
 [workspace_layering.rs](../../crates/mixengine-proto/tests/workspace_layering.rs) scans the `src/` of
 every crate but `platform`, `elevate` and `testkit`. The two files that legitimately hold one are
 listed there with their reason, and a listed file has to keep the attribute inside its test module,
-or be a `tests.rs` its parent declares under `#[cfg(test)]` — so a permission cannot quietly widen
-into the product.
+or be a `tests.rs` its parent declares under `#[cfg(test)]`, or a topic such a `tests.rs` declares —
+so a permission cannot quietly widen into the product.
 
 **`cfg!` is a different thing and is deliberately allowed.** A `cfg!(windows)` is a *value*: both
 arms compile on every OS, type-check on every OS, and are reachable from a test on every OS, which

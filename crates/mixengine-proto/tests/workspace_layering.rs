@@ -171,9 +171,13 @@ const NO_OS_CFG: &[&str] = &[
 /// `foo.rs` declares as `#[cfg(test)]` directly above `mod tests;`, and the check asserts that pair
 /// in `foo.rs` instead of a line inside the file. `foo.rs` itself is not permitted anything, so an OS
 /// `cfg` there is an offence like any other.
+///
+/// **So is a topic `foo/tests/<topic>.rs` under that hub** (T207f, T207o): the hub `foo/tests.rs`
+/// declares it with `mod <topic>;`, and `foo.rs` declares the hub as above. The hub is not permitted
+/// anything by this — only the topic named here is.
 const PERMITTED: &[(&str, &str)] = &[
     (
-        "mixengine-core/src/generate/recipes/postgres/tests.rs",
+        "mixengine-core/src/generate/recipes/postgres/tests/server.rs",
         "the tests for the two shapes of `pg_ctl` invocation, which differ by OS",
     ),
     (
@@ -253,23 +257,33 @@ fn no_crate_but_platform_compiles_a_line_away_by_operating_system() {
                 continue;
             };
 
-            if relative.ends_with("/tests.rs") {
-                let parent = file
-                    .parent()
-                    .expect("a tests.rs sits in its module's directory")
-                    .with_extension("rs");
-                let declared = std::fs::read_to_string(&parent).unwrap_or_default();
-                let declared: Vec<&str> = declared.lines().collect();
+            // A topic under a test hub: the hub names it, and the hub is a `tests.rs` like below.
+            let hub = file
+                .parent()
+                .filter(|dir| dir.file_name().is_some_and(|name| name == "tests"))
+                .map(|dir| dir.with_extension("rs"));
+            if let Some(hub) = hub {
+                let topic = file
+                    .file_stem()
+                    .expect("a topic file has a name")
+                    .to_string_lossy();
+                let named = std::fs::read_to_string(&hub).unwrap_or_default();
 
                 assert!(
-                    declared
-                        .windows(2)
-                        .any(|pair| pair[0].trim() == "#[cfg(test)]"
-                            && pair[1].trim() == "mod tests;"),
-                    "{relative} is permitted an OS cfg for {why} as a test module, but {} does not \
-                     declare it with `#[cfg(test)]` directly above `mod tests;`",
-                    parent.display()
+                    named
+                        .lines()
+                        .any(|line| line.trim() == format!("mod {topic};")),
+                    "{relative} is permitted an OS cfg for {why} as a test topic, but {} does not \
+                     declare it with `mod {topic};`",
+                    hub.display()
                 );
+                assert_declares_tests(&hub, &relative, why);
+
+                continue;
+            }
+
+            if relative.ends_with("/tests.rs") {
+                assert_declares_tests(&file, &relative, why);
 
                 continue;
             }
@@ -307,6 +321,26 @@ fn no_crate_but_platform_compiles_a_line_away_by_operating_system() {
         "these compile a line away by operating system, which belongs in mixengine-platform behind \
          a trait — or, if both arms must exist everywhere, in a `cfg!` value:\n  {}",
         offences.join("\n  ")
+    );
+}
+
+/// Assert that the file beside `tests` — `foo.rs` for `foo/tests.rs` — declares it with
+/// `#[cfg(test)]` directly above `mod tests;`, which is what makes all of `tests` test code.
+fn assert_declares_tests(tests: &std::path::Path, relative: &str, why: &str) {
+    let parent = tests
+        .parent()
+        .expect("a tests.rs sits in its module's directory")
+        .with_extension("rs");
+    let declared = std::fs::read_to_string(&parent).unwrap_or_default();
+    let declared: Vec<&str> = declared.lines().collect();
+
+    assert!(
+        declared
+            .windows(2)
+            .any(|pair| pair[0].trim() == "#[cfg(test)]" && pair[1].trim() == "mod tests;"),
+        "{relative} is permitted an OS cfg for {why} as a test module, but {} does not declare \
+         its tests with `#[cfg(test)]` directly above `mod tests;`",
+        parent.display()
     );
 }
 
