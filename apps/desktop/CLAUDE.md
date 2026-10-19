@@ -87,7 +87,7 @@ src/                 React frontend
     sqlite/          The only one with no server behind it
     mongo/ redis/    The two with a workspace of their own: <Kind>Workspace.tsx, api.ts, and components/ only they draw
     components/      This module's components every engine shares
-    i18n/            This module's own strings
+    i18n/            This module's own strings; sql/ and nosql/ hold the workspaces' groups
     db.css  types.ts Its global styles; the types mirroring the Rust models
     connectionForm.css  workspaces.css  The rest of them: the connection form, and the three workspaces
     tabState.ts      What a tab remembers, as in every module
