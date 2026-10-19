@@ -124,6 +124,10 @@ from somebody else's manifest, and write the reason as the edge, not as "upstrea
   that is left reads top to bottom. A flat table with one arm per method or per error is not such
   a function. `api/rpc/table.rs` and `error.rs`'s `to_wire` are long, but nothing in them depends
   on an earlier arm, and they stay tables. The seven walks that predate this rule are T209.
+- **A list of steps that always all run, where no step reads another's result, needs no state
+  `enum`.** A daemon start's repairs are the example. Each step is a named function that logs its
+  own failure, and the list is the calls in order. See
+  [the T209 design](../specs/2026-10-20-t209-the-daemons-walks-as-named-steps-design.md), D2.
 
 ### Comments
 

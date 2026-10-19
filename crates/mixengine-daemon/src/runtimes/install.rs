@@ -313,28 +313,23 @@ impl Runtimes {
     }
 
     /// What every newly recorded runtime needs: for a JDK this home's authority, a pool and its
-    /// activation port, and its `conf.d`. Shared by an install, an adopt and the start walk — roadmap
-    /// task **T182f**.
+    /// activation port, and its `conf.d`. Shared by an install, an adopt and the start walk.
     ///
     /// # Errors
     ///
     /// Only when the summary cannot be encoded: everything else here is reported and left for the
     /// next daemon start, on the reasoning each step gives.
+    #[warn(clippy::cognitive_complexity)]
     pub(crate) async fn after_recorded(
         &self,
         kind: RuntimeKind,
         version: &PackageVersion,
         summary: RuntimeSummary,
     ) -> Result<serde_json::Value, Error> {
-        // **After the row and never before it**, because the pool points at that row: this is the
-        // post-install hook `docs/features/runtime-versions.md` describes, and it is the same
-        // idempotent call the daemon makes at boot. A failure here is reported and does not undo the
-        // install — a PHP with no pool is a PHP the next boot gives one to, where an install rolled
-        // back for it would be eighty megabytes thrown away over a row.
-        // **A JDK verifies this home's own sites from its first run** — roadmap task T27e, D9.
-        // After the row for the pool hook's reason below, and because what this walks is rows; it
-        // never undoes the install, on that hook's rule — a JDK that cannot verify a local site is
-        // more use than a hundred and forty megabytes thrown away over a certificate store.
+        // **A JDK verifies this home's own sites from its first run.** After the row for the pool
+        // hook's reason below, and because what this walks is rows; it never undoes the install, on
+        // that hook's rule — a JDK that cannot verify a local site is more use than a hundred and
+        // forty megabytes thrown away over a certificate store.
         if kind == RuntimeKind::Java {
             crate::certs::jdks::hold(&self.store, self.paths.certs())
                 .await
@@ -343,9 +338,14 @@ impl Runtimes {
 
         let occasion = Occasion::Install { kind, version };
 
+        // **After the row and never before it**, because the pool points at that row: this is the
+        // post-install hook `docs/features/runtime-versions.md` describes, and it is the same
+        // idempotent call the daemon makes at boot. A failure here is reported and does not undo the
+        // install — a PHP with no pool is a PHP the next boot gives one to, where an install rolled
+        // back for it would be eighty megabytes thrown away over a row.
         give_runtimes_their_pools(&self.store, occasion).await;
 
-        // **And the address that lets a request start that pool again** — roadmap task **T72a**.
+        // **And the address that lets a request start that pool again.**
         //
         // The same two idempotent repairs the daemon makes at boot, in the same order, because a
         // pool that has just been created has neither: `activation::ensure` gives it the port a
@@ -354,9 +354,8 @@ impl Runtimes {
         // pool that idle-stops leaves its site answering 502, which is a failure a user would have
         // to guess a restart out of.
         //
-        // **Found by measurement rather than by reading**: this hole was T70's, and it stayed
-        // invisible until T72a's cold path put a real request through a pool the sweeper had
-        // stopped.
+        // **Found by measurement rather than by reading**: this hole stayed invisible until a real
+        // request went through a pool the sweeper had stopped.
         //
         // Reported and not fatal, on the pool hook's reasoning above.
         give_activation_ports(&self.store, occasion).await;
@@ -368,10 +367,23 @@ impl Runtimes {
         )
         .await;
 
-        // The ini set this build can load, rendered before anything runs out of it — reported rather
-        // than fatal, on the pool hook's reasoning above: a PHP with no `conf.d` is one the next
-        // daemon start gives one to, where an install rolled back for it would be eighty megabytes
-        // thrown away over a file.
+        self.render_conf_d(kind, version).await;
+        self.refresh_bin().await;
+
+        serde_json::to_value(&summary).map_err(|error| {
+            Error::new(
+                ErrorCode::Internal,
+                format!("what the install produced could not be encoded: {error}"),
+            )
+        })
+    }
+
+    /// The ini set this build can load, rendered before anything runs out of it — reported rather
+    /// than fatal, on the pool hook's reasoning: a PHP with no `conf.d` is one the next daemon start
+    /// gives one to, where an install rolled back for it would be eighty megabytes thrown away over
+    /// a file.
+    #[warn(clippy::cognitive_complexity)]
+    async fn render_conf_d(&self, kind: RuntimeKind, version: &PackageVersion) {
         match mixengine_core::runtimes::extensions::state(&self.store, kind, version).await {
             Ok(state) => {
                 if let Err(error) =
@@ -388,14 +400,5 @@ impl Runtimes {
                 "this runtime was installed but its extensions could not be read back"
             ),
         }
-
-        self.refresh_bin().await;
-
-        serde_json::to_value(&summary).map_err(|error| {
-            Error::new(
-                ErrorCode::Internal,
-                format!("what the install produced could not be encoded: {error}"),
-            )
-        })
     }
 }
