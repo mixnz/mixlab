@@ -138,10 +138,14 @@ The 48 files T207n named, grouped by how they split and how a split is checked (
       whether a bump is due. Platform's `process.rs` is checked on Linux through WSL and with
       macOS clippy, as `before-pushing` says. Design:
       [2026-10-18-t207p-code-split-by-capability-design.md](../specs/2026-10-18-t207p-code-split-by-capability-design.md).
-- [ ] **T207q** Outside the root workspace, ten files, each checked by its own project. The
+- [x] **T207q** Outside the root workspace, ten files, each checked by its own project. The
       desktop's Rust: `db/drivers/{clickhouse,mssql,postgres}.rs` move `table_data` and
       `build_where` into the engine's folder, and `sync/session.rs` splits `impl SyncState`
       (1,082). The desktop's frontend: `db/db.css` and `shell/App.css` split by the component
       they style, verified with `npm run screenshots -- --check`, and `db/i18n/en.ts` and
       `vi.ts` split by screen with the same keys in both. The server: `native/src/accounts.rs`
-      and `worker/src/account.ts` (1,083), verified by `server/conformance`.
+      and `worker/src/account.ts` (1,083), verified by `server/conformance`. Design:
+      [2026-10-18-t207q-files-outside-the-root-workspace-design.md](../specs/2026-10-18-t207q-files-outside-the-root-workspace-design.md).
+
+Since T207q the size baseline is empty again: no source file in the repository is over 1,000
+lines, and `node scripts/check-file-sizes.mjs` holds every file to the limit itself.

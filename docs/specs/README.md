@@ -229,3 +229,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-17 | [Test files past 1,000 lines, split by topic at the boundaries they already have (design)](2026-10-17-t207o-test-files-split-by-topic-design.md) | T207o | implemented |
 | 2026-10-17 | [`unwrap()` and `expect()` in the code MixLab ships (design)](2026-10-17-t208g-unwrap-and-expect-in-shipped-code-design.md) | T208g | implemented |
 | 2026-10-18 | [Code past 1,000 lines in the root workspace, split by capability (design)](2026-10-18-t207p-code-split-by-capability-design.md) | T207p | implemented |
+| 2026-10-18 | [The ten files outside the root workspace, split (design)](2026-10-18-t207q-files-outside-the-root-workspace-design.md) | T207q | implemented |

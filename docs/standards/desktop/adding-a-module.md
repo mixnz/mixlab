@@ -66,7 +66,7 @@ contract is as small as it is.
 
 5. **Global CSS**, if any, in `src/modules/<id>/<id>.css`, imported from the tab component.
    Component-scoped rules go in each component's CSS Module instead. Order between stylesheets is
-   decided by Vite from the import graph — a rule that must beat one in `shell/App.css` wins on
+   decided by Vite from the import graph — a rule that must beat one in `shell/chrome.css` wins on
    specificity, not on order.
 
 6. **A Settings pane**, if the module needs one, through `ModuleDefinition.settings`. The shell's

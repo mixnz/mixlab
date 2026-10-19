@@ -1,15 +1,4 @@
 {
   "limit": 1000,
-  "files": {
-    "apps/desktop/src-tauri/src/modules/db/drivers/clickhouse.rs": 1053,
-    "apps/desktop/src-tauri/src/modules/db/drivers/mssql.rs": 1144,
-    "apps/desktop/src-tauri/src/modules/db/drivers/postgres.rs": 1152,
-    "apps/desktop/src-tauri/src/sync/session.rs": 1322,
-    "apps/desktop/src/modules/db/db.css": 1128,
-    "apps/desktop/src/modules/db/i18n/en.ts": 1156,
-    "apps/desktop/src/modules/db/i18n/vi.ts": 1131,
-    "apps/desktop/src/shell/App.css": 1294,
-    "server/native/src/accounts.rs": 1013,
-    "server/worker/src/account.ts": 1083
-  }
+  "files": {}
 }

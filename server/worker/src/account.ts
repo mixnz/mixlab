@@ -14,6 +14,7 @@
 //
 // **Nothing in here parses a ciphertext.**
 
+import { batch, readHeads, readRecords, writeRecord } from "./accountRecords";
 import { readConfig, type Config, type Env } from "./config";
 import {
   SALT_BYTES,
@@ -32,14 +33,6 @@ import {
 import { senderFor, type LetterKind } from "./email";
 import { askBucket, type Allowance } from "./ratelimit";
 import { fail, json, notFound } from "./http";
-import {
-  applyDelete,
-  applyPut,
-  listSince,
-  staleSince,
-  type Outcome,
-  type Precondition,
-} from "./records";
 import { SCHEMA, type AccountRow, type DeviceRow, type TokenRow } from "./schema";
 import {
   asObject,
@@ -64,33 +57,10 @@ const secretOf = (token: string): string => token.split(".").at(-1) ?? "";
 /** Wrong, expired and already-used answer alike: the sentence a person needs is the same. */
 const badCode = (): Response => fail(400, "invalid-code", "That code is invalid or has expired.");
 
-/** `If-Match: "41"` and `If-None-Match: *`, which are how a write states what it believes. */
-function readPrecondition(headers: Headers): Precondition {
-  const ifMatch = headers.get("If-Match");
-  const parsed = ifMatch === null ? Number.NaN : Number(ifMatch.replace(/"/g, ""));
-  return {
-    ifMatch: Number.isSafeInteger(parsed) ? parsed : undefined,
-    ifNoneMatch: headers.get("If-None-Match") === "*",
-  };
-}
-
-/**
- * A record answer, successful or not. On a 409 or a 412 the current record travels **beside** the
- * error rather than instead of it: the client is the one that resolves a conflict (D4), so it
- * needs the other side of it in the same answer it was refused by.
- */
-function outcome(result: Outcome): Response {
-  const body = {
-    ...(result.record ?? {}),
-    ...(result.error ? { error: result.error } : {}),
-  };
-  const headers =
-    result.record && !result.error ? { ETag: `"${result.record.version}"` } : undefined;
-  return json(result.status, body, headers);
-}
-
 export class Account implements DurableObject {
-  private readonly sql: SqlStorage;
+  // Not private, nor are `frozen`, `account` and `scheduleReaping`: the record routes in
+  // `accountRecords.ts` are functions of this object, and use them.
+  readonly sql: SqlStorage;
 
   constructor(
     private readonly state: DurableObjectState,
@@ -147,11 +117,11 @@ export class Account implements DurableObject {
       case "POST /v1/account/check":
         return this.checkVerifier(config, request, body);
       case "GET /v1/records":
-        return this.readRecords(config, request, url);
+        return readRecords(this, config, request, url);
       case "POST /v1/records/batch":
-        return this.batch(config, request, body);
+        return batch(this, config, request, body);
       case "POST /v1/records/heads":
-        return this.readHeads(config, request, body);
+        return readHeads(this, config, request, body);
       case "GET /__test__/outbox":
         return this.readOutbox(config);
       default:
@@ -166,7 +136,7 @@ export class Account implements DurableObject {
       (request.method === "PUT" || request.method === "DELETE") &&
       url.pathname.startsWith("/v1/records/")
     ) {
-      return this.writeRecord(config, request, url, body);
+      return writeRecord(this, config, request, url, body);
     }
 
     return notFound();
@@ -192,7 +162,7 @@ export class Account implements DurableObject {
    * machine doing the copying needs them, and so does a second machine deciding whether to take
    * the copy over.
    */
-  private frozen(): Response | null {
+  frozen(): Response | null {
     if (this.freeze().state !== "frozen") return null;
     return fail(423, "account-frozen", "This account is being moved to another server and can't be changed right now.");
   }
@@ -292,137 +262,6 @@ export class Account implements DurableObject {
     this.wipe();
     await this.state.storage.deleteAlarm();
     return json(200, { recordsDeleted: Number(counted?.total ?? 0) });
-  }
-
-  // --- records ------------------------------------------------------------------------------
-
-  private async readRecords(config: Config, request: Request, url: URL): Promise<Response> {
-    const session = await this.authenticate(request);
-    if (!session) return fail(401, "invalid-token", "That token is invalid or has expired.");
-    // `Number("")` is 0, which would have quietly turned `?since=` into "from the beginning"
-    // here while `server/native/` refused it. Digits or nothing.
-    const raw = url.searchParams.get("since");
-    const since = raw === null ? 0 : /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
-    // A flag that turns expiry off takes one spelling, not `true`, `0` or nothing (T178b, M4).
-    const resync = url.searchParams.get("resync");
-    if (resync !== null && resync !== "1") {
-      return fail(400, "invalid-request", "`resync` is 1 or absent.");
-    }
-
-    const result = listSince(
-      this.sql,
-      config.capabilities,
-      since,
-      url.searchParams.get("collection"),
-      resync === "1",
-    );
-    return "records" in result ? json(200, result) : outcome(result);
-  }
-
-  private async readHeads(config: Config, request: Request, body: unknown): Promise<Response> {
-    const session = await this.authenticate(request);
-    if (!session) return fail(401, "invalid-token", "That token is invalid or has expired.");
-    // A read, like `GET /v1/records`: a frozen account still answers it (D4b).
-    const result = staleSince(this.sql, config.capabilities, body, session.deviceId);
-    return "stale" in result ? json(200, result) : outcome(result);
-  }
-
-  private async writeRecord(
-    config: Config,
-    request: Request,
-    url: URL,
-    body: unknown,
-  ): Promise<Response> {
-    const session = await this.authenticate(request);
-    if (!session) return fail(401, "invalid-token", "That token is invalid or has expired.");
-    const frozen = this.frozen();
-    if (frozen) return frozen;
-
-    const parts = url.pathname.slice("/v1/records/".length).split("/");
-    if (parts.length !== 2) return notFound();
-    const [collection, id] = parts as [string, string];
-    const precondition = readPrecondition(request.headers);
-
-    if (request.method === "PUT") {
-      return outcome(
-        applyPut(this.sql, config.capabilities, collection, id, body, precondition, session.deviceId),
-      );
-    }
-
-    const removed = applyDelete(
-      this.sql,
-      collection,
-      id,
-      precondition.ifMatch,
-      asObject(body)?.["updatedAt"],
-      session.deviceId,
-    );
-    if (removed.status === 200) await this.scheduleReaping(config.capabilities.tombstoneRetentionDays);
-    return outcome(removed);
-  }
-
-  private async batch(config: Config, request: Request, body: unknown): Promise<Response> {
-    const session = await this.authenticate(request);
-    if (!session) return fail(401, "invalid-token", "That token is invalid or has expired.");
-    const frozen = this.frozen();
-    if (frozen) return frozen;
-
-    const operations = asObject(body)?.["operations"];
-    const limits = config.capabilities;
-    if (
-      !Array.isArray(operations) ||
-      operations.length === 0 ||
-      operations.length > limits.maxBatchOperations
-    ) {
-      return fail(
-        400,
-        "invalid-request",
-        `A batch needs between 1 and ${limits.maxBatchOperations} operations.`,
-      );
-    }
-
-    // The envelope refuses only when the account is already full: past that point every entry
-    // would fail alike, and answering once is kinder than answering a hundred times.
-    const account = this.account();
-    if (account && account.stored_bytes > limits.accountQuotaBytes) {
-      return fail(507, "quota-exceeded", "This account is full.", {
-        limit: limits.accountQuotaBytes,
-        used: account.stored_bytes,
-      });
-    }
-
-    // Independent compare-and-swaps and not a transaction (D4): each entry succeeds or conflicts
-    // on its own, and a 409 in entry seven is news for the client rather than a failed request.
-    const results = operations.map((operation) => {
-      const fields = asObject(operation);
-      if (!fields) return { status: 400, error: { code: "invalid-request", message: "Not an operation." } };
-
-      const collection = String(fields["collection"] ?? "");
-      const id = String(fields["id"] ?? "");
-      const ifMatch = typeof fields["ifMatch"] === "number" ? fields["ifMatch"] : undefined;
-
-      if (fields["op"] === "delete") {
-        return applyDelete(this.sql, collection, id, ifMatch, fields["updatedAt"], session.deviceId);
-      }
-      if (fields["op"] === "put") {
-        return applyPut(
-          this.sql,
-          limits,
-          collection,
-          id,
-          fields["record"],
-          { ifMatch, ifNoneMatch: fields["ifNoneMatch"] === true },
-          session.deviceId,
-        );
-      }
-      return { status: 400, error: { code: "invalid-request", message: "`op` is put or delete." } };
-    });
-
-    if (results.some((entry) => entry.record?.deleted === true)) {
-      await this.scheduleReaping(limits.tombstoneRetentionDays);
-    }
-
-    return json(200, { results });
   }
 
   /**
@@ -874,7 +713,7 @@ export class Account implements DurableObject {
     }
   }
 
-  private account(): AccountRow | null {
+  account(): AccountRow | null {
     return this.sql.exec<AccountRow>(`SELECT * FROM account WHERE id = 1`).toArray()[0] ?? null;
   }
 
@@ -1000,7 +839,7 @@ export class Account implements DurableObject {
    * account bills for every account that has ever existed rather than for every account in use,
    * and it does it quietly, forever. An account with nothing deleted sets no alarm at all.
    */
-  private async scheduleReaping(retentionDays: number): Promise<void> {
+  async scheduleReaping(retentionDays: number): Promise<void> {
     const oldest = this.sql
       .exec<{ at: number | null }>(`SELECT MIN(written_at) AS at FROM record WHERE deleted = 1`)
       .toArray()[0];

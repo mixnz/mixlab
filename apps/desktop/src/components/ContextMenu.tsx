@@ -11,7 +11,7 @@ interface Props {
   /** Called for every way out that isn't choosing an entry: a press outside, Escape, a scroll.
    * Choosing an entry is the caller's own business, since only it knows what the entry does. */
   onClose: () => void;
-  /** The entries — plain `<button>`s, which `.context-menu` in `App.css` styles. */
+  /** The entries — plain `<button>`s, which `.context-menu` in `chrome.css` styles. */
   children: ReactNode;
 }
 
