@@ -2,8 +2,9 @@
 
 ## Toolchain
 
-- Edition 2024, MSRV 1.97.1 pinned in `rust-toolchain.toml` and bumped deliberately — when it moves,
-  `rust-version` in the workspace manifest moves with it.
+- Edition 2024. The compiler is pinned in `rust-toolchain.toml` and bumped deliberately. When it
+  moves, `rust-version` in the workspace manifest moves with it. Read the version off those two
+  files, not off this page.
 - `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` gate every commit.
 - So does rustdoc: `cargo doc --workspace --no-deps --document-private-items`. Intra-doc links are
   resolved by nothing else, and `rustdoc::all` is denied in `[workspace.lints]`, so this fails
@@ -20,7 +21,7 @@
 | Concern | Crate |
 | --- | --- |
 | async runtime | `tokio` (multi-thread) |
-| HTTP server/client | `hyper` + `hyper-util`, `reqwest` (rustls) for downloads — see below |
+| HTTP server/client | `hyper` + `hyper-util`, `reqwest` (rustls, OS verifier) for downloads — [ADR 0063](../decisions/0063-outbound-tls-trusts-the-operating-system.md) |
 | index signatures | `minisign-verify` in the product, `minisign` in the testkit and nowhere else |
 | artifact hashing | `sha2` — pinned to the 0.10 `sqlx` already brings, not the newer 0.11 |
 | archives | `zip` (deflate only), `tar`, `flate2`; zstd is `ruzstd` in the product and `zstd` in the testkit, for `minisign`'s reason |
@@ -28,17 +29,17 @@
 | DB | `sqlx` (SQLite, compile-time checked) |
 | CLI | `clap` (derive) |
 | logging | `tracing` + `tracing-subscriber` |
-| errors | `thiserror` in libraries, `anyhow` only in binaries' `main` |
+| errors | `thiserror` in libraries, `anyhow` in binary crates only — see *Error handling* |
 | templates | `minijinja` |
 | certs | `rcgen`, `rustls`, `x509-parser` |
-| DNS | `hickory-server` + `hickory-proto`. **Not `hickory-resolver`**: the daemon is authoritative for the TLDs it manages and refuses everything else rather than forwarding (T44 design, D1), so there is no stub resolver and no cache in this workspace |
+| DNS | `hickory-server` + `hickory-proto`. **Not `hickory-resolver`**: the daemon answers for the TLDs it manages and refuses everything else rather than forwarding, so there is no stub resolver and no cache in this workspace |
 | mDNS | `mdns-sd` |
 | process/system info | `sysinfo` |
-| keyring | `keyring`, plus a direct edge onto its Linux backend `dbus-secret-service` — the one exception to this table, argued in [ADR 0013](../decisions/0013-reading-the-d-bus-error-name-to-tell-an-absent-store.md): `keyring` cannot say whether a machine has no secret service or has one that refused, and the D-Bus error name underneath it can |
+| keyring | `keyring`, plus a direct edge onto its Linux backend `dbus-secret-service` — the one exception to this table, [ADR 0013](../decisions/0013-reading-the-d-bus-error-name-to-tell-an-absent-store.md) |
 | paths | `directories` |
 | Windows APIs | `windows` (official crate), never `winapi` |
 | TS bindings | `ts-rs` |
-| Markdown rendering | `pulldown-cmark`, a **dev**-dependency of `mixengine-docs` alone — the site generator is an `example` in that crate, so no renderer is linked into `mix`, which prints the handbook's Markdown itself ([ADR 0021](../decisions/0021-the-handbook-is-one-corpus-published-three-ways.md)) |
+| Markdown rendering | `pulldown-cmark`, a **dev**-dependency of `mixengine-docs` alone, so no renderer is linked into `mix` — [ADR 0021](../decisions/0021-the-handbook-is-one-corpus-published-three-ways.md) |
 
 ### A second copy of a crate is a decision, and the build asks for it in writing
 
@@ -54,35 +55,19 @@ without looking — the `sha2` row above is what looking does, pinning our own e
 `sqlx` brings rather than taking 0.11 and doubling it. Add the entry only when the second copy comes
 from somebody else's manifest, and write the reason as the edge, not as "upstream".
 
-### Outbound TLS trusts the operating system, not a bundled root store
-
-Settled at T20, which brought the first outbound request in this workspace — `hyper` serves the
-local IPC socket and answers loopback health checks, and `mixengine-supervisor` refuses an `https://`
-check rather than pull a TLS stack in for `127.0.0.1`.
-
-`reqwest`'s default `rustls` feature enables **`rustls-platform-verifier`**, so certificates are
-judged by the OS's own verifier: enterprise roots are honoured, CA constraints and OCSP/CRL
-revocation apply, and a machine behind a TLS-inspecting corporate proxy works. Keep it. A bundled
-root store would refuse that machine with nothing the user could do, and would refuse the internal
-certificate a `MIXENGINE_MIRROR_URL` mirror is likely to carry. `rustls-native-certs` is not the
-alternative to reach for either — its own maintainers now point at the platform verifier.
-
-Being permissive there is affordable because **TLS is not what decides whether a document is ours**:
-the Ed25519 index signature is, end to end, checked after the bytes arrive however they arrived. One
-consequence to know before somebody rediscovers it and calls it a hole: from Phase 5 MixEngine
-installs its own CA into that same store, so its own CA is trusted by its own downloader. The private
-key sits on the user's machine — anybody holding it already owns the machine — and it cannot touch
-the signature.
-
 ## Error handling
 
 - Every library crate defines its own `Error` enum with `thiserror`. **No `anyhow::Result` in
-  library signatures.**
+  library signatures.** A binary crate (`mixengined`) may use `anyhow` inside itself. What reaches
+  a client is converted to the typed wire error at the boundary, never sent as an `anyhow` chain.
 - That enum may wrap one enum per subject, each in the module of its subject, through a
   `#[error(transparent)] Subject(#[from] SubjectError)` variant. `mixengine-core` does this: its
   `Error` holds what every subject shares, and `GraphError`, `JobError`, `ExtensionError` and
   the rest hold the others. The daemon classifies each subject's errors in a `match` with no
-  wildcard, so a variant added later does not compile until it has a wire code.
+  wildcard, so a variant added to a subject does not compile until it has a wire code. The outer
+  `match` on `mixengine_core::Error` does need a `_ => internal` arm, because that enum is
+  `#[non_exhaustive]`. So a **new subject** compiles without a classification and reaches clients
+  as `internal`: adding one means adding its arm in `error.rs` in the same change.
 - `mixengine-proto::Error` is the wire error; conversions live at the daemon boundary and always set
   a stable `code` and a useful `hint`.
 - `unwrap()`/`expect()` are allowed only where a panic is genuinely impossible and the message says
@@ -95,45 +80,72 @@ the signature.
 
 - Blocking work (file extraction, hashing, `sqlx` on a large query, any shell-out that can hang) goes
   through `spawn_blocking` or a dedicated task; nothing blocks the runtime.
-- Every spawned task has a name (`tokio::task::Builder`) and a shutdown path via a `CancellationToken`
-  derived from the daemon's root token. No detached tasks that outlive shutdown.
+- **No detached tasks that outlive shutdown.** A task that runs past the call that started it is
+  held by something shutdown waits for (a `TaskTracker`, a `JoinSet`, a kept `JoinHandle`), and
+  stops on a `CancellationToken` derived from the daemon's root token. A task that writes state is
+  never dropped unjoined. `tokio::task::Builder` is not how a task is named here: it needs
+  `--cfg tokio_unstable`, which this workspace does not set. Existing `tokio::spawn` calls whose
+  handle nobody keeps are listed and fixed by T209h.
 - Timeouts on everything that touches the network, a child process, or a socket. A missing timeout is
   a review blocker.
 
 ## Structure & style
 
+### Files and modules
+
 - Modules by capability, not by layer: `sites/`, `runtimes/`, `certs/` — not `models/`, `utils/`.
   `utils` and `helpers` are banned module names.
 - **No source file over 1,000 lines** — `.rs`, and the desktop's `.ts`, `.tsx`, `.js`, `.mjs` and
-  `.css` alike (T207; 1,500 until T207n). The files already past it are named in `scripts/file-size-baseline.json` at
-  their length, and may not grow. Making one shorter means `node scripts/check-file-sizes.mjs
-  --shrink` in the same commit, which lowers its entry. Nothing raises one: a file that has to grow
-  is a hand edit to the JSON, argued in review — the usual answer is a new module.
-- **A file whose code fits under the limit and whose tests do not** keeps `#[cfg(test)] mod tests;`
-  and moves the module's body to `foo/tests.rs` (T207e). The module is still `foo::tests`, so no
-  test changes its name. A file with a second test module moves each to a file of its own name,
-  `foo/claim_tests.rs` beside `foo/tests.rs`, so no test changes its path (T207m). Tests that
-  would not fit in one file of their own split by topic under that hub, `foo/tests/<topic>.rs`, at
-  the boundaries they already have (T207f); an integration suite does the same as
-  `tests/<name>/main.rs` beside its topics. A topic that outgrows the limit splits into siblings
-  under the same hub, and a suite moved into a directory names a shared module with
-  `#[path = "../<module>/mod.rs"]`. A topic sits one module below the file it came from, so an
-  explicit `super::` in its code becomes `super::super::` (T207o). A file whose *code* is past the
-  limit is split by capability instead, and its tests go with what they test.
+  `.css` alike. The files already past it are named in `scripts/file-size-baseline.json` at their
+  length, and may not grow. Making one shorter means `node scripts/check-file-sizes.mjs --shrink`
+  in the same commit, which lowers its entry. Nothing raises one: a file that has to grow is a hand
+  edit to the JSON, argued in review — the usual answer is a new module.
+- Where tests go when they push a file past the limit is in
+  [testing.md](testing.md#where-a-test-file-goes). A file whose *code* is past the limit is split
+  by capability, and its tests go with what they test.
+
+### Types and state
+
 - Newtypes for identifiers (`SiteId`, `ServiceId`, `RuntimeKind`); no bare `String` IDs crossing a
   function boundary.
+- Constructors take injected dependencies (`Arc<dyn Host>`, `Arc<Store>`); no global singletons, no
+  reading env vars deep inside a function — configuration enters at `main`.
+- **A `static` that holds state is the exception, and says why.** It is allowed only for something
+  there is one of per process by nature: the log sink, a lock that serialises writes to one file,
+  state the OS keeps per process. Its doc comment says why it cannot be passed in. Anything a test
+  would want two of is injected instead.
+
+### Control flow
+
+- **A function that decides what state comes next is a list of named steps.** Starting,
+  supervising, stopping, repairing and upgrading are examples. The states are an explicit `enum`.
+  Each step is a function that takes one state and returns the next. What a step decides (retry or
+  give up, which reason to record) is a pure function, tested without spawning a process. The walk
+  that is left reads top to bottom. A flat table with one arm per method or per error is not such
+  a function. `api/rpc/table.rs` and `error.rs`'s `to_wire` are long, but nothing in them depends
+  on an earlier arm, and they stay tables. The seven walks that predate this rule are T209.
+
+### Comments
+
 - Public items in `core`, `proto`, `platform` carry doc comments explaining *why*, with `# Errors`
-  and `# Panics` sections where applicable.
+  and `# Panics` sections where applicable. Review checks this; no lint does, because
+  `missing_docs` is not turned on.
 - **A comment earns its place by carrying what the code cannot**: an alternative that was tried and
   rejected, a constraint found by experiment, a hazard in somebody else's crate. One that restates
   the line below it is a line to delete — and one that restates a note in `docs/` is worse, since
   two tellings of a decision are two places for it to drift (see
   [../roadmap/todo.md](../roadmap/todo.md), "Working on this file", for which telling wins).
+- **A code comment does not cite a roadmap task number** (`T182f`, "roadmap task T32"). It says
+  the reason itself. Which task brought the line in is history, and history belongs in the commit
+  message, where `git log -S` and `git blame` find it. A number in a comment sends the reader to
+  another file, and it goes wrong when the task is split, lettered or moved. Where a reader really
+  needs the longer argument, link the ADR or the spec under `docs/specs/` by file name. Never link
+  a plan under `docs/plans/`. The rule holds for the window's TypeScript too. Citations that
+  predate it go when the code around them next changes, not in a bulk rewrite (T209b adds the
+  check).
 - Where the claim is about **another crate's behaviour** — that `sqlx` reports this as that, that
   `tracing-subscriber` appends recorded fields — prefer a test to a sentence. A sentence is checked
   by nobody and goes stale in silence on the day the dependency is upgraded.
-- Constructors take injected dependencies (`Arc<dyn Host>`, `Arc<Store>`); no global singletons, no
-  `lazy_static` state, no reading env vars deep inside a function — configuration enters at `main`.
 
 ## Logging
 

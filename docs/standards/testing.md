@@ -68,6 +68,25 @@ it.
    (runs 35456409469 and 35470533602). The rule is not "log more" — it is that **the failure
    message alone decides whether the next person can fix it or can only retry**.
 
+## Where a test file goes
+
+The 1,000-line limit in [rust.md](rust.md) counts tests too. When tests are what push a file past
+it, they move out, and **no test changes its path**, so nextest's filters and the test counts stay
+the same:
+
+- **A file whose code fits and whose tests do not** keeps `#[cfg(test)] mod tests;` and moves the
+  module's body to `foo/tests.rs`. The module is still `foo::tests`.
+- **A file with a second test module** moves each to a file of its own name, `foo/claim_tests.rs`
+  beside `foo/tests.rs`.
+- **Tests that would not fit in one file of their own** split by topic under that hub,
+  `foo/tests/<topic>.rs`, at the boundaries they already have. A topic that outgrows the limit
+  splits into siblings under the same hub. A topic sits one module below the file it came from,
+  so an explicit `super::` in its code becomes `super::super::`.
+- **An integration suite** does the same as `tests/<name>/main.rs` beside its topics. A suite
+  moved into a directory names a shared module with `#[path = "../<module>/mod.rs"]`.
+- **A file whose code is past the limit** splits by capability instead, and its tests go with what
+  they test.
+
 ## Fixtures
 
 They live in **`crates/mixengine-testkit`**, a workspace member that is a **dev-dependency and never

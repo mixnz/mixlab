@@ -26,3 +26,17 @@ The folder contains:
 - `index.ts` — re-exports the component as the folder's public entry point.
 
 Consumers must import the component via the folder path only, never by reaching into `ComponentName.tsx` directly. This keeps the folder's internal file layout free to change without breaking callers.
+
+## State and effects
+
+- **An effect depends on what it reads.** `react-hooks/exhaustive-deps` and `rules-of-hooks` stay
+  on. When a dependency is a function rebuilt on every render, the fix is to make it stable
+  (`useCallback`, or read it through a ref), not to turn off the lint. A disable is allowed only
+  when its comment gives a reason a stable callback cannot fix, and the shared workaround for one
+  reason lives in one hook, not in a copy per file (T209a).
+- **States that change together are one value.** Loading, error and result, or a draft and whether
+  it was edited, go into one `useReducer` or one discriminated union. With a separate `useState`
+  for each, a combination that cannot happen can still be written. A component with more than
+  about a dozen `useState` is the sign to look (T209f).
+- Splitting a large component into hooks and parts follows the `splitting-a-react-component` skill
+  in `.claude/skills/`, and is checked in the running window, not only by its tests.

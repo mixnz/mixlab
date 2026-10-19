@@ -62,6 +62,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0060](0060-a-crash-report-carries-offsets-and-the-release-keeps-the-symbols.md) | A crash report carries offsets, and the release keeps the symbols | Accepted |
 | [0061](0061-a-blueprint-is-written-at-the-lowest-schema-that-holds-it.md) | A blueprint is written at the lowest schema that holds it | Accepted |
 | [0062](0062-the-sql-engines-share-one-command-set.md) | The SQL engines share one command set behind one trait, and an engine is added by implementing it | Accepted |
+| [0063](0063-outbound-tls-trusts-the-operating-system.md) | Outbound TLS trusts the operating system's verifier, not a bundled root store | Accepted |
 
 ### Desktop (recorded in the standalone client)
 
