@@ -1,5 +1,6 @@
+use super::page::build_where;
 use super::{build_key_where, parse_written_rows, quote_literal};
-use super::{build_where, is_decodable, quote_ident, Filter, QueryResult};
+use super::{is_decodable, quote_ident, Filter, QueryResult};
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 
