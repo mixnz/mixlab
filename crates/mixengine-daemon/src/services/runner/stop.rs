@@ -169,8 +169,8 @@ impl Runner {
     ) -> Asked {
         // Started before the request rather than after it, which only `Command` can tell the
         // difference: a signal is sent in microseconds, while running `mariadb-admin shutdown` is
-        // itself part of what the spec's grace period was written to cover. The rule is T9a's, one
-        // level down — whatever the spec allows, minus what has already been spent.
+        // itself part of what the spec's grace period was written to cover. The rule is the shutdown
+        // budget's, one level down — whatever the spec allows, minus what has already been spent.
         let began = Instant::now();
 
         if let Err(error) = process.ask_to_stop() {

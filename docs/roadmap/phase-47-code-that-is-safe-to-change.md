@@ -21,7 +21,7 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
 
 ## Found first
 
-- [ ] **T209** The daemon's walks as named steps. Seven functions decide what state comes next in
+- [x] **T209** The daemon's walks as named steps. Seven functions decide what state comes next in
       one body, with a `match` per failure and a `tokio::select!` in the middle. Their clippy
       cognitive complexity (default limit 25): `serve/repairs.rs` `repair_home` 83,
       `services/runner/attempt.rs` `attempt` 73, `serve/machine.rs:74` 71,
