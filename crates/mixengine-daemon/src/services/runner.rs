@@ -33,6 +33,7 @@ mod attempt;
 mod environment;
 mod reload;
 mod stop;
+mod watching;
 
 /// How often a running service is asked whether it is still there.
 ///
