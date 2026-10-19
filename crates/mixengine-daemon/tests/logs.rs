@@ -250,6 +250,22 @@ fn text(frame: &LogFrame) -> Option<&str> {
     }
 }
 
+/// One frame per line, numbered and named by variant, for a failure message a CI log can be read
+/// from.
+fn described(frames: &[LogFrame]) -> String {
+    frames
+        .iter()
+        .enumerate()
+        .map(|(at, frame)| match frame {
+            LogFrame::Line(line) => format!("[{at}] line: {}", line.text),
+            LogFrame::Historic { text } => format!("[{at}] historic: {text}"),
+            LogFrame::Gap { missed } => format!("[{at}] gap: {missed} missed"),
+            other => format!("[{at}] {other:?}"),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// The whole of T16b in one connection: what was printed before, and what is printed after, with
 /// nothing lost between them and nothing shown twice.
 #[tokio::test]
@@ -278,9 +294,23 @@ async fn a_follow_hands_over_the_tail_and_then_carries_on_from_it() {
         .await;
     let tail = stream.until(mixengine_testkit::service::READY_LINE).await;
 
+    // Said with everything that arrived: a `Historic` frame here means the ring was still empty when
+    // this connection read it, and a `Gap` means the relay into it fell behind. Which one, and where
+    // in the tail, is the whole difference between the two causes.
+    let strangers: Vec<usize> = tail
+        .iter()
+        .enumerate()
+        .filter(|(_, frame)| !matches!(frame, LogFrame::Line(_)))
+        .map(|(at, _)| at)
+        .collect();
+
     assert!(
-        tail.iter().all(|frame| matches!(frame, LogFrame::Line(_))),
-        "a daemon that captured this service serves its own lines, not the file's"
+        strangers.is_empty(),
+        "a daemon that captured this service serves its own lines, not the file's — frames \
+         {strangers:?} of {} were not lines\n--- the tail, as it arrived ---\n{}\n--- daemon ---\n{}",
+        tail.len(),
+        described(&tail),
+        home.daemon_log()
     );
 
     // And the stream carries on into what the service prints from here. Line 25 of a service
@@ -299,8 +329,13 @@ async fn a_follow_hands_over_the_tail_and_then_carries_on_from_it() {
         .count();
 
     assert_eq!(
-        announcements, 1,
-        "the service announced itself once; this connection showed it {announcements} times"
+        announcements,
+        1,
+        "the service announced itself once; this connection showed it {announcements} times\n\
+         --- the tail ---\n{}\n--- what followed ---\n{}\n--- daemon ---\n{}",
+        described(&tail),
+        described(&after),
+        home.daemon_log()
     );
 
     // A second connection, because the first one is holding a `follow` open: HTTP/1.1 carries one
