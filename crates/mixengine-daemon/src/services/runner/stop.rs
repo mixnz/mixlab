@@ -521,6 +521,9 @@ impl Stoppable for Adopted {
 }
 
 #[cfg(test)]
+mod characterization;
+
+#[cfg(test)]
 mod tests {
     use mixengine_proto::{Millis, ServiceSpec};
     use mixengine_testkit::FakeService;
