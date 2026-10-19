@@ -229,3 +229,40 @@ async fn an_exit_that_cannot_be_read_while_waiting_kills() {
     assert!(exit.is_none());
     assert!(began.elapsed() < AT_ONCE, "took {:?}", began.elapsed());
 }
+
+mod plan {
+    use std::path::Path;
+
+    use super::*;
+
+    #[test]
+    fn plan_stop_covers_every_behaviour() {
+        let grace = Millis::from_secs(5);
+        let signal = StopBehaviour::Signal { grace };
+        let command = StopBehaviour::Command {
+            program: "mariadb-admin".into(),
+            args: vec!["shutdown".to_owned()],
+            grace,
+        };
+        let asked = StopPlan::Command {
+            program: Path::new("mariadb-admin"),
+            args: &["shutdown".to_owned()],
+            grace,
+        };
+
+        assert_eq!(plan_stop(&StopBehaviour::Kill, true), StopPlan::Kill);
+        assert_eq!(plan_stop(&StopBehaviour::Kill, false), StopPlan::Kill);
+        assert_eq!(plan_stop(&signal, true), StopPlan::Signal { grace });
+        assert_eq!(
+            plan_stop(&signal, false),
+            StopPlan::Kill,
+            "Windows has no request to send a process it gave no console to (ADR 0008)"
+        );
+        assert_eq!(plan_stop(&command, true), asked);
+        assert_eq!(
+            plan_stop(&command, false),
+            asked,
+            "a command is how a service is asked where a signal cannot be sent"
+        );
+    }
+}

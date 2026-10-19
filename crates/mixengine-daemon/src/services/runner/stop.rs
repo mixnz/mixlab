@@ -2,9 +2,10 @@
 //! shutdown has left, and killing what does not — a child of this process or an adopted
 //! survivor of an earlier daemon alike.
 
+use std::path::Path;
 use std::time::Duration;
 
-use mixengine_platform::process::{Adopted, CAN_ASK_TO_STOP, Exit, Supervised};
+use mixengine_platform::process::{Adopted, CAN_ASK_TO_STOP, Exit, Ran, Supervised};
 use mixengine_proto::{ServiceState, StateReason, StopBehaviour};
 use mixengine_supervisor::logs::Capture;
 use tokio::time::Instant;
@@ -122,142 +123,29 @@ impl Runner {
     /// because those two really are different amounts of work, and reserving the larger of them for
     /// both would take five seconds off every supervised stop to pay for a drain that costs two. See
     /// [`Runner::grace_for`], which is where it is spent.
+    #[warn(clippy::cognitive_complexity)]
     async fn ask_to_stop(&self, process: &mut dyn Stoppable, tail: Duration) -> Option<Exit> {
-        // Started before the request rather than after it, which only `Command` can tell the
-        // difference: a signal is sent in microseconds, while running `mariadb-admin shutdown` is
-        // itself part of what the spec's grace period was written to cover. The rule is T9a's, one
-        // level down — whatever the spec allows, minus what has already been spent. The `Command`
-        // arm moves it once more, for the one thing that is neither.
-        let mut began = Instant::now();
-
-        let grace = match self.spec.stop() {
+        let asked = match plan_stop(self.spec.stop(), CAN_ASK_TO_STOP) {
             // Nothing to ask. Honest rather than a grace period spent on a request nobody sent.
-            StopBehaviour::Kill => return None,
+            StopPlan::Kill => return None,
 
-            StopBehaviour::Signal { grace } => {
-                // ADR 0008: Windows has no request a daemon can send to a process it gave no console
-                // to, so the grace period is not spent pretending otherwise.
-                if !CAN_ASK_TO_STOP {
-                    return None;
-                }
+            StopPlan::Signal { grace } => self.ask_by_signal(process, grace, tail),
 
-                if let Err(error) = process.ask_to_stop() {
-                    tracing::warn!(
-                        service = self.spec.id().as_str(),
-                        error = %error,
-                        "cannot ask this service to stop; it will be killed"
-                    );
-
-                    return None;
-                }
-
-                self.grace_for(*grace, tail)
-            }
-
-            // The polite stop for a service that has something to flush, and on Windows the *only*
-            // one there is (ADR 0008). What the command does is ask; what proves it worked is the
-            // process going, which is the wait below — a `mariadb-admin shutdown` returns as soon as
-            // the server has accepted the instruction, not once it has finished acting on it.
-            StopBehaviour::Command {
+            StopPlan::Command {
                 program,
                 args,
                 grace,
             } => {
-                let place = self.where_commands_run().await;
-
-                // **The clock starts after this, not before it.** Resolving the environment is the
-                // daemon's own preparation rather than any part of the service shutting down, and
-                // for an adopted service it is a keyring read allowed the whole of `ENVIRONMENT`.
-                // Charged to the grace period it is spent before the request is even sent: a
-                // three-second read and a `mariadb-admin shutdown` that returns in two would use up
-                // a five-second grace outright, and the service would be killed mid-flush — the
-                // "recovery on its next start" the arms below exist to avoid.
-                began = Instant::now();
-
-                // Clamped here rather than above for the same reason the clock starts here: what a
-                // whole-daemon shutdown has left is smaller after a three-second keyring read than
-                // it was before one, and the command is what should be given the difference.
-                let allowed = self.grace_for(*grace, tail);
-
-                // **Zero is a kill, not a command run with no patience.** `run` would spawn the
-                // program, find the deadline already past on the next poll and kill it — a process
-                // started, two pipes made and a `mariadb-admin` given no chance to say anything, at
-                // the one moment the daemon has run out of the time it was given. Nothing is left to
-                // hear an answer in, so the question is not asked; `ended_meanwhile` is still read,
-                // because a service that went by itself must not be recorded as one that was killed.
-                if allowed.is_zero() {
-                    tracing::info!(
-                        service = self.spec.id().as_str(),
-                        program = %program.display(),
-                        "nothing is left of the shutdown budget; this service's stop command is not \
-                         run and it is killed at once, which may leave it to recover on its next \
-                         start"
-                    );
-
-                    return self.ended_meanwhile(process);
-                }
-
-                match place.run(program, args, allowed).await {
-                    Ok(ran) if ran.succeeded() => allowed,
-
-                    // It ran and refused, or it ran out of the whole grace period. Either way the
-                    // service has not been asked successfully and waiting longer buys nothing, so
-                    // this falls through to the kill — loudly, and carrying whatever the program
-                    // said, because for a database that kill is a recovery on its next start and
-                    // `ERROR 1045: Access denied` is the whole of what the user has to act on.
-                    Ok(ran) => {
-                        if let Some(exit) = self.ended_meanwhile(process) {
-                            tracing::info!(
-                                service = self.spec.id().as_str(),
-                                program = %program.display(),
-                                timed_out = ran.timed_out(),
-                                complaint = ran.complaint().unwrap_or("it said nothing"),
-                                "this service's stop command did not report success, but the \
-                                 service stopped anyway"
-                            );
-
-                            return Some(exit);
-                        }
-
-                        tracing::error!(
-                            service = self.spec.id().as_str(),
-                            program = %program.display(),
-                            timed_out = ran.timed_out(),
-                            complaint = ran.complaint().unwrap_or("it said nothing"),
-                            "this service's stop command did not work; killing it instead, which \
-                             may leave it to recover on its next start"
-                        );
-
-                        return None;
-                    }
-
-                    // The program a spec names is not on this machine, or cannot be started. A
-                    // spec to fix rather than a service to blame, and the service still has to stop.
-                    Err(error) => {
-                        let ended = self.ended_meanwhile(process);
-
-                        // Said either way: a program a spec names and this machine does not have is
-                        // a spec to fix, and it stays broken whether or not the service happened to
-                        // go by itself this time.
-                        tracing::error!(
-                            service = self.spec.id().as_str(),
-                            program = %program.display(),
-                            error = %error,
-                            killing = ended.is_none(),
-                            "cannot run this service's stop command"
-                        );
-
-                        return ended;
-                    }
-                }
+                self.ask_by_command(process, program, args, grace, tail)
+                    .await
             }
 
             // `StopBehaviour` is `#[non_exhaustive]`. A behaviour this build does not know is not a
             // licence to invent one, and the service still has to stop.
-            other => {
+            StopPlan::Unknown => {
                 tracing::warn!(
                     service = self.spec.id().as_str(),
-                    behaviour = ?other,
+                    behaviour = ?self.spec.stop(),
                     "unknown stop behaviour; killing the service"
                 );
 
@@ -265,8 +153,167 @@ impl Runner {
             }
         };
 
-        let deadline = began + grace;
+        match asked {
+            Asked::Wait { deadline, grace } => self.wait_for_exit(process, deadline, grace).await,
+            Asked::Finished(exit) => exit,
+        }
+    }
 
+    /// Send the signal, and say how long to wait for it to be acted on.
+    #[warn(clippy::cognitive_complexity)]
+    fn ask_by_signal(
+        &self,
+        process: &mut dyn Stoppable,
+        grace: mixengine_proto::Millis,
+        tail: Duration,
+    ) -> Asked {
+        // Started before the request rather than after it, which only `Command` can tell the
+        // difference: a signal is sent in microseconds, while running `mariadb-admin shutdown` is
+        // itself part of what the spec's grace period was written to cover. The rule is T9a's, one
+        // level down — whatever the spec allows, minus what has already been spent.
+        let began = Instant::now();
+
+        if let Err(error) = process.ask_to_stop() {
+            tracing::warn!(
+                service = self.spec.id().as_str(),
+                error = %error,
+                "cannot ask this service to stop; it will be killed"
+            );
+
+            return Asked::Finished(None);
+        }
+
+        let grace = self.grace_for(grace, tail);
+
+        Asked::Wait {
+            deadline: began + grace,
+            grace,
+        }
+    }
+
+    /// Run the spec's stop command, and say how long to wait for the service to act on it.
+    ///
+    /// The polite stop for a service that has something to flush, and on Windows the *only* one
+    /// there is (ADR 0008). What the command does is ask; what proves it worked is the process
+    /// going, which is [`Runner::wait_for_exit`] — a `mariadb-admin shutdown` returns as soon as the
+    /// server has accepted the instruction, not once it has finished acting on it.
+    #[warn(clippy::cognitive_complexity)]
+    async fn ask_by_command(
+        &self,
+        process: &mut dyn Stoppable,
+        program: &Path,
+        args: &[String],
+        grace: mixengine_proto::Millis,
+        tail: Duration,
+    ) -> Asked {
+        let place = self.where_commands_run().await;
+
+        // **The clock starts after this, not before it.** Resolving the environment is the daemon's
+        // own preparation rather than any part of the service shutting down, and for an adopted
+        // service it is a keyring read allowed the whole of `ENVIRONMENT`. Charged to the grace
+        // period it is spent before the request is even sent: a three-second read and a
+        // `mariadb-admin shutdown` that returns in two would use up a five-second grace outright,
+        // and the service would be killed mid-flush — the "recovery on its next start" the arms
+        // below exist to avoid.
+        let began = Instant::now();
+
+        // Clamped here rather than before the read for the same reason the clock starts here: what
+        // a whole-daemon shutdown has left is smaller after a three-second keyring read than it was
+        // before one, and the command is what should be given the difference.
+        let allowed = self.grace_for(grace, tail);
+
+        // **Zero is a kill, not a command run with no patience.** `run` would spawn the program,
+        // find the deadline already past on the next poll and kill it — a process started, two
+        // pipes made and a `mariadb-admin` given no chance to say anything, at the one moment the
+        // daemon has run out of the time it was given. Nothing is left to hear an answer in, so the
+        // question is not asked; `ended_meanwhile` is still read, because a service that went by
+        // itself must not be recorded as one that was killed.
+        if allowed.is_zero() {
+            tracing::info!(
+                service = self.spec.id().as_str(),
+                program = %program.display(),
+                "nothing is left of the shutdown budget; this service's stop command is not run \
+                 and it is killed at once, which may leave it to recover on its next start"
+            );
+
+            return Asked::Finished(self.ended_meanwhile(process));
+        }
+
+        match place.run(program, args, allowed).await {
+            Ok(ran) if ran.succeeded() => Asked::Wait {
+                deadline: began + allowed,
+                grace: allowed,
+            },
+
+            Ok(ran) => Asked::Finished(self.after_a_refused_command(process, program, &ran)),
+
+            // The program a spec names is not on this machine, or cannot be started. A spec to fix
+            // rather than a service to blame, and the service still has to stop.
+            Err(error) => {
+                let ended = self.ended_meanwhile(process);
+
+                // Said either way: a program a spec names and this machine does not have is a spec
+                // to fix, and it stays broken whether or not the service happened to go by itself
+                // this time.
+                tracing::error!(
+                    service = self.spec.id().as_str(),
+                    program = %program.display(),
+                    error = %error,
+                    killing = ended.is_none(),
+                    "cannot run this service's stop command"
+                );
+
+                Asked::Finished(ended)
+            }
+        }
+    }
+
+    /// A stop command that ran and refused, or ran out of the whole grace period.
+    ///
+    /// Either way the service has not been asked successfully and waiting longer buys nothing, so
+    /// this falls through to the kill — loudly, and carrying whatever the program said, because for
+    /// a database that kill is a recovery on its next start and `ERROR 1045: Access denied` is the
+    /// whole of what the user has to act on.
+    #[warn(clippy::cognitive_complexity)]
+    fn after_a_refused_command(
+        &self,
+        process: &mut dyn Stoppable,
+        program: &Path,
+        ran: &Ran,
+    ) -> Option<Exit> {
+        if let Some(exit) = self.ended_meanwhile(process) {
+            tracing::info!(
+                service = self.spec.id().as_str(),
+                program = %program.display(),
+                timed_out = ran.timed_out(),
+                complaint = ran.complaint().unwrap_or("it said nothing"),
+                "this service's stop command did not report success, but the service stopped \
+                 anyway"
+            );
+
+            return Some(exit);
+        }
+
+        tracing::error!(
+            service = self.spec.id().as_str(),
+            program = %program.display(),
+            timed_out = ran.timed_out(),
+            complaint = ran.complaint().unwrap_or("it said nothing"),
+            "this service's stop command did not work; killing it instead, which may leave it to \
+             recover on its next start"
+        );
+
+        None
+    }
+
+    /// Wait until the service goes or `deadline` passes. `None` if it did not go.
+    #[warn(clippy::cognitive_complexity)]
+    async fn wait_for_exit(
+        &self,
+        process: &mut dyn Stoppable,
+        deadline: Instant,
+        grace: Duration,
+    ) -> Option<Exit> {
         loop {
             match process.exited() {
                 Ok(Some(exit)) => return Some(exit),
@@ -473,6 +520,60 @@ impl Runner {
 
             Capture::detached()
         })
+    }
+}
+
+/// How a service is to be asked to stop, decided by [`plan_stop`] before anything is asked.
+#[derive(Debug, PartialEq, Eq)]
+enum StopPlan<'a> {
+    /// Nothing to ask: the spec says kill, or a signal is all it names and this system cannot send
+    /// one.
+    Kill,
+
+    /// Send the signal, then wait up to `grace`.
+    Signal { grace: mixengine_proto::Millis },
+
+    /// Run this program, then wait up to `grace` for the service to go.
+    Command {
+        program: &'a Path,
+        args: &'a [String],
+        grace: mixengine_proto::Millis,
+    },
+
+    /// A behaviour this build does not know.
+    Unknown,
+}
+
+/// What asking did.
+enum Asked {
+    /// The request went; wait for the service to act on it until `deadline`.
+    Wait { deadline: Instant, grace: Duration },
+
+    /// Nothing is left to wait for. `None` means the caller kills.
+    Finished(Option<Exit>),
+}
+
+/// How `behaviour` is carried out on a system that `can_ask` a process to stop, or cannot.
+///
+/// ADR 0008: Windows has no request a daemon can send to a process it gave no console to, so a
+/// `Signal` there is a kill rather than a grace period spent pretending otherwise. A `Command` is
+/// the polite stop that works everywhere.
+#[warn(clippy::cognitive_complexity)]
+fn plan_stop(behaviour: &StopBehaviour, can_ask: bool) -> StopPlan<'_> {
+    match behaviour {
+        StopBehaviour::Kill => StopPlan::Kill,
+        StopBehaviour::Signal { grace } if can_ask => StopPlan::Signal { grace: *grace },
+        StopBehaviour::Signal { .. } => StopPlan::Kill,
+        StopBehaviour::Command {
+            program,
+            args,
+            grace,
+        } => StopPlan::Command {
+            program,
+            args,
+            grace: *grace,
+        },
+        _ => StopPlan::Unknown,
     }
 }
 
