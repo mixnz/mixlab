@@ -31,8 +31,10 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       decides moves into a pure function tested without spawning a process. The walk that is left
       reads top to bottom as the list of steps. No behaviour changes: the daemon's unit and
       integration test counts stay the same, and each walk gains tests for its decisions. One
-      design for all seven, then one pull request per walk, `attempt` and `stop` first, because a
-      wrong branch there stops a user's service. The rule has been in `docs/standards/rust.md`,
+      design for all seven, then one pull request with one stage per walk, `attempt` and `stop`
+      first, because a wrong branch there stops a user's service. Design:
+      [2026-10-20-t209-the-daemons-walks-as-named-steps-design.md](../specs/2026-10-20-t209-the-daemons-walks-as-named-steps-design.md).
+      The rule has been in `docs/standards/rust.md`,
       *Structure & style*, since this phase was filed. This task brings the seven walks that
       predate it up to it.
 - [ ] **T209a** The window's effects depend on what they read. The frontend turns off
