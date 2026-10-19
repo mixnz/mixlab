@@ -54,6 +54,29 @@ fn spawn(fake: &FakeService) -> Supervised {
     .expect("a fakeservice starts")
 }
 
+/// Read `service`'s output until it says it is ready, and keep reading it after.
+///
+/// The capture is returned so the caller holds it: dropped, nothing drains the pipe the service
+/// writes into.
+async fn ready(service: &mut Supervised) -> Capture {
+    let capture = Capture::start(service, "svc", mixengine_proto::LogPolicy::default(), None);
+    let deadline = Instant::now() + Duration::from_secs(10);
+
+    while !capture
+        .recent(16)
+        .iter()
+        .any(|line| line.text == mixengine_testkit::service::READY_LINE)
+    {
+        assert!(
+            Instant::now() < deadline,
+            "fakeservice never said it was ready"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+
+    capture
+}
+
 fn stopped_by(behaviour: StopBehaviour) -> ServiceSpec {
     spec("svc").stop(behaviour).build().expect("a usable spec")
 }
@@ -129,6 +152,11 @@ async fn a_signal_the_process_ignores_waits_out_the_grace() {
     let (_home, paths, store) = home(&["svc"]).await;
     let runner = runner(by_signal(), &paths, &store);
     let mut service = spawn(&FakeService::new().ignoring_stop());
+
+    // A signal that arrives before `fakeservice` has installed the handlers it ignores takes the
+    // default action and ends it — which on Linux and macOS is a few milliseconds after the spawn.
+    // It says it is ready only after they are installed.
+    let _capture = ready(&mut service).await;
 
     let began = Instant::now();
     let exit = runner.ask_to_stop(&mut service, FLUSH).await;
