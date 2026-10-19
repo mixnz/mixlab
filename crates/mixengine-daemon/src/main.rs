@@ -46,7 +46,7 @@ use std::process::ExitCode;
 
 use anyhow::Context as _;
 use clap::Parser;
-use mixengine_core::{Store, config};
+use mixengine_core::{Home, Store, config};
 use mixengine_platform::ipc;
 
 use args::{Args, Launch};
@@ -122,6 +122,7 @@ async fn exit_code() -> ExitCode {
     ExitCode::FAILURE
 }
 
+#[warn(clippy::cognitive_complexity)]
 async fn run() -> anyhow::Result<()> {
     // First line of the process, so that `daemon.status` answers when this daemon *started* rather
     // than when it finished starting: creating a home, running the migrations and opening SQLite
@@ -193,83 +194,9 @@ async fn run() -> anyhow::Result<()> {
         return detach(&args, &home.paths, &endpoint).await;
     }
 
-    // **A daemon a service manager started is handed a console it did not ask for**, and on Windows
-    // that is a terminal window on the user's desktop at every login — measured under Task
-    // Scheduler, where `<Hidden>true</Hidden>` does not stop it either. Nothing happens here when
-    // the console is shared with a shell, which is every developer's `mixengined`, and nothing
-    // happens on either Unix. Roadmap task T85b, its design's D4.
-    //
-    // **Before the options below rather than after**, so that `is_terminal` answers about the
-    // streams this process actually ends up with: colour written into the null device is not wrong,
-    // but it is a decision made about a terminal that is no longer there. Logged after
-    // `logging::init`, because there is nowhere to say it until then.
-    let released = mixengine_platform::process::release_unattended_console();
+    start_logging(&args, &home)?;
 
-    // A flag beats the file, and the file beats the default. Neither is read anywhere but here.
-    let options = logging::Options {
-        file: home.paths.daemon_log_file(),
-        level: args
-            .log_level
-            .map_or(home.config.log.level, config::LogLevel::from),
-        format: args
-            .log_format
-            .map_or(home.config.log.format, config::LogFormat::from),
-        // Colour only when a human is watching. The file never gets any — see `logging`.
-        colour: std::io::stderr().is_terminal(),
-    };
-
-    logging::init(&options).with_context(|| {
-        format!(
-            "cannot write the daemon log at {}",
-            home.paths.daemon_log_file().display()
-        )
-    })?;
-
-    // **Roadmap task T91.** After `logging::init`, because the hook's last step is a log line; and
-    // before the first line below, so that a panic during the rest of start-up is recorded like any
-    // other. A panic *earlier* than this — parsing arguments, resolving the home, reading
-    // `config.toml` — gets the default hook, and that is right: those failures happen while
-    // somebody is watching stderr, and none of them has a log to be written to yet. The `--detach`
-    // parent returns above this and installs nothing, for the same reason.
-    crash::Reports::new(&home.paths, home.config.crash.enabled).install();
-    #[cfg(feature = "crash-probe")]
-    crash::probe::raise_if_asked();
-
-    tracing::info!(
-        version = env!("CARGO_PKG_VERSION"),
-        protocol = %mixengine_proto::PROTOCOL_VERSION,
-        home = %home.paths.root().display(),
-        log = %home.paths.daemon_log_file().display(),
-        "mixengined starting"
-    );
-
-    if released {
-        tracing::debug!("released a console this process was the only one attached to");
-    }
-
-    // Said rather than silently ignored: a key that does nothing looks exactly like one that does
-    // not work (T185b, ADR 0057).
-    if home.config.retired_bin.rescan_seconds.is_some() {
-        tracing::info!(
-            "`[bin] rescan_seconds` in config.toml no longer does anything: MixEngine notices a \
-             tool installed into a runtime as it lands; the line can be removed"
-        );
-    }
-    if home.config.daemon.retired_ipc_path.is_some() {
-        tracing::info!(
-            "`[daemon] ipc_path` in config.toml has never done anything: the daemon listens where \
-             the platform puts the endpoint, under run/; the line can be removed"
-        );
-    }
-    // A warning rather than the two notes above: whoever set these believed they were steering a
-    // check the daemon no longer makes, and `enabled = false` in particular reads as a promise.
-    if home.config.updates.enabled.is_some() || home.config.updates.check_seconds.is_some() {
-        tracing::warn!(
-            "`[updates] enabled` and `check_seconds` in config.toml no longer do anything since \
-             T187: the daemon never looks for a newer MixEngine on its own, and MixLab checks for \
-             itself; the lines can be removed"
-        );
-    }
+    say_what_config_no_longer_does(&home.config);
 
     // **Before `Store::open`, and that ordering is the point of taking it here.** `sqlx-sqlite`
     // implements the migration lock as a no-op, SQLite having no advisory lock to use, so two
@@ -293,85 +220,10 @@ async fn run() -> anyhow::Result<()> {
 
     tracing::info!(database = %store.file().display(), "database open and up to date");
 
-    // **Which store this home keeps its credentials in** — roadmap task T194, D1. Read here, after
-    // the database and before the host that reads a credential, so that a start with no flag gets
-    // the store the home chose. A release asked for another one switches only if the switch is
-    // allowed, and records it; a development build's flag is for this start alone.
-    let release = mixengine_platform::RELEASE;
-    let recorded = credentials::recorded(&store).await?;
-    let credential_store = match credentials::at_start(release, args.credential_store, recorded) {
-        credentials::AtStart::Use(chosen) => chosen,
-        credentials::AtStart::Switch { from, to } => {
-            credentials::check_switch(
-                &store,
-                home.paths.credentials_file(),
-                release,
-                std::env::consts::OS,
-                from,
-                to,
-            )
-            .await
-            .map_err(anyhow::Error::msg)?;
-            credentials::record(&store, to).await?;
-            to
-        }
-    };
-    // Read once for the run: whether a switch would be offered (`daemon.status`'s `choosable`).
-    // The operating system's store is asked only where the answer depends on it, a Linux release on
-    // it, so no other machine is made to reach its keyring at start.
-    let os_store_absent = release
-        && std::env::consts::OS == "linux"
-        && credential_store == credentials::Store::Os
-        && tokio::task::spawn_blocking(|| {
-            credentials::os_store_absent(mixengine_platform::host().keyring())
-        })
-        .await
-        .unwrap_or(false);
-    let credential_facts = credentials::Facts {
-        store: credential_store,
-        choosable: credentials::choosable(
-            release,
-            std::env::consts::OS,
-            credential_store,
-            os_store_absent,
-        ),
-    };
+    let (credential_store, credential_facts) =
+        choose_credentials(&args, &store, &home.paths).await?;
 
-    // **Roadmap task T144**, and it has to be here rather than inside `open_home`: whether these
-    // flags may be honoured is a question for the database, and `open_home` never opens one. What
-    // makes the ordering safe is that `mixengine.db` is the one file `[paths]` cannot move, so the
-    // store was opened at a path no relocation can change underneath this decision.
-    let home = match storage::apply(
-        &store,
-        home.paths.config_file(),
-        &home.config.paths,
-        &args.requested_paths(),
-    )
-    .await?
-    {
-        storage::Applied::Nothing => home,
-
-        // Read again rather than patched in place. `open_home` is idempotent and documented as
-        // such — it is what `mix doctor` reuses — so this is the honest way to pick up a layout
-        // that changed a moment ago: resolve, read the file that was just written, and let
-        // `bootstrap` create what the new value names.
-        //
-        // `endpoint` and `lock` above are **not** recomputed, and do not need to be: both come out
-        // of `run/`, which is the directory `[paths]` refuses to move, so a second read answers
-        // with what this process is already holding.
-        storage::Applied::Written(_) => {
-            let moved = mixengine_core::open_home(args.home.as_deref(), host.as_ref())
-                .map_err(|error| error.to_wire())?;
-
-            // The default layout was created a moment ago by the `open_home` at the top of this
-            // function, because the window these flags need is a question for a database that did
-            // not exist yet. What that leaves behind is an empty directory in the home, at exactly
-            // the path somebody who just chose a disk would go looking for their data.
-            storage::tidy(&home.paths, &moved.paths);
-
-            moved
-        }
-    };
+    let home = apply_storage(&args, &store, home, host.as_ref()).await?;
 
     // Everything that runs with the database open lives in `serve`, and its result is held rather
     // than propagated with `?`, so that the close below is on the only way out — the transport
@@ -432,6 +284,195 @@ async fn run() -> anyhow::Result<()> {
     }
 
     served.map(|_| ())
+}
+
+/// Start the daemon's log, install the crash hook, and say that this daemon is starting.
+#[warn(clippy::cognitive_complexity)]
+fn start_logging(args: &Args, home: &Home) -> anyhow::Result<()> {
+    // **A daemon a service manager started is handed a console it did not ask for**, and on Windows
+    // that is a terminal window on the user's desktop at every login — measured under Task
+    // Scheduler, where `<Hidden>true</Hidden>` does not stop it either. Nothing happens here when
+    // the console is shared with a shell, which is every developer's `mixengined`, and nothing
+    // happens on either Unix.
+    //
+    // **Before the options below rather than after**, so that `is_terminal` answers about the
+    // streams this process actually ends up with: colour written into the null device is not wrong,
+    // but it is a decision made about a terminal that is no longer there. Logged after
+    // `logging::init`, because there is nowhere to say it until then.
+    let released = mixengine_platform::process::release_unattended_console();
+
+    // A flag beats the file, and the file beats the default. Neither is read anywhere but here.
+    let options = logging::Options {
+        file: home.paths.daemon_log_file(),
+        level: args
+            .log_level
+            .map_or(home.config.log.level, config::LogLevel::from),
+        format: args
+            .log_format
+            .map_or(home.config.log.format, config::LogFormat::from),
+        // Colour only when a human is watching. The file never gets any — see `logging`.
+        colour: std::io::stderr().is_terminal(),
+    };
+
+    logging::init(&options).with_context(|| {
+        format!(
+            "cannot write the daemon log at {}",
+            home.paths.daemon_log_file().display()
+        )
+    })?;
+
+    // After `logging::init`, because the hook's last step is a log line; and
+    // before the first line below, so that a panic during the rest of start-up is recorded like any
+    // other. A panic *earlier* than this — parsing arguments, resolving the home, reading
+    // `config.toml` — gets the default hook, and that is right: those failures happen while
+    // somebody is watching stderr, and none of them has a log to be written to yet. The `--detach`
+    // parent returns above this and installs nothing, for the same reason.
+    crash::Reports::new(&home.paths, home.config.crash.enabled).install();
+    #[cfg(feature = "crash-probe")]
+    crash::probe::raise_if_asked();
+
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        protocol = %mixengine_proto::PROTOCOL_VERSION,
+        home = %home.paths.root().display(),
+        log = %home.paths.daemon_log_file().display(),
+        "mixengined starting"
+    );
+
+    if released {
+        tracing::debug!("released a console this process was the only one attached to");
+    }
+
+    Ok(())
+}
+
+/// Say which keys in `config.toml` no longer do anything.
+#[warn(clippy::cognitive_complexity)]
+fn say_what_config_no_longer_does(config: &config::Config) {
+    // Said rather than silently ignored: a key that does nothing looks exactly like one that does
+    // not work (ADR 0057).
+    if config.retired_bin.rescan_seconds.is_some() {
+        tracing::info!(
+            "`[bin] rescan_seconds` in config.toml no longer does anything: MixEngine notices a \
+             tool installed into a runtime as it lands; the line can be removed"
+        );
+    }
+    if config.daemon.retired_ipc_path.is_some() {
+        tracing::info!(
+            "`[daemon] ipc_path` in config.toml has never done anything: the daemon listens where \
+             the platform puts the endpoint, under run/; the line can be removed"
+        );
+    }
+    // A warning rather than the two notes above: whoever set these believed they were steering a
+    // check the daemon no longer makes, and `enabled = false` in particular reads as a promise.
+    if config.updates.enabled.is_some() || config.updates.check_seconds.is_some() {
+        tracing::warn!(
+            "`[updates] enabled` and `check_seconds` in config.toml no longer do anything since \
+             T187: the daemon never looks for a newer MixEngine on its own, and MixLab checks for \
+             itself; the lines can be removed"
+        );
+    }
+}
+
+/// **Which store this home keeps its credentials in.** Read after the database and before the host
+/// that reads a credential, so that a start with no flag gets the store the home chose. A release
+/// asked for another one switches only if the switch is allowed, and records it; a development
+/// build's flag is for this start alone.
+#[warn(clippy::cognitive_complexity)]
+async fn choose_credentials(
+    args: &Args,
+    store: &Store,
+    paths: &mixengine_core::Paths,
+) -> anyhow::Result<(credentials::Store, credentials::Facts)> {
+    let release = mixengine_platform::RELEASE;
+    let recorded = credentials::recorded(store).await?;
+    let credential_store = match credentials::at_start(release, args.credential_store, recorded) {
+        credentials::AtStart::Use(chosen) => chosen,
+        credentials::AtStart::Switch { from, to } => {
+            credentials::check_switch(
+                store,
+                paths.credentials_file(),
+                release,
+                std::env::consts::OS,
+                from,
+                to,
+            )
+            .await
+            .map_err(anyhow::Error::msg)?;
+            credentials::record(store, to).await?;
+            to
+        }
+    };
+    // Read once for the run: whether a switch would be offered (`daemon.status`'s `choosable`).
+    // The operating system's store is asked only where the answer depends on it, a Linux release on
+    // it, so no other machine is made to reach its keyring at start.
+    let os_store_absent = release
+        && std::env::consts::OS == "linux"
+        && credential_store == credentials::Store::Os
+        && tokio::task::spawn_blocking(|| {
+            credentials::os_store_absent(mixengine_platform::host().keyring())
+        })
+        .await
+        .unwrap_or(false);
+    let credential_facts = credentials::Facts {
+        store: credential_store,
+        choosable: credentials::choosable(
+            release,
+            std::env::consts::OS,
+            credential_store,
+            os_store_absent,
+        ),
+    };
+
+    Ok((credential_store, credential_facts))
+}
+
+/// Honour the `[paths]` flags this start was given, and return the home as it now is.
+///
+/// Here rather than inside `open_home`: whether these flags may be honoured is a question for the
+/// database, and `open_home` never opens one. What makes the ordering safe is that `mixengine.db`
+/// is the one file `[paths]` cannot move, so the store was opened at a path no relocation can
+/// change underneath this decision.
+#[warn(clippy::cognitive_complexity)]
+async fn apply_storage(
+    args: &Args,
+    store: &Store,
+    home: Home,
+    host: &dyn mixengine_platform::Host,
+) -> anyhow::Result<Home> {
+    let home = match storage::apply(
+        store,
+        home.paths.config_file(),
+        &home.config.paths,
+        &args.requested_paths(),
+    )
+    .await?
+    {
+        storage::Applied::Nothing => home,
+
+        // Read again rather than patched in place. `open_home` is idempotent and documented as
+        // such — it is what `mix doctor` reuses — so this is the honest way to pick up a layout
+        // that changed a moment ago: resolve, read the file that was just written, and let
+        // `bootstrap` create what the new value names.
+        //
+        // `endpoint` and `lock` above are **not** recomputed, and do not need to be: both come out
+        // of `run/`, which is the directory `[paths]` refuses to move, so a second read answers
+        // with what this process is already holding.
+        storage::Applied::Written(_) => {
+            let moved = mixengine_core::open_home(args.home.as_deref(), host)
+                .map_err(|error| error.to_wire())?;
+
+            // The default layout was created a moment ago by the `open_home` at the top of this
+            // function, because the window these flags need is a question for a database that did
+            // not exist yet. What that leaves behind is an empty directory in the home, at exactly
+            // the path somebody who just chose a disk would go looking for their data.
+            storage::tidy(&home.paths, &moved.paths);
+
+            moved
+        }
+    };
+
+    Ok(home)
 }
 
 /// Remove the directories a finished uninstall named, and say why about any that stay.
