@@ -1,7 +1,4 @@
 {
   "limit": 1000,
-  "files": {
-    "server/native/src/accounts.rs": 1013,
-    "server/worker/src/account.ts": 1083
-  }
+  "files": {}
 }
