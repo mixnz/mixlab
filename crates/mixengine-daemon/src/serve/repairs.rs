@@ -5,6 +5,7 @@
 use std::sync::Arc;
 
 use super::Shared;
+use crate::services::repairs::Occasion;
 use crate::{adopt, background, services};
 
 /// **What an earlier home left on disk, and marked, is recorded first** — roadmap task T182f.
@@ -37,19 +38,7 @@ pub(super) async fn repair_home(
     // removed by hand. Nothing here fails the start, on the same rule the two blocks around it
     // follow: a runtime with no service is one command away from having one, where refusing to start
     // would leave the user with no daemon at all.
-    match mixengine_core::services::pools::ensure(
-        store,
-        mixengine_platform::host().as_ref(),
-        &services::catalogue(),
-    )
-    .await
-    {
-        Ok(created) if created.is_empty() => {
-            tracing::debug!("every installed runtime already has the service it needs");
-        }
-        Ok(created) => tracing::info!(pools = ?created, "installed runtimes were given services"),
-        Err(error) => tracing::warn!(%error, "could not give every installed runtime its service"),
-    }
+    services::repairs::give_runtimes_their_pools(store, Occasion::Start).await;
 
     // **Both halves of on-demand activation, and spawned rather than awaited** — roadmap task T70.
     // A port is allocated for every service whose activator needs one, and then an address is held
@@ -72,45 +61,17 @@ pub(super) async fn repair_home(
         let store = store.clone();
 
         async move {
-            let host = mixengine_platform::host();
-
-            match mixengine_core::services::activation::ensure(
-                &store,
-                host.as_ref(),
-                &crate::services::catalogue(),
-            )
-            .await
-            {
-                Ok(given) if given.is_empty() => {
-                    tracing::debug!("every service that can be woken already has its port");
-                }
-                Ok(given) => {
-                    tracing::info!(services = ?given, "services were given activation ports")
-                }
-                Err(error) => {
-                    tracing::warn!(%error, "could not give every wakeable service a port");
-                    return;
-                }
+            if !services::repairs::give_activation_ports(&store, Occasion::Start).await {
+                return;
             }
 
-            match crate::services::activate::hold_all(
+            services::repairs::hold_activation_addresses(
                 Arc::clone(&services),
                 &paths,
                 &store,
-                host.as_ref(),
+                Occasion::Start,
             )
-            .await
-            {
-                Ok(held) if held.is_empty() => {
-                    tracing::debug!("no service in this home can be started by a request");
-                }
-                Ok(held) => {
-                    tracing::info!(services = ?held, "holding an address for each of these")
-                }
-                Err(error) => {
-                    tracing::warn!(%error, "could not hold an address for every wakeable service");
-                }
-            }
+            .await;
 
             // **What the last daemon left down is still down** — roadmap task **T70a**. Without
             // this a database stopped before a restart is unreachable for ever: its row says

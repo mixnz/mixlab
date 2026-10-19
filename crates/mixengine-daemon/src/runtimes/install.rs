@@ -12,6 +12,9 @@ use mixengine_proto::{
 use crate::error::ToWire as _;
 use crate::jobs::JobHandle;
 use crate::requirements;
+use crate::services::repairs::{
+    Occasion, give_activation_ports, give_runtimes_their_pools, hold_activation_addresses,
+};
 
 use super::{Runtimes, emulation_notice, offered, subject_of};
 
@@ -338,25 +341,9 @@ impl Runtimes {
                 .log("after a JDK was installed");
         }
 
-        match mixengine_core::services::pools::ensure(
-            &self.store,
-            mixengine_platform::host().as_ref(),
-            &crate::services::catalogue(),
-        )
-        .await
-        {
-            Ok(created) if created.is_empty() => {}
-            Ok(created) => {
-                tracing::info!(pools = ?created, "the new runtime was given its service")
-            }
-            Err(error) => tracing::warn!(
-                kind = kind.as_str(),
-                version = version.as_str(),
-                %error,
-                "this runtime was installed but could not be given its service; the next daemon \
-                 start will try again"
-            ),
-        }
+        let occasion = Occasion::Install { kind, version };
+
+        give_runtimes_their_pools(&self.store, occasion).await;
 
         // **And the address that lets a request start that pool again** — roadmap task **T72a**.
         //
@@ -372,37 +359,14 @@ impl Runtimes {
         // stopped.
         //
         // Reported and not fatal, on the pool hook's reasoning above.
-        let host = mixengine_platform::host();
-
-        if let Err(error) = mixengine_core::services::activation::ensure(
-            &self.store,
-            host.as_ref(),
-            &crate::services::catalogue(),
-        )
-        .await
-        {
-            tracing::warn!(
-                %error,
-                "a new pool could not be given an activation port; the next daemon start will try \
-                 again"
-            );
-        }
-
-        match crate::services::activate::hold_all(
+        give_activation_ports(&self.store, occasion).await;
+        hold_activation_addresses(
             Arc::clone(&self.services),
             &self.paths,
             &self.store,
-            host.as_ref(),
+            occasion,
         )
-        .await
-        {
-            Ok(held) if held.is_empty() => {}
-            Ok(held) => tracing::info!(services = ?held, "a request can now start these services"),
-            Err(error) => tracing::warn!(
-                %error,
-                "a new pool cannot be started by a request until this daemon is restarted"
-            ),
-        }
+        .await;
 
         // The ini set this build can load, rendered before anything runs out of it — reported rather
         // than fatal, on the pool hook's reasoning above: a PHP with no `conf.d` is one the next
