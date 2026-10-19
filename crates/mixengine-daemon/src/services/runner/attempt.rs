@@ -291,17 +291,8 @@ impl Runner {
 
                 self.record_exit(None).await;
 
-                // **A conflict outranks a refusal, and the order is not arbitrary.** If another
-                // program holds the port, the client this check runs is talking to *that program* —
-                // a refusal it printed is not this service's, and who holds the port is the fact
-                // worth reporting.
-                self.give_up(
-                    conflict
-                        .or(refused)
-                        .unwrap_or(StateReason::ReadyTimeout { after }),
-                    None,
-                )
-                .await
+                self.give_up(timed_out_reason(conflict, refused, after), None)
+                    .await
             }
 
             // A spec this build or this machine cannot check. Not a timeout, and reported as what it
@@ -604,17 +595,8 @@ impl Runner {
                 After::Done
             }
 
-            // **A conflict replaces an exit and never a crash loop.** `StateReason::Exited` says
-            // only what the OS said, and a port held by somebody else is the same fact with the
-            // useful half attached; `StateReason::CrashLoop` carries its own count and the lines
-            // the service printed, which is more than this could add.
             Decision::GiveUp { reason } => {
-                let reason = match (reason, conflict) {
-                    (StateReason::Exited { .. }, Some(conflict)) => conflict,
-                    (reason, _) => reason,
-                };
-
-                self.give_up(reason, None).await
+                self.give_up(given_up_reason(reason, conflict), None).await
             }
 
             // The `Restarting` is what answers a walk that is waiting on this service, which is why
@@ -622,10 +604,7 @@ impl Runner {
             // nobody could read would leave that walk with nothing to wait for.
             Decision::Restart { after, attempt } => {
                 if !self
-                    .move_to(
-                        ServiceState::Restarting,
-                        conflict.unwrap_or(StateReason::Exited { code }),
-                    )
+                    .move_to(ServiceState::Restarting, restarting_reason(conflict, code))
                     .await
                 {
                     return After::Done;
@@ -675,6 +654,42 @@ impl Runner {
     }
 }
 
+/// Why a start that was not ready in time failed.
+///
+/// **A conflict outranks a refusal, and the order is not arbitrary.** If another program holds the
+/// port, the client the ready check runs is talking to *that program* — a refusal it printed is not
+/// this service's, and who holds the port is the fact worth reporting.
+#[warn(clippy::cognitive_complexity)]
+fn timed_out_reason(
+    conflict: Option<StateReason>,
+    refused: Option<StateReason>,
+    after: mixengine_proto::Millis,
+) -> StateReason {
+    conflict
+        .or(refused)
+        .unwrap_or(StateReason::ReadyTimeout { after })
+}
+
+/// Why a service the restart policy gave up on failed.
+///
+/// **A conflict replaces an exit and never a crash loop.** `StateReason::Exited` says only what the
+/// OS said, and a port held by somebody else is the same fact with the useful half attached;
+/// `StateReason::CrashLoop` carries its own count and the lines the service printed, which is more
+/// than this could add.
+#[warn(clippy::cognitive_complexity)]
+fn given_up_reason(reason: StateReason, conflict: Option<StateReason>) -> StateReason {
+    match (reason, conflict) {
+        (StateReason::Exited { .. }, Some(conflict)) => conflict,
+        (reason, _) => reason,
+    }
+}
+
+/// Why a service is restarting: who holds its port if anybody does, or how it exited.
+#[warn(clippy::cognitive_complexity)]
+fn restarting_reason(conflict: Option<StateReason>, code: Option<i32>) -> StateReason {
+    conflict.unwrap_or(StateReason::Exited { code })
+}
+
 /// Turn a supervisor refusal into the reason a user reads.
 ///
 /// [`Error::UnsupportedCheck`](mixengine_supervisor::Error::UnsupportedCheck) already carries both
@@ -699,6 +714,9 @@ fn uncheckable(error: &mixengine_supervisor::Error) -> StateReason {
         },
     }
 }
+
+#[cfg(test)]
+mod decisions;
 
 #[cfg(test)]
 mod tests {
