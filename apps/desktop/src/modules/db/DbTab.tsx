@@ -18,6 +18,8 @@ import ConnectionWorkspace from "./tab/ConnectionWorkspace";
 /* The module's own global stylesheet: the connection form, the saved list and the three
    workspaces. Component-scoped rules live in each component's CSS Module. */
 import "./db.css";
+import "./connectionForm.css";
+import "./workspaces.css";
 
 /**
  * A database tab: the saved list and the connection form, or the workspace of the connection it

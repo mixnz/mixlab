@@ -6,6 +6,7 @@ import { useStartupProfile } from "./profiles";
    Loading them from a component that may not mount would work only for as long as nobody makes
    `Workspace` a lazy import. */
 import "./App.css";
+import "./chrome.css";
 
 /**
  * Which modules this window draws, decided before anything is drawn.

@@ -1,7 +1,7 @@
 # The root element of a workspace
 
 Every pane a module tab renders as its whole body — a workspace, or anything standing in for one —
-sits in `.tab-panel`, and `.tab-panel` is a **row-direction flex container** (`shell/App.css`, with
+sits in `.tab-panel`, and `.tab-panel` is a **row-direction flex container** (`shell/chrome.css`, with
 `display: flex` set inline by `Workspace.tsx` on the active tab). That one fact is the whole of this
 convention.
 

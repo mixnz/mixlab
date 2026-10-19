@@ -214,12 +214,15 @@ has no Copy on a right-click any more. A pane that wants one owns it, the same a
 
 ## Styling
 
-- Two global stylesheets, one per owner. [`src/shell/App.css`](../../../apps/desktop/src/shell/App.css) has the
-  resets, the scrollbars, the tab chrome, the classes any module may use (`.visually-hidden`,
-  `.context-menu`, `.select-*`, `.muted`) and the custom properties everything builds on;
-  [`src/modules/db/db.css`](../../../apps/desktop/src/modules/db/db.css) has the connection form, the saved list,
-  the three workspaces and the engine colours. `glass.css` is the shell's too — `glass`,
-  `glass-pill`, `glass-sheet` and `glass-scrim` are a material it offers every module.
+- Global stylesheets, one set per owner. [`src/shell/App.css`](../../../apps/desktop/src/shell/App.css) has the
+  custom properties everything builds on, the dark theme and the colour themes, and is the one
+  stylesheet that names a colour; [`src/shell/chrome.css`](../../../apps/desktop/src/shell/chrome.css) has the
+  resets, the scrollbars, the tab chrome and the classes any module may use (`.visually-hidden`,
+  `.context-menu`, `.select-*`, `.muted`);
+  [`src/modules/db/db.css`](../../../apps/desktop/src/modules/db/db.css) has the saved list and the engine
+  colours, with the connection form in `connectionForm.css` and the three workspaces in
+  `workspaces.css` beside it. `glass.css` is the shell's too — `glass`, `glass-pill`, `glass-sheet`
+  and `glass-scrim` are a material it offers every module.
 - **Order between them is not guaranteed.** Vite decides it from the import graph, and `db.css` is
   reached through the registry before the shell's own is. Where a module rule has to beat a shell
   rule, it wins on specificity, never on order.

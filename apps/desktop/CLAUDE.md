@@ -68,7 +68,8 @@ src/                 React frontend
     registry.ts      MODULES, MODULE_PRESETS — the only file outside modules/ that names one
     profiles.ts      enabledModules and visibleModules() — the setting behind the gate
     launch.ts        Tabs the backend asks for — the only other way a tab opens
-    App.css          Tokens + chrome + the classes any module may use
+    App.css          Tokens, the dark theme and the colour themes: the one stylesheet that names a colour
+    chrome.css       The chrome, and the classes any module may use
   core/              Helpers no module owns and any module may use
   components/        Shared primitives only, one folder each
   icons/  i18n/      Shared icons; the shared dictionaries and dicts.ts, which merges them
@@ -88,6 +89,7 @@ src/                 React frontend
     components/      This module's components every engine shares
     i18n/            This module's own strings
     db.css  types.ts Its global styles; the types mirroring the Rust models
+    connectionForm.css  workspaces.css  The rest of them: the connection form, and the three workspaces
     tabState.ts      What a tab remembers, as in every module
   modules/rest/      The REST client
     RestTab.tsx      Sidebar of saved requests + the request being edited

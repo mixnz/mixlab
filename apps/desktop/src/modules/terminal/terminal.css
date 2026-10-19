@@ -1,6 +1,6 @@
 @import "@xterm/xterm/css/xterm.css";
 
-/* `width` rather than leaving it be: `shell/App.css` gives `.tab-panel` `display: flex` without
+/* `width` rather than leaving it be: `shell/chrome.css` gives `.tab-panel` `display: flex` without
    setting a direction, so this frame is a flex item on the horizontal axis and `0 1 auto` takes its
    width from its content. For the form it is narrower than the window; for xterm it is worse —
    `FitAddon` measures the frame to compute the column count and then resets `.xterm`'s width, the

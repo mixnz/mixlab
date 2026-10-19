@@ -51,7 +51,7 @@ function storeColorTheme(colorTheme: ColorTheme): void {
 
 /* A theme the user picks fades in rather than landing in one frame: a whole window flipping from
    dark to light at once is hard on the eyes. The browser snapshots the old page and cross-fades to
-   the new one, so the terminal's canvas fades with everything else. The timing lives in App.css.
+   the new one, so the terminal's canvas fades with everything else. The timing lives in chrome.css.
    Only the click is animated — the first paint, a synced preference and the OS switching under
    *system* still apply at once. A webview without view transitions, or a user who asked for less
    motion, gets the switch as it always was. */

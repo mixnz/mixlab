@@ -1,0 +1,413 @@
+/* The database module's workspaces: the frame a connection opens into, its method tabs, and the
+   SQL, Mongo and Redis workspaces with their headers, sidebars and panels. Global for the same
+   reason as `db.css`, and imported right after it. */
+
+.workspace {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Where a workspace would be, for a kind that has none — see the fallback at the end of
+   `DbTab.tsx`. Deliberately plain: it is a dead end, and dressing it up would suggest there is
+   something here to work with. */
+.workspace-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  /* The same root box every workspace in this file takes — see
+     [docs/standards/desktop/workspace-root.md](../../../../../docs/standards/desktop/workspace-root.md). */
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 2rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.workspace-unavailable p {
+  max-width: 34rem;
+  margin: 0;
+}
+
+/* The workspace's own tabs — Data / Structure / Statistics / Query — are navigation: they move to
+   another view of the same thing, so they keep an underline, and are the one row in the app that
+   does. */
+.method-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.method-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  /* As tall as the database picker beside it, so the header reads as one row. */
+  min-height: var(--control-h);
+  box-sizing: border-box;
+  padding: 0 0.85em;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+}
+
+/* Only the logo is brand-coloured; the name beside it stays in the text colour, so a row of four
+   tabs reads as one control rather than four coloured words. */
+.method-tab-icon {
+  color: var(--kind);
+}
+
+.method-tab:hover {
+  color: var(--text);
+}
+
+.method-tab-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  background: rgb(var(--accent-rgb) / 0.08);
+}
+
+/* The way out of a connection, sitting after the tabs and deliberately not looking like one: a rule
+   stands it off the last tab, and square corners where a tab is rounded. Red only under the
+   pointer, where the click would land: leaving a connection loses nothing. */
+.method-tab-disconnect {
+  margin-left: 0.5rem;
+  padding-left: 0.9em;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.method-tab-disconnect:hover {
+  color: var(--danger-text);
+  background: rgb(var(--danger-rgb) / 0.12);
+}
+
+.sql-workspace {
+  /* What the dump and restore overlay is positioned against — it covers this tab's workspace,
+     and only it, so the tab bar and the other connections stay usable meanwhile. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  padding: var(--view-padding);
+}
+
+.sql-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.sql-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sql-db-select {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sql-content-tabs {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.sql-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.2rem;
+}
+
+.sql-sidebar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding-right: 0.15rem;
+}
+
+.sql-sidebar-search {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-bottom: 0.4rem;
+}
+
+/* Only where the bar sits: the buttons themselves are the shared ActionBar's. */
+/* Two bars: what the list holds on the left, what the database as a whole answers to on the
+   right, pushed apart so the destructive one is nowhere near the everyday ones. */
+.sql-sidebar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  padding-top: 0.35rem;
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.sql-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A tab panel that stays mounted while another tab is up — all four of them are: the script and
+   results in the Query editor, the figures in Statistics, the page of rows the Data grid has read
+   and the shape Structure has, none of which should have to be fetched again for a look at one of
+   the others. Taking one out of the flow rather than unmounting it is what keeps that state; it
+   costs the layout nothing while hidden. */
+.sql-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sql-panel-hidden {
+  display: none;
+}
+
+.mongo-workspace {
+  /* What the dump and restore overlay is positioned against — it covers this tab's workspace,
+     and only it, so the tab bar and the other connections stay usable meanwhile. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  padding: var(--view-padding);
+}
+
+.mongo-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.mongo-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mongo-db-select {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Sits inside the header rather than above the content, so it drops the strip's own separator
+   and bottom gap and lets the header's border do that work. */
+.mongo-content-tabs {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.mongo-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.2rem;
+}
+
+.mongo-sidebar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding-right: 0.15rem;
+}
+
+.mongo-sidebar-search {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-bottom: 0.4rem;
+}
+
+/* Two bars, as on the MySQL side: the list's own actions, and the database's. */
+.mongo-sidebar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  padding-top: 0.35rem;
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.mongo-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A tab panel that stays mounted while another tab is up — the Statistics grid, whose figures
+   have to outlive a look at the documents. The MySQL side's own pair, for the same job. */
+.mongo-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mongo-panel-hidden {
+  display: none;
+}
+
+.redis-workspace {
+  /* Where the tunnel popup sits: it covers this tab's workspace, and only that. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  padding: var(--view-padding);
+}
+
+.redis-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.redis-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.redis-db-select {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Sits inside the header rather than above the content, so it drops the strip's own separator
+   and bottom gap and lets the header's border do that work. */
+.redis-content-tabs {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.redis-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.2rem;
+}
+
+.redis-sidebar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding-right: 0.15rem;
+}
+
+.redis-sidebar-search {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-bottom: 0.4rem;
+}
+
+.redis-key-pattern {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Wide enough for the one word the flat option is written as, and no wider — the pattern box
+   next to it is what should get the sidebar's width. */
+.redis-separator-select {
+  flex: 0 0 auto;
+  width: 3.6rem;
+}
+
+/* Beside it, and for the same reason: wide enough for `200K` and no wider. Both of these say how
+   the keyspace is read, so they sit together at the end of the row. */
+.redis-limit-select {
+  flex: 0 0 auto;
+  width: 4.2rem;
+}
+
+.redis-sidebar-actions {
+  flex: 0 0 auto;
+  padding-top: 0.35rem;
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.redis-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* The table and collection lists in the sidebar. The search box and buttons around them keep the
+   app's own size, but a list of names can run to hundreds, and at a full field's height too few of
+   them fit on screen. One step down the same scale, rather than a size of its own. */
+.db-sidebar-list {
+  --control-h: var(--control-h-xs);
+}

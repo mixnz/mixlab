@@ -11,10 +11,11 @@ import { readEnabledModules, visibleModules } from "./shell/profiles";
 import { LANGUAGE_KEY, MODULES_KEY, PALETTE_KEY, THEME_KEY } from "./shell/storageKeys";
 import TrayFrame from "./shell/tray/TrayFrame";
 import { traySections } from "./shell/tray/sections";
-/* The tokens, the ground and the theme the main window draws with. `shell/theme` applies the stored
+/* The tokens, the ground, the chrome and the theme the main window draws with. `shell/theme` applies the stored
    theme and colour theme as it is imported. */
 import "./shell/theme";
 import "./shell/App.css";
+import "./shell/chrome.css";
 
 /**
  * The tray panel's window — T168, T192, `src-tauri/src/tray.rs`.
