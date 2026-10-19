@@ -32,6 +32,7 @@ pub(crate) mod limits;
 pub(crate) mod logs;
 mod ports;
 mod recovery;
+pub(crate) mod repairs;
 pub(crate) mod reset;
 mod runner;
 mod shutdown;

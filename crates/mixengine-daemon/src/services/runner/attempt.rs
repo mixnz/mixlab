@@ -2,20 +2,20 @@
 //! ready, watching it while it runs, and deciding what its end means — a restart, a stop,
 //! or giving up.
 
+use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::sync::Arc;
 
 use mixengine_core::services;
-use mixengine_platform::process::{self, Supervised};
+use mixengine_platform::process::{self, Exit, Supervised};
 use mixengine_proto::{ServiceState, StateReason};
 use mixengine_supervisor::logs::Capture;
 use mixengine_supervisor::restart::TAIL_LINES;
-use mixengine_supervisor::{Decision, Health, Restarts, Surroundings, Verdict, ready};
+use mixengine_supervisor::{Decision, Restarts, Surroundings, ready};
 use tokio::sync::broadcast;
-use tokio::time::Instant;
 
 use super::super::now;
-use super::{After, Readiness, Runner, WATCH, fold, worth_recording};
+use super::{After, Runner};
 
 impl Runner {
     /// One life of the process: spawn it, wait for readiness, then watch it until it ends.
@@ -82,23 +82,50 @@ impl Runner {
         });
     }
 
+    #[warn(clippy::cognitive_complexity)]
     pub(super) async fn attempt(&mut self, restarts: &mut Restarts) -> After {
-        let env = match self.environment().await {
-            Ok(Some(env)) => env,
+        let mut life = Life::Resolving;
+
+        loop {
+            life = match life {
+                Life::Resolving => self.resolve().await,
+                Life::Spawning { env } => self.spawn(env).await,
+                Life::WaitingForReady {
+                    supervised,
+                    capture,
+                } => self.wait_for_ready(supervised, capture, restarts).await,
+                Life::Watching {
+                    supervised,
+                    capture,
+                } => Life::Over(self.supervise(supervised, capture, restarts).await),
+                Life::Stopping {
+                    supervised,
+                    capture,
+                } => Life::Over(self.stop(supervised, capture).await),
+                Life::Over(after) => return after,
+            };
+        }
+    }
+
+    /// Read the environment the service is to be started with.
+    #[warn(clippy::cognitive_complexity)]
+    async fn resolve(&mut self) -> Life {
+        match self.environment().await {
+            Ok(Some(env)) => Life::Spawning { env },
 
             // Asked to stop while the keyring was still being read. Nothing was started, so this
             // goes straight through `Stopping`, as a stop during a backoff does.
             Ok(None) => {
                 self.stopped_before_running().await;
 
-                return After::Done;
+                Life::Over(After::Done)
             }
 
             // A credential the spec names and the keyring does not hold, or one it will not answer
             // for inside `START_ENVIRONMENT`. The process was never started, which is exactly what
             // `SpawnFailed` says. The event stays the reason alone; the sentence naming the entry —
-            // its address, never its value — goes on the row (T200b, D5), which is what lets this
-            // machine's own MixLab and `mix` say why instead of `daemon.log` alone.
+            // its address, never its value — goes on the row, which is what lets this machine's own
+            // MixLab and `mix` say why instead of `daemon.log` alone.
             Err(error) => {
                 tracing::error!(
                     service = self.spec.id().as_str(),
@@ -106,12 +133,17 @@ impl Runner {
                     "cannot resolve the environment this service is to be started with"
                 );
 
-                return self
-                    .give_up(StateReason::SpawnFailed, Some(format!("{error:#}")))
-                    .await;
+                Life::Over(
+                    self.give_up(StateReason::SpawnFailed, Some(format!("{error:#}")))
+                        .await,
+                )
             }
-        };
+        }
+    }
 
+    /// Start the process, put its output where clients read it, and record it on the row.
+    #[warn(clippy::cognitive_complexity)]
+    async fn spawn(&mut self, env: BTreeMap<String, String>) -> Life {
         let args: Vec<OsString> = self.spec.args().iter().map(OsString::from).collect();
 
         let mut supervised = match process::spawn_supervised(
@@ -131,9 +163,10 @@ impl Runner {
                     "cannot start this service"
                 );
 
-                return self
-                    .give_up(StateReason::SpawnFailed, Some(format!("{error:#}")))
-                    .await;
+                return Life::Over(
+                    self.give_up(StateReason::SpawnFailed, Some(format!("{error:#}")))
+                        .await,
+                );
             }
         };
 
@@ -141,14 +174,6 @@ impl Runner {
         // command need is the environment the service is *running* with, and resolving it again
         // would be an OS keyring read every ten seconds for as long as the service is up.
         self.surroundings = Some(Surroundings::new(self.spec.cwd(), env));
-
-        // Cloned rather than borrowed out of `self`, because the wait below also holds `&mut
-        // supervised` and the two would be a borrow of `self` and a borrow inside it at once. Two
-        // owned fields, cloned once per start, against a ready check that may run for a minute.
-        let place = self
-            .surroundings
-            .clone()
-            .expect("the surroundings were just set");
 
         // Before anything waits on the process: a pipe nobody drains stops the service writing to
         // it, and a ready check that matches a log pattern has nothing to match against until this
@@ -161,13 +186,24 @@ impl Runner {
         );
 
         self.relay(&capture);
+        self.record_started(&supervised).await;
 
-        // The three columns nothing wrote before T19, and the pair T18 adopts on. The start time is
-        // read while the handle is still held, which is what makes it this child's: an unreaped
-        // child keeps its pid reserved on Unix, and on Windows this process holds a handle to it, so
-        // the number cannot have been given away in between. A reading that fails leaves the column
-        // null rather than guessing — the process is supervised either way, and what a null costs is
-        // only that a daemon restart will not adopt it.
+        Life::WaitingForReady {
+            supervised,
+            capture,
+        }
+    }
+
+    /// Write the process this service now runs as onto its row.
+    ///
+    /// The three columns nothing wrote before, and the pair a daemon restart adopts on. The start
+    /// time is read while the handle is still held, which is what makes it this child's: an
+    /// unreaped child keeps its pid reserved on Unix, and on Windows this process holds a handle to
+    /// it, so the number cannot have been given away in between. A reading that fails leaves the
+    /// column null rather than guessing — the process is supervised either way, and what a null
+    /// costs is only that a daemon restart will not adopt it.
+    #[warn(clippy::cognitive_complexity)]
+    async fn record_started(&self, supervised: &Supervised) {
         let started_at = match supervised.started_at() {
             Ok(started_at) => started_at,
 
@@ -199,6 +235,23 @@ impl Runner {
                  daemon restart will not adopt it"
             );
         }
+    }
+
+    /// Wait for the process to be ready, and decide what its answer means.
+    #[warn(clippy::cognitive_complexity)]
+    async fn wait_for_ready(
+        &mut self,
+        mut supervised: Supervised,
+        capture: Capture,
+        restarts: &mut Restarts,
+    ) -> Life {
+        // Cloned rather than borrowed out of `self`, because the wait below also holds `&mut
+        // supervised` and the two would be a borrow of `self` and a borrow inside it at once. Two
+        // owned fields, cloned once per start, against a ready check that may run for a minute.
+        let place = self
+            .surroundings
+            .clone()
+            .expect("spawn sets the surroundings before the ready check");
 
         // Raced against the stop for the same reason the watch loop is, and it matters more here:
         // a ready check is allowed tens of seconds, and a daemon that only looked at its token
@@ -216,329 +269,145 @@ impl Runner {
         // process is up, `Starting` reaches `Stopping`, and a service that is mid-start is exactly
         // the one whose data directory should not be left to a destructor that kills.
         let Some(outcome) = outcome else {
-            return self.stop(supervised, capture).await;
+            return Life::Stopping {
+                supervised,
+                capture,
+            };
         };
 
         match outcome {
-            Ok(ready::Ready::Ready) => {
-                if !self
-                    .move_to(ServiceState::Running, StateReason::Ready)
-                    .await
-                {
-                    self.kill(supervised, capture).await;
-                    self.record_exit(None).await;
-
-                    return After::Done;
-                }
-
-                self.answered_by_this_start();
-
-                self.supervise(supervised, capture, restarts).await
-            }
+            Ok(ready::Ready::Ready) => self.on_ready(supervised, capture).await,
 
             // The most common way a service fails to start, and the reason `ready::wait` races the
             // exit rather than polling the probe: this is the same path a crash an hour from now
             // takes, and it is the restart policy that decides between them.
             Ok(ready::Ready::Exited(exit)) => {
-                // Asked before the process is reaped, and only about a failure: an exit of zero is
-                // a service that did what it was told, and nothing about a port could improve on
-                // that sentence.
-                let conflict = if exit.is_success() {
-                    None
-                } else {
-                    self.port_conflict(Some(supervised.pid())).await
-                };
-
-                let capture = self.kill(supervised, capture).await;
-                let decision = restarts.ended(&exit, std::time::Instant::now(), &capture);
-
-                self.after_exit(decision, exit.code(), conflict).await
+                self.on_exit_before_ready(supervised, capture, &exit, restarts)
+                    .await
             }
 
             // Running, and never going to be usable. Killed rather than left: the next attempt would
             // collide with the port and the data directory this one is holding.
-            Ok(ready::Ready::TimedOut) => {
-                let after = self.spec.ready().timeout();
-                // Asked while the process is still up, so that its own pid is there to be
-                // recognised: a service that bound its port and then failed its ready check is
-                // holding that port itself, and is not in conflict with anybody.
-                let conflict = self.port_conflict(Some(supervised.pid())).await;
-
-                // Kept rather than dropped since roadmap task **T127a**: `kill` is also the drain,
-                // so what comes back holds the server's last words instead of leaving them in a
-                // pipe.
-                let capture = self.kill(supervised, capture).await;
-                let refused = self.refused_superuser(&capture);
-
-                // **And what it last said, in the daemon's own log.** The service's own log file
-                // holds these lines as well, but a ready timeout is the failure a reader meets
-                // furthest from that file — in a CI log, in a bug report, in a screenshot — and
-                // "not ready within 15s" on its own says only that something was slow. Measured on
-                // run 35470533602, where a php-fpm pool timed out on Windows and the report held
-                // no line of what the pool had printed.
-                let said = capture.recent(TAIL_LINES);
-                if !said.is_empty() {
-                    tracing::warn!(
-                        service = self.spec.id().as_str(),
-                        said = said
-                            .iter()
-                            .map(|line| line.text.as_str())
-                            .collect::<Vec<_>>()
-                            .join(" / "),
-                        "this service was not ready in time; these are its last lines"
-                    );
-                }
-
-                self.record_exit(None).await;
-
-                // **A conflict outranks a refusal, and the order is not arbitrary.** If another
-                // program holds the port, the client this check runs is talking to *that program* —
-                // a refusal it printed is not this service's, and who holds the port is the fact
-                // worth reporting.
-                self.give_up(
-                    conflict
-                        .or(refused)
-                        .unwrap_or(StateReason::ReadyTimeout { after }),
-                    None,
-                )
-                .await
-            }
+            Ok(ready::Ready::TimedOut) => self.on_ready_timeout(supervised, capture).await,
 
             // A spec this build or this machine cannot check. Not a timeout, and reported as what it
             // is — see `StateReason::Uncheckable`.
-            Err(error) => {
-                let reason = uncheckable(&error);
-                tracing::error!(
-                    service = self.spec.id().as_str(),
-                    error = %error,
-                    "this service cannot be checked for readiness here"
-                );
-
-                self.kill(supervised, capture).await;
-                self.record_exit(None).await;
-
-                self.give_up(reason, None).await
-            }
+            Err(error) => self.on_uncheckable(supervised, capture, &error).await,
         }
     }
 
-    /// Watch a running service: for the daemon asking it to stop, for it ending, for it going sick.
-    ///
-    /// One timer rather than two, and it is the cheaper one that sets the pace: the health check's
-    /// interval is measured in seconds and the liveness poll in milliseconds, so the loop wakes on
-    /// whichever is next and asks only the question that is due.
-    async fn supervise(
-        &mut self,
-        mut supervised: Supervised,
-        capture: Capture,
-        restarts: &mut Restarts,
-    ) -> After {
-        let mut health = self.spec.health().map(Health::watching);
-        let mut due = health
-            .as_ref()
-            .map(|health| Instant::now() + health.interval());
+    /// The process is ready: record it, and watch it.
+    #[warn(clippy::cognitive_complexity)]
+    async fn on_ready(&mut self, supervised: Supervised, capture: Capture) -> Life {
+        if !self
+            .move_to(ServiceState::Running, StateReason::Ready)
+            .await
+        {
+            self.kill(supervised, capture).await;
+            self.record_exit(None).await;
 
-        // Whether the current run of unmakeable probes has already been reported. See the `Err` arm
-        // below: a transient fault is worth one line, not one line every interval.
-        let mut complained = false;
-
-        // **The two halves of the state this loop owns** — roadmap task T71a. `healthy` starts true
-        // because a service with no health check is one nothing has ever said is ill, and `state`
-        // starts `Running` because `supervise` is entered from the `Running`/`Ready` transition
-        // immediately above it.
-        let mut healthy = true;
-        let mut state = ServiceState::Running;
-
-        // Taken once, before the loop: the borrow checker's reason is that the loop reaches `&mut
-        // self`, and the better one is that a probe every ten seconds must not be a keyring read
-        // every ten seconds. Only `HealthProbe::Command` reads it.
-        let place = self.where_commands_run().await;
-
-        loop {
-            let watch = Instant::now() + WATCH;
-            let wake = due.map_or(watch, |due| due.min(watch));
-
-            tokio::select! {
-                // Biased towards the stop: a service the daemon has been asked to shut down should
-                // not spend one more health interval being probed.
-                biased;
-
-                () = self.cancel.cancelled() => {
-                    return self.stop(supervised, capture).await;
-                }
-
-                // Ahead of the timer and behind the stop. A configuration that has already been
-                // written is one the next liveness poll can wait for, and a daemon on its way out
-                // should not spend a reload's patience on a service it is about to stop.
-                () = self.asked_to_reload.notified() => {
-                    self.reload(&place, &supervised).await;
-
-                    continue;
-                }
-
-                // Beside the reload and for its reason: something has been written down and the
-                // running process has not been told yet. Cheaper than a reload — no patience, no
-                // signal, no command — because both mechanisms accept a rewrite with processes
-                // already inside them.
-                Ok(()) = self.limits_asked.changed() => {
-                    let asked = *self.limits_asked.borrow_and_update();
-
-                    if let Err(error) = supervised.set_limits(&super::super::limits::from_proto(asked)) {
-                        // **Logged, and the service is left running.** A mechanism that refused a
-                        // value is not a service that has stopped working, and a daemon that killed
-                        // a healthy database because a cap could not be written would be doing more
-                        // damage than the uncapped service ever could.
-                        tracing::warn!(
-                            service = self.spec.id().as_str(),
-                            error = %error,
-                            "cannot apply this service's new limits to the running process"
-                        );
-                    }
-
-                    continue;
-                }
-
-                // **Nothing is done here, deliberately.** This arm exists to wake the loop; what
-                // to do about the new value is the same decision a health probe reaches, and it is
-                // made once, below, from both inputs.
-                Ok(()) = self.over_memory.changed() => {}
-
-                () = tokio::time::sleep_until(wake) => {}
-            }
-
-            match supervised.exited() {
-                Ok(Some(exit)) => {
-                    // Said before the kill rather than after, and this is the only place a readiness
-                    // is published without a row behind it. Between a process ending and
-                    // `after_exit` persisting what that meant lie a drain bounded by `FLUSH` and a
-                    // write, and a walk arriving inside that window would otherwise read the `Up`
-                    // this service stopped being — and start the tier below against a database that
-                    // has gone. `Deciding` and not `Down` because what happens next is the restart
-                    // policy's to say: whoever is waiting waits a moment longer for the answer
-                    // rather than being handed a failure that a restart is about to contradict.
-                    self.readiness.send_replace(Readiness::Deciding);
-
-                    let capture = self.kill(supervised, capture).await;
-                    let decision = restarts.ended(&exit, std::time::Instant::now(), &capture);
-
-                    // No port diagnosis here, and the difference from a failed *start* is the whole
-                    // reason: this process had the port. Whatever ended it, nobody took it away —
-                    // and if something claims it before the restart, that start is where it will be
-                    // met and named.
-                    return self.after_exit(decision, exit.code(), None).await;
-                }
-
-                Ok(None) => {}
-
-                // The OS will not say. Nothing to decide on, and the next tick asks again.
-                Err(error) => tracing::warn!(
-                    service = self.spec.id().as_str(),
-                    error = %error,
-                    "cannot tell whether this service is still running"
-                ),
-            }
-
-            // **Folded before the health guard below, not inside it** — roadmap task T71a. A
-            // service whose recipe declares no `HealthCheck` never reaches that branch, and a fold
-            // living there would watch such a service's ceiling and never say a word about it.
-            let over = *self.over_memory.borrow_and_update();
-            let folded = fold(healthy, over);
-
-            if worth_recording(state, folded.0) && self.move_to(folded.0, folded.1).await {
-                state = folded.0;
-            }
-
-            let Some(watching) = health.as_mut() else {
-                continue;
-            };
-
-            if due.is_some_and(|due| Instant::now() < due) {
-                continue;
-            }
-
-            // Raced against the stop for the same reason the sleep above is: the probe is a program
-            // the spec named or an HTTP request, and both are bounded by `HealthCheck::timeout`
-            // rather than by anything short. A `mariadb-admin ping` against a database that has
-            // stopped answering hangs for the whole of it, and awaiting that outright would make a
-            // `mix stop` arriving mid-probe wait out a deadline set for judging health, not for
-            // shutting down. Dropping the future is the cancellation: `run_once` kills the child it
-            // spawned, and the fold this verdict would have gone into belongs to a loop that is
-            // ending anyway.
-            let examined = tokio::select! {
-                biased;
-
-                () = self.cancel.cancelled() => {
-                    return self.stop(supervised, capture).await;
-                }
-
-                examined = watching.examine(&place) => examined,
-            };
-
-            match examined {
-                // **Recorded, not applied** — roadmap task T71a. The verdict changes what this loop
-                // believes about the service's health; what state that adds up to is the fold's, at
-                // the top of the next turn, because size has a say in it too.
-                Ok(Some(Verdict::Degraded)) => {
-                    healthy = false;
-                }
-
-                Ok(Some(Verdict::Recovered)) => {
-                    // The backoff, not the failure history: a service that recovers between crashes
-                    // is still crashing, and `Restarts` is what remembers that.
-                    restarts.recovered();
-                    healthy = true;
-                }
-
-                Ok(None) => {}
-
-                // A probe that could not be made *this time*: the binary was being replaced by an
-                // upgrade, the machine was out of process slots. **Not a verdict about the service**
-                // — nothing was measured, so degrading it would report a bad moment as a sick
-                // database — and not a reason to stop asking either, because the next interval is
-                // entitled to a different answer. Said once and then only counted, so a fault that
-                // lasts an hour is one line in `daemon.log` rather than three hundred.
-                Err(error) if error.might_work_later() => {
-                    if !complained {
-                        complained = true;
-
-                        tracing::warn!(
-                            service = self.spec.id().as_str(),
-                            error = %error,
-                            "this service's health probe could not be made; it will be tried again \
-                             at the next interval"
-                        );
-                    }
-
-                    due = Some(Instant::now() + watching.interval());
-
-                    continue;
-                }
-
-                // A probe this build or this machine cannot make. **The service is left alone**,
-                // deliberately: it is running and its readiness was proved, and degrading it for a
-                // check nobody can make would report a fault in the spec as a fault in the service.
-                // Said once, because the answer will not change, and then never probed again.
-                Err(error) => {
-                    tracing::warn!(
-                        service = self.spec.id().as_str(),
-                        error = %error,
-                        "this service cannot be health-checked here; it will be watched for exiting \
-                         and nothing else"
-                    );
-
-                    health = None;
-                    due = None;
-
-                    continue;
-                }
-            }
-
-            // Cleared by any probe that was actually made, so a fault that comes back after an hour
-            // of working is reported again rather than swallowed by the first one.
-            complained = false;
-
-            due = Some(Instant::now() + watching.interval());
+            return Life::Over(After::Done);
         }
+
+        self.answered_by_this_start();
+
+        Life::Watching {
+            supervised,
+            capture,
+        }
+    }
+
+    /// The process ended before it was ready.
+    #[warn(clippy::cognitive_complexity)]
+    async fn on_exit_before_ready(
+        &self,
+        supervised: Supervised,
+        capture: Capture,
+        exit: &Exit,
+        restarts: &mut Restarts,
+    ) -> Life {
+        // Asked before the process is reaped, and only about a failure: an exit of zero is a
+        // service that did what it was told, and nothing about a port could improve on that
+        // sentence.
+        let conflict = if exit.is_success() {
+            None
+        } else {
+            self.port_conflict(Some(supervised.pid())).await
+        };
+
+        let capture = self.kill(supervised, capture).await;
+        let decision = restarts.ended(exit, std::time::Instant::now(), &capture);
+
+        Life::Over(self.after_exit(decision, exit.code(), conflict).await)
+    }
+
+    /// The process is running and was not ready in time.
+    #[warn(clippy::cognitive_complexity)]
+    async fn on_ready_timeout(&self, supervised: Supervised, capture: Capture) -> Life {
+        let after = self.spec.ready().timeout();
+        // Asked while the process is still up, so that its own pid is there to be recognised: a
+        // service that bound its port and then failed its ready check is holding that port itself,
+        // and is not in conflict with anybody.
+        let conflict = self.port_conflict(Some(supervised.pid())).await;
+
+        // Kept rather than dropped: `kill` is also the drain, so what comes back holds the server's
+        // last words instead of leaving them in a pipe.
+        let capture = self.kill(supervised, capture).await;
+        let refused = self.refused_superuser(&capture);
+
+        self.say_last_lines(&capture);
+        self.record_exit(None).await;
+
+        Life::Over(
+            self.give_up(timed_out_reason(conflict, refused, after), None)
+                .await,
+        )
+    }
+
+    /// What a service that was not ready in time last said, in the daemon's own log.
+    ///
+    /// The service's own log file holds these lines as well, but a ready timeout is the failure a
+    /// reader meets furthest from that file — in a CI log, in a bug report, in a screenshot — and
+    /// "not ready within 15s" on its own says only that something was slow. Measured on run
+    /// 35470533602, where a php-fpm pool timed out on Windows and the report held no line of what
+    /// the pool had printed.
+    #[warn(clippy::cognitive_complexity)]
+    fn say_last_lines(&self, capture: &Capture) {
+        let said = capture.recent(TAIL_LINES);
+        if said.is_empty() {
+            return;
+        }
+
+        tracing::warn!(
+            service = self.spec.id().as_str(),
+            said = said
+                .iter()
+                .map(|line| line.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" / "),
+            "this service was not ready in time; these are its last lines"
+        );
+    }
+
+    /// The service's ready check cannot be made here.
+    #[warn(clippy::cognitive_complexity)]
+    async fn on_uncheckable(
+        &self,
+        supervised: Supervised,
+        capture: Capture,
+        error: &mixengine_supervisor::Error,
+    ) -> Life {
+        let reason = uncheckable(error);
+        tracing::error!(
+            service = self.spec.id().as_str(),
+            error = %error,
+            "this service cannot be checked for readiness here"
+        );
+
+        self.kill(supervised, capture).await;
+        self.record_exit(None).await;
+
+        Life::Over(self.give_up(reason, None).await)
     }
 
     /// What happens after the process ended by itself.
@@ -604,17 +473,8 @@ impl Runner {
                 After::Done
             }
 
-            // **A conflict replaces an exit and never a crash loop.** `StateReason::Exited` says
-            // only what the OS said, and a port held by somebody else is the same fact with the
-            // useful half attached; `StateReason::CrashLoop` carries its own count and the lines
-            // the service printed, which is more than this could add.
             Decision::GiveUp { reason } => {
-                let reason = match (reason, conflict) {
-                    (StateReason::Exited { .. }, Some(conflict)) => conflict,
-                    (reason, _) => reason,
-                };
-
-                self.give_up(reason, None).await
+                self.give_up(given_up_reason(reason, conflict), None).await
             }
 
             // The `Restarting` is what answers a walk that is waiting on this service, which is why
@@ -622,10 +482,7 @@ impl Runner {
             // nobody could read would leave that walk with nothing to wait for.
             Decision::Restart { after, attempt } => {
                 if !self
-                    .move_to(
-                        ServiceState::Restarting,
-                        conflict.unwrap_or(StateReason::Exited { code }),
-                    )
+                    .move_to(ServiceState::Restarting, restarting_reason(conflict, code))
                     .await
                 {
                     return After::Done;
@@ -675,6 +532,75 @@ impl Runner {
     }
 }
 
+/// Where one life of a service's process is.
+///
+/// A handle that has to be stopped or killed lives in the state that owns it, so a step that drops
+/// it on the floor does not compile.
+enum Life {
+    /// Reading the environment the process is to be started with.
+    Resolving,
+
+    /// About to start the process with this environment.
+    Spawning { env: BTreeMap<String, String> },
+
+    /// Started, and its ready check not yet answered.
+    WaitingForReady {
+        supervised: Supervised,
+        capture: Capture,
+    },
+
+    /// Ready, and watched until it ends or is asked to stop.
+    Watching {
+        supervised: Supervised,
+        capture: Capture,
+    },
+
+    /// Asked to stop before it was ready.
+    Stopping {
+        supervised: Supervised,
+        capture: Capture,
+    },
+
+    /// This life is over, and this is what the runner does next.
+    Over(After),
+}
+
+/// Why a start that was not ready in time failed.
+///
+/// **A conflict outranks a refusal, and the order is not arbitrary.** If another program holds the
+/// port, the client the ready check runs is talking to *that program* — a refusal it printed is not
+/// this service's, and who holds the port is the fact worth reporting.
+#[warn(clippy::cognitive_complexity)]
+fn timed_out_reason(
+    conflict: Option<StateReason>,
+    refused: Option<StateReason>,
+    after: mixengine_proto::Millis,
+) -> StateReason {
+    conflict
+        .or(refused)
+        .unwrap_or(StateReason::ReadyTimeout { after })
+}
+
+/// Why a service the restart policy gave up on failed.
+///
+/// **A conflict replaces an exit and never a crash loop.** `StateReason::Exited` says only what the
+/// OS said, and a port held by somebody else is the same fact with the useful half attached;
+/// `StateReason::CrashLoop` carries its own count and the lines the service printed, which is more
+/// than this could add.
+#[warn(clippy::cognitive_complexity)]
+fn given_up_reason(reason: StateReason, conflict: Option<StateReason>) -> StateReason {
+    match (reason, conflict) {
+        (StateReason::Exited { .. }, Some(conflict)) => conflict,
+        (reason, _) => reason,
+    }
+}
+
+/// Why a service is restarting: who holds its port if anybody does, or how it exited.
+#[warn(clippy::cognitive_complexity)]
+fn restarting_reason(conflict: Option<StateReason>, code: Option<i32>) -> StateReason {
+    conflict.unwrap_or(StateReason::Exited { code })
+}
+
 /// Turn a supervisor refusal into the reason a user reads.
 ///
 /// [`Error::UnsupportedCheck`](mixengine_supervisor::Error::UnsupportedCheck) already carries both
@@ -699,6 +625,9 @@ fn uncheckable(error: &mixengine_supervisor::Error) -> StateReason {
         },
     }
 }
+
+#[cfg(test)]
+mod decisions;
 
 #[cfg(test)]
 mod tests {

@@ -514,4 +514,7 @@ fn decided_by(readiness: Readiness) -> Option<Start> {
 }
 
 #[cfg(test)]
+mod characterization;
+
+#[cfg(test)]
 mod tests;
