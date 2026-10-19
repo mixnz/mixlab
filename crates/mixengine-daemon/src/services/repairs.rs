@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use mixengine_core::{Paths, Store};
-use mixengine_proto::{PackageVersion, RuntimeKind};
+use mixengine_proto::{PackageVersion, RuntimeKind, ServiceId};
 
 use super::Registry;
 
@@ -26,6 +26,12 @@ pub(crate) enum Occasion<'a> {
     },
 }
 
+/// What one repair did: the services it touched, or why it could not.
+type Repaired = mixengine_core::Result<Vec<ServiceId>>;
+
+/// What holding the addresses did.
+type Held = Result<Vec<ServiceId>, Box<mixengine_core::Error>>;
+
 /// Give every installed runtime the service its recipe says it should have.
 #[warn(clippy::cognitive_complexity)]
 pub(crate) async fn give_runtimes_their_pools(store: &Store, occasion: Occasion<'_>) {
@@ -36,22 +42,31 @@ pub(crate) async fn give_runtimes_their_pools(store: &Store, occasion: Occasion<
     )
     .await;
 
-    match (created, occasion) {
-        (Ok(created), Occasion::Start) if created.is_empty() => {
+    match occasion {
+        Occasion::Start => pools_at_start(created),
+        Occasion::Install { kind, version } => pools_after_install(created, kind, version),
+    }
+}
+
+#[warn(clippy::cognitive_complexity)]
+fn pools_at_start(created: Repaired) {
+    match created {
+        Ok(created) if created.is_empty() => {
             tracing::debug!("every installed runtime already has the service it needs");
         }
-        (Ok(created), Occasion::Start) => {
-            tracing::info!(pools = ?created, "installed runtimes were given services");
-        }
-        (Err(error), Occasion::Start) => {
-            tracing::warn!(%error, "could not give every installed runtime its service");
-        }
+        Ok(created) => tracing::info!(pools = ?created, "installed runtimes were given services"),
+        Err(error) => tracing::warn!(%error, "could not give every installed runtime its service"),
+    }
+}
 
-        (Ok(created), Occasion::Install { .. }) if created.is_empty() => {}
-        (Ok(created), Occasion::Install { .. }) => {
+#[warn(clippy::cognitive_complexity)]
+fn pools_after_install(created: Repaired, kind: RuntimeKind, version: &PackageVersion) {
+    match created {
+        Ok(created) if created.is_empty() => {}
+        Ok(created) => {
             tracing::info!(pools = ?created, "the new runtime was given its service");
         }
-        (Err(error), Occasion::Install { kind, version }) => tracing::warn!(
+        Err(error) => tracing::warn!(
             kind = kind.as_str(),
             version = version.as_str(),
             %error,
@@ -70,30 +85,35 @@ pub(crate) async fn give_activation_ports(store: &Store, occasion: Occasion<'_>)
         &super::catalogue(),
     )
     .await;
+    let worked = given.is_ok();
 
-    match (given, occasion) {
-        (Ok(given), Occasion::Start) if given.is_empty() => {
+    match occasion {
+        Occasion::Start => ports_at_start(given),
+        Occasion::Install { .. } => ports_after_install(given),
+    }
+
+    worked
+}
+
+#[warn(clippy::cognitive_complexity)]
+fn ports_at_start(given: Repaired) {
+    match given {
+        Ok(given) if given.is_empty() => {
             tracing::debug!("every service that can be woken already has its port");
-            true
         }
-        (Ok(given), Occasion::Start) => {
-            tracing::info!(services = ?given, "services were given activation ports");
-            true
-        }
-        (Err(error), Occasion::Start) => {
-            tracing::warn!(%error, "could not give every wakeable service a port");
-            false
-        }
+        Ok(given) => tracing::info!(services = ?given, "services were given activation ports"),
+        Err(error) => tracing::warn!(%error, "could not give every wakeable service a port"),
+    }
+}
 
-        (Ok(_), Occasion::Install { .. }) => true,
-        (Err(error), Occasion::Install { .. }) => {
-            tracing::warn!(
-                %error,
-                "a new pool could not be given an activation port; the next daemon start will try \
-                 again"
-            );
-            false
-        }
+#[warn(clippy::cognitive_complexity)]
+fn ports_after_install(given: Repaired) {
+    if let Err(error) = given {
+        tracing::warn!(
+            %error,
+            "a new pool could not be given an activation port; the next daemon start will try \
+             again"
+        );
     }
 }
 
@@ -108,22 +128,31 @@ pub(crate) async fn hold_activation_addresses(
     let host = mixengine_platform::host();
     let held = super::activate::hold_all(services, paths, store, host.as_ref()).await;
 
-    match (held, occasion) {
-        (Ok(held), Occasion::Start) if held.is_empty() => {
+    match occasion {
+        Occasion::Start => held_at_start(held),
+        Occasion::Install { .. } => held_after_install(held),
+    }
+}
+
+#[warn(clippy::cognitive_complexity)]
+fn held_at_start(held: Held) {
+    match held {
+        Ok(held) if held.is_empty() => {
             tracing::debug!("no service in this home can be started by a request");
         }
-        (Ok(held), Occasion::Start) => {
-            tracing::info!(services = ?held, "holding an address for each of these");
-        }
-        (Err(error), Occasion::Start) => {
+        Ok(held) => tracing::info!(services = ?held, "holding an address for each of these"),
+        Err(error) => {
             tracing::warn!(%error, "could not hold an address for every wakeable service");
         }
+    }
+}
 
-        (Ok(held), Occasion::Install { .. }) if held.is_empty() => {}
-        (Ok(held), Occasion::Install { .. }) => {
-            tracing::info!(services = ?held, "a request can now start these services");
-        }
-        (Err(error), Occasion::Install { .. }) => tracing::warn!(
+#[warn(clippy::cognitive_complexity)]
+fn held_after_install(held: Held) {
+    match held {
+        Ok(held) if held.is_empty() => {}
+        Ok(held) => tracing::info!(services = ?held, "a request can now start these services"),
+        Err(error) => tracing::warn!(
             %error,
             "a new pool cannot be started by a request until this daemon is restarted"
         ),
