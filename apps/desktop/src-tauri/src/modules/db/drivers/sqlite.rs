@@ -455,7 +455,10 @@ pub(super) fn column_value(row: &SqliteRow, i: usize) -> Value {
 /// There is no `regexp` arm, and that is not an omission: SQLite parses the word but ships no
 /// implementation, so such a clause would always fail with "no such function: regexp". The dropdown
 /// does not offer the operator either — see `regexpFilter` on the dialect.
-fn build_where(filters: &[Filter], columns: &[String]) -> Result<(String, Vec<String>), AppError> {
+pub(super) fn build_where(
+    filters: &[Filter],
+    columns: &[String],
+) -> Result<(String, Vec<String>), AppError> {
     let mut clauses: Vec<String> = Vec::new();
     let mut binds: Vec<String> = Vec::new();
     let bind = |binds: &mut Vec<String>, value: String| {

@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 /// `String` parameter to compare against a `UInt64` column on its own. The ordering operators are
 /// the exception, the same way they are on PostgreSQL: `toString()` on a number sorts `10` before
 /// `9`, so there the column is left as it is and the parameter is typed to match instead.
-pub(super) fn build_where(
+pub(in crate::modules::db::drivers) fn build_where(
     filters: &[Filter],
     columns: &BTreeMap<String, String>,
 ) -> Result<(String, Vec<(String, String)>), AppError> {

@@ -107,6 +107,9 @@ pub fn escape_like(value: &str) -> String {
 }
 
 #[cfg(test)]
+mod where_clauses;
+
+#[cfg(test)]
 mod tests {
     use super::{escape_like, split_list_parts, unquote};
 

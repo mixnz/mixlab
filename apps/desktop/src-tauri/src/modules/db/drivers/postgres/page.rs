@@ -70,7 +70,7 @@ async fn foreign_keys(
 /// type instead — which is what `columns` carries the type for. Binding the text alone is not
 /// enough: sqlx names a bound `&str` as `text` on the wire, and PostgreSQL will not compare an
 /// `integer` with one ("operator does not exist: integer > text").
-pub(super) fn build_where(
+pub(in crate::modules::db::drivers) fn build_where(
     filters: &[Filter],
     columns: &BTreeMap<String, String>,
 ) -> Result<(String, Vec<String>), AppError> {

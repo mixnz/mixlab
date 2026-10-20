@@ -9,7 +9,7 @@ pub mod ddl;
 pub mod dump;
 pub mod editing;
 pub mod engine;
-mod page;
+pub(super) mod page;
 pub mod script;
 pub mod structure;
 

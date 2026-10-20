@@ -33,7 +33,7 @@ use std::collections::BTreeMap;
 /// column's own type, which is what it does implicitly in a comparison — and what it refuses,
 /// loudly, when the text is not a value of that type after all. That refusal is the right answer:
 /// the user typed something this column could not hold.
-pub(super) fn build_where(
+pub(in crate::modules::db::drivers) fn build_where(
     filters: &[Filter],
     columns: &BTreeMap<String, String>,
 ) -> Result<(String, Vec<String>), AppError> {

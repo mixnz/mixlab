@@ -270,7 +270,10 @@ async fn foreign_keys(
 /// first. A row whose operator wants a value it wasn't given is dropped rather than matched
 /// literally: the bar's opening `id =` row must not become `WHERE id = ''` before anything is
 /// typed into it.
-fn build_where(filters: &[Filter], columns: &[String]) -> Result<(String, Vec<String>), AppError> {
+pub(super) fn build_where(
+    filters: &[Filter],
+    columns: &[String],
+) -> Result<(String, Vec<String>), AppError> {
     let mut clauses: Vec<String> = Vec::new();
     let mut binds: Vec<String> = Vec::new();
 
