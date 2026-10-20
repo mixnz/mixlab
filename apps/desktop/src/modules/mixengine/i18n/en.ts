@@ -266,6 +266,8 @@ export default {
       declined: "Permission was not granted, so nothing was changed. You can allow it again when you are ready.",
       cannotPrompt: "This machine cannot raise a permission prompt right now.",
       cannotPromptReason: "This machine cannot raise a permission prompt right now: {{reason}}",
+      waitingCommand: "Run this in a terminal on the MixEngine machine to allow it:",
+      copyCommand: "Copy command",
     },
     projects: {
       rowMenu: "More actions",

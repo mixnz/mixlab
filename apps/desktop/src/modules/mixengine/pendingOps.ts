@@ -14,6 +14,8 @@
  * the daemon then announces the queue that is left.
  */
 
+import type { ByHand } from "@mixengine/api";
+
 /** One row of the list, reduced for drawing. */
 export interface DescribedOp {
   /** The operation kind — one of the 13 variants of `PrivilegedOp`. */
@@ -151,4 +153,14 @@ export function describeOp(pending: unknown): DescribedOp {
     description,
     detail: extra === undefined ? "" : JSON.stringify(extra, null, 2),
   };
+}
+
+/**
+ * The line a grant raised from a terminal is waiting for (ADR 0065), or `null` when none is.
+ *
+ * The same line `mix elevation status` prints. The window shows it to be run in a terminal on the
+ * machine the daemon is on, and never runs it: it has no terminal for `sudo` to ask in.
+ */
+export function terminalCommand(waiting: ByHand | null | undefined): string | null {
+  return waiting ? `sudo -- ${waiting.helper} ${waiting.request}` : null;
 }

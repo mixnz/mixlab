@@ -7,6 +7,7 @@ import {
   isNothingWaiting,
   otherGrant,
   pendingFrom,
+  terminalCommand,
 } from "./pendingOps";
 
 /** Exactly the shape the daemon sends: `PendingOp` wraps `PrivilegedOp` in the `op` field. */
@@ -172,5 +173,26 @@ describe("hasNewOps", () => {
     expect(hasNewOps(new Set([7, 8]), [hostsApply])).toBe(false);
     expect(hasNewOps(new Set([7]), [hostsApply])).toBe(false);
     expect(hasNewOps(new Set([7]), [])).toBe(false);
+  });
+});
+
+describe("terminalCommand", () => {
+  /* ADR 0065: a grant `mix` started over SSH waits for this line; the window shows it so that it can
+     be run, and never runs it — MixLab has no terminal. */
+  it("is sudo on the helper and the request the daemon is waiting on", () => {
+    expect(
+      terminalCommand({
+        job: 4,
+        helper: "/usr/local/libexec/mixengine/mixengine-elevate",
+        request: "/home/me/.mixengine/run/elevate/abc/request.json",
+      }),
+    ).toBe(
+      "sudo -- /usr/local/libexec/mixengine/mixengine-elevate /home/me/.mixengine/run/elevate/abc/request.json",
+    );
+  });
+
+  it("is nothing when no grant is waiting", () => {
+    expect(terminalCommand(null)).toBeNull();
+    expect(terminalCommand(undefined)).toBeNull();
   });
 });

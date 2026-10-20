@@ -261,6 +261,8 @@ const vi: typeof en = {
       declined: "Chưa được cấp quyền, nên chưa có gì thay đổi. Bấm Cho phép lại khi sẵn sàng.",
       cannotPrompt: "Máy này hiện không thể bật lời hỏi quyền.",
       cannotPromptReason: "Máy này hiện không thể bật lời hỏi quyền: {{reason}}",
+      waitingCommand: "Chạy lệnh này trong terminal trên máy chạy MixEngine để cấp quyền:",
+      copyCommand: "Sao chép lệnh",
     },
     projects: {
       rowMenu: "Thêm hành động",

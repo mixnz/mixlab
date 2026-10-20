@@ -1,12 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 
+import Button from "../../../../components/Button";
 import Modal, { ModalBody } from "../../../../components/Modal";
+import { copyText } from "../../../../core/clipboard";
 import { errorMessage } from "../../../../core/errors";
+import { CopyIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { GrantOutcome } from "@mixengine/api";
 import type { JobSummary } from "@mixengine/api";
-import { describeOp, isGrantInFlight, isNothingWaiting, otherGrant } from "../../pendingOps";
+import {
+  describeOp,
+  isGrantInFlight,
+  isNothingWaiting,
+  otherGrant,
+  terminalCommand,
+} from "../../pendingOps";
 import { useRunningDots } from "../../screens/Settings/useRunningDots";
 import styles from "./ElevationDialog.module.css";
 
@@ -23,8 +32,12 @@ import styles from "./ElevationDialog.module.css";
  * `MIXENGINE_HOME` and is removed by the same Uninstall, but an old `hosts-apply` may still be
  * stuck in the elevation queue from before) `elevation.grant` has nothing left to call — an
  * "Allow" button still drawn in that situation promises something the app cannot do. `reason` is
- * the sentence the daemon writes for each platform (e.g. Linux: the whole `pkexec` command to type
- * by hand).
+ * the sentence the daemon writes for each platform (e.g. Linux: what is missing, and that
+ * `mix elevation grant` works from a terminal).
+ *
+ * **A grant `mix` started from a terminal is shown, never run** (ADR 0065). While the daemon waits
+ * for one, `elevation.status` carries the command, and this dialog shows it with a copy button:
+ * the window has no terminal for `sudo` to ask in, so it never starts a grant of that kind itself.
  *
  * **There is no "Skip" button.** `elevation.drop` drops the whole batch without leaving any way to
  * grant it again — closing the dialog (Escape, clicking outside, or the Close button) only hides
@@ -66,6 +79,8 @@ export default function ElevationDialog({
   /** The outcome of the last Allow when it did not lead to closing the dialog — a translated
    *  sentence, or `null`. */
   const [notice, setNotice] = useState<string | null>(null);
+  /** The command a grant started from a terminal waits for, while one does. */
+  const [command, setCommand] = useState<string | null>(null);
   const dots = useRunningDots(busy || following);
   const { t } = useTranslation();
   /** Whether still mounted — set to `true` in the effect body rather than only `false` in the
@@ -77,6 +92,28 @@ export default function ElevationDialog({
       live.current = false;
     };
   }, []);
+
+  // Only where no dialog can be raised, which is where a terminal's grant can be waiting. Read
+  // again every two seconds: the grant may be started, or end, while this dialog is open.
+  useEffect(() => {
+    if (canPrompt) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let stopped = false;
+    const read = async () => {
+      try {
+        const status = await api.elevationStatus();
+        if (!stopped) setCommand(terminalCommand(status.waiting));
+      } catch {
+        // The command is a convenience; the dialog is still right without it.
+      }
+      if (!stopped) timer = setTimeout(() => void read(), 2000);
+    };
+    void read();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [canPrompt]);
 
   function settle(summary: JobSummary) {
     setBusy(false);
@@ -232,6 +269,22 @@ export default function ElevationDialog({
                   ? t("mixengine.elevation.cannotPromptReason", { reason })
                   : t("mixengine.elevation.cannotPrompt")}
               </p>
+            )}
+            {command !== null && (
+              <div className={styles.waiting}>
+                <p className={styles.lead}>{t("mixengine.elevation.waitingCommand")}</p>
+                <pre className={styles.detail}>{command}</pre>
+                <Button
+                  size="small"
+                  variant="ghost"
+                  onClick={() =>
+                    void copyText(command).catch((e: unknown) => setNotice(errorMessage(t, e)))
+                  }
+                >
+                  <CopyIcon size={14} />
+                  {t("mixengine.elevation.copyCommand")}
+                </Button>
+              </div>
             )}
             {notice !== null && !busy && !following && (
               <p className={styles.cannotPrompt}>{notice}</p>
