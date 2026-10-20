@@ -6,7 +6,7 @@ use super::{
     row_to_json, table_columns, ColumnMeta, Filter, ForeignKey, PageQuery, TablePage,
 };
 use crate::error::AppError;
-use crate::modules::db::drivers::filters::{escape_like, split_list};
+use crate::modules::db::drivers::filters::{self, escape_like, LikeEscape, Numbered, WhereSyntax};
 use sqlx::{PgPool, Row};
 use std::collections::BTreeMap;
 
@@ -55,136 +55,39 @@ async fn foreign_keys(
     Ok(keys)
 }
 
-/// Turns the filter rows into a WHERE clause and the values to bind into it, in order.
+/// What PostgreSQL writes its own way in a filter's `WHERE`.
 ///
-/// Every value reaches the server as a bound parameter; the column name is the one part that has
-/// to be interpolated, which is why it is checked against the table's own columns first.
+/// Comparisons are made against the column cast to text, because a filter value arrives as text
+/// and PostgreSQL, unlike MySQL, will not coerce it to the column's type on its own. And `regexp`
+/// is `~`, PostgreSQL's own match operator.
+const WHERE_SYNTAX: WhereSyntax = WhereSyntax {
+    quote_ident,
+    as_text: |quoted| format!("{quoted}::text"),
+    regexp: Some(("~", "!~")),
+    escape_like,
+    like_escape: LikeEscape::Never,
+};
+
+/// Turns the filter rows into a WHERE clause and the values to bind into it, numbered `$1`, `$2`,
+/// … in order. See [`filters::build_where`].
 ///
-/// Two operators differ from MySQL's by more than spelling. Comparisons are made against the
-/// column cast to text, because a filter value arrives as text and PostgreSQL — unlike MySQL —
-/// will not coerce it to the column's type on its own. And `regexp` is `~`, PostgreSQL's own
-/// match operator.
-///
-/// The ordering operators are the one place that cast has to go the other way. `"id"::text > $1`
-/// would sort 10 before 9, so the column is left as it is and the *value* is cast to the column's
-/// type instead — which is what `columns` carries the type for. Binding the text alone is not
-/// enough: sqlx names a bound `&str` as `text` on the wire, and PostgreSQL will not compare an
-/// `integer` with one ("operator does not exist: integer > text").
+/// The ordering operators are the one place the text cast has to go the other way.
+/// `"id"::text > $1` would sort 10 before 9, so the column is left as it is and the *value* is cast
+/// to the column's type instead, which is what `columns` carries the type for. Binding the text
+/// alone is not enough: sqlx names a bound `&str` as `text` on the wire, and PostgreSQL will not
+/// compare an `integer` with one ("operator does not exist: integer > text"). The type comes from
+/// `format_type`, which is PostgreSQL's own spelling of it, already quoted where a name needs it,
+/// so it can be written into the cast as it stands.
 pub(in crate::modules::db::drivers) fn build_where(
     filters: &[Filter],
     columns: &BTreeMap<String, String>,
 ) -> Result<(String, Vec<String>), AppError> {
-    let mut clauses: Vec<String> = Vec::new();
-    let mut binds: Vec<String> = Vec::new();
-    // The number the next placeholder gets: PostgreSQL numbers them, so unlike MySQL's `?` they
-    // cannot simply be counted off the bind list at the end.
-    let mut next = 1usize;
-    let mut placeholder = |binds: &mut Vec<String>, value: String| {
-        binds.push(value);
-        let p = format!("${next}");
-        next += 1;
-        p
-    };
-
-    for filter in filters {
-        let Some(base_type) = columns.get(&filter.column) else {
-            return Err(err!("error.unknownFilterColumn", column = &filter.column));
-        };
-        // Cast to text so that the value bound against it — always text — compares as typed. The
-        // ordering operators are the exception: `>` on text would sort 10 before 9, so there the
-        // column stands and the bound value is cast to its type with `typed` below.
-        let col = format!("{}::text", quote_ident(&filter.column));
-        let raw = quote_ident(&filter.column);
-        // The type comes from `format_type`, which is PostgreSQL's own spelling of it — already
-        // quoted where a name needs it, so it can be written into the cast as it stands.
-        let typed = |p: String| format!("CAST({p} AS {base_type})");
-        let value = filter.value.as_deref().unwrap_or("");
-        let operator = filter.operator.as_str();
-
-        let clause = match operator {
-            "eq" => format!("{col} = {}", placeholder(&mut binds, value.to_string())),
-            "ne" => format!("{col} <> {}", placeholder(&mut binds, value.to_string())),
-            "gt" => format!(
-                "{raw} > {}",
-                typed(placeholder(&mut binds, value.to_string()))
-            ),
-            "gte" => format!(
-                "{raw} >= {}",
-                typed(placeholder(&mut binds, value.to_string()))
-            ),
-            "lt" => format!(
-                "{raw} < {}",
-                typed(placeholder(&mut binds, value.to_string()))
-            ),
-            "lte" => format!(
-                "{raw} <= {}",
-                typed(placeholder(&mut binds, value.to_string()))
-            ),
-            "contains" => format!(
-                "{col} LIKE {}",
-                placeholder(&mut binds, format!("%{}%", escape_like(value)))
-            ),
-            "notContains" => format!(
-                "{col} NOT LIKE {}",
-                placeholder(&mut binds, format!("%{}%", escape_like(value)))
-            ),
-            "startsWith" => format!(
-                "{col} LIKE {}",
-                placeholder(&mut binds, format!("{}%", escape_like(value)))
-            ),
-            "endsWith" => format!(
-                "{col} LIKE {}",
-                placeholder(&mut binds, format!("%{}", escape_like(value)))
-            ),
-            "like" => format!("{col} LIKE {}", placeholder(&mut binds, value.to_string())),
-            "notLike" => format!(
-                "{col} NOT LIKE {}",
-                placeholder(&mut binds, value.to_string())
-            ),
-            "regexp" => format!("{col} ~ {}", placeholder(&mut binds, value.to_string())),
-            "notRegexp" => format!("{col} !~ {}", placeholder(&mut binds, value.to_string())),
-            "in" | "notIn" => {
-                let items = split_list(value);
-                if items.is_empty() {
-                    continue;
-                }
-                let placeholders = items
-                    .into_iter()
-                    .map(|item| placeholder(&mut binds, item))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                let sql_op = if operator == "in" { "IN" } else { "NOT IN" };
-                format!("{col} {sql_op} ({placeholders})")
-            }
-            "between" | "notBetween" => {
-                let items = split_list(value);
-                // Two bounds or nothing — one of them alone says nothing about a range.
-                if items.len() < 2 {
-                    continue;
-                }
-                let low = typed(placeholder(&mut binds, items[0].clone()));
-                let high = typed(placeholder(&mut binds, items[1].clone()));
-                let sql_op = if operator == "between" {
-                    "BETWEEN"
-                } else {
-                    "NOT BETWEEN"
-                };
-                format!("{raw} {sql_op} {low} AND {high}")
-            }
-            "isNull" => format!("{raw} IS NULL"),
-            "isNotNull" => format!("{raw} IS NOT NULL"),
-            "isEmpty" => format!("{col} = ''"),
-            "isNotEmpty" => format!("{col} <> ''"),
-            other => return Err(err!("error.unknownFilterOperator", operator = other)),
-        };
-
-        clauses.push(clause);
-    }
-
-    if clauses.is_empty() {
-        return Ok((String::new(), binds));
-    }
-    Ok((format!(" WHERE {}", clauses.join(" AND ")), binds))
+    filters::build_where(
+        filters,
+        |name| columns.get(name).map(String::as_str),
+        &WHERE_SYNTAX,
+        Numbered::new("$", true),
+    )
 }
 
 /// Whether [`column_value`] has a decoder for this type, given as `format_type` spells it.

@@ -7,131 +7,49 @@ use super::{
     Filter, ForeignKey, PageQuery, Pool, TablePage,
 };
 use crate::error::AppError;
-use crate::modules::db::drivers::filters::split_list;
+use crate::modules::db::drivers::filters::{self, LikeEscape, Numbered, WhereSyntax};
 use std::collections::BTreeMap;
 
-/// Turns the filter rows into a WHERE clause and the values to bind into it, in order.
-///
-/// Every value reaches the server as a bound parameter — tiberius numbers them `@P1`, `@P2`, …, the
-/// way PostgreSQL numbers `$1`, so they cannot simply be counted off the bind list at the end. The
-/// column name is the one part that has to be interpolated, which is why it is checked against the
-/// table's own columns first.
-///
-/// Two differences from the PostgreSQL version this is shaped after:
+/// What SQL Server writes its own way in a filter's `WHERE`.
 ///
 /// * **No regex.** SQL Server has no counterpart to `~` or `REGEXP` before its 2025 release, so
-///   there is no arm for `regexp`/`notRegexp` and `mssqlDialect.regexpFilter` is false — the
-///   operator is gone from the dropdown rather than offered and failing (D12).
+///   `mssqlDialect.regexpFilter` is false and the operator is gone from the dropdown rather than
+///   offered and failing.
 /// * **Case is the column's business.** There is no `ILIKE` here, and no `LOWER()` wrapped around
 ///   anything: whether a comparison is case-sensitive is decided by the column's collation, and
-///   most installations default to a `_CI_` one — so in practice these filters ignore case. Forcing
+///   most installations default to a `_CI_` one, so in practice these filters ignore case. Forcing
 ///   it either way with `LOWER()` would only make every one of them unable to use an index.
+/// * **Every `LIKE` names its escape character.** SQL Server only knows a backslash escapes if the
+///   pattern says so. `like`/`notLike` keep the clause too, which is how a pattern of the user's
+///   own can escape a wildcard.
 ///
 /// Text comparisons cast the column to `nvarchar(max)` so a value bound as text compares as typed.
-/// The ordering operators are the exception, and cast nothing: `CAST([id] AS nvarchar(max)) > '9'`
-/// would sort 10 before 9. There the column stands and SQL Server converts the bound text to the
-/// column's own type, which is what it does implicitly in a comparison — and what it refuses,
-/// loudly, when the text is not a value of that type after all. That refusal is the right answer:
-/// the user typed something this column could not hold.
+const WHERE_SYNTAX: WhereSyntax = WhereSyntax {
+    quote_ident,
+    as_text: |quoted| format!("CAST({quoted} AS nvarchar(max))"),
+    regexp: None,
+    escape_like: escape_like_mssql,
+    like_escape: LikeEscape::Always,
+};
+
+/// Turns the filter rows into a WHERE clause and the values to bind into it, which tiberius
+/// numbers `@P1`, `@P2`, … See [`filters::build_where`].
+///
+/// The ordering operators cast nothing: `CAST([id] AS nvarchar(max)) > '9'` would sort 10 before 9.
+/// There the column stands and SQL Server converts the bound text to the column's own type, which
+/// is what it does implicitly in a comparison, and what it refuses, loudly, when the text is not a
+/// value of that type after all. That refusal is the right answer: the user typed something this
+/// column could not hold.
 pub(in crate::modules::db::drivers) fn build_where(
     filters: &[Filter],
     columns: &BTreeMap<String, String>,
 ) -> Result<(String, Vec<String>), AppError> {
-    let mut clauses: Vec<String> = Vec::new();
-    let mut binds: Vec<String> = Vec::new();
-    let mut next = 1usize;
-    let mut placeholder = |binds: &mut Vec<String>, value: String| {
-        binds.push(value);
-        let p = format!("@P{next}");
-        next += 1;
-        p
-    };
-
-    for filter in filters {
-        if !columns.contains_key(&filter.column) {
-            return Err(err!("error.unknownFilterColumn", column = &filter.column));
-        }
-        let raw = quote_ident(&filter.column);
-        let col = format!("CAST({raw} AS nvarchar(max))");
-        let value = filter.value.as_deref().unwrap_or("");
-        let operator = filter.operator.as_str();
-        // Every pattern this builds escapes with a backslash, and SQL Server only knows that if the
-        // pattern says so.
-        let like = |negated: bool, p: String| {
-            let not = if negated { "NOT " } else { "" };
-            format!("{col} {not}LIKE {p} ESCAPE '\\'")
-        };
-
-        let clause = match operator {
-            "eq" => format!("{col} = {}", placeholder(&mut binds, value.to_string())),
-            "ne" => format!("{col} <> {}", placeholder(&mut binds, value.to_string())),
-            "gt" => format!("{raw} > {}", placeholder(&mut binds, value.to_string())),
-            "gte" => format!("{raw} >= {}", placeholder(&mut binds, value.to_string())),
-            "lt" => format!("{raw} < {}", placeholder(&mut binds, value.to_string())),
-            "lte" => format!("{raw} <= {}", placeholder(&mut binds, value.to_string())),
-            "contains" => like(
-                false,
-                placeholder(&mut binds, format!("%{}%", escape_like_mssql(value))),
-            ),
-            "notContains" => like(
-                true,
-                placeholder(&mut binds, format!("%{}%", escape_like_mssql(value))),
-            ),
-            "startsWith" => like(
-                false,
-                placeholder(&mut binds, format!("{}%", escape_like_mssql(value))),
-            ),
-            "endsWith" => like(
-                false,
-                placeholder(&mut binds, format!("%{}", escape_like_mssql(value))),
-            ),
-            // `like`/`notLike` hand the pattern over as the user wrote it — that is the point of
-            // the operator — so the value is not escaped. The `ESCAPE` clause still stands, which
-            // is how a pattern of their own can escape a wildcard too.
-            "like" => like(false, placeholder(&mut binds, value.to_string())),
-            "notLike" => like(true, placeholder(&mut binds, value.to_string())),
-            "in" | "notIn" => {
-                let items = split_list(value);
-                if items.is_empty() {
-                    continue;
-                }
-                let placeholders = items
-                    .into_iter()
-                    .map(|item| placeholder(&mut binds, item))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                let sql_op = if operator == "in" { "IN" } else { "NOT IN" };
-                format!("{col} {sql_op} ({placeholders})")
-            }
-            "between" | "notBetween" => {
-                let items = split_list(value);
-                // Two bounds or nothing — one of them alone says nothing about a range.
-                if items.len() < 2 {
-                    continue;
-                }
-                let low = placeholder(&mut binds, items[0].clone());
-                let high = placeholder(&mut binds, items[1].clone());
-                let sql_op = if operator == "between" {
-                    "BETWEEN"
-                } else {
-                    "NOT BETWEEN"
-                };
-                format!("{raw} {sql_op} {low} AND {high}")
-            }
-            "isNull" => format!("{raw} IS NULL"),
-            "isNotNull" => format!("{raw} IS NOT NULL"),
-            "isEmpty" => format!("{col} = ''"),
-            "isNotEmpty" => format!("{col} <> ''"),
-            other => return Err(err!("error.unknownFilterOperator", operator = other)),
-        };
-
-        clauses.push(clause);
-    }
-
-    if clauses.is_empty() {
-        return Ok((String::new(), binds));
-    }
-    Ok((format!(" WHERE {}", clauses.join(" AND ")), binds))
+    filters::build_where(
+        filters,
+        |name| columns.get(name).map(String::as_str),
+        &WHERE_SYNTAX,
+        Numbered::new("@P", false),
+    )
 }
 
 /// The ORDER BY a page is cut out of.

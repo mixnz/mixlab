@@ -3,7 +3,7 @@ pub mod engine;
 pub mod script;
 pub mod structure;
 
-use super::filters::{escape_like, split_list};
+use super::filters::{self, escape_like, LikeEscape, QuestionMarks, WhereSyntax};
 use crate::error::AppError;
 pub use crate::modules::db::drivers::sql::types::{
     ColumnMeta, Filter, ForeignKey, PageQuery, TablePage,
@@ -262,93 +262,30 @@ async fn foreign_keys(
     Ok(keys)
 }
 
-/// Turns the filter rows into a WHERE clause (leading space included, empty when nothing filters)
-/// and the values to bind into its placeholders, in order.
-///
-/// Every value reaches MySQL as a bound parameter, never as SQL text — the column name is the one
-/// part that has to be interpolated, which is why it is checked against the table's own columns
-/// first. A row whose operator wants a value it wasn't given is dropped rather than matched
-/// literally: the bar's opening `id =` row must not become `WHERE id = ''` before anything is
-/// typed into it.
+/// What MySQL writes its own way in a filter's `WHERE`. It coerces a value bound as text to the
+/// column's type itself, so the column needs no text form, and it takes a backslash as the `LIKE`
+/// escape character unless told otherwise.
+const WHERE_SYNTAX: WhereSyntax = WhereSyntax {
+    quote_ident,
+    as_text: |quoted| quoted.to_string(),
+    regexp: Some(("REGEXP", "NOT REGEXP")),
+    escape_like,
+    like_escape: LikeEscape::Never,
+};
+
+/// Turns the filter rows into a WHERE clause and the values to bind into its `?` placeholders, in
+/// order. See [`filters::build_where`].
 pub(super) fn build_where(
     filters: &[Filter],
     columns: &[String],
 ) -> Result<(String, Vec<String>), AppError> {
-    let mut clauses: Vec<String> = Vec::new();
-    let mut binds: Vec<String> = Vec::new();
-
-    for filter in filters {
-        if !columns.iter().any(|c| c == &filter.column) {
-            return Err(err!("error.unknownFilterColumn", column = &filter.column));
-        }
-        let col = quote_ident(&filter.column);
-        let value = filter.value.as_deref().unwrap_or("");
-        let operator = filter.operator.as_str();
-
-        let (clause, mut values): (String, Vec<String>) = match operator {
-            "eq" => (format!("{col} = ?"), vec![value.to_string()]),
-            "ne" => (format!("{col} <> ?"), vec![value.to_string()]),
-            "gt" => (format!("{col} > ?"), vec![value.to_string()]),
-            "gte" => (format!("{col} >= ?"), vec![value.to_string()]),
-            "lt" => (format!("{col} < ?"), vec![value.to_string()]),
-            "lte" => (format!("{col} <= ?"), vec![value.to_string()]),
-            "contains" => (
-                format!("{col} LIKE ?"),
-                vec![format!("%{}%", escape_like(value))],
-            ),
-            "notContains" => (
-                format!("{col} NOT LIKE ?"),
-                vec![format!("%{}%", escape_like(value))],
-            ),
-            "startsWith" => (
-                format!("{col} LIKE ?"),
-                vec![format!("{}%", escape_like(value))],
-            ),
-            "endsWith" => (
-                format!("{col} LIKE ?"),
-                vec![format!("%{}", escape_like(value))],
-            ),
-            "like" => (format!("{col} LIKE ?"), vec![value.to_string()]),
-            "notLike" => (format!("{col} NOT LIKE ?"), vec![value.to_string()]),
-            "regexp" => (format!("{col} REGEXP ?"), vec![value.to_string()]),
-            "notRegexp" => (format!("{col} NOT REGEXP ?"), vec![value.to_string()]),
-            "in" | "notIn" => {
-                let items = split_list(value);
-                if items.is_empty() {
-                    continue;
-                }
-                let placeholders = vec!["?"; items.len()].join(", ");
-                let sql_op = if operator == "in" { "IN" } else { "NOT IN" };
-                (format!("{col} {sql_op} ({placeholders})"), items)
-            }
-            "between" | "notBetween" => {
-                let items = split_list(value);
-                // Two bounds or nothing — one of them alone says nothing about a range.
-                if items.len() < 2 {
-                    continue;
-                }
-                let sql_op = if operator == "between" {
-                    "BETWEEN"
-                } else {
-                    "NOT BETWEEN"
-                };
-                (format!("{col} {sql_op} ? AND ?"), items[..2].to_vec())
-            }
-            "isNull" => (format!("{col} IS NULL"), Vec::new()),
-            "isNotNull" => (format!("{col} IS NOT NULL"), Vec::new()),
-            "isEmpty" => (format!("{col} = ''"), Vec::new()),
-            "isNotEmpty" => (format!("{col} <> ''"), Vec::new()),
-            other => return Err(err!("error.unknownFilterOperator", operator = other)),
-        };
-
-        clauses.push(clause);
-        binds.append(&mut values);
-    }
-
-    if clauses.is_empty() {
-        return Ok((String::new(), binds));
-    }
-    Ok((format!(" WHERE {}", clauses.join(" AND ")), binds))
+    let column_type = |name: &str| columns.iter().any(|c| c == name).then_some("");
+    filters::build_where(
+        filters,
+        column_type,
+        &WHERE_SYNTAX,
+        QuestionMarks::default(),
+    )
 }
 
 /// Reads one page of a table. `query.sort_column` orders the whole table before the page is cut
