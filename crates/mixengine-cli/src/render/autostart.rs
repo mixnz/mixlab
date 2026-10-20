@@ -1,6 +1,6 @@
 //! `mix autostart`: the login entry that starts the daemon.
 
-use mixengine_proto::{AutostartMechanism, AutostartReport};
+use mixengine_proto::{AtBoot, AutostartMechanism, AutostartReport};
 
 /// Which of the three `mix autostart` commands is being rendered.
 ///
@@ -17,6 +17,10 @@ pub(crate) enum Autostarted {
     Enabled,
     /// `mix autostart disable`.
     Disabled,
+    /// `mix autostart enable --at-boot`.
+    EnabledAtBoot,
+    /// `mix autostart disable --at-boot`.
+    DisabledAtBoot,
 }
 
 /// `mix autostart …`, for a person — roadmap task **T85b**.
@@ -29,6 +33,24 @@ pub(crate) fn autostart_report(autostarted: Autostarted, report: &AutostartRepor
     let mut rendered = match (autostarted, report.enabled, report.for_this_home) {
         (_, true, false) => "an autostart entry is registered, but for another home
 "
+        .to_owned(),
+
+        (Autostarted::EnabledAtBoot, _, _) => match report.changed {
+            true => "this home's daemon will now start at boot, before anyone logs in\n",
+            false => "this home's daemon already started at boot\n",
+        }
+        .to_owned(),
+
+        (Autostarted::DisabledAtBoot, _, _) => match (report.at_boot, report.changed) {
+            (AtBoot::OnByAccount, _) => {
+                "this account starts its services at boot on its own, and MixEngine leaves that \
+                 alone\n"
+            }
+            (_, true) => {
+                "this home's daemon no longer starts at boot; it still starts when you log in\n"
+            }
+            (_, false) => "this home's daemon did not start at boot\n",
+        }
         .to_owned(),
 
         (Autostarted::Asked, true, true) => "this home's daemon starts when you log in
@@ -73,6 +95,16 @@ pub(crate) fn autostart_report(autostarted: Autostarted, report: &AutostartRepor
         ));
     }
 
+    if let Some(line) = at_boot(report.at_boot) {
+        rendered.push_str(&format!("  {:<9} {}\n", "at boot", line));
+    }
+
+    if matches!(report.at_boot, AtBoot::On | AtBoot::OnByAccount) && report.for_this_home {
+        rendered.push_str(
+            "  services start with it only if their own autostart is on: see mix service list\n",
+        );
+    }
+
     if report.mechanism == AutostartMechanism::None {
         rendered.push_str(
             "  this machine has no way to start something at login that MixEngine will write, so \
@@ -88,7 +120,27 @@ pub(crate) fn autostart_report(autostarted: Autostarted, report: &AutostartRepor
         );
     }
 
+    if autostarted == Autostarted::EnabledAtBoot && report.at_boot == AtBoot::On {
+        rendered.push_str("it takes effect at the next boot\n");
+    }
+
     rendered
+}
+
+/// Whether the daemon also starts before anyone logs in, and whose setting that is, or nothing
+/// where the machine has no such thing.
+fn at_boot(at_boot: AtBoot) -> Option<&'static str> {
+    match at_boot {
+        AtBoot::Unsupported => None,
+        AtBoot::Off => Some("no, only after you log in"),
+        AtBoot::On => {
+            Some("yes, before anyone logs in (MixEngine turned on linger for this account)")
+        }
+        AtBoot::OnByAccount => Some(
+            "yes, before anyone logs in (this account already lingers, and MixEngine leaves that \
+             alone)",
+        ),
+    }
 }
 
 /// What this machine starts things with, as a person would name it.
@@ -103,8 +155,6 @@ fn mechanism(mechanism: AutostartMechanism) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use mixengine_proto::AtBoot;
-
     use super::*;
 
     fn registered(for_this_home: bool) -> AutostartReport {
@@ -184,5 +234,62 @@ mod tests {
 
         assert!(rendered.contains("no systemd user manager"), "{rendered}");
         assert!(rendered.contains("nothing to register"), "{rendered}");
+    }
+
+    #[test]
+    fn the_boot_line_is_absent_where_there_is_no_boot_half() {
+        let report = AutostartReport {
+            at_boot: AtBoot::Unsupported,
+            ..registered(true)
+        };
+
+        assert!(!autostart_report(Autostarted::Asked, &report).contains("at boot"));
+    }
+
+    #[test]
+    fn each_boot_state_says_whose_it_is() {
+        for (at_boot, says) in [
+            (AtBoot::Off, "only after you log in"),
+            (AtBoot::On, "MixEngine turned on linger"),
+            (AtBoot::OnByAccount, "MixEngine leaves that alone"),
+        ] {
+            let report = AutostartReport {
+                at_boot,
+                ..registered(true)
+            };
+            let rendered = autostart_report(Autostarted::Asked, &report);
+            assert!(rendered.contains(says), "{at_boot:?}: {rendered}");
+        }
+    }
+
+    #[test]
+    fn starting_at_boot_points_at_the_services_that_come_with_it() {
+        let report = AutostartReport {
+            at_boot: AtBoot::On,
+            changed: true,
+            ..registered(true)
+        };
+        let rendered = autostart_report(Autostarted::EnabledAtBoot, &report);
+
+        assert!(
+            rendered.starts_with("this home's daemon will now start at boot"),
+            "{rendered}"
+        );
+        assert!(rendered.contains("mix service list"), "{rendered}");
+        assert!(rendered.contains("next boot"), "{rendered}");
+    }
+
+    #[test]
+    fn unticking_boot_against_the_account_s_own_linger_says_nothing_changed() {
+        let report = AutostartReport {
+            at_boot: AtBoot::OnByAccount,
+            ..registered(true)
+        };
+        let rendered = autostart_report(Autostarted::DisabledAtBoot, &report);
+
+        assert!(
+            rendered.starts_with("this account starts its services at boot on its own"),
+            "{rendered}"
+        );
     }
 }
