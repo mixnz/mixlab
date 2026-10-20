@@ -66,7 +66,7 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       `scripts/check-task-citations.mjs` counts every `T` and number in the files
       `check-file-sizes.mjs` reads, comments and strings alike, except the scripts that read the
       roadmap. The baseline was written at 6,066 citations in 1,024 files.
-- [ ] **T209c** Measure duplication in the `db` module's SQL drivers before changing anything.
+- [x] **T209c** Measure duplication in the `db` module's SQL drivers before changing anything.
       `drivers/mssql/` is 4,740 lines, `sqlite/` 3,825, `clickhouse/` 3,641, `postgres/` 3,092,
       `mysql/` 2,383, and the shared `drivers/sql/` only 872. Run a duplicate-code scanner
       (`jscpd` or similar, installed as a dev tool, not a dependency) over
@@ -74,6 +74,44 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       engines, and in which parts (`dump`, `structure`, `script`, …). Then decide: a part with real
       duplication gets a follow-up task that moves it into `drivers/sql/`, and one without is
       recorded as checked. The answer is a number, as in phase 28.
+      **Measured with `jscpd` 4.3.0 (`--format rust`, its defaults of 50 tokens and 5 lines) on
+      `master` at `8733802d`.** `drivers/` is 26,397 lines in 58 files, and 2,051 of them (7.77%)
+      are in 186 clones. 694 lines in 64 clones repeat code of the same engine and are not this
+      task's. **1,543 lines in 122 clones repeat code of another engine.** That is summed per pair
+      of files, so a block three engines share counts twice. By part, grouped by the function a
+      clone sits in:
+
+      | part | lines | engines | decision |
+      | --- | --- | --- | --- |
+      | `script`, splitting a script into statements (`split_statements` and its `push`) | ~185 | mssql, mysql, postgres, sqlite | **real**: one lexer frame with the dialect's quoting and comments filled in. T209i |
+      | `script`, `run`'s loop over the statements, and `validate` | ~200 | postgres, sqlite, mysql, clickhouse | **real**: the same columns, `MAX_ROWS`, timing and failure per statement. T209i |
+      | `page`, `build_where` and `table_data` | ~205 | all five SQL engines | **real**: the `in`, `between`, `isNull` … arms match word for word. T209j |
+      | editing rows: `update_row`, `insert_rows`, `delete_rows` | ~174 | postgres, sqlite, mysql, mssql's `editing.rs` | **real for the three sqlx engines**: the transaction, the rollback and `error.rowFailed`. T209k. mssql runs on tiberius and stays its own |
+      | `engine.rs`, each `impl SqlEngine` | 193 | every engine | checked: trait signatures that hand each call to the engine's own module, with nothing left to move |
+      | `ddl` and `structure` | ~293 | about 20 functions, the longest clone 37 lines | checked: mostly `From<sql::types::*Spec>` into the part of a spec each engine reads, and short input checks in front of SQL that differs per dialect |
+      | `dump` and `restore` | ~105 | split across six pairs | checked: small, and spread out |
+      | tests, `column_value` and the rest | ~185 | | checked: tests, and decoding written against each driver's own types |
+
+- [ ] **T209i** One statement splitter and one `run` loop for the SQL engines. `split_statements`
+      in `mssql/`, `mysql/`, `postgres/` and `sqlite/` `script.rs` walks the same frame: line and
+      block comments, a quoted run, the first word as the statement's verb, `;` to end it. Only
+      the dialect differs: `#` comments and backslash escapes in MySQL, dollar quotes and `E''` in
+      PostgreSQL, `[...]` and `GO` batches in SQL Server. That frame moves to `drivers/sql/`
+      with the dialect as its argument, and `run`'s per-statement result collection with it, so far
+      as the sqlx engines share it. ClickHouse's `Scanner` is compared and joins only if it fits.
+      The splitter tests of every engine pass unchanged, and the frontend's copy in
+      `src/modules/db/sql/` is left alone.
+- [ ] **T209j** One `build_where` for the SQL engines. `mysql.rs`, `sqlite.rs` and the `page.rs` of
+      `mssql/`, `postgres/` and `clickhouse/` each turn the filter bar into a `WHERE` with the same
+      arms. One function in `drivers/filters.rs` takes what differs: how a placeholder is spelled,
+      how an identifier is quoted, the regex operator, and PostgreSQL's cast of a bound value. The
+      SQL each engine sends is unchanged, which its existing tests and new ones per operator prove.
+- [ ] **T209k** One frame for editing rows in the sqlx engines. `update_row`, `insert_rows` and
+      `delete_rows` in `mysql.rs`, `postgres.rs` and `sqlite.rs` repeat the transaction, the
+      rollback on the first failure and `error.rowFailed`. That frame moves to `drivers/sql/`,
+      and each engine keeps its placeholders, its key predicate and its bind. SQL Server's
+      `editing.rs` runs on tiberius and is left as it is. Comes after T209j, which touches the same
+      files.
 
 ## Found after
 
