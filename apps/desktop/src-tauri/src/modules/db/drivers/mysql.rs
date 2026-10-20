@@ -4,6 +4,7 @@ pub mod script;
 pub mod structure;
 
 use super::filters::{self, escape_like, LikeEscape, QuestionMarks, WhereSyntax};
+use super::sql::editing::{self, RowSql};
 use crate::error::AppError;
 pub use crate::modules::db::drivers::sql::types::{
     ColumnMeta, Filter, ForeignKey, PageQuery, TablePage,
@@ -436,8 +437,14 @@ impl MySqlRows {
             .collect::<Vec<_>>()
             .join(" AND ")
     }
+}
 
-    pub fn count(&self, key: &Map<String, Value>) -> String {
+/// Every value goes in as text or null, and MySQL coerces the text to the column's real type on
+/// write.
+impl RowSql for MySqlRows {
+    type Database = sqlx::MySql;
+
+    fn count(&self, key: &Map<String, Value>) -> String {
         format!(
             "SELECT COUNT(*) FROM {} WHERE {}",
             self.qualified,
@@ -445,7 +452,7 @@ impl MySqlRows {
         )
     }
 
-    pub fn update(&self, updates: &Map<String, Value>, key: &Map<String, Value>) -> String {
+    fn update(&self, updates: &Map<String, Value>, key: &Map<String, Value>) -> String {
         let set_clause = updates
             .keys()
             .map(|c| format!("{} = ?", quote_ident(c)))
@@ -458,7 +465,7 @@ impl MySqlRows {
         )
     }
 
-    pub fn insert(&self, row: &Map<String, Value>) -> String {
+    fn insert(&self, row: &Map<String, Value>) -> String {
         let qualified = &self.qualified;
         // `() VALUES ()` is MySQL's way of spelling "a row that is nothing but defaults".
         if row.is_empty() {
@@ -475,7 +482,7 @@ impl MySqlRows {
 
     /// `LIMIT 1` so that the no-primary-key fallback can only ever remove the one row the user
     /// selected, never its duplicates.
-    pub fn delete_one(&self, key: &Map<String, Value>) -> String {
+    fn delete_one(&self, key: &Map<String, Value>) -> String {
         format!(
             "DELETE FROM {} WHERE {} LIMIT 1",
             self.qualified,
@@ -483,28 +490,17 @@ impl MySqlRows {
         )
     }
 
-    pub fn delete_all(&self) -> String {
+    fn delete_all(&self) -> String {
         format!("DELETE FROM {}", self.qualified)
     }
-}
 
-/// Binds a JSON value (always `Null` or `String` — the frontend only ever
-/// sends edited text or an explicit null) as an `Option<&str>`, letting MySQL
-/// coerce the text to the column's real type on write.
-fn bind_value<'q>(
-    query: sqlx::query::Query<'q, sqlx::MySql, sqlx::mysql::MySqlArguments>,
-    value: &'q Value,
-) -> sqlx::query::Query<'q, sqlx::MySql, sqlx::mysql::MySqlArguments> {
-    match value {
-        Value::String(s) => query.bind(Some(s.as_str())),
-        _ => query.bind(None::<&str>),
+    fn map_error(&self, error: sqlx::Error) -> AppError {
+        map_error(error)
     }
 }
 
-/// Updates exactly one row, identified by `key` (primary key columns, or —
-/// when a table has none — every column as a fallback). Runs inside a
-/// transaction that first verifies the key predicate matches exactly one
-/// row, so the no-PK fallback can't silently clobber a duplicate row.
+/// Updates exactly one row, identified by `key` (primary key columns, or — when a table has none —
+/// every column as a fallback). See [`editing::update_row`].
 pub async fn update_row(
     pool: &MySqlPool,
     database: &str,
@@ -518,46 +514,12 @@ pub async fn update_row(
     if key.is_empty() {
         return Err(err!("error.updateWithoutKey"));
     }
-
-    let statements = MySqlRows::new(database, table);
-
-    let mut tx = pool.begin().await.map_err(map_error)?;
-
-    let mut count_query = sqlx::query(sqlx::AssertSqlSafe(statements.count(key)));
-    for v in key.values() {
-        count_query = bind_value(count_query, v);
-    }
-    let matched: i64 = count_query
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(map_error)?
-        .get::<i64, _>(0);
-    if matched != 1 {
-        tx.rollback().await.map_err(map_error)?;
-        return Err(err!("error.rowsMatched", matched = matched));
-    }
-
-    let mut update_query = sqlx::query(sqlx::AssertSqlSafe(statements.update(updates, key)));
-    for v in updates.values() {
-        update_query = bind_value(update_query, v);
-    }
-    for v in key.values() {
-        update_query = bind_value(update_query, v);
-    }
-    update_query.execute(&mut *tx).await.map_err(map_error)?;
-
-    tx.commit().await.map_err(map_error)?;
-    Ok(())
+    editing::update_row(pool, &MySqlRows::new(database, table), updates, key).await
 }
 
-/// Inserts `rows`, one map per new row, all in a single transaction: if any one of them is
-/// rejected, none of them land.
-///
-/// A row only carries the columns it has something to say about — a column left out of the map
-/// is left out of that row's INSERT too, so the table's own DEFAULT (or AUTO_INCREMENT, or a
-/// generated expression) is what fills it. That is also why each row is its own statement
-/// rather than one multi-VALUES INSERT: rows may fill in different sets of columns, and the
-/// error a rejected row produces can then say which row it was.
+/// Inserts `rows`, one map per new row, all in a single transaction. A column a row leaves out is
+/// filled by the table's own DEFAULT, AUTO_INCREMENT or generated expression. See
+/// [`editing::insert_rows`].
 pub async fn insert_rows(
     pool: &MySqlPool,
     database: &str,
@@ -567,23 +529,7 @@ pub async fn insert_rows(
     if rows.is_empty() {
         return Ok(());
     }
-
-    let statements = MySqlRows::new(database, table);
-    let mut tx = pool.begin().await.map_err(map_error)?;
-
-    for (i, row) in rows.iter().enumerate() {
-        let mut query = sqlx::query(sqlx::AssertSqlSafe(statements.insert(row)));
-        for v in row.values() {
-            query = bind_value(query, v);
-        }
-        if let Err(e) = query.execute(&mut *tx).await {
-            tx.rollback().await.map_err(map_error)?;
-            return Err(err!("error.rowFailed", index = i + 1).caused_by(map_error(e)));
-        }
-    }
-
-    tx.commit().await.map_err(map_error)?;
-    Ok(())
+    editing::insert_rows(pool, &MySqlRows::new(database, table), rows).await
 }
 
 /// Deletes rows identified by `keys` (each map is one row's primary key columns,
@@ -607,28 +553,7 @@ pub async fn delete_rows(
     }
 
     let statements = MySqlRows::new(database, table);
-    let mut tx = pool.begin().await.map_err(map_error)?;
-
-    if all {
-        sqlx::query(sqlx::AssertSqlSafe(statements.delete_all()))
-            .execute(&mut *tx)
-            .await
-            .map_err(map_error)?;
-    } else {
-        for key in keys {
-            if key.is_empty() {
-                tx.rollback().await.map_err(map_error)?;
-                return Err(err!("error.deleteWithoutKey"));
-            }
-            let mut query = sqlx::query(sqlx::AssertSqlSafe(statements.delete_one(key)));
-            for v in key.values() {
-                query = bind_value(query, v);
-            }
-            query.execute(&mut *tx).await.map_err(map_error)?;
-        }
-    }
-
-    tx.commit().await.map_err(map_error)?;
+    editing::delete_rows(pool, &statements, keys, all).await?;
 
     // Outside the transaction on purpose: ALTER TABLE forces an implicit commit
     // in MySQL, so running it inside would end the transaction behind our back.

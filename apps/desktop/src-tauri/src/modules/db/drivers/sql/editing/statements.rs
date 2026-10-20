@@ -2,6 +2,7 @@
 //! update, an insert, the delete of one row and the delete of all of them. Written out in full, so
 //! that any change to what reaches a server shows here as a failing line.
 
+use super::RowSql;
 use crate::modules::db::drivers::mysql::MySqlRows;
 use crate::modules::db::drivers::postgres::PgRows;
 use crate::modules::db::drivers::sqlite::SqliteRows;
