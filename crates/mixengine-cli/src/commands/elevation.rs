@@ -6,10 +6,11 @@ use std::process::ExitCode;
 use clap::Subcommand;
 use mixengine_platform::ipc::Endpoint;
 use mixengine_proto::{
-    ElevationDrop, ElevationStatus, Error, ErrorCode, JobSummary, PendingOpId, rpc,
+    ElevationDrop, ElevationGrant, ElevationStatus, Error, ErrorCode, JobSummary, PendingOpId, rpc,
 };
 
 use crate::autostart::Autostart;
+use crate::by_hand::{self, Route, Terminal};
 use crate::client::{Client, ask, encode};
 use crate::confirm::unanswered;
 use crate::jobs::follow;
@@ -90,25 +91,52 @@ pub(crate) async fn elevation(
             let waiting: ElevationStatus =
                 ask(&mut client, rpc::method::ELEVATION_STATUS, None).await?;
 
-            // An empty queue is `elevation.grant`'s own refusal to make, and it is left to it. What
-            // is skipped is the question: there is nothing to put in front of somebody.
-            if !waiting.pending.is_empty() && !yes && !confirmed(&waiting, json)? {
+            // ADR 0065: which way to ask is settled before anybody is asked whether to. An empty
+            // queue is `elevation.grant`'s own refusal to make, and it is left to it.
+            let route = match waiting.pending.is_empty() {
+                true => Route::Dialog,
+                false => by_hand::route(&waiting, Terminal::here(), json, "mix elevation grant")?,
+            };
+            if route == Route::ByHand {
+                by_hand::trusted_here(waiting.helper.as_deref())?;
+            }
+
+            // What is skipped is the question: there is nothing to put in front of somebody.
+            if !waiting.pending.is_empty() && !yes && !confirmed(&waiting, json, route)? {
                 // Saying no is an answer and not a failure — `docs/decisions/0005-on-demand-
                 // elevation.md`. Nothing was written and nothing was dropped, so the same command
                 // works when the person is ready.
                 return Ok(ExitCode::SUCCESS);
             }
 
-            let started: JobSummary = ask(&mut client, rpc::method::ELEVATION_GRANT, None).await?;
+            // No parameters for a dialog, as before ADR 0065, so an older daemon still answers.
+            let asked = match route {
+                Route::Dialog => None,
+                Route::ByHand => encode(&ElevationGrant { by_hand: true }),
+            };
+            let started: JobSummary = ask(&mut client, rpc::method::ELEVATION_GRANT, asked).await?;
 
             if no_wait {
                 emit(&rendered(json, &started, || {
                     render::job::job_status(&started)
                 }))?;
+                if route == Route::ByHand {
+                    let _ = writeln!(
+                        std::io::stderr(),
+                        "`mix elevation status` shows the command to run in a terminal"
+                    );
+                }
                 return Ok(ExitCode::SUCCESS);
             }
 
-            let finished = follow(&mut client, started, json).await?;
+            let ended = match route {
+                Route::ByHand => by_hand::run_waiting(&mut client, started.id).await?,
+                Route::Dialog => None,
+            };
+            let finished = match ended {
+                Some(finished) => finished,
+                None => follow(&mut client, started, json).await?,
+            };
             emit(&rendered(json, &finished, || {
                 render::job::job_status(&finished)
             }))?;
@@ -155,15 +183,21 @@ pub(crate) async fn elevation(
 /// When there is nobody to ask — `--json`, or a standard input at end of file. Both are refused
 /// rather than assumed either way: yes would raise a dialog on a machine nobody is sitting at, and
 /// no would be a decline the caller could not tell from a grant that happened.
-pub(crate) fn confirmed(waiting: &ElevationStatus, json: bool) -> Result<bool, Error> {
+pub(crate) fn confirmed(
+    waiting: &ElevationStatus,
+    json: bool,
+    route: Route,
+) -> Result<bool, Error> {
     if json {
         return Err(unanswered());
     }
 
-    match confirm::ask(&format!(
-        "{}\ncontinue? [y/N] ",
-        render::elevation::elevation_prompt(waiting)
-    )) {
+    let screen = match route {
+        Route::Dialog => render::elevation::elevation_prompt(waiting),
+        Route::ByHand => render::elevation::elevation_prompt_by_hand(waiting),
+    };
+
+    match confirm::ask(&format!("{screen}\ncontinue? [y/N] ")) {
         confirm::Answer::Yes => Ok(true),
 
         confirm::Answer::No => {

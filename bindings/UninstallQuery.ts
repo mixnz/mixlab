@@ -35,8 +35,11 @@ grant: boolean,
 /**
  * Raise that prompt from the caller's terminal rather than as a dialog — as
  * [`ElevationGrant::by_hand`](crate::ElevationGrant::by_hand). Meaningless without `grant`.
+ *
+ * Left off the wire when `false`: this type denies unknown fields, and a daemon from before
+ * ADR 0065 would refuse every uninstall that carried it.
  */
-by_hand: boolean, 
+by_hand?: boolean, 
 /**
  * Leave out what other programs hold in the folders that would go — roadmap task **T182e**.
  *

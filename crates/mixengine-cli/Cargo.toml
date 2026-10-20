@@ -40,7 +40,9 @@ serde_json.workspace = true
 # runtime the daemon needs would be several worker threads started to wait on a single socket. The
 # reactor and the timer this leaves out are pulled in by `mixengine-platform`, which is where the
 # connecting happens.
-tokio = { workspace = true, features = ["macros", "rt"] }
+# `process` and `signal` are `sudo` in the person's own terminal, and Ctrl-C while it asks (ADR
+# 0065); `time` is the wait for the daemon to publish the request.
+tokio = { workspace = true, features = ["macros", "rt", "process", "signal", "time"] }
 
 [dev-dependencies]
 tempfile.workspace = true

@@ -5,11 +5,12 @@ use std::process::ExitCode;
 
 use mixengine_platform::ipc::Endpoint;
 use mixengine_proto::{
-    DaemonStatus, Error, ErrorCode, JobOutcome, JobSummary, Removal, ResidueId, UninstallQuery,
-    UninstallReport, rpc,
+    DaemonStatus, ElevationStatus, Error, ErrorCode, JobOutcome, JobSummary, Removal, ResidueId,
+    UninstallQuery, UninstallReport, rpc,
 };
 
 use crate::autostart::Autostart;
+use crate::by_hand::{self, Route, Terminal};
 use crate::client::{Client, ask, encode};
 use crate::confirm::unanswered;
 use crate::jobs::follow;
@@ -122,6 +123,11 @@ pub(crate) async fn uninstall(
         return Ok(ExitCode::SUCCESS);
     }
 
+    // ADR 0065: how the one prompt will be raised is settled before the question. A run that cannot
+    // raise one is not refused — most of an uninstall needs no administrator — but it is said
+    // here, while nothing has changed.
+    let route = privileged_route(&mut client, json).await?;
+
     if !yes && !agreed_to_uninstall(&planned, keep_home, keep_relocated, json)? {
         // Saying no is an answer and not a failure — `mix elevation grant`'s rule. Nothing was
         // removed, so the same command works when the person is ready.
@@ -142,6 +148,7 @@ pub(crate) async fn uninstall(
             grant: true,
             // And the act always looks: something stuck that appeared since the plan refuses here.
             skip_holders: false,
+            by_hand: route.by_hand(),
             ..query
         }),
     )
@@ -154,7 +161,14 @@ pub(crate) async fn uninstall(
         return Ok(ExitCode::SUCCESS);
     }
 
-    let finished = follow(&mut client, started, json).await?;
+    let ended = match route {
+        Route::ByHand => by_hand::run_waiting(&mut client, started.id).await?,
+        Route::Dialog => None,
+    };
+    let finished = match ended {
+        Some(finished) => finished,
+        None => follow(&mut client, started, json).await?,
+    };
 
     let Some(JobOutcome::Succeeded { result }) = finished.outcome.clone() else {
         emit(&rendered(json, &finished, || {
@@ -211,6 +225,31 @@ pub(crate) async fn uninstall(
             false => ExitCode::SUCCESS,
         },
     )
+}
+
+/// Which way the uninstall's one prompt is raised — ADR 0065.
+///
+/// Where neither a dialog nor this terminal can ask, or the helper is not one a terminal may run,
+/// the reason is printed and the dialog is asked for anyway: the daemon then leaves what needs an
+/// administrator behind and says so, which is what an uninstall did before.
+async fn privileged_route(client: &mut Client, json: bool) -> Result<Route, Error> {
+    let elevation: ElevationStatus = ask(client, rpc::method::ELEVATION_STATUS, None).await?;
+
+    let decided =
+        by_hand::route(&elevation, Terminal::here(), json, "mix uninstall").and_then(|route| {
+            match route {
+                Route::ByHand => by_hand::trusted_here(elevation.helper.as_deref()).map(|()| route),
+                Route::Dialog => Ok(route),
+            }
+        });
+
+    Ok(decided.unwrap_or_else(|error| {
+        let _ = writeln!(
+            std::io::stderr(),
+            "{error}\nwhat needs an administrator's permission will be left behind"
+        );
+        Route::Dialog
+    }))
 }
 
 /// The `.pkg`'s paths still on disk after a run that says it removed the package — T182a.

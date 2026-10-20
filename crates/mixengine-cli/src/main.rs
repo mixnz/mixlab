@@ -12,6 +12,7 @@
 //! and can branch on `code` without caring which side of the socket produced it.
 
 mod autostart;
+mod by_hand;
 mod client;
 mod commands;
 mod confirm;

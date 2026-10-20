@@ -120,6 +120,9 @@ fn granting_says_what_each_operation_will_change_before_it_asks() {
     let (home, _daemon, domain, _waiting) = a_home_with_something_waiting();
 
     let output = home.mix(&["elevation", "grant"]);
+    if refused_before_the_question(&home, &output) {
+        return;
+    }
     let said = stderr(&output);
 
     let described = said
@@ -145,6 +148,9 @@ fn granting_refuses_when_there_is_nobody_to_answer() {
     let (home, _daemon, _domain, waiting) = a_home_with_something_waiting();
 
     let output = home.mix(&["elevation", "grant"]);
+    if refused_before_the_question(&home, &output) {
+        return nothing_was_granted(&home, waiting);
+    }
 
     assert!(!output.status.success(), "{}", stderr(&output));
     assert!(
@@ -173,6 +179,9 @@ fn answering_no_leaves_everything_waiting() {
     let (home, _daemon, _domain, waiting) = a_home_with_something_waiting();
 
     let output = home.mix_answering("n\n", &["elevation", "grant"]);
+    if refused_before_the_question(&home, &output) {
+        return nothing_was_granted(&home, waiting);
+    }
 
     assert!(
         output.status.success(),
@@ -189,6 +198,9 @@ fn json_cannot_be_asked_so_it_has_to_be_told_in_advance() {
     let (home, _daemon, _domain, waiting) = a_home_with_something_waiting();
 
     let output = home.mix_answering("y\n", &["elevation", "grant", "--json"]);
+    if refused_before_the_question(&home, &output) {
+        return nothing_was_granted(&home, waiting);
+    }
 
     assert!(!output.status.success(), "{}", stderr(&output));
     assert!(stderr(&output).contains("--yes"), "{}", stderr(&output));
@@ -215,6 +227,27 @@ fn status_keeps_counting_what_is_waiting_after_a_decline() {
 
     let said = stdout(&home.mix(&["status"]));
     assert!(said.contains("waiting"), "{said}");
+}
+
+/// On a machine with no dialog — a headless runner, this suite's standard input never a terminal —
+/// ADR 0065 refuses **before** the question, naming the command that works from a terminal. That is
+/// asserted here, and the caller's question-shaped assertions are skipped: there is none to ask.
+///
+/// Measured rather than assumed, as the queue's length is: whether a dialog can be raised is a fact
+/// about the machine running `cargo test`.
+fn refused_before_the_question(home: &Home, output: &std::process::Output) -> bool {
+    let status = json(&home.mix(&["elevation", "status", "--json"]));
+    if status["can_prompt"].as_bool() != Some(false) {
+        return false;
+    }
+
+    let said = stderr(output);
+    assert!(!output.status.success(), "{said}");
+    assert!(said.contains("no terminal to ask in"), "{said}");
+    assert!(said.contains("mix elevation grant"), "{said}");
+    assert!(!said.contains("continue?"), "asked before refusing: {said}");
+
+    true
 }
 
 /// The queue is untouched and no grant was ever attempted.

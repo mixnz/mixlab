@@ -35,6 +35,16 @@ pub(crate) fn elevation_status(status: &ElevationStatus) -> String {
         rendered.push_str(&format!("  helper    {said}\n"));
     }
 
+    // ADR 0065. Before the reason: a machine that cannot raise a dialog is exactly where a grant
+    // waits, and what it waits for is the line a person can act on.
+    if let Some(waiting) = &status.waiting {
+        rendered.push_str(&format!(
+            "  waiting   job {} waits for this to be run in a terminal:\n    {}\n",
+            waiting.job,
+            crate::by_hand::command(waiting)
+        ));
+    }
+
     match (&status.reason, status.pending.is_empty()) {
         // The reason is the answer, and on Linux it is a command to type. Printed whether or not
         // anything is waiting: a machine that cannot elevate is worth knowing about before the first
@@ -87,6 +97,16 @@ pub(crate) fn elevation_prompt(status: &ElevationStatus) -> String {
 
     format!(
         "{}\nyour operating system will ask once, for all of them, to allow\n  {helper}\n",
+        waiting(status)
+    )
+}
+
+/// [`elevation_prompt`] for a grant raised from this terminal (ADR 0065): `sudo` asks, here.
+pub(crate) fn elevation_prompt_by_hand(status: &ElevationStatus) -> String {
+    let helper = status.helper.as_deref().unwrap_or("mixengine-elevate");
+
+    format!(
+        "{}\nsudo will ask once, in this terminal, for your password to run\n  {helper}\n",
         waiting(status)
     )
 }
@@ -215,6 +235,57 @@ mod tests {
         assert!(rendered.contains("helper"), "{rendered}");
         assert!(
             rendered.contains("run this release's installer"),
+            "{rendered}"
+        );
+    }
+
+    /// ADR 0065: while a grant waits for a terminal, the command is on the screen for anybody who
+    /// looks — a second SSH session can run it.
+    #[test]
+    fn a_waiting_grant_shows_the_command() {
+        let rendered = elevation_status(&ElevationStatus {
+            elevated: false,
+            can_prompt: false,
+            reason: Some("no polkit agent".to_owned()),
+            helper: Some("/usr/local/libexec/mixengine/mixengine-elevate".to_owned()),
+            installed_helper: None,
+            pending: vec![a_pending_probe(1)],
+            last: None,
+            waiting: Some(mixengine_proto::ByHand {
+                job: mixengine_proto::JobId(4),
+                helper: "/usr/local/libexec/mixengine/mixengine-elevate".to_owned(),
+                request: "/home/me/.mixengine/run/elevate/abc/request.json".to_owned(),
+            }),
+        });
+
+        assert!(rendered.contains("job #4"), "{rendered}");
+        assert!(
+            rendered.contains(
+                "sudo -- /usr/local/libexec/mixengine/mixengine-elevate \
+                 /home/me/.mixengine/run/elevate/abc/request.json"
+            ),
+            "{rendered}"
+        );
+    }
+
+    /// From a terminal it is `sudo` that asks, here, and not a dialog somewhere else.
+    #[test]
+    fn the_by_hand_prompt_says_sudo_will_ask_here() {
+        let rendered = elevation_prompt_by_hand(&ElevationStatus {
+            elevated: false,
+            can_prompt: false,
+            reason: None,
+            helper: Some("/usr/local/libexec/mixengine/mixengine-elevate".to_owned()),
+            installed_helper: None,
+            pending: vec![a_pending_probe(1)],
+            last: None,
+            waiting: None,
+        });
+
+        assert!(rendered.contains("sudo"), "{rendered}");
+        assert!(rendered.contains("this terminal"), "{rendered}");
+        assert!(
+            !rendered.contains("operating system will ask"),
             "{rendered}"
         );
     }

@@ -137,7 +137,7 @@ pub(crate) async fn self_repair(
                 return Ok(outcome);
             }
 
-            if !confirmed(&waiting, json)? {
+            if !confirmed(&waiting, json, crate::by_hand::Route::Dialog)? {
                 // Saying no is an answer and not a failure — the same rule as `mix elevation grant`.
                 // Nothing was dropped, so the same command works when the person is ready.
                 return Ok(outcome);
