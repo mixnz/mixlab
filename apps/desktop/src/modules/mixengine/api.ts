@@ -694,6 +694,16 @@ export function autostartDisable(): Promise<AutostartReport> {
   return invoke<AutostartReport>("mixengine_autostart_disable");
 }
 
+/** `autostart.enable_at_boot` — the login entry, then this account's linger (Linux). */
+export function autostartEnableAtBoot(): Promise<AutostartReport> {
+  return invoke<AutostartReport>("mixengine_autostart_enable_at_boot");
+}
+
+/** `autostart.disable_at_boot` — releases only a linger MixEngine turned on; keeps the login entry. */
+export function autostartDisableAtBoot(): Promise<AutostartReport> {
+  return invoke<AutostartReport>("mixengine_autostart_disable_at_boot");
+}
+
 /** `path.status` — whether `<root>/bin` is on this user's saved PATH yet. */
 export function pathStatus(): Promise<PathReport> {
   return invoke<PathReport>("mixengine_path_status");

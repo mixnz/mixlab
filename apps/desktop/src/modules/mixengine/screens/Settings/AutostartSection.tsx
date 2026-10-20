@@ -5,7 +5,7 @@ import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { AutostartReport } from "@mixengine/api";
-import { autostartPresentation } from "../../settingsState";
+import { autostartPresentation, bootPresentation } from "../../settingsState";
 import SectionLoading from "./SectionLoading";
 import styles from "./Settings.module.css";
 
@@ -17,6 +17,11 @@ import styles from "./Settings.module.css";
  * for a home that is not this one. Pressing "Enable" here is still valid (it *replaces* the entry,
  * since there is only one entry per user), but the sentence shown must not say "enabled" as if
  * there were nothing more to know.
+ *
+ * **The boot box is drawn only where the machine has a boot half** (Linux with a systemd user
+ * manager). Ticking it also ticks the login box, because `autostart.enable_at_boot` registers the
+ * entry first; `onByAccount` is drawn ticked and locked, since the account's own linger is not
+ * MixEngine's to turn off.
  */
 export default function AutostartSection({ onError }: { onError: (message: string) => void }) {
   const [report, setReport] = useState<AutostartReport | null>(null);
@@ -51,8 +56,23 @@ export default function AutostartSection({ onError }: { onError: (message: strin
     }
   }
 
+  async function toggleBoot() {
+    if (report === null) return;
+    setBusy(true);
+    try {
+      setReport(
+        bootPresentation(report) === "on" ? await api.autostartDisableAtBoot() : await api.autostartEnableAtBoot(),
+      );
+    } catch (e) {
+      onError(errorMessage(t, e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (report === null) return loaded ? null : <SectionLoading title={t("mixengine.settings.autostart.title")} />;
   const presentation = autostartPresentation(report);
+  const boot = bootPresentation(report);
 
   return (
     <section className={styles.section}>
@@ -71,6 +91,16 @@ export default function AutostartSection({ onError }: { onError: (message: strin
             disabled={busy}
             onChange={() => void toggle()}
           />
+          {boot !== "hidden" && (
+            <Checkbox
+              className={styles.row}
+              label={t("mixengine.settings.autostart.atBoot")}
+              checked={boot !== "off"}
+              disabled={busy || boot === "onByAccount"}
+              onChange={() => void toggleBoot()}
+            />
+          )}
+          {boot === "onByAccount" && <p className={styles.muted}>{t("mixengine.settings.autostart.atBootByAccount")}</p>}
           {presentation === "enabledOtherHome" && (
             <p className={styles.warn}>{t("mixengine.settings.autostart.otherHome")}</p>
           )}
