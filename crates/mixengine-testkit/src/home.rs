@@ -261,6 +261,16 @@ impl Home {
         self.root.join(LOGS_DIR_NAME).join(DAEMON_LOG_FILE_NAME)
     }
 
+    /// Where a suite that keeps the daemon's standard error points it.
+    ///
+    /// Not a path the daemon knows: nothing writes it unless a suite hands it to
+    /// [`Daemon::command`](crate::Daemon::command)'s stderr, and a [`Client`](crate::Client) whose
+    /// request gets no answer prints it when it exists. A panic is in there and nowhere else.
+    #[must_use]
+    pub fn daemon_stderr_file(&self) -> PathBuf {
+        self.root.join("daemon.stderr")
+    }
+
     /// The SQLite file a daemon serving this home opens.
     ///
     /// The fourth path this crate restates, and it exists for [`mod@crate::declare`]: a test that has to
