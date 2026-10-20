@@ -7,18 +7,11 @@
 //! The Query tab's Cancel button is closed on this engine rather than left to be pressed and do
 //! nothing — see `cancellable` on the dialect.
 //!
-//! What the splitter has to know is smaller than either of the others'. There is no dollar quoting,
-//! no `#` comment, no `DELIMITER`, and a backslash inside a string is just a backslash. What it
-//! adds is the second identifier quote: SQLite understands MySQL's backtick as well as the standard
-//! double quote, and a semicolon inside either has to be left alone.
-//!
-//! Square-bracket identifiers — `[order]`, which SQLite also accepts — are deliberately not
-//! handled, because `src/modules/db/sql/statements.ts` does not handle them either and the two
-//! splitters must agree on every case. A `;` inside one would split a statement that should not be
-//! split, in the editor and here alike.
+//! The script is split by the shared splitter, with SQLite's rules in `sql::syntax::SQLITE`.
 
 use super::{column_value, map_error};
 use crate::error::AppError;
+use crate::modules::db::drivers::sql::{statements::split_statements, syntax::SQLITE};
 use crate::modules::db::models::{SqlProblem, StatementResult};
 use futures_util::StreamExt;
 use serde_json::Value;
@@ -28,120 +21,6 @@ use std::time::Instant;
 /// How many rows of one result set are read back — as on the other two, a ceiling rather than a
 /// promise.
 const MAX_ROWS: usize = 10_000;
-
-/// One statement carved out of the editor's text.
-struct Statement {
-    text: String,
-    /// The keyword it opens with, upper-cased. Empty for a run of nothing but comments.
-    verb: String,
-}
-
-/// Splits a script into the statements that are to be sent one at a time.
-///
-/// Only a semicolon outside a string, a quoted identifier and a comment separates two. Comments are
-/// kept in the text: they may carry a hint, and dropping them would change what the engine is asked
-/// to run.
-///
-/// This is ported to `src/modules/db/sql/statements.ts`, which the editor splits with so that the
-/// statement it highlights is the one that ends up running. **A change to either splitter belongs
-/// in the same commit as the other**, and in both sets of tests.
-fn split_statements(sql: &str) -> Vec<Statement> {
-    let chars: Vec<char> = sql.chars().collect();
-    let mut statements: Vec<Statement> = Vec::new();
-    let mut current = String::new();
-    let mut verb = String::new();
-    let mut verb_done = false;
-    let mut i = 0;
-
-    fn push(statements: &mut Vec<Statement>, current: &mut String, verb: &mut String) {
-        let text = current.trim().to_string();
-        let opening = std::mem::take(verb);
-        current.clear();
-        // No opening keyword means there was no statement here — only whitespace, or a comment
-        // sitting between two semicolons.
-        if opening.is_empty() {
-            return;
-        }
-        statements.push(Statement {
-            text,
-            verb: opening,
-        });
-    }
-
-    while i < chars.len() {
-        let c = chars[i];
-
-        // `--` to the end of the line. Unlike MySQL, no whitespace is required after it.
-        if c == '-' && chars.get(i + 1) == Some(&'-') {
-            while i < chars.len() && chars[i] != '\n' {
-                current.push(chars[i]);
-                i += 1;
-            }
-            continue;
-        }
-
-        // `/* ... */`, which does not nest: the first close ends it.
-        if c == '/' && chars.get(i + 1) == Some(&'*') {
-            current.push('/');
-            current.push('*');
-            i += 2;
-            while i < chars.len() {
-                if chars[i] == '*' && chars.get(i + 1) == Some(&'/') {
-                    current.push('*');
-                    current.push('/');
-                    i += 2;
-                    break;
-                }
-                current.push(chars[i]);
-                i += 1;
-            }
-            continue;
-        }
-
-        if c == '\'' || c == '"' || c == '`' {
-            current.push(c);
-            i += 1;
-            while i < chars.len() {
-                let ch = chars[i];
-                current.push(ch);
-                i += 1;
-                if ch == c {
-                    // Two of the quote in a row are an escaped quote, not the end of the literal.
-                    // There is no backslash escape to consider: in SQLite a backslash inside a
-                    // string is a backslash.
-                    if chars.get(i) == Some(&c) {
-                        current.push(c);
-                        i += 1;
-                        continue;
-                    }
-                    break;
-                }
-            }
-            continue;
-        }
-
-        if c == ';' {
-            push(&mut statements, &mut current, &mut verb);
-            verb_done = false;
-            i += 1;
-            continue;
-        }
-
-        // Plain code: the first word of it is the statement's keyword.
-        if !verb_done {
-            if c.is_alphanumeric() || c == '_' {
-                verb.push(c.to_ascii_uppercase());
-            } else if !verb.is_empty() {
-                verb_done = true;
-            }
-        }
-        current.push(c);
-        i += 1;
-    }
-
-    push(&mut statements, &mut current, &mut verb);
-    statements
-}
 
 /// The statements whose point is the number of rows they changed, so that a count of zero is still
 /// worth reporting as a count.
@@ -198,7 +77,7 @@ pub async fn validate(pool: &SqlitePool, sql: &str) -> Result<Option<SqlProblem>
 /// There is no `announce` and no pid, unlike the other two: nothing here can be cancelled from
 /// outside.
 pub async fn run(pool: &SqlitePool, sql: &str) -> Result<Vec<StatementResult>, AppError> {
-    let statements = split_statements(sql);
+    let statements = split_statements(sql, &SQLITE);
     if statements.is_empty() {
         return Err(err!("error.nothingToRun"));
     }
@@ -297,7 +176,7 @@ mod tests {
     use super::*;
 
     fn split(sql: &str) -> Vec<(String, String)> {
-        split_statements(sql)
+        split_statements(sql, &SQLITE)
             .into_iter()
             .map(|s| (s.verb, s.text))
             .collect()
