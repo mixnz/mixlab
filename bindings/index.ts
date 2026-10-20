@@ -8,6 +8,7 @@ export * from "./AnswerSubject";
 export * from "./ApiAccess";
 export * from "./AppliedDatabase";
 export * from "./ArtifactAvailability";
+export * from "./AtBoot";
 export * from "./AutostartMechanism";
 export * from "./AutostartReport";
 export * from "./Backoff";

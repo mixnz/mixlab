@@ -695,6 +695,8 @@ const vi: typeof en = {
         unsupported: "Máy này không hỗ trợ. Chạy tay: {{location}}",
         otherHome: "Mục này đang đăng ký cho một home MixEngine khác.",
         location: "Đã đăng ký ở: {{location}}",
+        atBoot: "Chạy cả khi vừa bật máy, chưa ai đăng nhập",
+        atBootByAccount: "Tài khoản của bạn đã tự chạy các dịch vụ khi bật máy. MixEngine để nguyên thiết lập đó.",
       },
       path: {
         title: "Lệnh trong terminal",

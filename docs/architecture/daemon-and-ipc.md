@@ -121,8 +121,11 @@ daemon.*     status, version, shutdown, doctor, doctor_repair, bundle,
                                          raises one prompt and then ends this daemon)
 runtime.*    list_available, list_installed, install, uninstall, set_default, resolve
 path.*       status, install, uninstall
-autostart.*  status, enable, disable   (T85b; enable registers and does not start, disable
-                                        removes and does not stop — ADR 0016)
+autostart.*  status, enable, disable, enable_at_boot, disable_at_boot
+                                       (T85b; enable registers and does not start, disable
+                                        removes and does not stop — ADR 0016. enable_at_boot
+                                        also turns on the account's linger, Linux only, and
+                                        MixEngine turns off only a linger it turned on — ADR 0064)
 service.*    list, status, create, delete, start, stop, restart, limits, set_limits,
              idle, set_idle, set_front_end   (T97; which program every site is reached
                                              through is `ServiceSummary::role`, and changing
@@ -251,7 +254,10 @@ it is the end of it, and a socket cannot forget to close.
   `mixengined.service`. Three formats install as root and cannot know which account will use
   MixEngine, three install as the user — so this is MixEngine's to do and nobody else's, which is the
   helper's argument reversed. It registers and does not start; `autostart.disable` removes and does
-  not stop.
+  not stop. On Linux, `autostart.enable_at_boot` also turns on the account's systemd linger, so the
+  unit starts at boot with nobody logged in — as the account and never elevated, and undone only
+  when MixEngine was the one to turn it on
+  ([ADR 0064](../decisions/0064-the-daemon-may-start-at-boot-by-the-account-s-own-linger.md)).
 - **Foreground by default**: `mixengined` runs in the foreground unless given `--detach`. That is
   what every service manager above wants — each supervises the process itself and reads a fork as a
   death — so the flag exists for the one caller that cannot hold the daemon: a client autostarting

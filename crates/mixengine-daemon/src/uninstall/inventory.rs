@@ -82,7 +82,7 @@ pub(crate) async fn take(
         asked: query.package,
         present,
     }));
-    rows.push(autostart_entry(uninstall));
+    rows.push(autostart_entry(uninstall).await);
     rows.push(path_entry(uninstall).await);
 
     // T185a: what this install added to itself, from a copy MixEngine updates itself and nowhere
@@ -596,23 +596,26 @@ fn audit_log() -> Residue {
 /// **Only when it is this home's.** One entry per user means enabling from a second home replaces
 /// it, so an entry naming another home is that home's to remove and not this one's — which is
 /// exactly what `AutostartReport::for_this_home` exists to say.
-fn autostart_entry(uninstall: &Uninstall) -> Residue {
+///
+/// **And the linger this home turned on, with or without the entry**, because a unit deleted by
+/// hand leaves it behind, and the account would go on lingering for a home that is gone.
+async fn autostart_entry(uninstall: &Uninstall) -> Residue {
     let what = "the entry that starts this home's daemon at login".to_owned();
 
-    match uninstall.autostart.status() {
-        Ok(report) => Residue {
+    let asked = async {
+        Ok::<_, mixengine_proto::Error>((
+            uninstall.autostart.status().await?,
+            uninstall.autostart.holds_linger().await?,
+        ))
+    }
+    .await;
+
+    match asked {
+        Ok((report, holds_linger)) => Residue {
             id: ResidueId::AutostartEntry,
             what,
             location: report.location.clone(),
-            outcome: match report.enabled && report.for_this_home {
-                true => Removal::Planned {
-                    how:
-                        "remove the entry that starts this home's daemon at login, which needs no \
-                          administrator"
-                            .to_owned(),
-                },
-                false => Removal::Absent {},
-            },
+            outcome: autostart_outcome(&report, holds_linger),
         },
         Err(error) => Residue {
             id: ResidueId::AutostartEntry,
@@ -625,6 +628,33 @@ fn autostart_entry(uninstall: &Uninstall) -> Residue {
                 ),
             },
         },
+    }
+}
+
+/// What row 9 plans, from the entry's report and whether this home holds the account's linger.
+pub(super) fn autostart_outcome(
+    report: &mixengine_proto::AutostartReport,
+    holds_linger: bool,
+) -> Removal {
+    let entry = report.enabled && report.for_this_home;
+
+    let how = match (entry, holds_linger) {
+        (true, false) => {
+            "remove the entry that starts this home's daemon at login, which needs no administrator"
+        }
+        (true, true) => {
+            "remove the entry that starts this home's daemon at login, and turn off the systemd \
+             linger MixEngine turned on for it, neither of which needs an administrator"
+        }
+        (false, true) => {
+            "turn off the systemd linger MixEngine turned on for this home, which needs no \
+             administrator"
+        }
+        (false, false) => return Removal::Absent {},
+    };
+
+    Removal::Planned {
+        how: how.to_owned(),
     }
 }
 

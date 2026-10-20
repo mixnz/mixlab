@@ -94,6 +94,22 @@ pub struct AutostartState {
     pub command: Vec<String>,
 }
 
+/// Whether this machine starts the account's manager, and so the entry, before anyone logs in.
+///
+/// **On or off, and never whose.** Who turned it on is MixEngine's state, kept in the home's
+/// database, and this crate holds none — the daemon composes that half.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BootStart {
+    /// Nothing here starts a daemon before login: Windows, macOS, a Linux with no user manager.
+    Unsupported,
+
+    /// The entry starts at login only.
+    Off,
+
+    /// The account's manager starts at boot, so the entry does too.
+    On,
+}
+
 /// Where this OS keeps what it starts at login, and how to put one entry there reversibly.
 ///
 /// Every implementation follows `docs/architecture/platform-abstraction.md`'s rules the way
@@ -137,4 +153,80 @@ pub trait ServiceInstaller: std::fmt::Debug + Send + Sync {
     /// [`Error::Io`](crate::Error::Io) when the entry is there and cannot be read, and
     /// [`Error::Command`](crate::Error::Command) when the tool that holds it refuses to say.
     fn state(&self) -> Result<AutostartState>;
+
+    /// Whether the entry would also start at boot, before anyone logs in, changing nothing.
+    ///
+    /// The default is the answer of every system where only root can arrange that.
+    ///
+    /// # Errors
+    ///
+    /// None by default; an implementation reports rather than refuses, as [`state`](Self::state).
+    fn boot_state(&self) -> Result<BootStart> {
+        Ok(BootStart::Unsupported)
+    }
+
+    /// Make the account's manager start at boot, and answer what it reads back afterwards.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::UnsupportedPlatform`](crate::Error::UnsupportedPlatform) by default, and
+    /// [`Error::Command`](crate::Error::Command) when the tool that holds the setting refuses.
+    fn enable_boot(&self) -> Result<BootStart> {
+        Err(no_boot_half())
+    }
+
+    /// Undo [`enable_boot`](Self::enable_boot), and answer what it reads back afterwards.
+    ///
+    /// # Errors
+    ///
+    /// As [`enable_boot`](Self::enable_boot).
+    fn disable_boot(&self) -> Result<BootStart> {
+        Err(no_boot_half())
+    }
+}
+
+/// Why a system with no boot half refuses one.
+fn no_boot_half() -> crate::Error {
+    crate::Error::UnsupportedPlatform {
+        capability: "ServiceInstaller",
+        reason: "on this system only an administrator can start something before anyone logs in, \
+                 and MixEngine starts its daemon at login instead"
+            .to_owned(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Windows and macOS keep the default bodies: a status that reports, two mutations that refuse.
+    #[derive(Debug)]
+    struct LoginOnly;
+
+    impl ServiceInstaller for LoginOnly {
+        fn enable(&self, _: &AutostartPlan) -> Result<AutostartState> {
+            unreachable!("not exercised")
+        }
+
+        fn disable(&self) -> Result<AutostartState> {
+            unreachable!("not exercised")
+        }
+
+        fn state(&self) -> Result<AutostartState> {
+            unreachable!("not exercised")
+        }
+    }
+
+    #[test]
+    fn an_installer_with_no_boot_half_reports_unsupported_and_refuses_to_change_it() {
+        assert_eq!(LoginOnly.boot_state().unwrap(), BootStart::Unsupported);
+        assert!(matches!(
+            LoginOnly.enable_boot(),
+            Err(crate::Error::UnsupportedPlatform { .. })
+        ));
+        assert!(matches!(
+            LoginOnly.disable_boot(),
+            Err(crate::Error::UnsupportedPlatform { .. })
+        ));
+    }
 }

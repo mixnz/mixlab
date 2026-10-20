@@ -395,6 +395,22 @@ pub const AUTOSTART_ENABLE: &str = "autostart.enable";
 /// they are using, so nothing here touches a running process.
 pub const AUTOSTART_DISABLE: &str = "autostart.disable";
 
+/// Also start at boot, before anyone logs in. Takes no parameters, answers
+/// [`AutostartReport`](crate::AutostartReport).
+///
+/// Registers the login entry as [`AUTOSTART_ENABLE`] does — boot start without it would start
+/// nothing — and then turns on the account's systemd linger, as the account and never elevated.
+/// If the linger half is refused the entry stays registered and the hint names the command to run
+/// with `sudo`. Answers `unsupported` where only an administrator could arrange it.
+pub const AUTOSTART_ENABLE_AT_BOOT: &str = "autostart.enable_at_boot";
+
+/// Stop starting at boot, and keep starting at login. Takes no parameters, answers
+/// [`AutostartReport`](crate::AutostartReport).
+///
+/// Turns the account's linger off only if MixEngine turned it on; a linger the account set is left
+/// alone and the answer says `changed: false`. Stops nothing that is running.
+pub const AUTOSTART_DISABLE_AT_BOOT: &str = "autostart.disable_at_boot";
+
 /// Every declared service and what it is doing. See [`ServiceList`](crate::ServiceList).
 pub const SERVICE_LIST: &str = "service.list";
 

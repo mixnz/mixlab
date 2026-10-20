@@ -19,6 +19,26 @@ export function autostartPresentation(
 }
 
 /**
+ * The "also at boot" box: hidden where nothing can start before login (and from a daemon that
+ * predates the member), and `onByAccount` drawn ticked but locked, because the account's own linger
+ * is not MixEngine's to turn off.
+ */
+export type BootPresentation = "hidden" | "off" | "on" | "onByAccount";
+
+export function bootPresentation(report: Pick<AutostartReport, "at_boot">): BootPresentation {
+  switch (report.at_boot) {
+    case "off":
+      return "off";
+    case "on":
+      return "on";
+    case "on_by_account":
+      return "onByAccount";
+    default:
+      return "hidden";
+  }
+}
+
+/**
  * Keeps the order and length of `DoctorReport.checks` — no check is filtered out, including every
  * `outcome: "ok"`. This function exists only so there is one place for a test to assert that,
  * because filtering is the easiest mistake to make when someone "tidies" the list before drawing

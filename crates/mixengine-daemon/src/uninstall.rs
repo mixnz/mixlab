@@ -437,10 +437,9 @@ impl Uninstall {
         }
 
         if planned_row(planned, ResidueId::AutostartEntry) {
-            let autostart = Arc::clone(&self.autostart);
             done.insert(
                 ResidueId::AutostartEntry,
-                match crate::api::on_a_blocking_thread(move || autostart.disable()).await {
+                match self.autostart.disable().await {
                     Ok(report) => Removal::Removed {
                         what: format!("{} no longer starts this home at login", report.location),
                     },

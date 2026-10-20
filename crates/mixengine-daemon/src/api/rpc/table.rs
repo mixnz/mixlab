@@ -23,7 +23,7 @@ use mixengine_proto::{
 use serde_json::Value;
 
 use super::super::Api;
-use super::{Failure, arguments, encode_result, no_params, on_a_blocking_thread, refused};
+use super::{Failure, arguments, encode_result, no_params, refused};
 
 /// Answer one call of `method` with `params`, or say why it was not answered.
 pub(super) async fn route(
@@ -540,36 +540,31 @@ pub(super) async fn route(
         }
 
         // The second capability that writes outside the home, beside `path.*` above and on
-        // its rule: only ever when somebody asks. Blocking for those three's reason too — a
-        // tool to run and a file to write.
+        // its rule: only ever when somebody asks. The blocking hop — a tool to run and a file to
+        // write — is inside `Autostart`, which also reads and writes the home's linger record.
         rpc::method::AUTOSTART_STATUS => {
             no_params(params.as_ref())?;
-            let autostart = Arc::clone(&api.autostart);
-            encode_result(
-                &on_a_blocking_thread(move || autostart.status())
-                    .await
-                    .map_err(refused)?,
-            )
+            encode_result(&api.autostart.status().await.map_err(refused)?)
         }
 
         rpc::method::AUTOSTART_ENABLE => {
             no_params(params.as_ref())?;
-            let autostart = Arc::clone(&api.autostart);
-            encode_result(
-                &on_a_blocking_thread(move || autostart.enable())
-                    .await
-                    .map_err(refused)?,
-            )
+            encode_result(&api.autostart.enable().await.map_err(refused)?)
         }
 
         rpc::method::AUTOSTART_DISABLE => {
             no_params(params.as_ref())?;
-            let autostart = Arc::clone(&api.autostart);
-            encode_result(
-                &on_a_blocking_thread(move || autostart.disable())
-                    .await
-                    .map_err(refused)?,
-            )
+            encode_result(&api.autostart.disable().await.map_err(refused)?)
+        }
+
+        rpc::method::AUTOSTART_ENABLE_AT_BOOT => {
+            no_params(params.as_ref())?;
+            encode_result(&api.autostart.enable_at_boot().await.map_err(refused)?)
+        }
+
+        rpc::method::AUTOSTART_DISABLE_AT_BOOT => {
+            no_params(params.as_ref())?;
+            encode_result(&api.autostart.disable_at_boot().await.map_err(refused)?)
         }
 
         rpc::method::SERVICE_LIST => {

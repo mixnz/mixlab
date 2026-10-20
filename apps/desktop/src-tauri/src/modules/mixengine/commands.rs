@@ -826,6 +826,18 @@ pub async fn mixengine_autostart_disable() -> Result<Value, AppError> {
     rpc::call("autostart.disable", json!({})).await
 }
 
+/// `autostart.enable_at_boot` — the login entry, then this account's linger; no parameters.
+#[tauri::command]
+pub async fn mixengine_autostart_enable_at_boot() -> Result<Value, AppError> {
+    rpc::call("autostart.enable_at_boot", json!({})).await
+}
+
+/// `autostart.disable_at_boot` — releases only a linger MixEngine turned on; no parameters.
+#[tauri::command]
+pub async fn mixengine_autostart_disable_at_boot() -> Result<Value, AppError> {
+    rpc::call("autostart.disable_at_boot", json!({})).await
+}
+
 /// `path.status` — whether `<root>/bin` is on this user's PATH yet, read from the saved PATH
 /// (registry, shell profile) rather than the daemon's environment. No parameters; returns
 /// `PathReport`.

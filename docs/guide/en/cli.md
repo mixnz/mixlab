@@ -1610,8 +1610,12 @@ Does **not** start the daemon: there is one running, and it is the one answering
 changes is what happens at your next login. Idempotent, and it says which of the two it did.
 
 ```
-mix autostart enable
+mix autostart enable [OPTIONS]
 ```
+
+| Flag | What it does |
+| --- | --- |
+| `--at-boot` | Also start at boot, before anyone logs in. On Linux this turns on your account's systemd linger, which needs no administrator where the system allows it |
 
 ### mix autostart disable
 
@@ -1621,8 +1625,12 @@ Does **not** stop the daemon that is running. Turning off "start at login" is no
 the daemon you are using.
 
 ```
-mix autostart disable
+mix autostart disable [OPTIONS]
 ```
+
+| Flag | What it does |
+| --- | --- |
+| `--at-boot` | Only stop starting at boot, and keep starting when you log in |
 
 ## mix elevation
 

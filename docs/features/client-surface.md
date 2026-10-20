@@ -230,6 +230,9 @@ binaries. What they state is what the daemon **writes** —
    the answer says which mechanism this machine has, where the entry lives, and — the one thing a
    client must not work out for itself — whether an entry that *is* registered belongs to this home
    or to another one, which is a switch that must read "on, for a different home" rather than "on".
+   **Also at boot is a second switch reading `at_boot`**, over `autostart.enable_at_boot` and
+   `autostart.disable_at_boot` and drawn only where it is not `unsupported`; `on_by_account` is
+   drawn ticked and locked, because the account's own linger is not MixEngine's to turn off.
    **Save battery is a switch over `service.save_resources` / `service.set_save_resources`** (T167b,
    ADR 0041): off unless a person turned it on, and while it is off nothing is idle-stopped. It is
    also `mix service save-resources`.

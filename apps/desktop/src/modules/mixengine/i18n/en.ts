@@ -706,6 +706,8 @@ export default {
         unsupported: "Not supported on this machine. Run it by hand: {{location}}",
         otherHome: "This is registered for a different MixEngine home.",
         location: "Registered at: {{location}}",
+        atBoot: "Also start at boot, before anyone logs in",
+        atBootByAccount: "Your account already starts its services at boot. MixEngine leaves that setting alone.",
       },
       path: {
         title: "Terminal commands",
