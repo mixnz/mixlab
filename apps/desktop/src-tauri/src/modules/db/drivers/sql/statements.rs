@@ -290,7 +290,7 @@ pub fn split_statements(sql: &str, syntax: &SqlSyntax) -> Vec<Statement> {
 #[cfg(test)]
 mod tests {
     use super::split_statements;
-    use crate::modules::db::drivers::sql::syntax::{SqlSyntax, MYSQL, POSTGRES, SQLITE};
+    use crate::modules::db::drivers::sql::syntax::{SqlSyntax, MSSQL, MYSQL, POSTGRES, SQLITE};
 
     fn verbs(sql: &str, syntax: &SqlSyntax) -> Vec<String> {
         split_statements(sql, syntax)
@@ -345,6 +345,10 @@ mod tests {
             texts("SELECT `a;``b`; SELECT 2", &MYSQL)[0],
             "SELECT `a;``b`"
         );
+        assert_eq!(
+            texts("SELECT [a;]]b]; SELECT 2", &MSSQL)[0],
+            "SELECT [a;]]b]"
+        );
         assert_eq!(verbs("SELECT `a;b`", &POSTGRES), ["SELECT", "B"]);
     }
 
@@ -396,5 +400,41 @@ mod tests {
     fn a_chunk_without_a_verb_is_not_a_statement() {
         assert_eq!(verbs("SELECT 1;; -- done\n", &SQLITE), ["SELECT"]);
         assert_eq!(verbs("  -- c\n select 1", &SQLITE), ["SELECT"]);
+    }
+
+    #[test]
+    fn go_ends_a_batch_only_where_the_syntax_has_one() {
+        assert_eq!(
+            texts("SELECT 1\nGO\nSELECT 2", &MSSQL),
+            ["SELECT 1", "SELECT 2"]
+        );
+        assert_eq!(
+            texts("SELECT 1\ngo 3\nSELECT 2\nGO", &MSSQL),
+            ["SELECT 1", "SELECT 2"]
+        );
+        assert_eq!(verbs("SELECT 1\nGO\nSELECT 2", &MYSQL), ["SELECT"]);
+    }
+
+    #[test]
+    fn go_inside_a_string_or_comment_is_not_a_separator() {
+        assert_eq!(verbs("SELECT 'x\nGO\ny'", &MSSQL), ["SELECT"]);
+        assert_eq!(
+            texts("/* a\nGO\nb */ SELECT 1", &MSSQL),
+            ["/* a\nGO\nb */ SELECT 1"]
+        );
+    }
+
+    #[test]
+    fn go_after_code_on_its_line_is_not_a_separator() {
+        assert_eq!(verbs("SELECT 1; GO\nSELECT 2", &MSSQL), ["SELECT", "GO"]);
+        assert_eq!(verbs("SELECT 1\nGO3\nSELECT 2", &MSSQL), ["SELECT"]);
+    }
+
+    #[test]
+    fn crlf_text_is_kept() {
+        assert_eq!(
+            texts("SELECT 1,\r\n2\r\nGO\r\nSELECT 3\r\n", &MSSQL),
+            ["SELECT 1,\r\n2", "SELECT 3"]
+        );
     }
 }

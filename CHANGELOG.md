@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Fixed
+- In MixLab, a SQL Server script with a `GO` line inside a string or a comment runs as the Query
+  tab shows it. Before, it was cut in two at that line.
 - On macOS and Linux, Settings → Updates offers Finish as soon as you come back from the
   installer, instead of a few seconds later.
 - In MixLab, Ctrl+R (⌘R on a Mac) reloads the table, structure or result on screen again. After

@@ -6,9 +6,9 @@
  * so a rule is stated once and the code that depends on it stays shared. It is deliberately about
  * *lexing* only: which words mean what is the dialect's business, not this file's.
  *
- * Each field mirrors the same decision in the Rust splitter it is a port of — `mysql_script.rs`
- * and `postgres_script.rs` — and the two must agree, since a statement the editor highlights has
- * to be the one the server ends up running.
+ * Each field mirrors the same field of `SqlSyntax` in
+ * `src-tauri/src/modules/db/drivers/sql/syntax.rs`, which the backend splits with, and the two
+ * must agree, since a statement the editor highlights has to be the one the server ends up running.
  */
 export interface SqlSyntax {
   /** `#` opens a comment to the end of the line. MySQL only; in PostgreSQL it is an operator. */
@@ -110,11 +110,10 @@ export const SQLITE_SYNTAX: SqlSyntax = {
 };
 
 /**
- * ClickHouse, documented rather than checked against a running parser the way the other three
- * were: this app has no equivalent of `mysql_script.rs`/`postgres_script.rs` for it to be ported
- * from, so these are ClickHouse's own lexical rules as its manual states them, not a fact proven
- * against a server. Both identifier quotes are accepted at once — backtick and double quote — the
- * one point where this matches {@link SQLITE_SYNTAX} exactly rather than either of the other two.
+ * ClickHouse, as its manual states its lexical rules. Both identifier quotes are accepted at once —
+ * backtick and double quote — the one point where this matches {@link SQLITE_SYNTAX} exactly rather
+ * than either of the other two. The backend has no `SqlSyntax` for it: it reads ClickHouse with
+ * the `Scanner` in `src-tauri/src/modules/db/drivers/clickhouse/script.rs`.
  */
 export const CLICKHOUSE_SYNTAX: SqlSyntax = {
   hashComments: true,
@@ -129,11 +128,8 @@ export const CLICKHOUSE_SYNTAX: SqlSyntax = {
 };
 
 /**
- * T-SQL's lexical rules, read off the SQL Server docs and `tiberius`'s default session settings
- * rather than ported from a running Rust splitter the way the other four are: there is no
- * `mssql_script.rs` yet for this to mirror — that is Plan 5, and it keeps in step with this one by
- * a parallel test suite, not a shared shape (see D4/D9 of
- * `docs/specs/2026-09-05-mssql-support-design.md`).
+ * T-SQL's lexical rules, read off the SQL Server docs and `tiberius`'s default session settings.
+ * Mirrored by `MSSQL` in `src-tauri/src/modules/db/drivers/sql/syntax.rs`.
  */
 export const MSSQL_SYNTAX: SqlSyntax = {
   // `#` opens a temporary table's name here (`#t`, `##t`), not a comment.

@@ -68,3 +68,14 @@ pub const SQLITE: SqlSyntax = SqlSyntax {
     dollar_quoting: false,
     batch_separator: false,
 };
+
+pub const MSSQL: SqlSyntax = SqlSyntax {
+    hash_comments: false,
+    dash_comment_needs_space: false,
+    nested_block_comments: false,
+    identifier_quote: Some(('[', ']')),
+    backslash_escapes: false,
+    escape_string_prefix: false,
+    dollar_quoting: false,
+    batch_separator: true,
+};
