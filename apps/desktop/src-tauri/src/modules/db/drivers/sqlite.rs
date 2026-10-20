@@ -17,6 +17,7 @@ pub mod script;
 pub mod structure;
 
 use super::filters::{self, escape_like, LikeEscape, QuestionMarks, WhereSyntax};
+use super::sql::editing::{self, RowSql};
 use crate::error::AppError;
 pub use crate::modules::db::drivers::sql::types::{
     ColumnMeta, Filter, ForeignKey, PageQuery, TablePage,
@@ -479,27 +480,6 @@ pub(super) fn build_where(
     )
 }
 
-/// Binds one edited value.
-///
-/// Always as text or null — the grid only ever sends the text someone typed, or an explicit null.
-/// Unlike PostgreSQL, no cast is needed to get it into the column's type: SQLite applies the
-/// column's *affinity* on the way in, so `'7'` written to an INTEGER column is stored as the
-/// integer 7 and `'abc'` written to the same column is stored as the text it is.
-///
-/// The one place that falls short is a column holding bytes. Its values reach the grid base64
-/// encoded, and an edited one goes back as that text rather than as the bytes it stands for. That
-/// is what the other two drivers do as well — none of them decodes an edited binary cell — so it is
-/// a limit of the grid rather than of this engine.
-fn bind_value<'q>(
-    query: sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments>,
-    value: &'q Value,
-) -> sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments> {
-    match value {
-        Value::String(s) => query.bind(Some(s.as_str())),
-        _ => query.bind(None::<&str>),
-    }
-}
-
 /// The `WHERE` that names one row: every key column matched, nulls included.
 ///
 /// `IS` rather than `=` because a null key column has to match a null — SQLite's `IS` is the
@@ -510,6 +490,86 @@ fn key_predicate(key: &Map<String, Value>) -> String {
         .map(|column| format!("{} IS ?", quote_ident(column)))
         .collect::<Vec<_>>()
         .join(" AND ")
+}
+
+/// The SQL SQLite writes for the grid's edits to one table.
+pub(in crate::modules::db::drivers) struct SqliteRows {
+    /// The table's name, quoted.
+    pub quoted: String,
+    /// Whether the table has a primary key. Read only by `delete_one`; an update or an insert has
+    /// no reason to ask, and leaves it `false`.
+    pub keyed: bool,
+}
+
+/// Every edited value goes in as text or null, the only things the grid sends.
+/// Unlike PostgreSQL, no cast is needed to get it into the column's type: SQLite applies the
+/// column's *affinity* on the way in, so `'7'` written to an INTEGER column is stored as the
+/// integer 7 and `'abc'` written to the same column is stored as the text it is.
+///
+/// The one place that falls short is a column holding bytes. Its values reach the grid base64
+/// encoded, and an edited one goes back as that text rather than as the bytes it stands for. That
+/// is what the other two drivers do as well — none of them decodes an edited binary cell — so it is
+/// a limit of the grid rather than of this engine.
+impl RowSql for SqliteRows {
+    type Database = sqlx::Sqlite;
+
+    fn count(&self, key: &Map<String, Value>) -> String {
+        format!(
+            "SELECT COUNT(*) FROM {} WHERE {}",
+            self.quoted,
+            key_predicate(key)
+        )
+    }
+
+    fn update(&self, updates: &Map<String, Value>, key: &Map<String, Value>) -> String {
+        let set_clause = updates
+            .keys()
+            .map(|column| format!("{} = ?", quote_ident(column)))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "UPDATE {} SET {set_clause} WHERE {}",
+            self.quoted,
+            key_predicate(key)
+        )
+    }
+
+    fn insert(&self, row: &Map<String, Value>) -> String {
+        let quoted = &self.quoted;
+        if row.is_empty() {
+            return format!("INSERT INTO {quoted} DEFAULT VALUES");
+        }
+        let columns = row
+            .keys()
+            .map(|c| quote_ident(c))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let values = vec!["?"; row.len()].join(", ");
+        format!("INSERT INTO {quoted} ({columns}) VALUES ({values})")
+    }
+
+    /// Aimed at `rowid` when the table has no primary key, so that one row goes and its identical
+    /// twin stays. See [`delete_rows`].
+    fn delete_one(&self, key: &Map<String, Value>) -> String {
+        let quoted = &self.quoted;
+        let predicate = key_predicate(key);
+        if self.keyed {
+            format!("DELETE FROM {quoted} WHERE {predicate}")
+        } else {
+            format!(
+                "DELETE FROM {quoted} WHERE rowid = \
+                 (SELECT rowid FROM {quoted} WHERE {predicate} LIMIT 1)"
+            )
+        }
+    }
+
+    fn delete_all(&self) -> String {
+        format!("DELETE FROM {}", self.quoted)
+    }
+
+    fn map_error(&self, error: sqlx::Error) -> AppError {
+        map_error(error)
+    }
 }
 
 /// Whether the table identifies its own rows — that is, whether it has a primary key.
@@ -525,11 +585,7 @@ async fn has_primary_key(pool: &SqlitePool, table: &str) -> Result<bool, AppErro
     Ok(count > 0)
 }
 
-/// Writes `updates` into the single row `key` names.
-///
-/// The row is counted first, inside the same transaction as the write: a key that matches two rows
-/// — which only a table with no primary key can produce — would otherwise update both, and the
-/// grid would show one row changing while another silently changed with it.
+/// Writes `updates` into the single row `key` names. See [`editing::update_row`].
 pub async fn update_row(
     pool: &SqlitePool,
     table: &str,
@@ -543,52 +599,17 @@ pub async fn update_row(
         return Err(err!("error.updateWithoutKey"));
     }
 
-    let quoted = quote_ident(table);
-    let set_clause = updates
-        .keys()
-        .map(|column| format!("{} = ?", quote_ident(column)))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let predicate = key_predicate(key);
-
-    let mut tx = pool.begin().await.map_err(map_error)?;
-
-    let count_sql = format!("SELECT COUNT(*) FROM {quoted} WHERE {predicate}");
-    let mut count_query = sqlx::query_scalar(sqlx::AssertSqlSafe(count_sql));
-    for value in key.values() {
-        count_query = match value {
-            Value::String(s) => count_query.bind(Some(s.as_str())),
-            _ => count_query.bind(None::<&str>),
-        };
-    }
-    let matched: i64 = count_query.fetch_one(&mut *tx).await.map_err(map_error)?;
-    if matched != 1 {
-        tx.rollback().await.map_err(map_error)?;
-        return Err(err!("error.rowsMatched", matched = matched));
-    }
-
-    let update_sql = format!("UPDATE {quoted} SET {set_clause} WHERE {predicate}");
-    let mut update_query = sqlx::query(sqlx::AssertSqlSafe(update_sql));
-    for value in updates.values() {
-        update_query = bind_value(update_query, value);
-    }
-    for value in key.values() {
-        update_query = bind_value(update_query, value);
-    }
-    if let Err(e) = update_query.execute(&mut *tx).await {
-        tx.rollback().await.map_err(map_error)?;
-        return Err(map_error(e));
-    }
-
-    tx.commit().await.map_err(map_error)?;
-    Ok(())
+    let statements = SqliteRows {
+        quoted: quote_ident(table),
+        keyed: false,
+    };
+    editing::update_row(pool, &statements, updates, key).await
 }
 
 /// Inserts rows, all in one transaction: one rejected row means none of them land.
 ///
-/// A column left out of a row's map is left out of its INSERT, so the table's own default fills it.
 /// A row that names nothing at all is `DEFAULT VALUES`, SQLite's way of spelling a row that is
-/// nothing but defaults.
+/// nothing but defaults. See [`editing::insert_rows`].
 pub async fn insert_rows(
     pool: &SqlitePool,
     table: &str,
@@ -598,33 +619,11 @@ pub async fn insert_rows(
         return Ok(());
     }
 
-    let quoted = quote_ident(table);
-    let mut tx = pool.begin().await.map_err(map_error)?;
-
-    for (i, row) in rows.iter().enumerate() {
-        let sql = if row.is_empty() {
-            format!("INSERT INTO {quoted} DEFAULT VALUES")
-        } else {
-            let columns = row
-                .keys()
-                .map(|c| quote_ident(c))
-                .collect::<Vec<_>>()
-                .join(", ");
-            let values = vec!["?"; row.len()].join(", ");
-            format!("INSERT INTO {quoted} ({columns}) VALUES ({values})")
-        };
-        let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
-        for value in row.values() {
-            query = bind_value(query, value);
-        }
-        if let Err(e) = query.execute(&mut *tx).await {
-            tx.rollback().await.map_err(map_error)?;
-            return Err(err!("error.rowFailed", index = i + 1).caused_by(map_error(e)));
-        }
-    }
-
-    tx.commit().await.map_err(map_error)?;
-    Ok(())
+    let statements = SqliteRows {
+        quoted: quote_ident(table),
+        keyed: false,
+    };
+    editing::insert_rows(pool, &statements, rows).await
 }
 
 /// Deletes the rows `keys` names — each map is one row's primary key columns, or every column when
@@ -647,40 +646,11 @@ pub async fn delete_rows(
         return Ok(());
     }
 
-    let quoted = quote_ident(table);
-    let keyed = has_primary_key(pool, table).await?;
-    let mut tx = pool.begin().await.map_err(map_error)?;
-
-    if all {
-        let sql = format!("DELETE FROM {quoted}");
-        sqlx::query(sqlx::AssertSqlSafe(sql))
-            .execute(&mut *tx)
-            .await
-            .map_err(map_error)?;
-    } else {
-        for key in keys {
-            if key.is_empty() {
-                tx.rollback().await.map_err(map_error)?;
-                return Err(err!("error.deleteWithoutKey"));
-            }
-            let predicate = key_predicate(key);
-            let sql = if keyed {
-                format!("DELETE FROM {quoted} WHERE {predicate}")
-            } else {
-                format!(
-                    "DELETE FROM {quoted} WHERE rowid = \
-                     (SELECT rowid FROM {quoted} WHERE {predicate} LIMIT 1)"
-                )
-            };
-            let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
-            for value in key.values() {
-                query = bind_value(query, value);
-            }
-            query.execute(&mut *tx).await.map_err(map_error)?;
-        }
-    }
-
-    tx.commit().await.map_err(map_error)?;
+    let statements = SqliteRows {
+        quoted: quote_ident(table),
+        keyed: has_primary_key(pool, table).await?,
+    };
+    editing::delete_rows(pool, &statements, keys, all).await?;
 
     if reset_auto_increment {
         reset_sequence(pool, table).await?;

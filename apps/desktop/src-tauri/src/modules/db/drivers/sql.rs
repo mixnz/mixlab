@@ -2,11 +2,12 @@
 //! shapes that cross to the window, and the one trait every engine answers through (ADR 0062).
 //!
 //! `syntax`, `statements` and `run` are how they read and run a script the user typed, ClickHouse
-//! excepted.
+//! excepted. `editing` is how MySQL, PostgreSQL and SQLite write the rows the grid changed.
 //!
 //! MongoDB and Redis are not here. They have workspaces of their own and share no operation with
 //! these worth a trait.
 
+pub mod editing;
 pub mod engine;
 pub mod run;
 pub mod statements;

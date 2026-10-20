@@ -124,12 +124,20 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       from 2,640 lines to 2,266, and `filters.rs` from 185 to 518, tests included.
       `drivers/filters/where_clauses.rs` pins every engine's clause and binds for all 22 operators,
       written against the five copies before they went.
-- [ ] **T209k** One frame for editing rows in the sqlx engines. `update_row`, `insert_rows` and
+- [x] **T209k** One frame for editing rows in the sqlx engines. `update_row`, `insert_rows` and
       `delete_rows` in `mysql.rs`, `postgres.rs` and `sqlite.rs` repeat the transaction, the
       rollback on the first failure and `error.rowFailed`. That frame moves to `drivers/sql/`,
       and each engine keeps its placeholders, its key predicate and its bind. SQL Server's
       `editing.rs` runs on tiberius and is left as it is. Comes after T209j, which touches the same
-      files.
+      files. Design:
+      [2026-10-21-t209k-one-frame-for-editing-rows-design.md](../specs/2026-10-21-t209k-one-frame-for-editing-rows-design.md).
+      `drivers/sql/editing.rs` holds the `RowSql` trait and the frame, generic over
+      `sqlx::Database`, and the one bind of an edited value. Each engine writes its SQL in
+      `MySqlRows`, `PgRows` or `SqliteRows`, and keeps its early returns, what it reads before the
+      transaction and its counter reset. The three engine files went from 2,409 lines to 2,307, and
+      `editing.rs` is 174 lines, with 223 of tests in `sql/editing/statements.rs` pinning every
+      statement of every engine. The one behaviour change: a failed `UPDATE` now rolls back
+      explicitly on MySQL and PostgreSQL too, as SQLite did.
 
 ## Found after
 
