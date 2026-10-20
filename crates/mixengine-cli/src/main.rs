@@ -336,7 +336,7 @@ enum Command {
         /// Leave this home's directory where it is, and undo only what is outside it.
         ///
         /// Keeps the databases in `data/`, the certificates and everything else this home holds. The
-        /// daemon keeps running, because there is still a home for it to serve.
+        /// daemon stops all the same; the next `mix` command starts it again.
         #[arg(long)]
         keep_home: bool,
 

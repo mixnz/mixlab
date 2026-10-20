@@ -25,21 +25,23 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       log, the `mix database` wording; bindings.
 - [x] **T194f** `security-model.md`, `platform-abstraction.md`'s `Keyring` row, the changelog lines,
       and the design flipped to `implemented`.
-- [ ] **T211** The ADR: on a machine with no graphical agent, `mix` in a terminal raises the
+- [x] **T211** The ADR: on a machine with no graphical agent, `mix` in a terminal raises the
       prompt itself, through `sudo` on the helper — amending ADR 0005. Found on an Ubuntu 24.04
       server over SSH (2026-10-21): `polkitd` is installed and running, but `pkexec` is not — a
       separate package since Ubuntu 24.04 — and with no polkit agent over SSH it could not prompt
       anyway, so `mix elevation grant` and the privileged half of `mix uninstall` never run there,
       and nothing names a way to do it by hand. The error itself is wrong too: it says *"pkexec is
-      not on PATH, so polkit is not installed"*, which T211c corrects. Design to come.
-- [ ] **T211a** The daemon writes the request and hands its path to a client that has a terminal,
+      not on PATH, so polkit is not installed"*, which T211c corrects. Linux and macOS alike: a Mac
+      over SSH has the same gap. ADR 0065;
+      design: [2026-10-21-t211-elevation-from-a-terminal-design.md](../specs/2026-10-21-t211-elevation-from-a-terminal-design.md).
+- [x] **T211a** The daemon writes the request and hands its path to a client that has a terminal,
       instead of refusing in `elevation/require.rs` before the request exists;
       `mixengine-elevate` still validates every request itself. **(P)**
-- [ ] **T211b** `mix elevation grant` and `mix uninstall` run `sudo <helper> <request>` in the
+- [x] **T211b** `mix elevation grant` and `mix uninstall` run `sudo <helper> <request>` in the
       person's own terminal, and the daemon reads the report as it does after `pkexec`. **(P)**
-- [ ] **T211c** Ask whether this machine can raise a prompt before `continue? [y/N]`, not after
+- [x] **T211c** Ask whether this machine can raise a prompt before `continue? [y/N]`, not after
       the answer; where it cannot, the error names the command a person can run by hand.
-- [ ] **T211d** `docs/guide/en/uninstalling.md` names `mixengine-headless` beside `mixlab` for
+- [x] **T211d** `docs/guide/en/uninstalling.md` names `mixengine-headless` beside `mixlab` for
       `apt remove` and `dnf remove`, `mix uninstall`'s last line names the package command, and
       `--keep-home`'s help stops saying the daemon keeps running (ADR 0051).
 - [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the

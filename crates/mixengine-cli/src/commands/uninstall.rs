@@ -219,6 +219,16 @@ pub(crate) async fn uninstall(
         report_left(&format!("the daemon (pid {pid}) is still running"));
     }
 
+    // Last, because it is the next thing to type: what `mix uninstall` undid is MixEngine's, and the
+    // program itself is the package manager's.
+    if finished_uninstall(&report)
+        && let Some(said) = std::env::current_exe()
+            .ok()
+            .and_then(|exe| package_command(&exe, cfg!(target_os = "linux")))
+    {
+        let _ = writeln!(std::io::stderr(), "{said}");
+    }
+
     Ok(
         match report.left_behind() || !still_there.is_empty() || lingering {
             true => ExitCode::FAILURE,
@@ -514,6 +524,18 @@ async fn left_behind(
     }
 }
 
+/// The line that names the package command, for a `mix` a Linux package put under `/usr`.
+///
+/// Both packages, because either may be the one installed: `mixlab` carries the window and
+/// `mixengine-headless` does not, and each replaces the other.
+fn package_command(exe: &std::path::Path, linux: bool) -> Option<String> {
+    (linux && exe.starts_with("/usr")).then(|| {
+        "the program itself stays: remove it with `sudo apt remove mixlab` (or \
+         `mixengine-headless`, if that is the one installed); on Fedora, `sudo dnf remove` the same"
+            .to_owned()
+    })
+}
+
 /// One line on stderr about something that is still on this machine.
 ///
 /// Standard error, beside the report rather than inside it: stdout carries the daemon's answer, and
@@ -585,5 +607,37 @@ pub(crate) fn agreed_to_uninstall(
         }
 
         confirm::Answer::Unanswerable => Err(unanswered()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::package_command;
+
+    /// A package put `mix` in `/usr/bin`, and the package manager is what takes it away.
+    #[test]
+    fn a_packaged_linux_install_is_told_the_package_command() {
+        let said = package_command(Path::new("/usr/bin/mix"), true).expect("a package command");
+
+        assert!(said.contains("sudo apt remove mixlab"), "{said}");
+        assert!(said.contains("mixengine-headless"), "{said}");
+        assert!(said.contains("dnf remove"), "{said}");
+    }
+
+    /// A `cargo build`, or a copy somebody unpacked, has no package to remove.
+    #[test]
+    fn a_program_outside_usr_is_not_told_about_a_package() {
+        assert_eq!(
+            package_command(Path::new("/home/me/mixlab/target/debug/mix"), true),
+            None
+        );
+    }
+
+    /// macOS has `--package`, and Windows its own uninstaller.
+    #[test]
+    fn only_linux_is_told_about_a_package_manager() {
+        assert_eq!(package_command(Path::new("/usr/bin/mix"), false), None);
     }
 }
