@@ -213,16 +213,23 @@ impl Autostart {
             .nth(1)
             .map(PathBuf::from);
 
+        let for_this_home = named.is_some_and(|home| home == self.root);
+
+        // A linger with no entry for this home starts the account's manager and nothing of this
+        // daemon's, so it reads off: the question is whether *this* daemon comes back at boot.
+        let starts = state.enabled && for_this_home;
+
         Ok(AutostartReport {
             mechanism: mechanism(state.mechanism),
             location: state.location,
             enabled: state.enabled,
             changed: state.changed || lingered,
             command: state.command,
-            for_this_home: named.is_some_and(|home| home == self.root),
+            for_this_home,
             at_boot: match (boot, ours) {
                 (BootStart::Unsupported, _) => AtBoot::Unsupported,
                 (BootStart::Off, _) => AtBoot::Off,
+                (BootStart::On, _) if !starts => AtBoot::Off,
                 (BootStart::On, true) => AtBoot::On,
                 (BootStart::On, false) => AtBoot::OnByAccount,
             },
@@ -370,7 +377,16 @@ mod tests {
 
         let gone = autostart.disable().await.expect("disable");
         assert!(!gone.enabled, "{gone:?}");
-        assert_eq!(gone.at_boot, AtBoot::OnByAccount);
+        assert_eq!(
+            gone.at_boot,
+            AtBoot::Off,
+            "with no entry nothing starts at boot, whatever the linger: {gone:?}"
+        );
+        assert_eq!(
+            host.service_installer().boot_state().expect("read"),
+            BootStart::On,
+            "the account's linger is still on"
+        );
         assert!(
             !host
                 .autostart_operations()
@@ -404,6 +420,23 @@ mod tests {
         let after = autostart.status().await.expect("read");
         assert!(after.enabled && after.for_this_home, "{after:?}");
         assert_eq!(after.at_boot, AtBoot::Off);
+    }
+
+    /// The entry names another home: what starts at boot is that home's daemon, not this one.
+    #[tokio::test]
+    async fn an_entry_for_another_home_does_not_start_this_one_at_boot() {
+        let (_directory, mine, host) =
+            autostart(mock::Host::with_linger(ROOT, BootStart::On)).await;
+        let (_theirs_directory, theirs_store) = store().await;
+        let elsewhere = Autostart::new(
+            PathBuf::from("/usr/bin/mixengined"),
+            PathBuf::from("/tmp/theirs"),
+            host as Arc<dyn Host>,
+            theirs_store,
+        );
+        elsewhere.enable().await.expect("register");
+
+        assert_eq!(mine.status().await.expect("read").at_boot, AtBoot::Off);
     }
 
     /// Somebody ran `loginctl disable-linger` by hand: the record is cleared at the next read, so a

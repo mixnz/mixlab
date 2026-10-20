@@ -48,7 +48,8 @@ pub enum AtBoot {
     #[default]
     Unsupported,
 
-    /// The daemon starts at login only.
+    /// This daemon does not start at boot: it starts at login only, or not at all. A linger with no
+    /// entry for this home reads as this too, since it starts nothing of this daemon's.
     Off,
 
     /// It starts at boot because MixEngine turned the account's linger on; `autostart.disable` and
