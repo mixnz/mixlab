@@ -95,11 +95,8 @@ pub(crate) async fn elevation(
             // queue is `elevation.grant`'s own refusal to make, and it is left to it.
             let route = match waiting.pending.is_empty() {
                 true => Route::Dialog,
-                false => by_hand::route(&waiting, Terminal::here(), json, "mix elevation grant")?,
+                false => route_for(&waiting, json, "mix elevation grant")?,
             };
-            if route == Route::ByHand {
-                by_hand::trusted_here(waiting.helper.as_deref())?;
-            }
 
             // What is skipped is the question: there is nothing to put in front of somebody.
             if !waiting.pending.is_empty() && !yes && !confirmed(&waiting, json, route)? {
@@ -109,34 +106,17 @@ pub(crate) async fn elevation(
                 return Ok(ExitCode::SUCCESS);
             }
 
-            // No parameters for a dialog, as before ADR 0065, so an older daemon still answers.
-            let asked = match route {
-                Route::Dialog => None,
-                Route::ByHand => encode(&ElevationGrant { by_hand: true }),
-            };
-            let started: JobSummary = ask(&mut client, rpc::method::ELEVATION_GRANT, asked).await?;
+            let started = start_grant(&mut client, route).await?;
 
             if no_wait {
                 emit(&rendered(json, &started, || {
                     render::job::job_status(&started)
                 }))?;
-                if route == Route::ByHand {
-                    let _ = writeln!(
-                        std::io::stderr(),
-                        "`mix elevation status` shows the command to run in a terminal"
-                    );
-                }
+                say_where_the_command_is(route);
                 return Ok(ExitCode::SUCCESS);
             }
 
-            let ended = match route {
-                Route::ByHand => by_hand::run_waiting(&mut client, started.id).await?,
-                Route::Dialog => None,
-            };
-            let finished = match ended {
-                Some(finished) => finished,
-                None => follow(&mut client, started, json).await?,
-            };
+            let finished = see_through(&mut client, route, started, json).await?;
             emit(&rendered(json, &finished, || {
                 render::job::job_status(&finished)
             }))?;
@@ -169,6 +149,74 @@ pub(crate) async fn elevation(
 
             Ok(ExitCode::SUCCESS)
         }
+    }
+}
+
+/// Which way a grant of `waiting` is raised from here (ADR 0065), or why it cannot be.
+///
+/// # Errors
+///
+/// `privileged_required` when neither a dialog nor this terminal can ask, naming `rerun`, and when
+/// the helper a terminal would run is not one it may.
+pub(crate) fn route_for(
+    waiting: &ElevationStatus,
+    json: bool,
+    rerun: &str,
+) -> Result<Route, Error> {
+    let route = by_hand::route(waiting, Terminal::here(), json, rerun)?;
+
+    if route == Route::ByHand {
+        by_hand::trusted_here(waiting.helper.as_deref())?;
+    }
+
+    Ok(route)
+}
+
+/// `elevation.grant`, raised the way `route` says.
+///
+/// No parameters for a dialog, as before ADR 0065, so a daemon from before it still answers.
+///
+/// # Errors
+///
+/// Whatever `elevation.grant` refuses.
+pub(crate) async fn start_grant(client: &mut Client, route: Route) -> Result<JobSummary, Error> {
+    let asked = match route {
+        Route::Dialog => None,
+        Route::ByHand => encode(&ElevationGrant { by_hand: true }),
+    };
+
+    ask(client, rpc::method::ELEVATION_GRANT, asked).await
+}
+
+/// Follow a grant to its end — running `sudo` on it first, when it waits for this terminal.
+///
+/// # Errors
+///
+/// What [`by_hand::run_waiting`] refuses, and a job that cannot be followed.
+pub(crate) async fn see_through(
+    client: &mut Client,
+    route: Route,
+    started: JobSummary,
+    json: bool,
+) -> Result<JobSummary, Error> {
+    let ended = match route {
+        Route::ByHand => by_hand::run_waiting(client, started.id).await?,
+        Route::Dialog => None,
+    };
+
+    match ended {
+        Some(finished) => Ok(finished),
+        None => follow(client, started, json).await,
+    }
+}
+
+/// After `--no-wait`, where a terminal's grant can be found.
+pub(crate) fn say_where_the_command_is(route: Route) {
+    if route == Route::ByHand {
+        let _ = writeln!(
+            std::io::stderr(),
+            "`mix elevation status` shows the command to run in a terminal"
+        );
     }
 }
 

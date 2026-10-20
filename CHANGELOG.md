@@ -5,8 +5,8 @@
 ### Added
 - On a Linux server, MixEngine can come back after a reboot with nobody logged in:
   `mix autostart enable --at-boot`, or *Also start at boot* in Settings → MixEngine.
-- Over SSH, `mix elevation grant` and `mix uninstall` ask for your password through `sudo` in the
-  same terminal, on Linux and macOS. MixLab shows the command a waiting grant needs.
+- Over SSH, `mix elevation grant`, `mix doctor --repair` and `mix uninstall` ask for your password
+  through `sudo` in the same terminal, on Linux and macOS. MixLab shows the command a waiting grant needs.
 
 ### Fixed
 - On Ubuntu 24.04 and later, a machine without `pkexec` no longer says polkit is missing.

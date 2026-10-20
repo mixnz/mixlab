@@ -10,9 +10,11 @@ use mixengine_proto::{
 };
 
 use crate::autostart::Autostart;
+use crate::by_hand::Route;
 use crate::client::{Client, ask, encode};
-use crate::commands::elevation::confirmed;
-use crate::jobs::follow;
+use crate::commands::elevation::{
+    confirmed, route_for, say_where_the_command_is, see_through, start_grant,
+};
 use crate::output::{emit, rendered};
 use crate::render;
 
@@ -105,10 +107,24 @@ pub(crate) async fn self_repair(
 ) -> Result<ExitCode, Error> {
     let mut client = Client::connect(endpoint, autostart).await?;
 
+    // ADR 0065. With `--yes` the daemon raises the prompt inside the repair, which is a dialog; from
+    // a terminal over SSH it is this process that asks instead, once the repair has queued the rest.
+    // A machine where neither can ask is left to the daemon, as before: the rows wait.
+    let early = match yes {
+        true => {
+            let status: ElevationStatus =
+                ask(&mut client, rpc::method::ELEVATION_STATUS, None).await?;
+            route_for(&status, json, "mix doctor --repair").unwrap_or(Route::Dialog)
+        }
+        false => Route::Dialog,
+    };
+
     let repaired: RepairReport = ask(
         &mut client,
         rpc::method::DAEMON_DOCTOR_REPAIR,
-        encode(&DoctorRepair { grant: yes }),
+        encode(&DoctorRepair {
+            grant: the_daemon_raises_it(yes, early),
+        }),
     )
     .await?;
 
@@ -123,9 +139,9 @@ pub(crate) async fn self_repair(
         false => ExitCode::SUCCESS,
     };
 
-    let started = match repaired.granting {
+    let (started, route) = match repaired.granting {
         // `--yes`: the daemon raised it because the person said so before it ran.
-        Some(started) => started,
+        Some(started) => (started, Route::Dialog),
 
         None => {
             let waiting: ElevationStatus =
@@ -137,13 +153,19 @@ pub(crate) async fn self_repair(
                 return Ok(outcome);
             }
 
-            if !confirmed(&waiting, json, crate::by_hand::Route::Dialog)? {
+            // Settled before the question, as `mix elevation grant` settles it.
+            let route = match yes {
+                true => early,
+                false => route_for(&waiting, json, "mix doctor --repair")?,
+            };
+
+            if !yes && !confirmed(&waiting, json, route)? {
                 // Saying no is an answer and not a failure — the same rule as `mix elevation grant`.
                 // Nothing was dropped, so the same command works when the person is ready.
                 return Ok(outcome);
             }
 
-            ask(&mut client, rpc::method::ELEVATION_GRANT, None).await?
+            (start_grant(&mut client, route).await?, route)
         }
     };
 
@@ -151,10 +173,11 @@ pub(crate) async fn self_repair(
         emit(&rendered(json, &started, || {
             render::job::job_status(&started)
         }))?;
+        say_where_the_command_is(route);
         return Ok(outcome);
     }
 
-    let finished = follow(&mut client, started, json).await?;
+    let finished = see_through(&mut client, route, started, json).await?;
     emit(&rendered(json, &finished, || {
         render::job::job_status(&finished)
     }))?;
@@ -164,4 +187,32 @@ pub(crate) async fn self_repair(
         true => outcome,
         false => ExitCode::FAILURE,
     })
+}
+
+/// Does the repair itself raise the prompt? Only for `--yes`, and only as a dialog: a prompt from
+/// this terminal is raised by this process once the repair has queued what needs it (ADR 0065).
+fn the_daemon_raises_it(yes: bool, route: Route) -> bool {
+    yes && route == Route::Dialog
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn yes_over_a_dialog_lets_the_daemon_raise_it() {
+        assert!(the_daemon_raises_it(true, Route::Dialog));
+    }
+
+    /// Over SSH the daemon's dialog would land where nobody is, so the repair only queues.
+    #[test]
+    fn yes_from_a_terminal_keeps_the_prompt_here() {
+        assert!(!the_daemon_raises_it(true, Route::ByHand));
+    }
+
+    #[test]
+    fn without_yes_the_daemon_never_raises_it() {
+        assert!(!the_daemon_raises_it(false, Route::Dialog));
+        assert!(!the_daemon_raises_it(false, Route::ByHand));
+    }
 }

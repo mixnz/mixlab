@@ -10,7 +10,7 @@ use mixengine_proto::{
 };
 
 use crate::autostart::Autostart;
-use crate::by_hand::{self, Route, Terminal};
+use crate::by_hand::{self, Route};
 use crate::client::{Client, ask, encode};
 use crate::confirm::unanswered;
 use crate::jobs::follow;
@@ -245,13 +245,7 @@ pub(crate) async fn uninstall(
 async fn privileged_route(client: &mut Client, json: bool) -> Result<Route, Error> {
     let elevation: ElevationStatus = ask(client, rpc::method::ELEVATION_STATUS, None).await?;
 
-    let decided =
-        by_hand::route(&elevation, Terminal::here(), json, "mix uninstall").and_then(|route| {
-            match route {
-                Route::ByHand => by_hand::trusted_here(elevation.helper.as_deref()).map(|()| route),
-                Route::Dialog => Ok(route),
-            }
-        });
+    let decided = crate::commands::elevation::route_for(&elevation, json, "mix uninstall");
 
     Ok(decided.unwrap_or_else(|error| {
         let _ = writeln!(
