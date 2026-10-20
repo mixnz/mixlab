@@ -25,6 +25,8 @@ import { onTabRequest, takeTabRequests } from "./launch";
 import { readSession, writeSession } from "./session";
 import {
   firstTabOfModule,
+  idsKey,
+  idsOf,
   openableModules,
   rebadgeTab,
   restateTab,
@@ -64,9 +66,8 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
      to a string rather than on the array, because the array is a fresh one whenever the setting is
      written: the dispatcher rebinds its listener on identity, and the Settings table is handed the
      very same `shortcuts` value so the two cannot come to disagree. */
-  const enabledKey = enabled.join(",");
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `enabledKey` is `enabled` flattened; depending on the array itself is the thing this exists to avoid.
-  const visible = useMemo(() => visibleModules(enabled), [enabledKey]);
+  const enabledKey = idsKey(enabled);
+  const visible = useMemo(() => visibleModules(idsOf(enabledKey)), [enabledKey]);
   const visibleIds = useMemo(() => visible.map((m) => m.id), [visible]);
 
   /* The tray icon is MixLab's and goes up whatever modules are visible (ADR 0058); what this window
@@ -134,11 +135,10 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
      several times a second, and the dispatcher rebinds its listener whenever `shortcuts` changes
      identity. */
   const openModuleKey = useMemo(
-    () => [...new Set(tabs.map((tab) => tab.moduleId))].sort().join(","),
+    () => idsKey([...new Set(tabs.map((tab) => tab.moduleId))].sort()),
     [tabs],
   );
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `openModuleKey` is all of `tabs` that matters here; depending on the array itself is the thing this exists to avoid.
-  const openable = useMemo(() => openableModules(visible, tabs), [visible, openModuleKey]);
+  const openable = useMemo(() => openableModules(visible, idsOf(openModuleKey)), [visible, openModuleKey]);
   const openableIds = useMemo(() => openable.map((m) => m.id), [openable]);
   const shortcuts = useMemo(() => shortcutsFor(visible, openable), [visible, openable]);
   const { theme, colorTheme, setTheme, setColorTheme } = useTheme();
