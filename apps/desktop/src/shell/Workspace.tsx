@@ -16,7 +16,7 @@ import { isBlockedReload } from "../core/reload";
 import { configureTray } from "../core/window";
 import { logError } from "../core/log";
 import { useScrollAcceleration } from "../core/scroll";
-import { useShortcut, useShortcutDispatcher } from "../core/shortcuts";
+import { useShortcut, useShortcutDispatcher, useShortcuts } from "../core/shortcuts";
 import { useTheme } from "./theme";
 import { useLanguageT, useTranslation } from "../i18n";
 import { useUpdates } from "./update";
@@ -189,19 +189,19 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
   useShortcut("app.nextTab", () => setActiveId(tabIdAtOffset(tabs, activeId, 1)), true);
   useShortcut("app.prevTab", () => setActiveId(tabIdAtOffset(tabs, activeId, -1)), true);
   /* One number key per **visible** module — `Ctrl/Cmd+1` for the first one on the strip, `2` for
-     the second. Hooks in a loop, which is safe here and only here: the loop is over `MODULES`, a
-     module-level constant, so the count and the order are fixed for the life of the app.
+     the second. One `useShortcuts` call for all of them, so no hook is called in a loop.
 
-     Over the registry and not over the visible list, and that is not a detail: hooks may not change
-     in number between renders, and the visible list shrinks with the profile. So all five
-     registrations are made on every render and a hidden module's simply passes `false`, which
-     registers nothing. Which *chord* each one carries is `shortcuts`' business — see
-     `moduleTabShortcuts`. Reading the list rather than naming the modules is what keeps this file
-     from being the second place that knows them. */
-  for (const module of MODULES) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- module-level constant, see above: same count, same order, every render, for the life of the app.
-    useShortcut(newModuleTabId(module.id), () => openOrGoTo(module.id), visibleIds.includes(module.id));
-  }
+     Over the registry and not over the visible list: every module has an entry on every render, and
+     a hidden module's simply says it is off, which registers nothing. Which *chord* each one carries
+     is `shortcuts`' business — see `moduleTabShortcuts`. Reading the list rather than naming the
+     modules is what keeps this file from being the second place that knows them. */
+  useShortcuts(
+    MODULES.map((module) => ({
+      id: newModuleTabId(module.id),
+      handler: () => openOrGoTo(module.id),
+      enabled: visibleIds.includes(module.id),
+    })),
+  );
 
   /* `state` is only ever given by the backend's tab requests below: it is what the module behind
      the tab reads on mount, through the same `restored` prop a tab from the last session gets. */
