@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use mixengine_platform::{AutostartPlan, AutostartState, Host};
-use mixengine_proto::{AutostartMechanism, AutostartReport, Error};
+use mixengine_proto::{AtBoot, AutostartMechanism, AutostartReport, Error};
 
 use crate::error::ToWire as _;
 
@@ -108,6 +108,7 @@ impl Autostart {
             changed: state.changed,
             command: state.command,
             for_this_home: named.is_some_and(|home| home == self.root),
+            at_boot: AtBoot::Unsupported,
         }
     }
 }

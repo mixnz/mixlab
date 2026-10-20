@@ -61,7 +61,7 @@ mod update_api;
 mod upgrade_api;
 mod version;
 
-pub use autostart_api::{AutostartMechanism, AutostartReport};
+pub use autostart_api::{AtBoot, AutostartMechanism, AutostartReport};
 pub use blueprint::{
     AppliedDatabase, BlueprintApplied, BlueprintApplyResponse, BlueprintList, BlueprintPlan,
     BlueprintSource, BlueprintSummary, Disposition, NextStep, NextStepKind, NextSteps, PlanAction,

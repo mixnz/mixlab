@@ -103,6 +103,8 @@ fn mechanism(mechanism: AutostartMechanism) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use mixengine_proto::AtBoot;
+
     use super::*;
 
     fn registered(for_this_home: bool) -> AutostartReport {
@@ -120,6 +122,7 @@ mod tests {
                 },
             ],
             for_this_home,
+            at_boot: AtBoot::Off,
         }
     }
 
@@ -174,6 +177,7 @@ mod tests {
             changed: false,
             command: Vec::new(),
             for_this_home: false,
+            at_boot: AtBoot::Unsupported,
         };
 
         let rendered = autostart_report(Autostarted::Asked, &nothing);

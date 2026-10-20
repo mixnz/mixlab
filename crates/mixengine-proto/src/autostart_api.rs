@@ -33,6 +33,32 @@ pub enum AutostartMechanism {
     None,
 }
 
+/// Whether the daemon also starts at boot, before anyone logs in — and whose setting that is.
+///
+/// **Whose matters because MixEngine undoes only its own.** On Linux this is the account's systemd
+/// linger, which starts *every* unit the account enabled, not only `mixengined`: an account that
+/// lingered before MixEngine asked keeps lingering whatever is unticked here. Composed by the
+/// daemon, from the machine's reading and the home's record of having turned it on.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub enum AtBoot {
+    /// Nothing here starts a daemon before login: Windows, macOS, a Linux with no user manager —
+    /// and what a daemon built before this field existed is read as saying.
+    #[default]
+    Unsupported,
+
+    /// The daemon starts at login only.
+    Off,
+
+    /// It starts at boot because MixEngine turned the account's linger on; `autostart.disable` and
+    /// `autostart.disable_at_boot` turn it off again.
+    On,
+
+    /// It starts at boot because the account already lingered; MixEngine never turns that off.
+    OnByAccount,
+}
+
 /// What every `autostart.*` method answers.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -74,6 +100,10 @@ pub struct AutostartReport {
     /// itself would be business logic in a client, and a place for two clients to disagree about
     /// whose entry it is.
     pub for_this_home: bool,
+
+    /// Whether the daemon also starts at boot, before anyone logs in. See [`AtBoot`].
+    #[serde(default)]
+    pub at_boot: AtBoot,
 }
 
 #[cfg(test)]
@@ -92,6 +122,7 @@ mod tests {
                 "/home/me/.local/share/mixengine".to_owned(),
             ],
             for_this_home: true,
+            at_boot: AtBoot::Off,
         }
     }
 
@@ -119,6 +150,7 @@ mod tests {
             changed: false,
             command: Vec::new(),
             for_this_home: false,
+            at_boot: AtBoot::Unsupported,
         };
 
         let encoded = serde_json::to_value(&nothing).unwrap();
@@ -149,5 +181,28 @@ mod tests {
                 mechanism
             );
         }
+    }
+
+    #[test]
+    fn at_boot_is_spelled_for_the_wire() {
+        let on = AutostartReport {
+            at_boot: AtBoot::OnByAccount,
+            ..report()
+        };
+
+        assert_eq!(
+            serde_json::to_value(on).unwrap()["at_boot"],
+            "on_by_account"
+        );
+    }
+
+    /// A daemon built before the boot half answered without the key; a client still decodes it.
+    #[test]
+    fn an_answer_with_no_at_boot_reads_as_unsupported() {
+        let mut older = serde_json::to_value(report()).unwrap();
+        older.as_object_mut().unwrap().remove("at_boot");
+
+        let decoded: AutostartReport = serde_json::from_value(older).unwrap();
+        assert_eq!(decoded.at_boot, AtBoot::Unsupported);
     }
 }
