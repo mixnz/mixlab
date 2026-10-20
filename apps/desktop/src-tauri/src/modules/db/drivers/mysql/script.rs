@@ -5,157 +5,13 @@
 
 use super::{column_value, map_error, quote_ident};
 use crate::error::AppError;
+use crate::modules::db::drivers::sql::run::MAX_ROWS;
+use crate::modules::db::drivers::sql::{statements::split_statements, syntax::MYSQL};
 use crate::modules::db::models::{SqlProblem, StatementResult};
 use futures_util::StreamExt;
 use serde_json::Value;
 use sqlx::{Column, Either, MySqlPool, Row};
 use std::time::Instant;
-
-/// How many rows of one result set are read back. A query without a LIMIT can name more rows than
-/// there is memory for, so the client stops here and says that it did.
-///
-/// Ten thousand rather than the thousand this was: the results grid holds only the rows on screen
-/// now, so the cost of a large set is what it takes to decode and hand over — not what it takes to
-/// draw. This is still a ceiling and not a promise; the auto-LIMIT in the Query tab is what most
-/// scripts actually stop at.
-const MAX_ROWS: usize = 10_000;
-
-/// One statement carved out of the editor's text.
-struct Statement {
-    text: String,
-    /// The keyword it opens with, upper-cased. Empty for a run of nothing but comments, which is
-    /// how such a run is recognised as not being a statement at all.
-    verb: String,
-}
-
-/// Splits a script into the statements that are to be sent one at a time.
-///
-/// Only a semicolon outside a string, a quoted identifier and a comment separates statements;
-/// comments themselves are kept in the text, since a `/*+ hint */` or a `/*!50000 ... */` version
-/// comment is part of what MySQL is being asked to run.
-///
-/// The client-side `DELIMITER` directive is not supported: a routine body whose `BEGIN ... END`
-/// holds semicolons of its own has to be run as the single statement it is, not pasted in with the
-/// `DELIMITER $$` wrapper a command-line client would want.
-fn split_statements(sql: &str) -> Vec<Statement> {
-    let chars: Vec<char> = sql.chars().collect();
-    let mut statements: Vec<Statement> = Vec::new();
-    let mut current = String::new();
-    let mut verb = String::new();
-    // Set once the opening word has ended, so that the words after it can't overwrite it.
-    let mut verb_done = false;
-    let mut i = 0;
-
-    fn push(
-        statements: &mut Vec<Statement>,
-        current: &mut String,
-        verb: &mut String,
-        verb_done: &mut bool,
-    ) {
-        let text = current.trim().to_string();
-        current.clear();
-        *verb_done = false;
-        let verb = std::mem::take(verb);
-        // No opening keyword means there was no statement here — only whitespace, or a comment
-        // sitting between two semicolons.
-        if verb.is_empty() {
-            return;
-        }
-        statements.push(Statement { text, verb });
-    }
-
-    while i < chars.len() {
-        let c = chars[i];
-
-        // `--` opens a comment only when whitespace (or the end of the text) follows it: `5--3`
-        // is arithmetic, not a comment.
-        if c == '-'
-            && chars.get(i + 1) == Some(&'-')
-            && matches!(
-                chars.get(i + 2),
-                None | Some(' ') | Some('\t') | Some('\n') | Some('\r')
-            )
-        {
-            while i < chars.len() && chars[i] != '\n' {
-                current.push(chars[i]);
-                i += 1;
-            }
-            continue;
-        }
-        if c == '#' {
-            while i < chars.len() && chars[i] != '\n' {
-                current.push(chars[i]);
-                i += 1;
-            }
-            continue;
-        }
-        if c == '/' && chars.get(i + 1) == Some(&'*') {
-            current.push('/');
-            current.push('*');
-            i += 2;
-            while i < chars.len() {
-                if chars[i] == '*' && chars.get(i + 1) == Some(&'/') {
-                    current.push('*');
-                    current.push('/');
-                    i += 2;
-                    break;
-                }
-                current.push(chars[i]);
-                i += 1;
-            }
-            continue;
-        }
-
-        if c == '\'' || c == '"' || c == '`' {
-            current.push(c);
-            i += 1;
-            while i < chars.len() {
-                let ch = chars[i];
-                current.push(ch);
-                i += 1;
-                // A backslash escapes the next character inside a string literal. Inside a
-                // backtick-quoted identifier it does not — there, doubling is the only escape.
-                if ch == '\\' && c != '`' {
-                    if let Some(&next) = chars.get(i) {
-                        current.push(next);
-                        i += 1;
-                    }
-                    continue;
-                }
-                if ch == c {
-                    // Two of the quote in a row are an escaped quote, not the end of the literal.
-                    if chars.get(i) == Some(&c) {
-                        current.push(c);
-                        i += 1;
-                        continue;
-                    }
-                    break;
-                }
-            }
-            continue;
-        }
-
-        if c == ';' {
-            push(&mut statements, &mut current, &mut verb, &mut verb_done);
-            i += 1;
-            continue;
-        }
-
-        // Plain code: the first word of it is the statement's keyword.
-        if !verb_done {
-            if c.is_alphanumeric() || c == '_' {
-                verb.extend(c.to_uppercase());
-            } else if !verb.is_empty() {
-                verb_done = true;
-            }
-        }
-        current.push(c);
-        i += 1;
-    }
-
-    push(&mut statements, &mut current, &mut verb, &mut verb_done);
-    statements
-}
 
 /// The statement text could not be parsed. The one thing a checker can be sure is wrong.
 const ER_PARSE_ERROR: u16 = 1064;
@@ -295,7 +151,7 @@ pub async fn run(
     database: Option<&str>,
     announce: impl FnOnce(u64),
 ) -> Result<Vec<StatementResult>, AppError> {
-    let statements = split_statements(sql);
+    let statements = split_statements(sql, &MYSQL);
     if statements.is_empty() {
         return Err(err!("error.nothingToRun"));
     }
@@ -422,7 +278,8 @@ pub async fn run(
 /// separately is a syntax error at best and half an operation at worst.
 #[cfg(test)]
 mod tests {
-    use super::{error_line, split_statements};
+    use super::error_line;
+    use crate::modules::db::drivers::sql::{statements::split_statements, syntax::MYSQL};
 
     /// Where the diagnostic gets anchored. MySQL puts the line at the end of the sentence, and a
     /// statement whose text happens to contain those words must not be read as the server's.
@@ -439,11 +296,17 @@ mod tests {
     }
 
     fn texts(sql: &str) -> Vec<String> {
-        split_statements(sql).into_iter().map(|s| s.text).collect()
+        split_statements(sql, &MYSQL)
+            .into_iter()
+            .map(|s| s.text)
+            .collect()
     }
 
     fn verbs(sql: &str) -> Vec<String> {
-        split_statements(sql).into_iter().map(|s| s.verb).collect()
+        split_statements(sql, &MYSQL)
+            .into_iter()
+            .map(|s| s.verb)
+            .collect()
     }
 
     #[test]

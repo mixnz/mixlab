@@ -1,17 +1,16 @@
 /**
  * Carving the Query tab's script into the statements it is made of.
  *
- * This is a port of `split_statements` in `src-tauri/src/db/mysql_script.rs` and
- * `postgres_script.rs`, which are what actually run a script. The backend splits so it can send one
- * statement at a time; the editor splits so it can say which statement the caret is in, run that
- * one alone, and draw it. They must agree — a statement the editor highlights and sends has to be
- * the same one the server ends up running — **so a change to any of the splitters belongs in the
- * same commit as the others**, and in every set of tests:
- * [statements.test.ts](./statements.test.ts) here, `mod tests` there, case for case.
+ * This is a port of `split_statements` in `src-tauri/src/modules/db/drivers/sql/statements.rs`,
+ * which is what actually runs a script. The backend splits so it can send one statement at a time;
+ * the editor splits so it can say which statement the caret is in, run that one alone, and draw it.
+ * They must agree — a statement the editor highlights and sends has to be the same one the server
+ * ends up running — **so a change to either splitter belongs in the same commit as the other**, and
+ * in both sets of tests: [statements.test.ts](./statements.test.ts) here, `mod tests` there.
  *
- * One splitter serves both engines: what differs between them is lexical, and travels in a
- * {@link SqlSyntax}. The only thing this port adds over the Rust ones is where each statement sits
- * in the text.
+ * One splitter serves every engine: what differs between them is lexical, and travels in a
+ * {@link SqlSyntax}. The only thing this port adds over the Rust one is where each statement sits
+ * in the text. ClickHouse's backend reads its script with a scanner of its own.
  */
 
 import { dollarTag, opensEscapeString, type SqlSyntax } from "./syntax";

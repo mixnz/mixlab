@@ -34,15 +34,16 @@ The database module, under `modules/db/`:
 | `handoff.rs` | A `mixlab://connect?…` URL as a `ConnectionConfig`, the rule for which environment variable may hold its password, and `HandoffState`, where it waits for its tab. |
 | `drivers/sql.rs`, `drivers/sql/types.rs` | What the five SQL engines share: the shapes that cross to the window, written once. |
 | `drivers/sql/engine.rs` | `SqlEngine`, the trait every SQL engine answers through, its `unsupported` default, and `retry_read!`. |
+| `drivers/sql/syntax.rs`, `drivers/sql/statements.rs`, `drivers/sql/run.rs` | Reading a script the user typed: each engine's lexical rules, the one splitter every SQL engine but ClickHouse cuts it with (the mirror of the window's `statements.ts`), and the statement-by-statement loop PostgreSQL and SQLite run it with. |
 | `drivers/<engine>/engine.rs` | That engine's `SqlEngine`: each method calls the functions beside it. |
 | `drivers/mysql.rs` | Connect, query, row/value conversion, table data, CRUD. |
 | `drivers/mysql/structure.rs` | Columns and indexes: read, ADD/CHANGE/DROP. |
-| `drivers/mysql/script.rs` | Splits user SQL into statements and runs them one by one. |
+| `drivers/mysql/script.rs` | Runs user SQL statement by statement, split by `drivers/sql/statements.rs`; its own loop, since a procedure answers one statement with several result sets. |
 | `drivers/mysql/dump.rs` | Backup and restore with `mysqldump` and `mysql`, the credentials in an option file only this user can read. |
 | `drivers/postgres.rs` | Connect, list, read a page — with a pool **per database**, since a PostgreSQL connection cannot see into another. |
 | `drivers/postgres/structure.rs` | The Structure and Statistics tabs, reported in the shapes `mysql/structure.rs` reports so one grid draws either. |
 | `drivers/postgres/ddl.rs` | Tables, columns and indexes changed — one property at a time, unlike MySQL's `CHANGE COLUMN`. |
-| `drivers/postgres/script.rs` | The counterpart of `mysql/script.rs`: split, run statement by statement, validate one without running it. |
+| `drivers/postgres/script.rs` | Runs a script through `drivers/sql/run.rs`, cancels one, and validates a statement without running it. |
 | `drivers/postgres/dump.rs` | Backup and restore with `pg_dump` and `psql`, the credentials in a password file and the database's name in the environment. |
 | `drivers/sqlite.rs` | Connect to a **file**, read a page, write rows. No endpoint, no tunnel, no TLS — and metadata read through the `pragma_*` table-valued functions, since a `PRAGMA` takes no bind parameters. |
 | `drivers/sqlite/structure.rs` | The Structure and Statistics tabs. Row counts are counted rather than estimated, and sizes come from `dbstat` — which exists because the app bundles its own SQLite. |

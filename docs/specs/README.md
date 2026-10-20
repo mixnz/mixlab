@@ -232,3 +232,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-18 | [The ten files outside the root workspace, split (design)](2026-10-18-t207q-files-outside-the-root-workspace-design.md) | T207q | implemented |
 | 2026-10-20 | [The daemon's walks as named steps (design)](2026-10-20-t209-the-daemons-walks-as-named-steps-design.md) | T209 | implemented |
 | 2026-10-20 | [The window's effects depend on what they read (design)](2026-10-20-t209a-the-windows-effects-depend-on-what-they-read-design.md) | T209a | implemented |
+| 2026-10-20 | [One statement splitter for the SQL engines (design)](2026-10-20-t209i-one-statement-splitter-design.md) | T209i | implemented |

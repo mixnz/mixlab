@@ -7,140 +7,30 @@
 //! The Query tab's Cancel button is closed on this engine rather than left to be pressed and do
 //! nothing — see `cancellable` on the dialect.
 //!
-//! What the splitter has to know is smaller than either of the others'. There is no dollar quoting,
-//! no `#` comment, no `DELIMITER`, and a backslash inside a string is just a backslash. What it
-//! adds is the second identifier quote: SQLite understands MySQL's backtick as well as the standard
-//! double quote, and a semicolon inside either has to be left alone.
-//!
-//! Square-bracket identifiers — `[order]`, which SQLite also accepts — are deliberately not
-//! handled, because `src/modules/db/sql/statements.ts` does not handle them either and the two
-//! splitters must agree on every case. A `;` inside one would split a statement that should not be
-//! split, in the editor and here alike.
+//! The script is split by the shared splitter, with SQLite's rules in `sql::syntax::SQLITE`.
 
 use super::{column_value, map_error};
 use crate::error::AppError;
+use crate::modules::db::drivers::sql::run::{run_statements, ScriptRows};
+use crate::modules::db::drivers::sql::{statements::split_statements, syntax::SQLITE};
 use crate::modules::db::models::{SqlProblem, StatementResult};
-use futures_util::StreamExt;
-use serde_json::Value;
-use sqlx::{Column, Either, Executor, Row, SqlitePool};
-use std::time::Instant;
+use sqlx::sqlite::SqliteQueryResult;
+use sqlx::{Executor, Sqlite, SqlitePool};
 
-/// How many rows of one result set are read back — as on the other two, a ceiling rather than a
-/// promise.
-const MAX_ROWS: usize = 10_000;
+/// What the shared loop needs to read SQLite's results.
+const ROWS: ScriptRows<Sqlite> = ScriptRows {
+    column_value,
+    is_write_verb,
+    done,
+};
 
-/// One statement carved out of the editor's text.
-struct Statement {
-    text: String,
-    /// The keyword it opens with, upper-cased. Empty for a run of nothing but comments.
-    verb: String,
-}
-
-/// Splits a script into the statements that are to be sent one at a time.
-///
-/// Only a semicolon outside a string, a quoted identifier and a comment separates two. Comments are
-/// kept in the text: they may carry a hint, and dropping them would change what the engine is asked
-/// to run.
-///
-/// This is ported to `src/modules/db/sql/statements.ts`, which the editor splits with so that the
-/// statement it highlights is the one that ends up running. **A change to either splitter belongs
-/// in the same commit as the other**, and in both sets of tests.
-fn split_statements(sql: &str) -> Vec<Statement> {
-    let chars: Vec<char> = sql.chars().collect();
-    let mut statements: Vec<Statement> = Vec::new();
-    let mut current = String::new();
-    let mut verb = String::new();
-    let mut verb_done = false;
-    let mut i = 0;
-
-    fn push(statements: &mut Vec<Statement>, current: &mut String, verb: &mut String) {
-        let text = current.trim().to_string();
-        let opening = std::mem::take(verb);
-        current.clear();
-        // No opening keyword means there was no statement here — only whitespace, or a comment
-        // sitting between two semicolons.
-        if opening.is_empty() {
-            return;
-        }
-        statements.push(Statement {
-            text,
-            verb: opening,
-        });
-    }
-
-    while i < chars.len() {
-        let c = chars[i];
-
-        // `--` to the end of the line. Unlike MySQL, no whitespace is required after it.
-        if c == '-' && chars.get(i + 1) == Some(&'-') {
-            while i < chars.len() && chars[i] != '\n' {
-                current.push(chars[i]);
-                i += 1;
-            }
-            continue;
-        }
-
-        // `/* ... */`, which does not nest: the first close ends it.
-        if c == '/' && chars.get(i + 1) == Some(&'*') {
-            current.push('/');
-            current.push('*');
-            i += 2;
-            while i < chars.len() {
-                if chars[i] == '*' && chars.get(i + 1) == Some(&'/') {
-                    current.push('*');
-                    current.push('/');
-                    i += 2;
-                    break;
-                }
-                current.push(chars[i]);
-                i += 1;
-            }
-            continue;
-        }
-
-        if c == '\'' || c == '"' || c == '`' {
-            current.push(c);
-            i += 1;
-            while i < chars.len() {
-                let ch = chars[i];
-                current.push(ch);
-                i += 1;
-                if ch == c {
-                    // Two of the quote in a row are an escaped quote, not the end of the literal.
-                    // There is no backslash escape to consider: in SQLite a backslash inside a
-                    // string is a backslash.
-                    if chars.get(i) == Some(&c) {
-                        current.push(c);
-                        i += 1;
-                        continue;
-                    }
-                    break;
-                }
-            }
-            continue;
-        }
-
-        if c == ';' {
-            push(&mut statements, &mut current, &mut verb);
-            verb_done = false;
-            i += 1;
-            continue;
-        }
-
-        // Plain code: the first word of it is the statement's keyword.
-        if !verb_done {
-            if c.is_alphanumeric() || c == '_' {
-                verb.push(c.to_ascii_uppercase());
-            } else if !verb.is_empty() {
-                verb_done = true;
-            }
-        }
-        current.push(c);
-        i += 1;
-    }
-
-    push(&mut statements, &mut current, &mut verb);
-    statements
+/// Rows affected, and the rowid of the row this statement inserted. The rowid is reported only for
+/// an INSERT: SQLite keeps the last one on the connection, so after an UPDATE it would still hold
+/// whatever the INSERT before it left there.
+fn done(result: &SqliteQueryResult, verb: &str) -> (u64, Option<u64>) {
+    let rowid = result.last_insert_rowid();
+    let inserted = (verb == "INSERT" || verb == "REPLACE") && rowid > 0;
+    (result.rows_affected(), inserted.then_some(rowid as u64))
 }
 
 /// The statements whose point is the number of rows they changed, so that a count of zero is still
@@ -198,7 +88,7 @@ pub async fn validate(pool: &SqlitePool, sql: &str) -> Result<Option<SqlProblem>
 /// There is no `announce` and no pid, unlike the other two: nothing here can be cancelled from
 /// outside.
 pub async fn run(pool: &SqlitePool, sql: &str) -> Result<Vec<StatementResult>, AppError> {
-    let statements = split_statements(sql);
+    let statements = split_statements(sql, &SQLITE);
     if statements.is_empty() {
         return Err(err!("error.nothingToRun"));
     }
@@ -206,90 +96,7 @@ pub async fn run(pool: &SqlitePool, sql: &str) -> Result<Vec<StatementResult>, A
     let mut conn = pool.acquire().await.map_err(map_error)?;
     conn.close_on_drop();
 
-    let mut results: Vec<StatementResult> = Vec::new();
-
-    for statement in statements {
-        let started = Instant::now();
-        let mut columns: Vec<String> = Vec::new();
-        let mut rows: Vec<Vec<Value>> = Vec::new();
-        let mut truncated = false;
-        let mut rows_affected = 0u64;
-        let mut last_insert_id: Option<u64> = None;
-        let mut failure: Option<String> = None;
-
-        // Scoped so the stream lets go of the connection before the next statement takes it.
-        {
-            let mut stream =
-                sqlx::raw_sql(sqlx::AssertSqlSafe(statement.text.clone())).fetch_many(&mut *conn);
-            while let Some(item) = stream.next().await {
-                match item {
-                    Ok(Either::Right(row)) => {
-                        if columns.is_empty() {
-                            columns = row.columns().iter().map(|c| c.name().to_string()).collect();
-                        }
-                        if rows.len() < MAX_ROWS {
-                            rows.push(
-                                (0..row.columns().len())
-                                    .map(|i| column_value(&row, i))
-                                    .collect(),
-                            );
-                        } else {
-                            truncated = true;
-                        }
-                    }
-                    Ok(Either::Left(done)) => {
-                        rows_affected = done.rows_affected();
-                        /* The rowid of the row this statement inserted. Reported only for an
-                        INSERT: SQLite keeps the last one on the connection, so after an UPDATE
-                        it would still hold whatever the INSERT before it left there. */
-                        if statement.verb == "INSERT" || statement.verb == "REPLACE" {
-                            let rowid = done.last_insert_rowid();
-                            if rowid > 0 {
-                                last_insert_id = Some(rowid as u64);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        failure = Some(
-                            e.as_database_error()
-                                .map(|db| db.message().to_string())
-                                .unwrap_or_else(|| e.to_string()),
-                        );
-                        break;
-                    }
-                }
-            }
-        }
-
-        let kind = if failure.is_some() {
-            "error"
-        } else if !columns.is_empty() {
-            "rows"
-        } else if is_write_verb(&statement.verb) {
-            "affected"
-        } else {
-            "ok"
-        };
-        let failed = failure.is_some();
-        results.push(StatementResult {
-            statement: statement.text,
-            verb: statement.verb,
-            kind: kind.to_string(),
-            columns,
-            rows,
-            truncated,
-            rows_affected,
-            last_insert_id,
-            duration_ms: started.elapsed().as_millis() as u64,
-            error: failure,
-        });
-        // A failed statement stops the script, the way it would in a command-line client.
-        if failed {
-            break;
-        }
-    }
-
-    Ok(results)
+    Ok(run_statements(&mut *conn, statements, &ROWS).await)
 }
 
 #[cfg(test)]
@@ -297,7 +104,7 @@ mod tests {
     use super::*;
 
     fn split(sql: &str) -> Vec<(String, String)> {
-        split_statements(sql)
+        split_statements(sql, &SQLITE)
             .into_iter()
             .map(|s| (s.verb, s.text))
             .collect()
@@ -369,6 +176,7 @@ mod tests {
 mod run_tests {
     use super::super::tests::Fixture;
     use super::*;
+    use crate::modules::db::drivers::sql::run::MAX_ROWS;
 
     #[tokio::test]
     async fn a_script_runs_statement_by_statement_and_reports_each() {
@@ -387,6 +195,33 @@ mod run_tests {
         assert_eq!(results[1].kind, "affected");
         assert_eq!(results[1].rows_affected, 3);
         assert_eq!(results[2].kind, "rows");
+    }
+
+    #[tokio::test]
+    async fn a_statement_with_no_rows_and_no_write_is_ok_and_a_write_of_none_is_affected() {
+        let (_fixture, pool) = Fixture::open().await;
+        let results = run(&pool, "create temp table t(x); update t set x = 2 where 0")
+            .await
+            .unwrap();
+
+        assert_eq!(results[0].kind, "ok");
+        assert_eq!(results[1].kind, "affected");
+        assert_eq!(results[1].rows_affected, 0);
+    }
+
+    #[tokio::test]
+    async fn rows_past_the_cap_are_left_unread_and_say_so() {
+        let (_fixture, pool) = Fixture::open().await;
+        let results = run(
+            &pool,
+            "with recursive c(x) as (select 1 union all select x + 1 from c where x < 10001) \
+             select x from c",
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(results[0].rows.len(), MAX_ROWS);
+        assert!(results[0].truncated);
     }
 
     #[tokio::test]

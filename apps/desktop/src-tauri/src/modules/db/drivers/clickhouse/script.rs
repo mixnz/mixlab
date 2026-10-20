@@ -20,13 +20,10 @@ use super::{
     QueryResult,
 };
 use crate::error::AppError;
+use crate::modules::db::drivers::sql::run::MAX_ROWS;
 use crate::modules::db::models::{SqlProblem, StatementResult};
 use serde_json::Value;
 use std::time::Instant;
-
-/// How many rows of one result set are read back — the same ceiling the other three engines hold
-/// a script's result set to.
-const MAX_ROWS: usize = 10_000;
 
 /// One statement carved out of the editor's text.
 struct Statement {

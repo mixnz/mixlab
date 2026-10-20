@@ -14,217 +14,18 @@
 
 use super::{column_value, map_error};
 use crate::error::AppError;
+use crate::modules::db::drivers::sql::run::{run_statements, ScriptRows};
+use crate::modules::db::drivers::sql::{statements::split_statements, syntax::POSTGRES};
 use crate::modules::db::models::{SqlProblem, StatementResult};
-use futures_util::StreamExt;
-use serde_json::Value;
-use sqlx::{Column, Either, Executor, PgPool, Row};
-use std::time::Instant;
+use sqlx::{Executor, PgPool, Postgres};
 
-/// How many rows of one result set are read back — as on MySQL, a ceiling rather than a promise.
-const MAX_ROWS: usize = 10_000;
-
-/// One statement carved out of the editor's text.
-struct Statement {
-    text: String,
-    /// The keyword it opens with, upper-cased. Empty for a run of nothing but comments.
-    verb: String,
-}
-
-/// What may sit inside a PostgreSQL identifier after its first character — `$` included.
-fn is_ident_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_' || c == '$'
-}
-
-/// Whether the `'` at `chars[i]` opens an `E'...'` literal, the one PostgreSQL string a backslash
-/// escapes in. The prefix has to be touching, and cannot be the tail of a longer name.
-fn opens_escape_string(chars: &[char], i: usize) -> bool {
-    if i == 0 || !matches!(chars[i - 1], 'E' | 'e') {
-        return false;
-    }
-    i < 2 || !is_ident_char(chars[i - 2])
-}
-
-/// The tag of a dollar quote opening at `chars[i]`, when one does: `$$` gives `""`, `$body$` gives
-/// `"body"`, and anything else — `$1`, a lone `$` — gives `None`.
-///
-/// A tag is an identifier: letters, digits and underscores, not starting with a digit. That last
-/// rule is what keeps the placeholders `$1, $2` out of this, since they would otherwise read as an
-/// opening quote that never closes and swallow the rest of the script.
-fn dollar_tag(chars: &[char], i: usize) -> Option<String> {
-    if chars.get(i) != Some(&'$') {
-        return None;
-    }
-    // Glued to the end of a name it belongs to that name: `$` is legal inside a PostgreSQL
-    // identifier and the server reads the longest one it can before looking for a quote, so
-    // `SELECT 1 AS a$b$c` names a column `a$b$c`. Read as an opening quote, `$b$` swallows
-    // everything up to the next one of itself, or the rest of the script.
-    if i > 0 && is_ident_char(chars[i - 1]) {
-        return None;
-    }
-    let mut tag = String::new();
-    let mut j = i + 1;
-    while let Some(&c) = chars.get(j) {
-        match c {
-            '$' => return Some(tag),
-            _ if c.is_alphanumeric() || c == '_' => {
-                // A tag cannot open with a digit — `$1` is a placeholder, not a quote.
-                if tag.is_empty() && c.is_numeric() {
-                    return None;
-                }
-                tag.push(c);
-                j += 1;
-            }
-            _ => return None,
-        }
-    }
-    None
-}
-
-/// Splits a script into the statements that are to be sent one at a time.
-///
-/// Only a semicolon outside a string, a quoted identifier, a comment and a dollar-quoted body
-/// separates two. Comments are kept in the text: they may carry a hint, and dropping them would
-/// change what the server is asked to run.
-///
-/// This is ported to `src/sql/statements.ts`, which the editor splits with so that the statement it
-/// highlights is the one the server ends up running. **A change to either splitter belongs in the
-/// same commit as the other**, and in both sets of tests.
-fn split_statements(sql: &str) -> Vec<Statement> {
-    let chars: Vec<char> = sql.chars().collect();
-    let mut statements: Vec<Statement> = Vec::new();
-    let mut current = String::new();
-    let mut verb = String::new();
-    let mut verb_done = false;
-    let mut i = 0;
-
-    fn push(statements: &mut Vec<Statement>, current: &mut String, verb: &mut String) {
-        let text = current.trim().to_string();
-        current.clear();
-        let verb = std::mem::take(verb);
-        if verb.is_empty() {
-            return;
-        }
-        statements.push(Statement { text, verb });
-    }
-
-    while i < chars.len() {
-        let c = chars[i];
-
-        // `--` always opens a comment, whatever follows it — unlike MySQL, which wants whitespace
-        // after it so that `5--3` stays arithmetic. PostgreSQL has no `#` comment either.
-        if c == '-' && chars.get(i + 1) == Some(&'-') {
-            while i < chars.len() && chars[i] != '\n' {
-                current.push(chars[i]);
-                i += 1;
-            }
-            continue;
-        }
-        // Block comments nest in PostgreSQL, unlike MySQL's: `/* /* */ */` is one comment, and
-        // stopping at the first `*/` would leave a stray `*/` to be parsed as code.
-        if c == '/' && chars.get(i + 1) == Some(&'*') {
-            let mut depth = 0;
-            while i < chars.len() {
-                if chars[i] == '/' && chars.get(i + 1) == Some(&'*') {
-                    depth += 1;
-                    current.push('/');
-                    current.push('*');
-                    i += 2;
-                    continue;
-                }
-                if chars[i] == '*' && chars.get(i + 1) == Some(&'/') {
-                    depth -= 1;
-                    current.push('*');
-                    current.push('/');
-                    i += 2;
-                    if depth == 0 {
-                        break;
-                    }
-                    continue;
-                }
-                current.push(chars[i]);
-                i += 1;
-            }
-            continue;
-        }
-
-        // A dollar-quoted body ends only at its own tag, so a `$$ ... ; ... $$` function body is
-        // one statement however many semicolons it holds.
-        if let Some(tag) = dollar_tag(&chars, i) {
-            let close: Vec<char> = format!("${tag}$").chars().collect();
-            for c in &close {
-                current.push(*c);
-            }
-            i += close.len();
-            while i < chars.len() {
-                if chars[i..].starts_with(&close[..]) {
-                    for c in &close {
-                        current.push(*c);
-                    }
-                    i += close.len();
-                    break;
-                }
-                current.push(chars[i]);
-                i += 1;
-            }
-            if !verb.is_empty() {
-                verb_done = true;
-            }
-            continue;
-        }
-
-        if c == '\'' || c == '"' {
-            // A backslash escapes only inside an `E'...'`. Everywhere else in PostgreSQL — an
-            // ordinary string, a quoted name — it is just a backslash, unlike MySQL.
-            let escapes = c == '\'' && opens_escape_string(&chars, i);
-            current.push(c);
-            i += 1;
-            while i < chars.len() {
-                let ch = chars[i];
-                current.push(ch);
-                i += 1;
-                if ch == '\\' && escapes {
-                    if let Some(&next) = chars.get(i) {
-                        current.push(next);
-                        i += 1;
-                    }
-                    continue;
-                }
-                if ch == c {
-                    // Two in a row are an escaped quote, the other way a literal holds its own
-                    // quote — and the only one an ordinary string has.
-                    if chars.get(i) == Some(&c) {
-                        current.push(c);
-                        i += 1;
-                        continue;
-                    }
-                    break;
-                }
-            }
-            continue;
-        }
-
-        if c == ';' {
-            push(&mut statements, &mut current, &mut verb);
-            verb_done = false;
-            i += 1;
-            continue;
-        }
-
-        // Plain code: the first word of it is the statement's keyword.
-        if !verb_done {
-            if c.is_alphanumeric() || c == '_' {
-                verb.push(c.to_ascii_uppercase());
-            } else if !verb.is_empty() {
-                verb_done = true;
-            }
-        }
-        current.push(c);
-        i += 1;
-    }
-
-    push(&mut statements, &mut current, &mut verb);
-    statements
-}
+/// What the shared loop needs to read PostgreSQL's results. There is no generated key to report:
+/// PostgreSQL has no per-statement one, and `RETURNING` is how a script asks for it.
+const ROWS: ScriptRows<Postgres> = ScriptRows {
+    column_value,
+    is_write_verb,
+    done: |result, _verb| (result.rows_affected(), None),
+};
 
 /// The text could not be parsed. The one thing a checker can be sure is wrong.
 const SYNTAX_ERROR: &str = "42601";
@@ -341,7 +142,7 @@ pub async fn run(
     sql: &str,
     announce: impl FnOnce(u64),
 ) -> Result<Vec<StatementResult>, AppError> {
-    let statements = split_statements(sql);
+    let statements = split_statements(sql, &POSTGRES);
     if statements.is_empty() {
         return Err(err!("error.nothingToRun"));
     }
@@ -363,90 +164,26 @@ pub async fn run(
     conn.close_on_drop();
     announce(backend_pid(&mut conn).await?);
 
-    let mut results: Vec<StatementResult> = Vec::new();
-
-    for statement in statements {
-        let started = Instant::now();
-        let mut columns: Vec<String> = Vec::new();
-        let mut rows: Vec<Vec<Value>> = Vec::new();
-        let mut truncated = false;
-        let mut rows_affected = 0u64;
-        let mut failure: Option<String> = None;
-
-        // Scoped so the stream lets go of the connection before the next statement takes it.
-        {
-            let mut stream =
-                sqlx::raw_sql(sqlx::AssertSqlSafe(statement.text.clone())).fetch_many(&mut *conn);
-            while let Some(item) = stream.next().await {
-                match item {
-                    Ok(Either::Right(row)) => {
-                        if columns.is_empty() {
-                            columns = row.columns().iter().map(|c| c.name().to_string()).collect();
-                        }
-                        if rows.len() < MAX_ROWS {
-                            rows.push(
-                                (0..row.columns().len())
-                                    .map(|i| column_value(&row, i))
-                                    .collect(),
-                            );
-                        } else {
-                            truncated = true;
-                        }
-                    }
-                    Ok(Either::Left(done)) => rows_affected = done.rows_affected(),
-                    Err(e) => {
-                        failure = Some(
-                            e.as_database_error()
-                                .map(|db| db.message().to_string())
-                                .unwrap_or_else(|| e.to_string()),
-                        );
-                        break;
-                    }
-                }
-            }
-        }
-
-        let kind = if failure.is_some() {
-            "error"
-        } else if !columns.is_empty() {
-            "rows"
-        } else if is_write_verb(&statement.verb) {
-            "affected"
-        } else {
-            "ok"
-        };
-        let failed = failure.is_some();
-        results.push(StatementResult {
-            statement: statement.text,
-            verb: statement.verb,
-            kind: kind.to_string(),
-            columns,
-            rows,
-            truncated,
-            rows_affected,
-            last_insert_id: None,
-            duration_ms: started.elapsed().as_millis() as u64,
-            error: failure,
-        });
-        // A failed statement stops the script, the way it would in a command-line client.
-        if failed {
-            break;
-        }
-    }
-
-    Ok(results)
+    Ok(run_statements(&mut *conn, statements, &ROWS).await)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{line_of, split_statements};
+    use super::line_of;
+    use crate::modules::db::drivers::sql::{statements::split_statements, syntax::POSTGRES};
 
     fn verbs(sql: &str) -> Vec<String> {
-        split_statements(sql).into_iter().map(|s| s.verb).collect()
+        split_statements(sql, &POSTGRES)
+            .into_iter()
+            .map(|s| s.verb)
+            .collect()
     }
 
     fn texts(sql: &str) -> Vec<String> {
-        split_statements(sql).into_iter().map(|s| s.text).collect()
+        split_statements(sql, &POSTGRES)
+            .into_iter()
+            .map(|s| s.text)
+            .collect()
     }
 
     #[test]
