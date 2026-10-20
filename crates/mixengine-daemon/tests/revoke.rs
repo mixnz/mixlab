@@ -12,125 +12,9 @@
 //! — because a third spelling of a JSON-RPC client is a third thing to keep in step.
 
 use std::path::Path;
-use std::process::{Child, Command, Stdio};
 
-use http_body_util::{BodyExt as _, Full};
-use hyper::body::Bytes;
-use hyper::header::{CONTENT_TYPE, HOST};
-use hyper::{Method, Request, StatusCode};
-use hyper_util::rt::TokioIo;
-use mixengine_platform::ipc::Connection;
-use mixengine_testkit::Home;
+use mixengine_testkit::{Client, Daemon, Home};
 use serde_json::{Value, json};
-
-struct Daemon(Child);
-
-impl Daemon {
-    fn start(home: &Home) -> Self {
-        Self(
-            Command::new(env!("CARGO_BIN_EXE_mixengined"))
-                .arg("--home")
-                .arg(home.path())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .expect("the daemon binary runs"),
-        )
-    }
-}
-
-impl Drop for Daemon {
-    fn drop(&mut self) {
-        // Killed rather than asked, on `tests/sites.rs`' reasoning: a test that failed halfway must
-        // not leave a process holding the temporary home open.
-        let _ = self.0.kill();
-        let _ = self.0.wait();
-    }
-}
-
-/// One connection to the daemon.
-struct Client {
-    sender: hyper::client::conn::http1::SendRequest<Full<Bytes>>,
-}
-
-impl Client {
-    async fn connect(home: &Home) -> Self {
-        let connection = Connection::connect(home.endpoint())
-            .await
-            .expect("the daemon is listening");
-
-        let (sender, driver) = hyper::client::conn::http1::handshake(TokioIo::new(connection))
-            .await
-            .expect("the daemon speaks HTTP/1.1");
-
-        tokio::spawn(driver);
-
-        Self { sender }
-    }
-
-    async fn call(&mut self, method: &str, params: Value) -> Value {
-        let body = json!({ "jsonrpc": "2.0", "method": method, "params": params, "id": 1 });
-
-        let request = Request::builder()
-            .method(Method::POST)
-            .uri("/rpc")
-            .header(HOST, "mixengine")
-            .header(CONTENT_TYPE, "application/json")
-            .body(Full::new(Bytes::from(
-                serde_json::to_vec(&body).expect("a request serialises"),
-            )))
-            .expect("a well formed request");
-
-        self.sender
-            .ready()
-            .await
-            .expect("the connection is still open");
-
-        let response = self.sender.send_request(request).await.expect("an answer");
-        assert_eq!(response.status(), StatusCode::OK, "{method}");
-
-        let bytes = response
-            .into_body()
-            .collect()
-            .await
-            .expect("a whole body")
-            .to_bytes();
-
-        let answer: Value = serde_json::from_slice(&bytes).expect("a JSON-RPC response");
-        assert!(answer.get("error").is_none(), "{method}: {answer}");
-        answer["result"].clone()
-    }
-
-    /// The same call, for a request that is expected to be refused.
-    async fn refusal(&mut self, method: &str, params: Value) -> Value {
-        let body = json!({ "jsonrpc": "2.0", "method": method, "params": params, "id": 1 });
-
-        let request = Request::builder()
-            .method(Method::POST)
-            .uri("/rpc")
-            .header(HOST, "mixengine")
-            .header(CONTENT_TYPE, "application/json")
-            .body(Full::new(Bytes::from(
-                serde_json::to_vec(&body).expect("a request serialises"),
-            )))
-            .expect("a well formed request");
-
-        self.sender.ready().await.expect("the connection is open");
-
-        let response = self.sender.send_request(request).await.expect("an answer");
-
-        let bytes = response
-            .into_body()
-            .collect()
-            .await
-            .expect("a whole body")
-            .to_bytes();
-
-        let answer: Value = serde_json::from_slice(&bytes).expect("a JSON-RPC response");
-
-        answer["error"].clone()
-    }
-}
 
 /// A directory to register a project against.
 fn repository() -> tempfile::TempDir {
@@ -247,7 +131,7 @@ async fn a_share_with_a_deadline_ends_by_itself() {
     };
 
     let home = Home::configured("[sharing]\ncheck_seconds = 1\n");
-    let _daemon = Daemon::start(&home);
+    let _daemon = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
     home.wait_until_listening().await;
 
     let repository = repository();
@@ -311,7 +195,7 @@ async fn a_deadline_that_passed_while_the_daemon_was_down_is_acted_on() {
     let repository = repository();
 
     {
-        let _daemon = Daemon::start(&home);
+        let daemon = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
         home.wait_until_listening().await;
 
         let mut client = Client::connect(&home).await;
@@ -329,12 +213,13 @@ async fn a_deadline_that_passed_while_the_daemon_was_down_is_acted_on() {
             .await;
 
         assert!(still_shared(&mut client, "blog.test").await);
+        daemon.kill();
     }
 
     home.wait_until_gone().await;
     tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
-    let _second = Daemon::start(&home);
+    let _second = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
     home.wait_until_listening().await;
     let mut client = Client::connect(&home).await;
 
@@ -361,7 +246,7 @@ async fn a_length_shorter_than_the_share_has_lasted_is_refused() {
     // A period long enough that nothing expires under this test: what is being asserted is the
     // refusal, and a loop ending the share mid-way would assert it by accident.
     let home = Home::configured("[sharing]\ncheck_seconds = 3600\n");
-    let _daemon = Daemon::start(&home);
+    let _daemon = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
     home.wait_until_listening().await;
 
     let repository = repository();
@@ -382,7 +267,7 @@ async fn a_length_shorter_than_the_share_has_lasted_is_refused() {
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     let refusal = client
-        .refusal(
+        .refuse(
             "site.share",
             json!({
                 "site": {"domain": "blog.test"},
@@ -432,7 +317,7 @@ async fn deleting_a_shared_site_withdraws_its_share() {
     };
 
     let home = Home::new();
-    let _daemon = Daemon::start(&home);
+    let _daemon = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
     home.wait_until_listening().await;
 
     let repository = repository();

@@ -67,6 +67,15 @@ impl Daemon {
         self.0.id()
     }
 
+    /// End it the way a crash or a power cut does: killed, nothing asked, no shutdown run.
+    ///
+    /// For a test about what the *next* start does, where a stop that ran its shutdown would be a
+    /// second thing the test depends on. Dropping a `Daemon` asks first; this does not.
+    pub fn kill(mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+
     /// Wait for it to end **by itself**, and say whether it did.
     ///
     /// What proves a shutdown happened is this process leaving: an answer to a stop arrives while
