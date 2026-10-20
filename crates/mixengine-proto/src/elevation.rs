@@ -92,8 +92,8 @@ pub struct ElevationStatus {
 
     /// Why not, when it cannot.
     ///
-    /// On Linux this is the whole `pkexec` command to run by hand, which the platform layer built it
-    /// to be — dropping it would leave a person with "unavailable" and nothing to type. Absent
+    /// On Linux it ends by naming what works instead — `mix elevation grant` from a terminal (ADR
+    /// 0065) — so dropping it would leave a person with "unavailable" and nothing to type. Absent
     /// rather than `null` when there is nothing to say.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
@@ -275,16 +275,15 @@ mod tests {
         );
     }
 
-    /// The Linux branch is the one this matters for: `reason` is the whole `pkexec` command a person
-    /// is meant to type, and a flattening that lost it would leave them with "unavailable".
+    /// The Linux branch is the one this matters for: `reason` says what is missing and what works
+    /// instead, and a flattening that lost it would leave a person with "unavailable".
     #[test]
     fn an_unavailable_grant_keeps_the_command_to_run_by_hand() {
         let grant = GrantOutcome {
             job: JobId(9),
             at: Timestamp(1_760_000_000_000),
             outcome: ElevationOutcome::Unavailable {
-                reason: "no polkit agent; run: pkexec /opt/mixengine/mixengine-elevate /…"
-                    .to_owned(),
+                reason: "no polkit agent; pkexec is not installed".to_owned(),
             },
             applied: 0,
             still_pending: 1,
@@ -293,7 +292,12 @@ mod tests {
 
         let encoded = serde_json::to_value(&grant).unwrap();
         assert_eq!(encoded["outcome"], "unavailable");
-        assert!(encoded["reason"].as_str().unwrap().contains("pkexec"));
+        assert!(
+            encoded["reason"]
+                .as_str()
+                .unwrap()
+                .contains("no polkit agent")
+        );
 
         assert_eq!(
             serde_json::from_value::<GrantOutcome>(encoded).unwrap(),

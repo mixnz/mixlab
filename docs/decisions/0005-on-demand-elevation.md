@@ -4,6 +4,8 @@
 **Date**: 2026-08-10
 **Supersedes the helper design in** [0001](0001-rust-core-daemon-gui-split.md) (the three-tier split
 otherwise stands)
+**Amended by** [0065](0065-a-terminal-may-raise-the-prompt-itself.md): a terminal may raise the
+prompt itself, through `sudo`, where no dialog can.
 
 ## Context
 

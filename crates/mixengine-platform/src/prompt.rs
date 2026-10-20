@@ -216,16 +216,19 @@ pub(crate) mod linux {
         pub(crate) graphical: bool,
     }
 
-    /// What is missing, or `None` when a prompt can be raised.
+    /// What a person reads after any Linux reason: the way that works where a dialog cannot.
     ///
-    /// `manual` is the command a person could run by hand, and is `Some` only where the caller knows
-    /// it. [`Elevation::probe`](crate::Elevation::probe) takes no paths, so it cannot compose one and
-    /// its reason stops at what is absent; `run` has both paths and appends the command. The design
-    /// asked for the command in the reason without saying which of the two callers could produce one
-    /// — this is that resolution, and it is why `manual` is an `Option` rather than a `&str`.
-    pub(crate) fn missing(session: Session, manual: Option<&str>) -> Option<String> {
+    /// Not a `pkexec` command: an SSH session has no agent for `pkexec` to ask through either, and
+    /// a request exists only while a grant waits for it. `mix` in a terminal raises the prompt
+    /// through `sudo` itself (ADR 0065).
+    pub(crate) const FROM_A_TERMINAL: &str =
+        "From a terminal on this machine, run: mix elevation grant";
+
+    /// What is missing, or `None` when a prompt can be raised.
+    pub(crate) fn missing(session: Session) -> Option<String> {
         let absent = if !session.pkexec {
-            "pkexec is not on PATH, so polkit is not installed"
+            // Since Ubuntu 24.04 `pkexec` is a package of its own, and `polkitd` runs without it.
+            "pkexec is not installed (on Ubuntu 24.04 and later it is a package of its own)"
         } else if !session.bus {
             "there is no session bus ($DBUS_SESSION_BUS_ADDRESS is unset and $XDG_RUNTIME_DIR has \
              no bus socket), so polkit cannot reach an authentication agent"
@@ -236,10 +239,7 @@ pub(crate) mod linux {
             return None;
         };
 
-        Some(match manual {
-            Some(command) => format!("{absent}. Run this by hand instead: {command}"),
-            None => absent.to_owned(),
-        })
+        Some(format!("{absent}. {FROM_A_TERMINAL}"))
     }
 
     /// What `pkexec`'s exit code means, in the three words the trait speaks.
@@ -413,56 +413,56 @@ mod tests {
             graphical: true,
         };
 
-        assert_eq!(linux::missing(complete, None), None);
+        assert_eq!(linux::missing(complete), None);
 
-        let reason = linux::missing(
-            linux::Session {
-                pkexec: false,
-                ..complete
-            },
-            None,
-        )
+        let reason = linux::missing(linux::Session {
+            pkexec: false,
+            ..complete
+        })
         .expect("no pkexec, no prompt");
         assert!(reason.contains("pkexec"), "{reason}");
 
-        let reason = linux::missing(
-            linux::Session {
-                bus: false,
-                ..complete
-            },
-            None,
-        )
+        let reason = linux::missing(linux::Session {
+            bus: false,
+            ..complete
+        })
         .expect("no bus, no agent");
         assert!(reason.contains("session bus"), "{reason}");
 
-        let reason = linux::missing(
-            linux::Session {
-                graphical: false,
-                ..complete
-            },
-            None,
-        )
+        let reason = linux::missing(linux::Session {
+            graphical: false,
+            ..complete
+        })
         .expect("no graphical session, nowhere to draw a prompt");
         assert!(reason.contains("graphical session"), "{reason}");
     }
 
-    /// The fallback ADR 0005 asks for: a machine that cannot prompt says what to type instead.
+    /// Ubuntu 24.04 ships `pkexec` as a package of its own, so its absence says nothing about polkit.
     #[test]
-    fn linux_puts_the_manual_command_in_the_reason_when_it_has_one() {
-        let reason = linux::missing(
-            linux::Session {
-                pkexec: true,
-                bus: true,
-                graphical: false,
-            },
-            Some("pkexec /opt/mixengine/mixengine-elevate /tmp/one/request.json"),
-        )
+    fn linux_without_pkexec_does_not_say_polkit_is_missing() {
+        let reason = linux::missing(linux::Session {
+            pkexec: false,
+            bus: true,
+            graphical: true,
+        })
+        .expect("no pkexec, no prompt");
+
+        assert!(reason.contains("pkexec is not installed"), "{reason}");
+        assert!(!reason.contains("polkit is not installed"), "{reason}");
+        assert!(reason.contains("mix elevation grant"), "{reason}");
+    }
+
+    /// The fallback ADR 0065 gives: a machine that cannot prompt says what works instead.
+    #[test]
+    fn linux_points_at_the_terminal_route_whatever_is_missing() {
+        let reason = linux::missing(linux::Session {
+            pkexec: true,
+            bus: true,
+            graphical: false,
+        })
         .expect("no graphical session");
 
-        assert!(
-            reason.ends_with("pkexec /opt/mixengine/mixengine-elevate /tmp/one/request.json"),
-            "{reason}"
-        );
+        assert!(reason.ends_with(linux::FROM_A_TERMINAL), "{reason}");
     }
 
     #[test]

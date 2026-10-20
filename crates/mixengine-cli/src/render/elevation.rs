@@ -237,23 +237,21 @@ mod tests {
         assert!(!rendered.contains("helper"), "{rendered}");
     }
 
-    /// A machine that cannot prompt has to print the reason, because on Linux the reason is the
-    /// command a person is meant to type.
+    /// A machine that cannot prompt has to print the reason, because on Linux the reason says what
+    /// is missing and what works instead.
     #[test]
     fn a_machine_that_cannot_prompt_prints_what_to_do_instead() {
         let rendered = elevation_status(&ElevationStatus {
             elevated: false,
             can_prompt: false,
-            reason: Some(
-                "no polkit agent; run: pkexec /opt/mixengine/mixengine-elevate /…".to_owned(),
-            ),
+            reason: Some("no polkit agent; pkexec is not installed".to_owned()),
             helper: Some("/opt/mixengine/mixengine-elevate".to_owned()),
             installed_helper: None,
             pending: vec![a_pending_probe(1)],
             last: None,
         });
 
-        assert!(rendered.contains("pkexec"), "{rendered}");
+        assert!(rendered.contains("no polkit agent"), "{rendered}");
         assert!(
             !rendered.contains("mix elevation grant"),
             "offering a command that cannot work: {rendered}"

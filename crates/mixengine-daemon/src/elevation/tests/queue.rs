@@ -282,13 +282,13 @@ async fn a_grant_that_applied_announces_the_queue_it_left() {
     assert!(announced.is_empty(), "{announced:?}");
 }
 
-/// On Linux the reason is the whole `pkexec` command a person is meant to type. It is worthless
-/// if the daemon drops it, so it is asserted all the way through to `elevation.status`.
+/// On Linux the reason says what is missing and what works instead. It is worthless if the daemon
+/// drops it, so it is asserted all the way through to `elevation.status`.
 #[tokio::test]
 async fn a_machine_that_cannot_prompt_keeps_the_reason_intact() {
     let (_home, elevation, _events, _machine) = registry(mock::Host::unable_to_elevate(
         "/tmp/mixengine",
-        "no polkit agent; run: pkexec /opt/mixengine/mixengine-elevate /…",
+        "no polkit agent; pkexec is not installed",
     ))
     .await;
     elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
@@ -299,13 +299,13 @@ async fn a_machine_that_cannot_prompt_keeps_the_reason_intact() {
         .expect_err("there is no way to raise a prompt here");
 
     assert_eq!(error.code, mixengine_proto::ErrorCode::PrivilegedRequired);
-    assert!(error.to_string().contains("pkexec"), "{error}");
+    assert!(error.to_string().contains("no polkit agent"), "{error}");
     assert_eq!(elevation.summary().await.unwrap().pending, 1);
 
     let status = elevation.status().await.unwrap();
     assert_eq!(
         status.reason.as_deref(),
-        Some("no polkit agent; run: pkexec /opt/mixengine/mixengine-elevate /…")
+        Some("no polkit agent; pkexec is not installed")
     );
 }
 
