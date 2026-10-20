@@ -57,7 +57,7 @@ The database module, under `modules/db/`:
 | `drivers/clickhouse/script.rs` | Split and run, one request per statement — the HTTP interface refuses a body holding more than one. `validate` runs `EXPLAIN AST`, which parses without executing. |
 | `drivers/dump.rs` | What every engine's backup shares — the mode, the progress a transfer reports, calling it off — and the child process the vendors' tools run in. |
 | `drivers/tools.rs` | Where those tools come from: the pinned downloads, and `PG_VERSION`. |
-| `drivers/filters.rs` | Shared filter-value parsing (`split_list` etc.). |
+| `drivers/filters.rs` | Shared filter-value parsing (`split_list` etc.), and `build_where`, the `WHERE` every SQL engine builds from the filter bar, with each engine's `WhereSyntax` and `Placeholders`. |
 
 The REST module, under `modules/rest/` — four files, because the thin part is all of it:
 
