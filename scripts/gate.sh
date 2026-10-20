@@ -52,6 +52,8 @@ check "the helper's version" bash packaging/helper-lock.sh --check
 check "documentation links" node scripts/check-docs.mjs
 # No source file grows past 1,000 lines, and none already past it grows at all (T207, T207n).
 check "file sizes" node scripts/check-file-sizes.mjs
+# No source file cites a roadmap task number it did not cite before, and the old citations only go.
+check "task citations" node scripts/check-task-citations.mjs
 # A string whose `\` continuation went missing reads "no line              in the hosts file", and
 # neither rustfmt nor the compiler says a word about it.
 check "string continuations" node scripts/check-strings.mjs

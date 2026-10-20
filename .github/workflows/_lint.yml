@@ -49,6 +49,14 @@ jobs:
           node --test scripts/check-file-sizes.test.mjs
           node scripts/check-file-sizes.mjs
 
+      # A code comment says its reason rather than citing a roadmap task (docs/standards/rust.md,
+      # *Comments*): no file cites more task numbers than scripts/task-citation-baseline.json
+      # allows, and that file only ever goes down. Needs only Node.
+      - name: Task citations
+        run: |
+          node --test scripts/check-task-citations.test.mjs
+          node scripts/check-task-citations.mjs
+
       # A Rust string whose `\` line continuation went missing carries a run of spaces into the
       # message, and neither rustfmt nor clippy notices. Needs only Node, like the step above.
       - name: String continuations

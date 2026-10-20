@@ -54,7 +54,7 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       list is empty. "`lang` beside `t`" is `useLanguageT`, the module number chords are one
       `useShortcuts`, and the rest are `useCallback`s and effect events. `Workspace.tsx` is 205
       lines over `shell/workspace/`, and `RestTab.tsx` 299 over `modules/rest/tab/`.
-- [ ] **T209b** Roadmap numbers stop being added to code comments. `.rs` files cite about 5,600
+- [x] **T209b** Roadmap numbers stop being added to code comments. `.rs` files cite about 5,600
       task numbers (`T182f`, `T32`, …) and say "roadmap task" 2,281 times. 26% of Rust's
       non-blank lines are comments. The number tells a reader to look elsewhere, and goes wrong
       when a task is split or renumbered. The rule (in `docs/standards/rust.md` since this phase
@@ -63,6 +63,9 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       count grows, and is run by `scripts/gate.sh` and CI's `lint` job. Existing citations are not
       rewritten in bulk. They go when the code around them is next changed, and `--shrink` records
       it.
+      `scripts/check-task-citations.mjs` counts every `T` and number in the files
+      `check-file-sizes.mjs` reads, comments and strings alike, except the scripts that read the
+      roadmap. The baseline was written at 6,066 citations in 1,024 files.
 - [ ] **T209c** Measure duplication in the `db` module's SQL drivers before changing anything.
       `drivers/mssql/` is 4,740 lines, `sqlite/` 3,825, `clickhouse/` 3,641, `postgres/` 3,092,
       `mysql/` 2,383, and the shared `drivers/sql/` only 872. Run a duplicate-code scanner
@@ -123,6 +126,6 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
 **M47** None of the seven walks in T209 is above clippy's cognitive-complexity limit of 25.
 `Workspace.tsx` and `RestTab.tsx` turn off no React hooks lint. No integration suite starts
 `mixengined` with its own copy of the harness. `cargo tree -p mixengine-shim -e normal` has neither
-`sqlx` nor `reqwest`. The task-citation baseline from T209b is lower than when it was written.
+`sqlx` nor `reqwest`. The task-citation baseline from T209b is lower than the 6,066 it was written at.
 `bash scripts/gate.sh`, `cargo test --workspace`, and `npm run build`, `npm test` and
 `npm run lint` in `apps/desktop` are green.
