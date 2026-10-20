@@ -234,3 +234,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-20 | [The window's effects depend on what they read (design)](2026-10-20-t209a-the-windows-effects-depend-on-what-they-read-design.md) | T209a | implemented |
 | 2026-10-20 | [One statement splitter for the SQL engines (design)](2026-10-20-t209i-one-statement-splitter-design.md) | T209i | implemented |
 | 2026-10-20 | [One `build_where` for the SQL engines (design)](2026-10-20-t209j-one-build-where-design.md) | T209j | implemented |
+| 2026-10-21 | [One frame for editing rows in the sqlx engines (design)](2026-10-21-t209k-one-frame-for-editing-rows-design.md) | T209k | approved |

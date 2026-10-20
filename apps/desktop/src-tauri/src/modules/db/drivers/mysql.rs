@@ -415,6 +415,79 @@ pub async fn table_data(
     })
 }
 
+/// The SQL MySQL writes for the grid's edits to one table.
+pub(in crate::modules::db::drivers) struct MySqlRows {
+    /// The table, quoted and qualified by its database.
+    pub qualified: String,
+}
+
+impl MySqlRows {
+    pub fn new(database: &str, table: &str) -> Self {
+        MySqlRows {
+            qualified: format!("{}.{}", quote_ident(database), quote_ident(table)),
+        }
+    }
+
+    /// `<=>` is MySQL's NULL-safe equality operator, so a key column that is itself NULL still
+    /// matches (plain `=` never matches NULL).
+    fn key_predicate(key: &Map<String, Value>) -> String {
+        key.keys()
+            .map(|c| format!("{} <=> ?", quote_ident(c)))
+            .collect::<Vec<_>>()
+            .join(" AND ")
+    }
+
+    pub fn count(&self, key: &Map<String, Value>) -> String {
+        format!(
+            "SELECT COUNT(*) FROM {} WHERE {}",
+            self.qualified,
+            Self::key_predicate(key)
+        )
+    }
+
+    pub fn update(&self, updates: &Map<String, Value>, key: &Map<String, Value>) -> String {
+        let set_clause = updates
+            .keys()
+            .map(|c| format!("{} = ?", quote_ident(c)))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "UPDATE {} SET {set_clause} WHERE {}",
+            self.qualified,
+            Self::key_predicate(key)
+        )
+    }
+
+    pub fn insert(&self, row: &Map<String, Value>) -> String {
+        let qualified = &self.qualified;
+        // `() VALUES ()` is MySQL's way of spelling "a row that is nothing but defaults".
+        if row.is_empty() {
+            return format!("INSERT INTO {qualified} () VALUES ()");
+        }
+        let columns = row
+            .keys()
+            .map(|c| quote_ident(c))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let placeholders = vec!["?"; row.len()].join(", ");
+        format!("INSERT INTO {qualified} ({columns}) VALUES ({placeholders})")
+    }
+
+    /// `LIMIT 1` so that the no-primary-key fallback can only ever remove the one row the user
+    /// selected, never its duplicates.
+    pub fn delete_one(&self, key: &Map<String, Value>) -> String {
+        format!(
+            "DELETE FROM {} WHERE {} LIMIT 1",
+            self.qualified,
+            Self::key_predicate(key)
+        )
+    }
+
+    pub fn delete_all(&self) -> String {
+        format!("DELETE FROM {}", self.qualified)
+    }
+}
+
 /// Binds a JSON value (always `Null` or `String` — the frontend only ever
 /// sends edited text or an explicit null) as an `Option<&str>`, letting MySQL
 /// coerce the text to the column's real type on write.
@@ -446,24 +519,11 @@ pub async fn update_row(
         return Err(err!("error.updateWithoutKey"));
     }
 
-    let qualified = format!("{}.{}", quote_ident(database), quote_ident(table));
-    let set_clause = updates
-        .keys()
-        .map(|c| format!("{} = ?", quote_ident(c)))
-        .collect::<Vec<_>>()
-        .join(", ");
-    // `<=>` is MySQL's NULL-safe equality operator, so a key column that is
-    // itself NULL still matches (plain `=` never matches NULL).
-    let where_clause = key
-        .keys()
-        .map(|c| format!("{} <=> ?", quote_ident(c)))
-        .collect::<Vec<_>>()
-        .join(" AND ");
+    let statements = MySqlRows::new(database, table);
 
     let mut tx = pool.begin().await.map_err(map_error)?;
 
-    let count_sql = format!("SELECT COUNT(*) FROM {qualified} WHERE {where_clause}");
-    let mut count_query = sqlx::query(sqlx::AssertSqlSafe(count_sql));
+    let mut count_query = sqlx::query(sqlx::AssertSqlSafe(statements.count(key)));
     for v in key.values() {
         count_query = bind_value(count_query, v);
     }
@@ -477,8 +537,7 @@ pub async fn update_row(
         return Err(err!("error.rowsMatched", matched = matched));
     }
 
-    let update_sql = format!("UPDATE {qualified} SET {set_clause} WHERE {where_clause}");
-    let mut update_query = sqlx::query(sqlx::AssertSqlSafe(update_sql));
+    let mut update_query = sqlx::query(sqlx::AssertSqlSafe(statements.update(updates, key)));
     for v in updates.values() {
         update_query = bind_value(update_query, v);
     }
@@ -509,23 +568,11 @@ pub async fn insert_rows(
         return Ok(());
     }
 
-    let qualified = format!("{}.{}", quote_ident(database), quote_ident(table));
+    let statements = MySqlRows::new(database, table);
     let mut tx = pool.begin().await.map_err(map_error)?;
 
     for (i, row) in rows.iter().enumerate() {
-        // `() VALUES ()` is MySQL's way of spelling "a row that is nothing but defaults".
-        let sql = if row.is_empty() {
-            format!("INSERT INTO {qualified} () VALUES ()")
-        } else {
-            let columns = row
-                .keys()
-                .map(|c| quote_ident(c))
-                .collect::<Vec<_>>()
-                .join(", ");
-            let placeholders = vec!["?"; row.len()].join(", ");
-            format!("INSERT INTO {qualified} ({columns}) VALUES ({placeholders})")
-        };
-        let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
+        let mut query = sqlx::query(sqlx::AssertSqlSafe(statements.insert(row)));
         for v in row.values() {
             query = bind_value(query, v);
         }
@@ -559,12 +606,11 @@ pub async fn delete_rows(
         return Ok(());
     }
 
-    let qualified = format!("{}.{}", quote_ident(database), quote_ident(table));
+    let statements = MySqlRows::new(database, table);
     let mut tx = pool.begin().await.map_err(map_error)?;
 
     if all {
-        let sql = format!("DELETE FROM {qualified}");
-        sqlx::query(sqlx::AssertSqlSafe(sql))
+        sqlx::query(sqlx::AssertSqlSafe(statements.delete_all()))
             .execute(&mut *tx)
             .await
             .map_err(map_error)?;
@@ -574,15 +620,7 @@ pub async fn delete_rows(
                 tx.rollback().await.map_err(map_error)?;
                 return Err(err!("error.deleteWithoutKey"));
             }
-            // `<=>` is MySQL's NULL-safe equality operator, so a key column that
-            // is itself NULL still matches (plain `=` never matches NULL).
-            let where_clause = key
-                .keys()
-                .map(|c| format!("{} <=> ?", quote_ident(c)))
-                .collect::<Vec<_>>()
-                .join(" AND ");
-            let sql = format!("DELETE FROM {qualified} WHERE {where_clause} LIMIT 1");
-            let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
+            let mut query = sqlx::query(sqlx::AssertSqlSafe(statements.delete_one(key)));
             for v in key.values() {
                 query = bind_value(query, v);
             }
@@ -595,7 +633,7 @@ pub async fn delete_rows(
     // Outside the transaction on purpose: ALTER TABLE forces an implicit commit
     // in MySQL, so running it inside would end the transaction behind our back.
     if reset_auto_increment {
-        let sql = format!("ALTER TABLE {qualified} AUTO_INCREMENT = 1");
+        let sql = format!("ALTER TABLE {} AUTO_INCREMENT = 1", statements.qualified);
         sqlx::query(sqlx::AssertSqlSafe(sql))
             .execute(pool)
             .await

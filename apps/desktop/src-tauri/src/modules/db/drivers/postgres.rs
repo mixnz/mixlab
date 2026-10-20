@@ -479,6 +479,92 @@ fn key_predicate(
         .join(" AND ")
 }
 
+/// The SQL PostgreSQL writes for the grid's edits to one table.
+pub(in crate::modules::db::drivers) struct PgRows {
+    /// The table, quoted and qualified by its schema.
+    pub qualified: String,
+    /// Each column's type, for the cast every placeholder carries. See [`placeholder`].
+    pub types: BTreeMap<String, String>,
+    /// Whether the table has a primary key. Read only by `delete_one`; an update or an insert has
+    /// no reason to ask, and leaves it `false`.
+    pub keyed: bool,
+}
+
+impl PgRows {
+    pub fn count(&self, key: &Map<String, Value>) -> String {
+        format!(
+            "SELECT COUNT(*) FROM {} WHERE {}",
+            self.qualified,
+            key_predicate(key, &self.types, 1)
+        )
+    }
+
+    /// The key's placeholders carry on where the SET clause's left off: one numbering runs through
+    /// the whole statement, unlike MySQL's positional `?`.
+    pub fn update(&self, updates: &Map<String, Value>, key: &Map<String, Value>) -> String {
+        let set_clause = updates
+            .keys()
+            .enumerate()
+            .map(|(i, column)| {
+                format!(
+                    "{} = {}",
+                    quote_ident(column),
+                    placeholder(i + 1, column, &self.types)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "UPDATE {} SET {set_clause} WHERE {}",
+            self.qualified,
+            key_predicate(key, &self.types, updates.len() + 1)
+        )
+    }
+
+    pub fn insert(&self, row: &Map<String, Value>) -> String {
+        let qualified = &self.qualified;
+        // `DEFAULT VALUES` is PostgreSQL's way of spelling "a row that is nothing but defaults".
+        if row.is_empty() {
+            return format!("INSERT INTO {qualified} DEFAULT VALUES");
+        }
+        let columns = row
+            .keys()
+            .map(|c| quote_ident(c))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let values = row
+            .keys()
+            .enumerate()
+            .map(|(n, column)| placeholder(n + 1, column, &self.types))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("INSERT INTO {qualified} ({columns}) VALUES ({values})")
+    }
+
+    /// A table with a primary key is identified exactly by it, so one row's predicate can only
+    /// ever match one row. Without one there is nothing to stop a predicate matching a row's
+    /// duplicate, and PostgreSQL has no `DELETE ... LIMIT` to cap it with — hence the subquery.
+    pub fn delete_one(&self, key: &Map<String, Value>) -> String {
+        let qualified = &self.qualified;
+        let predicate = key_predicate(key, &self.types, 1);
+        if self.keyed {
+            format!("DELETE FROM {qualified} WHERE {predicate}")
+        } else {
+            // One physical row, picked and then deleted by where it sits. `tableoid` travels
+            // with `ctid` because a `ctid` is only unique within one table, and a partitioned
+            // table is several — matching on the pair cannot reach into the wrong partition.
+            format!(
+                "DELETE FROM {qualified} WHERE (tableoid, ctid) = \
+                 (SELECT tableoid, ctid FROM {qualified} WHERE {predicate} LIMIT 1)"
+            )
+        }
+    }
+
+    pub fn delete_all(&self) -> String {
+        format!("DELETE FROM {}", self.qualified)
+    }
+}
+
 /// Binds a JSON value — always `Null` or `String`, since the frontend only ever sends edited text
 /// or an explicit null — as `Option<&str>`, for a placeholder that carries the cast to the column's
 /// real type. See [`placeholder`].
@@ -509,29 +595,15 @@ pub async fn update_row(
     }
 
     let (schema, name) = resolve(table);
-    let qualified = qualified_sql(&schema, &name);
-    let types = column_types(pool, &schema, &name).await?;
-
-    let set_clause = updates
-        .keys()
-        .enumerate()
-        .map(|(i, column)| {
-            format!(
-                "{} = {}",
-                quote_ident(column),
-                placeholder(i + 1, column, &types)
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
+    let statements = PgRows {
+        qualified: qualified_sql(&schema, &name),
+        types: column_types(pool, &schema, &name).await?,
+        keyed: false,
+    };
 
     let mut tx = pool.begin().await.map_err(map_error)?;
 
-    let count_sql = format!(
-        "SELECT COUNT(*) FROM {qualified} WHERE {}",
-        key_predicate(key, &types, 1)
-    );
-    let mut count_query = sqlx::query_scalar(sqlx::AssertSqlSafe(count_sql));
+    let mut count_query = sqlx::query_scalar(sqlx::AssertSqlSafe(statements.count(key)));
     for value in key.values() {
         count_query = match value {
             Value::String(s) => count_query.bind(Some(s.as_str())),
@@ -544,13 +616,7 @@ pub async fn update_row(
         return Err(err!("error.rowsMatched", matched = matched));
     }
 
-    // The key's placeholders carry on where the SET clause's left off: one numbering runs through
-    // the whole statement, unlike MySQL's positional `?`.
-    let update_sql = format!(
-        "UPDATE {qualified} SET {set_clause} WHERE {}",
-        key_predicate(key, &types, updates.len() + 1)
-    );
-    let mut update_query = sqlx::query(sqlx::AssertSqlSafe(update_sql));
+    let mut update_query = sqlx::query(sqlx::AssertSqlSafe(statements.update(updates, key)));
     for value in updates.values() {
         update_query = bind_value(update_query, value);
     }
@@ -581,29 +647,15 @@ pub async fn insert_rows(
     }
 
     let (schema, name) = resolve(table);
-    let qualified = qualified_sql(&schema, &name);
-    let types = column_types(pool, &schema, &name).await?;
+    let statements = PgRows {
+        qualified: qualified_sql(&schema, &name),
+        types: column_types(pool, &schema, &name).await?,
+        keyed: false,
+    };
     let mut tx = pool.begin().await.map_err(map_error)?;
 
     for (i, row) in rows.iter().enumerate() {
-        // `DEFAULT VALUES` is PostgreSQL's way of spelling "a row that is nothing but defaults".
-        let sql = if row.is_empty() {
-            format!("INSERT INTO {qualified} DEFAULT VALUES")
-        } else {
-            let columns = row
-                .keys()
-                .map(|c| quote_ident(c))
-                .collect::<Vec<_>>()
-                .join(", ");
-            let values = row
-                .keys()
-                .enumerate()
-                .map(|(n, column)| placeholder(n + 1, column, &types))
-                .collect::<Vec<_>>()
-                .join(", ");
-            format!("INSERT INTO {qualified} ({columns}) VALUES ({values})")
-        };
-        let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
+        let mut query = sqlx::query(sqlx::AssertSqlSafe(statements.insert(row)));
         for value in row.values() {
             query = bind_value(query, value);
         }
@@ -635,18 +687,16 @@ pub async fn delete_rows(
     }
 
     let (schema, name) = resolve(table);
-    let qualified = qualified_sql(&schema, &name);
-    let types = column_types(pool, &schema, &name).await?;
-    // A table with a primary key is identified exactly by it, so one row's predicate can only ever
-    // match one row. Without one there is nothing to stop a predicate matching a row's duplicate,
-    // and PostgreSQL has no `DELETE ... LIMIT` to cap it with — hence the subquery below.
-    let keyed = !primary_key(pool, &schema, &name).await?.is_empty();
+    let statements = PgRows {
+        qualified: qualified_sql(&schema, &name),
+        types: column_types(pool, &schema, &name).await?,
+        keyed: !primary_key(pool, &schema, &name).await?.is_empty(),
+    };
 
     let mut tx = pool.begin().await.map_err(map_error)?;
 
     if all {
-        let sql = format!("DELETE FROM {qualified}");
-        sqlx::query(sqlx::AssertSqlSafe(sql))
+        sqlx::query(sqlx::AssertSqlSafe(statements.delete_all()))
             .execute(&mut *tx)
             .await
             .map_err(map_error)?;
@@ -656,19 +706,7 @@ pub async fn delete_rows(
                 tx.rollback().await.map_err(map_error)?;
                 return Err(err!("error.deleteWithoutKey"));
             }
-            let predicate = key_predicate(key, &types, 1);
-            let sql = if keyed {
-                format!("DELETE FROM {qualified} WHERE {predicate}")
-            } else {
-                // One physical row, picked and then deleted by where it sits. `tableoid` travels
-                // with `ctid` because a `ctid` is only unique within one table, and a partitioned
-                // table is several — matching on the pair cannot reach into the wrong partition.
-                format!(
-                    "DELETE FROM {qualified} WHERE (tableoid, ctid) = \
-                     (SELECT tableoid, ctid FROM {qualified} WHERE {predicate} LIMIT 1)"
-                )
-            };
-            let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
+            let mut query = sqlx::query(sqlx::AssertSqlSafe(statements.delete_one(key)));
             for value in key.values() {
                 query = bind_value(query, value);
             }

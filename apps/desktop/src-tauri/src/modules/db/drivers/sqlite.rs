@@ -512,6 +512,71 @@ fn key_predicate(key: &Map<String, Value>) -> String {
         .join(" AND ")
 }
 
+/// The SQL SQLite writes for the grid's edits to one table.
+pub(in crate::modules::db::drivers) struct SqliteRows {
+    /// The table's name, quoted.
+    pub quoted: String,
+    /// Whether the table has a primary key. Read only by `delete_one`; an update or an insert has
+    /// no reason to ask, and leaves it `false`.
+    pub keyed: bool,
+}
+
+impl SqliteRows {
+    pub fn count(&self, key: &Map<String, Value>) -> String {
+        format!(
+            "SELECT COUNT(*) FROM {} WHERE {}",
+            self.quoted,
+            key_predicate(key)
+        )
+    }
+
+    pub fn update(&self, updates: &Map<String, Value>, key: &Map<String, Value>) -> String {
+        let set_clause = updates
+            .keys()
+            .map(|column| format!("{} = ?", quote_ident(column)))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "UPDATE {} SET {set_clause} WHERE {}",
+            self.quoted,
+            key_predicate(key)
+        )
+    }
+
+    pub fn insert(&self, row: &Map<String, Value>) -> String {
+        let quoted = &self.quoted;
+        if row.is_empty() {
+            return format!("INSERT INTO {quoted} DEFAULT VALUES");
+        }
+        let columns = row
+            .keys()
+            .map(|c| quote_ident(c))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let values = vec!["?"; row.len()].join(", ");
+        format!("INSERT INTO {quoted} ({columns}) VALUES ({values})")
+    }
+
+    /// Aimed at `rowid` when the table has no primary key, so that one row goes and its identical
+    /// twin stays. See [`delete_rows`].
+    pub fn delete_one(&self, key: &Map<String, Value>) -> String {
+        let quoted = &self.quoted;
+        let predicate = key_predicate(key);
+        if self.keyed {
+            format!("DELETE FROM {quoted} WHERE {predicate}")
+        } else {
+            format!(
+                "DELETE FROM {quoted} WHERE rowid = \
+                 (SELECT rowid FROM {quoted} WHERE {predicate} LIMIT 1)"
+            )
+        }
+    }
+
+    pub fn delete_all(&self) -> String {
+        format!("DELETE FROM {}", self.quoted)
+    }
+}
+
 /// Whether the table identifies its own rows — that is, whether it has a primary key.
 ///
 /// Without one, a row's "key" is every column it has, and two identical rows are indistinguishable
@@ -543,18 +608,14 @@ pub async fn update_row(
         return Err(err!("error.updateWithoutKey"));
     }
 
-    let quoted = quote_ident(table);
-    let set_clause = updates
-        .keys()
-        .map(|column| format!("{} = ?", quote_ident(column)))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let predicate = key_predicate(key);
+    let statements = SqliteRows {
+        quoted: quote_ident(table),
+        keyed: false,
+    };
 
     let mut tx = pool.begin().await.map_err(map_error)?;
 
-    let count_sql = format!("SELECT COUNT(*) FROM {quoted} WHERE {predicate}");
-    let mut count_query = sqlx::query_scalar(sqlx::AssertSqlSafe(count_sql));
+    let mut count_query = sqlx::query_scalar(sqlx::AssertSqlSafe(statements.count(key)));
     for value in key.values() {
         count_query = match value {
             Value::String(s) => count_query.bind(Some(s.as_str())),
@@ -567,8 +628,7 @@ pub async fn update_row(
         return Err(err!("error.rowsMatched", matched = matched));
     }
 
-    let update_sql = format!("UPDATE {quoted} SET {set_clause} WHERE {predicate}");
-    let mut update_query = sqlx::query(sqlx::AssertSqlSafe(update_sql));
+    let mut update_query = sqlx::query(sqlx::AssertSqlSafe(statements.update(updates, key)));
     for value in updates.values() {
         update_query = bind_value(update_query, value);
     }
@@ -598,22 +658,14 @@ pub async fn insert_rows(
         return Ok(());
     }
 
-    let quoted = quote_ident(table);
+    let statements = SqliteRows {
+        quoted: quote_ident(table),
+        keyed: false,
+    };
     let mut tx = pool.begin().await.map_err(map_error)?;
 
     for (i, row) in rows.iter().enumerate() {
-        let sql = if row.is_empty() {
-            format!("INSERT INTO {quoted} DEFAULT VALUES")
-        } else {
-            let columns = row
-                .keys()
-                .map(|c| quote_ident(c))
-                .collect::<Vec<_>>()
-                .join(", ");
-            let values = vec!["?"; row.len()].join(", ");
-            format!("INSERT INTO {quoted} ({columns}) VALUES ({values})")
-        };
-        let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
+        let mut query = sqlx::query(sqlx::AssertSqlSafe(statements.insert(row)));
         for value in row.values() {
             query = bind_value(query, value);
         }
@@ -647,13 +699,14 @@ pub async fn delete_rows(
         return Ok(());
     }
 
-    let quoted = quote_ident(table);
-    let keyed = has_primary_key(pool, table).await?;
+    let statements = SqliteRows {
+        quoted: quote_ident(table),
+        keyed: has_primary_key(pool, table).await?,
+    };
     let mut tx = pool.begin().await.map_err(map_error)?;
 
     if all {
-        let sql = format!("DELETE FROM {quoted}");
-        sqlx::query(sqlx::AssertSqlSafe(sql))
+        sqlx::query(sqlx::AssertSqlSafe(statements.delete_all()))
             .execute(&mut *tx)
             .await
             .map_err(map_error)?;
@@ -663,16 +716,7 @@ pub async fn delete_rows(
                 tx.rollback().await.map_err(map_error)?;
                 return Err(err!("error.deleteWithoutKey"));
             }
-            let predicate = key_predicate(key);
-            let sql = if keyed {
-                format!("DELETE FROM {quoted} WHERE {predicate}")
-            } else {
-                format!(
-                    "DELETE FROM {quoted} WHERE rowid = \
-                     (SELECT rowid FROM {quoted} WHERE {predicate} LIMIT 1)"
-                )
-            };
-            let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
+            let mut query = sqlx::query(sqlx::AssertSqlSafe(statements.delete_one(key)));
             for value in key.values() {
                 query = bind_value(query, value);
             }
