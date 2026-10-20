@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { enterModal } from "../core/shortcuts";
 import { exit, OPEN, type ExitState } from "./dialogExit";
 import styles from "./dialogMotion.module.css";
@@ -50,8 +50,10 @@ export function useDialogExit(question?: unknown, visible?: () => boolean) {
      It stays up through the exit animation, because the dialog is still on screen for those 130ms
      and still holds the keyboard. */
   // `visible`: a dialog drawn into a tab counts only while that tab is on screen (`Modal/host`).
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- read through a ref by the caller; counted once per mount
-  useEffect(() => enterModal(visible), []);
+  // Counted once per mount: `visible` is read through a ref by the caller, so the one it hands over
+  // first is the one that stays current, and an effect event keeps a later one from recounting.
+  const enter = useEffectEvent(() => enterModal(visible));
+  useEffect(() => enter(), []);
 
   const [closing, setClosing] = useState(false);
   const [settled, setSettled] = useState(false);

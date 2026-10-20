@@ -85,11 +85,11 @@ export function useTabArrival({
      password and is; a `mixlab://` link from a browser brought everything but, and is shown as a
      form with the caret where the one missing thing goes, rather than dialled to a certain
      "access denied". */
-  useEffect(() => {
-    if (restoreTried.current || restoredState === null || !("handoffId" in restoredState)) return;
-    restoreTried.current = true;
+  // `connect` and the two callbacks are rebuilt every render; through an effect event the take
+  // reads the current ones without running again for them. It runs once per tab, as the ref says.
+  const takeArrival = useEffectEvent((handoffId: string) => {
     onStateChange(undefined);
-    takeHandoff(restoredState.handoffId).then(
+    takeHandoff(handoffId).then(
       (handoff) => {
         if (connection.isClosed()) return;
         editor.fill(handoff.config, handoff.keyring_ref ?? null, handoff.label);
@@ -109,6 +109,10 @@ export function useTabArrival({
       },
       () => {},
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per tab, on the snapshot taken at mount; `connect` and the two callbacks are rebuilt every render.
+  });
+  useEffect(() => {
+    if (restoreTried.current || restoredState === null || !("handoffId" in restoredState)) return;
+    restoreTried.current = true;
+    takeArrival(restoredState.handoffId);
   }, [restoredState]);
 }

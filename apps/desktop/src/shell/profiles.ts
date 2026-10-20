@@ -90,7 +90,7 @@ export function visibleModules(enabled: string[]): ModuleDefinition[] {
  * a second hand-written list of module ids could only ever restate the order this one already
  * carries, and would one day contradict it.
  *
- * Session restore wins over this, always: `Workspace` reads the session in a `useState`
+ * Session restore wins over this, always: `useTabs` reads the session in a `useState`
  * initializer and only reaches here when there is nothing to restore.
  *
  * `visible` must not be empty. Deliberately unguarded — a default that is not in `enabled` would

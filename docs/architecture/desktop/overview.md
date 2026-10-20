@@ -49,9 +49,10 @@ and nothing in `src/shell/` ever looks inside it. Ids only — the shape and the
 
 ## Tabs and connections
 
-`shell/Workspace.tsx` owns a list of tabs — `{ id, moduleId, title, badges, state }`. Each renders
-the `Tab` component its module supplies, and a tab that has been on screen is kept mounted (hidden
-with `display: none`) so switching tabs never loses a connection or scroll position. `Ctrl/Cmd+T`
+`shell/Workspace.tsx` owns a list of tabs — `{ id, moduleId, title, badges, state }`, kept by
+`shell/workspace/useTabs.ts`. Each renders the `Tab` component its module supplies, and a tab that
+has been on screen is kept mounted (hidden with `display: none`) so switching tabs never loses a
+connection or scroll position. `Ctrl/Cmd+T`
 opens a tab of the default module, `Ctrl/Cmd+W` closes one, `Ctrl+Tab` and `Ctrl+Shift+Tab` move
 along the strip; closing the last tab spawns a fresh one. With more than one module **visible**,
 `[+]` opens a menu instead of a tab.

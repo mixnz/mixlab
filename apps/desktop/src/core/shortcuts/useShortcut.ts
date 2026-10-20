@@ -40,6 +40,47 @@ export function useShortcut(id: string, handler: () => void, enabled: boolean): 
   }, [id, enabled]);
 }
 
+/** One entry of {@link useShortcuts}: what `useShortcut` takes, as a value. */
+export interface ShortcutEntry {
+  id: string;
+  handler: () => void;
+  enabled: boolean;
+}
+
+/** The ids of `entries` that are on, in order, as one string — what `useShortcuts` registers again on. */
+export function enabledKeyOf(entries: ShortcutEntry[]): string {
+  return entries
+    .filter((entry) => entry.enabled)
+    .map((entry) => entry.id)
+    .join("\n");
+}
+
+/**
+ * {@link useShortcut} for a list whose length is fixed for the life of the component — one id per
+ * module in the registry, say.
+ *
+ * One effect for the whole list rather than one hook per entry, so the number of hooks never
+ * depends on the list and none has to be called in a loop. The registrations are made in the
+ * entries' order and are made again, all of them, whenever the set that is on changes; within the
+ * list that order is what breaks a tie between two of its ids, as it is for the hook above. Handlers
+ * are read when the key is pressed, as `useShortcut` reads its one.
+ */
+export function useShortcuts(entries: ShortcutEntry[]): void {
+  const latest = useRef(entries);
+  latest.current = entries;
+  const key = enabledKeyOf(entries);
+
+  useEffect(() => {
+    if (key === "") return;
+    const disposers = key.split("\n").map((id) =>
+      register({ id, handler: () => latest.current.find((entry) => entry.id === id)?.handler() }),
+    );
+    return () => {
+      for (const dispose of disposers) dispose();
+    };
+  }, [key]);
+}
+
 /** A keystroke read the one way the app reads them, so nothing asks the DOM these questions
  *  twice and answers them differently the second time. */
 export function pressOf(e: KeyboardEvent): Press {

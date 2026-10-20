@@ -64,6 +64,7 @@ src/                 React frontend
   shell/             Tab bar, [+] menu, shortcuts, Settings — knows no module
     App.tsx          The gate: which modules this window draws, decided before anything is drawn
     Workspace.tsx    The tab bar itself, and everything that reads the visible module list
+    workspace/       Workspace's hooks and parts: the tabs and the session, tab requests, sync's closing date, the tray and menus, the strip, the panes
     module.ts        ModuleDefinition, ModuleTabProps, TabBadge — what a module is
     registry.ts      MODULES, MODULE_PRESETS — the only file outside modules/ that names one
     profiles.ts      enabledModules and visibleModules() — the setting behind the gate
@@ -93,6 +94,7 @@ src/                 React frontend
     tabState.ts      What a tab remembers, as in every module
   modules/rest/      The REST client
     RestTab.tsx      Sidebar of saved requests + the request being edited
+    tab/             RestTab's hooks and parts: the open requests, sends, pastes, the environment, pane sizes, the request pane
     api.ts           The only invoke calls here: rest_send, rest_cancel; secrets through core/secrets.ts
     *.ts  *.test.ts  The pure halves — building a request, interpolating, parsing a paste
     components/  i18n/  rest.css

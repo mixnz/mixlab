@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   firstTabOfModule,
+  idsKey,
+  idsOf,
   openableModules,
   rebadgeTab,
   restateTab,
@@ -92,6 +94,20 @@ describe("restateTab", () => {
   });
 });
 
+/* A list of ids flattened to one string, for a memo that must not rebuild on a new array with the
+   same ids in it — and back. */
+describe("idsKey and idsOf", () => {
+  it("reads no ids out of an empty key", () => {
+    expect(idsOf("")).toEqual([]);
+    expect(idsOf(idsKey([]))).toEqual([]);
+  });
+
+  it("reads back the ids it was given, in order", () => {
+    expect(idsOf("db,rest")).toEqual(["db", "rest"]);
+    expect(idsOf(idsKey(["rest", "db"]))).toEqual(["rest", "db"]);
+  });
+});
+
 /* What the `[+]` button, the menu behind it and the number chords are still allowed to open.
 
    The question is a module's own and never a count of modules: a window drawing nothing but the
@@ -106,7 +122,7 @@ describe("openableModules", () => {
   });
 
   it("drops a module that says one tab of it is all there is, once it has one", () => {
-    expect(openableModules(everything, [tabOf("mixengine")]).map((m) => m.id)).toEqual([
+    expect(openableModules(everything, ["mixengine"]).map((m) => m.id)).toEqual([
       "db",
       "rest",
       "terminal",
@@ -116,19 +132,18 @@ describe("openableModules", () => {
   });
 
   it("leaves a MixEngine-only window with nothing left to open", () => {
-    expect(openableModules(mixengineOnly, [tabOf("mixengine")])).toEqual([]);
+    expect(openableModules(mixengineOnly, ["mixengine"])).toEqual([]);
   });
 
   /* A connection, a session, a request — a tab each, and the module is no less openable for having
      three of them. This is the case a rule written on `visible.length` would have broken. */
   it("keeps a module whose tabs are its whole point, however many are open", () => {
     const terminalOnly = visibleModules(["terminal"]);
-    const tabs = [tabOf("terminal", "a"), tabOf("terminal", "b"), tabOf("terminal", "c")];
-    expect(openableModules(terminalOnly, tabs).map((m) => m.id)).toEqual(["terminal"]);
+    expect(openableModules(terminalOnly, ["terminal", "terminal", "terminal"]).map((m) => m.id)).toEqual(["terminal"]);
   });
 
   it("says nothing about a tab of a module this window is not drawing", () => {
-    expect(openableModules(mixengineOnly, [tabOf("db")]).map((m) => m.id)).toEqual(["mixengine"]);
+    expect(openableModules(mixengineOnly, ["db"]).map((m) => m.id)).toEqual(["mixengine"]);
   });
 });
 

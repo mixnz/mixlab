@@ -36,14 +36,28 @@ export interface TabInfo {
  * left to open, and the button is not drawn at all — the close button then stands alone, and
  * closing the last tab replaces it, which is how such a window reloads its module.
  *
+ * `openIds` is the module of every tab on the strip, which is all of the tabs this reads.
+ *
  * Derived on every render rather than kept: the visible list changes with the profile and the tabs
  * change with every click, and a remembered answer to a question this cheap is an answer that goes
  * out of date somewhere nobody is looking.
  */
-export function openableModules(visible: ModuleDefinition[], tabs: TabInfo[]): ModuleDefinition[] {
-  return visible.filter(
-    (module) => !module.singleTab || !tabs.some((tab) => tab.moduleId === module.id),
-  );
+export function openableModules(
+  visible: ModuleDefinition[],
+  openIds: readonly string[],
+): ModuleDefinition[] {
+  return visible.filter((module) => !module.singleTab || !openIds.includes(module.id));
+}
+
+/** Ids flattened to one string, for a memo that must not rebuild on a fresh array holding the same
+ *  ids. Module ids hold no comma. {@link idsOf} reads them back. */
+export function idsKey(ids: readonly string[]): string {
+  return ids.join(",");
+}
+
+/** The ids {@link idsKey} flattened; none for an empty key. */
+export function idsOf(key: string): string[] {
+  return key === "" ? [] : key.split(",");
 }
 
 /**

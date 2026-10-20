@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import Input from "../../../../components/Input";
 import Select from "../../../../components/Select";
 import type { SelectOption } from "../../../../components/Select";
-import { useTranslation } from "../../../../i18n";
+import { useLanguageT, useTranslation } from "../../../../i18n";
 import type { SqlCollation } from "../../types";
 import styles from "./CollationSelect.module.css";
 
@@ -34,7 +34,9 @@ interface Props {
  * it is read once per connection and handed down rather than fetched here.
  */
 function CollationSelect({ value, collations, placeholder, ariaLabel, disabled, onChange }: Props) {
-  const { t, lang } = useTranslation();
+  const { t } = useTranslation();
+  // The options are words made once per language: a new function per language rebuilds them.
+  const tl = useLanguageT();
   const current = value.trim();
 
   /** The list as it is offered: the chosen collation's own character set first, then the ones most
@@ -63,9 +65,9 @@ function CollationSelect({ value, collations, placeholder, ariaLabel, disabled, 
             <span>{collation.name}</span>
             <span className={styles.charset}>
               {collation.charset === ""
-                ? t("collation.anyCharset")
+                ? tl("collation.anyCharset")
                 : collation.isDefault
-                  ? t("collation.charsetDefault", { charset: collation.charset })
+                  ? tl("collation.charsetDefault", { charset: collation.charset })
                   : collation.charset}
             </span>
           </span>
@@ -80,8 +82,7 @@ function CollationSelect({ value, collations, placeholder, ariaLabel, disabled, 
       list.splice(1, 0, { value: current, label: current });
     }
     return list;
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `lang` beside `t`: `t` is one function for the life of the app, so `lang` is what rebuilds these words when they change. See `i18n/index.tsx`.
-  }, [collations, current, placeholder, t, lang]);
+  }, [collations, current, placeholder, tl]);
 
   if (collations.length === 0) {
     return (

@@ -33,7 +33,9 @@ Consumers must import the component via the folder path only, never by reaching 
   on. When a dependency is a function rebuilt on every render, the fix is to make it stable
   (`useCallback`, or read it through a ref), not to turn off the lint. A disable is allowed only
   when its comment gives a reason a stable callback cannot fix, and the shared workaround for one
-  reason lives in one hook, not in a copy per file (T209a).
+  reason lives in one hook, not in a copy per file (T209a). A `useMemo` or an effect that turns
+  words into a value translates with `useLanguageT()` from `i18n/`, a new function per language
+  that it lists like any other dependency, never with `t` and an unread `lang` beside it.
 - **States that change together are one value.** Loading, error and result, or a draft and whether
   it was edited, go into one `useReducer` or one discriminated union. With a separate `useState`
   for each, a combination that cannot happen can still be written. A component with more than

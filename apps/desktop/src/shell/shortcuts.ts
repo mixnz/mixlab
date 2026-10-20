@@ -27,9 +27,9 @@ export function newModuleTabId(moduleId: string): string {
  * and not after the position, so anything that ever files against one — a remap screen — outlives a
  * profile change.
  *
- * **`Workspace.tsx` may not loop over this.** Its `useShortcut` calls have to be the same count on
- * every render, and this list shrinks with the profile; the loop there is over the registry, and it
- * passes `enabled` instead. See the note beside it.
+ * **`Workspace.tsx` does not register from this list.** It registers one entry per module in the
+ * registry through `useShortcuts`, a hidden module's with `enabled` off, because this list shrinks
+ * with the profile. See the note beside it.
  */
 export function moduleTabShortcuts(
   visible: ModuleDefinition[],

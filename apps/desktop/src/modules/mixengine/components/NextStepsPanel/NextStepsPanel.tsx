@@ -36,7 +36,7 @@ interface Props {
   /** Present only right after an apply (D8): the credentials block is drawn from it. */
   database?: AppliedDatabase | null;
   /** Whether this window draws the Terminal module. Hidden, the buttons say they turn it on: the
-   *  shell turns a module on for a tab that names it (`Workspace.tsx`, T110). */
+   *  shell turns a module on for a tab that names it (`shell/workspace/useTabRequests.ts`, T110). */
   terminalVisible: boolean;
   /** A step with `credentials`, outside `AfterApply`, links here (D8). */
   onShowDatabase?: () => void;
