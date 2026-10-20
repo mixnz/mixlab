@@ -27,9 +27,11 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       and the design flipped to `implemented`.
 - [ ] **T211** The ADR: on a machine with no graphical agent, `mix` in a terminal raises the
       prompt itself, through `sudo` on the helper — amending ADR 0005. Found on an Ubuntu 24.04
-      server over SSH (2026-10-21): no polkit installed, and `pkexec` refuses without `DISPLAY`
+      server over SSH (2026-10-21): `polkitd` is installed and running, but `pkexec` is not — a
+      separate package since Ubuntu 24.04 — and with no polkit agent over SSH it could not prompt
       anyway, so `mix elevation grant` and the privileged half of `mix uninstall` never run there,
-      and nothing names a way to do it by hand. Design to come.
+      and nothing names a way to do it by hand. The error itself is wrong too: it says *"pkexec is
+      not on PATH, so polkit is not installed"*, which T211c corrects. Design to come.
 - [ ] **T211a** The daemon writes the request and hands its path to a client that has a terminal,
       instead of refusing in `elevation/require.rs` before the request exists;
       `mixengine-elevate` still validates every request itself. **(P)**
