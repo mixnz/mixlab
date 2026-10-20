@@ -1,6 +1,7 @@
 //! The queue: batches, enqueueing, dropping and grants.
 
 use super::*;
+use crate::elevation::Route;
 
 /// T182b, D2. A batch holding a helper operation and others runs the helper's first, and keeps
 /// the rest in the order they were queued.
@@ -156,7 +157,10 @@ async fn three_operations_are_one_prompt_on_the_request_that_was_just_written() 
     three_waiting(&elevation).await;
     assert_eq!(elevation.summary().await.unwrap().pending, 3);
 
-    let started = elevation.grant().await.expect("a grant becomes a job");
+    let started = elevation
+        .grant(Route::Dialog)
+        .await
+        .expect("a grant becomes a job");
     finished(&elevation.jobs, started.id).await;
 
     let raised = machine.prompts_raised();
@@ -185,7 +189,7 @@ async fn a_helper_that_left_no_report_fails_the_job_and_keeps_every_row() {
         registry(mock::Host::with_home("/tmp/mixengine")).await;
     elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
 
-    let started = elevation.grant().await.unwrap();
+    let started = elevation.grant(Route::Dialog).await.unwrap();
     let ended = finished(&elevation.jobs, started.id).await;
 
     assert_eq!(ended.state, mixengine_proto::JobState::Failed);
@@ -207,7 +211,7 @@ async fn a_helper_that_left_no_report_says_why_in_the_error() {
         registry(mock::Host::elevation_saying("/tmp/mixengine", said)).await;
     elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
 
-    let started = elevation.grant().await.unwrap();
+    let started = elevation.grant(Route::Dialog).await.unwrap();
     let ended = finished(&elevation.jobs, started.id).await;
 
     let Some(mixengine_proto::JobOutcome::Failed { error }) = ended.outcome else {
@@ -230,7 +234,7 @@ async fn a_decline_leaves_the_queue_alone_and_the_job_succeeds() {
         registry(mock::Host::declining_elevation("/tmp/mixengine")).await;
     elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
 
-    let started = elevation.grant().await.unwrap();
+    let started = elevation.grant(Route::Dialog).await.unwrap();
     let ended = finished(&elevation.jobs, started.id).await;
 
     assert_eq!(ended.state, mixengine_proto::JobState::Succeeded);
@@ -263,7 +267,7 @@ async fn a_grant_that_applied_announces_the_queue_it_left() {
     elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
     let mut watching = events.subscribe();
 
-    let started = elevation.grant().await.unwrap();
+    let started = elevation.grant(Route::Dialog).await.unwrap();
     let ended = finished(&elevation.jobs, started.id).await;
     assert_eq!(ended.state, mixengine_proto::JobState::Succeeded);
     assert_eq!(elevation.summary().await.unwrap().pending, 0);
@@ -294,7 +298,7 @@ async fn a_machine_that_cannot_prompt_keeps_the_reason_intact() {
     elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
 
     let error = elevation
-        .grant()
+        .grant(Route::Dialog)
         .await
         .expect_err("there is no way to raise a prompt here");
 
@@ -322,7 +326,7 @@ async fn a_second_grant_while_one_is_in_flight_is_refused_and_names_the_first() 
     elevation.state.lock().unwrap().slot = Slot::Running(JobId(41));
 
     let error = elevation
-        .grant()
+        .grant(Route::Dialog)
         .await
         .expect_err("one prompt at a time, for one queue");
 
@@ -332,7 +336,10 @@ async fn a_second_grant_while_one_is_in_flight_is_refused_and_names_the_first() 
     // And a slot left free is a slot a grant can take, or one failed grant would wedge the
     // daemon for as long as it runs.
     elevation.state.lock().unwrap().slot = Slot::Free;
-    let started = elevation.grant().await.expect("the slot was released");
+    let started = elevation
+        .grant(Route::Dialog)
+        .await
+        .expect("the slot was released");
     finished(&elevation.jobs, started.id).await;
     assert_eq!(elevation.state.lock().unwrap().slot, Slot::Free);
 }
@@ -344,7 +351,10 @@ async fn granting_an_empty_queue_raises_nothing() {
     let (_home, elevation, _events, machine) =
         registry(mock::Host::with_home("/tmp/mixengine")).await;
 
-    let error = elevation.grant().await.expect_err("nothing is waiting");
+    let error = elevation
+        .grant(Route::Dialog)
+        .await
+        .expect_err("nothing is waiting");
 
     assert_eq!(error.code, mixengine_proto::ErrorCode::PreconditionFailed);
     assert!(machine.prompts_raised().is_empty());
@@ -365,7 +375,7 @@ async fn granting_without_a_helper_beside_the_daemon_is_dependency_missing() {
     .expect("the helper goes");
 
     let error = elevation
-        .grant()
+        .grant(Route::Dialog)
         .await
         .expect_err("there is nothing to run");
 

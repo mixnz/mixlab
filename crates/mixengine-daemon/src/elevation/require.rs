@@ -8,7 +8,7 @@ use mixengine_proto::{Error, ErrorCode};
 
 use crate::error::ToWire as _;
 
-use super::{Chosen, Elevation};
+use super::{Chosen, Elevation, Route};
 
 impl Elevation {
     /// Ask for this helper to be installed where only an administrator can rewrite it — roadmap
@@ -374,6 +374,7 @@ impl Elevation {
     pub(super) async fn preflight(
         &self,
         only: Option<&[mixengine_proto::PendingOpId]>,
+        route: Route,
     ) -> Result<(Vec<mixengine_proto::PendingOp>, Chosen), Error> {
         let mut waiting = mixengine_core::elevation::pending(&self.store)
             .await
@@ -394,7 +395,13 @@ impl Elevation {
 
         let helper = self.choose_for(&waiting).await?;
 
-        if let Some(reason) = self.reason() {
+        // A terminal raises its own prompt, so only a missing helper stops it — ADR 0065.
+        let reason = match route {
+            Route::Dialog => self.reason(),
+            Route::ByHand => self.helper_reason(),
+        };
+
+        if let Some(reason) = reason {
             return Err(Error::new(
                 ErrorCode::PrivilegedRequired,
                 format!("this machine cannot raise an elevation prompt: {reason}"),

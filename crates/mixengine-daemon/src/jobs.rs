@@ -135,19 +135,8 @@ impl JobHandle {
         self.cancel.is_cancelled()
     }
 
-    /// The same question as something to wait on, for work that is already in a `select!`.
-    // Still unused outside this module's own tests: the one producer there is polls between chunks
-    // and between steps rather than racing its work against a token, because a download dropped
-    // mid-`await` leaves a staging directory nobody removes. `cfg_attr` rather than a plain
-    // `expect`, because it *is* used in the tests and an expectation that holds in one build and
-    // not the other is itself a warning.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "for a producer whose work is a `select!` — the install polls instead"
-        )
-    )]
+    /// The same question as something to wait on, for work that is already in a `select!` — a
+    /// grant waiting for a terminal to run the helper is one.
     pub(crate) fn cancelled(&self) -> tokio_util::sync::WaitForCancellationFuture<'_> {
         self.cancel.cancelled()
     }

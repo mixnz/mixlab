@@ -366,7 +366,7 @@ impl Repairs {
     /// they are still waiting, and a machine with no helper beside this daemon is a machine where
     /// they will keep waiting. The client sees `granting: null` next to them and can say so.
     async fn flush(self: &Arc<Self>) -> Option<mixengine_proto::JobSummary> {
-        match self.elevation.grant().await {
+        match self.elevation.grant(crate::elevation::Route::Dialog).await {
             Ok(job) => Some(job),
             Err(error) => {
                 tracing::warn!(

@@ -9,16 +9,16 @@ use mixengine_proto::{
     BlueprintApply, BlueprintCapture, BlueprintImport, CaRotateQuery, CaStatusQuery,
     CaUninstallQuery, CertIssue, CertStatusQuery, CleanupQuery, DatabaseClientQuery,
     DatabaseCreate, DatabaseCredentialsQuery, DatabaseOpen, DiagnosticsBundle, DiskUsageQuery,
-    DoctorRepair, DomainAdd, DomainRemove, DomainStatusQuery, ElevationDrop, Error, ErrorCode,
-    ExtensionAvailable, ExtensionChoice, ExtensionInspect, ExtensionInstall, ExtensionPlanRequest,
-    ExtensionTarget, ExtensionUninstall, FrontEndSwitch, JobFilter, JobList, JobQuery, JobWait,
-    MetricsHistoryQuery, PackageFilter, PackageInstall, PackageTarget, PackageUpgrade,
-    PackageUpgradeQuery, ProjectCreate, ProjectQuery, ProjectUpdate, ResetCredential,
-    RuntimeFilter, RuntimeInstall, RuntimeQuestion, RuntimeTarget, RuntimeUninstall,
-    RuntimeUpgrade, RuntimeUpgradeQuery, SaveResourcesSet, ServiceAutostartSet, ServiceCreate,
-    ServiceDelete, ServiceIdleSet, ServiceLimitsSet, ServiceQuery, ServiceTarget, SiteCreate,
-    SiteListQuery, SiteQuery, SiteShare, SiteUpdate, UninstallQuery, UpdateApply, UpdateCheck,
-    UpdateDecide, UpdateFinish, UpdateHandOver,
+    DoctorRepair, DomainAdd, DomainRemove, DomainStatusQuery, ElevationDrop, ElevationGrant, Error,
+    ErrorCode, ExtensionAvailable, ExtensionChoice, ExtensionInspect, ExtensionInstall,
+    ExtensionPlanRequest, ExtensionTarget, ExtensionUninstall, FrontEndSwitch, JobFilter, JobList,
+    JobQuery, JobWait, MetricsHistoryQuery, PackageFilter, PackageInstall, PackageTarget,
+    PackageUpgrade, PackageUpgradeQuery, ProjectCreate, ProjectQuery, ProjectUpdate,
+    ResetCredential, RuntimeFilter, RuntimeInstall, RuntimeQuestion, RuntimeTarget,
+    RuntimeUninstall, RuntimeUpgrade, RuntimeUpgradeQuery, SaveResourcesSet, ServiceAutostartSet,
+    ServiceCreate, ServiceDelete, ServiceIdleSet, ServiceLimitsSet, ServiceQuery, ServiceTarget,
+    SiteCreate, SiteListQuery, SiteQuery, SiteShare, SiteUpdate, UninstallQuery, UpdateApply,
+    UpdateCheck, UpdateDecide, UpdateFinish, UpdateHandOver,
 };
 use serde_json::Value;
 
@@ -733,8 +733,14 @@ pub(super) async fn route(
         }
 
         rpc::method::ELEVATION_GRANT => {
-            no_params(params.as_ref())?;
-            encode_result(&api.elevation.grant().await.map_err(refused)?)
+            // None at all is the dialog this method always raised.
+            let asked: ElevationGrant = arguments(params)?;
+            encode_result(
+                &api.elevation
+                    .grant(asked.by_hand.into())
+                    .await
+                    .map_err(refused)?,
+            )
         }
 
         rpc::method::ELEVATION_DROP => {

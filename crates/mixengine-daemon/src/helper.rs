@@ -234,7 +234,7 @@ pub(crate) async fn keep_in_step(
     if elevation
         .first_prompt_for(mixengine_proto::privileged::HELPER_VERSION)
         .await
-        && let Err(error) = elevation.grant().await
+        && let Err(error) = elevation.grant(crate::elevation::Route::Dialog).await
     {
         tracing::info!(%error, "the helper's replacement waits for the next prompt");
     }
