@@ -154,6 +154,7 @@ mod tests {
             installed_helper: None,
             pending: vec![a_pending_probe(1), a_pending_probe(2)],
             last: None,
+            waiting: None,
         });
 
         assert!(rendered.contains("2 operations are waiting"), "{rendered}");
@@ -179,6 +180,7 @@ mod tests {
             installed_helper: None,
             pending: vec![a_pending_probe(1), a_pending_probe(2)],
             last: None,
+            waiting: None,
         });
 
         assert!(rendered.contains("2 operations are waiting"), "{rendered}");
@@ -207,6 +209,7 @@ mod tests {
             }),
             pending: Vec::new(),
             last: None,
+            waiting: None,
         });
 
         assert!(rendered.contains("helper"), "{rendered}");
@@ -232,6 +235,7 @@ mod tests {
             }),
             pending: Vec::new(),
             last: None,
+            waiting: None,
         });
 
         assert!(!rendered.contains("helper"), "{rendered}");
@@ -249,6 +253,7 @@ mod tests {
             installed_helper: None,
             pending: vec![a_pending_probe(1)],
             last: None,
+            waiting: None,
         });
 
         assert!(rendered.contains("no polkit agent"), "{rendered}");
@@ -277,6 +282,7 @@ mod tests {
                 still_pending: 1,
                 problems: Vec::new(),
             }),
+            waiting: None,
         });
 
         assert!(rendered.contains("declined"), "{rendered}");

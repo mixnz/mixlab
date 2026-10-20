@@ -67,6 +67,7 @@ pub(crate) async fn uninstall(
         // nothing else, so it does not pay for reading the handle table.
         skip_holders: relocated,
         package,
+        by_hand: false,
     };
 
     let planned: UninstallReport = ask(

@@ -733,7 +733,8 @@ pub const METRICS_HISTORY: &str = "metrics.history";
 /// client makes on connect.
 pub const ELEVATION_STATUS: &str = "elevation.status";
 
-/// Spend one prompt on everything that is waiting. Takes no parameters, answers a
+/// Spend one prompt on everything that is waiting. Takes an optional
+/// [`ElevationGrant`](crate::ElevationGrant) — none is a dialog, as before — and answers a
 /// [`JobSummary`](crate::JobSummary).
 ///
 /// **A job, because what it waits on is a person reading a dialog** and there is no clock on

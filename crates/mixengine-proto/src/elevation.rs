@@ -123,6 +123,29 @@ pub struct ElevationStatus {
     /// the pending list already says everything a client needs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last: Option<GrantOutcome>,
+
+    /// A grant waiting for somebody to run the helper from a terminal, while one is (ADR 0065).
+    ///
+    /// The command is here rather than only in the reply to the caller that started it, so that
+    /// `mix elevation status` and MixLab can show it, and a second session can run it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub waiting: Option<ByHand>,
+}
+
+/// A grant that wrote its request and is waiting for a terminal to run the helper on it.
+///
+/// Strings and not `PathBuf`s, for [`ElevationStatus::helper`]'s reason.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct ByHand {
+    /// The job that is waiting, and the one to cancel to stop waiting.
+    pub job: JobId,
+
+    /// The installed helper, absolute. `mix` runs no other, whatever this says.
+    pub helper: String,
+
+    /// The request the helper is to be given, absolute.
+    pub request: String,
 }
 
 /// What the privileged helper installed on this machine turned out to be — roadmap task **T88a**.
@@ -199,6 +222,20 @@ pub struct GrantOutcome {
     pub problems: Vec<String>,
 }
 
+/// `elevation.grant` — how the one prompt is to be raised.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct ElevationGrant {
+    /// Write the request and wait for a terminal to run the helper on it, instead of raising a
+    /// dialog (ADR 0065).
+    ///
+    /// **Defaults to `false`**, the dialog `elevation.grant` always raised. Only a caller holding a
+    /// terminal sends `true`; MixLab never does.
+    #[serde(default)]
+    pub by_hand: bool,
+}
+
 /// `elevation.drop` — forget one operation, or all of them.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -227,6 +264,59 @@ mod tests {
             op,
             requested_at: Timestamp(1_760_000_000_000),
         }
+    }
+
+    /// A client built before `waiting` existed sent and read statuses without it.
+    #[test]
+    fn an_older_status_without_waiting_still_reads() {
+        let encoded = serde_json::json!({
+            "elevated": false,
+            "can_prompt": true,
+            "pending": [],
+        });
+
+        let status: ElevationStatus = serde_json::from_value(encoded).unwrap();
+
+        assert_eq!(status.waiting, None);
+    }
+
+    /// Absent rather than `null`, as `reason` and `last` are.
+    #[test]
+    fn waiting_is_absent_not_null_when_none() {
+        let encoded = serde_json::to_value(ElevationStatus {
+            elevated: false,
+            can_prompt: true,
+            reason: None,
+            helper: None,
+            installed_helper: None,
+            pending: Vec::new(),
+            last: None,
+            waiting: None,
+        })
+        .unwrap();
+
+        assert!(encoded.get("waiting").is_none(), "{encoded}");
+    }
+
+    /// `elevation.grant` took no parameters before ADR 0065, and a client that still sends none
+    /// asks for the dialog it always did.
+    #[test]
+    fn a_grant_with_no_params_is_not_by_hand() {
+        assert!(!ElevationGrant::default().by_hand);
+        assert!(
+            !serde_json::from_value::<ElevationGrant>(serde_json::json!({}))
+                .unwrap()
+                .by_hand
+        );
+    }
+
+    /// A misspelt `by_hand` must not quietly become a dialog nobody at this terminal can see.
+    #[test]
+    fn a_grant_refuses_a_field_it_does_not_know() {
+        assert!(
+            serde_json::from_value::<ElevationGrant>(serde_json::json!({ "byhand": true }))
+                .is_err()
+        );
     }
 
     /// A client renders the list without deciding what an operation means, which is what the
@@ -316,6 +406,7 @@ mod tests {
             installed_helper: None,
             pending: Vec::new(),
             last: None,
+            waiting: None,
         };
 
         let encoded = serde_json::to_value(&status).unwrap();
@@ -365,6 +456,7 @@ mod tests {
             }),
             pending: Vec::new(),
             last: None,
+            waiting: None,
         };
 
         let encoded = serde_json::to_value(&status).unwrap();

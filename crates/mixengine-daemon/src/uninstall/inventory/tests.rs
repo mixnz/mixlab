@@ -322,6 +322,7 @@ fn query(keep_home: bool, keep_relocated: bool) -> mixengine_proto::UninstallQue
         grant: false,
         skip_holders: false,
         package: false,
+        by_hand: false,
     }
 }
 

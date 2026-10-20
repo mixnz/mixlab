@@ -635,6 +635,7 @@ impl Elevation {
             installed_helper: self.installed_helper(),
             pending,
             last,
+            waiting: None,
         })
     }
 

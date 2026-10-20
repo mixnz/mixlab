@@ -33,6 +33,11 @@ keep_relocated: boolean,
  */
 grant: boolean, 
 /**
+ * Raise that prompt from the caller's terminal rather than as a dialog — as
+ * [`ElevationGrant::by_hand`](crate::ElevationGrant::by_hand). Meaningless without `grant`.
+ */
+by_hand: boolean, 
+/**
  * Leave out what other programs hold in the folders that would go — roadmap task **T182e**.
  *
  * **Defaults to `false`**: every plan and every act looks, because something stuck found before
