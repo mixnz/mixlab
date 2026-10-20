@@ -52,7 +52,7 @@ export function judge(sizes, baseline) {
   const errors = [];
   for (const [file, lines] of sizes) {
     if (lines > limit && !(file in files)) {
-      errors.push(`${file}: is ${number(lines)} lines; the limit is ${number(limit)} — split it by capability (docs/standards/rust.md)`);
+      errors.push(`${file}: is ${number(lines)} lines; the limit is ${number(limit)} — split it by capability (docs/standards/source-files.md)`);
     }
   }
   for (const [file, allowed] of Object.entries(files)) {

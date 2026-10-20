@@ -70,7 +70,7 @@ it.
 
 ## Where a test file goes
 
-The 1,000-line limit in [rust.md](rust.md) counts tests too. When tests are what push a file past
+The 1,000-line limit in [source-files.md](source-files.md) counts tests too. When tests are what push a file past
 it, they move out, and **no test changes its path**, so nextest's filters and the test counts stay
 the same:
 

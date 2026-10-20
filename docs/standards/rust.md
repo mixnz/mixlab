@@ -95,14 +95,8 @@ from somebody else's manifest, and write the reason as the edge, not as "upstrea
 
 - Modules by capability, not by layer: `sites/`, `runtimes/`, `certs/` — not `models/`, `utils/`.
   `utils` and `helpers` are banned module names.
-- **No source file over 1,000 lines** — `.rs`, and the desktop's `.ts`, `.tsx`, `.js`, `.mjs` and
-  `.css` alike. The files already past it are named in `scripts/file-size-baseline.json` at their
-  length, and may not grow. Making one shorter means `node scripts/check-file-sizes.mjs --shrink`
-  in the same commit, which lowers its entry. Nothing raises one: a file that has to grow is a hand
-  edit to the JSON, argued in review — the usual answer is a new module.
-- Where tests go when they push a file past the limit is in
-  [testing.md](testing.md#where-a-test-file-goes). A file whose *code* is past the limit is split
-  by capability, and its tests go with what they test.
+- A file stays under the size limit in [source-files.md](source-files.md); one that would cross it
+  splits along these lines.
 
 ### Types and state
 

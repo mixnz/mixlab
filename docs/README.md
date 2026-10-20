@@ -73,6 +73,7 @@ A new top-level folder is created once three documents fit nowhere above.
 
 ### standards
 - [rust.md](standards/rust.md) · [testing.md](standards/testing.md) ·
+  [source-files.md](standards/source-files.md) — the 1,000-line limit, for every language ·
   [git-and-reviews.md](standards/git-and-reviews.md) ·
   [plans-and-specs.md](standards/plans-and-specs.md) — where specs and plans go, and what a spec's
   status means · [changelog.md](standards/changelog.md) — one tag per section, in order, three

@@ -95,6 +95,9 @@ application's own set of rules; `server/README.md` is the server's.
   never parse a generated file back into state.
 - **Cross-platform or not merged.** A feature must compile on all three OSes; unsupported paths
   return a typed `Unsupported` error, never `todo!()`.
+- **No source file past 1,000 lines**, Rust, TypeScript and CSS alike: a file an edit would take
+  past it is split before the edit, never made room for in the baseline. How to split, and what
+  the baseline is, are in [docs/standards/source-files.md](docs/standards/source-files.md).
 - **No Docker, no VM.** Managed processes are native. See `docs/decisions/0003-no-container-isolation.md`.
 
 ## Detailed documentation
@@ -125,7 +128,7 @@ cargo sqlx prepare --workspace -- --all-targets --all-features  # after editing 
 bash packaging/bindings.sh               # after changing a type in mixengine-proto (T56)
 cargo run -p mixengine-cli -- status      # drive the daemon from the CLI
 node scripts/check-docs.mjs              # documentation links + spec status; --write-index after adding a spec
-node scripts/check-file-sizes.mjs        # no file past 1,000 lines grows; --shrink after making one shorter
+node scripts/check-file-sizes.mjs        # the file size limit in docs/standards/source-files.md
 cd apps/desktop && npm ci && npm run build && npm test && npm run lint     # the desktop frontend
 cd apps/desktop/src-tauri && cargo fmt --check && cargo clippy --locked --all-targets -- -D warnings  # its own workspace
 ```
