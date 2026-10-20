@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import ConfirmDialog from "../../components/ConfirmDialog";
-import Splitter, { clampRatio, clampSize } from "../../components/Splitter";
+import Splitter from "../../components/Splitter";
 import { moveId, Tab, TabStrip, tabKeyDown } from "../../components/TabStrip";
 import { errorMessage } from "../../core/errors";
 import { modalDepth, useShortcut } from "../../core/shortcuts";
@@ -9,7 +9,7 @@ import { useTranslation } from "../../i18n";
 import { CANCELLED, decodeBase64, restCancel, restSend } from "./api";
 import { buildRequest } from "./buildRequest";
 import { detectBody, type ViewMode } from "./contentType";
-import { SECRET_MASK, findEnvironment, historyVars, previewVars, varMap } from "./environments";
+import { SECRET_MASK, historyVars, previewVars, varMap } from "./environments";
 import { addVariables, useEnvironments } from "./environmentsStore";
 import { historyUrl, keptBody, type HistoryEntry } from "./history";
 import { recordSend } from "./historyStore";
@@ -45,19 +45,9 @@ import {
 import { foldQuery, replaceQuery, urlWithParams } from "./syncUrlParams";
 import { parseRestTabState } from "./tabState";
 import type { RestRequest } from "./types";
-import {
-  MAX_SIDEBAR_WIDTH,
-  MAX_SPLIT_RATIO,
-  MIN_SIDEBAR_WIDTH,
-  MIN_SPLIT_RATIO,
-  currentWorkspace,
-  sendSettings,
-  setLastEnvId,
-  setSidebarWidth,
-  setSplitRatio,
-  useWorkspace,
-  workspaceLoaded,
-} from "./workspace";
+import { currentWorkspace, sendSettings, useWorkspace } from "./workspace";
+import { useEnvironmentChoice } from "./tab/useEnvironmentChoice";
+import { usePaneSizes } from "./tab/usePaneSizes";
 import "./rest.css";
 
 type RequestTabKey = "params" | "body" | "headers" | "auth";
@@ -77,11 +67,8 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
   const lists = useRequestLists();
   const workspace = useWorkspace();
   const environments = useEnvironments();
-  const [envId, setEnvId] = useState<string | null>(null);
   const [envDialogOpen, setEnvDialogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  /** Whether `lastEnvId` has been taken. Once, and once only — see the note on the field. */
-  const envSeeded = useRef(false);
 
   const [openIds, setOpenIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -110,10 +97,7 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
   const [preferredModes, setPreferredModes] = useState<Record<string, ViewMode>>({});
   const [headersOpen, setHeadersOpen] = useState<Record<string, boolean>>({});
 
-  const [width, setWidth] = useState(workspace.sidebarWidth);
-  const [ratio, setRatio] = useState(workspace.splitRatio);
-  const dragFrom = useRef(0);
-  const panesRef = useRef<HTMLDivElement>(null);
+  const { width, ratio, panesRef, sidebarSplitter, paneSplitter } = usePaneSizes(workspace);
   const urlRef = useRef<HTMLInputElement>(null);
   /** The request whose URL box is still owed the keyboard — set by New, cleared once given. */
   const [focusUrlFor, setFocusUrlFor] = useState<string | null>(null);
@@ -142,29 +126,10 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
     [],
   );
 
-  // The workspace file is read once, after the first render — so the furniture starts at its
-  // defaults and moves to what was saved when it arrives.
-  useEffect(() => setWidth(workspace.sidebarWidth), [workspace.sidebarWidth]);
-  useEffect(() => setRatio(workspace.splitRatio), [workspace.splitRatio]);
-
-  useEffect(() => {
-    if (envSeeded.current || !workspaceLoaded()) return;
-    envSeeded.current = true;
-    setEnvId(workspace.lastEnvId);
-  }, [workspace]);
+  const { env, chooseEnv } = useEnvironmentChoice(workspace, environments);
 
   const label = (request: RestRequest) =>
     request.name !== "" ? request.name : shortUrl(request.url) || t("rest.untitled");
-
-  /* Null when nothing is chosen, and also when what was chosen has since been deleted — which is
-     the whole of what deleting an environment has to clean up. */
-  const env = findEnvironment(environments, envId);
-
-  function chooseEnv(id: string | null) {
-    setEnvId(id);
-    // Written for the next REST tab to open with; this one keeps its own choice from here.
-    setLastEnvId(id);
-  }
 
   /* The open tabs, resolved afresh from the store: a request edited anywhere shows its new name
      here, and one deleted from the sidebar takes its tab with it. */
@@ -588,15 +553,7 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
         orientation="vertical"
         ariaLabel={t("rest.resizeSidebar")}
         title={t("rest.resizeSidebar")}
-        onDragStart={() => {
-          dragFrom.current = width;
-        }}
-        onDrag={(delta) =>
-          setWidth(clampSize(dragFrom.current, delta, MIN_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH))
-        }
-        onDragEnd={(delta) =>
-          setSidebarWidth(clampSize(dragFrom.current, delta, MIN_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH))
-        }
+        {...sidebarSplitter}
       />
 
       <div className="rest-main">
@@ -698,31 +655,7 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
               orientation="vertical"
               ariaLabel={t("rest.resizePanes")}
               title={t("rest.resizePanes")}
-              onDragStart={() => {
-                dragFrom.current = ratio;
-              }}
-              onDrag={(delta) =>
-                setRatio(
-                  clampRatio(
-                    dragFrom.current,
-                    delta,
-                    panesRef.current?.clientWidth ?? 0,
-                    MIN_SPLIT_RATIO,
-                    MAX_SPLIT_RATIO,
-                  ),
-                )
-              }
-              onDragEnd={(delta) =>
-                setSplitRatio(
-                  clampRatio(
-                    dragFrom.current,
-                    delta,
-                    panesRef.current?.clientWidth ?? 0,
-                    MIN_SPLIT_RATIO,
-                    MAX_SPLIT_RATIO,
-                  ),
-                )
-              }
+              {...paneSplitter}
             />
 
             <section className="rest-response-pane">
