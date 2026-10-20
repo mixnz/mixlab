@@ -10,16 +10,9 @@
 //! something, since a fixture offering only what is runnable could not tell a filter that works from
 //! one that does nothing.
 
-use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
-use http_body_util::{BodyExt as _, Full};
-use hyper::body::Bytes;
-use hyper::header::{CONTENT_TYPE, HOST};
-use hyper::{Method, Request, StatusCode};
-use hyper_util::rt::TokioIo;
-use mixengine_platform::ipc::Connection;
-use mixengine_testkit::{FakePackage, Home, MockRegistry, Packed, Packing};
+use mixengine_testkit::{Client, Daemon, FakePackage, Home, MockRegistry, Packed, Packing};
 use serde_json::{Value, json};
 
 /// How long a job is given to finish before the test gives up on it.
@@ -89,7 +82,7 @@ impl Fixture {
         registry.publish(&index_for(&packed, &url));
 
         let home = Home::new();
-        let daemon = Daemon::start(&home, &registry);
+        let daemon = started(&home, &registry);
         home.wait_until_listening().await;
 
         Self {
@@ -172,109 +165,26 @@ fn arch() -> &'static str {
     std::env::consts::ARCH
 }
 
-/// The daemon process, killed when the test ends however it ends.
-struct Daemon(Child);
-
-impl Daemon {
-    fn start(home: &Home, registry: &MockRegistry) -> Self {
-        Self(
-            Command::new(env!("CARGO_BIN_EXE_mixengined"))
-                .arg("--home")
-                .arg(home.path())
-                .arg("--index-url")
-                .arg(registry.url())
-                .arg("--index-key")
-                .arg(registry.public_key())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .expect("the daemon binary runs"),
-        )
-    }
+/// A daemon for `home`, reading its index from `registry`.
+fn started(home: &Home, registry: &MockRegistry) -> Daemon {
+    let mut command = Daemon::command(env!("CARGO_BIN_EXE_mixengined"), home);
+    command
+        .arg("--index-url")
+        .arg(registry.url())
+        .arg("--index-key")
+        .arg(registry.public_key());
+    Daemon::spawn(command)
 }
 
-impl Drop for Daemon {
-    fn drop(&mut self) {
-        // Killed rather than asked: a test that failed halfway must not leave a process holding the
-        // temporary home open, which on Windows would make the directory unremovable.
-        let _ = self.0.kill();
-        let _ = self.0.wait();
-    }
-}
-
-/// One connection to the daemon.
-struct Client {
-    sender: hyper::client::conn::http1::SendRequest<Full<Bytes>>,
-}
-
-impl Client {
-    async fn connect(home: &Home) -> Self {
-        let connection = Connection::connect(home.endpoint())
-            .await
-            .expect("the daemon is listening");
-
-        let (sender, driver) = hyper::client::conn::http1::handshake(TokioIo::new(connection))
-            .await
-            .expect("the daemon speaks HTTP/1.1");
-
-        tokio::spawn(driver);
-
-        Self { sender }
-    }
-
-    /// Call a method and hand back its `result`, insisting it succeeded.
-    async fn call(&mut self, method: &str, params: Value) -> Value {
-        let answer = self.ask(method, params).await;
-        assert!(answer.get("error").is_none(), "{method}: {answer}");
-
-        answer["result"].clone()
-    }
-
-    /// Call a method and hand back its `error`, insisting it did not succeed.
-    async fn refuse(&mut self, method: &str, params: Value) -> Value {
-        let answer = self.ask(method, params).await;
-        assert!(answer.get("result").is_none(), "{method}: {answer}");
-
-        answer["error"].clone()
-    }
-
-    async fn ask(&mut self, method: &str, params: Value) -> Value {
-        let body = json!({ "jsonrpc": "2.0", "method": method, "params": params, "id": 1 });
-
-        let request = Request::builder()
-            .method(Method::POST)
-            .uri("/rpc")
-            .header(HOST, "mixengine")
-            .header(CONTENT_TYPE, "application/json")
-            .body(Full::new(Bytes::from(
-                serde_json::to_vec(&body).expect("a request serialises"),
-            )))
-            .expect("a well formed request");
-
-        // Waited for rather than assumed: `hyper`'s dispatcher allows one request through before
-        // it has said it wants one, and every request after that only once the connection task has
-        // been polled since the last response. This suite reuses a connection, so sending straight
-        // away raced that task and failed with `canceled: connection was not ready` — rarely, and
-        // more often on the machine with the least to spare, which is CI.
-        self.sender
-            .ready()
-            .await
-            .expect("the connection is still open");
-
-        let response = self.sender.send_request(request).await.expect("an answer");
-        assert_eq!(response.status(), StatusCode::OK, "{method}");
-
-        let bytes = response
-            .into_body()
-            .collect()
-            .await
-            .expect("a whole body")
-            .to_bytes();
-
-        serde_json::from_slice(&bytes).expect("a JSON-RPC response")
-    }
-
+/// What this suite asks of a client beyond a call.
+trait Jobs {
     /// Install a version and wait for the job it produced to end.
+    async fn install(&mut self, version: &str) -> Value;
+    /// Wait for a job to end, and answer with it as it ended.
+    async fn finished(&mut self, job: Value) -> Value;
+}
+
+impl Jobs for Client {
     async fn install(&mut self, version: &str) -> Value {
         let started = self
             .call(
@@ -291,7 +201,6 @@ impl Client {
         self.finished(started["id"].clone()).await
     }
 
-    /// Wait for a job to end, and answer with it as it ended.
     async fn finished(&mut self, job: Value) -> Value {
         let deadline = tokio::time::Instant::now() + PATIENCE;
 

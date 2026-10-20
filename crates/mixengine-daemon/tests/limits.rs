@@ -11,16 +11,8 @@
 //! `tests/logs.rs` states: a release daemon has nothing that can run one, and the tests would fail
 //! on a service that never starts rather than on what they assert.
 
-use std::process::{Child, Command, Stdio};
-
-use http_body_util::{BodyExt as _, Full};
-use hyper::body::Bytes;
-use hyper::header::{CONTENT_TYPE, HOST};
-use hyper::{Method, Request, StatusCode};
-use hyper_util::rt::TokioIo;
-use mixengine_platform::ipc::Connection;
 use mixengine_proto::rpc::method;
-use mixengine_testkit::{Home, Service};
+use mixengine_testkit::{Client, Daemon, Home, Service};
 use serde_json::{Value, json};
 
 /// The service every test here caps.
@@ -359,7 +351,7 @@ async fn a_limit_for_a_service_that_does_not_exist_is_refused() {
 /// A home with a daemon in it, and one declared `fakeservice`.
 async fn declared() -> (Home, Daemon) {
     let home = Home::new();
-    let daemon = Daemon::start(&home);
+    let daemon = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
     home.wait_until_listening().await;
 
     // The migrations run when the daemon opens the home, so there is nothing to write a row into
@@ -372,102 +364,4 @@ async fn declared() -> (Home, Daemon) {
     .await;
 
     (home, daemon)
-}
-
-/// The daemon process, ended when the test ends however it ends.
-struct Daemon(Child);
-
-impl Daemon {
-    fn start(home: &Home) -> Self {
-        Self(
-            Command::new(env!("CARGO_BIN_EXE_mixengined"))
-                .arg("--home")
-                .arg(home.path())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .expect("the daemon binary runs"),
-        )
-    }
-}
-
-impl Drop for Daemon {
-    fn drop(&mut self) {
-        // Asked to stop first: this suite starts services, and on macOS a killed daemon leaves them
-        // running for good. Killed if it does not go, so a test that failed halfway still does not
-        // leave a process holding the temporary home open. See `end_daemon`.
-        mixengine_testkit::end_daemon(&mut self.0);
-    }
-}
-
-/// One connection to the daemon.
-struct Client {
-    sender: hyper::client::conn::http1::SendRequest<Full<Bytes>>,
-}
-
-impl Client {
-    async fn connect(home: &Home) -> Self {
-        let connection = Connection::connect(home.endpoint())
-            .await
-            .expect("the daemon is listening");
-
-        let (sender, driver) = hyper::client::conn::http1::handshake(TokioIo::new(connection))
-            .await
-            .expect("the daemon speaks HTTP/1.1");
-
-        tokio::spawn(driver);
-
-        Self { sender }
-    }
-
-    /// Call a method and hand back its `result`, insisting it succeeded.
-    async fn call(&mut self, method: &str, params: Value) -> Value {
-        let answer = self.ask(method, params).await;
-        assert!(answer.get("error").is_none(), "{method}: {answer}");
-
-        answer["result"].clone()
-    }
-
-    /// Call a method and hand back its `error`, insisting it did not succeed.
-    async fn refuse(&mut self, method: &str, params: Value) -> Value {
-        let answer = self.ask(method, params).await;
-        assert!(answer.get("result").is_none(), "{method}: {answer}");
-
-        answer["error"].clone()
-    }
-
-    async fn ask(&mut self, method: &str, params: Value) -> Value {
-        let body = json!({ "jsonrpc": "2.0", "method": method, "params": params, "id": 1 });
-
-        let request = Request::builder()
-            .method(Method::POST)
-            .uri("/rpc")
-            .header(HOST, "mixengine")
-            .header(CONTENT_TYPE, "application/json")
-            .body(Full::new(Bytes::from(
-                serde_json::to_vec(&body).expect("a request serialises"),
-            )))
-            .expect("a well formed request");
-
-        // Waited for rather than assumed: `hyper`'s dispatcher allows one request through before it
-        // has said it wants one, and every request after that only once the connection task has been
-        // polled since the last response. This suite reuses a connection — see `logs.rs`, where the
-        // race this avoids was found.
-        self.sender
-            .ready()
-            .await
-            .expect("the connection is still open");
-
-        let response = self.sender.send_request(request).await.expect("an answer");
-        assert_eq!(response.status(), StatusCode::OK, "{method}");
-
-        let bytes = response
-            .into_body()
-            .collect()
-            .await
-            .expect("a whole body")
-            .to_bytes();
-
-        serde_json::from_slice(&bytes).expect("a JSON-RPC response")
-    }
 }

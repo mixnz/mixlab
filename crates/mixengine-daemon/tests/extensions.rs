@@ -6,15 +6,8 @@
 //! from the first, so pointing the daemon at one points it at both.
 
 use std::path::Path;
-use std::process::{Child, Command, Stdio};
 
-use http_body_util::{BodyExt as _, Full};
-use hyper::body::Bytes;
-use hyper::header::{CONTENT_TYPE, HOST};
-use hyper::{Method, Request, StatusCode};
-use hyper_util::rt::TokioIo;
-use mixengine_platform::ipc::Connection;
-use mixengine_testkit::{Home, MockRegistry};
+use mixengine_testkit::{Client, Daemon, Home, MockRegistry};
 use serde_json::{Value, json};
 
 /// A registry document holding `entries`, generated at `generated_at` — the shape
@@ -57,7 +50,13 @@ impl Fixture {
         ));
 
         let home = Home::new();
-        let daemon = Daemon::start(&home, &registry);
+        let mut command = Daemon::command(env!("CARGO_BIN_EXE_mixengined"), &home);
+        command
+            .arg("--index-url")
+            .arg(registry.url())
+            .arg("--index-key")
+            .arg(registry.public_key());
+        let daemon = Daemon::spawn(command);
         home.wait_until_listening().await;
 
         Self {
@@ -69,96 +68,6 @@ impl Fixture {
 
     async fn client(&self) -> Client {
         Client::connect(&self.home).await
-    }
-}
-
-/// The daemon process, killed when the test ends however it ends.
-struct Daemon(Child);
-
-impl Daemon {
-    fn start(home: &Home, registry: &MockRegistry) -> Self {
-        Self(
-            Command::new(env!("CARGO_BIN_EXE_mixengined"))
-                .arg("--home")
-                .arg(home.path())
-                .arg("--index-url")
-                .arg(registry.url())
-                .arg("--index-key")
-                .arg(registry.public_key())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .expect("the daemon binary runs"),
-        )
-    }
-}
-
-impl Drop for Daemon {
-    fn drop(&mut self) {
-        // Killed rather than asked: a test that failed halfway must not leave a process holding the
-        // temporary home open, which on Windows would make the directory unremovable.
-        let _ = self.0.kill();
-        let _ = self.0.wait();
-    }
-}
-
-/// One connection to the daemon.
-struct Client {
-    sender: hyper::client::conn::http1::SendRequest<Full<Bytes>>,
-}
-
-impl Client {
-    async fn connect(home: &Home) -> Self {
-        let connection = Connection::connect(home.endpoint())
-            .await
-            .expect("the daemon is listening");
-
-        let (sender, driver) = hyper::client::conn::http1::handshake(TokioIo::new(connection))
-            .await
-            .expect("the daemon speaks HTTP/1.1");
-
-        tokio::spawn(driver);
-
-        Self { sender }
-    }
-
-    /// Call a method and hand back its `result`, insisting it succeeded.
-    async fn call(&mut self, method: &str, params: Value) -> Value {
-        let answer = self.ask(method, params).await;
-        assert!(answer.get("error").is_none(), "{method}: {answer}");
-
-        answer["result"].clone()
-    }
-
-    async fn ask(&mut self, method: &str, params: Value) -> Value {
-        let body = json!({ "jsonrpc": "2.0", "method": method, "params": params, "id": 1 });
-
-        let request = Request::builder()
-            .method(Method::POST)
-            .uri("/rpc")
-            .header(HOST, "mixengine")
-            .header(CONTENT_TYPE, "application/json")
-            .body(Full::new(Bytes::from(
-                serde_json::to_vec(&body).expect("a request serialises"),
-            )))
-            .expect("a well formed request");
-
-        self.sender
-            .ready()
-            .await
-            .expect("the connection is still open");
-
-        let response = self.sender.send_request(request).await.expect("an answer");
-        assert_eq!(response.status(), StatusCode::OK, "{method}");
-
-        let bytes = response
-            .into_body()
-            .collect()
-            .await
-            .expect("a whole body")
-            .to_bytes();
-
-        serde_json::from_slice(&bytes).expect("a JSON-RPC response")
     }
 }
 

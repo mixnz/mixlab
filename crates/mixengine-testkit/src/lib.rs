@@ -13,6 +13,10 @@
 //! test that proves php-fpm is up by connecting to its socket proves only that something is
 //! listening — see [`mod@fastcgi`].
 //!
+//! Two more were each copied into a dozen suites before they were written once here: a
+//! [`Daemon`] a test started, from the binary path the suite hands it, and the [`Client`] that
+//! talks to it over the API.
+//!
 //! **A dev-dependency and nothing else.** Nothing in this crate may end up inside `mixengined`,
 //! `mix` or `mixengine-elevate`, which `crates/mixengine-proto/tests/workspace_layering.rs` checks
 //! rather than trusts. That is what makes the exception in [`process`] affordable: it is a `#[cfg]`
@@ -25,7 +29,9 @@
 
 #![warn(missing_docs)]
 
+pub mod client;
 pub mod create;
+pub mod daemon;
 pub mod declare;
 pub mod extension;
 pub mod fastcgi;
@@ -37,7 +43,9 @@ pub mod service;
 pub mod signing;
 pub mod upgrade;
 
+pub use client::Client;
 pub use create::{call, create, create_blocking};
+pub use daemon::Daemon;
 pub use declare::{Service, VERSION};
 pub use home::Home;
 pub use package::{FakePackage, Packed, Packing};

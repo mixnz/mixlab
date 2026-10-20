@@ -6,16 +6,9 @@
 //! it away and says so. The PHP is a row and a pool row (`declare::php_pool`), not a download.
 
 use std::net::{Ipv4Addr, SocketAddr, TcpStream};
-use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
-use http_body_util::{BodyExt as _, Full};
-use hyper::body::Bytes;
-use hyper::header::{CONTENT_TYPE, HOST};
-use hyper::{Method, Request, StatusCode};
-use hyper_util::rt::TokioIo;
-use mixengine_platform::ipc::Connection;
-use mixengine_testkit::{Home, declare};
+use mixengine_testkit::{Client, Daemon, Home, declare};
 use serde_json::{Value, json};
 
 /// How long an install of a directory copy may take.
@@ -29,7 +22,7 @@ struct Fixture {
 impl Fixture {
     async fn start() -> Self {
         let home = Home::new();
-        let daemon = Daemon::start(&home);
+        let daemon = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
         home.wait_until_listening().await;
 
         Self {
@@ -43,93 +36,13 @@ impl Fixture {
     }
 }
 
-struct Daemon(Child);
-
-impl Daemon {
-    fn start(home: &Home) -> Self {
-        Self(
-            Command::new(env!("CARGO_BIN_EXE_mixengined"))
-                .arg("--home")
-                .arg(home.path())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .expect("the daemon binary runs"),
-        )
-    }
-}
-
-impl Drop for Daemon {
-    fn drop(&mut self) {
-        let _ = self.0.kill();
-        let _ = self.0.wait();
-    }
-}
-
-/// One connection to the daemon. The same helpers `tests/runtimes.rs` carries.
-struct Client {
-    sender: hyper::client::conn::http1::SendRequest<Full<Bytes>>,
-}
-
-impl Client {
-    async fn connect(home: &Home) -> Self {
-        let connection = Connection::connect(home.endpoint())
-            .await
-            .expect("the daemon is listening");
-
-        let (sender, driver) = hyper::client::conn::http1::handshake(TokioIo::new(connection))
-            .await
-            .expect("the daemon speaks HTTP/1.1");
-
-        tokio::spawn(driver);
-
-        Self { sender }
-    }
-
-    async fn call(&mut self, method: &str, params: Value) -> Value {
-        let answer = self.ask(method, params).await;
-        assert!(answer.get("error").is_none(), "{method}: {answer}");
-        answer["result"].clone()
-    }
-
-    async fn refuse(&mut self, method: &str, params: Value) -> Value {
-        let answer = self.ask(method, params).await;
-        assert!(answer.get("result").is_none(), "{method}: {answer}");
-        answer["error"].clone()
-    }
-
-    async fn ask(&mut self, method: &str, params: Value) -> Value {
-        let body = json!({ "jsonrpc": "2.0", "method": method, "params": params, "id": 1 });
-
-        let request = Request::builder()
-            .method(Method::POST)
-            .uri("/rpc")
-            .header(HOST, "mixengine")
-            .header(CONTENT_TYPE, "application/json")
-            .body(Full::new(Bytes::from(
-                serde_json::to_vec(&body).expect("a request serialises"),
-            )))
-            .expect("a well formed request");
-
-        self.sender
-            .ready()
-            .await
-            .expect("the connection is still open");
-
-        let response = self.sender.send_request(request).await.expect("an answer");
-        assert_eq!(response.status(), StatusCode::OK, "{method}");
-
-        let bytes = response
-            .into_body()
-            .collect()
-            .await
-            .expect("a whole body")
-            .to_bytes();
-
-        serde_json::from_slice(&bytes).expect("a JSON-RPC response")
-    }
-
+/// What this suite asks of a client beyond a call.
+trait Jobs {
     /// Wait for a job to end, and answer with it as it ended.
+    async fn finished(&mut self, job: Value) -> Value;
+}
+
+impl Jobs for Client {
     async fn finished(&mut self, job: Value) -> Value {
         let deadline = tokio::time::Instant::now() + PATIENCE;
 
@@ -676,12 +589,12 @@ async fn a_running_service_extension_is_stopped_by_its_uninstall() {
 async fn a_deleted_pool_gives_its_activators_address_back() {
     let home = Home::new();
     {
-        let _first = Daemon::start(&home);
+        let _first = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
         home.wait_until_listening().await;
         declare::php_pool(&home.database_file(), "8.3.34").await;
     }
 
-    let _daemon = Daemon::start(&home);
+    let _daemon = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
     home.wait_until_listening().await;
     let mut client = Client::connect(&home).await;
 

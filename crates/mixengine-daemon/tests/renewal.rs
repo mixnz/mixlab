@@ -9,98 +9,12 @@
 //! it and start another against the same home.
 
 use std::path::Path;
-use std::process::{Child, Command, Stdio};
 
-use http_body_util::{BodyExt as _, Full};
-use hyper::body::Bytes;
-use hyper::header::{CONTENT_TYPE, HOST};
-use hyper::{Method, Request, StatusCode};
-use hyper_util::rt::TokioIo;
-use mixengine_platform::ipc::Connection;
-use mixengine_testkit::Home;
-use serde_json::{Value, json};
+use mixengine_testkit::{Client, Daemon, Home};
+use serde_json::json;
 
 /// What the renewal loop says once it has replaced a certificate and handed it to the generator.
 const RENEWED: &str = "renewed certificates and told the front end";
-
-struct Daemon(Child);
-
-impl Daemon {
-    fn start(home: &Home) -> Self {
-        Self(
-            Command::new(env!("CARGO_BIN_EXE_mixengined"))
-                .arg("--home")
-                .arg(home.path())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .expect("the daemon binary runs"),
-        )
-    }
-}
-
-impl Drop for Daemon {
-    fn drop(&mut self) {
-        // Killed rather than asked, on `tests/sites.rs`' reasoning: a test that failed halfway must
-        // not leave a process holding the temporary home open.
-        let _ = self.0.kill();
-        let _ = self.0.wait();
-    }
-}
-
-/// One connection to the daemon. The same helpers `tests/sites.rs` carries.
-struct Client {
-    sender: hyper::client::conn::http1::SendRequest<Full<Bytes>>,
-}
-
-impl Client {
-    async fn connect(home: &Home) -> Self {
-        let connection = Connection::connect(home.endpoint())
-            .await
-            .expect("the daemon is listening");
-
-        let (sender, driver) = hyper::client::conn::http1::handshake(TokioIo::new(connection))
-            .await
-            .expect("the daemon speaks HTTP/1.1");
-
-        tokio::spawn(driver);
-
-        Self { sender }
-    }
-
-    async fn call(&mut self, method: &str, params: Value) -> Value {
-        let body = json!({ "jsonrpc": "2.0", "method": method, "params": params, "id": 1 });
-
-        let request = Request::builder()
-            .method(Method::POST)
-            .uri("/rpc")
-            .header(HOST, "mixengine")
-            .header(CONTENT_TYPE, "application/json")
-            .body(Full::new(Bytes::from(
-                serde_json::to_vec(&body).expect("a request serialises"),
-            )))
-            .expect("a well formed request");
-
-        self.sender
-            .ready()
-            .await
-            .expect("the connection is still open");
-
-        let response = self.sender.send_request(request).await.expect("an answer");
-        assert_eq!(response.status(), StatusCode::OK, "{method}");
-
-        let bytes = response
-            .into_body()
-            .collect()
-            .await
-            .expect("a whole body")
-            .to_bytes();
-
-        let answer: Value = serde_json::from_slice(&bytes).expect("a JSON-RPC response");
-        assert!(answer.get("error").is_none(), "{method}: {answer}");
-        answer["result"].clone()
-    }
-}
 
 /// A directory to register a project against.
 fn repository() -> tempfile::TempDir {
@@ -204,7 +118,7 @@ async fn a_site_with_https(home: &Home, repository: &Path) {
 #[tokio::test]
 async fn a_running_daemon_renews_a_certificate_that_is_running_out() {
     let home = Home::configured("[certs]\nrenew_check_seconds = 1\n");
-    let _daemon = Daemon::start(&home);
+    let _daemon = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
     home.wait_until_listening().await;
 
     let repository = repository();
@@ -272,7 +186,7 @@ fn said_after(log: &str, mark: usize, wanted: &str) -> bool {
 #[tokio::test]
 async fn a_start_issues_for_a_site_whose_certificate_is_missing() {
     let home = Home::new();
-    let daemon = Daemon::start(&home);
+    let daemon = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
     home.wait_until_listening().await;
 
     let repository = repository();
@@ -287,10 +201,10 @@ async fn a_start_issues_for_a_site_whose_certificate_is_missing() {
     std::fs::remove_file(&certificate).expect("the certificate is removed");
     std::fs::remove_file(&key).expect("the key is removed");
 
-    drop(daemon);
+    daemon.kill();
     home.wait_until_gone().await;
 
-    let _second = Daemon::start(&home);
+    let _second = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
 
     // **Waited for by the log and not by the endpoint.** The listener is bound before the start
     // issues anything, so a connection can be answered while this is still to come. The line

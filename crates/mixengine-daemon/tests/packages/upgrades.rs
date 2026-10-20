@@ -179,7 +179,7 @@ impl Fixture {
         registry.publish(&published);
 
         let home = Home::new();
-        let daemon = Daemon::start(&home, &registry);
+        let daemon = started(&home, &registry);
         home.wait_until_listening().await;
 
         Self {

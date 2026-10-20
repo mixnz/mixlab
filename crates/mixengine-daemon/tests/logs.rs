@@ -11,17 +11,14 @@
 //! reason `crates/mixengine-cli/tests/service.rs` states: a release daemon has nothing that can run
 //! one, and the tests would fail on a service that never starts rather than on what they assert.
 
-use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
 use http_body_util::{BodyExt as _, Full};
 use hyper::body::Bytes;
 use hyper::header::{CONTENT_TYPE, HOST};
 use hyper::{Method, Request, StatusCode};
-use hyper_util::rt::TokioIo;
-use mixengine_platform::ipc::Connection;
 use mixengine_proto::LogFrame;
-use mixengine_testkit::{Home, Service};
+use mixengine_testkit::{Client, Daemon, Home, Service};
 
 /// How long a stream is given to say something before the test gives up on it.
 ///
@@ -36,7 +33,7 @@ const PATIENCE: Duration = Duration::from_secs(20);
 /// decides how long they take rather than whether they pass.
 async fn running(id: &str) -> (Home, Daemon) {
     let home = Home::new();
-    let daemon = Daemon::start(&home);
+    let daemon = Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home);
     home.wait_until_listening().await;
 
     // The migrations that create the schema run when the daemon opens the home, so there is nothing
@@ -52,99 +49,13 @@ async fn running(id: &str) -> (Home, Daemon) {
     (home, daemon)
 }
 
-/// The daemon process, killed when the test ends however it ends.
-struct Daemon(Child);
-
-impl Daemon {
-    fn start(home: &Home) -> Self {
-        Self(
-            Command::new(env!("CARGO_BIN_EXE_mixengined"))
-                .arg("--home")
-                .arg(home.path())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .expect("the daemon binary runs"),
-        )
-    }
-}
-
-impl Drop for Daemon {
-    fn drop(&mut self) {
-        // Killed rather than asked: a test that failed halfway must not leave a process holding the
-        // temporary home open, which on Windows would make the directory unremovable.
-        let _ = self.0.kill();
-        let _ = self.0.wait();
-    }
-}
-
-/// One connection to the daemon, for a request whose answer is read as it arrives.
-struct Client {
-    sender: hyper::client::conn::http1::SendRequest<Full<Bytes>>,
-}
-
-impl Client {
-    async fn connect(home: &Home) -> Self {
-        let connection = Connection::connect(home.endpoint())
-            .await
-            .expect("the daemon is listening");
-
-        let (sender, driver) = hyper::client::conn::http1::handshake(TokioIo::new(connection))
-            .await
-            .expect("the daemon speaks HTTP/1.1");
-
-        tokio::spawn(driver);
-
-        Self { sender }
-    }
-
-    /// Call a JSON-RPC method and hand back its `result`.
-    async fn call(&mut self, method: &str, params: serde_json::Value) -> serde_json::Value {
-        let body = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params,
-            "id": 1,
-        });
-
-        let request = Request::builder()
-            .method(Method::POST)
-            .uri("/rpc")
-            .header(HOST, "mixengine")
-            .header(CONTENT_TYPE, "application/json")
-            .body(Full::new(Bytes::from(
-                serde_json::to_vec(&body).expect("a request serialises"),
-            )))
-            .expect("a well formed request");
-
-        // Waited for rather than assumed: `hyper`'s dispatcher allows one request through before
-        // it has said it wants one, and every request after that only once the connection task has
-        // been polled since the last response. This suite reuses a connection, so sending straight
-        // away raced that task and failed with `canceled: connection was not ready` — rarely, and
-        // more often on the machine with the least to spare, which is CI.
-        self.sender
-            .ready()
-            .await
-            .expect("the connection is still open");
-
-        let response = self.sender.send_request(request).await.expect("an answer");
-        assert_eq!(response.status(), StatusCode::OK, "{method}");
-
-        let bytes = response
-            .into_body()
-            .collect()
-            .await
-            .expect("a whole body")
-            .to_bytes();
-        let answer: serde_json::Value =
-            serde_json::from_slice(&bytes).expect("a JSON-RPC response");
-
-        assert!(answer.get("error").is_none(), "{method}: {answer}");
-
-        answer["result"].clone()
-    }
-
+/// What this suite asks of a client beyond a call.
+trait Logs {
     /// Open `GET /logs/…` and read it as it arrives.
+    async fn logs(&mut self, query: &str) -> Stream;
+}
+
+impl Logs for Client {
     async fn logs(&mut self, query: &str) -> Stream {
         let request = Request::builder()
             .method(Method::GET)
@@ -153,17 +64,7 @@ impl Client {
             .body(Full::new(Bytes::new()))
             .expect("a well formed request");
 
-        // Waited for rather than assumed: `hyper`'s dispatcher allows one request through before
-        // it has said it wants one, and every request after that only once the connection task has
-        // been polled since the last response. This suite reuses a connection, so sending straight
-        // away raced that task and failed with `canceled: connection was not ready` — rarely, and
-        // more often on the machine with the least to spare, which is CI.
-        self.sender
-            .ready()
-            .await
-            .expect("the connection is still open");
-
-        let response = self.sender.send_request(request).await.expect("an answer");
+        let response = self.send(request).await;
 
         assert_eq!(response.status(), StatusCode::OK, "{query}");
         assert_eq!(
