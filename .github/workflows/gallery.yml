@@ -50,6 +50,8 @@ permissions: {}
 jobs:
   tell-the-packaging-repository:
     name: ask mixengine-packages to check what it published
+    # The token lives in this environment, which only `master` reaches.
+    environment: packages
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
