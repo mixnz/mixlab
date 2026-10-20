@@ -15,7 +15,7 @@ pub(crate) mod php_site;
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Output, Stdio};
+use std::process::{Command, Output, Stdio};
 use std::time::Duration;
 
 use mixengine_testkit::home::STARTUP;
@@ -194,17 +194,12 @@ impl Home {
     /// A daemon started with `variables` removed from its environment — a test that is about what
     /// the home remembers must not inherit what CI sets for the whole run (T194).
     pub(crate) fn start_daemon_without(&self, variables: &[&str]) -> Daemon {
-        let mut command = Command::new(daemon_binary());
-        command
-            .arg("--home")
-            .arg(self.path())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
+        let mut command = Daemon::command(daemon_binary(), &self.0);
         for variable in variables {
             command.env_remove(variable);
         }
 
-        let daemon = Daemon(command.spawn().expect("the daemon binary runs"));
+        let daemon = Daemon::spawn(command);
         self.wait_until_listening();
         daemon
     }
@@ -230,15 +225,10 @@ impl Home {
     }
 
     fn spawn_daemon_from(&self, binary: &Path, arguments: &[&str]) -> Daemon {
-        let mut command = Command::new(binary);
-        command
-            .arg("--home")
-            .arg(self.path())
-            .args(arguments)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
+        let mut command = Daemon::command(binary, &self.0);
+        command.args(arguments);
 
-        let daemon = Daemon(command.spawn().expect("the daemon binary runs"));
+        let daemon = Daemon::spawn(command);
         self.wait_until_listening();
         daemon
     }
@@ -317,45 +307,9 @@ impl Drop for Home {
     }
 }
 
-/// A daemon this test started and is responsible for.
-pub(crate) struct Daemon(Child);
-
-impl Daemon {
-    /// The process it is running as.
-    pub(crate) fn pid(&self) -> u32 {
-        self.0.id()
-    }
-
-    /// Wait for it to end **by itself**, and say whether it did.
-    ///
-    /// The one assertion `mix daemon stop` cannot make from its own output: the answer arrives while
-    /// the daemon is still there, on purpose, so what proves a shutdown happened is this process
-    /// leaving. Polled rather than `wait`ed on, because a daemon that never goes has to fail this
-    /// test rather than hang the suite — and because the kill in [`Drop`] would otherwise make every
-    /// run look identical.
-    pub(crate) fn wait_until_gone(&mut self) -> bool {
-        let deadline = std::time::Instant::now() + mixengine_testkit::home::SHUTDOWN;
-
-        while std::time::Instant::now() < deadline {
-            if self.0.try_wait().is_ok_and(|exit| exit.is_some()) {
-                return true;
-            }
-
-            std::thread::sleep(Duration::from_millis(25));
-        }
-
-        false
-    }
-}
-
-impl Drop for Daemon {
-    fn drop(&mut self) {
-        // Asked to stop first, so the services it started stop with it — on macOS a killed daemon
-        // leaves them running for good. Killed if it does not go: every test wants its daemon gone
-        // whatever state it left it in. See `end_daemon`.
-        mixengine_testkit::end_daemon(&mut self.0);
-    }
-}
+/// A daemon this test started and is responsible for: the testkit's, asked to stop when it drops
+/// and killed if it does not go.
+pub(crate) use mixengine_testkit::Daemon;
 
 /// The `mixengined` built alongside this `mix`.
 ///
