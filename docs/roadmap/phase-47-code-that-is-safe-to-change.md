@@ -141,7 +141,7 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
 
 ## Found after
 
-- [ ] **T209d** One daemon harness for every integration suite. The struct that starts
+- [x] **T209d** One daemon harness for every integration suite. The struct that starts
       `mixengined --home <home>` with `stdout`/`stderr` to null, and kills it in `Drop`, is copied
       almost line for line into about 20 test files (`fn start(` 28 times, `fn drop(` 22 times;
       `crates/mixengine-daemon/tests/idle.rs:44` and `limits.rs:381` are identical). `connect`,
@@ -151,6 +151,14 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       &Path, home: &Home)` takes the path as an argument, and each suite passes its own `env!`. A
       move and only a move: test counts unchanged, and no suite keeps a copy. Documented in
       `testing.md`, *Fixtures*, with this task.
+      Design:
+      [2026-10-21-t209d-one-daemon-harness-design.md](../specs/2026-10-21-t209d-one-daemon-harness-design.md).
+      `Daemon` and `Client` live in `mixengine-testkit`; thirteen suites in `mixengine-daemon/tests/`
+      and the CLI harness use them, 1,286 lines shorter between them for 271 in the testkit. The
+      test lists are the same name for name. One behaviour change, in teardown: every dropped
+      `Daemon` is asked to stop before it is killed, as `limits.rs` and the CLI already did; the two
+      tests about what a start after a crash does call `Daemon::kill`. `lifecycle.rs` and the `api`
+      suite keep their own on purpose.
 - [ ] **T209e** The shim compiles only what it runs. `mixengine-shim` runs on every `php`, `node`,
       `python` a user types. It depends on `mixengine-core`, which brings `sqlx` and `reqwest`, so
       its normal dependency tree is 288 crates against `mix`'s 110, and the debug binary is

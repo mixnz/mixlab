@@ -112,6 +112,16 @@ building the binary at all — the one thing `FakeService::program` needs to be 
   `crates/mixengine-daemon/tests/lifecycle.rs` holds all of them against `Paths` at once. The log is
   the one that needs the test: `Paths::new` refuses to let a `[paths]` override move `run/`, so the
   first two cannot drift by accident, while `logs/` has no such guard.
+- `mixengine_testkit::Daemon` and `mixengine_testkit::Client` — a `mixengined` a test started, and
+  one HTTP/1.1 connection to it with `ask`, `call`, `refuse` and `send` for a stream. The binary
+  is an argument, `Daemon::start(env!("CARGO_BIN_EXE_mixengined"), &home)`, because
+  `CARGO_BIN_EXE_…` reaches only a test of the package that builds it; before it was one, about a
+  dozen suites carried a copy of both. Dropping a `Daemon` asks it to stop and kills it only if it
+  does not go (`end_daemon`, for its macOS reason); a test about what the *next* start does calls
+  `Daemon::kill` instead. A `Client` whose request gets no answer prints the daemon's log, and
+  `Home::daemon_stderr_file` too when a suite pointed stderr there. `lifecycle.rs` keeps its own
+  `Foreground`, which kills on purpose and holds a `--detach` that is not the daemon, and the `api`
+  suite keeps its own, whose home has no `[dns]` seed.
 - `mixengine_testkit::FakeService` + the `fakeservice` binary — the configurable child process
   (slow start, never ready, exit code, ignores a request to stop, leaves an orphan). Every mode is
   covered by `crates/mixengine-testkit/tests/fakeservice.rs`: a fixture that quietly stopped
