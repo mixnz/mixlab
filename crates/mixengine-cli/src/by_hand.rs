@@ -7,7 +7,7 @@
 //! names, so a compromised daemon cannot choose what a person types their password for.
 
 use std::io::Write as _;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use mixengine_proto::{
@@ -92,29 +92,46 @@ pub(crate) fn route(
     .with_hint(format!("run it again from a terminal:  {rerun}")))
 }
 
-/// Refuse to put `helper` behind `sudo` unless it is the installed one, and root's.
+/// Refuse to put `helper` behind `sudo` unless it is at one of the `allowed` places, and root's.
+///
+/// **Both, and the first is not optional.** Root owns `/usr/bin/bash` too, and handed a request it
+/// would run it as a script. The places are the ones this machine compiles in: where the system
+/// runs the helper, and where a release ships a copy beside the daemon, which the daemon falls back
+/// to for a batch the installed helper cannot read.
 ///
 /// # Errors
 ///
-/// `privileged_required`, naming the one path that would be run.
-pub(crate) fn trusted(helper: &str, installed: &Path, root_owns_it: bool) -> Result<(), Error> {
-    if Path::new(helper) != installed {
+/// `privileged_required`, naming where a helper would be trusted.
+pub(crate) fn trusted(
+    helper: &str,
+    allowed: &[PathBuf],
+    root_owns: impl Fn(&Path) -> bool,
+) -> Result<(), Error> {
+    let helper = Path::new(helper);
+
+    if !allowed.iter().any(|place| place == helper) {
+        let places: Vec<String> = allowed
+            .iter()
+            .map(|place| place.display().to_string())
+            .collect();
+
         return Err(Error::new(
             ErrorCode::PrivilegedRequired,
             format!(
-                "a terminal runs only the helper installed at {}, and this daemon would use {helper}",
-                installed.display()
+                "a terminal runs only a helper a release installed ({}), and this daemon would use {}",
+                places.join(", "),
+                helper.display()
             ),
         )
         .with_hint("install a MixEngine release, or run this where a dialog can be raised"));
     }
 
-    if !root_owns_it {
+    if !root_owns(helper) {
         return Err(Error::new(
             ErrorCode::PrivilegedRequired,
             format!(
-                "the helper at {} is not owned by root, so it is not run with sudo",
-                installed.display()
+                "the helper at {} is not root's alone, so it is not run with sudo",
+                helper.display()
             ),
         ));
     }
@@ -122,11 +139,15 @@ pub(crate) fn trusted(helper: &str, installed: &Path, root_owns_it: bool) -> Res
     Ok(())
 }
 
+/// Where the window's bundle is named on macOS — `mixengine_core::window::BUNDLE`, spelled here
+/// because this crate reaches no further into the workspace than the platform layer.
+const BUNDLE: &str = "MixLab.app";
+
 /// [`trusted`], asked of this machine.
 ///
 /// # Errors
 ///
-/// As [`trusted`], and when this machine will not name or read its installed helper.
+/// As [`trusted`], and when this machine will not name its installed helper.
 pub(crate) fn trusted_here(helper: Option<&str>) -> Result<(), Error> {
     let installed = mixengine_platform::install::helper_path().map_err(|error| {
         Error::new(
@@ -135,14 +156,30 @@ pub(crate) fn trusted_here(helper: Option<&str>) -> Result<(), Error> {
         )
     })?;
 
-    let root_owns_it =
-        mixengine_platform::elevated::owner_of(&installed).is_ok_and(|owner| owner.is_superuser());
+    // Beside this `mix`, which a release puts beside `mixengined`: the same list the daemon's
+    // fallback is read from.
+    let mut allowed = vec![installed];
+    if let Ok(program) = std::env::current_exe() {
+        allowed.extend(mixengine_platform::install::helper_sources(
+            &program, BUNDLE,
+        ));
+    }
 
-    trusted(
-        helper.unwrap_or("no helper at all"),
-        &installed,
-        root_owns_it,
-    )
+    trusted(helper.unwrap_or("no helper at all"), &allowed, root_alone)
+}
+
+/// Does root own `path`, with nobody else able to write it or the directory it is in?
+fn root_alone(path: &Path) -> bool {
+    use mixengine_platform::elevated::{others_can_write, owner_of};
+
+    let roots = |path: &Path| owner_of(path).is_ok_and(|owner| owner.is_superuser());
+    let closed = |path: &Path| others_can_write(path).is_ok_and(|open| !open);
+
+    roots(path)
+        && closed(path)
+        && path
+            .parent()
+            .is_some_and(|directory| roots(directory) && closed(directory))
 }
 
 /// What a person would type: the line `mix elevation status` shows while a grant waits.
@@ -303,7 +340,6 @@ async fn cancel(client: &mut Client, job: JobId) {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
 
     use mixengine_proto::{ByHand, ElevationStatus, ErrorCode, JobId};
 
@@ -405,50 +441,50 @@ mod tests {
         assert!(route(&status(false), windows, false, "mix elevation grant").is_err());
     }
 
-    #[test]
-    fn the_installed_root_owned_helper_is_trusted() {
-        let installed = Path::new("/usr/local/libexec/mixengine/mixengine-elevate");
+    const INSTALLED: &str = "/usr/local/libexec/mixengine/mixengine-elevate";
+    const SHIPPED: &str = "/usr/bin/mixengine-elevate";
 
-        assert!(
-            trusted(
-                "/usr/local/libexec/mixengine/mixengine-elevate",
-                installed,
-                true
-            )
-            .is_ok()
-        );
+    /// The two places a release puts the helper: where the system runs it, and beside the daemon.
+    fn allowed() -> Vec<std::path::PathBuf> {
+        vec![INSTALLED.into(), SHIPPED.into()]
     }
 
     #[test]
-    fn a_helper_that_is_not_the_installed_one_is_refused() {
-        let installed = Path::new("/usr/local/libexec/mixengine/mixengine-elevate");
+    fn the_installed_root_owned_helper_is_trusted() {
+        assert!(trusted(INSTALLED, &allowed(), |_| true).is_ok());
+    }
 
+    /// A batch the installed helper cannot read is run by the copy the package put beside the
+    /// daemon, and a package's files are root's as much as the installed one is.
+    #[test]
+    fn the_root_owned_copy_shipped_beside_the_daemon_is_trusted() {
+        assert!(trusted(SHIPPED, &allowed(), |_| true).is_ok());
+    }
+
+    #[test]
+    fn a_helper_at_neither_place_is_refused() {
         let error = trusted(
             "/home/me/mixlab/target/debug/mixengine-elevate",
-            installed,
-            true,
+            &allowed(),
+            |_| true,
         )
         .expect_err("a path from the daemon is not run as root");
 
         assert_eq!(error.code, ErrorCode::PrivilegedRequired);
-        assert!(
-            error.to_string().contains(&installed.display().to_string()),
-            "{error}"
-        );
+        assert!(error.to_string().contains(INSTALLED), "{error}");
+    }
+
+    /// Root owning a file is not enough on its own: `/usr/bin/bash` is root's, and handed a request
+    /// it would run it as a script.
+    #[test]
+    fn a_root_owned_program_that_is_not_a_helper_is_refused() {
+        assert!(trusted("/usr/bin/bash", &allowed(), |_| true).is_err());
     }
 
     #[test]
-    fn an_installed_helper_root_does_not_own_is_refused() {
-        let installed = Path::new("/usr/local/libexec/mixengine/mixengine-elevate");
-
-        assert!(
-            trusted(
-                "/usr/local/libexec/mixengine/mixengine-elevate",
-                installed,
-                false
-            )
-            .is_err()
-        );
+    fn a_helper_root_does_not_own_is_refused() {
+        assert!(trusted(INSTALLED, &allowed(), |_| false).is_err());
+        assert!(trusted(SHIPPED, &allowed(), |_| false).is_err());
     }
 
     #[test]
