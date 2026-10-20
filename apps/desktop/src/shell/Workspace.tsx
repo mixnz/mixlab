@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Button from "../components/Button";
 import LoadingOverlay from "../components/LoadingOverlay";
 import { DialogHost } from "../components/Modal";
@@ -9,49 +9,29 @@ import TabNotice from "./components/TabNotice";
 import UpdatePanel from "./components/UpdatePanel";
 import RemoveDialog from "./components/RemoveDialog";
 import ContextMenu from "../components/ContextMenu";
-import { moveTab, Tab, TabAction, tabKeyDown, TabStrip, TabTitle, useTabReorder } from "../components/TabStrip";
+import { Tab, TabAction, tabKeyDown, TabStrip, TabTitle, useTabReorder } from "../components/TabStrip";
 import { CloudDownloadIcon, CloudUploadIcon, PlusIcon, SettingsIcon } from "../icons";
 import { useScrollAcceleration } from "../core/scroll";
 import { useShortcut, useShortcutDispatcher, useShortcuts } from "../core/shortcuts";
 import { useTheme } from "./theme";
 import { useTranslation } from "../i18n";
 import { useUpdates } from "./update";
-import type { TabBadge } from "./module";
-import { onTabRequest, takeTabRequests, type TabRequest } from "./launch";
-import { readSession, writeSession } from "./session";
-import {
-  firstTabOfModule,
-  idsKey,
-  idsOf,
-  openableModules,
-  rebadgeTab,
-  restateTab,
-  retitleTab,
-  tabIdAtOffset,
-  type TabInfo,
-} from "./tabs";
+import { firstTabOfModule, idsKey, idsOf, openableModules, tabIdAtOffset } from "./tabs";
 import { MODULES, moduleById } from "./registry";
-import { defaultModuleId, visibleModules, withModule } from "./profiles";
+import { defaultModuleId, visibleModules } from "./profiles";
 import { newModuleTabId, shortcutsFor } from "./shortcuts";
 import { useSyncActivity } from "./sync/activity";
 import { closingSoon } from "./sync/closing";
 import { traySections } from "./tray/sections";
 import { useSyncClosing } from "./workspace/useSyncClosing";
 import { useWindowChrome } from "./workspace/useWindowChrome";
+import { forgetNotice, useTabs } from "./workspace/useTabs";
+import { useTabRequests } from "./workspace/useTabRequests";
 
 interface WorkspaceProps {
   /** The module ids this window draws — `shell/profiles.ts`. */
   enabled: string[];
   onEnabledChange: (enabled: string[]) => void;
-}
-
-/** `notices` without `tabId`, or `notices` itself when there was nothing under it — so a close
- *  that had no notice to forget does not make React re-render the world. */
-function forgetNotice(notices: Record<string, string>, tabId: string): Record<string, string> {
-  if (!(tabId in notices)) return notices;
-  const next = { ...notices };
-  delete next[tabId];
-  return next;
 }
 
 function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
@@ -71,29 +51,20 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
 
   const syncClosing = useSyncClosing();
 
-  const newTab = useCallback(
-    (moduleId: string = defaultModuleId(visible), state?: unknown): TabInfo => {
-      const def = moduleById(moduleId);
-      return { id: crypto.randomUUID(), moduleId, title: t(def.defaultTitleKey), badges: [], state };
-    },
-    [visible, t],
-  );
-
-  /* What was open when the app was last closed, read once on the way up. The strip and, per tab,
-     one opaque value the module behind it asked to have kept — the shell carries it and does not
-     read it. What a module does with its own is up to the module, and it does not do it until the
-     tab is first looked at. See `shell/session.ts`. */
-  const [restored] = useState(() => readSession(visibleIds));
-  const [tabs, setTabs] = useState<TabInfo[]>(() =>
-    // Badges are never stored; the module reports its own the moment it mounts.
-    restored ? restored.tabs.map((tab) => ({ ...tab, badges: [] })) : [newTab()],
-  );
-  const [activeId, setActiveId] = useState(() => restored?.activeId ?? tabs[0].id);
-  /* The tabs that have been in front at least once this launch — the only ones rendered.
-     Restoring six tabs by mounting six panes would open six connection forms and start six
-     shells at launch, for tabs the user may never come back to; the rest of them sit on the strip
-     and wait, and mount the first time they are looked at. */
-  const [mounted, setMounted] = useState<string[]>(() => [activeId]);
+  const {
+    tabs,
+    activeId,
+    setActiveId,
+    mounted,
+    enabledFor,
+    setEnabledFor,
+    openTab,
+    closeTab,
+    reorderTabs,
+    renameTab,
+    setTabBadges,
+    setTabState,
+  } = useTabs({ visible, visibleIds });
 
   /* Which of the visible modules a new tab can still be opened of — `shell/tabs.ts`. Everything in
      this file that offers one reads this and not `visible`: the `[+]` button, the menu behind it,
@@ -128,12 +99,6 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
      opens a tab outright then, exactly as it did before there was a registry. */
   const [moduleMenu, setModuleMenu] = useState<{ x: number; y: number } | null>(null);
 
-  /* Tabs that were opened by turning their module on — tab id to module id. `Workspace` state and
-     not the session's per-tab slot: that slot belongs to the module (`shell/module.ts`), and by
-     the next launch the sentence is false anyway — the module is simply enabled, and was when the
-     session was written. T110's D2. */
-  const [enabledFor, setEnabledFor] = useState<Record<string, string>>({});
-
   useScrollAcceleration();
   useShortcutDispatcher(shortcuts);
   /* Always listening — the tab bar is there on every screen the app has. `app.newTab` is the one
@@ -158,15 +123,6 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
     })),
   );
 
-  /* `state` is only ever given by the backend's tab requests below: it is what the module behind
-     the tab reads on mount, through the same `restored` prop a tab from the last session gets. */
-  function openTab(moduleId?: string, state?: unknown): TabInfo {
-    const tab = newTab(moduleId, state);
-    setTabs((prev) => [...prev, tab]);
-    setActiveId(tab.id);
-    return tab;
-  }
-
   /* What a module's own number key does: open a tab of it, or go to the tab it already has and
      cannot have a second of. The second branch is only ever reached by a `singleTab` module — the
      other four are openable whatever is on the strip — and it is what keeps `Ctrl/Cmd+1` from being
@@ -181,138 +137,9 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
     if (open !== undefined) setActiveId(open);
   }
 
-  function closeTab(id: string) {
-    setTabs((prev) => {
-      const next = prev.filter((t) => t.id !== id);
-      return next.length > 0 ? next : [newTab()];
-    });
-    setMounted((prev) => prev.filter((mountedId) => mountedId !== id));
-    setEnabledFor((prev) => forgetNotice(prev, id));
-  }
+  const reorder = useTabReorder(reorderTabs);
 
-  /* Dragging a tab along the strip. The order is the tab list itself, so a move is a new list and
-     everything that follows the list follows the move — `Ctrl+Tab` walks the strip as it is drawn,
-     and the session file is written the moment it changes. */
-  const reorder = useTabReorder((fromId, toId, side) => {
-    setTabs((prev) => moveTab(prev, fromId, toId, side));
-  });
-
-  function renameTab(id: string, title: string) {
-    setTabs((prev) => retitleTab(prev, id, title));
-  }
-
-  function setTabBadges(id: string, badges: TabBadge[]) {
-    setTabs((prev) => rebadgeTab(prev, id, badges));
-  }
-
-  function setTabState(id: string, state: unknown) {
-    setTabs((prev) => restateTab(prev, id, state));
-  }
-
-  // Keeps activeId pointing at a real tab whenever the active one disappears
-  // (e.g. closing the last remaining tab spawns a fresh one that must be focused).
-  useLayoutEffect(() => {
-    if (!tabs.some((t) => t.id === activeId)) {
-      setActiveId(tabs[tabs.length - 1].id);
-    }
-  }, [tabs, activeId]);
-
-  // Whatever is in front is mounted, and stays mounted for the rest of the launch — every pane in
-  // the app is written on the understanding that leaving a tab does not throw its state away.
-  useEffect(() => {
-    setMounted((prev) => (prev.includes(activeId) ? prev : [...prev, activeId]));
-  }, [activeId]);
-
-  /* A module turned off takes its tabs with it. An effect on the visible list rather than a branch
-     inside the Settings handler, because there is more than one way that list changes — the three
-     presets, the five checkboxes, and later T110's handoff — and a rule enforced at one call site
-     is a rule the second call site breaks. The confirmation happens before the setting changes, in
-     the Settings pane; by the time this runs the answer was yes.
-
-     Both updaters return their input unchanged when there is nothing to drop, so this does not
-     rewrite the session on every render it happens to run in. Closing the last tab opens a fresh
-     one, exactly as `closeTab` does. `activeId` needs nothing: the layout effect above already
-     keeps it pointing at a tab that exists. */
-  useEffect(() => {
-    setTabs((prev) => {
-      const kept = prev.filter((tab) => visibleIds.includes(tab.moduleId));
-      if (kept.length === prev.length) return prev;
-      return kept.length > 0 ? kept : [newTab()];
-    });
-    setMounted((prev) => {
-      const kept = prev.filter((id) =>
-        tabs.some((tab) => tab.id === id && visibleIds.includes(tab.moduleId)),
-      );
-      return kept.length === prev.length ? prev : kept;
-    });
-    // A notice belongs to a tab; a tab that went with its module takes it along.
-    setEnabledFor((prev) => {
-      const kept = Object.fromEntries(
-        Object.entries(prev).filter(([tabId]) =>
-          tabs.some((tab) => tab.id === tabId && visibleIds.includes(tab.moduleId)),
-        ),
-      );
-      return Object.keys(kept).length === Object.keys(prev).length ? prev : kept;
-    });
-  }, [visibleIds, tabs, newTab]);
-
-  /* Written as it changes rather than on the way out: a desktop app is closed by the window
-     manager, by a crash, or by an update restarting it, and only the first of those would ever
-     reach a handler. Badge changes bring this round too — they cost a `JSON.stringify` of three
-     fields per tab, which is cheaper than working out whether they mattered. */
-  useEffect(() => {
-    writeSession(tabs, activeId);
-  }, [tabs, activeId]);
-
-  /* What a batch of tab requests does once it has been taken. An effect event, so the drain below
-     can listen once and still read `enabled` as it is when the batch arrives, and call the
-     `openTab` of that render. */
-  const openRequested = useEffectEvent((requests: TabRequest[], ids: string[]) => {
-    /* A module this window is not drawing is turned on for the tab that arrived — T110's D1.
-       One union across the whole batch and one call: two requests for two hidden modules would
-       otherwise each compute their next set from the same stale `enabled`, and the second would
-       undo the first.
-
-       Before the tabs are opened, and in the same synchronous block: `enabled` is `App`'s state
-       and `tabs` is this component's, and React batches every update made in one tick — after an
-       `await` included — into one commit, so `visibleIds` and `tabs` reach the visibility effect
-       together and the new tab is never a tab of a hidden module. */
-    const before = enabled;
-    let next = before;
-    for (const request of requests) next = withModule(next, request.moduleId, ids);
-    if (next !== before) onEnabledChange(next);
-
-    for (const request of requests) {
-      const tab = openTab(request.moduleId, request.state);
-      // Hidden when the request arrived — which is the whole of what the notice says.
-      if (!before.includes(request.moduleId)) {
-        setEnabledFor((prev) => ({ ...prev, [tab.id]: request.moduleId }));
-      }
-    }
-  });
-
-  /* Tabs the backend asks for — see `shell/launch.ts` for what they are and why they are drained
-     rather than delivered. No "cancelled" guard around the drain: what has been taken from the
-     backend's queue is gone from it, and a request dropped because StrictMode remounted this
-     component between the call and its answer would be a tab that never opens. */
-  useEffect(() => {
-    /* All five ids, not the visible ones: what has been taken from the backend's queue is gone from
-       it, and filtering here would leave a `mixlab://` handoff for a hidden module rotting in a queue
-       nothing ever drains again. Such a tab opens and draws — `MODULES` is unchanged, so
-       `moduleById` finds it — and its module is turned on by `openRequested` so that the visibility
-       effect above does not drop it on the same commit. */
-    const ids = MODULES.map((m) => m.id);
-    async function drain() {
-      const requests = await takeTabRequests(ids).catch(() => []);
-      if (requests.length === 0) return;
-      openRequested(requests, ids);
-    }
-    const unlisten = onTabRequest(() => void drain());
-    void drain();
-    return () => {
-      void unlisten.then((stop) => stop());
-    };
-  }, []);
+  useTabRequests({ enabled, onEnabledChange, openTab, setEnabledFor });
 
   useWindowChrome({ hasTraySection, onRemoveRequested: () => setRemoveOpen(true) });
 
