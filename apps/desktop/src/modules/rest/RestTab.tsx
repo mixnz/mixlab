@@ -1,26 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import ConfirmDialog from "../../components/ConfirmDialog";
 import Splitter from "../../components/Splitter";
-import { Tab, TabStrip, tabKeyDown } from "../../components/TabStrip";
 import { useShortcut } from "../../core/shortcuts";
 import type { ModuleTabProps } from "../../shell/module";
 import { useTranslation } from "../../i18n";
 import type { ViewMode } from "./contentType";
-import { SECRET_MASK, previewVars, varMap } from "./environments";
+import { previewVars, varMap } from "./environments";
 import { addVariables, useEnvironments } from "./environmentsStore";
 import { interpolate } from "./interpolate";
 import { resolveRequest } from "./resolveRequest";
-import AuthPane from "./components/AuthPane";
-import BodyEditor from "./components/BodyEditor";
 import EnvironmentDialog from "./components/EnvironmentDialog";
 import EnvironmentSelect from "./components/EnvironmentSelect";
 import HistoryDialog from "./components/HistoryDialog";
 import ResponsePane from "./components/ResponsePane";
-import KeyValueTable from "./components/KeyValueTable";
 import RequestList from "./components/RequestList";
 import RequestTabs from "./components/RequestTabs";
-import UrlBar from "./components/UrlBar";
-import UrlPreview from "./components/UrlPreview";
 import { shortUrl } from "./format";
 import {
   addRequest,
@@ -38,9 +31,9 @@ import { useOpenRequests } from "./tab/useOpenRequests";
 import { usePaneSizes } from "./tab/usePaneSizes";
 import { usePasteRequest } from "./tab/usePasteRequest";
 import { useSends } from "./tab/useSends";
+import RequestPane, { type RequestTabKey } from "./tab/RequestPane";
+import SwapDialog from "./tab/SwapDialog";
 import "./rest.css";
-
-type RequestTabKey = "params" | "body" | "headers" | "auth";
 
 /**
  * The REST client's workspace: the request list, the requests open on it, and the pane each one
@@ -181,13 +174,6 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
   );
   useShortcut("rest.history", () => setHistoryOpen(true), active);
 
-  const paneTabs: { key: RequestTabKey; label: string }[] = [
-    { key: "params", label: t("rest.paramsTab") },
-    { key: "body", label: t("rest.bodyTab") },
-    { key: "headers", label: t("rest.requestHeadersTab") },
-    { key: "auth", label: t("rest.authTab") },
-  ];
-
   return (
     <div className="rest-tab">
       <aside className="rest-sidebar" style={{ width }}>
@@ -238,72 +224,29 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
           <p className="rest-empty muted">{t("rest.emptyMain")}</p>
         ) : (
           <div className="rest-panes" ref={panesRef}>
-            <section className="rest-request-pane" style={{ flex: `0 0 ${ratio * 100}%` }}>
-              <UrlBar
-                inputRef={urlRef}
-                method={activeRequest.method}
-                url={activeRequest.url}
-                sending={sendState.phase === "sending"}
-                blocked={blocked}
-                onMethodChange={(method) => edit({ method })}
-                onUrlChange={editUrl}
-                onPasteText={pasteIntoUrl}
-                onSend={() => void send()}
-                onCancel={cancel}
-              />
-              {preview !== null && resolved !== null && (
-                <UrlPreview
-                  preview={preview}
-                  missing={resolved.missing}
-                  cyclic={resolved.cyclic}
-                  envName={env?.name ?? ""}
-                  onAddMissing={() => {
-                    // Only offered when something is missing, which takes an environment.
-                    if (env === null) return;
-                    addVariables(env.id, resolved.missing);
-                    setEnvDialogOpen(true);
-                  }}
-                />
-              )}
-              <TabStrip size="small" role="tablist">
-                {paneTabs.map((tab) => {
-                  const pick = () =>
-                    setRequestTabs((prev) => ({ ...prev, [activeRequest.id]: tab.key }));
-                  return (
-                    <Tab
-                      key={tab.key}
-                      active={requestTab === tab.key}
-                      role="tab"
-                      aria-selected={requestTab === tab.key}
-                      tabIndex={0}
-                      onClick={pick}
-                      onKeyDown={tabKeyDown(pick)}
-                    >
-                      {tab.label}
-                    </Tab>
-                  );
-                })}
-              </TabStrip>
-              <div className="rest-pane-body">
-                {requestTab === "params" && (
-                  <KeyValueTable rows={activeRequest.params} onChange={(params) => edit({ params })} />
-                )}
-                {requestTab === "body" && (
-                  <BodyEditor body={activeRequest.body} onChange={(body) => edit({ body })} />
-                )}
-                {requestTab === "headers" && (
-                  <KeyValueTable rows={activeRequest.headers} onChange={(headers) => edit({ headers })} />
-                )}
-                {requestTab === "auth" && (
-                  <AuthPane
-                    auth={activeRequest.auth}
-                    headers={activeRequest.headers}
-                    params={activeRequest.params}
-                    onChange={(auth) => edit({ auth })}
-                  />
-                )}
-              </div>
-            </section>
+            <RequestPane
+              request={activeRequest}
+              ratio={ratio}
+              urlRef={urlRef}
+              sending={sendState.phase === "sending"}
+              blocked={blocked}
+              preview={preview}
+              resolved={resolved}
+              envName={env?.name ?? ""}
+              requestTab={requestTab}
+              onRequestTabChange={(key) => setRequestTabs((prev) => ({ ...prev, [activeRequest.id]: key }))}
+              onEdit={edit}
+              onUrlChange={editUrl}
+              onPasteText={pasteIntoUrl}
+              onSend={() => void send()}
+              onCancel={cancel}
+              onAddMissing={() => {
+                // Only offered when something is missing, which takes an environment.
+                if (env === null || resolved === null) return;
+                addVariables(env.id, resolved.missing);
+                setEnvDialogOpen(true);
+              }}
+            />
 
             <Splitter
               orientation="vertical"
@@ -339,31 +282,15 @@ function RestTab({ active, onTitleChange, restored, onStateChange }: ModuleTabPr
       )}
 
       {swap !== null && (
-        <ConfirmDialog
-          title={t("rest.swapTitle")}
-          message={t("rest.swapMessage", { env: env?.name ?? "" })}
-          confirmLabel={t("rest.swapConfirm")}
-          cancelLabel={t("rest.swapCancel")}
+        <SwapDialog
+          swap={swap}
+          envName={env?.name ?? ""}
           onConfirm={() => {
             saveRequest(swap.request);
             setSwap(null);
           }}
           onCancel={() => setSwap(null)}
-        >
-          <ul className="rest-swap-list">
-            {swap.found.map((item) => (
-              <li key={item.name} className="rest-swap-row">
-                <code className="rest-swap-name">{`{{${item.name}}}`}</code>
-                {/* A secret's value is dots here for the same reason it is dots under the URL box:
-                    the question is which variable, and the answer never needs the credential. */}
-                <span className="rest-swap-value">{item.secret ? SECRET_MASK : item.value}</span>
-                <span className="rest-swap-count">
-                  {t("rest.swapCount", { count: item.count })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </ConfirmDialog>
+        />
       )}
     </div>
   );
