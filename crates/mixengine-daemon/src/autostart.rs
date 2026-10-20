@@ -135,6 +135,14 @@ impl Autostart {
         self.report(state, boot, lingered).await
     }
 
+    /// Whether the account lingers because this home turned it on — what uninstall has to undo even
+    /// when the unit is already gone, since `disable` is what takes it away.
+    pub(crate) async fn holds_linger(&self) -> Result<bool, Error> {
+        let boot = self.installer(|installer| installer.boot_state()).await?;
+
+        Ok(boot == BootStart::On && self.linger_is_ours().await?)
+    }
+
     /// Turn linger off if, and only if, this home turned it on. Answers the reading afterwards and
     /// whether anything changed.
     async fn release_linger(&self) -> Result<(BootStart, bool), Error> {
@@ -437,6 +445,34 @@ mod tests {
         elsewhere.enable().await.expect("register");
 
         assert_eq!(mine.status().await.expect("read").at_boot, AtBoot::Off);
+    }
+
+    /// The unit was deleted by hand and the linger MixEngine turned on was left: uninstall has to be
+    /// able to see it, and `disable` still takes it away.
+    #[tokio::test]
+    async fn a_linger_we_set_outlives_a_unit_removed_by_hand_until_disable() {
+        let (_directory, autostart, host) = autostart(mock::Host::with_home(ROOT)).await;
+        autostart.enable_at_boot().await.expect("enable at boot");
+        host.service_installer()
+            .disable()
+            .expect("the unit, removed by hand");
+
+        assert!(autostart.holds_linger().await.expect("ask"));
+
+        autostart.disable().await.expect("disable");
+        assert_eq!(
+            host.service_installer().boot_state().expect("read"),
+            BootStart::Off
+        );
+        assert!(!autostart.holds_linger().await.expect("ask again"));
+    }
+
+    #[tokio::test]
+    async fn an_account_s_own_linger_is_not_ours_to_hold() {
+        let (_directory, autostart, _host) =
+            autostart(mock::Host::with_linger(ROOT, BootStart::On)).await;
+
+        assert!(!autostart.holds_linger().await.expect("ask"));
     }
 
     /// Somebody ran `loginctl disable-linger` by hand: the record is cleared at the next read, so a

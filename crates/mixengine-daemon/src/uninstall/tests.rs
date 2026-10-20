@@ -236,3 +236,41 @@ fn a_kept_helper_is_not_a_row_to_act_on() {
 
     assert!(!planned_row(&[kept], ResidueId::PrivilegedHelper));
 }
+
+fn autostart(enabled: bool, for_this_home: bool) -> mixengine_proto::AutostartReport {
+    mixengine_proto::AutostartReport {
+        mechanism: mixengine_proto::AutostartMechanism::SystemdUser,
+        location: "/home/me/.config/systemd/user/mixengined.service".to_owned(),
+        enabled,
+        changed: false,
+        command: Vec::new(),
+        for_this_home,
+        at_boot: mixengine_proto::AtBoot::Off,
+    }
+}
+
+#[test]
+fn a_linger_this_home_turned_on_is_residue_even_with_no_entry_left() {
+    let Removal::Planned { how } = inventory::autostart_outcome(&autostart(false, false), true)
+    else {
+        panic!("a linger MixEngine turned on has to be planned for removal");
+    };
+
+    assert!(how.contains("linger"), "{how}");
+}
+
+#[test]
+fn the_login_entry_is_residue_only_when_it_is_this_home_s() {
+    assert!(matches!(
+        inventory::autostart_outcome(&autostart(true, true), false),
+        Removal::Planned { .. }
+    ));
+    assert!(matches!(
+        inventory::autostart_outcome(&autostart(true, false), false),
+        Removal::Absent {}
+    ));
+    assert!(matches!(
+        inventory::autostart_outcome(&autostart(false, false), false),
+        Removal::Absent {}
+    ));
+}

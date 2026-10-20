@@ -95,7 +95,7 @@ pub(crate) fn autostart_report(autostarted: Autostarted, report: &AutostartRepor
         ));
     }
 
-    if let Some(line) = at_boot(report.at_boot) {
+    if let Some(line) = at_boot(report) {
         rendered.push_str(&format!("  {:<9} {}\n", "at boot", line));
     }
 
@@ -129,10 +129,11 @@ pub(crate) fn autostart_report(autostarted: Autostarted, report: &AutostartRepor
 
 /// Whether the daemon also starts before anyone logs in, and whose setting that is, or nothing
 /// where the machine has no such thing.
-fn at_boot(at_boot: AtBoot) -> Option<&'static str> {
-    match at_boot {
+fn at_boot(report: &AutostartReport) -> Option<&'static str> {
+    match report.at_boot {
         AtBoot::Unsupported => None,
-        AtBoot::Off => Some("no, only after you log in"),
+        AtBoot::Off if report.enabled && report.for_this_home => Some("no, only after you log in"),
+        AtBoot::Off => Some("no"),
         AtBoot::On => {
             Some("yes, before anyone logs in (MixEngine turned on linger for this account)")
         }
@@ -291,5 +292,19 @@ mod tests {
             rendered.starts_with("this account starts its services at boot on its own"),
             "{rendered}"
         );
+    }
+
+    /// Nothing starts at login either, so "only after you log in" would be a promise.
+    #[test]
+    fn with_nothing_registered_the_boot_line_is_a_plain_no() {
+        let report = AutostartReport {
+            enabled: false,
+            command: Vec::new(),
+            ..registered(true)
+        };
+        let rendered = autostart_report(Autostarted::Asked, &report);
+
+        assert!(rendered.contains("  at boot   no\n"), "{rendered}");
+        assert!(!rendered.contains("only after you log in"), "{rendered}");
     }
 }
