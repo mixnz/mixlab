@@ -234,3 +234,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-20 | [The daemon's walks as named steps (design)](2026-10-20-t209-the-daemons-walks-as-named-steps-design.md) | T209 | implemented |
 | 2026-10-20 | [The window's effects depend on what they read (design)](2026-10-20-t209a-the-windows-effects-depend-on-what-they-read-design.md) | T209a | implemented |
 | 2026-10-20 | [One statement splitter for the SQL engines (design)](2026-10-20-t209i-one-statement-splitter-design.md) | T209i | implemented |
+| 2026-10-20 | [One `build_where` for the SQL engines (design)](2026-10-20-t209j-one-build-where-design.md) | T209j | implemented |

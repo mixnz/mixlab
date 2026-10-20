@@ -111,11 +111,19 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       procedure answers one statement with several result sets. **ClickHouse is checked and left
       out:** its `Scanner` resumes across the chunks its restore reads, and it escapes a quoted name
       with a backslash, which no `SqlSyntax` field says.
-- [ ] **T209j** One `build_where` for the SQL engines. `mysql.rs`, `sqlite.rs` and the `page.rs` of
+- [x] **T209j** One `build_where` for the SQL engines. `mysql.rs`, `sqlite.rs` and the `page.rs` of
       `mssql/`, `postgres/` and `clickhouse/` each turn the filter bar into a `WHERE` with the same
       arms. One function in `drivers/filters.rs` takes what differs: how a placeholder is spelled,
       how an identifier is quoted, the regex operator, and PostgreSQL's cast of a bound value. The
       SQL each engine sends is unchanged, which its existing tests and new ones per operator prove.
+      Design:
+      [2026-10-20-t209j-one-build-where-design.md](../specs/2026-10-20-t209j-one-build-where-design.md).
+      `drivers/filters.rs` holds `build_where`, a `WhereSyntax` per engine and the `Placeholders`
+      trait, with `QuestionMarks` for MySQL and SQLite and `Numbered` for PostgreSQL and SQL Server.
+      ClickHouse keeps its `{pN:Type}` parameters in its own `page.rs`. The five engine files went
+      from 2,640 lines to 2,266, and `filters.rs` from 185 to 518, tests included.
+      `drivers/filters/where_clauses.rs` pins every engine's clause and binds for all 22 operators,
+      written against the five copies before they went.
 - [ ] **T209k** One frame for editing rows in the sqlx engines. `update_row`, `insert_rows` and
       `delete_rows` in `mysql.rs`, `postgres.rs` and `sqlite.rs` repeat the transaction, the
       rollback on the first failure and `error.rowFailed`. That frame moves to `drivers/sql/`,

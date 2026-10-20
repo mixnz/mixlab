@@ -5,130 +5,61 @@ use super::{
     Filter, PageQuery, TablePage,
 };
 use crate::error::AppError;
-use crate::modules::db::drivers::filters::{escape_like, split_list};
+use crate::modules::db::drivers::filters::{
+    self, escape_like, LikeEscape, Placeholders, WhereSyntax,
+};
 use std::collections::BTreeMap;
 
+/// What ClickHouse writes its own way in a filter's `WHERE`. Every text comparison goes through
+/// `toString()` on the column: ClickHouse, unlike MySQL, does not coerce a `String` parameter to
+/// compare against a `UInt64` column on its own.
+const WHERE_SYNTAX: WhereSyntax = WhereSyntax {
+    quote_ident,
+    as_text: |quoted| format!("toString({quoted})"),
+    regexp: None,
+    escape_like,
+    like_escape: LikeEscape::Never,
+};
+
+/// ClickHouse's named parameters, `{p0:String}`, `{p1:UInt64}`, … — see [`query_with_params`].
+/// Each carries its own type: `String` for a text comparison, the column's type for an ordering
+/// one, since `toString()` on a number sorts `10` before `9`.
+#[derive(Default)]
+struct Params {
+    params: Vec<(String, String)>,
+}
+
+impl Placeholders for Params {
+    type Bind = (String, String);
+
+    fn text(&mut self, value: String) -> String {
+        self.typed(value, "String")
+    }
+
+    fn typed(&mut self, value: String, column_type: &str) -> String {
+        let name = format!("p{}", self.params.len());
+        let placeholder = format!("{{{name}:{column_type}}}");
+        self.params.push((name, value));
+        placeholder
+    }
+
+    fn into_binds(self) -> Vec<(String, String)> {
+        self.params
+    }
+}
+
 /// Turns the filter rows into a `WHERE` clause and the parameters to bind into it, in
-/// `{name:Type}` form — see [`query_with_params`].
-///
-/// Every comparison goes through `toString()` on the column, the value bound as `String`: the
-/// frontend sends every filter value as text, and ClickHouse — unlike MySQL — does not coerce a
-/// `String` parameter to compare against a `UInt64` column on its own. The ordering operators are
-/// the exception, the same way they are on PostgreSQL: `toString()` on a number sorts `10` before
-/// `9`, so there the column is left as it is and the parameter is typed to match instead.
-pub(super) fn build_where(
+/// `{name:Type}` form. See [`filters::build_where`].
+pub(in crate::modules::db::drivers) fn build_where(
     filters: &[Filter],
     columns: &BTreeMap<String, String>,
 ) -> Result<(String, Vec<(String, String)>), AppError> {
-    let mut clauses: Vec<String> = Vec::new();
-    let mut params: Vec<(String, String)> = Vec::new();
-    let mut next = 0usize;
-    let mut placeholder = |params: &mut Vec<(String, String)>, ty: &str, value: String| {
-        let name = format!("p{next}");
-        next += 1;
-        params.push((name.clone(), value));
-        format!("{{{name}:{ty}}}")
-    };
-
-    for filter in filters {
-        let Some(base_type) = columns.get(&filter.column) else {
-            return Err(err!("error.unknownFilterColumn", column = &filter.column));
-        };
-        let col = format!("toString({})", quote_ident(&filter.column));
-        let raw = quote_ident(&filter.column);
-        let value = filter.value.as_deref().unwrap_or("");
-        let operator = filter.operator.as_str();
-
-        let clause = match operator {
-            "eq" => format!(
-                "{col} = {}",
-                placeholder(&mut params, "String", value.to_string())
-            ),
-            "ne" => format!(
-                "{col} <> {}",
-                placeholder(&mut params, "String", value.to_string())
-            ),
-            "gt" => format!(
-                "{raw} > {}",
-                placeholder(&mut params, base_type, value.to_string())
-            ),
-            "gte" => format!(
-                "{raw} >= {}",
-                placeholder(&mut params, base_type, value.to_string())
-            ),
-            "lt" => format!(
-                "{raw} < {}",
-                placeholder(&mut params, base_type, value.to_string())
-            ),
-            "lte" => format!(
-                "{raw} <= {}",
-                placeholder(&mut params, base_type, value.to_string())
-            ),
-            "contains" => format!(
-                "{col} LIKE {}",
-                placeholder(&mut params, "String", format!("%{}%", escape_like(value)))
-            ),
-            "notContains" => format!(
-                "{col} NOT LIKE {}",
-                placeholder(&mut params, "String", format!("%{}%", escape_like(value)))
-            ),
-            "startsWith" => format!(
-                "{col} LIKE {}",
-                placeholder(&mut params, "String", format!("{}%", escape_like(value)))
-            ),
-            "endsWith" => format!(
-                "{col} LIKE {}",
-                placeholder(&mut params, "String", format!("%{}", escape_like(value)))
-            ),
-            "like" => format!(
-                "{col} LIKE {}",
-                placeholder(&mut params, "String", value.to_string())
-            ),
-            "notLike" => format!(
-                "{col} NOT LIKE {}",
-                placeholder(&mut params, "String", value.to_string())
-            ),
-            "in" | "notIn" => {
-                let items = split_list(value);
-                if items.is_empty() {
-                    continue;
-                }
-                let placeholders = items
-                    .into_iter()
-                    .map(|item| placeholder(&mut params, "String", item))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                let sql_op = if operator == "in" { "IN" } else { "NOT IN" };
-                format!("{col} {sql_op} ({placeholders})")
-            }
-            "between" | "notBetween" => {
-                let items = split_list(value);
-                if items.len() < 2 {
-                    continue;
-                }
-                let low = placeholder(&mut params, base_type, items[0].clone());
-                let high = placeholder(&mut params, base_type, items[1].clone());
-                let sql_op = if operator == "between" {
-                    "BETWEEN"
-                } else {
-                    "NOT BETWEEN"
-                };
-                format!("{raw} {sql_op} {low} AND {high}")
-            }
-            "isNull" => format!("{raw} IS NULL"),
-            "isNotNull" => format!("{raw} IS NOT NULL"),
-            "isEmpty" => format!("{col} = ''"),
-            "isNotEmpty" => format!("{col} <> ''"),
-            other => return Err(err!("error.unknownFilterOperator", operator = other)),
-        };
-
-        clauses.push(clause);
-    }
-
-    if clauses.is_empty() {
-        return Ok((String::new(), params));
-    }
-    Ok((format!(" WHERE {}", clauses.join(" AND ")), params))
+    filters::build_where(
+        filters,
+        |name| columns.get(name).map(String::as_str),
+        &WHERE_SYNTAX,
+        Params::default(),
+    )
 }
 
 /// Reads one page of a table. `auto_increment_column` is always `None` — v1 never writes, so

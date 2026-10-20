@@ -16,7 +16,7 @@ pub mod engine;
 pub mod script;
 pub mod structure;
 
-use super::filters::{escape_like, split_list};
+use super::filters::{self, escape_like, LikeEscape, QuestionMarks, WhereSyntax};
 use crate::error::AppError;
 pub use crate::modules::db::drivers::sql::types::{
     ColumnMeta, Filter, ForeignKey, PageQuery, TablePage,
@@ -446,103 +446,37 @@ pub(super) fn column_value(row: &SqliteRow, i: usize) -> Value {
     }
 }
 
-/// Turns the filter rows into a WHERE clause (leading space included, empty when nothing filters)
-/// and the values to bind into its placeholders, in order.
+/// What SQLite writes its own way in a filter's `WHERE`.
 ///
-/// Every value reaches SQLite as a bound parameter; the column name is the one part interpolated,
-/// which is why it is checked against the table's own columns first.
+/// Compared as text, so that what is typed into the filter box matches what the grid shows
+/// whatever storage class the cell holds: SQLite otherwise sorts every string after every number,
+/// and `= '5'` would not find an integer 5. The ordering operators are the exception: there the
+/// column stands, so numbers compare as numbers.
 ///
-/// There is no `regexp` arm, and that is not an omission: SQLite parses the word but ships no
+/// There is no regex, and that is not an omission: SQLite parses the word but ships no
 /// implementation, so such a clause would always fail with "no such function: regexp". The dropdown
 /// does not offer the operator either — see `regexpFilter` on the dialect.
-fn build_where(filters: &[Filter], columns: &[String]) -> Result<(String, Vec<String>), AppError> {
-    let mut clauses: Vec<String> = Vec::new();
-    let mut binds: Vec<String> = Vec::new();
-    let bind = |binds: &mut Vec<String>, value: String| {
-        binds.push(value);
-        "?".to_string()
-    };
+const WHERE_SYNTAX: WhereSyntax = WhereSyntax {
+    quote_ident,
+    as_text: |quoted| format!("CAST({quoted} AS TEXT)"),
+    regexp: None,
+    escape_like,
+    like_escape: LikeEscape::Escaped,
+};
 
-    for filter in filters {
-        if !columns.iter().any(|c| c == &filter.column) {
-            return Err(err!("error.unknownFilterColumn", column = &filter.column));
-        }
-        let col = quote_ident(&filter.column);
-        /* Compared as text, so that what is typed into the filter box matches what the grid shows
-        whatever storage class the cell holds — SQLite otherwise sorts every string after every
-        number, and `= '5'` would not find an integer 5. The ordering operators are the
-        exception: there the column stands, so numbers compare as numbers. */
-        let text = format!("CAST({col} AS TEXT)");
-        let value = filter.value.as_deref().unwrap_or("");
-        let operator = filter.operator.as_str();
-
-        let clause = match operator {
-            "eq" => format!("{text} = {}", bind(&mut binds, value.to_string())),
-            "ne" => format!("{text} <> {}", bind(&mut binds, value.to_string())),
-            "gt" => format!("{col} > {}", bind(&mut binds, value.to_string())),
-            "gte" => format!("{col} >= {}", bind(&mut binds, value.to_string())),
-            "lt" => format!("{col} < {}", bind(&mut binds, value.to_string())),
-            "lte" => format!("{col} <= {}", bind(&mut binds, value.to_string())),
-            "contains" => format!(
-                "{text} LIKE {} ESCAPE '\\'",
-                bind(&mut binds, format!("%{}%", escape_like(value)))
-            ),
-            "notContains" => format!(
-                "{text} NOT LIKE {} ESCAPE '\\'",
-                bind(&mut binds, format!("%{}%", escape_like(value)))
-            ),
-            "startsWith" => format!(
-                "{text} LIKE {} ESCAPE '\\'",
-                bind(&mut binds, format!("{}%", escape_like(value)))
-            ),
-            "endsWith" => format!(
-                "{text} LIKE {} ESCAPE '\\'",
-                bind(&mut binds, format!("%{}", escape_like(value)))
-            ),
-            "like" => format!("{text} LIKE {}", bind(&mut binds, value.to_string())),
-            "notLike" => format!("{text} NOT LIKE {}", bind(&mut binds, value.to_string())),
-            "in" | "notIn" => {
-                let items = split_list(value);
-                if items.is_empty() {
-                    continue;
-                }
-                let placeholders = items
-                    .into_iter()
-                    .map(|item| bind(&mut binds, item))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                let sql_op = if operator == "in" { "IN" } else { "NOT IN" };
-                format!("{text} {sql_op} ({placeholders})")
-            }
-            "between" | "notBetween" => {
-                let items = split_list(value);
-                // Two bounds or nothing — one of them alone says nothing about a range.
-                if items.len() < 2 {
-                    continue;
-                }
-                let low = bind(&mut binds, items[0].clone());
-                let high = bind(&mut binds, items[1].clone());
-                let sql_op = if operator == "between" {
-                    "BETWEEN"
-                } else {
-                    "NOT BETWEEN"
-                };
-                format!("{col} {sql_op} {low} AND {high}")
-            }
-            "isNull" => format!("{col} IS NULL"),
-            "isNotNull" => format!("{col} IS NOT NULL"),
-            "isEmpty" => format!("{text} = ''"),
-            "isNotEmpty" => format!("{text} <> ''"),
-            other => return Err(err!("error.unknownFilterOperator", operator = other)),
-        };
-
-        clauses.push(clause);
-    }
-
-    if clauses.is_empty() {
-        return Ok((String::new(), binds));
-    }
-    Ok((format!(" WHERE {}", clauses.join(" AND ")), binds))
+/// Turns the filter rows into a WHERE clause and the values to bind into its `?` placeholders, in
+/// order. See [`filters::build_where`].
+pub(super) fn build_where(
+    filters: &[Filter],
+    columns: &[String],
+) -> Result<(String, Vec<String>), AppError> {
+    let column_type = |name: &str| columns.iter().any(|c| c == name).then_some("");
+    filters::build_where(
+        filters,
+        column_type,
+        &WHERE_SYNTAX,
+        QuestionMarks::default(),
+    )
 }
 
 /// Binds one edited value.
