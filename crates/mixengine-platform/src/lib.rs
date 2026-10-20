@@ -156,17 +156,17 @@ pub use private_file::write_private;
 #[cfg(feature = "host")]
 pub use traits::{
     APP_CONTROL_REFUSAL, APPLICATION_CONTROL_BLOCKED, AppControl, AppControlState,
-    AutostartMechanism, AutostartPlan, AutostartState, BrowserChange, BrowserSurvey, BrowserTrust,
-    ConnectionCount, DatabaseState, DesktopApps, DirectoryAccess, Elevation, ElevationSupport,
-    Enforcement, FirewallRules, GroupReading, GroupRoot, HomeDirs, Host, HostsFile, InstalledApp,
-    Installers, Interface, KEYRING_SERVICE, Keyring, LimitMechanism, LimitSupport, Located,
-    Machine, MachineFacts, MemoryMeasure, NetworkInfo, OrphanGuarantee, PathIntegration,
-    PathLocation, PathState, PortAccess, PortAccessMethod, PortAccessState, PortBinding,
-    PortHolder, PortOwner, PortRange, Probe, ProcessMetrics, Raised, RedistributableOutcome,
-    Redistributables, ReservedPorts, ResolverConfig, ResolverMethod, ResolverState,
-    ResourceControl, ServiceInstaller, Started, TrustState, TrustStore, TrustStoreMethod,
-    VISUAL_CPP_PUBLISHER, VisualCppVersion, WhenExceeded, avx, choose_interface, dotted_version,
-    names_the_redistributable, orphan_guarantee, pkgid_of, refused_by_app_control,
+    AutostartMechanism, AutostartPlan, AutostartState, BootStart, BrowserChange, BrowserSurvey,
+    BrowserTrust, ConnectionCount, DatabaseState, DesktopApps, DirectoryAccess, Elevation,
+    ElevationSupport, Enforcement, FirewallRules, GroupReading, GroupRoot, HomeDirs, Host,
+    HostsFile, InstalledApp, Installers, Interface, KEYRING_SERVICE, Keyring, LimitMechanism,
+    LimitSupport, Located, Machine, MachineFacts, MemoryMeasure, NetworkInfo, OrphanGuarantee,
+    PathIntegration, PathLocation, PathState, PortAccess, PortAccessMethod, PortAccessState,
+    PortBinding, PortHolder, PortOwner, PortRange, Probe, ProcessMetrics, Raised,
+    RedistributableOutcome, Redistributables, ReservedPorts, ResolverConfig, ResolverMethod,
+    ResolverState, ResourceControl, ServiceInstaller, Started, TrustState, TrustStore,
+    TrustStoreMethod, VISUAL_CPP_PUBLISHER, VisualCppVersion, WhenExceeded, avx, choose_interface,
+    dotted_version, names_the_redistributable, orphan_guarantee, pkgid_of, refused_by_app_control,
     shared_libraries, visual_cpp_from_registry,
 };
 

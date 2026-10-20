@@ -2,7 +2,9 @@
 
 use std::sync::Mutex;
 
-use crate::{AutostartMechanism, AutostartPlan, AutostartState, Error, Result, ServiceInstaller};
+use crate::{
+    AutostartMechanism, AutostartPlan, AutostartState, BootStart, Error, Result, ServiceInstaller,
+};
 
 /// What a test asserts on: the calls, in order, with the plan each one carried.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -12,6 +14,12 @@ pub enum AutostartOp {
 
     /// [`ServiceInstaller::disable`] was called.
     Disabled,
+
+    /// [`ServiceInstaller::enable_boot`] was called.
+    BootEnabled,
+
+    /// [`ServiceInstaller::disable_boot`] was called.
+    BootDisabled,
 }
 
 /// The name the mock reports its entry under.
@@ -20,7 +28,7 @@ pub enum AutostartOp {
 /// `~/Library/LaunchAgents/…` here would be asserting about a machine no part of this run touched.
 const LOCATION: &str = "the mock host's autostart entry";
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(super) struct Entry {
     /// The plan currently registered, if any.
     registered: Mutex<Option<AutostartPlan>>,
@@ -30,18 +38,45 @@ pub(super) struct Entry {
 
     /// Set by a test that wants to see what the caller does on a machine with no mechanism.
     absent: bool,
+
+    /// What the account's linger reads as.
+    boot: Mutex<BootStart>,
+
+    /// Set by a test that wants to see what the caller does when polkit will not let the account
+    /// linger itself.
+    refuses_linger: bool,
 }
 
 impl Entry {
     pub(super) fn recording() -> Self {
-        Self::default()
+        Self::lingering(BootStart::Off)
+    }
+
+    /// An account whose linger already reads `boot` — `On` is one that lingered before MixEngine.
+    pub(super) fn lingering(boot: BootStart) -> Self {
+        Self {
+            registered: Mutex::new(None),
+            operations: Mutex::new(Vec::new()),
+            absent: false,
+            boot: Mutex::new(boot),
+            refuses_linger: false,
+        }
+    }
+
+    /// A machine whose polkit will not let the account linger itself.
+    pub(super) fn refusing_linger() -> Self {
+        Self {
+            refuses_linger: true,
+            ..Self::recording()
+        }
     }
 
     /// A machine with nowhere to register anything — Linux with no systemd user manager.
     pub(super) fn without_a_mechanism() -> Self {
         Self {
             absent: true,
-            ..Self::default()
+            boot: Mutex::new(BootStart::Unsupported),
+            ..Self::recording()
         }
     }
 
@@ -107,6 +142,43 @@ impl ServiceInstaller for Entry {
 
     fn state(&self) -> Result<AutostartState> {
         Ok(self.reading(false))
+    }
+
+    fn boot_state(&self) -> Result<BootStart> {
+        Ok(*lock(&self.boot))
+    }
+
+    fn enable_boot(&self) -> Result<BootStart> {
+        lock(&self.operations).push(AutostartOp::BootEnabled);
+
+        if self.absent {
+            return Err(Error::UnsupportedPlatform {
+                capability: "ServiceInstaller",
+                reason: "this mock has no way to start anything at boot".to_owned(),
+            });
+        }
+
+        if self.refuses_linger {
+            return Err(Error::Command {
+                command: "loginctl",
+                path: None,
+                status: "exit status: 1".to_owned(),
+                output: "Access denied".to_owned(),
+            });
+        }
+
+        *lock(&self.boot) = BootStart::On;
+        Ok(BootStart::On)
+    }
+
+    fn disable_boot(&self) -> Result<BootStart> {
+        lock(&self.operations).push(AutostartOp::BootDisabled);
+
+        if !self.absent {
+            *lock(&self.boot) = BootStart::Off;
+        }
+
+        Ok(*lock(&self.boot))
     }
 }
 
@@ -176,5 +248,34 @@ mod tests {
 
         assert_eq!(entry.state().unwrap().mechanism, AutostartMechanism::None);
         assert!(entry.enable(&plan()).is_err());
+    }
+
+    #[test]
+    fn linger_turns_on_and_off_and_every_call_is_recorded() {
+        let entry = Entry::recording();
+        assert_eq!(entry.boot_state().unwrap(), BootStart::Off);
+
+        assert_eq!(entry.enable_boot().unwrap(), BootStart::On);
+        assert_eq!(entry.disable_boot().unwrap(), BootStart::Off);
+        assert_eq!(
+            entry.operations(),
+            [AutostartOp::BootEnabled, AutostartOp::BootDisabled]
+        );
+    }
+
+    #[test]
+    fn a_refusing_machine_leaves_linger_as_it_was() {
+        let entry = Entry::refusing_linger();
+
+        assert!(matches!(entry.enable_boot(), Err(Error::Command { .. })));
+        assert_eq!(entry.boot_state().unwrap(), BootStart::Off);
+    }
+
+    #[test]
+    fn a_machine_with_no_mechanism_has_no_boot_half_either() {
+        assert_eq!(
+            Entry::without_a_mechanism().boot_state().unwrap(),
+            BootStart::Unsupported
+        );
     }
 }
