@@ -4,7 +4,7 @@ slug = "services"
 order = 6
 summary = "Caddy hoặc Nginx, MariaDB, MySQL, PostgreSQL, Redis và Memcached. Cài khi bạn yêu cầu, cấu hình sẵn cho bạn, và không bao giờ in mật khẩu ra màn hình."
 translation_of = "en/services.md"
-source_sha256 = "7ab35d29a66dfe2bb3cd7e77f99502e55e08701a166d6a880e615cded3613a95"
+source_sha256 = "c593905b2973df8493be97de9887b5bd07fb231435a0b3b8765c6721bcee7a25"
 +++
 
 # Máy chủ, cơ sở dữ liệu và bộ nhớ đệm
@@ -132,10 +132,10 @@ extension này; Fedora và GNOME gốc thì không. Khi thiếu nó sẽ không 
 MixLab như trước, và công tắc đăng nhập sẽ mở cửa sổ thay cho icon.
 
 Với máy chủ Linux không ai đăng nhập, bật **Chạy cả khi vừa bật máy, chưa ai đăng nhập** trong
-**Settings → MixEngine**, hoặc chạy `mix autostart enable --at-boot`. Sau khi khởi động lại, MixEngine
-tự chạy lên. MixEngine làm việc này qua linger của systemd trên tài khoản của bạn, đa số hệ thống không
-đòi quyền quản trị; nếu máy bạn từ chối, chạy `sudo loginctl enable-linger $USER` một lần. Service nào
-bật tự khởi động riêng thì mới chạy theo, xem ở `mix service list`.
+**Settings → MixEngine**, hoặc chạy `mix autostart enable --at-boot`. Sau khi khởi động lại,
+MixEngine tự chạy lên. MixEngine làm việc này qua linger của systemd trên tài khoản của bạn, đa số
+hệ thống không đòi quyền quản trị; nếu máy bạn từ chối, chạy `sudo loginctl enable-linger $USER`
+một lần. Service nào bật tự khởi động riêng thì mới chạy theo, xem ở `mix service list`.
 
 ## Cập nhật server lên bản vá mới hơn
 
