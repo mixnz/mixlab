@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useState } from "react";
 import Button from "../components/Button";
 import LoadingOverlay from "../components/LoadingOverlay";
 import { DialogHost } from "../components/Modal";
@@ -21,7 +21,7 @@ import { useTheme } from "./theme";
 import { useLanguageT, useTranslation } from "../i18n";
 import { useUpdates } from "./update";
 import type { TabBadge } from "./module";
-import { onTabRequest, takeTabRequests } from "./launch";
+import { onTabRequest, takeTabRequests, type TabRequest } from "./launch";
 import { readSession, writeSession } from "./session";
 import {
   firstTabOfModule,
@@ -105,10 +105,13 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
     }).catch((e: unknown) => void logError("tray", e));
   }, [hasTraySection, tl]);
 
-  function newTab(moduleId: string = defaultModuleId(visible), state?: unknown): TabInfo {
-    const def = moduleById(moduleId);
-    return { id: crypto.randomUUID(), moduleId, title: t(def.defaultTitleKey), badges: [], state };
-  }
+  const newTab = useCallback(
+    (moduleId: string = defaultModuleId(visible), state?: unknown): TabInfo => {
+      const def = moduleById(moduleId);
+      return { id: crypto.randomUUID(), moduleId, title: t(def.defaultTitleKey), badges: [], state };
+    },
+    [visible, t],
+  );
 
   /* What was open when the app was last closed, read once on the way up. The strip and, per tab,
      one opaque value the module behind it asked to have kept — the shell carries it and does not
@@ -173,11 +176,6 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
      the next launch the sentence is false anyway — the module is simply enabled, and was when the
      session was written. T110's D2. */
   const [enabledFor, setEnabledFor] = useState<Record<string, string>>({});
-
-  /* The drain below listens once, on purpose, so the `enabled` array in its closure is the one
-     from mount. A ref written every render is the only thing in that closure that is current. */
-  const enabledRef = useRef(enabled);
-  enabledRef.current = enabled;
 
   useScrollAcceleration();
   useShortcutDispatcher(shortcuts);
@@ -299,8 +297,7 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
       );
       return Object.keys(kept).length === Object.keys(prev).length ? prev : kept;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `newTab` is rebuilt every render and closes over `visible`, which is in the list already.
-  }, [visibleIds, tabs]);
+  }, [visibleIds, tabs, newTab]);
 
   /* Written as it changes rather than on the way out: a desktop app is closed by the window
      manager, by a crash, or by an update restarting it, and only the first of those would ever
@@ -310,6 +307,33 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
     writeSession(tabs, activeId);
   }, [tabs, activeId]);
 
+  /* What a batch of tab requests does once it has been taken. An effect event, so the drain below
+     can listen once and still read `enabled` as it is when the batch arrives, and call the
+     `openTab` of that render. */
+  const openRequested = useEffectEvent((requests: TabRequest[], ids: string[]) => {
+    /* A module this window is not drawing is turned on for the tab that arrived — T110's D1.
+       One union across the whole batch and one call: two requests for two hidden modules would
+       otherwise each compute their next set from the same stale `enabled`, and the second would
+       undo the first.
+
+       Before the tabs are opened, and in the same synchronous block: `enabled` is `App`'s state
+       and `tabs` is this component's, and React batches every update made in one tick — after an
+       `await` included — into one commit, so `visibleIds` and `tabs` reach the visibility effect
+       together and the new tab is never a tab of a hidden module. */
+    const before = enabled;
+    let next = before;
+    for (const request of requests) next = withModule(next, request.moduleId, ids);
+    if (next !== before) onEnabledChange(next);
+
+    for (const request of requests) {
+      const tab = openTab(request.moduleId, request.state);
+      // Hidden when the request arrived — which is the whole of what the notice says.
+      if (!before.includes(request.moduleId)) {
+        setEnabledFor((prev) => ({ ...prev, [tab.id]: request.moduleId }));
+      }
+    }
+  });
+
   /* Tabs the backend asks for — see `shell/launch.ts` for what they are and why they are drained
      rather than delivered. No "cancelled" guard around the drain: what has been taken from the
      backend's queue is gone from it, and a request dropped because StrictMode remounted this
@@ -318,41 +342,19 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
     /* All five ids, not the visible ones: what has been taken from the backend's queue is gone from
        it, and filtering here would leave a `mixlab://` handoff for a hidden module rotting in a queue
        nothing ever drains again. Such a tab opens and draws — `MODULES` is unchanged, so
-       `moduleById` finds it — and its module is turned on below so that the visibility effect above
-       does not drop it on the same commit. */
+       `moduleById` finds it — and its module is turned on by `openRequested` so that the visibility
+       effect above does not drop it on the same commit. */
     const ids = MODULES.map((m) => m.id);
     async function drain() {
       const requests = await takeTabRequests(ids).catch(() => []);
       if (requests.length === 0) return;
-
-      /* A module this window is not drawing is turned on for the tab that arrived — T110's D1.
-         One union across the whole batch and one call: two requests for two hidden modules would
-         otherwise each compute their next set from the same stale `enabled`, and the second would
-         undo the first.
-
-         Before the tabs are opened, and in the same synchronous block: `enabled` is `App`'s state
-         and `tabs` is this component's, and React batches every update made in one tick — after an
-         `await` included — into one commit, so `visibleIds` and `tabs` reach the visibility effect
-         together and the new tab is never a tab of a hidden module. */
-      const before = enabledRef.current;
-      let next = before;
-      for (const request of requests) next = withModule(next, request.moduleId, ids);
-      if (next !== before) onEnabledChange(next);
-
-      for (const request of requests) {
-        const tab = openTab(request.moduleId, request.state);
-        // Hidden when the request arrived — which is the whole of what the notice says.
-        if (!before.includes(request.moduleId)) {
-          setEnabledFor((prev) => ({ ...prev, [tab.id]: request.moduleId }));
-        }
-      }
+      openRequested(requests, ids);
     }
     const unlisten = onTabRequest(() => void drain());
     void drain();
     return () => {
       void unlisten.then((stop) => stop());
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `openTab` is rebuilt every render and only ever calls the two stable setters, `onEnabledChange` is a `useState` setter, and the current profile is read through `enabledRef`; listening once is the point.
   }, []);
 
   useEffect(() => {
