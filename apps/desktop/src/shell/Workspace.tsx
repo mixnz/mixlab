@@ -8,17 +8,13 @@ import SettingsModal from "./components/SettingsModal";
 import TabNotice from "./components/TabNotice";
 import UpdatePanel from "./components/UpdatePanel";
 import RemoveDialog from "./components/RemoveDialog";
-import { onUninstallRequest, uninstallMenuLabel } from "./uninstall";
 import ContextMenu from "../components/ContextMenu";
 import { moveTab, Tab, TabAction, tabKeyDown, TabStrip, TabTitle, useTabReorder } from "../components/TabStrip";
 import { CloudDownloadIcon, CloudUploadIcon, PlusIcon, SettingsIcon } from "../icons";
-import { isBlockedReload } from "../core/reload";
-import { configureTray } from "../core/window";
-import { logError } from "../core/log";
 import { useScrollAcceleration } from "../core/scroll";
 import { useShortcut, useShortcutDispatcher, useShortcuts } from "../core/shortcuts";
 import { useTheme } from "./theme";
-import { useLanguageT, useTranslation } from "../i18n";
+import { useTranslation } from "../i18n";
 import { useUpdates } from "./update";
 import type { TabBadge } from "./module";
 import { onTabRequest, takeTabRequests, type TabRequest } from "./launch";
@@ -37,11 +33,11 @@ import {
 import { MODULES, moduleById } from "./registry";
 import { defaultModuleId, visibleModules, withModule } from "./profiles";
 import { newModuleTabId, shortcutsFor } from "./shortcuts";
-import { startSync, SYNC_NOW_EVENT } from "./sync";
 import { useSyncActivity } from "./sync/activity";
-import { syncClosingHere, syncStatus } from "./sync/api";
 import { closingSoon } from "./sync/closing";
 import { traySections } from "./tray/sections";
+import { useSyncClosing } from "./workspace/useSyncClosing";
+import { useWindowChrome } from "./workspace/useWindowChrome";
 
 interface WorkspaceProps {
   /** The module ids this window draws — `shell/profiles.ts`. */
@@ -70,40 +66,10 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
   const visible = useMemo(() => visibleModules(idsOf(enabledKey)), [enabledKey]);
   const visibleIds = useMemo(() => visible.map((m) => m.id), [visible]);
 
-  /* The tray icon is MixLab's and goes up whatever modules are visible (ADR 0058); what this window
-     tells it is whether a visible module lends the panel a section, and the words for its menu —
-     again on a language switch, which is what `useLanguageT` gives a new function for. */
+  // Whether a visible module lends the tray panel a section — what `useWindowChrome` tells the tray.
   const hasTraySection = traySections(visible).length > 0;
-  const tl = useLanguageT();
 
-  // The main window syncs; the tray panel, which never mounts a workspace, does not.
-  /** The signed-in server and its announced end, when there is one (D4b). */
-  const [closing, setClosing] = useState<{ server: string; on: number } | null>(null);
-  /** Dismissed for this run; the next launch asks again. */
-  const [closingDismissed, setClosingDismissed] = useState(false);
-
-  useEffect(() => startSync(), []);
-
-  // The signed-in server's closing date, read at launch and again after a sign-in or a move —
-  // `requestSync` is what both of those fire.
-  useEffect(() => {
-    const read = () => {
-      void Promise.all([syncStatus(), syncClosingHere()])
-        .then(([status, on]) => setClosing(status.server && on !== null ? { server: status.server, on } : null))
-        .catch(() => setClosing(null));
-    };
-    read();
-    window.addEventListener(SYNC_NOW_EVENT, read);
-    return () => window.removeEventListener(SYNC_NOW_EVENT, read);
-  }, []);
-
-  useEffect(() => {
-    void configureTray(hasTraySection, {
-      openPanel: tl("tray.openPanel"),
-      openMain: tl("tray.openMain"),
-      quit: tl("tray.quit"),
-    }).catch((e: unknown) => void logError("tray", e));
-  }, [hasTraySection, tl]);
+  const syncClosing = useSyncClosing();
 
   const newTab = useCallback(
     (moduleId: string = defaultModuleId(visible), state?: unknown): TabInfo => {
@@ -151,18 +117,9 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
   /* MixLab's own updater — T187. Here rather than in the pane, so the Settings button can say that
      a release is waiting whatever modules are visible, and the pane reads the same state. */
   const updates = useUpdates(settingsOpen);
-  /* MixLab ▸ Remove MixLab from this Mac…: T182a. The menu item is Rust's, built before any string
-     was loaded, so its text is sent from here; where there is no item the command does nothing. */
+  /* MixLab ▸ Remove MixLab from this Mac…: T182a. The menu item and its words are
+     `useWindowChrome`'s; the dialog it opens is drawn here. */
   const [removeOpen, setRemoveOpen] = useState(false);
-  useEffect(() => {
-    const unlisten = onUninstallRequest(() => setRemoveOpen(true));
-    return () => {
-      void unlisten.then((stop) => stop());
-    };
-  }, []);
-  useEffect(() => {
-    void uninstallMenuLabel(t("remove.menuItem")).catch(() => {});
-  }, [t]);
   /* The release on the Settings button's dot: offered, downloading or ready to install. *Later*
      hides the corner panel and not the dot, which interrupts nothing (T188 D1). */
   const pendingView = updates.view === "offer" || updates.view === "downloading" || updates.view === "ready";
@@ -357,20 +314,7 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
     };
   }, []);
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      // Reloading the webview takes every open connection down with it, so no keystroke is left
-      // able to ask for one. The plain `Ctrl+R` is not refused here: it is `pane.reload` on the
-      // registry, which presses the reload button of the pane on screen or swallows the key —
-      // see `useReloadShortcut`.
-      //
-      // The rest — `F5`, the hard reload — are not commands: nothing is being asked for here,
-      // only refused. See `isBlockedReload` for what differs between builds.
-      if (isBlockedReload(e)) e.preventDefault();
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  useWindowChrome({ hasTraySection, onRemoveRequested: () => setRemoveOpen(true) });
 
   return (
     <main className="app">
@@ -522,15 +466,15 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
         </ContextMenu>
       )}
 
-      {closing && !closingDismissed && closingSoon(closing.on, Date.now()) && (
+      {syncClosing.closing && !syncClosing.dismissed && closingSoon(syncClosing.closing.on, Date.now()) && (
         <ClosingStrip
-          server={closing.server}
-          closingOn={closing.on}
+          server={syncClosing.closing.server}
+          closingOn={syncClosing.closing.on}
           onOpen={() => {
             setSettingsSection("sync");
             setSettingsOpen(true);
           }}
-          onDismiss={() => setClosingDismissed(true)}
+          onDismiss={syncClosing.dismiss}
         />
       )}
 
