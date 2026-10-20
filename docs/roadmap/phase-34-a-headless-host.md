@@ -44,6 +44,10 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
 - [x] **T211d** `docs/guide/en/uninstalling.md` names `mixengine-headless` beside `mixlab` for
       `apt remove` and `dnf remove`, `mix uninstall`'s last line names the package command, and
       `--keep-home`'s help stops saying the daemon keeps running (ADR 0051).
+      **Verified** on Ubuntu 24.04 over SSH (2026-10-21): a decline, a grant run by hand from a
+      second session, a grant in the same terminal, `mix doctor --repair --yes`, and `mix uninstall`.
+      **Not yet verified:** a Mac over SSH (T211a/b are **(P)**), and MixLab's elevation dialog
+      showing the waiting command — no device to test on yet.
 - [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
       account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
       headless host has no prompt to show.
