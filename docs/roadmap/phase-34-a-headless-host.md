@@ -42,7 +42,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
 - [ ] **T211d** `docs/guide/en/uninstalling.md` names `mixengine-headless` beside `mixlab` for
       `apt remove` and `dnf remove`, `mix uninstall`'s last line names the package command, and
       `--keep-home`'s help stops saying the daemon keeps running (ADR 0051).
-- [ ] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
+- [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
       account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
       headless host has no prompt to show.
       Design: [2026-10-20-t195-start-at-boot-without-a-login-design.md](../specs/2026-10-20-t195-start-at-boot-without-a-login-design.md).

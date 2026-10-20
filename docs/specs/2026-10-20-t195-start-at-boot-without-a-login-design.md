@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-20
 task: T195
 ---
@@ -65,12 +65,19 @@ On 2026-10-20, on this repository's own development machine: Ubuntu 24.04.5 LTS,
    system test `this_account_lingers_and_stops_lingering` passed from an SSH shell and again from
    `systemd-run --user --wait`, which runs it in no session: `loginctl enable-linger <uid>` read back
    `yes`, `disable-linger <uid>` read back `no`, and nothing asked for a password.
+9. **After a reboot the daemon was back before anyone could log in.** On 2026-10-21, on this
+   machine, a release build of this branch with its own home on the file store, a MariaDB with its
+   own autostart on, and `mix autostart enable --at-boot`, then `sudo reboot`. In seconds since the
+   kernel started: logind created the lingering user at 5.97 and `user-runtime-dir@1001` at 6.01;
+   `systemd-user-sessions` finished at 124.98 (the boot waited two minutes on `remote-fs.target`);
+   the user manager began at 124.994, `ssh.service` was ready at 125.010, and the first SSH session
+   opened at 125.290. The daemon ran the unit's `ExecStart`, the MariaDB was running, and its
+   account answered with the password the file store kept, asked with `--no-autostart` throughout.
 
-Not measured, and to be measured during implementation:
+Not measured:
 
 - `loginctl show-user <uid>` for an account with no session and no linger, which logind answers
   with an error rather than `Linger=no` — what D1 parses that error as.
-- A full reboot with linger on and nobody logged in — the milestone itself.
 - A distribution whose polkit policy does *not* allow `set-self-linger` — the case D1's refusal
   path is for.
 

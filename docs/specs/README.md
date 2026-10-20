@@ -230,7 +230,7 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-17 | [`unwrap()` and `expect()` in the code MixLab ships (design)](2026-10-17-t208g-unwrap-and-expect-in-shipped-code-design.md) | T208g | implemented |
 | 2026-10-18 | [Code past 1,000 lines in the root workspace, split by capability (design)](2026-10-18-t207p-code-split-by-capability-design.md) | T207p | implemented |
 | 2026-10-18 | [The ten files outside the root workspace, split (design)](2026-10-18-t207q-files-outside-the-root-workspace-design.md) | T207q | implemented |
-| 2026-10-20 | [T195 — Start at boot without a login (design)](2026-10-20-t195-start-at-boot-without-a-login-design.md) | T195 | approved |
+| 2026-10-20 | [T195 — Start at boot without a login (design)](2026-10-20-t195-start-at-boot-without-a-login-design.md) | T195 | implemented |
 | 2026-10-20 | [The daemon's walks as named steps (design)](2026-10-20-t209-the-daemons-walks-as-named-steps-design.md) | T209 | implemented |
 | 2026-10-20 | [The window's effects depend on what they read (design)](2026-10-20-t209a-the-windows-effects-depend-on-what-they-read-design.md) | T209a | implemented |
 | 2026-10-20 | [One statement splitter for the SQL engines (design)](2026-10-20-t209i-one-statement-splitter-design.md) | T209i | implemented |
