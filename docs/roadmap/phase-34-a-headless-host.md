@@ -25,9 +25,25 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       log, the `mix database` wording; bindings.
 - [x] **T194f** `security-model.md`, `platform-abstraction.md`'s `Keyring` row, the changelog lines,
       and the design flipped to `implemented`.
+- [ ] **T211** The ADR: on a machine with no graphical agent, `mix` in a terminal raises the
+      prompt itself, through `sudo` on the helper — amending ADR 0005. Found on an Ubuntu 24.04
+      server over SSH (2026-10-21): no polkit installed, and `pkexec` refuses without `DISPLAY`
+      anyway, so `mix elevation grant` and the privileged half of `mix uninstall` never run there,
+      and nothing names a way to do it by hand. Design to come.
+- [ ] **T211a** The daemon writes the request and hands its path to a client that has a terminal,
+      instead of refusing in `elevation/require.rs` before the request exists;
+      `mixengine-elevate` still validates every request itself. **(P)**
+- [ ] **T211b** `mix elevation grant` and `mix uninstall` run `sudo <helper> <request>` in the
+      person's own terminal, and the daemon reads the report as it does after `pkexec`. **(P)**
+- [ ] **T211c** Ask whether this machine can raise a prompt before `continue? [y/N]`, not after
+      the answer; where it cannot, the error names the command a person can run by hand.
+- [ ] **T211d** `docs/guide/en/uninstalling.md` names `mixengine-headless` beside `mixlab` for
+      `apt remove` and `dnf remove`, `mix uninstall`'s last line names the package command, and
+      `--keep-home`'s help stops saying the daemon keeps running (ADR 0051).
 - [ ] **T195** Start at boot without a login: a systemd user unit and linger, enabled through
       `mixengine-elevate` once. Design to come.
 
 **Milestone M34**: on an Ubuntu 24.04 server with no desktop, reached only over SSH, a release
 chooses the file store, first-runs a MariaDB, keeps its password across a daemon restart, and after
-a reboot with nobody logged in the daemon is back with the database answering.
+a reboot with nobody logged in the daemon is back with the database answering; over the same SSH
+session, `mix elevation grant` applies its queue and `mix uninstall` finishes.
