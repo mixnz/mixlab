@@ -11,17 +11,11 @@
 //! What is installed is a [`FakePackage`] containing the `fakeservice` binary under the name the
 //! index publishes it as, so the post-install check spawns something that really runs.
 
-use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
-use http_body_util::{BodyExt as _, Full};
-use hyper::body::Bytes;
-use hyper::header::{CONTENT_TYPE, HOST};
-use hyper::{Method, Request, StatusCode};
-use hyper_util::rt::TokioIo;
-use mixengine_platform::ipc::Connection;
-use mixengine_testkit::{FakePackage, Home, MockRegistry, Packed, Packing, declare};
+use mixengine_testkit::{
+    Client, Daemon, FakePackage, Home, MockRegistry, Packed, Packing, declare,
+};
 use serde_json::{Value, json};
 
 mod install;
@@ -88,7 +82,7 @@ impl Fixture {
         registry.publish(&index_for(&packed, &url));
 
         let home = Home::new();
-        let daemon = Daemon::start(&home, &registry);
+        let daemon = started(&home, &registry);
         home.wait_until_listening().await;
 
         Self {
@@ -110,14 +104,14 @@ impl Fixture {
         for name in ["mixengine.db", "mixengine.db-wal", "mixengine.db-shm"] {
             let _ = std::fs::remove_file(self.home.path().join(name));
         }
-        self.daemon = Some(Daemon::start(&self.home, &self.registry));
+        self.daemon = Some(started(&self.home, &self.registry));
         self.home.wait_until_listening().await;
     }
 
     /// Stop this daemon and start another on the same home, database and all.
     async fn restart(&mut self) {
         self.daemon.take();
-        self.daemon = Some(Daemon::start(&self.home, &self.registry));
+        self.daemon = Some(started(&self.home, &self.registry));
         self.home.wait_until_listening().await;
     }
 
@@ -346,152 +340,42 @@ fn arch() -> &'static str {
     std::env::consts::ARCH
 }
 
-/// Where every daemon this home has run writes its standard error, appended rather than replaced
-/// so a [`Fixture::reinstall`] keeps what the daemon before it said.
+/// A daemon for `home`, reading its index from `registry`.
 ///
-/// **Kept because a panic goes nowhere else.** `daemon.log` is written by the daemon's own logger,
-/// which a panic bypasses, and run 37414570632 lost a daemon between two requests with nothing
-/// left to read: `ConnectionReset` and two `null`s where the reason should have been.
-fn stderr_file(home: &Path) -> PathBuf {
-    home.join("daemon.stderr")
+/// Its standard error goes to [`Home::daemon_stderr_file`], appended rather than replaced so a
+/// [`Fixture::reinstall`] keeps what the daemon before it said, and a request with no answer prints
+/// it. **Kept because a panic goes nowhere else.** `daemon.log` is written by the daemon's own
+/// logger, which a panic bypasses, and run 37414570632 lost a daemon between two requests with
+/// nothing left to read: `ConnectionReset` and two `null`s where the reason should have been.
+fn started(home: &Home, registry: &MockRegistry) -> Daemon {
+    let stderr = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(home.daemon_stderr_file())
+        .expect("a file for the daemon's standard error");
+
+    let mut command = Daemon::command(env!("CARGO_BIN_EXE_mixengined"), home);
+    // Passed as arguments rather than through the environment, per rule 2 in
+    // `docs/standards/testing.md`: two of these running at once under `cargo test` would otherwise
+    // be pointed at each other's registry.
+    command
+        .arg("--index-url")
+        .arg(registry.url())
+        .arg("--index-key")
+        .arg(registry.public_key())
+        .stderr(stderr);
+    Daemon::spawn(command)
 }
 
-/// The daemon process, killed when the test ends however it ends.
-struct Daemon(Child);
-
-impl Daemon {
-    fn start(home: &Home, registry: &MockRegistry) -> Self {
-        let stderr = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(stderr_file(home.path()))
-            .expect("a file for the daemon's standard error");
-
-        Self(
-            Command::new(env!("CARGO_BIN_EXE_mixengined"))
-                .arg("--home")
-                .arg(home.path())
-                // Passed as arguments rather than through the environment, per rule 2 in
-                // `docs/standards/testing.md`: two of these running at once under `cargo test`
-                // would otherwise be pointed at each other's registry.
-                .arg("--index-url")
-                .arg(registry.url())
-                .arg("--index-key")
-                .arg(registry.public_key())
-                .stdout(Stdio::null())
-                .stderr(stderr)
-                .spawn()
-                .expect("the daemon binary runs"),
-        )
-    }
-}
-
-impl Drop for Daemon {
-    fn drop(&mut self) {
-        // Killed rather than asked: a test that failed halfway must not leave a process holding the
-        // temporary home open, which on Windows would make the directory unremovable.
-        let _ = self.0.kill();
-        let _ = self.0.wait();
-    }
-}
-
-/// One connection to the daemon.
-struct Client {
-    sender: hyper::client::conn::http1::SendRequest<Full<Bytes>>,
-    /// The home's directory, for what a failed request prints: the daemon's log and its stderr.
-    home: PathBuf,
-    /// `daemon.log`, read the same way.
-    daemon_log: PathBuf,
-}
-
-impl Client {
-    async fn connect(home: &Home) -> Self {
-        let connection = Connection::connect(home.endpoint())
-            .await
-            .expect("the daemon is listening");
-
-        let (sender, driver) = hyper::client::conn::http1::handshake(TokioIo::new(connection))
-            .await
-            .expect("the daemon speaks HTTP/1.1");
-
-        tokio::spawn(driver);
-
-        Self {
-            sender,
-            home: home.path().to_path_buf(),
-            daemon_log: home.daemon_log_file(),
-        }
-    }
-
-    /// What the daemon said, for a request that got no answer: a panic is in its stderr, and
-    /// anything it logged on the way there is in its log.
-    fn said(&self) -> String {
-        let read = |path: &Path| {
-            std::fs::read_to_string(path).unwrap_or_else(|error| format!("(unreadable: {error})"))
-        };
-        format!(
-            "--- the daemon's stderr ---\n{}\n--- daemon.log ---\n{}",
-            read(&stderr_file(&self.home)),
-            read(&self.daemon_log)
-        )
-    }
-
-    /// Call a method and hand back its `result`, insisting it succeeded.
-    async fn call(&mut self, method: &str, params: Value) -> Value {
-        let answer = self.ask(method, params).await;
-        assert!(answer.get("error").is_none(), "{method}: {answer}");
-
-        answer["result"].clone()
-    }
-
-    /// Call a method and hand back its `error`, insisting it did not succeed.
-    async fn refuse(&mut self, method: &str, params: Value) -> Value {
-        let answer = self.ask(method, params).await;
-        assert!(answer.get("result").is_none(), "{method}: {answer}");
-
-        answer["error"].clone()
-    }
-
-    async fn ask(&mut self, method: &str, params: Value) -> Value {
-        let body = json!({ "jsonrpc": "2.0", "method": method, "params": params, "id": 1 });
-
-        let request = Request::builder()
-            .method(Method::POST)
-            .uri("/rpc")
-            .header(HOST, "mixengine")
-            .header(CONTENT_TYPE, "application/json")
-            .body(Full::new(Bytes::from(
-                serde_json::to_vec(&body).expect("a request serialises"),
-            )))
-            .expect("a well formed request");
-
-        // Waited for rather than assumed: `hyper`'s dispatcher allows one request through before
-        // it has said it wants one, and every request after that only once the connection task has
-        // been polled since the last response. This suite reuses a connection, so sending straight
-        // away raced that task and failed with `canceled: connection was not ready` — rarely, and
-        // more often on the machine with the least to spare, which is CI.
-        self.sender
-            .ready()
-            .await
-            .expect("the connection is still open");
-
-        let response = match self.sender.send_request(request).await {
-            Ok(response) => response,
-            Err(error) => panic!("{method}: no answer: {error:?}\n{}", self.said()),
-        };
-        assert_eq!(response.status(), StatusCode::OK, "{method}");
-
-        let bytes = response
-            .into_body()
-            .collect()
-            .await
-            .expect("a whole body")
-            .to_bytes();
-
-        serde_json::from_slice(&bytes).expect("a JSON-RPC response")
-    }
-
+/// What this suite asks of a client beyond a call.
+trait Jobs {
     /// Install a version and wait for the job it produced to end.
+    async fn install(&mut self, version: &str) -> Value;
+    /// Wait for a job to end, and answer with it as it ended.
+    async fn finished(&mut self, job: Value) -> Value;
+}
+
+impl Jobs for Client {
     async fn install(&mut self, version: &str) -> Value {
         let started = self
             .call(
@@ -508,7 +392,6 @@ impl Client {
         self.finished(started["id"].clone()).await
     }
 
-    /// Wait for a job to end, and answer with it as it ended.
     async fn finished(&mut self, job: Value) -> Value {
         let deadline = tokio::time::Instant::now() + PATIENCE;
 
