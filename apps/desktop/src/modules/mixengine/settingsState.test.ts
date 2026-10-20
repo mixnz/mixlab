@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { autostartPresentation, credentialsPresentation, doctorChecksInOrder } from "./settingsState";
+import type { AutostartReport } from "@mixengine/api";
+
+import {
+  autostartPresentation,
+  bootPresentation,
+  credentialsPresentation,
+  doctorChecksInOrder,
+} from "./settingsState";
 
 describe("autostartPresentation", () => {
   it("is unsupported when this machine has no mechanism", () => {
@@ -62,5 +69,18 @@ describe("credentialsPresentation", () => {
     expect(credentialsPresentation({ store: "os", choosable: true })).toEqual({ store: "os", switchTo: "home" });
     expect(credentialsPresentation({ store: "home", choosable: true })).toEqual({ store: "home", switchTo: "os" });
     expect(credentialsPresentation({ store: "os", choosable: false })).toEqual({ store: "os", switchTo: null });
+  });
+});
+
+describe("bootPresentation", () => {
+  it("hides the box where the machine has no boot half, or the daemon predates it", () => {
+    expect(bootPresentation({ at_boot: "unsupported" })).toBe("hidden");
+    expect(bootPresentation({} as Pick<AutostartReport, "at_boot">)).toBe("hidden");
+  });
+
+  it("tells MixEngine's linger from the account's own", () => {
+    expect(bootPresentation({ at_boot: "off" })).toBe("off");
+    expect(bootPresentation({ at_boot: "on" })).toBe("on");
+    expect(bootPresentation({ at_boot: "on_by_account" })).toBe("onByAccount");
   });
 });

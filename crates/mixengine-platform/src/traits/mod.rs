@@ -30,7 +30,9 @@ pub use app_control::{
     APP_CONTROL_REFUSAL, APPLICATION_CONTROL_BLOCKED, AppControl, AppControlState,
     refused_by_app_control,
 };
-pub use autostart::{AutostartMechanism, AutostartPlan, AutostartState, ServiceInstaller};
+pub use autostart::{
+    AutostartMechanism, AutostartPlan, AutostartState, BootStart, ServiceInstaller,
+};
 pub use browsers::{BrowserChange, BrowserSurvey, BrowserTrust, DatabaseState};
 pub use connections::ConnectionCount;
 pub use desktop::{DesktopApps, InstalledApp, Located, Started};

@@ -266,6 +266,8 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         mixengine::commands::mixengine_autostart_status,
         mixengine::commands::mixengine_autostart_enable,
         mixengine::commands::mixengine_autostart_disable,
+        mixengine::commands::mixengine_autostart_enable_at_boot,
+        mixengine::commands::mixengine_autostart_disable_at_boot,
         mixengine::commands::mixengine_path_status,
         mixengine::commands::mixengine_path_install,
         mixengine::commands::mixengine_path_uninstall,

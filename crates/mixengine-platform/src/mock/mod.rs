@@ -711,6 +711,26 @@ impl Host {
         }
     }
 
+    /// A host whose account's linger already reads `boot` before anything is asked of it —
+    /// `BootStart::On` is an account that lingered before MixEngine did anything.
+    #[must_use]
+    pub fn with_linger(home: impl Into<PathBuf>, boot: crate::BootStart) -> Self {
+        Self {
+            autostart: autostart::Entry::lingering(boot),
+            ..Self::with_home(home)
+        }
+    }
+
+    /// A host whose polkit will not let the account linger itself: `enable_boot` fails as
+    /// `loginctl` does there, and the linger stays as it was.
+    #[must_use]
+    pub fn refusing_linger(home: impl Into<PathBuf>) -> Self {
+        Self {
+            autostart: autostart::Entry::refusing_linger(),
+            ..Self::with_home(home)
+        }
+    }
+
     /// Every autostart mutation this host was asked for, in order.
     ///
     /// Reads are absent for [`PathOp`]'s reason: what a test has to be able to see is the

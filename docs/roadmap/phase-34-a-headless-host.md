@@ -27,9 +27,11 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       and the design flipped to `implemented`.
 - [ ] **T211** The ADR: on a machine with no graphical agent, `mix` in a terminal raises the
       prompt itself, through `sudo` on the helper — amending ADR 0005. Found on an Ubuntu 24.04
-      server over SSH (2026-10-21): no polkit installed, and `pkexec` refuses without `DISPLAY`
+      server over SSH (2026-10-21): `polkitd` is installed and running, but `pkexec` is not — a
+      separate package since Ubuntu 24.04 — and with no polkit agent over SSH it could not prompt
       anyway, so `mix elevation grant` and the privileged half of `mix uninstall` never run there,
-      and nothing names a way to do it by hand. Design to come.
+      and nothing names a way to do it by hand. The error itself is wrong too: it says *"pkexec is
+      not on PATH, so polkit is not installed"*, which T211c corrects. Design to come.
 - [ ] **T211a** The daemon writes the request and hands its path to a client that has a terminal,
       instead of refusing in `elevation/require.rs` before the request exists;
       `mixengine-elevate` still validates every request itself. **(P)**
@@ -40,8 +42,10 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
 - [ ] **T211d** `docs/guide/en/uninstalling.md` names `mixengine-headless` beside `mixlab` for
       `apt remove` and `dnf remove`, `mix uninstall`'s last line names the package command, and
       `--keep-home`'s help stops saying the daemon keeps running (ADR 0051).
-- [ ] **T195** Start at boot without a login: a systemd user unit and linger, enabled through
-      `mixengine-elevate` once. Design to come.
+- [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
+      account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
+      headless host has no prompt to show.
+      Design: [2026-10-20-t195-start-at-boot-without-a-login-design.md](../specs/2026-10-20-t195-start-at-boot-without-a-login-design.md).
 
 **Milestone M34**: on an Ubuntu 24.04 server with no desktop, reached only over SSH, a release
 chooses the file store, first-runs a MariaDB, keeps its password across a daemon restart, and after

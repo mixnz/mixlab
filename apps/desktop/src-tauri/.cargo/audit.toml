@@ -29,6 +29,10 @@ ignore = [
   "RUSTSEC-2026-0098",
   "RUSTSEC-2026-0099",
   "RUSTSEC-2026-0104",
+  # 0382 — certificate paths through the distrusted emSign intermediates — is the same road and is
+  # not reached for the same reason: `NoCertVerifier` builds no path. The 0.103 line it also names
+  # is updated past it (0.103.16), so this ignore covers only tiberius' 0.101.
+  "RUSTSEC-2026-0382",
 
   # `rustls` 0.21 — the same road in: tiberius 0.12.3 pins it, on macOS only, through
   # `tokio-rustls` 0.24, and the fix is a 0.23 release that line will never get. Neither is reached.
