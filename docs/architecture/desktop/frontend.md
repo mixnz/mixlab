@@ -151,7 +151,7 @@ in both, so what is developed against is what ships; `F5` and the hard reload st
 `npm run dev:app` and are swallowed too in a packaged build.
 
 > **Unverified**, and worth checking the day someone has a packaged build open: the blocking is a
-> DOM `preventDefault` in [`shell/Workspace.tsx`](../../../apps/desktop/src/shell/Workspace.tsx), and WebView2 handles reload as a browser
+> DOM `preventDefault` in [`shell/workspace/useWindowChrome.ts`](../../../apps/desktop/src/shell/workspace/useWindowChrome.ts), and WebView2 handles reload as a browser
 > accelerator. If the key gets through anyway, the fix is Tauri-side rather than more JavaScript.
 
 ### Every Ctrl/Cmd chord goes through one listener

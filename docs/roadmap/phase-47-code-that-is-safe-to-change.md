@@ -37,7 +37,7 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       The rule has been in `docs/standards/rust.md`,
       *Structure & style*, since this phase was filed. This task brings the seven walks that
       predate it up to it.
-- [ ] **T209a** The window's effects depend on what they read. The frontend turns off
+- [x] **T209a** The window's effects depend on what they read. The frontend turns off
       `react-hooks/exhaustive-deps` 9 times and `rules-of-hooks` once. 5 of those 10 are in
       `shell/Workspace.tsx`, where `newTab` and `openTab` "are rebuilt every render". Those become
       stable callbacks (`useCallback`, or read through a ref), and the lint comes back on.
@@ -48,6 +48,12 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       `npm run screenshots -- --check`. Done when the only remaining disables are the ones whose
       comment names a reason a callback cannot give. Each of those stays listed here. The rule
       for new code is in `docs/standards/desktop/component-structure.md`, *State and effects*.
+      Design:
+      [2026-10-20-t209a-the-windows-effects-depend-on-what-they-read-design.md](../specs/2026-10-20-t209a-the-windows-effects-depend-on-what-they-read-design.md).
+      None of the ten gave such a reason, so no `react-hooks` disable is left in `src/` and this
+      list is empty. "`lang` beside `t`" is `useLanguageT`, the module number chords are one
+      `useShortcuts`, and the rest are `useCallback`s and effect events. `Workspace.tsx` is 205
+      lines over `shell/workspace/`, and `RestTab.tsx` 299 over `modules/rest/tab/`.
 - [ ] **T209b** Roadmap numbers stop being added to code comments. `.rs` files cite about 5,600
       task numbers (`T182f`, `T32`, …) and say "roadmap task" 2,281 times. 26% of Rust's
       non-blank lines are comments. The number tells a reader to look elsewhere, and goes wrong

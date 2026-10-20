@@ -239,7 +239,7 @@ function AccountView({ status, onChanged }: Props) {
           onMoved={() => {
             onChanged();
             // The new account's store starts empty; a full run pulls it before anything is
-            // pushed, and re-reads the new server's closing date (`Workspace`) on the way.
+            // pushed, and re-reads the new server's closing date (`useSyncClosing`) on the way.
             requestSync();
           }}
           onCancel={() => {
