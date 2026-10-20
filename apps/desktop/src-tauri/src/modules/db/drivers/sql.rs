@@ -7,6 +7,7 @@
 //! these worth a trait.
 
 pub mod engine;
+pub mod run;
 pub mod statements;
 pub mod syntax;
 pub mod types;

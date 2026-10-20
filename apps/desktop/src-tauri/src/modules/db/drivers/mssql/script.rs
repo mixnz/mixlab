@@ -30,6 +30,7 @@
 
 use super::{column_value, map_error, quote_ident, Connection, Pool};
 use crate::error::AppError;
+use crate::modules::db::drivers::sql::run::MAX_ROWS;
 use crate::modules::db::drivers::sql::statements::{split_statements, Statement};
 use crate::modules::db::drivers::sql::syntax::MSSQL;
 use crate::modules::db::models::{SqlProblem, StatementResult};
@@ -44,12 +45,6 @@ use tiberius::Row;
 fn is_write_verb(verb: &str) -> bool {
     matches!(verb, "INSERT" | "UPDATE" | "DELETE" | "MERGE")
 }
-
-/// How many rows of one result set are read back. A query without a `TOP` can name more rows than
-/// there is memory for, so the client stops here and says that it did — the same ceiling
-/// `mysql::script`/`postgres::script` use, for the same reason: the grid only ever shows the rows on
-/// screen now.
-const MAX_ROWS: usize = 10_000;
 
 /// The server's own words for one failed statement — never routed through [`map_error`], which
 /// produces a translation code for the *command's* own `Result`, not the per-statement text this

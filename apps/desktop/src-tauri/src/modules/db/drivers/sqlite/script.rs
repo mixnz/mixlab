@@ -11,16 +11,27 @@
 
 use super::{column_value, map_error};
 use crate::error::AppError;
+use crate::modules::db::drivers::sql::run::{run_statements, ScriptRows};
 use crate::modules::db::drivers::sql::{statements::split_statements, syntax::SQLITE};
 use crate::modules::db::models::{SqlProblem, StatementResult};
-use futures_util::StreamExt;
-use serde_json::Value;
-use sqlx::{Column, Either, Executor, Row, SqlitePool};
-use std::time::Instant;
+use sqlx::sqlite::SqliteQueryResult;
+use sqlx::{Executor, Sqlite, SqlitePool};
 
-/// How many rows of one result set are read back — as on the other two, a ceiling rather than a
-/// promise.
-const MAX_ROWS: usize = 10_000;
+/// What the shared loop needs to read SQLite's results.
+const ROWS: ScriptRows<Sqlite> = ScriptRows {
+    column_value,
+    is_write_verb,
+    done,
+};
+
+/// Rows affected, and the rowid of the row this statement inserted. The rowid is reported only for
+/// an INSERT: SQLite keeps the last one on the connection, so after an UPDATE it would still hold
+/// whatever the INSERT before it left there.
+fn done(result: &SqliteQueryResult, verb: &str) -> (u64, Option<u64>) {
+    let rowid = result.last_insert_rowid();
+    let inserted = (verb == "INSERT" || verb == "REPLACE") && rowid > 0;
+    (result.rows_affected(), inserted.then_some(rowid as u64))
+}
 
 /// The statements whose point is the number of rows they changed, so that a count of zero is still
 /// worth reporting as a count.
@@ -85,90 +96,7 @@ pub async fn run(pool: &SqlitePool, sql: &str) -> Result<Vec<StatementResult>, A
     let mut conn = pool.acquire().await.map_err(map_error)?;
     conn.close_on_drop();
 
-    let mut results: Vec<StatementResult> = Vec::new();
-
-    for statement in statements {
-        let started = Instant::now();
-        let mut columns: Vec<String> = Vec::new();
-        let mut rows: Vec<Vec<Value>> = Vec::new();
-        let mut truncated = false;
-        let mut rows_affected = 0u64;
-        let mut last_insert_id: Option<u64> = None;
-        let mut failure: Option<String> = None;
-
-        // Scoped so the stream lets go of the connection before the next statement takes it.
-        {
-            let mut stream =
-                sqlx::raw_sql(sqlx::AssertSqlSafe(statement.text.clone())).fetch_many(&mut *conn);
-            while let Some(item) = stream.next().await {
-                match item {
-                    Ok(Either::Right(row)) => {
-                        if columns.is_empty() {
-                            columns = row.columns().iter().map(|c| c.name().to_string()).collect();
-                        }
-                        if rows.len() < MAX_ROWS {
-                            rows.push(
-                                (0..row.columns().len())
-                                    .map(|i| column_value(&row, i))
-                                    .collect(),
-                            );
-                        } else {
-                            truncated = true;
-                        }
-                    }
-                    Ok(Either::Left(done)) => {
-                        rows_affected = done.rows_affected();
-                        /* The rowid of the row this statement inserted. Reported only for an
-                        INSERT: SQLite keeps the last one on the connection, so after an UPDATE
-                        it would still hold whatever the INSERT before it left there. */
-                        if statement.verb == "INSERT" || statement.verb == "REPLACE" {
-                            let rowid = done.last_insert_rowid();
-                            if rowid > 0 {
-                                last_insert_id = Some(rowid as u64);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        failure = Some(
-                            e.as_database_error()
-                                .map(|db| db.message().to_string())
-                                .unwrap_or_else(|| e.to_string()),
-                        );
-                        break;
-                    }
-                }
-            }
-        }
-
-        let kind = if failure.is_some() {
-            "error"
-        } else if !columns.is_empty() {
-            "rows"
-        } else if is_write_verb(&statement.verb) {
-            "affected"
-        } else {
-            "ok"
-        };
-        let failed = failure.is_some();
-        results.push(StatementResult {
-            statement: statement.text,
-            verb: statement.verb,
-            kind: kind.to_string(),
-            columns,
-            rows,
-            truncated,
-            rows_affected,
-            last_insert_id,
-            duration_ms: started.elapsed().as_millis() as u64,
-            error: failure,
-        });
-        // A failed statement stops the script, the way it would in a command-line client.
-        if failed {
-            break;
-        }
-    }
-
-    Ok(results)
+    Ok(run_statements(&mut *conn, statements, &ROWS).await)
 }
 
 #[cfg(test)]
@@ -248,6 +176,7 @@ mod tests {
 mod run_tests {
     use super::super::tests::Fixture;
     use super::*;
+    use crate::modules::db::drivers::sql::run::MAX_ROWS;
 
     #[tokio::test]
     async fn a_script_runs_statement_by_statement_and_reports_each() {
@@ -266,6 +195,33 @@ mod run_tests {
         assert_eq!(results[1].kind, "affected");
         assert_eq!(results[1].rows_affected, 3);
         assert_eq!(results[2].kind, "rows");
+    }
+
+    #[tokio::test]
+    async fn a_statement_with_no_rows_and_no_write_is_ok_and_a_write_of_none_is_affected() {
+        let (_fixture, pool) = Fixture::open().await;
+        let results = run(&pool, "create temp table t(x); update t set x = 2 where 0")
+            .await
+            .unwrap();
+
+        assert_eq!(results[0].kind, "ok");
+        assert_eq!(results[1].kind, "affected");
+        assert_eq!(results[1].rows_affected, 0);
+    }
+
+    #[tokio::test]
+    async fn rows_past_the_cap_are_left_unread_and_say_so() {
+        let (_fixture, pool) = Fixture::open().await;
+        let results = run(
+            &pool,
+            "with recursive c(x) as (select 1 union all select x + 1 from c where x < 10001) \
+             select x from c",
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(results[0].rows.len(), MAX_ROWS);
+        assert!(results[0].truncated);
     }
 
     #[tokio::test]

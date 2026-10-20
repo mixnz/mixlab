@@ -14,15 +14,18 @@
 
 use super::{column_value, map_error};
 use crate::error::AppError;
+use crate::modules::db::drivers::sql::run::{run_statements, ScriptRows};
 use crate::modules::db::drivers::sql::{statements::split_statements, syntax::POSTGRES};
 use crate::modules::db::models::{SqlProblem, StatementResult};
-use futures_util::StreamExt;
-use serde_json::Value;
-use sqlx::{Column, Either, Executor, PgPool, Row};
-use std::time::Instant;
+use sqlx::{Executor, PgPool, Postgres};
 
-/// How many rows of one result set are read back — as on MySQL, a ceiling rather than a promise.
-const MAX_ROWS: usize = 10_000;
+/// What the shared loop needs to read PostgreSQL's results. There is no generated key to report:
+/// PostgreSQL has no per-statement one, and `RETURNING` is how a script asks for it.
+const ROWS: ScriptRows<Postgres> = ScriptRows {
+    column_value,
+    is_write_verb,
+    done: |result, _verb| (result.rows_affected(), None),
+};
 
 /// The text could not be parsed. The one thing a checker can be sure is wrong.
 const SYNTAX_ERROR: &str = "42601";
@@ -161,78 +164,7 @@ pub async fn run(
     conn.close_on_drop();
     announce(backend_pid(&mut conn).await?);
 
-    let mut results: Vec<StatementResult> = Vec::new();
-
-    for statement in statements {
-        let started = Instant::now();
-        let mut columns: Vec<String> = Vec::new();
-        let mut rows: Vec<Vec<Value>> = Vec::new();
-        let mut truncated = false;
-        let mut rows_affected = 0u64;
-        let mut failure: Option<String> = None;
-
-        // Scoped so the stream lets go of the connection before the next statement takes it.
-        {
-            let mut stream =
-                sqlx::raw_sql(sqlx::AssertSqlSafe(statement.text.clone())).fetch_many(&mut *conn);
-            while let Some(item) = stream.next().await {
-                match item {
-                    Ok(Either::Right(row)) => {
-                        if columns.is_empty() {
-                            columns = row.columns().iter().map(|c| c.name().to_string()).collect();
-                        }
-                        if rows.len() < MAX_ROWS {
-                            rows.push(
-                                (0..row.columns().len())
-                                    .map(|i| column_value(&row, i))
-                                    .collect(),
-                            );
-                        } else {
-                            truncated = true;
-                        }
-                    }
-                    Ok(Either::Left(done)) => rows_affected = done.rows_affected(),
-                    Err(e) => {
-                        failure = Some(
-                            e.as_database_error()
-                                .map(|db| db.message().to_string())
-                                .unwrap_or_else(|| e.to_string()),
-                        );
-                        break;
-                    }
-                }
-            }
-        }
-
-        let kind = if failure.is_some() {
-            "error"
-        } else if !columns.is_empty() {
-            "rows"
-        } else if is_write_verb(&statement.verb) {
-            "affected"
-        } else {
-            "ok"
-        };
-        let failed = failure.is_some();
-        results.push(StatementResult {
-            statement: statement.text,
-            verb: statement.verb,
-            kind: kind.to_string(),
-            columns,
-            rows,
-            truncated,
-            rows_affected,
-            last_insert_id: None,
-            duration_ms: started.elapsed().as_millis() as u64,
-            error: failure,
-        });
-        // A failed statement stops the script, the way it would in a command-line client.
-        if failed {
-            break;
-        }
-    }
-
-    Ok(results)
+    Ok(run_statements(&mut *conn, statements, &ROWS).await)
 }
 
 #[cfg(test)]

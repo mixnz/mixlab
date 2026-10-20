@@ -5,21 +5,13 @@
 
 use super::{column_value, map_error, quote_ident};
 use crate::error::AppError;
+use crate::modules::db::drivers::sql::run::MAX_ROWS;
 use crate::modules::db::drivers::sql::{statements::split_statements, syntax::MYSQL};
 use crate::modules::db::models::{SqlProblem, StatementResult};
 use futures_util::StreamExt;
 use serde_json::Value;
 use sqlx::{Column, Either, MySqlPool, Row};
 use std::time::Instant;
-
-/// How many rows of one result set are read back. A query without a LIMIT can name more rows than
-/// there is memory for, so the client stops here and says that it did.
-///
-/// Ten thousand rather than the thousand this was: the results grid holds only the rows on screen
-/// now, so the cost of a large set is what it takes to decode and hand over — not what it takes to
-/// draw. This is still a ceiling and not a promise; the auto-LIMIT in the Query tab is what most
-/// scripts actually stop at.
-const MAX_ROWS: usize = 10_000;
 
 /// The statement text could not be parsed. The one thing a checker can be sure is wrong.
 const ER_PARSE_ERROR: u16 = 1064;
