@@ -13,9 +13,10 @@
 //! CI runner all have one, and what a person can act on there is a sentence naming the command to
 //! run by hand.
 //!
-//! **`loginctl enable-linger` is deliberately not called.** Without it a systemd user manager stops
-//! at logout, which is exactly the lifetime `docs/architecture/overview.md` states for the
-//! daemon: *login → logout*.
+//! **Linger is the boot half, and only when somebody asks.** Without it a systemd user manager runs
+//! from the account's first login to its last logout, and so does the daemon this unit starts. With
+//! it the manager starts at boot, and the unit with it — see `linger.rs` and
+//! `docs/decisions/0064-the-daemon-may-start-at-boot-by-the-account-s-own-linger.md`.
 //!
 //! `Restart=on-failure` and **not** `Restart=always`: `mix daemon stop` must stay stopped. macOS
 //! says the same with `KeepAlive: { SuccessfulExit: false }` and Windows with `<RestartOnFailure>`.
@@ -23,7 +24,10 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::{AutostartMechanism, AutostartPlan, AutostartState, Error, Result, ServiceInstaller};
+use super::linger;
+use crate::{
+    AutostartMechanism, AutostartPlan, AutostartState, BootStart, Error, Result, ServiceInstaller,
+};
 
 /// The unit's file name, named in `docs/architecture/daemon-and-ipc.md`.
 const UNIT: &str = "mixengined.service";
@@ -209,6 +213,30 @@ impl ServiceInstaller for Unit {
 
     fn state(&self) -> Result<AutostartState> {
         Ok(self.reading(probe(), self.registered()?, false))
+    }
+
+    fn boot_state(&self) -> Result<BootStart> {
+        Ok(match probe() {
+            AutostartMechanism::None => BootStart::Unsupported,
+            _ => linger::state(),
+        })
+    }
+
+    fn enable_boot(&self) -> Result<BootStart> {
+        if probe() == AutostartMechanism::None {
+            return Err(Error::UnsupportedPlatform {
+                capability: "ServiceInstaller",
+                reason: "this machine has no systemd user manager, so there is nothing a linger \
+                         would start at boot"
+                    .to_owned(),
+            });
+        }
+
+        linger::set(true)
+    }
+
+    fn disable_boot(&self) -> Result<BootStart> {
+        linger::set(false)
     }
 }
 

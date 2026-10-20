@@ -9,8 +9,11 @@ mod app_control;
 // The daemon's autostart entry, as a systemd user unit — T85b.
 #[cfg(feature = "host")]
 mod autostart;
+// The account's systemd linger: what makes the entry above start at boot rather than at login.
 #[cfg(any(feature = "host", feature = "process"))]
 pub(crate) mod cgroup;
+#[cfg(feature = "host")]
+mod linger;
 // Under both features since T85, on `port_access`' pattern: the daemon reads who owns a file before
 // it runs one as root, and the writing half stays the helper's. Every item carries its own gate.
 #[cfg(any(feature = "host", feature = "elevated"))]
