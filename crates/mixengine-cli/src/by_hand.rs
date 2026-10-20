@@ -187,6 +187,14 @@ pub(crate) fn command(waiting: &ByHand) -> String {
     format!("sudo -- {} {}", waiting.helper, waiting.request)
 }
 
+/// What is said just before `sudo` asks: that it will, and the line it is running.
+fn announcement(waiting: &ByHand) -> String {
+    format!(
+        "sudo will ask for your password, running:\n  {}",
+        command(waiting)
+    )
+}
+
 /// How long a grant is given to publish what it is waiting for.
 const PUBLISHED_WITHIN: Duration = Duration::from_secs(30);
 
@@ -217,12 +225,7 @@ pub(crate) async fn run_waiting(
         return Err(error);
     }
 
-    let _ = writeln!(
-        std::io::stderr(),
-        "sudo will ask for your password to run
-  {}",
-        command(&waiting)
-    );
+    let _ = writeln!(std::io::stderr(), "{}", announcement(&waiting));
 
     let mut sudo = tokio::process::Command::new("sudo");
     sudo.arg("--").arg(&waiting.helper).arg(&waiting.request);
@@ -485,6 +488,24 @@ mod tests {
     fn a_helper_root_does_not_own_is_refused() {
         assert!(trusted(INSTALLED, &allowed(), |_| false).is_err());
         assert!(trusted(SHIPPED, &allowed(), |_| false).is_err());
+    }
+
+    /// Said once, just before `sudo` asks: what is about to run, without reading as "to run sudo".
+    #[test]
+    fn the_announcement_names_the_command_being_run() {
+        let waiting = ByHand {
+            job: JobId(4),
+            helper: INSTALLED.to_owned(),
+            request: "/home/me/.mixengine/run/elevate/abc/request.json".to_owned(),
+        };
+
+        assert_eq!(
+            announcement(&waiting),
+            format!(
+                "sudo will ask for your password, running:\n  sudo -- {INSTALLED} \
+                 /home/me/.mixengine/run/elevate/abc/request.json"
+            )
+        );
     }
 
     #[test]
