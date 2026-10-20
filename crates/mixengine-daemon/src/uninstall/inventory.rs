@@ -82,7 +82,7 @@ pub(crate) async fn take(
         asked: query.package,
         present,
     }));
-    rows.push(autostart_entry(uninstall));
+    rows.push(autostart_entry(uninstall).await);
     rows.push(path_entry(uninstall).await);
 
     // T185a: what this install added to itself, from a copy MixEngine updates itself and nowhere
@@ -596,10 +596,10 @@ fn audit_log() -> Residue {
 /// **Only when it is this home's.** One entry per user means enabling from a second home replaces
 /// it, so an entry naming another home is that home's to remove and not this one's — which is
 /// exactly what `AutostartReport::for_this_home` exists to say.
-fn autostart_entry(uninstall: &Uninstall) -> Residue {
+async fn autostart_entry(uninstall: &Uninstall) -> Residue {
     let what = "the entry that starts this home's daemon at login".to_owned();
 
-    match uninstall.autostart.status() {
+    match uninstall.autostart.status().await {
         Ok(report) => Residue {
             id: ResidueId::AutostartEntry,
             what,

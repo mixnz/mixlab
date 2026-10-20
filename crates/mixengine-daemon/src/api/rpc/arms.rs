@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use mixengine_proto::rpc;
-use mixengine_proto::{AutostartReport, PathReport};
+use mixengine_proto::{AtBoot, AutostartReport, PathReport};
 use serde_json::Value;
 
 use crate::api::test_daemon::{call, daemon, undeclared};
@@ -105,6 +105,27 @@ async fn the_autostart_entry_is_reported_then_registered_and_then_taken_away() {
     // Two enables and a disable. The status is absent for the `path.*` recorder's reason: a
     // read is not a mutation.
     assert_eq!(daemon.host.autostart_operations().len(), 3);
+
+    daemon.quiet().await;
+}
+
+/// The boot half over the dispatcher, against `mock::Host` for the reason above: the real one
+/// turns on the linger of whoever runs the suite.
+#[tokio::test]
+async fn starting_at_boot_is_turned_on_and_off_and_the_login_entry_stays() {
+    let daemon = undeclared().await;
+
+    let at_boot: AutostartReport = daemon
+        .expect(rpc::method::AUTOSTART_ENABLE_AT_BOOT, Value::Null)
+        .await;
+    assert!(at_boot.enabled && at_boot.for_this_home, "{at_boot:?}");
+    assert_eq!(at_boot.at_boot, AtBoot::On);
+
+    let login_only: AutostartReport = daemon
+        .expect(rpc::method::AUTOSTART_DISABLE_AT_BOOT, Value::Null)
+        .await;
+    assert!(login_only.enabled, "the login entry stays: {login_only:?}");
+    assert_eq!(login_only.at_boot, AtBoot::Off);
 
     daemon.quiet().await;
 }

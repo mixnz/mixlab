@@ -235,6 +235,7 @@ where
         installed.join(format!("mixengined{}", std::env::consts::EXE_SUFFIX)),
         paths.root().to_path_buf(),
         Arc::clone(&host) as Arc<dyn mixengine_platform::Host>,
+        store.clone(),
     ));
 
     let elevation = crate::elevation::Elevation::new(

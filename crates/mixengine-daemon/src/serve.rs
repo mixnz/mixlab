@@ -262,6 +262,7 @@ pub(crate) async fn serve(
         program.clone(),
         paths.root().to_path_buf(),
         mixengine_platform::host(),
+        store.clone(),
     ));
 
     // The fourth reader of this path, and the last — roadmap task **T88**. Kept here because
