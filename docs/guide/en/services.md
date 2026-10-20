@@ -131,6 +131,12 @@ On GNOME the icon needs the *AppIndicator and KStatusNotifierItem Support* exten
 includes it; Fedora and plain GNOME do not. Without it there is no icon, closing the window quits
 MixLab as before, and the login switch opens the window instead.
 
+On a Linux server nobody logs in to, turn on **Also start at boot, before anyone logs in** under
+**Settings → MixEngine**, or run `mix autostart enable --at-boot`. MixEngine then comes back after a
+reboot by itself. It does this through your account's systemd linger, which needs no administrator
+on most systems; if yours refuses, run `sudo loginctl enable-linger $USER` once. A service starts
+along with it only if its own autostart is on, which `mix service list` shows.
+
 ## Updating a server to a newer patch
 
 `mix package available` lists servers one row per line too, and names an update above the table

@@ -131,6 +131,12 @@ Trên GNOME, icon cần extension *AppIndicator and KStatusNotifierItem Support*
 extension này; Fedora và GNOME gốc thì không. Khi thiếu nó sẽ không có icon, đóng cửa sổ vẫn thoát
 MixLab như trước, và công tắc đăng nhập sẽ mở cửa sổ thay cho icon.
 
+Với máy chủ Linux không ai đăng nhập, bật **Chạy cả khi vừa bật máy, chưa ai đăng nhập** trong
+**Settings → MixEngine**, hoặc chạy `mix autostart enable --at-boot`. Sau khi khởi động lại, MixEngine
+tự chạy lên. MixEngine làm việc này qua linger của systemd trên tài khoản của bạn, đa số hệ thống không
+đòi quyền quản trị; nếu máy bạn từ chối, chạy `sudo loginctl enable-linger $USER` một lần. Service nào
+bật tự khởi động riêng thì mới chạy theo, xem ở `mix service list`.
+
 ## Cập nhật server lên bản vá mới hơn
 
 `mix package available` cũng liệt kê server theo từng dòng phiên bản, và báo bản cập nhật phía trên

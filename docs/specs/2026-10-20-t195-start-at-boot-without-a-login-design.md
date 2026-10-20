@@ -61,11 +61,13 @@ On 2026-10-20, on this repository's own development machine: Ubuntu 24.04.5 LTS,
    `XDG_RUNTIME_DIR`, so a daemon started at boot and a `mix` run later over SSH find each other
    without anything else changing.
 
+8. **The account lingers itself by uid, from no session, with no password.** On 2026-10-21 the
+   system test `this_account_lingers_and_stops_lingering` passed from an SSH shell and again from
+   `systemd-run --user --wait`, which runs it in no session: `loginctl enable-linger <uid>` read back
+   `yes`, `disable-linger <uid>` read back `no`, and nothing asked for a password.
+
 Not measured, and to be measured during implementation:
 
-- `loginctl enable-linger <own uid>` and `disable-linger <own uid>` actually succeeding without a
-  password from a process outside any session. logind is expected to check `set-self-linger` when
-  the uid named is the caller's own; the system suite (see *Testing*) is what proves it.
 - `loginctl show-user <uid>` for an account with no session and no linger, which logind answers
   with an error rather than `Linger=no` — what D1 parses that error as.
 - A full reboot with linger on and nobody logged in — the milestone itself.

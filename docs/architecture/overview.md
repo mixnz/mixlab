@@ -31,7 +31,7 @@ Three privilege levels, three lifetimes:
 | Component | Privilege | Lifetime |
 | --- | --- | --- |
 | `mix` (and any other client) | user | on demand |
-| `mixengined` | user | login → logout (autostart, restartable) |
+| `mixengined` | user | login → logout, or boot → shutdown when asked ([ADR 0064](../decisions/0064-the-daemon-may-start-at-boot-by-the-account-s-own-linger.md)) (autostart, restartable) |
 | `mixengine-elevate` | elevated | seconds — one batch of operations, then exits. **Never resident.** |
 | Managed services | user | started/stopped by the supervisor |
 

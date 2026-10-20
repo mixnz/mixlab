@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+- On a Linux server, MixEngine can come back after a reboot with nobody logged in:
+  `mix autostart enable --at-boot`, or *Also start at boot* in Settings → MixEngine.
+
 ### Fixed
 - In MixLab, a SQL Server script with a `GO` line inside a string or a comment runs as the Query
   tab shows it. Before, it was cut in two at that line.

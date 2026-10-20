@@ -25,8 +25,10 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       log, the `mix database` wording; bindings.
 - [x] **T194f** `security-model.md`, `platform-abstraction.md`'s `Keyring` row, the changelog lines,
       and the design flipped to `implemented`.
-- [ ] **T195** Start at boot without a login: a systemd user unit and linger, enabled through
-      `mixengine-elevate` once. Design to come.
+- [ ] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
+      account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
+      headless host has no prompt to show.
+      Design: [2026-10-20-t195-start-at-boot-without-a-login-design.md](../specs/2026-10-20-t195-start-at-boot-without-a-login-design.md).
 
 **Milestone M34**: on an Ubuntu 24.04 server with no desktop, reached only over SSH, a release
 chooses the file store, first-runs a MariaDB, keeps its password across a daemon restart, and after
