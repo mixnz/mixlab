@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-20
 task: T209i
 ---
@@ -167,13 +167,13 @@ engine, to serve one. The phase file records ClickHouse as checked and left out,
 - Apart from D2's verb casing and D3's `GO`, the statements are the same text and verb as before.
   The four engines' existing splitter tests prove it.
 - A PostgreSQL or SQLite script returns the same `StatementResult`s as before: the same `kind`, the
-  same rows, the same `last_insert_id` and the same stop at the first failure. No test runs a
-  script today. So commit 3 first adds tests in `sqlite/script.rs` against an in-memory database,
-  written and passing against the current loop before it moves. They cover each `kind`,
-  `last_insert_id` after an `INSERT` and after an `UPDATE`, rows past `MAX_ROWS`, and the stop at
-  a failure. PostgreSQL has no server in the unit tests. It runs the same generic code, and is
-  checked by hand in the running window: a script with a `SELECT`, an `UPDATE` and a failing
-  statement.
+  same rows, the same `last_insert_id` and the same stop at the first failure. `sqlite/script.rs`
+  already runs scripts against a fixture database: the `rows` and `affected` kinds,
+  `last_insert_id` after an `INSERT` and after an `UPDATE`, and the stop at a failure. Commit 3
+  first adds what those tests leave out, the `ok` kind and rows past `MAX_ROWS`, written and
+  passing against the current loop before it moves. PostgreSQL has no server in the unit tests.
+  It runs the same generic code, and is checked by hand in the running window: a script with a
+  `SELECT`, an `UPDATE` and a failing statement.
 - `src/modules/db/sql/` keeps its code. Its header comments in `statements.ts` and `syntax.ts`
   still point at `src-tauri/src/db/mysql_script.rs` and `postgres_script.rs`, paths that no longer
   exist, and say SQL Server has no Rust splitter. They are corrected to name

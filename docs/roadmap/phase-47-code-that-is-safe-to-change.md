@@ -92,7 +92,7 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       | `dump` and `restore` | ~105 | split across six pairs | checked: small, and spread out |
       | tests, `column_value` and the rest | ~185 | | checked: tests, and decoding written against each driver's own types |
 
-- [ ] **T209i** One statement splitter and one `run` loop for the SQL engines. `split_statements`
+- [x] **T209i** One statement splitter and one `run` loop for the SQL engines. `split_statements`
       in `mssql/`, `mysql/`, `postgres/` and `sqlite/` `script.rs` walks the same frame: line and
       block comments, a quoted run, the first word as the statement's verb, `;` to end it. Only
       the dialect differs: `#` comments and backslash escapes in MySQL, dollar quotes and `E''` in
@@ -100,7 +100,17 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       with the dialect as its argument, and `run`'s per-statement result collection with it, so far
       as the sqlx engines share it. ClickHouse's `Scanner` is compared and joins only if it fits.
       The splitter tests of every engine pass unchanged, and the frontend's copy in
-      `src/modules/db/sql/` is left alone.
+      `src/modules/db/sql/` is left alone. Design:
+      [2026-10-20-t209i-one-statement-splitter-design.md](../specs/2026-10-20-t209i-one-statement-splitter-design.md).
+      `drivers/sql/syntax.rs` mirrors the window's `SqlSyntax`, and `drivers/sql/statements.rs` is
+      the one splitter. `drivers/sql/run.rs` holds the loop PostgreSQL and SQLite share, generic
+      over `sqlx::Database`, and the one `MAX_ROWS`. The four `script.rs` went from 2,245 lines to
+      1,518, and `drivers/sql/` gained 644, 151 of them tests. SQL Server's `GO` is now read
+      in the same pass as strings and comments, as the window reads it: a `GO` line inside either no
+      longer cuts the script, which is in the CHANGELOG. MySQL keeps its own loop, because a
+      procedure answers one statement with several result sets. **ClickHouse is checked and left
+      out:** its `Scanner` resumes across the chunks its restore reads, and it escapes a quoted name
+      with a backslash, which no `SqlSyntax` field says.
 - [ ] **T209j** One `build_where` for the SQL engines. `mysql.rs`, `sqlite.rs` and the `page.rs` of
       `mssql/`, `postgres/` and `clickhouse/` each turn the filter bar into a `WHERE` with the same
       arms. One function in `drivers/filters.rs` takes what differs: how a placeholder is spelled,
