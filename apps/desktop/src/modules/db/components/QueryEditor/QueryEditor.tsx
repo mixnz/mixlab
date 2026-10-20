@@ -47,7 +47,7 @@ import {
   HistoryIcon,
   PlayIcon,
 } from "../../../../icons";
-import { useTranslation, type TranslationKey } from "../../../../i18n";
+import { useLanguageT, useTranslation, type TranslationKey } from "../../../../i18n";
 import { errorMessage } from "../../../../core/errors";
 import { MODIFIER_LABEL, shortcutLabel } from "../../../../core/platform";
 import { RELOAD_SHORTCUT, useReloadShortcut } from "../../../../core/reload";
@@ -127,7 +127,9 @@ function QueryEditor({
   onOpenTable,
   onDatabaseChanged,
 }: Props) {
-  const { t, lang } = useTranslation();
+  const { t } = useTranslation();
+  // The hover texts are words made once per language: a new function per language rebuilds them.
+  const tl = useLanguageT();
   const api = useSqlApi();
   const dialect = useSqlDialect();
   const snippets = useQuerySnippets();
@@ -339,7 +341,7 @@ function QueryEditor({
       const at = { from: reference.from, to: reference.to };
 
       if (reference.kind === "function") {
-        return { ...at, title: reference.signature, subtitle: t("query.hoverFunction") };
+        return { ...at, title: reference.signature, subtitle: tl("query.hoverFunction") };
       }
 
       // A column says what it holds, whether it may be empty, what it keys and where it points —
@@ -349,8 +351,8 @@ function QueryEditor({
         const key = KEY_LABELS[column.key];
         const parts = [
           column.dataType,
-          column.nullable ? t("query.hoverNullable") : t("query.hoverNotNull"),
-          ...(key ? [t(key)] : []),
+          column.nullable ? tl("query.hoverNullable") : tl("query.hoverNotNull"),
+          ...(key ? [tl(key)] : []),
           // An arrow needs no translating, and the target is a name rather than a word. Spelled
           // `->` for the reason `columnDetail` spells it that way: the bundled font draws it.
           ...(column.references ? [`-> ${column.references}`] : []),
@@ -365,17 +367,17 @@ function QueryEditor({
       const { columns } = reference.table;
       const footer = [
         columns.length > HOVER_COLUMNS
-          ? t("query.hoverMoreColumns", { n: columns.length - HOVER_COLUMNS })
+          ? tl("query.hoverMoreColumns", { n: columns.length - HOVER_COLUMNS })
           : null,
-        onOpenTable ? t("query.hoverJump", { shortcut: shortcutLabel("Click") }) : null,
+        onOpenTable ? tl("query.hoverJump", { shortcut: shortcutLabel("Click") }) : null,
       ].filter((part) => part !== null);
       return {
         ...at,
         title: reference.table.name,
         subtitle:
           columns.length === 1
-            ? t("query.hoverTableOne")
-            : t("query.hoverTable", { n: columns.length }),
+            ? tl("query.hoverTableOne")
+            : tl("query.hoverTable", { n: columns.length }),
         items: columns.slice(0, HOVER_COLUMNS).map((column) => ({
           name: column.name,
           detail: columnDetail(column),
@@ -399,8 +401,7 @@ function QueryEditor({
         return { from: reference.from, to: reference.to, open: () => onOpenTable(name) };
       },
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `lang` beside `t`: `t` is one function for the life of the app, so `lang` is what rebuilds these words when they change. See `i18n/index.tsx`.
-  }, [outline, onOpenTable, dialect, statementsOf, t, lang]);
+  }, [outline, onOpenTable, dialect, statementsOf, tl]);
 
   /** Every keystroke lands here, and almost every one of them ends without a render: React drops a
    *  state write that changes nothing, and this one changes twice in a script's life.

@@ -18,7 +18,7 @@ import { logError } from "../core/log";
 import { useScrollAcceleration } from "../core/scroll";
 import { useShortcut, useShortcutDispatcher } from "../core/shortcuts";
 import { useTheme } from "./theme";
-import { useTranslation } from "../i18n";
+import { useLanguageT, useTranslation } from "../i18n";
 import { useUpdates } from "./update";
 import type { TabBadge } from "./module";
 import { onTabRequest, takeTabRequests } from "./launch";
@@ -57,7 +57,7 @@ function forgetNotice(notices: Record<string, string>, tabId: string): Record<st
 }
 
 function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
-  const { t, lang } = useTranslation();
+  const { t } = useTranslation();
   const { direction: syncDirection } = useSyncActivity();
 
   /* Which modules this window has, and everything derived from that. Memoized on the ids flattened
@@ -71,9 +71,9 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
 
   /* The tray icon is MixLab's and goes up whatever modules are visible (ADR 0058); what this window
      tells it is whether a visible module lends the panel a section, and the words for its menu —
-     again on a language switch. `lang` is listed beside `t` because `t` is one function for the
-     life of the app. */
+     again on a language switch, which is what `useLanguageT` gives a new function for. */
   const hasTraySection = traySections(visible).length > 0;
+  const tl = useLanguageT();
 
   // The main window syncs; the tray panel, which never mounts a workspace, does not.
   /** The signed-in server and its announced end, when there is one (D4b). */
@@ -98,11 +98,11 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
 
   useEffect(() => {
     void configureTray(hasTraySection, {
-      openPanel: t("tray.openPanel"),
-      openMain: t("tray.openMain"),
-      quit: t("tray.quit"),
+      openPanel: tl("tray.openPanel"),
+      openMain: tl("tray.openMain"),
+      quit: tl("tray.quit"),
     }).catch((e: unknown) => void logError("tray", e));
-  }, [hasTraySection, lang, t]);
+  }, [hasTraySection, tl]);
 
   function newTab(moduleId: string = defaultModuleId(visible), state?: unknown): TabInfo {
     const def = moduleById(moduleId);

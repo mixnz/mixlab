@@ -39,10 +39,18 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
   return template.replace(/\{\{(\w+)\}\}/g, (match, name) => (name in vars ? String(vars[name]) : match));
 }
 
+/** A key and its variables in, the words out. */
+export type Translate = (key: TranslationKey, vars?: Record<string, string | number>) => string;
+
+/** The lookup `t` and `useLanguageT` both make, bound to one dictionary. */
+export function translator(dict: TranslationDict): Translate {
+  return (key, vars) => interpolate(resolve(dict, key), vars);
+}
+
 interface I18nContextValue {
   lang: Language;
   setLang: (lang: Language) => void;
-  t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
+  t: Translate;
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -63,14 +71,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
      Nothing is lost on the rendering side. A switch changes `lang`, which rebuilds the context
      value below, which re-renders every consumer — each calling this same `t`, now reading the new
      dictionary. The one thing that does not follow by itself is a `useMemo` that has already
-     turned words into a value; those list `lang` beside `t`, and that is what marks them out. */
+     turned words into a value; those translate with `useLanguageT` below instead. */
   const dict = useRef(DICTS[lang]);
   dict.current = DICTS[lang];
 
-  const t = useCallback<I18nContextValue["t"]>(
-    (key, vars) => interpolate(resolve(dict.current, key), vars),
-    [],
-  );
+  const t = useCallback<Translate>((key, vars) => translator(dict.current)(key, vars), []);
 
   const setLang = useCallback((next: Language) => {
     localStorage.setItem(STORAGE_KEY, next);
@@ -86,4 +91,18 @@ export function useTranslation() {
   const ctx = useContext(I18nContext);
   if (!ctx) throw new Error("useTranslation must be used within I18nProvider");
   return ctx;
+}
+
+/**
+ * A translate function that is a **new function per language**, for a `useMemo` or an effect that
+ * turns words into a value.
+ *
+ * `t` is one function for the life of the app, so a memo that lists it is never rebuilt on a
+ * language switch and keeps the words it made in the language before. This one changes when the
+ * language does, so a memo that lists it is rebuilt for that reason and no other — the dependency
+ * says what it means, and the hooks lint can check it.
+ */
+export function useLanguageT(): Translate {
+  const { lang } = useTranslation();
+  return useMemo(() => translator(DICTS[lang]), [lang]);
 }

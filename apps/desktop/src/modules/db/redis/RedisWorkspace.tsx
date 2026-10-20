@@ -23,7 +23,7 @@ import keyListStyles from "./components/RedisKeyList/RedisKeyList.module.css";
 import Splitter from "../../../components/Splitter";
 import { useSidebarWidth } from "../workspace/sidebarWidth";
 import { ReloadIcon } from "../../../icons";
-import { useTranslation } from "../../../i18n";
+import { useLanguageT, useTranslation } from "../../../i18n";
 import { errorMessage } from "../../../core/errors";
 import { useReloadShortcut, withReloadShortcut } from "../../../core/reload";
 import { reloadTarget, type ReloadPane } from "./reloadTarget";
@@ -134,7 +134,9 @@ function RedisWorkspace({
   onScanLimitChange,
   readOnly = false,
 }: Props) {
-  const { t, lang } = useTranslation();
+  const { t } = useTranslation();
+  // The limit picker's labels are words made once per language: a new function per language rebuilds them.
+  const tl = useLanguageT();
   const [databases, setDatabases] = useState<RedisDbInfo[]>([]);
   const [databasesLoading, setDatabasesLoading] = useState(false);
   const [selectedDb, setSelectedDb] = useState(() => {
@@ -412,12 +414,11 @@ function RedisWorkspace({
       : [...SCAN_LIMITS, keyLimit].sort((a, b) => a - b);
     return values.map((limit) => ({
       value: limit,
-      label: t("redis.scanLimitShort", { n: limit / 1000 }),
-      optionLabel: t("redis.scanLimitOption", { n: limit.toLocaleString() }),
+      label: tl("redis.scanLimitShort", { n: limit / 1000 }),
+      optionLabel: tl("redis.scanLimitOption", { n: limit.toLocaleString() }),
       searchText: String(limit),
     }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `lang` beside `t`: `t` is one function for the life of the app, so `lang` is what rebuilds these words when they change. See `i18n/index.tsx`.
-  }, [keyLimit, t, lang]);
+  }, [keyLimit, tl]);
 
   return (
     <div className="redis-workspace">
