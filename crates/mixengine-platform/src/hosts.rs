@@ -27,7 +27,7 @@ use crate::{Error, Result};
 pub use crate::markers::{BEGIN_MARKER, END_MARKER};
 
 /// The hosts file's managed block.
-const BLOCK: crate::markers::Block = crate::markers::Block::in_file("the hosts file");
+const BLOCK: crate::markers::Block<'static> = crate::markers::Block::in_file("the hosts file");
 
 /// Where this OS keeps the file.
 #[must_use]
