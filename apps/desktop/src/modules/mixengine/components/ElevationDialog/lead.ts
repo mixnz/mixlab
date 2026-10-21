@@ -11,7 +11,7 @@ export type LeadState = {
 };
 
 /**
- * The i18n keys of the dialog's opening sentences, in order — T211h.
+ * The i18n keys of the dialog's opening sentences, in order.
  *
  * Each sentence says only what is true of the dialog it opens: "one prompt" only where one can be
  * raised, and "anything marked below" only when something is.

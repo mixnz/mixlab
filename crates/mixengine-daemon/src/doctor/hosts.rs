@@ -1,4 +1,4 @@
-//! The hosts blocks other homes left behind — roadmap task **T211g**, D5.
+//! The hosts blocks other homes left behind — ADR 0066.
 //!
 //! Every tagged block was written by a batch that recorded its home in the helper's ledger first,
 //! so the ledger can say whose each block is. A block whose home is gone has nobody left to remove

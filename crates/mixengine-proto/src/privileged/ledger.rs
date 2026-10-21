@@ -1,4 +1,4 @@
-//! The helper's record of the homes it serves — roadmap task **T211g**, ADR 0066.
+//! The helper's record of the homes it serves — ADR 0066.
 //!
 //! **A file format, not an API.** `mixengine-elevate` writes it beside its audit log and is the
 //! only writer; the daemon reads the same file to plan an uninstall and to find a hosts block whose

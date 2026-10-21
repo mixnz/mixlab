@@ -204,7 +204,7 @@ fn apply_each(
     let mut results: Vec<Option<OpOutcome>> = vec![None; ops.len()];
     let mut last: Option<usize> = None;
 
-    // T211g: this home goes into the ledger before any operation, so a batch that fails still says
+    // this home goes into the ledger before any operation, so a batch that fails still says
     // who asked. Only with a token: the ledger sits beside the log, which only root may write.
     let batch = match (elevated, log.parent()) {
         (true, Some(directory)) => homes::Batch::begin(directory, home, &caller.to_string(), now()),
@@ -249,7 +249,7 @@ fn apply_each(
         .collect()
 }
 
-/// The answer to a removal of something another home still uses, or [`None`] to apply it — T211g.
+/// The answer to a removal of something another home still uses, or [`None`] to apply it (ADR 0066).
 ///
 /// The two operations that take the machine's own copies, the helper and its log, ask the ledger
 /// first. Without a token nothing is kept here: the gate in [`ops::apply`] refuses them instead.
@@ -420,7 +420,7 @@ mod tests {
         assert_eq!(seen.len(), codes.len());
     }
 
-    /// T211g: a removal another living home would miss is answered here, before the operation
+    /// a removal another living home would miss is answered here, before the operation
     /// reaches the machine — and the log it would have taken is still there.
     #[test]
     fn the_audit_log_stays_while_another_home_in_the_ledger_lives() {

@@ -134,7 +134,7 @@ pub(crate) fn remove(log: &Path) -> OpOutcome {
     }
 
     if let Some(directory) = log.parent() {
-        // **The ledger of homes goes with the log** (T211g): a removal only reaches here when no
+        // **The ledger of homes goes with the log** (ADR 0066): a removal only reaches here when no
         // other home in it is left, so nothing it records is anybody's any more.
         let ledger = directory.join(mixengine_platform::ledger::FILE_NAME);
         if std::fs::remove_file(&ledger).is_ok() {
@@ -338,7 +338,7 @@ mod tests {
         );
     }
 
-    /// T211g: the ledger of homes is the helper's too, and goes with the log when the last home
+    /// the ledger of homes is the helper's too, and goes with the log when the last home
     /// removes it — or the directory would outlive the uninstall that was meant to take it.
     #[test]
     fn removing_the_log_takes_the_ledger_of_homes_with_it() {

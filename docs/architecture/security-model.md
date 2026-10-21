@@ -34,7 +34,10 @@ process validates everything again rather than trusting its caller:
 1. Parses a typed request; anything unparseable is rejected without partial effect.
 2. Domains must match `^[a-z0-9-]+(\.[a-z0-9-]+)*$` and end in a configured managed TLD. Paths are
    canonicalised and must resolve inside `MIXENGINE_HOME`. Ports must be in the recorded allowlist.
-3. Refuses to touch any hosts-file line outside the `# BEGIN/END MixEngine` block.
+3. Refuses to touch any hosts-file line outside the requesting home's `# BEGIN/END MixEngine <tag>`
+   block. It derives the tag from the request's home itself; another tag is accepted only to empty
+   a block whose home its ledger says is gone, and the untagged block from before T211g only to
+   empty it (ADR 0066).
 4. Writes atomically under an advisory lock: temp file in the same directory → fsync → rename
    (`ReplaceFile` on Windows, to preserve ACLs).
 5. Appends one JSON line per operation to a root-owned log **outside `MIXENGINE_HOME`** —
@@ -45,6 +48,10 @@ process validates everything again rather than trusting its caller:
    trail `mix doctor` reads back, **and it makes what ran readable, nothing more** — it prevents
    nothing, and specifically not the binary-replacement path below, since a helper that has been
    replaced is also the thing writing the log.
+   Beside the log it keeps `homes.json`, the ledger of every home that has asked it for anything,
+   recorded before each batch's first operation. `helper-remove` and `audit-log-remove` act only when
+   no other home in it still exists, and answer `unmanaged` otherwise: the helper and its log are the
+   machine's, and one home's uninstall is not another's (ADR 0066).
 6. Exits. A distinct exit code reports "user declined", which the daemon treats as a normal outcome.
 7. Runs every external program as an **argument vector**, never through a shell and never with a
    command line it interpolated. The sharpest edge is the launcher rather than the helper: on macOS

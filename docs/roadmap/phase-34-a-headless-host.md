@@ -71,7 +71,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       sentences that measurement found pointed the wrong way, and no longer do: the refusal over SSH
       offers MixLab only when the daemon can raise a dialog, and the dialog's *cannot prompt* line
       (`mix daemon stop`, which would cancel it) stays hidden while a terminal's grant waits.
-- [ ] **T211g** One home takes from the machine what other homes on it still use, found on a Mac
+- [x] **T211g** One home takes from the machine what other homes on it still use, found on a Mac
       with two homes on 2026-10-21 — and every machine that develops MixEngine has two (ADR 0024).
       The hosts file has one `# BEGIN MixEngine` block for every home, so one home's `hosts-apply`
       replaced another's `blog.test`, and a home whose resolver got wired empties it for the others.
@@ -81,7 +81,8 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       so it keeps itself and the log while another home is listed. **(P)** ADR 0066, amending 0051
       and 0005.
       Design: [2026-10-21-t211g-t211h-one-home-undoes-only-its-own-design.md](../specs/2026-10-21-t211g-t211h-one-home-undoes-only-its-own-design.md).
-- [ ] **T211h** Display slips older than T211, found on the same Mac: `helper … replaces it at the
+      Not yet measured on a Mac with two homes: the run the design asks for is still owed.
+- [x] **T211h** Display slips older than T211, found on the same Mac: `helper … replaces it at the
       next permission prompt` printed when the daemon skipped the replacement; a succeeded job still
       showing 40% or 70% and its last step; `mix doctor --repair` printing "the managed hosts block"
       twice; MixLab's `hosts-apply` detail printing `127.0.0.1` twice with no name. And two in the

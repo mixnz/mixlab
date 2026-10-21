@@ -301,7 +301,7 @@ mod tests {
             .unwrap_or_default()
     }
 
-    /// T211g: this home's block and the shared one are two operations in one prompt.
+    /// this home's block and the shared one are two operations in one prompt.
     #[tokio::test]
     async fn an_uninstall_removes_this_homes_block_and_the_shared_one() {
         let body =
@@ -314,7 +314,7 @@ mod tests {
         );
     }
 
-    /// T211g: a shared block alone is still something this home's uninstall removes.
+    /// a shared block alone is still something this home's uninstall removes.
     #[tokio::test]
     async fn the_hosts_row_counts_the_shared_block() {
         let body = the_uninstall_prompt_with(&[], &["127.0.0.1 old.test"]).await;

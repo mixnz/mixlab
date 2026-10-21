@@ -88,10 +88,10 @@ async fn a_home_on_dns_asks_for_an_empty_block_rather_than_for_nothing() {
     );
 }
 
-/// T211g: a row queued before each home kept its own block asks to write the shared one, which the
+/// a row queued before each home kept its own block asks to write the shared one, which the
 /// helper now refuses. Once this home's own block says what it should, that row is withdrawn.
 #[tokio::test]
-async fn a_pending_shared_block_from_before_t211g_is_withdrawn() {
+async fn a_pending_shared_block_from_before_per_home_blocks_is_withdrawn() {
     let (home, elevation, _events, _machine) = registry_resolving(
         mock::Host::with_hosts("/tmp/mixengine", ["127.0.0.1 blog.test"]),
         crate::dns::Dns::hosts_only_for_tests(),

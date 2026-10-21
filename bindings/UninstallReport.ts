@@ -22,7 +22,7 @@ export type UninstallReport = {
  */
 items: Array<Residue>, 
 /**
- * How many of `items` are kept because another home on this machine still uses them — T211g.
+ * How many of `items` are kept because another home on this machine still uses them (ADR 0066).
  * Counted by the daemon, so a client prints it and decides nothing. Zero from a daemon that
  * predates it.
  */

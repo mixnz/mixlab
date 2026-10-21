@@ -397,7 +397,7 @@ impl Host {
     }
 
     /// This host, with a legacy hosts block holding `lines` — the block every home shared before
-    /// T211g.
+    /// each kept its own (ADR 0066).
     #[must_use]
     pub fn with_legacy_hosts<'a>(self, lines: impl IntoIterator<Item = &'a str>) -> Self {
         Self {
@@ -406,7 +406,7 @@ impl Host {
         }
     }
 
-    /// This host, whose hosts file holds blocks under `tags` — other homes' among them (T211g).
+    /// This host, whose hosts file holds blocks under `tags` — other homes' among them (ADR 0066).
     #[must_use]
     pub fn with_hosts_tags<'a>(self, tags: impl IntoIterator<Item = &'a str>) -> Self {
         Self {

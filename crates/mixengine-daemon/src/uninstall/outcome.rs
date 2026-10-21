@@ -211,7 +211,7 @@ pub(super) fn settle(
         };
     }
 
-    // T211g: the helper kept it for another home that asked after the plan was read. The second
+    // the helper kept it for another home that asked after the plan was read. The second
     // reading says so, and it is neither a removal nor a failure.
     if matches!(after.outcome, Removal::Kept { .. }) {
         return after;

@@ -187,7 +187,7 @@ pub(crate) fn revoke(
 }
 
 /// Remove every file under `root` that MixEngine marked and that `keep` does not name — and, with
-/// `only`, that sends its TLD to that port and no other (T211g).
+/// `only`, that sends its TLD to that port and no other (ADR 0066).
 ///
 /// Reads the directory rather than the TLD table, so a file left by a build that managed a TLD this
 /// one does not still goes — which is what makes uninstall complete rather than nearly complete.
@@ -328,7 +328,7 @@ mod tests {
         );
     }
 
-    /// T211g: a revoke takes the files that name this home's port, and leaves another home's and
+    /// a revoke takes the files that name this home's port, and leaves another home's and
     /// any older format it cannot place.
     #[cfg(feature = "elevated")]
     #[test]

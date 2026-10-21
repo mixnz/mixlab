@@ -33,7 +33,7 @@ pub trait HostsFile: std::fmt::Debug + Send + Sync {
     /// guessing at what somebody else meant.
     fn managed(&self, tag: Option<&str>) -> Result<Vec<HostEntry>>;
 
-    /// Every tag a block in the file carries — one per home that has written one (T211g, D5).
+    /// Every tag a block in the file carries — one per home that has written one (ADR 0066).
     ///
     /// # Errors
     ///

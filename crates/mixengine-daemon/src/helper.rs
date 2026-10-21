@@ -134,7 +134,7 @@ async fn probe(helper: &Path, home: &Path, directory: &Path) -> Option<HelperFac
 /// response was written without `deny_unknown_fields` in the first place. A version either side
 /// cannot parse is [`None`]: a sentence about a string nobody can compare helps nobody.
 ///
-/// `stays` is why this start could not stage the replacement (T211h): then nothing is queued, and
+/// `stays` is why this start could not stage the replacement : then nothing is queued, and
 /// the sentence says the helper stays rather than promising a prompt that will not replace it.
 pub(crate) fn upgrade_sentence(
     facts: &HelperFacts,
@@ -392,7 +392,7 @@ mod tests {
         assert!(!facts("0.2.0", false).can_replace_itself());
     }
 
-    /// T211h: a replacement the daemon could not stage is not one that happens at the next prompt.
+    /// a replacement the daemon could not stage is not one that happens at the next prompt.
     #[test]
     fn a_helper_that_was_not_staged_says_it_stays() {
         let said = upgrade_sentence(

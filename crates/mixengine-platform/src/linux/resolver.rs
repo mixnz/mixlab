@@ -182,7 +182,7 @@ pub(crate) fn revoke(
 
     let _held = crate::resolver::held()?;
 
-    // T211g: a link pointing at another home's server is that home's. A file that is not there is
+    // a link pointing at another home's server is that home's. A file that is not there is
     // read as empty, and an empty file points nowhere — which leaves the `.netdev` alone with it,
     // as a revoke of a half-written link from before this rule would not.
     let declared = std::fs::read_to_string(networkd::NETWORK_PATH).unwrap_or_default();

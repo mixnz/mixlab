@@ -137,7 +137,7 @@ function describeKind(pending: unknown): Omit<DescribedOp, "screenOnly"> {
   const kind = typeof op.op === "string" ? op.op : "unknown";
 
   if (kind === "hosts-apply" && Array.isArray(op.entries)) {
-    // `HostEntry` names the field `domain`: reading `name` printed the address alone (T211h).
+    // `HostEntry` names the field `domain`: reading `name` printed the address alone .
     const lines = (op.entries as Partial<HostEntry>[])
       .map((entry) => `${String(entry.address ?? "")} ${String(entry.domain ?? "")}`.trim())
       .filter(Boolean);

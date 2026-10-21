@@ -161,7 +161,7 @@ impl Elevation {
             .await
             .map_err(|error| error.to_wire())?;
 
-        // T211g: this home's own block, tagged from its path the way the helper tags it.
+        // this home's own block, tagged from its path the way the helper tags it.
         let tag = mixengine_platform::hosts::tag_for(&self.home);
         let wanted = PrivilegedOp::hosts_apply(Some(tag.clone()), desired);
 
@@ -189,8 +189,8 @@ impl Elevation {
         }
     }
 
-    /// Ask for the hosts blocks under `tags` to be emptied — homes that are gone left them (T211g,
-    /// D5). The helper empties one only after its own ledger says that home is gone.
+    /// Ask for the hosts blocks under `tags` to be emptied — homes that are gone left them (ADR
+    /// 0066). The helper empties one only after its own ledger says that home is gone.
     ///
     /// # Errors
     ///
@@ -207,7 +207,7 @@ impl Elevation {
         Ok(())
     }
 
-    /// Withdraw a row queued before T211g that writes names into the block every home shared.
+    /// Withdraw a row queued before each home kept its own block that writes names into the block every home shared.
     ///
     /// The helper now refuses to write that block, so the row could only ever come back refused.
     /// A row that only empties it is an uninstall's, and stays.

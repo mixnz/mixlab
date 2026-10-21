@@ -166,7 +166,7 @@ impl Doctor {
             };
         };
 
-        // T211g: this home's own block, under the tag the helper derives from its path.
+        // this home's own block, under the tag the helper derives from its path.
         let tag = mixengine_platform::hosts::tag_for(&self.root);
         let wanted =
             mixengine_proto::privileged::PrivilegedOp::hosts_apply(Some(tag.clone()), desired);

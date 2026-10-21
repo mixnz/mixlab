@@ -295,7 +295,7 @@ impl Repairs {
     async fn enqueue(&self, what: Enqueue) -> Action {
         let asked = match what {
             // What will be done, not what it is done to: the row's name already says that, and
-            // `mix doctor --repair` printed it twice (T211h).
+            // `mix doctor --repair` printed it twice .
             Enqueue::Hosts => (
                 self.elevation.require_hosts().await,
                 "rewriting it to hold this home's names",
@@ -458,7 +458,7 @@ enum Enqueue {
     /// The managed hosts block.
     Hosts,
 
-    /// The hosts blocks of homes that are gone (T211g).
+    /// The hosts blocks of homes that are gone (ADR 0066).
     OrphanHosts,
 
     /// The resolver for this home's managed TLDs.

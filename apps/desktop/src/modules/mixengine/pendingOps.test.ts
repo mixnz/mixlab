@@ -58,7 +58,7 @@ describe("describeOp", () => {
     expect(describeOp(hostsApply).description).toBe("Add 1 name to the hosts file");
   });
 
-  /* T211h: each line is an address and a domain, as `HostEntry` spells them. Reading a `name` the
+  /* each line is an address and a domain, as `HostEntry` spells them. Reading a `name` the
      binding does not have printed `127.0.0.1` once per line and no name at all. */
   it("names the hosts lines it would write", () => {
     const detail = describeOp(hostsApply).detail;

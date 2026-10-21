@@ -890,7 +890,7 @@ fn the_candidate_sits_under_the_homes_run_directory() {
     );
 }
 
-/// T211g: this home's block, another home's and the legacy block are three questions, so three
+/// this home's block, another home's and the legacy block are three questions, so three
 /// rows — an uninstall asks for two of them in one batch.
 #[test]
 fn own_legacy_and_orphan_blocks_are_separate_queue_rows() {
@@ -903,11 +903,11 @@ fn own_legacy_and_orphan_blocks_are_separate_queue_rows() {
     assert_eq!(
         legacy.dedupe_key(),
         "hosts-apply",
-        "the key rows queued before T211g already carry, so they need no migration"
+        "the key rows queued before each home kept its own block already carry, so they need no migration"
     );
 }
 
-/// A row queued before T211g carries no `home`, and reads as the legacy block it was written for.
+/// A row queued before each home kept its own block carries no `home`, and reads as the legacy block it was written for.
 #[test]
 fn a_hosts_apply_without_home_reads_as_the_legacy_block() {
     let value = serde_json::json!({ "op": "hosts-apply", "entries": [] });

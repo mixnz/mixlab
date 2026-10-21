@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-21
 task:
   - T211g
@@ -107,7 +107,9 @@ home that uses it, because every request names its home, so the helper keeps the
 - **A ledger this batch created keeps both.** It has seen only this home and says nothing about
   homes from before it, so the helper removes itself and the log only when `homes.json` existed
   before the batch. A single-home machine that has granted anything since the update removes them
-  as before; the helper's own replacement is such a batch.
+  as before. The helper's own replacement is **not** such a batch: the helper being replaced runs
+  it, and that one keeps no ledger. So an uninstall that is the first grant after the update keeps
+  the helper and the log, and its rows say how to remove them by hand.
 - **A ledger that cannot be read keeps both**, with the reason. Keeping a file is recoverable;
   removing another home's helper and log is not.
 - `AuditLogRemove` that does act removes `homes.json` and `homes.lock` with the log.

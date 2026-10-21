@@ -561,7 +561,7 @@ impl Uninstall {
     /// putting a `PrivilegedOp` on it would put the elevation protocol into the uninstall report —
     /// where a client could read it, and where two clients could disagree about what a row means.
     ///
-    /// **Several for the hosts row** (T211g): this home's block, and the block every home shared
+    /// **Several for the hosts row** (ADR 0066): this home's block, and the block every home shared
     /// before each kept its own, when that still holds names. One row on the report, two questions
     /// in the queue.
     async fn operations_for(&self, id: ResidueId) -> Vec<PrivilegedOp> {
@@ -848,7 +848,7 @@ fn kept_relocated(items: &[Residue]) -> Vec<usize> {
         .collect()
 }
 
-/// The report of `items`, with what is kept for another home counted where it is decided (T211g).
+/// The report of `items`, with what is kept for another home counted where it is decided (ADR 0066).
 fn report(items: Vec<Residue>) -> UninstallReport {
     let kept_for_others = items
         .iter()

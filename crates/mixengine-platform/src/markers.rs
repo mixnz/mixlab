@@ -38,7 +38,7 @@ pub enum Insertion<'a> {
 /// Carries the file's name only so a refusal can say which of the files a person has to open. It
 /// holds no path and reads nothing: every method takes the text.
 ///
-/// **A tag names whose block it is** — roadmap task **T211g**, ADR 0066. The hosts file holds one
+/// **A tag names whose block it is** — ADR 0066. The hosts file holds one
 /// block per home, `# BEGIN MixEngine <tag>`; the untagged block is the one every home shared
 /// before. Each block matches only its own markers, so a line that is another block's marker is,
 /// to this one, a line like any other.
@@ -334,10 +334,11 @@ load anchor \"com.apple\" from \"/etc/pf.anchors/com.apple\"
         assert!(error.to_string().contains("/etc/pf.conf"), "{error}");
     }
 
-    /// The legacy block beside one tagged block — the shape a hosts file has after T211g.
+    /// The legacy block beside one tagged block — the shape a hosts file has once homes keep their
+    /// own (ADR 0066).
     const TWO: &str = "a\n# BEGIN MixEngine\nL\n# END MixEngine\n# BEGIN MixEngine ab12\nT\n# END MixEngine ab12\n";
 
-    /// T211g, D2: each block reads only between its own markers, and a tag nobody wrote reads as
+    /// ADR 0066: each block reads only between its own markers, and a tag nobody wrote reads as
     /// no block at all.
     #[test]
     fn a_tagged_block_reads_only_its_own() {
@@ -351,8 +352,8 @@ load anchor \"com.apple\" from \"/etc/pf.anchors/com.apple\"
     fn splicing_a_tagged_block_leaves_the_others_byte_for_byte() {
         let block = Block::tagged("f", "ab12");
 
-        let changed = block.splice(TWO, "T2\n", Insertion::End).unwrap();
-        assert_eq!(changed, TWO.replace("\nT\n", "\nT2\n"));
+        let changed = block.splice(TWO, "X\n", Insertion::End).unwrap();
+        assert_eq!(changed, TWO.replace("\nT\n", "\nX\n"));
 
         assert_eq!(
             block.splice(TWO, "", Insertion::End).unwrap(),

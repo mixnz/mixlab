@@ -1,5 +1,5 @@
 //! Which homes this helper serves, and whether a removal would take something another one uses —
-//! roadmap task **T211g**, ADR 0066.
+//! ADR 0066.
 //!
 //! Every batch records its home in the ledger before any operation. `helper-remove` and
 //! `audit-log-remove` then ask [`Batch::kept`] first: the helper and its log are the machine's, and
@@ -134,7 +134,7 @@ mod tests {
         }
     }
 
-    /// The case T211g was found on: a second home still uses the helper.
+    /// The case this was found on, a Mac with two homes: a second home still uses the helper.
     #[test]
     fn the_helper_keeps_itself_while_another_home_lives() {
         let kept = batch(true, &["/homes/a", "/homes/b"]).kept(

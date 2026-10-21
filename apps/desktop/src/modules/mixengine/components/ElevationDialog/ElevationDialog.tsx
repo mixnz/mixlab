@@ -263,7 +263,7 @@ export default function ElevationDialog({
         <>
           <ModalBody>
             {/* A terminal's grant carries only what a terminal can, so "one prompt" is not true of
-                the list while one waits; nor where no prompt can be raised (T211h). */}
+                the list while one waits; nor where no prompt can be raised . */}
             <p className={styles.lead}>
               {leadKeys({
                 canPrompt,

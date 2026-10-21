@@ -9,14 +9,14 @@ describe("leadKeys", () => {
     ]);
   });
 
-  /* T211h: where no prompt can be raised, "changed in one prompt" was not true. */
+  /* where no prompt can be raised, "changed in one prompt" was not true. */
   it("says the window cannot ask where it cannot", () => {
     expect(leadKeys({ canPrompt: false, terminalWaits: false, anyMarked: false })).toEqual([
       "mixengine.elevation.leadCannotPrompt",
     ]);
   });
 
-  /* T211h: "anything marked below" only when something below is marked. */
+  /* "anything marked below" only when something below is marked. */
   it("mentions marked rows only when there are some", () => {
     expect(leadKeys({ canPrompt: true, terminalWaits: true, anyMarked: false })).toEqual([
       "mixengine.elevation.leadWhileTerminalWaits",

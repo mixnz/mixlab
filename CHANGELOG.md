@@ -11,6 +11,12 @@
   and `mix` says so before it asks.
 
 ### Fixed
+- With two MixEngine homes on one machine, such as a release and a development build, each keeps
+  its own names in the hosts file, and uninstalling one leaves the other's names, DNS routing,
+  privileged helper and audit log in place.
+- `mix job status` no longer shows a finished job stuck at 40% with its last step, `mix doctor
+  --repair` names the hosts fix once, and MixLab's permission dialog lists each hosts name and only
+  says what is true of that dialog.
 - On a Mac, a MixEngine started over SSH says it cannot show an administrator prompt and how to
   restart it, instead of reporting a wrong password.
 - On Ubuntu 24.04 and later, a machine without `pkexec` no longer says polkit is missing.

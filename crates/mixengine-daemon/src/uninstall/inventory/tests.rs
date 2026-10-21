@@ -541,7 +541,7 @@ fn homes(paths: &[&str]) -> Result<Option<mixengine_proto::privileged::HomesLedg
     }))
 }
 
-/// T211g, D4: the daemon plans what the helper will decide — another living home keeps the helper
+/// ADR 0066: the daemon plans what the helper will decide — another living home keeps the helper
 /// and the log, and so does a machine with no ledger or one that cannot be read.
 #[test]
 fn the_helper_and_log_stay_while_another_home_uses_them() {

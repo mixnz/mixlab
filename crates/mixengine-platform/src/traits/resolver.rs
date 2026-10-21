@@ -98,7 +98,7 @@ impl ResolverState {
     /// against a wiring written five phases earlier.
     #[must_use]
     ///
-    /// `port` is this home's DNS server: only what points at it is this home's to remove (T211g).
+    /// `port` is this home's DNS server: only what points at it is this home's to remove (ADR 0066).
     pub fn target(&self, port: u16) -> Option<ResolverTarget> {
         match self.method {
             ResolverMethod::None => None,

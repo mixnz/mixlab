@@ -276,7 +276,7 @@ fn the_login_entry_is_residue_only_when_it_is_this_home_s() {
     ));
 }
 
-/// T211g: the helper kept a row the plan said would go — another home granted in between. The
+/// the helper kept a row the plan said would go — another home granted in between. The
 /// second reading is the answer, not "removed at the next restart" and not a failure.
 #[test]
 fn a_helper_kept_after_planning_settles_as_kept() {
@@ -292,7 +292,7 @@ fn a_helper_kept_after_planning_settles_as_kept() {
     assert_eq!(settled, kept);
 }
 
-/// T211g, D7: the report counts what was kept for another home, so `mix` decides nothing.
+/// ADR 0066: the report counts what was kept for another home, so `mix` decides nothing.
 #[test]
 fn the_report_counts_what_another_home_keeps() {
     let for_another = Residue {

@@ -165,7 +165,7 @@ pub async fn finish(
     let result = serde_json::to_string(&outcome)
         .map_err(|source| Error::Job(JobError::JobOutcomeUnwritable { job: job.0, source }))?;
 
-    // **A success is 100%** (T211h): the work is done, whatever its last step reported, and a
+    // **A success is 100%** : the work is done, whatever its last step reported, and a
     // succeeded job at 40% read as one that stopped. A failure or a cancellation keeps the number
     // it got to, which is where to look.
     let (id, state, finished) = (job.0, to.as_str(), at.0);
@@ -544,7 +544,7 @@ mod tests {
         assert_eq!(row.outcome, Some(JobOutcome::Failed { error }));
     }
 
-    /// T211h: a job that succeeded did all of it, whatever its last step reported.
+    /// a job that succeeded did all of it, whatever its last step reported.
     #[tokio::test]
     async fn a_success_ends_at_one_hundred() {
         let (_home, store) = store().await;

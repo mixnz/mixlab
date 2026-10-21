@@ -274,7 +274,7 @@ elevated = [
     # refused. `.github/elevate-dependencies.txt` gains them here, which is the commit where a
     # binary running as root first uses them.
     "dep:pem",
-    # T211g: the helper's ledger of homes is JSON. Already in the helper's closure through
+    # ADR 0066: the helper's ledger of homes is JSON. Already in the helper's closure through
     # `mixengine-elevate`'s own dependency, so `.github/elevate-dependencies.txt` does not change.
     "dep:serde_json",
 ]

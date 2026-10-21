@@ -39,7 +39,7 @@ use machine::{certificate_rows, firewall_rules, hosts_block, port_access, resolv
 pub(crate) const FOR_ANOTHER_HOME: &str = "kept for the other homes on this machine: ";
 
 /// Why the helper and its log stay for another home, or [`None`] when this home is the last — the
-/// same answer `mixengine-elevate` reaches from the same ledger (T211g, D4).
+/// same answer `mixengine-elevate` reaches from the same ledger (ADR 0066).
 ///
 /// **No ledger, or one that cannot be read, keeps them**: keeping a file is recoverable, removing
 /// another home's is not.
@@ -121,7 +121,7 @@ pub(crate) async fn take(
     rows.push(trust);
     rows.push(browsers);
 
-    // T211g, D4: the helper and its log are the machine's, and stay while another home uses them —
+    // ADR 0066: the helper and its log are the machine's, and stay while another home uses them —
     // read here from the helper's own ledger, which the helper reads again before it acts.
     let shared = for_others(
         ledger(),

@@ -6,7 +6,7 @@
  * Mirrors [`ResolverPlan`] with only what a removal reads. Every artifact each variant deletes is
  * a constant in the helper, so no variant carries a path.
  *
- * **The port, where the mechanism names one** (T211g, ADR 0066): the files are one per TLD or one
+ * **The port, where the mechanism names one** (ADR 0066): the files are one per TLD or one
  * per machine, and they point at whichever home wired them last. Only what points at this home's
  * server is this home's to remove.
  */

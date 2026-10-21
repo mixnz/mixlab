@@ -9,7 +9,7 @@ use super::super::Uninstall;
 use super::{firewall_label, resolver_place, trust_place};
 
 /// **1.** This home's block in this machine's hosts file, read the way T41 reads it — and the block
-/// every home shared before each kept its own (T211g), which this home's uninstall also removes.
+/// every home shared before each kept its own (ADR 0066), which this home's uninstall also removes.
 pub(super) fn hosts_block(uninstall: &Uninstall) -> Residue {
     let file = uninstall.host.hosts_file();
     let location = file.path().display().to_string();

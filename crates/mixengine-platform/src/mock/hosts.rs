@@ -11,7 +11,7 @@ const OWN: &str = "0000000000000000";
 
 /// The blocks a test says the machine is holding.
 ///
-/// **One answer for every home's tag** (T211g): a daemon under test asks only about its own block,
+/// **One answer for every home's tag** (ADR 0066): a daemon under test asks only about its own block,
 /// so `holding` is that home's, whatever its tag. The legacy block and the list of tags are set
 /// apart, because those are the questions about other homes.
 #[derive(Debug)]
@@ -19,7 +19,7 @@ pub(crate) struct Hosts {
     /// This home's block, already parsed — or why it cannot be read.
     managed: std::result::Result<Vec<HostEntry>, String>,
 
-    /// The untagged block every home shared before T211g.
+    /// The untagged block every home shared before each kept its own.
     legacy: Vec<HostEntry>,
 
     /// Every tag a block in the file carries.

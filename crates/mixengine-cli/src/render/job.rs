@@ -43,7 +43,7 @@ pub(crate) fn job_status(job: &JobSummary) -> String {
         rendered.push_str(&format!("  {label:9} {value}\n"));
     };
 
-    // T211h: *doing* only while it is. A finished job's last step is history, and a failed one's is
+    // *doing* only while it is. A finished job's last step is history, and a failed one's is
     // where it stopped, which is where to look.
     if !job.message.is_empty() {
         let step = format!("{} ({}%)", job.message, job.percent);
@@ -108,13 +108,13 @@ mod tests {
         }
     }
 
-    /// T211h: a job that is still running says what it is doing.
+    /// a job that is still running says what it is doing.
     #[test]
     fn a_running_job_prints_what_it_is_doing() {
         assert!(job_status(&job(JobState::Running, None)).contains("doing     verifying (40%)"));
     }
 
-    /// T211h: a finished job is not doing anything any more.
+    /// a finished job is not doing anything any more.
     #[test]
     fn a_finished_job_prints_no_doing_line() {
         let done = job(
@@ -131,7 +131,7 @@ mod tests {
         );
     }
 
-    /// T211h: a failed job says where it stopped, which is where to look.
+    /// a failed job says where it stopped, which is where to look.
     #[test]
     fn a_failed_job_says_where_it_stopped() {
         let failed = job(

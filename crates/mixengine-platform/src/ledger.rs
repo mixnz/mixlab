@@ -1,4 +1,4 @@
-//! The helper's ledger of the homes it serves, on disk — roadmap task **T211g**, ADR 0066.
+//! The helper's ledger of the homes it serves, on disk — ADR 0066.
 //!
 //! `homes.json` beside `elevate.log`: root-owned, world-readable, replaced atomically under a lock of
 //! its own. The helper records every batch's home in it before any operation, and decides from it
@@ -26,7 +26,7 @@ pub struct Recorded {
     /// Whether the ledger was there before this call wrote it.
     ///
     /// A ledger this batch created has seen only this home, and says nothing about homes from
-    /// before it — so it removes nothing (T211g, D4).
+    /// before it — so it removes nothing (ADR 0066).
     pub existed_before: bool,
 }
 
@@ -34,7 +34,7 @@ pub struct Recorded {
 ///
 /// # Errors
 ///
-/// [`Error::Io`](crate::Error::Io) for a ledger that cannot be read or does not parse. Callers keep
+/// [`Error::Io`] for a ledger that cannot be read or does not parse. Callers keep
 /// what they would have removed: keeping a file is recoverable, removing another home's is not.
 pub fn read(directory: &Path) -> Result<Option<HomesLedger>> {
     let path = directory.join(FILE_NAME);
@@ -73,8 +73,8 @@ pub fn alive(home: &Path) -> bool {
 ///
 /// # Errors
 ///
-/// [`Error::Io`](crate::Error::Io) when the ledger cannot be read or replaced, and
-/// [`Error::Os`](crate::Error::Os) when another helper holds its lock.
+/// [`Error::Io`] when the ledger cannot be read or replaced, and
+/// [`Error::Os`] when another helper holds its lock.
 pub fn record(directory: &Path, home: &Path, caller: &str, now: u64) -> Result<Recorded> {
     // Held across the read and the replace, on `hosts::apply`'s reasoning: two helpers that both
     // read before either wrote would each drop the other's home.

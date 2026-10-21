@@ -55,7 +55,7 @@ pub(crate) fn uninstall_report(report: &UninstallReport) -> String {
         }
     }
 
-    // T211g: the daemon counted these; a person reading only the end is told the machine is not
+    // the daemon counted these; a person reading only the end is told the machine is not
     // bare on purpose.
     match report.kept_for_others {
         0 => {}
@@ -89,7 +89,7 @@ mod tests {
         );
     }
 
-    /// T211g, D7: what another home still uses is counted by the daemon, and said once at the end.
+    /// ADR 0066: what another home still uses is counted by the daemon, and said once at the end.
     #[test]
     fn what_another_home_keeps_is_said_last() {
         let report = UninstallReport {

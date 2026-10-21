@@ -784,7 +784,7 @@ mod tests {
         assert_eq!(armed.take(), vec![std::path::PathBuf::from("/tmp/two")]);
     }
 
-    /// T211g: a name in this home's own hosts block is a hosts entry, though the block is tagged.
+    /// a name in this home's own hosts block is a hosts entry, though the block is tagged.
     #[tokio::test]
     async fn a_name_in_this_homes_own_block_is_a_hosts_entry() {
         let daemon = super::test_daemon::daemon_on(
@@ -804,7 +804,7 @@ mod tests {
         assert!(report.domains[0].hosts_entry, "{report:?}");
     }
 
-    /// T211h: a repair says what it will do to the hosts block, not the block's name a second time.
+    /// a repair says what it will do to the hosts block, not the block's name a second time.
     #[tokio::test]
     async fn a_hosts_repair_says_what_it_will_do() {
         let daemon = super::test_daemon::daemon_on(

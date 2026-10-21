@@ -29,7 +29,7 @@ pub use crate::markers::{BEGIN_MARKER, END_MARKER};
 /// What the hosts file's blocks are called in a refusal.
 const FILE: &str = "the hosts file";
 
-/// The block one home owns, or the legacy block every home shared before T211g.
+/// The block one home owns, or the legacy block every home shared before each kept its own.
 fn block(tag: Option<&str>) -> crate::markers::Block<'_> {
     match tag {
         Some(tag) => crate::markers::Block::tagged(FILE, tag),
@@ -37,7 +37,7 @@ fn block(tag: Option<&str>) -> crate::markers::Block<'_> {
     }
 }
 
-/// The tag of the hosts block that belongs to the home at `home` — roadmap task **T211g**, ADR 0066.
+/// The tag of the hosts block that belongs to the home at `home` — ADR 0066.
 ///
 /// **FNV-1a over the path as [`crate::paths::in_full`] spells it**, 16 lowercase hex digits — the
 /// spelling `mixengine-elevate` resolves a request's home to, and the one its ledger records. So a
@@ -215,7 +215,7 @@ pub fn parse(text: &str, tag: Option<&str>) -> Result<Vec<HostEntry>> {
 }
 
 /// Every tag a block in `text` carries, sorted, each once — what `mix doctor` compares with the
-/// homes the helper's ledger knows (T211g, D5).
+/// homes the helper's ledger knows (ADR 0066).
 ///
 /// # Errors
 ///
@@ -240,7 +240,7 @@ pub fn tags(text: &str) -> Result<Vec<String>> {
 /// An empty `entries` removes the block, markers and all — which is also the reverse of every other
 /// call, and the reason no backup file is kept.
 ///
-/// **A home's block takes its names out of the legacy block** (T211g, D2): each name `entries` holds
+/// **A home's block takes its names out of the legacy block** (ADR 0066): each name `entries` holds
 /// leaves the block every home shared before, and that block goes once it holds none. Nothing else
 /// in it moves; another home's names stay until that home writes its own.
 ///
@@ -696,7 +696,7 @@ mod tests {
         );
     }
 
-    /// The single block every home shared before T211g, as the tests above were written against.
+    /// The single block every home shared before each kept its own, as the tests above were written against.
     fn splice_legacy(text: &str, entries: &[HostEntry]) -> Result<String> {
         splice(text, None, entries)
     }
@@ -706,7 +706,7 @@ mod tests {
         parse(text, None)
     }
 
-    /// T211g, D2: a path and a symlink to it are one home, and two homes are two tags.
+    /// ADR 0066: a path and a symlink to it are one home, and two homes are two tags.
     #[test]
     fn one_home_two_spellings_one_tag() {
         let one = tempfile::TempDir::new().expect("a directory");

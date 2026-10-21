@@ -198,7 +198,7 @@ pub(crate) struct Elevation {
     /// and will not guess.
     facts: Mutex<Option<crate::helper::HelperFacts>>,
 
-    /// Why this start left an older helper as it is, when it did — T211h. Without it the status
+    /// Why this start left an older helper as it is, when it did. Without it the status
     /// promised a replacement at the next prompt that nothing had queued.
     helper_stays: Mutex<Option<String>>,
 
@@ -635,7 +635,7 @@ impl Elevation {
         })
     }
 
-    /// Remember why this start left the installed helper as it is, or that it did not — T211h.
+    /// Remember why this start left the installed helper as it is, or that it did not.
     pub(crate) fn helper_stays(&self, reason: Option<String>) {
         if let Ok(mut held) = self.helper_stays.lock() {
             *held = reason;

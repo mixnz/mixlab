@@ -91,8 +91,10 @@ elevation, UAC and the firewall, and none of them is the answer.
 ## Rules
 
 1. **Every mutation is reversible and tagged.** Managed hosts entries are wrapped in
-   `# BEGIN MixEngine` / `# END MixEngine` markers; we never touch lines outside the block. Same idea
-   for resolver files and firewall rule names (`MixEngine — <purpose>`).
+   `# BEGIN MixEngine <tag>` / `# END MixEngine <tag>` markers, one block per home, the tag a hash of
+   the home's path (`hosts::tag_for`, ADR 0066); we never touch lines outside a block, nor another
+   home's block. Same idea for resolver files, removed only when they point at this home's DNS
+   port, and for firewall rule names (`MixEngine — <purpose>`).
 2. **Read-modify-write is atomic.** Write to a temp file in the same directory, `fsync`, then rename.
    On Windows use `ReplaceFile` to preserve ACLs. Take an advisory lock so two MixEngine processes
    never interleave.

@@ -385,7 +385,7 @@ pub enum ResolverPlan {
 /// Mirrors [`ResolverPlan`] with only what a removal reads. Every artifact each variant deletes is
 /// a constant in the helper, so no variant carries a path.
 ///
-/// **The port, where the mechanism names one** (T211g, ADR 0066): the files are one per TLD or one
+/// **The port, where the mechanism names one** (ADR 0066): the files are one per TLD or one
 /// per machine, and they point at whichever home wired them last. Only what points at this home's
 /// server is this home's to remove.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -519,7 +519,7 @@ pub enum PrivilegedOp {
     /// the block.
     HostsApply {
         /// Whose block: the tag `mixengine_platform::hosts::tag_for` derives from a home's path, or
-        /// [`None`] for the untagged block every home shared before T211g (ADR 0066).
+        /// [`None`] for the untagged block every home shared before each kept its own (ADR 0066).
         ///
         /// **The helper checks it rather than trusting it.** A tag is accepted when it is the
         /// requesting home's own, or — for an empty list only — when the helper's ledger says its
@@ -737,9 +737,9 @@ impl PrivilegedOp {
             Self::Probe {} => {
                 serde_json::to_string(self).unwrap_or_else(|_| self.name().to_owned())
             }
-            // One row per block (T211g): this home's, an orphan's and the legacy one are separate
+            // One row per block (ADR 0066): this home's, an orphan's and the legacy one are separate
             // questions, and an uninstall asks two of them at once. The legacy block keeps the bare
-            // kind, which is the key every row queued before T211g already carries.
+            // kind, which is the key every row queued before each home kept its own block already carries.
             Self::HostsApply {
                 home: Some(tag), ..
             } => format!("{}:{tag}", self.name()),

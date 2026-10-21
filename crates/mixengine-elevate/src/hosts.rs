@@ -35,7 +35,7 @@ const LIMIT: usize = 512;
 /// Validate, apply, and say what happened.
 ///
 /// `home` is the requesting home as `crate::request` resolved it; its tag is derived here, from
-/// that path, rather than taken from the daemon (T211g, D2).
+/// that path, rather than taken from the daemon (ADR 0066).
 pub(crate) fn apply(tag: Option<&str>, entries: &[HostEntry], home: &Path) -> OpOutcome {
     if let Some(reason) = refusal(entries) {
         return OpOutcome::Refused { reason };
@@ -89,7 +89,7 @@ pub(crate) fn apply(tag: Option<&str>, entries: &[HostEntry], home: &Path) -> Op
     }
 }
 
-/// Why this block is not the requesting home's to write, or [`None`] — T211g, D2 and D5.
+/// Why this block is not the requesting home's to write, or [`None`] — ADR 0066 and D5.
 ///
 /// `ours` is the requesting home's tag. Another tag is accepted only to empty a block whose home
 /// `ledger` names and `alive` says is gone; the legacy block (`None`) only ever to empty it.
@@ -255,7 +255,7 @@ mod tests {
         }
     }
 
-    /// T211g, D2: a tag is a hash's hex digits and nothing else may reach a marker line.
+    /// ADR 0066: a tag is a hash's hex digits and nothing else may reach a marker line.
     #[test]
     fn a_tag_that_is_not_hex_is_refused() {
         for bad in ["../x", "ABC", "", "a\nb", "0123456789abcdeg"] {
@@ -282,7 +282,7 @@ mod tests {
         assert_eq!(whose(Some(OURS), &[], OURS, None, |_| true), None);
     }
 
-    /// The block every home shared before T211g is drained and removed, never written again.
+    /// The block every home shared before each kept its own is drained and removed, never written again.
     #[test]
     fn the_legacy_block_can_only_be_emptied() {
         assert!(
