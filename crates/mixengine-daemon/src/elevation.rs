@@ -650,9 +650,15 @@ impl Elevation {
     ///
     /// The wire error of a queue that could not be read.
     pub(crate) async fn status(&self) -> Result<ElevationStatus, Error> {
-        let pending = mixengine_core::elevation::pending(&self.store)
+        let mut pending = mixengine_core::elevation::pending(&self.store)
             .await
             .map_err(|error| error.to_wire())?;
+
+        // The machine's sentence, so a client renders it and decides nothing.
+        let machine = self.host.elevation();
+        for row in &mut pending {
+            row.needs_the_screen = machine.needs_the_screen(&row.op);
+        }
 
         let reason = self.reason();
         let (last, waiting) = {

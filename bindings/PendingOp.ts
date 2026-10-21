@@ -32,4 +32,12 @@ description: string,
  * "pending since" says how long the machine has been missing it rather than how recently
  * somebody noticed.
  */
-requested_at: Timestamp, };
+requested_at: Timestamp, 
+/**
+ * Why a grant raised from a terminal leaves this row waiting, when it does.
+ *
+ * The operating system's sentence: on macOS, adding MixEngine's authority to the System
+ * keychain asks on the Mac's own screen even under `sudo`. A grant raised at the screen still
+ * carries it. Absent rather than `null`, and absent from a daemon that predates it.
+ */
+needs_the_screen?: string | null, };

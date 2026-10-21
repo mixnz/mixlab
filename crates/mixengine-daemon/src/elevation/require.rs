@@ -393,6 +393,29 @@ impl Elevation {
             .with_hint("`mix elevation status` lists what would be asked for"));
         }
 
+        // What a terminal cannot grant stays queued for a grant raised at the machine's own screen.
+        if route == Route::ByHand {
+            let machine = self.host.elevation();
+            let mut screen_only = None;
+            waiting.retain(|pending| match machine.needs_the_screen(&pending.op) {
+                Some(reason) => {
+                    screen_only.get_or_insert(reason);
+                    false
+                }
+                None => true,
+            });
+
+            if let (true, Some(reason)) = (waiting.is_empty(), screen_only) {
+                return Err(Error::new(
+                    ErrorCode::PrivilegedRequired,
+                    format!("this cannot be allowed from a terminal: {reason}"),
+                )
+                .with_hint(
+                    "run `mix elevation grant` on this machine itself, or allow it in MixLab",
+                ));
+            }
+        }
+
         let helper = self.choose_for(&waiting).await?;
 
         // A terminal raises its own prompt, so only a missing helper stops it — ADR 0065.

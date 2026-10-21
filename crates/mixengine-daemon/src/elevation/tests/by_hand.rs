@@ -225,3 +225,95 @@ async fn a_dialog_grant_is_unchanged_where_none_can_be_raised() {
     assert_eq!(error.code, mixengine_proto::ErrorCode::PrivilegedRequired);
     assert_eq!(elevation.status().await.unwrap().waiting, None);
 }
+
+/// A machine where a terminal cannot grant `probe`, as macOS cannot add to its System keychain,
+/// with `probe` and an empty hosts block waiting.
+async fn a_machine_with_a_screen_only_row() -> (tempfile::TempDir, Arc<Elevation>, Arc<mock::Host>)
+{
+    let (home, elevation, _events, machine) =
+        registry(mock::Host::with_home("/tmp/mixengine").needing_the_screen_for("probe")).await;
+    elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
+    elevation
+        .enqueue(&PrivilegedOp::hosts_apply(vec![]))
+        .await
+        .unwrap();
+
+    (home, elevation, machine)
+}
+
+#[tokio::test]
+async fn status_marks_what_a_terminal_cannot_grant() {
+    let (_home, elevation, _machine) = a_machine_with_a_screen_only_row().await;
+
+    let pending = elevation.status().await.unwrap().pending;
+
+    let marked: Vec<(&str, Option<&str>)> = pending
+        .iter()
+        .map(|row| (row.op.name(), row.needs_the_screen.as_deref()))
+        .collect();
+    assert_eq!(
+        marked,
+        vec![
+            ("probe", Some(mock::NEEDS_THE_SCREEN)),
+            ("hosts-apply", None)
+        ]
+    );
+}
+
+#[tokio::test]
+async fn a_terminal_grant_leaves_what_needs_the_screen_queued() {
+    let (_home, elevation, _machine) = a_machine_with_a_screen_only_row().await;
+
+    let started = elevation.grant(Route::ByHand).await.unwrap();
+    let waiting = the_waiting_command(&elevation).await;
+    let request = std::fs::read_to_string(&waiting.request).unwrap();
+    assert!(!request.contains("\"probe\""), "{request}");
+    assert!(request.contains("hosts-apply"), "{request}");
+
+    let (report, bytes) = the_helper_answers(&waiting);
+    std::fs::write(report, bytes).unwrap();
+    finished(&elevation, started.id).await;
+
+    let left: Vec<&str> = elevation
+        .status()
+        .await
+        .unwrap()
+        .pending
+        .iter()
+        .map(|row| row.op.name())
+        .collect();
+    assert_eq!(left, vec!["probe"], "kept for a grant raised at the screen");
+}
+
+#[tokio::test]
+async fn a_terminal_grant_of_nothing_but_screen_rows_is_refused_before_a_job() {
+    let (_home, elevation, _events, _machine) =
+        registry(mock::Host::with_home("/tmp/mixengine").needing_the_screen_for("probe")).await;
+    elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
+
+    let error = elevation
+        .grant(Route::ByHand)
+        .await
+        .expect_err("a terminal cannot grant the only row");
+
+    assert_eq!(error.code, mixengine_proto::ErrorCode::PrivilegedRequired);
+    assert!(
+        error.to_string().contains(mock::NEEDS_THE_SCREEN),
+        "{error}"
+    );
+    assert!(error.to_string().contains("mix elevation grant"), "{error}");
+    assert_eq!(elevation.status().await.unwrap().pending.len(), 1);
+    assert_eq!(elevation.status().await.unwrap().last, None);
+}
+
+#[tokio::test]
+async fn a_dialog_grant_still_carries_what_needs_the_screen() {
+    let (_home, elevation, machine) = a_machine_with_a_screen_only_row().await;
+
+    let started = elevation.grant(Route::Dialog).await.unwrap();
+    finished(&elevation, started.id).await;
+
+    let raised = machine.prompts_raised();
+    assert_eq!(raised.len(), 1);
+    assert!(raised[0].body.contains("\"probe\""), "{}", raised[0].body);
+}

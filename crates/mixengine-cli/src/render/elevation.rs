@@ -81,6 +81,11 @@ fn waiting(status: &ElevationStatus) -> String {
             pending.op.name(),
             pending.description
         ));
+
+        // The machine's sentence, under the row it is about.
+        if let Some(reason) = &pending.needs_the_screen {
+            rendered.push_str(&format!("       not from a terminal: {reason}\n"));
+        }
     }
 
     rendered
@@ -105,10 +110,26 @@ pub(crate) fn elevation_prompt(status: &ElevationStatus) -> String {
 pub(crate) fn elevation_prompt_by_hand(status: &ElevationStatus) -> String {
     let helper = status.helper.as_deref().unwrap_or("mixengine-elevate");
 
-    format!(
+    let mut rendered = format!(
         "{}\nsudo will ask once, in this terminal, for your password to run\n  {helper}\n",
         waiting(status)
-    )
+    );
+
+    // What the batch leaves out, said before anybody agrees to it.
+    let left: Vec<&str> = status
+        .pending
+        .iter()
+        .filter_map(|pending| pending.needs_the_screen.as_deref())
+        .collect();
+    if let Some(reason) = left.first() {
+        let stays = match left.len() {
+            1 => "1 operation stays waiting".to_owned(),
+            many => format!("{many} operations stay waiting"),
+        };
+        rendered.push_str(&format!("{stays}: {reason}\n"));
+    }
+
+    rendered
 }
 
 /// What one grant did, in a line — and under it, what anything that did not happen had to say.
@@ -159,6 +180,7 @@ mod tests {
             description: op.describe(),
             op,
             requested_at: mixengine_proto::Timestamp(1_760_000_000_000),
+            needs_the_screen: None,
         }
     }
 
@@ -266,6 +288,59 @@ mod tests {
             ),
             "{rendered}"
         );
+    }
+
+    fn a_probe_for_the_screen(id: i64) -> mixengine_proto::PendingOp {
+        mixengine_proto::PendingOp {
+            needs_the_screen: Some("it needs this Mac's own screen".to_owned()),
+            ..a_pending_probe(id)
+        }
+    }
+
+    fn waiting_on(pending: Vec<mixengine_proto::PendingOp>) -> ElevationStatus {
+        ElevationStatus {
+            elevated: false,
+            can_prompt: true,
+            reason: None,
+            helper: Some("/Library/PrivilegedHelperTools/dev.mixengine.elevate".to_owned()),
+            installed_helper: None,
+            pending,
+            last: None,
+            waiting: None,
+        }
+    }
+
+    /// The row says why a terminal leaves it, under the row it is about.
+    #[test]
+    fn status_says_which_row_a_terminal_cannot_grant() {
+        let rendered = elevation_status(&waiting_on(vec![a_probe_for_the_screen(1)]));
+
+        assert!(
+            rendered.contains("it needs this Mac's own screen"),
+            "{rendered}"
+        );
+    }
+
+    /// Said before `continue? [y/N]`, so nobody agrees to a batch that is smaller than the list.
+    #[test]
+    fn the_by_hand_prompt_says_what_stays_waiting() {
+        let rendered = elevation_prompt_by_hand(&waiting_on(vec![
+            a_probe_for_the_screen(1),
+            a_pending_probe(2),
+        ]));
+
+        assert!(
+            rendered.contains("1 operation stays waiting: it needs this Mac's own screen"),
+            "{rendered}"
+        );
+    }
+
+    /// A dialog at the screen carries it, so there is nothing to say there.
+    #[test]
+    fn the_dialog_prompt_says_nothing_stays_waiting() {
+        let rendered = elevation_prompt(&waiting_on(vec![a_probe_for_the_screen(1)]));
+
+        assert!(!rendered.contains("stays waiting"), "{rendered}");
     }
 
     /// From a terminal it is `sudo` that asks, here, and not a dialog somewhere else.

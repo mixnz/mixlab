@@ -12,6 +12,7 @@ fn the_helper_operation_goes_first_in_its_batch() {
         description: op.describe(),
         op,
         requested_at: Timestamp(0),
+        needs_the_screen: None,
     };
 
     let mut waiting = vec![

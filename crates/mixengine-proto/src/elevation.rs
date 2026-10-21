@@ -54,6 +54,14 @@ pub struct PendingOp {
     /// "pending since" says how long the machine has been missing it rather than how recently
     /// somebody noticed.
     pub requested_at: Timestamp,
+
+    /// Why a grant raised from a terminal leaves this row waiting, when it does.
+    ///
+    /// The operating system's sentence: on macOS, adding MixEngine's authority to the System
+    /// keychain asks on the Mac's own screen even under `sudo`. A grant raised at the screen still
+    /// carries it. Absent rather than `null`, and absent from a daemon that predates it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub needs_the_screen: Option<String>,
 }
 
 /// The three facts `daemon.status` carries about elevation — the T40b design, D6.
@@ -263,6 +271,7 @@ mod tests {
             description: op.describe(),
             op,
             requested_at: Timestamp(1_760_000_000_000),
+            needs_the_screen: None,
         }
     }
 

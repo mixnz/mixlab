@@ -443,6 +443,7 @@ fn one_waiting(id: i64) -> PendingOp {
         description: op.describe(),
         op,
         requested_at: WHEN,
+        needs_the_screen: None,
     }
 }
 

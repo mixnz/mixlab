@@ -292,6 +292,7 @@ mod tests {
                 description: op.describe(),
                 op,
                 requested_at: crate::Timestamp(1_760_000_000_000),
+                needs_the_screen: None,
             }],
         };
 

@@ -197,6 +197,24 @@ pub(crate) mod macos {
             },
         }
     }
+    /// Why `op` cannot be granted from a terminal on macOS, or `None` when it can.
+    ///
+    /// `add-trusted-cert -d` writes the admin trust domain, and macOS asks for it in a SecurityAgent
+    /// dialog on the Mac's own screen even when root runs it — see `macos::trust::apply`. Over SSH
+    /// nobody at the terminal can answer that, so the row waits for a grant raised at the screen.
+    pub(crate) fn needs_the_screen(
+        op: &mixengine_proto::privileged::PrivilegedOp,
+    ) -> Option<String> {
+        matches!(
+            op,
+            mixengine_proto::privileged::PrivilegedOp::TrustCaInstall { .. }
+        )
+        .then(|| {
+            "adding MixEngine's certificate authority to the System keychain needs this Mac's own \
+             screen, where macOS asks for it"
+                .to_owned()
+        })
+    }
 }
 
 /// Linux's table, and the environment question the other two systems do not have.
@@ -405,6 +423,22 @@ mod tests {
     }
 
     /// D5, all four states of the probe.
+    /// `add-trusted-cert -d` raises SecurityAgent on the Mac's own screen even under `sudo`,
+    /// so a terminal cannot grant it. Nothing else the helper does on macOS needs the screen.
+    #[test]
+    fn macos_says_only_the_trust_install_needs_the_screen() {
+        let install = mixengine_proto::privileged::PrivilegedOp::TrustCaInstall {
+            plan: mixengine_proto::privileged::TrustPlan::SystemKeychain { der: vec![1, 2, 3] },
+        };
+
+        let reason = macos::needs_the_screen(&install).expect("the System keychain asks on screen");
+        assert!(reason.contains("screen"), "{reason}");
+        assert_eq!(
+            macos::needs_the_screen(&mixengine_proto::privileged::PrivilegedOp::Probe {}),
+            None
+        );
+    }
+
     #[test]
     fn linux_names_whichever_piece_of_polkit_is_missing() {
         let complete = linux::Session {

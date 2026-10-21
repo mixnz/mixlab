@@ -41,6 +41,10 @@ impl Elevation for Prompt {
         }
     }
 
+    fn needs_the_screen(&self, op: &mixengine_proto::privileged::PrivilegedOp) -> Option<String> {
+        decide::needs_the_screen(op)
+    }
+
     fn run(&self, helper: &Path, request: &Path) -> Result<Raised> {
         prompt::usable("run as the elevation helper", helper)?;
         prompt::usable("hand to the elevation helper", request)?;

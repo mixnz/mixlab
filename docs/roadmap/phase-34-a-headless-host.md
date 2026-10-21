@@ -44,10 +44,28 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
 - [x] **T211d** `docs/guide/en/uninstalling.md` names `mixengine-headless` beside `mixlab` for
       `apt remove` and `dnf remove`, `mix uninstall`'s last line names the package command, and
       `--keep-home`'s help stops saying the daemon keeps running (ADR 0051).
-      **Verified** on Ubuntu 24.04 over SSH (2026-10-21): a decline, a grant run by hand from a
-      second session, a grant in the same terminal, `mix doctor --repair --yes`, and `mix uninstall`.
-      **Not yet verified:** a Mac over SSH (T211a/b are **(P)**), and MixLab's elevation dialog
-      showing the waiting command — no device to test on yet.
+      **Verified** over SSH on 2026-10-21, on Ubuntu 24.04 and on macOS 15: a decline, a grant run
+      by hand from a second session, a grant in the same terminal, `mix doctor --repair --yes` and
+      `mix uninstall`; on the Mac also Ctrl-C at `sudo`'s password and three wrong passwords. Two
+      gaps the Mac found are T211e and T211f.
+- [x] **T211e** On macOS a terminal cannot add MixEngine's authority to the System keychain:
+      `add-trusted-cert -d` raises SecurityAgent on the Mac's own screen even under `sudo`. A grant
+      raised from a terminal leaves such rows queued, says so before `continue?`, and
+      `elevation.status` marks them; the helper refuses at once when the console is not the
+      caller's. **(P)**
+      Design: [2026-10-21-t211e-what-a-terminal-cannot-grant-design.md](../specs/2026-10-21-t211e-what-a-terminal-cannot-grant-design.md).
+- [ ] **T211f** MixLab's elevation dialog shows a terminal's waiting command whatever `can_prompt`
+      says, and while it follows such a grant says it waits for a terminal rather than for a system
+      prompt. Same design as T211e.
+- [ ] **T211g** `mix uninstall` of one home removes what other homes on the machine use: resolver
+      wiring it did not write (`/etc/resolver/*` from another home, found on a Mac on 2026-10-21),
+      the installed helper and the audit log. Remove only what this home applied, recorded as
+      `firewall.applied` already is, and keep the rest with a sentence; homes installed before the
+      record keep rather than remove. Needs an ADR amending 0051. Design to come.
+- [ ] **T211h** Display slips older than T211, found on the same Mac: `helper … replaces it at the
+      next permission prompt` printed when the daemon skipped the replacement; a succeeded job still
+      showing 40% or 70% and its last step; `mix doctor --repair` printing "the managed hosts block"
+      twice; MixLab's `hosts-apply` detail printing `127.0.0.1` twice with no name.
 - [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
       account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
       headless host has no prompt to show.

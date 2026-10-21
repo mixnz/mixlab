@@ -77,6 +77,16 @@ pub trait Elevation: std::fmt::Debug + Send + Sync {
     /// [`ElevationOutcome::Unavailable`] too.
     fn probe(&self) -> ElevationSupport;
 
+    /// Why `op` cannot be granted from a terminal on this system, or `None` when it can.
+    ///
+    /// A grant raised from a terminal leaves such rows in the queue, for a grant raised at the
+    /// machine's own screen. Only macOS has one: its System keychain asks on screen even under
+    /// `sudo`.
+    fn needs_the_screen(&self, op: &mixengine_proto::privileged::PrivilegedOp) -> Option<String> {
+        let _ = op;
+        None
+    }
+
     /// Run `helper` once, elevated, with `request` as its only argument.
     ///
     /// **Blocking, and with no deadline**: a person reading a prompt is not a clock the OS gives us.

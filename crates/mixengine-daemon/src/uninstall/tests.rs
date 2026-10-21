@@ -198,6 +198,7 @@ fn a_package_row_whose_removal_is_still_queued_says_so() {
         op: PrivilegedOp::PackageRemove {},
         description: String::new(),
         requested_at: mixengine_proto::Timestamp(0),
+        needs_the_screen: None,
     }];
 
     let settled = settle(package.clone(), package, true, &waiting);

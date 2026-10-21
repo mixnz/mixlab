@@ -79,6 +79,7 @@ async fn probe(helper: &Path, home: &Path, directory: &Path) -> Option<HelperFac
         description: op.describe(),
         op,
         requested_at: Timestamp::from_system_time(std::time::SystemTime::now()),
+        needs_the_screen: None,
     };
 
     // **At the floor, and not at this build's own protocol.** This is the one request sent before

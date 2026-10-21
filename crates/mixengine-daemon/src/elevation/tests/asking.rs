@@ -535,6 +535,7 @@ fn only_a_batch_that_installed_or_replaced_the_helper_is_worth_a_probe() {
                 description: op.describe(),
                 op: op.clone(),
                 requested_at: mixengine_proto::Timestamp(0),
+                needs_the_screen: None,
             })
             .collect()
     };
