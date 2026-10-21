@@ -25,6 +25,9 @@ use serde::{Deserialize, Serialize};
 use crate::ProtocolVersion;
 
 mod describe;
+mod ledger;
+
+pub use ledger::{HomesLedger, LedgerEntry};
 
 /// The name the response takes, beside the request it answers.
 ///
