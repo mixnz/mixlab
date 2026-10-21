@@ -589,3 +589,32 @@ fn only_a_batch_that_installed_or_replaced_the_helper_is_worth_a_probe() {
         PrivilegedOp::AuditLogRemove {},
     ])));
 }
+
+/// Emptying another home's block, which `mix doctor --repair` asks for, says whose block it is: the
+/// sentence that empties this home's own block read the same, and looked like losing its names.
+#[tokio::test]
+async fn emptying_a_gone_homes_block_says_whose_it_is() {
+    let (home, elevation, _events, _machine) = registry_resolving(
+        mock::Host::with_hosts("/tmp/mixengine", []),
+        crate::dns::Dns::hosts_only_for_tests(),
+    )
+    .await;
+    with_an_installed_helper(&home);
+
+    elevation
+        .enqueue(&PrivilegedOp::hosts_apply(
+            Some("fedcba9876543210".to_owned()),
+            Vec::new(),
+        ))
+        .await
+        .unwrap();
+
+    let pending = elevation.status().await.unwrap().pending;
+
+    assert!(
+        pending[0]
+            .description
+            .contains("home that no longer exists"),
+        "{pending:?}"
+    );
+}

@@ -81,7 +81,14 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       so it keeps itself and the log while another home is listed. **(P)** ADR 0066, amending 0051
       and 0005.
       Design: [2026-10-21-t211g-t211h-one-home-undoes-only-its-own-design.md](../specs/2026-10-21-t211g-t211h-one-home-undoes-only-its-own-design.md).
-      Not yet measured on a Mac with two homes: the run the design asks for is still owed.
+      **Verified** on macOS 15 on 2026-10-22, at the screen, with three homes of this branch over
+      the helper it builds: each wrote a block of its own and the untagged block drained; the second
+      home, on its own DNS port, left the first one's block, a resolver file naming another port,
+      the helper and the log in place on uninstall, and its plan said so before `continue?`; a third
+      home deleted by hand was named by `mix doctor` and emptied by `--repair`, after which the
+      ledger dropped the second; the last home's uninstall took the helper, the log and the ledger.
+      One sentence that run found reads otherwise now: emptying a gone home's block said
+      *"remove MixEngine's block from the hosts file"*, like emptying one's own.
 - [x] **T211h** Display slips older than T211, found on the same Mac: `helper … replaces it at the
       next permission prompt` printed when the daemon skipped the replacement; a succeeded job still
       showing 40% or 70% and its last step; `mix doctor --repair` printing "the managed hosts block"

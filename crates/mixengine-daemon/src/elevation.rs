@@ -253,7 +253,8 @@ impl Elevation {
         // `None` is the operation that was already waiting. The machine's needs did not change, so
         // there is nothing to announce — an event per attempt would put a producer's retry loop on a
         // client's screen. See the T40b design, D8.
-        if let Some(pending) = announced {
+        if let Some(mut pending) = announced {
+            self.word(&mut pending);
             self.events
                 .publish(DaemonEvent::ElevationRequired { pending });
         }
@@ -306,10 +307,11 @@ impl Elevation {
     ///
     /// The wire error of a queue that could not be read back.
     async fn announce_what_is_left(&self) -> Result<usize, Error> {
-        let pending = mixengine_core::elevation::pending(&self.store)
+        let mut pending = mixengine_core::elevation::pending(&self.store)
             .await
             .map_err(|error| error.to_wire())?;
         let waiting = pending.len();
+        self.word(&mut pending);
 
         self.events
             .publish(DaemonEvent::ElevationRequired { pending });
@@ -611,6 +613,29 @@ impl Elevation {
         })
     }
 
+    /// Say whose hosts block a row empties when it is not this home's (ADR 0066).
+    ///
+    /// The operation's own sentence cannot: which tag is this home's is the daemon's to know, and
+    /// emptying a block that a home now gone left behind read exactly like emptying this one's.
+    fn word(&self, pending: &mut [mixengine_proto::PendingOp]) {
+        let ours = mixengine_platform::hosts::tag_for(&self.home);
+
+        for row in pending {
+            if let PrivilegedOp::HostsApply {
+                home: Some(tag),
+                entries,
+            } = &row.op
+                && entries.is_empty()
+                && *tag != ours
+            {
+                row.description = format!(
+                    "remove from the hosts file the block of a MixEngine home that no longer \
+                     exists ({tag})"
+                );
+            }
+        }
+    }
+
     /// What the installed helper is, as the handshake at start found it — roadmap task **T88a**.
     ///
     /// The sentence is composed here rather than by a client, on `PendingOp::description`'s rule:
@@ -679,6 +704,7 @@ impl Elevation {
         for row in &mut pending {
             row.needs_the_screen = machine.needs_the_screen(&row.op);
         }
+        self.word(&mut pending);
 
         let reason = self.reason();
         let (last, waiting) = {
