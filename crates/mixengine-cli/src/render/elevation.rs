@@ -35,6 +35,16 @@ pub(crate) fn elevation_status(status: &ElevationStatus) -> String {
         rendered.push_str(&format!("  helper    {said}\n"));
     }
 
+    // ADR 0065. Before the reason: a machine that cannot raise a dialog is exactly where a grant
+    // waits, and what it waits for is the line a person can act on.
+    if let Some(waiting) = &status.waiting {
+        rendered.push_str(&format!(
+            "  waiting   job {} waits for this to be run in a terminal:\n    {}\n",
+            waiting.job,
+            crate::by_hand::command(waiting)
+        ));
+    }
+
     match (&status.reason, status.pending.is_empty()) {
         // The reason is the answer, and on Linux it is a command to type. Printed whether or not
         // anything is waiting: a machine that cannot elevate is worth knowing about before the first
@@ -71,6 +81,11 @@ fn waiting(status: &ElevationStatus) -> String {
             pending.op.name(),
             pending.description
         ));
+
+        // The machine's sentence, under the row it is about.
+        if let Some(reason) = &pending.needs_the_screen {
+            rendered.push_str(&format!("       not over SSH: {reason}\n"));
+        }
     }
 
     rendered
@@ -89,6 +104,36 @@ pub(crate) fn elevation_prompt(status: &ElevationStatus) -> String {
         "{}\nyour operating system will ask once, for all of them, to allow\n  {helper}\n",
         waiting(status)
     )
+}
+
+/// [`elevation_prompt`] for a grant raised from this terminal (ADR 0065): `sudo` asks, here.
+///
+/// `over_ssh` is whether this terminal is away from the machine's screen: only then do the rows
+/// marked `needs_the_screen` stay out of the batch, and only then is that said.
+pub(crate) fn elevation_prompt_by_hand(status: &ElevationStatus, over_ssh: bool) -> String {
+    let helper = status.helper.as_deref().unwrap_or("mixengine-elevate");
+
+    let mut rendered = format!(
+        "{}\nsudo will ask once, in this terminal, for your password to run\n  {helper}\n",
+        waiting(status)
+    );
+
+    // What the batch leaves out, said before anybody agrees to it.
+    let left: Vec<&str> = status
+        .pending
+        .iter()
+        .filter(|_| over_ssh)
+        .filter_map(|pending| pending.needs_the_screen.as_deref())
+        .collect();
+    if let Some(reason) = left.first() {
+        let stays = match left.len() {
+            1 => "1 operation stays waiting".to_owned(),
+            many => format!("{many} operations stay waiting"),
+        };
+        rendered.push_str(&format!("{stays}: {reason}\n"));
+    }
+
+    rendered
 }
 
 /// What one grant did, in a line — and under it, what anything that did not happen had to say.
@@ -139,6 +184,7 @@ mod tests {
             description: op.describe(),
             op,
             requested_at: mixengine_proto::Timestamp(1_760_000_000_000),
+            needs_the_screen: None,
         }
     }
 
@@ -154,6 +200,7 @@ mod tests {
             installed_helper: None,
             pending: vec![a_pending_probe(1), a_pending_probe(2)],
             last: None,
+            waiting: None,
         });
 
         assert!(rendered.contains("2 operations are waiting"), "{rendered}");
@@ -179,6 +226,7 @@ mod tests {
             installed_helper: None,
             pending: vec![a_pending_probe(1), a_pending_probe(2)],
             last: None,
+            waiting: None,
         });
 
         assert!(rendered.contains("2 operations are waiting"), "{rendered}");
@@ -207,11 +255,137 @@ mod tests {
             }),
             pending: Vec::new(),
             last: None,
+            waiting: None,
         });
 
         assert!(rendered.contains("helper"), "{rendered}");
         assert!(
             rendered.contains("run this release's installer"),
+            "{rendered}"
+        );
+    }
+
+    /// ADR 0065: while a grant waits for a terminal, the command is on the screen for anybody who
+    /// looks — a second SSH session can run it.
+    #[test]
+    fn a_waiting_grant_shows_the_command() {
+        let rendered = elevation_status(&ElevationStatus {
+            elevated: false,
+            can_prompt: false,
+            reason: Some("no polkit agent".to_owned()),
+            helper: Some("/usr/local/libexec/mixengine/mixengine-elevate".to_owned()),
+            installed_helper: None,
+            pending: vec![a_pending_probe(1)],
+            last: None,
+            waiting: Some(mixengine_proto::ByHand {
+                job: mixengine_proto::JobId(4),
+                helper: "/usr/local/libexec/mixengine/mixengine-elevate".to_owned(),
+                request: "/home/me/.mixengine/run/elevate/abc/request.json".to_owned(),
+            }),
+        });
+
+        assert!(rendered.contains("job #4"), "{rendered}");
+        assert!(
+            rendered.contains(
+                "sudo -- /usr/local/libexec/mixengine/mixengine-elevate \
+                 /home/me/.mixengine/run/elevate/abc/request.json"
+            ),
+            "{rendered}"
+        );
+    }
+
+    fn a_probe_for_the_screen(id: i64) -> mixengine_proto::PendingOp {
+        mixengine_proto::PendingOp {
+            needs_the_screen: Some("it needs this Mac's own screen".to_owned()),
+            ..a_pending_probe(id)
+        }
+    }
+
+    fn waiting_on(pending: Vec<mixengine_proto::PendingOp>) -> ElevationStatus {
+        ElevationStatus {
+            elevated: false,
+            can_prompt: true,
+            reason: None,
+            helper: Some("/Library/PrivilegedHelperTools/dev.mixengine.elevate".to_owned()),
+            installed_helper: None,
+            pending,
+            last: None,
+            waiting: None,
+        }
+    }
+
+    /// The row says why a terminal leaves it, under the row it is about.
+    #[test]
+    fn status_says_which_row_a_terminal_cannot_grant() {
+        let rendered = elevation_status(&waiting_on(vec![a_probe_for_the_screen(1)]));
+
+        assert!(
+            rendered.contains("it needs this Mac's own screen"),
+            "{rendered}"
+        );
+    }
+
+    /// Said before `continue? [y/N]`, so nobody agrees to a batch that is smaller than the list.
+    #[test]
+    fn the_by_hand_prompt_says_what_stays_waiting() {
+        let rendered = elevation_prompt_by_hand(
+            &waiting_on(vec![a_probe_for_the_screen(1), a_pending_probe(2)]),
+            true,
+        );
+
+        assert!(
+            rendered.contains("1 operation stays waiting: it needs this Mac's own screen"),
+            "{rendered}"
+        );
+    }
+
+    /// `sudo` in a terminal at the screen reaches the dialog it asks in, so nothing stays.
+    #[test]
+    fn a_terminal_at_the_screen_says_nothing_stays_waiting() {
+        let rendered =
+            elevation_prompt_by_hand(&waiting_on(vec![a_probe_for_the_screen(1)]), false);
+
+        assert!(!rendered.contains("stays waiting"), "{rendered}");
+    }
+
+    /// The label says where it cannot be done, not that terminals cannot do it: one at the screen
+    /// can.
+    #[test]
+    fn the_row_says_it_is_not_over_ssh() {
+        let rendered = elevation_status(&waiting_on(vec![a_probe_for_the_screen(1)]));
+
+        assert!(rendered.contains("not over SSH: it needs"), "{rendered}");
+    }
+
+    /// A dialog at the screen carries it, so there is nothing to say there.
+    #[test]
+    fn the_dialog_prompt_says_nothing_stays_waiting() {
+        let rendered = elevation_prompt(&waiting_on(vec![a_probe_for_the_screen(1)]));
+
+        assert!(!rendered.contains("stays waiting"), "{rendered}");
+    }
+
+    /// From a terminal it is `sudo` that asks, here, and not a dialog somewhere else.
+    #[test]
+    fn the_by_hand_prompt_says_sudo_will_ask_here() {
+        let rendered = elevation_prompt_by_hand(
+            &ElevationStatus {
+                elevated: false,
+                can_prompt: false,
+                reason: None,
+                helper: Some("/usr/local/libexec/mixengine/mixengine-elevate".to_owned()),
+                installed_helper: None,
+                pending: vec![a_pending_probe(1)],
+                last: None,
+                waiting: None,
+            },
+            true,
+        );
+
+        assert!(rendered.contains("sudo"), "{rendered}");
+        assert!(rendered.contains("this terminal"), "{rendered}");
+        assert!(
+            !rendered.contains("operating system will ask"),
             "{rendered}"
         );
     }
@@ -232,28 +406,28 @@ mod tests {
             }),
             pending: Vec::new(),
             last: None,
+            waiting: None,
         });
 
         assert!(!rendered.contains("helper"), "{rendered}");
     }
 
-    /// A machine that cannot prompt has to print the reason, because on Linux the reason is the
-    /// command a person is meant to type.
+    /// A machine that cannot prompt has to print the reason, because on Linux the reason says what
+    /// is missing and what works instead.
     #[test]
     fn a_machine_that_cannot_prompt_prints_what_to_do_instead() {
         let rendered = elevation_status(&ElevationStatus {
             elevated: false,
             can_prompt: false,
-            reason: Some(
-                "no polkit agent; run: pkexec /opt/mixengine/mixengine-elevate /…".to_owned(),
-            ),
+            reason: Some("no polkit agent; pkexec is not installed".to_owned()),
             helper: Some("/opt/mixengine/mixengine-elevate".to_owned()),
             installed_helper: None,
             pending: vec![a_pending_probe(1)],
             last: None,
+            waiting: None,
         });
 
-        assert!(rendered.contains("pkexec"), "{rendered}");
+        assert!(rendered.contains("no polkit agent"), "{rendered}");
         assert!(
             !rendered.contains("mix elevation grant"),
             "offering a command that cannot work: {rendered}"
@@ -279,6 +453,7 @@ mod tests {
                 still_pending: 1,
                 problems: Vec::new(),
             }),
+            waiting: None,
         });
 
         assert!(rendered.contains("declined"), "{rendered}");

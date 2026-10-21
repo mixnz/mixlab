@@ -8,7 +8,7 @@ use mixengine_proto::{Error, ErrorCode};
 
 use crate::error::ToWire as _;
 
-use super::{Chosen, Elevation};
+use super::{Chosen, Elevation, Route};
 
 impl Elevation {
     /// Ask for this helper to be installed where only an administrator can rewrite it — roadmap
@@ -374,6 +374,7 @@ impl Elevation {
     pub(super) async fn preflight(
         &self,
         only: Option<&[mixengine_proto::PendingOpId]>,
+        route: Route,
     ) -> Result<(Vec<mixengine_proto::PendingOp>, Chosen), Error> {
         let mut waiting = mixengine_core::elevation::pending(&self.store)
             .await
@@ -392,9 +393,37 @@ impl Elevation {
             .with_hint("`mix elevation status` lists what would be asked for"));
         }
 
+        // What a terminal over SSH cannot grant stays queued for a grant raised at the machine's
+        // own screen. A terminal at the screen reaches the dialog the operation asks in.
+        if route == (Route::ByHand { over_ssh: true }) {
+            let machine = self.host.elevation();
+            let mut screen_only = None;
+            waiting.retain(|pending| match machine.needs_the_screen(&pending.op) {
+                Some(reason) => {
+                    screen_only.get_or_insert(reason);
+                    false
+                }
+                None => true,
+            });
+
+            if let (true, Some(reason)) = (waiting.is_empty(), screen_only) {
+                return Err(Error::new(
+                    ErrorCode::PrivilegedRequired,
+                    format!("this cannot be allowed over SSH: {reason}"),
+                )
+                .with_hint(at_the_screen(self.reason().is_none())));
+            }
+        }
+
         let helper = self.choose_for(&waiting).await?;
 
-        if let Some(reason) = self.reason() {
+        // A terminal raises its own prompt, so only a missing helper stops it — ADR 0065.
+        let reason = match route {
+            Route::Dialog => self.reason(),
+            Route::ByHand { .. } => self.helper_reason(),
+        };
+
+        if let Some(reason) = reason {
             return Err(Error::new(
                 ErrorCode::PrivilegedRequired,
                 format!("this machine cannot raise an elevation prompt: {reason}"),
@@ -404,5 +433,17 @@ impl Elevation {
         self.reserve()?;
 
         Ok((waiting, helper))
+    }
+}
+
+/// Where a row left for the screen can be granted.
+///
+/// MixLab only when this daemon can raise a dialog: one started over SSH cannot, and a
+/// window talking to it has no Allow to offer. A terminal at the screen still can, through `sudo`.
+fn at_the_screen(can_prompt: bool) -> &'static str {
+    if can_prompt {
+        "run `mix elevation grant` on this machine itself, or allow it in MixLab"
+    } else {
+        "run `mix elevation grant` in a terminal on this machine itself"
     }
 }

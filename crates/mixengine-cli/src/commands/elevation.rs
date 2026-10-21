@@ -6,10 +6,11 @@ use std::process::ExitCode;
 use clap::Subcommand;
 use mixengine_platform::ipc::Endpoint;
 use mixengine_proto::{
-    ElevationDrop, ElevationStatus, Error, ErrorCode, JobSummary, PendingOpId, rpc,
+    ElevationDrop, ElevationGrant, ElevationStatus, Error, ErrorCode, JobSummary, PendingOpId, rpc,
 };
 
 use crate::autostart::Autostart;
+use crate::by_hand::{self, Route, Terminal};
 use crate::client::{Client, ask, encode};
 use crate::confirm::unanswered;
 use crate::jobs::follow;
@@ -90,25 +91,33 @@ pub(crate) async fn elevation(
             let waiting: ElevationStatus =
                 ask(&mut client, rpc::method::ELEVATION_STATUS, None).await?;
 
-            // An empty queue is `elevation.grant`'s own refusal to make, and it is left to it. What
-            // is skipped is the question: there is nothing to put in front of somebody.
-            if !waiting.pending.is_empty() && !yes && !confirmed(&waiting, json)? {
+            // ADR 0065: which way to ask is settled before anybody is asked whether to. An empty
+            // queue is `elevation.grant`'s own refusal to make, and it is left to it.
+            let route = match waiting.pending.is_empty() {
+                true => Route::Dialog,
+                false => route_for(&waiting, json, "mix elevation grant")?,
+            };
+            nothing_left_over_ssh(&waiting, route, Terminal::here().ssh)?;
+
+            // What is skipped is the question: there is nothing to put in front of somebody.
+            if !waiting.pending.is_empty() && !yes && !confirmed(&waiting, json, route)? {
                 // Saying no is an answer and not a failure — `docs/decisions/0005-on-demand-
                 // elevation.md`. Nothing was written and nothing was dropped, so the same command
                 // works when the person is ready.
                 return Ok(ExitCode::SUCCESS);
             }
 
-            let started: JobSummary = ask(&mut client, rpc::method::ELEVATION_GRANT, None).await?;
+            let started = start_grant(&mut client, route).await?;
 
             if no_wait {
                 emit(&rendered(json, &started, || {
                     render::job::job_status(&started)
                 }))?;
+                say_where_the_command_is(route);
                 return Ok(ExitCode::SUCCESS);
             }
 
-            let finished = follow(&mut client, started, json).await?;
+            let finished = see_through(&mut client, route, started, json).await?;
             emit(&rendered(json, &finished, || {
                 render::job::job_status(&finished)
             }))?;
@@ -144,6 +153,120 @@ pub(crate) async fn elevation(
     }
 }
 
+/// Which way a grant of `waiting` is raised from here (ADR 0065), or why it cannot be.
+///
+/// # Errors
+///
+/// `privileged_required` when neither a dialog nor this terminal can ask, naming `rerun`, and when
+/// the helper a terminal would run is not one it may.
+pub(crate) fn route_for(
+    waiting: &ElevationStatus,
+    json: bool,
+    rerun: &str,
+) -> Result<Route, Error> {
+    let route = by_hand::route(waiting, Terminal::here(), json, rerun)?;
+
+    if route == Route::ByHand {
+        by_hand::trusted_here(waiting.helper.as_deref())?;
+    }
+
+    Ok(route)
+}
+
+/// Refuse a terminal over SSH whose every waiting row needs the machine's own screen — before
+/// `continue? [y/N]`, rather than after it, where the daemon would refuse the same batch.
+///
+/// # Errors
+///
+/// `privileged_required`, with the daemon's sentence for the first such row.
+pub(crate) fn nothing_left_over_ssh(
+    waiting: &ElevationStatus,
+    route: Route,
+    over_ssh: bool,
+) -> Result<(), Error> {
+    if route != Route::ByHand || !over_ssh {
+        return Ok(());
+    }
+
+    let mut reasons = waiting
+        .pending
+        .iter()
+        .map(|pending| pending.needs_the_screen.as_deref());
+
+    match reasons.next() {
+        Some(Some(reason)) if reasons.all(|other| other.is_some()) => Err(Error::new(
+            ErrorCode::PrivilegedRequired,
+            format!("this cannot be allowed over SSH: {reason}"),
+        )
+        .with_hint(at_the_screen(waiting.can_prompt))),
+        _ => Ok(()),
+    }
+}
+
+/// Where a row left for the screen can be granted — the daemon's `at_the_screen`, which says the
+/// same after `continue?`.
+///
+/// MixLab only when the daemon can raise a dialog: one started over SSH cannot, and the window then
+/// has no Allow to offer. A terminal at the screen still can, through `sudo`.
+fn at_the_screen(can_prompt: bool) -> &'static str {
+    if can_prompt {
+        "run `mix elevation grant` on this machine itself, or allow it in MixLab"
+    } else {
+        "run `mix elevation grant` in a terminal on this machine itself"
+    }
+}
+
+/// `elevation.grant`, raised the way `route` says.
+///
+/// No parameters for a dialog, as before ADR 0065, so a daemon from before it still answers.
+///
+/// # Errors
+///
+/// Whatever `elevation.grant` refuses.
+pub(crate) async fn start_grant(client: &mut Client, route: Route) -> Result<JobSummary, Error> {
+    let asked = match route {
+        Route::Dialog => None,
+        Route::ByHand => encode(&ElevationGrant {
+            by_hand: true,
+            over_ssh: Terminal::here().ssh,
+        }),
+    };
+
+    ask(client, rpc::method::ELEVATION_GRANT, asked).await
+}
+
+/// Follow a grant to its end — running `sudo` on it first, when it waits for this terminal.
+///
+/// # Errors
+///
+/// What [`by_hand::run_waiting`] refuses, and a job that cannot be followed.
+pub(crate) async fn see_through(
+    client: &mut Client,
+    route: Route,
+    started: JobSummary,
+    json: bool,
+) -> Result<JobSummary, Error> {
+    let ended = match route {
+        Route::ByHand => by_hand::run_waiting(client, started.id).await?,
+        Route::Dialog => None,
+    };
+
+    match ended {
+        Some(finished) => Ok(finished),
+        None => follow(client, started, json).await,
+    }
+}
+
+/// After `--no-wait`, where a terminal's grant can be found.
+pub(crate) fn say_where_the_command_is(route: Route) {
+    if route == Route::ByHand {
+        let _ = writeln!(
+            std::io::stderr(),
+            "`mix elevation status` shows the command to run in a terminal"
+        );
+    }
+}
+
 /// Show what a grant would allow, ask about it, and answer whether to go on — roadmap task **T64**.
 ///
 /// The screen is printed whichever way this ends, because it is the point: a person is being asked
@@ -155,15 +278,21 @@ pub(crate) async fn elevation(
 /// When there is nobody to ask — `--json`, or a standard input at end of file. Both are refused
 /// rather than assumed either way: yes would raise a dialog on a machine nobody is sitting at, and
 /// no would be a decline the caller could not tell from a grant that happened.
-pub(crate) fn confirmed(waiting: &ElevationStatus, json: bool) -> Result<bool, Error> {
+pub(crate) fn confirmed(
+    waiting: &ElevationStatus,
+    json: bool,
+    route: Route,
+) -> Result<bool, Error> {
     if json {
         return Err(unanswered());
     }
 
-    match confirm::ask(&format!(
-        "{}\ncontinue? [y/N] ",
-        render::elevation::elevation_prompt(waiting)
-    )) {
+    let screen = match route {
+        Route::Dialog => render::elevation::elevation_prompt(waiting),
+        Route::ByHand => render::elevation::elevation_prompt_by_hand(waiting, Terminal::here().ssh),
+    };
+
+    match confirm::ask(&format!("{screen}\ncontinue? [y/N] ")) {
         confirm::Answer::Yes => Ok(true),
 
         confirm::Answer::No => {
@@ -178,5 +307,81 @@ pub(crate) fn confirmed(waiting: &ElevationStatus, json: bool) -> Result<bool, E
         }
 
         confirm::Answer::Unanswerable => Err(unanswered()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mixengine_proto::{ElevationStatus, ErrorCode, PendingOp, PendingOpId, Timestamp};
+
+    use super::*;
+
+    fn a_row(id: i64, screen: bool) -> PendingOp {
+        let op = mixengine_proto::privileged::PrivilegedOp::Probe {};
+
+        PendingOp {
+            id: PendingOpId(id),
+            description: op.describe(),
+            op,
+            requested_at: Timestamp(1_760_000_000_000),
+            needs_the_screen: screen.then(|| "it needs this Mac's own screen".to_owned()),
+        }
+    }
+
+    fn waiting_on(pending: Vec<PendingOp>) -> ElevationStatus {
+        ElevationStatus {
+            elevated: false,
+            can_prompt: true,
+            reason: None,
+            helper: None,
+            installed_helper: None,
+            pending,
+            last: None,
+            waiting: None,
+        }
+    }
+
+    /// Refused before `continue? [y/N]`, as the daemon would refuse after it.
+    #[test]
+    fn over_ssh_a_queue_of_screen_rows_is_refused_before_the_question() {
+        let error = nothing_left_over_ssh(&waiting_on(vec![a_row(1, true)]), Route::ByHand, true)
+            .expect_err("nothing a terminal over SSH can do");
+
+        assert_eq!(error.code, ErrorCode::PrivilegedRequired);
+        assert!(error.message.contains("over SSH"), "{}", error.message);
+        assert!(error.to_string().contains("mix elevation grant"), "{error}");
+    }
+
+    /// A daemon started over SSH has no dialog, so MixLab is no way out.
+    #[test]
+    fn over_ssh_to_a_daemon_without_a_dialog_mixlab_is_not_offered() {
+        let mut waiting = waiting_on(vec![a_row(1, true)]);
+        waiting.can_prompt = false;
+
+        let error = nothing_left_over_ssh(&waiting, Route::ByHand, true)
+            .expect_err("nothing a terminal over SSH can do");
+
+        assert!(!error.to_string().contains("MixLab"), "{error}");
+        assert!(error.to_string().contains("in a terminal"), "{error}");
+    }
+
+    #[test]
+    fn over_ssh_one_row_it_can_do_is_enough() {
+        assert!(
+            nothing_left_over_ssh(
+                &waiting_on(vec![a_row(1, true), a_row(2, false)]),
+                Route::ByHand,
+                true
+            )
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn at_the_screen_or_by_dialog_nothing_is_refused() {
+        let screen_only = waiting_on(vec![a_row(1, true)]);
+
+        assert!(nothing_left_over_ssh(&screen_only, Route::ByHand, false).is_ok());
+        assert!(nothing_left_over_ssh(&screen_only, Route::Dialog, true).is_ok());
     }
 }

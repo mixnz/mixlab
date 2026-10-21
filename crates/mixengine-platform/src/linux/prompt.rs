@@ -31,7 +31,7 @@ pub(crate) struct Prompt;
 
 impl Elevation for Prompt {
     fn probe(&self) -> ElevationSupport {
-        decide::missing(session(), None).map_or(ElevationSupport::Available, |reason| {
+        decide::missing(session()).map_or(ElevationSupport::Available, |reason| {
             ElevationSupport::Unavailable { reason }
         })
     }
@@ -40,13 +40,9 @@ impl Elevation for Prompt {
         prompt::usable("run as the elevation helper", helper)?;
         prompt::usable("hand to the elevation helper", request)?;
 
-        // Composed once and used twice: it is the sentence a user is given whether the machine was
-        // ruled out before the spawn or the spawn itself failed.
-        let manual = format!("{PKEXEC} {} {}", helper.display(), request.display());
-
         // Rule 3 of platform-abstraction.md — detect, then act. Nothing is spawned on a machine that
         // has already been shown to have nowhere to draw a prompt.
-        if let Some(reason) = decide::missing(session(), Some(&manual)) {
+        if let Some(reason) = decide::missing(session()) {
             return Ok(Raised::from(ElevationOutcome::Unavailable { reason }));
         }
 
@@ -64,7 +60,8 @@ impl Elevation for Prompt {
             Err(source) => {
                 return Ok(Raised::from(ElevationOutcome::Unavailable {
                     reason: format!(
-                        "{PKEXEC} could not be started ({source}). Run this by hand instead: {manual}"
+                        "{PKEXEC} could not be started ({source}). {}",
+                        decide::FROM_A_TERMINAL
                     ),
                 }));
             }

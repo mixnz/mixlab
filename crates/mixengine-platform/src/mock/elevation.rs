@@ -48,7 +48,14 @@ pub(super) struct Prompts {
     /// Without one, `Completed` is a helper that ran and wrote nothing — the default, and T40a's
     /// reminder that a crash is not a per-OS event.
     reports: bool,
+
+    /// The wire names of the operations this machine says a terminal cannot grant, as macOS says
+    /// of its System keychain.
+    on_screen: Vec<&'static str>,
 }
+
+/// What the mock says about an operation that needs the screen.
+pub const NEEDS_THE_SCREEN: &str = "this one needs the machine's own screen";
 
 impl Default for Prompts {
     fn default() -> Self {
@@ -57,6 +64,7 @@ impl Default for Prompts {
             answer: ElevationOutcome::Completed,
             said: None,
             reports: false,
+            on_screen: Vec::new(),
         }
     }
 }
@@ -106,6 +114,12 @@ impl Prompts {
         }
     }
 
+    /// The same machine, saying a terminal cannot grant the operation named `op`.
+    pub(super) fn needing_the_screen_for(mut self, op: &'static str) -> Self {
+        self.on_screen.push(op);
+        self
+    }
+
     /// Every prompt this host was asked to raise, in order.
     pub(super) fn raised(&self) -> Vec<Prompt> {
         self.raised
@@ -126,6 +140,12 @@ impl Elevation for Prompts {
             // "declined" as "impossible".
             ElevationOutcome::Completed | ElevationOutcome::Declined => ElevationSupport::Available,
         }
+    }
+
+    fn needs_the_screen(&self, op: &mixengine_proto::privileged::PrivilegedOp) -> Option<String> {
+        self.on_screen
+            .contains(&op.name())
+            .then(|| NEEDS_THE_SCREEN.to_owned())
     }
 
     fn run(&self, helper: &Path, request: &Path) -> Result<Raised> {

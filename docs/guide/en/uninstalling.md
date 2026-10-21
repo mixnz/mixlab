@@ -146,17 +146,22 @@ in `/usr/local/bin`, `MixLab.app` and the package receipt.
 mix uninstall --package
 ```
 
-On Linux, the package manager removes it, and `mix uninstall` prints the command when it is done:
+On Linux, the package manager removes it, and `mix uninstall` prints the command when it is done.
+A server without the window has the `mixengine-headless` package instead of `mixlab`:
 
 ```bash
-sudo apt remove mixlab
-sudo dnf remove mixlab
+sudo apt remove mixlab              # or: sudo apt remove mixengine-headless
+sudo dnf remove mixlab              # or: sudo dnf remove mixengine-headless
 ```
 
 On Windows, the installer's own uninstaller already did this part.
 
-A Mac with no one logged in at the screen cannot show the administrator prompt. There, remove the
-program by hand:
+Over SSH there is no screen for the administrator prompt, on Linux or on a Mac. `mix uninstall`
+asks through `sudo` instead, for your password in the same terminal. Your account has to be
+allowed to use `sudo`.
+
+If even that cannot run, for example from a script with no terminal, remove the Mac's program by
+hand:
 
 ```bash
 sudo rm -rf /usr/local/bin/mix /usr/local/bin/mixengined /usr/local/bin/mixengine-shim \

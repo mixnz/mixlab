@@ -11,7 +11,7 @@ use mixengine_proto::{Error, ErrorCode, GrantOutcome, JobKind, JobSummary, Times
 use crate::error::ToWire as _;
 
 use super::{
-    Afterwards, Chosen, Elevation, Released, Slot, may_have_changed_the_helper,
+    Afterwards, Chosen, Elevation, Released, Route, Slot, may_have_changed_the_helper,
     put_the_helper_first,
 };
 
@@ -34,8 +34,10 @@ impl Elevation {
     /// there is no helper beside this daemon. `privileged_required`, carrying `probe()`'s reason,
     /// when this machine cannot raise a prompt at all. `conflict`, naming the job already running,
     /// when a grant is in flight.
-    pub(crate) async fn grant(self: &Arc<Self>) -> Result<JobSummary, Error> {
-        let (waiting, helper) = self.preflight(None).await?;
+    ///
+    /// [`Route::ByHand`] is not refused on a machine with no dialog: it raises none (ADR 0065).
+    pub(crate) async fn grant(self: &Arc<Self>, route: Route) -> Result<JobSummary, Error> {
+        let (waiting, helper) = self.preflight(None, route).await?;
 
         let elevation = Arc::clone(self);
         let started = self
@@ -44,7 +46,7 @@ impl Elevation {
                 &JobKind::parse(rpc::method::ELEVATION_GRANT).expect("a valid kind"),
                 move |handle| async move {
                     elevation
-                        .flush(&handle, helper, waiting, Afterwards::Reconcile)
+                        .flush(&handle, helper, waiting, Afterwards::Reconcile, route)
                         .await
                 },
             )
@@ -87,6 +89,12 @@ impl Elevation {
                 ErrorCode::Conflict,
                 "a grant is already starting",
             )),
+            // Waiting for a terminal, the command is what a person needs, not the job.
+            Slot::Running(job) if state.waiting.is_some() => Err(Error::new(
+                ErrorCode::Conflict,
+                format!("job {job} is waiting for a terminal to run the helper"),
+            )
+            .with_hint("`mix elevation status` shows the command it is waiting for")),
             Slot::Running(job) => Err(Error::new(
                 ErrorCode::Conflict,
                 format!("job {job} is already asking for permission"),
@@ -112,6 +120,7 @@ impl Elevation {
         helper: Chosen,
         mut waiting: Vec<mixengine_proto::PendingOp>,
         afterwards: Afterwards,
+        route: Route,
     ) -> Result<serde_json::Value, Error> {
         // Released however this ends — including through a panic the RPC layer contains, which is
         // the whole reason it is not a line at the bottom.
@@ -148,17 +157,21 @@ impl Elevation {
 
         handle.progress(20, "asking for permission").await;
 
-        let path = request.path().to_path_buf();
-        let machine = Arc::clone(&self.host);
-        let raised =
-            tokio::task::spawn_blocking(move || machine.elevation().run(&helper.path, &path))
-                .await
-                .map_err(|join| {
-                    Error::new(
-                        ErrorCode::Internal,
-                        format!("the elevation prompt could not be waited on: {join}"),
-                    )
-                })?;
+        let raised = match route {
+            Route::Dialog => {
+                let path = request.path().to_path_buf();
+                let machine = Arc::clone(&self.host);
+                tokio::task::spawn_blocking(move || machine.elevation().run(&helper.path, &path))
+                    .await
+                    .map_err(|join| {
+                        Error::new(
+                            ErrorCode::Internal,
+                            format!("the elevation prompt could not be waited on: {join}"),
+                        )
+                    })?
+            }
+            Route::ByHand { .. } => Ok(self.by_hand(handle, &helper.path, &request).await),
+        };
 
         let answer = self.judge(handle, &request, raised, &waiting).await;
 

@@ -14,6 +14,8 @@
  * the daemon then announces the queue that is left.
  */
 
+import type { ByHand } from "@mixengine/api";
+
 /** One row of the list, reduced for drawing. */
 export interface DescribedOp {
   /** The operation kind — one of the 13 variants of `PrivilegedOp`. */
@@ -22,6 +24,9 @@ export interface DescribedOp {
   description: string;
   /** Exactly what it will change. Not translated: these are real paths, addresses and ports. */
   detail: string;
+  /** Why a grant from a terminal leaves this row waiting, in the daemon's words. Empty when it
+   *  does not. */
+  screenOnly: string;
 }
 
 /** The `pending` of an `elevation_required`, or `null` when the message is about something else. */
@@ -113,6 +118,13 @@ export function otherGrant<Outcome extends { job: number }>(
  * what the operation does, and rewriting it here would be MixLab making up a second explanation.
  */
 export function describeOp(pending: unknown): DescribedOp {
+  const row = (pending ?? {}) as { needs_the_screen?: unknown };
+  const screenOnly = typeof row.needs_the_screen === "string" ? row.needs_the_screen : "";
+  return { ...describeKind(pending), screenOnly };
+}
+
+/** {@link describeOp} without the row's own facts: what the operation is and what it changes. */
+function describeKind(pending: unknown): Omit<DescribedOp, "screenOnly"> {
   const row = (pending ?? {}) as { op?: unknown; description?: unknown };
   const description = typeof row.description === "string" ? row.description : "";
 
@@ -151,4 +163,22 @@ export function describeOp(pending: unknown): DescribedOp {
     description,
     detail: extra === undefined ? "" : JSON.stringify(extra, null, 2),
   };
+}
+
+/**
+ * The line a grant raised from a terminal is waiting for (ADR 0065), or `null` when none is.
+ *
+ * The same line `mix elevation status` prints. The window shows it to be run in a terminal on the
+ * machine the daemon is on, and never runs it: it has no terminal for `sudo` to ask in.
+ */
+export function terminalCommand(waiting: ByHand | null | undefined): string | null {
+  return waiting ? `sudo -- ${waiting.helper} ${waiting.request}` : null;
+}
+
+/**
+ * What a grant this dialog follows is waiting for: a command run in a terminal (ADR 0065) while one
+ * is waiting, or else the system's own prompt.
+ */
+export function whatTheGrantWaitsFor(command: string | null): "terminal" | "systemPrompt" {
+  return command === null ? "systemPrompt" : "terminal";
 }

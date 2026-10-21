@@ -30,3 +30,16 @@
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
+
+.waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* A command is one long line of two paths: wrapped, so it reads without scrolling sideways. */
+.command {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

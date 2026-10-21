@@ -208,7 +208,15 @@ impl Uninstall {
         // **Only when something is waiting.** `elevation.grant` refuses an empty queue outright, and
         // raising a dialog to discover that would be a prompt for nothing.
         let granted = match query.grant && !asked.ids.is_empty() {
-            true => Some(self.elevation.grant_only(handle, &asked.ids).await),
+            true => Some(
+                self.elevation
+                    .grant_only(
+                        handle,
+                        &asked.ids,
+                        crate::elevation::Route::asked(query.by_hand, query.over_ssh),
+                    )
+                    .await,
+            ),
             false => None,
         };
 

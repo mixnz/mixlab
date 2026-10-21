@@ -64,6 +64,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0062](0062-the-sql-engines-share-one-command-set.md) | The SQL engines share one command set behind one trait, and an engine is added by implementing it | Accepted |
 | [0063](0063-outbound-tls-trusts-the-operating-system.md) | Outbound TLS trusts the operating system's verifier, not a bundled root store | Accepted |
 | [0064](0064-the-daemon-may-start-at-boot-by-the-account-s-own-linger.md) | The daemon may start at boot, by the account's own linger, turned on only when asked and never elevated | Accepted |
+| [0065](0065-a-terminal-may-raise-the-prompt-itself.md) | A terminal may raise the elevation prompt itself, through `sudo` on the installed helper, where no dialog can | Accepted |
 
 ### Desktop (recorded in the standalone client)
 

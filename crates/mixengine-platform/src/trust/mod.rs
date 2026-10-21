@@ -15,6 +15,7 @@
 
 mod check;
 mod der;
+pub(crate) mod screen;
 // The envelope the two file-based stores are written in. Unix only, so a Windows build of the
 // helper does not gain the crate — see the module header.
 #[cfg(unix)]

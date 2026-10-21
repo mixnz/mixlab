@@ -12,6 +12,11 @@ the local network. Each of those is a footgun if done casually. This document is
 - **`mixengine-elevate` is the only elevated component**, and it exists for seconds at a time: the
   daemon spawns it through the OS elevation prompt (UAC / osascript / pkexec), it performs one
   batch of operations, and it exits. It has no listener, no service registration, no idle state.
+  Over SSH, or where no dialog can be raised, `mix` runs it through `sudo` in the person's own
+  terminal instead, and only the root-owned installed copy, never a path the daemon names
+  ([ADR 0065](../decisions/0065-a-terminal-may-raise-the-prompt-itself.md)). The daemon then learns
+  that a report appeared rather than that it ran the helper; a forged report misinforms the queue
+  and changes nothing on the machine.
   The one exception, and its conditions, is
   [ADR 0037](../decisions/0037-mixengine-may-run-microsofts-visual-cpp-installer.md): Microsoft's
   Visual C++ Redistributable installer, signature-verified and agreed to, which raises its own

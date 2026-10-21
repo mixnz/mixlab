@@ -217,6 +217,7 @@ async fn a_settled_firewall_plan_is_recorded() {
         op: PrivilegedOp::FirewallApply { plan: plan.clone() },
         description: "open two ports".to_owned(),
         requested_at: mixengine_proto::Timestamp(1),
+        needs_the_screen: None,
     }];
 
     for outcome in [
@@ -261,6 +262,7 @@ async fn a_firewall_plan_that_did_not_land_records_nothing() {
         op: PrivilegedOp::FirewallApply { plan },
         description: "open one port".to_owned(),
         requested_at: mixengine_proto::Timestamp(1),
+        needs_the_screen: None,
     }];
 
     for outcome in [

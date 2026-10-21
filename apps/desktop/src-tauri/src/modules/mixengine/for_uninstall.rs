@@ -58,6 +58,9 @@ fn query(keep_home: bool, keep_relocated: bool, grant: bool) -> UninstallQuery {
         grant,
         skip_holders: false,
         package: true,
+        // The window has no terminal to run `sudo` in (ADR 0065).
+        by_hand: false,
+        over_ssh: false,
     }
 }
 

@@ -47,6 +47,19 @@ pub struct UninstallQuery {
     #[serde(default)]
     pub grant: bool,
 
+    /// Raise that prompt from the caller's terminal rather than as a dialog — as
+    /// [`ElevationGrant::by_hand`](crate::ElevationGrant::by_hand). Meaningless without `grant`.
+    ///
+    /// Left off the wire when `false`: this type denies unknown fields, and a daemon from before
+    /// ADR 0065 would refuse every uninstall that carried it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub by_hand: bool,
+
+    /// That terminal is behind SSH — as [`ElevationGrant::over_ssh`](crate::ElevationGrant::over_ssh).
+    /// Left off the wire when `false`, for `by_hand`'s reason.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub over_ssh: bool,
+
     /// Leave out what other programs hold in the folders that would go — roadmap task **T182e**.
     ///
     /// **Defaults to `false`**: every plan and every act looks, because something stuck found before

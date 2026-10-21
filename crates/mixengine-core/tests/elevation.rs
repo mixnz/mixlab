@@ -55,6 +55,7 @@ fn waiting(id: i64) -> PendingOp {
         description: op.describe(),
         op,
         requested_at: Timestamp(1_760_000_000_000),
+        needs_the_screen: None,
     }
 }
 

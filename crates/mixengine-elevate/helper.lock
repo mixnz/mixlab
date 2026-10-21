@@ -54,6 +54,7 @@
     "crates/mixengine-platform/src/trust/der.rs",
     "crates/mixengine-platform/src/trust/mod.rs",
     "crates/mixengine-platform/src/trust/pem.rs",
+    "crates/mixengine-platform/src/trust/screen.rs",
     "crates/mixengine-platform/src/unix/elevated.rs",
     "crates/mixengine-platform/src/unix/hosts.rs",
     "crates/mixengine-platform/src/unix/install.rs",

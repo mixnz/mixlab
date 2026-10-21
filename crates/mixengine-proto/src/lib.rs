@@ -102,8 +102,8 @@ pub use domain_api::{
     DomainAdd, DomainRemove, DomainStatus, DomainStatusQuery, DomainStatusReport,
 };
 pub use elevation::{
-    ElevationDrop, ElevationStatus, ElevationSummary, GrantOutcome, InstalledHelper, PendingOp,
-    PendingOpId,
+    ByHand, ElevationDrop, ElevationGrant, ElevationStatus, ElevationSummary, GrantOutcome,
+    InstalledHelper, PendingOp, PendingOpId,
 };
 pub use error::{Error, ErrorCode, flatten};
 pub use event::DaemonEvent;

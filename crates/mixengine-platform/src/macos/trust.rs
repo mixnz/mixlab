@@ -573,6 +573,20 @@ fn run_in_session(caller: &crate::elevated::Owner, arguments: &[&str]) -> crate:
         });
     }
 
+    // **Before anything is written**: `add-trusted-cert` puts the certificate in the keychain and
+    // then asks on screen, so a dialog with nowhere to appear leaves it there untrusted. A console
+    // that cannot be read is asked anyway, as before this check existed.
+    if let Ok(console) = std::fs::metadata("/dev/console") {
+        use std::os::unix::fs::MetadataExt as _;
+
+        if let Err(why) = crate::trust::screen::callers_screen(console.uid(), uid) {
+            return Err(crate::Error::Os {
+                action: "change this machine's System keychain",
+                source: std::io::Error::other(why),
+            });
+        }
+    }
+
     let mut line: Vec<&str> = vec!["asuser", uid, SECURITY];
     line.extend_from_slice(arguments);
 

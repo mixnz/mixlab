@@ -35,7 +35,7 @@ use crate::PortHolder;
 
 pub use autostart::AutostartOp;
 pub use desktop::Launched;
-pub use elevation::Prompt;
+pub use elevation::{NEEDS_THE_SCREEN, Prompt};
 pub use keyring::SecretOp;
 pub use path::PathOp;
 
@@ -345,6 +345,16 @@ impl Host {
         Self {
             prompts: elevation::Prompts::refusing(reason),
             ..Self::with_home(home)
+        }
+    }
+
+    /// The same host, saying a terminal cannot grant the operation named `op` — what macOS says of
+    /// adding an authority to its System keychain. The reason is [`NEEDS_THE_SCREEN`].
+    #[must_use]
+    pub fn needing_the_screen_for(self, op: &'static str) -> Self {
+        Self {
+            prompts: self.prompts.needing_the_screen_for(op),
+            ..self
         }
     }
 

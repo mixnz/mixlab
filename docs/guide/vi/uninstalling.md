@@ -4,7 +4,7 @@ slug = "uninstalling"
 order = 13
 summary = "Hoàn tác mọi thứ MixLab đã ghi bên ngoài thư mục của nó, xem danh sách trước khi đồng ý, và giữ lại cơ sở dữ liệu nếu bạn muốn."
 translation_of = "en/uninstalling.md"
-source_sha256 = "c06aa2e236ad0d7d2be0e1d9c2a5f56d4cfe13be2200de376a906d70feb241f4"
+source_sha256 = "b3ce687f485b50635f532857dcbfff1714cec55140200acb990b348ec3ed4b5a"
 +++
 
 # Gỡ MixLab
@@ -146,17 +146,21 @@ Trên Mac, thêm `--package` là cùng hộp thoại quản trị đó gỡ luô
 mix uninstall --package
 ```
 
-Trên Linux, trình quản lý gói lo phần này, và `mix uninstall` in sẵn lệnh khi chạy xong:
+Trên Linux, trình quản lý gói lo phần này, và `mix uninstall` in sẵn lệnh khi chạy xong. Máy chủ
+không có cửa sổ thì cài gói `mixengine-headless` thay cho `mixlab`:
 
 ```bash
-sudo apt remove mixlab
-sudo dnf remove mixlab
+sudo apt remove mixlab              # hoặc: sudo apt remove mixengine-headless
+sudo dnf remove mixlab              # hoặc: sudo dnf remove mixengine-headless
 ```
 
 Trên Windows, bộ gỡ của bộ cài đã làm luôn phần này.
 
-Một máy Mac không có ai đăng nhập ở màn hình thì không hiện được hộp thoại quản trị. Khi đó, gỡ
-chương trình bằng tay:
+Qua SSH thì không có màn hình để hiện hộp thoại quản trị, trên Linux lẫn Mac. Khi đó `mix uninstall`
+hỏi mật khẩu qua `sudo` ngay trong terminal đang dùng. Tài khoản của bạn cần được phép dùng `sudo`.
+
+Nếu cả cách đó cũng không chạy được, chẳng hạn từ một script không có terminal, gỡ chương trình
+trên Mac bằng tay:
 
 ```bash
 sudo rm -rf /usr/local/bin/mix /usr/local/bin/mixengined /usr/local/bin/mixengine-shim \

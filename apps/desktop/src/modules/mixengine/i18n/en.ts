@@ -261,11 +261,15 @@ export default {
     elevation: {
       title: "MixEngine needs an administrator",
       lead: "Everything below will be changed in one prompt.",
+      leadWhileTerminalWaits: "A command in a terminal is waiting to change what it can. Anything marked below waits for this screen.",
       grant: "Allow",
       prompting: "Waiting for you to answer the system prompt",
+      waitingForTerminal: "Waiting for the command below to be run in a terminal",
       declined: "Permission was not granted, so nothing was changed. You can allow it again when you are ready.",
       cannotPrompt: "This machine cannot raise a permission prompt right now.",
       cannotPromptReason: "This machine cannot raise a permission prompt right now: {{reason}}",
+      waitingCommand: "Run this in a terminal on the MixEngine machine to allow it:",
+      copyCommand: "Copy command",
     },
     projects: {
       rowMenu: "More actions",

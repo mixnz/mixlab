@@ -25,23 +25,67 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       log, the `mix database` wording; bindings.
 - [x] **T194f** `security-model.md`, `platform-abstraction.md`'s `Keyring` row, the changelog lines,
       and the design flipped to `implemented`.
-- [ ] **T211** The ADR: on a machine with no graphical agent, `mix` in a terminal raises the
+- [x] **T211** The ADR: on a machine with no graphical agent, `mix` in a terminal raises the
       prompt itself, through `sudo` on the helper — amending ADR 0005. Found on an Ubuntu 24.04
       server over SSH (2026-10-21): `polkitd` is installed and running, but `pkexec` is not — a
       separate package since Ubuntu 24.04 — and with no polkit agent over SSH it could not prompt
       anyway, so `mix elevation grant` and the privileged half of `mix uninstall` never run there,
       and nothing names a way to do it by hand. The error itself is wrong too: it says *"pkexec is
-      not on PATH, so polkit is not installed"*, which T211c corrects. Design to come.
-- [ ] **T211a** The daemon writes the request and hands its path to a client that has a terminal,
+      not on PATH, so polkit is not installed"*, which T211c corrects. Linux and macOS alike: a Mac
+      over SSH has the same gap. ADR 0065;
+      design: [2026-10-21-t211-elevation-from-a-terminal-design.md](../specs/2026-10-21-t211-elevation-from-a-terminal-design.md).
+- [x] **T211a** The daemon writes the request and hands its path to a client that has a terminal,
       instead of refusing in `elevation/require.rs` before the request exists;
       `mixengine-elevate` still validates every request itself. **(P)**
-- [ ] **T211b** `mix elevation grant` and `mix uninstall` run `sudo <helper> <request>` in the
+- [x] **T211b** `mix elevation grant` and `mix uninstall` run `sudo <helper> <request>` in the
       person's own terminal, and the daemon reads the report as it does after `pkexec`. **(P)**
-- [ ] **T211c** Ask whether this machine can raise a prompt before `continue? [y/N]`, not after
+- [x] **T211c** Ask whether this machine can raise a prompt before `continue? [y/N]`, not after
       the answer; where it cannot, the error names the command a person can run by hand.
-- [ ] **T211d** `docs/guide/en/uninstalling.md` names `mixengine-headless` beside `mixlab` for
+- [x] **T211d** `docs/guide/en/uninstalling.md` names `mixengine-headless` beside `mixlab` for
       `apt remove` and `dnf remove`, `mix uninstall`'s last line names the package command, and
       `--keep-home`'s help stops saying the daemon keeps running (ADR 0051).
+      **Verified** over SSH on 2026-10-21, on Ubuntu 24.04 and on macOS 15: a decline, a grant run
+      by hand from a second session, a grant in the same terminal, `mix doctor --repair --yes` and
+      `mix uninstall`; on the Mac also Ctrl-C at `sudo`'s password and three wrong passwords. Two
+      gaps the Mac found are T211e and T211f, measured there again the same day and passing; the
+      helper's console check (T211e, D5) has unit tests and was not tried on a Mac.
+- [x] **T211e** On macOS a terminal cannot add MixEngine's authority to the System keychain:
+      `add-trusted-cert -d` raises SecurityAgent on the Mac's own screen even under `sudo`. A grant
+      raised from a terminal leaves such rows queued, says so before `continue?`, and
+      `elevation.status` marks them; the helper refuses at once when the console is not the
+      caller's. **(P)**
+      Design: [2026-10-21-t211e-what-a-terminal-cannot-grant-design.md](../specs/2026-10-21-t211e-what-a-terminal-cannot-grant-design.md).
+- [x] **T211f** MixLab's elevation dialog shows a terminal's waiting command whatever `can_prompt`
+      says, and while it follows such a grant says it waits for a terminal rather than for a system
+      prompt. Same design as T211e.
+- [x] **T211i** Found re-measuring T211e/f on the Mac: a daemon `mix` starts over SSH lives in
+      SSH's session, and osascript from there fails with -60007 (*wrong password*) showing nothing,
+      for every later dialog grant at the screen. The daemon reads `launchctl managername` once and
+      answers `can_prompt: false` outside `Aqua`, with the way out (`mix daemon stop` at the Mac),
+      and -60007 reads as that. `ElevationGrant`/`UninstallQuery` carry `over_ssh`, and only a grant
+      over SSH leaves what needs the screen: `sudo` at the screen reaches its dialog. `mix` refuses
+      over SSH before `continue?` when every row needs the screen; rows read *not over SSH*;
+      MixLab's lead and the wrapped command fit a terminal's grant. **(P)** Left open: starting the
+      daemon from SSH into `gui/<uid>` through launchd, which needs measuring on a Mac first.
+      **Verified** on macOS 15 on 2026-10-21, over SSH and at the screen, MixLab included. Two
+      sentences that measurement found pointed the wrong way, and no longer do: the refusal over SSH
+      offers MixLab only when the daemon can raise a dialog, and the dialog's *cannot prompt* line
+      (`mix daemon stop`, which would cancel it) stays hidden while a terminal's grant waits.
+- [ ] **T211g** `mix uninstall` of one home removes what other homes on the machine use: resolver
+      wiring it did not write (`/etc/resolver/*` from another home, found on a Mac on 2026-10-21),
+      the installed helper and the audit log. Remove only what this home applied, recorded as
+      `firewall.applied` already is, and keep the rest with a sentence; homes installed before the
+      record keep rather than remove. Needs an ADR amending 0051. Design to come.
+      The hosts file too: there is one `# BEGIN MixEngine` block for every home, so one home's
+      `hosts-apply` replaced another's `blog.test` with its own name, and a home whose resolver got
+      wired queues the block's removal, which would empty it for the others (a Mac, 2026-10-21).
+- [ ] **T211h** Display slips older than T211, found on the same Mac: `helper … replaces it at the
+      next permission prompt` printed when the daemon skipped the replacement; a succeeded job still
+      showing 40% or 70% and its last step; `mix doctor --repair` printing "the managed hosts block"
+      twice; MixLab's `hosts-apply` detail printing `127.0.0.1` twice with no name. And two in the
+      elevation dialog, found re-measuring T211i: *"Everything below will be changed in one
+      prompt"* where the daemon cannot raise one, and *"Anything marked below waits for this
+      screen"* where nothing is marked.
 - [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
       account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
       headless host has no prompt to show.

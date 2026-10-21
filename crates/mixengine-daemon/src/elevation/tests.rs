@@ -1,6 +1,7 @@
 use super::*;
 
 mod asking;
+mod by_hand;
 mod queue;
 mod withdrawal;
 

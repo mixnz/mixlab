@@ -315,6 +315,11 @@ reason a client can behave well without inventing anything.
   operation and what it will literally change — the exact hosts lines, the port, the store — so a
   client can show that and then raise one prompt. A decline is a supported outcome the API models,
   not an error ([ADR 0005](../decisions/0005-on-demand-elevation.md)).
+- **A prompt may be raised from a terminal instead.** `elevation.grant` and `daemon.uninstall` take
+  `by_hand`: the daemon writes the request, shows the command on `elevation.status` as `waiting`,
+  and waits for the helper's report instead of raising a dialog. Only a client holding a terminal
+  sends it — `mix`, over SSH or where no dialog can be raised — and a graphical client shows
+  `waiting` rather than starting one ([ADR 0065](../decisions/0065-a-terminal-may-raise-the-prompt-itself.md)).
 - **Every error carries its own remedy.** `Error::hint` is what a client renders as the suggested
   action, and the diagnostics bundle is `daemon.bundle` (T93): one call assembles the archive and
   answers with its path, so "copy diagnostics" is a file to open rather than five readings to

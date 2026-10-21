@@ -21,19 +21,20 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use mixengine_core::{Paths, Store};
 use mixengine_platform::{ElevationSupport, Host};
 use mixengine_proto::privileged::{OpOutcome, PrivilegedOp};
 use mixengine_proto::{
-    DaemonEvent, ElevationDrop, ElevationStatus, ElevationSummary, Error, GrantOutcome, JobId,
-    Timestamp,
+    ByHand, DaemonEvent, ElevationDrop, ElevationStatus, ElevationSummary, Error, GrantOutcome,
+    JobId, Timestamp,
 };
 
 use crate::api::Events;
 use crate::error::ToWire as _;
 
+mod by_hand;
 mod flush;
 mod require;
 
@@ -73,6 +74,37 @@ struct State {
     /// What the most recent one did — in memory, deliberately. See
     /// [`ElevationStatus::last`](mixengine_proto::ElevationStatus).
     last: Option<GrantOutcome>,
+
+    /// The grant in the slot, while it waits for a terminal to run the helper (ADR 0065).
+    waiting: Option<ByHand>,
+}
+
+/// How long a grant waits for somebody to run the helper from a terminal before it counts as
+/// declined, and gives the slot back.
+const BY_HAND_WAIT: Duration = Duration::from_secs(600);
+
+/// How the one prompt of a grant is raised (ADR 0065).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Route {
+    /// This daemon raises the operating system's dialog: UAC, `osascript`, `pkexec`.
+    Dialog,
+
+    /// This daemon writes the request and waits for a terminal to run the helper on it. Nothing
+    /// is spawned here, so a machine where no dialog can be raised is not refused.
+    ByHand {
+        /// The terminal is behind SSH, so what needs the machine's own screen stays queued.
+        over_ssh: bool,
+    },
+}
+
+impl Route {
+    /// The `by_hand` and `over_ssh` flags `elevation.grant` and `daemon.uninstall` carry.
+    pub(crate) fn asked(by_hand: bool, over_ssh: bool) -> Self {
+        match by_hand {
+            true => Self::ByHand { over_ssh },
+            false => Self::Dialog,
+        }
+    }
 }
 
 /// The two files this daemon could hand an elevation prompt — roadmap task **T85**.
@@ -165,6 +197,9 @@ pub(crate) struct Elevation {
     /// that would not answer, and every reader treats those the same — this daemon does not know
     /// and will not guess.
     facts: Mutex<Option<crate::helper::HelperFacts>>,
+
+    /// How long a [`Route::ByHand`] grant waits — [`BY_HAND_WAIT`], and shorter only in tests.
+    by_hand_wait: Duration,
 }
 
 impl Elevation {
@@ -190,6 +225,7 @@ impl Elevation {
             dns,
             state: Mutex::new(State::default()),
             facts: Mutex::new(None),
+            by_hand_wait: BY_HAND_WAIT,
         })
     }
 
@@ -519,10 +555,16 @@ impl Elevation {
         &self,
         handle: &crate::jobs::JobHandle,
     ) -> Result<serde_json::Value, Error> {
-        let (waiting, helper) = self.preflight(None).await?;
+        let (waiting, helper) = self.preflight(None, Route::Dialog).await?;
 
-        self.flush(handle, helper, waiting, Afterwards::Reconcile)
-            .await
+        self.flush(
+            handle,
+            helper,
+            waiting,
+            Afterwards::Reconcile,
+            Route::Dialog,
+        )
+        .await
     }
 
     /// [`grant_within`](Self::grant_within) over the rows `ids` names, and nothing else waiting —
@@ -539,10 +581,11 @@ impl Elevation {
         &self,
         handle: &crate::jobs::JobHandle,
         ids: &[mixengine_proto::PendingOpId],
+        route: Route,
     ) -> Result<serde_json::Value, Error> {
-        let (waiting, helper) = self.preflight(Some(ids)).await?;
+        let (waiting, helper) = self.preflight(Some(ids), route).await?;
 
-        self.flush(handle, helper, waiting, Afterwards::Nothing)
+        self.flush(handle, helper, waiting, Afterwards::Nothing, route)
             .await
     }
 
@@ -610,17 +653,25 @@ impl Elevation {
     ///
     /// The wire error of a queue that could not be read.
     pub(crate) async fn status(&self) -> Result<ElevationStatus, Error> {
-        let pending = mixengine_core::elevation::pending(&self.store)
+        let mut pending = mixengine_core::elevation::pending(&self.store)
             .await
             .map_err(|error| error.to_wire())?;
 
+        // The machine's sentence, so a client renders it and decides nothing.
+        let machine = self.host.elevation();
+        for row in &mut pending {
+            row.needs_the_screen = machine.needs_the_screen(&row.op);
+        }
+
         let reason = self.reason();
-        let last = self
-            .state
-            .lock()
-            .expect("the elevation slot is not held across an await")
-            .last
-            .clone();
+        let (last, waiting) = {
+            let state = self
+                .state
+                .lock()
+                .expect("the elevation slot is not held across an await");
+
+            (state.last.clone(), state.waiting.clone())
+        };
 
         Ok(ElevationStatus {
             elevated: self.elevated,
@@ -635,6 +686,7 @@ impl Elevation {
             installed_helper: self.installed_helper(),
             pending,
             last,
+            waiting,
         })
     }
 
@@ -666,17 +718,25 @@ impl Elevation {
     /// a prompt; a daemon with no `mixengine-elevate` beside it has nothing to show one *for*. Both
     /// leave `can_prompt` false, and only one of them is fixed by installing a polkit agent.
     fn reason(&self) -> Option<String> {
-        if let Err(error) = mixengine_core::elevation::helper(
-            &self.candidates.program,
-            self.candidates.installed.as_deref(),
-        ) {
-            return Some(error.to_string());
+        if let Some(reason) = self.helper_reason() {
+            return Some(reason);
         }
 
         match self.host.elevation().probe() {
             ElevationSupport::Available => None,
             ElevationSupport::Unavailable { reason } => Some(reason),
         }
+    }
+
+    /// Why there is no helper to run, or [`None`] when there is one — the half of
+    /// [`reason`](Self::reason) a terminal cannot fix either.
+    fn helper_reason(&self) -> Option<String> {
+        mixengine_core::elevation::helper(
+            &self.candidates.program,
+            self.candidates.installed.as_deref(),
+        )
+        .err()
+        .map(|error| error.to_string())
     }
 }
 

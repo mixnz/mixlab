@@ -5,8 +5,15 @@
 ### Added
 - On a Linux server, MixEngine can come back after a reboot with nobody logged in:
   `mix autostart enable --at-boot`, or *Also start at boot* in Settings → MixEngine.
+- Over SSH, `mix elevation grant`, `mix doctor --repair` and `mix uninstall` ask for your password
+  through `sudo` in the same terminal, on Linux and macOS. MixLab shows the command a waiting grant needs.
+  On a Mac over SSH, adding MixEngine's certificate authority still waits for the Mac's own screen,
+  and `mix` says so before it asks.
 
 ### Fixed
+- On a Mac, a MixEngine started over SSH says it cannot show an administrator prompt and how to
+  restart it, instead of reporting a wrong password.
+- On Ubuntu 24.04 and later, a machine without `pkexec` no longer says polkit is missing.
 - In MixLab, a SQL Server script with a `GO` line inside a string or a comment runs as the Query
   tab shows it. Before, it was cut in two at that line.
 - On macOS and Linux, Settings → Updates offers Finish as soon as you come back from the

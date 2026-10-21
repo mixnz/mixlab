@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 
+import Button from "../../../../components/Button";
 import Modal, { ModalBody } from "../../../../components/Modal";
+import { copyText } from "../../../../core/clipboard";
 import { errorMessage } from "../../../../core/errors";
+import { CopyIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { GrantOutcome } from "@mixengine/api";
 import type { JobSummary } from "@mixengine/api";
-import { describeOp, isGrantInFlight, isNothingWaiting, otherGrant } from "../../pendingOps";
+import {
+  describeOp,
+  isGrantInFlight,
+  isNothingWaiting,
+  otherGrant,
+  terminalCommand,
+  whatTheGrantWaitsFor,
+} from "../../pendingOps";
 import { useRunningDots } from "../../screens/Settings/useRunningDots";
 import styles from "./ElevationDialog.module.css";
 
@@ -23,8 +33,15 @@ import styles from "./ElevationDialog.module.css";
  * `MIXENGINE_HOME` and is removed by the same Uninstall, but an old `hosts-apply` may still be
  * stuck in the elevation queue from before) `elevation.grant` has nothing left to call — an
  * "Allow" button still drawn in that situation promises something the app cannot do. `reason` is
- * the sentence the daemon writes for each platform (e.g. Linux: the whole `pkexec` command to type
- * by hand).
+ * the sentence the daemon writes for each platform (e.g. Linux: what is missing, and that
+ * `mix elevation grant` works from a terminal).
+ *
+ * **A grant `mix` started from a terminal is shown, never run** (ADR 0065). While the daemon waits
+ * for one, `elevation.status` carries the command, and this dialog shows it with a copy button on
+ * every system — on a Mac `canPrompt` is true and the command is still the way forward. The window
+ * has no terminal for `sudo` to ask in, so it never starts a grant of that kind itself. While it
+ * follows such a grant, the footer says it waits for a terminal, because no system prompt exists;
+ * and a row that grant left for the screen says so under it, in the daemon's words.
  *
  * **There is no "Skip" button.** `elevation.drop` drops the whole batch without leaving any way to
  * grant it again — closing the dialog (Escape, clicking outside, or the Close button) only hides
@@ -66,6 +83,10 @@ export default function ElevationDialog({
   /** The outcome of the last Allow when it did not lead to closing the dialog — a translated
    *  sentence, or `null`. */
   const [notice, setNotice] = useState<string | null>(null);
+  /** The command a grant started from a terminal waits for, while one does. */
+  const [command, setCommand] = useState<string | null>(null);
+  /** Per row id, why a terminal's grant leaves it for the screen — from the same reading. */
+  const [screenOnly, setScreenOnly] = useState<Map<number, string>>(new Map());
   const dots = useRunningDots(busy || following);
   const { t } = useTranslation();
   /** Whether still mounted — set to `true` in the effect body rather than only `false` in the
@@ -75,6 +96,36 @@ export default function ElevationDialog({
     live.current = true;
     return () => {
       live.current = false;
+    };
+  }, []);
+
+  // A terminal's grant can be waiting on any system, whatever `canPrompt` says. Read again every
+  // two seconds: the grant may be started, or end, while this dialog is open.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let stopped = false;
+    const read = async () => {
+      try {
+        const status = await api.elevationStatus();
+        if (!stopped) {
+          setCommand(terminalCommand(status.waiting));
+          setScreenOnly(
+            new Map(
+              status.pending.flatMap((row) =>
+                row.needs_the_screen ? [[row.id, row.needs_the_screen] as const] : [],
+              ),
+            ),
+          );
+        }
+      } catch {
+        // The command is a convenience; the dialog is still right without it.
+      }
+      if (!stopped) timer = setTimeout(() => void read(), 2000);
+    };
+    void read();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
     };
   }, []);
 
@@ -186,7 +237,9 @@ export default function ElevationDialog({
       footerNote={
         busy || following ? (
           <>
-            {t("mixengine.elevation.prompting")}
+            {whatTheGrantWaitsFor(command) === "terminal"
+              ? t("mixengine.elevation.waitingForTerminal")
+              : t("mixengine.elevation.prompting")}
             {dots}
           </>
         ) : undefined
@@ -208,10 +261,19 @@ export default function ElevationDialog({
       {() => (
         <>
           <ModalBody>
-            <p className={styles.lead}>{t("mixengine.elevation.lead")}</p>
+            {/* A terminal's grant carries only what a terminal can, so "one prompt" is not true of
+                the list while one waits. */}
+            <p className={styles.lead}>
+              {command === null
+                ? t("mixengine.elevation.lead")
+                : t("mixengine.elevation.leadWhileTerminalWaits")}
+            </p>
             <ul className={styles.ops}>
               {pending.map((op, at) => {
                 const { kind, description, detail } = describeOp(op);
+                const id = (op as { id?: unknown }).id;
+                const leftForTheScreen =
+                  command !== null && typeof id === "number" ? screenOnly.get(id) : undefined;
                 return (
                   // The position is the key: `PendingOp.id` does exist, but the order is what the
                   // daemon sends and the list is never re-sorted, so both give the same result and
@@ -222,16 +284,37 @@ export default function ElevationDialog({
                     {description && <div>{description}</div>}
                     <code className={styles.kind}>{kind}</code>
                     {detail && <pre className={styles.detail}>{detail}</pre>}
+                    {leftForTheScreen && (
+                      <p className={styles.cannotPrompt}>{leftForTheScreen}</p>
+                    )}
                   </li>
                 );
               })}
             </ul>
-            {!canPrompt && (
+            {/* Not while a terminal's grant waits: the way out this sentence gives (on a Mac,
+                `mix daemon stop`) would cancel that grant, and the command below is the way on. */}
+            {!canPrompt && command === null && (
               <p className={styles.cannotPrompt}>
                 {reason
                   ? t("mixengine.elevation.cannotPromptReason", { reason })
                   : t("mixengine.elevation.cannotPrompt")}
               </p>
+            )}
+            {command !== null && (
+              <div className={styles.waiting}>
+                <p className={styles.lead}>{t("mixengine.elevation.waitingCommand")}</p>
+                <pre className={`${styles.detail} ${styles.command}`}>{command}</pre>
+                <Button
+                  size="small"
+                  variant="ghost"
+                  onClick={() =>
+                    void copyText(command).catch((e: unknown) => setNotice(errorMessage(t, e)))
+                  }
+                >
+                  <CopyIcon size={14} />
+                  {t("mixengine.elevation.copyCommand")}
+                </Button>
+              </div>
             )}
             {notice !== null && !busy && !following && (
               <p className={styles.cannotPrompt}>{notice}</p>

@@ -156,6 +156,7 @@ async fn read(
                 description: op.describe(),
                 op,
                 requested_at: Timestamp(row.requested_at),
+                needs_the_screen: None,
             }),
             Err(error) => {
                 tracing::warn!(
