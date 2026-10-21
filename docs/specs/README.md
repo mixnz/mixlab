@@ -237,4 +237,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-20 | [One `build_where` for the SQL engines (design)](2026-10-20-t209j-one-build-where-design.md) | T209j | implemented |
 | 2026-10-21 | [One frame for editing rows in the sqlx engines (design)](2026-10-21-t209k-one-frame-for-editing-rows-design.md) | T209k | implemented |
 | 2026-10-21 | [T211 — Elevation from a terminal (design)](2026-10-21-t211-elevation-from-a-terminal-design.md) | T211, T211a, T211b, T211c, T211d | implemented |
-| 2026-10-21 | [T211e, T211f — What a terminal cannot grant, and the window that waits for one (design)](2026-10-21-t211e-what-a-terminal-cannot-grant-design.md) | T211e, T211f | approved |
+| 2026-10-21 | [T211e, T211f — What a terminal cannot grant, and the window that waits for one (design)](2026-10-21-t211e-what-a-terminal-cannot-grant-design.md) | T211e, T211f | implemented |

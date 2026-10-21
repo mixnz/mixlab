@@ -24,6 +24,9 @@ export interface DescribedOp {
   description: string;
   /** Exactly what it will change. Not translated: these are real paths, addresses and ports. */
   detail: string;
+  /** Why a grant from a terminal leaves this row waiting, in the daemon's words. Empty when it
+   *  does not. */
+  screenOnly: string;
 }
 
 /** The `pending` of an `elevation_required`, or `null` when the message is about something else. */
@@ -115,6 +118,13 @@ export function otherGrant<Outcome extends { job: number }>(
  * what the operation does, and rewriting it here would be MixLab making up a second explanation.
  */
 export function describeOp(pending: unknown): DescribedOp {
+  const row = (pending ?? {}) as { needs_the_screen?: unknown };
+  const screenOnly = typeof row.needs_the_screen === "string" ? row.needs_the_screen : "";
+  return { ...describeKind(pending), screenOnly };
+}
+
+/** {@link describeOp} without the row's own facts: what the operation is and what it changes. */
+function describeKind(pending: unknown): Omit<DescribedOp, "screenOnly"> {
   const row = (pending ?? {}) as { op?: unknown; description?: unknown };
   const description = typeof row.description === "string" ? row.description : "";
 
@@ -163,4 +173,12 @@ export function describeOp(pending: unknown): DescribedOp {
  */
 export function terminalCommand(waiting: ByHand | null | undefined): string | null {
   return waiting ? `sudo -- ${waiting.helper} ${waiting.request}` : null;
+}
+
+/**
+ * What a grant this dialog follows is waiting for: a command run in a terminal (ADR 0065) while one
+ * is waiting, or else the system's own prompt.
+ */
+export function whatTheGrantWaitsFor(command: string | null): "terminal" | "systemPrompt" {
+  return command === null ? "systemPrompt" : "terminal";
 }

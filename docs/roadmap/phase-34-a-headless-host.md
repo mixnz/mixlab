@@ -54,7 +54,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       `elevation.status` marks them; the helper refuses at once when the console is not the
       caller's. **(P)**
       Design: [2026-10-21-t211e-what-a-terminal-cannot-grant-design.md](../specs/2026-10-21-t211e-what-a-terminal-cannot-grant-design.md).
-- [ ] **T211f** MixLab's elevation dialog shows a terminal's waiting command whatever `can_prompt`
+- [x] **T211f** MixLab's elevation dialog shows a terminal's waiting command whatever `can_prompt`
       says, and while it follows such a grant says it waits for a terminal rather than for a system
       prompt. Same design as T211e.
 - [ ] **T211g** `mix uninstall` of one home removes what other homes on the machine use: resolver

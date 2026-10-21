@@ -15,6 +15,7 @@ import {
   isNothingWaiting,
   otherGrant,
   terminalCommand,
+  whatTheGrantWaitsFor,
 } from "../../pendingOps";
 import { useRunningDots } from "../../screens/Settings/useRunningDots";
 import styles from "./ElevationDialog.module.css";
@@ -36,8 +37,11 @@ import styles from "./ElevationDialog.module.css";
  * `mix elevation grant` works from a terminal).
  *
  * **A grant `mix` started from a terminal is shown, never run** (ADR 0065). While the daemon waits
- * for one, `elevation.status` carries the command, and this dialog shows it with a copy button:
- * the window has no terminal for `sudo` to ask in, so it never starts a grant of that kind itself.
+ * for one, `elevation.status` carries the command, and this dialog shows it with a copy button on
+ * every system — on a Mac `canPrompt` is true and the command is still the way forward. The window
+ * has no terminal for `sudo` to ask in, so it never starts a grant of that kind itself. While it
+ * follows such a grant, the footer says it waits for a terminal, because no system prompt exists;
+ * and a row that grant left for the screen says so under it, in the daemon's words.
  *
  * **There is no "Skip" button.** `elevation.drop` drops the whole batch without leaving any way to
  * grant it again — closing the dialog (Escape, clicking outside, or the Close button) only hides
@@ -81,6 +85,8 @@ export default function ElevationDialog({
   const [notice, setNotice] = useState<string | null>(null);
   /** The command a grant started from a terminal waits for, while one does. */
   const [command, setCommand] = useState<string | null>(null);
+  /** Per row id, why a terminal's grant leaves it for the screen — from the same reading. */
+  const [screenOnly, setScreenOnly] = useState<Map<number, string>>(new Map());
   const dots = useRunningDots(busy || following);
   const { t } = useTranslation();
   /** Whether still mounted — set to `true` in the effect body rather than only `false` in the
@@ -93,16 +99,24 @@ export default function ElevationDialog({
     };
   }, []);
 
-  // Only where no dialog can be raised, which is where a terminal's grant can be waiting. Read
-  // again every two seconds: the grant may be started, or end, while this dialog is open.
+  // A terminal's grant can be waiting on any system, whatever `canPrompt` says. Read again every
+  // two seconds: the grant may be started, or end, while this dialog is open.
   useEffect(() => {
-    if (canPrompt) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
     const read = async () => {
       try {
         const status = await api.elevationStatus();
-        if (!stopped) setCommand(terminalCommand(status.waiting));
+        if (!stopped) {
+          setCommand(terminalCommand(status.waiting));
+          setScreenOnly(
+            new Map(
+              status.pending.flatMap((row) =>
+                row.needs_the_screen ? [[row.id, row.needs_the_screen] as const] : [],
+              ),
+            ),
+          );
+        }
       } catch {
         // The command is a convenience; the dialog is still right without it.
       }
@@ -113,7 +127,7 @@ export default function ElevationDialog({
       stopped = true;
       clearTimeout(timer);
     };
-  }, [canPrompt]);
+  }, []);
 
   function settle(summary: JobSummary) {
     setBusy(false);
@@ -223,7 +237,9 @@ export default function ElevationDialog({
       footerNote={
         busy || following ? (
           <>
-            {t("mixengine.elevation.prompting")}
+            {whatTheGrantWaitsFor(command) === "terminal"
+              ? t("mixengine.elevation.waitingForTerminal")
+              : t("mixengine.elevation.prompting")}
             {dots}
           </>
         ) : undefined
@@ -249,6 +265,9 @@ export default function ElevationDialog({
             <ul className={styles.ops}>
               {pending.map((op, at) => {
                 const { kind, description, detail } = describeOp(op);
+                const id = (op as { id?: unknown }).id;
+                const leftForTheScreen =
+                  command !== null && typeof id === "number" ? screenOnly.get(id) : undefined;
                 return (
                   // The position is the key: `PendingOp.id` does exist, but the order is what the
                   // daemon sends and the list is never re-sorted, so both give the same result and
@@ -259,6 +278,9 @@ export default function ElevationDialog({
                     {description && <div>{description}</div>}
                     <code className={styles.kind}>{kind}</code>
                     {detail && <pre className={styles.detail}>{detail}</pre>}
+                    {leftForTheScreen && (
+                      <p className={styles.cannotPrompt}>{leftForTheScreen}</p>
+                    )}
                   </li>
                 );
               })}

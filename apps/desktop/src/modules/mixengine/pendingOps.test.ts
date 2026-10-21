@@ -8,6 +8,7 @@ import {
   otherGrant,
   pendingFrom,
   terminalCommand,
+  whatTheGrantWaitsFor,
 } from "./pendingOps";
 
 /** Exactly the shape the daemon sends: `PendingOp` wraps `PrivilegedOp` in the `op` field. */
@@ -194,5 +195,30 @@ describe("terminalCommand", () => {
   it("is nothing when no grant is waiting", () => {
     expect(terminalCommand(null)).toBeNull();
     expect(terminalCommand(undefined)).toBeNull();
+  });
+});
+
+describe("describeOp's screenOnly", () => {
+  /* The daemon's sentence for a row a terminal cannot grant: on a Mac, adding the authority to the
+     System keychain asks on the Mac's own screen. */
+  it("carries the daemon's sentence", () => {
+    const row = { ...hostsApply, needs_the_screen: "it needs this Mac's own screen" };
+    expect(describeOp(row).screenOnly).toBe("it needs this Mac's own screen");
+  });
+
+  it("is empty for a row a terminal can grant", () => {
+    expect(describeOp(hostsApply).screenOnly).toBe("");
+  });
+});
+
+describe("whatTheGrantWaitsFor", () => {
+  /* Following a grant a terminal started, there is no system prompt anywhere: saying there is one
+     sent a person looking for a dialog that did not exist. */
+  it("is the terminal while a terminal's command is waiting", () => {
+    expect(whatTheGrantWaitsFor("sudo -- /x /y")).toBe("terminal");
+  });
+
+  it("is the system prompt otherwise", () => {
+    expect(whatTheGrantWaitsFor(null)).toBe("systemPrompt");
   });
 });
