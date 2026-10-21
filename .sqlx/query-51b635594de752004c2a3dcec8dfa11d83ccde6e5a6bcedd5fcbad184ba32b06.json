@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE jobs SET state = ?, finished_at = ?, result_json = ?,\n                percent = CASE WHEN ? = 'succeeded' THEN 100 ELSE percent END\n         WHERE id = ? AND state = 'running'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "51b635594de752004c2a3dcec8dfa11d83ccde6e5a6bcedd5fcbad184ba32b06"
+}

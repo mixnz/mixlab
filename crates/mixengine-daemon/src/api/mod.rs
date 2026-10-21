@@ -803,4 +803,35 @@ mod tests {
 
         assert!(report.domains[0].hosts_entry, "{report:?}");
     }
+
+    /// T211h: a repair says what it will do to the hosts block, not the block's name a second time.
+    #[tokio::test]
+    async fn a_hosts_repair_says_what_it_will_do() {
+        let daemon = super::test_daemon::daemon_on(
+            std::sync::Arc::new(crate::services::fixture::Declared(Vec::new())),
+            &[],
+            |home| mixengine_platform::mock::Host::with_hosts(home, ["127.0.0.1 old.test"]),
+        )
+        .await;
+
+        let report: mixengine_proto::RepairReport = daemon
+            .expect(
+                mixengine_proto::rpc::method::DAEMON_DOCTOR_REPAIR,
+                serde_json::json!({ "grant": false }),
+            )
+            .await;
+
+        let hosts = report
+            .actions
+            .iter()
+            .find(|action| action.id == mixengine_proto::ProblemId::HostsBlockDiffers)
+            .expect("the stale block is a problem the repair answers");
+
+        assert_eq!(
+            hosts.outcome,
+            mixengine_proto::Action::Enqueued {
+                what: "rewriting it to hold this home's names".to_owned()
+            }
+        );
+    }
 }

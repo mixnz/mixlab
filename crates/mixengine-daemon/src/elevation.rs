@@ -198,6 +198,10 @@ pub(crate) struct Elevation {
     /// and will not guess.
     facts: Mutex<Option<crate::helper::HelperFacts>>,
 
+    /// Why this start left an older helper as it is, when it did — T211h. Without it the status
+    /// promised a replacement at the next prompt that nothing had queued.
+    helper_stays: Mutex<Option<String>>,
+
     /// How long a [`Route::ByHand`] grant waits — [`BY_HAND_WAIT`], and shorter only in tests.
     by_hand_wait: Duration,
 }
@@ -225,6 +229,7 @@ impl Elevation {
             dns,
             state: Mutex::new(State::default()),
             facts: Mutex::new(None),
+            helper_stays: Mutex::new(None),
             by_hand_wait: BY_HAND_WAIT,
         })
     }
@@ -618,11 +623,23 @@ impl Elevation {
             upgrade: crate::helper::upgrade_sentence(
                 &facts,
                 mixengine_proto::privileged::HELPER_VERSION,
+                self.helper_stays
+                    .lock()
+                    .ok()
+                    .and_then(|stays| stays.clone())
+                    .as_deref(),
             ),
             version: facts.version,
             protocol: facts.speaks.0,
             supported_ops: facts.supported_ops,
         })
+    }
+
+    /// Remember why this start left the installed helper as it is, or that it did not — T211h.
+    pub(crate) fn helper_stays(&self, reason: Option<String>) {
+        if let Ok(mut held) = self.helper_stays.lock() {
+            *held = reason;
+        }
     }
 
     /// What the installed helper answered a handshake with, for the one caller that needs the

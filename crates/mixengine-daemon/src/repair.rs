@@ -294,9 +294,11 @@ impl Repairs {
     /// A repair the helper has to make, asked for rather than made.
     async fn enqueue(&self, what: Enqueue) -> Action {
         let asked = match what {
+            // What will be done, not what it is done to: the row's name already says that, and
+            // `mix doctor --repair` printed it twice (T211h).
             Enqueue::Hosts => (
                 self.elevation.require_hosts().await,
-                "the managed hosts block",
+                "rewriting it to hold this home's names",
             ),
             Enqueue::OrphanHosts => {
                 // Found again rather than carried from the doctor run: the repair may come long

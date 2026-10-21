@@ -133,7 +133,14 @@ async fn probe(helper: &Path, home: &Path, directory: &Path) -> Option<HelperFac
 /// A helper *newer* than this release's is [`None`] too: that is routine, and is the reason the
 /// response was written without `deny_unknown_fields` in the first place. A version either side
 /// cannot parse is [`None`]: a sentence about a string nobody can compare helps nobody.
-pub(crate) fn upgrade_sentence(facts: &HelperFacts, ours: &str) -> Option<String> {
+///
+/// `stays` is why this start could not stage the replacement (T211h): then nothing is queued, and
+/// the sentence says the helper stays rather than promising a prompt that will not replace it.
+pub(crate) fn upgrade_sentence(
+    facts: &HelperFacts,
+    ours: &str,
+    stays: Option<&str>,
+) -> Option<String> {
     use mixengine_proto::PackageVersion;
 
     let installed = PackageVersion::parse(facts.version.clone()).ok()?;
@@ -143,11 +150,18 @@ pub(crate) fn upgrade_sentence(facts: &HelperFacts, ours: &str) -> Option<String
         return None;
     }
 
-    Some(format!(
-        "the privileged helper on this machine is {}, and this release's is {ours}. It keeps \
-         serving everything it knows, and MixEngine replaces it at the next permission prompt",
-        facts.version
-    ))
+    Some(match stays {
+        Some(reason) => format!(
+            "the privileged helper on this machine is {}, and this release's is {ours}. It keeps \
+             serving everything it knows, and stays as it is: {reason}",
+            facts.version
+        ),
+        None => format!(
+            "the privileged helper on this machine is {}, and this release's is {ours}. It keeps \
+             serving everything it knows, and MixEngine replaces it at the next permission prompt",
+            facts.version
+        ),
+    })
 }
 
 /// What the start of a daemon does about the installed helper — the T182b design, D2's table.
@@ -220,6 +234,7 @@ pub(crate) async fn keep_in_step(
             Ok(()) => elevation.enqueue(&PrivilegedOp::HelperReplace {}).await,
             Err(reason) => {
                 tracing::info!(%reason, "the privileged helper stays as it is until the next start");
+                elevation.helper_stays(Some(reason));
                 return decided;
             }
         },
@@ -229,8 +244,13 @@ pub(crate) async fn keep_in_step(
 
     if let Err(error) = queued {
         tracing::warn!(%error, "could not queue the privileged helper's replacement");
+        elevation.helper_stays(Some(format!(
+            "its replacement could not be queued: {error}"
+        )));
         return decided;
     }
+
+    elevation.helper_stays(None);
 
     if elevation
         .first_prompt_for(mixengine_proto::privileged::HELPER_VERSION)
@@ -334,14 +354,14 @@ mod tests {
 
     #[test]
     fn a_helper_of_this_build_needs_nothing_said_about_it() {
-        assert!(upgrade_sentence(&facts("0.2.0", true), "0.2.0").is_none());
+        assert!(upgrade_sentence(&facts("0.2.0", true), "0.2.0", None).is_none());
     }
 
     /// A helper *newer* than the daemon is routine — the response was written without
     /// `deny_unknown_fields` for exactly that — so it is not something to report either.
     #[test]
     fn a_helper_newer_than_this_daemon_needs_nothing_said_about_it() {
-        assert!(upgrade_sentence(&facts("0.3.0", true), "0.2.0").is_none());
+        assert!(upgrade_sentence(&facts("0.3.0", true), "0.2.0", None).is_none());
     }
 
     /// T182b, D2. Whichever kind of old it is, the sentence says the daemon replaces it, and names
@@ -349,8 +369,8 @@ mod tests {
     #[test]
     fn an_older_helper_is_said_to_be_replaced_at_the_next_prompt() {
         for knows_replace in [true, false] {
-            let said =
-                upgrade_sentence(&facts("0.1.0", knows_replace), "0.2.0").expect("a sentence");
+            let said = upgrade_sentence(&facts("0.1.0", knows_replace), "0.2.0", None)
+                .expect("a sentence");
 
             assert!(said.contains("0.1.0"), "{said}");
             assert!(said.contains("next permission prompt"), "{said}");
@@ -361,7 +381,7 @@ mod tests {
     /// A version neither side can parse is not a reason to tell somebody to reinstall.
     #[test]
     fn a_version_that_is_not_one_says_nothing() {
-        assert!(upgrade_sentence(&facts("not a version", true), "0.2.0").is_none());
+        assert!(upgrade_sentence(&facts("not a version", true), "0.2.0", None).is_none());
     }
 
     /// The operation list is read by name, and the name is the wire tag rather than a second
@@ -370,5 +390,22 @@ mod tests {
     fn a_helper_that_knows_the_operation_is_the_one_that_names_it() {
         assert!(facts("0.2.0", true).can_replace_itself());
         assert!(!facts("0.2.0", false).can_replace_itself());
+    }
+
+    /// T211h: a replacement the daemon could not stage is not one that happens at the next prompt.
+    #[test]
+    fn a_helper_that_was_not_staged_says_it_stays() {
+        let said = upgrade_sentence(
+            &facts("0.1.0", true),
+            "0.2.0",
+            Some("the feed did not answer"),
+        )
+        .expect("a sentence");
+
+        assert!(
+            said.contains("stays as it is: the feed did not answer"),
+            "{said}"
+        );
+        assert!(!said.contains("next permission prompt"), "{said}");
     }
 }

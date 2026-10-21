@@ -165,13 +165,18 @@ pub async fn finish(
     let result = serde_json::to_string(&outcome)
         .map_err(|source| Error::Job(JobError::JobOutcomeUnwritable { job: job.0, source }))?;
 
+    // **A success is 100%** (T211h): the work is done, whatever its last step reported, and a
+    // succeeded job at 40% read as one that stopped. A failure or a cancellation keeps the number
+    // it got to, which is where to look.
     let (id, state, finished) = (job.0, to.as_str(), at.0);
     let updated = sqlx::query!(
-        "UPDATE jobs SET state = ?, finished_at = ?, result_json = ?
+        "UPDATE jobs SET state = ?, finished_at = ?, result_json = ?,
+                percent = CASE WHEN ? = 'succeeded' THEN 100 ELSE percent END
          WHERE id = ? AND state = 'running'",
         state,
         finished,
         result,
+        state,
         id
     )
     .execute(&mut *tx)
@@ -537,6 +542,29 @@ mod tests {
         let row = record(&store, job).await.expect("the row");
         assert_eq!(row.state, JobState::Failed);
         assert_eq!(row.outcome, Some(JobOutcome::Failed { error }));
+    }
+
+    /// T211h: a job that succeeded did all of it, whatever its last step reported.
+    #[tokio::test]
+    async fn a_success_ends_at_one_hundred() {
+        let (_home, store) = store().await;
+        let job = started(&store).await;
+
+        progress(&store, job, 40, "verifying".to_owned(), NOW)
+            .await
+            .expect("progress");
+        finish(
+            &store,
+            job,
+            JobOutcome::Succeeded {
+                result: serde_json::Value::Null,
+            },
+            NOW,
+        )
+        .await
+        .expect("an ending");
+
+        assert_eq!(record(&store, job).await.expect("the row").percent, 100);
     }
 
     /// The percentage a job stopped at is what the row keeps: it is the number that says where to
