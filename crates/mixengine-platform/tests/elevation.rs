@@ -330,10 +330,13 @@ fn macos_runs_the_helper_and_a_report_appears_beside_the_request() {
 /// ADR 0005's worst branch, asserted on a machine that genuinely has no authentication agent. A
 /// GitHub Linux runner has no graphical session, so this is not a second-class assertion — it is the
 /// only place the fallback is ever exercised for real.
+///
+/// The way out is `mix elevation grant` in a terminal, which raises the prompt through `sudo`
+/// (ADR 0065), and not a `pkexec` command that would fail on the same missing agent.
 #[cfg(target_os = "linux")]
 #[test]
 #[ignore = "asserts a property of a headless machine; run in CI's system job, with MIXENGINE_SYSTEM_TESTS=1"]
-fn linux_says_it_cannot_prompt_and_hands_back_the_command_to_run_by_hand() {
+fn linux_says_it_cannot_prompt_and_points_at_a_terminal() {
     if !system_tests() {
         return;
     }
@@ -363,12 +366,8 @@ fn linux_says_it_cannot_prompt_and_hands_back_the_command_to_run_by_hand() {
 
     assert!(reason.contains("pkexec"), "{reason}");
     assert!(
-        reason.contains(&helper().display().to_string()),
-        "the fallback is only useful if it is the whole command: {reason}"
-    );
-    assert!(
-        reason.contains(&pending.path.display().to_string()),
-        "{reason}"
+        reason.contains("mix elevation grant"),
+        "the fallback is only useful if it names what to run: {reason}"
     );
 
     // The other half of the same claim, and the one a reason string cannot make: a machine that said
