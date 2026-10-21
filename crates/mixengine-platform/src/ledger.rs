@@ -69,6 +69,12 @@ pub fn alive(home: &Path) -> bool {
     std::fs::symlink_metadata(home).is_ok_and(|metadata| metadata.is_dir())
 }
 
+/// Whether the directory `home` sat in is still there.
+fn parent_is_there(home: &Path) -> bool {
+    home.parent()
+        .is_some_and(|parent| std::fs::symlink_metadata(parent).is_ok_and(|meta| meta.is_dir()))
+}
+
 /// Record that `home`, asked by `caller`, used the helper at `now`.
 ///
 /// # Errors
@@ -76,6 +82,44 @@ pub fn alive(home: &Path) -> bool {
 /// [`Error::Io`] when the ledger cannot be read or replaced, and
 /// [`Error::Os`] when another helper holds its lock.
 pub fn record(directory: &Path, home: &Path, caller: &str, now: u64) -> Result<Recorded> {
+    // A file that cannot be read keeps every entry: what is written in it is unknown.
+    let written = std::fs::read_to_string(crate::hosts::path())
+        .ok()
+        .and_then(|text| crate::hosts::tags(&text).ok());
+
+    match written {
+        Some(tags) => record_keeping(directory, home, caller, now, &tags),
+        None => record_keeping_all(directory, home, caller, now),
+    }
+}
+
+/// [`record`], keeping every entry whatever the hosts file holds.
+fn record_keeping_all(directory: &Path, home: &Path, caller: &str, now: u64) -> Result<Recorded> {
+    record_with(directory, home, caller, now, &|_| true)
+}
+
+/// [`record`], given the tags the hosts file still carries — which a test writes by hand.
+fn record_keeping(
+    directory: &Path,
+    home: &Path,
+    caller: &str,
+    now: u64,
+    written: &[String],
+) -> Result<Recorded> {
+    record_with(directory, home, caller, now, &|entry: &Path| {
+        written.contains(&crate::hosts::tag_for(entry))
+    })
+}
+
+/// The body of [`record`]: `still_used` says whether a home that is gone still has something the
+/// ledger is the only way to place.
+fn record_with(
+    directory: &Path,
+    home: &Path,
+    caller: &str,
+    now: u64,
+    still_used: &dyn Fn(&Path) -> bool,
+) -> Result<Recorded> {
     // Held across the read and the replace, on `hosts::apply`'s reasoning: two helpers that both
     // read before either wrote would each drop the other's home.
     let _held = match crate::lock::Lock::acquire(&directory.join(LOCK_NAME))? {
@@ -94,6 +138,19 @@ pub fn record(directory: &Path, home: &Path, caller: &str, now: u64) -> Result<R
     let existing = read(directory)?;
     let existed_before = existing.is_some();
     let mut ledger = existing.unwrap_or_default();
+
+    // A home that is gone leaves the ledger here, so the file does not grow with every home a
+    // person ever deleted. Only where its parent is still there: a home on a disk that is not
+    // mounted looks gone too, and dropping it would let another home's uninstall take the helper
+    // from under it.
+    // And not while a hosts block still carries its tag: the ledger is how that block is placed,
+    // and how `mix doctor --repair` empties it.
+    ledger.homes.retain(|entry| {
+        entry.home == home
+            || alive(&entry.home)
+            || !parent_is_there(&entry.home)
+            || still_used(&entry.home)
+    });
 
     match ledger.homes.iter_mut().find(|entry| entry.home == home) {
         Some(entry) => {
@@ -184,5 +241,56 @@ mod tests {
             std::os::unix::fs::symlink(&home, &link).expect("a symlink");
             assert!(!alive(&link));
         }
+    }
+
+    /// A home deleted where its parent still is goes from the ledger at the next record; one on a
+    /// disk that is not mounted, whose parent is missing too, stays until it can be told apart.
+    #[test]
+    fn a_record_drops_homes_that_are_gone() {
+        let directory = tempfile::TempDir::new().expect("a directory");
+        let living = directory.path().join("living");
+        std::fs::create_dir(&living).expect("a living home");
+        let deleted = directory.path().join("deleted");
+        let unmounted = Path::new("/a-volume-that-is-not-mounted/home");
+
+        for home in [living.as_path(), deleted.as_path(), unmounted] {
+            record_keeping(directory.path(), home, "uid 501", 1, &[]).expect("recorded");
+        }
+        record_keeping(directory.path(), &living, "uid 501", 2, &[]).expect("recorded again");
+
+        let homes: Vec<std::path::PathBuf> = read(directory.path())
+            .unwrap()
+            .unwrap()
+            .homes
+            .into_iter()
+            .map(|entry| entry.home)
+            .collect();
+
+        assert_eq!(homes, vec![living, unmounted.to_path_buf()]);
+    }
+
+    /// A home that is gone but still has a block in the hosts file stays: the ledger is the only
+    /// way to place that block, and `mix doctor --repair` needs it to empty it.
+    #[test]
+    fn a_gone_home_whose_block_is_still_written_stays() {
+        let directory = tempfile::TempDir::new().expect("a directory");
+        let deleted = directory.path().join("deleted");
+        let tag = crate::hosts::tag_for(&deleted);
+
+        record_keeping(directory.path(), &deleted, "uid 501", 1, &[]).expect("recorded");
+        record_keeping(
+            directory.path(),
+            Path::new("/homes/a"),
+            "uid 501",
+            2,
+            &[tag],
+        )
+        .expect("recorded");
+
+        let ledger = read(directory.path()).unwrap().unwrap();
+        assert!(
+            ledger.homes.iter().any(|entry| entry.home == deleted),
+            "{ledger:?}"
+        );
     }
 }

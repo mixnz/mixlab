@@ -107,11 +107,7 @@ fn whose(
         });
     };
 
-    if tag.len() != 16
-        || !tag
-            .bytes()
-            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
-    {
+    if !hosts::is_tag(tag) {
         return Some(format!("`{tag}` is not the tag of a home's hosts block"));
     }
 

@@ -214,6 +214,16 @@ pub fn parse(text: &str, tag: Option<&str>) -> Result<Vec<HostEntry>> {
     Ok(entries)
 }
 
+/// Whether `value` is what [`tag_for`] writes: 16 lowercase hex digits, and nothing a person's own
+/// comment after `# BEGIN MixEngine` could be.
+#[must_use]
+pub fn is_tag(value: &str) -> bool {
+    value.len() == 16
+        && value
+            .bytes()
+            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+}
+
 /// Every tag a block in `text` carries, sorted, each once — what `mix doctor` compares with the
 /// homes the helper's ledger knows (ADR 0066).
 ///
@@ -226,6 +236,7 @@ pub fn tags(text: &str) -> Result<Vec<String>> {
     let mut found: Vec<String> = text
         .lines()
         .filter_map(|line| line.trim().strip_prefix(prefix.as_str()))
+        .filter(|tag| is_tag(tag))
         .map(str::to_owned)
         .collect();
 
@@ -735,6 +746,9 @@ mod tests {
     /// goes once it holds none.
     #[test]
     fn two_homes_and_the_legacy_block_each_keep_their_own() {
+        const A: &str = "aaaaaaaaaaaaaaaa";
+        const B: &str = "bbbbbbbbbbbbbbbb";
+
         let start = splice(
             &splice(
                 REAL,
@@ -745,18 +759,18 @@ mod tests {
                 ],
             )
             .unwrap(),
-            Some("aa"),
+            Some(A),
             &[entry("127.0.0.1", "a.test")],
         )
         .unwrap();
 
-        let once = splice(&start, Some("bb"), &[entry("127.0.0.1", "blog.test")]).unwrap();
+        let once = splice(&start, Some(B), &[entry("127.0.0.1", "blog.test")]).unwrap();
         assert_eq!(
-            parse(&once, Some("bb")).unwrap(),
+            parse(&once, Some(B)).unwrap(),
             vec![entry("127.0.0.1", "blog.test")]
         );
         assert_eq!(
-            parse(&once, Some("aa")).unwrap(),
+            parse(&once, Some(A)).unwrap(),
             vec![entry("127.0.0.1", "a.test")]
         );
         assert_eq!(
@@ -766,7 +780,7 @@ mod tests {
 
         let twice = splice(
             &once,
-            Some("bb"),
+            Some(B),
             &[
                 entry("127.0.0.1", "blog.test"),
                 entry("127.0.0.1", "shop.test"),
@@ -778,12 +792,9 @@ mod tests {
             twice.contains("nas.lan") && twice.contains("# BEGIN SomeOtherTool"),
             "{twice}"
         );
+        assert_eq!(tags(&twice).unwrap(), vec![A.to_owned(), B.to_owned()]);
         assert_eq!(
-            tags(&twice).unwrap(),
-            vec!["aa".to_owned(), "bb".to_owned()]
-        );
-        assert_eq!(
-            splice(&splice(&twice, Some("aa"), &[]).unwrap(), Some("bb"), &[]).unwrap(),
+            splice(&splice(&twice, Some(A), &[]).unwrap(), Some(B), &[]).unwrap(),
             REAL
         );
     }
@@ -814,5 +825,14 @@ mod tests {
             parse(&emptied, None).unwrap(),
             vec![entry("127.0.0.1", "old.test")]
         );
+    }
+
+    /// Somebody else's comment that happens to start like our marker is not a home's block.
+    #[test]
+    fn only_a_home_tag_is_a_tag() {
+        let text = "# BEGIN MixEngine (do not edit)\n# BEGIN MixEngine 0123456789abcdef\n\
+                    127.0.0.1  a.test\n# END MixEngine 0123456789abcdef\n# BEGIN MixEngine ABC\n";
+
+        assert_eq!(tags(text).unwrap(), vec!["0123456789abcdef".to_owned()]);
     }
 }

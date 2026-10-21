@@ -47,6 +47,15 @@ does not come back.
 - The helper keeps state between runs for the first time: `homes.json` in the audit directory,
   root-owned and world-readable, like the log. A ledger that cannot be read keeps the helper and
   the log; keeping a file is recoverable, removing another home's is not.
+- The ledger stays world-readable, and so it shows every local account the paths of the other
+  homes on the machine. Root-only would break the two readers that run without a token: the
+  daemon's uninstall plan, which says what stays before `continue?`, and `mix doctor`, which finds
+  a hosts block whose home is gone. A second, public file holding only tags would avoid it at the
+  cost of two files to keep in step, for paths that name accounts anybody can already list in
+  `/Users` or `/home`.
+- The ledger drops a home that is gone at the next record, unless the directory it sat in is gone
+  too (a disk that is not mounted) or a hosts block still carries its tag (the ledger is how that
+  block is placed and emptied).
 - A ledger the current batch created has seen only this home, so it removes nothing. A home that
   has asked for nothing since the update is not in the ledger, and an uninstall of another home can
   still remove the helper and the log under it. The gap closes the first time each home grants
