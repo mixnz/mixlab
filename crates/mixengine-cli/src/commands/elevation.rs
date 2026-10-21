@@ -198,8 +198,21 @@ pub(crate) fn nothing_left_over_ssh(
             ErrorCode::PrivilegedRequired,
             format!("this cannot be allowed over SSH: {reason}"),
         )
-        .with_hint("run `mix elevation grant` on this machine itself, or allow it in MixLab")),
+        .with_hint(at_the_screen(waiting.can_prompt))),
         _ => Ok(()),
+    }
+}
+
+/// Where a row left for the screen can be granted — the daemon's `at_the_screen`, which says the
+/// same after `continue?`.
+///
+/// MixLab only when the daemon can raise a dialog: one started over SSH cannot, and the window then
+/// has no Allow to offer. A terminal at the screen still can, through `sudo`.
+fn at_the_screen(can_prompt: bool) -> &'static str {
+    if can_prompt {
+        "run `mix elevation grant` on this machine itself, or allow it in MixLab"
+    } else {
+        "run `mix elevation grant` in a terminal on this machine itself"
     }
 }
 
@@ -337,6 +350,19 @@ mod tests {
         assert_eq!(error.code, ErrorCode::PrivilegedRequired);
         assert!(error.message.contains("over SSH"), "{}", error.message);
         assert!(error.to_string().contains("mix elevation grant"), "{error}");
+    }
+
+    /// A daemon started over SSH has no dialog, so MixLab is no way out.
+    #[test]
+    fn over_ssh_to_a_daemon_without_a_dialog_mixlab_is_not_offered() {
+        let mut waiting = waiting_on(vec![a_row(1, true)]);
+        waiting.can_prompt = false;
+
+        let error = nothing_left_over_ssh(&waiting, Route::ByHand, true)
+            .expect_err("nothing a terminal over SSH can do");
+
+        assert!(!error.to_string().contains("MixLab"), "{error}");
+        assert!(error.to_string().contains("in a terminal"), "{error}");
     }
 
     #[test]

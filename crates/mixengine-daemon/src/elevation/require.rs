@@ -411,9 +411,7 @@ impl Elevation {
                     ErrorCode::PrivilegedRequired,
                     format!("this cannot be allowed over SSH: {reason}"),
                 )
-                .with_hint(
-                    "run `mix elevation grant` on this machine itself, or allow it in MixLab",
-                ));
+                .with_hint(at_the_screen(self.reason().is_none())));
             }
         }
 
@@ -435,5 +433,17 @@ impl Elevation {
         self.reserve()?;
 
         Ok((waiting, helper))
+    }
+}
+
+/// Where a row left for the screen can be granted.
+///
+/// MixLab only when this daemon can raise a dialog: one started over SSH cannot, and a
+/// window talking to it has no Allow to offer. A terminal at the screen still can, through `sudo`.
+fn at_the_screen(can_prompt: bool) -> &'static str {
+    if can_prompt {
+        "run `mix elevation grant` on this machine itself, or allow it in MixLab"
+    } else {
+        "run `mix elevation grant` in a terminal on this machine itself"
     }
 }

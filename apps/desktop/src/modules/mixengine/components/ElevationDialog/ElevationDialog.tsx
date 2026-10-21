@@ -291,7 +291,9 @@ export default function ElevationDialog({
                 );
               })}
             </ul>
-            {!canPrompt && (
+            {/* Not while a terminal's grant waits: the way out this sentence gives (on a Mac,
+                `mix daemon stop`) would cancel that grant, and the command below is the way on. */}
+            {!canPrompt && command === null && (
               <p className={styles.cannotPrompt}>
                 {reason
                   ? t("mixengine.elevation.cannotPromptReason", { reason })

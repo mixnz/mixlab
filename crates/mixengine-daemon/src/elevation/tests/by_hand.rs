@@ -327,6 +327,26 @@ async fn a_terminal_grant_of_nothing_but_screen_rows_is_refused_before_a_job() {
     assert_eq!(elevation.status().await.unwrap().last, None);
 }
 
+/// A daemon with no dialog (one started over SSH) does not send anybody to MixLab, whose
+/// Allow it could not answer.
+#[tokio::test]
+async fn without_a_dialog_the_refusal_names_only_a_terminal_at_the_screen() {
+    let (_home, elevation, _events, _machine) = registry(
+        mock::Host::unable_to_elevate("/tmp/mixengine", "this daemon was started over SSH")
+            .needing_the_screen_for("probe"),
+    )
+    .await;
+    elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
+
+    let error = elevation
+        .grant(Route::ByHand { over_ssh: true })
+        .await
+        .expect_err("a terminal cannot grant the only row");
+
+    assert!(!error.to_string().contains("MixLab"), "{error}");
+    assert!(error.to_string().contains("in a terminal"), "{error}");
+}
+
 #[tokio::test]
 async fn a_dialog_grant_still_carries_what_needs_the_screen() {
     let (_home, elevation, machine) = a_machine_with_a_screen_only_row().await;

@@ -67,6 +67,10 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       over SSH before `continue?` when every row needs the screen; rows read *not over SSH*;
       MixLab's lead and the wrapped command fit a terminal's grant. **(P)** Left open: starting the
       daemon from SSH into `gui/<uid>` through launchd, which needs measuring on a Mac first.
+      **Verified** on macOS 15 on 2026-10-21, over SSH and at the screen, MixLab included. Two
+      sentences that measurement found pointed the wrong way, and no longer do: the refusal over SSH
+      offers MixLab only when the daemon can raise a dialog, and the dialog's *cannot prompt* line
+      (`mix daemon stop`, which would cancel it) stays hidden while a terminal's grant waits.
 - [ ] **T211g** `mix uninstall` of one home removes what other homes on the machine use: resolver
       wiring it did not write (`/etc/resolver/*` from another home, found on a Mac on 2026-10-21),
       the installed helper and the audit log. Remove only what this home applied, recorded as
@@ -78,7 +82,10 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
 - [ ] **T211h** Display slips older than T211, found on the same Mac: `helper … replaces it at the
       next permission prompt` printed when the daemon skipped the replacement; a succeeded job still
       showing 40% or 70% and its last step; `mix doctor --repair` printing "the managed hosts block"
-      twice; MixLab's `hosts-apply` detail printing `127.0.0.1` twice with no name.
+      twice; MixLab's `hosts-apply` detail printing `127.0.0.1` twice with no name. And two in the
+      elevation dialog, found re-measuring T211i: *"Everything below will be changed in one
+      prompt"* where the daemon cannot raise one, and *"Anything marked below waits for this
+      screen"* where nothing is marked.
 - [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
       account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
       headless host has no prompt to show.
