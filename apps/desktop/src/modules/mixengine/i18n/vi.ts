@@ -256,7 +256,9 @@ const vi: typeof en = {
     elevation: {
       title: "MixEngine cần quyền quản trị",
       lead: "Mọi thứ dưới đây sẽ được đổi trong đúng một lần hỏi.",
-      leadWhileTerminalWaits: "Một lệnh trong terminal đang chờ để đổi những gì nó làm được. Mục nào có ghi chú bên dưới thì phải làm tại màn hình này.",
+      leadCannotPrompt: "Những thay đổi này cần quyền quản trị, và cửa sổ này không hỏi quyền được ở đây.",
+      leadWhileTerminalWaits: "Một lệnh trong terminal đang chờ để đổi những gì nó làm được.",
+      leadMarkedWaitForScreen: "Mục nào có ghi chú bên dưới thì phải làm tại màn hình này.",
       grant: "Cho phép",
       prompting: "Đang chờ trả lời hộp thoại của hệ điều hành",
       waitingForTerminal: "Đang chờ chạy lệnh bên dưới trong terminal",
