@@ -513,24 +513,22 @@ impl Uninstall {
                 continue;
             }
 
-            let Some(op) = self.operation_for(id).await else {
-                continue;
-            };
+            for op in self.operations_for(id).await {
+                // T182b, D6: what this row is about to replace in the queue, kept to be put back.
+                let key = op.dedupe_key();
+                asked.displaced.extend(
+                    self.elevation
+                        .status()
+                        .await?
+                        .pending
+                        .into_iter()
+                        .filter(|waiting| waiting.op.dedupe_key() == key && waiting.op != op)
+                        .map(|waiting| waiting.op),
+                );
 
-            // T182b, D6: what this row is about to replace in the queue, kept to be put back.
-            let key = op.dedupe_key();
-            asked.displaced.extend(
-                self.elevation
-                    .status()
-                    .await?
-                    .pending
-                    .into_iter()
-                    .filter(|waiting| waiting.op.dedupe_key() == key && waiting.op != op)
-                    .map(|waiting| waiting.op),
-            );
-
-            self.elevation.enqueue(&op).await?;
-            asked.ops.push(op);
+                self.elevation.enqueue(&op).await?;
+                asked.ops.push(op);
+            }
         }
 
         // **Every batch writes the audit log, so every batch removes it** (T182b). The helper records
@@ -559,15 +557,44 @@ impl Uninstall {
         Ok(asked)
     }
 
-    /// The operation that undoes one row, rebuilt from the same probe the inventory read.
+    /// The operations that undo one row, rebuilt from the same probe the inventory read.
     ///
     /// **Rebuilt rather than carried on the row.** A `Residue` is a wire type a client renders, and
     /// putting a `PrivilegedOp` on it would put the elevation protocol into the uninstall report —
     /// where a client could read it, and where two clients could disagree about what a row means.
+    ///
+    /// **Several for the hosts row** (T211g): this home's block, and the block every home shared
+    /// before each kept its own, when that still holds names. One row on the report, two questions
+    /// in the queue.
+    async fn operations_for(&self, id: ResidueId) -> Vec<PrivilegedOp> {
+        match id {
+            ResidueId::HostsBlock => {
+                // Whole state: the empty block *is* the removal.
+                let mut ops = vec![PrivilegedOp::hosts_apply(
+                    Some(mixengine_platform::hosts::tag_for(self.paths.root())),
+                    Vec::new(),
+                )];
+
+                if self
+                    .host
+                    .hosts_file()
+                    .managed(None)
+                    .is_ok_and(|shared| !shared.is_empty())
+                {
+                    ops.push(PrivilegedOp::hosts_apply(None, Vec::new()));
+                }
+
+                ops
+            }
+            id => self.operation_for(id).await.into_iter().collect(),
+        }
+    }
+
+    /// The one operation that undoes any other row.
     async fn operation_for(&self, id: ResidueId) -> Option<PrivilegedOp> {
         match id {
-            // Whole state: the empty block *is* the removal.
-            ResidueId::HostsBlock => Some(PrivilegedOp::hosts_apply(None, Vec::new())),
+            // `operations_for`'s own arm.
+            ResidueId::HostsBlock => None,
 
             ResidueId::ResolverWiring => {
                 let port = self.dns.wirable_port()?;

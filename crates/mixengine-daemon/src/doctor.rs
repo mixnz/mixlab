@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use mixengine_proto::{Check, DoctorReport, Outcome, ProblemId};
 
+pub(crate) mod hosts;
 mod installs;
 mod trust;
 
@@ -120,6 +121,7 @@ impl Doctor {
         DoctorReport {
             checks: vec![
                 self.hosts_block().await,
+                self.orphaned_hosts_blocks(),
                 self.resolver(),
                 self.trust_store(),
                 self.browsers(),
@@ -164,14 +166,17 @@ impl Doctor {
             };
         };
 
-        let wanted = mixengine_proto::privileged::PrivilegedOp::hosts_apply(None, desired);
+        // T211g: this home's own block, under the tag the helper derives from its path.
+        let tag = mixengine_platform::hosts::tag_for(&self.root);
+        let wanted =
+            mixengine_proto::privileged::PrivilegedOp::hosts_apply(Some(tag.clone()), desired);
 
-        match self.host.hosts_file().managed(None) {
+        match self.host.hosts_file().managed(Some(&tag)) {
             // `present.clone()` and not `present`: a pattern guard may not move out of what it
             // matched, which is why `Elevation::require_hosts` writes it the same way one file over.
             Ok(present)
                 if mixengine_proto::privileged::PrivilegedOp::hosts_apply(
-                    None,
+                    Some(tag.clone()),
                     present.clone(),
                 ) == wanted =>
             {

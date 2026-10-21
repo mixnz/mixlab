@@ -80,9 +80,41 @@ async fn a_home_on_dns_asks_for_an_empty_block_rather_than_for_nothing() {
     );
     assert_eq!(
         waiting[0].op,
-        PrivilegedOp::hosts_apply(None, Vec::new()),
-        "a home on DNS wants no managed names in that file"
+        PrivilegedOp::hosts_apply(
+            Some(mixengine_platform::hosts::tag_for(home.path())),
+            Vec::new()
+        ),
+        "a home on DNS wants no managed names in its own block"
     );
+}
+
+/// T211g: a row queued before each home kept its own block asks to write the shared one, which the
+/// helper now refuses. Once this home's own block says what it should, that row is withdrawn.
+#[tokio::test]
+async fn a_pending_shared_block_from_before_t211g_is_withdrawn() {
+    let (home, elevation, _events, _machine) = registry_resolving(
+        mock::Host::with_hosts("/tmp/mixengine", ["127.0.0.1 blog.test"]),
+        crate::dns::Dns::hosts_only_for_tests(),
+    )
+    .await;
+    with_an_installed_helper(&home);
+    a_site_named(&elevation.store, "blog.test").await;
+
+    let shared = PrivilegedOp::hosts_apply(
+        None,
+        [mixengine_proto::privileged::HostEntry {
+            address: "127.0.0.1".parse().unwrap(),
+            domain: "blog.test".to_owned(),
+        }],
+    );
+    elevation.enqueue(&shared).await.unwrap();
+
+    elevation.require_hosts().await.unwrap();
+
+    let waiting = mixengine_core::elevation::pending(&elevation.store)
+        .await
+        .unwrap();
+    assert!(waiting.is_empty(), "{waiting:?}");
 }
 
 /// The same home, resolving the way every machine does until T45: the entry is asked for.

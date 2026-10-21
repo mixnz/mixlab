@@ -6,6 +6,9 @@ use mixengine_proto::privileged::HostEntry;
 
 use crate::{Error, Result};
 
+/// The tag [`Hosts::tags`] lists this home's own block under.
+const OWN: &str = "0000000000000000";
+
 /// The blocks a test says the machine is holding.
 ///
 /// **One answer for every home's tag** (T211g): a daemon under test asks only about its own block,
@@ -97,7 +100,16 @@ impl crate::HostsFile for Hosts {
         }
     }
 
+    /// The tags set with [`Hosts::with_tags`], and — when this home's block holds anything — one
+    /// standing in for it. A real file lists the home's own tag among the others, and the mock's own
+    /// block answers to every tag, so any one tag finds it.
     fn tags(&self) -> Result<Vec<String>> {
-        Ok(self.tags.clone())
+        let mut tags = self.tags.clone();
+
+        if self.managed.as_ref().is_ok_and(|own| !own.is_empty()) {
+            tags.insert(0, OWN.to_owned());
+        }
+
+        Ok(tags)
     }
 }

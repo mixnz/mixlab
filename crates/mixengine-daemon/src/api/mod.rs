@@ -783,4 +783,24 @@ mod tests {
 
         assert_eq!(armed.take(), vec![std::path::PathBuf::from("/tmp/two")]);
     }
+
+    /// T211g: a name in this home's own hosts block is a hosts entry, though the block is tagged.
+    #[tokio::test]
+    async fn a_name_in_this_homes_own_block_is_a_hosts_entry() {
+        let daemon = super::test_daemon::daemon_on(
+            std::sync::Arc::new(crate::services::fixture::Declared(Vec::new())),
+            &[],
+            |home| mixengine_platform::mock::Host::with_hosts(home, ["127.0.0.1 blog.test"]),
+        )
+        .await;
+
+        let report: mixengine_proto::DomainStatusReport = daemon
+            .expect(
+                mixengine_proto::rpc::method::DOMAIN_DNS_STATUS,
+                serde_json::json!({ "domain": "blog.test" }),
+            )
+            .await;
+
+        assert!(report.domains[0].hosts_entry, "{report:?}");
+    }
 }

@@ -161,13 +161,19 @@ impl Elevation {
             .await
             .map_err(|error| error.to_wire())?;
 
-        let wanted = PrivilegedOp::hosts_apply(None, desired);
+        // T211g: this home's own block, tagged from its path the way the helper tags it.
+        let tag = mixengine_platform::hosts::tag_for(&self.home);
+        let wanted = PrivilegedOp::hosts_apply(Some(tag.clone()), desired);
+
+        self.withdraw_a_shared_write().await?;
 
         // Compared as operations rather than as lists, so the ordering and deduplication are
         // `hosts_apply`'s in both directions and there is one definition of "the same block".
-        match self.host.hosts_file().managed(None) {
+        match self.host.hosts_file().managed(Some(&tag)) {
             // Not a pattern guard: `present` is a `Vec` and a guard cannot move out of one.
-            Ok(present) if PrivilegedOp::hosts_apply(None, present.clone()) == wanted => {
+            Ok(present)
+                if PrivilegedOp::hosts_apply(Some(tag.clone()), present.clone()) == wanted =>
+            {
                 // Nothing to ask for — and nothing to keep asking for either (T179).
                 self.no_longer_needed(&wanted.dedupe_key()).await
             }
@@ -180,6 +186,41 @@ impl Elevation {
 
                 self.enqueue_needing_a_helper(&wanted).await
             }
+        }
+    }
+
+    /// Ask for the hosts blocks under `tags` to be emptied — homes that are gone left them (T211g,
+    /// D5). The helper empties one only after its own ledger says that home is gone.
+    ///
+    /// # Errors
+    ///
+    /// The wire error of a row that could not be written.
+    pub(crate) async fn forget_hosts_blocks(&self, tags: &[String]) -> Result<(), Error> {
+        for tag in tags {
+            self.enqueue_needing_a_helper(&PrivilegedOp::hosts_apply(
+                Some(tag.clone()),
+                Vec::new(),
+            ))
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Withdraw a row queued before T211g that writes names into the block every home shared.
+    ///
+    /// The helper now refuses to write that block, so the row could only ever come back refused.
+    /// A row that only empties it is an uninstall's, and stays.
+    async fn withdraw_a_shared_write(&self) -> Result<(), Error> {
+        let shared = PrivilegedOp::hosts_apply(None, Vec::new());
+
+        let writes = self.status().await?.pending.iter().any(|waiting| {
+            matches!(&waiting.op, PrivilegedOp::HostsApply { home: None, entries } if !entries.is_empty())
+        });
+
+        match writes {
+            true => self.no_longer_needed(&shared.dedupe_key()).await,
+            false => Ok(()),
         }
     }
 

@@ -106,6 +106,10 @@ pub enum ProblemId {
     /// The managed hosts block is not what this home's sites need.
     HostsBlockDiffers,
 
+    /// A hosts block whose home is gone — T211g. Its names still point at loopback, and no home is
+    /// left to remove it.
+    HostsBlockOrphaned,
+
     /// Nothing on this machine sends a managed TLD to this daemon's DNS server.
     ResolverNotWired,
 

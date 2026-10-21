@@ -8,18 +8,31 @@ use super::super::Uninstall;
 
 use super::{firewall_label, resolver_place, trust_place};
 
-/// **1.** The block in this machine's hosts file, read the way T41 reads it.
+/// **1.** This home's block in this machine's hosts file, read the way T41 reads it — and the block
+/// every home shared before each kept its own (T211g), which this home's uninstall also removes.
 pub(super) fn hosts_block(uninstall: &Uninstall) -> Residue {
     let file = uninstall.host.hosts_file();
     let location = file.path().display().to_string();
+    let tag = mixengine_platform::hosts::tag_for(uninstall.paths.root());
 
-    let outcome = match file.managed(None) {
+    let read = file
+        .managed(Some(&tag))
+        .and_then(|own| file.managed(None).map(|shared| (own, shared)));
+
+    let outcome = match read {
         // An empty block is a machine that has never had one, which is not a failure — the trait's
         // own words.
-        Ok(entries) if entries.is_empty() => Removal::Absent {},
-        Ok(entries) => Removal::Planned {
-            how: PrivilegedOp::hosts_apply(None, Vec::new()).describe()
-                + &format!(", which today holds {} name(s)", entries.len()),
+        Ok((own, shared)) if own.is_empty() && shared.is_empty() => Removal::Absent {},
+        Ok((own, shared)) => Removal::Planned {
+            how: PrivilegedOp::hosts_apply(Some(tag), Vec::new()).describe()
+                + &format!(", which today holds {} name(s)", own.len())
+                + &match shared.is_empty() {
+                    true => String::new(),
+                    false => format!(
+                        ", and the block written before each home kept its own, which holds {}",
+                        shared.len()
+                    ),
+                },
         },
         Err(error) => Removal::Failed {
             because: format!(

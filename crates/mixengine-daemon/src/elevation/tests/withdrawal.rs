@@ -61,10 +61,15 @@ async fn a_hosts_file_that_cannot_be_read_withdraws_nothing() {
     .await;
     with_an_installed_helper(&home);
 
+    // Under this home's own block's key (T211g), which is the row a reading would withdraw.
     sqlx::query(
         "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at) \
-             VALUES ('{\"op\":\"probe\"}', 'hosts-apply', 1)",
+             VALUES ('{\"op\":\"probe\"}', ?, 1)",
     )
+    .bind(format!(
+        "hosts-apply:{}",
+        mixengine_platform::hosts::tag_for(home.path())
+    ))
     .execute(elevation.store.pool())
     .await
     .unwrap();
