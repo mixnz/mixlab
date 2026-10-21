@@ -18,6 +18,7 @@ mod audit;
 mod candidate;
 mod firewall;
 mod helper;
+mod homes;
 mod hosts;
 mod ops;
 mod package;
@@ -203,6 +204,13 @@ fn apply_each(
     let mut results: Vec<Option<OpOutcome>> = vec![None; ops.len()];
     let mut last: Option<usize> = None;
 
+    // T211g: this home goes into the ledger before any operation, so a batch that fails still says
+    // who asked. Only with a token: the ledger sits beside the log, which only root may write.
+    let batch = match (elevated, log.parent()) {
+        (true, Some(directory)) => homes::Batch::begin(directory, home, &caller.to_string(), now()),
+        _ => homes::Batch::unrecorded(),
+    };
+
     for (index, value) in ops.iter().enumerate() {
         let decoded = ops::decode(value);
 
@@ -212,7 +220,8 @@ fn apply_each(
         }
 
         let outcome = match decoded {
-            Ok(op) => ops::apply(&op, elevated, caller, home),
+            Ok(op) => kept(&op, elevated, &batch, home, log)
+                .unwrap_or_else(|| ops::apply(&op, elevated, caller, home)),
             Err(outcome) => outcome,
         };
 
@@ -225,7 +234,8 @@ fn apply_each(
 
     if let Some(index) = last {
         let outcome = match ops::decode(&ops[index]) {
-            Ok(op) => ops::apply(&op, elevated, caller, home),
+            Ok(op) => kept(&op, elevated, &batch, home, log)
+                .unwrap_or_else(|| ops::apply(&op, elevated, caller, home)),
             Err(outcome) => outcome,
         };
 
@@ -237,6 +247,48 @@ fn apply_each(
         .into_iter()
         .map(|outcome| outcome.expect("every index was filled"))
         .collect()
+}
+
+/// The answer to a removal of something another home still uses, or [`None`] to apply it — T211g.
+///
+/// The two operations that take the machine's own copies, the helper and its log, ask the ledger
+/// first. Without a token nothing is kept here: the gate in [`ops::apply`] refuses them instead.
+fn kept(
+    op: &PrivilegedOp,
+    elevated: bool,
+    batch: &homes::Batch,
+    home: &Path,
+    log: &Path,
+) -> Option<OpOutcome> {
+    if !elevated {
+        return None;
+    }
+
+    let alive = |path: &Path| mixengine_platform::ledger::alive(path);
+
+    match op {
+        PrivilegedOp::HelperRemove {} => {
+            let manual = mixengine_platform::install::helper_path().map_or_else(
+                |_| "remove the privileged helper as an administrator".to_owned(),
+                |path| format!("delete {} as an administrator", path.display()),
+            );
+            batch.kept(home, "the privileged helper", manual, alive)
+        }
+        PrivilegedOp::AuditLogRemove {} => batch.kept(
+            home,
+            "the audit log",
+            format!("delete {} as an administrator", log.display()),
+            alive,
+        ),
+        _ => None,
+    }
+}
+
+/// Seconds since the Unix epoch, for the ledger; zero on a clock set before it.
+fn now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs())
 }
 
 /// One line, or a complaint on stderr that there was nowhere to put it.
@@ -366,5 +418,30 @@ mod tests {
         seen.dedup();
 
         assert_eq!(seen.len(), codes.len());
+    }
+
+    /// T211g: a removal another living home would miss is answered here, before the operation
+    /// reaches the machine — and the log it would have taken is still there.
+    #[test]
+    fn the_audit_log_stays_while_another_home_in_the_ledger_lives() {
+        let directory = tempfile::TempDir::new().expect("a temporary directory");
+        let log = directory.path().join("elevate.log");
+        let other = tempfile::TempDir::new().expect("another home");
+
+        let file = directory.path().join("request.json");
+        std::fs::write(&file, b"{}").expect("the file");
+        let caller = mixengine_platform::elevated::owner_of(&file).expect("its owner");
+
+        mixengine_platform::ledger::record(directory.path(), other.path(), "uid 502", 1)
+            .expect("the other home, recorded by an earlier batch");
+
+        let ops = vec![serde_json::json!({ "op": "audit-log-remove" })];
+        let results = apply_each(&ops, &caller, "n", true, &log, directory.path());
+
+        assert!(
+            matches!(&results[0], OpOutcome::Unmanaged { reason, .. }
+                if reason.contains(&other.path().display().to_string())),
+            "{results:?}"
+        );
     }
 }

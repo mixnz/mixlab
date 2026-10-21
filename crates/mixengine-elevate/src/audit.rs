@@ -134,6 +134,13 @@ pub(crate) fn remove(log: &Path) -> OpOutcome {
     }
 
     if let Some(directory) = log.parent() {
+        // **The ledger of homes goes with the log** (T211g): a removal only reaches here when no
+        // other home in it is left, so nothing it records is anybody's any more.
+        let ledger = directory.join(mixengine_platform::ledger::FILE_NAME);
+        if std::fs::remove_file(&ledger).is_ok() {
+            removed.push(ledger.display().to_string());
+        }
+
         // **The helper's own lock files go with the log** — T182a's walk found four of them left
         // behind (`hosts.lock`, `resolver.lock`, `trust.lock`, `port-access.lock`), each written by
         // one of the platform's operations beside the log. A `.lock` in this directory is the
@@ -328,6 +335,31 @@ mod tests {
         assert!(
             !directory.exists(),
             "the locks and the directory go with the log"
+        );
+    }
+
+    /// T211g: the ledger of homes is the helper's too, and goes with the log when the last home
+    /// removes it — or the directory would outlive the uninstall that was meant to take it.
+    #[test]
+    fn removing_the_log_takes_the_ledger_of_homes_with_it() {
+        let parent = tempfile::TempDir::new().unwrap();
+        let directory = parent.path().join("MixEngine");
+        std::fs::create_dir(&directory).unwrap();
+        let log = directory.join(FILE_NAME);
+        append(&log, &entry("1000", "n", "probe", &OpOutcome::AlreadyDone)).unwrap();
+        std::fs::write(directory.join(mixengine_platform::ledger::FILE_NAME), b"{}").unwrap();
+        std::fs::write(
+            directory.join(mixengine_platform::ledger::LOCK_NAME),
+            b"1\n",
+        )
+        .unwrap();
+
+        let outcome = remove(&log);
+
+        assert!(matches!(outcome, OpOutcome::Applied { .. }), "{outcome:?}");
+        assert!(
+            !directory.exists(),
+            "the ledger and the directory go with the log"
         );
     }
 
