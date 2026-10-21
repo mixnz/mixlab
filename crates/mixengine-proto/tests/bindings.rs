@@ -34,6 +34,15 @@ const NOT_ON_THE_WIRE: &[(&str, &str)] = &[
         "VersionError",
         "the failure of parsing a PackageVersion, for the same reason as SpecError",
     ),
+    (
+        "HomesLedger",
+        "a file the privileged helper writes beside its audit log (ADR 0066); the daemon reads it \
+         from disk, and no client is ever sent one",
+    ),
+    (
+        "LedgerEntry",
+        "one entry of HomesLedger, for the same reason",
+    ),
 ];
 
 /// The types whose `Deserialize` is written by hand.
