@@ -188,6 +188,10 @@ pub(crate) mod macos {
 
         match error_code(stderr) {
             Some(-128) => ElevationOutcome::Declined,
+            // What osascript says from a session with no screen, worded as a wrong password.
+            Some(-60007) => ElevationOutcome::Unavailable {
+                reason: OUTSIDE_THE_SCREEN.to_owned(),
+            },
             Some(status) if status > 0 => ElevationOutcome::Completed,
             _ => ElevationOutcome::Unavailable {
                 reason: format!(
@@ -197,6 +201,20 @@ pub(crate) mod macos {
             },
         }
     }
+    /// What a daemon outside the screen's login session is told about its prompts.
+    const OUTSIDE_THE_SCREEN: &str = "this daemon was started over SSH, outside this Mac's screen, \
+         and macOS shows no administrator prompt from there. Run `mix daemon stop` at the Mac, \
+         then any `mix` command there starts it again";
+
+    /// Why no prompt can be raised from a process in the session `launchctl managername` names,
+    /// or `None` for `Aqua`, the session that owns the screen.
+    ///
+    /// `mix` over SSH starts the daemon by forking, so it lives in SSH's `Background` session, and
+    /// osascript from there fails with -60007 without showing anything.
+    pub(crate) fn outside_the_screen(manager: &str) -> Option<String> {
+        (manager.trim() != "Aqua").then(|| OUTSIDE_THE_SCREEN.to_owned())
+    }
+
     /// Why `op` cannot be granted from a terminal on macOS, or `None` when it can.
     ///
     /// `add-trusted-cert -d` writes the admin trust domain, and macOS asks for it in a SecurityAgent
@@ -423,6 +441,32 @@ mod tests {
     }
 
     /// D5, all four states of the probe.
+    /// A daemon started over SSH lives in a session macOS will not show an administrator prompt
+    /// from; the one at the screen is `Aqua`.
+    #[test]
+    fn macos_says_a_daemon_outside_the_screens_session_cannot_prompt() {
+        assert_eq!(macos::outside_the_screen("Aqua"), None);
+
+        let reason = macos::outside_the_screen("Background").expect("not the screen's session");
+        assert!(reason.contains("over SSH"), "{reason}");
+        assert!(reason.contains("mix daemon stop"), "{reason}");
+    }
+
+    /// `-60007` is what osascript says from such a session, as if the password had been wrong.
+    #[test]
+    fn macos_does_not_call_a_session_without_a_screen_a_wrong_password() {
+        let answer = macos::outcome(
+            Some(1),
+            "7:134: execution error: The administrator user name or password was incorrect. \
+             (-60007)",
+        );
+
+        let ElevationOutcome::Unavailable { reason } = answer else {
+            panic!("{answer:?}");
+        };
+        assert!(reason.contains("over SSH"), "{reason}");
+    }
+
     /// `add-trusted-cert -d` raises SecurityAgent on the Mac's own screen even under `sudo`,
     /// so a terminal cannot grant it. Nothing else the helper does on macOS needs the screen.
     #[test]

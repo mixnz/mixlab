@@ -261,7 +261,13 @@ export default function ElevationDialog({
       {() => (
         <>
           <ModalBody>
-            <p className={styles.lead}>{t("mixengine.elevation.lead")}</p>
+            {/* A terminal's grant carries only what a terminal can, so "one prompt" is not true of
+                the list while one waits. */}
+            <p className={styles.lead}>
+              {command === null
+                ? t("mixengine.elevation.lead")
+                : t("mixengine.elevation.leadWhileTerminalWaits")}
+            </p>
             <ul className={styles.ops}>
               {pending.map((op, at) => {
                 const { kind, description, detail } = describeOp(op);
@@ -295,7 +301,7 @@ export default function ElevationDialog({
             {command !== null && (
               <div className={styles.waiting}>
                 <p className={styles.lead}>{t("mixengine.elevation.waitingCommand")}</p>
-                <pre className={styles.detail}>{command}</pre>
+                <pre className={`${styles.detail} ${styles.command}`}>{command}</pre>
                 <Button
                   size="small"
                   variant="ghost"

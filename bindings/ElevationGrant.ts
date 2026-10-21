@@ -11,4 +11,10 @@ export type ElevationGrant = {
  * **Defaults to `false`**, the dialog `elevation.grant` always raised. Only a caller holding a
  * terminal sends `true`; MixLab never does.
  */
-by_hand: boolean, };
+by_hand: boolean, 
+/**
+ * That terminal is behind SSH, away from the machine's screen. With `by_hand`, the rows
+ * [`PendingOp::needs_the_screen`] marks stay queued: nobody there can answer the dialog they
+ * ask in. **Defaults to `false`**, a terminal at the screen.
+ */
+over_ssh: boolean, };

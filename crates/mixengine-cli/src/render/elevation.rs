@@ -84,7 +84,7 @@ fn waiting(status: &ElevationStatus) -> String {
 
         // The machine's sentence, under the row it is about.
         if let Some(reason) = &pending.needs_the_screen {
-            rendered.push_str(&format!("       not from a terminal: {reason}\n"));
+            rendered.push_str(&format!("       not over SSH: {reason}\n"));
         }
     }
 
@@ -107,7 +107,10 @@ pub(crate) fn elevation_prompt(status: &ElevationStatus) -> String {
 }
 
 /// [`elevation_prompt`] for a grant raised from this terminal (ADR 0065): `sudo` asks, here.
-pub(crate) fn elevation_prompt_by_hand(status: &ElevationStatus) -> String {
+///
+/// `over_ssh` is whether this terminal is away from the machine's screen: only then do the rows
+/// marked `needs_the_screen` stay out of the batch, and only then is that said.
+pub(crate) fn elevation_prompt_by_hand(status: &ElevationStatus, over_ssh: bool) -> String {
     let helper = status.helper.as_deref().unwrap_or("mixengine-elevate");
 
     let mut rendered = format!(
@@ -119,6 +122,7 @@ pub(crate) fn elevation_prompt_by_hand(status: &ElevationStatus) -> String {
     let left: Vec<&str> = status
         .pending
         .iter()
+        .filter(|_| over_ssh)
         .filter_map(|pending| pending.needs_the_screen.as_deref())
         .collect();
     if let Some(reason) = left.first() {
@@ -324,15 +328,33 @@ mod tests {
     /// Said before `continue? [y/N]`, so nobody agrees to a batch that is smaller than the list.
     #[test]
     fn the_by_hand_prompt_says_what_stays_waiting() {
-        let rendered = elevation_prompt_by_hand(&waiting_on(vec![
-            a_probe_for_the_screen(1),
-            a_pending_probe(2),
-        ]));
+        let rendered = elevation_prompt_by_hand(
+            &waiting_on(vec![a_probe_for_the_screen(1), a_pending_probe(2)]),
+            true,
+        );
 
         assert!(
             rendered.contains("1 operation stays waiting: it needs this Mac's own screen"),
             "{rendered}"
         );
+    }
+
+    /// `sudo` in a terminal at the screen reaches the dialog it asks in, so nothing stays.
+    #[test]
+    fn a_terminal_at_the_screen_says_nothing_stays_waiting() {
+        let rendered =
+            elevation_prompt_by_hand(&waiting_on(vec![a_probe_for_the_screen(1)]), false);
+
+        assert!(!rendered.contains("stays waiting"), "{rendered}");
+    }
+
+    /// The label says where it cannot be done, not that terminals cannot do it: one at the screen
+    /// can.
+    #[test]
+    fn the_row_says_it_is_not_over_ssh() {
+        let rendered = elevation_status(&waiting_on(vec![a_probe_for_the_screen(1)]));
+
+        assert!(rendered.contains("not over SSH: it needs"), "{rendered}");
     }
 
     /// A dialog at the screen carries it, so there is nothing to say there.
@@ -346,16 +368,19 @@ mod tests {
     /// From a terminal it is `sudo` that asks, here, and not a dialog somewhere else.
     #[test]
     fn the_by_hand_prompt_says_sudo_will_ask_here() {
-        let rendered = elevation_prompt_by_hand(&ElevationStatus {
-            elevated: false,
-            can_prompt: false,
-            reason: None,
-            helper: Some("/usr/local/libexec/mixengine/mixengine-elevate".to_owned()),
-            installed_helper: None,
-            pending: vec![a_pending_probe(1)],
-            last: None,
-            waiting: None,
-        });
+        let rendered = elevation_prompt_by_hand(
+            &ElevationStatus {
+                elevated: false,
+                can_prompt: false,
+                reason: None,
+                helper: Some("/usr/local/libexec/mixengine/mixengine-elevate".to_owned()),
+                installed_helper: None,
+                pending: vec![a_pending_probe(1)],
+                last: None,
+                waiting: None,
+            },
+            true,
+        );
 
         assert!(rendered.contains("sudo"), "{rendered}");
         assert!(rendered.contains("this terminal"), "{rendered}");

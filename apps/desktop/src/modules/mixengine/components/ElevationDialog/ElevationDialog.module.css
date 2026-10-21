@@ -37,3 +37,9 @@
   align-items: flex-start;
   gap: 6px;
 }
+
+/* A command is one long line of two paths: wrapped, so it reads without scrolling sideways. */
+.command {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

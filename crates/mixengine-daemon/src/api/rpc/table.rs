@@ -737,7 +737,10 @@ pub(super) async fn route(
             let asked: ElevationGrant = arguments(params)?;
             encode_result(
                 &api.elevation
-                    .grant(asked.by_hand.into())
+                    .grant(crate::elevation::Route::asked(
+                        asked.by_hand,
+                        asked.over_ssh,
+                    ))
                     .await
                     .map_err(refused)?,
             )

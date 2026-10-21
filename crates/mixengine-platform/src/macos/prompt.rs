@@ -25,19 +25,41 @@ const OSASCRIPT: &str = "/usr/bin/osascript";
 #[derive(Debug)]
 pub(crate) struct Prompt;
 
+/// `launchctl`, by its absolute path for [`OSASCRIPT`]'s reason.
+const LAUNCHCTL: &str = "/bin/launchctl";
+
+/// Why this process's session shows no administrator prompt, read once; `None` when it does, or
+/// when `launchctl` will not say, which is answered as before this was asked.
+fn session_outside_the_screen() -> Option<String> {
+    static ANSWER: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+
+    ANSWER
+        .get_or_init(|| {
+            let output = Command::new(LAUNCHCTL).arg("managername").output().ok()?;
+            if !output.status.success() {
+                return None;
+            }
+
+            decide::outside_the_screen(&String::from_utf8_lossy(&output.stdout))
+        })
+        .clone()
+}
+
 impl Elevation for Prompt {
     fn probe(&self) -> ElevationSupport {
-        if Path::new(OSASCRIPT).is_file() {
-            return ElevationSupport::Available;
+        if !Path::new(OSASCRIPT).is_file() {
+            return ElevationSupport::Unavailable {
+                reason: format!(
+                    "{OSASCRIPT} is not on this machine, so no administrator prompt can be raised"
+                ),
+            };
         }
 
-        // Nearly a constant, and honest about what it cannot see: a session with no window server
-        // would still answer `Available` here, and detecting *that* cheaply and correctly is not
-        // something this task has a way to do. See T40a, D6.
-        ElevationSupport::Unavailable {
-            reason: format!(
-                "{OSASCRIPT} is not on this machine, so no administrator prompt can be raised"
-            ),
+        // Which login session this process is in decides whether macOS shows its prompt at all,
+        // and it cannot change under a running process, so it is asked once.
+        match session_outside_the_screen() {
+            Some(reason) => ElevationSupport::Unavailable { reason },
+            None => ElevationSupport::Available,
         }
     }
 

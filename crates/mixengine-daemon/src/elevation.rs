@@ -91,14 +91,17 @@ pub(crate) enum Route {
 
     /// This daemon writes the request and waits for a terminal to run the helper on it. Nothing
     /// is spawned here, so a machine where no dialog can be raised is not refused.
-    ByHand,
+    ByHand {
+        /// The terminal is behind SSH, so what needs the machine's own screen stays queued.
+        over_ssh: bool,
+    },
 }
 
-impl From<bool> for Route {
-    /// The `by_hand` flag `elevation.grant` and `daemon.uninstall` carry.
-    fn from(by_hand: bool) -> Self {
+impl Route {
+    /// The `by_hand` and `over_ssh` flags `elevation.grant` and `daemon.uninstall` carry.
+    pub(crate) fn asked(by_hand: bool, over_ssh: bool) -> Self {
         match by_hand {
-            true => Self::ByHand,
+            true => Self::ByHand { over_ssh },
             false => Self::Dialog,
         }
     }

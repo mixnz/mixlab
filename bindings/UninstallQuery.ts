@@ -41,6 +41,11 @@ grant: boolean,
  */
 by_hand?: boolean, 
 /**
+ * That terminal is behind SSH — as [`ElevationGrant::over_ssh`](crate::ElevationGrant::over_ssh).
+ * Left off the wire when `false`, for `by_hand`'s reason.
+ */
+over_ssh?: boolean, 
+/**
  * Leave out what other programs hold in the folders that would go — roadmap task **T182e**.
  *
  * **Defaults to `false`**: every plan and every act looks, because something stuck found before

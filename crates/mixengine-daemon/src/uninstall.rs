@@ -210,7 +210,11 @@ impl Uninstall {
         let granted = match query.grant && !asked.ids.is_empty() {
             true => Some(
                 self.elevation
-                    .grant_only(handle, &asked.ids, query.by_hand.into())
+                    .grant_only(
+                        handle,
+                        &asked.ids,
+                        crate::elevation::Route::asked(query.by_hand, query.over_ssh),
+                    )
                     .await,
             ),
             false => None,

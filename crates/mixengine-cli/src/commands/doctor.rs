@@ -13,7 +13,7 @@ use crate::autostart::Autostart;
 use crate::by_hand::Route;
 use crate::client::{Client, ask, encode};
 use crate::commands::elevation::{
-    confirmed, route_for, say_where_the_command_is, see_through, start_grant,
+    confirmed, nothing_left_over_ssh, route_for, say_where_the_command_is, see_through, start_grant,
 };
 use crate::output::{emit, rendered};
 use crate::render;
@@ -158,6 +158,7 @@ pub(crate) async fn self_repair(
                 true => early,
                 false => route_for(&waiting, json, "mix doctor --repair")?,
             };
+            nothing_left_over_ssh(&waiting, route, crate::by_hand::Terminal::here().ssh)?;
 
             if !yes && !confirmed(&waiting, json, route)? {
                 // Saying no is an answer and not a failure — the same rule as `mix elevation grant`.

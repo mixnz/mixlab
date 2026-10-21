@@ -69,6 +69,7 @@ pub(crate) async fn uninstall(
         skip_holders: relocated,
         package,
         by_hand: false,
+        over_ssh: false,
     };
 
     let planned: UninstallReport = ask(
@@ -149,6 +150,7 @@ pub(crate) async fn uninstall(
             // And the act always looks: something stuck that appeared since the plan refuses here.
             skip_holders: false,
             by_hand: route.by_hand(),
+            over_ssh: route.by_hand() && by_hand::Terminal::here().ssh,
             ..query
         }),
     )

@@ -791,7 +791,7 @@
     "crates/mixengine-platform/src/macos/mod.rs": 11,
     "crates/mixengine-platform/src/macos/port_access.rs": 4,
     "crates/mixengine-platform/src/macos/process.rs": 5,
-    "crates/mixengine-platform/src/macos/prompt.rs": 3,
+    "crates/mixengine-platform/src/macos/prompt.rs": 2,
     "crates/mixengine-platform/src/macos/redistributable.rs": 1,
     "crates/mixengine-platform/src/macos/reserved.rs": 1,
     "crates/mixengine-platform/src/macos/resolver.rs": 4,

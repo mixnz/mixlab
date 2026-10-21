@@ -242,6 +242,12 @@ pub struct ElevationGrant {
     /// terminal sends `true`; MixLab never does.
     #[serde(default)]
     pub by_hand: bool,
+
+    /// That terminal is behind SSH, away from the machine's screen. With `by_hand`, the rows
+    /// [`PendingOp::needs_the_screen`] marks stay queued: nobody there can answer the dialog they
+    /// ask in. **Defaults to `false`**, a terminal at the screen.
+    #[serde(default)]
+    pub over_ssh: bool,
 }
 
 /// `elevation.drop` — forget one operation, or all of them.

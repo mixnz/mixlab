@@ -47,7 +47,8 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       **Verified** over SSH on 2026-10-21, on Ubuntu 24.04 and on macOS 15: a decline, a grant run
       by hand from a second session, a grant in the same terminal, `mix doctor --repair --yes` and
       `mix uninstall`; on the Mac also Ctrl-C at `sudo`'s password and three wrong passwords. Two
-      gaps the Mac found are T211e and T211f.
+      gaps the Mac found are T211e and T211f, measured there again the same day and passing; the
+      helper's console check (T211e, D5) has unit tests and was not tried on a Mac.
 - [x] **T211e** On macOS a terminal cannot add MixEngine's authority to the System keychain:
       `add-trusted-cert -d` raises SecurityAgent on the Mac's own screen even under `sudo`. A grant
       raised from a terminal leaves such rows queued, says so before `continue?`, and
@@ -57,11 +58,23 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
 - [x] **T211f** MixLab's elevation dialog shows a terminal's waiting command whatever `can_prompt`
       says, and while it follows such a grant says it waits for a terminal rather than for a system
       prompt. Same design as T211e.
+- [x] **T211i** Found re-measuring T211e/f on the Mac: a daemon `mix` starts over SSH lives in
+      SSH's session, and osascript from there fails with -60007 (*wrong password*) showing nothing,
+      for every later dialog grant at the screen. The daemon reads `launchctl managername` once and
+      answers `can_prompt: false` outside `Aqua`, with the way out (`mix daemon stop` at the Mac),
+      and -60007 reads as that. `ElevationGrant`/`UninstallQuery` carry `over_ssh`, and only a grant
+      over SSH leaves what needs the screen: `sudo` at the screen reaches its dialog. `mix` refuses
+      over SSH before `continue?` when every row needs the screen; rows read *not over SSH*;
+      MixLab's lead and the wrapped command fit a terminal's grant. **(P)** Left open: starting the
+      daemon from SSH into `gui/<uid>` through launchd, which needs measuring on a Mac first.
 - [ ] **T211g** `mix uninstall` of one home removes what other homes on the machine use: resolver
       wiring it did not write (`/etc/resolver/*` from another home, found on a Mac on 2026-10-21),
       the installed helper and the audit log. Remove only what this home applied, recorded as
       `firewall.applied` already is, and keep the rest with a sentence; homes installed before the
       record keep rather than remove. Needs an ADR amending 0051. Design to come.
+      The hosts file too: there is one `# BEGIN MixEngine` block for every home, so one home's
+      `hosts-apply` replaced another's `blog.test` with its own name, and a home whose resolver got
+      wired queues the block's removal, which would empty it for the others (a Mac, 2026-10-21).
 - [ ] **T211h** Display slips older than T211, found on the same Mac: `helper … replaces it at the
       next permission prompt` printed when the daemon skipped the replacement; a succeeded job still
       showing 40% or 70% and its last step; `mix doctor --repair` printing "the managed hosts block"

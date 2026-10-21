@@ -170,7 +170,7 @@ impl Elevation {
                         )
                     })?
             }
-            Route::ByHand => Ok(self.by_hand(handle, &helper.path, &request).await),
+            Route::ByHand { .. } => Ok(self.by_hand(handle, &helper.path, &request).await),
         };
 
         let answer = self.judge(handle, &request, raised, &waiting).await;

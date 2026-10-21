@@ -78,7 +78,7 @@ async fn a_by_hand_grant_is_not_refused_where_no_dialog_can_be_raised() {
     let (home, elevation) = waiting_machine(Duration::from_secs(5)).await;
 
     let started = elevation
-        .grant(Route::ByHand)
+        .grant(Route::ByHand { over_ssh: true })
         .await
         .expect("a terminal can ask");
     let waiting = the_waiting_command(&elevation).await;
@@ -103,7 +103,10 @@ async fn a_by_hand_grant_raises_no_dialog() {
         registry(mock::Host::with_home("/tmp/mixengine")).await;
     elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
 
-    let started = elevation.grant(Route::ByHand).await.unwrap();
+    let started = elevation
+        .grant(Route::ByHand { over_ssh: true })
+        .await
+        .unwrap();
     let waiting = the_waiting_command(&elevation).await;
     let (report, bytes) = the_helper_answers(&waiting);
     std::fs::write(report, bytes).unwrap();
@@ -119,7 +122,10 @@ async fn a_by_hand_grant_raises_no_dialog() {
 async fn a_report_written_beside_the_request_settles_the_queue() {
     let (_home, elevation) = waiting_machine(Duration::from_secs(5)).await;
 
-    let started = elevation.grant(Route::ByHand).await.unwrap();
+    let started = elevation
+        .grant(Route::ByHand { over_ssh: true })
+        .await
+        .unwrap();
     let waiting = the_waiting_command(&elevation).await;
     let (report, bytes) = the_helper_answers(&waiting);
     std::fs::write(report, bytes).unwrap();
@@ -140,7 +146,10 @@ async fn a_report_written_beside_the_request_settles_the_queue() {
 async fn a_half_written_report_is_read_once_it_is_whole() {
     let (_home, elevation) = waiting_machine(Duration::from_secs(5)).await;
 
-    let started = elevation.grant(Route::ByHand).await.unwrap();
+    let started = elevation
+        .grant(Route::ByHand { over_ssh: true })
+        .await
+        .unwrap();
     let waiting = the_waiting_command(&elevation).await;
     let (report, bytes) = the_helper_answers(&waiting);
     std::fs::write(&report, b"").unwrap();
@@ -157,7 +166,10 @@ async fn a_half_written_report_is_read_once_it_is_whole() {
 async fn a_cancelled_wait_is_a_decline_and_keeps_every_row() {
     let (_home, elevation) = waiting_machine(Duration::from_secs(5)).await;
 
-    let started = elevation.grant(Route::ByHand).await.unwrap();
+    let started = elevation
+        .grant(Route::ByHand { over_ssh: true })
+        .await
+        .unwrap();
     the_waiting_command(&elevation).await;
     elevation.jobs.cancel(started.id).await.unwrap();
     finished(&elevation, started.id).await;
@@ -170,7 +182,7 @@ async fn a_cancelled_wait_is_a_decline_and_keeps_every_row() {
     assert_eq!(status.pending.len(), 1);
     assert_eq!(status.waiting, None);
     elevation
-        .grant(Route::ByHand)
+        .grant(Route::ByHand { over_ssh: true })
         .await
         .expect("the slot was given back");
 }
@@ -179,7 +191,10 @@ async fn a_cancelled_wait_is_a_decline_and_keeps_every_row() {
 async fn nobody_running_the_command_ends_as_a_decline() {
     let (_home, elevation) = waiting_machine(Duration::from_millis(500)).await;
 
-    let started = elevation.grant(Route::ByHand).await.unwrap();
+    let started = elevation
+        .grant(Route::ByHand { over_ssh: true })
+        .await
+        .unwrap();
     let waiting = the_waiting_command(&elevation).await;
     finished(&elevation, started.id).await;
 
@@ -197,11 +212,14 @@ async fn nobody_running_the_command_ends_as_a_decline() {
 async fn a_second_grant_while_one_waits_names_the_waiting_command() {
     let (_home, elevation) = waiting_machine(Duration::from_secs(5)).await;
 
-    let started = elevation.grant(Route::ByHand).await.unwrap();
+    let started = elevation
+        .grant(Route::ByHand { over_ssh: true })
+        .await
+        .unwrap();
     the_waiting_command(&elevation).await;
 
     let error = elevation
-        .grant(Route::ByHand)
+        .grant(Route::ByHand { over_ssh: true })
         .await
         .expect_err("one grant at a time");
 
@@ -264,7 +282,10 @@ async fn status_marks_what_a_terminal_cannot_grant() {
 async fn a_terminal_grant_leaves_what_needs_the_screen_queued() {
     let (_home, elevation, _machine) = a_machine_with_a_screen_only_row().await;
 
-    let started = elevation.grant(Route::ByHand).await.unwrap();
+    let started = elevation
+        .grant(Route::ByHand { over_ssh: true })
+        .await
+        .unwrap();
     let waiting = the_waiting_command(&elevation).await;
     let request = std::fs::read_to_string(&waiting.request).unwrap();
     assert!(!request.contains("\"probe\""), "{request}");
@@ -292,7 +313,7 @@ async fn a_terminal_grant_of_nothing_but_screen_rows_is_refused_before_a_job() {
     elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
 
     let error = elevation
-        .grant(Route::ByHand)
+        .grant(Route::ByHand { over_ssh: true })
         .await
         .expect_err("a terminal cannot grant the only row");
 
@@ -316,4 +337,21 @@ async fn a_dialog_grant_still_carries_what_needs_the_screen() {
     let raised = machine.prompts_raised();
     assert_eq!(raised.len(), 1);
     assert!(raised[0].body.contains("\"probe\""), "{}", raised[0].body);
+}
+
+/// At the machine's own screen, `sudo` in a terminal still reaches the dialog the operation asks
+/// in, so nothing is left behind: only a grant from afar is.
+#[tokio::test]
+async fn a_terminal_at_the_screen_carries_what_needs_the_screen() {
+    let (_home, elevation, _machine) = a_machine_with_a_screen_only_row().await;
+
+    let started = elevation
+        .grant(Route::ByHand { over_ssh: false })
+        .await
+        .unwrap();
+    let waiting = the_waiting_command(&elevation).await;
+    let request = std::fs::read_to_string(&waiting.request).unwrap();
+
+    assert!(request.contains("\"probe\""), "{request}");
+    elevation.jobs.cancel(started.id).await.unwrap();
 }
