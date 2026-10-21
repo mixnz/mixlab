@@ -93,7 +93,7 @@ pub(super) fn resolver_wiring(uninstall: &Uninstall) -> Residue {
     // **`wired` and not `method`.** A machine with a mechanism and nothing routed through it has
     // nothing of ours to remove, and asking to revoke there would spend a prompt on an operation
     // whose only outcome is `AlreadyDone` — T41's D11, one capability along.
-    let outcome = match (state.wired.is_empty(), state.target()) {
+    let outcome = match (state.wired.is_empty(), state.target(port)) {
         (false, Some(target)) => Removal::Planned {
             how: PrivilegedOp::ResolverRevoke { target }.describe(),
         },

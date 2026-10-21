@@ -97,11 +97,13 @@ impl ResolverState {
     /// It exists now so that uninstall has a value to build rather than a reversal to invent
     /// against a wiring written five phases earlier.
     #[must_use]
-    pub fn target(&self) -> Option<ResolverTarget> {
+    ///
+    /// `port` is this home's DNS server: only what points at it is this home's to remove (T211g).
+    pub fn target(&self, port: u16) -> Option<ResolverTarget> {
         match self.method {
             ResolverMethod::None => None,
-            ResolverMethod::ResolverDirectory => Some(ResolverTarget::ResolverDirectory {}),
-            ResolverMethod::SystemdLink => Some(ResolverTarget::SystemdLink {}),
+            ResolverMethod::ResolverDirectory => Some(ResolverTarget::ResolverDirectory { port }),
+            ResolverMethod::SystemdLink => Some(ResolverTarget::SystemdLink { port }),
             ResolverMethod::Nrpt => Some(ResolverTarget::Nrpt {}),
         }
     }
@@ -182,7 +184,7 @@ mod tests {
         let state = state(ResolverMethod::None, &[]);
 
         assert_eq!(state.plan(&["test"], 53_535), None);
-        assert_eq!(state.target(), None);
+        assert_eq!(state.target(53_535), None);
     }
 
     /// Windows' plan carries no port, because NRPT has nowhere to put one.
@@ -226,16 +228,16 @@ mod tests {
     #[test]
     fn every_mechanism_has_something_to_remove() {
         assert_eq!(
-            state(ResolverMethod::Nrpt, &[]).target(),
+            state(ResolverMethod::Nrpt, &[]).target(53_535),
             Some(ResolverTarget::Nrpt {})
         );
         assert_eq!(
-            state(ResolverMethod::SystemdLink, &[]).target(),
-            Some(ResolverTarget::SystemdLink {})
+            state(ResolverMethod::SystemdLink, &[]).target(53_535),
+            Some(ResolverTarget::SystemdLink { port: 53_535 })
         );
         assert_eq!(
-            state(ResolverMethod::ResolverDirectory, &[]).target(),
-            Some(ResolverTarget::ResolverDirectory {})
+            state(ResolverMethod::ResolverDirectory, &[]).target(53_535),
+            Some(ResolverTarget::ResolverDirectory { port: 53_535 })
         );
     }
 }

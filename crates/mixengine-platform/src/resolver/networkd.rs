@@ -83,6 +83,12 @@ pub(crate) fn declared(contents: &str) -> (Vec<String>, Option<u16>) {
     (domains, port)
 }
 
+/// Whether a `.network` file sends its domains to this home's server on `port` — what makes the link
+/// this home's to remove (T211g).
+pub(crate) fn points_at(contents: &str, port: u16) -> bool {
+    declared(contents).1 == Some(port)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -165,5 +171,15 @@ mod tests {
 
         assert!(domains.is_empty());
         assert_eq!(port, None);
+    }
+
+    /// T211g: the link is this home's to remove only while it points at this home's port.
+    #[test]
+    fn a_link_is_revoked_only_for_its_own_port() {
+        let file = network(&["test".to_owned()], 53_535);
+
+        assert!(points_at(&file, 53_535));
+        assert!(!points_at(&file, 53_536));
+        assert!(!points_at("", 53_535));
     }
 }

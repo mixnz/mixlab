@@ -182,12 +182,13 @@ fn describe_resolver(plan: &ResolverPlan) -> String {
 /// What unwiring will literally do.
 fn describe_unwire(target: &ResolverTarget) -> String {
     match target {
-        ResolverTarget::ResolverDirectory {} => {
-            "remove the resolver files MixEngine wrote in /etc/resolver".to_owned()
-        }
-        ResolverTarget::SystemdLink {} => {
-            "remove MixEngine's network link and its two files in /etc/systemd/network".to_owned()
-        }
+        ResolverTarget::ResolverDirectory { port } => format!(
+            "remove the resolver files MixEngine wrote in /etc/resolver that point at 127.0.0.1:{port}"
+        ),
+        ResolverTarget::SystemdLink { port } => format!(
+            "remove MixEngine's network link and its two files in /etc/systemd/network, while they \
+             point at 127.0.0.1:{port}"
+        ),
         ResolverTarget::Nrpt {} => {
             "remove MixEngine's Name Resolution Policy rule from this machine".to_owned()
         }

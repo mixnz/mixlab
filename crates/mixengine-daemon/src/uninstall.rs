@@ -604,7 +604,7 @@ impl Uninstall {
                     .resolver()
                     .probe(&want, port)
                     .ok()?
-                    .target()
+                    .target(port)
                     .map(|target| PrivilegedOp::ResolverRevoke { target })
             }
 

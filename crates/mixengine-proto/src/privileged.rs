@@ -384,15 +384,25 @@ pub enum ResolverPlan {
 ///
 /// Mirrors [`ResolverPlan`] with only what a removal reads. Every artifact each variant deletes is
 /// a constant in the helper, so no variant carries a path.
+///
+/// **The port, where the mechanism names one** (T211g, ADR 0066): the files are one per TLD or one
+/// per machine, and they point at whichever home wired them last. Only what points at this home's
+/// server is this home's to remove.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "method", rename_all = "kebab-case", deny_unknown_fields)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub enum ResolverTarget {
-    /// Remove every `/etc/resolver/<tld>` file MixEngine marked.
-    ResolverDirectory {},
+    /// Remove every `/etc/resolver/<tld>` file MixEngine marked that sends its TLD to `port`.
+    ResolverDirectory {
+        /// This home's DNS server.
+        port: u16,
+    },
 
-    /// Remove both `systemd-networkd` files and the link they declare.
-    SystemdLink {},
+    /// Remove both `systemd-networkd` files and the link they declare, while they point at `port`.
+    SystemdLink {
+        /// This home's DNS server.
+        port: u16,
+    },
 
     /// Remove the one registry key.
     Nrpt {},

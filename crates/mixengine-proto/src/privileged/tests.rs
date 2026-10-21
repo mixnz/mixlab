@@ -495,7 +495,7 @@ fn resolver_operations_need_a_token_and_have_names() {
         },
     };
     let revoke = PrivilegedOp::ResolverRevoke {
-        target: ResolverTarget::SystemdLink {},
+        target: ResolverTarget::SystemdLink { port: 53_535 },
     };
 
     assert!(apply.requires_elevation());
