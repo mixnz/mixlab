@@ -55,6 +55,16 @@ pub(crate) fn uninstall_report(report: &UninstallReport) -> String {
         }
     }
 
+    // T211g: the daemon counted these; a person reading only the end is told the machine is not
+    // bare on purpose.
+    match report.kept_for_others {
+        0 => {}
+        1 => out.push_str("1 thing was kept because another home on this machine uses it\n"),
+        many => out.push_str(&format!(
+            "{many} things were kept because another home on this machine uses them\n"
+        )),
+    }
+
     out
 }
 
@@ -77,5 +87,27 @@ mod tests {
             uninstall_still_removing(std::time::Duration::from_millis(20_400)),
             "still removing, 20s so far"
         );
+    }
+
+    /// T211g, D7: what another home still uses is counted by the daemon, and said once at the end.
+    #[test]
+    fn what_another_home_keeps_is_said_last() {
+        let report = UninstallReport {
+            items: Vec::new(),
+            kept_for_others: 2,
+        };
+
+        assert!(
+            uninstall_report(&report)
+                .ends_with("2 things were kept because another home on this machine uses them\n"),
+            "{}",
+            uninstall_report(&report)
+        );
+
+        let none = UninstallReport {
+            items: Vec::new(),
+            kept_for_others: 0,
+        };
+        assert_eq!(uninstall_report(&none), "");
     }
 }

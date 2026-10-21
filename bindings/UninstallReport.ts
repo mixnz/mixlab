@@ -20,4 +20,10 @@ export type UninstallReport = {
  * [`ResidueId::InUse`] once per process in the way; the window's rows and the two credential
  * rows only when there is something there.
  */
-items: Array<Residue>, };
+items: Array<Residue>, 
+/**
+ * How many of `items` are kept because another home on this machine still uses them — T211g.
+ * Counted by the daemon, so a client prints it and decides nothing. Zero from a daemon that
+ * predates it.
+ */
+kept_for_others: number, };

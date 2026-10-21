@@ -526,3 +526,73 @@ fn the_windows_folders_follow_the_home_and_the_cache_always_goes() {
         "a home the installed window does not use took the window's folders"
     );
 }
+
+/// The ledger of homes, as a test writes it.
+fn homes(paths: &[&str]) -> Result<Option<mixengine_proto::privileged::HomesLedger>, String> {
+    Ok(Some(mixengine_proto::privileged::HomesLedger {
+        homes: paths
+            .iter()
+            .map(|home| mixengine_proto::privileged::LedgerEntry {
+                home: std::path::PathBuf::from(home),
+                caller: "uid 501".to_owned(),
+                last: 0,
+            })
+            .collect(),
+    }))
+}
+
+/// T211g, D4: the daemon plans what the helper will decide — another living home keeps the helper
+/// and the log, and so does a machine with no ledger or one that cannot be read.
+#[test]
+fn the_helper_and_log_stay_while_another_home_uses_them() {
+    let root = Path::new("/homes/a");
+
+    let other = for_others(homes(&["/homes/a", "/homes/b"]), root, |_| true)
+        .expect("another living home keeps them");
+    assert!(
+        other.starts_with(FOR_ANOTHER_HOME) && other.contains("/homes/b"),
+        "{other}"
+    );
+
+    assert!(
+        for_others(Ok(None), root, |_| true).is_some(),
+        "no ledger keeps them"
+    );
+    assert!(
+        for_others(Err("not JSON".to_owned()), root, |_| true)
+            .is_some_and(|said| said.contains("not JSON")),
+        "an unreadable ledger keeps them"
+    );
+    assert_eq!(
+        for_others(homes(&["/homes/a", "/homes/gone"]), root, |home| home
+            == root),
+        None,
+        "the last living home removes them"
+    );
+}
+
+/// Only a row that would have gone is kept; one that is absent, or already kept for its package,
+/// says what it said.
+#[test]
+fn keeping_for_others_turns_only_a_planned_row() {
+    let planned = Residue {
+        id: ResidueId::AuditLog,
+        what: "the log".to_owned(),
+        location: "/var/log/mixengine/elevate.log".to_owned(),
+        outcome: Removal::Planned {
+            how: "remove it".to_owned(),
+        },
+    };
+    let absent = Residue {
+        outcome: Removal::Absent {},
+        ..planned.clone()
+    };
+
+    let kept = keep_for_others(planned, Some("kept for the other homes".to_owned()));
+    assert!(matches!(kept.outcome, Removal::Kept { .. }), "{kept:?}");
+
+    assert_eq!(
+        keep_for_others(absent.clone(), Some("x".to_owned())),
+        absent
+    );
+}

@@ -35,6 +35,66 @@ mod machine;
 pub(crate) use credential_store::{credential_rows, credentials, ours};
 use machine::{certificate_rows, firewall_rules, hosts_block, port_access, resolver_wiring};
 
+/// How every sentence starts that keeps a row for another home's sake — what the report counts.
+pub(crate) const FOR_ANOTHER_HOME: &str = "kept for the other homes on this machine: ";
+
+/// Why the helper and its log stay for another home, or [`None`] when this home is the last — the
+/// same answer `mixengine-elevate` reaches from the same ledger (T211g, D4).
+///
+/// **No ledger, or one that cannot be read, keeps them**: keeping a file is recoverable, removing
+/// another home's is not.
+pub(crate) fn for_others(
+    ledger: Result<Option<mixengine_proto::privileged::HomesLedger>, String>,
+    root: &Path,
+    alive: impl Fn(&Path) -> bool,
+) -> Option<String> {
+    let ledger = match ledger {
+        Ok(Some(ledger)) => ledger,
+        Ok(None) => {
+            return Some(format!(
+                "{FOR_ANOTHER_HOME}no record yet says which other homes use it"
+            ));
+        }
+        Err(why) => {
+            return Some(format!(
+                "{FOR_ANOTHER_HOME}the record of which homes use it could not be read ({why})"
+            ));
+        }
+    };
+
+    let others = ledger.living_others(root, alive);
+
+    (!others.is_empty()).then(|| {
+        format!(
+            "{FOR_ANOTHER_HOME}{} still {} it",
+            others
+                .iter()
+                .map(|other| other.display().to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
+            if others.len() == 1 { "uses" } else { "use" }
+        )
+    })
+}
+
+/// `row`, kept with `sentence` when it would have gone — and as it was otherwise.
+pub(crate) fn keep_for_others(row: Residue, sentence: Option<String>) -> Residue {
+    match (&row.outcome, sentence) {
+        (Removal::Planned { .. }, Some(because)) => Residue {
+            outcome: Removal::Kept { because },
+            ..row
+        },
+        _ => row,
+    }
+}
+
+/// The helper's ledger of homes, from the audit directory.
+fn ledger() -> Result<Option<mixengine_proto::privileged::HomesLedger>, String> {
+    mixengine_platform::elevated::audit_directory()
+        .and_then(|directory| mixengine_platform::ledger::read(&directory))
+        .map_err(|error| mixengine_proto::flatten(&error))
+}
+
 /// The label every firewall rule MixEngine writes carries, composed the one way `sites::sharing`
 /// composes it. Written here as the same expression rather than a second spelling, so a rename in
 /// one place is a compile error and not a rule nobody removes.
@@ -61,8 +121,15 @@ pub(crate) async fn take(
     rows.push(trust);
     rows.push(browsers);
 
-    rows.push(privileged_helper().await);
-    rows.push(audit_log());
+    // T211g, D4: the helper and its log are the machine's, and stay while another home uses them —
+    // read here from the helper's own ledger, which the helper reads again before it acts.
+    let shared = for_others(
+        ledger(),
+        &mixengine_platform::paths::in_full(uninstall.paths.root()),
+        mixengine_platform::ledger::alive,
+    );
+    rows.push(keep_for_others(privileged_helper().await, shared.clone()));
+    rows.push(keep_for_others(audit_log(), shared));
 
     // T182a: the program itself, where an installer placed it. Read here, from the disk, like
     // every other row; whether it goes is the query's `package`.

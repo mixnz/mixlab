@@ -149,9 +149,7 @@ impl Uninstall {
     /// is about, because an uninstall that reported "nothing there" for a question nobody could
     /// answer is the one failure this feature exists to prevent.
     pub(crate) async fn plan(&self, query: &UninstallQuery) -> Result<UninstallReport, Error> {
-        Ok(UninstallReport {
-            items: self.rows(query).await?,
-        })
+        Ok(report(self.rows(query).await?))
     }
 
     /// `daemon.uninstall` — the job that takes MixEngine off this machine.
@@ -263,7 +261,7 @@ impl Uninstall {
             self.forget_credentials(&mut items, false).await;
             self.arm_the_home(&mut items, true);
 
-            return Ok(UninstallReport { items });
+            return Ok(report(items));
         }
 
         handle
@@ -366,7 +364,7 @@ impl Uninstall {
                 .await?;
         }
 
-        Ok(UninstallReport { items })
+        Ok(report(items))
     }
 
     /// Put the queue back as this uninstall found it — the T182b design, D6.
@@ -848,6 +846,22 @@ fn kept_relocated(items: &[Residue]) -> Vec<usize> {
         })
         .map(|(index, _)| index)
         .collect()
+}
+
+/// The report of `items`, with what is kept for another home counted where it is decided (T211g).
+fn report(items: Vec<Residue>) -> UninstallReport {
+    let kept_for_others = items
+        .iter()
+        .filter(|item| {
+            matches!(&item.outcome, Removal::Kept { because }
+                if because.starts_with(inventory::FOR_ANOTHER_HOME))
+        })
+        .count();
+
+    UninstallReport {
+        items,
+        kept_for_others: u32::try_from(kept_for_others).unwrap_or(u32::MAX),
+    }
 }
 
 #[cfg(test)]
