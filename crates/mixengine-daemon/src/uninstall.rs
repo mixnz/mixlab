@@ -567,7 +567,7 @@ impl Uninstall {
     async fn operation_for(&self, id: ResidueId) -> Option<PrivilegedOp> {
         match id {
             // Whole state: the empty block *is* the removal.
-            ResidueId::HostsBlock => Some(PrivilegedOp::hosts_apply(Vec::new())),
+            ResidueId::HostsBlock => Some(PrivilegedOp::hosts_apply(None, Vec::new())),
 
             ResidueId::ResolverWiring => {
                 let port = self.dns.wirable_port()?;

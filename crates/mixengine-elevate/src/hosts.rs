@@ -14,9 +14,11 @@
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
+use std::path::Path;
+
 use mixengine_platform::hosts::{self, Change};
 use mixengine_proto::domains::{MANAGED_TLDS, is_domain_syntax};
-use mixengine_proto::privileged::{HostEntry, OpOutcome};
+use mixengine_proto::privileged::{HomesLedger, HostEntry, OpOutcome};
 
 /// The two addresses a managed name may point at — the T41 design, D5.
 ///
@@ -31,14 +33,35 @@ const PERMITTED: [IpAddr; 2] = [
 const LIMIT: usize = 512;
 
 /// Validate, apply, and say what happened.
-pub(crate) fn apply(entries: &[HostEntry]) -> OpOutcome {
+///
+/// `home` is the requesting home as `crate::request` resolved it; its tag is derived here, from
+/// that path, rather than taken from the daemon (T211g, D2).
+pub(crate) fn apply(tag: Option<&str>, entries: &[HostEntry], home: &Path) -> OpOutcome {
     if let Some(reason) = refusal(entries) {
+        return OpOutcome::Refused { reason };
+    }
+
+    let ours = hosts::tag_for(home);
+
+    // Read only when the tag is not this home's: the ordinary write never needs the ledger, and a
+    // ledger that cannot be read must not stop a home writing its own block.
+    let ledger = match tag {
+        Some(tag) if tag != ours => mixengine_platform::elevated::audit_directory()
+            .and_then(|directory| mixengine_platform::ledger::read(&directory))
+            .ok()
+            .flatten(),
+        _ => None,
+    };
+
+    if let Some(reason) = whose(tag, entries, &ours, ledger.as_ref(), |path| {
+        mixengine_platform::ledger::alive(path)
+    }) {
         return OpOutcome::Refused { reason };
     }
 
     let file = hosts::path();
 
-    match hosts::apply(&file, None, entries) {
+    match hosts::apply(&file, tag, entries) {
         Ok(Change::Unchanged) => OpOutcome::AlreadyDone,
         Ok(Change::Written { entries: 0 }) => OpOutcome::Applied {
             detail: format!("removed MixEngine's block from {}", file.display()),
@@ -66,7 +89,65 @@ pub(crate) fn apply(entries: &[HostEntry]) -> OpOutcome {
     }
 }
 
-/// Why this request will not be applied, or [`None`].
+/// Why this block is not the requesting home's to write, or [`None`] — T211g, D2 and D5.
+///
+/// `ours` is the requesting home's tag. Another tag is accepted only to empty a block whose home
+/// `ledger` names and `alive` says is gone; the legacy block (`None`) only ever to empty it.
+fn whose(
+    tag: Option<&str>,
+    entries: &[HostEntry],
+    ours: &str,
+    ledger: Option<&HomesLedger>,
+    alive: impl Fn(&Path) -> bool,
+) -> Option<String> {
+    let Some(tag) = tag else {
+        return (!entries.is_empty()).then(|| {
+            "the hosts block MixEngine wrote before each home kept its own can only be removed"
+                .to_owned()
+        });
+    };
+
+    if tag.len() != 16
+        || !tag
+            .bytes()
+            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+    {
+        return Some(format!("`{tag}` is not the tag of a home's hosts block"));
+    }
+
+    if tag == ours {
+        return None;
+    }
+
+    if !entries.is_empty() {
+        return Some("only the requesting home's own hosts block may be written".to_owned());
+    }
+
+    let Some(ledger) = ledger else {
+        return Some(
+            "no record says which home this hosts block belongs to, so it is left as it is"
+                .to_owned(),
+        );
+    };
+
+    match ledger
+        .homes
+        .iter()
+        .find(|entry| hosts::tag_for(&entry.home) == tag)
+    {
+        Some(entry) if alive(&entry.home) => Some(format!(
+            "this hosts block belongs to {}, which is still there",
+            entry.home.display()
+        )),
+        Some(_) => None,
+        None => Some(
+            "no home this helper has served owns this hosts block, so it is left as it is"
+                .to_owned(),
+        ),
+    }
+}
+
+/// Why these entries will not be written, or [`None`].
 fn refusal(entries: &[HostEntry]) -> Option<String> {
     if entries.len() > LIMIT {
         return Some(format!(
@@ -104,6 +185,7 @@ fn refusal(entries: &[HostEntry]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mixengine_proto::privileged::{HomesLedger, LedgerEntry};
 
     fn entry(address: &str, domain: &str) -> HostEntry {
         HostEntry {
@@ -157,5 +239,105 @@ mod tests {
 
         assert_eq!(refusal(&good), None);
         assert_eq!(refusal(&[]), None, "an empty list removes the block");
+    }
+
+    /// The tag a test's own home would have — any 16 lowercase hex digits.
+    const OURS: &str = "0123456789abcdef";
+
+    /// A ledger holding one other home, at `/homes/b`.
+    fn ledger_with_b() -> HomesLedger {
+        HomesLedger {
+            homes: vec![LedgerEntry {
+                home: std::path::PathBuf::from("/homes/b"),
+                caller: "uid 502".to_owned(),
+                last: 0,
+            }],
+        }
+    }
+
+    /// T211g, D2: a tag is a hash's hex digits and nothing else may reach a marker line.
+    #[test]
+    fn a_tag_that_is_not_hex_is_refused() {
+        for bad in ["../x", "ABC", "", "a\nb", "0123456789abcdeg"] {
+            assert!(
+                whose(Some(bad), &[], OURS, None, |_| true).is_some(),
+                "{bad:?} was accepted"
+            );
+        }
+    }
+
+    /// This home's own block is the ordinary case, written or emptied.
+    #[test]
+    fn this_homes_own_block_may_be_written() {
+        assert_eq!(
+            whose(
+                Some(OURS),
+                &[entry("127.0.0.1", "blog.test")],
+                OURS,
+                None,
+                |_| true
+            ),
+            None
+        );
+        assert_eq!(whose(Some(OURS), &[], OURS, None, |_| true), None);
+    }
+
+    /// The block every home shared before T211g is drained and removed, never written again.
+    #[test]
+    fn the_legacy_block_can_only_be_emptied() {
+        assert!(
+            whose(None, &[entry("127.0.0.1", "blog.test")], OURS, None, |_| {
+                true
+            })
+            .is_some()
+        );
+        assert_eq!(whose(None, &[], OURS, None, |_| true), None);
+    }
+
+    /// A daemon cannot reach another living home's names by naming that home's tag.
+    #[test]
+    fn another_living_homes_block_is_refused() {
+        let ledger = ledger_with_b();
+        let theirs = hosts::tag_for(std::path::Path::new("/homes/b"));
+
+        let reason = whose(Some(&theirs), &[], OURS, Some(&ledger), |_| true)
+            .expect("refused while that home exists");
+
+        assert!(reason.contains("/homes/b"), "{reason}");
+    }
+
+    /// A block whose home the ledger says is gone may be emptied by anyone the helper serves —
+    /// emptied only, and only when the ledger can place it.
+    #[test]
+    fn an_orphan_block_may_be_emptied() {
+        let ledger = ledger_with_b();
+        let theirs = hosts::tag_for(std::path::Path::new("/homes/b"));
+
+        assert_eq!(
+            whose(Some(&theirs), &[], OURS, Some(&ledger), |_| false),
+            None
+        );
+        assert!(
+            whose(
+                Some(&theirs),
+                &[entry("127.0.0.1", "x.test")],
+                OURS,
+                Some(&ledger),
+                |_| false
+            )
+            .is_some(),
+            "an orphan's block is never written"
+        );
+        assert!(
+            whose(Some("fedcba9876543210"), &[], OURS, Some(&ledger), |_| {
+                false
+            })
+            .is_some(),
+            "a tag the ledger cannot place is nobody's to remove"
+        );
+        assert!(
+            whose(Some(&theirs), &[], OURS, None, |_| false).is_some(),
+            "no ledger, no orphan"
+        );
     }
 }

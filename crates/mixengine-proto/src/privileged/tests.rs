@@ -196,8 +196,8 @@ fn a_declined_prompt_is_a_word_rather_than_a_number() {
 fn every_operation_says_what_it_will_change() {
     for op in [
         PrivilegedOp::Probe {},
-        PrivilegedOp::hosts_apply([entry("127.0.0.1", "blog.test")]),
-        PrivilegedOp::hosts_apply([]),
+        PrivilegedOp::hosts_apply(None, [entry("127.0.0.1", "blog.test")]),
+        PrivilegedOp::hosts_apply(None, []),
     ] {
         let described = op.describe();
 
@@ -214,15 +214,21 @@ fn every_operation_says_what_it_will_change() {
 /// operation and not two rows on the screen that asks a person to allow them.
 #[test]
 fn a_hosts_change_is_a_set_and_not_a_sequence() {
-    let one = PrivilegedOp::hosts_apply([
-        entry("127.0.0.1", "api.blog.test"),
-        entry("127.0.0.1", "blog.test"),
-    ]);
-    let other = PrivilegedOp::hosts_apply([
-        entry("127.0.0.1", "blog.test"),
-        entry("127.0.0.1", "api.blog.test"),
-        entry("127.0.0.1", "blog.test"),
-    ]);
+    let one = PrivilegedOp::hosts_apply(
+        None,
+        [
+            entry("127.0.0.1", "api.blog.test"),
+            entry("127.0.0.1", "blog.test"),
+        ],
+    );
+    let other = PrivilegedOp::hosts_apply(
+        None,
+        [
+            entry("127.0.0.1", "blog.test"),
+            entry("127.0.0.1", "api.blog.test"),
+            entry("127.0.0.1", "blog.test"),
+        ],
+    );
 
     assert_eq!(
         one, other,
@@ -235,11 +241,11 @@ fn a_hosts_change_is_a_set_and_not_a_sequence() {
 /// column need no migration.
 #[test]
 fn a_whole_state_operation_deduplicates_on_its_kind() {
-    let one = PrivilegedOp::hosts_apply([entry("127.0.0.1", "blog.test")]);
-    let other = PrivilegedOp::hosts_apply([entry("127.0.0.1", "shop.test")]);
+    let one = PrivilegedOp::hosts_apply(Some("aa".to_owned()), [entry("127.0.0.1", "blog.test")]);
+    let other = PrivilegedOp::hosts_apply(Some("aa".to_owned()), [entry("127.0.0.1", "shop.test")]);
 
     assert_eq!(one.dedupe_key(), other.dedupe_key());
-    assert_eq!(one.dedupe_key(), "hosts-apply");
+    assert_eq!(one.dedupe_key(), "hosts-apply:aa");
     assert_ne!(
         one, other,
         "the same key, and deliberately not the same operation"
@@ -255,9 +261,11 @@ fn a_whole_state_operation_deduplicates_on_its_kind() {
 /// It needs a token, unlike `Probe`, and the helper's one gate is what reads this.
 #[test]
 fn writing_the_hosts_file_needs_an_administrative_token() {
-    assert!(PrivilegedOp::hosts_apply([entry("127.0.0.1", "blog.test")]).requires_elevation());
+    assert!(
+        PrivilegedOp::hosts_apply(None, [entry("127.0.0.1", "blog.test")]).requires_elevation()
+    );
     assert_eq!(
-        PrivilegedOp::hosts_apply([]).name(),
+        PrivilegedOp::hosts_apply(None, []).name(),
         "hosts-apply",
         "the tag is the audit log's word for it"
     );
@@ -267,10 +275,13 @@ fn writing_the_hosts_file_needs_an_administrative_token() {
 /// the domains themselves and not a count.
 #[test]
 fn a_hosts_change_describes_itself_by_naming_every_domain() {
-    let described = PrivilegedOp::hosts_apply([
-        entry("127.0.0.1", "blog.test"),
-        entry("127.0.0.1", "api.blog.test"),
-    ])
+    let described = PrivilegedOp::hosts_apply(
+        None,
+        [
+            entry("127.0.0.1", "blog.test"),
+            entry("127.0.0.1", "api.blog.test"),
+        ],
+    )
     .describe();
 
     assert!(described.contains("blog.test"), "{described}");
@@ -278,8 +289,13 @@ fn a_hosts_change_describes_itself_by_naming_every_domain() {
     assert!(described.contains("127.0.0.1"), "{described}");
 
     assert_eq!(
-        PrivilegedOp::hosts_apply([]).describe(),
+        PrivilegedOp::hosts_apply(Some("aa".to_owned()), []).describe(),
         "remove MixEngine's block from the hosts file"
+    );
+    assert!(
+        PrivilegedOp::hosts_apply(None, [])
+            .describe()
+            .contains("before each home kept its own")
     );
 }
 
@@ -296,7 +312,7 @@ fn a_hosts_entry_with_a_field_this_build_does_not_know_is_fatal() {
 
 #[test]
 fn a_hosts_change_round_trips() {
-    let op = PrivilegedOp::hosts_apply([entry("::1", "blog.test")]);
+    let op = PrivilegedOp::hosts_apply(None, [entry("::1", "blog.test")]);
 
     let encoded = serde_json::to_string(&op).unwrap();
     assert_eq!(serde_json::from_str::<PrivilegedOp>(&encoded).unwrap(), op);
@@ -465,7 +481,7 @@ fn both_directions_of_resolver_share_one_dedupe_key() {
     assert_eq!(apply.dedupe_key(), "resolver");
     assert_ne!(
         apply.dedupe_key(),
-        PrivilegedOp::hosts_apply([]).dedupe_key()
+        PrivilegedOp::hosts_apply(None, []).dedupe_key()
     );
 }
 
@@ -871,5 +887,39 @@ fn the_candidate_sits_under_the_homes_run_directory() {
     assert_eq!(
         helper_candidate_signature(&home),
         helper_candidate_dir(&home).join(format!("{name}.minisig"))
+    );
+}
+
+/// T211g: this home's block, another home's and the legacy block are three questions, so three
+/// rows — an uninstall asks for two of them in one batch.
+#[test]
+fn own_legacy_and_orphan_blocks_are_separate_queue_rows() {
+    let own = PrivilegedOp::hosts_apply(Some("aa".to_owned()), []);
+    let orphan = PrivilegedOp::hosts_apply(Some("bb".to_owned()), []);
+    let legacy = PrivilegedOp::hosts_apply(None, []);
+
+    assert_ne!(own.dedupe_key(), legacy.dedupe_key());
+    assert_ne!(own.dedupe_key(), orphan.dedupe_key());
+    assert_eq!(
+        legacy.dedupe_key(),
+        "hosts-apply",
+        "the key rows queued before T211g already carry, so they need no migration"
+    );
+}
+
+/// A row queued before T211g carries no `home`, and reads as the legacy block it was written for.
+#[test]
+fn a_hosts_apply_without_home_reads_as_the_legacy_block() {
+    let value = serde_json::json!({ "op": "hosts-apply", "entries": [] });
+
+    assert_eq!(
+        serde_json::from_value::<PrivilegedOp>(value).unwrap(),
+        PrivilegedOp::hosts_apply(None, [])
+    );
+    assert!(
+        !serde_json::to_string(&PrivilegedOp::hosts_apply(None, []))
+            .unwrap()
+            .contains("home"),
+        "the legacy block serialises as it always did"
     );
 }

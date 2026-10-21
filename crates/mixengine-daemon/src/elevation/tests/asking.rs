@@ -80,7 +80,7 @@ async fn a_home_on_dns_asks_for_an_empty_block_rather_than_for_nothing() {
     );
     assert_eq!(
         waiting[0].op,
-        PrivilegedOp::hosts_apply(Vec::new()),
+        PrivilegedOp::hosts_apply(None, Vec::new()),
         "a home on DNS wants no managed names in that file"
     );
 }
@@ -541,7 +541,7 @@ fn only_a_batch_that_installed_or_replaced_the_helper_is_worth_a_probe() {
     };
 
     assert!(may_have_changed_the_helper(&batch(&[
-        PrivilegedOp::hosts_apply(vec![]),
+        PrivilegedOp::hosts_apply(None, vec![]),
         PrivilegedOp::HelperInstall {},
     ])));
     assert!(may_have_changed_the_helper(&batch(&[
@@ -550,7 +550,7 @@ fn only_a_batch_that_installed_or_replaced_the_helper_is_worth_a_probe() {
 
     assert!(!may_have_changed_the_helper(&batch(&[])));
     assert!(!may_have_changed_the_helper(&batch(&[
-        PrivilegedOp::hosts_apply(vec![]),
+        PrivilegedOp::hosts_apply(None, vec![]),
     ])));
     assert!(!may_have_changed_the_helper(&batch(&[
         PrivilegedOp::HelperRemove {},

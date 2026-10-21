@@ -161,13 +161,13 @@ impl Elevation {
             .await
             .map_err(|error| error.to_wire())?;
 
-        let wanted = PrivilegedOp::hosts_apply(desired);
+        let wanted = PrivilegedOp::hosts_apply(None, desired);
 
         // Compared as operations rather than as lists, so the ordering and deduplication are
         // `hosts_apply`'s in both directions and there is one definition of "the same block".
         match self.host.hosts_file().managed(None) {
             // Not a pattern guard: `present` is a `Vec` and a guard cannot move out of one.
-            Ok(present) if PrivilegedOp::hosts_apply(present.clone()) == wanted => {
+            Ok(present) if PrivilegedOp::hosts_apply(None, present.clone()) == wanted => {
                 // Nothing to ask for — and nothing to keep asking for either (T179).
                 self.no_longer_needed(&wanted.dedupe_key()).await
             }

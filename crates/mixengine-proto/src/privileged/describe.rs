@@ -24,7 +24,7 @@ impl PrivilegedOp {
             Self::Probe {} => "report the installed helper's version, whether it holds an \
                                administrative token, and where it writes its audit log"
                 .to_owned(),
-            Self::HostsApply { entries } => describe_hosts(entries),
+            Self::HostsApply { home, entries } => describe_hosts(home.as_deref(), entries),
             Self::PortAccessGrant { plan } => describe_grant(plan),
             Self::PortAccessRevoke { target } => describe_revoke(target),
             Self::ResolverApply { plan } => describe_resolver(plan),
@@ -72,9 +72,14 @@ impl PrivilegedOp {
 ///
 /// The addresses are named when they differ, because the helper permits `::1` as well as
 /// `127.0.0.1` (D5) and a description that hid the difference would be describing something else.
-fn describe_hosts(entries: &[HostEntry]) -> String {
+fn describe_hosts(home: Option<&str>, entries: &[HostEntry]) -> String {
     let Some(first) = entries.first() else {
-        return "remove MixEngine's block from the hosts file".to_owned();
+        return match home {
+            Some(_) => "remove MixEngine's block from the hosts file".to_owned(),
+            None => "remove the block MixEngine wrote in the hosts file before each home kept its \
+                     own"
+            .to_owned(),
+        };
     };
 
     let uniform = entries.iter().all(|entry| entry.address == first.address);

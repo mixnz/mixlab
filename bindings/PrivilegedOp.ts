@@ -16,6 +16,15 @@ import type { TrustTarget } from "./TrustTarget";
  */
 export type PrivilegedOp = { "op": "probe", } | { "op": "hosts-apply", 
 /**
+ * Whose block: the tag `mixengine_platform::hosts::tag_for` derives from a home's path, or
+ * [`None`] for the untagged block every home shared before T211g (ADR 0066).
+ *
+ * **The helper checks it rather than trusting it.** A tag is accepted when it is the
+ * requesting home's own, or — for an empty list only — when the helper's ledger says its
+ * home is gone. The legacy block may only ever be emptied.
+ */
+home?: string | null, 
+/**
  * Sorted and deduplicated by [`PrivilegedOp::hosts_apply`], which is the only way one
  * should be built.
  */

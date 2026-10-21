@@ -18,7 +18,7 @@ pub(super) fn hosts_block(uninstall: &Uninstall) -> Residue {
         // own words.
         Ok(entries) if entries.is_empty() => Removal::Absent {},
         Ok(entries) => Removal::Planned {
-            how: PrivilegedOp::hosts_apply(Vec::new()).describe()
+            how: PrivilegedOp::hosts_apply(None, Vec::new()).describe()
                 + &format!(", which today holds {} name(s)", entries.len()),
         },
         Err(error) => Removal::Failed {

@@ -252,7 +252,7 @@ async fn a_machine_with_a_screen_only_row() -> (tempfile::TempDir, Arc<Elevation
         registry(mock::Host::with_home("/tmp/mixengine").needing_the_screen_for("probe")).await;
     elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
     elevation
-        .enqueue(&PrivilegedOp::hosts_apply(vec![]))
+        .enqueue(&PrivilegedOp::hosts_apply(None, vec![]))
         .await
         .unwrap();
 

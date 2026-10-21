@@ -56,7 +56,9 @@ pub(crate) fn apply(
 
         // The first operation with an effect. What it may write is decided next door, in forty lines
         // with nothing else in them — the T41 design, D3.
-        PrivilegedOp::HostsApply { entries } => crate::hosts::apply(entries),
+        PrivilegedOp::HostsApply { home: tag, entries } => {
+            crate::hosts::apply(tag.as_deref(), entries, home)
+        }
 
         // Roadmap task T42. What may be granted is decided next door, in one module with nothing
         // else in it — the T42 design, D5, on `hosts.rs`' pattern.
@@ -210,10 +212,14 @@ mod tests {
     fn a_hosts_change_under_an_ordinary_token_is_refused_before_it_writes() {
         let (directory, _binary, caller) = a_caller();
 
-        let op = PrivilegedOp::hosts_apply([mixengine_proto::privileged::HostEntry {
-            address: "127.0.0.1".parse().unwrap(),
-            domain: "blog.test".to_owned(),
-        }]);
+        let tag = mixengine_platform::hosts::tag_for(directory.path());
+        let op = PrivilegedOp::hosts_apply(
+            Some(tag),
+            [mixengine_proto::privileged::HostEntry {
+                address: "127.0.0.1".parse().unwrap(),
+                domain: "blog.test".to_owned(),
+            }],
+        );
 
         let outcome = apply(&op, false, &caller, directory.path());
 

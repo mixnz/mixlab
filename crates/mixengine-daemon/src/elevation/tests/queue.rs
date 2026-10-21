@@ -16,7 +16,7 @@ fn the_helper_operation_goes_first_in_its_batch() {
     };
 
     let mut waiting = vec![
-        pending(1, PrivilegedOp::hosts_apply(Vec::new())),
+        pending(1, PrivilegedOp::hosts_apply(None, Vec::new())),
         pending(2, PrivilegedOp::AuditLogRemove {}),
         pending(3, PrivilegedOp::HelperInstall {}),
     ];

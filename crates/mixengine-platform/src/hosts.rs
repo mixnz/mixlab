@@ -39,16 +39,18 @@ fn block(tag: Option<&str>) -> crate::markers::Block<'_> {
 
 /// The tag of the hosts block that belongs to the home at `home` — roadmap task **T211g**, ADR 0066.
 ///
-/// **FNV-1a over the canonical path**, 16 lowercase hex digits. A path rather than the home's id, so
-/// a home deleted by hand and made again in the same place finds its old block and overwrites it.
-/// No hash crate: `mixengine-elevate` derives the same tag and refuses `sha2` on principle, and the
-/// tag needs to be stable, not secret. A path that cannot be canonicalised is hashed as given.
+/// **FNV-1a over the path as [`crate::paths::in_full`] spells it**, 16 lowercase hex digits — the
+/// spelling `mixengine-elevate` resolves a request's home to, and the one its ledger records. So a
+/// home that is gone, whose path no longer resolves, still hashes to the tag it wrote while it was
+/// there. A path rather than the home's id, so a home deleted by hand and made again in the same
+/// place finds its old block and overwrites it. No hash crate: the helper derives the same tag and
+/// refuses `sha2` on principle, and the tag needs to be stable, not secret.
 #[must_use]
 pub fn tag_for(home: &Path) -> String {
     const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
     const PRIME: u64 = 0x0100_0000_01b3;
 
-    let canonical = std::fs::canonicalize(home).unwrap_or_else(|_| home.to_path_buf());
+    let canonical = crate::paths::in_full(home);
 
     let hash = canonical
         .as_os_str()

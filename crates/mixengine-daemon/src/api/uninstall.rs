@@ -354,16 +354,19 @@ mod tests {
         )
         .expect("a helper beside the program");
 
-        let sites = mixengine_proto::privileged::PrivilegedOp::hosts_apply([
-            mixengine_proto::privileged::HostEntry {
-                address: "127.0.0.1".parse().expect("an address"),
-                domain: "blog.test".to_owned(),
-            },
-            mixengine_proto::privileged::HostEntry {
-                address: "127.0.0.1".parse().expect("an address"),
-                domain: "shop.test".to_owned(),
-            },
-        ]);
+        let sites = mixengine_proto::privileged::PrivilegedOp::hosts_apply(
+            None,
+            [
+                mixengine_proto::privileged::HostEntry {
+                    address: "127.0.0.1".parse().expect("an address"),
+                    domain: "blog.test".to_owned(),
+                },
+                mixengine_proto::privileged::HostEntry {
+                    address: "127.0.0.1".parse().expect("an address"),
+                    domain: "shop.test".to_owned(),
+                },
+            ],
+        );
         daemon
             .api
             .elevation

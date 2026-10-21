@@ -508,6 +508,15 @@ pub enum PrivilegedOp {
     /// and makes "already done" a byte comparison rather than a judgement. An empty list removes
     /// the block.
     HostsApply {
+        /// Whose block: the tag `mixengine_platform::hosts::tag_for` derives from a home's path, or
+        /// [`None`] for the untagged block every home shared before T211g (ADR 0066).
+        ///
+        /// **The helper checks it rather than trusting it.** A tag is accepted when it is the
+        /// requesting home's own, or — for an empty list only — when the helper's ledger says its
+        /// home is gone. The legacy block may only ever be emptied.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        home: Option<String>,
+
         /// Sorted and deduplicated by [`PrivilegedOp::hosts_apply`], which is the only way one
         /// should be built.
         entries: Vec<HostEntry>,
@@ -690,7 +699,7 @@ impl PrivilegedOp {
     /// deduplicates on identity (see [`dedupe_key`](Self::dedupe_key)) and the *equality* below it
     /// is what decides whether anything is announced.
     #[must_use]
-    pub fn hosts_apply(entries: impl IntoIterator<Item = HostEntry>) -> Self {
+    pub fn hosts_apply(home: Option<String>, entries: impl IntoIterator<Item = HostEntry>) -> Self {
         let mut entries: Vec<HostEntry> = entries.into_iter().collect();
 
         // By name first: this order is what the block is rendered in and what `describe` reads out,
@@ -700,7 +709,7 @@ impl PrivilegedOp {
         });
         entries.dedup();
 
-        Self::HostsApply { entries }
+        Self::HostsApply { home, entries }
     }
 
     /// The identity a queue deduplicates on — the T41 design, D2.
@@ -718,7 +727,13 @@ impl PrivilegedOp {
             Self::Probe {} => {
                 serde_json::to_string(self).unwrap_or_else(|_| self.name().to_owned())
             }
-            Self::HostsApply { .. } => self.name().to_owned(),
+            // One row per block (T211g): this home's, an orphan's and the legacy one are separate
+            // questions, and an uninstall asks two of them at once. The legacy block keeps the bare
+            // kind, which is the key every row queued before T211g already carries.
+            Self::HostsApply {
+                home: Some(tag), ..
+            } => format!("{}:{tag}", self.name()),
+            Self::HostsApply { home: None, .. } => self.name().to_owned(),
             // D12: two values of one question — what port access should this machine have? — so a
             // revoke enqueued behind a pending grant replaces it rather than queueing after it.
             Self::PortAccessGrant { .. } | Self::PortAccessRevoke { .. } => {
