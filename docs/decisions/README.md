@@ -11,7 +11,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0002](0002-cross-platform-from-day-one.md) | Cross-platform from day one via a platform trait layer | Accepted |
 | [0003](0003-no-container-isolation.md) | Native processes, no Docker/VM isolation | Accepted |
 | [0004](0004-caddy-as-default-web-server.md) | Caddy as the default web server, Nginx optional | Accepted |
-| [0005](0005-on-demand-elevation.md) | On-demand elevation, no persistent privileged helper | Accepted |
+| [0005](0005-on-demand-elevation.md) | On-demand elevation, no persistent privileged helper | Accepted; amended by 0065 and 0066 |
 | [0006](0006-servicespec-in-proto-and-secret-free.md) | `ServiceSpec` lives in `mixengine-proto` and never carries a secret | Accepted |
 | [0007](0007-supervised-child-owns-a-process-group.md) | A supervised child owns a process group, and "no orphans" means three different things | Accepted |
 | [0008](0008-no-signal-stop-on-windows.md) | A service is asked to stop with a signal on Unix and with a command on Windows | Accepted |
@@ -50,7 +50,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0048](0048-a-file-a-package-manager-placed-leaves-with-the-package.md) | A file a package manager placed leaves with the package; `mix uninstall` keeps a packaged helper on Linux | Accepted |
 | [0049](0049-a-download-is-named-after-what-it-installs.md) | A download is named after what it installs: `mixlab-…` with the window, `mixengine-…-headless` without | Accepted; its list of downloads amended by 0053 |
 | [0050](0050-a-copy-the-pkg-installed-is-updated-by-the-pkg.md) | A copy the `.pkg` installed is updated by the `.pkg`, through Installer.app | Accepted; extended to the Linux packages by 0053 |
-| [0051](0051-an-uninstall-ends-what-it-undoes.md) | An uninstall ends what it undoes, and is the uninstaller's rather than the window's | Accepted |
+| [0051](0051-an-uninstall-ends-what-it-undoes.md) | An uninstall ends what it undoes, and is the uninstaller's rather than the window's | Accepted; amended by 0066 |
 | [0052](0052-a-build-that-is-not-a-release-keeps-its-own-credentials.md) | A build that is not a release keeps its credentials in its home, not in the OS store | Accepted; one sentence superseded by 0059 |
 | [0053](0053-the-helper-has-its-own-version-and-follows-the-product.md) | The helper has its own version and follows the product through the daemon | Accepted |
 | [0054](0054-an-install-completes-itself-from-its-own-payload.md) | An install completes itself from its own payload; an update still adds nothing | Accepted |
@@ -65,6 +65,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0063](0063-outbound-tls-trusts-the-operating-system.md) | Outbound TLS trusts the operating system's verifier, not a bundled root store | Accepted |
 | [0064](0064-the-daemon-may-start-at-boot-by-the-account-s-own-linger.md) | The daemon may start at boot, by the account's own linger, turned on only when asked and never elevated | Accepted |
 | [0065](0065-a-terminal-may-raise-the-prompt-itself.md) | A terminal may raise the elevation prompt itself, through `sudo` on the installed helper, where no dialog can | Accepted |
+| [0066](0066-what-a-home-applied-is-that-homes-to-undo.md) | What a home applied to the machine is that home's to undo: one hosts region per home, and a helper that keeps itself and its log while another home uses them | Accepted |
 
 ### Desktop (recorded in the standalone client)
 
