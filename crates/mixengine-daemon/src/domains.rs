@@ -145,7 +145,7 @@ impl Domains {
 
         // A hosts file that cannot be read is a home with no entries in it as far as this report is
         // concerned, which is what `Elevation::require_hosts` already assumes one line over.
-        let block = self.host.hosts_file().managed().unwrap_or_default();
+        let block = self.host.hosts_file().managed(None).unwrap_or_default();
 
         let mut domains = Vec::with_capacity(asked.len());
 

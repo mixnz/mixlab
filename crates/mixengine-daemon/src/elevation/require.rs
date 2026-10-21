@@ -165,7 +165,7 @@ impl Elevation {
 
         // Compared as operations rather than as lists, so the ordering and deduplication are
         // `hosts_apply`'s in both directions and there is one definition of "the same block".
-        match self.host.hosts_file().managed() {
+        match self.host.hosts_file().managed(None) {
             // Not a pattern guard: `present` is a `Vec` and a guard cannot move out of one.
             Ok(present) if PrivilegedOp::hosts_apply(present.clone()) == wanted => {
                 // Nothing to ask for — and nothing to keep asking for either (T179).

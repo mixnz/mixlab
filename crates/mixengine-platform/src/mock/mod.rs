@@ -396,6 +396,25 @@ impl Host {
         }
     }
 
+    /// This host, with a legacy hosts block holding `lines` — the block every home shared before
+    /// T211g.
+    #[must_use]
+    pub fn with_legacy_hosts<'a>(self, lines: impl IntoIterator<Item = &'a str>) -> Self {
+        Self {
+            hosts: self.hosts.with_legacy(lines),
+            ..self
+        }
+    }
+
+    /// This host, whose hosts file holds blocks under `tags` — other homes' among them (T211g).
+    #[must_use]
+    pub fn with_hosts_tags<'a>(self, tags: impl IntoIterator<Item = &'a str>) -> Self {
+        Self {
+            hosts: self.hosts.with_tags(tags),
+            ..self
+        }
+    }
+
     /// This host, with every prompt declined — for the fixtures that need a machine *and* a no.
     ///
     /// Roadmap task T182b: a declined uninstall on a machine that holds a hosts block is the case

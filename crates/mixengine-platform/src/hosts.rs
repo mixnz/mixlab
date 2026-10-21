@@ -26,8 +26,40 @@ use crate::{Error, Result};
 /// two test suites spell them from here.
 pub use crate::markers::{BEGIN_MARKER, END_MARKER};
 
-/// The hosts file's managed block.
-const BLOCK: crate::markers::Block<'static> = crate::markers::Block::in_file("the hosts file");
+/// What the hosts file's blocks are called in a refusal.
+const FILE: &str = "the hosts file";
+
+/// The block one home owns, or the legacy block every home shared before T211g.
+fn block(tag: Option<&str>) -> crate::markers::Block<'_> {
+    match tag {
+        Some(tag) => crate::markers::Block::tagged(FILE, tag),
+        None => crate::markers::Block::in_file(FILE),
+    }
+}
+
+/// The tag of the hosts block that belongs to the home at `home` — roadmap task **T211g**, ADR 0066.
+///
+/// **FNV-1a over the canonical path**, 16 lowercase hex digits. A path rather than the home's id, so
+/// a home deleted by hand and made again in the same place finds its old block and overwrites it.
+/// No hash crate: `mixengine-elevate` derives the same tag and refuses `sha2` on principle, and the
+/// tag needs to be stable, not secret. A path that cannot be canonicalised is hashed as given.
+#[must_use]
+pub fn tag_for(home: &Path) -> String {
+    const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const PRIME: u64 = 0x0100_0000_01b3;
+
+    let canonical = std::fs::canonicalize(home).unwrap_or_else(|_| home.to_path_buf());
+
+    let hash = canonical
+        .as_os_str()
+        .as_encoded_bytes()
+        .iter()
+        .fold(OFFSET, |hash, byte| {
+            (hash ^ u64::from(*byte)).wrapping_mul(PRIME)
+        });
+
+    format!("{hash:016x}")
+}
 
 /// Where this OS keeps the file.
 #[must_use]
@@ -68,10 +100,10 @@ pub enum Change {
 /// the file cannot be read or replaced, and [`Error::Os`] when the machine-wide lock is held by
 /// another helper.
 #[cfg(feature = "elevated")]
-pub fn apply(path: &Path, entries: &[HostEntry]) -> Result<Change> {
+pub fn apply(path: &Path, tag: Option<&str>, entries: &[HostEntry]) -> Result<Change> {
     let lock = crate::elevated::audit_directory()?.join(LOCK);
 
-    apply_under(path, entries, &lock)
+    apply_under(path, tag, entries, &lock)
 }
 
 /// [`apply`], with the lock named.
@@ -79,7 +111,12 @@ pub fn apply(path: &Path, entries: &[HostEntry]) -> Result<Change> {
 /// The tests take a lock inside a directory they own: the audit directory is root's, and a suite
 /// that had to create it could not run under an ordinary token.
 #[cfg(feature = "elevated")]
-pub(crate) fn apply_under(path: &Path, entries: &[HostEntry], lock: &Path) -> Result<Change> {
+pub(crate) fn apply_under(
+    path: &Path,
+    tag: Option<&str>,
+    entries: &[HostEntry],
+    lock: &Path,
+) -> Result<Change> {
     // Held across the read *and* the rename: two helpers that both read before either wrote would
     // each apply their own home's state over the other's.
     let _held = match crate::lock::Lock::acquire(lock)? {
@@ -96,7 +133,7 @@ pub(crate) fn apply_under(path: &Path, entries: &[HostEntry], lock: &Path) -> Re
     };
 
     let text = read(path)?;
-    let spliced = splice(&text, entries)?;
+    let spliced = splice(&text, tag, entries)?;
 
     if spliced == text {
         return Ok(Change::Unchanged);
@@ -123,18 +160,19 @@ fn read(path: &Path) -> Result<String> {
     }
 }
 
-/// The entries in the managed block of `text`, or why the block cannot be read.
+/// The entries in one managed block of `text` — the block tagged `tag`, or the legacy block for
+/// [`None`] — or why it cannot be read.
 ///
-/// An empty vector is a file with no block of ours in it, which is not an error: it is what a
-/// machine that has never run MixEngine looks like.
+/// An empty vector is a file with no such block in it, which is not an error: it is what a machine
+/// that has never run MixEngine looks like.
 ///
 /// # Errors
 ///
 /// [`Error::MalformedBlock`] for a block that cannot be read without guessing — see
 /// [`crate::markers`] and the T41 design, D6 — and for a line inside it that names no address or no
 /// domain.
-pub fn parse(text: &str) -> Result<Vec<HostEntry>> {
-    let Some(body) = BLOCK.body(text)? else {
+pub fn parse(text: &str, tag: Option<&str>) -> Result<Vec<HostEntry>> {
+    let Some(body) = block(tag).body(text)? else {
         return Ok(Vec::new());
     };
 
@@ -174,10 +212,35 @@ pub fn parse(text: &str) -> Result<Vec<HostEntry>> {
     Ok(entries)
 }
 
-/// `text` with the managed block set to `entries`, or why it cannot be.
+/// Every tag a block in `text` carries, sorted, each once — what `mix doctor` compares with the
+/// homes the helper's ledger knows (T211g, D5).
+///
+/// # Errors
+///
+/// None today; a `Result` so a reading that has to refuse can say so without a new signature.
+pub fn tags(text: &str) -> Result<Vec<String>> {
+    let prefix = format!("{BEGIN_MARKER} ");
+
+    let mut found: Vec<String> = text
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix(prefix.as_str()))
+        .map(str::to_owned)
+        .collect();
+
+    found.sort();
+    found.dedup();
+
+    Ok(found)
+}
+
+/// `text` with one managed block set to `entries`, or why it cannot be.
 ///
 /// An empty `entries` removes the block, markers and all — which is also the reverse of every other
 /// call, and the reason no backup file is kept.
+///
+/// **A home's block takes its names out of the legacy block** (T211g, D2): each name `entries` holds
+/// leaves the block every home shared before, and that block goes once it holds none. Nothing else
+/// in it moves; another home's names stay until that home writes its own.
 ///
 /// The block is rendered with the file's own line ending: CRLF if the file uses it anywhere, because
 /// rewriting a Windows hosts file with Unix endings is a diff on every line in a file people read
@@ -186,10 +249,35 @@ pub fn parse(text: &str) -> Result<Vec<HostEntry>> {
 /// # Errors
 ///
 /// [`Error::MalformedBlock`] for a block that cannot be edited without guessing — D6.
-pub fn splice(text: &str, entries: &[HostEntry]) -> Result<String> {
-    let body = render(entries, crate::markers::newline(text));
+pub fn splice(text: &str, tag: Option<&str>, entries: &[HostEntry]) -> Result<String> {
+    let newline = crate::markers::newline(text);
 
-    BLOCK.splice(text, &body, crate::markers::Insertion::End)
+    let drained = match tag {
+        Some(_) => {
+            let legacy = parse(text, None)?;
+            let kept: Vec<HostEntry> = legacy
+                .iter()
+                .filter(|old| !entries.iter().any(|new| new.domain == old.domain))
+                .cloned()
+                .collect();
+
+            match kept.len() == legacy.len() {
+                true => text.to_owned(),
+                false => block(None).splice(
+                    text,
+                    &render(&kept, newline),
+                    crate::markers::Insertion::End,
+                )?,
+            }
+        }
+        None => text.to_owned(),
+    };
+
+    block(tag).splice(
+        &drained,
+        &render(entries, newline),
+        crate::markers::Insertion::End,
+    )
 }
 
 /// The entries as the lines that go between the markers.
@@ -220,23 +308,29 @@ impl crate::HostsFile for Managed {
         path()
     }
 
-    fn managed(&self) -> Result<Vec<HostEntry>> {
-        let file = path();
+    fn managed(&self, tag: Option<&str>) -> Result<Vec<HostEntry>> {
+        parse(&machine()?, tag)
+    }
 
-        let text = match std::fs::read_to_string(&file) {
-            Ok(text) => text,
-            // A machine with no hosts file has no block in it, which is the same answer.
-            Err(source) if source.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-            Err(source) => {
-                return Err(Error::Io {
-                    action: "read",
-                    path: file,
-                    source,
-                });
-            }
-        };
+    fn tags(&self) -> Result<Vec<String>> {
+        tags(&machine()?)
+    }
+}
 
-        parse(&text)
+/// The machine's hosts file as text, or the empty string where there is none.
+#[cfg(feature = "host")]
+fn machine() -> Result<String> {
+    let file = path();
+
+    match std::fs::read_to_string(&file) {
+        Ok(text) => Ok(text),
+        // A machine with no hosts file has no block in it, which is the same answer.
+        Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+        Err(source) => Err(Error::Io {
+            action: "read",
+            path: file,
+            source,
+        }),
     }
 }
 
@@ -276,11 +370,11 @@ mod tests {
     /// keep: a test that searched for `nas.lan` would pass on a file that had lost everything else.
     #[test]
     fn every_unrelated_line_survives_every_edit() {
-        let first = splice(REAL, &[entry("127.0.0.1", "blog.test")]).unwrap();
+        let first = splice_legacy(REAL, &[entry("127.0.0.1", "blog.test")]).unwrap();
         assert!(first.contains("nas.lan"), "{first}");
         assert!(first.contains("# BEGIN SomeOtherTool"), "{first}");
 
-        let second = splice(
+        let second = splice_legacy(
             &first,
             &[entry("127.0.0.1", "shop.test"), entry("::1", "shop.test")],
         )
@@ -290,7 +384,7 @@ mod tests {
             "the block is replaced, not appended to: {second}"
         );
 
-        let removed = splice(&second, &[]).unwrap();
+        let removed = splice_legacy(&second, &[]).unwrap();
 
         assert_eq!(removed, REAL, "the file did not come back as it was");
     }
@@ -304,13 +398,16 @@ mod tests {
     fn a_file_with_no_trailing_newline_gains_one_and_nothing_else() {
         let original = "127.0.0.1 localhost";
 
-        let written = splice(original, &[entry("127.0.0.1", "blog.test")]).unwrap();
+        let written = splice_legacy(original, &[entry("127.0.0.1", "blog.test")]).unwrap();
         assert!(
             written.starts_with("127.0.0.1 localhost\n# BEGIN MixEngine\n"),
             "{written}"
         );
 
-        assert_eq!(splice(&written, &[]).unwrap(), "127.0.0.1 localhost\n");
+        assert_eq!(
+            splice_legacy(&written, &[]).unwrap(),
+            "127.0.0.1 localhost\n"
+        );
     }
 
     /// A Windows hosts file is read in Notepad. Rewriting it with Unix endings is a diff on every
@@ -319,7 +416,7 @@ mod tests {
     fn the_files_own_line_ending_is_the_one_the_block_is_written_with() {
         let crlf = "# a comment\r\n127.0.0.1\tlocalhost\r\n";
 
-        let written = splice(crlf, &[entry("127.0.0.1", "blog.test")]).unwrap();
+        let written = splice_legacy(crlf, &[entry("127.0.0.1", "blog.test")]).unwrap();
 
         assert!(written.contains("# BEGIN MixEngine\r\n"), "{written:?}");
         assert!(written.contains("127.0.0.1  blog.test\r\n"), "{written:?}");
@@ -327,25 +424,25 @@ mod tests {
             !written.contains("\n\n"),
             "no bare LF was introduced: {written:?}"
         );
-        assert_eq!(splice(&written, &[]).unwrap(), crlf);
+        assert_eq!(splice_legacy(&written, &[]).unwrap(), crlf);
     }
 
     /// An empty list on a file with no block is not an edit at all.
     #[test]
     fn removing_a_block_that_is_not_there_changes_nothing() {
-        assert_eq!(splice(REAL, &[]).unwrap(), REAL);
-        assert_eq!(splice("", &[]).unwrap(), "");
+        assert_eq!(splice_legacy(REAL, &[]).unwrap(), REAL);
+        assert_eq!(splice_legacy("", &[]).unwrap(), "");
     }
 
     /// Order in, one file out: the caller sorts, and the engine writes what it is given.
     #[test]
     fn the_same_set_in_two_orders_is_the_same_file() {
-        let one = splice(
+        let one = splice_legacy(
             REAL,
             &[entry("127.0.0.1", "a.test"), entry("127.0.0.1", "b.test")],
         )
         .unwrap();
-        let other = splice(
+        let other = splice_legacy(
             REAL,
             &[entry("127.0.0.1", "a.test"), entry("127.0.0.1", "b.test")],
         )
@@ -368,13 +465,13 @@ mod tests {
             (no_end, "no `# END MixEngine`"),
             (no_begin, "no `# BEGIN MixEngine`"),
         ] {
-            let error = splice(&text, &[entry("127.0.0.1", "a.test")]).unwrap_err();
+            let error = splice_legacy(&text, &[entry("127.0.0.1", "a.test")]).unwrap_err();
 
             assert!(
                 matches!(&error, crate::Error::MalformedBlock { reason } if reason.contains(what)),
                 "{error}"
             );
-            assert!(parse(&text).is_err(), "reading it is refused too");
+            assert!(parse_legacy(&text).is_err(), "reading it is refused too");
         }
     }
 
@@ -383,11 +480,11 @@ mod tests {
     fn the_managed_block_reads_back_as_the_entries_that_were_written() {
         let entries = vec![entry("127.0.0.1", "blog.test"), entry("::1", "blog.test")];
 
-        let written = splice(REAL, &entries).unwrap();
+        let written = splice_legacy(REAL, &entries).unwrap();
 
-        assert_eq!(parse(&written).unwrap(), entries);
+        assert_eq!(parse_legacy(&written).unwrap(), entries);
         assert_eq!(
-            parse(REAL).unwrap(),
+            parse_legacy(REAL).unwrap(),
             Vec::new(),
             "another tool's block is not ours"
         );
@@ -400,7 +497,7 @@ mod tests {
         let text = format!("{BEGIN_MARKER}\n127.0.0.1  a.test  b.test\n\n{END_MARKER}\n");
 
         assert_eq!(
-            parse(&text).unwrap(),
+            parse_legacy(&text).unwrap(),
             vec![entry("127.0.0.1", "a.test"), entry("127.0.0.1", "b.test")]
         );
     }
@@ -412,8 +509,8 @@ mod tests {
         let no_address = format!("{BEGIN_MARKER}\nnot-an-address blog.test\n{END_MARKER}\n");
         let no_domain = format!("{BEGIN_MARKER}\n127.0.0.1\n{END_MARKER}\n");
 
-        assert!(parse(&no_address).is_err());
-        assert!(parse(&no_domain).is_err());
+        assert!(parse_legacy(&no_address).is_err());
+        assert!(parse_legacy(&no_domain).is_err());
     }
 
     /// [`apply_under`], tried again while the lock reads as taken — for at most two seconds.
@@ -428,7 +525,7 @@ mod tests {
     fn apply(file: &Path, entries: &[HostEntry], lock: &Path) -> Change {
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
         loop {
-            match apply_under(file, entries, lock) {
+            match apply_under(file, None, entries, lock) {
                 Err(crate::Error::Os { source, .. })
                     if source.kind() == std::io::ErrorKind::WouldBlock
                         && std::time::Instant::now() < deadline =>
@@ -458,7 +555,7 @@ mod tests {
         );
         assert_eq!(
             std::fs::read_to_string(&file).unwrap(),
-            splice(REAL, &entries).unwrap()
+            splice_legacy(REAL, &entries).unwrap()
         );
 
         // D1's payoff: the second call is the byte comparison, not a judgement.
@@ -484,7 +581,7 @@ mod tests {
         )
         .unwrap();
 
-        assert!(apply_under(&file, &[entry("127.0.0.1", "a.test")], &lock).is_err());
+        assert!(apply_under(&file, None, &[entry("127.0.0.1", "a.test")], &lock).is_err());
 
         let left: Vec<_> = std::fs::read_dir(directory.path())
             .unwrap()
@@ -585,7 +682,7 @@ mod tests {
             panic!("nobody else is holding a lock in a directory this test just made");
         };
 
-        let error = apply_under(&file, &[entry("127.0.0.1", "a.test")], &lock).unwrap_err();
+        let error = apply_under(&file, None, &[entry("127.0.0.1", "a.test")], &lock).unwrap_err();
 
         assert!(
             !matches!(error, crate::Error::MalformedBlock { .. }),
@@ -594,6 +691,126 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(&file).unwrap(),
             "127.0.0.1 localhost\n"
+        );
+    }
+
+    /// The single block every home shared before T211g, as the tests above were written against.
+    fn splice_legacy(text: &str, entries: &[HostEntry]) -> Result<String> {
+        splice(text, None, entries)
+    }
+
+    /// The same, read.
+    fn parse_legacy(text: &str) -> Result<Vec<HostEntry>> {
+        parse(text, None)
+    }
+
+    /// T211g, D2: a path and a symlink to it are one home, and two homes are two tags.
+    #[test]
+    fn one_home_two_spellings_one_tag() {
+        let one = tempfile::TempDir::new().expect("a directory");
+        let two = tempfile::TempDir::new().expect("a directory");
+        let tag = tag_for(one.path());
+
+        assert_eq!(tag.len(), 16, "{tag}");
+        assert!(
+            tag.bytes()
+                .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')),
+            "{tag}"
+        );
+        assert_ne!(tag_for(two.path()), tag);
+
+        // A symlink needs a privilege on Windows that a test run does not have; the spelling that
+        // matters there is case and separators, which `canonicalize` settles the same way.
+        #[cfg(unix)]
+        {
+            let link = two.path().join("link");
+            std::os::unix::fs::symlink(one.path(), &link).expect("a symlink");
+            assert_eq!(tag_for(&link), tag);
+        }
+    }
+
+    /// Each home writes its own block; the legacy block gives up the names a home now writes, and
+    /// goes once it holds none.
+    #[test]
+    fn two_homes_and_the_legacy_block_each_keep_their_own() {
+        let start = splice(
+            &splice(
+                REAL,
+                None,
+                &[
+                    entry("127.0.0.1", "blog.test"),
+                    entry("127.0.0.1", "shop.test"),
+                ],
+            )
+            .unwrap(),
+            Some("aa"),
+            &[entry("127.0.0.1", "a.test")],
+        )
+        .unwrap();
+
+        let once = splice(&start, Some("bb"), &[entry("127.0.0.1", "blog.test")]).unwrap();
+        assert_eq!(
+            parse(&once, Some("bb")).unwrap(),
+            vec![entry("127.0.0.1", "blog.test")]
+        );
+        assert_eq!(
+            parse(&once, Some("aa")).unwrap(),
+            vec![entry("127.0.0.1", "a.test")]
+        );
+        assert_eq!(
+            parse(&once, None).unwrap(),
+            vec![entry("127.0.0.1", "shop.test")]
+        );
+
+        let twice = splice(
+            &once,
+            Some("bb"),
+            &[
+                entry("127.0.0.1", "blog.test"),
+                entry("127.0.0.1", "shop.test"),
+            ],
+        )
+        .unwrap();
+        assert_eq!(parse(&twice, None).unwrap(), Vec::new());
+        assert!(
+            twice.contains("nas.lan") && twice.contains("# BEGIN SomeOtherTool"),
+            "{twice}"
+        );
+        assert_eq!(
+            tags(&twice).unwrap(),
+            vec!["aa".to_owned(), "bb".to_owned()]
+        );
+        assert_eq!(
+            splice(&splice(&twice, Some("aa"), &[]).unwrap(), Some("bb"), &[]).unwrap(),
+            REAL
+        );
+    }
+
+    /// Emptying one home's block is not emptying anybody else's.
+    #[test]
+    fn an_empty_apply_removes_only_this_homes_block() {
+        let text = splice(
+            &splice(
+                &splice(REAL, None, &[entry("127.0.0.1", "old.test")]).unwrap(),
+                Some("aa"),
+                &[entry("127.0.0.1", "a.test")],
+            )
+            .unwrap(),
+            Some("bb"),
+            &[entry("127.0.0.1", "b.test")],
+        )
+        .unwrap();
+
+        let emptied = splice(&text, Some("aa"), &[]).unwrap();
+
+        assert_eq!(parse(&emptied, Some("aa")).unwrap(), Vec::new());
+        assert_eq!(
+            parse(&emptied, Some("bb")).unwrap(),
+            vec![entry("127.0.0.1", "b.test")]
+        );
+        assert_eq!(
+            parse(&emptied, None).unwrap(),
+            vec![entry("127.0.0.1", "old.test")]
         );
     }
 }

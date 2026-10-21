@@ -21,14 +21,22 @@ pub trait HostsFile: std::fmt::Debug + Send + Sync {
     /// Where this OS keeps the file, whether or not it is there.
     fn path(&self) -> PathBuf;
 
-    /// The entries in MixEngine's block, or why the block cannot be read.
+    /// The entries in one of MixEngine's blocks — the block tagged `tag`, which is one home's, or the
+    /// legacy block for [`None`] — or why it cannot be read.
     ///
-    /// An empty vector is a machine that has never run MixEngine, which is not a failure.
+    /// An empty vector is a machine with no such block, which is not a failure.
     ///
     /// # Errors
     ///
     /// [`Error::Io`](crate::Error::Io) when the file cannot be read, and
     /// [`Error::MalformedBlock`](crate::Error::MalformedBlock) when the block cannot be read without
     /// guessing at what somebody else meant.
-    fn managed(&self) -> Result<Vec<HostEntry>>;
+    fn managed(&self, tag: Option<&str>) -> Result<Vec<HostEntry>>;
+
+    /// Every tag a block in the file carries — one per home that has written one (T211g, D5).
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Io`](crate::Error::Io) when the file cannot be read.
+    fn tags(&self) -> Result<Vec<String>>;
 }

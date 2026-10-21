@@ -13,7 +13,7 @@ pub(super) fn hosts_block(uninstall: &Uninstall) -> Residue {
     let file = uninstall.host.hosts_file();
     let location = file.path().display().to_string();
 
-    let outcome = match file.managed() {
+    let outcome = match file.managed(None) {
         // An empty block is a machine that has never had one, which is not a failure — the trait's
         // own words.
         Ok(entries) if entries.is_empty() => Removal::Absent {},

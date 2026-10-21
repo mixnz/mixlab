@@ -6,11 +6,21 @@ use mixengine_proto::privileged::HostEntry;
 
 use crate::{Error, Result};
 
-/// The block a test says the machine is holding.
+/// The blocks a test says the machine is holding.
+///
+/// **One answer for every home's tag** (T211g): a daemon under test asks only about its own block,
+/// so `holding` is that home's, whatever its tag. The legacy block and the list of tags are set
+/// apart, because those are the questions about other homes.
 #[derive(Debug)]
 pub(crate) struct Hosts {
-    /// The block itself, already parsed — or why it cannot be read.
+    /// This home's block, already parsed — or why it cannot be read.
     managed: std::result::Result<Vec<HostEntry>, String>,
+
+    /// The untagged block every home shared before T211g.
+    legacy: Vec<HostEntry>,
+
+    /// Every tag a block in the file carries.
+    tags: Vec<String>,
 }
 
 impl Default for Hosts {
@@ -18,6 +28,8 @@ impl Default for Hosts {
     fn default() -> Self {
         Self {
             managed: Ok(Vec::new()),
+            legacy: Vec::new(),
+            tags: Vec::new(),
         }
     }
 }
@@ -40,7 +52,8 @@ impl Hosts {
         text.push('\n');
 
         Self {
-            managed: crate::hosts::parse(&text).map_err(|error| error.to_string()),
+            managed: crate::hosts::parse(&text, None).map_err(|error| error.to_string()),
+            ..Self::default()
         }
     }
 
@@ -48,6 +61,23 @@ impl Hosts {
     pub(crate) fn refusing(reason: &str) -> Self {
         Self {
             managed: Err(reason.to_owned()),
+            ..Self::default()
+        }
+    }
+
+    /// This machine, with a legacy block holding `lines`.
+    pub(crate) fn with_legacy<'a>(self, lines: impl IntoIterator<Item = &'a str>) -> Self {
+        Self {
+            legacy: Self::holding(lines).managed.unwrap_or_default(),
+            ..self
+        }
+    }
+
+    /// This machine, with blocks under `tags`.
+    pub(crate) fn with_tags<'a>(self, tags: impl IntoIterator<Item = &'a str>) -> Self {
+        Self {
+            tags: tags.into_iter().map(str::to_owned).collect(),
+            ..self
         }
     }
 }
@@ -57,9 +87,17 @@ impl crate::HostsFile for Hosts {
         PathBuf::from("/mock/hosts")
     }
 
-    fn managed(&self) -> Result<Vec<HostEntry>> {
-        self.managed
-            .clone()
-            .map_err(|reason| Error::MalformedBlock { reason })
+    fn managed(&self, tag: Option<&str>) -> Result<Vec<HostEntry>> {
+        match tag {
+            Some(_) => self
+                .managed
+                .clone()
+                .map_err(|reason| Error::MalformedBlock { reason }),
+            None => Ok(self.legacy.clone()),
+        }
+    }
+
+    fn tags(&self) -> Result<Vec<String>> {
+        Ok(self.tags.clone())
     }
 }

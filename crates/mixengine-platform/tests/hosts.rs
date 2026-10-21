@@ -48,7 +48,7 @@ fn the_real_machine_can_be_asked_what_our_block_holds() {
 
     assert_eq!(host.hosts_file().path(), hosts::path());
 
-    match host.hosts_file().managed() {
+    match host.hosts_file().managed(None) {
         Ok(entries) => {
             for entry in entries {
                 assert!(!entry.domain.is_empty());
@@ -65,13 +65,13 @@ fn the_real_machine_can_be_asked_what_our_block_holds() {
 fn a_mock_host_answers_from_memory() {
     let host = mock::Host::with_hosts("/tmp/mixengine-test", ["127.0.0.1 blog.test"]);
 
-    let managed = host.hosts_file().managed().unwrap();
+    let managed = host.hosts_file().managed(Some("aa")).unwrap();
 
     assert_eq!(managed.len(), 1);
     assert_eq!(managed[0].domain, "blog.test");
 
     let refusing = mock::Host::unable_to_read_the_hosts_file("/tmp/mixengine-test", "no such file");
-    assert!(refusing.hosts_file().managed().is_err());
+    assert!(refusing.hosts_file().managed(Some("aa")).is_err());
 }
 
 // The half that needs a real machine and an administrative token. `#[ignore]`d, so a developer's
@@ -96,7 +96,10 @@ fn the_real_hosts_file_is_edited_and_put_back() {
         domain: domain.clone(),
     };
 
-    let written = hosts::apply(&path, std::slice::from_ref(&entry))
+    // A tag of the test's own, so the run never touches a block a real home on this machine owns.
+    let tag = format!("{:016x}", std::process::id());
+
+    let written = hosts::apply(&path, Some(&tag), std::slice::from_ref(&entry))
         .unwrap_or_else(|error| panic!("this needs an administrative token: {error}"));
     assert!(
         matches!(written, hosts::Change::Written { entries: 1 }),
@@ -105,9 +108,9 @@ fn the_real_hosts_file_is_edited_and_put_back() {
 
     let after = std::fs::read_to_string(&path).unwrap();
     assert!(after.contains(&domain), "{after}");
-    assert_eq!(hosts::parse(&after).unwrap(), vec![entry]);
+    assert_eq!(hosts::parse(&after, Some(&tag)).unwrap(), vec![entry]);
 
-    let removed = hosts::apply(&path, &[]).expect("the block is removed");
+    let removed = hosts::apply(&path, Some(&tag), &[]).expect("the block is removed");
     assert!(
         matches!(removed, hosts::Change::Written { entries: 0 }),
         "{removed:?}"

@@ -166,7 +166,7 @@ impl Doctor {
 
         let wanted = mixengine_proto::privileged::PrivilegedOp::hosts_apply(desired);
 
-        match self.host.hosts_file().managed() {
+        match self.host.hosts_file().managed(None) {
             // `present.clone()` and not `present`: a pattern guard may not move out of what it
             // matched, which is why `Elevation::require_hosts` writes it the same way one file over.
             Ok(present)

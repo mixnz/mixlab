@@ -38,7 +38,7 @@ pub(crate) fn apply(entries: &[HostEntry]) -> OpOutcome {
 
     let file = hosts::path();
 
-    match hosts::apply(&file, entries) {
+    match hosts::apply(&file, None, entries) {
         Ok(Change::Unchanged) => OpOutcome::AlreadyDone,
         Ok(Change::Written { entries: 0 }) => OpOutcome::Applied {
             detail: format!("removed MixEngine's block from {}", file.display()),
