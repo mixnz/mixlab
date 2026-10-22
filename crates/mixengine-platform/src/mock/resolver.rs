@@ -15,6 +15,7 @@ pub(crate) struct Resolver {
 struct Answer {
     method: ResolverMethod,
     wired: Vec<String>,
+    bypassed: Option<String>,
 }
 
 impl Default for Resolver {
@@ -28,6 +29,7 @@ impl Default for Resolver {
             answer: Ok(Answer {
                 method: ResolverMethod::None,
                 wired: Vec::new(),
+                bypassed: None,
             }),
         }
     }
@@ -40,6 +42,18 @@ impl Resolver {
             answer: Ok(Answer {
                 method,
                 wired: wired.iter().map(|tld| (*tld).to_owned()).collect(),
+                bypassed: None,
+            }),
+        }
+    }
+
+    /// A machine using `method` whose programs never reach it, for `reason`.
+    pub(crate) fn bypassed(method: ResolverMethod, reason: &str) -> Self {
+        Self {
+            answer: Ok(Answer {
+                method,
+                wired: Vec::new(),
+                bypassed: Some(reason.to_owned()),
             }),
         }
     }
@@ -78,13 +92,25 @@ impl crate::ResolverConfig for Resolver {
             .map(|tld| (*tld).to_owned())
             .collect();
 
-        let missing = (wired.len() < tlds.len())
-            .then(|| "this machine does not route every managed TLD here".to_owned());
+        let missing = match &answer.bypassed {
+            Some(reason) => Some(reason.clone()),
+            None => (wired.len() < tlds.len())
+                .then(|| "this machine does not route every managed TLD here".to_owned()),
+        };
+
+        // A bypassed fixture declares every TLD it was asked about: the files an earlier grant wrote,
+        // which programs on that machine never reach.
+        let declared = match answer.bypassed {
+            Some(_) => tlds.iter().map(|tld| (*tld).to_owned()).collect(),
+            None => wired.clone(),
+        };
 
         Ok(ResolverState {
             method: answer.method,
             wired,
             missing,
+            bypassed: answer.bypassed,
+            declared,
         })
     }
 }

@@ -619,3 +619,37 @@ fn keeping_for_others_turns_only_a_planned_row() {
         absent
     );
 }
+
+fn resolver_state(wired: &[&str], bypassed: bool) -> mixengine_platform::ResolverState {
+    let tlds = |list: &[&str]| list.iter().map(|tld| (*tld).to_owned()).collect::<Vec<_>>();
+
+    mixengine_platform::ResolverState {
+        method: mixengine_platform::ResolverMethod::SystemdLink,
+        wired: if bypassed { Vec::new() } else { tlds(wired) },
+        missing: None,
+        bypassed: bypassed
+            .then(|| "programs on this machine do not ask systemd-resolved".to_owned()),
+        declared: tlds(wired),
+    }
+}
+
+/// Found running M34: a link an earlier grant wrote, on a machine whose programs never reach it,
+/// is still this home's to remove.
+#[test]
+fn a_link_programs_never_reach_is_still_revoked() {
+    let removal = machine::resolver_removal(&resolver_state(&["test"], true), 53_535);
+
+    assert!(matches!(removal, Removal::Planned { .. }), "{removal:?}");
+}
+
+#[test]
+fn a_machine_that_declares_nothing_has_nothing_to_revoke() {
+    assert!(matches!(
+        machine::resolver_removal(&resolver_state(&[], true), 53_535),
+        Removal::Absent {}
+    ));
+    assert!(matches!(
+        machine::resolver_removal(&resolver_state(&[], false), 53_535),
+        Removal::Absent {}
+    ));
+}

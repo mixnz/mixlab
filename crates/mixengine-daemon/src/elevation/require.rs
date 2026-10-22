@@ -189,6 +189,31 @@ impl Elevation {
         }
     }
 
+    /// Recompute this home's queued hosts row, when there is one, against what the machine routes
+    /// now.
+    ///
+    /// **A row is the block as of when it was queued**, and what the block should hold depends on
+    /// the wiring, which a start reads again. Found running M34: a row asking to empty the block,
+    /// queued while programs reached the resolver, outlived a restart on which they no longer did,
+    /// and granting it would have taken the home's names off the machine. Only a queued row is
+    /// recomputed; a start that found none asks for nothing, as before.
+    ///
+    /// # Errors
+    ///
+    /// The wire error of a row that could not be read or written.
+    pub(crate) async fn refresh_a_queued_hosts_row(&self) -> Result<(), Error> {
+        let tag = mixengine_platform::hosts::tag_for(&self.home);
+
+        let queued = self.status().await?.pending.iter().any(|waiting| {
+            matches!(&waiting.op, PrivilegedOp::HostsApply { home: Some(home), .. } if *home == tag)
+        });
+
+        match queued {
+            true => self.require_hosts().await,
+            false => Ok(()),
+        }
+    }
+
     /// Ask for the hosts blocks under `tags` to be emptied — homes that are gone left them (ADR
     /// 0066). The helper empties one only after its own ledger says that home is gone.
     ///

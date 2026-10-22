@@ -48,9 +48,11 @@ impl ResolverConfig for Resolver {
         });
 
         Ok(ResolverState {
+            declared: wired.clone(),
             method: ResolverMethod::ResolverDirectory,
             wired,
             missing,
+            bypassed: None,
         })
     }
 }

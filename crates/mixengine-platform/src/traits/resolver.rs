@@ -49,6 +49,22 @@ pub struct ResolverState {
 
     /// Why the rest are not, in words, for `mix doctor` (T47).
     pub missing: Option<String>,
+
+    /// Why programs on this machine never reach the mechanism, or [`None`] when they do.
+    ///
+    /// **Only Linux fills it**: a `systemd-networkd` link routes what is asked of
+    /// `systemd-resolved`, and a machine whose programs ask another server routes nothing through
+    /// it, however right its files are. When it is set, [`wired`](Self::wired) is empty,
+    /// [`plan`](Self::plan) asks for nothing and [`target`](Self::target) still names what an
+    /// earlier grant wrote.
+    pub bypassed: Option<String>,
+
+    /// The TLDs this machine's configuration routes here, whether or not programs reach it.
+    ///
+    /// The same list as [`wired`](Self::wired) except where [`bypassed`](Self::bypassed) is set:
+    /// there the files an earlier grant wrote are still on disk and still this home's to remove,
+    /// and an uninstall reads this to know so.
+    pub declared: Vec<String>,
 }
 
 impl ResolverState {
@@ -70,6 +86,12 @@ impl ResolverState {
             .collect();
 
         if tlds.is_empty() {
+            return None;
+        }
+
+        // A grant would rewrite files already on disk and change nothing programs ask; asking for
+        // one would spend a prompt on every start, forever.
+        if self.bypassed.is_some() {
             return None;
         }
 
@@ -152,7 +174,25 @@ mod tests {
             method,
             wired: wired.iter().map(|tld| (*tld).to_owned()).collect(),
             missing: None,
+            bypassed: None,
+            declared: wired.iter().map(|tld| (*tld).to_owned()).collect(),
         }
+    }
+
+    /// A machine whose programs skip the mechanism asks for no grant, and an uninstall can still
+    /// take away what an earlier grant wrote.
+    #[test]
+    fn a_bypassed_machine_asks_for_nothing_and_can_still_be_undone() {
+        let state = ResolverState {
+            bypassed: Some("programs here ask another server".to_owned()),
+            ..state(ResolverMethod::SystemdLink, &[])
+        };
+
+        assert_eq!(state.plan(&["test"], 53_535), None);
+        assert_eq!(
+            state.target(53_535),
+            Some(ResolverTarget::SystemdLink { port: 53_535 })
+        );
     }
 
     /// A machine already wired asks for nothing, so no prompt is spent on a row whose only possible

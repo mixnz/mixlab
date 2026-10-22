@@ -120,6 +120,98 @@ async fn a_resolver_that_already_routes_withdraws_what_was_queued() {
     );
 }
 
+/// Found running M34: a machine whose programs skip `systemd-resolved` is asked for no wiring, and
+/// a row an earlier reading queued goes. A grant would rewrite files already on disk and change
+/// nothing anybody asks.
+#[tokio::test]
+async fn a_resolver_programs_never_ask_is_not_asked_for() {
+    let (home, elevation, _events, _machine) = registry_resolving(
+        mock::Host::with_bypassed_resolver(
+            "/tmp/mixengine",
+            mixengine_platform::ResolverMethod::SystemdLink,
+            "programs on this machine do not ask systemd-resolved: …",
+        ),
+        crate::dns::Dns::wired_for_tests(),
+    )
+    .await;
+    with_an_installed_helper(&home);
+
+    elevation.require_resolver().await.unwrap();
+    assert!(
+        mixengine_core::elevation::pending(&elevation.store)
+            .await
+            .unwrap()
+            .is_empty(),
+        "a resolver programs never ask was asked for"
+    );
+
+    sqlx::query(
+        "INSERT INTO pending_privileged_ops (op, dedupe_key, requested_at) \
+             VALUES ('{\"op\":\"probe\"}', 'resolver', 1)",
+    )
+    .execute(elevation.store.pool())
+    .await
+    .unwrap();
+
+    elevation.require_resolver().await.unwrap();
+
+    assert!(
+        mixengine_core::elevation::pending(&elevation.store)
+            .await
+            .unwrap()
+            .is_empty(),
+        "the resolver row outlived a probe that found nothing to ask for"
+    );
+}
+
+/// Found running M34: a row queued to empty the block while names came through DNS is recomputed
+/// at the next start, which found programs no longer reach the resolver, so it asks for the
+/// home's names rather than taking them away.
+#[tokio::test]
+async fn a_queued_hosts_row_is_recomputed_against_what_routes_now() {
+    let (home, elevation, _events, _machine) =
+        registry(mock::Host::with_hosts("/tmp/mixengine", [])).await;
+    with_an_installed_helper(&home);
+    a_site_named(&elevation.store, "kept.test").await;
+
+    let tag = mixengine_platform::hosts::tag_for(home.path());
+    elevation
+        .enqueue_needing_a_helper(&PrivilegedOp::hosts_apply(Some(tag), Vec::new()))
+        .await
+        .unwrap();
+
+    elevation.refresh_a_queued_hosts_row().await.unwrap();
+
+    let pending = mixengine_core::elevation::pending(&elevation.store)
+        .await
+        .unwrap();
+    assert_eq!(pending.len(), 1, "{pending:?}");
+    assert!(
+        matches!(&pending[0].op, PrivilegedOp::HostsApply { entries, .. }
+            if entries.iter().any(|entry| entry.domain == "kept.test")),
+        "the queued row still empties the block: {pending:?}"
+    );
+}
+
+/// A start with no hosts row queued asks for nothing, even where the block differs: putting a
+/// block back is `--repair`'s to ask, as it was.
+#[tokio::test]
+async fn a_start_with_no_hosts_row_queued_asks_for_nothing() {
+    let (home, elevation, _events, _machine) =
+        registry(mock::Host::with_hosts("/tmp/mixengine", [])).await;
+    with_an_installed_helper(&home);
+    a_site_named(&elevation.store, "missing.test").await;
+
+    elevation.refresh_a_queued_hosts_row().await.unwrap();
+
+    assert!(
+        mixengine_core::elevation::pending(&elevation.store)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
 /// **T179**, for the trust store: a home with no authority has nothing to be trusted, so an
 /// install queued for an authority that is gone goes with it (the design's Settled 1).
 #[tokio::test]

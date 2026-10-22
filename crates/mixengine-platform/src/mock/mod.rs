@@ -574,6 +574,20 @@ impl Host {
         }
     }
 
+    /// A host whose machine has `method` and whose programs never reach it, for `reason` — the
+    /// server M34 ran on, where AdGuard Home had turned `systemd-resolved`'s stub off.
+    #[must_use]
+    pub fn with_bypassed_resolver(
+        home: impl Into<PathBuf>,
+        method: crate::ResolverMethod,
+        reason: &str,
+    ) -> Self {
+        Self {
+            resolver: resolver::Resolver::bypassed(method, reason),
+            ..Self::with_home(home)
+        }
+    }
+
     /// A host that cannot say what it routes, with `reason`.
     ///
     /// **Not a reason to fail a start**, for the reason

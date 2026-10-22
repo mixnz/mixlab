@@ -96,7 +96,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       elevation dialog, found re-measuring T211i: *"Everything below will be changed in one
       prompt"* where the daemon cannot raise one, and *"Anything marked below waits for this
       screen"* where nothing is marked.
-- [ ] **T211j** A resolver that glibc never asks is read as wired, found running M34 on 2026-10-22.
+- [x] **T211j** A resolver that glibc never asks is read as wired, found running M34 on 2026-10-22.
       On an Ubuntu 24.04 server with AdGuard Home, `resolved.conf.d/adguardhome.conf` sets
       `DNSStubListener=no` and `/etc/resolv.conf` names `127.0.0.1`, `1.1.1.1` and `8.8.8.8`, so
       after `resolver-apply` the `mixengine0` link answers `resolvectl query nothere.test` and
@@ -107,6 +107,15 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       machine. Wired is to mean that the system's own lookup reaches MixEngine's server: read
       whether `/etc/resolv.conf` is resolved's stub before calling the link wired, keep the hosts
       block while it is not, and have `mix doctor` name the file and the setting in the way.
+      Design: [2026-10-23-t211j-a-resolver-programs-never-ask-design.md](../specs/2026-10-23-t211j-a-resolver-programs-never-ask-design.md).
+      **Verified** on the same machine on 2026-10-23 with this branch's package: a fresh home asked
+      for no `resolver-apply`, `mix status` gave the reason, the block kept `m34.test` and `mix
+      doctor` named both files and `libnss-resolve`; with `libnss-resolve` installed the grant wired
+      the link and `getent` answered `anything.m34.test`, `foo.localhost` and `bar.internal` while
+      AdGuard stayed upstream; with it removed again, the next start withdrew the queued *"remove
+      MixEngine's block"*; and `mix uninstall` took a link programs never reach. The measurement
+      found two gaps the design then closed: a queued hosts row outlived a restart that changed the
+      reading, and the uninstall planned a revoke only from `wired`. It also found T211m.
 - [x] **T211k** `resolver-revoke` on Linux removes `10-mixengine.netdev` and `10-mixengine.network`
       and reloads systemd-networkd, which leaves the `mixengine0` dummy link up until the next boot;
       found by the same run, where `mix uninstall` printed *"removed … the DNS routing"* and `ip
@@ -128,6 +137,15 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       where `locate_window` finds it, as `database.client` does, since a Mac's two packages share a
       receipt; the password rows say *"forgot 1"*, true of either store; and the last line names
       the package the plan's row named, both only where no row did.
+- [ ] **T211m** An uninstall that has something to revoke on a machine whose log an earlier
+      uninstall removed leaves the log it just made, and so keeps the home. Found verifying T211j
+      on 2026-10-23: a fresh home on a machine still holding `mixengine0` granted `resolver-revoke`
+      and `audit-log-remove`, and the helper answered the second *"this machine has no record yet of
+      which other homes use it"* (`homes.rs`, ADR 0066), because the ledger did not exist before the
+      batch. It did not: this batch made it, and the log with it, so no other home can be using
+      either. The run printed *"LEFT … this was not here before the uninstall and it is here now"*
+      and kept the home; a second `mix uninstall` finished. Keep the log only when the ledger or
+      the log was there before the batch.
 - [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
       account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
       headless host has no prompt to show.

@@ -272,3 +272,49 @@ fn a_system_with_no_such_policy_is_skipped_rather_than_called_clean() {
 
     assert!(because.contains("no such thing here"), "{because}");
 }
+
+/// Found running M34: a machine whose programs skip `systemd-resolved` is a note naming why, never
+/// a problem `--repair` would answer with a grant that changes nothing.
+#[test]
+fn a_resolver_programs_never_ask_is_a_note() {
+    let state = mixengine_platform::ResolverState {
+        method: mixengine_platform::ResolverMethod::SystemdLink,
+        wired: Vec::new(),
+        missing: Some("programs on this machine do not ask systemd-resolved: …".to_owned()),
+        bypassed: Some("programs on this machine do not ask systemd-resolved: …".to_owned()),
+        declared: vec!["test".to_owned()],
+    };
+
+    let Outcome::Note { because } = super::resolver_outcome(Ok(state), 3) else {
+        panic!("the person's own DNS setup is news, not a fault");
+    };
+
+    assert!(
+        because.starts_with("names under .test, .localhost and .internal come from the hosts file"),
+        "{because}"
+    );
+    assert!(because.contains("do not ask systemd-resolved"), "{because}");
+    assert!(
+        because.contains("sudo apt install libnss-resolve"),
+        "the way out, measured on the machine that found this: {because}"
+    );
+}
+
+#[test]
+fn a_resolver_routing_less_than_asked_is_still_a_problem() {
+    let state = mixengine_platform::ResolverState {
+        method: mixengine_platform::ResolverMethod::SystemdLink,
+        wired: vec!["test".to_owned()],
+        missing: Some("not all of them".to_owned()),
+        bypassed: None,
+        declared: vec!["test".to_owned()],
+    };
+
+    assert!(matches!(
+        super::resolver_outcome(Ok(state), 3),
+        Outcome::Problem {
+            id: ProblemId::ResolverNotWired,
+            ..
+        }
+    ));
+}

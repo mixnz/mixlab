@@ -66,7 +66,7 @@ done
 | [31 — MixLab updates itself](phase-31-mixlab-updates-itself.md) | A MixLab user is told about a release and installs it from MixLab; MixEngine never looks or installs unasked | T187a–T187g | 7 / 7 | **M31** on Windows, a MixLab whose MixEngine never started comes back on the next release from Settings with no `mixengined` at any point, one with MixEngine running keeps its services, and an idle `mixengined` makes no request to the feed |
 | [32 — The tray is MixLab's](phase-32-the-tray-is-mixlabs.md) | MixLab runs in the background on every preset; a module lends the tray a section | T192a–T192e | 5 / 5 | **M32** on *Database tools*, a terminal session survives the close button and the icon brings it back; with MixEngine visible the panel works as M22 says |
 | [33 — A line shows its newest](phase-33-a-line-shows-its-newest.md) | The available list is one row per line, and an installed version updates to its line's newest patch on a click | T193a–T193d | 4 / 4 | **M33** PHP 8.4.24 serving a site updates to 8.4.25 from MixLab with its extensions kept and 8.4.24 gone; a MariaDB 11.4 instance updates within its line with its data intact |
-| [34 — A headless host](phase-34-a-headless-host.md) | A Linux release with no desktop runs databases, keeps their passwords, and comes back after a reboot on its own | T194a–T211l | 19 / 20 | **M34** on an Ubuntu 24.04 server reached only over SSH, a MariaDB first-runs on the file store, survives a daemon restart, and answers after an unattended reboot; `mix elevation grant` and `mix uninstall` finish over SSH |
+| [34 — A headless host](phase-34-a-headless-host.md) | A Linux release with no desktop runs databases, keeps their passwords, and comes back after a reboot on its own | T194a–T211m | 20 / 21 | **M34** on an Ubuntu 24.04 server reached only over SSH, a MariaDB first-runs on the file store, survives a daemon restart, and answers after an unattended reboot; `mix elevation grant` and `mix uninstall` finish over SSH |
 | [35 — An index that stays small](phase-35-an-index-that-stays-small.md) | The package index costs one small request when nothing was published, and only the kinds a home uses when something was | T196a–T196e | 5 / 5 | **M35** an idle daemon asks for one signature every six hours, a fresh home listing runtimes fetches six kind files and not eighteen, and an upgraded home cannot be walked backwards |
 | [36 — One command installs MixLab](phase-36-one-command-installs-mixlab.md) | One line in a terminal picks, checks and installs the right installer | T197–T197a | 2 / 2 | **M36** `curl … \| sh` and `irm … \| iex` install the headless programs on a clean Linux, macOS and Windows runner, and `mix --version` names the release |
 | [37 — The window closes its known gaps](phase-37-the-window-closes-its-known-gaps.md) | Every daemon method a person in the window needs has its button; the rest say why not | T199–T199a | 2 / 2 | **M37** `check-client-surface` reports 0 known gaps |
@@ -136,8 +136,8 @@ that does not match costs that kind and is named in the lists. The published set
 the new client on 2026-09-30 and decodes to exactly what `index.json` says.
 Design: [2026-09-30-t196-mixengine-reads-index-schema-2-design.md](../specs/2026-09-30-t196-mixengine-reads-index-schema-2-design.md).
 
-**M34 is reached**, and what phase 34 still holds open is T211j, which the
-milestone does not ask for — 19 of 20. On 2026-10-22, on an Ubuntu 24.04 server with no desktop and
+**M34 is reached**, and what phase 34 still holds open is T211m, which the
+milestone does not ask for — 20 of 21. On 2026-10-22, on an Ubuntu 24.04 server with no desktop and
 no `pkexec`, reached over SSH, a release of this branch chose the file store, first-ran a MariaDB,
 kept its password across a daemon restart, and was back with the database answering after a reboot
 nobody logged in to for nineteen hours; in the same SSH session `mix elevation grant` applied its

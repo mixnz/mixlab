@@ -66,9 +66,11 @@ impl ResolverConfig for Resolver {
         });
 
         Ok(ResolverState {
+            declared: wired.clone(),
             method: ResolverMethod::Nrpt,
             wired,
             missing,
+            bypassed: None,
         })
     }
 }

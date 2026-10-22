@@ -20,6 +20,9 @@
   says when the daemon starts at boot.
 - On a headless install, `mix uninstall` names the one package to remove and no longer mentions
   MixLab.
+- On a Linux machine whose DNS goes past systemd-resolved, such as one running AdGuard Home or
+  Pi-hole, MixEngine keeps your sites in the hosts file instead of saying wildcards work, and `mix
+  doctor` says how to turn them on.
 - `mix job status` no longer shows a finished job stuck at 40% with its last step, `mix doctor
   --repair` names the hosts fix once, and MixLab's permission dialog lists each hosts name and only
   says what is true of that dialog.

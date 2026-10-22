@@ -88,23 +88,27 @@ pub(super) fn resolver_wiring(uninstall: &Uninstall) -> Residue {
         }
     };
 
-    let location = resolver_place(state.method).to_owned();
+    Residue {
+        id: ResidueId::ResolverWiring,
+        what,
+        location: resolver_place(state.method).to_owned(),
+        outcome: resolver_removal(&state, port),
+    }
+}
 
-    // **`wired` and not `method`.** A machine with a mechanism and nothing routed through it has
-    // nothing of ours to remove, and asking to revoke there would spend a prompt on an operation
-    // whose only outcome is `AlreadyDone` — T41's D11, one capability along.
-    let outcome = match (state.wired.is_empty(), state.target(port)) {
+/// Whether there is wiring of this home's to revoke, as `state` reads it.
+///
+/// **`declared` and not `method`.** A machine with a mechanism and nothing routed through it has
+/// nothing of ours to remove, and asking to revoke there would spend a prompt on an operation
+/// whose only outcome is `AlreadyDone` — T41's D11, one capability along. And `declared` rather
+/// than `wired`, found running M34: a link programs never reach is still on disk, and still this
+/// home's to take.
+pub(super) fn resolver_removal(state: &mixengine_platform::ResolverState, port: u16) -> Removal {
+    match (state.declared.is_empty(), state.target(port)) {
         (false, Some(target)) => Removal::Planned {
             how: PrivilegedOp::ResolverRevoke { target }.describe(),
         },
         _ => Removal::Absent {},
-    };
-
-    Residue {
-        id: ResidueId::ResolverWiring,
-        what,
-        location,
-        outcome,
     }
 }
 
