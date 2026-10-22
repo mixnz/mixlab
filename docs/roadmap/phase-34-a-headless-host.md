@@ -107,11 +107,14 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       machine. Wired is to mean that the system's own lookup reaches MixEngine's server: read
       whether `/etc/resolv.conf` is resolved's stub before calling the link wired, keep the hosts
       block while it is not, and have `mix doctor` name the file and the setting in the way.
-- [ ] **T211k** `resolver-revoke` on Linux removes `10-mixengine.netdev` and `10-mixengine.network`
+- [x] **T211k** `resolver-revoke` on Linux removes `10-mixengine.netdev` and `10-mixengine.network`
       and reloads systemd-networkd, which leaves the `mixengine0` dummy link up until the next boot;
       found by the same run, where `mix uninstall` printed *"removed … the DNS routing"* and `ip
       link` still listed `mixengine0`, unmanaged, with no address and no DNS. Delete the link
       (`networkctl delete mixengine0`) after removing its files, and say so in the detail.
+      **Verified** on the same machine on 2026-10-22 with the helper rebuilt: a grant brought
+      `mixengine0` up, and after `mix uninstall` `ip link` no longer had it. A link left with no
+      files by an earlier helper is deleted too.
 - [ ] **T211l** Display slips the same run found: `mix doctor` reads a hosts block that holds names
       this home no longer wants as *"the hosts file does not hold the names this home's sites
       need"* (`doctor.rs`, one sentence for a block that differs either way); `mix autostart

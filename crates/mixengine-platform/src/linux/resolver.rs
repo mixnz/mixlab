@@ -35,6 +35,11 @@ const RESOLVED_RUNTIME: &str = "/run/systemd/resolve";
 #[cfg(feature = "host")]
 const NETWORKD_RUNTIME: &str = "/run/systemd/netif";
 
+/// One directory per network link the kernel has, which is how a revoke asks whether the link is
+/// still there.
+#[cfg(feature = "elevated")]
+const SYS_CLASS_NET: &str = "/sys/class/net";
+
 /// This system's answer.
 #[cfg(feature = "host")]
 #[derive(Debug, Default)]
@@ -162,7 +167,12 @@ pub(crate) fn apply(
     })
 }
 
-/// Take both files away and bring the link down with them.
+/// Take both files away, then the link they brought up.
+///
+/// **The link is deleted by name, after the reload.** Removing the `.netdev` and restarting
+/// `systemd-networkd` leaves the dummy link up until the next boot: networkd creates a netdev from
+/// its file and never deletes one whose file went. Deleting it before the reload would let a file
+/// still on disk bring it back.
 ///
 /// # Errors
 ///
@@ -190,22 +200,47 @@ pub(crate) fn revoke(
         return Ok(crate::resolver::Change::Unchanged);
     }
 
-    let mut changed = false;
-    changed |= remove(networkd::NETDEV_PATH)?;
-    changed |= remove(networkd::NETWORK_PATH)?;
+    let mut files = false;
+    files |= remove(networkd::NETDEV_PATH)?;
+    files |= remove(networkd::NETWORK_PATH)?;
 
-    if !changed {
-        return Ok(crate::resolver::Change::Unchanged);
+    if files {
+        reload()?;
     }
 
-    reload()?;
+    // Asked of the kernel rather than read from `networkctl`'s exit status, which is 1 both for a
+    // link that is not there and for a delete that failed. A link with no files is one an earlier
+    // helper left behind, and nothing else would ever take it away.
+    let link = std::path::Path::new(SYS_CLASS_NET)
+        .join(networkd::LINK)
+        .exists();
+    if link {
+        delete_link()?;
+    }
 
-    Ok(crate::resolver::Change::Written {
-        detail: format!(
+    Ok(revoked(files, link))
+}
+
+/// What a revoke that removed the files, the link, both or neither says it did.
+#[cfg(feature = "elevated")]
+fn revoked(files: bool, link: bool) -> crate::resolver::Change {
+    let detail = match (files, link) {
+        (false, false) => return crate::resolver::Change::Unchanged,
+        (true, true) => format!(
             "removed the {} link and its two files under /etc/systemd/network",
             networkd::LINK
         ),
-    })
+        (true, false) => format!(
+            "removed the two files under /etc/systemd/network; the {} link was already gone",
+            networkd::LINK
+        ),
+        (false, true) => format!(
+            "removed the {} link, whose files under /etc/systemd/network were already gone",
+            networkd::LINK
+        ),
+    };
+
+    crate::resolver::Change::Written { detail }
 }
 
 /// Write `contents` to `path` unless it already says exactly that. Answers whether it wrote.
@@ -250,19 +285,39 @@ fn remove(path: &str) -> crate::Result<bool> {
 /// is not one to ship on the strength of its documentation.
 #[cfg(feature = "elevated")]
 fn reload() -> crate::Result<()> {
-    const RELOAD: [&str; 3] = ["systemctl", "restart", "systemd-networkd"];
+    run(
+        ["systemctl", "restart", "systemd-networkd"],
+        "run systemctl to reload systemd-networkd",
+        "reload systemd-networkd",
+    )
+}
 
-    let output = std::process::Command::new(RELOAD[0])
-        .args(&RELOAD[1..])
+/// Delete the dummy link, which removing its file does not — measured on systemd 255: `networkctl
+/// delete mixengine0` exits 0 and the link is gone, and against a link that is not there exits 1
+/// with *"No such device"*. The same fixed-command shape as [`reload`].
+#[cfg(feature = "elevated")]
+fn delete_link() -> crate::Result<()> {
+    run(
+        ["networkctl", "delete", networkd::LINK],
+        "run networkctl to delete MixEngine's link",
+        "delete MixEngine's link",
+    )
+}
+
+/// Run one constant argument vector, reading a non-zero exit as `failed` with its stderr.
+#[cfg(feature = "elevated")]
+fn run(command: [&str; 3], start: &'static str, failed: &'static str) -> crate::Result<()> {
+    let output = std::process::Command::new(command[0])
+        .args(&command[1..])
         .output()
         .map_err(|source| crate::Error::Os {
-            action: "run systemctl to reload systemd-networkd",
+            action: start,
             source,
         })?;
 
     if !output.status.success() {
         return Err(crate::Error::Os {
-            action: "reload systemd-networkd",
+            action: failed,
             source: std::io::Error::other(
                 String::from_utf8_lossy(&output.stderr).trim().to_owned(),
             ),
@@ -319,5 +374,44 @@ mod tests {
     #[test]
     fn nothing_declared_is_nothing_wired() {
         assert!(wired_in("", &["test"], 53_535).is_empty());
+    }
+}
+
+#[cfg(all(test, feature = "elevated"))]
+mod revoke_tests {
+    use super::*;
+    use crate::resolver::Change;
+
+    /// The detail says what went, so a revoke that left the link up cannot read as one that
+    /// took it.
+    #[test]
+    fn a_revoke_says_whether_the_link_went_with_its_files() {
+        let Change::Written { detail } = revoked(true, true) else {
+            panic!("files and link removed is a change");
+        };
+        assert!(
+            detail.contains("mixengine0 link and its two files"),
+            "{detail}"
+        );
+
+        let Change::Written { detail } = revoked(true, false) else {
+            panic!("files removed is a change");
+        };
+        assert!(detail.contains("already gone"), "{detail}");
+    }
+
+    /// A link an earlier helper left with no files is still this revoke's to take.
+    #[test]
+    fn a_link_with_no_files_is_still_removed() {
+        let Change::Written { detail } = revoked(false, true) else {
+            panic!("a leftover link removed is a change");
+        };
+        assert!(detail.contains("files"), "{detail}");
+        assert!(detail.contains("were already gone"), "{detail}");
+    }
+
+    #[test]
+    fn nothing_there_is_unchanged() {
+        assert!(matches!(revoked(false, false), Change::Unchanged));
     }
 }

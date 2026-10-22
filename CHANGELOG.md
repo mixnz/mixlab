@@ -14,6 +14,8 @@
 - With two MixEngine homes on one machine, such as a release and a development build, each keeps
   its own names in the hosts file, and uninstalling one leaves the other's names, DNS routing,
   privileged helper and audit log in place.
+- On Linux, `mix uninstall` also takes away MixEngine's `mixengine0` network link. Before, it
+  stayed until the machine restarted.
 - `mix job status` no longer shows a finished job stuck at 40% with its last step, `mix doctor
   --repair` names the hosts fix once, and MixLab's permission dialog lists each hosts name and only
   says what is true of that dialog.
