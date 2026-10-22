@@ -140,6 +140,9 @@ async fn answering_no_removes_nothing_and_is_not_a_failure() {
     assert_eq!(home.contents(), before);
 }
 
+/// The name the round trip's site answers to, and what finds this home's hosts block.
+const SITE: &str = "uninstall-smoke.test";
+
 /// The clean-machine round trip — roadmap task **T87**, and the smoke test the task asks for.
 ///
 /// **A fresh CI runner is the clean VM.** It has never had MixEngine on it, so everything
@@ -163,8 +166,47 @@ async fn nothing_of_ours_is_left_on_this_machine() {
     let home = Home::new();
     let mut daemon = home.start_daemon();
 
-    // Everything a first run asks for: the helper, the certificate authority, the resolver wiring
-    // and the port grant, in one batch behind one prompt.
+    // A name of this home's own, before the grant so its hosts block is written in the same batch
+    // as everything else a first run asks for — on a machine with no scoped resolver, which is what
+    // a Linux runner without a systemd user manager is. Neither call is asserted on: what this is
+    // arranging is the *machine*, and `held` below is what says whether the arrangement worked.
+    //
+    // **The name is what finds this home's block.** Each home writes a block of its own (ADR 0066),
+    // and the suites before this one in the same job leave theirs, which this uninstall rightly
+    // leaves alone; a reading of the marker alone found one of theirs and called it ours.
+    let root = home.path().join("smoke-project");
+    std::fs::create_dir_all(&root).expect("a directory inside this home");
+
+    let project = home.mix(&[
+        "project",
+        "create",
+        &root.display().to_string(),
+        "--name",
+        "smoke",
+    ]);
+    println!(
+        "--- the project ---\n{}{}",
+        stdout(&project),
+        stderr(&project)
+    );
+
+    // `--kind static`, because the default is php and a runner has no PHP installed: measured on
+    // 2026-09-04, where the site refused with "no php version is installed as the default". Nothing
+    // here needs a program to run; what it needs is a *name*.
+    let site = home.mix(&[
+        "site",
+        "create",
+        "--project",
+        "smoke",
+        "--kind",
+        "static",
+        "--domain",
+        SITE,
+    ]);
+    println!("--- the site ---\n{}{}", stdout(&site), stderr(&site));
+
+    // Everything a first run asks for: the helper, the certificate authority, the resolver wiring,
+    // the port grant and the hosts block, in one batch behind one prompt.
     let granted = home.mix(&["elevation", "grant", "--yes"]);
     println!(
         "--- the grant ---\n{}{}",
@@ -193,41 +235,6 @@ async fn nothing_of_ours_is_left_on_this_machine() {
         && waiting["last"]["still_pending"].as_u64() == Some(0);
     println!("--- did the grant apply? ---\n{applied}: {waiting}");
 
-    // And a name of this home's own, so the hosts block has something in it on a machine with no
-    // scoped resolver — which is what a Linux runner without a systemd user manager is. Neither call
-    // is asserted on: what this is arranging is the *machine*, and `held` below is what says whether
-    // the arrangement worked.
-    let root = home.path().join("smoke-project");
-    std::fs::create_dir_all(&root).expect("a directory inside this home");
-
-    let project = home.mix(&[
-        "project",
-        "create",
-        &root.display().to_string(),
-        "--name",
-        "smoke",
-    ]);
-    println!(
-        "--- the project ---\n{}{}",
-        stdout(&project),
-        stderr(&project)
-    );
-
-    // `--kind static`, because the default is php and a runner has no PHP installed: measured on
-    // 2026-09-04, where the site refused with "no php version is installed as the default". Nothing
-    // here needs a program to run; what it needs is a *name*.
-    let site = home.mix(&[
-        "site",
-        "create",
-        "--project",
-        "smoke",
-        "--kind",
-        "static",
-        "--domain",
-        "uninstall-smoke.test",
-    ]);
-    println!("--- the site ---\n{}{}", stdout(&site), stderr(&site));
-
     // **This home's authority by key-id, and not "any MixEngine".** The suites that ran before this
     // one in the same job put authorities of their own homes into the same store, and an uninstall
     // removes exactly one — so a reading that matched the product name would find somebody else's
@@ -238,7 +245,7 @@ async fn nothing_of_ours_is_left_on_this_machine() {
         .to_owned();
     println!("--- this home's authority ---\n{authority}");
 
-    let held = machine::reading(&authority);
+    let held = machine::reading(&authority, SITE);
     println!("--- what this runner now holds ---\n{held}");
 
     let printed = home.mix(&["uninstall", "--yes"]);
@@ -261,7 +268,7 @@ async fn nothing_of_ours_is_left_on_this_machine() {
                 "the daemon outlived the home it was serving"
             );
 
-            let after = machine::reading(&authority);
+            let after = machine::reading(&authority, SITE);
             println!("--- what is left ---\n{after}");
             held.gone(&after);
 
@@ -296,7 +303,7 @@ async fn nothing_of_ours_is_left_on_this_machine() {
                 "an uninstall that left things behind reported success: {said}"
             );
 
-            let after = machine::reading(&authority);
+            let after = machine::reading(&authority, SITE);
             println!("--- what is left ---\n{after}");
         }
     }

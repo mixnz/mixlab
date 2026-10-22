@@ -2,9 +2,6 @@ use std::fmt;
 use std::path::Path;
 use std::process::Command;
 
-/// The marker MixEngine's hosts block is wrapped in, spelled out rather than imported.
-const HOSTS_MARKER: &str = "# BEGIN MixEngine";
-
 /// What one reading found, per thing. [`None`] is "nothing of ours there".
 pub(super) struct Reading {
     hosts: Option<String>,
@@ -90,10 +87,12 @@ impl fmt::Display for Reading {
 /// Read this machine, now.
 ///
 /// `authority` is the eight-character key-id of the home being asked about, which is what scopes
-/// the trust row to one home's certificate rather than to the product's name.
-pub(super) fn reading(authority: &str) -> Reading {
+/// the trust row to one home's certificate rather than to the product's name. `site` does the same
+/// for the hosts row: every home writes a block of its own (ADR 0066), and the one holding this
+/// home's name is this home's.
+pub(super) fn reading(authority: &str, site: &str) -> Reading {
     Reading {
-        hosts: containing(&hosts_file(), HOSTS_MARKER),
+        hosts: containing(&hosts_file(), site),
         resolver: resolver(),
         port_access: port_access(),
         trust: trust(authority),
