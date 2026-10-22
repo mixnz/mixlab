@@ -96,6 +96,30 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       elevation dialog, found re-measuring T211i: *"Everything below will be changed in one
       prompt"* where the daemon cannot raise one, and *"Anything marked below waits for this
       screen"* where nothing is marked.
+- [ ] **T211j** A resolver that glibc never asks is read as wired, found running M34 on 2026-10-22.
+      On an Ubuntu 24.04 server with AdGuard Home, `resolved.conf.d/adguardhome.conf` sets
+      `DNSStubListener=no` and `/etc/resolv.conf` names `127.0.0.1`, `1.1.1.1` and `8.8.8.8`, so
+      after `resolver-apply` the `mixengine0` link answers `resolvectl query nothere.test` and
+      `getent hosts anything.m34.test`, `foo.localhost` and `bar.internal` answer nothing. `mix
+      status` still says *"wildcards for *.test, *.localhost, *.internal"*, `mix domain status`
+      says `wildcard 127.0.0.1`, `mix doctor` says nothing about it, and the daemon queues
+      *"remove MixEngine's block from the hosts file"* — granted, it would take `m34.test` off this
+      machine. Wired is to mean that the system's own lookup reaches MixEngine's server: read
+      whether `/etc/resolv.conf` is resolved's stub before calling the link wired, keep the hosts
+      block while it is not, and have `mix doctor` name the file and the setting in the way.
+- [ ] **T211k** `resolver-revoke` on Linux removes `10-mixengine.netdev` and `10-mixengine.network`
+      and reloads systemd-networkd, which leaves the `mixengine0` dummy link up until the next boot;
+      found by the same run, where `mix uninstall` printed *"removed … the DNS routing"* and `ip
+      link` still listed `mixengine0`, unmanaged, with no address and no DNS. Delete the link
+      (`networkctl delete mixengine0`) after removing its files, and say so in the detail.
+- [ ] **T211l** Display slips the same run found: `mix doctor` reads a hosts block that holds names
+      this home no longer wants as *"the hosts file does not hold the names this home's sites
+      need"* (`doctor.rs`, one sentence for a block that differs either way); `mix autostart
+      status` heads an at-boot entry with *"starts when you log in"*; `mix database client` says
+      *"the headless archive has none"*, a tarball T182b replaced with `mixengine-headless`; and
+      `mix uninstall` on a `mixengine-headless` install keeps *"the MixLab application"*, says it
+      forgets passwords from *"this user's credential store"* when the store is the home's file,
+      and names `apt remove mixlab` first after its own plan named `dpkg:mixengine-headless`.
 - [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
       account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
       headless host has no prompt to show.
@@ -105,3 +129,39 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
 chooses the file store, first-runs a MariaDB, keeps its password across a daemon restart, and after
 a reboot with nobody logged in the daemon is back with the database answering; over the same SSH
 session, `mix elevation grant` applies its queue and `mix uninstall` finishes.
+
+**Reached on 2026-10-22**, on `code-server-n100`: Ubuntu 24.04.5, x86_64, systemd 255, no display
+manager and no desktop package, reached over SSH, with no `pkexec` and no Secret Service on the
+session bus. The release was this branch at `c388a161`, built on that machine by
+`packaging/linux/build-deb.sh` with `[profile.release]` as written and `MIXENGINE_RELEASE`, and
+installed as `mixengine-headless_0.0.19-1_amd64.deb` (helper 0.1.8) over a 0.0.19 install whose
+home was deleted first. Two ways it is not a tag's artifact: the four binaries were built on the
+host's glibc 2.39 rather than in `manylinux_2_28`, and `MIX_WINDOW_GLIBC` was raised to 2.39 for
+that one build and put back, since the window built on 24.04 needs 2.39 and the headless package
+does not carry it.
+
+1. `mix daemon credential-store home` answered *"from the next start"*; after `mix daemon stop`,
+   `mix status` read *"a file in this home, readable by your account only"*, and the log named
+   `credentials.json`.
+2. `mix package install mariadb 11.4.13` and `mix service create mariadb@main` first-ran it on 3309,
+   saying 3306 was taken (a MySQL in Docker holds it). The root password sat in `credentials.json`,
+   mode 0600; with it the client wrote a row, and with a wrong one it was refused.
+3. `mix daemon stop` stopped the service with the daemon; the next daemon read the file store, the
+   password hashed the same, and the row read back.
+4. With `mix service autostart mariadb@main --on` and `mix autostart enable --at-boot` (linger
+   `yes`, unit enabled), the machine rebooted at 03:51. systemd started the unit at 03:51:25 and
+   MariaDB was up a second later; nobody logged in until 23:17, and then the same password read
+   the same row.
+5. A site at `m34.test` queued `hosts-apply` beside `resolver-apply` and `trust-ca-install`.
+   `mix elevation grant` in that SSH session said before `continue?` that `sudo` would ask in this
+   terminal, ran `sudo -- …/mixengine-elevate …/request.json`, and applied all three: `/etc/hosts`
+   gained `# BEGIN MixEngine 186baeea2e723b7c`, and `/var/log/mixengine/` held `elevate.log` and a
+   `homes.json` listing this one home. `sudo` there is `NOPASSWD`, so its password prompt was not
+   exercised, and the terminal was a pty under `script` driven from the same SSH login.
+6. `mix uninstall` removed the hosts block (the file read as before it), the networkd files, the
+   authority, `/var/log/mixengine/` with the log and the ledger, the unit, the linger and the home;
+   it kept the helper and named the package that removes it, as T88d and T211d have it.
+
+What the run found is T211j, T211k and T211l, which keep the phase open: wildcard names never
+reached glibc on that machine while every surface said they did, the `mixengine0` link outlived
+`mix uninstall` until the next boot, and six sentences said something other than what happened.
