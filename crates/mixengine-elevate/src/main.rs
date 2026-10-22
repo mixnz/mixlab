@@ -274,9 +274,8 @@ fn kept(
             );
             batch.kept(home, "the privileged helper", manual, alive)
         }
-        PrivilegedOp::AuditLogRemove {} => batch.kept(
+        PrivilegedOp::AuditLogRemove {} => batch.kept_log(
             home,
-            "the audit log",
             format!("delete {} as an administrator", log.display()),
             alive,
         ),

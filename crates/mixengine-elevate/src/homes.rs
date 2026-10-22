@@ -16,6 +16,9 @@ pub(crate) struct Batch {
     /// Whether the ledger was there before this batch recorded its home.
     existed: bool,
 
+    /// Whether the audit log was there before this batch wrote a line to it.
+    log_existed: bool,
+
     /// The ledger after this batch's record, or why it could not be read.
     ledger: Result<Option<HomesLedger>, String>,
 }
@@ -26,6 +29,9 @@ impl Batch {
     /// **Never fails the batch.** A ledger that cannot be written costs a line on stderr, as an
     /// audit line does, and leaves a batch that keeps the helper and the log.
     pub(crate) fn begin(directory: &Path, home: &Path, caller: &str, now: u64) -> Self {
+        // Before the record below, and before any operation writes a line.
+        let log_existed = directory.join(crate::audit::FILE_NAME).exists();
+
         let existed = match mixengine_platform::ledger::record(directory, home, caller, now) {
             Ok(recorded) => recorded.existed_before,
             Err(error) => {
@@ -39,6 +45,7 @@ impl Batch {
 
         Self {
             existed,
+            log_existed,
             ledger: mixengine_platform::ledger::read(directory)
                 .map_err(|error| mixengine_proto::flatten(&error)),
         }
@@ -48,8 +55,30 @@ impl Batch {
     pub(crate) fn unrecorded() -> Self {
         Self {
             existed: false,
+            log_existed: false,
             ledger: Ok(None),
         }
+    }
+
+    /// [`kept`](Self::kept) for the audit log, which may also go when this batch made it.
+    ///
+    /// **Found on the server M34 ran on**: an uninstall with something to revoke, on a machine
+    /// whose log and ledger an earlier uninstall removed, wrote both afresh and then kept the log
+    /// as one other homes might use, so the uninstall reported it left behind and kept the home.
+    /// With neither there before this batch, everything in them is this batch's own. The helper
+    /// keeps the cautious rule: a package may have placed it for a home that never asked for
+    /// anything.
+    pub(crate) fn kept_log(
+        &self,
+        home: &Path,
+        manual: String,
+        alive: impl Fn(&Path) -> bool,
+    ) -> Option<OpOutcome> {
+        if !self.existed && !self.log_existed {
+            return None;
+        }
+
+        self.kept(home, "the audit log", manual, alive)
     }
 
     /// Why `what` stays for another home, as the outcome to answer with — or [`None`] when this home
@@ -114,6 +143,7 @@ mod tests {
     fn batch(existed: bool, homes: &[&str]) -> Batch {
         Batch {
             existed,
+            log_existed: true,
             ledger: Ok(Some(HomesLedger {
                 homes: homes
                     .iter()
@@ -165,6 +195,7 @@ mod tests {
     fn an_unreadable_ledger_keeps_both() {
         let unreadable = Batch {
             existed: true,
+            log_existed: true,
             ledger: Err("not JSON".to_owned()),
         };
 
@@ -193,6 +224,64 @@ mod tests {
                 )
                 .is_none()
         );
+    }
+
+    /// A log and a ledger this batch made hold nothing of another home's, so the log goes.
+    #[test]
+    fn a_log_this_batch_made_goes() {
+        let fresh = Batch {
+            log_existed: false,
+            ..batch(false, &["/homes/a"])
+        };
+
+        assert!(
+            fresh
+                .kept_log(Path::new("/homes/a"), "remove it".to_owned(), |_| true)
+                .is_none()
+        );
+    }
+
+    /// A log that was there before a ledger existed may hold another home's lines: it stays.
+    #[test]
+    fn a_log_older_than_the_ledger_stays() {
+        let kept = batch(false, &["/homes/a"]).kept_log(
+            Path::new("/homes/a"),
+            "remove it".to_owned(),
+            |_| true,
+        );
+
+        assert!(reason(kept).contains("no record yet"));
+    }
+
+    /// The helper keeps the cautious rule whatever the log says.
+    #[test]
+    fn a_fresh_batch_still_keeps_the_helper() {
+        let fresh = Batch {
+            log_existed: false,
+            ..batch(false, &["/homes/a"])
+        };
+
+        let kept = fresh.kept(
+            Path::new("/homes/a"),
+            "the privileged helper",
+            "remove it".to_owned(),
+            |_| true,
+        );
+
+        assert!(!reason(kept).is_empty());
+    }
+
+    /// `begin` reads whether the log was there before anything in the batch wrote to it.
+    #[test]
+    fn a_batch_knows_whether_the_log_was_there() {
+        let directory = tempfile::TempDir::new().expect("a directory");
+
+        let before = Batch::begin(directory.path(), Path::new("/homes/a"), "uid 501", 1);
+        std::fs::write(directory.path().join(crate::audit::FILE_NAME), "{}\n").expect("a log");
+        let after = Batch::begin(directory.path(), Path::new("/homes/a"), "uid 501", 2);
+
+        assert!(!before.log_existed);
+        assert!(after.log_existed);
     }
 
     /// The batch records its home before anything else, and a second batch finds the ledger there.

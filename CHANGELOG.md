@@ -23,6 +23,8 @@
 - On a Linux machine whose DNS goes past systemd-resolved, such as one running AdGuard Home or
   Pi-hole, MixEngine keeps your sites in the hosts file instead of saying wildcards work, and `mix
   doctor` says how to turn them on.
+- `mix uninstall` finishes in one run on a machine an earlier uninstall left with MixEngine's
+  network link still in place. Before, it kept the home and had to be run a second time.
 - `mix job status` no longer shows a finished job stuck at 40% with its last step, `mix doctor
   --repair` names the hosts fix once, and MixLab's permission dialog lists each hosts name and only
   says what is true of that dialog.

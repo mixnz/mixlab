@@ -137,7 +137,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       where `locate_window` finds it, as `database.client` does, since a Mac's two packages share a
       receipt; the password rows say *"forgot 1"*, true of either store; and the last line names
       the package the plan's row named, both only where no row did.
-- [ ] **T211m** An uninstall that has something to revoke on a machine whose log an earlier
+- [x] **T211m** An uninstall that has something to revoke on a machine whose log an earlier
       uninstall removed leaves the log it just made, and so keeps the home. Found verifying T211j
       on 2026-10-23: a fresh home on a machine still holding `mixengine0` granted `resolver-revoke`
       and `audit-log-remove`, and the helper answered the second *"this machine has no record yet of
@@ -146,6 +146,10 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       either. The run printed *"LEFT … this was not here before the uninstall and it is here now"*
       and kept the home; a second `mix uninstall` finished. Keep the log only when the ledger or
       the log was there before the batch.
+      **Verified** on the same machine on 2026-10-23 with the helper rebuilt: with no log and no
+      ledger on the machine and `mixengine0` left behind, one `mix uninstall` revoked the link, took
+      the log the batch had written, and removed the home. The helper itself keeps the cautious
+      rule, since a package may have placed it for a home that never asked for anything.
 - [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
       account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
       headless host has no prompt to show.
