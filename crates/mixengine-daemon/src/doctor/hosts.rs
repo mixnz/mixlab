@@ -7,7 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mixengine_proto::privileged::HomesLedger;
+use mixengine_proto::privileged::{HomesLedger, HostEntry};
 use mixengine_proto::{Check, Outcome, ProblemId};
 
 use super::Doctor;
@@ -53,6 +53,35 @@ impl Doctor {
                 },
             },
         }
+    }
+}
+
+/// Why this home's block is not what its sites want, naming the names on each side.
+///
+/// A block can differ both ways, and the two ask different things of a reader: a missing name is a
+/// site that does not open, a name still held is one the block keeps pointing at loopback.
+pub(crate) fn differs(wanted: &[HostEntry], present: &[HostEntry]) -> String {
+    let names = |from: &[HostEntry], without: &[HostEntry]| {
+        let mut names: Vec<&str> = from
+            .iter()
+            .filter(|entry| !without.contains(entry))
+            .map(|entry| entry.domain.as_str())
+            .collect();
+        names.dedup();
+        names.join(", ")
+    };
+
+    let missing = names(wanted, present);
+    let extra = names(present, wanted);
+
+    match (missing.is_empty(), extra.is_empty()) {
+        (false, true) => {
+            format!("the hosts file does not hold {missing}, which this home's sites need")
+        }
+        (true, false) => {
+            format!("the hosts file still holds {extra}, which this home no longer puts there")
+        }
+        _ => format!("the hosts file does not hold {missing}, and still holds {extra}"),
     }
 }
 
@@ -150,5 +179,47 @@ mod tests {
         let gone = mixengine_platform::hosts::tag_for(Path::new("/homes/gone"));
 
         assert!(orphans(&[gone], None, |_| false).is_empty());
+    }
+
+    fn entry(domain: &str) -> HostEntry {
+        HostEntry {
+            address: std::net::IpAddr::from([127, 0, 0, 1]),
+            domain: domain.to_owned(),
+        }
+    }
+
+    /// Found running M34: a block holding a name the home no longer wants there read as one missing
+    /// the names its sites need.
+    #[test]
+    fn a_block_that_holds_too_much_says_so() {
+        let said = differs(&[], &[entry("m34.test")]);
+
+        assert_eq!(
+            said,
+            "the hosts file still holds m34.test, which this home no longer puts there"
+        );
+    }
+
+    #[test]
+    fn a_block_that_holds_too_little_names_what_is_missing() {
+        let said = differs(
+            &[entry("blog.test"), entry("shop.test")],
+            &[entry("blog.test")],
+        );
+
+        assert_eq!(
+            said,
+            "the hosts file does not hold shop.test, which this home's sites need"
+        );
+    }
+
+    #[test]
+    fn a_block_that_differs_both_ways_names_both() {
+        let said = differs(&[entry("shop.test")], &[entry("old.test")]);
+
+        assert_eq!(
+            said,
+            "the hosts file does not hold shop.test, and still holds old.test"
+        );
     }
 }

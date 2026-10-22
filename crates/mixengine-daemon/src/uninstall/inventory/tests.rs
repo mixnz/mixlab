@@ -19,6 +19,7 @@ fn reading<'a>(
         placement,
         asked,
         present: present.iter().map(std::path::PathBuf::from).collect(),
+        window: true,
     }
 }
 
@@ -103,6 +104,28 @@ fn package_is_kept_with_a_reason_where_no_pkg_placed_the_copy() {
         directory: "/work/target/debug".into(),
     };
     assert!(package_row(&reading("macos", &dev, true, &[])).is_none());
+}
+
+/// Found running M34: the headless package's row named a MixLab application it never carried.
+#[test]
+fn a_copy_with_no_window_does_not_name_one() {
+    let headless = mixengine_core::updates::Placement::Installer {
+        directory: "/usr/bin".into(),
+        receipt: "dpkg:mixengine-headless".to_owned(),
+    };
+
+    let row = package_row(&PackageReading {
+        window: false,
+        ..reading("linux", &headless, false, &[])
+    })
+    .expect("a row");
+    assert_eq!(
+        row.what,
+        "the program itself: its commands and the package receipt"
+    );
+
+    let row = package_row(&reading("linux", &headless, false, &[])).expect("a row");
+    assert!(row.what.contains("MixLab application"), "{row:?}");
 }
 
 fn held(path: &str, movable: bool, holders: &[(u32, &str)]) -> HeldItem {

@@ -53,8 +53,12 @@ pub(crate) fn autostart_report(autostarted: Autostarted, report: &AutostartRepor
         }
         .to_owned(),
 
-        (Autostarted::Asked, true, true) => "this home's daemon starts when you log in
-"
+        (Autostarted::Asked, true, true) => match report.at_boot {
+            AtBoot::On | AtBoot::OnByAccount => {
+                "this home's daemon starts at boot, before anyone logs in\n"
+            }
+            AtBoot::Off | AtBoot::Unsupported => "this home's daemon starts when you log in\n",
+        }
         .to_owned(),
         (Autostarted::Asked, false, _) => "this home's daemon does not start when you log in
 "
@@ -199,6 +203,24 @@ mod tests {
             rendered.contains("/usr/bin/mixengined --home"),
             "{rendered}"
         );
+    }
+
+    /// Found running M34: an entry that starts at boot was headed "starts when you log in".
+    #[test]
+    fn an_entry_that_starts_at_boot_is_headed_so() {
+        for at_boot in [AtBoot::On, AtBoot::OnByAccount] {
+            let report = AutostartReport {
+                at_boot,
+                ..registered(true)
+            };
+
+            let rendered = autostart_report(Autostarted::Asked, &report);
+
+            assert!(
+                rendered.starts_with("this home's daemon starts at boot, before anyone logs in"),
+                "{rendered}"
+            );
+        }
     }
 
     #[test]

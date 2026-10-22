@@ -135,7 +135,7 @@ fn desktop_client(client: &DesktopClient) -> String {
         }
         DesktopClient::NoClient => "  this install has no MixLab window to open a database in\n  \
                                     MixLab comes with MixEngine's installers; the headless \
-                                    archive has none\n"
+                                    ones have none\n"
             .to_owned(),
     }
 }

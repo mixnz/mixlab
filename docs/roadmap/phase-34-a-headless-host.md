@@ -115,7 +115,7 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       **Verified** on the same machine on 2026-10-22 with the helper rebuilt: a grant brought
       `mixengine0` up, and after `mix uninstall` `ip link` no longer had it. A link left with no
       files by an earlier helper is deleted too.
-- [ ] **T211l** Display slips the same run found: `mix doctor` reads a hosts block that holds names
+- [x] **T211l** Display slips the same run found: `mix doctor` reads a hosts block that holds names
       this home no longer wants as *"the hosts file does not hold the names this home's sites
       need"* (`doctor.rs`, one sentence for a block that differs either way); `mix autostart
       status` heads an at-boot entry with *"starts when you log in"*; `mix database client` says
@@ -123,6 +123,11 @@ Design: [2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md](.
       `mix uninstall` on a `mixengine-headless` install keeps *"the MixLab application"*, says it
       forgets passwords from *"this user's credential store"* when the store is the home's file,
       and names `apt remove mixlab` first after its own plan named `dpkg:mixengine-headless`.
+      Done: the doctor names the entries missing and the ones left over; an entry that starts at
+      boot is headed so; a headless install is called one; the package row names the window only
+      where `locate_window` finds it, as `database.client` does, since a Mac's two packages share a
+      receipt; the password rows say *"forgot 1"*, true of either store; and the last line names
+      the package the plan's row named, both only where no row did.
 - [x] **T195** Start at boot without a login: a systemd user unit and linger, turned on as the
       account and never through `mixengine-elevate` — polkit lets an account linger itself, and a
       headless host has no prompt to show.

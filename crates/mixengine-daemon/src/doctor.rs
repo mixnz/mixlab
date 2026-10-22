@@ -168,8 +168,10 @@ impl Doctor {
 
         // this home's own block, under the tag the helper derives from its path.
         let tag = mixengine_platform::hosts::tag_for(&self.root);
-        let wanted =
-            mixengine_proto::privileged::PrivilegedOp::hosts_apply(Some(tag.clone()), desired);
+        let wanted = mixengine_proto::privileged::PrivilegedOp::hosts_apply(
+            Some(tag.clone()),
+            desired.clone(),
+        );
 
         match self.host.hosts_file().managed(Some(&tag)) {
             // `present.clone()` and not `present`: a pattern guard may not move out of what it
@@ -185,12 +187,11 @@ impl Doctor {
                     outcome: Outcome::Ok {},
                 }
             }
-            Ok(_) => Check {
+            Ok(present) => Check {
                 name,
                 outcome: Outcome::Problem {
                     id: ProblemId::HostsBlockDiffers,
-                    because: "the hosts file does not hold the names this home's sites need"
-                        .to_owned(),
+                    because: hosts::differs(&desired, &present),
                 },
             },
             Err(error) => Check {

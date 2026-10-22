@@ -143,11 +143,21 @@ pub(crate) async fn take(
                 .collect()
         })
         .unwrap_or_default();
+    // Whether this copy has the window, asked the way `database.client` asks: a headless package
+    // has none, and on macOS the two packages share one receipt.
+    let window = matches!(
+        uninstall.host.desktop_apps().locate_window(
+            mixengine_core::window::EXECUTABLE,
+            mixengine_core::window::BUNDLE
+        ),
+        Ok(mixengine_platform::Located::Installed(_))
+    );
     rows.extend(package_row(&PackageReading {
         os: std::env::consts::OS,
         placement: uninstall.updates.placement(),
         asked: query.package,
         present,
+        window,
     }));
     rows.push(autostart_entry(uninstall).await);
     rows.push(path_entry(uninstall).await);
@@ -561,6 +571,8 @@ pub(crate) struct PackageReading<'a> {
     pub(crate) asked: bool,
     /// Which of the `.pkg`'s paths are on disk now.
     pub(crate) present: Vec<std::path::PathBuf>,
+    /// Whether this install has MixLab, the window.
+    pub(crate) window: bool,
 }
 
 /// **7a.** The program itself, where an installer placed it — roadmap task **T182a**, spec D3.
@@ -571,8 +583,11 @@ pub(crate) struct PackageReading<'a> {
 pub(crate) fn package_row(reading: &PackageReading<'_>) -> Option<Residue> {
     use mixengine_core::updates::Placement;
 
-    let what = "the program itself: its commands, the MixLab application and the package receipt"
-        .to_owned();
+    let what = match reading.window {
+        true => "the program itself: its commands, the MixLab application and the package receipt",
+        false => "the program itself: its commands and the package receipt",
+    }
+    .to_owned();
 
     let (location, outcome) = match reading.placement {
         Placement::Installer { receipt, .. } if reading.os == "macos" && receipt == PKG_RECEIPT => {

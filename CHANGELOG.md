@@ -16,6 +16,10 @@
   privileged helper and audit log in place.
 - On Linux, `mix uninstall` also takes away MixEngine's `mixengine0` network link. Before, it
   stayed until the machine restarted.
+- `mix doctor` names the hosts entries that are missing or left over, and `mix autostart status`
+  says when the daemon starts at boot.
+- On a headless install, `mix uninstall` names the one package to remove and no longer mentions
+  MixLab.
 - `mix job status` no longer shows a finished job stuck at 40% with its last step, `mix doctor
   --repair` names the hosts fix once, and MixLab's permission dialog lists each hosts name and only
   says what is true of that dialog.

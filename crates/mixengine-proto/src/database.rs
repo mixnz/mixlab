@@ -166,7 +166,7 @@ pub enum DesktopClient {
         program: String,
     },
 
-    /// This install has no window: the headless archive, or a window somebody removed.
+    /// This install has no window: a headless installer placed it, or somebody removed the window.
     NoClient,
 }
 
