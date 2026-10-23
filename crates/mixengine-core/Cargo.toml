@@ -42,8 +42,8 @@ minijinja.workspace = true
 minisign-verify.workspace = true
 # The one place this crate speaks to a network. Whether to go to the network at all *is* the cache
 # policy, so the fetch lives beside the freshness rule that triggers it — the same reasoning that
-# puts `sqlx` here rather than in the daemon.
-reqwest.workspace = true
+# puts `sqlx` here rather than in the daemon. Optional, behind `network` below.
+reqwest = { workspace = true, optional = true }
 serde.workspace = true
 # `jobs.result_json` is the one column this crate reads and writes as a document rather than as a
 # value: what a job produced belongs to the method that produced it, so `JobOutcome` carries a
@@ -62,6 +62,21 @@ tokio = { workspace = true, features = ["fs", "io-util", "process", "rt", "time"
 toml.workspace = true
 toml_edit.workspace = true
 tracing.workspace = true
+
+# **Every fetch, and nothing else.** `network` is `reqwest` and the code that calls it: the index
+# client, the installer's download, the extension registry, the update feed and helper, a
+# blueprint's archive. On by default, so this crate's own tests and every workspace build cover all
+# of it. The daemon asks for it by name; `mixengine-shim` does not, because a shim reads the
+# database and never the network, and a binary run on every `php` a person types should not link an
+# HTTP and TLS stack it cannot reach — ADR 0067.
+#
+# **Cargo unifies features across one invocation.** The workspace declares this crate with
+# `default-features = false`, but a build that selects the daemon too compiles it once, with
+# `network`, and links the shim against that. `packaging/stage.sh` builds the shim on its own for
+# that reason, and `workspace_layering.rs` reads the shim's tree with `cargo tree -p`.
+[features]
+default = ["network"]
+network = ["dep:reqwest"]
 
 [dev-dependencies]
 # `MockRegistry`: a signed index over a real socket, which is the only way an index client can be

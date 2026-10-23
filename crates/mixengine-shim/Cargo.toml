@@ -21,6 +21,11 @@ path = "src/main.rs"
 # answer differently in two directories in under 15 ms. `mix` deliberately does not link this crate
 # — see the note in `mixengine-proto/tests/workspace_layering.rs` — because it can ask a daemon and
 # a bundled SQLite is a poor trade for learning where a socket is. Here there is nothing to ask.
+#
+# **Without `network`.** The shim reads the database and never the network, so core's fetches —
+# `reqwest`, and an HTTP and TLS stack with it — stay out of it; ADR 0067. A release builds this
+# crate in a cargo invocation of its own, because one shared with the daemon would turn `network`
+# back on (`packaging/stage.sh`).
 mixengine-core.workspace = true
 # `hand_over`, which is `exec` on Unix and a Job Object child on Windows, and `host()` for the
 # platform's own idea of where the home is when `MIXENGINE_HOME` says nothing.

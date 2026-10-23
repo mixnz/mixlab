@@ -206,18 +206,26 @@ fn a_stopped_group_has_no_process_left_running() {
         assert!(
             !still_running,
             "attempt {attempt}: `stop` returned ({stopped:?}) while pid {} — the leader {}'s child, \
-             in the same job — was still running; the next start would meet whatever it holds",
+             created at {} against the leader's {} (FILETIME ticks) — was still running; the next \
+             start would meet whatever it holds",
             child.pid,
             leader.pid(),
+            child.created,
+            child.leader_created,
         );
     }
 }
 
 /// A handle on a process, opened only to be asked whether it has ended.
+///
+/// The two creation times are carried for the failure message: a child created before its leader
+/// cannot be the leader's, and the message says which of the two a failure was.
 #[cfg(windows)]
 struct Watched {
     pid: u32,
     handle: std::os::windows::io::OwnedHandle,
+    created: u64,
+    leader_created: u64,
 }
 
 #[cfg(windows)]
@@ -245,13 +253,26 @@ impl Watched {
 /// time once its last client has gone.
 ///
 /// Polled for, because `cmd` starts it a moment after it is started itself.
+///
+/// **Created no earlier than the leader, or it is somebody else's.** A parent pid is a number
+/// recorded when a process starts, and Windows hands numbers out again quickly. Under nextest's
+/// parallel run other suites leave a `PING.EXE` behind for up to ten minutes, and one whose dead
+/// parent had the number the leader has now is named and parented exactly like the leader's child —
+/// but it is in no job of ours, so no stop of ours ends it. CI run 39950290768 failed this test once
+/// on a child that may have been that; the creation times in the message say so next time.
 #[cfg(windows)]
 fn the_child_of(leader: u32, program: &str) -> Watched {
-    use std::os::windows::io::FromRawHandle as _;
-    use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_SYNCHRONIZE};
+    use windows_sys::Win32::System::Threading::{
+        PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE,
+    };
 
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     let mut system = sysinfo::System::new();
+
+    let leader_created = opened(leader, PROCESS_QUERY_LIMITED_INFORMATION)
+        .as_ref()
+        .and_then(created)
+        .unwrap_or_else(|| panic!("the leader {leader} can be asked when it was created"));
 
     loop {
         system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
@@ -260,29 +281,24 @@ fn the_child_of(leader: u32, program: &str) -> Watched {
             let named = process.name().eq_ignore_ascii_case(program);
             let started_by = process.parent().map(sysinfo::Pid::as_u32) == Some(leader);
 
-            (named && started_by).then(|| pid.as_u32())
+            if !(named && started_by) {
+                return None;
+            }
+
+            let pid = pid.as_u32();
+            let handle = opened(pid, PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION)?;
+            let created = created(&handle)?;
+
+            (created >= leader_created).then_some(Watched {
+                pid,
+                handle,
+                created,
+                leader_created,
+            })
         });
 
-        if let Some(pid) = child {
-            #[expect(
-                unsafe_code,
-                reason = "OpenProcess takes three integers; the handle it returns is owned at once"
-            )]
-            let handle = unsafe { OpenProcess(PROCESS_SYNCHRONIZE, 0, pid) };
-
-            assert!(
-                !handle.is_null(),
-                "pid {pid}, the {program} {leader} started, could not be opened: {}",
-                std::io::Error::last_os_error()
-            );
-
-            #[expect(
-                unsafe_code,
-                reason = "the handle was just returned by OpenProcess and nothing else owns it"
-            )]
-            let handle = unsafe { std::os::windows::io::OwnedHandle::from_raw_handle(handle) };
-
-            return Watched { pid, handle };
+        if let Some(child) = child {
+            return child;
         }
 
         assert!(
@@ -292,6 +308,61 @@ fn the_child_of(leader: u32, program: &str) -> Watched {
 
         std::thread::sleep(Duration::from_millis(20));
     }
+}
+
+/// `pid` opened with `access`, or [`None`] when it has gone or will not be opened.
+#[cfg(windows)]
+fn opened(pid: u32, access: u32) -> Option<std::os::windows::io::OwnedHandle> {
+    use std::os::windows::io::FromRawHandle as _;
+    use windows_sys::Win32::System::Threading::OpenProcess;
+
+    #[expect(
+        unsafe_code,
+        reason = "OpenProcess takes three integers; the handle it returns is owned at once"
+    )]
+    let handle = unsafe { OpenProcess(access, 0, pid) };
+
+    if handle.is_null() {
+        return None;
+    }
+
+    #[expect(
+        unsafe_code,
+        reason = "the handle was just returned by OpenProcess and nothing else owns it"
+    )]
+    Some(unsafe { std::os::windows::io::OwnedHandle::from_raw_handle(handle) })
+}
+
+/// When the process behind `handle` was created, in `FILETIME` ticks, compared only with another
+/// read the same way on the same machine.
+#[cfg(windows)]
+fn created(handle: &std::os::windows::io::OwnedHandle) -> Option<u64> {
+    use std::os::windows::io::AsRawHandle as _;
+    use windows_sys::Win32::Foundation::FILETIME;
+    use windows_sys::Win32::System::Threading::GetProcessTimes;
+
+    let empty = || FILETIME {
+        dwLowDateTime: 0,
+        dwHighDateTime: 0,
+    };
+    let (mut created, mut exited, mut kernel, mut user) = (empty(), empty(), empty(), empty());
+
+    #[expect(
+        unsafe_code,
+        reason = "the handle is owned and outlives the call; the four times are written into locals"
+    )]
+    let asked = unsafe {
+        GetProcessTimes(
+            handle.as_raw_handle().cast(),
+            &raw mut created,
+            &raw mut exited,
+            &raw mut kernel,
+            &raw mut user,
+        )
+    };
+
+    (asked != 0)
+        .then(|| (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime))
 }
 
 /// A child that stays up long enough to be asked something, started with `limits`.

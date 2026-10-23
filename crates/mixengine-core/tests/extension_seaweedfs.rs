@@ -7,6 +7,9 @@
 //! itself does with these flags was measured on three systems and is written in the fixture's
 //! comments; nothing here downloads it.
 
+// Every test here fetches over a socket, which `network` carries (ADR 0067).
+#![cfg(feature = "network")]
+
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 

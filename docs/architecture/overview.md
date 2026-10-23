@@ -70,7 +70,8 @@ Rationale for the tier split in
   (`php`, `node`, `npm` …). Reads the name it was invoked by, resolves a version **in its own
   process** against the database opened read-only, and becomes the real program. The one client that
   depends on `mixengine-core`, and it has to: the whole promise is that it works with no daemon
-  running.
+  running. It takes core without `network`, so nothing that fetches is linked into it
+  ([ADR 0067](../decisions/0067-the-shim-reads-the-database-and-fetches-nothing.md)).
 - **`mixengine-testkit`** — the fixtures every suite shares: a `TempDir` home, the `fakeservice`
   binary supervision is tested against, and the one way this workspace stops a process by pid. A
   **dev-dependency and never anything else**, which `mixengine-proto/tests/workspace_layering.rs`

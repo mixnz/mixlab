@@ -148,6 +148,7 @@ impl Registry {
 /// # Errors
 ///
 /// As [`index::Client::with_transport`] — a key that is not one.
+#[cfg(feature = "network")]
 pub fn client(
     url: &str,
     public_key: &str,

@@ -3,6 +3,9 @@
 //! What these hold to is the order the design's D2 argues for: everything a person could refuse is
 //! decided before anything is fetched, and what is fetched lands whole or not at all.
 
+// Every test here fetches over a socket, which `network` carries (ADR 0067).
+#![cfg(feature = "network")]
+
 use std::path::{Path, PathBuf};
 
 use mixengine_core::extensions::install::{self, Plan, Request};

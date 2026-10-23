@@ -13,6 +13,7 @@ pub use error::ExtensionError;
 
 pub mod config;
 pub mod database;
+#[cfg(feature = "network")]
 pub mod install;
 pub mod manifest;
 pub mod pools;

@@ -143,6 +143,7 @@ async fn remove(path: &Path) -> Result<()> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "network")]
 mod tests {
     use mixengine_proto::Timestamp;
 

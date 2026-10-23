@@ -46,6 +46,10 @@ check "clippy" cargo clippy --workspace --all-targets --all-features -- -D warni
 # The helper on its own: the line above unifies the platform's features, so an item only `host`
 # reaches looks used there and is dead in the `elevated` build the helper compiles.
 check "helper clippy" cargo clippy -p mixengine-elevate --all-targets -- -D warnings
+# The core and the shim without `network` (ADR 0067), for the same reason: the workspace line turns
+# it on, so a fetch left ungated is dead or missing only here.
+check "core without network" cargo clippy -p mixengine-core --no-default-features --all-targets -- -D warnings
+check "shim clippy" cargo clippy -p mixengine-shim --all-targets -- -D warnings
 check "rustdoc" env RUSTDOCFLAGS="-D warnings" \
   cargo doc --workspace --no-deps --document-private-items --all-features
 check "the helper's version" bash packaging/helper-lock.sh --check
