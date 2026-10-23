@@ -27,12 +27,12 @@ import {
 } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
-import type { ProjectDetail } from "@mixengine/api";
 import type { ProjectSummary } from "@mixengine/api";
 import { takePendingProjectDetail } from "../../projectsNavigation";
-import { siteAddresses, type SiteAddresses } from "../../siteGroups";
+import { siteAddresses } from "../../siteGroups";
 import ProjectDetailPanel from "./ProjectDetailPanel";
 import ProjectForm from "./ProjectForm";
+import { detailRead, opened, stillListed, type OpenProject, type ProjectsDialog } from "./projectsScreen";
 import styles from "./Projects.module.css";
 
 interface Props {
@@ -47,20 +47,16 @@ interface Props {
 
 /** Every project registered in the home — create, edit (name/root/pins), delete. */
 export default function Projects({ active, onOpenSites, onOpenDashboard, terminalVisible }: Props) {
-  const [rows, setRows] = useState<ProjectSummary[]>([]);
-  /** False until the first read has answered — until then an empty `rows` means "not known yet",
-   *  not "no projects". */
-  const [loaded, setLoaded] = useState(false);
+  /** `null` until the first read has answered — until then no rows means "not known yet", not
+   *  "no projects". */
+  const [listed, setListed] = useState<ProjectSummary[] | null>(null);
+  const loaded = listed !== null;
+  const rows = listed ?? [];
   const [error, setError] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<ProjectDetail | null>(null);
-  /** The project whose row is open, and what has been read of it — T205: a row opens in place,
-   *  under itself, so what someone just clicked is where they are looking. */
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [detail, setDetail] = useState<ProjectDetail | null>(null);
-  /** The shown project's site addresses, for the steps panel's `open` rows — T205, T204a. */
-  const [detailAddresses, setDetailAddresses] = useState<SiteAddresses>({ first: null, byDomain: {} });
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<ProjectsDialog | null>(null);
+  /** The open row and what has been read of it — see `projectsScreen.ts`. */
+  const [openProject, setOpenProject] = useState<OpenProject | null>(null);
+  const expanded = openProject?.name ?? null;
   /** The row whose ⋮ menu is open, and where — the actions used less often live there, as on the
    *  Sites screen, so a row shows what is done every day and nothing else. */
   const [menu, setMenu] = useState<{ name: string; x: number; y: number } | null>(null);
@@ -74,18 +70,15 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
   const reload = useCallback(async () => {
     try {
       const list = await api.projects();
-      setRows(list.projects);
+      setListed(list.projects);
       setError("");
-      // The pins panel follows the list: a project that is gone — deleted here, by `mix`, or
-      // forgotten by a blueprint that failed — takes its panel with it rather than leaving a card
-      // about something the table no longer shows.
-      setExpanded((open) =>
-        open !== null && list.projects.some((row) => row.name === open) ? open : null,
-      );
+      // The pins panel follows the list rather than leaving a card about something the table no
+      // longer shows.
+      setOpenProject((current) => stillListed(current, list.projects.map((row) => row.name)));
     } catch (e) {
       setError(errorMessage(t, e));
     } finally {
-      setLoaded(true);
+      setListed((current) => current ?? []);
     }
   }, [t]);
 
@@ -94,27 +87,32 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
     if (active) void reload();
   }, [active, reload]);
 
-  /** The project's detail, and the address its steps open — read together. */
-  async function readDetail(name: string) {
-    const [shown, listed] = await Promise.all([api.projectShow(name), api.sites(name)]);
-    setDetail(shown);
-    setDetailAddresses(siteAddresses(listed.sites, null));
-  }
+  /** The project's detail, and the address its steps open — read together, for its row if that
+   *  is still the open one. */
+  const readDetail = useCallback(async (name: string) => {
+    const [shown, sites] = await Promise.all([api.projectShow(name), api.sites(name)]);
+    setOpenProject((current) => detailRead(current, name, shown, siteAddresses(sites.sites, null)));
+  }, []);
+
+  /** Opens `name`'s row and reads it. A read that fails closes that row, and no other. */
+  const openRow = useCallback(
+    (name: string) => {
+      setOpenProject(opened(name));
+      readDetail(name).catch((e: unknown) => {
+        setOpenProject((current) => (current?.name === name ? null : current));
+        setError(errorMessage(t, e));
+      });
+    },
+    [readDetail, t],
+  );
 
   /** Opens `name`'s row, or closes it when it is the open one. One open at a time. */
-  async function toggle(name: string) {
+  function toggle(name: string) {
     if (expanded === name) {
-      setExpanded(null);
+      setOpenProject(null);
       return;
     }
-    setExpanded(name);
-    setDetail(null);
-    try {
-      await readDetail(name);
-    } catch (e) {
-      setExpanded(null);
-      setError(errorMessage(t, e));
-    }
+    openRow(name);
   }
 
   /* Another screen sent someone to one project — the Sites screen's *What to run*, an apply that
@@ -123,23 +121,18 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
     if (!active) return;
     const wanted = takePendingProjectDetail();
     if (wanted === null) return;
-    setExpanded(wanted);
-    setDetail(null);
-    readDetail(wanted).catch((e: unknown) => {
-      setExpanded(null);
-      setError(errorMessage(t, e));
-    });
-  }, [active, t]);
+    openRow(wanted);
+  }, [active, openRow]);
 
   /** A click anywhere on a row opens it, except on the row's own buttons. */
   function rowClick(e: MouseEvent<HTMLTableRowElement>, name: string) {
     if ((e.target as HTMLElement).closest("button, a, input")) return;
-    void toggle(name);
+    toggle(name);
   }
 
   async function edit(name: string) {
     try {
-      setEditing(await api.projectShow(name));
+      setDialog({ kind: "edit", detail: await api.projectShow(name) });
     } catch (e) {
       setError(errorMessage(t, e));
     }
@@ -192,7 +185,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
     } finally {
       // **Closed either way.** A dialog kept up on a refusal is one the screen has no second
       // question for, and the banner behind it is where the refusal is being read anyway.
-      setDeleting(null);
+      setDialog(null);
     }
   }
 
@@ -205,7 +198,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
         title={t("mixengine.sidebar.projects")}
         description={t("mixengine.projects.about")}
         actions={
-          <Button size="large" variant="primary" onClick={() => setCreating(true)}>
+          <Button size="large" variant="primary" onClick={() => setDialog({ kind: "create" })}>
             <PlusIcon size={15} />
             {t("mixengine.projects.newProject")}
           </Button>
@@ -229,7 +222,8 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
             </thead>
             <tbody>
               {rows.map((row) => {
-                const open = expanded === row.name;
+                const open = openProject?.name === row.name;
+                const detail = open ? openProject.detail : null;
                 return (
                   <Fragment key={row.name}>
                     <tr
@@ -280,7 +274,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
                             size="small"
                             className={open ? `${styles.details} ${styles.detailsOpen}` : styles.details}
                             aria-expanded={open}
-                            onClick={() => void toggle(row.name)}
+                            onClick={() => toggle(row.name)}
                             data-demo="project-details"
                           >
                             {t("mixengine.projects.details")}
@@ -310,10 +304,10 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
                     {open && (
                       <tr className={styles.detailRow}>
                         <td colSpan={4}>
-                          {detail?.project.name === row.name ? (
+                          {openProject !== null && detail !== null ? (
                             <ProjectDetailPanel
                               detail={detail}
-                              addresses={detailAddresses}
+                              addresses={openProject.addresses}
                               terminalVisible={terminalVisible}
                               onOpenDashboard={onOpenDashboard}
                               adopting={adopting}
@@ -368,7 +362,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
             onClick={() => {
               const name = menu.name;
               setMenu(null);
-              setDeleting(name);
+              setDialog({ kind: "delete", name });
             }}
           >
             <TrashIcon size={14} />
@@ -377,38 +371,38 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
         </ContextMenu>
       )}
 
-      {creating && (
+      {dialog?.kind === "create" && (
         <ProjectForm
-          onCancel={() => setCreating(false)}
+          onCancel={() => setDialog(null)}
           onSaved={(warning) => {
-            setCreating(false);
+            setDialog(null);
             if (warning) setError(warning);
             void reload();
           }}
         />
       )}
 
-      {editing && (
+      {dialog?.kind === "edit" && (
         <ProjectForm
-          initial={editing}
-          onCancel={() => setEditing(null)}
+          initial={dialog.detail}
+          onCancel={() => setDialog(null)}
           onSaved={() => {
             // Pins are what an edit changes, so a panel open on this project is closed rather than
             // left showing the old ones — and re-reading it by name would fail after a rename.
-            if (expanded === editing.project.name) setExpanded(null);
-            setEditing(null);
+            if (expanded === dialog.detail.project.name) setOpenProject(null);
+            setDialog(null);
             void reload();
           }}
         />
       )}
 
-      {deleting && (
+      {dialog?.kind === "delete" && (
         <ConfirmDialog
           title={t("mixengine.projects.deleteTitle")}
           message={t("mixengine.projects.deleteMessage")}
           danger
-          onCancel={() => setDeleting(null)}
-          onConfirm={() => void confirmDelete(deleting)}
+          onCancel={() => setDialog(null)}
+          onConfirm={() => void confirmDelete(dialog.name)}
         />
       )}
     </div>

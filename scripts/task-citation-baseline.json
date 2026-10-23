@@ -153,7 +153,7 @@
     "apps/desktop/src/modules/mixengine/screens/Projects/ProjectDetailPanel.tsx": 2,
     "apps/desktop/src/modules/mixengine/screens/Projects/ProjectForm.tsx": 5,
     "apps/desktop/src/modules/mixengine/screens/Projects/Projects.module.css": 1,
-    "apps/desktop/src/modules/mixengine/screens/Projects/Projects.tsx": 6,
+    "apps/desktop/src/modules/mixengine/screens/Projects/Projects.tsx": 3,
     "apps/desktop/src/modules/mixengine/screens/ServicesDetail/AutostartPanel.tsx": 2,
     "apps/desktop/src/modules/mixengine/screens/ServicesDetail/DatabasePanel.tsx": 1,
     "apps/desktop/src/modules/mixengine/screens/ServicesDetail/LimitsPanel.tsx": 1,
