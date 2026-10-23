@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-23
 task: T209e
 ---
@@ -49,13 +49,27 @@ built is a change of its own.
 
 | | before | after |
 | --- | --- | --- |
-| `cargo tree -p mixengine-shim -e normal`, distinct crates | 219 | |
+| `cargo tree -p mixengine-shim -e normal`, distinct crates | 219 | 189 |
 | the same for `mix` (`mixengine-cli`), for reference | 94 | 94 |
-| `mixengine-shim.exe`, debug | 12,552,192 B | |
-| `mixengine-shim.exe`, release, built alone | 5,274,624 B | |
-| `mixengine-shim.exe`, release, built as `stage.sh` builds it | the same: core has no feature yet | |
-| `overhead.rs`, resolution, p50, nothing pins it / a manifest pins it | 3.04 / 1.48 ms | |
-| `overhead.rs`, shim minus program, p50, the same two cases | 39.19 / 35.96 ms | |
+| `mixengine-shim.exe`, debug | 12,552,192 B | 10,374,656 B |
+| `mixengine-shim.exe`, release, built alone | 5,274,624 B | 5,274,112 B |
+| `reqwest` symbols in that build's `mixengine_shim.pdb` | 4 | 0 |
+| `overhead.rs`, resolution, p50, nothing pins it / a manifest pins it | 3.04 / 1.48 ms | 3.31–5.73 / 1.42–1.61 ms over four runs |
+| `overhead.rs`, shim minus program, p50, the same two cases | 39.19 / 35.96 ms | 38.31–40.79 / 41.22–45.31 ms |
+
+The row "built as `stage.sh` builds it" was dropped from the table: `stage.sh` sets
+`MIXENGINE_RELEASE` and the release `RUSTFLAGS` (a static C runtime), so its shim is not comparable
+with one built alone. What it was checked for instead is that it links no `reqwest`: after the change
+its `mixengine_shim.pdb` names `reqwest` 0 times, against 591 in the `mixengined.pdb` built beside
+it.
+
+**What the numbers say.** The 30 crates that left are the HTTP and TLS stack: `reqwest`, `hyper`,
+`h2`, `http`, the `tower` crates, `rustls`, `rustls-webpki`, `tokio-rustls`, and `aws-lc-rs` with
+`aws-lc-sys`, the C library whose build is the slowest step of a clean shim build. The rest of
+`reqwest`'s subtree (`tokio`, `ring`, …) is shared with what the shim keeps. The release binary is the same size within 512 bytes, because the linker already dropped the
+`reqwest` code nothing called. The debug binary is 17% smaller. The resolution and the end-to-end
+time are unchanged within the run-to-run spread of this machine. The gain is the guarantee and the
+build, not the binary.
 
 The resolution is the number `overhead.rs` gates, against 15 ms. The end-to-end difference is
 measured through the trampoline, the shim and the program, three process creations on Windows, and

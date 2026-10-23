@@ -159,7 +159,7 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       `Daemon` is asked to stop before it is killed, as `limits.rs` and the CLI already did; the two
       tests about what a start after a crash does call `Daemon::kill`. `lifecycle.rs` and the `api`
       suite keep their own on purpose.
-- [ ] **T209e** The shim compiles only what it runs. `mixengine-shim` runs on every `php`, `node`,
+- [x] **T209e** The shim compiles only what it runs. `mixengine-shim` runs on every `php`, `node`,
       `python` a user types. It depends on `mixengine-core`, which brings `sqlx` and `reqwest`, so
       its normal dependency tree is 288 crates against `mix`'s 110, and the debug binary is
       12.7 MB. It uses about 15 functions from core: `paths`, `bin_commands::kind`,
@@ -171,6 +171,27 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       `workspace_layering.rs` then fails the build if `sqlx` or `reqwest` reaches the shim again.
       Changing a crate boundary is a cross-cutting decision, so this starts with a design and an
       ADR. **(P)**
+      Design:
+      [2026-10-23-t209e-the-shim-compiles-only-what-it-runs-design.md](../specs/2026-10-23-t209e-the-shim-compiles-only-what-it-runs-design.md),
+      and [ADR 0067](../decisions/0067-the-shim-reads-the-database-and-fetches-nothing.md). **The
+      shim keeps `sqlx`:** it reads six of those functions' answers from the database, with no
+      daemon to ask, and the ADR says why a file written for it lost. `reqwest` and every item that
+      fetches sit behind core's `network` feature, on by default; the workspace declares core
+      without defaults, the daemon asks for `network`, and `packaging/stage.sh` builds the shim in a
+      cargo invocation of its own. `Installer` moved to `install/installer.rs` and the index client
+      to `index/client.rs`, so each is one gated `mod` line. Measured on Windows: the shim's tree
+      went from 219 crates to 189, the HTTP and TLS stack with `aws-lc-sys` among them; the debug
+      binary from 12.55 MB to 10.37 MB; the release binary stayed 5.27 MB, because the linker had
+      already dropped the code, and its `.pdb` names `reqwest` 0 times instead of 4. Resolution and
+      start time are unchanged within noise. `workspace_layering.rs` fails when `reqwest` or `hyper`
+      reaches the shim, and `scripts/gate.sh` and CI's `lint` job clippy core without `network` and
+      the shim on its own.
+- [ ] **T209l** The release builds the privileged helper on its own. `mixengine-platform/Cargo.toml`
+      says the release pipeline gives `mixengine-elevate` a cargo invocation of its own, so that
+      feature unification cannot give it the platform's `host` and keyring code. `packaging/stage.sh`
+      does not: it builds the helper in one invocation with the daemon. Found while T209e gave the
+      shim its own. The helper's bytes are pinned by `packaging/helper-lock.sh`, so this measures
+      what the helper links built each way first, and bumps `HELPER_VERSION` if they differ.
 - [ ] **T209f** Forms that hold their state as one value. `mixengine/screens/Packages/Languages.tsx`
       has 25 `useState`, `terminal/components/TargetForm/TargetForm.tsx` 21, `db/redis/RedisWorkspace.tsx`
       19, `db/sql/SqlWorkspace.tsx` 18, `mixengine/screens/Extensions/Extensions.tsx` and
@@ -197,7 +218,8 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
 
 **M47** None of the seven walks in T209 is above clippy's cognitive-complexity limit of 25.
 `Workspace.tsx` and `RestTab.tsx` turn off no React hooks lint. No integration suite starts
-`mixengined` with its own copy of the harness. `cargo tree -p mixengine-shim -e normal` has neither
-`sqlx` nor `reqwest`. The task-citation baseline from T209b is lower than the 6,066 it was written at.
+`mixengined` with its own copy of the harness. `cargo tree -p mixengine-shim -e normal` has no
+`reqwest`; it keeps `sqlx` on purpose
+([ADR 0067](../decisions/0067-the-shim-reads-the-database-and-fetches-nothing.md)). The task-citation baseline from T209b is lower than the 6,066 it was written at.
 `bash scripts/gate.sh`, `cargo test --workspace`, and `npm run build`, `npm test` and
 `npm run lint` in `apps/desktop` are green.
