@@ -73,6 +73,15 @@ interface Target {
   collection: string;
 }
 
+/** The documents on screen, how many the conditions match, and the collection they were read from
+ *  (`null` until a read lands). One value, so `target` can never describe another collection than
+ *  the documents rendered beside it. */
+interface Shown {
+  documents: TypedDocument[];
+  total: number;
+  target: Target | null;
+}
+
 const DOC_PAGE_SIZES = [20, 50, 100, 200];
 
 /** One collection's filter bar as it was left behind: the rows still being edited, the conditions
@@ -142,11 +151,12 @@ function NoSqlTable({
   const restored = rememberedDocuments(documentCache, collectionKey, schemaToken);
   const [page, setPage] = useState(restored?.request.page ?? 0);
   const [pageSize, setPageSize] = useState(restored?.request.pageSize ?? 50);
-  const [documents, setDocuments] = useState<TypedDocument[]>(restored?.documents ?? []);
-  const [target, setTarget] = useState<Target | null>(
-    restored ? { connectionId, database: selectedDb, collection: selectedCollection } : null,
-  );
-  const [total, setTotal] = useState(restored?.total ?? 0);
+  const [shown, setShown] = useState<Shown>(() => ({
+    documents: restored?.documents ?? [],
+    total: restored?.total ?? 0,
+    target: restored ? { connectionId, database: selectedDb, collection: selectedCollection } : null,
+  }));
+  const { documents, total, target } = shown;
   const [loading, setLoading] = useState(false);
   // Bumped by the reload action, by a delete and by an insert, to run the fetch below again with
   // the conditions unchanged.
@@ -386,14 +396,14 @@ function NoSqlTable({
     // must never carry the state it built for one document onto another at the same index.
     setLoadId((n) => n + 1);
     if (cached) {
-      setDocuments(cached.documents);
-      setTotal(cached.total);
-      setTarget({ connectionId, database: selectedDb, collection: selectedCollection });
+      setShown({
+        documents: cached.documents,
+        total: cached.total,
+        target: { connectionId, database: selectedDb, collection: selectedCollection },
+      });
       markRememberedDocuments(cached.request);
     } else {
-      setDocuments([]);
-      setTotal(0);
-      setTarget(null);
+      setShown({ documents: [], total: 0, target: null });
       // Nothing read for this collection yet, so the fetch below is owed one — whatever the
       // previous collection left marked here.
       requestRef.current = null;
@@ -444,11 +454,11 @@ function NoSqlTable({
           // top, and otherwise is wherever the user had got to within the page.
           scrollTop: scrollPosRef.current,
         });
-        // One batched update, so `target` can never describe a different collection than the
-        // documents rendered alongside it.
-        setDocuments(result.documents);
-        setTarget({ connectionId, database: db, collection });
-        setTotal(result.total);
+        setShown({
+          documents: result.documents,
+          total: result.total,
+          target: { connectionId, database: db, collection },
+        });
         setLoadId((n) => n + 1);
         // Whatever these documents carry that the bar didn't know about yet is now filterable.
         setFields((known) => mergeDocumentFields(known, result.documents));
@@ -544,8 +554,10 @@ function NoSqlTable({
         if (target) documentCache.delete(cacheKey(target.database, target.collection));
         return;
       }
-      setDocuments((prev) =>
-        prev[at] === fetched ? prev.map((doc, i) => (i === at ? saved : doc)) : prev,
+      setShown((prev) =>
+        prev.documents[at] === fetched
+          ? { ...prev, documents: prev.documents.map((doc, i) => (i === at ? saved : doc)) }
+          : prev,
       );
     },
     [target, documentCache],
