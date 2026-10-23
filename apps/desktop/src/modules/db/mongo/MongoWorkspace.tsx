@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { UnlistenFn } from "@tauri-apps/api/event";
-import { cancelTransfer, onTransferProgress, type TransferProgress } from "../api";
+import { cancelTransfer } from "../api";
 import {
   mongoCreateCollection,
   mongoDropCollection,
@@ -22,6 +21,7 @@ import ErrorBanner from "../../../components/ErrorBanner";
 import DisconnectTab from "../components/DisconnectTab";
 import TunnelBanner from "../components/TunnelBanner";
 import { useWorkspaceError } from "../workspace/workspaceError";
+import { useTransfer } from "../workspace/transfer";
 import Input from "../../../components/Input";
 import NameDialog from "../../../components/NameDialog";
 import NoSqlTable from "./components/NoSqlTable";
@@ -93,6 +93,13 @@ const DEFAULT_SIDEBAR_WIDTH = 260;
 const MIN_SIDEBAR_WIDTH = 140;
 const MAX_SIDEBAR_WIDTH = 480;
 
+/** The one dialog over the workspace, with the collection it is about. */
+type WorkspaceDialog =
+  | { kind: "createDatabase" }
+  | { kind: "createCollection" }
+  | { kind: "renameCollection"; collection: string }
+  | { kind: "dropCollection"; collection: string };
+
 function MongoWorkspace({
   active,
   connectionId,
@@ -115,16 +122,9 @@ function MongoWorkspace({
   const [contentMode, setContentMode] = useState<ContentMode>("data");
   const [localError, setLocalError] = useWorkspaceError(tunnelled);
   const [serverInfo, setServerInfo] = useState<{ version: string; os: string } | null>(null);
-  const [creatingDatabase, setCreatingDatabase] = useState(false);
-  const [creatingCollection, setCreatingCollection] = useState(false);
-  /** The collection the context menu's rename is open on, and the one its drop is asking about. */
-  const [renamingCollection, setRenamingCollection] = useState<string | null>(null);
-  const [droppingCollection, setDroppingCollection] = useState<string | null>(null);
-  /** What the dump/restore tools are doing, if anything — shown over the whole workspace. */
-  const [transferStatus, setTransferStatus] = useState("");
-  /** How far the dump or restore behind that overlay has got — dropping a database has nothing to
-   * report. Null until the first reading arrives, and again once the overlay goes. */
-  const [transferProgress, setTransferProgress] = useState<TransferProgress | null>(null);
+  const [dialog, setDialog] = useState<WorkspaceDialog | null>(null);
+  /** What the dump/restore tools are doing, if anything — see `workspace/transfer.ts`. */
+  const { transfer, onBusyChange } = useTransfer(connectionId);
 
   /** The selection as `loadDatabases` needs to read it: through a ref, so reloading the list stays
    * one callback per connection instead of a new one on every change of database. */
@@ -198,27 +198,6 @@ function MongoWorkspace({
   useEffect(() => {
     void loadDatabases();
   }, [loadDatabases]);
-
-  // Only while the overlay is up, which is the only time there is anywhere to show a reading. The
-  // listener is registered as the transfer begins rather than kept for the life of the tab: what it
-  // is listening for happens a few times in a session and reports four times a second while it does.
-  useEffect(() => {
-    if (transferStatus === "") {
-      setTransferProgress(null);
-      return;
-    }
-    let stop: UnlistenFn | null = null;
-    let cancelled = false;
-    void onTransferProgress(connectionId, setTransferProgress).then((unlisten) => {
-      // The transfer ended before the listener was in place; there is nothing left to hear.
-      if (cancelled) void unlisten();
-      else stop = unlisten;
-    });
-    return () => {
-      cancelled = true;
-      stop?.();
-    };
-  }, [transferStatus, connectionId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -323,7 +302,7 @@ function MongoWorkspace({
       throw t("mongo.databaseNameInvalid");
     }
     if (databases.includes(name)) throw t("mongo.databaseExists", { database: name });
-    setCreatingDatabase(false);
+    setDialog(null);
     setDatabases((prev) => [...prev, name]);
     setSelectedDb(name);
     setSelectedCollection(null);
@@ -333,7 +312,7 @@ function MongoWorkspace({
    * reject back into the dialog, which is what shows them and stays open. */
   async function createCollection(name: string) {
     await mongoCreateCollection(connectionId, selectedDb, name);
-    setCreatingCollection(false);
+    setDialog(null);
     // Cleared so the new collection is visible whatever was being searched for when it was made.
     setCollectionFilter("");
     setSelectedCollection(name);
@@ -347,7 +326,7 @@ function MongoWorkspace({
    * name. Errors reject back into the dialog, which is what shows them and stays open. */
   async function renameCollection(collection: string, newName: string) {
     await mongoRenameCollection(connectionId, selectedDb, collection, newName);
-    setRenamingCollection(null);
+    setDialog(null);
     setCollectionFilter("");
     if (selectedCollection === collection) setSelectedCollection(newName);
     // Both ends of the move: the name it has left, and the name it has arrived at — which may have
@@ -358,7 +337,7 @@ function MongoWorkspace({
 
   /** Drops the collection the confirmation was asking about. */
   async function dropCollection(collection: string) {
-    setDroppingCollection(null);
+    setDialog(null);
     try {
       await mongoDropCollection(connectionId, selectedDb, collection);
       if (selectedCollection === collection) setSelectedCollection(null);
@@ -387,7 +366,7 @@ function MongoWorkspace({
       label: t("mongo.renameCollection"),
       disabled: noWrites,
       disabledHint: noWritesHint,
-      onSelect: setRenamingCollection,
+      onSelect: (collection) => setDialog({ kind: "renameCollection", collection }),
     },
     {
       key: "drop",
@@ -395,7 +374,7 @@ function MongoWorkspace({
       danger: true,
       disabled: noWrites,
       disabledHint: noWritesHint,
-      onSelect: setDroppingCollection,
+      onSelect: (collection) => setDialog({ kind: "dropCollection", collection }),
     },
   ];
 
@@ -424,7 +403,7 @@ function MongoWorkspace({
             value={selectedDb}
             onChange={(db) => {
               if (db === NEW_DATABASE) {
-                setCreatingDatabase(true);
+                setDialog({ kind: "createDatabase" });
                 return;
               }
               if (db === RELOAD_DATABASES) {
@@ -533,7 +512,7 @@ function MongoWorkspace({
                   disabled: !selectedDb || collectionsLoading || noWrites,
                   // Only for read-only: the system-database case already says so in its label.
                   disabledHint: readOnly ? t("common.readOnlyConnection") : undefined,
-                  onClick: () => setCreatingCollection(true),
+                  onClick: () => setDialog({ kind: "createCollection" }),
                 },
               ]}
             />
@@ -550,7 +529,7 @@ function MongoWorkspace({
               disabled={collectionsLoading || readOnly}
               onError={setLocalError}
               onChanged={databaseChanged}
-              onBusyChange={setTransferStatus}
+              onBusyChange={onBusyChange}
             />
           </div>
         </aside>
@@ -610,15 +589,15 @@ function MongoWorkspace({
         </section>
       </div>
 
-      {transferStatus !== "" && (
+      {transfer !== null && (
         <TransferOverlay
-          label={transferStatus}
-          progress={transferProgress}
+          label={transfer.label}
+          progress={transfer.progress}
           onCancel={() => void cancelTransfer(connectionId)}
         />
       )}
 
-      {creatingDatabase && (
+      {dialog?.kind === "createDatabase" && (
         <NameDialog
           title={t("databaseDialog.title")}
           ariaLabel={t("databaseDialog.title")}
@@ -627,12 +606,12 @@ function MongoWorkspace({
           submitLabel={t("databaseDialog.submit")}
           savingLabel={t("databaseDialog.saving")}
           hint={t("mongo.createDatabaseHint")}
-          onCancel={() => setCreatingDatabase(false)}
+          onCancel={() => setDialog(null)}
           onSubmit={createDatabase}
         />
       )}
 
-      {creatingCollection && selectedDb && (
+      {dialog?.kind === "createCollection" && selectedDb && (
         <NameDialog
           title={t("collectionDialog.title", { database: selectedDb })}
           ariaLabel={selectedDb}
@@ -640,33 +619,33 @@ function MongoWorkspace({
           emptyError={t("collectionDialog.errorName")}
           submitLabel={t("collectionDialog.submit")}
           savingLabel={t("collectionDialog.saving")}
-          onCancel={() => setCreatingCollection(false)}
+          onCancel={() => setDialog(null)}
           onSubmit={createCollection}
         />
       )}
 
-      {renamingCollection !== null && (
+      {dialog?.kind === "renameCollection" && (
         <NameDialog
-          title={t("mongo.renameCollectionTitle", { collection: renamingCollection })}
-          ariaLabel={renamingCollection}
+          title={t("mongo.renameCollectionTitle", { collection: dialog.collection })}
+          ariaLabel={dialog.collection}
           label={t("renameDialog.name")}
-          initialName={renamingCollection}
+          initialName={dialog.collection}
           emptyError={t("renameDialog.errorName")}
           submitLabel={t("renameDialog.submit")}
           savingLabel={t("renameDialog.saving")}
-          onCancel={() => setRenamingCollection(null)}
-          onSubmit={(newName) => renameCollection(renamingCollection, newName)}
+          onCancel={() => setDialog(null)}
+          onSubmit={(newName) => renameCollection(dialog.collection, newName)}
         />
       )}
 
-      {droppingCollection !== null && (
+      {dialog?.kind === "dropCollection" && (
         <ConfirmDialog
           title={t("mongo.dropCollectionTitle")}
-          message={t("mongo.dropCollectionMessage", { collection: droppingCollection })}
+          message={t("mongo.dropCollectionMessage", { collection: dialog.collection })}
           confirmLabel={t("common.delete")}
           danger
-          onConfirm={() => void dropCollection(droppingCollection)}
-          onCancel={() => setDroppingCollection(null)}
+          onConfirm={() => void dropCollection(dialog.collection)}
+          onCancel={() => setDialog(null)}
         />
       )}
     </div>

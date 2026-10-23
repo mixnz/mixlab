@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import type { UnlistenFn } from "@tauri-apps/api/event";
 import { useSqlApi, useSqlDialect } from "./context";
-import { cancelTransfer, onTransferProgress, type TransferProgress } from "../api";
+import { cancelTransfer } from "../api";
 import { filterRowFor } from "../workspace/filters";
 import type { FilterOperator } from "./filters";
 import { invalidateSchemaOutline } from "./schemaCache";
@@ -19,6 +18,7 @@ import ErrorBanner from "../../../components/ErrorBanner";
 import DisconnectTab from "../components/DisconnectTab";
 import TunnelBanner from "../components/TunnelBanner";
 import { useWorkspaceError } from "../workspace/workspaceError";
+import { useTransfer } from "../workspace/transfer";
 import Input from "../../../components/Input";
 import NameDialog from "../../../components/NameDialog";
 import SqlTable from "../components/SqlTable";
@@ -169,11 +169,8 @@ function SqlWorkspace({
   const [serverInfo, setServerInfo] = useState<{ version: string; os: string } | null>(null);
   const [collations, setCollations] = useState<SqlCollation[]>([]);
   const [dialog, setDialog] = useState<WorkspaceDialog | null>(null);
-  /** What the dump/restore tools are doing, if anything — shown over the whole workspace — and how
-   * far the dump or restore behind that overlay has got. Dropping a database has nothing to report,
-   * so `progress` stays null until the first reading arrives. */
-  const [transfer, setTransfer] = useState<{ label: string; progress: TransferProgress | null } | null>(null);
-  const transferring = transfer !== null;
+  /** What the dump/restore tools are doing, if anything — see `workspace/transfer.ts`. */
+  const { transfer, onBusyChange } = useTransfer(connectionId);
 
   /** The sidebar's search box and the list under it — see {@link useSidebarKeyboard}. */
   const sidebarKeys = useSidebarKeyboard(active, selectedDb);
@@ -252,25 +249,6 @@ function SqlWorkspace({
   useEffect(() => {
     void loadDatabases();
   }, [loadDatabases]);
-
-  // Only while the overlay is up, which is the only time there is anywhere to show a reading. The
-  // listener is registered as the transfer begins rather than kept for the life of the tab: what it
-  // is listening for happens a few times in a session and reports four times a second while it does.
-  useEffect(() => {
-    if (!transferring) return;
-    let stop: UnlistenFn | null = null;
-    let cancelled = false;
-    const heard = (progress: TransferProgress) => setTransfer((current) => current && { ...current, progress });
-    void onTransferProgress(connectionId, heard).then((unlisten) => {
-      // The transfer ended before the listener was in place; there is nothing left to hear.
-      if (cancelled) void unlisten();
-      else stop = unlisten;
-    });
-    return () => {
-      cancelled = true;
-      stop?.();
-    };
-  }, [transferring, connectionId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -688,9 +666,7 @@ function SqlWorkspace({
               schemaDisabled={tablesLoading || schemaReadOnly}
               onError={setLocalError}
               onChanged={databaseChanged}
-              onBusyChange={(label) =>
-                setTransfer((current) => (label === "" ? null : { label, progress: current?.progress ?? null }))
-              }
+              onBusyChange={onBusyChange}
             />
           </div>
         </aside>
