@@ -192,13 +192,26 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       does not: it builds the helper in one invocation with the daemon. Found while T209e gave the
       shim its own. The helper's bytes are pinned by `packaging/helper-lock.sh`, so this measures
       what the helper links built each way first, and bumps `HELPER_VERSION` if they differ.
-- [ ] **T209f** Forms that hold their state as one value. `mixengine/screens/Packages/Languages.tsx`
+- [x] **T209f** Forms that hold their state as one value. `mixengine/screens/Packages/Languages.tsx`
       has 25 `useState`, `terminal/components/TargetForm/TargetForm.tsx` 21, `db/redis/RedisWorkspace.tsx`
       19, `db/sql/SqlWorkspace.tsx` 18, `mixengine/screens/Extensions/Extensions.tsx` and
       `mixengine/screens/Blueprints/ApplyDialog.tsx` 16. States that change together (loading,
       error, result; a draft and whether it was edited) become one `useReducer`, or one
       discriminated union, so a state that cannot happen cannot be written. Comes after T209a,
       which touches some of the same files. Verified in the running window.
+      Design:
+      [2026-10-23-t209f-forms-that-hold-their-state-as-one-value-design.md](../specs/2026-10-23-t209f-forms-that-hold-their-state-as-one-value-design.md).
+      Counted without the import line, `useState` went Languages 24 → 12, TargetForm 20 → 1 and a
+      reducer, RedisWorkspace 18 → 8 and two reducers, SqlWorkspace 17 → 9 and a reducer,
+      Extensions 15 → 7, ApplyDialog 15 → 8. A read is `T | null`, a screen's dialogs one union, and
+      each reducer sits in a `.ts` beside its component with tests. The transfer overlay of the SQL
+      and Mongo workspaces is one `useTransfer` in `db/workspace/transfer.ts`. The five other files
+      past a dozen were changed too: MongoWorkspace 15 → 10 (its dialogs), NoSqlTable 15 → 13 (the
+      page, its count and its collection), Sites 14 → 11 (its dialogs), SignInForm 13 → 12 (the
+      server being added), Projects 13 → 8. Two bugs were found and fixed, both in the CHANGELOG:
+      saving a terminal target deleted elsewhere left the *deleted* notice up, and opening a second
+      project before the first had loaded could leave its row on Loading. Every screen was recorded
+      in the demo before and after, and only those two moments differ.
 - [ ] **T209g** One skeleton for the service recipes. `mixengine-core/src/generate/recipes/` is
       14,902 lines, almost a fifth of core, and grows with every service MixEngine supports.
       `mysql_family.rs` already shares MySQL and MariaDB. The design compares caddy, nginx,
