@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { useSqlApi, useSqlDialect } from "./context";
 import { cancelTransfer, onTransferProgress, type TransferProgress } from "../api";
@@ -39,6 +39,7 @@ import { useTranslation } from "../../../i18n";
 import { errorMessage } from "../../../core/errors";
 import type { SqlCollation } from "../types";
 import { kindLabel } from "../tab/connectionForm";
+import { NO_TABLE, tableSelection } from "./tableSelection";
 
 interface Props {
   /** Whether this connection's tab is the one on show. Passed straight through to the content
@@ -117,6 +118,13 @@ const CONTENT_TABS: {
   { mode: "query", labelKey: "sql.queryTab" },
 ];
 
+/** The one dialog over the workspace, with the table it is about. */
+type WorkspaceDialog =
+  | { kind: "createDatabase" }
+  | { kind: "createTable" }
+  | { kind: "renameTable"; table: string }
+  | { kind: "dropTable"; table: string };
+
 /** The database picker's first entry, which opens the create dialog instead of selecting anything.
  * MySQL allows no `/` in a database name, so this can never collide with a real one. */
 const NEW_DATABASE = "/new";
@@ -148,37 +156,24 @@ function SqlWorkspace({
   const { t } = useTranslation();
   const api = useSqlApi();
   const dialect = useSqlDialect();
-  const [databases, setDatabases] = useState<string[]>([]);
-  const [databasesLoading, setDatabasesLoading] = useState(false);
+  const [databases, setDatabases] = useState<{ list: string[]; loading: boolean }>({ list: [], loading: false });
   const [selectedDb, setSelectedDb] = useState(initialDatabase ?? "");
   const [tables, setTables] = useState<string[]>([]);
   const [tablesLoading, setTablesLoading] = useState(false);
   const [tableFilter, setTableFilter] = useState("");
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
-  /**
-   * A table held above the sidebar's list, put there by following a foreign key out of the grid.
-   *
-   * The list itself is left exactly as it was — the search box especially, which is very often what
-   * the user was in the middle of when a key took them somewhere else, and clearing it would lose
-   * the search they will want back. The table they were sent to is instead shown on its own row at
-   * the top, in reach whatever the list underneath is filtered down to, until they pick another
-   * table — which is the moment they no longer need a way back to this one.
-   */
-  const [pinnedTable, setPinnedTable] = useState<string | null>(null);
+  /* The selected table and the one pinned above the list — see `tableSelection.ts`. */
+  const [selection, dispatchSelection] = useReducer(tableSelection, NO_TABLE);
+  const { table: selectedTable, pinned: pinnedTable } = selection;
   const [contentMode, setContentMode] = useState<ContentMode>("data");
   const [localError, setLocalError] = useWorkspaceError(tunnelled);
   const [serverInfo, setServerInfo] = useState<{ version: string; os: string } | null>(null);
   const [collations, setCollations] = useState<SqlCollation[]>([]);
-  const [creatingDatabase, setCreatingDatabase] = useState(false);
-  const [creatingTable, setCreatingTable] = useState(false);
-  /** The table the context menu's rename is open on, and the one its drop is asking about. */
-  const [renamingTable, setRenamingTable] = useState<string | null>(null);
-  const [droppingTable, setDroppingTable] = useState<string | null>(null);
-  /** What the dump/restore tools are doing, if anything — shown over the whole workspace. */
-  const [transferStatus, setTransferStatus] = useState("");
-  /** How far the dump or restore behind that overlay has got — dropping a database has nothing to
-   * report. Null until the first reading arrives, and again once the overlay goes. */
-  const [transferProgress, setTransferProgress] = useState<TransferProgress | null>(null);
+  const [dialog, setDialog] = useState<WorkspaceDialog | null>(null);
+  /** What the dump/restore tools are doing, if anything — shown over the whole workspace — and how
+   * far the dump or restore behind that overlay has got. Dropping a database has nothing to report,
+   * so `progress` stays null until the first reading arrives. */
+  const [transfer, setTransfer] = useState<{ label: string; progress: TransferProgress | null } | null>(null);
+  const transferring = transfer !== null;
 
   /** The sidebar's search box and the list under it — see {@link useSidebarKeyboard}. */
   const sidebarKeys = useSidebarKeyboard(active, selectedDb);
@@ -242,15 +237,15 @@ function SqlWorkspace({
   /** Reads the database list, keeping the selection when the server still lists it — a database
    * dropped from under us leaves nothing to stay on. Also what the picker's reload entry calls. */
   const loadDatabases = useCallback(async () => {
-    setDatabasesLoading(true);
+    setDatabases((current) => ({ ...current, loading: true }));
     try {
       const dbs = await api.listDatabases(connectionId);
-      setDatabases(dbs);
+      setDatabases((current) => ({ ...current, list: dbs }));
       setSelectedDb((prev) => (prev && dbs.includes(prev) ? prev : ""));
     } catch (e) {
       setLocalError(errorMessage(t, e));
     } finally {
-      setDatabasesLoading(false);
+      setDatabases((current) => ({ ...current, loading: false }));
     }
   }, [api, connectionId, setLocalError, t]);
 
@@ -262,13 +257,11 @@ function SqlWorkspace({
   // listener is registered as the transfer begins rather than kept for the life of the tab: what it
   // is listening for happens a few times in a session and reports four times a second while it does.
   useEffect(() => {
-    if (transferStatus === "") {
-      setTransferProgress(null);
-      return;
-    }
+    if (!transferring) return;
     let stop: UnlistenFn | null = null;
     let cancelled = false;
-    void onTransferProgress(connectionId, setTransferProgress).then((unlisten) => {
+    const heard = (progress: TransferProgress) => setTransfer((current) => current && { ...current, progress });
+    void onTransferProgress(connectionId, heard).then((unlisten) => {
       // The transfer ended before the listener was in place; there is nothing left to hear.
       if (cancelled) void unlisten();
       else stop = unlisten;
@@ -277,7 +270,7 @@ function SqlWorkspace({
       cancelled = true;
       stop?.();
     };
-  }, [transferStatus, connectionId]);
+  }, [transferring, connectionId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -325,14 +318,11 @@ function SqlWorkspace({
     // Whatever the sidebar was reading is over, and its `finally` will no longer be the current
     // run's — so the spinner is put out here rather than left on for good.
     setTablesLoading(false);
+    dispatchSelection({ type: "cleared" });
     if (!selectedDb) {
       setTables([]);
-      setSelectedTable(null);
-      setPinnedTable(null);
       return;
     }
-    setSelectedTable(null);
-    setPinnedTable(null);
     api.listTables(connectionId, selectedDb)
       .then((list) => {
         if (tablesRun.current === mine) setTables(list);
@@ -348,15 +338,12 @@ function SqlWorkspace({
   // A table the list no longer holds — dropped from in here, or gone from the server by the time it
   // was read again — has nothing left to pin above it.
   useEffect(() => {
-    setPinnedTable((pinned) => (pinned === null || tables.includes(pinned) ? pinned : null));
+    dispatchSelection({ type: "listed", tables });
   }, [tables]);
 
-  /** A table chosen from the sidebar — either row of it. Choosing anything other than the pinned
-   * table takes the pin down: it was a way back from a key that has now been followed away from,
-   * and one that outstayed that would just be a row nobody asked for. */
+  /** A table chosen from the sidebar — either row of it; what it does to the pin is `select`'s. */
   function selectTable(table: string) {
-    if (table !== pinnedTable) setPinnedTable(null);
-    setSelectedTable(table);
+    dispatchSelection({ type: "select", table });
   }
 
   /** Opens a table named somewhere other than the sidebar — what `Ctrl+Click` on a table in the
@@ -365,8 +352,7 @@ function SqlWorkspace({
    * of a script is going to read rows rather than column definitions. */
   const openTable = useCallback((table: string) => {
     setTableFilter("");
-    setPinnedTable(null);
-    setSelectedTable(table);
+    dispatchSelection({ type: "open", table });
     setContentMode("data");
   }, []);
 
@@ -398,8 +384,7 @@ function SqlWorkspace({
         applied: [{ column, operator: "eq", value }],
         schemaToken: tokenFor(table),
       });
-      setPinnedTable(table);
-      setSelectedTable(table);
+      dispatchSelection({ type: "follow", table });
       setContentMode("data");
     },
     [selectedDb, tokenFor, tableCache, filterCache],
@@ -443,7 +428,7 @@ function SqlWorkspace({
     // again under the same name later is not the one these entries are about.
     forgetDatabase();
     setSelectedDb("");
-    setSelectedTable(null);
+    dispatchSelection({ type: "cleared" });
     setTables([]);
     await loadDatabases();
   }
@@ -452,9 +437,9 @@ function SqlWorkspace({
    * what shows them and stays open. */
   async function createDatabase(name: string, collation: string | null) {
     await api.createDatabase(connectionId, name, collation);
-    setCreatingDatabase(false);
+    setDialog(null);
     setSelectedDb(name);
-    setSelectedTable(null);
+    dispatchSelection({ type: "cleared" });
     // Re-listed rather than appended, so the picker keeps the order the server lists them in.
     await loadDatabases();
   }
@@ -463,10 +448,10 @@ function SqlWorkspace({
    * Errors reject back into the dialog, which is what shows them and stays open. */
   async function createTable(name: string, collation: string | null, engine: string | null) {
     await api.createTable(connectionId, selectedDb, name, collation, engine);
-    setCreatingTable(false);
+    setDialog(null);
     // Cleared so the new table is visible whatever was being searched for when it was made.
     setTableFilter("");
-    setSelectedTable(name);
+    dispatchSelection({ type: "created", table: name });
     // Under this name there may be an older table of the same one, dropped earlier in the session
     // and remembered still; what was read for it is not what this one holds.
     forgetTable(name);
@@ -477,12 +462,9 @@ function SqlWorkspace({
    * Errors reject back into the dialog, which is what shows them and stays open. */
   async function renameTable(table: string, newName: string) {
     await api.renameTable(connectionId, selectedDb, table, newName);
-    setRenamingTable(null);
+    setDialog(null);
     setTableFilter("");
-    if (selectedTable === table) setSelectedTable(newName);
-    // The pinned row follows the rename rather than being dropped by the check above: it is the
-    // same table, and it is still the way back to where the user came from.
-    if (pinnedTable === table) setPinnedTable(newName);
+    dispatchSelection({ type: "renamed", from: table, to: newName });
     // Both ends of the move: the name it has left, and the name it has arrived at — which may have
     // been another table's until it was dropped.
     forgetTable(table, newName);
@@ -491,10 +473,10 @@ function SqlWorkspace({
 
   /** Drops the table the confirmation was asking about. Nothing is left open on it afterwards. */
   async function dropTable(table: string) {
-    setDroppingTable(null);
+    setDialog(null);
     try {
       await api.dropTable(connectionId, selectedDb, table);
-      if (selectedTable === table) setSelectedTable(null);
+      dispatchSelection({ type: "dropped", table });
       forgetTable(table);
       listTables();
     } catch (e) {
@@ -524,7 +506,7 @@ function SqlWorkspace({
       label: t("sql.renameTable"),
       disabled: noSchemaWrites,
       disabledHint: noSchemaWritesHint,
-      onSelect: setRenamingTable,
+      onSelect: (table) => setDialog({ kind: "renameTable", table }),
     },
     {
       key: "drop",
@@ -532,7 +514,7 @@ function SqlWorkspace({
       danger: true,
       disabled: noSchemaWrites,
       disabledHint: noSchemaWritesHint,
-      onSelect: setDroppingTable,
+      onSelect: (table) => setDialog({ kind: "dropTable", table }),
     },
   ];
 
@@ -566,7 +548,7 @@ function SqlWorkspace({
             value={selectedDb}
             onChange={(db) => {
               if (db === NEW_DATABASE) {
-                setCreatingDatabase(true);
+                setDialog({ kind: "createDatabase" });
                 return;
               }
               if (db === RELOAD_DATABASES) {
@@ -574,7 +556,7 @@ function SqlWorkspace({
                 return;
               }
               setSelectedDb(db);
-              setSelectedTable(null);
+              dispatchSelection({ type: "cleared" });
             }}
             placeholder={t("sql.databasePlaceholder")}
             size="normal"
@@ -598,19 +580,19 @@ function SqlWorkspace({
                       ),
                     },
                   ]),
-              ...databases.map((db) => ({ value: db, label: db })),
+              ...databases.list.map((db) => ({ value: db, label: db })),
               {
                 value: RELOAD_DATABASES,
                 label: t("sql.reloadDatabases"),
                 // The menu stays open behind it: the reloaded list is the whole point of the
                 // click, and closing would hide it until the picker is opened again.
                 keepOpen: true,
-                disabled: databasesLoading,
+                disabled: databases.loading,
                 optionLabel: (
                   <span className="select-reload-option">
                     <ReloadIcon
                       size="1em"
-                      className={databasesLoading ? "select-reload-option-spinning" : undefined}
+                      className={databases.loading ? "select-reload-option-spinning" : undefined}
                     />
                     {t("sql.reloadDatabases")}
                   </span>
@@ -686,7 +668,7 @@ function SqlWorkspace({
                   disabled: !selectedDb || tablesLoading || noSchemaWrites,
                   // Only for read-only: the system-database case already says so in its label.
                   disabledHint: schemaReadOnly ? t("common.readOnlyConnection") : undefined,
-                  onClick: () => setCreatingTable(true),
+                  onClick: () => setDialog({ kind: "createTable" }),
                 },
               ]}
             />
@@ -706,7 +688,9 @@ function SqlWorkspace({
               schemaDisabled={tablesLoading || schemaReadOnly}
               onError={setLocalError}
               onChanged={databaseChanged}
-              onBusyChange={setTransferStatus}
+              onBusyChange={(label) =>
+                setTransfer((current) => (label === "" ? null : { label, progress: current?.progress ?? null }))
+              }
             />
           </div>
         </aside>
@@ -806,53 +790,53 @@ function SqlWorkspace({
         </section>
       </div>
 
-      {transferStatus !== "" && (
+      {transfer !== null && (
         <TransferOverlay
-          label={transferStatus}
-          progress={transferProgress}
+          label={transfer.label}
+          progress={transfer.progress}
           onCancel={() => void cancelTransfer(connectionId)}
         />
       )}
 
-      {creatingDatabase && (
+      {dialog?.kind === "createDatabase" && (
         <DatabaseDialog
           collations={collations}
-          onCancel={() => setCreatingDatabase(false)}
+          onCancel={() => setDialog(null)}
           onSubmit={createDatabase}
         />
       )}
 
-      {creatingTable && selectedDb && (
+      {dialog?.kind === "createTable" && selectedDb && (
         <TableDialog
           database={selectedDb}
           collations={collations}
-          onCancel={() => setCreatingTable(false)}
+          onCancel={() => setDialog(null)}
           onSubmit={createTable}
         />
       )}
 
-      {renamingTable !== null && (
+      {dialog?.kind === "renameTable" && (
         <NameDialog
-          title={t("sql.renameTableTitle", { table: renamingTable })}
-          ariaLabel={renamingTable}
+          title={t("sql.renameTableTitle", { table: dialog.table })}
+          ariaLabel={dialog.table}
           label={t("renameDialog.name")}
-          initialName={renamingTable}
+          initialName={dialog.table}
           emptyError={t("renameDialog.errorName")}
           submitLabel={t("renameDialog.submit")}
           savingLabel={t("renameDialog.saving")}
-          onCancel={() => setRenamingTable(null)}
-          onSubmit={(newName) => renameTable(renamingTable, newName)}
+          onCancel={() => setDialog(null)}
+          onSubmit={(newName) => renameTable(dialog.table, newName)}
         />
       )}
 
-      {droppingTable !== null && (
+      {dialog?.kind === "dropTable" && (
         <ConfirmDialog
           title={t("sql.dropTableTitle")}
-          message={t("sql.dropTableMessage", { table: droppingTable })}
+          message={t("sql.dropTableMessage", { table: dialog.table })}
           confirmLabel={t("common.delete")}
           danger
-          onConfirm={() => void dropTable(droppingTable)}
-          onCancel={() => setDroppingTable(null)}
+          onConfirm={() => void dropTable(dialog.table)}
+          onCancel={() => setDialog(null)}
         />
       )}
     </div>

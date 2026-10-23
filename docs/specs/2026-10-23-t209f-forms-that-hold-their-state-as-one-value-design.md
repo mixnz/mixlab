@@ -105,7 +105,7 @@ nothing in state can do that. The scan effect reads `request` instead of `applie
 | --- | --- |
 | `creatingDatabase`, `creatingTable`, `renamingTable`, `droppingTable` | `dialog`: `createDatabase`, `createTable`, `renameTable` (table), `dropTable` (table) |
 | `transferStatus`, `transferProgress` | `transfer: { label, progress } \| null` |
-| `selectedTable`, `pinnedTable` | `selection: { table, pinned }`, through `tableSelection.ts`, with `pinned` never set when `table` is not |
+| `selectedTable`, `pinnedTable` | `selection: { table, pinned }`, through `tableSelection.ts`: one action per way a table is chosen, renamed or dropped, so the pin moves with the table it names |
 | `databases`, `databasesLoading` | `databases: { list, loading }` |
 
 The transfer effect stops setting the progress back to `null` itself: closing the overlay drops the
