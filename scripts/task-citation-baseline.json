@@ -186,7 +186,7 @@
     "apps/desktop/src/modules/rest/sync.ts": 1,
     "apps/desktop/src/modules/rest/syncWrite.test.ts": 1,
     "apps/desktop/src/modules/terminal/TerminalTab.tsx": 3,
-    "apps/desktop/src/modules/terminal/components/TargetForm/TargetForm.tsx": 4,
+    "apps/desktop/src/modules/terminal/components/TargetForm/TargetForm.tsx": 2,
     "apps/desktop/src/modules/terminal/components/TerminalView/TerminalView.tsx": 1,
     "apps/desktop/src/modules/terminal/draftTarget.ts": 1,
     "apps/desktop/src/modules/terminal/index.ts": 1,

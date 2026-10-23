@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useReducer, useRef, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import Button from "../../../../components/Button";
 import Input, { Textarea } from "../../../../components/Input";
@@ -8,8 +8,7 @@ import RadioCard from "../../../../components/RadioCard";
 import SegmentedControl from "../../../../components/SegmentedControl";
 import { errorMessage } from "../../../../core/errors";
 import { savedChange } from "../../../../core/followSaved";
-import { DEFAULT_SSH_PORT, PRIVATE_KEY_PLACEHOLDER } from "../../../../core/ssh";
-import { stableStringify } from "../../../../core/stableStringify";
+import { PRIVATE_KEY_PLACEHOLDER } from "../../../../core/ssh";
 import { useTranslation } from "../../../../i18n";
 import { localShells } from "../../api";
 import { ShellIcon } from "../../icons";
@@ -23,16 +22,18 @@ import {
 import { loadTerminalSettings } from "../../settingsStore";
 import { shellLabel } from "../../shells";
 import { openingFor } from "../../session";
-import { formatEnvLines, parseEnvLines, parsePathLines } from "../../targetEnv";
-import type {
-  LocalShell,
-  OnRestore,
-  SavedTarget,
-  SshAuth,
-  SshConfig,
-  TerminalChoice,
-} from "../../types";
+import type { LocalShell, SavedTarget, TerminalChoice } from "../../types";
 import SavedTargetList from "./SavedTargetList";
+import {
+  buildChoice,
+  buildTarget,
+  draftEnv,
+  heldId,
+  initialForm,
+  isSavable,
+  snapshotOf,
+  targetForm,
+} from "./targetFormState";
 import styles from "./TargetForm.module.css";
 
 /** What a restored tab does with *Run on connect* — T205, D10 — as the form offers it. */
@@ -41,19 +42,6 @@ const ON_RESTORE_CHOICES = [
   { value: "type", label: "terminal.onRestoreType", description: "terminal.onRestoreTypeHint" },
   { value: "none", label: "terminal.onRestoreNone", description: "terminal.onRestoreNoneHint" },
 ] as const;
-
-/**
- * A saved target reduced to exactly "what it is" — without `id`.
- *
- * Leaving out `id` is what makes *Save as new* comparable: the new entry has a different id but
- * identical content, and the Update button has to read "nothing changed" right after. It goes
- * through `stableStringify` because the key order of a freshly built form object and of the same
- * object after a round trip through JSON are not the same — see `core/stableStringify.ts`.
- */
-function snapshotOf(target: SavedTarget): string {
-  const { id: _id, ...body } = target;
-  return stableStringify(body);
-}
 
 interface Props {
   onOpen: (choice: TerminalChoice) => void;
@@ -69,62 +57,15 @@ function TargetForm({ onOpen, onError, initial }: Props) {
   const targets = useSavedTargets();
   const targetsLoaded = useSavedTargetsLoaded();
 
-  const [kind, setKind] = useState<"local" | "ssh">(initial?.kind ?? "local");
-
+  /* The fields, and the saved entry they hold — see `targetFormState.ts`. One value, so loading a
+     row, clearing the form or a change from elsewhere moves them all at once. */
+  const [{ draft, held }, dispatch] = useReducer(targetForm, initial, initialForm);
+  const { local, ssh } = draft;
   /** The saved target the form is holding, or `null` when it was typed by hand. */
-  const [targetId, setTargetId] = useState<string | null>(initial?.targetId ?? null);
-  const [name, setName] = useState("");
-  /** A snapshot of the saved target when it was loaded, so the Update button knows whether
-   *  anything has changed. */
-  const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
-  const [runOnConnect, setRunOnConnect] = useState(initial?.runOnConnect ?? "");
-  /** The saved entry this form holds changed or went away somewhere else, while it held edits. */
-  const [stale, setStale] = useState<"changed" | "removed" | null>(null);
+  const targetId = heldId(held);
+  const savedSnapshot = held.kind === "held" ? held.snapshot : null;
 
-  // This machine
   const [shells, setShells] = useState<LocalShell[]>([]);
-  /* The name rather than the path, both in state and as the `Select`'s value: the name is what goes
-     to disk, so a saved row can be loaded into the form even before the machine's shell list has
-     finished reading. */
-  const [shellName, setShellName] = useState(initial?.kind === "local" ? initial.shell.name : "");
-  const [cwd, setCwd] = useState(initial?.kind === "local" ? (initial.cwd ?? "") : "");
-  /* What the shell is given beside its directory, as the lines the person types — T205, D9. */
-  const [envText, setEnvText] = useState(
-    initial?.kind === "local" ? formatEnvLines(initial.env ?? undefined) : "",
-  );
-  const [pathText, setPathText] = useState(
-    initial?.kind === "local" ? (initial.pathPrepend ?? []).join("\n") : "",
-  );
-  /* The two fields above sit under *Advanced*, closed: most targets set neither, and a form that
-     grows by two boxes for everyone is a form whose buttons fall off the pane. Open whenever there
-     is something in them, so nothing a target sets is hidden from the person editing it. */
-  const [advanced, setAdvanced] = useState(envText !== "" || pathText !== "");
-  /** What a tab restored on the next launch does with *Run on connect* — T205, D10. Not part of a
-   *  session, so it is read off the saved entry once that is found. */
-  const [onRestore, setOnRestore] = useState<OnRestore>("run");
-
-  // SSH
-  const [host, setHost] = useState(initial?.kind === "ssh" ? initial.config.host : "");
-  const [port, setPort] = useState(initial?.kind === "ssh" ? initial.config.port : DEFAULT_SSH_PORT);
-  const [username, setUsername] = useState(initial?.kind === "ssh" ? initial.config.username : "");
-  const [authType, setAuthType] = useState<"password" | "privatekey">(
-    initial?.kind === "ssh" ? initial.config.auth.type : "password",
-  );
-  const [password, setPassword] = useState(
-    initial?.kind === "ssh" && initial.config.auth.type === "password"
-      ? initial.config.auth.password
-      : "",
-  );
-  const [keyPath, setKeyPath] = useState(
-    initial?.kind === "ssh" && initial.config.auth.type === "privatekey"
-      ? initial.config.auth.key_path
-      : "",
-  );
-  const [passphrase, setPassphrase] = useState(
-    initial?.kind === "ssh" && initial.config.auth.type === "privatekey"
-      ? (initial.config.auth.passphrase ?? "")
-      : "",
-  );
 
   // `onError` is the parent's and may be a fresh closure each render; the read below runs once.
   const reportError = useEffectEvent((e: unknown) => onError(errorMessage(t, e)));
@@ -139,13 +80,14 @@ function TargetForm({ onOpen, onError, initial }: Props) {
         const preferred = settings.defaultShell
           ? found.find((shell) => shell.name === settings.defaultShell)
           : undefined;
-        /* `current ||` keeps what `initial` set: a failed opening followed by a retry has to return
-           to the shell just tried, not to the default shell. If the default shell has been removed
-           from the machine, `preferred` is `undefined` and the first one Rust suggests takes its
-           place. */
-        setShellName((current) => current || preferred?.name || (found[0]?.name ?? ""));
-        const dir = settings.defaultCwd;
-        if (dir) setCwd((current) => current || dir);
+        /* Into empty fields only: a failed opening followed by a retry has to return to the shell
+           just tried, not to the default shell. If the default shell has been removed from the
+           machine, `preferred` is `undefined` and the first one Rust suggests takes its place. */
+        dispatch({
+          type: "defaults",
+          shellName: preferred?.name || (found[0]?.name ?? ""),
+          cwd: settings.defaultCwd || undefined,
+        });
       })
       .catch((e) => reportError(e));
     // Runs only once: a machine's shell list does not change midway.
@@ -162,12 +104,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
    * belongs to the saved entry, not to the session. Without this step, after leaving a session the
    * form comes back with the right address and password but an empty Name field and a dead Update
    * button — even if the row in the column lights up, nobody reads from that that it is being held.
-   *
-   * Only the name and snapshot are set, deliberately not overwriting the whole entry: what the user
-   * just typed has to stay as it is. A form that, after an opening failed on a wrong password, puts
-   * the old password back by itself is a form arguing with the user. And because the snapshot is
-   * taken from the entry rather than from the form, a just-edited password brings the Update button
-   * back to life — exactly as it should.
+   * What `named` leaves alone, and why, is in `targetFormState.ts`.
    *
    * Waits for `targetsLoaded` because the list is empty until the file has been read, and before
    * that every id looks deleted.
@@ -180,189 +117,53 @@ function TargetForm({ onOpen, onError, initial }: Props) {
     const id = currentTargetId();
     if (namedInitial.current || id === null || !targetsLoaded) return;
     namedInitial.current = true;
-    const entry = targets.find((target) => target.id === id);
-    if (entry === undefined) {
-      /* That row was deleted while the session was running. The form keeps everything it has — it
-         can still reopen — but stops pointing at an id with nothing behind it, so the button no
-         longer says "Update" about an entry that does not exist. */
-      setTargetId(null);
-      return;
-    }
-    setName(entry.name);
-    setOnRestore(entry.onRestore ?? "run");
-    setSavedSnapshot(snapshotOf(entry));
+    dispatch({ type: "named", entry: targets.find((target) => target.id === id) });
   }, [targetsLoaded, targets]);
 
-  /** `applyTarget` as of the last render, for the effect below: a function made anew each render
-   *  cannot be one of its dependencies without making it run on every render. */
-  const applyLatest = useRef(applyTarget);
-  useLayoutEffect(() => {
-    applyLatest.current = applyTarget;
-  });
-
-  /* The variables as typed, or the first line that is not `KEY=value`: such a form neither saves
-     nor opens, and says which line. Declared above the first `buildTarget` call, which runs
-     during render: below it, they would not exist yet. */
-  const parsedEnv = parseEnvLines(envText);
-  const envError = "error" in parsedEnv ? parsedEnv.error : null;
-  const env = "env" in parsedEnv && Object.keys(parsedEnv.env).length > 0 ? parsedEnv.env : undefined;
-  const pathPrepend = parsePathLines(pathText);
+  const { envError } = draftEnv(draft);
 
   /* The saved entry this form holds can change under it: sync brings a newer one, or another tab
      updates or deletes it. An untouched form follows; edits are the person's and stay, and they
      are told. One that went away leaves the form as it is, and Save makes it a new one. */
   const heldEntry = targetId === null ? undefined : targets.find((target) => target.id === targetId);
   const currentSnapshot = heldEntry && snapshotOf(heldEntry);
-  const heldSnapshot = snapshotOf(buildTarget(""));
+  const heldSnapshot = snapshotOf(buildTarget(draft, ""));
   useEffect(() => {
     if (!namedInitial.current || targetId === null || !targetsLoaded) return;
     const change = savedChange(currentSnapshot, savedSnapshot, heldSnapshot);
-    if (change === "reload" && heldEntry) applyLatest.current(heldEntry);
-    else if (change === "changed") setStale("changed");
-    else if (change === "removed") {
-      setTargetId(null);
-      setSavedSnapshot(null);
-      setStale("removed");
-    }
+    // `namedInitial` is already spent here, so a plain `apply` is all `applyTarget` would do.
+    if (change === "reload" && heldEntry) dispatch({ type: "apply", entry: heldEntry });
+    else if (change === "changed") dispatch({ type: "changedElsewhere" });
+    else if (change === "removed") dispatch({ type: "removedElsewhere" });
   }, [targetId, targetsLoaded, heldEntry, currentSnapshot, savedSnapshot, heldSnapshot]);
-
-  const chosenShell = shells.find((shell) => shell.name === shellName);
 
   async function browseDirectory() {
     const picked = await openDialog({ directory: true, multiple: false });
-    if (typeof picked === "string") setCwd(picked);
+    if (typeof picked === "string") dispatch({ type: "editLocal", patch: { cwd: picked } });
   }
 
   async function browseKeyFile() {
     const picked = await openDialog({ directory: false, multiple: false });
-    if (typeof picked === "string") setKeyPath(picked);
+    if (typeof picked === "string") dispatch({ type: "editSsh", patch: { keyPath: picked } });
   }
 
-  function buildAuth(): SshAuth {
-    return authType === "password"
-      ? { type: "password", password }
-      : { type: "privatekey", key_path: keyPath, passphrase: passphrase || undefined };
-  }
-
-  function buildConfig(): SshConfig {
-    return { host: host.trim(), port, username: username.trim(), auth: buildAuth() };
-  }
-
-  /** Which target the form describes, under the id passed in. An empty field is written as
-   *  `undefined` rather than `""`: absence is the default, so an entry not using that field does
-   *  not carry a dead line around. `onRestore` likewise: `run` is what an absent one means. */
-  function buildTarget(id: string): SavedTarget {
-    const trimmedName = name.trim();
-    const opening = runOnConnect.trim() || undefined;
-    const restore = onRestore === "run" ? {} : { onRestore };
-    if (kind === "local") {
-      return {
-        id,
-        name: trimmedName,
-        kind: "local",
-        shellName,
-        cwd: cwd.trim() || null,
-        runOnConnect: opening,
-        ...restore,
-        ...(env === undefined ? {} : { env }),
-        ...(pathPrepend.length === 0 ? {} : { pathPrepend }),
-      };
-    }
-    return {
-      id,
-      name: trimmedName,
-      kind: "ssh",
-      config: buildConfig(),
-      runOnConnect: opening,
-      ...restore,
-    };
-  }
-
-  /** Enough for an attempt to mean something: an address, a user, and whatever the chosen
-   *  authentication method needs. */
-  const sshReady =
-    host.trim() !== "" &&
-    username.trim() !== "" &&
-    (authType === "password" ? password !== "" : keyPath.trim() !== "");
-
-  /** What is being opened, built from the form. `null` when the form is not yet enough for an
-   *  attempt to mean something. */
-  function buildChoice(): TerminalChoice | null {
-    const opening = runOnConnect.trim() || null;
-    if (kind === "local") {
-      return chosenShell && envError === null
-        ? {
-            kind: "local",
-            shell: chosenShell,
-            cwd: cwd.trim() || null,
-            targetId,
-            ...openingFor(opening, onRestore),
-            env: env ?? null,
-            pathPrepend: pathPrepend.length === 0 ? null : pathPrepend,
-          }
-        : null;
-    }
-    return sshReady
-      ? { kind: "ssh", config: buildConfig(), targetId, ...openingFor(opening, onRestore) }
-      : null;
-  }
-
-  /** Enough to save: a name, for this machine a real shell whose name can be saved, and variables
-   *  that read. */
-  const savable =
-    name.trim() !== "" &&
-    (kind === "ssh" || (chosenShell !== undefined && envError === null));
+  const savable = isSavable(draft, shells);
 
   /* The Update button is dead when the form holds exactly what was saved. Only asked when there is
      an entry to compare against: for a hand-typed target the button is Save, and Save is never
      pointless. */
-  const unchanged = targetId !== null && savedSnapshot === snapshotOf(buildTarget(""));
+  const unchanged = targetId !== null && savedSnapshot === heldSnapshot;
 
   function applyTarget(entry: SavedTarget) {
-    setStale(null);
-    // The targets column is always there, even while the form is on the other kind — clicking a
-    // row without the form switching kind would look like the click did nothing.
-    setKind(entry.kind);
-    setTargetId(entry.id);
-    setName(entry.name);
-    setRunOnConnect(entry.runOnConnect ?? "");
-    setOnRestore(entry.onRestore ?? "run");
-    setSavedSnapshot(snapshotOf(entry));
+    dispatch({ type: "apply", entry });
     // The name has been looked for already, and it is this one. The effect above has no turn left
     // to overwrite it.
     namedInitial.current = true;
-    if (entry.kind === "local") {
-      setShellName(entry.shellName);
-      setCwd(entry.cwd ?? "");
-      setEnvText(formatEnvLines(entry.env));
-      setPathText((entry.pathPrepend ?? []).join("\n"));
-      setAdvanced(entry.env !== undefined || entry.pathPrepend !== undefined);
-      /* And clear the other branch. Without clearing, switching to the SSH tab afterwards would
-         show the address and password of another server — the one loaded before — while the left
-         column highlights a local row, and the Update button stands ready to turn that row into a
-         server. */
-      resetSshFields();
-      return;
-    }
-    // Symmetrically: another local row's starting directory has no business here any more. The
-    // shell name stays — it belongs to no row; it is what the "This machine" tab opens by default.
-    setCwd("");
-    setEnvText("");
-    setPathText("");
-    setHost(entry.config.host);
-    setPort(entry.config.port);
-    setUsername(entry.config.username);
-    setAuthType(entry.config.auth.type);
-    setPassword(entry.config.auth.type === "password" ? entry.config.auth.password : "");
-    setKeyPath(entry.config.auth.type === "privatekey" ? entry.config.auth.key_path : "");
-    setPassphrase(
-      entry.config.auth.type === "privatekey" ? (entry.config.auth.passphrase ?? "") : "",
-    );
   }
 
   /** Double-clicking a row: loads it into the form and opens it right away. The config is taken
-   *  straight from the clicked entry rather than from state — `applyTarget` has just called
-   *  `setState`, and state only changes on the next render. */
+   *  straight from the clicked entry rather than from state — `applyTarget` has just dispatched,
+   *  and state only changes on the next render. */
   function openTarget(entry: SavedTarget) {
     applyTarget(entry);
     const opening = entry.runOnConnect ?? null;
@@ -391,45 +192,19 @@ function TargetForm({ onOpen, onError, initial }: Props) {
     });
   }
 
-  /** Clears the SSH half of the form. Separate because `applyTarget` needs it too: loading a local
-   *  row while leaving the credentials of the server just viewed would leave them sitting behind a
-   *  tab only one click away. */
-  function resetSshFields() {
-    setHost("");
-    setPort(DEFAULT_SSH_PORT);
-    setUsername("");
-    setAuthType("password");
-    setPassword("");
-    setKeyPath("");
-    setPassphrase("");
-  }
-
   /** Clears the form. The selected kind stays: "+" means "a new one of the kind I am looking at",
    *  and both kinds can be saved now. */
   function clearForm() {
-    setStale(null);
-    setTargetId(null);
-    setName("");
-    setSavedSnapshot(null);
-    setRunOnConnect("");
-    setOnRestore("run");
-    setCwd("");
-    setEnvText("");
-    setPathText("");
-    resetSshFields();
+    dispatch({ type: "clear" });
   }
 
   async function saveTarget() {
     if (!savable) return;
     try {
-      const entry = buildTarget(targetId ?? crypto.randomUUID());
-      if (targetId) {
-        await updateTarget(entry);
-      } else {
-        await addTarget(entry);
-        setTargetId(entry.id);
-      }
-      setSavedSnapshot(snapshotOf(entry));
+      const entry = buildTarget(draft, targetId ?? crypto.randomUUID());
+      if (targetId) await updateTarget(entry);
+      else await addTarget(entry);
+      dispatch({ type: "saved", entry });
     } catch (e) {
       onError(errorMessage(t, e));
     }
@@ -440,10 +215,9 @@ function TargetForm({ onOpen, onError, initial }: Props) {
   async function saveAsNew() {
     if (!savable) return;
     try {
-      const entry = buildTarget(crypto.randomUUID());
+      const entry = buildTarget(draft, crypto.randomUUID());
       await addTarget(entry);
-      setTargetId(entry.id);
-      setSavedSnapshot(snapshotOf(entry));
+      dispatch({ type: "saved", entry });
     } catch (e) {
       onError(errorMessage(t, e));
     }
@@ -458,7 +232,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
     }
   }
 
-  const choice = buildChoice();
+  const choice = buildChoice(draft, shells, targetId);
 
   return (
     <div className={styles.layout}>
@@ -483,8 +257,8 @@ function TargetForm({ onOpen, onError, initial }: Props) {
             block
             mode="tabs"
             aria-label={t("terminal.newTabTitle")}
-            value={kind}
-            onChange={setKind}
+            value={draft.kind}
+            onChange={(kind) => dispatch({ type: "edit", patch: { kind } })}
             segments={[
               { value: "local", label: t("terminal.targetLocal") },
               { value: "ssh", label: t("terminal.targetSsh") },
@@ -496,24 +270,24 @@ function TargetForm({ onOpen, onError, initial }: Props) {
             <label htmlFor="terminal-target-name">{t("terminal.targetName")}</label>
             <Input
               id="terminal-target-name"
-              value={name}
+              value={draft.name}
               placeholder={
-                kind === "local"
+                draft.kind === "local"
                   ? t("terminal.targetNamePlaceholderLocal")
                   : t("terminal.targetNamePlaceholderSsh")
               }
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => dispatch({ type: "edit", patch: { name: e.target.value } })}
             />
           </div>
 
-          {kind === "local" ? (
+          {draft.kind === "local" ? (
             <>
               <div className={styles.row}>
                 {/* `Select` does not take an `id`, so its label is `ariaLabel` rather than
                     `htmlFor` */}
                 <span>{t("terminal.shell")}</span>
                 <Select
-                  value={shellName}
+                  value={local.shellName}
                   options={shells.map((shell) => ({
                     value: shell.name,
                     label: (
@@ -526,7 +300,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
                     // reads.
                     searchText: shellLabel(shell.name),
                   }))}
-                  onChange={setShellName}
+                  onChange={(shellName) => dispatch({ type: "editLocal", patch: { shellName } })}
                   ariaLabel={t("terminal.shell")}
                   /* A machine where no shell was detected, and a saved row pointing at a shell
                      removed from the machine, both show up as an empty field — but they are not the
@@ -542,9 +316,9 @@ function TargetForm({ onOpen, onError, initial }: Props) {
                 <div className={styles.withButton}>
                   <Input
                     id="terminal-cwd"
-                    value={cwd}
+                    value={local.cwd}
                     placeholder={t("terminal.startInPlaceholder")}
-                    onChange={(e) => setCwd(e.target.value)}
+                    onChange={(e) => dispatch({ type: "editLocal", patch: { cwd: e.target.value } })}
                   />
                   <Button onClick={() => void browseDirectory()}>{t("terminal.browse")}</Button>
                 </div>
@@ -554,20 +328,20 @@ function TargetForm({ onOpen, onError, initial }: Props) {
                 variant="link"
                 size="small"
                 className={styles.advancedToggle}
-                aria-expanded={advanced}
-                onClick={() => setAdvanced((open) => !open)}
+                aria-expanded={local.advanced}
+                onClick={() => dispatch({ type: "editLocal", patch: { advanced: !local.advanced } })}
               >
-                {advanced ? t("terminal.advancedHide") : t("terminal.advancedShow")}
+                {local.advanced ? t("terminal.advancedHide") : t("terminal.advancedShow")}
               </Button>
 
-              {advanced && (
+              {local.advanced && (
                 <>
                   <div className={styles.row}>
                     <label htmlFor="terminal-env">{t("terminal.envLabel")}</label>
                     <Textarea
                       id="terminal-env"
-                      value={envText}
-                      onChange={(e) => setEnvText(e.target.value)}
+                      value={local.envText}
+                      onChange={(e) => dispatch({ type: "editLocal", patch: { envText: e.target.value } })}
                     />
                     {envError === null ? (
                       <p className={styles.hint}>{t("terminal.envHint")}</p>
@@ -582,8 +356,8 @@ function TargetForm({ onOpen, onError, initial }: Props) {
                     <label htmlFor="terminal-path">{t("terminal.pathLabel")}</label>
                     <Textarea
                       id="terminal-path"
-                      value={pathText}
-                      onChange={(e) => setPathText(e.target.value)}
+                      value={local.pathText}
+                      onChange={(e) => dispatch({ type: "editLocal", patch: { pathText: e.target.value } })}
                     />
                     <p className={styles.hint}>{t("terminal.pathHint")}</p>
                   </div>
@@ -595,15 +369,15 @@ function TargetForm({ onOpen, onError, initial }: Props) {
               <div className={styles.columns}>
                 <div className={styles.row}>
                   <label htmlFor="terminal-host">{t("terminal.host")}</label>
-                  <Input id="terminal-host" value={host} onChange={(e) => setHost(e.target.value)} />
+                  <Input id="terminal-host" value={ssh.host} onChange={(e) => dispatch({ type: "editSsh", patch: { host: e.target.value } })} />
                 </div>
                 <div className={`${styles.row} ${styles.narrow}`}>
                   <label htmlFor="terminal-port">{t("terminal.port")}</label>
                   <Input
                     id="terminal-port"
                     type="number"
-                    value={port}
-                    onChange={(e) => setPort(Number(e.target.value))}
+                    value={ssh.port}
+                    onChange={(e) => dispatch({ type: "editSsh", patch: { port: Number(e.target.value) } })}
                   />
                 </div>
               </div>
@@ -612,32 +386,32 @@ function TargetForm({ onOpen, onError, initial }: Props) {
                 <label htmlFor="terminal-user">{t("terminal.username")}</label>
                 <Input
                   id="terminal-user"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={ssh.username}
+                  onChange={(e) => dispatch({ type: "editSsh", patch: { username: e.target.value } })}
                 />
               </div>
 
               <div className={styles.row}>
                 <span>{t("terminal.authMethod")}</span>
                 <Select
-                  value={authType}
+                  value={ssh.authType}
                   options={[
                     { value: "password", label: t("terminal.authPassword") },
                     { value: "privatekey", label: t("terminal.authPrivateKey") },
                   ]}
-                  onChange={(value) => setAuthType(value)}
+                  onChange={(authType) => dispatch({ type: "editSsh", patch: { authType } })}
                   ariaLabel={t("terminal.authMethod")}
                 />
               </div>
 
-              {authType === "password" ? (
+              {ssh.authType === "password" ? (
                 <div className={styles.row}>
                   <label htmlFor="terminal-password">{t("terminal.password")}</label>
                   <Input
                     id="terminal-password"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={ssh.password}
+                    onChange={(e) => dispatch({ type: "editSsh", patch: { password: e.target.value } })}
                   />
                 </div>
               ) : (
@@ -647,9 +421,9 @@ function TargetForm({ onOpen, onError, initial }: Props) {
                     <div className={styles.withButton}>
                       <Input
                         id="terminal-key"
-                        value={keyPath}
+                        value={ssh.keyPath}
                         placeholder={PRIVATE_KEY_PLACEHOLDER}
-                        onChange={(e) => setKeyPath(e.target.value)}
+                        onChange={(e) => dispatch({ type: "editSsh", patch: { keyPath: e.target.value } })}
                       />
                       <Button onClick={() => void browseKeyFile()}>{t("terminal.browse")}</Button>
                     </div>
@@ -659,8 +433,8 @@ function TargetForm({ onOpen, onError, initial }: Props) {
                     <Input
                       id="terminal-passphrase"
                       type="password"
-                      value={passphrase}
-                      onChange={(e) => setPassphrase(e.target.value)}
+                      value={ssh.passphrase}
+                      onChange={(e) => dispatch({ type: "editSsh", patch: { passphrase: e.target.value } })}
                     />
                   </div>
                 </>
@@ -675,9 +449,9 @@ function TargetForm({ onOpen, onError, initial }: Props) {
             <label htmlFor="terminal-run-on-connect">{t("terminal.runOnConnect")}</label>
             <Textarea
               id="terminal-run-on-connect"
-              value={runOnConnect}
+              value={draft.runOnConnect}
               placeholder={t("terminal.runOnConnectPlaceholder")}
-              onChange={(e) => setRunOnConnect(e.target.value)}
+              onChange={(e) => dispatch({ type: "edit", patch: { runOnConnect: e.target.value } })}
             />
             <p className={styles.hint}>{t("terminal.runOnConnectHint")}</p>
           </div>
@@ -693,9 +467,9 @@ function TargetForm({ onOpen, onError, initial }: Props) {
                 <RadioCard
                   key={value}
                   name="terminal-on-restore"
-                  checked={onRestore === value}
-                  disabled={runOnConnect.trim() === ""}
-                  onChange={() => setOnRestore(value)}
+                  checked={draft.onRestore === value}
+                  disabled={draft.runOnConnect.trim() === ""}
+                  onChange={() => dispatch({ type: "edit", patch: { onRestore: value } })}
                   label={t(label)}
                   description={t(description)}
                 />
@@ -703,7 +477,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
             </div>
           </div>
 
-          {stale === "changed" && (
+          {held.kind === "held" && held.changedElsewhere && (
             <div className={styles.savedElsewhere}>
               <NoticeBanner message={t("terminal.changedElsewhere")} />
               <Button
@@ -717,8 +491,8 @@ function TargetForm({ onOpen, onError, initial }: Props) {
               </Button>
             </div>
           )}
-          {stale === "removed" && (
-            <NoticeBanner message={t("terminal.removedElsewhere")} onDismiss={() => setStale(null)} />
+          {held.kind === "removed" && (
+            <NoticeBanner message={t("terminal.removedElsewhere")} onDismiss={() => dispatch({ type: "dismissRemoved" })} />
           )}
 
           <div className={styles.actions}>
@@ -735,7 +509,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
               disabled={choice === null}
               onClick={() => choice && onOpen(choice)}
             >
-              {kind === "local" ? t("terminal.open") : t("terminal.connect")}
+              {draft.kind === "local" ? t("terminal.open") : t("terminal.connect")}
             </Button>
           </div>
         </div>

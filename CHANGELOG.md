@@ -41,6 +41,8 @@
   versions to install no longer waits for each language to be downloaded one after another.
 - The MixEngine Dashboard shows its services right away after MixEngine starts. Before, the list
   waited until the disk usage had been measured, which on Windows could take twenty seconds.
+- In MixLab's terminal, saving a target that was deleted in another tab takes down the notice
+  that said so. Before, it stayed beside the Update button.
 
 ## v0.0.19
 
