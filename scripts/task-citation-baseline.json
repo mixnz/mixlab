@@ -116,7 +116,7 @@
     "apps/desktop/src/modules/mixengine/quickStart.ts": 2,
     "apps/desktop/src/modules/mixengine/requirementStep.ts": 4,
     "apps/desktop/src/modules/mixengine/screens/Blueprints/ApplyDialog.module.css": 5,
-    "apps/desktop/src/modules/mixengine/screens/Blueprints/ApplyDialog.tsx": 18,
+    "apps/desktop/src/modules/mixengine/screens/Blueprints/ApplyDialog.tsx": 13,
     "apps/desktop/src/modules/mixengine/screens/Blueprints/Blueprints.tsx": 1,
     "apps/desktop/src/modules/mixengine/screens/Dashboard/Dashboard.module.css": 1,
     "apps/desktop/src/modules/mixengine/screens/Dashboard/Dashboard.tsx": 4,
