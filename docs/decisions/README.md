@@ -66,6 +66,7 @@ that supersedes the old one and update the old one's status line — never edit 
 | [0064](0064-the-daemon-may-start-at-boot-by-the-account-s-own-linger.md) | The daemon may start at boot, by the account's own linger, turned on only when asked and never elevated | Accepted |
 | [0065](0065-a-terminal-may-raise-the-prompt-itself.md) | A terminal may raise the elevation prompt itself, through `sudo` on the installed helper, where no dialog can | Accepted |
 | [0066](0066-what-a-home-applied-is-that-homes-to-undo.md) | What a home applied to the machine is that home's to undo: one hosts region per home, and a helper that keeps itself and its log while another home uses them | Accepted |
+| [0067](0067-the-shim-reads-the-database-and-fetches-nothing.md) | The shim reads the database itself, and links nothing that fetches: `reqwest` sits behind core's `network` feature, and the shim is built on its own | Accepted |
 
 ### Desktop (recorded in the standalone client)
 

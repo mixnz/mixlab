@@ -240,4 +240,5 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-21 | [T211 — Elevation from a terminal (design)](2026-10-21-t211-elevation-from-a-terminal-design.md) | T211, T211a, T211b, T211c, T211d | implemented |
 | 2026-10-21 | [T211e, T211f — What a terminal cannot grant, and the window that waits for one (design)](2026-10-21-t211e-what-a-terminal-cannot-grant-design.md) | T211e, T211f | implemented |
 | 2026-10-21 | [T211g, T211h — One home undoes only its own, and six sentences that said the wrong thing (design)](2026-10-21-t211g-t211h-one-home-undoes-only-its-own-design.md) | T211g, T211h | implemented |
+| 2026-10-23 | [The shim compiles only what it runs (design)](2026-10-23-t209e-the-shim-compiles-only-what-it-runs-design.md) | T209e | approved |
 | 2026-10-23 | [T211j — A resolver that programs never ask is not wired (design)](2026-10-23-t211j-a-resolver-programs-never-ask-design.md) | T211j | implemented |
