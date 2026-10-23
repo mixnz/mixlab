@@ -403,3 +403,58 @@ fn the_shim_never_builds_a_host() {
         );
     }
 }
+
+/// **Nothing that fetches reaches the shim.** ADR 0067: the shim reads the database itself and links
+/// no HTTP client, so `mixengine-core` comes without `network`. `cargo metadata` cannot answer this:
+/// its resolve is the workspace's, with `network` unified on by the daemon. `cargo tree -p` resolves
+/// the shim's features alone, which is what `packaging/stage.sh` builds it with.
+///
+/// `sqlx` is asserted present rather than absent. The shim keeps it on purpose, and a tree that
+/// printed nothing at all would otherwise pass for one without `reqwest` in it.
+#[test]
+fn nothing_that_fetches_reaches_the_shim() {
+    let workspace = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR")))
+        .parent()
+        .and_then(std::path::Path::parent)
+        .expect("the workspace root");
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+
+    let output = std::process::Command::new(cargo)
+        .current_dir(workspace)
+        .args([
+            "tree",
+            "-p",
+            "mixengine-shim",
+            "-e",
+            "normal",
+            "--prefix",
+            "none",
+            "--format",
+            "{p}",
+            "--locked",
+            "--offline",
+        ])
+        .output()
+        .expect("cargo runs");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success(),
+        "cargo tree failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let names: BTreeSet<&str> = stdout
+        .lines()
+        .filter_map(|line| line.split_whitespace().next())
+        .collect();
+    assert!(
+        names.contains("mixengine-core") && names.contains("sqlx"),
+        "cargo tree printed no tree to check:\n{stdout}"
+    );
+    for forbidden in ["reqwest", "hyper"] {
+        assert!(
+            !names.contains(forbidden),
+            "{forbidden} reaches mixengine-shim; ADR 0067 keeps every fetch out of it"
+        );
+    }
+}

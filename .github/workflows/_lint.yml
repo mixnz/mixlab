@@ -104,6 +104,15 @@ jobs:
       - name: The elevated helper builds without the rest of the platform
         run: cargo clippy -p mixengine-elevate --all-targets --locked -- -D warnings
 
+      # ADR 0067: the shim links `mixengine-core` without `network`, and every workspace build turns
+      # `network` on through the daemon. So a fetch left ungated compiles everywhere above and fails
+      # only where core is built alone — here, and in the release's own build of the shim.
+      - name: The core builds without its fetches
+        run: cargo clippy -p mixengine-core --no-default-features --all-targets --locked -- -D warnings
+
+      - name: The shim builds against that core
+        run: cargo clippy -p mixengine-shim --all-targets --locked -- -D warnings
+
       - name: The elevated helper's dependency budget
         run: |
           set -euo pipefail
