@@ -13,7 +13,6 @@ import * as api from "../../api";
 import type { BlueprintApplied } from "@mixengine/api";
 import type { BlueprintPlan } from "@mixengine/api";
 import type { BlueprintSummary } from "@mixengine/api";
-import type { MismatchAnswer } from "@mixengine/api";
 import type { Requirement } from "@mixengine/api";
 import {
   needLabel,
@@ -44,8 +43,18 @@ import { installDevkit } from "../../devkitInstall";
 import { planDevkitNeed } from "../../devkitNeed";
 import { formatBytes } from "../../metricsState";
 import { DEVKIT_PACKAGE, devkitOffer } from "../Packages/devkit";
-import type { PackageRelease } from "@mixengine/api";
 import { siteOfEachStep } from "../../siteGroups";
+import {
+  answered,
+  cancelAsked,
+  devkitFound,
+  ended,
+  planned,
+  runningJob,
+  started,
+  type Phase,
+  type PlanAnswers,
+} from "./applyPhase";
 import styles from "./ApplyDialog.module.css";
 
 interface Props {
@@ -67,13 +76,6 @@ interface Props {
   initialRoot?: string;
 }
 
-type Phase =
-  | { kind: "form" }
-  | { kind: "plan"; plan: BlueprintPlan; needs: Requirement[] }
-  | { kind: "running"; jobId: number }
-  | { kind: "done"; applied: BlueprintApplied }
-  | { kind: "failed"; message: string };
-
 /**
  * One method (`blueprint.apply`), called twice. Pass 1 (`dry_run: true`) only reads; pass 2
  * (`dry_run: false`) is the only one that really does anything, and can only be sent once
@@ -89,23 +91,11 @@ export default function ApplyDialog({
   const { t } = useTranslation();
   const [project, setProject] = useState(initialProject);
   const [root, setRoot] = useState(initialRoot);
+  /* Where the dialog is, with what was answered about the plan and whether Cancel was pressed —
+     see `applyPhase.ts`. */
   const [phase, setPhase] = useState<Phase>({ kind: "form" });
-  const [choices, setChoices] = useState<Record<number, MismatchAnswer>>({});
-  const [scaffoldAgreed, setScaffoldAgreed] = useState(false);
-  // T205a: one box per `.env` key the plan offers, keyed by the key.
-  const [dotenvAgreed, setDotenvAgreed] = useState<Record<string, boolean>>({});
-  // Agreement to install what the plan's releases lack on this machine — T152.
-  const [prerequisitesAgreed, setPrerequisitesAgreed] = useState(false);
-  /* A Ruby this blueprint pins that cannot build gems with C extensions, and the devkit to install
-     with the apply — T206a, asked where the decision is made. Ticked by default: the steps after
-     the apply need it, and a project made without it is half built. */
-  const [devkit, setDevkit] = useState<{ offer: PackageRelease | null } | null>(null);
-  const [devkitAgreed, setDevkitAgreed] = useState(true);
+  const jobId = runningJob(phase);
   const [busy, setBusy] = useState(false);
-  /** Cancel was pressed on the running apply. Kept past the ending: an apply cancelled between two
-   *  steps stops there and still **succeeds** with the steps it ran (the daemon's apply loop), so
-   *  the done view is the only place left to say the list is short because somebody asked. */
-  const [cancelAsked, setCancelAsked] = useState(false);
   const [error, setError] = useState("");
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [showLog, setShowLog] = useState(false);
@@ -143,27 +133,16 @@ export default function ApplyDialog({
         autostart: false,
       });
       if (response.outcome === "planned") {
-        setChoices({});
-        // Ticked for a blueprint someone vouches for, which is what the person picked it for; left
-        // for them to tick on one nobody vouches for — T205.
-        setScaffoldAgreed(response.plan.trusted);
-        // Ticked for a signed blueprint, as the scaffold's box is; empty for one nobody vouches
-        // for, which could name a key the project reads for something else (T205a).
-        setDotenvAgreed(
-          Object.fromEntries(
-            dotenvKeys(response.plan.steps).map((key) => [key, response.plan.trusted]),
-          ),
-        );
-        setPrerequisitesAgreed(false);
-        setPhase({ kind: "plan", plan: response.plan, needs: response.needs ?? [] });
-        setDevkit(null);
-        setDevkitAgreed(true);
+        const { plan } = response;
+        setPhase(planned(plan, response.needs ?? []));
         // Beside the plan and never at its expense: a listing that fails costs the offer.
         void Promise.all([api.runtimesAvailable("ruby"), api.packagesAvailable(DEVKIT_PACKAGE)])
           .then(([runtimes, packages]) =>
-            setDevkit(planDevkitNeed(response.plan, runtimes.runtimes, devkitOffer(packages))),
+            setPhase((current) =>
+              devkitFound(current, plan, planDevkitNeed(plan, runtimes.runtimes, devkitOffer(packages))),
+            ),
           )
-          .catch(() => setDevkit(null));
+          .catch(() => setPhase((current) => devkitFound(current, plan, null)));
       }
     } catch (e) {
       setError(errorMessage(t, e));
@@ -172,13 +151,13 @@ export default function ApplyDialog({
     }
   }
 
-  async function apply(plan: BlueprintPlan, installPrerequisites: boolean) {
+  async function apply(plan: BlueprintPlan, answers: PlanAnswers) {
     setBusy(true);
     setError("");
     try {
       const scaffoldIndex = scaffoldStepIndex(plan.steps);
       const scaffold =
-        scaffoldAgreed && scaffoldIndex >= 0
+        answers.scaffold && scaffoldIndex >= 0
           ? buildScaffoldConsent(plan, plan.steps[scaffoldIndex])
           : undefined;
       const response = await api.blueprintApply({
@@ -189,10 +168,10 @@ export default function ApplyDialog({
         // be the plan that runs, so what decides the directory must not change after the dry run.
         root_is_parent: false,
         dry_run: false,
-        install_prerequisites: installPrerequisites,
-        answers: buildAnswers(plan.steps, choices),
+        install_prerequisites: answers.prerequisites,
+        answers: buildAnswers(plan.steps, answers.choices),
         scaffold: scaffold ?? undefined,
-        dotenv: dotenvKeys(plan.steps).filter((key) => dotenvAgreed[key]),
+        dotenv: dotenvKeys(plan.steps).filter((key) => answers.dotenv[key]),
         // Sent on both passes: the plan people read must be the plan that runs, so a flag that
         // changes the plan must not be added after the dry run.
         front_end: true,
@@ -200,10 +179,10 @@ export default function ApplyDialog({
         autostart: false,
       });
       if (response.outcome === "started") {
-        setPhase({ kind: "running", jobId: response.job.id });
+        setPhase(started(response.job.id));
         // The devkit installs beside the apply, as its own job: nothing in the apply waits on it.
-        if (devkitAgreed && devkit?.offer) {
-          const offer = devkit.offer;
+        if (answers.devkitAgreed && answers.devkit?.offer) {
+          const offer = answers.devkit.offer;
           installDevkit(offer).catch((e: unknown) => setError(errorMessage(t, e)));
         }
       }
@@ -220,33 +199,35 @@ export default function ApplyDialog({
   // alongside this dialog, and a separate `api.watch()`/`api.unwatch()` here would steal or close
   // their channel.
   useEffect(() => {
-    if (phase.kind !== "running") return;
+    if (jobId === null) return;
     return subscribeDaemonWatch((raw) => setJobs((current) => applyJob(current, raw)));
-  }, [phase.kind]);
+  }, [jobId]);
 
   // The job has left JobRow[] (job_finished) — read the full result again through job.status.
   useEffect(() => {
-    if (phase.kind !== "running") return;
-    if (jobFor(jobs, phase.jobId) !== undefined) return;
+    if (jobId === null) return;
+    if (jobFor(jobs, jobId) !== undefined) return;
     let live = true;
     api
-      .jobStatus(phase.jobId)
+      .jobStatus(jobId)
       .then((job) => {
         if (!live) return;
         const applied = blueprintAppliedFrom(job);
         const failure = jobFailureMessage(job);
-        if (applied) setPhase({ kind: "done", applied });
-        else if (failure !== null) setPhase({ kind: "failed", message: failure });
+        if (applied) setPhase((current) => ended(current, { kind: "done", applied }));
+        else if (failure !== null) setPhase((current) => ended(current, { kind: "failed", message: failure }));
         // A step that gave up because of the cancellation ends the job as `cancelled`, which is
         // neither of the two above: without this the dialog would stay on "Running…" for good.
-        else if (jobWasCancelled(job))
-          setPhase({ kind: "failed", message: t("mixengine.blueprints.apply.cancelled") });
+        else if (jobWasCancelled(job)) {
+          const message = t("mixengine.blueprints.apply.cancelled");
+          setPhase((current) => ended(current, { kind: "failed", message }));
+        }
       })
       .catch((e: unknown) => setError(errorMessage(t, e)));
     return () => {
       live = false;
     };
-  }, [phase, jobs, t]);
+  }, [jobId, jobs, t]);
 
   // Open the stream **as soon as the apply starts running**, without waiting for the button — T120,
   // D6. The stream used to open only when `showLog` was on, so every line printed before the click
@@ -255,20 +236,23 @@ export default function ApplyDialog({
   // throughout the "running" phase — and `logEntries` stays after the phase changes, so it can
   // still be read once the apply has failed.
   useEffect(() => {
-    if (phase.kind !== "running") return;
-    const job = phase.jobId;
+    if (jobId === null) return;
     setLogEntries([]);
     api
-      .jobLogsWatch(job, 200, true, (raw) => {
+      .jobLogsWatch(jobId, 200, true, (raw) => {
         setLogEntries((current) => applyLogFrame(current, raw, 2000));
       })
       .catch((e: unknown) => setError(errorMessage(t, e)));
     return () => {
       void api.jobLogsUnwatch();
     };
-  }, [phase, t]);
+  }, [jobId, t]);
 
-  const running = phase.kind === "running" ? jobFor(jobs, phase.jobId) : undefined;
+  const running = jobId === null ? undefined : jobFor(jobs, jobId);
+
+  /** One answer to the plan on screen, from the answers as they are when it lands. */
+  const answer = (patch: (answers: PlanAnswers) => Partial<PlanAnswers>) =>
+    setPhase((current) => (current.kind === "plan" ? answered(current, patch(current.answers)) : current));
 
   // The buttons for the phase the dialog is in: a question has Cancel and its answer; a finished
   // apply has only Close, which is the answer — the caller's start-up chain hangs on `onDone`.
@@ -297,31 +281,32 @@ export default function ApplyDialog({
     // command not yet agreed to is a button promising to build a project and then building an empty
     // directory — so while the checkbox is empty, the label changes outright rather than just
     // adding a caption above.
-    const plan = phase.plan;
+    const { plan, answers } = phase;
     actions.push({
       kind: "confirm",
       label:
-        scaffoldConsentState(plan.steps, scaffoldAgreed) === "declined"
+        scaffoldConsentState(plan.steps, answers.scaffold) === "declined"
           ? t("mixengine.blueprints.apply.applyWithoutCommand")
           : t("mixengine.blueprints.apply.applyButton"),
       demo: "apply-run",
-      onClick: () => void apply(plan, prerequisitesAgreed),
+      onClick: () => void apply(plan, answers),
       disabled:
-        !canApply(plan.steps, choices) || !requirementsAllowApply(phase.needs, prerequisitesAgreed),
+        !canApply(plan.steps, answers.choices) ||
+        !requirementsAllowApply(phase.needs, answers.prerequisites),
       busy: busy ? t("mixengine.blueprints.apply.applying") : undefined,
     });
   }
   if (phase.kind === "running") {
-    const jobId = phase.jobId;
+    const job = phase.jobId;
     actions.push({
       kind: "secondary",
       label: t("mixengine.blueprints.apply.cancelApply"),
-      disabled: cancelAsked,
-      busy: cancelAsked ? t("mixengine.blueprints.apply.cancelling") : undefined,
+      disabled: phase.cancelAsked,
+      busy: phase.cancelAsked ? t("mixengine.blueprints.apply.cancelling") : undefined,
       onClick: () => {
-        setCancelAsked(true);
-        api.jobCancel(jobId).catch((e: unknown) => {
-          setCancelAsked(false);
+        setPhase((current) => cancelAsked(current, true));
+        api.jobCancel(job).catch((e: unknown) => {
+          setPhase((current) => cancelAsked(current, false));
           setError(errorMessage(t, e));
         });
       },
@@ -413,14 +398,14 @@ export default function ApplyDialog({
                               })}
                             </p>
                             <Button
-                              variant={choices[i] === "install" ? "primary" : "default"}
-                              onClick={() => setChoices((c) => ({ ...c, [i]: "install" }))}
+                              variant={phase.answers.choices[i] === "install" ? "primary" : "default"}
+                              onClick={() => answer((a) => ({ choices: { ...a.choices, [i]: "install" } }))}
                             >
                               {t("mixengine.blueprints.apply.choiceInstall")}
                             </Button>
                             <Button
-                              variant={choices[i] === "use_installed" ? "primary" : "default"}
-                              onClick={() => setChoices((c) => ({ ...c, [i]: "use_installed" }))}
+                              variant={phase.answers.choices[i] === "use_installed" ? "primary" : "default"}
+                              onClick={() => answer((a) => ({ choices: { ...a.choices, [i]: "use_installed" } }))}
                             >
                               {t("mixengine.blueprints.apply.choiceUseInstalled")}
                             </Button>
@@ -439,11 +424,11 @@ export default function ApplyDialog({
                               label={t("mixengine.blueprints.apply.dotenvConsent", {
                                 key: step.action.key,
                               })}
-                              checked={dotenvAgreed[step.action.key] ?? false}
+                              checked={phase.answers.dotenv[step.action.key] ?? false}
                               onChange={(e) => {
                                 const key = step.action.action === "write_dotenv" ? step.action.key : "";
                                 const checked = e.target.checked;
-                                setDotenvAgreed((agreed) => ({ ...agreed, [key]: checked }));
+                                answer((a) => ({ dotenv: { ...a.dotenv, [key]: checked } }));
                               }}
                             />
                           )}
@@ -470,16 +455,19 @@ export default function ApplyDialog({
                             <Checkbox
                               className={styles.checkbox}
                               label={t("mixengine.blueprints.apply.scaffoldConsent")}
-                              checked={scaffoldAgreed}
+                              checked={phase.answers.scaffold}
                               data-demo="apply-scaffold"
-                              onChange={(e) => setScaffoldAgreed(e.target.checked)}
+                              onChange={(e) => {
+                                const scaffold = e.target.checked;
+                                answer(() => ({ scaffold }));
+                              }}
                             />
                             {/* `mix`'s `[y/N]` question, drawn as an interface. Not ticking is an
                                 answer — the apply still installs the runtime, DB, site and domain,
                                 only the project directory stays empty — and until T121 the desktop
                                 said so nowhere: the user found out on the "Done" screen, lost among
                                 ten other lines. */}
-                            {!scaffoldAgreed && (
+                            {!phase.answers.scaffold && (
                               <p className={styles.consentWarning} role="status">
                                 {t("mixengine.blueprints.apply.scaffoldDeclined")}
                               </p>
@@ -490,23 +478,26 @@ export default function ApplyDialog({
                     </Fragment>
                   ))}
                 </ul>
-                {devkit?.offer && (
+                {phase.answers.devkit?.offer && (
                   <div className={styles.scaffold}>
                     <p>{t("mixengine.blueprints.apply.devkitTitle")}</p>
                     <Checkbox
                       className={styles.checkbox}
                       label={t("mixengine.blueprints.apply.devkitConsent", {
-                        size: formatBytes(devkit.offer.bytes),
+                        size: formatBytes(phase.answers.devkit.offer.bytes),
                       })}
-                      checked={devkitAgreed}
-                      onChange={(e) => setDevkitAgreed(e.target.checked)}
+                      checked={phase.answers.devkitAgreed}
+                      onChange={(e) => {
+                        const devkitAgreed = e.target.checked;
+                        answer(() => ({ devkitAgreed }));
+                      }}
                     />
                   </div>
                 )}
                 <PrerequisitesNotice
                   needs={phase.needs}
-                  agreed={prerequisitesAgreed}
-                  onAgree={setPrerequisitesAgreed}
+                  agreed={phase.answers.prerequisites}
+                  onAgree={(prerequisites) => answer(() => ({ prerequisites }))}
                 />
               </div>
             )}
@@ -516,7 +507,7 @@ export default function ApplyDialog({
                 <p>{t("mixengine.blueprints.apply.running")}</p>
                 <progress value={running?.percent ?? 0} max={100} />
                 <p>{running?.message ?? ""}</p>
-                {cancelAsked && <NoticeBanner message={t("mixengine.blueprints.apply.cancelNote")} />}
+                {phase.cancelAsked && <NoticeBanner message={t("mixengine.blueprints.apply.cancelNote")} />}
               </div>
             )}
 
@@ -552,7 +543,7 @@ export default function ApplyDialog({
               <div className={styles.done}>
                 <h4>{t("mixengine.blueprints.apply.doneTitle")}</h4>
 
-                {cancelAsked && <NoticeBanner message={t("mixengine.blueprints.apply.cancelled")} />}
+                {phase.cancelled && <NoticeBanner message={t("mixengine.blueprints.apply.cancelled")} />}
 
                 {/* At the **top** of the list, not the tenth line. And in the app's own words: the
                     `why` the daemon returns ends with a hint to run

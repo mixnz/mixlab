@@ -42,8 +42,8 @@ function SignInForm({ deviceName, onDeviceNameChange, onSignedIn, onRegistered, 
     rememberServer(localStorage, url);
     setServerState(url);
   };
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState("");
+  /** The address being typed for a new server, or `null` when none is being added. */
+  const [adding, setAdding] = useState<string | null>(null);
   const [access, setAccess] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -74,15 +74,14 @@ function SignInForm({ deviceName, onDeviceNameChange, onSignedIn, onRegistered, 
   }, [server, askedToken]);
 
   function add() {
-    const result = addServer(localStorage, draft);
+    const result = addServer(localStorage, adding ?? "");
     if (!result.ok) {
       setProblem(t(result.reason === "insecure" ? "sync.serverInsecure" : "sync.serverInvalid"));
       return;
     }
     setServers(result.servers);
     setServer(result.url);
-    setAdding(false);
-    setDraft("");
+    setAdding(null);
     setProblem(null);
   }
 
@@ -152,21 +151,21 @@ function SignInForm({ deviceName, onDeviceNameChange, onSignedIn, onRegistered, 
               {t("sync.removeServer")}
             </Button>
           )}
-          {!adding && (
-            <Button size="small" onClick={() => setAdding(true)}>
+          {adding === null && (
+            <Button size="small" onClick={() => setAdding("")}>
               {t("sync.addServer")}
             </Button>
           )}
         </div>
-        {adding && (
+        {adding !== null && (
           <div className={styles.row}>
             <Input
               className={styles.grow}
               mono
-              value={draft}
+              value={adding}
               placeholder="https://sync.example.com"
               aria-label={t("sync.addServer")}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => setAdding(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
@@ -180,10 +179,7 @@ function SignInForm({ deviceName, onDeviceNameChange, onSignedIn, onRegistered, 
             <Button
               size="small"
               variant="ghost"
-              onClick={() => {
-                setAdding(false);
-                setDraft("");
-              }}
+              onClick={() => setAdding(null)}
             >
               {t("common.cancel")}
             </Button>

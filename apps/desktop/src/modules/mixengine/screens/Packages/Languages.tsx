@@ -17,9 +17,8 @@ import { errorMessage } from "../../../../core/errors";
 import { ChevronDownIcon } from "../../../../icons";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
-import type { PackageRelease, PackageVersion, RuntimeKind, RuntimeRelease } from "@mixengine/api";
-import type { RuntimeSummary, RuntimeUpdate, UpgradePlan } from "@mixengine/api";
-import type { CatalogueGap } from "@mixengine/api";
+import type { PackageVersion, RuntimeKind, RuntimeRelease } from "@mixengine/api";
+import type { RuntimeSummary, RuntimeUpdate } from "@mixengine/api";
 import EmulatedMark, { isEmulated } from "../../components/EmulatedMark";
 import RequirementDialog from "../../components/RequirementDialog";
 import UpdateRow from "../../components/UpdateRow";
@@ -29,7 +28,6 @@ import {
   needLabel,
   requirementStep,
   splitLibraries,
-  type AskingStep,
 } from "../../requirementStep";
 import { applyJob, type JobRow } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
@@ -56,55 +54,46 @@ import {
   devkitState,
   lacksLabels,
   lacksReason,
-  type DevkitState,
 } from "./devkit";
 import { formatBytes } from "../../metricsState";
+import {
+  EMPTY_CATALOGUE,
+  EMPTY_LOCAL,
+  forceAsked,
+  NO_DEVKIT,
+  readAnswered,
+  type CatalogueRead,
+  type Devkit,
+  type LanguagesDialog,
+  type LocalRead,
+} from "./languagesState";
 import styles from "./Catalogue.module.css";
 
 /** The key the devkit's install job is followed under, beside the runtimes' `kind@version` keys. */
 const DEVKIT_JOB = "devkit";
 
 export default function Languages({ active }: { active: boolean }) {
-  const [installed, setInstalled] = useState<RuntimeSummary[]>([]);
-  const [available, setAvailable] = useState<RuntimeRelease[]>([]);
-  /** False until the first read has answered — until then an empty list means "not known yet",
-   *  not "nothing installed". Two flags, not one: what is installed is read from this machine and
+  /** `null` until the first read has answered — until then an empty list means "not known yet",
+   *  not "nothing installed". Two reads, not one: what is installed is read from this machine and
    *  answers at once, while the catalogue may wait on the package index's network. */
-  const [installedLoaded, setInstalledLoaded] = useState(false);
-  const [availableLoaded, setAvailableLoaded] = useState(false);
-  const [stale, setStale] = useState(false);
-  const [unavailable, setUnavailable] = useState<CatalogueGap[]>([]);
+  const [localRead, setLocalRead] = useState<LocalRead | null>(null);
+  const [catalogueRead, setCatalogueRead] = useState<CatalogueRead | null>(null);
+  const { installed, onDisk } = localRead ?? EMPTY_LOCAL;
+  const { available, stale, unavailable, updates } = catalogueRead ?? EMPTY_CATALOGUE;
+  const [devkit, setDevkit] = useState<Devkit>(NO_DEVKIT);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [installingJob, setInstallingJob] = useState<Record<string, number>>({});
-  const [uninstallTarget, setUninstallTarget] = useState<RuntimeSummary | null>(null);
-  const [forceHint, setForceHint] = useState<string | null>(null);
-  // The one question an install is waiting on, with the release it is about — T151.
-  const [asking, setAsking] = useState<{ release: RuntimeRelease; step: AskingStep } | null>(null);
+  /** The one question on screen — see `languagesState.ts`. */
+  const [dialog, setDialog] = useState<LanguagesDialog | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   // Filters the "not installed" table only — the same reason `Packages.tsx` has.
   const [filter, setFilter] = useState("");
-  // Lines the person opened to see their older releases — T193a.
+  // Lines the person opened to see their older releases.
   const [openLines, setOpenLines] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
-  const [onDisk, setOnDisk] = useState<OnDiskRow[]>([]);
   const [adopting, setAdopting] = useState<string | null>(null);
-  // What an install said about this machine and went on anyway — T27e.
+  // What an install said about this machine and went on anyway.
   const [notice, setNotice] = useState("");
-  // The devkit a Windows Ruby needs to build native gems, and whether it is here — T206a.
-  const [devkit, setDevkit] = useState<{ release: PackageRelease | null; installed: boolean }>({
-    release: null,
-    installed: false,
-  });
-  // Whether a devkit is here, recorded with its folder gone, or neither — read from `package.list`,
-  // where the catalogue above cannot tell a missing one from none (T206d).
-  const [devkitHere, setDevkitHere] = useState<DevkitState>({ state: "absent" });
-  const [removingDevkit, setRemovingDevkit] = useState<string | null>(null);
-  // T193b: what the index has newer in each installed version's line, and the update being asked.
-  const [updates, setUpdates] = useState<RuntimeUpdate[]>([]);
-  const [upgrading, setUpgrading] = useState<{ update: RuntimeUpdate; plan: UpgradePlan } | null>(null);
-  const [askingUpgrade, setAskingUpgrade] = useState<
-    { update: RuntimeUpdate; keep: boolean; step: AskingStep } | null
-  >(null);
   const { t } = useTranslation();
 
   // Reads the latest `installingJob` from inside a `watch` callback registered once — the effect
@@ -124,20 +113,19 @@ export default function Languages({ active }: { active: boolean }) {
       // Each half is drawn as soon as it answers: the installed table must not wait on a
       // catalogue that is fetching the package index.
       const local = Promise.all([api.runtimesInstalled(), api.runtimesFound()])
-        .then(([inst, found]) => {
-          setInstalled(inst.runtimes);
-          setOnDisk(runtimeRowsFrom(found));
-        })
-        .finally(() => setInstalledLoaded(true));
+        .then(([inst, found]) => setLocalRead({ installed: inst.runtimes, onDisk: runtimeRowsFrom(found) }))
+        .finally(() => setLocalRead((current) => readAnswered(current, EMPTY_LOCAL)));
       const catalogue = api
         .runtimesAvailable()
-        .then((avail) => {
-          setAvailable(avail.runtimes);
-          setStale(avail.stale);
-          setUnavailable(avail.unavailable ?? []);
-          setUpdates(avail.updates ?? []);
-        })
-        .finally(() => setAvailableLoaded(true));
+        .then((avail) =>
+          setCatalogueRead({
+            available: avail.runtimes,
+            stale: avail.stale,
+            unavailable: avail.unavailable ?? [],
+            updates: avail.updates ?? [],
+          }),
+        )
+        .finally(() => setCatalogueRead((current) => readAnswered(current, EMPTY_CATALOGUE)));
       try {
         await Promise.all([local, catalogue]);
         setError(stillShow);
@@ -145,12 +133,12 @@ export default function Languages({ active }: { active: boolean }) {
         // devkit button, not the screen (T206a).
         void api
           .packagesAvailable(DEVKIT_PACKAGE)
-          .then((catalogue) => setDevkit(devkitOffer(catalogue)))
-          .catch(() => setDevkit({ release: null, installed: false }));
+          .then((catalogue) => setDevkit((current) => ({ ...current, offer: devkitOffer(catalogue) })))
+          .catch(() => setDevkit((current) => ({ ...current, offer: NO_DEVKIT.offer })));
         void api
           .packagesInstalled(DEVKIT_PACKAGE)
-          .then((list) => setDevkitHere(devkitState(list.packages)))
-          .catch(() => setDevkitHere({ state: "absent" }));
+          .then((list) => setDevkit((current) => ({ ...current, here: devkitState(list.packages) })))
+          .catch(() => setDevkit((current) => ({ ...current, here: NO_DEVKIT.here })));
       } catch (e) {
         setError(errorMessage(t, e));
       }
@@ -248,7 +236,7 @@ export default function Languages({ active }: { active: boolean }) {
       );
       return;
     }
-    setAsking({ release, step: asked });
+    setDialog({ kind: "requirements", release, step: asked });
   }
 
   async function start(kind: RuntimeKind, version: PackageVersion, installPrerequisites: boolean) {
@@ -299,7 +287,7 @@ export default function Languages({ active }: { active: boolean }) {
     const marks = lacksLabels(release);
     if (marks.length === 0) return null;
     const nativeGems = marks.some(({ key }) => key === "native gems");
-    const devkitReady = devkitHere.state === "present";
+    const devkitReady = devkit.here.state === "present";
     const label = nativeGems
       ? devkitReady
         ? t("mixengine.packages.lacks.devkitInstalled")
@@ -324,11 +312,12 @@ export default function Languages({ active }: { active: boolean }) {
   function devkitNotice(): ReactNode {
     if (!installed.some((row) => row.kind === "ruby")) return null;
     if (!anyLacksNativeGems(available)) return null;
+    const devkitHere = devkit.here;
     if (devkitHere.state === "present") {
       return (
         <div className={styles.devkitNotice}>
           <p>{t("mixengine.packages.lacks.devkitReady")}</p>
-          <Button size="small" variant="ghost" onClick={() => setRemovingDevkit(devkitHere.version)}>
+          <Button size="small" variant="ghost" onClick={() => setDialog({ kind: "removeDevkit", version: devkitHere.version })}>
             {t("mixengine.packages.lacks.removeDevkit")}
           </Button>
         </div>
@@ -355,15 +344,16 @@ export default function Languages({ active }: { active: boolean }) {
         </div>
       );
     }
-    if (devkit.release === null) return null;
+    const offer = devkit.offer.release;
+    if (offer === null) return null;
     return (
       <div className={styles.devkitNotice}>
         <p>{t("mixengine.packages.lacks.devkitAbout")}</p>
         {devkitJob ? (
           <span className={styles.progressText}>{devkitJob.message}</span>
         ) : (
-          <Button size="small" variant="soft" onClick={() => devkit.release && void installDevkit(devkit.release.version)}>
-            {t("mixengine.packages.lacks.installDevkit", { size: formatBytes(devkit.release.bytes) })}
+          <Button size="small" variant="soft" onClick={() => void installDevkit(offer.version)}>
+            {t("mixengine.packages.lacks.installDevkit", { size: formatBytes(offer.bytes) })}
           </Button>
         )}
       </div>
@@ -374,8 +364,7 @@ export default function Languages({ active }: { active: boolean }) {
     setError("");
     try {
       await api.runtimeUninstall({ kind: target.kind, version: target.version, force });
-      setUninstallTarget(null);
-      setForceHint(null);
+      setDialog(null);
       void reload();
     } catch (e) {
       // No `force` sent yet and the refusal is a project pin: ask again with `force`, showing the
@@ -383,14 +372,13 @@ export default function Languages({ active }: { active: boolean }) {
       const step = afterRefusal(force, errorMessage(t, e));
 
       if (step.ask === "force") {
-        setForceHint(step.hint);
+        setDialog((current) => forceAsked(current, step.hint));
         return;
       }
 
       // Closed on the way out: a dialog left up once there is nothing left to ask is a dialog
       // holding the screen with nothing to say. See `forceStep.ts`.
-      setUninstallTarget(null);
-      setForceHint(null);
+      setDialog(null);
       setError(step.error);
     }
   }
@@ -400,7 +388,7 @@ export default function Languages({ active }: { active: boolean }) {
     setError("");
     try {
       const plan = await api.runtimeUpgradePlan({ kind: update.kind, from: update.from, to: update.to });
-      setUpgrading({ update, plan });
+      setDialog({ kind: "upgradePlan", update, plan });
     } catch (e) {
       setError(errorMessage(t, e));
     }
@@ -408,7 +396,7 @@ export default function Languages({ active }: { active: boolean }) {
 
   // After the plan was agreed: what the new version lacks is asked exactly as `install` asks it.
   async function upgrade(update: RuntimeUpdate, keep: boolean) {
-    setUpgrading(null);
+    setDialog(null);
     const step = requirementStep(update.needs ?? []);
     if (step.kind === "proceed" || step.kind === "notice") {
       await startUpgrade(update, keep, false);
@@ -428,7 +416,7 @@ export default function Languages({ active }: { active: boolean }) {
       );
       return;
     }
-    setAskingUpgrade({ update, keep, step: asked });
+    setDialog({ kind: "upgradeRequirements", update, keep, step: asked });
   }
 
   async function startUpgrade(update: RuntimeUpdate, keep: boolean, installPrerequisites: boolean) {
@@ -542,8 +530,8 @@ export default function Languages({ active }: { active: boolean }) {
 
       <OnDiskCard rows={onDisk} adopting={adopting} onAdopt={(row) => void adopt(row)} />
 
-      <Card title={t("mixengine.packages.installedTitle")} count={installedLoaded ? installed.length : undefined} flush>
-        {!installedLoaded ? (
+      <Card title={t("mixengine.packages.installedTitle")} count={localRead !== null ? installed.length : undefined} flush>
+        {localRead === null ? (
           <LoadingState />
         ) : installed.length === 0 ? (
           <EmptyState title={t("mixengine.packages.installedEmpty")} />
@@ -634,7 +622,7 @@ export default function Languages({ active }: { active: boolean }) {
                             {t("mixengine.packages.reinstall")}
                           </Button>
                         )}
-                        <Button size="small" variant="danger" onClick={() => setUninstallTarget(row)}>
+                        <Button size="small" variant="danger" onClick={() => setDialog({ kind: "uninstall", target: row, forceHint: null })}>
                           {t("mixengine.packages.uninstall")}
                         </Button>
                       </td>
@@ -662,7 +650,7 @@ export default function Languages({ active }: { active: boolean }) {
       <Card
         title={t("mixengine.packages.availableTitle")}
         count={
-          availableLoaded ? (
+          catalogueRead !== null ? (
             <>
               {lineGroups.length}
               <StaleBadge stale={stale} />
@@ -689,7 +677,7 @@ export default function Languages({ active }: { active: boolean }) {
         }
         flush
       >
-        {!availableLoaded ? (
+        {catalogueRead === null ? (
           <LoadingState />
         ) : lineGroups.length === 0 ? (
           filter.trim() !== "" && <EmptyState title={t("mixengine.packages.noMatches")} />
@@ -721,73 +709,66 @@ export default function Languages({ active }: { active: boolean }) {
         )}
       </Card>
 
-      {uninstallTarget && (
+      {dialog?.kind === "uninstall" && (
         <ConfirmDialog
-          title={t("mixengine.packages.uninstallConfirmTitle", { version: uninstallTarget.version })}
-          message={forceHint ?? uninstallTarget.version}
+          title={t("mixengine.packages.uninstallConfirmTitle", { version: dialog.target.version })}
+          message={dialog.forceHint ?? dialog.target.version}
           confirmLabel={
-            forceHint !== null ? t("mixengine.packages.uninstallForceConfirm") : undefined
+            dialog.forceHint !== null ? t("mixengine.packages.uninstallForceConfirm") : undefined
           }
           danger
-          onCancel={() => {
-            setUninstallTarget(null);
-            setForceHint(null);
-          }}
-          onConfirm={() => void uninstall(uninstallTarget, forceHint !== null)}
+          onCancel={() => setDialog(null)}
+          onConfirm={() => void uninstall(dialog.target, dialog.forceHint !== null)}
         />
       )}
 
-      {removingDevkit !== null && (
+      {dialog?.kind === "removeDevkit" && (
         <ConfirmDialog
           title={t("mixengine.packages.lacks.removeDevkitConfirmTitle")}
           message={t("mixengine.packages.lacks.removeDevkitConfirmMessage")}
           confirmLabel={t("mixengine.packages.lacks.removeDevkit")}
           danger
-          onCancel={() => setRemovingDevkit(null)}
+          onCancel={() => setDialog(null)}
           onConfirm={() => {
-            const version = removingDevkit;
-            setRemovingDevkit(null);
-            void removeDevkit(version);
+            setDialog(null);
+            void removeDevkit(dialog.version);
           }}
         />
       )}
 
-      {upgrading && (
+      {dialog?.kind === "upgradePlan" && (
         <UpgradeDialog
-          plan={upgrading.plan}
-          onCancel={() => setUpgrading(null)}
-          onConfirm={(keep) => void upgrade(upgrading.update, keep)}
+          plan={dialog.plan}
+          onCancel={() => setDialog(null)}
+          onConfirm={(keep) => void upgrade(dialog.update, keep)}
         />
       )}
 
-      {askingUpgrade && (
+      {dialog?.kind === "upgradeRequirements" && (
         <RequirementDialog
-          name={`${askingUpgrade.update.kind} ${askingUpgrade.update.to}`}
-          step={askingUpgrade.step}
-          onCancel={() => setAskingUpgrade(null)}
+          name={`${dialog.update.kind} ${dialog.update.to}`}
+          step={dialog.step}
+          onCancel={() => setDialog(null)}
           onInstall={() => {
-            const { update, keep } = askingUpgrade;
-            setAskingUpgrade(null);
-            void startUpgrade(update, keep, true);
+            setDialog(null);
+            void startUpgrade(dialog.update, dialog.keep, true);
           }}
-          onChoose={() => setAskingUpgrade(null)}
+          onChoose={() => setDialog(null)}
         />
       )}
 
-      {asking && (
+      {dialog?.kind === "requirements" && (
         <RequirementDialog
-          name={`${asking.release.kind} ${asking.release.version}`}
-          step={asking.step}
-          onCancel={() => setAsking(null)}
+          name={`${dialog.release.kind} ${dialog.release.version}`}
+          step={dialog.step}
+          onCancel={() => setDialog(null)}
           onInstall={() => {
-            const { release } = asking;
-            setAsking(null);
-            void start(release.kind, release.version, true);
+            setDialog(null);
+            void start(dialog.release.kind, dialog.release.version, true);
           }}
           onChoose={(version) => {
-            const { release } = asking;
-            setAsking(null);
-            void start(release.kind, version, false);
+            setDialog(null);
+            void start(dialog.release.kind, version, false);
           }}
         />
       )}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   redisListDatabases,
   redisScanKeys,
@@ -27,6 +27,8 @@ import { useLanguageT, useTranslation } from "../../../i18n";
 import { errorMessage } from "../../../core/errors";
 import { useReloadShortcut, withReloadShortcut } from "../../../core/reload";
 import { reloadTarget, type ReloadPane } from "./reloadTarget";
+import { SCAN_IDLE, scanReducer } from "./scanState";
+import { CONTENT_START, contentPane } from "./contentPane";
 
 interface Props {
   /** Whether this connection's tab is the one on show. What keeps `Ctrl+R` unambiguous: every
@@ -59,12 +61,6 @@ interface Props {
    */
   readOnly?: boolean;
 }
-
-/** The panes the content area can show: the selected key's value, or the keys under one group of
- * the sidebar with a way to delete them. The header is a tab strip, so a third one (a command
- * console, server info, …) is a case here and a branch below rather than a reshuffle of the
- * layout — same as the other two workspaces. */
-type ContentMode = "data" | "group";
 
 const DEFAULT_SIDEBAR_WIDTH = 300;
 const MIN_SIDEBAR_WIDTH = 140;
@@ -137,29 +133,24 @@ function RedisWorkspace({
   const { t } = useTranslation();
   // The limit picker's labels are words made once per language: a new function per language rebuilds them.
   const tl = useLanguageT();
-  const [databases, setDatabases] = useState<RedisDbInfo[]>([]);
-  const [databasesLoading, setDatabasesLoading] = useState(false);
+  const [databases, setDatabases] = useState<{ list: RedisDbInfo[]; loading: boolean }>({ list: [], loading: false });
   const [selectedDb, setSelectedDb] = useState(() => {
     const parsed = Number(initialDatabase);
     return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
   });
-  const [keys, setKeys] = useState<RedisKeyInfo[]>([]);
-  const [cursor, setCursor] = useState(REDIS_FIRST_CURSOR);
-  const [scanDone, setScanDone] = useState(false);
-  const [keysLoading, setKeysLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  // The group the delete pane is listing, by its prefix, or null when no group has been opened.
-  const [groupPrefix, setGroupPrefix] = useState<string | null>(null);
-  const [contentMode, setContentMode] = useState<ContentMode>("data");
+  /* The walk of the keyspace, one value — see `scanState.ts`. */
+  const [scan, dispatchScan] = useReducer(scanReducer, SCAN_IDLE);
+  const { keys, cursor, done: scanDone, loading: keysLoading, loadingMore } = scan;
+  /* The open key, the open group and the tab in front — see `contentPane.ts`. */
+  const [content, dispatchContent] = useReducer(contentPane, CONTENT_START);
+  const { key: selectedKey, group: groupPrefix, mode: contentMode } = content;
   const [localError, setLocalError] = useWorkspaceError(tunnelled);
   const [serverInfo, setServerInfo] = useState<{ version: string; os: string } | null>(null);
 
-  // The pattern the key list is showing. The input below edits `pattern` freely; only Enter (or
-  // the reload button) copies it here — a glob is retyped a character at a time, and rescanning
-  // the keyspace on every keystroke is the one thing not to do to a live server.
+  // The pattern the key list is showing is `request`'s. The input below edits `pattern` freely;
+  // only Enter (or the reload button) copies it there — a glob is retyped a character at a time, and
+  // rescanning the keyspace on every keystroke is the one thing not to do to a live server.
   const [pattern, setPattern] = useState("*");
-  const [appliedPattern, setAppliedPattern] = useState("*");
   // Reading the same keys, not fetching different ones: the tree is built client-side out of the
   // names already loaded, so changing this costs nothing and needs no rescan.
   const [separator, setSeparator] = useState(DEFAULT_SEPARATOR);
@@ -167,9 +158,9 @@ function RedisWorkspace({
   // remember it, and even a saved one only sees the new value once the store has written it
   // back. The picker has to take effect on the press either way.
   const [keyLimit, setKeyLimit] = useState(scanLimit ?? DEFAULT_SCAN_LIMIT);
-  // Bumped to rescan on the same pattern: pressing reload twice is a request to look again, and
-  // an unchanged pattern alone would be a no-op.
-  const [scanId, setScanId] = useState(0);
+  // A new one for every rescan, on the same pattern too: pressing reload twice is a request to look
+  // again, and an unchanged pattern alone would be a no-op. `id` is what makes it new.
+  const [request, setRequest] = useState({ pattern: "*", id: 0 });
   // Which half the user last reached into, or null before they have touched either. Both halves
   // have a reload of their own, so `Ctrl+R` has to be pointed at one of them — see
   // {@link reloadTarget}, which is where the rule itself is written down and tested.
@@ -183,8 +174,7 @@ function RedisWorkspace({
   // set of keys under another one and nothing at all under none. The pane closes rather than
   // relisting itself around whatever the new separator makes of the same string.
   useEffect(() => {
-    setGroupPrefix(null);
-    setContentMode("data");
+    dispatchContent({ type: "closeGroup" });
   }, [separator]);
 
   /** Sets the ceiling and remembers it. The scan effect takes `keyLimit` as an input, so this
@@ -229,11 +219,11 @@ function RedisWorkspace({
   /** Reads the database list. Also called after a delete: the key counts in it are what the
    * selector shows, and one of them has just changed. */
   const loadDatabases = useCallback(() => {
-    setDatabasesLoading(true);
+    setDatabases((current) => ({ ...current, loading: true }));
     redisListDatabases(connectionId)
-      .then(setDatabases)
+      .then((list) => setDatabases((current) => ({ ...current, list })))
       .catch((e) => setLocalError(errorMessage(t, e)))
-      .finally(() => setDatabasesLoading(false));
+      .finally(() => setDatabases((current) => ({ ...current, loading: false })));
   }, [connectionId, setLocalError, t]);
 
   useEffect(() => loadDatabases(), [loadDatabases]);
@@ -253,12 +243,7 @@ function RedisWorkspace({
   useEffect(() => {
     const mine = ++scanRun.current;
     const live = () => scanRun.current === mine;
-    setKeys([]);
-    setCursor(REDIS_FIRST_CURSOR);
-    setScanDone(false);
-    setKeysLoading(true);
-    // A page still out belongs to the sweep just abandoned; nothing will clear this for it.
-    setLoadingMore(false);
+    dispatchScan({ type: "started" });
 
     void (async () => {
       const collected: RedisKeyInfo[] = [];
@@ -269,7 +254,7 @@ function RedisWorkspace({
       let lastPublished = 0;
       try {
         for (;;) {
-          const page = await redisScanKeys(connectionId, appliedPattern, next, KEY_PAGE_SIZE);
+          const page = await redisScanKeys(connectionId, request.pattern, next, KEY_PAGE_SIZE);
           if (!live()) return;
           for (const key of page.keys) {
             if (seen.has(key.name)) continue;
@@ -281,23 +266,21 @@ function RedisWorkspace({
           const now = Date.now();
           if (finished || now - lastPublished >= SCAN_PUBLISH_INTERVAL_MS) {
             lastPublished = now;
-            setKeys(collected.slice());
-            setCursor(page.cursor);
-            setScanDone(page.done);
+            dispatchScan({ type: "published", keys: collected.slice(), cursor: page.cursor, done: page.done });
           }
           if (finished) break;
         }
       } catch (e) {
         if (live()) setLocalError(errorMessage(t, e));
       } finally {
-        if (live()) setKeysLoading(false);
+        if (live()) dispatchScan({ type: "finished" });
       }
     })();
 
     return () => {
       scanRun.current += 1;
     };
-  }, [connectionId, appliedPattern, selectedDb, scanId, keyLimit, setLocalError, t]);
+  }, [connectionId, request, selectedDb, keyLimit, setLocalError, t]);
 
   /** Appends one more slice of a keyspace the sweep gave up on at its ceiling. The
    * order is not settled at that point and cannot be, so this is the one path where new names
@@ -305,32 +288,26 @@ function RedisWorkspace({
   function loadMoreKeys() {
     if (scanDone || loadingMore || keysLoading) return;
     const mine = scanRun.current;
-    setLoadingMore(true);
-    redisScanKeys(connectionId, appliedPattern, cursor, KEY_PAGE_SIZE)
+    dispatchScan({ type: "moreAsked" });
+    redisScanKeys(connectionId, request.pattern, cursor, KEY_PAGE_SIZE)
       .then((page) => {
         /* The sweep this page was asked for is not the one on screen any more. Its keys would be
            appended to another database's list, and — worse, because it outlives the names — its
            cursor and its `done` would be believed about that list. */
         if (scanRun.current !== mine) return;
-        setKeys((prev) => {
-          const seen = new Set(prev.map((k) => k.name));
-          return [...prev, ...page.keys.filter((k) => !seen.has(k.name))];
-        });
-        setCursor(page.cursor);
-        setScanDone(page.done);
+        dispatchScan({ type: "moreLanded", keys: page.keys, cursor: page.cursor, done: page.done });
       })
       .catch((e) => {
         if (scanRun.current === mine) setLocalError(errorMessage(t, e));
       })
       .finally(() => {
-        if (scanRun.current === mine) setLoadingMore(false);
+        if (scanRun.current === mine) dispatchScan({ type: "moreEnded" });
       });
   }
 
   /** Rescans from the top on whatever the pattern box currently holds. */
   const rescan = useCallback(() => {
-    setAppliedPattern(pattern.trim() || "*");
-    setScanId((n) => n + 1);
+    setRequest((current) => ({ pattern: pattern.trim() || "*", id: current.id + 1 }));
   }, [pattern]);
 
   // The right pane only has something to re-read while it is showing a value: the prompt to pick a
@@ -360,9 +337,7 @@ function RedisWorkspace({
       // A key name means nothing outside the database it was read from, so the pane is closed
       // rather than carried over — and neither does a group's prefix. A rescan on the same
       // database keeps both.
-      setSelectedKey(null);
-      setGroupPrefix(null);
-      setContentMode("data");
+      dispatchContent({ type: "databaseChanged" });
       setSelectedDb(index);
       loadDatabases();
     } catch (e) {
@@ -373,9 +348,8 @@ function RedisWorkspace({
   /** Drops deleted keys from the list without rescanning: the rest of the list is still what
    * the server holds, and a rescan would lose every page loaded so far. */
   function handleKeysDeleted(names: string[]) {
-    const gone = new Set(names);
-    setKeys((prev) => prev.filter((k) => !gone.has(k.name)));
-    setSelectedKey((prev) => (prev !== null && gone.has(prev) ? null : prev));
+    dispatchScan({ type: "keysDeleted", names });
+    dispatchContent({ type: "keysDeleted", names });
     loadDatabases();
   }
 
@@ -389,8 +363,7 @@ function RedisWorkspace({
   }, [keys, groupPrefix, separator]);
 
   function closeGroup() {
-    setGroupPrefix(null);
-    setContentMode("data");
+    dispatchContent({ type: "closeGroup" });
   }
 
   // An empty list is not an empty keyspace while the sweep is still running: SCAN returns a
@@ -437,7 +410,7 @@ function RedisWorkspace({
             searchable
             searchPlaceholder={t("redis.searchDatabasesPlaceholder")}
             options={[
-              ...databases.map((db) => ({
+              ...databases.list.map((db) => ({
                 value: db.index,
                 label: t("redis.dbOption", { index: db.index, keys: db.keys }),
               })),
@@ -447,12 +420,12 @@ function RedisWorkspace({
                 // The menu stays open behind it: the reloaded key counts are the whole point of
                 // the click, and closing would hide them until the picker is opened again.
                 keepOpen: true,
-                disabled: databasesLoading,
+                disabled: databases.loading,
                 optionLabel: (
                   <span className="select-reload-option">
                     <ReloadIcon
                       size="1em"
-                      className={databasesLoading ? "select-reload-option-spinning" : undefined}
+                      className={databases.loading ? "select-reload-option-spinning" : undefined}
                     />
                     {t("redis.reloadDatabases")}
                   </span>
@@ -467,7 +440,7 @@ function RedisWorkspace({
             role="tab"
             aria-selected={contentMode === "data"}
             className={`method-tab${contentMode === "data" ? " method-tab-active" : ""}`}
-            onClick={() => setContentMode("data")}
+            onClick={() => dispatchContent({ type: "showTab", mode: "data" })}
           >
             {t("redis.dataTab")}
           </button>
@@ -480,7 +453,7 @@ function RedisWorkspace({
               aria-selected={contentMode === "group"}
               className={`method-tab${contentMode === "group" ? " method-tab-active" : ""}`}
               title={groupPrefix}
-              onClick={() => setContentMode("group")}
+              onClick={() => dispatchContent({ type: "showTab", mode: "group" })}
             >
               {t("redis.groupTab")}
             </button>
@@ -551,11 +524,9 @@ function RedisWorkspace({
             keys={keys}
             separator={separator}
             selectedKey={selectedKey}
-            // Picking a key is a request to see its value, so it brings that pane back to the
-            // front — the delete pane stays open behind its tab rather than swallowing the click.
+            // Picking a key brings its value to the front — see `selectKey` in `contentPane.ts`.
             onSelect={(name) => {
-              setSelectedKey(name);
-              setContentMode("data");
+              dispatchContent({ type: "selectKey", name });
               // Opening a key is a request to read it, so the shortcut follows the value that
               // just appeared — even for a user who had been working in the sidebar until now.
               setReloadFocus("right");
@@ -571,10 +542,7 @@ function RedisWorkspace({
               {
                 key: "list-to-delete",
                 label: t("redis.listGroupKeys"),
-                onSelect: (path) => {
-                  setGroupPrefix(path);
-                  setContentMode("group");
-                },
+                onSelect: (path) => dispatchContent({ type: "openGroup", prefix: path }),
               },
             ]}
           />
