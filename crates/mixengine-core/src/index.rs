@@ -45,18 +45,23 @@
 
 use std::time::Duration;
 
+#[cfg(feature = "network")]
 mod client;
 pub mod format;
+#[cfg(feature = "network")]
 pub mod packages;
 pub mod schema1;
 pub mod schema2;
 
+#[cfg(feature = "network")]
 pub use client::{Client, default_transport};
+#[cfg(feature = "network")]
 pub(crate) use client::{FETCH_TIMEOUT, Got, SIGNATURE_SUFFIX, get, verify};
 pub use format::{
     Arch, Artifact, Channel, Extensions, Index, Missing, Os, Package, Requires, Selection, TARGETS,
     Target, Timestamp,
 };
+#[cfg(feature = "network")]
 pub use packages::PackageIndex;
 
 /// The key every published index is signed with, compiled in.

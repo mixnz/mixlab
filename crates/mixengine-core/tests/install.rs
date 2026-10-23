@@ -12,6 +12,9 @@
 //! must never appear in `list`**. So each failing path asserts the absence of the destination, not
 //! only the presence of an error.
 
+// Every test here fetches over a socket, which `network` carries (ADR 0067).
+#![cfg(feature = "network")]
+
 use std::path::PathBuf;
 use std::sync::Mutex;
 

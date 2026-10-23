@@ -6,6 +6,9 @@
 //! we believe it produces, which matters because the format has a legacy variant the client refuses
 //! on purpose and a hand-built fixture would have hidden the difference.
 
+// Every test here fetches over a socket, which `network` carries (ADR 0067).
+#![cfg(feature = "network")]
+
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 

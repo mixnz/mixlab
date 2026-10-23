@@ -35,7 +35,9 @@ hyper = { workspace = true, features = ["http1", "server"] }
 hyper-util = { workspace = true, features = ["tokio"] }
 # The mDNS responder a shared site is advertised by -- roadmap task T75.
 mdns-sd.workspace = true
-mixengine-core.workspace = true
+# `network`: the daemon is what fetches — the index, the installer, the extension registry, the
+# update feed. The workspace entry takes none of core's features, so the ask is here.
+mixengine-core = { workspace = true, features = ["network"] }
 mixengine-platform = { workspace = true, features = ["default"] }
 mixengine-proto.workspace = true
 mixengine-supervisor.workspace = true

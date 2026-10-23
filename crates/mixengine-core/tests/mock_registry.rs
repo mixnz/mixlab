@@ -8,6 +8,9 @@
 //! They live here rather than beside the registry because `mixengine-testkit` has no HTTP client
 //! and gets none for the sake of four tests.
 
+// Every test here fetches over a socket, which `network` carries (ADR 0067).
+#![cfg(feature = "network")]
+
 use mixengine_testkit::MockRegistry;
 use sha2::Digest as _;
 

@@ -45,7 +45,10 @@ publish = false
 # `mixengine-testkit` sits outside that graph on purpose: it is a **dev-dependency only**, which the
 # same test enforces separately, so nothing it contains can reach a shipped binary.
 [workspace.dependencies]
-mixengine-core = { path = "crates/mixengine-core" }
+# Without its defaults, so each member says what it takes: the daemon asks for `network`, and the
+# shim leaves every fetch out (ADR 0067). A member's own `default-features = false` would be ignored
+# under an entry that left them on.
+mixengine-core = { path = "crates/mixengine-core", default-features = false }
 # The handbook, embedded at compile time — roadmap task T90. It depends on nothing at all: its front
 # matter is parsed by a build script, so what `mix` links is a table of `&'static str`.
 mixengine-docs = { path = "crates/mixengine-docs" }

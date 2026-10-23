@@ -8,6 +8,9 @@
 //! The one thing here that has no counterpart there is the entry the listing skips: a document can
 //! be entirely ours, entirely valid, and still hold an extension a build this old cannot read.
 
+// Every test here fetches over a socket, which `network` carries (ADR 0067).
+#![cfg(feature = "network")]
+
 use std::path::Path;
 
 use mixengine_core::extensions::registry::Registry;

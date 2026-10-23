@@ -46,8 +46,10 @@ use crate::index::Artifact;
 use crate::{Error, Result};
 
 pub(crate) mod archive;
+#[cfg(feature = "network")]
 mod installer;
 
+#[cfg(feature = "network")]
 pub use installer::Installer;
 
 /// How long the post-install check may take before it counts as a binary that does not start.
@@ -281,6 +283,7 @@ pub fn provided(provides: &BTreeMap<String, String>, url: &str, dir: &Path) -> R
 ///
 /// A `JoinError` here means the blocking pool panicked, which nothing in this module does — it is
 /// reported as an I/O failure rather than unwrapped because nothing in this crate panics.
+#[cfg(feature = "network")]
 async fn blocking<T, F>(path: &Path, work: F) -> Result<T>
 where
     F: FnOnce() -> Result<T> + Send + 'static,

@@ -5,9 +5,13 @@
 //! unpacking is `core::install::archive`'s, whose path checks already refuse an entry that leaves
 //! the directory it is unpacked into.
 
+#[cfg(feature = "network")]
 use std::path::Path;
 
-use crate::install::archive::{self, Format};
+#[cfg(feature = "network")]
+use crate::install::archive;
+use crate::install::archive::Format;
+#[cfg(feature = "network")]
 use crate::{BlueprintError, Error, InstallError, Result};
 
 /// The largest archive this fetches: 1 GiB (D2).
@@ -29,6 +33,7 @@ pub fn is_folder_name(strip: &str) -> bool {
 
 /// How the unpacked tree reaches the project root.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg(feature = "network")]
 enum Mover {
     /// Rename where it can, copy where the two are on different volumes (ADR 0040).
     RenameOrCopy,
@@ -50,6 +55,7 @@ enum Mover {
 /// [`InstallError::ArtifactTransport`] and [`BlueprintError::ArchiveTooLarge`] for the transfer;
 /// [`BlueprintError::ArchiveStripMissing`] when `strip` is not at the archive's top level; and the
 /// unpacker's own refusals.
+#[cfg(feature = "network")]
 pub async fn fetch(
     installer: &crate::install::Installer,
     url: &str,
@@ -61,6 +67,7 @@ pub async fn fetch(
 }
 
 /// [`fetch`] with the client named, which is what a test hands a plain one to.
+#[cfg(feature = "network")]
 async fn fetch_using(
     http: &reqwest::Client,
     url: &str,
@@ -83,6 +90,7 @@ async fn fetch_using(
     outcome
 }
 
+#[cfg(feature = "network")]
 async fn fetch_into(
     http: &reqwest::Client,
     url: &str,
@@ -134,6 +142,7 @@ async fn fetch_into(
 }
 
 /// The transfer, with the ceiling (D2). `prerequisites::download`'s shape, unpinned the same way.
+#[cfg(feature = "network")]
 async fn download(http: &reqwest::Client, url: &str, into: &Path) -> Result<()> {
     use tokio::io::AsyncWriteExt;
 
@@ -174,6 +183,7 @@ async fn download(http: &reqwest::Client, url: &str, into: &Path) -> Result<()> 
 }
 
 /// The names at the archive's top level, sorted, for the refusal (D2).
+#[cfg(feature = "network")]
 fn top_level(unpacked: &Path) -> Vec<String> {
     let mut names: Vec<String> = std::fs::read_dir(unpacked)
         .map(|entries| {
@@ -188,6 +198,7 @@ fn top_level(unpacked: &Path) -> Vec<String> {
 }
 
 /// Move every child of `from` into `to`.
+#[cfg(feature = "network")]
 fn move_children(from: &Path, to: &Path, mover: Mover) -> Result<()> {
     let read = |source| Error::Io {
         action: "read",
@@ -214,6 +225,7 @@ fn move_children(from: &Path, to: &Path, mover: Mover) -> Result<()> {
 }
 
 /// A recursive copy, for the cross-volume case.
+#[cfg(feature = "network")]
 fn copy_tree(from: &Path, to: &Path) -> Result<()> {
     let io = |action: &'static str, path: &Path| {
         let path = path.to_path_buf();
@@ -238,7 +250,7 @@ fn copy_tree(from: &Path, to: &Path) -> Result<()> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "network"))]
 mod tests {
     use std::io::Write;
 

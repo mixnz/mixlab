@@ -23,11 +23,16 @@ use std::path::Path;
 
 use mixengine_proto::privileged::HelperStamp;
 
+#[cfg(feature = "network")]
 use super::feed::HelperArtifact;
+#[cfg(feature = "network")]
+use crate::InstallError;
+#[cfg(feature = "network")]
 use crate::install::Installer;
-use crate::{Error, InstallError, Result, UpdateError};
+use crate::{Error, Result, UpdateError};
 
 /// The suffix minisign gives a detached signature, and `packaging/sign.sh` writes.
+#[cfg(feature = "network")]
 const SIGNATURE_SUFFIX: &str = ".minisig";
 
 /// How long a fetch of one small file may take.
@@ -35,6 +40,7 @@ const SIGNATURE_SUFFIX: &str = ".minisig";
 /// Every path that touches the network has one, per `docs/standards/rust.md`. Shorter than the
 /// index's is not warranted and longer is not either: the two files together are about a megabyte,
 /// there is no cache to fall back to, and a daemon start is waiting on it in the background.
+#[cfg(feature = "network")]
 const FETCH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
 /// Check `bytes` against `signature`, and read what the signature says they are.
@@ -104,6 +110,7 @@ pub fn verify(bytes: &[u8], signature: &str, public_key: &str) -> Result<HelperS
 ///
 /// [`InstallError::ArtifactTransport`] for either fetch, [`Error::Io`] for the directory and the
 /// two files, and whatever [`verify`] refused.
+#[cfg(feature = "network")]
 pub async fn stage(
     installer: &Installer,
     artifact: &HelperArtifact,
@@ -145,6 +152,7 @@ pub async fn stage(
 ///
 /// [`Error::Io`] naming whichever of the two files could not be written, or the mode that could not
 /// be set.
+#[cfg(feature = "network")]
 fn place(bytes: &[u8], signature: &str, into: &Path) -> Result<()> {
     let name = name();
     let candidate = into.join(&name);
@@ -176,11 +184,13 @@ pub async fn clear(into: &Path) -> Result<()> {
 
 /// What the candidate is called, which is what
 /// [`mixengine_proto::privileged::helper_candidate`] composes on the other side.
+#[cfg(feature = "network")]
 fn name() -> String {
     format!("mixengine-elevate{}", std::env::consts::EXE_SUFFIX)
 }
 
 /// One file, whole, with a timeout.
+#[cfg(feature = "network")]
 async fn fetch(http: &reqwest::Client, url: &str) -> Result<Vec<u8>> {
     let response = http
         .get(url)
@@ -208,6 +218,7 @@ async fn fetch(http: &reqwest::Client, url: &str) -> Result<Vec<u8>> {
 }
 
 /// One file, written where the elevated process will look for it.
+#[cfg(feature = "network")]
 fn write(path: &Path, bytes: &[u8]) -> Result<()> {
     std::fs::write(path, bytes).map_err(|source| Error::Io {
         action: "write the staged privileged helper",
@@ -216,7 +227,7 @@ fn write(path: &Path, bytes: &[u8]) -> Result<()> {
     })
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "network"))]
 mod tests {
     use super::*;
 

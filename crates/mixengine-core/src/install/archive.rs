@@ -22,9 +22,11 @@
 //! `tools/mkindex.py` writes the index from. Sniffing magic bytes instead would read a claim made by
 //! the downloaded file about itself, which is a strictly weaker statement than one we signed.
 
+#[cfg(feature = "network")]
 use std::io::{BufReader, Read};
 use std::path::{Component, Path};
 
+#[cfg(feature = "network")]
 use crate::{Error, InstallError, Result};
 
 /// One of the three shapes the publishing pipeline produces.
@@ -75,6 +77,7 @@ impl Format {
 /// [`InstallError::UnsafeArchiveEntry`] when an entry names a path outside `into`,
 /// [`InstallError::ArchiveUnreadable`] when the container or the compressor refuses what it was
 /// given, and [`Error::Io`] when the file cannot be opened.
+#[cfg(feature = "network")]
 pub(crate) fn extract(archive: &Path, format: Format, into: &Path) -> Result<()> {
     let file = std::fs::File::open(archive).map_err(|source| Error::Io {
         action: "open",
@@ -133,6 +136,7 @@ pub(crate) fn safe(path: &Path) -> bool {
 /// Refusing it instead was a real failure and worth naming: no zip carries such an entry, so every
 /// Windows install went on working while every macOS and Linux one refused its own artifact at the
 /// unpack step.
+#[cfg(feature = "network")]
 fn names_the_destination(path: &Path) -> bool {
     path.components()
         .all(|component| component == Component::CurDir)
@@ -143,6 +147,7 @@ fn names_the_destination(path: &Path) -> bool {
 /// The names are walked in full before a single byte is written, so an archive whose last entry is
 /// the malicious one does not get to leave the first hundred behind. `by_index_raw` reads the entry
 /// header without starting its decompressor, which is what makes that first pass cheap.
+#[cfg(feature = "network")]
 fn unpack_zip<R: Read + std::io::Seek>(file: R, archive: &Path, into: &Path) -> Result<()> {
     let mut zip = zip::ZipArchive::new(file).map_err(|source| unreadable(archive, source))?;
 
@@ -183,6 +188,7 @@ fn unpack_zip<R: Read + std::io::Seek>(file: R, archive: &Path, into: &Path) -> 
 /// `preserve_permissions` is set because it is **off by default** in `tar`, and a PHP unpacked
 /// without its mode bits is a `php` that cannot be executed — a failure that would surface later,
 /// somewhere else, as a permission error nobody would trace back to here.
+#[cfg(feature = "network")]
 fn unpack_tar<R: Read>(reader: R, archive: &Path, into: &Path) -> Result<()> {
     let mut tar = tar::Archive::new(reader);
     tar.set_preserve_permissions(true);
@@ -234,6 +240,7 @@ fn unpack_tar<R: Read>(reader: R, archive: &Path, into: &Path) -> Result<()> {
 }
 
 /// Blame the archive rather than the reader, for anything a decompressor refuses.
+#[cfg(feature = "network")]
 fn unreadable(
     archive: &Path,
     source: impl std::error::Error + Send + Sync + 'static,
@@ -244,7 +251,7 @@ fn unreadable(
     })
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "network"))]
 mod tests {
     use std::path::PathBuf;
 

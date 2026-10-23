@@ -6,12 +6,16 @@
 //! What is fetched is not believed here — `mixengine_platform`'s `Redistributables` does that,
 //! against Microsoft's signature, immediately before it runs.
 
+#[cfg(feature = "network")]
 use std::path::PathBuf;
 
 use mixengine_proto::RedistributableArch;
+#[cfg(feature = "network")]
 use tokio::io::AsyncWriteExt as _;
 
+#[cfg(feature = "network")]
 use crate::install::Installer;
+#[cfg(feature = "network")]
 use crate::{Error, InstallError, Result};
 
 /// Microsoft's permanent address for the x64 redistributable.
@@ -21,6 +25,7 @@ pub const VISUAL_CPP_X64: &str = "https://aka.ms/vs/17/release/vc_redist.x64.exe
 pub const VISUAL_CPP_ARM64: &str = "https://aka.ms/vs/17/release/vc_redist.arm64.exe";
 
 /// The most this download may be. Measured 2026-09-16 at 25.6 MB for x64.
+#[cfg(feature = "network")]
 const LIMIT: u64 = 64 * 1024 * 1024;
 
 /// Where the redistributable for `arch` is fetched from.
@@ -40,6 +45,7 @@ pub const fn url(arch: RedistributableArch) -> &'static str {
 ///
 /// [`InstallError::ArtifactTransport`] for the fetch, [`InstallError::ArtifactTooLarge`] past the
 /// limit, and [`Error::Io`] for the file.
+#[cfg(feature = "network")]
 pub async fn download(installer: &Installer, arch: RedistributableArch) -> Result<PathBuf> {
     let url = url(arch);
     crate::paths::create_dir(installer.downloads())?;
@@ -87,7 +93,7 @@ pub async fn download(installer: &Installer, arch: RedistributableArch) -> Resul
     Ok(into)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "network"))]
 mod tests {
     use super::*;
 

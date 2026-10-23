@@ -27,7 +27,9 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "network")]
 use crate::index::Artifact;
+#[cfg(feature = "network")]
 use crate::install::{Installer, NotAnArchive, SmokeTest, Watcher};
 use crate::{Error, Result};
 
@@ -103,6 +105,7 @@ pub struct Swapped {
 /// [`InstallError::MissingFromArtifact`]: crate::InstallError::MissingFromArtifact
 /// [`InstallError::SmokeTestFailed`]: crate::InstallError::SmokeTestFailed
 /// [`InstallError::UnsafeArchiveEntry`]: crate::InstallError::UnsafeArchiveEntry
+#[cfg(feature = "network")]
 pub async fn stage<W: Watcher>(
     installer: &Installer,
     artifact: &Artifact,
