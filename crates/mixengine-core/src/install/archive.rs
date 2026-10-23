@@ -251,7 +251,8 @@ fn unreadable(
     })
 }
 
-#[cfg(all(test, feature = "network"))]
+#[cfg(test)]
+#[cfg(feature = "network")]
 mod tests {
     use std::path::PathBuf;
 

@@ -227,7 +227,8 @@ fn write(path: &Path, bytes: &[u8]) -> Result<()> {
     })
 }
 
-#[cfg(all(test, feature = "network"))]
+#[cfg(test)]
+#[cfg(feature = "network")]
 mod tests {
     use super::*;
 

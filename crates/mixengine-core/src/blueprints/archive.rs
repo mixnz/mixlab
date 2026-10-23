@@ -250,7 +250,8 @@ fn copy_tree(from: &Path, to: &Path) -> Result<()> {
     }
 }
 
-#[cfg(all(test, feature = "network"))]
+#[cfg(test)]
+#[cfg(feature = "network")]
 mod tests {
     use std::io::Write;
 

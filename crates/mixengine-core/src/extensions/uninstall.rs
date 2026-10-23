@@ -142,7 +142,8 @@ async fn remove(path: &Path) -> Result<()> {
     crate::paths::remove_dir(path).await
 }
 
-#[cfg(all(test, feature = "network"))]
+#[cfg(test)]
+#[cfg(feature = "network")]
 mod tests {
     use mixengine_proto::Timestamp;
 

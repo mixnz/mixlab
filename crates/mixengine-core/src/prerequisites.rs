@@ -93,7 +93,8 @@ pub async fn download(installer: &Installer, arch: RedistributableArch) -> Resul
     Ok(into)
 }
 
-#[cfg(all(test, feature = "network"))]
+#[cfg(test)]
+#[cfg(feature = "network")]
 mod tests {
     use super::*;
 
