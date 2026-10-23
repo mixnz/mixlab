@@ -275,3 +275,38 @@ fn the_login_entry_is_residue_only_when_it_is_this_home_s() {
         Removal::Absent {}
     ));
 }
+
+/// the helper kept a row the plan said would go — another home granted in between. The
+/// second reading is the answer, not "removed at the next restart" and not a failure.
+#[test]
+fn a_helper_kept_after_planning_settles_as_kept() {
+    let kept = Residue {
+        outcome: Removal::Kept {
+            because: format!("{}/homes/b still uses it", inventory::FOR_ANOTHER_HOME),
+        },
+        ..planned()
+    };
+
+    let settled = settle(planned(), kept.clone(), true, &[]);
+
+    assert_eq!(settled, kept);
+}
+
+/// ADR 0066: the report counts what was kept for another home, so `mix` decides nothing.
+#[test]
+fn the_report_counts_what_another_home_keeps() {
+    let for_another = Residue {
+        outcome: Removal::Kept {
+            because: format!("{}/homes/b still uses it", inventory::FOR_ANOTHER_HOME),
+        },
+        ..planned()
+    };
+    let for_a_package = Residue {
+        outcome: Removal::Kept {
+            because: "it came with the mixengine package".to_owned(),
+        },
+        ..planned()
+    };
+
+    assert_eq!(report(vec![for_another, for_a_package]).kept_for_others, 1);
+}

@@ -262,6 +262,66 @@ mod tests {
         }
     }
 
+    /// The prompt an uninstall raises on a machine whose hosts file holds `own` in this home's
+    /// block and `shared` in the block written before each home kept its own.
+    async fn the_uninstall_prompt_with(
+        own: &'static [&'static str],
+        shared: &'static [&'static str],
+    ) -> String {
+        let daemon = daemon_on(Arc::new(fixture::Declared(Vec::new())), &[], move |home| {
+            mixengine_platform::mock::Host::with_hosts(home, own.iter().copied())
+                .with_legacy_hosts(shared.iter().copied())
+        })
+        .await;
+
+        std::fs::write(
+            daemon
+                .api
+                .paths()
+                .root()
+                .join("installed-beside")
+                .join(format!("mixengine-elevate{}", std::env::consts::EXE_SUFFIX)),
+            b"a helper the mock never runs",
+        )
+        .expect("a helper beside the program");
+
+        let started: JobSummary = daemon
+            .expect(
+                rpc::method::DAEMON_UNINSTALL,
+                serde_json::json!({ "keep_home": true, "grant": true }),
+            )
+            .await;
+        let _ = finished_job(&daemon, started).await;
+
+        daemon
+            .host
+            .prompts_raised()
+            .last()
+            .map(|prompt| prompt.body.clone())
+            .unwrap_or_default()
+    }
+
+    /// this home's block and the shared one are two operations in one prompt.
+    #[tokio::test]
+    async fn an_uninstall_removes_this_homes_block_and_the_shared_one() {
+        let body =
+            the_uninstall_prompt_with(&["127.0.0.1 blog.test"], &["127.0.0.1 old.test"]).await;
+
+        assert_eq!(body.matches("hosts-apply").count(), 2, "{body}");
+        assert!(
+            body.contains("\"home\":\""),
+            "this home's block names its tag: {body}"
+        );
+    }
+
+    /// a shared block alone is still something this home's uninstall removes.
+    #[tokio::test]
+    async fn the_hosts_row_counts_the_shared_block() {
+        let body = the_uninstall_prompt_with(&[], &["127.0.0.1 old.test"]).await;
+
+        assert!(body.contains("hosts-apply"), "{body}");
+    }
+
     /// T182, D4. A process running from the home refuses the act before anything is enqueued.
     /// T182b, D6. The uninstall's prompt carries only what the uninstall asked for: a producer's
     /// operation waiting in the same queue is not in the batch, and is still waiting afterwards.
@@ -354,16 +414,21 @@ mod tests {
         )
         .expect("a helper beside the program");
 
-        let sites = mixengine_proto::privileged::PrivilegedOp::hosts_apply([
-            mixengine_proto::privileged::HostEntry {
-                address: "127.0.0.1".parse().expect("an address"),
-                domain: "blog.test".to_owned(),
-            },
-            mixengine_proto::privileged::HostEntry {
-                address: "127.0.0.1".parse().expect("an address"),
-                domain: "shop.test".to_owned(),
-            },
-        ]);
+        let sites = mixengine_proto::privileged::PrivilegedOp::hosts_apply(
+            Some(mixengine_platform::hosts::tag_for(
+                daemon.api.paths().root(),
+            )),
+            [
+                mixengine_proto::privileged::HostEntry {
+                    address: "127.0.0.1".parse().expect("an address"),
+                    domain: "blog.test".to_owned(),
+                },
+                mixengine_proto::privileged::HostEntry {
+                    address: "127.0.0.1".parse().expect("an address"),
+                    domain: "shop.test".to_owned(),
+                },
+            ],
+        );
         daemon
             .api
             .elevation

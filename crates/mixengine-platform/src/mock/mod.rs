@@ -396,6 +396,25 @@ impl Host {
         }
     }
 
+    /// This host, with a legacy hosts block holding `lines` — the block every home shared before
+    /// each kept its own (ADR 0066).
+    #[must_use]
+    pub fn with_legacy_hosts<'a>(self, lines: impl IntoIterator<Item = &'a str>) -> Self {
+        Self {
+            hosts: self.hosts.with_legacy(lines),
+            ..self
+        }
+    }
+
+    /// This host, whose hosts file holds blocks under `tags` — other homes' among them (ADR 0066).
+    #[must_use]
+    pub fn with_hosts_tags<'a>(self, tags: impl IntoIterator<Item = &'a str>) -> Self {
+        Self {
+            hosts: self.hosts.with_tags(tags),
+            ..self
+        }
+    }
+
     /// This host, with every prompt declined — for the fixtures that need a machine *and* a no.
     ///
     /// Roadmap task T182b: a declined uninstall on a machine that holds a hosts block is the case
@@ -551,6 +570,20 @@ impl Host {
     ) -> Self {
         Self {
             resolver: resolver::Resolver::routing(method, wired),
+            ..Self::with_home(home)
+        }
+    }
+
+    /// A host whose machine has `method` and whose programs never reach it, for `reason` — the
+    /// server M34 ran on, where AdGuard Home had turned `systemd-resolved`'s stub off.
+    #[must_use]
+    pub fn with_bypassed_resolver(
+        home: impl Into<PathBuf>,
+        method: crate::ResolverMethod,
+        reason: &str,
+    ) -> Self {
+        Self {
+            resolver: resolver::Resolver::bypassed(method, reason),
             ..Self::with_home(home)
         }
     }

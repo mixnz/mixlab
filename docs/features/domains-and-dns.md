@@ -135,14 +135,23 @@ for nothing on such a home.
 ### 2. Hosts file (fallback, and for exact names)
 
 Used when the user declines the resolver setup, when the platform cannot scope DNS to a TLD, or for a
-one-off exact hostname. Entries go into the managed block:
+one-off exact hostname. Entries go into the home's own managed block, tagged with a hash of the
+home's path ([ADR 0066](../decisions/0066-what-a-home-applied-is-that-homes-to-undo.md)):
 
 ```
-# BEGIN MixEngine
+# BEGIN MixEngine 3f2a9c0e71b4d562
 127.0.0.1  api.blog.test
 127.0.0.1  blog.test
-# END MixEngine
+# END MixEngine 3f2a9c0e71b4d562
 ```
+
+**One block per home.** Two homes on one machine, a release and a development build being the
+ordinary case, each write and remove only their own. The untagged `# BEGIN MixEngine` block that
+every home shared before T211g is still read: a home's apply takes out of it the names it now
+writes in its own, the block goes once it holds none, and `mix uninstall` removes what is left.
+A block whose home is gone, deleted by hand or moved, is reported by `mix doctor` as
+`hosts_block_orphaned`, and `mix doctor --repair` empties it once the helper's ledger confirms that
+home no longer exists.
 
 **One line per name, `127.0.0.1` only, sorted by name.** An earlier draft of this page drew a
 matching `::1` line and that was wrong for the build it describes: nothing decides that the web

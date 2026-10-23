@@ -49,6 +49,22 @@ pub struct ResolverState {
 
     /// Why the rest are not, in words, for `mix doctor` (T47).
     pub missing: Option<String>,
+
+    /// Why programs on this machine never reach the mechanism, or [`None`] when they do.
+    ///
+    /// **Only Linux fills it**: a `systemd-networkd` link routes what is asked of
+    /// `systemd-resolved`, and a machine whose programs ask another server routes nothing through
+    /// it, however right its files are. When it is set, [`wired`](Self::wired) is empty,
+    /// [`plan`](Self::plan) asks for nothing and [`target`](Self::target) still names what an
+    /// earlier grant wrote.
+    pub bypassed: Option<String>,
+
+    /// The TLDs this machine's configuration routes here, whether or not programs reach it.
+    ///
+    /// The same list as [`wired`](Self::wired) except where [`bypassed`](Self::bypassed) is set:
+    /// there the files an earlier grant wrote are still on disk and still this home's to remove,
+    /// and an uninstall reads this to know so.
+    pub declared: Vec<String>,
 }
 
 impl ResolverState {
@@ -70,6 +86,12 @@ impl ResolverState {
             .collect();
 
         if tlds.is_empty() {
+            return None;
+        }
+
+        // A grant would rewrite files already on disk and change nothing programs ask; asking for
+        // one would spend a prompt on every start, forever.
+        if self.bypassed.is_some() {
             return None;
         }
 
@@ -97,11 +119,13 @@ impl ResolverState {
     /// It exists now so that uninstall has a value to build rather than a reversal to invent
     /// against a wiring written five phases earlier.
     #[must_use]
-    pub fn target(&self) -> Option<ResolverTarget> {
+    ///
+    /// `port` is this home's DNS server: only what points at it is this home's to remove (ADR 0066).
+    pub fn target(&self, port: u16) -> Option<ResolverTarget> {
         match self.method {
             ResolverMethod::None => None,
-            ResolverMethod::ResolverDirectory => Some(ResolverTarget::ResolverDirectory {}),
-            ResolverMethod::SystemdLink => Some(ResolverTarget::SystemdLink {}),
+            ResolverMethod::ResolverDirectory => Some(ResolverTarget::ResolverDirectory { port }),
+            ResolverMethod::SystemdLink => Some(ResolverTarget::SystemdLink { port }),
             ResolverMethod::Nrpt => Some(ResolverTarget::Nrpt {}),
         }
     }
@@ -150,7 +174,25 @@ mod tests {
             method,
             wired: wired.iter().map(|tld| (*tld).to_owned()).collect(),
             missing: None,
+            bypassed: None,
+            declared: wired.iter().map(|tld| (*tld).to_owned()).collect(),
         }
+    }
+
+    /// A machine whose programs skip the mechanism asks for no grant, and an uninstall can still
+    /// take away what an earlier grant wrote.
+    #[test]
+    fn a_bypassed_machine_asks_for_nothing_and_can_still_be_undone() {
+        let state = ResolverState {
+            bypassed: Some("programs here ask another server".to_owned()),
+            ..state(ResolverMethod::SystemdLink, &[])
+        };
+
+        assert_eq!(state.plan(&["test"], 53_535), None);
+        assert_eq!(
+            state.target(53_535),
+            Some(ResolverTarget::SystemdLink { port: 53_535 })
+        );
     }
 
     /// A machine already wired asks for nothing, so no prompt is spent on a row whose only possible
@@ -182,7 +224,7 @@ mod tests {
         let state = state(ResolverMethod::None, &[]);
 
         assert_eq!(state.plan(&["test"], 53_535), None);
-        assert_eq!(state.target(), None);
+        assert_eq!(state.target(53_535), None);
     }
 
     /// Windows' plan carries no port, because NRPT has nowhere to put one.
@@ -226,16 +268,16 @@ mod tests {
     #[test]
     fn every_mechanism_has_something_to_remove() {
         assert_eq!(
-            state(ResolverMethod::Nrpt, &[]).target(),
+            state(ResolverMethod::Nrpt, &[]).target(53_535),
             Some(ResolverTarget::Nrpt {})
         );
         assert_eq!(
-            state(ResolverMethod::SystemdLink, &[]).target(),
-            Some(ResolverTarget::SystemdLink {})
+            state(ResolverMethod::SystemdLink, &[]).target(53_535),
+            Some(ResolverTarget::SystemdLink { port: 53_535 })
         );
         assert_eq!(
-            state(ResolverMethod::ResolverDirectory, &[]).target(),
-            Some(ResolverTarget::ResolverDirectory {})
+            state(ResolverMethod::ResolverDirectory, &[]).target(53_535),
+            Some(ResolverTarget::ResolverDirectory { port: 53_535 })
         );
     }
 }

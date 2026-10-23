@@ -8,18 +8,31 @@ use super::super::Uninstall;
 
 use super::{firewall_label, resolver_place, trust_place};
 
-/// **1.** The block in this machine's hosts file, read the way T41 reads it.
+/// **1.** This home's block in this machine's hosts file, read the way T41 reads it — and the block
+/// every home shared before each kept its own (ADR 0066), which this home's uninstall also removes.
 pub(super) fn hosts_block(uninstall: &Uninstall) -> Residue {
     let file = uninstall.host.hosts_file();
     let location = file.path().display().to_string();
+    let tag = mixengine_platform::hosts::tag_for(uninstall.paths.root());
 
-    let outcome = match file.managed() {
+    let read = file
+        .managed(Some(&tag))
+        .and_then(|own| file.managed(None).map(|shared| (own, shared)));
+
+    let outcome = match read {
         // An empty block is a machine that has never had one, which is not a failure — the trait's
         // own words.
-        Ok(entries) if entries.is_empty() => Removal::Absent {},
-        Ok(entries) => Removal::Planned {
-            how: PrivilegedOp::hosts_apply(Vec::new()).describe()
-                + &format!(", which today holds {} name(s)", entries.len()),
+        Ok((own, shared)) if own.is_empty() && shared.is_empty() => Removal::Absent {},
+        Ok((own, shared)) => Removal::Planned {
+            how: PrivilegedOp::hosts_apply(Some(tag), Vec::new()).describe()
+                + &format!(", which today holds {} name(s)", own.len())
+                + &match shared.is_empty() {
+                    true => String::new(),
+                    false => format!(
+                        ", and the block written before each home kept its own, which holds {}",
+                        shared.len()
+                    ),
+                },
         },
         Err(error) => Removal::Failed {
             because: format!(
@@ -75,23 +88,27 @@ pub(super) fn resolver_wiring(uninstall: &Uninstall) -> Residue {
         }
     };
 
-    let location = resolver_place(state.method).to_owned();
+    Residue {
+        id: ResidueId::ResolverWiring,
+        what,
+        location: resolver_place(state.method).to_owned(),
+        outcome: resolver_removal(&state, port),
+    }
+}
 
-    // **`wired` and not `method`.** A machine with a mechanism and nothing routed through it has
-    // nothing of ours to remove, and asking to revoke there would spend a prompt on an operation
-    // whose only outcome is `AlreadyDone` — T41's D11, one capability along.
-    let outcome = match (state.wired.is_empty(), state.target()) {
+/// Whether there is wiring of this home's to revoke, as `state` reads it.
+///
+/// **`declared` and not `method`.** A machine with a mechanism and nothing routed through it has
+/// nothing of ours to remove, and asking to revoke there would spend a prompt on an operation
+/// whose only outcome is `AlreadyDone` — T41's D11, one capability along. And `declared` rather
+/// than `wired`, found running M34: a link programs never reach is still on disk, and still this
+/// home's to take.
+pub(super) fn resolver_removal(state: &mixengine_platform::ResolverState, port: u16) -> Removal {
+    match (state.declared.is_empty(), state.target(port)) {
         (false, Some(target)) => Removal::Planned {
             how: PrivilegedOp::ResolverRevoke { target }.describe(),
         },
         _ => Removal::Absent {},
-    };
-
-    Residue {
-        id: ResidueId::ResolverWiring,
-        what,
-        location,
-        outcome,
     }
 }
 

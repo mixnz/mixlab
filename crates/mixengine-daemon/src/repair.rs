@@ -294,10 +294,36 @@ impl Repairs {
     /// A repair the helper has to make, asked for rather than made.
     async fn enqueue(&self, what: Enqueue) -> Action {
         let asked = match what {
+            // What will be done, not what it is done to: the row's name already says that, and
+            // `mix doctor --repair` printed it twice .
             Enqueue::Hosts => (
                 self.elevation.require_hosts().await,
-                "the managed hosts block",
+                "rewriting it to hold this home's names",
             ),
+            Enqueue::OrphanHosts => {
+                // Found again rather than carried from the doctor run: the repair may come long
+                // after, and the helper checks the same ledger before it empties anything.
+                let tags = self
+                    .host
+                    .hosts_file()
+                    .tags()
+                    .map(|tags| {
+                        crate::doctor::hosts::orphans(
+                            &tags,
+                            crate::doctor::hosts::ledger().as_ref(),
+                            mixengine_platform::ledger::alive,
+                        )
+                    })
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|orphan| orphan.tag)
+                    .collect::<Vec<_>>();
+
+                (
+                    self.elevation.forget_hosts_blocks(&tags).await,
+                    "removing the hosts blocks of homes that are gone",
+                )
+            }
             Enqueue::Resolver => (
                 self.elevation.require_resolver().await,
                 "sending this home's managed TLDs to its own DNS server",
@@ -432,6 +458,9 @@ enum Enqueue {
     /// The managed hosts block.
     Hosts,
 
+    /// The hosts blocks of homes that are gone (ADR 0066).
+    OrphanHosts,
+
     /// The resolver for this home's managed TLDs.
     Resolver,
 
@@ -451,6 +480,7 @@ enum Enqueue {
 fn plan_for(id: ProblemId) -> Planned {
     match id {
         ProblemId::HostsBlockDiffers => Planned::Enqueue(Enqueue::Hosts),
+        ProblemId::HostsBlockOrphaned => Planned::Enqueue(Enqueue::OrphanHosts),
         ProblemId::ResolverNotWired => Planned::Enqueue(Enqueue::Resolver),
         ProblemId::CaNotTrusted => Planned::Enqueue(Enqueue::TrustStore),
         ProblemId::PortAccessMissing => Planned::Enqueue(Enqueue::PortAccess),

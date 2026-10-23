@@ -49,6 +49,9 @@ pub mod install;
 // three systems so its tests run on every one; the call itself is in `sys::install`.
 #[cfg(feature = "ipc")]
 pub mod ipc;
+// Documented by its own `//!` header. Under `elevated`, where the audit directory is named.
+#[cfg(feature = "elevated")]
+pub mod ledger;
 pub mod lock;
 #[cfg(any(feature = "host", feature = "elevated"))]
 mod packages;

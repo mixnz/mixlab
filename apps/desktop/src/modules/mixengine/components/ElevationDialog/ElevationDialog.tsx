@@ -19,6 +19,7 @@ import {
 } from "../../pendingOps";
 import { useRunningDots } from "../../screens/Settings/useRunningDots";
 import styles from "./ElevationDialog.module.css";
+import { leadKeys } from "./lead";
 
 /**
  * Every operation waiting for administrator rights, then one prompt.
@@ -262,11 +263,18 @@ export default function ElevationDialog({
         <>
           <ModalBody>
             {/* A terminal's grant carries only what a terminal can, so "one prompt" is not true of
-                the list while one waits. */}
+                the list while one waits; nor where no prompt can be raised . */}
             <p className={styles.lead}>
-              {command === null
-                ? t("mixengine.elevation.lead")
-                : t("mixengine.elevation.leadWhileTerminalWaits")}
+              {leadKeys({
+                canPrompt,
+                terminalWaits: command !== null,
+                anyMarked: pending.some((op) => {
+                  const id = (op as { id?: unknown }).id;
+                  return typeof id === "number" && screenOnly.has(id);
+                }),
+              })
+                .map((key) => t(key))
+                .join(" ")}
             </p>
             <ul className={styles.ops}>
               {pending.map((op, at) => {

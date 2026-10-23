@@ -261,7 +261,9 @@ export default {
     elevation: {
       title: "MixEngine needs an administrator",
       lead: "Everything below will be changed in one prompt.",
-      leadWhileTerminalWaits: "A command in a terminal is waiting to change what it can. Anything marked below waits for this screen.",
+      leadCannotPrompt: "These changes need an administrator, and this window cannot ask for one here.",
+      leadWhileTerminalWaits: "A command in a terminal is waiting to change what it can.",
+      leadMarkedWaitForScreen: "Anything marked below waits for this screen.",
       grant: "Allow",
       prompting: "Waiting for you to answer the system prompt",
       waitingForTerminal: "Waiting for the command below to be run in a terminal",

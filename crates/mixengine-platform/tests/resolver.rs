@@ -249,7 +249,7 @@ fn unwiring_a_machine_that_is_not_wired_changes_nothing() {
         .resolver()
         .probe(&[TLD], 53_535)
         .expect("a state")
-        .target()
+        .target(53_535)
     else {
         eprintln!("this machine has no scoped resolver mechanism, which is a valid answer (D2)");
         return;
@@ -277,7 +277,7 @@ impl Drop for Restore {
         let Ok(state) = host.resolver().probe(&[TLD], 53_535) else {
             return;
         };
-        let Some(target) = state.target() else {
+        let Some(target) = state.target(53_535) else {
             return;
         };
 

@@ -41,7 +41,7 @@ pub(crate) const LABEL: &str = "dev.mixengine.pf";
 pub(crate) const AFTER: &str = "rdr-anchor \"com.apple/*\"";
 
 /// The managed block in the main ruleset.
-const CONF: Block = Block::in_file(CONF_FILE);
+const CONF: Block<'static> = Block::in_file(CONF_FILE);
 
 /// The anchor file: one `rdr` per redirect, IPv4 only — D6.
 ///

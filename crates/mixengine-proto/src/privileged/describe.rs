@@ -24,7 +24,7 @@ impl PrivilegedOp {
             Self::Probe {} => "report the installed helper's version, whether it holds an \
                                administrative token, and where it writes its audit log"
                 .to_owned(),
-            Self::HostsApply { entries } => describe_hosts(entries),
+            Self::HostsApply { home, entries } => describe_hosts(home.as_deref(), entries),
             Self::PortAccessGrant { plan } => describe_grant(plan),
             Self::PortAccessRevoke { target } => describe_revoke(target),
             Self::ResolverApply { plan } => describe_resolver(plan),
@@ -72,9 +72,14 @@ impl PrivilegedOp {
 ///
 /// The addresses are named when they differ, because the helper permits `::1` as well as
 /// `127.0.0.1` (D5) and a description that hid the difference would be describing something else.
-fn describe_hosts(entries: &[HostEntry]) -> String {
+fn describe_hosts(home: Option<&str>, entries: &[HostEntry]) -> String {
     let Some(first) = entries.first() else {
-        return "remove MixEngine's block from the hosts file".to_owned();
+        return match home {
+            Some(_) => "remove MixEngine's block from the hosts file".to_owned(),
+            None => "remove the block MixEngine wrote in the hosts file before each home kept its \
+                     own"
+            .to_owned(),
+        };
     };
 
     let uniform = entries.iter().all(|entry| entry.address == first.address);
@@ -177,12 +182,13 @@ fn describe_resolver(plan: &ResolverPlan) -> String {
 /// What unwiring will literally do.
 fn describe_unwire(target: &ResolverTarget) -> String {
     match target {
-        ResolverTarget::ResolverDirectory {} => {
-            "remove the resolver files MixEngine wrote in /etc/resolver".to_owned()
-        }
-        ResolverTarget::SystemdLink {} => {
-            "remove MixEngine's network link and its two files in /etc/systemd/network".to_owned()
-        }
+        ResolverTarget::ResolverDirectory { port } => format!(
+            "remove the resolver files MixEngine wrote in /etc/resolver that point at 127.0.0.1:{port}"
+        ),
+        ResolverTarget::SystemdLink { port } => format!(
+            "remove MixEngine's network link and its two files in /etc/systemd/network, while they \
+             point at 127.0.0.1:{port}"
+        ),
         ResolverTarget::Nrpt {} => {
             "remove MixEngine's Name Resolution Policy rule from this machine".to_owned()
         }

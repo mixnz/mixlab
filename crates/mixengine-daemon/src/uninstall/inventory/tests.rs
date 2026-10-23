@@ -19,6 +19,7 @@ fn reading<'a>(
         placement,
         asked,
         present: present.iter().map(std::path::PathBuf::from).collect(),
+        window: true,
     }
 }
 
@@ -103,6 +104,28 @@ fn package_is_kept_with_a_reason_where_no_pkg_placed_the_copy() {
         directory: "/work/target/debug".into(),
     };
     assert!(package_row(&reading("macos", &dev, true, &[])).is_none());
+}
+
+/// Found running M34: the headless package's row named a MixLab application it never carried.
+#[test]
+fn a_copy_with_no_window_does_not_name_one() {
+    let headless = mixengine_core::updates::Placement::Installer {
+        directory: "/usr/bin".into(),
+        receipt: "dpkg:mixengine-headless".to_owned(),
+    };
+
+    let row = package_row(&PackageReading {
+        window: false,
+        ..reading("linux", &headless, false, &[])
+    })
+    .expect("a row");
+    assert_eq!(
+        row.what,
+        "the program itself: its commands and the package receipt"
+    );
+
+    let row = package_row(&reading("linux", &headless, false, &[])).expect("a row");
+    assert!(row.what.contains("MixLab application"), "{row:?}");
 }
 
 fn held(path: &str, movable: bool, holders: &[(u32, &str)]) -> HeldItem {
@@ -525,4 +548,108 @@ fn the_windows_folders_follow_the_home_and_the_cache_always_goes() {
         window_rows(false, Some(&found), false).is_empty(),
         "a home the installed window does not use took the window's folders"
     );
+}
+
+/// The ledger of homes, as a test writes it.
+fn homes(paths: &[&str]) -> Result<Option<mixengine_proto::privileged::HomesLedger>, String> {
+    Ok(Some(mixengine_proto::privileged::HomesLedger {
+        homes: paths
+            .iter()
+            .map(|home| mixengine_proto::privileged::LedgerEntry {
+                home: std::path::PathBuf::from(home),
+                caller: "uid 501".to_owned(),
+                last: 0,
+            })
+            .collect(),
+    }))
+}
+
+/// ADR 0066: the daemon plans what the helper will decide — another living home keeps the helper
+/// and the log, and so does a machine with no ledger or one that cannot be read.
+#[test]
+fn the_helper_and_log_stay_while_another_home_uses_them() {
+    let root = Path::new("/homes/a");
+
+    let other = for_others(homes(&["/homes/a", "/homes/b"]), root, |_| true)
+        .expect("another living home keeps them");
+    assert!(
+        other.starts_with(FOR_ANOTHER_HOME) && other.contains("/homes/b"),
+        "{other}"
+    );
+
+    assert!(
+        for_others(Ok(None), root, |_| true).is_some(),
+        "no ledger keeps them"
+    );
+    assert!(
+        for_others(Err("not JSON".to_owned()), root, |_| true)
+            .is_some_and(|said| said.contains("not JSON")),
+        "an unreadable ledger keeps them"
+    );
+    assert_eq!(
+        for_others(homes(&["/homes/a", "/homes/gone"]), root, |home| home
+            == root),
+        None,
+        "the last living home removes them"
+    );
+}
+
+/// Only a row that would have gone is kept; one that is absent, or already kept for its package,
+/// says what it said.
+#[test]
+fn keeping_for_others_turns_only_a_planned_row() {
+    let planned = Residue {
+        id: ResidueId::AuditLog,
+        what: "the log".to_owned(),
+        location: "/var/log/mixengine/elevate.log".to_owned(),
+        outcome: Removal::Planned {
+            how: "remove it".to_owned(),
+        },
+    };
+    let absent = Residue {
+        outcome: Removal::Absent {},
+        ..planned.clone()
+    };
+
+    let kept = keep_for_others(planned, Some("kept for the other homes".to_owned()));
+    assert!(matches!(kept.outcome, Removal::Kept { .. }), "{kept:?}");
+
+    assert_eq!(
+        keep_for_others(absent.clone(), Some("x".to_owned())),
+        absent
+    );
+}
+
+fn resolver_state(wired: &[&str], bypassed: bool) -> mixengine_platform::ResolverState {
+    let tlds = |list: &[&str]| list.iter().map(|tld| (*tld).to_owned()).collect::<Vec<_>>();
+
+    mixengine_platform::ResolverState {
+        method: mixengine_platform::ResolverMethod::SystemdLink,
+        wired: if bypassed { Vec::new() } else { tlds(wired) },
+        missing: None,
+        bypassed: bypassed
+            .then(|| "programs on this machine do not ask systemd-resolved".to_owned()),
+        declared: tlds(wired),
+    }
+}
+
+/// Found running M34: a link an earlier grant wrote, on a machine whose programs never reach it,
+/// is still this home's to remove.
+#[test]
+fn a_link_programs_never_reach_is_still_revoked() {
+    let removal = machine::resolver_removal(&resolver_state(&["test"], true), 53_535);
+
+    assert!(matches!(removal, Removal::Planned { .. }), "{removal:?}");
+}
+
+#[test]
+fn a_machine_that_declares_nothing_has_nothing_to_revoke() {
+    assert!(matches!(
+        machine::resolver_removal(&resolver_state(&[], true), 53_535),
+        Removal::Absent {}
+    ));
+    assert!(matches!(
+        machine::resolver_removal(&resolver_state(&[], false), 53_535),
+        Removal::Absent {}
+    ));
 }

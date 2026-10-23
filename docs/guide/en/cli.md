@@ -882,8 +882,8 @@ mix database create <SERVICE> [OPTIONS]
 
 Where this instance could be opened, and with what.
 
-MixLab, the window this MixEngine installed, when the install has one; nothing on the headless
-archive.
+MixLab, the window this MixEngine installed, when the install has one; nothing on a headless
+install.
 
 Reads only: starts nothing, opens nothing. "No client" is an answer, not a failure.
 
@@ -921,7 +921,7 @@ says so, and one that is not open is started.
 
 The instance is started if it is not running. The account's password is read from this machine's
 credential store at that moment and handed to the client in its own environment. It is never printed
-and never put in an argument. Exits 1 on an install with no window (the headless archive), and says
+and never put in an argument. Exits 1 on an install with no window (a headless install), and says
 so.
 
 ```

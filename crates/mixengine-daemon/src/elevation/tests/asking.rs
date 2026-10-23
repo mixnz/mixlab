@@ -80,9 +80,41 @@ async fn a_home_on_dns_asks_for_an_empty_block_rather_than_for_nothing() {
     );
     assert_eq!(
         waiting[0].op,
-        PrivilegedOp::hosts_apply(Vec::new()),
-        "a home on DNS wants no managed names in that file"
+        PrivilegedOp::hosts_apply(
+            Some(mixengine_platform::hosts::tag_for(home.path())),
+            Vec::new()
+        ),
+        "a home on DNS wants no managed names in its own block"
     );
+}
+
+/// a row queued before each home kept its own block asks to write the shared one, which the
+/// helper now refuses. Once this home's own block says what it should, that row is withdrawn.
+#[tokio::test]
+async fn a_pending_shared_block_from_before_per_home_blocks_is_withdrawn() {
+    let (home, elevation, _events, _machine) = registry_resolving(
+        mock::Host::with_hosts("/tmp/mixengine", ["127.0.0.1 blog.test"]),
+        crate::dns::Dns::hosts_only_for_tests(),
+    )
+    .await;
+    with_an_installed_helper(&home);
+    a_site_named(&elevation.store, "blog.test").await;
+
+    let shared = PrivilegedOp::hosts_apply(
+        None,
+        [mixengine_proto::privileged::HostEntry {
+            address: "127.0.0.1".parse().unwrap(),
+            domain: "blog.test".to_owned(),
+        }],
+    );
+    elevation.enqueue(&shared).await.unwrap();
+
+    elevation.require_hosts().await.unwrap();
+
+    let waiting = mixengine_core::elevation::pending(&elevation.store)
+        .await
+        .unwrap();
+    assert!(waiting.is_empty(), "{waiting:?}");
 }
 
 /// The same home, resolving the way every machine does until T45: the entry is asked for.
@@ -541,7 +573,7 @@ fn only_a_batch_that_installed_or_replaced_the_helper_is_worth_a_probe() {
     };
 
     assert!(may_have_changed_the_helper(&batch(&[
-        PrivilegedOp::hosts_apply(vec![]),
+        PrivilegedOp::hosts_apply(None, vec![]),
         PrivilegedOp::HelperInstall {},
     ])));
     assert!(may_have_changed_the_helper(&batch(&[
@@ -550,10 +582,39 @@ fn only_a_batch_that_installed_or_replaced_the_helper_is_worth_a_probe() {
 
     assert!(!may_have_changed_the_helper(&batch(&[])));
     assert!(!may_have_changed_the_helper(&batch(&[
-        PrivilegedOp::hosts_apply(vec![]),
+        PrivilegedOp::hosts_apply(None, vec![]),
     ])));
     assert!(!may_have_changed_the_helper(&batch(&[
         PrivilegedOp::HelperRemove {},
         PrivilegedOp::AuditLogRemove {},
     ])));
+}
+
+/// Emptying another home's block, which `mix doctor --repair` asks for, says whose block it is: the
+/// sentence that empties this home's own block read the same, and looked like losing its names.
+#[tokio::test]
+async fn emptying_a_gone_homes_block_says_whose_it_is() {
+    let (home, elevation, _events, _machine) = registry_resolving(
+        mock::Host::with_hosts("/tmp/mixengine", []),
+        crate::dns::Dns::hosts_only_for_tests(),
+    )
+    .await;
+    with_an_installed_helper(&home);
+
+    elevation
+        .enqueue(&PrivilegedOp::hosts_apply(
+            Some("fedcba9876543210".to_owned()),
+            Vec::new(),
+        ))
+        .await
+        .unwrap();
+
+    let pending = elevation.status().await.unwrap().pending;
+
+    assert!(
+        pending[0]
+            .description
+            .contains("home that no longer exists"),
+        "{pending:?}"
+    );
 }

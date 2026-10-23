@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use mixengine_proto::{Check, DoctorReport, Outcome, ProblemId};
 
+pub(crate) mod hosts;
 mod installs;
 mod trust;
 
@@ -120,6 +121,7 @@ impl Doctor {
         DoctorReport {
             checks: vec![
                 self.hosts_block().await,
+                self.orphaned_hosts_blocks(),
                 self.resolver(),
                 self.trust_store(),
                 self.browsers(),
@@ -164,26 +166,32 @@ impl Doctor {
             };
         };
 
-        let wanted = mixengine_proto::privileged::PrivilegedOp::hosts_apply(desired);
+        // this home's own block, under the tag the helper derives from its path.
+        let tag = mixengine_platform::hosts::tag_for(&self.root);
+        let wanted = mixengine_proto::privileged::PrivilegedOp::hosts_apply(
+            Some(tag.clone()),
+            desired.clone(),
+        );
 
-        match self.host.hosts_file().managed() {
+        match self.host.hosts_file().managed(Some(&tag)) {
             // `present.clone()` and not `present`: a pattern guard may not move out of what it
             // matched, which is why `Elevation::require_hosts` writes it the same way one file over.
             Ok(present)
-                if mixengine_proto::privileged::PrivilegedOp::hosts_apply(present.clone())
-                    == wanted =>
+                if mixengine_proto::privileged::PrivilegedOp::hosts_apply(
+                    Some(tag.clone()),
+                    present.clone(),
+                ) == wanted =>
             {
                 Check {
                     name,
                     outcome: Outcome::Ok {},
                 }
             }
-            Ok(_) => Check {
+            Ok(present) => Check {
                 name,
                 outcome: Outcome::Problem {
                     id: ProblemId::HostsBlockDiffers,
-                    because: "the hosts file does not hold the names this home's sites need"
-                        .to_owned(),
+                    because: hosts::differs(&desired, &present),
                 },
             },
             Err(error) => Check {
@@ -213,26 +221,9 @@ impl Doctor {
 
         let want: Vec<&str> = mixengine_proto::domains::WIRED_TLDS.to_vec();
 
-        match self.host.resolver().probe(&want, port) {
-            Ok(state) if state.wired.len() == want.len() => Check {
-                name,
-                outcome: Outcome::Ok {},
-            },
-            Ok(state) => Check {
-                name,
-                outcome: Outcome::Problem {
-                    id: ProblemId::ResolverNotWired,
-                    because: state.missing.unwrap_or_else(|| {
-                        "nothing on this machine sends a managed TLD to this daemon".to_owned()
-                    }),
-                },
-            },
-            Err(error) => Check {
-                name,
-                outcome: Outcome::Skipped {
-                    because: format!("this machine's resolver could not be read: {error}"),
-                },
-            },
+        Check {
+            name,
+            outcome: resolver_outcome(self.host.resolver().probe(&want, port), want.len()),
         }
     }
 
@@ -826,6 +817,39 @@ fn app_control_outcome(
         // had nothing to examine.
         Err(error) => Outcome::Skipped {
             because: mixengine_proto::flatten(&error),
+        },
+    }
+}
+
+/// What the resolver check says of a probe that was asked about `want` TLDs.
+///
+/// **A machine whose programs skip the resolver is a `Note`**, found running M34: the setting in
+/// the way is the person's own, made for another program, and the hosts file this home stays on is
+/// a supported mode. A `Problem` would hand `--repair` a grant that changes nothing.
+fn resolver_outcome(
+    probe: mixengine_platform::Result<mixengine_platform::ResolverState>,
+    want: usize,
+) -> Outcome {
+    match probe {
+        Ok(state) if state.wired.len() == want => Outcome::Ok {},
+        Ok(mixengine_platform::ResolverState {
+            bypassed: Some(reason),
+            ..
+        }) => Outcome::Note {
+            because: format!(
+                "names under .test, .localhost and .internal come from the hosts file, because \
+                 {reason}. Installing libnss-resolve (`sudo apt install libnss-resolve` on Debian \
+                 and Ubuntu) sends them through systemd-resolved and keeps the DNS server you use"
+            ),
+        },
+        Ok(state) => Outcome::Problem {
+            id: ProblemId::ResolverNotWired,
+            because: state.missing.unwrap_or_else(|| {
+                "nothing on this machine sends a managed TLD to this daemon".to_owned()
+            }),
+        },
+        Err(error) => Outcome::Skipped {
+            because: format!("this machine's resolver could not be read: {error}"),
         },
     }
 }

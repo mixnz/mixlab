@@ -3,6 +3,8 @@
 **Status**: Accepted. It amends the T87 design's D7 (the order of an uninstall) and removes the
 in-app uninstall that [ADR 0029](0029-every-install-format-carries-a-helper-to-install-from.md)
 was written against.
+**Amended by** [0066](0066-what-a-home-applied-is-that-homes-to-undo.md): what another home on the
+machine still uses is kept.
 **Date**: 2026-09-24
 
 ## Context

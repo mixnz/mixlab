@@ -11,6 +11,23 @@
   and `mix` says so before it asks.
 
 ### Fixed
+- With two MixEngine homes on one machine, such as a release and a development build, each keeps
+  its own names in the hosts file, and uninstalling one leaves the other's names, DNS routing,
+  privileged helper and audit log in place.
+- On Linux, `mix uninstall` also takes away MixEngine's `mixengine0` network link. Before, it
+  stayed until the machine restarted.
+- `mix doctor` names the hosts entries that are missing or left over, and `mix autostart status`
+  says when the daemon starts at boot.
+- On a headless install, `mix uninstall` names the one package to remove and no longer mentions
+  MixLab.
+- On a Linux machine whose DNS goes past systemd-resolved, such as one running AdGuard Home or
+  Pi-hole, MixEngine keeps your sites in the hosts file instead of saying wildcards work, and `mix
+  doctor` says how to turn them on.
+- `mix uninstall` finishes in one run on a machine an earlier uninstall left with MixEngine's
+  network link still in place. Before, it kept the home and had to be run a second time.
+- `mix job status` no longer shows a finished job stuck at 40% with its last step, `mix doctor
+  --repair` names the hosts fix once, and MixLab's permission dialog lists each hosts name and only
+  says what is true of that dialog.
 - On a Mac, a MixEngine started over SSH says it cannot show an administrator prompt and how to
   restart it, instead of reporting a wrong password.
 - On Ubuntu 24.04 and later, a machine without `pkexec` no longer says polkit is missing.

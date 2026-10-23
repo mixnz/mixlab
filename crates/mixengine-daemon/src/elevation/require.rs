@@ -161,13 +161,19 @@ impl Elevation {
             .await
             .map_err(|error| error.to_wire())?;
 
-        let wanted = PrivilegedOp::hosts_apply(desired);
+        // this home's own block, tagged from its path the way the helper tags it.
+        let tag = mixengine_platform::hosts::tag_for(&self.home);
+        let wanted = PrivilegedOp::hosts_apply(Some(tag.clone()), desired);
+
+        self.withdraw_a_shared_write().await?;
 
         // Compared as operations rather than as lists, so the ordering and deduplication are
         // `hosts_apply`'s in both directions and there is one definition of "the same block".
-        match self.host.hosts_file().managed() {
+        match self.host.hosts_file().managed(Some(&tag)) {
             // Not a pattern guard: `present` is a `Vec` and a guard cannot move out of one.
-            Ok(present) if PrivilegedOp::hosts_apply(present.clone()) == wanted => {
+            Ok(present)
+                if PrivilegedOp::hosts_apply(Some(tag.clone()), present.clone()) == wanted =>
+            {
                 // Nothing to ask for — and nothing to keep asking for either (T179).
                 self.no_longer_needed(&wanted.dedupe_key()).await
             }
@@ -180,6 +186,66 @@ impl Elevation {
 
                 self.enqueue_needing_a_helper(&wanted).await
             }
+        }
+    }
+
+    /// Recompute this home's queued hosts row, when there is one, against what the machine routes
+    /// now.
+    ///
+    /// **A row is the block as of when it was queued**, and what the block should hold depends on
+    /// the wiring, which a start reads again. Found running M34: a row asking to empty the block,
+    /// queued while programs reached the resolver, outlived a restart on which they no longer did,
+    /// and granting it would have taken the home's names off the machine. Only a queued row is
+    /// recomputed; a start that found none asks for nothing, as before.
+    ///
+    /// # Errors
+    ///
+    /// The wire error of a row that could not be read or written.
+    pub(crate) async fn refresh_a_queued_hosts_row(&self) -> Result<(), Error> {
+        let tag = mixengine_platform::hosts::tag_for(&self.home);
+
+        let queued = self.status().await?.pending.iter().any(|waiting| {
+            matches!(&waiting.op, PrivilegedOp::HostsApply { home: Some(home), .. } if *home == tag)
+        });
+
+        match queued {
+            true => self.require_hosts().await,
+            false => Ok(()),
+        }
+    }
+
+    /// Ask for the hosts blocks under `tags` to be emptied — homes that are gone left them (ADR
+    /// 0066). The helper empties one only after its own ledger says that home is gone.
+    ///
+    /// # Errors
+    ///
+    /// The wire error of a row that could not be written.
+    pub(crate) async fn forget_hosts_blocks(&self, tags: &[String]) -> Result<(), Error> {
+        for tag in tags {
+            self.enqueue_needing_a_helper(&PrivilegedOp::hosts_apply(
+                Some(tag.clone()),
+                Vec::new(),
+            ))
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Withdraw a row queued before each home kept its own block that writes names into the block every home shared.
+    ///
+    /// The helper now refuses to write that block, so the row could only ever come back refused.
+    /// A row that only empties it is an uninstall's, and stays.
+    async fn withdraw_a_shared_write(&self) -> Result<(), Error> {
+        let shared = PrivilegedOp::hosts_apply(None, Vec::new());
+
+        let writes = self.status().await?.pending.iter().any(|waiting| {
+            matches!(&waiting.op, PrivilegedOp::HostsApply { home: None, entries } if !entries.is_empty())
+        });
+
+        match writes {
+            true => self.no_longer_needed(&shared.dedupe_key()).await,
+            false => Ok(()),
         }
     }
 

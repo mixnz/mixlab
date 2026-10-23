@@ -88,10 +88,10 @@ pub(super) fn merge(measured: Vec<Residue>, privileged: Vec<Residue>) -> Vec<Res
 pub(super) fn forgotten(before: usize, left: mixengine_platform::Result<usize>) -> Removal {
     match left {
         Ok(0) => Removal::Removed {
-            what: format!("forgot {before} from this user's credential store"),
+            what: format!("forgot {before}"),
         },
         Ok(left) => Removal::Failed {
-            because: format!("{left} of {before} are still in this user's credential store"),
+            because: format!("{left} of {before} are still stored"),
         },
         // The whole chain, down to the store's own code: "cannot forget the credential" alone
         // says nothing a person can act on, and the T182a walk had to find the cause elsewhere.
@@ -209,6 +209,12 @@ pub(super) fn settle(
             outcome: Removal::Removed { what: how.clone() },
             ..after
         };
+    }
+
+    // the helper kept it for another home that asked after the plan was read. The second
+    // reading says so, and it is neither a removal nor a failure.
+    if matches!(after.outcome, Removal::Kept { .. }) {
+        return after;
     }
 
     if !granted {

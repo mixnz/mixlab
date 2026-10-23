@@ -25,6 +25,9 @@ use serde::{Deserialize, Serialize};
 use crate::ProtocolVersion;
 
 mod describe;
+mod ledger;
+
+pub use ledger::{HomesLedger, LedgerEntry};
 
 /// The name the response takes, beside the request it answers.
 ///
@@ -381,15 +384,25 @@ pub enum ResolverPlan {
 ///
 /// Mirrors [`ResolverPlan`] with only what a removal reads. Every artifact each variant deletes is
 /// a constant in the helper, so no variant carries a path.
+///
+/// **The port, where the mechanism names one** (ADR 0066): the files are one per TLD or one
+/// per machine, and they point at whichever home wired them last. Only what points at this home's
+/// server is this home's to remove.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "method", rename_all = "kebab-case", deny_unknown_fields)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub enum ResolverTarget {
-    /// Remove every `/etc/resolver/<tld>` file MixEngine marked.
-    ResolverDirectory {},
+    /// Remove every `/etc/resolver/<tld>` file MixEngine marked that sends its TLD to `port`.
+    ResolverDirectory {
+        /// This home's DNS server.
+        port: u16,
+    },
 
-    /// Remove both `systemd-networkd` files and the link they declare.
-    SystemdLink {},
+    /// Remove both `systemd-networkd` files and the link they declare, while they point at `port`.
+    SystemdLink {
+        /// This home's DNS server.
+        port: u16,
+    },
 
     /// Remove the one registry key.
     Nrpt {},
@@ -505,6 +518,15 @@ pub enum PrivilegedOp {
     /// and makes "already done" a byte comparison rather than a judgement. An empty list removes
     /// the block.
     HostsApply {
+        /// Whose block: the tag `mixengine_platform::hosts::tag_for` derives from a home's path, or
+        /// [`None`] for the untagged block every home shared before each kept its own (ADR 0066).
+        ///
+        /// **The helper checks it rather than trusting it.** A tag is accepted when it is the
+        /// requesting home's own, or — for an empty list only — when the helper's ledger says its
+        /// home is gone. The legacy block may only ever be emptied.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        home: Option<String>,
+
         /// Sorted and deduplicated by [`PrivilegedOp::hosts_apply`], which is the only way one
         /// should be built.
         entries: Vec<HostEntry>,
@@ -687,7 +709,7 @@ impl PrivilegedOp {
     /// deduplicates on identity (see [`dedupe_key`](Self::dedupe_key)) and the *equality* below it
     /// is what decides whether anything is announced.
     #[must_use]
-    pub fn hosts_apply(entries: impl IntoIterator<Item = HostEntry>) -> Self {
+    pub fn hosts_apply(home: Option<String>, entries: impl IntoIterator<Item = HostEntry>) -> Self {
         let mut entries: Vec<HostEntry> = entries.into_iter().collect();
 
         // By name first: this order is what the block is rendered in and what `describe` reads out,
@@ -697,7 +719,7 @@ impl PrivilegedOp {
         });
         entries.dedup();
 
-        Self::HostsApply { entries }
+        Self::HostsApply { home, entries }
     }
 
     /// The identity a queue deduplicates on — the T41 design, D2.
@@ -715,7 +737,13 @@ impl PrivilegedOp {
             Self::Probe {} => {
                 serde_json::to_string(self).unwrap_or_else(|_| self.name().to_owned())
             }
-            Self::HostsApply { .. } => self.name().to_owned(),
+            // One row per block (ADR 0066): this home's, an orphan's and the legacy one are separate
+            // questions, and an uninstall asks two of them at once. The legacy block keeps the bare
+            // kind, which is the key every row queued before each home kept its own block already carries.
+            Self::HostsApply {
+                home: Some(tag), ..
+            } => format!("{}:{tag}", self.name()),
+            Self::HostsApply { home: None, .. } => self.name().to_owned(),
             // D12: two values of one question — what port access should this machine have? — so a
             // revoke enqueued behind a pending grant replaces it rather than queueing after it.
             Self::PortAccessGrant { .. } | Self::PortAccessRevoke { .. } => {

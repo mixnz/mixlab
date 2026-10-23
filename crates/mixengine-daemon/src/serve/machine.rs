@@ -52,6 +52,12 @@ pub(super) async fn ask_for_grants(
     if let Err(error) = elevation.require_resolver().await {
         tracing::warn!(%error, "could not ask for this machine's managed TLDs to be routed here");
     }
+
+    // After the resolver, whose reading decides what the hosts block should hold: a row queued
+    // under another reading is recomputed rather than granted as it stood.
+    if let Err(error) = elevation.refresh_a_queued_hosts_row().await {
+        tracing::warn!(%error, "could not recompute the queued hosts row");
+    }
 }
 
 /// **And every start makes sure this home has a certificate authority**, here for the reason the

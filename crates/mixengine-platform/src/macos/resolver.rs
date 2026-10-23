@@ -48,9 +48,11 @@ impl ResolverConfig for Resolver {
         });
 
         Ok(ResolverState {
+            declared: wired.clone(),
             method: ResolverMethod::ResolverDirectory,
             wired,
             missing,
+            bypassed: None,
         })
     }
 }
@@ -154,7 +156,7 @@ pub(crate) fn apply(
 
     // Whole state's other half: a TLD this home no longer routes loses its file. Only ours are
     // touched, so a file somebody else put there for a TLD we stopped managing stays.
-    for removed in sweep(root, tlds)? {
+    for removed in sweep(root, tlds, None)? {
         changed.push(removed);
     }
 
@@ -172,7 +174,7 @@ pub(crate) fn revoke(
 ) -> crate::Result<crate::resolver::Change> {
     use mixengine_proto::privileged::ResolverTarget;
 
-    let ResolverTarget::ResolverDirectory {} = target else {
+    let ResolverTarget::ResolverDirectory { port } = target else {
         return Err(unsupported(
             "macOS routes a TLD with a file under /etc/resolver; this target is another system's \
              mechanism",
@@ -181,17 +183,20 @@ pub(crate) fn revoke(
 
     let _held = crate::resolver::held()?;
 
-    let removed = sweep(std::path::Path::new(directory::DIRECTORY), &[])?;
+    let removed = sweep(std::path::Path::new(directory::DIRECTORY), &[], Some(*port))?;
 
     Ok(change(&removed, "removed"))
 }
 
-/// Remove every file under `root` that MixEngine marked and that `keep` does not name.
+/// Remove every file under `root` that MixEngine marked and that `keep` does not name — and, with
+/// `only`, that sends its TLD to that port and no other (ADR 0066).
 ///
 /// Reads the directory rather than the TLD table, so a file left by a build that managed a TLD this
 /// one does not still goes — which is what makes uninstall complete rather than nearly complete.
+/// `only` is what keeps it from being *too* complete: a file another home's wiring wrote points at
+/// that home's server, and is that home's to remove.
 #[cfg(feature = "elevated")]
-fn sweep(root: &std::path::Path, keep: &[String]) -> crate::Result<Vec<String>> {
+fn sweep(root: &std::path::Path, keep: &[String], only: Option<u16>) -> crate::Result<Vec<String>> {
     let entries = match std::fs::read_dir(root) {
         Ok(entries) => entries,
         // No directory is nothing of ours to remove, which is the ordinary state of a machine that
@@ -224,7 +229,13 @@ fn sweep(root: &std::path::Path, keep: &[String]) -> crate::Result<Vec<String>> 
             continue;
         }
 
-        if !std::fs::read_to_string(&path).is_ok_and(|contents| directory::is_ours(&contents)) {
+        let Ok(contents) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+
+        if !directory::is_ours(&contents)
+            || only.is_some_and(|port| contents != directory::file_for(port))
+        {
             continue;
         }
 
@@ -317,5 +328,20 @@ mod tests {
             Resolver.method().expect("a method"),
             ResolverMethod::ResolverDirectory
         );
+    }
+
+    /// a revoke takes the files that name this home's port, and leaves another home's and
+    /// any older format it cannot place.
+    #[cfg(feature = "elevated")]
+    #[test]
+    fn a_revoke_keeps_files_naming_another_port() {
+        let temp = tempfile::TempDir::new().unwrap();
+        std::fs::write(temp.path().join("test"), directory::file_for(53_535)).unwrap();
+        std::fs::write(temp.path().join("internal"), directory::file_for(53_536)).unwrap();
+
+        let removed = sweep(temp.path(), &[], Some(53_535)).unwrap();
+
+        assert_eq!(removed, vec!["test".to_owned()]);
+        assert!(temp.path().join("internal").exists());
     }
 }

@@ -43,8 +43,16 @@ pub(crate) fn job_status(job: &JobSummary) -> String {
         rendered.push_str(&format!("  {label:9} {value}\n"));
     };
 
+    // *doing* only while it is. A finished job's last step is history, and a failed one's is
+    // where it stopped, which is where to look.
     if !job.message.is_empty() {
-        field("doing", &format!("{} ({}%)", job.message, job.percent));
+        let step = format!("{} ({}%)", job.message, job.percent);
+
+        match job.state {
+            JobState::Running => field("doing", &step),
+            JobState::Failed | JobState::Cancelled => field("stopped at", &step),
+            JobState::Succeeded => {}
+        }
     }
     field("started", &ago(job.started_at, SystemTime::now()));
 
@@ -79,4 +87,65 @@ pub(crate) fn job_status(job: &JobSummary) -> String {
 /// Whether a job that ended did what was asked, which is what an exit code is made of.
 pub(crate) fn job_succeeded(job: &JobSummary) -> bool {
     job.state == JobState::Succeeded
+}
+
+#[cfg(test)]
+mod tests {
+    use mixengine_proto::{Error, ErrorCode, JobId, JobKind, Timestamp};
+
+    use super::*;
+
+    fn job(state: JobState, outcome: Option<JobOutcome>) -> JobSummary {
+        JobSummary {
+            id: JobId(7),
+            kind: JobKind::parse("elevation.grant").expect("a kind"),
+            state,
+            percent: 40,
+            message: "verifying".to_owned(),
+            started_at: Timestamp(0),
+            finished_at: None,
+            outcome,
+        }
+    }
+
+    /// a job that is still running says what it is doing.
+    #[test]
+    fn a_running_job_prints_what_it_is_doing() {
+        assert!(job_status(&job(JobState::Running, None)).contains("doing     verifying (40%)"));
+    }
+
+    /// a finished job is not doing anything any more.
+    #[test]
+    fn a_finished_job_prints_no_doing_line() {
+        let done = job(
+            JobState::Succeeded,
+            Some(JobOutcome::Succeeded {
+                result: serde_json::Value::Null,
+            }),
+        );
+
+        assert!(
+            !job_status(&done).contains("doing"),
+            "{}",
+            job_status(&done)
+        );
+    }
+
+    /// a failed job says where it stopped, which is where to look.
+    #[test]
+    fn a_failed_job_says_where_it_stopped() {
+        let failed = job(
+            JobState::Failed,
+            Some(JobOutcome::Failed {
+                error: Error::new(ErrorCode::Internal, "it broke"),
+            }),
+        );
+
+        let rendered = job_status(&failed);
+        assert!(
+            rendered.contains("stopped at verifying (40%)"),
+            "{rendered}"
+        );
+        assert!(!rendered.contains("doing"), "{rendered}");
+    }
 }

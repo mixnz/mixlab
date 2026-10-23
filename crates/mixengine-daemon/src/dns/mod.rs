@@ -96,6 +96,11 @@ pub(crate) struct Dns {
     /// hosts entries while the user watched their permission do nothing. [`Dns::reprobe`] is what
     /// replaces it, and the grant is what calls that.
     wired: Mutex<Vec<String>>,
+
+    /// Why programs on this machine never reach the resolver, as of the last probe — found
+    /// running M34, where AdGuard Home had turned `systemd-resolved`'s stub off. While it is set,
+    /// [`Dns::because`] says so rather than promising a grant that cannot help.
+    bypassed: Mutex<Option<String>>,
 }
 
 impl Dns {
@@ -115,6 +120,7 @@ impl Dns {
                 state: State::Disabled,
                 wirable: false,
                 wired: Mutex::new(Vec::new()),
+                bypassed: Mutex::new(None),
             };
         }
 
@@ -138,6 +144,7 @@ impl Dns {
             // fixed and therefore wirable.
             wirable: config.port != Some(0),
             wired: Mutex::new(Vec::new()),
+            bypassed: Mutex::new(None),
         };
         dns.reprobe(host);
 
@@ -155,18 +162,26 @@ impl Dns {
             return;
         };
 
-        let wired = match host.resolver().probe(&WIRED_TLDS, port) {
-            Ok(state) => state.wired,
+        let (wired, bypassed) = match host.resolver().probe(&WIRED_TLDS, port) {
+            Ok(state) => (state.wired, state.bypassed),
             Err(error) => {
                 tracing::warn!(%error, "this machine's resolver cannot be read; assuming it routes nothing here");
-                Vec::new()
+                (Vec::new(), None)
             }
         };
+
+        if let Some(reason) = &bypassed {
+            tracing::info!(%reason, "this home stays on the hosts file");
+        }
 
         *self
             .wired
             .lock()
             .expect("the wiring is not held across an await") = wired;
+        *self
+            .bypassed
+            .lock()
+            .expect("the reason is not held across an await") = bypassed;
     }
 
     /// The port the server is answering on, or [`None`] when it is not answering.
@@ -206,6 +221,14 @@ impl Dns {
             .clone()
     }
 
+    /// Whether the last probe found that programs here never reach the resolver.
+    fn is_bypassed(&self) -> bool {
+        self.bypassed
+            .lock()
+            .expect("the reason is not held across an await")
+            .is_some()
+    }
+
     /// Which of the two name mechanisms this home is running on.
     ///
     /// **Both terms, and neither alone.** A server that is listening while nothing routes a name to
@@ -243,6 +266,10 @@ impl Dns {
             State::Disabled => Some("[dns] enabled = false in config.toml".to_owned()),
             State::Unavailable { because } => Some(because.clone()),
             State::Listening(_) if !self.wired().is_empty() => None,
+            // The whole reason is `mix doctor`'s to print; this line has room for what it means.
+            State::Listening(_) if self.is_bypassed() => {
+                Some("programs on this machine do not ask systemd-resolved".to_owned())
+            }
             State::Listening(address) => Some(format!(
                 "nothing on this machine routes a managed TLD to {address} yet"
             )),
@@ -262,6 +289,7 @@ impl Dns {
             state: State::Disabled,
             wirable: true,
             wired: Mutex::new(Vec::new()),
+            bypassed: Mutex::new(None),
         }
     }
 
@@ -277,6 +305,7 @@ impl Dns {
             state: State::Listening("127.0.0.1:53535".parse().expect("an address")),
             wirable: true,
             wired: Mutex::new(wired.iter().map(|tld| (*tld).to_owned()).collect()),
+            bypassed: Mutex::new(None),
         }
     }
 
@@ -286,6 +315,7 @@ impl Dns {
             state: State::Listening("127.0.0.1:51234".parse().expect("an address")),
             wirable: false,
             wired: Mutex::new(Vec::new()),
+            bypassed: Mutex::new(None),
         }
     }
 }
@@ -384,6 +414,27 @@ mod tests {
 
         assert_eq!(dns.mode(), DnsMode::Dns);
         assert_eq!(dns.status().wildcards, vec!["test".to_owned()]);
+    }
+
+    /// Found running M34: a machine whose programs skip `systemd-resolved` stays on the hosts file,
+    /// claims no wildcards, and says why instead of promising a grant.
+    #[test]
+    fn a_bypassed_resolver_keeps_the_hosts_file_and_says_why() {
+        let dns = listening(&["test"]);
+
+        dns.reprobe(&mock::Host::with_bypassed_resolver(
+            HOME,
+            mixengine_platform::ResolverMethod::SystemdLink,
+            "programs on this machine do not ask systemd-resolved: …",
+        ));
+
+        let status = dns.status();
+        assert_eq!(status.mode, DnsMode::HostsOnly);
+        assert!(status.wildcards.is_empty());
+        assert_eq!(
+            status.because.as_deref(),
+            Some("programs on this machine do not ask systemd-resolved")
+        );
     }
 
     /// And the other direction, which is what `mix doctor` will meet: a machine somebody unwired by

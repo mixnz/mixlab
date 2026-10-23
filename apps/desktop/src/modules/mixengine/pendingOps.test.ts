@@ -16,7 +16,14 @@ const hostsApply = {
   id: 7,
   requested_at: 1788651901982,
   description: "Add 1 name to the hosts file",
-  op: { op: "hosts-apply", entries: [{ address: "127.0.0.1", name: "blog.test" }] },
+  op: {
+    op: "hosts-apply",
+    home: "0123456789abcdef",
+    entries: [
+      { address: "127.0.0.1", domain: "blog.test" },
+      { address: "127.0.0.1", domain: "shop.test" },
+    ],
+  },
 };
 
 describe("pendingFrom", () => {
@@ -51,10 +58,11 @@ describe("describeOp", () => {
     expect(describeOp(hostsApply).description).toBe("Add 1 name to the hosts file");
   });
 
+  /* each line is an address and a domain, as `HostEntry` spells them. Reading a `name` the
+     binding does not have printed `127.0.0.1` once per line and no name at all. */
   it("names the hosts lines it would write", () => {
     const detail = describeOp(hostsApply).detail;
-    expect(detail).toContain("blog.test");
-    expect(detail).toContain("127.0.0.1");
+    expect(detail).toBe("127.0.0.1 blog.test\n127.0.0.1 shop.test");
   });
 
   /* 13 variants, and an unknown one must still show up — hiding it asks for rights for an operation

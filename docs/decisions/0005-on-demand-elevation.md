@@ -6,6 +6,8 @@
 otherwise stands)
 **Amended by** [0065](0065-a-terminal-may-raise-the-prompt-itself.md): a terminal may raise the
 prompt itself, through `sudo`, where no dialog can.
+**Amended by** [0066](0066-what-a-home-applied-is-that-homes-to-undo.md): one hosts region per
+home, and only the requesting home's may be touched.
 
 ## Context
 

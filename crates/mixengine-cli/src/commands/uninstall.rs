@@ -223,10 +223,15 @@ pub(crate) async fn uninstall(
 
     // Last, because it is the next thing to type: what `mix uninstall` undid is MixEngine's, and the
     // program itself is the package manager's.
+    let receipt = report
+        .items
+        .iter()
+        .find(|item| item.id == ResidueId::Package)
+        .map(|item| item.location.as_str());
     if finished_uninstall(&report)
         && let Some(said) = std::env::current_exe()
             .ok()
-            .and_then(|exe| package_command(&exe, cfg!(target_os = "linux")))
+            .and_then(|exe| package_command(&exe, cfg!(target_os = "linux"), receipt))
     {
         let _ = writeln!(std::io::stderr(), "{said}");
     }
@@ -522,13 +527,25 @@ async fn left_behind(
 
 /// The line that names the package command, for a `mix` a Linux package put under `/usr`.
 ///
-/// Both packages, because either may be the one installed: `mixlab` carries the window and
-/// `mixengine-headless` does not, and each replaces the other.
-fn package_command(exe: &std::path::Path, linux: bool) -> Option<String> {
-    (linux && exe.starts_with("/usr")).then(|| {
-        "the program itself stays: remove it with `sudo apt remove mixlab` (or \
-         `mixengine-headless`, if that is the one installed); on Fedora, `sudo dnf remove` the same"
-            .to_owned()
+/// The one package the plan's `package` row named by its receipt (`dpkg:<name>`, `rpm:<name>`).
+/// Both, where no row did: `mixlab` carries the window and `mixengine-headless` does not, and each
+/// replaces the other.
+fn package_command(exe: &std::path::Path, linux: bool, receipt: Option<&str>) -> Option<String> {
+    if !linux || !exe.starts_with("/usr") {
+        return None;
+    }
+
+    Some(match receipt.and_then(|receipt| receipt.split_once(':')) {
+        Some(("dpkg", package)) => {
+            format!("the program itself stays: remove it with `sudo apt remove {package}`")
+        }
+        Some(("rpm", package)) => {
+            format!("the program itself stays: remove it with `sudo dnf remove {package}`")
+        }
+        _ => "the program itself stays: remove it with `sudo apt remove mixlab` (or \
+              `mixengine-headless`, if that is the one installed); on Fedora, `sudo dnf remove` the \
+              same"
+            .to_owned(),
     })
 }
 
@@ -615,18 +632,39 @@ mod tests {
     /// A package put `mix` in `/usr/bin`, and the package manager is what takes it away.
     #[test]
     fn a_packaged_linux_install_is_told_the_package_command() {
-        let said = package_command(Path::new("/usr/bin/mix"), true).expect("a package command");
+        let said =
+            package_command(Path::new("/usr/bin/mix"), true, None).expect("a package command");
 
         assert!(said.contains("sudo apt remove mixlab"), "{said}");
         assert!(said.contains("mixengine-headless"), "{said}");
         assert!(said.contains("dnf remove"), "{said}");
     }
 
+    /// Found running M34: the plan named `dpkg:mixengine-headless`, and the last line named
+    /// `mixlab` first.
+    #[test]
+    fn the_package_the_plan_named_is_the_one_named() {
+        let said = package_command(
+            Path::new("/usr/bin/mix"),
+            true,
+            Some("dpkg:mixengine-headless"),
+        )
+        .expect("a package command");
+        assert_eq!(
+            said,
+            "the program itself stays: remove it with `sudo apt remove mixengine-headless`"
+        );
+
+        let said = package_command(Path::new("/usr/bin/mix"), true, Some("rpm:mixlab"))
+            .expect("a package command");
+        assert!(said.ends_with("`sudo dnf remove mixlab`"), "{said}");
+    }
+
     /// A `cargo build`, or a copy somebody unpacked, has no package to remove.
     #[test]
     fn a_program_outside_usr_is_not_told_about_a_package() {
         assert_eq!(
-            package_command(Path::new("/home/me/mixlab/target/debug/mix"), true),
+            package_command(Path::new("/home/me/mixlab/target/debug/mix"), true, None),
             None
         );
     }
@@ -634,6 +672,9 @@ mod tests {
     /// macOS has `--package`, and Windows its own uninstaller.
     #[test]
     fn only_linux_is_told_about_a_package_manager() {
-        assert_eq!(package_command(Path::new("/usr/bin/mix"), false), None);
+        assert_eq!(
+            package_command(Path::new("/usr/bin/mix"), false, None),
+            None
+        );
     }
 }

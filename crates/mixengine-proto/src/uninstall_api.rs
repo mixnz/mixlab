@@ -94,6 +94,12 @@ pub struct UninstallReport {
     /// [`ResidueId::InUse`] once per process in the way; the window's rows and the two credential
     /// rows only when there is something there.
     pub items: Vec<Residue>,
+
+    /// How many of `items` are kept because another home on this machine still uses them (ADR 0066).
+    /// Counted by the daemon, so a client prints it and decides nothing. Zero from a daemon that
+    /// predates it.
+    #[serde(default)]
+    pub kept_for_others: u32,
 }
 
 impl UninstallReport {
@@ -407,6 +413,7 @@ mod tests {
     #[test]
     fn only_a_failure_is_something_left_behind() {
         let mut report = UninstallReport {
+            kept_for_others: 0,
             items: vec![
                 residue(Removal::Removed {
                     what: "gone".to_owned(),
@@ -494,12 +501,14 @@ mod tests {
 
         let report = UninstallReport {
             items: vec![blocked],
+            kept_for_others: 0,
         };
         assert!(report.blocked());
         assert!(!report.left_behind());
 
         let clear = UninstallReport {
             items: vec![residue(Removal::Absent {})],
+            kept_for_others: 0,
         };
         assert!(!clear.blocked());
     }

@@ -1,4 +1,4 @@
-//! The rows for the passwords this home keeps in the system's credential store.
+//! The rows for the passwords this home keeps, in the system's credential store or in its own file.
 
 use mixengine_proto::{Removal, Residue, ResidueId};
 
@@ -69,7 +69,7 @@ pub(crate) fn credential_rows(found: &Found, keep_home: bool) -> Vec<Residue> {
                     .to_owned(),
             },
             false => Removal::Planned {
-                how: "remove them from this user's credential store".to_owned(),
+                how: "forget each one, wherever this home keeps them".to_owned(),
             },
         },
     };

@@ -783,4 +783,55 @@ mod tests {
 
         assert_eq!(armed.take(), vec![std::path::PathBuf::from("/tmp/two")]);
     }
+
+    /// a name in this home's own hosts block is a hosts entry, though the block is tagged.
+    #[tokio::test]
+    async fn a_name_in_this_homes_own_block_is_a_hosts_entry() {
+        let daemon = super::test_daemon::daemon_on(
+            std::sync::Arc::new(crate::services::fixture::Declared(Vec::new())),
+            &[],
+            |home| mixengine_platform::mock::Host::with_hosts(home, ["127.0.0.1 blog.test"]),
+        )
+        .await;
+
+        let report: mixengine_proto::DomainStatusReport = daemon
+            .expect(
+                mixengine_proto::rpc::method::DOMAIN_DNS_STATUS,
+                serde_json::json!({ "domain": "blog.test" }),
+            )
+            .await;
+
+        assert!(report.domains[0].hosts_entry, "{report:?}");
+    }
+
+    /// a repair says what it will do to the hosts block, not the block's name a second time.
+    #[tokio::test]
+    async fn a_hosts_repair_says_what_it_will_do() {
+        let daemon = super::test_daemon::daemon_on(
+            std::sync::Arc::new(crate::services::fixture::Declared(Vec::new())),
+            &[],
+            |home| mixengine_platform::mock::Host::with_hosts(home, ["127.0.0.1 old.test"]),
+        )
+        .await;
+
+        let report: mixengine_proto::RepairReport = daemon
+            .expect(
+                mixengine_proto::rpc::method::DAEMON_DOCTOR_REPAIR,
+                serde_json::json!({ "grant": false }),
+            )
+            .await;
+
+        let hosts = report
+            .actions
+            .iter()
+            .find(|action| action.id == mixengine_proto::ProblemId::HostsBlockDiffers)
+            .expect("the stale block is a problem the repair answers");
+
+        assert_eq!(
+            hosts.outcome,
+            mixengine_proto::Action::Enqueued {
+                what: "rewriting it to hold this home's names".to_owned()
+            }
+        );
+    }
 }

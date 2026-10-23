@@ -710,8 +710,8 @@ fn a_report_with_the_wrong_number_of_outcomes_is_refused() {
 async fn a_newer_hosts_state_supersedes_the_one_that_was_waiting() {
     let (_directory, store) = store().await;
 
-    let first = PrivilegedOp::hosts_apply([entry("blog.test")]);
-    let second = PrivilegedOp::hosts_apply([entry("blog.test"), entry("shop.test")]);
+    let first = PrivilegedOp::hosts_apply(None, [entry("blog.test")]);
+    let second = PrivilegedOp::hosts_apply(None, [entry("blog.test"), entry("shop.test")]);
 
     assert!(
         enqueue(&store, &first, Timestamp(1_000))
@@ -740,7 +740,7 @@ async fn a_newer_hosts_state_supersedes_the_one_that_was_waiting() {
 #[tokio::test]
 async fn re_enqueueing_the_same_hosts_state_announces_nothing() {
     let (_directory, store) = store().await;
-    let op = PrivilegedOp::hosts_apply([entry("blog.test")]);
+    let op = PrivilegedOp::hosts_apply(None, [entry("blog.test")]);
 
     assert!(
         enqueue(&store, &op, Timestamp(1_000))
@@ -788,10 +788,13 @@ fn entry(domain: &str) -> mixengine_proto::privileged::HostEntry {
 async fn withdrawing_takes_one_family_and_leaves_the_rest() {
     let (_home, store) = store().await;
 
-    let hosts = PrivilegedOp::hosts_apply(vec![mixengine_proto::privileged::HostEntry {
-        address: std::net::IpAddr::from([127, 0, 0, 1]),
-        domain: "hd.local".to_owned(),
-    }]);
+    let hosts = PrivilegedOp::hosts_apply(
+        None,
+        vec![mixengine_proto::privileged::HostEntry {
+            address: std::net::IpAddr::from([127, 0, 0, 1]),
+            domain: "hd.local".to_owned(),
+        }],
+    );
     enqueue(&store, &hosts, WHEN).await.unwrap();
     enqueue(&store, &PrivilegedOp::Probe {}, WHEN)
         .await

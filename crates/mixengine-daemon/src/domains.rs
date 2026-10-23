@@ -145,7 +145,19 @@ impl Domains {
 
         // A hosts file that cannot be read is a home with no entries in it as far as this report is
         // concerned, which is what `Elevation::require_hosts` already assumes one line over.
-        let block = self.host.hosts_file().managed().unwrap_or_default();
+        //
+        // **Every MixEngine block, not only this home's** (ADR 0066): the question is whether the name
+        // resolves through the hosts file, and a line another home wrote, or the block written before
+        // each home kept its own, resolves it all the same.
+        let file = self.host.hosts_file();
+        let block: Vec<mixengine_proto::privileged::HostEntry> = file
+            .tags()
+            .unwrap_or_default()
+            .iter()
+            .map(|tag| Some(tag.as_str()))
+            .chain([None])
+            .flat_map(|tag| file.managed(tag).unwrap_or_default())
+            .collect();
 
         let mut domains = Vec::with_capacity(asked.len());
 

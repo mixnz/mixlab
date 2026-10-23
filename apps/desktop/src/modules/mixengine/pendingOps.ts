@@ -14,7 +14,7 @@
  * the daemon then announces the queue that is left.
  */
 
-import type { ByHand } from "@mixengine/api";
+import type { ByHand, HostEntry } from "@mixengine/api";
 
 /** One row of the list, reduced for drawing. */
 export interface DescribedOp {
@@ -137,11 +137,9 @@ function describeKind(pending: unknown): Omit<DescribedOp, "screenOnly"> {
   const kind = typeof op.op === "string" ? op.op : "unknown";
 
   if (kind === "hosts-apply" && Array.isArray(op.entries)) {
-    const lines = op.entries
-      .map((entry) => {
-        const line = entry as { address?: unknown; name?: unknown };
-        return `${String(line.address ?? "")} ${String(line.name ?? "")}`.trim();
-      })
+    // `HostEntry` names the field `domain`: reading `name` printed the address alone .
+    const lines = (op.entries as Partial<HostEntry>[])
+      .map((entry) => `${String(entry.address ?? "")} ${String(entry.domain ?? "")}`.trim())
       .filter(Boolean);
     return { kind, description, detail: lines.join("\n") };
   }

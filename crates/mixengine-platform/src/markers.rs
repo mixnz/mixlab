@@ -37,9 +37,15 @@ pub enum Insertion<'a> {
 ///
 /// Carries the file's name only so a refusal can say which of the files a person has to open. It
 /// holds no path and reads nothing: every method takes the text.
+///
+/// **A tag names whose block it is** — ADR 0066. The hosts file holds one
+/// block per home, `# BEGIN MixEngine <tag>`; the untagged block is the one every home shared
+/// before. Each block matches only its own markers, so a line that is another block's marker is,
+/// to this one, a line like any other.
 #[derive(Debug, Clone, Copy)]
-pub struct Block {
+pub struct Block<'a> {
     what: &'static str,
+    tag: Option<&'a str>,
 }
 
 /// Where a block sits: the marker lines included, and the lines between them.
@@ -48,11 +54,38 @@ struct Found {
     inner: std::ops::Range<usize>,
 }
 
-impl Block {
-    /// The block in the file `what` names.
+impl Block<'static> {
+    /// The untagged block in the file `what` names.
     #[must_use]
     pub const fn in_file(what: &'static str) -> Self {
-        Self { what }
+        Self { what, tag: None }
+    }
+}
+
+impl<'a> Block<'a> {
+    /// The block tagged `tag` in the file `what` names.
+    #[must_use]
+    pub const fn tagged(what: &'static str, tag: &'a str) -> Self {
+        Self {
+            what,
+            tag: Some(tag),
+        }
+    }
+
+    /// This block's first line.
+    fn begin(&self) -> String {
+        match self.tag {
+            Some(tag) => format!("{BEGIN_MARKER} {tag}"),
+            None => BEGIN_MARKER.to_owned(),
+        }
+    }
+
+    /// This block's last line.
+    fn end(&self) -> String {
+        match self.tag {
+            Some(tag) => format!("{END_MARKER} {tag}"),
+            None => END_MARKER.to_owned(),
+        }
     }
 
     /// The lines between the markers, or [`None`] when the file holds no block of ours.
@@ -84,7 +117,7 @@ impl Block {
         let rendered = if body.is_empty() {
             String::new()
         } else {
-            format!("{BEGIN_MARKER}{newline}{body}{END_MARKER}{newline}")
+            format!("{}{newline}{body}{}{newline}", self.begin(), self.end())
         };
 
         let mut spliced = String::with_capacity(text.len() + rendered.len());
@@ -124,6 +157,7 @@ impl Block {
     /// A marker is matched against a **trimmed** line, exactly: leading whitespace and a CR are
     /// ignored, and `# BEGIN MixEngine (do not edit)` is somebody else's comment rather than ours.
     fn find(&self, text: &str) -> Result<Option<Found>> {
+        let (begin_marker, end_marker) = (self.begin(), self.end());
         let (mut begin, mut end) = (None, None);
         let (mut inner_start, mut inner_end) = (0, 0);
         let mut offset = 0;
@@ -131,17 +165,17 @@ impl Block {
         for line in text.split_inclusive('\n') {
             let trimmed = line.trim();
 
-            if trimmed == BEGIN_MARKER {
+            if trimmed == begin_marker {
                 if begin.is_some() {
-                    return Err(self.malformed("a second `# BEGIN MixEngine` marker"));
+                    return Err(self.malformed(&format!("a second `{begin_marker}` marker")));
                 }
                 begin = Some(offset);
                 inner_start = offset + line.len();
-            } else if trimmed == END_MARKER {
+            } else if trimmed == end_marker {
                 if begin.is_none() || end.is_some() {
-                    return Err(self.malformed(
-                        "an `# END MixEngine` marker with no `# BEGIN MixEngine` above it",
-                    ));
+                    return Err(self.malformed(&format!(
+                        "an `{end_marker}` marker with no `{begin_marker}` above it"
+                    )));
                 }
                 inner_end = offset;
                 end = Some(offset + line.len());
@@ -155,10 +189,9 @@ impl Block {
                 outer: start..finish,
                 inner: inner_start..inner_end,
             })),
-            (Some(_), None) => {
-                Err(self
-                    .malformed("a `# BEGIN MixEngine` marker with no `# END MixEngine` below it"))
-            }
+            (Some(_), None) => Err(self.malformed(&format!(
+                "a `{begin_marker}` marker with no `{end_marker}` below it"
+            ))),
             // `end` is only ever set once `begin` is, so what remains is a file with no block.
             (None, _) => Ok(None),
         }
@@ -218,7 +251,7 @@ anchor \"com.apple/*\"
 load anchor \"com.apple\" from \"/etc/pf.anchors/com.apple\"
 ";
 
-    const CONF: Block = Block::in_file("/etc/pf.conf");
+    const CONF: Block<'static> = Block::in_file("/etc/pf.conf");
 
     /// The reason this module exists: a block that has to land in the middle of a file, on the line
     /// after one particular line, rather than at the end.
@@ -299,5 +332,45 @@ load anchor \"com.apple\" from \"/etc/pf.anchors/com.apple\"
         let error = CONF.body(&two).unwrap_err();
 
         assert!(error.to_string().contains("/etc/pf.conf"), "{error}");
+    }
+
+    /// The legacy block beside one tagged block — the shape a hosts file has once homes keep their
+    /// own (ADR 0066).
+    const TWO: &str = "a\n# BEGIN MixEngine\nL\n# END MixEngine\n# BEGIN MixEngine ab12\nT\n# END MixEngine ab12\n";
+
+    /// ADR 0066: each block reads only between its own markers, and a tag nobody wrote reads as
+    /// no block at all.
+    #[test]
+    fn a_tagged_block_reads_only_its_own() {
+        assert_eq!(Block::tagged("f", "ab12").body(TWO).unwrap(), Some("T\n"));
+        assert_eq!(Block::in_file("f").body(TWO).unwrap(), Some("L\n"));
+        assert_eq!(Block::tagged("f", "cd34").body(TWO).unwrap(), None);
+    }
+
+    /// Removing one home's block leaves every other byte of the file where it was.
+    #[test]
+    fn splicing_a_tagged_block_leaves_the_others_byte_for_byte() {
+        let block = Block::tagged("f", "ab12");
+
+        let changed = block.splice(TWO, "X\n", Insertion::End).unwrap();
+        assert_eq!(changed, TWO.replace("\nT\n", "\nX\n"));
+
+        assert_eq!(
+            block.splice(TWO, "", Insertion::End).unwrap(),
+            "a\n# BEGIN MixEngine\nL\n# END MixEngine\n"
+        );
+    }
+
+    /// Two blocks under one tag are as unreadable as two untagged ones were.
+    #[test]
+    fn a_second_block_with_the_same_tag_is_malformed() {
+        let twice = format!("{TWO}# BEGIN MixEngine ab12\nU\n# END MixEngine ab12\n");
+
+        let error = Block::tagged("f", "ab12").body(&twice).unwrap_err();
+
+        assert!(
+            error.to_string().contains("# BEGIN MixEngine ab12"),
+            "{error}"
+        );
     }
 }
