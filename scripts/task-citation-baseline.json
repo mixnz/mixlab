@@ -134,7 +134,7 @@
     "apps/desktop/src/modules/mixengine/screens/Domains/CertTable.tsx": 1,
     "apps/desktop/src/modules/mixengine/screens/Domains/Domains.tsx": 1,
     "apps/desktop/src/modules/mixengine/screens/Extensions/Extensions.module.css": 5,
-    "apps/desktop/src/modules/mixengine/screens/Extensions/Extensions.tsx": 10,
+    "apps/desktop/src/modules/mixengine/screens/Extensions/Extensions.tsx": 9,
     "apps/desktop/src/modules/mixengine/screens/Extensions/PlanDialog.tsx": 1,
     "apps/desktop/src/modules/mixengine/screens/Metrics/Metrics.tsx": 1,
     "apps/desktop/src/modules/mixengine/screens/Metrics/chartScale.test.ts": 2,

@@ -17,9 +17,7 @@ import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { ExtensionOffer } from "@mixengine/api";
-import type { ExtensionOrigin } from "@mixengine/api";
 import type { ExtensionSummary } from "@mixengine/api";
-import type { ServiceSummary } from "@mixengine/api";
 import type { SiteSummary } from "@mixengine/api";
 import { failureMayHaveChanged, serviceFailure, type Failure } from "../../failureState";
 import StaleBadge from "../../components/StaleBadge";
@@ -47,6 +45,13 @@ import {
   type RowAction,
 } from "../../extensionState";
 import PlanDialog from "./PlanDialog";
+import {
+  deleteDataTicked,
+  EMPTY_LISTS,
+  listsAnswered,
+  type ExtensionLists,
+  type ExtensionsDialog,
+} from "./extensionsScreen";
 import styles from "./Extensions.module.css";
 
 /** The state as a pill tone: whether it is serving, not which of the seven states it is in. */
@@ -69,23 +74,15 @@ function pillTone(state: string | null | undefined): StatusTone {
  * There is no "configure" screen — `extension.configure` does not exist (decision D1, spec).
  */
 export default function Extensions({ active }: { active: boolean }) {
-  const [installed, setInstalled] = useState<ExtensionSummary[]>([]);
-  const [available, setAvailable] = useState<ExtensionOffer[]>([]);
-  const [sites, setSites] = useState<SiteSummary[]>([]);
-  /** False until the first read has answered — until then both lists being empty means "not known
-   *  yet", not "nothing installed" or "an empty registry". */
-  const [loaded, setLoaded] = useState(false);
-  const [unreadable, setUnreadable] = useState(0);
-  const [stale, setStale] = useState(false);
+  /** `null` until the first read has answered — see `extensionsScreen.ts`. */
+  const [lists, setLists] = useState<ExtensionLists | null>(null);
+  const loaded = lists !== null;
+  const { installed, available, sites, unreadable, stale, allServices } = lists ?? EMPTY_LISTS;
   const [serviceState, setServiceState] = useState<Record<string, string | null | undefined>>({});
   /** What each row has sent and not heard back about, by add-on id — the Dashboard's `busy`. */
   const [acting, setActing] = useState<Record<string, PendingAction>>({});
-  /** Every service, for why an add-on's process could not start — T200b, D6. */
-  const [allServices, setAllServices] = useState<ServiceSummary[]>([]);
   const [error, setError] = useState("");
-  const [installingSource, setInstallingSource] = useState<ExtensionOrigin | null>(null);
-  const [uninstalling, setUninstalling] = useState<ExtensionSummary | null>(null);
-  const [deleteData, setDeleteData] = useState(false);
+  const [dialog, setDialog] = useState<ExtensionsDialog | null>(null);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   /** The install job each add-on is following, by extension id — T200, D3. */
   const [installingJob, setInstallingJob] = useState<Record<string, number>>({});
@@ -108,20 +105,22 @@ export default function Extensions({ active }: { active: boolean }) {
           api.services(),
           api.sites(),
         ]);
-        setInstalled(inst.extensions);
-        setAvailable(avail.extensions);
-        setUnreadable(avail.unreadable);
-        setStale(avail.stale);
-        setSites(listed.sites);
+        setLists({
+          installed: inst.extensions,
+          available: avail.extensions,
+          unreadable: avail.unreadable,
+          stale: avail.stale,
+          sites: listed.sites,
+          allServices: services.services,
+        });
         const states: Record<string, string | null | undefined> = {};
         for (const svc of services.services) states[svc.id] = svc.state;
         setServiceState(states);
-        setAllServices(services.services);
         setError(stillShow);
       } catch (e) {
         setError(errorMessage(t, e));
       } finally {
-        setLoaded(true);
+        setLists(listsAnswered);
       }
     },
     [t],
@@ -164,7 +163,7 @@ export default function Extensions({ active }: { active: boolean }) {
    *  can end before this id is stored, and its `job_finished` would then pass unrecognised and
    *  leave the row installing for ever (T200, Review Focus 1). */
   async function started(id: string, job: number) {
-    setInstallingSource(null);
+    setDialog(null);
     setInstallingJob((current) => ({ ...current, [id]: job }));
     try {
       const status = await api.jobStatus(job);
@@ -176,7 +175,7 @@ export default function Extensions({ active }: { active: boolean }) {
 
   async function browseInstallFromPath() {
     const picked = await openDialog({ directory: true, multiple: false });
-    if (typeof picked === "string") setInstallingSource({ type: "path", path: picked });
+    if (typeof picked === "string") setDialog({ kind: "install", source: { type: "path", path: picked } });
   }
 
   /** `extension.*` and not `service.*` — see this plan's Global Constraints. */
@@ -245,11 +244,10 @@ export default function Extensions({ active }: { active: boolean }) {
     );
   }
 
-  async function confirmUninstall() {
-    if (!uninstalling) return;
+  async function confirmUninstall(row: ExtensionSummary, deleteData: boolean) {
     setError("");
     try {
-      await api.extensionUninstall({ id: uninstalling.id, delete_data: deleteData });
+      await api.extensionUninstall({ id: row.id, delete_data: deleteData });
       void reload();
     } catch (e) {
       setError(errorMessage(t, e));
@@ -257,8 +255,7 @@ export default function Extensions({ active }: { active: boolean }) {
       // **Closed either way.** This screen has no second question to ask on a refusal, and a
       // dialog kept up past its own answer is one nobody can see or dismiss — it has already
       // animated out. The banner behind it is where the refusal is read.
-      setUninstalling(null);
-      setDeleteData(false);
+      setDialog(null);
     }
   }
 
@@ -413,7 +410,7 @@ export default function Extensions({ active }: { active: boolean }) {
       <Button
         size="small"
         variant="soft"
-        onClick={() => setInstallingSource({ type: "registry", id: offer.id })}
+        onClick={() => setDialog({ kind: "install", source: { type: "registry", id: offer.id } })}
       >
         {t("mixengine.extensions.install")}
       </Button>
@@ -500,7 +497,7 @@ export default function Extensions({ active }: { active: boolean }) {
                           size="small"
                           variant="danger"
                           disabled={acting[row.id] !== undefined}
-                          onClick={() => setUninstalling(row)}
+                          onClick={() => setDialog({ kind: "uninstall", row, deleteData: false })}
                         >
                           {t("mixengine.extensions.uninstall")}
                         </Button>
@@ -552,30 +549,30 @@ export default function Extensions({ active }: { active: boolean }) {
           </Table>
         )}
       </Card>
-      {installingSource && (
+      {dialog?.kind === "install" && (
         <PlanDialog
-          source={installingSource}
-          onCancel={() => setInstallingSource(null)}
+          source={dialog.source}
+          onCancel={() => setDialog(null)}
           onStarted={(id, job) => void started(id, job)}
         />
       )}
 
-      {uninstalling && (
+      {dialog?.kind === "uninstall" && (
         <ConfirmDialog
-          title={t("mixengine.extensions.uninstallTitle", { name: uninstalling.name })}
+          title={t("mixengine.extensions.uninstallTitle", { name: dialog.row.name })}
           message={t("mixengine.extensions.uninstallMessage")}
           danger
-          onCancel={() => {
-            setUninstalling(null);
-            setDeleteData(false);
-          }}
-          onConfirm={() => void confirmUninstall()}
+          onCancel={() => setDialog(null)}
+          onConfirm={() => void confirmUninstall(dialog.row, dialog.deleteData)}
         >
           <Checkbox
             className={styles.checkbox}
             label={t("mixengine.extensions.deleteData")}
-            checked={deleteData}
-            onChange={(e) => setDeleteData(e.target.checked)}
+            checked={dialog.deleteData}
+            onChange={(e) => {
+              const deleteData = e.target.checked;
+              setDialog((current) => deleteDataTicked(current, deleteData));
+            }}
           />
         </ConfirmDialog>
       )}
