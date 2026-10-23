@@ -84,6 +84,13 @@ function SharingCell({
   );
 }
 
+/** The dialogs the screen can open; one at a time. */
+type SitesDialog =
+  | { kind: "create" }
+  | { kind: "edit"; detail: SiteDetail }
+  | { kind: "share"; domain: string }
+  | { kind: "delete"; domain: string };
+
 /**
  * Every site in the home, and their LAN sharing state.
  *
@@ -109,9 +116,8 @@ export default function Sites({
   const [projectNames, setProjectNames] = useState<string[]>([]);
   const [projectFilter, setProjectFilter] = useState("");
   const [error, setError] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<SiteDetail | null>(null);
-  const [sharing, setSharing] = useState<string | null>(null);
+  /** The one dialog on screen, with the site it is about. */
+  const [dialog, setDialog] = useState<SitesDialog | null>(null);
   /**
    * The domain waiting for its services to start; it locks **the whole table**, not just that row.
    *
@@ -123,8 +129,6 @@ export default function Sites({
   const [opening, setOpening] = useState<string | null>(null);
   /** A row's ⋮ menu and where it was opened; `null` means no menu is open. */
   const [menu, setMenu] = useState<{ domain: string; x: number; y: number } | null>(null);
-  /** The domain whose Delete is being confirmed. */
-  const [deleting, setDeleting] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const { t } = useTranslation();
 
@@ -213,7 +217,7 @@ export default function Sites({
 
   async function edit(domain: string) {
     try {
-      setEditing(await api.site(domain));
+      setDialog({ kind: "edit", detail: await api.site(domain) });
     } catch (e) {
       setError(errorMessage(t, e));
     }
@@ -307,7 +311,7 @@ export default function Sites({
       setError(errorMessage(t, e));
     } finally {
       // Closed either way, as Projects' delete is: a refusal is read in the banner behind it.
-      setDeleting(null);
+      setDialog(null);
     }
   }
 
@@ -338,7 +342,7 @@ export default function Sites({
                 ...projectNames.map((name) => ({ value: name, label: name })),
               ]}
             />
-            <Button size="large" variant="primary" data-demo="new-site" onClick={() => setCreating(true)}>
+            <Button size="large" variant="primary" data-demo="new-site" onClick={() => setDialog({ kind: "create" })}>
               <PlusIcon size={15} />
               {t("mixengine.sites.newSite")}
             </Button>
@@ -432,7 +436,7 @@ export default function Sites({
                     <td>
                       <SharingCell
                         sharing={row.sharing}
-                        onShare={() => setSharing(row.domain)}
+                        onShare={() => setDialog({ kind: "share", domain: row.domain })}
                         onUnshare={() => void unshare(row.domain)}
                       />
                     </td>
@@ -515,7 +519,7 @@ export default function Sites({
             onClick={() => {
               const domain = menuRow.domain;
               setMenu(null);
-              setDeleting(domain);
+              setDialog({ kind: "delete", domain });
             }}
           >
             <TrashIcon size={14} />
@@ -524,48 +528,49 @@ export default function Sites({
         </ContextMenu>
       )}
 
-      {deleting && (
+      {dialog?.kind === "delete" && (
         <ConfirmDialog
-          title={t("mixengine.sites.deleteTitle", { domain: deleting })}
+          title={t("mixengine.sites.deleteTitle", { domain: dialog.domain })}
           message={t("mixengine.sites.deleteMessage")}
           confirmLabel={t("mixengine.sites.delete")}
           danger
-          onCancel={() => setDeleting(null)}
-          onConfirm={() => void confirmDelete(deleting)}
+          onCancel={() => setDialog(null)}
+          onConfirm={() => void confirmDelete(dialog.domain)}
         />
       )}
 
-      {creating && (
+      {dialog?.kind === "create" && (
         <SiteForm
           defaultProject={projectFilter === "" ? undefined : projectFilter}
-          onCancel={() => setCreating(false)}
+          onCancel={() => setDialog(null)}
           onSaved={() => {
-            setCreating(false);
+            setDialog(null);
             void reload();
           }}
         />
       )}
 
-      {editing && (
+      {dialog?.kind === "edit" && (
         <SiteForm
-          initial={editing}
-          onCancel={() => setEditing(null)}
+          initial={dialog.detail}
+          onCancel={() => setDialog(null)}
           onSaved={() => {
-            setEditing(null);
+            setDialog(null);
             void reload();
           }}
         />
       )}
 
-      {sharing && (
+      {dialog?.kind === "share" && (
         <ShareDialog
-          domain={sharing}
-          onCancel={() => setSharing(null)}
+          domain={dialog.domain}
+          onCancel={() => setDialog(null)}
           onShared={(next) => {
+            const { domain } = dialog;
             setRows((current) =>
-              current.map((row) => (row.domain === sharing ? { ...row, sharing: next } : row)),
+              current.map((row) => (row.domain === domain ? { ...row, sharing: next } : row)),
             );
-            setSharing(null);
+            setDialog(null);
           }}
         />
       )}
