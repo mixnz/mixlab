@@ -219,13 +219,34 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       saving a terminal target deleted elsewhere left the *deleted* notice up, and opening a second
       project before the first had loaded could leave its row on Loading. Every screen was recorded
       in the demo before and after, and only those two moments differ.
-- [ ] **T209g** One skeleton for the service recipes. `mixengine-core/src/generate/recipes/` is
+- [x] **T209g** One skeleton for the service recipes. `mixengine-core/src/generate/recipes/` is
       14,902 lines, almost a fifth of core, and grows with every service MixEngine supports.
       `mysql_family.rs` already shares MySQL and MariaDB. The design compares caddy, nginx,
       mariadb, mysql, postgres, redis, mongodb, php_fpm and memcached, lists what each recipe
       writes the same way (the config file's frame, ports, log paths, datadir, readiness), and
       moves that into `generate/recipe/`. The generated files are byte-identical before and after,
       and the recipe tests prove it.
+      **Measured, and not done.** On `master` at `d5e7bf16` the `.rs` files under `recipes/` are
+      13,190 lines, and most of that is each server's own template, settings, ritual, and the
+      reason for each of them. What the five parts the task names turned out to be:
+
+      | part | finding |
+      | --- | --- |
+      | the config file's frame | no two templates word their header alike, and php-fpm comments with `;`; one macro would carry every variant |
+      | log paths | most servers log to the stream; php-fpm, nginx and the MySQL bootstrap name a file each, for three reasons |
+      | datadir and working directory | `context.data()` already spells the one; `cwd` is `etc` for seven and `data` for two, each with its reason |
+      | readiness | nine different checks; only the key `ready_timeout_ms` is shared |
+      | ports | the row's port and bind as an address, copied into six recipes with each its own refusal sentence |
+
+      Beyond the ports, what all nine copy is small: `millis`, the keys `ready_timeout_ms` and
+      `stop_grace_ms`, a 10-second health interval with three misses before degraded, the
+      connection idle probe and the hour a saving home waits (six recipes), and `root()` and
+      `context()` in every test module. No two copies had drifted apart. A branch that moved all
+      of it into `generate/recipe/` took the nine recipes from 12,989 lines to 12,594 and added
+      381 in three shared modules with their docs and tests, about 150 lines less code in all.
+      Proving the output unchanged took 36 golden files of 9,100 lines and a 397-line test. That
+      is more repository than the copies it removes, so the branch was dropped and the recipes
+      stay as they are. A helper that has to change in all nine is the moment to share it.
 - [ ] **T209h** Detached tasks that outlive shutdown. `docs/standards/rust.md`, *Async*, already
       says a task that outlives its call is held by something shutdown waits for, with "no
       detached tasks that outlive shutdown". The daemon still has `tokio::spawn` calls whose
