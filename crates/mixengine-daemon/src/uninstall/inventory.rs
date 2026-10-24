@@ -1,4 +1,4 @@
-//! What MixEngine has written on this machine — roadmap task **T87**.
+//! What MixEngine has written on this machine.
 //!
 //! **One enumeration, and both methods call it.** `daemon.uninstall_plan` renders it;
 //! `daemon.uninstall` renders it, acts, and calls it again to measure. Two enumerations — one for
@@ -12,8 +12,7 @@
 //! [`Outcome::Ok`] does not mean the same thing across its own rows. `Ok` on the trust check means
 //! the authority **is** installed; `Ok` on the hosts check means the block **matches** what the
 //! sites need, which on a wired machine is an *empty* block. An uninstall driven off that would
-//! remove the trust store and skip the hosts block on one machine and do the reverse on the next
-//! (the T87 design, D1).
+//! remove the trust store and skip the hosts block on one machine and do the reverse on the next.
 //!
 //! **A reader that fails is [`Removal::Failed`] and never [`Removal::Absent`].** An uninstall that
 //! reported "nothing there" because it could not look is the one failure mode this whole feature
@@ -131,8 +130,8 @@ pub(crate) async fn take(
     rows.push(keep_for_others(privileged_helper().await, shared.clone()));
     rows.push(keep_for_others(audit_log(), shared));
 
-    // T182a: the program itself, where an installer placed it. Read here, from the disk, like
-    // every other row; whether it goes is the query's `package`.
+    // The program itself, where an installer placed it. Read here, from the disk, like every other
+    // row; whether it goes is the query's `package`.
     let present: Vec<std::path::PathBuf> = mixengine_platform::install::package_paths()
         .map(|paths| {
             paths
@@ -162,8 +161,8 @@ pub(crate) async fn take(
     rows.push(autostart_entry(uninstall).await);
     rows.push(path_entry(uninstall).await);
 
-    // T185a: what this install added to itself, from a copy MixEngine updates itself and nowhere
-    // else — a copy a package manager placed is its package's to remove (ADR 0048).
+    // What this install added to itself, from a copy MixEngine updates itself and nowhere else — a
+    // copy a package manager placed is its package's to remove (ADR 0048).
     let recorded: Vec<String> = mixengine_core::updates::records::get(
         &uninstall.store,
         mixengine_core::updates::records::COMPLETED,
@@ -184,7 +183,7 @@ pub(crate) async fn take(
         mixengine_platform::window_data::locate(mixengine_core::window::IDENTIFIER).as_ref(),
         query.keep_home,
     ));
-    // T182d: what this home and the window keep in the credential store, following the home.
+    // What this home and the window keep in the credential store, following the home.
     rows.extend(credential_rows(
         &credentials(uninstall).await,
         query.keep_home,
@@ -220,7 +219,7 @@ pub(crate) async fn take(
     Ok(rows)
 }
 
-/// Is this the home the installed MixLab window drives — T182b?
+/// Is this the home the installed MixLab window drives?
 ///
 /// **The window's folders are one per user and not one per home**, so only the home a release's
 /// window uses may take them: an uninstall of a development home, or of one somebody pointed
@@ -231,7 +230,7 @@ fn is_the_windows_home(uninstall: &Uninstall) -> bool {
             .is_ok_and(|default| default == uninstall.paths.root())
 }
 
-/// **10b.** The MixLab window's own folders — T182b.
+/// **10b.** The MixLab window's own folders.
 ///
 /// What a person made there follows the home, kept when it is kept; the webview's cache and the
 /// logs go whatever is kept. A folder that is not there has no row: a headless install has none of
@@ -279,7 +278,7 @@ pub(crate) fn window_rows(
     data.chain(cache).collect()
 }
 
-/// What the credential store holds for this uninstall — T182d. Read once, off the runtime.
+/// What the credential store holds for this uninstall. Read once, off the runtime.
 pub(crate) struct Found {
     /// This home's id, or `None` when it could not be read.
     pub(crate) home: Option<String>,
@@ -289,7 +288,7 @@ pub(crate) struct Found {
     pub(crate) window: Option<mixengine_platform::Result<Vec<String>>>,
 }
 
-/// **10c.** The program files this install added to itself — T185a, ADR 0054.
+/// **10c.** The program files this install added to itself — ADR 0054.
 ///
 /// `directory` is the install's when its placement is `SelfUpdatable`, and `None` otherwise. One row
 /// for every recorded file still there, because the uninstall keys what it did by id; its location
@@ -319,8 +318,7 @@ pub(crate) fn completed_row(directory: Option<&Path>, recorded: &[String]) -> Op
     })
 }
 
-/// **11.** The home, each relocated directory, and every tombstone an earlier run left beside them
-/// — T182, D2 and D6.
+/// **11.** The home, each relocated directory, and every tombstone an earlier run left beside them.
 ///
 /// The home answers `keep_home` and the relocated directories answer `keep_relocated`: two choices,
 /// because a person may want the home gone and the databases on another disk kept, or the reverse.
@@ -372,7 +370,7 @@ pub(crate) fn going(
     going
 }
 
-/// **11c.** A tombstone an earlier uninstall renamed and could not delete — T182, D6.
+/// **11c.** A tombstone an earlier uninstall renamed and could not delete.
 fn tombstone(id: ResidueId, path: &Path) -> Residue {
     Residue {
         id,
@@ -384,8 +382,7 @@ fn tombstone(id: ResidueId, path: &Path) -> Residue {
     }
 }
 
-/// **12.** Every process in the way of a directory this uninstall would remove — T182, D4, and
-/// T182e, D4.
+/// **12.** Every process in the way of a directory this uninstall would remove.
 ///
 /// Two kinds, one row per process: a process *running from* one of those directories (any system),
 /// and a process holding something inside one of them that **cannot be moved** — a working
@@ -446,7 +443,7 @@ async fn in_use(
     running.into_iter().chain(stuck).collect()
 }
 
-/// A row per process holding something stuck, that is not already a row for running — T182e, D4.
+/// A row per process holding something stuck, that is not already a row for running.
 ///
 /// Matched on the `(pid N)` the running row's `what` ends with, which is how both kinds spell it.
 fn stuck_rows(
@@ -499,9 +496,9 @@ fn stuck_rows(
 /// **`symlink_metadata` and not `exists`**, which answers `false` for a dangling link somebody
 /// planted — the rule `mixengine-elevate`'s own validation runs on, applied to the reading side.
 ///
-/// **Its owner is asked only when it is there** — roadmap task **T88e**. A package database is a
-/// process or two, and a file that is absent has nobody to name. A database that cannot answer is
-/// "no package", which is the row as it was before that task: a helper this uninstall removes.
+/// **Its owner is asked only when it is there.** A package database is a process or two, and a file
+/// that is absent has nobody to name. A database that cannot answer is "no package", which is the
+/// row as it was before package databases were asked: a helper this uninstall removes.
 async fn privileged_helper() -> Residue {
     let Ok(path) = mixengine_platform::install::helper_path() else {
         return helper_row(None, false, None);
@@ -524,11 +521,11 @@ async fn privileged_helper() -> Residue {
 }
 
 /// The helper's row from what was read: where it is, whether it is there, and which package, if
-/// any, placed it — the T88e design, D3.
+/// any, placed it.
 ///
 /// **A helper a package placed is kept, and says so.** `mix`, `mixengined` and the shim leave the
-/// way they came (the T87 design, Scope); a helper the same package wrote is part of the same
-/// delivery, and removing it leaves the package database describing a file that is gone.
+/// way they came; a helper the same package wrote is part of the same delivery, and removing it
+/// leaves the package database describing a file that is gone.
 fn helper_row(path: Option<&Path>, present: bool, packaged: Option<String>) -> Residue {
     let what = "MixEngine's privileged helper".to_owned();
 
@@ -565,7 +562,7 @@ fn helper_row(path: Option<&Path>, present: bool, packaged: Option<String>) -> R
 pub(crate) struct PackageReading<'a> {
     /// `std::env::consts::OS`.
     pub(crate) os: &'a str,
-    /// Who placed this copy, from the daemon's start (T88f's reading of the receipt).
+    /// Who placed this copy, from the daemon's start (its reading of the receipt).
     pub(crate) placement: &'a mixengine_core::updates::Placement,
     /// The query's `package`.
     pub(crate) asked: bool,
@@ -575,7 +572,7 @@ pub(crate) struct PackageReading<'a> {
     pub(crate) window: bool,
 }
 
-/// **7a.** The program itself, where an installer placed it — roadmap task **T182a**, spec D3.
+/// **7a.** The program itself, where an installer placed it.
 ///
 /// On a copy the macOS `.pkg` placed, `Planned` when asked for and `Kept` naming the flag when not;
 /// on a copy a Linux package or the Windows installer placed, `Kept` naming what removes it there.
@@ -673,7 +670,7 @@ fn audit_log() -> Residue {
     }
 }
 
-/// **9.** The entry that starts this home's daemon at login — T85b's, and unprivileged.
+/// **9.** The entry that starts this home's daemon at login — unprivileged.
 ///
 /// **Only when it is this home's.** One entry per user means enabling from a second home replaces
 /// it, so an entry naming another home is that home's to remove and not this one's — which is
@@ -740,7 +737,7 @@ pub(super) fn autostart_outcome(
     }
 }
 
-/// **10.** `<root>/bin` on this user's `PATH` — T26's, and unprivileged.
+/// **10.** `<root>/bin` on this user's `PATH` — unprivileged.
 async fn path_entry(uninstall: &Uninstall) -> Residue {
     let what = "this home's commands on your PATH".to_owned();
 

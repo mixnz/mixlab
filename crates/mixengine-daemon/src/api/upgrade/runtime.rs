@@ -1,4 +1,4 @@
-//! `runtime.upgrade_plan` and `runtime.upgrade` — roadmap task **T193b**, the design's D5.
+//! `runtime.upgrade_plan` and `runtime.upgrade` — D5 of the design [`super`] names.
 
 use std::sync::Arc;
 

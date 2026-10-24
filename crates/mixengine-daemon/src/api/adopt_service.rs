@@ -1,5 +1,4 @@
-//! `service.found` and `service.adopt` — service data an earlier home left under `data/`, roadmap
-//! task **T182g**.
+//! `service.found` and `service.adopt` — service data an earlier home left under `data/`.
 //!
 //! Adopting is two things this daemon already does: `service.create` with the id whose derived
 //! data directory is the one found — a directory carrying `.mixengine-ready` skips the first run —
@@ -23,7 +22,7 @@ impl Api {
     ///
     /// The wire error of a table that could not be read.
     pub(crate) async fn service_found(&self) -> Result<ServiceFoundList, Error> {
-        // **A restore comes first** (T182h). While a copy of the earlier home can be restored, its
+        // **A restore comes first.** While a copy of the earlier home can be restored, its
         // data is not offered one directory at a time: adopting a database first would give this
         // home a service of its own, and the restore that brings back the projects and sites would
         // then be refused. A copy this build cannot restore does not hold this back.
@@ -128,7 +127,7 @@ impl Api {
     }
 
     /// For a service that keeps an admin password, set a new one in its data and leave it stopped —
-    /// what an adopt (T182g) and a restore (T182h) both need, since the password the data holds
+    /// what an adopt and a restore both need, since the password the data holds
     /// went with the earlier home's credential store. Nothing for any other service.
     ///
     /// # Errors

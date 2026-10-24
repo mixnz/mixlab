@@ -24,10 +24,10 @@ fn paths_under(home: &std::path::Path) -> mixengine_core::Paths {
 
 /// A site row, built here rather than through a `Store`.
 ///
-/// **`issue` takes records and never a `SiteRef`**, which is what lets this test exist without
-/// a database at all — and the reason for the signature is not the test: resolving a reference
-/// lives on `crate::sites::Sites`, and T50 gives *that* struct a `Certificates`. A
-/// `Certificates` that resolved references would close the loop.
+/// **`issue` takes records and never a `SiteRef`**, which is what lets this test exist without a
+/// database at all — and the reason for the signature is not the test: resolving a reference lives
+/// on `crate::sites::Sites`, and *that* struct holds a `Certificates`. A `Certificates` that
+/// resolved references would close the loop.
 fn a_site(domains: &[&str]) -> mixengine_core::sites::SiteRecord {
     mixengine_core::sites::SiteRecord {
         id: 1,
@@ -71,10 +71,9 @@ fn blog() -> Vec<String> {
     vec!["blog.test".to_owned()]
 }
 
-/// **A site that declares no HTTPS has nothing wrong with it** — the same distinction T52 had
-/// to add to `IssueOutcome`, and the third time this phase has had to make it. Without this
-/// rule every plaintext site in the home would be reported as missing a certificate it never
-/// asked for.
+/// **A site that declares no HTTPS has nothing wrong with it** — the same distinction
+/// `IssueOutcome::NotWanted` draws, and the third time it has had to be made. Without this rule
+/// every plaintext site in the home would be reported as missing a certificate it never asked for.
 #[test]
 fn a_site_that_declares_no_https_has_nothing_wrong_with_it() {
     assert_eq!(
@@ -103,13 +102,12 @@ fn a_site_with_no_certificate_on_disk_is_named_that_way() {
     );
 }
 
-/// **A shared site is not a site whose names differ** — roadmap task **T75**, fixing a defect
-/// shipped with T74.
+/// **A shared site is not a site whose names differ**, a defect LAN sharing first shipped with.
 ///
-/// T74 put the LAN address into the certificate and left this comparison reading the bare
+/// Sharing put the LAN address into the certificate and left this comparison reading the bare
 /// domain list, so every shared site reported `NamesDiffer` for as long as it was shared. The
-/// comparison has to ask the same question the issuer answered, which is what `leaf::covered`
-/// is for.
+/// comparison has to ask the same question the issuer answered, which is what `leaf::covered` is
+/// for.
 #[test]
 fn a_shared_site_whose_certificate_covers_its_address_has_no_problem() {
     let sharing = mixengine_core::sites::Sharing {
@@ -125,10 +123,10 @@ fn a_shared_site_whose_certificate_covers_its_address_has_no_problem() {
         "aa",
     );
 
-    // **The bare domain list is the defect, kept here as the other half of the assertion.**
-    // This is what the call site passed until T75, and it is why every shared site reported a
-    // problem it did not have. Asserted rather than described, so that a change that quietly
-    // reinstates it fails here.
+    // **The bare domain list is the defect, kept here as the other half of the assertion.** This is
+    // what the call site passed before the fix, and it is why every shared site reported a problem
+    // it did not have. Asserted rather than described, so that a change that quietly reinstates it
+    // fails here.
     assert_eq!(
         problem(
             true,
@@ -216,8 +214,8 @@ fn a_chain_the_verifier_refused_is_named_that_way() {
     );
 }
 
-/// Last, because it is the only one of these that is not broken yet — and T52's loop is already
-/// replacing it.
+/// Last, because it is the only one of these that is not broken yet — and the renewal loop is
+/// already replacing it.
 #[test]
 fn a_certificate_inside_the_renewal_window_is_named_last() {
     let cert = a_leaf(&["blog.test"], 10, "aa");
@@ -292,11 +290,11 @@ async fn a_home_with_no_authority_refuses_each_site_by_name() {
     assert!(!because.is_empty());
 }
 
-/// **A site that declares no HTTPS wanted nothing, and did not refuse** — roadmap task **T52**.
+/// **A site that declares no HTTPS wanted nothing, and did not refuse.**
 ///
-/// The distinction is not cosmetic, which is why this test changed rather than being deleted.
-/// T52's renewal loop announces every failure it finds, and with this outcome spelled `Refused`
-/// it would announce one per plaintext site, once an hour, for as long as the daemon runs.
+/// The distinction is not cosmetic, which is why this test changed rather than being deleted. The
+/// renewal loop announces every failure it finds, and with this outcome spelled `Refused` it would
+/// announce one per plaintext site, once an hour, for as long as the daemon runs.
 #[tokio::test]
 async fn a_site_without_https_wanted_nothing_rather_than_being_refused() {
     let home = tempfile::tempdir().expect("a temp home");
@@ -337,9 +335,8 @@ async fn a_certificates_with_no_store_issues_for_nothing() {
     assert!(report.sites.is_empty(), "{report:?}");
 }
 
-/// **Every start asks the browsers to hold it, and asking costs no prompt.** The system store
-/// needs an elevation batch; these databases are the user's own, which is the line T49 was
-/// split on.
+/// **Every start asks the browsers to hold it, and asking costs no prompt.** The system store needs
+/// an elevation batch; these databases are the user's own.
 #[tokio::test]
 async fn a_start_asks_this_machines_browsers_to_hold_the_authority() {
     let home = tempfile::tempdir().expect("a temp home");
@@ -360,18 +357,18 @@ async fn a_start_asks_this_machines_browsers_to_hold_the_authority() {
     );
 }
 
-/// **The acceptance criterion, enumerated** — roadmap task **T54**, and the control that makes
-/// the enumeration mean something.
+/// **The acceptance criterion, enumerated**, and the control that makes the enumeration mean
+/// something.
 ///
-/// `docs/features/tls.md` asks that `mix cert ca-uninstall` leave no MixEngine certificate in
-/// any store, *"verified by an integration test that enumerates the stores"*. A machine running
+/// `docs/features/tls.md` asks that `mix cert ca-uninstall` leave no MixEngine certificate in any
+/// store, *"verified by an integration test that enumerates the stores"*. A machine running
 /// `cargo test` has a real trust store it must not touch (testing rule 1) and may have no
-/// `certutil` at all, so the enumeration happens here — against the mock T49b built
-/// `browsers_removed` for, with T54 named in its documentation as the producer.
+/// `certutil` at all, so the enumeration happens here — against the mock's `browsers_removed`,
+/// which exists for exactly this.
 ///
-/// **The control is the first assertion.** "The list does not contain it" passes just as well
-/// when the list was never built, which is the failure mode that fooled three measurements in
-/// T49b before a handshake corrected them.
+/// **The control is the first assertion.** "The list does not contain it" passes just as well when
+/// the list was never built, which is the failure mode that fooled three measurements of the
+/// browsers' stores before a handshake corrected them.
 #[tokio::test]
 async fn a_removal_names_the_authority_every_browser_was_asked_to_hold() {
     let home = tempfile::tempdir().expect("a temp home");
@@ -423,9 +420,9 @@ async fn a_home_with_no_authority_asks_the_browsers_for_nothing() {
     assert!(host.browsers_installed().is_empty());
 }
 
-/// **And a damaged one is not written either**, which is the half an `Absent` home does not
-/// cover: `Unusable` is a certificate that exists, and installing one into somebody's browser
-/// would be spending their trust on something T54 has to replace anyway.
+/// **And a damaged one is not written either**, which is the half an `Absent` home does not cover:
+/// `Unusable` is a certificate that exists, and installing one into somebody's browser would be
+/// spending their trust on something a rotation has to replace anyway.
 #[tokio::test]
 async fn a_damaged_authority_is_not_written_into_a_browser() {
     let home = tempfile::tempdir().expect("a temp home");

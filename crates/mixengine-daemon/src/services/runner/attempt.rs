@@ -19,8 +19,7 @@ use super::{After, Runner};
 
 impl Runner {
     /// One life of the process: spawn it, wait for readiness, then watch it until it ends.
-    /// Put everything this capture reads onto the log clients are connected to — roadmap task
-    /// **T16b**.
+    /// Put everything this capture reads onto the log clients are connected to.
     ///
     /// **A relay and not a fourth sink inside the capture**, deliberately. The reader threads run
     /// outside the runtime and their one obligation is to drain a pipe the service blocks on; making
@@ -41,14 +40,14 @@ impl Runner {
     /// [`LogFrame::Gap`](mixengine_proto::LogFrame::Gap) exists to prevent, and the alternative is a
     /// log panel quietly missing the lines that explain a failure.
     ///
-    /// **What the capture already holds is taken here, and not inside the task** — roadmap task
-    /// **T16c**. `Capture::start` puts the reader threads on the pipes before it returns, and the
-    /// task below is spawned rather than run, so a service can print before the runtime first polls
-    /// it. A subscription delivers nothing that was sent before it existed, so every line in that
-    /// window used to reach `current.log` and never the ring — permanently, not until something
-    /// caught up, and those are a start's first lines. [`Capture::read`] hands over the tail and the
-    /// subscription under one lock, so what is taken here is complete and holds no line twice; both
-    /// are moved into the task, which records the tail before it pumps anything.
+    /// **What the capture already holds is taken here, and not inside the task.** `Capture::start`
+    /// puts the reader threads on the pipes before it returns, and the task below is spawned rather
+    /// than run, so a service can print before the runtime first polls it. A subscription delivers
+    /// nothing that was sent before it existed, so every line in that window used to reach
+    /// `current.log` and never the ring — permanently, not until something caught up, and those are
+    /// a start's first lines. [`Capture::read`] hands over the tail and the subscription under one
+    /// lock, so what is taken here is complete and holds no line twice; both are moved into the
+    /// task, which records the tail before it pumps anything.
     fn relay(&self, capture: &Capture) {
         let (already_said, mut lines) = capture.read();
         let log = Arc::clone(&self.log);
@@ -411,7 +410,7 @@ impl Runner {
     }
 
     /// What happens after the process ended by itself.
-    /// Who else is on a port this service was going to listen on — roadmap task **T38**.
+    /// Who else is on a port this service was going to listen on.
     ///
     /// On a blocking task because every implementation of the capability is a synchronous read of
     /// the machine, and one of them starts a process to do it (see `mixengine_platform`'s macOS
@@ -433,7 +432,7 @@ impl Runner {
         .flatten()
     }
 
-    /// What this service's last words say about a refused superuser, if anything — task **T127a**.
+    /// What this service's last words say about a refused superuser, if anything.
     ///
     /// **The same shape as [`Runner::port_conflict`], and asked at the same moment**: a start that
     /// has already failed, and a question that can turn an honest but useless reason into a useful
@@ -639,7 +638,7 @@ mod tests {
     use super::super::tests::adopted_runner;
     use super::*;
 
-    /// **A spawn that failed keeps its sentence on the row** — T200b, D5. Before it, `daemon.log`
+    /// **A spawn that failed keeps its sentence on the row.** Before the row kept one, `daemon.log`
     /// was the only place a missing credential was named.
     #[tokio::test]
     async fn a_spawn_that_failed_leaves_its_sentence_on_the_row() {

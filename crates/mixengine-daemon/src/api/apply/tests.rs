@@ -3,11 +3,11 @@ use mixengine_proto::{MismatchAnswer, PackageVersion, RuntimeKind, VersionConstr
 
 use super::*;
 
-/// **D5.** Before roadmap task **T120** the only writer of a job's log ring was the scaffold
-/// step, so an apply that failed before it — which is every apply that fails on a name — had an
-/// empty log, and a client's "show output" button had nothing to show. The stream is part of
-/// the line rather than a detail of the rendering: a client colouring its output needs to know
-/// which lines went badly without reading them.
+/// The only writer of a job's log ring was once the scaffold step, so an apply that failed before
+/// it — which is every apply that fails on a name — had an empty log, and a client's "show output"
+/// button had nothing to show. The stream is part of the line rather than a detail of the
+/// rendering: a client colouring its output needs to know which lines went badly without reading
+/// them.
 #[test]
 fn a_step_is_narrated_on_the_stream_that_says_whether_it_went_well() {
     let starting = narration(Stream::Stdout, "installing php 8.4");
@@ -60,8 +60,8 @@ fn a_plan_with_a_blocked_scaffold(command: &str) -> BlueprintPlan {
     plan
 }
 
-/// **A blocked scaffold blocks the scaffold, not the apply** — roadmap task **T78b**, its
-/// design's D5. Without a consent the plan is work, and the step is left with its reason.
+/// **A blocked scaffold blocks the scaffold, not the apply.** Without a consent the plan is work,
+/// and the step is left with its reason.
 #[test]
 fn a_blocked_scaffold_without_a_consent_is_not_a_refusal() {
     let plan = a_plan_with_a_blocked_scaffold("composer create-project laravel/laravel .");
@@ -93,9 +93,8 @@ fn a_blocked_scaffold_with_a_consent_is_refused_naming_the_program() {
     assert!(!hint.contains("bin/"), "{hint}");
 }
 
-/// **A consent naming another command is consent to something else** — roadmap task **T78a**,
-/// its design's D4. A blueprint can be re-imported between the plan a person read and the apply
-/// they sent.
+/// **A consent naming another command is consent to something else.** A blueprint can be
+/// re-imported between the plan a person read and the apply they sent.
 #[test]
 fn a_consent_naming_another_command_refuses_the_apply() {
     let plan = a_plan_with_a_scaffold("composer create-project laravel/laravel shop", true);
@@ -174,7 +173,7 @@ fn a_consent_for_a_plan_with_no_command_is_refused() {
     );
 }
 
-/// **A consent names the archive it agreed to** — roadmap task **T205**, D2.
+/// **A consent names the archive it agreed to.**
 #[test]
 fn a_consent_naming_the_archive_is_accepted_and_another_url_is_refused() {
     let url = "https://wordpress.org/latest.zip";
@@ -230,8 +229,7 @@ fn a_matching_consent_is_work() {
     );
 }
 
-/// **A consent names what was read** — roadmap task **T205a**, `consent_refusal`'s rule for
-/// a `.env` key.
+/// **A consent names what was read**, `consent_refusal`'s rule for a `.env` key.
 #[test]
 fn a_key_the_plan_does_not_write_is_refused() {
     let plan = a_plan(vec![step(
@@ -249,7 +247,7 @@ fn a_key_the_plan_does_not_write_is_refused() {
     assert!(refused.message.contains("OTHER"), "{}", refused.message);
 }
 
-/// **The account the apply made**, which T202 may have renamed — roadmap task **T205a**.
+/// **The account the apply made**, which the step may have renamed.
 #[test]
 fn the_dotenv_url_names_the_account_the_apply_made() {
     let made = AppliedDatabase {

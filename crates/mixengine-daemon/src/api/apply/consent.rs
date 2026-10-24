@@ -49,8 +49,7 @@ pub(super) fn questions(plan: &BlueprintPlan) -> Vec<AnswerSubject> {
         .collect()
 }
 
-/// Why a consent may not be spent on this plan, or [`None`] — roadmap task **T78a**, its design's
-/// D4.
+/// Why a consent may not be spent on this plan, or [`None`].
 ///
 /// **A consent names what was read.** A blueprint can be re-imported between the plan a person read
 /// and the apply they sent, so a consent naming another command is consent to something else, and
@@ -58,17 +57,16 @@ pub(super) fn questions(plan: &BlueprintPlan) -> Vec<AnswerSubject> {
 /// are refused here, before anything is touched.
 ///
 /// **No consent is not a refusal.** The scaffold step ends `NotRun` and everything else is applied,
-/// which is T78's position kept: a blueprint must not become worthless because nobody answered one
-/// question.
+/// which is the executor's position kept: a blueprint must not become worthless because nobody
+/// answered one question.
 pub(super) fn consent_refusal(
     plan: &BlueprintPlan,
     consent: Option<&ScaffoldConsent>,
 ) -> Option<Error> {
     let consent = consent?;
 
-    // **A command or an archive, whichever this plan has** — roadmap task **T205**, D2. Both are
-    // the one step a person agrees to, and the consent names what was shown: the command, or the
-    // URL.
+    // **A command or an archive, whichever this plan has.** Both are the one step a person agrees
+    // to, and the consent names what was shown: the command, or the URL.
     let planned_step = plan.steps.iter().find(|step| {
         matches!(
             step.action,
@@ -129,9 +127,9 @@ pub(super) fn consent_refusal(
         );
     }
 
-    // **Agreed to, and cannot run** — roadmap task **T78b**, its design's D5. Refused here, in the
-    // plan's own words, rather than as a shell's complaint at the end of a job. The hint never says
-    // `bin/`: that directory is swept of strangers at every start (T26).
+    // **Agreed to, and cannot run.** Refused here, in the plan's own words, rather than as a
+    // shell's complaint at the end of a job. The hint never says `bin/`: that directory is swept of
+    // strangers at every start.
     if let Some(PlanStep {
         disposition: Disposition::Blocked { reason },
         ..
@@ -153,13 +151,13 @@ pub(super) fn consent_refusal(
 /// **Three refusals, in the order they are cheapest to explain**: something that cannot be done at
 /// all, a question nobody answered, and an answer to a question nobody asked. All of them are
 /// decided here rather than five actions into a project directory, which is the whole point of
-/// having planned first (the T77 design, D10).
+/// having planned first.
 pub(super) fn refusal(
     questions: &[AnswerSubject],
     plan: &BlueprintPlan,
     answers: &[VersionAnswer],
 ) -> Option<Error> {
-    // **A blocked scaffold blocks the scaffold and not the apply** (T78b, D5): the one optional
+    // **A blocked scaffold blocks the scaffold and not the apply**: the one optional
     // step, whose refusal — when a consent names it — is `consent_refusal`'s.
     let blocked: Vec<String> = plan
         .steps

@@ -1,4 +1,4 @@
-//! What starts when the daemon does — roadmap task **T113**.
+//! What starts when the daemon does.
 //!
 //! **A plan, not a loop over flagged rows.** A php-fpm pool that is set and depends on a MariaDB
 //! that is not must bring MariaDB up, because a pool whose database is missing is a pool that fails
@@ -29,8 +29,8 @@
 //!
 //! **It is not the idle sweeper's opposite.** A service that is set here and also has an idle
 //! timeout starts at boot and is stopped again when nothing uses it, and that is two settings
-//! answering different questions rather than one overruling the other — see the design's D5. Nothing
-//! in this file exempts anything from anything.
+//! answering different questions rather than one overruling the other. Nothing in this file exempts
+//! anything from anything.
 
 use std::sync::Arc;
 

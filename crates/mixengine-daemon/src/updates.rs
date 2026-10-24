@@ -1,13 +1,11 @@
-//! Checking whether a newer MixEngine exists, and putting one on this machine — roadmap task
-//! **T88**.
+//! Checking whether a newer MixEngine exists, and putting one on this machine.
 //!
 //! # The whole sequence happens here, and `mix` prompts and reconnects
 //!
 //! `mixengine-cli` may depend on `mixengine-platform` and `mixengine-proto` and on nothing else —
 //! `workspace_layering.rs` enforces it — and verifying a signature, unpacking an archive and
 //! swapping files are all `mixengine-core`'s. So the client's whole part in an update is asking,
-//! waiting for the endpoint to go quiet, and starting the new daemon, which is `Autostart::run` and
-//! has been there since T9.
+//! waiting for the endpoint to go quiet, and starting the new daemon, which is `Autostart::run`.
 //!
 //! # Silent on failure, and that is a requirement rather than a shrug
 //!
@@ -133,17 +131,17 @@ pub(crate) struct Updates {
     /// fact.
     announced: Mutex<BTreeSet<String>>,
 
-    /// The machine, for the package receipt and Installer.app — roadmap task **T88f**.
+    /// The machine, for the package receipt and Installer.app.
     host: std::sync::Arc<dyn mixengine_platform::Host>,
 
     /// Where this daemon's own binary is, which `update.status` asks for its version while a `.pkg`
-    /// is handed over (T88f, D6).
+    /// is handed over.
     daemon_exe: Option<PathBuf>,
 
     /// The last reading of that binary: its `(device, inode)` and what it said it was.
     ///
     /// **Keyed by inode, not by modification time**: Installer.app writes a new inode and keeps the
-    /// time the file had in the package (the T88f readings, M3). So a status poll costs one `stat`
+    /// time the file had in the package (measured on a Mac). So a status poll costs one `stat`
     /// until the file is replaced.
     installed: Mutex<Option<OnDisk>>,
 }
@@ -170,9 +168,9 @@ impl Watcher for Quiet {
 impl Updates {
     /// Point a feed client and an installer at `source`, caching under the home's `cache/`.
     ///
-    /// `http` is the daemon's own transport, shared with the package index client and the
-    /// extension registry client rather than built fresh here — roadmap task **T72b**, on
-    /// `runtimes::Fetcher`'s own "one per daemon" reasoning, one layer down.
+    /// `http` is the daemon's own transport, shared with the package index client and the extension
+    /// registry client rather than built fresh here, on `runtimes::Fetcher`'s own "one per daemon"
+    /// reasoning, one layer down.
     ///
     /// # Errors
     ///
@@ -194,7 +192,7 @@ impl Updates {
                 std::env::var_os(APPIMAGE)
                     .filter(|value| !value.is_empty())
                     .as_deref(),
-                // Asked first, and passed in: the receipt is the platform's to read (T88f, D1).
+                // Asked first, and passed in: the receipt is the platform's to read.
                 host.installers().receipt_of(exe).as_deref(),
             ),
             // A daemon whose own path the operating system will not name. Refused in words rather
@@ -229,8 +227,8 @@ impl Updates {
         }))
     }
 
-    /// Whether this copy of MixEngine may replace its own binaries — roadmap task **T88a**'s
-    /// caller as well as T88's.
+    /// Whether this copy of MixEngine may replace its own binaries — asked before replacing the
+    /// privileged helper as well as before `mix self-update`.
     ///
     /// A privileged helper a package manager put where it is is replaced by that package manager,
     /// on exactly the reasoning `mix self-update` already refuses one with.
@@ -238,7 +236,7 @@ impl Updates {
         &self.placement
     }
 
-    /// Which kind of package updates this copy: `pkg`, `deb` or `rpm` — the T182b design, D5.
+    /// Which kind of package updates this copy: `pkg`, `deb` or `rpm`.
     ///
     /// Which installer an update hands over depends on it: the headless package for a copy that has
     /// no window, the window's package otherwise. Asked of the machine each time rather than
@@ -263,7 +261,7 @@ impl Updates {
         )
     }
 
-    /// The privileged helper this release publishes for this machine — roadmap task **T88a**.
+    /// The privileged helper this release publishes for this machine.
     ///
     /// Reads the feed the way `update.status` does, through the cache, so a machine that checked an
     /// hour ago does not fetch again for this.
@@ -271,8 +269,8 @@ impl Updates {
     /// # Errors
     ///
     /// The wire error of a feed that could not be read with nothing cached to fall back to, and
-    /// `UpdateError::HelperUnavailable` when the release published none for this pair —
-    /// which is also what a release from before T88a answers, since it lists none at all.
+    /// `UpdateError::HelperUnavailable` when the release published none for this pair — which is
+    /// also what a release from before helpers were published answers, since it lists none at all.
     pub(crate) async fn published_helper(
         &self,
     ) -> Result<(String, updates::HelperArtifact), Error> {
@@ -295,8 +293,8 @@ impl Updates {
             })?
             .clone();
 
-        // The helper's own version where the feed names one (T182b, D1), and the release's where
-        // it predates that, which is what the helper carried then.
+        // The helper's own version where the feed names one, and the release's where it predates
+        // that, which is what the helper carried then.
         let version = helper.version.clone().unwrap_or(catalogue.index.version);
 
         Ok((version, helper))
@@ -447,11 +445,11 @@ impl Updates {
     /// Everything an apply does before anything is stopped: check, refuse, download, verify, unpack,
     /// smoke-test.
     ///
-    /// **In that order and before the stop** — the T88 design, D5. Taken literally,
-    /// `docs/features/updates.md`'s *"stop → download → verify → install"* would leave a
-    /// developer's database down for the length of a download, on a connection nobody promised
-    /// anything about, to gain nothing: a download that fails after the stop has cost an outage, and
-    /// one that succeeds could have happened while everything was still up.
+    /// **In that order and before the stop.** Taken literally, `docs/features/updates.md`'s *"stop
+    /// → download → verify → install"* would leave a developer's database down for the length of a
+    /// download, on a connection nobody promised anything about, to gain nothing: a download that
+    /// fails after the stop has cost an outage, and one that succeeds could have happened while
+    /// everything was still up.
     ///
     /// # Errors
     ///
@@ -639,7 +637,7 @@ impl Updates {
         let skipped: Option<String> = read(&self.store, updates::records::SKIPPED_VERSION).await;
         let remind_after: Option<Timestamp> =
             read(&self.store, updates::records::REMIND_AFTER).await;
-        // A copy the `.pkg` installed is offered what it can install: the next `.pkg` (T88f).
+        // A copy the `.pkg` installed is offered what it can install: the next `.pkg`.
         let has_build = host().is_ok_and(|(os, arch)| match &self.placement {
             updates::Placement::Installer { .. } => feed
                 .installer(os, arch, self.installer_kind(), self.headless())
@@ -661,13 +659,13 @@ impl Updates {
 /// The environment variable a running AppImage sets, and the one thing that identifies one.
 const APPIMAGE: &str = "APPIMAGE";
 
-/// Why a copy the `.pkg` installed is not swapped in place, as an old client reads it — T88f.
+/// Why a copy the `.pkg` installed is not swapped in place, as an old client reads it.
 const INSTALLER_BECAUSE: &str = "the .pkg installed this copy, and MixEngine updates it by opening the next .pkg in Installer.app";
 
-/// The line that installs `package` without a window — T88f, D5. Quoted, because the path is in
+/// The line that installs `package` without a window. Quoted, because the path is in
 /// `Application Support` on macOS and has a space in it.
 fn install_command(package: &std::path::Path) -> String {
-    // By the file's own kind: the next package of a `.deb` copy is a `.deb` (T182b, D5).
+    // By the file's own kind: the next package of a `.deb` copy is a `.deb`.
     match package.extension().and_then(|extension| extension.to_str()) {
         Some("deb") => format!("sudo apt install '{}'", package.display()),
         Some("rpm") => format!("sudo dnf install '{}'", package.display()),
@@ -738,8 +736,9 @@ fn placement(placement: &updates::Placement) -> UpdatePlacement {
             directory: directory.display().to_string(),
             because: because.clone(),
         },
-        // `managed` on the wire, with a sentence still true for a client from before T88f: a new
-        // tagged variant would make an old client fail to read the whole status (the design, D3).
+        // `managed` on the wire, with a sentence still true for a client from before installers
+        // were published: a new tagged variant would make an old client fail to read the whole
+        // status.
         updates::Placement::Installer { directory, .. } => UpdatePlacement::Managed {
             directory: directory.display().to_string(),
             because: INSTALLER_BECAUSE.to_owned(),
@@ -764,13 +763,13 @@ pub(crate) fn applied(
 }
 
 /// What the new daemon starts again after an update: the services the stop walk reached **that
-/// were running before it** — roadmap task **T88**, "restore running services".
+/// were running before it**.
 ///
 /// The stop walk takes the whole graph in reverse dependency order, and `stop_one` reports a
 /// service that was already stopped as stopped, so `reached` holds every service in the plan.
 /// Recording that list would start every service on the machine at the next start, including the
-/// ones a person had stopped on purpose; the T88f check by hand found exactly that. The order is
-/// the walk's, which is what `restore_after_update` replays.
+/// ones a person had stopped on purpose; checking a `.pkg` update by hand found exactly that. The
+/// order is the walk's, which is what `restore_after_update` replays.
 pub(crate) fn restorable(reached: &[ServiceId], running: &[ServiceId]) -> Vec<ServiceId> {
     reached
         .iter()
@@ -788,7 +787,7 @@ mod tests {
     }
 
     /// The stop walk reaches every service in the plan, running or not, and `stop_one` counts a
-    /// service that was already stopped as stopped. Found by the T88f check by hand: a `.pkg`
+    /// service that was already stopped as stopped. Found by checking an update by hand: a `.pkg`
     /// update with two services running started six, four of which the person had stopped.
     #[test]
     fn a_service_that_was_stopped_before_the_update_is_not_restored() {

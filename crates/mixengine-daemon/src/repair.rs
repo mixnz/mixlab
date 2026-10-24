@@ -1,21 +1,21 @@
-//! `daemon.doctor_repair`, which acts on what `mix doctor` found — roadmap task **T47b**.
+//! `daemon.doctor_repair`, which acts on what `mix doctor` found.
 //!
 //! **One call, at most one prompt.** Repairs that live inside `MIXENGINE_HOME` are made here and
 //! now; repairs that need root are *enqueued* through the same producers everything else uses. [ADR
 //! 0005](../../../docs/decisions/0005-on-demand-elevation.md) settled that asking twice for one
 //! batch is the defect, and this module is the shape that obeys it.
 //!
-//! **Whether the queue is then flushed in the same call is the caller's to say**, and T64 is why.
-//! What is about to be allowed has to be readable *before* it is allowed, and a call that enqueued
-//! and flushed in one step leaves no moment for a client to show it. So the ordinary path is two
-//! calls — this one, then `elevation.grant` — and [`DoctorRepair::grant`] is for a caller that has
-//! already shown the batch and been answered.
+//! **Whether the queue is then flushed in the same call is the caller's to say**, and the rule
+//! every elevation follows is why. What is about to be allowed has to be readable *before* it is
+//! allowed, and a call that enqueued and flushed in one step leaves no moment for a client to show
+//! it. So the ordinary path is two calls — this one, then `elevation.grant` — and
+//! [`DoctorRepair::grant`] is for a caller that has already shown the batch and been answered.
 //!
-//! **Which repair a condition gets is decided by [`plan_for`], and that match is exhaustive.** It is
-//! the whole of what T47a bought by closing [`ProblemId`]: an id added later stops this file
-//! compiling until somebody decides what repairing it means. A `_ =>` arm would turn that compile
-//! error into a silent no-op and let the two halves drift apart — which is the defect the closed
-//! enum exists to prevent.
+//! **Which repair a condition gets is decided by [`plan_for`], and that match is exhaustive.** It
+//! is the whole of what closing [`ProblemId`] bought: an id added later stops this file compiling
+//! until somebody decides what repairing it means. A `_ =>` arm would turn that compile error into
+//! a silent no-op and let the two halves drift apart — which is the defect the closed enum exists
+//! to prevent.
 //!
 //! Deciding is separated from doing so the table can be read, and tested, without a machine.
 
@@ -45,10 +45,10 @@ pub(crate) struct Repairs {
     /// The home's own directory.
     root: std::path::PathBuf,
 
-    /// Where this home's authority lives, for the trust-store repair — T49a.
+    /// Where this home's authority lives, for the trust-store repair.
     certs: std::path::PathBuf,
 
-    /// What writes the authority into a browser (T49b) and signs a site's leaf (T50).
+    /// What writes the authority into a browser and signs a site's leaf.
     ///
     /// **One of these rather than one per repair.** Both certificate repairs want the same three
     /// things — this home's certificate directory, this machine, and its rows — and a second
@@ -200,13 +200,12 @@ impl Repairs {
                 }
             }
 
-            // **Nothing is read back to confirm it** — roadmap task T132, and the difference from
-            // the two repairs around it is worth stating: a browser database or a site can refuse,
-            // and this cannot. `render` is a comparison and an atomic write of a file inside the
-            // home; the machine's own store is what it is either way. So the only outcome that
-            // could be wrong here is one that claimed a bundle where the store answered too few
-            // roots — which is why the check above makes *that* a `Note` and never a problem this
-            // is asked to fix.
+            // **Nothing is read back to confirm it**, and the difference from the two repairs
+            // around it is worth stating: a browser database or a site can refuse, and this cannot.
+            // `render` is a comparison and an atomic write of a file inside the home; the machine's
+            // own store is what it is either way. So the only outcome that could be wrong here is
+            // one that claimed a bundle where the store answered too few roots — which is why the
+            // check above makes *that* a `Note` and never a problem this is asked to fix.
             InHome::WriteTrustBundle => {
                 self.certificates.rebuild_trust_bundle();
 
@@ -424,8 +423,8 @@ enum Planned {
 
 /// A repair that needs no privilege.
 ///
-/// **"No privilege" and not "under `MIXENGINE_HOME`", which is what this used to say.** T49b's
-/// browser databases are under the *user's* home rather than MixEngine's, and they still need no
+/// **"No privilege" and not "under `MIXENGINE_HOME`", which is what this used to say.** The
+/// browsers' databases are under the *user's* home rather than MixEngine's, and they still need no
 /// prompt: the path clause was a description of the three repairs that happened to exist, not the
 /// invariant. The invariant is that nothing here goes through `mixengine-elevate`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -439,16 +438,16 @@ enum InHome {
     /// Adopt or stop the rows nothing is supervising.
     ReconcileStrandedRows,
 
-    /// Put MixEngine's authority back into the browser databases that lack it — T49b.
+    /// Put MixEngine's authority back into the browser databases that lack it.
     TrustBrowsers,
 
-    /// Issue the certificates the sites that declare HTTPS are missing — T50.
+    /// Issue the certificates the sites that declare HTTPS are missing.
     IssueCertificates,
 
-    /// Write the trust bundle this home's runtimes read — T132.
+    /// Write the trust bundle this home's runtimes read.
     WriteTrustBundle,
 
-    /// Put MixEngine's authority back into every JDK that lacks it — T27e, ADR 0039.
+    /// Put MixEngine's authority back into every JDK that lacks it — ADR 0039.
     TrustJdks,
 }
 
@@ -567,7 +566,7 @@ mod tests {
         }
     }
 
-    /// **Repaired without a prompt, because issuance touches nothing outside this home** — T50.
+    /// **Repaired without a prompt, because issuance touches nothing outside this home.**
     #[test]
     fn a_missing_certificate_is_repaired_without_a_prompt() {
         assert_eq!(
@@ -584,10 +583,10 @@ mod tests {
             ProblemId::HomePermissionsLost,
             ProblemId::GeneratedConfigStale,
             ProblemId::ServiceUnsupervised,
-            // **T49b, and it is what widened `InHome`.** These databases are under the user's home
-            // rather than MixEngine's, and they still need no prompt.
+            // **The browsers, and they are what widened `InHome`.** These databases are under the
+            // user's home rather than MixEngine's, and they still need no prompt.
             ProblemId::BrowsersNotTrusted,
-            // **T50, and it is the second condition inside the home that touches a certificate.**
+            // **A missing certificate, the second condition inside the home that touches one.**
             // Issuing signs a leaf with a key this home already owns and writes it under this
             // home's own directory: nothing outside it is touched, so nothing raises a prompt.
             ProblemId::SiteCertificateMissing,

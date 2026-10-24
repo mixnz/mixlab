@@ -8,19 +8,19 @@ use mixengine_core::{Paths, Store};
 use super::Shared;
 use crate::{background, elevation, services};
 
-/// **Every start asks whether this machine will still let the front end answer on 80 and 443** —
-/// roadmap task T42, and the re-probe T88b asked for. A capability is cleared by any write to the
-/// binary, so an update loses it and the next start is what notices; the answer costs one read
-/// and no privilege. A home with no front end asks for nothing.
+/// **Every start asks whether this machine will still let the front end answer on 80 and 443.** A
+/// capability is cleared by any write to the binary, so an update loses it and the next start is
+/// what notices; the answer costs one read and no privilege. A home with no front end asks for
+/// nothing.
 ///
 /// After recovery, because that is what has just rendered the graph this reads the program path
 /// out of. Nothing here fails the start, on the rule every block around it follows: a machine
 /// that was not asked is one command away from being asked, where refusing to start would leave
 /// the user with no daemon at all.
 /// **And every start asks whether the file this daemon would run as root is somewhere only an
-/// administrator can rewrite** — roadmap task T85. First of the four, because what it asks for is
-/// about the helper the other three are applied *by*; and here rather than behind a prompt of its
-/// own for the reason every block in this run of them shares — first-run setup is one grant.
+/// administrator can rewrite.** First of the four, because what it asks for is about the helper the
+/// other three are applied *by*; and here rather than behind a prompt of its own for the reason
+/// every block in this run of them shares — first-run setup is one grant.
 ///
 /// Nothing here fails the start, on the rule the blocks around it follow: a machine that was not
 /// asked is one command away from being asked, where refusing to start would leave the user with
@@ -40,15 +40,15 @@ pub(super) async fn ask_for_grants(
         tracing::warn!(%error, "could not ask for permission to answer on 80 and 443");
     }
 
-    // **And every start asks whether this machine still sends its managed TLDs here** — roadmap
-    // task T45, and the same shape as the block above for the same reason: reading the wiring costs
-    // one file or one registry key and no privilege, so asking on every start is what notices a
-    // resolver an OS update, another home, or a person removed.
+    // **And every start asks whether this machine still sends its managed TLDs here**, the same
+    // shape as the block above for the same reason: reading the wiring costs one file or one
+    // registry key and no privilege, so asking on every start is what notices a resolver an OS
+    // update, another home, or a person removed.
     //
-    // **Here, before any site exists, and that ordering is the point** (the T45 design, D7). On a
-    // fresh home this puts the operation in the queue in time for first-run setup's single grant;
-    // asking after the first site was created would mean emptying a hosts block that already had a
-    // line in it, which is a second operation and therefore a second prompt.
+    // **Here, before any site exists, and that ordering is the point.** On a fresh home this puts
+    // the operation in the queue in time for first-run setup's single grant; asking after the first
+    // site was created would mean emptying a hosts block that already had a line in it, which is a
+    // second operation and therefore a second prompt.
     if let Err(error) = elevation.require_resolver().await {
         tracing::warn!(%error, "could not ask for this machine's managed TLDs to be routed here");
     }

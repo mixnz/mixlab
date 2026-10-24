@@ -15,7 +15,7 @@ use super::{Holder, Sites};
 impl Sites {
     /// The site a reference names, or the refusal for one that names nothing.
     ///
-    /// **A `Path` that reaches a project with several sites is refused, naming them** (spec D5):
+    /// **A `Path` that reaches a project with several sites is refused, naming them**:
     /// picking one would be picking at random, and the person typing it in a shell has a domain to
     /// hand.
     ///
@@ -140,9 +140,9 @@ impl Sites {
     /// The pool this project resolves to today, its row repaired if it had gone.
     ///
     /// **One call and not two**, because a php-fpm *route* asks the same question a php-fpm *site*
-    /// does and the two answers may not differ — roadmap task **T135**. Frozen at the moment it is
-    /// written, on [`Self::settled`]'s rule: what a shell resolves tomorrow is not what a site was
-    /// declared with.
+    /// does and the two answers may not differ. Frozen at the moment it is written, on
+    /// [`Self::settled`]'s rule: what a shell resolves tomorrow is not what a site was declared
+    /// with.
     async fn resolved_pool(&self, root: &Path) -> Result<ServiceId, Error> {
         let resolved = resolve::runtime(
             &self.store,
@@ -165,8 +165,7 @@ impl Sites {
     }
 
     /// The routes this site is about to be written with: refused where they cannot be rendered, and
-    /// with every php-fpm route that named no pool given the one this project resolves to —
-    /// roadmap task **T135**.
+    /// with every php-fpm route that named no pool given the one this project resolves to.
     ///
     /// [`None`] in and [`None`] out: an update that says nothing about routes leaves them alone,
     /// which is not the same request as one that empties the list.
@@ -214,8 +213,7 @@ impl Sites {
         Ok(Some(settled))
     }
 
-    /// The pool this site is about to be written with, its row made again if it had gone —
-    /// roadmap task **T122**.
+    /// The pool this site is about to be written with, its row made again if it had gone.
     ///
     /// **A derived pool is the one nobody typed, so nobody can be told to fix it.** The branch
     /// above reads `runtime_installs` through `core::resolve` and spells `php-fpm@<version>` from
@@ -258,7 +256,7 @@ impl Sites {
 }
 
 /// A route as the wire carries it: a static root spelled as this system spells a path, like the
-/// doc root beside it — roadmap task **T191**. The column keeps `/`.
+/// doc root beside it. The column keeps `/`.
 pub(super) fn natively(route: SiteRoute) -> SiteRoute {
     match route.target {
         RouteTarget::Static { root } => SiteRoute {
@@ -305,10 +303,10 @@ pub(super) fn upstream_is_an_address(upstream: &str) -> Result<(), Error> {
         return Err(refusal("it has no host"));
     }
 
-    // **Rendered verbatim into a Caddyfile and into `nginx.conf`** — the T135 design, D10. So what
-    // may appear here is a whitelist rather than a list of characters somebody remembered, and a
-    // newline is the whole of the injection: `http://h\n}\nadmin 0.0.0.0:2019 {` is a valid string,
-    // a valid JSON member, and a second server on Caddy's admin port.
+    // **Rendered verbatim into a Caddyfile and into `nginx.conf`.** So what may appear here is a
+    // whitelist rather than a list of characters somebody remembered, and a newline is the whole of
+    // the injection: `http://h\n}\nadmin 0.0.0.0:2019 {` is a valid string, a valid JSON member,
+    // and a second server on Caddy's admin port.
     //
     // **Refused rather than escaped**, on the rule the four checks above already follow: an address
     // that needs escaping to survive a configuration file is an address somebody mistyped, and
@@ -328,12 +326,11 @@ pub(super) fn upstream_is_an_address(upstream: &str) -> Result<(), Error> {
     Ok(())
 }
 
-/// A route path is an absolute prefix, matched at segment boundaries — the T135 design, D10.
+/// A route path is an absolute prefix, matched at segment boundaries.
 ///
 /// **The alphabet is a whitelist**, because this string is rendered into a Caddy `path` matcher and
 /// into an nginx `location` regex. `.` survives it and *is* a regex metacharacter, which is why the
-/// renderings escape rather than trust — the design's D5, and the one thing this function
-/// deliberately does not solve.
+/// renderings escape rather than trust — the one thing this function deliberately does not solve.
 pub(super) fn route_path_is_a_prefix(path: &str) -> Result<(), Error> {
     let refusal = |because: &str| {
         Error::new(
@@ -377,7 +374,7 @@ pub(super) fn route_path_is_a_prefix(path: &str) -> Result<(), Error> {
     Ok(())
 }
 
-/// The whole list, which is where a duplicate and a flood are visible — the T135 design, D10.
+/// The whole list, which is where a duplicate and a flood are visible.
 ///
 /// **A cap, because a site's routes are rendered into every one of its server blocks** and a list
 /// nobody bounded is a configuration file nobody bounded. Thirty-two is a number chosen to be

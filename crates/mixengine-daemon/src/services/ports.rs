@@ -1,4 +1,4 @@
-//! Why a start that failed failed, when the answer is a port — roadmap task **T38**.
+//! Why a start that failed failed, when the answer is a port.
 //!
 //! Every service in this product binds something, and the likeliest reason one of them will not
 //! start on a developer's machine is that a program MixEngine does not manage is already on its

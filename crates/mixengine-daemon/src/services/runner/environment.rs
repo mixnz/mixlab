@@ -180,7 +180,7 @@ impl Runner {
         match failed.into_iter().next() {
             // **The cause in the message itself**, because the caller logs this with `%error`,
             // which prints the top of a chain and not the chain — a `.context` here hid *why* from
-            // `daemon.log` (found by T200).
+            // `daemon.log`.
             Some((name, error)) => Err(anyhow::anyhow!("the environment entry {name}: {error:#}")),
             None => Ok(Some(env)),
         }
@@ -227,11 +227,11 @@ impl Runner {
                 let resolved = match value {
                     EnvValue::Literal { value } => Ok(value),
 
-                    // **Through `crate::secrets` and not the keyring directly** — roadmap task
-                    // **T126**. This is the read that hands a server its own superuser password at
-                    // spawn, so it is the one that has to find an entry written before addresses
-                    // named their home — otherwise upgrading a build would leave every database
-                    // unable to authenticate against itself.
+                    // **Through `crate::secrets` and not the keyring directly.** This is the read
+                    // that hands a server its own superuser password at spawn, so it is the one
+                    // that has to find an entry written before addresses named their home —
+                    // otherwise upgrading a build would leave every database unable to authenticate
+                    // against itself.
                     EnvValue::Keyring { service, key } => {
                         { crate::secrets::secret_blocking(host.as_ref(), &service, &key) }
                             .map_err(anyhow::Error::from)
@@ -279,8 +279,8 @@ impl Runner {
     }
 }
 
-/// The second half of a missing-credential sentence, for the one entry `mix service
-/// reset-credential` can write back — roadmap task **T202a**, D4.
+/// The second half of a missing-credential sentence, for the one entry
+/// `mix service reset-credential` can write back.
 ///
 /// **This service's own entry, by its address.** A recipe's ritual declares one secret of its own
 /// (`root`, `postgres`), at `<home>/<this service>/<account>`; every other `Keyring` entry a spec
@@ -482,7 +482,7 @@ mod tests {
         );
     }
 
-    /// **A missing credential says so in the line the log prints** — found by T200.
+    /// **A missing credential says so in the line the log prints.**
     ///
     /// The caller logs the error with `%error`, which prints the top of an `anyhow` chain and not
     /// the chain. With the cause behind a `.context`, `daemon.log` read *"the environment entry
@@ -515,9 +515,9 @@ mod tests {
         );
     }
 
-    /// T202a, D4. The entry that is this service's own — the one `mix service reset-credential`
-    /// can write back — names the repair in the same sentence, so Sites, `mix service list` and
-    /// the start error all carry it with no second lookup.
+    /// The entry that is this service's own — the one `mix service reset-credential` can write back
+    /// — names the repair in the same sentence, so Sites, `mix service list` and the start error
+    /// all carry it with no second lookup.
     #[tokio::test]
     async fn a_missing_credential_of_the_services_own_names_the_repair() {
         let (_home, paths, store) = home(&["mariadb"]).await;

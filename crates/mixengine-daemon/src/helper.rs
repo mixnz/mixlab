@@ -1,13 +1,12 @@
 //! What the privileged helper installed on this machine is, and what to say when it is older than
-//! the daemon reading it — roadmap task **T88a**.
+//! the daemon reading it.
 //!
 //! # Asked without a prompt
 //!
-//! `Probe` needs no administrative token — the T40 design's D5 made it so, precisely so that the
-//! operation reporting whether a process is elevated could ever report `false`. So the daemon finds
-//! out what the installed helper is by *running it as an ordinary process*, with a one-operation
-//! batch, and reading the header every answer already carries. No prompt is spent and nothing is
-//! changed.
+//! `Probe` needs no administrative token — it was made so precisely so that the operation reporting
+//! whether a process is elevated could ever report `false`. So the daemon finds out what the
+//! installed helper is by *running it as an ordinary process*, with a one-operation batch, and
+//! reading the header every answer already carries. No prompt is spent and nothing is changed.
 //!
 //! **Only when a helper is installed.** On a fresh machine and in every development tree there is
 //! nothing to ask, `Elevation::require_helper` enqueues `HelperInstall {}` as it always has, and
@@ -19,8 +18,11 @@
 //! protocol and the helper's, because a fixed old binary cannot be taught a newer one. And it reads
 //! `supported_ops` before deciding what to say about an old helper: without it, the only way to
 //! discover that the installed helper predates `helper-replace` is to enqueue one, spend a prompt,
-//! and be answered `Unsupported` — which deletes the row (the T40b design, D5) and leaves a person
-//! with a refusal and no sentence.
+//! and be answered `Unsupported` — which deletes the row from the elevation queue and leaves a
+//! person with a refusal and no sentence.
+//!
+//! The D-numbers below are those of
+//! `docs/specs/2026-09-25-t182b-a-helper-that-keeps-up-and-an-uninstall-that-finishes-design.md`.
 
 use std::path::Path;
 
@@ -126,9 +128,9 @@ async fn probe(helper: &Path, home: &Path, directory: &Path) -> Option<HelperFac
 
 /// What to tell somebody about a helper older than this release's, or [`None`].
 ///
-/// **One sentence, and no command in it** — the T182b design, D2. The daemon replaces an older
-/// helper by itself at the next elevation prompt, whichever kind of old it is, so there is nothing
-/// for a person to run and nothing to choose between.
+/// **One sentence, and no command in it** (D2). The daemon replaces an older helper by itself at
+/// the next elevation prompt, whichever kind of old it is, so there is nothing for a person to run
+/// and nothing to choose between.
 ///
 /// A helper *newer* than this release's is [`None`] too: that is routine, and is the reason the
 /// response was written without `deny_unknown_fields` in the first place. A version either side
@@ -164,7 +166,7 @@ pub(crate) fn upgrade_sentence(
     })
 }
 
-/// What the start of a daemon does about the installed helper — the T182b design, D2's table.
+/// What the start of a daemon does about the installed helper — D2's table.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Row {
     /// The installed helper is `HELPER_VERSION`.
@@ -213,7 +215,7 @@ pub(crate) fn row(installed: bool, facts: Option<&HelperFacts>) -> Row {
     }
 }
 
-/// Keep the installed helper in step with this release — the T182b design, D2.
+/// Keep the installed helper in step with this release (D2).
 ///
 /// **Queued, not prompted**: the operation joins the next grant, first in its batch. The one
 /// exception is the first start after an update that changed the helper, which raises the prompt
@@ -264,7 +266,7 @@ pub(crate) async fn keep_in_step(
 }
 
 /// Fetch, verify and smoke-test this release's signed helper into the candidate directory — the
-/// half of T88a's `upgrade` that stops before anything is queued.
+/// half of a helper upgrade that stops before anything is queued.
 ///
 /// # Errors
 ///
@@ -326,7 +328,7 @@ mod tests {
         }
     }
 
-    /// T182b, D2: every row of the table, from the facts a probe answers.
+    /// D2: every row of the table, from the facts a probe answers.
     #[test]
     fn every_row_of_the_table_is_decided_from_what_the_probe_said() {
         use mixengine_proto::privileged::HELPER_VERSION;
@@ -364,7 +366,7 @@ mod tests {
         assert!(upgrade_sentence(&facts("0.3.0", true), "0.2.0", None).is_none());
     }
 
-    /// T182b, D2. Whichever kind of old it is, the sentence says the daemon replaces it, and names
+    /// D2. Whichever kind of old it is, the sentence says the daemon replaces it, and names
     /// no command: there is none left to run.
     #[test]
     fn an_older_helper_is_said_to_be_replaced_at_the_next_prompt() {

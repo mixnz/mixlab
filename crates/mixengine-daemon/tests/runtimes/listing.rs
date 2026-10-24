@@ -24,9 +24,9 @@ fn index_with_a_node(packed: &Packed, url: &str) -> Value {
     published
 }
 
-/// **One kind's file that is not the one the root names costs that kind and no other** — roadmap
-/// task **T196**, its design's D5. The list says which, and a question about that kind is answered
-/// with "could not be read" rather than with "is not published".
+/// **One kind's file that is not the one the root names costs that kind and no other.** The list
+/// says which, and a question about that kind is answered with "could not be read" rather than with
+/// "is not published".
 #[tokio::test]
 async fn a_kind_that_cannot_be_read_is_named_and_the_rest_are_listed() {
     let fixture = Fixture::start_with(index_with_a_node).await;
@@ -72,7 +72,7 @@ async fn a_kind_that_cannot_be_read_is_named_and_the_rest_are_listed() {
 }
 
 /// A listing that read everything says so with an empty list, which is not the same as a daemon
-/// from before T196 that says nothing.
+/// from before the listing named unreadable files, which says nothing.
 #[tokio::test]
 async fn a_list_that_read_everything_has_nothing_unavailable() {
     let fixture = Fixture::start().await;
@@ -83,7 +83,7 @@ async fn a_list_that_read_everything_has_nothing_unavailable() {
     assert_eq!(listed["unavailable"], json!([]), "{listed}");
 }
 
-/// **A restored default is still the default** — roadmap task **T206d**, D3.
+/// **A restored default is still the default.**
 #[tokio::test]
 async fn a_deleted_runtime_folder_is_restored_as_the_default_it_was() {
     let fixture = Fixture::start().await;

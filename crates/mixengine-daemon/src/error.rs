@@ -132,11 +132,11 @@ impl ToWire for mixengine_core::Error {
             },
 
             Core::Install(error) => match error {
-                // **Reachable by a client since T23, and unclassified before it.** T20 and T21
-                // landed every variant below with no method in front of them, so each fell into the
-                // `internal` arm at the bottom of this match — which was true of nothing except
-                // that nobody could reach them. `runtime.*` is what made them a user's problem, so
-                // this is where they get a code and a way out.
+                // **Reachable by a client once `runtime.*` existed, and unclassified before it.**
+                // The download pipeline landed every variant below with no method in front of them,
+                // so each fell into the `internal` arm at the bottom of this match — which was true
+                // of nothing except that nobody could reach them. `runtime.*` is what made them a
+                // user's problem, so this is where they get a code and a way out.
                 //
                 // The split that matters is *whose fault it is*, because that is what decides where
                 // a person is sent: a document or an archive that verified and is then unusable is
@@ -248,7 +248,7 @@ impl ToWire for mixengine_core::Error {
 
                 // Logged where it happens and reported by `mix doctor`, never answered to a
                 // request: nothing a client asks for fails because a JDK's store could not be
-                // written — T27e.
+                // written.
                 InstallError::KeytoolRefused { .. } => {
                     Error::new(ErrorCode::Internal, chain(self))
                 }
@@ -296,8 +296,8 @@ impl ToWire for mixengine_core::Error {
                     )
                 }
 
-                // A directory an earlier home installed and this one could not check — roadmap task
-                // T182f. Recorded by hand once it can be checked, or removed.
+                // A directory an earlier home installed and this one could not check. Recorded by
+                // hand once it can be checked, or removed.
                 RuntimeError::UnrecordedInstall { path, .. } => {
                     Error::new(ErrorCode::AlreadyExists, chain(self)).with_hint(format!(
                         "`mix runtime adopt` or `mix package adopt` records it once it can be checked, \
@@ -326,8 +326,9 @@ impl ToWire for mixengine_core::Error {
                 // Nothing was asked for and there is nothing to fall back on. Distinct from the
                 // above because the way out is different: there is no constraint to satisfy, only a
                 // kind with no default — which is what uninstalling the last version leaves behind.
-                // **T206d, D2.** The version is recorded and its folder is gone: the hint is the
-                // install that restores it in place, and the uninstall that forgets it.
+                // **The row names the folder, and the folder decides.** The version is recorded and
+                // its folder is gone: the hint is the install that restores it in place, and the
+                // uninstall that forgets it.
                 RuntimeError::RuntimeMissing { kind, version, .. } => {
                     Error::new(ErrorCode::DependencyMissing, chain(self))
                         .with_hint(mixengine_core::resolve::restore_command(*kind, version))
@@ -405,8 +406,7 @@ impl ToWire for mixengine_core::Error {
                 }
 
                 // `conflict` rather than `already_exists`: what is refused is not the name being
-                // taken but MixEngine being unable to prove the account is its own to change —
-                // T77a's D3.
+                // taken but MixEngine being unable to prove the account is its own to change.
                 ServiceError::AccountNotOurs { .. } => Error::new(
                     ErrorCode::Conflict,
                     chain(self),
@@ -418,7 +418,8 @@ impl ToWire for mixengine_core::Error {
 
                 // **Not `unsupported`**, which means *this operating system cannot* and would be a
                 // lie about the machine: every system this ships to runs Redis, and Redis is what
-                // has no databases. The same distinction T77 drew for `blueprint.apply`.
+                // has no databases. The same distinction the first planner drew for
+                // `blueprint.apply`.
                 ServiceError::NoDatabaseVocabulary { .. } => {
                     Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                         "only the database servers have databases; `mix service list` shows what this \
@@ -426,10 +427,10 @@ impl ToWire for mixengine_core::Error {
                     )
                 }
 
-                // **The generated-configuration family — roadmap task T30.** What separates these
-                // is the same thing that separates the index failures above: whose fault it is. An
-                // override is the user's, a template and a recipe are ours, and a row that cannot
-                // be read back is neither — it is a database somebody edited.
+                // **The generated-configuration family.** What separates these is the same thing
+                // that separates the index failures above: whose fault it is. An override is the
+                // user's, a template and a recipe are ours, and a row that cannot be read back is
+                // neither — it is a database somebody edited.
                 //
                 // All three of these are a person's own overrides, and the message already names
                 // the setting — the ones that exist, the shape it had to be, or what is wrong with
@@ -586,9 +587,9 @@ impl ToWire for mixengine_core::Error {
             },
 
             Core::Blueprint(error) => match error {
-                // **T77 left these four in the catch-all below**, so a mistyped blueprint name
-                // reached a client as an internal error. Found while adding the three above; fixed
-                // here rather than left for whoever meets it next.
+                // **The first planner left these four in the catch-all below**, so a mistyped
+                // blueprint name reached a client as an internal error. Found while adding the
+                // three above; fixed here rather than left for whoever meets it next.
                 BlueprintError::InvalidBlueprintName { .. } => {
                     Error::new(ErrorCode::InvalidArgument, chain(self)).with_hint(
                         "a blueprint name is a filename stem: lower-case letters, digits and hyphens",
@@ -599,9 +600,8 @@ impl ToWire for mixengine_core::Error {
                     Error::new(ErrorCode::AlreadyExists, chain(self))
                 }
 
-                // **About the project, never the daemon failing** — roadmap task **T204a**. The
-                // several-sites refusal this replaced had no arm, and reached clients as
-                // `internal`.
+                // **About the project, never the daemon failing.** The several-sites refusal this
+                // replaced had no arm, and reached clients as `internal`.
                 BlueprintError::ProjectRunsSeveralPhps { .. } => {
                     Error::new(ErrorCode::Conflict, chain(self)).with_hint(
                         "a blueprint has one [runtimes] php; move the sites onto one PHP first",
@@ -621,7 +621,8 @@ impl ToWire for mixengine_core::Error {
 
                 // The signature is a property of the file somebody named, so the file is the
                 // argument that was wrong. Classified here rather than left to the `_ => internal`
-                // arm, which is where T77 left four variants and T78 had to come back for them.
+                // arm, which is where the first planner left four variants and the executor had to
+                // come back for them.
                 BlueprintError::BlueprintSignature { .. } => {
                     Error::new(ErrorCode::InvalidArgument, chain(self))
                         .with_hint("it can still be imported; it will be marked untrusted for good")
@@ -636,8 +637,8 @@ impl ToWire for mixengine_core::Error {
             },
 
             Core::Extension(error) => match error {
-                // **Every one of them classified, none left to the catch-all** — roadmap task T80.
-                // T77 left four blueprint variants falling through, and a mistyped name reached a
+                // **Every one of them classified, none left to the catch-all.** The first planner
+                // left four blueprint variants falling through, and a mistyped name reached a
                 // client as an internal error; the whole set is spelled out here rather than
                 // repeating that. All are `InvalidArgument` because all of them are about the file
                 // the caller handed in, and the one thing they need is where to look.
@@ -653,10 +654,9 @@ impl ToWire for mixengine_core::Error {
                     )
                 }
 
-                // **A precondition rather than an invalid argument** — roadmap task **T82a**. The
-                // id somebody typed is a real service; what is wrong is the state of this home, in
-                // which that service is one extension's own process and holds a credential no
-                // project's PHP may read.
+                // **A precondition rather than an invalid argument.** The id somebody typed is a
+                // real service; what is wrong is the state of this home, in which that service is
+                // one extension's own process and holds a credential no project's PHP may read.
                 ExtensionError::ExtensionPoolNotShared { .. } => {
                     Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(
                         "a web-app extension is served on a pool of its own, which carries a database \
@@ -664,11 +664,11 @@ impl ToWire for mixengine_core::Error {
                     )
                 }
 
-                // **The same shape for a `web-app`'s database** — roadmap task **T82**. An
-                // administrative interface onto a server this machine does not run is an install
-                // whose stated effect cannot happen, and the way out is the same kind of sentence:
-                // what to create. `internal` was what it reached a client as before this arm, which
-                // is the trap T77a's four blueprint variants fell into.
+                // **The same shape for a `web-app`'s database.** An administrative interface onto a
+                // server this machine does not run is an install whose stated effect cannot happen,
+                // and the way out is the same kind of sentence: what to create. `internal` was what
+                // it reached a client as before this arm, which is the trap the four blueprint
+                // variants above fell into.
                 ExtensionError::ExtensionNoDatabase { engines, .. } => {
                     Error::new(ErrorCode::DependencyMissing, chain(self)).with_hint(format!(
                         "`mix service create {}@main <version>` gives this machine one",
@@ -699,10 +699,10 @@ impl ToWire for mixengine_core::Error {
                     ))
                 }
 
-                // **Not `dependency_missing`, because nothing is missing** — T85's D5. The file is
-                // there and this daemon will not run it as an administrator, which is a state of
-                // the machine rather than an incomplete install, and the hint therefore says what
-                // to look at instead of saying "reinstall".
+                // **Not `dependency_missing`, because nothing is missing.** The file is there and
+                // this daemon will not run it as an administrator, which is a state of the machine
+                // rather than an incomplete install, and the hint therefore says what to look at
+                // instead of saying "reinstall".
                 ElevationError::ElevateUntrusted { path, .. } => {
                     Error::new(ErrorCode::PreconditionFailed, chain(self)).with_hint(format!(
                         "MixEngine will not run {} as an administrator until that file and the \
@@ -718,9 +718,8 @@ impl ToWire for mixengine_core::Error {
                     Error::new(ErrorCode::InvalidArgument, chain(self))
                 }
 
-                // T40a is explicit that `Completed` means the helper ran, not that it left a
-                // report, so this is a state rather than an impossibility — and one nothing a user
-                // typed caused.
+                // `Completed` means the helper ran, not that it left a report, so this is a state
+                // rather than an impossibility — and one nothing a user typed caused.
                 ElevationError::ElevateReportMissing { .. } => {
                     Error::new(ErrorCode::Internal, chain(self)).with_hint(
                         "the elevated helper ended without writing its answer; `logs/daemon.log` has \
@@ -788,7 +787,7 @@ impl ToWire for mixengine_core::Error {
     }
 }
 
-/// What a Linux release with no credential store is told to do — roadmap task T194, D3.
+/// What a Linux release with no credential store is told to do.
 ///
 /// A development build keeps a file already, and Windows and macOS always have a store in the
 /// session a daemon runs in, so only a Linux release is offered the file.
@@ -806,7 +805,8 @@ impl ToWire for mixengine_platform::Error {
         match self {
             // `reason` is required to describe the manual workaround where there is one
             // (`docs/architecture/platform-abstraction.md`, rule 4), and it is already in the
-            // message. A Linux release with no keyring is also told MixEngine's own answer (T194).
+            // message. A Linux release with no keyring is also told MixEngine's own answer: a file
+            // store in the home.
             Platform::UnsupportedPlatform { capability, .. } => {
                 let error = Error::new(ErrorCode::UnsupportedPlatform, chain(self));
                 match keyring_hint(mixengine_platform::RELEASE, std::env::consts::OS) {
@@ -866,12 +866,12 @@ impl ToWire for mixengine_supervisor::Error {
         use mixengine_supervisor::Error as Supervisor;
 
         match self {
-            // **Not an `ErrorKind`, because it does not have one** — roadmap task **T94**. A Code
-            // Integrity refusal arrives as an uncategorised OS error, and what is worth saying
-            // about it is not "the process failed" but why this machine will never start this
-            // program: nothing MixEngine ships or installs is code-signed, and the policy has no
-            // per-file override to offer. Above the `kind()` match rather than inside it, because
-            // the kind carries none of that.
+            // **Not an `ErrorKind`, because it does not have one.** A Code Integrity refusal
+            // arrives as an uncategorised OS error, and what is worth saying about it is not "the
+            // process failed" but why this machine will never start this program: nothing MixEngine
+            // ships or installs is code-signed, and the policy has no per-file override to offer.
+            // Above the `kind()` match rather than inside it, because the kind carries none of
+            // that.
             Supervisor::Spawn { program, source }
                 if mixengine_platform::refused_by_app_control(source) =>
             {
@@ -916,9 +916,9 @@ impl ToWire for crate::services::Undeclarable {
             // there is one answer to "a set of specs that is not a graph" and not two.
             Undeclarable::Invalid(error) => error.to_wire(),
 
-            // **T30 gave those failures a vocabulary, and the type now carries it.** The source is
-            // the daemon's own trait and could in principle be anything, but everything that
-            // implements it renders through `mixengine-core` — which already knows whether a
+            // **The generator gave those failures a vocabulary, and the type now carries it.** The
+            // source is the daemon's own trait and could in principle be anything, but everything
+            // that implements it renders through `mixengine-core` — which already knows whether a
             // failure is a typo in somebody's overrides or a bug in ours. This arm used to hold an
             // `anyhow::Error` and *downcast* to ask: it worked, and it would have stopped working
             // the first time somebody added a `.context(…)` on the way out, silently, by

@@ -1,10 +1,12 @@
-//! `domain.*` — roadmap task **T46**.
+//! `domain.*`.
 //!
-//! Two verbs and a diagnostic. The verbs are **thin over [`Sites`] on purpose**: each computes a new
-//! domain list and hands it to the same update the `site.*` half uses, so the TLD check, the hosts
-//! queueing and the front-end re-render have exactly one implementation between them (T46 design,
-//! D1). What is here that is not there is the *reason* a caller cannot compose them itself — a read,
-//! an append and a write back is a race with whatever another client did in between.
+//! Two verbs and a diagnostic. The verbs are **thin over [`Sites`] on purpose**: each computes a
+//! new domain list and hands it to the same update the `site.*` half uses, so the TLD check, the
+//! hosts queueing and the front-end re-render have exactly one implementation between them (D1).
+//! What is here that is not there is the *reason* a caller cannot compose them itself — a read, an
+//! append and a write back is a race with whatever another client did in between.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-24-t46-domain-rpc-design.md`.
 
 pub(crate) mod lookup;
 
@@ -27,7 +29,7 @@ pub(crate) struct Domains {
     /// The rows, for the diagnostic's "which site declares this" and nothing else.
     store: mixengine_core::Store,
 
-    /// The server, for its address and for which TLDs this machine routes — T44 and T45.
+    /// The server, for its address and for which TLDs this machine routes.
     dns: Arc<crate::dns::Dns>,
 
     /// This machine, for the one fact that is on disk rather than in the database.
@@ -60,7 +62,7 @@ impl Domains {
     /// Give a site one more name.
     ///
     /// **The new name goes on the end**, so the primary stays the primary: `site.update` reorders,
-    /// and a verb that says "add a domain" does not get to decide what a site is (T46 design, D3).
+    /// and a verb that says "add a domain" does not get to decide what a site is (D3).
     ///
     /// # Errors
     ///
@@ -84,7 +86,7 @@ impl Domains {
     /// where to look — and `conflict` for a site's last domain or its primary.
     pub(crate) async fn remove(&self, remove: &DomainRemove) -> Result<SiteDetail, Error> {
         // The domain names its own site: `site_domains_domain` is `UNIQUE`, which is why the request
-        // carries no site to disagree with (T46 design, D2).
+        // carries no site to disagree with (D2).
         let site = SiteRef::Domain(remove.domain.to_ascii_lowercase());
         let (record, _holder) = self.sites.expect(&site).await?;
 
@@ -97,10 +99,10 @@ impl Domains {
         self.sites.replace_domains(&site, domains, true).await
     }
 
-    /// What actually happens to a name — roadmap task **T46**.
+    /// What actually happens to a name.
     ///
     /// Four facts, three of them read and one asked. Nothing here decides whether the name *works*:
-    /// they fail independently and a client renders the one that is wrong (T46 design, D4).
+    /// they fail independently and a client renders the one that is wrong (D4).
     ///
     /// # Errors
     ///
@@ -196,8 +198,8 @@ impl Domains {
 /// restated as prose: a name nothing declares is not *also* missing a hosts entry, it is undeclared,
 /// and saying both would bury the one that matters.
 ///
-/// It never says what to do. Repair is T47's, and advice written here would drift from the thing
-/// that performs it (T46 design, D4).
+/// It never says what to do. Repair is `mix doctor`'s, and advice written here would drift from the
+/// thing that performs it (D4).
 fn why_not(
     site: Option<&str>,
     hosts_entry: bool,

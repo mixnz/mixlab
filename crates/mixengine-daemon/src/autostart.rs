@@ -1,5 +1,4 @@
-//! Whether this machine starts a daemon for this home at login — the only door onto it. Roadmap
-//! task **T85b**.
+//! Whether this machine starts a daemon for this home at login — the only door onto it.
 //!
 //! **Written only when somebody asks**, which is [`crate::shims`]' rule and the same one: a logon
 //! task, a LaunchAgent and a systemd user unit are all outside `MIXENGINE_HOME`, and

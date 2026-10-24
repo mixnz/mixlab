@@ -1,11 +1,11 @@
-//! Reading a credential, and the one compatibility path there is — roadmap task **T126**.
+//! Reading a credential, and the one compatibility path there is.
 //!
 //! # Why a module and not a method call
 //!
-//! T126 put the home in front of every credential address, because the OS credential store is one
-//! store per *user* and `MIXENGINE_HOME` means a user can have several homes. Every address this
-//! build **writes** is `<home-id>/<service-id>/<user>`; every address a home wrote before it is
-//! `<service-id>/<user>`, and those entries are somebody's running servers.
+//! ADR 0032 put the home in front of every credential address, because the OS credential store is
+//! one store per *user* and `MIXENGINE_HOME` means a user can have several homes. Every address
+//! this build **writes** is `<home-id>/<service-id>/<user>`; every address a home wrote before it
+//! is `<service-id>/<user>`, and those entries are somebody's running servers.
 //!
 //! So a read that finds nothing at the new address looks at the old one, and **moves what it
 //! finds**. That is the whole of the migration, and the reason it is shaped this way rather than as
@@ -19,8 +19,9 @@
 //!
 //! **It does not delete the old entry.** Another home on this machine may still be running a build
 //! that reads it, and a migration that took the credential away from a service nobody has upgraded
-//! yet would cause exactly the outage T126 exists to end. What is left behind is an entry nothing
-//! writes any more; `mix doctor` is where that becomes visible, and removing it is a later task.
+//! yet would cause exactly the outage the home id exists to end. What is left behind is an entry
+//! nothing writes any more; `mix doctor` is where that becomes visible, and removing it is a later
+//! task.
 //!
 //! **It does not check whether the value it moves is right.** An entry at the old address may
 //! already be another home's — that is the bug being fixed, and by the time a home reads it the
@@ -35,7 +36,7 @@ use mixengine_proto::{Error, ErrorCode};
 
 use crate::error::ToWire as _;
 
-/// Read the credential at `address`, moving one found at its pre-T126 address.
+/// Read the credential at `address`, moving one found at the address it had before it named a home.
 ///
 /// Blocking, and called from inside a `spawn_blocking` by both of its callers: the keyring blocks,
 /// and on Linux it blocks on a D-Bus round trip to a daemon that may be prompting somebody to
@@ -179,7 +180,7 @@ mod tests {
         assert_eq!(found.as_deref(), Some("this home's"));
     }
 
-    /// The migration: one written before T126 is found, answered, **and moved**.
+    /// The migration: one written before addresses named a home is found, answered, **and moved**.
     #[test]
     fn a_credential_written_before_homes_were_named_is_moved_to_this_home() {
         let host = machine();
@@ -231,8 +232,8 @@ mod tests {
     /// An address with no home in it has nothing older to fall back to.
     ///
     /// **One lookup and not two**, which is the point of asking whether the first segment *is* a
-    /// home id rather than whether there is one: an address from before T126 would otherwise cost
-    /// a second round trip to a key nothing ever wrote, on every miss, for ever.
+    /// home id rather than whether there is one: an address from before the home id would otherwise
+    /// cost a second round trip to a key nothing ever wrote, on every miss, for ever.
     #[test]
     fn an_address_with_no_home_has_no_fallback() {
         let host = machine();

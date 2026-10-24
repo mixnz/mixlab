@@ -1,4 +1,4 @@
-//! `runtime.upgrade*` and `package.upgrade*` — roadmap tasks **T193b** and **T193c**.
+//! `runtime.upgrade*` and `package.upgrade*`.
 //!
 //! Beside [`super::front_end`] and built the same way: an update is a stop, a row change, a render
 //! and a start, and its difficulty is what happens when one of them does not work. The rows are
@@ -6,6 +6,9 @@
 //!
 //! **Shared by both namespaces is only which release `to` is, and who is already moving what.**
 //! Everything else differs enough that one walk for both would be two walks behind a `match`.
+//!
+//! The D-numbers here and in both submodules are those of
+//! `docs/specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md`.
 
 mod package;
 mod runtime;

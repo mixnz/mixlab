@@ -1,4 +1,4 @@
-//! The API server: JSON-RPC over HTTP/1.1 on the local endpoint T7 opened.
+//! The API server: JSON-RPC over HTTP/1.1 on the local endpoint.
 //!
 //! Three layers, one per file, and the split is the same one the architecture draws:
 //!
@@ -18,7 +18,7 @@
 // subscriber receives and the registry's tests assert on the ones its transitions produce.
 // Crate-visible for one name: `blueprints::planned` reads the scaffold's PATH from
 // `api::apply::scaffold`, so that a plan judges a command against the string the shell would be
-// started with (T78b, D3).
+// started with.
 mod adopt_service;
 pub(crate) mod apply;
 mod cert;
@@ -100,8 +100,8 @@ pub(crate) struct Api {
 
     /// What is being supervised, and the only thing that starts or stops a service.
     ///
-    /// T19 deliberately left this in `serve`, where the shutdown wait needs it, rather than adding a
-    /// field nothing read. `service.*` is what reads it — roadmap task T19a.
+    /// The runner was first left in `serve`, where the shutdown wait needs it, rather than adding a
+    /// field nothing read. `service.*` is what reads it.
     services: Arc<services::Registry>,
 
     /// The long operations this daemon is running, and the only thing that starts or cancels one.
@@ -122,11 +122,10 @@ pub(crate) struct Api {
     /// `main` would be a fifth thing to keep in step for no reading of it.
     php_extensions: Arc<crate::php_extensions::Extensions>,
 
-    /// What an `extension.toml` declares, and what installing it here would produce —
-    /// roadmap task **T80**.
+    /// What an `extension.toml` declares, and what installing it here would produce.
     ///
-    /// Built here for `php_extensions`' reason, and holding only [`Paths`]: T80 stores
-    /// nothing, so there is no row and no registry beside it.
+    /// Built here for `php_extensions`' reason, and holding only [`Paths`]: the manifest format
+    /// stores nothing, so there is no row and no registry beside it.
     pub(crate) extensions: Arc<crate::extensions::Extensions>,
 
     /// The installed service packages, and the only thing that starts one of those installs.
@@ -139,21 +138,21 @@ pub(crate) struct Api {
     /// field in `main` would be one more thing to keep in step for no reading of it.
     projects: Arc<crate::projects::Projects>,
 
-    /// `database.create`'s half — roadmap task **T77a**.
+    /// `database.create`'s half.
     ///
     /// Built here for `projects`' reason, and holding the registry rather than the store: what it
     /// needs is how a service's databases are administered, which only a walk of the declared set
     /// knows.
     pub(crate) databases: Arc<crate::databases::Databases>,
 
-    /// Which credential store this daemon runs on — roadmap task **T194**. `daemon.status` answers
-    /// it, and `daemon.set_credential_store` compares a switch against it.
+    /// Which credential store this daemon runs on. `daemon.status` answers it, and
+    /// `daemon.set_credential_store` compares a switch against it.
     credentials: crate::credentials::Facts,
 
     /// The blueprints this home holds, and the only thing that writes one down.
     ///
     /// Built here for `projects`' reason, and holding [`Paths`] beside the store because a capture
-    /// renders a file next to the row it writes — roadmap task **T77**.
+    /// renders a file next to the row it writes.
     pub(crate) blueprints: Arc<crate::blueprints::Blueprints>,
 
     /// The declared sites, and the only thing that writes one down.
@@ -161,39 +160,39 @@ pub(crate) struct Api {
     /// Built here for `projects`' reason: it holds nothing of its own that outlives a call.
     pub(crate) sites: Arc<crate::sites::Sites>,
 
-    /// `mix doctor`'s half — roadmap task **T47a**.
+    /// `mix doctor`'s half.
     ///
     /// Holds every other part rather than being held by them: it is the one handler whose answer is
     /// assembled *across* subsystems, and each is reached through the door that already owns it.
     pub(crate) doctor: Arc<crate::doctor::Doctor>,
 
-    /// `mix doctor --repair`'s half — roadmap task **T47b**.
+    /// `mix doctor --repair`'s half.
     ///
     /// Built beside `doctor` and holding it, so the two halves of one feature cannot be given
     /// different dependencies: what a repair acts on is what the report found, read at the top of
     /// every call.
     pub(crate) repairs: Arc<crate::repair::Repairs>,
 
-    /// `mix doctor --bundle`'s half — roadmap task **T93**.
+    /// `mix doctor --bundle`'s half.
     ///
     /// Holds no reading of its own: what goes into an archive is what the handler already
     /// asked `doctor` and `status` for, handed over. A second `Doctor` here would be a second
     /// report of one machine, taken a moment apart.
     pub(crate) bundles: Arc<crate::diagnostics::Bundles>,
 
-    /// What `daemon.uninstall` left for this process to remove as it exits — roadmap task **T87**.
+    /// What `daemon.uninstall` left for this process to remove as it exits.
     ///
     /// Read by `serve` once the accept loop has drained, and acted on by `main`.
     pub(crate) armed: Arc<Armed>,
 
-    /// `mix uninstall`'s half — roadmap task **T87**.
+    /// `mix uninstall`'s half.
     ///
     /// Built beside `doctor` and holding the same readers rather than a `Host` of its own, on
     /// `repairs`' rule: the plan and the act are two halves of one feature, and giving them
     /// different dependencies would be giving them different answers about one machine.
     pub(crate) uninstall: Arc<crate::uninstall::Uninstall>,
 
-    /// `mix disk`'s and `mix cleanup`'s half — roadmap task **T96**.
+    /// `mix disk`'s and `mix cleanup`'s half.
     ///
     /// Holds only [`Paths`] and its own last reading: what it measures is directories, and what it
     /// removes is a closed list of names under two of them. The refusal that keeps it away from a
@@ -201,10 +200,10 @@ pub(crate) struct Api {
     /// `Api::cleanup_now`.
     pub(crate) disk: Arc<crate::disk::Disk>,
 
-    /// This home's certificate authority (T48): made at start, reported by `cert.ca_status`.
+    /// This home's certificate authority: made at start, reported by `cert.ca_status`.
     pub(crate) certificates: crate::certs::Certificates,
 
-    /// The `domain.*` half — roadmap task **T46**.
+    /// The `domain.*` half.
     ///
     /// Built here for `sites`' reason, and over the same object: both write a site, and two doors
     /// onto one table would be two places for a rule to live.
@@ -213,14 +212,13 @@ pub(crate) struct Api {
     /// `<root>/bin` and this user's PATH, and the only thing that writes either.
     shims: Arc<crate::shims::Shims>,
 
-    /// Whether this machine starts a daemon for this home at login — roadmap task **T85b**.
+    /// Whether this machine starts a daemon for this home at login.
     ///
     /// Beside `shims` because it is the second method that writes outside the home and the second
     /// that only ever does so when asked.
     autostart: Arc<crate::autostart::Autostart>,
 
-    /// Whether a newer MixEngine exists, and the only thing that replaces these binaries —
-    /// roadmap task **T88**.
+    /// Whether a newer MixEngine exists, and the only thing that replaces these binaries.
     ///
     /// Here rather than built in [`Api::new`], on `runtimes`' reasoning: building it can fail — a
     /// compiled-in key that is not a key, an `--update-key` somebody pasted half of — and that has
@@ -231,13 +229,13 @@ pub(crate) struct Api {
     /// The queue of privileged operations, and the only thing that raises a prompt.
     pub(crate) elevation: Arc<crate::elevation::Elevation>,
 
-    /// The DNS server, and which of the two name mechanisms this home is on — roadmap task T44.
+    /// The DNS server, and which of the two name mechanisms this home is on.
     pub(crate) dns: Arc<crate::dns::Dns>,
 
-    /// What is being measured, and the only way a client reaches a reading — roadmap task T71.
+    /// What is being measured, and the only way a client reaches a reading.
     metrics: crate::metrics::sampler::Handle,
 
-    /// How many finished minutes over its ceiling the memory watchdog gives a service — **T71a**.
+    /// How many finished minutes over its ceiling the memory watchdog gives a service.
     ///
     /// Read by `service.limits`, which describes the watchdog rather than reaching it. See
     /// [`Supervision::memory_over_minutes`].
@@ -252,7 +250,7 @@ pub(crate) struct Api {
     /// How this daemon stops, and how long it is allowed to take — see [`Shutdown`].
     shutdown: Shutdown,
 
-    /// One change to *which row is this home's front end* at a time — roadmap task **T97**.
+    /// One change to *which row is this home's front end* at a time.
     ///
     /// **The window this closes is real and short.** `service.set_front_end` deletes the old row
     /// before it creates the new one, because ADR 0026 requires that "exactly one front end" is
@@ -267,9 +265,9 @@ pub(crate) struct Api {
     /// path that is otherwise the hottest in this file.
     front_end: tokio::sync::Mutex<()>,
 
-    /// Every version an upgrade job is moving from or to, by `(kind or package, version)` —
-    /// roadmap task **T193b**. The same job is the value under both keys, so a second upgrade of the
-    /// same `from` is answered with it and anything touching either version is refused.
+    /// Every version an upgrade job is moving from or to, by `(kind or package, version)`. The same
+    /// job is the value under both keys, so a second upgrade of the same `from` is answered with it
+    /// and anything touching either version is refused.
     upgrading: tokio::sync::Mutex<
         std::collections::BTreeMap<
             (String, mixengine_proto::PackageVersion),
@@ -289,8 +287,8 @@ pub(crate) struct Api {
 /// `bin/` is the one of the four that is *reached from outside* — by a shim in a shell that has
 /// never spoken to a daemon.
 ///
-/// T22 made the first two into one argument for exactly this reason and predicted the growth; T23
-/// and T26 are the growth.
+/// The job system made the first two into one argument for exactly this reason and predicted the
+/// growth; runtimes and `bin/` are the growth.
 #[derive(Debug)]
 pub(crate) struct Supervision {
     /// What is being supervised, and the only thing that starts or stops a service.
@@ -305,8 +303,8 @@ pub(crate) struct Supervision {
     /// The same, for the servers, databases and caches a service is an instance of.
     pub(crate) packages: Arc<crate::packages::Packages>,
 
-    /// The signed extension registry, verified with the compiled-in key — roadmap task **T81**,
-    /// and **T81b** for why it is the client and not `Extensions` that arrives here.
+    /// The signed extension registry, verified with the compiled-in key. It is the client and not
+    /// `Extensions` that arrives here because `Extensions` holds `Sites`, which the API builds.
     ///
     /// Built by `main` on `runtimes`' reasoning: building it can fail — a compiled-in key that is
     /// not a key — and that has to fail the daemon's start rather than the first call, while
@@ -318,42 +316,42 @@ pub(crate) struct Supervision {
     /// `<root>/bin` and this user's PATH, and the only thing that writes either.
     pub(crate) shims: Arc<crate::shims::Shims>,
 
-    /// The daemon's autostart entry, and the only thing that writes it — roadmap task **T85b**.
+    /// The daemon's autostart entry, and the only thing that writes it.
     pub(crate) autostart: Arc<crate::autostart::Autostart>,
 
-    /// The update feed and the swap — roadmap task **T88**. See [`Api::updates`].
+    /// The update feed and the swap. See [`Api::updates`].
     pub(crate) updates: Arc<crate::updates::Updates>,
 
     /// The queue of privileged operations, and the only thing that raises a prompt.
     pub(crate) elevation: Arc<crate::elevation::Elevation>,
 
-    /// The DNS server, and the mode it puts this home in — roadmap task T44.
+    /// The DNS server, and the mode it puts this home in.
     ///
     /// Here rather than built in [`Api::new`], on `services`' reasoning rather than `extensions`':
     /// it binds sockets and owns a task, so there is exactly one per daemon, and the queue that
     /// decides whether this home still needs a hosts file reads the same object.
     pub(crate) dns: Arc<crate::dns::Dns>,
-    /// What advertises a shared site's name on the local network — roadmap task **T75**.
+    /// What advertises a shared site's name on the local network.
     ///
     /// Here for `dns`' reason: it owns a socket and a task, so there is exactly one per daemon, and
     /// every path that changes a share reconciles the same object.
     pub(crate) mdns: Arc<crate::mdns::Mdns>,
 
-    /// What is being measured, and the only way a client reaches a reading — roadmap task T71.
+    /// What is being measured, and the only way a client reaches a reading.
     ///
     /// A handle rather than the sampler: the loop owns the sampler and is the only thing that takes
     /// a reading. What the API can do is subscribe — which is what puts this daemon on its
     /// one-second rate — and reuse a reading young enough to answer with.
     pub(crate) metrics: crate::metrics::sampler::Handle,
 
-    /// How many finished minutes over its ceiling the memory watchdog gives a service — **T71a**.
+    /// How many finished minutes over its ceiling the memory watchdog gives a service.
     ///
     /// **The number and not the watchdog**, because the API only ever *describes* it: `service.limits`
     /// says what would happen to a service that went over, and a handler that could reach the loop
     /// itself could ask it to do something, which no client may.
     pub(crate) memory_over_minutes: u32,
 
-    /// This home's crash reports — roadmap task **T91**.
+    /// This home's crash reports.
     ///
     /// Here rather than an eighth argument to [`Api::new`], which is what this struct exists to
     /// prevent, and beside `memory_over_minutes` for that field's own reason: it is a reading taken
@@ -362,8 +360,8 @@ pub(crate) struct Supervision {
     /// only thing that writes one is a panic.
     pub(crate) crashes: crate::crash::Reports,
 
-    /// Which credential store this daemon runs on, and whether it would accept a switch — roadmap
-    /// task **T194**. Decided in `main` before the host was built, and only described from here.
+    /// Which credential store this daemon runs on, and whether it would accept a switch. Decided in
+    /// `main` before the host was built, and only described from here.
     pub(crate) credentials: crate::credentials::Facts,
 }
 
@@ -373,7 +371,7 @@ pub(crate) struct Supervision {
 /// arms them and `main` removes them — after the accept loop has drained, after every service has
 /// been stopped in dependency order, after `Store::close` has checkpointed the write-ahead log and
 /// after the home lock has been dropped. That is the only point at which every handle this process
-/// holds inside the home is closed (the T87 design, D9).
+/// holds inside the home is closed.
 ///
 /// **Empty on every ordinary daemon**, and taken exactly once: a second reader finding the same list
 /// would remove a directory twice and report the second failure as a fault.
@@ -382,9 +380,9 @@ pub(crate) struct Armed {
     /// What `main` removes once every handle inside them is closed.
     paths: std::sync::Mutex<Vec<std::path::PathBuf>>,
 
-    /// Set by an uninstall that finished — T182, D1. The daemon ends on this, whether or not a
-    /// directory was armed: a home that is kept is no reason to go on serving a machine that has
-    /// just been told to forget it.
+    /// Set by an uninstall that finished. The daemon ends on this, whether or not a directory was
+    /// armed: a home that is kept is no reason to go on serving a machine that has just been told
+    /// to forget it.
     finished: std::sync::atomic::AtomicBool,
 }
 
@@ -401,7 +399,7 @@ impl Armed {
         self.held().is_empty()
     }
 
-    /// The uninstall finished; the daemon is to end once its job is over — T182, D1.
+    /// The uninstall finished; the daemon is to end once its job is over.
     pub(crate) fn finish(&self) {
         self.finished
             .store(true, std::sync::atomic::Ordering::SeqCst);
@@ -440,7 +438,7 @@ pub(crate) struct Shutdown {
     /// looking at. `daemon.shutdown` is the other, and it cancels rather than reads.
     token: CancellationToken,
 
-    /// The whole of what `daemon.shutdown` may spend stopping services — roadmap task **T9a**.
+    /// The whole of what `daemon.shutdown` may spend stopping services.
     ///
     /// `config.toml`'s and not a caller's: how long this machine's services may take to shut down is
     /// a property of the machine, and a request that could ask for thirty seconds could ask for
@@ -475,13 +473,13 @@ impl Shutdown {
 ///
 /// **A guard rather than a last statement, because a handler does not only end by returning.** The
 /// future serving a request is dropped where it stands when its connection goes — hyper is built
-/// with its default `half_close`, so a client that is interrupted mid-request takes the handler with
-/// it — and a panic anywhere inside the walk does the same. `daemon.shutdown` cannot survive either:
-/// [`Registry::stopping_within`](crate::services::Registry::stopping_within) latches the registry
-/// shut on its first line and nothing ever clears that, so a shutdown that got that far and no
-/// further leaves a daemon that is still listening, still answering, refusing every start it is
-/// asked for, and waiting on a token nobody is left to cancel. The only way out of that is the one
-/// T9a exists to remove.
+/// with its default `half_close`, so a client that is interrupted mid-request takes the handler
+/// with it — and a panic anywhere inside the walk does the same. `daemon.shutdown` cannot survive
+/// either: [`Registry::stopping_within`](crate::services::Registry::stopping_within) latches the
+/// registry shut on its first line and nothing ever clears that, so a shutdown that got that far
+/// and no further leaves a daemon that is still listening, still answering, refusing every start it
+/// is asked for, and waiting on a token nobody is left to cancel. The only way out of that is the
+/// one `daemon.shutdown` exists to make unnecessary.
 ///
 /// So the cancellation is on the way out and not on a line: whatever ends the handler, the daemon
 /// goes. The ordering the method rests on is unchanged — this drops after the walk and before the
@@ -510,7 +508,7 @@ impl Api {
     /// taking it here would be taking it too late — see [`Started`].
     ///
     /// `events` is passed rather than made here because the API is no longer the only publisher:
-    /// the registry of running services (T19) announces every transition it persists, and it is
+    /// the registry of running services announces every transition it persists, and it is
     /// built before this so that a handler can reach it. `services` arrives for the same reason and
     /// is the same object the accept loop waits on at shutdown — one registry per daemon, not one
     /// per reader.
@@ -559,9 +557,9 @@ impl Api {
             mdns,
             events.clone(),
         );
-        // MixEngine's own extensions — roadmap task **T81**, built here since **T81b** because a
-        // `web-app` install ends with what `site.create` does after its row, and the `Sites` that
-        // knows how are made a few lines above.
+        // MixEngine's own extensions, built here because a `web-app` install ends with what
+        // `site.create` does after its row, and the `Sites` that knows how are made a few lines
+        // above.
         let extensions = Arc::new(crate::extensions::Extensions::new(
             paths.clone(),
             store.clone(),
@@ -569,8 +567,8 @@ impl Api {
             elevation.host(),
             registry,
             Arc::clone(&sites),
-            // The supervisor, for the pool a `web-app` is served on — roadmap task **T82a**. An
-            // uninstall stops it before the row that describes it is deleted.
+            // The supervisor, for the pool a `web-app` is served on. An uninstall stops it before
+            // the row that describes it is deleted.
             Arc::clone(&services),
         ));
         let domains = crate::domains::Domains::new(
@@ -659,7 +657,7 @@ impl Api {
         })
     }
 
-    /// The directories a finished uninstall left for this process to remove — roadmap task T87.
+    /// The directories a finished uninstall left for this process to remove.
     ///
     /// Taken, not read: serve is the one caller, and a second one finding the same list would
     /// remove a directory twice and report the second failure as a fault.
@@ -677,7 +675,7 @@ impl Api {
         &self.services
     }
 
-    /// What is being measured — roadmap task T71.
+    /// What is being measured.
     fn metrics(&self) -> &crate::metrics::sampler::Handle {
         &self.metrics
     }

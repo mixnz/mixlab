@@ -1,9 +1,9 @@
 //! `runtime.*` against a real `mixengined`, a real signed index and a real archive.
 //!
-//! Roadmap task **T23**, and the half no unit test can reach. That a table can be read, that an
-//! archive can be unpacked and that a job can be run are each provable in one process; that asking a
-//! daemon over a socket for a version it has never heard of *ends with PHP on disk, a row describing
-//! it, and a job that says so* is the seam, and the seam is the feature.
+//! The half no unit test can reach. That a table can be read, that an archive can be unpacked and
+//! that a job can be run are each provable in one process; that asking a daemon over a socket for a
+//! version it has never heard of *ends with PHP on disk, a row describing it, and a job that says
+//! so* is the seam, and the seam is the feature.
 //!
 //! **Nothing here touches the network.** [`MockRegistry`] serves a document it signs with a keypair
 //! it generated, over a loopback socket, and the daemon is pointed at both with `--index-url` and
@@ -98,7 +98,8 @@ impl Fixture {
     }
 
     /// Stop this daemon, remove what the uninstaller removes with the home — the database — and
-    /// start a fresh daemon on the same directories: the machine T182f was reported from.
+    /// start a fresh daemon on the same directories: the machine a reinstall was first reported
+    /// from.
     async fn reinstall(&mut self) {
         self.daemon.take();
         for name in ["mixengine.db", "mixengine.db-wal", "mixengine.db-shm"] {
@@ -285,7 +286,7 @@ fn index(packed: &Packed, url: &str) -> Value {
     })
 }
 
-/// [`index`], plus a newer PHP this machine can never run — roadmap task **T149**.
+/// [`index`], plus a newer PHP this machine can never run.
 ///
 /// A requirement no runner meets: glibc 99 on Linux, macOS 99 on a Mac. Windows has no such
 /// requirement to give — every runner has a Visual C++ runtime new enough — so the test that uses
@@ -319,7 +320,7 @@ fn index_with_one_that_cannot_run(packed: &Packed, url: &str) -> Value {
     published
 }
 
-/// The SAPI a real PHP publishes on this system — roadmap task T32.
+/// The SAPI a real PHP publishes on this system.
 ///
 /// **One and not both**, which is the shape of the index rather than a convenience: a Unix PHP has
 /// `php-fpm` and a Windows one has `php-cgi`, and publishing both here would give the php-fpm recipe

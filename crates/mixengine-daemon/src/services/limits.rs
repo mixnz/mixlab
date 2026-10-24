@@ -1,10 +1,10 @@
 //! Turning a declared `ResourceLimits` into the value the spawn layer speaks.
 //!
 //! **Two types for one idea, and the seam is deliberate.** `mixengine-platform`'s `process` module
-//! is compiled by `mixengine-shim` without `mixengine-proto` — the `process` feature does not enable
-//! that dependency, only `host` and `elevated` do — so it cannot name the proto type without adding
-//! proto to the shim's dependency closure to describe a value the shim never has. The T68 design,
-//! D9, and the same argument `mixengine_platform::process::Signal` already carries.
+//! is compiled by `mixengine-shim` without `mixengine-proto` — the `process` feature does not
+//! enable that dependency, only `host` and `elevated` do — so it cannot name the proto type without
+//! adding proto to the shim's dependency closure to describe a value the shim never has. It is the
+//! same argument `mixengine_platform::process::Signal` already carries.
 //!
 //! This function is the whole of what that costs, and this module exists so that it is the whole:
 //! nothing else in the daemon converts between the two.

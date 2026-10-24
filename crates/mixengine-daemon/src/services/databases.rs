@@ -1,4 +1,4 @@
-//! Making a database and the account that reaches it — roadmap task **T77a**.
+//! Making a database and the account that reaches it.
 //!
 //! [`mixengine_core::generate::databases`] says *what statements*; this says *with which
 //! credential*, and it is here for [`super::first_run`]'s reason: the OS keyring and the process
@@ -9,11 +9,12 @@
 //! 1. **Read the superuser's password**, which the service's first run generated and stored.
 //! 2. **Probe.** One read-only query, and the only thing that can tell an account of ours from
 //!    somebody else's.
-//! 3. **Decide** — [`decide`], which is the design's D3 and the whole of what makes step 5 safe.
-//! 4. **Store the account's password before touching the server.** T33's ordering, for T33's
-//!    reason: what a failure after this point leaves behind is a credential for an account that does
-//!    not exist, and the next attempt creates the account with exactly it. The other order leaves an
-//!    account whose password exists nowhere, which nothing can repair.
+//! 3. **Decide** — [`decide`], whose rule that a keyring entry is the deed of ownership is the
+//!    whole of what makes step 5 safe.
+//! 4. **Store the account's password before touching the server.** The first run's ordering, for
+//!    its reason: what a failure after this point leaves behind is a credential for an account that
+//!    does not exist, and the next attempt creates the account with exactly it. The other order
+//!    leaves an account whose password exists nowhere, which nothing can repair.
 //! 5. **Run the statements**, the last of which logs in as the new account and writes with it.
 
 use std::sync::Arc;
@@ -33,7 +34,7 @@ pub(crate) enum Account {
     Generate,
 
     /// A password a person chose: write it to the keyring before anything runs, exactly as
-    /// [`Generate`](Self::Generate) does, then use it. Roadmap task **T77b**.
+    /// [`Generate`](Self::Generate) does, then use it.
     ///
     /// **Distinct from [`Stored`](Self::Stored) on purpose.** A chosen password has never been
     /// written yet — not even when it replaces an existing entry — so treating it as already
@@ -49,10 +50,10 @@ pub(crate) enum Account {
     Foreign,
 }
 
-/// The design's **D3**, and roadmap task **T77b**'s D6: a keyring entry is the deed of ownership,
-/// and a chosen password is stored exactly where a generated one would be — never a way around the
-/// deed. `chosen` overrides what row of the *value* is used, never what row of the *decision* is:
-/// the foreign row is unreachable by any value of `chosen`, on purpose.
+/// **A keyring entry is the deed of ownership**, and a chosen password is stored exactly where a
+/// generated one would be — never a way around the deed. `chosen` overrides what row of the *value*
+/// is used, never what row of the *decision* is: the foreign row is unreachable by any value of
+/// `chosen`, on purpose.
 ///
 /// Pure, and deliberately so — this is the rule the whole task rests on, and a rule that needs a
 /// database and a credential store to exercise is a rule nobody checks.
@@ -76,7 +77,7 @@ pub(crate) fn decide(found: Found, stored: Option<String>, chosen: Option<String
     }
 }
 
-/// Why a database and its account were not made — roadmap task **T202**, D1.
+/// Why a database and its account were not made.
 ///
 /// **One refusal by type, everything else already on the wire.** The blueprint's database step
 /// retries with another name on [`Foreign`](Self::Foreign) and must not on anything else; the
@@ -85,7 +86,7 @@ pub(crate) fn decide(found: Found, stored: Option<String>, chosen: Option<String
 /// introduced, and stays that way.
 #[derive(Debug)]
 pub(crate) enum Making {
-    /// The account is on the server and this home holds no credential for it (T77a, D3).
+    /// The account is on the server and this home holds no credential for it.
     Foreign { service: ServiceId, user: String },
 
     /// Any other refusal.
@@ -93,7 +94,7 @@ pub(crate) enum Making {
 }
 
 impl Making {
-    /// The wire error a client receives, which for a foreign account is T77a's sentence and hint.
+    /// The wire error a client receives, which for a foreign account is a sentence and a hint.
     pub(crate) fn into_wire(self) -> Error {
         match self {
             Self::Foreign { service, user } => {
@@ -174,8 +175,8 @@ pub(crate) async fn ensure(
                 ErrorCode::PreconditionFailed,
                 format!("{service} has no superuser credential in this machine's keyring"),
             )
-            // **The same repair, named for the other shape this takes** — roadmap task **T127**. A
-            // missing entry and a wrong one are one command away from each other: the reset writes
+            // **The same repair, named for the other shape this takes.** A missing entry and a
+            // wrong one are one command away from each other: the reset writes
             // what this home holds, and generates one first where it holds nothing.
             .with_hint(format!(
                 "that password is written by the service's first run; `mix service start` \
@@ -189,10 +190,10 @@ pub(crate) async fn ensure(
         .probe(ask, &root)
         .map_err(|error| error.to_wire())?;
 
-    // **The probe is where a stale superuser credential is met, and the only place** — roadmap task
-    // **T126**. Every statement after it authenticates with the same password, so a probe that got
-    // through means the rest will; a probe that did not is the one failure worth explaining, and
-    // `ERROR 1045` on its own explains nothing to the person whose blueprint just stopped.
+    // **The probe is where a stale superuser credential is met, and the only place.** Every
+    // statement after it authenticates with the same password, so a probe that got through means
+    // the rest will; a probe that did not is the one failure worth explaining, and `ERROR 1045` on
+    // its own explains nothing to the person whose blueprint just stopped.
     let probed = super::step::run(&probe)
         .await
         .map_err(|error| explain_a_refused_superuser(error, service))?;
@@ -226,25 +227,25 @@ pub(crate) async fn ensure(
 
 /// What a server says when it refuses the superuser password this home holds.
 ///
-/// **Two of the three are codes and one is prose, and that asymmetry is measured** — roadmap task
-/// **T127**. `1045` is the MySQL family's and appears verbatim in both clients' output. `28P01` is
-/// PostgreSQL's SQLSTATE and **psql never prints it for a refused login**: it is a libpq
-/// *connection* failure and never reaches the formatter that would print a SQLSTATE, with
-/// `VERBOSITY=verbose` or without. So T126's matcher had never fired for a PostgreSQL user at all,
-/// and what is matched there is the sentence libpq writes, which is the only thing there is to
-/// match. `28P01` is kept beside it for a client that does surface it.
+/// **Two of the three are codes and one is prose, and that asymmetry is measured.** `1045` is the
+/// MySQL family's and appears verbatim in both clients' output. `28P01` is PostgreSQL's SQLSTATE
+/// and **psql never prints it for a refused login**: it is a libpq *connection* failure and never
+/// reaches the formatter that would print a SQLSTATE, with `VERBOSITY=verbose` or without. So the
+/// first matcher, which looked for codes alone, had never fired for a PostgreSQL user at all, and
+/// what is matched there is the sentence libpq writes, which is the only thing there is to match.
+/// `28P01` is kept beside it for a client that does surface it.
 ///
-/// **One list, two readers** — roadmap task **T127a**. [`explain_a_refused_superuser`] reads the
-/// message of a statement MixEngine itself ran, and [`refusal_in_log`] reads lines a server wrote to
-/// whoever was talking to it. A second copy of these three strings is the thing that would go stale
-/// the next time a client changes its wording.
+/// **One list, two readers.** [`explain_a_refused_superuser`] reads the message of a statement
+/// MixEngine itself ran, and [`refusal_in_log`] reads lines a server wrote to whoever was talking
+/// to it. A second copy of these three strings is the thing that would go stale the next time a
+/// client changes its wording.
 const REFUSALS: [&str; 3] = ["ERROR 1045", "28P01", "password authentication failed"];
 
-/// The repair T127 built, named for whoever has just met the refusal.
+/// The credential repair, named for whoever has just met the refusal.
 ///
-/// `pub(super)` because a *start* offers it too since roadmap task **T127a**:
-/// [`super::Registry::ensure_running`] is the other place a person meets this, and one sentence
-/// about a repair is the whole point of it being a function rather than a literal in two files.
+/// `pub(super)` because a *start* offers it too: [`super::Registry::ensure_running`] is the other
+/// place a person meets this, and one sentence about a repair is the whole point of it being a
+/// function rather than a literal in two files.
 pub(super) fn repair_hint(service: &ServiceId) -> String {
     format!(
         "the password inside the server's data directory and the one in this machine's credential \
@@ -256,8 +257,7 @@ pub(super) fn repair_hint(service: &ServiceId) -> String {
     )
 }
 
-/// The line in a service's own output that says it refused *this instance's* superuser — roadmap
-/// task **T127a**.
+/// The line in a service's own output that says it refused *this instance's* superuser.
 ///
 /// **Two conditions, and the second is the whole of what makes this safe to act on.** A refusal
 /// sentence alone says only that somebody was refused, and a server refuses whoever talks to it: an
@@ -287,16 +287,16 @@ where
         .map(ToOwned::to_owned)
 }
 
-/// Say what it means when a server refuses the superuser password this home holds — roadmap task
-/// **T126**.
+/// Say what it means when a server refuses the superuser password this home holds.
 ///
 /// **The one failure this module can diagnose rather than forward.** A database keeps its own copy
 /// of that password inside its data directory, and the keyring holds the other; they are written
 /// together by the first run and can only come apart one way — something replaced the entry after
-/// the bootstrap. Before T126 that address had no home in it, so *anything* on this machine with a
-/// service of the same name could do it: a second `MIXENGINE_HOME`, a sandbox, a test suite. What
-/// the person sees without this is `ERROR 1045 (28000): Access denied for user 'root'@'127.0.0.1'`
-/// at the end of a blueprint that downloaded a runtime and made a project directory.
+/// the bootstrap. Before addresses named their home (ADR 0032), that address had no home in it, so
+/// *anything* on this machine with a service of the same name could do it: a second
+/// `MIXENGINE_HOME`, a sandbox, a test suite. What the person sees without this is
+/// `ERROR 1045 (28000): Access denied for user 'root'@'127.0.0.1'` at the end of a blueprint that
+/// downloaded a runtime and made a project directory.
 ///
 /// What it matches is [`REFUSALS`], which says why one of the three is prose.
 ///
@@ -329,20 +329,20 @@ fn made(existed: bool) -> Made {
 
 /// Read one credential, off the runtime's threads.
 ///
-/// Reached by `database.open` as well (roadmap task **T83**), which reads an account's password
-/// at the moment of the handoff — one reader, so the two agree on the address and the thread.
+/// Reached by `database.open` as well, which reads an account's password at the moment of the
+/// handoff — one reader, so the two agree on the address and the thread.
 ///
-/// **Through [`crate::secrets`] since roadmap task T126**, which is what gives an address written
-/// before addresses named their home somewhere to be found: this call is where an account's entry
-/// from an older build is met, and the module note says why the move happens on the read.
+/// **Through [`crate::secrets`]**, which is what gives an address written before addresses named
+/// their home somewhere to be found: this call is where an account's entry from an older build is
+/// met, and the module note says why the move happens on the read.
 pub(crate) async fn read(host: &Arc<dyn Host>, address: &str) -> Result<Option<String>, Error> {
     crate::secrets::read(host, address).await
 }
 
 /// Store one, the same way.
 ///
-/// `pub(super)` since **T127**: `reset` is its second caller, for the credential a repair generates
-/// where the keyring holds none.
+/// `pub(super)` because `reset` is its second caller, for the credential a repair generates where
+/// the keyring holds none.
 pub(super) async fn write(host: &Arc<dyn Host>, address: &str, secret: &str) -> Result<(), Error> {
     let (host, address, secret) = (Arc::clone(host), address.to_owned(), secret.to_owned());
 
@@ -389,7 +389,7 @@ mod tests {
         ServiceId::parse("mariadb@main").expect("an id")
     }
 
-    /// **The whole of design D3, and it needs neither a server nor a credential store.**
+    /// **The whole of [`decide`]'s rule, and it needs neither a server nor a credential store.**
     ///
     /// A keyring entry is the deed of ownership. The row that matters is the last one: an account on
     /// the server that MixEngine holds no password for is somebody else's, and the alternative to
@@ -410,7 +410,7 @@ mod tests {
             decide(nothing, Some("kept".to_owned()), None),
             Account::Stored("kept".to_owned()),
             "a password stored for an account that does not exist yet is the half-finished attempt \
-             D5 leaves behind, and the next run creates the account with exactly it"
+             storing it first leaves behind, and the next run creates the account with exactly it"
         );
         assert_eq!(
             decide(account, Some("kept".to_owned()), None),
@@ -420,9 +420,8 @@ mod tests {
         assert_eq!(decide(account, None, None), Account::Foreign);
     }
 
-    /// **A chosen password is stored exactly where a generated one would be** — roadmap task
-    /// **T77b**, spec D6 — same branch, same row of the table, whether nothing was stored yet or
-    /// something already was.
+    /// **A chosen password is stored exactly where a generated one would be** — same branch, same
+    /// row of the table, whether nothing was stored yet or something already was.
     #[test]
     fn a_chosen_password_is_stored_the_way_a_generated_one_is() {
         let nothing = Found {
@@ -448,7 +447,7 @@ mod tests {
         );
     }
 
-    /// **Knowing a password is not ownership** — spec D6's last row, the one that matters. An
+    /// **Knowing a password is not ownership** — the last row, the one that matters. An
     /// account on the server MixEngine holds no keyring entry for is refused even when the caller
     /// supplied its correct password: the deed is the keyring entry, never a value proven correct.
     #[test]
@@ -464,7 +463,7 @@ mod tests {
         );
     }
 
-    /// **Design D5.** The password is stored before anything could run, so what a later failure
+    /// **Stored first.** The password is stored before anything could run, so what a later failure
     /// leaves is a credential for an account that does not exist — which the next attempt uses to
     /// create it. The opposite order leaves an account whose password exists nowhere.
     #[tokio::test]
@@ -492,9 +491,9 @@ mod tests {
         );
     }
 
-    /// **A chosen password reaches the keyring, not just the return value** — roadmap task
-    /// **T77b**. Asserting only `decide`'s output would pass even if the caller forgot to write a
-    /// value nobody had stored yet; this is the test that actually exercises the write.
+    /// **A chosen password reaches the keyring, not just the return value.** Asserting only
+    /// `decide`'s output would pass even if the caller forgot to write a value nobody had stored
+    /// yet; this is the test that actually exercises the write.
     #[tokio::test]
     async fn a_chosen_password_is_written_to_the_keyring_before_it_is_used() {
         let (mock, host) = host(true);
@@ -554,8 +553,8 @@ mod tests {
         );
     }
 
-    /// **Design D3's third branch**, as the error a client renders.
-    /// **A foreign account is a refusal the caller can read by type** — roadmap task **T202**, D1.
+    /// **The foreign branch**, as the error a client renders.
+    /// **A foreign account is a refusal the caller can read by type.**
     /// The blueprint's step retries on exactly this and on nothing else, and `ErrorCode::Conflict`
     /// is shared with refusals it must not retry on.
     #[tokio::test]
@@ -592,8 +591,8 @@ mod tests {
     }
 
     /// **A machine with no credential store fails here**, which is before anything could have been
-    /// created — T33's ordering, and the reason this reads the keyring at all rather than letting
-    /// the statements discover it.
+    /// created — the first run's ordering, and the reason this reads the keyring at all rather than
+    /// letting the statements discover it.
     #[tokio::test]
     async fn a_machine_with_no_credential_store_fails_before_anything_is_made() {
         let (mock, host) = host(false);
@@ -615,13 +614,13 @@ mod tests {
         );
     }
 
-    /// **PostgreSQL's refusal is recognised** — roadmap task **T127**.
+    /// **PostgreSQL's refusal is recognised.**
     ///
     /// **Measured rather than guessed.** `28P01` is the SQLSTATE and psql never prints it for a
     /// refused login: not with the recipe's own arguments and not with `VERBOSITY=verbose`, because
     /// a refused login is a libpq *connection* failure and never reaches the formatter that would
-    /// print one. The message below is what psql 17.11 actually wrote, so T126's matcher had never
-    /// fired for a PostgreSQL user at all.
+    /// print one. The message below is what psql 17.11 actually wrote, so the first matcher, which
+    /// looked for codes alone, had never fired for a PostgreSQL user at all.
     #[test]
     fn a_postgres_refusal_is_explained_and_names_the_repair() {
         let service = ServiceId::parse("postgres@main").expect("an id");
@@ -648,7 +647,7 @@ mod tests {
         );
     }
 
-    /// And the MySQL family's still is, with the same repair named — **T127**.
+    /// And the MySQL family's still is, with the same repair named.
     #[test]
     fn a_mysql_refusal_still_names_the_repair() {
         let refused = Error::new(
@@ -687,8 +686,8 @@ mod tests {
     const PG_REFUSAL: &str = "2026-09-13 12:00:00.000 +07 [1234] FATAL:  password authentication \
                               failed for user \"postgres\"";
 
-    /// **The line the server printed is what a failed start is named from** — roadmap task
-    /// **T127a**. The whole of the risk is here: this matcher runs over a log nobody controls.
+    /// **The line the server printed is what a failed start is named from.** The whole of the risk
+    /// is here: this matcher runs over a log nobody controls.
     #[test]
     fn a_superuser_refusal_is_found_in_the_lines_the_server_printed() {
         let said = refusal_in_log(
@@ -753,8 +752,8 @@ mod tests {
         );
     }
 
-    /// The repair is one sentence with two readers — **T127a**. [`explain_a_refused_superuser`] is
-    /// the other, and a second copy of this text is what would go stale.
+    /// The repair is one sentence with two readers. [`explain_a_refused_superuser`] is the other,
+    /// and a second copy of this text is what would go stale.
     #[test]
     fn the_repair_sentence_names_the_service_it_is_for() {
         let hint = repair_hint(&service());

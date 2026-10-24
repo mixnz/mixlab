@@ -46,7 +46,7 @@ async fn refresh_bypasses_a_fresh_cache() {
     );
 }
 
-/// **T182f, D1.** A package install leaves its marker too, for the same reason a runtime does.
+/// A package install leaves its marker too, for the same reason a runtime does.
 #[tokio::test]
 async fn an_installed_package_carries_its_marker() {
     let fixture = Fixture::start().await;
@@ -68,7 +68,7 @@ async fn an_installed_package_carries_its_marker() {
     assert_eq!(marker["version"], VERSION, "{marker}");
 }
 
-/// **T182f.** `package.adopt` answers a recorded version's row, and refuses one not on disk by name.
+/// `package.adopt` answers a recorded version's row, and refuses one not on disk by name.
 #[tokio::test]
 async fn adopting_a_package_answers_its_row_or_says_it_is_not_there() {
     let fixture = Fixture::start().await;
@@ -93,9 +93,9 @@ async fn adopting_a_package_answers_its_row_or_says_it_is_not_there() {
     assert_eq!(refused["data"]["code"], "not_found", "{refused}");
 }
 
-/// **T182g.** Service data an earlier home left under `data/` is listed with the version that would
-/// open it, and adopting it makes a stopped service whose data directory is that one. A directory
-/// whose first run never finished is listed with why it cannot be adopted, and left alone.
+/// Service data an earlier home left under `data/` is listed with the version that would open it,
+/// and adopting it makes a stopped service whose data directory is that one. A directory whose
+/// first run never finished is listed with why it cannot be adopted, and left alone.
 #[tokio::test]
 async fn a_found_instance_is_listed_and_adopting_it_makes_it_a_stopped_service() {
     let fixture = Fixture::started_with_package().await;
@@ -168,7 +168,7 @@ async fn a_found_instance_is_listed_and_adopting_it_makes_it_a_stopped_service()
     assert_eq!(refused["data"]["code"], "not_found", "{refused}");
 }
 
-/// **T182i.** `package.found` lists a package directory with no row, with why.
+/// `package.found` lists a package directory with no row, with why.
 #[tokio::test]
 async fn a_package_directory_with_no_row_is_listed_with_why() {
     let fixture = Fixture::start().await;
@@ -187,9 +187,9 @@ async fn a_package_directory_with_no_row_is_listed_with_why() {
     assert!(stray.is_dir(), "listing touches nothing");
 }
 
-/// **T182h over T182g.** While a copy of the earlier home can be restored, its service data is not
-/// offered for adopting one by one: adopting a database first would give this home a service of its
-/// own, and the restore that brings back the projects and sites would then be refused.
+/// **A restore comes first.** While a copy of the earlier home can be restored, its service data is
+/// not offered for adopting one by one: adopting a database first would give this home a service of
+/// its own, and the restore that brings back the projects and sites would then be refused.
 #[tokio::test]
 async fn service_data_is_not_offered_while_a_restore_is() {
     let fixture = Fixture::started_with_package().await;

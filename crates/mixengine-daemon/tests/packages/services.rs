@@ -2,8 +2,8 @@
 
 use super::*;
 
-/// The whole of the package half of T31a in one test, because it is one sequence: a version is
-/// offered, installed, listed and removed — and the directory on disk agrees at every step.
+/// The whole of `package.*` in one test, because it is one sequence: a version is offered,
+/// installed, listed and removed — and the directory on disk agrees at every step.
 #[tokio::test]
 async fn a_service_package_is_offered_installed_listed_and_removed() {
     let fixture = Fixture::start().await;
@@ -78,7 +78,7 @@ async fn a_service_package_is_offered_installed_listed_and_removed() {
             .parent()
             .expect("a parent")
             .exists(),
-        "the package's own folder goes with its last version (T206c)"
+        "the package's own folder goes with its last version"
     );
     assert_eq!(
         client.call("package.list", json!({})).await["packages"],
@@ -147,8 +147,7 @@ async fn installing_a_version_that_is_already_here_says_so_rather_than_downloadi
     assert_eq!(error["data"]["code"], "already_exists", "{error}");
 }
 
-/// **A folder deleted by hand reads as missing, and installing it again restores the same row** —
-/// roadmap task **T206d**, D1 and D3.
+/// **A folder deleted by hand reads as missing, and installing it again restores the same row.**
 #[tokio::test]
 async fn a_deleted_package_folder_is_missing_and_installing_it_again_restores_it() {
     let fixture = Fixture::start().await;
@@ -180,8 +179,8 @@ async fn a_deleted_package_folder_is_missing_and_installing_it_again_restores_it
     assert!(fixture.installed_at(VERSION).is_dir());
 }
 
-/// **A version whose folder is gone is offered again** — roadmap task **T206d**, D2. This is what
-/// locks MixLab's steps panel again over a devkit deleted by hand.
+/// **A version whose folder is gone is offered again.** This is what locks MixLab's steps panel
+/// again over a devkit deleted by hand.
 #[tokio::test]
 async fn a_deleted_package_folder_is_offered_as_not_installed() {
     let fixture = Fixture::start().await;
@@ -210,8 +209,9 @@ async fn an_installed_package_becomes_a_service_and_can_be_deleted_again() {
     assert_eq!(created["service"]["state"], "stopped", "{created}");
     // A number, and not *the* number: the fixture recipe wishes for 41000, and `free` in this
     // workspace means free on the machine rather than free in a home of its own — anything else on
-    // the runner holding it moves this service up, which is the allocator working. What T34c's own
-    // suite proves about which number lands is proved in `mixengine_core::services::ports`.
+    // the runner holding it moves this service up, which is the allocator working. What the
+    // allocator's own suite proves about which number lands is proved in
+    // `mixengine_core::services::ports`.
     assert!(
         created["service"]["port"].is_u64(),
         "a service of a recipe that names a port was given none: {created}"
@@ -402,9 +402,9 @@ async fn a_running_service_is_not_deleted_out_from_under_itself() {
         .await;
 }
 
-/// **Spec D4.** A site declaring a service is a statement about the future, and `--force` crosses
-/// it. After the delete the site is still there with the link gone — the cascade, not a second
-/// write — which is the whole reason a pool is an `Option`.
+/// A site declaring a service is a statement about the future, and `--force` crosses it. After the
+/// delete the site is still there with the link gone — the cascade, not a second write — which is
+/// the whole reason a pool is an `Option`.
 #[tokio::test]
 async fn a_service_a_site_declares_is_refused_and_then_forced() {
     let fixture = Fixture::started_with_package().await;

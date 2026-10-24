@@ -1,11 +1,11 @@
 //! `runtime.*`: what the index offers, what this machine has, and the job that turns one into the
 //! other.
 //!
-//! **This is the job system's first producer** (T23). Everything under it existed before this file
-//! did and none of it could be reached: T20 verifies a signed index nobody asked, T21 installs an
-//! artifact nobody named, T22 runs jobs nobody starts. What is added here is a method in front of
-//! each — which is why the wiring is an `impl` and not an adapter, since
-//! [`mixengine_core::install::Watcher`] was shaped after [`JobHandle`] on
+//! **This is the job system's first producer.** Everything under it existed before this file did
+//! and none of it could be reached: the index client verified a signed index nobody asked for, the
+//! download pipeline installed an artifact nobody named, and the job system ran jobs nobody
+//! started. What is added here is a method in front of each — which is why the wiring is an `impl`
+//! and not an adapter, since [`mixengine_core::install::Watcher`] was shaped after [`JobHandle`] on
 //! purpose.
 //!
 //! # Five of the six methods answer inline, and one returns a job
@@ -15,7 +15,7 @@
 //! and moving a default are none of them long, and making every one of them return a job would make
 //! a client learn a second protocol to hear an answer that was ready before it asked.
 //!
-//! `resolve` (T24) is the newest of the five and the only one a shim will *not* use: it calls
+//! `resolve` is the newest of the five and the only one a shim will *not* use: it calls
 //! [`mixengine_core::resolve`] in-process instead, because a `php` that needs a running daemon to
 //! start is a `php` that stops working when the daemon does. What the method is for is every client
 //! that is already talking to one — `mix`, the GUI panel — and the answer is the same either way,
@@ -74,7 +74,7 @@ pub(crate) struct IndexSource {
 }
 
 impl IndexSource {
-    /// Where the *extension registry* is, given where the package index is — roadmap task **T81**.
+    /// Where the *extension registry* is, given where the package index is.
     ///
     /// **Derived rather than a second setting.** The two documents are published side by side under
     /// one tag and verified with one key, so a mirror that serves the index serves this beside it;
@@ -129,8 +129,8 @@ impl Fetcher {
     /// Point an index client and an installer at `source`, caching under the home's `cache/`.
     ///
     /// `http` is the daemon's own transport, shared with the extension registry client and the
-    /// update feed client rather than built fresh here — roadmap task **T72b**, the same "one per
-    /// daemon" rule this type's own doc comment already states, one layer down.
+    /// update feed client rather than built fresh here — the same "one per daemon" rule this type's
+    /// own doc comment already states, one layer down.
     ///
     /// # Errors
     ///
@@ -170,7 +170,7 @@ pub(crate) struct Runtimes {
     /// The index that offers versions, and the pipeline that downloads them.
     fetcher: Arc<Fetcher>,
 
-    /// What a pool created by an install is registered with, so a request can start it — **T72a**.
+    /// What a pool created by an install is registered with, so a request can start it.
     ///
     /// Held for one call: `activate::hold_all` needs it, because an activator that accepts a
     /// connection has to be able to make the service run.
@@ -184,8 +184,8 @@ pub(crate) struct Runtimes {
     /// both start.
     running: tokio::sync::Mutex<BTreeMap<(RuntimeKind, PackageVersion), JobId>>,
 
-    /// `bin/`, refreshed as a runtime comes or goes — roadmap task **T185b**. Set once, after both
-    /// are built; a test that builds no `Shims` leaves it unset and nothing is refreshed.
+    /// `bin/`, refreshed as a runtime comes or goes. Set once, after both are built; a test that
+    /// builds no `Shims` leaves it unset and nothing is refreshed.
     shims: std::sync::OnceLock<Arc<crate::shims::Shims>>,
 }
 
@@ -209,7 +209,7 @@ impl Runtimes {
         })
     }
 
-    /// Keep `bin/` in step with what is installed — roadmap task **T185b**. Called once in `main`.
+    /// Keep `bin/` in step with what is installed. Called once in `main`.
     pub(crate) fn keeps_bin(&self, shims: Arc<crate::shims::Shims>) {
         let _ = self.shims.set(shims);
     }
@@ -225,7 +225,7 @@ impl Runtimes {
     }
 
     /// The install job running for this version, if there is one — `runtime.upgrade` refuses to
-    /// race it (T193b, the design's *Error handling*).
+    /// race it.
     pub(crate) async fn installing(
         &self,
         kind: RuntimeKind,
@@ -239,7 +239,7 @@ impl Runtimes {
     }
 
     /// The index and the download pipeline this daemon installs through — for the blueprint
-    /// executor, which judges releases it resolved through this same index (T152).
+    /// executor, which judges releases it resolved through this same index.
     pub(crate) fn fetcher(&self) -> &Arc<Fetcher> {
         &self.fetcher
     }
@@ -291,8 +291,8 @@ impl Runtimes {
         let installed = runtimes::records(&self.store, filter.kind)
             .await
             .map_err(|error| error.to_wire())?;
-        // **A version whose folder is gone is not installed here** — roadmap task **T206d**, D2: it is
-        // offered again, which is how it is put back, and it is the base of no update.
+        // **A version whose folder is gone is not installed here**: it is offered again, which is
+        // how it is put back, and it is the base of no update.
         let installed: Vec<_> = installed
             .into_iter()
             .filter(|have| !have.is_missing())
@@ -341,8 +341,7 @@ impl Runtimes {
                     needs: chosen.map(|_| {
                         requirements::of(&catalogue.index, name, &package.version, &facts)
                     }),
-                    // **What this cell cannot do**, read off the artifact this machine would take
-                    // — roadmap task **T206**, D2.
+                    // **What this cell cannot do**, read off the artifact this machine would take.
                     lacks: chosen
                         .map(|chosen| chosen.artifact.lacks.clone())
                         .unwrap_or_default(),
@@ -350,8 +349,8 @@ impl Runtimes {
                 offered.push(version);
             }
 
-            // **One release stands for each line** — roadmap task T193a, D1. Marked after the whole
-            // kind is read, because "newest" is a fact about the set and not about one row.
+            // **One release stands for each line.** Marked after the whole kind is read, because
+            // "newest" is a fact about the set and not about one row.
             let newest = mixengine_core::lines::newest_of_each_line(name, offered.iter());
             for release in runtimes.iter_mut().filter(|release| release.kind == kind) {
                 release.newest_in_line = Some(newest.values().any(|n| *n == release.version));
@@ -414,10 +413,10 @@ impl Runtimes {
 
     /// The newest release the index publishes for this machine that satisfies `wanted`.
     ///
-    /// **Roadmap task T78, its design's D9.** A plan holds a *constraint* on purpose — it reads this
-    /// home's tables and never the index — and turning one into a release is a question only the
-    /// index can answer. An apply asks it before it writes anything, so that a constraint nothing
-    /// satisfies fails while there is still nothing to take back.
+    /// **A constraint becomes a release here, and only here.** A plan holds a *constraint* on
+    /// purpose — it reads this home's tables and never the index — and turning one into a release
+    /// is a question only the index can answer. An apply asks it before it writes anything, so that
+    /// a constraint nothing satisfies fails while there is still nothing to take back.
     ///
     /// # Errors
     ///
@@ -457,7 +456,7 @@ impl Runtimes {
             })
     }
 
-    /// `runtime.requirements` — what one version lacks on this machine — roadmap task **T149**.
+    /// `runtime.requirements` — what one version lacks on this machine.
     ///
     /// # Errors
     ///
@@ -502,8 +501,8 @@ impl Runtimes {
             .map_err(|error| error.to_wire())
     }
 
-    /// `runtime.found` — every runtime directory on disk with no row, and why — roadmap task
-    /// **T182i**. Offline: no index, and nothing recorded.
+    /// `runtime.found` — every runtime directory on disk with no row, and why. Offline: no index,
+    /// and nothing recorded.
     ///
     /// # Errors
     ///
@@ -531,7 +530,7 @@ impl Runtimes {
         })
     }
 
-    /// `runtime.adopt` — record a version that is on disk without a row — roadmap task **T182f**.
+    /// `runtime.adopt` — record a version that is on disk without a row.
     ///
     /// A version already recorded answers its row, so asking twice is not an error.
     ///
@@ -598,7 +597,7 @@ impl Runtimes {
     }
 }
 
-/// Who a refusal about `target` is about — roadmap task **T149**.
+/// Who a refusal about `target` is about.
 pub(crate) fn subject_of(target: &RuntimeTarget) -> requirements::Subject {
     requirements::Subject {
         name: format!("{} {}", target.kind.as_str(), target.version.as_str()),
@@ -623,9 +622,9 @@ pub(crate) fn offered<'a>(
     version: &str,
     listing: &str,
 ) -> Result<(&'a Package, Selection<'a>), Error> {
-    // **Asked before "does not publish"** — roadmap task T196. A kind whose file could not be read
-    // and a kind that publishes nothing look the same from here on, and they send whoever reads
-    // the message to two different places.
+    // **Asked before "does not publish".** A kind whose file could not be read and a kind that
+    // publishes nothing look the same from here on, and they send whoever reads the message to two
+    // different places.
     if let Some(missing) = index.unread(kind) {
         return Err(Error::new(
             ErrorCode::Io,
@@ -650,9 +649,9 @@ pub(crate) fn offered<'a>(
 
     // Read off the target triple this daemon was compiled for rather than asked of the running
     // machine, which is also the answer the caller wants: an x86_64 build running under emulation
-    // should install x86_64 artifacts, because that is what it can execute. Since **T92** the
-    // reverse holds too and is `Target::runnable`'s business — an ARM64 Windows daemon may install
-    // an x86_64 artifact, because that machine can execute one and upstream builds it nothing else.
+    // should install x86_64 artifacts, because that is what it can execute. The reverse holds too
+    // and is `Target::runnable`'s business — an ARM64 Windows daemon may install an x86_64
+    // artifact, because that machine can execute one and upstream builds it nothing else.
     let Some(target) = Target::host() else {
         return Err(Error::new(
             ErrorCode::UnsupportedPlatform,
@@ -723,7 +722,7 @@ mod tests {
         .expect("the published shape parses")
     }
 
-    /// The notice is the whole of what an emulated install owes a person — roadmap task **T92**.
+    /// The notice is the whole of what an emulated install owes a person.
     ///
     /// It is composed here rather than asserted through a job, because what a job carries is a
     /// string and this is the only place that decides what the string says.
@@ -756,8 +755,8 @@ mod tests {
         );
     }
 
-    /// **A mirror is one setting, not two** — roadmap task **T81**. The registry sits beside the
-    /// index it was published with, so pointing at a mirror points at both.
+    /// **A mirror is one setting, not two.** The registry sits beside the index it was published
+    /// with, so pointing at a mirror points at both.
     #[test]
     fn the_registry_is_the_index_url_with_the_other_document_s_name() {
         let source = IndexSource {

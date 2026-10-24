@@ -38,7 +38,7 @@ pub(super) async fn accept_until_stopped(
             // has not swallowed one.
             stop = signals.stopped() => {
                 // **The budget is granted before the token is cancelled, and that order is the
-                // whole of the signal half of T9a.** Cancelling first would release every runner
+                // whole of the signal path's budget.** Cancelling first would release every runner
                 // into the stop its spec asks for, with nothing having said how long the *daemon*
                 // has — and on Windows the OS is already counting.
                 let budget = signalled_budget(shutdown_grace);
@@ -52,7 +52,7 @@ pub(super) async fn accept_until_stopped(
 
             // Cancelled by something inside the daemon rather than by the OS: `daemon.shutdown`,
             // which has already stopped the services in dependency order and granted its own budget
-            // before it got here (T9a). The loop understands both, and neither is the only one.
+            // before it got here. The loop understands both, and neither is the only one.
             () = shutdown.cancelled() => {
                 tracing::info!("shutting down");
                 break;
@@ -95,19 +95,19 @@ pub(super) async fn accept_until_stopped(
 /// already cancelled, so every runner is performing the stop its spec asks for; this is where the
 /// daemon waits for them instead of leaving the job to a destructor that kills.
 ///
-/// **Pinned and selected against rather than simply awaited, because this wait is the one part of
-/// a shutdown a person can be trapped in** — roadmap task T9a. Leaving the accept loop used to be
-/// the last time anything read `signals`, although the handlers stay installed for the rest of
-/// `serve`: on Unix tokio's `SIGINT`/`SIGTERM` handlers are process-global and permanent,
-/// so the default disposition is gone, and a second Ctrl-C during a stop that had wedged on one
-/// service was delivered into a channel nobody was reading and did nothing whatever. The only
-/// escape left was `kill -9`, which is the outcome this task exists to remove.
-/// **Jobs stop beside the services rather than after them** — roadmap task T22. The root token
-/// has already cancelled both, and what is left is the waiting: a service holds a port and a data
-/// directory, a job holds a staging directory it is the only thing that can remove. Neither wait
-/// is shortened by the other finishing, so running them in sequence would add one budget to the
-/// other — which is the arithmetic T9a's single budget exists to prevent. A job that will not
-/// stop inside it is left, and its row is the next daemon's `abandon` to close.
+/// **Pinned and selected against rather than simply awaited, because this wait is the one part of a
+/// shutdown a person can be trapped in.** Leaving the accept loop used to be the last time anything
+/// read `signals`, although the handlers stay installed for the rest of `serve`: on Unix tokio's
+/// `SIGINT`/`SIGTERM` handlers are process-global and permanent, so the default disposition is
+/// gone, and a second Ctrl-C during a stop that had wedged on one service was delivered into a
+/// channel nobody was reading and did nothing whatever. The only escape left was `kill -9`, which
+/// is the outcome this wait exists to remove.
+/// **Jobs stop beside the services rather than after them.** The root token has already cancelled
+/// both, and what is left is the waiting: a service holds a port and a data directory, a job holds
+/// a staging directory it is the only thing that can remove. Neither wait is shortened by the other
+/// finishing, so running them in sequence would add one budget to the other — which is the
+/// arithmetic the single shutdown budget exists to prevent. A job that will not stop inside it is
+/// left, and its row is the next daemon's `abandon` to close.
 pub(super) async fn stop_everything(
     signals: &mut signal::Signals,
     services: &services::Registry,
@@ -129,8 +129,8 @@ pub(super) async fn stop_everything(
         // outcome traded for a worse one. What a second request means is that the person is no
         // longer willing to wait for the polite stop, so the budget is narrowed to nothing and
         // every runner still to reach a stop goes straight to the kill: `Registry::stopping_within`
-        // is the narrow-only mechanism T9a already built for a second shutdown arriving during a
-        // first, and a second answer to the same question here would be one for them to disagree
+        // is the narrow-only mechanism the budget already has for a second shutdown arriving during
+        // a first, and a second answer to the same question here would be one for them to disagree
         // about.
         //
         // Then the *same* future is waited on again rather than dropped, because dropping it detaches

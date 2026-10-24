@@ -8,10 +8,10 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{api, background, elevation, services, updates};
 
-/// **What this home was already sharing, announced again** — roadmap task T75. The rows outlive
-/// the daemon and the advertisement does not, so a restart with a site shared would otherwise
-/// leave a name that resolved yesterday and resolves nothing today. Whole state, through the
-/// same call every share and unshare makes.
+/// **What this home was already sharing, announced again.** The rows outlive the daemon and the
+/// advertisement does not, so a restart with a site shared would otherwise leave a name that
+/// resolved yesterday and resolves nothing today. Whole state, through the same call every share
+/// and unshare makes.
 ///
 /// Not fatal, on the rule the responder itself follows: a home that cannot advertise is a home
 /// whose shared sites are reached by address.
@@ -26,7 +26,7 @@ pub(super) async fn after_the_api(
         tracing::warn!(%error, "this home's shared sites are reachable by address only");
     }
 
-    // **Every installed `web-app`'s generated configuration, written again** — roadmap task T82.
+    // **Every installed `web-app`'s generated configuration, written again.**
     // The rule `etc/` follows, applied to the one generated file that has to live inside an install
     // directory because the application it configures says so: it is ours, it is written from the
     // rows, and it is thrown away. Writing it here is what makes a database that was re-provisioned
@@ -44,20 +44,19 @@ pub(super) async fn after_the_api(
         let extensions = Arc::clone(&api.extensions);
 
         async move {
-            // **Before the configuration is written** — roadmap task T82a, its design's D10. A
-            // `web-app` installed before that task is still served on the shared pool, and the file
-            // written below belongs to the site as it will be served — so the repair goes first.
-            // Idempotent, and one query on a home with no extension sites, which is what lets it
-            // run at every boot instead of being a migration somebody has to know to run.
+            // **Before the configuration is written.** A `web-app` installed before extensions had
+            // a pool of their own is still served on the shared pool, and the file written below
+            // belongs to the site as it will be served — so the repair goes first. Idempotent, and
+            // one query on a home with no extension sites, which is what lets it run at every boot
+            // instead of being a migration somebody has to know to run.
             extensions.ensure_pools().await;
             extensions.configure().await;
         }
     });
 
-    // **And a third clock ends a share nobody ended** — roadmap task T76. The same shape as the
-    // renewal and idle loops in `clocks`, and here rather than beside them for one reason: it needs
-    // the `Sites` the API holds, and a second one built for it would answer a different question
-    // about the same home.
+    // **And a third clock ends a share nobody ended.** The same shape as the renewal and idle loops
+    // in `clocks`, and here rather than beside them for one reason: it needs the `Sites` the API
+    // holds, and a second one built for it would answer a different question about the same home.
     //
     // After the reconciliation in `recovery`, so its first pass never reads a home this daemon has
     // not finished starting; before the accept loop, so it does not race the first client.
@@ -69,10 +68,10 @@ pub(super) async fn after_the_api(
     );
 }
 
-/// **And what an update left behind, before anything else asks about it** — roadmap task T88.
-/// Reads the two records the daemon that replaced these binaries wrote, deletes them, checks that
-/// this build is the version that release declared, discards the `.old` files it can, and starts
-/// the services that were running. On every ordinary start it reads two absent rows and returns.
+/// **And what an update left behind, before anything else asks about it.** Reads the two records
+/// the daemon that replaced these binaries wrote, deletes them, checks that this build is the
+/// version that release declared, discards the `.old` files it can, and starts the services that
+/// were running. On every ordinary start it reads two absent rows and returns.
 ///
 /// Spawned rather than awaited, on the extension-configuration block's reasoning in as many
 /// words: the endpoint is bound and the accept loop is still below, and every moment spent here
@@ -98,10 +97,10 @@ pub(super) fn after_an_update(
         }
     });
 
-    // **And the installed helper, brought into step with this release** — roadmap task T182b, D2.
-    // After the update's own restore, so a start that follows an update reads the helper the update
-    // left. Spawned for the same reason as the block above, and because fetching this release's
-    // signed helper can wait on the network, which a start must never do.
+    // **And the installed helper, brought into step with this release.** After the update's own
+    // restore, so a start that follows an update reads the helper the update left. Spawned for the
+    // same reason as the block above, and because fetching this release's signed helper can wait on
+    // the network, which a start must never do.
     background.spawn("helper handshake", {
         let elevation = Arc::clone(elevation);
         let updates = Arc::clone(updates);

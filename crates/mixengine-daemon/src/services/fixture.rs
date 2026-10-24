@@ -4,10 +4,10 @@
 //! crate's own trait** — nothing outside the daemon can implement one. What it shares with the
 //! testkit is `FakeService`, which is what every spec here is built around.
 //!
-//! Several callers, which is why it is a module and not a helper in one of them: the registry's
-//! own tests walk plans directly, one module per capability since T207d, and the `service.*`
-//! handlers (T19a) go through the same registry from above. A second copy of "a home with a
-//! `services` row" would be a second thing to keep in step with `0001_initial.sql`.
+//! Several callers, which is why it is a module and not a helper in one of them: the registry's own
+//! tests walk plans directly, one module per capability, and the `service.*` handlers go through
+//! the same registry from above. A second copy of "a home with a `services` row" would be a second
+//! thing to keep in step with `0001_initial.sql`.
 
 use std::future::Future;
 use std::path::PathBuf;
@@ -54,8 +54,8 @@ impl SpecSource for Declared {
         ))))
     }
 
-    /// **Nothing, and that is the truthful answer here** — roadmap task **T53**. This fixture holds
-    /// specs a test wrote by hand; there is no recipe behind them and so no setting to merge.
+    /// **Nothing, and that is the truthful answer here.** This fixture holds specs a test wrote by
+    /// hand; there is no recipe behind them and so no setting to merge.
     fn settings(
         &self,
         _service: &ServiceId,
@@ -64,8 +64,7 @@ impl SpecSource for Declared {
     }
 }
 
-/// The same, from a home whose configuration is rewritten every time it is asked — roadmap task
-/// **T31**.
+/// The same, from a home whose configuration is rewritten every time it is asked.
 ///
 /// What the real generator reports for a service somebody has just reconfigured, and what the
 /// registry acts on by asking that service to re-read its file. Every walk, deliberately: a test
@@ -80,8 +79,8 @@ impl SpecSource for Rerendered {
         Box::pin(std::future::ready(Ok(generated(&self.0, Written::Updated))))
     }
 
-    /// **Nothing, and that is the truthful answer here** — roadmap task **T53**. This fixture holds
-    /// specs a test wrote by hand; there is no recipe behind them and so no setting to merge.
+    /// **Nothing, and that is the truthful answer here.** This fixture holds specs a test wrote by
+    /// hand; there is no recipe behind them and so no setting to merge.
     fn settings(
         &self,
         _service: &ServiceId,
@@ -104,8 +103,8 @@ impl SpecSource for Unavailable {
         })))
     }
 
-    /// **Nothing, and that is the truthful answer here** — roadmap task **T53**. This fixture holds
-    /// specs a test wrote by hand; there is no recipe behind them and so no setting to merge.
+    /// **Nothing, and that is the truthful answer here.** This fixture holds specs a test wrote by
+    /// hand; there is no recipe behind them and so no setting to merge.
     fn settings(
         &self,
         _service: &ServiceId,
@@ -131,7 +130,7 @@ fn generated(specs: &[ServiceSpec], written: Written) -> Vec<Generated> {
             // A fixture service has nothing to do once before it starts: the recipes that do are
             // the databases, and they are driven against a real server rather than against this.
             first_run: None,
-            // And nothing to make a database on, for the same reason — roadmap task T77a.
+            // And nothing to make a database on, for the same reason.
             provisioning: None,
         })
         .collect()
@@ -240,8 +239,8 @@ pub(crate) fn registry_on(
     )
 }
 
-/// Specs a test can replace between walks, counting how often it was asked to render — roadmap
-/// task **T190b**, whose subject is how often the idle sweep renders.
+/// Specs a test can replace between walks, counting how often it was asked to render — for the
+/// tests of how often the idle sweep renders.
 #[derive(Debug)]
 pub(crate) struct Swappable {
     specs: std::sync::Mutex<Vec<ServiceSpec>>,
@@ -302,8 +301,8 @@ impl SpecSource for Swappable {
         Box::pin(std::future::ready(answer))
     }
 
-    /// **Nothing, and that is the truthful answer here** — roadmap task **T53**. This fixture holds
-    /// specs a test wrote by hand; there is no recipe behind them and so no setting to merge.
+    /// **Nothing, and that is the truthful answer here.** This fixture holds specs a test wrote by
+    /// hand; there is no recipe behind them and so no setting to merge.
     fn settings(
         &self,
         _service: &ServiceId,

@@ -1,4 +1,4 @@
-//! `home.previous` and `home.restore` — a copy of an earlier home's state, roadmap task **T182h**.
+//! `home.previous` and `home.restore` — a copy of an earlier home's state.
 //!
 //! The merge is core's (`adopt::snapshot::restore`). What this adds is where to look for a copy and
 //! what each restored thing needs afterwards: a new admin password for every database (left

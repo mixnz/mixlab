@@ -1,4 +1,4 @@
-//! `database.create` — roadmap task **T77a**.
+//! `database.create`.
 //!
 //! Thin, like every handler here: it validates two names, makes sure the instance is up, and hands
 //! the work to [`crate::services::databases`]. What it adds is the two refusals a caller can act on
@@ -6,10 +6,10 @@
 //! them apart, because "no such service: redis@main" would send somebody looking for a service that
 //! is right there.
 //!
-//! **One provisioning at a time per instance** — the T77a design, D10. PostgreSQL's conditional
-//! creation reads and then writes, so two callers racing for the same database would put one of them
-//! into `database "blog" already exists`. The map here folds the second into waiting for the first,
-//! on the precedent of the one [`crate::packages`] holds.
+//! **One provisioning at a time per instance.** PostgreSQL's conditional creation reads and then
+//! writes, so two callers racing for the same database would put one of them into
+//! `database "blog" already exists`. The map here folds the second into waiting for the first, on
+//! the precedent of the one [`crate::packages`] holds.
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
@@ -29,8 +29,7 @@ use tokio::sync::Mutex;
 use crate::error::ToWire as _;
 use crate::services::databases::Making;
 
-/// What a database will be handed to: which state to report, and what to start — roadmap tasks
-/// **T107** and **T165**.
+/// What a database will be handed to: which state to report, and what to start.
 ///
 /// The scheme is not a member. The only client is this install's window, and its scheme is
 /// [`window::SCHEME`].
@@ -48,7 +47,7 @@ pub(crate) struct Databases {
     /// What declares a service, remembers how its databases are made, and can start it.
     services: Arc<crate::services::Registry>,
 
-    /// This machine, for its credential store and — roadmap task **T83** — the desktop client.
+    /// This machine, for its credential store and the desktop client.
     host: Arc<dyn mixengine_platform::Host>,
 
     /// This home's tables: which service listens where.
@@ -84,8 +83,7 @@ impl Databases {
         self.make(asked).await.map_err(Making::into_wire)
     }
 
-    /// [`Databases::create`], with the one refusal the blueprint's step reads by type — roadmap
-    /// task **T202**, D1.
+    /// [`Databases::create`], with the one refusal the blueprint's step reads by type.
     ///
     /// # Errors
     ///
@@ -106,7 +104,7 @@ impl Databases {
 
         let provisioning = self.vocabulary(&asked.service).await?;
 
-        // Held across the start and the statements — design D10.
+        // Held across the start and the statements: one provisioning at a time per instance.
         let gate = {
             let mut busy = self.busy.lock().await;
 
@@ -168,7 +166,7 @@ impl Databases {
         })
     }
 
-    /// `database.client` — where this instance could be opened. Reads only — roadmap task **T83**.
+    /// `database.client` — where this instance could be opened. Reads only.
     ///
     /// # Errors
     ///
@@ -183,10 +181,9 @@ impl Databases {
             .map_err(|error| error.to_wire())?;
         let client = self.locate_client().await?.state;
 
-        // **Composed, not looked up** — roadmap task **T84**, the design's D6. This method still
-        // touches the credential store not at all: the address is what the recipe's administrator
-        // and the service id say it is, which is exactly what makes the convention askable before
-        // anything has been opened.
+        // **Composed, not looked up.** This method still touches the credential store not at all:
+        // the address is what the recipe's administrator and the service id say it is, which is
+        // exactly what makes the convention askable before anything has been opened.
         let home = self.home().await?;
         let secret = address.as_ref().and_then(|address| {
             address
@@ -204,8 +201,7 @@ impl Databases {
         })
     }
 
-    /// Which home this is, for the first segment of every credential address — roadmap task
-    /// **T126**.
+    /// Which home this is, for the first segment of every credential address (ADR 0032).
     ///
     /// Read per call rather than held on this type: it is one indexed row, the calls that need it
     /// are already several round trips to a database server, and a copy cached here would be a
@@ -216,8 +212,7 @@ impl Databases {
             .map_err(|error| error.to_wire())
     }
 
-    /// `database.credentials` — the password held for one account. Reads only — roadmap task
-    /// **T77b**.
+    /// `database.credentials` — the password held for one account. Reads only.
     ///
     /// # Errors
     ///
@@ -280,11 +275,11 @@ impl Databases {
         })
     }
 
-    /// `database.open` — hand this instance to this install's window — roadmap tasks **T83** and **T165**.
+    /// `database.open` — hand this instance to this install's window.
     ///
-    /// The order is the design's data flow: validate, address, locate, start, read the credential,
-    /// launch. "No client" comes back as a state before anything is started, and
-    /// the credential is read as late as the order allows.
+    /// The order is the handoff's data flow: validate, address, locate, start, read the credential,
+    /// launch. "No client" comes back as a state before anything is started, and the credential is
+    /// read as late as the order allows.
     ///
     /// # Errors
     ///
@@ -343,8 +338,8 @@ impl Databases {
         let account = user.or_else(|| address.administrator.clone());
         let (secret, env) = match &account {
             Some(account) => {
-                // The shared composition — roadmap task **T84**. The recipe that wrote this entry
-                // and the handoff that reads it name one function, so the two cannot drift.
+                // The shared composition. The recipe that wrote this entry and the handoff that
+                // reads it name one function, so the two cannot drift.
                 let at = handoff::secret_key(&self.home().await?, &asked.service, account);
                 let password = self
                     .credential(
@@ -384,7 +379,7 @@ impl Databases {
         })
     }
 
-    /// The client as a state, and how to start it — roadmap tasks **T107** and **T165**.
+    /// The client as a state, and how to start it.
     ///
     /// **This install's window, or nothing** (ADR 0038). No extension is consulted: the only
     /// application a database is handed to is the MixLab this MixEngine installed, found where that
@@ -405,7 +400,7 @@ impl Databases {
         })
     }
 
-    /// This install's own window, off the runtime — roadmap task **T107**.
+    /// This install's own window, off the runtime.
     ///
     /// A handful of `stat`s, and still through `spawn_blocking`: the platform layer's contract is a
     /// blocking call, and a caller reading this should not have to know that it is cheap this month.
@@ -459,7 +454,7 @@ impl Databases {
             })
     }
 
-    /// Start the client, off the runtime, and judge it — the design's D8.
+    /// Start the client, off the runtime, and judge it.
     async fn launch(
         &self,
         app: &InstalledApp,
@@ -591,8 +586,8 @@ mod tests {
         assert_eq!(handoff.launched, None);
     }
 
-    /// **The merged product's client** — roadmap task **T107**. Nothing is installed besides
-    /// MixEngine, and `mix database open` still lands somewhere.
+    /// **The merged product's client.** Nothing is installed besides MixEngine, and
+    /// `mix database open` still lands somewhere.
     #[tokio::test]
     async fn the_window_is_the_client() {
         let host = Arc::new(MockHost::with_window(
@@ -618,7 +613,7 @@ mod tests {
     }
 
     /// The URL a window handoff produces carries the window's own scheme, and it is the window that
-    /// is started — T83's rule, on the new path.
+    /// is started.
     #[tokio::test]
     async fn a_window_handoff_carries_the_scheme_and_starts_the_window() {
         let host = Arc::new(MockHost::with_window(
@@ -654,7 +649,7 @@ mod tests {
     }
 
     /// A service no client opens: `protocol: null` to `client`, a refusal by name to `open` — the
-    /// T77a distinction between the package and the operating system.
+    /// distinction `database.create` draws between the package and the operating system.
     #[tokio::test]
     async fn a_cache_with_no_protocol_is_a_state_to_client_and_a_refusal_to_open() {
         let host = Arc::new(MockHost::with_home(std::env::temp_dir()));
@@ -711,7 +706,7 @@ mod tests {
             "{url}"
         );
         assert!(!url.contains("password"), "{url}");
-        // A server with no accounts has no entry to point a saved connection at — T84.
+        // A server with no accounts has no entry to point a saved connection at.
         assert!(!url.contains("secret_key"), "{url}");
         assert!(launched[0].env_names.is_empty());
 
@@ -722,8 +717,8 @@ mod tests {
         assert_eq!(refused.code, ErrorCode::InvalidArgument);
     }
 
-    /// **A MongoDB is a Redis to this method** — roadmap task **T155**: no accounts, no variable,
-    /// no form to make a database, and the kind the window reads as its Mongo tab.
+    /// **A MongoDB is a Redis to this method**: no accounts, no variable, no form to make a
+    /// database, and the kind the window reads as its Mongo tab.
     #[tokio::test]
     async fn a_mongodb_is_opened_with_no_account_and_offers_no_database_to_create() {
         let host = Arc::new(MockHost::with_window(
@@ -763,8 +758,8 @@ mod tests {
         assert!(launched[0].env_names.is_empty());
     }
 
-    /// **The design's D2, at the daemon.** The password is in the environment under the one name
-    /// and nowhere in the URL; a missing credential is a precondition and starts nothing.
+    /// The password is in the environment under the one name and nowhere in the URL; a missing
+    /// credential is a precondition and starts nothing.
     #[tokio::test]
     async fn a_database_is_opened_with_the_credential_in_the_environment_and_not_the_url() {
         let host = Arc::new(MockHost::with_window(
@@ -774,9 +769,8 @@ mod tests {
         let (_home, databases) =
             databases(Arc::clone(&host), &[("mariadb@main", "mariadb", 3306)]).await;
 
-        // **`client` says where the credential is, and reads nothing to find out** — roadmap task
-        // **T84**, the design's D6. Asked before anything has been stored, so an answer here can
-        // only have been composed.
+        // **`client` says where the credential is, and reads nothing to find out.** Asked before
+        // anything has been stored, so an answer here can only have been composed.
         let report = databases
             .client(&DatabaseClientQuery {
                 service: id("mariadb@main"),
@@ -799,9 +793,10 @@ mod tests {
         assert_eq!(missing.code, ErrorCode::PreconditionFailed);
         assert!(host.launched().is_empty());
 
-        // **Stored at the address a build before T126 would have used**, which is what makes the
-        // two assertions below one test of the compatibility path: the read finds it, the answer
-        // names this home's address, and the entry has been moved there by the time it returns.
+        // **Stored at the address a build from before ADR 0032 would have used**, which is what
+        // makes the two assertions below one test of the compatibility path: the read finds it, the
+        // answer names this home's address, and the entry has been moved there by the time it
+        // returns.
         host.keyring()
             .set_secret(KEYRING_SERVICE, "mariadb@main/root", "s3cret-value")
             .expect("stored");
@@ -822,8 +817,8 @@ mod tests {
             .expect("the URL")
             .to_string_lossy()
             .into_owned();
-        // The home's half of the address is percent-encoded like the rest of it — roadmap task
-        // **T126** — so what the window is handed is one opaque key it looks up, exactly as before.
+        // The home's half of the address is percent-encoded like the rest of it, so what the window
+        // is handed is one opaque key it looks up, exactly as before.
         let encoded = at(&databases, "mariadb@main/root")
             .await
             .replace('@', "%40")
@@ -836,7 +831,7 @@ mod tests {
             "{url}"
         );
         assert!(!url.contains("s3cret"), "{url}");
-        // **The key travels, the namespace does not** — roadmap task **T84**, the design's D5.
+        // **The key travels, the namespace does not.**
         assert!(!url.contains(KEYRING_SERVICE), "{url}");
         assert_eq!(
             launched[0].env_names,
@@ -858,7 +853,7 @@ mod tests {
         }
     }
 
-    /// The address this home spells `key` at — roadmap task **T126**.
+    /// The address this home spells `key` at.
     ///
     /// Composed rather than written down because a home's id is random and per home; what the tests
     /// below assert is that the *service's* half is right and that the home's half is there at all.
@@ -870,8 +865,8 @@ mod tests {
         format!("{home}/{key}")
     }
 
-    /// **The administrator by default** — roadmap task **T77b** — exactly as `database.open`'s own
-    /// default: the two commands answer the same question for a person.
+    /// **The administrator by default**, exactly as `database.open`'s own default: the two commands
+    /// answer the same question for a person.
     #[tokio::test]
     async fn credentials_defaults_to_the_administrator() {
         let host = Arc::new(MockHost::with_home(std::env::temp_dir()));
@@ -888,8 +883,8 @@ mod tests {
 
         assert_eq!(answer.user, "root");
 
-        // The entry was written at the pre-T126 address and is still answered — and the address
-        // handed back is this home's, which is where the read has just moved it.
+        // The entry was written at the address from before ADR 0032 and is still answered — and the
+        // address handed back is this home's, which is where the read has just moved it.
         assert_eq!(answer.password, "root-secret");
         assert_eq!(answer.secret.key, at(&databases, "mariadb@main/root").await);
         assert_eq!(

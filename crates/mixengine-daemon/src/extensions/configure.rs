@@ -11,8 +11,7 @@ use super::{CONFIG_SECRET_LENGTH, Extensions, needs_a_database};
 use crate::error::ToWire as _;
 
 impl Extensions {
-    /// Write every installed `web-app`'s generated configuration — roadmap task **T82**, the
-    /// design's D2.
+    /// Write every installed `web-app`'s generated configuration.
     ///
     /// **Called at boot as well as after an install**, which is what makes the file disposable
     /// rather than something written once and hoped about: a database that was re-provisioned, a
@@ -48,8 +47,7 @@ impl Extensions {
         }
     }
 
-    /// Give every `web-app` a pool of its own, and regenerate if that changed anything — roadmap
-    /// task **T82a**, its design's D10.
+    /// Give every `web-app` a pool of its own, and regenerate if that changed anything.
     ///
     /// **Called at boot, before [`configure`](Self::configure)**, so the configuration written there
     /// belongs to the pool the site is actually served on. Idempotent, which is what lets it run at
@@ -87,16 +85,16 @@ impl Extensions {
         }
     }
 
-    /// Give a pool this install just created the address a request wakes it through — roadmap task
-    /// **T200**, its design's D1.
+    /// Give a pool this install just created the address a request wakes it through.
     ///
-    /// **`runtime.install`'s two repairs, in its order** (T72a): `activation::ensure` allocates the
+    /// **`runtime.install`'s two repairs, in its order**: `activation::ensure` allocates the
     /// activation port a TCP pool needs, and `hold_all` binds every activator not yet held. Without
     /// them the pool gets both only at the next daemon start, and until then its site answers 502
     /// behind MixEngine's starting page — which is how a person met it.
     ///
-    /// **Reported and never fatal**, on T72a's reasoning: the next daemon start makes both repairs
-    /// again, where failing the install would leave a downloaded extension half-written.
+    /// **Reported and never fatal**, on `runtime.install`'s reasoning: the next daemon start makes
+    /// both repairs again, where failing the install would leave a downloaded extension
+    /// half-written.
     pub(super) async fn make_pool_reachable(&self) {
         if let Err(error) = mixengine_core::services::activation::ensure(
             &self.store,
@@ -130,13 +128,12 @@ impl Extensions {
     }
 
     /// Stop everything an extension runs before its rows are deleted: a `service`'s own process,
-    /// and a `web-app`'s pool — roadmap tasks **T82a** (the pool, its design's D11) and **T200**
-    /// (the service).
+    /// and a `web-app`'s pool.
     ///
-    /// **The service is T200's, found by uninstalling a running Mailpit.** Only the pool used to be
-    /// stopped, so a running service had its row deleted from under it, went on holding its own
-    /// executable, and the install directory could not be removed — on Windows `Access is denied`,
-    /// and the next install refused because the directory was still there.
+    /// **The service is here because uninstalling a running Mailpit showed it had to be.** Only the
+    /// pool used to be stopped, so a running service had its row deleted from under it, went on
+    /// holding its own executable, and the install directory could not be removed — on Windows
+    /// `Access is denied`, and the next install refused because the directory was still there.
     ///
     /// # Errors
     ///
@@ -199,7 +196,7 @@ impl Extensions {
         Ok(())
     }
 
-    /// Rewrite every installed runtime's generated `conf.d` — roadmap task **T82**.
+    /// Rewrite every installed runtime's generated `conf.d`.
     ///
     /// The call `main.rs` makes at boot, made again where an extension changes what belongs in it.
     /// **Reported and never fatal**, on the rule that call follows: an install that landed and then
@@ -218,11 +215,11 @@ impl Extensions {
 
     /// Write one, or say why it was skipped.
     ///
-    /// **A `web-app` whose declared database is gone is skipped and its file left alone** — the
-    /// design's D4. That state is reachable only through `mix service delete <db> --force`, a person
-    /// overruling the refusal the link armed; rewriting the configuration to point nowhere would
-    /// make a forced delete worse in silence, and reading the old value back out of the file would
-    /// be parsing a generated file into state.
+    /// **A `web-app` whose declared database is gone is skipped and its file left alone.** That
+    /// state is reachable only through `mix service delete <db> --force`, a person overruling the
+    /// refusal the link armed; rewriting the configuration to point nowhere would make a forced
+    /// delete worse in silence, and reading the old value back out of the file would be parsing a
+    /// generated file into state.
     pub(super) async fn configure_one(
         &self,
         installed: &extension_store::Installed,
@@ -248,7 +245,7 @@ impl Extensions {
         mixengine_core::extensions::config::write(&rendered).map_err(|error| error.to_wire())
     }
 
-    /// Where this extension's `{secret}` lives — roadmap task **T126**.
+    /// Where this extension's `{secret}` lives.
     ///
     /// One composition, three callers (read, write, forget), because an address spelled twice is an
     /// address that drifts — and a `forget` that drifted would leave the entry behind for ever.
@@ -262,14 +259,14 @@ impl Extensions {
         ))
     }
 
-    /// The stable random value behind `{secret}`, created on first use — the design's D7.
+    /// The stable random value behind `{secret}`, created on first use.
     ///
     /// **It has to be stable**: phpMyAdmin's `blowfish_secret` is what its session cookie is signed
     /// with, so a value that changed on every render would log everybody out on every regeneration.
     /// It cannot be recovered by reading the last generated file either — *never parse a generated
     /// file back into state* is the rule the whole `etc/` layout rests on — so it lives where this
     /// system keeps a secret, and `mixengine-core` never sees the keyring
-    /// (`generate::databases`' D1).
+    /// (the rule `generate::databases` follows).
     ///
     /// # Errors
     ///
@@ -287,8 +284,8 @@ impl Extensions {
         let read = {
             let (host, key) = (Arc::clone(&host), key.clone());
             tokio::task::spawn_blocking(move || {
-                // Through `crate::secrets` — roadmap task **T126** — so that an entry written
-                // before addresses named their home is still found, and moved.
+                // Through `crate::secrets`, so that an entry written before addresses named their
+                // home is still found, and moved.
                 crate::secrets::secret_blocking(
                     host.as_ref(),
                     mixengine_platform::KEYRING_SERVICE,

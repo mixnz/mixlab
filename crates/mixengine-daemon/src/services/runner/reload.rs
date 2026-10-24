@@ -9,8 +9,7 @@ use mixengine_supervisor::Surroundings;
 use super::Runner;
 
 impl Runner {
-    /// Hand the running process the configuration that was rewritten under it — roadmap task
-    /// **T31**.
+    /// Hand the running process the configuration that was rewritten under it.
     ///
     /// `caddy reload`, and later `nginx -s reload`: a program shipped with the service, run in the
     /// service's own surroundings, that tells the process listening to re-read its file. Everything
@@ -22,8 +21,9 @@ impl Runner {
     /// was running before it and is running after it, and a state change would announce a restart
     /// that did not happen. A reload that failed is not news about the *service* either — it is
     /// still up, still serving, still on the configuration it had — so it is a line in `daemon.log`
-    /// rather than a degradation. What a user has then is a file on disk that the running process is
-    /// not using, which the next start resolves and which `mix doctor` owes a sentence (T47).
+    /// rather than a degradation. What a user has then is a file on disk that the running process
+    /// is not using, which the next start resolves and which nothing reports yet: `mix doctor` does
+    /// not look for it.
     pub(super) async fn reload(&self, place: &Surroundings, supervised: &Supervised) {
         match self.spec.reload() {
             Some(ReloadBehaviour::Command {
@@ -50,7 +50,7 @@ impl Runner {
         }
     }
 
-    /// The [`ReloadBehaviour::Command`] half, which is what T31 wrote — unchanged, moved.
+    /// The [`ReloadBehaviour::Command`] half, which came first — unchanged, moved.
     async fn reload_by_command(
         &self,
         place: &Surroundings,
@@ -84,7 +84,7 @@ impl Runner {
         }
     }
 
-    /// The [`ReloadBehaviour::Signal`] half — roadmap task **T32**.
+    /// The [`ReloadBehaviour::Signal`] half.
     ///
     /// **[`CAN_SIGNAL`] is read before anything is waited for**, which is [`CAN_ASK_TO_STOP`]'s
     /// lesson applied one method along: a system with no signals should say so at the moment it is

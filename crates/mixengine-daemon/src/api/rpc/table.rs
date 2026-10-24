@@ -352,9 +352,9 @@ pub(super) async fn route(
             encode_result(&api.extensions.uninstall(&asked).await.map_err(refused)?)
         }
 
-        // **The same walk `service.start` takes** — the T81 design's D11. An extension is
-        // what somebody installed and its `ServiceId` is an implementation detail of that,
-        // so this resolves the one to the other and adds no supervision of its own.
+        // **The same walk `service.start` takes.** An extension is what somebody installed and its
+        // `ServiceId` is an implementation detail of that, so this resolves the one to the other
+        // and adds no supervision of its own.
         rpc::method::EXTENSION_START => {
             let asked: ExtensionTarget = arguments(params)?;
             let service = api
@@ -406,9 +406,9 @@ pub(super) async fn route(
             encode_result(&api.bundle().await.map_err(refused)?)
         }
 
-        // **The reference is resolved here rather than inside `Certificates`** — T50. That
-        // is where `expect` already lives, and a `Certificates` able to resolve one would
-        // have to hold the `Sites` that in turn holds it.
+        // **The reference is resolved here rather than inside `Certificates`.** That is where
+        // `expect` already lives, and a `Certificates` able to resolve one would have to hold the
+        // `Sites` that in turn holds it.
         rpc::method::CERT_ISSUE => {
             let issue: CertIssue = arguments(params)?;
 
@@ -420,9 +420,9 @@ pub(super) async fn route(
             encode_result(&api.certificates.issue(site).await.map_err(refused)?)
         }
 
-        // **The one route in this file that opens a socket** — roadmap task T53. It
-        // asks this home's own front end what it is serving, which is the only question
-        // here whose answer is not read out of a file or a row.
+        // **The one route in this file that opens a socket.** It asks this home's own front end
+        // what it is serving, which is the only question here whose answer is not read out of a
+        // file or a row.
         rpc::method::CERT_STATUS => {
             let query: CertStatusQuery = arguments(params)?;
 
@@ -449,7 +449,7 @@ pub(super) async fn route(
             encode_result(&api.ca_status().await.map_err(refused)?)
         }
 
-        // **The two routes in this file that take something away** — roadmap task T54.
+        // **The two routes in this file that take something away.**
         // Jobs, because they wait for an elevation prompt, and a prompt is not something an
         // RPC can block on: the person may take a minute, or walk away.
         rpc::method::CERT_CA_ROTATE => {
@@ -522,7 +522,7 @@ pub(super) async fn route(
         rpc::method::PATH_INSTALL => {
             no_params(params.as_ref())?;
             // Not `on_a_blocking_thread` any more: filling `bin/` now reads the database
-            // first (T130), so the call is a future rather than a pile of file copies, and
+            // first, so the call is a future rather than a pile of file copies, and
             // the copies themselves are what they always were — nineteen stats and, on the
             // pass that changes anything, a hard link apiece.
             encode_result(&api.shims.install().await.map_err(refused)?)
@@ -533,7 +533,7 @@ pub(super) async fn route(
             encode_result(&api.shims.uninstall().await.map_err(refused)?)
         }
 
-        // T131: the pass the daemon runs when a runtime's bindir changes, run now.
+        // The pass the daemon runs when a runtime's bindir changes, run now.
         rpc::method::PATH_RESCAN => {
             no_params(params.as_ref())?;
             encode_result(&api.shims.rescanned().await.map_err(refused)?)

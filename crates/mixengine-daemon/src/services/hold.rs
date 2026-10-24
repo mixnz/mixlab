@@ -1,9 +1,9 @@
-//! Holding a database's own address while nothing is serving it — roadmap task **T70a**.
+//! Holding a database's own address while nothing is serving it.
 //!
-//! T70's activator holds an address of its *own*, permanently, and a site file names it as a
-//! fallback for the pool it belongs to. There is no front end in front of a database to name one
-//! in — a client dials `127.0.0.1:3306` and nothing else will do — so here the daemon binds what
-//! the service itself listens on, and gives it back when the service starts.
+//! The activator in [`super::activate`] holds an address of its *own*, permanently, and a site file
+//! names it as a fallback for the pool it belongs to. There is no front end in front of a database
+//! to name one in — a client dials `127.0.0.1:3306` and nothing else will do — so here the daemon
+//! binds what the service itself listens on, and gives it back when the service starts.
 //!
 //! # The window, stated rather than hidden
 //!
@@ -26,6 +26,8 @@
 //! nothing else — so there is no address at which their stop could be undone. The web path needs
 //! `services.stopped_by` to answer the same question because its activator's address is bound
 //! either way; this path answers it by not binding.
+//!
+//! The D-numbers here are those of `docs/specs/2026-08-29-t70-on-demand-activation-design.md`.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -341,8 +343,8 @@ mod tests {
         taken_again(&own).await;
     }
 
-    /// **The address is given back before the process is spawned** — roadmap task **T70a**, and
-    /// the ordering the whole database path rests on.
+    /// **The address is given back before the process is spawned** — the ordering the whole
+    /// database path rests on.
     ///
     /// A database asked to bind an address the daemon is still holding does not start. This drives
     /// a real start through [`Registry::begin`], which is the single funnel every start goes

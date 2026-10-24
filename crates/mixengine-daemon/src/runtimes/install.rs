@@ -23,8 +23,8 @@ impl Runtimes {
     ///
     /// Three things are decided before a job exists, because each is an answer a caller should have
     /// immediately rather than through a job that fails a moment later: a version that is already
-    /// installed, a version this daemon is already installing, and — since T149 — a version this
-    /// machine certainly lacks something for.
+    /// installed, a version this daemon is already installing, and a version this machine certainly
+    /// lacks something for.
     ///
     /// # Errors
     ///
@@ -51,8 +51,8 @@ impl Runtimes {
         }
 
         match runtimes::record(&self.store, target.kind, &target.version).await {
-            // **A recorded version whose folder is gone is installed again** — roadmap task
-            // **T206d**, D3: the install restores the row it already has.
+            // **A recorded version whose folder is gone is installed again**: the install restores
+            // the row it already has.
             Ok(found) if found.is_missing() => {}
             Ok(_) => {
                 return Err(
@@ -86,9 +86,9 @@ impl Runtimes {
         let started = self
             .jobs
             .begin(&kind, move |handle| async move {
-                // **What the person agreed to happens first** — roadmap task **T150**. Inside the job,
-                // because it is a download and an installer; before `perform`, because nothing of
-                // the runtime may be fetched for a machine that still cannot run it.
+                // **What the person agreed to happens first.** Inside the job, because it is a
+                // download and an installer; before `perform`, because nothing of the runtime may
+                // be fetched for a machine that still cannot run it.
                 let prepared = match asked.install_prerequisites && !asked.ignore_requirements {
                     true => {
                         requirements::prepare(
@@ -161,9 +161,9 @@ impl Runtimes {
             handle.progress(0, &notice).await;
         }
 
-        // **What this machine may lack, said and not refused** — roadmap task T27e, D16. The gate
-        // in front of this job already let it through; what is left is to name the sonames, in the
-        // job's own progress so every client sees them and in the log for a support conversation.
+        // **What this machine may lack, said and not refused.** The gate in front of this job
+        // already let it through; what is left is to name the sonames, in the job's own progress so
+        // every client sees them and in the log for a support conversation.
         let advisories = mixengine_core::requirements::advisories(&requirements::of(
             &catalogue.index,
             kind.as_str(),
@@ -191,7 +191,7 @@ impl Runtimes {
         }
 
         // Assembled before the install rather than after it, because the marker the install leaves
-        // in the directory is this row (T182f, D1).
+        // in the directory is this row.
         let installation = runtimes::Installation {
             kind,
             version: version.clone(),
@@ -210,8 +210,8 @@ impl Runtimes {
         };
         let marker = mixengine_core::adopt::marker::Marker::runtime(&installation).encode();
 
-        // **Restore or record** — roadmap task **T206d**, D3: decided before the download, because an
-        // install whose row already exists writes over it rather than beside it.
+        // **Restore or record**, decided before the download, because an install whose row already
+        // exists writes over it rather than beside it.
         let restoring = matches!(
             runtimes::record(&self.store, kind, version).await,
             Ok(found) if found.is_missing()
@@ -247,7 +247,7 @@ impl Runtimes {
                 );
             }
 
-            // **T182f, D2.** The directory is there and has no row: an earlier home installed it.
+            // The directory is there and has no row: an earlier home installed it.
             Err(mixengine_core::Error::Runtime(RuntimeError::AlreadyInstalled { path })) => {
                 let found = mixengine_core::adopt::walk::Found {
                     subject: mixengine_core::adopt::Subject::Runtime {

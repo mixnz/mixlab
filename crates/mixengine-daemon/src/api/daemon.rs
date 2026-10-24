@@ -15,9 +15,9 @@ use super::service::walked;
 use crate::error::ToWire as _;
 
 impl Api {
-    /// `daemon.doctor` — every check the doctor makes, and the line about where this home keeps
-    /// its passwords (T194), which only the API knows: the store is decided in `main` and described
-    /// from here. A note and never a problem, so `daemon.doctor_repair` has nothing to read in it.
+    /// `daemon.doctor` — every check the doctor makes, and the line about where this home keeps its
+    /// passwords, which only the API knows: the store is decided in `main` and described from here.
+    /// A note and never a problem, so `daemon.doctor_repair` has nothing to read in it.
     pub(super) async fn doctor_report(&self) -> mixengine_proto::DoctorReport {
         let mut report = self.doctor.report().await;
         report.checks.push(crate::credentials::check(
@@ -27,8 +27,8 @@ impl Api {
         report
     }
 
-    /// `daemon.set_credential_store` — roadmap task T194, D4. Records the store the next start
-    /// uses; the running daemon keeps the host it was built with.
+    /// `daemon.set_credential_store`. Records the store the next start uses; the running daemon
+    /// keeps the host it was built with.
     ///
     /// # Errors
     ///
@@ -66,11 +66,11 @@ impl Api {
 
     /// `daemon.status` — every fact this build actually has.
     ///
-    /// **Fallible since T40b**, and `daemon.version` is what stays infallible: how many operations
-    /// are waiting is a read of the queue, and there is no honest number to report when that read
-    /// fails. Reporting zero would be the stale-clear failure D6 exists to prevent — a healthy
-    /// machine that is missing its hosts entries — and the handshake a client makes before it trusts
-    /// anything here is `daemon.version`, which touches nothing.
+    /// **Fallible since the elevation queue**, and `daemon.version` is what stays infallible: how
+    /// many operations are waiting is a read of the queue, and there is no honest number to report
+    /// when that read fails. Reporting zero would be the stale-clear failure the queue exists to
+    /// prevent — a healthy machine that is missing its hosts entries — and the handshake a client
+    /// makes before it trusts anything here is `daemon.version`, which touches nothing.
     ///
     /// # Errors
     ///
@@ -98,7 +98,7 @@ impl Api {
         })
     }
 
-    /// `daemon.bundle` — one diagnostics archive, written into this home — roadmap task **T93**.
+    /// `daemon.bundle` — one diagnostics archive, written into this home.
     ///
     /// **The status is read here and handed over, its failure included.** `status` is fallible and a
     /// bundle is wanted exactly when things are failing, so a queue that would not answer becomes an
@@ -244,9 +244,9 @@ impl Api {
         let plan = graph.stop_order();
         let planned = plan.flat().cloned().collect();
 
-        // **Not the same word a person's `service.stop` leaves** — roadmap task T123. Somebody asked
-        // for the *daemon* to stop, which is not a sentence about any one service, and a row that
-        // recorded it as one would keep every service unwakeable until somebody started it by hand.
+        // **Not the same word a person's `service.stop` leaves.** Somebody asked for the *daemon*
+        // to stop, which is not a sentence about any one service, and a row that recorded it as one
+        // would keep every service unwakeable until somebody started it by hand.
         Ok(walked(
             planned,
             self.services
@@ -313,7 +313,7 @@ mod tests {
         daemon.quiet().await;
     }
 
-    /// T9a's whole claim, in the order it makes it: services down, then the token, then the answer.
+    /// `daemon.shutdown`'s whole claim, in order: services down, then the token, then the answer.
     #[tokio::test]
     async fn shutting_down_stops_the_services_before_it_cancels_anything() {
         let daemon = daemon(web_and_db(), &["db", "web"]).await;

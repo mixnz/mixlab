@@ -4,11 +4,10 @@
 use mixengine_proto::privileged::PrivilegedOp;
 use mixengine_proto::{Error, Removal, Residue, ResidueId};
 
-/// Forget any waiting helper installation before an uninstall asks for the removal — roadmap task
-/// **T88d**.
+/// Forget any waiting helper installation before an uninstall asks for the removal.
 ///
-/// `Elevation::require_helper` puts `HelperInstall {}` in the queue at every daemon start, and
-/// T88d's bootstrap adds one whenever a producer on a machine with no installed helper asks for
+/// `Elevation::require_helper` puts `HelperInstall {}` in the queue at every daemon start, and the
+/// helper's bootstrap adds one whenever a producer on a machine with no installed helper asks for
 /// anything. Either can still be waiting when somebody presses Uninstall, and the batch would then
 /// install the helper and remove it — the right end state, reached by doing and undoing work in
 /// front of a person reading the list.
@@ -43,12 +42,12 @@ pub(crate) async fn drop_helper_installations(
 
 /// The second reading, paired with the first row by row — or a refusal when the two cannot be.
 ///
-/// **Rows are paired by position**, as T87 always has. A process that started between the two
-/// readings adds an in-use row the first did not have, and those rows are dropped here: the run
-/// refused on any in-use row before it began, so a new one is somebody who arrived after the
-/// check, and the rename on the way out refuses rather than half-deletes if they are still there.
-/// Anything else that makes the readings disagree is a machine that changed underneath the
-/// uninstall, and mis-pairing its rows would report one thing's outcome against another's name.
+/// **Rows are paired by position**, as they always have been. A process that started between the
+/// two readings adds an in-use row the first did not have, and those rows are dropped here: the run
+/// refused on any in-use row before it began, so a new one is somebody who arrived after the check,
+/// and the rename on the way out refuses rather than half-deletes if they are still there. Anything
+/// else that makes the readings disagree is a machine that changed underneath the uninstall, and
+/// mis-pairing its rows would report one thing's outcome against another's name.
 pub(super) fn aligned(
     planned: &[Residue],
     mut measured: Vec<Residue>,
@@ -84,7 +83,7 @@ pub(super) fn merge(measured: Vec<Residue>, privileged: Vec<Residue>) -> Vec<Res
 }
 
 /// What became of a credential row, from how many keys there were and how many the store still
-/// lists — T182d. Measured, like every other row.
+/// lists. Measured, like every other row.
 pub(super) fn forgotten(before: usize, left: mixengine_platform::Result<usize>) -> Removal {
     match left {
         Ok(0) => Removal::Removed {
@@ -93,8 +92,9 @@ pub(super) fn forgotten(before: usize, left: mixengine_platform::Result<usize>) 
         Ok(left) => Removal::Failed {
             because: format!("{left} of {before} are still stored"),
         },
-        // The whole chain, down to the store's own code: "cannot forget the credential" alone
-        // says nothing a person can act on, and the T182a walk had to find the cause elsewhere.
+        // The whole chain, down to the store's own code: "cannot forget the credential" alone says
+        // nothing a person can act on, and walking a macOS uninstall had to find the cause
+        // elsewhere.
         Err(error) => Removal::Failed {
             because: format!(
                 "the credential store could not be read back: {}",
@@ -104,7 +104,7 @@ pub(super) fn forgotten(before: usize, left: mixengine_platform::Result<usize>) 
     }
 }
 
-/// The home stays, so the passwords its data needs stay with it — T182d, D1.
+/// The home stays, so the passwords its data needs stay with it.
 pub(super) fn keep_credentials(items: &mut [Residue]) {
     for item in items.iter_mut() {
         if matches!(
@@ -173,7 +173,7 @@ pub(super) fn planned_row(planned: &[Residue], id: ResidueId) -> bool {
 ///
 /// **`Removed` is a measurement.** The helper is honest about what it did, but it is a separate
 /// process describing finished work; this is a fresh reading of the thing itself, and it costs no
-/// privilege for any row on the list (the T87 design, D3).
+/// privilege for any row on the list.
 ///
 /// **And `OnRestart` is settled by the queue and the disk**, not by reading the helper's sentence: an
 /// operation that is no longer waiting has been applied, so a file that is nonetheless still there is
@@ -186,9 +186,9 @@ pub(super) fn settle(
     waiting: &[mixengine_proto::PendingOp],
 ) -> Residue {
     let Removal::Planned { how } = &before.outcome else {
-        // **Absent before and present after is a failure** (the T182b design, D7): the act left
-        // this on the machine, and the second reading's `Planned` would have read as nothing
-        // being wrong — which is how an uninstall that put the authority back reported success.
+        // **Absent before and present after is a failure**: the act left this on the machine, and
+        // the second reading's `Planned` would have read as nothing being wrong — which is how an
+        // uninstall that put the authority back reported success.
         if matches!(before.outcome, Removal::Absent {})
             && matches!(after.outcome, Removal::Planned { .. })
         {

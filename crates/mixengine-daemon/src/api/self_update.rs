@@ -1,5 +1,5 @@
 //! `update.status`, `update.check`, `update.decide`, `update.apply`, `update.hand_over` and
-//! `update.finish`: this daemon replacing itself, roadmap tasks **T88** and **T88f**.
+//! `update.finish`: this daemon replacing itself.
 //!
 //! The feed, the download and the swap are [`crate::updates`]'s. What is here is the stop, the swap
 //! and the end of this process, in the order that leaves a working daemon when any of them fails.
@@ -45,10 +45,10 @@ impl Api {
     /// `update.apply` — install it, and then stop.
     ///
     /// **The order is download → verify → unpack → smoke → stop → swap → answer → exit**, and the
-    /// first four happening before the stop is this task's one departure from
-    /// `docs/features/updates.md`'s wording (the T88 design, D5): a download that fails after the
-    /// stop has cost an outage, and one that succeeds could have happened while everything was still
-    /// up. What is down is the swap and the restart, which is seconds.
+    /// first four happening before the stop is this method's one departure from
+    /// `docs/features/updates.md`'s wording: a download that fails after the stop has cost an
+    /// outage, and one that succeeds could have happened while everything was still up. What is
+    /// down is the swap and the restart, which is seconds.
     ///
     /// **A swap that fails leaves a working daemon**, which is why the [`Going`](super::Going) guard
     /// is taken *after* the swap and not before it. The rollback puts the binaries back, starts the
@@ -121,8 +121,8 @@ impl Api {
         Ok(crate::updates::applied(&staged, &swapped, restarting))
     }
 
-    /// `update.hand_over` — the next `.pkg`, verified and open in Installer.app (T88f). Nothing
-    /// is stopped, and the daemon keeps running.
+    /// `update.hand_over` — the next `.pkg`, verified and open in Installer.app. Nothing is
+    /// stopped, and the daemon keeps running.
     pub(super) async fn update_hand_over(
         &self,
         hand_over: UpdateHandOver,
@@ -130,12 +130,11 @@ impl Api {
         self.updates.hand_over(&hand_over.version).await
     }
 
-    /// `update.finish` — the second half of `update.apply`, for a copy the `.pkg` installed
-    /// (T88f, D6).
+    /// `update.finish` — the second half of `update.apply`, for a copy the `.pkg` installed.
     ///
     /// Refused until the new binary is on disk. Then stop, remember, answer, exit: this process
-    /// runs the old image, which kept running when Installer.app replaced the file (the T88f
-    /// readings, M3), so the stop order is the one the running daemon knows.
+    /// runs the old image, which kept running when Installer.app replaced the file (measured on a
+    /// Mac), so the stop order is the one the running daemon knows.
     pub(super) async fn update_finish(
         &self,
         _finish: UpdateFinish,
@@ -192,7 +191,7 @@ mod tests {
     use super::*;
     use crate::api::test_daemon::{Daemon, daemon, daemon_reading, web_and_db};
 
-    /// A daemon with no feed to read answers the question anyway — roadmap task **T88**.
+    /// A daemon with no feed to read answers the question anyway.
     ///
     /// **What it must not do is fail.** `docs/features/updates.md` says an offline machine never
     /// sees an error and never a slower startup, and this is the same rule one call along: the
@@ -283,14 +282,15 @@ mod tests {
     /// What the test release's `.pkg` holds. Any bytes: the daemon hashes them and opens the file.
     const PKG_BYTES: &[u8] = b"not a package, and never installed by a test";
 
-    /// The version the test feed offers — T88f.
+    /// The version the test feed offers.
     const PKG_OFFERED: &str = "99.0.0";
 
-    /// A daemon the `.pkg` installed, reading a feed served in-process, and the registry serving it
-    /// — roadmap task **T88f**.
+    /// A daemon the `.pkg` installed, reading a feed served in-process, and the registry serving
+    /// it.
     ///
-    /// `installers` says whether the feed lists the package at all (a feed from before T88f does
-    /// not), and `sha256` is the digest it claims for it: [`None`] claims the right one.
+    /// `installers` says whether the feed lists the package at all (a feed from before installers
+    /// were published does not), and `sha256` is the digest it claims for it: [`None`] claims the
+    /// right one.
     async fn installed_by_pkg(
         installers: bool,
         sha256: Option<String>,
@@ -303,7 +303,7 @@ mod tests {
         );
         let url = registry.publish_asset(&packed.path(), packed.bytes.clone());
         // Headless, because the mock host has no window installed: the updater hands a machine the
-        // flavour it has (T182b, D5).
+        // flavour it has.
         let row = serde_json::json!({
             "os": std::env::consts::OS, "arch": std::env::consts::ARCH, "kind": "pkg",
             "flavour": "headless",
@@ -455,7 +455,7 @@ mod tests {
         daemon.quiet().await;
     }
 
-    /// Old clients see `managed`; new ones see the installer and its size (the design, D3).
+    /// Old clients see `managed`; new ones see the installer and its size.
     #[tokio::test]
     async fn the_status_of_a_pkg_copy_says_managed_and_carries_the_installer() {
         let (daemon, _registry) = installed_by_pkg(true, None).await;
@@ -481,7 +481,8 @@ mod tests {
         daemon.quiet().await;
     }
 
-    /// A feed from before T88f: nothing to offer a .pkg copy, a sentence why, and no error.
+    /// A feed from before installers were published: nothing to offer a .pkg copy, a sentence why,
+    /// and no error.
     #[tokio::test]
     async fn a_feed_without_installers_offers_nothing_to_a_pkg_copy() {
         let (daemon, _registry) = installed_by_pkg(false, None).await;

@@ -1,4 +1,4 @@
-//! `daemon.uninstall_plan` and `daemon.uninstall` — roadmap task **T87**.
+//! `daemon.uninstall_plan` and `daemon.uninstall`.
 //!
 //! **Two methods on `daemon.doctor`/`daemon.doctor_repair`'s split, and not one flag.** The plan is
 //! a read in the strict sense — no row written, nothing enqueued, no prompt possible — which is what
@@ -48,11 +48,11 @@ pub(crate) struct Doors {
     /// Where the home's own directories are left for `main` to remove on the way out.
     pub(crate) armed: Arc<Armed>,
 
-    /// Where this copy's binaries are, and whether MixEngine updates them itself — T185a.
+    /// Where this copy's binaries are, and whether MixEngine updates them itself.
     pub(crate) updates: Arc<crate::updates::Updates>,
 }
 
-/// What an uninstall put in the queue — the T182b design, D6.
+/// What an uninstall put in the queue.
 #[derive(Debug, Default)]
 struct Asked {
     /// The operations it enqueued, in the order it enqueued them.
@@ -102,7 +102,7 @@ pub(crate) struct Uninstall {
     /// Where the home's own directories are left for `main` to remove on the way out.
     armed: Arc<Armed>,
 
-    /// Where this copy's binaries are, and whether MixEngine updates them itself — T185a.
+    /// Where this copy's binaries are, and whether MixEngine updates them itself.
     updates: Arc<crate::updates::Updates>,
 
     /// The home's own layout: where its authority is, and every directory it owns.
@@ -154,14 +154,14 @@ impl Uninstall {
 
     /// `daemon.uninstall` — the job that takes MixEngine off this machine.
     ///
-    /// **Refuse when blocked, privileged first, then this user's own things, home last** (the T182
-    /// design, D4 and D5). A process running from a directory that is going refuses the whole run
-    /// before anything is enqueued. Everything needing the helper goes into one batch, so there is
-    /// one dialog — and it goes *first*, so a declined prompt has changed nothing at all: `PATH`, the
-    /// login entry and the browsers are touched only once the machine is clear. That reverses T87's
-    /// D7, which cleaned them before the prompt so a declined grant still left them clean; an
-    /// uninstall that must either finish or change nothing cannot leave a half-clean machine behind.
-    /// The home goes last because the daemon is running out of it.
+    /// **Refuse when blocked, privileged first, then this user's own things, home last.** A process
+    /// running from a directory that is going refuses the whole run before anything is enqueued.
+    /// Everything needing the helper goes into one batch, so there is one dialog — and it goes
+    /// *first*, so a declined prompt has changed nothing at all: `PATH`, the login entry and the
+    /// browsers are touched only once the machine is clear. That reverses what the first uninstall
+    /// did, cleaning them before the prompt so a declined grant still left them clean; an uninstall
+    /// that must either finish or change nothing cannot leave a half-clean machine behind. The home
+    /// goes last because the daemon is running out of it.
     ///
     /// **Nothing stops a service here, and nothing in the home is removed here.** Both happen on the
     /// way out: the home's directories are *armed*, and `mixengined` removes them after its own
@@ -183,9 +183,9 @@ impl Uninstall {
         handle.progress(5, "reading what this machine holds").await;
         let planned = self.rows(query).await?;
 
-        // T182, D4: nothing is touched while a process runs from a directory that is going — or,
-        // since T182e, holds something in one that cannot be moved. The row's own sentence says
-        // which, and what to close.
+        // Nothing is touched while a process runs from a directory that is going — or holds
+        // something in one that cannot be moved. The row's own sentence says which, and what to
+        // close.
         if let Some(row) = planned
             .iter()
             .find(|row| matches!(row.outcome, Removal::Blocked { .. }))
@@ -238,7 +238,7 @@ impl Uninstall {
             })
             .collect();
 
-        // `Kept` is a helper a package placed (T88e), which is the package's to remove.
+        // `Kept` is a helper a package placed, which is the package's to remove.
         let machine_clear = privileged.iter().all(|row| {
             matches!(
                 row.outcome,
@@ -272,10 +272,10 @@ impl Uninstall {
             .await;
         let mut done = self.undo_what_needs_no_token(&planned).await;
 
-        // **And every installed JDK lets this home's authority go** — roadmap task T27e, D9.
-        // Logged rather than a residue row of its own: `cacerts` is inside the home, not a store on
-        // this machine a person could be shown. It matters with `keep_home`, where a kept JDK would
-        // otherwise go on trusting an authority the machine has just been told to forget.
+        // **And every installed JDK lets this home's authority go.** Logged rather than a residue
+        // row of its own: `cacerts` is inside the home, not a store on this machine a person could
+        // be shown. It matters with `keep_home`, where a kept JDK would otherwise go on trusting an
+        // authority the machine has just been told to forget.
         if let Ok(mixengine_proto::CaState::Present { ca }) = self.certificates.authority().await {
             self.certificates
                 .release_from_jdks(&ca.key_id)
@@ -305,7 +305,7 @@ impl Uninstall {
                 // then kept the home because of it. Found by CI on 2026-09-04.
                 //
                 // Except for one of the three that needed no token which was absent and is now
-                // back: that is `settle`'s T182b rule, and it holds for them too.
+                // back: that is `settle`'s rule, and it holds for them too.
                 None if !matches!(
                     before.id,
                     ResidueId::Home
@@ -324,8 +324,8 @@ impl Uninstall {
             });
         }
 
-        // T182d: the credential store goes only with a home that is going, so ask the same
-        // question `unfinished` asks, and let a failure here keep the home.
+        // The credential store goes only with a home that is going, so ask the same question
+        // `unfinished` asks, and let a failure here keep the home.
         let clear = !items.iter().any(|item| {
             matches!(
                 item.outcome,
@@ -345,8 +345,8 @@ impl Uninstall {
             )
         });
 
-        // T182h: the home's state goes with the home, so a folder that stays gets a copy of it —
-        // the next home pointed at it can bring the projects and sites back.
+        // The home's state goes with the home, so a folder that stays gets a copy of it — the next
+        // home pointed at it can bring the projects and sites back.
         if !unfinished && !query.keep_home {
             self.leave_a_copy(&mut items).await;
         }
@@ -356,8 +356,8 @@ impl Uninstall {
             .await;
         self.arm_the_home(&mut items, unfinished);
 
-        // T182b, D6: a finished uninstall leaves nothing waiting. The daemon is about to exit, and
-        // nothing in the queue belongs to a machine this home has just been taken off.
+        // A finished uninstall leaves nothing waiting. The daemon is about to exit, and nothing in
+        // the queue belongs to a machine this home has just been taken off.
         if !unfinished {
             self.elevation
                 .drop_pending(&mixengine_proto::ElevationDrop { op: None })
@@ -367,7 +367,7 @@ impl Uninstall {
         Ok(report(items))
     }
 
-    /// Put the queue back as this uninstall found it — the T182b design, D6.
+    /// Put the queue back as this uninstall found it.
     ///
     /// Drops the rows this run enqueued, then enqueues again what they displaced: a whole-state
     /// operation (`hosts-apply`, `firewall-apply`) dedupes on its name, so the uninstall's empty
@@ -389,9 +389,9 @@ impl Uninstall {
 
     /// The three things outside the home that belong to this account rather than to the machine.
     ///
-    /// **After the prompt, and only once the machine is clear** (the T182 design, D5). None needs a
-    /// token, which is exactly why they wait: a person who declines the dialog has then changed
-    /// nothing at all, and the next run finds all three where they were.
+    /// **After the prompt, and only once the machine is clear.** None needs a token, which is
+    /// exactly why they wait: a person who declines the dialog has then changed nothing at all, and
+    /// the next run finds all three where they were.
     ///
     /// Answers only the rows it acted on; everything else is settled from the second reading.
     async fn undo_what_needs_no_token(
@@ -414,8 +414,8 @@ impl Uninstall {
             );
         }
 
-        // T185a: the program files this install added to itself. The record is cleared once they
-        // are gone, so a kept home reused by a fresh install does not remove that install's file.
+        // The program files this install added to itself. The record is cleared once they are gone,
+        // so a kept home reused by a fresh install does not remove that install's file.
         if planned_row(planned, ResidueId::CompletedBinary)
             && let mixengine_core::updates::Placement::SelfUpdatable { directory } =
                 self.updates.placement()
@@ -490,7 +490,7 @@ impl Uninstall {
     /// none of this home's wiring, asks for nothing — a row whose only possible outcome is
     /// `AlreadyDone` is a row that makes a dialog longer for no reason.
     async fn ask_for_the_rest(&self, planned: &[Residue]) -> Result<Asked, Error> {
-        // T88d, and before anything else this asks for.
+        // A waiting helper install is forgotten before anything else this asks for.
         drop_helper_installations(&self.elevation).await?;
 
         let mut asked = Asked::default();
@@ -501,8 +501,8 @@ impl Uninstall {
             ResidueId::PortAccess,
             ResidueId::FirewallRules,
             ResidueId::TrustStore,
-            // T182a, D2: after every row the program's own files serve, before the helper and its
-            // log, so a failure part-way leaves the program in place to finish the job.
+            // After every row the program's own files serve, before the helper and its log, so a
+            // failure part-way leaves the program in place to finish the job.
             ResidueId::Package,
             ResidueId::PrivilegedHelper,
             ResidueId::AuditLog,
@@ -512,7 +512,7 @@ impl Uninstall {
             }
 
             for op in self.operations_for(id).await {
-                // T182b, D6: what this row is about to replace in the queue, kept to be put back.
+                // What this row is about to replace in the queue, kept to be put back.
                 let key = op.dedupe_key();
                 asked.displaced.extend(
                     self.elevation
@@ -529,11 +529,12 @@ impl Uninstall {
             }
         }
 
-        // **Every batch writes the audit log, so every batch removes it** (T182b). The helper records
-        // each operation it applies, so a run whose inventory found no log — an earlier uninstall
+        // **Every batch writes the audit log, so every batch removes it.** The helper records each
+        // operation it applies, so a run whose inventory found no log — an earlier uninstall
         // removed it — would create one with its own first line and then report that as left
-        // behind. Measured on the first real uninstall after T182b's D7. The helper applies this
-        // last and records nothing for it, whatever position it has in the batch.
+        // behind. Measured on the first real uninstall after a reappearing row became a failure.
+        // The helper applies this last and records nothing for it, whatever position it has in the
+        // batch.
         let remove_the_log = PrivilegedOp::AuditLogRemove {};
         if !asked.ops.is_empty() && !asked.ops.contains(&remove_the_log) {
             self.elevation.enqueue(&remove_the_log).await?;
@@ -617,7 +618,7 @@ impl Uninstall {
                     .map(|target| PrivilegedOp::PortAccessRevoke { target })
             }
 
-            // Whole state again: the empty plan is the revoke, which is why T74 shipped no
+            // Whole state again: the empty plan is the revoke, which is why LAN sharing has no
             // `FirewallRevoke` beside it.
             ResidueId::FirewallRules => Some(PrivilegedOp::FirewallApply {
                 plan: mixengine_proto::privileged::FirewallPlan {
@@ -649,7 +650,7 @@ impl Uninstall {
             // records nothing for it, because the line would recreate the file.
             ResidueId::AuditLog => Some(PrivilegedOp::AuditLogRemove {}),
 
-            // T182a: the program the `.pkg` placed, after everything else it serves is undone.
+            // The program the `.pkg` placed, after everything else it serves is undone.
             ResidueId::Package => Some(PrivilegedOp::PackageRemove {}),
 
             // The four that need no token, and the directories the daemon removes as it exits.
@@ -667,8 +668,8 @@ impl Uninstall {
         }
     }
 
-    /// Write a copy of this home's state into each relocated folder that stays — roadmap task
-    /// **T182h**, spec D5 — and say so on its row.
+    /// Write a copy of this home's state into each relocated folder that stays, and say so on its
+    /// row.
     ///
     /// Never fatal: a copy that cannot be written costs only the restore it would have offered, and
     /// is logged; the uninstall goes on exactly as it would have.
@@ -700,15 +701,15 @@ impl Uninstall {
     /// is record the directories, and the process removes them on the way out — after its own
     /// shutdown has stopped every service and after `Store::close` has checkpointed the log.
     ///
-    /// **Called whatever is kept, and it is what marks the run finished** (the T182 design, D1): a
-    /// directory the caller asked to keep stays exactly as the inventory said, and a finished run
-    /// ends the daemon even when nothing at all was armed.
+    /// **Called whatever is kept, and it is what marks the run finished**: a directory the caller
+    /// asked to keep stays exactly as the inventory said, and a finished run ends the daemon even
+    /// when nothing at all was armed.
     fn arm_the_home(&self, items: &mut [Residue], unfinished: bool) {
         let mut paths = Vec::new();
 
         for item in items.iter_mut() {
-            // The window's folders go with the home and by the same all-or-nothing removal (T182b):
-            // the webview's cache and a half-removed sync database are the same kind of leftover.
+            // The window's folders go with the home and by the same all-or-nothing removal: the
+            // webview's cache and a half-removed sync database are the same kind of leftover.
             if !matches!(
                 item.id,
                 ResidueId::Home
@@ -750,7 +751,7 @@ impl Uninstall {
         }
     }
 
-    /// Forget this home's credentials and the window's, when the home is about to go — T182d.
+    /// Forget this home's credentials and the window's, when the home is about to go.
     ///
     /// **Before `arm_the_home`, and only when everything else is clear**, so a failure here keeps
     /// the home: a home removed with its passwords still in the store is one nothing can clean up,
@@ -836,7 +837,7 @@ impl Uninstall {
     }
 }
 
-/// The rows of relocated folders this uninstall keeps — where a copy of the state goes (T182h).
+/// The rows of relocated folders this uninstall keeps — where a copy of the state goes.
 fn kept_relocated(items: &[Residue]) -> Vec<usize> {
     items
         .iter()

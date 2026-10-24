@@ -27,9 +27,9 @@ const SHUTDOWN_GRACE: std::time::Duration = std::time::Duration::from_secs(10);
 
 /// A daemon with a home under it: a database, a registry and whatever it declares.
 ///
-/// The `daemon.*` handlers read state captured at startup and touch neither, which is what let
-/// this be a bare struct before T19a. `service.*` reads the `services` rows and the registry, so
-/// the home is a real one and is held here for as long as the test needs it.
+/// The `daemon.*` handlers read state captured at startup and touch neither, which is what let this
+/// be a bare struct before `service.*` existed. `service.*` reads the `services` rows and the
+/// registry, so the home is a real one and is held here for as long as the test needs it.
 pub(super) struct Daemon {
     pub(super) _home: Home,
     pub(super) api: Arc<Api>,
@@ -43,7 +43,7 @@ pub(super) struct Daemon {
     pub(super) host: Arc<mixengine_platform::mock::Host>,
 
     /// The path this daemon believes it runs from, which `update.status` asks for its version
-    /// once a `.pkg` has been handed over — roadmap task **T88f**.
+    /// once a `.pkg` has been handed over.
     pub(super) installed_daemon: std::path::PathBuf,
 }
 
@@ -121,7 +121,7 @@ pub(super) async fn daemon(specs: Arc<dyn services::SpecSource>, rows: &[&str]) 
     daemon_on(specs, rows, mixengine_platform::mock::Host::with_home).await
 }
 
-/// The same daemon on a machine the caller describes — roadmap task **T97**.
+/// The same daemon on a machine the caller describes.
 ///
 /// **A constructor rather than a host**, because the mock's own constructors all take the home
 /// and this harness is the only thing that knows where it is. What varies between the switch
@@ -138,8 +138,8 @@ where
     daemon_reading(specs, rows, machine, None).await
 }
 
-/// The same daemon reading the update feed at `feed` — roadmap task **T88f**. [`None`] points it
-/// at a URL nothing answers on, which is what every other test here wants.
+/// The same daemon reading the update feed at `feed`. [`None`] points it at a URL nothing answers
+/// on, which is what every other test here wants.
 pub(super) async fn daemon_reading<H>(
     specs: Arc<dyn services::SpecSource>,
     rows: &[&str],
@@ -158,7 +158,7 @@ where
     let events = super::Events::new();
 
     // Before the registry, which takes it: a start may have a first-run ritual to perform, and
-    // that is a job — roadmap task T33.
+    // that is a job.
     let jobs = Arc::new(crate::jobs::Jobs::new(
         &store,
         events.clone(),
@@ -175,8 +175,8 @@ where
         Arc::clone(&jobs),
     ));
 
-    // One transport, shared the way `main` shares it — roadmap task **T72b** — so this test
-    // context stays an honest copy of what the daemon actually builds.
+    // One transport, shared the way `main` shares it, so this test context stays an honest copy of
+    // what the daemon actually builds.
     let transport =
         mixengine_core::index::default_transport().expect("an HTTP client can be built");
 
@@ -211,7 +211,7 @@ where
         b"the shim, as far as a copy is concerned",
     )
     .expect("a file in a temporary home");
-    // What `bin/` is filled from on Windows since T185, and harmless beside it elsewhere.
+    // What `bin/` is filled from on Windows, and harmless beside it elsewhere.
     std::fs::write(
         installed.join(format!(
             "mixengine-trampoline{}",
@@ -246,9 +246,9 @@ where
         Arc::clone(&host) as Arc<dyn mixengine_platform::Host>,
         crate::elevation::Candidates {
             program: installed.join(format!("mixengined{}", std::env::consts::EXE_SUFFIX)),
-            // A machine with no installed helper, stated rather than inherited — T85's D5. The
-            // machine running these tests may well have one, and every assertion here is about
-            // the copy this fixture puts beside its own `mixengined`.
+            // A machine with no installed helper, stated rather than inherited. The machine running
+            // these tests may well have one, and every assertion here is about the copy this
+            // fixture puts beside its own `mixengined`.
             installed: None,
         },
         Arc::new(crate::dns::Dns::hosts_only_for_tests()),
@@ -268,7 +268,7 @@ where
     // Pointed at a URL nothing answers on, which is the state these tests want: every one of
     // them asks what a daemon that has never read a feed says, and a fixture that could reach
     // the published one would be a test suite with an opinion about the network. Built before
-    // `Api` because the uninstall reads it too (T185a).
+    // `Api` because the uninstall reads it too.
     let updates = crate::updates::Updates::new(
         &paths,
         &store,
@@ -457,9 +457,9 @@ pub(super) async fn answer_json(api: &Arc<Api>, body: &str) -> Value {
     serde_json::from_slice(&answered).expect("the daemon answers JSON")
 }
 
-// `service.*` — T19a. What these exercise is the surface over T19's registry, which is why they
-// are here and not there: the walk itself has its own tests next door, and what has never been
-// proved before is that a request reaches it and comes back as something a client can render.
+// `service.*`. What these exercise is the surface over the runner's registry, which is why they are
+// here and not there: the walk itself has its own tests next door, and what has never been proved
+// before is that a request reaches it and comes back as something a client can render.
 
 /// Two services, the second depending on the first — the shape every walk below is about.
 pub(super) fn web_and_db() -> Arc<fixture::Declared> {

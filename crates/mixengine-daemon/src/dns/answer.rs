@@ -1,6 +1,6 @@
-//! What this server answers, as a function of the question — roadmap task **T44**.
+//! What this server answers, as a function of the question.
 //!
-//! **Pure, and deliberately so** (the T44 design, D5). Nothing here binds a socket, reads the
+//! **Pure, and deliberately so** (D5). Nothing here binds a socket, reads the
 //! configuration or touches the database: a question goes in and a [`Reply`] comes out, so the
 //! policy this module *is* can be asserted on as a table rather than by standing up a server and
 //! sending it packets. `super::server` is what turns a [`Reply`] into bytes on a wire.
@@ -11,11 +11,13 @@
 //!
 //! # There is no forwarder here, on purpose
 //!
-//! The T44 design, D1: every resolver mechanism T45 can use is scoped to a TLD, so a query outside
-//! one never arrives, and the single way it could — a Linux wiring that replaced a link's DNS
-//! servers with ours — is also the one where forwarding loops back through `systemd-resolved` and
-//! hangs. `REFUSED` sends a stub resolver to its next nameserver at once, which turns a mis-wiring
-//! into something `mix doctor` can see rather than a machine that has become mysteriously slow.
+//! D1: every mechanism the resolver can use is scoped to a TLD, so a query outside one never
+//! arrives, and the single way it could — a Linux wiring that replaced a link's DNS servers with
+//! ours — is also the one where forwarding loops back through `systemd-resolved` and hangs.
+//! `REFUSED` sends a stub resolver to its next nameserver at once, which turns a mis-wiring into
+//! something `mix doctor` can see rather than a machine that has become mysteriously slow.
+//!
+//! The D-numbers here are those of `docs/specs/2026-08-23-t44-dns-server-design.md`.
 
 use std::net::Ipv4Addr;
 use std::sync::LazyLock;
@@ -27,10 +29,10 @@ use mixengine_proto::domains::MANAGED_TLDS;
 
 /// The one address a managed name resolves to.
 ///
-/// `127.0.0.1` alone and never `::1` — the T44 design, D3, which is
-/// [`mixengine_core::hosts`]' answer to the same question for the same reason: after T43 the front
-/// end binds IPv4 only, and a name that resolves to an address nothing is listening on is a browser
-/// preferring IPv6 and waiting before it falls back, on every connection.
+/// `127.0.0.1` alone and never `::1` (D3), which is [`mixengine_core::hosts`]' answer to the same
+/// question for the same reason: `127.0.0.1` is the address every front end is reached on, and a
+/// name that resolves to an address nothing is listening on is a browser preferring IPv6 and
+/// waiting before it falls back, on every connection.
 const LOOPBACK: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
 /// How long an answer may be cached, in seconds.

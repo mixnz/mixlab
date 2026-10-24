@@ -1,11 +1,11 @@
-//! Renewing this home's certificates on a clock — roadmap task **T52**.
+//! Renewing this home's certificates on a clock.
 //!
 //! A leaf lives 90 days and is replaced once it has
 //! [`RENEW_WITHIN_DAYS`](mixengine_core::certs::leaf::RENEW_WITHIN_DAYS) or fewer left. Until this
 //! module every renewal came from a daemon **start**, which is enough for a machine switched off
 //! more than it is on and nothing at all for one whose daemon runs for three months.
 //!
-//! **The question asked here is T50's and not a second copy of it.** One pass is
+//! **The question asked here is the issuer's and not a second copy of it.** One pass is
 //! [`Certificates::issue`] with no site named — the same call the start makes — and everything in
 //! this module is about what to do with the answer.
 
@@ -91,7 +91,7 @@ fn pass(report: &mixengine_proto::CertIssueReport) -> Pass {
         match &site.outcome {
             mixengine_proto::IssueOutcome::Issued {} => renewed += 1,
 
-            // **`NotWanted` is not a failure**, which is the whole reason T52 added it. A site with
+            // **`NotWanted` is not a failure**, which is the whole reason it exists. A site with
             // HTTPS off asked for no certificate, and an event per plaintext site every hour is
             // what this arm exists to prevent.
             mixengine_proto::IssueOutcome::Reused {}
@@ -166,7 +166,7 @@ pub(crate) fn start(
                 Pass::Ran { renewed, failed } => {
                     if renewed > 0 {
                         // **This is the whole reload.** Rendering a site file stamps the
-                        // certificate's fingerprint into its header (T51), so a renewed
+                        // certificate's fingerprint into its header, so a renewed
                         // certificate makes the file differ, `document::install` finds a change,
                         // and the front end is reloaded. A failure here installed nothing —
                         // `install` stages first — so the front end goes on serving what worked,
@@ -274,8 +274,8 @@ mod tests {
         );
     }
 
-    /// **The assertion that keeps a plaintext site off the event stream.** T52's fourth outcome is
-    /// only worth having if this holds.
+    /// **The assertion that keeps a plaintext site off the event stream.** `NotWanted` is only
+    /// worth having if this holds.
     #[test]
     fn a_site_that_wanted_nothing_is_not_a_failure() {
         let report = a_report(vec![an_outcome(

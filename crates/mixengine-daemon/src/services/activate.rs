@@ -1,19 +1,19 @@
-//! Starting a service from the connection that needed it — roadmap task **T70**.
+//! Starting a service from the connection that needed it.
 //!
-//! T69 taught the daemon to stop a service nothing was using and shipped it switched off, because
-//! stopping a pool is only safe once something starts it again. This is that something.
+//! Stopping a service nothing is using is only safe once something starts it again, which is why
+//! the idle sweep first shipped switched off. This is that something.
 //!
 //! # It never reads what it carries
 //!
-//! The design's D1. A connection arrives, the service is made to run, the activator dials it and
-//! copies bytes until one side closes — and nothing in that sentence mentions a protocol. FastCGI,
-//! the MySQL protocol and RESP have nothing in common except that a client connects and something
-//! is said, so an activator that parsed any of them would be a parser in `mixengined` written to
-//! throw its own answer away.
+//! A connection arrives, the service is made to run, the activator dials it and copies bytes until
+//! one side closes — and nothing in that sentence mentions a protocol. FastCGI, the MySQL protocol
+//! and RESP have nothing in common except that a client connects and something is said, so an
+//! activator that parsed any of them would be a parser in `mixengined` written to throw its own
+//! answer away.
 //!
 //! The consequence worth stating: a client that speaks first and one that waits to be greeted are
 //! the same case here. The waiting client is the one a web-only design would never have met, and it
-//! is most of what T70a will need.
+//! is what lets a connection start a database too.
 //!
 //! # Four answers, and each of them is bounded
 //!
@@ -21,24 +21,24 @@
 //! | --- | --- |
 //! | stopped, and nobody meant it to stay down | start it, wait, proxy |
 //! | stopped, and a person stopped it | close the connection |
-//! | failed | start it, at most once per [`RETRY_FAILED_AFTER`]; otherwise close (T200) |
+//! | failed | start it, at most once per [`RETRY_FAILED_AFTER`]; otherwise close |
 //! | running | proxy straight through |
 //!
-//! The middle row is the design's D8 and it is not a detail: `mix service stop mariadb@main`
-//! followed by the next connection undoing it is the tool overruling its user. What makes it
-//! answerable after a restart is `services.stopped_by`, written on every arrival at `stopped`.
+//! The middle row is not a detail: `mix service stop mariadb@main` followed by the next connection
+//! undoing it is the tool overruling its user. What makes it answerable after a restart is
+//! `services.stopped_by`, written on every arrival at `stopped`.
 //!
-//! **The top row is wider than it was** — roadmap task **T123**. T70 wrote that column as a
-//! boolean, so it said *the daemon idled this* and nothing else; a row that had never run and one a
-//! restart left behind both fell to the middle row, and every PHP site on a machine that had been
-//! rebooted answered 502 until somebody started its pool by hand. Three of the four ways a service
-//! arrives at `stopped` are not a decision anybody made, and only the fourth may forbid a wake.
+//! **The top row is wider than it was.** The first activator wrote that column as a boolean, so it
+//! said *the daemon idled this* and nothing else; a row that had never run and one a restart left
+//! behind both fell to the middle row, and every PHP site on a machine that had been rebooted
+//! answered 502 until somebody started its pool by hand. Three of the four ways a service arrives
+//! at `stopped` are not a decision anybody made, and only the fourth may forbid a wake.
 //!
-//! **The failed row is T200's.** It used to fall to the last one, so a pool whose start had failed
-//! was dialled anyway and logged as running. It is tried again, because a `failed` row survives a
-//! restart and nothing else would ever start a web-app's pool once its cause is fixed — but not by
-//! every connection, since a front end retrying every fifty milliseconds would repeat one failure a
-//! hundred times.
+//! **The failed row is the newest.** It used to fall to the last one, so a pool whose start had
+//! failed was dialled anyway and logged as running. It is tried again, because a `failed` row
+//! survives a restart and nothing else would ever start a web-app's pool once its cause is fixed —
+//! but not by every connection, since a front end retrying every fifty milliseconds would repeat
+//! one failure a hundred times.
 //!
 //! The last row is not a special case for its own sake — a service that is running and whose
 //! primary address was refused anyway is a fault this is not the place to diagnose, and proxying is
@@ -68,7 +68,7 @@ use super::Registry;
 /// log — which is the whole of what a person has to go on when a site answers 502.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Refused {
-    /// A person stopped this service, so a request is not allowed to undo that — D8.
+    /// A person stopped this service, so a request is not allowed to undo that.
     StoppedOnPurpose,
 
     /// The service could not be started.
@@ -77,8 +77,8 @@ pub(crate) enum Refused {
     /// It started, and then nothing answered at its own address.
     NotListening,
 
-    /// Its last start failed, and a connection already tried it again moments ago — found by T200.
-    /// See [`RETRY_FAILED_AFTER`].
+    /// Its last start failed, and a connection already tried it again moments ago. See
+    /// [`RETRY_FAILED_AFTER`].
     Failed,
 }
 
@@ -174,7 +174,7 @@ pub(crate) async fn hold_all(
 
         match holding.get(&service) {
             Some(current) if current.listen == listen => continue,
-            // **The row's address moved** — a service reinstalled under the same id (T200, D2).
+            // **The row's address moved** — a service reinstalled under the same id.
             // The old listener goes first, so a port it held can be the new one.
             Some(_) => {
                 if let Some(old) = holding.remove(&service) {
@@ -208,13 +208,13 @@ pub(crate) async fn hold_all(
     Ok(held)
 }
 
-/// Stop holding `service`'s activator, if this daemon holds one — roadmap task **T200**, D2.
+/// Stop holding `service`'s activator, if this daemon holds one.
 ///
 /// **Called once the service's row is gone**, by `extension.uninstall` and `runtime.uninstall`.
-/// Before T200 nothing gave an address back, so an uninstalled pool kept its port until the daemon
-/// exited: the allocator could not hand it out, and a reinstall under the same id was skipped by
-/// [`hold_all`] and never bound at all. A connection already being carried finishes on its own
-/// task; only the accepting stops.
+/// Before this existed nothing gave an address back, so an uninstalled pool kept its port until the
+/// daemon exited: the allocator could not hand it out, and a reinstall under the same id was
+/// skipped by [`hold_all`] and never bound at all. A connection already being carried finishes on
+/// its own task; only the accepting stops.
 pub(crate) async fn release(service: &ServiceId) {
     let held = HOLDING.lock().await.remove(service);
 
@@ -238,10 +238,10 @@ async fn stop(held: Held) {
 /// Which services this daemon is already holding an address for.
 ///
 /// **Because this is a repair and not a step**, exactly as `activation::ensure` is one: it runs at
-/// boot *and* after a runtime install, since a pool created by that install has an activator nothing
-/// has bound yet — and without a second call it would have none until the next daemon start, which
-/// is a site that answers 502 for half an hour and then works after a restart nobody could have
-/// known to make. That was T70's, found by T72a's cold path measuring it.
+/// boot *and* after a runtime install, since a pool created by that install has an activator
+/// nothing has bound yet — and without a second call it would have none until the next daemon
+/// start, which is a site that answers 502 for half an hour and then works after a restart nobody
+/// could have known to make. That was the first activator's, found by measuring the cold path.
 ///
 /// A set rather than nothing, because `Activation::bind` on an address this same daemon already
 /// holds fails with `AddrInUse` — so a second pass would log every existing activator as an address
@@ -250,16 +250,16 @@ async fn stop(held: Held) {
 /// Process-wide, like `ports`' allocation lock and for the same reason: what it guards is a fact
 /// about this operating system, not about any one caller.
 ///
-/// **A map from service to address, not a set of services** — roadmap task **T200**, D2. A set
-/// could only say *this id is held*, so a service reinstalled under the same id with a new address
-/// was skipped and never bound, and nothing could find the listener to give its port back.
+/// **A map from service to address, not a set of services.** A set could only say *this id is
+/// held*, so a service reinstalled under the same id with a new address was skipped and never
+/// bound, and nothing could find the listener to give its port back.
 static HOLDING: tokio::sync::Mutex<std::collections::BTreeMap<ServiceId, Held>> =
     tokio::sync::Mutex::const_new(std::collections::BTreeMap::new());
 
 /// One activator this daemon holds: where, and the loop accepting there.
 struct Held {
     /// The address the generator named when it was bound — compared on every [`hold_all`], because
-    /// a service reinstalled under the same id comes back with a different one (T200, D2).
+    /// a service reinstalled under the same id comes back with a different one.
     listen: Listen,
 
     /// The accept loop. Aborting it drops the listener, which is what frees the address.
@@ -272,8 +272,8 @@ struct Held {
 /// written into; `Listen` is the platform's and belongs to the call that binds it. Neither crate
 /// depends on the other in the direction that would let them share one.
 ///
-/// **Two callers**: this file's activator and T70a's [`hold`](super::hold), which is why it is not
-/// inlined into either.
+/// **Two callers**: this file's activator and [`hold`](super::hold), which is why it is not inlined
+/// into either.
 pub(super) fn to_listen(upstream: &mixengine_core::generate::Upstream) -> Listen {
     match upstream {
         mixengine_core::generate::Upstream::Socket(path) => Listen::Socket(path.clone()),
@@ -283,11 +283,11 @@ pub(super) fn to_listen(upstream: &mixengine_core::generate::Upstream) -> Listen
 
 /// Make sure the service is running, then copy bytes between the client and it.
 ///
-/// **Two callers, one splice.** [`spawn`] above holds an address of the activator's own; T70a's
+/// **Two callers, one splice.** [`spawn`] above holds an address of the activator's own;
 /// [`hold`](super::hold) holds the service's *own* address and gives it back before it gets here.
 /// What happens once the connection has arrived is identical, and a second copy of
-/// `copy_bidirectional` would be a second place for D1 — *it never reads what it carries* — to be
-/// true, or to quietly stop being.
+/// `copy_bidirectional` would be a second place for *it never reads what it carries* to be true, or
+/// to quietly stop being.
 pub(super) async fn carry(
     services: &Registry,
     service: &ServiceId,
@@ -345,8 +345,8 @@ async fn ensure_running(services: &Registry, service: &ServiceId) -> Result<(), 
             }
         }
 
-        // **Failed is not running** (T200). Proxying to it dialled a process that never existed and
-        // logged it as one that runs. Tried again, but not by every connection: see `retry_due`.
+        // **Failed is not running.** Proxying to it dialled a process that never existed and logged
+        // it as one that runs. Tried again, but not by every connection: see `retry_due`.
         ServiceState::Failed => {
             if !retry_due(service) {
                 return Err(Refused::Failed);
@@ -375,8 +375,7 @@ async fn ensure_running(services: &Registry, service: &ServiceId) -> Result<(), 
     Ok(())
 }
 
-/// How long a failed service is left alone after a connection tried to start it — roadmap task
-/// **T200**.
+/// How long a failed service is left alone after a connection tried to start it.
 ///
 /// A front end retries a refused upstream every fifty milliseconds for five seconds, so without a
 /// pause one page load is a hundred starts failing for the same reason. Ten seconds is past that
@@ -392,10 +391,10 @@ static TRIED: std::sync::Mutex<std::collections::BTreeMap<ServiceId, std::time::
 
 /// Whether a connection may try to start this failed service now, and if so, mark that it did.
 ///
-/// **A failed service is tried again, and not by every connection** — T200. Refusing it for good
-/// would leave a web-app down after its cause was fixed, because a `failed` row survives a restart
-/// and nothing in a site starts its pool; trying on every connection would repeat one failure a
-/// hundred times a page load.
+/// **A failed service is tried again, and not by every connection.** Refusing it for good would
+/// leave a web-app down after its cause was fixed, because a `failed` row survives a restart and
+/// nothing in a site starts its pool; trying on every connection would repeat one failure a hundred
+/// times a page load.
 fn retry_due(service: &ServiceId) -> bool {
     let now = std::time::Instant::now();
     let mut tried = TRIED
@@ -455,7 +454,7 @@ mod tests {
             .expect("the row");
     }
 
-    /// **A service nobody stopped is not one somebody stopped** — roadmap task **T123**.
+    /// **A service nobody stopped is not one somebody stopped.**
     ///
     /// A row arrives at `stopped` with nothing behind it twice over: `service.create` writes one,
     /// and a machine that was restarted leaves every pool there. Neither is a person's decision, and
@@ -477,8 +476,7 @@ mod tests {
         );
     }
 
-    /// **A service that failed is tried again, once in a while, and never proxied to as running** —
-    /// found by T200.
+    /// **A service that failed is tried again, once in a while, and never proxied to as running.**
     ///
     /// Everything but `stopped` used to read as *running*, so a pool whose start had failed was
     /// dialled anyway and `daemon.log` said *"the service is running and nothing answers"* about a
@@ -510,7 +508,7 @@ mod tests {
         );
     }
 
-    /// **A person's stop is not undone by a connection** — the design's D8.
+    /// **A person's stop is not undone by a connection.**
     ///
     /// `mix service stop` followed by the next request restarting the service is the tool overruling
     /// its user, and after a daemon restart the only thing that can still tell the two stops apart
@@ -565,11 +563,11 @@ mod tests {
         );
     }
 
-    /// **A running service is proxied straight through, in both conversational orders** — D1.
+    /// **A running service is proxied straight through, in both conversational orders.**
     ///
     /// The activator never reads what it carries, so a client that speaks first (FastCGI) and one
     /// that waits to be greeted (MySQL) are the same case. The second is the one a web-only design
-    /// would never meet, and it is most of what T70a needs.
+    /// would never meet, and it is what lets a connection start a database too.
     #[tokio::test]
     async fn a_client_that_speaks_first_and_one_that_waits_are_both_carried() {
         let (home, paths, store) = home(&["waker"]).await;
@@ -626,7 +624,7 @@ mod tests {
         assert_eq!(&echoed, b"ping", "what the client said first was lost");
     }
 
-    /// **An activator that is stopped gives its address back** — roadmap task **T200**, D2.
+    /// **An activator that is stopped gives its address back.**
     ///
     /// Awaited rather than merely aborted: the caller goes on to let the allocator hand the port out
     /// again, and a listener dropped "soon" is one a second bind can still collide with.
@@ -662,8 +660,8 @@ mod tests {
             .expect("the address can be bound again");
     }
 
-    /// **Releasing what this daemon never held is nothing** — T200, D2. A service whose bind failed
-    /// at boot is uninstalled like any other.
+    /// **Releasing what this daemon never held is nothing.** A service whose bind failed at boot is
+    /// uninstalled like any other.
     #[tokio::test]
     async fn releasing_a_service_nothing_holds_does_nothing() {
         let never = service("never-held");

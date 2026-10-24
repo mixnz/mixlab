@@ -1,15 +1,16 @@
-//! A live TLS handshake against this home's own front end — roadmap task **T53**.
+//! A live TLS handshake against this home's own front end.
 //!
-//! **The first thing in this repository that measures a padlock rather than inferring one.** T48
-//! reads an authority off disk, T50 writes a leaf and reads it back, T51 renders a `tls` line
-//! naming it and T52 replaces it before it expires — every one of those is a claim about a *file*,
-//! and none of them establishes that the running server presents that file to anything. The report
-//! `docs/features/tls.md` calls the most common of all, a certificate a server still holds in
-//! memory after the file beside it was replaced, is invisible to all of them and obvious to this.
+//! **The first thing in this repository that measures a padlock rather than inferring one.** The
+//! generator reads an authority off disk, the leaf issuer writes a leaf and reads it back, the
+//! front end's configuration renders a `tls` line naming it and renewal replaces it before it
+//! expires — every one of those is a claim about a *file*, and none of them establishes that the
+//! running server presents that file to anything. The report `docs/features/tls.md` calls the most
+//! common of all, a certificate a server still holds in memory after the file beside it was
+//! replaced, is invisible to all of them and obvious to this.
 //!
-//! **Loopback, with the site's name as SNI, and never a resolved address** — the T53 design, D2.
-//! Whether `blog.test` resolves is `mix doctor`'s question, and a handshake that resolved would
-//! report "TLS failed" on a machine whose only fault is a resolver nobody wired.
+//! **Loopback, with the site's name as SNI, and never a resolved address.** Whether `blog.test`
+//! resolves is `mix doctor`'s question, and a handshake that resolved would report "TLS failed" on
+//! a machine whose only fault is a resolver nobody wired.
 
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
@@ -260,7 +261,7 @@ mod tests {
         assert_eq!(*trust, Verdict::Trusted {}, "{answer:?}");
     }
 
-    /// **The case the cheap alternative would have got wrong** — the T53 design, D3.
+    /// **The case the cheap alternative would have got wrong.**
     ///
     /// Comparing issuer names would notice this one, because a second authority carries a second
     /// name. What it would not notice is the same name over a different key, and the only way to be

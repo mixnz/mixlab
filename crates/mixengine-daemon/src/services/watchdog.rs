@@ -1,9 +1,9 @@
-//! Deciding that a service is holding more than it was allowed — roadmap task **T71a**.
+//! Deciding that a service is holding more than it was allowed.
 //!
-//! The reading is T71's: one `MetricsMinute` per subject per minute, already assembled by the
+//! The reading is one `MetricsMinute` per subject per minute, already assembled by the metrics
 //! sampler. What is here is everything that reading cannot say for itself — how many minutes this
-//! home is willing to see, whether this service's recipe permits a restart, and whether this episode
-//! has already had one.
+//! home is willing to see, whether this service's recipe permits a restart, and whether this
+//! episode has already had one.
 //!
 //! # The arithmetic is in finished minutes, never in elapsed time
 //!
@@ -140,7 +140,7 @@ impl Tally {
 
 /// Everything the watchdog needs to decide and to act.
 ///
-/// **It has no clock.** A sweeper of T69's kind owns an interval; this owns a receiver, and its
+/// **It has no clock.** A sweeper like the idle one owns an interval; this owns a receiver, and its
 /// period *is* the sampler's — which is what keeps exactly one thing on this machine reading the
 /// process table.
 #[derive(Debug)]
@@ -409,8 +409,8 @@ mod tests {
 
     /// A minute nobody measured is not a minute over the line.
     ///
-    /// The safety property, and it is T69's: a machine that slept eight hours wakes with a count of
-    /// zero, not with eight hours of evidence.
+    /// The safety property, and it is the idle sweep's too: a machine that slept eight hours wakes
+    /// with a count of zero, not with eight hours of evidence.
     #[test]
     fn a_missing_minute_resets_the_count() {
         let mut tally = Tally::default();
@@ -524,7 +524,7 @@ mod tests {
         );
     }
 
-    /// A ceiling this machine will not hold, watched to the end of the count — task **T71a**.
+    /// A ceiling this machine will not hold, watched to the end of the count.
     ///
     /// **The whole path against the real registry and a real process.** The only invented thing is
     /// what the machine reports about that process, which is the one thing a test cannot arrange for

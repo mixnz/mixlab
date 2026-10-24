@@ -1,14 +1,16 @@
-//! Which credential store this daemon keeps passwords in — roadmap tasks **T184** and **T194**,
-//! ADRs 0052 and 0059.
+//! Which credential store this daemon keeps passwords in — ADRs 0052 and 0059.
 //!
-//! **A property of the home, recorded in `settings`** (T194, D1). The build decides the default a
-//! home starts with — a release keeps the operating system's store, anything else a file in its own
-//! home — and a person may change it once: on a release, only to the file, only on Linux, and only
-//! where the operating system has no store at all (D2). Every start reads the row, so a start with
-//! no flag — `mix`'s autostart, a systemd unit, the window — gets the store the home chose.
+//! **A property of the home, recorded in `settings`** (D1). The build decides the default a home
+//! starts with — a release keeps the operating system's store, anything else a file in its own home
+//! — and a person may change it once: on a release, only to the file, only on Linux, and only where
+//! the operating system has no store at all (D2). Every start reads the row, so a start with no
+//! flag — `mix`'s autostart, a systemd unit, the window — gets the store the home chose.
 //!
 //! The rules are the pure functions below; the two keyring reads they need are made by the
 //! caller, off the runtime's threads.
+//!
+//! The D-numbers below are those of
+//! `docs/specs/2026-09-30-a-headless-home-keeps-its-credentials-in-a-file-design.md`.
 
 use std::path::Path;
 
@@ -270,8 +272,8 @@ impl From<mixengine_proto::CredentialStore> for Store {
     }
 }
 
-/// `mix doctor`'s line about the store — roadmap task T194, D5. A note and never a problem: a file
-/// store is a choice somebody made, and there is nothing to repair.
+/// `mix doctor`'s line about the store (D5). A note and never a problem: a file store is a choice
+/// somebody made, and there is nothing to repair.
 pub(crate) fn check(store: Store, file: &Path) -> mixengine_proto::Check {
     use mixengine_proto::Outcome;
 
@@ -488,7 +490,7 @@ mod tests {
         );
     }
 
-    /// T194, D5: a note for the file, never a problem, and nothing for the OS store.
+    /// D5: a note for the file, never a problem, and nothing for the OS store.
     #[test]
     fn the_doctor_notes_a_file_store_and_passes_the_os_one() {
         use mixengine_proto::Outcome;

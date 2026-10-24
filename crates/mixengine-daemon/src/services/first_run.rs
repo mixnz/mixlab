@@ -1,4 +1,4 @@
-//! Performing a first-run ritual — roadmap task **T33**.
+//! Performing a first-run ritual.
 //!
 //! `mixengine-core` says *what* has to happen once ([`generate::first_run`]); this says *when*, *in
 //! what order*, and *with what credentials*. It is in the daemon because both of the things it needs
@@ -151,7 +151,7 @@ fn patience_for(plan: &FirstRun) -> Millis {
 /// second one would be a plaintext credential on disk where this project has never had one.
 ///
 /// Whoever meets this on a headless Linux is told which of the three ways this machine has no
-/// secret service and what to do about each — **T15b**, argued in
+/// secret service and what to do about each, argued in
 /// `docs/decisions/0013-reading-the-d-bus-error-name-to-tell-an-absent-store.md`. The refusal
 /// itself is unchanged; what changed is that it stopped reporting MixEngine as broken.
 async fn store_the_secrets(

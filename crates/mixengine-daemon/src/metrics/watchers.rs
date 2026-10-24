@@ -1,4 +1,4 @@
-//! How many clients are watching, and how the loop hears about it — roadmap task **T71**.
+//! How many clients are watching, and how the loop hears about it.
 //!
 //! **The count of watchers is the count of open `GET /metrics` connections, and nothing else.** That
 //! is what makes "sampled only while watched" a property of the mechanism rather than of anyone's

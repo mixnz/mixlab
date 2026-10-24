@@ -1,8 +1,8 @@
 //! `package.*` against a real `mixengined`, a real signed index and a real archive.
 //!
-//! Roadmap task **T31a**, and [`tests/runtimes.rs`](runtimes.rs)' shape one namespace across: a
-//! [`MockRegistry`] serves a document it signs over a loopback socket, the daemon is pointed at both
-//! with `--index-url` and `--index-key`, and nothing here touches the network.
+//! [`tests/runtimes.rs`](runtimes.rs)' shape one namespace across: a [`MockRegistry`] serves a
+//! document it signs over a loopback socket, the daemon is pointed at both with `--index-url` and
+//! `--index-key`, and nothing here touches the network.
 //!
 //! **What is published is `fakeservice`**, because a debug build has a recipe for it and the archive
 //! can be a real executable that needs no server behind it. The index also publishes a
@@ -27,12 +27,12 @@ const PACKAGE: &str = "fakeservice";
 /// A package the index publishes and this build cannot run.
 ///
 /// **A name no index will ever carry, and that is the fix rather than the shortcut.** This was
-/// `redis` until T35 gave Redis a recipe and turned all three tests below red — which was the
-/// fixture being right about a fact that had an expiry date on it. Every real server the index
-/// publishes is one the catalogue is *meant* to grow a recipe for, so naming any of them here is the
-/// same clock set for a later day. What the rule is actually about outlives all of them: an index is
-/// published on its own schedule and a user's build is routinely older than it, so a package this
-/// build has never heard of is the ordinary case and not the contrived one.
+/// `redis` until Redis got a recipe and turned all three tests below red — which was the fixture
+/// being right about a fact that had an expiry date on it. Every real server the index publishes is
+/// one the catalogue is *meant* to grow a recipe for, so naming any of them here is the same clock
+/// set for a later day. What the rule is actually about outlives all of them: an index is published
+/// on its own schedule and a user's build is routinely older than it, so a package this build has
+/// never heard of is the ordinary case and not the contrived one.
 const UNRUNNABLE: &str = "futureservice";
 
 /// The version the index publishes that under. Nothing reads it as a version; it is here so the

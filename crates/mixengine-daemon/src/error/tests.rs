@@ -62,7 +62,7 @@ fn a_missing_entity_is_answered_with_the_command_that_lists_them() {
     );
 }
 
-/// A data directory somebody else holds is the caller's mistake, not the daemon's — T36.
+/// A data directory somebody else holds is the caller's mistake, not the daemon's.
 ///
 /// `internal` is what the catch-all would have made of it, and `internal` tells a person to
 /// report a bug about a create they can fix by naming another directory. The hint has to name
@@ -217,7 +217,7 @@ fn an_empty_home_is_an_invalid_argument() {
     assert_eq!(error.hint, None);
 }
 
-/// **T182f.** A directory an earlier home left is `already_exists`, and the hint is one sentence
+/// A directory an earlier home left is `already_exists`, and the hint is one sentence
 /// naming both ways on — with no run of spaces where a line continuation went missing.
 #[test]
 fn an_unrecorded_install_names_adopt_and_the_directory() {
@@ -372,10 +372,9 @@ fn a_program_that_will_not_run_is_a_failed_process() {
     assert_eq!(error.code, ErrorCode::ProcessFailed);
 }
 
-/// **An image this machine's policy refused is neither of the two above** — roadmap task
-/// **T94**. It is not a missing dependency and not a permission bit, it will not start on the
-/// next attempt, and the OS error number is the only thing that says so — which is why the
-/// hint says it in words.
+/// **An image this machine's policy refused is neither of the two above.** It is not a missing
+/// dependency and not a permission bit, it will not start on the next attempt, and the OS error
+/// number is the only thing that says so — which is why the hint says it in words.
 ///
 /// **Both arms in one test, through `cfg!` as a value.** The same number means nothing on macOS
 /// or Linux, and a `#[cfg(windows)]` here would be this crate compiling a line away by
@@ -400,7 +399,7 @@ fn an_image_the_policy_refused_is_named_exactly_where_that_number_can_mean_it() 
     assert_eq!(named, cfg!(windows), "{:?}", error.hint);
 }
 
-/// T194, D3: a Linux release with no keyring is told the one command MixEngine offers, and
+/// A Linux release with no keyring is told the one command MixEngine offers, and
 /// nothing switches on its own.
 #[test]
 fn a_linux_release_with_no_keyring_is_told_about_the_file_store() {

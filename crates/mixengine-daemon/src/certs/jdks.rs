@@ -1,5 +1,5 @@
-//! Every installed JDK told about this home's authority, inside its own `cacerts` — roadmap task
-//! **T27e**, [ADR 0039](../../../../docs/decisions/0039-a-jdk-is-told-about-the-authority-inside-its-own-cacerts.md).
+//! Every installed JDK told about this home's authority, inside its own `cacerts` —
+//! [ADR 0039](../../../../docs/decisions/0039-a-jdk-is-told-about-the-authority-inside-its-own-cacerts.md).
 //!
 //! **The browsers' shape, call for call**: a store the user owns, written without a prompt, at
 //! start, on repair, on a rotation and on every removal — plus once after a JDK is installed, since
@@ -28,8 +28,9 @@ pub(crate) struct JdkChange {
 }
 
 impl JdkChange {
-    /// One line for what was written, one warning per refusal. `when` says which of D9's moments
-    /// this was, because a refusal at start and a refusal after an install are read differently.
+    /// One line for what was written, one warning per refusal. `when` says which of the moments the
+    /// module names this was, because a refusal at start and a refusal after an install are read
+    /// differently.
     pub(crate) fn log(&self, when: &str) {
         if !self.written.is_empty() {
             tracing::info!(
@@ -44,7 +45,7 @@ impl JdkChange {
     }
 }
 
-/// **One writer at a time** — the design's D10.
+/// **One writer at a time.**
 ///
 /// A `static` rather than a field: `Certificates` is cloned and constructed in half a dozen places,
 /// so a lock of its own would be half a dozen locks, and a start's reconcile racing a rotation would
@@ -54,7 +55,7 @@ static WRITES: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 /// Put this home's authority into every JDK that does not already hold it.
 ///
 /// Nothing to do for a home with no usable authority, or none at all: there is nothing a JDK could
-/// be told, and writing a certificate T54 has to replace would be worse than writing none.
+/// be told, and writing a certificate a rotation has to replace would be worse than writing none.
 pub(crate) async fn hold(store: &Store, certs: &Path) -> JdkChange {
     let mut change = JdkChange::default();
 
@@ -178,8 +179,8 @@ mod tests {
     }
 
     /// **A home with no authority asks the JDKs for nothing**, which is the rule
-    /// `install_in_browsers` follows for the same reason: writing something T54 has to replace is
-    /// worse than writing nothing.
+    /// `install_in_browsers` follows for the same reason: writing something a rotation has to
+    /// replace is worse than writing nothing.
     #[tokio::test]
     async fn a_home_with_no_authority_writes_into_no_jdk() {
         let home = tempfile::tempdir().expect("a temporary home");

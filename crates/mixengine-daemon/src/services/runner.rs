@@ -51,10 +51,10 @@ const POLL: Duration = Duration::from_millis(50);
 
 /// How long a killed survivor is waited for before the daemon gives up on watching it go.
 ///
-/// Only ever reached by an **adopted** service (roadmap task T18), because that is the one this
-/// process cannot wait on: it is not the survivor's parent, so there is no status to reap and the
-/// only question available is "is it still there", asked at [`POLL`]. A `Supervised` child is waited
-/// for by the kernel and needs no ceiling at all.
+/// Only ever reached by a service crash recovery **adopted**, because that is the one this process
+/// cannot wait on: it is not the survivor's parent, so there is no status to reap and the only
+/// question available is "is it still there", asked at [`POLL`]. A `Supervised` child is waited for
+/// by the kernel and needs no ceiling at all.
 ///
 /// Generous, because what it is measuring is a `SIGKILL` being delivered and the process leaving the
 /// table — milliseconds unless the machine is in trouble. What happens when it runs out is in
@@ -67,8 +67,7 @@ const POLL: Duration = Duration::from_millis(50);
 /// nothing is counting; the budget is what it gets when something is.
 const GONE: Duration = Duration::from_secs(5);
 
-/// The least of [`GONE`] a killed survivor is watched for, whatever a shutdown has left — roadmap
-/// task **T9a**.
+/// The least of [`GONE`] a killed survivor is watched for, whatever a shutdown has left.
 ///
 /// **Because zero is a wrong answer here and a right one everywhere else the budget reaches.** A
 /// grace period of zero is a service killed at once and a log drain of zero is a tail nobody was
@@ -270,7 +269,7 @@ impl Readiness {
     }
 }
 
-/// What the memory watchdog last concluded about one service — roadmap task **T71a**.
+/// What the memory watchdog last concluded about one service.
 ///
 /// Carried as [`None`] where the service is under its ceiling *or* was not measured at all: the two
 /// are the same fact to a reader of state, and the difference between them is spent inside
@@ -284,7 +283,7 @@ pub(crate) struct Over {
     pub(crate) limit_mb: u32,
 }
 
-/// One state from two independent readings — roadmap task **T71a**.
+/// One state from two independent readings.
 ///
 /// **The runner is the only writer of the `Running`/`Degraded` edge, and this is why.** Health and
 /// size are measured by different things at different rates: a health verdict comes from a probe
@@ -341,7 +340,7 @@ pub(super) struct Runner {
     /// `logs/services/<service-id>/`, which `Capture` writes `current.log` into.
     pub(super) directory: PathBuf,
 
-    /// Where this service's output is put for clients to read — roadmap task **T16b**.
+    /// Where this service's output is put for clients to read.
     ///
     /// **Outlives every [`Capture`] this runner makes**, which is the whole reason it is a field
     /// here rather than something built beside each one: a capture belongs to one run of the
@@ -353,7 +352,7 @@ pub(super) struct Runner {
     /// The OS, for the one thing a spawn needs from it that the spec cannot carry: a credential.
     pub(super) host: Arc<dyn Host>,
 
-    /// The account a refusal in this service's own log would have to name — roadmap task **T127a**.
+    /// The account a refusal in this service's own log would have to name.
     ///
     /// [`None`] for everything that is not a database, which is the gate and not a nicety: a
     /// php-fpm pool captures its workers' output, and an application that cannot reach its database
@@ -375,8 +374,8 @@ pub(super) struct Runner {
     pub(super) cancel: CancellationToken,
 
     /// Notified when somebody asks for this service to start *now*, rather than when its restart
-    /// policy next comes round. Roadmap task **T19c**, and the only edge that runs from the registry
-    /// into a runner: everything else it does to a live runner is a read.
+    /// policy next comes round. The only edge that runs from the registry into a runner: everything
+    /// else it does to a live runner is a read.
     ///
     /// A [`Notify`] because the question carries nothing but the asking, and because a request that
     /// arrives while nothing is waiting is kept as one permit — so an explicit start is honoured by
@@ -384,8 +383,8 @@ pub(super) struct Runner {
     /// are one restart rather than two.
     pub(super) asked_to_start: Arc<Notify>,
 
-    /// Notified when this service's generated configuration has been rewritten under it — roadmap
-    /// task **T31**, and the second edge from the registry into a runner.
+    /// Notified when this service's generated configuration has been rewritten under it — the
+    /// second edge from the registry into a runner.
     ///
     /// A [`Notify`] for [`Runner::asked_to_start`]'s reasons and one of its own: a walk that renders
     /// while this runner is inside a health probe leaves a permit rather than a message, so the
@@ -400,7 +399,7 @@ pub(super) struct Runner {
     /// sender's own documentation for why a limit is the message and not a pointer to one.
     pub(super) limits_asked: watch::Receiver<mixengine_proto::ResourceLimits>,
 
-    /// Why the stop this runner is about to perform is happening — roadmap task **T69**.
+    /// Why the stop this runner is about to perform is happening.
     ///
     /// [`None`], which is nearly always, means somebody asked: `service.stop`, a walk, a shutdown.
     /// The idle sweeper sets it before it cancels, so a service that stopped because nothing was
@@ -411,13 +410,13 @@ pub(super) struct Runner {
     /// there is exactly one moment it matters.
     pub(super) stopping_because: watch::Receiver<Option<StateReason>>,
 
-    /// What the memory watchdog last concluded about this service — roadmap task **T71a**.
+    /// What the memory watchdog last concluded about this service.
     ///
     /// Read by `supervise`, folded with its own health verdict, and never acted on alone. See
     /// [`fold`].
     pub(super) over_memory: watch::Receiver<Option<Over>>,
 
-    /// What is left of the whole daemon's shutdown, when one is under way — roadmap task **T9a**.
+    /// What is left of the whole daemon's shutdown, when one is under way.
     ///
     /// Read at every wait a stop is about to make, and it can only shorten them: the seconds a
     /// service needs to flush are a fact about the service, and the total a user waits for a daemon
@@ -440,9 +439,9 @@ pub(super) struct Runner {
     /// up. See [`Surroundings`] for why a probe run anywhere else would be asking about a different
     /// server.
     ///
-    /// [`None`] until this runner has spawned something, which is the adopted case (roadmap task
-    /// T18): nothing in *this* process ever built that environment, so a stop command there resolves
-    /// one when it is needed — see [`Runner::where_commands_run`].
+    /// [`None`] until this runner has spawned something, which is the adopted case: nothing in
+    /// *this* process ever built that environment, so a stop command there resolves one when it is
+    /// needed — see [`Runner::where_commands_run`].
     pub(super) surroundings: Option<Surroundings>,
 
     /// The environment read a previous start stopped waiting for, while it is still going.
@@ -512,16 +511,15 @@ impl Runner {
     /// answered after the first attempt rather than after a `Failed` that is never coming either.
     /// `because` is why this first life began: [`StateReason::Requested`] for every start a person
     /// or a client asked for, and [`StateReason::Autostart`] for the walk the daemon performs at
-    /// boot — roadmap task **T113**. Every life *after* the first one has a reason of its own,
-    /// decided by the restart policy, so this is the one move the caller gets to name.
+    /// boot. Every life *after* the first one has a reason of its own, decided by the restart
+    /// policy, so this is the one move the caller gets to name.
     pub(super) async fn run(mut self, because: StateReason) {
         let mut restarts = Restarts::under(self.spec.restart());
 
         self.live(&mut restarts, because).await;
     }
 
-    /// Supervise a process that was **already running** when this daemon started — roadmap task
-    /// **T18**.
+    /// Supervise a process that was **already running** when this daemon started.
     ///
     /// The other way into this runner, and the difference is only how the first life of the process
     /// began: a daemon that was killed left this one behind, and its row, its pid and the moment it
@@ -537,10 +535,10 @@ impl Runner {
     /// readiness, because that lives in this process and this process has only just learned it.
     ///
     /// What the adopted life is missing is stated where a user pays for it: its output is not
-    /// captured — the pipes belong to a daemon that is gone — so `current.log` has a hole in it from
-    /// the moment that daemon died until the service is next started properly, and a crash loop
-    /// decided during this life carries no tail to explain itself with. `mix doctor` owes the
-    /// sentence (T47).
+    /// captured — the pipes belong to a daemon that is gone — so `current.log` has a hole in it
+    /// from the moment that daemon died until the service is next started properly, and a crash
+    /// loop decided during this life carries no tail to explain itself with. Nothing says so yet:
+    /// `mix doctor` does not look for it.
     pub(super) async fn adopt(mut self, adopted: Adopted) {
         tracing::info!(
             service = self.spec.id().as_str(),
@@ -678,10 +676,11 @@ impl Runner {
 
     /// Wait out a backoff, unless something happens that is worth more than the rest of the wait.
     ///
-    /// **The bias is the priority order.** A stop beats a start request, because a daemon on its way
-    /// out is not going to spawn one more process; a start request beats the remaining wait, which is
-    /// the whole of T19c — a person who has just typed `mix service start` at a service in its thirty
-    /// second backoff is asking for something the runner would otherwise make them sit through.
+    /// **The bias is the priority order.** A stop beats a start request, because a daemon on its
+    /// way out is not going to spawn one more process; a start request beats the remaining wait,
+    /// which is the reason the notify exists — a person who has just typed `mix service start` at a
+    /// service in its thirty second backoff is asking for something the runner would otherwise make
+    /// them sit through.
     async fn wait_out(&self, after: Duration) -> Released {
         tokio::select! {
             biased;
@@ -730,8 +729,8 @@ impl Runner {
         self.move_to_noting(to, reason, None).await
     }
 
-    /// [`Runner::move_to`], with the sentence that explains a move into `failed` — roadmap task
-    /// **T200b**, D5. Written in the transition's own transaction, by `transition_noting`.
+    /// [`Runner::move_to`], with the sentence that explains a move into `failed`. Written in the
+    /// transition's own transaction, by `transition_noting`.
     async fn move_to_noting(
         &self,
         to: ServiceState,
@@ -763,11 +762,11 @@ impl Runner {
 
 /// Poll an adopted process until it has gone. `false` if it had not within [`GONE`].
 ///
-/// **A free function because both halves of T18 need it and neither owns the other**: this runner
-/// waits here when it is asked to stop a service it took over, and [`Registry::discard`] waits here
-/// before it clears the row of a survivor it refused. The two are the same claim — nothing may be
-/// written down as stopped while the process it names is still running — and writing it twice is how
-/// they would come to disagree.
+/// **A free function because both halves of crash recovery need it and neither owns the other**:
+/// this runner waits here when it is asked to stop a service it took over, and
+/// [`Registry::discard`] waits here before it clears the row of a survivor it refused. The two are
+/// the same claim — nothing may be written down as stopped while the process it names is still
+/// running — and writing it twice is how they would come to disagree.
 ///
 /// **The ceiling here is the one a caller with no shutdown to answer to gets**, which is crash
 /// recovery's case exactly: `Registry::discard` runs before the first client is served, so there is
@@ -817,7 +816,7 @@ mod tests {
         }
     }
 
-    /// The four rows of the T71a design's D4 table, as a table.
+    /// The four combinations of a health verdict and a memory verdict, as a table.
     #[test]
     fn health_and_memory_fold_into_one_state() {
         assert_eq!(

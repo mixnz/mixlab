@@ -1,6 +1,6 @@
 //! `service.create` and `service.delete`: the two ends of a `services` row's life.
 //!
-//! Roadmap task **T31a**. Their own file rather than more of [`super::rpc`], which was then the
+//! Their own file rather than more of [`super::rpc`], which was then the
 //! longest in this crate, and together rather than beside their namespake neighbours because they
 //! are one decision read forwards and backwards: what a create writes is exactly what a delete
 //! takes away, and the second is the first's rollback when a rendering fails.
@@ -45,10 +45,10 @@ impl Api {
     /// `invalid_argument` for a package this build cannot run and for an id whose shape does not
     /// suit its recipe; `precondition_failed` when that version is not installed, with the install
     /// command in the hint, and when this home already has a front end and is being asked for a
-    /// second (T37); `already_exists` for a service that is already declared **and for a
-    /// `data_dir` another service already holds** (T36) — the second is decided by the write rather
-    /// than here, because whether a directory is free is a question about the table; and whatever
-    /// the rendering refused, after the row it wrote has been taken back out.
+    /// second; `already_exists` for a service that is already declared **and for a `data_dir`
+    /// another service already holds** — the second is decided by the write rather than here,
+    /// because whether a directory is free is a question about the table; and whatever the
+    /// rendering refused, after the row it wrote has been taken back out.
     pub(crate) async fn service_create(
         &self,
         create: &ServiceCreate,
@@ -63,9 +63,10 @@ impl Api {
 
     /// [`service_create`](Self::service_create) with the front-end lock already taken.
     ///
-    /// **Separate so that `service.set_front_end` can reuse every refusal in it** — T32's, T36's,
-    /// T37's — rather than grow a second implementation that would drift from this one. A switch
-    /// holds the lock across its whole walk, so a create that took it again would wait for itself.
+    /// **Separate so that `service.set_front_end` can reuse every refusal in it** — an id already
+    /// declared, a `data_dir` already held, a second front end — rather than grow a second
+    /// implementation that would drift from this one. A switch holds the lock across its whole
+    /// walk, so a create that took it again would wait for itself.
     pub(super) async fn create_declared(
         &self,
         catalogue: &mixengine_core::generate::Catalogue,
@@ -73,8 +74,8 @@ impl Api {
     ) -> Result<ServiceCreation, Error> {
         let package = create.id.name();
 
-        // **A toolchain is installed, never run** — roadmap task **T206a**, D5. Said before the
-        // generic refusal below, whose list of what can run would not name it.
+        // **A toolchain is installed, never run.** Said before the generic refusal below, whose
+        // list of what can run would not name it.
         if catalogue.is_toolchain(package) {
             return Err(Error::new(
                 ErrorCode::InvalidArgument,
@@ -147,10 +148,10 @@ impl Api {
             }
         };
 
-        // **One front end, whichever two programs are asked to be it** — roadmap task **T37**. The
-        // recipe's answer again, and a different question from the one above: `Instancing` is about
-        // how many rows may name `nginx`, and both front ends answer `Single`, so a home obeying
-        // both recipes still ends up with a Caddy and an nginx generated against the same 80 and
+        // **One front end, whichever two programs are asked to be it.** The recipe's answer again,
+        // and a different question from the one above: `Instancing` is about how many rows may name
+        // `nginx`, and both front ends answer `Single`, so a home obeying both recipes still ends
+        // up with a Caddy and an nginx generated against the same 80 and
         // 443. Refused before the package check, because installing the second one would not help.
         if matches!(recipe.role(), Role::FrontEnd(_))
             && let Some(holder) =
@@ -306,7 +307,7 @@ impl Api {
             .with_hint(format!("`mix service stop {id}` first")));
         }
 
-        // **The fourth refusal, and the second one `force` is allowed to cross** (spec D4). A site
+        // **The fourth refusal, and the second one `force` is allowed to cross.** A site
         // naming this service — as its php-fpm pool or as a link — is a statement about the next
         // `site.start`, which somebody who has been shown the sites is entitled to overrule. The
         // check above is a fact about now and stays above this one, so `--force` at a running
@@ -334,8 +335,8 @@ impl Api {
             .await
             .map_err(|error| error.to_wire())?;
 
-        // **Its activator goes with it**, as with `extension.uninstall` and `runtime.uninstall`
-        // (T200, D2): otherwise a deleted pool's port stays bound until the daemon exits.
+        // **Its activator goes with it**, as with `extension.uninstall` and `runtime.uninstall`:
+        // otherwise a deleted pool's port stays bound until the daemon exits.
         crate::services::activate::release(id).await;
 
         let data = column.map_or_else(|| self.data_directory(id), PathBuf::from);
@@ -352,7 +353,7 @@ impl Api {
         })
     }
 
-    /// The lock, taken only for the one role that has an invariant spanning rows — **T97**.
+    /// The lock, taken only for the one role that has an invariant spanning rows.
     ///
     /// **[`None`] is not a failure to lock**; it is a service for which there is nothing to
     /// serialise. A home may have as many databases as it likes and they contend for nothing here,
@@ -421,9 +422,9 @@ impl Api {
 
 /// Whether a service being created starts with the daemon.
 ///
-/// **A front end does unless somebody said otherwise** — roadmap task **T167e**, ADR 0041. It is the
-/// one service whose absence takes every site down at once, and while nobody had ticked it a reboot
-/// left port 80 empty. An explicit answer is taken as given; every other service defaults to off.
+/// **A front end does unless somebody said otherwise** — ADR 0041. It is the one service whose
+/// absence takes every site down at once, and while nobody had ticked it a reboot left port 80
+/// empty. An explicit answer is taken as given; every other service defaults to off.
 fn autostart_for(asked: Option<bool>, role: &Role) -> bool {
     asked.unwrap_or(matches!(role, Role::FrontEnd(_)))
 }
@@ -454,8 +455,8 @@ mod tests {
     use crate::api::test_daemon::undeclared;
     use crate::services::fixture;
 
-    /// **T97.** The lock is taken for the one role that has an invariant spanning rows, and for
-    /// nothing else.
+    /// The lock is taken for the one role that has an invariant spanning rows, and for nothing
+    /// else.
     ///
     /// A home may have as many databases as it likes and they contend for nothing here; a home may
     /// have one front end, and the window in which that is momentarily untrue is what this closes.

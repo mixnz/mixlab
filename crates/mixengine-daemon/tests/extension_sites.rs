@@ -1,9 +1,11 @@
-//! A `web-app` extension's site, against a real `mixengined` — roadmap task **T81b**.
+//! A `web-app` extension's site, against a real `mixengined`.
 //!
 //! `core`'s tests prove the rows; what only a daemon can be wrong about is the surface: that the
 //! site an install wrote is listed with its owner, that `site.*` refuses to edit it and allows
 //! stopping it, that removing the PHP it runs on is refused by name, and that an uninstall takes
 //! it away and says so. The PHP is a row and a pool row (`declare::php_pool`), not a download.
+//!
+//! The D-numbers here are those of `docs/specs/2026-09-03-t81b-extension-sites-design.md`.
 
 use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::time::Duration;
@@ -74,8 +76,8 @@ fn web_app() -> tempfile::TempDir {
         mixengine_testkit::extension::PHPMYADMIN,
     )
     .expect("a manifest");
-    // **The archive's own top level** — roadmap task **T82**. `--path` copies what a download would
-    // have unpacked, so the directory here is the one `[web-app].root` names.
+    // **The archive's own top level.** `--path` copies what a download would have unpacked, so the
+    // directory here is the one `[web-app].root` names.
     std::fs::create_dir_all(directory.path().join("phpMyAdmin-5.2.3-all-languages"))
         .expect("a doc root");
 
@@ -120,8 +122,8 @@ async fn installed(client: &mut Client, path: &str, log: &Home) -> Value {
 async fn a_web_app_is_served_on_a_site_only_its_extension_may_edit() {
     let fixture = Fixture::start().await;
     declare::php_pool(&fixture.home.database_file(), "8.3.34").await;
-    // **T82.** The fixture web-app declares a database, so this home has to run one — a plan
-    // refused before anything is fetched is the point of that declaration, not an accident here.
+    // The fixture web-app declares a database, so this home has to run one — a plan refused before
+    // anything is fetched is the point of that declaration, not an accident here.
     declare::database(
         &fixture.home.database_file(),
         "mariadb@main",
@@ -138,9 +140,9 @@ async fn a_web_app_is_served_on_a_site_only_its_extension_may_edit() {
         plan["site"]["domain"], "phpmyadmin.mixengine.test",
         "{plan}"
     );
-    // **The pool is the extension's own** — roadmap task **T82a**, that design's D1. The PHP it
-    // runs out of is still `8.3.34`, which is what `declare::php_pool` put there; what changed is
-    // that a `web-app` is not served from the process every project site is served from.
+    // **The pool is the extension's own.** The PHP it runs out of is still `8.3.34`, which is what
+    // `declare::php_pool` put there; what changed is that a `web-app` is not served from the
+    // process every project site is served from.
     assert_eq!(plan["site"]["pool"], "php-fpm@phpmyadmin", "{plan}");
 
     // Listed with its owner, HTTPS on, enabled.
@@ -160,8 +162,7 @@ async fn a_web_app_is_served_on_a_site_only_its_extension_may_edit() {
         extensions["extensions"][0]["site"], "phpmyadmin.mixengine.test",
         "{extensions}"
     );
-    // **T200, D5.** What it is for travels with the listing, read from the manifest it was
-    // installed from.
+    // What it is for travels with the listing, read from the manifest it was installed from.
     assert_eq!(
         extensions["extensions"][0]["description"], plan["description"],
         "{extensions}"
@@ -171,9 +172,9 @@ async fn a_web_app_is_served_on_a_site_only_its_extension_may_edit() {
     let site = json!({"site": {"domain": "phpmyadmin.mixengine.test"}});
     let shown = client.call("site.show", site.clone()).await;
     assert_eq!(shown["root"], plan["install_dir"], "{shown}");
-    // **The archive's own top level** — roadmap task **T82**. `doc_root_exists` is what would
-    // report a `[web-app].root` naming a directory the artifact does not unpack to, so it is
-    // asserted here beside the path rather than left to a run somebody has to do by hand.
+    // **The archive's own top level.** `doc_root_exists` is what would report a `[web-app].root`
+    // naming a directory the artifact does not unpack to, so it is asserted here beside the path
+    // rather than left to a run somebody has to do by hand.
     assert!(
         shown["doc_root_full"]
             .as_str()
@@ -183,12 +184,11 @@ async fn a_web_app_is_served_on_a_site_only_its_extension_may_edit() {
     assert_eq!(shown["doc_root_exists"], true, "{shown}");
     assert_eq!(shown["pool"]["declared"], "php-fpm@phpmyadmin", "{shown}");
 
-    // **The credential reaches this pool's workers and no other pool's** — roadmap task **T82a**,
-    // its design's D3. The rule lives in the template and is unit-tested there; what only a real
-    // install can say is that the whole chain arrives — the manifest's `signs_in`, the link the
-    // install froze, the credential the generator resolved, and the file on disk. This is the
-    // assertion that would catch a database superuser's password being handed to every project's
-    // PHP.
+    // **The credential reaches this pool's workers and no other pool's.** The rule lives in the
+    // template and is unit-tested there; what only a real install can say is that the whole chain
+    // arrives — the manifest's `signs_in`, the link the install froze, the credential the generator
+    // resolved, and the file on disk. This is the assertion that would catch a database superuser's
+    // password being handed to every project's PHP.
     let owned = fixture
         .home
         .path()
@@ -281,8 +281,8 @@ async fn a_web_app_is_served_on_a_site_only_its_extension_may_edit() {
 async fn runtime_uninstall_refuses_for_the_extension_frozen_on_it() {
     let fixture = Fixture::start().await;
     declare::php_pool(&fixture.home.database_file(), "8.3.34").await;
-    // **T82.** The fixture web-app declares a database, so this home has to run one — a plan
-    // refused before anything is fetched is the point of that declaration, not an accident here.
+    // The fixture web-app declares a database, so this home has to run one — a plan refused before
+    // anything is fetched is the point of that declaration, not an accident here.
     declare::database(
         &fixture.home.database_file(),
         "mariadb@main",
@@ -364,7 +364,7 @@ async fn still_served_here(home: &Home, port: u16) -> bool {
         .contains("cannot read the row of a service a connection asked for")
 }
 
-/// **T200, D1.** A web-app's pool can be woken by a request the moment the install ends.
+/// A web-app's pool can be woken by a request the moment the install ends.
 ///
 /// The pool is created by the install, outside boot, so it has neither an activation port nor a
 /// listener until something gives it one — and a site naming a pool that nothing can wake answers
@@ -411,12 +411,12 @@ async fn a_web_app_can_be_woken_the_moment_it_is_installed() {
     }
 }
 
-/// **T200, D2.** Uninstalling gives the activator's address back, and a reinstall is woken too.
+/// Uninstalling gives the activator's address back, and a reinstall is woken too.
 ///
-/// Before T200 the daemon kept every activator until it exited and skipped any service it already
-/// held, by id alone. An uninstall left the old port listening, and a reinstall under the same id
-/// was given a new port that nothing ever bound — so "uninstall it and install it again" failed
-/// exactly like the first install.
+/// Before an uninstall released it, the daemon kept every activator until it exited and skipped any
+/// service it already held, by id alone. An uninstall left the old port listening, and a reinstall
+/// under the same id was given a new port that nothing ever bound — so "uninstall it and install it
+/// again" failed exactly like the first install.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_reinstalled_web_app_can_be_woken_and_the_old_address_is_free() {
     let fixture = Fixture::start().await;
@@ -523,12 +523,12 @@ path = "/inbox"
 }
 
 /// **Uninstalling a running `service` extension stops it first, so it can be installed again** —
-/// found by T200's hand check.
+/// found by hand.
 ///
-/// The daemon stopped a `web-app`'s pool before the rows went (T82a) and nothing else: a running
-/// Mailpit had its row deleted from under it, its process went on holding its own executable, the
-/// install directory could not be removed (`Access is denied` on Windows), and the next install
-/// was refused because that directory was still there.
+/// The daemon stopped a `web-app`'s pool before the rows went and nothing else: a running Mailpit
+/// had its row deleted from under it, its process went on holding its own executable, the install
+/// directory could not be removed (`Access is denied` on Windows), and the next install was refused
+/// because that directory was still there.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_running_service_extension_is_stopped_by_its_uninstall() {
     let fixture = Fixture::start().await;
@@ -543,7 +543,7 @@ async fn a_running_service_extension_is_stopped_by_its_uninstall() {
             .expect("the plan names where it installs"),
     );
 
-    // **T200a, D2.** The page a person opens, rendered by the daemon from the port it allocated.
+    // The page a person opens, rendered by the daemon from the port it allocated.
     let listed = client.call("extension.list", json!({})).await;
     let catcher = &listed["extensions"][0];
     let port = catcher["ports"][0]["wanted"]
@@ -580,7 +580,7 @@ async fn a_running_service_extension_is_stopped_by_its_uninstall() {
     installed(&mut client, &path, &fixture.home).await;
 }
 
-/// **Deleting a pool gives its activator's address back** — T200b's follow-through on T200's D2.
+/// **Deleting a pool gives its activator's address back**, as uninstalling one already did.
 ///
 /// `extension.uninstall` and `runtime.uninstall` released an activator with its service;
 /// `service.delete` did not, so a deleted pool's port stayed bound until the daemon exited. The

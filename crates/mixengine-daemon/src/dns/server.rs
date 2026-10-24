@@ -1,18 +1,19 @@
-//! The sockets, and the task that answers on them — roadmap task **T44**.
+//! The sockets, and the task that answers on them.
 //!
 //! Everything about *what* to answer is [`super::answer`]'s, and everything here is about getting
 //! bytes to it and back: two sockets on loopback, hickory's UDP and TCP framing, and a task that
 //! ends with the daemon's root cancellation token.
 //!
-//! **Loopback and nothing else** — the T44 design, D8. Binding `127.0.0.1` rather than the wildcard
-//! address is the whole of this server's access control: a query from off the machine cannot
-//! arrive, so there is no source address to check and — with no forwarder behind it — nothing to
-//! abuse if one did.
+//! **Loopback and nothing else** (D8). Binding `127.0.0.1` rather than the wildcard address is the
+//! whole of this server's access control: a query from off the machine cannot arrive, so there is
+//! no source address to check and — with no forwarder behind it — nothing to abuse if one did.
 //!
 //! **Both transports, always.** A DNS client that receives a truncated answer retries over TCP, and
 //! a server that registered only a UDP socket fails that retry by refusing the connection, which
 //! reads as a network problem rather than as a missing listener. They are bound as a pair or not at
 //! all.
+//!
+//! The D-numbers here are those of `docs/specs/2026-08-23-t44-dns-server-design.md`.
 
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};

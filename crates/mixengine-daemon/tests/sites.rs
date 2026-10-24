@@ -1,13 +1,15 @@
 //! `site.*` against a real `mixengined` over a real socket.
 //!
-//! Roadmap task **T39a**. What the unit tests next to `core::sites` prove is that the rows are
-//! right; what is proved here is the part only a daemon can be wrong about — that a create with
-//! nothing but a project named builds a site out of a colleague's manifest, that the fall-through
-//! reaches the right default when it does not, and that deleting a project takes its sites with it.
+//! What the unit tests next to `core::sites` prove is that the rows are right; what is proved here
+//! is the part only a daemon can be wrong about — that a create with nothing but a project named
+//! builds a site out of a colleague's manifest, that the fall-through reaches the right default
+//! when it does not, and that deleting a project takes its sites with it.
 //!
 //! No registry and no index, on `tests/projects.rs`' reasoning: nothing here installs anything. The
 //! refusals that need a *declared service* are in `tests/packages.rs`, where a fixture can declare
 //! one against a package it has actually installed.
+//!
+//! The D-numbers here are those of `docs/specs/2026-08-22-t39a-site-model-design.md`.
 
 use std::path::Path;
 
@@ -58,9 +60,9 @@ fn as_string(path: &Path) -> String {
 /// The whole life of a site, in the order somebody lives it.
 /// D9 and D10 together, over one home.
 ///
-/// `site.start` and `site.stop` set a flag and walk. Neither starts, stops or asks after a *process*
-/// — a home whose Caddy is not running gets a rendered site file and no traffic, which is T39a's
-/// line held rather than a limitation: a site is not a process.
+/// `site.start` and `site.stop` set a flag and walk. Neither starts, stops or asks after a
+/// *process* — a home whose Caddy is not running gets a rendered site file and no traffic, which is
+/// the site model's line held rather than a limitation: a site is not a process.
 ///
 /// And the second call writes nothing, which is what "idempotent re-runs" means here. It is a
 /// property of `document::install`'s diff rather than a feature: the same bytes are compared against
@@ -398,8 +400,7 @@ async fn forgetting_a_project_forgets_its_sites_and_frees_their_domains() {
         .await;
 }
 
-/// The two `domain.*` verbs, and the two refusals that keep a site addressable — roadmap task
-/// **T46**.
+/// The two `domain.*` verbs, and the two refusals that keep a site addressable.
 ///
 /// What is proved here rather than beside `core::domains` is the half only a daemon can be wrong
 /// about: that the verbs walk the same write `site.update` walks, and that a name carries its own
@@ -476,19 +477,19 @@ async fn a_domain_is_added_and_taken_away_and_the_primary_is_neither() {
     );
 }
 
-/// The diagnostic on a machine nothing has wired, which is what CI is — roadmap task **T46**.
+/// The diagnostic on a machine nothing has wired, which is what CI is.
 ///
 /// **The negative half needs a control**, and it has one: `localhost` is resolved through the same
 /// `getaddrinfo` at the same moment, so "blog.test does not resolve" is a statement about the
-/// machine rather than about the instrument. Four of the six measurement rounds behind T45 were void
-/// for want of exactly this (T46 design, D9).
+/// machine rather than about the instrument. Four of the six measurement rounds taken while wiring
+/// the resolver were void for want of exactly this.
 #[tokio::test]
 async fn the_diagnostic_names_the_site_and_says_what_is_missing() {
     use std::net::ToSocketAddrs as _;
 
-    // **T202b, D5.** A Mac with MixEngine installed routes every `.test` name to that daemon
-    // through `/etc/resolver/test`, so whether `blog.test` resolves here is that daemon's answer
-    // and not this home's. CI's runners never carry the file; a developer's Mac does.
+    // A Mac with MixEngine installed routes every `.test` name to that daemon through
+    // `/etc/resolver/test`, so whether `blog.test` resolves here is that daemon's answer and not
+    // this home's. CI's runners never carry the file; a developer's Mac does.
     if std::path::Path::new("/etc/resolver/test").exists() {
         eprintln!(
             "skipped: this machine routes `.test` itself (/etc/resolver/test), so whether \
@@ -563,7 +564,7 @@ async fn the_diagnostic_names_the_site_and_says_what_is_missing() {
     assert_eq!(refused["data"]["code"], "invalid_argument", "{refused}");
 }
 
-/// **A site created over the API has a certificate before the call returns** — roadmap task T50.
+/// **A site created over the API has a certificate before the call returns.**
 ///
 /// The producer and not the RPC: nothing in this test asks for a certificate. A site that needed a
 /// second command to get a padlock is a site whose padlock is somebody's to remember, which is what
@@ -606,9 +607,9 @@ async fn a_new_site_is_issued_a_certificate_without_being_asked() {
     );
 }
 
-/// **And a domain added is a certificate reissued, before anything renders a config** — T50's
-/// second reuse question, which `docs/features/tls.md` names as the most common broken-padlock
-/// report.
+/// **And a domain added is a certificate reissued, before anything renders a config** — the second
+/// question the leaf's reuse rule asks, which `docs/features/tls.md` names as the most common
+/// broken-padlock report.
 ///
 /// The assertion is `cert.issue` answering `reused` over two names: had the update not reissued,
 /// the certificate on disk would still cover one, and this call would say `issued` instead.
@@ -660,12 +661,13 @@ async fn a_domain_added_to_a_site_reissues_its_certificate() {
     );
 }
 
-/// **A plaintext site is not a site missing a certificate** — roadmap task **T52**.
+/// **A plaintext site is not a site missing a certificate.**
 ///
-/// `Sites::now_has_a_certificate` warns on every refusal, and until T52 a site that declares no
-/// HTTPS *was* a refusal — so creating one wrote `the site has no certificate yet` about a site that
-/// never asked for one. Asserted rather than argued: the outcome type changed in order to make this
-/// line go away, and nothing else in this repository would notice if it came back.
+/// `Sites::now_has_a_certificate` warns on every refusal, and until `IssueOutcome::NotWanted` a
+/// site that declares no HTTPS *was* a refusal — so creating one wrote
+/// `the site has no certificate yet` about a site that never asked for one. Asserted rather than
+/// argued: the outcome type changed in order to make this line go away, and nothing else in this
+/// repository would notice if it came back.
 ///
 /// **The daemon is stopped before the log is read**, and that is the whole reliability of this
 /// test. A file appender may still be holding a line that was written, so an absence read from a
@@ -702,13 +704,13 @@ async fn a_plaintext_site_is_not_reported_as_missing_a_certificate() {
 
     // **The control, and this test is worthless without it.** An assertion that a line is absent
     // passes just as well when the log was never written or never read, which is the same red
-    // padlock T49b's browser measurements were fooled by three times. A line the daemon certainly
+    // padlock the browser measurements were fooled by three times. A line the daemon certainly
     // writes proves the file is here and flushed this far.
     assert!(log.contains("listening for clients"), "{log}");
     assert!(!log.contains("the site has no certificate yet"), "{log}");
 }
 
-/// LAN sharing, from the two angles a test machine can hold still — roadmap task **T74**.
+/// LAN sharing, from the two angles a test machine can hold still.
 ///
 /// **How many interfaces this machine has is a property of the machine**, not of MixEngine: CI's
 /// runners, a laptop on Wi-Fi and a developer's box with a Docker bridge all answer differently, so
@@ -718,7 +720,7 @@ async fn a_plaintext_site_is_not_reported_as_missing_a_certificate() {
 /// rather than an error.
 ///
 /// The share that succeeds is proved by the unit tests beside the code, and once by hand against a
-/// phone, which is what the T74 design says a real run is for.
+/// phone, which is what a real run is for.
 #[tokio::test]
 async fn sharing_refuses_an_interface_this_machine_does_not_have() {
     let fixture = Fixture::start().await;
@@ -776,7 +778,7 @@ const THREE_SITES: &str = "[project]\nname = \"shop\"\n\n\
     upstream = \"http://127.0.0.1:5173\"\nhttps = false\nservices = []\n\n\
     [[sites]]\ndomain = \"admin.shop.test\"\nkind = \"static\"\nhttps = false\n";
 
-/// **T204, D5.** Several sites and nothing named is refused, and the refusal is the command.
+/// Several sites and nothing named is refused, and the refusal is the command.
 #[tokio::test]
 async fn several_sites_and_nothing_named_is_refused_with_the_command() {
     let fixture = Fixture::start().await;
@@ -810,7 +812,7 @@ async fn several_sites_and_nothing_named_is_refused_with_the_command() {
     assert_eq!(list["sites"], json!([]), "nothing was invented: {list}");
 }
 
-/// **T204, D5.** `from` adopts one entry whole, and an unknown one is `not_found` naming the rest.
+/// `from` adopts one entry whole, and an unknown one is `not_found` naming the rest.
 #[tokio::test]
 async fn from_adopts_the_entry_it_names() {
     let fixture = Fixture::start().await;
@@ -853,8 +855,8 @@ async fn from_adopts_the_entry_it_names() {
     );
 }
 
-/// **T204, D3.** A legacy `[site]` with no `services` key links every `[[services]]` entry, as it
-/// always did; an entry with `services = []` links none.
+/// A legacy `[site]` with no `services` key links every `[[services]]` entry, as it always did; an
+/// entry with `services = []` links none.
 #[tokio::test]
 async fn an_entry_with_no_services_key_links_every_service() {
     let fixture = Fixture::start().await;

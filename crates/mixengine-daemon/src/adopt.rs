@@ -1,4 +1,4 @@
-//! Recording what an earlier home left on disk — roadmap task **T182f**.
+//! Recording what an earlier home left on disk.
 //!
 //! Design: `docs/specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md`.
 

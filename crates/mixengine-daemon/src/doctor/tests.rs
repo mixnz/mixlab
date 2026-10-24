@@ -7,7 +7,7 @@ use mixengine_proto::ProblemId;
 
 use super::Outcome;
 
-/// **A `Note` and never a `Problem`** — the T76 design, D8. A `Problem` carries a `ProblemId`,
+/// **A `Note` and never a `Problem`.** A `Problem` carries a `ProblemId`,
 /// and a `ProblemId` is what `daemon.doctor_repair` matches on; automatically deleting a
 /// firewall rule MixEngine did not create, and that somebody personally clicked Allow on, is not
 /// a repair. So the condition is given no identity a repair could key off, and what it carries
@@ -210,8 +210,7 @@ fn a_daemon_supervising_what_it_has_rows_for_strands_nothing() {
     assert!(super::stranded([("fakeservice@main", true)].into_iter(), &held).is_empty());
 }
 
-/// The ordinary Windows machine, and every machine that never had the feature — roadmap task
-/// **T94**.
+/// The ordinary Windows machine, and every machine that never had the feature.
 #[test]
 fn a_machine_refusing_nothing_is_ok() {
     let outcome = super::app_control_outcome(Ok(AppControlState::Off));
@@ -219,9 +218,9 @@ fn a_machine_refusing_nothing_is_ok() {
     assert!(matches!(outcome, Outcome::Ok {}), "{outcome:?}");
 }
 
-/// **Enforcing is a `Problem` and not a `Note`** — the T94 design, D6 — even on a machine where
-/// everything currently runs: the judgement is per file, and the next image MixEngine loads is
-/// a runtime archive whose hash has never existed anywhere.
+/// **Enforcing is a `Problem` and not a `Note`**, even on a machine where everything currently
+/// runs: the judgement is per file, and the next image MixEngine loads is a runtime archive whose
+/// hash has never existed anywhere.
 #[test]
 fn an_enforcing_machine_is_a_problem_with_a_name() {
     let outcome = super::app_control_outcome(Ok(AppControlState::Enforced));

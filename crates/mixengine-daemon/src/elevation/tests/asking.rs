@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// D11: the machine already says what the database says it should, so nothing is queued. A row
+/// The machine already says what the database says it should, so nothing is queued. A row
 /// here would put an operation on `mix status` whose only possible outcome is `AlreadyDone`.
 #[tokio::test]
 async fn a_machine_that_already_agrees_is_not_asked_for_permission() {
@@ -49,14 +49,14 @@ async fn a_machine_that_disagrees_is_asked_once() {
     ));
 }
 
-/// **The seam T44 built, in both directions** — the T44 design, D4.
+/// **The seam between the two name mechanisms, in both directions.**
 ///
 /// A home on the hosts file asks for the entry its sites declare. A home on DNS asks for an
 /// *empty* block, which is not the same as asking for nothing: the server answers the whole
 /// managed TLD by pattern, so an entry adds nothing, and the operation is what clears the names
 /// the other mode wrote. Skipping the queue would leave them resolving to loopback for ever.
 ///
-/// This is the test that stops D4 being tidied into "if DNS is on, do nothing".
+/// This is the test that stops the seam being tidied into "if DNS is on, do nothing".
 #[tokio::test]
 async fn a_home_on_dns_asks_for_an_empty_block_rather_than_for_nothing() {
     let (home, elevation, _events, _machine) = registry_resolving(
@@ -117,7 +117,7 @@ async fn a_pending_shared_block_from_before_per_home_blocks_is_withdrawn() {
     assert!(waiting.is_empty(), "{waiting:?}");
 }
 
-/// The same home, resolving the way every machine does until T45: the entry is asked for.
+/// The same home, resolving the way a machine with no resolver wiring does: the entry is asked for.
 #[tokio::test]
 async fn a_home_on_the_hosts_file_asks_for_the_names_its_sites_declare() {
     let (home, elevation, _events, _machine) = registry_resolving(
@@ -138,7 +138,7 @@ async fn a_home_on_the_hosts_file_asks_for_the_names_its_sites_declare() {
     assert!(waiting[0].description.contains("blog.test"), "{waiting:?}");
 }
 
-/// D2 asserted rather than described: two sites before anybody clicks Allow are one row holding
+/// Asserted rather than described: two sites before anybody clicks Allow are one row holding
 /// the *second* state, and one event per change rather than one row per change.
 #[tokio::test]
 async fn two_sites_before_a_grant_are_one_row_holding_the_second_state() {
@@ -179,8 +179,8 @@ async fn two_sites_before_a_grant_are_one_row_holding_the_second_state() {
 }
 
 /// A read that fails is not a reason to refuse a site. The helper is the authority on what is in
-/// that file, and it will say so on the screen T64 built — a better place for "your hosts file
-/// has two BEGIN markers" than a site creation's error.
+/// that file, and it will say so on the window's permissions screen — a better place for "your
+/// hosts file has two BEGIN markers" than a site creation's error.
 #[tokio::test]
 async fn a_hosts_file_that_cannot_be_read_is_still_asked_about() {
     let (home, elevation, _events, _machine) = registry(mock::Host::unable_to_read_the_hosts_file(
@@ -202,7 +202,7 @@ async fn a_hosts_file_that_cannot_be_read_is_still_asked_about() {
     );
 }
 
-/// D7: a machine that needs a grant and has not got one leaves exactly one row in the queue and
+/// A machine that needs a grant and has not got one leaves exactly one row in the queue and
 /// announces it once.
 #[tokio::test]
 async fn a_front_end_on_a_machine_with_no_grant_asks_for_one() {
@@ -233,7 +233,7 @@ async fn a_front_end_on_a_machine_with_no_grant_asks_for_one() {
     ));
 
     // A second start adds no second row: the dedupe key is the kind, and the state has not
-    // changed — the T41 design, D2, which this operation reuses unchanged.
+    // changed — the hosts file's rule, which this operation reuses unchanged.
     elevation
         .require_port_access(Some(Path::new("/packages/caddy/caddy")))
         .await
@@ -272,7 +272,7 @@ async fn a_machine_that_already_allows_it_asks_for_nothing() {
 }
 
 /// A home with no front end has no binary to name, and on Linux the question cannot even be
-/// asked without one — D12's reason for the producer being one-directional.
+/// asked without one — the reason the producer is one-directional.
 #[tokio::test]
 async fn a_home_with_no_front_end_asks_for_nothing() {
     let (_home, elevation, _events, _machine) = registry(mock::Host::without_port_access(
@@ -292,7 +292,7 @@ async fn a_home_with_no_front_end_asks_for_nothing() {
     );
 }
 
-/// T85's D6, the row that queues: a helper shipped beside the daemon and none installed.
+/// The answer that queues: a helper shipped beside the daemon and none installed.
 ///
 /// The fixture's `Candidates::installed` is `None`, so this states the machine rather than
 /// inheriting whichever one the tests are running on.
@@ -348,7 +348,7 @@ async fn asking_twice_for_the_helper_queues_one_operation() {
     );
 }
 
-/// T88d. A machine whose helper an uninstall removed still ships a source, so the next thing
+/// A machine whose helper an uninstall removed still ships a source, so the next thing
 /// that needs root puts the installation in front of itself — without the daemon restart
 /// `require_helper` alone would have needed.
 #[tokio::test]
@@ -426,7 +426,7 @@ async fn a_producer_with_no_helper_anywhere_asks_for_no_install() {
     );
 }
 
-/// T88d, and the other half of the rule above: a helper installation already waiting is
+/// The other half of the rule above: a helper installation already waiting is
 /// dropped before an uninstall asks for the removal, so the batch does not install the file it
 /// is about to remove.
 ///
@@ -460,7 +460,7 @@ async fn an_uninstall_drops_a_helper_installation_that_is_already_waiting() {
     assert_eq!(waiting[0].op, PrivilegedOp::HelperRemove {});
 }
 
-/// **The uninstall's own door is untouched by T88d's rule.** `crate::uninstall` enqueues
+/// **The uninstall's own door is untouched by that rule.** `crate::uninstall` enqueues
 /// directly, so a batch that removes the helper never first installs one.
 #[tokio::test]
 async fn enqueueing_directly_asks_for_no_helper() {
@@ -480,7 +480,7 @@ async fn enqueueing_directly_asks_for_no_helper() {
     assert_eq!(waiting[0].op, PrivilegedOp::HelperRemove {});
 }
 
-/// D6's first row: a daemon with no helper beside it has nothing to install, so it asks for
+/// The first answer: a daemon with no helper beside it has nothing to install, so it asks for
 /// nothing. Distinct from "it is already installed", and the reason it is a row of its own is
 /// that this is the state a moved binary is in — and `elevation.grant` already tells a person
 /// about *that* where they can act on it.

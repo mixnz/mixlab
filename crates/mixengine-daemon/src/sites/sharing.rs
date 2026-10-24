@@ -1,4 +1,4 @@
-//! Putting one site on the local network, and taking it back off — roadmap task **T74**.
+//! Putting one site on the local network, and taking it back off.
 //!
 //! Five things move, and the order they move in is the whole of this module.
 //!
@@ -42,16 +42,15 @@ impl super::Sites {
         for_seconds: Option<u64>,
         now: Timestamp,
     ) -> Result<SiteSharing, Error> {
-        // **Held for the whole of the share, reconciliation included** — the T76 design, D9. What
-        // this guards is not the row but the answer to *what should this machine have open?*, and
-        // since T76 that question is asked by a clock as well as by a person.
+        // **Held for the whole of the share, reconciliation included.** What this guards is not the
+        // row but the answer to *what should this machine have open?*, and that question is asked
+        // by a clock as well as by a person.
         let _sharing = self.sharing.lock().await;
 
         let (record, holder) = self.expect(site).await?;
 
-        // **Where T80's D8 becomes true at the site** — roadmap task **T81b**, the design's D6: the
-        // difference between an administrative interface and a site somebody chose to share is that
-        // nobody chose.
+        // **Where an extension's administrative interface stays unshared**: the difference between
+        // an administrative interface and a site somebody chose to share is that nobody chose.
         self.editable(&record, &holder)?;
 
         let host = self.elevation.host();
@@ -60,15 +59,15 @@ impl super::Sites {
             .interfaces()
             .map_err(|error| refused(&error))?;
 
-        // Never a guess — the T74 design, D5. The refusal carries the candidate list, which is what
-        // a person reads before typing `--interface`.
+        // Never a guess. The refusal carries the candidate list, which is what a person reads
+        // before typing `--interface`.
         let chosen = mixengine_platform::choose_interface(&found, interface).map_err(|error| {
             refused(&error).with_hint("`mix site share <site> --interface <name>`")
         })?;
 
-        // **The name before the row** — the T75 design, D2. A refusal after the write would leave a
-        // site shared under a name this home cannot advertise, which is a worse state than the one
-        // the caller asked to avoid.
+        // **The name before the row.** A refusal after the write would leave a site shared under a
+        // name this home cannot advertise, which is a worse state than the one the caller asked to
+        // avoid.
         let records = sites::records(&self.store, None)
             .await
             .map_err(|error| error.to_wire())?;
@@ -132,10 +131,10 @@ impl super::Sites {
     /// `not_found` for a site nothing answers to, and whatever writing the row, rendering the
     /// configuration or reissuing the certificate reports.
     pub(crate) async fn unshare(&self, site: &SiteRef) -> Result<(), Error> {
-        // D9 again, from the other end. Nothing inside this method calls `share`, and the watcher
-        // does not hold the lock while it calls this — a second acquisition here would deadlock a
-        // background task rather than fail it, which is why both facts are stated rather than left
-        // to a reader to verify.
+        // The sharing lock again, from the other end. Nothing inside this method calls `share`, and
+        // the watcher does not hold the lock while it calls this — a second acquisition here would
+        // deadlock a background task rather than fail it, which is why both facts are stated rather
+        // than left to a reader to verify.
         let _sharing = self.sharing.lock().await;
 
         let (record, _holder) = self.expect(site).await?;
@@ -161,7 +160,7 @@ impl super::Sites {
         Ok(())
     }
 
-    /// Say on the event stream what this home is now sharing — the T76 design, D7.
+    /// Say on the event stream what this home is now sharing.
     ///
     /// **Best-effort and never a failure**, which is the whole contract of
     /// [`mixengine_proto::DaemonEvent`]: a share that happened and was not announced is still a
@@ -190,12 +189,12 @@ impl super::Sites {
 
     /// Queue the one firewall operation this home now needs.
     ///
-    /// **Whole state, computed from the rows** — the T74 design, D6. Every shared site's web ports
-    /// go in one plan, so the queue holds one row for the question *what should this machine have
-    /// open?* rather than one per share, and the answer that supersedes it is simply the next plan.
-    /// A home with nothing shared wants the empty plan, which is the revoke — and queues it only
-    /// where this home has rules to revoke, because a prompt that changes nothing is a prompt
-    /// somebody still has to answer (T180).
+    /// **Whole state, computed from the rows.** Every shared site's web ports go in one plan, so
+    /// the queue holds one row for the question *what should this machine have open?* rather than
+    /// one per share, and the answer that supersedes it is simply the next plan. A home with
+    /// nothing shared wants the empty plan, which is the revoke — and queues it only where this
+    /// home has rules to revoke, because a prompt that changes nothing is a prompt somebody still
+    /// has to answer.
     pub(super) async fn wants_the_firewall(&self) -> Result<(), Error> {
         let records = sites::records(&self.store, None)
             .await
@@ -229,9 +228,9 @@ impl super::Sites {
             label: format!("{FIREWALL_LABEL}shared sites"),
         };
 
-        // **What this home last had applied, because the machine cannot be read** (T74, and the
-        // T180 design). A plan that is already applied is not a prompt; it is a row to take out of
-        // the queue, which is what an earlier sharing change may have left there.
+        // **What this home last had applied, because the machine cannot be read.** A plan that is
+        // already applied is not a prompt; it is a row to take out of the queue, which is what an
+        // earlier sharing change may have left there.
         let applied: Option<FirewallPlan> =
             mixengine_core::updates::records::get(&self.store, crate::elevation::FIREWALL_APPLIED)
                 .await
@@ -249,7 +248,7 @@ impl super::Sites {
             .await
     }
 
-    /// Advertise every shared site's name, and no other — roadmap task **T75**, the design's D4.
+    /// Advertise every shared site's name, and no other.
     ///
     /// **Whole state, like [`wants_the_firewall`](Self::wants_the_firewall)**, and called from the
     /// same places for the same reason: the question is *what should this home be advertising?*,
@@ -307,7 +306,7 @@ impl super::Sites {
             interface: sharing.interface.clone(),
             address: sharing.address.to_string(),
             // Where the authority is downloaded from, which is the shared site's own URL and the
-            // one path its block answers outside the site — roadmap task T75.
+            // one path its block answers outside the site.
             ca_url: format!("{url}/__mixengine/ca.crt"),
             advertised: name
                 .as_deref()
@@ -320,12 +319,12 @@ impl super::Sites {
     }
 }
 
-/// The refusal for a name another shared site already holds, or [`None`] — the T75 design, D2.
+/// The refusal for a name another shared site already holds, or [`None`].
 ///
 /// **A refusal and not a rename.** The alternative is a suffix, and a URL that changes because
 /// somebody else shared a site is a URL nobody can write down. What comes back names the site to
-/// unshare, because that is the action available to whoever reads it — the same shape T74's D5 uses
-/// for an ambiguous interface.
+/// unshare, because that is the action available to whoever reads it — the same shape the refusal
+/// of an ambiguous interface uses.
 ///
 /// [`None`] for a site whose primary domain yields no label: it is shared by address, and there is
 /// no name for anything to collide with.
@@ -357,16 +356,16 @@ fn refused(error: &mixengine_platform::Error) -> Error {
 
 /// When *this* share began.
 ///
-/// Re-sharing an already-shared site on the same address keeps the original start: T76 measures an
-/// expiry against it, and restarting the clock because somebody typed the command twice would extend
-/// a share nobody extended. A different address is a different share.
+/// Re-sharing an already-shared site on the same address keeps the original start: an expiry is
+/// measured against it, and restarting the clock because somebody typed the command twice would
+/// extend a share nobody extended. A different address is a different share.
 fn began(already: Option<&Sharing>, address: std::net::Ipv4Addr, now: Timestamp) -> Timestamp {
     already
         .filter(|already| already.address == address)
         .map_or(now, |already| already.since)
 }
 
-/// When *this* share ends, or [`None`] for one that does not — the T76 design, D6.
+/// When *this* share ends, or [`None`] for one that does not.
 ///
 /// **The deadline is measured from the start, and one already in the past is a refusal.** Both
 /// halves come from [`began`] above: a repeated share keeps its start, so `--for` names an instant
@@ -443,7 +442,7 @@ fn spelled(millis: i64) -> String {
 /// promise is the whole feature.
 ///
 /// A home with nothing shared answers the empty list, which is the revoke.
-/// Does this machine already hold what `wanted` asks for — roadmap task **T180**?
+/// Does this machine already hold what `wanted` asks for?
 ///
 /// **The ports and not the whole plan.** The label is composed from [`FIREWALL_LABEL`] by this
 /// build and is the same string in every plan it makes; comparing it would turn a rename into a
@@ -496,8 +495,8 @@ mod tests {
         }
     }
 
-    /// **Two shared sites cannot hold one name** — the T75 design, D2, and the refusal names the
-    /// site somebody has to unshare rather than leaving them to work it out.
+    /// **Two shared sites cannot hold one name**, and the refusal names the site somebody has to
+    /// unshare rather than leaving them to work it out.
     #[test]
     fn a_second_shared_site_with_the_same_label_is_refused_by_name() {
         let records = vec![a_site(1, "blog.test", true), a_site(2, "blog.dev", false)];
@@ -529,7 +528,7 @@ mod tests {
         assert!(collides(&records, &records[1]).is_none());
     }
 
-    /// **A `--for` that has already run out is refused rather than honoured** — the T76 design, D6.
+    /// **A `--for` that has already run out is refused rather than honoured.**
     ///
     /// The deadline is measured from `shared_since`, which a repeated share deliberately preserves,
     /// so `--for 1m` on a site shared an hour ago names an instant in the past. Honouring it would
@@ -696,8 +695,8 @@ mod tests {
         }
     }
 
-    /// **T180.** A home that has never granted a firewall plan holds no rules, so the empty plan is
-    /// already applied and the ports of a first share are not.
+    /// A home that has never granted a firewall plan holds no rules, so the empty plan is already
+    /// applied and the ports of a first share are not.
     #[test]
     fn a_home_that_never_shared_holds_no_rules() {
         assert!(already_applied(None, &plan(&[])));

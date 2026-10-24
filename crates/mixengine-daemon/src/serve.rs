@@ -42,11 +42,12 @@ const ACCEPT_PAUSE: Duration = Duration::from_millis(200);
 /// down — including the answer to `daemon.shutdown` itself, which is written into a connection this
 /// daemon has already decided to stop waiting for.
 ///
-/// **The `daemon.shutdown` path's number, and since T9a only that path's.** A shutdown the OS asked
-/// for has no answer to write and arrives with a clock running — see [`SIGNAL_CLIENT_GRACE`].
+/// **The `daemon.shutdown` path's number, and since the signal path got its own, only that
+/// path's.** A shutdown the OS asked for has no answer to write and arrives with a clock running —
+/// see [`SIGNAL_CLIENT_GRACE`].
 pub(crate) const CLIENT_GRACE: Duration = Duration::from_secs(2);
 
-/// The same, for the shutdown an operating system asked for — roadmap task **T9a**.
+/// The same, for the shutdown an operating system asked for.
 ///
 /// **A quarter of [`CLIENT_GRACE`], and the one difference between the two paths is what pays for
 /// it.** `daemon.shutdown` has an answer to write into one of these connections, and the two seconds
@@ -58,7 +59,7 @@ pub(crate) const CLIENT_GRACE: Duration = Duration::from_secs(2);
 /// where something else is counting, which is the trade [`CEILING_RESERVE`] describes.
 const SIGNAL_CLIENT_GRACE: Duration = Duration::from_millis(500);
 
-/// What [`CEILING_RESERVE`] keeps back for `Store::close` — roadmap task **T9a**.
+/// What [`CEILING_RESERVE`] keeps back for `Store::close`.
 ///
 /// The checkpoint is the step whose overrun actually loses something: a process terminated in the
 /// middle of it leaves the `-wal` sidecar holding the newest commits, and every other number here
@@ -67,7 +68,7 @@ const SIGNAL_CLIENT_GRACE: Duration = Duration::from_millis(500);
 /// survive is a laptop resuming from sleep with a hundred processes asking for the disk at once.
 const CHECKPOINT_MARGIN: Duration = Duration::from_secs(1);
 
-/// What [`CEILING_RESERVE`] keeps back for nothing in particular — roadmap task **T9a**.
+/// What [`CEILING_RESERVE`] keeps back for nothing in particular.
 ///
 /// Every other part of the reserve is a wait this daemon performs and can therefore be sure of.
 /// This one covers what it cannot: a task the runtime schedules late because eight runners are
@@ -82,7 +83,7 @@ const CHECKPOINT_MARGIN: Duration = Duration::from_secs(1);
 const SCHEDULING_SLACK: Duration = Duration::from_secs(1);
 
 /// What a shutdown keeps back from an operating system's ceiling for everything that is not a
-/// service — roadmap task **T9a**.
+/// service.
 ///
 /// Windows gives a console control handler about five seconds and then ends the process whatever it
 /// is doing ([`signal::STOP_CEILING`]), and stopping services is not the last thing a shutdown does:
@@ -116,7 +117,7 @@ pub(crate) const CEILING_RESERVE: Duration = SIGNAL_CLIENT_GRACE
     .saturating_add(SCHEDULING_SLACK);
 
 /// How long a shutdown that was asked to hurry still waits for the services it has just told to
-/// kill — roadmap task **T9a**.
+/// kill.
 ///
 /// A second request to stop narrows the budget to nothing, which puts every runner still to reach a
 /// stop at the same place: `Supervised`'s kill — `TerminateJobObject` or a `SIGKILL` to the group,
@@ -132,9 +133,9 @@ pub(crate) const CEILING_RESERVE: Duration = SIGNAL_CLIENT_GRACE
 ///
 /// What running out costs is stated rather than hidden: the runners still waiting are abandoned
 /// rather than aborted, so a service this daemon had asked to stop is left for the next one to meet
-/// as the crash recovery it already performs (roadmap task T18). That is the same bargain `kill -9`
-/// would have made — except that this way the database still gets its checkpoint, which is the whole
-/// reason the escalation is not a `return`.
+/// as the crash recovery it already performs. That is the same bargain `kill -9` would have made —
+/// except that this way the database still gets its checkpoint, which is the whole reason the
+/// escalation is not a `return`.
 ///
 /// **Bounded at half a second, because [`SCHEDULING_SLACK`] is what pays for it.** The wait arrives
 /// on top of a budget that may already have run to the end of its clock, so the worst case on
@@ -142,8 +143,7 @@ pub(crate) const CEILING_RESERVE: Duration = SIGNAL_CLIENT_GRACE
 /// 5 s the OS allows. That it fits inside the slack is a test rather than this sentence.
 const KILL_GRACE: Duration = Duration::from_millis(500);
 
-/// How far past its own deadline a shutdown may still watch a process it has just killed — roadmap
-/// task **T9a**.
+/// How far past its own deadline a shutdown may still watch a process it has just killed.
 ///
 /// **The one wait for which zero is not a real answer.** Every other constant the budget shortens is
 /// a wait whose absence costs something bounded and stated: a grace period of zero is a service
@@ -191,9 +191,9 @@ struct Shared<'a> {
 /// Separate from `main` so that `Store::close` has a single call site that every exit passes
 /// through, including the failing ones.
 ///
-/// **Answers the directories a finished uninstall left to remove** — roadmap task T87, and empty on
-/// every other run. They are returned rather than removed here, because the database is still open
-/// on the last line of this function and `MIXENGINE_HOME` is what holds it: `main` removes them once
+/// **Answers the directories a finished uninstall left to remove**, and is empty on every other
+/// run. They are returned rather than removed here, because the database is still open on the last
+/// line of this function and `MIXENGINE_HOME` is what holds it: `main` removes them once
 /// `Store::close` has checkpointed the write-ahead log and the home lock has been dropped.
 pub(crate) async fn serve(
     paths: &Paths,
@@ -215,33 +215,33 @@ pub(crate) async fn serve(
     // the next task to want a key would have added an eighth.
     let shutdown_grace = Duration::from_secs(config.daemon.shutdown_grace_seconds);
 
-    // **Whether a site with nothing behind it answers with a page of ours** — roadmap task T124.
+    // **Whether a site with nothing behind it answers with a page of ours.**
     // Read here beside the grace period rather than passed in, for the reason above: the file is
     // already an argument, and every generator this daemon builds has to read one answer or a drift
     // check would report a difference against a rendering nothing wrote.
     let welcome = config.sites.welcome_page;
 
-    // **Roadmap task T91.** Built here rather than passed in, and an eighth argument is only half
+    // **Crash reports.** Built here rather than passed in, and an eighth argument is only half
     // the reason — it would put this function over the count clippy allows, which is the same wall
     // the note above describes. The other half is that there is nothing to pass: `Reports` is a pure
     // function of the two things this function already has, so the value `main` installed the panic
     // hook from and this one are the same value rather than two copies of one.
     let crashes = crash::Reports::new(paths, config.crash.enabled);
 
-    // **`<root>/bin` is refreshed on every start** — roadmap task T26. It is a projection of a table
-    // compiled into this binary, exactly as `etc/` is a projection of the database, so a home whose
-    // `bin/` was emptied is repaired by starting the daemon. Touching nothing outside the root is
-    // what separates it from putting that directory on the user's PATH — that is `path.install`'s,
-    // and is only ever done when somebody asks.
+    // **`<root>/bin` is refreshed on every start.** It is a projection of a table compiled into
+    // this binary, exactly as `etc/` is a projection of the database, so a home whose `bin/` was
+    // emptied is repaired by starting the daemon. Touching nothing outside the root is what
+    // separates it from putting that directory on the user's PATH — that is `path.install`'s, and
+    // is only ever done when somebody asks.
     //
     // **Before the endpoint is bound**, unlike the two recovery passes below, and the reason is the
     // endpoint rather than the work: a client that dials after the bind waits in the backlog for
     // its answer, so every moment between the two is a moment it is kept waiting. Recovery is a
-    // database read and a handful of process lookups; nineteen file copies are not. (Before T170
-    // that wait was a refusal on Windows — `ERROR_PIPE_BUSY` — and putting these copies after the
-    // bind made an ordinary parallel test run fail.) Nothing is listening yet while this runs, and a
-    // client that finds nothing there retries — which is the same thing it does for the migrations
-    // that ran a moment ago.
+    // database read and a handful of process lookups; nineteen file copies are not. (Before the
+    // named pipe kept a backlog, that wait was a refusal on Windows — `ERROR_PIPE_BUSY` — and
+    // putting these copies after the bind made an ordinary parallel test run fail.) Nothing is
+    // listening yet while this runs, and a client that finds nothing there retries — which is the
+    // same thing it does for the migrations that ran a moment ago.
     //
     // Nothing here fails the start, on the rule the recovery passes follow: a `bin/` that could not
     // be written leaves a home whose shims are missing, which a person can see and act on, where
@@ -257,7 +257,7 @@ pub(crate) async fn serve(
     // **Built here and never called here.** The entry it registers is outside the home, so nothing
     // touches it on the daemon's own initiative — `shims` above refreshes `bin/` at every start
     // because that is inside the root, and puts the directory on the PATH only when asked, which is
-    // the same rule this whole capability is one line of. Roadmap task T85b.
+    // the same rule this whole capability is one line of.
     let autostart = Arc::new(autostart::Autostart::new(
         program.clone(),
         paths.root().to_path_buf(),
@@ -265,7 +265,7 @@ pub(crate) async fn serve(
         store.clone(),
     ));
 
-    // The fourth reader of this path, and the last — roadmap task **T88**. Kept here because
+    // The fourth reader of this path, and the last: the updater. Kept here because
     // `elevation::Candidates` takes the original by value further down, and because the
     // question the updater asks of it is a different one from the other three: not *what shall I
     // run*, but *is the directory this binary sits in one this account may write*.
@@ -273,9 +273,9 @@ pub(crate) async fn serve(
 
     projections::refresh_bin(&shims).await;
 
-    // **And from here a watch keeps it current** — roadmap tasks T131 and T185b. A `npm install -g
-    // yarn` typed a minute later changes a runtime's bindir and tells nobody; the kernel tells this,
-    // and nothing runs while nothing changes. See `bin_watch`.
+    // **And from here a watch keeps it current.** A `npm install -g yarn` typed a minute later
+    // changes a runtime's bindir and tells nobody; the kernel tells this, and nothing runs while
+    // nothing changes. See `bin_watch`.
     let _watching = bin_watch::start(Arc::clone(&shims), store.clone());
 
     projections::seed_gallery(store, paths).await;
@@ -284,7 +284,7 @@ pub(crate) async fn serve(
     // person actually meets here is "something else is already listening for this home", and the
     // sentence that says what to do about it is written at the boundary and nowhere else.
     //
-    // **Accepting from here on, not from `accept::accept_until_stopped`** (T170). Everything
+    // **Accepting from here on, not from `accept::accept_until_stopped`.** Everything
     // between this line and that loop — recovery, the trust store, the registry — used to be a
     // window in which a bound named pipe had one instance and nobody taking it, so a second client
     // met `ERROR_PIPE_BUSY` and gave up after its second of retries. The backlog accepts now and
@@ -303,8 +303,8 @@ pub(crate) async fn serve(
     let mut signals = signal::Signals::listen().map_err(|error| error.to_wire())?;
 
     // The root token every other shutdown path is a branch of. It is cancelled by a signal and
-    // awaited by the accept loop and by every `GET /events`; `daemon.shutdown` (roadmap task T9a)
-    // cancels the same object, and every service the registry supervises hangs a child token off it.
+    // awaited by the accept loop and by every `GET /events`; `daemon.shutdown` cancels the same
+    // object, and every service the registry supervises hangs a child token off it.
     let shutdown = CancellationToken::new();
 
     // The work a start leaves running behind it, owned so that none of it outlives the store it
@@ -315,20 +315,20 @@ pub(crate) async fn serve(
     // registry announces every state change it persists, from tasks that outlive any one request.
     let events = api::Events::new();
 
-    // **The source is the generator** — roadmap task T30. Every `service.*` call renders the
+    // **The source is the generator.** Every `service.*` call renders the
     // `services` table into `etc/` and into the specs the registry supervises, which is also why
     // there is nothing to do here beyond handing it the two things it reads: a home with no services
     // in it declares nothing, and the registry, the graph and the walk all handle that without a
     // special case.
-    // **Before the registry**, which takes it — roadmap task T33. A service that has never been
-    // started here may have a first-run ritual to perform, and that is minutes of work reported
-    // through a job rather than something a `service.start` can do inline.
+    // **Before the registry**, which takes it. A service that has never been started here may have
+    // a first-run ritual to perform, and that is minutes of work reported through a job rather than
+    // something a `service.start` can do inline.
     let jobs = Arc::new(jobs::Jobs::new(store, events.clone(), shutdown.clone()));
 
     // One host for both, rather than two: `declared` asks it what this system makes a front end
     // bind, and the registry keeps it for everything else.
     //
-    // T184: and the one host that reaches `keyring()` — directly, and through `elevation.host()`,
+    // And it is the one host that reaches `keyring()` — directly, and through `elevation.host()`,
     // which the API hands to extensions and databases. Every other `host()` in this crate reaches
     // pools, activation, shims, autostart or machine facts, none of which read a credential.
     tracing::info!(
@@ -351,40 +351,40 @@ pub(crate) async fn serve(
         .with_welcome(welcome),
     );
 
-    // **The DNS server, and the mode it puts this home in** — roadmap task T44. Started here, after
-    // the host and before the queue that reads its mode: `require_hosts` asks whether this home
-    // still needs a hosts file at all, and until T45 wires a resolver the answer is always yes.
+    // **The DNS server, and the mode it puts this home in.** Started here, after the host and
+    // before the queue that reads its mode: `require_hosts` asks it which managed TLDs a resolver
+    // routes here, and leaves the names under those out of the hosts file.
     //
     // Nothing here fails the start, on the rule every block around it follows — a port somebody else
     // is holding is a mode and a sentence on `mix status`, not a machine with no daemon.
     let dns = Arc::new(dns::Dns::start(&config.dns, host.as_ref(), shutdown.clone()).await);
 
-    // **The mDNS responder** — roadmap task T75. Started beside the DNS server and on the same
-    // rule: a home where UDP 5353 cannot be bound advertises nothing and shares by address, which
-    // is exactly what T74 shipped. It is deliberately not the DNS server: that one answers the
-    // managed TLDs for this machine, and this one answers one name for the network.
+    // **The mDNS responder.** Started beside the DNS server and on the same rule: a home where UDP
+    // 5353 cannot be bound advertises nothing and shares by address, which is exactly what LAN
+    // sharing did before this responder existed. It is deliberately not the DNS server: that one
+    // answers the managed TLDs for this machine, and this one answers one name for the network.
     let mdns = Arc::new(mdns::Mdns::start(shutdown.clone()));
 
-    // **Read once, reported, never refused** — the T40b design, D10. Refusing to start is what
-    // ADR 0005's first sentence seems to demand and is wrong here for a measured reason: CI's whole
-    // Windows third runs the daemon suites under a full administrative token (T2b), and a hard
-    // refusal would turn one of three platforms red for a reason that has nothing to do with the
-    // code under test. What is worth saying about it is not that this daemon cannot elevate — it is
-    // that every service it supervises inherits the token.
+    // **Read once, reported, never refused.** Refusing to start is what ADR 0005's first sentence
+    // seems to demand and is wrong here for a measured reason: CI's whole Windows third runs the
+    // daemon suites under a full administrative token, and a hard refusal would turn one of three
+    // platforms red for a reason that has nothing to do with the code under test. What is worth
+    // saying about it is not that this daemon cannot elevate — it is that every service it
+    // supervises inherits the token.
     let elevation = elevation::Elevation::new(
         paths,
         store,
         events.clone(),
         Arc::clone(&jobs),
-        // T184: the same host as the registry's, and not a second one. The API hands this one on
-        // to extensions, databases, bundles and certificates, which is where most credentials are
-        // read and written — a separate `host()` here kept them in the OS store.
+        // The same host as the registry's, and not a second one. The API hands this one on to
+        // extensions, databases, bundles and certificates, which is where most credentials are read
+        // and written — a separate `host()` here kept them in the OS store.
         Arc::clone(&host),
         elevation::Candidates {
             program,
-            // Where this operating system keeps an installed privileged helper — T85. `ok()` and
-            // not `?`: a machine that will not name one is a machine with no installed copy, which
-            // is the ordinary state of a development tree and not a reason to refuse to start.
+            // Where this operating system keeps an installed privileged helper. `ok()` and not `?`:
+            // a machine that will not name one is a machine with no installed copy, which is the
+            // ordinary state of a development tree and not a reason to refuse to start.
             installed: mixengine_platform::install::helper_path().ok(),
         },
         Arc::clone(&dns),
@@ -459,20 +459,20 @@ pub(crate) async fn serve(
 
     started::after_an_update(&updates, &services, &elevation, paths, &mut background);
 
-    // **No check at start and no clock** — ADR 0056 rule 8, T187. The feed is read only when
-    // somebody asks: `mix self-update`, `mix self-update --check`, or `update.check` from a client.
-    // A headless install may be a production server, and nothing there changes unless a person
-    // said so.
+    // **No check at start and no clock** — ADR 0056 rule 8. The feed is read only when somebody
+    // asks: `mix self-update`, `mix self-update --check`, or `update.check` from a client. A
+    // headless install may be a production server, and nothing there changes unless a person said
+    // so.
 
     tracing::info!(endpoint = %endpoint, "listening for clients");
 
-    // **And what asked to start, starts** — roadmap task T113. The fifth member of the family of
-    // background loops `clocks` and `started` start and the only one that runs *after* this line
-    // rather than before it: those four are sweeps whose first pass must not race the first client,
-    // and this one starts real programs. A daemon that will not answer `daemon.status` until
-    // MariaDB's first run has finished looks hung at exactly the moment somebody is looking at it,
-    // and what fills a dashboard in as it goes is the event stream this walk announces on — which
-    // needs a client able to connect to it.
+    // **And what asked to start, starts.** The fifth member of the family of background loops
+    // `clocks` and `started` start and the only one that runs *after* this line rather than before
+    // it: those four are sweeps whose first pass must not race the first client, and this one
+    // starts real programs. A daemon that will not answer `daemon.status` until MariaDB's first run
+    // has finished looks hung at exactly the moment somebody is looking at it, and what fills a
+    // dashboard in as it goes is the event stream this walk announces on — which needs a client
+    // able to connect to it.
     //
     // After recovery for `recover`'s own reason, which is satisfied by everything above: a service
     // recovery adopted is already up, and a walk counts one that is up as reached rather than
@@ -505,7 +505,7 @@ pub(crate) async fn serve(
     Ok(api.armed())
 }
 
-/// What a shutdown the *operating system* asked for may spend on services — roadmap task **T9a**.
+/// What a shutdown the *operating system* asked for may spend on services.
 ///
 /// **One budget, two ceilings.** `daemon.shutdown` arrives over a socket with nothing counting
 /// against it and gets the configured number entire; a console control event on Windows arrives with
@@ -570,7 +570,8 @@ async fn shut_down(mut connections: tokio::task::JoinSet<()>, grace: Duration) {
 mod tests {
     use super::*;
 
-    /// The "two ceilings" half of T9a, asserted as the one rule rather than as three per-OS numbers.
+    /// The "two ceilings" half of the shutdown budget, asserted as the one rule rather than as
+    /// three per-OS numbers.
     ///
     /// Written this way on purpose: a test that said "2.5 seconds on Windows" would be a second copy
     /// of `STOP_CEILING` in the daemon, which is exactly the `#[cfg]` the platform layer exists to
@@ -627,7 +628,8 @@ mod tests {
         );
     }
 
-    /// The escalation half of T9a: a second request to stop is paid for out of the slack.
+    /// The escalation half of the shutdown budget: a second request to stop is paid for out of the
+    /// slack.
     ///
     /// Asserted against [`SCHEDULING_SLACK`] rather than against a ceiling, so that it is a claim
     /// every OS can check — the arithmetic it stands for is that a budget spent to its last

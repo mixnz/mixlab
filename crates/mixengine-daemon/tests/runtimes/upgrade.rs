@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// Two patches of one line, and one release of another, all the same archive — T193a.
+/// Two patches of one line, and one release of another, all the same archive.
 fn two_patches(packed: &Packed, url: &str) -> Value {
     let entry = |version: &str| {
         json!({
@@ -45,8 +45,8 @@ fn three_patches(packed: &Packed, url: &str) -> Value {
     index
 }
 
-/// **T193a.** Every release says its line, one per line says it is the newest, and an installed
-/// version with a newer patch is named with that patch.
+/// Every release says its line, one per line says it is the newest, and an installed version with a
+/// newer patch is named with that patch.
 #[tokio::test]
 async fn the_catalogue_says_each_line_its_newest_and_what_updates() {
     let fixture = Fixture::start_with(two_patches).await;
@@ -65,7 +65,7 @@ async fn the_catalogue_says_each_line_its_newest_and_what_updates() {
     let row = |version: &str| {
         catalogue["runtimes"]
             .as_array()
-            .expect("T193 fixture")
+            .expect("runtime.list_available answers a list")
             .iter()
             .find(|row| row["version"] == version)
             .cloned()
@@ -118,7 +118,7 @@ async fn two_installed_patches_of_one_line_each_get_an_update() {
 /// A project `blog` with one PHP site on `pool`.
 async fn a_php_site(fixture: &Fixture, client: &mut Client, pool: &str) {
     let root = fixture.home.path().join("blog");
-    std::fs::create_dir_all(&root).expect("T193 fixture");
+    std::fs::create_dir_all(&root).expect("the project directory");
     client
         .call(
             "project.create",
@@ -137,7 +137,7 @@ async fn a_php_site(fixture: &Fixture, client: &mut Client, pool: &str) {
         .await;
 }
 
-/// **T193b, D4.** What is not an update is refused before anything else is read.
+/// What is not an update is refused before anything else is read.
 #[tokio::test]
 async fn an_upgrade_plan_refuses_what_is_not_an_update() {
     let fixture = Fixture::start_with(two_patches).await;
@@ -177,13 +177,13 @@ async fn an_upgrade_plan_refuses_what_is_not_an_update() {
     assert!(
         other_line["message"]
             .as_str()
-            .expect("T193 fixture")
+            .expect("the refusal has a message")
             .contains("switch"),
         "{other_line}"
     );
 }
 
-/// **T193b, D7.** A plan names the site that moves and the default, and changes nothing.
+/// A plan names the site that moves and the default, and changes nothing.
 #[tokio::test]
 async fn an_upgrade_plan_names_what_moves_and_writes_nothing() {
     let fixture = Fixture::start_with(two_patches).await;
@@ -211,9 +211,9 @@ async fn an_upgrade_plan_names_what_moves_and_writes_nothing() {
     assert_eq!(plan["to_installed"], false);
     let items: Vec<&str> = plan["entries"]
         .as_array()
-        .expect("T193 fixture")
+        .expect("the plan lists its entries")
         .iter()
-        .map(|entry| entry["item"]["item"].as_str().expect("T193 fixture"))
+        .map(|entry| entry["item"]["item"].as_str().expect("an item name"))
         .collect();
     assert!(items.contains(&"site"), "{plan}");
     assert!(items.contains(&"default"), "{plan}");
@@ -228,7 +228,7 @@ async fn an_upgrade_plan_names_what_moves_and_writes_nothing() {
     );
 }
 
-/// **T193b.** The site moves to the new pool, the default follows, and the old version is gone.
+/// The site moves to the new pool, the default follows, and the old version is gone.
 #[tokio::test]
 async fn an_upgrade_moves_the_site_and_the_default_and_removes_the_old_version() {
     let fixture = Fixture::start_with(two_patches).await;
@@ -266,9 +266,9 @@ async fn an_upgrade_moves_the_site_and_the_default_and_removes_the_old_version()
         .await;
     let versions: Vec<&str> = installed["runtimes"]
         .as_array()
-        .expect("T193 fixture")
+        .expect("runtime.list_installed answers a list")
         .iter()
-        .map(|row| row["version"].as_str().expect("T193 fixture"))
+        .map(|row| row["version"].as_str().expect("each row names its version"))
         .collect();
     assert_eq!(versions, ["8.3.34"], "{installed}");
     assert_eq!(installed["runtimes"][0]["default"], true, "{installed}");
@@ -307,7 +307,7 @@ async fn an_upgrade_asked_to_keep_keeps_the_old_version() {
     assert_eq!(
         installed["runtimes"]
             .as_array()
-            .expect("T193 fixture")
+            .expect("runtime.list_installed answers a list")
             .len(),
         2,
         "{installed}"
@@ -396,7 +396,7 @@ async fn an_upgrade_to_an_installed_version_moves_without_downloading() {
     );
 }
 
-/// **T193b, Error handling.** An uninstall of a version an upgrade is moving is refused.
+/// An uninstall of a version an upgrade is moving is refused.
 #[tokio::test]
 async fn a_version_being_upgraded_cannot_be_uninstalled() {
     let fixture = Fixture::start_with(two_patches).await;
@@ -449,8 +449,8 @@ fn web_app_requiring(requires: &str) -> tempfile::TempDir {
     directory
 }
 
-/// **T193b, D5 step 5 — added at execution.** A `web-app` whose `requires` only the old patch
-/// satisfies stays on it, and the old version is kept for it.
+/// A `web-app` whose `requires` only the old patch satisfies stays on it, and the old version is
+/// kept for it.
 #[tokio::test]
 async fn a_web_app_that_needs_the_old_patch_keeps_it() {
     let fixture = Fixture::start_with(two_patches).await;

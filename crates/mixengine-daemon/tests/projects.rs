@@ -1,11 +1,13 @@
 //! `project.*` against a real `mixengined` over a real socket.
 //!
-//! Roadmap task **T39**. What the unit tests next to `core::projects` prove is that the rows and the
-//! walk are right; what is proved here is the part only a daemon can be wrong about — that a create
-//! that names only a directory picks up the manifest lying in it, that a manifest pin is reported as
-//! outranking a contradicting row, and that the same directory under two spellings is one project.
+//! What the unit tests next to `core::projects` prove is that the rows and the walk are right; what
+//! is proved here is the part only a daemon can be wrong about — that a create that names only a
+//! directory picks up the manifest lying in it, that a manifest pin is reported as outranking a
+//! contradicting row, and that the same directory under two spellings is one project.
 //!
 //! No registry and no index: nothing here installs anything, so the daemon needs neither.
+//!
+//! The D-numbers here are those of `docs/specs/2026-08-22-t39-project-model-design.md`.
 
 use std::path::Path;
 
@@ -263,8 +265,8 @@ async fn an_export_writes_the_project_into_the_manifest_and_keeps_the_rest() {
     assert!(written.contains("php = \"^8.3\""), "{written}");
 }
 
-/// **T204, D1 and D4.** Two sites are both written, and an entry the home has no site for is kept
-/// and named rather than deleted.
+/// Two sites are both written, and an entry the home has no site for is kept and named rather than
+/// deleted.
 #[tokio::test]
 async fn an_export_writes_every_site_and_names_what_it_kept() {
     let fixture = Fixture::start().await;
@@ -301,8 +303,8 @@ async fn an_export_writes_every_site_and_names_what_it_kept() {
     assert!(written.contains("domain = \"shop.test\""), "{written}");
 }
 
-/// **T204, D7.** `project.show` lists what the file declares, and which of it is here, missing, or
-/// held by another project.
+/// `project.show` lists what the file declares, and which of it is here, missing, or held by
+/// another project.
 #[tokio::test]
 async fn a_project_shows_the_sites_its_manifest_declares() {
     let fixture = Fixture::start().await;

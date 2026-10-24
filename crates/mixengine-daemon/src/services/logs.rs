@@ -59,10 +59,9 @@ const HISTORIC_BYTES: u64 = 256 * 1024;
 /// [`Logs::forget_if_unwatched`]. An entry nobody is watching costs a receiver-less broadcast and
 /// whatever the ring last held, which is the price of `mix service logs mariadb` still explaining a
 /// service that failed ten minutes ago.
-/// **Keyed by subject rather than by service** — roadmap task **T78a**, its design's D13. A job that
-/// runs somebody else's command needs the same ring, the same subscription and the same
-/// back-pressure a service's output needs, and giving it a second surface would be two
-/// implementations of ADR 0009 to keep in step.
+/// **Keyed by subject rather than by service.** A job that runs somebody else's command needs the
+/// same ring, the same subscription and the same back-pressure a service's output needs, and giving
+/// it a second surface would be two implementations of ADR 0009 to keep in step.
 #[derive(Debug, Default)]
 pub(crate) struct Logs {
     subjects: Mutex<HashMap<LogSubject, Arc<ServiceLog>>>,
@@ -399,8 +398,8 @@ mod tests {
         );
     }
 
-    /// **A job's output is its own ring** — roadmap task **T78a**, its design's D13. Two subjects
-    /// that a single string would have spelled the same way are two logs here.
+    /// **A job's output is its own ring.** Two subjects that a single string would have spelled the
+    /// same way are two logs here.
     #[test]
     fn a_job_and_a_service_do_not_share_a_ring() {
         let logs = Logs::new();

@@ -1,4 +1,4 @@
-//! Measuring what is running, and keeping a day of it — roadmap task **T71**.
+//! Measuring what is running, and keeping a day of it.
 //!
 //! Three parts, and the split is by what each one needs to know. [`minutes`] is arithmetic over a
 //! series of readings and knows nothing about clocks, stores or clients. `watchers` is how many

@@ -1,4 +1,4 @@
-//! What the last daemon left behind — roadmap task **T18**, given a file by **T207d**.
+//! What the last daemon left behind: crash recovery.
 //!
 //! Adopting the processes that survived it, stopping the ones nothing can supervise, and clearing
 //! the rows whose process is gone. The state it reads and writes is the [`Registry`]'s.
@@ -10,7 +10,7 @@ use mixengine_proto::{ServiceId, ServiceState, StateReason};
 use super::runner::gone;
 use super::{Registry, Undeclarable, lock, record};
 
-/// What one boot's reconciliation found — roadmap task **T18**.
+/// What one boot's reconciliation found.
 ///
 /// Lists rather than counts, because the one caller that is not a test writes them into
 /// `daemon.log`: "adopted mariadb@main" is the line somebody reads a week later to understand why a
@@ -52,7 +52,7 @@ impl Recovery {
 }
 
 impl Registry {
-    /// Reconcile what the daemon before this one left behind — roadmap task **T18**.
+    /// Reconcile what the daemon before this one left behind.
     ///
     /// Called once, before anything is served, and it is the only thing in this registry that reads
     /// a `services` row it did not write. A daemon that was killed — or a machine that lost power —
@@ -93,10 +93,10 @@ impl Registry {
     pub(crate) async fn recover(&self) -> Recovery {
         let mut recovery = Recovery::default();
 
-        // **First, and before any row is read** — roadmap task **T68**. On Linux a supervised group
-        // is a *directory*, so a daemon that was killed leaves one behind for every service it was
-        // capping. Nothing on the other two systems, where a group is a kernel object that goes when
-        // the last handle to it closes.
+        // **First, and before any row is read.** On Linux a supervised group is a *directory*, so a
+        // daemon that was killed leaves one behind for every service it was capping. Nothing on the
+        // other two systems, where a group is a kernel object that goes when the last handle to it
+        // closes.
         //
         // Safe to run before adoption rather than after, and that is the point: an empty cgroup is
         // removable and a non-empty one is not, so this takes exactly the ones whose processes are
@@ -172,7 +172,7 @@ impl Registry {
         recovery
     }
 
-    /// Reconcile only the rows this registry holds no runner for — roadmap task **T47b**.
+    /// Reconcile only the rows this registry holds no runner for.
     ///
     /// **[`recover`](Self::recover) with the set narrowed, and narrowed for a reason that is not
     /// tidiness.** That function walks *every* row, which is right at a boot where nothing is
@@ -501,7 +501,7 @@ mod tests {
     use super::super::now;
     use super::*;
 
-    /// A `fakeservice` running, and a row that says the *last* daemon started it — T18's subject.
+    /// A `fakeservice` running, and a row that says the *last* daemon started it.
     ///
     /// The row is written the way the runner writes one, through `core`, so what recovery meets is
     /// what a killed daemon really leaves: a supervised state, a pid, and the moment that process
@@ -558,7 +558,7 @@ mod tests {
         service
     }
 
-    /// **T18, and the case M1 is about.** A process that outlived the daemon which started it is
+    /// **The case M1 is about.** A process that outlived the daemon which started it is
     /// supervised again by the one that finds it — not restarted, not left running with nothing
     /// watching it, and above all not reported as something it is not.
     ///

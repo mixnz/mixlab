@@ -1,19 +1,20 @@
 //! The one recipe a debug build adds to the catalogue: `mixengine-testkit`'s `fakeservice`.
 //!
-//! **Why a shipped crate carries a fixture's recipe at all.** Everything the daemon supervises comes
-//! from a [`Recipe`], and every real one is a later roadmap task against a real server — Caddy is
-//! T31, MariaDB T33. Until one lands there is no service a *real* `mixengined` process can be told
-//! to run, and the tests that need one are exactly the tests that cannot be written any other way:
-//! `mix service start` over a socket, a killed daemon adopting what outlived it, a log stream from a
-//! process that is still talking. Those drive the binary that is built, so a fixture inside a test
-//! module is unreachable from them.
+//! **Why a shipped crate carries a fixture's recipe at all.** Everything the daemon supervises
+//! comes from a [`Recipe`], and every real one runs a real server that has to be downloaded first.
+//! Some tests need a service a *real* `mixengined` process can be told to run without that, and
+//! they are exactly the tests that cannot be written any other way:
+//! `mix service start` over a socket, a killed daemon adopting what outlived it, a log stream from
+//! a process that is still talking. Those drive the binary that is built, so a fixture inside a
+//! test module is unreachable from them.
 //!
-//! **What it replaces is strictly wider.** Until T30 this was `MIXENGINE_DEV_SPECS`: a path to a
-//! JSON file of `ServiceSpec`s, which is a supervisor that runs whatever program a variable points
-//! at, with whatever arguments and whatever environment. This runs one program — the `fakeservice`
-//! inside the package a `packages` row names — with the flags below and nothing else. It is also the
-//! *real* path: a test that declares one of these exercises the merge, the render, the diff, the
-//! staging and the spec build, where a spec read from a file exercised none of them.
+//! **What it replaces is strictly wider.** Before the generator this was `MIXENGINE_DEV_SPECS`: a
+//! path to a JSON file of `ServiceSpec`s, which is a supervisor that runs whatever program a
+//! variable points at, with whatever arguments and whatever environment. This runs one program —
+//! the `fakeservice` inside the package a `packages` row names — with the flags below and nothing
+//! else. It is also the *real* path: a test that declares one of these exercises the merge, the
+//! render, the diff, the staging and the spec build, where a spec read from a file exercised none
+//! of them.
 //!
 //! Gated on `debug_assertions` all the same, because a release build has no business knowing about
 //! this program, and because a home that somehow held a `fakeservice` row should be told plainly
@@ -105,7 +106,7 @@ const READY_TIMEOUT: &str = "ready_timeout_ms";
 const LOG_EVERY: &str = "log_every";
 
 /// Take another bite of memory this big, in megabytes, every 50 ms. Zero is a service that eats
-/// nothing — roadmap task **T68**, where a service is walked into a real ceiling.
+/// nothing; anything else walks a service into a real resource ceiling.
 const EAT_MEMORY_MB: &str = "eat_memory_mb";
 
 /// Exit on its own after this long, in milliseconds. Zero is never.
@@ -140,15 +141,14 @@ impl Recipe for Fakeservice {
 
     /// A number well clear of anything a developer's machine runs, because these are fixtures.
     ///
-    /// It exists so that the allocation T34c added is exercised by every suite that declares a
-    /// service rather than only by the two databases: a second `fakeservice@…` gets the next port
-    /// up, which is the same rule `mariadb@legacy` meets. Nothing here ever binds it.
+    /// It exists so that port allocation is exercised by every suite that declares a service rather
+    /// than only by the two databases: a second `fakeservice@…` gets the next port up, which is the
+    /// same rule `mariadb@legacy` meets. Nothing here ever binds it.
     fn preferred_port(&self) -> Option<u16> {
         Some(41000)
     }
 
-    /// Measured on the port above, so that the idle machinery T69 built has a fixture to run
-    /// against.
+    /// Measured on the port above, so that the idle sweep has a fixture to run against.
     ///
     /// Nothing binds that port, which is exactly right for what the suites need: a `fakeservice`
     /// nobody connects to reads as idle, and a test that wants it busy connects to it.

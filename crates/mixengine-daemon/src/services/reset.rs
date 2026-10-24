@@ -1,5 +1,4 @@
-//! Re-setting a superuser credential in a data directory that already exists — roadmap task
-//! **T127**.
+//! Re-setting a superuser credential in a data directory that already exists.
 //!
 //! # Why this is not `first_run`
 //!
@@ -12,7 +11,8 @@
 //!
 //! # Why nothing reaches it on anybody's behalf
 //!
-//! T126's collision means the credential this home holds may be *another home's*. So the design's D3
+//! Before addresses named their home (ADR 0032), two homes on one machine wrote the same entry, so
+//! the credential this home holds may be *another home's*. So the rule creating a database rests on
 //! — a keyring entry is the deed of ownership — is exactly wrong in the one case this module exists
 //! for. Writing that entry into a server's data directory is the right repair and is also
 //! irreversible, on the strength of a claim known to be unreliable here, which is why it happens
@@ -254,7 +254,7 @@ async fn credentials(
         let address = plan.secret_address(spec.key);
 
         // **Through `crate::secrets`**, which is what gives an entry written before addresses named
-        // their home somewhere to be found — roadmap task **T126**.
+        // their home somewhere to be found.
         let secret = match crate::secrets::read(host, &address).await? {
             Some(found) => found,
             None => {

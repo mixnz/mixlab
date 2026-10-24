@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use super::Shared;
 
-/// **And from here a clock keeps doing it** — roadmap task T52. The issuance that ends
+/// **And from here a clock keeps doing it.** The issuance that ends
 /// [`machine::certificates`](super::machine::certificates) was the only renewal this daemon had: a
 /// leaf lives 90 days, so a machine switched off and on again stays current forever, and one whose
 /// daemon runs for three months reaches a red padlock with no defect anywhere in the code.
@@ -32,15 +32,17 @@ pub(super) fn start_clocks(shared: &Shared<'_>) -> crate::metrics::sampler::Hand
         shutdown.clone(),
     );
 
-    // **And a second clock stops what nothing is using** — roadmap task T69. Beside the renewal one
-    // because they are the same shape and have the same two constraints: after recovery, so a
-    // reading is never taken of a service this daemon has not decided about yet, and before the API
-    // is served, so the first sweep does not race the first client.
+    // **And a second clock stops what nothing is using.** Beside the renewal one because they are
+    // the same shape and have the same two constraints: after recovery, so a reading is never taken
+    // of a service this daemon has not decided about yet, and before the API is served, so the
+    // first sweep does not race the first client.
     //
-    // **Since T70 it sweeps php-fpm pools by default**, because the block below now holds an address
-    // for each of them and the request that finds a pool down is what wakes it. Every other service
-    // is still swept only where somebody ran `mix service idle`: a database has nothing to start it
-    // again until T70a, and idle-stopping one would be a connection refused with no way back.
+    // **It sweeps what has a policy, and by default nothing does** (ADR 0041): a service is swept
+    // where somebody ran `mix service idle`, or while the home saves resources, when php-fpm pools
+    // and the servers a connection can start get a number of their own. Each of those has an
+    // address held for it, and the request or connection that finds it down is what wakes it; a
+    // service nothing can wake gets no number, since stopping it would be a refusal with no way
+    // back.
     crate::services::idle::start(
         crate::services::idle::Sweeper::new(
             Arc::clone(services),
@@ -51,10 +53,10 @@ pub(super) fn start_clocks(shared: &Shared<'_>) -> crate::metrics::sampler::Hand
         shutdown.clone(),
     );
 
-    // **And a third clock measures what all of that is costing** — roadmap task T71. Beside the two
-    // above because it is the same shape, and after them for one reason of its own: what it measures
-    // is read out of the `services` rows, so a sweep that stopped something is reflected in the next
-    // reading rather than argued with.
+    // **And a third clock measures what all of that is costing.** Beside the two above because it
+    // is the same shape, and after them for one reason of its own: what it measures is read out of
+    // the `services` rows, so a sweep that stopped something is reflected in the next reading
+    // rather than argued with.
     //
     // **Two rates in one loop.** A reading a minute while nobody is watching, which is what the
     // 24-hour history is made of, and a reading a second while a client holds `GET /metrics` open.
@@ -70,10 +72,10 @@ pub(super) fn start_clocks(shared: &Shared<'_>) -> crate::metrics::sampler::Hand
     );
     let metrics = sampler.handle();
 
-    // **And a fourth loop watches a ceiling this machine may not be able to hold** — roadmap task
-    // **T71a**. Beside the three above because it belongs to the same family, and unlike all three
-    // of them it has *no clock*: it wakes when the sampler finishes a minute, so its rate is that
-    // loop's and there is still exactly one thing on this machine reading the process table.
+    // **And a fourth loop watches a ceiling this machine may not be able to hold.** Beside the
+    // three above because it belongs to the same family, and unlike all three of them it has *no
+    // clock*: it wakes when the sampler finishes a minute, so its rate is that loop's and there is
+    // still exactly one thing on this machine reading the process table.
     //
     // Subscribed before the sampler is spawned, so the first minute it finishes has a reader.
     crate::services::watchdog::start(

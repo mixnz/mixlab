@@ -1,4 +1,4 @@
-//! Writing `etc/ca/bundle.pem`, and when — roadmap task **T132**.
+//! Writing `etc/ca/bundle.pem`, and when.
 //!
 //! [`mixengine_core::generate::ca`] composes the file; this is the two lines that fetch its inputs
 //! and the one rule about failure. The machine's roots come from

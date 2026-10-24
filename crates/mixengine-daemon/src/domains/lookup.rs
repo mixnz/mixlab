@@ -1,29 +1,32 @@
-//! The two instruments a domain diagnostic is made of — roadmap task **T46**.
+//! The two instruments a domain diagnostic is made of.
 //!
 //! Both answer a question no stored fact can: what this machine *does*, right now, rather than what
-//! it was configured to do. That distinction is the whole reason they exist — T45 shipped a Linux
-//! wiring whose own probe agreed with it while not one name resolved, and nothing in the
-//! configuration could have said so.
+//! it was configured to do. That distinction is the whole reason they exist — the resolver once
+//! shipped a Linux wiring whose own probe agreed with it while not one name resolved, and nothing
+//! in the configuration could have said so.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-24-t46-domain-rpc-design.md`.
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs as _, UdpSocket};
 use std::time::Duration;
 
 /// What this machine's ordinary resolver answers for `name`, or an empty list.
 ///
-/// **`getaddrinfo`, and never `nslookup`.** Measured in T45: `nslookup` talks to the configured
-/// server directly and does not honour the Name Resolution Policy Table, so on Windows it answers
-/// NXDOMAIN for a name `getaddrinfo` resolves at the same moment. The instrument has to be the one
-/// the operating system gives ordinary programs, because those are what the answer is about.
+/// **`getaddrinfo`, and never `nslookup`.** Measured while wiring the resolver: `nslookup` talks to
+/// the configured server directly and does not honour the Name Resolution Policy Table, so on
+/// Windows it answers NXDOMAIN for a name `getaddrinfo` resolves at the same moment. The instrument
+/// has to be the one the operating system gives ordinary programs, because those are what the
+/// answer is about.
 ///
-/// **The operating system's cache is included, deliberately.** T45's system test had to defeat it —
-/// a fresh name every poll — because it was asking whether a *mechanism* works. This asks a
-/// different question: what does the user's browser see right now, and the cached answer is that
-/// answer.
+/// **The operating system's cache is included, deliberately.** The resolver's system test had to
+/// defeat it — a fresh name every poll — because it was asking whether a *mechanism* works. This
+/// asks a different question: what does the user's browser see right now, and the cached answer is
+/// that answer.
 ///
 /// **`bound` stops this waiting; it does not stop the lookup.** [`tokio::task::spawn_blocking`]
 /// cannot be cancelled, so a resolver that hangs holds one blocked thread until it gives up on its
 /// own. That is the honest cost, and it is written here rather than hidden behind a timeout that
-/// reads like a cancellation (T46 design, D6).
+/// reads like a cancellation (D6).
 pub(crate) async fn resolves(name: &str, bound: Duration) -> Vec<IpAddr> {
     // `getaddrinfo` resolves a *service*, so it wants a port. Every caller here is asking about a
     // name; 80 is arbitrary and never leaves this function.
@@ -45,7 +48,7 @@ pub(crate) async fn resolves(name: &str, bound: Duration) -> Vec<IpAddr> {
 
 /// What this daemon's own DNS server answers for `name`, asked over its socket.
 ///
-/// **Over the socket rather than of the zone** (T46 design, D7). Asking the zone proves the
+/// **Over the socket rather than of the zone** (D7). Asking the zone proves the
 /// answering logic; asking the socket proves the *listener*, which is the only fact that separates
 /// "the server died" from "nothing on this machine sends it a name" — the two failures the report
 /// this feeds exists to tell apart.
@@ -94,7 +97,8 @@ fn query_for(name: &str) -> Vec<u8> {
 /// The first `A` record in a reply, or [`None`] for anything else.
 ///
 /// [`None`] covers a reply carrying no answers, which is what `REFUSED` and `NODATA` both look like
-/// from here — and both are correct answers from T44's server for a name outside a managed TLD.
+/// from here — and both are correct answers from this daemon's DNS server for a name outside a
+/// managed TLD.
 fn first_a(packet: &[u8]) -> Option<Ipv4Addr> {
     let answers = u16::from_be_bytes([*packet.get(6)?, *packet.get(7)?]);
     if answers == 0 {
@@ -156,7 +160,7 @@ mod tests {
     /// **The control**, and a test of its own rather than a line inside another: every assertion
     /// below concludes something from a name that did *not* resolve, and without this that
     /// conclusion is a statement about `getaddrinfo` rather than about the machine. Four of the six
-    /// CI rounds behind T45 were void for exactly that (T46 design, D9).
+    /// CI rounds behind the resolver were void for exactly that (D9).
     #[tokio::test]
     async fn the_instrument_resolves_a_name_every_machine_has() {
         let found = resolves("localhost", Duration::from_secs(5)).await;
@@ -166,7 +170,7 @@ mod tests {
 
     /// A name under a TLD reserved to resolve nowhere — `.invalid`, RFC 6761 — on any machine.
     /// Not `.test`: a Mac with MixEngine installed routes every `.test` name to that daemon through
-    /// `/etc/resolver/test`, and the answer was that daemon's to give (T202b, D5).
+    /// `/etc/resolver/test`, and the answer was that daemon's to give.
     #[tokio::test]
     async fn a_name_nothing_routes_resolves_to_nothing() {
         // **CONTROL, in this test and not only in the one above** — a control taken in another test
@@ -201,9 +205,9 @@ mod tests {
 
     /// A server that answers is heard, which is the half the test above cannot prove.
     ///
-    /// The reply is assembled by hand rather than by starting T44's server: what is under test here
-    /// is the reading of a packet, and a test that needed the whole DNS server to prove it would
-    /// fail for reasons that have nothing to do with the parser.
+    /// The reply is assembled by hand rather than by starting the DNS server: what is under test
+    /// here is the reading of a packet, and a test that needed the whole DNS server to prove it
+    /// would fail for reasons that have nothing to do with the parser.
     #[tokio::test]
     async fn an_a_record_is_read_out_of_a_reply() {
         let server = UdpSocket::bind(("127.0.0.1", 0)).expect("an ephemeral port");

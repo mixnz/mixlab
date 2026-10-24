@@ -35,11 +35,11 @@ const DETACH_POLL: Duration = Duration::from_millis(50);
 /// daemon nobody was going to start (measured on CI). `mix daemon stop` followed by any command
 /// that autostarts is the same handoff by hand.
 ///
-/// Sized to cover a holder that is leaving — the clients, then the checkpoint, with room for a loaded
-/// machine — and a fraction of [`DETACH_TIMEOUT`], since a `--detach` parent is usually what is
-/// waiting behind this. A holder that neither answers nor leaves inside it is one still starting
-/// up — roadmap task T10's window, `Store::open` mid-migration — and standing aside for that one
-/// stays right: it will answer, and the parent waits for it.
+/// Sized to cover a holder that is leaving — the clients, then the checkpoint, with room for a
+/// loaded machine — and a fraction of [`DETACH_TIMEOUT`], since a `--detach` parent is usually what
+/// is waiting behind this. A holder that neither answers nor leaves inside it is one still starting
+/// up — `Store::open` mid-migration — and standing aside for that one stays right: it will answer,
+/// and the parent waits for it.
 ///
 /// [`CLIENT_GRACE`]: crate::serve::CLIENT_GRACE
 const HANDOFF: Duration = Duration::from_secs(5);
@@ -119,12 +119,12 @@ pub(crate) async fn detach(
         arguments.push(key.into());
     }
 
-    // And the four relocations — roadmap task **T144**. They have to reach the child rather than
-    // being applied here, because the child is the process that opens the database and only a
-    // process that has opened one can know whether these may still be honoured. A `--detach` that
-    // wrote them itself would be answering that question without having asked it — and a
-    // `--detach` that dropped them would be a flag that works in the foreground and silently does
-    // nothing through the one caller that starts most daemons.
+    // And the four relocations (`--runtimes`, `--packages`, `--data`, `--logs`). They have to reach
+    // the child rather than being applied here, because the child is the process that opens the
+    // database and only a process that has opened one can know whether these may still be honoured.
+    // A `--detach` that wrote them itself would be answering that question without having asked it
+    // — and a `--detach` that dropped them would be a flag that works in the foreground and
+    // silently does nothing through the one caller that starts most daemons.
     //
     // The name of each flag is the name of the key it writes, which is why this can be a loop over
     // the same list `config.toml` is written from rather than four blocks like the ones above.
@@ -174,9 +174,9 @@ pub(crate) async fn detach(
         // as this one: it exits 0 precisely when another daemon already holds this home — and that
         // daemon takes the lock **before** it opens SQLite, so between those two moments there is a
         // whole set of migrations during which the endpoint is legitimately not answering yet. This
-        // used to end the wait there and turn two clients autostarting at the same instant (roadmap
-        // task T10) into a failure for whichever of them lost the race. The deadline below is what
-        // that case waits on, and is generous for exactly this reason.
+        // used to end the wait there and turn two clients autostarting at the same instant into a
+        // failure for whichever of them lost the race. The deadline below is what that case waits
+        // on, and is generous for exactly this reason.
         if let Some(status) = &exit
             && !status.is_success()
         {

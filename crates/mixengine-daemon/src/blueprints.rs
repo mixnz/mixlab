@@ -1,15 +1,15 @@
 //! `blueprint.*`: what a project is made of, written down and read back.
 //!
-//! Roadmap task **T77**. [`crate::projects`]' shape one namespace across, and like it there is no
-//! index, no fetcher and no job here — a capture is rows and one rendered file inside this home.
+//! This is [`crate::projects`]' shape one namespace across, and like it there is no index, no
+//! fetcher and no job here — a capture is rows and one rendered file inside this home.
 //!
 //! # Applying happens elsewhere
 //!
 //! What is here is the *planning*: [`Blueprints::planned`] is the one path a dry run and a real
 //! apply both take. Carrying the plan out is [`crate::api::apply`], because every action in a plan
-//! is a capability `Api` holds and this type holds none of them (the T78 design, D1). The one thing
-//! read back from there is the `PATH` a scaffold command would run with, so that the plan judges the
-//! command's program against the same string (T78b, D3).
+//! is a capability `Api` holds and this type holds none of them. The one thing read back from there
+//! is the `PATH` a scaffold command would run with, so that the plan judges the command's program
+//! against the same string the apply will run it with.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -87,9 +87,8 @@ impl Blueprints {
             &manifest,
             &slug,
             BlueprintSource::Captured,
-            // A capture is this machine's own, so there is nobody else to vouch for — roadmap task
-            // **T78a**, its design's D1. It cannot carry a `[scaffold]` either way: capture never
-            // writes one.
+            // A capture is this machine's own, so there is nobody else to vouch for. It cannot
+            // carry a `[scaffold]` either way: capture never writes one.
             Trust::Inherent,
             asked.overwrite,
         )
@@ -103,11 +102,10 @@ impl Blueprints {
 
     /// `blueprint.import` — take in a blueprint somebody else wrote.
     ///
-    /// Roadmap task **T78a**, its design's D3. **The signature decides the trust, and nothing else
-    /// ever does** (D1): it is checked here, once, against the bytes on disk, and the answer becomes
-    /// a column no later call raises. The rendering written beside the row is not the signed
-    /// artifact and is never checked again — D16, and the round-trip test that keeps the two
-    /// identical in practice.
+    /// **The signature decides the trust, and nothing else ever does**: it is checked here, once,
+    /// against the bytes on disk, and the answer becomes a column no later call raises. The
+    /// rendering written beside the row is not the signed artifact and is never checked again; the
+    /// round-trip test is what keeps the two identical in practice.
     ///
     /// A signature that does not verify is **not** a refusal. A file whose signature is stale is
     /// still a file its owner may want; what it loses is the right to have its `[scaffold]` offered
@@ -139,11 +137,11 @@ impl Blueprints {
 
         let trust = self.vouched_for(asked, &path, &document).await?;
 
-        // **The file's own name, not the manifest's** — roadmap task **T79a**, its design's D10.
-        // `[blueprint] name` is display text and the gallery is what proves it: `Static site` and
-        // `Next.js` are good names for a person and cannot be slugs at all. Every rendering this
-        // product writes is `<slug>.toml`, so the stem is what carries a blueprint's name from one
-        // machine to another — and it is still `validated_slug` that decides whether it may.
+        // **The file's own name, not the manifest's.** `[blueprint] name` is display text and the
+        // gallery is what proves it: `Static site` and `Next.js` are good names for a person and
+        // cannot be slugs at all. Every rendering this product writes is `<slug>.toml`, so the stem
+        // is what carries a blueprint's name from one machine to another — and it is still
+        // `validated_slug` that decides whether it may.
         let slug = match &asked.name {
             Some(given) => given.clone(),
             None => file_stem(&path)?,
@@ -172,7 +170,7 @@ impl Blueprints {
     /// nothing is the ordinary case for a blueprint a colleague sent, which is why it is an answer
     /// rather than an error.
     ///
-    /// **Three answers rather than a boolean** — roadmap task **T79b**. This is the one place that
+    /// **Three answers rather than a boolean.** This is the one place that
     /// knows a file arrived with nothing from a file whose signature did not verify, and only the
     /// second is what the gallery key exists to catch; folding them together here is what left a
     /// person with one sentence for two events.
@@ -208,7 +206,7 @@ impl Blueprints {
             Ok(()) => Ok(Trust::Verified),
 
             // Said rather than swallowed, and not raised: what the file loses is the trust, not the
-            // import (D3).
+            // import.
             Err(error) => {
                 tracing::info!(
                     path = %path.display(),
@@ -261,9 +259,9 @@ impl Blueprints {
 
         let plan = plan::plan(
             &self.store,
-            // This daemon's own set and not `Catalogue::builtin()` — T115 asks it which packages
-            // are front ends, and what a home can install and what it can run have to be one
-            // answer, which is the rule `services::spec::catalogue` is written around.
+            // This daemon's own set and not `Catalogue::builtin()` — the plan asks it which
+            // packages are front ends, and what a home can install and what it can run have to be
+            // one answer, which is the rule `services::spec::catalogue` is written around.
             &crate::services::catalogue(),
             &plan::Wanted {
                 blueprint: &asked.blueprint,
@@ -311,7 +309,7 @@ fn now() -> String {
     Timestamp::from_system_time(std::time::SystemTime::now()).to_rfc3339()
 }
 
-/// The slug a file carries in its own name — roadmap task **T79a**, its design's D10.
+/// The slug a file carries in its own name.
 ///
 /// # Errors
 ///
@@ -345,12 +343,13 @@ fn absolute(given: &str) -> Result<PathBuf, Error> {
     }
 }
 
-/// Where the project goes: the path as sent, or one named under it — roadmap task **T120a**.
+/// Where the project goes: the path as sent, or one named under it.
 ///
 /// **The handle is composed here rather than in a client**, which is the whole of why
 /// [`BlueprintApply::root_is_parent`] exists on the wire: `mix` may not depend on `mixengine-core`
 /// and `domains::slug` may not move to `mixengine-proto`, so a client that composed this would be
-/// holding a second copy of the slug charset — the fragmentation T120 spent a task undoing.
+/// holding a second copy of the slug charset — the fragmentation that making `{project}` expand to
+/// a slug undid.
 ///
 /// **One function, reached from [`Blueprints::planned`]**, which is called twice for one apply —
 /// once with the answers and once without. A root composed differently between those two would be
@@ -439,7 +438,7 @@ mod tests {
     }
 
     /// A name with no ASCII in it has no handle, so there is no directory to compose. Refused here,
-    /// where nothing has been created — T120's D3 position, applied to the directory.
+    /// where nothing has been created — the rule `{project}` follows, applied to the directory.
     #[test]
     fn a_name_with_nothing_to_slug_is_refused_rather_than_guessed_at() {
         let asked = BlueprintApply {

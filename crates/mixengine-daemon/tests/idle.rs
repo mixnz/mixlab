@@ -1,4 +1,4 @@
-//! A service nothing is using is stopped, by a real daemon on its own clock — task **T69**.
+//! A service nothing is using is stopped, by a real daemon on its own clock.
 //!
 //! The arithmetic is settled against a mock beside `services::idle`, the reading against a fake
 //! server in `mixengine-supervisor`, and the surface against a real socket in the CLI's own suite.
@@ -64,7 +64,7 @@ async fn a_running_daemon_stops_a_service_nothing_is_using_and_says_why() {
     assert_eq!(running["state"], "running", "{running}");
     assert!(
         running.get("stopped_by").is_none(),
-        "a running service carries no stopped_by (T167d): {running}"
+        "a running service carries no stopped_by: {running}"
     );
 
     // **Set after the service is up**, so the first sweep to see it is also the first sweep that
@@ -97,7 +97,7 @@ async fn a_running_daemon_stops_a_service_nothing_is_using_and_says_why() {
     assert_eq!(stopped["state"], "stopped", "{stopped}");
     assert_eq!(
         stopped["stopped_by"], "daemon",
-        "an idle stop is MixEngine's, which a client draws as resting (T167d): {stopped}"
+        "an idle stop is MixEngine's, which a client draws as resting: {stopped}"
     );
 
     // **Waited for, and not read off the log as it stands.** The sweeper writes its own sentence

@@ -1,5 +1,4 @@
-//! Applying `--runtimes`, `--packages`, `--data` and `--logs`, and answering `--storage` — roadmap
-//! tasks **T144** and **T145**.
+//! Applying `--runtimes`, `--packages`, `--data` and `--logs`, and answering `--storage`.
 //!
 //! **The one place on this binary where a flag writes the home rather than configuring the
 //! process.** Every other flag here — `--log-level`, `--index-url`, `--update-url` — says something
@@ -152,8 +151,7 @@ pub(crate) fn tidy(before: &Paths, after: &Paths) {
     }
 }
 
-/// Read where this home's directories are and whether that is still a question — roadmap task
-/// **T145**.
+/// Read where this home's directories are and whether that is still a question.
 ///
 /// **It creates nothing, and that is the whole of the care this function needs.** The caller is a
 /// window drawing a "choose a disk" screen before any daemon has run, so the home it is asking

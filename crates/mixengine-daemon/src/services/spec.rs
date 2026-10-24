@@ -1,14 +1,14 @@
 //! Where a [`ServiceSpec`](mixengine_proto::ServiceSpec) comes from — the port, and the thing that
 //! answers it.
 //!
-//! **T19 wrote the question and T30 wrote the answer.** A `services` row carries `package_id`,
-//! `port`, `data_dir`, `config_overrides_json` and `limits_json`, which is the *input* to config
-//! generation rather than a spec; what turns it into one is
+//! **The registry wrote the question and the generator the answer.** A `services` row carries
+//! `package_id`, `port`, `data_dir`, `config_overrides_json` and `limits_json`, which is the
+//! *input* to config generation rather than a spec; what turns it into one is
 //! [`mixengine_core::generate::Generator`], which renders the service's configuration into
-//! `etc/<service-id>/` and builds the specification that points at it. The registry still depends on
-//! the question rather than on the answer — [`SpecSource`] here, a fixture in the tests, the
-//! generator in a running daemon — because the fixture is what lets the registry's own tests declare
-//! a service without a database row, a recipe or a file on disk.
+//! `etc/<service-id>/` and builds the specification that points at it. The registry still depends
+//! on the question rather than on the answer — [`SpecSource`] here, a fixture in the tests, the
+//! generator in a running daemon — because the fixture is what lets the registry's own tests
+//! declare a service without a database row, a recipe or a file on disk.
 //!
 //! The alternative that was not taken is a `spec_json` column, which would duplicate three columns
 //! the row already has and keep a second copy of what generation renders — `CLAUDE.md`'s
@@ -31,9 +31,9 @@ use super::fakeservice;
 /// One function rather than a line in `main`, because the choice has a `cfg` in it and this is the
 /// module that owns what a source is.
 ///
-/// **The port mapping is read here, once** — roadmap task **T43**. A front end answers on 80 and 443
-/// and binds 8080 and 8443 on macOS; which of those a template renders is not a `#[cfg]` anywhere
-/// above `mixengine-platform`, so it arrives as data. Reading it costs nothing —
+/// **The port mapping is read here, once.** A front end answers on 80 and 443 and binds 8080 and
+/// 8443 on macOS; which of those a template renders is not a `#[cfg]` anywhere above
+/// `mixengine-platform`, so it arrives as data. Reading it costs nothing —
 /// [`PortAccess::bindings`](mixengine_platform::PortAccess::bindings) is pure — and a generator
 /// lives as long as the daemon does.
 pub(crate) fn declared(
@@ -48,9 +48,9 @@ pub(crate) fn declared(
 /// The generator this daemon renders with.
 ///
 /// **One definition, two callers.** The registry renders through [`declared`] above; `mix doctor`
-/// asks the same generator what would change without changing it (T47b). A second construction would
-/// be a second port mapping, and the check would compare against a rendering the registry would
-/// never have written.
+/// asks the same generator what would change without changing it. A second construction would be a
+/// second port mapping, and the check would compare against a rendering the registry would never
+/// have written.
 pub(crate) fn generator(
     paths: &Paths,
     store: &Store,
@@ -122,7 +122,7 @@ pub(crate) trait SpecSource: std::fmt::Debug + Send + Sync {
 
     /// What one service is configured with, **without rendering or installing anything**.
     ///
-    /// Roadmap task **T53**, and the reason it is a second question rather than a field on
+    /// The reason it is a second question rather than a field on
     /// [`Generated`]: [`declared`](Self::declared) installs, and `mix cert status` — whose whole
     /// guarantee is that it writes nothing — needs the front end's `https_port` in order to open a
     /// connection to it. Asking through the other door would have a diagnostic rewrite this home's

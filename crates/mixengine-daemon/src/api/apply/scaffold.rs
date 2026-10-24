@@ -1,4 +1,4 @@
-//! Running a blueprint's own command — roadmap task **T78a**.
+//! Running a blueprint's own command.
 //!
 //! **This is the first thing MixEngine runs that MixEngine did not write**, and every guard around
 //! it is somewhere else: the consent that names the command is checked in
@@ -10,12 +10,12 @@
 //! Three things it deliberately does not do:
 //!
 //! - **It never elevates.** The command runs under the account this daemon runs as, and nothing it
-//!   does reaches the elevation queue. T78's "one prompt, at the end" is about the hosts file and
-//!   the trust store; a blueprint's command is not admitted to it.
+//!   does reaches the elevation queue. An apply's "one prompt, at the end" is about the hosts
+//!   file and the trust store; a blueprint's command is not admitted to it.
 //! - **It invents no environment.** The working directory is the project's and `PATH` gains the shim
 //!   directory, which is how the blueprint's own `[runtimes]` reaches the command — the shims
 //!   resolve a version from the project they are run in. Nothing else is added.
-//! - **It has no timeout** (the T78a design, D10). Every number that could be chosen kills a
+//! - **It has no timeout.** Every number that could be chosen kills a
 //!   legitimate `composer install` on a slow line, and a scaffold is by definition somebody else's
 //!   program doing an unknown amount of work. The bound is the job: it is visible, its output is
 //!   streaming, and `job.cancel` stops it — which kills the process *group*, so the tree a package
@@ -43,7 +43,7 @@ const POLL: Duration = Duration::from_millis(50);
 
 /// How many of the command's last lines are quoted when it fails.
 ///
-/// A job's log is a ring and no file (D13), so what survives the terminal scrolling past is this.
+/// A job's log is a ring and no file, so what survives the terminal scrolling past is this.
 const LAST_WORDS: usize = 3;
 
 /// How long a command that has exited is given for its output to be read to end of file.
@@ -112,20 +112,20 @@ pub(crate) fn environment(paths: &Paths) -> BTreeMap<String, String> {
         path(paths).to_string_lossy().into_owned(),
     );
 
-    // **The shims in that directory have to know which home they belong to** — found by T27c's
-    // first real `composer create-project`, on a daemon started with `--home`. A shim reads
+    // **The shims in that directory have to know which home they belong to** — found by the first
+    // real `composer create-project`, on a daemon started with `--home`. A shim reads
     // `MIXENGINE_HOME` and otherwise falls back to the OS default, which is *another* home's
     // database whenever this daemon's is not the default one: every `php`, `npx` or `composer` a
-    // scaffold ran there resolved against the wrong install. Set to this daemon's root, so the
-    // shim and the daemon that put it on the PATH agree about what "here" is.
+    // scaffold ran there resolved against the wrong install. Set to this daemon's root, so the shim
+    // and the daemon that put it on the PATH agree about what "here" is.
     env.insert(
         "MIXENGINE_HOME".to_owned(),
         paths.root().to_string_lossy().into_owned(),
     );
 
-    // **There is no terminal on the other end of this** — roadmap task **T120a**. A program that
-    // assumes one writes control sequences into a string a window renders as text, which is how
-    // `create-next-app`'s refusal reached a person as `[31m"Next.js 1"[39m`.
+    // **There is no terminal on the other end of this.** A program that assumes one writes control
+    // sequences into a string a window renders as text, which is how `create-next-app`'s refusal
+    // reached a person as `[31m"Next.js 1"[39m`.
     //
     // This bends the note above about inventing no environment, and the bend is deliberate rather
     // than overlooked: it changes nothing about what the command *does*, it answers a question
@@ -137,15 +137,15 @@ pub(crate) fn environment(paths: &Paths) -> BTreeMap<String, String> {
     env
 }
 
-/// The same text with every ANSI escape sequence taken out — roadmap task **T120a**.
+/// The same text with every ANSI escape sequence taken out.
 ///
 /// **Here rather than from a crate**, for one screenful of matching with no dependency and no
 /// version to it: the shapes a build tool emits are CSI (`ESC [ … final`), OSC (`ESC ] …` ended by
 /// BEL or by ST) and the two-character escapes. A line holding none of them comes back unchanged.
 ///
-/// **Removed at capture rather than at display.** There are three renderers of this text — the
-/// CLI, the desktop's dialog, and the job log T120 built — and a rule enforced in one place is a
-/// rule, while a rule enforced in three is a schedule for the fourth to be written without it.
+/// **Removed at capture rather than at display.** There are three renderers of this text — the CLI,
+/// the desktop's dialog, and the job log — and a rule enforced in one place is a rule, while a rule
+/// enforced in three is a schedule for the fourth to be written without it.
 fn without_escapes(text: &str) -> String {
     let mut clean = String::with_capacity(text.len());
     let mut characters = text.chars();
@@ -207,10 +207,10 @@ fn scrubbed(mut line: LogLine) -> LogLine {
 
 /// The `PATH` a scaffold command runs with: `<home>/bin` first, then this daemon's own.
 ///
-/// One function for both the plan and the shell — roadmap task **T78b**, its design's D3: the plan
-/// judges a command's program against exactly the string the command would be started with, and a
-/// program installed after this daemon started is invisible to both until it restarts. What
-/// [`environment`] says about the shims and about `join_paths` is about this half of it.
+/// One function for both the plan and the shell: the plan judges a command's program against
+/// exactly the string the command would be started with, and a program installed after this daemon
+/// started is invisible to both until it restarts. What [`environment`] says about the shims and
+/// about `join_paths` is about this half of it.
 pub(crate) fn path(paths: &Paths) -> std::ffi::OsString {
     let inherited = std::env::var_os("PATH").unwrap_or_default();
     let ahead = std::iter::once(paths.bin().to_path_buf());
@@ -221,9 +221,9 @@ pub(crate) fn path(paths: &Paths) -> std::ffi::OsString {
 
 /// Run one command in `root`, with its output going to `sink` as it arrives.
 ///
-/// **A non-zero exit is a [`StepResult::Failed`] and not an error** (D7 and D8): the apply did what
-/// it was asked, the project it made works, and the command's exit code is the command's own news.
-/// Returning an error here would spend T78's rollback ledger on a project that is fine.
+/// **A non-zero exit is a [`StepResult::Failed`] and not an error**: the apply did what it was
+/// asked, the project it made works, and the command's exit code is the command's own news.
+/// Returning an error here would spend the apply's rollback ledger on a project that is fine.
 ///
 /// A cancellation stops the group and answers [`StepResult::NotRun`], because a cancellation is not
 /// a request to undo anything — running the apply again offers the command afresh.
@@ -396,17 +396,16 @@ fn keep_last(last: &mut Vec<String>, line: &LogLine) {
 /// The exit code, and the last of what it printed — because a job's log is memory only, and by the
 /// time somebody reads the outcome the lines may be gone.
 ///
-/// **And the folder, when npm would not have taken its name** — roadmap task **T120c**, its
-/// design's D8. The plan blocks this before anything is installed, but only for a blueprint whose
-/// author declared `needs_npm_safe_dir`, and nobody's imported blueprint ever will. So the same
-/// sentence is written here as well, arriving after the download instead of before it, which is
-/// worse than the block and better than npm's own words.
+/// **And the folder, when npm would not have taken its name.** The plan blocks this before anything
+/// is installed, but only for a blueprint whose author declared `needs_npm_safe_dir`, and nobody's
+/// imported blueprint ever will. So the same sentence is written here as well, arriving after the
+/// download instead of before it, which is worse than the block and better than npm's own words.
 ///
 /// **Only for a command of the npm family**, which is the one guess this makes and the reason it is
 /// kept narrow: `composer create-project` takes its package name from its argument, so an npm rule
-/// added to *its* failure would be a false sentence sending somebody to rename a folder for
-/// nothing — the comprehension failure T120c is about, pointed back at us. A command the guess does
-/// not recognise simply gets no extra sentence.
+/// added to *its* failure would be a false sentence sending somebody to rename a folder for nothing
+/// — the comprehension failure the folder check is about, pointed back at us. A command the guess
+/// does not recognise simply gets no extra sentence.
 ///
 /// Both rules are asked of [`mixengine_core::blueprints`] rather than restated: a second copy of
 /// the charset, or of the program list, is two rules that drift.
@@ -491,9 +490,8 @@ mod tests {
         assert!(why.contains("os error"), "{why}");
     }
 
-    /// **A command that fails is a failed step, not a failed job** — roadmap task **T78a**, its
-    /// design's D7. The exit code is in the outcome, so somebody reading it afterwards has the one
-    /// fact the log may no longer hold.
+    /// **A command that fails is a failed step, not a failed job.** The exit code is in the
+    /// outcome, so somebody reading it afterwards has the one fact the log may no longer hold.
     #[tokio::test]
     async fn a_command_that_exits_non_zero_is_a_failed_step() {
         let root = tempfile::tempdir().expect("a directory");
@@ -569,9 +567,9 @@ mod tests {
         );
     }
 
-    /// **And the shims are told which home they belong to** — roadmap task **T27c**, found on the
-    /// way: a daemon started with `--home` put its `bin/` on the PATH and the shim in it looked up
-    /// the OS default home's database instead.
+    /// **And the shims are told which home they belong to**, found by hand: a daemon started with
+    /// `--home` put its `bin/` on the PATH and the shim in it looked up the OS default home's
+    /// database instead.
     #[test]
     fn the_command_is_told_which_home_the_shims_belong_to() {
         let home = tempfile::tempdir().expect("a directory");
@@ -585,7 +583,7 @@ mod tests {
         );
     }
 
-    /// **The command is told there is no terminal** — roadmap task **T120a**.
+    /// **The command is told there is no terminal.**
     ///
     /// A complement to the scrub below and never a substitute: `NO_COLOR` is a convention, honoured
     /// by `create-next-app` and not by everything. Measured on 2026-09-13 against
@@ -602,7 +600,7 @@ mod tests {
         );
     }
 
-    /// **What a command printed is data, not control** — roadmap task **T120a**.
+    /// **What a command printed is data, not control.**
     ///
     /// `create-next-app` colours a pipe, so its refusal reached a person as
     /// `[31m"Next.js 1"[39m` — and a terminal reading the same string would have obeyed it
@@ -650,8 +648,8 @@ mod tests {
         );
     }
 
-    /// **Multi-line output stays multi-line** — roadmap task **T120a**. Joining with `" / "` turned
-    /// a three-line explanation into one line whose punctuation read like paths.
+    /// **Multi-line output stays multi-line.** Joining with `" / "` turned a three-line explanation
+    /// into one line whose punctuation read like paths.
     #[test]
     fn a_failures_last_words_keep_their_lines() {
         let last = vec![
@@ -670,10 +668,9 @@ mod tests {
         assert_eq!(said.lines().count(), 3, "{said}");
     }
 
-    /// **The blueprint that never declared it** — roadmap task **T120c**, its design's D8. A
-    /// plan-time block only reaches a blueprint whose author asked for one; an imported one never
-    /// will, so a failure in a folder npm would refuse carries the same explanation — late, which
-    /// is worse than early and better than nothing.
+    /// **The blueprint that never declared it.** A plan-time block only reaches a blueprint whose
+    /// author asked for one; an imported one never will, so a failure in a folder npm would refuse
+    /// carries the same explanation — late, which is worse than early and better than nothing.
     #[test]
     fn a_failure_in_a_folder_npm_would_refuse_says_so() {
         let last = vec!["Could not create a project called \"Next.js 1\"".to_owned()];
@@ -692,8 +689,8 @@ mod tests {
     /// **And npm's rule is only spoken about npm's commands.** `composer create-project` takes its
     /// package name from its argument, so telling somebody whose `composer` failed over a network
     /// that their folder is the problem is a false sentence sending them to rename a folder for
-    /// nothing — the same comprehension failure this whole task exists to answer, pointed the other
-    /// way. D8's guess is narrow because a miss costs a hint and a wrong guess costs a wasted
+    /// nothing — the same comprehension failure the folder check exists to answer, pointed the
+    /// other way. The guess is narrow because a miss costs a hint and a wrong guess costs a wasted
     /// afternoon.
     #[test]
     fn a_composer_failure_is_told_nothing_about_npms_rule() {

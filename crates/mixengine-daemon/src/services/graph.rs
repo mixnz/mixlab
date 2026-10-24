@@ -1,4 +1,4 @@
-//! What this home declares, as the registry sees it — roadmap task **T207d** gave it a file.
+//! What this home declares, as the registry sees it.
 //!
 //! The graph every walk starts from, what a walk remembers out of it (first-run rituals, how a
 //! service's databases are provisioned, which running service has to re-read its configuration),
@@ -41,11 +41,11 @@ impl Registry {
     /// a service created, a port edited, a package upgraded — and a graph held from startup would
     /// answer for a home that no longer exists.
     ///
-    /// **It is also where a running service learns its configuration moved**, which is roadmap task
-    /// **T31** and is here because this is the only place both halves are visible: the source knows
-    /// what it rewrote, and this map knows what is running. Asking anywhere else would mean either a
-    /// generator that reaches into the registry or a walk that re-reads files it has already
-    /// overwritten. See [`Registry::hand_over`].
+    /// **It is also where a running service learns its configuration moved**, and that is here
+    /// because this is the only place both halves are visible: the source knows what it rewrote,
+    /// and this map knows what is running. Asking anywhere else would mean either a generator that
+    /// reaches into the registry or a walk that re-reads files it has already overwritten. See
+    /// [`Registry::hand_over`].
     ///
     /// # Errors
     ///
@@ -77,7 +77,7 @@ impl Registry {
     }
 
     /// The last graph a walk produced if it is younger than `max_age`, and a new walk otherwise —
-    /// roadmap task **T190b**, for the idle sweep and nothing else.
+    /// for the idle sweep and nothing else.
     ///
     /// **Stale on purpose, and bounded twice.** Every change to this home walks, so the graph here
     /// is behind only when a change skipped the walk, and `max_age` bounds even that. And the sweep
@@ -101,7 +101,7 @@ impl Registry {
         }
     }
 
-    /// Drop the kept graph, so the next sweep renders — for a change that does not walk (T190b).
+    /// Drop the kept graph, so the next sweep renders — for a change that does not walk.
     pub(crate) fn forget_graph(&self) {
         *lock(&self.last_graph) = None;
     }
@@ -144,7 +144,7 @@ impl Registry {
         Some(graph.spec(&id)?.program().to_path_buf())
     }
 
-    /// The port this home's front end serves TLS on, or [`None`] — roadmap task **T53**.
+    /// The port this home's front end serves TLS on, or [`None`].
     ///
     /// **From the settings a rendering would be made with**, which is the only source that cannot
     /// come to disagree with the configuration on disk. The other two are both refused: a second
@@ -189,7 +189,7 @@ impl Registry {
             .filter(|port| *port != 0)
     }
 
-    /// Keep what each declared service still has to have done to it once — roadmap task **T33**.
+    /// Keep what each declared service still has to have done to it once.
     ///
     /// **Replaced rather than merged**, so a service that stopped declaring a ritual — an override
     /// pointed at a different data directory, a recipe that no longer has one — stops carrying it.
@@ -213,7 +213,7 @@ impl Registry {
         lock(&self.rituals).get(id).cloned()
     }
 
-    /// Whether this service declares a credential a repair could re-set — roadmap task **T127**.
+    /// Whether this service declares a credential a repair could re-set.
     ///
     /// **Asked before anything is stopped.** The repair is a stop, some steps and a start; refusing
     /// a service that has no credential *after* the stop would take a web server down to tell
@@ -222,7 +222,7 @@ impl Registry {
         self.ritual_for(id).is_some_and(|plan| plan.has_reset())
     }
 
-    /// Re-set this service's superuser credential in place — roadmap task **T127**.
+    /// Re-set this service's superuser credential in place.
     ///
     /// **The caller has already stopped it**, and the caller is what starts it again: this is the
     /// middle of `service.reset_credential` and nothing else. It is a method here rather than a call
@@ -249,7 +249,7 @@ impl Registry {
         reset::perform(&self.host, &self.jobs, &plan).await
     }
 
-    /// Keep how each declared service's databases are made — roadmap task **T77a**.
+    /// Keep how each declared service's databases are made.
     ///
     /// Replaced rather than merged, on [`Registry::remember_rituals`]'s reasoning: a service that
     /// stopped declaring one — a recipe replaced, an override pointed elsewhere — stops carrying it.
@@ -266,7 +266,7 @@ impl Registry {
         *lock(&self.provisioning) = remembered;
     }
 
-    /// How this service's databases are administered, if it declared a way — roadmap task **T77a**.
+    /// How this service's databases are administered, if it declared a way.
     ///
     /// A walk fills the map, so this answers [`None`] until one has happened. Every caller reaches
     /// it through `database.create`, which asks [`Registry::graph`] first.
@@ -314,7 +314,7 @@ impl Registry {
         }
     }
 
-    /// Where a connection would have to arrive to wake `service` — roadmap task **T70a**.
+    /// Where a connection would have to arrive to wake `service`.
     ///
     /// **Asked of the generator rather than of the row**, so the answer is the one a render
     /// computed: a socket path is a function of how deep this home is and a port is a function of
@@ -360,7 +360,7 @@ mod tests {
     use super::super::spec::SpecSource;
     use super::*;
 
-    /// **The idle sweep may look through the last graph while it is young** — roadmap task T190b.
+    /// **The idle sweep may look through the last graph while it is young.**
     #[tokio::test]
     async fn the_sweep_reuses_a_young_graph_and_renders_an_old_one() {
         let (_home, paths, store) = home(&["caddy"]).await;
@@ -390,7 +390,7 @@ mod tests {
     }
 
     /// **Any walk refreshes what the sweep sees**, which is what bounds its staleness by the next
-    /// change rather than by the clock — roadmap task T190b.
+    /// change rather than by the clock.
     #[tokio::test]
     async fn any_walk_refreshes_what_the_sweep_sees() {
         let (_home, paths, store) = home(&["caddy", "redis"]).await;
@@ -416,7 +416,7 @@ mod tests {
         assert_eq!(source.renders(), 2);
     }
 
-    /// A change that does not walk says so, and the next sweep renders — roadmap task T190b.
+    /// A change that does not walk says so, and the next sweep renders.
     #[tokio::test]
     async fn a_forgotten_graph_is_rendered_again() {
         let (_home, paths, store) = home(&["caddy"]).await;
@@ -434,8 +434,8 @@ mod tests {
         assert_eq!(source.renders(), 2);
     }
 
-    /// **A configuration that changed under a running service reaches it without a restart** —
-    /// roadmap task T31, and the mechanism every site on the machine depends on.
+    /// **A configuration that changed under a running service reaches it without a restart** — the
+    /// mechanism every site on the machine depends on.
     ///
     /// The claim has two halves and the fixture proves both. The file the reload command creates is
     /// evidence that the command really ran — nothing else in this test writes it — and the pid is
@@ -513,9 +513,9 @@ mod tests {
         };
         assert!(
             // The source's own sentence, kept rather than replaced: this crate does not know what
-            // T30 will fail at, so it must not write the failure down in its own words. It is a
-            // `mixengine_core::Error` and not an `anyhow::Error` since R8, which is what lets the
-            // wire mapping read the code off it instead of downcasting to find one.
+            // the generator will fail at, so it must not write the failure down in its own words.
+            // It is a `mixengine_core::Error` and not an `anyhow::Error` since R8, which is what
+            // lets the wire mapping read the code off it instead of downcasting to find one.
             why.to_string().contains("no such package"),
             "{why}"
         );

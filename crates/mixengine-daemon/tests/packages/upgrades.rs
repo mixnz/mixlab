@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// Two patches of `fakeservice`, the same archive — roadmap task **T193a**.
+/// Two patches of `fakeservice`, the same archive.
 fn two_patches(packed: &Packed, url: &str) -> Value {
     let mut index = index(packed, url);
     let mut next = index["packages"][0].clone();
@@ -11,7 +11,7 @@ fn two_patches(packed: &Packed, url: &str) -> Value {
     index
 }
 
-/// **T193a.** An installed package with a newer patch of its line is named with that patch.
+/// An installed package with a newer patch of its line is named with that patch.
 #[tokio::test]
 async fn a_package_catalogue_says_lines_and_updates_too() {
     let fixture = Fixture::start_with(two_patches).await;
@@ -69,7 +69,7 @@ async fn a_running_instance(client: &mut Client, version: &str) {
     assert_eq!(started["complete"], true, "{started}");
 }
 
-/// **T193c, D6.** The instance moves, runs again, and the old version goes.
+/// The instance moves, runs again, and the old version goes.
 #[tokio::test]
 async fn a_package_upgrade_moves_a_running_instance_and_removes_the_old_version() {
     let fixture = Fixture::start_with(two_patches).await;
@@ -103,7 +103,7 @@ async fn a_package_upgrade_moves_a_running_instance_and_removes_the_old_version(
     let services = client.call("service.list", json!({})).await;
     let main = services["services"]
         .as_array()
-        .expect("T193 fixture")
+        .expect("service.list answers a list")
         .iter()
         .find(|service| service["id"] == "fakeservice@main")
         .cloned()
@@ -112,7 +112,7 @@ async fn a_package_upgrade_moves_a_running_instance_and_removes_the_old_version(
     assert_eq!(main["state"], "running", "{main}");
 }
 
-/// **T193c, Error handling.** A package being moved cannot be uninstalled.
+/// A package being moved cannot be uninstalled.
 #[tokio::test]
 async fn a_package_being_upgraded_cannot_be_uninstalled() {
     let fixture = Fixture::start_with(two_patches).await;
@@ -138,12 +138,12 @@ async fn a_package_being_upgraded_cannot_be_uninstalled() {
 }
 
 impl Fixture {
-    /// `fakeservice` 1.0.0, and a 1.0.1 whose program is not one — T193c, added at execution.
+    /// `fakeservice` 1.0.0, and a 1.0.1 whose program is not one.
     ///
     /// **A second archive rather than a second name in the first**, because a server's program is
     /// found by its package's name inside the install (`generate::program`), not through
     /// `provides`; and `fakeservice` has no smoke test, so the broken build installs and fails only
-    /// when it is started — which is the moment D6 step 4 is about.
+    /// when it is started — which is the moment the rollback is about.
     async fn start_with_a_broken_next_patch() -> Self {
         let packing = match cfg!(windows) {
             true => Packing::Zip,
@@ -191,8 +191,8 @@ impl Fixture {
     }
 }
 
-/// **T193c, D6 step 4 — added at execution.** An instance that does not start on the new patch is
-/// put back on the old one and started again, and the old version is kept.
+/// An instance that does not start on the new patch is put back on the old one and started again,
+/// and the old version is kept.
 ///
 /// **And the job fails**, saying so — the final review's finding: a job that ended `succeeded`
 /// here let `mix package upgrade` exit zero and MixLab say nothing, over an update that did not
@@ -237,8 +237,8 @@ async fn a_package_that_does_not_start_on_the_new_patch_goes_back() {
     assert_eq!(main["state"], "running", "and running again: {main}");
 }
 
-/// `package.list_available` names the package whose file could not be read — roadmap task
-/// **T196**, its design's D5, the twin of the runtime test.
+/// `package.list_available` names the package whose file could not be read — the twin of the
+/// runtime test.
 #[tokio::test]
 async fn a_package_that_cannot_be_read_is_named() {
     let fixture = Fixture::start().await;

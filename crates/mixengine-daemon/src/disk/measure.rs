@@ -1,4 +1,4 @@
-//! The walk, and the closed list of what a cleanup may remove — roadmap task **T96**.
+//! The walk, and the closed list of what a cleanup may remove.
 //!
 //! **Nothing here follows a symbolic link.** `read_dir` plus each entry's own metadata
 //! (`DirEntry::metadata`, or `symlink_metadata` where there is no entry), descending only into an
@@ -32,8 +32,8 @@ const CURRENT_LOG: &str = "current.log";
 /// The documents the extension registry, the update feed and a schema 1 package index cache at
 /// the top of `cache/`.
 ///
-/// The package index is one of two layouts, never both: `index.json`, or since roadmap task
-/// **T196** a signed root beside one file per kind, which the index client itself recognises —
+/// The package index is one of two layouts, never both: `index.json`, or since schema 2 a signed
+/// root beside one file per kind, which the index client itself recognises —
 /// [`mixengine_core::index::packages::is_cache_file`], one rule for everything that removes them.
 const CACHED_DOCUMENTS: [&str; 3] = ["index.json", "extensions.json", "latest.json"];
 
@@ -53,7 +53,7 @@ pub(super) struct Measured {
     pub(super) files: u64,
 
     /// Set when something under the directory could not be read, so [`bytes`](Self::bytes) is a
-    /// floor. A note and never an error — the T96 design, D8.
+    /// floor. A note and never an error.
     pub(super) unreadable: Option<String>,
 }
 
@@ -426,8 +426,8 @@ mod tests {
         assert_eq!(reclaimable.files, 3);
     }
 
-    /// **T196.** The package index is cached as a root, its signature and a file per kind, and a
-    /// cleanup takes all of them — and nothing that merely looks like one.
+    /// **Schema 2.** The package index is cached as a root, its signature and a file per kind, and
+    /// a cleanup takes all of them — and nothing that merely looks like one.
     #[test]
     fn the_cache_list_takes_the_package_index_a_kind_at_a_time() {
         let home = tempfile::tempdir().expect("a temporary directory");

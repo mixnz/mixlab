@@ -47,8 +47,8 @@ async fn refresh_bypasses_a_fresh_cache() {
     );
 }
 
-/// **T182f, D1.** An install leaves its marker beside what it unpacked, naming what was installed,
-/// so a home that loses its database can record the directory again.
+/// An install leaves its marker beside what it unpacked, naming what was installed, so a home that
+/// loses its database can record the directory again.
 #[tokio::test]
 async fn an_installed_runtime_carries_its_marker() {
     let fixture = Fixture::start().await;
@@ -71,8 +71,8 @@ async fn an_installed_runtime_carries_its_marker() {
     assert_eq!(marker["sha256"], fixture.packed.sha256, "{marker}");
 }
 
-/// **T182f, the machine it was reported from.** A PHP installed by one home is on disk when the
-/// next home starts without its database: it is listed as installed and as the default.
+/// **The machine a reinstall was first reported from.** A PHP installed by one home is on disk when
+/// the next home starts without its database: it is listed as installed and as the default.
 #[tokio::test]
 async fn a_runtime_the_last_home_installed_is_recorded_by_the_next_one() {
     let mut fixture = Fixture::start().await;
@@ -153,7 +153,7 @@ async fn a_directory_that_cannot_be_recorded_is_named_by_doctor_and_kept() {
     assert!(stray.is_dir(), "nothing was deleted");
 }
 
-/// **T182f, by hand.** A directory the start walk left — here because its marker names another
+/// **Adopted by hand.** A directory the start walk left — here because its marker names another
 /// version — is recorded by `runtime.adopt` once the index vouches for it, and its marker is put
 /// right. A version already recorded answers its row, and one not on disk is refused by name.
 #[tokio::test]
@@ -200,8 +200,8 @@ async fn adopting_one_version_checks_it_against_the_index() {
     assert_eq!(refused["data"]["code"], "not_found", "{refused}");
 }
 
-/// **T182i.** `runtime.found` lists a directory the start left, with why — what the window draws
-/// beside **Adopt** — and after the adopt it is gone.
+/// `runtime.found` lists a directory the start left, with why — what the window draws beside
+/// **Adopt** — and after the adopt it is gone.
 #[tokio::test]
 async fn a_runtime_the_start_left_is_listed_with_why_until_it_is_adopted() {
     let mut fixture = Fixture::start().await;
@@ -237,9 +237,9 @@ async fn a_runtime_the_start_left_is_listed_with_why_until_it_is_adopted() {
     );
 }
 
-/// **T182h.** A copy of the earlier home's state in a kept folder is offered by the next home and
-/// restored: the project comes back, the pool the start already made for the recorded PHP is kept
-/// rather than duplicated, and the copy is not offered twice.
+/// A copy of the earlier home's state in a kept folder is offered by the next home and restored:
+/// the project comes back, the pool the start already made for the recorded PHP is kept rather than
+/// duplicated, and the copy is not offered twice.
 #[tokio::test]
 async fn a_copy_of_the_last_home_is_offered_and_restored() {
     let mut fixture = Fixture::start().await;
@@ -286,8 +286,8 @@ async fn a_copy_of_the_last_home_is_offered_and_restored() {
     );
 }
 
-/// **T185b.** A home with no PHP has no `php` in `bin/`; installing one puts it there as the install
-/// ends, without waiting for the rescan, and uninstalling the last one takes it away again.
+/// A home with no PHP has no `php` in `bin/`; installing one puts it there as the install ends,
+/// without waiting for the rescan, and uninstalling the last one takes it away again.
 #[tokio::test]
 async fn bin_holds_php_only_while_a_php_is_installed() {
     let fixture = Fixture::start().await;
@@ -312,9 +312,9 @@ async fn bin_holds_php_only_while_a_php_is_installed() {
     assert!(!php.exists(), "the last PHP took its name with it");
 }
 
-/// **T185b.** Two Nodes, and only one of them has `yarn`: `bin/yarn` is there while that one is,
-/// and removing it takes `yarn` away in the same call — not at some later pass — while `node`
-/// stays, because a Node is still installed.
+/// Two Nodes, and only one of them has `yarn`: `bin/yarn` is there while that one is, and removing
+/// it takes `yarn` away in the same call — not at some later pass — while `node` stays, because a
+/// Node is still installed.
 #[tokio::test]
 async fn the_last_node_with_a_tool_takes_the_tool_with_it() {
     let mut fixture = Fixture::start().await;
@@ -348,8 +348,8 @@ async fn the_last_node_with_a_tool_takes_the_tool_with_it() {
     );
 }
 
-/// **T185b.** `npm install -g` tells nobody. The daemon hears the bindir change and `bin/` follows,
-/// both ways, with nothing asked of it and nothing polling.
+/// `npm install -g` tells nobody. The daemon hears the bindir change and `bin/` follows, both ways,
+/// with nothing asked of it and nothing polling.
 #[tokio::test]
 async fn a_tool_installed_into_a_runtime_becomes_a_command_unasked() {
     let mut fixture = Fixture::start().await;

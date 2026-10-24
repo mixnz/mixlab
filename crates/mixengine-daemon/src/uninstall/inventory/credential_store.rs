@@ -51,7 +51,7 @@ pub(crate) fn ours(home: &str, keys: &[String]) -> Vec<String> {
         .collect()
 }
 
-/// **10d.** This home's passwords and the window's — T182d.
+/// **10d.** This home's passwords and the window's.
 ///
 /// They follow the home, as the window's data does. A store with nothing of ours has no row. A
 /// machine with no store at all is the same answer, because it has nothing stored in one, and a

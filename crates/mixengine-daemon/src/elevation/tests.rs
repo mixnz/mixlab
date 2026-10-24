@@ -59,10 +59,10 @@ async fn registry_resolving(
         Arc::clone(&machine) as Arc<dyn Host>,
         Candidates {
             program,
-            // **A directory this OS would install into, with nothing in it** — T85's D5, stated
-            // rather than inherited. Anybody who has run the elevated suite on this machine has
-            // a real one, and every assertion below is about the copy this fixture wrote beside
-            // its own `mixengined`.
+            // **A directory this OS would install into, with nothing in it**, stated rather than
+            // inherited. Anybody who has run the elevated suite on this machine has a real one, and
+            // every assertion below is about the copy this fixture wrote beside its own
+            // `mixengined`.
             //
             // `Some(a path that is not there)` and not `None`: those are two different machines.
             // `None` is one that will not name a directory at all, where nothing can be
@@ -79,14 +79,14 @@ async fn registry_resolving(
     (home, elevation, events, machine)
 }
 
-/// Put a helper at the path the fixture calls installed — roadmap task **T88d**.
+/// Put a helper at the path the fixture calls installed.
 ///
-/// **The ordinary machine, and the one every test about a *producer* means.** The fixtures
-/// above describe a machine with nothing installed and a copy beside the daemon, because that
-/// is the state T85's D5 needs stated rather than inherited; on such a machine every producer
-/// now asks for the helper as well as for its own work, which would put a second row into
-/// assertions written about the first. Calling this makes the bootstrap return early, so the
-/// queue holds exactly what the producer asked for.
+/// **The ordinary machine, and the one every test about a *producer* means.** The fixtures above
+/// describe a machine with nothing installed and a copy beside the daemon, because that is the
+/// state the "nothing installed" case needs stated rather than inherited; on such a machine every
+/// producer now asks for the helper as well as for its own work, which would put a second row into
+/// assertions written about the first. Calling this makes the bootstrap return early, so the queue
+/// holds exactly what the producer asked for.
 ///
 /// Nothing runs the file and nothing reads who owns it: `helper` asks that only when somebody
 /// wants a path to hand a prompt, and no test that calls this does.

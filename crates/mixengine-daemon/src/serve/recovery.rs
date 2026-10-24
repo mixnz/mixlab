@@ -3,12 +3,12 @@
 
 use crate::services;
 
-/// **Before the first client, and after the listener is bound** — roadmap task T18. A daemon that
-/// was killed leaves rows claiming a supervisor that no longer exists, and until they are
-/// reconciled `service.list` would report a machine that does not exist: services running with
-/// nothing behind them. Doing it here rather than earlier costs nothing and buys the ordering
-/// that matters, which is that the single-instance lock is long since held: no second daemon can
-/// be looking at these rows, and nothing that survived can be adopted twice.
+/// **Before the first client, and after the listener is bound.** A daemon that was killed leaves
+/// rows claiming a supervisor that no longer exists, and until they are reconciled `service.list`
+/// would report a machine that does not exist: services running with nothing behind them. Doing it
+/// here rather than earlier costs nothing and buys the ordering that matters, which is that the
+/// single-instance lock is long since held: no second daemon can be looking at these rows, and
+/// nothing that survived can be adopted twice.
 ///
 /// Nothing here fails the start. A survivor that cannot be stopped, a row that cannot be
 /// cleared, a source that cannot say what is declared — each is reported and each leaves one
@@ -17,9 +17,9 @@ use crate::services;
 ///
 /// **Stale endpoint files are not part of it**, although the architecture document lists them in
 /// the same sentence. `ipc::Listener::bind` already unlinks a socket nothing answers on and binds
-/// again (T7), and there is no pid file to go stale: `run/mixengined.lock` is held as an open
-/// handle the OS releases even when the daemon is killed, so the file surviving means nothing and
-/// its contents are rewritten by whoever takes the lock next (T9).
+/// again, and there is no pid file to go stale: `run/mixengined.lock` is held as an open handle the
+/// OS releases even when the daemon is killed, so the file surviving means nothing and its contents
+/// are rewritten by whoever takes the lock next.
 pub(super) async fn recover(services: &services::Registry) {
     let recovered = services.recover().await;
 

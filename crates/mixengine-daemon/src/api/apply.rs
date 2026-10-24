@@ -1,6 +1,6 @@
-//! `blueprint.apply`: carrying out the plan T77 decided — roadmap task **T78**.
+//! `blueprint.apply`: carrying out the plan core decided.
 //!
-//! **The plan is core's, the execution is the daemon's** (the T78 design, D1).
+//! **The plan is core's, the execution is the daemon's** (D1).
 //! `mixengine_core::blueprints::plan` reads this home's tables and decides the list; every action in
 //! that list is a capability this daemon already has, and half of them — an install, a rendering, a
 //! supervisor reload, a keyring write — are things `mixengine-core` deliberately cannot do. So the
@@ -12,8 +12,10 @@
 //! # Nothing here decides what the steps are
 //!
 //! The executor consumes `Vec<PlanStep>` and may **fail**, but may not add a step, drop one or
-//! reorder them — the invariant T77 wrote down, and the only way `--dry-run` can promise to match
-//! the real run.
+//! reorder them — the invariant the first planner wrote down, and the only way `--dry-run` can
+//! promise to match the real run.
+//!
+//! The D-numbers below are those of `docs/specs/2026-09-01-t78-blueprint-apply-design.md`.
 
 mod account;
 mod consent;
@@ -83,7 +85,7 @@ impl Api {
             return Err(refused);
         }
 
-        // **Checked here, where nothing has been written yet** (T78a, D4). A consent that names
+        // **Checked here, where nothing has been written yet.** A consent that names
         // another command, or that was given about a blueprint whose trust has since changed, is
         // refused rather than spent.
         if let Some(refused) = consent_refusal(&plan, asked.scaffold.as_ref()) {
@@ -116,10 +118,10 @@ impl Api {
                     )
                     .await;
 
-                // **The ring does not outlive the job it was opened for** — roadmap task **T120**,
-                // its design's D5. One two-hundred-line ring per apply, in a map nothing prunes, is
-                // growth nothing bounds; the entry has been left behind for scaffold jobs since
-                // T78a, and narrating every step would make that universal.
+                // **The ring does not outlive the job it was opened for.** One two-hundred-line
+                // ring per apply, in a map nothing prunes, is growth nothing bounds; the entry used
+                // to be left behind for scaffold jobs, and narrating every step would make that
+                // universal.
                 //
                 // Both paths, which is why the `?` is below rather than above: a failed apply is
                 // exactly the one somebody reads the log of.
@@ -151,8 +153,8 @@ impl Api {
 
     /// The walk: every step of the plan, in the plan's own order.
     ///
-    /// **Adds no step, drops none, reorders none** — the invariant T77 wrote down. It may fail, and
-    /// what it does about that is the next task's.
+    /// **Adds no step, drops none, reorders none** — the invariant the first planner wrote down. It
+    /// may fail, and what it does about that is the ledger's.
     async fn perform(
         &self,
         plan: &BlueprintPlan,
@@ -164,8 +166,8 @@ impl Api {
     ) -> Result<BlueprintApplied, Error> {
         // **Nothing is written until every version is known** (D9). A plan holds constraints, and
         // only the index can say which release satisfies one — so it is asked here, where a failure
-        // costs nothing because the ledger is still empty. Since T152, the same holds for whether
-        // this machine runs those releases.
+        // costs nothing because the ledger is still empty. The same holds for whether this machine
+        // runs those releases.
         let resolved = self.resolve(plan, handle).await?;
         let (install_prerequisites, ignore_requirements) = prerequisites;
         if !ignore_requirements {
@@ -184,10 +186,10 @@ impl Api {
             dotenv,
         };
 
-        // **Opened once, before the first step** — roadmap task **T120**, its design's D5. The ring
-        // is per job and `feeding` is what gives it a size: without this call `keep` is zero, so
-        // every line below is published to whoever is already connected and kept for nobody — which
-        // is exactly what a client connecting one step late used to find.
+        // **Opened once, before the first step.** The ring is per job and `feeding` is what gives
+        // it a size: without this call `keep` is zero, so every line below is published to whoever
+        // is already connected and kept for nobody — which is exactly what a client connecting one
+        // step late used to find.
         let log = self
             .services()
             .logs()
@@ -264,8 +266,8 @@ impl Api {
                 }
             };
 
-            // **What differed from the plan is said as it happens** (T202, D2), on the bar and in
-            // the log, and kept in the outcome for whoever reads the report afterwards.
+            // **What differed from the plan is said as it happens**, on the bar and in the log, and
+            // kept in the outcome for whoever reads the report afterwards.
             if let StepResult::Done { note: Some(note) } = &result {
                 handle.progress(percent, note.clone()).await;
                 log.record(narration(Stream::Stdout, note.clone()));
@@ -284,8 +286,8 @@ impl Api {
             project: plan.project.clone(),
             root: plan.root.clone(),
             steps: outcomes,
-            // **What is left to do** — roadmap task **T205**, D6: the blueprint's steps for this
-            // project, expanded, with the row's trust beside them.
+            // **What is left to do**: the blueprint's steps for this project, expanded, with the
+            // row's trust beside them.
             next_steps: mixengine_core::blueprints::steps::of_manifest(
                 manifest,
                 &plan.project,
@@ -340,8 +342,8 @@ impl Api {
                 if registered.is_some_and(|project| {
                     mixengine_platform::paths::in_full(&project.root) == here
                 }) {
-                    // **The project points at its blueprint** — roadmap task **T205**, D5. Only where
-                    // none is recorded, so a resumed apply mends an older row and never repoints one.
+                    // **The project points at its blueprint.** Only where none is recorded, so a
+                    // resumed apply mends an older row and never repoints one.
                     mixengine_core::projects::adopt_blueprint(&self.store, name, &plan.blueprint)
                         .await
                         .map_err(|error| error.to_wire())?;
@@ -364,8 +366,8 @@ impl Api {
                     })
                     .await?;
 
-                // **The project points at its blueprint** — roadmap task **T205**, D5. Only where
-                // none is recorded, so a resumed apply mends an older row and never repoints one.
+                // **The project points at its blueprint.** Only where none is recorded, so a
+                // resumed apply mends an older row and never repoints one.
                 mixengine_core::projects::adopt_blueprint(&self.store, name, &plan.blueprint)
                     .await
                     .map_err(|error| error.to_wire())?;
@@ -398,13 +400,13 @@ impl Api {
                     port: None,
                     bind_addr: None,
                     data_dir: None,
-                    // **T116.** Only reached for an instance this apply is creating — a step that
-                    // planned `Satisfied` never gets here — so the flag cannot re-decide a service
-                    // somebody else's project left stopped on purpose.
+                    // Only reached for an instance this apply is creating — a step that planned
+                    // `Satisfied` never gets here — so the flag cannot re-decide a service somebody
+                    // else's project left stopped on purpose.
                     //
-                    // **`None` and not `Some(false)` when nobody asked** — T167e. `Some(false)` is a
-                    // person saying no, and would keep a front end this apply creates from starting
-                    // with the daemon, which `service.create` now does for a front end by default.
+                    // **`None` and not `Some(false)` when nobody asked.** `Some(false)` is a person
+                    // saying no, and would keep a front end this apply creates from starting with
+                    // the daemon, which `service.create` now does for a front end by default.
                     autostart: context.autostart.then_some(true),
                     overrides: None,
                 })
@@ -429,17 +431,17 @@ impl Api {
                     name: database.clone(),
                 });
 
-                // **The plan's name, or the next free one** (T202, D1) — `database.create` refuses
-                // an account somebody else made, and a blueprint has nobody at the keyboard to
-                // pick another. The note is D2's sentence, for the step's outcome and the log.
+                // **The plan's name, or the next free one** — `database.create` refuses an account
+                // somebody else made, and a blueprint has nobody at the keyboard to pick another.
+                // The note says which name was taken instead, for the step's outcome and the log.
                 let made = account::with_a_free_name(
                     self.databases.as_ref(),
                     &DatabaseCreate {
                         service: service.clone(),
                         database: database.clone(),
                         user: Some(user.clone()),
-                        // A blueprint never names a password — T77b's `--password` is a person
-                        // choosing one at the keyboard, not a value a plan can carry.
+                        // A blueprint never names a password — `--password` is a person choosing
+                        // one at the keyboard, not a value a plan can carry.
                         password: None,
                     },
                 )
@@ -451,7 +453,7 @@ impl Api {
                     "the blueprint's database and the account that reaches it are there"
                 );
 
-                // **What really happened, for the apply's answer** — roadmap task **T205**, D6.
+                // **What really happened, for the apply's answer.**
                 context.database = Some(AppliedDatabase {
                     service,
                     database: made.account.database.clone(),
@@ -537,19 +539,19 @@ impl Api {
                         // lose every `[[services]]` entry it should have carried. Its own list when
                         // the blueprint gave one, and otherwise every service the *plan* made sure
                         // of — a shared instance that was already here is never carried out, and
-                        // is no less this project's (T204a, D3).
+                        // is no less this project's.
                         services: Some(match services {
                             Some(listed) => listed.clone(),
                             None => steps::ensured_in(plan),
                         }),
-                        // **Written with the site, not after it** — roadmap task **T135**. There is
-                        // no `AddRoute` step and there should not be: a route is a column of the
-                        // site rather than a name the hosts file has to learn, so it costs no
-                        // elevation and nothing can observe the site without them.
+                        // **Written with the site, not after it.** There is no `AddRoute` step and
+                        // there should not be: a route is a column of the site rather than a name
+                        // the hosts file has to learn, so it costs no elevation and nothing can
+                        // observe the site without them.
                         routes: Some(routes.clone()),
                         https: Some(*https),
                         // A blueprint describes what a site *is*; a redirect is a fact about one
-                        // home's traffic, which no manifest declares — roadmap task **T98**.
+                        // home's traffic, which no manifest declares.
                         https_redirect: None,
                         // A `.local` name is one this plan would have blocked before the job began.
                         accept_risky_tld: false,
@@ -567,10 +569,10 @@ impl Api {
                     return Ok(StepResult::AlreadyTrue);
                 }
 
-                // **The site this name belongs to** — roadmap task **T204a**, D4: the first
-                // name of its group that already answers. A project may hold several sites, so
-                // its root names none of them; the root is only the answer for a plan with no
-                // group to read, which no plan this build makes is.
+                // **The site this name belongs to**: the first name of its group that already
+                // answers. A project may hold several sites, so its root names none of them; the
+                // root is only the answer for a plan with no group to read, which no plan this
+                // build makes is.
                 let mut site = None;
                 for name in steps::group_names(plan, position) {
                     if name != *domain && self.answers_to(&name).await? {
@@ -696,11 +698,11 @@ impl Api {
             }
 
             PlanAction::RunScaffold { command } => {
-                // **The ledger is not spent by this step** (T78a, D8): it answers a `StepResult`
-                // rather than an error, so a command that exits non-zero never reaches the
-                // unwinding path below. What it leaves is a project that works — the site serves,
-                // the database is there — and destroying that because somebody's post-install
-                // script failed is the more expensive direction to be wrong in.
+                // **The ledger is not spent by this step**: it answers a `StepResult` rather than
+                // an error, so a command that exits non-zero never reaches the unwinding path
+                // below. What it leaves is a project that works — the site serves, the database is
+                // there — and destroying that because somebody's post-install script failed is the
+                // more expensive direction to be wrong in.
                 let log = self
                     .services()
                     .logs()
@@ -729,9 +731,9 @@ impl Api {
             }
 
             PlanAction::FetchArchive { url, strip } => {
-                // **A failure is a failed step, not a failed apply** — roadmap task **T205**, D2, on
-                // the scaffold's own rule: the project it made works, and tearing it down over a
-                // download is the more expensive direction to be wrong in.
+                // **A failure is a failed step, not a failed apply**, on the scaffold's own rule:
+                // the project it made works, and tearing it down over a download is the more
+                // expensive direction to be wrong in.
                 let installer = mixengine_core::install::Installer::new(self.paths().cache())
                     .map_err(|error| error.to_wire())?;
                 let staging = self

@@ -7,7 +7,7 @@ use mixengine_proto::{Check, Outcome, ProblemId};
 use super::Doctor;
 
 impl Doctor {
-    /// **3.** Whether this machine trusts the authority T48 made — roadmap task **T49a**.
+    /// **3.** Whether this machine trusts the authority this home made.
     ///
     /// **A home with no authority is skipped, not a problem.** There is nothing to trust, and the
     /// daemon already warned about the generation that failed; reporting it twice would put a second
@@ -17,8 +17,8 @@ impl Doctor {
     /// that will never have one.
     ///
     /// **This answers "is it in the store", not "does a browser trust it".** Firefox and Chrome on
-    /// Linux read NSS and not this store at all (T49b), and the honest end-to-end check is a live
-    /// handshake, which is T53's.
+    /// Linux read NSS and not this store at all, and the honest end-to-end check is a live
+    /// handshake, which is `mix cert status`'.
     pub(super) fn trust_store(&self) -> Check {
         let name = "this machine's trust in MixEngine's authority".to_owned();
 
@@ -148,10 +148,10 @@ impl Doctor {
     }
 
     /// **3c.** Whether every site that declares HTTPS has a certificate that still covers its
-    /// names — roadmap task **T50**.
+    /// names.
     ///
     /// **A check on disk and not a handshake.** Whether a browser accepts what the front end
-    /// actually serves is a stronger claim and it is `mix cert status`' (T53); this one answers
+    /// actually serves is a stronger claim and it is `mix cert status`'; this one answers
     /// whether the file exists and matches the row, which is the question that catches the most
     /// common report — a domain added and a certificate not reissued.
     pub(super) async fn site_certificates(&self) -> Check {
@@ -233,7 +233,7 @@ impl Doctor {
         }
     }
 
-    /// **The bundle every runtime is pointed at** — roadmap task **T132**.
+    /// **The bundle every runtime is pointed at.**
     ///
     /// Three answers, and the middle one is the reason this is not a single `is_file`:
     ///
@@ -314,7 +314,7 @@ impl Doctor {
         }
     }
 
-    /// **Whether every JDK can verify this home's own sites** — roadmap task **T27e**, D11.
+    /// **Whether every JDK can verify this home's own sites.**
     ///
     /// One `keytool` per installed JDK, which reads and writes nothing; a home with no Java, or none
     /// with a usable authority, asks no process anything.
@@ -356,7 +356,7 @@ mod tests {
         assert!(matches!(outcome, Outcome::Ok {}), "{outcome:?}");
     }
 
-    /// **A JDK that cannot verify this home's sites is a problem, and is named** — T27e, D11.
+    /// **A JDK that cannot verify this home's sites is a problem, and is named.**
     #[test]
     fn a_jdk_lacking_the_authority_is_a_problem_naming_it() {
         let outcome = super::java_trust_outcome(&["java 21.0.12.1".to_owned()]);

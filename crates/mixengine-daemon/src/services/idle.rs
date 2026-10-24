@@ -1,4 +1,4 @@
-//! Deciding that a service has nothing to do — roadmap task **T69**.
+//! Deciding that a service has nothing to do.
 //!
 //! The reading is [`mixengine_supervisor::idle`]'s, on the reasoning written there. What is here is
 //! everything the supervisor cannot know: how long this home's owner said to wait, what depends on
@@ -31,7 +31,7 @@ use mixengine_core::services::ServiceGraph;
 use mixengine_proto::{IdleExemption, IdlePolicy, Millis, ServiceId};
 use mixengine_supervisor::Observation;
 
-/// How long the sweep may look through the last graph a walk produced — roadmap task **T190b**.
+/// How long the sweep may look through the last graph a walk produced.
 ///
 /// Ten minutes: the longest a sweep observes with a policy that has since changed. A change walks,
 /// which refreshes the graph long before this runs out, and a stop is decided on a fresh one anyway.
@@ -230,9 +230,9 @@ impl Sweeper {
 
     /// Take one reading of every running service that has a policy, and stop what is spent.
     pub(crate) async fn sweep(&mut self) -> Pass {
-        // **The last walk's graph, not a new render** — roadmap task T190b. Rendering installs every
-        // service's configuration, and doing that every thirty seconds to learn who has a policy was
-        // half of what this daemon spent at rest. A stop still renders first; see `still_stoppable`.
+        // **The last walk's graph, not a new render.** Rendering installs every service's
+        // configuration, and doing that every thirty seconds to learn who has a policy was half of
+        // what this daemon spent at rest. A stop still renders first; see `still_stoppable`.
         let graph = match self.registry.graph_for_sweep(SWEEP_GRAPH_AGE).await {
             Ok(graph) => graph,
             // The home's declarations could not be read, so nothing is stopped: an idle policy that
@@ -307,7 +307,7 @@ impl Sweeper {
         Pass::Ran { stopped, measured }
     }
 
-    /// The present, asked once before a stop — roadmap task **T190b**, the spec's D2.
+    /// The present, asked once before a stop.
     ///
     /// The sweep counted against a graph up to [`SWEEP_GRAPH_AGE`] old. Stopping is the one thing it
     /// does, so it renders now and stops only if the fresh graph still gives this service a policy
@@ -361,9 +361,9 @@ impl Sweeper {
 
     /// Stop one idle service, and say so on its transition rather than in a second event.
     ///
-    /// **Takes the graph `still_stoppable` rendered for this stop** — roadmap task T190b. The sweep
-    /// looks through a kept graph, and a stop is the one thing it may not decide on one; one render
-    /// per stopped service is what that costs, and a stop happens once per idle period at most.
+    /// **Takes the graph `still_stoppable` rendered for this stop.** The sweep looks through a kept
+    /// graph, and a stop is the one thing it may not decide on one; one render per stopped service
+    /// is what that costs, and a stop happens once per idle period at most.
     async fn stop(&self, graph: &ServiceGraph, id: &ServiceId, after: Millis) -> bool {
         // **Set before the plan is walked, never after.** The runner reads the reason at the moment
         // it enters `Stopping`, so a value written afterwards would arrive too late to explain this
@@ -395,12 +395,11 @@ impl Sweeper {
             "nothing was using this service, so it was stopped"
         );
 
-        // **Here, and after the stop succeeded** — roadmap task **T70a**. This is the one stop a
-        // *running* daemon makes that may arm a wake: a person's stop and a dependency's leave
-        // nothing bound, which is how D8 is answered on this path without reading anything at the
-        // moment a connection arrives. The other wakeable stops — a shutdown, a process that went
-        // away — are made by a daemon that is going or gone, and are armed by the boot walk in
-        // `main` instead (T123).
+        // **Here, and after the stop succeeded.** This is the one stop a *running* daemon makes
+        // that may arm a wake: a person's stop and a dependency's leave nothing bound, which is how
+        // a person's stop stays a stop on this path without reading anything at the moment a
+        // connection arrives. The other wakeable stops — a shutdown, a process that went away — are
+        // made by a daemon that is going or gone, and are armed by the boot walk in `main` instead.
         //
         // A service with nothing to hold — a pool, which has a permanent activator of its own, or
         // anything with no address at all — is left alone by the row check inside.
@@ -467,7 +466,7 @@ mod tests {
         ServiceId::parse(text).expect("a valid id")
     }
 
-    // ---- The sweep against a real registry — roadmap task T190b. ----
+    // ---- The sweep against a real registry. ----
 
     use std::sync::Arc;
 
@@ -538,7 +537,7 @@ mod tests {
         );
     }
 
-    /// **A stop is decided on a graph rendered for it** — the spec's D2.
+    /// **A stop is decided on a graph rendered for it.**
     #[tokio::test]
     async fn a_stop_is_decided_on_a_fresh_graph() {
         let fake = FakeService::new();

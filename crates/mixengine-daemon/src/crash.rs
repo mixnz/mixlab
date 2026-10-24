@@ -1,4 +1,4 @@
-//! What this daemon leaves behind when it hits a bug in itself. Roadmap task **T91**.
+//! What this daemon leaves behind when it hits a bug in itself.
 //!
 //! **Three documents described this before it existed.** `docs/standards/rust.md` says the RPC
 //! layer turns a panic into `internal`; `api/rpc.rs` says the message *"has already
@@ -14,7 +14,7 @@
 //! scope and can carry a path, so it goes to `daemon.log` — where paths a person chose already are,
 //! and always have been.
 //!
-//! **A release build records offsets, not names** (T91a): its symbols ship beside the download, and
+//! **A release build records offsets, not names**: its symbols ship beside the download, and
 //! `scripts/symbolize.mjs` turns a report's offsets back into names with them.
 //!
 //! **Nothing here sends anything anywhere.** See
@@ -131,7 +131,7 @@ impl Reports {
         let reports = self.clone();
         let previous = std::panic::take_hook();
         // Read here, once, because it walks headers and allocates: the hook only measures
-        // addresses against it (T91a).
+        // addresses against it.
         let image = crash_image::current();
 
         std::panic::set_hook(Box::new(move |info| {
@@ -278,7 +278,7 @@ impl Reports {
     }
 }
 
-/// What `mix doctor` says about this home's crash reports — roadmap task **T91**.
+/// What `mix doctor` says about this home's crash reports.
 ///
 /// **A [`Note`](Outcome::Note) and never a [`Problem`](Outcome::Problem), and that is not a
 /// stylistic choice.** `mix doctor` exits non-zero on a problem, so one crash recorded once would
@@ -326,7 +326,7 @@ pub(crate) fn check(reports: &Reports) -> Check {
     }
 }
 
-/// What the hook took of the panicking thread's stack — T91a.
+/// What the hook took of the panicking thread's stack.
 #[derive(Debug, Default)]
 struct Stack {
     /// Offsets into the executable, innermost first; a frame outside it has none.
@@ -341,11 +341,11 @@ struct Stack {
 
 /// The panicking thread's stack, as a report records it.
 ///
-/// **A release build resolves no names here** (T91a, D3): its symbols are not in the binary to
-/// resolve, and symbolising inside a panic hook is the hook's heaviest and most lock-prone work —
-/// on Windows it takes dbghelp's lock and may search a symbol path for a `.pdb` that is not there.
-/// A debug build keeps every symbol, so it also renders `std`'s backtrace, filtered by
-/// [`symbol_names`] exactly as format 1 was.
+/// **A release build resolves no names here**: its symbols are not in the binary to resolve, and
+/// symbolising inside a panic hook is the hook's heaviest and most lock-prone work — on Windows it
+/// takes dbghelp's lock and may search a symbol path for a `.pdb` that is not there. A debug build
+/// keeps every symbol, so it also renders `std`'s backtrace, filtered by [`symbol_names`] exactly
+/// as format 1 was.
 ///
 /// Without an [`Image`] the frames are still counted, each without an offset, so the depth of the
 /// stack survives a platform that could not describe its executable.
@@ -375,8 +375,7 @@ fn capture(image: Option<&Image>) -> Stack {
     }
 }
 
-/// A daemon that panics on request, so CI can prove a stripped release build's report symbolises —
-/// T91a.
+/// A daemon that panics on request, so CI can prove a stripped release build's report symbolises.
 ///
 /// **Behind the `crash-probe` feature and nothing else.** No build `packaging/stage.sh` makes
 /// enables it, so an installed daemon has no way to be told to panic: the code is not in it. The
