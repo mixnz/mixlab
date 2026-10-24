@@ -1,4 +1,4 @@
-//! Memcached — roadmap task **T35**, with [`redis`](super::redis) the other half of it.
+//! Memcached, with [`redis`](super::redis) the other cache.
 //!
 //! # The first recipe that renders nothing
 //!
@@ -16,10 +16,11 @@
 //!
 //! # An accept really is readiness here
 //!
-//! T33 argued at length that a TCP accept is a dishonest readiness check for a database, because it
-//! stays true for the whole of InnoDB's crash recovery while the server refuses every query. None of
-//! that applies to this program: memcached allocates its slabs and enters its event loop, and there
-//! is no recovery phase in which it is listening and unable to answer. The accept is the readiness.
+//! [`mariadb`](super::mariadb) argues at length that a TCP accept is a dishonest readiness check
+//! for a database, because it stays true for the whole of InnoDB's crash recovery while the server
+//! refuses every query. None of that applies to this program: memcached allocates its slabs and
+//! enters its event loop, and there is no recovery phase in which it is listening and unable to
+//! answer. The accept is the readiness.
 //!
 //! It is also all there is. **The package is one file** — `bin/memcached`, and nothing else — so
 //! there is no client to ask a question with, the way `redis-cli` and `mariadb-admin` are asked. The
@@ -164,7 +165,7 @@ impl Recipe for Memcached {
             // Nothing is read or written relative to anywhere, so this is only where a crash dump
             // would land. The data directory rather than `etc/`, which this service never has.
             .cwd(context.data())
-            // What a failed start is diagnosed against (T38).
+            // What a failed start is diagnosed against.
             .ports([addr.port()])
             // **An accept, and here that is the honest answer** — see the module note. It is also
             // the only one available: the package is one binary, with no client to ask.
@@ -185,26 +186,26 @@ impl Recipe for Memcached {
             .stop(StopBehaviour::Kill))
     }
 
-    /// Its port, and nothing else — T70a's D4. It listens on no Unix socket; the module doc above
+    /// Its port, and nothing else. It listens on no Unix socket; the module doc above
     /// says why, and an address the server never binds is one the daemon must not bind either.
     fn held_while_stopped(&self, context: &Context) -> Result<Vec<Upstream>> {
         Ok(vec![Upstream::Tcp(address(context)?)])
     }
 
-    /// An hour — T70a, design D9, and the number `resource-isolation.md` already publishes.
+    /// An hour — the number `resource-isolation.md` already publishes.
     ///
     /// **Longer than php-fpm's half hour on purpose.** A pool starts in tens of milliseconds; a
     /// server replays its log first, so a developer coming back to a project after fifty minutes
     /// would pay for the stop rather than benefit from it. What the extra half hour costs is one
     /// idle server's memory, which is the thing being traded and is worth naming.
     ///
-    /// **Answerable only now.** Until T70a the daemon could stop this and nothing could start it
-    /// again, and a default that idled it would have been a default that broke a home which changed
-    /// nothing — which is why the number arrives in the last commit of that task rather than the
-    /// first.
+    /// **Answerable only once a connection can start this server.** Before that the daemon could
+    /// stop it and nothing could start it again, and a default that idled it would have been a
+    /// default that broke a home which changed nothing — which is why the number arrived with the
+    /// last of that work rather than the first.
     ///
-    /// **Only while the home saves resources** — roadmap task **T167b**, ADR 0041. Until then this
-    /// number was the default for every home; now a service nobody set is never idle-stopped.
+    /// **Only while the home saves resources** (ADR 0041). Before that this number was the default
+    /// for every home; now a service nobody set is never idle-stopped.
     fn idle_when_saving(&self) -> Option<mixengine_proto::Millis> {
         Some(mixengine_proto::Millis::from_secs(60 * 60))
     }
@@ -360,7 +361,7 @@ mod tests {
         assert_eq!(flag(&spec("{}"), "-U"), "0");
     }
 
-    /// What a failed start is diagnosed against — roadmap task **T38**.
+    /// What a failed start is diagnosed against.
     #[test]
     fn the_spec_declares_the_port_it_will_bind() {
         assert_eq!(spec("{}").ports(), [11211]);

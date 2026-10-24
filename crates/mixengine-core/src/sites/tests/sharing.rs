@@ -2,8 +2,7 @@
 
 use super::*;
 
-/// A site is created unshared, shares whole, and unshares back to nothing — roadmap task
-/// **T74**.
+/// A site is created unshared, shares whole, and unshares back to nothing.
 #[tokio::test]
 async fn sharing_is_written_and_taken_away_as_one_value() {
     let (_temp, store, project) = home().await;
@@ -51,7 +50,7 @@ async fn sharing_is_written_and_taken_away_as_one_value() {
     assert!(unshared.sharing.is_none());
 }
 
-/// A deadline rides with the rest of the sharing row and leaves with it — roadmap task **T76**.
+/// A deadline rides with the rest of the sharing row and leaves with it.
 ///
 /// **`until` is the one of the four that is optional on its own.** A share without an expiry is
 /// the ordinary case, which is why it sits outside the trigger's all-or-nothing rule rather than
@@ -184,9 +183,9 @@ async fn a_site_is_created_whole_and_read_back_whole() {
     assert_eq!(found.domains[0], "blog.test", "the head is the primary");
 }
 
-/// **T98.** `https_redirect: true` is refused at `create` when `https_enabled` is `false`,
-/// before a row is written — the schema's own `CHECK` would refuse it a step later, in words
-/// about the column rather than the request.
+/// `https_redirect: true` is refused at `create` when `https_enabled` is `false`, before a row is
+/// written — the schema's own `CHECK` would refuse it a step later, in words about the column
+/// rather than the request.
 #[tokio::test]
 async fn https_redirect_needs_https_enabled_to_create_a_site() {
     let (_temp, store, project) = home().await;
@@ -223,9 +222,9 @@ async fn https_redirect_needs_https_enabled_to_create_a_site() {
     );
 }
 
-/// **T98, D2.** `https_redirect: Some(true)` is refused whether the `false` it collides with
-/// comes from this same `update` turning HTTPS off, or from the site already being
-/// plaintext-only — the two cases the design calls out by name.
+/// `https_redirect: Some(true)` is refused whether the `false` it collides with comes from this
+/// same `update` turning HTTPS off, or from the site already being plaintext-only — the two cases
+/// the design calls out by name.
 #[tokio::test]
 async fn https_redirect_needs_https_enabled_to_update_a_site_either_way_it_arrives() {
     let (_temp, store, project) = home().await;
@@ -300,10 +299,9 @@ async fn https_redirect_needs_https_enabled_to_update_a_site_either_way_it_arriv
     );
 }
 
-/// **T98, D2.** Turning `https_enabled` off while saying nothing about the redirect carries the
-/// redirect to `false` as well, because leaving it `true` on a plaintext-only site is a row the
-/// schema's `CHECK` refuses to hold — and the caller asked for neither that refusal nor a
-/// silent one either.
+/// Turning `https_enabled` off while saying nothing about the redirect carries the redirect to
+/// `false` as well, because leaving it `true` on a plaintext-only site is a row the schema's
+/// `CHECK` refuses to hold — and the caller asked for neither that refusal nor a silent one either.
 #[tokio::test]
 async fn turning_https_off_silently_carries_an_untouched_redirect_to_false() {
     let (_temp, store, project) = home().await;
@@ -343,9 +341,9 @@ async fn turning_https_off_silently_carries_an_untouched_redirect_to_false() {
     );
 }
 
-/// **T98.** Turning HTTPS on leaves an untouched redirect exactly where it was — the ordinary
-/// "leave it" reading, asserted so the cascade above cannot be mistaken for a rule about every
-/// `https_enabled` change rather than only the one that turns it off.
+/// Turning HTTPS on leaves an untouched redirect exactly where it was — the ordinary "leave it"
+/// reading, asserted so the cascade above cannot be mistaken for a rule about every `https_enabled`
+/// change rather than only the one that turns it off.
 #[tokio::test]
 async fn turning_https_on_leaves_an_untouched_redirect_alone() {
     let (_temp, store, project) = home().await;
@@ -381,7 +379,7 @@ async fn turning_https_on_leaves_an_untouched_redirect_alone() {
     assert!(!changed.https_redirect, "nothing asked for a redirect");
 }
 
-/// **T98.** Both columns round-trip through `create`, `update` and `records` together, the way
+/// Both columns round-trip through `create`, `update` and `records` together, the way
 /// `https_enabled` alone already does.
 #[tokio::test]
 async fn https_redirect_round_trips_through_create_update_and_records() {

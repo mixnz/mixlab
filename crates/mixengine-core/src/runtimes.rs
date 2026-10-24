@@ -60,24 +60,24 @@ pub fn directory(paths: &Paths, kind: RuntimeKind, version: &PackageVersion) -> 
 /// a build whose extension directory is wrong fails here rather than in the middle of somebody's
 /// afternoon. `--version` is the same thing for the other three.
 ///
-/// **Composer answers [`None`]** — roadmap task **T27c**, its design's D3. Its artifact is a `.phar`,
-/// which a PHP runs; the PHP may not be installed yet, and asking for one here would make
-/// `mix runtime install composer` fail on the machine a gallery blueprint is about to install PHP
-/// on. What the download proved by hash is the whole of what can be proved without one.
+/// **Composer answers [`None`].** Its artifact is a `.phar`, which a PHP runs; the PHP may not be
+/// installed yet, and asking for one here would make `mix runtime install composer` fail on the
+/// machine a gallery blueprint is about to install PHP on. What the download proved by hash is the
+/// whole of what can be proved without one.
 #[must_use]
 pub fn smoke_test(kind: RuntimeKind) -> Option<SmokeTest> {
     let (executable, flag, unset): (&str, &str, &'static [&'static str]) = match kind {
-        // Not `php-win.exe`, which answers `-v` with nothing at all — one of the four bugs T20a
-        // found, and the reason the index publishes both under names of ours.
+        // Not `php-win.exe`, which answers `-v` with nothing at all — one of the four bugs the
+        // first real package showed, and the reason the index publishes both under names of ours.
         RuntimeKind::Php => ("php", "-v", &[]),
         RuntimeKind::Node => ("node", "--version", &[]),
         RuntimeKind::Python => ("python", "--version", &[]),
         RuntimeKind::Ruby => ("ruby", "--version", &[]),
         // `go` has no `--version` flag. `version` touches no module, and the install directory
-        // holds no `go.mod`, so `go.env`'s `GOTOOLCHAIN=auto` has nothing to act on here (T27d).
+        // holds no `go.mod`, so `go.env`'s `GOTOOLCHAIN=auto` has nothing to act on here.
         RuntimeKind::Go => ("go", "version", &[]),
         // `--version` exists from JDK 9 and prints to stdout; on Linux it is also what fails when
-        // `libz.so.1` is missing, since the launcher imports it (T27e, D3).
+        // `libz.so.1` is missing, since the launcher imports it.
         RuntimeKind::Java => ("java", "--version", java::UNSET),
         RuntimeKind::Composer => return None,
     };
@@ -242,12 +242,12 @@ pub async fn remember(
         installed_at: at,
         bytes: installation.bytes,
         default,
-        // Read rather than assumed — T206d, D1: the row names the folder, and the folder decides.
+        // Read rather than assumed: the row names the folder, and the folder decides.
         missing: Some(crate::paths::is_gone(&installation.path).await),
     })
 }
 
-/// Write a reinstalled runtime over the row it already had — roadmap task **T206d**, D3.
+/// Write a reinstalled runtime over the row it already had.
 ///
 /// **An `UPDATE`, never a second row**: the id is what a pool's service points at, and `is_default`
 /// is left as it was, so a default that went missing comes back as the default. Called only after
@@ -305,11 +305,12 @@ pub async fn restore(
 
 /// Forget a runtime whose directory has already gone, and say whether its kind is left with none.
 ///
-/// **Nothing is promoted in its place**, and that stayed true when T24 arrived with the grammar
-/// that could pick a successor. Being *able* to name the newest remaining version was never the
-/// argument: an uninstall that silently moved what `php` means would break a project nobody was
-/// thinking about, which is the same reason [`remember`] does not move it either. A kind whose
-/// default was removed is left with no default, out loud, and `mix runtime default` is one command.
+/// **Nothing is promoted in its place**, and that stayed true when version resolution arrived with
+/// the grammar that could pick a successor. Being *able* to name the newest remaining version was
+/// never the argument: an uninstall that silently moved what `php` means would break a project
+/// nobody was thinking about, which is the same reason [`remember`] does not move it either. A kind
+/// whose default was removed is left with no default, out loud, and `mix runtime default` is one
+/// command.
 ///
 /// # Errors
 ///
@@ -444,8 +445,8 @@ pub async fn records(store: &Store, kind: Option<RuntimeKind>) -> Result<Vec<Run
         })
         .collect::<Result<Vec<_>>>()?;
 
-    // **Stamped from the disk on every read** — roadmap task **T206d**, D1: no column, so the answer
-    // is the folder's state now, at one `stat` a row.
+    // **Stamped from the disk on every read**: no column, so the answer is the folder's state now,
+    // at one `stat` a row.
     for summary in &mut listed {
         stamp(summary).await;
     }
@@ -491,7 +492,7 @@ pub async fn record(
     Ok(found)
 }
 
-/// Whether the folder a row names is gone, read now — roadmap task **T206d**, D1.
+/// Whether the folder a row names is gone, read now.
 async fn stamp(summary: &mut RuntimeSummary) {
     summary.missing = Some(crate::paths::is_gone(Path::new(&summary.path)).await);
 }
@@ -642,7 +643,7 @@ fn summary(
         // the whole listing over it would hide the runtime it belongs to.
         bytes: u64::try_from(bytes).unwrap_or(0),
         default: is_default == 1,
-        // Stamped from the disk by the reader — T206d, D1.
+        // Stamped from the disk by the reader.
         missing: None,
     })
 }

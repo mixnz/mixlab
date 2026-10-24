@@ -1,10 +1,10 @@
 //! The services this build knows how to run.
 //!
-//! One module per `packages.name`, each one a [`Recipe`](super::Recipe) and each one its own roadmap
-//! task: Caddy is T31, php-fpm T32, MariaDB T33, PostgreSQL T34, Redis and Memcached both T35,
-//! MySQL T34c, Nginx T37 and MongoDB T154. The machinery they are plugged into — the merge, the render, the diff,
-//! the staging, the validation — is T30's and lives one directory up; what a module in here owns is
-//! a template, the overrides worth having, and the [`ServiceSpec`] that runs the program.
+//! One module per `packages.name`, each one a [`Recipe`](super::Recipe) and each one built and
+//! judged against its own server: Caddy, php-fpm, MariaDB, PostgreSQL, Redis, Memcached, MySQL,
+//! Nginx and MongoDB. The machinery they are plugged into — the merge, the render, the diff, the
+//! staging, the validation — is the generator's and lives one directory up; what a module in here
+//! owns is a template, the overrides worth having, and the [`ServiceSpec`] that runs the program.
 //!
 //! **Two of them are for the same job, and only one of them may be doing it.** [`caddy`] and
 //! [`nginx`] are the two programs a site can be reached through, and
@@ -70,7 +70,7 @@ use crate::generate::context::Context;
 use crate::generate::first_run::Step;
 use crate::{Error, Result, ServiceError};
 
-/// What `sockaddr_un` can hold, measured against a real server in T33a.
+/// What `sockaddr_un` can hold, measured against a real server.
 ///
 /// Here rather than in one recipe because two of them listen on a socket and the limit belongs to
 /// the kernel, not to php-fpm: a path longer than this does not fail at `bind`, the server starts,
@@ -80,10 +80,10 @@ const SOCKET_PATH_LIMIT: usize = 103;
 
 /// Where the Unix bootstrap sees this install and this data directory from.
 ///
-/// **Both databases, from one place.** Lifted out of [`mariadb`] by T34c, when MySQL 5.6 turned out
-/// to need exactly it: upstream's `mysql_install_db` is the ancestor of `mariadb-install-db` and
-/// leaves `$basedir` unquoted in the same places, so two copies of the workaround would be two
-/// things to fix on the day that bug is.
+/// **Both databases, from one place.** Lifted out of [`mariadb`] when MySQL 5.6 turned out to need
+/// exactly it: upstream's `mysql_install_db` is the ancestor of `mariadb-install-db` and leaves
+/// `$basedir` unquoted in the same places, so two copies of the workaround would be two things to
+/// fix on the day that bug is.
 ///
 /// **Upstream's script leaves both `$basedir` and `$datadir` unquoted**, so either containing a space
 /// is split into two arguments and the script stops with `Could not find my_print_defaults` or
@@ -99,11 +99,11 @@ const SOCKET_PATH_LIMIT: usize = 103;
 /// mistakes available: one code path, exercised by every first run on every Unix machine, instead of
 /// a branch that is only ever taken on the developer machines nobody tests on.
 ///
-/// **Named after the home as well as the service** — roadmap task **T33b**. `/tmp` is one
-/// directory for every home on the machine, and every user of it. Named after the service alone,
-/// two homes bootstrapping `mariadb@main` shared one view: the second ritual's first step removed
-/// the first one's basedir, and on a machine with two users the second could not remove the
-/// first's at all. The home id is the one ADR 0032 gave the keyring for the same reason.
+/// **Named after the home as well as the service.** `/tmp` is one directory for every home on the
+/// machine, and every user of it. Named after the service alone, two homes bootstrapping
+/// `mariadb@main` shared one view: the second ritual's first step removed the first one's basedir,
+/// and on a machine with two users the second could not remove the first's at all. The home id is
+/// the one ADR 0032 gave the keyring for the same reason.
 pub(super) fn space_free_view(context: &Context) -> PathBuf {
     PathBuf::from("/tmp").join(format!(
         "mixengine-init-{}-{}",
@@ -123,15 +123,15 @@ pub(super) const TMPDIR: &str = "TMPDIR";
 
 /// Where an instance of the MySQL family keeps its temporary files: `<data>.tmp`, beside its data.
 ///
-/// **Its own rather than `/tmp`, and this is a measurement** — roadmap task **T33c**. The server's
-/// default is the machine's temporary directory, and at every start it deletes every `#sql*` file
-/// it finds there, whoever made it (`mysql_rm_tmp_tables`). Two bootstraps in two homes starting a
-/// quarter second apart — `tests/mariadb.rs`'s two tests on one CI runner — is the second one
-/// deleting the temporary tables the first's system-table load is in the middle of: `Could not
-/// remove temporary table … error: 2`, `Unknown table 'mysql.tmp_proxies_priv'`, `[ERROR] Aborting`.
-/// Reproduced in WSL against 11.4.12, one failure in six rounds; none in ten once each ritual had a
-/// directory of its own. Two services of this family starting together, or a user's own MariaDB
-/// restarting beside one of ours, meet the same deletion.
+/// **Its own rather than `/tmp`, and this is a measurement.** The server's default is the machine's
+/// temporary directory, and at every start it deletes every `#sql*` file it finds there, whoever
+/// made it (`mysql_rm_tmp_tables`). Two bootstraps in two homes starting a quarter second apart —
+/// `tests/mariadb.rs`'s two tests on one CI runner — is the second one deleting the temporary
+/// tables the first's system-table load is in the middle of: `Could not remove temporary table …
+/// error: 2`, `Unknown table 'mysql.tmp_proxies_priv'`, `[ERROR] Aborting`. Reproduced in WSL
+/// against 11.4.12, one failure in six rounds; none in ten once each ritual had a directory of its
+/// own. Two services of this family starting together, or a user's own MariaDB restarting beside
+/// one of ours, meet the same deletion.
 ///
 /// **Beside the data directory rather than inside it**, on the started marker's pattern: a
 /// directory inside is a schema to this server, and the installer refuses a data directory that is
@@ -234,12 +234,12 @@ fn within_socket_limit(service: &str, key: &'static str, socket: &Path) -> Resul
     Ok(())
 }
 
-/// Where the activator listens for the service whose own socket is `socket` — roadmap task **T70**.
+/// Where the activator listens for the service whose own socket is `socket`.
 ///
 /// `run/php-fpm-8.3.sock` becomes `run/php-fpm-8.3.activate.sock`: the same directory, the same
 /// name, one component inserted before the extension. A site file names both, the pool first, so
 /// that a request arriving while the pool is idle-stopped is retried against this one instead of
-/// answered with a 502 — the design's D2 and D3.
+/// answered with a 502.
 ///
 /// **Derived rather than allocated, because a rendered site file must not move.** The address is the
 /// same string whether the pool is up or down, so an idle stop rewrites nothing and reloads nothing.
@@ -361,9 +361,8 @@ mod tests {
         .with_home(crate::home::HomeId::parse(home).expect("a valid id"))
     }
 
-    /// **Two homes bootstrapping one service id get two views** — roadmap task **T33b**. With one,
-    /// the second ritual's first step, `rm -rf` on the view, took the first ritual's basedir away
-    /// from under it.
+    /// **Two homes bootstrapping one service id get two views.** With one, the second ritual's
+    /// first step, `rm -rf` on the view, took the first ritual's basedir away from under it.
     #[test]
     fn two_homes_bootstrapping_one_service_get_two_views() {
         assert_ne!(

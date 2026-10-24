@@ -1,4 +1,4 @@
-//! Generating `extensions.json` — roadmap task **T81a**.
+//! Generating `extensions.json`.
 //!
 //! `tests/extension_registry.rs` proves the *reading* half against a signed document over a real
 //! socket. This is the half that makes the document, and the two meet in one place worth naming:
@@ -50,7 +50,8 @@ fn every_manifest_becomes_an_entry() {
         mixengine_testkit::extension::PHPMYADMIN,
     );
     // Not a manifest, and not an error either: `data/extensions/README.md` lives beside them, and
-    // until T82 it is the only thing in that directory — git does not carry an empty one.
+    // before the first manifest it was the only thing in that directory — git does not carry an
+    // empty one.
     std::fs::write(manifests.join("README.md"), "# extensions\n").expect("write a readme");
 
     let registry = registry::assemble(&manifests, &key, generated_at()).expect("assemble");
@@ -76,9 +77,9 @@ fn every_manifest_becomes_an_entry() {
     );
 }
 
-/// The day before T82: a directory with no manifest in it is a document with no entry in it, not an
-/// error. `tools/blueprints.py` treats an empty gallery as evidence it was pointed at the wrong
-/// place; here empty is the state this task ships in, and an empty answer beats a 404.
+/// A directory with no manifest in it is a document with no entry in it, not an error.
+/// `tools/blueprints.py` treats an empty gallery as evidence it was pointed at the wrong place;
+/// here empty is the state the registry first shipped in, and an empty answer beats a 404.
 #[test]
 fn an_empty_directory_is_an_empty_document() {
     let home = tempfile::tempdir().expect("a directory");

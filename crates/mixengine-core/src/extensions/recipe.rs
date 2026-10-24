@@ -1,5 +1,4 @@
-//! Running an installed extension, out of the manifest it was installed from — roadmap task
-//! **T81**, the design's D7.
+//! Running an installed extension, out of the manifest it was installed from.
 //!
 //! # Why an extension is a [`Recipe`] rather than a second way to build a spec
 //!
@@ -17,8 +16,8 @@
 //! What this recipe answers is deliberately almost nothing: no settings, because an extension
 //! declares no overrides; no template files, because its configuration is its own; no validator,
 //! because there is no rendering of ours to judge. The one thing it does is build the spec, and it
-//! does that by handing the manifest back to [`crate::extensions::render`] — which T80 already
-//! wrote, and which `extension.inspect` already showed somebody.
+//! does that by handing the manifest back to [`crate::extensions::render`] — which already exists,
+//! and which `extension.inspect` already showed somebody.
 
 use mixengine_proto::ServiceSpecBuilder;
 
@@ -115,8 +114,8 @@ pub fn served_port_name(manifest: &ExtensionManifest) -> Option<&str> {
         _ => return None,
     };
 
-    // Every address in a manifest is `{listen}:{some_port}` — a literal host is refused at parse
-    // (T80's D2) — so what is read here is the placeholder, never an address.
+    // Every address in a manifest is `{listen}:{some_port}` — a literal host is refused at parse —
+    // so what is read here is the placeholder, never an address.
     let name = named
         .rsplit_once(":{")
         .and_then(|(_, rest)| rest.split('}').next())?;
@@ -138,7 +137,7 @@ mod tests {
         manifest::read(std::path::Path::new("extension.toml"), text).expect("a fixture parses")
     }
 
-    /// **`services.port` is the port `ready` watches** — the T81 design's D8.
+    /// **`services.port` is the port `ready` watches.**
     #[test]
     fn the_served_port_is_the_one_ready_watches() {
         // Mailpit's readiness check is `{listen}:{ui_port}`.

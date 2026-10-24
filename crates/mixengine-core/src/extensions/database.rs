@@ -1,8 +1,8 @@
-//! Which database a `web-app` extension is pointed at — roadmap task **T82**, the design's D4.
+//! Which database a `web-app` extension is pointed at.
 //!
-//! **Resolved the way T81b resolves the PHP**: at install, before anything is fetched, refused by
-//! name when nothing satisfies it, and frozen into a row rather than recomputed. The row is
-//! `site_service_links`, which T81b left empty for an extension site and named this task to fill.
+//! **Resolved the way an extension site's PHP is**: at install, before anything is fetched, refused
+//! by name when nothing satisfies it, and frozen into a row rather than recomputed. The row is
+//! `site_service_links`, the same table a project site's links are kept in.
 //!
 //! # Writing the link is what arms the refusal
 //!
@@ -18,12 +18,12 @@
 //!
 //! # No password here, and no socket
 //!
-//! [`Endpoint`] carries a host, a port and an account name. It carries no credential, because the
-//! design's D6 says a generated file does not hold one — where the password lives stays
+//! [`Endpoint`] carries a host, a port and an account name. It carries no credential, because the a
+//! generated file does not hold one — where the password lives stays
 //! [`Context::secret_address`](crate::generate::context::Context::secret_address)'s answer, in the
 //! keyring. It carries no socket, because every database recipe binds a TCP port on all three
-//! systems (T34c), so one address form is enough and a placeholder that rendered to nothing on
-//! Windows would be a template nobody could write once.
+//! systems, so one address form is enough and a placeholder that rendered to nothing on Windows
+//! would be a template nobody could write once.
 
 use mixengine_proto::ServiceId;
 
@@ -186,8 +186,8 @@ mod tests {
         );
     }
 
-    /// Refused before anything is fetched, naming what would satisfy it — T81b's shape for the PHP,
-    /// arriving a second time for the database.
+    /// Refused before anything is fetched, naming what would satisfy it — an extension site's shape
+    /// for the PHP, arriving a second time for the database.
     #[tokio::test]
     async fn a_machine_with_none_of_them_is_a_refusal_that_names_the_engines() {
         let (_temp, store) = home().await;

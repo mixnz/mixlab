@@ -2,8 +2,7 @@
 
 use super::*;
 
-/// **A `services` row belonging to an extension renders the manifest it was installed from** —
-/// roadmap task **T81**, the design's D7.
+/// **A `services` row belonging to an extension renders the manifest it was installed from.**
 ///
 /// And it goes through the same walk everything else does, which is the point of giving an
 /// extension a `services` row at all: the ports it holds, the limits its row carries and the
@@ -99,10 +98,9 @@ async fn idle_of(
 
 /// The row decides how long, the recipe decides how, and `0` outranks both.
 ///
-/// Three assertions because the column has three states, and the third is the one that exists
-/// for **T70**'s sake rather than for anything reachable today: a default arriving in a later
-/// release must reach the home that never touched this setting and must not reach the one whose
-/// owner switched it off.
+/// Three assertions because the column has three states, and the third is the one that exists for a
+/// recipe's own default: a default arriving in a later release must reach the home that never
+/// touched this setting and must not reach the one whose owner switched it off.
 #[tokio::test]
 async fn an_idle_policy_is_joined_from_the_row_and_the_recipe() {
     let (_home, generator) = home("{}").await;
@@ -131,8 +129,8 @@ async fn an_idle_policy_is_joined_from_the_row_and_the_recipe() {
     );
 }
 
-/// **T167b, ADR 0041.** A row nobody set is idle-stopped only while the home saves resources,
-/// and then on the recipe's saving number; a row somebody set means what they said either way.
+/// **ADR 0041.** A row nobody set is idle-stopped only while the home saves resources, and then on
+/// the recipe's saving number; a row somebody set means what they said either way.
 #[tokio::test]
 async fn a_row_nobody_set_idles_only_while_the_home_saves_resources() {
     let (_home, generator) = home("{}").await;
@@ -177,9 +175,9 @@ async fn a_row_becomes_a_spec_and_a_file_on_disk() {
     assert_eq!(generated.spec.id().as_str(), "fakeservice@main");
     assert!(generated.changed(), "nothing was written on a first render");
 
-    // **Roadmap task T71a**: the recipe's answer reaches the spec. This fixture says `true`
-    // where the trait's default is `false`, so an assertion here fails if the generator stops
-    // asking rather than passing for the wrong reason.
+    // The recipe's answer reaches the spec. This fixture says `true` where the trait's default is
+    // `false`, so an assertion here fails if the generator stops asking rather than passing for the
+    // wrong reason.
     assert!(
         generated.spec.restart_over_memory(),
         "the recipe's permission is carried onto the spec it renders"
@@ -198,7 +196,7 @@ async fn a_row_becomes_a_spec_and_a_file_on_disk() {
     assert!(rendered.contains("port = 4321"), "{rendered}");
 }
 
-/// **A number read without writing anything** — roadmap task **T53**.
+/// **A number read without writing anything.**
 ///
 /// `mix cert status` connects to the front end's TLS port, and the two other ways to learn it
 /// are both refused. [`Generator::generate`] goes through [`Generator::declared`], which

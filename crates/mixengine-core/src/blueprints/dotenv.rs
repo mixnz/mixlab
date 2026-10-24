@@ -1,4 +1,4 @@
-//! The one `.env` line a blueprint may ask an apply to write — roadmap task **T205a**.
+//! The one `.env` line a blueprint may ask an apply to write.
 //!
 //! **Appended, never rewritten.** A project's `.env` is the person's file: every line already in it
 //! is kept byte for byte, and a key that is already there — with `export` or without — is theirs,

@@ -1,5 +1,5 @@
 //! Sharing a site on the local network: the URL and the mDNS name it answers to, and its sharing
-//! written and read — roadmap tasks **T74** and **T75**.
+//! written and read.
 
 use crate::{Error, ProjectError, Result, Store};
 
@@ -8,9 +8,9 @@ use super::{Sharing, SiteRecord};
 
 /// The URL a phone opens, for a site shared at `address` and answered on `port`.
 ///
-/// **HTTP, and http alone until T75** — the T74 design. The certificate does cover this address,
-/// but a phone will not trust this home's authority until it has installed it, and the endpoint
-/// that serves the authority is T75's. A URL a person is told to open must be one that opens.
+/// **HTTP.** The certificate does cover this address, but a phone will not trust this home's
+/// authority until it has installed it from the address the authority is downloaded at, and a URL a
+/// person is told to open must be one that opens.
 ///
 /// The port is omitted when it is 80, because a URL a person reads off a terminal and types into a
 /// phone is a URL worth keeping short.
@@ -22,14 +22,14 @@ pub fn shared_url(address: std::net::Ipv4Addr, port: u16) -> String {
     }
 }
 
-/// The mDNS name a shared site answers to: `<slug>-mixengine.local` — roadmap task **T75**.
+/// The mDNS name a shared site answers to: `<slug>-mixengine.local`.
 ///
-/// **One label before `.local`, and that is not a style choice.** mDNS conventions single-label host
-/// names under `.local` (RFC 6762 section 3) and Windows' resolver enforces the convention: measured
-/// on 2026-08-31, `blog-mixengine.local` resolved to the shared address while
+/// **One label before `.local`, and that is not a style choice.** mDNS conventions single-label
+/// host names under `.local` (RFC 6762 section 3) and Windows' resolver enforces the convention:
+/// measured on 2026-08-31, `blog-mixengine.local` resolved to the shared address while
 /// `blog.mixengine.local` answered *DNS name does not exist* — same responder, same interface, same
-/// minute. The T75 design, D1, which is where the roadmap's and the feature spec's own spelling of
-/// this name was overturned.
+/// minute. That measurement is where the roadmap's and the feature spec's own spelling of this name
+/// was overturned.
 ///
 /// **Not `<slug>.local`**, which would also resolve. The flat `.local` namespace is shared with
 /// every printer and phone on the Wi-Fi; `-mixengine` is what makes this our name rather than a
@@ -44,15 +44,15 @@ pub fn shared_name(primary: &str) -> Option<String> {
     crate::domains::slug(label).map(|slug| format!("{slug}-mixengine.local"))
 }
 
-/// The shared site already answering to `name`, if one is — roadmap task **T75**.
+/// The shared site already answering to `name`, if one is.
 ///
 /// **Only shared sites collide.** The name is on the network while a site is shared and nowhere
 /// else, so `blog.test` and `blog.dev` are an ordinary pair right up until somebody shares the
 /// second one. `except` is the site being asked about, which must not collide with itself when it
 /// is re-shared or when its domains are updated.
 ///
-/// The T75 design, D2: what comes back is the namesake's primary domain, because the refusal names
-/// the site somebody has to unshare.
+/// What comes back is the namesake's primary domain, because the refusal names the site somebody
+/// has to unshare.
 #[must_use]
 pub fn name_taken<'a>(records: &'a [SiteRecord], except: i64, name: &str) -> Option<&'a str> {
     records
@@ -70,8 +70,8 @@ pub fn name_taken<'a>(records: &'a [SiteRecord], except: i64, name: &str) -> Opt
 
 /// The port this home's front end answers HTTP on, or 80 where it declares none.
 ///
-/// **The answer port and not the bound one** — T43, D8: on macOS a front end listens on 8080 behind
-/// a packet-filter redirect, and what a browser asks for is still 80. A LAN URL is what somebody
+/// **The answer port and not the bound one**: on macOS a front end listens on 8080 behind a
+/// packet-filter redirect, and what a browser asks for is still 80. A LAN URL is what somebody
 /// types, so it carries the number they type.
 ///
 /// # Errors
@@ -124,7 +124,7 @@ pub(super) fn read_sharing(
     }))
 }
 
-/// Write, or clear, a site's sharing — roadmap task **T74**.
+/// Write, or clear, a site's sharing.
 ///
 /// All three columns move together, which is what the trigger in `0001_initial.sql` holds and
 /// what [`Sharing`] makes unrepresentable otherwise. [`None`] is the unshare.

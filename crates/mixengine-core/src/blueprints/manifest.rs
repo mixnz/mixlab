@@ -1,19 +1,21 @@
 //! The blueprint manifest: `schema`, `[blueprint]`, `[runtimes]`, `[site]` or `[[sites]]`,
 //! `[[services]]`, `[php]`, `[scaffold]` and `[[next_steps]]`.
 //!
-//! **Its own type rather than `mixengine.toml`'s** — the T77 design, D1. The two files overlap but
-//! are not one: a blueprint carries `domain_pattern` where a project manifest carries `domain` and
-//! `aliases`, and it carries `database` and `user`, which the project manifest does not interpret.
-//! They also have two lifetimes. `mixengine.toml` is written by a person, lives in their repository
-//! under their comments and is edited byte-preservingly by [`crate::manifest::write`]; a blueprint
-//! is generated, read once and thrown away. One struct serving both would make every key an
-//! `Option` and hand the comment-preserving writer a second file shape to preserve.
+//! **Its own type rather than `mixengine.toml`'s.** The two files overlap but are not one: a
+//! blueprint carries `domain_pattern` where a project manifest carries `domain` and `aliases`, and
+//! it carries `database` and `user`, which the project manifest does not interpret. They also have
+//! two lifetimes. `mixengine.toml` is written by a person, lives in their repository under their
+//! comments and is edited byte-preservingly by [`crate::manifest::write`]; a blueprint is
+//! generated, read once and thrown away. One struct serving both would make every key an `Option`
+//! and hand the comment-preserving writer a second file shape to preserve.
 //!
 //! **There is no `[php] ini`** (D2). Every ini value MixEngine writes is a constant in
 //! [`crate::runtimes::extensions`] — the same `memory_limit = 512M` on every machine this product
 //! runs on — so there is no deviation to capture, and capturing it would be capturing a global
 //! default, which is the one thing this task is defined against. The key arrives with the task that
 //! gives a project an ini of its own.
+//!
+//! The D-numbers below are those of `docs/specs/2026-09-01-t77-blueprint-capture-design.md`.
 
 use std::collections::BTreeMap;
 
@@ -24,7 +26,7 @@ use crate::{BlueprintError, Error, Result};
 /// The highest schema this build reads. What it writes is [`schema_of`]'s answer (ADR 0061).
 pub const SCHEMA: u32 = 3;
 
-/// The schema a blueprint with several sites is written at — roadmap task **T204a**, D2.
+/// The schema a blueprint with several sites is written at.
 pub const SEVERAL_SITES: u32 = 3;
 
 /// The instance name that means "one of this project's own".
@@ -37,8 +39,8 @@ pub const PER_PROJECT: &str = "per-project";
 /// A blueprint, as its file says it.
 ///
 /// Read through `RawManifest`, which is where the rules a TOML parser cannot state are checked:
-/// `[scaffold]` names a command or an archive and not both (D2), and every `[[next_steps]]` entry
-/// is one a person can run unchanged in any shell (D4) — roadmap task **T205**.
+/// `[scaffold]` names a command or an archive and not both, and every `[[next_steps]]` entry is one
+/// a person can run unchanged in any shell.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
 #[serde(try_from = "RawManifest")]
 pub struct BlueprintManifest {
@@ -52,7 +54,7 @@ pub struct BlueprintManifest {
     pub runtimes: BTreeMap<RuntimeKind, VersionConstraint>,
 
     /// What is served, in the order the file lists it: `[site]` as one entry, `[[sites]]` as its
-    /// entries — roadmap task **T204a**, D1.
+    /// entries.
     pub sites: Vec<BlueprintSite>,
 
     /// The services it needs, in the order the file lists them.
@@ -65,16 +67,16 @@ pub struct BlueprintManifest {
     ///
     /// **Never written by [`crate::blueprints::capture`]**: capture does not invent a command to
     /// execute on somebody else's machine. A hand-written or gallery blueprint may carry one, and
-    /// since roadmap task **T78a** an apply runs it — in the new project's directory, and only
-    /// after somebody has agreed to the exact command, per apply, never on import.
+    /// an apply runs it — in the new project's directory, and only after somebody has agreed to the
+    /// exact command, per apply, never on import.
     pub scaffold: Option<Scaffold>,
 
-    /// A release archive to unpack into the new project's directory — roadmap task **T205**, D2.
+    /// A release archive to unpack into the new project's directory.
     /// Read from the same `[scaffold]` table as [`Self::scaffold`]; at most one of the two is set.
     pub archive: Option<Archive>,
 
-    /// What is left for a person to do after the apply — roadmap task **T205**, D4. Read with
-    /// `{project}` unexpanded, and kept that way: the steps are expanded where they are read.
+    /// What is left for a person to do after the apply. Read with `{project}` unexpanded, and kept
+    /// that way: the steps are expanded where they are read.
     pub next_steps: Vec<mixengine_proto::NextStep>,
 }
 
@@ -130,15 +132,15 @@ pub struct BlueprintSite {
     /// Every other name, by the same rule.
     pub aliases: Vec<String>,
 
-    /// `[[site.routes]]`, in the order they were captured — roadmap task **T135**.
+    /// `[[site.routes]]`, in the order they were captured.
     ///
     /// **A php-fpm route's pool is dropped on capture**, for the reason the site's own is: which
     /// pool answers is a fact about the machine a blueprint was taken from, and the receiving
     /// machine decides its own.
     pub routes: Vec<mixengine_proto::SiteRoute>,
 
-    /// The `[[services]]` entries this site links, by `name` or `name@instance` — roadmap task
-    /// **T204a**, D3. [`None`] links every one, which is what `[site]` always means.
+    /// The `[[services]]` entries this site links, by `name` or `name@instance`. [`None`] links
+    /// every one, which is what `[site]` always means.
     pub services: Option<Vec<String>>,
 }
 
@@ -164,8 +166,8 @@ pub struct BlueprintService {
     #[serde(default)]
     pub user: Option<String>,
 
-    /// The `.env` key an apply offers to write this database's URL under — roadmap task
-    /// **T205a**. Written only when the person agrees, and only on a service with an account.
+    /// The `.env` key an apply offers to write this database's URL under. Written only when the
+    /// person agrees, and only on a service with an account.
     #[serde(default)]
     pub dotenv: Option<String>,
 }
@@ -220,7 +222,7 @@ pub struct Scaffold {
     pub needs_npm_safe_dir: bool,
 }
 
-/// `[scaffold] archive` — roadmap task **T205**, D2.
+/// `[scaffold] archive`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Archive {
     /// `https://` only.
@@ -233,14 +235,15 @@ pub struct Archive {
     pub needs_empty_dir: bool,
 
     /// Whether the archive is unpacked only into an empty directory and skipped over a full one —
-    /// a starter, which a folder somebody cloned has no use for (T205, `php-mysql` and `static`).
+    /// a starter, which a folder somebody cloned has no use for (the gallery's `php-mysql` and
+    /// `static`).
     ///
     /// Where [`Archive::needs_empty_dir`] blocks the apply, this plans the step `Satisfied`: the
     /// code already there is the code the site serves, and nothing of it is overwritten.
     pub when_empty: bool,
 }
 
-/// The file as TOML says it, before the rules of D2 and D4 are checked.
+/// The file as TOML says it, before the `[scaffold]` and `[[next_steps]]` rules are checked.
 #[derive(serde::Deserialize)]
 struct RawManifest {
     schema: u32,
@@ -278,10 +281,10 @@ struct RawScaffold {
     when_empty: bool,
 }
 
-/// The longest `run` a step may carry (D4).
+/// The longest `run` a step may carry.
 const RUN_LIMIT: usize = 512;
 
-/// What a `run` may not contain, so it means one thing in `cmd.exe`, PowerShell and `sh` (D4).
+/// What a `run` may not contain, so it means one thing in `cmd.exe`, PowerShell and `sh`.
 const FORBIDDEN: &[&str] = &["&&", "||", ";", "|", ">", "<", "`", "$", "%", "\\"];
 
 impl TryFrom<RawManifest> for BlueprintManifest {
@@ -371,8 +374,8 @@ impl TryFrom<RawManifest> for BlueprintManifest {
                 vec![site]
             }
             (None, Some(sites)) => {
-                // **An older build would apply this as a project with no site** (T204a, D1), so
-                // the file has to say which builds can read it.
+                // **An older build would apply this as a project with no site**, so the file has to
+                // say which builds can read it.
                 if raw.schema < SEVERAL_SITES {
                     return Err(format!(
                         "[[sites]] needs schema = {SEVERAL_SITES}, and this file says {}",
@@ -413,8 +416,8 @@ impl TryFrom<RawManifest> for BlueprintManifest {
     }
 }
 
-/// `[[services]] dotenv`'s rules — roadmap task **T205a**: on a service with an account, a
-/// variable name, and on one service only, since an apply remembers one database.
+/// `[[services]] dotenv`'s rules: on a service with an account, a variable name, and on one service
+/// only, since an apply remembers one database.
 fn checked_dotenv(services: &[BlueprintService]) -> std::result::Result<(), String> {
     let mut offered = services
         .iter()
@@ -446,7 +449,7 @@ fn checked_dotenv(services: &[BlueprintService]) -> std::result::Result<(), Stri
     Ok(())
 }
 
-/// T204a's D1: no name answers for two entries, or twice in one.
+/// No name answers for two entries, or twice in one.
 fn checked_names(sites: &[BlueprintSite]) -> std::result::Result<(), String> {
     let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
 
@@ -464,8 +467,8 @@ fn checked_names(sites: &[BlueprintSite]) -> std::result::Result<(), String> {
     Ok(())
 }
 
-/// The `[[services]]` entry one `services` item names — roadmap task **T204a**, D3: the entry
-/// whose `name` it is, or, written `name@instance`, the one whose `instance` is that as written.
+/// The `[[services]]` entry one `services` item names: the entry whose `name` it is, or, written
+/// `name@instance`, the one whose `instance` is that as written.
 ///
 /// # Errors
 ///
@@ -504,16 +507,16 @@ fn patterns(sites: &[BlueprintSite]) -> String {
         .join(", ")
 }
 
-/// D4's rules for one step.
+/// The rules for one `[[next_steps]]` entry.
 fn checked_step(
     step: &mixengine_proto::NextStep,
     sites: &[BlueprintSite],
 ) -> std::result::Result<(), String> {
     use mixengine_proto::NextStepKind;
 
-    // **With several sites every step belongs to one** — roadmap task **T204a**, D5: a `serve`
-    // runs one site's program and an `open` opens one site's address, so a client is never left
-    // to guess. Named by `domain_pattern`, the identity an entry already has.
+    // **With several sites every step belongs to one**: a `serve` runs one site's program and an
+    // `open` opens one site's address, so a client is never left to guess. Named by
+    // `domain_pattern`, the identity an entry already has.
     match (&step.site, sites.len() > 1) {
         (Some(_), false) => {
             return Err("`site` names one of several sites, and this blueprint has one".to_owned());
@@ -557,7 +560,7 @@ fn checked_step(
     }
 }
 
-/// D4: one line a person can run unchanged in any shell this product meets.
+/// One line a person can run unchanged in any shell this product meets.
 fn checked_run(run: &str) -> std::result::Result<(), String> {
     if run.trim().is_empty() {
         return Err("`run` is empty".to_owned());
@@ -583,8 +586,8 @@ fn checked_run(run: &str) -> std::result::Result<(), String> {
     Ok(())
 }
 
-/// Whether the sites are written as `[[sites]]` — roadmap task **T204a**, D2: several of them, or
-/// one whose links `[site]` cannot say.
+/// Whether the sites are written as `[[sites]]`: several of them, or one whose links `[site]`
+/// cannot say.
 #[must_use]
 pub fn writes_sites_table(manifest: &BlueprintManifest) -> bool {
     manifest.sites.len() > 1 || manifest.sites.iter().any(|site| site.services.is_some())
@@ -593,9 +596,9 @@ pub fn writes_sites_table(manifest: &BlueprintManifest) -> bool {
 /// The schema a manifest is written at: the lowest that holds it (ADR 0061).
 ///
 /// **A key that changes what an apply does raises it; a key that only informs does not.** An
-/// archive and a `dotenv` change the apply, so either is schema 2 (T205, T205a); `[[next_steps]]`
-/// informs, so it is invisible here. Several sites change what an apply makes — an older build
-/// would make a project with none — so `[[sites]]` is schema 3 (T204a).
+/// archive and a `dotenv` change the apply, so either is schema 2; `[[next_steps]]` informs, so it
+/// is invisible here. Several sites change what an apply makes — an older build would make a
+/// project with none — so `[[sites]]` is schema 3.
 #[must_use]
 pub fn schema_of(manifest: &BlueprintManifest) -> u32 {
     if writes_sites_table(manifest) {
@@ -646,8 +649,8 @@ impl<'de> serde::Deserialize<'de> for BlueprintSite {
             .transpose()?
             .unwrap_or_default();
 
-        // **Absent and empty are different** — roadmap task **T204a**, D3: absent links every
-        // `[[services]]` entry, `[]` links none.
+        // **Absent and empty are different**: absent links every `[[services]]` entry, `[]` links
+        // none.
         let services = table
             .get("services")
             .map(|value| {
@@ -675,8 +678,8 @@ impl<'de> serde::Deserialize<'de> for BlueprintSite {
             domain_pattern: text("domain_pattern")
                 .ok_or_else(|| D::Error::custom("a [site] needs a domain_pattern"))?,
             aliases,
-            // **Invisible to the kind above**, which names no `routes` and denies no unknown field
-            // — roadmap task **T135**. Absent is none, which is every manifest the gallery ships.
+            // **Invisible to the kind above**, which names no `routes` and denies no unknown field.
+            // Absent is none, which is every manifest the gallery ships.
             routes: table
                 .get("routes")
                 .and_then(|value| value.as_array())
@@ -778,7 +781,7 @@ pub fn render(manifest: &BlueprintManifest) -> String {
     }
 
     if writes_sites_table(manifest) {
-        // **Several sites, or one naming its links** — roadmap task **T204a**, D2.
+        // **Several sites, or one naming its links.**
         let mut sites = toml_edit::ArrayOfTables::new();
         for site in &manifest.sites {
             sites.push(site_table(site));
@@ -859,7 +862,7 @@ pub fn render(manifest: &BlueprintManifest) -> String {
     }
 
     // **Last**, as an array of tables must be: TOML puts tables after the values of the table they
-    // sit in — roadmap task **T205**, D4.
+    // sit in.
     if !manifest.next_steps.is_empty() {
         let mut steps = toml_edit::ArrayOfTables::new();
 
@@ -932,8 +935,8 @@ fn site_table(site: &BlueprintSite) -> toml_edit::Table {
         table["aliases"] = value(aliases);
     }
 
-    // **The links, when the site names them** — roadmap task **T204a**, D3. A scalar, so before
-    // the routes for the reason the next comment gives.
+    // **The links, when the site names them.** A scalar, so before the routes for the reason the
+    // next comment gives.
     if let Some(services) = &site.services {
         let mut links = Array::new();
         for item in services {
@@ -944,7 +947,7 @@ fn site_table(site: &BlueprintSite) -> toml_edit::Table {
 
     // **After the scalars**, on [`render`]'s own reason for being hand-built: TOML puts
     // tables after the values of the table they sit in, and an array of tables written before
-    // `doc_root` would move every key after it into the wrong table — roadmap task **T135**.
+    // `doc_root` would move every key after it into the wrong table.
     if !site.routes.is_empty() {
         let mut routes = toml_edit::ArrayOfTables::new();
 

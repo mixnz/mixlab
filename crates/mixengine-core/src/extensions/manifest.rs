@@ -1,12 +1,11 @@
-//! The `extension.toml` manifest — roadmap task **T80**.
+//! The `extension.toml` manifest.
 //!
-//! **Its own type rather than a [`ServiceSpec`]** (the T80 design, D1), and not as a matter of
-//! taste: `ServiceSpec` has sixteen fields where `[service]` has four, it has no `id` — the
-//! manifest's author is not naming a service when they write `program` — and every path and address
-//! in the file is a *template*. `{install_dir}/mailpit` is not a `PathBuf` any check would accept
-//! and `{listen}:{ui_port}` is not a `SocketAddr` at all, so a `Deserialize` that succeeded on this
-//! file would be one that had stopped checking. What T77 found for `mixengine.toml`, arriving a
-//! second time.
+//! **Its own type rather than a [`ServiceSpec`]**, and not as a matter of taste: `ServiceSpec` has
+//! sixteen fields where `[service]` has four, it has no `id` — the manifest's author is not naming
+//! a service when they write `program` — and every path and address in the file is a *template*.
+//! `{install_dir}/mailpit` is not a `PathBuf` any check would accept and `{listen}:{ui_port}` is
+//! not a `SocketAddr` at all, so a `Deserialize` that succeeded on this file would be one that had
+//! stopped checking. What the first planner found for `mixengine.toml`, arriving a second time.
 //!
 //! What *is* shared is the vocabulary — [`EnvValue`], [`StopBehaviour`], [`RestartPolicy`],
 //! [`Millis`], [`VersionConstraint`] — which is what [ADR 0006] asked for, and which is why the rule
@@ -37,12 +36,11 @@ pub const FILE_NAME: &str = "extension.toml";
 
 /// The placeholders that are not ports.
 ///
-/// The first three are the installer's (T80). The next four arrive with the one document that has a
-/// database and a secret behind it — a `[web-app.config]`, roadmap task **T82**, the design's D5 and
-/// D7 — and the last is roadmap task **T82a**'s, the one placeholder that renders the *name* of an
-/// environment variable rather than a value. They are reserved here and not only in the renderer,
-/// because a `[ports]` key becomes a placeholder: a port called `db_host` would be a manifest whose
-/// own port shadowed the address it was pointed at.
+/// The first three are the installer's. The next four arrive with the one document that has a
+/// database and a secret behind it — a `[web-app.config]` — and the last is the one placeholder
+/// that renders the *name* of an environment variable rather than a value. They are reserved here
+/// and not only in the renderer, because a `[ports]` key becomes a placeholder: a port called
+/// `db_host` would be a manifest whose own port shadowed the address it was pointed at.
 const FIXED_PLACEHOLDERS: [&str; 8] = [
     "install_dir",
     "data_dir",
@@ -71,7 +69,7 @@ pub struct ExtensionManifest {
     ///
     /// **Its own table rather than a field inside `[service]`**, because a port is an installer's
     /// concern: by the time a spec exists it has already been told which number to use. Nothing
-    /// here reserves anything — allocation is T81's.
+    /// here reserves anything — allocation is the installer's.
     pub ports: BTreeMap<String, u16>,
 
     /// `[permissions]`.
@@ -80,18 +78,18 @@ pub struct ExtensionManifest {
     /// Whichever of the three bodies `kind` names.
     pub body: Body,
 
-    /// `[recipe]`, which may accompany any kind (the T80 design, D7).
+    /// `[recipe]`, which may accompany any kind.
     pub recipe: Option<RecipeTable>,
 
-    /// `[ui]`, the page a person opens — roadmap task **T200a**. A `service`'s only.
+    /// `[ui]`, the page a person opens. A `service`'s only.
     pub ui: Option<UiTable>,
 }
 
-/// `[ui]` — the port a person opens in a browser — roadmap task **T200a**, its design's D1.
+/// `[ui]` — the port a person opens in a browser.
 ///
 /// **A port's name and a path, never an address.** The address renders as
 /// `http://127.0.0.1:<allocated port><path>`: `127.0.0.1` is where the person's browser is, and a
-/// host written in a manifest is refused everywhere else (T80). Only a `service` may carry one; a
+/// host written in a manifest is refused everywhere else. Only a `service` may carry one; a
 /// web-app's page is its site.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
@@ -138,7 +136,7 @@ pub struct Header {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Artifact {
-    /// Where to fetch it. **Verified in T81**, not here — T80 downloads nothing.
+    /// Where to fetch it. **Verified at install**, not here — reading a manifest downloads nothing.
     pub url: String,
 
     /// What it must hash to.
@@ -146,11 +144,11 @@ pub struct Artifact {
 
     /// How large it is, in bytes.
     ///
-    /// **Optional here where the package index makes it mandatory** — roadmap task **T81**. The
-    /// downloader uses it to stop a body that never ends before a disk is filled, which the
-    /// checksum cannot do because it is only knowable once everything has arrived. A published
-    /// extension should carry one; an author pointing `--path` at their own directory should not
-    /// have to count bytes to try something, so an absent size falls back to a fixed ceiling
+    /// **Optional here where the package index makes it mandatory.** The downloader uses it to stop
+    /// a body that never ends before a disk is filled, which the checksum cannot do because it is
+    /// only knowable once everything has arrived. A published extension should carry one; an author
+    /// pointing `--path` at their own directory should not have to count bytes to try something, so
+    /// an absent size falls back to a fixed ceiling
     /// (`extensions::install::UNDECLARED_SIZE_CEILING`) rather than to no bound at all.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<u64>,
@@ -173,12 +171,11 @@ pub enum Body {
 
 /// `[service]` — a [`ServiceSpec`](mixengine_proto::ServiceSpec) with the templates still in it.
 ///
-/// **What an extension may declare is what its program *is*, never policy about the machine** (the
-/// T80 design, D9): `limits` are the machine owner's (T68), an `idle` policy on something nothing
-/// can wake is a service that stops for good (T69, T70), `logs` are per-home (T16), and
-/// `depends_on` is an edge into a service graph the extension cannot see and a name it would have
-/// to guess. Each of those takes the builder's own default — the same answer a compiled-in recipe
-/// gets when it says nothing.
+/// **What an extension may declare is what its program *is*, never policy about the machine**:
+/// `limits` are the machine owner's, an `idle` policy on something nothing can wake is a service
+/// that stops for good, `logs` are per-home, and `depends_on` is an edge into a service graph the
+/// extension cannot see and a name it would have to guess. Each of those takes the builder's own
+/// default — the same answer a compiled-in recipe gets when it says nothing.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ServiceTemplate {
@@ -323,13 +320,13 @@ pub struct WebApp {
 
     /// The one file MixEngine generates for this application, and the text it is generated from.
     ///
-    /// **The text lives here rather than inside the artifact** — roadmap task **T82**, the design's
-    /// D1, which is where T80's `template = "config.inc.php.tmpl"` was overturned. That field said
-    /// *a file inside the extension*, and for a registry install the extension's files **are**
-    /// upstream's archive, verified against a hash upstream published: there is no step between the
-    /// download and the rename where a file of ours could be added without making that hash a hash
-    /// of something else. Measured on the real one — phpMyAdmin's `libraries/vendor_config.php`
-    /// fixes `'configFile' => ROOT_PATH . 'config.inc.php'`, with no environment override — so the
+    /// **The text lives here rather than inside the artifact**, where the format's first version
+    /// had it as `template = "config.inc.php.tmpl"`. That field said *a file inside the extension*,
+    /// and for a registry install the extension's files **are** upstream's archive, verified
+    /// against a hash upstream published: there is no step between the download and the rename
+    /// where a file of ours could be added without making that hash a hash of something else.
+    /// Measured on the real one — phpMyAdmin's `libraries/vendor_config.php` fixes
+    /// `'configFile' => ROOT_PATH . 'config.inc.php'`, with no environment override — so the
     /// destination is inside the served root and the source has nowhere else to come from.
     ///
     /// **So an upgrade does not clobber what a person changed**: the generated file is ours and the
@@ -339,7 +336,7 @@ pub struct WebApp {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config: Option<WebAppConfig>,
 
-    /// The database this application administers, where it needs one — the T82 design's D4.
+    /// The database this application administers, where it needs one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub database: Option<WebAppDatabase>,
 
@@ -347,7 +344,7 @@ pub struct WebApp {
     pub runtime: WebAppRuntime,
 }
 
-/// `[web-app.config]` — roadmap task **T82**, the design's D1.
+/// `[web-app.config]`.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct WebAppConfig {
@@ -361,27 +358,27 @@ pub struct WebAppConfig {
     pub text: String,
 }
 
-/// `[web-app.database]` — roadmap task **T82**, the design's D4.
+/// `[web-app.database]`.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct WebAppDatabase {
     /// The engines this application can administer, **in order of preference**.
     ///
     /// The first one with a declared service on this machine is the one it is pointed at, and a
-    /// machine with none of them is told so before anything is fetched — T81b's shape for the PHP,
-    /// arriving a second time for the database.
+    /// machine with none of them is told so before anything is fetched — an extension site's shape
+    /// for the PHP, arriving a second time for the database.
     pub engines: Vec<String>,
 
     /// Whether this application is handed the server's **superuser password**, in its own php-fpm
-    /// pool's environment — roadmap task **T82a**, the design's D2.
+    /// pool's environment.
     ///
     /// **A boolean, because the variable's name is not an author's to write.** It arrives in
     /// [`CREDENTIAL_ENV`](super::render::CREDENTIAL_ENV), read out of the OS keyring by the
     /// supervisor at the moment the pool is spawned, and the manifest reaches it through
     /// `{db_password_env}` rather than by spelling it — so there is no name to collide with `PATH`
-    /// or with `PHP_INI_SCAN_DIR`, and therefore no check anybody could forget. That is T80's D2
-    /// (an extension cannot write an address, so nothing has to refuse one) applied to a second
-    /// field.
+    /// or with `PHP_INI_SCAN_DIR`, and therefore no check anybody could forget. That is the rule an
+    /// address already follows (an extension cannot write one, so nothing has to refuse one)
+    /// applied to a second field.
     ///
     /// **Off by default**, because a missing value is silence and silence is not consent. Every
     /// surface that shows a plan names the account this would sign in as.
@@ -407,7 +404,7 @@ pub struct WebAppRuntime {
 
 /// `[recipe]` — what an extension adds to what MixEngine generates.
 ///
-/// **Two forms, and both have a consumer named in the roadmap**: `php_ini` is T82's
+/// **Two forms, and both have a consumer named in the roadmap**: `php_ini` is Mailpit's
 /// `sendmail_path`, and `front_end` is the "extra Caddy directives" the feature document names. No
 /// third form until something reads one.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
@@ -437,7 +434,7 @@ pub struct PhpIniEntry {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct FrontEndFragment {
-    /// Which front end it is written for — roadmap task **T81c**, the design's D1.
+    /// Which front end it is written for.
     ///
     /// **Required, and not defaulted to either one.** The two configuration languages are not
     /// interchangeable, so a fragment with no server would be accepted by the parser and be a
@@ -504,14 +501,14 @@ struct Raw {
     web_app: Option<WebApp>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     recipe: Option<RecipeTable>,
-    // **Through `Raw` as well as the checked type** (T200a, D1): an installed row and a published
+    // **Through `Raw` as well as the checked type**: an installed row and a published
     // entry are both this shape, and a `[ui]` dropped here would vanish from both.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     ui: Option<UiTable>,
 }
 
 impl From<&ExtensionManifest> for Raw {
-    /// **The file's shape, back out of the checked type** — roadmap task **T81**, its design's D2.
+    /// **The file's shape, back out of the checked type.**
     ///
     /// A registry entry is a manifest written as JSON, and the document is worth having only if it
     /// is the shape somebody could have written: `[service]` under `service`, `[web-app]` under
@@ -568,7 +565,7 @@ pub fn read(path: &Path, text: &str) -> Result<ExtensionManifest> {
     checked(raw)
 }
 
-/// Read one entry of the published registry — roadmap task **T81**, its design's D2.
+/// Read one entry of the published registry.
 ///
 /// The same manifest in the same shape, arriving as JSON instead of TOML, and checked by the same
 /// code [`read`] checks a file with rather than by a second set of rules: what a `--path` install
@@ -594,8 +591,8 @@ pub fn read_value(entry: serde_json::Value) -> Result<ExtensionManifest> {
 
 /// Write a manifest as the registry publishes it, in the shape its file has.
 ///
-/// What the `extensions.manifest_json` column holds (D5) and what T81a will publish, out of one
-/// rendering rather than two.
+/// What the `extensions.manifest_json` column holds and what the packaging repository publishes,
+/// out of one rendering rather than two.
 #[must_use]
 pub fn to_value(manifest: &ExtensionManifest) -> serde_json::Value {
     serde_json::to_value(Raw::from(manifest))
@@ -640,7 +637,7 @@ fn checked(raw: Raw) -> Result<ExtensionManifest> {
     })
 }
 
-/// `[ui]`'s rules — roadmap task **T200a**, its design's D1.
+/// `[ui]`'s rules.
 ///
 /// # Errors
 ///
@@ -755,7 +752,7 @@ fn check_service(id: &ExtensionId, body: &Body) -> Result<()> {
     Ok(())
 }
 
-/// `web-app` may not ask for the LAN (the T80 design, D8).
+/// `web-app` may not ask for the LAN.
 fn check_reach(id: &ExtensionId, kind: ExtensionKind, network: NetworkReach) -> Result<()> {
     if kind == ExtensionKind::WebApp && network == NetworkReach::Lan {
         return Err(Error::Extension(ExtensionError::ExtensionField {
@@ -771,11 +768,11 @@ fn check_reach(id: &ExtensionId, kind: ExtensionKind, network: NetworkReach) -> 
     Ok(())
 }
 
-/// `[web-app].domain` is **one label** — roadmap task **T81b**, the design's D4.
+/// `[web-app].domain` is **one label**.
 ///
-/// T80 said so and did not check it; the site that serves the label composes
-/// `<label>.mixengine.<tld>`, so a dotted value would quietly become a deeper name. Refused at parse,
-/// where every other refusal about this format lives.
+/// The site that serves the label composes `<label>.mixengine.<tld>`, so a dotted value would
+/// quietly become a deeper name. Refused at parse, where every other refusal about this format
+/// lives.
 fn check_label(id: &ExtensionId, body: &Body) -> Result<()> {
     let Body::WebApp(app) = body else {
         return Ok(());
@@ -809,8 +806,7 @@ fn check_label(id: &ExtensionId, body: &Body) -> Result<()> {
     }
 }
 
-/// `[web-app.config].path` stays under the root, and `[web-app.database].engines` names something —
-/// roadmap task **T82**, the design's D1 and D4.
+/// `[web-app.config].path` stays under the root, and `[web-app.database].engines` names something.
 ///
 /// **Joined rather than rendered**, which is why this check is here and not in
 /// [`render::rooted`](super::render::rooted): the path carries no placeholders and is appended to a
@@ -865,9 +861,9 @@ fn check_config(id: &ExtensionId, body: &Body) -> Result<()> {
         );
     }
 
-    // **A manifest that asks for a database superuser's password has to read it** — roadmap task
-    // **T82a**, the design's D2. The only justification for putting that credential into a process
-    // is using it, so a `signs_in` nothing reads is a person agreeing to something for nothing.
+    // **A manifest that asks for a database superuser's password has to read it.** The only
+    // justification for putting that credential into a process is using it, so a `signs_in` nothing
+    // reads is a person agreeing to something for nothing.
     //
     // The one rule in this format that spans two tables, and it is here rather than in the renderer
     // because a renderer only ever sees the half it was handed.

@@ -1,4 +1,4 @@
-//! php-fpm: the FastCGI pool behind every PHP site — roadmap task **T32**.
+//! php-fpm: the FastCGI pool behind every PHP site.
 //!
 //! **The first recipe whose binary does not come from a package.** A PHP is installed with
 //! `runtime.install` into `runtime_installs`, and the process that serves its sites lives inside
@@ -33,7 +33,7 @@
 //! # What this recipe deliberately does not do
 //!
 //! **No `pm = dynamic` and no `pm = ondemand`.** Windows can express neither, and an override that
-//! works on two systems out of three is exactly the divide this task exists to avoid.
+//! works on two systems out of three is exactly the divide this recipe is written to avoid.
 //!
 //! **No `request_terminate_timeout` on Windows.** A hung script holds a worker there for as long as
 //! it hangs, and with five of them that is a dead PHP. The fix needs no process manager — the master
@@ -44,7 +44,7 @@
 //! **No `php.ini` and no `conf.d` of its own.** What a *pool* renders and what a *runtime's* ini set
 //! contains are different files with different owners, and this recipe owns the first. What it does
 //! do is name the second: `PHP_INI_SCAN_DIR` is set on both arms, so the pool and the `php` on
-//! somebody's terminal load one set — see [`crate::runtimes::extensions`], roadmap task T28.
+//! somebody's terminal load one set — see [`crate::runtimes::extensions`].
 //!
 //! **No site, and no `pool.d/` either.** Phase 4 renders the first per-site file and brings both the
 //! directory and the `include` that finds it. Naming them here ahead of time was tried and reverted:
@@ -53,21 +53,21 @@
 //! *installed* path while validation runs over the *staged* one, before anything is installed. The
 //! file says so where the line used to be.
 //!
-//! # A pool of an extension's own — roadmap task **T82a**
+//! # A pool of an extension's own
 //!
-//! Since that task a `web-app` extension is served on `php-fpm@<extension-id>`, a second pool on the
-//! same installed PHP as the shared `php-fpm@<version>`. Three things in this file follow from it:
-//! the socket is named after the *instance* rather than the version, so two pools of one PHP do not
-//! collide; a pool may carry an `EnvValue::Keyring` its site signs in with, and an edge to the
-//! database that credential opens; and the pool file renders `clear_env = no` for that pool alone,
-//! because php-fpm hands a worker nothing otherwise and the only alternative would write a password
-//! into a generated file. `with_credential` in this file is where the second and third meet.
+//! A `web-app` extension is served on `php-fpm@<extension-id>`, a second pool on the same installed
+//! PHP as the shared `php-fpm@<version>`. Three things in this file follow from it: the socket is
+//! named after the *instance* rather than the version, so two pools of one PHP do not collide; a
+//! pool may carry an `EnvValue::Keyring` its site signs in with, and an edge to the database that
+//! credential opens; and the pool file renders `clear_env = no` for that pool alone, because
+//! php-fpm hands a worker nothing otherwise and the only alternative would write a password into a
+//! generated file. `with_credential` in this file is where the second and third meet.
 //!
-//! **A `pm.status_path` since T72a, and still no slowlog.** The status page is what tells the daemon
-//! whether anybody is using a pool it cannot count connections to — see `STATUS_PATH` and
-//! [`Recipe::idle_probe`]. It is rendered on both systems and read on one: `php-cgi.exe` ignores the
-//! directive because it never reads this file at all, and Windows counts a real port instead. The
-//! slowlog stays absent, because nothing reads it.
+//! **A `pm.status_path`, and still no slowlog.** The status page is what tells the daemon whether
+//! anybody is using a pool it cannot count connections to — see `STATUS_PATH` and
+//! [`Recipe::idle_probe`]. It is rendered on both systems and read on one: `php-cgi.exe` ignores
+//! the directive because it never reads this file at all, and Windows counts a real port instead.
+//! The slowlog stays absent, because nothing reads it.
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::{Path, PathBuf};
@@ -96,7 +96,7 @@ const CGI: &str = "php-cgi";
 /// The rendered pool configuration, under `etc/<service-id>/`.
 const POOL_FILE: &str = "php-fpm.conf";
 
-/// What php-fpm's own status page is asked for, and what the pool file offers it at — **T72a**.
+/// What php-fpm's own status page is asked for, and what the pool file offers it at.
 ///
 /// **It must not end in `.php`, and that is the whole of what keeps it private.** The status page
 /// shares the socket a site's traffic arrives on, and what separates them is that both front ends
@@ -244,11 +244,11 @@ impl Recipe for PhpFpm {
     /// names are one value computed once.
     /// The pool is busy when something is connected to it — and on a socket, when php-fpm says so.
     ///
-    /// **Two mechanisms for one question, because the two systems run two different programs** —
-    /// roadmap task **T72a**. Where a pool is php-fpm on a socket there is no port to count, and no
-    /// cross-platform way to count a socket's connections, so the pool is asked about itself over
-    /// FastCGI. Where it is `php-cgi.exe -b` on a port, the port is counted as it has been since
-    /// T69: that program is not php-fpm and publishes no status page to ask.
+    /// **Two mechanisms for one question, because the two systems run two different programs.**
+    /// Where a pool is php-fpm on a socket there is no port to count, and no cross-platform way to
+    /// count a socket's connections, so the pool is asked about itself over FastCGI. Where it is
+    /// `php-cgi.exe -b` on a port, the port is counted as it always has been: that program is not
+    /// php-fpm and publishes no status page to ask.
     ///
     /// That is `LimitSupport`'s shape rather than a split — ask what this system can answer, instead
     /// of insisting all three answer alike.
@@ -258,10 +258,9 @@ impl Recipe for PhpFpm {
     /// one expression computed once. A probe derived from a column could count a port the pool is
     /// not listening on.
     ///
-    /// **Until T72a this answered [`None`] on a socket**, and that one line is what the cold path
-    /// cost: no probe means `generate` attaches no `IdlePolicy`, so the pool was never idle-stopped,
-    /// so no request to it was ever cold. The activator that would have woken it has existed since
-    /// T70.
+    /// **This once answered [`None`] on a socket**, and that one line is what the cold path cost:
+    /// no probe means `generate` attaches no `IdlePolicy`, so the pool was never idle-stopped, so
+    /// no request to it was ever cold. The activator that would have woken it already existed.
     fn idle_probe(&self, context: &Context) -> Option<mixengine_proto::IdleProbe> {
         match listen(context).ok()? {
             Upstream::Tcp(address) => Some(mixengine_proto::IdleProbe::Connections {
@@ -282,40 +281,39 @@ impl Recipe for PhpFpm {
         }
     }
 
-    /// Where this pool listens, for the site configuration that has to point at it — D5.
+    /// Where this pool listens, for the site configuration that has to point at it.
     fn upstream(&self, context: &Context) -> Result<Option<Upstream>> {
         listen(context).map(Some)
     }
 
-    /// Where the activator listens for this pool — roadmap task **T70**.
+    /// Where the activator listens for this pool.
     ///
-    /// **The two shapes are not symmetrical, and that asymmetry is the design's D3.** A socket pool's
+    /// **The two shapes are not symmetrical, and that asymmetry is deliberate.** A socket pool's
     /// activator is derived from the pool's own path and costs nothing; a TCP pool's cannot be
     /// derived at all, because `port + 1` hands the first pool's activator the second pool's own
     /// port — so it is allocated onto the row, and a row that has none has no activator rather than
     /// an invented one.
-    /// **Half an hour, and this is the first recipe in the build to name a number at all** —
-    /// roadmap task **T70**, design D9.
+    /// **Half an hour, and this is the first recipe in the build to name a number at all.**
     ///
-    /// T69 shipped idle detection switched off because stopping a pool is only safe once something
+    /// Idle detection shipped switched off because stopping a pool is only safe once something
     /// starts it again on the next request. That something is now here: the site file names the
     /// pool's activator after the pool, and the request that finds the pool down is what wakes it.
     ///
-    /// **A pool and nothing else.** The databases and the caches keep answering `None` until
-    /// **T70a**, which is what can start *them* again; turning them on here would idle-stop a
-    /// database that nothing could bring back. The two front ends keep answering it for ever.
+    /// **A pool first.** The databases and the caches answered `None` until a connection could
+    /// start *them* again; a number there would have idle-stopped a database that nothing could
+    /// bring back. The two front ends keep answering it for ever.
     ///
     /// The row still outranks this in both directions — `0` is a person saying never, and a number
     /// is a person saying how long — so a home whose owner switched idle-stopping off does not have
     /// it switched back on by this default arriving.
     ///
-    /// **Only while the home saves resources** — roadmap task **T167b**, ADR 0041. Until then this
-    /// number was the default for every home; now a service nobody set is never idle-stopped.
+    /// **Only while the home saves resources** (ADR 0041). Before that this number was the default
+    /// for every home; now a service nobody set is never idle-stopped.
     fn idle_when_saving(&self) -> Option<Millis> {
         Some(Millis::from_secs(30 * 60))
     }
 
-    /// **True, and this is the service the watchdog was built for** — roadmap task **T71a**.
+    /// **True, and this is the service the watchdog was built for.**
     ///
     /// A pool that has grown past its ceiling is a pool leaking through its workers, and the fix a
     /// person would apply by hand is this exact restart. What it costs is the requests in flight —
@@ -364,9 +362,10 @@ impl PhpFpm {
                     context.config(POOL_FILE).to_string_lossy().into_owned(),
                 ])
                 .cwd(context.etc())
-                // The runtime's own ini set, which is T28's and not this recipe's. Set identically on
-                // both systems, which is why it is written twice rather than in one arm: `php-cgi.exe`
-                // reads it exactly as php-fpm does, and a pool that did not would disagree with `php -m`.
+                // The runtime's own ini set, owned by `runtimes::extensions` and not by this
+                // recipe. Set identically on both systems, which is why it is written twice rather
+                // than in one arm: `php-cgi.exe` reads it exactly as php-fpm does, and a pool that
+                // did not would disagree with `php -m`.
                 .env(
                     crate::runtimes::extensions::SCAN_DIR_ENV,
                     crate::runtimes::extensions::conf_d(
@@ -416,13 +415,14 @@ impl PhpFpm {
         Ok(with_credential(
             ServiceSpec::builder(context.service().clone(), &program)
                 .args(["-b".to_owned(), addr.to_string()])
-                // What a failed start is diagnosed against (T38). Only this arm declares one: the Unix
+                // What a failed start is diagnosed against. Only this arm declares one: the Unix
                 // pool listens on a socket, which nothing else on the machine can be holding.
                 .ports([addr.port()])
                 .cwd(context.etc())
-                // The runtime's own ini set, which is T28's and not this recipe's. Set identically on
-                // both systems, which is why it is written twice rather than in one arm: `php-cgi.exe`
-                // reads it exactly as php-fpm does, and a pool that did not would disagree with `php -m`.
+                // The runtime's own ini set, owned by `runtimes::extensions` and not by this
+                // recipe. Set identically on both systems, which is why it is written twice rather
+                // than in one arm: `php-cgi.exe` reads it exactly as php-fpm does, and a pool that
+                // did not would disagree with `php -m`.
                 .env(
                     crate::runtimes::extensions::SCAN_DIR_ENV,
                     crate::runtimes::extensions::conf_d(
@@ -458,7 +458,7 @@ impl PhpFpm {
                 // **No reload.** There is no signal to send here, so a changed override leaves the
                 // running pool on its old configuration until somebody restarts it — and the daemon does
                 // not restart a thing nobody asked it to restart. The supervisor says so once, in
-                // `daemon.log`, and `mix doctor` (T47) owes the sentence.
+                // `daemon.log`, and `mix doctor` owes the sentence.
                 //
                 // `StopBehaviour::Signal` degrades to a kill here (ADR 0008), which is safe for this
                 // service and for a measured reason: terminating the master was observed to take every
@@ -471,7 +471,7 @@ impl PhpFpm {
     }
 }
 
-/// The credential this pool was given, put on the builder — roadmap task **T82a**, its design's D4.
+/// The credential this pool was given, put on the builder.
 ///
 /// **Both arms and one function**, which is the rule this recipe already keeps for
 /// `PHP_INI_SCAN_DIR`: a pool that carried a credential on one system and not on the other would be
@@ -482,12 +482,12 @@ impl PhpFpm {
 /// builds the child's `Command` — so the password exists nowhere that is persisted, serialised or
 /// logged, which is what [ADR 0006] exists for.
 ///
-/// **The edge is the daemon's rather than the manifest's** — the design's D7. T80's D9 refuses
-/// `depends_on` in an `extension.toml` because it is an edge into a graph the extension cannot see;
-/// this one is derived from a link this home resolved, and it is here because a pool started before
-/// its database has ever run finds no keyring entry at all — the entry is written by that database's
-/// first run. Both halves come out of the same [`Credential`], so a database that goes away takes
-/// the edge with it, which is what keeps `ServiceGraph::new` able to build.
+/// **The edge is the daemon's rather than the manifest's.** An `extension.toml` may not carry
+/// `depends_on`, because it is an edge into a graph the extension cannot see; this one is derived
+/// from a link this home resolved, and it is here because a pool started before its database has
+/// ever run finds no keyring entry at all — the entry is written by that database's first run. Both
+/// halves come out of the same [`Credential`], so a database that goes away takes the edge with it,
+/// which is what keeps `ServiceGraph::new` able to build.
 ///
 /// [`Credential`]: crate::extensions::pools::Credential
 /// [ADR 0006]: https://github.com/mixnz/mixlab/blob/master/docs/decisions/0006-servicespec-in-proto-and-secret-free.md
@@ -532,11 +532,11 @@ const fn listens_on_tcp() -> bool {
 /// whole reason — see [`within_socket_limit`](super::within_socket_limit) — and `run/` is near the
 /// top of the home while a data directory is two levels down inside one whose name the user chose.
 ///
-/// **Named after the instance and not after the version** — roadmap task **T82a**. For every pool
+/// **Named after the instance and not after the version.** For every pool
 /// [`pools::ensure`](crate::services::pools::ensure) makes the two are one string, so no existing
 /// home's socket moves; what makes them differ is the pool a `web-app` extension owns, which runs
-/// out of the same PHP as the shared one and must not answer on the same socket. The template spells
-/// the same expression through `service.instance_or_name`, and
+/// out of the same PHP as the shared one and must not answer on the same socket. The template
+/// spells the same expression through `service.instance_or_name`, and
 /// `the_file_and_the_readiness_check_name_one_socket` is what holds the two together.
 ///
 /// # Errors

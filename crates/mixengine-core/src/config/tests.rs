@@ -1,7 +1,7 @@
 use super::*;
 
-/// T191 D2: the template tells a person on Windows to write `/`; what the daemon uses is spelled
-/// natively, so nothing built under it mixes the two.
+/// The template tells a person on Windows to write `/`; what the daemon uses is spelled natively,
+/// so nothing built under it mixes the two.
 #[test]
 fn a_relocation_written_with_slashes_is_read_natively() {
     let written = if cfg!(windows) {
@@ -79,8 +79,7 @@ fn set_paths_writes_what_load_reads_back() {
     assert_eq!(read.as_os_str(), expected);
 }
 
-/// **On unless the user says otherwise**, and the shipped template says so in words —
-/// roadmap task **T124**.
+/// **On unless the user says otherwise**, and the shipped template says so in words.
 #[test]
 fn the_welcome_page_is_on_by_default() {
     let config: Config = toml::from_str("").expect("an empty configuration");
@@ -100,7 +99,7 @@ welcome_page = false
     );
 }
 
-/// The default, and the one value this key refuses — roadmap task **T71a**.
+/// The default, and the one value this key refuses.
 ///
 /// A test at all because the key exists for the daemon's own suite to move: one that could not
 /// be set would be a constant with a longer name.

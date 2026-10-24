@@ -1,4 +1,4 @@
-//! Handing one database service to a desktop client — roadmap task **T83**.
+//! Handing one database service to a desktop client.
 //!
 //! Two pure things and one read. [`address`] joins a `services` row to its recipe the way
 //! [`crate::extensions::database::endpoint`] does, and disagrees with it on purpose about Redis:
@@ -6,8 +6,8 @@
 //! way the client reads it, and [`encode`] is the ten lines that keep a crate out of the tree for
 //! one function.
 //!
-//! **No password anywhere in this module.** The URL names the variable the password travels in
-//! (the design's D2) and the daemon fills that variable; nothing here sees the value.
+//! **No password anywhere in this module.** The URL names the variable the password travels in and
+//! the daemon fills that variable; nothing here sees the value.
 
 use std::fmt::Write as _;
 use std::net::IpAddr;
@@ -20,7 +20,7 @@ use crate::{Error, Result, Store};
 
 /// The environment variable a credential is handed over in.
 ///
-/// T82a's name, re-exported rather than restated: one constant, two consumers.
+/// The extension pools' name, re-exported rather than restated: one constant, two consumers.
 pub use crate::extensions::pools::CREDENTIAL_ENV;
 
 /// Where one account's password lives inside the keyring's
@@ -31,7 +31,7 @@ pub use crate::extensions::pools::CREDENTIAL_ENV;
 /// passwords; and the home in front of both, because the credential store is one per **user** and
 /// a user may have several homes.
 ///
-/// **The home is roadmap task T126, and it was found by an outage.** The address used to be
+/// **The home is ADR 0032, and it was found by an outage.** The address used to be
 /// `<service-id>/<user>` and nothing else, so every `MIXENGINE_HOME` on a machine shared one entry:
 /// a sandbox home bootstrapping its own `mariadb@main` overwrote the root password of a home that
 /// had been running for a day, and that home's server — which keeps its own copy in its data
@@ -40,19 +40,18 @@ pub use crate::extensions::pools::CREDENTIAL_ENV;
 /// [ADR 0032](https://github.com/mixnz/mixlab/blob/master/docs/decisions/0032-a-keyring-address-names-the-home-it-belongs-to.md)
 /// is why it is an id the home carries rather than a hash of where it sits.
 ///
-/// **One composition, and roadmap task T84 is why it is here rather than in three places.** Until
-/// this task the string was spelled by
+/// **One composition, here rather than in three places.** The string used to be spelled by
 /// [`Context::secret_address`](crate::generate::context::Context::secret_address) for the recipes,
 /// again by `database.open` for the handoff, and read back by the daemon's credential reader. The
 /// convention is published to another application — MixLab reads these entries — but it reads the
 /// [`SecretAddress`](mixengine_proto::SecretAddress) the daemon *hands it* rather than composing
-/// one, which is what let T126 change the shape at all.
+/// one, which is what let ADR 0032 change the shape at all.
 #[must_use]
 pub fn secret_key(home: &HomeId, service: &ServiceId, user: &str) -> String {
     format!("{home}/{}/{user}", service.as_str())
 }
 
-/// The address this one had before it named a home — roadmap task **T126**.
+/// The address this one had before it named a home.
 ///
 /// `<home-id>/<rest>` with the home taken off, or [`None`] for a string that has no home in it and
 /// is therefore already the old shape. Derived rather than passed in, so nothing has to carry two
@@ -87,8 +86,7 @@ pub struct Address {
     /// The recipe's administrator — `root`, `postgres` — or [`None`] for a server with no accounts.
     pub administrator: Option<String>,
 
-    /// Whether the recipe knows how to make a database on it — roadmap task **T155**. `false` for
-    /// Redis and MongoDB.
+    /// Whether the recipe knows how to make a database on it. `false` for Redis and MongoDB.
     pub creates_databases: bool,
 }
 
@@ -112,12 +110,11 @@ pub struct Connection<'a> {
 
     /// The key half of the keyring address the password sits at, where there is one.
     ///
-    /// **The key and never the namespace** — roadmap task **T84**, the design's D5. MixLab registers
-    /// `mixlab://` with the operating system, so a URL is something a web page can make it receive; a
-    /// URL that could name the *credential store's namespace* would be a way to read any secret on
-    /// the machine and post it to a stranger's server as a password. A key it names reaches only
-    /// MixEngine's own entries, which is the same set it could reach by naming a `label` and a
-    /// `user`, so it adds no reach at all.
+    /// **The key and never the namespace.** MixLab registers `mixlab://` with the operating system,
+    /// so a URL is something a web page can make it receive; a URL that could name the *credential
+    /// store's namespace* would be a way to read any secret on the machine and post it to a
+    /// stranger's server as a password. A key it names reaches only MixEngine's own entries, which
+    /// is the same set it could reach by naming a `label` and a `user`, so it adds no reach at all.
     ///
     /// It travels rather than being derived from `label` and `user` because the composition is then
     /// MixEngine's alone to change: a rule spelled out on both sides is a rule that drifts.
@@ -127,7 +124,7 @@ pub struct Connection<'a> {
 /// The address of one service, or [`None`] for a service no database client opens.
 ///
 /// A row with no port is answered the same way: every database recipe binds a TCP port on all three
-/// systems (T34c), so a row without one is a service nothing can dial.
+/// systems, so a row without one is a service nothing can dial.
 ///
 /// **A service with no package is one of those, not a missing service.** `services` carries
 /// `CHECK (((package_id IS NOT NULL) + (runtime_install_id IS NOT NULL) + (extension_id IS NOT
@@ -209,9 +206,9 @@ pub fn url(connection: &Connection<'_>) -> String {
         let _ = write!(rendered, "&password_env={CREDENTIAL_ENV}");
     }
 
-    // **Roadmap task T84, the design's D5.** The key half of the address, so a client saving this
-    // connection can point at MixEngine's entry rather than keeping a second copy of what is in it.
-    // The namespace is a convention both applications hold and is deliberately not here.
+    // **The key half of the address**, so a client saving this connection can point at MixEngine's
+    // entry rather than keeping a second copy of what is in it. The namespace is a convention both
+    // applications hold and is deliberately not here.
     if let Some(key) = connection.secret_key {
         let _ = write!(rendered, "&secret_key={}", encode(key));
     }
@@ -250,9 +247,9 @@ mod tests {
         }
     }
 
-    /// **One composition, published to another application** — roadmap task **T84**, the design's
-    /// D6. The address MixLab is told to read and the address MixEngine writes are the same string
-    /// because they are the same function, not because two `format!`s agree by inspection.
+    /// **One composition, published to another application.** The address MixLab is told to read
+    /// and the address MixEngine writes are the same string because they are the same function, not
+    /// because two `format!`s agree by inspection.
     #[test]
     fn the_key_a_recipe_writes_and_the_key_a_handoff_names_are_one_function() {
         let service = ServiceId::parse("mariadb@main").expect("an id");
@@ -322,7 +319,7 @@ mod tests {
         );
     }
 
-    /// **The key travels; the namespace never does** — roadmap task **T84**, the design's D5.
+    /// **The key travels; the namespace never does.**
     ///
     /// MixLab registers `mixlab://` with the operating system, so a URL is something a web page can
     /// make it receive. One that could name the credential store's namespace would be a way to
@@ -373,8 +370,7 @@ mod tests {
         );
         assert!(!rendered.contains("password"), "{rendered}");
 
-        // And no key either — roadmap task **T84**. There is no entry, so there is nothing to
-        // point a saved connection at.
+        // And no key either. There is no entry, so there is nothing to point a saved connection at.
         assert!(!rendered.contains("secret_key"), "{rendered}");
     }
 

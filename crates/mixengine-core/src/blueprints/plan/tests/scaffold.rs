@@ -3,10 +3,10 @@
 
 use super::*;
 
-/// **`{project}` reaches the scaffold command too** — roadmap task **T78a**, its design's D6.
-/// T77 expanded the token into domains, databases and accounts and cloned the command verbatim,
-/// so a blueprint naming the project in its own command planned the token rather than the name.
-/// The command somebody agrees to has to be the command that runs.
+/// **`{project}` reaches the scaffold command too.** The first planner expanded the token into
+/// domains, databases and accounts and cloned the command verbatim, so a blueprint naming the
+/// project in its own command planned the token rather than the name. The command somebody agrees
+/// to has to be the command that runs.
 #[tokio::test]
 async fn the_project_name_reaches_the_scaffold_command() {
     let (temp, store) = home().await;
@@ -56,8 +56,8 @@ async fn the_project_name_reaches_the_scaffold_command() {
     assert_eq!(shown.as_deref(), Some(command.as_str()));
 }
 
-/// The plan says which blueprint it is applying and whether anybody vouched for it (D5), so a
-/// client shows the right words from the answer it already has.
+/// The plan says which blueprint it is applying and whether anybody vouched for it, so a client
+/// shows the right words from the answer it already has.
 #[tokio::test]
 async fn a_plan_says_where_its_blueprint_came_from() {
     let (temp, store) = home().await;
@@ -119,8 +119,8 @@ async fn a_scaffold_command_is_something_to_agree_to() {
     ));
 }
 
-/// **A program the PATH does not hold is blocked here, not at the end of a job** — roadmap task
-/// **T78b**, its design's D1: the step names the program, and nothing else in the plan changes.
+/// **A program the PATH does not hold is blocked here, not at the end of a job**: the step names
+/// the program, and nothing else in the plan changes.
 #[tokio::test]
 async fn a_scaffold_whose_program_is_missing_is_blocked_here() {
     let (temp, store) = home().await;
@@ -184,10 +184,10 @@ fn asking_for_an_empty_directory() -> crate::blueprints::manifest::BlueprintMani
 
 /// **A directory that already holds something is decided here, not by composer's exit code.**
 ///
-/// `composer create-project .` stops at the first entry a directory holds, and before this the
-/// plan said nothing about it — so an apply registered the project, installed the runtimes,
-/// made the database, the site, the domain and the certificate, and *then* the last step said
-/// the directory was not empty. D10's whole subject.
+/// `composer create-project .` stops at the first entry a directory holds, and before this the plan
+/// said nothing about it — so an apply registered the project, installed the runtimes, made the
+/// database, the site, the domain and the certificate, and *then* the last step said the directory
+/// was not empty — exactly what a plan exists to say first.
 #[tokio::test]
 async fn a_directory_that_already_holds_something_blocks_the_scaffold() {
     let (temp, store) = home().await;
@@ -237,7 +237,7 @@ async fn a_directory_that_already_holds_something_blocks_the_scaffold() {
     );
 }
 
-/// A manifest whose scaffold is an archive — roadmap task **T205**, D2.
+/// A manifest whose scaffold is an archive.
 fn fetching(url: &str) -> crate::blueprints::manifest::BlueprintManifest {
     let mut manifest = a_manifest();
     manifest.archive = Some(crate::blueprints::manifest::Archive {
@@ -274,8 +274,8 @@ fn offering_dotenv() -> crate::blueprints::manifest::BlueprintManifest {
     manifest
 }
 
-/// **The `.env` line is asked for, and after the scaffold** — roadmap task **T205a**. After,
-/// because `create-project .` refuses a folder that already holds a `.env`.
+/// **The `.env` line is asked for, and after the scaffold.** After, because `create-project .`
+/// refuses a folder that already holds a `.env`.
 #[tokio::test]
 async fn a_dotenv_key_is_asked_for_after_the_scaffold() {
     let (temp, store) = home().await;
@@ -345,9 +345,8 @@ async fn a_dotenv_key_missing_from_an_existing_env_is_asked_for() {
     );
 }
 
-/// **A starter steps aside for code already there** — roadmap task **T205**. A folder somebody
-/// cloned keeps its own `index.html`; the archive is neither unpacked over it nor a reason to
-/// stop the apply.
+/// **A starter steps aside for code already there.** A folder somebody cloned keeps its own
+/// `index.html`; the archive is neither unpacked over it nor a reason to stop the apply.
 #[tokio::test]
 async fn a_starter_into_a_full_directory_is_satisfied() {
     let (temp, store) = home().await;
@@ -389,7 +388,7 @@ async fn a_starter_into_an_empty_directory_is_agreed_to() {
     );
 }
 
-/// **The scaffold's gate, with the URL where the command would be** — T205, D2.
+/// **The scaffold's gate, with the URL where the command would be.**
 #[tokio::test]
 async fn an_archive_is_something_to_agree_to_naming_its_url() {
     let (temp, store) = home().await;
@@ -492,9 +491,9 @@ async fn scaffolding_at(
     .expect("a plan")
 }
 
-/// **The row that decides the rule** — roadmap task **T120c**. `next_js_1` is not a slug —
-/// [`crate::domains::slug`] turns the underscore into a hyphen — and npm accepts it, installs
-/// into it and writes `"name": "next_js_1"`. Measured on 2026-09-13 against
+/// **The row that decides the rule.** `next_js_1` is not a slug — [`crate::domains::slug`] turns
+/// the underscore into a hyphen — and npm accepts it, installs into it and writes
+/// `"name": "next_js_1"`. Measured on 2026-09-13 against
 /// `npx --yes create-next-app@latest . --yes`. A check built on `slug` would refuse a directory
 /// that works, which is the mistake this test exists to keep out.
 #[tokio::test]
@@ -533,7 +532,7 @@ async fn a_directory_npm_will_not_name_a_package_after_is_blocked_with_the_name_
     };
 
     assert!(reason.contains("Next.js 1"), "{reason}");
-    // **The answer, not the rule** — the design's D7.
+    // **The answer, not the rule**: the reason suggests a slug.
     assert!(reason.contains("next-js-1"), "{reason}");
 }
 
@@ -561,9 +560,8 @@ async fn the_other_names_npm_refuses_are_blocked_too() {
     }
 }
 
-/// **A blueprint that did not declare it is never judged by it** — the whole of the design's
-/// D3. Three of the gallery's four scaffolds take their package name from an argument and do
-/// not care what the folder is called.
+/// **A blueprint that did not declare it is never judged by it.** Three of the gallery's four
+/// scaffolds take their package name from an argument and do not care what the folder is called.
 #[tokio::test]
 async fn a_scaffold_that_did_not_ask_is_not_judged_on_its_directorys_name() {
     let (temp, store) = home().await;
@@ -620,7 +618,7 @@ async fn a_badly_named_directory_that_is_also_full_is_refused_for_its_name() {
 }
 
 /// The directory an apply is about usually does not exist yet — that is the happy path, and it
-/// is the one a false `blocked` here would cost (T78b, D2).
+/// is the one a false `blocked` here would cost.
 #[tokio::test]
 async fn a_directory_that_is_not_there_yet_is_a_directory_that_is_empty() {
     let (temp, store) = home().await;

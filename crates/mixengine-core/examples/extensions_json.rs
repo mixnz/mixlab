@@ -1,4 +1,4 @@
-//! Generate `extensions.json` for the packaging repository to sign — roadmap task **T81a**.
+//! Generate `extensions.json` for the packaging repository to sign.
 //!
 //! ```text
 //! cargo run -p mixengine-core --example extensions_json -- \

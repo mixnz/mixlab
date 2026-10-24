@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// A home from before T196: `index.json`, its signature, and nothing else.
+/// A home from before schema 2: `index.json`, its signature, and nothing else.
 async fn schema_1_home(registry: &MockRegistry, cache: &Path) {
     let old: Client<mixengine_core::index::schema1::Document> =
         Client::with(&registry.url(), registry.public_key(), cache).expect("a client");
@@ -65,7 +65,7 @@ async fn an_upgraded_home_cannot_be_walked_backwards() {
     assert!(!cache.path().join(ROOT).exists());
 }
 
-/// A mirror that copied `index.json` and nothing else is read through it, as before T196.
+/// A mirror that copied `index.json` and nothing else is read through it, as before schema 2.
 #[tokio::test]
 async fn a_source_with_no_schema_2_is_read_through_schema_1() {
     let cache = tempfile::tempdir().expect("a cache directory");
@@ -117,7 +117,7 @@ async fn an_unreachable_signature_is_not_a_reason_to_fall_back() {
 }
 
 /// Each file has its own limit, and a server that never answers is given up on when it runs out —
-/// not after the thirty seconds a whole request had before T196.
+/// not after the thirty seconds a whole request had before schema 2.
 ///
 /// **A socket that accepts and never answers**, rather than a limit too short for anything: a limit
 /// of one nanosecond was this test until CI's ubuntu runner answered over loopback before the timer

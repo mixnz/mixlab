@@ -384,12 +384,12 @@ pub async fn install(
     })
 }
 
-/// Show `documents` to `validator` and install none of them — roadmap task **T81c**.
+/// Show `documents` to `validator` and install none of them.
 ///
 /// [`install`]'s first half, and the whole of the reason it is separable: a rendering can be judged
 /// by the program that will read it *before* anything about the home changes. That is what lets an
 /// extension carrying a `[[recipe.front_end]]` fragment the front end will not accept be refused
-/// while it is still a document rather than an installation — the T81c design's D5.
+/// while it is still a document rather than an installation.
 ///
 /// **It differs from [`drift`] in what it can answer.** `drift` compares a rendering against what is
 /// on disk and never runs a program; this runs the real checker and says nothing about what is
@@ -465,9 +465,9 @@ impl Drift {
 
 /// What [`install`] would do to `directory`, asked without doing it.
 ///
-/// Roadmap task **T47b**, and the reason `mix doctor` can ask whether a generated file still matches
-/// its row: the question can only be answered by rendering again and comparing — generated
-/// configuration is never parsed back — and answering it must not install what it finds.
+/// The reason `mix doctor` can ask whether a generated file still matches its row: the question can
+/// only be answered by rendering again and comparing — generated configuration is never parsed back
+/// — and answering it must not install what it finds.
 ///
 /// # Errors
 ///

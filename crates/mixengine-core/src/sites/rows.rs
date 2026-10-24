@@ -35,8 +35,8 @@ pub(super) fn payload(kind: &SiteKind) -> String {
     value.to_string()
 }
 
-/// The `target` word and the `php_service_id` a route's target writes into its row — roadmap task
-/// **T135**. [`columns`]' shape one table down.
+/// The `target` word and the `php_service_id` a route's target writes into its row. [`columns`]'
+/// shape one table down.
 fn route_columns(target: &RouteTarget) -> (&'static str, Option<String>) {
     match target {
         RouteTarget::Proxy { .. } => ("proxy", None),
@@ -104,7 +104,7 @@ pub(super) fn read_route_target(
     }
 }
 
-/// Which of two routes a request under both of them belongs to — roadmap task **T135**.
+/// Which of two routes a request under both of them belongs to.
 ///
 /// **Longest first, and the whole order is total.** More segments wins, then more bytes, then the
 /// path itself — so two routes never compare equal and a rendering is the same on every run. It is
@@ -199,7 +199,7 @@ pub(super) async fn record(store: &Store, id: i64) -> Result<SiteRecord> {
         })
 }
 
-/// Replace a site's domains: every delete before any insert (spec D6).
+/// Replace a site's domains: every delete before any insert.
 pub(super) async fn write_domains(
     store: &Store,
     tx: &mut sqlx::Transaction<'_, Sqlite>,
@@ -269,7 +269,7 @@ pub(super) async fn write_links(
     Ok(())
 }
 
-/// Replace a site's routes, same shape as [`write_links`] — roadmap task **T135**.
+/// Replace a site's routes, same shape as [`write_links`].
 ///
 /// `position` is the index the caller wrote them in. The unique index refuses a duplicate path; the
 /// daemon has already refused one with a sentence naming it, so what arrives here is a database

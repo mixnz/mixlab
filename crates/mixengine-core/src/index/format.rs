@@ -5,13 +5,14 @@
 //! way. What follows is the history of their shape, and it still holds.
 //!
 //! Written against the document at
-//! <https://github.com/mixnz/mixengine-packages/releases/download/index/index.json> rather
-//! than against the sketch that preceded it, which is the whole reason T20a was ordered first. The
-//! two differ in exactly the places a client trips over: `provides` is a map from executable name to
-//! its path inside the archive rather than a list of names, because the daemon needs to know *where*
-//! a binary is and a borrowed archive keeps its publisher's layout; and `requires` hangs off the
-//! artifact rather than the package, because a Windows PHP needs a VC++ redistributable and the same
-//! version on Linux needs a glibc, and neither statement is true of the other.
+//! <https://github.com/mixnz/mixengine-packages/releases/download/index/index.json> rather than
+//! against the sketch that preceded it, which is the whole reason a real index was published before
+//! this client was written. The two differ in exactly the places a client trips over: `provides` is
+//! a map from executable name to its path inside the archive rather than a list of names, because
+//! the daemon needs to know *where* a binary is and a borrowed archive keeps its publisher's
+//! layout; and `requires` hangs off the artifact rather than the package, because a Windows PHP
+//! needs a VC++ redistributable and the same version on Linux needs a glibc, and neither statement
+//! is true of the other.
 //!
 //! Everything here is `#[serde(deny_unknown_fields)]`-free on purpose, which is the opposite of the
 //! rule `config.toml` follows. That file is written by a user, where a typo silently ignored is a
@@ -26,7 +27,7 @@ use crate::InstallError;
 use mixengine_proto::Execution;
 use serde::{Deserialize, Serialize};
 
-/// A kind a caller asked for and the index could not give — roadmap task **T196**, its design's D5.
+/// A kind a caller asked for and the index could not give.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Missing {
     /// Which kind.
@@ -38,10 +39,10 @@ pub struct Missing {
 
 /// The verified packages of the kinds somebody asked for.
 ///
-/// **A view and not a document** — roadmap task **T196**, its design's D2. The index is published
-/// as one file per kind, so what a caller holds is the kinds it named: a kind the view was built
-/// for and the index does not name is held as empty, and a kind the view was *not* built for is a
-/// bug in the caller, which a debug build says out loud.
+/// **A view and not a document.** The index is published as one file per kind, so what a caller
+/// holds is the kinds it named: a kind the view was built for and the index does not name is held
+/// as empty, and a kind the view was *not* built for is a bug in the caller, which a debug build
+/// says out loud.
 ///
 /// A view over a whole schema 1 document answers for every kind there is, which is what
 /// [`from_packages`](Index::from_packages) builds.
@@ -75,8 +76,7 @@ pub struct Package {
     ///
     /// Not normalised and not parsed here: it is the string a user pinned in `mixengine.toml`, and
     /// a client that rewrote it would stop matching what they wrote. Comparing versions is
-    /// [T24](../../../../docs/roadmap/phase-2-runtimes.md)'s problem and it needs the constraint
-    /// grammar this type does not have.
+    /// [`crate::resolve`]'s problem and it needs the constraint grammar this type does not have.
     pub version: String,
 
     /// Which channel this belongs to. Only `stable` is offered without a setting.
@@ -137,17 +137,16 @@ pub struct Artifact {
     pub extensions: Extensions,
 
     /// What this cell cannot do that its siblings can, and why — the publisher's words, read and
-    /// shown, never judged (roadmap task **T206**, D2). Empty for an entry written before T206.
+    /// shown, never judged. Empty for an entry written before the index carried it.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub lacks: BTreeMap<String, String>,
 }
 
 /// What the publisher measured off the finished artifact, as preconditions on the machine.
 ///
-/// **Read since T148, before anything is downloaded** — see [`crate::requirements`], which judges
-/// these against the machine and says what can be done about what is missing. T92 recorded that no
-/// consumer existed; [`crate::install::SmokeTest`] still stands in front of every install, because a
-/// prediction is not a proof.
+/// **Read before anything is downloaded** — see [`crate::requirements`], which judges these against
+/// the machine and says what can be done about what is missing. [`crate::install::SmokeTest`] still
+/// stands in front of every install, because a prediction is not a proof.
 ///
 /// **The published document already carries a field this type does not model.** Ten artifacts — the
 /// Linux PostgreSQL cells — state a `requires.tzdata`, and it is prose rather than a version: *"the
@@ -180,13 +179,12 @@ pub struct Requires {
 
     /// A processor feature the build assumes — `avx`, on every MongoDB artifact.
     ///
-    /// **Judged since T153**, the task that made MongoDB installable — see
-    /// [`crate::requirements`]. Only `avx`, and only on an x86_64 artifact.
+    /// **Judged, which is what made MongoDB installable** — see [`crate::requirements`]. Only
+    /// `avx`, and only on an x86_64 artifact.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cpu: Option<String>,
 
-    /// Shared libraries, by soname, that the build links and the archive does not ship — roadmap
-    /// task **T27e**.
+    /// Shared libraries, by soname, that the build links and the archive does not ship.
     ///
     /// Every Linux JDK's `libz`, `freetype`, X11 and ALSA: a publisher links them from the
     /// distribution, as every Linux JDK is built, and carrying a stranger's desktop stack inside a
@@ -372,8 +370,8 @@ pub struct Target {
 /// Every target MixEngine ships a build for, in the order a coverage matrix reads them.
 ///
 /// Six, and the number is a fact about this product rather than about the index: it is what
-/// [build-and-release.md](../../../../docs/operations/build-and-release.md) produces and what
-/// roadmap task **T92** measured the packaging pipeline against.
+/// [build-and-release.md](../../../../docs/operations/build-and-release.md) produces and what the
+/// packaging pipeline was measured against.
 pub const TARGETS: [Target; 6] = [
     Target::new(Os::Windows, Arch::X86_64),
     Target::new(Os::Windows, Arch::Aarch64),
@@ -504,7 +502,7 @@ impl Timestamp {
     }
 }
 
-/// The door the publishing pipeline comes through — roadmap task **T81a**.
+/// The door the publishing pipeline comes through.
 ///
 /// [`Deserialize`] is the other one, and both reach the same private `parse`. A generator has
 /// to *make* a timestamp rather than read one out of a document, and this workspace has no date
@@ -694,9 +692,9 @@ impl Index {
     ///
     /// The filter is the point: a version listed only for macOS is not a version a Windows user can
     /// install, and offering it would produce a failure at download time instead of an absence at
-    /// list time. Since **T92** it resolves through [`Package::select`], so a version an ARM64
-    /// Windows machine can only reach by emulation *is* listed — the alternative was that machine
-    /// being shown no PHP at all, in any branch, because upstream builds none for it.
+    /// list time. It resolves through [`Package::select`], so a version an ARM64 Windows machine
+    /// can only reach by emulation *is* listed — the alternative was that machine being shown no
+    /// PHP at all, in any branch, because upstream builds none for it.
     pub fn installable_for(&self, target: Target, kind: &str) -> impl Iterator<Item = &Package> {
         self.of(kind)
             .iter()

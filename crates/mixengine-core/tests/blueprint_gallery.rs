@@ -1,4 +1,4 @@
-//! The blueprints this build ships — roadmap task **T79**.
+//! The blueprints this build ships.
 //!
 //! Out here rather than beside the code because these are assertions about the *shipped set*: that
 //! the files are readable, that each one is its own rendering, and that seeding a real home
@@ -14,9 +14,9 @@ use mixengine_core::{Paths, Store, open_home};
 use mixengine_proto::{BlueprintSource, Disposition, PlanAction, RuntimeKind};
 use tempfile::TempDir;
 
-/// **Every gallery file is exactly what the renderer would write** — the T79 design, D2. Without
-/// this the file in this repository, the `manifest_toml` column and the file in a user's home are
-/// three different texts for one blueprint, and a `diff` between any two of them means nothing.
+/// **Every gallery file is exactly what the renderer would write.** Without this the file in this
+/// repository, the `manifest_toml` column and the file in a user's home are three different texts
+/// for one blueprint, and a `diff` between any two of them means nothing.
 #[test]
 fn every_gallery_blueprint_is_its_own_rendering() {
     for entry in ENTRIES {
@@ -68,9 +68,9 @@ fn the_gallery_is_the_set_the_roadmap_names() {
     }
 }
 
-/// **Ten carry a command and the rest do not** — D8, widened by T205's five PHP entries. Asserted rather than left to a reading of the
+/// **Ten carry a command and the rest do not.** Asserted rather than left to a reading of the
 /// files, because a scaffold added to `wordpress` or `django` by a later edit is exactly the change
-/// this task decided against.
+/// the gallery decided against.
 ///
 /// The eight without one are not a shortfall. A gallery command has to be non-interactive — there is
 /// no timeout, so a prompt hangs a job for good — spelled the same for `cmd.exe` and `sh`, with a
@@ -137,12 +137,12 @@ fn every_gallery_command_that_initialises_a_project_asks_for_an_empty_directory(
     }
 }
 
-/// **The npm one asks, and only the npm one** — roadmap task **T120c**.
+/// **The npm one asks, and only the npm one.**
 ///
 /// Four of the five commands are `composer create-project`, which takes its package name from its
 /// argument and does not care what the folder is called; the fifth reads the folder's basename and
 /// npm judges it. A flag that spread to the other four would refuse folders `composer` installs
-/// into happily, which is the over-blocking the design's D6 names as the costly mistake.
+/// into happily, which is the over-blocking that is the costly mistake.
 #[test]
 fn only_the_command_that_names_itself_after_the_directory_asks_for_an_npm_name() {
     for entry in ENTRIES {
@@ -161,15 +161,15 @@ fn only_the_command_that_names_itself_after_the_directory_asks_for_an_npm_name()
     }
 }
 
-/// **WordPress is the one archive, and the one file at schema 2** — roadmap task **T205**, D2 and
-/// ADR 0061: every other gallery file stays readable by every installed build.
+/// **WordPress is the one archive, and the one file at schema 2** — ADR 0061: every other gallery
+/// file stays readable by every installed build.
 #[test]
 fn only_archive_and_dotenv_entries_are_schema_2() {
     // `wordpress` borrows its publisher's release; `express-mongodb` unpacks a starter this
     // repository writes (`src/blueprints/starters/`), because no maintained initialiser makes an
-    // Express server that talks to MongoDB; `php-mysql` and `static` unpack one only into an
-    // empty folder (`when_empty`), so a cloned repository keeps its own files. `rails` and `django`
-    // offer their database URL as a `.env` key (T205a), which changes the apply too.
+    // Express server that talks to MongoDB; `php-mysql` and `static` unpack one only into an empty
+    // folder (`when_empty`), so a cloned repository keeps its own files. `rails` and `django` offer
+    // their database URL as a `.env` key, which changes the apply too.
     for entry in ENTRIES {
         let manifest = manifest::read(entry.manifest).expect("a gallery blueprint");
         let is_archive = matches!(
@@ -200,7 +200,7 @@ const STARTERS: &str = "https://github.com/mixnz/mixengine-packages/releases/dow
 fn every_starter_archive_is_in_the_tree() {
     let starters = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/blueprints/starters");
     // A folder is published zipped as `<name>-starter.zip`; a file directly under `starters/`
-    // (T205a's `rails-template.rb`) is published as itself.
+    // (`rails-template.rb`) is published as itself.
     let starter = |slug: &str, url: &str| -> Option<String> {
         let file = url.strip_prefix(STARTERS)?;
         if let Some(name) = file.strip_suffix("-starter.zip") {
@@ -268,7 +268,7 @@ fn django_starts_from_a_template_that_admits_its_test_domain() {
     assert!(settings.contains("ALLOWED_HOSTS = ['.test', 'localhost', '127.0.0.1', '[::1]']"));
     assert!(settings.contains("CSRF_TRUSTED_ORIGINS = ['https://*.test']"));
     assert!(settings.contains("SECRET_KEY = '{{ secret_key }}'"));
-    // T205a: the database MixEngine made, read from `.env`, and `.env` kept out of git.
+    // The database MixEngine made, read from `.env`, and `.env` kept out of git.
     assert!(settings.contains("_dotenv('DATABASE_URL')"));
     assert!(
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -277,8 +277,7 @@ fn django_starts_from_a_template_that_admits_its_test_domain() {
     );
 }
 
-/// **Whether the browser opens by itself** — T205, D7 and the last column of D13's table: it
-/// opens when no `once` or `serve` step is needed.
+/// **Whether the browser opens by itself**: it opens when no `once` or `serve` step is needed.
 #[test]
 fn whether_the_browser_opens_by_itself_matches_the_design() {
     use mixengine_proto::NextStepKind;
@@ -380,10 +379,10 @@ fn rails_new_carries_the_database_account() {
     assert!(step.credentials, "rails new does not carry credentials");
 }
 
-/// **Rails and Django read the database MixEngine made from `.env`** — roadmap task **T205a**.
-/// Rails under `DEVELOPMENT_DATABASE_URL`, because it merges `DATABASE_URL` into whichever
-/// environment runs and `bin/rails test` would purge the development database; and each shows the
-/// account, for a person who left the box unticked.
+/// **Rails and Django read the database MixEngine made from `.env`.** Rails under
+/// `DEVELOPMENT_DATABASE_URL`, because it merges `DATABASE_URL` into whichever environment runs and
+/// `bin/rails test` would purge the development database; and each shows the account, for a person
+/// who left the box unticked.
 #[test]
 fn rails_and_django_offer_their_database_url_and_show_the_account() {
     for (slug, key) in [
@@ -446,8 +445,8 @@ fn an_installer_on_postgres_says_postgres() {
     }
 }
 
-/// **Every step expands for a name that is not a slug** — T205's review focus: `My Blog` must
-/// become `my-blog`, never reach a command as itself, and never leave the token behind.
+/// **Every step expands for a name that is not a slug**: `My Blog` must become `my-blog`, never
+/// reach a command as itself, and never leave the token behind.
 #[test]
 fn every_gallery_step_expands_for_a_name_with_spaces() {
     for entry in ENTRIES {
@@ -476,7 +475,7 @@ async fn home() -> (TempDir, Paths, Store) {
     (temp, opened.paths, store)
 }
 
-/// **A home nobody has touched holds the gallery, trusted** — the T79 design, D1 and D3.
+/// **A home nobody has touched holds the gallery, trusted.**
 #[tokio::test]
 async fn a_fresh_home_is_seeded_with_the_whole_gallery() {
     let (_temp, paths, store) = home().await;
@@ -499,8 +498,8 @@ async fn a_fresh_home_is_seeded_with_the_whole_gallery() {
     }
 }
 
-/// **The second start writes nothing at all** — D4. This is the assertion the decision exists for:
-/// every CLI test in this workspace starts a daemon, and eleven file writes on each of those is a cost
+/// **The second start writes nothing at all.** This is the assertion the decision exists for: every
+/// CLI test in this workspace starts a daemon, and eleven file writes on each of those is a cost
 /// with nothing on the other side of it.
 #[tokio::test]
 async fn seeding_a_home_that_is_already_seeded_writes_nothing() {
@@ -514,8 +513,8 @@ async fn seeding_a_home_that_is_already_seeded_writes_nothing() {
     assert_eq!(again.left.len(), ENTRIES.len(), "{again:?}");
 }
 
-/// **A row somebody else owns is never touched** — D6. Capturing over `laravel` takes `--overwrite`
-/// and makes the row this machine's own; no upgrade takes that slug back.
+/// **A row somebody else owns is never touched.** Capturing over `laravel` takes `--overwrite` and
+/// makes the row this machine's own; no upgrade takes that slug back.
 #[tokio::test]
 async fn a_captured_row_survives_a_seed() {
     let (_temp, paths, store) = home().await;
@@ -554,7 +553,7 @@ version = "0.1.0"
     assert_eq!(filed.manifest.blueprint.name, "Mine");
 }
 
-/// **A builtin row that drifted is put back** — D5's repair property: a home whose gallery was
+/// **A builtin row that drifted is put back** — the repair property: a home whose gallery was
 /// edited or emptied is mended by starting the daemon, exactly as `bin/` is.
 #[tokio::test]
 async fn a_builtin_row_that_was_edited_is_restored() {
@@ -615,9 +614,9 @@ async fn planned_with(slug: &str, programs: &[&str]) -> mixengine_proto::Bluepri
 
 /// The same, for a project called something in particular.
 ///
-/// **A parameter since roadmap task T120**, which is about what a project's name may be: every
-/// caller before it wanted `shop`, a name that is already a slug and therefore says nothing about
-/// what happens to one that is not.
+/// **A parameter, because a project's name is what the slug rule is about**: every caller once
+/// wanted `shop`, a name that is already a slug and therefore says nothing about what happens to
+/// one that is not.
 async fn planned_for(
     slug: &str,
     programs: &[&str],
@@ -663,11 +662,11 @@ async fn planned(slug: &str) -> mixengine_proto::BlueprintPlan {
 /// **Every gallery plan without a blocked step** — nothing in the gallery asks for something this
 /// build cannot do on a machine that has nothing installed at all.
 ///
-/// **Nothing on the PATH either, not even the programs the commands name** — T78b as T185b left
-/// it. `bin/` holds a runtime's commands only once it is installed, so on a fresh machine there is
-/// no `composer` and no `npx` when the plan is made; the entries' own `[runtimes]` put them there
-/// before the command runs. Handing these plans a `composer` hid that every Composer entry was
-/// blocked on exactly the machine it was meant for.
+/// **Nothing on the PATH either, not even the programs the commands name.** `bin/` holds a
+/// runtime's commands only once it is installed, so on a fresh machine there is no `composer` and
+/// no `npx` when the plan is made; the entries' own `[runtimes]` put them there before the command
+/// runs. Handing these plans a `composer` hid that every Composer entry was blocked on exactly the
+/// machine it was meant for.
 #[tokio::test]
 async fn every_gallery_blueprint_plans_on_a_machine_with_nothing_installed() {
     for entry in ENTRIES {
@@ -716,8 +715,8 @@ async fn every_gallery_command_is_provided_by_its_own_runtimes() {
     }
 }
 
-/// **The entries that run Composer ask for it** — roadmap task **T27c**, its design's D6 — so a
-/// machine without one reads `create composer 2` where T78b had it read `blocked`.
+/// **The entries that run Composer ask for it**, so a machine without one reads `create composer 2`
+/// where it once read `blocked`.
 #[tokio::test]
 async fn the_composer_blueprints_ask_for_it_and_nothing_else_does() {
     for entry in ENTRIES {
@@ -752,9 +751,9 @@ async fn the_composer_blueprints_ask_for_it_and_nothing_else_does() {
     }
 }
 
-/// **`{project}` is expanded everywhere it appears, and nowhere is it left as a token** — the T78a
-/// D6 property, held for the shipped set: a gallery blueprint that planned the literal `{project}`
-/// would create a database called `{project}` on somebody's machine.
+/// **`{project}` is expanded everywhere it appears, and nowhere is it left as a token** — the
+/// planner's own property, held for the shipped set: a gallery blueprint that planned the literal
+/// `{project}` would create a database called `{project}` on somebody's machine.
 #[tokio::test]
 async fn no_gallery_plan_carries_an_unexpanded_token() {
     for entry in ENTRIES {
@@ -769,14 +768,13 @@ async fn no_gallery_plan_carries_an_unexpanded_token() {
     }
 }
 
-/// **Every blueprint this build ships works for a name a person would actually type** — roadmap
-/// task **T120**.
+/// **Every blueprint this build ships works for a name a person would actually type.**
 ///
-/// Before it, `{project}` was substituted verbatim, so `My Project 1` produced the database name
-/// `My Project 1` and the domain `My Project 1.test`: a green dry run, and then an apply that failed
-/// on the first of those after the directory had been made and three packages downloaded. Every
-/// entry in the gallery uses the token, so every entry was affected — which is why this is asserted
-/// over the shipped set rather than over one fixture.
+/// Before ADR 0030, `{project}` was substituted verbatim, so `My Project 1` produced the database
+/// name `My Project 1` and the domain `My Project 1.test`: a green dry run, and then an apply that
+/// failed on the first of those after the directory had been made and three packages downloaded.
+/// Every entry in the gallery uses the token, so every entry was affected — which is why this is
+/// asserted over the shipped set rather than over one fixture.
 #[tokio::test]
 async fn every_gallery_blueprint_plans_for_a_name_that_is_not_already_a_slug() {
     for entry in ENTRIES {
@@ -907,8 +905,8 @@ async fn the_mongodb_blueprints_plan_a_server_and_no_database() {
     }
 }
 
-/// **The three without a command plan no command** — D8, asserted on the plan rather than on the
-/// file, because the plan is what an apply carries out.
+/// **The three without a command plan no command**, asserted on the plan rather than on the file,
+/// because the plan is what an apply carries out.
 #[tokio::test]
 async fn the_blueprints_with_no_command_plan_no_command() {
     for slug in ["wordpress", "django", "static"] {
@@ -924,10 +922,9 @@ async fn the_blueprints_with_no_command_plan_no_command() {
     }
 }
 
-/// **The display names are deliberately not slugs** — roadmap task **T79a**, its design's D9. This
-/// is what makes the daemon's hand-import test mean something: if somebody renamed `Static site` to
-/// `static`, that test would keep passing for a reason that had stopped being true, and the fallback
-/// it guards would be untested again.
+/// **The display names are deliberately not slugs.** This is what makes the daemon's hand-import
+/// test mean something: if somebody renamed `Static site` to `static`, that test would keep passing
+/// for a reason that had stopped being true, and the fallback it guards would be untested again.
 #[test]
 fn the_gallery_display_names_are_not_slugs() {
     let names: Vec<String> = ENTRIES

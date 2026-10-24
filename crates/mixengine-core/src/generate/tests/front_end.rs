@@ -62,8 +62,7 @@ async fn a_front_end_renders_the_sites_this_home_declares_and_sweeps_the_ones_it
     );
 }
 
-/// **An extension's fragment lands in the front end's own `etc/`, and leaves with it** —
-/// roadmap task **T81c**.
+/// **An extension's fragment lands in the front end's own `etc/`, and leaves with it.**
 ///
 /// And only the fragment written for *this* front end: the same manifest declares one for each
 /// of the two, and a home running one of them renders one file. That is what `server` is for,
@@ -125,8 +124,7 @@ async fn a_front_end_renders_the_fragments_its_extensions_declare_and_sweeps_the
     );
 }
 
-/// **A fragment the front end will not accept stops the install, and the home does not move** —
-/// roadmap task **T81c**, the design's D5.
+/// **A fragment the front end will not accept stops the install, and the home does not move.**
 ///
 /// The judgement happens before anything is downloaded or written, so what this asserts beside
 /// the refusal is that `etc/` is exactly as it was: no configuration directory for the front
@@ -208,7 +206,7 @@ fn pending_extension(
     }
 }
 
-/// **The daemon is told where to hold from the same pass that renders** — T70a.
+/// **The daemon is told where to hold from the same pass that renders.**
 ///
 /// Never from a query of its own, which is why `activators` goes through `declarations` and
 /// why this does too: an address computed twice is an address that can be computed two ways,

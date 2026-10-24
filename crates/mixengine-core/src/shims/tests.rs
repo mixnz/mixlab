@@ -30,8 +30,8 @@ fn case_is_folded_exactly_where_the_filesystem_folds_it() {
     assert_eq!(dispatch(Path::new("PHP")).is_some(), cfg!(windows));
 }
 
-/// **One row runs through another kind** — roadmap task **T27c**, its design's D4. `composer`
-/// is a file for a PHP, and every other row is a program of its own.
+/// **One row runs through another kind.** `composer` is a file for a PHP, and every other row is a
+/// program of its own.
 #[test]
 fn only_composer_runs_through_another_kind() {
     for command in COMMANDS {
@@ -46,7 +46,7 @@ fn only_composer_runs_through_another_kind() {
     }
 }
 
-/// Go's two commands — roadmap task **T27d**, its design's D4.
+/// Go's two commands.
 #[test]
 fn go_fronts_go_and_gofmt() {
     for name in ["go", "gofmt"] {
@@ -58,7 +58,7 @@ fn go_fronts_go_and_gofmt() {
     }
 }
 
-/// Java's six commands — roadmap task **T27e**, its design's D4.
+/// Java's six commands.
 #[test]
 fn java_fronts_the_six_commands_its_artifact_provides() {
     for name in ["java", "javac", "jar", "jshell", "keytool", "jlink"] {

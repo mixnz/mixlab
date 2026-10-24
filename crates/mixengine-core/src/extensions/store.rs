@@ -1,4 +1,4 @@
-//! The `extensions` and `extension_ports` tables — roadmap task **T81**.
+//! The `extensions` and `extension_ports` tables.
 //!
 //! [`crate::packages`]' shape one table across: this module owns every write to both, and the
 //! ordering every caller follows is the same one — put it on disk, *then* write the row; remove the
@@ -12,13 +12,13 @@
 //! **nothing re-reads `extension.toml` out of the install directory** — that file sits where a user
 //! can edit it, and a manifest read back from it is one nobody agreed to.
 //!
-//! **What is stored is the reader's rendering, not the author's text**, which is T79's finding:
-//! keeping somebody's bytes would make the file on disk, this column and what the renderer reads
-//! three texts for one extension.
+//! **What is stored is the reader's rendering, not the author's text**, which is what the blueprint
+//! gallery found: keeping somebody's bytes would make the file on disk, this column and what the
+//! renderer reads three texts for one extension.
 //!
 //! **Ports are a table.** Not because an extension has many — though it does — but because
 //! [`crate::services::ports::allocate`] asks the database which ports are held, and a port it
-//! cannot see in SQL is one it hands out twice (the T81 design's D8).
+//! cannot see in SQL is one it hands out twice.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -72,8 +72,7 @@ pub struct Installed {
     /// Where its own files are. Removed by an uninstall.
     pub install_dir: PathBuf,
 
-    /// Where what it writes goes. **Outside `install_dir`** so an uninstall can keep it — the T81
-    /// design's D13.
+    /// Where what it writes goes. **Outside `install_dir`** so an uninstall can keep it.
     pub data_dir: PathBuf,
 
     /// Where it came from.
@@ -382,7 +381,7 @@ mod tests {
         assert_eq!(read.ports.len(), 2, "Mailpit asks for a UI port and SMTP");
     }
 
-    /// **The stored manifest is the reader's rendering** — the T81 design's D5.
+    /// **The stored manifest is the reader's rendering.**
     #[tokio::test]
     async fn the_stored_manifest_is_canonical() {
         let (_home, store) = store().await;

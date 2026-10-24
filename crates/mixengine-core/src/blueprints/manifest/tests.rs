@@ -84,11 +84,11 @@ extensions = ["redis", "xdebug"]
 command = "composer create-project laravel/laravel {project}"
 "#;
 
-/// **The rendering is not the signed artifact, and in practice it is the same bytes** — roadmap
-/// task **T78a**, its design's D16. Nothing depends on this: trust is decided over the bytes
-/// that were handed in, once, at import. But a gallery file that came back differently would
-/// mean anybody checking a `.minisig` against `blueprints/<slug>.toml` finds a failure with no
-/// tampering behind it, and this is what T77's byte-identical renderer was for.
+/// **The rendering is not the signed artifact, and in practice it is the same bytes.** Nothing
+/// depends on this: trust is decided over the bytes that were handed in, once, at import. But a
+/// gallery file that came back differently would mean anybody checking a `.minisig` against
+/// `blueprints/<slug>.toml` finds a failure with no tampering behind it, and this is what a
+/// byte-identical renderer is for.
 #[test]
 fn a_gallery_shaped_manifest_renders_back_byte_for_byte() {
     let read_back = read(GALLERY_SHAPED).expect("it parses");
@@ -108,7 +108,7 @@ fn a_scaffold_asks_for_nothing_about_the_directory_unless_it_says_so() {
     assert!(!read_back.scaffold.expect("a scaffold").needs_empty_dir);
 }
 
-/// **A site's routes survive a render and a read** — roadmap task **T135**, that design's D11.
+/// **A site's routes survive a render and a read.**
 ///
 /// The one property this test is really about is the ordering the renderer's own note explains:
 /// TOML puts a table after the values of the table it sits in, so an array of tables written
@@ -172,9 +172,9 @@ fn a_scaffold_that_asks_for_an_empty_directory_survives_the_round_trip() {
     assert_eq!(render(&read_back), asking);
 }
 
-/// **A command that names itself after its directory says so too** — roadmap task **T120c**.
-/// Written only when true, like its neighbour, so a manifest captured or imported before this
-/// key existed renders back exactly the bytes it arrived as.
+/// **A command that names itself after its directory says so too.** Written only when true, like
+/// its neighbour, so a manifest captured or imported before this key existed renders back exactly
+/// the bytes it arrived as.
 #[test]
 fn a_scaffold_that_needs_an_npm_safe_directory_survives_the_round_trip() {
     let asking = GALLERY_SHAPED.replace(
@@ -238,8 +238,8 @@ fn every_site_kind_survives_being_written_and_read() {
     }
 }
 
-/// **D7.** Two captures of one project must produce two identical files, or a golden test says
-/// nothing and a re-capture's diff is noise.
+/// Two captures of one project must produce two identical files, or a golden test says nothing and
+/// a re-capture's diff is noise.
 #[test]
 fn rendering_is_deterministic_and_puts_the_schema_first() {
     let rendered = render(&a_manifest());
@@ -371,7 +371,7 @@ fn a_scaffold_with_neither_is_refused() {
 }
 
 /// **`when_empty` reads, renders and round-trips** — a starter that is unpacked only into an
-/// empty folder and skipped over a clone (T205, `php-mysql` and `static`).
+/// empty folder and skipped over a clone (the gallery's `php-mysql` and `static`).
 #[test]
 fn an_archive_unpacked_only_when_empty_round_trips() {
     let text = with_scaffold(
@@ -411,7 +411,7 @@ fn with_services(services: &str) -> String {
     )
 }
 
-/// **`dotenv` reads, renders and round-trips, at schema 2** — roadmap task **T205a**.
+/// **`dotenv` reads, renders and round-trips, at schema 2.**
 #[test]
 fn a_dotenv_key_round_trips_at_schema_2() {
     let text = with_services(
@@ -593,7 +593,7 @@ const TWO_SITES: &str = "[[sites]]\nkind = \"static\"\ndoc_root = \"\"\nhttps = 
         https = true\ndomain_pattern = \"vite.{project}.test\"\nservices = []\n\n\
         [[services]]\nname = \"redis\"\ninstance = \"main\"\n";
 
-/// **T204a, D1.** `[[sites]]` reads as its entries, in order, each with its own links.
+/// `[[sites]]` reads as its entries, in order, each with its own links.
 #[test]
 fn several_sites_read_in_order_with_their_links() {
     let manifest = read(&with_body(3, TWO_SITES)).expect("reads");
@@ -609,7 +609,7 @@ fn several_sites_read_in_order_with_their_links() {
     assert_eq!(read(&rendered).expect("round trip"), manifest);
 }
 
-/// **T204a, D1.** `[site]` is still one entry, and links every service.
+/// `[site]` is still one entry, and links every service.
 #[test]
 fn a_single_site_table_is_one_entry_with_no_list_of_links() {
     let manifest = read(GALLERY_SHAPED).expect("reads");
@@ -632,7 +632,7 @@ fn both_forms_in_one_file_are_refused() {
     );
 }
 
-/// **T204a, D1.** An older build would apply this as a project with no site.
+/// Several sites under schema 1 or 2: an older build would apply this as a project with no site.
 #[test]
 fn several_sites_under_an_older_schema_are_refused_naming_3() {
     for schema in [1, 2] {
@@ -657,7 +657,7 @@ fn a_name_two_entries_answer_to_is_refused_with_both_positions() {
     );
 }
 
-/// **T204a, D3.** An item names one `[[services]]` entry, by name or by `name@instance`.
+/// An item names one `[[services]]` entry, by name or by `name@instance`.
 #[test]
 fn a_link_names_exactly_one_service() {
     let services = |item: &str| {
@@ -687,7 +687,7 @@ fn services_on_a_single_site_table_is_refused() {
     assert!(refusal(&text).contains("services"));
 }
 
-/// **T204a, D2.** One entry with no links is a `[site]` again, at the lowest schema.
+/// One entry with no links is a `[site]` again, at the lowest schema.
 #[test]
 fn one_entry_without_links_renders_as_a_single_site_table() {
     let text = with_body(
@@ -704,7 +704,7 @@ fn one_entry_without_links_renders_as_a_single_site_table() {
     );
 }
 
-/// **T204a, D2.** One entry naming its links keeps them, so it stays `[[sites]]` at 3.
+/// One entry naming its links keeps them, so it stays `[[sites]]` at 3.
 #[test]
 fn one_entry_with_links_stays_a_list() {
     let text = with_body(
@@ -717,7 +717,7 @@ fn one_entry_with_links_stays_a_list() {
     assert_eq!(read(&render(&manifest)).expect("round trip"), manifest);
 }
 
-/// **T204a, D2.** Routes nest under their own entry, after its links.
+/// Routes nest under their own entry, after its links.
 #[test]
 fn a_routed_entry_round_trips_among_several() {
     let mut manifest = read(&with_body(3, TWO_SITES)).expect("reads");
@@ -742,7 +742,7 @@ fn a_fourth_schema_is_refused_by_name() {
     ));
 }
 
-/// **T204a, D5.** With several sites every step names one, by its `domain_pattern`.
+/// With several sites every step names one, by its `domain_pattern`.
 #[test]
 fn a_step_names_its_site_when_there_are_several() {
     let step = |site: &str| {

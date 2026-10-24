@@ -86,7 +86,7 @@ pub const DEFAULT_URL: &str =
 /// a person installing four runtimes in a row does it over one round trip.
 pub const FRESH_FOR: Duration = Duration::from_secs(6 * 60 * 60);
 
-/// How a kind file failed to be the one its root names — roadmap task **T196**.
+/// How a kind file failed to be the one its root names.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum KindProblem {
@@ -174,16 +174,15 @@ pub struct Catalogue<D> {
     pub freshness: Freshness,
 }
 
-/// A signed document this client knows how to read — roadmap task **T81**.
+/// A signed document this client knows how to read.
 ///
-/// **More than one document is published** (the T81 design's D1 and D3): the package index says
-/// what can be installed, `extensions.json` says which extensions exist, and `latest.json` which
-/// release of MixEngine is newest. The package index is read by [`PackageIndex`] since roadmap task
-/// **T196**, and through this trait only where a source has nothing but `index.json`. They want identical treatment —
-/// verify before parse, cache, refuse to be walked backwards — and they must not share a cache
-/// file or a rollback mark, or a registry fetched at noon would look like an index rolled back to
-/// noon. So the client is generic over the document and this trait is everything it needs to know
-/// about one.
+/// **More than one document is published**: the package index says what can be installed,
+/// `extensions.json` says which extensions exist, and `latest.json` which release of MixEngine is
+/// newest. The package index is read by [`PackageIndex`], and through this trait only where a
+/// source has nothing but `index.json`. They want identical treatment — verify before parse, cache,
+/// refuse to be walked backwards — and they must not share a cache file or a rollback mark, or a
+/// registry fetched at noon would look like an index rolled back to noon. So the client is generic
+/// over the document and this trait is everything it needs to know about one.
 ///
 /// The [`InstallError::IndexSignature`](crate::InstallError::IndexSignature) family is deliberately
 /// *not* generic with it: every variant already carries the `url`, which is what says which

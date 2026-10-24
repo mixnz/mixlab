@@ -267,8 +267,8 @@ fn by_marker(found: &Found) -> std::result::Result<Marker, Refusal> {
     }
 }
 
-/// Why this directory is not recorded yet, said offline and recording nothing — roadmap task
-/// **T182i**, what a client draws beside its **Adopt**.
+/// Why this directory is not recorded yet, said offline and recording nothing — what a client
+/// draws beside its **Adopt**.
 ///
 /// The marker check a start makes, without the index: a directory with no marker has not been
 /// checked, and adopting it asks the index. One whose marker would record it answers that the next
@@ -583,8 +583,8 @@ mod tests {
         }
     }
 
-    /// **T182i.** Why each directory is not recorded, said offline and without recording anything —
-    /// what the window draws beside **Adopt**.
+    /// Why each directory is not recorded, said offline and without recording anything — what the
+    /// window draws beside **Adopt**.
     #[tokio::test]
     async fn examine_says_why_without_recording() {
         let (_temp, store, paths) = home().await;

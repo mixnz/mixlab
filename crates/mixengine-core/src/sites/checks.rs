@@ -6,16 +6,15 @@ use sqlx::Sqlite;
 
 use crate::{Error, ExtensionError, Result, Store};
 
-/// Refuse a pool that belongs to an extension to a site that is not that extension's — roadmap task
-/// **T82a**, that design's D5.
+/// Refuse a pool that belongs to an extension to a site that is not that extension's.
 ///
 /// **The instance half is the whole lookup.** `extensions::pools::id` composes `php-fpm@<id>`, so
 /// *does this pool belong to an extension* is *is its instance an installed extension* — one query,
 /// and exact because the rule is this build's own.
 ///
 /// **Here rather than in the daemon**, because `blueprint.apply` and `domain.add` reach [`update`]
-/// without going through a CLI, and a refusal they could cross is no refusal — T81b's D6 at a
-/// second field.
+/// without going through a CLI, and a refusal they could cross is no refusal — the rule an
+/// extension site's own refusals follow, at a second field.
 ///
 /// **And it cannot be crossed by ordering.** The pool row exists only while the extension is
 /// installed; a site must name a service that exists; and when the extension goes,
@@ -55,15 +54,14 @@ pub(super) async fn pool_is_free_for<'c>(
     }
 }
 
-/// Refuse a site that names a service nothing answers to — roadmap task **T122**.
+/// Refuse a site that names a service nothing answers to.
 ///
 /// **The schema already refused it; what it could not do was say so.** `sites.php_service_id` and
 /// `site_service_links.service_id` are both foreign keys, so an id with no row has never been
 /// writable — but SQLite answers `FOREIGN KEY constraint failed` and names neither the column nor
 /// the id, and that sentence is what a `blueprint.apply` handed a person after it had downloaded a
 /// runtime, created a database and started a web server. [`pool_is_free_for`]'s own doc has
-/// asserted *a site must name a service that exists* since T82a; this is that assertion given a
-/// voice.
+/// asserted *a site must name a service that exists*; this is that assertion given a voice.
 ///
 /// **Here rather than in the daemon**, for the reason the check above it carries: `blueprint.apply`
 /// reaches these rows without going through a CLI, so a refusal only the CLI made would be no

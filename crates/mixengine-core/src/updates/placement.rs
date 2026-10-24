@@ -1,4 +1,4 @@
-//! Whether this copy of MixEngine may replace itself — roadmap task **T88**, the design's D7.
+//! Whether this copy of MixEngine may replace itself.
 //!
 //! **A write probe and not a path table.** A list of "system" prefixes would be per-OS knowledge in
 //! this crate, which `CLAUDE.md` forbids, and would be wrong for anybody who installed somewhere
@@ -22,8 +22,7 @@ pub const PROBE_FILE: &str = ".mixengine-update-probe";
 /// The receipt the macOS `.pkg` installs under — `packaging/macos/build.sh`'s `--identifier`.
 pub const PKG_RECEIPT: &str = "dev.mixengine.cli";
 
-/// The kind of installer that updates a copy with this receipt, or [`None`] when no installer does —
-/// roadmap tasks **T88f** and **T182b**, D5.
+/// The kind of installer that updates a copy with this receipt, or [`None`] when no installer does.
 ///
 /// `pkg` for the macOS package's receipt, and `deb` or `rpm` for a copy one of the Linux packages
 /// installed: `mixengine-platform` spells those receipts `dpkg:<package>` and `rpm:<package>`. A
@@ -65,8 +64,8 @@ pub enum Placement {
         because: String,
     },
 
-    /// The macOS `.pkg` installed this copy, and the next `.pkg` updates it — roadmap task
-    /// **T88f** ([ADR 0050](../../../../docs/decisions/0050-a-copy-the-pkg-installed-is-updated-by-the-pkg.md)).
+    /// The macOS `.pkg` installed this copy, and the next `.pkg` updates it
+    /// ([ADR 0050](../../../../docs/decisions/0050-a-copy-the-pkg-installed-is-updated-by-the-pkg.md)).
     /// Handed to Installer.app, never swapped in place.
     Installer {
         /// The directory holding the binaries.
@@ -88,11 +87,11 @@ pub enum Placement {
 /// extracted by hand into a writable directory would *pass* a write probe while still being one
 /// file somebody placed rather than a directory of binaries an updater may replace one at a time.
 ///
-/// **The package receipt is asked before both** — roadmap task **T88f**, the design's D1. `receipt`
-/// is what `mixengine_platform` found for `daemon_exe`, passed in for `appimage`'s reason. A copy
-/// the `.pkg` installed may sit in a directory this account can write — the Intel Homebrew Mac, and
-/// the Apple silicon Mac the T88f readings were taken on — and the probe would then swap four
-/// binaries and leave the window and the helper behind. Only [`PKG_RECEIPT`] counts.
+/// **The package receipt is asked before both.** `receipt` is what `mixengine_platform` found for
+/// `daemon_exe`, passed in for `appimage`'s reason. A copy the `.pkg` installed may sit in a
+/// directory this account can write — the Intel Homebrew Mac, and the Apple silicon Mac this was
+/// measured on — and the probe would then swap four binaries and leave the window and the helper
+/// behind. Only [`PKG_RECEIPT`] counts.
 #[must_use]
 pub fn of(daemon_exe: &Path, appimage: Option<&OsStr>, receipt: Option<&str>) -> Placement {
     let Some(directory) = daemon_exe
@@ -196,7 +195,7 @@ mod tests {
     }
 
     /// A writable directory: the probe alone would call it self-updatable, which is the half-update
-    /// the T88f readings found possible on Apple silicon as well as on Intel (spec D1).
+    /// measured possible on Apple silicon as well as on Intel.
     #[test]
     fn the_pkg_receipt_is_asked_before_the_probe() {
         let directory = tempfile::tempdir().expect("a temporary directory");
@@ -210,8 +209,8 @@ mod tests {
         );
     }
 
-    /// T182b, D5. A copy a `.deb` or an `.rpm` installed is updated by the next package of the same
-    /// kind, like the `.pkg`, and the receipt says which kind that is.
+    /// A copy a `.deb` or an `.rpm` installed is updated by the next package of the same kind, like
+    /// the `.pkg`, and the receipt says which kind that is.
     #[test]
     fn a_linux_package_receipt_is_an_installer_of_its_own_kind() {
         let directory = tempfile::tempdir().expect("a temporary directory");

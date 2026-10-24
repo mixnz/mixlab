@@ -1,4 +1,4 @@
-//! Putting a release on this machine — roadmap task **T88**, the design's D3, D8 and D11.
+//! Putting a release on this machine.
 //!
 //! # Two halves, and only the second one is new
 //!
@@ -17,11 +17,11 @@
 //! # The helper beside the program is swapped too
 //!
 //! `mixengine-elevate` beside the program is the copy the daemon installs a privileged helper from,
-//! and it sits in a directory this account already writes, so skipping it protected nothing and left
-//! the daemon an old copy to install — roadmap task **T182b**, D4. The *privileged* copy is somewhere
-//! only an administrator can write, never under the install directory, so no swap can reach it: the
-//! daemon replaces that one through a prompt, with the signature checked inside the elevated context
-//! (T88a). `docs/features/updates.md`'s rule, that an auto-updated binary running as root is a local
+//! and it sits in a directory this account already writes, so skipping it protected nothing and
+//! left the daemon an old copy to install. The *privileged* copy is somewhere only an administrator
+//! can write, never under the install directory, so no swap can reach it: the daemon replaces that
+//! one through a prompt, with the signature checked inside the elevated context.
+//! `docs/features/updates.md`'s rule, that an auto-updated binary running as root is a local
 //! privilege-escalation vector, holds because of where that copy lives, not because of a name here.
 
 use std::collections::BTreeMap;
@@ -42,8 +42,7 @@ use crate::{Error, Result};
 /// [`InstallError::MissingFromArtifact`]: crate::InstallError::MissingFromArtifact
 pub const SMOKE_EXECUTABLE: &str = "mixengined";
 
-/// The window's key in a payload's `provides`, and what macOS wraps it in — roadmap tasks **T106**
-/// and **T107**.
+/// The window's key in a payload's `provides`, and what macOS wraps it in.
 ///
 /// **The one payload entry that is not resolved by appending an executable suffix.** On macOS a
 /// windowed application is a directory called [`WINDOW_BUNDLE`], which no suffix produces, so
@@ -51,8 +50,8 @@ pub const SMOKE_EXECUTABLE: &str = "mixengined";
 /// [`mixengine_platform::install::application_file_name`] — `installed_name` below — and
 /// [`WINDOW_BUNDLE`] is the second argument that call takes.
 ///
-/// Published under these two names because that is what this module has published since T106 and
-/// what `crates/mixengine-core/tests/packaging.rs` pins to `packaging/common.sh`; **defined in
+/// Published under these two names because that is what this module has always published and what
+/// `crates/mixengine-core/tests/packaging.rs` pins to `packaging/common.sh`; **defined in
 /// [`crate::window`]**, which holds all four of the window's names — a display name and a URL
 /// scheme are not an updater's business, and four names in two places is the drift this indirection
 /// removes.
@@ -209,9 +208,9 @@ pub fn swap(
 /// `mix` that ran the update, and a `mixlab.exe.old` by the window still running the image it started
 /// from; both go at the start after that one.
 ///
-/// **A `.old` may be a directory** — roadmap task **T106**. macOS's window is an application bundle,
-/// and `remove_file` does not remove one: left as it was, a machine that updated twice would keep
-/// every bundle it had ever run.
+/// **A `.old` may be a directory.** macOS's window is an application bundle, and `remove_file` does
+/// not remove one: left as it was, a machine that updated twice would keep every bundle it had ever
+/// run.
 #[must_use]
 pub fn discard_old(directory: &Path, names: &[String]) -> usize {
     names
@@ -233,10 +232,10 @@ pub fn discard_old(directory: &Path, names: &[String]) -> usize {
 
 /// One entry's swap: rename what is installed out of the way, then write the new one.
 ///
-/// **A file or a tree** — roadmap task **T106**. The window is a directory on macOS
-/// ([`WINDOW_BUNDLE`]), and a bundle half written is an application the operating system refuses to
-/// start, which is worse than the update that was refused. So a tree that cannot be finished is
-/// removed and the rename undone, exactly as the file path already did.
+/// **A file or a tree.** The window is a directory on macOS ([`WINDOW_BUNDLE`]), and a bundle half
+/// written is an application the operating system refuses to start, which is worse than the update
+/// that was refused. So a tree that cannot be finished is removed and the rename undone, exactly as
+/// the file path already did.
 fn replace(source: &Path, target: &Path, old: &Path) -> Result<()> {
     std::fs::rename(target, old).map_err(|source| Error::Io {
         action: "rename the installed binary out of the way",
@@ -353,7 +352,7 @@ fn binary_name(name: &str) -> String {
     format!("{name}{}", std::env::consts::EXE_SUFFIX)
 }
 
-/// What one payload name is called on this machine's disk — roadmap task **T106**.
+/// What one payload name is called on this machine's disk.
 ///
 /// Four of the five are [`binary_name`]. The fifth is [`WINDOW`], and asking the platform is the
 /// whole point: on macOS it is a bundle directory, and this crate may not hold that fact itself
@@ -473,10 +472,10 @@ mod tests {
         );
     }
 
-    /// T182b, D4. The helper beside the program is swapped like every other binary: it is the copy
-    /// the daemon installs from, and an update that left it behind would leave the daemon nothing
-    /// current to install. The *privileged* copy is never under the install directory, so no swap
-    /// can reach it.
+    /// The helper beside the program is swapped like every other binary: it is the copy the daemon
+    /// installs from, and an update that left it behind would leave the daemon nothing current to
+    /// install. The *privileged* copy is never under the install directory, so no swap can reach
+    /// it.
     #[test]
     fn the_helper_beside_the_program_is_swapped_like_every_other_binary() {
         let helper = "mixengine-elevate";
@@ -494,7 +493,7 @@ mod tests {
     }
 
     /// A payload that gained a binary against an install that does not have it yet — which is how
-    /// `mixengine-shim` behaves the day T85c is done.
+    /// `mixengine-trampoline` first reached an install that updated itself.
     #[test]
     fn a_binary_this_install_does_not_have_is_left_alone() {
         let (_root, staged, installed) = layout(&["mix", "mixengine-shim"], &["mix"]);
@@ -550,8 +549,8 @@ mod tests {
         );
     }
 
-    /// T106. macOS's window is a directory, and an update that could only replace files would leave
-    /// a new daemon beside a window from the release before it.
+    /// macOS's window is a directory, and an update that could only replace files would leave a new
+    /// daemon beside a window from the release before it.
     ///
     /// Staged under an ordinary binary's name so this runs the same way on all three systems: what
     /// is being tested is [`replace`]'s branch on `source.is_dir()`, and that branch has no `cfg`.

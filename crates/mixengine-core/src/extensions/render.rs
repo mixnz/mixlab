@@ -1,14 +1,14 @@
-//! Turning a manifest's templates into the thing that would run — roadmap task **T80**.
+//! Turning a manifest's templates into the thing that would run.
 //!
-//! **The manifest never writes an address** (the T80 design, D2). [`text`] substitutes `{listen}`
-//! from `permissions.network` and from nothing else, and a host written out anywhere in the file is
+//! **The manifest never writes an address.** [`text`] substitutes `{listen}` from
+//! `permissions.network` and from nothing else, and a host written out anywhere in the file is
 //! refused before substitution — including `127.0.0.1`, which is the one an author would write in
 //! good faith. So an extension that declared `loopback` has no way to spell any other address:
 //! there is no check here that a later feature could forget to consult, because there is nothing to
 //! check.
 //!
-//! **And every path grows from a placeholder** (D4), which is what `filesystem = ["own-data"]`
-//! *is*. An extension cannot reach a path it was not handed, because it cannot write one down.
+//! **And every path grows from a placeholder**, which is what `filesystem = ["own-data"]` *is*. An
+//! extension cannot reach a path it was not handed, because it cannot write one down.
 //!
 //! The refusals are checked against what the *author* wrote rather than against the rendering,
 //! because after substitution `{listen}` has become an address and the two would be
@@ -33,7 +33,7 @@ pub const INSTALL_DIR: &str = "{install_dir}";
 /// See [`INSTALL_DIR`].
 pub const DATA_DIR: &str = "{data_dir}";
 
-/// `{db_password_env}`, spelled as it appears in a file — roadmap task **T82a**, the design's D2.
+/// `{db_password_env}`, spelled as it appears in a file.
 ///
 /// **The one placeholder that renders the name of an environment variable rather than a value.**
 /// The password itself never reaches this crate: a pool's spec carries an `EnvValue::Keyring` and
@@ -65,22 +65,20 @@ pub struct Context {
     /// `{listen}`.
     pub listen: IpAddr,
 
-    /// Where this `web-app`'s database is, for `{db_host}`, `{db_port}` and `{db_user}` — roadmap
-    /// task **T82**, the design's D5.
+    /// Where this `web-app`'s database is, for `{db_host}`, `{db_port}` and `{db_user}`.
     ///
     /// [`None`] everywhere a configuration is not being written: a plan has resolved nothing yet,
     /// and a `service` extension has no database at all.
     pub database: Option<DatabaseEndpoint>,
 
-    /// `{secret}` — roadmap task **T82**, the design's D7.
+    /// `{secret}`.
     ///
     /// **Supplied by the daemon and never read here.** This crate has no business reaching a
-    /// credential store (`generate::databases`' D1), so the value arrives already read out of the
-    /// keyring, which is the same shape a recipe's declared secrets take.
+    /// credential store (the division `generate::databases` opens with), so the value arrives
+    /// already read out of the keyring, which is the same shape a recipe's declared secrets take.
     pub secret: Option<String>,
 
-    /// `{db_password_env}` — the variable a `web-app` declaring `signs_in` reads its password from,
-    /// roadmap task **T82a**, the design's D2.
+    /// `{db_password_env}` — the variable a `web-app` declaring `signs_in` reads its password from.
     ///
     /// **A name and never a value.** The password itself is never in this crate: the pool's spec
     /// carries an `EnvValue::Keyring` and the supervisor reads it at spawn. [`None`] wherever the
@@ -88,14 +86,13 @@ pub struct Context {
     pub password_env: Option<String>,
 }
 
-/// Where a `web-app`'s database is, and what to call its superuser — roadmap task **T82**, the
-/// design's D5.
+/// Where a `web-app`'s database is, and what to call its superuser.
 ///
 /// **Three fields and no fourth.** There is no socket, because every database recipe binds a TCP
-/// port on all three systems — T34c's *"a pool gets its 9000 the same way `mariadb@main` gets its
-/// 3306"* — so one address form is enough, and a placeholder rendering to nothing on Windows is a
-/// template nobody could write once. There is no password, because the design's D6 says a generated
-/// file does not carry one: where the credential lives stays
+/// port on all three systems — *"a pool gets its 9000 the same way `mariadb@main` gets its 3306"* —
+/// so one address form is enough, and a placeholder rendering to nothing on Windows is a template
+/// nobody could write once. There is no password, because a generated file does not carry one:
+/// where the credential lives stays
 /// [`Context::secret_address`](crate::generate::context::Context::secret_address)'s answer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DatabaseEndpoint {
@@ -117,22 +114,21 @@ pub struct DatabaseEndpoint {
 impl Context {
     /// The context an install on this machine *would* build.
     ///
-    /// **The ports here are what the extension asked for, not what it has.** Allocation is T81's,
-    /// through [`Port::Allocate`](crate::services::Port), and nothing is reserved by rendering —
-    /// a line that read like a reservation is how somebody concludes a port is held.
+    /// **The ports here are what the extension asked for, not what it has.** Allocation is the
+    /// installer's, through [`Port::Allocate`](crate::services::Port), and nothing is reserved by
+    /// rendering — a line that read like a reservation is how somebody concludes a port is held.
     #[must_use]
     pub fn planned(paths: &Paths, manifest: &ExtensionManifest) -> Self {
         let id = manifest.extension.id.as_str();
 
         Self {
             install_dir: paths.extensions().join(id),
-            // **Not under the install directory** — roadmap task **T81**, its design's D13. An
-            // uninstall removes `install_dir` whole and keeps this unless somebody asks otherwise,
-            // which is a promise a `data` nested inside it could not keep; the alternative, deleting
-            // everything under the install directory except one child, is a rule to remember at
-            // every future site that removes an extension. Two directories, two lifetimes: one
-            // belongs to the version installed and goes with it, the other belongs to the person and
-            // outlives every upgrade.
+            // **Not under the install directory.** An uninstall removes `install_dir` whole and
+            // keeps this unless somebody asks otherwise, which is a promise a `data` nested inside
+            // it could not keep; the alternative, deleting everything under the install directory
+            // except one child, is a rule to remember at every future site that removes an
+            // extension. Two directories, two lifetimes: one belongs to the version installed and
+            // goes with it, the other belongs to the person and outlives every upgrade.
             data_dir: paths.data().join("extensions").join(id),
             ports: manifest.ports.clone(),
             listen: manifest.permissions.network.listen_address(),
@@ -193,7 +189,7 @@ impl Context {
                 .map(|db| (db.port.to_string(), false)),
             "db_user" => self.database.as_ref().map(|db| (db.user.clone(), false)),
             "secret" => self.secret.clone().map(|secret| (secret, false)),
-            // **A name, and the only placeholder that renders one** — roadmap task **T82a**, D2.
+            // **A name, and the only placeholder that renders one.**
             // Answered from the manifest's `signs_in` rather than from anything this home holds,
             // which is why it is [`None`] on a context nobody asked to configure.
             "db_password_env" => self.password_env.clone().map(|name| (name, false)),
@@ -223,11 +219,11 @@ const ANSWERED_ONLY_WHEN_CONFIGURING: [&str; 5] =
 
 /// What a reader is told about one of [`ANSWERED_ONLY_WHEN_CONFIGURING`] that nothing answers.
 ///
-/// **Named per placeholder where the field that would supply it is not obvious** — roadmap task
-/// **T82a**. Four of the five are answered by a home that has a database and a secret, so "this
-/// home has nothing to answer it with" is the whole story; `{db_password_env}` is answered by a
-/// *manifest* field one line further up the same file, and saying which field is the difference
-/// between a refusal an author can act on and one they have to read this crate to understand.
+/// **Named per placeholder where the field that would supply it is not obvious.** Four of the five
+/// are answered by a home that has a database and a secret, so "this home has nothing to answer it
+/// with" is the whole story; `{db_password_env}` is answered by a *manifest* field one line further
+/// up the same file, and saying which field is the difference between a refusal an author can act
+/// on and one they have to read this crate to understand.
 fn unanswered(name: &str) -> String {
     match name {
         "db_password_env" => {
@@ -237,7 +233,7 @@ fn unanswered(name: &str) -> String {
     }
 }
 
-/// Substitute a `[web-app.config]` text — roadmap task **T82**, the design's D1 and D8.
+/// Substitute a `[web-app.config]` text.
 ///
 /// [`Destination::PhpSource`] copies a `{…}` it does not recognise, because PHP's own braces
 /// outnumber ours in any real file. **What is still refused is a placeholder of ours with nothing
@@ -267,7 +263,7 @@ pub fn php_source(
     spelled(id, field, template, context, Destination::PhpSource)
 }
 
-/// Where a substitution is landing — roadmap task **T81c**, the design's D4.
+/// Where a substitution is landing.
 ///
 /// Two things a placeholder cannot decide for itself, and both of them are properties of the
 /// document rather than of the extension.
@@ -280,14 +276,14 @@ pub fn php_source(
 /// substituted into it takes the same spelling.
 ///
 /// **Whether a `{…}` that is not ours is a mistake.** In a field whose whole content is MixEngine's
-/// vocabulary it is: `{home_dir}` surviving into an argument is a literal brace handed to a program,
-/// reported as whatever that program does with it. In a *fragment* it is not, and this is the one
-/// place the T80 rule does not hold — a brace is the destination language's own punctuation.
-/// `location / { return 404; }` is nginx, `handle { file_server }` is Caddy, and `{host}` is a Caddy
-/// placeholder spelled exactly the way ours are. Refusing what we do not recognise would refuse
-/// every real fragment; so an unrecognised `{…}` is copied verbatim, and what takes over the job of
-/// catching a misspelling is the front end's own parser, run over the fragment before the install is
-/// allowed to proceed.
+/// vocabulary it is: `{home_dir}` surviving into an argument is a literal brace handed to a
+/// program, reported as whatever that program does with it. In a *fragment* it is not, and this is
+/// the one place the address rule does not hold — a brace is the destination language's own
+/// punctuation. `location / { return 404; }` is nginx, `handle { file_server }` is Caddy, and
+/// `{host}` is a Caddy placeholder spelled exactly the way ours are. Refusing what we do not
+/// recognise would refuse every real fragment; so an unrecognised `{…}` is copied verbatim, and
+/// what takes over the job of catching a misspelling is the front end's own parser, run over the
+/// fragment before the install is allowed to proceed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Destination {
     /// A field whose whole content is this vocabulary: an argument, an environment value, a
@@ -301,12 +297,13 @@ pub enum Destination {
     /// A `[[recipe.front_end]]` fragment written for an `nginx.conf`. Forward slashes.
     NginxConf,
 
-    /// A `[web-app.config]` text, which is PHP source — roadmap task **T82**, the design's D8.
+    /// A `[web-app.config]` text, which is PHP source.
     ///
     /// Forward slashes, because PHP accepts them on Windows and a backslash inside a single-quoted
     /// PHP string is a character the reader has to reason about. An unrecognised `{…}` is copied
-    /// verbatim for T81c's reason arriving a second time: `function f() {` opens a brace before the
-    /// first placeholder, and refusing what we do not recognise would refuse every real file.
+    /// verbatim for a fragment's reason arriving a second time: `function f() {` opens a brace
+    /// before the first placeholder, and refusing what we do not recognise would refuse every real
+    /// file.
     ///
     /// What takes over from the refusal is the same thing that took it over for a fragment — the
     /// real parser. Here that is the PHP runtime, which is why this feature's testing rests on a
@@ -410,14 +407,13 @@ fn spelled(
 
             // **The brace alone, and the scan continues one character on** — not past the `}` that
             // was looked for. A block's `{` is the common case here (`server {`, `handle {`), and
-            // the nearest `}` after one is nowhere near it: in
-            // `server {\n    listen {listen}:{port};` it is the closing brace of `{listen}`, so
-            // consuming through it swallows a real placeholder and leaves `{listen}` in an
-            // `nginx.conf` — which nginx reports as a `listen` directive with no `;`, five lines
-            // from anything that looks wrong. Found by the real server in T81c, after two unit
-            // tests missed it: re-emitting the swallowed text is *lossless* whenever nothing
-            // inside it needed substituting, so a fragment that opens a block after its
-            // placeholders renders correctly by luck.
+            // the nearest `}` after one is nowhere near it: in `server {\n listen {listen}:{port};`
+            // it is the closing brace of `{listen}`, so consuming through it swallows a real
+            // placeholder and leaves `{listen}` in an `nginx.conf` — which nginx reports as a
+            // `listen` directive with no `;`, five lines from anything that looks wrong. Found by
+            // the real server, after two unit tests missed it: re-emitting the swallowed text is
+            // *lossless* whenever nothing inside it needed substituting, so a fragment that opens a
+            // block after its placeholders renders correctly by luck.
             //
             // A brace also ends whatever path was being copied — nothing MixEngine handed out
             // continues through one.
@@ -450,7 +446,7 @@ fn copy(rendered: &mut String, literal: &str, in_path: &mut bool, destination: D
 
 /// Substitute a path, insisting it grew from one of `allowed` and climbs out of nothing.
 ///
-/// This function is what `filesystem = ["own-data"]` *is* (the T80 design, D4): an extension
+/// This function is what `filesystem = ["own-data"]` *is*: an extension
 /// reaches the paths it was handed because it has no way to write down any other.
 ///
 /// # Errors
@@ -538,7 +534,7 @@ pub fn value(id: &ExtensionId, field: &str, template: &str, context: &Context) -
     text(id, field, template, context)
 }
 
-/// Substitute a `[[recipe.front_end]]` fragment — roadmap task **T81c**.
+/// Substitute a `[[recipe.front_end]]` fragment.
 ///
 /// [`value`] pointed at a configuration language rather than at a field of ours — see
 /// [`Destination`] for the two things that changes — and held to the same address rule for the same
@@ -632,7 +628,7 @@ pub fn service_spec(
         })
 }
 
-/// The same, stopping one step short of a finished spec — roadmap task **T81**.
+/// The same, stopping one step short of a finished spec.
 ///
 /// **A builder is what a [`Recipe`](crate::generate::Recipe) owes**, because the parts of a spec
 /// that come from the row rather than from the declaration — the resource limits a machine's owner

@@ -202,7 +202,7 @@ pub async fn delete(store: &Store, service: &ServiceId) -> Result<Option<String>
     Ok(removed)
 }
 
-/// Replace how long a service may look idle before it is stopped — roadmap task **T69**.
+/// Replace how long a service may look idle before it is stopped.
 ///
 /// **Three states, and the caller says which one it means.** `None` writes SQL `NULL`, "use
 /// whatever the recipe wants"; `Some(0)` writes `0`, "never, whatever the recipe wants"; `Some(n)`
@@ -244,7 +244,7 @@ pub async fn set_idle(store: &Store, service: &ServiceId, minutes: Option<u32>) 
     Ok(())
 }
 
-/// Replace whether this service starts when the daemon does — roadmap task **T112**.
+/// Replace whether this service starts when the daemon does.
 ///
 /// [`set_idle`]'s shape, and for its reason: the column is the whole of the setting, and what reads
 /// it is a walk that has not happened yet. **Nothing is started or stopped by this call.**
@@ -280,7 +280,7 @@ pub async fn set_autostart(store: &Store, service: &ServiceId, autostart: bool) 
     Ok(())
 }
 
-/// The services whose `autostart` column is set — roadmap task **T113**.
+/// The services whose `autostart` column is set.
 ///
 /// **The ids and not the rows**, because what the caller does with them is build a
 /// [`ServiceGraph::start_plan`](crate::services::graph::ServiceGraph::start_plan): the plan pulls in
@@ -308,7 +308,7 @@ pub async fn autostart_ids(store: &Store) -> Result<Vec<ServiceId>> {
         .collect())
 }
 
-/// What `services.idle_minutes` holds for this service — roadmap task **T69**.
+/// What `services.idle_minutes` holds for this service.
 ///
 /// The raw column rather than a resolved duration, because resolving it needs the recipe's default
 /// and this crate's callers hold the catalogue that has it. What turns the two into an answer a
@@ -336,7 +336,7 @@ pub async fn idle_minutes(store: &Store, service: &ServiceId) -> Result<Option<i
     Ok(row.idle_minutes)
 }
 
-/// Replace what a service may take — roadmap task **T68**.
+/// Replace what a service may take.
 ///
 /// **The whole value, never a delta.** `limits_json` holds a complete `ResourceLimits`, so a write
 /// that merged would need to read first, and two clients capping one service would then race over

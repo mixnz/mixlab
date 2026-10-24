@@ -1,12 +1,12 @@
-//! What the hosts file should hold, according to this home's database — roadmap task **T41**.
+//! What the hosts file should hold, according to this home's database.
 //!
 //! **Rendered from the rows every time and never parsed back**, which is the standing rule about
 //! generated configuration one file smaller: the block is disposable, and the operation that writes
-//! it carries the whole state rather than a delta (T41 design, D1).
+//! it carries the whole state rather than a delta.
 //!
 //! Nothing here decides whether that state is worth an elevation prompt. That is the daemon's
 //! question, because it needs the machine's current answer as well as this one — see
-//! `Elevation::require_hosts` and D11.
+//! `Elevation::require_hosts`.
 
 use std::net::{IpAddr, Ipv4Addr};
 
@@ -16,27 +16,27 @@ use crate::{Result, Store};
 
 /// The one address a managed name resolves to.
 ///
-/// **`127.0.0.1` alone, and no `::1`** — the T41 design, D5. Nothing decides that the web server
-/// binds `::1` until T43, and a name that resolves to an address nothing is listening on is a
-/// browser timing out before it retries. The helper permits `::1` so T43 can start emitting it
-/// without touching the audited binary.
+/// **`127.0.0.1` alone, and no `::1`.** `127.0.0.1` is the address every front end is reached on,
+/// and a name that resolves to an address nothing is listening on is a browser timing out before it
+/// retries. The helper permits `::1`, so a block that one day emits it needs no change to the
+/// audited binary.
 const LOOPBACK: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 
 /// One entry per domain of every site in this home **whose TLD nothing routes**, sorted by name.
 ///
-/// **Every site, whatever `sites.state` says** — the T41 design, D10. A disabled site is one that is
-/// not served; the hosts block is about name resolution, and a disabled name that resolves to
-/// loopback and is refused by the web server is a better failure than a name that does not resolve
-/// at all, because the first one is diagnosable.
+/// **Every site, whatever `sites.state` says.** A disabled site is one that is not served; the
+/// hosts block is about name resolution, and a disabled name that resolves to loopback and is
+/// refused by the web server is a better failure than a name that does not resolve at all, because
+/// the first one is diagnosable.
 ///
-/// **`wired` is per TLD, and that is a correction to T44** — the T45 design, D6. T44 gave this home
-/// one `DnsMode` and computed the whole block from it: hosts-only meant a line per domain, DNS meant
-/// an empty block. That was right while nothing could be wired, because both terms were false for
-/// every TLD at once. It stops being right the moment a resolver is pointed anywhere, because every
-/// mechanism there is scopes to **one TLD** — a file per TLD on macOS, a namespace per rule on
-/// Windows, an entry in `Domains=` on Linux — and `.local` is deliberately never wired at all. A
-/// home holding both `blog.test` and `shop.local` needs a block with exactly one line in it, and it
-/// is the `.local` one.
+/// **`wired` is per TLD, and that is a correction to the DNS server's first shape**, which gave
+/// this home one `DnsMode` and computed the whole block from it: hosts-only meant a line per
+/// domain, DNS meant an empty block. That was right while nothing could be wired, because both
+/// terms were false for every TLD at once. It stops being right the moment a resolver is pointed
+/// anywhere, because every mechanism there is scopes to **one TLD** — a file per TLD on macOS, a
+/// namespace per rule on Windows, an entry in `Domains=` on Linux — and `.local` is deliberately
+/// never wired at all. A home holding both `blog.test` and `shop.local` needs a block with exactly
+/// one line in it, and it is the `.local` one.
 ///
 /// A wired TLD is answered by pattern, so a line per name under it adds nothing and asking for one
 /// would spend an elevation prompt on a block that could only ever be redundant. An unwired TLD has
@@ -121,9 +121,9 @@ mod tests {
         }
     }
 
-    /// D10: a disabled site is one that is not *served*; the block is about name resolution.
-    /// Excluding it would make `site.disable` cost a password dialog for a state change that
-    /// touches nothing on disk.
+    /// A disabled site is one that is not *served*; the block is about name resolution. Excluding
+    /// it would make `site.disable` cost a password dialog for a state change that touches nothing
+    /// on disk.
     #[tokio::test]
     async fn every_domain_of_every_site_gets_a_line_whatever_its_state_says() {
         let (_temp, store, project) = home().await;
@@ -160,7 +160,7 @@ mod tests {
         );
         assert!(
             desired.iter().all(|entry| entry.address == LOOPBACK),
-            "D5: one address, and it is the one something is listening on"
+            "one address, and it is the one something is listening on"
         );
     }
 
@@ -172,9 +172,8 @@ mod tests {
         assert_eq!(desired(&store, &[]).await.unwrap(), Vec::new());
     }
 
-    /// The T45 design, D6. The wiring is scoped to one TLD on every system measured, so the block
-    /// is too: a home with a wired `.test` and an unwired `.local` needs exactly one line, and it
-    /// is the `.local` one.
+    /// The wiring is scoped to one TLD on every system measured, so the block is too: a home with a
+    /// wired `.test` and an unwired `.local` needs exactly one line, and it is the `.local` one.
     #[tokio::test]
     async fn only_the_domains_of_unwired_tlds_need_a_hosts_entry() {
         let (_temp, store, project) = home().await;
@@ -200,8 +199,8 @@ mod tests {
         );
     }
 
-    /// A home with nothing wired is every home before the first grant, and it keeps the whole block
-    /// T41 built.
+    /// A home with nothing wired is every home before the first grant, and it keeps the whole
+    /// block.
     #[tokio::test]
     async fn a_home_with_nothing_wired_needs_every_domain() {
         let (_temp, store, project) = home().await;

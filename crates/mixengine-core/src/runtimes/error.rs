@@ -1,7 +1,7 @@
 //! The ways recording, resolving and restoring runtimes and packages can fail.
 //!
 //! One of the enums [`crate::Error`] wraps transparently, so its messages and sources are
-//! the ones a caller of this crate always saw — roadmap task **T207j**.
+//! the ones a caller of this crate always saw.
 
 use std::path::PathBuf;
 
@@ -18,7 +18,7 @@ pub enum RuntimeError {
         path: PathBuf,
     },
 
-    /// A copy of an earlier home's state that this home will not take — roadmap task **T182h**.
+    /// A copy of an earlier home's state that this home will not take.
     #[error("this home cannot be restored from {}: {reason}", path.display())]
     RestoreRefused {
         /// The copy.
@@ -27,9 +27,9 @@ pub enum RuntimeError {
         reason: String,
     },
 
-    /// A directory where an install would go, which could not be recorded as one — roadmap task
-    /// **T182f**. Distinct from [`AlreadyInstalled`](Self::AlreadyInstalled) because what a person
-    /// does about it is different: record it by hand once it can be checked, or remove it.
+    /// A directory where an install would go, which could not be recorded as one. Distinct from
+    /// [`AlreadyInstalled`](Self::AlreadyInstalled) because what a person does about it is
+    /// different: record it by hand once it can be checked, or remove it.
     #[error("{} is on disk but not recorded: {reason}", path.display())]
     UnrecordedInstall {
         /// The directory.
@@ -144,7 +144,7 @@ pub enum RuntimeError {
         kind: mixengine_proto::RuntimeKind,
     },
 
-    /// The version asked for is recorded and its folder is gone — roadmap task **T206d**, D2.
+    /// The version asked for is recorded and its folder is gone.
     ///
     /// **Never answered with another version**: a default that moved because a folder vanished would
     /// change what a project runs behind its back. What the daemon turns it into is

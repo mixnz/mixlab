@@ -39,8 +39,7 @@ fn rendered(state: &State) -> BTreeMap<String, String> {
         .collect()
 }
 
-/// **An installed extension's `[recipe] php_ini` reaches every managed PHP** — roadmap task
-/// **T81**, its design's D10.
+/// **An installed extension's `[recipe] php_ini` reaches every managed PHP.**
 ///
 /// Rendered against *that extension's* install directory, which is the whole reason the
 /// substitution happens here rather than in whatever writes the file.

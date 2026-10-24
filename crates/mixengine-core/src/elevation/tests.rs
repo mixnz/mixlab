@@ -29,8 +29,9 @@ async fn the_first_enqueue_hands_back_the_whole_queue() {
     assert_eq!(waiting[0].requested_at, WHEN);
 }
 
-/// D2, and the whole of "no code path elevates in a loop" at rest: the schema is what refuses,
-/// so a producer that enqueues on every start writes one row without having to know it.
+/// One row per operation, and the whole of "no code path elevates in a loop" at rest: the schema is
+/// what refuses, so a producer that enqueues on every start writes one row without having to know
+/// it.
 #[tokio::test]
 async fn the_same_operation_asked_for_twice_is_one_row_with_the_first_moment() {
     let (_home, store) = store().await;
@@ -77,9 +78,9 @@ async fn dropping_one_leaves_the_others_and_dropping_all_empties_it() {
     assert!(pending(&store).await.unwrap().is_empty());
 }
 
-/// D2's last paragraph. The only way to make one of these is to downgrade the daemon underneath
-/// its own database, and a row no installed build can act on is a degraded mode nobody can ever
-/// clear — so it is deleted and logged rather than carried.
+/// The only way to make one of these is to downgrade the daemon underneath its own database, and a
+/// row no installed build can act on is a degraded mode nobody can ever clear — so it is deleted
+/// and logged rather than carried.
 #[tokio::test]
 async fn a_row_this_build_cannot_decode_is_removed_rather_than_carried() {
     let (_home, store) = store().await;
@@ -109,12 +110,12 @@ async fn a_row_this_build_cannot_decode_is_removed_rather_than_carried() {
     assert_eq!(left, 1);
 }
 
-/// D9: beside the program that went looking, and nowhere else. The refusal is what
-/// `elevation.grant` turns into `dependency_missing`.
+/// Beside the program that went looking, and nowhere else. The refusal is what `elevation.grant`
+/// turns into `dependency_missing`.
 ///
-/// `None` for the installed copy — not because this machine has none, which it may well if
-/// somebody has run the elevated suite here, but because that is the machine this test is
-/// describing. See T85's D5 for why the argument exists at all.
+/// `None` for the installed copy — not because this machine has none, which it may well if somebody
+/// has run the elevated suite here, but because that is the machine this test is describing.
+/// `helper`'s own documentation says why the argument exists at all.
 #[test]
 fn a_helper_that_is_not_beside_the_daemon_is_named_rather_than_searched_for() {
     let directory = tempfile::tempdir().expect("a temporary directory");
@@ -137,14 +138,15 @@ fn a_helper_that_is_not_beside_the_daemon_is_named_rather_than_searched_for() {
     );
 }
 
-/// T85's D5, as its own table, with T88d's source list in place of the single fallback. Every
-/// row, including the two no machine running this test could produce: an installed helper
-/// somebody else owns, and one the machine will not answer about.
+/// The choice between an installed helper and a shipped one, as its own table, with the platform's
+/// source list in place of a single fallback. Every row, including the two no machine running this
+/// test could produce: an installed helper somebody else owns, and one the machine will not answer
+/// about.
 fn ops(names: &[&str]) -> Vec<String> {
     names.iter().map(|name| (*name).to_owned()).collect()
 }
 
-/// T182b, D3. The installed helper knows every operation in the batch: it runs it.
+/// The installed helper knows every operation in the batch: it runs it.
 #[test]
 fn an_installed_helper_that_knows_the_batch_is_not_bypassed() {
     let installed = ops(&["hosts-apply", "trust-ca-install"]);
@@ -157,8 +159,8 @@ fn an_installed_helper_that_knows_the_batch_is_not_bypassed() {
     assert!(!bypass.applies());
 }
 
-/// T182b, D3. The installed helper cannot read an operation in the batch, and the shipped copy
-/// is this release's: the shipped copy runs it.
+/// The installed helper cannot read an operation in the batch, and the shipped copy is this
+/// release's: the shipped copy runs it.
 #[test]
 fn an_installed_helper_that_cannot_read_the_batch_gives_way_to_the_current_one() {
     let installed = ops(&["hosts-apply"]);
@@ -171,9 +173,9 @@ fn an_installed_helper_that_cannot_read_the_batch_gives_way_to_the_current_one()
     assert!(bypass.applies());
 }
 
-/// T182b, D2's last row. A helper too old to replace itself does know `helper-install`, but run
-/// by it that copies its own image onto itself; the install goes through the shipped copy. A
-/// helper that can replace itself is never bypassed for an install.
+/// A helper too old to replace itself does know `helper-install`, but run by it that copies its own
+/// image onto itself; the install goes through the shipped copy. A helper that can replace itself
+/// is never bypassed for an install.
 #[test]
 fn an_install_over_a_helper_too_old_to_replace_itself_goes_through_the_shipped_copy() {
     let too_old = ops(&["hosts-apply", "helper-install"]);
@@ -192,8 +194,8 @@ fn an_install_over_a_helper_too_old_to_replace_itself_goes_through_the_shipped_c
     assert!(!bypass.applies());
 }
 
-/// T182b, D3. A shipped copy that is not this release's, or that did not answer, is never the
-/// way around: that would trade a helper that cannot do the work for one nobody vouched for.
+/// A shipped copy that is not this release's, or that did not answer, is never the way around: that
+/// would trade a helper that cannot do the work for one nobody vouched for.
 #[test]
 fn a_shipped_copy_that_is_not_current_is_never_the_bypass() {
     let installed = ops(&["hosts-apply"]);
@@ -308,8 +310,8 @@ fn a_system_with_no_sources_at_all_is_still_a_refusal() {
     );
 }
 
-/// T88d. `helper` on a directory with nothing beside it and nothing installed keeps the shape
-/// every caller already handles.
+/// `helper` on a directory with nothing beside it and nothing installed keeps the shape every
+/// caller already handles.
 #[test]
 fn nothing_installed_and_nothing_shipped_is_elevate_missing() {
     let empty = tempfile::tempdir().expect("a temporary directory");
@@ -326,7 +328,7 @@ fn nothing_installed_and_nothing_shipped_is_elevate_missing() {
     );
 }
 
-/// D5's table, one row at a time. Four outcomes delete and exactly one is kept — the only one
+/// `settle`'s table, one row at a time. Four outcomes delete and exactly one is kept — the only one
 /// whose own type in `mixengine-proto` says retrying is meaningful.
 #[tokio::test]
 async fn only_the_outcome_that_says_try_again_keeps_its_row() {
@@ -384,8 +386,8 @@ async fn a_settlement_counts_what_a_person_is_told_afterwards() {
 
     let (_home, store) = store().await;
 
-    // Three distinct rows: `Probe` is the only operation this build has, so the other two are
-    // written directly — which is also the shape T41 will produce.
+    // Three distinct rows: `Probe` has one dedupe key, so the other two are written directly with
+    // keys of their own.
     enqueue(&store, &PrivilegedOp::Probe {}, WHEN)
         .await
         .unwrap();
@@ -473,9 +475,9 @@ fn a_request_is_written_where_the_helper_will_look_for_it() {
     assert_eq!(written.ops[0]["op"], "probe");
 }
 
-/// T88a. The protocol a request is marked with is the caller's decision, and this is what says
-/// so: the daemon marks one at the lower of its own and the installed helper's, which a
-/// function stamping its own constant would make unreachable.
+/// The protocol a request is marked with is the caller's decision, and this is what says so: the
+/// daemon marks one at the lower of its own and the installed helper's, which a function stamping
+/// its own constant would make unreachable.
 #[test]
 fn a_request_carries_the_protocol_its_writer_chose() {
     let home = tempfile::tempdir().expect("a temporary home");
@@ -495,9 +497,8 @@ fn a_request_carries_the_protocol_its_writer_chose() {
     assert_eq!(written.version, mixengine_proto::PROTOCOL_MINIMUM);
 }
 
-/// T88a, from the other end: a report from a helper older than this daemon is still a report,
-/// which is the whole of what *"an old elevate keeps serving the operations it knows"* needs
-/// from this side.
+/// From the other end: a report from a helper older than this daemon is still a report, which is
+/// the whole of what *"an old elevate keeps serving the operations it knows"* needs from this side.
 #[test]
 fn a_report_from_a_helper_at_the_floor_is_read() {
     let home = tempfile::tempdir().expect("a temporary home");
@@ -574,8 +575,8 @@ fn a_request_with_nothing_in_it_is_refused_before_it_is_written() {
     );
 }
 
-/// T40a is explicit that `Completed` means the helper *ran*, not that it left a report — a crash
-/// is not a per-OS event. So this is a state, not an impossibility, and it has its own error.
+/// `ElevationOutcome::Completed` means the helper *ran*, not that it left a report — a crash is not
+/// a per-OS event. So this is a state, not an impossibility, and it has its own error.
 #[test]
 fn a_request_with_no_report_beside_it_says_exactly_that() {
     let home = tempfile::tempdir().expect("a temporary home");
@@ -598,8 +599,8 @@ fn a_request_with_no_report_beside_it_says_exactly_that() {
     );
 }
 
-/// T166: the message ends in the helper's reason when there is one, and is today's sentence when
-/// there is not.
+/// The message ends in the helper's reason when there is one, and is today's sentence when there is
+/// not.
 #[test]
 fn a_missing_report_carries_what_the_helper_said() {
     let path = PathBuf::from("/home/run/elevate/x/response.json");
@@ -702,7 +703,7 @@ fn a_report_with_the_wrong_number_of_outcomes_is_refused() {
     );
 }
 
-/// D2: two sites created before anybody clicks Allow are **one** row, holding the second state.
+/// Two sites created before anybody clicks Allow are **one** row, holding the second state.
 ///
 /// Two rows would both be valid, would disagree, and would both be rendered on the one screen
 /// whose whole job is to say what is about to happen.
@@ -735,7 +736,7 @@ async fn a_newer_hosts_state_supersedes_the_one_that_was_waiting() {
     );
 }
 
-/// The `WHERE` clause is what keeps `rows_affected` meaning what T40b's caller reads it as:
+/// The `WHERE` clause is what keeps `rows_affected` meaning what the daemon reads it as:
 /// re-enqueueing the same desired state touches no row and announces nothing.
 #[tokio::test]
 async fn re_enqueueing_the_same_hosts_state_announces_nothing() {
@@ -782,8 +783,8 @@ fn entry(domain: &str) -> mixengine_proto::privileged::HostEntry {
     }
 }
 
-/// **A want that is gone leaves the queue** — roadmap task **T179**. Keyed like the enqueue, so
-/// one family goes and its neighbours stay.
+/// **A want that is gone leaves the queue.** Keyed like the enqueue, so one family goes and its
+/// neighbours stay.
 #[tokio::test]
 async fn withdrawing_takes_one_family_and_leaves_the_rest() {
     let (_home, store) = store().await;

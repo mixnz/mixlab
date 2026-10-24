@@ -1,11 +1,11 @@
-//! Completing an install from its own payload — roadmap task **T185a**,
+//! Completing an install from its own payload —
 //! `docs/decisions/0054-an-install-completes-itself-from-its-own-payload.md`.
 //!
-//! An update never adds a binary (`apply::swap`, rule 1). A release that gained one — T185's
+//! An update never adds a binary (`apply::swap`, rule 1). A release that gained one — Windows'
 //! `mixengine-trampoline` — therefore reaches an install that updated itself without it. This puts
 //! it there from the payload that install was just updated from, which is still unpacked in the
-//! cache: only names on [`COMPLETABLE`], only from a payload whose `mixengined` is byte for byte the
-//! one running, and never over a file that exists.
+//! cache: only names on [`COMPLETABLE`], only from a payload whose `mixengined` is byte for byte
+//! the one running, and never over a file that exists.
 
 use std::path::{Path, PathBuf};
 

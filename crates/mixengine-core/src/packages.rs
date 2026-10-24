@@ -139,12 +139,12 @@ pub async fn remember(
         bytes: installation.bytes,
         // Nothing can be an instance of a version that did not exist a moment ago.
         services: Vec::new(),
-        // Read rather than assumed — T206d, D1: the row names the folder, and the folder decides.
+        // Read rather than assumed: the row names the folder, and the folder decides.
         missing: Some(crate::paths::is_gone(&installation.path).await),
     })
 }
 
-/// Write a reinstalled package over the row it already had — roadmap task **T206d**, D3.
+/// Write a reinstalled package over the row it already had.
 ///
 /// **An `UPDATE`, never a second row**: the id is what `services.package_id` points at, so keeping it
 /// keeps every instance. Called only after the folder was renamed into place, which is
@@ -282,8 +282,8 @@ pub async fn records(store: &Store, package: Option<&str>) -> Result<Vec<Package
         }
     }
 
-    // **Stamped from the disk on every read** — roadmap task **T206d**, D1: no column, so the answer
-    // is the folder's state now, at one `stat` a row.
+    // **Stamped from the disk on every read**: no column, so the answer is the folder's state now,
+    // at one `stat` a row.
     let mut listed: Vec<PackageSummary> = listed.into_values().collect();
     for summary in &mut listed {
         summary.missing = Some(crate::paths::is_gone(Path::new(&summary.path)).await);
@@ -400,7 +400,7 @@ fn summary(
         package,
         path,
         services: Vec::new(),
-        // Stamped from the disk by the reader — T206d, D1.
+        // Stamped from the disk by the reader.
         missing: None,
     })
 }
@@ -437,11 +437,11 @@ mod tests {
 
     /// What an installed package publishes is written down, so a recipe can ask for it by name.
     ///
-    /// **The first package whose executables are not one binary at the install root is MariaDB**
-    /// (T33), whose seven commands live under `bin/` and `scripts/` and whose names upstream changed
+    /// **The first package whose executables are not one binary at the install root is MariaDB**,
+    /// whose seven commands live under `bin/` and `scripts/` and whose names upstream changed
     /// between 10.4 and 10.6. `Context::program` answers for Caddy and cannot answer for that; the
-    /// index has carried the map since T20 and `runtime_installs` has recorded it since T25, and
-    /// this is the row that stopped throwing it away.
+    /// index has always carried the map and `runtime_installs` records it, and this is the row that
+    /// stopped throwing it away.
     #[tokio::test]
     async fn an_installed_package_records_what_it_publishes() {
         let (_home, store) = store().await;
@@ -502,7 +502,7 @@ mod tests {
         );
     }
 
-    /// **Restored in place, so what points at the row still does** — T206d, D3.
+    /// **Restored in place, so what points at the row still does.**
     #[tokio::test]
     async fn restoring_a_package_keeps_its_row_and_its_services() {
         let (_home, store) = store().await;
@@ -541,7 +541,7 @@ mod tests {
         assert!(matches!(error, Error::NotFound { .. }), "{error}");
     }
 
-    /// **A folder deleted by hand is listed as missing, and the row stays** — T206d, D1.
+    /// **A folder deleted by hand is listed as missing, and the row stays.**
     #[tokio::test]
     async fn a_package_whose_folder_was_deleted_is_listed_as_missing() {
         let (home, store) = store().await;

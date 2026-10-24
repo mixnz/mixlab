@@ -1,7 +1,7 @@
 //! The ways asking the privileged helper can fail — what `elevation` reports.
 //!
 //! One of the enums [`crate::Error`] wraps transparently, so its messages and sources are
-//! the ones a caller of this crate always saw — roadmap task **T207j**.
+//! the ones a caller of this crate always saw.
 
 use std::path::PathBuf;
 
@@ -28,12 +28,11 @@ pub enum ElevationError {
 
     /// `mixengine-elevate` is installed where it belongs, and that file is not an administrator's.
     ///
-    /// **The one state where this refuses rather than falling back** — the T85 design, D5. A copy
-    /// beside the program is used when nothing is installed, because that is a development tree and
-    /// a machine before its first prompt. A copy that *is* installed and can be written by an
-    /// ordinary account is not the same thing at all: it is precisely the arrangement the
-    /// root-owned directory exists to prevent, and running it anyway would be doing as root exactly
-    /// what somebody set up.
+    /// **The one state where this refuses rather than falling back.** A copy beside the program is
+    /// used when nothing is installed, because that is a development tree and a machine before its
+    /// first prompt. A copy that *is* installed and can be written by an ordinary account is not
+    /// the same thing at all: it is precisely the arrangement the root-owned directory exists to
+    /// prevent, and running it anyway would be doing as root exactly what somebody set up.
     ///
     /// Not [`Error::ElevateMissing`]'s sibling in code either: that one is a broken installation and
     /// the fix is a reinstall, this one is a machine somebody has arranged and the fix is to find
@@ -62,7 +61,7 @@ pub enum ElevationError {
     /// **A state and not an impossibility.** `ElevationOutcome::Completed` means the helper ran, not
     /// that it wrote a report: a process that died before writing one is exactly this, on every
     /// system, because a crash is not a per-OS event. So is a helper that refused its request — it
-    /// writes nothing beside one it does not trust — and then `said` is its reason (T166).
+    /// writes nothing beside one it does not trust — and then `said` is its reason.
     #[error("the elevation helper left no report beside {}{}", path.display(), said_suffix(said.as_deref()))]
     ElevateReportMissing {
         /// Where one would have been.

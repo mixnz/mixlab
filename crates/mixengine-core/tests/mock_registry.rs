@@ -1,4 +1,4 @@
-//! What `MockRegistry` serves as index schema 2 — roadmap task **T196**.
+//! What `MockRegistry` serves as index schema 2.
 //!
 //! The registry is the other half of every test in `tests/index.rs`, and it encodes the set with
 //! code of its own rather than with this crate's. So these hold the fixture to the format before

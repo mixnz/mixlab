@@ -41,12 +41,11 @@ fn nginx_is_a_front_end() {
     );
 }
 
-/// What a failed start is diagnosed against — roadmap task **T38**.
+/// What a failed start is diagnosed against.
 ///
-/// **The status endpoint alone.** The row's own port is what sites will be served on, and this
-/// recipe writes no listener for it until sites exist (T43) — so an nginx that failed to start
-/// never wanted 80, and declaring it would put another program's IIS into the reason for a
-/// failure that was not about it.
+/// **The status endpoint alone.** The row's own port is what sites are served on, and
+/// `nginx.conf` writes no listener for it — a site's own file does — so declaring it would put
+/// another program's IIS into the reason for a failure that was not about it.
 #[test]
 fn the_spec_declares_the_status_endpoint_it_will_bind() {
     assert_eq!(spec("{}").ports(), [2020]);
@@ -138,11 +137,11 @@ fn every_path_in_the_rendering_is_written_the_way_a_windows_path_survives() {
 
 /// The five temp directories nginx makes for itself are children of one that already exists.
 ///
-/// The finding is `mixengine-packages`' and it is the reason this is asserted rather than
-/// assumed: nginx creates `client_body_temp` and the four beside it with a **single** `mkdir`,
-/// so a missing parent is `[emerg] CreateDirectory() failed (3)` on a configuration that passed
-/// `nginx -t` one line earlier. The data directory is made by `Generator::render` (T35); putting
-/// the five leaves directly inside it is what makes a `temp/` nobody creates unnecessary.
+/// The finding is `mixengine-packages`' and it is the reason this is asserted rather than assumed:
+/// nginx creates `client_body_temp` and the four beside it with a **single** `mkdir`, so a missing
+/// parent is `[emerg] CreateDirectory() failed (3)` on a configuration that passed `nginx -t` one
+/// line earlier. The data directory is made by `Generator::render`; putting the five leaves
+/// directly inside it is what makes a `temp/` nobody creates unnecessary.
 #[test]
 fn every_temp_directory_nginx_makes_has_a_parent_that_already_exists() {
     let context = context("{}");
@@ -218,11 +217,10 @@ fn a_reload_and_a_stop_are_sent_through_this_instances_own_configuration() {
     assert!(args.contains(&config), "{args:?}");
 }
 
-/// **Nothing is served on the row's own port yet**, and that is T43's to add rather than a gap.
+/// **`nginx.conf` serves nothing on the row's own port**, because a site's own file does.
 ///
-/// A front end that bound 80 here would need the port grant T42 has not built on macOS and
-/// Linux, and would be serving nothing on it. Caddy says the same thing by writing `http_port`
-/// into a global block and binding nothing until a site asks it to.
+/// A front end that bound 80 here would be serving nothing on it. Caddy says the same thing by
+/// writing `http_port` into a global block and binding nothing until a site asks it to.
 #[test]
 fn the_rendering_listens_on_nothing_a_site_would_be_reached_on() {
     let rendered = conf("{}");

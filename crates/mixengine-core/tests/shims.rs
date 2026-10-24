@@ -1,4 +1,4 @@
-//! Filling `<root>/bin` — roadmap task **T26**.
+//! Filling `<root>/bin`.
 //!
 //! What is proved here is the *arithmetic* of a refresh: which files appear, which are left alone,
 //! which are replaced and which are swept away. That a shim copied under a name then dispatches on
@@ -13,13 +13,13 @@ use mixengine_core::{RuntimeError, shims};
 struct Fixture {
     root: tempfile::TempDir,
 
-    /// The commands beyond [`shims::COMMANDS`] this fixture hands to every refresh — roadmap tasks
-    /// **T130** and **T131**. Empty for the suite that predates them, which is what keeps every
-    /// assertion below about the compiled table alone.
+    /// The commands beyond [`shims::COMMANDS`] this fixture hands to every refresh. Empty for the
+    /// suite that predates them, which is what keeps every assertion below about the compiled table
+    /// alone.
     extra: Vec<shims::Extra>,
 
-    /// The runtime kinds installed, which decides whose names a refresh writes — roadmap task
-    /// **T185b**. Every kind, for the suite that predates it.
+    /// The runtime kinds installed, which decides whose names a refresh writes. Every kind, for the
+    /// suite that predates it.
     installed: std::collections::BTreeSet<mixengine_proto::RuntimeKind>,
 }
 
@@ -32,7 +32,7 @@ impl Fixture {
             installed: shims::every_kind(),
         };
 
-        // T185: on Windows what `bin/` is filled from is the trampoline, and the resolver beside it
+        // On Windows what `bin/` is filled from is the trampoline, and the resolver beside it
         // is only named in the pointer. Written once, because nothing here upgrades it.
         if cfg!(windows) {
             std::fs::write(fixture.resolver(), b"the resolver").expect("a resolver");
@@ -81,7 +81,7 @@ impl Fixture {
         self.root.path().join("bin")
     }
 
-    /// The file `bin/` is filled from: the trampoline on Windows since T185, the shim elsewhere.
+    /// The file `bin/` is filled from: the trampoline on Windows, the shim elsewhere.
     fn shim(&self) -> PathBuf {
         let name = match cfg!(windows) {
             true => shims::TRAMPOLINE,
@@ -316,9 +316,9 @@ fn every_command_becomes_a_file_name_this_system_can_run() {
     }
 }
 
-/// **A command beyond the compiled table is a copy of the same shim** — roadmap tasks **T130** and
-/// **T131**. The whole of what `bin/` had to learn: `mysqldump` and `yarn` are names, and the
-/// program behind each of them is the one binary that reads its own file name.
+/// **A command beyond the compiled table is a copy of the same shim.** The whole of what `bin/` had
+/// to learn: `mysqldump` and `yarn` are names, and the program behind each of them is the one
+/// binary that reads its own file name.
 #[test]
 fn a_command_beyond_the_table_is_put_in_bin() {
     let fixture = Fixture::new().fronting(&["yarn", "mysqldump"]);
@@ -396,7 +396,7 @@ fn one_name_is_written_once() {
 }
 
 /// A resolver and a trampoline side by side with distinct bytes, the way a Windows release ships
-/// them, and the `bin/` a refresh fills from them — T185.
+/// them, and the `bin/` a refresh fills from them.
 fn an_install_with_both() -> (tempfile::TempDir, PathBuf) {
     let install = tempfile::tempdir().expect("a temporary directory");
     let exe = std::env::consts::EXE_SUFFIX;
@@ -420,7 +420,7 @@ fn mixengined_in(directory: &Path) -> PathBuf {
     directory.join(format!("mixengined{}", std::env::consts::EXE_SUFFIX))
 }
 
-/// T185: on Windows each name is the trampoline, and `bin/` says where the resolver is.
+/// On Windows each name is the trampoline, and `bin/` says where the resolver is.
 #[test]
 fn on_windows_bin_holds_the_trampoline_and_points_at_the_resolver() {
     if !cfg!(windows) {
@@ -460,9 +460,9 @@ fn a_second_refresh_keeps_the_pointer() {
     assert!(second.written.is_empty(), "{second:?}");
 }
 
-/// **An install that updated itself onto T185 has no trampoline**, because an update never adds a
-/// binary the install did not have (`updates::apply::swap`, rule 1). `bin/` must still be filled:
-/// with the shim itself, as before T185 — heavier, and every command still works.
+/// **An install that updated itself onto a release with trampolines has none**, because an update
+/// never adds a binary the install did not have (`updates::apply::swap`, rule 1). `bin/` must still
+/// be filled: with the shim itself, as before trampolines — heavier, and every command still works.
 #[test]
 fn on_windows_an_install_without_the_trampoline_fills_bin_with_the_shim() {
     if !cfg!(windows) {
@@ -540,8 +540,8 @@ fn elsewhere_bin_is_the_resolver_and_there_is_no_pointer() {
     assert!(!bin.join("mixengine-shim.path").exists());
 }
 
-/// **T185b.** A runtime's names are in `bin/` only while one of its versions is installed: none on
-/// a home with nothing, exactly the kind's rows once one is, and gone again when the last goes.
+/// A runtime's names are in `bin/` only while one of its versions is installed: none on a home with
+/// nothing, exactly the kind's rows once one is, and gone again when the last goes.
 #[test]
 fn only_an_installed_runtime_has_its_names_in_bin() {
     use mixengine_proto::RuntimeKind;
@@ -584,7 +584,7 @@ fn only_an_installed_runtime_has_its_names_in_bin() {
     );
 }
 
-/// **T185b.** Composer is run by PHP, so its name needs both installed.
+/// Composer is run by PHP, so its name needs both installed.
 #[test]
 fn composer_needs_both_composer_and_php() {
     use mixengine_proto::RuntimeKind;
@@ -605,8 +605,8 @@ fn composer_needs_both_composer_and_php() {
     assert!(composer.exists(), "Composer with a PHP");
 }
 
-/// **T185b.** A tool installed into a runtime — `npm install -g yarn` — is a command of that runtime,
-/// so it follows the same rule: no Node installed, no `yarn`, whatever the table of discovered tools
+/// A tool installed into a runtime — `npm install -g yarn` — is a command of that runtime, so it
+/// follows the same rule: no Node installed, no `yarn`, whatever the table of discovered tools
 /// still says from before the last Node went.
 #[test]
 fn a_tool_installed_into_a_runtime_goes_with_its_runtime() {

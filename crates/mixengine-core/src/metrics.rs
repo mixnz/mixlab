@@ -1,4 +1,4 @@
-//! The 24-hour history, and the three things done to it — roadmap task **T71**.
+//! The 24-hour history, and the three things done to it.
 //!
 //! Writing a minute, reading a window, deleting what is older than the retention. **The arithmetic
 //! that decides what a minute *is* lives in the daemon**, beside the loop that takes the readings;

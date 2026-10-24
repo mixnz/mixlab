@@ -1,4 +1,4 @@
-//! No firewall rule left behind — roadmap task **T76**, the second of two enforcement tests.
+//! No firewall rule left behind — the second of two enforcement tests.
 //!
 //! `docs/features/lan-sharing.md` promises that *disabling sharing leaves no firewall rule
 //! behind, verified by enumerating rules by label*. This is that verification, and it is the half
@@ -134,8 +134,8 @@ impl Drop for Cleanup {
     }
 }
 
-/// **The empty plan is the revoke, and it leaves nothing behind** — T74's D6, asserted rather than
-/// asserted *about*, and the promise every automatic revoke in T76 depends on.
+/// **The empty plan is the revoke, and it leaves nothing behind** — asserted rather than asserted
+/// *about*, and the promise every automatic revoke depends on.
 #[test]
 fn a_plan_that_carries_no_ports_leaves_no_rule_behind() {
     if !mixengine_platform::elevated::is_elevated() {
@@ -145,9 +145,9 @@ fn a_plan_that_carries_no_ports_leaves_no_rule_behind() {
         return;
     }
 
-    // Under MixEngine's own prefix, because the helper refuses any label outside it — T74's D7 — but
-    // named so that a rule this test leaked is obviously a test's and not a real home's.
-    let label = format!("{FIREWALL_LABEL}shared sites (T76 test)");
+    // Under MixEngine's own prefix, because the helper refuses any label outside it, but named so
+    // that a rule this test leaked is obviously a test's and not a real home's.
+    let label = format!("{FIREWALL_LABEL}shared sites (revoke test)");
     let _cleanup = Cleanup(label.clone());
 
     let home = tempfile::tempdir().expect("a temporary home");

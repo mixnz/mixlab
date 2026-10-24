@@ -50,8 +50,8 @@ async fn site(store: &Store, id: i64, domain: &str, doc_root: &str, kind: &str, 
         .expect("a domain row");
 }
 
-/// **One rule** — the T135 design, D2: the matched prefix is replaced by the upstream's path,
-/// trailing slash removed; an upstream with no path replaces nothing.
+/// **One rule**: the matched prefix is replaced by the upstream's path, trailing slash removed; an
+/// upstream with no path replaces nothing.
 ///
 /// **Two regex shapes**, because the strip-to-root case cannot share the other's: `$1` for the
 /// exact prefix is empty there, and a request may not leave with no path at all. Both measured
@@ -125,7 +125,7 @@ fn an_upstream_path_becomes_the_prefix_the_request_leaves_with() {
 /// The doc root a template gets is absolute and joined onto the project's root, whatever the row
 /// stores — the row is relative and forward-slashed on every system, and a Caddyfile needs a
 /// path this machine can open.
-/// **T204a, D5.** Each site's welcome page lists its own steps, not its neighbour's.
+/// Each site's welcome page lists its own steps, not its neighbour's.
 #[tokio::test]
 async fn each_site_lists_only_its_own_steps() {
     let (home, store) = home().await;
@@ -305,7 +305,7 @@ async fn a_php_site_carries_the_address_its_pool_listens_on() {
 /// pool that is gone is a state this build can reach. The site is **left out** rather than
 /// rendered with an empty address and rather than failing the render — a render that failed
 /// would leave a daemon that cannot render anything at all, which is far worse than the one site
-/// it was about. `mix doctor` (T47) is what reports it to a person.
+/// it was about. `mix doctor` is what reports it to a person.
 #[tokio::test]
 async fn a_site_whose_pool_is_gone_is_left_out_rather_than_failing_the_render() {
     let (home, store) = home().await;
@@ -339,7 +339,7 @@ async fn a_site_whose_pool_is_gone_is_left_out_rather_than_failing_the_render() 
 }
 
 /// A site with a certificate on disk carries the two paths a template has to write, and a
-/// fingerprint — roadmap task **T51**.
+/// fingerprint.
 #[tokio::test]
 async fn a_site_with_a_certificate_carries_its_paths_and_fingerprint() {
     let (home, store) = home().await;
@@ -376,10 +376,10 @@ async fn a_site_with_a_certificate_carries_its_paths_and_fingerprint() {
     assert_eq!(certificate.fingerprint.len(), 64);
 }
 
-/// **`https_redirect` mirrors the record, plainly** — roadmap task **T98**. No transformation
-/// happens between the column and this field, unlike `certificate`, which is why this is its own
-/// test rather than folded into the certificate ones above: a regression here would not be one a
-/// missing or present `certificate` would catch.
+/// **`https_redirect` mirrors the record, plainly.** No transformation happens between the column
+/// and this field, unlike `certificate`, which is why this is its own test rather than folded into
+/// the certificate ones above: a regression here would not be one a missing or present
+/// `certificate` would catch.
 #[tokio::test]
 async fn https_redirect_mirrors_the_record() {
     let (home, store) = home().await;
@@ -401,9 +401,9 @@ async fn https_redirect_mirrors_the_record() {
     assert!(served[0].https_redirect, "{served:?}");
 }
 
-/// **And carries no certificate along with it when there is none to carry** — T98 read beside
-/// T51's D4. A site can declare the redirect and still have nothing on disk to serve HTTPS
-/// with; the two recipes gate the redirect on both being true together for exactly this reason.
+/// **And carries no certificate along with it when there is none to carry.** A site can declare the
+/// redirect and still have nothing on disk to serve HTTPS with; the two recipes gate the redirect
+/// on both being true together for exactly this reason.
 #[tokio::test]
 async fn a_redirecting_site_with_no_certificate_still_carries_none() {
     let (home, store) = home().await;
@@ -426,8 +426,8 @@ async fn a_redirecting_site_with_no_certificate_still_carries_none() {
     assert!(served[0].certificate.is_none(), "{served:?}");
 }
 
-/// **A site with no certificate is `None` and not an error** — the T51 design, D4. This is the
-/// state a home with no authority is in, and rendering has to keep working there.
+/// **A site with no certificate is `None` and not an error.** This is the state a home with no
+/// authority is in, and rendering has to keep working there.
 #[tokio::test]
 async fn a_site_with_no_certificate_carries_none() {
     let (home, store) = home().await;
@@ -497,8 +497,8 @@ async fn a_site_that_declares_no_https_carries_none() {
     assert!(served[0].certificate.is_none(), "{served:?}");
 }
 
-/// **T81b, D3.** An extension's site is rooted at its install directory, joined component by
-/// component like a project's.
+/// An extension's site is rooted at its install directory, joined component by component like a
+/// project's.
 #[tokio::test]
 async fn an_extension_site_is_rooted_at_its_install_dir() {
     let (home, store) = home().await;

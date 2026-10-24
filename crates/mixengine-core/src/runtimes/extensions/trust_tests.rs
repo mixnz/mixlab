@@ -23,10 +23,10 @@ fn mixengine_ini(state: &State) -> String {
         .to_owned()
 }
 
-/// **PHP is told through the ini set rather than through the environment** — roadmap task
-/// **T132**. `PHP_INI_SCAN_DIR` names this directory for a `php` in a terminal *and* is set on
-/// the php-fpm spec, so `php -r` and `curl_exec()` in a browser get the same answer. That is
-/// what makes a site of this home reachable over HTTPS from another site of this home.
+/// **PHP is told through the ini set rather than through the environment.** `PHP_INI_SCAN_DIR`
+/// names this directory for a `php` in a terminal *and* is set on the php-fpm spec, so `php -r` and
+/// `curl_exec()` in a browser get the same answer. That is what makes a site of this home reachable
+/// over HTTPS from another site of this home.
 #[test]
 fn the_generated_ini_names_the_bundle() {
     let rendered = mixengine_ini(&php(Some(PathBuf::from("/home/etc/ca/bundle.pem"))));

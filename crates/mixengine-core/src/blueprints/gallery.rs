@@ -1,16 +1,18 @@
-//! The blueprints this build ships — roadmap task **T79**.
+//! The blueprints this build ships.
 //!
-//! **A table compiled into the binary** (the T79 design, D1), on [`crate::shims::COMMANDS`]'
-//! precedent: a set this build ships is a constant of this build, not a document it fetches. A
-//! gallery that arrived over the network would be absent on a fresh machine with no connection, and
-//! `builtin` would stop meaning *this build's own* — which is the only thing that makes trusting one
-//! without a signature check sound (D3).
+//! **A table compiled into the binary**, on [`crate::shims::COMMANDS`]' precedent: a set this build
+//! ships is a constant of this build, not a document it fetches. A gallery that arrived over the
+//! network would be absent on a fresh machine with no connection, and `builtin` would stop meaning
+//! *this build's own* — which is the only thing that makes trusting one without a signature check
+//! sound (D3).
 //!
 //! **Each file is exactly what [`crate::blueprints::manifest::render`] would write** (D2). That
 //! costs the files their comments — a gallery blueprint is a thing people read to learn the format,
 //! and it cannot carry a word of commentary; `[blueprint] description` is what carries it instead,
 //! because that survives the round trip. What it buys is that the file here and the file in a
 //! user's home are the same bytes, so a `diff` between them means something.
+//!
+//! The D-numbers below are those of `docs/specs/2026-09-01-t79-blueprint-gallery-design.md`.
 
 use mixengine_proto::BlueprintSource;
 

@@ -1,12 +1,12 @@
 //! What applying a blueprint would do, decided before anything happens.
 //!
-//! Roadmap task **T77**; **T78** is what carries the result out.
+//! The daemon's executor is what carries the result out.
 //!
 //! # One place decides, and the order is part of the answer
 //!
 //! The feature's acceptance criterion is that `--dry-run` matches exactly what the real run
 //! performs. That is only enforceable while one function decides what the actions are, so this is
-//! it: T78's executor consumes the list and may **fail**, but may not add a step, drop one or
+//! it: the executor consumes the list and may **fail**, but may not add a step, drop one or
 //! reorder them. The order here is dependency order — project, runtimes, services, databases, site,
 //! domains, certificate, extensions, scaffold — and is asserted by a test rather than left to the
 //! shape of the code.
@@ -17,7 +17,7 @@
 //!
 //! # It reads this home's tables, and nothing else
 //!
-//! **No index, no network** (D9). The mismatch prompt in the feature doc shows a download size, and
+//! **No index, no network.** The mismatch prompt in the feature doc shows a download size, and
 //! a size means asking the index, and the index has a network behind a six-hour cache — while this
 //! is the command a person runs *because* they do not want anything to happen yet. So a version
 //! nothing installed satisfies is `create`, without a size, and whether the index still publishes it
@@ -25,10 +25,10 @@
 //!
 //! # Everything that cannot be done is decided here
 //!
-//! **D10.** The point of a plan is that an apply does not get five actions into a project directory
-//! before discovering that the sixth was impossible — so a name that is too long, a directory that
-//! is already another project's, and a domain another site owns are all `blocked` at this point,
-//! each naming what stands in the way.
+//! The point of a plan is that an apply does not get five actions into a project directory before
+//! discovering that the sixth was impossible — so a name that is too long, a directory that is
+//! already another project's, and a domain another site owns are all `blocked` at this point, each
+//! naming what stands in the way.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -53,12 +53,12 @@ use steps::{
 /// The token a manifest writes where the project's own name went.
 const TOKEN: &str = "{project}";
 
-/// The front end a `[site]` gets on a home that has none — roadmap task **T115**.
+/// The front end a `[site]` gets on a home that has none.
 ///
 /// **Caddy, and not a manifest key.** A blueprint may not name a front end: exactly one runs at a
-/// time per home (T37), the choice is the home's and lives in `service.set_front_end`, and a
-/// manifest that named one would apply differently on a machine that had already chosen. What
-/// travels between machines is *this project is served over HTTP*, which `[site]` already says.
+/// time per home, the choice is the home's and lives in `service.set_front_end`, and a manifest
+/// that named one would apply differently on a machine that had already chosen. What travels
+/// between machines is *this project is served over HTTP*, which `[site]` already says.
 ///
 /// Caddy because it is this product's documented default and the server the warm-start budget was
 /// measured against. A home that has chosen Nginx keeps it: the rule only fires where there is no
@@ -67,10 +67,9 @@ const FRONT_END: &str = "caddy";
 
 /// What one apply is being planned for: everything the caller decided, in one value.
 ///
-/// **A struct and not nine parameters**, which is what it was until T115 added the ninth. The
-/// grouping is not arbitrary: `store` and the [`Catalogue`] are *this machine*, and everything here
-/// is *this request* — which is also the split that decides what a second caller would have to
-/// supply.
+/// **A struct and not nine parameters**, which is what it was until a ninth was added. The grouping
+/// is not arbitrary: `store` and the [`Catalogue`] are *this machine*, and everything here is *this
+/// request* — which is also the split that decides what a second caller would have to supply.
 #[derive(Debug, Clone, Copy)]
 pub struct Wanted<'a> {
     /// The slug this plan is for, carried through to [`BlueprintPlan::blueprint`].
@@ -85,16 +84,16 @@ pub struct Wanted<'a> {
     /// Where it would live. Absolute.
     pub root: &'a Path,
 
-    /// The answers to the version questions this plan raises — roadmap task **T78**.
+    /// The answers to the version questions this plan raises.
     pub answers: &'a [VersionAnswer],
 
     /// The `PATH` a `[scaffold]` command would run with — `<home>/bin`, then the daemon's own.
     ///
     /// Handed in rather than read here, so that a dry run and an apply judge the same string and a
-    /// test can hand in a directory of its own (roadmap task **T78b**, its design's D3).
+    /// test can hand in a directory of its own.
     pub scaffold_path: &'a std::ffi::OsStr,
 
-    /// Whether to plan a front end where this home has none — roadmap task **T115**.
+    /// Whether to plan a front end where this home has none.
     ///
     /// Off is the default everywhere: an apply is about a project, and provisioning the machine it
     /// runs on is a wider thing that is asked for rather than assumed.
@@ -128,7 +127,7 @@ pub async fn plan(
     let manifest = &filed.manifest;
     let mut steps = Vec::new();
 
-    // **The name, the way `project.create` will store it** — roadmap task **T128**.
+    // **The name, the way `project.create` will store it.**
     // [`projects::validated_name`] trims, so a plan carrying what was typed and a row holding what
     // was stored are two spellings of one project — and everything downstream compares them by
     // equality. Reported from a real apply of `Laravel `: the resumption check in [`register`] found
@@ -144,22 +143,22 @@ pub async fn plan(
     let validated = projects::validated_name(project);
     let project = validated.as_deref().unwrap_or(project);
 
-    // **What `{project}` becomes** — roadmap task **T120**, its design's D1. A project's *name* is a
-    // label a person reads, and `projects::validated_name` admits a space, a capital and a `;` into
-    // it; a database identifier, a DNS label, a `ServiceId` instance and a shell command each have a
-    // narrower charset than that. [`crate::domains::slug`] is the one rule that crosses all four,
-    // and `project.create` has derived a project's default domain with it since T39a — so this is
-    // that same handle, derived once, rather than a second answer to a question with one.
+    // **What `{project}` becomes.** A project's *name* is a label a person reads, and
+    // `projects::validated_name` admits a space, a capital and a `;` into it; a database
+    // identifier, a DNS label, a `ServiceId` instance and a shell command each have a narrower
+    // charset than that. [`crate::domains::slug`] is the one rule that crosses all four, and
+    // `project.create` derives a project's default domain with it — so this is that same handle,
+    // derived once, rather than a second answer to a question with one.
     //
     // [`None`] is a name with no ASCII in it to slug. The token is then left unexpanded and each
-    // step that uses it refuses it (D3), which is why that is not an error here: a manifest that
-    // never mentions `{project}` is unaffected by a name nothing can be made of.
+    // step that uses it refuses it, which is why that is not an error here: a manifest that never
+    // mentions `{project}` is unaffected by a name nothing can be made of.
     let handle = crate::domains::slug(project);
     let handle = handle.as_deref();
 
     // **Decided before the project step, because the pins it registers are what these answers
-    // settle** (D7). The order of the steps themselves is unchanged: the runtimes are pushed
-    // straight after the register, which is where they have always been.
+    // settle.** The order of the steps themselves is unchanged: the runtimes are pushed straight
+    // after the register, which is where they have always been.
     let mut runtimes = Vec::new();
     let mut pins = BTreeMap::new();
 
@@ -177,7 +176,7 @@ pub async fn plan(
     steps.push(registered);
     steps.extend(runtimes);
 
-    // **A site needs something to serve it, when the caller asked for one** — roadmap task T115.
+    // **A site needs something to serve it, when the caller asked for one.**
     // `core::sites` is explicit that "a home with no front end renders nothing and this succeeds",
     // so a manifest with a `[site]` applied to a fresh machine ends with a project, a database, a
     // site row, a domain, a certificate — and nothing listening. That is the whole of the complaint
@@ -224,7 +223,7 @@ pub async fn plan(
     }
 
     // Each `[[services]]` entry's id as its `EnsureService` step names it, by position — what a
-    // site's `services` list resolves to (T204a, D3).
+    // site's `services` list resolves to.
     let mut ensured_ids: Vec<Option<ServiceId>> = Vec::with_capacity(manifest.services.len());
 
     for service in &manifest.services {
@@ -257,9 +256,9 @@ pub async fn plan(
         }
     }
 
-    // **One group per site, in file order** — roadmap task **T204a**, D4: create, its names, its
-    // certificate. A group rather than a tier per action kind, because the executor reads a site's
-    // names off the steps straight after it.
+    // **One group per site, in file order**: create, its names, its certificate. A group rather
+    // than a tier per action kind, because the executor reads a site's names off the steps straight
+    // after it.
     let several = manifest.sites.len() > 1;
     let mut claimed: Vec<String> = Vec::new();
 
@@ -268,9 +267,9 @@ pub async fn plan(
         names.push(expand(&site.domain_pattern, handle));
         names.extend(site.aliases.iter().map(|alias| expand(alias, handle)));
 
-        // **What this site links, as the ensure steps name it** (D3). The reader already refused an
-        // item naming no entry or two, so a miss here is an id nothing can spell, which `ensure`
-        // has already blocked.
+        // **What this site links, as the ensure steps name it.** The reader already refused an item
+        // naming no entry or two, so a miss here is an id nothing can spell, which `ensure` has
+        // already blocked.
         let services = site.services.as_ref().map(|items| {
             items
                 .iter()
@@ -293,20 +292,20 @@ pub async fn plan(
                 SiteKind::PhpFpm { .. } => SiteKind::PhpFpm { pool: None },
                 other => other.clone(),
             },
-            // What this machine will make, so spelled the way it spells a path (T191); the
+            // What this machine will make, so spelled the way it spells a path; the
             // manifest keeps `/`, and `site.create` accepts either.
             doc_root: crate::paths::native_relative(&site.doc_root),
             https: site.https,
-            // Carried whole — roadmap task **T135**. A php-fpm route's pool is already `None` in
+            // Carried whole. A php-fpm route's pool is already `None` in
             // the manifest, on capture's own rule, so there is nothing to clear here.
             routes: site.routes.clone(),
             services,
         };
 
-        // **D2 again, and the step that found it out.** A project this apply already made, already
-        // holding its site, is not a second site waiting to be created — and a plan that said
-        // otherwise made a resumed apply fail on `already_exists`. Which site is *this* one is
-        // [`made`]'s question (T204a, D4).
+        // **A resumed apply is planned again, and this is the step that found that out.** A project
+        // this apply already made, already holding its site, is not a second site waiting to be
+        // created — and a plan that said otherwise made a resumed apply fail on `already_exists`.
+        // Which site is *this* one is [`made`]'s question.
         steps.push(match made(store, mine, several, &names, &claimed).await? {
             Made::No => PlanStep {
                 action,
@@ -351,20 +350,19 @@ pub async fn plan(
     }
 
     if let Some(scaffold) = &manifest.scaffold {
-        // **Expanded here, with everything else** — roadmap task **T78a**, its design's D6. The
-        // command a person is shown is the command that runs.
+        // **Expanded here, with everything else.** The command a person is shown is the command
+        // that runs.
         //
         // **The substitution is safe in front of a shell because what is substituted is the
-        // handle** — roadmap task **T120**, its design's D4. [`crate::domains::slug`] answers in
-        // `[a-z0-9-]` and nothing else, which holds no shell metacharacter. This line used to say
-        // that the *project's name* had been through that charset. It had not, and
-        // `projects::validated_name` admits `;`, `$` and a backtick to this day — so a project
-        // called `a; rm -rf $HOME` reached the shell as two commands.
+        // handle.** [`crate::domains::slug`] answers in `[a-z0-9-]` and nothing else, which holds
+        // no shell metacharacter. This line used to say that the *project's name* had been through
+        // that charset. It had not, and `projects::validated_name` admits `;`, `$` and a backtick
+        // to this day — so a project called `a; rm -rf $HOME` reached the shell as two commands.
         let command = expand(&scaffold.command, handle);
 
-        // **What the runtime steps above will have installed by the time this runs** (T78b, as
-        // T185b left it): every `[runtimes]` kind, since each of their steps ends with that kind
-        // on the disk whatever its disposition, and every kind already there.
+        // **What the runtime steps above will have installed by the time this runs**: every
+        // `[runtimes]` kind, since each of their steps ends with that kind on the disk whatever its
+        // disposition, and every kind already there.
         let mut available: BTreeSet<RuntimeKind> = manifest.runtimes.keys().copied().collect();
         available.extend(
             runtimes::records(store, None)
@@ -375,11 +373,10 @@ pub async fn plan(
 
         steps.push(PlanStep {
             // Arbitrary code from whoever wrote the blueprint. What answers this is the consent in
-            // the apply request (T78a, D4); here it is shown, exactly as it would run — or blocked,
-            // when its program is a bare name the PATH does not hold (T78b, D1), when the token
-            // did not expand (T120, D3), when it names itself after its directory and this one's
-            // name is not one npm will take (T120c, D5), or when it asked for an empty directory
-            // and this one is not.
+            // the apply request; here it is shown, exactly as it would run — or blocked, when its
+            // program is a bare name the PATH does not hold, when the token did not expand, when it
+            // names itself after its directory and this one's name is not one npm will take, or
+            // when it asked for an empty directory and this one is not.
             //
             // **A shell is the one name space with no validator**, so this check is the whole of
             // what stands between a handle that could not be made and a command carrying a literal
@@ -389,8 +386,8 @@ pub async fn plan(
             // not made applicable by emptying a folder, so that is the sentence worth reading
             // first. Only one reason is ever shown, which is why the order is written down.
             //
-            // **And the directory's name before its contents** (T120c): emptying a folder whose
-            // name is going to be refused anyway is work nobody gets back.
+            // **And the directory's name before its contents**: emptying a folder whose name is
+            // going to be refused anyway is work nobody gets back.
             disposition: match unexpanded(&command) {
                 Some(reason) => Disposition::Blocked { reason },
                 None => match crate::blueprints::program::disposition(
@@ -419,9 +416,9 @@ pub async fn plan(
     }
 
     if let Some(archive) = &manifest.archive {
-        // **The scaffold's place and the scaffold's gate** — roadmap task **T205**, D2. Unpacking
-        // is not running, but the PHP it writes runs the moment somebody opens the site, so the
-        // URL is shown and agreed to exactly as a command is.
+        // **The scaffold's place and the scaffold's gate.** Unpacking is not running, but the PHP
+        // it writes runs the moment somebody opens the site, so the URL is shown and agreed to
+        // exactly as a command is.
         let disposition = if !crate::blueprints::archive::format_known(&archive.url) {
             let file = archive
                 .url
@@ -465,9 +462,9 @@ pub async fn plan(
         });
     }
 
-    // **After the scaffold, and asked for** — roadmap task **T205a**. After, because
-    // `create-project .` refuses a folder that already holds a `.env`; asked, because it writes a
-    // password into the person's own file. A key already there is theirs (`Satisfied`).
+    // **After the scaffold, and asked for.** After, because `create-project .` refuses a folder
+    // that already holds a `.env`; asked, because it writes a password into the person's own file.
+    // A key already there is theirs (`Satisfied`).
     if let Some(key) = manifest
         .services
         .iter()
@@ -527,10 +524,9 @@ async fn php_of(store: &Store, pin: Option<&VersionConstraint>) -> Result<Option
 /// **Once, here**, so no later branch can expand it differently.
 ///
 /// A `handle` of [`None`] is a project name with no ASCII in it to slug, and the token is then left
-/// exactly where it is. That is deliberate — roadmap task **T120**, its design's D3: every name
-/// space this value reaches refuses `{project}` on its own rule, so the refusal happens at plan time
-/// and names the token that could not be expanded, rather than a substitution nobody asked for
-/// reaching a shell.
+/// exactly where it is. That is deliberate: every name space this value reaches refuses `{project}`
+/// on its own rule, so the refusal happens at plan time and names the token that could not be
+/// expanded, rather than a substitution nobody asked for reaching a shell.
 pub(crate) fn expand(value: &str, handle: Option<&str>) -> String {
     match handle {
         Some(handle) => value.replace(TOKEN, handle),
@@ -549,11 +545,10 @@ fn satisfied(action: PlanAction) -> PlanStep {
 
 /// The reason a name still holding `{project}` cannot be used, or [`None`] when it holds no token.
 ///
-/// **A better sentence than the charset's** — roadmap task **T120**, its design's D3. A name that
-/// could not be expanded fails [`crate::generate::databases::validated_identifier`] and
-/// [`crate::domains::normalised`] too, but on a character the person never typed: telling somebody
-/// that `{` is not allowed in a database name sends them looking for a `{` in their own. This says
-/// what actually happened.
+/// **A better sentence than the charset's.** A name that could not be expanded fails
+/// [`crate::generate::databases::validated_identifier`] and [`crate::domains::normalised`] too, but
+/// on a character the person never typed: telling somebody that `{` is not allowed in a database
+/// name sends them looking for a `{` in their own. This says what actually happened.
 fn unexpanded(name: &str) -> Option<String> {
     name.contains(TOKEN)
         .then(|| format!("there is nothing in the project's name to expand {TOKEN} into"))
@@ -566,9 +561,10 @@ const NAMED: usize = 3;
 ///
 /// **[`None`] for three different directories**, and deliberately so: one that is not there yet —
 /// which is the ordinary case, since an apply is usually what creates it — one that holds nothing,
-/// and one this daemon cannot read. The last is T78b's D2 one subject along: every doubt resolves
-/// to *not judging*, because a false `blocked` stops a blueprint that would have worked, and a
-/// directory whose listing fails is a doubt rather than an answer.
+/// and one this daemon cannot read. The last is [`program`](crate::blueprints::program)'s rule one
+/// subject along: every doubt resolves to *not judging*, because a false `blocked` stops a
+/// blueprint that would have worked, and a directory whose listing fails is a doubt rather than an
+/// answer.
 ///
 /// **It names what is in the way** rather than saying "not empty". The entry a person hits this on
 /// is very often `.git`, or what an apply that stopped partway left behind, and a file manager
@@ -615,7 +611,7 @@ const NPM_PUNCTUATION: [char; 3] = ['-', '_', '.'];
 const NPM_LIMIT: usize = 214;
 
 /// The reason `root`'s name is no place for a command that names itself after its directory, or
-/// [`None`] — roadmap task **T120c**.
+/// [`None`].
 ///
 /// **npm's rule and not [`crate::domains::slug`]'s**, which is the distinction this function exists
 /// to hold. `slug` turns every character outside `a-z0-9` into a hyphen, underscore included, so a
@@ -623,10 +619,9 @@ const NPM_LIMIT: usize = 214;
 /// writes `"name": "next_js_1"` for. A DNS label and a package name are different rules, and this
 /// is the package one.
 ///
-/// **Where it is unsure it permits**, the design's D6. A refusal here forbids somebody a thing that
-/// would have worked and offers no way round it; a miss costs one wasted install and falls back to
-/// the failure's own words. So a path with no final component at all — a drive root — is not
-/// judged.
+/// **Where it is unsure it permits.** A refusal here forbids somebody a thing that would have
+/// worked and offers no way round it; a miss costs one wasted install and falls back to the
+/// failure's own words. So a path with no final component at all — a drive root — is not judged.
 ///
 /// `slug` still has a job here, and it is the other one: it always answers in a charset every
 /// branch below accepts, so it is what the reason *suggests*.

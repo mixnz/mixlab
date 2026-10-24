@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// A static site at `blog.test` with a certificate — roadmap task **T51**.
+/// A static site at `blog.test` with a certificate.
 ///
 /// Paths that do not exist, deliberately: this module renders text and never reads a disk.
 /// Whether the pair is there was decided in `generate::served`.
@@ -25,7 +25,7 @@ fn a_site_with_a_certificate() -> Served {
     }
 }
 
-/// **nginx says in one directive what Caddy needs three for** — roadmap task **T70**, D2.
+/// **nginx says in one directive what Caddy needs three for.**
 ///
 /// `backup` in an `upstream` group *is* "only when the others have refused", so there is no
 /// policy to state and no load balancing to switch off. Measured against a real nginx 1.24.0
@@ -100,7 +100,7 @@ fn two_sites_on_one_pool_declare_two_differently_named_groups() {
 
     let names: Vec<String> = documents
         .iter()
-        // Site configurations only: since T124 a welcome page is rendered beside each of them,
+        // Site configurations only: a welcome page is rendered beside each of them,
         // and an HTML file declares no `upstream` group.
         .filter(|document| document.relative().starts_with(SITES))
         .map(|document| {
@@ -123,8 +123,8 @@ fn two_sites_on_one_pool_declare_two_differently_named_groups() {
     );
 }
 
-/// A pool with no activator renders what it rendered before T70: a `fastcgi_pass` straight at
-/// the pool, and no group at all.
+/// A pool with no activator renders what it rendered before on-demand activation: a `fastcgi_pass`
+/// straight at the pool, and no group at all.
 #[test]
 fn a_pool_with_no_activator_is_passed_to_directly() {
     let rendered = render_site(&Served {
@@ -153,7 +153,7 @@ fn a_pool_with_no_activator_is_passed_to_directly() {
     );
 }
 
-/// **The authority is rendered into a directory that holds only it** — the T75 design, D9.
+/// **The authority is rendered into a directory that holds only it.**
 ///
 /// `certs/ca/root.key` sits beside `certs/ca/root.crt`, so a front end pointed at the
 /// certificates directory would serve this home's signing key to the local network. The copy is
@@ -197,7 +197,7 @@ fn a_home_with_no_authority_renders_no_authority_file() {
     );
 }
 
-/// **The CA is downloadable from a shared site and from no other** — the T75 design, D9.
+/// **The CA is downloadable from a shared site and from no other.**
 ///
 /// "Served only while sharing is on" is a property of the rendering, which is what makes it
 /// something a test can hold rather than something a reviewer has to believe.
@@ -276,7 +276,7 @@ fn an_unshared_site_serves_no_authority() {
     assert!(!rendered.contains("__mixengine"), "{rendered}");
 }
 
-/// A site shared on the LAN, without a certificate — roadmap task **T74**.
+/// A site shared on the LAN, without a certificate.
 fn a_shared_site(address: [u8; 4]) -> Served {
     Served {
         shared: Some(Shared {
@@ -295,8 +295,8 @@ fn a_shared_site(address: [u8; 4]) -> Served {
     }
 }
 
-/// **A second `listen`, not a changed one** — the T74 design, D2. The browser on this machine
-/// and the phone are looking at the same site at the same time, so loopback stays.
+/// **A second `listen`, not a changed one.** The browser on this machine and the phone are looking
+/// at the same site at the same time, so loopback stays.
 #[test]
 fn a_shared_site_listens_on_loopback_and_the_lan_address() {
     let rendered = render_site(&a_shared_site([192, 168, 1, 10]));
@@ -315,9 +315,9 @@ fn a_shared_site_listens_on_loopback_and_the_lan_address() {
     );
 }
 
-/// **The name joins `server_name`** — the T75 design, D3. nginx picks a listener group by
-/// address and only then consults the names, so this is the half that decides which site
-/// replies to `blog-mixengine.local` once the responder has said where it resolves.
+/// **The name joins `server_name`.** nginx picks a listener group by address and only then consults
+/// the names, so this is the half that decides which site replies to `blog-mixengine.local` once
+/// the responder has said where it resolves.
 #[test]
 fn a_shared_site_names_itself_in_server_name() {
     let rendered = render_site(&a_shared_site([192, 168, 1, 10]));
@@ -350,7 +350,8 @@ fn an_unshared_site_carries_no_mdns_name() {
     assert!(rendered.contains("server_name shop.test;"), "{rendered}");
 }
 
-/// **Two sites shared on one address** — the assumption T74 recorded and could not yet reach.
+/// **Two sites shared on one address** — the assumption LAN sharing recorded and could not yet
+/// reach.
 ///
 /// nginx groups servers by listen address before it consults `server_name`, so a request
 /// carrying `Host: <ip>` is answered by that group's *default* — the first server block on the
@@ -421,7 +422,7 @@ fn an_unshared_site_listens_once_per_scheme() {
 }
 
 /// A shared HTTPS site listens on the LAN address over TLS as well, because the certificate
-/// covers that address as an IP SAN — T74, D9.
+/// covers that address as an IP SAN.
 #[test]
 fn a_shared_https_site_offers_tls_on_the_lan_address_too() {
     let rendered = render_site(&Served {
@@ -483,7 +484,7 @@ fn the_lan_address_belongs_to_the_shared_site_alone() {
     assert!(!carrying[0].contains("shop.test"), "{}", carrying[0]);
 }
 
-/// An HTTPS site listens twice and names its certificate — roadmap task **T51**.
+/// An HTTPS site listens twice and names its certificate.
 ///
 /// **One `server` block and not two, unlike Caddy**, and that was measured rather than assumed:
 /// nginx 1.24 answers `syntax is ok` to a block carrying a plaintext listener and a TLS one,
@@ -509,10 +510,10 @@ fn an_https_site_listens_on_tls_and_names_its_certificate() {
     assert_eq!(rendered.matches("server {").count(), 1, "{rendered}");
 }
 
-/// **Two `server` blocks, where T51's own D6 needed only one** — roadmap task **T98**. The
-/// block that answers on the plaintext listener returns 307 and carries none of the site's own
-/// content; everything `an_https_site_listens_on_tls_and_names_its_certificate` asserts about a
-/// single-block HTTPS site is still true of the *second* block here.
+/// **Two `server` blocks, where a site that does not redirect needs only one.** The block that
+/// answers on the plaintext listener returns 307 and carries none of the site's own content;
+/// everything `an_https_site_listens_on_tls_and_names_its_certificate` asserts about a single-block
+/// HTTPS site is still true of the *second* block here.
 #[test]
 fn a_site_with_redirect_on_renders_a_redirecting_block_and_a_serving_block() {
     let rendered = render_site(&Served {
@@ -537,7 +538,7 @@ fn a_site_with_redirect_on_renders_a_redirecting_block_and_a_serving_block() {
     );
 }
 
-/// **Off by default, and a site that never asked still renders the one block T51 shipped** —
+/// **Off by default, and a site that never asked still renders the one block it always did** —
 /// the regression this whole feature must not be.
 #[test]
 fn a_site_with_redirect_off_renders_one_server_block_as_before() {
@@ -547,10 +548,11 @@ fn a_site_with_redirect_off_renders_one_server_block_as_before() {
     assert!(!rendered.contains("return 307"), "{rendered}");
 }
 
-/// **A redirect needs a usable certificate, not only the flag** — the T51 design's D4 applied a
-/// second time, on nginx's own shape: a site that asked for HTTPS but has nothing on disk to
-/// serve it with already renders one plaintext listener; asking for a redirect too must not
-/// turn that into a 307 toward a TLS listener nothing is bound to.
+/// **A redirect needs a usable certificate, not only the flag** — the rule that a site with no
+/// usable certificate renders no TLS, applied a second time, on nginx's own shape: a site that
+/// asked for HTTPS but has nothing on disk to serve it with already renders one plaintext listener;
+/// asking for a redirect too must not turn that into a 307 toward a TLS listener nothing is bound
+/// to.
 #[test]
 fn a_site_with_redirect_on_but_no_certificate_renders_one_block_as_before() {
     let mut site = a_site_with_a_certificate();
@@ -567,10 +569,10 @@ fn a_site_with_redirect_on_but_no_certificate_renders_one_block_as_before() {
     );
 }
 
-/// **The CA route is reachable over plaintext on a redirecting shared site** — roadmap task
-/// **T98**, the design's D3, on nginx's own shape: the route lives in the redirecting block
-/// beside the `location /` that returns 307, and nowhere in the serving block behind it — a
-/// phone that has not yet trusted this home's authority cannot reach that block at all.
+/// **The CA route is reachable over plaintext on a redirecting shared site**, on nginx's own shape:
+/// the route lives in the redirecting block beside the `location /` that returns 307, and nowhere
+/// in the serving block behind it — a phone that has not yet trusted this home's authority cannot
+/// reach that block at all.
 #[test]
 fn a_redirecting_shared_site_still_serves_its_ca_route_over_plaintext() {
     let context = context("{}").with_authority(Some("-----BEGIN CERTIFICATE-----".to_owned()));
@@ -604,7 +606,7 @@ fn a_redirecting_shared_site_still_serves_its_ca_route_over_plaintext() {
     assert!(ca_route < second_server, "{rendered}");
 }
 
-/// A site with no certificate listens once and names none — the T51 design, D4.
+/// A site with no certificate listens once and names none.
 #[test]
 fn a_site_with_no_certificate_has_one_listener() {
     let mut site = a_site_with_a_certificate();
@@ -616,7 +618,7 @@ fn a_site_with_no_certificate_has_one_listener() {
     assert!(!rendered.contains("ssl"), "{rendered}");
 }
 
-/// **The fingerprint is what makes a reissue reload** — the T51 design, D5.
+/// **The fingerprint is what makes a reissue reload.**
 #[test]
 fn a_different_certificate_renders_a_different_file() {
     let site = a_site_with_a_certificate();

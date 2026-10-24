@@ -1,8 +1,7 @@
-//! What signs a MixEngine release — roadmap task **T86**.
+//! What signs a MixEngine release, and the updater that reads what was signed.
 //!
-//! This module is one constant today, and the constant is the whole point: it is the root of trust
-//! for everything the updater will later install. T88 grows the module into the client that reads
-//! `latest.json`; what is here is the key that document will be checked against.
+//! [`PUBLIC_KEY`] is the root of trust for everything the updater installs: `latest.json` is
+//! checked against it, and the payload against the SHA-256 that document carries.
 //!
 //! # A third key, and one key for every artifact
 //!
@@ -14,25 +13,25 @@
 //!
 //! The same key signs **every** artifact in a release, `mixengine-elevate` included. A key of its
 //! own for the one binary that runs as root would be the same secret in the same place under a
-//! second name: it splits the label and not the blast radius. What protects the helper is that it is
-//! never auto-updated and that its replacement is verified inside the elevated context (T88a).
+//! second name: it splits the label and not the blast radius. What protects the helper is that it
+//! is never auto-updated and that its replacement is verified inside the elevated context.
 //!
 //! # No verifier here
 //!
-//! There is deliberately no `verify` function. T88 checks `latest.json` through
-//! [`crate::index::Client`], which already verifies before it parses, and checks the payload against
-//! the SHA-256 that signed document carries. T88a checks the helper inside the elevated context, and
+//! There is deliberately no `verify` function. `latest.json` is checked through
+//! [`crate::index::Client`], which already verifies before it parses, and the payload against the
+//! SHA-256 that signed document carries. The helper is checked inside the elevated context, and
 //! `mixengine-elevate` may not depend on this crate at all — `workspace_layering.rs` says so — so
-//! that copy of the key will live in the helper. A verifier here would have exactly one caller: a
-//! test of itself.
+//! that copy of the key lives in the helper. A verifier here would have exactly one caller: a test
+//! of itself.
 //!
 //! # Rotating it
 //!
-//! Rotating this key is a one-way door. Every installed copy trusts exactly one key, so a build from
-//! before a rotation can never verify a feed signed after it — silently, since T88's client keeps
-//! the last document it verified and logs a refusal nobody reads. See
-//! [updates.md](../../../docs/features/updates.md) for what a rotation therefore costs and for
-//! the shape of the mitigation nobody has needed yet.
+//! Rotating this key is a one-way door. Every installed copy trusts exactly one key, so a build
+//! from before a rotation can never verify a feed signed after it — silently, since the feed client
+//! keeps the last document it verified and logs a refusal nobody reads. See
+//! [updates.md](../../../docs/features/updates.md) for what a rotation therefore costs and for the
+//! shape of the mitigation nobody has needed yet.
 
 mod error;
 

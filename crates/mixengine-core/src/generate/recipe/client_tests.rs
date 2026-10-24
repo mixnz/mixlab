@@ -1,6 +1,6 @@
 use super::*;
 
-/// **Nothing the supervisor runs is a command anybody can type** — roadmap task **T130**.
+/// **Nothing the supervisor runs is a command anybody can type.**
 ///
 /// [`crate::shims::COMMANDS`] states this for `php-fpm`, and a recipe is the other place it can
 /// be broken: a shim in front of `mariadbd` would be a second way to start a server nothing is
@@ -115,9 +115,8 @@ fn a_package_claims_each_name_once() {
     }
 }
 
-/// **A client is told where its own instance listens** — roadmap task **T130**, the design's
-/// D4, which exists because the port allocator gives 3306 to whichever of the two MySQL-family
-/// products asks first and the next free port above to the other.
+/// **A client is told where its own instance listens**, because the port allocator gives 3306 to
+/// whichever of the two MySQL-family products asks first and the next free port above to the other.
 #[test]
 fn a_client_is_told_where_its_instance_listens() {
     let catalogue = super::super::Catalogue::builtin();

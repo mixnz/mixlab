@@ -1,9 +1,9 @@
-//! How a package administers its databases: what to ask, and what to run — roadmap task **T77a**.
+//! How a package administers its databases: what to ask, and what to run.
 //!
-//! **The recipe declares, the daemon performs** — T33's division, one table across (the T77a design,
-//! D1). A recipe lives here, in a crate with no business reaching an OS credential store and no
-//! business spawning anything, so what it answers is *which statements*; the daemon answers *with
-//! which credential, against which running server*.
+//! **The recipe declares, the daemon performs** — the division the first-run ritual already
+//! follows, one table across. A recipe lives here, in a crate with no business reaching an OS
+//! credential store and no business spawning anything, so what it answers is *which statements*;
+//! the daemon answers *with which credential, against which running server*.
 //!
 //! # The probe, and why its output is two words
 //!
@@ -30,8 +30,8 @@ use crate::{Error, Result, ServiceError};
 ///
 /// MySQL's limit on an account name, which is the shorter of the two limits and therefore the only
 /// one worth having: a name a database would accept and an account would not is a `CREATE USER` the
-/// server refuses *after* the database has been made. The same number is `DATABASE_USER_LIMIT` in
-/// [`crate::blueprints::plan`], where T77 refuses it a whole apply earlier.
+/// server refuses *after* the database has been made. [`crate::blueprints::plan`] asks
+/// [`validated_identifier`] the same question, so a plan refuses such a name a whole apply earlier.
 pub const IDENTIFIER_LIMIT: usize = 32;
 
 /// How many characters a generated account password has.
@@ -172,7 +172,7 @@ pub fn validated_identifier(name: &str) -> Result<String> {
     Ok(name.to_owned())
 }
 
-/// A password a person chose, validated and never escaped — roadmap task **T77b**.
+/// A password a person chose, validated and never escaped.
 ///
 /// The same reasoning as [`validated_identifier`]: every recipe interpolates this value into a
 /// quoted SQL literal and nothing escapes it, so what is refused here is exactly the set of
@@ -234,7 +234,7 @@ impl Provisioning {
         self.context.secret_address(self.admin.root)
     }
 
-    /// The account that password belongs to — roadmap task **T127a**.
+    /// The account that password belongs to.
     ///
     /// `postgres` for PostgreSQL and `root` for the MySQL family: the same word
     /// [`root_address`](Self::root_address) composes an address out of, and the word a server writes

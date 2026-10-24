@@ -1,24 +1,24 @@
-//! Putting an extension on this machine — roadmap task **T81**.
+//! Putting an extension on this machine.
 //!
 //! # The order, and why it is that order
 //!
 //! 1. Read the manifest — from the verified registry, or from a directory for `--path`.
-//! 2. Refuse what this home cannot serve, **before anything is fetched** — roadmap task **T81c**.
+//! 2. Refuse what this home cannot serve, **before anything is fetched**.
 //!    A `[[recipe.front_end]]` fragment is rendered into this home's front-end configuration and
 //!    judged by the front end's own binary, and a fragment it will not parse stops the install here.
 //!    That check is the daemon's, because a [`Generator`](crate::generate::Generator) is where the
 //!    recipe catalogue and this system's port mapping already are; what used to stand in this step
-//!    was T81's refusal of the field by name, which this task replaced by making it work.
+//!    was a refusal of the field by name, replaced by making it work.
 //! 3. Ask. [`plan`] is what a person answers, and it carries the permissions the manifest declares.
 //! 4. Download, verify the SHA-256, unpack into staging, rename into place — [`crate::install`]
 //!    whole, which is the same transaction a runtime install is.
 //! 5. Allocate the ports, write the rows — the service row for a `service`, the site row for a
-//!    `web-app` (roadmap task **T81b**).
+//!    `web-app`.
 //!
-//! **Consent comes before the download** (the T81 design's D2), and that is what carrying manifests
-//! in the registry buys: the question *"this wants to reach the LAN and read your project roots —
-//! go on?"* can be asked before a byte of artifact arrives. Asking afterwards is asking after doing
-//! the thing somebody was about to refuse.
+//! **Consent comes before the download**, and that is what carrying manifests in the registry buys:
+//! the question *"this wants to reach the LAN and read your project roots — go on?"* can be asked
+//! before a byte of artifact arrives. Asking afterwards is asking after doing the thing somebody
+//! was about to refuse.
 //!
 //! # What a half-install leaves behind
 //!
@@ -56,32 +56,32 @@ const ANY: &str = "any";
 /// anything in the plan, small enough that a stream with no end is stopped.
 const UNDECLARED_SIZE_CEILING: u64 = 2 * 1024 * 1024 * 1024;
 
-/// The site a `web-app` would be given — roadmap task **T81b**.
+/// The site a `web-app` would be given.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlannedSite {
     /// `<label>.mixengine.<tld>`, normalised.
     pub domain: String,
 
     /// The pool it runs on — **its own**, `php-fpm@<extension-id>`, on the PHP resolved by
-    /// [`site_for`] (roadmap task **T82a**, that design's D1).
+    /// [`site_for`].
     ///
     /// **It does not exist yet when a plan answers it.** The row is written by
     /// [`pools::create`](crate::extensions::pools::create) during the install, which is what lets a
     /// plan name the pool somebody is agreeing to without reserving anything — the same thing
-    /// `[ports]` already does. T81b named the shared `php-fpm@<version>` here and confirmed it
-    /// through `pools::of`; what replaced that is `pools::id`, because the row is now this install's
-    /// to write.
+    /// `[ports]` already does. An extension site once ran on the shared `php-fpm@<version>`,
+    /// confirmed through `pools::of`; what replaced that is `pools::id`, because the row is now
+    /// this install's to write.
     pub pool: ServiceId,
 
     /// The installed PHP that pool is created on.
     ///
-    /// **Carried rather than resolved twice** — roadmap task **T82a**. [`site_for`] runs once for
-    /// the plan and once for the install, and a second `resolve::runtime` between them could answer
-    /// a different version: a `runtime.install` landing in the middle is all it would take.
+    /// **Carried rather than resolved twice.** [`site_for`] runs once for the plan and once for the
+    /// install, and a second `resolve::runtime` between them could answer a different version: a
+    /// `runtime.install` landing in the middle is all it would take.
     pub runtime: PackageVersion,
 
     /// The account this application would be **signed in as**, when the manifest declares
-    /// `[web-app.database].signs_in` — roadmap task **T82a**, the design's D2.
+    /// `[web-app.database].signs_in`.
     ///
     /// The recipe's [`administrator`](crate::generate::recipe::Recipe::administrator) and never a
     /// manifest's guess, so what a person is shown is the account the password actually opens.
@@ -91,8 +91,7 @@ pub struct PlannedSite {
     /// `[web-app].root` rendered and made relative to the install directory.
     pub doc_root: String,
 
-    /// The database it administers, frozen at install beside the pool — roadmap task **T82**, the
-    /// design's D4.
+    /// The database it administers, frozen at install beside the pool.
     ///
     /// [`None`] for a `web-app` that declares no `[web-app.database]`. Written into
     /// `site_service_links`, which is what arms `service.delete`'s existing refusal: nothing here
@@ -137,7 +136,7 @@ pub struct Plan {
     /// Where what it writes would go.
     pub data_dir: PathBuf,
 
-    /// The site it would be served on, for a `web-app` — roadmap task **T81b**.
+    /// The site it would be served on, for a `web-app`.
     pub site: Option<PlannedSite>,
 }
 
@@ -238,20 +237,19 @@ fn artifact_for_host(manifest: &ExtensionManifest) -> Result<Option<Artifact>> {
     }))
 }
 
-/// The site a `web-app` gets, decided before anything is fetched — roadmap task **T81b**.
+/// The site a `web-app` gets, decided before anything is fetched.
 ///
-/// **The PHP is resolved with the constraint alone and no directory** (the design's D5): `resolve`
-/// answers an explicit constraint before it looks at any manifest or project pin, which is T81's D14
-/// stated as a call.
+/// **The PHP is resolved with the constraint alone and no directory**: `resolve` answers an
+/// explicit constraint before it looks at any manifest or project pin, which is the rule that a
+/// `web-app` runs on a PHP MixEngine picks and never on a project's pin, stated as a call.
 ///
-/// **And the pool is this extension's own** — roadmap task **T82a**, that design's D1. T81b named
-/// the shared `php-fpm@<version>` here and confirmed the row through `pools::of`; a `web-app` now
-/// runs on a second pool on the same runtime install, so that an administrative interface onto this
-/// machine's databases is never in the process serving somebody's project. There is no row to
-/// confirm because the install is about to write it; what is checked instead is that the id can be
-/// composed at all.
+/// **And the pool is this extension's own.** This once named the shared `php-fpm@<version>` and
+/// confirmed the row through `pools::of`; a `web-app` now runs on a second pool on the same runtime
+/// install, so that an administrative interface onto this machine's databases is never in the
+/// process serving somebody's project. There is no row to confirm because the install is about to
+/// write it; what is checked instead is that the id can be composed at all.
 ///
-/// **The name is checked here too** (D4): the unique index still decides ownership, but a collision
+/// **The name is checked here too**: the unique index still decides ownership, but a collision
 /// reported now is one reported before a download rather than after it.
 ///
 /// # Errors
@@ -312,15 +310,14 @@ pub async fn site_for(
         other => other,
     })?;
 
-    // **Named rather than looked up** — roadmap task **T82a**, that design's D1. This pool is the
-    // extension's own and does not exist until `write_rows` creates it, so what can be refused here
-    // is an id that has no possible pool: one longer than a `ServiceId` may be once `php-fpm@` is in
-    // front of it.
+    // **Named rather than looked up.** This pool is the extension's own and does not exist until
+    // `write_rows` creates it, so what can be refused here is an id that has no possible pool: one
+    // longer than a `ServiceId` may be once `php-fpm@` is in front of it.
     let pool = super::pools::id(id)?;
 
-    // **Resolved here for the reason the PHP is** — roadmap task **T82**, the design's D4. A
-    // machine running none of the engines this application administers is told so before a byte
-    // arrives, rather than after sixteen megabytes and a site that opens on nothing.
+    // **Resolved here for the reason the PHP is.** A machine running none of the engines this
+    // application administers is told so before a byte arrives, rather than after sixteen megabytes
+    // and a site that opens on nothing.
     let database = match &app.database {
         Some(declared) => {
             Some(super::database::resolve(store, id.as_str(), &declared.engines).await?)
@@ -328,9 +325,9 @@ pub async fn site_for(
         None => None,
     };
 
-    // **The account, and only when the manifest asked to be signed in as it** — roadmap task
-    // **T82a**, the design's D2. The recipe's answer through the endpoint, never the manifest's:
-    // what a person is shown before they agree is the account the password actually opens.
+    // **The account, and only when the manifest asked to be signed in as it.** The recipe's answer
+    // through the endpoint, never the manifest's: what a person is shown before they agree is the
+    // account the password actually opens.
     let signs_in = app
         .database
         .as_ref()
@@ -408,13 +405,14 @@ pub async fn install<W: Watcher>(
         ));
     }
 
-    // **A directory no row owns is a leftover, and this install takes its place** — found by T200.
-    // An uninstall deletes the rows before the directory, so one that could not finish — a running
-    // Mailpit holding its own executable on Windows — left files nothing owns, and every install
-    // after it was refused as "already installed" about an extension that was not. The row was
-    // checked just above, so what is here is MixEngine's own debris. A removal that fails still
-    // stops the install, naming the path, rather than unpacking over something half-deleted. The
-    // data directory is not touched: keeping it is a promise the uninstall made.
+    // **A directory no row owns is a leftover, and this install takes its place** — found by hand,
+    // installing Mailpit on Windows. An uninstall deletes the rows before the directory, so one
+    // that could not finish — a running Mailpit holding its own executable on Windows — left files
+    // nothing owns, and every install after it was refused as "already installed" about an
+    // extension that was not. The row was checked just above, so what is here is MixEngine's own
+    // debris. A removal that fails still stops the install, naming the path, rather than unpacking
+    // over something half-deleted. The data directory is not touched: keeping it is a promise the
+    // uninstall made.
     if install_dir.exists() {
         tracing::info!(
             extension = %id,
@@ -425,7 +423,7 @@ pub async fn install<W: Watcher>(
     }
 
     // Decided before the download for the reason the plan is: a name that is taken and a PHP that
-    // is missing are both things to refuse before a byte arrives — roadmap task **T81b**.
+    // is missing are both things to refuse before a byte arrives.
     let site = site_for(store, paths, manifest).await?;
 
     crate::paths::create_dir(paths.extensions())?;
@@ -443,10 +441,10 @@ pub async fn install<W: Watcher>(
                         &artifact,
                         &install_dir,
                         None,
-                        // **An extension may publish one file** — roadmap task **T82**, the design's
-                        // D3. Adminer's distribution is a single PHP file, which is what a great
-                        // many small tools ship; the package index keeps the refusal, because there
-                        // a fourth suffix means a decompressor this build does not have.
+                        // **An extension may publish one file.** Adminer's distribution is a single
+                        // PHP file, which is what a great many small tools ship; the package index
+                        // keeps the refusal, because there a fourth suffix means a decompressor
+                        // this build does not have.
                         crate::install::NotAnArchive::OneFile,
                         watcher,
                     )
@@ -553,7 +551,7 @@ async fn write_rows(
         }
     }
 
-    // **The pool, before the site that names it** — roadmap task **T82a**, that design's D1.
+    // **The pool, before the site that names it.**
     // Outside the allocation lock for `services::create`'s reason: it takes the same lock, and the
     // lock is not reentrant. Rolled back with everything else — a pool with no extension is a
     // service nothing would ever start and nothing would ever remove.
@@ -564,10 +562,10 @@ async fn write_rows(
         return Err(refusal);
     }
 
-    // **The site, for the one kind that is served rather than run** — roadmap task **T81b**, the
-    // design's D7. Written where a `service` writes its row, under the same rollback: a site that
-    // failed — the name went to somebody between plan and install — forgets the extension row, and
-    // the cascade has nothing to take because the site was the row that failed.
+    // **The site, for the one kind that is served rather than run.** Written where a `service`
+    // writes its row, under the same rollback: a site that failed — the name went to somebody
+    // between plan and install — forgets the extension row, and the cascade has nothing to take
+    // because the site was the row that failed.
     if let Some(site) = site {
         let new = sites::NewSite {
             owner: SiteOwner::Extension(id.clone()),
@@ -578,7 +576,7 @@ async fn write_rows(
             https_enabled: true,
             https_redirect: false,
             domains: vec![site.domain.clone()],
-            // **The link, and what it buys** — roadmap task **T82**, the design's D4.
+            // **The link, and what it buys.**
             // `sites::declaring` reads `site_service_links`, so writing this row is what makes
             // `service.delete` refuse to remove the database out from under an administrative
             // interface. There is no second refusal anywhere for this, on purpose.
@@ -587,7 +585,7 @@ async fn write_rows(
         };
 
         if let Err(refusal) = sites::create(store, &new).await {
-            // The pool was written a moment ago and is this site's alone — roadmap task **T82a**.
+            // The pool was written a moment ago and is this site's alone.
             // Leaving it would leave a service nothing reaches and nothing removes, since what takes
             // a pool away is the uninstall of an extension whose row is about to be forgotten.
             super::pools::remove(store, paths, id).await?;

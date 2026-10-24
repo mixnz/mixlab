@@ -11,13 +11,13 @@
 //! `mariadb@main` and `mariadb@legacy` are two rows, two data directories and two ports; they are
 //! one recipe, and the difference between them is entirely in the [`Context`] it is handed.
 //!
-//! **The set this build ships is [`Catalogue::builtin`], and each entry in it is a roadmap task of
-//! its own** — Caddy is T31 and is in ([`recipes::caddy`](super::recipes::caddy)), php-fpm is T32,
-//! MariaDB T33, PostgreSQL T34, Redis and Memcached T35 — because each is a template, a set of
-//! overrides worth having and a first-start ritual, judged against the real server. What T30 owns is
-//! everything around them: the merge, the render, the diff, the staging and the [`ServiceSpec`] that
-//! comes out. A catalogue is a value, so a test — and a debug build with a fixture to supervise —
-//! composes its own.
+//! **The set this build ships is [`Catalogue::builtin`], and each entry in it was built on its
+//! own** — Caddy ([`recipes::caddy`](super::recipes::caddy)), php-fpm, MariaDB, PostgreSQL, Redis,
+//! Memcached and the rest — because each is a template, a set of overrides worth having and a
+//! first-start ritual, judged against the real server. What the generator owns is everything around
+//! them: the merge, the render, the diff, the staging and the [`ServiceSpec`] that comes out. A
+//! catalogue is a value, so a test — and a debug build with a fixture to supervise — composes its
+//! own.
 //!
 //! [`ServiceSpec`]: mixengine_proto::ServiceSpec
 
@@ -49,7 +49,7 @@ pub struct TemplateFile {
     pub source: &'static str,
 }
 
-/// One extension's `[[recipe.front_end]]`, rendered — roadmap task **T81c**.
+/// One extension's `[[recipe.front_end]]`, rendered.
 ///
 /// **The substitution has already happened**, and it happened where the extension's row is, because
 /// `{install_dir}` means the directory *that extension* was installed into and only its row knows
@@ -65,7 +65,7 @@ pub struct FrontEndAddition {
     pub fragment: String,
 }
 
-/// The pair a service presents, as a template and a spec have to name it — roadmap task **T99**.
+/// The pair a service presents, as a template and a spec have to name it.
 ///
 /// The shape of `served::SiteCertificate`, for a leaf that belongs to a server rather than to a
 /// site. **Read off the disk and never described from a write**: the generator fills it from
@@ -80,10 +80,10 @@ pub struct ServiceCertificate {
 
     /// SHA-256 of the certificate's DER, lowercase hex.
     ///
-    /// **Rendered into the generated file's header, and read back by nothing** — T51's reason,
-    /// restated for a server that does not reload: a reissue to the same path must still change the
-    /// file, so that a rewrite finds a difference and the file says which certificate it was
-    /// rendered for.
+    /// **Rendered into the generated file's header, and read back by nothing** — the reason a site
+    /// file carries one, restated for a server that does not reload: a reissue to the same path
+    /// must still change the file, so that a rewrite finds a difference and the file says which
+    /// certificate it was rendered for.
     pub fingerprint: String,
 }
 
@@ -119,7 +119,7 @@ pub struct Endpoints {
     pub plugins: Option<PathBuf>,
 
     /// Data files out of the package's own archive that the template `include`s by absolute path,
-    /// keyed by the `provides` name the index publishes them under — roadmap task **T37**.
+    /// keyed by the `provides` name the index publishes them under.
     ///
     /// **nginx is why, and it will not be the only one.** A generated `nginx.conf` sits in
     /// `etc/nginx/` with no `conf/` beside it, so `mime.types` has to be reached where the artifact
@@ -134,9 +134,9 @@ pub struct Endpoints {
 ///
 /// **A recipe must answer**, which is why [`Recipe::instancing`] has no default body: the question
 /// has a different answer for every server in `docs/features/services.md`'s catalogue, and a
-/// default here would be a decision made by whoever wrote this enum on behalf of a recipe nobody had
-/// written yet. It is also the half of T36 that `service.create` cannot avoid — what a *second*
-/// instance of one package means — while running two of them side by side stays T36's.
+/// default here would be a decision made by whoever wrote this enum on behalf of a recipe nobody
+/// had written yet. It is also the half of several instances that `service.create` cannot avoid —
+/// what a *second* instance of one package means — rather than what running two side by side takes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Instancing {
     /// Exactly one, and its id carries no `@`: there is one Caddy, and one active front end.
@@ -164,7 +164,7 @@ pub enum Source {
     Runtime(mixengine_proto::RuntimeKind),
 }
 
-/// What a service is *for*, where two packages can be for the same thing — roadmap task **T37**.
+/// What a service is *for*, where two packages can be for the same thing.
 ///
 /// **[`Instancing`] cannot say this**, which is why there are two enums rather than one. Instancing
 /// is about a package: how many rows may name `nginx`. This is about a *job*: `docs/features/services.md`
@@ -178,11 +178,10 @@ pub enum Source {
 pub enum Role {
     /// The program every site on the machine is reached through. Caddy and Nginx.
     ///
-    /// **It carries which configuration language it reads** — roadmap task **T81c**. A
-    /// `[[recipe.front_end]]` fragment is written for one of the two syntaxes and is a syntax error
-    /// in the other, so something has to say which recipe a fragment belongs to; saying it here
-    /// means a recipe cannot be the front end without answering, which a second method beside this
-    /// one would have allowed.
+    /// **It carries which configuration language it reads.** A `[[recipe.front_end]]` fragment is
+    /// written for one of the two syntaxes and is a syntax error in the other, so something has to
+    /// say which recipe a fragment belongs to; saying it here means a recipe cannot be the front
+    /// end without answering, which a second method beside this one would have allowed.
     FrontEnd(mixengine_proto::FrontEndServer),
 
     /// Everything else: a database, a cache, a pool. As many as the home wants.
@@ -191,12 +190,12 @@ pub enum Role {
 
 /// An executable inside an installed package, spelled the way this OS spells one.
 ///
-/// **The one spelling of that join, and the reason it is a free function** — roadmap task **T97**.
-/// [`Context::program`] is how a recipe asks, and it is the only way to ask while a service exists;
-/// `service.set_front_end` has to name the binary of a front end whose row *does not exist yet*, in
-/// order to find out whether this machine will let it answer on 80 and 443 before anything is
-/// stopped or deleted. Both callers therefore ask the same function, so the path a grant is written
-/// against and the path a spec runs cannot come to differ by a suffix.
+/// **The one spelling of that join, and the reason it is a free function.** [`Context::program`] is
+/// how a recipe asks, and it is the only way to ask while a service exists; `service.set_front_end`
+/// has to name the binary of a front end whose row *does not exist yet*, in order to find out
+/// whether this machine will let it answer on 80 and 443 before anything is stopped or deleted.
+/// Both callers therefore ask the same function, so the path a grant is written against and the
+/// path a spec runs cannot come to differ by a suffix.
 #[must_use]
 pub fn program(install_path: &Path, name: &str) -> PathBuf {
     install_path.join(format!("{name}{}", std::env::consts::EXE_SUFFIX))
@@ -217,7 +216,7 @@ pub enum Upstream {
     Tcp(SocketAddr),
 }
 
-/// Both addresses a site may point at for one service — roadmap task **T70**.
+/// Both addresses a site may point at for one service.
 ///
 /// **One value rather than two maps**, because a site file names them together and in one order:
 /// the service first, the activator second, so that a request the service refuses is retried
@@ -233,7 +232,7 @@ pub struct Upstreams {
     pub activator: Option<Upstream>,
 }
 
-/// One command `<root>/bin` fronts on an installed package's behalf — roadmap task **T130**.
+/// One command `<root>/bin` fronts on an installed package's behalf.
 ///
 /// **Declared rather than derived from `provides`**, and nginx is the reason: its map holds
 /// `mime.types` and `fastcgi_params` beside `nginx.exe`, so a `bin/` filled from the map wholesale
@@ -275,7 +274,7 @@ pub enum Claim {
 pub trait Recipe: std::fmt::Debug + Send + Sync {
     /// The `packages.name` this recipe is for.
     ///
-    /// **`&str` rather than `&'static str` since T81.** Every compiled-in recipe returns a literal
+    /// **`&str` rather than `&'static str`.** Every compiled-in recipe returns a literal
     /// and reads the same; what the borrow makes room for is a recipe built at run time out of an
     /// installed extension's manifest, whose name is a `String` in a row
     /// ([`ExtensionRecipe`](crate::extensions::recipe::ExtensionRecipe)).
@@ -304,13 +303,12 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
 
     /// The port this service would like, and [`None`] for one the daemon hands no port to.
     ///
-    /// **A wish, not a reservation** — roadmap task **T34c**. It is declared here, beside the binary
-    /// and the template, because which number a product is documented under is a fact about the
-    /// product: 3306 for either database, 6379 for Redis. A `service.create` that had to know them
-    /// would be a caller that has to know the whole catalogue, and two recipes naming 3306 would be
-    /// a special case rather than the ordinary one it is —
-    /// [`Port::Allocate`](crate::services::Port::Allocate) gives the first row to ask its wish and
-    /// the next the first free port above.
+    /// **A wish, not a reservation.** It is declared here, beside the binary and the template,
+    /// because which number a product is documented under is a fact about the product: 3306 for
+    /// either database, 6379 for Redis. A `service.create` that had to know them would be a caller
+    /// that has to know the whole catalogue, and two recipes naming 3306 would be a special case
+    /// rather than the ordinary one it is — [`Port::Allocate`](crate::services::Port::Allocate)
+    /// gives the first row to ask its wish and the next the first free port above.
     ///
     /// [`None`] means the daemon allocates nothing: a pool on a Unix socket, and Caddy, whose 80 and
     /// 443 are its own settings — a front end moved to 81 because something else answered on 80 is
@@ -319,8 +317,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
         None
     }
 
-    /// The account a client connects to this server as, for a server that has one — roadmap task
-    /// **T82**, the design's D5.
+    /// The account a client connects to this server as, for a server that has one.
     ///
     /// **Defaulted to [`None`], because that is what a server *is* unless it is a database.** A
     /// front end, a cache and a pool have no such account, so a recipe added later opts in rather
@@ -335,8 +332,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
         None
     }
 
-    /// What a database client speaks to this server, for a server one opens — roadmap task
-    /// **T83**, the design's D5.
+    /// What a database client speaks to this server, for a server one opens.
     ///
     /// **Defaulted to [`None`] for [`administrator`](Self::administrator)'s reason**: a front end, a
     /// cache with no client protocol and a pool are not something a database client opens. Redis
@@ -346,7 +342,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
         None
     }
 
-    /// The commands a person runs out of this package — roadmap task **T130**.
+    /// The commands a person runs out of this package.
     ///
     /// **Defaulted to nothing**, because that is what a package *is* unless somebody types one of
     /// its programs: the two front ends and php-fpm publish binaries a person never invokes by
@@ -359,7 +355,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
         &[]
     }
 
-    /// What one of those commands is told about the instance it belongs to — roadmap task **T130**.
+    /// What one of those commands is told about the instance it belongs to.
     ///
     /// **A client's own variable and nothing invented**: `mysql` reads `MYSQL_TCP_PORT` and `psql`
     /// reads `PGPORT`, and a family with no such variable — Redis, Memcached — answers an empty map
@@ -376,7 +372,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
         BTreeMap::new()
     }
 
-    /// How to tell that this service has nothing to do — roadmap task **T69**.
+    /// How to tell that this service has nothing to do.
     ///
     /// **The recipe's half of an [`IdlePolicy`], and `services.idle_minutes` holds the other.** Only
     /// the recipe knows which port its pool listens on or whether it renders a status endpoint, and
@@ -396,10 +392,10 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
     /// How long this service should look idle before it is stopped, when nobody has said and the
     /// home is not saving resources.
     ///
-    /// **[`None`] for every recipe, and that is the decision** — [ADR 0041]: MixEngine stops nothing
-    /// a person did not ask it to stop. A site that was up stays up. The numbers T70 and T70a chose
-    /// are [`idle_when_saving`](Self::idle_when_saving)'s, and reach a service only while the home's
-    /// *Save battery* switch is on.
+    /// **[`None`] for every recipe, and that is the decision** — [ADR 0041]: MixEngine stops
+    /// nothing a person did not ask it to stop. A site that was up stays up. The numbers on-demand
+    /// activation chose are [`idle_when_saving`](Self::idle_when_saving)'s, and reach a service
+    /// only while the home's *Save battery* switch is on.
     ///
     /// Kept as a method rather than deleted so that `idle_minutes` can still tell *nobody said*
     /// from *somebody said no*, and so a recipe for a program that should idle regardless has a
@@ -411,19 +407,19 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
     }
 
     /// How long this service should look idle before it is stopped, when nobody has said and the
-    /// home **is** saving resources — roadmap task **T167b**.
+    /// home **is** saving resources.
     ///
     /// **A recipe answers a number only once something can start its service again.** Stopping a
     /// service nothing can wake is a site that answers 502 for ever, so php-fpm names half an hour
-    /// (**T70** — the request that finds the pool down is what wakes it), the databases and the
-    /// caches an hour (**T70a** — the connection that finds the server down is what wakes it), and
-    /// the two front ends [`None`] for ever, because the thing that starts everything else back up
-    /// cannot be the thing that gets stopped.
+    /// (the request that finds the pool down is what wakes it), the databases and the caches an
+    /// hour (the connection that finds the server down is what wakes it), and the two front ends
+    /// [`None`] for ever, because the thing that starts everything else back up cannot be the thing
+    /// that gets stopped.
     fn idle_when_saving(&self) -> Option<mixengine_proto::Millis> {
         None
     }
 
-    /// Whether a memory watchdog may restart this service — roadmap task **T71a**.
+    /// Whether a memory watchdog may restart this service.
     ///
     /// **`false`, and a recipe opts in**, because whether a program survives being restarted under
     /// memory pressure is a property of the program and not a preference about it: a php-fpm pool
@@ -444,8 +440,8 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
     /// Handed to [`Installer::install`](crate::install::Installer::install) after the archive is
     /// unpacked and before the staging directory is renamed into place, so a build that will not
     /// start on this machine leaves nothing behind. [`None`] for a package with nothing cheap to
-    /// run — but a server almost always has one, and T20a's whole finding is that unpacking is not
-    /// evidence that anything runs.
+    /// run — but a server almost always has one, and the first real package showed that unpacking
+    /// is not evidence that anything runs.
     ///
     /// The executable is named by its key in `Artifact::provides` rather than by a path: the path
     /// inside the archive belongs to whoever published it, and the name belongs to us.
@@ -521,7 +517,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
     }
 
     /// Where the *activator* listens for this service, for a site file to name after
-    /// [`upstream`](Self::upstream) — roadmap task **T70**.
+    /// [`upstream`](Self::upstream).
     ///
     /// [`None`] for every recipe nothing can start by connecting to it, which is the default and is
     /// most of them. A recipe that answers [`Some`] is promising two things: the address differs
@@ -531,7 +527,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
     ///
     /// **[`Some`] is not a promise that the daemon is listening there.** Whether it binds is the
     /// daemon's, and depends on why the service is stopped: a service a person stopped is not one a
-    /// request may start again (design D8). What this answers is only *where*.
+    /// request may start again. What this answers is only *where*.
     ///
     /// # Errors
     ///
@@ -544,7 +540,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
         Ok(None)
     }
 
-    /// Whether this recipe's activator needs a port allocated onto the row — roadmap task **T70**.
+    /// Whether this recipe's activator needs a port allocated onto the row.
     ///
     /// **A question about the recipe and this system, never about one instance**, which is why it
     /// takes no [`Context`]: the port has to be allocated before a context exists to render with.
@@ -555,8 +551,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
         false
     }
 
-    /// The addresses of this service's *own* that a connection may start it at — roadmap task
-    /// **T70a**, design D4.
+    /// The addresses of this service's *own* that a connection may start it at.
     ///
     /// Empty by default, and empty for php-fpm on purpose. A pool has a front end in front of it,
     /// so its activator gets a permanent address of its own ([`activator`](Self::activator)) and
@@ -621,7 +616,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
         Ok(Vec::new())
     }
 
-    /// What this home's extensions add to this service's configuration — roadmap task **T81c**.
+    /// What this home's extensions add to this service's configuration.
     ///
     /// Asked only of the recipe holding [`Role::FrontEnd`], appended to the set
     /// [`files`](Self::files) rendered, and for [`sites`](Self::sites)' reason exactly: the checker
@@ -654,7 +649,6 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
     }
 
     /// The names a certificate for this service must cover, when it wants one — [`None`] for most.
-    /// Roadmap task **T99**.
     ///
     /// Opt-in like [`ritual`](Self::ritual). A recipe that answers gets a leaf this home's authority
     /// signed, under `certs/services/`, issued by the generator just before the render and reachable
@@ -684,7 +678,7 @@ pub trait Recipe: std::fmt::Debug + Send + Sync {
 pub struct Catalogue {
     recipes: BTreeMap<String, Arc<dyn Recipe>>,
 
-    /// Packages this build installs, lists and removes but never runs — roadmap task **T206a**.
+    /// Packages this build installs, lists and removes but never runs.
     toolchains: std::collections::BTreeSet<String>,
 }
 
@@ -733,8 +727,8 @@ impl Catalogue {
         self.recipes.keys().map(String::as_str)
     }
 
-    /// A package this build installs, lists and removes but never runs — roadmap task **T206a**,
-    /// D5. A toolchain has no recipe because there is nothing in it to supervise: `msys2` is the
+    /// A package this build installs, lists and removes but never runs. A toolchain has no recipe
+    /// because there is nothing in it to supervise: `msys2` is the
     /// devkit RubyInstaller's Ruby needs to build gems with C extensions.
     #[must_use]
     pub fn with_toolchain(mut self, package: &str) -> Self {

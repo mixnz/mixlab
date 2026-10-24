@@ -1,4 +1,4 @@
-//! Recording what is on disk without a row — roadmap task **T182f**.
+//! Recording what is on disk without a row.
 //!
 //! Everything MixEngine knows lives in `mixengine.db`, inside the home. An uninstall that removes the
 //! home and keeps a directory `[paths]` moved elsewhere leaves runtimes and packages nobody knows
@@ -6,7 +6,8 @@
 //! leaves in its directory so the next home can record it; [`walk`] finds such directories and
 //! records them.
 //!
-//! Design: `docs/specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md`.
+//! Design: `docs/specs/2026-09-27-t182f-a-reinstall-finds-what-the-last-one-kept-design.md`. The
+//! D-numbers in this module's files are that spec's.
 
 pub mod instances;
 pub mod marker;

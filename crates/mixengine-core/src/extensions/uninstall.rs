@@ -1,4 +1,4 @@
-//! Removing an installed extension — roadmap task **T81**, the design's D12.
+//! Removing an installed extension.
 //!
 //! # The reverse of the install, and tolerant of a half-done one
 //!
@@ -11,7 +11,7 @@
 //! # The data directory is kept
 //!
 //! Unless asked otherwise. It is the one thing here a person cannot get back, and it is why the
-//! layout puts it outside the install directory in the first place (D13) — an uninstall that had to
+//! layout puts it outside the install directory in the first place — an uninstall that had to
 //! delete everything under one root would be one that could not make this promise.
 //!
 //! **Nothing here stops a process.** Supervision belongs to the daemon, so the order it walks is
@@ -40,10 +40,10 @@ pub struct Removed {
     /// instead of leaving them to guess.
     pub data_dir_kept: Option<PathBuf>,
 
-    /// The domain released with it, for a `web-app` — roadmap task **T81b**.
+    /// The domain released with it, for a `web-app`.
     pub site: Option<String>,
 
-    /// The php-fpm pool that went with it, for a `web-app` — roadmap task **T82a**.
+    /// The php-fpm pool that went with it, for a `web-app`.
     ///
     /// Answered so a client can say the process went too, rather than leaving a `mix service list`
     /// entry for somebody to find and wonder about.
@@ -85,9 +85,9 @@ pub async fn uninstall(
         remove(&paths.service_logs(service)).await?;
     }
 
-    // **The site goes before the row that owns it** — roadmap task **T81b**, the design's D8. The
-    // cascade would take it anyway; deleting it here is what lets the answer name the domain, and
-    // `of_extension` answering `None` is what makes a second run after an interruption succeed.
+    // **The site goes before the row that owns it.** The cascade would take it anyway; deleting it
+    // here is what lets the answer name the domain, and `of_extension` answering `None` is what
+    // makes a second run after an interruption succeed.
     let site = match crate::sites::of_extension(store, id).await? {
         Some(site) => {
             crate::sites::delete(store, site.id).await?;
@@ -96,7 +96,7 @@ pub async fn uninstall(
         None => None,
     };
 
-    // **After the site and before the row** — roadmap task **T82a**, that design's D11.
+    // **After the site and before the row.**
     // `sites.php_service_id` is `ON DELETE SET NULL`, so removing the pool first would leave the
     // site pointing at nothing for one statement, and an interruption there would leave it for
     // good. `pools::remove` answers [`None`] for a pool that is already gone, which is what lets a
@@ -136,8 +136,8 @@ pub async fn uninstall(
 
 /// Remove a directory that may not be there.
 ///
-/// [`crate::paths::remove_dir`] since roadmap task **T82a**, which is where the second caller is:
-/// two copies of "not found is fine" is one copy that eventually is not.
+/// [`crate::paths::remove_dir`], which the install and the extension's pool call too: two copies of
+/// "not found is fine" is one copy that eventually is not.
 async fn remove(path: &Path) -> Result<()> {
     crate::paths::remove_dir(path).await
 }
@@ -207,7 +207,7 @@ mod tests {
         (home, source, paths, store, installed)
     }
 
-    /// **Everything goes except the data** — the design's D12.
+    /// **Everything goes except the data.**
     #[tokio::test]
     async fn uninstalling_keeps_the_data_directory() {
         let (_home, _source, paths, store, one) =
@@ -321,8 +321,7 @@ mod tests {
         );
     }
 
-    /// **An install takes the place of what a broken uninstall left behind** — found by T200's hand
-    /// check.
+    /// **An install takes the place of what a broken uninstall left behind** — found by hand.
     ///
     /// An uninstall that deleted the rows and then could not remove the directory — a running
     /// Mailpit holding its own executable on Windows — left a directory nothing owns, and every

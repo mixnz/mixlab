@@ -1,29 +1,32 @@
-//! The page a site answers with when it has nothing behind it — roadmap task **T124**.
+//! The page a site answers with when it has nothing behind it.
 //!
 //! **One template for both front ends**, because the page is the same page whichever program is
 //! serving it: what differs is how each one is told to reach it, and that lives in the two site
 //! templates. A second copy would be a second answer to "what does a new site say", and the copy
 //! that drifted would be the one nobody was reading on the day it mattered.
 //!
-//! **It names nothing about this machine** — the T124 design, D5. A shared site binds its interface
-//! address (T74) and answers to an mDNS name (T75), so a phone on the local network can fetch this
-//! page. An absolute path and a database account are facts about the machine; the document root as
-//! the *row* spells it is the one detail that is both useful and already implied by the site itself,
-//! which is why this module is handed that string rather than the joined path
+//! **It names nothing about this machine** (D5). A shared site binds its interface address and
+//! answers to an mDNS name, so a phone on the local network can fetch this page. An absolute path
+//! and a database account are facts about the machine; the document root as the *row* spells it is
+//! the one detail that is both useful and already implied by the site itself, which is why this
+//! module is handed that string rather than the joined path
 //! [`Served::doc_root`](super::served::Served::doc_root) carries.
+//!
+//! The D-numbers below are those of
+//! `docs/specs/2026-09-13-t124-a-site-with-nothing-behind-it-says-so-design.md`.
 
 use mixengine_proto::ServiceId;
 
 use crate::Result;
 use crate::generate::served::ServedKind;
 
-/// The page, compiled in — [`crate::blueprints::gallery`]'s D1, for its reason: what this build
-/// ships is a constant of this build, not a document it fetches or a file the user is invited to
-/// edit and then owns forever.
+/// The page, compiled in, for the reason [`crate::blueprints::gallery`] is: what this build ships
+/// is a constant of this build, not a document it fetches or a file the user is invited to edit and
+/// then owns forever.
 const PAGE: &str = include_str!("welcome/page.html");
 
-/// The page a site whose backend MixEngine manages answers while that backend is not answering —
-/// roadmap task **T167f**. Compiled in for [`PAGE`]'s reason.
+/// The page a site whose backend MixEngine manages answers while that backend is not answering.
+/// Compiled in for [`PAGE`]'s reason.
 const STARTING: &str = include_str!("welcome/starting.html");
 
 /// Where a site's starting page is written, inside the welcome directory.
@@ -35,7 +38,7 @@ pub fn starting_file(primary: &str) -> String {
     format!("{primary}.starting.html")
 }
 
-/// What the starting page is told: the domain, and nothing else about this machine (T124's D5 —
+/// What the starting page is told: the domain, and nothing else about this machine (D5 —
 /// the page can be fetched from the local network).
 #[derive(Debug, serde::Serialize)]
 struct StartingPage<'a> {
@@ -71,7 +74,7 @@ pub fn render_starting(
     .map(Some)
 }
 
-/// One command the page names — roadmap task **T205**, D6. Never anything about a database.
+/// One command the page names. Never anything about a database.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct WelcomeStep {
     /// The command, expanded.
@@ -93,8 +96,8 @@ pub struct WelcomePage<'a> {
     /// The one sentence that is true for this kind.
     pub what_to_do: String,
 
-    /// What the site's blueprint says to run, in order — roadmap task **T205**, D6. Empty where
-    /// it says nothing, and then the kind's sentence stands alone.
+    /// What the site's blueprint says to run, in order. Empty where it says nothing, and then the
+    /// kind's sentence stands alone.
     pub steps: &'a [WelcomeStep],
 }
 
@@ -144,8 +147,8 @@ pub fn page<'a>(
         ),
     };
 
-    // **The blueprint's own words, where it has them** — roadmap task **T205**, D6. The kind's
-    // sentence says *start your development server*; the steps say which command that is.
+    // **The blueprint's own words, where it has them.** The kind's sentence says *start your
+    // development server*; the steps say which command that is.
     let what_to_do = match steps.is_empty() {
         true => what_to_do,
         false => "Run these in the project directory, then reload this page.".to_owned(),
@@ -189,8 +192,8 @@ mod tests {
         ServiceId::parse("caddy").expect("an id")
     }
 
-    /// **T167f: a PHP site gets a starting page, and it says nothing about the machine.** Anything
-    /// else gets none — its backend is either the person's own program or absent.
+    /// **A PHP site gets a starting page, and it says nothing about the machine.** Anything else
+    /// gets none — its backend is either the person's own program or absent.
     #[test]
     fn only_a_php_site_gets_a_starting_page_and_it_names_only_the_domain() {
         let php = ServedKind::PhpFpm {
@@ -204,8 +207,8 @@ mod tests {
             .expect("the page renders")
             .expect("a php site has one");
         assert!(page.contains("blog.test"), "{page}");
-        // **T200b, D7.** Two places that say why — MixLab's Sites, and `mix site show` for a home
-        // with no window — and never the reason itself: a shared site is served to the LAN.
+        // Two places that say why — MixLab's Sites, and `mix site show` for a home with no window —
+        // and never the reason itself: a shared site is served to the LAN.
         assert!(page.contains("Sites screen"), "{page}");
         assert!(page.contains("mix site show blog.test"), "{page}");
         assert!(!page.contains("credential"), "{page}");
@@ -274,7 +277,7 @@ mod tests {
         );
     }
 
-    /// **A site with steps names the commands and nothing else** — roadmap task **T205**, D6.
+    /// **A site with steps names the commands and nothing else.**
     #[test]
     fn a_site_with_steps_names_the_commands_and_nothing_else() {
         let steps = vec![

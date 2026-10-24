@@ -1,7 +1,7 @@
-//! The version the daemon binary on disk reports — roadmap task **T88f**, the design's D6.
+//! The version the daemon binary on disk reports.
 //!
 //! After Installer.app has run, the file at the daemon's own path is the new binary while this
-//! process still runs the old image (the T88f readings, M3). Asking that file is how the daemon
+//! process still runs the old image, as measured on a Mac. Asking that file is how the daemon
 //! learns the install happened.
 
 use std::path::Path;
@@ -22,7 +22,7 @@ pub fn parse(stdout: &str) -> Option<String> {
 /// Run `exe --version` and read it. [`None`] when it will not run, fails, or is not `mixengined`.
 ///
 /// **Blocking**: a caller on the runtime runs it through `spawn_blocking`. It is asked once per new
-/// file at the daemon's path, not once per status poll (the design, D6).
+/// file at the daemon's path, not once per status poll.
 #[must_use]
 pub fn version_of(exe: &Path) -> Option<String> {
     let output = std::process::Command::new(exe)

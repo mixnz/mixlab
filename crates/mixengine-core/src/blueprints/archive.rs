@@ -1,9 +1,12 @@
-//! A release archive downloaded and unpacked into a new project — roadmap task **T205**, D2.
+//! A release archive downloaded and unpacked into a new project.
 //!
 //! **Unpinned on purpose.** `latest.zip` changes with every release, so a checksum in a gallery
 //! file would break it within weeks; HTTPS and the consent a person gives are the trust (D2). The
 //! unpacking is `core::install::archive`'s, whose path checks already refuse an entry that leaves
 //! the directory it is unpacked into.
+//!
+//! The D-numbers below are those of
+//! `docs/specs/2026-10-08-t205-a-blueprint-ends-at-a-working-site-design.md`.
 
 #[cfg(feature = "network")]
 use std::path::Path;

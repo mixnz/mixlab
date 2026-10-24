@@ -23,7 +23,7 @@ pub const DATABASE_FILE_NAME: &str = "mixengine.db";
 /// means nothing — see [`mixengine_platform::lock`].
 pub const LOCK_FILE_NAME: &str = "mixengined.lock";
 
-/// A development build's credential store, directly under the root — T184, ADR 0052. A release
+/// A development build's credential store, directly under the root — ADR 0052. A release
 /// never writes it.
 pub const CREDENTIALS_FILE_NAME: &str = "credentials.json";
 
@@ -41,7 +41,7 @@ pub const DAEMON_LOG_FILE_NAME: &str = "daemon.log";
 /// and its rotated copies — can be removed by removing one directory.
 const SERVICES_LOG_DIR_NAME: &str = "services";
 
-/// Where a crash report is written, inside `logs/` — roadmap task **T91**.
+/// Where a crash report is written, inside `logs/`.
 const CRASHES_DIR_NAME: &str = "crashes";
 
 /// Decide which directory is `MIXENGINE_HOME`.
@@ -118,7 +118,7 @@ pub fn create_dir(path: &Path) -> Result<()> {
     })
 }
 
-/// Whether a folder's metadata read says it is gone — roadmap task **T206d**, D1.
+/// Whether a folder's metadata read says it is gone.
 ///
 /// **Only `NotFound`.** No access, a drive not mounted, a timeout: each is a folder out of reach, and
 /// nothing here may treat one as deleted. A pure function of the read so every `ErrorKind` can be
@@ -133,7 +133,7 @@ pub async fn is_gone(path: &Path) -> bool {
     gone(&tokio::fs::symlink_metadata(path).await)
 }
 
-/// Remove a folder if it is empty, and say nothing either way — roadmap task **T206c**.
+/// Remove a folder if it is empty, and say nothing either way.
 ///
 /// **The operating system decides**: `remove_dir` refuses a folder that still holds a version or an
 /// install's `.staging` folder, and that refusal is the answer. Housekeeping, so it never fails the
@@ -146,7 +146,7 @@ pub fn remove_if_empty(directory: &Path) {
     }
 }
 
-/// A relative path written with `/`, joined onto `base` one part at a time — roadmap task **T191**.
+/// A relative path written with `/`, joined onto `base` one part at a time.
 ///
 /// A manifest's `provides` value, a site's doc root and a route's root are all stored with `/`,
 /// because they are written once for every system or rendered into a web server's configuration.
@@ -161,7 +161,7 @@ pub fn join_stored(base: &Path, relative: &str) -> PathBuf {
         .fold(base.to_path_buf(), |path, part| path.join(part))
 }
 
-/// `path` rebuilt from its components, so every separator is this system's — roadmap task **T191**.
+/// `path` rebuilt from its components, so every separator is this system's.
 ///
 /// For a path a person wrote by hand, such as a `[paths]` value the configuration template tells
 /// them to write with `/`. A trailing separator and `.` parts go; `..` stays, and so does a UNC
@@ -171,7 +171,7 @@ pub fn native(path: &Path) -> PathBuf {
     path.components().collect()
 }
 
-/// A relative path stored with `/`, spelled for a person on this system — roadmap task **T191**.
+/// A relative path stored with `/`, spelled for a person on this system.
 ///
 /// The wire form of a site's doc root and a static route's root. The column keeps `/`; the input
 /// side (`sites::relative_doc_root`) accepts either spelling, so what a client reads it can send
@@ -188,8 +188,8 @@ pub fn native_relative(stored: &str) -> String {
 ///
 /// **A directory that is already gone is the answer this wants**, which is what makes an uninstall
 /// resumable: one interrupted by a daemon restart has to be able to finish rather than refuse. Two
-/// callers share it since roadmap task **T82a** — an extension's own directories and the generated
-/// `etc/` and `logs/` of the pool that serves it — because two copies of "not found is fine" is one
+/// callers share it — an extension's own directories, the generated `etc/` and `logs/` of the pool
+/// that serves it, a leftover install directory — because two copies of "not found is fine" is one
 /// copy that eventually is not.
 ///
 /// # Errors
@@ -385,7 +385,7 @@ impl Paths {
         &self.config_file
     }
 
-    /// `credentials.json`: where a build that is not a release keeps its credentials — T184.
+    /// `credentials.json`: where a build that is not a release keeps its credentials.
     #[must_use]
     pub fn credentials_file(&self) -> &Path {
         &self.credentials_file
@@ -411,7 +411,7 @@ impl Paths {
         self.logs.join(SERVICES_LOG_DIR_NAME).join(service.as_str())
     }
 
-    /// Where this home's crash reports are written: `logs/crashes/` — roadmap task **T91**.
+    /// Where this home's crash reports are written: `logs/crashes/`.
     ///
     /// **Built rather than stored, and deliberately not one of [`directories`](Self::directories)**,
     /// on [`service_logs`](Self::service_logs)' reasoning: the first crash creates it, so a home
@@ -496,12 +496,12 @@ impl Paths {
         for directory in self.directories() {
             create_dir(directory)?;
 
-            // **Only where the restriction is not already in force** — roadmap task **T206e**. On
-            // Windows, restricting the root rewrites the inherited permissions of every file under
-            // it, and with an installed `msys2` that is 54,000 files: every start waited minutes on
-            // `icacls` before the pipe opened. Asking is one listing of the directory itself. A
-            // question that cannot be answered falls through to the restriction, which reports
-            // what is wrong as it always has.
+            // **Only where the restriction is not already in force.** On Windows, restricting the
+            // root rewrites the inherited permissions of every file under it, and with an installed
+            // `msys2` that is 54,000 files: every start waited minutes on `icacls` before the pipe
+            // opened. Asking is one listing of the directory itself. A question that cannot be
+            // answered falls through to the restriction, which reports what is wrong as it always
+            // has.
             if private.contains(&directory)
                 && !access.is_restricted_to_owner(directory).unwrap_or(false)
             {
@@ -515,8 +515,8 @@ impl Paths {
 
 #[cfg(test)]
 mod tests {
-    /// **Only "not found" is gone** — roadmap task **T206d**, D1. A folder that is there but out of
-    /// reach is not something to offer a reinstall over.
+    /// **Only "not found" is gone.** A folder that is there but out of reach is not something to
+    /// offer a reinstall over.
     #[test]
     fn only_not_found_is_gone() {
         use std::io::{Error, ErrorKind};
@@ -536,7 +536,7 @@ mod tests {
         )));
     }
 
-    /// **Only an empty folder goes** — roadmap task **T206c**.
+    /// **Only an empty folder goes.**
     #[test]
     fn only_an_empty_folder_is_removed() {
         let root = tempfile::tempdir().expect("a temporary directory");
@@ -567,7 +567,7 @@ mod tests {
 
     use super::*;
 
-    /// T184: the credentials belong to the home, so no `[paths]` override moves them.
+    /// The credentials belong to the home, so no `[paths]` override moves them.
     #[test]
     fn the_credentials_file_stays_at_the_root_whatever_moves() {
         let overrides = PathOverrides {
@@ -582,8 +582,8 @@ mod tests {
         );
     }
 
-    /// T191: a manifest's `bin/php` joined onto an install directory is spelled as this system
-    /// spells one — no `/` left inside a Windows path.
+    /// A manifest's `bin/php` joined onto an install directory is spelled as this system spells one
+    /// — no `/` left inside a Windows path.
     #[test]
     fn a_stored_relative_path_joins_in_this_systems_spelling() {
         let base = std::env::temp_dir().join("install");
@@ -621,7 +621,7 @@ mod tests {
         );
     }
 
-    /// T191 D2: a relocation written with `/` is respelled; on Unix nothing changes.
+    /// A relocation written with `/` is respelled; on Unix nothing changes.
     #[test]
     fn a_path_written_with_slashes_is_respelled() {
         let cases: &[(&str, &str)] = if cfg!(windows) {
@@ -651,7 +651,7 @@ mod tests {
         }
     }
 
-    /// T191 D3: a stored doc root reaches the wire in this system's spelling.
+    /// A stored doc root reaches the wire in this system's spelling.
     #[test]
     fn a_stored_relative_path_is_respelled_for_the_wire() {
         let expected = ["public", "assets"].join(std::path::MAIN_SEPARATOR_STR);

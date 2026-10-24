@@ -13,9 +13,9 @@ async fn store() -> (tempfile::TempDir, Store) {
 /// A keep-warm project reaches the pool its sites name, and nothing else.
 ///
 /// **The second half is the assertion worth having.** Today the only edge from a project to a
-/// service is `sites.php_service_id`, so a project's *database* is not reached — and the day
-/// T77 gives a project a way to declare what it needs, this test is what says the reach
-/// changed rather than a user discovering it.
+/// service this query follows is `sites.php_service_id`, so a project's *database* is not reached —
+/// and the day the query follows `site_service_links` too, this test is what says the reach changed
+/// rather than a user discovering it.
 #[tokio::test]
 async fn a_keep_warm_project_reaches_the_pool_its_sites_name() {
     let (_home, store) = store().await;
@@ -54,7 +54,7 @@ async fn a_keep_warm_project_reaches_the_pool_its_sites_name() {
     );
     assert!(
         !warm.contains_key(&ServiceId::parse("mariadb@main").expect("an id")),
-        "no schema relates a project to its database yet — that edge is T77's"
+        "keep-warm follows `sites.php_service_id` alone, so a project's database is not reached"
     );
 }
 
@@ -152,8 +152,8 @@ async fn install(store: &Store, kind: RuntimeKind, versions: &[&str]) {
     }
 }
 
-/// **D1 and D6 together.** The manifest outranks the row, so a contradicting row pin is inert —
-/// and saying which one is in charge is the whole reason this answer carries a source.
+/// The manifest outranks the row, so a contradicting row pin is inert — and saying which one is in
+/// charge is the whole reason this answer carries a source.
 #[tokio::test]
 async fn a_manifest_pin_outranks_the_rows_and_says_so() {
     let (_home, store) = store().await;
@@ -260,7 +260,7 @@ async fn a_pin_nothing_already_satisfies_breaks_over_nothing() {
     assert!(broken.is_empty(), "{broken:?}");
 }
 
-/// **D7 reads the pin in effective order**, so a refusal is never based on a row the file
+/// **A refusal reads the pin in effective order**, so it is never based on a row the file
 /// overrides.
 #[tokio::test]
 async fn a_row_pin_the_manifest_overrides_refuses_nothing() {
@@ -305,8 +305,8 @@ async fn a_registered_project_is_listed_with_the_pins_it_was_given() {
     assert_eq!(records(&store).await.expect("a listing"), vec![written]);
 }
 
-/// **D3.** The walk `resolve::in_a_project` used to hold: the nearest registered root at or
-/// above the directory, and never a further one when a nearer one exists.
+/// The walk `resolve::in_a_project` used to hold: the nearest registered root at or above the
+/// directory, and never a further one when a nearer one exists.
 #[tokio::test]
 async fn a_directory_finds_the_nearest_project_above_it() {
     let (_home, store) = store().await;
@@ -338,7 +338,7 @@ async fn a_directory_finds_the_nearest_project_above_it() {
     assert_eq!(outer.name, "outer");
 }
 
-/// **D5, the half that would otherwise be silently broken on Windows.** A row normalised on the
+/// **The half that would otherwise be silently broken on Windows.** A row normalised on the
 /// way in and a directory that was not are two strings for one directory — so the query side is
 /// normalised too, and the test asks it the way a caller does.
 #[tokio::test]
@@ -403,7 +403,7 @@ async fn the_same_name_twice_is_refused() {
     );
 }
 
-/// **D4.** A handle typed on a command line, and T39a will make a domain out of it.
+/// A handle typed on a command line, and a site makes a domain out of it.
 #[test]
 fn a_name_is_a_handle_rather_than_free_text() {
     assert_eq!(validated_name("  blog  ").expect("trimmed"), "blog");
@@ -423,7 +423,7 @@ fn a_name_is_a_handle_rather_than_free_text() {
     }
 }
 
-/// **D6.** An absent map leaves the pins alone; an empty one clears them.
+/// An absent map leaves the pins alone; an empty one clears them.
 #[tokio::test]
 async fn updating_pins_replaces_them_and_an_empty_map_clears_them() {
     let (_home, store) = store().await;
@@ -482,7 +482,7 @@ async fn updating_pins_replaces_them_and_an_empty_map_clears_them() {
 
 /// A row written by a build that manages a language this one does not must not stop this one
 /// reading the project — `resolve`'s own rule, kept where the reading moved to. `kotlin`, since Go
-/// (T27d) and Java (T27e) became kinds of this build's own.
+/// and Java became kinds of this build's own.
 #[tokio::test]
 async fn a_pin_naming_a_language_this_build_does_not_manage_is_ignored_rather_than_fatal() {
     let (_home, store) = store().await;

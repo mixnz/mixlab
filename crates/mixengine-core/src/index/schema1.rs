@@ -1,9 +1,9 @@
-//! `index.json`: the package index as one document — roadmap task **T196**.
+//! `index.json`: the package index as one document.
 //!
-//! What every MixEngine before T196 read, and what a source with no schema 2 set still serves (the
-//! T196 design's D9). It is published beside the schema 2 set for as long as the packaging
-//! repository generates it, and the two say the same thing: [`Index::from`] is where this one
-//! becomes the view every caller holds.
+//! What every MixEngine before schema 2 read, and what a source with no schema 2 set still serves.
+//! It is published beside the schema 2 set for as long as the packaging repository generates it,
+//! and the two say the same thing: [`Index::from`] is where this one becomes the view every caller
+//! holds.
 
 use serde::Deserialize;
 

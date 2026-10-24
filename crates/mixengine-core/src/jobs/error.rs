@@ -1,7 +1,7 @@
 //! The ways a job's row and its life can fail — what `jobs` reports.
 //!
 //! One of the enums [`crate::Error`] wraps transparently, so its messages and sources are
-//! the ones a caller of this crate always saw — roadmap task **T207j**.
+//! the ones a caller of this crate always saw.
 
 /// The ways a job's row and its life can fail.
 #[derive(Debug, thiserror::Error)]

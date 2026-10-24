@@ -172,7 +172,7 @@ fn a_stop_plan_pulls_in_what_needs_the_roots() {
 }
 
 /// Both directions are public, answer in the same shape, and name the service rather than
-/// shrugging when it is not here — T19 reads one to spawn and the other to give up.
+/// shrugging when it is not here — the daemon's runner reads one to spawn and the other to give up.
 #[test]
 fn a_service_knows_both_what_it_needs_and_what_needs_it() {
     let graph = graph(&[
@@ -223,7 +223,8 @@ fn a_service_knows_both_what_it_needs_and_what_needs_it() {
     }
 }
 
-/// What T19 spawns from: the plan names a service, and the graph is where its spec comes from.
+/// What the runner spawns from: the plan names a service, and the graph is where its spec comes
+/// from.
 #[test]
 fn the_spec_that_went_in_is_the_spec_that_comes_back() {
     let graph = graph(&[("caddy", &[]), ("mariadb", &[])]);
@@ -253,7 +254,7 @@ fn a_root_that_is_not_a_service_is_named() {
     assert_eq!(error, GraphError::NoSuchService { id: id("mariadb") });
 }
 
-/// What T19 asks after a service fails to start: everything that can now never come up.
+/// What the runner asks after a service fails to start: everything that can now never come up.
 #[test]
 fn a_failure_blocks_everything_downstream_of_it() {
     let graph = graph(&[

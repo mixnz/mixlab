@@ -23,7 +23,7 @@ fn doc_root() -> std::path::PathBuf {
     }
 }
 
-/// A site shared on the LAN — roadmap task **T74**.
+/// A site shared on the LAN.
 fn a_shared_site(address: [u8; 4]) -> Served {
     Served {
         shared: Some(Shared {

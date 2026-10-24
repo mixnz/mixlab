@@ -144,7 +144,7 @@ pub enum Error {
         source: toml::de::Error,
     },
 
-    /// `config.toml` could not be written to — roadmap task **T143**.
+    /// `config.toml` could not be written to.
     ///
     /// [`Error::Config`]'s sibling on the write path, and separate from it for
     /// [`ProjectError::ManifestEdit`]'s reason: the first says the user's file is wrong, and this
@@ -216,15 +216,14 @@ pub enum Error {
         source: sqlx::migrate::MigrateError,
     },
 
-    /// This home's `settings` holds no id, or holds something that is not one — roadmap task
-    /// **T126**.
+    /// This home's `settings` holds no id, or holds something that is not one.
     ///
     /// `0001_initial.sql` writes one at the first migration and keeps it through every later one,
     /// so a home reaching this has a database that skipped the migration or was edited by hand.
     ///
     /// **Refused rather than replaced.** Every credential this home has stored is addressed under
     /// the id it had; minting a second one would answer this call and orphan all of them at once,
-    /// which is the outage T126 exists to remove rather than a recovery from it.
+    /// which is the outage a home id exists to remove rather than a recovery from it.
     #[error("this home has no id, so a credential cannot say which home it belongs to")]
     HomeHasNoId,
 

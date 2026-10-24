@@ -1,12 +1,13 @@
-//! Caddy: the default front end — roadmap task **T31**.
+//! Caddy: the default front end.
 //!
 //! The first real [`Recipe`], and the shape the four after it are meant to follow. What it renders
 //! is one file, and what makes that file interesting is the three mechanisms hanging off it:
 //!
 //! - **`caddy validate` judges it before it is installed.** A [`Validator`] is all that takes, and
-//!   the staging directory T30 built is what makes it honest — the whole rendering is checked where
-//!   it is staged, `import sites/*.caddy` and all, so a configuration that is refused is one nothing
-//!   was installed from and the server goes on reading the last one that worked.
+//!   the staging directory the generator builds is what makes it honest — the whole rendering is
+//!   checked where it is staged, `import sites/*.caddy` and all, so a configuration that is
+//!   refused is one nothing was installed from and the server goes on reading the last one that
+//!   worked.
 //! - **The admin endpoint is both the readiness check and the health check.** `GET /config/` on it
 //!   answers `200` with the running configuration, which is a stronger statement than a TCP accept:
 //!   a Caddy whose listener is up and whose config failed to apply is not a Caddy anything should be
@@ -35,13 +36,13 @@
 //!
 //! # It renders every site, and into its own set
 //!
-//! Roadmap task **T43**. `sites/*.caddy` is imported by the Caddyfile above and rendered by
-//! [`Recipe::sites`] below, into the *same* `Vec<Document>` — never by a second path that runs
-//! afterwards. The import resolves against the directory holding the file it is written in, which is
-//! the staging directory while `caddy validate` is looking and `etc/caddy/` afterwards, so a site
-//! file written anywhere else would be invisible to the checker and present at run time: the one
-//! arrangement whose correctness cannot be checked. T31 put the import here rather than in Phase 4
-//! for exactly that reason, and this is the half that was waiting.
+//! `sites/*.caddy` is imported by the Caddyfile above and rendered by [`Recipe::sites`] below, into
+//! the *same* `Vec<Document>` — never by a second path that runs afterwards. The import resolves
+//! against the directory holding the file it is written in, which is the staging directory while
+//! `caddy validate` is looking and `etc/caddy/` afterwards, so a site file written anywhere else
+//! would be invisible to the checker and present at run time: the one arrangement whose correctness
+//! cannot be checked. The import was written here before any site existed for exactly that reason,
+//! and this is the half that was waiting.
 //!
 //! [`swept`](Recipe::swept) is the other half. A site that stops being declared has to lose its file
 //! on the same walk, or it goes on being served — so `sites/` holds exactly what was rendered into
@@ -58,8 +59,8 @@
 //! **And it installs no certificate authority**, which is a stronger statement and takes two more
 //! lines of the template: `skip_install_trust`, and a `pki` block naming the local CA for it to
 //! apply to. `auto_https off` stops Caddy *obtaining* certificates and does nothing about its own
-//! local CA, whose root Caddy installs into the user's trust store the first time it provisions one.
-//! Found by T76's port-scan suite: five `Caddy Local Authority` roots in `CurrentUser\Root` on a
+//! local CA, whose root Caddy installs into the user's trust store the first time it provisions
+//! one. Found by a port-scan suite: five `Caddy Local Authority` roots in `CurrentUser\Root` on a
 //! development machine, none of them asked for, and a CI runner that hung for the whole readiness
 //! budget inside that install. MixEngine reaches a trust store exactly once, through
 //! `mixengine-elevate`, for its own authority and with the user's consent — a front end doing it by
@@ -106,7 +107,7 @@ const SITE: &str = include_str!("caddy/site.caddy");
 /// in Rust that spells it.
 const SITES: &str = "sites";
 
-/// The directory an installed extension's `[[recipe.front_end]]` goes in — roadmap task **T81c**.
+/// The directory an installed extension's `[[recipe.front_end]]` goes in.
 ///
 /// Swept for [`SITES`]' reason: an uninstalled extension's fragment has to leave with it, and the
 /// pass that removes what the recipe stopped rendering is the one that does it. The name is in the
@@ -114,11 +115,11 @@ const SITES: &str = "sites";
 const EXTENSIONS: &str = "extensions";
 
 /// Where this home's public certificate authority is rendered, relative to this service's
-/// configuration — roadmap task **T75**.
+/// configuration.
 ///
 /// **A directory holding exactly one file.** `certs/ca/` holds the signing key beside the
 /// certificate, so it is never a directory a front end is pointed at; a copy of the public half is
-/// what a phone downloads. The T75 design, D9.
+/// what a phone downloads.
 const AUTHORITY: &str = "public/ca.crt";
 
 /// The directory of [`AUTHORITY`], which is what a front end is pointed at.
@@ -128,7 +129,7 @@ const AUTHORITY: &str = "public/ca.crt";
 /// place this layout is decided.
 const AUTHORITY_DIR: &str = "public";
 
-/// Where the page a site with nothing behind it answers with is rendered — roadmap task **T124**.
+/// Where the page a site with nothing behind it answers with is rendered.
 ///
 /// **A directory of its own, and never [`AUTHORITY_DIR`].** That one holds this home's authority and
 /// is asserted to hold exactly one file, because the front end is pointed at the *directory* and so
@@ -140,15 +141,15 @@ const WELCOME_DIR: &str = "welcome";
 /// Where the admin endpoint listens. Loopback always — see the template.
 const ADMIN_HOST: &str = "127.0.0.1";
 
-/// The addresses every site answers on before anything is shared — roadmap task **T74**.
+/// The addresses every site answers on before anything is shared.
 ///
 /// **Written on every site block, and that is the fix rather than the decoration.** Caddy's own
-/// default is every interface, so before T74 a site was already reachable from the network on any
-/// machine whose firewall allowed the port — it simply answered nothing, because no site block
-/// matched an address-shaped `Host`. T74 opens that port deliberately, which turns "answers
-/// nothing" into a promise this code has to keep: without these two lines a site nobody shared is
-/// listening on the LAN, and the only thing between it and a stranger is which `Host` header they
-/// send.
+/// default is every interface, so before LAN sharing a site was already reachable from the network
+/// on any machine whose firewall allowed the port — it simply answered nothing, because no site
+/// block matched an address-shaped `Host`. LAN sharing opens that port deliberately, which turns
+/// "answers nothing" into a promise this code has to keep: without these two lines a site nobody
+/// shared is listening on the LAN, and the only thing between it and a stranger is which `Host`
+/// header they send.
 ///
 /// Both loopback families, because `blog.test` resolves to 127.0.0.1 through the hosts file while
 /// `localhost` resolves to ::1 first on Windows — binding one would break whichever the developer
@@ -212,7 +213,7 @@ impl Recipe for Caddy {
         Instancing::Single
     }
 
-    /// And it is one of the two programs a site is reached through — roadmap task **T37**.
+    /// And it is one of the two programs a site is reached through.
     ///
     /// What `docs/features/services.md` calls "exactly one active front end" needs both halves:
     /// this one is about the *job*, and it is what [`instancing`](Self::instancing) cannot say —
@@ -271,16 +272,17 @@ impl Recipe for Caddy {
         }]
     }
 
-    /// Exactly `sites/`, and only because this recipe is a front end — D4.
+    /// Exactly `sites/`, and only because this recipe is a front end.
     ///
-    /// Without it a deleted site keeps the file it had and goes on being served, which is what T31
-    /// left open in as many words. Nothing sweeps `etc/caddy/` itself: a directory belonging to a
+    /// Without it a deleted site keeps the file it had and goes on being served, which is what the
+    /// first Caddy recipe left open in as many words. Nothing sweeps `etc/caddy/` itself: a
+    /// directory belonging to a
     /// *deleted service* is `service.delete`'s problem.
     fn swept(&self) -> &'static [&'static str] {
         &[SITES, EXTENSIONS, WELCOME_DIR]
     }
 
-    /// One file per site, named after its primary domain — D12.
+    /// One file per site, named after its primary domain.
     ///
     /// Rendered into the set the Caddyfile's own `import sites/*.caddy` picks up, which is what makes
     /// the whole rendering judged by `caddy validate` where it is staged.
@@ -310,18 +312,18 @@ impl Recipe for Caddy {
                         .as_ref()
                         .map(|shared| shared.address.to_string()),
                     mdns: site.shared.as_ref().and_then(|shared| shared.name.clone()),
-                    // **Only for a shared site, which is where "served only while sharing is on"
-                    // is actually enforced** - roadmap task T75. The rendered copy's directory,
-                    // absolute, and [`None`] on a home that has no authority to serve.
+                    // **Only for a shared site, which is where "served only while sharing is on" is
+                    // actually enforced.** The rendered copy's directory, absolute, and [`None`] on
+                    // a home that has no authority to serve.
                     authority: site
                         .shared
                         .as_ref()
                         .and(context.authority())
                         .map(|_| context.config(AUTHORITY_DIR).to_string_lossy().into_owned()),
 
-                    // **Every site gets one** — roadmap task T124. Unlike `authority` above this is
-                    // never conditional on the site: what a page is *for* is a site nobody has put
-                    // anything into yet, which is every site at the moment it is made.
+                    // **Every site gets one.** Unlike `authority` above this is never conditional
+                    // on the site: what a page is *for* is a site nobody has put anything into yet,
+                    // which is every site at the moment it is made.
                     welcome: context
                         .welcome()
                         .then(|| context.config(WELCOME_DIR).to_string_lossy().into_owned()),
@@ -341,14 +343,14 @@ impl Recipe for Caddy {
             })
             .collect::<Result<Vec<Document>>>()?;
 
-        // **Every site's welcome page, after every site's configuration** — roadmap task T124.
+        // **Every site's welcome page, after every site's configuration.**
         // Appended in a second pass rather than returned two at a time from the map above, so that
         // `documents[n]` goes on meaning the nth site: the authority below already depends on that
         // and says so, and interleaving would have made it depend on the stride instead.
         //
-        // **Nothing at all on a home that turned it off** (D6), which is the same answer the
-        // rendering gives: a page with no route is a file nothing reads, and a route with no page
-        // would be a 404 on top of the 404 this feature exists to replace.
+        // **Nothing at all on a home that turned it off**, which is the same answer the rendering
+        // gives: a page with no route is a file nothing reads, and a route with no page would be a
+        // 404 on top of the 404 this feature exists to replace.
         if context.welcome() {
             documents.reserve(served.len());
 
@@ -366,7 +368,7 @@ impl Recipe for Caddy {
                 ));
 
                 // And, for a site whose pool MixEngine starts, the page its 502 is answered with
-                // while that pool is not answering — roadmap task T167f.
+                // while that pool is not answering.
                 if let Some(starting) = crate::generate::welcome::render_starting(
                     context.service(),
                     site.primary(),
@@ -383,10 +385,10 @@ impl Recipe for Caddy {
             }
         }
 
-        // **This home's authority, appended last** — roadmap task T75. Last so that a caller
-        // naming `documents[0]` still means the first site, and unconditional so that the file's
-        // presence never has to track sharing state: what is conditional is the *route*, which the
-        // template renders only for a shared site.
+        // **This home's authority, appended last.** Last so that a caller naming `documents[0]`
+        // still means the first site, and unconditional so that the file's presence never has to
+        // track sharing state: what is conditional is the *route*, which the template renders only
+        // for a shared site.
         if let Some(authority) = context.authority() {
             documents.push(Document::new(AUTHORITY, authority));
         }
@@ -394,8 +396,7 @@ impl Recipe for Caddy {
         Ok(documents)
     }
 
-    /// One file per extension, in the set `import extensions/*.caddy` picks up — roadmap task
-    /// **T81c**.
+    /// One file per extension, in the set `import extensions/*.caddy` picks up.
     ///
     /// The fragment arrives rendered: its placeholders were substituted where the extension's row
     /// is, because `{install_dir}` means the directory *that* extension was installed into. What is
@@ -449,9 +450,9 @@ impl Recipe for Caddy {
 
         Ok(ServiceSpec::builder(context.service().clone(), &caddy)
             .args(["run", "--config", &config, "--adapter", "caddyfile"])
-            // What a failed start is diagnosed against (T38), and it is the admin endpoint alone:
+            // What a failed start is diagnosed against, and it is the admin endpoint alone:
             // `http_port` and `https_port` are in the global block, but Caddy binds neither until a
-            // site asks it to — and sites arrive with T43.
+            // site asks it to.
             .ports([admin_port])
             // The configuration directory, and not the data directory: `import sites/*.caddy`
             // resolves against the file rather than the process, but a relative path inside a site
@@ -496,8 +497,8 @@ impl Recipe for Caddy {
             })
             // Through the admin endpoint rather than by signal, and the same on all three systems.
             // A signal would work on Unix and be a console control event on Windows; this is one
-            // mechanism, it is the one Caddy documents, and it is the one T30a proved from a moved
-            // directory on all six targets.
+            // mechanism, it is the one Caddy documents, and it is the one the published package was
+            // proved with from a moved directory on all six targets.
             .stop(StopBehaviour::Command {
                 program: caddy,
                 args: vec!["stop".to_owned(), "--address".to_owned(), address],
@@ -518,27 +519,27 @@ struct SiteRendering<'a> {
     /// means the key has to be there whichever branch is taken.
     upstream: String,
 
-    /// The activator to fall back to, or [`None`] for a pool nothing can wake — T70.
+    /// The activator to fall back to, or [`None`] for a pool nothing can wake.
     ///
     /// Present whichever branch is taken, for `upstream`'s reason: `Strict` makes a missing key an
     /// error, and `None` serialises to `null`, which `{% if %}` reads as false.
     activator: Option<String>,
 
-    /// What `/` becomes on the way out, for a proxy site whose upstream carried a path — roadmap
-    /// task **T135**. [`None`] renders exactly what this file rendered before T135.
+    /// What `/` becomes on the way out, for a proxy site whose upstream carried a path. [`None`]
+    /// renders exactly what this file always rendered.
     rewrite: Option<crate::generate::served::Rewrite>,
 
-    /// What answers before the kind does, longest prefix first — roadmap task **T135**.
+    /// What answers before the kind does, longest prefix first.
     routes: Vec<RouteRendering>,
 
-    /// [`None`] renders no TLS block at all — the T51 design, D4.
+    /// [`None`] renders no TLS block at all.
     ///
     /// **The key is always present**, for `upstream`'s reason: `UndefinedBehavior::Strict` makes a
     /// missing key an error rather than a falsy value. `None` serialises to `null`, which `{% if %}`
     /// reads as false.
     certificate: Option<Certificate>,
 
-    /// Whether the plaintext block redirects rather than serves — roadmap task **T98**.
+    /// Whether the plaintext block redirects rather than serves.
     ///
     /// **Read beside `certificate` in the template, never alone.** A site can carry this as `true`
     /// with no usable certificate — the same gap [`certificate`](Self::certificate) already has a
@@ -546,7 +547,7 @@ struct SiteRendering<'a> {
     /// plaintext page it has always been able to serve.
     https_redirect: bool,
 
-    /// Every address this site's listeners bind, loopback first — roadmap task **T74**.
+    /// Every address this site's listeners bind, loopback first.
     ///
     /// **Never empty.** A site that is not shared binds the two loopback addresses and nothing
     /// else; a shared one adds its interface address. Caddy's `bind` *replaces* the default rather
@@ -555,33 +556,32 @@ struct SiteRendering<'a> {
     /// absent or an unshared site would be listening on the network.
     bind: Vec<String>,
 
-    /// The address a shared site also answers to by name, or [`None`] — roadmap task **T74**.
+    /// The address a shared site also answers to by name, or [`None`].
     ///
     /// **A site block matches on `Host`, and a phone sends the address it was given.** Binding the
     /// interface makes the connection arrive; without this line it arrives and matches no site, and
     /// Caddy answers 200 with an empty body — which is exactly what the first phone to try this saw.
     lan: Option<String>,
 
-    /// The mDNS name a shared site also answers to, or [`None`] — roadmap task **T75**.
+    /// The mDNS name a shared site also answers to, or [`None`].
     ///
     /// **The same lesson as [`lan`](Self::lan), with a name.** The daemon advertises the name and
     /// this line is what makes the site *reply* to it; a name that resolves to a block which does
-    /// not match it is the blank page T74 spent a phone finding.
+    /// not match it is the blank page LAN sharing spent a phone finding.
     mdns: Option<String>,
 
-    /// The directory this home's public authority was rendered into, or [`None`] — roadmap task
-    /// **T75**.
+    /// The directory this home's public authority was rendered into, or [`None`].
     ///
     /// **[`None`] for a site that is not shared**, which is how "served only while sharing is on"
     /// becomes a property of the rendering rather than a promise made about it. It is also [`None`]
     /// on a home with no authority to serve.
     authority: Option<String>,
 
-    /// The directory this site's welcome page was rendered into, absolute — roadmap task **T124**.
+    /// The directory this site's welcome page was rendered into, absolute.
     ///
-    /// **[`None`] on a home that turned the page off** — the T124 design, D6. The key is always
-    /// present, for [`upstream`](Self::upstream)'s reason: `Strict` makes a missing key an error
-    /// rather than a falsy value, and `None` serialises to `null`, which `{% if %}` reads as false.
+    /// **[`None`] on a home that turned the page off.** The key is always present, for
+    /// [`upstream`](Self::upstream)'s reason: `Strict` makes a missing key an error rather than a
+    /// falsy value, and `None` serialises to `null`, which `{% if %}` reads as false.
     welcome: Option<String>,
 }
 
@@ -596,7 +596,7 @@ fn bound(shared: Option<std::net::Ipv4Addr>) -> Vec<String> {
     bound
 }
 
-/// A certificate as the template writes it — roadmap task **T51**.
+/// A certificate as the template writes it.
 ///
 /// **Strings and not `Path`s**, because a template writes text: `Path`'s `Serialize` is lossy on a
 /// path that is not UTF-8, and `display()` is what the rest of this module already writes.
@@ -620,8 +620,8 @@ impl From<&crate::generate::served::SiteCertificate> for Certificate {
 /// Which branch of the template this kind takes.
 ///
 /// Three and not four: a `node-app` renders as a reverse proxy to loopback and that is all it is —
-/// D7. Nothing in this build starts a node process, and a fourth branch would be a difference the
-/// rendering does not have.
+/// nothing more. Nothing in this build starts a node process, and a fourth branch would be a
+/// difference the rendering does not have.
 const fn kind(kind: &ServedKind) -> &'static str {
     match kind {
         ServedKind::PhpFpm { .. } => "php-fpm",
@@ -644,11 +644,10 @@ fn upstream(kind: &ServedKind) -> String {
     }
 }
 
-/// What `/` becomes on the way out for a site whose own upstream carried a path — roadmap task
-/// **T135**.
+/// What `/` becomes on the way out for a site whose own upstream carried a path.
 ///
 /// [`None`] for every other kind, and for the ordinary proxy site whose upstream is an address and
-/// nothing more — which is what this file rendered before T135.
+/// nothing more — which is what this file always rendered.
 fn site_rewrite(kind: &ServedKind) -> Option<&crate::generate::served::Rewrite> {
     match kind {
         ServedKind::ReverseProxy { rewrite, .. } => rewrite.as_ref(),
@@ -686,7 +685,7 @@ struct RouteRendering {
     /// Where a php-fpm route's pool listens, in Caddy's spelling.
     upstream: String,
 
-    /// The activator to fall back to — roadmap task **T70**, the site's own rule.
+    /// The activator to fall back to, on the site's own rule.
     activator: Option<String>,
 }
 
@@ -729,10 +728,10 @@ impl RouteRendering {
     }
 }
 
-/// The activator's address for this kind, as Caddy spells one — roadmap task **T70**.
+/// The activator's address for this kind, as Caddy spells one.
 ///
 /// [`None`] for everything nothing can start by connecting to it, which renders the site exactly as
-/// it rendered before T70.
+/// it rendered before on-demand activation.
 fn activator(kind: &ServedKind) -> Option<String> {
     match kind {
         ServedKind::PhpFpm { activator, .. } => activator.as_ref().map(address),

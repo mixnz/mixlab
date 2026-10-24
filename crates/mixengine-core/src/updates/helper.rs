@@ -1,5 +1,4 @@
-//! Putting a replacement `mixengine-elevate` where the elevation prompt will find it — roadmap task
-//! **T88a**.
+//! Putting a replacement `mixengine-elevate` where the elevation prompt will find it.
 //!
 //! **Nothing here installs anything**, and the module is written so that reading it makes that
 //! obvious: it fetches two files, checks one against the other, and writes them into
@@ -11,8 +10,7 @@
 //! **So why check it twice?** The second check is the security boundary — this process runs as the
 //! user and is, if it has been compromised, the attacker. The first one is the user interface:
 //! `docs/features/updates.md` asks that a tampered artifact be refused *with the reason shown*,
-//! and a reason that only appears after somebody has clicked Allow is not shown. See the T88a
-//! design, D13.
+//! and a reason that only appears after somebody has clicked Allow is not shown.
 //!
 //! **And why a detached signature rather than the SHA-256 inside the signed feed**, which is how
 //! every other artifact this product installs is bound? Because the process that has to be

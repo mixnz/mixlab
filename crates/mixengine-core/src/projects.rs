@@ -39,13 +39,13 @@ use crate::{Error, Result, Store};
 
 /// The longest a project's name may be.
 ///
-/// A handle typed on a command line, and T39a will take a site's default domain from it.
+/// A handle typed on a command line, and a site's default domain is taken from it.
 const NAME_LIMIT: usize = 64;
 
 /// One row of `projects`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProjectRecord {
-    /// The rowid, which stays inside this crate: the wire handle is the name (spec D4).
+    /// The rowid, which stays inside this crate: the wire handle is the name.
     pub id: i64,
 
     /// What it is called.
@@ -60,7 +60,7 @@ pub struct ProjectRecord {
     /// When it was registered, as ISO-8601 text.
     pub created_at: String,
 
-    /// Whether this project's services are held out of idle shutdown — roadmap task **T69**.
+    /// Whether this project's services are held out of idle shutdown.
     ///
     /// *The one project being worked on all day*, in the feature doc's words. What it reaches is
     /// [`kept_warm`], which today is the PHP pool this project's sites name.
@@ -92,7 +92,7 @@ pub struct Change {
     /// The pins, **replacing** what the row held. An empty map clears them.
     pub pins: Option<BTreeMap<RuntimeKind, VersionConstraint>>,
 
-    /// Whether to hold this project's services out of idle shutdown — roadmap task **T69**.
+    /// Whether to hold this project's services out of idle shutdown.
     ///
     /// A field on the change every other project setting travels through rather than a
     /// `project.keep_warm` method of its own: a whole RPC for one boolean is a second door onto one
@@ -106,7 +106,7 @@ pub struct Change {
 ///
 /// [`ProjectError::InvalidProjectName`] for an empty name, one over sixty-four characters, one
 /// holding a control character, and one holding `/` or `\` — a name that carries a path separator
-/// can be neither a command-line handle nor the domain T39a will make of it.
+/// can be neither a command-line handle nor the domain a site makes of it.
 pub fn validated_name(name: &str) -> Result<String> {
     let trimmed = name.trim();
 
@@ -197,7 +197,7 @@ pub async fn create(
     })
 }
 
-/// Record which blueprint made a project — roadmap task **T205**, D5.
+/// Record which blueprint made a project.
 ///
 /// **Only where none is recorded.** A resumed apply sets it on a row an earlier build left `NULL`;
 /// nothing replaces a blueprint already named. `project.create` never calls this, so a project made
@@ -219,19 +219,19 @@ pub async fn adopt_blueprint(store: &Store, project: &str, blueprint: &str) -> R
     Ok(())
 }
 
-/// Every service a keep-warm project reaches, and which project reaches it — roadmap task **T69**.
+/// Every service a keep-warm project reaches, and which project reaches it.
 ///
 /// **One join, and it is `sites.php_service_id`.** That is the whole of what today's schema knows
 /// about which services a project uses, so this keeps a project's PHP pool warm and does **not**
 /// keep the database it queries warm. A `project_services` table would be a second description of a
 /// relationship `sites` already half-holds, written by nobody and read by one sweeper.
 ///
-/// **The missing half is already expressible, and T77 is what found that out.** This note used to
-/// say the widening belonged to T77's blueprints; it does not. `site_service_links` has held "which
-/// services does this site declare" since `0006`, and `blueprints::capture` *reads* that table
-/// rather than creating anything — so whoever widens this query has the join available today and
-/// needs no new feature to do it. Until then the gap costs nothing, because with no recipe offering
-/// an idle default no database is a candidate for stopping anyway.
+/// **The missing half is already expressible, and capturing a blueprint is what found that out.**
+/// This note used to say the widening belonged to blueprints; it does not. `site_service_links` has
+/// held "which services does this site declare" since `0006`, and `blueprints::capture` *reads*
+/// that table rather than creating anything — so whoever widens this query has the join available
+/// today and needs no new feature to do it. Until then the gap costs nothing, because with no
+/// recipe offering an idle default no database is a candidate for stopping anyway.
 ///
 /// **The project's name travels with the service** rather than being looked up again by whoever
 /// renders the exemption. It is already in this join, and the alternative is a second query per
@@ -520,10 +520,9 @@ fn missing(id: &str) -> Error {
 /// One project's pins in **effective** order, with what each resolves to today.
 ///
 /// Effective means the manifest's entry where the root has one and the row's where it does not,
-/// because that is what the shim will actually do (spec D1) — a panel showing anything else is a
-/// panel that lies. Nothing here refuses an unsatisfiable pin: `project.create` on a colleague's
-/// freshly cloned repository has to succeed on the machine that most needs telling what to install
-/// (spec D6).
+/// because that is what the shim will actually do — a panel showing anything else is a panel that
+/// lies. Nothing here refuses an unsatisfiable pin: `project.create` on a colleague's freshly
+/// cloned repository has to succeed on the machine that most needs telling what to install.
 ///
 /// # Errors
 ///
@@ -534,8 +533,8 @@ pub async fn effective_pins(store: &Store, project: &ProjectRecord) -> Result<Ve
     effective_pins_with(store, project, manifest.as_ref()).await
 }
 
-/// [`effective_pins`] over a manifest the caller has already read — roadmap task **T204**, so
-/// `project.show` reads the file once for its pins and its declared sites.
+/// [`effective_pins`] over a manifest the caller has already read, so `project.show` reads the
+/// file once for its pins and its declared sites.
 ///
 /// # Errors
 ///
@@ -586,8 +585,7 @@ pub async fn effective_pins_with(
     Ok(pins)
 }
 
-/// The sites a manifest declares, each with whether a site here holds it — roadmap task **T204**,
-/// spec D7.
+/// The sites a manifest declares, each with whether a site here holds it.
 ///
 /// # Errors
 ///
@@ -655,9 +653,9 @@ pub struct BrokenPin {
 
 /// The projects whose pin **goes from having an answer to having none** if this version is removed.
 ///
-/// The transition is the whole of it (spec D7). A pin that is already unsatisfiable stays
-/// unsatisfiable and refuses nothing, or one stale pin would make unremovable a runtime it never
-/// mentions; and a pin three installed versions answer is not broken by losing one of them.
+/// The transition is the whole of it. A pin that is already unsatisfiable stays unsatisfiable and
+/// refuses nothing, or one stale pin would make unremovable a runtime it never mentions; and a pin
+/// three installed versions answer is not broken by losing one of them.
 ///
 /// Reading every project's manifest here is affordable *here*: an uninstall deletes hundreds of
 /// megabytes and runs perhaps monthly. It is not affordable anywhere near the shim, which is why

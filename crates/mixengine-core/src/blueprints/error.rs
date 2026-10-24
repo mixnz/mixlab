@@ -1,7 +1,7 @@
 //! The ways reading, naming and fetching a blueprint can fail — what `blueprints` reports.
 //!
 //! One of the enums [`crate::Error`] wraps transparently, so its messages and sources are
-//! the ones a caller of this crate always saw — roadmap task **T207j**.
+//! the ones a caller of this crate always saw.
 
 /// The ways reading, naming and fetching a blueprint can fail
 #[derive(Debug, thiserror::Error)]
@@ -30,8 +30,7 @@ pub enum BlueprintError {
         schema: u32,
     },
 
-    /// A project's php-fpm sites run more than one PHP, and a blueprint has one — roadmap task
-    /// **T204a**, D6.
+    /// A project's php-fpm sites run more than one PHP, and a blueprint has one.
     ///
     /// Refused rather than reduced: writing one version down would change what the other sites run
     /// on the machine that applies it. The sites are named because "two PHPs" sends somebody
@@ -74,8 +73,8 @@ pub enum BlueprintError {
     ///
     /// Unreachable through our own writes, so it means a hand-edited database or a row written by a
     /// build that knew a fourth source — and answering a listing with a guess about where a
-    /// blueprint came from is the wrong direction to be wrong in, since T78a's trust marking is
-    /// what reads it.
+    /// blueprint came from is the wrong direction to be wrong in, since the trust marking is what
+    /// reads it.
     #[error("the blueprint {name} is stored as {value}, which is not a source")]
     UnknownBlueprintSource {
         /// The slug.
@@ -84,7 +83,7 @@ pub enum BlueprintError {
         value: String,
     },
 
-    /// A blueprint's signature does not verify against the gallery key — roadmap task **T78a**.
+    /// A blueprint's signature does not verify against the gallery key.
     ///
     /// Not a refusal on its own: an import whose signature does not check out lands *untrusted*
     /// rather than being thrown away, because a stale signature is a fact about the file and not a
@@ -110,7 +109,7 @@ pub enum BlueprintError {
         source: Box<dyn std::error::Error + Send + Sync>,
     },
 
-    /// A blueprint's archive is past the ceiling an apply downloads — roadmap task **T205**, D2.
+    /// A blueprint's archive is past the ceiling an apply downloads.
     ///
     /// Its own variant rather than [`InstallError::ArtifactTooLarge`], whose sentence is about a
     /// signed index: an archive has no index, and the number here is this build's, not a
@@ -125,14 +124,14 @@ pub enum BlueprintError {
         limit: u64,
     },
 
-    /// An archive's suffix names no format this build unpacks — roadmap task **T205**, D2.
+    /// An archive's suffix names no format this build unpacks.
     #[error("{url} is not a .zip, .tar.gz or .tar.zst, so this build cannot unpack it")]
     ArchiveFormatUnknown {
         /// The address.
         url: String,
     },
 
-    /// `strip` names a folder the archive does not have at its top level — roadmap task **T205**.
+    /// `strip` names a folder the archive does not have at its top level.
     #[error("{url} has no top-level folder {strip}; it has: {}", found.join(", "))]
     ArchiveStripMissing {
         /// The address.

@@ -1,4 +1,4 @@
-//! MongoDB — roadmap task **T154**.
+//! MongoDB.
 //!
 //! The contract is `mixengine-packages`' P18, taken as published: `mongod` and `mongos` under
 //! `bin/`, no shell, `requires.cpu = "avx"` on every cell. What this recipe decides is what that
@@ -170,7 +170,7 @@ impl Recipe for Mongodb {
         Ok(ServiceSpec::builder(context.service().clone(), server)
             .args(args)
             .cwd(context.data())
-            // What a failed start is diagnosed against (T38).
+            // What a failed start is diagnosed against.
             .ports([address.port()])
             .ready(ReadyCheck::LogPattern {
                 regex: READY_LINE.to_owned(),
@@ -195,9 +195,9 @@ impl Recipe for Mongodb {
         Ok(vec![Upstream::Tcp(address(context)?)])
     }
 
-    /// An hour, T70a's number for every database.
+    /// An hour, the number every other database is given.
     ///
-    /// **Only while the home saves resources** — roadmap task **T167b**, ADR 0041. Until then this
+    /// **Only while the home saves resources** (ADR 0041). Before that this
     /// number was the default for every home; now a service nobody set is never idle-stopped.
     fn idle_when_saving(&self) -> Option<Millis> {
         Some(Millis::from_secs(60 * 60))
@@ -430,7 +430,7 @@ mod tests {
         assert_eq!(spec.ports(), [27017]);
     }
 
-    /// **The first of the two locks that stand in for a password** — design D2.
+    /// **The first of the two locks that stand in for a password.**
     #[test]
     fn a_bind_address_a_network_can_reach_is_refused() {
         for bind in ["0.0.0.0", "192.168.1.20", "not-an-address"] {

@@ -27,7 +27,7 @@ async fn a_signed_index_is_fetched_verified_and_read() {
 }
 
 /// A client built against a transport the caller already had reads exactly what one that built its
-/// own would have — roadmap task **T72b**, [`Client::with_transport`]'s reason for existing.
+/// own would have — [`Client::with_transport`]'s reason for existing.
 #[tokio::test]
 async fn a_client_built_from_a_shared_transport_reads_the_same_document() {
     let cache = tempfile::tempdir().expect("a cache directory");
@@ -207,7 +207,7 @@ fn installable_kinds() -> Vec<String> {
 }
 
 /// The compiled-in key against the index that is actually published, and what the pipeline has
-/// produced for each of the six targets — roadmap task **T92**.
+/// produced for each of the six targets.
 ///
 /// **`#[ignore]`d, and it is the only test in this workspace that reaches the internet.** The suite
 /// runs with egress blocked on purpose, so this cannot be part of it — but the things it checks are
@@ -248,7 +248,7 @@ async fn the_published_index_verifies_against_the_key_in_this_build() {
         index.missing()
     );
 
-    // **The client's half of the publisher's `verify.py`** — roadmap task T196: the set decodes to
+    // **The client's half of the publisher's `verify.py`**: the set decodes to
     // what `index.json` lists, value for value. Both are read in the same second, and a publish
     // landing between the two reads is the one way this can differ without anything being wrong.
     let other = tempfile::tempdir().expect("a second cache directory");

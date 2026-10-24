@@ -6,7 +6,7 @@
 //! nothing here spawns a process. What that buys is the test the daemon cannot have —
 //! `mixengine-daemon` is a binary crate with no library target, so with the document here a test in
 //! `tests/elevation.rs` can build a request with the shipped code, run the **real** helper under an
-//! ordinary token, and read the report back with the shipped code. See the T40b design, D3.
+//! ordinary token, and read the report back with the shipped code.
 
 mod error;
 
@@ -23,10 +23,10 @@ use crate::{Error, Result, Store};
 
 /// The operation as the `op` column holds it: its serialisation, and nothing else.
 ///
-/// **Not the `dedupe_key` any more.** T40b wrote one value into both columns, which is right for an
-/// operation carrying no state and wrong for a whole-state one: two `hosts-apply` rows disagreeing
-/// about what the file should hold would both be valid. The key is now the operation's *identity*
-/// and is [`PrivilegedOp::dedupe_key`]'s to answer — see the T41 design, D2.
+/// **Not the `dedupe_key` any more.** The queue first wrote one value into both columns, which is
+/// right for an operation carrying no state and wrong for a whole-state one: two `hosts-apply` rows
+/// disagreeing about what the file should hold would both be valid. The key is now the operation's
+/// *identity* and is [`PrivilegedOp::dedupe_key`]'s to answer.
 ///
 /// # Errors
 ///
@@ -42,13 +42,13 @@ fn canonical(op: &PrivilegedOp) -> Result<String> {
 ///
 /// [`None`] means the operation was already waiting: the machine's needs did not change, so there is
 /// nothing to announce and the daemon publishes no
-/// [`ElevationRequired`](mixengine_proto::DaemonEvent::ElevationRequired). See the T40b design, D8.
+/// [`ElevationRequired`](mixengine_proto::DaemonEvent::ElevationRequired).
 ///
-/// **A whole-state operation supersedes the one that was waiting** rather than queueing beside it —
-/// the T41 design, D2. `requested_at` is deliberately not refreshed: the need started when it
-/// started, and a queue that reset its own clock on every site creation would report a wait that
-/// never got older. The `WHERE` clause is what preserves [`None`]'s meaning: re-enqueueing the same
-/// state touches no row, so nothing is announced.
+/// **A whole-state operation supersedes the one that was waiting** rather than queueing beside it.
+/// `requested_at` is deliberately not refreshed: the need started when it started, and a queue that
+/// reset its own clock on every site creation would report a wait that never got older. The `WHERE`
+/// clause is what preserves [`None`]'s meaning: re-enqueueing the same state touches no row, so
+/// nothing is announced.
 ///
 /// The list is read back **inside the transaction that inserted**, on
 /// [`services::transition`](crate::services::transition)'s rule: what is announced is what survived
@@ -112,10 +112,10 @@ pub async fn enqueue(
 
 /// Everything waiting, oldest first.
 ///
-/// **A writer as well as a reader**, for the one case D2 names: a row this build cannot decode is
-/// deleted and logged rather than carried. Filtering it instead would leave it to be met, and
-/// warned about, on every call for the life of the home — and a row no installed build can act on is
-/// a degraded mode nobody can ever clear.
+/// **A writer as well as a reader**, for one case: a row this build cannot decode is deleted and
+/// logged rather than carried. Filtering it instead would leave it to be met, and warned about, on
+/// every call for the life of the home — and a row no installed build can act on is a degraded mode
+/// nobody can ever clear.
 ///
 /// # Errors
 ///
@@ -208,8 +208,7 @@ pub async fn discard(store: &Store, which: Option<PendingOpId>) -> Result<usize>
     Ok(usize::try_from(removed.rows_affected()).unwrap_or(usize::MAX))
 }
 
-/// Forget the operation of one family, because this machine no longer needs it — roadmap task
-/// **T179**.
+/// Forget the operation of one family, because this machine no longer needs it.
 ///
 /// **The opposite of [`enqueue`], keyed the same way.** `key` is [`PrivilegedOp::dedupe_key`]'s own
 /// value, so *the same question* means one thing in both directions and a family is spelled in one
@@ -217,7 +216,7 @@ pub async fn discard(store: &Store, which: Option<PendingOpId>) -> Result<usize>
 ///
 /// **Withdrawing is not revoking.** This removes a request nobody has answered; what the machine
 /// already holds is untouched, and taking that back is a producer's job elsewhere or the
-/// uninstall's (T87).
+/// uninstall's.
 ///
 /// Withdrawing what is not there is **not** an error, on [`discard`]'s rule: the caller wanted it
 /// gone and it is.
@@ -262,7 +261,7 @@ pub struct Settled {
 
 /// Apply a helper's report to the queue.
 ///
-/// **Four outcomes delete the row and one keeps it** — the T40b design, D5:
+/// **Four outcomes delete the row and one keeps it:**
 ///
 /// | [`OpOutcome`] | The row | Why |
 /// | --- | --- | --- |
@@ -289,11 +288,11 @@ pub async fn settle(store: &Store, results: &[(PendingOpId, OpOutcome)]) -> Resu
 
     for (id, outcome) in results {
         match outcome {
-            // `Unmanaged` settles beside `Applied`, and that is a decision rather than a
-            // shorthand — T74. The operation is finished: this machine has no mechanism for it, so
-            // the row must not be kept for a retry that would answer the same thing forever. What
-            // the user has to know instead travels back with the *share*, which renders the manual
-            // command; the queue's job here is only to stop asking.
+            // `Unmanaged` settles beside `Applied`, and that is a decision rather than a shorthand.
+            // The operation is finished: this machine has no mechanism for it, so the row must not
+            // be kept for a retry that would answer the same thing forever. What the user has to
+            // know instead travels back with the *share*, which renders the manual command; the
+            // queue's job here is only to stop asking.
             OpOutcome::Applied { .. } | OpOutcome::AlreadyDone | OpOutcome::Unmanaged { .. } => {
                 settled.applied += 1;
             }
@@ -376,19 +375,19 @@ impl Request {
 /// Write one batch into a fresh single-use directory.
 ///
 /// **The directory is single-use by construction**, which is what makes `response.json`'s existence
-/// a sufficient anti-replay check (T40/D10): nothing else is ever written beside a request, so a
-/// request with an answer next to it has been processed and the helper refuses it.
+/// a sufficient anti-replay check: nothing else is ever written beside a request, so a request with
+/// an answer next to it has been processed and the helper refuses it.
 ///
 /// The nonce comes from the OS's random source through
 /// [`generate_secret`](mixengine_platform::generate_secret) rather than from a counter or a clock: a
 /// daemon restarted twice in a second must not be able to produce two requests the helper cannot
 /// tell apart.
 ///
-/// `version` is the protocol to mark this request with, and it is the **caller's** decision —
-/// roadmap task **T88a**. The daemon sends the lower of what it speaks and what the installed
-/// helper answered a handshake with, because a fixed old binary cannot be taught a newer protocol
-/// and the newer peer is therefore the one that speaks down. A function that stamped its own would
-/// make that decision unreachable.
+/// `version` is the protocol to mark this request with, and it is the **caller's** decision. The
+/// daemon sends the lower of what it speaks and what the installed helper answered a handshake
+/// with, because a fixed old binary cannot be taught a newer protocol and the newer peer is
+/// therefore the one that speaks down. A function that stamped its own would make that decision
+/// unreachable.
 ///
 /// # Errors
 ///
@@ -493,12 +492,12 @@ pub fn read_report(request: &Request) -> Result<PrivilegedResponse> {
         }));
     }
 
-    // **At or above the floor, rather than exactly this build's** — roadmap task T88a. The helper is
-    // excluded from auto-update, so a report from one older than this daemon is the ordinary case;
-    // and one *newer* than this daemon is why the response was written without
-    // `deny_unknown_fields`. The answer is bound to *this* request by the nonce, checked just above,
-    // so what the version says is which build answered rather than which request it answered — and
-    // the caller reads it to learn the ceiling every later request to that helper is marked at.
+    // **At or above the floor, rather than exactly this build's.** The helper is excluded from
+    // auto-update, so a report from one older than this daemon is the ordinary case; and one
+    // *newer* than this daemon is why the response was written without `deny_unknown_fields`. The
+    // answer is bound to *this* request by the nonce, checked just above, so what the version says
+    // is which build answered rather than which request it answered — and the caller reads it to
+    // learn the ceiling every later request to that helper is marked at.
     if response.version < mixengine_proto::PROTOCOL_MINIMUM {
         return Err(Error::Elevation(ElevationError::ElevateReportMismatched {
             path,
@@ -526,9 +525,9 @@ pub fn read_report(request: &Request) -> Result<PrivilegedResponse> {
 
 /// What a read of the *installed* helper found.
 ///
-/// Three answers rather than a boolean, because "could not tell" is not "it is fine" — the T85
-/// design, D5. The two that are not [`Administrative`](Trust::Administrative) both refuse, and they
-/// carry different sentences because a person can act on one of them and not on the other.
+/// Three answers rather than a boolean, because "could not tell" is not "it is fine". The two that
+/// are not [`Administrative`](Trust::Administrative) both refuse, and they carry different
+/// sentences because a person can act on one of them and not on the other.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Trust {
     /// The file **and** its directory belong to an administrative account, and no other account may
@@ -544,27 +543,26 @@ pub(crate) enum Trust {
 
 /// Where `mixengine-elevate` is, given the program that is asking and where this OS installs one.
 ///
-/// **The installed copy first, the copy beside the program second, and a refusal in between** — the
-/// T85 design, D5.
+/// **The installed copy first, the copy beside the program second, and a refusal in between.**
 ///
-/// Until T85 this was *"beside whatever is running, and there is no override"* — the T40b design,
-/// D9 — which was true for as long as a release put every binary in one directory. It stopped being
-/// true the moment an installer put `mixengined` in the user's own directory and the one file this
-/// product runs as root somewhere only an administrator can write, which is what T85 is for.
+/// This was once *"beside whatever is running, and there is no override"*, which was true for as
+/// long as a release put every binary in one directory. It stopped being true the moment an
+/// installer put `mixengined` in the user's own directory and the one file this product runs as
+/// root somewhere only an administrator can write.
 ///
-/// **There is still no override**, and D9's reasoning is untouched: a setting that chooses which
+/// **There is still no override**, and the reasoning is untouched: a setting that chooses which
 /// file is run as root is a setting that chooses which file is run as root. `installed` is not one
 /// — it is where *this operating system* keeps a privileged helper, a constant compiled into
 /// [`mixengine_platform::install`], threaded through as an argument so that a test can state which
 /// machine it is describing rather than inheriting whichever one it happens to run on.
 ///
-/// **The second candidate is a list rather than a path** — roadmap task **T88d**. Where a copy of
-/// the helper ships is a fact about install formats, so it is
-/// [`mixengine_platform::install::helper_sources`]'s to answer; what is decided here is the
-/// preference between an installed helper and a shipped one, which has not changed. Every system's
-/// list ends with the directory D9 already accepted, which is what a `cargo build` and a machine
-/// before its first elevation prompt both use — and on the three formats an installer writes as
-/// root it now holds one more entry, so that `mix uninstall` is no longer a one-way door.
+/// **The second candidate is a list rather than a path.** Where a copy of the helper ships is a
+/// fact about install formats, so it is [`mixengine_platform::install::helper_sources`]'s to
+/// answer; what is decided here is the preference between an installed helper and a shipped one,
+/// which has not changed. Every system's list ends with the directory beside the program, which is
+/// what a `cargo build` and a machine before its first elevation prompt both use — and on the three
+/// formats an installer writes as root it now holds one more entry, so that `mix uninstall` is no
+/// longer a one-way door.
 ///
 /// The list is built **only when there is no installed helper to prefer**, because this function is
 /// on the path of every `mix status`.
@@ -592,8 +590,7 @@ pub fn helper(program: &Path, installed: Option<&Path>) -> Result<PathBuf> {
     })
 }
 
-/// Whether a batch goes past the installed helper to the one this release ships — roadmap task
-/// **T182b**, D3.
+/// Whether a batch goes past the installed helper to the one this release ships.
 ///
 /// **Only when the installed helper cannot do the work**: it does not list an operation in the
 /// batch among its `supported_ops`, *and* the shipped copy reports this release's
@@ -622,9 +619,9 @@ impl Bypass<'_> {
         let current = self.shipped_version == Some(mixengine_proto::privileged::HELPER_VERSION);
         let unreadable = self.batch_ops.iter().any(|op| !knows(op));
 
-        // **And an install over a helper too old to replace itself** (D2's last row). Such a helper
-        // does know `helper-install`, but run by it the operation copies *its own* image onto
-        // itself and answers `AlreadyDone`: only the shipped copy can install anything newer.
+        // **And an install over a helper too old to replace itself.** Such a helper does know
+        // `helper-install`, but run by it the operation copies *its own* image onto itself and
+        // answers `AlreadyDone`: only the shipped copy can install anything newer.
         let install_over_old =
             self.batch_ops.contains(&"helper-install") && !knows("helper-replace");
 
@@ -641,8 +638,7 @@ pub fn shipped(program: &Path) -> Option<PathBuf> {
         .find(|path| path.is_file())
 }
 
-/// [`helper`], and T182b's D3: the shipped copy instead of the installed one when [`Bypass`]
-/// applies.
+/// [`helper`], then [`Bypass`]: the shipped copy instead of the installed one when it applies.
 ///
 /// **A refusal stays a refusal.** An installed helper that is not an administrator's is refused
 /// before any bypass is considered: going around it would run the weaker arrangement at exactly the
@@ -664,15 +660,15 @@ pub fn helper_for(
     }
 }
 
-/// D5's table, over facts rather than over a filesystem.
+/// [`helper`]'s choice as a table, over facts rather than over a filesystem.
 ///
 /// Separated so that the table is a unit test: the row that matters most — an installed helper that
 /// is **not** an administrator's — cannot be produced on a machine where the person running the
 /// tests is not root, and a rule nobody can exercise is a rule nobody can trust.
 ///
-/// **The sources arrive as a closure** — roadmap task **T88d** — so that *an installed helper is
-/// preferred and nothing else is even looked at* is a property a test can hold by passing one that
-/// panics, rather than a sentence in a comment. Each entry is a path and whether it is there.
+/// **The sources arrive as a closure** so that *an installed helper is preferred and nothing else
+/// is even looked at* is a property a test can hold by passing one that panics, rather than a
+/// sentence in a comment. Each entry is a path and whether it is there.
 pub(crate) fn choose(
     installed: Option<(PathBuf, Trust)>,
     sources: impl FnOnce() -> Vec<(PathBuf, bool)>,
@@ -722,13 +718,13 @@ pub(crate) fn choose(
 }
 
 /// Why a file about to be handed to an elevation prompt is not an administrator's, or [`None`] when
-/// it is — roadmap task **T88d**.
+/// it is.
 ///
 /// **For the one caller that asks before spending a prompt**, which is the daemon deciding to
 /// enqueue `HelperInstall {}`. What it reports is the residual
 /// `docs/architecture/security-model.md` states for a machine with nothing installed: on Windows,
-/// on the portable archives and — since T88d — inside a macOS bundle, the copy MixEngine would
-/// install from sits where an ordinary account can arrange it.
+/// on the portable archives and inside a macOS bundle, the copy MixEngine would install from sits
+/// where an ordinary account can arrange it.
 ///
 /// **Deliberately not called by [`helper`]**, which every `mix status` and every poll a window makes
 /// goes through: four ownership reads a second, with a warning line for each, is what *a source is

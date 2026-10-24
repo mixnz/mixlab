@@ -1,4 +1,4 @@
-//! Which port a new service is given — roadmap task **T34c**.
+//! Which port a new service is given.
 //!
 //! MariaDB and MySQL name the same default, and so do two instances of either, which is one problem
 //! and not two. `docs/features/services.md` answers it in one rule and this module is that rule:
@@ -12,9 +12,9 @@
 //! routinely held by an XAMPP, by Windows' own `MySQL80` service or by a container nobody
 //! remembers, none of which has a `services` row — so the question is asked by *binding* the port,
 //! and a preferred port lost to a program MixEngine does not manage is reported with as much of
-//! that program's identity as the OS will give up (T38) rather than renumbered in silence. The
-//! table is consulted as well and for the opposite reason: a stopped MariaDB holds 3306 as surely
-//! as a running one, because the number is in its rendered configuration and in somebody's `.env`.
+//! that program's identity as the OS will give up rather than renumbered in silence. The table is
+//! consulted as well and for the opposite reason: a stopped MariaDB holds 3306 as surely as a
+//! running one, because the number is in its rendered configuration and in somebody's `.env`.
 //!
 //! **The search is bounded.** Running out of it is an error, not a longer loop — see
 //! [`ServiceError::PortsExhausted`].
@@ -60,8 +60,8 @@ static IN_FLIGHT: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// Take the allocation lock, and hold it until the row is written.
 ///
-/// `pub(crate)` since T81: an extension install allocates several ports and writes two tables, and
-/// it has to hold the same lock a `service.create` does or the two can be handed one number.
+/// `pub(crate)` because an extension install allocates several ports and writes two tables, and it
+/// has to hold the same lock a `service.create` does or the two can be handed one number.
 pub(crate) async fn hold() -> tokio::sync::MutexGuard<'static, ()> {
     IN_FLIGHT.lock().await
 }
@@ -159,12 +159,11 @@ pub async fn allocate_activation(
 
 /// Every port any row in this database holds, whichever column holds it.
 ///
-/// **One query rather than one per caller** — roadmap task **T81**. Both allocators ask the same
-/// question and a service handed another's address fails as a refused bind with no explanation
-/// attached to it, so two lists that could drift apart are two chances to hand one out twice. The
-/// third source is `extension_ports`: an extension asks for more ports than a `services` row has
-/// columns, and the ones that do not fit are no less held for living in another table (the T81
-/// design's D8).
+/// **One query rather than one per caller.** Both allocators ask the same question and a service
+/// handed another's address fails as a refused bind with no explanation attached to it, so two
+/// lists that could drift apart are two chances to hand one out twice. The third source is
+/// `extension_ports`: an extension asks for more ports than a `services` row has columns, and the
+/// ones that do not fit are no less held for living in another table.
 ///
 /// # Errors
 ///
@@ -350,8 +349,7 @@ pub(super) mod tests {
             .expect("a held port");
     }
 
-    /// **A port an extension holds is a port nothing else is handed** — roadmap task **T81**, its
-    /// design's D8.
+    /// **A port an extension holds is a port nothing else is handed.**
     ///
     /// An extension asks for more ports than a `services` row has columns — Mailpit wants one for
     /// its UI and one for SMTP — so the rest live in `extension_ports`. If this query did not read
@@ -392,7 +390,7 @@ pub(super) mod tests {
         assert_eq!(port, first + 2, "the extension's port was handed out again");
     }
 
-    /// **An activator's port is never a port some row already holds** — roadmap task **T70**, D3.
+    /// **An activator's port is never a port some row already holds.**
     ///
     /// The trap this closes is `port + 1`. With pools on 9000 and 9001 that rule gives the first
     /// pool's activator the second pool's own port: one of the two fails to bind, and what the user

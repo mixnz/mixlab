@@ -1,10 +1,12 @@
-//! What an update within a line changes in this home's rows — roadmap tasks **T193b** and
-//! **T193c**, the design's D5 and D6.
+//! What an update within a line changes in this home's rows.
 //!
 //! **Every write an update makes is here, and each has its reverse.** The daemon orders the steps
 //! and talks to processes; what it may never do is leave a site pointing at a pool that is not
 //! there, so the one move that touches several tables is one transaction, and [`move_back`] undoes
 //! it exactly.
+//!
+//! The D-numbers below are those of
+//! `docs/specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md`.
 
 pub mod kept;
 

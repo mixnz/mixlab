@@ -222,7 +222,7 @@ fn bootstrap_reapplies_permissions_to_a_home_that_already_exists() {
     );
 }
 
-/// **A home already restricted is left alone** — found by hand on 2026-10-08 (T206e): on Windows
+/// **A home already restricted is left alone** — found by hand on 2026-10-08: on Windows
 /// restricting the root rewrites the inherited permissions of every file under it, and with the
 /// 54,000 files of an installed `msys2` every daemon start waited minutes on `icacls` before it
 /// opened its pipe, so MixLab could not start MixEngine at all. Whether the restriction is in force
@@ -374,7 +374,7 @@ fn a_host_with_no_answer_is_reported_rather_than_guessed() {
     assert!(error.to_string().contains("MIXENGINE_HOME"), "{error}");
 }
 
-/// A home with all four keys moved still owns twelve directories — roadmap task **T147**.
+/// A home with all four keys moved still owns twelve directories.
 ///
 /// **The number is the point, not the paths.** `Paths::directories` is what `bootstrap` creates and
 /// what the uninstall inventory walks; a relocation that quietly dropped one from the list would be

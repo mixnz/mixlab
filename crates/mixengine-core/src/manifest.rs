@@ -1,20 +1,20 @@
 //! `mixengine.toml` — the file a project pins its runtimes in, read and written in one place.
 //!
-//! **One reader** (spec D9). [`crate::resolve`] used to deserialise a deliberately narrow struct of
-//! its own: `[runtimes]` and nothing else. T39 needs `[project] name` on import and a writer for
-//! export, and two structs describing one file would be two answers to one question — so the narrow
-//! one is gone and `resolve` is a caller.
+//! **One reader.** [`crate::resolve`] used to deserialise a deliberately narrow struct of its own:
+//! `[runtimes]` and nothing else. Import needs `[project] name` and export needs a writer, and two
+//! structs describing one file would be two answers to one question — so the narrow one is gone and
+//! `resolve` is a caller.
 //!
-//! **Unknown sections are still allowed through.** `[site]` and `[[services]]` have types as of
-//! T39a, and `[[sites]]` as of T204, but the file also has to hold what T43 and Phase 8 will add, and a `deny_unknown_fields`
-//! here would make this build refuse the manifests those tasks write. What is still closed is the
-//! map inside `[runtimes]` — a key naming a language MixEngine does not manage is a pin that would
+//! **Unknown sections are still allowed through.** `[site]`, `[[sites]]` and `[[services]]` have
+//! types, but the file also has to hold what a later MixEngine adds, and a `deny_unknown_fields`
+//! here would make this build refuse the manifests that one writes. What is still closed is the map
+//! inside `[runtimes]` — a key naming a language MixEngine does not manage is a pin that would
 //! silently do nothing — and the two typed sections' own required keys.
 //!
 //! # The writer edits; it does not rewrite
 //!
 //! This file lives in the user's repository, under version control, with their comments and their
-//! key order in it — and, after T39a, a `[site]` or `[[sites]]` block they wrote by hand. Serialising a fresh
+//! key order in it — and a `[site]` or `[[sites]]` block they wrote by hand. Serialising a fresh
 //! document over it would destroy all of that, and would do it to the one file whose entire purpose
 //! is to be read by a person. So [`write()`] edits a `toml_edit` document: it sets `[project] name`
 //! and the `[runtimes]` keys it owns, and leaves every other byte alone.
@@ -32,8 +32,8 @@ pub const FILE_NAME: &str = "mixengine.toml";
 /// `mixengine.toml`, as this build understands it.
 ///
 /// Four sections and no catch-all: what the writer preserves beyond them it preserves through the
-/// document it edits rather than through a field nothing reads, so a section T43 adds survives an
-/// export without this type having to hold it.
+/// document it edits rather than through a field nothing reads, so a section a later MixEngine adds
+/// survives an export without this type having to hold it.
 #[derive(Debug, Default, PartialEq, Eq, serde::Deserialize)]
 #[serde(try_from = "Sections")]
 pub struct Manifest {
@@ -43,11 +43,11 @@ pub struct Manifest {
     /// The versions this project wants, by language.
     pub runtimes: BTreeMap<RuntimeKind, VersionConstraint>,
 
-    /// `[site]` or `[[sites]]`, in the order the file writes them — roadmap task **T204**.
+    /// `[site]` or `[[sites]]`, in the order the file writes them.
     ///
-    /// **One list for both spellings**, so no caller asks which one a file used: `[site]` is a
-    /// list of one, and is what every file written before T204 holds. The form only matters to the
-    /// writer, which reads it off the document it edits.
+    /// **One list for both spellings**, so no caller asks which one a file used: `[site]` is a list
+    /// of one, and is what every file written before `[[sites]]` existed holds. The form only
+    /// matters to the writer, which reads it off the document it edits.
     pub sites: Vec<ManifestSite>,
 
     /// `[[services]]`, in the order the file lists them.
@@ -72,7 +72,7 @@ struct Sections {
 impl TryFrom<Sections> for Manifest {
     type Error = String;
 
-    /// **Both spellings at once is refused** (T204, D1): a file holding both was meant one way, and
+    /// **Both spellings at once is refused**: a file holding both was meant one way, and
     /// picking either would apply something its author did not write.
     fn try_from(sections: Sections) -> std::result::Result<Self, String> {
         let sites = match (sections.site, sections.sites) {
@@ -95,7 +95,7 @@ impl TryFrom<Sections> for Manifest {
     }
 }
 
-/// Which of a manifest's sites a `site.create` falls through to — roadmap task **T204**, spec D5.
+/// Which of a manifest's sites a `site.create` falls through to.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Choice<'a> {
     /// The entry, when one was chosen.
@@ -112,11 +112,12 @@ pub enum ServicesFrom<'a> {
     Listed(&'a [ServiceId]),
 
     /// Every `[[services]]` entry: a chosen entry with no `services` key, or a file declaring no
-    /// site — which is everything a manifest meant before T204.
+    /// site — which is everything a manifest meant before `[[sites]]`.
     Every,
 
     /// None. The request describes a site a several-site file does not, and guessing that it wants
-    /// every service the others use is the invented default T39a's D10 refused.
+    /// every service the others use is an invented default, which the site model has always
+    /// refused.
     Nothing,
 }
 
@@ -150,14 +151,14 @@ pub enum Unchosen {
 
 impl Manifest {
     /// Choose the entry a `site.create` falls through to: `from`, then `domains[0]`, then the only
-    /// one — spec D5.
+    /// one.
     ///
     /// `default_domain` is what an entry with no `domain` is called, which is the name
     /// `site.create` would give it (`<slug>.test`).
     ///
     /// # Errors
     ///
-    /// [`Unchosen`], each variant one refusal of D5.
+    /// [`Unchosen`], each variant one way that order finds nothing.
     pub fn choose<'a>(
         &'a self,
         from: Option<&str>,
@@ -254,8 +255,8 @@ fn named<'a>(
 
 /// `[site]` — what is served out of this directory, and at what name.
 ///
-/// Every field is optional because every one of them falls through to a default the daemon knows
-/// (spec D7): a manifest saying only `domain = "blog.test"` is a whole declaration.
+/// Every field is optional because every one of them falls through to a default the daemon knows:
+/// a manifest saying only `domain = "blog.test"` is a whole declaration.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct ManifestSite {
     /// The primary domain.
@@ -278,17 +279,17 @@ pub struct ManifestSite {
     /// between to drift.
     pub kind: Option<SiteKind>,
 
-    /// `[[site.routes]]`, in the order the file writes them — roadmap task **T135**.
+    /// `[[site.routes]]`, in the order the file writes them.
     ///
-    /// Empty where the file names none, which is every manifest written before T135. The daemon is
-    /// what sorts them into match order; a file is what somebody typed.
+    /// Empty where the file names none, which is every manifest written before routes existed. The
+    /// daemon is what sorts them into match order; a file is what somebody typed.
     pub routes: Vec<mixengine_proto::SiteRoute>,
 
-    /// `services = [...]`: the ids this site links — roadmap task **T204**, spec D3.
+    /// `services = [...]`: the ids this site links.
     ///
-    /// **Absent is not empty.** [`None`] falls through to every `[[services]]` entry, which is
-    /// what every file written before T204 means. `Some(vec![])` links none. An id without an
-    /// instance is looked up the way `[[services]]` is: the bare name, then `name@main`.
+    /// **Absent is not empty.** [`None`] falls through to every `[[services]]` entry, which is what
+    /// every file written before `services` existed means. `Some(vec![])` links none. An id without
+    /// an instance is looked up the way `[[services]]` is: the bare name, then `name@main`.
     pub services: Option<Vec<ServiceId>>,
 }
 
@@ -326,7 +327,7 @@ impl<'de> serde::Deserialize<'de> for ManifestSite {
             .transpose()?
             .unwrap_or_default();
 
-        // **Read before the kind, and harmless to it either way** — roadmap task **T135**.
+        // **Read before the kind, and harmless to it either way.**
         // `SiteKind` names no `routes`, and nothing here denies unknown fields, so the array below
         // is invisible to the line after it. Reading it first is what keeps that a fact about this
         // function rather than about `SiteKind`'s attributes.
@@ -345,8 +346,7 @@ impl<'de> serde::Deserialize<'de> for ManifestSite {
             .transpose()?
             .unwrap_or_default();
 
-        // **Read before the kind, and harmless to it either way**, on `routes`' reasoning —
-        // roadmap task **T204**.
+        // **Read before the kind, and harmless to it either way**, on `routes`' reasoning.
         let services = table
             .get("services")
             .map(|value| {
@@ -384,12 +384,12 @@ impl<'de> serde::Deserialize<'de> for ManifestSite {
 
 /// One `[[services]]` entry.
 ///
-/// **`database` and `user` are read as of T77**, and by exactly one caller:
-/// [`crate::blueprints::capture`]. They used to be absent from this type on the rule that a key read
-/// and then quietly ignored is a promise not kept (spec D8) — which was right while nothing could
-/// act on them. What changed is that something can: a captured blueprint carries the database name
-/// so that the apply T78 brings can create it under the new project's name. This build still
-/// creates no databases, and the writer still preserves both keys through the document it edits.
+/// **`database` and `user` are read**, and by exactly one caller: [`crate::blueprints::capture`].
+/// They used to be absent from this type on the rule that a key read and then quietly ignored is a
+/// promise not kept — which was right while nothing could act on them. What changed is that
+/// something can: a captured blueprint carries the database name so that applying it creates the
+/// database under the new project's name. Importing a project creates none, and the writer still
+/// preserves both keys through the document it edits.
 #[derive(Debug, Default, PartialEq, Eq, serde::Deserialize)]
 pub struct ManifestService {
     /// The package, which is the first half of a [`mixengine_proto::ServiceId`].
@@ -491,13 +491,14 @@ pub struct Export {
     /// `[runtimes]`, the keys this export owns.
     pub pins: BTreeMap<RuntimeKind, VersionConstraint>,
 
-    /// Every site of the project, in `sites::records` order — roadmap task **T204**.
+    /// Every site of the project, in `sites::records` order.
     ///
-    /// Written as `[site]` or `[[sites]]` by spec D1's table; which entry is whose is D2's.
+    /// Written as `[site]` or `[[sites]]`, whichever the file can hold; an entry belongs to the
+    /// site that holds its `domain`.
     pub sites: Vec<ExportSite>,
 }
 
-/// What [`write()`] did — roadmap task **T204**.
+/// What [`write()`] did.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Written {
     /// Whether the file had to be created.
@@ -505,8 +506,7 @@ pub struct Written {
 
     /// The `domain` of each site entry no site of the project holds, left exactly as written.
     ///
-    /// An export never deletes (T39a's D9), so it says what it left in the same answer that left
-    /// it — spec D4.
+    /// An export never deletes, so it says what it left in the same answer that left it.
     pub sites_kept: Vec<String>,
 }
 
@@ -523,8 +523,7 @@ pub struct ExportSite {
     pub https: bool,
     /// What it serves, written from an exhaustive match so a fifth kind cannot be forgotten.
     pub kind: SiteKind,
-    /// The routes it declares, written from an exhaustive match for the same reason — roadmap task
-    /// **T135**.
+    /// The routes it declares, written from an exhaustive match for the same reason.
     pub routes: Vec<mixengine_proto::SiteRoute>,
     /// The services it declares.
     pub services: Vec<ExportService>,
@@ -533,8 +532,8 @@ pub struct ExportSite {
 /// One `[[services]]` entry, as an export writes it.
 #[derive(Debug, Clone)]
 pub struct ExportService {
-    /// The id exactly as the site links it, which is what the site's `services = [...]` names —
-    /// roadmap task **T204**. `name` and `instance` are its halves spelled out for `[[services]]`;
+    /// The id exactly as the site links it, which is what the site's `services = [...]` names.
+    /// `name` and `instance` are its halves spelled out for `[[services]]`;
     /// this is kept whole because a single-instance package (`caddy`) has no `@main` to add.
     pub link: ServiceId,
     /// The package.
@@ -605,8 +604,8 @@ pub fn write(directory: &Path, export: &Export) -> Result<Written> {
         })
     })?;
 
-    // **The union of every site's links** — roadmap task **T204**, spec D3. It used to be the one
-    // site's, and only when there was exactly one, so a project with two exported no services.
+    // **The union of every site's links.** It used to be the one site's, and only when there was
+    // exactly one, so a project with two exported no services.
     let services = every_service(&export.sites);
     if !services.is_empty() {
         merge_services(&mut document, &services);
@@ -626,7 +625,7 @@ pub fn write(directory: &Path, export: &Export) -> Result<Written> {
     })
 }
 
-/// `[site]` or `[[sites]]`, in the form spec D1's table picks; answers the entries it kept.
+/// `[site]` or `[[sites]]`, whichever the file can hold; answers the entries it kept.
 ///
 /// The file has already been read through [`read()`], so it never holds both forms here.
 fn write_sites(
@@ -671,7 +670,7 @@ fn write_sites(
         }
     }
 
-    // **D2: an entry belongs to the site holding its `domain` among any of its names.** A domain
+    // **An entry belongs to the site holding its `domain` among any of its names.** A domain
     // belongs to one site in a home, so at most one site matches; the first entry to claim a site
     // has it, and a later one for the same site is kept and reported.
     let mut owner = vec![None; entries.len()];
@@ -775,10 +774,10 @@ fn fill(table: &mut toml_edit::Table, site: &ExportSite) {
     table["doc_root"] = toml_edit::value(site.doc_root.as_str());
     table["https"] = toml_edit::value(site.https);
 
-    // **Every kind's payload is this export's**, so a site that changed kind does not leave the
-    // old one's key behind — roadmap task **T204**, spec D2. Only the keys the current kind does
-    // not use are removed: the one it does use is overwritten where it stands, so an export with
-    // nothing new to say moves no line in somebody's diff.
+    // **Every kind's payload is this export's**, so a site that changed kind does not leave the old
+    // one's key behind. Only the keys the current kind does not use are removed: the one it does
+    // use is overwritten where it stands, so an export with nothing new to say moves no line in
+    // somebody's diff.
     if !matches!(site.kind, SiteKind::ReverseProxy { .. }) {
         table.remove("upstream");
     }
@@ -805,9 +804,9 @@ fn fill(table: &mut toml_edit::Table, site: &ExportSite) {
         }
     }
 
-    // **Written whole, and written even when empty** — roadmap task **T135**, on `aliases`' rule
-    // and for its reason: a route removed in the database and left in the file would be a file
-    // that disagrees with the home it came from, and this is a key the export owns outright.
+    // **Written whole, and written even when empty**, on `aliases`' rule and for its reason: a
+    // route removed in the database and left in the file would be a file that disagrees with the
+    // home it came from, and this is a key the export owns outright.
     let mut routes = toml_edit::ArrayOfTables::new();
 
     for route in &site.routes {
@@ -839,9 +838,8 @@ fn fill(table: &mut toml_edit::Table, site: &ExportSite) {
 
     table["routes"] = toml_edit::Item::ArrayOfTables(routes);
 
-    // **Written whole, and written even when empty** — roadmap task **T204**, spec D3, on
-    // `aliases`' rule: a link removed in the database and left here would be a file that disagrees
-    // with the home it came from.
+    // **Written whole, and written even when empty**, on `aliases`' rule: a link removed in the
+    // database and left here would be a file that disagrees with the home it came from.
     let mut links = toml_edit::Array::new();
     for service in &site.services {
         links.push(service.link.to_string());

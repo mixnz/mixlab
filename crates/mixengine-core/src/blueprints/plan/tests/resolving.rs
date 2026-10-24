@@ -4,7 +4,7 @@
 use super::*;
 use crate::sites;
 
-/// **A plan names the project the way it will be registered** — roadmap task **T128**.
+/// **A plan names the project the way it will be registered.**
 ///
 /// `projects::validated_name` trims, so `project.create` stores `Laravel`; the plan used to
 /// carry `Laravel ` verbatim and hand it on to three readers that each compare it by equality.
@@ -47,7 +47,7 @@ async fn a_name_is_planned_the_way_it_will_be_stored() {
     );
 }
 
-/// And the same name, applied twice, is the resumption it is — **T128**.
+/// And the same name, applied twice, is the resumption it is.
 ///
 /// The comparisons in [`register`] are equalities against `projects.name`, so an untrimmed name
 /// matched nothing: a second apply of a project this one had already registered planned a
@@ -301,7 +301,7 @@ async fn another_version_of_an_installed_runtime_is_a_choice_rather_than_an_inst
 }
 
 /// Nothing of that language installed is an install, without a size: the plan never asks the
-/// index (D9).
+/// index.
 #[tokio::test]
 async fn a_runtime_this_home_does_not_have_is_an_install() {
     let (temp, store) = home().await;
@@ -332,7 +332,7 @@ async fn a_runtime_this_home_does_not_have_is_an_install() {
     );
 }
 
-/// **D10.** The owner is named, because "taken" without a name sends somebody hunting.
+/// The owner is named, because "taken" without a name sends somebody hunting.
 #[tokio::test]
 async fn a_domain_another_site_owns_is_blocked_and_says_who_has_it() {
     let (temp, store) = home().await;
@@ -392,11 +392,11 @@ async fn a_domain_another_site_owns_is_blocked_and_says_who_has_it() {
     assert!(reason.contains("shop.test"), "{reason}");
 }
 
-/// **D10 again**: a name whose expansion cannot be a database account is refused at dry-run,
-/// not five actions into an apply.
+/// A name whose expansion cannot be a database account is refused at dry-run, not five actions into
+/// an apply.
 ///
-/// **T120** moved the rule itself: the limit is enforced by the function that owns it rather
-/// than by a copy of its number here, so the sentence is now `validated_identifier`'s own.
+/// The rule itself has moved: the limit is enforced by the function that owns it rather than by a
+/// copy of its number here, so the sentence is now `validated_identifier`'s own.
 #[tokio::test]
 async fn a_project_name_too_long_for_a_database_account_is_blocked_here() {
     let (temp, store) = home().await;
@@ -429,7 +429,7 @@ async fn a_project_name_too_long_for_a_database_account_is_blocked_here() {
     assert!(reason.contains("thirty-two"), "{reason}");
 }
 
-/// **D8.** The order is what T78 executes, so it is asserted rather than left to chance.
+/// The order is what the executor follows, so it is asserted rather than left to chance.
 #[tokio::test]
 async fn the_steps_are_in_dependency_order() {
     let (temp, store) = home().await;
@@ -456,10 +456,10 @@ async fn the_steps_are_in_dependency_order() {
     .await
     .expect("a plan");
 
-    // **Tiers, not one rank per action kind** — and the correction is the point. Install,
-    // ensure and create-database are *one* tier because the planner walks a service at a time:
-    // a manifest with two `[[services]]` has always produced install, ensure, install, ensure,
-    // and a rank per kind only looked monotonic because this fixture had one service. T115 made
+    // **Tiers, not one rank per action kind** — and the correction is the point. Install, ensure
+    // and create-database are *one* tier because the planner walks a service at a time: a manifest
+    // with two `[[services]]` has always produced install, ensure, install, ensure, and a rank per
+    // kind only looked monotonic because this fixture had one service. Planning a front end made
     // that visible by adding a front end ahead of them, and what it broke was the assertion and
     // never the order.
     let tier = |action: &PlanAction| match action {
@@ -468,8 +468,8 @@ async fn the_steps_are_in_dependency_order() {
         PlanAction::InstallPackage { .. }
         | PlanAction::EnsureService { .. }
         | PlanAction::CreateDatabase { .. } => 2,
-        // **One tier for the sites** (T204a, D4): each site is its own group inside it, which
-        // the assertion at the end of this test says.
+        // **One tier for the sites**: each site is its own group inside it, which the assertion at
+        // the end of this test says.
         PlanAction::CreateSite { .. }
         | PlanAction::AddDomain { .. }
         | PlanAction::IssueCertificate { .. } => 3,
@@ -512,8 +512,8 @@ async fn the_steps_are_in_dependency_order() {
         );
     }
 
-    // **Inside the sites tier, each site is its own group** (T204a, D4): create, primary,
-    // aliases, certificate — and the next site starts only after.
+    // **Inside the sites tier, each site is its own group**: create, primary, aliases, certificate
+    // — and the next site starts only after.
     assert_eq!(
         site_words(&planned),
         [
@@ -528,7 +528,7 @@ async fn the_steps_are_in_dependency_order() {
     );
 }
 
-/// Two sites: the PHP app with MariaDB, and a Vite proxy that links nothing (T204a).
+/// Two sites: the PHP app with MariaDB, and a Vite proxy that links nothing.
 fn two_sites() -> BlueprintManifest {
     let mut manifest = a_manifest();
     manifest.schema = 3;
@@ -609,8 +609,8 @@ async fn a_site_holding(store: &Store, project: i64, domains: &[&str]) {
     .expect("a site");
 }
 
-/// **T204a, D4.** One group per site, in file order — the executor reads a site's names off
-/// the steps straight after it.
+/// One group per site, in file order — the executor reads a site's names off the steps straight
+/// after it.
 #[tokio::test]
 async fn several_sites_plan_one_group_each_in_file_order() {
     let (temp, store) = home().await;
@@ -630,8 +630,7 @@ async fn several_sites_plan_one_group_each_in_file_order() {
     );
 }
 
-/// **T204a, D3.** Each site carries what it links, as the ensure steps name it; `[site]`
-/// carries `None`.
+/// Each site carries what it links, as the ensure steps name it; `[site]` carries `None`.
 #[tokio::test]
 async fn each_site_carries_its_own_links() {
     let (temp, store) = home().await;
@@ -661,7 +660,7 @@ async fn each_site_carries_its_own_links() {
     );
 }
 
-/// **T204a, D3.** `per-project` links the project's own instance, as its ensure names it.
+/// `per-project` links the project's own instance, as its ensure names it.
 #[tokio::test]
 async fn a_link_to_a_dedicated_instance_names_the_projects_own() {
     let (temp, store) = home().await;
@@ -698,7 +697,7 @@ async fn a_link_to_a_dedicated_instance_names_the_projects_own() {
     );
 }
 
-/// **T204a, D4.** A resumed apply: site 1 is there, found by an alias; site 2 is not.
+/// A resumed apply: site 1 is there, found by an alias; site 2 is not.
 #[tokio::test]
 async fn a_site_already_made_is_satisfied_by_any_of_its_names_and_the_other_is_work() {
     let (temp, store) = home().await;
@@ -714,7 +713,7 @@ async fn a_site_already_made_is_satisfied_by_any_of_its_names_and_the_other_is_w
     );
 }
 
-/// **T204a, D4.** One site holding two entries' names is not a guess an apply makes.
+/// One site holding two entries' names is not a guess an apply makes.
 #[tokio::test]
 async fn one_site_answering_for_two_entries_blocks_the_second() {
     let (temp, store) = home().await;
@@ -735,7 +734,7 @@ async fn one_site_answering_for_two_entries_blocks_the_second() {
     }
 }
 
-/// **T204a, D4.** A one-site blueprint keeps the older question: any site of this project.
+/// A one-site blueprint keeps the older question: any site of this project.
 #[tokio::test]
 async fn a_one_site_blueprint_resumes_on_any_site_of_the_project() {
     let (temp, store) = home().await;

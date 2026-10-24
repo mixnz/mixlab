@@ -1,4 +1,4 @@
-//! Whether the directories that grow may still be moved — roadmap task **T143**.
+//! Whether the directories that grow may still be moved.
 //!
 //! **The location of a runtime is not a lookup, it is a row.** `runtime_installs.install_path` and
 //! `services.data_dir` are `TEXT` columns holding absolute paths, written when the install happened

@@ -1,4 +1,4 @@
-//! `projects.blueprint_id` and what is read through it — roadmap task **T205**, D5.
+//! `projects.blueprint_id` and what is read through it.
 
 use std::collections::BTreeMap;
 

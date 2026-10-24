@@ -1,30 +1,29 @@
 //! The `services` table: what the daemon believes about each supervised service between restarts.
 //!
-//! This module owns every write to that table. Most of it is the columns a *supervisor* writes:
-//! what T14 owns is the state machine and the guarantee that a transition is either persisted *and*
-//! announced or neither, and what T19 added beside it is [`started`] and [`ended`], the two writes
-//! that turn a running process into a row the adoption after a daemon restart (T18) can meet.
+//! This module owns every write to that table. Most of it is the columns a *supervisor* writes: the
+//! state machine and the guarantee that a transition is either persisted *and* announced or
+//! neither, and beside it [`started`] and [`ended`], the two writes that turn a running process
+//! into a row crash recovery can meet.
 //!
-//! **T31a added the row's own beginning and end** — [`create`] and [`delete`] — which until then
-//! were a comment here saying Phase 3 would bring them. What is *decided* about a new service still
-//! happens above: which recipe, whether the package is installed, whether the id's shape suits the
-//! recipe's instancing. What is here is the insert and the delete, so that the table has one writer.
+//! **The row's own beginning and end are here too** — [`create`] and [`delete`]. What is *decided*
+//! about a new service still happens above: which recipe, whether the package is installed, whether
+//! the id's shape suits the recipe's instancing. What is here is the insert and the delete, so that
+//! the table has one writer.
 //!
-//! **T32 gave the row a second possible parent.** A service used to be an instance of a `packages`
-//! row and nothing else; php-fpm is an instance of a `runtime_installs` one, because the process
-//! serving a user's sites lives inside the PHP they installed. [`Origin`] is which of the two a
-//! caller means, `services` carries both columns with a `CHECK` that exactly one is set, and the
-//! foreign key is what lets `runtime.uninstall` refuse to remove a PHP a pool still points at.
+//! **php-fpm gave the row a second possible parent.** A service used to be an instance of a
+//! `packages` row and nothing else; php-fpm is an instance of a `runtime_installs` one, because the
+//! process serving a user's sites lives inside the PHP they installed. [`Origin`] is which of the
+//! two a caller means, `services` carries both columns with a `CHECK` that exactly one is set, and
+//! the foreign key is what lets `runtime.uninstall` refuse to remove a PHP a pool still points at.
 //!
-//! `last_started_at` is still not written here, but the question T14 left open is now closed: the
+//! `last_started_at` is still not written here, but the question of its format is closed: the
 //! column holds epoch milliseconds — a [`mixengine_proto::Timestamp`] verbatim — rather than the
 //! ISO-8601 text it was first declared as. It is read back by the supervisor on every exit to place
 //! a restart inside or outside the crash-loop window, which makes it a moment the daemon does
-//! arithmetic on rather than one a person reads; storing it as text would have bought a date library
-//! this workspace needs for nothing else, to parse on the hot path of a restart. The other `_at`
-//! columns stay text because nothing branches on them. `0001_initial.sql` was edited rather than
-//! migrated for the same reason T14 edited it: nothing has shipped, so forward-only has nothing yet
-//! to protect.
+//! arithmetic on rather than one a person reads; storing it as text would have bought a date
+//! library this workspace needs for nothing else, to parse on the hot path of a restart. The other
+//! `_at` columns stay text because nothing branches on them. `0001_initial.sql` was edited rather
+//! than migrated, which was possible only because nothing had shipped yet.
 
 mod error;
 
@@ -78,18 +77,19 @@ pub async fn state(store: &Store, service: &ServiceId) -> Result<ServiceState> {
     parse_state(service, stored)
 }
 
-/// Who left a service stopped — roadmap task **T123**.
+/// Who left a service stopped.
 ///
 /// **Only meaningful while a service is [`ServiceState::Stopped`]**, and written on every arrival
 /// there so it can never be left over from an older stop. On-demand activation is the reader: a stop
 /// this answers [`Person`](Self::Person) for is one a connection may not undo, because `mix service
 /// stop` followed by the next request restarting the service is the tool overruling its user.
 ///
-/// **Three answers because T70's boolean was one short.** `idle_stopped` asked *did the daemon idle
-/// this?*, so a row that had never run and a service the daemon itself put down both fell in beside
-/// a person's stop — and both were then refused a wake. A machine that was restarted has every pool
-/// in that state, which is how a PHP site came to answer 502 until somebody started its pool by
-/// hand, against `resource-isolation.md`'s own promise of *no error page, no manual start*.
+/// **Three answers because on-demand activation's first boolean was one short.** `idle_stopped`
+/// asked *did the daemon idle this?*, so a row that had never run and a service the daemon itself
+/// put down both fell in beside a person's stop — and both were then refused a wake. A machine that
+/// was restarted has every pool in that state, which is how a PHP site came to answer 502 until
+/// somebody started its pool by hand, against `resource-isolation.md`'s own promise of *no error
+/// page, no manual start*.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StoppedBy {
     /// Nobody has. The service has not run yet, or it is not stopped at all.
@@ -102,7 +102,7 @@ pub enum StoppedBy {
     Daemon,
 }
 
-/// The wire's spelling of the same three words — roadmap task **T167d**, where a client learns it.
+/// The wire's spelling of the same three words, which is where a client learns it.
 impl From<StoppedBy> for mixengine_proto::StoppedBy {
     fn from(stopped_by: StoppedBy) -> Self {
         match stopped_by {
@@ -132,11 +132,11 @@ impl StoppedBy {
     /// [`StateReason::Idle`], [`StateReason::Vanished`], [`StateReason::Unadopted`]), and so does
     /// every way a process ends without being asked to.
     ///
-    /// **[`StateReason::CredentialReset`] is the second, and it is not a person** — roadmap task
-    /// **T127**. It is here because of what the answer is *used for* rather than what it describes: a
-    /// reset holds the data directory while it rewrites the credential inside it, so a connection
-    /// must not start a server on top of that work. `Person` is the answer that says so, and the
-    /// repair puts the service back itself when it is finished.
+    /// **[`StateReason::CredentialReset`] is the second, and it is not a person.** It is here
+    /// because of what the answer is *used for* rather than what it describes: a reset holds the
+    /// data directory while it rewrites the credential inside it, so a connection must not start a
+    /// server on top of that work. `Person` is the answer that says so, and the repair puts the
+    /// service back itself when it is finished.
     ///
     /// **The `_` arm is why this is worth a test of its own.** A reason added to the protocol and not
     /// named here becomes `Daemon`, which is wakeable, and the compiler says nothing.
@@ -194,11 +194,11 @@ pub struct ServiceRecord {
     /// What the row says the service is doing.
     pub state: ServiceState,
 
-    /// Why it last failed — roadmap task **T200b**, D5. Written with the move into `failed`,
-    /// cleared by the next move into `running`; a note this build cannot read is [`None`].
+    /// Why it last failed. Written with the move into `failed`, cleared by the next move into
+    /// `running`; a note this build cannot read is [`None`].
     pub last_failure: Option<mixengine_proto::ServiceFailureNote>,
 
-    /// Who left it stopped — roadmap tasks **T70** and **T123**. See [`StoppedBy`].
+    /// Who left it stopped. See [`StoppedBy`].
     pub stopped_by: StoppedBy,
 
     /// The process it is running as, where there is one. Cleared by [`ended`].
@@ -213,8 +213,8 @@ pub struct ServiceRecord {
     /// When that process began, as the OS counts such moments — a
     /// [`StartTime`](mixengine_platform::process::StartTime) stored verbatim.
     ///
-    /// **Half of an identity and useless on its own**, which is why it travels beside the pid and is
-    /// cleared with it. Crash recovery (T18) is the only reader: it asks the OS when the process
+    /// **Half of an identity and useless on its own**, which is why it travels beside the pid and
+    /// is cleared with it. Crash recovery is the only reader: it asks the OS when the process
     /// bearing `pid` began and compares the two, because a pid the machine has handed out again
     /// names somebody else's program. A row with a pid and no start time is one adoption refuses —
     /// see [`started`].
@@ -230,7 +230,7 @@ pub struct ServiceRecord {
     /// What its process exited with the last time one ended.
     pub last_exit_code: Option<i32>,
 
-    /// Whether this service starts when the daemon does — roadmap task **T112**.
+    /// Whether this service starts when the daemon does.
     ///
     /// **Read here rather than through [`declaration`]**, which also carries it. A *listing* wants
     /// this: `declaration` is a four-table join per service, and paying for one per row to report
@@ -242,7 +242,7 @@ pub struct ServiceRecord {
     /// a second query per listing to keep a distinction nothing acts on.
     pub autostart: bool,
 
-    /// Which version of its program this service runs — roadmap task **T183**.
+    /// Which version of its program this service runs.
     ///
     /// Out of whichever parent the row names: the package's for a server, the runtime's for
     /// php-fpm. [`None`] for an extension's service, whose version is the extension's rather than a
@@ -253,12 +253,12 @@ pub struct ServiceRecord {
 
 /// Where the binary a service runs comes from.
 ///
-/// **Two tables, one of which is not a package** — T32. Everything up to php-fpm was installed from
-/// the index by `package.install` and has a `packages` row; a pool has no such row and must not be
+/// **Two tables, one of which is not a package.** Everything up to php-fpm was installed from the
+/// index by `package.install` and has a `packages` row; a pool has no such row and must not be
 /// given a fake one, because the directory it runs out of belongs to `runtime.install` and is
 /// removed by `runtime.uninstall`. Which one a service names is what the `CHECK` on `services`
-/// enforces, and this enum is that constraint said in Rust, so a caller cannot even assemble the row
-/// the database would refuse.
+/// enforces, and this enum is that constraint said in Rust, so a caller cannot even assemble the
+/// row the database would refuse.
 #[derive(Debug, Clone)]
 pub enum Origin {
     /// A `packages` row: Caddy, MariaDB, Redis — anything the signed index publishes as a server.
@@ -273,8 +273,7 @@ pub enum Origin {
         version: PackageVersion,
     },
 
-    /// An `extensions` row: an installed extension whose manifest declares a `[service]` —
-    /// roadmap task **T81**.
+    /// An `extensions` row: an installed extension whose manifest declares a `[service]`.
     ///
     /// **The third origin, and the one that carries its own recipe.** A package's row points at
     /// knowledge compiled into this build; an extension's row carries the manifest it was installed
@@ -296,7 +295,7 @@ pub enum Origin {
     },
 }
 
-/// Where a new service's port comes from — roadmap task **T34c**.
+/// Where a new service's port comes from.
 ///
 /// **Three answers and not an [`Option`]**, because the missing case is the interesting one: a
 /// caller that names no port is not a service without one, it is a service whose recipe names 3306
@@ -371,8 +370,8 @@ pub struct Declaration {
 /// What version a service is an instance of, or [`None`] when nothing here can say.
 ///
 /// **Two possible parents and one query** (`0001_initial.sql`): a service comes out of a `packages`
-/// row or, since T32, out of a `runtime_installs` one. Both carry the version, and a caller asking
-/// "what should a colleague install" does not care which table answered.
+/// row or out of a `runtime_installs` one. Both carry the version, and a caller asking "what should
+/// a colleague install" does not care which table answered.
 ///
 /// [`None`] rather than an error for a version this build cannot parse: the reader is
 /// `project.export`, and a link dropped from the file to punish an unreadable version would lose
@@ -442,7 +441,7 @@ pub async fn record(store: &Store, service: &ServiceId) -> Result<ServiceRecord>
     })
 }
 
-/// One service's row, read back as the [`Declaration`] that wrote it — roadmap task **T97**.
+/// One service's row, read back as the [`Declaration`] that wrote it.
 ///
 /// **The inverse of [`create`], and it is a value rather than a query so that the two cannot
 /// drift.** Its caller is `service.set_front_end`, which deletes the row a home's front end is

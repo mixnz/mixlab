@@ -1,4 +1,4 @@
-//! The port an activator listens on, given to the rows that need one — roadmap task **T70**.
+//! The port an activator listens on, given to the rows that need one.
 //!
 //! **A repair rather than a step in `service.create`**, and for [`pools::ensure`](super::pools)'s
 //! reason: run at boot as well as after a create, it gives a pool written by an earlier build its
@@ -12,10 +12,10 @@
 //! system, so a service that listens on a socket derives its activator's address instead and takes
 //! no port out of circulation.
 //!
-//! **A row that already has one keeps it.** T34c's rule holds for this column too: an allocated port
-//! belongs to its row for as long as the row lives. Here the reason is narrower than a `.env` and no
-//! weaker — the number is in a rendered site file, and moving it silently means every idle stop
-//! rewrites `etc/` and reloads the front end.
+//! **A row that already has one keeps it.** The port allocator's rule holds for this column too: an
+//! allocated port belongs to its row for as long as the row lives. Here the reason is narrower than
+//! a `.env` and no weaker — the number is in a rendered site file, and moving it silently means
+//! every idle stop rewrites `etc/` and reloads the front end.
 
 use mixengine_proto::ServiceId;
 

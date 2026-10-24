@@ -1,16 +1,16 @@
 //! Turning a project that already works into a manifest.
 //!
-//! Roadmap task **T77**. The whole difficulty is in one sentence of the feature doc: capture *what
-//! is actually in use*, **not the global defaults**, and never data, credentials or absolute paths.
-//! Each of the rules below is that sentence applied to one thing this home knows.
+//! The whole difficulty is in one sentence of the feature doc: capture *what is actually in use*,
+//! **not the global defaults**, and never data, credentials or absolute paths. Each of the rules
+//! below is that sentence applied to one thing this home knows.
 //!
 //! # Where each key comes from
 //!
 //! | Key | Read from |
 //! |---|---|
 //! | `[runtimes]` | [`crate::resolve`], keeping only what the project or its manifest decided (D4a) |
-//! | `[site]` / `[[sites]]` | the project's `sites` rows in primary-domain order, their `site_domains`, and nothing about ports (T204a) |
-//! | `[[sites]] services` | each site's `site_service_links`, minus the front end and the pools (T204a) |
+//! | `[site]` / `[[sites]]` | the `sites` rows by primary domain, their `site_domains`, no ports |
+//! | `[[sites]] services` | each site's `site_service_links`, minus the front end and the pools |
 //! | `[[services]]` | every site's links, each once, minus the front end and minus the pools |
 //! | `[[services]] database`, `user` | the project's own `mixengine.toml` (D3) |
 //! | `[php] extensions` | the *choices* on the PHP the pool runs, which are already deviations (D2) |
@@ -24,6 +24,8 @@
 //!
 //! The test that holds this is written against the **rendered string** rather than against the
 //! struct: asserting on fields would only prove that the ones we remembered are empty.
+//!
+//! The D-numbers below are those of `docs/specs/2026-09-01-t77-blueprint-capture-design.md`.
 
 use std::collections::BTreeMap;
 
@@ -87,8 +89,8 @@ pub struct Asked<'a> {
 /// [`ProjectError::Manifest`]: crate::ProjectError::Manifest
 pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManifest> {
     let project = asked.project;
-    // **Every site, in primary-domain order** — roadmap task **T204a**, D6: `sites::records`'s
-    // own, so capturing twice still writes one file twice.
+    // **Every site, in primary-domain order**: `sites::records`'s own, so capturing twice still
+    // writes one file twice.
     let records = sites::records(store, Some(project.id)).await?;
     let declared = manifest::read(&manifest::at(&project.root))?;
 
@@ -106,7 +108,7 @@ pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManife
 
     let services = linked(store, project, &union, pool.as_ref(), declared.as_ref()).await?;
 
-    // **How a site names one of those** (D3): by `name`, or `name@instance` as the file writes the
+    // **How a site names one of those**: by `name`, or `name@instance` as the file writes the
     // instance when two entries share a name. `linked` keeps `union`'s order one for one.
     let item_of = |service: &ServiceId| -> Option<String> {
         let position = union.iter().position(|one| one == service)?;
@@ -145,8 +147,8 @@ pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManife
                 .skip(1)
                 .map(|domain| tokenised_domain(domain, &project.name))
                 .collect(),
-            // **The same rule one table down** — roadmap task **T135**. A route's pool is a fact
-            // about this machine; everything else about the route travels.
+            // **The same rule one table down.** A route's pool is a fact about this machine;
+            // everything else about the route travels.
             routes: site
                 .routes
                 .iter()
@@ -160,9 +162,9 @@ pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManife
                     },
                 })
                 .collect(),
-            // **Said for every site when there are several** (D6), `[]` included, so the file
-            // says what each one links rather than falling back to *every service*. One site
-            // links them all, which `[site]` already means.
+            // **Said for every site when there are several**, `[]` included, so the file says what
+            // each one links rather than falling back to *every service*. One site links them all,
+            // which `[site]` already means.
             services: several.then(|| {
                 site.services
                     .iter()
@@ -173,17 +175,17 @@ pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManife
         })
         .collect();
 
-    // **As the blueprint has them** — roadmap task **T205**, D5. Unexpanded in the row, so nothing
-    // here turns a slug back into `{project}`.
+    // **As the blueprint has them.** Unexpanded in the row, so nothing here turns a slug back into
+    // `{project}`.
     let next_steps = match crate::blueprints::steps::declared(store, project.id).await? {
         None => Vec::new(),
         Some((origin, _)) => {
             let mut steps = origin.next_steps;
 
-            // **A step with no site, now that there are several** (T204a, D6): it belonged to the
-            // one site its blueprint described, so it goes to the entry with that pattern, or to
-            // the first. Without this, a project that gained a second site by hand would capture
-            // into a file this build refuses to read.
+            // **A step with no site, now that there are several**: it belonged to the one site its
+            // blueprint described, so it goes to the entry with that pattern, or to the first.
+            // Without this, a project that gained a second site by hand would capture into a file
+            // this build refuses to read.
             if several {
                 let home = origin
                     .sites
@@ -207,7 +209,7 @@ pub async fn capture(store: &Store, asked: &Asked<'_>) -> Result<BlueprintManife
     Ok(BlueprintManifest {
         // **The lowest schema, because capture never writes an archive** — ADR 0061. `SCHEMA` is
         // what this build reads, not what a capture holds, and `render` writes several sites at
-        // 3 whatever this says (T204a).
+        // 3 whatever this says.
         schema: 1,
         blueprint: Header {
             name: asked.name.to_owned(),
@@ -238,8 +240,7 @@ fn kept(service: &ServiceId) -> bool {
     !FRONT_ENDS.contains(&service.name()) && service.name() != POOL
 }
 
-/// The PHP the project's php-fpm sites run, and the pool the first of them names — roadmap task
-/// **T204a**, D6.
+/// The PHP the project's php-fpm sites run, and the pool the first of them names.
 ///
 /// # Errors
 ///
@@ -377,7 +378,7 @@ async fn linked(
             user: named
                 .and_then(|entry| entry.user.as_deref())
                 .map(|user| tokenised_value(user, &project.name)),
-            // Never captured (T205a): a project's `.env` says nothing about which key a blueprint
+            // Never captured: a project's `.env` says nothing about which key a blueprint
             // should offer, and a manifest that named one would be a guess.
             dotenv: None,
         });
@@ -630,7 +631,7 @@ mod tests {
         assert_eq!(manifest.services[0].instance.as_deref(), Some(PER_PROJECT));
     }
 
-    /// **T204a, D6.** Every site, each with its own links; `[[services]]` the union.
+    /// Every site, each with its own links; `[[services]]` the union.
     #[tokio::test]
     async fn a_project_with_several_sites_captures_them_all() {
         let (_temp, store, project) = home("blog").await;
@@ -686,7 +687,7 @@ mod tests {
         assert_eq!(read_back.services, manifest.services);
     }
 
-    /// **T204a, D3 and D6.** Two links to one package name the instance, as the file writes it.
+    /// Two links to one package name the instance, as the file writes it.
     #[tokio::test]
     async fn two_instances_of_one_package_are_linked_by_instance() {
         let (_temp, store, project) = home("blog").await;
@@ -724,7 +725,7 @@ mod tests {
         crate::blueprints::manifest::read(&render(&manifest)).expect("a file this build reads");
     }
 
-    /// **T204a, D6.** A blueprint has one PHP, so two are refused and both are named.
+    /// A blueprint has one PHP, so two are refused and both are named.
     #[tokio::test]
     async fn sites_on_two_phps_are_refused_naming_both() {
         let (_temp, store, project) = home("blog").await;
@@ -780,8 +781,8 @@ mod tests {
         }
     }
 
-    /// **T204a, D6.** Steps from a one-site blueprint go to the site that blueprint described, so
-    /// a project that later gained a site still captures into a file this build reads.
+    /// Steps from a one-site blueprint go to the site that blueprint described, so a project that
+    /// later gained a site still captures into a file this build reads.
     #[tokio::test]
     async fn steps_from_a_one_site_blueprint_are_given_its_site() {
         let (_temp, store, project) = home("blog").await;
@@ -823,7 +824,7 @@ mod tests {
     #[tokio::test]
     async fn a_runtime_that_only_the_global_default_named_is_not_captured() {
         let (temp, store, project) = home("blog").await;
-        // A folder that is there: since T206d a default whose folder is gone resolves to nothing.
+        // A folder that is there: a default whose folder is gone resolves to nothing.
         let folder = temp.path().join("runtimes").join("node");
         std::fs::create_dir_all(&folder).expect("a folder");
 
@@ -873,8 +874,8 @@ mod tests {
         a_php_pool(&store, "8.2.23", r#"{"xdebug":true}"#).await;
         a_package(&store, 1, "mariadb", "11.4.3", "main").await;
         a_site(&store, &project, &["blog.test"], &["mariadb@main"]).await;
-        // **Two sites** — roadmap task **T204a**: `[[sites]]` and its `services` are a second
-        // shape of the file, and they are held to the same rule.
+        // **Two sites**: `[[sites]]` and its `services` are a second shape of the file, and they
+        // are held to the same rule.
         a_site(&store, &project, &["api.blog.test"], &["mariadb@main"]).await;
 
         let manifest = capture(&store, &asked(&project, "blog-stack"))

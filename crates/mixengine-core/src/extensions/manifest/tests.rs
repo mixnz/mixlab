@@ -1,7 +1,7 @@
 use super::*;
 
 /// **A registry entry is a manifest in JSON, and it is read by the same code that reads the
-/// file** — roadmap task **T81**, its design's D2.
+/// file**.
 ///
 /// The document the registry publishes holds manifests rather than pointers to them, so a
 /// `--path` install and a registry install are proved by one parse. That only holds if what is
@@ -62,8 +62,8 @@ fn every_kind_reads() {
     assert!(matches!(sendmail.body, Body::Recipe));
 }
 
-/// **D7.** Mailpit is a supervised service *and* a php.ini change, in one extension, because
-/// two extensions for one product would be two things to install and uninstall in step.
+/// Mailpit is a supervised service *and* a php.ini change, in one extension, because two extensions
+/// for one product would be two things to install and uninstall in step.
 #[test]
 fn a_service_may_also_carry_a_recipe() {
     let mailpit = parse(mixengine_testkit::extension::MAILPIT).expect("parses");
@@ -91,8 +91,8 @@ fn a_table_from_another_kind_is_refused() {
     ));
 }
 
-/// **`desktop-app` is not a kind** — roadmap task **T165**, ADR 0038. A manifest that still
-/// says so is refused by the reader like any other word it does not know.
+/// **`desktop-app` is not a kind** — ADR 0038. A manifest that still says so is refused by the
+/// reader like any other word it does not know.
 #[test]
 fn desktop_app_is_not_a_kind() {
     let text = with_body("desktop-app", "[desktop-app]\nscheme = \"otherapp\"\n");
@@ -132,8 +132,8 @@ fn a_newer_schema_is_refused() {
     ));
 }
 
-/// **D9.** A stop command is a second program to render, and a second place to repeat the
-/// path rule, for something no planned extension needs.
+/// A stop command is a second program to render, and a second place to repeat the path rule, for
+/// something no planned extension needs.
 #[test]
 fn a_stop_command_is_refused() {
     let text = with_body(
@@ -161,8 +161,8 @@ fn a_port_name_must_be_a_placeholder_name() {
     ));
 }
 
-/// **D8.** These are administrative interfaces onto the machine's own databases. The
-/// difference between them and a site somebody chose to share is that nobody chose.
+/// These are administrative interfaces onto the machine's own databases. The difference between
+/// them and a site somebody chose to share is that nobody chose.
 #[test]
 fn a_web_app_may_not_ask_for_the_lan() {
     let text = mixengine_testkit::extension::PHPMYADMIN
@@ -186,9 +186,9 @@ fn an_id_a_recipe_claims_is_refused() {
     ));
 }
 
-/// **T81c, D1.** A fragment says which configuration language it is written in, because a
-/// Caddyfile fragment in an `nginx.conf` is a syntax error and there is no answer to *"which of
-/// the two did the author mean"* that is not a guess.
+/// A fragment says which configuration language it is written in, because a Caddyfile fragment in
+/// an `nginx.conf` is a syntax error and there is no answer to *"which of the two did the author
+/// mean"* that is not a guess.
 #[test]
 fn a_front_end_fragment_names_its_server() {
     let text = with_body(
@@ -245,9 +245,9 @@ fn an_unknown_key_is_refused() {
     ));
 }
 
-/// **T81b, D4.** `[web-app].domain` is one label placed under `mixengine.test`; a dotted one
-/// would have become `pma.tools.mixengine.test`, and an uppercase one is not a label this
-/// system's domain syntax accepts.
+/// `[web-app].domain` is one label placed under `mixengine.test`; a dotted one would have become
+/// `pma.tools.mixengine.test`, and an uppercase one is not a label this system's domain syntax
+/// accepts.
 #[test]
 fn a_web_app_domain_is_one_label() {
     for (domain, expected) in [
@@ -276,8 +276,7 @@ fn a_web_app_domain_is_one_label() {
     assert!(parse(&fine).is_ok());
 }
 
-/// **Every fixture is a manifest the roster publishes** — roadmap task **T82**, the design's
-/// D10.
+/// **Every fixture is a manifest the roster publishes.**
 ///
 /// The claim `extension.rs` opens with is only worth having if something checks it, and what a
 /// published entry has to survive is this parse: `mixnz/mixengine-packages` renders each of
@@ -302,8 +301,8 @@ fn every_shipped_manifest_parses() {
     }
 }
 
-/// **Adminer is the one whose artifact is not an archive** — the design's D3 — and the one whose
-/// generated file is the application's entry point rather than a configuration beside it.
+/// **Adminer is the one whose artifact is not an archive**, and the one whose generated file is the
+/// application's entry point rather than a configuration beside it.
 #[test]
 fn adminer_is_one_file_and_a_generated_entry_point() {
     let manifest = parse(mixengine_testkit::extension::ADMINER).expect("adminer parses");
@@ -339,8 +338,7 @@ fn a_web_app(extra: &str) -> String {
     )
 }
 
-/// **The text is the manifest's, because the artifact is upstream's** — roadmap task **T82**,
-/// the design's D1.
+/// **The text is the manifest's, because the artifact is upstream's.**
 ///
 /// For a registry install the extension's files *are* the published archive, verified against a
 /// hash its publisher wrote down. There is no step between the download and the rename where a
@@ -400,7 +398,7 @@ fn a_declared_database_names_at_least_one_engine() {
     );
 }
 
-/// **The four placeholders T82 adds join the three that were already reserved.**
+/// **The four placeholders a `[web-app.config]` adds join the three that were already reserved.**
 ///
 /// A `[ports]` key becomes a placeholder, so a port called `db_host` would be a manifest whose
 /// own port shadowed the address it was pointed at.
@@ -425,9 +423,9 @@ fn with_body(kind: &str, body: &str) -> String {
     )
 }
 
-/// **A manifest that asks for a superuser password has to read it** — roadmap task **T82a**,
-/// the design's D2. Consent that buys nothing is consent nobody should be asked for, and this
-/// is the one rule in this format that spans two tables.
+/// **A manifest that asks for a superuser password has to read it.** Consent that buys nothing is
+/// consent nobody should be asked for, and this is the one rule in this format that spans two
+/// tables.
 #[test]
 fn signing_in_without_reading_the_password_is_refused() {
     let refusal = parse(&signing_in("signs_in = true", "$cfg['h'] = '{db_host}';"))
@@ -517,7 +515,7 @@ network = "loopback"
 filesystem = ["own-data"]
 "#;
 
-/// **T200a, D1.** `[ui]` names a port the manifest declares, and survives `to_value`.
+/// `[ui]` names a port the manifest declares, and survives `to_value`.
 #[test]
 fn a_service_names_the_port_a_person_opens() {
     let text = format!("{SMALL_SERVICE}\n[ui]\nport = \"ui_port\"\n");
@@ -536,8 +534,8 @@ fn a_service_names_the_port_a_person_opens() {
     assert_eq!(back.ui, read.ui);
 }
 
-/// **T200a, D1.** A manifest with no `[ui]` — every one installed before T200a — reads as none,
-/// and is stored without one.
+/// A manifest with no `[ui]` — every one installed before the table existed — reads as none, and
+/// is stored without one.
 #[test]
 fn a_manifest_without_ui_has_none() {
     let read = parse(SMALL_SERVICE).expect("a manifest");
@@ -545,7 +543,7 @@ fn a_manifest_without_ui_has_none() {
     assert!(to_value(&read).get("ui").is_none());
 }
 
-/// **T200a, D1.** The port has to be one `[ports]` declares, and the path has to be a path.
+/// The port has to be one `[ports]` declares, and the path has to be a path.
 #[test]
 fn a_ui_naming_no_port_or_no_path_is_refused() {
     for (table, field) in [
@@ -561,7 +559,7 @@ fn a_ui_naming_no_port_or_no_path_is_refused() {
     }
 }
 
-/// **T200a, D1.** A web-app's page is its site.
+/// A web-app's page is its site.
 #[test]
 fn ui_is_refused_on_a_web_app() {
     let text = format!(

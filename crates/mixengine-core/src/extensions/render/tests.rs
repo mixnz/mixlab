@@ -23,9 +23,9 @@ fn with_a_database() -> Context {
     }
 }
 
-/// **`{db_password_env}` renders the one name this system uses** — roadmap task **T82a**, the
-/// design's D2. A name and never a password: what the pool carries is an `EnvValue::Keyring`,
-/// and what the generated file carries is the variable to read it out of.
+/// **`{db_password_env}` renders the one name this system uses.** A name and never a password: what
+/// the pool carries is an `EnvValue::Keyring`, and what the generated file carries is the variable
+/// to read it out of.
 #[test]
 fn the_password_variable_renders_its_name_and_never_a_password() {
     let mut context = with_a_database();
@@ -70,13 +70,13 @@ fn an_id() -> ExtensionId {
     ExtensionId::parse("pma").expect("an extension id")
 }
 
-/// **PHP is made of braces** — roadmap task **T82**, the design's D8.
+/// **PHP is made of braces.**
 ///
 /// [`Destination::Field`] refuses a `{…}` it does not recognise, and is right to: a `{home_dir}`
 /// surviving into an argument is a literal brace handed to a program. A `config.inc.php` is not
-/// that document — `function f() {` is a brace before the first placeholder — so this is T81c's
-/// answer arriving a second time, including the part two unit tests missed and the real server
-/// caught: the scan continues **one character on**, never past the `}` it was looking for.
+/// that document — `function f() {` is a brace before the first placeholder — so this is a
+/// fragment's answer arriving a second time, including the part two unit tests missed and the real
+/// server caught: the scan continues **one character on**, never past the `}` it was looking for.
 #[test]
 fn php_source_keeps_its_own_braces_and_substitutes_ours() {
     let rendered = php_source(
@@ -130,8 +130,8 @@ fn a_database_placeholder_with_no_database_is_refused() {
     }
 }
 
-/// The whole of D2, proved by reading what came out rather than by trusting what went in —
-/// T77's method for "never data, credentials or absolute paths".
+/// The whole of the address rule, proved by reading what came out rather than by trusting what went
+/// in — the first planner's method for "never data, credentials or absolute paths".
 #[test]
 fn a_loopback_extension_renders_no_other_address() {
     let spec = render(mixengine_testkit::extension::MAILPIT).expect("renders");
@@ -191,8 +191,7 @@ fn a_rendered_path_uses_one_separator() {
     }
 }
 
-/// **The data directory is not inside the install directory** — roadmap task **T81**, its
-/// design's D13.
+/// **The data directory is not inside the install directory.**
 ///
 /// An uninstall removes `install_dir` whole and keeps what a person accumulated unless they ask
 /// otherwise, and a `data` nested inside it would make that promise unkeepable. The alternative
@@ -363,9 +362,9 @@ fn probe_context(root: &Path) -> (ExtensionId, Context) {
     (id, context)
 }
 
-/// **T81c, D4.** nginx eats a backslash, so a path substituted into an nginx fragment is
-/// forward-slashed whatever this system spells one with; the same path bound for a Caddyfile is
-/// left as written, because a backtick-quoted token takes it as it is.
+/// nginx eats a backslash, so a path substituted into an nginx fragment is forward-slashed whatever
+/// this system spells one with; the same path bound for a Caddyfile is left as written, because a
+/// backtick-quoted token takes it as it is.
 #[test]
 fn a_fragment_spells_a_path_the_way_its_server_does() {
     let home = tempfile::tempdir().expect("a directory");
@@ -397,9 +396,9 @@ fn a_fragment_spells_a_path_the_way_its_server_does() {
     );
 }
 
-/// **A brace is the destination language's punctuation** — the T81c design, D4. A block, a
-/// Caddy placeholder and an nginx variable all pass through untouched, and a backslash that is
-/// not part of a substituted path stays the author's: `location ~ \.php$` means something.
+/// **A brace is the destination language's punctuation.** A block, a Caddy placeholder and an nginx
+/// variable all pass through untouched, and a backslash that is not part of a substituted path
+/// stays the author's: `location ~ \.php$` means something.
 #[test]
 fn a_fragment_leaves_the_destination_s_own_syntax_alone() {
     let home = tempfile::tempdir().expect("a directory");
@@ -428,7 +427,7 @@ fn a_fragment_leaves_the_destination_s_own_syntax_alone() {
     assert_eq!(caddy, "handle { header_up Host {host} }");
 }
 
-/// **A placeholder inside a block is still a placeholder** — found by a real nginx in T81c.
+/// **A placeholder inside a block is still a placeholder** — found by a real nginx.
 ///
 /// The nearest `}` after a block's `{` is nowhere near it: in `server {\n    listen {listen}…`
 /// it is the closing brace of `{listen}`. A renderer that consumed through it swallowed the
@@ -455,7 +454,7 @@ fn a_placeholder_inside_a_block_is_substituted() {
     assert_eq!(rendered, "server {\n    listen 127.0.0.1:8025;\n}\n");
 }
 
-/// And a field whose whole content *is* this vocabulary keeps the refusal T80 argued for: an
+/// And a field whose whole content *is* this vocabulary keeps the refusal it always had: an
 /// unknown placeholder there is a literal brace handed to a program.
 #[test]
 fn a_field_still_refuses_a_placeholder_it_does_not_know() {

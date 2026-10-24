@@ -8,8 +8,8 @@ fn a_program_that_is_simply_missing_says_only_what_the_os_said() {
     assert_eq!(why_it_would_not_start(&source), source.to_string());
 }
 
-/// **A refused image load is a machine-wide condition and no amount of re-running fixes it** —
-/// roadmap task **T94** — so the detail carries the reason nobody would guess from `4551`.
+/// **A refused image load is a machine-wide condition and no amount of re-running fixes it**, so
+/// the detail carries the reason nobody would guess from `4551`.
 ///
 /// **Both arms in one test, through `cfg!` as a value.** The same number means nothing on macOS
 /// or Linux, and a `#[cfg(windows)]` here would be this crate compiling a line away by
@@ -66,9 +66,9 @@ fn a_bundle_payload() -> Artifact {
     artifact
 }
 
-/// T106. macOS wraps a windowed application in a directory, and `packaging/feed.sh` names that
-/// directory in the payload's `provides` — so an artifact carrying one must stage rather than be
-/// refused, and being refused would take the four ordinary binaries down with it.
+/// macOS wraps a windowed application in a directory, and `packaging/feed.sh` names that directory
+/// in the payload's `provides` — so an artifact carrying one must stage rather than be refused, and
+/// being refused would take the four ordinary binaries down with it.
 #[test]
 fn a_provides_entry_may_name_a_directory() {
     let staging = tempfile::tempdir().expect("a temporary directory");

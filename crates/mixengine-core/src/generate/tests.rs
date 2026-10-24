@@ -20,7 +20,7 @@ impl Recipe for Fake {
         "fakeservice"
     }
 
-    /// Set so that the generator carrying it onto the spec is observable — task **T71a**.
+    /// Set so that the generator carrying it onto the spec is observable.
     ///
     /// The trait's default is `false`, so a fixture that took it would prove nothing about
     /// whether `generate` reads this at all.
@@ -59,13 +59,13 @@ impl Recipe for Fake {
             .map(|port| mixengine_proto::IdleProbe::Connections { port })
     }
 
-    /// Forty-five minutes while the home saves resources — T167b. A number of its own so the
+    /// Forty-five minutes while the home saves resources. A number of its own so the
     /// test below can tell it from the row's.
     fn idle_when_saving(&self) -> Option<mixengine_proto::Millis> {
         Some(mixengine_proto::Millis::from_secs(45 * 60))
     }
 
-    /// On the port the row allocated, as every database recipe answers — T70a.
+    /// On the port the row allocated, as every database recipe answers.
     ///
     /// A fixture rather than a real recipe, because what the generator is asked here is
     /// whether it carries a recipe's answer out of the same pass that renders. *Which*
@@ -93,7 +93,7 @@ impl Recipe for Fake {
     }
 }
 
-/// [`Fake`], asking for a certificate — roadmap task **T99**.
+/// [`Fake`], asking for a certificate.
 ///
 /// A second type rather than a flag on [`Fake`], so that every existing fixture keeps proving
 /// that a recipe which does not ask gets nothing. Everything but the one answer delegates.
@@ -165,7 +165,7 @@ impl Recipe for Solo {
     }
 }
 
-/// The same front end with a checker that refuses everything — for T81c's D5.
+/// The same front end with a checker that refuses everything.
 ///
 /// A front end whose binary says no is the whole of what `would_serve` is about, and the cheapest
 /// way to have one is a validator that exits non-zero: what is under test is that the judgement

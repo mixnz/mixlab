@@ -2,8 +2,8 @@
 
 use super::*;
 
-/// **What D10 is for.** An export is written into somebody's version-controlled file, so
-/// everything it does not own survives it byte for byte.
+/// **Why the writer edits rather than serialises.** An export is written into somebody's
+/// version-controlled file, so everything it does not own survives it byte for byte.
 #[test]
 fn writing_a_manifest_keeps_the_comments_the_order_and_the_sections_it_does_not_own() {
     let home = somewhere();
@@ -78,7 +78,7 @@ fn a_directory_with_no_manifest_gets_one_written() {
     );
 }
 
-/// **T204, D1.** `[[sites]]` reads as its entries, in file order.
+/// `[[sites]]` reads as its entries, in file order.
 #[test]
 fn several_sites_read_in_the_order_the_file_writes_them() {
     let home = somewhere();
@@ -100,7 +100,7 @@ fn several_sites_read_in_the_order_the_file_writes_them() {
     assert_eq!(sites[1].domain.as_deref(), Some("api.test"));
 }
 
-/// **T204, D1.** One `[site]` is a list of one, which every file written before T204 is.
+/// One `[site]` is a list of one, which every file written before `[[sites]]` existed is.
 #[test]
 fn a_single_site_reads_as_a_list_of_one() {
     let home = somewhere();
@@ -115,8 +115,8 @@ fn a_single_site_reads_as_a_list_of_one() {
     assert_eq!(sites[0].domain.as_deref(), Some("blog.test"));
 }
 
-/// **T204, D1.** Both forms at once is a file whose author meant one of them, and choosing would
-/// apply something they did not write.
+/// Both forms at once is a file whose author meant one of them, and choosing would apply something
+/// they did not write.
 #[test]
 fn a_file_with_both_forms_is_refused() {
     let home = somewhere();
@@ -135,8 +135,8 @@ fn a_file_with_both_forms_is_refused() {
     assert!(format!("{error:?}").contains("[[sites]]"), "{error:?}");
 }
 
-/// **T204, D3.** An absent `services` is not an empty one: absent falls through to every
-/// `[[services]]` entry, and `[]` links none.
+/// An absent `services` is not an empty one: absent falls through to every `[[services]]` entry,
+/// and `[]` links none.
 #[test]
 fn an_absent_services_list_is_told_apart_from_an_empty_one() {
     let home = somewhere();
@@ -164,7 +164,7 @@ fn an_absent_services_list_is_told_apart_from_an_empty_one() {
     );
 }
 
-/// **T204, D3.** A `services` entry that cannot be an id is the file being wrong.
+/// A `services` entry that cannot be an id is the file being wrong.
 #[test]
 fn a_services_entry_that_is_not_an_id_is_refused() {
     let home = somewhere();
@@ -180,8 +180,8 @@ fn a_services_entry_that_is_not_an_id_is_refused() {
     ));
 }
 
-/// **T204, D5.** A duplicate domain is refused where a site is chosen, never here, so the shim's
-/// `resolve` keeps working in that directory.
+/// A duplicate domain is refused where a site is chosen, never here, so the shim's `resolve` keeps
+/// working in that directory.
 #[test]
 fn a_duplicate_domain_still_reads() {
     let home = somewhere();
@@ -200,8 +200,8 @@ fn a_duplicate_domain_still_reads() {
     assert_eq!(manifest.runtimes.len(), 1);
 }
 
-/// **T204, D1.** Two sites into a file with none is `[[sites]]`, each with its own links, and
-/// `[[services]]` is the union.
+/// Two sites into a file with none is `[[sites]]`, each with its own links, and `[[services]]` is
+/// the union.
 #[test]
 fn two_sites_are_written_as_many_with_their_own_services() {
     let home = somewhere();
@@ -238,7 +238,7 @@ fn two_sites_are_written_as_many_with_their_own_services() {
     assert_eq!(sites[1].services.as_ref().map(Vec::len), Some(2));
 }
 
-/// **T204, D1.** One site stays `[site]`, the form every released build reads.
+/// One site stays `[site]`, the form every released build reads.
 #[test]
 fn one_site_is_still_written_as_one() {
     let home = somewhere();
@@ -250,12 +250,12 @@ fn one_site_is_still_written_as_one() {
     assert!(!after.contains("[[sites]]"), "{after}");
     assert!(
         after.contains("services = []"),
-        "D3: written in both forms: {after}"
+        "a site's links are written in both forms: {after}"
     );
 }
 
-/// **T204, D1.** A file already in `[[sites]]` stays there when only one site is left, so the
-/// diff shows the sites changing rather than the form.
+/// A file already in `[[sites]]` stays there when only one site is left, so the diff shows the
+/// sites changing rather than the form.
 #[test]
 fn a_file_in_many_stays_in_many_with_one_site() {
     let home = somewhere();
@@ -268,8 +268,8 @@ fn a_file_in_many_stays_in_many_with_one_site() {
     assert!(!after.contains("[site]"), "{after}");
 }
 
-/// **T204, D1.** A `[site]` a person wrote becomes the first `[[sites]]`, with its comment, its
-/// unknown key and their order.
+/// A `[site]` a person wrote becomes the first `[[sites]]`, with its comment, its unknown key and
+/// their order.
 #[test]
 fn a_single_site_becomes_the_first_of_many_with_its_comment_and_keys() {
     let home = somewhere();
@@ -303,8 +303,8 @@ fn a_single_site_becomes_the_first_of_many_with_its_comment_and_keys() {
     assert!(blog < shop, "the converted entry is first: {after}");
 }
 
-/// **T204, D2.** An entry belongs to the site holding its `domain` among any of its names, so a
-/// renamed primary updates the entry rather than adding a second one.
+/// An entry belongs to the site holding its `domain` among any of its names, so a renamed primary
+/// updates the entry rather than adding a second one.
 #[test]
 fn an_entry_is_found_by_an_alias_after_the_primary_moved() {
     let home = somewhere();
@@ -335,8 +335,8 @@ fn an_entry_is_found_by_an_alias_after_the_primary_moved() {
     );
 }
 
-/// **T204, D2 and D4.** An entry no site holds is left byte for byte and named; so is a second
-/// entry for a site an earlier one already took.
+/// An entry no site holds is left byte for byte and named; so is a second entry for a site an
+/// earlier one already took.
 #[test]
 fn an_entry_no_site_holds_is_kept_and_named() {
     let home = somewhere();
@@ -365,7 +365,7 @@ fn an_entry_no_site_holds_is_kept_and_named() {
     assert!(after.contains("domain = \"new.test\""), "{after}");
 }
 
-/// **T204, D4.** A project with no site leaves a hand-written one and names it.
+/// A project with no site leaves a hand-written one and names it.
 #[test]
 fn no_site_names_every_entry_it_left() {
     let home = somewhere();
@@ -376,8 +376,8 @@ fn no_site_names_every_entry_it_left() {
     assert_eq!(written.sites_kept, ["typed.test"]);
 }
 
-/// **T204, D2.** The kind's payload keys are owned, so a proxy that became static loses its
-/// `upstream` in either form.
+/// The kind's payload keys are owned, so a proxy that became static loses its `upstream` in either
+/// form.
 #[test]
 fn a_kind_that_changed_takes_its_old_payload_with_it() {
     for original in [
