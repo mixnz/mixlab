@@ -1,7 +1,7 @@
-//! Windows: the Visual C++ runtimes, from the keys their installer writes — roadmap task **T148**.
+//! Windows: the Visual C++ runtimes, from the keys their installer writes.
 //!
 //! **The 64-bit view**, where a measurement on 2026-09-16 found `…\Runtimes\x64`. The x86 key is
-//! not read: no artifact the index publishes is x86 (T148 design, D1).
+//! not read: no artifact the index publishes is x86.
 
 use windows_sys::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SUCCESS};
 use windows_sys::Win32::System::Registry::{

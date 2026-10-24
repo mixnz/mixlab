@@ -21,10 +21,10 @@ pub enum ElevationSupport {
 
 /// What became of one prompt, and what the helper said on its way out.
 ///
-/// `said` is **a sentence for a person, never something to branch on** — T40a, D7 still holds: the
-/// helper's exit code goes no further than a log line, because Windows cannot supply it. What a
-/// helper that refused its request wrote to stderr is the only account of *why* there is no report
-/// beside it (roadmap task T166, D5), and without it the daemon can say only that there is none.
+/// `said` is **a sentence for a person, never something to branch on**, for the reason the helper's
+/// exit code goes no further than a log line: Windows cannot supply it. What a helper that refused
+/// its request wrote to stderr is the only account of *why* there is no report beside it, and
+/// without it the daemon can say only that there is none.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Raised {
     /// The prompt's answer — the part that crosses the wire.
@@ -53,17 +53,18 @@ impl From<ElevationOutcome> for Raised {
 /// with one of the three words in [`ElevationOutcome`]. It does not open the response file: reading
 /// that is `serde_json` over types `mixengine-proto` already describes, with no operating system
 /// anywhere in it, and a mock that had to fabricate a whole `PrivilegedResponse` would be a mock of
-/// something that is not the OS. T40b reads it. See the T40a design, D1.
+/// something that is not the OS. The daemon's elevation queue reads it.
 ///
 /// **Nothing here takes a command or an argument list.** Both paths are the caller's, every
-/// invocation is composed from them and from constants belonging to the implementation, and there is
-/// no parameter through which caller-supplied text could reach a command line — which makes T40/D9's
-/// rule a property of the type rather than something three implementations have to remember.
+/// invocation is composed from them and from constants belonging to the implementation, and there
+/// is no parameter through which caller-supplied text could reach a command line — which makes "no
+/// shell strings, anywhere" a property of the type rather than something three implementations have
+/// to remember.
 pub trait Elevation: std::fmt::Debug + Send + Sync {
     /// Can a prompt be raised here?
     ///
-    /// Cheap, and spawns nothing: `mix doctor` (T47) and the daemon's degraded mode (T40b) both have
-    /// to be able to say "this machine cannot elevate" without raising a prompt to find out.
+    /// Cheap, and spawns nothing: `mix doctor` and the daemon's degraded mode both have to be able
+    /// to say "this machine cannot elevate" without raising a prompt to find out.
     ///
     /// **Its honesty is not the same on the three systems, and pretending otherwise would be worse
     /// than the asymmetry.** Windows answers [`ElevationSupport::Available`] unconditionally,
@@ -89,9 +90,9 @@ pub trait Elevation: std::fmt::Debug + Send + Sync {
 
     /// Run `helper` once, elevated, with `request` as its only argument.
     ///
-    /// **Blocking, and with no deadline**: a person reading a prompt is not a clock the OS gives us.
-    /// The caller owns cancellation — T40b runs this on `spawn_blocking`, the way a keyring read
-    /// already is.
+    /// **Blocking, and with no deadline**: a person reading a prompt is not a clock the OS gives
+    /// us. The caller owns cancellation — the elevation queue runs this on `spawn_blocking`, the
+    /// way a keyring read already is.
     ///
     /// [`ElevationOutcome::Completed`] means the helper **ran**, not that it left a report. A helper
     /// that died before writing one is `Completed` with nothing beside the request — a state every

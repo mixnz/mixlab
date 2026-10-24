@@ -1,33 +1,33 @@
 //! Windows implementations of the platform traits.
 
-// The executable a crash report describes, and the unwind it is read with — T91a.
+// The executable a crash report describes, and the unwind it is read with.
 #[cfg(feature = "host")]
 mod access;
 #[cfg(feature = "ipc")]
 pub(crate) mod activation;
 #[cfg(feature = "host")]
 pub(crate) mod crash_image;
-// What this machine will refuse to load, for want of a signature — T94.
+// What this machine will refuse to load, for want of a signature.
 #[cfg(feature = "host")]
 mod app_control;
-// The daemon's autostart entry, as a Task Scheduler logon task — T85b.
+// The daemon's autostart entry, as a Task Scheduler logon task.
 #[cfg(feature = "host")]
 mod autostart;
 // Running a Windows tool as an argument vector, which both `access` (behind `host`) and `elevated`
 // need — so it sits here rather than inside either of them.
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub(crate) mod command;
-// Letting go of a console Task Scheduler handed this process — T85b. Behind `process`, whose
-// public function it answers.
+// Letting go of a console Task Scheduler handed this process. Behind `process`, whose public
+// function it answers.
 #[cfg(feature = "process")]
 pub(crate) mod console;
-// Under both features since T85: the daemon reads who owns a file before it runs one as root, and
-// the writing half — the elevation bit, the audit directory, the root-owned `mkdir` — is still the
-// helper's alone. Every item inside carries its own gate.
+// Under both features: the daemon reads who owns a file before it runs one as root, and the writing
+// half — the elevation bit, the audit directory, the root-owned `mkdir` — is still the helper's
+// alone. Every item inside carries its own gate.
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub(crate) mod elevated;
 pub(crate) mod fullname;
-// Who holds a file or a directory, read from the system's handle table — T182e. `host`, like the
+// Who holds a file or a directory, read from the system's handle table. `host`, like the
 // `occupants` module that is its only caller.
 #[cfg(feature = "host")]
 pub(crate) mod handles;
@@ -35,7 +35,7 @@ pub(crate) mod handles;
 pub(crate) mod home;
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub(crate) mod hosts;
-// Where the privileged helper is installed — T85. Under both features because both sides ask it.
+// Where the privileged helper is installed. Under both features because both sides ask it.
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub(crate) mod install;
 #[cfg(feature = "ipc")]
@@ -47,7 +47,7 @@ pub(crate) mod known_folder;
 #[cfg(feature = "host")]
 mod limits;
 pub(crate) mod lock;
-// What this machine offers the programs MixEngine installs — T148.
+// What this machine offers the programs MixEngine installs.
 #[cfg(feature = "host")]
 mod machine;
 #[cfg(feature = "host")]
@@ -68,10 +68,10 @@ pub(crate) mod private_file;
 pub(crate) mod process;
 #[cfg(feature = "host")]
 mod prompt;
-// Believing and running Microsoft's Visual C++ Redistributable installer — T150.
+// Believing and running Microsoft's Visual C++ Redistributable installer.
 #[cfg(feature = "host")]
 mod redistributable;
-// The package receipt and the system installer a `.pkg` update is handed to — T88f.
+// The package receipt and the system installer a `.pkg` update is handed to.
 #[cfg(feature = "host")]
 mod installers;
 #[cfg(feature = "elevated")]
@@ -85,7 +85,7 @@ mod firewall_rules;
 mod reserved;
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub(crate) mod resolver;
-// Every unsafe call T49a makes, in one file — see its header.
+// Every unsafe call the certificate store needs is in one file, `store` below — see its header.
 #[cfg(feature = "host")]
 mod browsers;
 #[cfg(any(feature = "host", feature = "elevated"))]
@@ -119,7 +119,7 @@ pub(crate) struct Host {
     autostart: autostart::Logon,
     // Not a `windows/` module: the Credential Manager is reached through the same crate the other
     // two systems' stores are. See `crate::secrets`.
-    // Boxed because a development daemon keeps it in a file instead — T184.
+    // Boxed because a development daemon keeps it in a file instead.
     secrets: Box<dyn crate::Keyring>,
     env: path::Env,
     ports: ports::Ports,

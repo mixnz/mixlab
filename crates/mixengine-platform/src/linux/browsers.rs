@@ -1,17 +1,19 @@
 //! Linux: `certutil`, and the databases Firefox and Chrome read instead of the system store.
 //!
-//! **The tool is not installed on a stock Ubuntu 24.04** — the T49b design, D7, and the measurement
-//! that task started from. It ships in `libnss3-tools`, which `libnss3` does not pull in. A machine
-//! without it is a state to report, and the report names the package.
+//! **The tool is not installed on a stock Ubuntu 24.04**, which is the measurement this module
+//! started from. It ships in `libnss3-tools`, which `libnss3` does not pull in. A machine without
+//! it is a state to report, and the report names the package.
 //!
-//! **Every invocation gets a null stdin and a deadline** — D8, which is T49a's macOS lesson applied
-//! before it cost anything here. `security remove-trusted-cert` once waited twenty minutes in CI
-//! printing nothing, because `Command::output()` inherits stdin and has no timeout; `certutil` has
-//! the same failure available to it, since a Firefox profile with a master password set makes it
-//! prompt. A daemon start that inherited stdin would never finish.
+//! **Every invocation gets a null stdin and a deadline**, which is the system trust store's macOS
+//! lesson applied before it cost anything here. `security remove-trusted-cert` once waited twenty
+//! minutes in CI printing nothing, because `Command::output()` inherits stdin and has no timeout;
+//! `certutil` has the same failure available to it, since a Firefox profile with a master password
+//! set makes it prompt. A daemon start that inherited stdin would never finish.
 //!
 //! **One database's failure never fails the survey.** Each is independent, and a locked or broken
 //! profile is a line in the report rather than an error return.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-25-t49b-nss-databases-design.md`.
 
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -176,8 +178,9 @@ impl BrowserTrust for Browsers {
                 }
             };
 
-            // **The second check** — T49a's D5. A certificate wearing a MixEngine-shaped nickname is
-            // not proof that MixEngine put it there, and nothing failing this is deleted.
+            // **The second check**, as the system store's removal makes it. A certificate wearing a
+            // MixEngine-shaped nickname is not proof that MixEngine put it there, and nothing
+            // failing this is deleted.
             let ours = crate::trust::ours(&found).is_ok_and(|authority| authority.key_id == key_id);
 
             if !ours {
@@ -237,7 +240,7 @@ fn state(database: &crate::browsers::Database, der: &[u8]) -> DatabaseState {
     match read(&database.directory, &nickname) {
         Ok(found) => {
             // Exact DER bytes. A nickname match alone would claim another home's authority as this
-            // one's, which is the comparison every probe T49a wrote makes.
+            // one's, which is the comparison every system trust store probe makes.
             let installed = found.as_deref() == Some(der);
 
             DatabaseState {
@@ -463,7 +466,7 @@ mod tests {
     /// The name is built in one place and derived from the authority — never a second `format!`,
     /// which is how a removal comes to look for a name an install never wrote.
     #[test]
-    fn the_nickname_is_the_subject_t48_writes() {
+    fn the_nickname_is_the_subject_the_generator_writes() {
         assert_eq!(
             crate::trust::subject_of("0123abcd"),
             "MixEngine Local CA 0123abcd"

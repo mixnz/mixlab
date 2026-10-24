@@ -1,9 +1,11 @@
-//! The listener an activator holds — roadmap task **T70**.
+//! The listener an activator holds.
 //!
 //! **One test file that names no operating system.** What a service listens on differs by system —
 //! a Unix socket where there are sockets, a TCP port on Windows — and the whole point of
 //! [`Listen`] is that everything above this crate can carry either without knowing which. So the
 //! address these tests use comes out of one helper, and every assertion below holds on all three.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-29-t70-on-demand-activation-design.md`.
 
 #![cfg(feature = "ipc")]
 
@@ -61,7 +63,7 @@ async fn bound(home: &tempfile::TempDir) -> (Listen, Activation) {
     (listen, activation)
 }
 
-/// **The activator carries bytes and never reads them** — the design's D1.
+/// **The activator carries bytes and never reads them** — D1.
 ///
 /// FastCGI, the MySQL protocol and RESP have nothing in common except that a client connects and
 /// something is said. This is the whole of what the listener has to do for all three.
@@ -95,9 +97,9 @@ async fn what_is_written_to_one_end_arrives_at_the_other() {
 
 /// **A client that waits to be greeted is carried by the same code** — D1, the other order.
 ///
-/// MySQL sends nothing until the server has spoken. A listener that assumed the client speaks
-/// first would serve every web request and hang on every database connection, which is exactly the
-/// half T70a depends on and exactly the half a web-only test would never reach.
+/// MySQL sends nothing until the server has spoken. A listener that assumed the client speaks first
+/// would serve every web request and hang on every database connection, which is exactly the half
+/// the database path depends on and exactly the half a web-only test would never reach.
 #[tokio::test]
 async fn a_client_that_waits_to_be_greeted_is_carried_too() {
     let home = tempfile::tempdir().expect("a directory");

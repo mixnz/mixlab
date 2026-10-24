@@ -783,9 +783,9 @@ mod tests {
         );
     }
 
-    /// Two values the desktop client pinned while it kept a copy of this function (phase 11,
-    /// T102). A change to the hash, the lowercasing or the prefix is a daemon that vanishes from
-    /// every client that computed the old name — so it is a red test here, not a support ticket.
+    /// Two values the desktop client pinned while it kept a copy of this function. A change to the
+    /// hash, the lowercasing or the prefix is a daemon that vanishes from every client that
+    /// computed the old name — so it is a red test here, not a support ticket.
     #[test]
     fn the_fingerprint_values_the_desktop_client_pinned_still_hold() {
         use std::path::Path;

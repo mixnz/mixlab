@@ -44,8 +44,8 @@ impl crate::Installers for Installers {
 mod tests {
     use crate::Host as _;
 
-    /// What the daemon's T88f tests stand on: a host whose binary belongs to a package, and a record
-    /// of what it handed to the installer.
+    /// What the daemon's `.pkg` update tests stand on: a host whose binary belongs to a package,
+    /// and a record of what it handed to the installer.
     #[test]
     fn a_host_with_a_receipt_names_it_and_records_what_it_opened() {
         let home = tempfile::tempdir().expect("a home");

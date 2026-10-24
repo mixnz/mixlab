@@ -1,15 +1,17 @@
 //! macOS: the System keychain, through `/usr/bin/security`.
 //!
-//! **Not through Security.framework, and that is a decision about the other binary** — the T49a
-//! design, D6. `SecCertificateCreateWithData`, `SecItemAdd` and `SecTrustSettingsSetTrustSettings`
-//! would mean a new unsafe FFI surface inside `mixengine-elevate`, whose whole design constraint is
-//! that a person can audit it by reading it, for an operation that runs once per install. The rule
-//! T42 set with `pfctl` and T45 kept with `systemctl` holds here: one fixed command, a constant
-//! argument vector, and no argument taken from the request.
+//! **Not through Security.framework, and that is a decision about the other binary.**
+//! `SecCertificateCreateWithData`, `SecItemAdd` and `SecTrustSettingsSetTrustSettings` would mean a
+//! new unsafe FFI surface inside `mixengine-elevate`, whose whole design constraint is that a
+//! person can audit it by reading it, for an operation that runs once per install. The rule port
+//! access follows with `pfctl` and the resolver with `systemctl` holds here: one fixed command, a
+//! constant argument vector, and no argument taken from the request.
 //!
 //! Reading is `security find-certificate -a -p`, which lists every certificate in a keychain as PEM
 //! and **needs no administrative token** — measured by `tests/trust.rs` in CI's ordinary `test` job
 //! rather than asserted here.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-24-t49a-system-trust-store-design.md`.
 
 #[cfg(feature = "elevated")]
 use crate::trust::Change;
@@ -152,8 +154,8 @@ fn trusted(file: &std::path::Path) -> crate::Result<bool> {
 /// A certificate in the System keychain: the DER, and the SHA-1 `security` itself reports for it.
 ///
 /// **The hash is carried and never computed.** Recomputing it would mean `sha2`-shaped weight in a
-/// binary that runs as root, and the T49a design's D11 refused that. What this is for is naming one
-/// exact certificate back to `security` in the removal — and a number the system just printed for a
+/// binary that runs as root, which was measured and refused. What this is for is naming one exact
+/// certificate back to `security` in the removal — and a number the system just printed for a
 /// certificate is a better name for it than anything this crate could derive.
 #[cfg(any(feature = "host", feature = "elevated"))]
 struct Certificate {
@@ -268,7 +270,8 @@ const GRACE: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// Run `security`, with no console to ask at and a limit on how long it may take.
 ///
-/// **Two things a helper behind an elevation prompt has to get right, and T49a had neither.**
+/// **Two things a helper behind an elevation prompt has to get right, and the first version had
+/// neither.**
 ///
 /// `stdin` is `/dev/null`. `security` is a program that asks for a password when it wants one, and
 /// this is called from a process that has no terminal to ask at — under `sudo` in CI, and from an
@@ -371,9 +374,9 @@ fn read_on_a_thread<R: std::io::Read + Send + 'static>(
 
 /// Hand the certificate to `security` as a trusted root.
 ///
-/// **One fixed command, and the file path is the helper's own** — the T49a design, D6. The DER
-/// arrives in the request; the *path* it is written to is chosen here, so the rule T42 set with
-/// `pfctl` holds: no argument comes from the request.
+/// **One fixed command, and the file path is the helper's own.** The DER arrives in the request;
+/// the *path* it is written to is chosen here, so the rule every privileged command follows holds:
+/// no argument comes from the request.
 ///
 /// **Run inside the caller's login session, through `launchctl asuser`, and that is what makes it
 /// work at all.** `add-trusted-cert -d` writes the admin trust domain, whose authorization rule is

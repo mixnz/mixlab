@@ -3,27 +3,27 @@
 //! Two opposite requests live here, and the pair is the whole of the module:
 //!
 //! - [`spawn_detached`] starts a process this one is letting go of. `mixengined --detach` and a
-//!   client's autostart (roadmap task T10) are made of it.
+//!   client's autostart are made of it.
 //! - [`spawn_supervised`] starts a process this one owns and intends to outlive. Every managed
-//!   service is made of it (roadmap task T13).
+//!   service is made of it.
 //!
-//! A third relationship arrives with crash recovery and starts no process at all: [`Adopted`] is one
-//! that survived the daemon which started it, taken over by the daemon running now on the strength
-//! of its pid *and* its [`StartTime`] (roadmap task T18). It is the weakest of the three — liveness
-//! and a stop, and nothing else — and its documentation says where that is paid for.
+//! A third relationship arrives with crash recovery and starts no process at all: [`Adopted`] is
+//! one that survived the daemon which started it, taken over by the daemon running now on the
+//! strength of its pid *and* its [`StartTime`]. It is the weakest of the three — liveness and a
+//! stop, and nothing else — and its documentation says where that is paid for.
 //!
 //! [`hand_over`] is the fourth relationship and the strangest: a process that stops being itself.
-//! The shim (roadmap task T25) resolves which PHP a directory uses and then has to *become* it —
-//! same arguments, same streams, same terminal, same exit code. On Unix that is `exec` and there is
-//! nothing left to describe; on Windows there is no such call, so it is a child in a Job Object with
-//! the console events swallowed on the way past. See the function for what that costs.
+//! The shim resolves which PHP a directory uses and then has to *become* it — same arguments, same
+//! streams, same terminal, same exit code. On Unix that is `exec` and there is nothing left to
+//! describe; on Windows there is no such call, so it is a child in a Job Object with the console
+//! events swallowed on the way past. See the function for what that costs.
 //!
 //! [`run_once`] is the fifth and the odd one out: a program run **to completion**, for its exit
-//! status rather than for its running. `mariadb-admin ping` and `caddy stop` are what it is for
-//! (roadmap task T15a) — a probe and a shutdown, both of which start a process the caller has no
-//! interest in supervising. It is here rather than in the supervisor for the reason every spawn is:
-//! a `Command` on Windows has to be told not to be given a console window, and that is a `#[cfg]` no
-//! crate above this one is allowed to contain.
+//! status rather than for its running. `mariadb-admin ping` and `caddy stop` are what it is for — a
+//! probe and a shutdown, both of which start a process the caller has no interest in supervising.
+//! It is here rather than in the supervisor for the reason every spawn is: a `Command` on Windows
+//! has to be told not to be given a console window, and that is a `#[cfg]` no crate above this one
+//! is allowed to contain.
 //!
 //! **The difference is stated in the destructors, because that is where a reader will meet it**:
 //! dropping a [`Detached`] deliberately does not stop the child, and dropping a [`Supervised`]
@@ -46,9 +46,9 @@
 //! child leads a process group of its own — a Job Object on Windows, a session on Unix — so that
 //! stopping it means stopping everything it started, and so that a daemon which goes away takes it
 //! along. How completely that last part is true depends on the system and is set out in
-//! `docs/decisions/0007-supervised-child-owns-a-process-group.md`: a kernel guarantee on Windows,
-//! a guard that covers the immediate child on Linux, and nothing at all on macOS, where crash
-//! recovery at the next boot (roadmap task T18) is what closes the gap.
+//! `docs/decisions/0007-supervised-child-owns-a-process-group.md`: a kernel guarantee on Windows, a
+//! guard that covers the immediate child on Linux, and nothing at all on macOS, where crash
+//! recovery at the next boot is what closes the gap.
 
 use std::collections::BTreeMap;
 use std::ffi::OsString;
@@ -142,10 +142,9 @@ pub enum Priority {
 /// and ordinary priority.
 ///
 /// **What each field does on this machine is not answered here.** That is
-/// [`ResourceControl`](crate::ResourceControl)'s, and the split is deliberate: this type is what the
-/// caller *asked for*, and applying it is allowed to be a no-op on a system with no mechanism —
-/// macOS has no hard memory cap, and a spawn there must succeed rather than refuse. See the T68
-/// design, D6.
+/// [`ResourceControl`](crate::ResourceControl)'s, and the split is deliberate: this type is what
+/// the caller *asked for*, and applying it is allowed to be a no-op on a system with no mechanism —
+/// macOS has no hard memory cap, and a spawn there must succeed rather than refuse.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Limits {
     /// A ceiling on CPU as a percentage of **one core**. `None` is uncapped.
@@ -227,7 +226,7 @@ pub fn without_a_window(command: &mut Command) {
     sys::without_a_window(command);
 }
 
-/// Let go of a console this process is the only one attached to — roadmap task **T85b**.
+/// Let go of a console this process is the only one attached to.
 ///
 /// **For the daemon a service manager starts.** A console-subsystem program launched with no console
 /// to inherit is handed a new one by Windows, and on Windows 11 that is a terminal window on the
@@ -256,11 +255,11 @@ pub fn release_unattended_console() -> bool {
 /// of the handle, which is the entire point. What the handle is still good for is the question the
 /// caller asks while it waits for the child to come up: is it still there?
 ///
-/// **A caller that goes on running has to reap it.** [`Child`] does not wait on drop, so on Unix the
-/// process started here stays this process's child and becomes a zombie the moment it exits, for as
-/// long as this process lives. `mixengined --detach` exits straight after the spawn and never meets
-/// that; `mix` and the GUI autostarting a daemon (roadmap task T10) will, and have to keep the
-/// handle and go on asking [`exited`](Self::exited) rather than dropping it once the daemon answers.
+/// **A caller that goes on running has to reap it.** [`Child`] does not wait on drop, so on Unix
+/// the process started here stays this process's child and becomes a zombie the moment it exits,
+/// for as long as this process lives. `mixengined --detach` exits straight after the spawn and
+/// never meets that; `mix` and the GUI autostarting a daemon will, and have to keep the handle and
+/// go on asking [`exited`](Self::exited) rather than dropping it once the daemon answers.
 #[derive(Debug)]
 pub struct Detached {
     child: Child,
@@ -322,11 +321,11 @@ impl Detached {
 ///
 /// One of a child's output streams, whichever way that child was started.
 ///
-/// **A type of this crate's rather than the standard library's, and T34a is why.** On Windows a
-/// supervised child is created by `CreateProcessAsUserW` from a restricted token — see
+/// **A type of this crate's rather than the standard library's, because of the restricted token.**
+/// On Windows a supervised child is created by `CreateProcessAsUserW` from a restricted token — see
 /// `docs/decisions/0010-supervised-child-never-inherits-administrators.md` — and a
-/// [`std::process::ChildStdout`] cannot be built from a handle that call returns. A [`File`] can, on
-/// both systems, and a pipe read to end of file is the whole of what either caller wants.
+/// [`std::process::ChildStdout`] cannot be built from a handle that call returns. A [`File`] can,
+/// on both systems, and a pipe read to end of file is the whole of what either caller wants.
 ///
 /// Blocking, deliberately: the one consumer is `mixengine_supervisor::logs`, which reads each stream
 /// on a thread of its own.
@@ -349,8 +348,7 @@ impl Read for OutputPipe {
 /// Nothing on Windows: the job object takes the whole group down when the last handle to it closes,
 /// which is a kernel guarantee and needs no code of ours to run. The immediate child on Linux, via
 /// `PR_SET_PDEATHSIG`; anything *it* started is reparented and carries on. Everything on macOS,
-/// which has neither mechanism. Crash recovery at the next boot (roadmap task T18) is what covers
-/// the difference, and
+/// which has neither mechanism. Crash recovery at the next boot is what covers the difference, and
 /// `docs/decisions/0007-supervised-child-owns-a-process-group.md` is where it is written down
 /// rather than rounded up.
 #[derive(Debug)]
@@ -377,7 +375,7 @@ impl Supervised {
     /// **There is no `pending, needs restart` state, deliberately.** Both mechanisms accept a
     /// rewrite with processes already inside them, so a limit that has been set is a limit that is
     /// in effect — which spares every reader of limits a flag to carry and every client a state to
-    /// render. The T68 design, D7.
+    /// render.
     ///
     /// **A service already over a newly-lowered memory cap can be killed by this call**, and that is
     /// the correct behaviour for the thing being asked for. The caller is expected to report the
@@ -403,9 +401,9 @@ impl Supervised {
 
     /// The child's process id, which on Unix is also its process group id.
     ///
-    /// Recorded together with the process start time by whoever persists it: a pid on its own is not
-    /// an identity, because the number is reused. That pairing is what makes adoption after a daemon
-    /// restart sound (roadmap task T18) — see [`started_at`](Self::started_at) for the other half.
+    /// Recorded together with the process start time by whoever persists it: a pid on its own is
+    /// not an identity, because the number is reused. That pairing is what makes adoption after a
+    /// daemon restart sound — see [`started_at`](Self::started_at) for the other half.
     #[must_use]
     pub fn pid(&self) -> u32 {
         self.child.id()
@@ -448,9 +446,9 @@ impl Supervised {
     /// The child's standard output, taken once.
     ///
     /// Piped by [`spawn_supervised`] and **owed a reader**: a pipe holds tens of kilobytes, after
-    /// which the service blocks on its next line and looks like it has hung. Log capture (roadmap
-    /// task T16) is that reader; until it exists, a caller that does not take these streams should
-    /// only supervise a process that says nothing.
+    /// which the service blocks on its next line and looks like it has hung. Log capture is that
+    /// reader, and a caller that does not take these streams should only supervise a process that
+    /// says nothing.
     #[must_use]
     pub fn take_stdout(&mut self) -> Option<OutputPipe> {
         self.child.take_stdout()
@@ -518,13 +516,13 @@ impl Supervised {
     /// monitor, and a reset that started once the monitor alone had gone met `ibdata1` still held.
     /// On Unix the other members are not waited for, having never been this process's children.
     ///
-    /// **The group is killed even when the leader has already exited**, and that is the correction
-    /// T15 owed T13. A php-fpm master that crashed leaves its pool holding the port; a wrapper script
-    /// that `exec`ed and died leaves the server it started. Skipping the kill because the process we
-    /// named is gone would leave exactly the processes a restart is about to collide with — and
-    /// "gone" is also the state a stop is *trying* to reach, so making it a precondition read the
-    /// question backwards. What the old guard bought was not signalling a pgid the OS may have given
-    /// away since; that window is the residual race
+    /// **The group is killed even when the leader has already exited**, which the first version of
+    /// this stop did not do. A php-fpm master that crashed leaves its pool holding the port; a
+    /// wrapper script that `exec`ed and died leaves the server it started. Skipping the kill
+    /// because the process we named is gone would leave exactly the processes a restart is about to
+    /// collide with — and "gone" is also the state a stop is *trying* to reach, so making it a
+    /// precondition read the question backwards. What the old guard bought was not signalling a
+    /// pgid the OS may have given away since; that window is the residual race
     /// `docs/decisions/0007-supervised-child-owns-a-process-group.md` already accepts, and this
     /// handle remembers that it has killed so it cannot enter that window twice.
     ///
@@ -571,9 +569,9 @@ impl Drop for Supervised {
 ///
 /// The child leads a process group of its own and is not meant to outlive this process. Both
 /// streams are **piped**, because everything a managed service says has to reach
-/// `logs/services/<id>/current.log` (roadmap task T16) — see
-/// [`take_stdout`](Supervised::take_stdout) for the obligation that comes with them. `stdin` is the
-/// null device: a service that reads from a terminal is one that hangs where nobody can see it.
+/// `logs/services/<id>/current.log` — see [`take_stdout`](Supervised::take_stdout) for the
+/// obligation that comes with them. `stdin` is the null device: a service that reads from a
+/// terminal is one that hangs where nobody can see it.
 ///
 /// `directory` is required rather than inherited for the same reason [`spawn_detached`] requires it
 /// — a process's working directory is a reference the OS holds for the process's whole life.
@@ -615,11 +613,11 @@ pub fn spawn_supervised(
 
 /// Start one command through this system's shell, supervised as a group.
 ///
-/// **For a blueprint's `[scaffold]`** — roadmap task **T78a**, its design's D9 — and for nothing
-/// else yet. `cmd.exe /C <command>` on Windows and `/bin/sh -c <command>` everywhere else: the
-/// string is what somebody read and agreed to, and the shell is what makes `composer install && npm
-/// ci` mean what whoever wrote the blueprint meant. Splitting it into a program and arguments here
-/// would be a quoting rule of MixEngine's own, documented nowhere its author is looking.
+/// **For a blueprint's `[scaffold]`**, and for nothing else yet. `cmd.exe /C <command>` on Windows
+/// and `/bin/sh -c <command>` everywhere else: the string is what somebody read and agreed to, and
+/// the shell is what makes `composer install && npm ci` mean what whoever wrote the blueprint
+/// meant. Splitting it into a program and arguments here would be a quoting rule of MixEngine's
+/// own, documented nowhere its author is looking.
 ///
 /// Supervised rather than one-shot, for the group: `composer` starts children, and a cancellation
 /// has to stop the tree rather than orphan it. The caller carries the same obligation
@@ -647,12 +645,11 @@ pub fn spawn_shell_supervised(
 
 /// Where the shell would find `name` on `path`, or [`None`].
 ///
-/// **For a plan to read a `[scaffold]` command's first word** — roadmap task **T78b**, its design's
-/// D4 — and by the rule the shell that runs it would use, which is the only rule worth asking:
-/// `cmd.exe` appends every `PATHEXT` extension and never runs a bare file, `execvp` wants an
-/// execute bit and does not care what the name ends in. The caller supplies `path` so that the
-/// answer is about the PATH the command would run with and not about this process's, and so that a
-/// test can hand in a temporary directory.
+/// **For a plan to read a `[scaffold]` command's first word**, and by the rule the shell that runs
+/// it would use, which is the only rule worth asking: `cmd.exe` appends every `PATHEXT` extension
+/// and never runs a bare file, `execvp` wants an execute bit and does not care what the name ends
+/// in. The caller supplies `path` so that the answer is about the PATH the command would run with
+/// and not about this process's, and so that a test can hand in a temporary directory.
 ///
 /// An empty entry means the current directory to both shells and is skipped: the scaffold's current
 /// directory is a project root that holds nothing yet.
@@ -714,10 +711,10 @@ fn supervise(
 
 /// Remove whatever a daemon that was killed left behind of its supervised groups.
 ///
-/// **Called once, at daemon start**, beside the stale socket and pidfile cleanup roadmap task T18
-/// put there. Empty on Windows and macOS and real only on Linux, where a group is a *directory*: a
-/// job object goes away when the last handle to it closes, which a killed process does for free,
-/// and macOS makes no group object at all.
+/// **Called once, at daemon start**, beside crash recovery's stale socket and pidfile cleanup.
+/// Empty on Windows and macOS and real only on Linux, where a group is a *directory*: a job object
+/// goes away when the last handle to it closes, which a killed process does for free, and macOS
+/// makes no group object at all.
 ///
 /// Takes no argument and reports nothing, because there is no decision here for a caller to make. A
 /// cgroup that still holds a process cannot be removed, and one that still holds a process belongs
@@ -770,8 +767,8 @@ fn state_the_whole_environment(command: &mut Command, env: &BTreeMap<String, Str
     command.envs(whole_environment(env));
 }
 
-/// Become `program` — moved to [`crate::handover`] with T185, and kept here for every caller that
-/// already has `process`.
+/// Become `program` — moved to [`crate::handover`], and kept here for every caller that already has
+/// `process`.
 pub use crate::handover::hand_over;
 
 /// A child this process can ask whether it has ended yet.
@@ -851,8 +848,8 @@ impl fmt::Display for Exit {
 /// The environment is inherited, with `extra_env` applied on top. Inheriting is deliberate:
 /// `MIXENGINE_LOG_FORMAT` is set by a log collector that wraps a command it did not write, and a
 /// child that dropped it would stop being collected halfway through a start. `extra_env` exists for
-/// the one caller that adds something — this install's window handed a credential (roadmap task
-/// T83, through [`crate::DesktopApps`]) — and is empty for every other.
+/// the one caller that adds something — this install's window handed a credential, through
+/// [`crate::DesktopApps`] — and is empty for every other.
 ///
 /// **`directory` is required rather than inherited**, and the caller is expected to name something
 /// it is happy to have held for the child's whole life: a process's working directory is a reference

@@ -58,9 +58,10 @@ fn namespace(what: &str) -> String {
 ///
 /// **`MIXENGINE_TEST_NO_KEYRING=1` turns the skip into an assertion, and that is the only way this
 /// branch is ever proved.** A machine with no store is not something a runner is by accident, so
-/// left alone the `Err` arm here is a path every green run walks past — which is how T15b's bug
-/// survived to be found by a stack trace instead of a test. A step that takes the store away on
-/// purpose sets this, and then finding one is a failure rather than a silent pass.
+/// left alone the `Err` arm here is a path every green run walks past — which is how a bug about a
+/// Linux with no secret service survived to be found by a stack trace instead of a test. A step
+/// that takes the store away on purpose sets this, and then finding one is a failure rather than a
+/// silent pass.
 fn store_is_absent<T>(outcome: &Result<T, Error>) -> bool {
     let must_be_absent = std::env::var("MIXENGINE_TEST_NO_KEYRING").is_ok_and(|want| want == "1");
 
@@ -265,9 +266,9 @@ fn the_mock_remembers_what_it_was_given_and_says_what_it_did() {
 /// A generated secret is the length asked for, and is made of characters no quoting rule can break.
 ///
 /// **The alphabet is a safety property, not a style choice.** The value is interpolated into a SQL
-/// string literal by the MariaDB recipe's bootstrap step (T33), so a quote or a backslash in it
-/// would be an escaping bug with a credential on the other side of it. Restricting the alphabet is
-/// what makes that interpolation safe without an escaper nobody would test.
+/// string literal by the MariaDB recipe's bootstrap step, so a quote or a backslash in it would be
+/// an escaping bug with a credential on the other side of it. Restricting the alphabet is what
+/// makes that interpolation safe without an escaper nobody would test.
 #[test]
 fn a_generated_secret_is_the_length_asked_for_and_needs_no_escaping() {
     let secret = mixengine_platform::generate_secret(32).expect("this machine has entropy");
@@ -291,7 +292,7 @@ fn two_generated_secrets_are_not_the_same() {
     assert_ne!(first, second);
 }
 
-/// T186: the keys under a service, and only those, read back from the machine's own store.
+/// The keys under a service, and only those, read back from the machine's own store.
 #[test]
 fn keys_lists_what_was_written_under_a_service() {
     let _turn = the_store();
@@ -322,8 +323,8 @@ fn keys_lists_what_was_written_under_a_service() {
     assert!(keyring.keys(&service).expect("a listing").is_empty());
 }
 
-/// T186: on macOS a home's credentials are one Keychain item, listed back by key. Uses a home id no
-/// real home has, and removes it on the way out.
+/// On macOS a home's credentials are one Keychain item, listed back by key. Uses a home id no real
+/// home has, and removes it on the way out.
 #[test]
 #[cfg(target_os = "macos")]
 fn a_homes_credentials_round_trip_through_one_item() {

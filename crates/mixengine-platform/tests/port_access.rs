@@ -4,6 +4,8 @@
 //! privilege on any of the three systems, and that is what makes the daemon able to do it on every
 //! start. The write is the privileged operation, and the tests that drive it are `#[ignore]`d
 //! further down and belong to CI's `system` job.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-23-t42-port-access-design.md`.
 
 use std::path::Path;
 
@@ -143,8 +145,8 @@ fn a_mock_host_answers_from_memory() {
     assert!(refusing.port_access().probe(binary, &[80]).is_err());
 }
 
-/// The default mock needs nothing, so every suite in this workspace that predates T42 keeps asking
-/// for no prompt.
+/// The default mock needs nothing, so every suite in this workspace written before ports below 1024
+/// needed a grant keeps asking for no prompt.
 #[test]
 fn a_plain_mock_host_needs_nothing_granted() {
     let host = mock::Host::with_home("/tmp/m");
@@ -271,7 +273,8 @@ fn a_capability_is_granted_read_back_lost_to_a_write_and_revoked() {
     // D1's payoff: the second call is a comparison, not a judgement.
     assert_eq!(port_access::apply(&plan).unwrap(), Change::Unchanged);
 
-    // What an update does — measured, and the reason T88b is closed by this task.
+    // What an update does — measured, and the reason no separate re-probe after an update is
+    // needed: the probe at every start already sees it.
     std::fs::write(&binary, b"#!/bin/sh\nexit 1\n").unwrap();
 
     let state = host.port_access().probe(&binary, &[80]).unwrap();

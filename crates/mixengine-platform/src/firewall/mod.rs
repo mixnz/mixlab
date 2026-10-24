@@ -1,4 +1,4 @@
-//! Letting the local network reach a shared site's ports — roadmap task **T74**.
+//! Letting the local network reach a shared site's ports.
 //!
 //! Three systems, and only one of them writes a rule in the ordinary case. Windows has a firewall
 //! that blocks an inbound connection by default and a precise, removable way to say otherwise;
@@ -41,10 +41,10 @@ pub enum Applied {
 
     /// This machine has no mechanism to apply it to.
     ///
-    /// **An outcome, not an error** — the T74 design, D8. macOS in its ordinary configuration and a
-    /// Linux running neither `ufw` nor `firewalld` both arrive here, and on both of them the site
-    /// may well already be reachable. What a person needs is the sentence and the command, not a
-    /// failed share.
+    /// **An outcome, not an error.** macOS in its ordinary configuration and a Linux running
+    /// neither `ufw` nor `firewalld` both arrive here, and on both of them the site may well
+    /// already be reachable. What a person needs is the sentence and the command, not a failed
+    /// share.
     Unmanaged {
         /// Why nothing was done, phrased for a user.
         reason: String,
@@ -56,8 +56,8 @@ pub enum Applied {
 
 /// Open exactly the ports `plan` names, under this system's own mechanism.
 ///
-/// **Whole state** — the T74 design, D6 — so a second call with the same plan is
-/// [`Applied::Unchanged`], and a plan naming no ports removes the rules rather than doing nothing.
+/// **Whole state**, so a second call with the same plan is [`Applied::Unchanged`], and a plan
+/// naming no ports removes the rules rather than doing nothing.
 ///
 /// # Errors
 ///

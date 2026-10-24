@@ -1,4 +1,4 @@
-//! The running executable on Windows — T91a.
+//! The running executable on Windows.
 //!
 //! The module handle of the main program is its base, `SizeOfImage` from its PE headers is its
 //! range, and the CodeView record in its debug directory carries the GUID and age the `.pdb` is

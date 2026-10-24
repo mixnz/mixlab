@@ -1,8 +1,8 @@
-//! What this machine offers the programs MixEngine installs — roadmap task **T148**.
+//! What this machine offers the programs MixEngine installs.
 //!
 //! **Read, never remembered.** [`Machine::facts`] is asked once per question the daemon answers, so
-//! a runtime somebody installed a minute ago is seen by the next question anybody asks (T148 design,
-//! D1). Every read is a registry lookup or one call into the C library.
+//! a runtime somebody installed a minute ago is seen by the next question anybody asks. Every read
+//! is a registry lookup or one call into the C library.
 //!
 //! **The half that is a decision is compiled everywhere**, on [`crate::AppControl`]'s pattern: the
 //! parsers below are pure and their tests run on all three systems; only the calls sit behind a
@@ -49,12 +49,11 @@ pub struct MachineFacts {
     /// The same runtime for ARM64, on Windows.
     pub visual_cpp_arm64: Probe<VisualCppVersion>,
 
-    /// Whether the processor has AVX and the operating system saves its state — roadmap task
-    /// **T153**. See [`avx`].
+    /// Whether the processor has AVX and the operating system saves its state. See [`avx`].
     pub avx: Probe<()>,
 
-    /// The sonames this system's loader lists for this architecture, on Linux — roadmap task
-    /// **T27e**. See [`shared_libraries`].
+    /// The sonames this system's loader lists for this architecture, on Linux. See
+    /// [`shared_libraries`].
     pub shared_libraries: Probe<std::collections::BTreeSet<String>>,
 }
 
@@ -73,8 +72,7 @@ impl MachineFacts {
     }
 }
 
-/// Whether this processor supports AVX, and this operating system saves its state — roadmap task
-/// **T153**.
+/// Whether this processor supports AVX, and this operating system saves its state.
 ///
 /// **One answer for all three systems**, which is why it is here rather than in each one's
 /// `machine` module: the question is the processor's, and `is_x86_feature_detected!` asks both
@@ -101,7 +99,7 @@ pub fn avx() -> Probe<()> {
     }
 }
 
-/// The sonames `ldconfig -p` lists for `arch` — roadmap task **T27e**.
+/// The sonames `ldconfig -p` lists for `arch`.
 ///
 /// `arch` is `std::env::consts::ARCH`, and the tag it maps to is the one `ldconfig` prints beside
 /// each entry: a 32-bit library carries no architecture tag at all, so a machine with only an i386
@@ -138,7 +136,7 @@ pub fn shared_libraries(listing: &str, arch: &str) -> Probe<std::collections::BT
     }
 }
 
-/// What this machine offers — roadmap task **T148**.
+/// What this machine offers.
 pub trait Machine: std::fmt::Debug + Send + Sync {
     /// Read every fact now.
     ///
@@ -209,9 +207,9 @@ mod tests {
         assert_eq!(dotted_version("v14"), Probe::Unknown);
     }
 
-    /// Four lines of `ldconfig -p`, as Ubuntu prints them — roadmap task **T27e**, measured on
-    /// 2026-09-18. The third is 32-bit, which carries no architecture tag; the fourth is the shape
-    /// a distribution prints when it records an ABI.
+    /// Four lines of `ldconfig -p`, as Ubuntu prints them, measured on 2026-09-18. The third is
+    /// 32-bit, which carries no architecture tag; the fourth is the shape a distribution prints
+    /// when it records an ABI.
     const LISTING: &str = "363 libs found in cache `/etc/ld.so.cache'\n\
         \tlibz.so.1 (libc6,x86-64) => /lib/x86_64-linux-gnu/libz.so.1\n\
         \tlibasound.so.2 (libc6) => /lib/i386-linux-gnu/libasound.so.2\n\

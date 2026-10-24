@@ -12,7 +12,7 @@ use super::table::{StartTime, started_at};
 /// this process's own — pipes, a group, a status to wait for; a [`Detached`] one is a process this
 /// one let go of but still has a handle to. This is neither: the process was started by a daemon
 /// that is gone, its pipes went with that daemon, and this process is not its parent. What is left
-/// is exactly two things, and they are what roadmap task **T18** promises and nothing more:
+/// is exactly two things, and they are what crash recovery promises and nothing more:
 ///
 /// - **whether it is still there**, asked by re-reading its start time rather than by trusting its
 ///   pid, and

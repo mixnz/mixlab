@@ -14,8 +14,8 @@ pub(crate) enum Tool {
 ///
 /// **`ufw` has no comment field on a plain allow**, so unlike `netsh` the label cannot be written
 /// into the rule. What that costs is the ability to enumerate MixEngine's own rules later, which is
-/// why `Applied::Written` names the ports it opened rather than promising they can be found by
-/// name — and why T76's "no rule left behind" test is a Windows test.
+/// why `Applied::Written` names the ports it opened rather than promising they can be found by name
+/// — and why the "no rule left behind" test is a Windows test.
 #[must_use]
 pub(crate) fn ufw(port: u16, allow: bool) -> Vec<String> {
     let verb = if allow { "allow" } else { "deny" };
@@ -26,8 +26,8 @@ pub(crate) fn ufw(port: u16, allow: bool) -> Vec<String> {
 /// `firewall-cmd --add-port=<port>/tcp`, runtime only.
 ///
 /// **Not `--permanent`.** A shared site is a thing you turn on for an afternoon; a rule that
-/// survived a reboot would outlive both the share and the reason for it, and T76 revokes on a
-/// network change rather than on a restart.
+/// survived a reboot would outlive both the share and the reason for it, and a share is revoked on
+/// a network change rather than on a restart.
 #[must_use]
 pub(crate) fn firewalld(port: u16, allow: bool) -> Vec<String> {
     let verb = if allow { "add" } else { "remove" };

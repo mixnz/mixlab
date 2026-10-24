@@ -1,4 +1,4 @@
-//! `netsh`'s excluded port ranges, as text — roadmap task **T47a**.
+//! `netsh`'s excluded port ranges, as text.
 //!
 //! **Pure and compiled on all three systems**, for [`crate::resolver::directory`]'s reason: the half
 //! of a per-OS mechanism that is a decision about text is tested everywhere, and only the call that

@@ -6,10 +6,10 @@ use crate::{Error, Result};
 
 /// One interface this machine could answer on, as the OS names it.
 ///
-/// **IPv4 only** — the T74 design, D4. An interface with a v6 address and no v4 one is not a
-/// candidate here, and saying so is the whole of the filtering: a second family would double the
-/// certificate SAN, the URL and the QR code for a case no acceptance criterion asks for, and the
-/// column that stores the choice would stop holding one answer.
+/// **IPv4 only.** An interface with a v6 address and no v4 one is not a candidate here, and saying
+/// so is the whole of the filtering: a second family would double the certificate SAN, the URL and
+/// the QR code for a case no acceptance criterion asks for, and the column that stores the choice
+/// would stop holding one answer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Interface {
     /// The OS's own name for it — `Wi-Fi`, `en0`, `wlp3s0`. What a person types after
@@ -44,10 +44,10 @@ pub trait NetworkInfo: std::fmt::Debug + Send + Sync {
 
 /// The interface to share on, or a refusal that names the alternatives.
 ///
-/// **It never guesses** — the T74 design, D5. One candidate is an answer; two are a question, and a
-/// machine that picked the wrong one would put a site on a network the user did not mean to be on.
-/// The refusal lists every candidate with its address, because that list *is* the remedy: it is
-/// what the user reads before typing `--interface`.
+/// **It never guesses.** One candidate is an answer; two are a question, and a machine that picked
+/// the wrong one would put a site on a network the user did not mean to be on. The refusal lists
+/// every candidate with its address, because that list *is* the remedy: it is what the user reads
+/// before typing `--interface`.
 ///
 /// # Errors
 ///

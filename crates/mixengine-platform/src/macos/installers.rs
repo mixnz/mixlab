@@ -1,4 +1,4 @@
-//! `pkgutil` and Installer.app — roadmap task **T88f**.
+//! `pkgutil` and Installer.app.
 
 use std::path::Path;
 use std::process::Command;
@@ -32,7 +32,7 @@ impl crate::Installers for Installers {
 
     fn open(&self, package: &Path) -> Result<()> {
         // Returns when `open` has, not when the installation has: the person drives Installer.app,
-        // and over SSH it still comes up on the desktop session's screen (the T88f readings, M4).
+        // and over SSH it still comes up on the desktop session's screen (measured on a Mac).
         let output = Command::new(OPEN)
             .arg("-a")
             .arg("Installer")
@@ -61,8 +61,8 @@ impl crate::Installers for Installers {
 mod tests {
     use crate::Installers as _;
 
-    /// The real `pkgutil`, on a path no package installed: exit 0 and no `pkgid:` line (the T88f
-    /// readings, M1), which is no receipt rather than an error.
+    /// The real `pkgutil`, on a path no package installed: exit 0 and no `pkgid:` line (measured on
+    /// a Mac), which is no receipt rather than an error.
     #[test]
     fn a_path_no_package_installed_has_no_receipt() {
         let directory = tempfile::tempdir().expect("a directory");

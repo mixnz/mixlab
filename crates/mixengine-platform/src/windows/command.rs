@@ -2,7 +2,7 @@
 //!
 //! Here rather than inside either caller because both `access` (behind the `host` feature) and
 //! `elevated` need it, and a build that takes one without the other must still compile. The rule it
-//! exists to keep is the one in the T40 design, D9: the program is **named**, never a command line —
+//! exists to keep is "no shell strings, anywhere": the program is **named**, never a command line —
 //! no quoting rules, no interpolation, nothing for a path containing a space or a quote to break.
 
 use std::ffi::OsStr;
@@ -82,7 +82,7 @@ pub(crate) fn run<'a>(
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
-/// Run a Windows tool and hand back its stdout **whatever it exited with** — task **T76**.
+/// Run a Windows tool and hand back its stdout **whatever it exited with**.
 ///
 /// [`run`]'s sibling, and the difference is the whole reason it exists: `netsh advfirewall firewall
 /// show rule` exits non-zero when nothing matches, which for a *count* is the answer zero rather

@@ -1,10 +1,13 @@
-//! Is this the certificate `mixengine_core::certs::ca` generates? — the T49a design, D4.
+//! Is this the certificate `mixengine_core::certs::ca` generates?
+//!
+//! The design is `docs/specs/2026-08-24-t49a-system-trust-store-design.md`; the D-numbers below
+//! are that design's.
 //!
 //! **Not a security boundary against a compromised daemon, and saying so is the point.** One that
 //! could forge a `TrustCaInstall` already holds the private key of the authority this machine
 //! trusts, and can sign any certificate for any name without installing a second root. What this
 //! file does is keep the set of certificates an install could ever have created **enumerable**, so
-//! that `mix cert ca-uninstall` (T54) and uninstall (T87) can be sure they removed all of it. An
+//! that `mix cert ca-uninstall` and `mix uninstall` can be sure they removed all of it. An
 //! unconstrained install could leave behind a root called anything at all, which nothing would ever
 //! find again.
 //!
@@ -17,11 +20,12 @@
 
 use super::der::{self, Element, Malformed};
 
-/// Larger than any certificate T48 produces, and small enough that a request cannot be a denial of
-/// service by length alone. A P-256 authority is a little over 400 bytes.
+/// Larger than any certificate `mixengine_core::certs::ca` produces, and small enough that a
+/// request cannot be a denial of service by length alone. A P-256 authority is a little over 400
+/// bytes.
 pub const MAX_DER: usize = 8 * 1024;
 
-/// What T48 writes into the common name, before the identifier.
+/// What `mixengine_core::certs::ca` writes into the common name, before the identifier.
 const SUBJECT_PREFIX: &str = "MixEngine Local CA ";
 
 /// `mixengine_core::certs::ca`'s `KEY_ID_LENGTH`.
@@ -33,7 +37,7 @@ const KEY_ID_LENGTH: usize = 8;
 
 /// The most years between `notBefore` and `notAfter`.
 ///
-/// T48 asks for ten; the extra one is a leap-day and time-zone margin rather than a policy.
+/// The generator asks for ten; the extra one is a leap-day and time-zone margin, not a policy.
 const MAX_YEARS: i32 = 11;
 
 /// `2.5.4.3`, commonName.
@@ -47,10 +51,10 @@ const OID_BASIC_CONSTRAINTS: &[u8] = &[0x55, 0x1d, 0x13];
 
 /// `SEQUENCE { BOOLEAN TRUE, INTEGER 0 }` — `CA:TRUE, pathlen:0`, and nothing else.
 ///
-/// **Compared as bytes rather than parsed.** There is exactly one DER encoding this may have, so the
-/// comparison is both the check and its own proof, and it cannot be widened by a parser being
-/// lenient somewhere. A test generates a real T48-shaped certificate and asserts these are the bytes
-/// inside it, so a change in `rcgen` fails loudly rather than quietly accepting more.
+/// **Compared as bytes rather than parsed.** There is exactly one DER encoding this may have, so
+/// the comparison is both the check and its own proof, and it cannot be widened by a parser being
+/// lenient somewhere. A test generates a certificate shaped like the generator's and asserts these
+/// are the bytes inside it, so a change in `rcgen` fails loudly rather than quietly accepting more.
 const BASIC_CONSTRAINTS_CA_PATHLEN_0: &[u8] = &[0x30, 0x06, 0x01, 0x01, 0xff, 0x02, 0x01, 0x00];
 
 /// `BIT STRING`, one unused bit, `keyCertSign | cRLSign` — and no other bit set.
@@ -69,7 +73,7 @@ pub struct Authority {
 /// Why these bytes will not be installed.
 pub type Refused = Malformed;
 
-/// Are `der`'s bytes shaped like an authority T48 generated?
+/// Are `der`'s bytes shaped like an authority `mixengine_core::certs::ca` generated?
 ///
 /// # Errors
 ///
@@ -249,11 +253,11 @@ fn common_name(subject: Element<'_>) -> Result<String, Refused> {
 
 /// The eight characters after the prefix, **as a shape and never recomputed from the key**.
 ///
-/// The T49a design's D4 records why. Recomputing the identifier — SHA-256 of the
-/// SubjectPublicKeyInfo, truncated — would need a hash in `mixengine-elevate`, measured at 8 crates
-/// with none of them already there, and it would refuse nothing: whoever generates a certificate
-/// sets its common name to their own key's identifier and passes. What is worth checking is that the
-/// name belongs to a family small enough for uninstall to enumerate, which is this.
+/// D4 records why. Recomputing the identifier — SHA-256 of the SubjectPublicKeyInfo, truncated —
+/// would need a hash in `mixengine-elevate`, measured at 8 crates with none of them already there,
+/// and it would refuse nothing: whoever generates a certificate sets its common name to their own
+/// key's identifier and passes. What is worth checking is that the name belongs to a family small
+/// enough for uninstall to enumerate, which is this.
 fn key_id(common_name: &str) -> Result<String, Refused> {
     let id = common_name.strip_prefix(SUBJECT_PREFIX).ok_or_else(|| {
         Malformed(format!(
@@ -341,8 +345,8 @@ mod tests {
         params.is_ca = IsCa::Ca(BasicConstraints::Constrained(0));
         params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];
         // **rcgen's defaults are 1975 to 4096**, which `within_years` refuses and should: 2121
-        // years is exactly the hundred-year root that rule exists for. T48 sets both, so a fixture
-        // that left them alone would be testing a certificate T48 never makes.
+        // years is exactly the hundred-year root that rule exists for. The generator sets both, so
+        // a fixture that left them alone would be testing a certificate it never makes.
         params.not_before = rcgen::date_time_ymd(2026, 1, 1);
         params.not_after = rcgen::date_time_ymd(2036, 1, 1);
         params
@@ -362,10 +366,10 @@ mod tests {
     }
 
     #[test]
-    fn a_certificate_shaped_like_the_one_t48_makes_is_accepted() {
+    fn a_certificate_shaped_like_the_one_the_generator_makes_is_accepted() {
         let der = ours_shaped(|_| {});
 
-        let authority = ours(&der).expect("the shape T48 generates");
+        let authority = ours(&der).expect("the shape the generator makes");
 
         assert_eq!(authority.key_id, A_KEY_ID);
         assert_eq!(authority.subject, subject_of(A_KEY_ID));
@@ -410,7 +414,7 @@ mod tests {
             }
         }
 
-        assert!(basic && usage, "T48's own shape changed");
+        assert!(basic && usage, "the generator's own shape changed");
     }
 
     /// **An authority is not a server**, and a name on one invites something to accept it as a leaf.
@@ -486,9 +490,9 @@ mod tests {
         assert!(ours(&der).is_err());
     }
 
-    /// And exactly ten years, which is what T48 asks for, is not.
+    /// And exactly ten years, which is what the generator asks for, is not.
     #[test]
-    fn the_lifetime_t48_asks_for_is_accepted() {
+    fn the_ten_years_the_generator_asks_for_are_accepted() {
         let der = ours_shaped(|params| {
             params.not_before = rcgen::date_time_ymd(2026, 1, 1);
             params.not_after = rcgen::date_time_ymd(2036, 1, 1);
@@ -524,8 +528,8 @@ mod tests {
         }
     }
 
-    /// The value a removal names is checked before any store is opened, and it is checked as a
-    /// shape — the T49a design, D5.
+    /// D5: the value a removal names is checked before any store is opened, and it is checked as a
+    /// shape.
     #[test]
     fn only_eight_lowercase_hex_characters_name_an_authority() {
         assert!(is_key_id("0123abcd"));

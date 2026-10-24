@@ -1,4 +1,4 @@
-//! Ports this system has taken out of circulation — roadmap task **T47a**.
+//! Ports this system has taken out of circulation.
 
 use crate::Result;
 

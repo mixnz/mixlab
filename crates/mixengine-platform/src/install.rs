@@ -8,7 +8,9 @@
 //! Nothing in this module creates anything or checks anything: it says *where*, and
 //! `mixengine-elevate` is the only thing that ever writes there. Who owns what is already
 //! [`crate::elevated::owner_of`]'s question, and the answer to it is what
-//! `mixengine_core::elevation::helper` refuses on. See the T85 design, D1 and D3.
+//! `mixengine_core::elevation::helper` refuses on. Why a privileged operation places the helper
+//! rather than the installer, and where "root-owned" is on each system, is argued in
+//! `docs/specs/2026-09-04-t85-installers-design.md`.
 
 use std::path::PathBuf;
 
@@ -34,12 +36,12 @@ pub fn helper_path() -> Result<PathBuf> {
 }
 
 /// Every copy of `mixengine-elevate` an install format on this system leaves behind that MixEngine
-/// may install *from*, most trustworthy first — roadmap task **T88d**.
+/// may install *from*, most trustworthy first.
 ///
 /// **A source is not [`helper_path`].** That one is the file this machine runs as root; these are
 /// copies that ship with the product, and the only thing one is ever used for is being handed to an
 /// elevation prompt on a machine with no installed helper — a development tree, a machine before
-/// its first prompt, and, since T88d, a machine whose helper `mix uninstall` has removed.
+/// its first prompt, and a machine whose helper `mix uninstall` has removed.
 /// `mixengine_core::elevation::helper` prefers the installed copy and never reads this list when
 /// there is one.
 ///
@@ -54,13 +56,12 @@ pub fn helper_sources(program: &std::path::Path, bundle: &str) -> Vec<PathBuf> {
     crate::sys::install::helper_sources(program, bundle)
 }
 
-/// The package that owns `path`, when this system's package database says one does — roadmap
-/// task **T88e**.
+/// The package that owns `path`, when this system's package database says one does.
 ///
 /// **Linux asks, and the other two answer [`None`].** A file a `.deb` or an `.rpm` placed is the
 /// package manager's to remove, and `mix uninstall` keeps it. macOS has no `.pkg` uninstaller and
 /// nothing that reads a receipt back, so a helper there is removed whoever placed it; Windows'
-/// installer never places one. The T88e design, D1 and D2.
+/// installer never places one.
 ///
 /// **A name, never a command**, on `Placement::Managed`'s rule: which command removes a package is
 /// not something this crate may guess.
@@ -94,7 +95,7 @@ pub fn missing_helper_advice() -> &'static str {
     crate::sys::install::missing_helper_advice()
 }
 
-/// Make a freshly written file one this machine will execute — roadmap task **T88**.
+/// Make a freshly written file one this machine will execute.
 ///
 /// **A `.zip` does not carry the executable bit**, and the Windows portable archive is a `.zip`
 /// while the two Unix payloads are tarballs. So a `mix` unpacked out of one on a Unix machine can
@@ -115,7 +116,7 @@ pub fn make_executable(path: &std::path::Path) -> Result<()> {
     crate::sys::install::make_executable(path)
 }
 
-/// The package receipt that names `path` — the T88f design, D1. [`None`] off macOS.
+/// The package receipt that names `path`, which is what marks a `.pkg` install. [`None`] off macOS.
 ///
 /// The daemon asks through [`crate::Host::installers`], which its tests can replace; this is the
 /// same question for a caller holding no host.
@@ -125,7 +126,7 @@ pub fn receipt_of(path: &std::path::Path) -> Option<String> {
     crate::host().installers().receipt_of(path)
 }
 
-/// Open `package` in the system's installer — the T88f design, D5.
+/// Open `package` in the system's installer.
 ///
 /// # Errors
 ///
@@ -137,16 +138,16 @@ pub fn open_installer(package: &std::path::Path) -> Result<()> {
 
 /// `(device, inode)` of `path`, or [`None`] where the system has no such pair or the file is gone.
 ///
-/// What the T88f install check is cached by: Installer.app writes each file under a new inode and
-/// keeps the modification time it had in the package (the T88f readings, M3), so a time would miss
-/// a reinstall of the same build.
+/// What the check that a `.pkg` install has finished is cached by: Installer.app writes each file
+/// under a new inode and keeps the modification time it had in the package (measured on a Mac
+/// reinstalling the same build), so a time would miss a reinstall of the same build.
 #[must_use]
 pub fn file_identity(path: &std::path::Path) -> Option<(u64, u64)> {
     crate::sys::install::file_identity(path)
 }
 
 /// Every directory an installer of this operating system puts MixEngine's programs in, in the order
-/// they are consulted — roadmap task **T107**.
+/// they are consulted.
 ///
 /// `%LOCALAPPDATA%\Programs\MixEngine` on Windows, `/usr/local/bin` on macOS, `/usr/bin` and then
 /// `/usr/local/bin` on Linux — each argued in its own module, and each held to
@@ -159,7 +160,7 @@ pub fn program_dirs() -> Vec<PathBuf> {
     crate::sys::install::program_dirs()
 }
 
-/// Where `name` is on this machine — roadmap task **T107**.
+/// Where `name` is on this machine.
 ///
 /// `name` is a bare name out of `packaging/common.sh`'s `MIX_BINARIES` — `mixengined`, `mix` — and
 /// this platform's executable suffix is appended here, so no caller spells `.exe`.
@@ -185,8 +186,7 @@ pub fn program_path(name: &str) -> Option<PathBuf> {
     first_file(&program_search_dirs(), &file)
 }
 
-/// Every directory [`program_path`] consults, in the order it consults them — roadmap task
-/// **T111**.
+/// Every directory [`program_path`] consults, in the order it consults them.
 ///
 /// The running executable's own directory, then [`program_dirs`], then `PATH` without its empty
 /// entries — the three steps [`program_path`] argues for, as a list rather than as a search.
@@ -226,7 +226,7 @@ fn first_file(dirs: &[PathBuf], file: &str) -> Option<PathBuf> {
         .find(|candidate| candidate.is_file())
 }
 
-/// What a desktop application named `executable` is called on disk here — roadmap task **T106**.
+/// What a desktop application named `executable` is called on disk here.
 ///
 /// `mixlab.exe` on Windows, `mixlab` on Linux, `MixLab.app` on macOS, where a windowed application
 /// is a directory rather than a file.
@@ -243,7 +243,7 @@ pub fn application_file_name(executable: &str, bundle: &str) -> String {
     crate::sys::install::application_file_name(executable, bundle)
 }
 
-/// The thing an installer placed, given the executable inside it — roadmap task **T106**.
+/// The thing an installer placed, given the executable inside it.
 ///
 /// `…/MixLab.app` for `…/MixLab.app/Contents/MacOS/mixlab`; the executable itself on Windows and
 /// Linux, and on a macOS build with no bundle around it.
@@ -256,7 +256,7 @@ pub fn application_root(executable: &std::path::Path) -> std::path::PathBuf {
     crate::sys::install::application_root(executable)
 }
 
-/// The program inside the thing an installer placed — roadmap task **T107**.
+/// The program inside the thing an installer placed.
 ///
 /// `…/MixLab.app/Contents/MacOS/mixlab` for `…/MixLab.app`; the path itself on Windows and Linux,
 /// and on a macOS build with no bundle around it. The exact inverse of [`application_root`], and
@@ -300,7 +300,7 @@ pub fn own_as_root(path: &std::path::Path) -> Result<()> {
 /// nor no: Windows cannot unlink a file whose image is mapped, and the helper is the running program
 /// when it is asked to remove itself — so what happens there is that the operating system accepts
 /// the removal and performs it at the next restart. A caller that folded both into "removed" would
-/// report a file as gone while it was still on disk. See the T87 design, D8.
+/// report a file as gone while it was still on disk.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct HelperRemoval {
     /// Paths that are gone now.
@@ -321,7 +321,7 @@ impl HelperRemoval {
     }
 }
 
-/// Take the privileged helper off this machine — roadmap task **T87**.
+/// Take the privileged helper off this machine.
 ///
 /// The other end of [`own_as_root`], and the reversal
 /// [ADR 0015](../../../docs/decisions/0015-the-helper-installs-itself.md) owed uninstall: the
@@ -349,7 +349,7 @@ pub fn remove_helper() -> Result<HelperRemoval> {
     crate::sys::install::remove_helper()
 }
 
-/// What the macOS `.pkg` places as root outside the home — roadmap task **T182a**, spec D2.
+/// What the macOS `.pkg` places as root outside the home.
 ///
 /// **Constants, never a request's**: the privileged helper removes exactly these, so a daemon that
 /// has been talked into anything cannot aim the removal elsewhere.
@@ -404,7 +404,7 @@ pub fn forget_receipt(receipt: &str) -> std::io::Result<bool> {
     crate::sys::install::forget_receipt(receipt)
 }
 
-/// Take the program the `.pkg` placed off this machine — roadmap task **T182a**.
+/// Take the program the `.pkg` placed off this machine.
 ///
 /// The binaries go whatever they are (absent is fine); the bundle goes **only** when its
 /// `Info.plist` names [`PackagePaths::bundle_identifier`], so somebody else's application at that
@@ -463,8 +463,8 @@ pub fn remove_package(
 #[cfg(test)]
 mod tests {
 
-    /// Installer.app writes each file under a new inode and keeps its modification time (the T88f
-    /// readings, M3), so the identity is what tells the file at a path was replaced.
+    /// Installer.app writes each file under a new inode and keeps its modification time (measured
+    /// on a Mac), so the identity is what tells the file at a path was replaced.
     #[test]
     fn a_file_renamed_over_another_has_a_new_identity() {
         let directory = tempfile::tempdir().expect("a directory");
@@ -616,8 +616,8 @@ mod tests {
     /// The list a window shows when it found nothing is the list the lookup walked — the same
     /// function, not a second description of it — and it begins where [`program_path`] begins.
     ///
-    /// Roadmap task **T111**: MixLab prints this when `mixengined` is nowhere, so a person can see
-    /// which directory to look in rather than being told only that something is missing.
+    /// MixLab prints this when `mixengined` is nowhere, so a person can see which directory to look
+    /// in rather than being told only that something is missing.
     #[test]
     fn the_search_list_begins_beside_the_running_executable_and_has_no_empty_entry() {
         let dirs = program_search_dirs();
@@ -656,7 +656,7 @@ mod tests {
     }
 }
 
-/// What the macOS `.pkg` places and how it is taken back off — roadmap task **T182a**, spec D2.
+/// What the macOS `.pkg` places and how it is taken back off.
 #[cfg(test)]
 mod package_tests {
     use super::*;

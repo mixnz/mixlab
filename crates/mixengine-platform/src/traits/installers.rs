@@ -1,9 +1,9 @@
-//! Who installed this copy, and handing a package to the system's installer — roadmap task
-//! **T88f** ([ADR 0050](../../../../docs/decisions/0050-a-copy-the-pkg-installed-is-updated-by-the-pkg.md)).
+//! Who installed this copy, and handing a package to the system's installer
+//! ([ADR 0050](../../../../docs/decisions/0050-a-copy-the-pkg-installed-is-updated-by-the-pkg.md)).
 //!
 //! **Not `install::packaged_by`.** That one answers "who removes this file", and on macOS it
-//! deliberately answers nobody (T88e). This one answers "who installed this copy", which on macOS is
-//! the `.pkg` receipt.
+//! deliberately answers nobody. This one answers "who installed this copy", which on macOS is the
+//! `.pkg` receipt.
 
 use std::path::Path;
 
@@ -12,8 +12,8 @@ use crate::Result;
 /// The package identifier on a `pkgutil --file-info` answer, or [`None`].
 ///
 /// **The line is the answer, and the exit status is not.** `pkgutil` exits 0 for a file no package
-/// installed and for a path that does not exist, and then prints only `volume:` and `path:` (the
-/// T88f readings, M1). Pure and compiled everywhere, so its fixtures run on every system.
+/// installed and for a path that does not exist, and then prints only `volume:` and `path:`
+/// (measured on a Mac). Pure and compiled everywhere, so its fixtures run on every system.
 #[must_use]
 pub fn pkgid_of(file_info: &str) -> Option<&str> {
     file_info
@@ -23,7 +23,7 @@ pub fn pkgid_of(file_info: &str) -> Option<&str> {
         .filter(|id| !id.is_empty())
 }
 
-/// The system's own package installer — roadmap task **T88f**.
+/// The system's own package installer.
 pub trait Installers: std::fmt::Debug + Send + Sync {
     /// The receipt that names `path`, or [`None`]: on a system without receipts, for a file no
     /// package installed, and when the receipt tool could not be run, which is logged and never an
@@ -46,8 +46,7 @@ pub trait Installers: std::fmt::Debug + Send + Sync {
 mod tests {
     use super::*;
 
-    /// What `pkgutil --file-info /usr/local/bin/mixengined` printed on macOS 15.7.3 (the T88f
-    /// readings, M1).
+    /// What `pkgutil --file-info /usr/local/bin/mixengined` printed on macOS 15.7.3.
     const OURS: &str = "volume: /\npath: /usr/local/bin/mixengined\n\npkgid: dev.mixengine.cli\n\
                         pkg-version: 0.0.7\ninstall-time: 1790183317\nuid: 0\ngid: 0\nmode: 100755\n";
 

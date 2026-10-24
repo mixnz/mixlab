@@ -6,9 +6,9 @@
 //! localised, it can be changed, and two accounts on two machines can share one.
 //!
 //! `windows/access.rs` answers the same question a different way, by parsing `whoami /user`. That
-//! is not an oversight to be tidied away here: it is a verified path with tests behind it, and T47
-//! owns the decision to revisit the whole Windows ACL implementation, this included. What must not
-//! happen is a third way.
+//! is not an oversight to be tidied away here: it is a verified path with tests behind it, and
+//! revisiting the whole Windows ACL implementation, this included, is a decision of its own. What
+//! must not happen is a third way.
 
 use std::io;
 

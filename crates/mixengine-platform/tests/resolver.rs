@@ -2,7 +2,7 @@
 //!
 //! The unwritten half of this file is the important one. **Every test that concludes something from
 //! a name that did *not* resolve first proves, with the same instrument and at the same moment,
-//! that the instrument is alive** — the T45 design, D14.
+//! that the instrument is alive** (D14).
 //!
 //! That rule is not a style preference. The measurement this whole task was designed from ran six
 //! rounds and **four of them were void**: a fake DNS server was started in one CI step and asked
@@ -13,6 +13,8 @@
 //! And on Windows the instrument must be `getaddrinfo` — [`std::net::ToSocketAddrs`] — and never
 //! `nslookup`, which was measured to bypass the Name Resolution Policy Table entirely and would
 //! report a correctly wired machine as broken.
+//!
+//! The D-numbers here are those of `docs/specs/2026-08-23-t45-resolver-wiring-design.md`.
 
 use mixengine_platform::{Host as _, ResolverMethod, mock};
 
@@ -101,7 +103,7 @@ fn the_plan_is_whole_state_and_is_nothing_when_the_machine_already_agrees() {
 /// A plan that is not this system's mechanism is refused **by name**, before anything is touched.
 ///
 /// Not `#[ignore]`d: a refusal reaches no file and needs no token, so it is asserted here with the
-/// reads — exactly as T42 asserts Windows' refusal in the ordinary job.
+/// reads — exactly as `tests/port_access.rs` asserts Windows' refusal in the ordinary job.
 #[test]
 fn the_plan_this_system_does_not_use_is_refused_by_name() {
     use mixengine_proto::privileged::ResolverPlan;
@@ -292,7 +294,8 @@ impl Drop for Restore {
 /// **`getaddrinfo`, and never `nslookup`.** Measured on Windows: `nslookup` talks to the configured
 /// server directly and does not honour the Name Resolution Policy Table, so it answers NXDOMAIN for
 /// a name that `getaddrinfo` resolves at the same moment. A diagnostic written with it would report
-/// a correctly wired machine as broken — which T46 and T47 will need to know as well.
+/// a correctly wired machine as broken — which `domain.dns_status` and `mix doctor` need to know as
+/// well.
 fn resolves_within(name: &str, bound: std::time::Duration) -> Option<std::net::Ipv4Addr> {
     let deadline = std::time::Instant::now() + bound;
 

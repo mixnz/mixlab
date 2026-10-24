@@ -1,12 +1,12 @@
 //! Linux implementations of the platform traits.
 
-// The executable a crash report describes — T91a.
+// The executable a crash report describes.
 #[cfg(feature = "host")]
 pub(crate) mod crash_image;
-// What this machine will refuse to load, for want of a signature — T94. Nothing, here.
+// What this machine will refuse to load, for want of a signature. Nothing, here.
 #[cfg(feature = "host")]
 mod app_control;
-// The daemon's autostart entry, as a systemd user unit — T85b.
+// The daemon's autostart entry, as a systemd user unit.
 #[cfg(feature = "host")]
 mod autostart;
 // The account's systemd linger: what makes the entry above start at boot rather than at login.
@@ -14,18 +14,18 @@ mod autostart;
 pub(crate) mod cgroup;
 #[cfg(feature = "host")]
 mod linger;
-// Under both features since T85, on `port_access`' pattern: the daemon reads who owns a file before
-// it runs one as root, and the writing half stays the helper's. Every item carries its own gate.
+// Under both features, on `port_access`' pattern: the daemon reads who owns a file before it runs
+// one as root, and the writing half stays the helper's. Every item carries its own gate.
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub(crate) mod elevated;
 #[cfg(feature = "host")]
 pub(crate) mod home;
-// Where the privileged helper is installed — T85. Under both features because both sides ask it.
+// Where the privileged helper is installed. Under both features because both sides ask it.
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub(crate) mod install;
 #[cfg(feature = "host")]
 mod limits;
-// What this machine offers the programs MixEngine installs — T148.
+// What this machine offers the programs MixEngine installs.
 #[cfg(feature = "host")]
 mod machine;
 // The read half is `host` and the write half is `elevated`, so the module is declared for
@@ -34,21 +34,20 @@ mod machine;
 pub(crate) mod port_access;
 #[cfg(feature = "host")]
 mod ports;
-// Becoming another program — T185. `unix/`'s, because `exec` is the same call on both.
+// Becoming another program. `unix/`'s, because `exec` is the same call on both.
 #[cfg(feature = "handover")]
 pub(crate) use crate::unix::handover;
-// Letting go of an unattended console: `unix/`'s, because on both systems it is nothing —
-// T85b.
+// Letting go of an unattended console: `unix/`'s, because on both systems it is nothing.
 #[cfg(feature = "process")]
 pub(crate) use crate::unix::console;
 #[cfg(feature = "process")]
 pub(crate) mod process;
 #[cfg(feature = "host")]
 mod prompt;
-// The Visual C++ Redistributable, which is Windows' alone — T150.
+// The Visual C++ Redistributable, which is Windows' alone.
 #[cfg(feature = "host")]
 mod redistributable;
-// The package receipt and the system installer a `.pkg` update is handed to — T88f.
+// The package receipt and the system installer a `.pkg` update is handed to.
 #[cfg(feature = "host")]
 mod installers;
 // The read half is `host` and the write half is `elevated`, as `port_access` is.
@@ -124,7 +123,7 @@ pub(crate) struct Host {
     autostart: autostart::Unit,
     // Not a `linux/` module, and not a `unix/` one either: the secret service is reached through the
     // same crate the other two systems' stores are. See `crate::secrets`.
-    // Boxed because a development daemon keeps it in a file instead — T184.
+    // Boxed because a development daemon keeps it in a file instead.
     secrets: Box<dyn crate::Keyring>,
     profiles: path::Profiles,
     ports: ports::Ports,

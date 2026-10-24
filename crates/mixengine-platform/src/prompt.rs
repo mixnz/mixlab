@@ -6,7 +6,9 @@
 //! means there was nobody to ask, how an argument is quoted. Those live here, as pure functions over
 //! a code and a string, in a module compiled on all three systems, so that each system's table is
 //! tested on every one of them. What stays in `sys::prompt` is the call that can be made nowhere
-//! else. See the T40a design, "Testing".
+//! else.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-22-t40a-elevation-design.md`.
 
 #![allow(
     dead_code,
@@ -73,7 +75,7 @@ pub(crate) mod windows {
     ///
     /// **The quoting is provable here rather than conventional.** `"` is not a legal character in a
     /// Windows path name, so no path can close the quotation early — and a path carrying one anyway
-    /// is refused, which is what turns that from a belief into a check. See the T40a design, D4.
+    /// is refused, which is what turns that from a belief into a check.
     ///
     /// # Errors
     ///
@@ -100,8 +102,8 @@ pub(crate) mod windows {
 
 /// The most of what a helper said that reaches an error message, in bytes.
 ///
-/// A refusal is one line; the bound is for a helper that panicked and printed a backtrace, where the
-/// reason is at the end and a page of frames above it is not a sentence anybody reads — T166, D5.
+/// A refusal is one line; the bound is for a helper that panicked and printed a backtrace, where
+/// the reason is at the end and a page of frames above it is not a sentence anybody reads.
 pub(crate) const SAID_LIMIT: usize = 1024;
 
 /// A helper's stderr as it goes into an error: trimmed, `None` when there is nothing, and the
@@ -129,8 +131,8 @@ pub(crate) mod macos {
     /// **A compile-time constant with no value of ours anywhere in it.** The two paths arrive as
     /// `argv` and are quoted by AppleScript's own `quoted form of`, which is the one operator on
     /// that system whose entire job is being right about spaces, quotes and newlines in a shell
-    /// word. Interpolating a path into this string instead is the line T40/D9 singles out as the
-    /// single most dangerous one in the elevation path on any of the three systems — T40a, D3.
+    /// word. Interpolating a path into this string instead would be the single most dangerous line
+    /// in the elevation path on any of the three systems.
     pub(crate) const SCRIPT: [&str; 3] = [
         "on run argv",
         "do shell script (quoted form of (item 1 of argv)) & \" \" \
@@ -175,11 +177,11 @@ pub(crate) mod macos {
 
     /// What osascript's answer means, in the three words the trait speaks.
     ///
-    /// `-128` is `userCanceledErr`, and it is why T40/D11 said a declined prompt cannot be an exit
-    /// code of the helper's. A **positive** code is the helper's own status, reported through an
-    /// AppleScript error because that is how `do shell script` reports one — the helper ran, so the
-    /// answer is `Completed` and whatever it thought is beside the request. Any other negative code
-    /// is AppleScript refusing to do it at all; so is a run that left no code to read, because there
+    /// `-128` is `userCanceledErr`, and it is why a declined prompt cannot be an exit code of the
+    /// helper's. A **positive** code is the helper's own status, reported through an AppleScript
+    /// error because that is how `do shell script` reports one — the helper ran, so the answer is
+    /// `Completed` and whatever it thought is beside the request. Any other negative code is
+    /// AppleScript refusing to do it at all; so is a run that left no code to read, because there
     /// is then nothing to say it ever started.
     pub(crate) fn outcome(code: Option<i32>, stderr: &str) -> ElevationOutcome {
         if code == Some(0) {
@@ -281,8 +283,8 @@ pub(crate) mod linux {
     /// What `pkexec`'s exit code means, in the three words the trait speaks.
     ///
     /// `126` is a dismissed dialog and `127` is "not authorised, or something went wrong" — the two
-    /// numbers T40/D2 kept every exit code of the helper's below 125 to stay clear of, and this is
-    /// the task that spends them. Anything else is the helper's own status: it ran, and what it
+    /// numbers every exit code of the helper's stays below 125 to keep clear of, and this is the
+    /// function that spends them. Anything else is the helper's own status: it ran, and what it
     /// thought is beside the request. A run with no code at all was ended by a signal, which is not
     /// a report that it started.
     pub(crate) fn outcome(code: Option<i32>) -> ElevationOutcome {
@@ -388,7 +390,8 @@ mod tests {
 
     #[test]
     fn macos_keeps_the_helpers_sentence_and_drops_applescripts_framing() {
-        // The stderr of the incident T166 comes from, verbatim but for the path.
+        // The stderr of a helper refused on a checkout on an external disk, verbatim but for the
+        // path.
         assert_eq!(
             macos::said(
                 "7:134: execution error: mixengine-elevate: cannot read /Volumes/SSD/home/run/\

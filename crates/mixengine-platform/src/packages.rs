@@ -1,4 +1,4 @@
-//! What a package database says owns a file — roadmap task **T88e**.
+//! What a package database says owns a file.
 //!
 //! **Pure and compiled on all three systems**, for [`crate::reserved`]'s reason: the half of a
 //! per-OS mechanism that is a decision about text is tested everywhere, and only the call that can

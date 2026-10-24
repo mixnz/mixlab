@@ -32,8 +32,8 @@ use super::{GROUP_GONE, RawChild, still_running, unsafe_zeroed_because_every_fie
 /// `docs/decisions/0007-supervised-child-owns-a-process-group.md`.
 ///
 /// One job per service rather than one for the daemon, so `TerminateJobObject` means "stop this
-/// service and its children" and not "stop everything". It is also the object Phase 7 hangs CPU and
-/// memory caps on (roadmap task T68), which per-daemon jobs would have had to be rebuilt to allow.
+/// service and its children" and not "stop everything". It is also the object CPU and memory caps
+/// hang on, which per-daemon jobs would have had to be rebuilt to allow.
 #[derive(Debug)]
 pub(crate) struct Group {
     /// Owned. Closing it is what kills the group, so it is closed in exactly one place — [`Drop`].
@@ -270,8 +270,7 @@ impl Group {
     /// and `std::process::Child` hands out a process handle but never a thread one — so doing it in
     /// the right order means replacing `Command` with a hand-rolled `CreateProcessW`. A daemon
     /// killed between those two calls therefore leaves the child behind; the window is one call
-    /// wide, and crash recovery (roadmap task T18) covers exactly that case. ADR 0007 records the
-    /// trade.
+    /// wide, and crash recovery covers exactly that case. ADR 0007 records the trade.
     ///
     /// A child that has already exited cannot be assigned, and Windows says so with
     /// `ERROR_ACCESS_DENIED` — indistinguishable from the real thing here, so it is reported as the
@@ -282,7 +281,7 @@ impl Group {
 
     /// The same assignment, addressed by handle.
     ///
-    /// A shim's hand-over used to be the other caller; since T185 it keeps a job of its own in
+    /// A shim's hand-over used to be the other caller; now it keeps a job of its own in
     /// `windows/handover.rs`, so that the `handover` feature needs nothing from `process`. The
     /// caller borrows a handle it owns, which is the whole of what this needs to be true.
     fn assign(&self, process: HANDLE) -> Result<()> {

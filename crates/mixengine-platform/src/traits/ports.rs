@@ -39,8 +39,8 @@ pub struct PortHolder {
 /// reads a table the OS already keeps, and is safe to call from an error path — which is where it
 /// is called from, so a diagnosis that fails must never become the failure being diagnosed.
 ///
-/// Not to be confused with the `PortAccess` capability of roadmap task T42, which is about being
-/// *allowed* to bind 80 and 443. This one is about who got there first.
+/// Not to be confused with the `PortAccess` capability, which is about being *allowed* to bind 80
+/// and 443. This one is about who got there first.
 pub trait PortOwner: std::fmt::Debug + Send + Sync {
     /// Which process is listening on `port`, if any is.
     ///

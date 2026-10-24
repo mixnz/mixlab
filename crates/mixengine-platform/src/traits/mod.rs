@@ -76,10 +76,10 @@ pub use trust::{TrustState, TrustStore, TrustStoreMethod};
 /// resolver's changes are and executed by `mixengine-elevate` out of [`crate::firewall`]; no
 /// accessor below leads to it.
 ///
-/// Reading arrived with T76, and the reason is that the interesting rule is not one of ours. Binding
-/// UDP 5353 for mDNS makes Windows offer to write an every-port rule for `mixengined.exe`, and a
-/// daemon cannot learn about a rule it never made from its own database. Reading needs no privilege
-/// and changes nothing — see [`FirewallRules`].
+/// Reading is here because the interesting rule is not one of ours. Binding UDP 5353 for mDNS makes
+/// Windows offer to write an every-port rule for `mixengined.exe`, and a daemon cannot learn about
+/// a rule it never made from its own database. Reading needs no privilege and changes nothing — see
+/// [`FirewallRules`].
 pub trait Host: std::fmt::Debug + Send + Sync {
     /// Where this OS wants application data to live.
     fn home_dirs(&self) -> &dyn HomeDirs;
@@ -93,7 +93,7 @@ pub trait Host: std::fmt::Debug + Send + Sync {
     /// Where this user's PATH is kept, so `<root>/bin` can go on it and come off again.
     fn path_integration(&self) -> &dyn PathIntegration;
 
-    /// Whether this machine starts a daemon for this home at login — roadmap task **T85b**.
+    /// Whether this machine starts a daemon for this home at login.
     ///
     /// **Writes as well as reads, and needs no token for either**, which puts it beside
     /// [`path_integration`](Self::path_integration) rather than among the read-only capabilities:
@@ -130,10 +130,10 @@ pub trait Host: std::fmt::Debug + Send + Sync {
     /// Whether this machine trusts MixEngine's own certificate authority.
     ///
     /// **Reads only**, as [`resolver`](Self::resolver) does and for its reason: the write needs a
-    /// token the daemon does not have, and belongs to `mixengine-elevate` — roadmap task **T49a**.
+    /// token the daemon does not have, and belongs to `mixengine-elevate`.
     fn trust_store(&self) -> &dyn TrustStore;
 
-    /// Whether Firefox and Chrome trust that same authority — roadmap task **T49b**.
+    /// Whether Firefox and Chrome trust that same authority.
     ///
     /// **Beside [`trust_store`](Self::trust_store) rather than inside it**: browsers on Linux read
     /// NSS databases and not the system store at all, there are N of them, and one `bool` cannot
@@ -141,61 +141,61 @@ pub trait Host: std::fmt::Debug + Send + Sync {
     /// databases belong to the user and no token is needed for them.
     fn browsers(&self) -> &dyn BrowserTrust;
 
-    /// What this machine will enforce of a service's declared limits — roadmap task **T68**.
+    /// What this machine will enforce of a service's declared limits.
     ///
     /// **Reads only**, as [`port_access`](Self::port_access) and [`resolver`](Self::resolver) do:
     /// applying a limit is done to a child through [`process`](crate::process), not asked of the
     /// machine. See [`ResourceControl`].
     fn resource_control(&self) -> &dyn ResourceControl;
 
-    /// What each supervised process group is spending right now — roadmap task **T71**.
+    /// What each supervised process group is spending right now.
     ///
     /// **Reads only**, as [`resource_control`](Self::resource_control) does and beside it for the
     /// contrast: that one answers what this machine will enforce, once; this one is asked on a timer
     /// for as long as the daemon runs. See [`ProcessMetrics`].
     fn process_metrics(&self) -> &dyn ProcessMetrics;
 
-    /// Which of this machine's networks a site could be shared on — roadmap task **T74**.
+    /// Which of this machine's networks a site could be shared on.
     ///
     /// **Reads only**, like [`reserved_ports`](Self::reserved_ports) beside it: sharing binds a
     /// listener this daemon already owns, so nothing here changes the machine.
     fn network(&self) -> &dyn NetworkInfo;
 
-    /// What this system has taken out of circulation — roadmap task **T47a**.
+    /// What this system has taken out of circulation.
     ///
     /// The third of three port capabilities, and the one about the operating system rather than
     /// about another program or about privilege — see [`ReservedPorts`].
     fn reserved_ports(&self) -> &dyn ReservedPorts;
 
-    /// What this machine will refuse to load, for want of a signature — roadmap task **T94**.
+    /// What this machine will refuse to load, for want of a signature.
     ///
     /// **Reads only**, and about the operating system rather than about anything MixEngine
     /// installed — the same shape as [`reserved_ports`](Self::reserved_ports) above. See
     /// [`AppControl`].
     fn app_control(&self) -> &dyn AppControl;
 
-    /// What this machine offers the programs MixEngine installs — roadmap task **T148**.
+    /// What this machine offers the programs MixEngine installs.
     ///
     /// **Reads only**, and read again every time it is asked; see [`Machine`].
     fn machine(&self) -> &dyn Machine;
 
-    /// Installing a Visual C++ runtime this machine lacks — roadmap task **T150**.
+    /// Installing a Visual C++ runtime this machine lacks.
     ///
     /// **Starts a program that asks Windows for administrator rights**, after a person agreed, and
     /// only a file Microsoft signed; see [`Redistributables`] and ADR 0037.
     fn redistributables(&self) -> &dyn Redistributables;
 
-    /// Who installed this copy, and the system installer a `.pkg` update is handed to — roadmap
-    /// task **T88f**. See [`Installers`] and ADR 0050.
+    /// Who installed this copy, and the system installer a `.pkg` update is handed to. See
+    /// [`Installers`] and ADR 0050.
     fn installers(&self) -> &dyn Installers;
 
-    /// Inbound firewall rules naming a program — roadmap task **T76**.
+    /// Inbound firewall rules naming a program.
     ///
     /// **Reads only**, like [`network`](Self::network) and [`reserved_ports`](Self::reserved_ports)
     /// beside it, and the one direction of the firewall a daemon is allowed. See [`FirewallRules`].
     fn firewall_rules(&self) -> &dyn FirewallRules;
 
-    /// A desktop application somebody installed, found and started — roadmap task **T83**.
+    /// A desktop application somebody installed, found and started.
     ///
     /// **Starts a process, and is the only capability that does**: see [`DesktopApps`] for why it
     /// is here rather than in [`process`](crate::process).

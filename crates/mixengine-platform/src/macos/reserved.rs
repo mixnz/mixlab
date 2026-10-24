@@ -1,4 +1,4 @@
-//! macOS: no such concept — roadmap task **T47a**.
+//! macOS: no such concept.
 
 use crate::{Error, PortRange, ReservedPorts, Result};
 

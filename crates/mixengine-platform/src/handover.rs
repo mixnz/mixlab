@@ -1,4 +1,4 @@
-//! Becoming another program, and the record a resolver hands a trampoline — roadmap task **T185**.
+//! Becoming another program, and the record a resolver hands a trampoline.
 //!
 //! **Its own feature, because `mixengine-trampoline` takes this and nothing else.** A trampoline is
 //! copied into `<root>/bin` once per command name on Windows, so every byte it links is paid for
@@ -40,7 +40,7 @@ const VALUE: u8 = b'V';
 pub struct Handover {
     /// The program to run.
     pub program: PathBuf,
-    /// Arguments that go before the user's own — `composer.phar` for T27c, otherwise none.
+    /// Arguments that go before the user's own — `composer.phar` for Composer, otherwise none.
     pub args: Vec<OsString>,
     /// Applied over the inherited environment, exactly as [`hand_over`] applies it.
     pub env: BTreeMap<String, OsString>,

@@ -58,7 +58,7 @@ pub fn started_at(pid: u32) -> Result<Option<StartTime>> {
     sys::started_at(pid).map(|started| started.map(StartTime))
 }
 
-/// Who started each process on this machine, as `pid → parent pid` — roadmap task **T181**.
+/// Who started each process on this machine, as `pid → parent pid`.
 ///
 /// **The cheap half of a metrics reading.** Walking a service's group needs every process's parent
 /// and nothing else, and reading only that is a fraction of what refreshing every process costs —
@@ -78,8 +78,7 @@ pub(crate) fn parent_table() -> Result<BTreeMap<u32, u32>> {
     sys::parent_table()
 }
 
-/// What one process has spent: its CPU time so far and its resident size now — roadmap task
-/// **T190**.
+/// What one process has spent: its CPU time so far and its resident size now.
 #[cfg(all(feature = "host", windows))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Usage {
@@ -90,7 +89,7 @@ pub(crate) struct Usage {
     pub(crate) rss_bytes: u64,
 }
 
-/// One process's [`Usage`], read without listing the machine — roadmap task **T190**.
+/// One process's [`Usage`], read without listing the machine.
 ///
 /// Windows only: there `sysinfo` takes a snapshot of every process even when asked for a few, and
 /// that snapshot was the whole cost of a metrics tick. [`None`] for every way of not being a

@@ -20,16 +20,17 @@ struct Answer {
 
     /// When set, only a binary whose file name contains this holds the grant.
     ///
-    /// **The one thing about `Capability` a global flag cannot describe** — roadmap task **T97**.
-    /// On Linux the grant is an attribute *of the binary*, so a home that switches web server is a
-    /// home whose new front end has none while the old one still has it; a fixture that answered
-    /// the same for every path could not express the machine the switch is designed around.
+    /// **The one thing about `Capability` a global flag cannot describe.** On Linux the grant is an
+    /// attribute *of the binary*, so a home that switches web server is a home whose new front end
+    /// has none while the old one still has it; a fixture that answered the same for every path
+    /// could not express the machine the switch is designed around.
     only: Option<String>,
 }
 
 impl Default for Access {
     /// A machine that needs nothing — which is what Windows is, and what every suite written before
-    /// T42 should keep looking like: they ask for no prompt and this is why.
+    /// ports below 1024 needed a grant should keep looking like: they ask for no prompt and this is
+    /// why.
     fn default() -> Self {
         Self {
             answer: Ok(Answer {

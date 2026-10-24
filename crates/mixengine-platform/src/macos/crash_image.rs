@@ -1,4 +1,4 @@
-//! The running executable on macOS — T91a.
+//! The running executable on macOS.
 //!
 //! dyld's image 0 is the main program. Its slide is what an address is measured from, its `__TEXT`
 //! segment is its code, and its `LC_UUID` is the identifier `dwarfdump --uuid` prints and a

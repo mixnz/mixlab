@@ -1,4 +1,4 @@
-//! Firewall rules this machine holds for a program — roadmap task **T76**.
+//! Firewall rules this machine holds for a program.
 
 use std::path::Path;
 

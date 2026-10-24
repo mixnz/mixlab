@@ -8,15 +8,15 @@ use crate::Result;
 
 /// The managed block, read.
 ///
-/// **Read-only, and that is the whole trait** — the T41 design, D9. Adding and removing entries
-/// cannot live here: they need an administrative token, and a capability the daemon can call is by
-/// definition one it holds no token for. The write is
+/// **Read-only, and that is the whole trait.** Adding and removing entries cannot live here: they
+/// need an administrative token, and a capability the daemon can call is by definition one it holds
+/// no token for. The write is
 /// [`PrivilegedOp::HostsApply`](mixengine_proto::privileged::PrivilegedOp::HostsApply), applied by
 /// `mixengine-elevate`. Reading needs no privilege on any of the three systems.
 ///
 /// Three callers, one of them already here: the producer decides whether a change is worth a prompt
-/// by comparing this against what the database says (T41), `domain.dns_status` answers "is there a
-/// hosts entry?" with it (T46), and `mix doctor` reconciles against it (T47).
+/// by comparing this against what the database says, `domain.dns_status` answers "is there a hosts
+/// entry?" with it, and `mix doctor` reconciles against it.
 pub trait HostsFile: std::fmt::Debug + Send + Sync {
     /// Where this OS keeps the file, whether or not it is there.
     fn path(&self) -> PathBuf;

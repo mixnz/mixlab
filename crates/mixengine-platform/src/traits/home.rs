@@ -20,7 +20,7 @@ pub trait HomeDirs: std::fmt::Debug + Send + Sync {
     /// | Linux | `$XDG_DATA_HOME/mixengine`, falling back to `~/.local/share/mixengine` | `…/mixengine-dev` |
     ///
     /// The second column is [`crate::RELEASE`]'s doing and is not a mode anything selects at run
-    /// time: it is decided when the binary is compiled — T95.
+    /// time: it is decided when the binary is compiled.
     ///
     /// The directory is **not** created here and may not exist yet; bootstrapping it is the
     /// caller's job.
@@ -33,10 +33,10 @@ pub trait HomeDirs: std::fmt::Debug + Send + Sync {
 
     /// Could a process elevated through this OS's prompt read files under `path`?
     ///
-    /// **A question about where a home may go, asked before one is chosen** — roadmap task T166. On
-    /// macOS the answer is no for any volume but the boot one: TCC gates removable and network
-    /// volumes, and `mixengine-elevate` arrives through `osascript` and `authtrampoline` with no
-    /// responsible process to inherit a grant from, so it cannot read the request in `<home>/run`.
+    /// **A question about where a home may go, asked before one is chosen.** On macOS the answer is
+    /// no for any volume but the boot one: TCC gates removable and network volumes, and
+    /// `mixengine-elevate` arrives through `osascript` and `authtrampoline` with no responsible
+    /// process to inherit a grant from, so it cannot read the request in `<home>/run`.
     ///
     /// **`true` by default, which is Linux's and Windows' answer.** Root and an elevated token read
     /// an external disk there. The Linux mounts that fail the same way — FUSE without `allow_other`,

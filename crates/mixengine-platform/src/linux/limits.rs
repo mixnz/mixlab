@@ -33,8 +33,8 @@ impl ResourceControl for Limits {
             }
 
             // No delegated subtree at all: one reason, and it is the same reason for both fields —
-            // though not the same *answer*, since T71a reads a memory ceiling this machine will not
-            // hold and does nothing about a CPU one.
+            // though not the same *answer*, since the memory watchdog reads a memory ceiling this
+            // machine will not hold and does nothing about a CPU one.
             Err(why) => (
                 Enforcement::Unavailable { why: why.clone() },
                 Enforcement::Advisory { why: Some(why) },
@@ -75,7 +75,7 @@ fn cpu_enforcement(controller: std::result::Result<(), String>) -> Enforcement {
     )
 }
 
-/// The `memory` controller's answer — roadmap task **T71a**.
+/// The `memory` controller's answer.
 ///
 /// **`Advisory` where `cpu` would say `Unavailable`, and the difference is that something now
 /// happens.** A session with no delegated `memory` controller used to store a `memory_mb` and do

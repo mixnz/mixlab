@@ -1,4 +1,4 @@
-//! The calling thread's return addresses, from the unwinder `std` itself links — T91a.
+//! The calling thread's return addresses, from the unwinder `std` itself links.
 //!
 //! `_Unwind_Backtrace` and `_Unwind_GetIP` are the Itanium C++ ABI's unwind interface: `libgcc_s`
 //! on Linux, `libunwind` inside `libSystem` on macOS. `std` unwinds panics through the same

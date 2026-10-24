@@ -5,11 +5,11 @@
 //! `mixengine-elevate` does not gain the crate at all.
 //!
 //! **Taken rather than hand-written, and the measurement is why the answer differs from
-//! `super::der`'s.** The T49a design's D11 refused `x509-parser` at 22 net crates and `sha2` at 8,
-//! both into a binary that runs as root. `pem` is **two** — itself and `base64` — and what it
-//! replaces is base64 with its padding rules, which is the kind of thing that is wrong in a way
-//! nobody notices until a certificate with the wrong length shows up. The rule that file states is
-//! that adding a line is a decision somebody has to argue for, not that the number may never go up.
+//! `super::der`'s.** `x509-parser` was measured and refused at 22 net crates and `sha2` at 8, both
+//! into a binary that runs as root. `pem` is **two** — itself and `base64` — and what it replaces
+//! is base64 with its padding rules, which is the kind of thing that is wrong in a way nobody
+//! notices until a certificate with the wrong length shows up. The rule that file states is that
+//! adding a line is a decision somebody has to argue for, not that the number may never go up.
 //!
 //! It is also the version `rcgen` pins, so the workspace holds one copy and a certificate written by
 //! `mixengine_core::certs::ca` is read back through the same code that wrote it.

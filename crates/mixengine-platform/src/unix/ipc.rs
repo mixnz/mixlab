@@ -161,9 +161,8 @@ impl Drop for Listener {
     /// [`Listener::bind`]. Checking device and inode first is what stops this from deleting a
     /// *different* daemon's socket: two starting at once can both find the endpoint dead and both
     /// bind, the second one's file replacing the first one's at the same name, and the first one's
-    /// shutdown would then take the survivor's socket with it. The single-instance lock (roadmap
-    /// task T9) is what makes that race unreachable; this makes its consequence harmless in the
-    /// meantime.
+    /// shutdown would then take the survivor's socket with it. The single-instance lock is what
+    /// makes that race unreachable; this makes its consequence harmless in the meantime.
     fn drop(&mut self) {
         let ours = fs::metadata(&self.path)
             .is_ok_and(|current| (current.dev(), current.ino()) == self.file);

@@ -3,12 +3,12 @@
 //! **`/dev/pf` belongs to root**, so the daemon — which runs as the user — cannot ask the packet
 //! filter whether it is enabled or what it has loaded. What it can read is the anchor, the block in
 //! `/etc/pf.conf` and the boot job's plist, all of them world-readable. The probe is a byte
-//! comparison against what a grant would put there — the T42 design, D9.
+//! comparison against what a grant would put there.
 //!
 //! **That proves the configuration is in place; it does not prove pf is running right now.** The
 //! plist is what makes that true at every boot, and the plist's presence is what is checked here.
 //! The honest end-to-end check is a request to `127.0.0.1:80` reaching this home's front end, which
-//! needs a front end that serves something — T43's, and `mix doctor`'s (T47).
+//! needs a front end that serves something — a site's, and `mix doctor`'s.
 
 #[cfg(feature = "host")]
 use std::path::Path;
@@ -112,8 +112,8 @@ fn text(path: &str) -> Option<String> {
     std::fs::read_to_string(Path::new(path)).ok()
 }
 
-/// Write the three artifacts a redirect is made of, then do now what the third does at boot — the
-/// T42 design, D3, and ADR 0012.
+/// Write the three artifacts a redirect is made of, then do now what the third does at boot — see
+/// ADR 0012.
 ///
 /// **The third is a boot job**, and it is what makes the other two mean anything: pf is disabled on
 /// every boot and `pfctl -e` needs root, so a redirect that is only installed works until the first

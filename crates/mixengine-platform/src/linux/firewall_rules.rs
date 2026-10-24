@@ -1,4 +1,4 @@
-//! Linux firewalls filter by port, not by program — roadmap task **T76**.
+//! Linux firewalls filter by port, not by program.
 
 use std::path::Path;
 

@@ -1,6 +1,6 @@
-//! No `.pkg` receipts and no `.pkg` installer here — roadmap task **T88f**. Nothing calls
-//! [`crate::Installers::open`] on this system: the daemon only hands a package over for a copy whose
-//! receipt it found, and there is none to find.
+//! No `.pkg` receipts and no `.pkg` installer here. Nothing calls [`crate::Installers::open`] on
+//! this system: the daemon only hands a package over for a copy whose receipt it found, and there
+//! is none to find.
 
 use std::path::Path;
 

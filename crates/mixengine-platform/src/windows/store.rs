@@ -1,9 +1,9 @@
 //! The certificate store itself: opening it, walking it, and — under an administrative token —
 //! changing it.
 //!
-//! **Every unsafe call in T49a is in this file**, which is the arrangement the rest of `windows/`
-//! already uses: the reason to keep them together is that a person auditing what this project does
-//! with raw pointers can read one file rather than three.
+//! **Every unsafe call the system trust store makes is in this file**, which is the arrangement the
+//! rest of `windows/` already uses: the reason to keep them together is that a person auditing what
+//! this project does with raw pointers can read one file rather than three.
 //!
 //! **The handle owns its close.** `CertCloseStore` and `CertFreeCertificateContext` are easy to
 //! miss on an early return, so the store is a type with a `Drop` and the enumeration never hands a
@@ -62,7 +62,8 @@ fn open(read_only: bool) -> crate::Result<Store> {
     #[expect(
         unsafe_code,
         reason = "opening a certificate store has no safe equivalent in this crate's dependency \
-                  budget, and `certutil.exe` was refused in the T49a design's D6"
+                  budget, and spawning `certutil.exe` under an administrative token is a larger \
+                  surface"
     )]
     let handle = unsafe {
         CertOpenStore(
@@ -90,8 +91,8 @@ fn open(read_only: bool) -> crate::Result<Store> {
 /// own call and the context is freed before the next one is fetched, so there is no way to hold a
 /// pointer into a store that has since been closed.
 ///
-/// Reading is the producer's half of T49a and the helper never does it, so this is `host`'s: the
-/// elevated build reaches the store through [`add`] and [`remove`] instead.
+/// Reading is the producer's half and the helper never does it, so this is `host`'s: the elevated
+/// build reaches the store through [`add`] and [`remove`] instead.
 #[cfg(feature = "host")]
 pub(crate) fn each_certificate(mut matches: impl FnMut(&[u8]) -> bool) -> crate::Result<bool> {
     use windows_sys::Win32::Security::Cryptography::CertFreeCertificateContext;
@@ -179,8 +180,8 @@ pub(crate) fn add(der: &[u8]) -> crate::Result<bool> {
     // context back, which is what keeps this from having one more thing to free.
     #[expect(
         unsafe_code,
-        reason = "adding to a certificate store has no safe equivalent, and `certutil.exe` was \
-                  refused in the T49a design's D6"
+        reason = "adding to a certificate store has no safe equivalent, and spawning \
+                  `certutil.exe` under an administrative token is a larger surface"
     )]
     let added = unsafe {
         CertAddEncodedCertificateToStore(
@@ -221,8 +222,8 @@ pub(crate) fn add(der: &[u8]) -> crate::Result<bool> {
 /// Remove every certificate in `LocalMachine\Root` that `ours` accepts.
 ///
 /// **`ours` runs against what was found, not against what was asked for**, which is the second of
-/// D5's two checks: a request names an authority by key-id, and this is what makes sure the thing
-/// carrying that name is also shaped like one MixEngine made.
+/// the two checks a removal gets: a request names an authority by key-id, and this is what makes
+/// sure the thing carrying that name is also shaped like one MixEngine made.
 ///
 /// # Errors
 ///

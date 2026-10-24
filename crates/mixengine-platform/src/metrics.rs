@@ -1,4 +1,4 @@
-//! The real reading, taken with `sysinfo` — roadmap task **T71**.
+//! The real reading, taken with `sysinfo`.
 //!
 //! **One file for three operating systems**, which is the exception this crate allows itself where a
 //! dependency has already done the per-OS work: `sysinfo` reads `/proc` on Linux, `proc_pidinfo` on
@@ -6,10 +6,10 @@
 //! which. The `#[cfg]` rule exists to keep operating-system differences out of the crates *above*
 //! this one, and this is inside it.
 //!
-//! Two per-system reads live with the other per-system process questions in `crate::process`:
-//! every process's parent (`parent_table`, T181), which decides who a reading refreshes, and on
-//! Windows each member's CPU time and working set (`usage`, T190), because `sysinfo` lists the whole
-//! machine there before refreshing even one pid. That choice is the one `#[cfg]` in this file, on
+//! Two per-system reads live with the other per-system process questions in `crate::process`: every
+//! process's parent (`parent_table`), which decides who a reading refreshes, and on Windows each
+//! member's CPU time and working set (`usage`), because `sysinfo` lists the whole machine there
+//! before refreshing even one pid. That choice is the one `#[cfg]` in this file, on
 //! `Readings::members`.
 //!
 //! **The walk is a pure function over a table.** A test that had to grow a real process tree would
@@ -19,12 +19,13 @@
 //!
 //! # A group is a tree, and the alternative was measured against
 //!
-//! Every supervised service on Windows already runs in a Job Object, and `QueryInformationJobObject`
-//! reports the job's total CPU time and peak memory directly — more accurate than this walk and
-//! immune to a process that reparents itself. It is deliberately not used: it would measure Windows
-//! through a different mechanism than the other two systems, at the moment **T72** is about to hold
-//! all three to one threshold, and three numbers that cannot be compared are worse than three
-//! numbers wrong in the same direction. This walk overstates shared pages identically everywhere.
+//! Every supervised service on Windows already runs in a Job Object, and
+//! `QueryInformationJobObject` reports the job's total CPU time and peak memory directly — more
+//! accurate than this walk and immune to a process that reparents itself. It is deliberately not
+//! used: it would measure Windows through a different mechanism than the other two systems, while
+//! CI holds all three to one memory budget, and three numbers that cannot be compared are worse
+//! than three numbers wrong in the same direction. This walk overstates shared pages identically
+//! everywhere.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Mutex;
@@ -69,10 +70,11 @@ impl Snapshot {
     ) -> Vec<GroupReading> {
         let children = self.children();
 
-        // **Every other subject's root, so a walk can stop when it reaches one** — found by T72.
-        // Every supervised service is a child of the daemon, so a walk that descended through
-        // everything would make the daemon's row *the daemon and everything it runs*: the largest
-        // consumer on every chart, and a set of rows that counts each service twice when summed.
+        // **Every other subject's root, so a walk can stop when it reaches one** — found when CI
+        // first measured the daemon against its memory budget. Every supervised service is a child
+        // of the daemon, so a walk that descended through everything would make the daemon's row
+        // *the daemon and everything it runs*: the largest consumer on every chart, and a set of
+        // rows that counts each service twice when summed.
         let boundaries: BTreeSet<u32> = roots.iter().map(|root| root.pid).collect();
 
         roots
@@ -158,7 +160,7 @@ fn walk(root: u32, children: &BTreeMap<u32, Vec<u32>>, boundaries: &BTreeSet<u32
     visited
 }
 
-/// Every process in any of these groups, read from a parent table — roadmap task **T181**.
+/// Every process in any of these groups, read from a parent table.
 ///
 /// What a reading refreshes, and so the whole of what it pays for. A root the table does not hold
 /// has ended, and contributes nothing. Whether a root is still the process the caller recorded is
@@ -175,13 +177,13 @@ fn members(roots: &[GroupRoot], parents: &BTreeMap<u32, u32>) -> BTreeSet<u32> {
         .collect()
 }
 
-/// How long a listing of the machine is trusted — roadmap task **T190**.
+/// How long a listing of the machine is trusted.
 ///
 /// Ten seconds, which is how late a worker a group spawned on its own can be counted. A root is
 /// never late: a changed root lists the machine at once.
 const REDISCOVER: Duration = Duration::from_secs(10);
 
-/// The last listing of the machine, kept between readings — roadmap task **T190**.
+/// The last listing of the machine, kept between readings.
 ///
 /// **Who is in a group changes rarely, and what they spend changes every second.** Listing every
 /// process on the machine answers the first question, and on Windows it was the whole cost of a
@@ -211,8 +213,8 @@ struct Kept {
 impl Discovery {
     /// The parent table this reading walks, listing the machine only when the one kept will not do.
     ///
-    /// [`None`] when a listing was needed and failed. The caller then refreshes everything, as
-    /// before T181, and the next reading tries again.
+    /// [`None`] when a listing was needed and failed. The caller then refreshes the whole process
+    /// table, and the next reading tries again.
     fn parents(
         &mut self,
         roots: &[GroupRoot],
@@ -256,7 +258,7 @@ impl Discovery {
     }
 }
 
-/// One process's CPU time, and when it was read — roadmap task **T190**.
+/// One process's CPU time, and when it was read.
 #[cfg(any(windows, test))]
 #[derive(Debug, Clone, Copy)]
 struct Mark {
@@ -322,7 +324,7 @@ impl Default for Readings {
 }
 
 impl Readings {
-    /// The members, one pid at a time — roadmap task **T190**.
+    /// The members, one pid at a time.
     ///
     /// **Not through `sysinfo` on Windows**, whose refresh of `Some(pids)` still walks a
     /// `CreateToolhelp32Snapshot` of every process on the machine, 10–20 ms each time on the
@@ -421,13 +423,13 @@ impl Readings {
         self.system
             .processes()
             .iter()
-            // **Threads are not processes, and on Linux this list holds both** — found by T72,
-            // which read a single-binary Caddy as 445 MB. `sysinfo` reports each thread with its
-            // process's parent pid *and* its process's whole resident size, so a group walked over
-            // them counts one process once per thread and multiplies its memory by the thread
-            // count. `thread_kind` answers `Some` only for a thread, and only on Linux and Android;
-            // everywhere else this filter passes everything through, which is why Windows and macOS
-            // never showed the fault.
+            // **Threads are not processes, and on Linux this list holds both** — found when CI's
+            // memory budget read a single-binary Caddy as 445 MB. `sysinfo` reports each thread
+            // with its process's parent pid *and* its process's whole resident size, so a group
+            // walked over them counts one process once per thread and multiplies its memory by the
+            // thread count. `thread_kind` answers `Some` only for a thread, and only on Linux and
+            // Android; everywhere else this filter passes everything through, which is why Windows
+            // and macOS never showed the fault.
             .filter(|(_, process)| process.thread_kind().is_none())
             .map(|(pid, process)| {
                 (
@@ -453,12 +455,11 @@ impl ProcessMetrics for Sampler {
 
         let now = Instant::now();
 
-        // **Only the processes in a group, where the machine says who they are** — roadmap task
-        // T181. Refreshing everything to learn six parents cost ~12 ms a tick on macOS, where
-        // `sysinfo` reads every process's arguments on each refresh. **And the machine is asked
-        // only when the answer may have changed** — T190, where listing it was the whole cost of a
-        // tick on Windows. A table that cannot be read falls back to refreshing everything, with
-        // `sysinfo`'s own parents.
+        // **Only the processes in a group, where the machine says who they are.** Refreshing
+        // everything to learn six parents cost ~12 ms a tick on macOS, where `sysinfo` reads every
+        // process's arguments on each refresh. **And the machine is asked only when the answer may
+        // have changed**: on Windows, listing it was the whole cost of a tick. A table that cannot
+        // be read falls back to refreshing everything, with `sysinfo`'s own parents.
         let rows = match state
             .discovery
             .parents(roots, now, crate::process::parent_table)
@@ -542,7 +543,7 @@ mod tests {
         assert_eq!(measured[0].cpu_percent, Some(10.0));
     }
 
-    /// **A group stops where another group begins** — found by T72.
+    /// **A group stops where another group begins** — found when CI first measured the daemon.
     ///
     /// Every supervised service is a child of the daemon, so a walk that descended through
     /// everything would report the daemon's row as *the daemon and every service it runs* — which
@@ -624,9 +625,9 @@ mod tests {
         BTreeMap::from([(10, 1), (11, 10), (12, 10), (99, 1)])
     }
 
-    /// **The members are what the walk would sum, and nothing else** — roadmap task **T181**. They
-    /// are the only processes a reading refreshes, so one missing is a worker drawn as free and one
-    /// extra is the machine-wide refresh this exists to avoid.
+    /// **The members are what the walk would sum, and nothing else.** They are the only processes a
+    /// reading refreshes, so one missing is a worker drawn as free and one extra is the
+    /// machine-wide refresh this exists to avoid.
     #[test]
     fn the_members_are_each_root_and_everything_under_it() {
         assert_eq!(
@@ -752,8 +753,8 @@ mod tests {
         let now = Instant::now();
         let roots = [root(10, 7)];
 
-        // 12 cannot be opened by this account, ever. Listing the machine again on its account
-        // every tick would be the cost T190 exists to remove.
+        // 12 cannot be opened by this account, ever. Listing the machine again on its account every
+        // tick would be the cost the cached listing exists to remove.
         discovery.parents(&roots, now, counting(&calls));
         discovery.absent(BTreeSet::from([12]));
         for _ in 0..5 {
@@ -831,7 +832,7 @@ mod tests {
         assert_eq!(cpu_percent(mark(0, now), mark(50, now)), 0.0);
     }
 
-    /// **A real reading, twice, of the process running the test** — roadmap task **T181**.
+    /// **A real reading, twice, of the process running the test.**
     ///
     /// The narrow refresh reaches `sysinfo` through a filter and a kind the table tests above never
     /// see, so this is the one test that a group measured through them still has memory at once and
@@ -856,11 +857,12 @@ mod tests {
         assert!(second[0].processes >= 1, "{second:?}");
     }
 
-    /// What one reading costs, with seven groups — the shape of the report that led to **T190**.
+    /// What one reading costs, with seven groups — the shape of the report that showed listing the
+    /// machine was the whole cost of a tick on Windows.
     ///
     /// **Ignored by default and asserting nothing** — a timing taken on a shared runner is not a
-    /// fact to fail a build on. It exists because T71 chose to sample a machine nobody is watching,
-    /// and the number belongs beside the periods that spend it, which is
+    /// fact to fail a build on. It exists because the metrics history samples a machine nobody is
+    /// watching, and the number belongs beside the periods that spend it, which is
     /// [`ProcessMetrics::measure`]'s documentation. Run it with `--release --ignored --nocapture`.
     #[test]
     #[ignore = "a measurement, not an assertion"]

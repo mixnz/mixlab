@@ -1,8 +1,8 @@
 //! A prompt nobody sees.
 //!
-//! The surface T40b's tests run against, and the reason `Elevation` is a capability on a `Host`
-//! rather than a free function like `lock` or `signal`: a queue whose whole job is to batch pending
-//! operations behind **one** prompt has to be testable without one.
+//! The surface the elevation queue's tests run against, and the reason `Elevation` is a capability
+//! on a `Host` rather than a free function like `lock` or `signal`: a queue whose whole job is to
+//! batch pending operations behind **one** prompt has to be testable without one.
 //!
 //! **Unlike the three real launchers, nothing here refuses a path.** A test asserting what a queue
 //! raised should not also have to install a helper binary; the refusals are the launchers' own and
@@ -28,7 +28,7 @@ pub struct Prompt {
     pub request: PathBuf,
 
     /// What that request held when the prompt was raised — the daemon removes the file afterwards,
-    /// so this is the only way a test can see which operations a batch carried (T182b, D6).
+    /// so this is the only way a test can see which operations a batch carried.
     pub body: String,
 }
 
@@ -45,7 +45,7 @@ pub(super) struct Prompts {
     said: Option<String>,
 
     /// Whether the "helper" leaves a report beside the request, applying every operation in it.
-    /// Without one, `Completed` is a helper that ran and wrote nothing — the default, and T40a's
+    /// Without one, `Completed` is a helper that ran and wrote nothing — the default, and a
     /// reminder that a crash is not a per-OS event.
     reports: bool,
 
@@ -106,7 +106,7 @@ impl Prompts {
     }
 
     /// A prompt that is accepted, and a helper that wrote `said` to stderr — the helper that refused
-    /// its request, when nothing is written beside it (T166).
+    /// its request, when nothing is written beside it.
     pub(super) fn saying(said: &str) -> Self {
         Self {
             said: Some(said.to_owned()),

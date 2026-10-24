@@ -1,4 +1,4 @@
-//! Which inbound rules name a program, out of `netsh`' own listing — roadmap task **T76**.
+//! Which inbound rules name a program, out of `netsh`' own listing.
 //!
 //! The one system of the three that has such a table, and the one where the question matters:
 //! binding UDP 5353 makes Windows offer to write an every-port rule for `mixengined.exe`, and a

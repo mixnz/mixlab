@@ -1,9 +1,10 @@
 //! macOS: MixEngine does not search browser certificate databases here.
 //!
-//! **This says what MixEngine did and not what Firefox reads** — the T49b design, D2. Firefox on
-//! macOS may well read the System keychain, through `security.enterprise_roots`; no machine
-//! available to that task had one installed, so nothing here claims it either way. D14 of the
-//! design records how to find out, which is one `about:config` entry away for anybody who has one.
+//! **This says what MixEngine did and not what Firefox reads.** Firefox on macOS may well read the
+//! System keychain, through `security.enterprise_roots`; no machine available when this was written
+//! had one installed, so nothing here claims it either way.
+//! `docs/specs/2026-08-25-t49b-nss-databases-design.md`, D14, records how to find out, which is one
+//! `about:config` entry away for anybody who has one.
 
 use crate::{BrowserChange, BrowserSurvey, BrowserTrust, Result};
 

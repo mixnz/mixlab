@@ -16,8 +16,8 @@
 //! PATH is the machine's value followed by this user's, so a PHP installed for the whole machine is
 //! ahead of `<root>/bin` whatever this writes; on Unix a profile file is read before whatever a
 //! later-sourced script does to `PATH`. Prepending inside the value we own is the most either
-//! system allows without touching something that is not ours, and `mix doctor` (T47) is where
-//! "something else is winning" belongs.
+//! system allows without touching something that is not ours, and `mix doctor` is where "something
+//! else is winning" belongs.
 
 use std::path::Path;
 

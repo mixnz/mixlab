@@ -1,9 +1,9 @@
 //! The block a system file lets MixEngine own, and nothing outside it.
 //!
-//! **T41 wrote this inside `hosts`, and T42 is what moved it.** `/etc/pf.conf` needs exactly the
-//! same machinery with a different file in the error message and an insertion point that is not the
-//! end of the file — see the T42 design, D10. The extraction is forced by the second user rather
-//! than proposed on taste, which is the only kind of restructuring this project makes to code that
+//! **This was written inside `hosts`, and port access is what moved it.** `/etc/pf.conf` needs
+//! exactly the same machinery with a different file in the error message and an insertion point
+//! that is not the end of the file. The extraction is forced by the second user rather than
+//! proposed on taste, which is the only kind of restructuring this project makes to code that
 //! already works.
 //!
 //! **Nothing between the markers is anybody else's, and nothing outside them is ours.** That is the
@@ -236,9 +236,9 @@ fn after(text: &str, wanted: &str) -> Option<usize> {
 mod tests {
     use super::*;
 
-    /// Apple's own `/etc/pf.conf`, which is the file T42 splices into. Order-sensitive: every
-    /// translation rule must precede every filter rule, so a block appended at the end of this file
-    /// is a file `pfctl` refuses to load.
+    /// Apple's own `/etc/pf.conf`, which is the file port access splices into. Order-sensitive:
+    /// every translation rule must precede every filter rule, so a block appended at the end of
+    /// this file is a file `pfctl` refuses to load.
     const PF: &str = "\
 #
 # Default PF configuration file.
@@ -298,7 +298,7 @@ load anchor \"com.apple\" from \"/etc/pf.anchors/com.apple\"
         );
     }
 
-    /// T41's criterion, applied to the second file: in, changed, out, and byte-identical.
+    /// The hosts file's criterion, applied to the second file: in, changed, out, byte-identical.
     #[test]
     fn every_unrelated_line_survives_an_insertion_in_the_middle() {
         let at = Insertion::After("rdr-anchor \"com.apple/*\"");

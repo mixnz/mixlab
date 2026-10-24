@@ -1,6 +1,7 @@
 //! Where Windows keeps the hosts file.
 //!
-//! The replace itself left for `windows/replace.rs` when T42 brought a second file that needed it.
+//! The replace itself left for `windows/replace.rs` when port access brought a second file that
+//! needed it.
 
 use std::path::PathBuf;
 

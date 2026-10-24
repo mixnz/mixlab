@@ -1,5 +1,5 @@
 //! The running executable as a crash report needs it: where it is loaded, which addresses are its
-//! own, and which build it is — roadmap task **T91a**.
+//! own, and which build it is.
 //!
 //! A crash report records each frame as an **offset into the executable** rather than as a name,
 //! and the release keeps the daemon's symbols beside the download instead of inside it. Turning an

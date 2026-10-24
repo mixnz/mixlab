@@ -13,9 +13,9 @@ use crate::{Error, Interface, NetworkInfo, Result};
 pub(crate) struct Network;
 
 impl NetworkInfo for Network {
-    /// **IPv4 only, and up only** — the T74 design, D4. `if-addrs` reports an interface once per
-    /// address it holds, so one adapter with a v4 and a v6 address arrives twice and only the v4
-    /// row survives; an adapter that is down carries no address and never appears at all.
+    /// **IPv4 only, and up only.** `if-addrs` reports an interface once per address it holds, so
+    /// one adapter with a v4 and a v6 address arrives twice and only the v4 row survives; an
+    /// adapter that is down carries no address and never appears at all.
     fn interfaces(&self) -> Result<Vec<Interface>> {
         let found = if_addrs::get_if_addrs().map_err(|source| Error::Os {
             action: "enumerate this machine's network interfaces",

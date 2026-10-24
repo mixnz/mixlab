@@ -11,9 +11,9 @@ const FIRST_UNRESERVED: u16 = 1024;
 
 /// How this machine lets a program the user runs answer on a port the OS reserves.
 ///
-/// **One per system, chosen by the system, never negotiated** — the T42 design, D2. There is no
-/// fallback chain, because the measurement removed the only candidate for one: `reservedhigh` does
-/// not exist on macOS 15, so that system has pf or it has nothing.
+/// **One per system, chosen by the system, never negotiated.** There is no fallback chain, because
+/// the measurement removed the only candidate for one: `reservedhigh` does not exist on macOS 15,
+/// so that system has pf or it has nothing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PortAccessMethod {
     /// Nothing is needed, and nothing is granted. Windows reserves no ports below 1024.
@@ -53,7 +53,7 @@ pub struct PortAccessState {
     /// Is the grant already in place — or was none ever needed?
     pub granted: bool,
 
-    /// Why not, in words, when `granted` is false. Shown by `mix doctor` (T47).
+    /// Why not, in words, when `granted` is false. Shown by `mix doctor`.
     pub missing: Option<String>,
 }
 
@@ -105,8 +105,7 @@ impl PortAccessState {
     /// What would have to be removed to undo [`plan`](Self::plan), or [`None`] on a system that
     /// grants nothing.
     ///
-    /// **Nothing in T42 enqueues one** — the T42 design, D12. It exists so uninstall (T87) has a
-    /// value to build rather than a reversal to invent against a grant written five phases earlier.
+    /// **Nothing at a start enqueues one.** `mix uninstall` is what builds it.
     #[must_use]
     pub fn target(&self, binary: &Path) -> Option<PortAccessTarget> {
         match self.method {
@@ -119,7 +118,7 @@ impl PortAccessState {
     }
 }
 
-/// Whether an unprivileged program may answer on a port the OS reserves — roadmap task **T42**.
+/// Whether an unprivileged program may answer on a port the OS reserves.
 ///
 /// **Not [`PortOwner`](crate::PortOwner)**, whose own documentation already draws the line: that one
 /// is about who got to a port first, and this one is about being allowed to bind one at all.

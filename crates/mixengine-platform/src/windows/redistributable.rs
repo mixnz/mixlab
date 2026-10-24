@@ -1,4 +1,7 @@
-//! Windows: the three checks, the held file, and the run — roadmap task **T150**, T148 design D6.
+//! Windows: the three checks, the held file, and the run.
+//!
+//! The steps are those of D6 in
+//! `docs/specs/2026-09-16-t148-what-a-machine-lacks-is-installed-not-reported-design.md`.
 
 use std::ffi::{OsStr, c_void};
 use std::os::windows::ffi::OsStrExt as _;

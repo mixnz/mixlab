@@ -1,4 +1,4 @@
-//! Who is running from a directory — roadmap task **T182**, D4.
+//! Who is running from a directory.
 //!
 //! **Before an uninstall removes a directory, the processes whose executable lies inside it are the
 //! ones that would stop it half-way**: a `php artisan serve` started through a shim, a database a
@@ -6,8 +6,8 @@
 //! already done the per-system work.
 //!
 //! What a process table cannot show — a working directory, an open file, a watched folder — is
-//! asked of the handle table by [`held_under`] (T182e) on Windows, where it refuses a rename, and
-//! each thing found is probed for whether it could be moved anyway.
+//! asked of the handle table by [`held_under`] on Windows, where it refuses a rename, and each
+//! thing found is probed for whether it could be moved anyway.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -80,7 +80,7 @@ pub fn processes_under(directories: &[PathBuf], spare: Option<u32>) -> Vec<Occup
     found
 }
 
-/// Something another process holds inside a directory an uninstall removes — T182e, D1.
+/// Something another process holds inside a directory an uninstall removes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HeldItem {
     /// The file or directory, spelled under the caller's own spelling of the directory it lies in.
@@ -103,11 +103,11 @@ pub struct Holder {
     pub name: String,
 }
 
-/// How long [`held_under`] may read the handle table for — the T182e design, D2.
+/// How long [`held_under`] may read the handle table for.
 pub const HELD_BUDGET: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// Every file or directory strictly inside one of `directories` that a process other than `spare`
-/// and its descendants holds open, probed for whether it could be moved — T182e, D1 to D3.
+/// and its descendants holds open, probed for whether it could be moved.
 ///
 /// **Windows only finds anything**: it is the one system where something held open refuses a
 /// directory's rename. One of `directories` itself is never an item: renaming an open directory is
@@ -205,7 +205,7 @@ fn held_on_windows(directories: &[PathBuf], spare: Option<u32>) -> Vec<HeldItem>
         .collect()
 }
 
-/// Could `path` be renamed and deleted now? `None` when it is not there any more — T182e, D1.
+/// Could `path` be renamed and deleted now? `None` when it is not there any more.
 ///
 /// The access a rename and a delete need, asked for while sharing everything: refused with a
 /// sharing violation exactly when some existing handle does not share delete. Opened and closed;
@@ -445,8 +445,7 @@ mod tests {
         }
     }
 
-    /// T182e, D1. A watched directory: held, and movable — its watch shares delete and follows a
-    /// rename.
+    /// A watched directory: held, and movable — its watch shares delete and follows a rename.
     #[cfg(windows)]
     #[test]
     fn a_watched_directory_is_held_and_movable() {

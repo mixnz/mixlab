@@ -1,4 +1,4 @@
-//! The running executable on Linux — T91a.
+//! The running executable on Linux.
 //!
 //! `dl_iterate_phdr` visits the main program first: its load bias is what an address is measured
 //! from, its `PT_LOAD` segments are its range, and its `PT_NOTE` segments hold the GNU build-id

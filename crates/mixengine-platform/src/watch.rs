@@ -1,4 +1,4 @@
-//! Being told when the entries of a directory change — roadmap task **T185b**, ADR 0057.
+//! Being told when the entries of a directory change — ADR 0057.
 //!
 //! `npm install -g yarn` writes a program into the Node install's own bindir and tells nobody. The
 //! daemon turns that into a command, and this is how it hears about it: the kernel's own
@@ -7,7 +7,7 @@
 //!
 //! **An idle machine pays nothing.** Nothing here wakes on a timer: a callback runs when a watched
 //! directory gains, loses or renames an entry, and at no other time. That is what replaced the
-//! two-second `stat` loop T131 shipped with.
+//! two-second `stat` loop the first version shipped with.
 //!
 //! **Not recursive.** What becomes a command is a file directly inside a bindir; a package's own
 //! files, which `npm` writes by the thousand under `node_modules`, are not. A directory that does not

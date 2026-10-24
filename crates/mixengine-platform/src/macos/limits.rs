@@ -7,23 +7,23 @@ use crate::{Enforcement, LimitMechanism, LimitSupport, MemoryMeasure, ResourceCo
 pub(crate) struct Limits;
 
 impl ResourceControl for Limits {
-    /// **Nothing is capped here, and memory is watched** — roadmap task **T71a**.
+    /// **Nothing is capped here, and memory is watched.**
     ///
     /// There is no per-process memory ceiling on this system and no CPU rate control. What it has is
     /// scheduling priority, which is a different promise and is reported as the one thing that is
     /// simply true.
     ///
-    /// `memory` was [`Enforcement::Unsupported`] until T71a, and that was honest while nothing read
-    /// the number. Something reads it now: the daemon compares a `memory_mb` against the minutes
-    /// T71's sampler finishes, warns while a service is over it, and restarts the service where its
-    /// recipe says a restart is safe. That is not a wall and must not be drawn as one, which is
-    /// exactly what [`Enforcement::Advisory`] means.
+    /// `memory` was [`Enforcement::Unsupported`] before the memory watchdog, and that was honest
+    /// while nothing read the number. Something reads it now: the daemon compares a `memory_mb`
+    /// against the minutes the metrics sampler finishes, warns while a service is over it, and
+    /// restarts the service where its recipe says a restart is safe. That is not a wall and must
+    /// not be drawn as one, which is exactly what [`Enforcement::Advisory`] means.
     ///
     /// **`why: None`, and the [`None`] is the argument.** `Advisory`'s `Some` is for a machine
     /// somebody could start differently — a Linux session with no delegated `memory` controller. On
-    /// macOS there is no delegation to ask for and no session to change, so a sentence here would be
-    /// a line `mix doctor` printed at a person who can do nothing with it. T68's D6 said that about
-    /// `Unsupported`; the reasoning outlived the variant.
+    /// macOS there is no delegation to ask for and no session to change, so a sentence here would
+    /// be a line `mix doctor` printed at a person who can do nothing with it. That was said about
+    /// `Unsupported` first; the reasoning outlived the variant.
     ///
     /// **`cpu` stays [`Enforcement::Unsupported`].** A rate has no watchdog equivalent: "it has been
     /// at 100% for three minutes" may be a service doing precisely what was asked of it, where "it

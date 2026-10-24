@@ -34,10 +34,10 @@ const FULL: &str = "(OI)(CI)F";
 
 /// Read, execute and traverse, likewise.
 ///
-/// **`RX` and not the `R` this was until T85.** The same grant now covers the directory the
-/// privileged helper is installed into, and a helper an ordinary account may not execute is one the
-/// elevation prompt that account raises cannot start. On the audit log, where this started, execute
-/// on a text file means nothing and costs nothing.
+/// **`RX` and not the `R` this once was.** The same grant now covers the directory the privileged
+/// helper is installed into, and a helper an ordinary account may not execute is one the elevation
+/// prompt that account raises cannot start. On the audit log, where this started, execute on a text
+/// file means nothing and costs nothing.
 #[cfg(feature = "elevated")]
 const READ: &str = "(OI)(CI)RX";
 
@@ -138,10 +138,10 @@ pub(crate) fn others_can_write(path: &Path) -> Result<bool> {
 
 #[cfg(feature = "elevated")]
 pub(crate) fn audit_directory() -> Result<PathBuf> {
-    // **Asked of the shell and not read out of `%ProgramData%`** — the T85 design, D4. The variable
-    // was the machine's own answer for as long as the environment came from the machine; this
-    // binary is started by the daemon through an elevation prompt, and what environment that hands
-    // over is not something the process this one is written not to trust should get a say in.
+    // **Asked of the shell and not read out of `%ProgramData%`.** The variable was the machine's
+    // own answer for as long as the environment came from the machine; this binary is started by
+    // the daemon through an elevation prompt, and what environment that hands over is not something
+    // the process this one is written not to trust should get a say in.
     Ok(super::known_folder::program_data()?.join("MixEngine"))
 }
 

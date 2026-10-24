@@ -1,4 +1,4 @@
-//! Linux: nothing to install — roadmap task **T150**.
+//! Linux: nothing to install.
 
 use std::path::Path;
 

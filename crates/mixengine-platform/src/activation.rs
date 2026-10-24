@@ -1,4 +1,4 @@
-//! The address an activator holds, and the byte stream it hands back — roadmap task **T70**.
+//! The address an activator holds, and the byte stream it hands back.
 //!
 //! A service that has been stopped for being idle is started again by the connection that needed
 //! it. Something has to be listening where that connection arrives, and *where* is the one thing
@@ -90,7 +90,7 @@ impl Activation {
         self.0.listening_on()
     }
 
-    /// Give the address back, so that the service it belongs to can take it — **T70a**, design D4.
+    /// Give the address back, so that the service it belongs to can take it.
     ///
     /// **Only the database path calls this.** A pool's activator holds a permanent address of its
     /// own and never lets go; a database's activator holds *the database's* address, and the start
@@ -186,11 +186,12 @@ mod tests {
         }
     }
 
-    /// **An address the activator gave back is an address the service can take** — T70a's D4.
+    /// **An address the activator gave back is an address the service can take.**
     ///
     /// This is the whole of what the database path needs from the platform layer and the whole of
-    /// what T70 never needed: a pool's activator holds an address of its own for as long as the
-    /// daemon runs, and a database's activator holds *the database's*, which it must hand over.
+    /// what the web path never needed: a pool's activator holds an address of its own for as long
+    /// as the daemon runs, and a database's activator holds *the database's*, which it must hand
+    /// over.
     ///
     /// **Closing is not enough on a Unix socket.** The file survives the close, and a server asked
     /// to bind a path that already exists reports that it exists rather than taking it — so a

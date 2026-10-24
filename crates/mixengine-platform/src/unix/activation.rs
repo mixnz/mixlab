@@ -1,4 +1,4 @@
-//! A Unix socket or a TCP port, whichever the service listens on — roadmap task **T70**.
+//! A Unix socket or a TCP port, whichever the service listens on.
 //!
 //! Identical on Linux and macOS, which is why it lives here rather than in either directory: tokio
 //! spells both listeners the same way on both, and there is no peer check to differ over — see
@@ -92,7 +92,7 @@ impl Activation {
         }
     }
 
-    /// Close the listener, and remove the socket file the close leaves behind — **T70a**.
+    /// Close the listener, and remove the socket file the close leaves behind.
     ///
     /// **A `UnixListener` does not unlink its path when it is dropped**, and a server told to bind
     /// a path that already exists reports that it exists rather than taking it — so a release that

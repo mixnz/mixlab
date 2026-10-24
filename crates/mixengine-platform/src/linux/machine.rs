@@ -1,5 +1,4 @@
-//! Linux: the C library's own answer, and what else the loader knows — roadmap tasks **T148** and
-//! **T27e**.
+//! Linux: the C library's own answer, and what else the loader knows.
 //!
 //! Every Linux build of MixEngine targets `-gnu`, so the running process is itself proof that a
 //! glibc is here; the only question is which.
@@ -34,8 +33,7 @@ fn glibc() -> Probe<String> {
     text.to_str().map_or(Probe::Unknown, dotted_version)
 }
 
-/// What the loader's cache lists, from the first place a distribution keeps `ldconfig` — roadmap
-/// task **T27e**.
+/// What the loader's cache lists, from the first place a distribution keeps `ldconfig`.
 ///
 /// **Named absolutely, and three of them**: a user's `PATH` usually has no `sbin`, and Debian,
 /// Fedora and Arch do not agree on which one it is. A machine with none is [`Probe::Unknown`], which

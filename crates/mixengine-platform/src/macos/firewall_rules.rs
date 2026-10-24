@@ -1,4 +1,4 @@
-//! macOS has no per-program inbound rule table to enumerate — roadmap task **T76**.
+//! macOS has no per-program inbound rule table to enumerate.
 
 use std::path::Path;
 

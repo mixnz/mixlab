@@ -103,11 +103,11 @@ pub(crate) fn without_a_window(_command: &mut Command) {}
 /// `setsid` the group's id **is** the child's pid, so the caller already has it and there is no
 /// kernel object whose lifetime anyone has to manage.
 ///
-/// **The cap is the part that differs between the two Unixes, and it arrived with roadmap task
-/// T68.** Linux has a cgroup to create, write and remove; macOS has nothing at all. So the field's
-/// *type* comes from the OS module rather than being a field behind a `#[cfg(target_os = "linux")]`
-/// in this shared file — the same reason `PR_SET_PDEATHSIG` lives in `linux/process.rs` and not
-/// here. What this file knows is that there is an attachment and that it has three methods.
+/// **The cap is the part that differs between the two Unixes.** Linux has a cgroup to create, write
+/// and remove; macOS has nothing at all. So the field's *type* comes from the OS module rather than
+/// being a field behind a `#[cfg(target_os = "linux")]` in this shared file — the same reason
+/// `PR_SET_PDEATHSIG` lives in `linux/process.rs` and not here. What this file knows is that there
+/// is an attachment and that it has three methods.
 #[derive(Debug)]
 pub(crate) struct Group {
     /// This system's mechanism for capping the group, already prepared.
@@ -118,7 +118,7 @@ pub(crate) struct Group {
 ///
 /// Fallible only because Windows's counterpart is: neither Unix has anything here that fails, and a
 /// Linux machine that will lend no cgroup answers with an attachment that caps nothing rather than
-/// with an error. The T68 design, D6.
+/// with an error.
 pub(crate) fn group() -> Result<Group> {
     Ok(Group {
         attachment: sys::Attachment::prepare(),
@@ -182,10 +182,10 @@ impl Group {
     /// service cannot drift apart. Rewriting `cpu.max` under live processes is exactly what cgroup
     /// v2 is for, so the second call needs nothing the first did not do.
     ///
-    /// Infallible on this system: a machine that lends no cgroup has no attachment, and a controller
-    /// it was not delegated is a file that will not open. Both are reported once, to a person,
-    /// through [`ResourceControl`](crate::ResourceControl) — failing a start over either would turn a
-    /// machine that cannot cap a service into one that cannot run one. The T68 design, D6.
+    /// Infallible on this system: a machine that lends no cgroup has no attachment, and a
+    /// controller it was not delegated is a file that will not open. Both are reported once, to a
+    /// person, through [`ResourceControl`](crate::ResourceControl) — failing a start over either
+    /// would turn a machine that cannot cap a service into one that cannot run one.
     #[expect(
         clippy::unnecessary_wraps,
         reason = "the signature is Windows's, where writing a job object really can fail"
@@ -216,8 +216,8 @@ impl Group {
     /// `mariadbd` that a wrapper script `exec`ed into, all of it.
     ///
     /// `SIGKILL` rather than `SIGTERM` because this is the ungraceful stop by construction; the
-    /// grace period a `StopBehaviour` asks for is the supervisor's to run (roadmap task T15), and it
-    /// ends here when it runs out.
+    /// grace period a `StopBehaviour` asks for is the supervisor's to run, and it ends here when it
+    /// runs out.
     ///
     /// A group that has already gone is success, not failure. `ESRCH` means there was nothing left
     /// to kill, which is what the caller wanted; treating it as an error would make a service that
@@ -254,10 +254,10 @@ impl Group {
 /// `SIGKILL` to the group led by a process this one did not start, or to the process itself if it
 /// leads none.
 ///
-/// **The group first, and for the reason [`Group::terminate`] aims there**: a supervised child called
-/// `setsid` before it became the program, so its pgid is its pid for as long as it lives, and a
-/// survivor of a killed daemon (roadmap task T18) is by definition such a child — addressing the
-/// group is addressing the workers it forked as well.
+/// **The group first, and for the reason [`Group::terminate`] aims there**: a supervised child
+/// called `setsid` before it became the program, so its pgid is its pid for as long as it lives,
+/// and a survivor of a killed daemon is by definition such a child — addressing the group is
+/// addressing the workers it forked as well.
 ///
 /// **The fallback is not decoration.** `kill(-pid, …)` fails with `ESRCH` when no *group* has that
 /// id, which is indistinguishable, from here, from a group that has gone — and a process that leads
@@ -440,7 +440,7 @@ pub(crate) fn spawn_child(
     })
 }
 
-/// [`spawn_child`], with the command handed to `/bin/sh -c` — roadmap task **T78a**.
+/// [`spawn_child`], with the command handed to `/bin/sh -c`.
 ///
 /// There is no quoting question on this side: `argv` is a list, and the shell reads the one element
 /// that is the command. Which shell is `/bin/sh` deliberately rather than the user's `$SHELL`: a
@@ -494,8 +494,8 @@ pub(crate) fn find_program(name: &str, path: &std::ffi::OsStr) -> Option<std::pa
 /// `write`.
 ///
 /// A failed write is **not** a failed spawn. A cgroup this machine would not lend is reported once,
-/// to a person, and the service runs uncapped — the T68 design, D6. Returning an error here would
-/// refuse the start instead.
+/// to a person, and the service runs uncapped. Returning an error here would refuse the start
+/// instead.
 #[cfg(target_os = "linux")]
 pub(crate) fn join_cgroup(command: &mut Command, fd: std::os::fd::RawFd) {
     #[expect(

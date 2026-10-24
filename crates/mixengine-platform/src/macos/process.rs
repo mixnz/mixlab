@@ -13,9 +13,9 @@
 //! of the three platforms they are on rather than repeating a guarantee only Windows keeps.
 //! `docs/decisions/0007-supervised-child-owns-a-process-group.md` records why the alternatives
 //! lost: a watchdog inside the child only works for a child we wrote, and MixEngine supervises
-//! `php-fpm`, `mariadbd` and `caddy`. What covers the gap instead is crash recovery at the next boot
-//! (roadmap task T18) — pid *and* start time, reconciled — which has to exist on every platform
-//! anyway for the machine that lost power.
+//! `php-fpm`, `mariadbd` and `caddy`. What covers the gap instead is crash recovery at the next
+//! boot — pid *and* start time, reconciled — which has to exist on every platform anyway for the
+//! machine that lost power.
 
 use std::io;
 use std::process::Command;
@@ -38,8 +38,8 @@ pub(crate) use crate::unix::process::{
 /// **This is the reading the whole of crash recovery rests on here**, because macOS is the system
 /// that has no `PR_SET_PDEATHSIG` and no job object: a killed daemon leaves every service it was
 /// supervising running, and the daemon that starts next has nothing but a pid and this number to
-/// tell what it found. `docs/decisions/0007-supervised-child-owns-a-process-group.md` is where
-/// that gap is recorded, and roadmap task T18 is what closes it.
+/// tell what it found. `docs/decisions/0007-supervised-child-owns-a-process-group.md` is where that
+/// gap is recorded, and crash recovery is what closes it.
 ///
 /// `proc_pidinfo` rather than the `sysctl` route to `kinfo_proc`: it asks for the one struct the
 /// answer is in, it is the interface Apple documents for this question, and it does not reach a
@@ -128,7 +128,7 @@ fn zeroed_because_every_field_is_a_number() -> libc::proc_bsdinfo {
     unsafe { std::mem::zeroed() }
 }
 
-/// Every process's parent — roadmap task **T181**, see `crate::process::parent_table`.
+/// Every process's parent — see `crate::process::parent_table`.
 ///
 /// `proc_listallpids` and then one `PROC_PIDT_SHORTBSDINFO` per pid, rather than the single
 /// `sysctl(KERN_PROC_ALL)` that answers the same question: `libc` does not define `kinfo_proc` for
@@ -234,8 +234,8 @@ pub(crate) fn arrange(command: &mut Command, group: &crate::unix::process::Group
 /// `crate::unix::process::set_priority`.
 ///
 /// The type exists so that `unix/process.rs` has one shape on both systems. The standing-in
-/// watchdog `docs/features/resource-isolation.md` describes is **roadmap task T71a**, which needs
-/// T71's sampler.
+/// watchdog `docs/features/resource-isolation.md` describes is the daemon's, and reads the metrics
+/// sampler.
 #[derive(Debug)]
 pub(crate) struct Attachment;
 

@@ -5,11 +5,10 @@
 //! touched.** It needs no elevation, it belongs to the account MixEngine runs as, and the machine
 //! one is shared with every other user on the box — a development tool has no business in it.
 //!
-//! What that costs is stated rather than hidden: `explorer` builds a process's `PATH` as the machine
-//! value followed by the user one, so a PHP installed for the whole machine is *ahead* of
+//! What that costs is stated rather than hidden: `explorer` builds a process's `PATH` as the
+//! machine value followed by the user one, so a PHP installed for the whole machine is *ahead* of
 //! `<root>/bin` no matter what this writes. Prepending inside the value we own is as far as a
-//! user-level change reaches; `mix doctor` (T47) is where "something else is answering `php`"
-//! belongs.
+//! user-level change reaches; `mix doctor` is where "something else is answering `php`" belongs.
 //!
 //! # Why the API rather than `setx`
 //!

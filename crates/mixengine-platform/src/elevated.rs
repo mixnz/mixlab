@@ -1,12 +1,12 @@
 //! The primitives that only mean anything under an administrative token.
 //!
-//! **Two callers and one split**, since T85. The *writing* half — the elevation bit, the audit
-//! directory, the root-owned `mkdir` — is `mixengine-elevate`'s alone and stays behind the
-//! `elevated` feature, so that binary can take this crate without `tokio`, `keyring` or
-//! `directories` (the T40 design, D8). The *reading* half — [`owner_of`] and [`others_can_write`] —
-//! is also the daemon's, because the question it answers is *may I run this file as root?* and that
-//! is asked on the unprivileged side of the boundary, before a prompt is spent. Same shape as
-//! `hosts`, `port_access`, `resolver` and `trust`, one capability along.
+//! **Two callers and one split.** The *writing* half — the elevation bit, the audit directory, the
+//! root-owned `mkdir` — is `mixengine-elevate`'s alone and stays behind the `elevated` feature, so
+//! that binary can take this crate without `tokio`, `keyring` or `directories`. The *reading* half
+//! — [`owner_of`] and [`others_can_write`] — is also the daemon's, because the question it answers
+//! is *may I run this file as root?* and that is asked on the unprivileged side of the boundary,
+//! before a prompt is spent. Same shape as `hosts`, `port_access`, `resolver` and `trust`, one
+//! capability along.
 //!
 //! **The identity of a caller is the owner of the file it wrote**, and that is the whole reason
 //! [`owner_of`] exists. The daemon runs as the user, and if the daemon is compromised it *is* the

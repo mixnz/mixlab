@@ -97,7 +97,7 @@ pub(crate) fn absent_store(source: &KeyringError) -> Option<&'static str> {
     }
 }
 
-/// The keys under `service` — T186.
+/// The keys under `service`.
 ///
 /// Searched on the `service` attribute `keyring` writes, and read from its `username` attribute.
 /// Locked items are included: their attributes are not secret, and a locked keyring must not look

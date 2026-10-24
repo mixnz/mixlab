@@ -1,4 +1,4 @@
-//! macOS: nothing to install — roadmap task **T150**.
+//! macOS: nothing to install.
 
 use std::path::Path;
 

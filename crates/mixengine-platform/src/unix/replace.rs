@@ -1,6 +1,6 @@
 //! Replacing a system file on macOS and Linux without ever leaving a torn one.
 //!
-//! **Moved out of `unix/hosts.rs` by T42**, which brought three more files that need what
+//! **Moved out of `unix/hosts.rs` by port access**, which brought three more files that need what
 //! `/etc/hosts` needed: `/etc/pf.conf`, `/etc/pf.anchors/mixengine` and a LaunchDaemon plist. One
 //! mechanism for both systems, which is what `unix/` is for.
 

@@ -1,4 +1,4 @@
-//! The development build's credential store: one file in a home — roadmap task **T184**.
+//! The development build's credential store: one file in a home.
 //!
 //! Driven through the public constructor a daemon uses, so what is proved is what the daemon gets.
 
@@ -171,7 +171,7 @@ fn source_chain(error: &dyn std::error::Error) -> String {
     parts.join(": ")
 }
 
-/// T186: the keys under one service, and none of another's.
+/// The keys under one service, and none of another's.
 #[test]
 fn keys_lists_one_service_and_never_another() {
     let directory = tempfile::tempdir().expect("a directory");

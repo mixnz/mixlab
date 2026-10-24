@@ -1,4 +1,4 @@
-//! Where the MixLab window keeps its own files — roadmap task **T182b**.
+//! Where the MixLab window keeps its own files.
 //!
 //! **Tauri's folders, not MixEngine's.** The window saves its connections, histories and sync
 //! database in the per-user folders Tauri names after the application identifier, and its webview

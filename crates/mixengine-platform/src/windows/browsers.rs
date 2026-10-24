@@ -1,9 +1,10 @@
 //! Windows: MixEngine does not search browser certificate databases here.
 //!
-//! **This says what MixEngine did and not what Firefox reads** — the T49b design, D2. Firefox on
-//! Windows may well read the machine's own store, through `security.enterprise_roots`; no machine
-//! available to that task had one installed, so nothing here claims it either way. D14 of the
-//! design records how to find out, which is one `about:config` entry away for anybody who has one.
+//! **This says what MixEngine did and not what Firefox reads.** Firefox on Windows may well read
+//! the machine's own store, through `security.enterprise_roots`; no machine available when this was
+//! written had one installed, so nothing here claims it either way.
+//! `docs/specs/2026-08-25-t49b-nss-databases-design.md`, D14, records how to find out, which is one
+//! `about:config` entry away for anybody who has one.
 //!
 //! It is also a mechanism decision and not only a scope decision. Windows ships an unrelated
 //! `certutil.exe` in `C:\WINDOWS\system32` — CryptoAPI's, with an entirely different command line —

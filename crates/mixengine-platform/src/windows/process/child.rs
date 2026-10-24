@@ -167,11 +167,11 @@ pub(crate) fn spawn_child(
     })
 }
 
-/// [`spawn_child`], with the command handed to `cmd.exe /C` — roadmap task **T78a**.
+/// [`spawn_child`], with the command handed to `cmd.exe /C`.
 ///
-/// **The command is the line's tail, verbatim** (the T78a design, D12): `cmd.exe` parses its own
-/// command line by rules that are not `CommandLineToArgvW`'s, and a command containing a quote put
-/// through this crate's ordinary quoting would reach the shell mangled.
+/// **The command is the line's tail, verbatim**: `cmd.exe` parses its own command line by rules
+/// that are not `CommandLineToArgvW`'s, and a command containing a quote put through this crate's
+/// ordinary quoting would reach the shell mangled.
 ///
 /// `cmd.exe` is taken from `%SystemRoot%` rather than found on a `PATH`, which is what
 /// `services/step.rs` already does and for the same reason: the shell that runs somebody's command

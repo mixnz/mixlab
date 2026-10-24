@@ -1,4 +1,4 @@
-//! Windows: `netsh`, parsed — roadmap task **T47a**.
+//! Windows: `netsh`, parsed.
 //!
 //! **A command and not an API**, deliberately. Windows exposes these ranges through `netsh`'s output
 //! and through the registry's `ReservedPorts` value, and the two do not agree: the registry holds

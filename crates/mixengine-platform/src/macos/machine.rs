@@ -1,4 +1,4 @@
-//! macOS: the product version the kernel reports — roadmap task **T148**.
+//! macOS: the product version the kernel reports.
 
 use crate::{Machine, MachineFacts, Probe, avx, dotted_version};
 

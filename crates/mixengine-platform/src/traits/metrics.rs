@@ -1,11 +1,11 @@
-//! What a process group is costing this machine right now — roadmap task **T71**.
+//! What a process group is costing this machine right now.
 //!
 //! **Beside [`ConnectionCount`](crate::ConnectionCount) rather than inside
 //! [`ResourceControl`](crate::ResourceControl)**, and the pair is worth stating: `ResourceControl`
 //! answers what this machine will *enforce*, asked once at boot; this is asked every tick for as
 //! long as the daemon runs and answers what is being *spent*. A ceiling and a measurement are
 //! different questions — and on macOS, where there is no memory ceiling to ask about, the second is
-//! all there is (roadmap task **T71a**).
+//! all there is, and the memory watchdog acts on it.
 
 use crate::process::StartTime;
 
@@ -76,24 +76,24 @@ pub trait ProcessMetrics: std::fmt::Debug + Send + Sync {
     ///
     /// # What one call costs
     ///
-    /// Two halves since roadmap task **T181**. Every process's *parent* is read the cheapest way the
-    /// system offers, because the parent map has to exist before any group can be walked; then only
-    /// the processes in a group are refreshed for their CPU and memory. Since **T190** the first
-    /// half is kept between calls and taken again only when the roots change, when a member that
-    /// was read has ended, or after ten seconds; on Windows the second half reads each member by pid,
-    /// because `sysinfo` walks a snapshot of every process there even when asked for a few.
+    /// Two halves. Every process's *parent* is read the cheapest way the system offers, because the
+    /// parent map has to exist before any group can be walked; then only the processes in a group
+    /// are refreshed for their CPU and memory. The first half is kept between calls and taken again
+    /// only when the roots change, when a member that was read has ended, or after ten seconds; on
+    /// Windows the second half reads each member by pid, because `sysinfo` walks a snapshot of
+    /// every process there even when asked for a few.
     ///
-    /// Before T181 the whole table was refreshed every call. Measured over ten calls on one
+    /// The first version refreshed the whole table every call. Measured over ten calls on one
     /// developer's machine with 276 processes running, that was **about 10 ms on Windows 11** (9–16
     /// ms across runs) and **about 2 ms under WSL Ubuntu 24.04**; on a Mac with 773 running it was
-    /// **12–15 ms**, because `sysinfo` reads every process's arguments there on each refresh. After
-    /// it, the same Mac measures **about 0.5 ms**.
+    /// **12–15 ms**, because `sysinfo` reads every process's arguments there on each refresh. With
+    /// two halves, the same Mac measures **about 0.5 ms**.
     ///
-    /// Windows had not gained from T181: with seven groups on a machine with 446 processes a call
-    /// still cost **14.6 ms**, two whole-machine snapshots, and the daemon held 5–6% of a core while
-    /// one stream was open. Since T190 a call at the fast rate costs **41 µs** there, and a call
-    /// that lists the machine 6.9 ms, once in ten seconds; under WSL the same calls cost 198 µs and
-    /// 1.1 ms.
+    /// Windows had not gained from the split alone: with seven groups on a machine with 446
+    /// processes a call still cost **14.6 ms**, two whole-machine snapshots, and the daemon held
+    /// 5–6% of a core while one stream was open. With the parent map kept and each member read by
+    /// pid, a call at the fast rate costs **41 µs** there, and a call that lists the machine 6.9
+    /// ms, once in ten seconds; under WSL the same calls cost 198 µs and 1.1 ms.
     ///
     /// That is the number the sampling periods are chosen against, and it is measured rather than
     /// argued because the documents in this repository criticise polling a sleeping laptop by name:

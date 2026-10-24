@@ -19,10 +19,10 @@ pub(crate) struct Browsers {
 impl Default for Browsers {
     /// A machine MixEngine does not search.
     ///
-    /// **Which is what every suite written before T49b should keep looking like** — the same
-    /// reasoning as [`super::trust`]'s default, and the same mistake it exists to prevent: those
-    /// suites were written against a home whose browsers nobody had asked about, and a default that
-    /// quietly held the authority would rewrite what they assert.
+    /// **Which is what every suite written before browsers were asked about should keep looking
+    /// like** — the same reasoning as [`super::trust`]'s default, and the same mistake it exists to
+    /// prevent: those suites were written against a home whose browsers nobody had asked about, and
+    /// a default that quietly held the authority would rewrite what they assert.
     fn default() -> Self {
         Self::answering(BrowserSurvey::NotSearched {
             because: "this fixture's machine is not one MixEngine searches".to_owned(),

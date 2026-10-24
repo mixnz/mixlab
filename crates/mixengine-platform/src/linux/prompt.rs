@@ -1,12 +1,12 @@
 //! Raising the polkit prompt on the one-shot helper.
 //!
 //! **`--disable-internal-agent`.** Without it, a `pkexec` that finds no authentication agent falls
-//! back to the textual one built into itself, which prompts on the controlling terminal — a terminal
-//! a daemon does not have and could not show anybody if it did. With it, `pkexec` fails at once. The
-//! environment check below is a heuristic and can be wrong; this flag is what makes being wrong
-//! cheap, because the failure is then a fast non-zero exit rather than a process waiting forever on
-//! a tty nobody is watching. See the T40a design, D5, and ADR 0005, which calls this the worst
-//! failure mode of the three systems.
+//! back to the textual one built into itself, which prompts on the controlling terminal — a
+//! terminal a daemon does not have and could not show anybody if it did. With it, `pkexec` fails at
+//! once. The environment check below is a heuristic and can be wrong; this flag is what makes being
+//! wrong cheap, because the failure is then a fast non-zero exit rather than a process waiting
+//! forever on a tty nobody is watching. See ADR 0005, which calls this the worst failure mode of
+//! the three systems.
 //!
 //! **No polkit action file is shipped.** `pkexec` run against a program with no registered action
 //! falls back to `org.freedesktop.policykit.exec`, which asks for an administrator password and
@@ -48,7 +48,7 @@ impl Elevation for Prompt {
 
         // `output` rather than `status`: the helper's stderr is the only account of why it left no
         // report, and inherited it went to the daemon's own stream, where nobody who had just typed
-        // a password would read it — T166, D5. stdin was never the helper's to read.
+        // a password would read it. stdin was never the helper's to read.
         let ran = Command::new(PKEXEC)
             .arg("--disable-internal-agent")
             .arg(helper)

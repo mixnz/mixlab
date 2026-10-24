@@ -1,11 +1,12 @@
-//! What this machine's application control policy is doing about unsigned images — roadmap task
-//! **T94**.
+//! What this machine's application control policy is doing about unsigned images.
 //!
-//! **Two claims, kept apart on purpose** (T94 design, D3). [`AppControl`] reads a value that
-//! describes **Smart App Control** and nothing else. [`refused_by_app_control`] recognises a refusal
-//! that an *enterprise WDAC policy* produces just as readily, on a machine whose Smart App Control
-//! is off — so it says "an application control policy" and never names the feature. Collapsing the
-//! two would send somebody on a corporate laptop to a setting that is not the one refusing them.
+//! The D-numbers below are those of `docs/specs/2026-09-04-t94-application-control-design.md`.
+//!
+//! **Two claims, kept apart on purpose** (D3). [`AppControl`] reads a value that describes **Smart
+//! App Control** and nothing else. [`refused_by_app_control`] recognises a refusal that an
+//! *enterprise WDAC policy* produces just as readily, on a machine whose Smart App Control is off —
+//! so it says "an application control policy" and never names the feature. Collapsing the two would
+//! send somebody on a corporate laptop to a setting that is not the one refusing them.
 //!
 //! **The half that is a decision is compiled everywhere.** [`AppControlState::from_policy_value`]
 //! and [`refused_by_app_control`] are pure and are tested on all three systems, which is the rule
@@ -52,7 +53,7 @@ pub enum AppControlState {
     ///
     /// **Also what a machine with no such feature reads as** — Windows 10, Server, anything before
     /// Windows 11 22H2 — because the question is "is something refusing images here", and no policy
-    /// is a clear no (T94 design, D5).
+    /// is a clear no (D5).
     Off,
 
     /// Smart App Control is watching this machine and has not decided yet.
@@ -82,7 +83,7 @@ impl AppControlState {
     }
 }
 
-/// What this machine's Smart App Control policy is doing — roadmap task **T94**.
+/// What this machine's Smart App Control policy is doing.
 ///
 /// **Reads only, and needs no privilege.** The value lives under
 /// `HKLM\SYSTEM\CurrentControlSet\Control`, which any account may query, and nothing here writes —

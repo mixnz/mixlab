@@ -6,7 +6,7 @@
 //! saying so.
 //!
 //! What *can* stop a bind here is an excluded port range (`netsh int ipv4 show excludedportrange`),
-//! which looks like a permission error and is not one. That is `mix doctor`'s (T47) and not a grant.
+//! which looks like a permission error and is not one. That is `mix doctor`'s and not a grant.
 
 #[cfg(feature = "host")]
 use std::path::Path;

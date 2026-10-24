@@ -1,7 +1,10 @@
-//! Starting a desktop application, against the real OS — roadmap tasks **T83** and **T165**.
+//! Starting a desktop application, against the real OS.
 //!
 //! `locate_window` is proved against a `TempDir` in `src/desktop.rs`; what is here is the launcher
 //! every system shares, driven against the shell every system has, and the mock's contract.
+//!
+//! The D-numbers below are those of
+//! `docs/specs/2026-09-03-t83-a-connection-handed-to-the-window-design.md`.
 
 use std::collections::BTreeMap;
 use std::ffi::OsString;

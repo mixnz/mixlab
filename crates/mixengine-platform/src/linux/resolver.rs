@@ -1,7 +1,7 @@
 //! Linux: a `systemd-networkd` link of MixEngine's own.
 //!
 //! **This is the mechanism left after the measurement removed every one the feature spec and the
-//! roadmap named** — the T45 design, D10:
+//! roadmap named:**
 //!
 //! - a `/etc/systemd/resolved.conf.d/` drop-in with `DNS=127.0.0.1:53535` and `Domains=~test`
 //!   redirects the **whole machine**: after it, `getent hosts github.com` answered `127.0.0.1`. A
@@ -20,6 +20,8 @@
 //! **And unlike the other two systems, the mechanism here is a question about the machine rather
 //! than about the platform** — D2. A Linux with no `systemd-resolved` and no `systemd-networkd` has
 //! no scoped mechanism, which is [`ResolverMethod::None`] and a mode rather than a failure.
+//!
+//! The D-numbers here are those of `docs/specs/2026-08-23-t45-resolver-wiring-design.md`.
 
 use crate::resolver::networkd;
 
@@ -373,10 +375,9 @@ fn remove(path: &str) -> crate::Result<bool> {
 
 /// Ask `systemd-networkd` to read the files that were just written.
 ///
-/// **One fixed command with no argument from the request** — the shape T42 established with
-/// `pfctl`. The rule this binary keeps is that it never runs an *arbitrary* command; a constant
-/// argument vector is not one, and there is no API for this that does not go through systemd's own
-/// tool.
+/// **One fixed command with no argument from the request**, the shape port access has with `pfctl`.
+/// The rule this binary keeps is that it never runs an *arbitrary* command; a constant argument
+/// vector is not one, and there is no API for this that does not go through systemd's own tool.
 ///
 /// `networkctl reload` would be lighter and **was not measured**, so it is not used: what the
 /// probe demonstrated bringing the link up was a restart, and a mechanism nobody has watched work

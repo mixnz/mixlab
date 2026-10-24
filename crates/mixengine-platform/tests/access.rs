@@ -174,12 +174,12 @@ fn macos_removes_an_acl_somebody_else_left_behind() {
 #[cfg(target_os = "macos")]
 #[test]
 fn macos_severs_an_inherited_ace() {
-    // The macOS half of `windows_severs_an_inherited_ace`. macOS inherits ACLs too, from
-    // the parent directory rather than from the volume: an ACE carrying `directory_inherit` on a
-    // parent of `MIXENGINE_HOME` lands on every directory created below it, marked `inherited` and
-    // fully in force. `file_inherit` reaches the files as well — which is what makes this the CA
-    // private key's problem (T48) and not a tidiness one. Clearing the ACL on the directory is also
-    // what stops the files created in it later from inheriting anything.
+    // The macOS half of `windows_severs_an_inherited_ace`. macOS inherits ACLs too, from the parent
+    // directory rather than from the volume: an ACE carrying `directory_inherit` on a parent of
+    // `MIXENGINE_HOME` lands on every directory created below it, marked `inherited` and fully in
+    // force. `file_inherit` reaches the files as well — which is what makes this the CA private
+    // key's problem and not a tidiness one. Clearing the ACL on the directory is also what stops
+    // the files created in it later from inheriting anything.
     let host = host();
     let parent = fresh_directory();
     grant_everyone_inheritable(parent.path());
