@@ -1,5 +1,6 @@
-//! `runtime.upgrade*` and `package.upgrade*` — roadmap tasks **T193b** and **T193c**, the design's
-//! D4 and D7 (`docs/specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md`).
+//! `runtime.upgrade*` and `package.upgrade*`
+//! (`docs/specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md`, D4 and
+//! D7).
 //!
 //! **One plan type for both namespaces and for both moments.** What a person is shown before they
 //! agree and what the finished job reports are the same list, with each entry's outcome moved from

@@ -2,7 +2,7 @@
 import type { NextStep } from "./NextStep";
 
 /**
- * A project's steps, and whether the blueprint they came from is trusted — T205, D12.
+ * A project's steps, and whether the blueprint they came from is trusted.
  */
 export type NextSteps = { 
 /**

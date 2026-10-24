@@ -1,10 +1,9 @@
 //! What `cert.ca_status` answers: this home's certificate authority, and nothing about the machine.
 //!
-//! **There is no trust-store field, and that is a decision rather than an omission.** Whether an
-//! operating system trusts this certificate is a question about the operating system, answered by
-//! machinery roadmap task T49 builds; a field this build could only ever fill with "unknown" would
-//! be an answer nobody can act on. [`DnsStatus`](crate::DnsStatus) took the same shape for the same
-//! reason (T46): report the independent facts, and refuse to collapse them into a verdict.
+//! **There is no trust-store field in [`Ca`], and that is a decision rather than an omission.**
+//! Whether an operating system trusts this certificate is a question about the operating system,
+//! answered beside it in [`CaStatus::trust`]. [`DnsStatus`](crate::DnsStatus) took the same shape
+//! for the same reason: report the independent facts, and refuse to collapse them into a verdict.
 //!
 //! **And there is nowhere here a private key could travel.**
 //! `docs/architecture/security-model.md` says the key is never copied, exported by an RPC, or
@@ -15,8 +14,8 @@ use crate::{SiteRef, Timestamp};
 /// `cert.ca_status` takes no options, and says so in a type.
 ///
 /// An empty struct with `deny_unknown_fields` rather than no parameters at all: a caller who
-/// misspells something is told, instead of being silently given the default — the reasoning T40
-/// established for every parameterless method since.
+/// misspells something is told, instead of being silently given the default — the reasoning every
+/// parameterless method follows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -24,10 +23,10 @@ pub struct CaStatusQuery {}
 
 /// This home's certificate authority, as far as the daemon can see it.
 ///
-/// **A struct around one enum, and the enum is flattened into it.** The wrapper is what lets T49
-/// add whether the machine's stores trust this certificate without turning a tagged enum into
-/// something a client has to unwrap; the `flatten` is what stops the tag — which is also called
-/// `state` — from arriving nested inside a field of the same name.
+/// **A struct around one enum, and the enum is flattened into it.** The wrapper is what lets
+/// [`trust`](Self::trust) say whether the machine's stores trust this certificate without turning a
+/// tagged enum into something a client has to unwrap; the `flatten` is what stops the tag — which
+/// is also called `state` — from arriving nested inside a field of the same name.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct CaStatus {
@@ -35,18 +34,15 @@ pub struct CaStatus {
     #[serde(flatten)]
     pub state: CaState,
 
-    /// Whether this machine trusts it — roadmap task **T49a**.
+    /// Whether this machine trusts it.
     ///
     /// **Beside [`Ca`] rather than inside it**, because whether a machine trusts a certificate is a
     /// fact about the machine and `Ca` describes the certificate. A home whose authority is absent
     /// or damaged still has a machine with or without a store, and this still has something true to
     /// say about it.
-    ///
-    /// T48 left this out on purpose, recording that a field it could only have filled with
-    /// "unknown" is not an answer. It is answerable now.
     pub trust: Trust,
 
-    /// What Firefox and Chrome say — roadmap task **T49b**.
+    /// What Firefox and Chrome say.
     ///
     /// **Beside [`trust`](Self::trust) and not inside it.** They are separate questions with
     /// separate answers: `trust` is one store and one `bool`, and this is N databases that are
@@ -121,7 +117,7 @@ pub struct BrowserDatabase {
     pub because: Option<String>,
 }
 
-/// Whether a site has a usable certificate — roadmap task **T50**.
+/// Whether a site has a usable certificate.
 ///
 /// **[`CaState`]'s vocabulary, reused deliberately.** The ways a key and a certificate on disk can
 /// disagree do not depend on which of the two they are, so [`Unusable`] is the same closed enum
@@ -166,10 +162,10 @@ pub struct SiteCert {
     /// The authority that signed it, as X.509 spells the name.
     ///
     /// **The fourth question the issuer asks is a comparison of this against the authority's own
-    /// subject** — the T50 design, D6 — which is free because T48 put the key's identity into that
-    /// name. On the wire rather than derived only where it is needed, because `mix cert status`
-    /// (T53) has to be able to show a person *which* authority signed a certificate they cannot get
-    /// a padlock for.
+    /// subject** (`docs/specs/2026-08-25-t50-leaf-issuance-design.md`, D6), which is free because
+    /// the authority carries its key's identity in that name. On the wire rather than derived only
+    /// where it is needed, because `mix cert status` has to be able to show a person *which*
+    /// authority signed a certificate they cannot get a padlock for.
     pub issuer: String,
 
     /// SHA-256 of the certificate's DER, lowercase hex, no separators.
@@ -228,7 +224,7 @@ pub struct SiteCertOutcome {
     pub state: CertState,
 }
 
-/// What `cert.status` was asked about — roadmap task **T53**.
+/// What `cert.status` was asked about.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields, default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -237,7 +233,7 @@ pub struct CertStatusQuery {
     pub site: Option<SiteRef>,
 }
 
-/// What this home's certificates are doing — roadmap task **T53**.
+/// What this home's certificates are doing.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct CertStatusReport {
@@ -265,7 +261,7 @@ pub struct SiteCertStatus {
     pub problem: Option<CertProblem>,
 }
 
-/// A condition of one site's certificate — roadmap task **T53**.
+/// A condition of one site's certificate.
 ///
 /// **A name for a condition rather than advice**, which is [`ProblemId`](crate::ProblemId)'s own
 /// words about itself and holds here unchanged: `mix` renders the command to run and a graphical
@@ -307,7 +303,7 @@ pub enum CertProblem {
     Expiring,
 }
 
-/// What this home's front end presented when asked for a site over TLS — roadmap task **T53**.
+/// What this home's front end presented when asked for a site over TLS.
 ///
 /// **The first answer in this crate that comes from a socket rather than from a file.** Everything
 /// else said about a certificate here is read off disk and believed; this is what the running
@@ -318,9 +314,9 @@ pub enum CertProblem {
 pub enum Handshake {
     /// This site declares no HTTPS, so nothing was attempted.
     ///
-    /// **Not a failure and not a problem**, which is the distinction T52 had to add to
-    /// [`IssueOutcome`] for the same reason: a site that asked for no certificate is not a site
-    /// whose certificate is missing.
+    /// **Not a failure and not a problem**, which is the distinction [`IssueOutcome::NotWanted`]
+    /// draws for the same reason: a site that asked for no certificate is not a site whose
+    /// certificate is missing.
     NotAsked {},
 
     /// Nothing answered, and this is why: no front end in this home, or a port nothing holds.
@@ -346,7 +342,7 @@ pub enum Handshake {
     },
 }
 
-/// Whether a presented chain validates — roadmap task **T53**.
+/// Whether a presented chain validates.
 ///
 /// **An enum rather than a `bool` with a sentence beside it**, on [`CaState`]'s shape: the pair has
 /// two states nobody means — rejected with no reason, and trusted with one — and this makes every
@@ -378,11 +374,11 @@ pub enum IssueOutcome {
 
     /// Nothing was written because nothing was asked for: this site declares no HTTPS.
     ///
-    /// **Not a refusal, and the distinction is not cosmetic** — roadmap task **T52**. A refusal is
-    /// MixEngine failing at something it was asked to do; this is MixEngine correctly doing
-    /// nothing. T52's renewal loop announces every failure it finds, so with these two under one
-    /// name it would announce one per plaintext site, once an hour, for as long as the daemon runs
-    /// — and `crate::sites::Sites::now_has_a_certificate` was already logging `the site has no
+    /// **Not a refusal, and the distinction is not cosmetic.** A refusal is MixEngine failing at
+    /// something it was asked to do; this is MixEngine correctly doing nothing. The renewal loop
+    /// announces every failure it finds, so with these two under one name it would announce one per
+    /// plaintext site, once an hour, for as long as the daemon runs — and
+    /// `crate::sites::Sites::now_has_a_certificate` was already logging `the site has no
     /// certificate yet` about a site that never wanted one.
     NotWanted {
         /// In words.
@@ -392,10 +388,10 @@ pub enum IssueOutcome {
     /// Nothing was written, and this is why: no usable authority, or no domains at all.
     ///
     /// **A per-site outcome and not a failed call.** One site that cannot be issued for must not
-    /// take the answer for the others with it, which is the same shape T49b's `BrowserChange` has.
+    /// take the answer for the others with it, which is the same shape `BrowserChange` has.
     ///
-    /// A site with no domains stays here rather than moving to [`Self::NotWanted`] with T52: it is
-    /// a row that should not exist, and calling it "not wanted" would hide it.
+    /// A site with no domains stays here rather than moving to [`Self::NotWanted`]: it is a row
+    /// that should not exist, and calling it "not wanted" would hide it.
     Refused {
         /// In words.
         because: String,
@@ -405,9 +401,9 @@ pub enum IssueOutcome {
 /// Whether this machine holds MixEngine's certificate authority in its own trust store.
 ///
 /// **This says "is it in the store", not "does a browser trust it".** Firefox and Chrome on Linux
-/// read NSS databases and not the system store at all — that is T49b — and a browser already running
-/// may not re-read a store it has cached. The honest end-to-end answer is a live TLS handshake,
-/// which is `mix cert status`' job (T53).
+/// read NSS databases and not the system store at all — that is [`CaStatus::browsers`] — and a
+/// browser already running may not re-read a store it has cached. The honest end-to-end answer is a
+/// live TLS handshake, which is `mix cert status`' job.
 /// **A nested object rather than a flattened one, unlike [`CaState`] above.** Two reasons, and both
 /// are about this type rather than about taste: `Trust::NotInstalled` and `CaState::Unusable` both
 /// spell their reason `because`, so flattening would let one silently overwrite the other on the one
@@ -434,7 +430,7 @@ pub enum Trust {
     ///
     /// **A supported machine, not a failure**, exactly as `ResolverMethod::None` is: Linux without
     /// either anchors directory keeps working over HTTP, and its browsers are reached through NSS
-    /// (T49b) rather than through a system store at all.
+    /// rather than through a system store at all.
     NoStore {
         /// Which of those it is, in words.
         because: String,
@@ -460,8 +456,9 @@ pub enum Trust {
 pub enum CaState {
     /// This home has no certificate authority.
     ///
-    /// Reachable even though the daemon makes one at start (the T48 design, D4): a start whose
-    /// generation failed warns and carries on, and this is what the next question gets.
+    /// Reachable even though the daemon makes one at start
+    /// (`docs/specs/2026-08-24-t48-internal-ca-design.md`, D4): a start whose generation failed
+    /// warns and carries on, and this is what the next question gets.
     ///
     /// An empty struct variant rather than a unit one, for [`Outcome`](crate::Outcome)'s reason:
     /// `deny_unknown_fields` never fires on a unit variant of an internally tagged enum, because it
@@ -487,8 +484,7 @@ pub enum CaState {
 ///
 /// **Closed rather than a string**, for [`ProblemId`](crate::ProblemId)'s reason: a client that
 /// matches on wording is a client that silently stops matching. Nothing here is advice — what to do
-/// about each is the client's to say, and for most of them it is `mix cert ca-rotate`, which T54
-/// builds.
+/// about each is the client's to say, and for most of them it is `mix cert ca-rotate`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -498,9 +494,10 @@ pub enum Unusable {
 
     /// The private key is there and the certificate is not.
     ///
-    /// The state a crash between the two writes leaves, which is why the key is written first (the
-    /// T48 design, D2): this is a shape that can be recognised, where a certificate whose key never
-    /// arrived looks exactly like one whose key was lost.
+    /// The state a crash between the two writes leaves, which is why the key is written first
+    /// (`docs/specs/2026-08-24-t48-internal-ca-design.md`, D2): this is a shape that can be
+    /// recognised, where a certificate whose key never arrived looks exactly like one whose key was
+    /// lost.
     CertificateMissing,
 
     /// The private key is there and is not a private key this build can read.
@@ -527,8 +524,8 @@ pub struct Ca {
     /// SHA-256 of the certificate's DER, lowercase hex, no separators.
     ///
     /// **The number a browser shows and a trust store lists**, and therefore the only one a person
-    /// can compare against anything. Not the same value as [`key_id`](Self::key_id), and the T48
-    /// design's D1 is why there are two.
+    /// can compare against anything. Not the same value as [`key_id`](Self::key_id), and
+    /// `docs/specs/2026-08-24-t48-internal-ca-design.md`, D1, is why there are two.
     pub fingerprint: String,
 
     /// The first eight hex characters of the SHA-256 of the public key, which is what
@@ -550,7 +547,7 @@ pub struct Ca {
     ///
     /// **Signed, and allowed to be negative.** An expired authority is a true statement about a
     /// certificate that exists and parses, not an unusable one: what it needs is rotation, which is
-    /// T54's and not this build's.
+    /// `cert.ca_rotate`'s.
     pub days_left: i64,
 
     /// The certificate itself, PEM. The public half, and there is no field for the other one.
@@ -569,7 +566,7 @@ pub struct CaRotateQuery {}
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct CaUninstallQuery {}
 
-/// What `cert.ca_rotate` did — roadmap task **T54**.
+/// What `cert.ca_rotate` did.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct CaRotateReport {
@@ -600,12 +597,12 @@ pub struct CaRotateReport {
     /// One entry per site whose certificate was reissued, exactly `cert.issue`'s.
     ///
     /// Empty when nothing was committed. A rotation reissues through the call `mix cert issue`
-    /// already runs, because T50 made a leaf signed by a superseded authority unreusable — so there
-    /// is no second reissue path to keep in step with the first.
+    /// already runs, because a leaf signed by a superseded authority is never reused — so there is
+    /// no second reissue path to keep in step with the first.
     pub sites: Vec<SiteCertOutcome>,
 }
 
-/// What became of a rotation — roadmap task **T54**.
+/// What became of a rotation.
 ///
 /// **Internally tagged and `#[non_exhaustive]`**, as [`CertProblem`] is: a client matches on a word,
 /// and a later build may find a fourth thing to say.
@@ -634,7 +631,7 @@ pub enum RotateOutcome {
     },
 }
 
-/// What `cert.ca_uninstall` did — roadmap task **T54**.
+/// What `cert.ca_uninstall` did.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct CaUninstallReport {
@@ -652,7 +649,7 @@ pub struct CaUninstallReport {
     pub status: CaStatus,
 }
 
-/// What became of a removal — roadmap task **T54**.
+/// What became of a removal.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
 #[non_exhaustive]

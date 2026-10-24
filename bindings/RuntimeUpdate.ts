@@ -4,8 +4,7 @@ import type { Requirement } from "./Requirement";
 import type { RuntimeKind } from "./RuntimeKind";
 
 /**
- * One installed version and the newer release of its line the index offers — roadmap task
- * **T193a**, D2.
+ * One installed version and the newer release of its line the index offers.
  */
 export type RuntimeUpdate = { 
 /**
@@ -26,6 +25,6 @@ to: PackageVersion,
  */
 to_installed: boolean, 
 /**
- * What this machine lacks for `to`, as a release's `needs` says it (T149).
+ * What this machine lacks for `to`, as a release's `needs` says it.
  */
 needs?: Array<Requirement> | null, };

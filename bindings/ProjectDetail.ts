@@ -19,14 +19,14 @@ project: ProjectSummary,
  */
 pins: Array<ProjectPin>, 
 /**
- * The sites its `mixengine.toml` declares, in file order — roadmap task **T204**, spec D7.
+ * The sites its `mixengine.toml` declares, in file order.
  *
- * What lets a client offer the import at all: until T204 only `site.create` read the file,
+ * What lets a client offer the import at all: before this, only `site.create` read the file,
  * and only at the moment of creating.
  */
 declared_sites?: Array<DeclaredSite>, 
 /**
- * What its blueprint says is left to do, read through `projects.blueprint_id` — roadmap task
- * **T205**, D5. [`None`] for a project made by hand or applied before T205.
+ * What its blueprint says is left to do, read through `projects.blueprint_id`. [`None`] for a
+ * project made by hand or applied before blueprints carried next steps.
  */
 next_steps?: NextSteps | null, };

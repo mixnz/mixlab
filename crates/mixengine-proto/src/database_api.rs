@@ -1,4 +1,4 @@
-//! Requests in the `database.*` namespace — roadmap tasks **T77a** and **T83**.
+//! Requests in the `database.*` namespace.
 
 use crate::ServiceId;
 
@@ -10,7 +10,7 @@ pub struct DatabaseClientQuery {
     pub service: ServiceId,
 }
 
-/// `database.credentials` — the password held for one account. Reads only. Roadmap task **T77b**.
+/// `database.credentials` — the password held for one account. Reads only.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct DatabaseCredentialsQuery {
@@ -54,7 +54,7 @@ pub struct DatabaseCreate {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user: Option<String>,
 
-    /// A password the caller chose, rather than one MixEngine generates. Roadmap task **T77b**.
+    /// A password the caller chose, rather than one MixEngine generates.
     ///
     /// Validated and never escaped: `mixengine_core::generate::databases::validated_password`
     /// refuses everything that could end the quoted SQL literal it is interpolated into. Absent

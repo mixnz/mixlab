@@ -28,7 +28,7 @@ places: Array<PathPlace>,
  *
  * Carried by all three methods because it is the other half of the same question: a PATH entry
  * naming a directory with no `php` in it is a PATH entry that does nothing, and the two are
- * set up together (roadmap task T26).
+ * set up together.
  */
 commands: Array<string>, 
 /**
@@ -40,7 +40,7 @@ commands: Array<string>,
  */
 stale?: Array<string>, 
 /**
- * Where each of those commands came from — roadmap tasks **T130** and **T131**.
+ * Where each of those commands came from.
  *
  * **Beside [`commands`](Self::commands) rather than replacing it**, because the two answer
  * different questions and only one of them is the old one: `commands` is what `bin/` holds,

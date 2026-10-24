@@ -12,8 +12,7 @@ export type SiteDetail = {
  */
 site: SiteSummary, 
 /**
- * The owner's root: the project's directory, or the extension's install directory (roadmap
- * task **T81b**).
+ * The owner's root: the project's directory, or the extension's install directory.
  */
 root: string, 
 /**

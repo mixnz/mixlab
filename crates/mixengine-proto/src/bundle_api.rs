@@ -1,4 +1,4 @@
-//! `daemon.bundle`'s types — the wire answer and the archive's own schema. Roadmap task **T93**.
+//! `daemon.bundle`'s types — the wire answer and the archive's own schema.
 //!
 //! **The archive's schema lives here and not in the daemon**, although [`Manifest`] and
 //! [`PlatformFacts`] never travel on the wire. A bundle is read by whoever was sent one, which is
@@ -59,7 +59,7 @@ pub enum Part {
     /// The tail of `daemon.log`.
     DaemonLog,
 
-    /// Every crash report in `logs/crashes/`, newest first — roadmap task **T91**.
+    /// Every crash report in `logs/crashes/`, newest first.
     ///
     /// **The one member of this archive that is clean by construction.** Everything else here is
     /// clean because
@@ -101,9 +101,9 @@ impl Part {
 /// The number [`Manifest::format`] carries, so a reader that does not know a shape stops rather
 /// than guessing at one.
 ///
-/// **2 since T91**, which added [`Part::Crashes`]: a reader that knows only shape 1 meets
-/// `"crashes"` inside [`Manifest::parts`] and cannot decode it, so it is owed a number it can
-/// compare rather than a `serde` error.
+/// **2 since [`Part::Crashes`] was added**: a reader that knows only shape 1 meets `"crashes"`
+/// inside [`Manifest::parts`] and cannot decode it, so it is owed a number it can compare rather
+/// than a `serde` error.
 ///
 /// **A `Part` added after v0.1.0 is a [`PROTOCOL_VERSION`](crate::PROTOCOL_VERSION) bump**, because
 /// this enum also travels on the wire inside [`Member::part`] and an older `mix` cannot decode a
@@ -111,7 +111,7 @@ impl Part {
 /// [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md) settles an
 /// added *member* and not an added variant;
 /// [ADR 0022](../../../docs/decisions/0022-a-crash-report-is-recorded-by-default-and-sent-by-nothing.md)
-/// settles this one. It was free in T91 because nothing had been released.
+/// settles this one. Adding `Crashes` was free because nothing had been released.
 pub const MANIFEST_FORMAT: u32 = 2;
 
 /// One part that was written, and what it cost.

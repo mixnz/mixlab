@@ -2,7 +2,7 @@
 import type { RuntimeFound } from "./RuntimeFound";
 
 /**
- * What `runtime.found` answers — roadmap task **T182i**.
+ * What `runtime.found` answers.
  */
 export type RuntimeFoundList = { 
 /**

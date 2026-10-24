@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use super::*;
 use crate::Millis;
 
-/// The two probes T190b adds travel under names a client can read — roadmap task **T190b**, D4.
+/// The MySQL and Redis probes travel under names a client can read.
 #[test]
 fn the_protocol_probes_travel_by_their_own_names() {
     let addr: SocketAddr = "127.0.0.1:3306".parse().expect("an address");
@@ -32,15 +32,15 @@ fn spec() -> ServiceSpecBuilder {
     })
 }
 
-/// **The namespace is a published fact, not a private constant** — roadmap task **T84**, the
-/// design's D6. It is spelled out here because another application reads credentials under it,
-/// and a word two programs agree on is a word one of them must not be free to change quietly.
+/// **The namespace is a published fact, not a private constant.** It is spelled out here because
+/// another application reads credentials under it, and a word two programs agree on is a word one
+/// of them must not be free to change quietly.
 #[test]
 fn the_keyring_namespace_is_the_one_word_both_applications_agree_on() {
     assert_eq!(KEYRING_SERVICE, "mixengine");
 }
 
-/// What a failed start is diagnosed against — roadmap task **T38**.
+/// What a failed start is diagnosed against.
 ///
 /// The recipe rendering a spec knows the number it wrote into the configuration, and nothing
 /// downstream of it does: a `ReadyCheck` names an address only for the services that are checked
@@ -57,7 +57,7 @@ fn a_spec_declares_no_ports_by_default() {
     assert!(spec().build().unwrap().ports().is_empty());
 }
 
-/// A recipe's permission, and the default that is every other service — roadmap task **T71a**.
+/// A recipe's permission, and the default that is every other service.
 ///
 /// **Asserted in both directions**, because the interesting half is the default: a spec that
 /// says nothing must produce a service no watchdog will ever restart.
@@ -801,7 +801,7 @@ fn an_idle_source_needs_both_the_column_and_the_recipe_to_be_decided() {
     assert_eq!(
         IdleSource::of(None, None, None),
         IdleSource::Unset,
-        "every service in this build, until T70 gives the recipes defaults"
+        "no setting and no recipe default is no policy at all"
     );
 
     // The state a report without it calls "never": asked for, and nothing to measure with.

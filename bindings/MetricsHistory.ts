@@ -18,8 +18,8 @@ minutes: Array<MetricsMinute>,
  */
 retention_hours: number, 
 /**
- * How many logical processors this machine has — roadmap task **T190c**, and
- * [`MetricsFrame::cores`]'s reason: what `cpu_avg` and `cpu_peak` are divided by to be drawn
- * as a share of the machine. The rows themselves stay in percent of one core.
+ * How many logical processors this machine has, for [`MetricsFrame::cores`]'s reason: what
+ * `cpu_avg` and `cpu_peak` are divided by to be drawn as a share of the machine. The rows
+ * themselves stay in percent of one core.
  */
 cores: number, };

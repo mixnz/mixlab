@@ -33,9 +33,9 @@ kind?: SiteKind | null,
  */
 services?: Array<ServiceId> | null, 
 /**
- * The routes, **replacing** the list the site had — roadmap task **T135**. [`Self::domains`]'
- * rule and its reason: with a merge there is no way to remove one. `Some(vec![])` empties the
- * list; [`None`] leaves it alone.
+ * The routes, **replacing** the list the site had. [`Self::domains`]' rule and its reason:
+ * with a merge there is no way to remove one. `Some(vec![])` empties the list; [`None`] leaves
+ * it alone.
  */
 routes?: Array<SiteRoute> | null, 
 /**
@@ -43,7 +43,7 @@ routes?: Array<SiteRoute> | null,
  */
 https?: boolean | null, 
 /**
- * Whether the plaintext address should redirect to the HTTPS one — roadmap task **T98**.
+ * Whether the plaintext address should redirect to the HTTPS one.
  *
  * `None` leaves it — except that turning `https` off while this is left unset carries it to
  * `false` as well, a site whose `https` this update leaves `false` for any reason refuses

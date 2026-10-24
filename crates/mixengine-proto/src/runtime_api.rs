@@ -172,7 +172,7 @@ pub struct RuntimeUninstall {
     pub force: bool,
 }
 
-/// What `runtime.install` takes: a version, and what the person agreed to — roadmap task **T149**.
+/// What `runtime.install` takes: a version, and what the person agreed to.
 ///
 /// Flattened on [`RuntimeUninstall`]'s pattern, so a request with neither flag is the
 /// [`RuntimeTarget`] every client has always sent.
@@ -252,23 +252,24 @@ pub struct RuntimeCatalogue {
     /// person acts on is "could the publisher be reached", not "how old exactly".
     pub stale: bool,
 
-    /// Each installed version whose line has a newer release here, and which one — T193a, D2.
+    /// Each installed version whose line has a newer release here, and which one.
     ///
     /// Composed with the available list and never with the installed one, because listing what is
-    /// on the disk must not cost a request to the index. [`None`] is a daemon from before T193.
+    /// on the disk must not cost a request to the index. [`None`] is a daemon that does not offer
+    /// updates within a line.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updates: Option<Vec<RuntimeUpdate>>,
 
-    /// What this list could not be read for — roadmap task **T196**.
+    /// What this list could not be read for.
     ///
     /// The package index is one file per kind, so one file that could not be read costs that kind
-    /// and no other. [`None`] is a daemon from before T196; an empty list is one that read
-    /// everything it was asked for.
+    /// and no other. [`None`] is a daemon from before the index had one file per kind; an empty
+    /// list is one that read everything it was asked for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unavailable: Option<Vec<CatalogueGap>>,
 }
 
-/// A runtime kind or a package an available list could not be read for — roadmap task **T196**.
+/// A runtime kind or a package an available list could not be read for.
 ///
 /// Said rather than left out in silence: a list with a kind missing and no word about it reads as
 /// an index that publishes nothing for that kind, and sends a person looking for a version that
@@ -324,7 +325,7 @@ pub struct RuntimeSummary {
     /// none, which is what a home is left with when its only version is uninstalled.
     pub default: bool,
 
-    /// Whether the folder this row names is gone — roadmap task **T206d**.
+    /// Whether the folder this row names is gone.
     ///
     /// `Some(true)` only when the folder answered "not found". A folder that cannot be read for any
     /// other reason is not gone, and reads `Some(false)`. `None` is a daemon from before this
@@ -334,7 +335,7 @@ pub struct RuntimeSummary {
 }
 
 impl RuntimeSummary {
-    /// Whether this daemon said the folder is gone. `None` is not — roadmap task **T206d**.
+    /// Whether this daemon said the folder is gone. `None` is not.
     #[must_use]
     pub fn is_missing(&self) -> bool {
         self.missing == Some(true)
@@ -377,7 +378,7 @@ pub struct RuntimeRelease {
     /// for two clients to disagree about what "installed" means.
     pub installed: bool,
 
-    /// Whether this machine would run that build natively — roadmap task **T92**.
+    /// Whether this machine would run that build natively.
     ///
     /// Composed by the daemon, which is the only party that knows both what the index published and
     /// which triple this build was compiled for. [`None`] means the peer predates the member and
@@ -388,14 +389,14 @@ pub struct RuntimeRelease {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub execution: Option<Execution>,
 
-    /// What this machine lacks for that build, each with what can be done — roadmap task **T149**.
+    /// What this machine lacks for that build, each with what can be done.
     ///
     /// [`None`] means a peer that predates the member, per ADR 0019; an empty list means nothing is
     /// lacking or nothing could be judged.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub needs: Option<Vec<crate::Requirement>>,
 
-    /// The line this release belongs to (`8.4`, `22`) — roadmap task **T193a**, D1.
+    /// The line this release belongs to (`8.4`, `22`).
     ///
     /// Decided by the daemon (`mixengine_core::lines`) so that no client decides it; [`None`] is a
     /// daemon that predates the member, per ADR 0019.
@@ -408,13 +409,12 @@ pub struct RuntimeRelease {
     pub newest_in_line: Option<bool>,
 
     /// What this release cannot do on the cell this machine would install, and why — the index's
-    /// `lacks`, in the publisher's words (roadmap task **T206**, D2). Empty when it lacks nothing.
+    /// `lacks`, in the publisher's words. Empty when it lacks nothing.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub lacks: std::collections::BTreeMap<String, String>,
 }
 
-/// One installed version and the newer release of its line the index offers — roadmap task
-/// **T193a**, D2.
+/// One installed version and the newer release of its line the index offers.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct RuntimeUpdate {
@@ -431,7 +431,7 @@ pub struct RuntimeUpdate {
     /// asked for.
     pub to_installed: bool,
 
-    /// What this machine lacks for `to`, as a release's `needs` says it (T149).
+    /// What this machine lacks for `to`, as a release's `needs` says it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub needs: Option<Vec<crate::Requirement>>,
 }
@@ -538,8 +538,7 @@ pub struct RuntimeRemoval {
     pub default_cleared: bool,
 }
 
-/// One runtime directory on disk with no row — roadmap task **T182i**. The answer to `runtime.found` is a
-/// list of these.
+/// One runtime directory on disk with no row. The answer to `runtime.found` is a list of these.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct RuntimeFound {
@@ -557,7 +556,7 @@ pub struct RuntimeFound {
     pub why: String,
 }
 
-/// What `runtime.found` answers — roadmap task **T182i**.
+/// What `runtime.found` answers.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct RuntimeFoundList {
@@ -569,8 +568,8 @@ pub struct RuntimeFoundList {
 mod tests {
     use super::*;
 
-    /// **A daemon from before T206d sends no `missing`**, and a client reads that as not known to
-    /// be gone — ADR 0019.
+    /// **A daemon from before `missing` existed sends none**, and a client reads that as not known
+    /// to be gone — ADR 0019.
     #[test]
     fn an_older_daemon_s_runtime_reads_without_missing() {
         let summary: RuntimeSummary = serde_json::from_value(serde_json::json!({
@@ -583,7 +582,7 @@ mod tests {
         assert!(!summary.is_missing());
     }
 
-    /// **An older daemon's row reads, and a release lacking nothing says nothing** — T206, D2.
+    /// **An older daemon's row reads, and a release lacking nothing says nothing.**
     #[test]
     fn a_release_lacking_nothing_writes_no_lacks() {
         let release: RuntimeRelease = serde_json::from_value(serde_json::json!({
@@ -628,7 +627,7 @@ mod tests {
     fn an_uninstall_without_a_force_is_still_an_uninstall() {
         let asked: RuntimeUninstall =
             serde_json::from_value(serde_json::json!({"kind": "php", "version": "8.3.33"}))
-                .expect("the shape every client has sent since T23");
+                .expect("the shape every client has sent since the first release");
 
         assert!(!asked.force);
         assert_eq!(asked.target.kind, crate::RuntimeKind::Php);
@@ -660,10 +659,9 @@ mod tests {
         );
     }
 
-    /// [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md): a
-    /// member added after protocol 1 was frozen is absent on the wire when nobody reported it, and
-    /// [`None`] means *"this peer predates the member"* rather than *"could not determine"* —
-    /// roadmap task **T92**.
+    /// [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md): a member
+    /// added after protocol 1 was frozen is absent on the wire when nobody reported it, and
+    /// [`None`] means *"this peer predates the member"* rather than *"could not determine"*.
     #[test]
     fn an_unreported_execution_is_absent_rather_than_defaulted() {
         let older = serde_json::json!({
@@ -759,12 +757,13 @@ mod tests {
         );
     }
 
-    /// **T149.** An install without its two flags is the request every client has sent since T23.
+    /// An install without its two flags is the request every client has sent since the first
+    /// release.
     #[test]
     fn an_install_without_its_flags_is_the_target_it_always_was() {
         let asked: RuntimeInstall =
             serde_json::from_value(serde_json::json!({"kind": "php", "version": "8.3.33"}))
-                .expect("the shape every client has sent since T23");
+                .expect("the shape every client has sent since the first release");
 
         assert!(!asked.install_prerequisites);
         assert!(!asked.ignore_requirements);
@@ -775,7 +774,7 @@ mod tests {
         );
     }
 
-    /// **T149.** Both halves are tagged, so a client switches on each without parsing a sentence.
+    /// Both halves are tagged, so a client switches on each without parsing a sentence.
     #[test]
     fn a_requirement_carries_what_is_missing_and_what_can_be_done() {
         let requirement = crate::Requirement {
@@ -798,7 +797,7 @@ mod tests {
         );
     }
 
-    /// ADR 0019, one member along: a release from a daemon before T149 has no `needs`.
+    /// ADR 0019, one member along: a release from a daemon before `needs` existed has none.
     #[test]
     fn an_unreported_needs_is_absent_rather_than_empty() {
         let older = serde_json::json!({
@@ -807,12 +806,12 @@ mod tests {
         });
 
         let release: RuntimeRelease =
-            serde_json::from_value(older).expect("a peer from before T149");
+            serde_json::from_value(older).expect("a peer from before `needs`");
         assert_eq!(release.needs, None);
     }
 
-    /// **T193a, ADR 0019.** A daemon from before lines sends none of the three members, and a
-    /// client must read that as absence rather than fail.
+    /// **ADR 0019.** A daemon from before lines sends none of the three members, and a client must
+    /// read that as absence rather than fail.
     #[test]
     fn a_catalogue_from_before_lines_decodes_with_none_of_them() {
         let old = serde_json::json!({

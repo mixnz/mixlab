@@ -1,4 +1,4 @@
-//! What `daemon.uninstall_plan` and `daemon.uninstall` answer — roadmap task **T87**.
+//! What `daemon.uninstall_plan` and `daemon.uninstall` answer.
 //!
 //! **A list of things that can be there, and not a list of things that were.** A report that
 //! printed only what it removed would leave a person unable to tell *"there was no resolver
@@ -9,7 +9,8 @@
 //!
 //! **It is a measurement and not a claim.** `daemon.uninstall` reads the machine again after the
 //! grant and sets each [`Removal`] from what it finds; the helper is honest about what it did, but
-//! it is a separate process describing finished work (the T87 design, D3).
+//! it is a separate process describing finished work
+//! (`docs/specs/2026-09-04-t87-uninstall-design.md`, D3).
 //!
 //! **[`Removal`] and not `Disposition`**, which is the word this document reached for first: this
 //! crate already exports a `Disposition` — a blueprint's — and a flat re-export has room for one.
@@ -27,23 +28,24 @@ pub struct UninstallQuery {
     /// **Defaults to `false`**, which is the complete removal the command exists for. The flag is
     /// here because a home holds `data/` — the MySQL and Postgres instances somebody may have spent
     /// a week filling — and a product whose only exit destroys them is one people do not try in the
-    /// first place (the T87 design, D10).
+    /// first place (`docs/specs/2026-09-04-t87-uninstall-design.md`, D10).
     #[serde(default)]
     pub keep_home: bool,
 
-    /// Leave every directory `[paths]` has moved out of the root where it is — roadmap task **T182**.
+    /// Leave every directory `[paths]` has moved out of the root where it is.
     ///
-    /// **Its own choice and not part of `keep_home`** (the T182 design, D2): those directories are
-    /// moved to another disk because they are large, and a person may want the home gone and the
-    /// databases on the other disk kept, or the reverse. A directory that was never moved lies inside
-    /// the home and follows `keep_home`.
+    /// **Its own choice and not part of `keep_home`**: those directories are moved to another disk
+    /// because they are large, and a person may want the home gone and the databases on the other
+    /// disk kept, or the reverse. A directory that was never moved lies inside the home and follows
+    /// `keep_home`.
     #[serde(default)]
     pub keep_relocated: bool,
 
     /// Flush the elevation queue in this same call, raising the one prompt.
     ///
     /// **Defaults to `false`**, and ignored by `daemon.uninstall_plan`, which raises nothing. The
-    /// two-call path is T64's rule: what is about to be allowed is read before it is allowed.
+    /// two-call path is the rule every elevation follows: what is about to be allowed is shown
+    /// before it is allowed.
     #[serde(default)]
     pub grant: bool,
 
@@ -60,7 +62,7 @@ pub struct UninstallQuery {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub over_ssh: bool,
 
-    /// Leave out what other programs hold in the folders that would go — roadmap task **T182e**.
+    /// Leave out what other programs hold in the folders that would go.
     ///
     /// **Defaults to `false`**: every plan and every act looks, because something stuck found before
     /// the prompt is something the person can close while nothing has changed. `true` is for a caller
@@ -68,7 +70,7 @@ pub struct UninstallQuery {
     /// banner is up — and reading the handle table costs seconds.
     #[serde(default)]
     pub skip_holders: bool,
-    /// Also remove the program the macOS `.pkg` placed — roadmap task **T182a**.
+    /// Also remove the program the macOS `.pkg` placed.
     ///
     /// **Defaults to `false`**: `mix uninstall` keeps meaning *undo what MixLab did*, and the
     /// `Package` row then says how the program itself goes. Ignored where no `.pkg` placed the copy.
@@ -109,7 +111,7 @@ impl UninstallReport {
     /// deliberately not failures: one is a removal this process is in the middle of performing and
     /// the other is one the operating system has accepted and will perform. Counting either would
     /// report every Windows run as a failure, because Windows cannot unlink the image the helper is
-    /// running from (the T87 design, D8).
+    /// running from (`docs/specs/2026-09-04-t87-uninstall-design.md`, D8).
     #[must_use]
     pub fn left_behind(&self) -> bool {
         self.items
@@ -117,7 +119,7 @@ impl UninstallReport {
             .any(|item| matches!(item.outcome, Removal::Failed { .. }))
     }
 
-    /// Is anything in the way of starting? — **T182**, D4.
+    /// Is anything in the way of starting?
     ///
     /// **What `mix uninstall --dry-run` exits `3` for**, and what makes `daemon.uninstall` refuse
     /// before it enqueues a single operation.
@@ -187,9 +189,9 @@ pub enum ResidueId {
     /// The root-owned record of what ran as root, outside `MIXENGINE_HOME`.
     AuditLog,
 
-    /// The program itself, where an installer placed it — roadmap task **T182a**. On macOS the four
-    /// binaries, the application bundle and the receipt the `.pkg` wrote; elsewhere a `Kept` row
-    /// saying what removes the program.
+    /// The program itself, where an installer placed it. On macOS the four binaries, the
+    /// application bundle and the receipt the `.pkg` wrote; elsewhere a `Kept` row saying what
+    /// removes the program.
     Package,
 
     /// The entry that starts this home's daemon at login.
@@ -198,25 +200,25 @@ pub enum ResidueId {
     /// `<root>/bin` on this user's `PATH`.
     PathEntry,
 
-    /// A program file this install added to itself from its own payload — **T185a**, ADR 0054.
-    /// It goes with the program whatever is kept, and only from a copy MixEngine updates itself.
+    /// A program file this install added to itself from its own payload — ADR 0054. It goes with
+    /// the program whatever is kept, and only from a copy MixEngine updates itself.
     CompletedBinary,
 
     /// A folder the MixLab window saves what a person made in: connections, histories, the sync
-    /// database — **T182b**. It follows the home: kept when the home is kept.
+    /// database. It follows the home: kept when the home is kept.
     WindowData,
 
-    /// A folder the MixLab window keeps its webview's cache and its logs in — **T182b**. Removed with
-    /// the program, whatever is kept.
+    /// A folder the MixLab window keeps its webview's cache and its logs in. Removed with the
+    /// program, whatever is kept.
     WindowCache,
 
     /// The passwords this home's services and databases use, in the OS credential store under
-    /// `mixengine`, `<home-id>/…` — **T182d**. They follow the home: a kept `data/` without its
-    /// passwords is a database nobody can open.
+    /// `mixengine`, `<home-id>/…`. They follow the home: a kept `data/` without its passwords is a
+    /// database nobody can open.
     Credentials,
 
-    /// The MixLab window's saved passwords and its sync sign-in, under `MixLab` — **T182d**. They
-    /// follow the home, as the window's data does.
+    /// The MixLab window's saved passwords and its sync sign-in, under `MixLab`. They follow the
+    /// home, as the window's data does.
     WindowCredentials,
 
     /// `MIXENGINE_HOME` itself.
@@ -228,7 +230,7 @@ pub enum ResidueId {
     /// these back one by one once the daemon is gone, and a row is what it reads back.
     RelocatedDirectory,
 
-    /// A process running from inside a directory this uninstall would remove — **T182**, D4.
+    /// A process running from inside a directory this uninstall would remove.
     ///
     /// One row per process. It is never removed: it is the reason the uninstall does not start.
     InUse,
@@ -300,9 +302,10 @@ pub enum Removal {
 
     /// Goes when this daemon exits, which it is about to do.
     ///
-    /// **`MIXENGINE_HOME`'s answer, and only ever its.** A process cannot measure the removal of the
-    /// directory holding the database it has open; `mix` reads these paths back once the daemon is
-    /// gone, which is what makes this command's exit code mean anything (the T87 design, D9).
+    /// **`MIXENGINE_HOME`'s answer, and only ever its.** A process cannot measure the removal of
+    /// the directory holding the database it has open; `mix` reads these paths back once the daemon
+    /// is gone, which is what makes this command's exit code mean anything
+    /// (`docs/specs/2026-09-04-t87-uninstall-design.md`, D9).
     OnExit {
         /// What goes, in a sentence.
         what: String,
@@ -310,9 +313,10 @@ pub enum Removal {
 
     /// Goes at the next restart of this machine, and why it could not go now.
     ///
-    /// **Windows' answer for the privileged helper, and nothing else's.** A file with a mapped image
-    /// section cannot be unlinked, and the helper is running when it is asked to remove itself — so
-    /// the operating system's own removal queue is what takes it (the T87 design, D8).
+    /// **Windows' answer for the privileged helper, and nothing else's.** A file with a mapped
+    /// image section cannot be unlinked, and the helper is running when it is asked to remove
+    /// itself — so the operating system's own removal queue is what takes it
+    /// (`docs/specs/2026-09-04-t87-uninstall-design.md`, D8).
     OnRestart {
         /// What is scheduled and why it had to be, in a sentence.
         what: String,
@@ -330,7 +334,7 @@ pub enum Removal {
         because: String,
     },
 
-    /// In the way: nothing on this list is touched while it is there — **T182**, D4.
+    /// In the way: nothing on this list is touched while it is there.
     ///
     /// Only `daemon.uninstall_plan` answers it; `daemon.uninstall` refuses instead of acting.
     Blocked {
@@ -341,9 +345,9 @@ pub enum Removal {
 
 #[cfg(test)]
 mod tests {
-    /// T182a: a query from before `package` existed reads with it off, and the row has its name.
+    /// A query from before `package` existed reads with it off, and the row has its name.
     #[test]
-    fn a_query_from_before_t182a_reads_with_package_false() {
+    fn a_query_from_before_package_reads_with_package_false() {
         let query: super::UninstallQuery =
             serde_json::from_value(serde_json::json!({ "keep_home": true })).unwrap();
 
@@ -356,7 +360,7 @@ mod tests {
 
     use super::*;
 
-    /// T182e. A query from a client that predates `skip_holders` still reads, and looks.
+    /// A query from a client that predates `skip_holders` still reads, and looks.
     #[test]
     fn a_query_without_skip_holders_looks_for_holders() {
         let query: UninstallQuery =
@@ -366,7 +370,7 @@ mod tests {
         assert!(!query.skip_holders);
     }
 
-    /// T182e. The uninstaller's `--relocated` listing asks not to pay for the scan.
+    /// The uninstaller's `--relocated` listing asks not to pay for the scan.
     #[test]
     fn a_query_can_skip_holders() {
         let query: UninstallQuery =
@@ -458,7 +462,7 @@ mod tests {
 
         assert_eq!(unique.len(), spellings.len(), "{spellings:?}");
         assert_eq!(spellings.len(), 18);
-        // T182d: the credential store, as the two words `mix` and a test match on.
+        // The credential store, as the two words `mix` and a test match on.
         assert!(
             spellings.contains(&"\"credentials\"".to_owned()),
             "{spellings:?}"
@@ -469,7 +473,7 @@ mod tests {
         );
     }
 
-    /// T182, D2. The relocated directories are their own choice, and leaving the field out keeps
+    /// The relocated directories are their own choice, and leaving the field out keeps
     /// the old meaning: remove them.
     #[test]
     fn keeping_the_relocated_directories_is_its_own_field_and_defaults_to_no() {
@@ -482,7 +486,7 @@ mod tests {
         assert!(!query.keep_home);
     }
 
-    /// T182, D4. A process in the way is a row of its own and an outcome of its own, and it is what
+    /// A process in the way is a row of its own and an outcome of its own, and it is what
     /// `blocked` answers — never what `left_behind` answers, because nothing was attempted.
     #[test]
     fn a_process_in_the_way_blocks_and_is_not_left_behind() {

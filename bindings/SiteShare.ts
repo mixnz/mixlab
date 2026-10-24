@@ -2,7 +2,7 @@
 import type { SiteRef } from "./SiteRef";
 
 /**
- * Which site to put on the local network, and on which interface — roadmap task **T74**.
+ * Which site to put on the local network, and on which interface.
  */
 export type SiteShare = { 
 /**
@@ -18,13 +18,12 @@ site: SiteRef,
  */
 interface?: string | null, 
 /**
- * How long this share should last, in seconds, or [`None`] for one with no end — roadmap task
- * **T76**.
+ * How long this share should last, in seconds, or [`None`] for one with no end.
  *
- * **Measured from when the share began and not from this request** — the T76 design, D6. T74
- * preserves `shared_since` across a repeated share precisely so that typing the command again
- * extends nothing, and a deadline that restarted would undo that. A value that lands in the
- * past is refused rather than honoured: a URL that is dead by the time it is printed is worse
- * than a sentence saying so.
+ * **Measured from when the share began and not from this request.** A share keeps
+ * `shared_since` across a repeated share precisely so that typing the command again extends
+ * nothing, and a deadline that restarted would undo that. A value that lands in the past is
+ * refused rather than honoured: a URL that is dead by the time it is printed is worse than a
+ * sentence saying so.
  */
 for_seconds?: number | null, };

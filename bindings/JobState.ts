@@ -12,8 +12,8 @@
  * **There is no `Cancelling`, and that is a decision rather than an omission.** Cancellation here
  * is cooperative: `job.cancel` cancels the token the work is watching, and the work ends when it
  * next looks. A state between the asking and the ending would have to be written by every producer
- * of a job — and this build has none yet, so the only thing that could justify it is a guess about
- * what T21's download will need. `Running` with a cancellation already requested is what a client
- * sees, which is the truth: the work is still going.
+ * of a job — and when this was written there were none, so the only thing that could justify it
+ * was a guess about what a download would need. `Running` with a cancellation already requested is
+ * what a client sees, which is the truth: the work is still going.
  */
 export type JobState = "running" | "succeeded" | "failed" | "cancelled";

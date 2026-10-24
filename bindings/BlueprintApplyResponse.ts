@@ -6,10 +6,10 @@ import type { Requirement } from "./Requirement";
 /**
  * What `blueprint.apply` answers.
  *
- * **One method, two answers** — T77 argued the single method, because the plan a person reads and
- * the plan the daemon carries out have to be the same list. A tagged union is what lets that
- * survive execution arriving: a client reads which answer it got from the object rather than
- * inferring it from its own request.
+ * **One method, two answers.** One method, because the plan a person reads and the plan the daemon
+ * carries out have to be the same list. A tagged union is what lets that survive execution
+ * arriving: a client reads which answer it got from the object rather than inferring it from its
+ * own request.
  */
 export type BlueprintApplyResponse = { "outcome": "planned", 
 /**
@@ -17,11 +17,11 @@ export type BlueprintApplyResponse = { "outcome": "planned",
  */
 plan: BlueprintPlan, 
 /**
- * What the releases this plan would install lack on this machine — roadmap task **T152**.
+ * What the releases this plan would install lack on this machine.
  *
- * Composed by the daemon around the plan, never inside it (T78's D9): the plan holds
- * constraints, and the daemon resolves them against the index to judge. One entry per
- * distinct requirement, however many steps share it. [`None`] from a daemon before T152, or
+ * Composed by the daemon around the plan, never inside it: the plan holds constraints, and
+ * the daemon resolves them against the index to judge. One entry per distinct requirement,
+ * however many steps share it. [`None`] from a daemon that does not judge requirements, or
  * when the index could not be read — a dry run is never refused for want of a judgement.
  */
 needs?: Array<Requirement> | null, } | { "outcome": "started", 

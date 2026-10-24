@@ -1,14 +1,14 @@
-//! What `daemon.doctor` answers — roadmap task **T47a**.
+//! What `daemon.doctor` answers.
 //!
 //! **A list of checks and not a list of problems.** A doctor that prints nothing on a healthy
 //! machine leaves a person unsure it looked, so what was examined and what was found are one
 //! structure: "eleven checks, all Ok" and "eleven checks, one Problem" are renderings of the same
-//! (T47a design, D2).
+//! (`docs/specs/2026-08-24-t47a-doctor-design.md`, D2).
 //!
 //! Nothing here says what to do about anything. A [`Problem`](Outcome::Problem) carries a
 //! [`ProblemId`], which is a name for a condition rather than advice, and which
-//! `daemon.doctor_repair` (T47b) matches on — so the two halves cannot drift, a repair for an id
-//! nothing produces failing to compile against a closed enum (D3).
+//! `daemon.doctor_repair` matches on — so the two halves cannot drift, a repair for an id nothing
+//! produces failing to compile against a closed enum.
 
 /// Everything `daemon.doctor` examined, and what each answered.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -27,7 +27,7 @@ impl DoctorReport {
     ///
     /// **[`Outcome::Note`] and [`Outcome::Skipped`] are not faults**, which is the whole of this
     /// function: it is what `mix doctor`'s exit code is, and a doctor whose exit code says "I ran"
-    /// rather than "the machine is well" cannot be used in a script (T47a design, D8).
+    /// rather than "the machine is well" cannot be used in a script.
     #[must_use]
     pub fn has_a_problem(&self) -> bool {
         self.checks
@@ -58,18 +58,17 @@ pub enum Outcome {
     /// Examined, and what was expected is what is there.
     ///
     /// An empty struct variant rather than a unit one: `deny_unknown_fields` never fires on a unit
-    /// variant of an internally tagged enum — it is read through `deserialize_any`, which T40
-    /// established — and the rule holds for the variant carrying no fields as much as for the ones
-    /// that do.
+    /// variant of an internally tagged enum — it is read through `deserialize_any` — and the rule
+    /// holds for the variant carrying no fields as much as for the ones that do.
     Ok {},
 
     /// A fact worth stating that is not a fault.
     ///
     /// [ADR 0007](../../../docs/decisions/0007-supervised-child-owns-a-process-group.md) is why
     /// this variant exists: what MixEngine can guarantee about killing a service's descendants
-    /// differs by system, and reporting "macOS guarantees nothing" as a *problem* would be reporting
-    /// the operating system as broken. Reporting it as nothing at all is the failure that ADR exists
-    /// to prevent (T47a design, D4).
+    /// differs by system, and reporting "macOS guarantees nothing" as a *problem* would be
+    /// reporting the operating system as broken. Reporting it as nothing at all is the failure that
+    /// ADR exists to prevent.
     Note {
         /// The fact, in a sentence.
         because: String,
@@ -95,7 +94,8 @@ pub enum Outcome {
     },
 }
 
-/// The conditions this build can report, and the whole of what T47b can be asked to repair.
+/// The conditions this build can report, and the whole of what `daemon.doctor_repair` can be
+/// asked to repair.
 ///
 /// **Closed rather than a string.** A repair keyed off a spelling is a repair that silently stops
 /// matching; keyed off this, a repair for a condition nothing produces does not compile.
@@ -115,11 +115,12 @@ pub enum ProblemId {
 
     /// This machine does not trust MixEngine's own certificate authority.
     ///
-    /// **Repaired by asking again, which is why this exists where T48 declined to add one.** There
-    /// the condition was a damaged authority and the repair would have been to regenerate — a
-    /// destructive act, invalidating every leaf already issued and every store holding the old
-    /// certificate, and T54's decision to make. Here the repair is the same one `ResolverNotWired`
-    /// and `PortAccessMissing` already have: put the operation back in the queue.
+    /// **Repaired by asking again, which is why this exists where a damaged authority has no
+    /// condition.** There the repair would have been to regenerate — a destructive act,
+    /// invalidating every leaf already issued and every store holding the old certificate, and a
+    /// decision for `mix cert ca-rotate` to make. Here the repair is the same one
+    /// `ResolverNotWired` and `PortAccessMissing` already have: put the operation back in the
+    /// queue.
     CaNotTrusted,
 
     /// Firefox or Chrome on this machine does not trust MixEngine's certificate authority.
@@ -131,13 +132,12 @@ pub enum ProblemId {
     /// read.
     BrowsersNotTrusted,
 
-    /// A site that declares HTTPS has no usable certificate — roadmap task **T50**.
+    /// A site that declares HTTPS has no usable certificate.
     ///
-    /// **T48 declined to add a condition for its own subject and this adds one, and the difference
-    /// is what the repair does.** There, the condition was a damaged authority and the repair would
-    /// have been to regenerate — throwing away every leaf and every store holding the old
-    /// certificate, in answer to a request nobody made. Here the repair is issuance: idempotent,
-    /// destructive of nothing, and needing no privilege.
+    /// **A damaged authority has no condition of its own and this has one, and the difference is
+    /// what the repair does.** There, the repair would have been to regenerate — throwing away
+    /// every leaf and every store holding the old certificate, in answer to a request nobody made.
+    /// Here the repair is issuance: idempotent, destructive of nothing, and needing no privilege.
     SiteCertificateMissing,
 
     /// The DNS server could not bind, so this home has no wildcard names at all.
@@ -164,8 +164,7 @@ pub enum ProblemId {
     /// A `services` row claims to be supervised and this daemon has no supervisor for it.
     ServiceUnsupervised,
 
-    /// This machine refuses to load an unsigned image, and every program MixEngine starts is one —
-    /// roadmap task **T94**.
+    /// This machine refuses to load an unsigned image, and every program MixEngine starts is one.
     ///
     /// **Reported even on a machine where everything currently runs**, and that is the cost this
     /// condition is worth paying: Smart App Control judges a *file*, so the next image MixEngine
@@ -177,8 +176,7 @@ pub enum ProblemId {
     /// than asking somebody to lower their machine's defences.
     ApplicationControlEnforced,
 
-    /// This machine's roots could be read and `etc/ca/bundle.pem` is not what they say — roadmap
-    /// task **T132**.
+    /// This machine's roots could be read and `etc/ca/bundle.pem` is not what they say.
     ///
     /// **A problem and not a note, because of what it costs when it is true**: without the bundle,
     /// a Python, Ruby or PHP program started through `bin/` is told nothing, and every HTTPS
@@ -191,8 +189,8 @@ pub enum ProblemId {
     /// repair and nothing MixEngine did wrong.
     TrustBundleMissing,
 
-    /// An installed JDK does not hold this home's authority in its own `cacerts` — roadmap task
-    /// **T27e**, [ADR 0039](../../../docs/decisions/0039-a-jdk-is-told-about-the-authority-inside-its-own-cacerts.md).
+    /// An installed JDK does not hold this home's authority in its own `cacerts` —
+    /// [ADR 0039](../../../docs/decisions/0039-a-jdk-is-told-about-the-authority-inside-its-own-cacerts.md).
     ///
     /// **A problem and not a note**, on [`TrustBundleMissing`](Self::TrustBundleMissing)'s
     /// reasoning: without it, every HTTPS request a Java program makes to a site of this home fails
@@ -203,7 +201,7 @@ pub enum ProblemId {
     /// the published default — is reported as untouched rather than silently retried.
     JavaTrustMissing,
 
-    /// A runtime or package is recorded and its folder is gone — roadmap task **T206d**.
+    /// A runtime or package is recorded and its folder is gone.
     ///
     /// Installing the same version again restores it in place, and that is a download somebody
     /// asks for: `daemon.doctor_repair` leaves it alone.
@@ -282,10 +280,10 @@ mod tests {
         assert!(report.has_a_problem());
     }
 
-    /// The two conditions T47b repairs are ids like the rest, so a repair keys off them the same
-    /// way — which is the whole of why they are here rather than inside the repair.
+    /// The two conditions the repair acts on are ids like the rest, so a repair keys off them the
+    /// same way — which is the whole of why they are here rather than inside the repair.
     #[test]
-    fn the_conditions_t47b_repairs_are_spelled_on_the_wire() {
+    fn the_conditions_the_repair_acts_on_are_spelled_on_the_wire() {
         for (id, spelling) in [
             (
                 ProblemId::GeneratedConfigStale,

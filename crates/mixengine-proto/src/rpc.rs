@@ -31,7 +31,8 @@ pub mod method;
 /// to write it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 // The one literal JSON-RPC allows, and the published contract says so rather than saying `string`
-// (roadmap task T56). This type's serde is hand-written, so there is nothing for `ts-rs` to read.
+// in its TypeScript binding. This type's serde is hand-written, so there is nothing for `ts-rs` to
+// read.
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, type = "\"2.0\""))]
 pub struct Version;
 
@@ -193,12 +194,11 @@ impl Response {
 
 /// The half of a [`Response`] that is either a result or an error, never both.
 ///
-/// **Named for its container rather than `Outcome`** — roadmap task T56. The published TypeScript
-/// contract names a file after each type, so this one and
-/// [`doctor_api::Outcome`](crate::Outcome) were one file, carrying both declarations in whatever
-/// order the exporter ran them. Type names are unique across this crate for that reason, and
-/// `crates/mixengine-proto/tests/bindings.rs` says so. Nothing on the wire moved: the enum is
-/// `#[serde(untagged)]`, so its name was never encoded.
+/// **Named for its container rather than `Outcome`.** The published TypeScript contract names a
+/// file after each type, so this one and [`doctor_api::Outcome`](crate::Outcome) were one file,
+/// carrying both declarations in whatever order the exporter ran them. Type names are unique across
+/// this crate for that reason, and `crates/mixengine-proto/tests/bindings.rs` says so. Nothing on
+/// the wire moved: the enum is `#[serde(untagged)]`, so its name was never encoded.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]

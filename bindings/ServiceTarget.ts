@@ -18,8 +18,7 @@ export type ServiceTarget = {
  */
 service?: ServiceId | null, 
 /**
- * Every service one project needs, instead of one service or all of them — roadmap task
- * **T125**.
+ * Every service one project needs, instead of one service or all of them.
  *
  * **What a project needs is the daemon's answer and never a client's.** It is the services its
  * sites declare — `site_service_links`, which is where `blueprint.apply` writes the database

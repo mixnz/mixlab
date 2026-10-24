@@ -51,7 +51,7 @@ pub enum SiteKind {
     },
 }
 
-/// One path prefix on a site, and what answers it — roadmap task **T135**.
+/// One path prefix on a site, and what answers it.
 ///
 /// **Beside [`SiteKind`] rather than inside it.** A site is a kind plus an ordered set of these, and
 /// the kind is what answers everything no route matched — which is why `/` is not a path a route may
@@ -73,7 +73,7 @@ pub struct SiteRoute {
     pub target: RouteTarget,
 }
 
-/// What answers under a route's path — roadmap task **T135**.
+/// What answers under a route's path.
 ///
 /// [`SiteKind`]'s shape one level down, with the two differences a prefix makes: there is no
 /// `node-app`, because a port is an address and a second way to write one is a second thing to keep
@@ -158,16 +158,15 @@ impl SiteState {
 ///
 /// Every field but the project falls through — the argument, then `[site]` in the project's
 /// manifest, then a default — which is what makes `site.create { project }` the import (spec D7),
-/// and `site.create { project, from }` the import of one of several (roadmap task **T204**).
+/// and `site.create { project, from }` the import of one of several.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct SiteCreate {
     /// Which project it belongs to.
     pub project: ProjectRef,
 
-    /// Which of the manifest's sites to fall through to, by any of its names — roadmap task
-    /// **T204**, spec D5. Needed when the file declares more than one and the request names no
-    /// domain that picks one.
+    /// Which of the manifest's sites to fall through to, by any of its names. Needed when the file
+    /// declares more than one and the request names no domain that picks one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from: Option<String>,
 
@@ -188,8 +187,8 @@ pub struct SiteCreate {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub services: Option<Vec<ServiceId>>,
 
-    /// The routes it declares, **replacing** the list rather than merging into it — roadmap task
-    /// **T135**. Falls through to `[[site.routes]]`, then to none.
+    /// The routes it declares, **replacing** the list rather than merging into it. Falls through to
+    /// `[[site.routes]]`, then to none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub routes: Option<Vec<SiteRoute>>,
 
@@ -197,7 +196,7 @@ pub struct SiteCreate {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub https: Option<bool>,
 
-    /// Whether the plaintext address should redirect to the HTTPS one — roadmap task **T98**.
+    /// Whether the plaintext address should redirect to the HTTPS one.
     ///
     /// Refused when `true` beside an `https` that resolves to `false`, whether that is this same
     /// request's own `https: Some(false)` or a `https` left unset on a site created plaintext-only.
@@ -235,9 +234,9 @@ pub struct SiteUpdate {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub services: Option<Vec<ServiceId>>,
 
-    /// The routes, **replacing** the list the site had — roadmap task **T135**. [`Self::domains`]'
-    /// rule and its reason: with a merge there is no way to remove one. `Some(vec![])` empties the
-    /// list; [`None`] leaves it alone.
+    /// The routes, **replacing** the list the site had. [`Self::domains`]' rule and its reason:
+    /// with a merge there is no way to remove one. `Some(vec![])` empties the list; [`None`] leaves
+    /// it alone.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub routes: Option<Vec<SiteRoute>>,
 
@@ -245,7 +244,7 @@ pub struct SiteUpdate {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub https: Option<bool>,
 
-    /// Whether the plaintext address should redirect to the HTTPS one — roadmap task **T98**.
+    /// Whether the plaintext address should redirect to the HTTPS one.
     ///
     /// `None` leaves it — except that turning `https` off while this is left unset carries it to
     /// `false` as well, a site whose `https` this update leaves `false` for any reason refuses
@@ -270,7 +269,7 @@ pub struct SiteQuery {
     pub site: SiteRef,
 }
 
-/// Which site to put on the local network, and on which interface — roadmap task **T74**.
+/// Which site to put on the local network, and on which interface.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct SiteShare {
@@ -285,14 +284,13 @@ pub struct SiteShare {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interface: Option<String>,
 
-    /// How long this share should last, in seconds, or [`None`] for one with no end — roadmap task
-    /// **T76**.
+    /// How long this share should last, in seconds, or [`None`] for one with no end.
     ///
-    /// **Measured from when the share began and not from this request** — the T76 design, D6. T74
-    /// preserves `shared_since` across a repeated share precisely so that typing the command again
-    /// extends nothing, and a deadline that restarted would undo that. A value that lands in the
-    /// past is refused rather than honoured: a URL that is dead by the time it is printed is worse
-    /// than a sentence saying so.
+    /// **Measured from when the share began and not from this request.** A share keeps
+    /// `shared_since` across a repeated share precisely so that typing the command again extends
+    /// nothing, and a deadline that restarted would undo that. A value that lands in the past is
+    /// refused rather than honoured: a URL that is dead by the time it is printed is worse than a
+    /// sentence saying so.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub for_seconds: Option<u64>,
 }
@@ -314,7 +312,7 @@ pub struct SiteList {
     pub sites: Vec<SiteSummary>,
 }
 
-/// Who a site belongs to — roadmap task **T81b**.
+/// Who a site belongs to.
 ///
 /// **A replacement for the old `project: String`, not an option beside it.** Two optionals a reader
 /// has to agree about is the shape this codebase spends triggers avoiding. A project is named by
@@ -358,13 +356,13 @@ pub struct SiteSummary {
     /// Whether HTTPS is declared.
     pub https: bool,
 
-    /// Whether the plaintext address redirects to the HTTPS one — roadmap task **T98**.
+    /// Whether the plaintext address redirects to the HTTPS one.
     pub https_redirect: bool,
 
     /// Whether the web server should serve it.
     pub state: SiteState,
 
-    /// Every route, **in match order** — longest path first — roadmap task **T135**.
+    /// Every route, **in match order** — longest path first.
     ///
     /// **On the summary and not only on the detail**, on [`sharing`](Self::sharing)'s argument: what
     /// is behind a site is a question about every site at once, and a list that could not answer it
@@ -377,7 +375,7 @@ pub struct SiteSummary {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub routes: Vec<SiteRoute>,
 
-    /// Where the local network can reach it, when it can — roadmap task **T74**.
+    /// Where the local network can reach it, when it can.
     ///
     /// **On the summary and not only on the detail**, because "what is exposed right now" is a
     /// question about every site at once: a list that could not answer it would make a client ask
@@ -386,26 +384,28 @@ pub struct SiteSummary {
     pub sharing: Option<SiteSharing>,
 }
 
-/// A site the local network can reach, and how — roadmap task **T74**.
+/// A site the local network can reach, and how.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct SiteSharing {
     /// The interface it is shared on, by the name the OS gives it.
     pub interface: String,
 
-    /// The IPv4 address bound, certified and printed. IPv4 only — the T74 design, D4.
+    /// The IPv4 address bound, certified and printed. IPv4 only —
+    /// `docs/specs/2026-08-31-t74-lan-sharing-design.md`, D4.
     pub address: String,
 
     /// What to open, ready to hand to a browser or draw as a QR code.
     ///
-    /// **HTTP, and the address rather than the name** — the T75 design, D11. The certificate covers
+    /// **HTTP, and the address rather than the name**
+    /// (`docs/specs/2026-08-31-t75-mdns-and-ca-download-design.md`, D11). The certificate covers
     /// this address and this site's [`name`](Self::name) both, but a phone does not trust this
     /// home's authority until it has installed it from [`ca_url`](Self::ca_url), and Android's
     /// resolver does not answer `.local` for a browser. A URL a person is told to open must be one
     /// that opens, on the device they happen to be holding.
     pub url: String,
 
-    /// The mDNS name this site answers to, `<slug>-mixengine.local` — roadmap task **T75**.
+    /// The mDNS name this site answers to, `<slug>-mixengine.local`.
     ///
     /// **One label before `.local`**, which is measured rather than chosen: a multi-label name
     /// under `.local` does not resolve. Present whenever the site is shared and its primary domain
@@ -417,11 +417,11 @@ pub struct SiteSharing {
     /// Whether this daemon is currently answering mDNS queries for [`name`](Self::name).
     ///
     /// `false` on a home where UDP 5353 could not be bound, or where a firewall blocks it. The
-    /// share still works by address, which is what T74 shipped; a client says so rather than
-    /// printing a name as though it resolved.
+    /// share still works by address; a client says so rather than printing a name as though it
+    /// resolved.
     pub advertised: bool,
 
-    /// Where a phone downloads this home's certificate authority — roadmap task **T75**.
+    /// Where a phone downloads this home's certificate authority.
     ///
     /// Served by the front end from this site's own block, and only while the site is shared. The
     /// public certificate and nothing else: the signing key is not in any directory a front end is
@@ -431,7 +431,7 @@ pub struct SiteSharing {
     /// When sharing began.
     pub since: crate::Timestamp,
 
-    /// When this share ends by itself, or [`None`] for one that does not — roadmap task **T76**.
+    /// When this share ends by itself, or [`None`] for one that does not.
     ///
     /// Set by `--for`, and measured from [`since`](Self::since) rather than from the request that
     /// set it. A share also ends when this machine leaves the network it was shared on, which is
@@ -441,7 +441,7 @@ pub struct SiteSharing {
     pub until: Option<crate::Timestamp>,
 }
 
-/// Why a site's sharing changed — roadmap task **T76**.
+/// Why a site's sharing changed.
 ///
 /// **Internally tagged under `kind`, not `type`.** It travels inside
 /// [`DaemonEvent::SiteSharingChanged`](crate::DaemonEvent), which is itself tagged `type`, and two
@@ -484,8 +484,7 @@ pub struct SiteDetail {
     /// The site itself.
     pub site: SiteSummary,
 
-    /// The owner's root: the project's directory, or the extension's install directory (roadmap
-    /// task **T81b**).
+    /// The owner's root: the project's directory, or the extension's install directory.
     pub root: String,
 
     /// Root plus doc root, as the filesystem spells it.
@@ -588,8 +587,8 @@ mod tests {
         assert_eq!(php, SiteKind::PhpFpm { pool: None });
     }
 
-    /// **T135, D3.** A route is flat on the wire, exactly as [`SiteKind`] is: one definition reads a
-    /// JSON-RPC member and a `[[site.routes]]` table with nothing in between.
+    /// A route is flat on the wire, exactly as [`SiteKind`] is: one definition reads a JSON-RPC
+    /// member and a `[[site.routes]]` table with nothing in between.
     #[test]
     fn a_route_carries_its_target_beside_its_path() {
         let proxy: SiteRoute = serde_json::from_value(

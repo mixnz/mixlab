@@ -4,7 +4,7 @@ import type { NextSteps } from "./NextSteps";
 import type { StepOutcome } from "./StepOutcome";
 
 /**
- * What an apply did, as the job's result — roadmap task **T78**.
+ * What an apply did, as the job's result.
  */
 export type BlueprintApplied = { 
 /**
@@ -28,10 +28,10 @@ root: string,
  */
 steps: Array<StepOutcome>, 
 /**
- * What is left to do, from the blueprint's `[[next_steps]]` — roadmap task **T205**, D6.
+ * What is left to do, from the blueprint's `[[next_steps]]`.
  */
 next_steps?: NextSteps | null, 
 /**
- * The account the database step really used, when there was one — T205, D6.
+ * The account the database step really used, when there was one.
  */
 database?: AppliedDatabase | null, };

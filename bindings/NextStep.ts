@@ -2,7 +2,7 @@
 import type { NextStepKind } from "./NextStepKind";
 
 /**
- * One thing a blueprint says is left to do — roadmap task **T205**, D4.
+ * One thing a blueprint says is left to do.
  *
  * **The same type in a manifest and on the wire.** A manifest holds it with `{project}` in it; an
  * answer holds it expanded. Nothing else differs, so one type carries both.
@@ -33,6 +33,7 @@ optional?: boolean,
  */
 credentials?: boolean, 
 /**
- * Which site it belongs to. Absent in schema 1 and 2; T204a defines it.
+ * Which site it belongs to. Absent in schema 1 and 2; schema 3, which holds several sites,
+ * defines it.
  */
 site?: string | null, };

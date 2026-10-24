@@ -2,7 +2,7 @@
 import type { Timestamp } from "./Timestamp";
 
 /**
- * A site the local network can reach, and how — roadmap task **T74**.
+ * A site the local network can reach, and how.
  */
 export type SiteSharing = { 
 /**
@@ -10,13 +10,15 @@ export type SiteSharing = {
  */
 interface: string, 
 /**
- * The IPv4 address bound, certified and printed. IPv4 only — the T74 design, D4.
+ * The IPv4 address bound, certified and printed. IPv4 only —
+ * `docs/specs/2026-08-31-t74-lan-sharing-design.md`, D4.
  */
 address: string, 
 /**
  * What to open, ready to hand to a browser or draw as a QR code.
  *
- * **HTTP, and the address rather than the name** — the T75 design, D11. The certificate covers
+ * **HTTP, and the address rather than the name**
+ * (`docs/specs/2026-08-31-t75-mdns-and-ca-download-design.md`, D11). The certificate covers
  * this address and this site's [`name`](Self::name) both, but a phone does not trust this
  * home's authority until it has installed it from [`ca_url`](Self::ca_url), and Android's
  * resolver does not answer `.local` for a browser. A URL a person is told to open must be one
@@ -24,7 +26,7 @@ address: string,
  */
 url: string, 
 /**
- * The mDNS name this site answers to, `<slug>-mixengine.local` — roadmap task **T75**.
+ * The mDNS name this site answers to, `<slug>-mixengine.local`.
  *
  * **One label before `.local`**, which is measured rather than chosen: a multi-label name
  * under `.local` does not resolve. Present whenever the site is shared and its primary domain
@@ -37,12 +39,12 @@ name: string | null,
  * Whether this daemon is currently answering mDNS queries for [`name`](Self::name).
  *
  * `false` on a home where UDP 5353 could not be bound, or where a firewall blocks it. The
- * share still works by address, which is what T74 shipped; a client says so rather than
- * printing a name as though it resolved.
+ * share still works by address; a client says so rather than printing a name as though it
+ * resolved.
  */
 advertised: boolean, 
 /**
- * Where a phone downloads this home's certificate authority — roadmap task **T75**.
+ * Where a phone downloads this home's certificate authority.
  *
  * Served by the front end from this site's own block, and only while the site is shared. The
  * public certificate and nothing else: the signing key is not in any directory a front end is
@@ -54,7 +56,7 @@ ca_url: string,
  */
 since: Timestamp, 
 /**
- * When this share ends by itself, or [`None`] for one that does not — roadmap task **T76**.
+ * When this share ends by itself, or [`None`] for one that does not.
  *
  * Set by `--for`, and measured from [`since`](Self::since) rather than from the request that
  * set it. A share also ends when this machine leaves the network it was shared on, which is

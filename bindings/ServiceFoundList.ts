@@ -2,7 +2,7 @@
 import type { ServiceFound } from "./ServiceFound";
 
 /**
- * What `service.found` answers — roadmap task **T182g**.
+ * What `service.found` answers.
  */
 export type ServiceFoundList = { 
 /**

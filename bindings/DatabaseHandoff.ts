@@ -31,9 +31,9 @@ database?: string | null,
 /**
  * Where the password was read from. Never the password.
  *
- * Both halves since roadmap task **T84**, and the key half is also what the URL carries as
- * `secret_key` — so the connection the client saves can point at this entry instead of holding
- * a second copy of what is in it.
+ * Both halves, and the key half is also what the URL carries as `secret_key` — so the
+ * connection the client saves can point at this entry instead of holding a second copy of what
+ * is in it.
  */
 secret?: SecretAddress | null, 
 /**

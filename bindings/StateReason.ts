@@ -10,9 +10,10 @@ import type { ServiceId } from "./ServiceId";
  * distinguish two failures a user currently sees as one. A client renders what it knows and shows
  * the state alone for what it does not.
  *
- * Every variant here is an edge in [`ServiceState::can_become`]. What is deliberately *not* here is
- * anything the code that would emit it does not exist for yet — which is why [`StateReason::Idle`]
- * arrived with T69 and not before, rather than being declared as a promise the build did not keep.
+ * Every variant here is an edge in [`ServiceState::can_become`]. What is deliberately *not* here
+ * is anything the code that would emit it does not exist for yet — which is why
+ * [`StateReason::Idle`] arrived with the idle sweep and not before, rather than being declared as
+ * a promise the build did not keep.
  */
 export type StateReason = { "kind": "requested" } | { "kind": "autostart" } | { "kind": "shutdown" } | { "kind": "credential_reset" } | { "kind": "ready" } | { "kind": "ready_timeout", 
 /**

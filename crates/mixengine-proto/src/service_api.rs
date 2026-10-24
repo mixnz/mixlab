@@ -18,13 +18,13 @@ use crate::{
     ProjectRef, ResourceLimits, ServiceId, ServiceState, StateReason, Timestamp,
 };
 
-/// Which database's superuser credential to re-set — roadmap task **T127**.
+/// Which database's superuser credential to re-set.
 ///
-/// **A type of its own rather than [`ServiceTarget`], and T125 is why.** That type's `service` is
-/// optional and [`None`] means *every service this home declares* — which is how both clients came
-/// to ask for the whole home when they meant one project. A repair asked for with no subject is that
-/// mistake with worse consequences, so the subject is a required field and there is nothing left to
-/// refuse at run time.
+/// **A type of its own rather than [`ServiceTarget`].** That type's `service` is optional and
+/// [`None`] means *every service this home declares* — which is how both clients came to ask for
+/// the whole home when they meant one project. A repair asked for with no subject is that mistake
+/// with worse consequences, so the subject is a required field and there is nothing left to refuse
+/// at run time.
 ///
 /// There is no `project` either, for the reason `service.stop` refuses one: a project's services
 /// include the front end every *other* site is reached through, and none of them but a database
@@ -58,8 +58,7 @@ pub struct ServiceTarget {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub service: Option<ServiceId>,
 
-    /// Every service one project needs, instead of one service or all of them — roadmap task
-    /// **T125**.
+    /// Every service one project needs, instead of one service or all of them.
     ///
     /// **What a project needs is the daemon's answer and never a client's.** It is the services its
     /// sites declare — `site_service_links`, which is where `blueprint.apply` writes the database
@@ -131,7 +130,8 @@ pub struct ServiceQuery {
 /// Which service `service.delete` is about, and whether a site declaring it may be crossed.
 ///
 /// Flattened over [`ServiceQuery`] on [`crate::RuntimeUninstall`]'s precedent: the same wire shape
-/// every client has sent since T31a, plus one optional key an older client's request parses without.
+/// every client has sent since `service.delete` first shipped, plus one optional key an older
+/// client's request parses without.
 ///
 /// **`force` crosses a declaration and never a process** (spec D4). A site naming this service is a
 /// statement about the next `site.start`, which somebody shown the sites is entitled to overrule; a
@@ -162,7 +162,7 @@ pub struct ServiceList {
 
 /// One service, as the daemon currently sees it. Also the whole of what `service.status` answers.
 ///
-/// Why a service last failed — roadmap task **T200b**, its design's D5.
+/// Why a service last failed.
 ///
 /// `detail` is always a sentence: the error the supervisor had when it gave up, or the reason's
 /// own words. That is what lets a client show it without a second table of what each
@@ -191,19 +191,20 @@ pub struct ServiceSummary {
     /// What the `services` row says it is doing.
     ///
     /// **[`None`] means declared but never created**: something describes how to run this service
-    /// and the daemon has no row for it, so it has no state to be in and cannot be started until one
-    /// exists. Not a case a finished MixEngine reaches — from T30 onwards a declaration is *rendered
-    /// from* a row — which is exactly why it is reported rather than smoothed over into `stopped`: a
-    /// service that quietly claims to be stopped and then refuses to start explains nothing.
+    /// and the daemon has no row for it, so it has no state to be in and cannot be started until
+    /// one exists. Not a case a finished MixEngine reaches — a declaration is *rendered from* a row
+    /// — which is exactly why it is reported rather than smoothed over into `stopped`: a service
+    /// that quietly claims to be stopped and then refuses to start explains nothing.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state: Option<ServiceState>,
 
     /// Whether a task in this daemon is supervising it right now.
     ///
     /// Not a second opinion about [`ServiceSummary::state`] — the row is the only thing that says
-    /// what a service is doing — but the answer to a different question: a row saying `running` with
-    /// nothing supervising it is what a daemon that was killed leaves behind, and adopting or
-    /// clearing those is T18. Until then this is where that gap is visible instead of implied.
+    /// what a service is doing — but the answer to a different question: a row saying `running`
+    /// with nothing supervising it is what a daemon that was killed leaves behind. Crash recovery
+    /// adopts or clears those when the daemon starts, and this is where anything it leaves is
+    /// visible instead of implied.
     pub supervised: bool,
 
     /// The process it is running as, where there is one.
@@ -211,11 +212,11 @@ pub struct ServiceSummary {
 
     /// The port its row was given, and [`None`] for a service that listens on none.
     ///
-    /// **The number in the row, not one derived from the running process** — roadmap task
-    /// **T34c**. It is allocated once, when the service is created, and never recomputed: it is in
-    /// somebody's `.env` and in a colleague's shell history by the end of the afternoon, so a
-    /// service that quietly moved between restarts would break both. A stopped service has it just
-    /// as a running one does, which is the point of reporting it here rather than only at creation.
+    /// **The number in the row, not one derived from the running process.** It is allocated once,
+    /// when the service is created, and never recomputed: it is in somebody's `.env` and in a
+    /// colleague's shell history by the end of the afternoon, so a service that quietly moved
+    /// between restarts would break both. A stopped service has it just as a running one does,
+    /// which is the point of reporting it here rather than only at creation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
 
@@ -231,8 +232,7 @@ pub struct ServiceSummary {
     /// order. Empty for a service that depends on nothing.
     pub depends_on: Vec<ServiceId>,
 
-    /// What this service is *for*, where two packages can be for the same thing — roadmap task
-    /// **T97**.
+    /// What this service is *for*, where two packages can be for the same thing.
     ///
     /// **The one thing a client could previously do nothing about.** Which program a home's sites
     /// are reached through is a fact the daemon holds and never published, so a client wanting to
@@ -248,7 +248,7 @@ pub struct ServiceSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role: Option<ServiceRole>,
 
-    /// Whether this service starts when the daemon does — roadmap task **T112**.
+    /// Whether this service starts when the daemon does.
     ///
     /// **The setting and not a prediction**: it says what the column holds, not whether the service
     /// will in fact be running after the next login, which depends on a port being free and a
@@ -258,15 +258,15 @@ pub struct ServiceSummary {
     /// follow: a service with no row has no setting to report, exactly as it has no state.
     ///
     /// **Defaulted**, on [ADR 0020]'s rule that the published contract is the shape the daemon
-    /// writes: a client older than T112 keeps parsing what a newer daemon says, and one newer than
-    /// a daemon that predates this member reads `false` — which is what every home had before
-    /// anybody could set it.
+    /// writes: a client older than this member keeps parsing what a newer daemon says, and one
+    /// newer than a daemon that predates this member reads `false` — which is what every home had
+    /// before anybody could set it.
     ///
     /// [ADR 0020]: https://github.com/mixnz/mixlab/blob/master/docs/decisions/0020-the-published-contract-is-the-shape-the-daemon-writes.md
     #[serde(default)]
     pub autostart: bool,
 
-    /// Who left it stopped, while it is — roadmap task **T167d**.
+    /// Who left it stopped, while it is.
     ///
     /// **Absent while the service is not `stopped`**, and from a daemon older than this member
     /// (ADR 0019). It is what lets a client tell a service MixEngine put to rest, which the next
@@ -277,7 +277,7 @@ pub struct ServiceSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stopped_by: Option<StoppedBy>,
 
-    /// Which version of its program this service runs — roadmap task **T183**.
+    /// Which version of its program this service runs.
     ///
     /// **What a person reads next to the id**, because the id is a name they chose and says
     /// nothing about the program: `mysql@main` is whichever MySQL was installed when it was created.
@@ -289,7 +289,7 @@ pub struct ServiceSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<PackageVersion>,
 
-    /// Why it failed, while it is `failed` — roadmap task **T200b**, D5.
+    /// Why it failed, while it is `failed`.
     ///
     /// On `stopped_by`'s rule: the row keeps the note after a person stops a failed service, and no
     /// listing shows a failure the state no longer claims. Optional on the wire (ADR 0019).
@@ -316,7 +316,7 @@ pub enum StoppedBy {
 }
 
 /// Whether this home stops services nobody is using — `service.save_resources` answers it, and
-/// `service.set_save_resources` answers it after changing it. Roadmap task **T167b**.
+/// `service.set_save_resources` answers it after changing it.
 ///
 /// **Off unless a person turned it on** ([ADR 0041]). While it is off, a service whose own idle
 /// setting is unset is never stopped for being idle; a service somebody gave a number keeps it.
@@ -343,8 +343,6 @@ pub struct SaveResourcesSet {
 /// value restores the recipe's own default; no recipe declares an autostart, so there is no third
 /// state for one to restore and an option would be a case every client had to decide about for
 /// nothing.
-///
-/// Roadmap task **T112**.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct ServiceAutostartSet {
@@ -355,10 +353,10 @@ pub struct ServiceAutostartSet {
     pub autostart: bool,
 }
 
-/// What a service is *for*, where two packages can be for the same thing — roadmap task **T97**.
+/// What a service is *for*, where two packages can be for the same thing.
 ///
 /// The wire half of `mixengine-core`'s `Role`, which is what a recipe answers and what
-/// `service.create` refuses a second front end by (**T37**).
+/// `service.create` refuses a second front end by.
 ///
 /// **[`FrontEnd`](Self::FrontEnd) carries which of the two it is, and that is the whole point.**
 /// Without the payload a client that wanted to draw a two-way switch would be back where it started:
@@ -474,7 +472,7 @@ pub struct ServiceCreate {
     pub overrides: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
-/// Why a service is not on the port its recipe would have preferred — roadmap task **T34c**.
+/// Why a service is not on the port its recipe would have preferred.
 ///
 /// **A port a person did not pick is one they have to be told about.** A recipe names the number
 /// its product is documented under — 3306 for both databases, 6379 for Redis — and the first row to
@@ -504,11 +502,11 @@ pub struct PortMoved {
 
 /// What `service.create` answers: the service, and the port story where there is one.
 ///
-/// **Its own type rather than a [`ServiceSummary`]** — roadmap task **T34c** — because a create
-/// answers two different questions and only one of them is true forever. What the service *is*
-/// outlives the call and is a [`ServiceSummary`]; why it is not on the port its recipe prefers is
-/// true only of this moment, and a field for it on every listing would be a sentence about a
-/// decision nobody is making any more.
+/// **Its own type rather than a [`ServiceSummary`]**, because a create answers two different
+/// questions and only one of them is true forever. What the service *is* outlives the call and is a
+/// [`ServiceSummary`]; why it is not on the port its recipe prefers is true only of this moment,
+/// and a field for it on every listing would be a sentence about a decision nobody is making any
+/// more.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct ServiceCreation {
@@ -554,15 +552,15 @@ pub struct ServiceFailure {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<StateReason>,
 
-    /// What the runner wrote about it — the same sentence `ServiceSummary.last_failure` carries
-    /// (T200b) — so the first thing a client prints is the runner's and not the state machine's.
-    /// Roadmap task **T202a**, D3. [`None`] where the reason is, and for a daemon from before it.
+    /// What the runner wrote about it — the same sentence `ServiceSummary.last_failure` carries —
+    /// so the first thing a client prints is the runner's and not the state machine's. [`None`]
+    /// where the reason is, and for a daemon from before the field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
 }
 
-/// One service data directory an earlier home left under `data/`, with no service row — roadmap
-/// task **T182g**. The answer to `service.found` is a list of these.
+/// One service data directory an earlier home left under `data/`, with no service row. The answer
+/// to `service.found` is a list of these.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct ServiceFound {
@@ -585,7 +583,7 @@ pub struct ServiceFound {
     pub why_not: Option<String>,
 }
 
-/// What `service.found` answers — roadmap task **T182g**.
+/// What `service.found` answers.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct ServiceFoundList {
@@ -593,7 +591,7 @@ pub struct ServiceFoundList {
     pub found: Vec<ServiceFound>,
 }
 
-/// What `service.adopt` takes — roadmap task **T182g**.
+/// What `service.adopt` takes.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct ServiceAdopt {
@@ -616,13 +614,13 @@ pub struct ServiceLimitsReport {
     pub service: ServiceId,
 
     /// What has been asked for. Stored whether or not this machine can enforce it — see
-    /// [`support`](Self::support), and the T68 design, D10.
+    /// [`support`](Self::support), and `docs/specs/2026-08-26-t68-resource-limits-design.md`, D10.
     pub limits: ResourceLimits,
 
     /// What this machine will actually do with each field of it.
     pub support: LimitSupport,
 
-    /// What is watching this service's ceiling, where nothing enforces it — task **T71a**.
+    /// What is watching this service's ceiling, where nothing enforces it.
     ///
     /// [`None`] means nothing is watching, which is two different situations with one answer: this
     /// machine caps `memory_mb` itself, or this service has not declared one. A client that drew a
@@ -631,7 +629,7 @@ pub struct ServiceLimitsReport {
     pub watchdog: Option<MemoryWatchdog>,
 }
 
-/// What watches a service's `memory_mb` where this machine cannot enforce it — task **T71a**.
+/// What watches a service's `memory_mb` where this machine cannot enforce it.
 ///
 /// **Per service, which is why it is not a field of [`LimitSupport`]**: that type answers for the
 /// machine and is handed no service, so it cannot say whether *this* one would be restarted. The
@@ -653,12 +651,13 @@ pub struct MemoryWatchdog {
     pub restarts: bool,
 }
 
-/// What `service.idle` answers — roadmap task **T69**.
+/// What `service.idle` answers.
 ///
-/// **The exemptions are carried rather than folded into `policy`**, on the rule T46 wrote for
-/// `DnsStatus`: "why is this still running?" has four answers that look identical from outside — no
-/// policy, policy switched off, a running dependent, a keep-warm project — and collapsing them into
-/// one `Option` sends a person to change a setting that was never the cause.
+/// **The exemptions are carried rather than folded into `policy`**, on the rule
+/// [`DnsStatus`](crate::DnsStatus) follows: "why is this still running?" has four answers that look
+/// identical from outside — no policy, policy switched off, a running dependent, a keep-warm
+/// project — and collapsing them into one `Option` sends a person to change a setting that was
+/// never the cause.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct IdleReport {
@@ -693,7 +692,7 @@ pub struct ServiceIdleSet {
     pub minutes: Option<u32>,
 }
 
-/// What `service.set_front_end` takes — roadmap task **T97**.
+/// What `service.set_front_end` takes.
 ///
 /// **Which program, and not which row.** A caller does not name a `ServiceId`, because the id of the
 /// service that is about to exist is the recipe's to decide and the one that is about to go is the
@@ -727,7 +726,7 @@ pub struct FrontEndSwitch {
     pub grant: bool,
 }
 
-/// What a switch did — roadmap task **T97**.
+/// What a switch did.
 ///
 /// **A measurement of the home afterwards, not a claim about what was attempted**, which is
 /// [`UninstallReport`](crate::UninstallReport)'s shape and its reasoning: the interesting outcomes
@@ -799,7 +798,7 @@ impl FrontEndReport {
     }
 }
 
-/// The five ends a switch can have — roadmap task **T97**.
+/// The five ends a switch can have.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]

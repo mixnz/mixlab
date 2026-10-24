@@ -58,8 +58,7 @@ placement: UpdatePlacement,
  */
 will_restart?: Array<ServiceId>, 
 /**
- * The installer this copy is updated with, present exactly when the `.pkg` installed it —
- * roadmap task **T88f**, the design's D3.
+ * The installer this copy is updated with, present exactly when the `.pkg` installed it.
  *
  * **A member of its own and not a new [`UpdatePlacement`] variant**: that stays `managed` on
  * the wire, because a tag an old client does not know would fail the whole status for it. A
@@ -68,6 +67,6 @@ will_restart?: Array<ServiceId>,
 installer?: UpdateInstaller | null, 
 /**
  * The version the daemon binary on disk reports, while it is the one handed to the installer
- * and not the one running — roadmap task **T88f**. It means *installed, restart to finish*.
+ * and not the one running. It means *installed, restart to finish*.
  */
 installed?: string | null, };

@@ -15,12 +15,12 @@ action: PlanAction,
  */
 disposition: Disposition, 
 /**
- * Whether carrying it out puts something in the elevation queue — the T77 design, D11.
+ * Whether carrying it out puts something in the elevation queue.
  *
  * **It queues, and a client is what spends the prompt.** This daemon never raises one on its
- * own initiative (T40b), so an apply enqueues exactly as `site.create` does and the single
- * prompt comes afterwards, from whoever asked for the apply — corrected here by T78, which is
- * the task that found the earlier wording promising a prompt this step does not raise.
+ * own initiative, so an apply enqueues exactly as `site.create` does and the single prompt
+ * comes afterwards, from whoever asked for the apply. An earlier wording here promised a
+ * prompt this step does not raise.
  *
  * A dry run that did not say a password is coming would still have failed to answer the
  * question it was run to answer; what it says now is *once, at the end, if you say so*.

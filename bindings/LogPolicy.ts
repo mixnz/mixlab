@@ -4,7 +4,7 @@
  * How much of a service's output to keep, and where the ceiling is.
  *
  * Rotation is the supervisor's own job rather than an external logrotate's, because the supervisor
- * is the process holding the file handle. Enforcement is roadmap task T16.
+ * is the process holding the file handle.
  */
 export type LogPolicy = { 
 /**

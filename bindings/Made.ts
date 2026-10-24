@@ -3,8 +3,8 @@
 /**
  * What one call did to one object.
  *
- * Two words rather than a `bool`, and they are read by more than a renderer: **T78's ledger
- * records this**, because a rollback may only undo what that apply actually created — and
+ * Two words rather than a `bool`, and they are read by more than a renderer: **a blueprint apply's
+ * ledger records this**, because a rollback may only undo what that apply actually created — and
  * `true`/`false` on a field called `created` reads the same whichever way somebody wires it up.
  */
 export type Made = "created" | "existing";

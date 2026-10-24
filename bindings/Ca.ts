@@ -13,8 +13,8 @@ subject: string,
  * SHA-256 of the certificate's DER, lowercase hex, no separators.
  *
  * **The number a browser shows and a trust store lists**, and therefore the only one a person
- * can compare against anything. Not the same value as [`key_id`](Self::key_id), and the T48
- * design's D1 is why there are two.
+ * can compare against anything. Not the same value as [`key_id`](Self::key_id), and
+ * `docs/specs/2026-08-24-t48-internal-ca-design.md`, D1, is why there are two.
  */
 fingerprint: string, 
 /**
@@ -40,7 +40,7 @@ not_after: Timestamp,
  *
  * **Signed, and allowed to be negative.** An expired authority is a true statement about a
  * certificate that exists and parses, not an unusable one: what it needs is rotation, which is
- * T54's and not this build's.
+ * `cert.ca_rotate`'s.
  */
 days_left: number, 
 /**

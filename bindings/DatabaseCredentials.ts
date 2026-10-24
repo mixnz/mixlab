@@ -4,7 +4,7 @@ import type { ServiceId } from "./ServiceId";
 
 /**
  * `database.credentials` — the password held for one account, read from this machine's
- * credential store. Roadmap task **T77b**.
+ * credential store.
  *
  * **The one exception to this module's own rule.** Every other type here answers *where* a
  * credential is; this answers *what it is*, because its whole purpose is to put a stored password

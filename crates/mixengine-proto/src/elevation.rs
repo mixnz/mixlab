@@ -37,7 +37,8 @@ pub struct PendingOp {
     pub id: PendingOpId,
 
     /// The operation itself, decoded. A row this build cannot decode is deleted rather than carried
-    /// — see the T40b design, D2 — so this is never a value nobody can act on.
+    /// — see `docs/specs/2026-08-23-t40b-elevation-queue-design.md`, D2 — so this is never a
+    /// value nobody can act on.
     pub op: PrivilegedOp,
 
     /// [`PrivilegedOp::describe`], rendered here rather than by the client.
@@ -64,7 +65,8 @@ pub struct PendingOp {
     pub needs_the_screen: Option<String>,
 }
 
-/// The three facts `daemon.status` carries about elevation — the T40b design, D6.
+/// The three facts `daemon.status` carries about elevation —
+/// `docs/specs/2026-08-23-t40b-elevation-queue-design.md`, D6.
 ///
 /// *Degraded* is not a field here and is not a column anywhere: it means
 /// [`pending`](ElevationSummary::pending) is not zero, computed where it is asked for. A second
@@ -114,8 +116,7 @@ pub struct ElevationStatus {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub helper: Option<String>,
 
-    /// What the installed helper turned out to be, when there is one and it answered — roadmap
-    /// task **T88a**.
+    /// What the installed helper turned out to be, when there is one and it answered.
     ///
     /// `default`, so a client built before this field existed still reads a newer daemon's answer.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -156,11 +157,11 @@ pub struct ByHand {
     pub request: String,
 }
 
-/// What the privileged helper installed on this machine turned out to be — roadmap task **T88a**.
+/// What the privileged helper installed on this machine turned out to be.
 ///
 /// Read by running that helper as an *ordinary* process with a `probe`, so nothing here costs a
-/// prompt: `Probe` needs no administrative token, which is what the T40 design's D5 arranged.
-/// Absent when nothing is installed, or when the machine would not answer.
+/// prompt: `Probe` needs no administrative token (`docs/specs/2026-08-22-t40-elevate-design.md`,
+/// D5). Absent when nothing is installed, or when the machine would not answer.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct InstalledHelper {
@@ -177,8 +178,8 @@ pub struct InstalledHelper {
     ///
     /// Rendered here rather than by a client, on [`PendingOp::description`]'s rule and for its
     /// reason: a client deciding what to say about the helper would be a client deciding what runs
-    /// as root. Since T182b there is nothing for a person to run: the daemon replaces an older
-    /// helper at the next prompt, and this says so.
+    /// as root. There is nothing for a person to run: the daemon replaces an older helper at the
+    /// next prompt, and this says so.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub upgrade: Option<String>,
 }
@@ -453,7 +454,7 @@ mod tests {
         assert!(serde_json::from_str::<ElevationDrop>(r#"{"id":7}"#).is_err());
     }
 
-    /// T88a. The three facts a handshake found, and the sentence the daemon composed from them —
+    /// The three facts a handshake found, and the sentence the daemon composed from them —
     /// `CLAUDE.md`'s "no business logic in clients", applied to the one screen that says what to do
     /// about the file this machine runs as root.
     #[test]

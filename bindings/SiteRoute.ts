@@ -2,7 +2,7 @@
 import type { ServiceId } from "./ServiceId";
 
 /**
- * One path prefix on a site, and what answers it — roadmap task **T135**.
+ * One path prefix on a site, and what answers it.
  *
  * **Beside [`SiteKind`] rather than inside it.** A site is a kind plus an ordered set of these, and
  * the kind is what answers everything no route matched — which is why `/` is not a path a route may

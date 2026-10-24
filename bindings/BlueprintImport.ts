@@ -4,9 +4,9 @@
  * `blueprint.import` — take in a blueprint somebody else wrote.
  *
  * **The only thing in this build that can produce [`BlueprintSource::Imported`]**, and therefore
- * the only thing that can produce an untrusted one — roadmap task **T78a**, its design's D3. A
- * capture is this machine's own and the gallery is this build's own; everything else arrives
- * through here, and what it arrives with decides whether its `[scaffold]` will ever be offered.
+ * the only thing that can produce an untrusted one. A capture is this machine's own and the
+ * gallery is this build's own; everything else arrives through here, and what it arrives with
+ * decides whether its `[scaffold]` will ever be offered.
  *
  * [`BlueprintSource::Imported`]: crate::BlueprintSource
  */

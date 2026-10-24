@@ -6,7 +6,7 @@
  * **Four answers for five categories, and the API states them rather than letting a client work
  * them out.** A client that derived *"runtimes go through `runtime.uninstall`"* would be holding a
  * copy of a table the daemon owns — and a cleanup button that deleted a runtime directly would be
- * the back door around **T32**'s refusal to uninstall a runtime under a running pool.
+ * the back door around the refusal to uninstall a runtime under a running pool.
  *
  * **Internally tagged**, so a client matches on a word rather than working out which fields
  * arrived — [`Outcome`](crate::Outcome)'s rule.

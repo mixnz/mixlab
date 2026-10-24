@@ -2,7 +2,7 @@
 import type { ServiceWalk } from "./ServiceWalk";
 
 /**
- * The five ends a switch can have — roadmap task **T97**.
+ * The five ends a switch can have.
  */
 export type FrontEndOutcome = { "outcome": "unchanged", } | { "outcome": "switched", 
 /**

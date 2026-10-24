@@ -2,7 +2,7 @@
 import type { CaStatus } from "./CaStatus";
 
 /**
- * What `cert.ca_uninstall` did — roadmap task **T54**.
+ * What `cert.ca_uninstall` did.
  */
 export type CaUninstallReport = { 
 /**

@@ -1,4 +1,4 @@
-//! What a service is costing, now and over the last day — roadmap task **T71**.
+//! What a service is costing, now and over the last day.
 //!
 //! Three tenses and one type each. [`MetricsFrame`] is *now*: what `metrics.snapshot` answers and
 //! what every frame of `GET /metrics` carries. [`MetricsMinute`] is *just now*: one row of the
@@ -21,7 +21,7 @@ use crate::{ServiceId, Timestamp};
 // `"daemon"` or `"service:<id>"` in one string — the shape `Display` writes and `parse` reads, and
 // what this type's hand-written serde puts on the wire. The grammar stays in
 // [`MetricsSubject::parse`] rather than becoming a TypeScript template literal nothing in this
-// repository could check against it (roadmap task T56).
+// repository could check against it.
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, as = "String"))]
 pub enum MetricsSubject {
     /// `mixengined` itself, and whatever it started that is not a service.
@@ -33,8 +33,8 @@ pub enum MetricsSubject {
     /// **It does not include the services it supervises**, although every one of them is a child of
     /// this process — a group stops where another group begins. The rows are disjoint on purpose:
     /// otherwise the daemon would be the largest consumer on every chart, and a client adding the
-    /// rows up would count each service twice. Corrected at **T72**, which is what summing them was
-    /// first needed for.
+    /// rows up would count each service twice. Corrected when a project's total first needed the
+    /// rows summed.
     Daemon,
 
     /// One supervised service, and everything its process started.
@@ -106,8 +106,8 @@ pub struct MetricsSample {
     /// from. A zero there would draw an idle service during the second it is most expensive.
     ///
     /// **On the stream and in a snapshot it is the mean of the last five seconds of readings**
-    /// (roadmap task T190c), because one second of CPU time on Windows is a count of 15.6 ms
-    /// quanta. The minute history is kept from the readings themselves.
+    /// because one second of CPU time on Windows is a count of 15.6 ms quanta. The minute history
+    /// is kept from the readings themselves.
     pub cpu_percent: Option<f32>,
 
     /// Resident bytes over the whole group, with shared pages counted once per process.
@@ -137,7 +137,7 @@ pub struct MetricsFrame {
     /// sample of zero, because *not measured* and *measured nothing* are different facts.
     pub samples: Vec<MetricsSample>,
 
-    /// How many logical processors this machine has — roadmap task **T190c**.
+    /// How many logical processors this machine has.
     ///
     /// What a client divides [`MetricsSample::cpu_percent`] by to show a share of the whole
     /// machine, as Task Manager does. The same count as
@@ -147,7 +147,7 @@ pub struct MetricsFrame {
     pub cores: u32,
 }
 
-/// What a reply from a daemon older than roadmap task T190c meant: percent of one core.
+/// What a reply from a daemon older than `cores` meant: percent of one core.
 const fn one_core() -> u32 {
     1
 }
@@ -216,9 +216,9 @@ pub struct MetricsHistory {
     /// How long this home keeps a row, so a client can say why its chart starts where it does.
     pub retention_hours: u32,
 
-    /// How many logical processors this machine has — roadmap task **T190c**, and
-    /// [`MetricsFrame::cores`]'s reason: what `cpu_avg` and `cpu_peak` are divided by to be drawn
-    /// as a share of the machine. The rows themselves stay in percent of one core.
+    /// How many logical processors this machine has, for [`MetricsFrame::cores`]'s reason: what
+    /// `cpu_avg` and `cpu_peak` are divided by to be drawn as a share of the machine. The rows
+    /// themselves stay in percent of one core.
     #[serde(default = "one_core")]
     pub cores: u32,
 }
@@ -231,7 +231,7 @@ mod tests {
         MetricsSubject::Service(ServiceId::parse(id).expect("an id"))
     }
 
-    /// Frames and histories say what one core is worth here — roadmap task **T190c**.
+    /// Frames and histories say what one core is worth here.
     #[test]
     fn a_frame_carries_the_machine_s_cores_and_an_old_one_reads_as_one() {
         let frame = MetricsFrame {

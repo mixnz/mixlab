@@ -13,8 +13,7 @@ site: SiteRef,
  * The name to add.
  *
  * **Never becomes the primary.** [`crate::SiteUpdate`] reorders and the head of that list is
- * the primary; a verb that says "add a domain" does not get to decide what a site *is* (T46
- * design, D3).
+ * the primary; a verb that says "add a domain" does not get to decide what a site *is* (D3).
  */
 domain: string, 
 /**

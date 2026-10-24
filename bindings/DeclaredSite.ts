@@ -2,8 +2,7 @@
 import type { DeclaredSiteState } from "./DeclaredSiteState";
 
 /**
- * One site a project's `mixengine.toml` declares, and whether this home has it — roadmap task
- * **T204**, spec D7.
+ * One site a project's `mixengine.toml` declares, and whether this home has it.
  */
 export type DeclaredSite = { 
 /**

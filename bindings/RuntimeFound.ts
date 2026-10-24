@@ -3,8 +3,7 @@ import type { PackageVersion } from "./PackageVersion";
 import type { RuntimeKind } from "./RuntimeKind";
 
 /**
- * One runtime directory on disk with no row — roadmap task **T182i**. The answer to `runtime.found` is a
- * list of these.
+ * One runtime directory on disk with no row. The answer to `runtime.found` is a list of these.
  */
 export type RuntimeFound = { 
 /**

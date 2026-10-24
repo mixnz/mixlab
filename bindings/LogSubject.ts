@@ -3,7 +3,7 @@ import type { JobId } from "./JobId";
 import type { ServiceId } from "./ServiceId";
 
 /**
- * Whose output a log stream carries — roadmap task **T78a**, its design's D13.
+ * Whose output a log stream carries.
  *
  * **A second kind of subject rather than a second surface.** The ring, the frames, the [`Gap`] a
  * slow reader is told about and the per-connection back-pressure are the ones

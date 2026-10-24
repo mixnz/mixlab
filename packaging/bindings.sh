@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # The published TypeScript API contract: generate it, check it is current, pack it for a release.
 #
-# Roadmap task T56.
 # Design: docs/specs/2026-09-05-t56-the-published-api-contract-design.md
 #
 #   bash packaging/bindings.sh            regenerate bindings/ in place
@@ -71,7 +70,7 @@ mix_generate_contract() {
   {
     echo "// The MixEngine API contract: every request, response, event and error the daemon speaks."
     echo "//"
-    echo "// Generated from \`mixengine-proto\` by \`packaging/bindings.sh\` — roadmap task T56."
+    echo "// Generated from \`mixengine-proto\` by \`packaging/bindings.sh\`."
     echo "// Do not edit anything in this directory; every file in it is rewritten from the Rust types."
     echo ""
     printf '%s\n' "$files" | while read -r file; do

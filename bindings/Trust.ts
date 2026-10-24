@@ -4,9 +4,9 @@
  * Whether this machine holds MixEngine's certificate authority in its own trust store.
  *
  * **This says "is it in the store", not "does a browser trust it".** Firefox and Chrome on Linux
- * read NSS databases and not the system store at all — that is T49b — and a browser already running
- * may not re-read a store it has cached. The honest end-to-end answer is a live TLS handshake,
- * which is `mix cert status`' job (T53).
+ * read NSS databases and not the system store at all — that is [`CaStatus::browsers`] — and a
+ * browser already running may not re-read a store it has cached. The honest end-to-end answer is a
+ * live TLS handshake, which is `mix cert status`' job.
  * **A nested object rather than a flattened one, unlike [`CaState`] above.** Two reasons, and both
  * are about this type rather than about taste: `Trust::NotInstalled` and `CaState::Unusable` both
  * spell their reason `because`, so flattening would let one silently overwrite the other on the one

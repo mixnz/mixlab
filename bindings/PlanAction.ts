@@ -23,7 +23,7 @@ name: string,
  */
 root: string, 
 /**
- * The versions it will ask for — roadmap task **T78**, its design's D7.
+ * The versions it will ask for.
  *
  * **Without this the blueprint's `[runtimes]` never reaches the machine**: the new site
  * resolves to whatever this machine defaults to, and a capture of the applied project
@@ -112,7 +112,7 @@ doc_root: string,
  */
 https: boolean, 
 /**
- * The path routes it declares — roadmap task **T135**.
+ * The path routes it declares.
  *
  * A php-fpm route's pool is not named here, for the reason `kind`'s is: which pool answers
  * is decided on the machine that makes the site. Empty for every blueprint the gallery
@@ -120,9 +120,8 @@ https: boolean,
  */
 routes?: Array<SiteRoute>, 
 /**
- * The services this site links, as their `EnsureService` steps name them — roadmap task
- * **T204a**, D3. [`None`] is every service the apply made sure of, which is what a
- * one-site blueprint links.
+ * The services this site links, as their `EnsureService` steps name them. [`None`] is
+ * every service the apply made sure of, which is what a one-site blueprint links.
  */
 services?: Array<ServiceId> | null, } | { "action": "add_domain", 
 /**

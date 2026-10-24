@@ -99,11 +99,11 @@ impl ServiceState {
 
     /// Whether a service in this state is one something should be supervising right now.
     ///
-    /// **The set crash recovery reconciles at boot** (roadmap task T18): a daemon that was killed
-    /// leaves rows in exactly these five states with nothing supervising them, and the daemon that
-    /// starts next has to either take the process over or say that it is gone. The other two are
-    /// where a service is *left*, so a row in one of them is already telling the truth about a
-    /// machine with no daemon on it.
+    /// **The set crash recovery reconciles at boot**: a daemon that was killed leaves rows in
+    /// exactly these five states with nothing supervising them, and the daemon that starts next has
+    /// to either take the process over or say that it is gone. The other two are where a service is
+    /// *left*, so a row in one of them is already telling the truth about a machine with no daemon
+    /// on it.
     ///
     /// Here rather than in the daemon because it is a property of the machine, like
     /// [`can_become`](Self::can_become): `Restarting` counts although no process exists in it —
@@ -200,9 +200,10 @@ impl std::fmt::Display for ServiceState {
 /// distinguish two failures a user currently sees as one. A client renders what it knows and shows
 /// the state alone for what it does not.
 ///
-/// Every variant here is an edge in [`ServiceState::can_become`]. What is deliberately *not* here is
-/// anything the code that would emit it does not exist for yet — which is why [`StateReason::Idle`]
-/// arrived with T69 and not before, rather than being declared as a promise the build did not keep.
+/// Every variant here is an edge in [`ServiceState::can_become`]. What is deliberately *not* here
+/// is anything the code that would emit it does not exist for yet — which is why
+/// [`StateReason::Idle`] arrived with the idle sweep and not before, rather than being declared as
+/// a promise the build did not keep.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 #[non_exhaustive]
@@ -212,7 +213,7 @@ pub enum StateReason {
     /// did on their behalf at boot.
     Requested,
 
-    /// The daemon started this because its `autostart` setting said to — roadmap task **T113**.
+    /// The daemon started this because its `autostart` setting said to.
     ///
     /// **Its own variant rather than [`Requested`](Self::Requested)**, because the difference is the
     /// whole of what somebody reading an event at login wants to know: nobody asked, a setting did.
@@ -226,14 +227,14 @@ pub enum StateReason {
     /// recorded rather than failing to parse the event.
     Autostart,
 
-    /// The daemon stopped this on its way out — roadmap task **T123**.
+    /// The daemon stopped this on its way out.
     ///
     /// **[`Autostart`](Self::Autostart)'s mirror image, and it exists for the same reason turned
-    /// around.** `daemon.shutdown` and a person's `service.stop` walk the same
-    /// `Registry::stop`, so both read as [`Requested`](Self::Requested) — and a stop that is only
-    /// MixEngine going down became indistinguishable from one its owner meant to last. What that
-    /// cost is the whole of T123: on-demand activation refuses to undo a person's stop, so after
-    /// every `mix daemon restart` it refused to wake anything at all.
+    /// around.** `daemon.shutdown` and a person's `service.stop` walk the same `Registry::stop`, so
+    /// both read as [`Requested`](Self::Requested) — and a stop that is only MixEngine going down
+    /// became indistinguishable from one its owner meant to last. What that cost: on-demand
+    /// activation refuses to undo a person's stop, so after every `mix daemon restart` it refused
+    /// to wake anything at all.
     ///
     /// **Somebody did ask — for the *daemon* to stop**, which is not a sentence about any one
     /// service. That is the distinction this word carries and `Requested` cannot.
@@ -242,12 +243,13 @@ pub enum StateReason {
     /// recorded rather than failing to parse the event.
     Shutdown,
 
-    /// A repair stopped this to re-set its superuser credential — roadmap task **T127**.
+    /// A repair stopped this to re-set its superuser credential.
     ///
     /// **Its own word rather than [`Requested`](Self::Requested)**, for `Requested`'s own reason:
-    /// somebody asked for a *repair*, not for this service to be down. And it outlives the job where
-    /// the job fails — `mix service status` saying *a person stopped this* about a repair that died
-    /// half-way is the kind of account T126 spent a day chasing.
+    /// somebody asked for a *repair*, not for this service to be down. And it outlives the job
+    /// where the job fails — `mix service status` saying *a person stopped this* about a repair
+    /// that died half-way is the kind of account that once cost a day of chasing a refused
+    /// password.
     ///
     /// **Naming it here is half the change.** Whether a connection may start the service again is
     /// `StoppedBy::may_be_woken` in `mixengine-core`, and `StoppedBy::of` reaches its wakeable answer
@@ -269,7 +271,7 @@ pub enum StateReason {
         after: Millis,
     },
 
-    /// A port the service was going to listen on is held by something else — roadmap task **T38**.
+    /// A port the service was going to listen on is held by something else.
     ///
     /// **Not a refusal to start: this is what a start that already failed turns out to have been.**
     /// A server whose bind is refused exits, or sits there never becoming ready, and both of those
@@ -299,7 +301,7 @@ pub enum StateReason {
     SpawnFailed,
 
     /// A first-run ritual this service has never had performed did not finish, so nothing was
-    /// spawned — roadmap task **T33**.
+    /// spawned.
     ///
     /// Its own variant rather than [`StateReason::SpawnFailed`], which would be a lie in the one way
     /// that matters: nothing was even attempted, and what a user has to fix is upstream of the
@@ -312,17 +314,17 @@ pub enum StateReason {
         detail: String,
     },
 
-    /// The server is up, and refuses the superuser password this home holds — roadmap task
-    /// **T127a**.
+    /// The server is up, and refuses the superuser password this home holds.
     ///
     /// **The other end of [`FirstRunFailed`](Self::FirstRunFailed), and it arrives much later.** A
     /// first run writes that password into the data directory *and* into the OS credential store;
-    /// once the two come apart nothing can log in to bring them back together, and T126 is where
-    /// that could happen. T127 built the repair — `mix service reset-credential` — and reached it
-    /// from the provisioning probe, which is a *running* server. This is the same explanation for a
-    /// server that never gets there: a cluster whose readiness check is an authenticated query
-    /// cannot leave `starting`, and until this word existed it was reported as a ready check that
-    /// timed out, which sends the reader to look at a server that is running perfectly well.
+    /// once the two come apart nothing can log in to bring them back together — two homes sharing
+    /// one keyring address is how they once did (ADR 0032). The repair is `mix service
+    /// reset-credential`, reached from the provisioning probe, which is a *running* server. This is
+    /// the same explanation for a server that never gets there: a cluster whose readiness check is
+    /// an authenticated query cannot leave `starting`, and until this word existed it was reported
+    /// as a ready check that timed out, which sends the reader to look at a server that is running
+    /// perfectly well.
     ///
     /// **It is a reading of what the service printed and not of what MixEngine asked**, so the
     /// daemon reaches it only for a service that has a database vocabulary, and only for a line
@@ -439,11 +441,11 @@ pub enum StateReason {
 
     /// Its process did not survive the daemon that was supervising it.
     ///
-    /// Written by crash recovery at the next start (roadmap task T18) for a row that claimed a
-    /// running process and turned out not to have one: the pid names nothing, or it names something
-    /// that began before the process we recorded and is therefore somebody else's. **Nothing is
-    /// signalled on this path** — a pid that failed the identity check is precisely the pid this
-    /// product must not act on.
+    /// Written by crash recovery at the next start for a row that claimed a running process and
+    /// turned out not to have one: the pid names nothing, or it names something that began before
+    /// the process we recorded and is therefore somebody else's. **Nothing is signalled on this
+    /// path** — a pid that failed the identity check is precisely the pid this product must not act
+    /// on.
     ///
     /// Not [`StateReason::Exited`], which says the supervisor watched a process end and read its
     /// status. Nobody watched this one: it went with a daemon that was killed, or with a machine
@@ -469,8 +471,7 @@ pub enum StateReason {
         reason: String,
     },
 
-    /// Nothing was using it, for as long as its [`crate::IdlePolicy`] said to wait — roadmap task
-    /// **T69**.
+    /// Nothing was using it, for as long as its [`crate::IdlePolicy`] said to wait.
     ///
     /// **A reason on the transition rather than an event of its own.** "Why did my PHP stop?" is a
     /// question about a move, and a `ServiceIdled` beside `ServiceStateChanged` would announce one
@@ -489,7 +490,7 @@ pub enum StateReason {
         after: Millis,
     },
 
-    /// It is holding more than the `memory_mb` this machine cannot enforce — roadmap task **T71a**.
+    /// It is holding more than the `memory_mb` this machine cannot enforce.
     ///
     /// Carried on the move to [`ServiceState::Degraded`] while it is over, and again on the stop
     /// that restarts it once it has been over for long enough. Reachable only where
@@ -662,7 +663,7 @@ mod tests {
             ),
             (
                 // The line is the client's to lay out, exactly as `CrashLoop`'s tail is; what
-                // belongs in the clause after `failed —` is what it means — roadmap task **T127a**.
+                // belongs in the clause after `failed —` is what it means.
                 StateReason::SuperuserRefused {
                     said: "FATAL:  password authentication failed for user \"postgres\"".to_owned(),
                 },

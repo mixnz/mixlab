@@ -7,7 +7,7 @@ import type { Millis } from "./Millis";
  *
  * The product's central promise is that idle costs nothing, and this is the mechanism. `None` on a
  * [`ServiceSpec`] means never idle-stop — correct for the front-end web server, which is the thing
- * that starts everything else back up. Enforcement is roadmap task T69.
+ * that starts everything else back up. The daemon's idle sweep is what acts on it.
  */
 export type IdlePolicy = { 
 /**

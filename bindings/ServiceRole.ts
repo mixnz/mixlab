@@ -2,10 +2,10 @@
 import type { FrontEndServer } from "./FrontEndServer";
 
 /**
- * What a service is *for*, where two packages can be for the same thing — roadmap task **T97**.
+ * What a service is *for*, where two packages can be for the same thing.
  *
  * The wire half of `mixengine-core`'s `Role`, which is what a recipe answers and what
- * `service.create` refuses a second front end by (**T37**).
+ * `service.create` refuses a second front end by.
  *
  * **[`FrontEnd`](Self::FrontEnd) carries which of the two it is, and that is the whole point.**
  * Without the payload a client that wanted to draw a two-way switch would be back where it started:

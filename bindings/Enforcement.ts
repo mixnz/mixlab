@@ -8,9 +8,9 @@ import type { WhenExceeded } from "./WhenExceeded";
  * session's `memory` controller far more readily than its `cpu` controller, and which of the two
  * arrives has moved between releases — so a machine that caps memory and cannot cap CPU is an
  * ordinary machine, and a single flag could only describe it by lying about one of them.
- * **`#[non_exhaustive]` since T71a**, which is the first release to add a variant to it. A client
- * in another repository reads these values, and the honest thing to tell it is that the set of
- * answers a machine can give grows — the same promise [`StateReason`](crate::StateReason) has
+ * **`#[non_exhaustive]` since the memory watchdog**, the first release to add a variant to it. A
+ * client in another repository reads these values, and the honest thing to tell it is that the set
+ * of answers a machine can give grows — the same promise [`StateReason`](crate::StateReason) has
  * always made.
  */
 export type Enforcement = { "kind": "hard", 

@@ -1,15 +1,15 @@
 //! What a machine will actually enforce of a service's declared limits.
 //!
-//! Roadmap task **T68**. Here rather than in `mixengine-platform`, although every value of these
-//! types is produced there: they cross the API to a client, so they need `serde`, and this crate is
-//! where the shared vocabulary lives. `mixengine-platform` re-exports them, and the trait that
-//! answers with them — `ResourceControl` — stays there, because *asking the machine* is that crate's
-//! job and describing the answer is this one's.
+//! Here rather than in `mixengine-platform`, although every value of these types is produced there:
+//! they cross the API to a client, so they need `serde`, and this crate is where the shared
+//! vocabulary lives. `mixengine-platform` re-exports them, and the trait that answers with them —
+//! `ResourceControl` — stays there, because *asking the machine* is that crate's job and describing
+//! the answer is this one's.
 //!
 //! The counterpart is `mixengine_platform::process::Limits`, which deliberately does **not** live
 //! here: the spawn layer is compiled by `mixengine-shim` without this crate. So a declared limit
 //! (`ResourceLimits`, in `service/policy.rs`) and an applied one are two types, and the daemon
-//! converts — the T68 design, D9.
+//! converts (`docs/specs/2026-08-26-t68-resource-limits-design.md`, D9).
 
 /// How this system caps a supervised service. One per system, chosen by the system.
 ///
@@ -54,9 +54,9 @@ pub enum WhenExceeded {
 /// session's `memory` controller far more readily than its `cpu` controller, and which of the two
 /// arrives has moved between releases — so a machine that caps memory and cannot cap CPU is an
 /// ordinary machine, and a single flag could only describe it by lying about one of them.
-/// **`#[non_exhaustive]` since T71a**, which is the first release to add a variant to it. A client
-/// in another repository reads these values, and the honest thing to tell it is that the set of
-/// answers a machine can give grows — the same promise [`StateReason`](crate::StateReason) has
+/// **`#[non_exhaustive]` since the memory watchdog**, the first release to add a variant to it. A
+/// client in another repository reads these values, and the honest thing to tell it is that the set
+/// of answers a machine can give grows — the same promise [`StateReason`](crate::StateReason) has
 /// always made.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -86,7 +86,7 @@ pub enum Enforcement {
         why: String,
     },
 
-    /// Nothing caps this field, but this daemon watches it and acts — roadmap task **T71a**.
+    /// Nothing caps this field, but this daemon watches it and acts.
     ///
     /// **Not a wall, and a client must not draw it as one.** A service may go over the number and
     /// keep running; what follows is a warning, and a restart where the service's own recipe says a
@@ -129,7 +129,7 @@ pub enum MemoryMeasure {
     /// controller was delegated to this session.
     ChargedPages,
 
-    /// Resident set size, as T71's sampler reads it — what a watchdog judges.
+    /// Resident set size, as the metrics sampler reads it — what a watchdog judges.
     ///
     /// **Overstates shared pages**, identically on every system, because a page mapped by a master
     /// and four workers is counted five times. There is no cross-platform way to do better, and it

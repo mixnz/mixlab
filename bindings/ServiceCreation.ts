@@ -5,11 +5,11 @@ import type { ServiceSummary } from "./ServiceSummary";
 /**
  * What `service.create` answers: the service, and the port story where there is one.
  *
- * **Its own type rather than a [`ServiceSummary`]** — roadmap task **T34c** — because a create
- * answers two different questions and only one of them is true forever. What the service *is*
- * outlives the call and is a [`ServiceSummary`]; why it is not on the port its recipe prefers is
- * true only of this moment, and a field for it on every listing would be a sentence about a
- * decision nobody is making any more.
+ * **Its own type rather than a [`ServiceSummary`]**, because a create answers two different
+ * questions and only one of them is true forever. What the service *is* outlives the call and is a
+ * [`ServiceSummary`]; why it is not on the port its recipe prefers is true only of this moment,
+ * and a field for it on every listing would be a sentence about a decision nobody is making any
+ * more.
  */
 export type ServiceCreation = { 
 /**

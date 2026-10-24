@@ -14,7 +14,7 @@ key: string,
  */
 value: string, } | { "type": "front_end", 
 /**
- * Which of the two front ends the fragment is written for — roadmap task **T81c**.
+ * Which of the two front ends the fragment is written for.
  *
  * Shown rather than folded away, because a home running the *other* front end renders
  * nothing for this entry: what an inspection would otherwise say is that something is

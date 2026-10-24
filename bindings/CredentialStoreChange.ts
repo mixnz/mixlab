@@ -2,7 +2,7 @@
 import type { CredentialStore } from "./CredentialStore";
 
 /**
- * What `daemon.set_credential_store` answers — roadmap task **T194**.
+ * What `daemon.set_credential_store` answers.
  *
  * **Two stores, because a switch applies at the next start**: the running daemon keeps the host it
  * was built with, and a client says so when the two differ.

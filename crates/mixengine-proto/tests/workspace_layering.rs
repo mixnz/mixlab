@@ -34,17 +34,16 @@ const ALLOWED_EDGES: &[(&str, &[&str])] = &[
         ],
     ),
     // `platform` is here for `ipc::Connection` and `HomeDirs` alone — the transport `mix` dials and
-    // the OS convention that says which home it dials for (roadmap task T10). Narrow on purpose: a
-    // client that reached further into that crate would be doing something to the machine, which is
-    // the daemon's job, and the ban on business logic in a client holds either way. Notably absent
-    // is `mixengine-core`, which the CLI would otherwise want for `Paths`: it carries `sqlx`, and
+    // the OS convention that says which home it dials for. Narrow on purpose: a client that reached
+    // further into that crate would be doing something to the machine, which is the daemon's job,
+    // and the ban on business logic in a client holds either way. Notably absent is
+    // `mixengine-core`, which the CLI would otherwise want for `Paths`: it carries `sqlx`, and
     // linking a bundled SQLite into `mix` to learn that `run/` sits under the root is a trade
     // nobody would make. See `home.rs` for the one thing that duplicates instead, and for the test
-    // that keeps the two answers together.
-    // The handbook, and the bottom of the graph beside `proto`. It depends on nothing at all: its
-    // front matter is parsed by a build script, so what a binary links is a table of `&'static str`
-    // — roadmap task T90. The Markdown renderer that builds the site is a dev-dependency of it,
-    // which is what keeps a renderer out of `mix`.
+    // that keeps the two answers together. The handbook, and the bottom of the graph beside
+    // `proto`. It depends on nothing at all: its front matter is parsed by a build script, so what
+    // a binary links is a table of `&'static str` — and the Markdown renderer that builds the site
+    // is a dev-dependency of it, which is what keeps a renderer out of `mix`.
     ("mixengine-docs", &[]),
     (
         "mixengine-cli",
@@ -59,9 +58,9 @@ const ALLOWED_EDGES: &[(&str, &[&str])] = &[
         "mixengine-shim",
         &["mixengine-core", "mixengine-platform", "mixengine-proto"],
     ),
-    // What `<root>/bin` holds per command name on Windows (T185), and so the one binary whose size
-    // is paid dozens of times over. `platform` alone, and only its `handover` feature: anything
-    // else here would be a copy of it in every name.
+    // What `<root>/bin` holds per command name on Windows, and so the one binary whose size is paid
+    // dozens of times over. `platform` alone, and only its `handover` feature: anything else here
+    // would be a copy of it in every name.
     ("mixengine-trampoline", &["mixengine-platform"]),
     // Fixtures, and nothing a user runs. It may depend on `platform` because `fakeservice` reaches
     // the same `Signals` and `spawn_detached` the daemon does — using them rather than reimplementing
@@ -167,14 +166,14 @@ const NO_OS_CFG: &[&str] = &[
 /// somewhere in the middle and this test would be measuring nothing, so a file that grows one fails
 /// rather than quietly widening its own permission.
 ///
-/// **A `foo/tests.rs` is test code from its first line** (T207e): it is the body of the module
-/// `foo.rs` declares as `#[cfg(test)]` directly above `mod tests;`, and the check asserts that pair
-/// in `foo.rs` instead of a line inside the file. `foo.rs` itself is not permitted anything, so an OS
+/// **A `foo/tests.rs` is test code from its first line**: it is the body of the module `foo.rs`
+/// declares as `#[cfg(test)]` directly above `mod tests;`, and the check asserts that pair in
+/// `foo.rs` instead of a line inside the file. `foo.rs` itself is not permitted anything, so an OS
 /// `cfg` there is an offence like any other.
 ///
-/// **So is a topic `foo/tests/<topic>.rs` under that hub** (T207f, T207o): the hub `foo/tests.rs`
-/// declares it with `mod <topic>;`, and `foo.rs` declares the hub as above. The hub is not permitted
-/// anything by this — only the topic named here is.
+/// **So is a topic `foo/tests/<topic>.rs` under that hub**: the hub `foo/tests.rs` declares it with
+/// `mod <topic>;`, and `foo.rs` declares the hub as above. The hub is not permitted anything by
+/// this — only the topic named here is.
 const PERMITTED: &[(&str, &str)] = &[
     (
         "mixengine-core/src/generate/recipes/postgres/tests/server.rs",

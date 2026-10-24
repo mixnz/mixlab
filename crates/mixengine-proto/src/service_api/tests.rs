@@ -4,7 +4,7 @@ fn service(id: &str) -> ServiceId {
     ServiceId::parse(id).expect("a valid service id")
 }
 
-/// T202a, D3. A failure written by a daemon from before the detail still reads, and the detail
+/// A failure written by a daemon from before the detail still reads, and the detail
 /// the runner persisted travels with the reason.
 #[test]
 fn a_service_failure_reads_without_a_detail_and_carries_one() {
@@ -33,7 +33,7 @@ fn a_service_failure_reads_without_a_detail_and_carries_one() {
     );
 }
 
-/// **T182g.** A found instance that can be adopted says with what, and leaves out the two
+/// A found instance that can be adopted says with what, and leaves out the two
 /// fields that would only be there when it cannot.
 #[test]
 fn a_found_service_that_opens_carries_only_what_opens_it() {
@@ -81,7 +81,7 @@ fn a_role_says_what_a_service_is_for_and_names_the_program_when_it_matters() {
     );
 }
 
-/// **The floor of protocol 1**, as the JSON a daemon from before **T97** actually sent — and
+/// **The floor of protocol 1**, as the JSON a daemon from before `role` actually sent — and
 /// the guard on [ADR 0019] that keeps the next added member optional too.
 ///
 /// Every member below is one this type was frozen with. [`ServiceSummary::role`] is absent,
@@ -111,11 +111,11 @@ fn a_summary_from_before_a_role_existed_still_reads() {
     );
     assert_eq!(
         decoded.version, None,
-        "an absent version is a daemon that predates T183"
+        "an absent version is a daemon that predates the member"
     );
 }
 
-/// **T183.** A version goes out as the plain string it was installed as, and comes back equal.
+/// A version goes out as the plain string it was installed as, and comes back equal.
 #[test]
 fn a_summary_carries_the_version_it_runs_and_omits_one_it_does_not_know() {
     let known = ServiceSummary {
@@ -133,7 +133,8 @@ fn a_summary_carries_the_version_it_runs_and_omits_one_it_does_not_know() {
     assert!(unknown.get("version").is_none(), "{unknown}");
 }
 
-/// **D4.** The shape every client has sent since T31a still parses, and gains one optional key.
+/// The shape every client has sent since `service.delete` first shipped still parses, and gains
+/// one optional key.
 #[test]
 fn a_service_delete_from_before_force_existed_still_parses() {
     let asked: ServiceDelete =
@@ -230,7 +231,7 @@ fn not_waiting_is_the_one_thing_a_target_has_to_spell_out() {
     );
 }
 
-/// **T97.** The only thing a Settings screen has to send is which program it wants.
+/// The only thing a Settings screen has to send is which program it wants.
 #[test]
 fn a_switch_needs_only_the_server_and_raises_nothing_by_itself() {
     let switch: FrontEndSwitch =
@@ -357,7 +358,7 @@ fn a_status_without_a_service_does_not_decode() {
         .expect_err("a status with no subject is a mistyped list, not a list");
 }
 
-/// T167: who stopped a service travels as one word, and a daemon older than the member — or a
+/// Who stopped a service travels as one word, and a daemon older than the member — or a
 /// service that is not stopped — sends nothing.
 #[test]
 fn stopped_by_is_a_word_and_is_absent_when_not_said() {

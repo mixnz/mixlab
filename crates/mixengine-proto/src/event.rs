@@ -4,10 +4,10 @@
 //! the rest — is declared here **one variant at a time, as the code that emits it lands**. Writing
 //! them all up front would mean inventing identifier types before the code that issues them has an
 //! opinion, and publishing a wire contract nothing can produce.
-//! [`DaemonEvent::ServiceStateChanged`] is the first to arrive that way, with T14; the two job
-//! variants are the second, with T22, and they are the case that shows why the rule is worth
-//! keeping — `JobId` turned out to be the rowid of a table that did not exist when the architecture
-//! document named the type.
+//! [`DaemonEvent::ServiceStateChanged`] is the first to arrive that way, with the service state
+//! machine; the two job variants are the second, with the job system, and they are the case that
+//! shows why the rule is worth keeping — `JobId` turned out to be the rowid of a table that did not
+//! exist when the architecture document named the type.
 //!
 //! `LogLine` is the one variant listed there that will never be built: output travels on its own
 //! endpoint, per [ADR 0009](https://github.com/mixnz/mixlab/blob/master/docs/decisions/0009-logs-travel-on-their-own-stream.md).
@@ -26,7 +26,7 @@ use crate::{JobFinish, JobProgress, PendingOp, ServiceTransition, SharingChange,
 /// `addEventListener` per variant — and it means a variant added in a later phase reaches an older
 /// client as an object it can recognise and ignore, rather than as an event type it never
 /// subscribed to and silently never sees.
-/// **Not [`Eq`], since T22.** [`JobOutcome::Succeeded`](crate::JobOutcome) carries a
+/// **Not [`Eq`].** [`JobOutcome::Succeeded`](crate::JobOutcome) carries a
 /// [`serde_json::Value`], whose float variant has no total equality — and the payload of a job is
 /// the one thing on this stream whose shape belongs to the method that produced it rather than to
 /// this crate. [`PartialEq`] is what tests compare with anyway.
@@ -59,23 +59,23 @@ pub enum DaemonEvent {
     /// as one flat object: `{"type":"service_state_changed","service":"caddy",…}`.
     ServiceStateChanged(ServiceTransition),
 
-    /// One or more privileged operations are waiting for permission — roadmap task **T40b**.
+    /// One or more privileged operations are waiting for permission.
     ///
-    /// **The whole queue and not the row that was just written.** T64's client prints every
-    /// operation an `ElevationRequired` batches and what each will change, and a variant carrying
-    /// only the newest would make it fetch the rest before it could say anything. The list is read
-    /// back inside the transaction that inserted, on
+    /// **The whole queue and not the row that was just written.** `mix` prints every operation an
+    /// `ElevationRequired` batches and what each will change, and a variant carrying only the
+    /// newest would make it fetch the rest before it could say anything. The list is read back
+    /// inside the transaction that inserted, on
     /// [`ServiceStateChanged`](DaemonEvent::ServiceStateChanged)'s rule: what is announced is what
     /// survived the write.
     ///
     /// An enqueue that changed nothing publishes nothing. The same operation asked for twice is one
-    /// row (the T40b design, D2), and an event per attempt would put a producer's retry loop on a
-    /// client's screen.
+    /// row (`docs/specs/2026-08-23-t40b-elevation-queue-design.md`, D2), and an event per attempt
+    /// would put a producer's retry loop on a client's screen.
     ///
-    /// **Rows leaving are announced too**: a withdrawal (T179) and a grant that applied or refused
+    /// **Rows leaving are announced too**: a withdrawal and a grant that applied or refused
     /// something publish the queue that is left, so a client that drew the list redraws it — and an
-    /// empty `pending` is how it learns nothing waits any more. A client that opens its list on this
-    /// event tells a queue that grew from one that shrank by the ids it has not seen before.
+    /// empty `pending` is how it learns nothing waits any more. A client that opens its list on
+    /// this event tells a queue that grew from one that shrank by the ids it has not seen before.
     ElevationRequired {
         /// Everything waiting, oldest first.
         pending: Vec<PendingOp>,
@@ -103,7 +103,7 @@ pub enum DaemonEvent {
     /// asking again; `job.status` exists for the one that missed it.
     JobFinished(JobFinish),
 
-    /// A site's certificate is running out and MixEngine could not replace it — task **T52**.
+    /// A site's certificate is running out and MixEngine could not replace it.
     ///
     /// **Only a renewal that failed.** A renewal that worked is not news: the certificate is there,
     /// the front end has been told, and there is nothing for anybody to do about it. This is the
@@ -123,7 +123,7 @@ pub enum DaemonEvent {
         because: String,
     },
 
-    /// A site went onto the local network, or came off it — roadmap task **T76**.
+    /// A site went onto the local network, or came off it.
     ///
     /// **One variant for both directions**, because a client has one question: *is anything shared,
     /// and why did that change?* That is the tray icon `docs/features/lan-sharing.md` asks for,
@@ -131,9 +131,9 @@ pub enum DaemonEvent {
     ///
     /// [`sharing`](Self::SiteSharingChanged::sharing) is the value `site.share` answers with,
     /// unchanged — the rule [`ServiceStateChanged`](DaemonEvent::ServiceStateChanged) states — and
-    /// [`None`] for a site that is no longer shared. `because` is what T76 adds over T74: a share
-    /// somebody switched off and a share that ended because the laptop moved leave the same state
-    /// behind and are different news.
+    /// [`None`] for a site that is no longer shared. `because` is what the event adds over the
+    /// site's own state: a share somebody switched off and a share that ended because the laptop
+    /// moved leave the same state behind and are different news.
     SiteSharingChanged {
         /// The site, by its primary domain.
         domain: String,
@@ -145,7 +145,7 @@ pub enum DaemonEvent {
         because: SharingChange,
     },
 
-    /// A newer MixEngine has been published — roadmap task **T88**.
+    /// A newer MixEngine has been published.
     ///
     /// **Once per version, and not once per check.** The daemon reads the feed at startup and every
     /// 24 h; a check that runs daily for a month must not spend a client's stream allowance
@@ -193,9 +193,8 @@ mod tests {
         );
     }
 
-    /// The same flattening, for the variants T22 added: a job's progress is one object with a
-    /// `type`, not a `job_progress` wrapper the GUI would have to unwrap for two variants out of
-    /// four.
+    /// The same flattening, for the job variants: a job's progress is one object with a `type`, not
+    /// a `job_progress` wrapper the GUI would have to unwrap for two variants out of four.
     #[test]
     fn a_job_moving_arrives_as_one_flat_object() {
         let event = DaemonEvent::JobProgress(JobProgress {

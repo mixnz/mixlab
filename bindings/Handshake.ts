@@ -3,7 +3,7 @@ import type { SiteCert } from "./SiteCert";
 import type { Verdict } from "./Verdict";
 
 /**
- * What this home's front end presented when asked for a site over TLS — roadmap task **T53**.
+ * What this home's front end presented when asked for a site over TLS.
  *
  * **The first answer in this crate that comes from a socket rather than from a file.** Everything
  * else said about a certificate here is read off disk and believed; this is what the running

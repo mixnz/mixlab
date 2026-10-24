@@ -3,9 +3,9 @@
 /**
  * One port an extension asked for.
  *
- * **A wish and not a reservation.** Allocation happens when a row is written, which is T81's, and
- * nothing here holds a number. A line that read like a reservation is how somebody concludes a
- * port is theirs.
+ * **A wish and not a reservation.** Allocation happens when a row is written, which is the
+ * install's, and nothing here holds a number. A line that read like a reservation is how somebody
+ * concludes a port is theirs.
  */
 export type PortWish = { 
 /**

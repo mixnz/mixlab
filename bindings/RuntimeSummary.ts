@@ -53,7 +53,7 @@ bytes: number,
  */
 default: boolean, 
 /**
- * Whether the folder this row names is gone — roadmap task **T206d**.
+ * Whether the folder this row names is gone.
  *
  * `Some(true)` only when the folder answered "not found". A folder that cannot be read for any
  * other reason is not gone, and reads `Some(false)`. `None` is a daemon from before this

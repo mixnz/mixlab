@@ -7,26 +7,23 @@ import type { Unusable } from "./Unusable";
 /**
  * This home's certificate authority, as far as the daemon can see it.
  *
- * **A struct around one enum, and the enum is flattened into it.** The wrapper is what lets T49
- * add whether the machine's stores trust this certificate without turning a tagged enum into
- * something a client has to unwrap; the `flatten` is what stops the tag — which is also called
- * `state` — from arriving nested inside a field of the same name.
+ * **A struct around one enum, and the enum is flattened into it.** The wrapper is what lets
+ * [`trust`](Self::trust) say whether the machine's stores trust this certificate without turning a
+ * tagged enum into something a client has to unwrap; the `flatten` is what stops the tag — which
+ * is also called `state` — from arriving nested inside a field of the same name.
  */
 export type CaStatus = { 
 /**
- * Whether this machine trusts it — roadmap task **T49a**.
+ * Whether this machine trusts it.
  *
  * **Beside [`Ca`] rather than inside it**, because whether a machine trusts a certificate is a
  * fact about the machine and `Ca` describes the certificate. A home whose authority is absent
  * or damaged still has a machine with or without a store, and this still has something true to
  * say about it.
- *
- * T48 left this out on purpose, recording that a field it could only have filled with
- * "unknown" is not an answer. It is answerable now.
  */
 trust: Trust, 
 /**
- * What Firefox and Chrome say — roadmap task **T49b**.
+ * What Firefox and Chrome say.
  *
  * **Beside [`trust`](Self::trust) and not inside it.** They are separate questions with
  * separate answers: `trust` is one store and one `bool`, and this is N databases that are

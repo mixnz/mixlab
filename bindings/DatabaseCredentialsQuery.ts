@@ -2,7 +2,7 @@
 import type { ServiceId } from "./ServiceId";
 
 /**
- * `database.credentials` — the password held for one account. Reads only. Roadmap task **T77b**.
+ * `database.credentials` — the password held for one account. Reads only.
  */
 export type DatabaseCredentialsQuery = { 
 /**

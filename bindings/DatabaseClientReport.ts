@@ -18,19 +18,18 @@ service: ServiceId,
  */
 protocol?: DatabaseProtocol | null, 
 /**
- * Where the administrator's password lives, for a server that has one — roadmap task **T84**.
+ * Where the administrator's password lives, for a server that has one.
  *
  * **Composed, never looked up.** This method starts nothing, opens nothing and touches the
- * credential store not at all — T83's D6, unchanged — because the address is what the recipe
- * and the service id say it is. That is what makes the convention *askable*: a client can draw
- * "stored in your credential store as …" beside the button without opening a database to find
- * out.
+ * credential store not at all, because the address is what the recipe and the service id say
+ * it is. That is what makes the convention *askable*: a client can draw "stored in your
+ * credential store as …" beside the button without opening a database to find out.
  *
  * [`None`] for a server with no accounts, and for a service no database client opens.
  */
 secret?: SecretAddress | null, 
 /**
- * Whether `database.create` can make a database on it — roadmap task **T155**.
+ * Whether `database.create` can make a database on it.
  *
  * `false` for a server that makes none — Redis, MongoDB — so a client leaves out a form that
  * could only be refused, without learning which products those are. [`None`] for a service no

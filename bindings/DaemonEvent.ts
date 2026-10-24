@@ -14,7 +14,7 @@ import type { SiteSharing } from "./SiteSharing";
  * `addEventListener` per variant — and it means a variant added in a later phase reaches an older
  * client as an object it can recognise and ignore, rather than as an event type it never
  * subscribed to and silently never sees.
- * **Not [`Eq`], since T22.** [`JobOutcome::Succeeded`](crate::JobOutcome) carries a
+ * **Not [`Eq`].** [`JobOutcome::Succeeded`](crate::JobOutcome) carries a
  * [`serde_json::Value`], whose float variant has no total equality — and the payload of a job is
  * the one thing on this stream whose shape belongs to the method that produced it rather than to
  * this crate. [`PartialEq`] is what tests compare with anyway.

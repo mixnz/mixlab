@@ -5,12 +5,13 @@ import type { IdleSource } from "./IdleSource";
 import type { ServiceId } from "./ServiceId";
 
 /**
- * What `service.idle` answers — roadmap task **T69**.
+ * What `service.idle` answers.
  *
- * **The exemptions are carried rather than folded into `policy`**, on the rule T46 wrote for
- * `DnsStatus`: "why is this still running?" has four answers that look identical from outside — no
- * policy, policy switched off, a running dependent, a keep-warm project — and collapsing them into
- * one `Option` sends a person to change a setting that was never the cause.
+ * **The exemptions are carried rather than folded into `policy`**, on the rule
+ * [`DnsStatus`](crate::DnsStatus) follows: "why is this still running?" has four answers that look
+ * identical from outside — no policy, policy switched off, a running dependent, a keep-warm
+ * project — and collapsing them into one `Option` sends a person to change a setting that was
+ * never the cause.
  */
 export type IdleReport = { 
 /**

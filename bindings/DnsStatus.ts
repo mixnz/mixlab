@@ -2,8 +2,7 @@
 import type { DnsMode } from "./DnsMode";
 
 /**
- * What this daemon's own DNS server is doing, and what it costs when it is not — roadmap task
- * **T44**, which also closes T46a.
+ * What this daemon's own DNS server is doing, and what it costs when it is not.
  *
  * A home resolves its names one of two ways: through the built-in DNS server, which answers a
  * whole managed TLD by pattern, or through the hosts file, which has one line per name. The
@@ -20,8 +19,8 @@ mode: DnsMode,
  *
  * **Not the same question as [`DnsStatus::mode`]**, and that is the field's whole reason for
  * existing: a server can be listening perfectly while nothing on the machine sends it a name,
- * which is every machine until the resolver wiring of T45. A string for
- * [`DaemonStatus`]' reason — it is for reading, and nothing parses it back.
+ * which is every machine until its resolver is wired. A string for [`DaemonStatus`]' reason —
+ * it is for reading, and nothing parses it back.
  */
 listening: string | null, 
 /**
@@ -32,12 +31,12 @@ listening: string | null,
  * rather than inferred from `mode`, because what a client renders is the loss and not the
  * mechanism.
  *
- * **A list rather than a `bool`, from T45 on.** While nothing could be wired, "does this home
- * have wildcards?" had one answer for the whole home. It no longer does: every mechanism there
- * is scopes to one TLD, and `.local` is deliberately never wired — so a home can perfectly well
- * answer `*.blog.test` by pattern and still need a hosts line for `shop.local`. A boolean would
- * have to say `true` and leave a client to work out which half of its sites it applies to,
- * which is the derivation this field exists to prevent.
+ * **A list rather than a `bool`.** Before resolvers could be wired, "does this home have
+ * wildcards?" had one answer for the whole home. It no longer does: every mechanism there is
+ * scopes to one TLD, and `.local` is deliberately never wired — so a home can perfectly well
+ * answer `*.blog.test` by pattern and still need a hosts line for `shop.local`. A boolean
+ * would have to say `true` and leave a client to work out which half of its sites it applies
+ * to, which is the derivation this field exists to prevent.
  */
 wildcards: Array<string>, 
 /**

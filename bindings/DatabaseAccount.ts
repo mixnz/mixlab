@@ -23,10 +23,10 @@ user: string,
  * Where the account's password lives in this machine's credential store.
  *
  * **Never the password.** Derivable rather than secret — telling a caller the rule is what
- * makes a second method for looking one up unnecessary until T83 gives that a shape.
+ * makes a second method for looking one up unnecessary.
  *
- * **Both halves since roadmap task T84**: the namespace is part of the contract, so a client
- * renders the address without knowing any of MixEngine's constants.
+ * **Both halves**: the namespace is part of the contract, so a client renders the address
+ * without knowing any of MixEngine's constants.
  */
 secret: SecretAddress, 
 /**

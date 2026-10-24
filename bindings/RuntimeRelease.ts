@@ -47,7 +47,7 @@ bytes: number,
  */
 installed: boolean, 
 /**
- * Whether this machine would run that build natively — roadmap task **T92**.
+ * Whether this machine would run that build natively.
  *
  * Composed by the daemon, which is the only party that knows both what the index published and
  * which triple this build was compiled for. [`None`] means the peer predates the member and
@@ -58,14 +58,14 @@ installed: boolean,
  */
 execution?: Execution | null, 
 /**
- * What this machine lacks for that build, each with what can be done — roadmap task **T149**.
+ * What this machine lacks for that build, each with what can be done.
  *
  * [`None`] means a peer that predates the member, per ADR 0019; an empty list means nothing is
  * lacking or nothing could be judged.
  */
 needs?: Array<Requirement> | null, 
 /**
- * The line this release belongs to (`8.4`, `22`) — roadmap task **T193a**, D1.
+ * The line this release belongs to (`8.4`, `22`).
  *
  * Decided by the daemon (`mixengine_core::lines`) so that no client decides it; [`None`] is a
  * daemon that predates the member, per ADR 0019.
@@ -78,6 +78,6 @@ line?: string | null,
 newest_in_line?: boolean | null, 
 /**
  * What this release cannot do on the cell this machine would install, and why — the index's
- * `lacks`, in the publisher's words (roadmap task **T206**, D2). Empty when it lacks nothing.
+ * `lacks`, in the publisher's words. Empty when it lacks nothing.
  */
 lacks?: { [key in string]: string }, };

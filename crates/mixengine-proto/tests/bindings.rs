@@ -1,9 +1,9 @@
 //! The published TypeScript contract and the crate it is generated from cannot drift apart.
 //!
-//! Roadmap task **T56**. `packaging/bindings.sh --check` regenerates the contract and compares the
-//! bytes, which answers *"does the file say what the type says"*. This answers the questions that
-//! survive a correct regeneration: is every public type in it, does any two of them collide, and is
-//! everything left out of it left out on purpose.
+//! `packaging/bindings.sh --check` regenerates the contract and compares the bytes, which answers
+//! *"does the file say what the type says"*. This answers the questions that survive a correct
+//! regeneration: is every public type in it, does any two of them collide, and is everything left
+//! out of it left out on purpose.
 //!
 //! It is the shape `crates/mixengine-core/tests/packaging.rs` uses on `MIX_BINARIES`, for the same
 //! reason: a list nothing forces to agree with the code is a list that will not.

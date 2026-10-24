@@ -1,9 +1,10 @@
-//! What `domain.*` asks and answers — roadmap task **T46**.
+//! What `domain.*` asks and answers.
 //!
 //! Two verbs and a diagnostic. The verbs add nothing [`crate::SiteUpdate`] cannot already do, and
 //! exist because of what a client would otherwise have to do to use it: read the site, append one
 //! name, send the whole list back. That is business logic in a client, which `CLAUDE.md` forbids,
-//! and a read-modify-write that drops a domain another client added in between (T46 design, D1).
+//! and a read-modify-write that drops a domain another client added in between
+//! (`docs/specs/2026-08-24-t46-domain-rpc-design.md`, D1; the D-numbers below are that design's).
 
 use std::net::{IpAddr, Ipv4Addr};
 
@@ -19,8 +20,7 @@ pub struct DomainAdd {
     /// The name to add.
     ///
     /// **Never becomes the primary.** [`crate::SiteUpdate`] reorders and the head of that list is
-    /// the primary; a verb that says "add a domain" does not get to decide what a site *is* (T46
-    /// design, D3).
+    /// the primary; a verb that says "add a domain" does not get to decide what a site *is* (D3).
     pub domain: String,
 
     /// `.local` is mDNS territory and is allowed only when the caller says they know.
@@ -33,7 +33,7 @@ pub struct DomainAdd {
 /// **No site, and none to give.** `site_domains_domain` is `UNIQUE` — the index its own migration
 /// calls "the one that decides ownership" — so a domain names its site. Asking a caller for it as
 /// well would be asking for a fact the database holds, and would let them name a site the domain is
-/// not on (T46 design, D2).
+/// not on (D2).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct DomainRemove {
@@ -64,10 +64,10 @@ pub struct DomainStatusReport {
 
 /// What happens to one name, as four facts that fail independently.
 ///
-/// **Four facts and no verdict** (T46 design, D4). A hosts line with no server, a server with no
-/// resolver, and a resolver wired to a TLD this name is not on are three different faults with three
-/// different fixes; one boolean would leave every client working out which of them it had — which is
-/// the derivation [`crate::DnsStatus::wildcards`] had to stop making in T45.
+/// **Four facts and no verdict** (D4). A hosts line with no server, a server with no resolver, and
+/// a resolver wired to a TLD this name is not on are three different faults with three different
+/// fixes; one boolean would leave every client working out which of them it had — which is the
+/// derivation [`crate::DnsStatus::wildcards`] had to stop making once resolvers could be wired.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct DomainStatus {
@@ -76,9 +76,9 @@ pub struct DomainStatus {
 
     /// The site that declares it, by its primary domain, or [`None`] for a name nothing declares.
     ///
-    /// **Reported rather than refused** (T46 design, D5): somebody asking why `foo.test` does not
-    /// work when they never declared it is owed exactly that answer, and the other three facts still
-    /// hold one.
+    /// **Reported rather than refused** (D5): somebody asking why `foo.test` does not work when
+    /// they never declared it is owed exactly that answer, and the other three facts still hold
+    /// one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub site: Option<String>,
 
@@ -90,15 +90,15 @@ pub struct DomainStatus {
 
     /// What this daemon's own DNS server answers, asked over its socket.
     ///
-    /// [`None`] is a server that is not listening or did not reply — a different fault from a server
-    /// that answers while nothing on the machine sends it a name, and the reason this is asked over
-    /// the socket rather than of the zone (T46 design, D7).
+    /// [`None`] is a server that is not listening or did not reply — a different fault from a
+    /// server that answers while nothing on the machine sends it a name, and the reason this is
+    /// asked over the socket rather than of the zone (D7).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub server_answers: Option<Ipv4Addr>,
 
     /// What the operating system actually resolves it to, through `getaddrinfo`.
     ///
-    /// **Never `nslookup`**, which T45 measured to bypass the Name Resolution Policy Table on
+    /// **Never `nslookup`**, which was measured to bypass the Name Resolution Policy Table on
     /// Windows: it answers NXDOMAIN for a name `getaddrinfo` resolves at the same moment, so a
     /// diagnostic built with it would report a correctly wired machine as broken. Empty is a name
     /// that does not resolve.
@@ -107,8 +107,9 @@ pub struct DomainStatus {
     /// One sentence saying what is wrong, or [`None`] when nothing is.
     ///
     /// A sentence and not a code, on [`crate::DnsStatus::because`]'s precedent next door. It says
-    /// what is wrong and never what to do about it: repair is T47's, and a diagnostic that suggests
-    /// a fix it cannot perform is one that will drift from the thing that performs it.
+    /// what is wrong and never what to do about it: repair is `mix doctor --repair`'s, and a
+    /// diagnostic that suggests a fix it cannot perform is one that will drift from the thing that
+    /// performs it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub because: Option<String>,
 }

@@ -3,7 +3,7 @@ import type { PackageVersion } from "./PackageVersion";
 import type { RuntimeKind } from "./RuntimeKind";
 
 /**
- * What `runtime.install` takes: a version, and what the person agreed to — roadmap task **T149**.
+ * What `runtime.install` takes: a version, and what the person agreed to.
  *
  * Flattened on [`RuntimeUninstall`]'s pattern, so a request with neither flag is the
  * [`RuntimeTarget`] every client has always sent.

@@ -18,7 +18,7 @@ export type ServiceLimitsReport = {
 service: ServiceId, 
 /**
  * What has been asked for. Stored whether or not this machine can enforce it — see
- * [`support`](Self::support), and the T68 design, D10.
+ * [`support`](Self::support), and `docs/specs/2026-08-26-t68-resource-limits-design.md`, D10.
  */
 limits: ResourceLimits, 
 /**
@@ -26,7 +26,7 @@ limits: ResourceLimits,
  */
 support: LimitSupport, 
 /**
- * What is watching this service's ceiling, where nothing enforces it — task **T71a**.
+ * What is watching this service's ceiling, where nothing enforces it.
  *
  * [`None`] means nothing is watching, which is two different situations with one answer: this
  * machine caps `memory_mb` itself, or this service has not declared one. A client that drew a

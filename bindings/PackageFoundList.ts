@@ -2,7 +2,7 @@
 import type { PackageFound } from "./PackageFound";
 
 /**
- * What `package.found` answers — roadmap task **T182i**.
+ * What `package.found` answers.
  */
 export type PackageFoundList = { 
 /**

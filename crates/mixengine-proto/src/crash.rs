@@ -1,12 +1,12 @@
-//! What `mixengined` leaves behind when it hits a bug in itself. Roadmap task **T91**.
+//! What `mixengined` leaves behind when it hits a bug in itself.
 //!
 //! **Every field here is one of five things**: a compile-time constant of the build that wrote it
 //! (the location, the version, the target), a literal from `std` or `tokio` (the thread name), a
 //! symbol name out of a backtrace, an offset into the executable, or the executable's build
 //! identifier. None of them can hold a value from the home it was written in — not a project's
 //! directory, not a site's name, not a password. That is what lets one of these be attached to a
-//! public bug report without being read first. The last two arrived with format 2 (T91a,
-//! [ADR 0060](../../../docs/decisions/0060-a-crash-report-carries-offsets-and-the-release-keeps-the-symbols.md)).
+//! public bug report without being read first. The last two arrived with format 2
+//! ([ADR 0060](../../../docs/decisions/0060-a-crash-report-carries-offsets-and-the-release-keeps-the-symbols.md)).
 //!
 //! **The panic message is deliberately not here.** It is `format!`-ed from whatever was in scope at
 //! the moment of a bug, which is the one string in this product nobody reviewed: an `unwrap()` on
@@ -26,9 +26,9 @@ use crate::{DaemonVersion, Timestamp};
 /// The number [`CrashReport::format`] carries, so a reader that does not know a shape stops rather
 /// than guessing at one — [`MANIFEST_FORMAT`](crate::MANIFEST_FORMAT)'s reasoning.
 ///
-/// **2 since T91a**: frames became offsets into the executable, the names moved to
-/// [`CrashReport::symbols`], and [`CrashReport::build_id`] arrived. [`CrashReport::from_json`] still
-/// reads a format-1 report.
+/// **2 since ADR 0060**: frames became offsets into the executable, the names moved to
+/// [`CrashReport::symbols`], and [`CrashReport::build_id`] arrived. [`CrashReport::from_json`]
+/// still reads a format-1 report.
 pub const CRASH_FORMAT: u32 = 2;
 
 /// One frame of the panicking thread, as a position in the executable.
@@ -122,7 +122,7 @@ pub struct CrashReport {
     pub build_id: Option<String>,
 }
 
-/// A report as format 1 wrote it, before T91a: frames were names.
+/// A report as format 1 wrote it: frames were names.
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CrashReportV1 {
@@ -247,7 +247,7 @@ mod tests {
         assert!(encoded.contains("\"frames\":[{}]"), "{encoded}");
     }
 
-    /// A report written before T91a reads back with its format and its names intact.
+    /// A format-1 report reads back with its format and its names intact.
     #[test]
     fn a_format_1_report_keeps_its_format_and_its_names() {
         let written = serde_json::json!({

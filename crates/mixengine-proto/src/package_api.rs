@@ -50,7 +50,7 @@ pub struct PackageTarget {
     pub version: PackageVersion,
 }
 
-/// What `package.install` takes: a version, and what the person agreed to — roadmap task **T149**.
+/// What `package.install` takes: a version, and what the person agreed to.
 ///
 /// [`RuntimeInstall`](crate::RuntimeInstall)'s shape, for the same reason.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -135,7 +135,7 @@ pub struct PackageSummary {
     /// answer in it. Empty is a package nothing is using.
     pub services: Vec<ServiceId>,
 
-    /// Whether the folder this row names is gone — roadmap task **T206d**.
+    /// Whether the folder this row names is gone.
     ///
     /// `Some(true)` only when the folder answered "not found". A folder that cannot be read for any
     /// other reason is not gone, and reads `Some(false)`. `None` is a daemon from before this
@@ -145,7 +145,7 @@ pub struct PackageSummary {
 }
 
 impl PackageSummary {
-    /// Whether this daemon said the folder is gone. `None` is not — roadmap task **T206d**.
+    /// Whether this daemon said the folder is gone. `None` is not.
     #[must_use]
     pub fn is_missing(&self) -> bool {
         self.missing == Some(true)
@@ -167,18 +167,19 @@ pub struct PackageCatalogue {
     /// Whether this came from a cached index the daemon could not refresh.
     pub stale: bool,
 
-    /// Each installed version whose line has a newer release here, and which one — T193a, D2.
+    /// Each installed version whose line has a newer release here, and which one.
     ///
     /// Composed with the available list and never with the installed one, because listing what is
-    /// on the disk must not cost a request to the index. [`None`] is a daemon from before T193.
+    /// on the disk must not cost a request to the index. [`None`] is a daemon that does not offer
+    /// updates within a line.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updates: Option<Vec<PackageUpdate>>,
 
-    /// What this list could not be read for — roadmap task **T196**.
+    /// What this list could not be read for.
     ///
     /// The package index is one file per kind, so one file that could not be read costs that kind
-    /// and no other. [`None`] is a daemon from before T196; an empty list is one that read
-    /// everything it was asked for.
+    /// and no other. [`None`] is a daemon from before the index had one file per kind; an empty
+    /// list is one that read everything it was asked for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unavailable: Option<Vec<crate::CatalogueGap>>,
 }
@@ -207,7 +208,7 @@ pub struct PackageRelease {
     /// Whether this exact version is already on this machine.
     pub installed: bool,
 
-    /// Whether this machine would run that build natively — roadmap task **T92**.
+    /// Whether this machine would run that build natively.
     ///
     /// Composed by the daemon, which is the only party that knows both what the index published and
     /// which triple this build was compiled for. [`None`] means the peer predates the member and
@@ -218,14 +219,14 @@ pub struct PackageRelease {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub execution: Option<Execution>,
 
-    /// What this machine lacks for that build, each with what can be done — roadmap task **T149**.
+    /// What this machine lacks for that build, each with what can be done.
     ///
     /// [`None`] means a peer that predates the member, per ADR 0019; an empty list means nothing is
     /// lacking or nothing could be judged.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub needs: Option<Vec<crate::Requirement>>,
 
-    /// The line this release belongs to (`8.4`, `22`) — roadmap task **T193a**, D1.
+    /// The line this release belongs to (`8.4`, `22`).
     ///
     /// Decided by the daemon (`mixengine_core::lines`) so that no client decides it; [`None`] is a
     /// daemon that predates the member, per ADR 0019.
@@ -238,7 +239,7 @@ pub struct PackageRelease {
     pub newest_in_line: Option<bool>,
 }
 
-/// One installed package version and the newer release of its line — roadmap task **T193a**, D2.
+/// One installed package version and the newer release of its line.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct PackageUpdate {
@@ -269,8 +270,7 @@ pub struct PackageRemoval {
     pub removed: PackageSummary,
 }
 
-/// One package directory on disk with no row — roadmap task **T182i**. The answer to `package.found` is a
-/// list of these.
+/// One package directory on disk with no row. The answer to `package.found` is a list of these.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct PackageFound {
@@ -288,7 +288,7 @@ pub struct PackageFound {
     pub why: String,
 }
 
-/// What `package.found` answers — roadmap task **T182i**.
+/// What `package.found` answers.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct PackageFoundList {
@@ -300,7 +300,7 @@ pub struct PackageFoundList {
 mod tests {
     use super::*;
 
-    /// **A daemon from before T206d sends no `missing`** — ADR 0019.
+    /// **A daemon from before `missing` existed sends none** — ADR 0019.
     #[test]
     fn an_older_daemon_s_package_reads_without_missing() {
         let summary: PackageSummary = serde_json::from_value(serde_json::json!({

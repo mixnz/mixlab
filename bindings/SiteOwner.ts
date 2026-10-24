@@ -2,7 +2,7 @@
 import type { ExtensionId } from "./ExtensionId";
 
 /**
- * Who a site belongs to — roadmap task **T81b**.
+ * Who a site belongs to.
  *
  * **A replacement for the old `project: String`, not an option beside it.** Two optionals a reader
  * has to agree about is the shape this codebase spends triggers avoiding. A project is named by

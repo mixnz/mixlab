@@ -1,10 +1,10 @@
-//! What `daemon.doctor_repair` answers — roadmap task **T47b**.
+//! What `daemon.doctor_repair` answers.
 //!
 //! **A record of what was done, and not a second report.** `daemon.doctor` lists every check
-//! whatever it answered, because a check that found nothing is the evidence that it ran. This is the
-//! other kind of document: it is read *after* an action, and an entry saying "this was already fine
-//! so I did nothing" is noise in a list whose whole purpose is to say what changed. What was
-//! examined is one call away (T47b design, D2).
+//! whatever it answered, because a check that found nothing is the evidence that it ran. This is
+//! the other kind of document: it is read *after* an action, and an entry saying "this was already
+//! fine so I did nothing" is noise in a list whose whole purpose is to say what changed. What was
+//! examined is one call away (`docs/specs/2026-08-24-t47b-doctor-repair-design.md`, D2).
 //!
 //! Nothing here decides anything. Which [`Action`] a condition gets is decided by the daemon's
 //! exhaustive match on [`ProblemId`] — and being exhaustive is what stops a repair and this build's
@@ -14,12 +14,12 @@ use crate::{JobSummary, ProblemId};
 
 /// What to repair, and whether to raise the prompt.
 ///
-/// **`grant` exists because of T64**, not for symmetry: a person must be able to read what is about
-/// to be allowed *before* it is allowed, and a call that enqueued and flushed in one step leaves no
-/// moment for a client to show them. So the ordinary path is two calls — enqueue, show the batch,
-/// then `elevation.grant` — and `grant: true` is for a caller that has already shown it and been
-/// answered. `mix doctor --repair` takes the first path; `mix doctor --repair --yes` takes the
-/// second.
+/// **`grant` exists because of the rule every elevation follows**, not for symmetry: a person must
+/// be able to read what is about to be allowed *before* it is allowed, and a call that enqueued and
+/// flushed in one step leaves no moment for a client to show them. So the ordinary path is two
+/// calls — enqueue, show the batch, then `elevation.grant` — and `grant: true` is for a caller that
+/// has already shown it and been answered. `mix doctor --repair` takes the first path; `mix doctor
+/// --repair --yes` takes the second.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]

@@ -2,7 +2,7 @@
 import type { ServiceId } from "./ServiceId";
 
 /**
- * What answers under a route's path — roadmap task **T135**.
+ * What answers under a route's path.
  *
  * [`SiteKind`]'s shape one level down, with the two differences a prefix makes: there is no
  * `node-app`, because a port is an address and a second way to write one is a second thing to keep
