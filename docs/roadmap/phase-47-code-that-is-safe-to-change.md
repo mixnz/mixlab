@@ -186,12 +186,19 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       start time are unchanged within noise. `workspace_layering.rs` fails when `reqwest` or `hyper`
       reaches the shim, and `scripts/gate.sh` and CI's `lint` job clippy core without `network` and
       the shim on its own.
-- [ ] **T209l** The release builds the privileged helper on its own. `mixengine-platform/Cargo.toml`
+- [x] **T209l** The release builds the privileged helper on its own. `mixengine-platform/Cargo.toml`
       says the release pipeline gives `mixengine-elevate` a cargo invocation of its own, so that
       feature unification cannot give it the platform's `host` and keyring code. `packaging/stage.sh`
       does not: it builds the helper in one invocation with the daemon. Found while T209e gave the
       shim its own. The helper's bytes are pinned by `packaging/helper-lock.sh`, so this measures
       what the helper links built each way first, and bumps `HELPER_VERSION` if they differ.
+      `stage.sh` now builds the shim and the helper each in an invocation of its own. Measured on
+      Windows with the release flags: built beside the daemon, the platform had `host`, `ipc`,
+      `process` and `signal` on, 270 crates compiled, and the `.exe` was 1,114,624 bytes with
+      `tokio` and `keyring` in its `.pdb`; built alone, 18 crates, 1,113,600 bytes, and neither name.
+      So the shipped helper also differed from the one `helper-lock.mjs` fingerprints, which is a
+      build of the helper alone. They differ, and no bump was needed: `HELPER_VERSION` is already
+      0.1.8, one past the 0.1.7 that v0.0.19 shipped, and a release needs one bump.
 - [x] **T209f** Forms that hold their state as one value. `mixengine/screens/Packages/Languages.tsx`
       has 25 `useState`, `terminal/components/TargetForm/TargetForm.tsx` 21, `db/redis/RedisWorkspace.tsx`
       19, `db/sql/SqlWorkspace.tsx` 18, `mixengine/screens/Extensions/Extensions.tsx` and

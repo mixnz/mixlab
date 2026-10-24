@@ -55,15 +55,18 @@ fi
 # instead. Two shapes of the same thing: an array for the two branches that invoke cargo directly,
 # and a string for the one that passes a command into a container.
 #
-# **Minus the shim's too, which gets a cargo invocation of its own below.** Cargo unifies features
-# across the packages one invocation builds, so a shim built beside `mixengined` would compile
-# `mixengine-core` with `network` and link against it — the HTTP and TLS stack ADR 0067 keeps out of
-# a binary that runs on every `php` a person types.
-shim="mixengine-shim"
+# **Minus the two in `alone` too, each of which gets a cargo invocation of its own below.** Cargo
+# unifies features across the packages one invocation builds. A shim built beside `mixengined` would
+# compile `mixengine-core` with `network` and link against it — the HTTP and TLS stack ADR 0067 keeps
+# out of a binary that runs on every `php` a person types. A helper built beside it would compile
+# `mixengine-platform` with `host`, `ipc`, `process` and `signal`, so tokio and the keyring backend
+# in a binary that runs as root, which `mixengine-elevate`'s manifest refuses. Measured on Windows: 270
+# crates built together, 18 alone, and a different `.exe`.
+alone=(mixengine-shim mixengine-elevate)
 packages=()
 packages_string=""
 for crate in "${MIX_CRATES[@]}"; do
-  if [ "$crate" = "$MIX_WINDOW" ] || [ "$crate" = "$shim" ]; then
+  if [ "$crate" = "$MIX_WINDOW" ] || [[ " ${alone[*]} " == *" $crate "* ]]; then
     continue
   fi
   packages+=(-p "$crate")
@@ -113,15 +116,22 @@ if [ "${MIX_PREBUILT:-0}" = "1" ]; then
     }
   done
 elif [ -n "$container" ]; then
+  alone_string=""
+  for crate in "${alone[@]}"; do
+    alone_string="$alone_string && cargo build --release --locked --target '$target' -p $crate"
+  done
   mix_in_container "$container" \
-    "rustup target add '$target' && cargo build --release --locked --target '$target'$packages_string \
-      && cargo build --release --locked --target '$target' -p $shim"
+    "rustup target add '$target' && cargo build --release --locked --target '$target'$packages_string$alone_string"
 elif [ -n "$target" ]; then
   cargo build --release --locked --target "$target" "${packages[@]}"
-  cargo build --release --locked --target "$target" -p "$shim"
+  for crate in "${alone[@]}"; do
+    cargo build --release --locked --target "$target" -p "$crate"
+  done
 else
   cargo build --release --locked "${packages[@]}"
-  cargo build --release --locked -p "$shim"
+  for crate in "${alone[@]}"; do
+    cargo build --release --locked -p "$crate"
+  done
 fi
 
 if [ "$build_only" -eq 1 ]; then
