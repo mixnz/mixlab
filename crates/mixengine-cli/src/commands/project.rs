@@ -63,7 +63,7 @@ pub(crate) enum ProjectCommand {
         //
         // `id` spelled out because the flattened project argument is also called `name`, and clap
         // refuses two arguments under one id — it did so at *parse* time, so `mix project update
-        // blog --name blogging` panicked instead of running. Found by T77's
+        // blog --name blogging` panicked instead of running. Found by
         // `every_command_is_one_clap_can_build`, which is now what stops the next one.
         #[arg(long, id = "new_name", value_name = "NAME")]
         name: Option<String>,

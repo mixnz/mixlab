@@ -1,4 +1,4 @@
-//! What MixEngine costs when nobody is using it — roadmap task **T72**, measured.
+//! What MixEngine costs when nobody is using it, measured.
 //!
 //! `../features/resource-isolation.md` publishes a number: *"Idle footprint (daemon + Caddy, nothing
 //! else running): target < 60 MB RSS, ~0 % CPU."* Nothing in this repository measured it until this
@@ -18,7 +18,7 @@
 //!
 //! # What is measured, and through what
 //!
-//! `rss_bytes` per subject from `mix metrics --json`, which is the daemon's own sampler from T71 and
+//! `rss_bytes` per subject from `mix metrics --json`, which is the daemon's own metrics sampler and
 //! therefore the same number a person reads off their own machine. Not a reading of this machine
 //! taken beside the daemon: one mechanism, one answer.
 //!
@@ -74,24 +74,24 @@ use harness::json;
 /// budget does not depend on it being right.
 ///
 /// **Raised from 36 MB on 2026-09-07, and the reason is written down because it is the one the
-/// paragraph above warns about.** A week after T72 the daemon measured 31 MB on Windows, 30 MB on
-/// Linux and 35 MB on macOS — five to ten more than the day the budget was set, on every system —
-/// and the macOS reading sat within a megabyte of the gate for ten runs before a runner's noise
-/// took it over, on a commit that changed a test file in another crate. Forty-two was the same rule
-/// applied to the new worst: about a fifth above it, and an explicit non-answer to where the five
-/// megabytes went — that question became roadmap task **T72b**.
+/// paragraph above warns about.** A week on, the daemon measured 31 MB on
+/// Windows, 30 MB on Linux and 35 MB on macOS — five to ten more than the day the budget was set,
+/// on every system — and the macOS reading sat within a megabyte of the gate for ten runs before a
+/// runner's noise took it over, on a commit that changed a test file in another crate. Forty-two
+/// was the same rule applied to the new worst: about a fifth above it, and an explicit non-answer
+/// to where the five megabytes went — that question was measured next.
 ///
-/// **Lowered to 41 MB, T72b's own reading.** Of the growth, ~3.5 MB traced to `mix self-update`
-/// (T88): a `reqwest::Client` built and never shared, plus the feed it eagerly fetches at every
-/// start. The rest — everything else that landed the same week — measured under 1.5 MB combined,
-/// too small and too spread across too many tasks to be one thing worth chasing; see the T72b
-/// design's own reading of it.
+/// **Lowered to 41 MB, on that measurement.** Of the growth, ~3.5 MB traced to `mix self-update`: a
+/// `reqwest::Client` built and never shared, plus the feed it eagerly fetches at every start. The
+/// rest — everything else that landed the same week — measured under 1.5 MB combined, too small and
+/// too spread across too many changes to be one thing worth chasing; see the design below for its
+/// reading of it.
 ///
 /// The fix built one transport and handed clones of it to the package index, extension registry
-/// and update feed clients instead of three independent ones — [the T72b
+/// and update feed clients instead of three independent ones — [the
 /// design](../../../docs/specs/2026-09-07-t72b-one-transport-for-three-signed-documents-design.md).
 /// Re-measured on the same machine, release, five runs: 30.7–34.2 MB. That spread is wider than the
-/// paired A/B the T72b design was measured with — most likely this machine under more background
+/// paired A/B that design was measured with — most likely this machine under more background
 /// load by the time of the reading rather than the fix itself — and it is written down rather than
 /// smoothed over. Forty-one is about a fifth above the worst of the five, on the same rule as every
 /// number above it.
@@ -118,9 +118,9 @@ const SETTLE: Duration = Duration::from_secs(30);
 
 /// How many readings the median is taken over, a second apart.
 ///
-/// Answering a snapshot walks the process table — about 10 ms on Windows, measured at T71 — and the
-/// daemon is one of the subjects, so each reading perturbs what it reads a little. A median is what
-/// buys that off, and it is what both other budgets in this job take.
+/// Answering a snapshot walks the process table — about 10 ms on Windows, measured when the sampler
+/// was built — and the daemon is one of the subjects, so each reading perturbs what it reads a
+/// little. A median is what buys that off, and it is what both other budgets in this job take.
 const READINGS: usize = 5;
 
 /// What one `mix metrics --json` said: which subjects it named, and what each of them holds.
@@ -140,7 +140,7 @@ impl Reading {
         self.subjects.iter().map(|(_, rss)| rss).sum()
     }
 
-    /// What `mixengined` itself is holding — since T72, not counting the services it supervises.
+    /// What `mixengined` itself is holding, not counting the services it supervises.
     fn daemon(&self) -> u64 {
         self.subjects
             .iter()

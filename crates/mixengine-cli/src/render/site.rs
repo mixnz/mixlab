@@ -6,7 +6,7 @@ use mixengine_proto::{
 };
 use std::time::SystemTime;
 
-/// The services `mix site show` cannot start for this site, and why — roadmap task **T200b**, D6.
+/// The services `mix site show` cannot start for this site, and why.
 ///
 /// The site's pool and every service it is linked to, read against the listing. An empty string
 /// when nothing it needs has failed, so the caller can append it whatever it holds.
@@ -46,9 +46,9 @@ pub(crate) fn site_list(list: &SiteList) -> String {
         return "no sites are declared; `mix site create` adds one\n".to_owned();
     }
 
-    // **A count and not the routes themselves** — roadmap task **T135**. What a listing is for is
-    // "does this site have more behind it"; which prefix answers what is `mix site show`'s, where
-    // there is room to print the address beside it.
+    // **A count and not the routes themselves.** What a listing is for is "does this site have more
+    // behind it"; which prefix answers what is `mix site show`'s, where there is room to print the
+    // address beside it.
     let mut out = format!(
         "{:<28}  {:<14}  {:<7}  {:<9}  {}\n",
         "DOMAIN", "KIND", "ROUTES", "STATE", "OWNER"
@@ -72,7 +72,7 @@ pub(crate) fn site_list(list: &SiteList) -> String {
     out
 }
 
-/// Who a site belongs to, as a column reads it — roadmap task **T81b**.
+/// Who a site belongs to, as a column reads it.
 fn owner_word(owner: &SiteOwner) -> String {
     match owner {
         SiteOwner::Project { name } => name.clone(),
@@ -80,7 +80,7 @@ fn owner_word(owner: &SiteOwner) -> String {
     }
 }
 
-/// What a route's target is printed as — roadmap task **T135**.
+/// What a route's target is printed as.
 ///
 /// The target *and* its address, because a path on its own answers nothing a person came to find
 /// out: `/api  →  http://127.0.0.1:3003/xyz` is the line, and the arrow is what makes the direction
@@ -107,9 +107,9 @@ fn kind_word(kind: &SiteKind) -> &'static str {
     }
 }
 
-/// The `https` line's value, with the redirect folded in rather than given a row of its own —
-/// roadmap task **T98**. A redirect is never reachable without HTTPS already being on, so it is not
-/// a fact worth asking a reader to check two lines to get.
+/// The `https` line's value, with the redirect folded in rather than given a row of its own. A
+/// redirect is never reachable without HTTPS already being on, so it is not a fact worth asking a
+/// reader to check two lines to get.
 fn https_word(https: bool, redirect: bool) -> String {
     match (https, redirect) {
         (true, true) => "yes (redirect)".to_owned(),
@@ -184,9 +184,9 @@ pub(crate) fn site_detail(detail: &SiteDetail) -> String {
         out.push_str(&format!("\naliases: {}\n", detail.domains[1..].join(", ")));
     }
 
-    // **In match order, which is what the daemon answers with** — roadmap task **T135**. Not the
-    // order somebody typed: the front end resolves an overlap by specificity, and a listing showing
-    // declaration order would be showing something no server does.
+    // **In match order, which is what the daemon answers with.** Not the order somebody typed: the
+    // front end resolves an overlap by specificity, and a listing showing declaration order would
+    // be showing something no server does.
     if !detail.site.routes.is_empty() {
         out.push_str(&format!("\n{:<24}  {}\n", "PATH", "ANSWERED BY"));
 
@@ -232,18 +232,18 @@ pub(crate) fn site_removal(removal: &SiteRemoval) -> String {
 
 /// What `mix site share` prints: where the site is, and a code a phone can point at.
 ///
-/// **The QR is drawn here and the URL is answered by the daemon** - the T74 design, D10. A terminal
-/// is one client's rendering of one string; a graphical client draws its own from the same string,
-/// and the daemon knows about neither.
+/// **The QR is drawn here and the URL is answered by the daemon.** A terminal is one client's
+/// rendering of one string; a graphical client draws its own from the same string, and the daemon
+/// knows about neither.
 pub(crate) fn site_shared(sharing: &SiteSharing) -> String {
     let mut out = format!(
         "shared on the local network\n  url        {}\n  interface  {} ({})\n",
         sharing.url, sharing.interface, sharing.address
     );
 
-    // **The name is printed, and whether anything answers for it is printed beside it** - roadmap
-    // task T75. A name that resolves nowhere looks exactly like one that does until somebody types
-    // it into a phone, so a home that could not bind UDP 5353 says so here rather than there.
+    // **The name is printed, and whether anything answers for it is printed beside it.** A name
+    // that resolves nowhere looks exactly like one that does until somebody types it into a phone,
+    // so a home that could not bind UDP 5353 says so here rather than there.
     if let Some(name) = sharing.name.as_deref() {
         match sharing.advertised {
             true => out.push_str(&format!("  name       {name}\n")),
@@ -255,8 +255,8 @@ pub(crate) fn site_shared(sharing: &SiteSharing) -> String {
 
     out.push_str(&format!("  authority  {}\n", sharing.ca_url));
 
-    // **Printed only when there is one** — roadmap task T76. A share with no deadline is the
-    // ordinary case, and a line reading "ends  never" is a line every reader has to skip.
+    // **Printed only when there is one.** A share with no deadline is the ordinary case, and a line
+    // reading "ends never" is a line every reader has to skip.
     if let Some(until) = sharing.until {
         out.push_str(&format!(
             "  ends       {}\n",
@@ -264,9 +264,9 @@ pub(crate) fn site_shared(sharing: &SiteSharing) -> String {
         ));
     }
 
-    // **The QR carries the address and not the name** - the T75 design, D11. Android's resolver
-    // does not answer `.local` for a browser, so a code carrying the name would be a broken URL for
-    // a large share of the phones this feature exists for.
+    // **The QR carries the address and not the name.** Android's resolver does not answer `.local`
+    // for a browser, so a code carrying the name would be a broken URL for a large share of the
+    // phones this feature exists for.
     if let Some(code) = qr(&sharing.url) {
         out.push('\n');
         out.push_str(&code);
@@ -303,8 +303,8 @@ mod tests {
     use super::*;
     use crate::render::service::tests::{failed_with, summary};
 
-    /// **T81b.** A listing says who owns each site, and an extension's site says so in words a
-    /// person can act on.
+    /// A listing says who owns each site, and an extension's site says so in words a person can act
+    /// on.
     #[test]
     fn a_site_listing_names_the_owner() {
         let list = SiteList {
@@ -345,7 +345,7 @@ mod tests {
         assert!(rendered.contains("extension phpmyadmin"), "{rendered}");
     }
 
-    /// A share as the daemon answers one, advertised or not — roadmap tasks **T74** and **T75**.
+    /// A share as the daemon answers one, advertised or not.
     fn a_share(advertised: bool) -> SiteSharing {
         SiteSharing {
             interface: "Wi-Fi".to_owned(),
@@ -359,12 +359,10 @@ mod tests {
         }
     }
 
-    /// What `mix site share` prints once the phone has a name and somewhere to get the authority —
-    /// roadmap task **T75**.
+    /// What `mix site share` prints once the phone has a name and somewhere to get the authority.
     ///
     /// **The QR stays on the address.** Android's resolver does not answer `.local` for a browser,
-    /// so a code carrying the name would be a broken URL for a large share of phones — the T75
-    /// design, D11.
+    /// so a code carrying the name would be a broken URL for a large share of phones.
     #[test]
     fn a_shared_site_prints_its_name_and_where_to_get_the_authority() {
         let rendered = super::site_shared(&a_share(true));
@@ -377,9 +375,9 @@ mod tests {
         );
     }
 
-    /// **A deadline is printed as a wait and not as a timestamp** — roadmap task **T76**. Somebody
-    /// who has just typed `--for 2h` wants to know it took, and "in 2h" is the answer to that; an
-    /// instant in milliseconds is a number they would have to convert.
+    /// **A deadline is printed as a wait and not as a timestamp.** Somebody who has just typed
+    /// `--for 2h` wants to know it took, and "in 2h" is the answer to that; an instant in
+    /// milliseconds is a number they would have to convert.
     #[test]
     fn a_share_with_a_deadline_says_when_it_ends() {
         let Timestamp(millis) = Timestamp::from_system_time(SystemTime::now());
@@ -414,7 +412,7 @@ mod tests {
         assert!(rendered.contains("not being advertised"), "{rendered}");
     }
 
-    /// What `mix site share` prints — roadmap task **T74**.
+    /// What `mix site share` prints.
     ///
     /// **The URL is above the code, and both are there.** A QR is unreadable to anyone reading a
     /// transcript, piping the output, or working over a connection that mangles block characters,
@@ -437,7 +435,7 @@ mod tests {
         assert!(rendered.contains("certificate authority"), "{rendered}");
     }
 
-    /// **T200b, D6.** `mix site show` names the service its site cannot start, and why.
+    /// `mix site show` names the service its site cannot start, and why.
     #[test]
     fn a_site_whose_pool_failed_says_which_and_why() {
         let detail: SiteDetail = serde_json::from_value(serde_json::json!({

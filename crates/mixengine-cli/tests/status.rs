@@ -1,10 +1,10 @@
 //! `mix` against a real `mixengined`, over a real endpoint.
 //!
-//! This is the test the whole of task T10 exists to pass, and none of it can be written any other
-//! way: that the client and the daemon agree on which home they are talking about, that they agree
-//! on the endpoint that home implies, and that a client which finds nothing there produces a daemon
-//! rather than an error message. The pieces are mocked nowhere, because every one of those claims is
-//! about two operating-system processes.
+//! This is the test the whole of `mix` was first built to pass, and none of it can be written any
+//! other way: that the client and the daemon agree on which home they are talking about, that they
+//! agree on the endpoint that home implies, and that a client which finds nothing there produces a
+//! daemon rather than an error message. The pieces are mocked nowhere, because every one of those
+//! claims is about two operating-system processes.
 //!
 //! It is also the guard on the one thing `mix` duplicates rather than shares. The daemon computes
 //! `run/` through `mixengine_core::Paths` and the client computes it in `home.rs`, because `core`
@@ -84,9 +84,9 @@ fn the_human_rendering_leads_with_the_state_and_the_home() {
         rendered.contains(&home.endpoint()),
         "the endpoint is what tells one daemon from another: {rendered}"
     );
-    // **Roadmap task T44**, end to end: a real daemon, a real bind, and the one line that says how
-    // this home resolves a name. `hosts file` and not `DNS`, on every machine until T45 wires a
-    // resolver — a server nothing routes a name to resolves exactly as many names as no server.
+    // **The DNS server**, end to end: a real daemon, a real bind, and the one line that says how
+    // this home resolves a name. `hosts file` and not `DNS`, because no resolver routes a name to a
+    // test home — a server nothing routes a name to resolves exactly as many names as no server.
     assert!(
         rendered.contains("names     hosts file"),
         "a client is told which mechanism this home is on: {rendered}"

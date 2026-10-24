@@ -1,9 +1,9 @@
 schema = 1
 
-# A blueprint whose stack is one `fakeservice` instance and no site — roadmap task **T116**.
+# A blueprint whose stack is one `fakeservice` instance and no site.
 #
-# **No `[site]`**, deliberately: T115 plans a front end for a manifest that has one, and this suite
-# is offline by construction. What this fixture is for is the one question T116 asks — whether the
+# **No `[site]`**, deliberately: `--with-front-end` plans a front end for a manifest that has one,
+# and this suite is offline by construction. What this fixture is for is one question — whether the
 # service an apply *creates* carries the autostart setting the request asked for — and a site would
 # drag a web server into a test that is not about one.
 #

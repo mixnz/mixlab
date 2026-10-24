@@ -1,5 +1,4 @@
-//! `mix service front-end` and `mix service set-front-end` against a daemon that is really running —
-//! roadmap task **T97**.
+//! `mix service front-end` and `mix service set-front-end` against a daemon that is really running.
 //!
 //! **A fresh home has no front end**, because nothing installs one — `docs/features/services.md`
 //! says so — and that is exactly the state worth proving these two commands in. What is asserted

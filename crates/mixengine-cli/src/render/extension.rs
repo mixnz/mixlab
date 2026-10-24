@@ -11,7 +11,7 @@ use mixengine_proto::{
 ///
 /// **Three things a person reads off this**, in this order: what it is, what it would run, and what
 /// it asked for. The last is the one a line could mislead about, so it says *asked for* — a port
-/// here is a wish, and allocation is not something T80 does at all.
+/// here is a wish, and reading a manifest allocates nothing.
 ///
 /// The permission lines say which of them are boundaries. `network` and `filesystem` are enforced
 /// by the manifest format itself; `services` is a declaration, and reads as one, because an
@@ -121,9 +121,9 @@ pub(crate) fn extension_inspection(inspection: &ExtensionInspection) -> String {
         for addition in &inspection.extends {
             out.push_str(&match addition {
                 RecipeAddition::PhpIni { key, value } => format!("  php.ini  {key} = {value}\n"),
-                // **The server is named rather than folded away** — roadmap task T81c. A home
-                // running the other front end renders nothing for this entry, and a reader who
-                // cannot see which one it is for cannot tell that from a line that took effect.
+                // **The server is named rather than folded away.** A home running the other front
+                // end renders nothing for this entry, and a reader who cannot see which one it is
+                // for cannot tell that from a line that took effect.
                 RecipeAddition::FrontEnd { server, fragment } => {
                     format!("  frontend ({}) {fragment}\n", server.package())
                 }
@@ -134,13 +134,13 @@ pub(crate) fn extension_inspection(inspection: &ExtensionInspection) -> String {
     out
 }
 
-/// `mix extension list` — roadmap task **T81**.
+/// `mix extension list`, for a person.
 ///
-/// **The `TRUST` column is T79b's, one table across.** A blueprint says `signed` / `unsigned` /
-/// `mismatched`; an extension has two answers, because the registry's signature covers the whole
-/// document — an entry either arrived inside something the compiled-in key vouched for, or the
-/// document was refused before anything was installed. What is left is `--path`, which nothing
-/// vouches for and which stays marked for as long as it is installed.
+/// **The `TRUST` column is the blueprint listing's, one table across.** A blueprint says `signed` /
+/// `unsigned` / `mismatched`; an extension has two answers, because the registry's signature covers
+/// the whole document — an entry either arrived inside something the compiled-in key vouched for,
+/// or the document was refused before anything was installed. What is left is `--path`, which
+/// nothing vouches for and which stays marked for as long as it is installed.
 pub(crate) fn installed_extensions(list: &InstalledExtensions) -> String {
     if list.extensions.is_empty() {
         return "nothing is installed; `mix extension available` lists what could be\n".to_owned();
@@ -161,7 +161,7 @@ pub(crate) fn installed_extensions(list: &InstalledExtensions) -> String {
                 one.service
                     .as_ref()
                     .map_or_else(|| "—".to_owned(), ToString::to_string),
-                // A web-app's site or a service's page: where it opens (T200a, D3).
+                // A web-app's site or a service's page: where it opens.
                 one.site
                     .clone()
                     .or_else(|| one.ui.clone())
@@ -175,7 +175,7 @@ pub(crate) fn installed_extensions(list: &InstalledExtensions) -> String {
                         .collect::<Vec<_>>()
                         .join(" "),
                 },
-                // Last, so a long sentence pushes nothing else out of line — T200, D5.
+                // Last, so a long sentence pushes nothing else out of line.
                 one.description.clone().unwrap_or_default(),
             ]
         })
@@ -198,11 +198,11 @@ pub(crate) fn installed_extensions(list: &InstalledExtensions) -> String {
 
 /// `mix extension available`.
 ///
-/// **Empty and old are two answers, not one.** A registry that lists nothing — which is what
-/// **T81a** publishes until the first manifests land — is a complete answer, and telling that
-/// person to update sends them after a listing no version of MixEngine would show them. The
-/// sentence about what this build cannot read belongs to the other empty: one where every entry
-/// there is an entry this build had to drop.
+/// **Empty and old are two answers, not one.** A registry that lists nothing — as this one did
+/// until its first manifests landed — is a complete answer, and telling that person to
+/// update sends them after a listing no version of MixEngine would show them. The sentence about
+/// what this build cannot read belongs to the other empty: one where every entry there is an entry
+/// this build had to drop.
 pub(crate) fn extension_catalogue(catalogue: &ExtensionCatalogue) -> String {
     let mut out = match (catalogue.extensions.is_empty(), catalogue.unreadable) {
         (true, 0) => "the registry lists no extensions yet\n".to_owned(),
@@ -241,8 +241,8 @@ pub(crate) fn extension_catalogue(catalogue: &ExtensionCatalogue) -> String {
         );
     }
 
-    // **Said rather than swallowed** — the T81 design's D4. An extension missing from a listing is
-    // one somebody goes looking for in the wrong place.
+    // **Said rather than swallowed.** An extension missing from a listing is one somebody goes
+    // looking for in the wrong place.
     if catalogue.unreadable > 0 {
         out.push_str(&format!(
             "\n{} {} this build cannot read; update MixEngine to see {}\n",
@@ -347,16 +347,15 @@ pub(crate) fn extension_plan(plan: &ExtensionPlan) -> String {
             site.domain, site.pool
         ));
 
-        // **Which server this would open onto, before anybody agrees to it** — roadmap task **T82**.
-        // An administrative interface onto a database is a thing to be shown the database.
+        // **Which server this would open onto, before anybody agrees to it.** An administrative
+        // interface onto a database is a thing to be shown the database.
         if let Some(database) = &site.database {
             out.push_str(&format!("database     {database}\n"));
         }
 
-        // **And what it is really being granted** — roadmap task **T82a**, its design's D2. Handing
-        // an application a database superuser's password is the most consequential thing an
-        // extension can be given, so it is said in full: which account, where the password comes
-        // from, and that nothing writes it down.
+        // **And what it is really being granted.** Handing an application a database superuser's
+        // password is the most consequential thing an extension can be given, so it is said in
+        // full: which account, where the password comes from, and that nothing writes it down.
         if let Some(user) = &site.signs_in {
             out.push_str(&format!(
                 "signs in     as {user}, in a php-fpm pool of its own; that pool reads the \
@@ -382,8 +381,8 @@ pub(crate) fn extension_removal(removal: &ExtensionRemoval) -> String {
         out.push_str(&format!("  its service {service} went with it\n"));
     }
 
-    // The pool a `web-app` was served on — roadmap task **T82a**. Named for the same reason the
-    // service above is: a process that went is a thing to say, not a thing to leave out.
+    // The pool a `web-app` was served on. Named for the same reason the service above is: a process
+    // that went is a thing to say, not a thing to leave out.
     if let Some(pool) = &removal.pool {
         out.push_str(&format!("  its pool {pool} went with it\n"));
     }
@@ -410,8 +409,8 @@ mod tests {
 
     use super::*;
 
-    /// **T200, D5.** The listing says what each extension is for, last, where a long sentence
-    /// pushes nothing else out of line.
+    /// The listing says what each extension is for, last, where a long sentence pushes nothing else
+    /// out of line.
     #[test]
     fn an_installed_extension_is_listed_with_what_it_is_for() {
         let list = InstalledExtensions {
@@ -432,7 +431,7 @@ mod tests {
         let rendered = installed_extensions(&list);
 
         assert!(rendered.contains("DESCRIPTION"), "{rendered}");
-        // **T200a, D3.** A service's page sits where a web-app's site does.
+        // A service's page sits where a web-app's site does.
         assert!(rendered.contains("OPENS AT"), "{rendered}");
         assert!(rendered.contains("http://127.0.0.1:8025/"), "{rendered}");
         assert!(!rendered.contains(" SITE "), "{rendered}");
@@ -442,9 +441,9 @@ mod tests {
         );
     }
 
-    /// **T81b.** A plan for a web-app says which name it takes and which pool it runs on — and
-    /// since **T82a**, which account it would sign itself in as, because a database superuser's
-    /// password is the one thing on this screen somebody must not agree to by accident.
+    /// A plan for a web-app says which name it takes and which pool it runs on — and which account
+    /// it would sign itself in as, because a database superuser's password is the one thing on this
+    /// screen somebody must not agree to by accident.
     #[test]
     fn an_extension_plan_names_the_site_it_would_take() {
         let plan = ExtensionPlan {
@@ -592,7 +591,7 @@ mod tests {
         }
     }
 
-    /// Empty and old are different answers. The registry published for **T81a** lists nothing at
+    /// Empty and old are different answers. A registry with no manifests in it yet lists nothing at
     /// all, and telling that person their build is too old sends them to update something that
     /// would not change the listing.
     #[test]

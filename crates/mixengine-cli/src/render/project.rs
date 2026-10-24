@@ -73,7 +73,7 @@ pub(crate) fn project_detail(detail: &ProjectDetail) -> String {
         }
     }
 
-    // **T204, D7.** What mixengine.toml declares, and the command for each one not here yet.
+    // What mixengine.toml declares, and the command for each one not here yet.
     if !detail.declared_sites.is_empty() {
         out.push_str(&format!("\n{:<28}  {}\n", "IN MIXENGINE.TOML", "HERE"));
 
@@ -89,7 +89,7 @@ pub(crate) fn project_detail(detail: &ProjectDetail) -> String {
         }
     }
 
-    // **T205, D6.** What the project's blueprint says is left to do.
+    // What the project's blueprint says is left to do.
     if let Some(steps) = &detail.next_steps {
         out.push_str(&next_steps_said(steps));
     }
@@ -119,7 +119,7 @@ pub(crate) fn project_export(exported: &ProjectExport) -> String {
         ),
     };
 
-    // **T204, D4.** What the file still declares that this home does not have, left as written.
+    // What the file still declares that this home does not have, left as written.
     if !exported.sites_kept.is_empty() {
         let names = match exported.sites_kept.len() {
             1 => "that name",
@@ -138,7 +138,7 @@ pub(crate) fn project_export(exported: &ProjectExport) -> String {
 mod tests {
     use super::*;
 
-    /// **T204, D4.** An export names the entries it left, and says nothing when there are none.
+    /// An export names the entries it left, and says nothing when there are none.
     #[test]
     fn an_export_names_the_site_entries_it_kept() {
         let mut exported = ProjectExport {
@@ -157,7 +157,7 @@ mod tests {
         );
     }
 
-    /// **T204, D7.** The declared sites print even with no pins, each with what to do.
+    /// The declared sites print even with no pins, each with what to do.
     #[test]
     fn a_project_lists_the_sites_its_manifest_declares() {
         let detail = ProjectDetail {

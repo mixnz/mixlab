@@ -125,9 +125,9 @@ pub(crate) enum BlueprintCommand {
         /// are reached through, not every service of this home. They start after the permission
         /// prompt, so every site's name already resolves when it comes up.
         //
-        // Roadmap task T125: which services those are is the daemon's answer and not this
-        // command's. Until T125 the only set a client could ask for was every service this home
-        // declares.
+        // Which services those are is the daemon's answer and not this command's. Before `--start`
+        // asked for one project's services, the only set a client could ask for was every service
+        // this home declares.
         #[arg(long)]
         start: bool,
 
@@ -258,15 +258,15 @@ pub(crate) async fn blueprint(
             install_prerequisites,
             ignore_requirements,
         } => {
-            // **Where it goes, and who names it** — roadmap task **T120a**. A path somebody typed
-            // is sent as typed; with none, the daemon is told to make one *under* this directory,
-            // and it names that directory with the project's handle.
+            // **Where it goes, and who names it.** A path somebody typed is sent as typed; with
+            // none, the daemon is told to make one *under* this directory, and it names that
+            // directory with the project's handle.
             //
             // The naming is deliberately not done here. This binary may not depend on
             // `mixengine-core` (`mixengine-proto/tests/workspace_layering.rs`), so it cannot call
-            // `domains::slug` — and restating the charset would be a second copy of the rule T120
-            // spent a task consolidating, in the client the ban on business logic is about. A
-            // client knows where it is standing; the daemon knows what things are called.
+            // `domains::slug` — and restating the charset would be a second copy of the slug rule
+            // (ADR 0030), in the client the ban on business logic is about. A client knows where it
+            // is standing; the daemon knows what things are called.
             let (root, root_is_parent) = match path {
                 Some(path) => (here(Some(path))?, false),
                 None => (here(None)?, true),
@@ -280,23 +280,22 @@ pub(crate) async fn blueprint(
                 dry_run: true,
                 answers: Vec::new(),
                 // Filled in below, once the plan says whether there is a command to agree to and
-                // who wrote it — roadmap task **T78a**.
+                // who wrote it.
                 scaffold: None,
-                // Filled in below, once the plan says which `.env` keys it offers — T205a.
+                // Filled in below, once the plan says which `.env` keys it offers.
                 dotenv: Vec::new(),
                 // Carried on the dry run as well as on the real one, which is what keeps the
                 // feature's own acceptance criterion true: `--dry-run` prints the actions the real
                 // run performs, so a flag that changed the plan may not be added afterwards.
                 front_end: with_front_end,
                 autostart: services_autostart,
-                // Answered below, once the plan says what its releases lack — T152.
+                // Answered below, once the plan says what its releases lack.
                 install_prerequisites: false,
                 ignore_requirements,
             };
 
-            // **The plan comes first either way** (the T78 design, D6). A dry run stops here; a real
-            // apply needs it because the questions are in it, and a daemon has no keyboard to ask
-            // them with.
+            // **The plan comes first either way.** A dry run stops here; a real apply needs it
+            // because the questions are in it, and a daemon has no keyboard to ask them with.
             let planned: BlueprintApplyResponse =
                 ask(&mut client, rpc::method::BLUEPRINT_APPLY, encode(&apply)).await?;
 
@@ -326,17 +325,17 @@ pub(crate) async fn blueprint(
                 return Ok(ExitCode::SUCCESS);
             };
 
-            // **The command is shown and agreed to, every apply** — roadmap task **T78a**. The
-            // consent carries the command it was given about, so a blueprint that changed between
-            // this plan and the apply below cannot be run under it.
+            // **The command is shown and agreed to, every apply.** The consent carries the command
+            // it was given about, so a blueprint that changed between this plan and the apply below
+            // cannot be run under it.
             let consent = agreed_to_scaffold(plan, run_scaffold, run_untrusted_scaffold, json)?;
 
-            // **Its own question** — roadmap task **T205a**. The line holds a password, so it is
-            // asked apart from the command and never answered by `--run-scaffold`.
+            // **Its own question.** The line holds a password, so it is asked apart from the
+            // command and never answered by `--run-scaffold`.
             let dotenv = agreed_to_dotenv(plan, write_dotenv, json);
 
-            // **Asked once for the whole plan** (T152, D7), after the version and scaffold questions
-            // so every question the apply raises is answered before any of it starts.
+            // **Asked once for the whole plan**, after the version and scaffold questions so every
+            // question the apply raises is answered before any of it starts.
             let Some(agreed) = agreed_to_prerequisites(needs, install_prerequisites, json)? else {
                 return Ok(ExitCode::SUCCESS);
             };
@@ -357,11 +356,11 @@ pub(crate) async fn blueprint(
                 ));
             };
 
-            // **A second connection, because two streams cannot share one** — roadmap task
-            // **T78a**. The job's own progress comes back on this client's `job.wait`, and what the
-            // blueprint's command prints comes down `GET /logs/job/<id>` for as long as it runs. A
-            // log that cannot be opened is not worth failing an apply over: the work goes on and the
-            // outcome still says what happened.
+            // **A second connection, because two streams cannot share one.** The job's own progress
+            // comes back on this client's `job.wait`, and what the blueprint's command prints comes
+            // down `GET /logs/job/<id>` for as long as it runs. A log that cannot be opened is not
+            // worth failing an apply over: the work goes on and the outcome still says what
+            // happened.
             let watching = watch_job_log(endpoint, autostart, job.id, json).await;
 
             let finished = follow(&mut client, job, json).await?;
@@ -389,15 +388,15 @@ pub(crate) async fn blueprint(
                 return Ok(ExitCode::FAILURE);
             }
 
-            // **The job succeeded and a step did not** — roadmap task **T78a**, its design's D7. The
-            // apply applied everything it was asked to; what failed is the blueprint's own command,
-            // and a shell that chained on this has to hear it.
+            // **The job succeeded and a step did not.** The apply applied everything it was asked
+            // to; what failed is the blueprint's own command, and a shell that chained on this has
+            // to hear it.
             if a_step_failed {
                 return Ok(ExitCode::FAILURE);
             }
 
-            // **The client is what spends the prompt** (D10): the apply queued the hosts entries and
-            // the daemon never raises a dialog on its own initiative, so the last thing this command
+            // **The client is what spends the prompt**: the apply queued the hosts entries and the
+            // daemon never raises a dialog on its own initiative, so the last thing this command
             // does is offer the one prompt that makes the new site reachable.
             let spent = granted(&mut client, grant, json).await?;
 
@@ -405,16 +404,16 @@ pub(crate) async fn blueprint(
                 return Ok(spent);
             }
 
-            // **After the elevation and not inside the job** — roadmap task **T117**. An apply never
-            // raises a prompt; it queues what needs one and the client spends it above. A front end
-            // started before that would serve the new site at a name this machine does not resolve
-            // and with a certificate no store trusts — a browser error at the end of a progress bar.
+            // **After the elevation and not inside the job.** An apply never raises a prompt; it
+            // queues what needs one and the client spends it above. A front end started before that
+            // would serve the new site at a name this machine does not resolve and with a
+            // certificate no store trusts — a browser error at the end of a progress bar.
             //
-            // **This project's services, not this home's** — roadmap task **T125**. Until then the
-            // target was empty, meaning *every service this home declares*, and a home with four
-            // PHP versions and three databases started all of them to put one site up. What the
-            // apply needs is a set no client may derive — so the daemon derives it, from the sites
-            // this project now has, and `--start` asks for it by name.
+            // **This project's services, not this home's.** Before `--start` asked for them by
+            // name, the target was empty, meaning *every service this home declares*, and a home
+            // with four PHP versions and three databases started all of them to put one site up.
+            // What the apply needs is a set no client may derive — so the daemon derives it, from
+            // the sites this project now has, and `--start` asks for it by name.
             let walk: ServiceWalk = ask(
                 &mut client,
                 rpc::method::SERVICE_START,
@@ -443,10 +442,10 @@ pub(crate) async fn blueprint(
 /// There was nobody to put the question to.
 /// The answers to a plan's version questions, or [`None`] when somebody cancelled.
 ///
-/// **One question per mismatch, and the flags answer them all** (the T78 design, D6). A person
-/// answers them one at a time; a script passes `--install-missing` or `--use-installed` and is never
-/// asked. Standard input at end of file with a question outstanding is a refusal naming the two
-/// flags, on `confirm.rs`' standing rule: what must not happen is a prompt nobody is there to see.
+/// **One question per mismatch, and the flags answer them all.** A person answers them one at a
+/// time; a script passes `--install-missing` or `--use-installed` and is never asked. Standard
+/// input at end of file with a question outstanding is a refusal naming the two flags, on
+/// `confirm.rs`' standing rule: what must not happen is a prompt nobody is there to see.
 fn answered(
     plan: &BlueprintPlan,
     install_missing: bool,
@@ -587,11 +586,11 @@ fn unanswerable_question() -> Error {
 
 /// Agreement to run the blueprint's own command, or [`None`] where there is nothing to agree to.
 ///
-/// Roadmap task **T78a**, its design's D4 and D15. **The command is printed exactly as it will run**
-/// — a confirmation that paraphrased would be a confirmation to something else — and the flag that
-/// answers it depends on who wrote the blueprint: `--run-scaffold` for one the gallery signed, and
-/// `--run-untrusted-scaffold` for one nobody vouches for. Neither covers the other, so a script that
-/// runs somebody's unsigned command says so on the line that does it.
+/// **The command is printed exactly as it will run** — a confirmation that paraphrased would be a
+/// confirmation to something else — and the flag that answers it depends on who wrote the
+/// blueprint: `--run-scaffold` for one the gallery signed, and `--run-untrusted-scaffold` for one
+/// nobody vouches for. Neither covers the other, so a script that runs somebody's unsigned command
+/// says so on the line that does it.
 ///
 /// Declining is not a failure. The apply goes ahead without the command and the step comes back
 /// saying it was left, which is a project a person can use and one line they can run themselves.
@@ -606,9 +605,9 @@ fn agreed_to_scaffold(
     run_untrusted_scaffold: bool,
     json: bool,
 ) -> Result<Option<ScaffoldConsent>, Error> {
-    // **A command or an archive** — roadmap task **T205**, D2. What is shown and agreed to is the
-    // command, or the archive's URL; the consent names whichever it was. A starter planned
-    // `Satisfied` over a full folder will not run, so there is nothing to agree to.
+    // **A command or an archive.** What is shown and agreed to is the command, or the archive's
+    // URL; the consent names whichever it was. A starter planned `Satisfied` over a full folder
+    // will not run, so there is nothing to agree to.
     let Some((command, archive)) = plan
         .steps
         .iter()
@@ -705,7 +704,7 @@ fn agreed_to_scaffold(
     }
 }
 
-/// The `.env` keys the person agrees to have written — roadmap task **T205a**.
+/// The `.env` keys the person agrees to have written.
 ///
 /// Asked once per key, after the scaffold's question. **Nobody to ask writes nothing**, the
 /// scaffold's rule for a question with a safe default: the project works without the line, and the
@@ -746,11 +745,10 @@ fn agreed_to_dotenv(plan: &BlueprintPlan, write_dotenv: bool, json: bool) -> Vec
 
 /// What a person is told about the blueprint whose command they are being asked to run.
 ///
-/// **Which kind of untrusted, and not merely that it is** — roadmap task **T79b**. This is the
-/// moment the reason is worth most: somebody is about to run a stranger's command, and "a signature
-/// came with this and it is not the gallery's" is a different thing to weigh than "nobody signed
-/// it". It changes what is *said* and nothing about what is allowed — one flag still answers for
-/// both kinds (the T79b design's D8).
+/// **Which kind of untrusted, and not merely that it is.** This is the moment the reason is worth
+/// most: somebody is about to run a stranger's command, and "a signature came with this and it is
+/// not the gallery's" is a different thing to weigh than "nobody signed it". It changes what is
+/// *said* and nothing about what is allowed — one flag still answers for both kinds.
 ///
 /// A function of its own because the question it belongs to is only asked on a real apply, with a
 /// keyboard in front of it: a sentence reachable no other way is a sentence nothing can check.
@@ -771,8 +769,8 @@ fn vouching(untrusted: bool, signature: Option<SignatureCheck>) -> &'static str 
 
 /// Say on stderr that a command was left unrun because there was nobody to ask, and leave it.
 ///
-/// Roadmap task **T78a**. The apply goes ahead: what it makes is a project somebody can use, and
-/// the step's own outcome says the command is still theirs to run.
+/// The apply goes ahead: what it makes is a project somebody can use, and the step's own outcome
+/// says the command is still theirs to run.
 fn unasked(command: &str, untrusted: bool) -> Option<ScaffoldConsent> {
     let flag = match untrusted {
         true => "--run-untrusted-scaffold",
@@ -789,10 +787,10 @@ fn unasked(command: &str, untrusted: bool) -> Option<ScaffoldConsent> {
 
 /// Print what a job's own command says, for as long as it says anything.
 ///
-/// Roadmap task **T78a**. A task rather than part of the wait, because the two are different
-/// streams: progress comes back on `job.wait` and output comes down `GET /logs/job/<id>`, and one
-/// connection cannot carry both. [`None`] when the daemon cannot be reached a second time, which is
-/// a log this command does without rather than an apply it refuses to run.
+/// A task rather than part of the wait, because the two are different streams: progress comes back
+/// on `job.wait` and output comes down `GET /logs/job/<id>`, and one connection cannot carry both.
+/// [`None`] when the daemon cannot be reached a second time, which is a log this command does
+/// without rather than an apply it refuses to run.
 async fn watch_job_log(
     endpoint: &Endpoint,
     autostart: Option<&Autostart>,
@@ -814,8 +812,8 @@ mod tests {
     use mixengine_proto::PlanAction;
     use mixengine_proto::SignatureCheck;
 
-    /// **`--run-scaffold` agrees to an archive by its URL** — roadmap task **T205**, D2. The
-    /// consent names what the plan showed, and an archive shows a URL, not a command.
+    /// **`--run-scaffold` agrees to an archive by its URL.** The consent names what the plan
+    /// showed, and an archive shows a URL, not a command.
     #[test]
     fn the_scaffold_flag_agrees_to_an_archive_by_its_url() {
         let url = "https://wordpress.org/latest.zip";
@@ -847,10 +845,9 @@ mod tests {
         assert!(!consent.untrusted);
     }
 
-    /// **A starter skipped over a full folder asks nothing** — roadmap task **T205**. `php-mysql`
-    /// and `static` plan their archive `Satisfied` over a cloned repository, so there is nothing to
-    /// agree to: no `[y/N]` is printed for a step that will not run, and `--run-scaffold` spends
-    /// no consent on it.
+    /// **A starter skipped over a full folder asks nothing.** `php-mysql` and `static` plan their
+    /// archive `Satisfied` over a cloned repository, so there is nothing to agree to: no `[y/N]` is
+    /// printed for a step that will not run, and `--run-scaffold` spends no consent on it.
     #[test]
     fn a_satisfied_archive_asks_for_no_consent() {
         let url = "https://x.org/static-starter.zip";
@@ -899,8 +896,7 @@ mod tests {
         }
     }
 
-    /// **`--write-dotenv` agrees to every key; `--json` without it to none** — roadmap task
-    /// **T205a**.
+    /// **`--write-dotenv` agrees to every key; `--json` without it to none.**
     #[test]
     fn the_dotenv_flag_agrees_to_each_key_and_a_json_run_to_none() {
         let plan = plan_writing("DATABASE_URL");
@@ -918,8 +914,8 @@ mod tests {
         assert!(agreed_to_dotenv(&plan, true, false).is_empty());
     }
 
-    /// **The question names which kind of untrusted it is** — roadmap task **T79b**. It is asked
-    /// only on a real apply, so this is where the three sentences are checked.
+    /// **The question names which kind of untrusted it is.** It is asked only on a real apply, so
+    /// this is where the three sentences are checked.
     #[test]
     fn the_scaffold_question_says_what_is_known_about_the_blueprint() {
         assert!(super::vouching(false, Some(SignatureCheck::Verified)).contains("is signed"));

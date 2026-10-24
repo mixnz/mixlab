@@ -20,7 +20,7 @@ use crate::render;
 /// **Nothing is decided here.** No domain is validated, no doc root is made relative and no kind is
 /// defaulted: all of that is the daemon's, and a `mix` that could refuse what the GUI could not
 /// would be the first bug `CLAUDE.md` names.
-/// `mix metrics` — roadmap task **T71**.
+/// `mix metrics`: what this home's services cost.
 ///
 /// Three readings of one namespace and one command, because they are three tenses of one question:
 /// what is it costing now (`metrics.snapshot`), what has it been costing (`metrics.history`), and

@@ -12,7 +12,7 @@ use crate::jobs::follow;
 use crate::output::{emit, rendered};
 use crate::{confirm, render};
 
-/// Print the plan, and ask — or answer `true` without asking under `--yes`. T193, D7.
+/// Print the plan, and ask — or answer `true` without asking under `--yes`.
 pub(crate) fn upgrade_confirmed(
     plan: &UpgradePlan,
     dry_run: bool,

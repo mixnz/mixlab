@@ -1,11 +1,11 @@
 schema = 3
 
-# Two static sites in one project — roadmap task **T204a**.
+# Two static sites in one project.
 #
 # **Static, so the suite stays offline**, for the reason `with-a-site-and-a-service.toml` gives, and
 # `fakeservice` so a link has something to point at. The first site links it and has an alias; the
-# second links nothing and has none — which is what a site's own `services` (D3) and a site's own
-# names (D4) are about.
+# second links nothing and has none — which is what a site's own `services` and a site's own names
+# are about.
 
 [blueprint]
 name = "with-two-sites"

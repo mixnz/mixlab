@@ -1,4 +1,4 @@
-//! The MySQL recipe against a **real** MySQL — roadmap task **T34c**.
+//! The MySQL recipe against a **real** MySQL.
 //!
 //! Everything else about this recipe is provable in one process and is proved there: the three
 //! bootstrap routes, the template, the spec, the credential that is named rather than carried. None
@@ -106,8 +106,8 @@ const SERVICE: &str = "mysql@main";
 /// A name of its own, so the two ignored tests in this file, which run at once in two homes, read
 /// apart in a log. It used to be what kept their bootstraps apart as well: a Unix bootstrap named
 /// its space-free view `/tmp/mixengine-init-<id>`, one view for every home bootstrapping that id,
-/// and the second ritual's cleanup took the first one's basedir away. Roadmap task **T33b** put
-/// the home id in the name.
+/// and the second ritual's cleanup took the first one's basedir away. The name carries the home id
+/// now.
 const RESET: &str = "mysql@reset";
 
 /// The MySQL this suite is about, or the reason there is none.
@@ -309,10 +309,9 @@ fn without_a_password(root: &Path, port: u16, user: &str) -> String {
     said
 }
 
-/// The positive counterpart of [`without_a_password`] — roadmap task **T77b**. A query that
-/// succeeds with exactly the password this test chose *is* the proof the daemon stored and used
-/// it, on T77a's D13 reasoning: nothing here ever reads the keyring, because nothing needs to —
-/// the value was never MixEngine's to generate.
+/// The positive counterpart of [`without_a_password`]. A query that succeeds with exactly the
+/// password this test chose *is* the proof the daemon stored and used it: nothing here ever reads
+/// the keyring, because nothing needs to — the value was never MixEngine's to generate.
 fn with_the_password(root: &Path, port: u16, user: &str, password: &str) -> String {
     let client = root.join(format!("bin/mysql{}", std::env::consts::EXE_SUFFIX));
 
@@ -348,8 +347,8 @@ fn with_the_password(root: &Path, port: u16, user: &str, password: &str) -> Stri
 /// The archive every test in this suite installs, packed by the first test that asks for it.
 ///
 /// Every test packs the same [`package`] directory into the same archive, and on Windows deflating
-/// a real server is the slowest thing this suite does (T170c). The tests run in parallel, so the
-/// others wait on the lock rather than packing a copy each.
+/// a real server is the slowest thing this suite does. The tests run in parallel, so the others
+/// wait on the lock rather than packing a copy each.
 fn packed() -> Packed {
     static PACKED: OnceLock<Packed> = OnceLock::new();
 
@@ -429,7 +428,7 @@ async fn created_as(service: &str) -> (Home, harness::Daemon, MockRegistry, Path
     (home, daemon, registry, installed_at, port)
 }
 
-/// **The whole of T34c, in the order a user meets it.**
+/// **The whole of the recipe, in the order a user meets it.**
 ///
 /// One test rather than eight, deliberately: each step is the previous one's precondition, and eight
 /// tests would be eight real bootstraps performed to re-reach the state this one is already in.
@@ -441,8 +440,9 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
 
     // --- started, which is where the bootstrap happens -------------------------------------------
     //
-    // Nothing here asked for a first run. The start did, because the data directory is empty — which
-    // is the half of T33 that is invisible from inside the daemon and obvious from out here.
+    // Nothing here asked for a first run. The start did, because the data directory is empty —
+    // which is the half of a first run that is invisible from inside the daemon and obvious from
+    // out here.
     at("starting the service, which is where the first run bootstraps");
     let started = expect(&home, &["service", "start", SERVICE, "--json"]);
     assert_eq!(
@@ -522,8 +522,8 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
     // --- a database and an account for it ---------------------------------------------------------
     //
     // **Nothing here reads a credential**, which is the whole reason the proof that the account's
-    // password *works* is a step inside the daemon rather than an assertion here — roadmap task
-    // T77a, design D13. See this file's module note for what reading one costs on macOS.
+    // password *works* is a step inside the daemon rather than an assertion here. See this file's
+    // module note for what reading one costs on macOS.
     at("creating a database and an account for it");
     let created = expect(
         &home,
@@ -532,10 +532,10 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
     assert_eq!(created["made"]["database"], "created", "{created}");
     assert_eq!(created["made"]["user"], "created", "{created}");
     assert_eq!(created["secret"]["service"], "mixengine", "{created}");
-    // **And the key begins with this home's id** — roadmap task **T126**. Asserted by shape rather
-    // than by value, because the id is minted per home by `0001_initial.sql` and a suite that knew
-    // it would be reading the home's database to find out. What matters here is that it is there:
-    // without it this entry is the same one every other MIXENGINE_HOME on the machine writes to.
+    // **And the key begins with this home's id** (ADR 0032). Asserted by shape rather than by
+    // value, because the id is minted per home by `0001_initial.sql` and a suite that knew it would
+    // be reading the home's database to find out. What matters here is that it is there: without it
+    // this entry is the same one every other MIXENGINE_HOME on the machine writes to.
     let key = created["secret"]["key"].as_str().expect("an address");
     let (home_id, rest) = key.split_once('/').unwrap_or_default();
     assert_eq!(rest, "mysql@main/blog", "{created}");
@@ -552,7 +552,7 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
     );
 
     // **Asking twice changes nothing**, which is what makes a failed apply resumable rather than
-    // restartable — and what `blueprint.apply` will lean on in T78.
+    // restartable — and what `blueprint.apply` leans on.
     at("creating the same database a second time");
     let again = expect(
         &home,
@@ -588,9 +588,8 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
 
     // --- a chosen password ---------------------------------------------------------------------
     //
-    // Roadmap task **T77b**. Success against the real server *is* the proof the daemon stored and
-    // used exactly the password given — T77a's D13 reasoning, extended to a value nobody
-    // generated.
+    // Success against the real server *is* the proof the daemon stored and used exactly the
+    // password given — the reasoning above, extended to a value nobody generated.
     at("creating an account with a chosen password");
     let chosen = expect(
         &home,
@@ -762,8 +761,9 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
 
 /// Set the root password in this data directory to something MixEngine does not know.
 ///
-/// **The T126 collision, reproduced from the server's side rather than the keyring's** — the MariaDB
-/// suite's reasoning, and the same constraint about this suite never touching the credential store.
+/// **Two homes sharing one keyring entry, reproduced from the server's side rather than the
+/// keyring's** — the MariaDB suite's reasoning, and the same constraint about this suite never
+/// touching the credential store.
 ///
 /// `--skip-networking --init-file` is this route's own mechanism: a server that binds no network
 /// port, runs the statement it was given, and stops itself with the second one.
@@ -795,8 +795,8 @@ fn set_the_root_password_behind_mixengines_back(root: &Path, data: &Path, passwo
     );
 }
 
-/// **A credential nothing can produce any more is re-set by a command, and the databases are kept**
-/// — roadmap task **T127**.
+/// **A credential nothing can produce any more is re-set by a command, and the databases are
+/// kept.**
 ///
 /// MySQL's half, and it is a third mechanism rather than a second spelling of MariaDB's: this route
 /// sets the password with `ALTER USER` through an `--init-file`, where MariaDB writes the grant

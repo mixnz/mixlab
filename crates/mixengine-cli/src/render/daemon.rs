@@ -51,7 +51,7 @@ pub(crate) fn daemon_shutdown(shutdown: &DaemonShutdown) -> String {
     rendered
 }
 
-/// `mix daemon credential-store` — what was recorded, and when it applies (T194).
+/// `mix daemon credential-store` — what was recorded, and when it applies.
 pub(crate) fn credential_store_change(change: mixengine_proto::CredentialStoreChange) -> String {
     let word = |store| match store {
         mixengine_proto::CredentialStore::Os => "the system's credential store",
@@ -160,9 +160,9 @@ mod tests {
 
     #[test]
     fn a_service_that_would_not_stop_is_named_although_the_daemon_stopped_anyway() {
-        // T18's one failure: a survivor adopted from a previous daemon that will not die. The daemon
-        // goes regardless — refusing would leave a user with no way out — so the report is the whole
-        // of what tells them the port is still held.
+        // Crash recovery's one failure: a survivor adopted from a previous daemon that will not
+        // die. The daemon goes regardless — refusing would leave a user with no way out — so the
+        // report is the whole of what tells them the port is still held.
         let refused = DaemonShutdown {
             services: ServiceWalk {
                 planned: vec![id("db")],

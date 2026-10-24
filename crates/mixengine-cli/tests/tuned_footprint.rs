@@ -1,9 +1,9 @@
-//! What a dev-tuned database template saves — roadmap task **T73**, measured.
+//! What a dev-tuned database template saves, measured.
 //!
 //! `../features/resource-isolation.md` says the config templates are *"tuned down for a dev
-//! machine"*, and until T73 the database half of that sentence was not true: every number those
-//! templates rendered was the value the server would have used with no configuration file at all.
-//! This suite is what makes the claim checkable rather than asserted.
+//! machine"*, and until the templates were tuned the database half of that sentence was not true:
+//! every number those templates rendered was the value the server would have used with no
+//! configuration file at all. This suite is what makes the claim checkable rather than asserted.
 //!
 //! # The gate is a difference, not a number
 //!
@@ -53,8 +53,8 @@
 //! answer. The comparison is asserted **only in a release build**, on `idle_footprint.rs`' rule — a
 //! debug daemon is a different program. A debug run still measures and still prints.
 //!
-//! It needs a secret service for T33's reason: the MariaDB bootstrap refuses a machine with no
-//! credential store. Windows and macOS have one in the OS; on Linux the `bench` job installs
+//! It needs a secret service for `mariadb.rs`' reason: the MariaDB bootstrap refuses a machine with
+//! no credential store. Windows and macOS have one in the OS; on Linux the `bench` job installs
 //! `gnome-keyring` and wraps this command in a `dbus-run-session` of its own.
 
 mod harness;
@@ -249,7 +249,8 @@ fn index(packed: &Packed, url: &str, provides: serde_json::Map<String, Value>) -
     })
 }
 
-/// Everything T73 changes, put back to the value the server would have used on its own.
+/// Everything the tuned template changes, put back to the value the server would have used on its
+/// own.
 ///
 /// **Two routes, because the recipe has two kinds of value.** `innodb_buffer_pool_size` is a
 /// `Setting` and comes back through its own key; `key_buffer_size` and the log flush are stated by
@@ -308,7 +309,7 @@ fn server_log(home: &Home, service: &str) -> String {
 /// One reading of what this home is holding: every subject, and its `rss_bytes`.
 ///
 /// **Through `mix` rather than through the socket**, on `idle_footprint.rs`' rule: the number this
-/// gates should be the number a person can read for themselves, from T71's own sampler.
+/// gates should be the number a person can read for themselves, from the metrics sampler.
 fn subjects(home: &Home) -> Vec<(String, u64)> {
     let frame = json(&home.mix(&["metrics", "--json"]));
 

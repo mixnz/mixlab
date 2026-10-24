@@ -1,10 +1,9 @@
 //! `mix service idle` and `mix project keep-warm` against a real daemon.
 //!
-//! Roadmap task **T69**, and the half no unit test can reach: what a *person* is told. The
-//! arithmetic is asserted against a mock in the daemon's own `services::idle` tests and the reading
-//! against a fake server in `mixengine-supervisor`; what is asserted here is the thing those cannot
-//! be — that the four reasons a service stays running arrive on the screen as four different
-//! sentences.
+//! The idle sweep, and the half no unit test can reach: what a *person* is told. The arithmetic is
+//! asserted against a mock in the daemon's own `services::idle` tests and the reading against a
+//! fake server in `mixengine-supervisor`; what is asserted here is the thing those cannot be — that
+//! the four reasons a service stays running arrive on the screen as four different sentences.
 //!
 //! **The services are `fakeservice` rows**, so these are ignored in a release build for
 //! `tests/limits.rs`'s reason: that recipe is compiled into debug builds only.
@@ -108,8 +107,8 @@ fn a_duration_that_is_not_minutes_is_refused_before_the_daemon_is_asked() {
 
 /// A keep-warm project shows up as an exemption on the pool its site names.
 ///
-/// **The receipt for D9.** The service is not stopped while the project is warm, and the report
-/// says which project — because that is the thing a person has to go and change.
+/// **A warm project keeps its service.** The service is not stopped while the project is warm, and
+/// the report says which project — because that is the thing a person has to go and change.
 #[test]
 #[cfg_attr(
     not(debug_assertions),

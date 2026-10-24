@@ -1,4 +1,4 @@
-//! A PHP site, reached the way a person reaches one — roadmap task **T72a**.
+//! A PHP site, reached the way a person reaches one.
 //!
 //! **The first request in this repository that goes through the front end and comes back from PHP.**
 //! `caddy.rs` proves a rendering the server accepts and `php_fpm.rs` proves a pool that executes a
@@ -7,10 +7,10 @@
 //!
 //! # Why it exists now
 //!
-//! T72a renders `pm.status_path` into every pool file, so php-fpm publishes its own status page on
-//! the socket a site's traffic arrives on. What separates the two is a *name*: both front ends hand
-//! FastCGI only what matches `.php`, and the status path deliberately does not — so no URL can
-//! produce a `SCRIPT_NAME` equal to it.
+//! Every pool file carries `pm.status_path`, so php-fpm publishes its own status page on the socket
+//! a site's traffic arrives on. What separates the two is a *name*: both front ends hand FastCGI
+//! only what matches `.php`, and the status path deliberately does not — so no URL can produce a
+//! `SCRIPT_NAME` equal to it.
 //!
 //! **That was an argument, and this is the measurement.** It is the assertion that lets the pool file
 //! carry the directive at all: if a site can be asked for its pool's status page, the arrangement is
@@ -92,8 +92,8 @@ async fn a_site_cannot_be_asked_for_the_pools_status_page() {
     }
 }
 
-/// **T193b through the front end.** After its PHP is updated within its line, the site is served by
-/// the new version's pool.
+/// **An update, through the front end.** After its PHP is updated within its line, the site is
+/// served by the new version's pool.
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs a real Caddy and a real PHP — see the module note, and the `caddy` and `php` steps in _services.yml"]
 async fn a_site_is_still_served_after_its_php_is_updated() {
@@ -185,8 +185,7 @@ filesystem = ["own-data"]
     directory
 }
 
-/// **A web-app is served on its first request, and again after a reinstall** — roadmap task
-/// **T200**, D1 and D2.
+/// **A web-app is served on its first request, and again after a reinstall.**
 ///
 /// The person who installed Adminer got MixEngine's starting page instead, because nothing could
 /// wake the pool the install had just created. This is that path with a real Caddy and a real PHP:

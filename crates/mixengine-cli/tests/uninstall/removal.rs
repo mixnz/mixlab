@@ -5,9 +5,9 @@ use super::*;
 /// `--keep-home` undoes what is outside the home, leaves the home, and ends the daemon.
 ///
 /// **Nothing outside the home is asserted to have gone.** What is proved is the half this flag is
-/// for — the home survives — and the half T182 changed: a finished uninstall ends the daemon
-/// whatever was kept, because a kept home is no reason to go on serving a machine that has just been
-/// told to forget it (the T182 design, D1).
+/// for — the home survives — and the half the Windows uninstaller changed: a finished uninstall
+/// ends the daemon whatever was kept, because a kept home is no reason to go on serving a machine
+/// that has just been told to forget it.
 #[tokio::test(flavor = "multi_thread")]
 async fn keeping_the_home_leaves_the_home_and_ends_the_daemon() {
     let home = Home::new();
@@ -56,8 +56,8 @@ async fn a_complete_uninstall_takes_the_home_and_the_daemon_with_it() {
 
     let printed = home.mix(&["uninstall", "--yes"]);
 
-    // T182b, D8: `mix` returns only once the daemon's process has ended — not merely its endpoint,
-    // which goes quiet while the daemon is still removing the home and its image still mapped.
+    // `mix` returns only once the daemon's process has ended — not merely its endpoint, which goes
+    // quiet while the daemon is still removing the home and its image still mapped.
     assert_eq!(
         mixengine_platform::process::started_at(pid).ok().flatten(),
         None,
@@ -91,10 +91,10 @@ async fn a_complete_uninstall_takes_the_home_and_the_daemon_with_it() {
 
 /// The same, for a daemon `mix` autostarted — which is the daemon every real machine has.
 ///
-/// **T182b, found on the first real Windows uninstall.** An autostarted daemon is started with its
-/// home as its working directory, and Windows will not rename a directory a process is standing in,
-/// the daemon's own included: every such uninstall kept the home and exited non-zero. The test
-/// above never saw it, because a daemon this suite starts itself stands somewhere else.
+/// **Found on the first real Windows uninstall.** An autostarted daemon is started with its home as
+/// its working directory, and Windows will not rename a directory a process is standing in, the
+/// daemon's own included: every such uninstall kept the home and exited non-zero. The test above
+/// never saw it, because a daemon this suite starts itself stands somewhere else.
 #[tokio::test(flavor = "multi_thread")]
 async fn an_autostarted_daemon_takes_its_home_with_it() {
     let home = Home::new();
@@ -143,7 +143,7 @@ async fn answering_no_removes_nothing_and_is_not_a_failure() {
 /// The name the round trip's site answers to, and what finds this home's hosts block.
 const SITE: &str = "uninstall-smoke.test";
 
-/// The clean-machine round trip — roadmap task **T87**, and the smoke test the task asks for.
+/// The clean-machine round trip, and the smoke test the uninstall feature asks for.
 ///
 /// **A fresh CI runner is the clean VM.** It has never had MixEngine on it, so everything
 /// [`machine::reading`] finds after a grant is what MixEngine put there and nothing else.
@@ -228,7 +228,7 @@ async fn nothing_of_ours_is_left_on_this_machine() {
     // **It is the grant's own record and not the length of the queue**, which was this predicate's
     // first draft and was wrong on the one runner where everything worked: a flush that succeeded
     // reconciles the hosts block immediately afterwards, so the queue is refilled a moment later by
-    // design (`Elevation::flush`, D8) and a run that applied everything reads as one that applied
+    // design (`Elevation::flush`) and a run that applied everything reads as one that applied
     // nothing. What settles it is what the grant reported about itself.
     let waiting = json(&home.mix(&["elevation", "status", "--json"]));
     let applied = waiting["last"]["outcome"] == "completed"

@@ -1,10 +1,10 @@
 //! `mix daemon stop` against a real daemon, with a real service under it.
 //!
-//! Task **T9a**, and the reason it is an end-to-end test rather than a unit one: everything below
-//! the client is proved where it lives — the handler stops the services before it cancels anything,
-//! the budget bounds the sum — and what none of that proves is that a person typing three words is
-//! left with no daemon. That claim is about a process ending, so nothing here is mocked and the
-//! assertion is `Daemon::wait_until_gone`.
+//! The reason it is an end-to-end test rather than a unit one: everything below the client is
+//! proved where it lives — the handler stops the services before it cancels anything, the budget
+//! bounds the sum — and what none of that proves is that a person typing three words is left with
+//! no daemon. That claim is about a process ending, so nothing here is mocked and the assertion is
+//! `Daemon::wait_until_gone`.
 //!
 //! **The ones that declare a service are ignored in a release build**, for the reason `service.rs`
 //! gives at length: the only recipe a `fakeservice` row can be rendered by is compiled into debug
@@ -23,9 +23,9 @@ use mixengine_testkit::Service;
 /// Break the one service this home declares, the way a person editing overrides breaks it.
 ///
 /// A setting no recipe has is **refused** rather than ignored, so the daemon can no longer say what
-/// this home declares — which is the case T9a decided a daemon still stops for, and the one where an
-/// empty walk is a lie rather than merely terse. What makes this work at all is that the generator
-/// reads the row on every call instead of at startup.
+/// this home declares — which is a case the shutdown budget still stops a daemon for, and the one
+/// where an empty walk is a lie rather than merely terse. What makes this work at all is that the
+/// generator reads the row on every call instead of at startup.
 fn misconfigured(home: &Home, id: &str) {
     mixengine_testkit::declare::reconfigure_blocking(
         &home.database_file(),
@@ -117,8 +117,7 @@ fn stopping_a_daemon_that_is_running_reads_as_one_sentence_about_the_daemon() {
     );
 }
 
-/// **The shutdown T9a decided still happens, and the half of it that used to go only to
-/// `daemon.log`.**
+/// **The shutdown that still happens, and the half of it that used to go only to `daemon.log`.**
 ///
 /// The daemon cannot say what it declares, so there is no order to stop anything in; it stops all
 /// the same, because refusing over an override somebody mistyped would leave them a daemon they can
@@ -146,9 +145,8 @@ fn a_shutdown_nobody_could_order_says_so_in_json_rather_than_reading_as_a_quiet_
         serde_json::json!([]),
         "no order could be worked out, so nothing was planned: {answer}"
     );
-    // `invalid_argument` and not `internal`: since T30 the daemon knows the difference between a
-    // generator that failed for its own reasons and a setting a person misspelled, and it is the
-    // second here.
+    // `invalid_argument` and not `internal`: the daemon knows the difference between a generator
+    // that failed for its own reasons and a setting a person misspelled, and it is the second here.
     assert_eq!(answer["unordered"]["code"], "invalid_argument", "{answer}");
     assert!(
         answer["unordered"]["message"]
@@ -234,10 +232,10 @@ fn stopping_a_daemon_that_is_not_running_does_not_start_one_to_stop_it() {
     );
 }
 
-/// **The home remembers its store** — roadmap task T194, D1. A development build defaults to the
-/// file; once `os` is recorded, a start with no flag runs on `os`. `MIXENGINE_CREDENTIAL_STORE` is
-/// removed from both daemons' environment, because CI sets it for the whole run and this test is
-/// about what the home says, not what the environment says.
+/// **The home remembers its store.** A development build defaults to the file; once `os` is
+/// recorded, a start with no flag runs on `os`. `MIXENGINE_CREDENTIAL_STORE` is removed from both
+/// daemons' environment, because CI sets it for the whole run and this test is about what the home
+/// says, not what the environment says.
 #[test]
 fn a_recorded_store_outlives_the_daemon_that_recorded_it() {
     let home = Home::new();

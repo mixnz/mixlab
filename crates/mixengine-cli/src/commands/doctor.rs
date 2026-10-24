@@ -18,7 +18,7 @@ use crate::commands::elevation::{
 use crate::output::{emit, rendered};
 use crate::render;
 
-/// `mix doctor` — roadmap task **T47a**.
+/// `mix doctor`: what is wrong with this home, with the exit code saying whether anything is.
 pub(crate) async fn doctor(
     endpoint: &Endpoint,
     autostart: Option<&Autostart>,
@@ -44,7 +44,7 @@ pub(crate) async fn doctor(
     })
 }
 
-/// `mix doctor --bundle` — roadmap task **T93**.
+/// `mix doctor --bundle`: an archive to attach to a bug report.
 ///
 /// **This one exits zero when the archive was written**, unlike bare `mix doctor`, whose exit code
 /// is the report. The deliverable of this command is the file: a bundle is taken *because*
@@ -91,13 +91,14 @@ pub(crate) async fn bundle(
     Ok(ExitCode::SUCCESS)
 }
 
-/// `mix doctor --repair` — roadmap task **T47b**.
+/// `mix doctor --repair`: fix what the report found.
 ///
-/// **Two calls, and T64 is the reason.** The first repairs what needs no privilege and *queues* what
-/// does; then the batch is read, shown and answered before the second raises the prompt — which is
-/// the rule `mix elevation grant` obeys, over the same queue, for the same reason. `--yes` collapses
-/// the two into one call by saying so on the command line, which is a person answering in advance
-/// rather than a client skipping the question.
+/// **Two calls, because what is about to be allowed is shown before it is allowed.** The first
+/// repairs what needs no privilege and *queues* what does; then the batch is read, shown and
+/// answered before the second raises the prompt — which is the rule `mix elevation grant` obeys,
+/// over the same queue, for the same reason. `--yes` collapses the two into one call by saying so
+/// on the command line, which is a person answering in advance rather than a client skipping the
+/// question.
 pub(crate) async fn self_repair(
     endpoint: &Endpoint,
     autostart: Option<&Autostart>,

@@ -11,7 +11,7 @@ use crate::client::{Client, ask};
 use crate::output::emit;
 use crate::{autostart, render};
 
-/// `mix storage`: where this home's growing directories are — roadmap task **T145**.
+/// `mix storage`: where this home's growing directories are.
 ///
 /// **Neither asynchronous nor connected**, which is what makes it the odd one in
 /// [`run`](crate::run)'s match.

@@ -50,7 +50,7 @@ pub(crate) enum AutostartCommand {
     },
 }
 
-/// `mix autostart …`: one call, one rendering — roadmap task **T85b**.
+/// `mix autostart …`: one call, one rendering.
 ///
 /// No exit code of its own, on `mix path`'s rule: each of these either did what it said or failed
 /// outright, and a machine with no mechanism at all is something to report rather than a failure of

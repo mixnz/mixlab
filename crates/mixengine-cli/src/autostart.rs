@@ -11,16 +11,16 @@
 //! current-thread runtime with no other task pending is exactly the wait we want and is one fewer
 //! moving part than a `tokio::process` child polled by a runtime that has nothing else to do.
 //!
-//! **Reading that child to end-of-file needs one thing arranged first, and it is not obvious.**
-//! Roadmap task T9 found that a daemon started with `--detach` inherited the pipe its caller's
-//! stdout was on, and fixed it inside `spawn_detached` — which is one copy too late for the caller
-//! *this* module is. Inheritance on Windows is transitive: `mix`'s own stdout reaches
+//! **Reading that child to end-of-file needs one thing arranged first, and it is not obvious.** A
+//! daemon started with `--detach` once inherited the pipe its caller's stdout was on, and the
+//! daemon fixed that inside `spawn_detached` — which is one copy too late for the caller *this*
+//! module is. Inheritance on Windows is transitive: `mix`'s own stdout reaches
 //! `mixengined --detach` the moment it is spawned, and that process passes it on to the daemon
 //! before `spawn_detached` gets a say. Whatever is reading `mix` — a shell script, `cargo test`,
 //! the GUI — then waits for an end-of-file that arrives when the daemon exits, days later. So the
 //! spawn below is wrapped in [`process::hide_stdio_from_children`], which is `mix` declining to
-//! hand on what it was handed. Found exactly the way T9's was: as a `mix status` that returned
-//! promptly and a test that never did.
+//! hand on what it was handed. Found exactly the way the daemon's copy was: as a `mix status` that
+//! returned promptly and a test that never did.
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -113,7 +113,7 @@ impl Autostart {
     }
 }
 
-/// Run the daemon binary once and hand back what it printed — roadmap task **T145**.
+/// Run the daemon binary once and hand back what it printed.
 ///
 /// **The other half of this module, and the reason it is here rather than beside the command that
 /// wants it.** `mix storage` asks where a home's directories are, which is a question about rows in
@@ -252,7 +252,7 @@ mod tests {
             .expect_err("there is no binary by that name");
 
         // `dependency_missing` and not `process_failed`: nothing ran, and the way out is an
-        // install rather than a repair. The GUI turns this code into an offer to install (T66).
+        // install rather than a repair.
         assert_eq!(error.code, ErrorCode::DependencyMissing);
         assert!(
             error

@@ -21,7 +21,7 @@ pub(super) fn ago(Timestamp(happened): Timestamp, now: SystemTime) -> String {
     }
 }
 
-/// How long until something happens, from this machine's clock — roadmap task **T76**.
+/// How long until something happens, from this machine's clock.
 ///
 /// [`ago`]'s mirror, sharing [`units`] with it so that "in 1h 58m" and "1h 58m ago" round the same
 /// way. A moment already gone reads as `any moment now` rather than as a negative wait: the loop

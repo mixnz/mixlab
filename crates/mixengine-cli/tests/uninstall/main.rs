@@ -1,4 +1,4 @@
-//! `mix uninstall` against a real daemon — roadmap task **T87**.
+//! `mix uninstall` against a real daemon.
 //!
 //! **The unignored half of this file may never remove anything from the machine running it.** Every
 //! test here runs on somebody's own workstation, so what is proved without `--ignored` is the plan,
@@ -44,7 +44,7 @@ fn needs_an_administrator(home: &Home) -> bool {
         .expect("rows")
         .iter()
         .filter(|row| row["outcome"]["removal"] == "planned")
-        // T182d: this user's credential store needs no administrator either.
+        // This user's credential store needs no administrator either.
         .filter(|row| {
             !matches!(
                 row["id"].as_str(),

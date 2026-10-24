@@ -4,7 +4,7 @@ use super::size::size;
 use super::table::table;
 use mixengine_proto::{Cleanup, CleanupReport, DiskUsage, Reclaim};
 
-/// `daemon.disk_usage`, as a person reads it — roadmap task **T96**.
+/// `daemon.disk_usage`, as a person reads it.
 ///
 /// **Every row carries what would take it back**, because the question somebody has when they look
 /// at a disk table is not *how big* but *what can I do about it* — and four of the five rows have a
@@ -72,7 +72,7 @@ fn reclaim(reclaim: &Reclaim) -> String {
     }
 }
 
-/// `daemon.cleanup`, as a person reads it — roadmap task **T96**.
+/// `daemon.cleanup`, as a person reads it.
 ///
 /// **Every row, whatever it answered**, on [`uninstall_report`]'s rule: a report that printed only
 /// what it removed would leave somebody unable to tell *"there were no rotated log files"* from
@@ -124,7 +124,7 @@ mod tests {
 
     use super::*;
 
-    /// T96. Every row says what would take it back, so a person reading the table never has to know
+    /// Every row says what would take it back, so a person reading the table never has to know
     /// which of five directories is safe to empty.
     #[test]
     fn the_disk_table_says_what_would_reclaim_each_row() {
@@ -172,7 +172,7 @@ mod tests {
         assert!(rendered.contains("\ntotal     800 MiB\n"), "{rendered}");
     }
 
-    /// T96. A category that could only be read in part says so in the table, not only in the JSON: a
+    /// A category that could only be read in part says so in the table, not only in the JSON: a
     /// figure that is a floor and reads as a total is the one thing this must not do.
     #[test]
     fn an_unreadable_category_says_so_in_the_table() {
@@ -201,8 +201,8 @@ mod tests {
         );
     }
 
-    /// T96. A row appears whatever it answered, so a person can tell "there were no rotated logs"
-    /// from "the logs were not looked at" — `uninstall_report`'s rule, and its reason.
+    /// A row appears whatever it answered, so a person can tell "there were no rotated logs" from
+    /// "the logs were not looked at" — `uninstall_report`'s rule, and its reason.
     #[test]
     fn a_cleanup_prints_every_row_and_ends_on_the_total() {
         let report = CleanupReport {
@@ -236,7 +236,7 @@ mod tests {
         assert!(rendered.contains("took back 90 MiB"), "{rendered}");
     }
 
-    /// T96. A file that would not go is named, because a total that quietly excluded it would be a
+    /// A file that would not go is named, because a total that quietly excluded it would be a
     /// cleanup somebody runs twice wondering why the number never moves.
     #[test]
     fn a_partial_cleanup_says_what_would_not_go() {

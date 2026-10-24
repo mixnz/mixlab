@@ -42,14 +42,14 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
         rendered.push_str(&format!("  {label:9} {value}\n"));
     }
 
-    // **The names line, and it is one line whichever mechanism is running** — roadmap task T44.
+    // **The names line, and it is one line whichever mechanism is running.**
     // The mode alone is not the sentence somebody needs: what a hosts-only home loses is wildcards,
     // and what it wants to know is why, so both travel with it.
     if let Some(dns) = &status.dns {
         rendered.push_str(&match dns.mode {
-            // The TLDs are named rather than counted, because from T45 on a home can have wildcards
-            // for some of its names and not others — `.local` is never routed — and "wildcards work"
-            // would be true and useless to somebody whose `.local` site had just stopped resolving.
+            // The TLDs are named rather than counted, because a home can have wildcards for some of
+            // its names and not others — `.local` is never routed — and "wildcards work" would be
+            // true and useless to somebody whose `.local` site had just stopped resolving.
             DnsMode::Dns => format!(
                 "  names     DNS on {}, wildcards for {}\n",
                 dns.listening.as_deref().unwrap_or("loopback"),
@@ -65,8 +65,8 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
         });
     }
 
-    // Which store the passwords are in — roadmap task T194. Absent from a daemon that predates it,
-    // and then no line is invented.
+    // Which store the passwords are in. Absent from a daemon that predates it, and then no line is
+    // invented.
     if let Some(credentials) = &status.credentials {
         rendered.push_str(match credentials.store {
             mixengine_proto::CredentialStore::Os => "  passwords the system's credential store\n",
@@ -93,9 +93,9 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
         }
     }
 
-    // **One line when there is an update, and nothing at all when there is not** — roadmap task
-    // **T88**. Everything else about it is `update.status`, which is a screen; this is a status line,
-    // and what makes it worth one is that nothing else in the product would ever mention it.
+    // **One line when there is an update, and nothing at all when there is not.** Everything else
+    // about it is `update.status`, which is a screen; this is a status line, and what makes it
+    // worth one is that nothing else in the product would ever mention it.
     if let Some(update) = &status.update {
         rendered.push_str(&format!(
             "  update    MixEngine {} is available; `mix self-update` shows what changed\n",
@@ -107,10 +107,10 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
     // were — but the explanation for a `mix` that has a command the daemon answers `not_found` to,
     // and for whichever lines above that daemon was too old to fill in.
     //
-    // **Reachable, from T88c on.** It was written for this skew and tested for it, and until
-    // `elevation` and `dns` became optional the answer did not deserialise — so the one thing that
-    // explained the situation was the one thing that could not be printed. See ADR 0019,
-    // `docs/decisions/0019-an-added-response-member-is-optional.md`.
+    // **Reachable.** It was written for this skew and tested for it, and until `elevation` and
+    // `dns` became optional the answer did not deserialise
+    // — so the one thing that explained the situation was the one thing that could not be printed.
+    // See ADR 0019, `docs/decisions/0019-an-added-response-member-is-optional.md`.
     //
     // One note and not two: a status somebody reads daily earns at most one, and in the only case
     // where both halves apply the second is the explanation of the first.
@@ -154,9 +154,9 @@ pub(crate) fn status(status: &DaemonStatus) -> String {
 /// captured diagnostic.
 ///
 /// **Verbatim includes what is not there.** A member an older daemon predates is absent from this
-/// object rather than `null` or defaulted — `.daemon.dns` and `.daemon.elevation` from **T88c**,
-/// `.daemon.update` from T88 — which is the honest encoding of a fact nobody reported, and what
-/// `jq` should be asked about with `//` rather than indexed into.
+/// object rather than `null` or defaulted — `.daemon.dns`, `.daemon.elevation` and `.daemon.update`
+/// among them — which is the honest encoding of a fact nobody reported, and what `jq` should be
+/// asked about with `//` rather than indexed into.
 pub(crate) fn status_json(status: &DaemonStatus) -> serde_json::Value {
     serde_json::json!({
         "client": client(),
@@ -243,8 +243,7 @@ mod tests {
         }
     }
 
-    /// T194: `mix status` names the store when the daemon says, and invents nothing when it does
-    /// not — Review Focus 5.
+    /// `mix status` names the store when the daemon says, and invents nothing when it does not.
     #[test]
     fn status_names_the_credential_store_when_the_daemon_says() {
         let told = DaemonStatus {
@@ -265,7 +264,7 @@ mod tests {
         assert!(!rendered.contains("  passwords "), "{rendered}");
     }
 
-    /// `mix status` gains one line when an update is offered — roadmap task **T88**.
+    /// `mix status` gains one line when an update is offered.
     #[test]
     fn status_names_the_version_that_is_waiting() {
         let offered = DaemonStatus {
@@ -325,10 +324,11 @@ mod tests {
         assert!(!status(&example()).contains("note"));
     }
 
-    /// A daemon from before `elevation` and `dns` existed — roadmap task **T88c**.
+    /// A daemon from before `elevation` and `dns` existed.
     ///
-    /// **The point is that this renders at all.** Until T88c the answer did not deserialise, so the
-    /// note below — written for exactly this skew, and tested above — could never reach anybody.
+    /// **The point is that this renders at all.** Until those two members became optional the
+    /// answer did not deserialise, so the note below — written for exactly this skew, and tested
+    /// above — could never reach anybody.
     ///
     /// What is *not* printed matters as much: no `names` line invented from a default, which would
     /// state that `api.blog.test` does not resolve on the word of a daemon that said nothing.

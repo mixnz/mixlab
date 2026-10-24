@@ -150,8 +150,8 @@ impl Client {
     ///
     /// **The one thing `mix` waits for that is not an answer.** `mix uninstall` removes the home as
     /// its very last act *after* this process has gone, so the client cannot read back what is left
-    /// until it has — and reading a moment early would report every path as left behind on a machine
-    /// where nothing was (the T87 design, D9).
+    /// until it has — and reading a moment early would report every path as left behind on a
+    /// machine where nothing was.
     ///
     /// Answers whether it is actually gone, so a caller can say which of the two happened rather
     /// than assuming.
@@ -712,10 +712,11 @@ mod tests {
         assert_eq!(daemon.connections(), 1);
     }
 
-    /// The daemon closes a connection that sends no request for `DAEMON_IDLE_TIMEOUT`, and a
-    /// person reading a consent prompt takes longer than that: `mix self-update` answered "Broken
-    /// pipe" to the *i* typed after 35 seconds (the T88f check by hand). So a call after that long
-    /// an idle dials again before it sends, rather than writing into a socket the daemon has shut.
+    /// The daemon closes a connection that sends no request for `DAEMON_IDLE_TIMEOUT`, and a person
+    /// reading a consent prompt takes longer than that: `mix self-update` answered "Broken pipe" to
+    /// the *i* typed after 35 seconds, while a `.pkg` update was checked by hand. So a call after
+    /// that long an idle dials again before it sends, rather than writing into a socket the daemon
+    /// has shut.
     #[tokio::test]
     async fn a_call_after_an_idle_the_daemon_would_have_ended_dials_again() {
         let daemon = FakeDaemon::serve();

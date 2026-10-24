@@ -542,7 +542,7 @@ mix site create [OPTIONS]
 | `--files` `<PATH=DIR>` | Serve a path prefix from a directory: `/assets=dist`. The prefix is stripped. Repeatable |
 | `--no-routes` | Remove every route this site has |
 | `--service` `<SERVICE>` | A service the site declares, as `mariadb@main`. May be given more than once |
-| `--https` `<HTTPS>` | Declare HTTPS for it. Phase 5 is what acts on this |
+| `--https` `<HTTPS>` | Serve it over HTTPS too, with a certificate from this home's own authority |
 | `--https-redirect` `<HTTPS_REDIRECT>` | Redirect the plaintext address to the HTTPS one. Needs `--https true` |
 | `--i-know` | Accept a `.local` domain, which belongs to mDNS |
 
@@ -1687,12 +1687,7 @@ mix cert <COMMAND>
 
 ### mix cert issue
 
-Say what this home's certificate authority is: its name, its fingerprint, how long it has.
-
-**Not whether this machine trusts it.** That is a question about the operating system's own
-certificate stores rather than about the authority, this build does not yet ask it, and nothing
-printed here implies an answer to it. Give a site the certificate its names need, or every HTTPS
-site one.
+Give a site the certificate its names need, or every HTTPS site one.
 
 Idempotent: a certificate that still covers the right names, has more than thirty days left and was
 signed by the authority this home has now is left exactly as it is.
@@ -1724,6 +1719,11 @@ mix cert status [OPTIONS]
 | `--site` `<DOMAIN>` | One site, by any of its domains. Every site when this is left out |
 
 ### mix cert ca-status
+
+Say what this home's certificate authority is, and where this machine trusts it.
+
+Its name, its fingerprint and how long it has, then whether the system's certificate store trusts it
+and which browser databases hold it.
 
 ```
 mix cert ca-status

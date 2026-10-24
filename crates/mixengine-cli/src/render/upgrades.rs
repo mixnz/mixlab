@@ -1,10 +1,10 @@
-//! What an update will do or did, for a runtime and a package alike — roadmap task **T193b**.
+//! What an update will do or did, for a runtime and a package alike.
 
 use super::prerequisites::requirements;
 use super::size::size;
 use mixengine_proto::{OldVersion, UpgradeItem, UpgradeOutcome, UpgradePlan};
 
-/// What an update will do or did, for a person — roadmap tasks **T193b** and **T193c**, D7.
+/// What an update will do or did, for a person.
 ///
 /// **One rendering for the plan and for the result**, as the type is one: each line gains how it
 /// went once the job has run.

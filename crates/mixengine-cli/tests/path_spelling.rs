@@ -1,5 +1,4 @@
-//! Roadmap task **T191**: every path `mix --json` hands a person is spelled the way this system
-//! spells one.
+//! Every path `mix --json` hands a person is spelled the way this system spells one.
 //!
 //! One test for the rule rather than one per field, so a field added later cannot bring the mixed
 //! spelling back (`C:\…\data/mariadb`) without failing here. It is meaningful on Windows only,

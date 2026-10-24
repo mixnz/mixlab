@@ -16,7 +16,7 @@ use crate::jobs::follow;
 use crate::output::{emit, rendered};
 use crate::{confirm, render};
 
-/// `mix disk` — roadmap task **T96**.
+/// `mix disk`: what this home's directories take up, by category.
 ///
 /// **`refresh: true`, always.** The daemon keeps a reading for a minute so that a dashboard
 /// re-reading on every event does not walk `runtimes/` each time; somebody who typed a command is
@@ -41,11 +41,11 @@ pub(crate) async fn disk(
     Ok(ExitCode::SUCCESS)
 }
 
-/// `mix cleanup` — roadmap task **T96**.
+/// `mix cleanup`: remove what is safe to lose, after showing how much it is.
 ///
 /// **What is about to go is read and shown first**, on `mix uninstall`'s rule: `daemon.disk_usage`
 /// is the plan half of this pair, and a command that deleted before anybody had seen the number
-/// would be the *"measured and deleted in one breath"* T96 exists to refuse.
+/// would be the *"measured and deleted in one breath"* this pair exists to refuse.
 pub(crate) async fn cleanup(
     endpoint: &Endpoint,
     autostart: Option<&Autostart>,
@@ -122,7 +122,7 @@ pub(crate) async fn cleanup(
     })
 }
 
-/// Ask, once, in front of the table that was just printed — roadmap task **T96**.
+/// Ask, once, in front of the table that was just printed.
 ///
 /// **Nothing to take is a yes.** A command that asked *"remove nothing?"* would be one people learn
 /// to answer without reading, which is the habit the question exists to prevent.

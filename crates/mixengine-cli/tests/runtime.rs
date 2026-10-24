@@ -1,6 +1,6 @@
 //! `mix runtime` and `mix job` against a real daemon, a real signed index and a real archive.
 //!
-//! Roadmap task **T23**'s client half. What the daemon's own `tests/runtimes.rs` proves is that the
+//! The client half of `runtime.*`. What the daemon's own `tests/runtimes.rs` proves is that the
 //! methods do what they say; what is proved here is the part that is only true of `mix` — that the
 //! two arguments a person types reach the right method, that an install *waits* by default and ends
 //! with an exit status a shell can branch on, and that both renderings say what happened.
@@ -175,8 +175,8 @@ async fn a_runtime_this_build_does_not_manage_is_refused_before_anything_is_dial
     );
 }
 
-/// **T24's client half.** What is only true of `mix` here is the pair the daemon cannot know: the
-/// directory it was run in, and `MIXENGINE_PHP`.
+/// **`runtime.resolve`'s client half.** What is only true of `mix` here is the pair the daemon
+/// cannot know: the directory it was run in, and `MIXENGINE_PHP`.
 #[tokio::test(flavor = "multi_thread")]
 async fn resolving_sends_the_directory_it_was_run_in_and_the_variable_it_was_given() {
     let fixture = Fixture::start().await;
@@ -332,8 +332,8 @@ async fn refresh_reaches_the_daemon_from_the_command_line() {
     );
 }
 
-/// **T182f.** `mix runtime adopt` reaches `runtime.adopt`: a version recorded answers its row, and
-/// one that is not on disk says so and names the install.
+/// `mix runtime adopt` reaches `runtime.adopt`: a version recorded answers its row, and one that is
+/// not on disk says so and names the install.
 #[tokio::test(flavor = "multi_thread")]
 async fn adopt_reaches_the_daemon_from_the_command_line() {
     let fixture = Fixture::start().await;
@@ -353,8 +353,8 @@ async fn adopt_reaches_the_daemon_from_the_command_line() {
     );
 }
 
-/// **T182i.** `mix runtime found` and `mix package found` reach the daemon: a home with nothing left
-/// on disk lists nothing, in both renderings.
+/// `mix runtime found` and `mix package found` reach the daemon: a home with nothing left on disk
+/// lists nothing, in both renderings.
 #[tokio::test(flavor = "multi_thread")]
 async fn found_reaches_the_daemon_from_the_command_line() {
     let fixture = Fixture::start().await;
@@ -368,7 +368,7 @@ async fn found_reaches_the_daemon_from_the_command_line() {
     }
 }
 
-/// Two patches of one line, the same archive under both — roadmap task **T193**.
+/// Two patches of one line, the same archive under both.
 fn two_patches(packed: &Packed, url: &str) -> Value {
     let mut published = index(packed, url);
     // An update renders the pool before it moves anything, and a pool renders only for an install
@@ -387,8 +387,8 @@ fn two_patches(packed: &Packed, url: &str) -> Value {
     published
 }
 
-/// **T193a and T193b through `mix`.** The listing names the update with its command, the plan is
-/// printed before anything happens, and `--yes` runs it to the end.
+/// **An update through `mix`.** The listing names the update with its command, the plan is printed
+/// before anything happens, and `--yes` runs it to the end.
 #[tokio::test(flavor = "multi_thread")]
 async fn an_update_is_listed_planned_and_applied_from_the_command_line() {
     let fixture = Fixture::start_with(two_patches).await;

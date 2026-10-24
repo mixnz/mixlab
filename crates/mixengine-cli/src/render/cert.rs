@@ -6,7 +6,7 @@ use mixengine_proto::{
     RotateOutcome, Trust, UninstallOutcome, Unusable, Verdict,
 };
 
-/// `mix cert issue`, for a person — roadmap task **T50**.
+/// `mix cert issue`, for a person.
 ///
 /// **A line per site and never a count.** "3 certificates issued" is a number nobody can act on;
 /// the domain is what somebody opens in a browser, and the reason a refusal gives is the only part
@@ -30,8 +30,8 @@ pub(crate) fn cert_issue(report: &CertIssueReport) -> String {
                 "  {}  unchanged: {} days left\n",
                 site.domain, cert.days_left
             ),
-            // Roadmap task **T52**: a site that declares no HTTPS asked for nothing, and printing
-            // it as "not issued" reads as a fault where there is none.
+            // `IssueOutcome::NotWanted`: a site that declares no HTTPS asked for nothing, and
+            // printing it as "not issued" reads as a fault where there is none.
             (IssueOutcome::NotWanted { because }, _) => {
                 format!("  {}  nothing to do: {because}\n", site.domain)
             }
@@ -45,7 +45,7 @@ pub(crate) fn cert_issue(report: &CertIssueReport) -> String {
         .collect()
 }
 
-/// `mix cert status`, for a person — roadmap task **T53**.
+/// `mix cert status`, for a person.
 ///
 /// **The command to run is written here and not by the daemon.** The answer carries a
 /// [`CertProblem`], which is a name for a condition; turning that into `mix cert issue --site …` is
@@ -145,11 +145,11 @@ fn advice(domain: &str, problem: CertProblem) -> String {
 
 /// `mix cert ca-status`, for a person.
 ///
-/// **The trust line prints what the daemon said and never a word more.** T48 left it off entirely,
-/// because there was no such fact in the answer and a line implying one would be the client
-/// inventing something — `CLAUDE.md`'s "a client only renders what the daemon returns". T49a put the
-/// fact in the answer, including the case where the daemon could not find out, which prints as
-/// exactly that rather than as "no".
+/// **The trust line prints what the daemon said and never a word more.** The first version of this
+/// command left it off entirely, because there was no such fact in the answer and a line implying
+/// one would be the client inventing something — `CLAUDE.md`'s "a client only renders what the
+/// daemon returns". The answer carries it now, including the case where the daemon could not find
+/// out, which prints as exactly that rather than as "no".
 ///
 /// **And it says which store**, because "trusted" and "in this machine's own store, for every
 /// account on it" are different claims and only the second is what happened.
@@ -202,7 +202,7 @@ pub(crate) fn ca_status(status: &CaStatus) -> String {
     rendered
 }
 
-/// `mix cert ca-rotate` — roadmap task **T54**.
+/// `mix cert ca-rotate`, for a person.
 ///
 /// **What is left comes from the status, because that is the measurement**; the outcome supplies the
 /// reason a measurement cannot give.
@@ -215,9 +215,9 @@ pub(crate) fn ca_rotate(report: &CaRotateReport) -> String {
             );
 
             // **The one thing a rotation can leave behind and not otherwise mention.** A previous
-            // authority that could not be read cannot be named for removal — T49a's D5 forbids
-            // guessing — so the old certificate is still in the store, and saying nothing here
-            // would read as a clean rotation.
+            // authority that could not be read cannot be named for removal — nothing is removed
+            // from a trust store by guesswork — so the old certificate is still in the store, and
+            // saying nothing here would read as a clean rotation.
             if report.previous.is_none() {
                 said.push_str(
                     "the previous certificate was left in this machine's trust store: it could not\nbe read, and nothing is removed that cannot be named\n",
@@ -245,7 +245,7 @@ pub(crate) fn ca_rotate(report: &CaRotateReport) -> String {
     rendered
 }
 
-/// `mix cert ca-uninstall` — roadmap task **T54**.
+/// `mix cert ca-uninstall`, for a person.
 ///
 /// **What is left comes from the status, because that is the measurement**; the outcome supplies the
 /// reason a measurement cannot give. So the two halves cannot disagree: there is only one reading.
@@ -292,7 +292,7 @@ fn browser(database: &BrowserDatabase) -> String {
     )
 }
 
-/// The authority itself, which is the half T48 built.
+/// The authority itself: the half of the status about this home rather than this machine.
 fn certificate(state: &CaState) -> String {
     match state {
         // Reachable, and worth a sentence rather than an empty screen: a start whose generation
@@ -344,7 +344,7 @@ fn certificate(state: &CaState) -> String {
 }
 
 /// Each way of being unusable, in a sentence. **Not what to do about it**: the reason is a fact
-/// about this home, and the remedy is `mix cert ca-rotate`, which T54 builds.
+/// about this home, and the remedy is `mix cert ca-rotate`.
 fn unusable(because: Unusable) -> &'static str {
     match because {
         Unusable::KeyMissing => "the certificate is here and its private key is not",

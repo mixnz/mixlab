@@ -84,7 +84,7 @@ pub(crate) enum SiteCommand {
         #[arg(long = "service", value_name = "SERVICE", value_parser = service_id)]
         services: Vec<ServiceId>,
 
-        /// Declare HTTPS for it. Phase 5 is what acts on this.
+        /// Serve it over HTTPS too, with a certificate from this home's own authority.
         #[arg(long)]
         https: Option<bool>,
 
@@ -339,8 +339,8 @@ pub(crate) async fn site(
             };
             let detail: SiteDetail =
                 ask(&mut client, rpc::method::SITE_SHOW, encode(&query)).await?;
-            // **And why it cannot start, where that is so** — roadmap task **T200b**, D6. Asked of
-            // the listing the daemon already answers; `--json` stays the site alone.
+            // **And why it cannot start, where that is so.** Asked of the listing the daemon
+            // already answers; `--json` stays the site alone.
             let services: ServiceList = ask(&mut client, rpc::method::SERVICE_LIST, None).await?;
             emit(&rendered(json, &detail, || {
                 render::site::site_detail(&detail)
@@ -482,7 +482,7 @@ fn site_kind(
     })
 }
 
-/// The three route flags as the one list the API takes — roadmap task **T135**.
+/// The three route flags as the one list the API takes.
 ///
 /// **The whole list in one request, and never a read-modify-write.** A client that fetched a site's
 /// routes, changed one and sent them back would be holding business logic and racing another writer;
@@ -593,8 +593,8 @@ mod tests {
     use super::*;
     use mixengine_proto::RouteTarget;
 
-    /// **T135, D12.** Three flags build the whole list in one request — no read-modify-write in the
-    /// client, so no race and no business logic here.
+    /// Three flags build the whole list in one request — no read-modify-write in the client, so no
+    /// race and no business logic here.
     #[test]
     fn three_flags_build_one_route_list() {
         let routes = site_routes(

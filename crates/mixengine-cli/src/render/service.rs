@@ -21,8 +21,8 @@ pub(crate) enum Walked {
     Stop,
     Restart,
 
-    /// A credential reset — roadmap task **T127**. The walk it reports is the *start* that puts
-    /// back what the repair took down.
+    /// A credential reset. The walk it reports is the *start* that puts back what the repair took
+    /// down.
     ResetCredential,
 }
 
@@ -90,10 +90,10 @@ pub(crate) fn service_list(list: &ServiceList) -> String {
         })
         .collect();
 
-    // `AUTOSTART` beside `STATE` rather than out at the end — roadmap task T112. The two are the
-    // question somebody scanning this table is actually asking: what is running, and what will be
-    // running after the next login. `VERSION` beside the id (T183), because the id is a name
-    // somebody chose and the version is what it actually is.
+    // `AUTOSTART` beside `STATE` rather than out at the end. The two are the question somebody
+    // scanning this table is actually asking: what is running, and what will be running after the
+    // next login. `VERSION` beside the id, because the id is a name somebody chose and the version
+    // is what it actually is.
     let mut out = table(
         [
             "SERVICE",
@@ -107,8 +107,8 @@ pub(crate) fn service_list(list: &ServiceList) -> String {
         &rows,
     );
 
-    // **Why each failed service failed** — roadmap task **T200b**, D6. A line each, after the
-    // table, because the sentence is too long for a column and is the reason anybody reads this.
+    // **Why each failed service failed.** A line each, after the table, because the sentence is too
+    // long for a column and is the reason anybody reads this.
     for service in &list.services {
         if let Some(note) = &service.last_failure {
             out.push_str(&format!(
@@ -130,7 +130,7 @@ fn yes_no(value: bool) -> String {
     }
 }
 
-/// `mix service autostart <service>`, for a person — roadmap task **T112**.
+/// `mix service autostart <service>`, for a person.
 ///
 /// **Two sentences and not one word.** The setting alone would leave somebody reading `no` beside a
 /// service that does start at every login, because a start plan pulls in what the flagged services
@@ -216,7 +216,7 @@ pub(crate) fn service_status(service: &ServiceSummary) -> String {
     rendered
 }
 
-/// `mix service front-end`, for a person — roadmap task **T97**.
+/// `mix service front-end`, for a person.
 ///
 /// **What the daemon said, not what this client worked out.** The row is picked by
 /// [`ServiceSummary::role`], which is the whole point of that member: no client anywhere maps a
@@ -235,7 +235,7 @@ pub(crate) fn front_end(found: Option<&ServiceSummary>) -> String {
     )
 }
 
-/// `mix service set-front-end`, for a person — roadmap task **T97**.
+/// `mix service set-front-end`, for a person.
 ///
 /// **The outcome leads**, on [`service_walk`]'s rule: three of the five endings leave the home where
 /// it started, and somebody reading this needs to know which one happened before anything else.
@@ -340,9 +340,9 @@ pub(crate) fn service_walk(walked: Walked, walk: &ServiceWalk) -> String {
         return format!("{} {}\n", walked.reached(), names(&walk.reached));
     };
 
-    // The runner's sentence first (T202a, D3), the state machine's reason when there is none, and
-    // the admission when there is neither — a reason is `None` only when the failure was the
-    // daemon's own, and inventing one would be worse than saying so.
+    // The runner's sentence first, the state machine's reason when there is none, and the admission
+    // when there is neither — a reason is `None` only when the failure was the daemon's own, and
+    // inventing one would be worse than saying so.
     let mut rendered = match (&failure.detail, &failure.reason) {
         (Some(detail), _) => format!("{} {}: {detail}\n", failure.service, walked.failed()),
         (None, Some(reason)) => format!("{} {}: {reason}\n", failure.service, walked.failed()),
@@ -363,9 +363,9 @@ pub(crate) fn service_walk(walked: Walked, walk: &ServiceWalk) -> String {
             }
         }
 
-        // **And then the command that undoes it** — roadmap task **T127a**. A walk carries no hint
-        // field and is not being given one for this: the daemon said what happened, and which of
-        // `mix`'s own verbs repairs it is what this binary knows and the daemon does not.
+        // **And then the command that undoes it.** A walk carries no hint field and is not being
+        // given one for this: the daemon said what happened, and which of `mix`'s own verbs repairs
+        // it is what this binary knows and the daemon does not.
         Some(StateReason::SuperuserRefused { said }) => {
             rendered.push_str(&format!("    {said}\n"));
             rendered.push_str(&format!(
@@ -452,11 +452,11 @@ pub(crate) fn service_adopted(summary: &ServiceSummary) -> String {
 
 /// `mix service create`, for a person.
 ///
-/// **The second paragraph is the whole reason the answer is not just the service** — roadmap task
-/// **T34c**. A recipe's preferred port is the number a person has in their `.env` and in their
-/// muscle memory, and a service that was quietly given the next one along would be discovered as a
-/// connection that is refused, hours later. So a move is stated at the moment it happens, with as
-/// much of the program that took the port as this machine would give up.
+/// **The second paragraph is the whole reason the answer is not just the service.** A recipe's
+/// preferred port is the number a person has in their `.env` and in their muscle memory, and a
+/// service that was quietly given the next one along would be discovered as a connection that is
+/// refused, hours later. So a move is stated at the moment it happens, with as much of the program
+/// that took the port as this machine would give up.
 #[must_use]
 pub(crate) fn service_creation(creation: &ServiceCreation) -> String {
     let mut rendered = format!(
@@ -533,9 +533,9 @@ pub(super) fn names(services: &[ServiceId]) -> String {
 /// **Four answers, and never fewer.** A service that stays running does so for one of four reasons
 /// that look identical from outside — nothing idles it, somebody switched idling off for it,
 /// something running depends on it, or a project is being kept warm. Two of those are settings and
-/// two are not, so a rendering that showed only the policy would send half of the people who read it
-/// to change something that was never the cause. This is `mix domain status`' rule from T46, applied
-/// to a smaller question.
+/// two are not, so a rendering that showed only the policy would send half of the people who read
+/// it to change something that was never the cause. This is `mix domain status`' rule, applied to a
+/// smaller question.
 pub(crate) fn service_idle(report: &IdleReport) -> String {
     let mut rendered = format!("{}\n", report.service);
 
@@ -678,7 +678,7 @@ cpu is a percentage of one core; this machine has {} of them
     rendered
 }
 
-/// The line about what is watching a ceiling this machine cannot hold — task **T71a**.
+/// The line about what is watching a ceiling this machine cannot hold.
 ///
 /// **Both numbers and the ending, or nothing at all.** A client that printed only the restart would
 /// say nothing about the services most worth saying something about: a database over its ceiling is
@@ -749,11 +749,11 @@ fn enforcement(
             false => format!("could not be enforced: {why}"),
         },
 
-        // **Watched rather than capped** — roadmap task T71a. Deliberately not the word "enforced":
-        // the service may go over this number and keep running. What happens after it does is per
-        // service rather than per machine, so it is the `watchdog` line below this one and not this
-        // sentence. The `why` is carried where the platform gave one, which is a machine somebody
-        // could start differently; macOS gives none and none is printed.
+        // **Watched rather than capped.** Deliberately not the word "enforced": the service may go
+        // over this number and keep running. What happens after it does is per service rather than
+        // per machine, so it is the `watchdog` line below this one and not this sentence. The `why`
+        // is carried where the platform gave one, which is a machine somebody could start
+        // differently; macOS gives none and none is printed.
         Enforcement::Advisory { why } => {
             let counts = counted(measure, measured);
 

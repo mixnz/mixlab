@@ -1,4 +1,4 @@
-//! The Redis recipe against a **real** Redis — roadmap task **T35**.
+//! The Redis recipe against a **real** Redis.
 //!
 //! Everything else about this recipe is provable in one process and is proved there: the template
 //! renders, the settings merge, the spec builds. None of that says the thing the task is about,
@@ -203,7 +203,7 @@ async fn created() -> (Home, harness::Daemon, MockRegistry, u16) {
     (home, daemon, registry, port)
 }
 
-/// **The whole of T35's Redis half, in the order a user meets it.**
+/// **The whole of the recipe, in the order a user meets it.**
 ///
 /// One test rather than five, for `mariadb.rs`' reason: each step is the previous one's
 /// precondition, and five tests would be five real servers started to re-reach the state this one is

@@ -1,6 +1,6 @@
 //! `mix service limits` against a real daemon.
 //!
-//! Roadmap task **T68**, and the half the daemon's own suite cannot reach: what a *person* is shown.
+//! Resource limits, and the half the daemon's own suite cannot reach: what a *person* is shown.
 //! That `service.set_limits` replaces the whole value rather than merging is asserted over the wire
 //! in `crates/mixengine-daemon/tests/limits.rs`; what is asserted here is the thing that makes that
 //! rule liveable — **the cleared field is on the screen**. A client that took a patch would need no
@@ -54,7 +54,8 @@ fn reading_limits_prints_every_field_and_what_this_machine_does_with_it() {
     assert!(printed.contains("one core"), "{printed}");
 }
 
-/// **The receipt for D8.** `set --cpu` alone clears a memory ceiling, and the clearing is visible.
+/// **The whole value is replaced.** `set --cpu` alone clears a memory ceiling, and the clearing is
+/// visible.
 ///
 /// A person who did not mean it finds out on the same screen, in the same breath as the change they
 /// did mean — which is the whole reason `service.set_limits` is allowed to take the whole value.
@@ -185,12 +186,13 @@ fn a_limit_is_stored_and_its_enforcement_is_reported_separately() {
 
 /// **The acceptance criterion, and the only proof by outcome in the whole task.**
 ///
-/// `resource-isolation.md` asks that "setting a memory limit on Windows/Linux is observably enforced
-/// by an integration test that allocates past it". Walking into a memory ceiling is a *discrete
-/// event* — the process dies, or an allocation fails — which is why memory is proved this way and
-/// CPU is not: a CPU cap is a rate, and asserting a rate means timing a busy loop on a shared runner,
-/// which the warm-start suite already taught this project what to expect from. That measurement is
-/// **T72's**, which has a `bench` job that knows how to compare against master.
+/// `resource-isolation.md` asks that "setting a memory limit on Windows/Linux is observably
+/// enforced by an integration test that allocates past it". Walking into a memory ceiling is a
+/// *discrete event* — the process dies, or an allocation fails — which is why memory is proved this
+/// way and CPU is not: a CPU cap is a rate, and asserting a rate means timing a busy loop on a
+/// shared runner, which the warm-start suite already taught this project what to expect from. That
+/// measurement belongs to **the footprint budgets**, which have a `bench` job that knows how to
+/// compare against master.
 ///
 /// **Skipped where this machine enforces nothing** — macOS always, and a Linux session with no
 /// delegated `memory` controller. Asserting there would be asserting the runner rather than

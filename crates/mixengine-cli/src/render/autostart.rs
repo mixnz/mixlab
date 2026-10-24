@@ -23,7 +23,7 @@ pub(crate) enum Autostarted {
     DisabledAtBoot,
 }
 
-/// `mix autostart …`, for a person — roadmap task **T85b**.
+/// `mix autostart …`, for a person.
 ///
 /// **An entry that is registered for another home is never reported as "set up".** There is one
 /// entry per user, so a second home enabling replaces it, and somebody reading "this home starts at

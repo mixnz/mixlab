@@ -2,7 +2,7 @@ use mixengine_proto::{PackageVersion, Timestamp};
 
 use super::*;
 
-/// The line names both numbers and the ending, so nobody has to infer either — task **T71a**.
+/// The line names both numbers and the ending, so nobody has to infer either.
 ///
 /// **The `false` case is the one worth a test.** A database over its ceiling is warned about and
 /// deliberately left alone, and a rendering that said only "watched" would read exactly like one
@@ -125,7 +125,7 @@ fn a_move_with_nothing_to_name_still_says_the_port_was_taken() {
     );
 }
 
-/// A failed service with a note, the way the daemon reports one (T200b).
+/// A failed service with a note, the way the daemon reports one.
 pub(in crate::render) fn failed_with(id_value: &str, detail: &str) -> ServiceSummary {
     ServiceSummary {
         last_failure: Some(mixengine_proto::ServiceFailureNote {
@@ -137,7 +137,7 @@ pub(in crate::render) fn failed_with(id_value: &str, detail: &str) -> ServiceSum
     }
 }
 
-/// **T200b, D6.** The listing ends with why each failed service failed.
+/// The listing ends with why each failed service failed.
 #[test]
 fn a_failed_service_is_followed_by_why() {
     let rendered = service_list(&ServiceList {
@@ -189,8 +189,8 @@ fn the_listing_is_a_table_whose_columns_line_up_whatever_the_names_are() {
     );
 }
 
-/// **T183.** A status names the version beside the other facts, and a service with none
-/// prints no empty line for it.
+/// A status names the version beside the other facts, and a service with none prints no empty line
+/// for it.
 #[test]
 fn a_status_names_the_version_the_service_runs() {
     let known = service_status(&ServiceSummary {
@@ -276,7 +276,7 @@ fn a_walk_that_reached_everything_is_one_line() {
     );
 }
 
-/// T202a, D3. A walk's failure prints the runner's detail before the reason's own sentence.
+/// A walk's failure prints the runner's detail before the reason's own sentence.
 #[test]
 fn a_walks_failure_prints_the_runners_detail_first() {
     let walk = ServiceWalk {
@@ -335,7 +335,7 @@ fn a_walk_that_stopped_leads_with_the_service_to_fix_and_shows_what_it_took_down
     assert_eq!(lines[3], "  blocked   worker");
 }
 
-/// **A refused superuser is shown with the command that repairs it** — roadmap task **T127a**.
+/// **A refused superuser is shown with the command that repairs it.**
 ///
 /// `mix` naming one of `mix`'s own verbs is not business logic in a client: the daemon said what
 /// happened, and which command undoes it is the thing only this binary knows. A `ServiceWalk`

@@ -1,4 +1,4 @@
-//! The MariaDB recipe against a **real** MariaDB — roadmap task **T33**.
+//! The MariaDB recipe against a **real** MariaDB.
 //!
 //! Everything else about this recipe is provable in one process and is proved there: the template
 //! renders with every path quoted, the settings merge, the spec builds, the file and the readiness
@@ -114,8 +114,8 @@ const SERVICE: &str = "mariadb@main";
 /// A name of its own, so the two ignored tests in this file, which run at once in two homes, read
 /// apart in a log. It used to be what kept their bootstraps apart as well: a Unix bootstrap named
 /// its space-free view `/tmp/mixengine-init-<id>`, one view for every home bootstrapping that id,
-/// and the second ritual's cleanup took the first one's basedir away. Roadmap task **T33b** put
-/// the home id in the name.
+/// and the second ritual's cleanup took the first one's basedir away. The name carries the home id
+/// now.
 const RESET: &str = "mariadb@reset";
 
 /// The instance the adopt test keeps across a reinstall — a name of its own for [`RESET`]'s reason.
@@ -266,16 +266,16 @@ fn server_log(home: &Home) -> String {
         .unwrap_or_else(|error| panic!("{} could not be read: {error}", path.display()))
 }
 
-/// Whether `key` is this home's keyring address for `address` — roadmap task **T126**.
+/// Whether `key` is this home's keyring address for `address`.
 ///
-/// **The whole string cannot be written down in a test.** Since T126 an address begins with an id
-/// the home mints for itself at its first migration — six random bytes, so twelve hex characters —
-/// which is what stopped every `MIXENGINE_HOME` on a machine from sharing one entry. What a test can
-/// state is the shape: this home's id, a slash, and the address as it was spelled before homes were
+/// **The whole string cannot be written down in a test.** An address begins with an id the home
+/// mints for itself at its first migration — six random bytes, so twelve hex characters — which is
+/// what stopped every `MIXENGINE_HOME` on a machine from sharing one entry. What a test can state
+/// is the shape: this home's id, a slash, and the address as it was spelled before homes were
 /// named.
 ///
 /// Asserted rather than ignored, because the prefix is the fix: a key that is *only* the old
-/// spelling is the defect T126 exists to have removed.
+/// spelling is the defect ADR 0032 removed.
 /// Linux-only, because its one caller is: the handoff test is the only place a client is
 /// handed an address, and it is the only system where this suite can name a data directory
 /// through the daemon's environment.
@@ -342,18 +342,18 @@ fn without_a_password(root: &Path, port: u16, user: &str) -> String {
     said
 }
 
-/// The positive counterpart of [`without_a_password`] — roadmap task **T77b**. A query that
-/// succeeds with exactly the password this test chose *is* the proof the daemon stored and used
-/// it, on T77a's D13 reasoning: nothing here ever reads the keyring, because nothing needs to —
-/// the value was never MixEngine's to generate.
+/// The positive counterpart of [`without_a_password`]. A query that succeeds with exactly the
+/// password this test chose *is* the proof the daemon stored and used it: nothing here ever reads
+/// the keyring, because nothing needs to — the value was never MixEngine's to generate.
 ///
-/// **And since T99 it proves a second thing: the connection was encrypted.** An 11.4 client with a
-/// password on its command line verifies the server's certificate by default and refuses a server
-/// that offers no TLS at all (`ERROR 2026`) — which is how this call found `skip-ssl` in the
-/// recipe. The recipe now renders a leaf this home's authority signed, and `Ssl_cipher` is what
-/// separates *the pair was written* from *the pair was served*: the client negotiates TLS on its
-/// own, so the only way the cipher comes back empty is a server that loaded no certificate and fell
-/// back to plaintext — or made its own, which is the seconds-per-start T99 exists to remove.
+/// **And it proves a second thing: the connection was encrypted.** An 11.4 client with a password
+/// on its command line verifies the server's certificate by default and refuses a server that
+/// offers no TLS at all (`ERROR 2026`) — which is how this call found `skip-ssl` in the recipe. The
+/// recipe now renders a leaf this home's authority signed, and `Ssl_cipher` is what separates *the
+/// pair was written* from *the pair was served*: the client negotiates TLS on its own, so the only
+/// way the cipher comes back empty is a server that loaded no certificate and fell back to
+/// plaintext — or made its own, which is the seconds-per-start a certificate from this home's
+/// authority removes.
 fn with_the_password(root: &Path, port: u16, user: &str, password: &str) -> String {
     let client = root.join(format!("bin/mariadb{}", std::env::consts::EXE_SUFFIX));
     let client = if client.is_file() {
@@ -408,8 +408,8 @@ fn with_the_password(root: &Path, port: u16, user: &str, password: &str) -> Stri
 /// The archive every test in this suite installs, packed by the first test that asks for it.
 ///
 /// Every test packs the same [`package`] directory into the same archive, and on Windows deflating
-/// a real server is the slowest thing this suite does (T170c). The tests run in parallel, so the
-/// others wait on the lock rather than packing a copy each.
+/// a real server is the slowest thing this suite does. The tests run in parallel, so the others
+/// wait on the lock rather than packing a copy each.
 fn packed() -> Packed {
     static PACKED: OnceLock<Packed> = OnceLock::new();
 

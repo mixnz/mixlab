@@ -5,7 +5,7 @@ use super::size::size;
 use super::table::MISSING;
 use mixengine_proto::{UpdateApplied, UpdateHandedOver, UpdatePlacement, UpdateStatus};
 
-/// `mix self-update` and `mix self-update --check`, for a person — roadmap task **T88**.
+/// `mix self-update` and `mix self-update --check`, for a person.
 ///
 /// **The consent prompt is this text plus one question.** `docs/features/updates.md` requires
 /// that somebody sees the version, the size and the notes before they answer, and that they are told
@@ -18,7 +18,7 @@ use mixengine_proto::{UpdateApplied, UpdateHandedOver, UpdatePlacement, UpdateSt
 pub(crate) fn update_status(status: &UpdateStatus) -> String {
     let mut rendered = format!("MixEngine {}\n", status.current);
 
-    // Installer.app has put the new binaries on disk and this daemon is still the old one — T88f.
+    // Installer.app has put the new binaries on disk and this daemon is still the old one.
     if let Some(installed) = &status.installed {
         rendered.push_str(&format!(
             "  update    {installed} is installed. finish it: mix self-update --finish\n"
@@ -28,7 +28,7 @@ pub(crate) fn update_status(status: &UpdateStatus) -> String {
     }
 
     // A copy the `.pkg` installed reads `managed` on the wire, and is still offered its update: the
-    // next `.pkg`, through Installer.app (T88f, D3). Only a copy with no installer is refused here.
+    // next `.pkg`, through Installer.app. Only a copy with no installer is refused here.
     if let (UpdatePlacement::Managed { directory, because }, None) =
         (&status.placement, &status.installer)
     {
@@ -99,13 +99,12 @@ pub(crate) fn update_status(status: &UpdateStatus) -> String {
     rendered
 }
 
-/// What `mix self-update` prints once the package is handed over — roadmap tasks **T88f** and
-/// **T182b** (D5).
+/// What `mix self-update` prints once the package is handed over.
 ///
-/// **The path and the command every time**, not only when opening failed. Over SSH, `open`
-/// succeeds and Installer.app comes up on the Mac's own screen, which the person at this prompt may
-/// not be looking at (the T88f readings, M4). Both are the daemon's, printed unchanged. A Linux
-/// machine with no desktop session opens nothing, and the command is then the only way.
+/// **The path and the command every time**, not only when opening failed. Over SSH, `open` succeeds
+/// and Installer.app comes up on the Mac's own screen, which the person at this prompt may not be
+/// looking at (measured on a Mac). Both are the daemon's, printed unchanged. A Linux machine with
+/// no desktop session opens nothing, and the command is then the only way.
 pub(crate) fn update_handed_over(handed: &UpdateHandedOver) -> String {
     if handed.opened {
         format!(
@@ -124,7 +123,7 @@ pub(crate) fn update_handed_over(handed: &UpdateHandedOver) -> String {
     }
 }
 
-/// What an update did, printed while the daemon that did it is exiting — roadmap task **T88**.
+/// What an update did, printed while the daemon that did it is exiting.
 ///
 /// **`kept` is named rather than left out.** `mixengine-elevate` is deliberately not replaced, and
 /// somebody comparing version numbers afterwards should find that stated rather than discover it.
@@ -172,7 +171,7 @@ mod tests {
 
     /// A release this account cannot install is refused in the daemon's own words, and the words are
     /// printed rather than replaced by a code this client would have to invent a sentence for.
-    /// A status as a copy the `.pkg` installed reports it — T88f: `managed` on the wire, with the
+    /// A status as a copy the `.pkg` installed reports it: `managed` on the wire, with the
     /// installer beside it, and a release offered.
     fn pkg_status() -> UpdateStatus {
         UpdateStatus {
@@ -201,7 +200,7 @@ mod tests {
         }
     }
 
-    /// A copy the `.pkg` installed is offered the installer, not refused (T88f, D8).
+    /// A copy the `.pkg` installed is offered the installer, not refused.
     #[test]
     fn a_pkg_copy_is_offered_the_installer_rather_than_refused() {
         let rendered = update_status(&pkg_status());
@@ -223,7 +222,7 @@ mod tests {
     }
 
     /// The path and the command, every time: over SSH, Installer.app opens on the Mac's own screen
-    /// (the T88f readings, M4).
+    /// (measured on a Mac).
     #[test]
     fn a_handover_prints_the_package_and_the_command_every_time() {
         let package = "/Users/x/Library/Application Support/MixEngine/cache/updates/0.0.9/\
@@ -240,7 +239,7 @@ mod tests {
         assert!(rendered.contains("mix self-update --finish"), "{rendered}");
     }
 
-    /// T182b, D5. A Linux machine with no desktop session opens nothing: the command is printed as
+    /// A Linux machine with no desktop session opens nothing: the command is printed as
     /// the step to take, and nothing claims an installer is open.
     #[test]
     fn a_handover_with_nothing_opened_prints_the_command_as_the_way() {

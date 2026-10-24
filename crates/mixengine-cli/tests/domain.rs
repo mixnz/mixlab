@@ -1,14 +1,14 @@
 //! `mix domain` against a real daemon.
 //!
-//! Roadmap task **T46**'s client half. What the daemon's own `tests/sites.rs` proves is that the
-//! three methods do what they say; what is proved here is the part only `mix` can be wrong about —
-//! that the flags a person types reach the right method, and that a diagnostic a person reads is a
+//! The client half of `domain.*`. What the daemon's own `tests/sites.rs` proves is that the three
+//! methods do what they say; what is proved here is the part only `mix` can be wrong about — that
+//! the flags a person types reach the right method, and that a diagnostic a person reads is a
 //! rendering of what the daemon answered rather than a second opinion assembled in the client.
 //!
 //! **The negative half of this file needs a control.** A test concluding something from a name that
-//! did *not* resolve, without proving in the same run and with the same instrument that a name which
-//! must resolve does, is making a claim about `getaddrinfo` rather than about the machine. Four of
-//! the six measurement rounds behind T45 were void for exactly that (T46 design, D9).
+//! did *not* resolve, without proving in the same run and with the same instrument that a name
+//! which must resolve does, is making a claim about `getaddrinfo` rather than about the machine.
+//! Four of the six measurement rounds behind the resolver were void for exactly that.
 
 mod harness;
 
@@ -78,9 +78,9 @@ async fn a_name_is_added_and_taken_away_and_the_primary_stays() {
 /// The diagnostic on a machine nothing has wired, which is what every machine running this is.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_diagnostic_reports_a_name_nothing_routes_and_says_why() {
-    // **T202b, D5.** A Mac with MixEngine installed routes every `.test` name to that daemon
-    // through `/etc/resolver/test`, so whether `blog.test` resolves here is that daemon's answer
-    // and not this home's. CI's runners never carry the file; a developer's Mac does.
+    // A Mac with MixEngine installed routes every `.test` name to that daemon through
+    // `/etc/resolver/test`, so whether `blog.test` resolves here is that daemon's answer and not
+    // this home's. CI's runners never carry the file; a developer's Mac does.
     if std::path::Path::new("/etc/resolver/test").exists() {
         eprintln!(
             "skipped: this machine routes `.test` itself (/etc/resolver/test), so whether \
@@ -132,7 +132,7 @@ async fn the_diagnostic_reports_a_name_nothing_routes_and_says_why() {
     assert!(table.contains("does not resolve"), "{table}");
 }
 
-/// A name nothing declares is answered rather than refused — the T46 design, D5.
+/// A name nothing declares is answered rather than refused.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_name_nothing_declares_is_still_answered() {
     let home = Home::new();

@@ -1,4 +1,4 @@
-//! `mix extension install/list/uninstall` against a real daemon — roadmap task **T81**.
+//! `mix extension install/list/uninstall` against a real daemon.
 //!
 //! `extension_manifest.rs` proves the reading of a manifest; this proves the *doing*. What is only
 //! true here, and is what the design spends its arguments on:
@@ -11,7 +11,7 @@
 //!
 //! The extension installed here runs nothing: its `[service]` names a program that does not exist,
 //! which is fine because nothing starts it. What a *started* extension does is the supervisor's,
-//! and it is the same walk `mix service start` takes — the design's D11.
+//! and it is the same walk `mix service start` takes.
 
 mod harness;
 
@@ -79,7 +79,7 @@ fn extension(body: &str) -> tempfile::TempDir {
     directory
 }
 
-/// **The whole loop, and the unsigned marker along it** — the design's D9 and D12.
+/// **The whole loop, and the unsigned marker along it.**
 #[tokio::test(flavor = "multi_thread")]
 async fn a_directory_install_is_unsigned_all_the_way_through() {
     let home = Home::new();
@@ -202,14 +202,14 @@ async fn starting_something_that_runs_nothing_says_what_it_is() {
     assert!(said.contains("runs no process"), "{said}");
 }
 
-/// **T82.** A `[recipe] php_ini` line reaches every managed PHP when the extension is installed,
-/// and goes when it goes — without a daemon restart in between.
+/// A `[recipe] php_ini` line reaches every managed PHP when the extension is installed, and goes
+/// when it goes — without a daemon restart in between.
 ///
-/// **Found by installing the real Mailpit.** T81 wired the field and left it written by
+/// **Found by installing the real Mailpit.** The installer wired the field and left it written by
 /// `refresh_all`, which runs at boot and after a runtime install and on no other path — so
 /// `sendmail_path` appeared only after `mixengined` was restarted. The acceptance criterion this
-/// serves says *with no manual php.ini edit*, not *after a restart*, and T81c had already learned
-/// the same lesson for the other half of `[recipe]`.
+/// serves says *with no manual php.ini edit*, not *after a restart*, and front-end fragments had
+/// already learned the same lesson for the other half of `[recipe]`.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_php_ini_line_reaches_a_managed_php_without_a_restart() {
     let home = Home::new();
@@ -251,8 +251,7 @@ async fn a_php_ini_line_reaches_a_managed_php_without_a_restart() {
     );
 }
 
-/// A `web-app` on the phpMyAdmin fixture's shape, served on an internal domain — roadmap task
-/// **T81b**.
+/// A `web-app` on the phpMyAdmin fixture's shape, served on an internal domain.
 const PHPMYADMIN: &str = r#"
 schema = 1
 
@@ -299,8 +298,8 @@ network = "loopback"
 filesystem = ["own-data"]
 "#;
 
-/// **T81b.** A web-app is served on a site its extension owns: the plan names it, the listings show
-/// it, sharing it is refused, and the uninstall releases it.
+/// A web-app is served on a site its extension owns: the plan names it, the listings show it,
+/// sharing it is refused, and the uninstall releases it.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_web_app_is_a_site_its_extension_owns() {
     let home = Home::new();
@@ -313,9 +312,9 @@ async fn a_web_app_is_a_site_its_extension_owns() {
     let path = directory.path().display().to_string();
 
     let planned = stdout(&home.mix(&["extension", "plan", "--path", &path]));
-    // **The pool is the extension's own** — roadmap task **T82a**, its design's D1. The PHP behind
-    // it is still the `8.3.34` seeded above; what changed is that a `web-app` is not served from the
-    // process every project site is served from.
+    // **The pool is the extension's own.** The PHP behind it is still the `8.3.34` seeded above;
+    // what changed is that a `web-app` is not served from the process every project site is served
+    // from.
     assert!(
         planned.contains("https://phpmyadmin.mixengine.test, on php-fpm@phpmyadmin"),
         "{planned}"
@@ -363,12 +362,11 @@ async fn a_web_app_is_a_site_its_extension_owns() {
     );
 }
 
-/// **T82.** The generated configuration is written into the served root, with the database the
-/// install linked substituted into it — and the link is what makes `service.delete` refuse.
+/// The generated configuration is written into the served root, with the database the install
+/// linked substituted into it — and the link is what makes `service.delete` refuse.
 ///
 /// Four claims in one test because they are one mechanism: writing the link is what arms the
-/// refusal (the design's D4), so proving the refusal separately would prove it against a row nothing
-/// wrote.
+/// refusal, so proving the refusal separately would prove it against a row nothing wrote.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_web_app_is_configured_from_the_database_it_was_linked_to() {
     let home = Home::new();
@@ -401,15 +399,15 @@ async fn a_web_app_is_configured_from_the_database_it_was_linked_to() {
     assert!(written.contains("'127.0.0.1'"), "{written}");
     assert!(written.contains("'13306'"), "{written}");
     assert!(written.contains("'root'"), "{written}");
-    // The application's own braces are the destination language's punctuation, not ours — D8.
+    // The application's own braces are the destination language's punctuation, not ours.
     assert!(written.contains("if (true) {"), "{written}");
     // And `{secret}` was answered by something, rather than left standing as a literal brace.
     assert!(!written.contains("{secret}"), "{written}");
 
-    // **T184: the secret is in this home's file, and nowhere on the machine.** A development
-    // daemon keeps its credentials beside everything else of its home's, so this test no longer
-    // writes the developer's Keychain — and no longer reads `extensions/phpmyadmin/config` out of
-    // it through T126's fallback, which every home on the machine shares.
+    // **The secret is in this home's file, and nowhere on the machine.** A development daemon keeps
+    // its credentials beside everything else of its home's, so this test no longer writes the
+    // developer's Keychain — and no longer reads `extensions/phpmyadmin/config` out of it through
+    // the fallback from before addresses named their home, which every home on the machine shares.
     let secret = stored_config_secret(&home).unwrap_or_else(|| {
         panic!(
             "the extension's `{{secret}}` was not stored in this home's credentials.json: {:?}\n{}",
@@ -422,7 +420,7 @@ async fn a_web_app_is_configured_from_the_database_it_was_linked_to() {
         "the rendered file does not carry the stored secret:\n{written}"
     );
 
-    // **The link armed the refusal that was already there** — D4. No new refusal exists for this.
+    // **The link armed the refusal that was already there.** No new refusal exists for this.
     let deleted = home.mix(&["service", "delete", "mariadb@main"]);
     assert!(!deleted.status.success(), "{}", stdout(&deleted));
     assert!(

@@ -1,9 +1,9 @@
 //! `mix site` against a real daemon.
 //!
-//! Roadmap task **T39a**'s client half. What the daemon's own `tests/sites.rs` proves is that the
-//! methods do what they say; what is proved here is the part only true of `mix` — that the flags a
-//! person types reach the right method, that a command typed inside a project finds its site
-//! without being told, and that an export leaves a hand-written key where it was.
+//! The client half of `site.*`. What the daemon's own `tests/sites.rs` proves is that the methods
+//! do what they say; what is proved here is the part only true of `mix` — that the flags a person
+//! types reach the right method, that a command typed inside a project finds its site without being
+//! told, and that an export leaves a hand-written key where it was.
 
 mod harness;
 
@@ -101,9 +101,9 @@ async fn a_site_is_created_from_the_current_directory_and_shown_from_a_subdirect
     assert!(removed.contains("free for another site"), "{removed}");
 }
 
-/// **T98, against the real daemon.** `--https-redirect` is accepted at `site create` itself, not
-/// only at `site update` — a person does not have to create a site plaintext and turn the redirect
-/// on afterwards, as long as `--https` is not explicitly refused in the same breath.
+/// **The redirect, against the real daemon.** `--https-redirect` is accepted at `site create`
+/// itself, not only at `site update` — a person does not have to create a site plaintext and turn
+/// the redirect on afterwards, as long as `--https` is not explicitly refused in the same breath.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_site_is_created_with_its_redirect_already_on() {
     let home = Home::new();
@@ -156,7 +156,7 @@ async fn a_site_is_created_with_its_redirect_already_on() {
     );
 }
 
-/// **D9.** `mix project export` writes the site beside the runtimes, and leaves everything a person
+/// `mix project export` writes the site beside the runtimes, and leaves everything a person
 /// put in the file exactly where it was.
 #[tokio::test(flavor = "multi_thread")]
 async fn an_export_writes_the_site_and_keeps_a_hand_written_key() {

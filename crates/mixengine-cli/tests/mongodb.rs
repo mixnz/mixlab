@@ -1,4 +1,4 @@
-//! The MongoDB recipe against a **real** MongoDB — roadmap task **T156**.
+//! The MongoDB recipe against a **real** MongoDB.
 //!
 //! Everything else about the recipe is provable in one process and is proved there: the template
 //! renders, the arguments differ per system, a bind address off loopback is refused. None of that
@@ -290,7 +290,7 @@ async fn created() -> (Home, harness::Daemon, MockRegistry, u16) {
     (home, daemon, registry, port)
 }
 
-/// **The whole of T156, in the order a user meets it.**
+/// **The whole of the recipe, in the order a user meets it.**
 ///
 /// One test rather than five, for `redis.rs`' reason: each step is the previous one's precondition.
 #[tokio::test(flavor = "multi_thread")]

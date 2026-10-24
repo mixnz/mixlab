@@ -3,13 +3,13 @@
 use super::table::MISSING;
 use mixengine_proto::{Execution, PackageVersion, Requirement};
 
-/// Which rows of a catalogue to print — roadmap task **T193a**, D3.
+/// Which rows of a catalogue to print.
 ///
 /// **Filtering on what the daemon sent**, which is rendering: `line` and `newest_in_line` are the
 /// daemon's answers, and nothing here compares two versions.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Lines {
-    /// Every release, as before T193.
+    /// Every release, one row each, as the listing printed before it grouped them by line.
     pub(crate) all: bool,
 
     /// Every release of this one line.
@@ -46,7 +46,7 @@ pub(super) fn more(lines: &[Option<&str>], line: Option<&str>) -> String {
     }
 }
 
-/// The lines above a table that name each update, with the command that applies it — D3.
+/// The lines above a table that name each update, with the command that applies it.
 pub(super) fn update_lines<'a>(
     command: &str,
     updates: impl Iterator<Item = (&'a str, &'a PackageVersion, &'a PackageVersion)>,
@@ -60,13 +60,13 @@ pub(super) fn update_lines<'a>(
     said
 }
 
-/// The column that counts a line's other releases — roadmap task **T193a**.
+/// The column that counts a line's other releases.
 pub(super) const MORE_HEADING: &str = "MORE";
 
 /// The seventh column's heading, on both listings.
 pub(super) const RUNS_HEADING: &str = "RUNS";
 
-/// The column that says what a release lacks on this machine — roadmap task **T151**.
+/// The column that says what a release lacks on this machine.
 pub(super) const NEEDS_HEADING: &str = "NEEDS";
 
 /// What one release lacks, in the few words a cell has room for; blank for a release lacking nothing.
@@ -89,8 +89,7 @@ pub(super) fn any_lacking<'a>(needs: impl Iterator<Item = Option<&'a Vec<Require
         .any(|needs| needs.is_some_and(|needs| !needs.is_empty()))
 }
 
-/// The note that goes above a listing with an emulated row in it, or [`None`] for one without —
-/// roadmap task **T92**.
+/// The note that goes above a listing with an emulated row in it, or [`None`] for one without.
 ///
 /// **A column rather than a line per row, and only when a row needs it.** On five of the six
 /// targets MixEngine ships a build for, every release is native and a column reading `native` forty

@@ -1,4 +1,4 @@
-//! `mix disk` and `mix cleanup` against a daemon that is really running — roadmap task **T96**.
+//! `mix disk` and `mix cleanup` against a daemon that is really running.
 //!
 //! What is worth proving here and nowhere else is that the two halves agree: what `mix disk` says
 //! would be taken back is what `mix cleanup` takes, measured on a real home rather than on a

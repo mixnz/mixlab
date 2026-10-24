@@ -1,16 +1,16 @@
 //! `mix service` against a real daemon supervising a real process.
 //!
-//! Task **T19b**, and the reason it is an end-to-end test rather than a unit one: everything below
-//! the client has been proved in its own crate — the registry walks a plan, the handlers answer
-//! `service.*` — and what has never been proved is that a person typing four words gets a process
-//! started and an exit code that means it. That claim spans two operating-system processes and a
-//! socket, so nothing here is mocked.
+//! The reason it is an end-to-end test rather than a unit one: everything below the client has been
+//! proved in its own crate — the registry walks a plan, the handlers answer `service.*` — and what
+//! has never been proved is that a person typing four words gets a process started and an exit code
+//! that means it. That claim spans two operating-system processes and a socket, so nothing here is
+//! mocked.
 //!
 //! **The services are `fakeservice` rows**, written by `mixengine_testkit::declare` — which is
-//! Phase 3's `service.create` in the same sense — and rendered by the daemon's own generator (T30)
+//! Phase 3's `service.create` in the same sense — and rendered by the daemon's own generator
 //! through the fixture recipe in `crates/mixengine-daemon/src/services/fakeservice.rs`. So what a
-//! test below writes is a *declaration*, exactly as a user's would be, and the whole path from a row
-//! to a running process is the one under test.
+//! test below writes is a *declaration*, exactly as a user's would be, and the whole path from a
+//! row to a running process is the one under test.
 //!
 //! **The five that declare a service are ignored in a release build**, because that recipe is
 //! compiled into debug builds only: a release `mixengined` has nothing that can run a `fakeservice`,
@@ -47,7 +47,8 @@ fn running(services: &[Service]) -> (Home, harness::Daemon) {
 const PREFERRED: u64 = 41_000;
 const SEARCH: u64 = 64;
 
-/// **T34c from the end a person is at**: two services of one recipe cannot both have its port.
+/// **Port allocation from the end a person is at**: two services of one recipe cannot both have its
+/// port.
 ///
 /// The recipe names one number and every instance of it wants that number, so each is given the
 /// lowest free one at or above it — and whoever did not get the number is told so at the moment of
@@ -116,7 +117,7 @@ fn every_instance_of_a_recipe_gets_a_port_of_its_own_and_the_moved_one_is_told()
     );
 }
 
-/// **What T30 added, from the end a person is at**: the configuration a service runs on is
+/// **Rendering from rows, from the end a person is at**: the configuration a service runs on is
 /// generated from its row, and changing the row changes what the process does.
 ///
 /// Every layer of that is proved where it lives — the merge, the template, the diff, the atomic
@@ -182,9 +183,9 @@ fn changing_an_override_regenerates_the_config_and_the_service_runs_on_it() {
     }
 }
 
-/// **What T31 added, from the same end**: a service that is *already running* when its
-/// configuration changes is handed the new one, rather than being left on the old one until somebody
-/// restarts it.
+/// **And handing over, from the same end**: a service that is *already running* when its
+/// configuration changes is handed the new one, rather than being left on the old one until
+/// somebody restarts it.
 ///
 /// The test above is the other half of the pair and stops the service before changing anything,
 /// which is the easy case — a start reads whatever is on disk. This one never stops it, and the two
@@ -261,10 +262,10 @@ fn a_service_starts_stops_and_says_so_in_both_renderings() {
     assert_eq!(listed["services"][0]["supervised"], false);
     assert_eq!(
         listed["services"][0]["stopped_by"], "never",
-        "a service that has not run was stopped by nobody (T167d)"
+        "a service that has not run was stopped by nobody"
     );
 
-    // The whole of T19b in one line: a person types four words and a process is running.
+    // The whole of this suite in one line: a person types four words and a process is running.
     let started = json(&home.mix(&["service", "start", "fakeservice@main", "--json"]));
     assert_eq!(started["complete"], true, "{started}");
     assert_eq!(started["reached"][0], "fakeservice@main", "{started}");
@@ -424,7 +425,7 @@ fn a_service_that_was_not_ready_in_time_has_its_last_lines_in_the_daemon_log() {
     );
 }
 
-/// `mix service logs` — roadmap task **T16b**, from the side a person types it.
+/// `mix service logs`, from the side a person types it.
 ///
 /// **The human rendering is the service's own output and nothing else**, which is what makes
 /// `mix service logs caddy | grep …` work the way it does for every other program's log. The `--json`
@@ -498,8 +499,7 @@ fn a_home_that_declares_nothing_says_so_rather_than_printing_nothing() {
     assert_eq!(error["code"], "not_found", "{error}");
 }
 
-/// **The project scope is a start's alone, and it is answered by the daemon** — roadmap task
-/// **T125**.
+/// **The project scope is a start's alone, and it is answered by the daemon.**
 ///
 /// What the set *is* is proved where it is derived (`core::sites::services_of`) and where an apply
 /// uses it (`tests/blueprint.rs`). What this pins is the surface a person types at: a project this
@@ -538,7 +538,7 @@ fn a_service_id_that_cannot_exist_is_refused_before_a_daemon_is_started() {
     // clap's own usage exit code, not ours: the value never became a `ServiceId`, so no call was
     // made — which is the point. Nothing was created in the home either.
     //
-    // **"Nothing" means nothing beyond what the fixture seeded**, which since T44 is one
+    // **"Nothing" means nothing beyond what the fixture seeded**, which is one
     // `config.toml` holding `[dns] port = 0` so that no suite binds the real DNS port.
     assert_eq!(output.status.code(), Some(2), "{output:?}");
     assert_eq!(
@@ -583,7 +583,7 @@ fn a_walk_nobody_waits_for_is_reported_as_accepted_rather_than_as_finished() {
     }
 }
 
-/// **`mix service autostart` reads it, writes it, and `mix service list` carries it** — T112.
+/// **`mix service autostart` reads it, writes it, and `mix service list` carries it.**
 ///
 /// The whole of what a client can do with the setting, from the end a person is at: nothing carries
 /// it until somebody says so, `--on` writes it, the reading afterwards agrees, and the column is in
@@ -642,7 +642,7 @@ fn a_service_is_told_to_start_with_mixengine_and_every_reading_agrees() {
     );
 }
 
-/// **`--on` and `--off` are one group**, so asking for both is a refusal and not a coin toss — T112.
+/// **`--on` and `--off` are one group**, so asking for both is a refusal and not a coin toss.
 #[test]
 fn asking_for_both_autostart_answers_at_once_is_refused() {
     let home = Home::new();
@@ -655,8 +655,8 @@ fn asking_for_both_autostart_answers_at_once_is_refused() {
     );
 }
 
-/// **T167b, ADR 0041: a home saves nothing until somebody asks it to**, and the switch goes both
-/// ways and reads back — from the command line, which is the client-surface rule.
+/// **ADR 0041: a home saves nothing until somebody asks it to**, and the switch goes both ways and
+/// reads back — from the command line, which is the client-surface rule.
 #[test]
 fn save_resources_is_off_until_turned_on_and_reads_back() {
     let (home, _daemon) = running(&[]);
@@ -678,7 +678,7 @@ fn save_resources_is_off_until_turned_on_and_reads_back() {
     assert_eq!(off["on"], Value::Bool(false), "{off}");
 }
 
-/// **The repair T127 exists to provide is reachable from `mix`** — the client-surface rule.
+/// **The credential repair is reachable from `mix`** — the client-surface rule.
 ///
 /// Help only: the repair itself against a real server is `mariadb.rs`, `mysql.rs` and `postgres.rs`,
 /// which is where there is a data directory to write into.
@@ -691,7 +691,7 @@ fn a_credential_reset_is_a_service_subcommand() {
     assert!(help.contains("reset-credential"), "{help}");
 }
 
-/// **A service that keeps no credential is refused, and the refusal names what does** — T127.
+/// **A service that keeps no credential is refused, and the refusal names what does.**
 ///
 /// `--yes` so the prompt is not what stops it: the assertion is about the daemon's answer, and a
 /// test that passed because nobody typed `y` would pass with the feature removed.
@@ -713,8 +713,8 @@ fn a_service_with_no_credential_is_refused_a_reset() {
     );
 }
 
-/// **T182g.** `mix service found` and `mix service adopt` reach the daemon: a fresh home has
-/// nothing to adopt, and adopting something that is not there says where to look.
+/// `mix service found` and `mix service adopt` reach the daemon: a fresh home has nothing to adopt,
+/// and adopting something that is not there says where to look.
 #[test]
 fn found_and_adopt_reach_the_daemon_from_the_command_line() {
     let home = Home::new();
@@ -736,7 +736,7 @@ fn found_and_adopt_reach_the_daemon_from_the_command_line() {
     assert!(said.contains("mix service found"), "{said}");
 }
 
-/// **A failed service says why in its own listing** — roadmap task **T200b**, D5.
+/// **A failed service says why in its own listing.**
 ///
 /// The sentence was in `daemon.log` and nowhere a client could read it, so MixLab's "see why" had
 /// nothing to show. A stop asked of a failed service has no process to stop and leaves it failed,

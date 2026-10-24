@@ -1,9 +1,10 @@
-//! The first request to a site whose pool is asleep — roadmap task **T72a**, measured.
+//! The first request to a site whose pool is asleep, measured.
 //!
 //! `../features/resource-isolation.md` publishes a number: *"Cold path: first request to a stopped
 //! site served in under 1.5 s."* Nothing measured it until this file, and on two systems of three
-//! there was nothing to measure: a pool on a Unix socket had no idle probe, so it was never stopped,
-//! so no request to it was ever cold. T72a is the probe; this is the budget.
+//! there was nothing to measure: a pool on a Unix socket had no idle probe, so it was never
+//! stopped, so no request to it was ever cold. The pool's status probe came first; this is the
+//! budget.
 //!
 //! # Three pools, one sweep
 //!
@@ -12,15 +13,15 @@
 //! another and timed separately, and the wait is paid once.
 //!
 //! **The pools must be stopped by the sweeper and not by a person.** A service somebody stopped is
-//! one the activator closes the connection on, deliberately — T70's D8 — because the tool must not
-//! overrule its user. So this sets a policy and waits, rather than calling `service stop`.
+//! one the activator closes the connection on, deliberately, because the tool must not overrule its
+//! user. So this sets a policy and waits, rather than calling `service stop`.
 //!
 //! # Three versions rather than three copies
 //!
 //! `MIXENGINE_PHP_RUNTIMES` names them, and the `bench` job fetches **7.0.33, 7.4.33 and 8.3.33**.
 //! The first is the floor this product offers, the second is the legacy version people still run,
 //! and the third is what the `test` job pins. **Two of the three predate `pm.status_listen`
-//! entirely**, so this is also the standing proof of T72a's decision to read the status page off the
+//! entirely**, so this is also the standing proof of the decision to read the status page off the
 //! pool's own socket: the day somebody reaches for the cleaner arithmetic, two thirds of this
 //! measurement go red rather than a paragraph being disbelieved.
 //!

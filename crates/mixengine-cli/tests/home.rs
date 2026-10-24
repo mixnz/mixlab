@@ -1,4 +1,4 @@
-//! `mix home previous` and `mix home restore` — roadmap task **T182h**.
+//! `mix home previous` and `mix home restore`.
 //!
 //! What a restore brings back is proved against the daemon in `mixengine-daemon`'s own suite; this
 //! is only that the command line reaches both methods and says the right thing when there is no

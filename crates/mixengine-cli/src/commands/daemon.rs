@@ -25,7 +25,7 @@ pub(crate) enum DaemonCommand {
     /// Choose where this home keeps its passwords from the next start: `os`, the system's
     /// credential store, or `home`, a file only your account can read.
     //
-    // Roadmap task T194, ADR 0059. A release takes `home` only on a Linux machine with no
+    // ADR 0059. A release takes `home` only on a Linux machine with no
     // credential store, and the daemon refuses a switch while the current store holds anything.
     CredentialStore {
         /// `os` or `home`.
@@ -80,7 +80,7 @@ pub(crate) async fn daemon_stop(endpoint: &Endpoint, json: bool) -> Result<ExitC
     })
 }
 
-/// `mix daemon credential-store` — roadmap task T194.
+/// `mix daemon credential-store`: where this home keeps its passwords from the next start.
 pub(crate) async fn daemon_credential_store(
     store: CredentialStoreArg,
     endpoint: &Endpoint,

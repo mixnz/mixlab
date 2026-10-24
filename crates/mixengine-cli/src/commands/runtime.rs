@@ -471,7 +471,7 @@ pub(crate) async fn runtime(
 /// round trip over a local socket — and prints the progress it passes on **stderr**, so that stdout
 /// still carries exactly one answer and `--json` still emits exactly one object.
 ///
-/// **What the machine lacks is asked about first** (T151), once, before anything is started.
+/// **What the machine lacks is asked about first**, once, before anything is started.
 async fn install(
     client: &mut Client,
     target: RuntimeTarget,
@@ -522,7 +522,7 @@ async fn install(
     })
 }
 
-/// Say what the release just installed cannot do, and what adds it — roadmap task **T206**, D3.
+/// Say what the release just installed cannot do, and what adds it.
 ///
 /// **From the cached index, and never at the install's expense.** A listing that cannot be read
 /// costs this line and nothing else: the install has already succeeded.
@@ -570,7 +570,7 @@ async fn said_what_it_lacks(
             .max_by(|a, b| a.cmp_precedence(b))
     });
 
-    // `installed` is the daemon's answer, which since T206d leaves out a devkit whose folder is gone.
+    // `installed` is the daemon's answer, which leaves out a devkit whose folder is gone.
     let installed = offered
         .as_ref()
         .is_some_and(|catalogue| catalogue.packages.iter().any(|release| release.installed));

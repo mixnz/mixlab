@@ -43,10 +43,10 @@ pub(crate) enum ServiceCommand {
     /// The one `mix service` subcommand that is not a `service.*` method: output is a stream, and a
     /// JSON-RPC call cannot be one, so the lines arrive on a connection of their own.
     //
-    // The reasoning is ADR 0009, `docs/decisions/0009-logs-travel-on-their-own-stream.md`. It is
-    // a `//` comment and not a `///` one deliberately: this text is `mix service logs --help`, and
-    // since T90 it is also a page of the user handbook — a link to a path only a checkout of this
-    // repository has is a dead link for every reader of both.
+    // The reasoning is ADR 0009, `docs/decisions/0009-logs-travel-on-their-own-stream.md`. It is a
+    // `//` comment and not a `///` one deliberately: this text is `mix service logs --help`, and it
+    // is also a page of the user handbook — a link to a path only a checkout of this repository has
+    // is a dead link for every reader of both.
     Logs {
         /// The service to read.
         #[arg(value_name = "SERVICE", value_parser = service_id)]
@@ -378,11 +378,11 @@ fn walk_target(target: &Target) -> ServiceTarget {
 
 /// What `start` takes, which is [`Target`] plus the one scope only a start has.
 ///
-/// **A type of its own rather than a field on [`Target`]** — roadmap task **T125**. The field would
-/// have to be refused on `stop` and `restart`, and a flag a command lists in its own `--help` in
-/// order to reject it is a flag that reads as a gap. What a project-scoped stop would mean is a
-/// different set from this one — this includes the front end every *other* site is reached
-/// through — so the daemon keeps its refusal for a hand-written request, and `mix` never offers it.
+/// **A type of its own rather than a field on [`Target`].** The field would have to be refused on
+/// `stop` and `restart`, and a flag a command lists in its own `--help` in order to reject it is a
+/// flag that reads as a gap. What a project-scoped stop would mean is a different set from this one
+/// — this includes the front end every *other* site is reached through — so the daemon keeps its
+/// refusal for a hand-written request, and `mix` never offers it.
 #[derive(Debug, clap::Args)]
 pub(crate) struct StartTarget {
     #[command(flatten)]
@@ -397,7 +397,7 @@ pub(crate) struct StartTarget {
     project: Option<String>,
 }
 
-/// Which service in a listing is the front end, as the daemon answered — roadmap task **T97**.
+/// Which service in a listing is the front end, as the daemon answered.
 ///
 /// **Three answers and not an [`Option`]**, because the third is a wire fact and not a home fact: a
 /// daemon built before `ServiceSummary::role` sends none, and reading that as *no front end* would
@@ -436,15 +436,16 @@ fn the_front_end(list: &ServiceList) -> Found<'_> {
     }
 }
 
-/// `mix service set-front-end <server>` — roadmap task **T97**.
+/// `mix service set-front-end <server>`: move every site to the other web server.
 ///
 /// **The question is asked before the call and not after it**, on `mix cleanup`'s rule: a switch
 /// stops the web server every site in this home is reached through, and somebody who typed it needs
 /// to know that before it happens rather than to read it in a report.
 ///
 /// `grant: true` is sent because the person has just been told that a permission prompt may appear
-/// — which is T64's rule met — and because the switch cannot go ahead without the grant on the one
-/// system that needs it.
+/// — which is the rule every elevation follows: what is about to be allowed is shown before it is
+/// allowed — and because the switch cannot go ahead without the grant on the one system that needs
+/// it.
 async fn set_front_end(
     client: &mut Client,
     json: bool,
@@ -510,7 +511,7 @@ async fn set_front_end(
     })
 }
 
-/// Ask, once, in front of what is about to happen — roadmap task **T97**.
+/// Ask, once, in front of what is about to happen.
 ///
 /// **Asking for the server a home is already on is a yes**, on `agreed_to_cleanup`'s rule: a command
 /// that asked *"change nothing?"* is one people learn to answer without reading.
@@ -567,7 +568,7 @@ fn agreed_to_switch(list: &ServiceList, server: FrontEndServer, json: bool) -> R
     }
 }
 
-/// Ask before a repair stops a database and rewrites the credential inside it — **T127**.
+/// Ask before a repair stops a database and rewrites the credential inside it.
 ///
 /// **Asked rather than assumed, and `--yes` is the way past it**, because this is the one `mix
 /// service` subcommand that changes something inside a data directory. What it says is what somebody
@@ -852,9 +853,9 @@ pub(crate) async fn service(
                     Ok(ExitCode::SUCCESS)
                 }
 
-                // ADR 0019's cost, paid in the one place that reads the member: a daemon from before
-                // T97 sends no role at all, and guessing from the package names is the thing this
-                // command exists so that nobody does.
+                // ADR 0019's cost, paid in the one place that reads the member: a daemon from
+                // before the front end could be switched sends no role at all, and guessing from
+                // the package names is the thing this command exists so that nobody does.
                 Found::Unanswered => Err(Error::new(
                     ErrorCode::PreconditionFailed,
                     "this daemon does not say what a service is for, so which one is the front \
@@ -934,9 +935,8 @@ pub(crate) async fn service(
             encode(&walk_target(target)),
         ),
 
-        // **Its own params type**, which is why every arm here encodes its own: T125's finding was
-        // that a target with no service means *the whole home*, and a repair may not be askable
-        // that way.
+        // **Its own params type**, which is why every arm here encodes its own: a target with no
+        // service means *the whole home*, and a repair may not be askable that way.
         ServiceCommand::ResetCredential {
             service,
             yes,

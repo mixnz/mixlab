@@ -17,15 +17,15 @@ use crate::jobs::follow;
 use crate::output::{emit, rendered};
 use crate::{confirm, render};
 
-/// `mix uninstall` — roadmap task **T87**.
+/// `mix uninstall`: remove MixEngine from this machine, after showing what goes.
 ///
 /// **The plan is asked for first and always**, even on the way to the real thing: what a person is
-/// about to allow is what they are shown, which is T64's rule applied to the one command that cannot
-/// be undone. `--dry-run` is that same call and then nothing else.
+/// about to allow is what they are shown, which is the rule every elevation follows, applied here
+/// to the one command that cannot be undone. `--dry-run` is that same call and then nothing else.
 ///
-/// **Exit `3` is "something is in the way"** (the T182 design, D4): a process running from a
-/// directory that would be removed. Distinct from `1`, so the Windows uninstaller can tell *close
-/// this and try again* from *this failed*.
+/// **Exit `3` is "something is in the way"**: a process running from a directory that would be
+/// removed. Distinct from `1`, so the Windows uninstaller can tell *close this and try again* from
+/// *this failed*.
 pub(crate) async fn uninstall(
     endpoint: &Endpoint,
     autostart: Option<&Autostart>,
@@ -45,9 +45,9 @@ pub(crate) async fn uninstall(
 
     let mut client = Client::connect(endpoint, autostart).await?;
 
-    // T182b, D8: which process this is, by pid *and* the moment it began, so the wait at the end is
-    // for this daemon and not for whatever the OS later hands the pid to. A daemon that will not say
-    // is waited for the old way, by its endpoint going quiet.
+    // Which process this is, by pid *and* the moment it began, so the wait at the end is for this
+    // daemon and not for whatever the OS later hands the pid to. A daemon that will not say is
+    // waited for the old way, by its endpoint going quiet.
     let daemon = ask::<DaemonStatus>(&mut client, rpc::method::DAEMON_STATUS, None)
         .await
         .ok()
@@ -64,8 +64,8 @@ pub(crate) async fn uninstall(
         // A plan raises nothing whatever this says; sent as it will be sent to the act, so the two
         // calls are visibly one question asked twice.
         grant: false,
-        // T182e: the listing the uninstaller reads while its banner is up names folders and
-        // nothing else, so it does not pay for reading the handle table.
+        // The listing the uninstaller reads while its banner is up names folders and nothing else,
+        // so it does not pay for reading the handle table.
         skip_holders: relocated,
         package,
         by_hand: false,
@@ -79,8 +79,8 @@ pub(crate) async fn uninstall(
     )
     .await?;
 
-    // T182, D9: the listing the Windows uninstaller reads — the directories `[paths]` moved out,
-    // and not the tombstones beside them, which are garbage and not a choice.
+    // The listing the Windows uninstaller reads — the directories `[paths]` moved out, and not the
+    // tombstones beside them, which are garbage and not a choice.
     if relocated {
         for item in &planned.items {
             if item.id == ResidueId::RelocatedDirectory
@@ -93,9 +93,9 @@ pub(crate) async fn uninstall(
         return Ok(ExitCode::SUCCESS);
     }
 
-    // T182e, D6: the listing the uninstaller's "close these first" page reads — one line per program
-    // in the way, and nothing else. A question and not a refusal, so it succeeds either way. ASCII
-    // only: the uninstaller reads it through `nsExec`, which spells a dash as three other characters.
+    // The listing the uninstaller's "close these first" page reads — one line per program in the
+    // way, and nothing else. A question and not a refusal, so it succeeds either way. ASCII only:
+    // the uninstaller reads it through `nsExec`, which spells a dash as three other characters.
     if blocked {
         for item in &planned.items {
             if matches!(item.outcome, Removal::Blocked { .. }) {
@@ -136,7 +136,7 @@ pub(crate) async fn uninstall(
     }
 
     // Measured now, from the plan, while nothing is being removed: what `left_behind` says while it
-    // waits is how much there is to remove (T182b).
+    // waits is how much there is to remove.
     let removing = bytes_going(&planned);
 
     let started: JobSummary = ask(
@@ -144,8 +144,8 @@ pub(crate) async fn uninstall(
         rpc::method::DAEMON_UNINSTALL,
         encode(&UninstallQuery {
             // The plan above *is* the batch this allows, and it has just been shown or answered for
-            // in advance — which is T64's rule met, so the prompt is raised inside the one job the
-            // caller is already following.
+            // in advance — so what is about to be allowed has been shown, and the prompt is raised
+            // inside the one job the caller is already following.
             grant: true,
             // And the act always looks: something stuck that appeared since the plan refuses here.
             skip_holders: false,
@@ -195,14 +195,14 @@ pub(crate) async fn uninstall(
 
     let still_there = left_behind(&report, endpoint, daemon, removing).await;
 
-    // **And the process itself** (the T182b design, D8). The endpoint goes quiet before the daemon
-    // has finished removing its home and exited, and until it has, its image is still mapped: the
-    // Windows uninstaller deleting `mixengined.exe` straight after this returned is what found that.
+    // **And the process itself.** The endpoint goes quiet before the daemon has finished removing
+    // its home and exited, and until it has, its image is still mapped: the Windows uninstaller
+    // deleting `mixengined.exe` straight after this returned is what found that.
     let lingering = finished_uninstall(&report)
         && daemon.is_some_and(|(pid, began)| !process_has_ended(pid, began));
 
     // **Why, before what.** A daemon that could not remove its home says so in a note outside it
-    // (T182b), and that sentence is the one that tells a person what to close.
+    // and that sentence is the one that tells a person what to close.
     if let Some((pid, _)) = daemon.filter(|_| !lingering) {
         print_the_daemons_note(pid);
     }
@@ -211,8 +211,8 @@ pub(crate) async fn uninstall(
         report_left(path);
     }
 
-    // T182a: the program's own files, read back off the disk once the daemon has gone, like the
-    // home. `mix` itself is one of them and goes on running from memory, as the window does.
+    // The program's own files, read back off the disk once the daemon has gone, like the home.
+    // `mix` itself is one of them and goes on running from memory, as the window does.
     for path in package_left(&report) {
         report_left(&path);
     }
@@ -263,7 +263,7 @@ async fn privileged_route(client: &mut Client, json: bool) -> Result<Route, Erro
     }))
 }
 
-/// The `.pkg`'s paths still on disk after a run that says it removed the package — T182a.
+/// The `.pkg`'s paths still on disk after a run that says it removed the package.
 fn package_left(report: &UninstallReport) -> Vec<String> {
     let removed = report.items.iter().any(|item| {
         item.id == ResidueId::Package && matches!(item.outcome, Removal::Removed { .. })
@@ -284,7 +284,7 @@ fn package_left(report: &UninstallReport) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// Did the daemon say this uninstall finished, which is what ends it (T182b, D1)?
+/// Did the daemon say this uninstall finished, which is what ends it?
 fn finished_uninstall(report: &UninstallReport) -> bool {
     !report.items.iter().any(|item| {
         matches!(
@@ -324,7 +324,7 @@ fn has_ended(pid: u32, began: mixengine_platform::process::StartTime) -> bool {
 }
 
 /// How many bytes the directories this plan removes hold — the home, the relocated directories and
-/// the window's folders that are `Planned` (T182b).
+/// the window's folders that are `Planned`.
 ///
 /// **Without following a link**, since a removal does not either, and with every unreadable entry
 /// counted as nothing: this is a figure for a person, and a wrong one is only a wrong figure.
@@ -382,7 +382,7 @@ fn print_the_daemons_note(pid: u32) {
     let _ = std::fs::remove_file(&note);
 }
 
-/// What `mix uninstall` exits with when a process is in the way — the T182 design, D4.
+/// What `mix uninstall` exits with when a process is in the way.
 const BLOCKED: u8 = 3;
 
 /// What `mix uninstall` was asked to do: its six flags, on
@@ -410,16 +410,16 @@ pub(crate) struct UninstallAsk {
 /// slow machine, which is the one wrong answer this command must not give.
 const GOING: std::time::Duration = std::time::Duration::from_secs(60);
 
-/// How long a finished uninstall waits for the daemon's *process* to end once its endpoint has —
-/// the T182b design, D8. Removing a home with runtimes in it is the slow part, and a machine with a
-/// large `runtimes/` is exactly the one where giving up early would be a false *"still running"*.
+/// How long a finished uninstall waits for the daemon's *process* to end once its endpoint has.
+/// Removing a home with runtimes in it is the slow part, and a machine with a large `runtimes/` is
+/// exactly the one where giving up early would be a false *"still running"*.
 const PROCESS_GONE: std::time::Duration = std::time::Duration::from_secs(120);
 
 /// The paths the daemon said it was taking with it that are still on disk once it has gone.
 ///
 /// **A process cannot measure the removal of the directory it is running out of**, so the daemon
 /// names these and the client reads them back — which is what makes this command's exit code mean
-/// *nothing is left behind* rather than *the daemon said so* (the T87 design, D9).
+/// *nothing is left behind* rather than *the daemon said so*.
 ///
 /// **And the paths are waited for, not read once.** The endpoint stops answering the moment the
 /// daemon commits to going, which is a long way before it has stopped its services, checkpointed the
@@ -431,13 +431,13 @@ const PROCESS_GONE: std::time::Duration = std::time::Duration::from_secs(120);
 /// A daemon that is still there when the budget runs out has not removed them, and what this answers
 /// is the honest thing: they are still there.
 ///
-/// **A daemon whose process has ended will not remove anything more**, so once `daemon` has gone the
-/// paths are read one last time and answered, rather than waited on for the rest of the budget
-/// (T182b: a home held open by File Explorer kept the uninstaller waiting a minute for nothing).
+/// **A daemon whose process has ended will not remove anything more**, so once `daemon` has gone
+/// the paths are read one last time and answered, rather than waited on for the rest of the budget
+/// (a home held open by File Explorer kept the uninstaller waiting a minute for nothing).
 ///
-/// **And it says that it is waiting** (T182b). Removing a home of a gigabyte takes a minute on
-/// Windows, and a person watching the uninstaller saw nothing move for all of it: one line when the
-/// wait begins, with how much is going, and one every `STILL` after.
+/// **And it says that it is waiting.** Removing a home of a gigabyte takes a minute on Windows, and
+/// a person watching the uninstaller saw nothing move for all of it: one line when the wait begins,
+/// with how much is going, and one every `STILL` after.
 async fn left_behind(
     report: &UninstallReport,
     endpoint: &Endpoint,
@@ -457,8 +457,8 @@ async fn left_behind(
         .map(|item| item.location.as_str())
         .collect();
 
-    // T182, D1: a finished uninstall ends the daemon even when nothing of its own is going, and
-    // this waits for that too — a script reading the exit code should not find the daemon still up.
+    // A finished uninstall ends the daemon even when nothing of its own is going, and this waits
+    // for that too — a script reading the exit code should not find the daemon still up.
     let finished = !report.items.iter().any(|item| {
         matches!(
             item.outcome,
@@ -492,7 +492,7 @@ async fn left_behind(
         // Asked before the paths are read, so the reading after it is one the daemon cannot change.
         let ended = daemon.is_some_and(|(pid, began)| has_ended(pid, began));
 
-        // A tombstone beside a path is that path half-removed (T182, D6), and counts as left.
+        // A tombstone beside a path is that path half-removed, and counts as left.
         let mut left: Vec<String> = going
             .iter()
             .flat_map(|path| {
@@ -573,7 +573,7 @@ pub(crate) fn agreed_to_uninstall(
         return Err(unanswered());
     }
 
-    // The relocated directories are only worth a clause of their own when there are some (T182, D2).
+    // The relocated directories are only worth a clause of their own when there are some.
     let moved = planned.items.iter().any(|item| {
         item.id == ResidueId::RelocatedDirectory
             && !item.location.contains(mixengine_platform::tombstone::MARK)

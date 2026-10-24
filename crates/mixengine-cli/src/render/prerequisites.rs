@@ -1,8 +1,8 @@
-//! What an install lacks on this machine, printed — roadmap tasks **T151** and **T27e**.
+//! What an install lacks on this machine, printed.
 
 use mixengine_proto::Requirement;
 
-/// What an install lacks here, one line each with what can be done — roadmap task **T151**.
+/// What an install lacks here, one line each with what can be done.
 pub(crate) fn requirements(unmet: &[Requirement]) -> String {
     let mut rendered = String::from("this machine lacks what it needs:\n");
     for requirement in unmet {
@@ -14,7 +14,7 @@ pub(crate) fn requirements(unmet: &[Requirement]) -> String {
     rendered
 }
 
-/// What an install may lack that refuses nothing — roadmap task **T27e**, its design's D16.
+/// What an install may lack that refuses nothing.
 pub(crate) fn advisories(advisories: &[Requirement]) -> String {
     let named: Vec<String> = advisories
         .iter()
@@ -56,7 +56,7 @@ mod tests {
         );
     }
 
-    /// **A warning names the libraries and says the install goes on** — roadmap task **T27e**, D16.
+    /// **A warning names the libraries and says the install goes on.**
     #[test]
     fn a_warning_names_the_libraries_and_says_the_install_goes_on() {
         let said = advisories(&[Requirement {

@@ -3,16 +3,16 @@
 use super::size::size;
 use mixengine_proto::{Action, BundleReport, DoctorReport, Outcome, RepairReport};
 
-/// `daemon.doctor`, as a person reads it — roadmap task **T47a**.
+/// `daemon.doctor`, as a person reads it.
 ///
 /// **Every check gets a line, including the ones that found nothing.** A doctor that printed only
 /// faults would leave a person unsure it looked, which is the whole reason the report carries what
 /// was examined rather than only what was wrong.
 ///
 /// The word in the margin is the outcome and the indented line under it is the daemon's own
-/// sentence — the daemon's `because` never carries advice (T47a design, D3), so the one line telling
-/// a person what to do about a `PROBLEM` is this client's own, appended once for the whole report
-/// rather than repeated under every line that earned it.
+/// sentence — the daemon's `because` never carries advice, so the one line telling a person what to
+/// do about a `PROBLEM` is this client's own, appended once for the whole report rather than
+/// repeated under every line that earned it.
 pub(crate) fn doctor(report: &DoctorReport) -> String {
     let mut out = String::new();
 
@@ -38,7 +38,7 @@ pub(crate) fn doctor(report: &DoctorReport) -> String {
     out
 }
 
-/// `daemon.doctor_repair`, as a person reads it — roadmap task **T47b**.
+/// `daemon.doctor_repair`, as a person reads it.
 ///
 /// **The same three margins as [`doctor`]**, so the two read as one tool: what was done, what is
 /// waiting, and what nothing could be done about. A `PROBLEM` here means the same thing it means
@@ -67,7 +67,7 @@ pub(crate) fn repair(report: &RepairReport) -> String {
     out
 }
 
-/// `daemon.bundle`, as a person reads it — roadmap task **T93**.
+/// `daemon.bundle`, as a person reads it.
 ///
 /// **The omissions are printed and not summarised.** They are the half a person will not otherwise
 /// know to ask about, and a bundle whose gaps live only in a JSON field is a bundle whose gaps get

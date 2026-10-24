@@ -1,8 +1,8 @@
-//! `mix domain` — roadmap task **T46**.
+//! `mix domain`, for a person.
 
 use mixengine_proto::DomainStatusReport;
 
-/// `domain.dns_status`, as a person reads it — roadmap task **T46**.
+/// `domain.dns_status`, as a person reads it.
 ///
 /// **One column per fact, because the four fail independently.** A single "works / does not" column
 /// would be exactly the derivation the report exists to prevent; the sentence under a failing row is

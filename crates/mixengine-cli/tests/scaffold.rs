@@ -1,4 +1,4 @@
-//! Importing a blueprint somebody else wrote, and running its own command — roadmap task **T78a**.
+//! Importing a blueprint somebody else wrote, and running its own command.
 //!
 //! What is proved here is the whole of the task end to end and what no unit test can: that a
 //! hand-written blueprint arrives *untrusted*, that its `[scaffold]` command does not run because
@@ -55,7 +55,7 @@ command = "{command}"
 }
 
 /// Write one into the home under `stem` and import it, answering with the summary the daemon wrote
-/// down. The slug is the stem — T79a's rule — so two blueprints in one home take two stems.
+/// down. The slug is the stem, so two blueprints in one home take two stems.
 fn imported_running(home: &Home, stem: &str, command: &str) -> serde_json::Value {
     let file = home.path().join(format!("{stem}.toml"));
     std::fs::write(&file, a_blueprint_with_a_command(command)).expect("a blueprint to import");
@@ -80,8 +80,8 @@ async fn a_hand_written_blueprint_arrives_untrusted() {
     assert_eq!(summary["source"], "imported", "{summary}");
     assert_eq!(summary["trusted"], false, "{summary}");
 
-    // **Found by slug rather than by position** — roadmap task T79 put six built-in blueprints in
-    // every home, so index zero is whichever gallery slug sorts first and not this one.
+    // **Found by slug rather than by position**: the gallery puts built-in blueprints in every
+    // home, so index zero is whichever gallery slug sorts first and not this one.
     let listed = json(&home.mix(&["blueprint", "list", "--json"]));
     let slug = summary["slug"].as_str().expect("a slug");
     let found = listed["blueprints"]
@@ -144,8 +144,8 @@ async fn a_blueprints_own_command_runs_only_when_asked_for() {
     );
 }
 
-/// **`--run-scaffold` is not the gesture an unsigned blueprint takes** — roadmap task **T78a**, its
-/// design's D15 — and the refusal names the one that is rather than leaving somebody guessing.
+/// **`--run-scaffold` is not the gesture an unsigned blueprint takes**, and the refusal names the
+/// one that is rather than leaving somebody guessing.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_flag_for_a_signed_blueprint_does_not_answer_for_an_unsigned_one() {
     let home = Home::new();
@@ -217,9 +217,9 @@ async fn declining_the_question_leaves_the_command_and_keeps_the_project() {
 const A_PROGRAM_NOBODY_HAS: &str = "mixengine-no-such-program-t78b";
 
 /// **A command whose program is missing is blocked in the plan, refused when agreed to, and left
-/// when it is not — and the project is there either way** — roadmap task **T78b**. The whole of
-/// the design's D1, D3 and D5, end to end: the plan says it, the refusal says it in the plan's
-/// words, and an apply without the gesture still applies everything else.
+/// when it is not — and the project is there either way.** End to end: the plan says it, the
+/// refusal says it in the plan's words, and an apply without the gesture still applies everything
+/// else.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_command_whose_program_is_missing_is_blocked_before_anything_runs() {
     let home = Home::new();
@@ -288,10 +288,9 @@ async fn a_command_whose_program_is_missing_is_blocked_before_anything_runs() {
     assert_eq!(shown["project"]["name"], "five", "{shown}");
 }
 
-/// **A project named the way people name things gets a directory a tool will accept** — roadmap
-/// task **T120a**.
+/// **A project named the way people name things gets a directory a tool will accept.**
 ///
-/// The whole of D1 in one apply: no `--path`, a name carrying a capital, a space and a dot, and the
+/// The whole rule in one apply: no `--path`, a name carrying a capital, a space and a dot, and the
 /// directory that appears is the *handle*. The scaffold's own file is what proves the command ran
 /// **in** that directory rather than somewhere a plan merely mentioned.
 ///
@@ -342,8 +341,8 @@ async fn a_project_name_that_is_not_a_slug_still_gets_a_directory_a_tool_accepts
     );
 }
 
-/// **A path somebody typed is used as typed** — the design's D2, and the other half of the decision
-/// above. A folder a person named is a folder a person named.
+/// **A path somebody typed is used as typed** — the other half of the decision above. A folder a
+/// person named is a folder a person named.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_path_somebody_named_is_not_respelled() {
     let home = Home::new();
