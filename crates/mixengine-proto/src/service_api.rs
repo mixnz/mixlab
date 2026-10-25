@@ -212,10 +212,10 @@ pub struct ServiceSummary {
 
     /// The port its row was given, and [`None`] for a service that listens on none.
     ///
-    /// **The number in the row, not one derived from the running process.** It is allocated once,
-    /// when the service is created, and never recomputed: it is in somebody's `.env` and in a
-    /// colleague's shell history by the end of the afternoon, so a service that quietly moved
-    /// between restarts would break both. A stopped service has it just as a running one does,
+    /// **The number in the row, not one derived from the running process.** It is allocated when
+    /// the service is created and changes only when a person moves it with `service.set`: it is in
+    /// somebody's `.env` and in a colleague's shell history by the end of the afternoon, so a
+    /// service that quietly moved between restarts would break both. A stopped service has it just as a running one does,
     /// which is the point of reporting it here rather than only at creation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,

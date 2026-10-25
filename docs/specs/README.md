@@ -245,4 +245,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-23 | [T211j — A resolver that programs never ask is not wired (design)](2026-10-23-t211j-a-resolver-programs-never-ask-design.md) | T211j | implemented |
 | 2026-10-24 | [No roadmap task numbers in code (design)](2026-10-24-t209m-no-task-numbers-in-code-design.md) | T209m | implemented |
 | 2026-10-25 | [No task outlives shutdown (design)](2026-10-25-t209h-no-task-outlives-shutdown-design.md) | T209h | implemented |
-| 2026-10-25 | [T210 — Moving a service to another port](2026-10-25-t210-moving-a-service-to-another-port-design.md) | T210 | approved |
+| 2026-10-25 | [T210 — Moving a service to another port](2026-10-25-t210-moving-a-service-to-another-port-design.md) | T210 | implemented |

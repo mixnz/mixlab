@@ -12,7 +12,7 @@ follows the other.
 
 ---
 
-- [ ] **T210** `service.set` moves an instance to another port. Today a port is allocated once,
+- [x] **T210** `service.set` moves an instance to another port. Today a port is allocated once,
       when the row is written, and never changes (`docs/features/services.md`, *Ports, and who
       gets 3306*). That spec already names the missing piece: "`mix service set`, which does not
       exist yet". The case that asks for it: `mysql@57` holds 3306 and `mysql@8` was given 3307.

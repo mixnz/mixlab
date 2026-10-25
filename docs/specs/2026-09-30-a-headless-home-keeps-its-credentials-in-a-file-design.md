@@ -113,7 +113,7 @@ workarounds:
 > can read, run `mix daemon credential-store home`
 
 The sentence is added where the daemon maps `UnsupportedPlatform` for the `Keyring` capability to
-a wire error ([error.rs](../../crates/mixengine-daemon/src/error.rs)), not in
+a wire error ([error.rs](../../crates/mixengine-daemon/src/error/mod.rs)), not in
 `mixengine-platform`: the platform layer does not know `mix` exists, and its own workarounds stay
 as they are.
 

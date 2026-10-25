@@ -79,13 +79,19 @@ and not two. A port is **allocated once, when the row is written, and never comp
   which has a `services` row. So the test is a bind and not a query, and a preferred port lost to a
   program MixEngine does not manage is reported with as much of that program's identity as the OS
   will give up (T38) rather than as a silent renumbering. The search is bounded — running out of ports is an error, not a longer loop.
-- **An allocated port belongs to its row for as long as the row lives.** Deleting whoever holds 3306
-  does not promote anybody into it: the port is in a project's `.env` and in a colleague's shell
-  history, and a service that quietly moved would break both. Moving one is a person's decision and
-  a regeneration — `mix service set`, which does not exist yet and is the same missing task the
-  reload waits for.
+- **A port moves only when a person moves it.** Deleting whoever holds 3306 does not promote anybody
+  into it: the port is in a project's `.env` and in a colleague's shell history, and a service
+  that quietly moved would break both. A person moves one with `service.set` —
+  `mix service set <id> --port <n>`, or *Change port…* in MixLab — which checks the new port the way
+  the allocator checks one (no row or extension holds it, and it binds on the row's own address,
+  with a foreign holder named), renders the configuration again and restarts a running instance; a
+  stopped one stays stopped, and a start that fails on the new port puts it back on the old one. The
+  answer names what MixEngine cannot follow: a `.env`, a saved connection, shell history. Only a
+  database or a cache moves; a front end's 80 and 443 and a php-fpm pool's internal port do not.
+  Design: [T210](../specs/2026-10-25-t210-moving-a-service-to-another-port-design.md).
 - **Allocating and writing the row are one critical section**, or two concurrent `service.create`
-  calls are each handed the same next-free port and the second server fails to bind at start.
+  calls are each handed the same next-free port and the second server fails to bind at start. A
+  move takes the same lock.
 
 ## Config generation
 

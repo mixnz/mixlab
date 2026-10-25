@@ -139,7 +139,10 @@ binaries. What they state is what the daemon **writes** —
    `ServiceSummary::autostart` and `service.set_autostart`, and **T113** is what acts on it — a
    start plan over the flagged services, walked once after the endpoint is serving, so a service
    something flagged depends on comes up too. That is the one thing in this page that a client
-   could not draw, found by a person using the product rather than by reading; the generated config readable back for display only;
+   could not draw, found by a person using the product rather than by reading. **And the port, since
+   T210**: `ServiceSummary::port_movable` says whether a service may move, and `service.set` moves
+   it (`mix service set`; MixLab's *Change port…* in a row's menu on the Dashboard and the Port
+   panel on the service's screen); the generated config readable back for display only;
    credentials fetched on demand; validation failures returned per field, not as one string. **And,
    for a database service, where it can be opened — T83**: whether a desktop database client is
    installed to hand the connection to, and the handoff itself, answered per service so a client
