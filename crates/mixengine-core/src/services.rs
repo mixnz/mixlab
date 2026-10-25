@@ -50,7 +50,7 @@ pub mod save_resources;
 mod transitions;
 mod write;
 
-pub use claim::{Claimed, claim, port_movable};
+pub use claim::{Claimed, claim, port_movable, reclaim};
 pub use transitions::{ended, started, transition, transition_noting};
 use transitions::{exit_code, failure_note, installed_version, listening_port, process_id};
 pub use write::{

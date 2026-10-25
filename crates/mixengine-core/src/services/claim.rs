@@ -111,6 +111,30 @@ pub async fn claim(
     Ok(Claimed::Moved { from })
 }
 
+/// Put `service` back on `port`, the port it held before a move that did not finish.
+///
+/// **No bind test**, unlike [`claim`]: the reason to go back is a process of this service that is
+/// still bound there. What is checked is the table, under the same lock — while the move lasted the
+/// row did not hold `port`, and a `service.create` could have been handed it.
+///
+/// # Errors
+///
+/// [`ServiceError::PortHeld`] when another row or an extension holds `port` now, [`Error::NotFound`]
+/// when no such service is declared, and the store's own failure.
+pub async fn reclaim(store: &Store, service: &ServiceId, port: u16) -> Result<()> {
+    let _allocating = ports::hold().await;
+
+    if let Some((_, holder)) = ports::holders(store)
+        .await?
+        .into_iter()
+        .find(|(held, holder)| *held == i64::from(port) && holder != service.as_str())
+    {
+        return Err(Error::Service(ServiceError::PortHeld { port, holder }));
+    }
+
+    super::set_port(store, service, port).await
+}
+
 #[cfg(test)]
 mod tests {
     use std::net::{Ipv4Addr, TcpListener};
@@ -346,6 +370,43 @@ mod tests {
         drop(held);
         let claimed = moving.await.expect("the task").expect("a move");
         assert_eq!(claimed, Claimed::Moved { from: first });
+    }
+
+    /// **Going back to a port its own process still holds is not refused by that process.** A move
+    /// whose stop failed leaves the old process bound to the old port; the row has to follow it
+    /// back, and a bind test would say no.
+    #[tokio::test]
+    async fn reclaim_goes_back_to_a_port_its_own_process_still_holds() {
+        let (_home, store) = store().await;
+        let first = a_free_run(2);
+        declared(&store, "one", first + 1).await;
+        let _still_running =
+            TcpListener::bind((Ipv4Addr::LOCALHOST, first)).expect("the old process");
+
+        reclaim(&store, &one(), first)
+            .await
+            .expect("back on its old port");
+
+        assert_eq!(port_of(&store, "one@main").await, Some(i64::from(first)));
+    }
+
+    /// **But a port another row was given meanwhile is not taken back.** The row left it free in
+    /// the table for as long as the move lasted, and a create could have been handed it.
+    #[tokio::test]
+    async fn reclaim_refuses_a_port_another_row_was_given_meanwhile() {
+        let (_home, store) = store().await;
+        let first = a_free_run(2);
+        declared(&store, "one", first + 1).await;
+        declared(&store, "two", first).await;
+
+        let refused = reclaim(&store, &one(), first)
+            .await
+            .expect_err("taken meanwhile");
+
+        assert!(
+            matches!(&refused, crate::Error::Service(ServiceError::PortHeld { holder, .. }) if holder == "two@main"),
+            "{refused:?}"
+        );
     }
 
     /// Which catalogue rows a person may move: every server with a port of its own, and nothing

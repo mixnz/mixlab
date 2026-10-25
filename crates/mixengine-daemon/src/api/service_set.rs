@@ -170,10 +170,11 @@ impl Api {
 
     /// Write the old port back. Logged loudly when even that fails: the row then names a port the
     /// person was told it is not on, and `mix service status` is where they will see it.
+    ///
+    /// **`reclaim` and not `claim`**: after a stop that failed, this service's own process is still
+    /// bound to `from`, and a bind test would refuse the one row that should have it.
     async fn back_on_the_old_port(&self, id: &ServiceId, from: u16) {
-        if let Err(error) =
-            mixengine_core::services::claim(&self.store, self.services.host(), id, from).await
-        {
+        if let Err(error) = mixengine_core::services::reclaim(&self.store, id, from).await {
             tracing::error!(
                 service = id.as_str(),
                 port = from,
