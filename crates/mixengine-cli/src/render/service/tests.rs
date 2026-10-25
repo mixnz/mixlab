@@ -52,6 +52,7 @@ pub(in crate::render) fn summary(id_value: &str, state: Option<ServiceState>) ->
         last_exit_code: None,
         depends_on: Vec::new(),
         role: Some(mixengine_proto::ServiceRole::Other {}),
+        port_movable: None,
         autostart: false,
         stopped_by: None,
         version: None,

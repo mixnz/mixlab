@@ -248,6 +248,14 @@ pub struct ServiceSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role: Option<ServiceRole>,
 
+    /// Whether `service.set` accepts a port for this service.
+    ///
+    /// The daemon's answer, from the recipe, so no client decides which services may move: a
+    /// database or a cache may, a front end and a php-fpm pool may not. [`None`] means a daemon
+    /// built before the member, on [`role`](Self::role)'s rule — a client draws no way to move it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port_movable: Option<bool>,
+
     /// Whether this service starts when the daemon does.
     ///
     /// **The setting and not a prediction**: it says what the column holds, not whether the service
@@ -598,6 +606,10 @@ pub struct ServiceAdopt {
     /// A service `service.found` listed.
     pub service: ServiceId,
 }
+
+mod set;
+
+pub use set::{PortChange, ServiceSet, ServiceSetResult};
 
 #[cfg(test)]
 mod tests;
