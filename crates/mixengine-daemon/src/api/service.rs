@@ -504,7 +504,13 @@ pub(super) fn summary(
             .map(|dependencies| dependencies.iter().cloned().collect())
             .unwrap_or_default(),
         role: Some(role_of(catalogue, id)),
-        port_movable: None,
+        // The recipe's answer, so no client decides which services may move. A row whose package
+        // this build has no recipe for — an extension's — may not.
+        port_movable: Some(
+            catalogue
+                .recipe(id.name())
+                .is_some_and(|recipe| mixengine_core::services::port_movable(recipe.as_ref())),
+        ),
         // The row's column, on `port`'s rule: a service with no row has no setting to report,
         // exactly as it has no state — and `false` is the reading that cannot be acted on, which is
         // the safer of the two for something a boot walk reads.

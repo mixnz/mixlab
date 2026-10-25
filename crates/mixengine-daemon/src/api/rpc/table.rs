@@ -16,9 +16,9 @@ use mixengine_proto::{
     PackageUpgrade, PackageUpgradeQuery, ProjectCreate, ProjectQuery, ProjectUpdate,
     ResetCredential, RuntimeFilter, RuntimeInstall, RuntimeQuestion, RuntimeTarget,
     RuntimeUninstall, RuntimeUpgrade, RuntimeUpgradeQuery, SaveResourcesSet, ServiceAutostartSet,
-    ServiceCreate, ServiceDelete, ServiceIdleSet, ServiceLimitsSet, ServiceQuery, ServiceTarget,
-    SiteCreate, SiteListQuery, SiteQuery, SiteShare, SiteUpdate, UninstallQuery, UpdateApply,
-    UpdateCheck, UpdateDecide, UpdateFinish, UpdateHandOver,
+    ServiceCreate, ServiceDelete, ServiceIdleSet, ServiceLimitsSet, ServiceQuery, ServiceSet,
+    ServiceTarget, SiteCreate, SiteListQuery, SiteQuery, SiteShare, SiteUpdate, UninstallQuery,
+    UpdateApply, UpdateCheck, UpdateDecide, UpdateFinish, UpdateHandOver,
 };
 use serde_json::Value;
 
@@ -650,6 +650,11 @@ pub(super) async fn route(
         rpc::method::SERVICE_IDLE => {
             let target: ServiceTarget = arguments(params)?;
             encode_result(&api.service_idle(&target).await.map_err(refused)?)
+        }
+
+        rpc::method::SERVICE_SET => {
+            let asked: ServiceSet = arguments(params)?;
+            encode_result(&api.service_set(&asked).await.map_err(refused)?)
         }
 
         rpc::method::SERVICE_SET_IDLE => {

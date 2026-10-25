@@ -150,6 +150,13 @@ impl Service {
         self
     }
 
+    /// Never announce readiness whenever the service's row holds `port`, and start normally on any
+    /// other — a start that fails on one port and not on another, for a move's rollback.
+    #[must_use]
+    pub fn refuse_port(self, port: u16) -> Self {
+        self.set("refuse_port", json!(port))
+    }
+
     /// Add these lines to the generated arguments file verbatim.
     ///
     /// The free-form half of every recipe's overrides, and the only way a test reaches a

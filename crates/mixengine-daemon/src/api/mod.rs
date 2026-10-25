@@ -34,6 +34,7 @@ mod restore;
 mod rpc;
 mod self_update;
 mod service;
+mod service_set;
 mod service_settings;
 #[cfg(test)]
 mod test_daemon;
