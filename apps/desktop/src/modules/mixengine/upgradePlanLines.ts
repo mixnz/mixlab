@@ -1,6 +1,6 @@
 /**
- * An `UpgradePlan` as sentences — T193, D7. What each entry means is the daemon's; this only picks
- * the sentence and fills in the names it sent.
+ * An `UpgradePlan` as sentences. What each entry means is the daemon's; this only picks the
+ * sentence and fills in the names it sent.
  */
 import type { UpgradeItem, UpgradePlan } from "@mixengine/api";
 

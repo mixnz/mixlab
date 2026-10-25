@@ -15,7 +15,7 @@ export default defineConfig(async () => ({
     },
   },
 
-  // Two pages: the main window, and the tray panel's window (T168, `src-tauri/src/tray.rs`).
+  // Two pages: the main window, and the tray panel's window (`src-tauri/src/tray.rs`).
   build: {
     rollupOptions: {
       input: {

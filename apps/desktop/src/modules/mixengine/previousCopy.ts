@@ -1,7 +1,7 @@
 import type { HomePrevious } from "@mixengine/api";
 
 /**
- * `home.previous` as the Dashboard's offer — roadmap task T182h.
+ * `home.previous` as the Dashboard's offer.
  *
  * Pure, and reading only what the daemon answered: it counted what the copy holds and said whether
  * a newer build wrote it. `null` is no offer at all.

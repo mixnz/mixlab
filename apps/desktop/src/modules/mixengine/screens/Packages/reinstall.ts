@@ -1,4 +1,4 @@
-/** The release that puts back an install whose folder is gone — T206d. The same version, because
+/** The release that puts back an install whose folder is gone. The same version, because
  *  an install of that version restores its row in place; `null` when the catalogue no longer
  *  offers it, and the button says so rather than installing something else. */
 export function releaseToRestore<R extends { version: string }>(
@@ -10,7 +10,7 @@ export function releaseToRestore<R extends { version: string }>(
 }
 
 /** What a Reinstall button shows: busy while its own install runs, so a second click starts nothing,
- *  disabled when the catalogue no longer offers the version, and ready otherwise — T206d. */
+ *  disabled when the catalogue no longer offers the version, and ready otherwise. */
 export function reinstallState(
   restore: { version: string } | null,
   running: boolean,

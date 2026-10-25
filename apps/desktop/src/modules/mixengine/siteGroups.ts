@@ -3,7 +3,7 @@ import { siteUrl } from "./siteState";
 
 /**
  * The primary domain of the site each plan step belongs to, or `null` for a step outside every
- * site's group — T204a, D4.
+ * site's group.
  *
  * **Read off the order, as the daemon's executor reads it**: a site's names are the `add_domain`
  * steps straight after its `create_site`, and its certificate follows them. Nothing is decided here
@@ -29,7 +29,7 @@ export function firstSiteDomain(actions: PlanAction[]): string | null {
   return next?.action === "add_domain" ? next.domain : null;
 }
 
-/** Where a project's steps open: by the site a step names, else the first site — T204a, D5. */
+/** Where a project's steps open: by the site a step names, else the first site. */
 export interface SiteAddresses {
   first: string | null;
   byDomain: Record<string, string>;

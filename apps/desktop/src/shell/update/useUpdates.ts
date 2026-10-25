@@ -3,10 +3,10 @@ import { useWindowFocused } from "../../core/windowFocus";
 import * as api from "./api";
 import { panelView, retryStep, updateView, type Panel, type Step, type View } from "./view";
 
-/** 30 seconds after the window is drawn, then every 24 hours — spec D6. */
+/** 30 seconds after the window is drawn, then every 24 hours. */
 const FIRST_CHECK_MS = 30_000;
 const EVERY_MS = 24 * 60 * 60 * 1000;
-/** How often the installer's result is looked for while it is open — spec D5. */
+/** How often the installer's result is looked for while it is open. */
 const DISK_POLL_MS = 3_000;
 
 /**
@@ -28,7 +28,7 @@ function codeOf(error: unknown): string | undefined {
 export interface Updates {
   status: api.UpdateStatus | null;
   view: View;
-  /** What the corner panel draws (T188 D1). */
+  /** What the corner panel draws. */
   panel: Panel;
   progress: api.Progress | null;
   handedOver: api.HandedOver | null;
@@ -65,7 +65,7 @@ export interface Updates {
 /**
  * MixLab's updater, for the shell: mounted once in `Workspace`, and handed to the Updates pane, the
  * corner panel and the Settings button, which all read this one state. Checks on its own only while
- * the automatic switch is on; never downloads or installs without a click (T187 D6, T188 D3).
+ * the automatic switch is on; never downloads or installs without a click.
  *
  * `watching` is whether somebody can see the result of an installer: the poll for the version on
  * disk runs only then, so a person who walked away leaves no timer behind.
@@ -164,7 +164,7 @@ export function useUpdates(watching: boolean): Updates {
   const panel = panelView({ view, later, failed: failure !== null });
 
   // The sentence under *Install and restart* on Windows: asked when the offer becomes ready, since
-  // it is a call to a daemon that may not be running (T188 D1).
+  // it is a call to a daemon that may not be running.
   const swapReady = view === "ready" && status?.placement.kind === "swap";
   useEffect(() => {
     if (!swapReady) return;

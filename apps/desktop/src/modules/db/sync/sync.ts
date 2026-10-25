@@ -19,10 +19,11 @@ import { addConnection, removeConnection, updateConnection } from "../saved/save
 import type { ConnectionConfig, SavedConnection } from "../types";
 
 /**
- * What travels of a connection: what it *is* (D5), and its read-only guard.
+ * What travels of a connection: what it *is* (D5 of
+ * `docs/specs/2026-09-20-t177-a-copy-only-you-can-read-design.md`), and its read-only guard.
  *
  * An allow-list: a sidebar's width, a pin, a scan ceiling and a MixEngine keyring reference belong
- * to this machine, and every credential belongs to `connection-secrets` (T177f).
+ * to this machine, and every credential belongs to `connection-secrets`.
  */
 export function connectionToSync(connection: SavedConnection): SyncItem {
   const config = withoutSecrets(connection.config);
@@ -135,7 +136,7 @@ async function writeSecrets(changes: SyncChanges): Promise<string[]> {
     }
     const local = current.get(synced.id);
     if (!local) {
-      // Parked for a connection still to come: `read` does not return it until then (L4).
+      // Parked for a connection still to come: `read` does not return it until then.
       await saveSecrets(synced.id, secrets);
       skipped.push(synced.id);
       continue;

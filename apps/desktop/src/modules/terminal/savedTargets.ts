@@ -60,7 +60,7 @@ export function parseSavedTarget(value: unknown): SavedTarget | null {
   if (typeof entry.id !== "string" || entry.id === "") return null;
   if (typeof entry.name !== "string") return null;
   const runOnConnect = typeof entry.runOnConnect === "string" ? entry.runOnConnect : undefined;
-  // Only the three words; anything else reads as absent, which is `run` — T205, D10.
+  // Only the three words; anything else reads as absent, which is `run`.
   const onRestore = ON_RESTORE.find((word) => word === entry.onRestore);
   const restore = onRestore === undefined ? {} : { onRestore };
 
@@ -91,7 +91,7 @@ export function parseSavedTarget(value: unknown): SavedTarget | null {
 
 const ON_RESTORE: readonly OnRestore[] = ["run", "type", "none"];
 
-/** An object whose every value is a string, or `undefined` — T205, D9. */
+/** An object whose every value is a string, or `undefined`. */
 function stringMap(value: unknown): Record<string, string> | undefined {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
   const entries = Object.entries(value as Record<string, unknown>);
@@ -99,7 +99,7 @@ function stringMap(value: unknown): Record<string, string> | undefined {
   return Object.fromEntries(entries) as Record<string, string>;
 }
 
-/** An array of strings, or `undefined` — T205, D9. */
+/** An array of strings, or `undefined`. */
 function stringList(value: unknown): string[] | undefined {
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) return undefined;
   return value as string[];

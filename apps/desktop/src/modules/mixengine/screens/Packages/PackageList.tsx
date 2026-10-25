@@ -64,14 +64,14 @@ export default function PackageList({
   // a few rows, and hiding some of them behind a search hides exactly what the user needs to see in
   // full before removing anything.
   const [filter, setFilter] = useState("");
-  // Lines the person opened to see their older releases — T193a.
+  // Lines the person opened to see their older releases.
   const [openLines, setOpenLines] = useState<Set<string>>(new Set());
 
   const installedInCategory = newestFirst(
     installed.filter((row) => packageCategory(row.package) === category),
     (row) => row.package,
   );
-  // One row per line, the rest behind a toggle — T193a, as `Languages.tsx` draws it.
+  // One row per line, the rest behind a toggle, as `Languages.tsx` draws it.
   const lineGroups = groupByLine(
     newestFirst(
       available.filter(
@@ -111,7 +111,7 @@ export default function PackageList({
         <span className={styles.version}>{release.version}</span>
         <span className={styles.tag}>{release.channel}</span>
         {/* One grid cell for both, as in `Languages.tsx`: the row is six columns, and a seventh
-            child would push Install onto the next line (T206). */}
+            child would push Install onto the next line. */}
         <span className={styles.needsCell}>
           <span
             className={styles.needs}
@@ -166,7 +166,7 @@ export default function PackageList({
               {installedInCategory.map((row) => {
                 const key = versionKey(row.package, row.version);
                 const inUse = row.services.length > 0;
-                // Its folder is gone — T206d: the same version, offered again, puts it back.
+                // Its folder is gone: the same version, offered again, puts it back.
                 const gone = row.missing === true;
                 const restore = gone
                   ? releaseToRestore(available, (release) => release.package === row.package, row.version)

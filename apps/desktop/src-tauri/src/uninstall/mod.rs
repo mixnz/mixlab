@@ -1,4 +1,5 @@
-//! Removing MixLab from a Mac the `.pkg` placed it on — roadmap task **T182a**, spec D1 and D4.
+//! Removing MixLab from a Mac the `.pkg` placed it on — spec D1 and D4. The spec this module's
+//! comments cite is `docs/specs/2026-10-07-t182a-an-uninstall-path-for-macos-design.md`.
 //!
 //! The shell's, not the `mixengine` module's: a person who never started MixEngine removes MixLab
 //! too. What it needs from MixEngine it asks `crate::modules::mixengine::for_uninstall` for, and

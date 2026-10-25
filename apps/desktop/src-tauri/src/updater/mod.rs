@@ -1,4 +1,4 @@
-//! MixLab's own updater — roadmap task **T187**,
+//! MixLab's own updater. The spec this module's comments cite is
 //! `docs/specs/2026-09-26-t187-mixlab-updates-itself-design.md`.
 //!
 //! **Nothing here names a MixEngine crate** (ADR 0056 rule 3; `tests/layering.rs` scans for it).

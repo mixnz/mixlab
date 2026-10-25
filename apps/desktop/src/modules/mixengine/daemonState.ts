@@ -13,20 +13,20 @@ export interface ServiceRow {
   id: string;
   state: ServiceState | null;
   port: number | null;
-  /** Whether it starts along with the daemon — T112. Only a **setting**, not a prediction: it
+  /** Whether it starts along with the daemon. Only a **setting**, not a prediction: it
    *  states the column in the database, not that this service will run after the next login (that
    *  also depends on whether the port is free and the program is still there). A
    *  `service_state_changed` event does not change it, so `applyEvent` keeps the old value and only
    *  rereading `service.list` can change it. */
   autostart: boolean;
-  /** Who stopped it, when it is stopped — T167g. `daemon` means MixEngine stopped it itself (for
+  /** Who stopped it, when it is stopped. `daemon` means MixEngine stopped it itself (for
    *  being idle), and the next request will start it again; `null` while running or when an old
    *  daemon does not send it. */
   stoppedBy: StoppedBy | null;
-  /** The version of the program the service is running — T183. `null` when the daemon does not
+  /** The version of the program the service is running. `null` when the daemon does not
    *  send it (an old daemon, an extension's service…), and then nothing is drawn. */
   version: string | null;
-  /** Why it failed, while it is failed — T200b, D6. The pill's tooltip; `null` otherwise, and from
+  /** Why it failed, while it is failed. The pill's tooltip; `null` otherwise, and from
    *  a daemon that does not send it. An event moving the state does not carry it, so only rereading
    *  `service.list` fills it in. */
   lastFailure: string | null;
@@ -65,7 +65,7 @@ export function needsResync(raw: string): boolean {
  *  one, because a finished `elevation.grant` (from the dialog, from the CLI, or from another MixLab
  *  window) changes the waiting count. The daemon now announces the queue a grant left as an
  *  `elevation_required` too, but events are best-effort, so this reread stays. */
-/** The event stream ended — the daemon stopped, or was stopped from somewhere else (T168: the tray). */
+/** The event stream ended — the daemon stopped, or was stopped from somewhere else (the tray). */
 export function isDisconnected(raw: string): boolean {
   try {
     const { type } = JSON.parse(raw) as { type?: unknown };
@@ -161,8 +161,8 @@ export function applyEvent(
       // Build no row for an unknown service: `service.list` is where a row is born, and it knows
       // things this event does not carry.
       const stoppedBy = to === "stopped" ? stoppedByReason(event.reason) : null;
-      // T200b, D6: the event carries the reason and never the sentence, so a move into `failed`
-      // asks for `service.list` again, which has it; any other move leaves the old sentence behind.
+      // The event carries the reason and never the sentence, so a move into `failed` asks for
+      // `service.list` again, which has it; any other move leaves the old sentence behind.
       return {
         rows: rows.map((row) => (row.id === id ? { ...row, state: to, stoppedBy, lastFailure: null } : row)),
         resync: to === "failed",
@@ -179,8 +179,8 @@ export function applyEvent(
 /**
  * Who stopped a service, read from the `reason` of the event moving it to `stopped` — the same rule
  * as MixEngine's `StoppedBy::of`: `requested` and `credential_reset` are a person, every other
- * reason is the machine. An unreadable `reason` is not guessed at: `null`, and the row shows as it
- * did before T167.
+ * reason is the machine. An unreadable `reason` is not guessed at: `null`, and the row shows a
+ * plain stop, as it did before a stop said who made it.
  */
 export function stoppedByReason(reason: unknown): StoppedBy | null {
   if (typeof reason !== "object" || reason === null) return null;

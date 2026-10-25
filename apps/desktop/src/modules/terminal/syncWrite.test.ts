@@ -59,7 +59,7 @@ describe("what sync writes of a host", () => {
       removed: [],
     });
     // `read` returns credentials only for a host that is here, so agreed they would be pushed as a
-    // deletion (T178a, L4).
+    // deletion.
     expect(skipped).toEqual(["h-elsewhere"]);
     expect(files.saveSecrets).toHaveBeenCalledWith("h-elsewhere", { sshPassword: "pw" });
   });

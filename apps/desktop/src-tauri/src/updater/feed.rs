@@ -56,7 +56,8 @@ pub struct Installer {
     pub url: String,
     pub size: u64,
     pub sha256: String,
-    /// `window` or `headless`. `None` is the window's: all a feed from before T182b listed.
+    /// `window` or `headless`. `None` is the window's: all a feed listed before it carried the
+    /// headless package.
     #[serde(default)]
     pub flavour: Option<String>,
 }

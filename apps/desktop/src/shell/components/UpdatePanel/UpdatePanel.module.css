@@ -1,5 +1,5 @@
 /* Bottom right, 16px from both edges, and under every dialog layer (Settings is 60/61, the default
-   80/81): Settings opened over the panel covers it rather than fighting it. T188 D1. */
+   80/81): Settings opened over the panel covers it rather than fighting it. */
 .panel {
   position: fixed;
   right: 16px;
@@ -55,7 +55,7 @@
   gap: 8px;
 }
 
-/* The small link after the two buttons: skipping is the quiet choice (T188 D1). */
+/* The small link after the two buttons: skipping is the quiet choice. */
 .skip {
   margin-left: auto;
 }

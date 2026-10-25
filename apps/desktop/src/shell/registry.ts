@@ -17,7 +17,7 @@ import { tunnelModule } from "../modules/tunnel";
  *  happens to carry — see `shell/profiles.ts`. MixEngine leads because this is MixEngine's window;
  *  the four that follow are in the order the standalone client listed them.
  *
- *  **The first entry a profile shows is the tab it opens by default** — T109. There is no constant
+ *  **The first entry a profile shows is the tab it opens by default.** There is no constant
  *  for it: `defaultModuleId` is a filter's first element, so the default is a module this list has
  *  by construction, and a preset that hides MixEngine leads with whatever it does show. */
 export const MODULES: ModuleDefinition[] = [
@@ -33,14 +33,14 @@ export const MODULES: ModuleDefinition[] = [
    this is the one place a module is joined to the app. */
 for (const m of MODULES) provideModuleActions(m.id, m.actions ?? {});
 
-/** Every collection the account screen can offer (D5), in the app's order. The one place a
+/** Every collection the account screen can offer, in the app's order. The one place a
  *  collection is joined to the app, the way `MODULES` is for tabs. */
 export const SYNCABLE: SyncableCollection[] = [
   preferencesSyncable,
   ...MODULES.flatMap((m) => m.syncable ?? []),
 ];
 
-/** The three answers to "what will you use MixLab for?" — T108, the desktop client design's D11. */
+/** The three answers to "what will you use MixLab for?". */
 export type PresetId = "mixengine" | "everything" | "databaseTools";
 
 /** In the order the first-run screen and the Settings pane offer them. */

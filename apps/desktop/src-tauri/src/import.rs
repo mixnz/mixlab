@@ -1,9 +1,10 @@
 //! Bringing a standalone-client user's data across, once, on the first launch of MixLab.
 //!
 //! A changed bundle identifier is a changed application-data directory and a changed keyring
-//! namespace, so a person who was using the standalone client opens a window that has never seen any of their
-//! saved connections. This module is what puts them back. It is written to the T104 design's D5,
-//! which is worth reading before changing anything here; the three rules it turns on are:
+//! namespace, so a person who was using the standalone client opens a window that has never seen
+//! any of their saved connections. This module is what puts them back. It is written to D5 of
+//! `docs/specs/2026-09-09-t104-the-application-is-mixlab-design.md`, which is worth reading before
+//! changing anything here; the three rules it turns on are:
 //!
 //! - **The old directory and the old keyring entries are never written or deleted.** A standalone
 //!   The standalone client may still be installed and still be in use, and this is somebody's data either way.
@@ -38,8 +39,8 @@ const LEGACY_IDENTIFIER: &str = "io.github.haiquang9994.mixdb";
 /// Written into the new directory when the import has run.
 ///
 /// Its presence is the whole of "do not look again". Its contents are for whoever reads a support
-/// thread, and for T108, which starts a user whose data came from the standalone client on the *Everything*
-/// profile rather than on *MixEngine*.
+/// thread, and for the module visibility setting, which starts a user whose data came from the
+/// standalone client on the *Everything* profile rather than on *MixEngine*.
 pub const MARKER: &str = "mixdb-import.json";
 
 /// The largest file this copies. Nothing the store plugin writes comes anywhere near it; the cap
@@ -303,11 +304,12 @@ fn marker_in(dir: &Path) -> bool {
 
 /// Whether a standalone-client user's data was brought across on this machine.
 ///
-/// T108's third question. The window asks it on exactly one launch — a webview profile with no
-/// shell settings at all — to tell a fresh install from an imported one: the import copies store
-/// files and deliberately copies no `localStorage`, so those two look identical from up there and
-/// want opposite answers. A machine whose application-data directory cannot even be named has
-/// nothing imported in it, which is `false` and not an error worth showing anyone.
+/// The third question `shell/profiles.ts` asks when it picks a first launch's modules. The window
+/// asks it on exactly one launch — a webview profile with no shell settings at all — to tell a
+/// fresh install from an imported one: the import copies store files and deliberately copies no
+/// `localStorage`, so those two look identical from up there and want opposite answers. A machine
+/// whose application-data directory cannot even be named has nothing imported in it, which is
+/// `false` and not an error worth showing anyone.
 #[tauri::command]
 pub fn import_happened(app: AppHandle) -> bool {
     crate::platform::app_data_dir(&app).is_ok_and(|dir| marker_in(&dir))
@@ -441,9 +443,10 @@ mod tests {
         assert!(copy_stores(&new).is_none());
     }
 
-    /// T108 asks one question of this module: did a standalone-client user's data come across on this machine?
-    /// The marker is the whole answer, and it is written inside `setup()` — before the event loop
-    /// that carries the question — so by the time the window can ask, the answer is final.
+    /// The module visibility setting asks one question of this module: did a standalone-client
+    /// user's data come across on this machine? The marker is the whole answer, and it is written
+    /// inside `setup()` — before the event loop that carries the question — so by the time the
+    /// window can ask, the answer is final.
     #[test]
     fn the_marker_is_the_whole_answer() {
         let dir = tempfile::tempdir().unwrap();

@@ -36,7 +36,7 @@ import {
 } from "./targetFormState";
 import styles from "./TargetForm.module.css";
 
-/** What a restored tab does with *Run on connect* — T205, D10 — as the form offers it. */
+/** What a restored tab does with *Run on connect*, as the form offers it. */
 const ON_RESTORE_CHOICES = [
   { value: "run", label: "terminal.onRestoreRun", description: "terminal.onRestoreRunHint" },
   { value: "type", label: "terminal.onRestoreType", description: "terminal.onRestoreTypeHint" },
@@ -457,7 +457,7 @@ function TargetForm({ onOpen, onError, initial }: Props) {
           </div>
 
           {/* For both kinds, and only meaningful with something to run: a tab restored on the next
-              launch runs it, types it and waits, or just opens — T205, D10. */}
+              launch runs it, types it and waits, or just opens. */}
           <div className={styles.row}>
             <span id="terminal-on-restore">{t("terminal.onRestoreLabel")}</span>
             {/* Cards rather than a segmented control: each choice needs its sentence, and three

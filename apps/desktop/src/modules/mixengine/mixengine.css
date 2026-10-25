@@ -36,7 +36,7 @@
   font-size: var(--text-sm);
 }
 
-/* Where `mixengined` was looked for — a list of paths, not a sentence (T111). A real `PATH` has a
+/* Where `mixengined` was looked for — a list of paths, not a sentence. A real `PATH` has a
    few dozen entries, so a ceiling and its own scrolling keep the button in place under it. */
 .mixengine-gate-searched {
   margin: 0;
@@ -89,7 +89,7 @@
   padding: 28px 30px 36px 36px;
 }
 
-/* Where the four directories that grow are placed, at the gate — T146. The same frame as the list
+/* Where the four directories that grow are placed, at the gate. The same frame as the list
    of searched directories: the same thing is being said here, a few paths to read. */
 .mixengine-gate-storage {
   display: flex;

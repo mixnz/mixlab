@@ -39,9 +39,9 @@ interface Props {
   active: boolean;
   /** Over to the Sites screen, filtered to this project — see `sitesNavigation.ts`. */
   onOpenSites: (project: string) => void;
-  /** Over to the Dashboard, where a database's sign-in details are shown — T205, D8. */
+  /** Over to the Dashboard, where a database's sign-in details are shown. */
   onOpenDashboard: () => void;
-  /** Whether this window draws the Terminal module, for the steps panel — T205. */
+  /** Whether this window draws the Terminal module, for the steps panel. */
   terminalVisible: boolean;
 }
 
@@ -138,7 +138,7 @@ export default function Projects({ active, onOpenSites, onOpenDashboard, termina
     }
   }
 
-  /** Creates one site the manifest declares, every field falling through to the file (T204). */
+  /** Creates one site the manifest declares, every field falling through to the file. */
   async function adoptSite(project: string, domain: string) {
     setAdopting(domain);
     try {

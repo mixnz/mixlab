@@ -10,7 +10,7 @@ import SectionLoading from "./SectionLoading";
 import styles from "./Settings.module.css";
 
 /**
- * The autostart switch — T85b.
+ * The autostart switch.
  *
  * **`enabled && !for_this_home` must read differently from `enabled && for_this_home`.** A
  * registered entry belonging to another home is still `enabled: true` — the switch is on, but on

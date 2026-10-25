@@ -1,6 +1,6 @@
-//! Fetching a file a module needs and checking it is the file it should be — taken out of the
-//! `db` module's tool download (T203, D2) so the `tunnel` module's `cloudflared` uses the same
-//! `curl`, the same SHA-256 check and the same progress counting, rather than a copy of them.
+//! Fetching a file a module needs and checking it is the file it should be — taken out of the `db`
+//! module's tool download so the `tunnel` module's `cloudflared` uses the same `curl`, the same
+//! SHA-256 check and the same progress counting, rather than a copy of them.
 //!
 //! `curl` and `tar` do the fetching and unpacking: both ship with Windows 10 and up and with every
 //! macOS and Linux this app runs on.

@@ -5,7 +5,7 @@ import { describeGaps } from "./gaps";
 
 /**
  * "Missing from this list: node" — for `RuntimeCatalogue.unavailable` and
- * `PackageCatalogue.unavailable` (T196). Drawn beside `StaleBadge` for its reason: a list with a
+ * `PackageCatalogue.unavailable`. Drawn beside `StaleBadge` for its reason: a list with a
  * kind missing and no word about it reads as an index that publishes nothing for that kind.
  */
 export default function UnavailableNote({ gaps }: { gaps: CatalogueGap[] | null | undefined }) {

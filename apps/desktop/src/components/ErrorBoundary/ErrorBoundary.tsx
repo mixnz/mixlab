@@ -44,8 +44,8 @@ function Fallback({ variant, onReset }: FallbackProps) {
             >
               {t("settings.openLogFolder")}
             </button>
-            {/* MixLab's own restart and not a plugin's — T106 took `tauri-plugin-process` out with
-                the updater it arrived for. `relaunch_app` starts the executable this process was
+            {/* MixLab's own restart and not a plugin's — `tauri-plugin-process` went out with the
+                updater it arrived for. `relaunch_app` starts the executable this process was
                 started from, which after an update is the one that replaced it. */}
             <button type="button" className={styles.button} onClick={() => void invoke("relaunch_app")}>
               {t("error.restartApp")}

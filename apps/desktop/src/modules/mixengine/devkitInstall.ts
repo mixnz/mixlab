@@ -7,7 +7,7 @@ import { jobFinished } from "./runtimeState";
 import { DEVKIT_PACKAGE } from "./screens/Packages/devkit";
 
 /**
- * The devkit's install job, while one runs — one for the whole window (T206a).
+ * The devkit's install job, while one runs — one for the whole window.
  *
  * The Apply dialog starts it beside an apply, and the steps panel that follows would otherwise not
  * know: it would offer *Install devkit* again over a job already downloading. So every place that

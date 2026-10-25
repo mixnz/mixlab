@@ -78,8 +78,8 @@ describe("parseTerminalTabState", () => {
     expect(parseTerminalTabState({ kind: "local", shellName: "pwsh", cwd: 7 })).toBeNull();
   });
 
-  /* `""` is the machine's default shell — T205: the launch queue that hands a tab over cannot know
-     this machine's shell names. */
+  /* `""` is the machine's default shell: the launch queue that hands a tab over cannot know this
+     machine's shell names. */
   it("reads an empty shell name as the default shell", () => {
     expect(parseTerminalTabState({ kind: "local", shellName: "" })).toEqual({
       kind: "local",
@@ -89,7 +89,7 @@ describe("parseTerminalTabState", () => {
     });
   });
 
-  /* T205, D8: a tab another module hands over runs its lines once and is a plain shell after. */
+  /* A tab another module hands over runs its lines once and is a plain shell after. */
   it("reads a one-shot local state with its run lines", () => {
     expect(
       parseTerminalTabState({

@@ -92,8 +92,8 @@ export default function LimitsPanel({ service }: { service: string }) {
                 disabled={saving}
                 onChange={(e) => setCpu(e.target.value)}
               />
-              {/* Limits are declared per core, unlike how the tray and the Dashboard show usage
-                  (T190c). */}
+              {/* Limits are declared per core, unlike how the tray and the Dashboard show
+                  usage. */}
               <p className={styles.hint}>{t("mixengine.servicesDetail.limits.cpuHint")}</p>
               {cpuKind === "unavailable" && (
                 <p className={styles.hint}>

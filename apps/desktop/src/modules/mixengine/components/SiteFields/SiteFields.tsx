@@ -185,8 +185,8 @@ export default function SiteFields({
         )}
       </div>
 
-      {/* T135. This block validates nothing — a wrong path comes back with exactly what the daemon
-          says, like everything else in this form. */}
+      {/* The routes. This block validates nothing — a wrong path comes back with exactly what the
+          daemon says, like everything else in this form. */}
       <div className={styles.field}>
         {t("mixengine.sites.form.routes")}
         <p className={styles.hint}>{t("mixengine.sites.form.routesHint")}</p>

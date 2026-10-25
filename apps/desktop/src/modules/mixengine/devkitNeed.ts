@@ -26,14 +26,14 @@ export function planDevkitNeed(
 }
 
 /**
- * Whether a project's steps would meet a Ruby that cannot build gems with C extensions — T206a,
- * surfaced where the steps are (T205).
+ * Whether a project's steps would meet a Ruby that cannot build gems with C extensions, surfaced
+ * where the steps are.
  *
  * Measured by hand: `rails new` on a Windows Ruby with no devkit ran `bundle install`, which stopped
  * at the first gem with a C extension, and `rails server` then listed sixty missing gems. A note
  * under the step said to install the devkit first, and a note is what nobody reads before pressing
  * Run. So the panel asks the question itself: the Ruby this project resolves to, whether its release
- * lacks `native gems` (the index's `lacks`, T206), and whether a devkit is installed.
+ * lacks `native gems` (the index's `lacks`), and whether a devkit is installed.
  *
  * `null` when nothing stands in the way; otherwise the devkit to offer, `null` where this machine is
  * offered none.

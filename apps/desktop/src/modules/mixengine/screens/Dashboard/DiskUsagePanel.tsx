@@ -65,8 +65,8 @@ function ReclaimTag({ category }: { category: CategoryUsage }) {
 }
 
 /**
- * The disk usage table with 5 fixed categories (T96), each drawn differently according to the
- * `Reclaim` the daemon returns.
+ * The disk usage table with 5 fixed categories, each drawn differently according to the `Reclaim`
+ * the daemon returns.
  *
  * **Only two categories (`logs`, `cache`) have a clean-up button** — the other three (`runtimes`,
  * `data`, `certs`) are read-only and point the user to the right place to clean them. The "Clean

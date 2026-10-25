@@ -9,7 +9,7 @@ import * as api from "../../api";
 import styles from "./AutostartPanel.module.css";
 
 /**
- * Whether this service starts along with MixEngine — T114.
+ * Whether this service starts along with MixEngine.
  *
  * **A switch, no Save button**, unlike `IdlePanel` right next to it: idle has three states and a
  * number to type, so it needs a confirmation; this is a boolean column, and a switch that needs an
@@ -28,7 +28,7 @@ export default function AutostartPanel({ service }: { service: string }) {
   const { t } = useTranslation();
 
   // Read from `service.list` rather than a separate read method: `ServiceSummary` already carries
-  // this column (T112), so adding another backend command just to ask about one service would add
+  // this column, so adding another backend command just to ask about one service would add
   // another place to drift.
   const reload = useCallback(async () => {
     try {

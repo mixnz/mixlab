@@ -40,7 +40,7 @@ export default function Dashboard({
   active: boolean;
   /** Opens the Logs screen on one service — the row menu's *View logs*. */
   onViewLogs: (serviceId: string) => void;
-  /** Whether this window draws the built-in database client — T110. Straight through to the row
+  /** Whether this window draws the built-in database client. Straight through to the row
    *  menu, which is where *open* lives now. */
   isModuleVisible: (moduleId: string) => boolean;
 }) {
@@ -99,7 +99,7 @@ export default function Dashboard({
         onNew={() => setCreating(true)}
       />
 
-      {/* Above the service table, and only when this home has no site yet — T117. */}
+      {/* Above the service table, and only when this home has no site yet. */}
       {shouldOfferQuickStart(sites) && (
         <QuickStart
           onCreated={() => void readSites()}
@@ -107,9 +107,9 @@ export default function Dashboard({
         />
       )}
       <PathNudge active={active} />
-      {/* T182h: a copy of an earlier install's state, while this home has nothing of its own. */}
+      {/* A copy of an earlier install's state, while this home has nothing of its own. */}
       <RestorePrevious active={active} onRestored={() => void reload()} />
-      {/* T182g: service data an earlier install left, until nothing is left to adopt. */}
+      {/* Service data an earlier install left, until nothing is left to adopt. */}
       <FoundServices active={active} onAdopted={() => void reload()} />
 
       <ServicesCard

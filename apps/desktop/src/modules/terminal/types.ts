@@ -33,9 +33,9 @@ export type { SshAuth, SshConfig } from "../../core/ssh";
 export type SavedTarget = SavedLocalTarget | SavedSshTarget;
 
 /**
- * What a tab restored on the next launch does with its target's `runOnConnect` — T205, D10.
- * `run` types and presses Enter, as every entry did before; `type` leaves the last line waiting
- * for Enter; `none` opens the shell and types nothing.
+ * What a tab restored on the next launch does with its target's `runOnConnect`. `run` types and
+ * presses Enter, as every entry did before; `type` leaves the last line waiting for Enter; `none`
+ * opens the shell and types nothing.
  */
 export type OnRestore = "run" | "type" | "none";
 
@@ -63,9 +63,9 @@ export interface SavedLocalTarget extends SavedTargetBase {
   kind: "local";
   shellName: string;
   cwd: string | null;
-  /** Variables set in the shell, in plain text beside the rest of the entry — T205, D9. */
+  /** Variables set in the shell, in plain text beside the rest of the entry. */
   env?: Record<string, string>;
-  /** Directories put ahead of the inherited `PATH` — T205, D9. */
+  /** Directories put ahead of the inherited `PATH`. */
   pathPrepend?: string[];
 }
 
@@ -102,7 +102,7 @@ export type TerminalChoice =
       cwd: string | null;
       targetId: string | null;
       runOnConnect: string | null;
-      /** Whether `runOnConnect`'s last line is followed by Enter — T205, D10. */
+      /** Whether `runOnConnect`'s last line is followed by Enter. */
       press: boolean;
       env: Record<string, string> | null;
       pathPrepend: string[] | null;

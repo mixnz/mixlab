@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Stage the four headless binaries beside the window, then run `tauri dev` — T111.
+ * Stage the four headless binaries beside the window, then run `tauri dev`.
  *
- * The window looks for `mixengined` in its own directory first (T107), and `tauri dev` starts it
- * out of src-tauri/target/debug/, where nothing else ever puts a daemon. So the MixEngine tab of a
+ * The window looks for `mixengined` in its own directory first, and `tauri dev` starts it out of
+ * src-tauri/target/debug/, where nothing else ever puts a daemon. So the MixEngine tab of a
  * development window either showed the *not installed* gate or, on a machine with a release
  * installed, found *that* daemon at the second step and started it against the wrong home — the
  * release default is `MixEngine`, a build out of cargo defaults to `MixEngine-dev` (ADR 0024), and
@@ -31,12 +31,12 @@
  * reaches both it and `mix daemon stop`: two commands joined by `&&` are two processes, and an
  * environment set in the first does not survive into the second.
  *
- * **This script picks no home** — T166, ADR 0040. It passes MIXENGINE_DEV_HOME, the same
- * suggestion the root .cargo/config.toml gives everything cargo runs, and the binaries decide:
- * the checkout's .mixengine-home, unless an elevated helper could not read it there (a checkout on
- * an external disk, on macOS), in which case the default home. Deciding here as well would be a
- * second copy of that rule, in a language the daemon does not speak. A MIXENGINE_HOME already set
- * still wins, as it does for cargo.
+ * **This script picks no home** — ADR 0040. It passes MIXENGINE_DEV_HOME, the same suggestion the
+ * root .cargo/config.toml gives everything cargo runs, and the binaries decide: the checkout's
+ * .mixengine-home, unless an elevated helper could not read it there (a checkout on an external
+ * disk, on macOS), in which case the default home. Deciding here as well would be a second copy of
+ * that rule, in a language the daemon does not speak. A MIXENGINE_HOME already set still wins, as
+ * it does for cargo.
  *
  * Node and not bash: `npm run dev:app` is typed into PowerShell, and on a Windows machine with WSL
  * a bare `bash` is System32\bash.exe, which is WSL's. The other scripts in packaging/ are run from
@@ -141,10 +141,10 @@ function isHeldByARunningProcess(error) {
 // running executable be overwritten in place, and the kernel keeps the code signature it validated
 // for that inode while anything maps it: every later start of the rewritten file is then killed
 // with SIGKILL before it prints a word — `Could not start MixEngine`, found 2026-09-19 with a
-// daemon from the last window still running (T166). Unlinking leaves that daemon on its own inode
-// and gives the new binary a fresh one; it is Apple's own advice for replacing a signed binary.
-// Windows and Linux refuse the overwrite instead (os error 5, ETXTBSY) until the stopped daemon has
-// exited, which is what the retry below waits out.
+// daemon from the last window still running. Unlinking leaves that daemon on its own inode and
+// gives the new binary a fresh one; it is Apple's own advice for replacing a signed binary. Windows
+// and Linux refuse the overwrite instead (os error 5, ETXTBSY) until the stopped daemon has exited,
+// which is what the retry below waits out.
 function tryCopy(source, target) {
   try {
     if (process.platform === "darwin") {

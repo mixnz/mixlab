@@ -157,7 +157,7 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
       if (entry === undefined || entry.kind !== "ssh") return;
       // `config` here is already complete — `savedTargets.ts` merges the secrets from the keyring
       // in before handing it out. What the restored tab does with its commands is the entry's
-      // `onRestore` — T205, D10.
+      // `onRestore`.
       startRestored({
         kind: "ssh",
         config: entry.config,
@@ -185,14 +185,14 @@ function TerminalTab({ active, onTitleChange, onBadgesChange, restored, onStateC
       .then((shells) => {
         /* `""` is the machine's default shell: `local.rs` lists the shells "in suggested order —
            the first one is the default". A tab handed over by another module names no shell,
-           because it cannot know this machine's names (T205). */
+           because it cannot know this machine's names. */
         const shell =
           restoredState.shellName === ""
             ? shells[0]
             : shells.find((s) => s.name === restoredState.shellName);
         if (shell === undefined) return;
         const local = saved?.kind === "local" ? saved : undefined;
-        /* Lines handed over once (T205, D8): typed now, and gone from the state `start` writes
+        /* Lines handed over once: typed now, and gone from the state `start` writes
            back, so the next launch reopens a plain shell. */
         if (restoredState.run !== undefined) {
           startRestored({

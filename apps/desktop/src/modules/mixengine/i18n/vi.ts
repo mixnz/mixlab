@@ -2,7 +2,7 @@ import type en from "./en";
 
 const vi: typeof en = {
   mixengine: {
-    // The tray panel's MixEngine section (T168, T192).
+    // The tray panel's MixEngine section.
     tray: {
       counts: "Service đang chạy: {{up}}/{{total}}",
       setUp: "Thiết lập trong MixLab",
@@ -45,7 +45,7 @@ const vi: typeof en = {
       blueprints: "Blueprints",
       // Only the **label** changes: MixEngine's add-ons are still `extension.*` in every method and
       // every document. This is the only place the two meanings collide — four rows below
-      // *Packages*, where PHP's extensions are hiding (T118).
+      // *Packages*, where PHP's extensions are hiding.
       extensions: "Add-ons",
       metrics: "Metrics",
       settings: "Settings",
@@ -714,7 +714,7 @@ const vi: typeof en = {
         stale:
           "Không xoá được mấy file cũ trong thư mục: {{names}}. Đóng terminal nào còn dùng chúng rồi thử lại.",
       },
-      // MixLab's own login entry, beside MixEngine's — ADR 0042, T168f.
+      // MixLab's own login entry, beside MixEngine's — ADR 0042.
       doctor: {
         title: "Chẩn đoán",
         ok: "Ổn",

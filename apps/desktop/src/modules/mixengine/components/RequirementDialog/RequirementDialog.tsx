@@ -14,7 +14,7 @@ interface Props {
 }
 
 /**
- * The one question an install asks when the machine lacks something — roadmap task T151.
+ * The one question an install asks when the machine lacks something.
  *
  * Shared by the Languages and Packages screens so the two cannot word the same approval differently.
  */

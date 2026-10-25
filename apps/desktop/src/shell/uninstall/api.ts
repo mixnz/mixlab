@@ -1,4 +1,4 @@
-/** The only `invoke` calls for removing MixLab: T182a. The Rust side is `src-tauri/src/uninstall/`. */
+/** The only `invoke` calls for removing MixLab. The Rust side is `src-tauri/src/uninstall/`. */
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 

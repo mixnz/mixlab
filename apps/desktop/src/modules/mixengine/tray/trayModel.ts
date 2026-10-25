@@ -4,7 +4,7 @@ import type { ServiceRow } from "../daemonState";
 import { toggleMode } from "../serviceStateLabel";
 
 /**
- * The tray panel's pure halves — T168, `docs/specs/2026-09-19-t168-mixengine-in-the-tray-design.md`.
+ * The tray panel's pure halves — `docs/specs/2026-09-19-t168-mixengine-in-the-tray-design.md`.
  */
 
 /**

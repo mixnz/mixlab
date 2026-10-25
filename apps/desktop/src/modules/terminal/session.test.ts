@@ -49,7 +49,7 @@ describe("terminalTarget", () => {
     });
   });
 
-  /* T205, D9: what a saved local target sets in its shell reaches Rust as it was saved. */
+  /* What a saved local target sets in its shell reaches Rust as it was saved. */
   it("carries a local target's variables and PATH prefix", () => {
     expect(
       terminalTarget({ ...bash, env: { MIXENGINE_HOME: "C:\\h" }, pathPrepend: ["C:\\h\\bin"] }),
@@ -152,8 +152,8 @@ describe("openingKeystrokes", () => {
     expect(openingKeystrokes("   \n\n  ")).toBeNull();
   });
 
-  /* T205, D10: a restored tab or an untrusted project's step is typed and left for the person to
-     run. Earlier lines still run; only the last one waits. */
+  /* A restored tab or an untrusted project's step is typed and left for the person to run.
+     Earlier lines still run; only the last one waits. */
   it("types without Enter when asked not to press it", () => {
     expect(openingKeystrokes("npm run dev", false)).toBe("npm run dev");
     expect(openingKeystrokes("a\nb", false)).toBe("a\rb");

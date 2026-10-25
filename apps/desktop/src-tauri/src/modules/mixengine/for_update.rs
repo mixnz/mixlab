@@ -1,4 +1,4 @@
-//! What MixLab's updater asks this module for, and nothing more — T187, spec D1.
+//! What MixLab's updater asks this module for, and nothing more.
 //!
 //! The updater is MixLab's and names no MixEngine crate (ADR 0056 rule 3). When it has to stop a
 //! daemon that is running and start it again after the swap, it asks here, over the public API,
@@ -37,7 +37,7 @@ pub async fn running() -> bool {
 }
 
 /// How many services an install would stop and start again, for the update panel's sentence
-/// (T188). `None` when no daemon answers, or it would not say; never starts one.
+/// before an install. `None` when no daemon answers, or it would not say; never starts one.
 pub async fn running_services() -> Option<u32> {
     if !running().await {
         return None;

@@ -1,6 +1,6 @@
-//! Which `cloudflared` a tunnel runs — T203, D2. The machine's own first, at a path set in Settings
-//! or on `PATH`; then one MixLab downloaded, pinned here and checked against its SHA-256 before it
-//! is unpacked or run. Never put on `PATH`: it belongs to MixLab, not to the machine.
+//! Which `cloudflared` a tunnel runs. The machine's own first, at a path set in Settings or on
+//! `PATH`; then one MixLab downloaded, pinned here and checked against its SHA-256 before it is
+//! unpacked or run. Never put on `PATH`: it belongs to MixLab, not to the machine.
 
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};

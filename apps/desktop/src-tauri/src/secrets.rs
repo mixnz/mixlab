@@ -58,7 +58,8 @@ const SERVICE: &str = "MixLab";
 ///
 /// Read once, by the import on the first launch after the rename (`crate::import`), and never
 /// written to or deleted from: a standalone client may still be installed and still be in use, and
-/// those entries are its own. See the T104 design, D4.
+/// those entries are its own. See D4 of
+/// `docs/specs/2026-09-09-t104-the-application-is-mixlab-design.md`.
 pub const LEGACY_SERVICE: &str = "MixDB";
 
 /// The account the vault is stored under. Inside it, a key is a connection id — a uuid — or
@@ -92,7 +93,7 @@ trait Store {
 ///
 /// The name is a field rather than the constant it used to be because two of them are addressed
 /// from here: this application's own and — read-only — the one the standalone client used. MixEngine's is read
-/// through `mixengine_platform` instead (`read_mixengine_entry`, T186).
+/// through `mixengine_platform` instead (`read_mixengine_entry`).
 struct OsStore {
     service: &'static str,
 }
@@ -377,8 +378,8 @@ pub fn delete(id: &str) -> Result<(), AppError> {
     keeper().delete(id)
 }
 
-/// One entry of this application's own under `account` — sync's `sync-master-key` (the design's
-/// D2). On macOS it lives inside the vault, so a launch is one Keychain dialog and never two; see
+/// One entry of this application's own under `account` — sync's `sync-master-key`. On macOS it
+/// lives inside the vault, so a launch is one Keychain dialog and never two; see
 /// `Keeper::read_own`. Elsewhere it is an entry of its own, as a connection's is.
 pub fn read_own(account: &str) -> Result<Option<String>, AppError> {
     keeper().read_own(account)
@@ -412,9 +413,9 @@ pub async fn secrets_delete(id: String) -> Result<(), AppError> {
 
 /// Reads one of MixEngine's own keyring entries by the key half of its address.
 ///
-/// **Through `mixengine_platform`, not through `OsStore`** — T186. On macOS the daemon keeps a
-/// home's credentials in one Keychain item, and the platform crate is what knows how to find an
-/// entry inside it. Bypasses `Keeper` entirely: that vault is this app's own. The service is
+/// **Through `mixengine_platform`, not through `OsStore`.** On macOS the daemon keeps a home's
+/// credentials in one Keychain item, and the platform crate is what knows how to find an entry
+/// inside it. Bypasses `Keeper` entirely: that vault is this app's own. The service is
 /// `mixengine_platform::KEYRING_SERVICE`, a compile-time constant on this side too and never taken
 /// from a caller: see the module doc of `modules/db/handoff.rs` for why it must not travel on the
 /// wire. `SavedConnection.keyringRef` on the frontend is only ever the key half of the address.
@@ -436,7 +437,7 @@ fn read_mixengine_entry(key: &str) -> Result<Option<String>, AppError> {
 /// Every account's secrets as the standalone client left them, and the accounts that could not be read.
 ///
 /// Reads and nothing else — no write, no delete, no move into a vault. The standalone client may still be
-/// installed and in use, and its entries are its own (T104, D5).
+/// installed and in use, and its entries are its own.
 ///
 /// Two shapes, because the standalone client wrote two: one entry per account on Windows and Linux, and on macOS a
 /// single `vault` account holding every account's secrets in one object — with a per-account entry

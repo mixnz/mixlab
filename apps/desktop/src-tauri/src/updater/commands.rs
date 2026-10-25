@@ -1,4 +1,5 @@
-//! The commands Settings → Updates and the update panel call — T187 spec D9, T188 spec D2.
+//! The commands Settings → Updates and the update panel call — spec D9. The panel asks for a
+//! download and an install as two clicks, so each is a command of its own.
 //!
 //! No unit tests of their own: each one reads the placement and the records, or hands work to a
 //! module that has its tests (`feed`, `install`, `handover`). What the pane draws from their answer
@@ -25,7 +26,7 @@ pub struct UpdaterState {
     feed: Mutex<Option<Feed>>,
     checked_at: Mutex<Option<String>>,
     installing: AtomicBool,
-    /// A download is running; a second one would write the same `.partial` file (T188).
+    /// A download is running; a second one would write the same `.partial` file.
     downloading: AtomicBool,
     /// Wakes the running download's `select!` so it stops, keeping the partial file.
     cancel: tokio::sync::Notify,
@@ -51,8 +52,8 @@ pub struct UpdateStatus {
     skipped: Option<String>,
     automatic: bool,
     installing: bool,
-    /// The offered version when its download is on disk and proved (T188 D2), so a window starting
-    /// after a finished download opens on *Ready*.
+    /// The offered version when its download is on disk and proved, so a window starting after a
+    /// finished download opens on *Ready*.
     downloaded: Option<String>,
     checked_at: Option<String>,
     /// Why a check a person asked for failed. Always `None` for the automatic one (spec D6).
@@ -230,8 +231,8 @@ impl Drop for Downloading<'_> {
     }
 }
 
-/// Download and prove the offered release (T188 D2): the payload on Windows, the installer on macOS
-/// and Linux, ending in a `ready` marker. Installs nothing. `update_cancel_download` stops it with
+/// Download and prove the offered release: the payload on Windows, the installer on macOS and
+/// Linux, ending in a `ready` marker. Installs nothing. `update_cancel_download` stops it with
 /// `error.updateCancelled` and keeps the partial file for the next try.
 #[tauri::command]
 pub async fn update_download(
@@ -304,7 +305,7 @@ pub async fn update_open_installer(
     handover::open_installer(&app, &offered(&state)?, &installer)
 }
 
-/// How many services an install would restart, or `None` with no daemon running (T188 D1).
+/// How many services an install would restart, or `None` with no daemon running.
 #[tauri::command]
 pub async fn update_restarts() -> Option<u32> {
     crate::modules::mixengine::for_update::running_services().await

@@ -31,35 +31,35 @@ export interface PackagesState {
    *  installed list has long answered. */
   availableLoaded: boolean;
   stale: boolean;
-  /** What the package index could not be read for (T196); empty when it read everything. */
+  /** What the package index could not be read for; empty when it read everything. */
   unavailable: CatalogueGap[];
   jobs: JobRow[];
   installingJob: Record<string, number>;
   error: string;
   clearError: () => void;
-  /** What an install said about this machine and went on anyway — T27e. */
+  /** What an install said about this machine and went on anyway. */
   notice: string;
   clearNotice: () => void;
   install: (release: PackageRelease) => Promise<void>;
   uninstall: (target: PackageSummary) => Promise<void>;
-  /** The one question an install is waiting on — T151. */
+  /** The one question an install is waiting on. */
   asking: { release: PackageRelease; step: AskingStep } | null;
   agree: () => Promise<void>;
   chooseInstead: (version: string) => Promise<void>;
   dismissAsking: () => void;
-  /** Package directories on disk with no row, as `package.found` answers them — T182i. */
+  /** Package directories on disk with no row, as `package.found` answers them. */
   onDisk: PackageFoundList;
   /** The `name@version` being adopted now. */
   adopting: string | null;
   adopt: (pkg: string, version: string) => Promise<void>;
-  /** Each installed version whose line has a newer release — T193c. */
+  /** Each installed version whose line has a newer release. */
   updates: PackageUpdate[];
   /** The update being asked about, with the daemon's plan for it. */
   upgrading: { update: PackageUpdate; plan: UpgradePlan } | null;
   askToUpgrade: (update: PackageUpdate) => Promise<void>;
   upgrade: (update: PackageUpdate, keep: boolean) => Promise<void>;
   dismissUpgrade: () => void;
-  /** What the new version lacks, asked as an install asks it — T151. */
+  /** What the new version lacks, asked as an install asks it. */
   askingUpgrade: { update: PackageUpdate; keep: boolean; step: AskingStep } | null;
   agreeUpgrade: () => Promise<void>;
   dismissAskingUpgrade: () => void;
@@ -85,7 +85,7 @@ export function usePackages(active: boolean): PackagesState {
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [installingJob, setInstallingJob] = useState<Record<string, number>>({});
   const [error, setError] = useState("");
-  // What an install said about this machine and went on anyway — T27e.
+  // What an install said about this machine and went on anyway.
   const [notice, setNotice] = useState("");
   const [asking, setAsking] = useState<{ release: PackageRelease; step: AskingStep } | null>(null);
   const [updates, setUpdates] = useState<PackageUpdate[]>([]);
@@ -187,7 +187,7 @@ export function usePackages(active: boolean): PackagesState {
     [t],
   );
 
-  // What the machine lacks is asked about before the download starts — T151.
+  // What the machine lacks is asked about before the download starts.
   const install = useCallback(
     async (release: PackageRelease) => {
       setError("");
@@ -215,7 +215,7 @@ export function usePackages(active: boolean): PackagesState {
         return;
       }
 
-      // **Said, not asked** — T27e, the same rule `Languages` follows and `mix` follows.
+      // **Said, not asked**: the same rule `Languages` follows and `mix` follows.
       if (step.kind === "notice") {
         const libraries = t("mixengine.requirements.librariesNotice", {
           name: `${release.package} ${release.version}`,
@@ -258,7 +258,7 @@ export function usePackages(active: boolean): PackagesState {
 
   const dismissAsking = useCallback(() => setAsking(null), []);
 
-  /** There is no `force` — refusing because `services` is not empty is final (D6). Draw the list
+  /** There is no `force` — refusing because `services` is not empty is final. Draw the list
    *  and stop there. */
   const uninstall = useCallback(
     async (target: PackageSummary) => {
@@ -289,7 +289,7 @@ export function usePackages(active: boolean): PackagesState {
     [reload, t],
   );
 
-  // T193c: the plan first, then what the new version lacks (T151), then the job — as `Languages`.
+  // The plan first, then what the new version lacks, then the job — as `Languages`.
   const askToUpgrade = useCallback(
     async (update: PackageUpdate) => {
       setError("");

@@ -1,9 +1,9 @@
 import type { CatalogueGap } from "@mixengine/api";
 
 /**
- * What a list says about the kinds the package index could not be read for (T196): their names
- * for the pill, and each one's reason for its tooltip. `null` when there is nothing to say —
- * everything was read, or the daemon is from before the field existed.
+ * What a list says about the kinds the package index could not be read for: their names for the
+ * pill, and each one's reason for its tooltip. `null` when there is nothing to say — everything was
+ * read, or the daemon is from before the field existed.
  */
 export function describeGaps(
   gaps: CatalogueGap[] | null | undefined,

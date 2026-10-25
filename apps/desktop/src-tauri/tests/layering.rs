@@ -1,7 +1,7 @@
 //! The desktop crate reaches into the MixEngine workspace through two crates and no more — ADR
 //! 0027, rule 1. The root workspace's `workspace_layering.rs` cannot see this crate, because this
-//! crate is excluded from that workspace on purpose (the design's D1), so the guard lives here and
-//! reads its own manifest.
+//! crate is excluded from that workspace on purpose, so the guard lives here and reads its own
+//! manifest.
 
 use std::collections::BTreeSet;
 
@@ -103,7 +103,7 @@ fn the_updater_names_no_mixengine_crate() {
     }
 }
 
-/// T182a: removing MixLab is the shell's, as updating it is (ADR 0056 rule 3). Nothing under
+/// Removing MixLab is the shell's, as updating it is (ADR 0056 rule 3). Nothing under
 /// `src/uninstall/` names a MixEngine crate; what it needs from the daemon it asks
 /// `modules::mixengine::for_uninstall` for.
 #[test]

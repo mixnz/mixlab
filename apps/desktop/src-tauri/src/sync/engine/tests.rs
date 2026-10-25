@@ -237,7 +237,7 @@ fn opaque(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
 }
 
-/// T189, D3: what only this machine wrote is not news, and the cursor steps over its echo.
+/// What only this machine wrote is not news, and the cursor steps over its echo.
 #[tokio::test]
 async fn a_collection_only_this_machine_wrote_is_not_stale_and_its_cursor_moves() {
     let (server, store) = (Fake::new("mine"), Store::in_memory("s").await.unwrap());
@@ -274,7 +274,7 @@ async fn another_machines_write_is_stale_and_the_cursor_stays() {
     assert_eq!(store.since("c").await.unwrap(), 1);
 }
 
-/// T189, D4 step 2: the states in which `fetch` does more than read from the cursor.
+/// The states in which `fetch` does more than read from the cursor.
 #[tokio::test]
 async fn a_zero_cursor_a_resync_and_an_owed_record_are_stale_without_asking() {
     let (server, store) = (Fake::new("mine"), Store::in_memory("s").await.unwrap());
@@ -457,9 +457,9 @@ async fn a_lost_conflict_is_met_again_until_its_winner_is_written() {
     assert_eq!(server.current("a").ciphertext.as_deref(), Some("theirs"));
 }
 
-/// T189, D5: the server kept this machine's write and the app died before remembering it. The
-/// same device at the same `updatedAt` is this machine's own word: written again, not handed
-/// back as a newer edit that replaced it.
+/// The server kept this machine's write and the app died before remembering it. The same device at
+/// the same `updatedAt` is this machine's own word: written again, not handed back as a newer edit
+/// that replaced it.
 #[tokio::test]
 async fn this_machines_own_unremembered_write_is_written_again() {
     let (server, store) = (Fake::new("mine"), Store::in_memory("s").await.unwrap());
@@ -536,7 +536,7 @@ async fn a_forgotten_cursor_starts_a_resync_that_keeps_what_was_agreed() {
     assert!(store.agreed("c", "a").await.unwrap().is_some());
 }
 
-/// Past one page, a resync says so on every page after the first, and reaches the end (M4).
+/// Past one page, a resync says so on every page after the first, and reaches the end.
 #[tokio::test]
 async fn a_resync_says_so_on_every_page_after_the_first() {
     let (server, store) = (Fake::new("theirs"), Store::in_memory("s").await.unwrap());
@@ -639,8 +639,8 @@ impl Remote for Picky {
     }
 }
 
-/// C2: one refused entry does not hide the entries after it, nor stop the batches after its
-/// own — `limits()` sends two at a time, so "2" is refused in the second of three.
+/// One refused entry does not hide the entries after it, nor stop the batches after its own —
+/// `limits()` sends two at a time, so "2" is refused in the second of three.
 #[tokio::test]
 async fn a_refused_entry_does_not_hide_the_rest() {
     let server = Picky {
@@ -674,7 +674,7 @@ async fn a_refused_entry_does_not_hide_the_rest() {
 }
 
 /// A record another version of the app skipped is asked for again: the collection resyncs
-/// from the start, once. The same version asks for nothing (T178d).
+/// from the start, once. The same version asks for nothing.
 #[tokio::test]
 async fn a_new_version_resyncs_a_collection_that_owes_a_record() {
     let (server, store) = (Fake::new("theirs"), Store::in_memory("s").await.unwrap());

@@ -2,7 +2,7 @@ import type { AutostartReport } from "@mixengine/api";
 import type { CredentialStore, CredentialsStatus, DoctorReport } from "@mixengine/api";
 
 /**
- * Four states an autostart switch can be in, not two — T85b.
+ * Four states an autostart switch can be in, not two.
  *
  * **`enabledOtherHome` is the state both the roadmap and `client-surface.md` name explicitly**: a
  * registered entry belonging to another home still makes `enabled: true`, and drawing it as
@@ -50,7 +50,7 @@ export function doctorChecksInOrder(report: DoctorReport): DoctorReport["checks"
 }
 
 /**
- * What the Credentials section draws (T194): the store, and the one it may switch to — `null` when
+ * What the Credentials section draws: the store, and the one it may switch to — `null` when
  * the daemon would refuse, or nothing at all from a daemon that predates the member.
  */
 export function credentialsPresentation(

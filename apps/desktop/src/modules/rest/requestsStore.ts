@@ -146,13 +146,13 @@ export function deleteRequest(id: string): void {
 }
 
 /** Resolves once the file has been read. **Sync waits on it**: reading an unloaded store would
- *  report every saved request as deleted (T177d). */
+ *  report every saved request as deleted. */
 export function requestsReady(): Promise<void> {
   return store.ready();
 }
 
-/** Sync's write: the Saved list as another machine left it, Recent untouched (T177d). Resolves once
- *  it is on disk and rejects when it is not (T178a, L5). */
+/** Sync's write: the Saved list as another machine left it, Recent untouched. Resolves once it is
+ *  on disk and rejects when it is not. */
 export function replaceSaved(saved: RestRequest[]): Promise<void> {
   const lists = { ...store.get(), saved };
   store.publish(lists);

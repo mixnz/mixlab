@@ -61,7 +61,7 @@
 
 /* The PHP row's extensions, under it, on the sunken surface. */
 /* An installed version whose update row follows it: the two read as one entry, so no line between
-   them - T193. `tbody tr` outranks the Table's own `tbody td` border. */
+   them. `tbody tr` outranks the Table's own `tbody td` border. */
 tbody tr.withUpdate > td {
   border-bottom: none;
 }
@@ -100,14 +100,14 @@ tbody tr.withUpdate > td {
   border-top: 1px solid var(--border-soft);
 }
 
-/* An older release of a line, drawn under the row that stands for it - T193a. The badge column
+/* An older release of a line, drawn under the row that stands for it. The badge column
    (28px) and one gap (12px) further in, so it reads as belonging to the row above. */
 .releaseNested {
   composes: release;
   padding-left: 58px;
 }
 
-/* "N more" beside a runtime's name - T193a. */
+/* "N more" beside a runtime's name. */
 .moreInLine {
   margin-left: 8px;
   font-weight: 400;
@@ -117,7 +117,7 @@ tbody tr.withUpdate > td {
   font-weight: 500;
 }
 
-/* What a release lacks on this machine - T151. Quiet, because most rows say nothing here. */
+/* What a release lacks on this machine. Quiet, because most rows say nothing here. */
 /* Column five: what a release needs, then what it lacks. */
 .needsCell {
   display: flex;
@@ -139,7 +139,7 @@ tbody tr.withUpdate > td {
   white-space: nowrap;
 }
 
-/* The devkit, offered once at the head of the list (T206a). */
+/* The devkit, offered once at the head of the list. */
 .devkitNotice {
   display: flex;
   align-items: center;
@@ -157,7 +157,7 @@ tbody tr.withUpdate > td {
   margin: 0;
 }
 
-/* Reinstall and Remove side by side, at the end of the notice — T206d. */
+/* Reinstall and Remove side by side, at the end of the notice. */
 .devkitActions {
   display: flex;
   flex-shrink: 0;

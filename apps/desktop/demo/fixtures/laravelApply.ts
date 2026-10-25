@@ -90,7 +90,7 @@ export function laravelPlan(project: string, root: string): BlueprintPlan {
   };
 }
 
-/** T202, D2: the one step whose outcome can differ from the plan, shown in the demo. */
+/** The one step whose outcome can differ from the plan, shown in the demo. */
 function noteFor(action: PlanAction): string | null {
   return action.action === "create_database"
     ? `the account ${action.user} is somebody else's, so this project's is ${action.user}-2`
@@ -179,9 +179,9 @@ export function createApplyRunner({
 
   function run(plan: BlueprintPlan) {
     const total = plan.steps.length;
-    // The daemon narrates every step into the job's log as well as on the bar (T120, D5), and a
-    // note where the outcome differed from the plan (T202, D2): the output pane fills from the
-    // first step, not only once composer runs.
+    // The daemon narrates every step into the job's log as well as on the bar, and a note where
+    // the outcome differed from the plan: the output pane fills from the first step, not only once
+    // composer runs.
     plan.steps.forEach((step, position) => {
       const at = position * STEP_MS;
       schedule(() => {

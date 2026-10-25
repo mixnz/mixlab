@@ -49,7 +49,7 @@
   font-weight: 500;
 }
 
-/* The small word after HTTPS: this site sends every HTTP address to HTTPS (T98). */
+/* The small word after HTTPS: this site sends every HTTP address to HTTPS. */
 .redirect {
   color: var(--text-muted);
   font-size: var(--text-sm);
@@ -76,7 +76,7 @@
   color: var(--text-muted);
 }
 
-/* Why the site's pool could not start — T200b, D6. */
+/* Why the site's pool could not start. */
 .failure {
   display: flex;
   align-items: center;

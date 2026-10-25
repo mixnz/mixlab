@@ -2,12 +2,12 @@
 //!
 //! Both answers are `mixengine-platform`'s, the same way they are `mix`'s
 //! (`crates/mixengine-cli/src/home.rs`): `MIXENGINE_HOME` wins, then a development checkout's
-//! suggested home when `mixengine_platform::home` lets it stand (T166), then the platform, and
-//! the result is made absolute and spelled in full rather than canonicalised, and the endpoint is
-//! computed from `<home>/run`. Nothing here reads `config.toml`: `[daemon] ipc_path` was parsed by
-//! the daemon's own config and used by nothing, so honouring it — as this file did until phase 11,
-//! T102 — was dialling somewhere no daemon listens. The key has since been retired from the
-//! template; a file that still carries it is read and ignored.
+//! suggested home when `mixengine_platform::home` lets it stand, then the platform, and the result
+//! is made absolute and spelled in full rather than canonicalised, and the endpoint is computed
+//! from `<home>/run`. Nothing here reads `config.toml`: `[daemon] ipc_path` was parsed by the
+//! daemon's own config and used by nothing, so honouring it — as this file once did — was dialling
+//! somewhere no daemon listens. The key has since been retired from the template; a file that still
+//! carries it is read and ignored.
 
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -78,8 +78,8 @@ mod tests {
         assert_eq!(run_dir(Path::new("/h")), PathBuf::from("/h").join("run"));
     }
 
-    /// T166: `MIXENGINE_HOME` beats a checkout's suggestion, which beats the platform default —
-    /// the same order `mix` and `mixengined` resolve in.
+    /// `MIXENGINE_HOME` beats a checkout's suggestion, which beats the platform default — the same
+    /// order `mix` and `mixengined` resolve in.
     #[test]
     fn a_checkout_suggestion_sits_between_the_override_and_the_default() {
         let host = mixengine_platform::mock::Host::with_home(std::env::temp_dir().join("default"));

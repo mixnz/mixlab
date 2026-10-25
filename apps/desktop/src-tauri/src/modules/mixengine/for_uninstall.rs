@@ -1,5 +1,5 @@
-//! What the shell's *Remove MixLab* asks this module for, and nothing more — roadmap task
-//! **T182a**, spec D4.
+//! What the shell's *Remove MixLab* asks this module for, and nothing more — D4 of
+//! `docs/specs/2026-10-07-t182a-an-uninstall-path-for-macos-design.md`.
 //!
 //! The removal is the shell's (`crate::uninstall`), and names no MixEngine crate. It reaches the
 //! daemon here, over the public API, typed against `mixengine-proto`, and gets plain JSON back.
@@ -25,7 +25,7 @@ const WAIT: Millis = Millis(10_000);
 const POLL: Duration = Duration::from_millis(200);
 
 /// The daemon this removal talks to: by pid and the moment it began, so the wait at the end is for
-/// this process and not for whatever the system later hands the pid to (T182b, D8).
+/// this process and not for whatever the system later hands the pid to.
 #[derive(Debug, Clone, Copy)]
 pub struct Daemon {
     pid: u32,

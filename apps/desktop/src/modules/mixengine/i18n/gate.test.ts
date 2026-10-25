@@ -4,7 +4,7 @@ import { resolve } from "../../../i18n";
 import { EN, VI } from "../../../i18n/dicts";
 
 /**
- * The tab's gate, when the daemon is not found, says where it looked — T111.
+ * The tab's gate, when the daemon is not found, says where it looked.
  *
  * `VI` is not typed against `EN` in `i18n/dicts.ts`, so a key present on one side and missing on
  * the other is something `tsc` says nothing about: `resolve` returns the key string itself, and a

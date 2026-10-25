@@ -1,4 +1,4 @@
-//! What a tunnel may point at — T203, D4: an address on this machine and nothing else.
+//! What a tunnel may point at: an address on this machine and nothing else.
 
 use crate::error::AppError;
 

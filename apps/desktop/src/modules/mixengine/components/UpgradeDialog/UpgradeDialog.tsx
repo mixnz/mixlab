@@ -15,9 +15,9 @@ interface Props {
 }
 
 /**
- * The question an Update asks — T193, D7 and the design's MixLab section. Shows the daemon's plan
- * as it is, and one choice: keep the old version. When the plan already says it will be kept, the
- * box is ticked and cannot be cleared, and the reason is the line under it.
+ * The question an Update asks. Shows the daemon's plan as it is, and one choice: keep the old
+ * version. When the plan already says it will be kept, the box is ticked and cannot be cleared, and
+ * the reason is the line under it.
  */
 export default function UpgradeDialog({ plan, onConfirm, onCancel }: Props) {
   const { t } = useTranslation();

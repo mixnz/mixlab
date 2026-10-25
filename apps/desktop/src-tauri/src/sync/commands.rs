@@ -94,7 +94,7 @@ pub async fn sync_notice(
     state.notice(&collection, items).await
 }
 
-/// The collections a full run must pull, asked of the server in one request (T189).
+/// The collections a full run must pull, asked of the server in one request.
 #[tauri::command]
 pub async fn sync_heads(
     state: State<'_, SyncState>,

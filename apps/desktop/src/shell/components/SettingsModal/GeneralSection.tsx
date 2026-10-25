@@ -8,7 +8,7 @@ import { useTranslation } from "../../../i18n";
 import styles from "./SettingsModal.module.css";
 
 /**
- * MixLab-wide behaviour that is not how it looks — T192. For now, MixLab at login (ADR 0042), here
+ * MixLab-wide behaviour that is not how it looks. For now, MixLab at login (ADR 0042), here
  * rather than in the MixEngine pane since ADR 0058: starting in the tray is MixLab's, whatever
  * modules are visible. The daemon's own switch stays in the MixEngine pane.
  *

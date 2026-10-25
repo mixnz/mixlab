@@ -18,12 +18,11 @@ interface Props {
 /**
  * Previews an install before sending it, for both registry and local directory sources.
  *
- * `extension.plan` is the only step — `extension.inspect` is not called first (Decision D2, spec).
- * Sign-in (`site.signs_in`) is drawn **inside** the permissions block, not next to the domain
- * (spec, section 2).
+ * `extension.plan` is the only step — `extension.inspect` is not called first. Sign-in
+ * (`site.signs_in`) is drawn **inside** the permissions block, not next to the domain.
  *
  * Closes once the daemon has accepted the install job; the screen follows the job on its row
- * (T200, D3). A modal locked for a minute-long download would hold the whole window. The id comes
+ * instead. A modal locked for a minute-long download would hold the whole window. The id comes
  * from the plan because a path install's id is unknown until its manifest has been read.
  */
 export default function PlanDialog({ source, onCancel, onStarted }: Props) {
@@ -44,7 +43,8 @@ export default function PlanDialog({ source, onCancel, onStarted }: Props) {
     setInstalling(true);
     setError("");
     try {
-      // `consent` is taken verbatim from `plan` — not rebuilt from input; see Decision D3.
+      // `consent` is taken verbatim from `plan` — not rebuilt from input: what is agreed to is what
+      // was shown.
       const job = await api.extensionInstall({
         source,
         consent: {

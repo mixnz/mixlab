@@ -11,8 +11,8 @@ import { rowTone, type TunnelInfo } from "../tunnelState";
 import styles from "./TraySection.module.css";
 
 /**
- * The Tunnel section of the tray panel — T203b, D5. What is published right now, from the menu bar,
- * so a person who closed the window can see it and end it there.
+ * The Tunnel section of the tray panel. What is published right now, from the menu bar, so a person
+ * who closed the window can see it and end it there.
  *
  * **Always lent, and one line when nothing runs**: `TraySection` is part of the module's definition,
  * not of its state. The list is the backend's, the one the tab reads.

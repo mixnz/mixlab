@@ -1,4 +1,4 @@
-//! MixLab at login — ADR 0042, T168f.
+//! MixLab at login — ADR 0042.
 //!
 //! `tauri-plugin-autostart` writes the entry (a LaunchAgent, an `HKCU\...\Run` value, an XDG
 //! autostart file) with [`crate::launch::HIDDEN`], so a login start brings up the tray and no

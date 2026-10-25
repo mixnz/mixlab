@@ -11,7 +11,7 @@ import styles from "./Settings.module.css";
 
 /**
  * `daemon.bundle` — one archive, one path. "Copy diagnostics" is one file to open, not five places
- * to read (T4.8). `omitted` is drawn too, rather than presenting the archive as complete.
+ * to read. `omitted` is drawn too, rather than presenting the archive as complete.
  */
 export default function DiagnosticsSection({ onError }: { onError: (message: string) => void }) {
   const [report, setReport] = useState<BundleReport | null>(null);

@@ -30,7 +30,7 @@ pub struct Page {
     pub more: bool,
 }
 
-/// `POST /v1/records/heads` (T189).
+/// `POST /v1/records/heads`: which collections another machine changed.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Heads {
@@ -95,7 +95,7 @@ pub enum Operation {
         collection: String,
         id: String,
         if_match: i64,
-        /// When the deletion was made: the tombstone's own time, which D4 weighs (T178c, C1).
+        /// When the deletion was made: the tombstone's own time, which D4 weighs.
         updated_at: i64,
     },
 }

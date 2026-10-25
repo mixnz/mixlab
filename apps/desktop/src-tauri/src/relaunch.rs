@@ -1,4 +1,4 @@
-//! Starting this window again — roadmap tasks **T106** and **T187**.
+//! Starting this window again.
 //!
 //! Two callers: the ErrorBoundary's *Restart app*, and MixLab's own updater (`crate::updater`),
 //! coming back on the new version after it has replaced this executable underneath the running

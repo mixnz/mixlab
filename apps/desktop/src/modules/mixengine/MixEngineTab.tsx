@@ -80,7 +80,7 @@ export default function MixEngineTab({
   const [error, setError] = useState("");
   const { t, lang } = useTranslation();
 
-  /* Where the four growing directories go, and the four rows the user is editing — T146.
+  /* Where the four growing directories go, and the four rows the user is editing.
      `null` is "not finished asking", as distinct from "asked, and the choice is closed".
 
      **Only asked at `notRunning`, not at `notInstalled`.** The design says the picker belongs to
@@ -169,7 +169,7 @@ export default function MixEngineTab({
     };
   }, []);
 
-  /* The tray panel starts and stops the same daemon (T168), so this tab cannot assume it is the
+  /* The tray panel starts and stops the same daemon, so this tab cannot assume it is the
      only one that does. Stopped here and started there: ask again every couple of seconds while
      the gate is up — one `/health` dial that fails at once when nobody is listening. Running here
      and stopped there: the event stream ending says so, and the gate comes back. */

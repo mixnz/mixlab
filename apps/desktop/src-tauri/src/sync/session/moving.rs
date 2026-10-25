@@ -35,7 +35,7 @@ impl SyncState {
         let params = session.account.params(&saved.email).await?;
         let keys = derive(password, decode(&params.salt_account)?).await?;
         // The password becomes the new server's: checked here, where a typo is still a typo, and
-        // not discovered at the last step, when the old account refuses to be deleted (C3).
+        // not discovered at the last step, when the old account refuses to be deleted.
         session
             .account
             .check(&session.access_token, &keys.auth)

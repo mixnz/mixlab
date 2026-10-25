@@ -101,7 +101,7 @@ export function loadTerminalSettings(): Promise<TerminalSettings> {
 /** One settings change. One door rather than a setter per field: the Settings pane changes one
  *  field at a time and no field needs anything another field does not. */
 /** One settings change, resolved once it is on disk and rejected when it is not — for sync, which
- *  agrees only on what the disk holds (T178a, L5). Sanitized on the way in, as every write is. */
+ *  agrees only on what the disk holds. Sanitized on the way in, as every write is. */
 export function saveTerminalSettings(patch: Partial<TerminalSettings>): Promise<void> {
   return shared.save(sanitizeSettings({ ...shared.get(), ...patch }));
 }

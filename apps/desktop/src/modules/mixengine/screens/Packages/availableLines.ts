@@ -1,9 +1,9 @@
 /**
- * The "not installed" list, one group per version line — T193a, D3 and the design's MixLab section.
+ * The "not installed" list, one group per version line.
  *
  * Display only: which line a release is in and which one is newest are the daemon's answers
- * (`line`, `newest_in_line`), and nothing here compares versions. A daemon from before T193 sends
- * neither, and then every row is a group of its own, which is the list as it was.
+ * (`line`, `newest_in_line`), and nothing here compares versions. A daemon from before version
+ * lines sends neither, and then every row is a group of its own, which is the list as it was.
  */
 
 export interface LinedRow {

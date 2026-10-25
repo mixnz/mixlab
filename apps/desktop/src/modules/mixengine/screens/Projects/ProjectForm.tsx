@@ -16,11 +16,9 @@ import { installedVersions } from "../../runtimeState";
 import SiteFields, { draftDomains, emptySiteDraft, siteCreateFields } from "../../components/SiteFields";
 import styles from "./ProjectForm.module.css";
 
-// Every kind the contract knows, in the order the form shows them. `composer` arrived with
-// MixEngine's T27c and was the first thing the alias onto `bindings/` caught (phase 11, T102): a
+// Every kind the contract knows, in the order the form shows them, which is the order the
+// contract's own list keeps. `composer` was the first thing the alias onto `bindings/` caught: a
 // project pinned to a Composer version would otherwise have lost that pin on its next save here.
-// `go` arrived with T27d, before `composer`, in the order the contract's own list keeps; `java`
-// arrived with T27e, after `go`.
 const RUNTIME_KINDS: readonly RuntimeKind[] = ["php", "node", "python", "ruby", "go", "java", "composer"];
 
 /**
@@ -165,7 +163,7 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
           name: name !== initial.project.name ? name : undefined,
           root: root !== initial.project.root ? root : undefined,
           // No `keep_warm`: absent leaves the column as it is. The form no longer shows it — it
-          // only matters while Save battery is on, and `mix project keep-warm` sets it (T167g).
+          // only matters while Save battery is on, and `mix project keep-warm` sets it.
           pins: pinsPayload() ?? {},
         });
         onSaved();

@@ -112,7 +112,7 @@ describe("parseSavedTarget", () => {
     });
   });
 
-  /* T205, D9 and D10: what a local target sets in its shell, and what a restored tab does. */
+  /* What a local target sets in its shell, and what a restored tab does. */
   it("reads onRestore, env and pathPrepend, and defaults onRestore to run", () => {
     const entry = parseSavedTarget({
       id: "t-1", name: "a", kind: "local", shellName: "pwsh", cwd: "/p",

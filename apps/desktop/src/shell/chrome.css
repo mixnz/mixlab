@@ -91,7 +91,7 @@ button.brand-settings {
   color: var(--text-secondary);
 }
 
-/* A release is waiting — T187. A dot at the button's corner, whole pixels so it sits still at any
+/* A release is waiting. A dot at the button's corner, whole pixels so it sits still at any
    display scale; the title says which version. */
 button.brand-settings.has-update {
   position: relative;
@@ -146,7 +146,7 @@ button.brand-settings.has-update::after {
   overflow: hidden;
 }
 
-/* Room for a notice above a tab's pane — T110's D3.
+/* Room for a notice above a tab's pane: the one that says a module was turned on to open it.
 
    **The two wrappers are always in the tree and are boxes only when there is a notice.** They have
    to be always there: React tells one element from another by its position, so a pane that gained

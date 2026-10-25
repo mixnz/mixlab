@@ -22,7 +22,7 @@ describe("autostartPresentation", () => {
     ).toBe("disabled");
   });
 
-  /* This is the state T85b exists to name: enabled is true, but not for this home. */
+  /* This is the state the fourth value exists to name: enabled is true, but not for this home. */
   it("is enabledOtherHome when the registered entry belongs to a different home", () => {
     expect(
       autostartPresentation({ mechanism: "logon_task", enabled: true, for_this_home: false }),

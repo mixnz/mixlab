@@ -1,5 +1,6 @@
 //! Two machines, one server, and the whole round trip between them — each test a story that loses
-//! data or never ends, from the T178a–b spec (`docs/specs/2026-09-22-t178-*`).
+//! data or never ends, from
+//! `docs/specs/2026-09-22-t178-a-pull-that-keeps-what-it-has-not-agreed-design.md`.
 //!
 //! **[`Machine::sync`] is `loop.ts`'s `syncCollection` over `session.rs`'s calls**, in their order:
 //! this machine's changes noticed, every page fetched, opened, written by the module, landed and
@@ -187,7 +188,7 @@ impl Server {
                 nonce: Some(nonce.clone()),
                 ciphertext: Some(ciphertext.clone()),
             },
-            // The tombstone keeps the time its deletion was made (T178c, C1).
+            // The tombstone keeps the time its deletion was made.
             None => WireRecord {
                 collection,
                 id,
@@ -514,7 +515,7 @@ async fn a_deletion_is_not_undone_by_this_machines_own_earlier_push() {
     );
 }
 
-/// L2: D4 keeps the later edit, whichever machine made it — and a pull runs before
+/// L2: the conflict rule keeps the later edit, whichever machine made it — and a pull runs before
 /// every push, so the rule has to hold there too, not only on a `409`.
 #[tokio::test]
 async fn a_newer_edit_made_offline_survives_a_pull_of_an_older_one() {
@@ -690,8 +691,8 @@ async fn a_skips_what_b_wrote(server: &Server) -> (Machine, Machine) {
     (a, b)
 }
 
-/// T178d: once a release can read it, the record is delivered again, with nobody editing it and
-/// the cursor long past it.
+/// Once a release can read it, the record is delivered again, with nobody editing it and the cursor
+/// long past it.
 #[tokio::test]
 async fn a_skipped_record_is_delivered_after_an_upgrade() {
     let server = Server::new(2);
@@ -751,9 +752,9 @@ async fn a_record_still_unreadable_waits_for_the_next_release() {
     );
 }
 
-/// L3: an edit noticed in the same second as this machine's own earlier push. D4's exact tie
-/// keeps the remote copy, and the remote copy is the old push coming back; content, not time, says
-/// it is not news.
+/// L3: an edit noticed in the same second as this machine's own earlier push. The conflict rule's
+/// exact tie keeps the remote copy, and the remote copy is the old push coming back; content, not
+/// time, says it is not news.
 #[tokio::test]
 async fn an_edit_in_the_same_second_as_its_own_push_survives() {
     let server = Server::new(2);
@@ -830,8 +831,8 @@ async fn a_resync_interrupted_after_one_page_still_ends() {
     );
 }
 
-/// C1: a deletion made later than an edit wins, whichever reaches the server first. While the
-/// tombstone kept the replaced version's time, the edit that arrived second came back to life.
+/// A deletion made later than an edit wins, whichever reaches the server first. While the tombstone
+/// kept the replaced version's time, the edit that arrived second came back to life.
 async fn a_later_deletion_against_an_earlier_edit(
     deletion_first: bool,
 ) -> (Server, Machine, Machine) {

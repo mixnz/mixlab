@@ -68,8 +68,8 @@ interface Props {
    */
   onDone: (applied: BlueprintApplied | null) => void;
 
-  /** Prefills the project name. Quick Start has already asked, so the user does not type it again
-   *  — T117. */
+  /** Prefills the project name. Quick Start has already asked, so the user does not type it
+   *  again. */
   initialProject?: string;
 
   /** Prefills the directory, for the same reason. */
@@ -115,15 +115,15 @@ export default function ApplyDialog({
         blueprint: blueprint.slug,
         project,
         root,
-        // **The directory the user picks is the project's directory** — T120c, D1. Both windows
-        // understand "pick a directory" the same way; the only place still joining paths is `mix`
-        // without `--path`, because there nobody picks a directory at all.
+        // **The directory the user picks is the project's directory.** Both windows understand
+        // "pick a directory" the same way; the only place still joining paths is `mix` without
+        // `--path`, because there nobody picks a directory at all.
         root_is_parent: false,
         dry_run: true,
-        // **Always on** — T205, D7. MixLab's question is always *give me a site that works*, and a
-        // home that already has a front end is left as it is by the daemon.
+        // **Always on.** MixLab's question is always *give me a site that works*, and a home that
+        // already has a front end is left as it is by the daemon.
         front_end: true,
-        // **Always off, and no prop turns it on** — `BlueprintApply.autostart` (T116) is a required
+        // **Always off, and no prop turns it on** — `BlueprintApply.autostart` is a required
         // field, so it is sent rather than left out. This window does not decide on anyone's behalf
         // which services start along with MixEngine: an apply flagging everything it *creates* is
         // an apply answering a question the user has not asked. That question is asked in exactly
@@ -229,8 +229,8 @@ export default function ApplyDialog({
     };
   }, [jobId, jobs, t]);
 
-  // Open the stream **as soon as the apply starts running**, without waiting for the button — T120,
-  // D6. The stream used to open only when `showLog` was on, so every line printed before the click
+  // Open the stream **as soon as the apply starts running**, without waiting for the button. The
+  // stream used to open only when `showLog` was on, so every line printed before the click
   // was lost for good: an apply that failed at the second step and only then got "Show output"
   // clicked showed a blank panel. The button now only toggles **display**, while collection runs
   // throughout the "running" phase — and `logEntries` stays after the phase changes, so it can
@@ -270,8 +270,8 @@ export default function ApplyDialog({
       busy: busy ? t("mixengine.blueprints.apply.previewing") : undefined,
     });
   }
-  // **Which site each step is for** — T204a, D4. Read off the plan's order, and only drawn when the
-  // plan makes more than one site: a one-site plan reads as it always has.
+  // **Which site each step is for.** Read off the plan's order, and only drawn when the plan makes
+  // more than one site: a one-site plan reads as it always has.
   const planSites = phase.kind === "plan" ? siteOfEachStep(phase.plan.steps.map((step) => step.action)) : [];
   const severalSites =
     phase.kind === "plan" && phase.plan.steps.filter((step) => step.action.action === "create_site").length > 1;
@@ -364,7 +364,7 @@ export default function ApplyDialog({
                 <ul className={styles.steps}>
                   {phase.plan.steps.map((step, i) => (
                     <Fragment key={i}>
-                      {/* T204a, D4: with several sites, each site's steps sit under its name. */}
+                      {/* With several sites, each site's steps sit under its name. */}
                       {severalSites && step.action.action === "create_site" && planSites[i] !== null && (
                         <li className={styles.siteHeading}>
                           {t("mixengine.blueprints.apply.siteHeading", { domain: planSites[i] })}
@@ -464,9 +464,9 @@ export default function ApplyDialog({
                             />
                             {/* `mix`'s `[y/N]` question, drawn as an interface. Not ticking is an
                                 answer — the apply still installs the runtime, DB, site and domain,
-                                only the project directory stays empty — and until T121 the desktop
-                                said so nowhere: the user found out on the "Done" screen, lost among
-                                ten other lines. */}
+                                only the project directory stays empty — and the window used to say
+                                so nowhere: the user found out on the "Done" screen, lost among ten
+                                other lines. */}
                             {!phase.answers.scaffold && (
                               <p className={styles.consentWarning} role="status">
                                 {t("mixengine.blueprints.apply.scaffoldDeclined")}
@@ -511,9 +511,9 @@ export default function ApplyDialog({
               </div>
             )}
 
-            {/* Outlives the "running" phase — T120, D6. A failed apply is when the output is most
-                worth reading, and the button used to sit in the block above, so it vanished
-                exactly then. */}
+            {/* Outlives the "running" phase. A failed apply is when the output is most worth
+                reading, and the button used to sit in the block above, so it vanished exactly
+                then. */}
             {(phase.kind === "running" || logEntries.length > 0) && (
               <div className={styles.output}>
                 <Button data-demo="apply-log" onClick={() => setShowLog((v) => !v)}>
@@ -559,8 +559,8 @@ export default function ApplyDialog({
                   </div>
                 )}
 
-                {/* T205a: a `.env` key left unwritten, in MixLab's words; the daemon's `why`
-                    names a `mix` flag. */}
+                {/* A `.env` key left unwritten, in MixLab's words; the daemon's `why` names a
+                    `mix` flag. */}
                 {dotenvLeftKeys(phase.applied).map((key) => (
                   <p key={key} className={styles.leftUnrun} role="status">
                     {t("mixengine.blueprints.apply.dotenvLeft", { key })}
@@ -587,9 +587,9 @@ export default function ApplyDialog({
                         {outcome.result.result === "failed" &&
                           t("mixengine.blueprints.apply.stepFailed", { why: outcome.result.why })}
                       </p>
-                      {/* T202, D2: what differed from the plan — the account the project ended up
-                          with, a database that was already there — in the daemon's own sentence,
-                          under the step it is about. */}
+                      {/* What differed from the plan — the account the project ended up with, a
+                          database that was already there — in the daemon's own sentence, under
+                          the step it is about. */}
                       {outcome.result.result === "done" && outcome.result.note != null && (
                         <p className={styles.note}>{outcome.result.note}</p>
                       )}
@@ -607,7 +607,7 @@ export default function ApplyDialog({
 }
 
 /**
- * What the plan's releases lack on this machine — T152. One block for the whole plan, because one
+ * What the plan's releases lack on this machine. One block for the whole plan, because one
  * approval covers every step that needs the same runtime.
  */
 function PrerequisitesNotice({
@@ -623,7 +623,7 @@ function PrerequisitesNotice({
   const step = requirementStep(needs);
   if (step.kind === "proceed") return null;
 
-  // **Said, not asked** — T27e: the apply is not held up by a library the distribution provides.
+  // **Said, not asked**: the apply is not held up by a library the distribution provides.
   if (step.kind === "notice") {
     return (
       <NoticeBanner

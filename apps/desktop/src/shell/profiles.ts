@@ -45,11 +45,11 @@ export function normalizeModules(stored: unknown, knownIds: string[]): string[] 
  *
  * **The same array back means nothing changed** — the caller writes no setting and says nothing in
  * a notice. Appended rather than inserted in the registry's order: order never comes out of the
- * stored set (T108's D1), `visibleModules` is a filter over `MODULES`, and a second place that
- * knew the order would be a second place that could be wrong about it.
+ * stored set, `visibleModules` is a filter over `MODULES`, and a second place that knew the order
+ * would be a second place that could be wrong about it.
  *
- * This is how a tab request for a hidden module turns it on — T110's D1. Visibility, not
- * capability: the module's commands were registered either way.
+ * This is how a tab request for a hidden module turns it on. Visibility, not capability: the
+ * module's commands were registered either way.
  */
 export function withModule(enabled: string[], moduleId: string, knownIds: string[]): string[] {
   if (enabled.includes(moduleId) || !knownIds.includes(moduleId)) return enabled;
@@ -86,17 +86,17 @@ export function visibleModules(enabled: string[]): ModuleDefinition[] {
  *
  * **The first module the profile shows** — and since `visible` is in the registry's order, that is
  * MixEngine for the *MixEngine* and *Everything* profiles and the database client for *Database
- * tools*, which is the whole of T109. There is no constant and no table of preferences per preset:
- * a second hand-written list of module ids could only ever restate the order this one already
- * carries, and would one day contradict it.
+ * tools*, which is the whole of the default tab. There is no constant and no table of preferences
+ * per preset: a second hand-written list of module ids could only ever restate the order this one
+ * already carries, and would one day contradict it.
  *
  * Session restore wins over this, always: `useTabs` reads the session in a `useState`
  * initializer and only reaches here when there is nothing to restore.
  *
  * `visible` must not be empty. Deliberately unguarded — a default that is not in `enabled` would
  * make `Workspace` open a tab its own visibility effect drops and then reopen it, which is a render
- * loop where this is a crash. The three guards that make an empty set unreachable are T108's, at
- * the edges where such a value arrives: `normalizeModules`, the last checkbox, `useStartupProfile`.
+ * loop where this is a crash. The three guards that make an empty set unreachable sit at the edges
+ * where such a value arrives: `normalizeModules`, the last checkbox, `useStartupProfile`.
  */
 export function defaultModuleId(visible: ModuleDefinition[]): string {
   return visible[0].id;
@@ -106,17 +106,18 @@ export function defaultModuleId(visible: ModuleDefinition[]): string {
  *  session — a handful of strings about the window, read once on the way up. */
 export const MODULES_STORAGE_KEY = MODULES_KEY;
 
-/** Where the preset beside the list is kept — T203, D0. */
+/** Where the preset beside the list is kept. */
 export { MODULES_PRESET_KEY };
 
 /** The mark for a set that is not a preset. */
 const CUSTOM = "custom";
 
 /**
- * What each preset held before T203. A home no T203 build has written holds one of these lists and
- * no mark, and that list means the preset. Not `MODULE_PRESETS`, which now says something else.
+ * What each preset held before the mark was written beside the list. A home no build that writes
+ * the mark has written holds one of these lists and no mark, and that list means the preset. Not
+ * `MODULE_PRESETS`, which now says something else.
  */
-export const PRESETS_BEFORE_T203: Record<PresetId, string[]> = {
+export const PRESETS_BEFORE_MARK: Record<PresetId, string[]> = {
   mixengine: ["mixengine"],
   everything: ["mixengine", "db", "rest", "terminal", "tools"],
   databaseTools: ["db", "rest", "terminal", "tools"],
@@ -155,7 +156,7 @@ export interface ShellStorage {
  * Two questions, in order:
  *
  * 1. **A stored set**, if there is one this build can act on.
- * 2. **Any other shell key**, which means a build older than this task has run in this profile.
+ * 2. **Any other shell key**, which means a build from before the module set ran in this profile.
  *    That window has a theme, a session and four modules' worth of saved work, and handing it the
  *    *MixEngine* preset would make its database tabs vanish on an upgrade. It gets *Everything*.
  *
@@ -182,19 +183,19 @@ export function resolveStoredModules(storage: ShellStorage, knownIds: string[]):
   const known = (ids: string[]) => ids.filter((id) => knownIds.includes(id));
 
   // A preset mark wins while the list beside it agrees with it — this build's composition or the
-  // one before T203. A list that says anything else was changed where the mark is unknown, by a
-  // build that writes only the list, and the person's change wins (T203, D0).
+  // one before the mark. A list that says anything else was changed where the mark is unknown, by
+  // a build that writes only the list, and the person's change wins.
   if (mark !== null && mark !== CUSTOM) {
-    if (list === null || sameSet(list, MODULE_PRESETS[mark]) || sameSet(list, PRESETS_BEFORE_T203[mark])) {
+    if (list === null || sameSet(list, MODULE_PRESETS[mark]) || sameSet(list, PRESETS_BEFORE_MARK[mark])) {
       return known(MODULE_PRESETS[mark]);
     }
     return list;
   }
   if (list !== null) {
-    // No mark at all: a home from before T203, whose list is a preset's old composition or not.
+    // No mark at all: a home from before the mark, whose list is a preset's old composition or not.
     if (mark === null) {
       const stored = list;
-      const was = PRESET_IDS.find((id) => sameSet(stored, PRESETS_BEFORE_T203[id]));
+      const was = PRESET_IDS.find((id) => sameSet(stored, PRESETS_BEFORE_MARK[id]));
       if (was) return known(MODULE_PRESETS[was]);
     }
     return list;
@@ -225,9 +226,9 @@ export function writeEnabledModules(enabled: string[]): void {
   }
 }
 
-/** Whether T104's import brought a standalone-client user's data across. A call that cannot be made — the
- *  browser-only `npm run dev`, a command somehow not registered — reads as `false`, which shows the
- *  first-run screen: one click, rather than a silently wrong profile. */
+/** Whether the first launch's import brought a standalone-client user's data across. A call that
+ *  cannot be made — the browser-only `npm run dev`, a command somehow not registered — reads as
+ *  `false`, which shows the first-run screen: one click, rather than a silently wrong profile. */
 export function importHappened(): Promise<boolean> {
   return invoke<boolean>("import_happened").catch(() => false);
 }
@@ -247,10 +248,10 @@ export type Startup =
  * one is the marker on disk.
  *
  * The write is an effect rather than something the resolution does, so every path that changes the
- * set — the first-run screen, the presets, the checkboxes, and later T110's handoff — is persisted
- * by the same line. **Nothing leaves the screen without writing**: were the answer not written, the
- * next launch would find the session the workspace had since written and answer *Everything* to a
- * question the user had already answered differently.
+ * set — the first-run screen, the presets, the checkboxes, a tab request for a hidden module — is
+ * persisted by the same line. **Nothing leaves the screen without writing**: were the answer not
+ * written, the next launch would find the session the workspace had since written and answer
+ * *Everything* to a question the user had already answered differently.
  */
 export function useStartupProfile(): Startup {
   const [enabled, setEnabled] = useState<string[] | null>(readEnabledModules);

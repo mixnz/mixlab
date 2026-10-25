@@ -22,8 +22,8 @@ let watching: Promise<void> | null = null;
 
 function ensureWatching(): void {
   watching ??= api.watch((raw) => {
-    // A stream that ended is not open any more: the next `ensureDaemonWatch` reopens it (T168 —
-    // the tray panel outlives many daemons, and without this it would never hear from the next).
+    // A stream that ended is not open any more: the next `ensureDaemonWatch` reopens it. The tray
+    // panel outlives many daemons, and without this it would never hear from the next.
     if (raw === DISCONNECTED) watching = null;
     for (const listener of listeners) listener(raw);
   }).catch(() => {

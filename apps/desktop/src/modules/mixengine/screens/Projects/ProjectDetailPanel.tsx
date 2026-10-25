@@ -11,7 +11,7 @@ import styles from "./Projects.module.css";
 
 interface Props {
   detail: ProjectDetail;
-  /** Where the steps' `open` rows go: each step's own site, else the project's first — T204a. */
+  /** Where the steps' `open` rows go: each step's own site, else the project's first. */
   addresses: SiteAddresses;
   terminalVisible: boolean;
   onOpenDashboard: () => void;
@@ -21,7 +21,7 @@ interface Props {
 }
 
 /**
- * One project, opened in place under its row — T205. Its runtimes, the sites its `mixengine.toml`
+ * One project, opened in place under its row. Its runtimes, the sites its `mixengine.toml`
  * declares and what its blueprint says is left to run, in that order, so everything about the row
  * someone just opened is where they are looking rather than at the foot of a long list.
  */

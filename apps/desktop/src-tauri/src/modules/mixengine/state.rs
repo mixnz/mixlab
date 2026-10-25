@@ -1,8 +1,8 @@
 //! What this module keeps between two commands: exactly one open event stream.
 //!
-//! **One per window** since T168a: the tray panel is a second webview with its own `daemonWatch.ts`,
-//! and a single slot meant the panel opening its stream closed the main window's — the Dashboard
-//! would silently stop updating whenever somebody clicked the tray icon.
+//! **One per window**: the tray panel is a second webview with its own `daemonWatch.ts`, and a
+//! single slot meant the panel opening its stream closed the main window's — the Dashboard would
+//! silently stop updating whenever somebody clicked the tray icon.
 //!
 //! One stream per tab is wrong. MixEngine's event bus is a shared bus holding 1024 messages, and
 //! two MixEngine tabs open at once would be two `/events` connections reading it. One stream, with
@@ -16,7 +16,7 @@ use std::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 
 /// One cancellable stream per webview label — what `MixEngineState` and `MetricsState` both keep,
-/// since the tray panel (T168) opens each of them beside the main window's.
+/// since the tray panel opens each of them beside the main window's.
 #[derive(Default)]
 struct PerWindow {
     open: Mutex<HashMap<String, CancellationToken>>,
@@ -94,9 +94,9 @@ impl LogsState {
 /// daemon to once a minute. `stop()` here must be called exactly when the Dashboard is no longer
 /// `active`, not only on unmount.
 ///
-/// **One per window since T168.** The tray panel shows the daemon's own CPU and memory while it is
-/// open; with a single slot, opening it closed the Dashboard's stream, and closing it left the
-/// Dashboard with none. The daemon samples at 1 Hz while *any* of them is open.
+/// **One per window.** The tray panel shows the daemon's own CPU and memory while it is open; with
+/// a single slot, opening it closed the Dashboard's stream, and closing it left the Dashboard with
+/// none. The daemon samples at 1 Hz while *any* of them is open.
 #[derive(Default)]
 pub struct MetricsState {
     streams: PerWindow,

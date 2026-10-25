@@ -22,7 +22,7 @@ export const DAEMON_SUBJECT = "daemon";
 /**
  * Parses one raw message from `/metrics`. `null` if it is not a valid `MetricsFrame`.
  *
- * A frame from a daemon older than T190c has no `cores`: its figure was already a percentage of
+ * A frame from a daemon that does not send `cores` has a figure that was already a percentage of
  * one core, so `cores` defaults to 1 instead of rejecting the whole frame.
  */
 export function parseMetricsFrame(raw: string): MetricsFrame | null {
@@ -49,7 +49,7 @@ export function readingFor(frame: MetricsFrame | null, subject: string): Metrics
 }
 
 /**
- * Every service in `frame` added up, as one sample — the tray panel's *Services* strip (T168).
+ * Every service in `frame` added up, as one sample — the tray panel's *Services* strip.
  *
  * Only what the frame measured is added: a service missing from it is not counted as 0, and a
  * service whose CPU could not be read adds its memory and nothing to the CPU. `null` when the
@@ -84,7 +84,7 @@ export function formatBytes(bytes: number): string {
 }
 
 /**
- * `cpu_percent` (a percentage of one core) converted to a percentage of the whole machine — T190c.
+ * `cpu_percent` (a percentage of one core) converted to a percentage of the whole machine.
  *
  * The denominator is the logical thread count the daemon sends along (`MetricsFrame.cores`,
  * `MetricsHistory.cores`), which is also the denominator Task Manager uses. `cores` of 0 is

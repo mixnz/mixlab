@@ -3,7 +3,8 @@ import type { SyncChanges, SyncItem } from "../../core/syncCollection";
 
 /**
  * The account and the loop's commands (`src-tauri/src/sync/commands.rs`), typed. `MK` never comes
- * this way; the recovery key does, once, from `syncRegister`.
+ * this way; the recovery key does, once, from `syncRegister`. The D-numbers here are those of
+ * `docs/specs/2026-09-20-t177-a-copy-only-you-can-read-design.md`.
  */
 
 export interface SyncStatus {
@@ -37,7 +38,7 @@ export interface PushedChanges {
   accepted: number;
   replaced: SyncChanges;
   token: string | null;
-  /** The first refusal, of one entry or of a whole request (T178c, C2). What landed is already agreed. */
+  /** The first refusal, of one entry or of a whole request. What landed is already agreed. */
   error: { code: string; params?: Record<string, string> } | null;
   /** This account's collection was never pulled, so nothing was sent: sync it in full instead. */
   needsPull: boolean;
@@ -48,12 +49,12 @@ export interface SyncBackend {
   /** Stamps this machine's changes before a pull, so the pull can weigh them (D4). Sends nothing. */
   notice(collection: string, items: SyncItem[]): Promise<void>;
   /**
-   * Which of these collections a full run must pull, in one request (T189). Every other one's
-   * cursor moves past this machine's own writes, so it is only pushed.
+   * Which of these collections a full run must pull, in one request. Every other one's cursor moves
+   * past this machine's own writes, so it is only pushed.
    */
   heads(collections: string[]): Promise<string[]>;
   pullPage(collection: string): Promise<PulledPage>;
-  /** `skipped`: what the module did not write, which sync must not agree on (T178a, L4). */
+  /** `skipped`: what the module did not write, which sync must not agree on. */
   commitPull(collection: string, token: string, skipped: string[]): Promise<void>;
   /** `onSending`: called just before anything leaves for the server — never when nothing changed. */
   push(collection: string, items: SyncItem[], onSending?: () => void): Promise<PushedChanges>;

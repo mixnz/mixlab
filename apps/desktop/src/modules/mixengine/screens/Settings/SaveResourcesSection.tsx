@@ -8,7 +8,7 @@ import SectionLoading from "./SectionLoading";
 import styles from "./Settings.module.css";
 
 /**
- * "Save battery" — T167b, ADR 0041.
+ * "Save battery" — ADR 0041.
  *
  * **Off unless the user turns it on.** When off, MixEngine stops no service just because it is
  * idle: a running site just keeps running. When on, PHP pools idle for half an hour and

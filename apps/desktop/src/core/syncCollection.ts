@@ -1,7 +1,8 @@
 import type { TranslationKey } from "../i18n";
 
 /**
- * What sync sees of a module's data, and nothing more (the design's D5 and D7).
+ * What sync sees of a module's data, and nothing more (D5 and D7 of
+ * `docs/specs/2026-09-20-t177-a-copy-only-you-can-read-design.md`, whose D-numbers these are).
  *
  * **An item is an id and some data**: the shell never learns that one is a connection. `data` is
  * only what should travel — a reader leaves out a secret, a sidebar's width, a path on this
@@ -33,8 +34,7 @@ export interface SyncableCollection {
    * Apply another machine's changes, and resolve to the ids of the upserts `read` will **not**
    * return as sent — data this module cannot read, or credentials parked for an item this machine
    * does not hold. Sync agrees on everything else, and an agreed id `read` leaves out is pushed as
-   * a deletion (T178a, L4). Resolves only once the disk has what was written, and rejects when it
-   * does not (L5).
+   * a deletion. Resolves only once the disk has what was written, and rejects when it does not.
    */
   write: (changes: SyncChanges) => Promise<string[]>;
   /**

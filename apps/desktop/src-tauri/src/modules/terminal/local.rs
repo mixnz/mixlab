@@ -211,8 +211,8 @@ fn pty_size(size: TerminalSize) -> PtySize {
 /// Three flows run in parallel after this function returns: one thread reading the pty, one thread
 /// writing to the pty, one thread waiting on the child process. There is only one way out, and the
 /// order on it is the real order — see where `exit_rx` is awaited below.
-/// A `cwd` that is not a directory is said, not silently replaced by the home directory — T205,
-/// D11: a target outlives the project it was made for.
+/// A `cwd` that is not a directory is said, not silently replaced by the home directory: a target
+/// outlives the project it was made for.
 fn check_cwd(cwd: Option<&str>) -> Result<Option<&str>, AppError> {
     match cwd {
         Some(dir) if !Path::new(dir).is_dir() => Err(err!("error.terminalCwdMissing", path = dir)),
@@ -220,7 +220,7 @@ fn check_cwd(cwd: Option<&str>) -> Result<Option<&str>, AppError> {
     }
 }
 
-/// `prepend` ahead of `inherited`, joined by this OS's rule — T205, D9.
+/// `prepend` ahead of `inherited`, joined by this OS's rule.
 fn joined_path(prepend: &[String], inherited: Option<OsString>) -> Option<OsString> {
     if prepend.is_empty() {
         return None;
@@ -276,7 +276,7 @@ pub fn spawn(
         command.env("PATH", path);
     }
 
-    // T205c: a child inherits "ignore Ctrl+C" from however MixLab was launched.
+    // A child inherits "ignore Ctrl+C" from however MixLab was launched.
     crate::platform::process_ctrl_c();
 
     let mut child = pair
@@ -604,7 +604,7 @@ mod tests {
         assert_eq!(joined_path(&[], None), None);
     }
 
-    /// **Ctrl+C reaches a shell started while this process ignores it** — roadmap task **T205c**.
+    /// **Ctrl+C reaches a shell started while this process ignores it.**
     /// A launcher that starts MixLab with `CREATE_NEW_PROCESS_GROUP` hands every child "ignore
     /// Ctrl+C", and PowerShell then ignored the key. The probe runs in a child process of its own,
     /// since the flag is process-wide and would leak into every other test here.

@@ -1,4 +1,4 @@
-//! The mark a download leaves once it is proved — roadmap task **T188**, spec D2.
+//! The mark a download leaves once it is proved.
 //!
 //! `updates/<version>/ready` is written last, after the SHA-256 check (and on Windows the unpack
 //! and the smoke test), so its presence is the whole claim that *Install* has something to install.

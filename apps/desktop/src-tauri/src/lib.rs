@@ -27,11 +27,11 @@ pub fn run() {
     // starts — threads, webview helpers, later a shell in a terminal tab — inherits what is left.
     let opening = launch::Opening::from_process();
     // And, in the same breath and for the same reason, whether this copy was started by the copy it
-    // is replacing — T106. Read and removed here: left in the environment it would be inherited by
-    // every child this process ever starts, the next relaunch's included. `remember` goes with it,
-    // because after an update `/proc/self/exe` names the file that was renamed out of the way rather
-    // than the one that replaced it — so the only safe moment to ask is before an update can have
-    // happened.
+    // is replacing. Read and removed here: left in the environment it would be inherited by every
+    // child this process ever starts, the next relaunch's included. `remember` goes with it,
+    // because after an update `/proc/self/exe` names the file that was renamed out of the way
+    // rather than the one that replaced it — so the only safe moment to ask is before an update can
+    // have happened.
     let taking_over = relaunch::taking_over();
     relaunch::remember();
     let context = tauri::generate_context!();
@@ -67,8 +67,8 @@ pub fn run() {
                 .build(),
         );
 
-    // **No updater plugin and no process plugin** — T106. MixEngine's updater is the only one:
-    // `update.status | check | decide | apply` on the daemon, one signed feed, one key, one payload.
+    // **No updater plugin and no process plugin.** MixLab's updater is `crate::updater`, its own:
+    // one signed feed, one key, one payload, and nothing asked of the daemon but a stop and start.
     // What the process plugin was here for — restarting this window — is `crate::relaunch`, which has
     // to know rather more than that plugin did about which executable is the right one to start.
     #[cfg(desktop)]
@@ -78,7 +78,7 @@ pub fn run() {
         .plugin({
             let window_state = tauri_plugin_window_state::Builder::default()
                 .with_state_flags(tauri_plugin_window_state::StateFlags::MAXIMIZED)
-                // The tray panel is placed beside the icon every time it opens (T168).
+                // The tray panel is placed beside the icon every time it opens.
                 .with_denylist(&[tray::PANEL]);
             // On Windows `main` is maximized as it is first shown instead — see
             // `launch::bring_to_front` for why.
@@ -137,8 +137,8 @@ pub fn run() {
             }
 
             // An update that stopped MixEngine and was interrupted is finished here, and `.old`
-            // files an earlier update left are removed (T187, spec D8). Then every download but
-            // the release on offer goes (T188, spec D2).
+            // files an earlier update left are removed. Then every download but the release on
+            // offer goes.
             {
                 let handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
@@ -157,8 +157,8 @@ pub fn run() {
                 app.manage(updater::commands::UpdaterState::default());
             }
 
-            // T182a: MixLab ▸ Remove MixLab from this Mac…, on a `.pkg` copy of a release. Its
-            // state is managed everywhere, so the label command has something to answer.
+            // MixLab ▸ Remove MixLab from this Mac…, on a `.pkg` copy of a release. Its state is
+            // managed everywhere, so the label command has something to answer.
             {
                 use tauri::Manager as _;
                 app.manage(uninstall::menu::UninstallMenu::default());
@@ -188,8 +188,8 @@ pub fn run() {
             let handle = app.handle().clone();
             std::thread::spawn(move || modules::db::sweep_downloads(&handle));
 
-            /* What a crashed MixLab left running as a tunnel, on macOS: the next start ends it
-            (T203, D3). Windows and Linux need nothing here; their kernels did it at the crash. */
+            /* What a crashed MixLab left running as a tunnel, on macOS: the next start ends it.
+            Windows and Linux need nothing here; their kernels did it at the crash. */
             if let Ok(data) = platform::app_data_dir(app.handle()) {
                 modules::tunnel::state::sweep(&modules::tunnel::state::records_path(&data));
             }
@@ -200,7 +200,7 @@ pub fn run() {
         .expect("error while building tauri application")
         .run(|app, event| match event {
             tauri::RunEvent::Exit => {
-                // Every tunnel ends with MixLab, never later (T203, D3).
+                // Every tunnel ends with MixLab, never later.
                 use tauri::Manager as _;
                 app.state::<modules::tunnel::state::Tunnels>().stop_all();
                 launch::stop(app);

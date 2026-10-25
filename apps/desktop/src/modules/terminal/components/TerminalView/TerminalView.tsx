@@ -38,7 +38,7 @@ interface Props {
    *  also an entry into that machine. */
   runOnConnect: string | null;
   /** Whether the last line of `runOnConnect` is followed by Enter. `false` types it and leaves it
-   *  for the person to run — T205, D10. */
+   *  for the person to run. */
   pressEnter: boolean;
   /** A background tab stays mounted and keeps receiving bytes — this only decides focus and when
    *  to measure again. */

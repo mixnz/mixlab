@@ -17,15 +17,15 @@ import CredentialsSection from "./CredentialsSection";
 import SectionLoading from "./SectionLoading";
 
 /**
- * Root directory, managed TLD, autostart, doctor, diagnostics — T4.6–T4.8. Updates are not here but
- * in MixLab's Settings → Updates (T187, ADR 0056).
+ * Root directory, managed TLD, autostart, doctor, diagnostics. Updates are not here but in MixLab's
+ * Settings → Updates (ADR 0056).
  *
  * **Root/TLD call no new command** — both are read from `daemon.status()` (`home`,
  * `dns?.wildcards`), the call the Dashboard already makes on every `reload()`. Settings makes its
  * own separate call, which is cheaper than sharing state with another screen.
  *
  * **"Default web server" is a section of its own (`FrontEndSection`)** — `service.set_front_end`
- * and `ServiceSummary.role` (T97) exist since bindings `v0.0.6`; on an older daemon that section
+ * and `ServiceSummary.role` exist since bindings `v0.0.6`; on an older daemon that section
  * shows a "this version does not support it yet" line instead of disappearing.
  */
 export default function Settings({ active }: { active: boolean }) {

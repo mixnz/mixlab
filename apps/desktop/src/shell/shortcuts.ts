@@ -16,7 +16,7 @@ export function newModuleTabId(moduleId: string): string {
  * A number key per visible module: `Ctrl/Cmd+1` opens a tab of the first one on the strip, `2` the
  * second.
  *
- * A function of the visible list rather than a constant over the registry — T108. Which modules are
+ * A function of the visible list rather than a constant over the registry. Which modules are
  * drawn is a setting now, and a chord that pointed at a module the user had turned off would be a
  * key nothing answers with a row in the table saying it does.
  *
@@ -132,10 +132,9 @@ function shellShortcuts(visible: ModuleDefinition[], openable: ModuleDefinition[
  * by going to the tab it has. Defaults to the whole of `visible`, which is what a window with no
  * tabs in it yet would pass.
  *
- * **The result must be memoized by the caller.** It was a module-level constant until T108 made it
- * a function of the visible modules; `useShortcutDispatcher` rebinds its listener whenever the
- * array's identity changes, and the Settings table is handed the very same value so the two cannot
- * come to disagree.
+ * **The result must be memoized by the caller.** It is a function of the visible modules, not a
+ * module-level constant; `useShortcutDispatcher` rebinds its listener whenever the array's identity
+ * changes, and the Settings table is handed the very same value so the two cannot come to disagree.
  */
 export function shortcutsFor(
   visible: ModuleDefinition[],

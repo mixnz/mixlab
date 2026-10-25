@@ -9,7 +9,7 @@ import { credentialsPresentation } from "../../settingsState";
 import styles from "./Settings.module.css";
 
 /**
- * Where this home keeps its passwords — T194, ADR 0059.
+ * Where this home keeps its passwords — ADR 0059.
  *
  * Drawn from `daemon.status`, which the screen already reads: the store, and — only where the daemon
  * says it would accept one — a switch. A switch applies at the next start, so success is a sentence

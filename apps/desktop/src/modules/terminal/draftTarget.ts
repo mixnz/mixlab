@@ -4,7 +4,7 @@ import { loadTerminalSettings } from "./settingsStore";
 import type { OnRestore, SavedLocalTarget, SavedTarget } from "./types";
 
 /**
- * A target another module asks this one to save — T205. The MixEngine module's *Save as Terminal
+ * A target another module asks this one to save. The MixEngine module's *Save as Terminal
  * target* sends one for a project's dev server, and it is saved there and then: the person pressed
  * Save, so a target in the list is what they expect next time, with no tab opened over what they
  * were reading.

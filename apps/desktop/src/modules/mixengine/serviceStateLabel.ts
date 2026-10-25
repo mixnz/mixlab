@@ -19,7 +19,7 @@ export type ServiceStateKey =
   | "mixengine.serviceState.resting";
 
 /**
- * `stoppedBy` is what separates **"resting"** from "stopped" — T167g, ADR 0041. A service MixEngine
+ * `stoppedBy` is what separates **"resting"** from "stopped" — ADR 0041. A service MixEngine
  * stopped itself for being idle (`stopped` + `daemon`) will be started again on the next request,
  * so it is neither broken nor something the user turned off: drawing it as a red `Stopped` lies
  * about what the user will see. An older daemon does not send `stopped_by`, and then everything

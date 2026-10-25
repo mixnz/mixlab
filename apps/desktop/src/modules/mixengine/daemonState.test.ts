@@ -40,7 +40,7 @@ describe("rowsFrom", () => {
     ]);
   });
 
-  /* T183: the version is what the user reads next to the id. An old daemon does not send this
+  /* The version is what the user reads next to the id. An old daemon does not send this
      field, so it becomes `null`, and `null` means draw nothing. */
   it("carries a service's version onto its row, and null when the daemon sent none", () => {
     const base = {
@@ -57,7 +57,7 @@ describe("rowsFrom", () => {
     expect(rowsFrom([base])[0].version).toBeNull();
   });
 
-  /* T200b, D6: why a failed service failed is what its pill's tooltip says — and only while it is
+  /* Why a failed service failed is what its pill's tooltip says — and only while it is
      failed, so a row the state has moved past shows nothing stale. */
   it("carries why a failed service failed, and nothing for one that is not failed", () => {
     const note = { at: 1_760_000_000_000, reason: { kind: "spawn_failed" as const }, detail: "no credential" };
@@ -240,7 +240,7 @@ describe("movesARow", () => {
   });
 });
 
-/* T167g: who stopped a service rides on the transition's reason, by the same rule MixEngine's
+/* Who stopped a service rides on the transition's reason, by the same rule MixEngine's
    `StoppedBy::of` uses — so the Dashboard can draw an idle stop as resting without a second read. */
 describe("stoppedBy from a transition", () => {
   const stop = (reason: unknown) =>
@@ -280,7 +280,7 @@ describe("applyEvent and why a service failed", () => {
   const moved = (to: string) =>
     JSON.stringify({ type: "service_state_changed", service: "php-fpm@phpmyadmin", from: "starting", to, reason: { kind: "requested" } });
 
-  /* T200b, D6: the event carries the reason and never the sentence, so a move into `failed` asks
+  /* The event carries the reason and never the sentence, so a move into `failed` asks
      for `service.list` again, which has it. */
   it("asks for the listing again when a service fails", () => {
     expect(applyEvent([row], moved("failed")).resync).toBe(true);

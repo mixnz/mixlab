@@ -28,7 +28,7 @@ export function answerSubjectFor(step: PlanStep): AnswerSubject | null {
   return null;
 }
 
-/** `-1` when the plan has no scaffold step to agree to — a `run_scaffold`, or since T205 a
+/** `-1` when the plan has no scaffold step to agree to — a `run_scaffold` or a
  *  `fetch_archive`; there is always at most one in a plan. A starter planned `satisfied` over a
  *  full folder will not run, so it asks nothing. */
 export function scaffoldStepIndex(steps: PlanStep[]): number {
@@ -72,7 +72,7 @@ export function scaffoldLeftCommand(applied: BlueprintApplied): string | null {
   for (const outcome of applied.steps) {
     if (outcome.result.result !== "not_run") continue;
     if (outcome.action.action === "run_scaffold") return outcome.action.command;
-    // An archive left out is named by its address (T205, D2).
+    // An archive left out is named by its address.
     if (outcome.action.action === "fetch_archive") return outcome.action.url;
   }
   return null;
@@ -123,7 +123,7 @@ export function buildAnswers(
 }
 
 /** `command` is exactly the string the step showed — not anything the user typed again. For an
- *  archive it is empty and `archive` is the address the step showed (T205, D2). */
+ *  archive it is empty and `archive` is the address the step showed. */
 export function buildScaffoldConsent(plan: BlueprintPlan, step: PlanStep): ScaffoldConsent | null {
   if (step.action.action === "run_scaffold") {
     return { command: step.action.command, untrusted: !plan.trusted };
@@ -173,7 +173,7 @@ export function describePlanAction(
   }
 }
 
-/** The `.env` keys this plan asks to write, password included (T205a). A key already in `.env`
+/** The `.env` keys this plan asks to write, password included. A key already in `.env`
  *  plans `satisfied` and asks nothing. */
 export function dotenvKeys(steps: PlanStep[]): string[] {
   return steps.flatMap((step) =>
@@ -184,7 +184,7 @@ export function dotenvKeys(steps: PlanStep[]): string[] {
 }
 
 /** The keys an apply left unwritten, said on the *Done* screen in MixLab's words rather than the
- *  daemon's `why`, whose hint names a `mix` flag (T205a). */
+ *  daemon's `why`, whose hint names a `mix` flag. */
 export function dotenvLeftKeys(applied: BlueprintApplied): string[] {
   return applied.steps.flatMap((outcome) =>
     outcome.action.action === "write_dotenv" && outcome.result.result === "not_run"

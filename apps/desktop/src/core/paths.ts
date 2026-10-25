@@ -1,5 +1,5 @@
 /**
- * Paths as a person on this machine reads them — roadmap task T191.
+ * Paths as a person on this machine reads them.
  *
  * The daemon already answers in this system's spelling. What is left for the window are the joins
  * it makes itself from what a folder dialog returned, and the one split that names a SQLite tab.

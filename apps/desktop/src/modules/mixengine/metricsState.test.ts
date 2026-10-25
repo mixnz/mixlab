@@ -31,7 +31,7 @@ describe("parseMetricsFrame", () => {
     expect(parseMetricsFrame(raw)).toEqual({ at: 1757203200000, samples: [], cores: 12 });
   });
 
-  /* A daemon older than T190c does not send `cores`: its figure was already a percentage of one
+  /* A daemon that does not send `cores` sent a figure that was already a percentage of one
      core. */
   it("reads an old daemon's frame as percent of one core", () => {
     const raw = JSON.stringify({ at: 1757203200000, samples: [] });
@@ -87,7 +87,7 @@ describe("formatBytes", () => {
   });
 });
 
-/* T190c: `cpu_percent` is a percentage of ONE core; users read it the Task Manager way, i.e. as a
+/* `cpu_percent` is a percentage of ONE core; users read it the Task Manager way, i.e. as a
    percentage of the whole machine, with one decimal place. */
 describe("formatCpu", () => {
   it("shows a share of the machine with one decimal, as Task Manager does", () => {

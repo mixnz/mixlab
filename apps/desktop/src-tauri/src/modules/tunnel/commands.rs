@@ -1,4 +1,4 @@
-//! The tunnel module's commands — T203a.
+//! The tunnel module's commands.
 
 use std::path::PathBuf;
 

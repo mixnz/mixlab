@@ -7,13 +7,13 @@ import type {
 
 import { toggleMode } from "./serviceStateLabel";
 
-/** The offers a person can still install — T200, D4. An installed add-on is one card up, and a
+/** The offers a person can still install. An installed add-on is one card up, and a
  *  second row for it was the screen saying the same thing twice. */
 export function notInstalled(offers: ExtensionOffer[]): ExtensionOffer[] {
   return offers.filter((offer) => !offer.installed);
 }
 
-/** Whether this machine has anything to install — T200, D8. Answered by the listing, so nobody
+/** Whether this machine has anything to install. Answered by the listing, so nobody
  *  opens a plan dialog whose only content is a refusal. */
 export function installable(artifact: ArtifactAvailability): boolean {
   return artifact.type !== "other_targets";
@@ -42,14 +42,14 @@ export function kindKey(kind: string): KindKey | null {
   }
 }
 
-/** What an installed add-on is for, or `null` — T200, D5. A daemon older than T200 sends no
- *  description, and an empty line under the name would look like a rendering fault. */
+/** What an installed add-on is for, or `null`. A daemon from before the listing carried it sends
+ *  no description, and an empty line under the name would look like a rendering fault. */
 export function summaryDescription(row: ExtensionSummary): string | null {
   const text = row.description?.trim() ?? "";
   return text === "" ? null : text;
 }
 
-/** The ports an installed add-on holds, as `name number` pairs — T201, D5. The S3 endpoint of
+/** The ports an installed add-on holds, as `name number` pairs. The S3 endpoint of
  *  SeaweedFS and the SMTP port of Mailpit are what a person needs after installing, and no other
  *  screen shows them. `null` when it holds none, so the row draws no empty line. */
 export function heldPorts(row: ExtensionSummary): string | null {
@@ -57,7 +57,7 @@ export function heldPorts(row: ExtensionSummary): string | null {
   return row.ports.map((port) => `${port.name} ${port.wanted}`).join(" · ");
 }
 
-/** The site a `web-app` is served on, from `site.list` — T200, D6. `null` when the add-on names
+/** The site a `web-app` is served on, from `site.list`. `null` when the add-on names
  *  none or the listing has no such site, which only a broken install produces. */
 export function webAppSite(row: ExtensionSummary, sites: SiteSummary[]): SiteSummary | null {
   if (!row.site) return null;
@@ -70,15 +70,15 @@ export type RowAction = "open" | "turnOn" | "turnOff" | "start" | "stop";
 const STOPPABLE = new Set(["running", "starting", "degraded", "restarting"]);
 
 /**
- * What a row offers besides Uninstall — T200, D6 and D7.
+ * What a row offers besides Uninstall.
  *
  * A `web-app` is its site: Open always, and the one switch that changes it. A `service` gets the
  * one action its state allows, where the screen used to show Start and Stop side by side whatever
  * the state was. `stopping` offers nothing, because it is on its way to the answer already. An
  * unknown state offers Start, the action that can do no harm to a service that is not running.
  *
- * **A service that declares its page opens it, whatever its state** (T200a, D3): Open starts it
- * first when it is not running, so the person does not have to.
+ * **A service that declares its page opens it, whatever its state**: Open starts it first when it
+ * is not running, so the person does not have to.
  */
 export function rowActions(
   row: ExtensionSummary,

@@ -98,7 +98,7 @@ window.matchMedia(DARK_QUERY).addEventListener("change", () => {
   if (readStoredTheme() === "system") applyTheme("system");
 });
 
-/* Another machine's preference, written by sync (T177d): the page follows at once. */
+/* Another machine's preference, written by sync: the page follows at once. */
 onPreferencesChanged(() => {
   applyTheme(readStoredTheme());
 });

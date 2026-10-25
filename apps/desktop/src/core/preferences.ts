@@ -1,6 +1,6 @@
 /**
  * "Something rewrote a preference in `localStorage` behind the app's back" — sync, arriving from
- * another machine (T177d). Theme, accent, language and the enabled modules each re-read theirs.
+ * another machine. Theme, accent, language and the enabled modules each re-read theirs.
  *
  * In `core/` because `i18n/` must hear it too, and `i18n/` imports nothing from `shell/`.
  */

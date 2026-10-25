@@ -74,7 +74,7 @@ describe("scaffoldStepIndex", () => {
     expect(scaffoldStepIndex(steps.slice(0, 1))).toBe(-1);
   });
 
-  // T205: `php-mysql` and `static` skip their starter over a cloned folder; nothing to agree to.
+  // `php-mysql` and `static` skip their starter over a cloned folder; nothing to agree to.
   it("skips a starter archive planned satisfied", () => {
     const skipped = step({
       action: { action: "fetch_archive", url: "https://x.org/static-starter.zip", strip: "static" },
@@ -315,7 +315,7 @@ describe("blueprintAppliedFrom / jobFailureMessage", () => {
   });
 });
 
-/* T205, D2: an archive the daemon downloads is consented to like a command it runs. */
+/* An archive the daemon downloads is consented to like a command it runs. */
 describe("archives", () => {
   it("treats an archive like a command for consent", () => {
     const plan = {
@@ -339,7 +339,7 @@ describe("archives", () => {
   });
 });
 
-// T205a: the `.env` keys a plan asks about, and the ones an apply left unwritten.
+// The `.env` keys a plan asks about, and the ones an apply left unwritten.
 describe("dotenvKeys", () => {
   const ask = step({
     action: { action: "write_dotenv", key: "DATABASE_URL", path: ".env" },

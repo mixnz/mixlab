@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/* What sync agrees on must be on disk (T178a, L5): a write whose save fails has to say so, or
+/* What sync agrees on must be on disk: a write whose save fails has to say so, or
    sync records a hash the disk never held and later pushes the old copy back as an edit. */
 vi.stubGlobal("window", globalThis);
 

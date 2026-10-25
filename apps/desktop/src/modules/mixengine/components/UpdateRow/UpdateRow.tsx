@@ -11,7 +11,7 @@ interface Props<U extends { to: string }> {
 }
 
 /**
- * The row under an installed version that has a newer patch in its line — T193.
+ * The row under an installed version that has a newer patch in its line.
  *
  * **A row of its own, so an update never widens a column.** The button and the progress used to sit
  * in the version cell, where every progress message changed the cell's width and the table

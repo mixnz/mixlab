@@ -5,6 +5,8 @@ import type { SyncBackend } from "./api";
  * How often this machine looks, locally, for something it has not lent yet. A look that finds
  * nothing costs no request — Rust compares hashes before it opens a socket — so this is how *"on a
  * local change, after a debounce"* (D8, rule 1) is met without every module announcing its writes.
+ * The D-numbers in this file are those of
+ * `docs/specs/2026-09-20-t177-a-copy-only-you-can-read-design.md`.
  */
 export const LOCAL_CHECK_MS = 30_000;
 
@@ -79,7 +81,7 @@ export async function pushCollection(
     await backend.commitPush(collection.id, pushed.token, skipped);
   }
   // After the commit: what landed and what was replaced are recorded, and only then is the refusal
-  // reported, the way a failed push always was (T178c, C2).
+  // reported, the way a failed push always was.
   if (pushed.error !== null) throw pushed.error;
   return pushed.replaced.upserts.length + pushed.replaced.removed.length;
 }
@@ -95,8 +97,8 @@ export interface LoopOptions {
   /** A run began: at least one row is on. */
   onRunStart?: (run: Run) => void;
   /**
-   * That full run is about to pull: the server named something that changed elsewhere (T189).
-   * Never for a run that only asked and was told nothing changed.
+   * That full run is about to pull: the server named something that changed elsewhere. Never for a
+   * run that only asked and was told nothing changed.
    */
   onDownloading?: () => void;
   /** That run is about to send this machine's changes — only ever between its start and its end. */
@@ -140,12 +142,12 @@ function isSignedOut(error: unknown): boolean {
 }
 
 /**
- * Sync at D8's moments: at launch, on focus once {@link FOCUS_PULL_MS} has passed, whenever
- * asked, a local check every {@link LOCAL_CHECK_MS}, and a pull when nothing has been heard for
- * {@link IDLE_PULL_MS}. A full run asks the server once which collections changed elsewhere
- * (T189) and pulls only those. **One run at a time**, across every
- * loop there is: a moment that arrives during a run asks for one more, however many arrive, and a
- * loop started while a stopped one is still writing waits for it. Returns the stop.
+ * Sync at D8's moments: at launch, on focus once {@link FOCUS_PULL_MS} has passed, whenever asked,
+ * a local check every {@link LOCAL_CHECK_MS}, and a pull when nothing has been heard for
+ * {@link IDLE_PULL_MS}. A full run asks the server once which collections changed elsewhere and
+ * pulls only those. **One run at a time**, across every loop there is: a moment that arrives during
+ * a run asks for one more, however many arrive, and a loop started while a stopped one is still
+ * writing waits for it. Returns the stop.
  */
 export function startSyncLoop(options: LoopOptions): () => void {
   let running = false;
@@ -172,8 +174,8 @@ export function startSyncLoop(options: LoopOptions): () => void {
     let error: unknown = undefined;
     let finished = false;
     try {
-      // One question for the whole run (T189): a collection no other machine touched is only
-      // pushed. A push run never asks, as it never did.
+      // One question for the whole run: a collection no other machine touched is only pushed. A
+      // push run never asks, as it never did.
       let stale: Set<string> | null = null;
       if (run === "full") {
         try {

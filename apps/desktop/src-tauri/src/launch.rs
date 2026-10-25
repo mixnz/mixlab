@@ -33,7 +33,7 @@ use crate::secrets::Redacted;
 pub struct Opening {
     pub url: Option<String>,
     pub secret: Option<String>,
-    /// `--hidden`: started by the login entry, so only the tray comes up (ADR 0042, T168f).
+    /// `--hidden`: started by the login entry, so only the tray comes up (ADR 0042).
     pub hidden: bool,
 }
 
@@ -177,7 +177,8 @@ pub fn accept<R: Runtime>(app: &AppHandle<R>, url: &str, secret: Option<String>)
 struct Message {
     url: Option<String>,
     secret: Option<String>,
-    /// Left off the line when false, so a copy from before T168f reads every line it ever did.
+    /// Left off the line when false, so a copy from before the login entry reads every line it ever
+    /// did.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     hidden: bool,
 }
@@ -264,7 +265,7 @@ pub fn stop<R: Runtime>(app: &AppHandle<R>) {
 /// A line from another copy: bring the window up, and open what it carried, if anything.
 ///
 /// Except a login start with nothing to open: the login entry firing while MixLab already runs
-/// — somebody started it by hand first — must not throw a window at them (T168f).
+/// — somebody started it by hand first — must not throw a window at them.
 fn received<R: Runtime>(app: &AppHandle<R>, line: &str) {
     match serde_json::from_str::<Message>(line) {
         Ok(Message {
@@ -293,7 +294,7 @@ fn received<R: Runtime>(app: &AppHandle<R>, line: &str) {
 static PLACED: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn bring_to_front<R: Runtime>(app: &AppHandle<R>) {
-    // Back in the Dock first, when closing it to the tray took it out (T168).
+    // Back in the Dock first, when closing it to the tray took it out.
     crate::tray::show_in_dock(app);
     if let Some(window) = app.get_webview_window("main") {
         /* On Windows, tao answers anything that touches a maximized window that is still hidden —

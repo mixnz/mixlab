@@ -5,7 +5,7 @@ import { useTranslation } from "../../../../i18n";
 import { readCloudflaredPath, writeCloudflaredPath } from "../../settings";
 import styles from "./TunnelSettings.module.css";
 
-/** The Tunnel pane in Settings: which `cloudflared` to run — T203, D2. */
+/** The Tunnel pane in Settings: which `cloudflared` to run. */
 export default function TunnelSettings() {
   const { t } = useTranslation();
   const [path, setPath] = useState(readCloudflaredPath);

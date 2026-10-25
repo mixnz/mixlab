@@ -1,5 +1,5 @@
 /**
- * The binary list `packaging/common.sh` declares, read from the shell without running it — T111.
+ * The binary list `packaging/common.sh` declares, read from the shell without running it.
  *
  * `MIX_BINARIES` and `MIX_CRATES` are two bash arrays paired by index, and `MIX_WINDOW` is the one
  * entry of the first that is not a headless binary. `crates/mixengine-core/tests/packaging.rs`

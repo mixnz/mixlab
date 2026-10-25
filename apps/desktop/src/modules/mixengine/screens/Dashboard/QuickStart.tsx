@@ -24,7 +24,7 @@ type Phase =
   | { kind: "done"; url: string | null };
 
 /**
- * Builds the first site in one click — T117.
+ * Builds the first site in one click.
  *
  * **A card, not a wizard.** A modal over a daemon that is installing a runtime is a modal in the
  * way; a screen of its own would have to justify itself forever, even once people have twenty
@@ -41,7 +41,7 @@ export default function QuickStart({
   terminalVisible,
 }: {
   onCreated: () => void;
-  /** Whether this window draws the Terminal module, for the steps after an apply — T205. */
+  /** Whether this window draws the Terminal module, for the steps after an apply. */
   terminalVisible: boolean;
 }) {
   const [available, setAvailable] = useState<BlueprintSummary[]>([]);
