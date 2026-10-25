@@ -53,6 +53,8 @@ impl Runner {
         let log = Arc::clone(&self.log);
         let service = self.spec.id().clone();
 
+        // **Detached, and safe to drop.** It ends when the capture's sender drops, which is when the
+        // process it reads goes, and what it writes is the in-memory ring: a log line, not state.
         tokio::spawn(async move {
             for line in already_said {
                 log.record(line);
