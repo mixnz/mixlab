@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ServiceSetResult } from "@mixengine/api";
+import Button from "../../../../components/Button";
 import Input from "../../../../components/Input";
 import Modal, { ModalBody, ModalErrors } from "../../../../components/Modal";
 import { errorMessage } from "../../../../core/errors";
@@ -18,8 +19,9 @@ interface Props {
   onClose: () => void;
   /** Called once the daemon has moved it, so the caller can read its rows again. */
   onMoved?: (result: ServiceSetResult) => void;
-  /** Drawn under the result, for what the caller can offer next. */
-  afterMove?: (result: ServiceSetResult) => ReactNode;
+  /** Whether this window has the Database module, which owns the saved connections a move leaves
+   *  on the old port. Only then is updating them offered. */
+  offerSavedConnections: boolean;
 }
 
 /**
@@ -31,7 +33,7 @@ interface Props {
  * not manage — is the daemon's sentence, shown in the same place, with the dialog left open. The
  * running sentence and the button's label are the confirmation; there is no second dialog.
  */
-export default function PortDialog({ service, port, running, onClose, onMoved, afterMove }: Props) {
+export default function PortDialog({ service, port, running, onClose, onMoved, offerSavedConnections }: Props) {
   const { t } = useTranslation();
   const [text, setText] = useState(String(port));
   const [errors, setErrors] = useState<string[]>([]);
@@ -93,7 +95,18 @@ export default function PortDialog({ service, port, running, onClose, onMoved, a
                 </ul>
               </>
             )}
-            {afterMove?.(result)}
+            {offerSavedConnections && change !== undefined && change !== null && change.from !== change.to && (
+              <div className={styles.follow}>
+                <Button
+                  onClick={() => {
+                    // The Database tab asks before it changes anything; this only says what moved.
+                    void api.savedConnectionsFollow(service, change.from, change.to).finally(onClose);
+                  }}
+                >
+                  {t("mixengine.port.updateSaved")}
+                </Button>
+              </div>
+            )}
           </ModalBody>
         )}
       </Modal>

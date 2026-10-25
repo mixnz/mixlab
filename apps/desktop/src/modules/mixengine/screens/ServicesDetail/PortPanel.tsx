@@ -19,7 +19,7 @@ import styles from "./PortPanel.module.css";
  * (`port_movable`): a front end or a php-fpm pool shows its port and one line saying it is fixed.
  * A service with no port draws nothing.
  */
-export default function PortPanel({ service }: { service: string }) {
+export default function PortPanel({ service, dbVisible }: { service: string; dbVisible: boolean }) {
   const { t } = useTranslation();
   const [row, setRow] = useState<ServiceRow | null>(null);
   const [read, setRead] = useState(false);
@@ -75,6 +75,7 @@ export default function PortPanel({ service }: { service: string }) {
           running={restartsOnMove(row.state)}
           onClose={() => setOpen(false)}
           onMoved={() => void reload()}
+          offerSavedConnections={dbVisible}
         />
       )}
     </Card>

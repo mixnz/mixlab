@@ -17,4 +17,5 @@ export default {
   current: "Listens on {{port}}",
   changeButton: "Change…",
   notMovable: "This service's port is fixed.",
+  updateSaved: "Update saved connections…",
 };

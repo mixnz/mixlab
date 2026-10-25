@@ -455,6 +455,12 @@ export function serviceSet(service: string, port: number): Promise<ServiceSetRes
   return invoke<ServiceSetResult>("mixengine_service_set", { params });
 }
 
+/** Opens a Database tab that offers to move the saved connections made for `service` from `from`
+ *  to `to`. The `db` module owns those connections; this only tells it what moved. */
+export function savedConnectionsFollow(service: string, from: number, to: number): Promise<void> {
+  return invoke("mixengine_saved_connections_follow", { service, from, to });
+}
+
 /** `service.set_autostart` — whether this service starts along with MixEngine.
  *  Starts nothing and stops nothing: what it changes is the walk at the next daemon start. */
 export function serviceSetAutostart(params: ServiceAutostartSet): Promise<ServiceSummary> {

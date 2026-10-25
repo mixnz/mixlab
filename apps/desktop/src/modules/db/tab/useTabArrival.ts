@@ -3,7 +3,7 @@ import { useTranslation } from "../../../i18n";
 import { takeHandoff } from "../api";
 import { arrivesConnected } from "./handoffArrival";
 import { reconnectsOnRestore } from "../saved/savedConnections";
-import { parseDbTabState } from "../tabState";
+import { parseDbTabState, type ServiceMovedTabState } from "../tabState";
 import type { SavedConnection } from "../types";
 import type { Connection } from "./useConnection";
 import type { ConnectionFormState } from "./useConnectionForm";
@@ -20,8 +20,9 @@ interface Options {
   onStateChange: (state: unknown) => void;
 }
 
-/** How the tab arrives: back at what it had open last launch, or holding a connection another
- *  program handed over. Each happens once per tab, and only one of them. */
+/** How the tab arrives: back at what it had open last launch, holding a connection another
+ *  program handed over, or asked by MixEngine about a service that moved port. Each happens once
+ *  per tab, and only one of them. Returns the move, while its question is still open. */
 export function useTabArrival({
   restored,
   savedConnections,
@@ -115,4 +116,19 @@ export function useTabArrival({
     restoreTried.current = true;
     takeArrival(restoredState.handoffId);
   }, [restoredState]);
+
+  /* A tab MixEngine opened after moving a service to another port. The question is the tab's for
+     this session only: the slot is forgotten at once, so a relaunch does not ask again about a
+     move already answered. */
+  const [moved, setMoved] = useState<ServiceMovedTabState["serviceMoved"] | null>(() =>
+    restoredState !== null && "serviceMoved" in restoredState ? restoredState.serviceMoved : null,
+  );
+  const forgetMove = useEffectEvent(() => onStateChange(undefined));
+  useEffect(() => {
+    if (restoreTried.current || restoredState === null || !("serviceMoved" in restoredState)) return;
+    restoreTried.current = true;
+    forgetMove();
+  }, [restoredState]);
+
+  return { moved, dismissMoved: () => setMoved(null) };
 }

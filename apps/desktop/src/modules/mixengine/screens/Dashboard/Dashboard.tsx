@@ -16,6 +16,7 @@ import PathNudge from "./PathNudge";
 import QuickStart from "./QuickStart";
 import RestorePrevious from "./RestorePrevious";
 import { restartsOnMove } from "../../portDialogState";
+import { DATABASE_MODULE_ID } from "../ServicesDetail/openChoices";
 import PortDialog from "../ServicesDetail/PortDialog";
 import ServiceRowMenu from "./ServiceRowMenu";
 import ServicesCard from "./ServicesCard";
@@ -168,6 +169,7 @@ export default function Dashboard({
           running={restartsOnMove(portRow.state)}
           onClose={() => setPortTarget(null)}
           onMoved={() => void reload()}
+          offerSavedConnections={isModuleVisible(DATABASE_MODULE_ID)}
         />
       )}
 

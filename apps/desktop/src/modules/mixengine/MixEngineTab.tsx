@@ -39,6 +39,7 @@ import {
   type StorageRow,
 } from "./storagePicker";
 import type { MixEngineScreen } from "./tabState";
+import { DATABASE_MODULE_ID } from "./screens/ServicesDetail/openChoices";
 import { TERMINAL_MODULE_ID } from "./nextSteps";
 import { requestProjectDetail } from "./projectsNavigation";
 import "./mixengine.css";
@@ -359,7 +360,9 @@ export default function MixEngineTab({
             }}
           />
         ))}
-        {pane("servicesDetail", (active) => <ServicesDetail active={active} />)}
+        {pane("servicesDetail", (active) => (
+          <ServicesDetail active={active} dbVisible={isModuleVisible(DATABASE_MODULE_ID)} />
+        ))}
         {pane("logs", (active) => <Logs active={active} />)}
         {pane("blueprints", (active) => (
           <Blueprints active={active} terminalVisible={isModuleVisible(TERMINAL_MODULE_ID)} />

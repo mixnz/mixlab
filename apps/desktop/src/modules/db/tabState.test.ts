@@ -67,3 +67,17 @@ describe("parseDbTabState", () => {
     expect(parseDbTabState({ savedId: "" })).toBeNull();
   });
 });
+
+describe("parseDbTabState for a moved service", () => {
+  it("reads a service that moved, as MixEngine asked the tab to open for it", () => {
+    expect(parseDbTabState({ serviceMoved: { service: "mysql@8", from: 3307, to: 3306 } })).toEqual({
+      serviceMoved: { service: "mysql@8", from: 3307, to: 3306 },
+    });
+  });
+
+  it("refuses a move it cannot read", () => {
+    expect(parseDbTabState({ serviceMoved: { service: "mysql@8", from: "x", to: 3306 } })).toBeNull();
+    expect(parseDbTabState({ serviceMoved: { service: "", from: 3307, to: 3306 } })).toBeNull();
+    expect(parseDbTabState({ serviceMoved: null })).toBeNull();
+  });
+});

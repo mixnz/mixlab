@@ -38,3 +38,8 @@
   line-height: var(--leading-sm);
   color: var(--text-muted);
 }
+
+.follow {
+  display: flex;
+  margin-top: 14px;
+}

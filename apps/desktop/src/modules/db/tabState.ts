@@ -33,7 +33,16 @@ export interface HandoffTabState {
   handoffId: string;
 }
 
-export type DbTabState = SavedTabState | HandoffTabState;
+/**
+ * A tab MixEngine asked for after moving one of its services to another port, so the connections
+ * saved for it can be offered the new one. Acted on once and never written back: the tab replaces
+ * it with its own state as soon as it opens.
+ */
+export interface ServiceMovedTabState {
+  serviceMoved: { service: string; from: number; to: number };
+}
+
+export type DbTabState = SavedTabState | HandoffTabState | ServiceMovedTabState;
 
 /**
  * The stored value, if it is one, or `null`.
@@ -54,5 +63,16 @@ export function parseDbTabState(value: unknown): DbTabState | null {
   if (typeof state.handoffId === "string" && state.handoffId !== "") {
     return { handoffId: state.handoffId };
   }
+  const moved = state.serviceMoved;
+  if (typeof moved === "object" && moved !== null && !Array.isArray(moved)) {
+    const { service, from, to } = moved as Record<string, unknown>;
+    if (typeof service === "string" && service !== "" && isPort(from) && isPort(to)) {
+      return { serviceMoved: { service, from, to } };
+    }
+  }
   return null;
+}
+
+function isPort(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 65535;
 }

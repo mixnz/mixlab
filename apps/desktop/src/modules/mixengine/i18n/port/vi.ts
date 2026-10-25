@@ -17,4 +17,5 @@ export default {
   current: "Đang lắng nghe ở {{port}}",
   changeButton: "Đổi…",
   notMovable: "Port của service này cố định.",
+  updateSaved: "Cập nhật kết nối đã lưu…",
 };
