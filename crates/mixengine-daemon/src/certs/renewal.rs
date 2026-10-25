@@ -137,13 +137,14 @@ fn newly(announced: &mut BTreeSet<String>, failed: &[Failure]) -> Vec<Failure> {
 /// tolerance that makes an imprecise clock a non-problem — and it is also why a late tick has
 /// nothing to make up: a pass that finds nothing due does nothing.
 pub(crate) fn start(
+    background: &crate::background::Background,
     certificates: Certificates,
     services: std::sync::Arc<crate::services::Registry>,
     events: crate::api::Events,
     every: std::time::Duration,
     shutdown: tokio_util::sync::CancellationToken,
 ) {
-    tokio::spawn(async move {
+    background.spawn("certificate renewal", async move {
         let mut announced = BTreeSet::new();
         let mut ticker = tokio::time::interval(every);
         ticker.tick().await;

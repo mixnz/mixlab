@@ -45,8 +45,13 @@ use super::Registry;
 /// Spawned rather than awaited, and cancelled by the same token as its four siblings: a daemon told
 /// to stop while it is still walking stops walking, and what it has already started is stopped by
 /// the shutdown that follows — in reverse dependency order, by the code that owns that question.
-pub(crate) fn start(services: Arc<Registry>, store: Store, shutdown: CancellationToken) {
-    tokio::spawn(async move {
+pub(crate) fn start(
+    background: &crate::background::Background,
+    services: Arc<Registry>,
+    store: Store,
+    shutdown: CancellationToken,
+) {
+    background.spawn("autostart", async move {
         tokio::select! {
             () = shutdown.cancelled() => {}
             () = walk(services, store) => {}

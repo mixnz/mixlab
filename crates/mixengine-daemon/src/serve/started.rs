@@ -61,6 +61,7 @@ pub(super) async fn after_the_api(
     // After the reconciliation in `recovery`, so its first pass never reads a home this daemon has
     // not finished starting; before the accept loop, so it does not race the first client.
     crate::sites::revoke::start(
+        background,
         Arc::clone(&api.sites),
         elevation.host(),
         std::time::Duration::from_secs(config.sharing.check_seconds),

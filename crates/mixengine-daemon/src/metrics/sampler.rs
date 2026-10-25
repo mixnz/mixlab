@@ -434,10 +434,14 @@ impl Handle {
 }
 
 /// Run the loop until the daemon shuts down.
-pub(crate) fn start(mut sampler: Sampler, shutdown: tokio_util::sync::CancellationToken) {
+pub(crate) fn start(
+    background: &crate::background::Background,
+    mut sampler: Sampler,
+    shutdown: tokio_util::sync::CancellationToken,
+) {
     let mut signal = sampler.watchers.signal();
 
-    tokio::spawn(async move {
+    background.spawn("metrics sampler", async move {
         loop {
             let period = sampler.period();
 

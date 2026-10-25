@@ -273,11 +273,6 @@ pub(crate) async fn serve(
 
     projections::refresh_bin(&shims).await;
 
-    // **And from here a watch keeps it current.** A `npm install -g yarn` typed a minute later
-    // changes a runtime's bindir and tells nobody; the kernel tells this, and nothing runs while
-    // nothing changes. See `bin_watch`.
-    let _watching = bin_watch::start(Arc::clone(&shims), store.clone());
-
     projections::seed_gallery(store, paths).await;
 
     // Through the wire mapping, and for the same reason the startup steps above are: the failure a
@@ -310,6 +305,17 @@ pub(crate) async fn serve(
     // The work a start leaves running behind it, owned so that none of it outlives the store it
     // reads — see `background`. Stopped beside the clients, before `serve` returns.
     let background = background::Background::new();
+
+    // **And from here a watch keeps `bin/` current.** A `npm install -g yarn` typed a minute later
+    // changes a runtime's bindir and tells nobody; the kernel tells this, and nothing runs while
+    // nothing changes. See `bin_watch`. Started once there is a set to own it and a token to stop
+    // it; `bin/` was refreshed above, and the watch's first pass catches anything in between.
+    bin_watch::start(
+        &background,
+        Arc::clone(&shims),
+        store.clone(),
+        shutdown.clone(),
+    );
 
     // Made here rather than inside the API, because the API is no longer the only publisher: the
     // registry announces every state change it persists, from tasks that outlive any one request.
@@ -416,7 +422,7 @@ pub(crate) async fn serve(
 
     machine::certificates(&shared, &background).await;
 
-    let metrics = clocks::start_clocks(&shared);
+    let metrics = clocks::start_clocks(&shared, &background);
 
     let adopted = repairs::repair_home(&shared, &background).await;
 
@@ -477,7 +483,12 @@ pub(crate) async fn serve(
     // After recovery for `recover`'s own reason, which is satisfied by everything above: a service
     // recovery adopted is already up, and a walk counts one that is up as reached rather than
     // restarting it.
-    crate::services::autostart::start(Arc::clone(&services), store.clone(), shutdown.clone());
+    crate::services::autostart::start(
+        &background,
+        Arc::clone(&services),
+        store.clone(),
+        shutdown.clone(),
+    );
 
     let (connections, on_the_os_clock) = accept::accept_until_stopped(
         &mut listener,

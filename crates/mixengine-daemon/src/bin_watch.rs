@@ -26,6 +26,7 @@ use std::time::Duration;
 
 use mixengine_core::{Store, runtimes};
 use tokio::sync::Notify;
+use tokio_util::sync::CancellationToken;
 
 use crate::shims::Shims;
 
@@ -36,12 +37,17 @@ use crate::shims::Shims;
 /// wait after an event, never a period: with nothing happening, nothing waits.
 const SETTLE: Duration = Duration::from_millis(250);
 
-/// Start watching, and hand back the handle that stops it.
+/// Start watching, until the daemon shuts down.
 ///
 /// Nothing here can fail the daemon: a bindir that cannot be watched is logged, every command the
 /// daemon runs itself still leaves `bin/` right, and `mix path rescan` is there for the rest.
-pub(crate) fn start(shims: Arc<Shims>, store: Store) -> tokio::task::JoinHandle<()> {
-    tokio::spawn(async move {
+pub(crate) fn start(
+    background: &crate::background::Background,
+    shims: Arc<Shims>,
+    store: Store,
+    shutdown: CancellationToken,
+) {
+    background.spawn("bin watch", async move {
         let changed = Arc::new(Notify::new());
 
         // **The first watch is followed by a scan too**, as every later one is. `bin/` was filled
@@ -57,7 +63,14 @@ pub(crate) fn start(shims: Arc<Shims>, store: Store) -> tokio::task::JoinHandle<
             if heard {
                 heard = false;
 
-                match shims.rescan().await {
+                // Raced against the token like the wait below: a rescan writes `bin/` and reads the
+                // store, and the store is about to close.
+                let rescanned = tokio::select! {
+                    () = shutdown.cancelled() => return,
+                    rescanned = shims.rescan() => rescanned,
+                };
+
+                match rescanned {
                     Ok(refreshed)
                         if refreshed.written.is_empty() && refreshed.removed.is_empty() => {}
                     Ok(refreshed) => tracing::info!(
@@ -73,6 +86,7 @@ pub(crate) fn start(shims: Arc<Shims>, store: Store) -> tokio::task::JoinHandle<
             }
 
             tokio::select! {
+                () = shutdown.cancelled() => return,
                 () = changed.notified() => {
                     settle(&changed).await;
                     heard = true;
