@@ -87,7 +87,8 @@ async fn follow(jobs: Arc<Jobs>, armed: Arc<Armed>, token: CancellationToken, id
     }
 
     tracing::info!(
-        "this home has been removed from this machine; the daemon is stopping, and takes whatever          of its own directories were not kept with it"
+        "this home has been removed from this machine; the daemon is stopping, and takes whatever \
+         of its own directories were not kept with it"
     );
 
     token.cancel();

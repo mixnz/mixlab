@@ -204,10 +204,10 @@ where
         let _ = answer.send(outcome);
     });
 
-    let stopped = match answered.await {
+    match answered.await {
         Ok(Ok(Ok(result))) => {
             tracing::debug!("answered");
-            return Ok(result);
+            Ok(result)
         }
 
         Ok(Ok(Err(failure))) => {
@@ -215,34 +215,45 @@ where
             // most of what lands here is a request that was simply wrong. The line exists so the
             // daemon's log can answer "what was this client doing" later.
             tracing::warn!(code = %failure.error.code, error = %failure.error.message, "refused");
-            return Err(failure);
+            Err(failure)
         }
 
         // The panic message itself has already gone to the log through the panic hook — which is
         // `crate::crash`'s, installed at `main`, and which also left a report in `logs/crashes/`.
         // It is not repeated to the client — a backtrace is not something a user can act on, and
         // the daemon's log is where it belongs.
-        Ok(Err(_panic)) => false,
+        Ok(Err(_panic)) => {
+            tracing::error!(
+                "a request handler did not finish; answering `internal` and staying up"
+            );
 
-        // No answer at all: the task was stopped by the shutdown, or was never started because the
-        // shutdown had already closed the set. Answered all the same, so nothing waits on it.
-        Err(_) => true,
-    };
+            Err(Failure {
+                code: RpcCode::INTERNAL_ERROR,
+                error: Error::new(
+                    ErrorCode::Internal,
+                    format!("`{method}` failed in a way it does not account for"),
+                )
+                .with_hint(
+                    "this is a bug in MixEngine; `logs/daemon.log` has the detail a report needs",
+                ),
+            })
+        }
 
-    tracing::error!(
-        panicked = !stopped,
-        stopped,
-        "a request handler did not finish; answering `internal` and staying up"
-    );
+        // No answer at all: the shutdown had already closed the set, or stopped the handler when
+        // the client grace ran out. **Not `internal`**, whose hint calls it a bug: this is a daemon
+        // doing what it was asked, and a client polling `daemon.status` through a stop meets it.
+        Err(_) => {
+            tracing::info!("a request arrived or was still running as this daemon stopped");
 
-    Err(Failure {
-        code: RpcCode::INTERNAL_ERROR,
-        error: Error::new(
-            ErrorCode::Internal,
-            format!("`{method}` failed in a way it does not account for"),
-        )
-        .with_hint("this is a bug in MixEngine; `logs/daemon.log` has the detail a report needs"),
-    })
+            Err(refused(
+                Error::new(
+                    ErrorCode::Conflict,
+                    format!("`{method}` was not carried out: this daemon is stopping"),
+                )
+                .with_hint("start it again with `mix daemon start`, then ask again"),
+            ))
+        }
+    }
 }
 
 /// Run a handler's blocking half where blocking work belongs.
@@ -428,10 +439,10 @@ mod tests {
         .await
         .expect("an answer rather than a wait");
 
-        assert_eq!(
-            answered.expect_err("nothing ran").code,
-            RpcCode::INTERNAL_ERROR
-        );
+        // Said as what it is — the daemon is stopping — and not as the bug `internal` means.
+        let failure = answered.expect_err("nothing ran");
+        assert_eq!(failure.code, RpcCode::APPLICATION_ERROR);
+        assert_eq!(failure.error.code, ErrorCode::Conflict);
     }
 
     #[tokio::test]

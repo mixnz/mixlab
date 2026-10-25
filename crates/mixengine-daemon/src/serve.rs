@@ -302,8 +302,9 @@ pub(crate) async fn serve(
     // object, and every service the registry supervises hangs a child token off it.
     let shutdown = CancellationToken::new();
 
-    // The work a start leaves running behind it, owned so that none of it outlives the store it
-    // reads — see `background`. Stopped beside the clients, before `serve` returns.
+    // The work this daemon leaves running behind a call — the start's, the clocks', every request
+    // handler's — owned so that none of it outlives the store it reads; see `background`. Stopped
+    // beside the clients, before `serve` returns.
     let background = background::Background::new();
 
     // **And from here a watch keeps `bin/` current.** A `npm install -g yarn` typed a minute later
