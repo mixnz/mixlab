@@ -43,10 +43,10 @@ pid: number | null,
 /**
  * The port its row was given, and [`None`] for a service that listens on none.
  *
- * **The number in the row, not one derived from the running process.** It is allocated once,
- * when the service is created, and never recomputed: it is in somebody's `.env` and in a
- * colleague's shell history by the end of the afternoon, so a service that quietly moved
- * between restarts would break both. A stopped service has it just as a running one does,
+ * **The number in the row, not one derived from the running process.** It is allocated when
+ * the service is created and changes only when a person moves it with `service.set`: it is in
+ * somebody's `.env` and in a colleague's shell history by the end of the afternoon, so a
+ * service that quietly moved between restarts would break both. A stopped service has it just as a running one does,
  * which is the point of reporting it here rather than only at creation.
  */
 port?: number | null, 
@@ -81,6 +81,14 @@ depends_on: Array<ServiceId>,
  * behind this already gives such a row when it passes over it.
  */
 role?: ServiceRole | null, 
+/**
+ * Whether `service.set` accepts a port for this service.
+ *
+ * The daemon's answer, from the recipe, so no client decides which services may move: a
+ * database or a cache may, a front end and a php-fpm pool may not. [`None`] means a daemon
+ * built before the member, on [`role`](Self::role)'s rule — a client draws no way to move it.
+ */
+port_movable?: boolean | null, 
 /**
  * Whether this service starts when the daemon does.
  *

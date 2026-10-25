@@ -21,6 +21,7 @@ import ServiceForm from "../../components/ServiceForm";
 import AutostartPanel from "./AutostartPanel";
 import DatabasePanel from "./DatabasePanel";
 import IdlePanel from "./IdlePanel";
+import PortPanel from "./PortPanel";
 import LimitsPanel from "./LimitsPanel";
 import styles from "./ServicesDetail.module.css";
 
@@ -61,7 +62,15 @@ function dotTone(
   return tone === "success" ? "dotSuccess" : tone === "danger" ? "dotDanger" : tone === "warning" ? "dotWarning" : "dotNeutral";
 }
 
-export default function ServicesDetail({ active }: { active: boolean }) {
+export default function ServicesDetail({
+  active,
+  dbVisible,
+}: {
+  active: boolean;
+  /** Whether this window draws the Database module, which owns the saved connections a port move
+   *  can leave behind. */
+  dbVisible: boolean;
+}) {
   const [services, setServices] = useState<ServiceSummary[]>([]);
   /** False until the first read has answered — until then an empty `services` means "not known
    *  yet", not "no services". */
@@ -323,6 +332,9 @@ export default function ServicesDetail({ active }: { active: boolean }) {
                   down", idle answers "what keeps running when I am not using it". Two different
                   questions about one service, and anyone turning both on has to see both at once. */}
               <AutostartPanel service={selected} />
+              {/* Where clients connect, beside the other settings of this one service; draws
+                  nothing for a service with no port. */}
+              <PortPanel service={selected} dbVisible={dbVisible} />
               <IdlePanel service={selected} />
               <LimitsPanel service={selected} />
             </Fragment>

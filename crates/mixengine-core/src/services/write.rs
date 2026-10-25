@@ -244,6 +244,38 @@ pub async fn set_idle(store: &Store, service: &ServiceId, minutes: Option<u32>) 
     Ok(())
 }
 
+/// Replace the port a service listens on.
+///
+/// **The column and nothing else, and no check.** Whether the number is free is
+/// [`claim`](super::claim())'s, which calls this inside the allocation lock; a caller that wrote a
+/// port without that check would be the race the lock exists to close.
+///
+/// # Errors
+///
+/// [`Error::NotFound`] when no such service is declared, and the store's own failure when the write
+/// does not land.
+pub async fn set_port(store: &Store, service: &ServiceId, port: u16) -> Result<()> {
+    let id = service.as_str();
+    let column = i64::from(port);
+
+    let changed = sqlx::query!("UPDATE services SET port = ? WHERE id = ?", column, id)
+        .execute(store.pool())
+        .await
+        .map_err(|source| store.failure("write", source))?
+        .rows_affected();
+
+    if changed == 0 {
+        return Err(Error::NotFound {
+            kind: "service",
+            id: id.to_owned(),
+        });
+    }
+
+    tracing::info!(%id, port, "a service was moved to another port");
+
+    Ok(())
+}
+
 /// Replace whether this service starts when the daemon does.
 ///
 /// [`set_idle`]'s shape, and for its reason: the column is the whole of the setting, and what reads

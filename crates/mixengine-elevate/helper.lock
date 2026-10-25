@@ -119,6 +119,7 @@
     "crates/mixengine-proto/src/service/policy.rs",
     "crates/mixengine-proto/src/service/validate.rs",
     "crates/mixengine-proto/src/service_api.rs",
+    "crates/mixengine-proto/src/service_api/set.rs",
     "crates/mixengine-proto/src/site_api.rs",
     "crates/mixengine-proto/src/state.rs",
     "crates/mixengine-proto/src/storage_api.rs",

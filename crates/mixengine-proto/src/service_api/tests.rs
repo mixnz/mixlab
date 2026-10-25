@@ -157,6 +157,7 @@ fn summary(id: &str) -> ServiceSummary {
         last_exit_code: None,
         depends_on: Vec::new(),
         role: Some(ServiceRole::Other {}),
+        port_movable: None,
         autostart: false,
         stopped_by: None,
         version: None,
@@ -402,6 +403,7 @@ fn a_summary_of_a_service_with_no_row_omits_the_state_rather_than_inventing_one(
         last_exit_code: None,
         depends_on: Vec::new(),
         role: None,
+        port_movable: None,
         autostart: false,
         stopped_by: None,
         version: None,
@@ -461,4 +463,48 @@ fn a_walk_that_was_not_waited_for_says_so_rather_than_looking_like_one_that_did_
         encoded.get("failed").is_none(),
         "nothing failed — nothing has happened yet: {encoded}"
     );
+}
+
+/// `service.set` with no setting in it reads, so the daemon can refuse it in words rather than a
+/// client meeting a decode error.
+#[test]
+fn service_set_reads_without_a_port() {
+    let asked: ServiceSet =
+        serde_json::from_value(serde_json::json!({"service": "mysql@8"})).expect("reads");
+
+    assert_eq!(asked.service.as_str(), "mysql@8");
+    assert_eq!(asked.port, None);
+}
+
+/// A summary from a daemon built before `port_movable` reads as "not said", never as "no".
+#[test]
+fn a_summary_from_an_older_daemon_has_no_port_movable() {
+    let mut encoded = serde_json::to_value(summary("mysql@8")).expect("encodes");
+    encoded
+        .as_object_mut()
+        .expect("an object")
+        .remove("port_movable");
+
+    let read: ServiceSummary = serde_json::from_value(encoded).expect("reads");
+
+    assert_eq!(read.port_movable, None);
+}
+
+/// What a move answers survives the wire unchanged.
+#[test]
+fn a_set_result_round_trips() {
+    let result = ServiceSetResult {
+        service: summary("mysql@8"),
+        port: Some(PortChange {
+            from: 3307,
+            to: 3306,
+        }),
+        restarted: true,
+        not_followed: vec!["a project's .env that names 3307".to_owned()],
+    };
+
+    let read: ServiceSetResult =
+        serde_json::from_value(serde_json::to_value(&result).expect("encodes")).expect("reads");
+
+    assert_eq!(read, result);
 }

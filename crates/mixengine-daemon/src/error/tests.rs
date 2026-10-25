@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use mixengine_core::ServiceError;
 use mixengine_core::services::GraphError;
 use mixengine_proto::ServiceId;
 

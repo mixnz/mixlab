@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- A database or cache can move to another port: `mix service set <service> --port <n>`, or
+  *Change port…* in MixLab. MixLab then offers to update the saved connections that used the old port.
 - On a Linux server, MixEngine can come back after a reboot with nobody logged in:
   `mix autostart enable --at-boot`, or *Also start at boot* in Settings → MixEngine.
 - Over SSH, `mix elevation grant`, `mix doctor --repair` and `mix uninstall` ask for your password

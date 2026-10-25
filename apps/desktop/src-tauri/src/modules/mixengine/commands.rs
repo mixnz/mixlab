@@ -477,6 +477,17 @@ pub async fn mixengine_service_set_autostart(params: Value) -> Result<Value, App
     rpc::call("service.set_autostart", params).await
 }
 
+/// `service.set` — moving a service to another port. `params` has the shape of
+/// `ServiceSet { service, port }`; returns `ServiceSetResult`.
+///
+/// **A running service is restarted by the call**, which drops its open connections: the window
+/// says so before it sends this, and the daemon does the rest — checks the port, renders, restarts,
+/// and puts the service back on its old port when the new one does not start.
+#[tauri::command]
+pub async fn mixengine_service_set(params: Value) -> Result<Value, AppError> {
+    rpc::call("service.set", params).await
+}
+
 /// `service.save_resources` — ADR 0041. Returns `SaveResources { on }`: whether this home stops
 /// services nobody is using. Off unless the user has turned it on.
 #[tauri::command]

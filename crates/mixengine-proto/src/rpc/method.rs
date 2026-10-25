@@ -600,6 +600,16 @@ pub const SERVICE_IDLE: &str = "service.idle";
 /// call itself.
 pub const SERVICE_SET_IDLE: &str = "service.set_idle";
 
+/// Change a setting of a service that exists. Takes [`ServiceSet`](crate::ServiceSet), answers
+/// [`ServiceSetResult`](crate::ServiceSetResult).
+///
+/// **Today the setting is the port**, and the call is the whole move: the port is checked the way
+/// an allocated one is at create, the row changes, the configuration is rendered again, and a
+/// running service is restarted — a port is one of the changes a reload cannot apply. A stopped
+/// one stays stopped. When the restart fails on the new port, the service is put back on the old
+/// one and the failure is the answer.
+pub const SERVICE_SET: &str = "service.set";
+
 /// Replace whether this service starts when the daemon does. Takes
 /// [`ServiceAutostartSet`](crate::ServiceAutostartSet), answers
 /// [`ServiceSummary`](crate::ServiceSummary).

@@ -376,6 +376,15 @@ const dbVi: DbDict = {
     cannotRemoveDirectory: "Không xoá được {{path}}: {{message}}",
     noAppDataDir: "MixLab không có chỗ nào để lưu file riêng của nó: {{message}}",
   },
+  followPort: {
+    found: "{{count}} kết nối đã lưu vẫn trỏ tới {{service}} ở port {{from}}: {{names}}. Chuyển sang {{to}}?",
+    foundOne: "Một kết nối đã lưu vẫn trỏ tới {{service}} ở port {{from}}: {{names}}. Chuyển sang {{to}}?",
+    none: "Không có kết nối đã lưu nào trỏ tới {{service}} ở port {{from}}.",
+    update: "Cập nhật",
+    leave: "Để nguyên",
+    ok: "OK",
+    updated: "Đã chuyển {{count}} kết nối đã lưu sang {{to}}.",
+  },
   dbSync: {
     connections: "Kết nối",
     connectionSecrets: "Mật khẩu kết nối",

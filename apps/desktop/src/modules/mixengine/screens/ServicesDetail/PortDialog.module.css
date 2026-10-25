@@ -1,0 +1,45 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.field input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sentence {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--text);
+}
+
+.note {
+  margin: 0 0 12px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--text-secondary);
+}
+
+.sentence + .note {
+  margin-top: 12px;
+}
+
+.list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--text-muted);
+}
+
+.follow {
+  display: flex;
+  margin-top: 14px;
+}

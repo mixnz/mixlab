@@ -271,6 +271,16 @@ pub(crate) async fn hold_if_wakeable(services: &Arc<Registry>, service: &Service
         .await;
 }
 
+/// Hold again what `service`'s row now says, after the row has moved to another port.
+///
+/// **Released first, whatever the row says**, so the old address is never held for a service that
+/// no longer listens there; then [`hold_if_wakeable`] decides from the row, exactly as at an idle
+/// stop. A service nothing was held for, and one a person stopped, end up holding nothing.
+pub(crate) async fn rehold(services: &Arc<Registry>, service: &ServiceId) {
+    services.holder().release(service).await;
+    hold_if_wakeable(services, service).await;
+}
+
 #[cfg(test)]
 mod tests {
     use std::net::{Ipv4Addr, TcpListener};
@@ -440,5 +450,40 @@ mod tests {
             1,
             "the holder never holds anything, so the assertion above was vacuous"
         );
+    }
+
+    /// **A service moved to another port gives its old address back.** `rehold` releases what was
+    /// held and holds again only what the row now says — here nothing, because the row is a
+    /// person's stop — so the old address is free for whoever is given it next.
+    #[tokio::test]
+    async fn rehold_gives_the_old_address_back() {
+        let (fixture_home, paths, store) = home(&["db"]).await;
+
+        sqlx::query("UPDATE services SET state = 'stopped', stopped_by = 'person' WHERE id = 'db'")
+            .execute(store.pool())
+            .await
+            .expect("the row");
+
+        let registry = Arc::new(registry(
+            &paths,
+            &store,
+            Arc::new(Declared(vec![spec("db").build().expect("a usable spec")])),
+        ));
+
+        let old = somewhere(&fixture_home, "old.sock");
+
+        registry
+            .holder()
+            .hold(Arc::clone(&registry), &service("db"), vec![old.clone()])
+            .await;
+
+        rehold(&registry, &service("db")).await;
+
+        assert_eq!(
+            registry.holder().holding(),
+            0,
+            "the old address is still held"
+        );
+        taken_again(&old).await;
     }
 }

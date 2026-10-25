@@ -1365,6 +1365,28 @@ mix service set-front-end <SERVER> [OPTIONS]
 | `-y`, `--yes` | Answer the question in advance |
 | `--no-wait` | Return once the daemon has accepted the switch rather than once it has made it |
 
+### mix service set
+
+Move a service to another port.
+
+The port is checked the way one is when a service is created: no other service or extension may hold
+it, and nothing else on this machine may be listening there. The configuration is rendered again for
+the new port. A running service is restarted, which drops every open connection, so it asks first; a
+stopped one stays stopped.
+
+A project's .env, a saved connection in MixLab and shell history still name the old port, and are
+listed afterwards.
+
+```
+mix service set <SERVICE> [OPTIONS]
+```
+
+| Flag | What it does |
+| --- | --- |
+| `<SERVICE>` | The service to move: `mysql@8`, `redis@cache` |
+| `--port` `<PORT>` | The port it should listen on |
+| `-y`, `--yes` | Do not ask before restarting a running service |
+
 ### mix service start
 
 Start a service, and everything it depends on

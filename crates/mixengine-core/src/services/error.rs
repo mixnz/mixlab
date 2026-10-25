@@ -310,6 +310,49 @@ pub enum ServiceError {
         last: u16,
     },
 
+    /// A port a person asked a service to move to is already some row's, or an extension's.
+    ///
+    /// Named by its holder rather than reported as "in use": the holder may be stopped and have no
+    /// process at all, and what the person needs to know is who it belongs to.
+    #[error("{port} belongs to {holder}")]
+    PortHeld {
+        /// The port asked for.
+        port: u16,
+
+        /// The service id or extension id that holds it.
+        holder: String,
+    },
+
+    /// A port a person asked a service to move to is bound by something MixEngine does not manage.
+    #[error(
+        "{port} is held by {}, which MixEngine does not manage",
+        held_by(*pid, program.as_deref())
+    )]
+    PortUnavailable {
+        /// The port asked for.
+        port: u16,
+
+        /// The process listening there, as far as the OS would say.
+        pid: Option<u32>,
+
+        /// Its program name, as far as the OS would say.
+        program: Option<String>,
+    },
+
+    /// A port no client could be told to dial.
+    #[error("{port} is not a port a client can dial")]
+    PortInvalid {
+        /// The port asked for.
+        port: u16,
+    },
+
+    /// A port was asked of a service whose row listens on none.
+    #[error("{service} listens on no port")]
+    ListensOnNoPort {
+        /// The service asked about.
+        service: mixengine_proto::ServiceId,
+    },
+
     /// A recipe asked the install behind its service for an executable it does not publish.
     ///
     /// Distinct from [`RuntimeError::RuntimeProvidesNothing`], which is the shim's question —
@@ -354,4 +397,15 @@ pub enum ServiceError {
         /// What it does publish, in the order a listing shows them.
         known: Vec<String>,
     },
+}
+
+/// Who holds a port, in the words a refusal uses: the program and its pid where the OS said, and
+/// "another program on this machine" where it did not.
+fn held_by(pid: Option<u32>, program: Option<&str>) -> String {
+    match (program, pid) {
+        (Some(program), Some(pid)) => format!("{program} (pid {pid})"),
+        (Some(program), None) => program.to_owned(),
+        (None, Some(pid)) => format!("pid {pid}"),
+        (None, None) => "another program on this machine".to_owned(),
+    }
 }

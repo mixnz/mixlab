@@ -12,6 +12,7 @@ import { useConnection } from "./tab/useConnection";
 import { useConnectionForm } from "./tab/useConnectionForm";
 import { useTabArrival } from "./tab/useTabArrival";
 import { useSavedList } from "./tab/useSavedList";
+import FollowPortBanner from "./tab/FollowPortBanner";
 import SavedConnectionList from "./tab/SavedConnectionList";
 import SavedConnectionMenu from "./tab/SavedConnectionMenu";
 import ConnectionWorkspace from "./tab/ConnectionWorkspace";
@@ -81,7 +82,7 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
 
   const disconnect = () => connection.disconnect(editor.savedEntry);
 
-  useTabArrival({
+  const { moved, dismissMoved } = useTabArrival({
     restored,
     savedConnections,
     savedConnectionsLoaded,
@@ -118,6 +119,7 @@ function DbTab({ active, onTitleChange, onBadgesChange, restored, onStateChange 
             focusPassword={editor.focusPassword}
             notices={
               <>
+                {moved !== null && <FollowPortBanner moved={moved} onDone={dismissMoved} />}
                 {error && <ErrorBanner message={error} onDismiss={() => setError("")} />}
                 {stale === "changed" && (
                   <div className="saved-elsewhere">

@@ -38,6 +38,7 @@ use mixengine_proto::{
 use crate::{Error, Result, Store};
 
 pub mod activation;
+mod claim;
 pub mod client;
 mod data_dir;
 pub mod front_end;
@@ -49,9 +50,12 @@ pub mod save_resources;
 mod transitions;
 mod write;
 
+pub use claim::{Claimed, claim, port_movable, reclaim};
 pub use transitions::{ended, started, transition, transition_noting};
 use transitions::{exit_code, failure_note, installed_version, listening_port, process_id};
-pub use write::{autostart_ids, create, delete, idle_minutes, set_autostart, set_idle, set_limits};
+pub use write::{
+    autostart_ids, create, delete, idle_minutes, set_autostart, set_idle, set_limits, set_port,
+};
 
 pub use graph::{GraphError, Plan, ServiceGraph};
 

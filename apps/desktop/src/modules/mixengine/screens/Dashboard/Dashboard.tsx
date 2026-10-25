@@ -15,6 +15,9 @@ import FoundServices from "./FoundServices";
 import PathNudge from "./PathNudge";
 import QuickStart from "./QuickStart";
 import RestorePrevious from "./RestorePrevious";
+import { restartsOnMove } from "../../portDialogState";
+import { DATABASE_MODULE_ID } from "../ServicesDetail/openChoices";
+import PortDialog from "../ServicesDetail/PortDialog";
 import ServiceRowMenu from "./ServiceRowMenu";
 import ServicesCard from "./ServicesCard";
 import styles from "./Dashboard.module.css";
@@ -49,6 +52,8 @@ export default function Dashboard({
   const [creating, setCreating] = useState(false);
   /** A row's menu, and where it was opened. `null` means no menu is open. */
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  /** The service whose port is being changed, from its row menu. `null` when none is. */
+  const [portTarget, setPortTarget] = useState<string | null>(null);
   const { t } = useTranslation();
 
   const { disk, refreshingDisk, readDisk, refreshDisk } = useDiskUsage({ setError });
@@ -80,6 +85,8 @@ export default function Dashboard({
     useDatabaseClients({ rows, reload, setError });
 
   const runningCount = rows.filter((row) => isServing(row.state)).length;
+  /** Read from the rows rather than kept when the menu opened, so the dialog follows the stream. */
+  const portRow = portTarget === null ? undefined : rows.find((row) => row.id === portTarget);
 
   return (
     <div className={`mixengine-page ${styles.dashboard}`}>
@@ -148,11 +155,23 @@ export default function Dashboard({
         isModuleVisible={isModuleVisible}
         onClose={() => setMenu(null)}
         onViewLogs={onViewLogs}
+        onChangePort={setPortTarget}
         setAutostart={setAutostart}
         showCredentials={showCredentials}
         setResetTarget={setResetTarget}
         setError={setError}
       />
+
+      {portRow !== undefined && portRow.port !== null && (
+        <PortDialog
+          service={portRow.id}
+          port={portRow.port}
+          running={restartsOnMove(portRow.state)}
+          onClose={() => setPortTarget(null)}
+          onMoved={() => void reload()}
+          offerSavedConnections={isModuleVisible(DATABASE_MODULE_ID)}
+        />
+      )}
 
       {credentials !== null && (
         <CredentialDialog credentials={credentials} onClose={() => setCredentials(null)} />

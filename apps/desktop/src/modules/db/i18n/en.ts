@@ -400,6 +400,16 @@ const dbEn = {
     cannotRemoveDirectory: "Cannot remove {{path}}: {{message}}",
     noAppDataDir: "There is nowhere for MixLab to keep its own files: {{message}}",
   },
+  // A tab MixEngine opened after moving one of its services to another port.
+  followPort: {
+    found: "{{count}} saved connections still point at {{service}} on {{from}}: {{names}}. Update them to {{to}}?",
+    foundOne: "A saved connection still points at {{service}} on {{from}}: {{names}}. Update it to {{to}}?",
+    none: "No saved connection points at {{service}} on {{from}}.",
+    update: "Update",
+    leave: "Leave them",
+    ok: "OK",
+    updated: "Updated {{count}} saved connections to {{to}}.",
+  },
   dbSync: {
     connections: "Connections",
     connectionSecrets: "Connection passwords",

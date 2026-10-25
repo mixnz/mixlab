@@ -150,6 +150,44 @@ pub(crate) fn service_autostart(service: &ServiceSummary) -> String {
     )
 }
 
+/// `mix service set`, for a person.
+///
+/// **What moved, then what did not.** The daemon names what it cannot follow — a `.env`, a saved
+/// connection, a shell's history — and this prints that list as it came, because somebody who just
+/// moved a database is about to find out which of those still says the old number.
+pub(crate) fn service_set(result: &mixengine_proto::ServiceSetResult) -> String {
+    let id = &result.service.id;
+
+    let Some(change) = result.port else {
+        return format!("{id}: nothing was changed\n");
+    };
+
+    if change.from == change.to {
+        return format!("{id} is already on {}.\n", change.to);
+    }
+
+    let mut said = match result.restarted {
+        true => format!(
+            "{id} moved from {} to {}, and was restarted.\n",
+            change.from, change.to
+        ),
+        false => format!(
+            "{id} moved from {} to {}. It is stopped, and will listen there when it starts.\n",
+            change.from, change.to
+        ),
+    };
+
+    if !result.not_followed.is_empty() {
+        said.push_str("Not changed by MixEngine:\n");
+
+        for line in &result.not_followed {
+            said.push_str(&format!("  - {line}\n"));
+        }
+    }
+
+    said
+}
+
 /// `mix service save-resources`, for a person.
 pub(crate) fn save_resources(answer: mixengine_proto::SaveResources) -> String {
     match answer.on {

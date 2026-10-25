@@ -34,6 +34,7 @@ mod restore;
 mod rpc;
 mod self_update;
 mod service;
+mod service_set;
 mod service_settings;
 #[cfg(test)]
 mod test_daemon;
@@ -264,6 +265,14 @@ pub(crate) struct Api {
     /// database, cache and pool goes past it untouched, which is what makes a lock affordable on a
     /// path that is otherwise the hottest in this file.
     front_end: tokio::sync::Mutex<()>,
+
+    /// One `service.set` at a time.
+    ///
+    /// **A move is a stop and a start, and its rollback a second write.** Two moves of one service
+    /// side by side let the one that failed put its old port back after the other had written its
+    /// new one, so the service ended where neither caller was told it was. Moves are rare and a
+    /// person makes them, so one lock for all of them costs nothing anybody waits on.
+    moving: tokio::sync::Mutex<()>,
 
     /// Every version an upgrade job is moving from or to, by `(kind or package, version)`. The same
     /// job is the value under both keys, so a second upgrade of the same `from` is answered with it
@@ -670,6 +679,7 @@ impl Api {
             events,
             shutdown,
             front_end: tokio::sync::Mutex::new(()),
+            moving: tokio::sync::Mutex::new(()),
             upgrading: tokio::sync::Mutex::new(std::collections::BTreeMap::new()),
         })
     }

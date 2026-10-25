@@ -1,5 +1,8 @@
+import portEn from "./port/en";
+
 export default {
   mixengine: {
+    port: portEn,
     // The tray panel's MixEngine section.
     tray: {
       counts: "Services running: {{up}}/{{total}}",

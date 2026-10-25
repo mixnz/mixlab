@@ -1,7 +1,9 @@
 import type en from "./en";
+import portVi from "./port/vi";
 
 const vi: typeof en = {
   mixengine: {
+    port: portVi,
     // The tray panel's MixEngine section.
     tray: {
       counts: "Service đang chạy: {{up}}/{{total}}",

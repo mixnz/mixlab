@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT port AS \"port: i64\", bind_addr FROM services WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "port: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "services",
+            "name": "port"
+          }
+        }
+      },
+      {
+        "name": "bind_addr",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "services",
+            "name": "bind_addr"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "317d7ba9e66c7ff83524c9152217968749318f50861373e0f16658255d86d155"
+}

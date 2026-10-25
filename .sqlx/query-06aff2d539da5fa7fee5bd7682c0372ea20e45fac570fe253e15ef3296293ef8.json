@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT port AS \"port!: i64\", id AS \"holder!: String\" FROM services\n             WHERE port IS NOT NULL\n           UNION\n           SELECT activation_port, id FROM services WHERE activation_port IS NOT NULL\n           UNION\n           SELECT port, extension_id FROM extension_ports\n           ORDER BY 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "port!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "services",
+            "name": "port"
+          }
+        }
+      },
+      {
+        "name": "holder!: String",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "services",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "06aff2d539da5fa7fee5bd7682c0372ea20e45fac570fe253e15ef3296293ef8"
+}

@@ -1,0 +1,21 @@
+/** Đổi port của một service: hộp thoại, panel Port và mục trong menu của dòng service. */
+export default {
+  menuItem: "Đổi port…",
+  title: "Đổi port của {{service}}",
+  label: "Port",
+  invalid: "Nhập port từ 1 đến 65535.",
+  running: "{{service}} đang chạy. Đổi port sẽ khởi động lại nó và ngắt các kết nối đang mở.",
+  change: "Đổi port",
+  changeAndRestart: "Đổi và khởi động lại",
+  moved: "{{service}} giờ lắng nghe ở {{to}}.",
+  movedRestarted: "{{service}} giờ lắng nghe ở {{to}} và đã khởi động lại.",
+  unchanged: "{{service}} đã ở port {{to}} rồi.",
+  notFollowed: "MixEngine không tự sửa những chỗ này, chúng có thể vẫn dùng {{from}}:",
+  done: "Xong",
+  panelTitle: "Port",
+  panelAbout: "Chỗ các client kết nối tới service này.",
+  current: "Đang lắng nghe ở {{port}}",
+  changeButton: "Đổi…",
+  notMovable: "Port của service này cố định.",
+  updateSaved: "Cập nhật kết nối đã lưu…",
+};
