@@ -444,11 +444,28 @@ pub(crate) struct Shutdown {
     /// a property of the machine, and a request that could ask for thirty seconds could ask for
     /// thirty minutes. Read once at startup, like everything else here.
     grace: Duration,
+
+    /// Where a handler's work that outlives its answer is spawned, so the shutdown waits for it:
+    /// every request's handler, a walk nobody waits for, a follow on a job.
+    background: crate::background::Background,
 }
 
 impl Shutdown {
-    pub(crate) fn new(token: CancellationToken, grace: Duration) -> Self {
-        Self { token, grace }
+    pub(crate) fn new(
+        token: CancellationToken,
+        grace: Duration,
+        background: crate::background::Background,
+    ) -> Self {
+        Self {
+            token,
+            grace,
+            background,
+        }
+    }
+
+    /// The daemon's one set of owned tasks — see [`crate::background`].
+    pub(crate) fn background(&self) -> &crate::background::Background {
+        &self.background
     }
 
     /// Commit to going, and hold the thing that makes it happen — see [`Going`].

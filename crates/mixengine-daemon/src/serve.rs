@@ -458,7 +458,7 @@ pub(crate) async fn serve(
             crashes,
             credentials: credential_facts,
         },
-        api::Shutdown::new(shutdown.clone(), shutdown_grace),
+        api::Shutdown::new(shutdown.clone(), shutdown_grace, background.clone()),
     );
 
     started::after_the_api(&api, &elevation, config, &shutdown, &background).await;

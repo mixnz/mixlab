@@ -424,7 +424,11 @@ where
         // Cancelled by `daemon.shutdown` and by nothing else here — there is no accept loop in
         // these tests waiting on it, which is what makes the method's own test able to assert
         // that it was cancelled rather than watch a process exit.
-        shutdown: super::Shutdown::new(CancellationToken::new(), SHUTDOWN_GRACE),
+        shutdown: super::Shutdown::new(
+            CancellationToken::new(),
+            SHUTDOWN_GRACE,
+            crate::background::Background::new(),
+        ),
         front_end: tokio::sync::Mutex::new(()),
         upgrading: tokio::sync::Mutex::new(std::collections::BTreeMap::new()),
     });
