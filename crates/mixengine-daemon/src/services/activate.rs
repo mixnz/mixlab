@@ -125,16 +125,21 @@ pub(crate) async fn spawn(
             let target = target.clone();
 
             // One task per connection, or a service that takes five seconds to start would hold
-            // every other request to every other pool behind it.
-            tokio::spawn(async move {
-                if let Err(refused) = carry(&services, &service, &target, accepted).await {
-                    tracing::info!(
-                        service = service.as_str(),
-                        reason = ?refused,
-                        "a connection asked for this service and was not served"
-                    );
-                }
-            });
+            // every other request to every other pool behind it. Owned by the daemon's
+            // `Background` rather than by this loop, because a connection being carried outlives
+            // the loop — see `release` — and the shutdown still has to wait for it.
+            services
+                .background()
+                .clone()
+                .spawn("activation splice", async move {
+                    if let Err(refused) = carry(&services, &service, &target, accepted).await {
+                        tracing::info!(
+                            service = service.as_str(),
+                            reason = ?refused,
+                            "a connection asked for this service and was not served"
+                        );
+                    }
+                });
         }
     });
 

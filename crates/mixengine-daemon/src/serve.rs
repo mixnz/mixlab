@@ -354,7 +354,8 @@ pub(crate) async fn serve(
             shutdown.clone(),
             Arc::clone(&jobs),
         )
-        .with_welcome(welcome),
+        .with_welcome(welcome)
+        .with_background(background.clone()),
     );
 
     // **The DNS server, and the mode it puts this home in.** Started here, after the host and
