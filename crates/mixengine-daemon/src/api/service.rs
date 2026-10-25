@@ -358,10 +358,11 @@ impl Api {
 
     /// Run a walk here, or behind the answer — the whole of what [`ServiceTarget::wait`] chooses.
     ///
-    /// **A walk that is not waited for is still bounded by the daemon's own life.** It is cancelled
-    /// by the root token rather than detached, per the rule in `docs/standards/rust.md` against a
-    /// task that outlives shutdown: the services it started keep their runners, which are the
-    /// registry's and were never this task's to hold.
+    /// **A walk that is not waited for is still bounded by the daemon's own life.** It runs in the
+    /// daemon's `Background`, which the shutdown drains before the store closes, and is cut short by
+    /// the root token, per the rule in `docs/standards/rust.md` against a task that outlives
+    /// shutdown: the services it started keep their runners, which are the registry's and were never
+    /// this task's to hold.
     ///
     /// Its outcome goes to `daemon.log`, because nobody is waiting to be told: a client that asked
     /// not to wait is reading `ServiceStateChanged`, where every move in the walk appears as it
@@ -387,7 +388,7 @@ impl Api {
         let shutdown = self.shutdown.token().clone();
         let accepted = planned.clone();
 
-        tokio::spawn(async move {
+        self.shutdown.background().spawn("unwaited walk", async move {
             tokio::select! {
                 () = shutdown.cancelled() => {
                     tracing::info!("a walk that was not waited for was cut short by the shutdown");

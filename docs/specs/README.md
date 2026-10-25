@@ -244,3 +244,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-23 | [Forms that hold their state as one value (design)](2026-10-23-t209f-forms-that-hold-their-state-as-one-value-design.md) | T209f | implemented |
 | 2026-10-23 | [T211j — A resolver that programs never ask is not wired (design)](2026-10-23-t211j-a-resolver-programs-never-ask-design.md) | T211j | implemented |
 | 2026-10-24 | [No roadmap task numbers in code (design)](2026-10-24-t209m-no-task-numbers-in-code-design.md) | T209m | implemented |
+| 2026-10-25 | [No task outlives shutdown (design)](2026-10-25-t209h-no-task-outlives-shutdown-design.md) | T209h | implemented |

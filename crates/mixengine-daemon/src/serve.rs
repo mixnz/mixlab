@@ -273,11 +273,6 @@ pub(crate) async fn serve(
 
     projections::refresh_bin(&shims).await;
 
-    // **And from here a watch keeps it current.** A `npm install -g yarn` typed a minute later
-    // changes a runtime's bindir and tells nobody; the kernel tells this, and nothing runs while
-    // nothing changes. See `bin_watch`.
-    let _watching = bin_watch::start(Arc::clone(&shims), store.clone());
-
     projections::seed_gallery(store, paths).await;
 
     // Through the wire mapping, and for the same reason the startup steps above are: the failure a
@@ -307,9 +302,21 @@ pub(crate) async fn serve(
     // object, and every service the registry supervises hangs a child token off it.
     let shutdown = CancellationToken::new();
 
-    // The work a start leaves running behind it, owned so that none of it outlives the store it
-    // reads — see `background`. Stopped beside the clients, before `serve` returns.
-    let mut background = background::Background::new();
+    // The work this daemon leaves running behind a call — the start's, the clocks', every request
+    // handler's — owned so that none of it outlives the store it reads; see `background`. Stopped
+    // beside the clients, before `serve` returns.
+    let background = background::Background::new();
+
+    // **And from here a watch keeps `bin/` current.** A `npm install -g yarn` typed a minute later
+    // changes a runtime's bindir and tells nobody; the kernel tells this, and nothing runs while
+    // nothing changes. See `bin_watch`. Started once there is a set to own it and a token to stop
+    // it; `bin/` was refreshed above, and the watch's first pass catches anything in between.
+    bin_watch::start(
+        &background,
+        Arc::clone(&shims),
+        store.clone(),
+        shutdown.clone(),
+    );
 
     // Made here rather than inside the API, because the API is no longer the only publisher: the
     // registry announces every state change it persists, from tasks that outlive any one request.
@@ -348,7 +355,8 @@ pub(crate) async fn serve(
             shutdown.clone(),
             Arc::clone(&jobs),
         )
-        .with_welcome(welcome),
+        .with_welcome(welcome)
+        .with_background(background.clone()),
     );
 
     // **The DNS server, and the mode it puts this home in.** Started here, after the host and
@@ -414,18 +422,18 @@ pub(crate) async fn serve(
 
     machine::ask_for_grants(&elevation, &services).await;
 
-    machine::certificates(&shared, &mut background).await;
+    machine::certificates(&shared, &background).await;
 
-    let metrics = clocks::start_clocks(&shared);
+    let metrics = clocks::start_clocks(&shared, &background);
 
-    let adopted = repairs::repair_home(&shared, &mut background).await;
+    let adopted = repairs::repair_home(&shared, &background).await;
 
     let clients::Clients {
         registry,
         runtimes,
         packages,
         updates,
-    } = clients::build_clients(&shared, sources, &daemon_exe, &adopted, &mut background).await?;
+    } = clients::build_clients(&shared, sources, &daemon_exe, &adopted, &background).await?;
 
     // Built after the listener rather than before it, so `daemon.status` reports the endpoint that
     // was actually bound instead of the one that would be computed again now.
@@ -452,12 +460,12 @@ pub(crate) async fn serve(
             crashes,
             credentials: credential_facts,
         },
-        api::Shutdown::new(shutdown.clone(), shutdown_grace),
+        api::Shutdown::new(shutdown.clone(), shutdown_grace, background.clone()),
     );
 
-    started::after_the_api(&api, &elevation, config, &shutdown, &mut background).await;
+    started::after_the_api(&api, &elevation, config, &shutdown, &background).await;
 
-    started::after_an_update(&updates, &services, &elevation, paths, &mut background);
+    started::after_an_update(&updates, &services, &elevation, paths, &background);
 
     // **No check at start and no clock** — ADR 0056 rule 8. The feed is read only when somebody
     // asks: `mix self-update`, `mix self-update --check`, or `update.check` from a client. A
@@ -477,7 +485,12 @@ pub(crate) async fn serve(
     // After recovery for `recover`'s own reason, which is satisfied by everything above: a service
     // recovery adopted is already up, and a walk counts one that is up as reached rather than
     // restarting it.
-    crate::services::autostart::start(Arc::clone(&services), store.clone(), shutdown.clone());
+    crate::services::autostart::start(
+        &background,
+        Arc::clone(&services),
+        store.clone(),
+        shutdown.clone(),
+    );
 
     let (connections, on_the_os_clock) = accept::accept_until_stopped(
         &mut listener,
@@ -496,7 +509,7 @@ pub(crate) async fn serve(
         shutdown_grace,
         connections,
         on_the_os_clock,
-        &mut background,
+        &background,
     )
     .await;
 

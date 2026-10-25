@@ -631,6 +631,8 @@ pub async fn open_tunnel(
                 // bridging task instead of being handled inline — an inline loop would block
                 // `accept()` for as long as that one connection stays open, starving every other
                 // connection the pool tries to establish through this tunnel.
+                // Detached, and safe to drop: it carries bytes between two sockets and ends when
+                // either closes; it writes no state.
                 let inner = Arc::clone(&inner);
                 tokio::spawn(async move {
                     bridge_connection(&inner, local_stream).await;

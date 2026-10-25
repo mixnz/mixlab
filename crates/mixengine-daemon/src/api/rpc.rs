@@ -9,14 +9,17 @@ mod arms;
 
 mod table;
 
+use std::future::Future;
 use std::sync::Arc;
 
+use futures_util::FutureExt as _;
 use mixengine_proto::rpc::{Id, Request, Response, RpcCode, RpcError};
 use mixengine_proto::{Error, ErrorCode};
 use serde_json::Value;
 use tracing::Instrument as _;
 
 use super::Api;
+use crate::background::Background;
 
 /// Answer a `POST /rpc` body.
 ///
@@ -155,34 +158,59 @@ async fn dispatch(api: &Arc<Api>, call: Value) -> Option<Response> {
 
 /// Run one method, containing anything it does to itself.
 ///
-/// The call happens inside a spawned task purely so that a panic becomes a value. A handler that
-/// panics must not take the daemon with it — `docs/standards/rust.md` is explicit that a panic
-/// here kills every managed service — and the connection alone is not enough to sacrifice either:
-/// the client would see a dropped socket and have no idea whether its request had been carried out.
-/// `panic = "abort"` in the release profile would defeat this, which is why the workspace manifest
-/// says so out loud.
+/// See [`contained`], which is the whole of it; this only names the work.
 async fn call_method(
     api: Arc<Api>,
     method: String,
     params: Option<Value>,
 ) -> Result<Value, Failure> {
+    let background = api.shutdown().background().clone();
     let named = method.clone();
 
-    let outcome = tokio::spawn(
+    contained(
+        &background,
+        &named,
         async move { table::route(api, &method, params).await }
             // The span belongs to the request, and the task the work runs in is not the task the span
             // was opened on, so it is attached explicitly rather than inherited.
             .in_current_span(),
     )
-    .await;
+    .await
+}
 
-    match outcome {
-        Ok(Ok(result)) => {
+/// Run `work` in the daemon's `Background`, and turn whatever it does to itself into an answer.
+///
+/// **A task of its own, so that a panic becomes a value.** A handler that panics must not take the
+/// daemon with it — `docs/standards/rust.md` is explicit that a panic here kills every managed
+/// service — and the connection alone is not enough to sacrifice either: the client would see a
+/// dropped socket and have no idea whether its request had been carried out. `panic = "abort"` in
+/// the release profile would defeat this, which is why the workspace manifest says so out loud.
+///
+/// **In `Background` rather than a bare `tokio::spawn`**, because the work outlives the
+/// connection waiting on it: a connection still open after the client grace is dropped, and a
+/// detached handler ran on past it into `Store::close`. In `Background` the shutdown waits for it
+/// beside the clients and stops what is left. A `JoinSet` hands no result back to the caller, so
+/// the panic is caught inside the task with `catch_unwind` and the outcome sent over a oneshot.
+async fn contained<F>(background: &Background, method: &str, work: F) -> Result<Value, Failure>
+where
+    F: Future<Output = Result<Value, Failure>> + Send + 'static,
+{
+    let (answer, answered) = tokio::sync::oneshot::channel();
+
+    background.spawn("rpc handler", async move {
+        // `AssertUnwindSafe` because nothing observes the work's state after a panic: the future is
+        // dropped here, and the only thing that leaves this task is the outcome.
+        let outcome = std::panic::AssertUnwindSafe(work).catch_unwind().await;
+        let _ = answer.send(outcome);
+    });
+
+    match answered.await {
+        Ok(Ok(Ok(result))) => {
             tracing::debug!("answered");
             Ok(result)
         }
 
-        Ok(Err(failure)) => {
+        Ok(Ok(Err(failure))) => {
             // `warn` and not `error`: the caller has been told, in a message written for them, and
             // most of what lands here is a request that was simply wrong. The line exists so the
             // daemon's log can answer "what was this client doing" later.
@@ -190,16 +218,12 @@ async fn call_method(
             Err(failure)
         }
 
-        Err(join) => {
-            // The panic message itself has already gone to the log through the panic hook — which
-            // is `crate::crash`'s, installed at `main`, and which also left a report in
-            // `logs/crashes/`. Until crash reports existed there was no hook at all and this
-            // sentence was true of nothing: the default one writes to stderr, and a `--detach`ed
-            // daemon's stderr is the null device. It is still not repeated to the client — a
-            // backtrace is not something a user can act on, and the daemon's log is where it
-            // belongs.
+        // The panic message itself has already gone to the log through the panic hook — which is
+        // `crate::crash`'s, installed at `main`, and which also left a report in `logs/crashes/`.
+        // It is not repeated to the client — a backtrace is not something a user can act on, and
+        // the daemon's log is where it belongs.
+        Ok(Err(_panic)) => {
             tracing::error!(
-                panicked = join.is_panic(),
                 "a request handler did not finish; answering `internal` and staying up"
             );
 
@@ -207,12 +231,27 @@ async fn call_method(
                 code: RpcCode::INTERNAL_ERROR,
                 error: Error::new(
                     ErrorCode::Internal,
-                    format!("`{named}` failed in a way it does not account for"),
+                    format!("`{method}` failed in a way it does not account for"),
                 )
                 .with_hint(
                     "this is a bug in MixEngine; `logs/daemon.log` has the detail a report needs",
                 ),
             })
+        }
+
+        // No answer at all: the shutdown had already closed the set, or stopped the handler when
+        // the client grace ran out. **Not `internal`**, whose hint calls it a bug: this is a daemon
+        // doing what it was asked, and a client polling `daemon.status` through a stop meets it.
+        Err(_) => {
+            tracing::info!("a request arrived or was still running as this daemon stopped");
+
+            Err(refused(
+                Error::new(
+                    ErrorCode::Conflict,
+                    format!("`{method}` was not carried out: this daemon is stopping"),
+                )
+                .with_hint("start it again with `mix daemon start`, then ask again"),
+            ))
         }
     }
 }
@@ -362,6 +401,48 @@ mod tests {
     /// Whether a response says the call succeeded.
     fn succeeded(response: &Response) -> bool {
         matches!(response.outcome, ResponseOutcome::Success { .. })
+    }
+
+    /// A handler that panics is answered `internal`, and the daemon stays up to say so.
+    #[tokio::test]
+    async fn a_handler_that_panics_is_answered_internal() {
+        let failure = contained(&Background::new(), "test.panics", async {
+            panic!("on purpose")
+        })
+        .await
+        .expect_err("a panic is not an answer");
+
+        assert_eq!(failure.code, RpcCode::INTERNAL_ERROR);
+    }
+
+    #[tokio::test]
+    async fn a_handler_that_answers_is_passed_through() {
+        let value = contained(&Background::new(), "test.answers", async {
+            Ok(serde_json::json!(7))
+        })
+        .await
+        .expect("the handler's own answer");
+
+        assert_eq!(value, serde_json::json!(7));
+    }
+
+    /// A request that lands after the shutdown closed the set is answered, not left waiting.
+    #[tokio::test]
+    async fn a_request_during_shutdown_is_answered_rather_than_left_waiting() {
+        let background = Background::new();
+        background.shut_down(std::time::Duration::ZERO).await;
+
+        let answered = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            contained(&background, "test.late", async { Ok(serde_json::json!(1)) }),
+        )
+        .await
+        .expect("an answer rather than a wait");
+
+        // Said as what it is — the daemon is stopping — and not as the bug `internal` means.
+        let failure = answered.expect_err("nothing ran");
+        assert_eq!(failure.code, RpcCode::APPLICATION_ERROR);
+        assert_eq!(failure.error.code, ErrorCode::Conflict);
     }
 
     #[tokio::test]

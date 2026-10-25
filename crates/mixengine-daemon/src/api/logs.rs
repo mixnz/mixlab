@@ -291,13 +291,15 @@ const LAST_LINES: std::time::Duration = std::time::Duration::from_millis(250);
 /// A token that cancels when this job is over, so a follow on it ends.
 ///
 /// A child of the daemon's own token, so a shutdown still ends the stream and cancelling this one
-/// never reaches back up. The task it spawns lives as long as the job does and no longer.
+/// never reaches back up. The task it spawns lives as long as the job does and no longer, and runs
+/// in the daemon's `Background`, since it reads the store.
 fn until_the_job_ends(api: &Arc<Api>, job: JobId) -> tokio_util::sync::CancellationToken {
     let token = api.shutdown().token().child_token();
     let ending = token.clone();
     let api = Arc::clone(api);
+    let background = api.shutdown().background().clone();
 
-    tokio::spawn(async move {
+    background.spawn("job log follow", async move {
         loop {
             match api.jobs.wait(job, JOB_POLL).await {
                 Ok(summary) if summary.state.is_finished() => break,

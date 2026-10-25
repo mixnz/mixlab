@@ -300,11 +300,12 @@ impl Watchdog {
 /// one owns a receiver, so its rate is the sampler's and there is still exactly one thing on this
 /// machine reading the process table.
 pub(crate) fn start(
+    background: &crate::background::Background,
     mut watchdog: Watchdog,
     mut minutes: broadcast::Receiver<Vec<MetricsMinute>>,
     shutdown: CancellationToken,
 ) {
-    tokio::spawn(async move {
+    background.spawn("memory watchdog", async move {
         loop {
             let received = tokio::select! {
                 () = shutdown.cancelled() => return,

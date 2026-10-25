@@ -196,17 +196,23 @@ async fn wake(
         // dials — this task has released it by then, and the start has finished.
         let target = address.clone();
 
-        tokio::spawn(async move {
-            if let Err(refused) =
-                super::activate::carry(&services, &service, &target, accepted).await
-            {
-                tracing::info!(
-                    service = service.as_str(),
-                    reason = ?refused,
-                    "a connection asked for this service and was not served"
-                );
-            }
-        });
+        // Owned by the daemon's `Background` rather than by this loop, and it has to be: the start
+        // this connection asks for releases the hold, which cancels and awaits this very loop, so a
+        // splice the loop owned would be cut off mid-start by the start it asked for.
+        services
+            .background()
+            .clone()
+            .spawn("held address splice", async move {
+                if let Err(refused) =
+                    super::activate::carry(&services, &service, &target, accepted).await
+                {
+                    tracing::info!(
+                        service = service.as_str(),
+                        reason = ?refused,
+                        "a connection asked for this service and was not served"
+                    );
+                }
+            });
     }
 
     if let Err(error) = activation.release() {

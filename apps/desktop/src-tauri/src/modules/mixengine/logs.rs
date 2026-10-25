@@ -60,6 +60,8 @@ where
         .await
         .map_err(|e| err!("error.mixengineProtocol", message = e))?;
 
+    // Detached, and safe to drop: it drives one connection to the daemon, ends when the request's
+    // `SendRequest` is dropped, and writes nothing.
     tauri::async_runtime::spawn(async move {
         let _ = connection.await;
     });
@@ -72,6 +74,8 @@ where
     let token = CancellationToken::new();
     state.keep(token.clone());
 
+    // Detached, and safe to drop: it ends on the token kept in the state above, or when the window
+    // stops listening, and only forwards frames to it.
     tauri::async_runtime::spawn(async move {
         let _sender = sender;
         let mut frames = Frames::new();

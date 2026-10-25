@@ -12,7 +12,10 @@ use super::Shared;
 ///
 /// Here rather than beside the DNS server so that it reads as what it is — the standing version
 /// of that issuance — and before `api::Api::new`, which takes `events`.
-pub(super) fn start_clocks(shared: &Shared<'_>) -> crate::metrics::sampler::Handle {
+pub(super) fn start_clocks(
+    shared: &Shared<'_>,
+    background: &crate::background::Background,
+) -> crate::metrics::sampler::Handle {
     let Shared {
         paths,
         store,
@@ -25,6 +28,7 @@ pub(super) fn start_clocks(shared: &Shared<'_>) -> crate::metrics::sampler::Hand
     } = *shared;
 
     crate::certs::renewal::start(
+        background,
         crate::certs::Certificates::issuing(paths, Arc::clone(host), store.clone()),
         Arc::clone(services),
         events.clone(),
@@ -44,6 +48,7 @@ pub(super) fn start_clocks(shared: &Shared<'_>) -> crate::metrics::sampler::Hand
     // service nothing can wake gets no number, since stopping it would be a refusal with no way
     // back.
     crate::services::idle::start(
+        background,
         crate::services::idle::Sweeper::new(
             Arc::clone(services),
             store.clone(),
@@ -79,6 +84,7 @@ pub(super) fn start_clocks(shared: &Shared<'_>) -> crate::metrics::sampler::Hand
     //
     // Subscribed before the sampler is spawned, so the first minute it finishes has a reader.
     crate::services::watchdog::start(
+        background,
         crate::services::watchdog::Watchdog::new(
             Arc::clone(services),
             config.services.memory_over_minutes,
@@ -87,7 +93,7 @@ pub(super) fn start_clocks(shared: &Shared<'_>) -> crate::metrics::sampler::Hand
         shutdown.clone(),
     );
 
-    crate::metrics::sampler::start(sampler, shutdown.clone());
+    crate::metrics::sampler::start(background, sampler, shutdown.clone());
 
     metrics
 }

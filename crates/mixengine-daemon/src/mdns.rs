@@ -206,6 +206,8 @@ impl Mdns {
                     let cancelled = watcher.clone();
                     let going_down = daemon.clone();
 
+                    // **Detached, and safe to drop.** It ends on that token, and all it does then is
+                    // tell the responder to stop advertising: no row and no file is written.
                     tokio::spawn(async move {
                         cancelled.cancelled().await;
                         let _ = going_down.shutdown();

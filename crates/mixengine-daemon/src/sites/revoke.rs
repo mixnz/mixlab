@@ -152,12 +152,13 @@ pub(crate) fn confirmed(
 /// takes it only inside `unshare`. Stated because the failure it prevents is a hang rather than an
 /// error.
 pub(crate) fn start(
+    background: &crate::background::Background,
     sites: std::sync::Arc<super::Sites>,
     host: std::sync::Arc<dyn mixengine_platform::Host>,
     every: std::time::Duration,
     shutdown: tokio_util::sync::CancellationToken,
 ) {
-    tokio::spawn(async move {
+    background.spawn("share expiry", async move {
         let mut previous: BTreeMap<i64, Ending> = BTreeMap::new();
         let mut ticker = tokio::time::interval(every);
         ticker.tick().await;

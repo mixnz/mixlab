@@ -415,11 +415,12 @@ impl Sweeper {
 /// its own: `tokio::time::interval` completes its first immediately, and a sweep at the moment the
 /// daemon finishes recovery would take a reading of services that have been running for no time.
 pub(crate) fn start(
+    background: &crate::background::Background,
     mut sweeper: Sweeper,
     every: Duration,
     shutdown: tokio_util::sync::CancellationToken,
 ) {
-    tokio::spawn(async move {
+    background.spawn("idle sweep", async move {
         let mut ticker = tokio::time::interval(every);
         ticker.tick().await;
 

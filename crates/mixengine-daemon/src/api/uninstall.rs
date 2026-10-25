@@ -5,9 +5,11 @@
 use std::sync::Arc;
 
 use mixengine_proto::rpc;
-use mixengine_proto::{Error, ErrorCode, JobKind, JobSummary, UninstallQuery};
+use mixengine_proto::{Error, ErrorCode, JobId, JobKind, JobSummary, UninstallQuery};
+use tokio_util::sync::CancellationToken;
 
-use super::Api;
+use super::{Api, Armed};
+use crate::jobs::Jobs;
 
 impl Api {
     /// `daemon.uninstall` — one job, and this daemon's own end when the home goes with it.
@@ -39,42 +41,57 @@ impl Api {
             )
             .await?;
 
-        let jobs = Arc::clone(&self.jobs);
-        let armed = Arc::clone(&self.armed);
-        let token = self.shutdown.token().clone();
-        let id = started.id;
-
-        tokio::spawn(async move {
-            // In long steps rather than one deadline, because what this is waiting on has none: the
-            // job ends when a person answers a prompt. Every other end of the wait — a job that was
-            // cancelled, a row that has gone — leaves nothing armed and therefore ends nothing.
-            const STEP: mixengine_proto::Millis = mixengine_proto::Millis(60_000);
-
-            loop {
-                match jobs.wait(id, STEP).await {
-                    Ok(summary) if summary.state.is_finished() => break,
-                    Ok(_) => {}
-                    Err(error) => {
-                        tracing::warn!(job = %id, %error, "an uninstall could not be followed");
-                        return;
-                    }
-                }
-            }
-
-            if !armed.is_finished() {
-                return;
-            }
-
-            tracing::info!(
-                "this home has been removed from this machine; the daemon is stopping, and takes \
-                 whatever of its own directories were not kept with it"
-            );
-
-            token.cancel();
-        });
+        self.shutdown.background().spawn(
+            "uninstall follow",
+            follow(
+                Arc::clone(&self.jobs),
+                Arc::clone(&self.armed),
+                self.shutdown.token().clone(),
+                started.id,
+            ),
+        );
 
         Ok(started)
     }
+}
+
+/// Wait for the uninstall `id` to finish, then end this daemon if it removed the home.
+///
+/// **Raced against the root token, not only bounded by it.** `Jobs::wait` answers at once once the
+/// daemon is stopping, with a job that has not finished, so a loop that only asked again would ask
+/// for as long as the process lived. A daemon already stopping has nothing left for this to end.
+async fn follow(jobs: Arc<Jobs>, armed: Arc<Armed>, token: CancellationToken, id: JobId) {
+    // In long steps rather than one deadline, because what this is waiting on has none: the job
+    // ends when a person answers a prompt. Every other end of the wait — a job that was cancelled,
+    // a row that has gone — leaves nothing armed and therefore ends nothing.
+    const STEP: mixengine_proto::Millis = mixengine_proto::Millis(60_000);
+
+    loop {
+        let waited = tokio::select! {
+            () = token.cancelled() => return,
+            waited = jobs.wait(id, STEP) => waited,
+        };
+
+        match waited {
+            Ok(summary) if summary.state.is_finished() => break,
+            Ok(_) => {}
+            Err(error) => {
+                tracing::warn!(job = %id, %error, "an uninstall could not be followed");
+                return;
+            }
+        }
+    }
+
+    if !armed.is_finished() {
+        return;
+    }
+
+    tracing::info!(
+        "this home has been removed from this machine; the daemon is stopping, and takes whatever \
+         of its own directories were not kept with it"
+    );
+
+    token.cancel();
 }
 
 #[cfg(test)]
@@ -85,6 +102,45 @@ mod tests {
     use super::*;
     use crate::api::test_daemon::{Daemon, daemon_on, undeclared};
     use crate::services::fixture;
+
+    /// **The follow ends with the daemon.** Once the root token is cancelled `Jobs::wait` answers at
+    /// once with a job that has not finished, and the loop used to ask again, and again, until the
+    /// process exited.
+    #[tokio::test]
+    async fn following_an_uninstall_ends_when_the_daemon_stops() {
+        let home = tempfile::tempdir().expect("a directory");
+        let store = mixengine_core::Store::open(&home.path().join("mixengine.db"))
+            .await
+            .expect("a store");
+        let root = tokio_util::sync::CancellationToken::new();
+        let jobs = Arc::new(crate::jobs::Jobs::new(
+            &store,
+            crate::api::Events::new(),
+            root.clone(),
+        ));
+
+        // A job that never finishes, whatever is cancelled: the follow must end on the token alone.
+        let started = jobs
+            .begin(
+                &JobKind::parse(rpc::method::DAEMON_UNINSTALL).expect("a valid kind"),
+                |_| std::future::pending(),
+            )
+            .await
+            .expect("a job");
+
+        root.cancel();
+
+        let ended = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            follow(jobs, Arc::new(Armed::default()), root, started.id),
+        )
+        .await;
+
+        assert!(
+            ended.is_ok(),
+            "the follow was still running two seconds after the daemon stopped"
+        );
+    }
 
     /// The plan is a read: it answers on a home with nothing in it, it names every row, and it
     /// asks for nothing — a home whose queue is still empty afterwards is the assertion that it

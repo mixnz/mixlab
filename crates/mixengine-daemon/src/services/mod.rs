@@ -97,6 +97,11 @@ pub(crate) struct Registry {
     /// registry spawns can outlive the daemon.
     shutdown: CancellationToken,
 
+    /// Where a task that outlives the call starting it runs, so the shutdown waits for it — the
+    /// connections an activator carries. A set of its own until the daemon hands over the shared
+    /// one with [`with_background`](Self::with_background), so a fixture needs nothing.
+    background: crate::background::Background,
+
     /// What a shutdown has left to spend, once one is under way — see [`Budget`].
     budget: Budget,
 
@@ -233,8 +238,8 @@ struct Running {
 /// One stop of one service, held for exactly as long as that stop is in flight.
 ///
 /// **A guard rather than two statements, because a stop does not only end by returning.** An
-/// `api/rpc.rs` handler is a `tokio::spawn` nothing joins, so the future performing a stop can be
-/// dropped where it stands when its connection goes — and a runner task that panicked mid-tidy-up
+/// `api/rpc.rs` handler runs in the daemon's `Background`, so the future performing a stop can be
+/// dropped where it stands when a shutdown's grace runs out under it — and a runner task that panicked mid-tidy-up
 /// takes its caller's frame with it. Whatever ends the stop, the entry has to leave the map and
 /// everybody waiting on it has to be released: a marker left behind would make every later stop of
 /// that service wait for a stop that is not happening, and then report it as done.
@@ -370,6 +375,20 @@ impl Registry {
         self
     }
 
+    /// The daemon's one set of owned tasks, in place of the registry's own.
+    ///
+    /// A setter for the reason [`with_welcome`](Self::with_welcome) is one: `new` is at the seven
+    /// arguments clippy allows.
+    pub(crate) fn with_background(mut self, background: crate::background::Background) -> Self {
+        self.background = background;
+        self
+    }
+
+    /// Where a task that must outlive its caller is spawned.
+    pub(crate) fn background(&self) -> &crate::background::Background {
+        &self.background
+    }
+
     /// A registry with nothing running.
     pub(crate) fn new(
         paths: &Paths,
@@ -391,6 +410,7 @@ impl Registry {
             events,
             specs,
             shutdown,
+            background: crate::background::Background::new(),
             budget: Budget::default(),
             shutting_down: AtomicBool::new(false),
             running: Arc::new(Mutex::new(HashMap::new())),

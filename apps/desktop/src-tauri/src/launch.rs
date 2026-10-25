@@ -222,6 +222,8 @@ pub fn forward(identifier: &str, opening: &Opening) -> bool {
 pub fn start<R: Runtime>(app: &AppHandle<R>, opening: Opening) {
     let endpoint = instance::Endpoint::for_app(&app.config().identifier);
     let listener = app.clone();
+    // Detached, and safe to drop: it answers other copies for as long as this one runs, writes no
+    // state, and `RunEvent::Exit` removes its endpoint (`stop`).
     tauri::async_runtime::spawn(instance::serve(endpoint, move |line| {
         received(&listener, &line)
     }));

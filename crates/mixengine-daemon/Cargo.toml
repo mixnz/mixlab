@@ -18,11 +18,11 @@ anyhow.workspace = true
 # workspace manifest.
 async-trait.workspace = true
 clap.workspace = true
-# `stream::unfold` for the SSE body, and nothing else. Already in this tree through `sqlx`, so the
-# edge costs no new package — the same reasoning `windows-sys` is chosen by in the workspace
-# manifest. `default-features = false` drops the executor and the `Sink` machinery, neither of which
+# `stream::unfold` for the SSE body, and `catch_unwind` (`std`) for a request handler, which turns
+# a panic into an answer. Already in this tree through `sqlx`, so the edge costs no new package —
+# the same reasoning `windows-sys` is chosen by in the workspace manifest. `default-features = false` drops the executor and the `Sink` machinery, neither of which
 # a daemon that runs on tokio has any use for.
-futures-util = { workspace = true, default-features = false, features = ["alloc"] }
+futures-util = { workspace = true, default-features = false, features = ["alloc", "std"] }
 # The DNS server. `hickory-server` owns the UDP and TCP framing, the EDNS handling and the
 # truncation; the policy it serves is this crate's own `RequestHandler`, because this zone holds no
 # records to configure an authority with. `hickory-proto` is a direct edge rather than a re-export,

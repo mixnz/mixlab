@@ -162,6 +162,9 @@ pub(super) async fn start(port: u16, shutdown: CancellationToken) -> io::Result<
     server.register_socket(udp);
     server.register_listener(tcp, TCP_IDLE, TCP_RESPONSE_BUFFER);
 
+    // **Detached, and safe to drop.** It ends on the root token with a graceful stop, and what it
+    // holds is two sockets: it reads and writes no state, so nothing is lost if the process ends
+    // before it has finished letting go of them.
     tokio::spawn(async move {
         tokio::select! {
             () = shutdown.cancelled() => {

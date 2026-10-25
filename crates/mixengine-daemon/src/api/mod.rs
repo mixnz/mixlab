@@ -444,11 +444,28 @@ pub(crate) struct Shutdown {
     /// a property of the machine, and a request that could ask for thirty seconds could ask for
     /// thirty minutes. Read once at startup, like everything else here.
     grace: Duration,
+
+    /// Where a handler's work that outlives its answer is spawned, so the shutdown waits for it:
+    /// every request's handler, a walk nobody waits for, a follow on a job.
+    background: crate::background::Background,
 }
 
 impl Shutdown {
-    pub(crate) fn new(token: CancellationToken, grace: Duration) -> Self {
-        Self { token, grace }
+    pub(crate) fn new(
+        token: CancellationToken,
+        grace: Duration,
+        background: crate::background::Background,
+    ) -> Self {
+        Self {
+            token,
+            grace,
+            background,
+        }
+    }
+
+    /// The daemon's one set of owned tasks — see [`crate::background`].
+    pub(crate) fn background(&self) -> &crate::background::Background {
+        &self.background
     }
 
     /// Commit to going, and hold the thing that makes it happen — see [`Going`].
@@ -472,9 +489,9 @@ impl Shutdown {
 /// A shutdown that has been ordered, held for as long as the handler performing it runs.
 ///
 /// **A guard rather than a last statement, because a handler does not only end by returning.** The
-/// future serving a request is dropped where it stands when its connection goes — hyper is built
-/// with its default `half_close`, so a client that is interrupted mid-request takes the handler
-/// with it — and a panic anywhere inside the walk does the same. `daemon.shutdown` cannot survive
+/// future serving a request is dropped where it stands if it is still running when a shutdown's
+/// client grace runs out — handlers run in the daemon's `Background`, which stops whatever is left
+/// then — and a panic anywhere inside the walk does the same. `daemon.shutdown` cannot survive
 /// either: [`Registry::stopping_within`](crate::services::Registry::stopping_within) latches the
 /// registry shut on its first line and nothing ever clears that, so a shutdown that got that far
 /// and no further leaves a daemon that is still listening, still answering, refusing every start it
