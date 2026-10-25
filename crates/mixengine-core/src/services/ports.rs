@@ -24,10 +24,10 @@
 //! That lock is `hold`, and [`create`](super::create) takes it for every create rather than for
 //! the allocating ones alone.
 //!
-//! What is deliberately *not* here is moving a port afterwards: an allocated port belongs to its row
-//! for as long as the row lives, because it is in a project's `.env` and in a colleague's shell
-//! history by the end of the afternoon. Deleting whoever holds 3306 promotes nobody into it. Moving
-//! one is a person's decision and a regeneration — `mix service set`, which does not exist yet.
+//! What is deliberately *not* here is moving a port on anybody's behalf: an allocated port belongs to
+//! its row until a person moves it, because it is in a project's `.env` and in a colleague's shell
+//! history by the end of the afternoon. Deleting whoever holds 3306 promotes nobody into it. A
+//! person's move is [`claim`](super::claim()), held to the same check this module makes.
 //!
 //! [`Recipe::preferred_port`]: crate::generate::Recipe::preferred_port
 
@@ -182,6 +182,31 @@ async fn held(store: &Store) -> Result<Vec<i64>> {
     .map_err(|source| store.failure("read", source))
 }
 
+/// Every port any row holds, with who holds it: a service id, or an extension's id.
+///
+/// [`held`]'s three sources, kept in one place with it so the two cannot disagree about what is
+/// taken. The allocators need only the numbers; a person moving a service is told whose it is.
+///
+/// # Errors
+///
+/// [`Error::Database`](crate::Error::Database) when the tables cannot be read.
+pub(super) async fn holders(store: &Store) -> Result<Vec<(i64, String)>> {
+    let rows = sqlx::query!(
+        r#"SELECT port AS "port!: i64", id AS "holder!: String" FROM services
+             WHERE port IS NOT NULL
+           UNION
+           SELECT activation_port, id FROM services WHERE activation_port IS NOT NULL
+           UNION
+           SELECT port, extension_id FROM extension_ports
+           ORDER BY 1"#
+    )
+    .fetch_all(store.pool())
+    .await
+    .map_err(|source| store.failure("read", source))?;
+
+    Ok(rows.into_iter().map(|row| (row.port, row.holder)).collect())
+}
+
 /// How far above a recipe's preferred port the search goes before it gives up.
 const SEARCH: u16 = 64;
 
@@ -191,7 +216,7 @@ const SEARCH: u16 = 64;
 /// is a number a server will bind, and the only thing that answers "may it" is the same call the
 /// server itself will make — a port can be unavailable for reasons no listener explains, and on
 /// Windows an exclusive reservation is one of them.
-fn bindable(bind: IpAddr, port: u16) -> bool {
+pub(super) fn bindable(bind: IpAddr, port: u16) -> bool {
     std::net::TcpListener::bind((bind, port)).is_ok()
 }
 
@@ -201,7 +226,7 @@ fn bindable(bind: IpAddr, port: u16) -> bool {
 /// either way, and the sentence the caller ends up with — "another program on this machine has it"
 /// — is worse than naming the program and better than refusing to create the service at all. See
 /// [`mixengine_platform::PortOwner`].
-fn moved(host: &dyn Host, preferred: u16) -> PortMoved {
+pub(super) fn moved(host: &dyn Host, preferred: u16) -> PortMoved {
     let holder = host.port_owner().listening_on(preferred).ok().flatten();
 
     PortMoved {
@@ -221,12 +246,12 @@ pub(super) mod tests {
     use super::*;
 
     /// The home the mock host is given. Nothing in this module touches it.
-    const HOME: &str = "/mixengine";
+    pub(in crate::services) const HOME: &str = "/mixengine";
 
     /// The address every service in these tests binds.
     const LOOPBACK: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 
-    async fn store() -> (tempfile::TempDir, Store) {
+    pub(in crate::services) async fn store() -> (tempfile::TempDir, Store) {
         let home = tempfile::tempdir().expect("a temporary directory");
         let store = Store::open(&home.path().join(crate::paths::DATABASE_FILE_NAME))
             .await
@@ -302,7 +327,7 @@ pub(super) mod tests {
     }
 
     /// A `services` row holding `port`, as a `service.create` before this one would have left it.
-    async fn declared(store: &Store, id: &str, port: u16) {
+    pub(in crate::services) async fn declared(store: &Store, id: &str, port: u16) {
         sqlx::query(
             "INSERT INTO packages (name, version, install_path, installed_at, source_url, sha256)
              VALUES (?, '1.0.0', '/packages/whatever', '2026-08-21T00:00:00Z',
@@ -326,7 +351,12 @@ pub(super) mod tests {
     }
 
     /// An installed extension holding `port`, as an install would have left it.
-    async fn held_by_an_extension(store: &Store, id: &str, name: &str, port: u16) {
+    pub(in crate::services) async fn held_by_an_extension(
+        store: &Store,
+        id: &str,
+        name: &str,
+        port: u16,
+    ) {
         sqlx::query(
             "INSERT OR IGNORE INTO extensions
                (id, name, version, kind, manifest_json, install_dir, data_dir, source, signed,

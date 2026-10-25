@@ -572,6 +572,31 @@ mod tests {
         assert_eq!(port_of(&chosen), Some(3306));
     }
 
+    /// **Moving an instance onto the product's own port makes it the one clients pick**, with
+    /// nothing else changed: the order reads the row on every run.
+    #[tokio::test]
+    async fn an_instance_moved_onto_the_products_port_is_the_one_clients_pick() {
+        let (_home, store) = store().await;
+        install(&store, "mysql", "8.4.6").await;
+        instantiate(&store, "mysql@a", "mysql", "8.4.6", Some(3307)).await;
+        instantiate(&store, "mysql@b", "mysql", "8.4.6", Some(3308)).await;
+
+        let id = ServiceId::parse("mysql@b").expect("an id");
+        crate::services::set_port(&store, &id, 3306)
+            .await
+            .expect("a move");
+
+        let chosen = chosen(&store, "mysql", Some(3306), None)
+            .await
+            .expect("an instance");
+
+        assert_eq!(
+            chosen.service.as_ref().map(ServiceId::as_str),
+            Some("mysql@b")
+        );
+        assert_eq!(port_of(&chosen), Some(3306));
+    }
+
     /// Ports equal or absent and the answer is still the same one on every run: the lowest port,
     /// then the id ascending.
     #[tokio::test]

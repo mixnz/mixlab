@@ -22,6 +22,30 @@ pub(super) fn service(error: &ServiceError, whole: &mixengine_core::Error) -> Er
             )
         }
 
+        // A move onto a port somebody already has. Who has it is in the message; the way out is
+        // a different number, or moving the holder first.
+        ServiceError::PortHeld { holder, .. } => Error::new(ErrorCode::AlreadyExists, chain(whole))
+            .with_hint(format!(
+                "pick another port, or move {holder} off it first; `mix service list` shows every \
+                 service's port"
+            )),
+
+        // A program this home does not manage has it. Under 1024 on Linux and macOS the
+        // likelier reason is that nothing here may bind there at all.
+        ServiceError::PortUnavailable { port, .. } => {
+            let hint = if *port < 1024 && std::env::consts::OS != "windows" {
+                "ports under 1024 need privileges MixEngine does not run with; pick one above 1023"
+            } else {
+                "stop that program, or pick another port"
+            };
+
+            Error::new(ErrorCode::PreconditionFailed, chain(whole)).with_hint(hint)
+        }
+
+        ServiceError::PortInvalid { .. } | ServiceError::ListensOnNoPort { .. } => {
+            Error::new(ErrorCode::InvalidArgument, chain(whole))
+        }
+
         // The fourth, and the one whose repair is a different *argument* rather than a
         // different call: nothing has to be deleted, the create has to name somewhere else.
         // The message already carries the service that got there first, so the hint spends
